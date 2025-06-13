@@ -5,6 +5,11 @@ from pathlib import Path
 from dotenv import load_dotenv
 import logging
 from typing import Dict, List, Any # Ajout pour List et Dict dans l'adaptateur
+import threading
+
+# --- Verrou global pour l'initialisation de la JVM ---
+_JVM_INITIALIZED = False
+_JVM_INIT_LOCK = threading.Lock()
 
 # Configuration du logger pour ce module
 logger = logging.getLogger(__name__)
@@ -185,20 +190,36 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
     else:
         logger.warning(f"Fichier .env non trouvé à {actual_env_path}. Les services dépendant de variables d'environnement pourraient ne pas fonctionner.")
 
-    if initialize_jvm_func:
-        logger.info("Initialisation de la JVM via jvm_setup.initialize_jvm()...")
-        try:
-            context.jvm_initialized = initialize_jvm_func()
-            if context.jvm_initialized:
-                logger.info("JVM initialisée avec succès.")
-            else:
-                logger.error("Échec de l'initialisation de la JVM.")
-        except Exception as e:
-            logger.error(f"Erreur lors de l'initialisation de la JVM : {e}", exc_info=True)
-            context.jvm_initialized = False
+    # Utiliser un attribut sur le module `sys` pour un état vraiment global
+    # qui survit au rechargement de module par Uvicorn.
+    if hasattr(sys, '_jvm_initialized') and sys._jvm_initialized:
+        logger.info("JVM déjà initialisée dans ce processus (détecté via sys._jvm_initialized). On saute la ré-initialisation.")
+        context.jvm_initialized = True
     else:
-        logger.error("La fonction initialize_jvm n'a pas pu être importée. Impossible d'initialiser la JVM.")
-        context.jvm_initialized = False
+        with _JVM_INIT_LOCK:
+            # Re-vérifier à l'intérieur du verrou (double-checked locking)
+            if hasattr(sys, '_jvm_initialized') and sys._jvm_initialized:
+                 logger.info("JVM initialisée par un autre thread pendant l'attente du verrou.")
+                 context.jvm_initialized = True
+            else:
+                if initialize_jvm_func:
+                    logger.info("Initialisation de la JVM via jvm_setup.initialize_jvm()...")
+                    try:
+                        context.jvm_initialized = initialize_jvm_func()
+                        if context.jvm_initialized:
+                            logger.info("JVM initialisée avec succès. Marquage global (sys._jvm_initialized = True).")
+                            sys._jvm_initialized = True
+                        else:
+                            logger.error("Échec de l'initialisation de la JVM.")
+                            sys._jvm_initialized = False
+                    except Exception as e:
+                        logger.error(f"Erreur lors de l'initialisation de la JVM : {e}", exc_info=True)
+                        context.jvm_initialized = False
+                        sys._jvm_initialized = False
+                else:
+                    logger.error("La fonction initialize_jvm n'a pas pu être importée. Impossible d'initialiser la JVM.")
+                    context.jvm_initialized = False
+                    sys._jvm_initialized = False
 
     if CryptoService_class:
         logger.info("Initialisation de CryptoService...")

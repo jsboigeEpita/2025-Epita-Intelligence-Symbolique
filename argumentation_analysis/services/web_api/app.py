@@ -12,6 +12,7 @@ import sys
 import os # Assurez-vous qu'os est importé si ce n'est pas déjà le cas plus haut
 from pathlib import Path # Assurez-vous que Path est importé
 from typing import Optional, Dict, Any # AJOUTÉ ICI POUR CORRIGER NameError
+from fastapi import FastAPI
 
 # --- Initialisation explicite de l'environnement du projet ---
 # Cela doit être fait AVANT toute autre logique d'application ou import de service spécifique au projet.
@@ -85,7 +86,6 @@ from werkzeug.exceptions import HTTPException
 from a2wsgi import WSGIMiddleware
 
 
-
 # Déclarer les variables avant le bloc try pour qu'elles aient un scope global dans le module
 flask_app = None # Sera assigné à flask_app_instance_for_init
 app = None # Sera assigné à app_object_for_uvicorn
@@ -106,7 +106,6 @@ try:
     _top_module_logger.info("--- Mounting Flask app within a FastAPI instance ---")
     sys.stderr.flush()
 
-    from fastapi import FastAPI # Import déplacé ici
     # Créer une instance de FastAPI comme application principale
     fastapi_app = FastAPI()
 
