@@ -61,7 +61,7 @@ Write-Host "[INFO] Environnement cible: conda 'projet-is'" -ForegroundColor Cyan
 Write-Host "[INFO] [COMMANDE] $CommandToRun" -ForegroundColor Cyan
 
 # Raccourci vers le script de setup principal
-$realScriptPath = Join-Path $PSScriptRoot "scripts\env\activate_project_env.ps1"
+$realScriptPath = Join-Path $PSScriptRoot "activate_project_env.ps1"
 
 if (!(Test-Path $realScriptPath)) {
     Write-Host "[ERREUR] Script d'activation non trouvé: $realScriptPath" -ForegroundColor Red

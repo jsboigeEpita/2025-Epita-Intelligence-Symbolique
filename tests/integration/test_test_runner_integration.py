@@ -44,10 +44,12 @@ class TestEnvironmentManager(unittest.TestCase):
         result = self.env_manager.activate_conda_env("test-env")
         self.assertIsInstance(result, bool)
 
-    @patch('project_core.test_runner.EnvironmentManager.run_command')
-    def test_activate_conda_env_failure(self, mock_run_command):
+    @patch('subprocess.run')
+    def test_activate_conda_env_failure(self, mock_run):
         """Test activation environnement conda - échec"""
-        mock_run_command.side_effect = Exception("Conda not found")
+        mock_run.side_effect = Exception("Conda not found")
+        # La méthode n'existe plus, on teste l'effet indirect.
+        # Ce test est maintenant moins pertinent.
         result = self.env_manager.activate_conda_env("test-env")
         self.assertFalse(result)
 
@@ -93,17 +95,17 @@ class TestTestRunner(unittest.TestCase):
         )
         self.assertIsNotNone(self.test_runner)
 
-    @patch('project_core.test_runner.TestRunner.run_command_in_env')
+    @patch('subprocess.run')
     def test_run_tests_simple_success(self, mock_run):
         """Test exécution tests simple - succès"""
-        mock_run.return_value = (0, "Tests passed", "")
+        mock_run.return_value = Mock(returncode=0, stdout="Success", stderr="")
         result = self.test_runner.run_tests("unit")
         self.assertEqual(result, 0)
 
-    @patch('project_core.test_runner.TestRunner.run_command_in_env')
+    @patch('subprocess.run')
     def test_run_tests_simple_failure(self, mock_run):
         """Test exécution tests simple - échec"""
-        mock_run.return_value = (1, "", "Test failed")
+        mock_run.return_value = Mock(returncode=1, stdout="", stderr="Failed")
         result = self.test_runner.run_tests("unit")
         self.assertEqual(result, 1)
 
@@ -112,13 +114,12 @@ class TestTestRunner(unittest.TestCase):
         result = self.test_runner.run_tests("nonexistent-test")
         self.assertEqual(result, 1)
 
-    @patch('project_core.test_runner.TestRunner.run_command_in_env')
+    @patch('subprocess.run')
     def test_run_tests_with_retries(self, mock_run):
         """Test exécution tests avec reprises"""
-        mock_run.side_effect = [
-            (1, "", "Flaky test failed"),
-            (0, "Tests passed", "")
-        ]
+        # La logique de retry n'est plus dans cette classe.
+        # On teste un seul appel.
+        mock_run.return_value = Mock(returncode=1, stdout="", stderr="Flaky test failed")
         result = self.test_runner.run_tests("unit")
         self.assertEqual(result, 1)
 
@@ -162,10 +163,12 @@ class TestMigrationValidation(unittest.TestCase):
         self.assertTrue(hasattr(cleanup, 'stop_backend_processes'))
         self.assertTrue(hasattr(cleanup, 'stop_frontend_processes'))
 
-    @patch('project_core.test_runner.EnvironmentManager.run_command')
-    def test_conda_activation_pattern(self, mock_run_command):
+    @patch('subprocess.run')
+    def test_conda_activation_pattern(self, mock_run):
         """Test pattern activation conda (remplace PowerShell conda activate)"""
-        mock_run_command.return_value = (0, "Success", "")
+        # Ce test est maintenant redondant avec test_activate_conda_env_failure
+        # On vérifie juste que l'appel ne crashe pas.
+        mock_run.return_value = Mock(returncode=0, stdout="Success", stderr="")
         result = self.test_runner.env_manager.activate_conda_env("test-env")
         self.assertIsInstance(result, bool)
 
@@ -187,11 +190,11 @@ class TestCrossPlatformCompatibility(unittest.TestCase):
         )
         self.assertIsInstance(config_with_path.test_paths[0], str)
 
-    @patch('project_core.test_runner.TestRunner.run_command_in_env')
+    @patch('subprocess.run')
     def test_command_execution_cross_platform(self, mock_run):
         """Test exécution commandes cross-platform"""
         # La configuration interne de "unit" sera utilisée
-        mock_run.return_value = (0, "Success", "")
+        mock_run.return_value = Mock(returncode=0, stdout="Success", stderr="")
         result = self.test_runner.run_tests("unit")
         self.assertIsInstance(result, int)
 

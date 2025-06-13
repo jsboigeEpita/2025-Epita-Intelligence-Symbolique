@@ -6,7 +6,9 @@ import subprocess
 # import jpype # Commenté pour éviter le démarrage prématuré de la JVM
 from pathlib import Path
 import logging
-from argumentation_analysis.core.jvm_setup import LIBS_DIR as CORE_LIBS_DIR
+from argumentation_analysis.core.jvm_setup import find_libs_dir
+
+CORE_LIBS_DIR = find_libs_dir()
 
 
 # Configuration du logger pour ce fichier conftest spécifique

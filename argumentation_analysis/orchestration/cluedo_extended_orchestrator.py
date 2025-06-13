@@ -111,6 +111,7 @@ class CluedoExtendedOrchestrator:
             nom_enquete_cluedo=nom_enquete,
             elements_jeu_cluedo=elements_jeu,
             description_cas="Un meurtre a été commis. Qui, où, et avec quoi ?",
+            initial_context={"raison_enquete": "Validation du workflow 3 agents"},
             oracle_strategy=self.oracle_strategy
         )
 

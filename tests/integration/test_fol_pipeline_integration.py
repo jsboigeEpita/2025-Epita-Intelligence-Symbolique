@@ -14,6 +14,7 @@ Tests bout-en-bout du pipeline FOL avec composants authentiques.
 """
 
 import pytest
+import pytest_asyncio
 import asyncio
 import sys
 import os
@@ -26,7 +27,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
-    from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent
+    from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent as FirstOrderLogicAgent
     from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
     from argumentation_analysis.core.llm_service import create_llm_service
     from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer
@@ -62,6 +63,14 @@ except ImportError:
             return Mock(error_type="TEST", corrections=["fix1"])
 
 
+@pytest_asyncio.fixture(scope="module")
+async def fol_agent_with_kernel():
+    """Fixture pour créer un FOLLogicAgent avec un kernel authentique."""
+    config = UnifiedConfig()
+    kernel = config.get_kernel_with_gpt4o_mini()
+    agent = FirstOrderLogicAgent(kernel=kernel, agent_name="TestAgentFOLWithKernel")
+    return agent
+
 class TestFOLPipelineIntegration:
     async def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
@@ -93,11 +102,11 @@ class TestFOLPipelineIntegration:
         if Path(self.temp_dir).exists():
             os.rmdir(self.temp_dir)
     
-    async def test_fol_pipeline_end_to_end(self):
+    @pytest.mark.asyncio
+    async def test_fol_pipeline_end_to_end(self, fol_agent_with_kernel):
         """Test du pipeline FOL bout-en-bout."""
         # 1. Créer l'agent FOL
-        mock_kernel = await self._create_authentic_gpt4o_mini_instance()
-        fol_agent = FirstOrderLogicAgent(kernel=mock_kernel)
+        fol_agent = fol_agent_with_kernel
         
         # 2. Générer la syntaxe FOL
         fol_formula = fol_agent.generate_fol_syntax(self.test_text)
@@ -159,13 +168,13 @@ class TestFOLPipelineIntegration:
         assert "∀x(Homme(x) → Mortel(x))" in report_content
         assert "satisfiable" in report_content.lower()
     
-    async def test_fol_pipeline_with_error_handling(self):
+    @pytest.mark.asyncio
+    async def test_fol_pipeline_with_error_handling(self, fol_agent_with_kernel):
         """Test du pipeline FOL avec gestion d'erreurs."""
         # Texte problématique pour FOL
         problematic_text = "Cette phrase n'a pas de structure logique claire."
         
-        mock_kernel = await self._create_authentic_gpt4o_mini_instance()
-        fol_agent = FirstOrderLogicAgent(kernel=mock_kernel)
+        fol_agent = fol_agent_with_kernel
         
         try:
             # Générer FOL malgré le texte problématique
@@ -182,12 +191,12 @@ class TestFOLPipelineIntegration:
             # Si erreur, vérifier qu'elle est appropriée
             assert "fol" in str(e).lower() or "logic" in str(e).lower()
     
-    async def test_fol_pipeline_performance(self):
+    @pytest.mark.asyncio
+    async def test_fol_pipeline_performance(self, fol_agent_with_kernel):
         """Test de performance du pipeline FOL."""
         import time
         
-        mock_kernel = await self._create_authentic_gpt4o_mini_instance()
-        fol_agent = FirstOrderLogicAgent(kernel=mock_kernel)
+        fol_agent = fol_agent_with_kernel
         
         start_time = time.time()
         
@@ -221,8 +230,7 @@ class TestFOLPipelineIntegration:
         
         try:
             # Test avec vrai Tweety FOL
-            mock_kernel = await self._create_authentic_gpt4o_mini_instance()
-            fol_agent = FirstOrderLogicAgent(kernel=mock_kernel)
+            fol_agent = fol_agent_with_kernel
             
             # Formules FOL valides
             valid_formulas = [
@@ -358,7 +366,8 @@ class TestFOLPowerShellIntegration:
 class TestFOLValidationIntegration:
     """Tests d'intégration pour la validation FOL."""
     
-    async def test_fol_syntax_validation_integration(self):
+    @pytest.mark.asyncio
+    async def test_fol_syntax_validation_integration(self, fol_agent_with_kernel):
         """Test d'intégration de validation syntaxe FOL."""
         # Formules FOL à valider
         test_formulas = [
@@ -368,8 +377,7 @@ class TestFOLValidationIntegration:
             "∀x(P(x) → Q(x)) ∧ P(a)",   # Valide
         ]
         
-        mock_kernel = await self._create_authentic_gpt4o_mini_instance()
-        fol_agent = FirstOrderLogicAgent(kernel=mock_kernel)
+        fol_agent = fol_agent_with_kernel
         
         validation_results = []
         for formula in test_formulas:
@@ -394,7 +402,8 @@ class TestFOLValidationIntegration:
         valid_count = sum(1 for r in validation_results if r["valid"])
         assert valid_count >= 2  # Au moins 2 formules valides
     
-    async def test_fol_semantic_validation_integration(self):
+    @pytest.mark.asyncio
+    async def test_fol_semantic_validation_integration(self, fol_agent_with_kernel):
         """Test d'intégration de validation sémantique FOL."""
         # Test avec ensemble cohérent de formules
         coherent_formulas = [
@@ -403,8 +412,7 @@ class TestFOLValidationIntegration:
             "¬Mortel(platon) → ¬Homme(platon)"  # Contraposée
         ]
         
-        mock_kernel = await self._create_authentic_gpt4o_mini_instance()
-        fol_agent = FirstOrderLogicAgent(kernel=mock_kernel)
+        fol_agent = fol_agent_with_kernel
         
         result = fol_agent.analyze_with_tweety_fol(coherent_formulas)
         

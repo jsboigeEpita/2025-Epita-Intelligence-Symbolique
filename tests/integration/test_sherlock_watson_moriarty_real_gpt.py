@@ -82,7 +82,7 @@ def real_gpt_elements():
 
 
 @pytest.fixture
-async def rate_limiter():
+def rate_limiter():
     """Rate limiter pour éviter de dépasser les limites API."""
     async def _rate_limit():
         await asyncio.sleep(1.0)  # 1 seconde entre les appels
