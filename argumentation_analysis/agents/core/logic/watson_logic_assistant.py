@@ -76,12 +76,19 @@ class WatsonTools:
     Plugin contenant les outils logiques pour l'agent Watson.
     Ces méthodes interagissent avec TweetyBridge.
     """
-    def __init__(self, tweety_bridge: TweetyBridge, constants: Optional[List[str]] = None):
+    def __init__(self, tweety_bridge: Optional[TweetyBridge] = None, constants: Optional[List[str]] = None):
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._tweety_bridge = tweety_bridge or TweetyBridge()
         self._constants = constants or []
-        if not self._tweety_bridge.is_jvm_ready():
-            self._logger.error("La JVM n'est pas prête. Les fonctionnalités de TweetyBridge pourraient ne pas fonctionner.")
+        try:
+            # Si aucun bridge n'est fourni, on essaie d'en créer un.
+            # C'est cette ligne qui peut échouer si la JVM n'est pas prête.
+            self._tweety_bridge = tweety_bridge or TweetyBridge()
+        except RuntimeError as e:
+            self._logger.warning(f"Échec de l'initialisation de TweetyBridge: {e}. Watson fonctionnera sans outils logiques formels.")
+            self._tweety_bridge = None
+
+        if not self._tweety_bridge or not self._tweety_bridge.is_jvm_ready():
+            self._logger.warning("TweetyBridge n'est pas prêt. Les outils logiques formels sont désactivés.")
 
     def _normalize_formula(self, formula: str) -> str:
         """Normalise une formule pour la rendre compatible avec le parser PL de Tweety."""
