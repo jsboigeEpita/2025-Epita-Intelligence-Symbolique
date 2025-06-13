@@ -268,7 +268,7 @@ class CluedoOracleState(EnqueteCluedoState):
             "Sherlock": {
                 "can_query_oracle": True,
                 "max_oracle_queries_per_turn": 3,
-                "allowed_query_types": ["suggestion_validation", "clue_request", "card_inquiry", "rapid_test"],
+                "allowed_query_types": ["suggestion_validation", "clue_request", "card_inquiry", "rapid_test", "game_state"],
                 "permission_rule": default_permissions.get("SherlockEnqueteAgent")
             },
             "WatsonLogicAssistant": {
@@ -281,7 +281,7 @@ class CluedoOracleState(EnqueteCluedoState):
             "Watson": {
                 "can_query_oracle": True,
                 "max_oracle_queries_per_turn": 1,
-                "allowed_query_types": ["logical_validation", "constraint_check"],
+                "allowed_query_types": ["logical_validation", "constraint_check", "card_inquiry"],
                 "permission_rule": default_permissions.get("WatsonLogicAssistant")
             },
             "MoriartyInterrogatorAgent": {
@@ -297,6 +297,11 @@ class CluedoOracleState(EnqueteCluedoState):
                 "allowed_query_types": ["progressive_hint", "card_inquiry", "suggestion_validation"],
                 "can_access_dataset": True,
                 "is_oracle": True
+            },
+            "TestAgent": {
+                "can_query_oracle": True,
+                "max_oracle_queries_per_turn": 10,
+                "allowed_query_types": ["game_state", "card_inquiry", "test_query"]
             }
         }
     
@@ -314,10 +319,12 @@ class CluedoOracleState(EnqueteCluedoState):
         Returns:
             OracleResponse avec autorisation et données
         """
+        self._logger.info(f"Début de query_oracle pour {agent_name} avec query_type={query_type}")
         try:
             # Conversion du type de requête
             query_type_enum = QueryType(query_type)
         except ValueError:
+            self._logger.warning(f"Type de requête invalide: {query_type}")
             return OracleResponse(
                 authorized=False,
                 message=f"Type de requête invalide: {query_type}",
@@ -326,15 +333,19 @@ class CluedoOracleState(EnqueteCluedoState):
         
         # Vérification permissions
         if not self._agent_can_query_oracle(agent_name, query_type_enum):
+            self._logger.warning(f"Permission refusée pour {agent_name} sur {query_type}")
             return OracleResponse(
                 authorized=False,
                 message=f"Permission refusée pour {agent_name}:{query_type}",
                 agent_name=agent_name
             )
         
+        self._logger.info(f"Permissions validées pour {agent_name}. Délégation au dataset.")
         # Délégation au dataset Oracle
         try:
+            self._logger.debug(f"Appel de cluedo_dataset.process_query avec agent={agent_name}, query={query_type_enum}")
             response = self.cluedo_dataset.process_query(agent_name, query_type_enum, query_params)
+            self._logger.debug(f"Retour de process_query: {response}")
             
             # Conversion en OracleResponse
             oracle_response = OracleResponse(
@@ -363,6 +374,7 @@ class CluedoOracleState(EnqueteCluedoState):
         self._log_oracle_interaction(agent_name, query_type_enum, oracle_response, query_params)
         
         self.oracle_queries_count += 1
+        self._logger.info(f"Incrémentation de oracle_interactions. Nouvelle valeur: {self.workflow_metrics['oracle_interactions'] + 1}")
         self.workflow_metrics["oracle_interactions"] += 1
         self.oracle_interactions += 1  # Synchronisation attribut test
         
@@ -613,7 +625,7 @@ class CluedoOracleState(EnqueteCluedoState):
                 "interaction_pattern": self.interaction_pattern[-10:],  # 10 dernières interactions
                 "oracle_queries": self.oracle_queries_count,
                 "suggestions_validated": len(self.suggestions_validated_by_oracle),
-                "agents_active": list(set(self.interaction_pattern + ["Sherlock", "Watson", "Moriarty"]))  # Include default agents
+                "agents_active": list(set(self.interaction_pattern))
             },
             "cards_distribution": {
                 "moriarty_cards": len(self.get_moriarty_cards()),

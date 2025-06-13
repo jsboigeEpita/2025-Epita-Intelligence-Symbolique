@@ -1,72 +1,28 @@
-#!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-Script d'exécution des tests (refactorisé avec Python)
+Lance les tests du projet en utilisant le m&#233;canisme d'activation d'environnement centralis&#233;.
 
 .DESCRIPTION
-Lance les tests via le module Python mutualisé test_runner.py
-
-.PARAMETER TestPath
-Chemin des tests à exécuter
-
-.PARAMETER Verbose
-Mode verbeux
-
-.PARAMETER Fast
-Mode rapide
+Ce script est un raccourci pour ex&#233;cuter tous les tests (unitaires et d'int&#233;gration)
+via le script `setup_project_env.ps1`, qui garantit que l'environnement Conda
+'projet-is' est correctement activ&#233; avant de lancer pytest.
 
 .EXAMPLE
-.\run_tests.ps1 -TestPath "tests/unit" -Verbose
-.\run_tests.ps1 -Fast
-
-.NOTES
-Refactorisé - Utilise scripts/core/test_runner.py
+.\run_tests.ps1
 #>
 
-param(
-    [string]$TestPath = "tests/unit",
-    [switch]$Verbose,
-    [switch]$Fast
-)
+param()
 
-# Configuration
 $ProjectRoot = $PSScriptRoot
-$TestModule = "scripts/core/test_runner.py"
+$SetupScript = Join-Path $ProjectRoot "setup_project_env.ps1"
+$PytestCommand = "python -m pytest"
 
-function Write-Log {
-    param([string]$Message, [string]$Level = "INFO")
-    $color = switch ($Level) {
-        "ERROR" { "Red" }
-        "SUCCESS" { "Green" }
-        default { "White" }
-    }
-    Write-Host "[$(Get-Date -Format 'HH:mm:ss')] $Message" -ForegroundColor $color
-}
-
-try {
-    Write-Log "Exécution des tests via module Python mutualisé..."
-    
-    # Construction des arguments Python
-    $pythonArgs = @("python", $TestModule)
-    
-    if ($Fast) { $pythonArgs += "--fast" }
-    if ($Verbose) { $pythonArgs += "--verbose" }
-    
-    Write-Log "Commande: python $TestModule $(if($Fast){'--fast'}) $(if($Verbose){'--verbose'})"
-    
-    # Exécution
-    & $pythonArgs[0] $pythonArgs[1..($pythonArgs.Length-1)]
-    $exitCode = $LASTEXITCODE
-    
-    if ($exitCode -eq 0) {
-        Write-Log "Tests exécutés avec succès" "SUCCESS"
-    } else {
-        Write-Log "Tests échoués (Code: $exitCode)" "ERROR"
-    }
-    
-    exit $exitCode
-    
-} catch {
-    Write-Log "Erreur: $($_.Exception.Message)" "ERROR"
+if (-not (Test-Path $SetupScript)) {
+    Write-Host "[ERREUR] Le script de configuration '$SetupScript' est introuvable." -ForegroundColor Red
     exit 1
 }
+
+Write-Host "[INFO] Lancement des tests via $SetupScript..." -ForegroundColor Cyan
+
+& $SetupScript -CommandToRun $PytestCommand
+exit $LASTEXITCODE

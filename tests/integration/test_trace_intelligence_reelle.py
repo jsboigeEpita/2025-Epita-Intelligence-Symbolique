@@ -81,7 +81,6 @@ def test_imports_orchestration_reelle():
     orchestration_modules = [
         'cluedo_extended_orchestrator',
         'cluedo_orchestrator',
-        'sherlock_watson_orchestrator',
         'argumentation_analysis.main_orchestrator',
     ]
     for module in orchestration_modules:

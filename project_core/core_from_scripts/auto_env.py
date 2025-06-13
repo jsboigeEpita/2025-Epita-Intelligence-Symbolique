@@ -159,9 +159,20 @@ def get_simple_import() -> str:
 # Auto-exécution à l'import pour usage ultra-simple
 if __name__ != "__main__":
     # Le module est importé, auto-activation
-    # TEMPORAIREMENT DÉSACTIVÉ POUR LES TESTS D'IMPORT
-    # ensure_env(silent=False) # FORCER silent=False pour voir les logs de débogage
-    pass
+    # ========================== ATTENTION - PROTECTION CRITIQUE ==========================
+    # La ligne suivante `ensure_env()` est ESSENTIELLE pour la sécurité et la stabilité
+    # de tous les tests et scripts. Elle garantit que le code s'exécute dans
+    # l'environnement Conda approprié ('projet-is').
+    #
+    # NE JAMAIS DÉSACTIVER, COMMENTER OU SUPPRIMER CETTE LIGNE.
+    # Le faire contourne les gardes-fous et peut entraîner des erreurs de dépendances
+    # subtiles, des comportements imprévisibles et l'utilisation de mocks à la place
+    # de composants réels, corrompant ainsi les résultats des tests.
+    #
+    # Cette protection est intentionnellement non-silencieuse pour rendre tout échec
+    # d'activation de l'environnement immédiatement visible.
+    # =====================================================================================
+    ensure_env(silent=False)
 
 
 if __name__ == "__main__":

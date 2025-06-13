@@ -19,6 +19,7 @@ Tests couvrant:
 """
 
 import pytest
+import pytest_asyncio
 import asyncio
 import time
 
@@ -27,6 +28,7 @@ from datetime import datetime
 
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from unittest.mock import patch
 
 # Imports du système Oracle
 from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
@@ -263,6 +265,8 @@ class TestOraclePerformanceIntegration:
         oracle_state = CluedoOracleState(
             nom_enquete_cluedo="Performance Test",
             elements_jeu_cluedo=elements_jeu,
+            description_cas="Cas de test pour la performance des requêtes.",
+            initial_context={"test_id": "performance_query"},
             oracle_strategy="balanced"
         )
         
@@ -298,6 +302,8 @@ class TestOraclePerformanceIntegration:
         oracle_state = CluedoOracleState(
             nom_enquete_cluedo="Concurrency Test",
             elements_jeu_cluedo=elements_jeu,
+            description_cas="Cas de test pour les opérations concurrentes.",
+            initial_context={"test_id": "concurrency_test"},
             oracle_strategy="balanced"
         )
         
@@ -349,6 +355,8 @@ class TestOraclePerformanceIntegration:
         oracle_state = CluedoOracleState(
             nom_enquete_cluedo="Memory Test",
             elements_jeu_cluedo=elements_jeu,
+            description_cas="Cas de test pour l'utilisation mémoire.",
+            initial_context={"test_id": "memory_usage"},
             oracle_strategy="balanced"
         )
         
@@ -368,17 +376,21 @@ class TestOraclePerformanceIntegration:
 class TestOracleErrorHandlingIntegration:
     """Tests de gestion d'erreurs dans l'intégration Oracle."""
     
-    @pytest.fixture
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+
+    @pytest_asyncio.fixture
     async def error_test_kernel(self):
         """Kernel pour tests d'erreurs."""
-        kernel = await self._create_authentic_gpt4o_mini_instance()
-        return kernel
-    
+        return await self._create_authentic_gpt4o_mini_instance()
+
     @pytest.mark.asyncio
     async def test_agent_failure_recovery(self, error_test_kernel):
         """Test la récupération en cas d'échec d'agent."""
         orchestrator = CluedoExtendedOrchestrator(
-            kernel=error_test_kernel,
+            kernel=error_test_kernel,  # pytest-asyncio injecte le résultat de la fixture, pas la coroutine
             max_turns=5,
             max_cycles=2,
             oracle_strategy="balanced"
@@ -413,11 +425,13 @@ class TestOracleErrorHandlingIntegration:
         oracle_state = CluedoOracleState(
             nom_enquete_cluedo="Error Test",
             elements_jeu_cluedo=elements_jeu,
+            description_cas="Cas de test pour la gestion d'erreur.",
+            initial_context={"test_id": "error_handling_dataset"},
             oracle_strategy="balanced"
         )
         
         # Simulation d'erreur de dataset
-        with patch.object(oracle_state.cluedo_dataset, 'process_query', 
+        with patch.object(oracle_state.cluedo_dataset, 'process_query',
                          side_effect=Exception("Dataset connection failed")):
             
             result = await oracle_state.query_oracle(
@@ -431,7 +445,8 @@ class TestOracleErrorHandlingIntegration:
             if hasattr(result, 'success'):
                 assert result.success is False
     
-    def test_invalid_configuration_handling(self, error_test_kernel):
+    @pytest.mark.asyncio
+    async def test_invalid_configuration_handling(self, error_test_kernel):
         """Test la gestion de configurations invalides."""
         # Test avec éléments de jeu invalides
         invalid_elements = {
@@ -445,6 +460,8 @@ class TestOracleErrorHandlingIntegration:
             oracle_state = CluedoOracleState(
                 nom_enquete_cluedo="Invalid Config Test",
                 elements_jeu_cluedo=invalid_elements,
+                description_cas="Cas de test pour configuration invalide.",
+                initial_context={"test_id": "invalid_config"},
                 oracle_strategy="invalid_strategy"  # Stratégie invalide
             )
             
@@ -478,6 +495,8 @@ class TestOracleScalabilityIntegration:
         oracle_state = CluedoOracleState(
             nom_enquete_cluedo="Large Scale Test",
             elements_jeu_cluedo=large_elements,
+            description_cas="Cas de test pour la scalabilité.",
+            initial_context={"test_id": "scalability_large_game"},
             oracle_strategy="balanced"
         )
         
@@ -508,6 +527,8 @@ class TestOracleScalabilityIntegration:
         oracle_state = CluedoOracleState(
             nom_enquete_cluedo="Extended Workflow Test",
             elements_jeu_cluedo=elements_jeu,
+            description_cas="Cas de test pour workflow étendu.",
+            initial_context={"test_id": "extended_workflow_sim"},
             oracle_strategy="progressive"
         )
         
