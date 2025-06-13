@@ -49,9 +49,13 @@ def ensure_env(env_name: str = "projet-is", silent: bool = True) -> bool:
     # Vérification immédiate de l'exécutable Python
     if env_name not in sys.executable:
         error_message_immediate = (
-            f"ERREUR CRITIQUE IMMÉDIATE : Le script est lancé avec un interpréteur Python incorrect.\n"
-            f"  Exécutable Python (sys.executable): '{sys.executable}' (Doit contenir: '{env_name}')\n"
-            f"  POUR CORRIGER : Assurez-vous que l'environnement Conda '{env_name}' est activé, ou lancez ce script via le wrapper 'activate_project_env.ps1'."
+            f"ERREUR CRITIQUE : L'INTERPRÉTEUR PYTHON EST INCORRECT.\n"
+            f"  Exécutable utilisé : '{sys.executable}'\n"
+            f"  L'exécutable attendu doit provenir de l'environnement Conda '{env_name}'.\n\n"
+            f"  SOLUTION IMPÉRATIVE :\n"
+            f"  Utilisez le script wrapper 'activate_project_env.ps1' situé à la RACINE du projet.\n\n"
+            f"  Exemple : powershell -File .\\activate_project_env.ps1 -CommandToRun \"python votre_script.py\"\n\n"
+            f"  IMPORTANT : Ce script ne se contente pas d'activer Conda. Il configure aussi JAVA_HOME, PYTHONPATH, et d'autres variables d'environnement cruciales. Ne PAS l'ignorer."
         )
         print(f"[auto_env] {error_message_immediate}", file=sys.stderr)
         raise RuntimeError(error_message_immediate)
@@ -110,10 +114,13 @@ def ensure_env(env_name: str = "projet-is", silent: bool = True) -> bool:
 
         if not (is_conda_env_correct and is_python_executable_correct):
             error_message = (
-                f"ERREUR CRITIQUE : Le script ne s'exécute pas dans l'environnement Conda '{env_name}' attendu après tentative d'activation.\n"
-                f"  Environnement Conda actif (CONDA_DEFAULT_ENV): '{current_conda_env}' (Attendu: '{env_name}')\n"
-                f"  Exécutable Python (sys.executable): '{current_python_executable}' (Doit contenir: '{env_name}')\n"
-                f"  POUR CORRIGER : Assurez-vous que l'environnement Conda '{env_name}' est activé avant de lancer ce script, ou utilisez le wrapper 'activate_project_env.ps1'."
+                f"ERREUR CRITIQUE : L'ENVIRONNEMENT '{env_name}' N'EST PAS CORRECTEMENT ACTIVÉ.\n"
+                f"  Environnement Conda détecté : '{current_conda_env}' (Attendu: '{env_name}')\n"
+                f"  Exécutable Python détecté : '{current_python_executable}'\n\n"
+                f"  SOLUTION IMPÉRATIVE :\n"
+                f"  Utilisez le script wrapper 'activate_project_env.ps1' situé à la RACINE du projet pour lancer vos commandes.\n\n"
+                f"  Exemple : powershell -File .\\activate_project_env.ps1 -CommandToRun \"python -m pytest\"\n\n"
+                f"  IMPORTANT : Ce script ne se contente pas d'activer Conda. Il configure aussi JAVA_HOME, PYTHONPATH, et d'autres variables d'environnement cruciales. Ne PAS l'ignorer."
             )
             # Logger l'erreur même si silent est True pour cette partie critique
             logger_instance.error(error_message) # Utilise l'instance de logger existante

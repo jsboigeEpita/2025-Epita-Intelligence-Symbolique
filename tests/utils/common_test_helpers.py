@@ -405,6 +405,10 @@ def run_with_mocked_dependencies(func, *args, **kwargs):
         return func(*args, **kwargs)
 
 
+async def create_authentic_gpt4o_mini_instance():
+    """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+    config = UnifiedConfig()
+    return config.get_kernel_with_gpt4o_mini()
 if __name__ == "__main__":
     # Exemple d'utilisation
     env_info = setup_test_environment()
