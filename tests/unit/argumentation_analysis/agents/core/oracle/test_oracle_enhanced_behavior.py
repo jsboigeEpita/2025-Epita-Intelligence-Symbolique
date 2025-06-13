@@ -172,8 +172,8 @@ class TestOracleEnhancedBehavior:
                 query_params=query
             )
             
-            if hasattr(result, 'hint_content'):
-                hints_revealed.append(result.hint_content)
+            if result.data and result.data.get('hint_content'):
+                hints_revealed.append(result.data['hint_content'])
         
         # Vérifier que les indices sont progressifs
         assert len(hints_revealed) >= 2
@@ -181,7 +181,8 @@ class TestOracleEnhancedBehavior:
         # Vérifier l'escalade de complexité
         for i in range(1, len(hints_revealed)):
             # Les indices suivants devraient être plus détaillés
-            assert len(hints_revealed[i]) >= len(hints_revealed[i-1])
+            if hints_revealed[i] and hints_revealed[i-1]:
+                assert len(hints_revealed[i]) >= len(hints_revealed[i-1])
     
     def test_enhanced_orchestration_cycle(self, oracle_enhanced_state):
         """Test l'orchestration cyclique améliorée."""

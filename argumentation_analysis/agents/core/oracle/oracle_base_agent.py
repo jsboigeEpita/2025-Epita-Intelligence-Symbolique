@@ -198,7 +198,7 @@ class OracleTools:
         try:
             query_type_enum = QueryType(query_type)
             agent_to_check = target_agent or self.agent_name
-            is_authorized = self.dataset_manager.check_permission(agent_to_check, query_type_enum)
+            is_authorized = await self.dataset_manager.check_permission(agent_to_check, query_type_enum)
             
             if is_authorized:
                 return f"{agent_to_check} a les permissions pour {query_type}"

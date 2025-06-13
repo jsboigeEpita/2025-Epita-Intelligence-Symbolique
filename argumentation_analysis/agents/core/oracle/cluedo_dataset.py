@@ -401,7 +401,7 @@ class CluedoDataset:
             }
         }
     
-    def process_query(self, agent_name: str, query_type: QueryType, query_params: Dict[str, Any]) -> QueryResult:
+    async def process_query(self, agent_name: str, query_type: QueryType, query_params: Dict[str, Any]) -> QueryResult:
         """
         Traite une requête générique sur le dataset.
         

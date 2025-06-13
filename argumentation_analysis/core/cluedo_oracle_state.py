@@ -344,7 +344,7 @@ class CluedoOracleState(EnqueteCluedoState):
         # Délégation au dataset Oracle
         try:
             self._logger.debug(f"Appel de cluedo_dataset.process_query avec agent={agent_name}, query={query_type_enum}")
-            response = self.cluedo_dataset.process_query(agent_name, query_type_enum, query_params)
+            response = await self.cluedo_dataset.process_query(agent_name, query_type_enum, query_params)
             self._logger.debug(f"Retour de process_query: {response}")
             
             # Conversion en OracleResponse
@@ -418,6 +418,9 @@ class CluedoOracleState(EnqueteCluedoState):
                 # Generate progressive hint content
                 hint_content = f"Level {hint_level} hint: {hint_type} - Progressive complexity escalation"
                 oracle_response.hint_content = hint_content
+                if oracle_response.data is None:
+                    oracle_response.data = {}
+                oracle_response.data['hint_content'] = hint_content
                 oracle_response.metadata["hint_level"] = hint_level
                 oracle_response.metadata["hint_type"] = hint_type
                 
