@@ -93,9 +93,11 @@ class SimpleAnalysisService:
                 import json
                 gpt_result = json.loads(gpt_content)
                 fallacies = gpt_result.get('fallacies', [])
-            except json.JSONDecodeError:
-                # Fallback si GPT ne renvoie pas du JSON valide
-                fallacies = [{"type": "Analyse_GPT4o_Textuelle", "description": gpt_content[:200], "confidence": 0.9}]
+                summary = gpt_result.get('summary', "Résumé non fourni par l'IA.")
+            except (json.JSONDecodeError, AttributeError):
+                # Fallback si GPT ne renvoie pas du JSON valide ou si gpt_content n'est pas une string
+                fallacies = [{"type": "Analyse_GPT4o_Textuelle", "description": str(gpt_content)[:200], "confidence": 0.9}]
+                summary = "Impossible de parser la réponse de l'IA."
             
             self.logger.info(f"✅ Analyse GPT-4o-mini terminée en {duration:.2f}s")
             
@@ -103,7 +105,7 @@ class SimpleAnalysisService:
                 'fallacies': fallacies,
                 'duration': duration,
                 'components_used': ['GPT-4o-mini', 'OpenAI-API', 'SimpleAnalysisService'],
-                'summary': f"Analyse authentique GPT-4o-mini terminée. Modèle: {response.model}. {len(fallacies)} éléments détectés.",
+                'summary': summary,
                 'authentic_gpt4o_used': True,
                 'gpt_model_used': response.model,
                 'tokens_used': response.usage.total_tokens if response.usage else 0,

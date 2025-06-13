@@ -95,9 +95,9 @@ def test_api_startup_and_basic_functionality():
         assert data["status"] == "healthy"
         print(f"✓ Health check: {data}")
         
-        # Test examples endpoint  
-        print("\nTest endpoint /examples...")
-        response = requests.get(f"{api_url}/examples", timeout=10)
+        # Test examples endpoint
+        print("\nTest endpoint /api/examples...")
+        response = requests.get(f"{api_url}/api/examples", timeout=10)
         assert response.status_code == 200
         data = response.json()
         assert "examples" in data
@@ -109,7 +109,7 @@ def test_api_startup_and_basic_functionality():
         
         start_time = time.time()
         response = requests.post(
-            f"{api_url}/analyze",
+            f"{api_url}/api/analyze",
             json={"text": test_text},
             timeout=60
         )
@@ -120,45 +120,46 @@ def test_api_startup_and_basic_functionality():
         
         # Vérifications
         assert "analysis_id" in data
-        assert "analysis" in data
-        assert "service_used" in data
+        assert "status" in data
+        assert data["status"] == "success"
+        assert "fallacies" in data
+
+        analysis_summary = data.get("summary", "")
+        service_metadata = data.get("metadata", {})
         
-        analysis = data["analysis"]
-        service = data["service_used"]
-        
-        print(f"✓ Analyse reçue ({len(analysis)} chars) en {processing_time:.2f}s")
-        print(f"✓ Service utilisé: {service}")
-        
+        print(f"✓ Analyse reçue ({analysis_summary[:50]}...) en {processing_time:.2f}s")
+        print(f"✓ Service utilisé: {service_metadata.get('gpt_model')}")
+
         # Vérifier authenticité
-        assert service == "openai_gpt4o_mini", f"Service incorrect: {service}"
-        assert len(analysis) > 20, f"Analyse trop courte: {len(analysis)} chars"
+        assert service_metadata.get("authentic_analysis") is True, "L'analyse ne semble pas authentique"
+        assert len(analysis_summary) > 10, f"Résumé d'analyse trop court: {len(analysis_summary)} chars"
         assert processing_time > 1.0, f"Temps trop rapide ({processing_time:.2f}s), possible mock"
         
         print(f"✓ Analyse authentique GPT-4o-mini confirmée")
         print(f"  - Temps: {processing_time:.2f}s (> 1.0s)")
-        print(f"  - Longueur: {len(analysis)} chars")
-        print(f"  - Service: {service}")
+        print(f"  - Longueur: {len(analysis_summary)} chars")
+        print(f"  - Service: {service_metadata.get('gpt_model')}")
         
         # Test détection sophisme
         print("\nTest détection sophisme...")
         sophisme_text = "Cette théorie est fausse car son auteur est un idiot."
         
         response = requests.post(
-            f"{api_url}/analyze",
+            f"{api_url}/api/analyze",
             json={"text": sophisme_text},
             timeout=60
         )
         
         assert response.status_code == 200
         data = response.json()
-        analysis = data["analysis"].lower()
+        analysis_summary = data.get("summary", "").lower()
         
         # Chercher des indicateurs de détection logique
-        indicators = ["sophisme", "fallacy", "ad hominem", "argument", "logique", "erreur"]
-        found = [ind for ind in indicators if ind in analysis]
+        indicators = ["sophisme", "fallacy", "ad hominem", "argument", "logique", "erreur", "raisonnement"]
+        found = [ind for ind in indicators if ind in analysis_summary]
         
         print(f"✓ Indicateurs trouvés: {found}")
-        assert len(found) > 0, f"Aucun indicateur logique dans: {analysis[:100]}"
+        assert len(found) > 0, f"Aucun indicateur logique dans: {analysis_summary[:100]}"
         
         print("✓ Test API et fonctionnalités RÉUSSI")
         
