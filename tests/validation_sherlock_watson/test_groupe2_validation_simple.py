@@ -1,3 +1,4 @@
+from unittest.mock import Mock, AsyncMock
 
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai

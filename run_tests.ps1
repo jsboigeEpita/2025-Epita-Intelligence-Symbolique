@@ -11,11 +11,13 @@ via le script `setup_project_env.ps1`, qui garantit que l'environnement Conda
 .\run_tests.ps1
 #>
 
-param()
+param(
+    [string]$TestPath = ""
+)
 
 $ProjectRoot = $PSScriptRoot
 $ActivationScript = Join-Path $ProjectRoot "activate_project_env.ps1"
-$PytestCommand = "python -m pytest"
+$PytestCommand = "python -m pytest $TestPath"
 
 if (-not (Test-Path $ActivationScript)) {
     Write-Host "[ERREUR] Le script d'activation '$ActivationScript' est introuvable." -ForegroundColor Red
