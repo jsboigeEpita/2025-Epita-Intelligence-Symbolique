@@ -150,7 +150,7 @@ class DatasetAccessManager:
         
         self._logger.info(f"DatasetAccessManager initialisé avec dataset: {type(dataset).__name__}")
     
-    def execute_query(self, agent_name: str, query_type: QueryType, query_params: Dict[str, Any]) -> QueryResult:
+    async def execute_query(self, agent_name: str, query_type: QueryType, query_params: Dict[str, Any]) -> QueryResult:
         """
         Exécute une requête après validation des permissions et vérification du cache.
         
@@ -209,7 +209,7 @@ class DatasetAccessManager:
                 )
             
             # Exécution de la requête sur le dataset
-            result = self._execute_dataset_query(agent_name, query_type, query_params)
+            result = await self._execute_dataset_query(agent_name, query_type, query_params)
             
             # Filtrage selon permissions
             filtered_result = self._apply_permission_filters(agent_name, result)
@@ -290,10 +290,10 @@ class DatasetAccessManager:
         # Générer un hash pour éviter les clés trop longues
         return hashlib.md5(cache_data.encode()).hexdigest()
     
-    def _execute_dataset_query(self, agent_name: str, query_type: QueryType, query_params: Dict[str, Any]) -> QueryResult:
+    async def _execute_dataset_query(self, agent_name: str, query_type: QueryType, query_params: Dict[str, Any]) -> QueryResult:
         """Exécute la requête sur le dataset approprié."""
         if isinstance(self.dataset, CluedoDataset):
-            return self.dataset.process_query(agent_name, query_type, query_params)
+            return await self.dataset.process_query(agent_name, query_type, query_params)
         else:
             # Support pour d'autres types de datasets à l'avenir
             return QueryResult(
