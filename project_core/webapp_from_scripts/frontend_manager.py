@@ -31,9 +31,10 @@ class FrontendManager:
     - Arrêt propre
     """
     
-    def __init__(self, config: Dict[str, Any], logger: logging.Logger):
+    def __init__(self, config: Dict[str, Any], logger: logging.Logger, backend_url: Optional[str] = None):
         self.config = config
         self.logger = logger
+        self.backend_url = backend_url
         
         # Configuration
         self.enabled = config.get('enabled', False)
@@ -122,16 +123,21 @@ class FrontendManager:
             self.logger.info(f"Redirection stdout du frontend vers: {log_dir / 'frontend_stdout.log'}")
             self.logger.info(f"Redirection stderr du frontend vers: {log_dir / 'frontend_stderr.log'}")
 
-            # Sur Windows, il est plus robuste d'utiliser shell=True avec la commande sous forme de chaîne
-            # pour que le PATH de l'environnement soit correctement interprété.
-            start_cmd_str = ' '.join(self.start_command.split())
+            # Appel direct à 'npm.cmd' sur Windows pour éviter les problèmes de 'shell=True'
+            if sys.platform == "win32":
+                cmd = ['npm.cmd'] + self.start_command.split()[1:] # ['npm.cmd', 'start']
+                shell = False
+            else:
+                cmd = self.start_command
+                shell = True # Comportement original pour non-Windows
+
             self.process = subprocess.Popen(
-                start_cmd_str,
+                cmd,
                 stdout=self.frontend_stdout_log_file,
                 stderr=self.frontend_stderr_log_file,
                 cwd=self.frontend_path,
                 env=frontend_env,
-                shell=True,
+                shell=shell,
                 creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0
             )
             
@@ -228,7 +234,13 @@ class FrontendManager:
             'SKIP_PREFLIGHT_CHECK': 'true',  # Évite erreurs compatibilité
             'CI': 'true' # Force le mode non-interactif
         })
-        
+
+        if self.backend_url:
+            env['REACT_APP_API_URL'] = self.backend_url
+            self.logger.info(f"Injection de REACT_APP_API_URL={self.backend_url} dans l'environnement du frontend.")
+        else:
+            self.logger.warning("Aucune backend_url fournie au FrontendManager. Le frontend pourrait utiliser une URL par défaut incorrecte.")
+
         # Ajout du chemin npm/node à l'environnement
         npm_path = self._find_npm_executable()
         if npm_path:

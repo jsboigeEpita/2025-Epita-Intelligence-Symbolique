@@ -122,9 +122,10 @@ class BackendManager:
                         self.logger.warning(f"Le chemin '{base_path}' de CONDA_PATH n'existe pas.")
                         continue
                     
+                    # CONDA_PATH est censé contenir des chemins comme C:\...\miniconda3\condabin
+                    # ou C:\...\miniconda3\Scripts, où conda.exe se trouve directement.
                     potential_paths = [
-                        base_path / "condabin" / "conda.exe",
-                        base_path / "Scripts" / "conda.exe",
+                        base_path / "conda.exe",
                     ]
                     for path_to_check in potential_paths:
                         self.logger.info(f"Vérification de: {path_to_check}")

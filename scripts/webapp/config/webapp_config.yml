@@ -5,7 +5,7 @@ backend:
   - 5004
   - 5005
   - 5006
-  health_endpoint: /health
+  health_endpoint: /api/health
   max_attempts: 5
   module: argumentation_analysis.services.web_api.app:app
   start_port: 5004
@@ -20,7 +20,7 @@ cleanup:
   - web_api
   - serve
 frontend:
-  enabled: false
+  enabled: true
   path: services/web_api/interface-web-argumentative
   port: 3000
   start_command: npm start
@@ -31,7 +31,7 @@ logging:
   level: INFO
 playwright:
   browser: chromium
-  enabled: false
+  enabled: true
   headless: true
   screenshots_dir: logs/screenshots
   slow_timeout_ms: 20000
