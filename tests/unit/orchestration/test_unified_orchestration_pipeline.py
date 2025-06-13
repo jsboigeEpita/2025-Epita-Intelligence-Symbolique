@@ -135,6 +135,7 @@ class TestUnifiedOrchestrationPipeline:
             use_mocks=False,
             enable_hierarchical=False,
             enable_specialized_orchestrators=False,
+            auto_select_orchestrator=False,  # Force la sélection manuelle
             save_orchestration_trace=False,
             enable_communication_middleware=False
         )
