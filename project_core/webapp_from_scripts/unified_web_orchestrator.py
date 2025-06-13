@@ -434,7 +434,8 @@ class UnifiedWebOrchestrator:
     
     async def full_integration_test(self, headless: bool = True,
                                    frontend_enabled: bool = None,
-                                   test_paths: List[str] = None) -> bool:
+                                   test_paths: List[str] = None,
+                                   **kwargs) -> bool:
         """
         Test d'intégration complet : démarrage + tests + arrêt
         
@@ -457,7 +458,7 @@ class UnifiedWebOrchestrator:
             await asyncio.sleep(2)
             
             # 3. Exécution tests
-            success = await self.run_tests(test_paths)
+            success = await self.run_tests(test_paths, **kwargs)
             
             if success:
                 self.add_trace("[SUCCESS] INTEGRATION REUSSIE",
@@ -772,7 +773,10 @@ def main():
                     success = await orchestrator.run_tests(args.tests, pytest_args=unknown)
             else:  # --integration par défaut
                 success = await orchestrator.full_integration_test(
-                    headless, args.frontend, args.tests, pytest_args=unknown)
+                    headless=headless,
+                    frontend_enabled=args.frontend,
+                    test_paths=args.tests,
+                    pytest_args=unknown)
         except KeyboardInterrupt:
             print("\n🛑 Interruption utilisateur détectée. Arrêt en cours...")
             # L'arrêt est géré par le signal handler

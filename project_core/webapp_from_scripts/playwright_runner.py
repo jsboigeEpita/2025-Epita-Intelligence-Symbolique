@@ -33,7 +33,11 @@ class PlaywrightRunner:
         self.last_results: Optional[Dict[str, Any]] = None
 
     async def run_tests(self, test_paths: List[str] = None,
-                        runtime_config: Dict[str, Any] = None) -> bool:
+                            runtime_config: Dict[str, Any] = None,
+                            pytest_args: List[str] = None) -> bool:
+        # Configuration de la variable d'environnement pour forcer la config de test
+        os.environ['USE_MOCK_CONFIG'] = '1'
+        self.logger.info("Variable d'environnement 'USE_MOCK_CONFIG' définie à '1'")
         if not self.enabled:
             self.logger.info("Tests Playwright désactivés")
             return True
