@@ -24,6 +24,7 @@ Adaptations Oracle Enhanced v2.1.0 :
 
 import pytest
 import asyncio
+from unittest.mock import Mock, AsyncMock
 
 from typing import Dict, Any, List
 
@@ -39,37 +40,22 @@ from argumentation_analysis.agents.core.oracle.cluedo_dataset import CluedoDatas
 
 
 class TestOracleBaseAgent:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-        
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
     """Tests pour la classe OracleBaseAgent."""
-    
+
     @pytest.fixture
-    async def mock_kernel(self):
+    def mock_kernel(self):
         """Kernel Semantic Kernel mocké."""
         kernel = Mock(spec=Kernel)
-        kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
+        kernel.add_plugin = Mock()
         return kernel
     
     @pytest.fixture
-    async def mock_dataset_manager(self):
+    def mock_dataset_manager(self):
         """DatasetAccessManager mocké."""
         manager = Mock(spec=DatasetAccessManager)
         
         # Mock du permission_manager
-        mock_permission_manager = await self._create_authentic_gpt4o_mini_instance()
+        mock_permission_manager = Mock()
         mock_permission_manager.is_authorized = Mock(return_value=True)
         manager.permission_manager = mock_permission_manager
         
@@ -107,7 +93,7 @@ class TestOracleBaseAgent:
     def oracle_base_agent(self, mock_kernel, mock_dataset_manager, sample_agent_config):
         """Instance d'OracleBaseAgent configurée pour les tests."""
         agent = OracleBaseAgent(
-            kernel=mock_kernel,
+            kernel=mock_kernel, # This is now a mock, not a coroutine
             dataset_manager=mock_dataset_manager,
             **sample_agent_config
         )
@@ -144,7 +130,7 @@ class TestOracleBaseAgent:
             data={"card": "Colonel Moutarde", "category": "suspect"},
             query_type=QueryType.CARD_INQUIRY
         )
-        mock_dataset_manager.execute_oracle_query# Mock eliminated - using authentic gpt-4o-mini expected_response
+        mock_dataset_manager.execute_oracle_query.return_value = expected_response
         
         # Exécution
         result = await oracle_base_agent.oracle_tools.query_oracle_dataset(
@@ -171,7 +157,7 @@ class TestOracleBaseAgent:
             data={},
             query_type=QueryType.ADMIN_COMMAND
         )
-        mock_dataset_manager.execute_oracle_query# Mock eliminated - using authentic gpt-4o-mini denied_response
+        mock_dataset_manager.execute_oracle_query.return_value = denied_response
         
         # Exécution
         result = await oracle_base_agent.oracle_tools.query_oracle_dataset(
@@ -187,7 +173,7 @@ class TestOracleBaseAgent:
     async def test_validate_agent_permissions_success(self, oracle_base_agent, mock_dataset_manager):
         """Test la validation réussie des permissions d'agent."""
         # Configuration
-        mock_dataset_manager.validate_agent_access# Mock eliminated - using authentic gpt-4o-mini True
+        mock_dataset_manager.check_permission.return_value = True
         
         # Exécution
         result = await oracle_base_agent.oracle_tools.validate_agent_permissions(
@@ -207,7 +193,7 @@ class TestOracleBaseAgent:
     async def test_validate_agent_permissions_failure(self, oracle_base_agent, mock_dataset_manager):
         """Test la validation échouée des permissions d'agent."""
         # Configuration
-        mock_dataset_manager.check_permission# Mock eliminated - using authentic gpt-4o-mini False
+        mock_dataset_manager.check_permission.return_value = False
         
         # Exécution
         result = await oracle_base_agent.oracle_tools.validate_agent_permissions(
@@ -247,7 +233,7 @@ class TestOracleBaseAgent:
     async def test_oracle_error_handling(self, oracle_base_agent, mock_dataset_manager):
         """Test la gestion des erreurs dans les requêtes Oracle."""
         # Configuration du mock pour lever une exception
-        mock_dataset_manager.execute_oracle_query# Mock eliminated - using authentic gpt-4o-mini Exception("Erreur de connexion dataset")
+        mock_dataset_manager.execute_oracle_query.side_effect = Exception("Erreur de connexion dataset")
         
         # Exécution
         result = await oracle_base_agent.oracle_tools.query_oracle_dataset(
@@ -283,7 +269,7 @@ class TestOracleBaseAgent:
             data={},
             query_type=QueryType.CARD_INQUIRY
         )
-        mock_dataset_manager.execute_oracle_query# Mock eliminated - using authentic gpt-4o-mini valid_response
+        mock_dataset_manager.execute_oracle_query.return_value = valid_response
         
         result = await oracle_base_agent.oracle_tools.query_oracle_dataset(
             query_type="card_inquiry",
@@ -304,18 +290,19 @@ class TestOracleTools:
     """Tests spécifiques pour la classe OracleTools."""
     
     @pytest.fixture
-    async def mock_dataset_manager(self):
+    def mock_dataset_manager(self):
         """DatasetAccessManager mocké pour les tests OracleTools."""
         manager = Mock(spec=DatasetAccessManager)
-        manager.execute_oracle_query = await self._create_authentic_gpt4o_mini_instance()
-        manager.validate_agent_access = await self._create_authentic_gpt4o_mini_instance()
+        manager.execute_oracle_query = AsyncMock()
+        manager.validate_agent_access = Mock()
         return manager
     
     @pytest.fixture
     def oracle_tools(self, mock_dataset_manager):
         """Instance OracleTools pour les tests."""
         return OracleTools(
-            dataset_manager=mock_dataset_manager
+            dataset_manager=mock_dataset_manager,
+            agent_name="TestAgent"
         )
     
     def test_oracle_tools_initialization(self, oracle_tools, mock_dataset_manager):
@@ -332,7 +319,7 @@ class TestOracleTools:
             data={"parsed": True},
             query_type=QueryType.DATASET_ACCESS
         )
-        mock_dataset_manager.execute_oracle_query# Mock eliminated - using authentic gpt-4o-mini mock_response
+        mock_dataset_manager.execute_oracle_query.return_value = mock_response
         
         # Test avec JSON valide
         result = await oracle_tools.query_oracle_dataset(
@@ -365,7 +352,7 @@ class TestOracleTools:
             OracleResponse(authorized=True, message="Première requête", data={"id": 1}, query_type=QueryType.CARD_INQUIRY),
             OracleResponse(authorized=True, message="Deuxième requête", data={"id": 2}, query_type=QueryType.GAME_STATE),
         ]
-        mock_dataset_manager.execute_oracle_query# Mock eliminated - using authentic gpt-4o-mini responses
+        mock_dataset_manager.execute_oracle_query.side_effect = responses
         
         # Exécution de requêtes multiples
         result1 = await oracle_tools.query_oracle_dataset("card_inquiry", '{"card": "Test1"}')
