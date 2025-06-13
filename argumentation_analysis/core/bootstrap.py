@@ -172,7 +172,28 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
         # actual_env_path = current_project_root / "argumentation_analysis" / ".env"
 
     if actual_env_path.exists():
-        load_dotenv(dotenv_path=actual_env_path, override=True)
+        # Remplacement de load_dotenv pour éviter les popups sur Windows
+        # en lisant manuellement le fichier .env
+        try:
+            with open(actual_env_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    if '=' in line:
+                        key, value = line.split('=', 1)
+                        key = key.strip()
+                        value = value.strip()
+                        # Supprimer les guillemets optionnels autour de la valeur
+                        if (value.startswith('"') and value.endswith('"')) or \
+                           (value.startswith("'") and value.endswith("'")):
+                            value = value[1:-1]
+                        
+                        if key: # S'assurer que la clé n'est pas vide
+                            os.environ[key] = value
+        except Exception as e:
+            logger.error(f"Erreur lors de la lecture manuelle du fichier .env: {e}")
+
         logger.info(f"Variables d'environnement chargées depuis : {actual_env_path}")
         context.config['OPENAI_API_KEY'] = os.getenv("OPENAI_API_KEY")
         context.config['TEXT_CONFIG_PASSPHRASE'] = os.getenv("TEXT_CONFIG_PASSPHRASE")

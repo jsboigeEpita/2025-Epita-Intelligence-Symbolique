@@ -37,137 +37,54 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
     }
   });
 
-  test('Interface Simple - Vérification accessibilité', async ({ page }) => {
-    console.log('🔧 Test Interface Simple sur port 3001');
-    
-    try {
-      // Le port de l'interface simple n'est plus utilisé, on utilise FRONTEND_URL
-      await page.goto(process.env.FRONTEND_URL || `http://localhost:3000`);
-      
-      // Vérifier les éléments de base
-      await expect(page.locator('body')).toBeVisible();
-      
-      console.log('✅ Interface Simple accessible');
-      
-    } catch (error) {
-      console.log('⚠️ Interface Simple non accessible sur 3001:', error.message);
-      
-      // Essayer sur le port par défaut 3000 si elle n'est pas sur 3001
-      try {
-        await page.goto(process.env.FRONTEND_URL || `http://localhost:3000`);
-        await expect(page.locator('body')).toBeVisible();
-        console.log('✅ Interface Simple trouvée sur port 3000');
-      } catch (error2) {
-        console.log('❌ Interface Simple complètement inaccessible:', error2.message);
-      }
-    }
-  });
+  // This test is obsolete as the simple interface on port 3001 is no longer in use.
+  // test('Interface Simple - Vérification accessibilité', ...);
 
   test('API Status - Validation des endpoints', async ({ request }) => {
     console.log('🔌 Test des endpoints API');
-    
-    const ports = [3000, 3001];
-    let workingPorts = [];
-    
-    for (const port of ports) {
-      try {
-        const response = await request.get(`${process.env.BACKEND_URL}/flask/api/status`);
-        
-        if (response.ok()) {
-          const statusData = await response.json();
-          workingPorts.push({
-            port: port,
-            status: statusData.status,
-            services: statusData.services
-          });
-          console.log(`✅ Port ${port}: ${statusData.status}`);
+    let isApiHealthy = false;
+    try {
+      // The API endpoint is unique, no need to loop over frontend ports.
+      const response = await request.get(`${process.env.BACKEND_URL}/flask/api/health`);
+      if (response.ok()) {
+        const statusData = await response.json();
+        if (statusData.status === 'ok') {
+          isApiHealthy = true;
         }
-      } catch (error) {
-        console.log(`❌ Port ${port}: Non accessible`);
+        console.log(`✅ API Health Check: ${statusData.status}`);
       }
+    } catch (error) {
+      console.log(`❌ API Health Check: Non accessible - ${error.message}`);
     }
-    
-    // Au moins une interface doit être accessible
-    expect(workingPorts.length).toBeGreaterThan(0);
-    console.log(`✅ ${workingPorts.length} interface(s) fonctionnelle(s)`);
+    expect(isApiHealthy).toBe(true);
   });
 
   test('API Examples - Validation des exemples', async ({ request }) => {
     console.log('📚 Test des exemples API');
-    
-    const ports = [3000, 3001];
     let examplesFound = false;
-    
-    for (const port of ports) {
-      try {
-        const response = await request.get(`${process.env.BACKEND_URL}/flask/api/examples`);
-        
-        if (response.ok()) {
-          const examplesData = await response.json();
-          
-          if (examplesData.examples && examplesData.examples.length > 0) {
-            examplesFound = true;
-            console.log(`✅ Port ${port}: ${examplesData.examples.length} exemples trouvés`);
-            
-            // Vérifier la structure des exemples
-            const firstExample = examplesData.examples[0];
-            expect(firstExample).toHaveProperty('title');
-            expect(firstExample).toHaveProperty('text');
-            expect(firstExample).toHaveProperty('type');
-          }
+    try {
+      const response = await request.get(`${process.env.BACKEND_URL}/flask/api/examples`);
+      if (response.ok()) {
+        const examplesData = await response.json();
+        if (examplesData.examples && examplesData.examples.length > 0) {
+          examplesFound = true;
+          console.log(`✅ ${examplesData.examples.length} exemples trouvés`);
+          // Vérifier la structure des exemples
+          const firstExample = examplesData.examples[0];
+          expect(firstExample).toHaveProperty('title');
+          expect(firstExample).toHaveProperty('text');
+          expect(firstExample).toHaveProperty('type');
         }
-      } catch (error) {
-        console.log(`❌ Port ${port}: Exemples non accessibles`);
       }
+    } catch (error) {
+      console.log(`❌ Exemples API non accessibles: ${error.message}`);
     }
-    
     expect(examplesFound).toBe(true);
   });
 
-  test('ServiceManager - Test d\'intégration', async ({ request }) => {
-    console.log('⚙️ Test intégration ServiceManager');
-    
-    let serviceManagerActive = false;
-    
-    const ports = [3000, 3001];
-    
-    for (const port of ports) {
-      try {
-        const response = await request.get(`${process.env.BACKEND_URL}/flask/api/status`);
-        
-        if (response.ok()) {
-          const statusData = await response.json();
-          
-          if (statusData.services && statusData.services.service_manager === 'active') {
-            serviceManagerActive = true;
-            console.log(`✅ Port ${port}: ServiceManager actif`);
-            
-            // Test d'analyse simple pour vérifier l'intégration
-            const analysisResponse = await request.post(`${process.env.BACKEND_URL}/flask/api/analyze`, {
-              data: {
-                text: 'Test de régression ServiceManager',
-                analysis_type: 'comprehensive'
-              }
-            });
-            
-            if (analysisResponse.ok()) {
-              const analysisData = await analysisResponse.json();
-              console.log(`✅ Port ${port}: Analyse ServiceManager réussie`);
-              
-              // Vérifier la structure de réponse
-              expect(analysisData).toHaveProperty('status');
-              expect(analysisData).toHaveProperty('results');
-            }
-          }
-        }
-      } catch (error) {
-        console.log(`❌ Port ${port}: Erreur ServiceManager`);
-      }
-    }
-    
-    // ServiceManager devrait être disponible sur au moins une interface
-    expect(serviceManagerActive).toBe(true);
-  });
+  // This test is obsolete as the /api/status endpoint and service_manager property have been removed.
+  // The health check is now at /api/health.
+  // test('ServiceManager - Test d\'intégration', ...);
 
   test('Interface React - Test fonctionnalité complète', async ({ page }) => {
     console.log('🎯 Test fonctionnalité complète Interface React');
@@ -262,66 +179,42 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
     }
   });
 
-  test('Régression - Validation des anciennes fonctionnalités', async ({ request }) => {
-    console.log('🔍 Test de régression des fonctionnalités');
+  test('Régression - Validation des endpoints critiques', async ({ request }) => {
+    console.log('🔍 Test de régression des endpoints');
     
-    const regressionResults = {
-      statusEndpoint: false,
-      examplesEndpoint: false,
-      analysisEndpoint: false,
-      serviceManagerIntegration: false
+    const results = {
+      health: false,
+      examples: false,
+      analyze: false
     };
-    
-    const ports = [3000, 3001];
-    
-    for (const port of ports) {
-      try {
-        // Test endpoint status
-        const statusResponse = await request.get(`${process.env.BACKEND_URL}/flask/api/status`);
-        if (statusResponse.ok()) {
-          regressionResults.statusEndpoint = true;
-          
-          const statusData = await statusResponse.json();
-          if (statusData.services && statusData.services.service_manager) {
-            regressionResults.serviceManagerIntegration = true;
-          }
-        }
-        
-        // Test endpoint examples
-        const examplesResponse = await request.get(`${process.env.BACKEND_URL}/flask/api/examples`);
-        if (examplesResponse.ok()) {
-          regressionResults.examplesEndpoint = true;
-        }
-        
-        // Test endpoint analysis
-        const analysisResponse = await request.post(`${process.env.BACKEND_URL}/flask/api/analyze`, {
-          data: {
-            text: 'Test de non-régression',
-            analysis_type: 'comprehensive'
-          }
-        });
-        if (analysisResponse.ok()) {
-          regressionResults.analysisEndpoint = true;
-        }
-        
-      } catch (error) {
-        console.log(`Port ${port} non testé:`, error.message);
+
+    try {
+      // Test health endpoint
+      const healthRes = await request.get(`${process.env.BACKEND_URL}/flask/api/health`);
+      if (healthRes.ok()) results.health = true;
+
+      // Test examples endpoint
+      const examplesRes = await request.get(`${process.env.BACKEND_URL}/flask/api/examples`);
+      if (examplesRes.ok() && (await examplesRes.json()).examples.length > 0) {
+        results.examples = true;
       }
+
+      // Test analysis endpoint
+      const analyzeRes = await request.post(`${process.env.BACKEND_URL}/flask/api/analyze`, {
+        data: { text: 'test', analysis_type: 'comprehensive' }
+      });
+      if (analyzeRes.ok()) results.analyze = true;
+
+    } catch (error) {
+      console.log(`❌ Erreur durant le test de régression API: ${error.message}`);
     }
-    
+
     // Vérifications de non-régression
-    expect(regressionResults.statusEndpoint).toBe(true);
-    expect(regressionResults.examplesEndpoint).toBe(true);
-    expect(regressionResults.analysisEndpoint).toBe(true);
+    expect(results.health).toBe(true);
+    expect(results.examples).toBe(true);
+    expect(results.analyze).toBe(true);
     
-    console.log('✅ Aucune régression détectée sur les fonctionnalités critiques');
-    
-    // ServiceManager est souhaitable mais pas critique
-    if (regressionResults.serviceManagerIntegration) {
-      console.log('✅ ServiceManager intégré et fonctionnel');
-    } else {
-      console.log('⚠️ ServiceManager non détecté - mode dégradé possible');
-    }
+    console.log('✅ Aucune régression détectée sur les endpoints critiques.');
   });
 
 });

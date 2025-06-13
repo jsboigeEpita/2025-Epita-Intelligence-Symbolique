@@ -109,6 +109,14 @@ try:
     from fastapi import FastAPI # Import déplacé ici
     # Créer une instance de FastAPI comme application principale
     fastapi_app = FastAPI()
+    from fastapi.middleware.cors import CORSMiddleware
+    fastapi_app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Permissif pour le développement, à restreindre en production
+        allow_credentials=True,
+        allow_methods=["*"], # Autorise toutes les méthodes
+        allow_headers=["*"], # Autorise tous les headers
+    )
 
     # Monter l'application Flask (WSGI) sur un sous-chemin pour éviter les conflits de routes.
     fastapi_app.mount("/flask", WSGIMiddleware(flask_app_instance_for_init))
