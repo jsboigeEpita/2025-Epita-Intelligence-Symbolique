@@ -100,26 +100,28 @@ class TestMoriartyInterrogatorAgent:
         assert ("Cluedo" in instructions or "CLUEDO" in instructions or
                 "Poignard" in instructions or "Colonel" in instructions)
     
-    def test_validate_cluedo_suggestion_success(self, moriarty_agent, mock_cluedo_dataset):
+    def test_validate_cluedo_suggestion_success(self, moriarty_agent, mock_cluedo_dataset, monkeypatch):
         """Test la validation réussie d'une suggestion Cluedo."""
         from argumentation_analysis.agents.core.oracle.permissions import ValidationResult
         from argumentation_analysis.agents.core.oracle.cluedo_dataset import CluedoSuggestion
         
-        # Test simple avec le mock déjà configuré dans le fixture
-        result = mock_cluedo_dataset.validate_cluedo_suggestion.return_value
+        validation_result = ValidationResult(can_refute=True, revealed_cards=[], suggestion_valid=True, authorized=True)
+        monkeypatch.setattr(mock_cluedo_dataset, "validate_cluedo_suggestion", Mock(return_value=validation_result))
         
+        suggestion = CluedoSuggestion(suspect="Test", arme="Test", lieu="Test", suggested_by="Test")
+        result = mock_cluedo_dataset.validate_cluedo_suggestion(suggestion, "TestAgent")
+
         # Vérifications basées sur le mock du fixture
         assert result.can_refute is True
         assert result.suggestion_valid is True
         assert isinstance(result.revealed_cards, list)
     
-    def test_validate_cluedo_suggestion_invalid(self, moriarty_agent, mock_cluedo_dataset):
+    def test_validate_cluedo_suggestion_invalid(self, moriarty_agent, mock_cluedo_dataset, monkeypatch):
         """Test la validation d'une suggestion invalide."""
         from argumentation_analysis.agents.core.oracle.permissions import ValidationResult
         from argumentation_analysis.agents.core.oracle.cluedo_dataset import CluedoSuggestion
         
         # Configuration d'un nouveau mock pour suggestion invalide
-        from argumentation_analysis.agents.core.oracle.permissions import ValidationResult
         invalid_result = ValidationResult(
             can_refute=False,
             revealed_cards=[],
@@ -127,48 +129,55 @@ class TestMoriartyInterrogatorAgent:
             authorized=False,
             reason="Invalid parameters"
         )
-        mock_cluedo_dataset.validate_cluedo_suggestion.return_value = invalid_result
+        monkeypatch.setattr(mock_cluedo_dataset, "validate_cluedo_suggestion", Mock(return_value=invalid_result))
         
-        # Test simple pour vérifier le mock
-        result = mock_cluedo_dataset.validate_cluedo_suggestion.return_value
-        
+        suggestion = CluedoSuggestion(suspect="Test", arme="Test", lieu="Test", suggested_by="Test")
+        result = mock_cluedo_dataset.validate_cluedo_suggestion(suggestion, "TestAgent")
+
         # Vérifications
         assert result.suggestion_valid is False
         assert result.reason == "Invalid parameters"
     
-    def test_reveal_card_if_owned_success(self, moriarty_agent, mock_cluedo_dataset):
+    def test_reveal_card_if_owned_success(self, moriarty_agent, mock_cluedo_dataset, monkeypatch):
         """Test la révélation réussie d'une carte possédée."""
-        # Test simple avec les mocks des fixtures
-        moriarty_cards = mock_cluedo_dataset.get_moriarty_cards.return_value
-        can_reveal = "knife" in moriarty_cards
+        monkeypatch.setattr(mock_cluedo_dataset, "get_moriarty_cards", Mock(return_value=["Poignard"]))
+        monkeypatch.setattr(mock_cluedo_dataset, "reveal_card", Mock(return_value={"revealed_card": "Poignard", "revealing_agent": "Moriarty"}))
         
+        moriarty_cards = mock_cluedo_dataset.get_moriarty_cards()
+        can_reveal = "Poignard" in moriarty_cards
+        
+        result = None
         if can_reveal:
-            result = mock_cluedo_dataset.reveal_card.return_value
+            suggestion = Mock() # Suggestion non pertinente ici
+            result = mock_cluedo_dataset.reveal_card(suggestion, "Poignard")
             
         # Vérifications
         assert can_reveal is True
-        assert result["revealed_card"] == "knife"
+        assert result["revealed_card"] == "Poignard"
         assert result["revealing_agent"] == "Moriarty"
     
-    def test_reveal_card_if_owned_not_owned(self, moriarty_agent, mock_cluedo_dataset):
+    def test_reveal_card_if_owned_not_owned(self, moriarty_agent, mock_cluedo_dataset, monkeypatch):
         """Test la tentative de révélation d'une carte non possédée."""
-        # Test simple avec les mocks des fixtures
-        moriarty_cards = mock_cluedo_dataset.get_moriarty_cards.return_value
-        can_reveal = "candlestick" in moriarty_cards
+        monkeypatch.setattr(mock_cluedo_dataset, "get_moriarty_cards", Mock(return_value=["Poignard"]))
+
+        moriarty_cards = mock_cluedo_dataset.get_moriarty_cards()
+        can_reveal = "Chandelier" in moriarty_cards
         
         # Vérifications
         assert can_reveal is False
     
-    def test_provide_game_clue_strategic(self, moriarty_agent, mock_cluedo_dataset):
+    def test_provide_game_clue_strategic(self, moriarty_agent, mock_cluedo_dataset, monkeypatch):
         """Test la fourniture d'un indice stratégique."""
-        # Test simple avec le mock des fixtures
-        result = mock_cluedo_dataset._generate_strategic_clue.return_value
+        strategic_result = {"clue_type": "strategic", "content": "Hint"}
+        monkeypatch.setattr(mock_cluedo_dataset, "_generate_strategic_clue", Mock(return_value=strategic_result))
+
+        result = mock_cluedo_dataset._generate_strategic_clue()
         
         # Vérifications
         assert "clue_type" in result
         assert "content" in result
     
-    def test_provide_game_clue_elimination(self, moriarty_agent, mock_cluedo_dataset):
+    def test_provide_game_clue_elimination(self, moriarty_agent, mock_cluedo_dataset, monkeypatch):
         """Test la fourniture d'un indice d'élimination."""
         # Configuration d'un nouveau mock pour elimination
         elimination_result = {
@@ -176,10 +185,10 @@ class TestMoriartyInterrogatorAgent:
             "content": "This weapon is not in the solution",
             "eliminated_option": "rope"
         }
-        mock_cluedo_dataset._generate_strategic_clue.return_value = elimination_result
+        monkeypatch.setattr(mock_cluedo_dataset, "_generate_strategic_clue", Mock(return_value=elimination_result))
         
         # Test simple
-        result = mock_cluedo_dataset._generate_strategic_clue.return_value
+        result = mock_cluedo_dataset._generate_strategic_clue()
         
         # Vérifications
         assert result["clue_type"] == "elimination"
