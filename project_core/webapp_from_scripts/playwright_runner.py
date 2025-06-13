@@ -22,7 +22,7 @@ class PlaywrightRunner:
         self.enabled = config.get('enabled', True)
         self.browser = config.get('browser', 'chromium')
         self.headless = config.get('headless', True)
-        self.timeout_ms = config.get('timeout_ms', 10000)
+        self.timeout_ms = config.get('timeout_ms', 30000)
         self.test_paths = config.get('test_paths', ['tests_playwright/tests/'])
         self.screenshots_dir = Path(config.get('screenshots_dir', 'logs/screenshots'))
         self.traces_dir = Path(config.get('traces_dir', 'logs/traces'))
@@ -33,8 +33,7 @@ class PlaywrightRunner:
         self.last_results: Optional[Dict[str, Any]] = None
 
     async def run_tests(self, test_paths: List[str] = None,
-                        runtime_config: Dict[str, Any] = None,
-                        pytest_args: List[str] = None) -> bool:
+                        runtime_config: Dict[str, Any] = None) -> bool:
         if not self.enabled:
             self.logger.info("Tests Playwright désactivés")
             return True
@@ -47,9 +46,9 @@ class PlaywrightRunner:
 
         try:
             await self._prepare_test_environment(effective_config)
-            playwright_command_str = self._build_playwright_command_string(
-                test_paths, effective_config, pytest_args or [])
-            result = await self._execute_tests(playwright_command_str, effective_config)
+            playwright_command_parts = self._build_playwright_command_string(
+                test_paths, effective_config)
+            result = await self._execute_tests(playwright_command_parts, effective_config)
             success = await self._analyze_results(result)
             return success
         except Exception as e:
@@ -84,57 +83,60 @@ class PlaywrightRunner:
         self.logger.info(f"Variables test configurées: {env_vars}")
 
     def _build_playwright_command_string(self, test_paths: List[str],
-                                         config: Dict[str, Any],
-                                         pytest_args: List[str]) -> str:
-        """Construit la chaîne de commande 'pytest ...' pour les tests Playwright Python."""
-        parts = ['pytest']  # Changement pour utiliser pytest
-        
+                                         config: Dict[str, Any]) -> List[str]:
+        """Construit la liste de commande 'npx playwright test ...'."""
+        # Sur Windows, npx est souvent dans le PATH, mais on peut le rendre plus robuste
+        # en utilisant le chemin direct si on le connaît. Pour l'instant, on se fie au PATH.
+        npx_executable = 'npx'
+
+        parts = [npx_executable, 'playwright', 'test']
         parts.extend(test_paths)
         
         if not config.get('headless', True):
-            parts.append('--headed')  # Option standard pour pytest-playwright
-        
-        # Le nom du navigateur (config['browser']) est généralement géré par pytest-playwright
-        # via des fixtures ou des variables d'environnement (déjà définies dans _prepare_test_environment).
-        # Ajouter --browser ici pourrait être redondant ou entrer en conflit.
-        # Exemple: pytest-playwright utilise --browser chromium --browser firefox etc.
-        # parts.append(f"--browser {config['browser']}") # Ne pas ajouter pour l'instant
+            parts.append('--headed')
+            
+        # Lorsque le fichier de configuration utilise des "projets",
+        # il faut utiliser --project au lieu de --browser.
+        parts.append(f"--project={config['browser']}")
+        parts.append(f"--timeout={config['timeout_ms']}")
 
-        # La gestion du timeout global pour pytest est différente.
-        # pytest-playwright a son propre mécanisme de timeout.
-        # L'option --timeout de npx playwright test n'a pas d'équivalent direct simple pour pytest.
-        # Le timeout_ms de la config est déjà utilisé pour les variables d'environnement.
-        # Ne pas ajouter de --timeout global à la commande pytest pour l'instant.
+        self.logger.info(f"Construction de la commande 'npx playwright': {parts}")
+        return parts
 
-        if pytest_args:
-            parts.extend(pytest_args)
-
-        self.logger.info(f"Construction de la commande Pytest. Config headless: {config.get('headless', True)}, Browser: {config.get('browser')}")
-        return ' '.join(parts)
-
-    async def _execute_tests(self, playwright_command_str: str,
+    async def _execute_tests(self, playwright_command_parts: List[str],
                            config: Dict[str, Any]) -> subprocess.CompletedProcess:
-        # La commande n'a plus besoin du 'cd', on passe le répertoire de travail directement.
-        self.logger.info(f"Commande à exécuter via EnvironmentManager: {playwright_command_str}")
         
-        # Le répertoire de travail doit être celui où se trouve package.json,
-        # ou la racine du projet si les chemins de test sont relatifs à la racine.
-        # Les chemins de test comme 'tests/functional/...' sont relatifs à la racine du projet.
+        self.logger.info(f"Commande à exécuter: {' '.join(playwright_command_parts)}")
+        
+        # Le répertoire de travail doit être la racine du projet
         test_dir = '.'
 
         try:
-            # Utilisation de asyncio.to_thread pour ne pas bloquer la boucle
-            result = await asyncio.to_thread(
-                self.env_manager.run_in_conda_env,
-                playwright_command_str,
+            # Utilisation de asyncio.create_subprocess_shell pour une meilleure gestion async
+            # On passe une chaîne de caractères à shell
+            command_str = ' '.join(playwright_command_parts)
+            process = await asyncio.create_subprocess_shell(
+                command_str,
                 cwd=test_dir,
-                capture_output=True
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
             )
+            
+            stdout, stderr = await process.communicate()
+            
+            result = subprocess.CompletedProcess(
+                args=playwright_command_parts,
+                returncode=process.returncode,
+                stdout=stdout.decode('utf-8', errors='ignore'),
+                stderr=stderr.decode('utf-8', errors='ignore')
+            )
+            
             self.logger.info(f"Tests terminés - Code retour: {result.returncode}")
             return result
+            
         except Exception as e:
-            self.logger.error(f"Erreur majeure lors de l'appel à EnvironmentManager: {e}", exc_info=True)
-            return subprocess.CompletedProcess(args=playwright_command_str, returncode=1, stdout="", stderr=str(e))
+            self.logger.error(f"Erreur majeure lors de l'exécution de la commande Playwright: {e}", exc_info=True)
+            return subprocess.CompletedProcess(args=' '.join(playwright_command_parts), returncode=1, stdout="", stderr=str(e))
 
     async def _analyze_results(self, result: subprocess.CompletedProcess) -> bool:
         success = result.returncode == 0
