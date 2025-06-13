@@ -34,10 +34,10 @@ async def test_all_group3_fixes():
     
     # Setup de base
     mock_kernel = Mock(spec=Kernel)
-    mock_kernel.add_plugin = await create_authentic_gpt4o_mini_instance()
+    mock_kernel.add_plugin = Mock()
     
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
-    mock_permission_manager = await create_authentic_gpt4o_mini_instance()
+    mock_permission_manager = Mock(spec=PermissionManager)
     mock_permission_manager.is_authorized = Mock(return_value=True)
     mock_dataset_manager.permission_manager = mock_permission_manager
     
