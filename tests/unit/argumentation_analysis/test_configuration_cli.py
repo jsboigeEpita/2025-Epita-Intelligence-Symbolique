@@ -341,6 +341,18 @@ class TestArgumentParser:
 class TestCLIIntegrationWithScripts:
     """Tests d'intégration CLI avec les scripts existants."""
     
+    @pytest.fixture
+    def mock_argv(self, mocker):
+        """Fixture pour mocker sys.argv."""
+        mock_argv_list = [
+            'script.py',
+            '--logic-type', 'modal',
+            '--mock-level', 'none',
+            '--use-real-tweety',
+            '--text', 'Command line test'
+        ]
+        return mocker.patch('sys.argv', mock_argv_list)
+
     def test_cli_integration_with_orchestration_script(self):
         """Test d'intégration avec le script d'orchestration."""
         # Simuler l'appel du script avec nouveaux arguments
@@ -378,30 +390,19 @@ class TestCLIIntegrationWithScripts:
         assert 'PowerShell' in args.text
         assert 'integration' in args.text
     
-    
     def test_cli_arguments_from_command_line(self, mock_argv):
         """Test de lecture des arguments depuis la ligne de commande."""
-        # Simuler sys.argv
-        mock_argv = [ # Mock eliminated - using authentic gpt-4o-mini
-            'script.py',
-            '--logic-type', 'modal',
-            '--mock-level', 'none',
-            '--use-real-tweety',
-            '--text', 'Command line test'
-        ]
+        # La fixture mock_argv a déjà patché sys.argv
         
-        # Test que le parser peut lire sys.argv
         parser = create_argument_parser()
         
-        # Parse des arguments sans spécifier la liste (utilise sys.argv par défaut)
-        try:
-            args = parser.parse_args(mock_argv.return_value[1:])  # Exclure le nom du script
-            assert args.logic_type == 'modal'
-            assert args.mock_level == 'none'
-            assert args.use_real_tweety is True
-        except Exception:
-            # Si erreur de parsing, test basique
-            assert len(mock_argv.return_value) > 1
+        # parser.parse_args() sans argument utilise sys.argv[1:] par défaut
+        args = parser.parse_args()
+        
+        assert args.logic_type == 'modal'
+        assert args.mock_level == 'none'
+        assert args.use_real_tweety is True
+        assert args.text == 'Command line test'
 
 
 class TestCLIBackwardCompatibility:

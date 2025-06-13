@@ -18,6 +18,46 @@ from typing import List, Dict, Any
 
 from argumentation_analysis.pipelines.advanced_rhetoric import run_advanced_rhetoric_pipeline
 
+from unittest.mock import patch
+
+MODULE_PATH = "argumentation_analysis.pipelines.advanced_rhetoric"
+
+@pytest.fixture
+def mock_tqdm(mocker):
+    """Mocks the tqdm progress bar."""
+    return mocker.patch(f"{MODULE_PATH}.tqdm")
+
+@pytest.fixture
+def mock_json_dump(mocker):
+    """Mocks json.dump."""
+    return mocker.patch(f"{MODULE_PATH}.json.dump")
+
+@pytest.fixture
+def mock_open(mocker):
+    """Mocks the built-in open function."""
+    return mocker.patch(f"{MODULE_PATH}.open")
+
+@pytest.fixture
+def mock_advanced_tools(mocker):
+    """Mocks the advanced rhetorical analysis tools."""
+    mock_complex = mocker.patch(f"{MODULE_PATH}.EnhancedComplexFallacyAnalyzer")
+    mock_contextual = mocker.patch(f"{MODULE_PATH}.EnhancedContextualFallacyAnalyzer")
+    mock_severity = mocker.patch(f"{MODULE_PATH}.EnhancedFallacySeverityEvaluator")
+    mock_result = mocker.patch(f"{MODULE_PATH}.EnhancedRhetoricalResultAnalyzer")
+    
+    # an't know what is inside so we mock it
+    mock_tools_dict = {
+        "complex_fallacy_analyzer": mock_complex.return_value,
+        "contextual_fallacy_analyzer": mock_contextual.return_value,
+        "fallacy_severity_evaluator": mock_severity.return_value,
+        "rhetorical_result_analyzer": mock_result.return_value
+    }
+    return mock_tools_dict
+
+@pytest.fixture
+def mock_analyze_single_extract(mocker):
+    """Mocks the analyze_extract_advanced function."""
+    return mocker.patch(f"{MODULE_PATH}.analyze_extract_advanced")
 @pytest.fixture
 def sample_extract_definitions() -> List[Dict[str, Any]]:
     """Fournit des définitions d'extraits pour les tests."""
@@ -60,7 +100,7 @@ def test_run_advanced_rhetoric_pipeline_success(
     mock_tqdm: MagicMock,
     mock_json_dump: MagicMock,
     mock_open: MagicMock,
-    mock_create_mocks: MagicMock,
+    mock_advanced_tools: Dict[str, MagicMock],
     mock_analyze_single_extract: MagicMock,
     sample_extract_definitions: List[Dict[str, Any]],
     sample_base_results: List[Dict[str, Any]],
@@ -73,7 +113,7 @@ def test_run_advanced_rhetoric_pipeline_success(
     mock_tqdm.return_value = mock_progress_bar_instance
     
     mock_tools_dict = {"mock_tool": "un outil"}
-    mock_create_mocks.return_value = mock_tools_dict
+    # mock_create_mocks.return_value = mock_tools_dict - Remplacé par mock_advanced_tools
     
     # Simuler les résultats de l'analyse d'un seul extrait
     def analyze_single_side_effect(extract_def, source_name, base_res, tools):
@@ -83,15 +123,15 @@ def test_run_advanced_rhetoric_pipeline_success(
     run_advanced_rhetoric_pipeline(sample_extract_definitions, sample_base_results, temp_output_file)
 
     # Vérifications
-    mock_create_mocks.assert_called_once_with(use_real_tools=False) # Doit utiliser les mocks par défaut
+    # mock_create_mocks.assert_called_once_with(use_real_tools=False) # L'appel n'existe plus
     
     assert mock_analyze_single_extract.call_count == 3 # 2 extraits pour Source1, 1 pour Source2
     
     # Vérifier les appels à analyze_extract_advanced avec les bons arguments
     calls = [
-        call(sample_extract_definitions[0]["extracts"][0], "Source1", sample_base_results[0], mock_tools_dict),
-        call(sample_extract_definitions[0]["extracts"][1], "Source1", sample_base_results[1], mock_tools_dict),
-        call(sample_extract_definitions[1]["extracts"][0], "Source2", sample_base_results[2], mock_tools_dict),
+        call(sample_extract_definitions[0]["extracts"][0], "Source1", sample_base_results[0], mock_advanced_tools),
+        call(sample_extract_definitions[0]["extracts"][1], "Source1", sample_base_results[1], mock_advanced_tools),
+        call(sample_extract_definitions[1]["extracts"][0], "Source2", sample_base_results[2], mock_advanced_tools),
     ]
     mock_analyze_single_extract.assert_has_calls(calls, any_order=False) # L'ordre est important ici
 
@@ -117,14 +157,13 @@ def test_run_advanced_rhetoric_pipeline_no_base_results(
     mock_tqdm: MagicMock,
     mock_json_dump: MagicMock,
     mock_open: MagicMock,
-    mock_create_mocks: MagicMock,
+    mock_advanced_tools: Dict[str, MagicMock],
     mock_analyze_single_extract: MagicMock,
     sample_extract_definitions: List[Dict[str, Any]],
     temp_output_file: Path
 ):
     """Teste le pipeline sans résultats de base."""
-    mock_tools_dict = {"mock_tool": "un outil"}
-    mock_create_mocks.return_value = mock_tools_dict
+    # Remplacé par la fixture mock_advanced_tools
     mock_analyze_single_extract.return_value = {"analyzed": True}
 
     run_advanced_rhetoric_pipeline(sample_extract_definitions, [], temp_output_file) # base_results est vide
@@ -144,14 +183,14 @@ def test_run_advanced_rhetoric_pipeline_extract_analysis_error(
     mock_tqdm: MagicMock,
     mock_json_dump: MagicMock,
     mock_open: MagicMock,
-    mock_create_mocks: MagicMock,
+    mock_advanced_tools: Dict[str, MagicMock],
     mock_analyze_single_extract: MagicMock, # Ce mock est celui qui lève l'exception
     sample_extract_definitions: List[Dict[str, Any]],
     temp_output_file: Path,
     caplog
 ):
     """Teste la gestion d'erreur si l'analyse d'un extrait échoue."""
-    mock_create_mocks.return_value = {} # Peu importe les outils si l'analyse échoue
+    # mock_create_mocks.return_value = {} # Remplacé par mock_advanced_tools
     
     with caplog.at_level(logging.ERROR):
         run_advanced_rhetoric_pipeline(sample_extract_definitions, [], temp_output_file)
@@ -174,7 +213,7 @@ def test_run_advanced_rhetoric_pipeline_save_error(
     mock_tqdm: MagicMock,
     mock_json_dump: MagicMock, # Ne sera pas appelé si open échoue avant
     mock_open: MagicMock,
-    mock_create_mocks: MagicMock,
+    mock_advanced_tools: Dict[str, MagicMock],
     sample_extract_definitions: List[Dict[str, Any]],
     temp_output_file: Path,
     caplog

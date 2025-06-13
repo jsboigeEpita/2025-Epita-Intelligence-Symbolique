@@ -63,16 +63,16 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
         self.state_manager = StateManagerPlugin(self.state)
         self.kernel.add_plugin(self.state_manager, "StateManager")
         
-        self.pm_agent = MagicMock(spec=Agent)
+        self.pm_agent = MagicMock()
         self.pm_agent.name = "ProjectManagerAgent"
         
-        self.pl_agent = MagicMock(spec=Agent)
+        self.pl_agent = MagicMock()
         self.pl_agent.name = "PropositionalLogicAgent"
         
-        self.informal_agent = MagicMock(spec=Agent)
+        self.informal_agent = MagicMock()
         self.informal_agent.name = "InformalAnalysisAgent"
         
-        self.extract_agent = MagicMock(spec=Agent)
+        self.extract_agent = MagicMock()
         self.extract_agent.name = "ExtractAgent"
         
         self.agents = [self.pm_agent, self.pl_agent, self.informal_agent, self.extract_agent]
@@ -296,16 +296,16 @@ class TestAgentInteractionWithErrors: # Suppression de l'héritage AsyncTestCase
         self.state_manager = StateManagerPlugin(self.state)
         self.kernel.add_plugin(self.state_manager, "StateManager")
         
-        self.pm_agent = MagicMock(spec=Agent)
+        self.pm_agent = MagicMock()
         self.pm_agent.name = "ProjectManagerAgent"
         
-        self.pl_agent = MagicMock(spec=Agent)
+        self.pl_agent = MagicMock()
         self.pl_agent.name = "PropositionalLogicAgent"
         
-        self.informal_agent = MagicMock(spec=Agent)
+        self.informal_agent = MagicMock()
         self.informal_agent.name = "InformalAnalysisAgent"
         
-        self.extract_agent = MagicMock(spec=Agent)
+        self.extract_agent = MagicMock()
         self.extract_agent.name = "ExtractAgent"
         
         self.agents = [self.pm_agent, self.pl_agent, self.informal_agent, self.extract_agent]

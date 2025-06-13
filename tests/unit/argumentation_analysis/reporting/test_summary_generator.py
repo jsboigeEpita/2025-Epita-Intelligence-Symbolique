@@ -15,6 +15,52 @@ from pathlib import Path
 from typing import List, Dict, Any
 from unittest.mock import MagicMock
 
+from unittest.mock import patch
+
+MODULE_PATH = "argumentation_analysis.reporting.summary_generator"
+
+@pytest.fixture
+def mock_json_dump(mocker):
+    """Mocks json.dump."""
+    return mocker.patch(f"{MODULE_PATH}.json.dump")
+
+@pytest.fixture
+def mock_open_global_json(mocker):
+    """Mocks the built-in open for the global json report."""
+    return mocker.patch(f"{MODULE_PATH}.open")
+
+@pytest.fixture
+def mock_open(mocker):
+    """Mocks the built-in open function."""
+    return mocker.patch(f"{MODULE_PATH}.open")
+
+@pytest.fixture
+def mock_generate_global_summary(mocker):
+    """Mocks generate_global_summary_report."""
+    return mocker.patch(f"{MODULE_PATH}.generate_global_summary_report")
+
+@pytest.fixture
+def mock_generate_markdown(mocker):
+    """Mocks generate_markdown_summary_for_analysis."""
+    return mocker.patch(f"{MODULE_PATH}.generate_markdown_summary_for_analysis")
+
+@pytest.fixture
+def mock_generate_analysis(mocker):
+    """Mocks generate_rhetorical_analysis_for_extract."""
+    return mocker.patch(f"{MODULE_PATH}.generate_rhetorical_analysis_for_extract")
+
+# Fixtures courtes pour le test avec les entrées vides
+@pytest.fixture
+def mock_g_global(mock_generate_global_summary):
+    return mock_generate_global_summary
+
+@pytest.fixture
+def mock_g_md(mock_generate_markdown):
+    return mock_generate_markdown
+
+@pytest.fixture
+def mock_g_analysis(mock_generate_analysis):
+    return mock_generate_analysis
 from argumentation_analysis.reporting.summary_generator import (
     run_summary_generation_pipeline,
     generate_rhetorical_analysis_for_extract, # Pourrait être testé plus en détail
