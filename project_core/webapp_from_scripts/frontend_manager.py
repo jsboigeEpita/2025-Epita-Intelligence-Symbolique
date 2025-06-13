@@ -96,10 +96,7 @@ class FrontendManager:
             # Démarrage serveur React
             self.logger.info(f"Démarrage frontend: {self.start_command}")
             
-            if sys.platform == "win32":
-                cmd = ['cmd', '/c'] + self.start_command.split()
-            else:
-                cmd = ['sh', '-c', self.start_command]
+            # Ce bloc est maintenant géré ci-dessous avec une logique plus robuste.
             
             # Préparation des fichiers de log pour le frontend
             log_dir = Path("logs")
@@ -170,7 +167,7 @@ class FrontendManager:
                 }
                 
         except Exception as e:
-            self.logger.error(f"Erreur démarrage frontend: {e}")
+            self.logger.error(f"Erreur démarrage frontend: {e}", exc_info=True)
             return {
                 'success': False,
                 'error': str(e),
