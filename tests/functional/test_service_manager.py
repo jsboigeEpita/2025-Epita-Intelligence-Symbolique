@@ -26,6 +26,7 @@ import socket
 import subprocess
 import threading
 from pathlib import Path
+from unittest.mock import patch
 
 
 # Import des modules à tester
@@ -95,17 +96,24 @@ class TestPortManager:
     def test_find_available_port_all_occupied(self):
         """Test quand tous les ports sont occupés"""
         servers = []
+        start_port = 9100
         try:
             # Occuper une plage de ports
-            start_port = 9100
             for i in range(5):
-                server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                server.bind(('localhost', start_port + i))
-                server.listen(1)
-                servers.append(server)
-            
+                try:
+                    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    server.bind(('localhost', start_port + i))
+                    server.listen(1)
+                    servers.append(server)
+                except OSError as e:
+                    self.logger.warning(f"Port {start_port + i} déjà utilisé, impossible de le lier pour le test. Erreur: {e}")
+    
+            # Si nous n'avons pu lier aucun port, le test n'est pas pertinent.
+            if not servers:
+                pytest.skip("Impossible de lier des ports pour ce test, ils sont peut-être déjà tous occupés.")
+    
             # Tenter de trouver un port dans cette plage
-            found_port = self.port_manager.find_available_port(start_port, max_attempts=5)
+            found_port = self.port_manager.find_available_port(start_port, max_attempts=len(servers))
             assert found_port is None
             
         finally:
@@ -188,6 +196,7 @@ class TestProcessCleanup:
         
         assert handler_called == True
     
+    @pytest.mark.asyncio
     async def test_stop_backend_processes_simulation(self):
         """Test arrêt processus backend (simulation)"""
         # Créer un processus Python simulant app.py
@@ -266,6 +275,7 @@ class TestServiceManager:
         assert "test-service" in self.service_manager.services
         assert self.service_manager.services["test-service"].port == 8888
     
+    @pytest.mark.asyncio
     async def test_service_health_check_mock(self):
         """Test health check avec mock"""
         with patch('requests.get') as mock_get:

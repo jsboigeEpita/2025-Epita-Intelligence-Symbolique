@@ -369,6 +369,12 @@ class UnifiedWebOrchestrator:
                 self.add_trace("[ERROR] ECHEC LANCEMENT NAVIGATEUR", "Impossible d'exécuter les tests", status="error")
                 return False
 
+        # Pause de stabilisation pour le serveur de développement React
+        if self.app_info.frontend_url:
+            delay = self.config.get('frontend', {}).get('stabilization_delay_s', 10)
+            self.add_trace("[STABILIZE] PAUSE STABILISATION", f"Attente de {delay}s pour que le frontend (Create React App) se stabilise...")
+            await asyncio.sleep(delay)
+
         self.add_trace("[TEST] EXECUTION TESTS PLAYWRIGHT", f"Tests: {test_paths or 'tous'}")
         
         test_config = {
