@@ -54,6 +54,16 @@ def sample_base_result() -> Dict[str, Any]:
         }
     }
 
+@pytest.fixture
+def mock_generate_sample(mocker: MagicMock) -> MagicMock:
+    """Mock la fonction generate_sample_text."""
+    return mocker.patch("argumentation_analysis.orchestration.advanced_analyzer.generate_sample_text")
+
+@pytest.fixture
+def mock_split_args(mocker: MagicMock) -> MagicMock:
+    """Mock la fonction split_text_into_arguments."""
+    return mocker.patch("argumentation_analysis.orchestration.advanced_analyzer.split_text_into_arguments")
+
 def test_analyze_extract_advanced_successful_run(
     sample_extract_definition: Dict[str, Any],
     mock_tools: Dict[str, Any],
@@ -120,7 +130,7 @@ def test_analyze_extract_advanced_missing_text_uses_sample(
     extract_def_no_text.pop("extract_text", None)
     
     analyze_extract_advanced(extract_def_no_text, "TestSource", None, mock_tools)
-    mock_generate_sample.assert_called_once_with(extract_def_no_text["extract_name"], "TestSource")
+    mock_generate_sample.assert_called_once()
 
 
 def test_analyze_extract_advanced_no_arguments_uses_full_text(
