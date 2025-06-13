@@ -1,6 +1,7 @@
 # core/llm_service.py
 import logging
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
 from typing import Union # Pour type hint
@@ -32,12 +33,16 @@ def create_llm_service(service_id: str = "global_llm_service", force_mock: bool 
     """
     logger.critical("<<<<< get_llm_service FUNCTION CALLED >>>>>")
     logger.info(f"--- Configuration du Service LLM ({service_id}) ---")
-    cwd = os.getcwd()
-    logger.info(f"Current working directory for dotenv: {cwd}")
-    dotenv_path = os.path.join(cwd, '.env')
-    logger.info(f"Attempting to load .env from explicit path: {dotenv_path}")
-    success = load_dotenv(dotenv_path=dotenv_path, override=True, verbose=True) # Ajout de verbose=True
-    logger.info(f"load_dotenv success with explicit path '{dotenv_path}': {success}")
+    
+    # Déterminer la racine du projet à partir de l'emplacement de ce fichier
+    # pour assurer une découverte fiable du fichier .env
+    project_root = Path(__file__).resolve().parent.parent.parent
+    dotenv_path = project_root / '.env'
+    logger.info(f"Project root determined from __file__: {project_root}")
+    logger.info(f"Attempting to load .env from absolute path: {dotenv_path}")
+    
+    success = load_dotenv(dotenv_path=dotenv_path, override=True, verbose=True)
+    logger.info(f"load_dotenv success with absolute path '{dotenv_path}': {success}")
 
     api_key = os.getenv("OPENAI_API_KEY")
     logger.info(f"Value of api_key directly from os.getenv: '{api_key}'")
