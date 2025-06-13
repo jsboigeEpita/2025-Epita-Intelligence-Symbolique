@@ -5,6 +5,11 @@ from pathlib import Path
 from dotenv import load_dotenv
 import logging
 from typing import Dict, List, Any # Ajout pour List et Dict dans l'adaptateur
+import threading
+
+# --- Verrou global pour l'initialisation de la JVM ---
+_JVM_INITIALIZED = False
+_JVM_INIT_LOCK = threading.Lock()
 
 # Configuration du logger pour ce module
 logger = logging.getLogger(__name__)
@@ -185,20 +190,27 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
     else:
         logger.warning(f"Fichier .env non trouvé à {actual_env_path}. Les services dépendant de variables d'environnement pourraient ne pas fonctionner.")
 
-    if initialize_jvm_func:
-        logger.info("Initialisation de la JVM via jvm_setup.initialize_jvm()...")
-        try:
-            context.jvm_initialized = initialize_jvm_func()
-            if context.jvm_initialized:
-                logger.info("JVM initialisée avec succès.")
+    global _JVM_INITIALIZED
+    with _JVM_INIT_LOCK:
+        if not _JVM_INITIALIZED:
+            if initialize_jvm_func:
+                logger.info("Initialisation de la JVM via jvm_setup.initialize_jvm()...")
+                try:
+                    context.jvm_initialized = initialize_jvm_func()
+                    if context.jvm_initialized:
+                        logger.info("JVM initialisée avec succès.")
+                        _JVM_INITIALIZED = True
+                    else:
+                        logger.error("Échec de l'initialisation de la JVM.")
+                except Exception as e:
+                    logger.error(f"Erreur lors de l'initialisation de la JVM : {e}", exc_info=True)
+                    context.jvm_initialized = False
             else:
-                logger.error("Échec de l'initialisation de la JVM.")
-        except Exception as e:
-            logger.error(f"Erreur lors de l'initialisation de la JVM : {e}", exc_info=True)
-            context.jvm_initialized = False
-    else:
-        logger.error("La fonction initialize_jvm n'a pas pu être importée. Impossible d'initialiser la JVM.")
-        context.jvm_initialized = False
+                logger.error("La fonction initialize_jvm n'a pas pu être importée. Impossible d'initialiser la JVM.")
+                context.jvm_initialized = False
+        else:
+            logger.info("JVM déjà marquée comme initialisée lors d'un appel précédent. On saute la ré-initialisation.")
+            context.jvm_initialized = True
 
     if CryptoService_class:
         logger.info("Initialisation de CryptoService...")

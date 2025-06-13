@@ -83,7 +83,7 @@ from flask import Flask, request, jsonify, redirect, url_for
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 from a2wsgi import WSGIMiddleware
-
+from fastapi import FastAPI
 
 
 # Déclarer les variables avant le bloc try pour qu'elles aient un scope global dans le module
@@ -106,7 +106,6 @@ try:
     _top_module_logger.info("--- Mounting Flask app within a FastAPI instance ---")
     sys.stderr.flush()
 
-    from fastapi import FastAPI # Import déplacé ici
     # Créer une instance de FastAPI comme application principale
     fastapi_app = FastAPI()
 

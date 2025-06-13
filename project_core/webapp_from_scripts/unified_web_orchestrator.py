@@ -769,10 +769,10 @@ def main():
             elif args.test:
                  # Pour les tests seuls, on fait un cycle complet mais sans arrêt entre les étapes.
                 if await orchestrator.start_webapp(headless, args.frontend):
-                    success = await orchestrator.run_tests(args.tests, pytest_args=unknown)
+                    success = await orchestrator.run_tests(args.tests)
             else:  # --integration par défaut
                 success = await orchestrator.full_integration_test(
-                    headless, args.frontend, args.tests, pytest_args=unknown)
+                    headless, args.frontend, args.tests)
         except KeyboardInterrupt:
             print("\n🛑 Interruption utilisateur détectée. Arrêt en cours...")
             # L'arrêt est géré par le signal handler
