@@ -1,6 +1,9 @@
 # Dépendances principales
 networkx>=2.6.0
-semantic-kernel>=1.33.0
+# ATTENTION: La version de semantic-kernel DOIT être >= 1.33.0.
+# Les versions antérieures (ex: 0.9.x) ont une API différente (ex: semantic_kernel.events)
+# et ne sont PAS compatibles avec le code actuel. NE PAS RETROGRADER.
+semantic-kernel>=1.33.0,<2.0.0
 jupyter_ui_poll>=0.2.0
 ipywidgets>=7.7.0
 transformers>=4.20.0
