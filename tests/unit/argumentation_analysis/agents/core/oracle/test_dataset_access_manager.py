@@ -145,13 +145,14 @@ class TestDatasetAccessManager:
         result_sherlock_unauthorized_type = dataset_manager.permission_manager.is_authorized("Sherlock", QueryType.SUGGESTION_VALIDATION)
         assert result_sherlock_unauthorized_type is False
     
-    def test_execute_query_success(self, dataset_manager, mock_dataset, mock_permission_manager):
+    @pytest.mark.asyncio
+    async def test_execute_query_success(self, dataset_manager, mock_dataset, mock_permission_manager):
         """Test l'exécution réussie d'une requête."""
         # S'assurer que l'agent a la permission
         mock_permission_manager.add_permission_rule(PermissionRule("Sherlock", [QueryType.CARD_INQUIRY]))
         
         # Test
-        result = dataset_manager.execute_query(
+        result = await dataset_manager.execute_query(
             agent_name="Sherlock",
             query_type=QueryType.CARD_INQUIRY,
             query_params={"card": "Colonel Moutarde"} # Utiliser une carte du dataset réel
@@ -167,14 +168,15 @@ class TestDatasetAccessManager:
         assert result.data is not None
         assert result.query_type == QueryType.CARD_INQUIRY
     
-    def test_permission_denied_query(self, dataset_manager, mock_permission_manager):
+    @pytest.mark.asyncio
+    async def test_permission_denied_query(self, dataset_manager, mock_permission_manager):
         """Test requête refusée pour permissions insuffisantes."""
         # S'assurer que l'agent n'a PAS la permission pour ce type de requête
         # mock_permission_manager.is_authorized est maintenant une vraie méthode,
         # elle retournera False si aucune règle n'autorise UnauthorizedAgent pour SUGGESTION_VALIDATION.
         
         # Test
-        result = dataset_manager.execute_query(
+        result = await dataset_manager.execute_query(
             agent_name="UnauthorizedAgent", # Cet agent n'a pas de règle de permission définie
             query_type=QueryType.SUGGESTION_VALIDATION,
             query_params={"suggestion": {"suspect": "Plum", "arme": "Poignard", "lieu": "Salon"}}
@@ -253,13 +255,14 @@ class TestCluedoDatasetManager:
         assert cluedo_manager.dataset == mock_cluedo_dataset
         assert isinstance(cluedo_manager.permission_manager, PermissionManager)
     
-    def test_execute_oracle_query(self, cluedo_manager, mock_cluedo_dataset):
+    @pytest.mark.asyncio
+    async def test_execute_oracle_query(self, cluedo_manager, mock_cluedo_dataset):
         """Test l'exécution d'une requête Oracle Cluedo."""
         # CluedoDatasetManager configure des permissions par défaut.
         # SherlockEnqueteAgent devrait avoir la permission CARD_INQUIRY par défaut.
         
         # Test avec un agent autorisé et une carte du dataset réel
-        result = cluedo_manager.execute_oracle_query(
+        result = await cluedo_manager.execute_oracle_query(
             agent_name="SherlockEnqueteAgent", # Agent défini dans les permissions par défaut
             query_type=QueryType.CARD_INQUIRY,
             query_params={"card": "Professeur Violet"} # Carte du dataset réel
@@ -287,10 +290,11 @@ class TestDatasetAccessManagerIntegration:
         """Manager avec dataset réel."""
         return DatasetAccessManager(dataset=real_cluedo_dataset)
     
-    def test_real_query_execution_flow(self, integration_manager):
+    @pytest.mark.asyncio
+    async def test_real_query_execution_flow(self, integration_manager):
         """Test du flux complet d'exécution de requête."""
         # Test avec agent non autorisé (aucune permission configurée)
-        result = integration_manager.execute_query(
+        result = await integration_manager.execute_query(
             agent_name="Sherlock",
             query_type=QueryType.CARD_INQUIRY,
             query_params={"card": "knife"}
@@ -310,17 +314,18 @@ class TestDatasetAccessManagerIntegration:
         assert isinstance(result_sherlock, bool)
         assert isinstance(result_watson, bool)
     
-    def test_cache_performance_real_data(self, integration_manager):
+    @pytest.mark.asyncio
+    async def test_cache_performance_real_data(self, integration_manager):
         """Test des performances de cache avec données réelles."""
         # Première requête
-        result1 = integration_manager.execute_query(
+        result1 = await integration_manager.execute_query(
             agent_name="Watson",
             query_type=QueryType.CARD_INQUIRY,
             query_params={"card": "rope"}
         )
         
         # Deuxième requête identique (devrait utiliser le cache)
-        result2 = integration_manager.execute_query(
+        result2 = await integration_manager.execute_query(
             agent_name="Watson",
             query_type=QueryType.CARD_INQUIRY,
             query_params={"card": "rope"}

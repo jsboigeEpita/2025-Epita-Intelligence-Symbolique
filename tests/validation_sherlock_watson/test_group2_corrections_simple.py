@@ -52,9 +52,9 @@ async def test_dataset_manager_check_permission():
     assert hasattr(dataset_manager, 'check_permission'), "La methode check_permission doit exister"
     
     # Tester la methode
-    result_authorized = dataset_manager.check_permission("Watson", QueryType.CARD_INQUIRY)
-    result_unauthorized = dataset_manager.check_permission("Watson", QueryType.ADMIN_COMMAND)
-    
+    result_authorized = await dataset_manager.check_permission("Watson", QueryType.CARD_INQUIRY)
+    result_unauthorized = await dataset_manager.check_permission("Watson", QueryType.ADMIN_COMMAND)
+
     assert result_authorized == True, "Watson devrait etre autorise pour CARD_INQUIRY"
     assert result_unauthorized == False, "Watson ne devrait pas etre autorise pour ADMIN_COMMAND"
     
@@ -68,7 +68,7 @@ async def test_mock_permission_setup():
     
     # Configuration d'un mock comme dans les tests originaux
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
-    mock_dataset_manager.check_permission = Mock(return_value=True)
+    mock_dataset_manager.check_permission = AsyncMock(return_value=True)
     
     # Verifier que l'attribut permission_manager peut etre mocke
     mock_permission_manager = Mock(spec=PermissionManager)
@@ -80,10 +80,10 @@ async def test_mock_permission_setup():
     assert hasattr(mock_dataset_manager, 'check_permission'), "Le mock doit avoir la methode check_permission"
     
     # Test des appels
-    result = mock_dataset_manager.check_permission("Watson", QueryType.CARD_INQUIRY)
-    assert result == True, "Le mock doit retourner True"
+    result = await mock_dataset_manager.check_permission("Watson", QueryType.CARD_INQUIRY)
+    assert result is True, "Le mock doit retourner True"
     
-    mock_dataset_manager.check_permission.assert_called_once_with("Watson", QueryType.CARD_INQUIRY)
+    mock_dataset_manager.check_permission.assert_awaited_once_with("Watson", QueryType.CARD_INQUIRY)
     
     print("SUCCES Test 2: Les mocks sont correctement configures")
 
@@ -98,7 +98,7 @@ async def test_oracle_tools_integration():
     mock_kernel.add_plugin = Mock()
     
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
-    mock_dataset_manager.check_permission = Mock(return_value=True)
+    mock_dataset_manager.check_permission = AsyncMock(return_value=True)
     
     # Creer l'agent Oracle avec OracleTools
     agent_config = {

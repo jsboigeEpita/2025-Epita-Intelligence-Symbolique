@@ -64,7 +64,7 @@ class TestOracleBaseAgent:
         )
         
         manager.execute_oracle_query = AsyncMock(return_value=success_response)
-        manager.check_permission = Mock(return_value=True)
+        manager.check_permission = AsyncMock(return_value=True)
         
         return manager
     
@@ -170,7 +170,7 @@ class TestOracleBaseAgent:
         )
         
         # Vérifications
-        mock_dataset_manager.check_permission.assert_called_once_with("Watson", QueryType.CARD_INQUIRY
+        mock_dataset_manager.check_permission.assert_awaited_once_with("Watson", QueryType.CARD_INQUIRY
         )
         assert "Watson a les permissions" in result
         assert "card_inquiry" in result
@@ -188,6 +188,7 @@ class TestOracleBaseAgent:
         )
         
         # Vérifications
+        mock_dataset_manager.check_permission.assert_awaited_once_with("UnauthorizedAgent", QueryType.DATASET_ACCESS)
         assert "n'a pas les permissions" in result
         assert "UnauthorizedAgent" in result
         assert "dataset_access" in result
@@ -276,7 +277,7 @@ class TestOracleTools:
         """DatasetAccessManager mocké pour les tests OracleTools."""
         manager = Mock(spec=DatasetAccessManager)
         manager.execute_oracle_query = AsyncMock()
-        manager.check_permission = Mock()
+        manager.check_permission = AsyncMock()
         return manager
     
     @pytest.fixture
@@ -343,7 +344,7 @@ class TestOracleTools:
         )
         
         # Vérifications
-        mock_dataset_manager.check_permission.assert_called_once_with("AuthorizedAgent", QueryType.CARD_INQUIRY
+        mock_dataset_manager.check_permission.assert_awaited_once_with("AuthorizedAgent", QueryType.CARD_INQUIRY
         )
         assert "AuthorizedAgent a les permissions" in result
     
@@ -360,6 +361,7 @@ class TestOracleTools:
         )
         
         # Vérifications
+        mock_dataset_manager.check_permission.assert_awaited_once_with("UnauthorizedAgent", QueryType.DATASET_ACCESS)
         assert "UnauthorizedAgent n'a pas les permissions" in result
         assert "dataset_access" in result
     

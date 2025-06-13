@@ -74,7 +74,8 @@ class TestOracleBaseAgent:
             query_type=QueryType.CARD_INQUIRY
         )
         
-        manager.execute_oracle_query = Mock(return_value=success_response)
+        manager.execute_oracle_query = AsyncMock(return_value=success_response)
+        manager.check_permission = AsyncMock(return_value=True)
         manager.validate_agent_access = Mock(return_value=True)
         
         return manager
@@ -182,11 +183,11 @@ class TestOracleBaseAgent:
         )
         
         # Vérifications
-        mock_dataset_manager.check_permission.assert_called_once_with(
+        mock_dataset_manager.check_permission.assert_awaited_once_with(
             "Watson",
             QueryType.CARD_INQUIRY
         )
-        assert "Watson" in result
+        assert "Watson a les permissions" in result
         assert "card_inquiry" in result
     
     @pytest.mark.asyncio
@@ -202,12 +203,11 @@ class TestOracleBaseAgent:
         )
         
         # Vérifications
-        mock_dataset_manager.check_permission.assert_called_once_with(
+        mock_dataset_manager.check_permission.assert_awaited_once_with(
             "UnauthorizedAgent",
             QueryType.ADMIN_COMMAND
         )
-        assert "UnauthorizedAgent n'a pas les permissions pour admin_command" in result
-        assert "UnauthorizedAgent" in result
+        assert "UnauthorizedAgent n'a pas les permissions" in result
         assert "admin_command" in result
     
     def test_oracle_tools_kernel_function_decorators(self, oracle_base_agent):
@@ -293,7 +293,7 @@ class TestOracleTools:
     def mock_dataset_manager(self):
         """DatasetAccessManager mocké pour les tests OracleTools."""
         manager = Mock(spec=DatasetAccessManager)
-        manager.execute_oracle_query = Mock()
+        manager.execute_oracle_query = AsyncMock()
         manager.validate_agent_access = Mock()
         return manager
     

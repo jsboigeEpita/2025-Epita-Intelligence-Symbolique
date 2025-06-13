@@ -336,7 +336,7 @@ class DatasetAccessManager:
         else:
             return data
     
-    def execute_oracle_query(self, agent_name: str, query_type: QueryType, query_params: Dict[str, Any]) -> OracleResponse:
+    async def execute_oracle_query(self, agent_name: str, query_type: QueryType, query_params: Dict[str, Any]) -> OracleResponse:
         """
         Interface haut niveau pour les requêtes Oracle.
         
@@ -349,7 +349,7 @@ class DatasetAccessManager:
             OracleResponse avec autorisation et données
         """
         try:
-            query_result = self.execute_query(agent_name, query_type, query_params)
+            query_result = await self.execute_query(agent_name, query_type, query_params)
             
             return OracleResponse(
                 authorized=query_result.success,
@@ -405,7 +405,7 @@ class DatasetAccessManager:
         self.permission_manager.add_permission(agent_name, query_type)
         self._logger.info(f"Permission {query_type.value} ajoutée pour l'agent {agent_name}.")
 
-    def check_permission(self, agent_name: str, query_type: QueryType) -> bool:
+    async def check_permission(self, agent_name: str, query_type: QueryType) -> bool:
         """
         Vérifie si un agent a les permissions pour un type de requête.
         
@@ -467,9 +467,9 @@ class CluedoDatasetManager(DatasetAccessManager):
         super().__init__(cluedo_dataset, permission_manager)
         self._logger.info("CluedoDatasetManager initialisé avec permissions par défaut")
     
-    def validate_cluedo_suggestion(self, agent_name: str, suspect: str, arme: str, lieu: str) -> OracleResponse:
+    async def validate_cluedo_suggestion(self, agent_name: str, suspect: str, arme: str, lieu: str) -> OracleResponse:
         """Interface simplifiée pour valider une suggestion Cluedo."""
-        return self.execute_oracle_query(
+        return await self.execute_oracle_query(
             agent_name=agent_name,
             query_type=QueryType.SUGGESTION_VALIDATION,
             query_params={
@@ -481,17 +481,17 @@ class CluedoDatasetManager(DatasetAccessManager):
             }
         )
     
-    def request_clue(self, agent_name: str) -> OracleResponse:
+    async def request_clue(self, agent_name: str) -> OracleResponse:
         """Interface simplifiée pour demander un indice."""
-        return self.execute_oracle_query(
+        return await self.execute_oracle_query(
             agent_name=agent_name,
             query_type=QueryType.CLUE_REQUEST,
             query_params={}
         )
     
-    def inquire_about_card(self, agent_name: str, card: str) -> OracleResponse:
+    async def inquire_about_card(self, agent_name: str, card: str) -> OracleResponse:
         """Interface simplifiée pour enquêter sur une carte."""
-        return self.execute_oracle_query(
+        return await self.execute_oracle_query(
             agent_name=agent_name,
             query_type=QueryType.CARD_INQUIRY,
             query_params={"card": card}

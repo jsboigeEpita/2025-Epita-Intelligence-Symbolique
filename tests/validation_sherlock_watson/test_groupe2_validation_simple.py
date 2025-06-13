@@ -38,7 +38,7 @@ async def test_validate_agent_permissions_success():
     mock_kernel.add_plugin = Mock()
     
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
-    mock_dataset_manager.check_permission = Mock(return_value=True)
+    mock_dataset_manager.check_permission = AsyncMock(return_value=True)
     
     agent_config = {
         "agent_name": "TestOracle",
@@ -60,7 +60,7 @@ async def test_validate_agent_permissions_success():
     )
     
     # Verifications
-    mock_dataset_manager.check_permission.assert_called_once_with(
+    mock_dataset_manager.check_permission.assert_awaited_once_with(
         "Watson",
         QueryType.CARD_INQUIRY
     )
@@ -80,7 +80,7 @@ async def test_validate_agent_permissions_failure():
     mock_kernel.add_plugin = Mock()
     
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
-    mock_dataset_manager.check_permission = Mock(return_value=False)
+    mock_dataset_manager.check_permission = AsyncMock(return_value=False)
     
     agent_config = {
         "agent_name": "TestOracle",
@@ -119,7 +119,7 @@ async def test_check_agent_permission_success():
     mock_kernel.add_plugin = Mock()
     
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
-    mock_dataset_manager.check_permission = Mock(return_value=True)
+    mock_dataset_manager.check_permission = AsyncMock(return_value=True)
     
     agent_config = {
         "agent_name": "TestOracle", 
@@ -143,7 +143,7 @@ async def test_check_agent_permission_success():
     )
     
     # Verifications
-    mock_dataset_manager.check_permission.assert_called_once_with(
+    mock_dataset_manager.check_permission.assert_awaited_once_with(
         "AuthorizedAgent",
         QueryType.CARD_INQUIRY
     )
@@ -162,7 +162,7 @@ async def test_check_agent_permission_failure():
     mock_kernel.add_plugin = Mock()
     
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
-    mock_dataset_manager.check_permission = Mock(return_value=False)
+    mock_dataset_manager.check_permission = AsyncMock(return_value=False)
     
     agent_config = {
         "agent_name": "TestOracle",
