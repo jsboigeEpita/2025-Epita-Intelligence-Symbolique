@@ -434,7 +434,8 @@ class UnifiedWebOrchestrator:
     
     async def full_integration_test(self, headless: bool = True,
                                    frontend_enabled: bool = None,
-                                   test_paths: List[str] = None) -> bool:
+                                   test_paths: List[str] = None,
+                                   **kwargs) -> bool:
         """
         Test d'intégration complet : démarrage + tests + arrêt
         
@@ -457,7 +458,7 @@ class UnifiedWebOrchestrator:
             await asyncio.sleep(2)
             
             # 3. Exécution tests
-            success = await self.run_tests(test_paths)
+            success = await self.run_tests(test_paths, **kwargs)
             
             if success:
                 self.add_trace("[SUCCESS] INTEGRATION REUSSIE",

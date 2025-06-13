@@ -19,10 +19,10 @@ project_root_path = Path(__file__).resolve().parent.parent.parent
 if str(project_root_path) not in sys.path:
     sys.path.insert(0, str(project_root_path))
 
-# Importation de la nouvelle fonction de pipeline
-from project_core.pipelines.dependency_management_pipeline import run_dependency_installation_pipeline
-# setup_logging est maintenant appelé à l'intérieur du pipeline, mais on garde un logger local pour ce script.
-from argumentation_analysis.utils.core_utils.logging_utils import setup_logging # Pour configurer le logger de ce script
+# Importation de la nouvelle fonction pour exécuter des commandes pip
+from project_core.setup_core_from_scripts.run_pip_commands import _run_command_in_conda_env
+from project_core.core_from_scripts.environment_manager import EnvironmentManager
+from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
 
 # Configuration du logger pour ce script (avant l'appel au pipeline)
 # Le pipeline configurera son propre logging ou utilisera celui configuré globalement.
@@ -54,11 +54,11 @@ def main():
         help="Niveau de verbosité du logging."
     )
     parser.add_argument(
-        "--pip-options",
-        type=str,
-        nargs='*', # Accepte zéro ou plusieurs options pip
-        help="Options supplémentaires à passer à la commande pip install (ex: --no-cache-dir --upgrade)."
-    )
+       "--pip-options",
+       type=str, # nargs non spécifié, la valeur par défaut est 1
+       default="",
+       help="Options supplémentaires à passer à la commande pip install, sous forme d'une seule chaîne (ex: \"--no-cache-dir --upgrade\")."
+   )
     
     args = parser.parse_args()
 
@@ -68,11 +68,26 @@ def main():
     logger.info(f"Script {Path(__file__).name} démarré.")
     logger.info(f"Appel du pipeline d'installation des dépendances avec les arguments: {args}")
 
-    success = run_dependency_installation_pipeline(
-        requirements_file_path=args.requirements_file,
-        force_reinstall=args.force_reinstall,
-        log_level=args.log_level,
-        pip_options=args.pip_options
+    env_manager = EnvironmentManager(project_root_path=str(project_root_path))
+    conda_env_name = env_manager.get_project_env_name()
+
+    if not conda_env_name:
+        logger.error("Nom de l'environnement Conda non trouvé. Impossible de continuer.")
+        sys.exit(1)
+
+    pip_command = ["pip", "install", "-r", args.requirements_file]
+    if args.force_reinstall:
+        pip_command.append("--force-reinstall")
+    if args.pip_options:
+        pip_command.extend(args.pip_options.split())
+
+    logger.info(f"Construction de la commande pip : {' '.join(pip_command)}")
+    
+    success = _run_command_in_conda_env(
+        conda_env_name=conda_env_name,
+        command_list=pip_command,
+        project_root=str(project_root_path),
+        logger_instance=logger
     )
 
     if success:
