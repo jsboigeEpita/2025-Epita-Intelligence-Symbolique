@@ -19,7 +19,7 @@ TOUT EST CONFIGURÉ POUR L'AUTHENTICITÉ : Aucun mock par défaut.
 import os
 import enum
 from typing import List, Dict, Any, Optional, Union
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 
 # ==================== ÉNUMÉRATIONS ====================
@@ -129,6 +129,26 @@ class UnifiedConfig:
 
     def __post_init__(self):
         """Validation et normalisation de la configuration."""
+        # Vérifier la variable d'environnement pour forcer la configuration de test
+        if os.environ.get('USE_MOCK_CONFIG') == '1':
+            # Application manuelle de la configuration de test pour éviter la récursion
+            self.logic_type = LogicType.PL
+            self.agents = [AgentType.INFORMAL, AgentType.SYNTHESIS]
+            self.orchestration_type = OrchestrationType.UNIFIED
+            self.mock_level = MockLevel.FULL
+            self.taxonomy_size = TaxonomySize.MOCK
+            self.enable_jvm = False
+            self.require_real_gpt = False
+            self.require_real_tweety = False
+            self.require_full_taxonomy = False
+            self.timeout_seconds = 30
+            # S'assurer que les autres drapeaux liés à l'authenticité sont cohérents
+            self.use_mock_llm = True
+            self.use_authentic_llm = False
+            self.use_mock_services = True
+            self.use_authentic_services = False
+            return  # Ignorer le reste des validations pour la config de test
+
         self._validate_configuration()
         self._normalize_agent_list()
         self._apply_authenticity_constraints()
@@ -138,11 +158,13 @@ class UnifiedConfig:
         # Validation du niveau de mock vs authenticité
         if self.mock_level != MockLevel.NONE:
             if self.require_real_gpt or self.require_real_tweety or self.require_full_taxonomy:
-                raise ValueError(
-                    f"Configuration incohérente: mock_level={self.mock_level.value} "
-                    f"mais require_real_* activé. Pour l'authenticité 100%, "
-                    f"utilisez mock_level=none."
-                )
+                # Ne pas lever d'erreur si la configuration de test est active
+                if os.environ.get('USE_MOCK_CONFIG') != '1':
+                    raise ValueError(
+                        f"Configuration incohérente: mock_level={self.mock_level.value} "
+                        f"mais require_real_* activé. Pour l'authenticité 100%, "
+                        f"utilisez mock_level=none."
+                    )
         
         # Validation agents vs logique
         if self.logic_type == LogicType.FOL and AgentType.LOGIC in self.agents:

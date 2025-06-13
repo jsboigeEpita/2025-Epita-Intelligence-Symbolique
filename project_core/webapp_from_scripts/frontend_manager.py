@@ -114,32 +114,32 @@ class FrontendManager:
                 except Exception:
                     pass
 
-            self.frontend_stdout_log_file = open(log_dir / "frontend_stdout.log", "wb") # 'wb' pour write bytes (écrase)
-            self.frontend_stderr_log_file = open(log_dir / "frontend_stderr.log", "wb") # 'wb' pour write bytes (écrase)
-
-            self.logger.info(f"Redirection stdout du frontend vers: {log_dir / 'frontend_stdout.log'}")
+            self.frontend_stderr_log_file = open(log_dir / "frontend_stderr.log", "wb")
             self.logger.info(f"Redirection stderr du frontend vers: {log_dir / 'frontend_stderr.log'}")
 
-            # Appel direct à 'npm.cmd' sur Windows pour éviter les problèmes de 'shell=True'
+            # On capture stdout pour détecter le démarrage, et stderr est redirigé vers un fichier de log
             if sys.platform == "win32":
-                cmd = ['npm.cmd'] + self.start_command.split()[1:] # ['npm.cmd', 'start']
+                cmd = ['npm.cmd'] + self.start_command.split()[1:]
                 shell = False
             else:
                 cmd = self.start_command
-                shell = True # Comportement original pour non-Windows
+                shell = True
 
             self.process = subprocess.Popen(
                 cmd,
-                stdout=self.frontend_stdout_log_file,
+                stdout=subprocess.PIPE,  # Capture de la sortie standard
                 stderr=self.frontend_stderr_log_file,
                 cwd=self.frontend_path,
                 env=frontend_env,
                 shell=shell,
-                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0,
+                universal_newlines=True, # Décode la sortie en texte
+                encoding='utf-8',
+                errors='replace'
             )
             
-            # Attente démarrage
-            frontend_ready = await self._wait_for_frontend()
+            # Attente démarrage en lisant la sortie
+            frontend_ready = await self._wait_for_frontend_output()
             
             if frontend_ready:
                 self.current_url = f"http://localhost:{self.port}"
@@ -277,29 +277,56 @@ class FrontendManager:
         self.logger.debug("NPM_HOME ou NODE_HOME non trouvées ou invalides.")
         return None
 
-    async def _wait_for_frontend(self) -> bool:
-        """Attend que le frontend soit accessible"""
-        url = f"http://localhost:{self.port}"
-        start_time = time.time()
+    async def _wait_for_frontend_output(self) -> bool:
+        """
+        Attend que le frontend soit prêt en lisant sa sortie standard (stdout).
+        C'est plus fiable que le polling réseau.
+        """
+        self.logger.info("Attente du message de succès dans la sortie du frontend...")
         
-        # Attente initiale pour démarrage React
-        await asyncio.sleep(10)
+        if not self.process or not self.process.stdout:
+            self.logger.error("Le processus frontend n'a pas de flux stdout à lire.")
+            return False
+
+        try:
+            # On utilise asyncio.wait_for pour gérer le timeout global
+            await asyncio.wait_for(self._read_stdout_and_check(), timeout=self.timeout_seconds)
+            self.logger.info("Message 'Compiled successfully' détecté. Le frontend est prêt.")
+            return True
+        except asyncio.TimeoutError:
+            self.logger.error(f"Timeout - Le message de succès du frontend n'a pas été trouvé après {self.timeout_seconds}s.")
+            return False
+        except Exception as e:
+            self.logger.error(f"Erreur inattendue en attendant la sortie du frontend: {e}", exc_info=True)
+            return False
+
+    async def _read_stdout_and_check(self):
+        """Tâche asynchrone pour lire stdout ligne par ligne."""
+        loop = asyncio.get_event_loop()
+         # La chaîne à rechercher. Peut être adaptée si les logs de react-scripts changent.
+        success_strings = ["Compiled successfully!", "webpack compiled successfully"]
         
-        while time.time() - start_time < self.timeout_seconds:
-            try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as response:
-                        if response.status == 200:
-                            self.logger.info(f"Frontend accessible sur {url}")
-                            return True
-            except Exception:
-                # Continue à attendre
-                pass
-                
-            await asyncio.sleep(3)
-        
-        self.logger.error(f"Timeout - Frontend non accessible sur {url}")
-        return False
+        while True:
+            if not self.process or not self.process.stdout:
+                break
+            
+            # Utilise run_in_executor pour ne pas bloquer la boucle asyncio avec readline()
+            line = await loop.run_in_executor(None, self.process.stdout.readline)
+            
+            if not line:
+                # Le processus s'est peut-être terminé prématurément
+                await asyncio.sleep(0.1) # Petite attente pour éviter une boucle trop rapide
+                if self.process.poll() is not None:
+                    self.logger.error("Le processus frontend s'est terminé prématurément.")
+                    break
+                continue
+
+            self.logger.debug(f"[Frontend stdout] {line.strip()}")
+            
+            # Vérifie si l'une des chaînes de succès est présente
+            if any(s in line for s in success_strings):
+                return # La condition est remplie, on sort
+
     
     async def health_check(self) -> bool:
         """Vérifie l'état de santé du frontend"""
