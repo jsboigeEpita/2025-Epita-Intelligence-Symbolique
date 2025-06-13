@@ -115,7 +115,7 @@ class UnifiedWebOrchestrator:
         
         # Gestionnaires spécialisés
         self.backend_manager = BackendManager(self.config.get('backend', {}), self.logger)
-        self.frontend_manager = FrontendManager(self.config.get('frontend', {}), self.logger)
+        self.frontend_manager: Optional[FrontendManager] = None # Sera instancié plus tard
         self.playwright_runner = PlaywrightRunner(self.config.get('playwright', {}), self.logger)
         self.process_cleaner = ProcessCleaner(self.logger)
         
@@ -321,9 +321,18 @@ class UnifiedWebOrchestrator:
                 return False
             
             # 3. Démarrage frontend (optionnel)
-            frontend_enabled = frontend_enabled if frontend_enabled is not None else self.config['frontend']['enabled']
-            if frontend_enabled:
+            frontend_config_enabled = self.config.get('frontend', {}).get('enabled', False)
+            frontend_enabled_effective = frontend_enabled if frontend_enabled is not None else frontend_config_enabled
+            
+            self.logger.info(f"[FRONTEND_DECISION] Config 'frontend.enabled': {frontend_config_enabled}")
+            self.logger.info(f"[FRONTEND_DECISION] Argument CLI '--frontend' (via paramètre frontend_enabled): {frontend_enabled}")
+            self.logger.info(f"[FRONTEND_DECISION] Valeur effective pour démarrer le frontend: {frontend_enabled_effective}")
+
+            if frontend_enabled_effective:
+                self.logger.info("[FRONTEND_DECISION] Condition de démarrage du frontend est VRAIE. Tentative de démarrage...")
                 await self._start_frontend()
+            else:
+                self.logger.info("[FRONTEND_DECISION] Condition de démarrage du frontend est FAUSSE. Frontend non démarré.")
             
             # 4. Validation des services
             if not await self._validate_services():
@@ -398,7 +407,7 @@ class UnifiedWebOrchestrator:
 
             # 2. Arrêter les services
             tasks = []
-            if self.app_info.frontend_pid:
+            if self.frontend_manager and self.app_info.frontend_pid:
                 tasks.append(self.frontend_manager.stop())
             if self.app_info.backend_pid:
                 tasks.append(self.backend_manager.stop())
@@ -545,11 +554,16 @@ class UnifiedWebOrchestrator:
     
     async def _start_frontend(self) -> bool:
         """Démarre le frontend React"""
-        if not self.config['frontend']['enabled']:
-            return True
-            
+        # La décision de démarrer a déjà été prise en amont
         self.add_trace("[FRONTEND] DEMARRAGE FRONTEND", "Lancement interface React")
         
+        # Instanciation tardive du FrontendManager pour lui passer l'URL du backend
+        self.frontend_manager = FrontendManager(
+            self.config.get('frontend', {}),
+            self.logger,
+            backend_url=self.app_info.backend_url
+        )
+
         result = await self.frontend_manager.start()
         if result['success']:
             self.app_info.frontend_url = result['url']
@@ -575,7 +589,7 @@ class UnifiedWebOrchestrator:
         if not backend_ok:
             return False
 
-        if self.app_info.frontend_url:
+        if self.frontend_manager and self.app_info.frontend_url:
             frontend_ok = await self.frontend_manager.health_check()
             if not frontend_ok:
                 self.add_trace("[WARNING] FRONTEND INACCESSIBLE", "L'interface utilisateur ne répond pas, mais le backend est OK.", status="warning")

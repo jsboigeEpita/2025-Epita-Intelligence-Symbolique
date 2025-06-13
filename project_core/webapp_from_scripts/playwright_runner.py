@@ -84,13 +84,26 @@ class PlaywrightRunner:
 
     def _build_playwright_command_string(self, test_paths: List[str],
                                          config: Dict[str, Any]) -> str:
-        """Construit la chaîne de commande 'npx playwright test ...'."""
-        parts = ['npx', 'playwright', 'test']
+        """Construit la chaîne de commande 'pytest ...' pour les tests Playwright Python."""
+        parts = ['pytest']  # Changement pour utiliser pytest
         parts.extend(test_paths)
-        # parts.append(f"--browser={config['browser']}") # Option retirée car cause conflit avec les projets Playwright
+        
         if not config.get('headless', True):
-            parts.append('--headed')
-        parts.append(f"--timeout={config['timeout_ms']}")
+            parts.append('--headed')  # Option standard pour pytest-playwright
+        
+        # Le nom du navigateur (config['browser']) est généralement géré par pytest-playwright
+        # via des fixtures ou des variables d'environnement (déjà définies dans _prepare_test_environment).
+        # Ajouter --browser ici pourrait être redondant ou entrer en conflit.
+        # Exemple: pytest-playwright utilise --browser chromium --browser firefox etc.
+        # parts.append(f"--browser {config['browser']}") # Ne pas ajouter pour l'instant
+
+        # La gestion du timeout global pour pytest est différente.
+        # pytest-playwright a son propre mécanisme de timeout.
+        # L'option --timeout de npx playwright test n'a pas d'équivalent direct simple pour pytest.
+        # Le timeout_ms de la config est déjà utilisé pour les variables d'environnement.
+        # Ne pas ajouter de --timeout global à la commande pytest pour l'instant.
+
+        self.logger.info(f"Construction de la commande Pytest. Config headless: {config.get('headless', True)}, Browser: {config.get('browser')}")
         return ' '.join(parts)
 
     async def _execute_tests(self, playwright_command_str: str,
