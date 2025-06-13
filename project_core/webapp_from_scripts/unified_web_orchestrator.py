@@ -364,22 +364,15 @@ class UnifiedWebOrchestrator:
         
         test_config = {
             'backend_url': self.app_info.backend_url,
-            'frontend_url': self.app_info.frontend_url or self.app_info.backend_url,
+            'frontend_url': self.app_info.frontend_url or f"http://localhost:{self.config['frontend']['port']}",
             'headless': self.headless,
             **kwargs
         }
 
         # La communication avec Playwright se fait via les variables d'environnement
-        # que playwright.config.js lira (par exemple, BASE_URL)
-        base_url = self.app_info.frontend_url or self.app_info.backend_url
-        backend_url = self.app_info.backend_url
-        os.environ['BASE_URL'] = base_url
-        os.environ['BACKEND_URL'] = backend_url
+        # La configuration des variables d'environnement est maintenant entièrement
+        # déléguée au PlaywrightRunner pour éviter les incohérences.
         
-        self.add_trace("[PLAYWRIGHT] CONFIGURATION URLS",
-                      f"BASE_URL={base_url}",
-                      f"BACKEND_URL={backend_url}")
-
         return await self.playwright_runner.run_tests(test_paths, test_config)
     
     async def stop_webapp(self):
