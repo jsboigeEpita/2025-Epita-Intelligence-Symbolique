@@ -27,9 +27,11 @@ from tests.utils.common_test_helpers import create_authentic_gpt4o_mini_instance
 from argumentation_analysis.agents.core.oracle.dataset_access_manager import DatasetAccessManager
 from argumentation_analysis.agents.core.oracle.permissions import QueryType, PermissionManager, PermissionRule
 from argumentation_analysis.agents.core.oracle.oracle_base_agent import OracleBaseAgent, OracleTools
+from argumentation_analysis.agents.core.oracle.cluedo_dataset import CluedoDataset
 from semantic_kernel.kernel import Kernel
 
 
+@pytest.mark.anyio
 async def test_dataset_manager_check_permission():
     """Test que DatasetAccessManager a maintenant la methode check_permission."""
     print("Test 1: Verification de l'existence de check_permission sur DatasetAccessManager")

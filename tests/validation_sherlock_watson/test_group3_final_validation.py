@@ -22,7 +22,7 @@ sys.path.append('.')
 from tests.utils.common_test_helpers import create_authentic_gpt4o_mini_instance
 from argumentation_analysis.agents.core.oracle.oracle_base_agent import OracleBaseAgent, OracleTools
 from argumentation_analysis.agents.core.oracle.dataset_access_manager import DatasetAccessManager
-from argumentation_analysis.agents.core.oracle.permissions import QueryType, OracleResponse
+from argumentation_analysis.agents.core.oracle.permissions import QueryType, OracleResponse, PermissionManager
 from semantic_kernel.kernel import Kernel
 
 @pytest.mark.anyio
