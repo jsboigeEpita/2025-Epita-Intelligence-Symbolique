@@ -15,6 +15,7 @@ import asyncio
 
 from typing import Dict, Any, List
 from datetime import datetime
+from unittest.mock import patch, Mock
 
 # Imports du système Oracle
 from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent, MoriartyTools
@@ -61,8 +62,7 @@ class TestMoriartyInterrogatorAgent:
         # Les cartes de Moriarty et la solution peuvent être adaptées pour les besoins des tests.
         return CluedoDataset(
             moriarty_cards=["Poignard", "Salon", "Moutarde"],
-            solution={"suspect": "Pervenche", "arme": "Revolver", "lieu": "Cuisine"},
-            reveal_policy=RevealPolicy.BALANCED # Politique par défaut
+            solution_secrete={"suspect": "Pervenche", "arme": "Revolver", "lieu": "Cuisine"},
         )
     
     @pytest.fixture

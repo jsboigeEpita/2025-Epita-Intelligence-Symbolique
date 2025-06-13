@@ -18,6 +18,7 @@ Tests couvrant:
 
 import pytest
 import asyncio
+from unittest.mock import Mock, AsyncMock
 
 from typing import Dict, Any, List
 
@@ -51,10 +52,10 @@ class TestOracleBaseAgent:
     """Tests pour la classe OracleBaseAgent."""
     
     @pytest.fixture
-    async def mock_kernel(self):
+    def mock_kernel(self):
         """Kernel Semantic Kernel mocké."""
         kernel = Mock(spec=Kernel)
-        kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
+        kernel.add_plugin = Mock()
         return kernel
     
     @pytest.fixture
@@ -95,6 +96,7 @@ class TestOracleBaseAgent:
     @pytest.fixture
     def oracle_base_agent(self, mock_kernel, mock_dataset_manager, sample_agent_config):
         """Instance d'OracleBaseAgent configurée pour les tests."""
+        # The kernel is now a mock, not a coroutine
         agent = OracleBaseAgent(
             kernel=mock_kernel,
             dataset_manager=mock_dataset_manager,
@@ -286,11 +288,11 @@ class TestOracleTools:
     """Tests spécifiques pour la classe OracleTools."""
     
     @pytest.fixture
-    async def mock_dataset_manager(self):
+    def mock_dataset_manager(self):
         """DatasetAccessManager mocké pour les tests OracleTools."""
         manager = Mock(spec=DatasetAccessManager)
-        manager.execute_oracle_query = await self._create_authentic_gpt4o_mini_instance()
-        manager.check_permission = await self._create_authentic_gpt4o_mini_instance()
+        manager.execute_oracle_query = AsyncMock()
+        manager.check_permission = Mock()
         return manager
     
     @pytest.fixture
