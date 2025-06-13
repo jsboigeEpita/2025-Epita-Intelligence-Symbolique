@@ -11,7 +11,7 @@
 const { test, expect } = require('@playwright/test');
 
 // Configuration des tests
-const BASE_URL = process.env.BASE_URL || 'http://localhost:5001';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3000'; // Modifié pour pointer vers le port du frontend React
 const JTMS_PREFIX = '/jtms';
 
 test.describe('Interface Web JTMS - Tests d\'Intégration Complète', () => {

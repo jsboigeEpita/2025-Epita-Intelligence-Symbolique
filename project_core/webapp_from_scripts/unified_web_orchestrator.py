@@ -227,7 +227,7 @@ class UnifiedWebOrchestrator:
                 'env_activation': 'powershell -File scripts/env/activate_project_env.ps1'
             },
             'frontend': {
-                'enabled': False,  # Optionnel selon besoins
+                'enabled': True,  # On active par défaut pour les tests
                 'path': 'services/web_api/interface-web-argumentative',
                 'port': frontend_port,
                 'start_command': 'npm start',
@@ -411,7 +411,7 @@ class UnifiedWebOrchestrator:
             self.app_info.status = WebAppStatus.STOPPED
     
     async def full_integration_test(self, headless: bool = True,
-                                   frontend_enabled: bool = None,
+                                   frontend_enabled: bool = True, # Forcer le frontend pour l'intégration
                                    test_paths: List[str] = None) -> bool:
         """
         Test d'intégration complet : démarrage + tests + arrêt
@@ -538,7 +538,11 @@ class UnifiedWebOrchestrator:
     
     async def _start_frontend(self) -> bool:
         """Démarre le frontend React"""
-        if not self.config['frontend']['enabled']:
+        # Pour un test d'intégration, le frontend est nécessaire.
+        # La configuration peut être surchargée par l'appelant.
+        frontend_config = self.config.get('frontend', {})
+        if not frontend_config.get('enabled', False):
+            self.logger.info("Frontend désactivé dans la configuration, démarrage ignoré.")
             return True
             
         self.add_trace("[FRONTEND] DEMARRAGE FRONTEND", "Lancement interface React")
@@ -765,6 +769,10 @@ def main():
     sys.exit(exit_code)
 
 if __name__ == "__main__":
-    from project_core.core_from_scripts import auto_env
-    auto_env.ensure_env()
+    # La vérification de l'environnement est maintenant redondante car gérée
+    # par le script de lancement (temp_run_orchestrator.bat), qui assure
+    # l'exécution dans le bon interpréteur Conda. La vérification interne
+    # posait des problèmes de détection dans ce mode de lancement.
+    # from project_core.core_from_scripts import auto_env
+    # auto_env.ensure_env()
     main()
