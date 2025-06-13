@@ -129,6 +129,24 @@ class UnifiedConfig:
 
     def __post_init__(self):
         """Validation et normalisation de la configuration."""
+        # --- Conversion des chaînes en Enums ---
+        for f in fields(self):
+            if isinstance(f.type, type) and issubclass(f.type, enum.Enum):
+                value = getattr(self, f.name)
+                if isinstance(value, str):
+                    try:
+                        # Essayer de trouver une correspondance exacte d'abord
+                        setattr(self, f.name, f.type(value))
+                    except ValueError:
+                        # Si ça échoue, essayer une correspondance insensible à la casse
+                        for member in f.type:
+                            if member.value.lower() == value.lower():
+                                setattr(self, f.name, member)
+                                break
+                        else:
+                            # Si aucune correspondance n'est trouvée, relancer l'erreur originale
+                            raise ValueError(f"'{value}' n'est pas une valeur valide pour {f.type.__name__}")
+
         # Vérifier la variable d'environnement pour forcer la configuration de test
         if os.environ.get('USE_MOCK_CONFIG') == '1':
             # Application manuelle de la configuration de test pour éviter la récursion

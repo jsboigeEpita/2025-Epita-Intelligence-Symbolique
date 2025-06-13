@@ -62,10 +62,11 @@ except ImportError as e:
 @pytest.fixture(scope="session", autouse=True)
 def jvm_session_manager():
     """Initialise la JVM une fois pour toute la session de test et l'arrête à la fin."""
-    from argumentation_analysis.core.jvm_setup import initialize_jvm, shutdown_jvm_if_needed, is_jvm_started
+    import jpype
+    from argumentation_analysis.core.jvm_setup import initialize_jvm, shutdown_jvm_if_needed
     
     # Démarrer la JVM seulement si elle ne l'est pas déjà
-    if not is_jvm_started():
+    if not jpype.isJVMStarted():
         initialize_jvm()
     
     yield  # Les tests s'exécutent ici
