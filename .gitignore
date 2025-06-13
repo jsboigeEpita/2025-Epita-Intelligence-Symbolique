@@ -278,3 +278,6 @@ docs/sherlock_watson_investigation.md
 debug_imports.py
 # Fichiers de trace d'analyse complets
 analyse_trace_complete_*.json
+
+# Ignore patch files
+*.patch
