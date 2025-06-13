@@ -233,6 +233,7 @@ class TestServiceManager:
     
     def setup_method(self):
         """Setup avant chaque test"""
+        patch.stopall() # Annuler tous les mocks potentiellement actifs
         self.service_manager = ServiceManager()
         
         # Configuration de test simple
@@ -344,6 +345,7 @@ class TestServiceManagerIntegration:
     
     def setup_method(self):
         """Setup avant chaque test"""
+        patch.stopall() # Annuler tous les mocks potentiellement actifs
         self.service_manager = ServiceManager()
     
     def teardown_method(self):
@@ -432,6 +434,7 @@ class TestFailoverScenarios:
     
     def setup_method(self):
         """Setup avant chaque test"""
+        patch.stopall() # Annuler tous les mocks potentiellement actifs
         self.service_manager = ServiceManager()
     
     def teardown_method(self):

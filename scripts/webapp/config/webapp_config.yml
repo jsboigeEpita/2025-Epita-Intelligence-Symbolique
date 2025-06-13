@@ -36,7 +36,7 @@ playwright:
   screenshots_dir: logs/screenshots
   slow_timeout_ms: 20000
   test_paths:
-  - tests/functional/
+  - tests_playwright/tests/
   timeout_ms: 10000
   traces_dir: logs/traces
 webapp:
