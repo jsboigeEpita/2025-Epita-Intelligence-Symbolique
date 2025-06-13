@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, AsyncMock, patch
 import asyncio
 # from semantic_kernel.agents import Agent # Commenté car le module n'existe plus à cet emplacement
 from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.contents import ChatRole as AuthorRole
+from semantic_kernel.contents.utils.author_role import AuthorRole
 from argumentation_analysis.core.strategies import SimpleTerminationStrategy, DelegatingSelectionStrategy, BalancedParticipationStrategy
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 # from tests.async_test_case import AsyncTestCase # Suppression de l'import

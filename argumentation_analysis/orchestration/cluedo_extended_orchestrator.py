@@ -19,12 +19,11 @@ from argumentation_analysis.agents.core.oracle.cluedo_dataset import RevelationR
 import semantic_kernel as sk
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.kernel import Kernel
-# Version SK 0.9.6b1 - agents module non disponible - Utilisation architecture native SK
+# Code adapté pour SK >= 1.30.0. Version SK 0.9.6b1 interdite/obsolète pour ce projet.
 # PURGE PHASE 3A: Élimination complète fallbacks - Utilisation composants natifs uniquement
 AGENTS_AVAILABLE = False  # Module agents non disponible dans SK 0.9.6b1
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
-# from semantic_kernel.filters.functions.function_invocation_context import FunctionInvocationContext # ANCIEN IMPORT
 from semantic_kernel.events import FunctionInvokingEventArgs, FunctionInvokedEventArgs # NOUVEAUX IMPORTS
 from semantic_kernel.prompt_template.prompt_template_config import PromptTemplateConfig
 # from semantic_kernel.filters.filter_types import FilterTypes # N'est plus utilisé avec les handlers directs
@@ -316,7 +315,6 @@ class CluedoExtendedOrchestrator:
         self.kernel_lock = asyncio.Lock()
         self.logging_handler = ToolCallLoggingHandler()
 
-
         self.max_turns = max_turns
         self.max_cycles = max_cycles
         self.oracle_strategy = oracle_strategy
@@ -496,11 +494,8 @@ class CluedoExtendedOrchestrator:
         
         # Configuration du plugin d'état étendu
         async with self.kernel_lock:
-            state_plugin = EnqueteStateManagerPlugin(self.oracle_state)
-            self.kernel.add_plugin(state_plugin, "EnqueteStatePlugin")
-            
             # Ajout des handlers de logging modernes
-            if HANDLERS_AVAILABLE and self.logging_handler:
+            if HANDLERS_AVAILABLE and hasattr(self, 'logging_handler') and self.logging_handler:
                 self.kernel.add_function_invoking_handler(self.logging_handler.on_function_invoking)
                 self.kernel.add_function_invoked_handler(self.logging_handler.on_function_invoked)
                 self._logger.info("Handlers de journalisation des appels de fonctions activés.")
