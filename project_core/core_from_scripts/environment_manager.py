@@ -771,42 +771,23 @@ class EnvironmentManager:
             if not silent: self.logger.debug(f"[.ENV DISCOVERY] Chemins Conda consolidés: {conda_path_to_write}")
 
             env_file = project_root / ".env"
-            current_env_lines = []
-            conda_path_line_updated_in_file = False
-
-            if env_file.exists():
-                with open(env_file, 'r', encoding='utf-8') as f_read_env:
-                    current_env_lines = f_read_env.readlines()
-                
-                for i, line_content in enumerate(current_env_lines):
-                    stripped_line_content = line_content.strip()
-                    if stripped_line_content.startswith("CONDA_PATH="):
-                        current_env_lines[i] = f'CONDA_PATH="{conda_path_to_write}"\n'
-                        conda_path_line_updated_in_file = True
-                        if not silent: self.logger.info(f"[.ENV] Ligne CONDA_PATH existante mise à jour dans {env_file}")
-                        break
+            updates = {"CONDA_PATH": f'"{conda_path_to_write}"'}
             
-            if not conda_path_line_updated_in_file:
-                if current_env_lines and not current_env_lines[-1].endswith('\n') and current_env_lines[-1].strip() != "":
-                    current_env_lines.append('\n')
-                current_env_lines.append(f'CONDA_PATH="{conda_path_to_write}"\n')
-                if not silent: self.logger.info(f"[.ENV] Nouvelle ligne CONDA_PATH ajoutée à {env_file}")
-
             try:
-                with open(env_file, 'w', encoding='utf-8') as f_write_env:
-                    f_write_env.writelines(current_env_lines)
-                if not silent: self.logger.info(f"[.ENV] Fichier {env_file} sauvegardé avec CONDA_PATH='{conda_path_to_write}'")
+                self._update_env_file_safely(env_file, updates, silent)
                 
-                # Recharger .env pour que os.environ soit mis à jour (depuis le bon répertoire)
-                dotenv_path_for_reload_op = find_dotenv(str(env_file), usecwd=True, raise_error_if_not_found=False)
-                if dotenv_path_for_reload_op:
-                     load_dotenv(dotenv_path_for_reload_op, override=True) # Override pour prendre la nouvelle valeur
-                     if not silent: self.logger.info(f"[.ENV] Variables rechargées depuis {dotenv_path_for_reload_op}")
-                     return True # CONDA_PATH est maintenant dans os.environ
-                else: # Ne devrait pas arriver
-                    if not silent: self.logger.warning(f"[.ENV] Erreur: {env_file} non trouvé par find_dotenv après écriture.")
-                    os.environ['CONDA_PATH'] = conda_path_to_write # Forcer au cas où
-                    return True # Indiquer que CONDA_PATH est au moins dans os.environ
+                # Recharger .env pour que os.environ soit mis à jour
+                load_dotenv(env_file, override=True)
+                if not silent: self.logger.info(f"[.ENV] Variables rechargées depuis {env_file}")
+
+                # Valider que la variable est bien dans l'environnement
+                if 'CONDA_PATH' in os.environ:
+                    return True
+                else:
+                    if not silent: self.logger.warning("[.ENV] CONDA_PATH n'a pas pu être chargé dans l'environnement après la mise à jour.")
+                    # Forcer au cas où, pour la session courante
+                    os.environ['CONDA_PATH'] = conda_path_to_write
+                    return True
 
             except Exception as e_write_env:
                 if not silent: self.logger.warning(f"[.ENV] Échec de la mise à jour du fichier {env_file}: {e_write_env}")
@@ -816,6 +797,49 @@ class EnvironmentManager:
             return False # Pas de chemins découverts, CONDA_PATH n'est pas résolu par cette fonction
 
     # --- Fin des méthodes transférées ---
+
+    def _update_env_file_safely(self, env_file_path: Path, updates: Dict[str, str], silent: bool = True):
+        """
+        Met à jour un fichier .env de manière sécurisée, en préservant les lignes existantes.
+        
+        Args:
+            env_file_path: Chemin vers le fichier .env.
+            updates: Dictionnaire des clés/valeurs à mettre à jour.
+            silent: Si True, n'affiche pas les logs de succès.
+        """
+        lines = []
+        keys_to_update = set(updates.keys())
+        
+        if env_file_path.exists():
+            with open(env_file_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+
+        # Parcourir les lignes existantes pour mettre à jour les clés
+        for i, line in enumerate(lines):
+            stripped_line = line.strip()
+            if not stripped_line or stripped_line.startswith('#'):
+                continue
+            
+            if '=' in stripped_line:
+                key = stripped_line.split('=', 1)[0].strip()
+                if key in keys_to_update:
+                    lines[i] = f"{key}={updates[key]}\n"
+                    keys_to_update.remove(key) # Marquer comme traitée
+
+        # Ajouter les nouvelles clés à la fin si elles n'existaient pas
+        if keys_to_update:
+            if lines and lines[-1].strip() != '':
+                 lines.append('\n') # Assurer un retour à la ligne avant d'ajouter
+            for key in keys_to_update:
+                lines.append(f"{key}={updates[key]}\n")
+
+        # Écrire le fichier mis à jour
+        with open(env_file_path, 'w', encoding='utf-8') as f:
+            f.writelines(lines)
+        
+        if not silent:
+            self.logger.info(f"Fichier .env mis à jour en toute sécurité : {env_file_path}")
+
 
 def is_conda_env_active(env_name: str = "projet-is") -> bool:
     """Vérifie si l'environnement conda spécifié est actuellement actif"""
