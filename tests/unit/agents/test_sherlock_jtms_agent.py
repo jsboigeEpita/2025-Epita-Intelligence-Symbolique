@@ -37,9 +37,9 @@ class TestSherlockJTMSAgent:
     async def test_agent_initialization(self, sherlock_agent):
         """Test d'initialisation de l'agent Sherlock"""
         assert sherlock_agent.agent_name == "sherlock_test"
-        assert sherlock_agent.specialization == "deductive_reasoning"
-        assert hasattr(sherlock_agent, 'investigation_memory')
-        assert hasattr(sherlock_agent, 'reasoning_chains')
+        assert hasattr(sherlock_agent, '_hypothesis_tracker')
+        assert hasattr(sherlock_agent, '_evidence_manager')
+        assert hasattr(sherlock_agent, '_base_sherlock')
     
     @pytest.mark.asyncio
     async def test_analyze_clue(self, sherlock_agent):
@@ -50,40 +50,37 @@ class TestSherlockJTMSAgent:
             "reliability": 0.9
         }
         
-        result = await sherlock_agent.analyze_clue("couteau_sanglant", clue_data)
+        result = await sherlock_agent.analyze_clues([clue_data])
         
         assert result is not None
-        assert "analysis" in result
-        assert "confidence" in result
-        assert "deductions" in result
+        assert "processed_clues" in result
+        assert "new_evidence_ids" in result
+        assert len(result["new_evidence_ids"]) == 1
         
         # Vérifier qu'une croyance a été ajoutée
         beliefs = sherlock_agent.get_all_beliefs()
-        assert any("couteau" in belief_name.lower() for belief_name in beliefs.keys())
+        assert any(evidence_id in beliefs for evidence_id in result["new_evidence_ids"])
     
     @pytest.mark.asyncio
     async def test_form_hypothesis(self, sherlock_agent):
         """Test de formation d'hypothèse"""
         # Ajouter quelques indices
-        await sherlock_agent.analyze_clue("arme", {"description": "Couteau", "location": "bibliotheque"})
-        await sherlock_agent.analyze_clue("lieu", {"description": "Bibliothèque fermée", "location": "bibliotheque"})
+        clue1_result = await sherlock_agent.analyze_clues([{"description": "Couteau", "location": "bibliotheque"}])
+        clue2_result = await sherlock_agent.analyze_clues([{"description": "Bibliothèque fermée", "location": "bibliotheque"}])
+        evidence_ids = clue1_result["new_evidence_ids"] + clue2_result["new_evidence_ids"]
+
+        context = "Suspect: Colonel Moutarde, Arme: Couteau, Lieu: Bibliothèque"
         
-        hypothesis_data = {
-            "suspect": "Colonel Moutarde",
-            "weapon": "Couteau",
-            "location": "Bibliothèque"
-        }
-        
-        result = await sherlock_agent.form_hypothesis("hyp_moutarde_couteau", hypothesis_data)
+        result = await sherlock_agent.formulate_hypothesis(context, evidence_ids)
         
         assert result is not None
         assert "hypothesis_id" in result
-        assert "supporting_evidence" in result
-        assert "confidence_score" in result
+        assert "hypothesis" in result
+        assert "confidence" in result
         
         # Vérifier que l'hypothèse est dans les croyances
         beliefs = sherlock_agent.get_all_beliefs()
-        assert "hyp_moutarde_couteau" in beliefs
+        assert result["hypothesis_id"] in beliefs
     
     @pytest.mark.asyncio
     async def test_build_reasoning_chain(self, sherlock_agent):

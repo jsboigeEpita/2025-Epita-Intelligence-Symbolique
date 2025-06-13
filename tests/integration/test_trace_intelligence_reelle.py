@@ -97,10 +97,32 @@ def test_imports_orchestration_reelle():
     assert not modules_ko, f"Échec d'import des modules d'orchestration: {modules_ko}"
 
 def test_scenario_cluedo_simple():
-    """Teste l'instanciation de CluedoOracleState."""
+    """Teste l'instanciation de CluedoOracleState avec des arguments valides."""
     try:
         from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
-        state = CluedoOracleState()
-        assert hasattr(state, 'add_evidence') or hasattr(state, 'add_clue')
-    except (ImportError, AssertionError) as e:
-        pytest.fail(f"Test du scénario Cluedo simple a échoué: {e}")
+        
+        # Définition de données de test minimales
+        nom_enquete_test = "Enquête de Test pour Instanciation"
+        elements_jeu_test = {
+            "suspects": ["Colonel Moutarde", "Professeur Violet"],
+            "armes": ["Poignard", "Revolver"],
+            "lieux": ["Cuisine", "Salon"]
+        }
+        description_cas_test = "Un cas de test pour valider l'initialisation de CluedoOracleState."
+        initial_context_test = {"source_test": "test_scenario_cluedo_simple"}
+
+        # Instanciation avec les arguments requis
+        state = CluedoOracleState(
+            nom_enquete_cluedo=nom_enquete_test,
+            elements_jeu_cluedo=elements_jeu_test,
+            description_cas=description_cas_test,
+            initial_context=initial_context_test
+        )
+        
+        # Ajout d'une assertion simple pour valider l'objet créé
+        assert state is not None
+        assert state.nom_enquete_cluedo == nom_enquete_test
+        assert "suspects" in state.elements_jeu_cluedo
+
+    except Exception as e:
+        pytest.fail(f"L'instanciation de CluedoOracleState a échoué avec une exception inattendue: {e}")

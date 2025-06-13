@@ -4,7 +4,8 @@ Système d'orchestration multi-agents avec Oracle authentique
 """
 
 from .cluedo_extended_orchestrator import CluedoExtendedOrchestrator
-from .cluedo_components.strategies import CyclicSelectionStrategy, OracleTerminationStrategy
+from .strategies import CyclicSelectionStrategy, OracleTerminationStrategy
+
 
 __all__ = [
     "CluedoExtendedOrchestrator",

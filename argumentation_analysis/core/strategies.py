@@ -6,7 +6,7 @@ from semantic_kernel.contents import ChatMessageContent
 from typing import List, Dict, TYPE_CHECKING
 import logging
 from pydantic import PrivateAttr
-from argumentation_analysis.orchestration.cluedo_extended_orchestrator import TerminationStrategy, SelectionStrategy
+from argumentation_analysis.orchestration.base import SelectionStrategy, TerminationStrategy
 
 # Importer la classe d'état
 from .shared_state import RhetoricalAnalysisState
