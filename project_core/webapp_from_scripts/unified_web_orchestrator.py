@@ -745,7 +745,7 @@ def main():
     parser.add_argument('--integration', action='store_true', default=True,
                        help='Test d\'intégration complet (défaut)')
     
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
     
     # Override headless si --visible
     headless = args.headless and not args.visible
@@ -769,10 +769,10 @@ def main():
             elif args.test:
                  # Pour les tests seuls, on fait un cycle complet mais sans arrêt entre les étapes.
                 if await orchestrator.start_webapp(headless, args.frontend):
-                    success = await orchestrator.run_tests(args.tests)
+                    success = await orchestrator.run_tests(args.tests, pytest_args=unknown)
             else:  # --integration par défaut
                 success = await orchestrator.full_integration_test(
-                    headless, args.frontend, args.tests)
+                    headless, args.frontend, args.tests, pytest_args=unknown)
         except KeyboardInterrupt:
             print("\n🛑 Interruption utilisateur détectée. Arrêt en cours...")
             # L'arrêt est géré par le signal handler

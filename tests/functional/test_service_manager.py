@@ -1,10 +1,4 @@
 
-# Authentic gpt-4o-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 #!/usr/bin/env python3
 """
 Tests fonctionnels pour ServiceManager
@@ -26,7 +20,7 @@ import socket
 import subprocess
 import threading
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock, AsyncMock
 
 
 # Import des modules à tester
@@ -41,21 +35,6 @@ except ImportError:
 
 
 class TestPortManager:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-        
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
     """Tests du gestionnaire de ports - validation pattern Free-Port"""
     
     def setup_method(self):
@@ -209,24 +188,27 @@ class TestProcessCleanup:
         
         # Test avec mock pour éviter d'arrêter d'autres processus Python
         with patch('psutil.process_iter') as mock_iter:
-            mock_process = await self._create_authentic_gpt4o_mini_instance()
+            # Utiliser un mock standard au lieu d'une instance réelle de kernel
+            mock_process = MagicMock()
             mock_process.info = {
                 'pid': proc.pid,
-                'name': 'python.exe',
+                'name': 'python.exe' if sys.platform == "win32" else "python",
                 'cmdline': ['python', 'app.py']
             }
-            mock_iter# Mock eliminated - using authentic gpt-4o-mini [mock_process]
+            mock_iter.return_value = [mock_process]
             
             with patch('psutil.Process') as mock_psutil_process:
-                mock_proc_instance = await self._create_authentic_gpt4o_mini_instance()
-                mock_proc_instance.name# Mock eliminated - using authentic gpt-4o-mini "python.exe"
+                # Configurer le mock pour le processus
+                mock_proc_instance = MagicMock()
+                mock_proc_instance.name.return_value = 'python.exe' if sys.platform == "win32" else "python"
                 mock_proc_instance.pid = proc.pid
-                mock_psutil_process# Mock eliminated - using authentic gpt-4o-mini mock_proc_instance
+                mock_psutil_process.return_value = mock_proc_instance
                 
                 stopped_count = self.cleanup.stop_backend_processes(['app.py'])
                 
-                # Vérifier que terminate a été appelé
-                # mock_proc_instance.terminate.# Mock assertion eliminated - authentic validation
+                # Vérifier que la méthode terminate a été appelée sur le mock
+                mock_proc_instance.terminate.assert_called_once()
+                assert stopped_count == 1
     
     def test_cleanup_managed_processes(self):
         """Test nettoyage processus managés"""
@@ -280,9 +262,9 @@ class TestServiceManager:
         """Test health check avec mock"""
         with patch('requests.get') as mock_get:
             # Simuler réponse réussie
-            mock_response = await self._create_authentic_gpt4o_mini_instance()
+            mock_response = MagicMock()
             mock_response.status_code = 200
-            mock_get# Mock eliminated - using authentic gpt-4o-mini mock_response
+            mock_get.return_value = mock_response
             
             result = self.service_manager.test_service_health("http://localhost:8888/health")
             assert result == True
@@ -295,7 +277,8 @@ class TestServiceManager:
     def test_service_health_check_timeout(self):
         """Test timeout health check"""
         with patch('requests.get') as mock_get:
-            mock_get# Mock eliminated - using authentic gpt-4o-mini requests.exceptions.Timeout()
+            # Configurer le mock pour lever une exception de timeout
+            mock_get.side_effect = requests.exceptions.Timeout()
             
             result = self.service_manager.test_service_health("http://localhost:8888/health", timeout=1)
             assert result == False
@@ -323,7 +306,8 @@ class TestServiceManager:
         
         # Mock pour simuler qu'aucun port n'est libre
         with patch.object(self.service_manager.port_manager, 'find_available_port') as mock_find:
-            mock_find# Mock eliminated - using authentic gpt-4o-mini None
+            # Configurer le mock pour retourner None
+            mock_find.return_value = None
             
             success, port = self.service_manager.start_service_with_failover("no-port-service")
             
@@ -476,7 +460,8 @@ class TestFailoverScenarios:
             
             # Mock health check pour éviter échec
             with patch.object(self.service_manager, 'test_service_health') as mock_health:
-                mock_health# Mock eliminated - using authentic gpt-4o-mini True
+                # Configurer le mock pour qu'il retourne True
+                mock_health.return_value = True
                 
                 # Test démarrage avec failover
                 success, assigned_port = self.service_manager.start_service_with_failover("failover-test")

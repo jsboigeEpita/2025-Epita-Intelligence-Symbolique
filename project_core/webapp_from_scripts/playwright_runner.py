@@ -33,7 +33,8 @@ class PlaywrightRunner:
         self.last_results: Optional[Dict[str, Any]] = None
 
     async def run_tests(self, test_paths: List[str] = None,
-                        runtime_config: Dict[str, Any] = None) -> bool:
+                        runtime_config: Dict[str, Any] = None,
+                        pytest_args: List[str] = None) -> bool:
         if not self.enabled:
             self.logger.info("Tests Playwright désactivés")
             return True
@@ -47,7 +48,7 @@ class PlaywrightRunner:
         try:
             await self._prepare_test_environment(effective_config)
             playwright_command_str = self._build_playwright_command_string(
-                test_paths, effective_config)
+                test_paths, effective_config, pytest_args or [])
             result = await self._execute_tests(playwright_command_str, effective_config)
             success = await self._analyze_results(result)
             return success
@@ -83,9 +84,11 @@ class PlaywrightRunner:
         self.logger.info(f"Variables test configurées: {env_vars}")
 
     def _build_playwright_command_string(self, test_paths: List[str],
-                                         config: Dict[str, Any]) -> str:
+                                         config: Dict[str, Any],
+                                         pytest_args: List[str]) -> str:
         """Construit la chaîne de commande 'pytest ...' pour les tests Playwright Python."""
         parts = ['pytest']  # Changement pour utiliser pytest
+        
         parts.extend(test_paths)
         
         if not config.get('headless', True):
@@ -103,6 +106,9 @@ class PlaywrightRunner:
         # Le timeout_ms de la config est déjà utilisé pour les variables d'environnement.
         # Ne pas ajouter de --timeout global à la commande pytest pour l'instant.
 
+        if pytest_args:
+            parts.extend(pytest_args)
+
         self.logger.info(f"Construction de la commande Pytest. Config headless: {config.get('headless', True)}, Browser: {config.get('browser')}")
         return ' '.join(parts)
 
@@ -114,7 +120,7 @@ class PlaywrightRunner:
         # Le répertoire de travail doit être celui où se trouve package.json,
         # ou la racine du projet si les chemins de test sont relatifs à la racine.
         # Les chemins de test comme 'tests/functional/...' sont relatifs à la racine du projet.
-        test_dir = '.' # Changé de 'tests_playwright' à '.'
+        test_dir = '.'
 
         try:
             # Utilisation de asyncio.to_thread pour ne pas bloquer la boucle
