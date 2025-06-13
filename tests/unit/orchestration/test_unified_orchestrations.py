@@ -126,7 +126,7 @@ class TestUnifiedOrchestrations:
         
         # Test que la configuration est respectée
         if hasattr(orchestrator, 'config'):
-            assert orchestrator.config.logic_type.value == 'FOL'
+            assert orchestrator.config.logic_type.value.lower() == 'fol'
 
     def test_multi_agent_coordination(self):
         """Test de coordination multi-agents."""

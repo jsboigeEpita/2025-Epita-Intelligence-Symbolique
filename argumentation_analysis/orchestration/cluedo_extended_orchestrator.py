@@ -22,15 +22,15 @@ from semantic_kernel.filters.functions.function_invocation_context import Functi
 # Assumant que ces composants existent dans un sous-dossier.
 # Si ce n'est pas le cas, ces imports devront être ajustés.
 try:
-    from .cluedo_components.logging_handler import ToolCallLoggingHandler
-    from .cluedo_components.strategies import CyclicSelectionStrategy, OracleTerminationStrategy
-    from .cluedo_components.metrics_collector import MetricsCollector
-    from .cluedo_components.suggestion_handler import SuggestionHandler
-    from .cluedo_components.dialogue_analyzer import DialogueAnalyzer
-    from .cluedo_components.enhanced_logic import EnhancedLogicHandler
-except ImportError:
+    from argumentation_analysis.orchestration.cluedo_components.logging_handler import ToolCallLoggingHandler
+    from argumentation_analysis.orchestration.cluedo_components.strategies import CyclicSelectionStrategy, OracleTerminationStrategy
+    from argumentation_analysis.orchestration.cluedo_components.metrics_collector import MetricsCollector
+    from argumentation_analysis.orchestration.cluedo_components.suggestion_handler import SuggestionHandler
+    from argumentation_analysis.orchestration.cluedo_components.dialogue_analyzer import DialogueAnalyzer
+    from argumentation_analysis.orchestration.cluedo_components.enhanced_logic import EnhancedLogicHandler
+except ImportError as e:
     # Fallback si la structure de cluedo_components n'existe pas, pour éviter un crash complet
-    logging.error("Impossible d'importer les composants depuis .cluedo_components. L'orchestrateur sera non fonctionnel.")
+    logging.error(f"Impossible d'importer les composants depuis cluedo_components: L'orchestrateur sera non fonctionnel. Erreur: {e}")
     ToolCallLoggingHandler = object
     CyclicSelectionStrategy = object
     OracleTerminationStrategy = object
@@ -41,13 +41,13 @@ except ImportError:
 
 
 # Imports des dépendances du projet
-from ..core.cluedo_oracle_state import CluedoOracleState
-from ..agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
-from ..agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
-from ..agents.core.logic.tweety_bridge import TweetyBridge
-from ..agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent
-from ..agents.core.oracle.permissions import QueryType
-from .group_chat import GroupChatOrchestration
+from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
+from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
+from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
+from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent
+from argumentation_analysis.agents.core.oracle.permissions import QueryType
+from argumentation_analysis.orchestration.group_chat import GroupChatOrchestration
 
 logger = logging.getLogger(__name__)
 

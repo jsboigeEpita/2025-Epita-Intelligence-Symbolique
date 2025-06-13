@@ -22,23 +22,19 @@ sys.path.insert(0, str(project_root))
 
 
 @pytest.fixture(scope="session", autouse=True)
-def setup_test_environment():
-    """Configuration de l'environnement de test."""
-    # Désactiver les logs verbeux pendant les tests
-    logging.getLogger('argumentation_analysis').setLevel(logging.ERROR)
+def jvm_session_manager():
+    """Initialise la JVM une fois pour toute la session de test et l'arrête à la fin."""
+    import jpype
+    from argumentation_analysis.core.jvm_setup import initialize_jvm, shutdown_jvm_if_needed
     
-    # Mock des composants JPype si nécessaires
-    if 'jpype' not in sys.modules:
-        # Mock basique de jpype pour éviter les erreurs d'import
-        sys.modules['jpype'] = type(sys)('jpype')
-        sys.modules['jpype'].isJVMStarted = lambda: False
-        sys.modules['jpype'].shutdownJVM = lambda: None
-        sys.modules['jpype'].startJVM = lambda *args, **kwargs: None
+    # Démarrer la JVM seulement si elle ne l'est pas déjà
+    if not jpype.isJVMStarted():
+        initialize_jvm()
     
-    yield
+    yield  # Les tests s'exécutent ici
     
-    # Nettoyage après les tests
-    pass
+    # Arrêter la JVM à la fin de la session de test
+    shutdown_jvm_if_needed()
 
 @pytest.fixture
 def llm_service():
