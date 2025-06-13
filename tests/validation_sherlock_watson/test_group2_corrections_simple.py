@@ -43,7 +43,7 @@ async def test_dataset_manager_check_permission():
     permission_manager.add_permission_rule(rule)
     
     # Creer le dataset manager
-    mock_dataset = await create_authentic_gpt4o_mini_instance()
+    mock_dataset = Mock(spec=CluedoDataset)
     dataset_manager = DatasetAccessManager(mock_dataset, permission_manager)
     
     # Verifier que la methode existe
@@ -93,7 +93,7 @@ async def test_oracle_tools_integration():
     
     # Creer les mocks
     mock_kernel = Mock(spec=Kernel)
-    mock_kernel.add_plugin = await create_authentic_gpt4o_mini_instance()
+    mock_kernel.add_plugin = Mock()
     
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
     mock_dataset_manager.check_permission = Mock(return_value=True)
