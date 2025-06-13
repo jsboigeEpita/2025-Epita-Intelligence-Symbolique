@@ -18,8 +18,11 @@ import os
 # Ajouter le répertoire racine au path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from argumentation_analysis.agents.core.oracle.oracle_base_agent import OracleBaseAgent
-from argumentation_analysis.agents.core.oracle.permissions import QueryType
+from tests.utils.common_test_helpers import create_authentic_gpt4o_mini_instance
+from argumentation_analysis.agents.core.oracle.oracle_base_agent import OracleBaseAgent, OracleTools
+from argumentation_analysis.agents.core.oracle.permissions import QueryType, PermissionManager
+from argumentation_analysis.agents.core.oracle.dataset_access_manager import DatasetAccessManager
+from semantic_kernel.kernel import Kernel
 
 @pytest.mark.anyio
 async def test_oracle_fixes():
@@ -27,9 +30,10 @@ async def test_oracle_fixes():
     print("=== Test des corrections Oracle ===")
     
     # Création des mocks
-    mock_kernel = await self._create_authentic_gpt4o_mini_instance()
-    mock_dataset_manager = await self._create_authentic_gpt4o_mini_instance()
-    mock_permission_manager = await self._create_authentic_gpt4o_mini_instance()
+    mock_kernel = Mock(spec=Kernel)
+    mock_kernel.add_plugin = Mock()
+    mock_dataset_manager = Mock(spec=DatasetAccessManager)
+    mock_permission_manager = Mock(spec=PermissionManager)
     mock_permission_manager.is_authorized = Mock(return_value=True)
     mock_dataset_manager.permission_manager = mock_permission_manager
     # Mock de la méthode check_permission qui est réellement appelée
@@ -73,7 +77,7 @@ async def test_oracle_fixes():
     # Test 2: validate_agent_permissions - failure
     try:
         # Reconfigurer le mock pour retourner False
-        mock_dataset_manager.check_permission# Mock eliminated - using authentic gpt-4o-mini False
+        mock_dataset_manager.check_permission.return_value = False
         mock_dataset_manager.check_permission.reset_mock()
         
         result = await agent.oracle_tools.validate_agent_permissions(
