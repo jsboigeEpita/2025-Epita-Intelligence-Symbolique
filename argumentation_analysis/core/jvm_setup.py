@@ -102,11 +102,22 @@ def find_jdk_path() -> Optional[Path]:
 def get_jvm_options() -> List[str]:
     """Prépare les options pour le démarrage de la JVM, incluant le chemin du JDK si disponible."""
     options = [
-        "-Xms128m",
-        "-Xmx512m",
+        "-Xms64m",      # Réduit de 128m à 64m pour éviter les access violations
+        "-Xmx256m",     # Réduit de 512m à 256m pour les tests
         "-Dfile.encoding=UTF-8",
         "-Djava.awt.headless=true"
     ]
+    
+    # Options spécifiques Windows pour contourner les access violations JPype
+    if os.name == 'nt':  # Windows
+        options.extend([
+            "-XX:+UseG1GC",              # Garbage collector plus stable
+            "-XX:+DisableExplicitGC",    # Évite les GC manuels problématiques
+            "-XX:-UsePerfData",          # Désactive les données de performance
+            "-Djava.awt.headless=true"   # Force mode headless
+        ])
+        logger.info("Options JVM Windows spécifiques ajoutées pour contourner les access violations JPype")
+    
     logger.info(f"Options JVM de base définies : {options}")
     return options
 
@@ -142,6 +153,7 @@ def initialize_jvm(lib_dir_path: Optional[str] = None, specific_jar_path: Option
             
             jars = [str(f) for f in jar_directory.glob("*.jar")]
             logger.info(f"Classpath construit avec {len(jars)} JAR(s) depuis '{jar_directory}'.")
+            logger.info(f"Classpath configuré avec {len(jars)} JARs (JPype {jpype.__version__})")
 
         if not jars:
             logger.error("(ERREUR) Aucun JAR trouvé pour le classpath. Démarrage annulé.")
@@ -155,14 +167,14 @@ def initialize_jvm(lib_dir_path: Optional[str] = None, specific_jar_path: Option
         
         try:
             logger.info(f"Tentative de démarrage de la JVM avec le chemin par défaut: {jvm_path}")
-            jpype.startJVM(*jvm_options, classpath=jars, convertStrings=False)
+            jpype.startJVM(*jvm_options, classpath=jars)  # Supprime convertStrings=False problématique
         except Exception as e:
             logger.warning(f"Échec du démarrage avec le chemin par défaut de JPype. Erreur: {e}")
             if jdk_path:
                 jvm_path = str(jdk_path / "bin" / "server" / "jvm.dll") # Exemple pour Windows
                 if os.path.exists(jvm_path):
                      logger.info(f"Tentative de démarrage avec le JDK portable: {jvm_path}")
-                     jpype.startJVM(jvm_path, *jvm_options, classpath=jars, convertStrings=False)
+                     jpype.startJVM(jvm_path, *jvm_options, classpath=jars)  # Supprime convertStrings=False problématique
                 else:
                     logger.error("jvm.dll non trouvé dans le JDK portable. Impossible de démarrer la JVM.")
                     raise RuntimeError("Échec du démarrage de la JVM.") from e

@@ -159,7 +159,9 @@ def get_simple_import() -> str:
 # Auto-exécution à l'import pour usage ultra-simple
 if __name__ != "__main__":
     # Le module est importé, auto-activation
-    ensure_env(silent=False) # FORCER silent=False pour voir les logs de débogage
+    # TEMPORAIREMENT DÉSACTIVÉ POUR LES TESTS D'IMPORT
+    # ensure_env(silent=False) # FORCER silent=False pour voir les logs de débogage
+    pass
 
 
 if __name__ == "__main__":

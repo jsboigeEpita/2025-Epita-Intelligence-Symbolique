@@ -238,6 +238,11 @@ class TestUnifiedOrchestrationPipeline:
         """Test de l'initialisation avec orchestrateurs spécialisés réels."""
         pipeline = UnifiedOrchestrationPipeline(specialized_config)
         
+        # Mock kernel pour que _initialize_specialized_orchestrators() fonctionne
+        from unittest.mock import Mock
+        mock_kernel = Mock()
+        pipeline.kernel = mock_kernel
+        
         with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.UnifiedOrchestrationPipeline._initialize_base_services'):
             success = await pipeline.initialize()
         
@@ -246,12 +251,12 @@ class TestUnifiedOrchestrationPipeline:
         
         # Vérifier que les orchestrateurs spécialisés réels sont instanciés
         assert len(pipeline.specialized_orchestrators) > 0
-        from argumentation_analysis.orchestrators.cluedo_orchestrator import CluedoOrchestrator
-        from argumentation_analysis.orchestrators.conversation_orchestrator import ConversationOrchestrator
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
+        from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
         
         assert "cluedo" in pipeline.specialized_orchestrators
         assert "conversation" in pipeline.specialized_orchestrators
-        assert isinstance(pipeline.specialized_orchestrators["cluedo"]["orchestrator"], CluedoOrchestrator)
+        assert isinstance(pipeline.specialized_orchestrators["cluedo"]["orchestrator"], CluedoExtendedOrchestrator)
         assert isinstance(pipeline.specialized_orchestrators["conversation"]["orchestrator"], ConversationOrchestrator)
     
     @pytest.mark.asyncio
