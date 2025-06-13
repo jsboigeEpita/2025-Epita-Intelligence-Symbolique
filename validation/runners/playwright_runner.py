@@ -118,6 +118,9 @@ class PlaywrightRunner:
         env_vars = {
             'BACKEND_URL': config['backend_url'],
             'FRONTEND_URL': config['frontend_url'],
+            # Variables de compatibilité pour les tests existants
+            'API_BASE_URL': config['backend_url'],
+            'FRONTEND_BASE_URL': config['frontend_url'],
             'HEADLESS': str(config['headless']).lower(),
             'BROWSER': config['browser'],
             'SCREENSHOTS_DIR': str(self.screenshots_dir),
