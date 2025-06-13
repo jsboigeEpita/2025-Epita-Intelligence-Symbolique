@@ -237,9 +237,9 @@ class TestUnifiedOrchestrationPipeline:
         assert pipeline.initialized is True
         
         # Vérifier que les gestionnaires hiérarchiques réels sont instanciés
-        from argumentation_analysis.orchestrators.strategic_manager import StrategicManager
-        from argumentation_analysis.orchestrators.task_coordinator import TaskCoordinator
-        from argumentation_analysis.orchestrators.operational_manager import OperationalManager
+        from argumentation_analysis.orchestration.hierarchical.strategic_manager import StrategicManager
+        from argumentation_analysis.orchestration.hierarchical.tactical_coordinator import TaskCoordinator
+        from argumentation_analysis.orchestration.hierarchical.operational_manager import OperationalManager
         
         assert isinstance(pipeline.strategic_manager, StrategicManager)
         assert isinstance(pipeline.tactical_coordinator, TaskCoordinator)

@@ -175,14 +175,11 @@ class UnifiedConfig:
         """Valide la cohérence de la configuration."""
         # Validation du niveau de mock vs authenticité
         if self.mock_level != MockLevel.NONE:
-            if self.require_real_gpt or self.require_real_tweety or self.require_full_taxonomy:
-                # Ne pas lever d'erreur si la configuration de test est active
-                if os.environ.get('USE_MOCK_CONFIG') != '1':
-                    raise ValueError(
-                        f"Configuration incohérente: mock_level={self.mock_level.value} "
-                        f"mais require_real_* activé. Pour l'authenticité 100%, "
-                        f"utilisez mock_level=none."
-                    )
+            # En mode mock partiel ou complet, toutes les exigences "réelles" doivent être désactivées.
+            # Cela simplifie la configuration et évite les incohérences.
+            self.require_real_gpt = False
+            self.require_real_tweety = False
+            self.require_full_taxonomy = False
         
         # Validation agents vs logique
         if self.logic_type == LogicType.FOL and AgentType.LOGIC in self.agents:

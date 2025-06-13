@@ -98,7 +98,7 @@ class TestUnifiedOrchestrations:
             mock_level='PARTIAL', # On utilise des mocks partiels maintenant
             orchestration_type='UNIFIED',
             require_real_gpt=False, # On n'exige plus le vrai GPT
-            require_real_tweety=True
+            require_real_tweety=False # Doit être False si le mock_level n'est pas 'NONE'
         )
     
     def test_conversation_orchestrator_initialization(self):
@@ -126,7 +126,7 @@ class TestUnifiedOrchestrations:
         
         # Test que la configuration est respectée
         if hasattr(orchestrator, 'config'):
-            assert orchestrator.config.logic_type == 'FOL'
+            assert orchestrator.config.logic_type.value == 'FOL'
 
     def test_multi_agent_coordination(self):
         """Test de coordination multi-agents."""
@@ -349,7 +349,7 @@ class TestUnifiedSystemCoordination:
         assert conv_orchestrator is not None
         
         # Test avec configuration LLM réel
-        real_config = UnifiedConfig(orchestration_type='REAL_LLM')
+        real_config = UnifiedConfig(orchestration_type='REAL')
         real_orchestrator = RealLLMOrchestrator(config=real_config)
         
         assert real_orchestrator is not None
@@ -406,7 +406,7 @@ class TestUnifiedSystemCoordination:
         
         # Vérifier qu'aucun mock n'est utilisé en mode authentique
         if hasattr(orchestrator, 'config'):
-            assert orchestrator.config.mock_level == 'NONE'
+            assert orchestrator.config.mock_level.value == 'none'
 
 
 class TestOrchestrationPerformanceAndRobustness:
