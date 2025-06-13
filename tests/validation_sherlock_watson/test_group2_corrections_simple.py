@@ -1,3 +1,4 @@
+from unittest.mock import Mock, AsyncMock
 
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai
@@ -20,13 +21,17 @@ import asyncio
 # Ajouter le dossier racine au path
 sys.path.insert(0, os.path.abspath('.'))
 
+from tests.utils.common_test_helpers import create_authentic_gpt4o_mini_instance
+
 # Imports necessaires
 from argumentation_analysis.agents.core.oracle.dataset_access_manager import DatasetAccessManager
 from argumentation_analysis.agents.core.oracle.permissions import QueryType, PermissionManager, PermissionRule
 from argumentation_analysis.agents.core.oracle.oracle_base_agent import OracleBaseAgent, OracleTools
+from argumentation_analysis.agents.core.oracle.cluedo_dataset import CluedoDataset
 from semantic_kernel.kernel import Kernel
 
 
+@pytest.mark.anyio
 async def test_dataset_manager_check_permission():
     """Test que DatasetAccessManager a maintenant la methode check_permission."""
     print("Test 1: Verification de l'existence de check_permission sur DatasetAccessManager")
@@ -40,7 +45,7 @@ async def test_dataset_manager_check_permission():
     permission_manager.add_permission_rule(rule)
     
     # Creer le dataset manager
-    mock_dataset = await self._create_authentic_gpt4o_mini_instance()
+    mock_dataset = Mock(spec=CluedoDataset)
     dataset_manager = DatasetAccessManager(mock_dataset, permission_manager)
     
     # Verifier que la methode existe
@@ -90,7 +95,7 @@ async def test_oracle_tools_integration():
     
     # Creer les mocks
     mock_kernel = Mock(spec=Kernel)
-    mock_kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
+    mock_kernel.add_plugin = Mock()
     
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
     mock_dataset_manager.check_permission = Mock(return_value=True)

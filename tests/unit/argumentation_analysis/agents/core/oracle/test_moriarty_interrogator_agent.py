@@ -12,9 +12,11 @@ Tests unitaires corrigés pour MoriartyInterrogatorAgent.
 
 import pytest
 import asyncio
+from unittest.mock import Mock, patch
 
 from typing import Dict, Any, List
 from datetime import datetime
+from unittest.mock import patch, Mock
 
 # Imports du système Oracle
 from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent, MoriartyTools
@@ -61,7 +63,7 @@ class TestMoriartyInterrogatorAgent:
         # Les cartes de Moriarty et la solution peuvent être adaptées pour les besoins des tests.
         return CluedoDataset(
             moriarty_cards=["Poignard", "Salon", "Moutarde"],
-            solution={"suspect": "Pervenche", "arme": "Revolver", "lieu": "Cuisine"},
+            solution_secrete={"suspect": "Pervenche", "arme": "Revolver", "lieu": "Cuisine"},
             reveal_policy=RevealPolicy.BALANCED # Politique par défaut
         )
     
@@ -126,7 +128,7 @@ class TestMoriartyInterrogatorAgent:
             authorized=False,
             reason="Invalid parameters"
         )
-        mock_cluedo_dataset.validate_cluedo_suggestion# Mock eliminated - using authentic gpt-4o-mini invalid_result
+        mock_cluedo_dataset.validate_cluedo_suggestion.return_value = invalid_result
         
         # Test simple pour vérifier le mock
         result = mock_cluedo_dataset.validate_cluedo_suggestion.return_value
@@ -175,7 +177,7 @@ class TestMoriartyInterrogatorAgent:
             "content": "This weapon is not in the solution",
             "eliminated_option": "rope"
         }
-        mock_cluedo_dataset._generate_strategic_clue# Mock eliminated - using authentic gpt-4o-mini elimination_result
+        mock_cluedo_dataset._generate_strategic_clue.return_value = elimination_result
         
         # Test simple
         result = mock_cluedo_dataset._generate_strategic_clue.return_value
@@ -267,7 +269,7 @@ class TestMoriartyTools:
     def test_reveal_card_error_handling(self, moriarty_tools, mock_cluedo_dataset):
         """Test la gestion d'erreur lors de la révélation."""
         # Configuration pour lever une exception
-        mock_cluedo_dataset.get_moriarty_cards# Mock eliminated - using authentic gpt-4o-mini Exception("Erreur de révélation")
+        mock_cluedo_dataset.get_moriarty_cards.side_effect = Exception("Erreur de révélation")
         
         result = moriarty_tools.reveal_card_if_owned("TestCard", "TestAgent", "test context")
         

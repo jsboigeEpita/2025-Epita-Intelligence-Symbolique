@@ -31,7 +31,7 @@ try:
     from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
     from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
     from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer
-    from config.unified_config import UnifiedConfig
+    from config.unified_config import UnifiedConfig as RealUnifiedConfig
     from argumentation_analysis.agents.core.logic.fol_logic_agent import FirstOrderLogicAgent
     REAL_COMPONENTS_AVAILABLE = True
 except ImportError as e:
@@ -123,7 +123,7 @@ except ImportError as e:
 class TestUnifiedSystemIntegration:
     async def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
+        config = RealUnifiedConfig()
         return config.get_kernel_with_gpt4o_mini()
         
     async def _make_authentic_llm_call(self, prompt: str) -> str:

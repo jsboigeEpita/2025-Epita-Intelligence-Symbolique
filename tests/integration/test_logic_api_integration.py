@@ -14,6 +14,7 @@ Tests d'intégration pour l'API Web avec les agents logiques.
 import os
 import sys
 import unittest
+from unittest.mock import patch, MagicMock
 import json
 
 import uuid

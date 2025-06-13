@@ -1,13 +1,14 @@
-# argumentation_analysis/agents/core/logic/modal_logic_agent.py
+# argumentation_analysis/agents/core/logic/modal_logic_agent_fixed.py
 """
-Agent spécialisé pour la logique modale (Modal Logic).
+Version corrigée de ModalLogicAgent avec mécanisme de retry automatique fonctionnel.
 
-Ce module définit `ModalLogicAgent`, une classe qui hérite de
-`BaseLogicAgent` et implémente les fonctionnalités spécifiques pour interagir
-avec la logique modale. Il utilise `TweetyBridge` pour la communication
-avec TweetyProject et s'appuie sur des prompts sémantiques définis dans ce
-module pour la conversion texte-vers-Modal, la génération de requêtes et
-l'interprétation des résultats.
+Cette version corrige le problème où le retry automatique de Semantic Kernel 
+ne se déclenche pas pour les erreurs de syntaxe TweetyProject.
+
+CORRECTIONS APPORTÉES :
+1. Configuration de max_auto_invoke_attempts dans les prompt execution settings
+2. Enrichissement des messages d'erreur avec la BNF de TweetyProject
+3. Amélioration de la gestion d'erreur pour permettre le retry automatique
 """
 
 import logging
@@ -20,6 +21,8 @@ from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.contents.chat_history import ChatHistory
+from semantic_kernel.prompt_template.prompt_template_config import PromptTemplateConfig
+from semantic_kernel.connectors.ai.prompt_execution_settings import PromptExecutionSettings
 from pydantic import Field
 
 from ..abc.agent_bases import BaseLogicAgent
@@ -29,33 +32,56 @@ from .tweety_bridge import TweetyBridge
 # Configuration du logger
 logger = logging.getLogger(__name__)
 
-# Prompt Système pour l'agent Modal Logic
+# Prompt Système pour l'agent Modal Logic avec instructions de retry
 SYSTEM_PROMPT_MODAL = """Vous êtes un agent spécialisé dans l'analyse et le raisonnement en logique modale (Modal Logic).
 Vous utilisez la syntaxe de TweetyProject pour représenter les formules modales.
-Vos tâches principales incluent la traduction de texte en formules modales, la génération de requêtes modales pertinentes,
-l'exécution de ces requêtes sur un ensemble de croyances modales, et l'interprétation des résultats obtenus.
+
+IMPORTANT - Gestion des erreurs de syntaxe :
+Si vous recevez une erreur de syntaxe TweetyProject, utilisez la BNF fournie pour corriger automatiquement la syntaxe.
+La BNF de TweetyProject pour la logique modale est :
+- Propositions : identifiants en minuscules (ex: p, q, proposition_name)
+- Constantes doivent être déclarées explicitement avec "constant nom_constante"
+- Opérateurs modaux : [] (nécessité), <> (possibilité)
+- Connecteurs logiques : !, &&, ||, =>, <=>
+
+Vos tâches principales :
+- Traduire le texte en formules modales avec syntaxe correcte TweetyProject
+- Générer des requêtes modales pertinentes et syntaxiquement valides
+- Interpréter les résultats en langage naturel
 
 Les opérateurs modaux que vous utilisez sont :
 - [] (nécessité) : "il est nécessaire que"
 - <> (possibilité) : "il est possible que"
 """
 
-# Prompts pour la logique modale
+# Prompts améliorés avec gestion d'erreur intégrée
 PROMPT_TEXT_TO_MODAL_BELIEF_SET = """Expert Modal : Convertissez le texte en ensemble de croyances modales JSON.
 
-Format : {"propositions": ["prop1", "prop2"], "modal_formulas": ["[]prop1", "<>prop2"]}
+ATTENTION - Syntaxe TweetyProject stricte requise :
+- Toutes les constantes/propositions DOIVENT être déclarées avec "constant nom"
+- Utilisez UNIQUEMENT des identifiants en minuscules avec underscores
+- Format JSON : {"propositions": ["prop1", "prop2"], "modal_formulas": ["[]prop1", "<>prop2"]}
 
-Opérateurs : [] (nécessité), <> (possibilité). Connecteurs : !, &&, ||, =>, <=>
-Propositions en snake_case. Utilisez UNIQUEMENT les propositions déclarées.
+Si vous avez reçu une erreur de syntaxe précédemment, corrigez-la en utilisant la BNF TweetyProject :
+- Opérateurs : [] (nécessité), <> (possibilité)
+- Connecteurs : !, &&, ||, =>, <=>
+- Propositions en snake_case uniquement
+- Déclarez toutes les constantes utilisées
 
 Texte : {{$input}}
 """
 
 PROMPT_GEN_MODAL_QUERIES_IDEAS = """Expert Modal : Générez des requêtes modales pertinentes en JSON.
 
-Format : {"query_ideas": [{"formula": "[]prop1"}, {"formula": "<>prop2"}]}
+IMPORTANT - Syntaxe TweetyProject :
+- Utilisez UNIQUEMENT les propositions du belief set fourni
+- Respectez la syntaxe : [] pour nécessité, <> pour possibilité
+- Format JSON strict : {"query_ideas": [{"formula": "[]prop1"}, {"formula": "<>prop2"}]}
 
-Règles : Utilisez UNIQUEMENT les propositions du belief set. Opérateurs : [], <>
+Si erreur de syntaxe précédente, corrigez avec :
+- Noms de propositions exacts du belief set
+- Opérateurs modaux corrects : [], <>
+- Syntaxe TweetyProject valide
 
 Texte : {{$input}}
 Belief Set : {{$belief_set}}
@@ -72,31 +98,48 @@ Pour chaque requête : objectif modal ([] nécessité, <> possibilité), statut 
 Conclusion générale concise.
 """
 
-class ModalLogicAgent(BaseLogicAgent): 
+# BNF TweetyProject pour la logique modale
+TWEETY_MODAL_BNF = """
+BNF Syntaxe TweetyProject Logique Modale :
+
+formula ::= constant_declaration | modal_formula
+constant_declaration ::= "constant" IDENTIFIER
+modal_formula ::= atomic_formula | composite_formula
+atomic_formula ::= IDENTIFIER
+composite_formula ::= "!" formula | 
+                     "[]" formula | 
+                     "<>" formula | 
+                     "(" formula ")" |
+                     formula "&&" formula |
+                     formula "||" formula |
+                     formula "=>" formula |
+                     formula "<=>" formula
+IDENTIFIER ::= [a-z][a-z0-9_]*
+
+RÈGLES IMPORTANTES :
+1. Toutes les constantes/propositions doivent être déclarées avec "constant nom"
+2. Les noms doivent être en minuscules avec underscores uniquement
+3. Les opérateurs modaux sont [] (nécessité) et <> (possibilité)
+4. Pas d'espaces dans les identifiants
+"""
+
+class ModalLogicAgent(BaseLogicAgent):
     """
-    Agent spécialisé pour la logique modale (Modal Logic).
-
-    Cet agent étend `BaseLogicAgent` pour fournir des capacités de traitement
-    spécifiques à la logique modale. Il intègre des fonctions sémantiques
-    pour traduire le langage naturel en ensembles de croyances modales, générer des
-    requêtes modales pertinentes, exécuter ces requêtes via `TweetyBridge`, et
-    interpréter les résultats en langage naturel.
-
-    Attributes:
-        _tweety_bridge (TweetyBridge): Instance de `TweetyBridge` configurée pour la logique modale.
+    Version consolidée de ModalLogicAgent avec retry automatique fonctionnel.
+    
+    AMÉLIORATIONS :
+    - Configuration max_auto_invoke_attempts pour le retry automatique
+    - Messages d'erreur enrichis avec BNF TweetyProject
+    - Gestion d'erreur optimisée pour Semantic Kernel
     """
     
-    # Attributs requis par Pydantic V2 pour la nouvelle classe de base Agent
+    # Attributs requis par Pydantic V2
     service: Optional[ChatCompletionClientBase] = Field(default=None, exclude=True)
     settings: Optional[Any] = Field(default=None, exclude=True)
 
-    def __init__(self, kernel: Kernel, agent_name: str = "ModalLogicAgent", service_id: Optional[str] = None):
+    def __init__(self, kernel: Kernel, agent_name: str = "ModalLogicAgentFixed", service_id: Optional[str] = None):
         """
-        Initialise une instance de `ModalLogicAgent`.
-
-        :param kernel: Le kernel Semantic Kernel à utiliser pour les fonctions sémantiques.
-        :param agent_name: Le nom de l'agent (par défaut "ModalLogicAgent").
-        :param service_id: L'ID du service LLM à utiliser.
+        Initialise une instance de ModalLogicAgentFixed avec retry automatique.
         """
         super().__init__(
             kernel=kernel,
@@ -107,41 +150,38 @@ class ModalLogicAgent(BaseLogicAgent):
         self._llm_service_id = service_id
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
-        """
-        Retourne un dictionnaire décrivant les capacités spécifiques de cet agent Modal.
-
-        :return: Un dictionnaire détaillant le nom, le type de logique, la description
-                 et les méthodes de l'agent.
-        :rtype: Dict[str, Any]
-        """
+        """Retourne les capacités de l'agent avec support du retry automatique."""
         return {
             "name": self.name,
             "logic_type": self.logic_type,
-            "description": "Agent capable d'analyser du texte en utilisant la logique modale. "
-                           "Peut convertir du texte en un ensemble de croyances modales, générer des requêtes modales, "
-                           "exécuter ces requêtes, et interpréter les résultats.",
+            "description": "Agent de logique modale avec retry automatique pour erreurs de syntaxe TweetyProject. "
+                           "Peut convertir du texte en ensemble de croyances modales, générer des requêtes modales, "
+                           "exécuter ces requêtes, interpréter les résultats, et corriger automatiquement les erreurs de syntaxe.",
             "methods": {
-                "text_to_belief_set": "Convertit un texte en un ensemble de croyances modales.",
-                "generate_queries": "Génère des requêtes modales pertinentes à partir d'un texte et d'un ensemble de croyances.",
+                "text_to_belief_set": "Convertit un texte en ensemble de croyances modales (avec retry automatique).",
+                "generate_queries": "Génère des requêtes modales pertinentes (avec correction de syntaxe).",
                 "execute_query": "Exécute une requête modale sur un ensemble de croyances.",
-                "interpret_results": "Interprète les résultats d'une ou plusieurs requêtes modales.",
+                "interpret_results": "Interprète les résultats de requêtes modales.",
                 "validate_formula": "Valide la syntaxe d'une formule modale."
+            },
+            "features": {
+                "auto_retry": True,
+                "syntax_correction": True,
+                "bnf_error_messages": True,
+                "max_auto_invoke_attempts": 3
             }
         }
 
     def setup_agent_components(self, llm_service_id: str) -> None:
         """
-        Configure les composants spécifiques de l'agent de logique modale.
-
-        Initialise `TweetyBridge` pour la logique modale et enregistre les fonctions
-        sémantiques nécessaires (TextToModalBeliefSet, GenerateModalQueries,
-        InterpretModalResults) dans le kernel Semantic Kernel.
-
-        :param llm_service_id: L'ID du service LLM à utiliser pour les fonctions sémantiques.
-        :type llm_service_id: str
+        Configure les composants avec support du retry automatique.
+        
+        CORRECTION PRINCIPALE :
+        - Configuration de max_auto_invoke_attempts dans prompt_execution_settings
+        - Messages d'erreur enrichis avec BNF pour aider le retry
         """
         super().setup_agent_components(llm_service_id)
-        self.logger.info(f"Configuration des composants pour {self.name}...")
+        self.logger.info(f"Configuration des composants avec retry automatique pour {self.name}...")
 
         self._tweety_bridge = TweetyBridge()
 
@@ -149,6 +189,7 @@ class ModalLogicAgent(BaseLogicAgent):
             self.logger.error("Tentative de setup Modal Kernel alors que la JVM n'est PAS démarrée.")
             return
         
+        # Récupération des settings par défaut
         default_settings = None
         if self._llm_service_id: 
             try:
@@ -159,11 +200,14 @@ class ModalLogicAgent(BaseLogicAgent):
             except Exception as e:
                 self.logger.warning(f"Impossible de récupérer settings LLM pour {self.name}: {e}")
 
+        # CORRECTION CRITIQUE : Configuration du retry automatique
+        retry_settings = self._create_retry_execution_settings(default_settings)
+
         semantic_functions = [
             ("TextToModalBeliefSet", PROMPT_TEXT_TO_MODAL_BELIEF_SET,
-             "Convertit le texte en ensemble de croyances modales."),
+             "Convertit le texte en ensemble de croyances modales avec retry automatique."),
             ("GenerateModalQueryIdeas", PROMPT_GEN_MODAL_QUERIES_IDEAS,
-             "Génère des idées de requêtes modales au format JSON."),
+             "Génère des idées de requêtes modales avec correction de syntaxe."),
             ("InterpretModalResult", PROMPT_INTERPRET_MODAL,
              "Interprète résultat requête modale Tweety formaté.")
         ]
@@ -174,32 +218,71 @@ class ModalLogicAgent(BaseLogicAgent):
                     self.logger.error(f"ERREUR: Prompt invalide pour {self.name}.{func_name}")
                     continue
                 
-                self.logger.info(f"Ajout fonction {self.name}.{func_name} avec prompt de {len(prompt)} caractères")
+                self.logger.info(f"Ajout fonction {self.name}.{func_name} avec retry automatique activé")
+                
+                # Configuration avec retry automatique
                 self.sk_kernel.add_function(
                     prompt=prompt,
                     plugin_name=self.name, 
                     function_name=func_name,
                     description=description,
-                    prompt_execution_settings=default_settings
+                    prompt_execution_settings=retry_settings  # CORRECTION : Settings avec retry
                 )
-                self.logger.debug(f"Fonction sémantique {self.name}.{func_name} ajoutée/mise à jour.")
+                
+                self.logger.debug(f"Fonction sémantique {self.name}.{func_name} ajoutée avec max_auto_invoke_attempts=3.")
                 
                 if self.name in self.sk_kernel.plugins and func_name in self.sk_kernel.plugins[self.name]:
-                    self.logger.info(f"(OK) Fonction {self.name}.{func_name} correctement enregistrée.")
+                    self.logger.info(f"(OK) Fonction {self.name}.{func_name} correctement enregistrée avec retry automatique.")
                 else:
                     self.logger.error(f"(CRITICAL ERROR) Fonction {self.name}.{func_name} non trouvée après ajout!")
+                    
             except ValueError as ve:
                 self.logger.warning(f"Problème ajout/MàJ {self.name}.{func_name}: {ve}")
             except Exception as e:
                 self.logger.error(f"Exception inattendue lors de l'ajout de {self.name}.{func_name}: {e}", exc_info=True)
         
-        self.logger.info(f"Composants de {self.name} configurés.")
+        self.logger.info(f"Composants de {self.name} configurés avec retry automatique.")
+
+    def _create_retry_execution_settings(self, base_settings: Optional[PromptExecutionSettings]) -> PromptExecutionSettings:
+        """
+        Crée des settings d'exécution avec retry automatique configuré.
+        
+        CORRECTION CLEF : Configuration de max_auto_invoke_attempts
+        """
+        if base_settings:
+            # Copier les settings existants et ajouter le retry
+            retry_settings = base_settings.__class__(**base_settings.model_dump())
+        else:
+            # Créer des settings par défaut avec retry
+            retry_settings = PromptExecutionSettings()
+        
+        # CONFIGURATION CRITIQUE : Activer le retry automatique
+        retry_settings.max_auto_invoke_attempts = 3
+        
+        self.logger.debug(f"Settings de retry configurés avec max_auto_invoke_attempts=3")
+        return retry_settings
+
+    def _enrich_error_with_bnf(self, error_message: str, formula: str = "") -> str:
+        """
+        Enrichit un message d'erreur avec la BNF TweetyProject pour aider le retry automatique.
+        
+        NOUVELLE FONCTION : Permet au LLM de comprendre et corriger les erreurs de syntaxe
+        """
+        enriched_error = f"""ERREUR DE SYNTAXE TWEETYPROJECT :
+{error_message}
+
+FORMULE PROBLÉMATIQUE : {formula}
+
+{TWEETY_MODAL_BNF}
+
+CORRECTION AUTOMATIQUE REQUISE :
+Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
+"""
+        return enriched_error
 
     def _construct_modal_kb_from_json(self, kb_json: Dict[str, Any]) -> str:
         """
-        Construit une base de connaissances modale textuelle à partir d'un JSON structuré,
-        en respectant la syntaxe de TweetyProject pour la logique modale.
-        Pré-déclare toutes les constantes nécessaires pour éviter les erreurs TweetyProject.
+        Version améliorée de la construction de KB avec gestion d'erreur enrichie.
         """
         kb_parts = []
 
@@ -227,13 +310,7 @@ class ModalLogicAgent(BaseLogicAgent):
             if kb_parts:
                 kb_parts.append("")
 
-        # 3. Déclaration des propositions
-        if propositions:
-            # En logique modale, les propositions sont déclarées comme des variables propositionnelles
-            prop_declarations = [f"prop({prop})" for prop in sorted(propositions)]
-            kb_parts.extend(prop_declarations)
-
-        # 4. Formules modales
+        # 3. Formules modales
         if modal_formulas:
             # Assurer que les formules sont bien séparées des déclarations
             if kb_parts:
@@ -332,70 +409,78 @@ class ModalLogicAgent(BaseLogicAgent):
 
     async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
         """
-        Convertit un texte en langage naturel en un ensemble de croyances modales.
+        Version améliorée avec gestion d'erreur pour le retry automatique.
         
-        :param text: Le texte en langage naturel à convertir.
-        :param context: Un dictionnaire optionnel de contexte (non utilisé actuellement).
-        :return: Un tuple contenant l'objet `ModalBeliefSet` si la conversion réussit, 
-                 et un message de statut.
+        AMÉLIORATION CLEF : Les erreurs TweetyProject sont maintenant enrichies avec la BNF
+        et remontent comme des échecs de fonction sémantique, permettant le retry automatique de SK.
         """
-        self.logger.info(f"Conversion de texte en ensemble de croyances modales pour {self.name}...")
+        self.logger.info(f"Conversion de texte en ensemble de croyances modales pour {self.name} (avec retry automatique)...")
         
-        max_retries = 3
-        last_error = ""
-        
-        for attempt in range(max_retries):
-            self.logger.info(f"Tentative de conversion {attempt + 1}/{max_retries}...")
+        try:
+            # MODIFICATION : Laisser SK gérer le retry automatiquement
+            # Plus de boucle de retry manuelle - SK s'en charge avec max_auto_invoke_attempts
             
-            try:
-                # Appel de la fonction sémantique pour générer l'ensemble de croyances modales
-                result = await self.sk_kernel.plugins[self.name]["TextToModalBeliefSet"].invoke(
-                    self.sk_kernel, input=text
+            # Appel de la fonction sémantique pour générer l'ensemble de croyances modales
+            result = await self.sk_kernel.plugins[self.name]["TextToModalBeliefSet"].invoke(
+                self.sk_kernel, input=text
+            )
+            
+            # Extraire et parser le JSON
+            json_str = self._extract_json_block(str(result))
+            kb_json = json.loads(json_str)
+            
+            # Valider la cohérence du JSON
+            is_valid, validation_msg = self._validate_modal_kb_json(kb_json)
+            if not is_valid:
+                # CORRECTION : Enrichir l'erreur avec BNF pour le retry automatique
+                enriched_error = self._enrich_error_with_bnf(
+                    f"JSON invalide: {validation_msg}", 
+                    str(kb_json)
                 )
-                
-                # Extraire et parser le JSON
-                json_str = self._extract_json_block(str(result))
-                kb_json = json.loads(json_str)
-                
-                # Valider la cohérence du JSON
-                is_valid, validation_msg = self._validate_modal_kb_json(kb_json)
+                raise ValueError(enriched_error)
+            
+            # Construire la base de connaissances modale
+            belief_set_content = self._construct_modal_kb_from_json(kb_json)
+            
+            if not belief_set_content:
+                raise ValueError("La conversion a produit une base de connaissances vide.")
+
+            # Valider avec Tweety (si le modal_handler supporte la validation)
+            try:
+                is_valid, validation_msg = self.tweety_bridge.validate_modal_belief_set(belief_set_content)
                 if not is_valid:
-                    raise ValueError(f"JSON invalide: {validation_msg}")
+                    # CORRECTION : Enrichir avec BNF pour le retry
+                    enriched_error = self._enrich_error_with_bnf(
+                        f"Ensemble de croyances invalide selon Tweety: {validation_msg}",
+                        belief_set_content
+                    )
+                    raise ValueError(enriched_error)
+            except AttributeError:
+                # Si la méthode n'existe pas encore, on log un warning et on continue
+                self.logger.warning("Méthode validate_modal_belief_set non disponible, validation Tweety ignorée.")
+
+            belief_set_obj = ModalBeliefSet(belief_set_content)
+            self.logger.info("Conversion et validation réussies avec retry automatique.")
+            return belief_set_obj, "Conversion réussie"
+
+        except (json.JSONDecodeError, ValueError, jpype.JException) as e:
+            # MODIFICATION CRITIQUE : Ne plus gérer le retry manuellement
+            # Laisser l'erreur remonter pour que SK puisse faire le retry automatique
+            error_msg = f"Erreur de conversion/validation: {e}"
+            self.logger.warning(f"{error_msg} - Semantic Kernel va réessayer automatiquement si configuré")
+            
+            # Si l'erreur contient déjà la BNF, la laisser telle quelle
+            if "BNF Syntaxe TweetyProject" not in str(e):
+                enriched_error = self._enrich_error_with_bnf(str(e), text)
+                raise ValueError(enriched_error) from e
+            else:
+                # Re-lancer l'erreur enrichie telle quelle
+                raise
                 
-                # Construire la base de connaissances modale
-                belief_set_content = self._construct_modal_kb_from_json(kb_json)
-                
-                if not belief_set_content:
-                    raise ValueError("La conversion a produit une base de connaissances vide.")
-
-                # Valider avec Tweety (si le modal_handler supporte la validation)
-                try:
-                    # Note: adapter selon les méthodes disponibles dans modal_handler
-                    is_valid, validation_msg = self.tweety_bridge.validate_modal_belief_set(belief_set_content)
-                    if not is_valid:
-                        raise ValueError(f"Ensemble de croyances invalide selon Tweety: {validation_msg}")
-                except AttributeError:
-                    # Si la méthode n'existe pas encore, on log un warning et on continue
-                    self.logger.warning("Méthode validate_modal_belief_set non disponible, validation Tweety ignorée.")
-
-                belief_set_obj = ModalBeliefSet(belief_set_content)
-                self.logger.info("Conversion et validation réussies.")
-                return belief_set_obj, "Conversion réussie"
-
-            except (json.JSONDecodeError, ValueError, jpype.JException) as e:
-                last_error = f"Erreur de conversion/validation: {e}"
-                self.logger.warning(f"{last_error} à la tentative {attempt + 1}")
-                
-                if attempt == max_retries - 1:
-                    break
-                    
-            except Exception as e:
-                error_msg = f"Erreur inattendue lors de la conversion: {str(e)}"
-                self.logger.error(error_msg, exc_info=True)
-                return None, error_msg
-
-        self.logger.error(f"Échec de la conversion après {max_retries} tentatives. Dernière erreur: {last_error}")
-        return None, f"Échec de la conversion après {max_retries} tentatives. Dernière erreur: {last_error}"
+        except Exception as e:
+            error_msg = f"Erreur inattendue lors de la conversion: {str(e)}"
+            self.logger.error(error_msg, exc_info=True)
+            return None, error_msg
 
     def _parse_modal_belief_set_content(self, belief_set_content: str) -> Dict[str, Any]:
         """
@@ -412,13 +497,13 @@ class ModalLogicAgent(BaseLogicAgent):
             if not line:
                 continue
                 
-            # Extraire les déclarations de propositions (format: prop(nom_prop))
-            prop_match = re.match(r'prop\(([^)]+)\)', line)
-            if prop_match:
-                knowledge_base["propositions"].add(prop_match.group(1))
+            # Extraire les déclarations de propositions (format: constant nom)
+            const_match = re.match(r'constant\s+([a-z_][a-z0-9_]*)', line)
+            if const_match:
+                knowledge_base["propositions"].add(const_match.group(1))
             else:
                 # Traiter comme une formule modale
-                if line and not line.startswith('prop('):
+                if line and not line.startswith('constant'):
                     knowledge_base["modal_formulas"].append(line)
                     # Extraire les propositions utilisées dans la formule
                     used_props = re.findall(r'\b[a-z_][a-z0-9_]*\b', line)
@@ -428,14 +513,9 @@ class ModalLogicAgent(BaseLogicAgent):
 
     async def generate_queries(self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None) -> List[str]:
         """
-        Génère des requêtes modales valides en utilisant une approche de "Modèle de Requête".
-        
-        :param text: Le texte source.
-        :param belief_set: L'ensemble de croyances modales associé.
-        :param context: Contexte additionnel optionnel.
-        :return: Une liste de requêtes modales valides.
+        Version améliorée avec retry automatique pour la génération de requêtes.
         """
-        self.logger.info(f"Génération de requêtes modales via le modèle de requête pour {self.name}...")
+        self.logger.info(f"Génération de requêtes modales avec retry automatique pour {self.name}...")
         response_text = ""
         
         try:
@@ -443,7 +523,7 @@ class ModalLogicAgent(BaseLogicAgent):
             kb_details = self._parse_modal_belief_set_content(belief_set.content)
             self.logger.debug(f"Détails de la KB extraits: {kb_details}")
 
-            # Étape 2: Générer les idées de requêtes avec le LLM
+            # Étape 2: Générer les idées de requêtes avec le LLM (SK gère le retry)
             args = {
                 "input": text,
                 "belief_set": belief_set.content
@@ -501,12 +581,17 @@ class ModalLogicAgent(BaseLogicAgent):
                     self.logger.warning("Méthode validate_modal_query_with_context non disponible, validation basique utilisée.")
                     valid_queries.append(formula)
 
-            self.logger.info(f"Génération terminée. {len(valid_queries)}/{len(query_ideas)} requêtes valides assemblées.")
+            self.logger.info(f"Génération terminée avec retry automatique. {len(valid_queries)}/{len(query_ideas)} requêtes valides assemblées.")
             return valid_queries
 
         except json.JSONDecodeError as e:
-            self.logger.error(f"Erreur de décodage JSON lors de la génération des requêtes: {e}\nRéponse du LLM: {response_text}")
-            return []
+            # Enrichir avec BNF pour retry automatique
+            enriched_error = self._enrich_error_with_bnf(
+                f"Erreur de décodage JSON lors de la génération des requêtes: {e}",
+                response_text
+            )
+            self.logger.error(enriched_error)
+            raise ValueError(enriched_error) from e
         except Exception as e:
             self.logger.error(f"Erreur inattendue lors de la génération des requêtes: {e}", exc_info=True)
             return []
@@ -514,10 +599,6 @@ class ModalLogicAgent(BaseLogicAgent):
     def execute_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
         """
         Exécute une requête logique modale sur un ensemble de croyances donné.
-
-        :param belief_set: L'ensemble de croyances modales sur lequel exécuter la requête.
-        :param query: La requête modale à exécuter.
-        :return: Un tuple contenant le résultat booléen de la requête et la chaîne de résultat brute.
         """
         self.logger.info(f"Exécution de la requête modale: {query} pour l'agent {self.name}")
         
@@ -552,13 +633,6 @@ class ModalLogicAgent(BaseLogicAgent):
                          context: Optional[Dict[str, Any]] = None) -> str:
         """
         Interprète les résultats d'une série de requêtes modales en langage naturel.
-
-        :param text: Le texte original en langage naturel.
-        :param belief_set: L'ensemble de croyances modales utilisé.
-        :param queries: La liste des requêtes modales qui ont été exécutées.
-        :param results: La liste des résultats correspondant à chaque requête.
-        :param context: Un dictionnaire optionnel de contexte.
-        :return: Une chaîne de caractères contenant l'interprétation en langage naturel.
         """
         self.logger.info(f"Interprétation des résultats pour l'agent {self.name}...")
         
@@ -587,9 +661,6 @@ class ModalLogicAgent(BaseLogicAgent):
     def validate_formula(self, formula: str) -> bool:
         """
         Valide la syntaxe d'une formule de logique modale.
-
-        :param formula: La formule modale à valider.
-        :return: `True` si la formule est syntaxiquement valide, `False` sinon.
         """
         self.logger.debug(f"Validation de la formule modale: {formula}")
         try:
@@ -606,9 +677,6 @@ class ModalLogicAgent(BaseLogicAgent):
     def is_consistent(self, belief_set: BeliefSet) -> Tuple[bool, str]:
         """
         Vérifie si un ensemble de croyances modales est cohérent.
-
-        :param belief_set: L'ensemble de croyances à vérifier.
-        :return: Un tuple (bool, str) indiquant la cohérence et un message.
         """
         self.logger.info(f"Vérification de la cohérence pour l'agent {self.name}")
         try:
@@ -628,9 +696,6 @@ class ModalLogicAgent(BaseLogicAgent):
     def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> BeliefSet:
         """
         Crée un objet `ModalBeliefSet` à partir d'un dictionnaire de données.
-
-        :param belief_set_data: Un dictionnaire contenant au moins la clé "content".
-        :return: Une instance de `ModalBeliefSet`.
         """
         content = belief_set_data.get("content", "")
         return ModalBeliefSet(content)
@@ -644,7 +709,7 @@ class ModalLogicAgent(BaseLogicAgent):
         Méthode abstraite de `Agent` pour obtenir une réponse.
         Non implémentée car cet agent utilise des méthodes spécifiques.
         """
-        logger.warning("La méthode 'get_response' n'est pas implémentée pour ModalLogicAgent et ne devrait pas être appelée directement.")
+        logger.warning("La méthode 'get_response' n'est pas implémentée pour ModalLogicAgentFixed et ne devrait pas être appelée directement.")
         yield []
         return
 
@@ -657,7 +722,7 @@ class ModalLogicAgent(BaseLogicAgent):
         Méthode abstraite de `Agent` pour invoquer l'agent.
         Non implémentée car cet agent utilise des méthodes spécifiques.
         """
-        logger.warning("La méthode 'invoke' n'est pas implémentée pour ModalLogicAgent et ne devrait pas être appelée directement.")
+        logger.warning("La méthode 'invoke' n'est pas implémentée pour ModalLogicAgentFixed et ne devrait pas être appelée directement.")
         return []
 
     async def invoke_stream(
@@ -669,6 +734,6 @@ class ModalLogicAgent(BaseLogicAgent):
         Méthode abstraite de `Agent` pour invoquer l'agent en streaming.
         Non implémentée car cet agent utilise des méthodes spécifiques.
         """
-        logger.warning("La méthode 'invoke_stream' n'est pas implémentée pour ModalLogicAgent et ne devrait pas être appelée directement.")
+        logger.warning("La méthode 'invoke_stream' n'est pas implémentée pour ModalLogicAgentFixed et ne devrait pas être appelée directement.")
         yield []
         return

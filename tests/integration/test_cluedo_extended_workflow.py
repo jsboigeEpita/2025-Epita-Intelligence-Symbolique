@@ -20,6 +20,7 @@ Tests couvrant:
 import pytest
 import asyncio
 import time
+from unittest.mock import Mock
 
 from typing import Dict, Any, List, Tuple
 from datetime import datetime
@@ -41,6 +42,27 @@ from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import Sherloc
 from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
 from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent
 
+async def _create_authentic_gpt4o_mini_instance():
+    """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+    config = UnifiedConfig()
+    return config.get_kernel_with_gpt4o_mini()
+
+@pytest.fixture
+async def mock_kernel():
+    """Kernel mocké pour tests comparatifs."""
+    kernel = Mock(spec=Kernel)
+    kernel.add_plugin = await _create_authentic_gpt4o_mini_instance()
+    kernel.add_filter = await _create_authentic_gpt4o_mini_instance()
+    return kernel
+
+@pytest.fixture
+def comparison_elements():
+    """Éléments Cluedo standardisés pour comparaisons équitables."""
+    return {
+        "suspects": ["Colonel Moutarde", "Professeur Violet", "Mademoiselle Rose"],
+        "armes": ["Poignard", "Chandelier", "Revolver"],
+        "lieux": ["Salon", "Cuisine", "Bureau"]
+    }
 
 @pytest.mark.integration
 @pytest.mark.comparison
@@ -67,15 +89,11 @@ class TestNewOrchestrator:
 
 #@pytest.mark.skip(reason="Legacy tests for old orchestrator")
 class TestWorkflowComparison:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
         
     async def _make_authentic_llm_call(self, prompt: str) -> str:
         """Fait un appel authentique à gpt-4o-mini."""
         try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
+            kernel = await _create_authentic_gpt4o_mini_instance()
             result = await kernel.invoke("chat", input=prompt)
             return str(result)
         except Exception as e:
@@ -83,23 +101,6 @@ class TestWorkflowComparison:
             return "Authentic LLM call failed"
 
     """Tests de comparaison entre workflows 2-agents et 3-agents."""
-    
-    @pytest.fixture
-    async def mock_kernel(self):
-        """Kernel mocké pour tests comparatifs."""
-        kernel = Mock(spec=Kernel)
-        kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
-        kernel.add_filter = await self._create_authentic_gpt4o_mini_instance()
-        return kernel
-    
-    @pytest.fixture
-    def comparison_elements(self):
-        """Éléments Cluedo standardisés pour comparaisons équitables."""
-        return {
-            "suspects": ["Colonel Moutarde", "Professeur Violet", "Mademoiselle Rose"],
-            "armes": ["Poignard", "Chandelier", "Revolver"],
-            "lieux": ["Salon", "Cuisine", "Bureau"]
-        }
     
     @pytest.fixture
     def mock_conversation_2agents(self):

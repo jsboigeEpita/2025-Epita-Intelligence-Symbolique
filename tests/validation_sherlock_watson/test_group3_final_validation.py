@@ -1,3 +1,4 @@
+from unittest.mock import Mock, AsyncMock
 
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai
@@ -18,9 +19,10 @@ import traceback
 
 # Imports du système Oracle
 sys.path.append('.')
+from tests.utils.common_test_helpers import create_authentic_gpt4o_mini_instance
 from argumentation_analysis.agents.core.oracle.oracle_base_agent import OracleBaseAgent, OracleTools
 from argumentation_analysis.agents.core.oracle.dataset_access_manager import DatasetAccessManager
-from argumentation_analysis.agents.core.oracle.permissions import QueryType, OracleResponse
+from argumentation_analysis.agents.core.oracle.permissions import QueryType, OracleResponse, PermissionManager
 from semantic_kernel.kernel import Kernel
 
 @pytest.mark.anyio
@@ -32,10 +34,10 @@ async def test_all_group3_fixes():
     
     # Setup de base
     mock_kernel = Mock(spec=Kernel)
-    mock_kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
+    mock_kernel.add_plugin = Mock()
     
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
-    mock_permission_manager = await self._create_authentic_gpt4o_mini_instance()
+    mock_permission_manager = Mock(spec=PermissionManager)
     mock_permission_manager.is_authorized = Mock(return_value=True)
     mock_dataset_manager.permission_manager = mock_permission_manager
     

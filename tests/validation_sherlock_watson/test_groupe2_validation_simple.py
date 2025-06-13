@@ -1,3 +1,4 @@
+from unittest.mock import Mock, AsyncMock
 
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai
@@ -19,6 +20,7 @@ import asyncio
 # Ajouter le dossier racine au path
 sys.path.insert(0, os.path.abspath('.'))
 
+from tests.utils.common_test_helpers import create_authentic_gpt4o_mini_instance
 # Imports necessaires
 from argumentation_analysis.agents.core.oracle.dataset_access_manager import DatasetAccessManager
 from argumentation_analysis.agents.core.oracle.permissions import QueryType, PermissionManager, PermissionRule, OracleResponse
@@ -33,7 +35,7 @@ async def test_validate_agent_permissions_success():
     
     # Configuration des mocks comme dans le test original
     mock_kernel = Mock(spec=Kernel)
-    mock_kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
+    mock_kernel.add_plugin = Mock()
     
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
     mock_dataset_manager.check_permission = Mock(return_value=True)
@@ -75,7 +77,7 @@ async def test_validate_agent_permissions_failure():
     
     # Configuration des mocks
     mock_kernel = Mock(spec=Kernel)
-    mock_kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
+    mock_kernel.add_plugin = Mock()
     
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
     mock_dataset_manager.check_permission = Mock(return_value=False)
@@ -114,7 +116,7 @@ async def test_check_agent_permission_success():
     
     # Configuration des mocks
     mock_kernel = Mock(spec=Kernel)
-    mock_kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
+    mock_kernel.add_plugin = Mock()
     
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
     mock_dataset_manager.check_permission = Mock(return_value=True)
@@ -157,7 +159,7 @@ async def test_check_agent_permission_failure():
     
     # Configuration des mocks
     mock_kernel = Mock(spec=Kernel)
-    mock_kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
+    mock_kernel.add_plugin = Mock()
     
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
     mock_dataset_manager.check_permission = Mock(return_value=False)

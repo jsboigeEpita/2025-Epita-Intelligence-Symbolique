@@ -37,6 +37,7 @@ class TweetyErrorAnalyzer:
         self.logger = logging.getLogger(__name__)
         self._setup_error_patterns()
         self._setup_bnf_rules()
+        self._setup_corrections()
     
     def _setup_error_patterns(self):
         """Configure les patterns de reconnaissance d'erreurs."""
