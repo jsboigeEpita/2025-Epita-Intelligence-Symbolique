@@ -19,7 +19,11 @@ from argumentation_analysis.agents.core.oracle.cluedo_dataset import RevelationR
 import semantic_kernel as sk
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.kernel import Kernel
-# Code adapté pour SK >= 1.30.0. Version SK 0.9.6b1 interdite/obsolète pour ce projet.
+# [DEPRECATION WARNING]
+# Le code ci-dessous a été migré vers une version moderne de semantic-kernel (>= 1.0.0).
+# La version 0.9.6b1 est obsolète, instable et a causé des erreurs critiques de 'shadowing' de PYTHONPATH.
+# NE PAS TENTER de réinstaller ou d'utiliser la version 0.9.6b1.
+# Toute nouvelle fonctionnalité doit être compatible avec l'API événementielle de semantic-kernel.
 # PURGE PHASE 3A: Élimination complète fallbacks - Utilisation composants natifs uniquement
 AGENTS_AVAILABLE = False  # Module agents non disponible dans SK 0.9.6b1
 from semantic_kernel.contents import ChatMessageContent
@@ -32,11 +36,13 @@ from semantic_kernel.functions.kernel_arguments import KernelArguments
 # Assurez-vous que l'environnement conda 'projet-is' a une version propre et correcte installée.
 from semantic_kernel.functions.kernel_function_hooks import FunctionInvokingEventArgs, FunctionInvokedEventArgs
 from semantic_kernel.prompt_template.prompt_template_config import PromptTemplateConfig
-# from semantic_kernel.filters.filter_types import FilterTypes # N'est plus utilisé avec les handlers directs
 
-# Note: Les filtres sont gérés différemment dans les versions récentes,
-# nous utiliserons les handlers directement.
-HANDLERS_AVAILABLE = True # Renommé pour plus de clarté
+# Imports pour le nouveau système de filtres
+from semantic_kernel.filters.filter_types import FilterTypes
+from semantic_kernel.filters.functions.function_invocation_context import FunctionInvocationContext
+
+# Note: Les filtres remplacent les handlers.
+HANDLERS_AVAILABLE = True # Gardé pour la logique existante, mais représente maintenant les filtres.
 # from semantic_kernel.processes.runtime.in_process_runtime import InProcessRuntime  # Module non disponible
 from pydantic import Field
 
@@ -57,38 +63,41 @@ logger = logging.getLogger(__name__)
 
 
 # Nouvelle implémentation du logging via les handlers d'événements du Kernel
+# Nouvelle implémentation du logging via le système de filtres
 class ToolCallLoggingHandler:
     """
-    Handler pour journaliser les appels de fonctions (outils) du kernel,
-    utilisant le système d'événements de Semantic Kernel.
+    Filtre pour journaliser les appels de fonctions (outils) du kernel,
+    utilisant le nouveau système de filtres de Semantic Kernel.
     """
-    async def on_function_invoking(self, kernel: Kernel, e: FunctionInvokingEventArgs) -> None:
-        """Handler exécuté avant l'invocation de la fonction."""
-        metadata = e.kernel_function_metadata
+    async def __call__(self, context: FunctionInvocationContext, next: Callable[..., Awaitable[None]]) -> None:
+        """Handler de filtre exécuté avant et après l'invocation de la fonction."""
+        # Logique "avant" (invoking)
+        metadata = context.function.metadata
         function_name = f"{metadata.plugin_name}.{metadata.name}"
-        logger.debug(f"▶️  INVOKING KERNEL FUNCTION: {function_name}")
+        logger.debug(f"▶️  FILTER: INVOKING KERNEL FUNCTION: {function_name}")
         
-        args_str = ", ".join(f"{k}='{str(v)[:100]}...'" for k, v in e.arguments.items())
-        logger.debug(f"  ▶️  ARGS: {args_str}")
+        args_str = ", ".join(f"{k}='{str(v)[:100]}...'" for k, v in context.arguments.items())
+        logger.debug(f"  ▶️  FILTER: ARGS: {args_str}")
 
-    async def on_function_invoked(self, kernel: Kernel, e: FunctionInvokedEventArgs) -> None:
-        """Handler exécuté après l'invocation de la fonction."""
-        metadata = e.kernel_function_metadata
-        function_name = f"{metadata.plugin_name}.{metadata.name}"
+        # Exécute la fonction suivante dans la chaîne (ou la fonction elle-même)
+        await next(context)
+
+        # Logique "après" (invoked)
         result_content = "N/A"
         
-        if e.exception:
-            logger.error(f"  ◀️  EXCEPTION in {function_name}: {e.exception}")
-            result_content = f"EXCEPTION: {e.exception}"
-        elif e.function_result:
-            result_value = e.function_result.value
+        if context.result and context.result.metadata.get('exception'):
+            exception = context.result.metadata['exception']
+            logger.error(f"  ◀️  FILTER: EXCEPTION in {function_name}: {exception}")
+            result_content = f"EXCEPTION: {exception}"
+        elif context.result:
+            result_value = context.result.value
             if isinstance(result_value, list):
                 result_content = f"List[{len(result_value)}] - " + ", ".join(map(str, result_value[:3]))
             else:
                 result_content = str(result_value)
         
-        logger.debug(f"  ◀️  RESULT for {function_name}: {result_content[:500]}...") # Tronqué
-        logger.debug(f"◀️  FINISHED KERNEL FUNCTION: {function_name}")
+        logger.debug(f"  ◀️  FILTER: RESULT for {function_name}: {result_content[:500]}...") # Tronqué
+        logger.debug(f"◀️  FILTER: FINISHED KERNEL FUNCTION: {function_name}")
 
 # Les classes de base (Agent, Strategies) sont importées depuis le module `base`
 # pour éviter les dépendances circulaires.
@@ -500,13 +509,13 @@ class CluedoExtendedOrchestrator:
         
         # Configuration du plugin d'état étendu
         async with self.kernel_lock:
-            # Ajout des handlers de logging modernes
+            # Ajout du filtre de logging moderne
             if HANDLERS_AVAILABLE and hasattr(self, 'logging_handler') and self.logging_handler:
-                self.kernel.add_function_invoking_handler(self.logging_handler.on_function_invoking)
-                self.kernel.add_function_invoked_handler(self.logging_handler.on_function_invoked)
-                self._logger.info("Handlers de journalisation des appels de fonctions activés.")
+                # La nouvelle API utilise add_filter
+                self.kernel.add_filter(FilterTypes.FUNCTION_INVOCATION, self.logging_handler)
+                self._logger.info("Filtre de journalisation des appels de fonctions activé.")
             else:
-                self._logger.info("Handlers de journalisation non activés (HANDLERS_AVAILABLE=False ou handler non initialisé).")
+                self._logger.info("Filtre de journalisation non activé (HANDLERS_AVAILABLE=False ou handler non initialisé).")
         
         # Préparation des constantes pour Watson
         all_constants = [name.replace(" ", "") for category in elements_jeu.values() for name in category]
