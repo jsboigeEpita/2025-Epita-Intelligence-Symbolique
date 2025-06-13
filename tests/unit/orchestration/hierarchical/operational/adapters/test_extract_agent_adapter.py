@@ -108,12 +108,14 @@ class TestExtractAgentAdapter:
         yield
 
         # Cleanup AsyncIO tasks before stopping patches
-        try:
-            tasks = [task for task in asyncio.all_tasks() if not task.done()]
-            if tasks:
-                await asyncio.gather(*tasks, return_exceptions=True)
-        except Exception:
-            pass
+        # try:
+        #     tasks = [task for task in asyncio.all_tasks() if not task.done()]
+        #     if tasks:
+        #         logger.warning(f"Nettoyage de {len(tasks)} tâches asyncio non terminées.")
+        #         await asyncio.gather(*tasks, return_exceptions=True)
+        # except Exception as e:
+        #     logger.error(f"Erreur lors du nettoyage des tâches asyncio: {e}")
+        #     pass
 
         # Nettoyage après chaque test
         self.patcher.stop()

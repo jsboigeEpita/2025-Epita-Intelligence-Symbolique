@@ -14,6 +14,7 @@ from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
 from config.unified_config import UnifiedConfig
 from unittest.mock import MagicMock, AsyncMock
+import logging
 
 import pytest
 import asyncio
@@ -26,6 +27,8 @@ from typing import Dict, Any, List
 # Ajout du chemin pour les imports
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
+
+logger = logging.getLogger(__name__)
 
 try:
     from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
@@ -97,21 +100,6 @@ except ImportError as e:
 
 
 class TestUnifiedOrchestrations:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-        
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
     """Tests avancés pour les orchestrations unifiées."""
     
     def setup_method(self):
@@ -254,6 +242,25 @@ class TestUnifiedOrchestrations:
 class TestRealLLMOrchestrationAdvanced:
     """Tests avancés pour RealLLMOrchestrator."""
     
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        # Assurez-vous que la méthode get_kernel_with_gpt4o_mini existe et est correcte
+        if hasattr(config, 'get_kernel_with_gpt4o_mini'):
+            return config.get_kernel_with_gpt4o_mini()
+        # Fallback ou erreur si la méthode n'existe pas
+        raise AttributeError("UnifiedConfig n'a pas de méthode 'get_kernel_with_gpt4o_mini'")
+
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     def setup_method(self):
         """Configuration initiale pour chaque test."""
         self.test_text = "L'Ukraine a été créée par la Russie. Donc Poutine a raison."

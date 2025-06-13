@@ -6,8 +6,6 @@ except ImportError:
     pass
 # =========================================
 import jpype
-import jpype.imports
-from jpype.types import JString
 import logging
 from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
 # from argumentation_analysis.utils.core_utils.path_operations import get_project_root # Différé
@@ -232,29 +230,21 @@ class TweetyInitializer:
         logger.info("Attempting to import TweetyProject Java classes...")
         try:
             # Propositional Logic
-            # jpype.imports.org.tweetyproject.logics.pl.syntax # Old way
             _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlSignature")
             _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.Proposition")
             _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
-            # jpype.imports.org.tweetyproject.logics.pl.reasoner # Old way
             _ = jpype.JClass("org.tweetyproject.logics.pl.reasoner.SatReasoner")
-            # jpype.imports.org.tweetyproject.logics.pl.sat # Old way
             _ = jpype.JClass("org.tweetyproject.logics.pl.sat.Sat4jSolver")
             
             # First-Order Logic
-            # jpype.imports.org.tweetyproject.logics.fol.syntax # Old way
             _ = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolSignature")
             _ = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolBeliefSet")
-            # jpype.imports.org.tweetyproject.logics.fol.reasoner # Old way
             _ = jpype.JClass("org.tweetyproject.logics.fol.reasoner.SimpleFolReasoner")
             
             # Modal Logic
-            # jpype.imports.org.tweetyproject.logics.ml.syntax # Old way
             _ = jpype.JClass("org.tweetyproject.logics.ml.syntax.MlFormula") # Attempting to use MlFormula for ModalLogic types
             _ = jpype.JClass("org.tweetyproject.logics.ml.syntax.MlBeliefSet")
-            # jpype.imports.org.tweetyproject.logics.ml.reasoner # Old way
             _ = jpype.JClass("org.tweetyproject.logics.ml.reasoner.SimpleMlReasoner") # KrHyperModalReasoner non trouvé dans le JAR
-            # jpype.imports.org.tweetyproject.logics.ml.parser.MlParser # Old way
             _ = jpype.JClass("org.tweetyproject.logics.ml.parser.MlParser")
             
             # General TweetyProject classes

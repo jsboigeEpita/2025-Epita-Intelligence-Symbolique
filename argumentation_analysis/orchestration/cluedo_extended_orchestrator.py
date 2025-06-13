@@ -19,31 +19,16 @@ from argumentation_analysis.agents.core.oracle.cluedo_dataset import RevelationR
 import semantic_kernel as sk
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.kernel import Kernel
-# [DEPRECATION WARNING]
-# Le code ci-dessous a été migré vers une version moderne de semantic-kernel (>= 1.0.0).
-# La version 0.9.6b1 est obsolète, instable et a causé des erreurs critiques de 'shadowing' de PYTHONPATH.
-# NE PAS TENTER de réinstaller ou d'utiliser la version 0.9.6b1.
-# Toute nouvelle fonctionnalité doit être compatible avec l'API événementielle de semantic-kernel.
-# PURGE PHASE 3A: Élimination complète fallbacks - Utilisation composants natifs uniquement
-AGENTS_AVAILABLE = False  # Module agents non disponible dans SK 0.9.6b1
+# Utilisation de la version moderne de semantic-kernel (>= 1.0.0)
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
-# REGLE CRITIQUE DE VERSIONNAGE (semantic-kernel)
-# Le projet utilise semantic-kernel version >= 1.33.0. Dans cette version (et les suivantes de la v1),
-# les gestionnaires d'événements comme FunctionInvokingEventArgs ne se trouvent plus
-# dans 'semantic_kernel.events' mais dans 'semantic_kernel.functions.kernel_function_hooks'.
-# NE PAS CHANGER ces imports pour des chemins obsolètes.
-# Assurez-vous que l'environnement conda 'projet-is' a une version propre et correcte installée.
-from semantic_kernel.functions.kernel_function_hooks import FunctionInvokingEventArgs, FunctionInvokedEventArgs
 from semantic_kernel.prompt_template.prompt_template_config import PromptTemplateConfig
 
 # Imports pour le nouveau système de filtres
 from semantic_kernel.filters.filter_types import FilterTypes
 from semantic_kernel.filters.functions.function_invocation_context import FunctionInvocationContext
 
-# Note: Les filtres remplacent les handlers.
-HANDLERS_AVAILABLE = True # Gardé pour la logique existante, mais représente maintenant les filtres.
-# from semantic_kernel.processes.runtime.in_process_runtime import InProcessRuntime  # Module non disponible
+# Les filtres remplacent les anciens "handlers" d'événements.
 from pydantic import Field
 
 # Imports locaux
@@ -99,202 +84,10 @@ class ToolCallLoggingHandler:
         logger.debug(f"  ◀️  FILTER: RESULT for {function_name}: {result_content[:500]}...") # Tronqué
         logger.debug(f"◀️  FILTER: FINISHED KERNEL FUNCTION: {function_name}")
 
-# Les classes de base (Agent, Strategies) sont importées depuis le module `base`
-# pour éviter les dépendances circulaires.
+# Les classes de base (Agent, etc.) et les stratégies sont maintenant importées
+# depuis leurs propres modules pour une meilleure séparation des préoccupations.
 from .base import Agent, SelectionStrategy, TerminationStrategy
-
-class CyclicSelectionStrategy(SelectionStrategy):
-    """
-    Stratégie de sélection cyclique adaptée au workflow Oracle : Sherlock → Watson → Moriarty.
-    
-    Implémente une sélection cyclique avec adaptations contextuelles optionnelles
-    selon l'état du jeu et les interactions précédentes.
-    """
-    
-    def __init__(self, agents: List[Agent], adaptive_selection: bool = False, oracle_state: 'CluedoOracleState' = None):
-        """
-        Initialise la stratégie de sélection cyclique.
-        
-        Args:
-            agents: Liste des agents dans l'ordre cyclique souhaité
-            adaptive_selection: Active les adaptations contextuelles (Phase 2)
-            oracle_state: État Oracle pour accès au contexte (Phase C)
-        """
-        super().__init__()
-        # Stockage direct dans __dict__ pour éviter les problèmes Pydantic
-        self.__dict__['agents'] = agents
-        self.__dict__['agent_order'] = [agent.name for agent in agents]
-        self.__dict__['current_index'] = 0
-        self.__dict__['adaptive_selection'] = adaptive_selection
-        self.__dict__['turn_count'] = 0
-        self.__dict__['oracle_state'] = oracle_state  # PHASE C: Accès au contexte
-        
-        self.__dict__['_logger'] = logging.getLogger(self.__class__.__name__)
-        self._logger.info(f"CyclicSelectionStrategy initialisée avec ordre: {self.agent_order}")
-    
-    async def next(self, agents: List[Agent], history: List[ChatMessageContent]) -> Agent:
-        """
-        Sélectionne le prochain agent selon l'ordre cyclique.
-        
-        Args:
-            agents: Liste des agents disponibles
-            history: Historique des messages
-            
-        Returns:
-            Agent sélectionné pour le prochain tour
-        """
-        if not agents:
-            raise ValueError("Aucun agent disponible pour la sélection")
-        
-        # Sélection cyclique de base
-        selected_agent_name = self.agent_order[self.current_index]
-        selected_agent = next((agent for agent in agents if agent.name == selected_agent_name), None)
-        
-        if not selected_agent:
-            self._logger.warning(f"Agent {selected_agent_name} non trouvé, sélection du premier agent disponible")
-            selected_agent = agents[0]
-        
-        # PHASE C: Injection du contexte récent dans l'agent sélectionné
-        if self.oracle_state and hasattr(selected_agent, '_context_enhanced_prompt'):
-            contextual_addition = self.oracle_state.get_contextual_prompt_addition(selected_agent.name)
-            if contextual_addition:
-                # Stockage temporaire du contexte pour l'agent
-                selected_agent._current_context = contextual_addition
-                self._logger.debug(f"Contexte injecté pour {selected_agent.name}: {len(contextual_addition)} caractères")
-        
-        # Avance l'index cyclique (contournement Pydantic)
-        object.__setattr__(self, 'current_index', (self.current_index + 1) % len(self.agent_order))
-        object.__setattr__(self, 'turn_count', self.turn_count + 1)
-        
-        # Adaptations contextuelles (optionnelles pour Phase 1)
-        if self.adaptive_selection:
-            selected_agent = await self._apply_contextual_adaptations(selected_agent, agents, history)
-        
-        self._logger.info(f"Agent sélectionné: {selected_agent.name} (tour {self.turn_count})")
-        return selected_agent
-    
-    async def _apply_contextual_adaptations(self, default_agent: Agent, agents: List[Agent], history: List[ChatMessageContent]) -> Agent:
-        """
-        Applique des adaptations contextuelles à la sélection (Phase 2).
-        
-        Adaptations possibles:
-        - Si Sherlock fait une suggestion → priorité à Moriarty
-        - Si Watson détecte contradiction → retour à Sherlock
-        - Si Moriarty révèle information cruciale → priorité à Watson
-        """
-        # Pour Phase 1, on retourne l'agent par défaut
-        # Cette méthode sera étoffée en Phase 2
-        return default_agent
-    
-    def reset(self) -> None:
-        """Remet à zéro la stratégie de sélection."""
-        self.current_index = 0
-        self.turn_count = 0
-        self._logger.info("Stratégie de sélection cyclique remise à zéro")
-
-
-class OracleTerminationStrategy(TerminationStrategy):
-    """
-    Stratégie de terminaison adaptée au workflow avec Oracle.
-    
-    Critères de terminaison:
-    1. Solution correcte proposée ET validée par Oracle
-    2. Toutes les cartes révélées (solution par élimination)
-    3. Consensus des 3 agents sur une solution (futur)
-    4. Timeout (max_turns atteint)
-    """
-    
-    max_turns: int = Field(default=15)  # Plus de tours pour 3 agents
-    max_cycles: int = Field(default=5)  # 5 cycles de 3 agents
-    turn_count: int = Field(default=0, exclude=True)
-    cycle_count: int = Field(default=0, exclude=True)
-    is_solution_found: bool = Field(default=False, exclude=True)
-    oracle_state: CluedoOracleState = Field(default=None)
-    
-    def __init__(self, max_turns: int = 15, max_cycles: int = 5, oracle_state: CluedoOracleState = None, **kwargs):
-        super().__init__(**kwargs)
-        self.max_turns = max_turns
-        self.max_cycles = max_cycles
-        self.oracle_state = oracle_state
-        self.turn_count = 0
-        self.cycle_count = 0
-        self.is_solution_found = False
-        
-        self._logger = logging.getLogger(self.__class__.__name__)
-    
-    async def should_terminate(self, agent: Agent, history: List[ChatMessageContent]) -> bool:
-        """
-        Détermine si le workflow doit se terminer selon les critères Oracle.
-        
-        Args:
-            agent: Agent actuel
-            history: Historique des messages
-            
-        Returns:
-            True si le workflow doit se terminer
-        """
-        # Comptage des tours et cycles
-        self.turn_count += 1
-        if agent and agent.name == "Sherlock":  # Début d'un nouveau cycle
-            self.cycle_count += 1
-            self._logger.info(f"\n--- CYCLE {self.cycle_count}/{self.max_cycles} - TOUR {self.turn_count}/{self.max_turns} ---")
-        
-        # Critère 1: Solution proposée et correcte
-        if self._check_solution_found():
-            self.is_solution_found = True
-            self._logger.info("[OK] Solution correcte trouvée et validée. Terminaison.")
-            return True
-        
-        # Critère 2: Solution par élimination complète
-        if self._check_elimination_complete():
-            self._logger.info("[OK] Toutes les cartes révélées - solution par élimination possible. Terminaison.")
-            return True
-        
-        # Critère 3: Timeout par nombre de tours
-        if self.turn_count >= self.max_turns:
-            self._logger.info(f"⏰ Nombre maximum de tours atteint ({self.max_turns}). Terminaison.")
-            return True
-        
-        # Critère 4: Timeout par nombre de cycles
-        if self.cycle_count >= self.max_cycles:
-            self._logger.info(f"⏰ Nombre maximum de cycles atteint ({self.max_cycles}). Terminaison.")
-            return True
-        
-        return False
-    
-    def _check_solution_found(self) -> bool:
-        """Vérifie si une solution correcte a été proposée."""
-        if not self.oracle_state or not self.oracle_state.is_solution_proposed:
-            return False
-        
-        solution_proposee = self.oracle_state.final_solution
-        solution_correcte = self.oracle_state.get_solution_secrete()
-        
-        if solution_proposee == solution_correcte:
-            self._logger.info(f"Solution correcte: {solution_proposee}")
-            return True
-        
-        self._logger.info(f"Solution incorrecte: {solution_proposee} ≠ {solution_correcte}")
-        return False
-    
-    def _check_elimination_complete(self) -> bool:
-        """Vérifie si toutes les cartes non-secrètes ont été révélées."""
-        if not self.oracle_state:
-            return False
-        
-        return self.oracle_state.is_game_solvable_by_elimination()
-    
-    def get_termination_summary(self) -> Dict[str, Any]:
-        """Retourne un résumé des conditions de terminaison."""
-        return {
-            "turn_count": self.turn_count,
-            "cycle_count": self.cycle_count,
-            "max_turns": self.max_turns,
-            "max_cycles": self.max_cycles,
-            "is_solution_found": self.is_solution_found,
-            "solution_proposed": self.oracle_state.is_solution_proposed if self.oracle_state else False,
-            "elimination_possible": self._check_elimination_complete()
-        }
+from .strategies import CyclicSelectionStrategy, OracleTerminationStrategy
 
 
 class CluedoExtendedOrchestrator:
@@ -510,12 +303,11 @@ class CluedoExtendedOrchestrator:
         # Configuration du plugin d'état étendu
         async with self.kernel_lock:
             # Ajout du filtre de logging moderne
-            if HANDLERS_AVAILABLE and hasattr(self, 'logging_handler') and self.logging_handler:
-                # La nouvelle API utilise add_filter
+            if hasattr(self, 'logging_handler') and self.logging_handler:
                 self.kernel.add_filter(FilterTypes.FUNCTION_INVOCATION, self.logging_handler)
                 self._logger.info("Filtre de journalisation des appels de fonctions activé.")
             else:
-                self._logger.info("Filtre de journalisation non activé (HANDLERS_AVAILABLE=False ou handler non initialisé).")
+                self._logger.warning("Filtre de journalisation non disponible.")
         
         # Préparation des constantes pour Watson
         all_constants = [name.replace(" ", "") for category in elements_jeu.values() for name in category]

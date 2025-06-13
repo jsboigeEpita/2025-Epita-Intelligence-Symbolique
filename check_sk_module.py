@@ -1,34 +1,35 @@
-import semantic_kernel
 import sys
+import semantic_kernel
 
+print(f"--- Semantic Kernel Diagnostic Script ---")
 print(f"Python version: {sys.version}")
 print(f"Python executable: {sys.executable}")
-print(f"semantic-kernel version: {semantic_kernel.__version__}")
 
 try:
-    from semantic_kernel.functions import kernel_function_context
-    print("Successfully imported semantic_kernel.functions.kernel_function_context")
-    if hasattr(kernel_function_context, 'KernelFunctionInvokingEventArgs'):
-        print("KernelFunctionInvokingEventArgs found in kernel_function_context.")
-    else:
-        print("KernelFunctionInvokingEventArgs NOT found in kernel_function_context.")
-    print("Dir of kernel_function_context:", dir(kernel_function_context))
+    print(f"semantic-kernel version: {semantic_kernel.__version__}")
+    print(f"semantic-kernel path: {semantic_kernel.__path__}")
+
+    # In modern semantic-kernel (>= 1.0), event args are in `semantic_kernel.events`.
+    # Let's verify we can import them.
+    from semantic_kernel.events import FunctionInvokingEventArgs
+    print("\nSUCCESS: `semantic_kernel` basic import is working.")
+    print("SUCCESS: `FunctionInvokingEventArgs` successfully imported from `semantic_kernel.events`.")
+    print("Environment appears to be correctly configured for semantic-kernel v1.x.")
+
+except AttributeError:
+    print("\nERROR: Could not get `semantic_kernel.__version__`.")
+    print("This often indicates a PYTHONPATH issue, where a local folder named 'semantic_kernel' is shadowing the installed package.")
+    print("Please check your project structure and ensure no such local folder exists.")
 
 except ImportError as e:
-    print(f"Failed to import semantic_kernel.functions.kernel_function_context: {e}")
+    print(f"\nERROR: An ImportError occurred: {e}")
+    print("This might mean the `semantic-kernel` package is not correctly installed or there is a version mismatch.")
+    print("Please ensure you have run 'pip install --upgrade semantic-kernel'.")
 
-except Exception as e_gen:
-    print(f"An unexpected error occurred: {e_gen}")
+except Exception as e:
+    print(f"\nERROR: An unexpected error occurred: {e}")
 
-print("\nAttempting to import KernelFunctionInvokingEventArgs directly from kernel_function_context:")
-try:
-    from semantic_kernel.functions.kernel_function_context import KernelFunctionInvokingEventArgs
-    print("Successfully imported KernelFunctionInvokingEventArgs from kernel_function_context.")
-except ImportError as e2:
-    print(f"Failed to import KernelFunctionInvokingEventArgs from kernel_function_context: {e2}")
-except Exception as e_gen2:
-    print(f"An unexpected error occurred during direct import: {e_gen2}")
-
-print("\nChecking sys.path:")
+print("\n--- sys.path details ---")
 for p in sys.path:
     print(p)
+print("--------------------------")
