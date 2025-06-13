@@ -67,7 +67,6 @@ def test_forward_references_work():
         assert annotations['_tweety_bridge'] == "TweetyBridge"
         
         print("SUCCESS: Forward references correctement configurées")
-        return True
     except Exception as e:
         pytest.fail(f"ECHEC: Problème avec les forward references: {e}")
 
@@ -87,7 +86,6 @@ def test_no_circular_import_in_module_deps():
         assert BeliefSet is not None
         
         print("SUCCESS: Pas de cycle d'import détecté entre les modules")
-        return True
     except ImportError as e:
         if "partially initialized module" in str(e):
             pytest.fail(f"ECHEC: Cycle d'import encore présent: {e}")
@@ -104,14 +102,12 @@ def test_logic_agents_can_inherit_from_baselogicagent():
         # Vérifier l'héritage
         assert issubclass(PropositionalLogicAgent, BaseLogicAgent)
         print("SUCCESS: PropositionalLogicAgent hérite correctement de BaseLogicAgent")
-        return True
     except ImportError as e:
         if "BaseLogicAgent" in str(e):
             pytest.fail(f"ECHEC: PropositionalLogicAgent ne peut pas importer BaseLogicAgent: {e}")
         else:
             # Cet agent peut ne pas exister, on ignore
             print("INFO: PropositionalLogicAgent non trouvé (peut être normal)")
-            return True
     except Exception as e:
         pytest.fail(f"ECHEC: Problème avec l'héritage: {e}")
 

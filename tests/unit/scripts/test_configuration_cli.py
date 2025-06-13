@@ -22,6 +22,7 @@ CLI vers la configuration UnifiedConfig, incluant :
 import pytest
 import argparse
 import sys
+from unittest.mock import patch
 
 from pathlib import Path
 

@@ -16,6 +16,7 @@ from unittest.mock import Mock, patch
 
 from typing import Dict, Any, List
 from datetime import datetime
+from unittest.mock import patch, Mock
 
 # Imports du système Oracle
 from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent, MoriartyTools
