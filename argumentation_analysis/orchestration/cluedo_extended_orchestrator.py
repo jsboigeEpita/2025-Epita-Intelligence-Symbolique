@@ -14,8 +14,9 @@ import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 from semantic_kernel.kernel import Kernel
-from semantic_kernel.filters.filter_types import FilterTypes
-from semantic_kernel.filters.functions.function_invocation_context import FunctionInvocationContext
+# CORRECTIF: Les imports filters ne sont pas disponibles dans cette version de semantic_kernel
+# from semantic_kernel.filters.filter_types import FilterTypes
+# from semantic_kernel.filters.functions.function_invocation_context import FunctionInvocationContext
 
 
 # Imports locaux des composants
