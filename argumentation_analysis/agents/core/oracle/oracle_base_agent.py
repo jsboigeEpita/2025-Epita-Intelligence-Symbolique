@@ -137,7 +137,7 @@ class OracleTools:
                 raise ValueError(f"Type de requête invalide: {query_type}")
             
             # Exécution via le gestionnaire
-            response = self.dataset_manager.execute_oracle_query(
+            response = await self.dataset_manager.execute_oracle_query(
                 agent_name=self.agent_name,
                 query_type=query_type_enum,
                 query_params=params_dict
@@ -198,7 +198,7 @@ class OracleTools:
         try:
             query_type_enum = QueryType(query_type)
             agent_to_check = target_agent or self.agent_name
-            is_authorized = self.dataset_manager.check_permission(agent_to_check, query_type_enum)
+            is_authorized = await self.dataset_manager.check_permission(agent_to_check, query_type_enum)
             
             if is_authorized:
                 return f"{agent_to_check} a les permissions pour {query_type}"
