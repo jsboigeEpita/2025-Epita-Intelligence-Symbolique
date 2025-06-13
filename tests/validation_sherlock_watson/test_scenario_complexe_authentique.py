@@ -57,8 +57,9 @@ def test_full_crypto_rhetoric_pipeline(crypto_service, complex_rhetorical_text, 
     assert decrypted_text == complex_rhetorical_text
 
     # 3. Analyse rhétorique
-    complex_analyzer = EnhancedComplexFallacyAnalyzer()
-    contextual_analyzer = EnhancedContextualFallacyAnalyzer()
+    taxonomy_path = Path(crypto_service.__class__.__module__.__str__().split('.')[0]).parent / 'data' / 'fallacy_definitions.csv'
+    complex_analyzer = EnhancedComplexFallacyAnalyzer(taxonomy_path=str(taxonomy_path))
+    contextual_analyzer = EnhancedContextualFallacyAnalyzer(taxonomy_path=str(taxonomy_path))
     
     arguments = split_text_into_arguments(decrypted_text)
     analysis_context = "test_scenario_complexe"

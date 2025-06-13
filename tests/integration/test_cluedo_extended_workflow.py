@@ -29,7 +29,8 @@ from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
 # Imports des orchestrateurs
 # from argumentation_analysis.orchestration.cluedo_orchestrator import run_cluedo_game
-from argumentation_analysis.orchestration.cluedo_extended_orchestrator import run_cluedo_oracle_game
+# from argumentation_analysis.orchestration.cluedo_extended_orchestrator import run_cluedo_oracle_game
+from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
 
 # Imports des états
 from argumentation_analysis.core.enquete_states import EnqueteCluedoState
@@ -43,6 +44,28 @@ from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent impor
 
 @pytest.mark.integration
 @pytest.mark.comparison
+class TestNewOrchestrator:
+    @pytest.mark.asyncio
+    async def test_orchestrator_runs_successfully(self, mock_kernel, comparison_elements):
+        """Vérifie que le nouvel orchestrateur s'exécute sans erreur."""
+        orchestrator = CluedoExtendedOrchestrator(
+            kernel=mock_kernel,
+            max_turns=3,
+            max_cycles=1,
+            oracle_strategy="cooperative"
+        )
+
+        await orchestrator.setup_workflow(elements_jeu=comparison_elements)
+        
+        initial_question = "Qui a commis le meurtre ?"
+        results = await orchestrator.execute_workflow(initial_question)
+
+        assert "workflow_info" in results
+        assert "final_metrics" in results
+        assert results["workflow_info"]["strategy"] == "cooperative"
+        assert len(results["final_metrics"]["history"]) > 0
+
+#@pytest.mark.skip(reason="Legacy tests for old orchestrator")
 class TestWorkflowComparison:
     async def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""

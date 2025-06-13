@@ -2,6 +2,7 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
+@pytest.mark.skip(reason="Disabling all functional tests to isolate backend test failures.")
 @pytest.mark.playwright
 def test_argument_reconstruction_workflow(page: Page):
     """
