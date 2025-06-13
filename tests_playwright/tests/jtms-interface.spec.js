@@ -11,14 +11,14 @@
 const { test, expect } = require('@playwright/test');
 
 // Configuration des tests
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000'; // Modifié pour pointer vers le port du frontend React
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 const JTMS_PREFIX = '/jtms';
 
 test.describe('Interface Web JTMS - Tests d\'Intégration Complète', () => {
     
     test.beforeEach(async ({ page }) => {
         // Vérifier que le serveur est disponible
-        await page.goto(BASE_URL);
+        await page.goto(FRONTEND_URL);
         await expect(page).toHaveTitle(/MyIA Open-Webui/);
     });
 
@@ -532,7 +532,7 @@ execute()
 test.describe('Utilitaires de Test', () => {
     
     test('Génération de données de test', async ({ page }) => {
-        await page.goto(`${BASE_URL}${JTMS_PREFIX}/dashboard`);
+        await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/dashboard`);
         
         // Générer un ensemble de test complet
         const testData = {
@@ -557,7 +557,7 @@ test.describe('Utilitaires de Test', () => {
 
     test('Nettoyage après tests', async ({ page }) => {
         // Nettoyer les sessions de test
-        await page.goto(`${BASE_URL}${JTMS_PREFIX}/sessions`);
+        await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/sessions`);
         
         // Supprimer les sessions de test (celles qui commencent par "Test" ou "test_")
         const testSessions = page.locator('.session-card:has([data-session-name*="test" i], [data-session-name*="Test"])');

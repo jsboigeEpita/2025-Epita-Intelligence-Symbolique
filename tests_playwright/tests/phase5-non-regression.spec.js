@@ -20,7 +20,7 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
     console.log('🔍 Test Interface React sur port 3000');
     
     try {
-      await page.goto(`http://localhost:${INTERFACE_REACT_PORT}`);
+      await page.goto(process.env.FRONTEND_URL || `http://localhost:3000`);
       
       // Vérifier le titre
       await expect(page).toHaveTitle(/Argumentation Analysis App/);
@@ -41,7 +41,8 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
     console.log('🔧 Test Interface Simple sur port 3001');
     
     try {
-      await page.goto(`http://localhost:${INTERFACE_SIMPLE_PORT}`);
+      // Le port de l'interface simple n'est plus utilisé, on utilise FRONTEND_URL
+      await page.goto(process.env.FRONTEND_URL || `http://localhost:3000`);
       
       // Vérifier les éléments de base
       await expect(page.locator('body')).toBeVisible();
@@ -53,7 +54,7 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
       
       // Essayer sur le port par défaut 3000 si elle n'est pas sur 3001
       try {
-        await page.goto(`http://localhost:3000`);
+        await page.goto(process.env.FRONTEND_URL || `http://localhost:3000`);
         await expect(page.locator('body')).toBeVisible();
         console.log('✅ Interface Simple trouvée sur port 3000');
       } catch (error2) {
@@ -70,7 +71,7 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
     
     for (const port of ports) {
       try {
-        const response = await request.get(`http://localhost:${port}/status`);
+        const response = await request.get(`${process.env.BACKEND_URL}/status`);
         
         if (response.ok()) {
           const statusData = await response.json();
@@ -99,7 +100,7 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
     
     for (const port of ports) {
       try {
-        const response = await request.get(`http://localhost:${port}/api/examples`);
+        const response = await request.get(`${process.env.BACKEND_URL}/api/examples`);
         
         if (response.ok()) {
           const examplesData = await response.json();
@@ -132,7 +133,7 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
     
     for (const port of ports) {
       try {
-        const response = await request.get(`http://localhost:${port}/status`);
+        const response = await request.get(`${process.env.BACKEND_URL}/status`);
         
         if (response.ok()) {
           const statusData = await response.json();
@@ -142,7 +143,7 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
             console.log(`✅ Port ${port}: ServiceManager actif`);
             
             // Test d'analyse simple pour vérifier l'intégration
-            const analysisResponse = await request.post(`http://localhost:${port}/analyze`, {
+            const analysisResponse = await request.post(`${process.env.BACKEND_URL}/analyze`, {
               data: {
                 text: 'Test de régression ServiceManager',
                 analysis_type: 'comprehensive'
@@ -172,7 +173,7 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
     console.log('🎯 Test fonctionnalité complète Interface React');
     
     try {
-      await page.goto(`http://localhost:${INTERFACE_REACT_PORT}`);
+      await page.goto(process.env.FRONTEND_URL || `http://localhost:3000`);
       
       // Vérifier le chargement complet
       await page.waitForLoadState('networkidle');
@@ -221,8 +222,8 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
     try {
       // Tentative d'accès simultané
       const [response1, response2] = await Promise.allSettled([
-        page1.goto(`http://localhost:${INTERFACE_REACT_PORT}`, { timeout: 10000 }),
-        page2.goto(`http://localhost:${INTERFACE_SIMPLE_PORT}`, { timeout: 10000 })
+        page1.goto(process.env.FRONTEND_URL || `http://localhost:3000`, { timeout: 10000 }),
+        page2.goto(process.env.FRONTEND_URL || `http://localhost:3000`, { timeout: 10000 })
       ]);
       
       let accessibleInterfaces = 0;
@@ -242,7 +243,7 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
         
         // Test de fallback sur port 3000
         try {
-          await page2.goto(`http://localhost:3000`);
+          await page2.goto(process.env.FRONTEND_URL || `http://localhost:3000`);
           accessibleInterfaces++;
           console.log('✅ Interface Simple accessible sur port 3000');
         } catch (fallbackError) {
@@ -276,7 +277,7 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
     for (const port of ports) {
       try {
         // Test endpoint status
-        const statusResponse = await request.get(`http://localhost:${port}/status`);
+        const statusResponse = await request.get(`${process.env.BACKEND_URL}/status`);
         if (statusResponse.ok()) {
           regressionResults.statusEndpoint = true;
           
@@ -287,13 +288,13 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
         }
         
         // Test endpoint examples
-        const examplesResponse = await request.get(`http://localhost:${port}/api/examples`);
+        const examplesResponse = await request.get(`${process.env.BACKEND_URL}/api/examples`);
         if (examplesResponse.ok()) {
           regressionResults.examplesEndpoint = true;
         }
         
         // Test endpoint analysis
-        const analysisResponse = await request.post(`http://localhost:${port}/analyze`, {
+        const analysisResponse = await request.post(`${process.env.BACKEND_URL}/analyze`, {
           data: {
             text: 'Test de non-régression',
             analysis_type: 'comprehensive'

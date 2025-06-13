@@ -7,7 +7,7 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Investigation Textes Varies - Analyse Argumentative', () => {
   
-  const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5004';
+  const API_BASE_URL = process.env.BACKEND_URL || process.env.API_BASE_URL || 'http://localhost:5003';
   const INTERFACE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
   
   // Dataset de textes varies pour investigation

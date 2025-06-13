@@ -17,7 +17,7 @@ test.describe('API Backend - Services d\'Analyse', () => {
     expect(response.status()).toBe(200);
     
     const healthData = await response.json();
-    expect(healthData).toHaveProperty('status', 'healthy');
+    expect(healthData).toHaveProperty('status', 'ok');
     expect(healthData).toHaveProperty('message');
     expect(healthData).toHaveProperty('services');
     expect(healthData).toHaveProperty('version', '1.0.0');
