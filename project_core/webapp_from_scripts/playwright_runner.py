@@ -24,6 +24,7 @@ class PlaywrightRunner:
         self.headless = config.get('headless', True)
         self.timeout_ms = config.get('timeout_ms', 30000)
         self.test_paths = config.get('test_paths', ['tests_playwright/tests/'])
+        self.process_timeout_s = config.get('process_timeout_s', 600)  # Timeout global du processus en secondes
         self.screenshots_dir = Path(config.get('screenshots_dir', 'logs/screenshots'))
         self.traces_dir = Path(config.get('traces_dir', 'logs/traces'))
 
@@ -74,6 +75,7 @@ class PlaywrightRunner:
     async def _prepare_test_environment(self, config: Dict[str, Any]):
         """Prépare l'environnement pour les tests"""
         env_vars = {
+            'API_BASE_URL': config['backend_url'], # Correction du nom de la variable
             'BACKEND_URL': config['backend_url'],
             'FRONTEND_URL': config['frontend_url'],
             'PLAYWRIGHT_BASE_URL': config.get('frontend_url') or config['backend_url'],
@@ -89,11 +91,19 @@ class PlaywrightRunner:
     def _build_playwright_command_string(self, test_paths: List[str],
                                          config: Dict[str, Any]) -> List[str]:
         """Construit la liste de commande 'npx playwright test ...'."""
-        # Sur Windows, npx est souvent dans le PATH, mais on peut le rendre plus robuste
-        # en utilisant le chemin direct si on le connaît. Pour l'instant, on se fie au PATH.
-        npx_executable = 'npx'
+        # Construction d'un chemin absolu vers npx.cmd pour éviter les problèmes de PATH et de shell=True.
+        # C'est la méthode la plus robuste pour Windows.
+        node_home = os.getenv('NODE_HOME')
+        if not node_home:
+            raise EnvironmentError("La variable d'environnement NODE_HOME n'est pas définie. Impossible de trouver npx.")
+        
+        npx_executable = Path(node_home) / 'npx.cmd'
+        if not npx_executable.is_file():
+            raise FileNotFoundError(f"L'exécutable npx.cmd n'a pas été trouvé à l'emplacement attendu: {npx_executable}")
 
-        parts = [npx_executable, 'playwright', 'test']
+        self.logger.info(f"Utilisation de l'exécutable npx trouvé à: {npx_executable}")
+
+        parts = [str(npx_executable), 'playwright', 'test']
         parts.extend(test_paths)
         
         if not config.get('headless', True):
@@ -102,44 +112,70 @@ class PlaywrightRunner:
         # Lorsque le fichier de configuration utilise des "projets",
         # il faut utiliser --project au lieu de --browser.
         parts.append(f"--project={config['browser']}")
-        parts.append(f"--timeout={config['timeout_ms']}")
+        
+        # Utiliser un reporter qui ne bloque pas la fin du processus
+        parts.append('--reporter=list')
 
         self.logger.info(f"Construction de la commande 'npx playwright': {parts}")
         return parts
 
     async def _execute_tests(self, playwright_command_parts: List[str],
                            config: Dict[str, Any]) -> subprocess.CompletedProcess:
+        """Exécute les tests en utilisant asyncio.create_subprocess_exec pour un contrôle total."""
         
-        self.logger.info(f"Commande à exécuter: {' '.join(playwright_command_parts)}")
+        self.logger.info(f"Commande à exécuter (via asyncio): {' '.join(playwright_command_parts)}")
         
-        # Le répertoire de travail doit être la racine du projet
-        test_dir = '.'
+        proc = None
+        playwright_stdout_log = Path("logs") / "playwright_stdout.log"
+        playwright_stderr_log = Path("logs") / "playwright_stderr.log"
+        self.logger.info(f"Redirection stdout de Playwright vers: {playwright_stdout_log}")
+        self.logger.info(f"Redirection stderr de Playwright vers: {playwright_stderr_log}")
 
         try:
-            # Utilisation de asyncio.create_subprocess_shell pour une meilleure gestion async
-            # On passe une chaîne de caractères à shell
-            command_str = ' '.join(playwright_command_parts)
-            process = await asyncio.create_subprocess_shell(
-                command_str,
-                cwd=test_dir,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
+            with open(playwright_stdout_log, 'wb') as stdout_file, \
+                 open(playwright_stderr_log, 'wb') as stderr_file:
+                
+                proc = await asyncio.create_subprocess_exec(
+                    *playwright_command_parts,
+                    stdout=stdout_file,
+                    stderr=stderr_file
+                )
+
+                # Attendre la fin du processus
+                return_code = await proc.wait()
+
+                self.logger.info(f"Tests terminés - Code retour: {return_code}")
             
-            stdout, stderr = await process.communicate()
-            
-            result = subprocess.CompletedProcess(
+            # Lire le contenu des logs pour le retour
+            stdout = playwright_stdout_log.read_text(encoding='utf-8', errors='ignore')
+            stderr = playwright_stderr_log.read_text(encoding='utf-8', errors='ignore')
+
+            # Retourner un objet compatible avec l'analyseur de résultats
+            return subprocess.CompletedProcess(
                 args=playwright_command_parts,
-                returncode=process.returncode,
-                stdout=stdout.decode('utf-8', errors='ignore'),
-                stderr=stderr.decode('utf-8', errors='ignore')
+                returncode=return_code,
+                stdout=stdout,
+                stderr=stderr
             )
-            
-            self.logger.info(f"Tests terminés - Code retour: {result.returncode}")
-            return result
-            
+
+        except asyncio.CancelledError:
+            self.logger.warning("L'exécution des tests a été annulée (probablement par timeout).")
+            if proc:
+                self.logger.info(f"Tentative de terminaison forcée du processus Playwright (PID: {proc.pid})...")
+                try:
+                    proc.terminate()
+                    await asyncio.wait_for(proc.wait(), timeout=5.0)
+                    self.logger.info("Processus Playwright terminé.")
+                except Exception:
+                    self.logger.error(f"Échec de la terminaison, tentative de kill du processus Playwright (PID: {proc.pid})...")
+                    proc.kill()
+                    await proc.wait()
+                    self.logger.warning("Processus Playwright tué.")
+            # Il est essentiel de relancer CancelledError pour que le timeout de l'orchestrateur fonctionne.
+            raise
+
         except Exception as e:
-            self.logger.error(f"Erreur majeure lors de l'exécution de la commande Playwright: {e}", exc_info=True)
+            self.logger.error(f"Erreur majeure lors de l'exécution de la commande Playwright avec asyncio: {e}", exc_info=True)
             return subprocess.CompletedProcess(args=' '.join(playwright_command_parts), returncode=1, stdout="", stderr=str(e))
 
     async def _analyze_results(self, result: subprocess.CompletedProcess) -> bool:

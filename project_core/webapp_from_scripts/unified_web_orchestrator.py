@@ -108,30 +108,35 @@ class UnifiedWebOrchestrator:
         # {"path": "/flask/api/framework", "method": "POST", "data": {"arguments": [{"id": "a", "content": "a"}]}}
     ]
 
-    def __init__(self, config_path: str = "scripts/webapp/config/webapp_config.yml"):
-        self.config_path = Path(config_path)
+    def __init__(self, args: argparse.Namespace):
+        self.config_path = Path(args.config)
         self.config = self._load_config()
-        self.logger = self._setup_logging()
-        
+        self.logger = self._setup_logging(log_level=args.log_level.upper())
+
+        # Configuration runtime basée sur les arguments
+        self.headless = args.headless and not args.visible
+        self.timeout_minutes = args.timeout
+        self.enable_trace = not args.no_trace
+
         # Gestionnaires spécialisés
         self.backend_manager = BackendManager(self.config.get('backend', {}), self.logger)
-        self.frontend_manager: Optional[FrontendManager] = None # Sera instancié plus tard
-        self.playwright_runner = PlaywrightRunner(self.config.get('playwright', {}), self.logger)
+        self.frontend_manager: Optional[FrontendManager] = None  # Sera instancié plus tard
+
+        playwright_config = self.config.get('playwright', {})
+        # Le timeout CLI surcharge la config YAML
+        playwright_config['timeout_ms'] = self.timeout_minutes * 60 * 1000
+
+        self.playwright_runner = PlaywrightRunner(playwright_config, self.logger)
         self.process_cleaner = ProcessCleaner(self.logger)
-        
+
         # État de l'application
         self.app_info = WebAppInfo()
         self.trace_log: List[TraceEntry] = []
         self.start_time = datetime.now()
-        
+
         # Support Playwright natif
         self.playwright: Optional[Playwright] = None
         self.browser: Optional[Browser] = None
-
-        # Configuration runtime
-        self.headless = True
-        self.timeout_minutes = 10
-        self.enable_trace = True
 
         self._setup_signal_handlers()
 
@@ -255,22 +260,31 @@ class UnifiedWebOrchestrator:
             }
         }
     
-    def _setup_logging(self) -> logging.Logger:
+    def _setup_logging(self, log_level: str = 'INFO') -> logging.Logger:
         """Configure le système de logging"""
         logging_config = self.config.get('logging', {})
         log_file = Path(logging_config.get('file', 'logs/webapp_orchestrator.log'))
         log_file.parent.mkdir(parents=True, exist_ok=True)
-        
+
+        # La CLI surcharge la config YAML
+        level = log_level or logging_config.get('level', 'INFO').upper()
+
+        # Supprimer les handlers existants pour éviter les logs dupliqués
+        for handler in logging.root.handlers[:]:
+            logging.root.removeHandler(handler)
+            
         logging.basicConfig(
-            level=getattr(logging, logging_config.get('level', 'INFO')),
-            format=logging_config.get('format', '%(asctime)s - %(levelname)s - %(message)s'),
+            level=level,
+            format=logging_config.get('format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s'),
             handlers=[
                 logging.FileHandler(log_file, encoding='utf-8'),
                 logging.StreamHandler(sys.stdout)
             ]
         )
         
-        return logging.getLogger(__name__)
+        logger = logging.getLogger(__name__)
+        logger.info(f"Niveau de log configuré sur : {level}")
+        return logger
     
     def add_trace(self, action: str, details: str = "", result: str = "", 
                   screenshot: str = "", status: str = "success"):
@@ -395,6 +409,9 @@ class UnifiedWebOrchestrator:
                       f"BASE_URL={base_url}",
                       f"BACKEND_URL={backend_url}")
 
+        # L'ancienne gestion de subprocess.TimeoutExpired n'est plus nécessaire car
+        # le runner utilise maintenant create_subprocess_exec.
+        # Le timeout est géré plus haut par asyncio.wait_for.
         return await self.playwright_runner.run_tests(test_paths, test_config)
     
     async def stop_webapp(self):
@@ -458,7 +475,22 @@ class UnifiedWebOrchestrator:
             await asyncio.sleep(2)
             
             # 3. Exécution tests
-            success = await self.run_tests(test_paths, **kwargs)
+            try:
+                # Utilisation d'un timeout asyncio global comme filet de sécurité ultime.
+                # Cela garantit que l'orchestrateur ne restera jamais bloqué indéfiniment.
+                test_timeout_s = self.timeout_minutes * 60
+                self.add_trace("[TEST] Lancement avec timeout global", f"{test_timeout_s}s")
+                
+                success = await asyncio.wait_for(
+                    self.run_tests(test_paths, **kwargs),
+                    timeout=test_timeout_s
+                )
+            except asyncio.TimeoutError:
+                self.add_trace("[ERROR] TIMEOUT GLOBAL",
+                              f"L'étape de test a dépassé le timeout de {self.timeout_minutes} minutes.",
+                              "Le processus est probablement bloqué.",
+                              status="error")
+                success = False
             
             if success:
                 self.add_trace("[SUCCESS] INTEGRATION REUSSIE",
@@ -733,47 +765,43 @@ def main():
                        help='Force activation frontend')
     parser.add_argument('--tests', nargs='*',
                        help='Chemins spécifiques des tests à exécuter')
-    parser.add_argument('--timeout', type=int, default=10,
-                       help='Timeout en minutes')
-    
+    parser.add_argument('--timeout', type=int, default=20,
+                           help='Timeout global en minutes pour l\'orchestration.')
+    parser.add_argument('--log-level', type=str, default='INFO',
+                           choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
+                           help='Niveau de log pour la console et le fichier.')
+    parser.add_argument('--no-trace', action='store_true',
+                           help='Désactive la génération du rapport de trace Markdown.')
+
     # Commandes
-    parser.add_argument('--start', action='store_true',
-                       help='Démarre seulement l\'application')
-    parser.add_argument('--stop', action='store_true', 
-                       help='Arrête l\'application')
-    parser.add_argument('--test', action='store_true',
-                       help='Exécute seulement les tests')
-    parser.add_argument('--integration', action='store_true', default=True,
-                       help='Test d\'intégration complet (défaut)')
-    
+    parser.add_argument('--start', action='store_true', help='Démarre seulement l\'application.')
+    parser.add_argument('--stop', action='store_true', help='Arrête l\'application.')
+    parser.add_argument('--test', action='store_true', help='Exécute seulement les tests sur une app déjà démarrée ou en la démarrant.')
+    parser.add_argument('--integration', action='store_true', default=True, help='Test d\'intégration complet (défaut).')
+
     args, unknown = parser.parse_known_args()
-    
-    # Override headless si --visible
-    headless = args.headless and not args.visible
-    
+
     # Création orchestrateur
-    orchestrator = UnifiedWebOrchestrator(args.config)
-    orchestrator.headless = headless
-    orchestrator.timeout_minutes = args.timeout
-    
+    orchestrator = UnifiedWebOrchestrator(args)
+
     async def run_command():
         success = False
         try:
             if args.start:
-                success = await orchestrator.start_webapp(headless, args.frontend)
+                success = await orchestrator.start_webapp(orchestrator.headless, args.frontend)
                 if success:
                     print("Application démarrée. Pressez Ctrl+C pour arrêter.")
-                    await asyncio.Event().wait() # Attendre indéfiniment
+                    await asyncio.Event().wait()  # Attendre indéfiniment
             elif args.stop:
                 await orchestrator.stop_webapp()
                 success = True
             elif args.test:
-                 # Pour les tests seuls, on fait un cycle complet mais sans arrêt entre les étapes.
-                if await orchestrator.start_webapp(headless, args.frontend):
+                # Pour les tests seuls, on fait un cycle complet mais sans arrêt entre les étapes.
+                if await orchestrator.start_webapp(orchestrator.headless, args.frontend):
                     success = await orchestrator.run_tests(args.tests)
             else:  # --integration par défaut
                 success = await orchestrator.full_integration_test(
-                    headless, args.frontend, args.tests)
+                    orchestrator.headless, args.frontend, args.tests)
         except KeyboardInterrupt:
             print("\n🛑 Interruption utilisateur détectée. Arrêt en cours...")
             # L'arrêt est géré par le signal handler
