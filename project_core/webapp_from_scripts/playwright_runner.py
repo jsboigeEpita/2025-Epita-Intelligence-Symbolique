@@ -132,10 +132,32 @@ class PlaywrightRunner:
 
     async def _analyze_results(self, result: subprocess.CompletedProcess) -> bool:
         success = result.returncode == 0
+        
+        log_dir = Path("logs")
+        log_dir.mkdir(exist_ok=True)
+        
+        # Sauvegarder la sortie complète dans des fichiers pour éviter la troncature des logs
         if result.stdout:
-            self.logger.info("STDOUT:\n" + result.stdout)
+            stdout_log_path = log_dir / "pytest_stdout.log"
+            with open(stdout_log_path, "w", encoding="utf-8") as f:
+                f.write(result.stdout)
+            self.logger.info(f"Sortie STDOUT des tests sauvegardée dans {stdout_log_path}")
+        else:
+            self.logger.info("Aucune sortie STDOUT des tests à sauvegarder.")
+    
         if result.stderr:
-            self.logger.error("STDERR:\n" + result.stderr)
-
+            stderr_log_path = log_dir / "pytest_stderr.log"
+            with open(stderr_log_path, "w", encoding="utf-8") as f:
+                f.write(result.stderr)
+            self.logger.error(f"Sortie STDERR des tests sauvegardée dans {stderr_log_path}")
+        else:
+            self.logger.info("Aucune sortie STDERR des tests à sauvegarder.")
+    
+        # Afficher un résumé si la sortie n'est pas trop longue
+        if result.stdout and len(result.stdout) < 2000:
+            self.logger.info("STDOUT (aperçu):\n" + result.stdout)
+        if result.stderr and len(result.stderr) < 2000:
+            self.logger.error("STDERR (aperçu):\n" + result.stderr)
+    
         self.logger.info(f"Analyse des résultats terminée. Succès: {success}")
         return success

@@ -1,5 +1,7 @@
 // Utilisation de la variable d'environnement avec fallback intelligent
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+// L'URL injectée par l'orchestrateur via REACT_APP_API_URL est prioritaire.
+// La valeur de secours est alignée sur le port par défaut du backend dans l'orchestrateur.
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5004';
 
 // Configuration par défaut pour les requêtes
 const defaultHeaders = {

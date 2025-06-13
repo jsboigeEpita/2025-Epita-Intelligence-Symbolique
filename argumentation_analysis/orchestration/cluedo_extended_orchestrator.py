@@ -28,6 +28,13 @@ from semantic_kernel.kernel import Kernel
 AGENTS_AVAILABLE = False  # Module agents non disponible dans SK 0.9.6b1
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
+# REGLE CRITIQUE DE VERSIONNAGE (semantic-kernel)
+# Le projet utilise semantic-kernel version >= 1.33.0. Dans cette version (et les suivantes de la v1),
+# les gestionnaires d'événements comme FunctionInvokingEventArgs ne se trouvent plus
+# dans 'semantic_kernel.events' mais dans 'semantic_kernel.functions.kernel_function_hooks'.
+# NE PAS CHANGER ces imports pour des chemins obsolètes.
+# Assurez-vous que l'environnement conda 'projet-is' a une version propre et correcte installée.
+from semantic_kernel.functions.kernel_function_hooks import FunctionInvokingEventArgs, FunctionInvokedEventArgs
 from semantic_kernel.prompt_template.prompt_template_config import PromptTemplateConfig
 
 # Imports pour le nouveau système de filtres
