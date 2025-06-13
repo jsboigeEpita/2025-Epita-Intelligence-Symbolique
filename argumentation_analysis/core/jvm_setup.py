@@ -15,6 +15,9 @@ _PROJECT_ROOT_DIR = None
 _LIBS_DIR = None
 _PORTABLE_JDK_PATH = None
 _ENV_LOADED = False
+_JVM_WAS_SHUTDOWN = False  # Indicateur pour éviter les tentatives de redémarrage
+_JVM_INITIALIZED_THIS_SESSION = False  # Flag pour la session de test
+_SESSION_FIXTURE_OWNS_JVM = False  # Flag pour indiquer que la fixture de session contrôle la JVM
 
 def _ensure_env_loaded():
     """Charge les variables d'environnement une seule fois."""
@@ -124,10 +127,37 @@ def get_jvm_options() -> List[str]:
 def initialize_jvm(lib_dir_path: Optional[str] = None, specific_jar_path: Optional[str] = None) -> bool:
     """
     Initialise la JVM avec les JARs de TweetyProject (initialisation paresseuse).
+    
+    ATTENTION: JPype ne permet qu'un seul cycle de vie JVM par processus Python.
+    Une fois jpype.shutdownJVM() appelé, la JVM ne peut plus être redémarrée.
     """
+    global _JVM_WAS_SHUTDOWN, _JVM_INITIALIZED_THIS_SESSION, _SESSION_FIXTURE_OWNS_JVM
+    
     logger.info(f"JVM_SETUP: initialize_jvm appelée. isJVMStarted au début: {jpype.isJVMStarted()}")
+    logger.info(f"JVM_SETUP: _JVM_WAS_SHUTDOWN: {_JVM_WAS_SHUTDOWN}")
+    logger.info(f"JVM_SETUP: _JVM_INITIALIZED_THIS_SESSION: {_JVM_INITIALIZED_THIS_SESSION}")
+    logger.info(f"JVM_SETUP: _SESSION_FIXTURE_OWNS_JVM: {_SESSION_FIXTURE_OWNS_JVM}")
+    
+    # PROTECTION 1: Vérifier si une tentative de redémarrage est en cours
+    if _JVM_WAS_SHUTDOWN and not jpype.isJVMStarted():
+        logger.error("JVM_SETUP: ERREUR - Tentative de redémarrage de la JVM détectée. JPype ne supporte qu'un cycle de vie JVM par processus.")
+        logger.error("JVM_SETUP: Veuillez relancer le processus Python pour utiliser la JVM à nouveau.")
+        return False
+    
+    # PROTECTION 2: Si la fixture de session contrôle la JVM, interdire les appels directs
+    if _SESSION_FIXTURE_OWNS_JVM and jpype.isJVMStarted():
+        logger.info("JVM_SETUP: La JVM est contrôlée par la fixture de session. Utilisation de la JVM existante.")
+        _JVM_INITIALIZED_THIS_SESSION = True
+        return True
+    
+    # PROTECTION 3: Si déjà initialisée dans cette session, ne pas refaire
+    if _JVM_INITIALIZED_THIS_SESSION and jpype.isJVMStarted():
+        logger.info("JVM_SETUP: JVM déjà initialisée dans cette session. Réutilisation.")
+        return True
+    
     if jpype.isJVMStarted():
-        logger.info("JVM_SETUP: JVM déjà démarrée.")
+        logger.info("JVM_SETUP: JVM déjà démarrée (sans contrôle de session).")
+        _JVM_INITIALIZED_THIS_SESSION = True
         return True
 
     try:
@@ -189,6 +219,9 @@ def initialize_jvm(lib_dir_path: Optional[str] = None, specific_jar_path: Option
         except Exception as e_test:
             logger.error(f"(ERREUR) Test de chargement de classe Tweety échoué: {e_test}", exc_info=True)
 
+        # Marquer que la JVM a été initialisée avec succès dans cette session
+        _JVM_INITIALIZED_THIS_SESSION = True
+        logger.info("JVM_SETUP: Flag _JVM_INITIALIZED_THIS_SESSION défini à True.")
         return True
 
     except Exception as e:
@@ -208,14 +241,47 @@ def _safe_log(logger_instance, level, message, exc_info_val=False):
     except Exception:
         print(f"FALLBACK LOG (Exception in logger) ({logging.getLevelName(level)}): {message}")
 
+def set_session_fixture_owns_jvm(owns: bool = True):
+    """
+    Définit si la fixture de session contrôle la JVM.
+    
+    Args:
+        owns: True si la fixture de session contrôle la JVM, False sinon
+    """
+    global _SESSION_FIXTURE_OWNS_JVM
+    _SESSION_FIXTURE_OWNS_JVM = owns
+    logger.info(f"JVM_SETUP: _SESSION_FIXTURE_OWNS_JVM défini à {owns}")
+
+def is_session_fixture_owns_jvm() -> bool:
+    """Retourne si la fixture de session contrôle la JVM."""
+    return _SESSION_FIXTURE_OWNS_JVM
+
+def reset_session_flags():
+    """Remet à zéro les flags de session (utile pour les tests)."""
+    global _JVM_INITIALIZED_THIS_SESSION, _SESSION_FIXTURE_OWNS_JVM
+    _JVM_INITIALIZED_THIS_SESSION = False
+    _SESSION_FIXTURE_OWNS_JVM = False
+    logger.info("JVM_SETUP: Flags de session remis à zéro")
+
 def shutdown_jvm_if_needed():
-    """Arrête la JVM si elle est démarrée."""
+    """
+    Arrête la JVM si elle est démarrée.
+    
+    ATTENTION: Une fois la JVM arrêtée avec jpype.shutdownJVM(),
+    elle ne peut plus être redémarrée dans le même processus Python.
+    """
+    global _JVM_WAS_SHUTDOWN
+    
     _safe_log(logger, logging.INFO, "JVM_SETUP: Appel de shutdown_jvm_if_needed.")
+    _safe_log(logger, logging.INFO, f"JVM_SETUP: _SESSION_FIXTURE_OWNS_JVM: {_SESSION_FIXTURE_OWNS_JVM}")
+    
     try:
         if jpype.isJVMStarted():
             _safe_log(logger, logging.INFO, f"JVM_SETUP: JVM est démarrée. Appel de jpype.shutdownJVM().")
             jpype.shutdownJVM()
-            _safe_log(logger, logging.INFO, f"JVM_SETUP: jpype.shutdownJVM() exécuté.")
+            _JVM_WAS_SHUTDOWN = True
+            _safe_log(logger, logging.INFO, f"JVM_SETUP: jpype.shutdownJVM() exécuté. Flag _JVM_WAS_SHUTDOWN défini à True.")
+            _safe_log(logger, logging.INFO, f"JVM_SETUP: ATTENTION: La JVM ne peut plus être redémarrée dans ce processus.")
         else:
             _safe_log(logger, logging.INFO, "JVM_SETUP: JVM n'était pas démarrée.")
     except Exception as e_shutdown:

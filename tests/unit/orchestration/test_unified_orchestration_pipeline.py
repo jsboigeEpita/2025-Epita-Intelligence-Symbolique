@@ -196,18 +196,14 @@ class TestUnifiedOrchestrationPipeline:
         """Test de l'initialisation asynchrone réussie avec de vrais composants."""
         pipeline = UnifiedOrchestrationPipeline(basic_config)
         
-        # Patcher _initialize_base_services pour éviter un second appel à initialize_jvm
-        with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.UnifiedOrchestrationPipeline._initialize_base_services') as mock_init_base:
-            mock_init_base.return_value = True # Simuler le succès
-            
-            # L'initialisation doit maintenant utiliser les vrais services
-            # grâce à la configuration et à l'environnement de test.
-            success = await pipeline.initialize()
+        # La fixture jvm_session_manager est active et contrôle la JVM.
+        # Nous pouvons maintenant appeler initialiser en toute sécurité.
+        # La méthode initialize() devrait détecter la JVM existante via les nouveaux verrous.
+        success = await pipeline.initialize()
         
         assert success is True
         assert pipeline.initialized is True
-        # Les services de base n'ont pas été réellement initialisés à cause du patch
-        # donc on ne peut pas les vérifier ici.
+        assert pipeline.llm_service is not None # Doit être initialisé
     
     @pytest.mark.asyncio
     async def test_pipeline_initialization_with_hierarchical(self, hierarchical_config, jvm_session_manager):
@@ -710,7 +706,10 @@ class TestErrorHandlingAndEdgeCases:
         
         with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.create_llm_service'):
             with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.UnifiedOrchestrationPipeline._initialize_base_services'):
-                await pipeline.initialize()
+                with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.UnifiedOrchestrationPipeline._initialize_fallback_pipeline'):
+                    await pipeline.initialize()
+                    # CORRECTIF: S'assurer que le pipeline est marqué comme initialisé après le patch
+                    pipeline.initialized = True
             
             # Mock qui prend plus de temps que le timeout
             async def slow_analysis(*args, **kwargs):
@@ -740,10 +739,15 @@ class TestErrorHandlingAndEdgeCases:
         
         with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.create_llm_service'):
             with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.UnifiedOrchestrationPipeline._initialize_base_services'):
-                await pipeline.initialize()
+                with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.UnifiedOrchestrationPipeline._initialize_fallback_pipeline'):
+                    await pipeline.initialize()
+                    # CORRECTIF: S'assurer que le pipeline est marqué comme initialisé après le patch
+                    pipeline.initialized = True
             
             with patch.object(pipeline, '_fallback_pipeline') as mock_fallback:
-                mock_fallback.analyze_text_unified.return_value = {"status": "success"}
+                async def mock_analyze():
+                    return {"status": "success"}
+                mock_fallback.analyze_text_unified.return_value = mock_analyze()
                 
                 results = await pipeline.analyze_text_orchestrated(large_text)
                 
@@ -765,9 +769,13 @@ class TestErrorHandlingAndEdgeCases:
             pipeline = UnifiedOrchestrationPipeline(config)
             with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.create_llm_service'):
                 with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.UnifiedOrchestrationPipeline._initialize_base_services'):
-                    await pipeline.initialize()
+                    with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.UnifiedOrchestrationPipeline._initialize_fallback_pipeline'):
+                        await pipeline.initialize()
+                        # CORRECTIF: S'assurer que le pipeline est marqué comme initialisé après le patch
+                        pipeline.initialized = True
                 with patch.object(pipeline, '_fallback_pipeline') as mock_fallback:
-                    mock_fallback.analyze_text_unified.return_value = {"status": "success"}
+                    # Utiliser AsyncMock pour les méthodes async
+                    mock_fallback.analyze_text_unified = AsyncMock(return_value={"status": "success"})
                     return await pipeline.analyze_text_orchestrated(text)
         
         # Lancer les analyses en parallèle
@@ -807,13 +815,21 @@ class TestErrorHandlingAndEdgeCases:
         
         with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.create_llm_service'):
             with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.UnifiedOrchestrationPipeline._initialize_base_services'):
-                await pipeline.initialize()
+                with patch('argumentation_analysis.pipelines.unified_orchestration_pipeline.UnifiedOrchestrationPipeline._initialize_fallback_pipeline'):
+                    await pipeline.initialize()
+                    # CORRECTIF: S'assurer que le pipeline est marqué comme initialisé après le patch
+                    pipeline.initialized = True
             
-            # Analyser plusieurs textes
-            for i in range(10):
-                text = f"Analyse mémoire test {i} " * 100
-                with patch.object(pipeline, '_fallback_pipeline') as mock_fallback:
-                    mock_fallback.analyze_text_unified.return_value = {"status": "success"}
+            # Mock d'analyse mémoire optimisée
+            async def memory_efficient_analysis(*args, **kwargs):
+                return {"status": "success", "memory_optimized": True}
+            
+            # Analyser plusieurs textes avec mock async correct
+            with patch.object(pipeline, '_fallback_pipeline') as mock_fallback:
+                mock_fallback.analyze_text_unified = memory_efficient_analysis
+                
+                for i in range(10):
+                    text = f"Analyse mémoire test {i} " * 100
                     await pipeline.analyze_text_orchestrated(text)
             
             await pipeline.shutdown()
@@ -850,8 +866,8 @@ class TestPerformanceAndOptimization:
         assert execution_time < 10.0
         assert results["status"] == "success"
         
-        # Vérifier que le temps reporté est cohérent
-        reported_time = results["execution_time"]
+        # Vérifier que le temps reporté est cohérent (utiliser total_execution_time qui inclut init/shutdown)
+        reported_time = results["total_execution_time"]
         assert abs(reported_time - execution_time) < 0.5  # Tolérance de 0.5s
     
     @pytest.mark.asyncio
