@@ -274,7 +274,7 @@ class FrontendManager:
         start_time = time.time()
         
         # Attente initiale pour démarrage React
-        await asyncio.sleep(10)
+        await asyncio.sleep(30)
         
         while time.time() - start_time < self.timeout_seconds:
             try:

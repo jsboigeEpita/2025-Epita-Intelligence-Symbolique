@@ -102,7 +102,7 @@ test.describe('Investigation Textes Varies - Analyse Argumentative', () => {
       const startTime = Date.now();
       
       try {
-        const response = await request.post(`${API_BASE_URL}/api/analyze`, {
+        const response = await request.post(`${API_BASE_URL}/flask/api/analyze`, {
           data: {
             text: texte.texte,
             analysis_type: texte.type_analyse,
@@ -256,7 +256,7 @@ test.describe('Investigation Textes Varies - Analyse Argumentative', () => {
       
       const startTime = Date.now();
       
-      const response = await request.post(`${API_BASE_URL}/api/analyze`, {
+      const response = await request.post(`${API_BASE_URL}/flask/api/analyze`, {
         data: {
           text: texte.texte,
           analysis_type: texte.type,
@@ -297,7 +297,7 @@ test.describe('Investigation Textes Varies - Analyse Argumentative', () => {
     for (const texte of textesProblematiques) {
       console.log(`🧪 Test: ${texte.titre}`);
       
-      const response = await request.post(`${API_BASE_URL}/api/analyze`, {
+      const response = await request.post(`${API_BASE_URL}/flask/api/analyze`, {
         data: {
           text: texte.texte,
           analysis_type: "comprehensive"

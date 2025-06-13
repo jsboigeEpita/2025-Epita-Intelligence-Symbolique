@@ -71,7 +71,7 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
     
     for (const port of ports) {
       try {
-        const response = await request.get(`${process.env.BACKEND_URL}/status`);
+        const response = await request.get(`${process.env.BACKEND_URL}/flask/api/status`);
         
         if (response.ok()) {
           const statusData = await response.json();
@@ -100,7 +100,7 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
     
     for (const port of ports) {
       try {
-        const response = await request.get(`${process.env.BACKEND_URL}/api/examples`);
+        const response = await request.get(`${process.env.BACKEND_URL}/flask/api/examples`);
         
         if (response.ok()) {
           const examplesData = await response.json();
@@ -133,7 +133,7 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
     
     for (const port of ports) {
       try {
-        const response = await request.get(`${process.env.BACKEND_URL}/status`);
+        const response = await request.get(`${process.env.BACKEND_URL}/flask/api/status`);
         
         if (response.ok()) {
           const statusData = await response.json();
@@ -143,7 +143,7 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
             console.log(`✅ Port ${port}: ServiceManager actif`);
             
             // Test d'analyse simple pour vérifier l'intégration
-            const analysisResponse = await request.post(`${process.env.BACKEND_URL}/analyze`, {
+            const analysisResponse = await request.post(`${process.env.BACKEND_URL}/flask/api/analyze`, {
               data: {
                 text: 'Test de régression ServiceManager',
                 analysis_type: 'comprehensive'
@@ -277,7 +277,7 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
     for (const port of ports) {
       try {
         // Test endpoint status
-        const statusResponse = await request.get(`${process.env.BACKEND_URL}/status`);
+        const statusResponse = await request.get(`${process.env.BACKEND_URL}/flask/api/status`);
         if (statusResponse.ok()) {
           regressionResults.statusEndpoint = true;
           
@@ -288,13 +288,13 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
         }
         
         // Test endpoint examples
-        const examplesResponse = await request.get(`${process.env.BACKEND_URL}/api/examples`);
+        const examplesResponse = await request.get(`${process.env.BACKEND_URL}/flask/api/examples`);
         if (examplesResponse.ok()) {
           regressionResults.examplesEndpoint = true;
         }
         
         // Test endpoint analysis
-        const analysisResponse = await request.post(`${process.env.BACKEND_URL}/analyze`, {
+        const analysisResponse = await request.post(`${process.env.BACKEND_URL}/flask/api/analyze`, {
           data: {
             text: 'Test de non-régression',
             analysis_type: 'comprehensive'
