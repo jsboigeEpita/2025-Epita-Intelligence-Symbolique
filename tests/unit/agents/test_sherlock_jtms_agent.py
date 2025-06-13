@@ -170,10 +170,13 @@ class TestSherlockJTMSAgent:
             ]
         }
         
+        # D'abord, analyser les indices pour générer des hypothèses
+        await sherlock_agent.analyze_clues(case_data["clues"])
+
         result = await sherlock_agent.deduce_solution(case_data)
-        
+    
         assert result is not None
-        assert "primary_hypothesis" in result
+        assert "primary_hypothesis" in result, f"Erreur de déduction: {result.get('error')}"
         assert "detailed_solution" in result
         assert "confidence_score" in result
     

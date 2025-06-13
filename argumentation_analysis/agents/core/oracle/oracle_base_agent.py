@@ -137,7 +137,7 @@ class OracleTools:
                 raise ValueError(f"Type de requête invalide: {query_type}")
             
             # Exécution via le gestionnaire
-            response = self.dataset_manager.execute_oracle_query(
+            response = await self.dataset_manager.execute_oracle_query(
                 agent_name=self.agent_name,
                 query_type=query_type_enum,
                 query_params=params_dict

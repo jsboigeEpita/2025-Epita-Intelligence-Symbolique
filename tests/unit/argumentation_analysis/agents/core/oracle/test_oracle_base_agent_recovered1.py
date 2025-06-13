@@ -74,7 +74,7 @@ class TestOracleBaseAgent:
             query_type=QueryType.CARD_INQUIRY
         )
         
-        manager.execute_oracle_query = AsyncMock(return_value=success_response)
+        manager.execute_oracle_query = Mock(return_value=success_response)
         manager.validate_agent_access = Mock(return_value=True)
         
         return manager
@@ -293,7 +293,7 @@ class TestOracleTools:
     def mock_dataset_manager(self):
         """DatasetAccessManager mocké pour les tests OracleTools."""
         manager = Mock(spec=DatasetAccessManager)
-        manager.execute_oracle_query = AsyncMock()
+        manager.execute_oracle_query = Mock()
         manager.validate_agent_access = Mock()
         return manager
     
