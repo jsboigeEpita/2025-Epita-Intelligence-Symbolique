@@ -1,5 +1,4 @@
 import jpype
-from jpype.types import JString
 import logging
 # La configuration du logging (appel à setup_logging()) est supposée être faite globalement.
 from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
@@ -39,7 +38,7 @@ class ModalHandler:
         logger.debug(f"Attempting to parse Modal Logic formula: {formula_str} (Logic: {modal_logic_str}), Signature: {signature_declarations_str}")
         
         try:
-            java_formula_str = JString(formula_str)
+            java_formula_str = jpype.JClass("java.lang.String")(formula_str)
             
             # Revenir à l'appel simple, car parseFormula(String, Signature) n'existe pas pour MlParser.
             # La gestion de la signature pour les propositions en logique modale doit se faire autrement

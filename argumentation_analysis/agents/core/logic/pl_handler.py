@@ -1,5 +1,4 @@
 import jpype
-from jpype.types import JString
 import logging
 from typing import Optional, List
 # La configuration du logging (appel à setup_logging()) est supposée être faite globalement,
@@ -136,12 +135,12 @@ class PLHandler:
                 signature = PlSignature()
                 Proposition = jpype.JClass("org.tweetyproject.logics.pl.syntax.Proposition")
                 for const_name in constants:
-                    proposition = Proposition(JString(const_name))
+                    proposition = Proposition(jpype.JClass("java.lang.String")(const_name))
                     if not signature.contains(proposition):
                         signature.add(proposition)
                 pl_formula = self._pl_parser.parseFormula(JString(normalized_formula), signature)
             else:
-                java_formula_str = JString(normalized_formula)
+                java_formula_str = jpype.JClass("java.lang.String")(normalized_formula)
                 pl_formula = self._pl_parser.parseFormula(java_formula_str)
 
             logger.info(f"Successfully parsed PL formula: '{formula_str}' as '{normalized_formula}' -> {pl_formula}")

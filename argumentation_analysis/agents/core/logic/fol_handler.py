@@ -1,5 +1,4 @@
 import jpype
-from jpype.types import JString
 import logging
 # La configuration du logging (appel à setup_logging()) est supposée être faite globalement.
 from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
@@ -36,7 +35,7 @@ class FOLHandler:
         
         logger.debug(f"Attempting to parse FOL formula: {formula_str}")
         try:
-            java_formula_str = JString(formula_str)
+            java_formula_str = jpype.JClass("java.lang.String")(formula_str)
             fol_formula = parser_to_use.parseFormula(java_formula_str)
             logger.info(f"Successfully parsed FOL formula: {formula_str} -> {fol_formula}")
             return fol_formula
@@ -61,7 +60,7 @@ class FOLHandler:
 
             # The parseBeliefBase method is designed to handle the entire string,
             # including the "signature:" line. No need to split manually.
-            java_belief_set_str = JString(belief_set_str)
+            java_belief_set_str = jpype.JClass("java.lang.String")(belief_set_str)
             belief_set_obj = parser.parseBeliefBase(java_belief_set_str)
             
             # After parsing, we can retrieve the signature from the parsed object.

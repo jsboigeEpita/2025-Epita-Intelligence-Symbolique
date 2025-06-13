@@ -35,6 +35,7 @@ import semantic_kernel as sk
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.llm_service import create_llm_service
 from argumentation_analysis.core.jvm_setup import initialize_jvm
+import jpype
 from argumentation_analysis.paths import LIBS_DIR, DATA_DIR, RESULTS_DIR
 
 # Imports du pipeline original pour compatibilité
@@ -311,14 +312,19 @@ class UnifiedOrchestrationPipeline:
         
         # JVM pour analyse formelle
         if "formal" in self.config.analysis_modes or "unified" in self.config.analysis_modes:
-            logger.info("[JVM] Initialisation de la JVM pour analyse formelle...")
-            try:
-                self.jvm_ready = initialize_jvm(lib_dir_path=LIBS_DIR)
-                if self.jvm_ready:
-                    logger.info("[JVM] JVM initialisée avec succès")
-            except Exception as e:
-                logger.error(f"[JVM] Erreur initialisation JVM: {e}")
-                self.jvm_ready = False
+            logger.info("[JVM] Vérification du statut de la JVM pour analyse formelle...")
+            if not jpype.isJVMStarted():
+                logger.info("[JVM] JVM non démarrée. Tentative d'initialisation...")
+                try:
+                    self.jvm_ready = initialize_jvm(lib_dir_path=LIBS_DIR)
+                    if self.jvm_ready:
+                        logger.info("[JVM] JVM initialisée avec succès par le pipeline.")
+                except Exception as e:
+                    logger.error(f"[JVM] Erreur lors de l'initialisation de la JVM par le pipeline: {e}")
+                    self.jvm_ready = False
+            else:
+                logger.info("[JVM] La JVM est déjà démarrée (probablement par une fixture de test).")
+                self.jvm_ready = True
     
     async def _initialize_service_manager(self):
         """Initialise le service manager centralisé."""

@@ -25,8 +25,7 @@ from semantic_kernel.kernel import Kernel
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
 from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
-    CluedoExtendedOrchestrator,
-    run_cluedo_oracle_game
+    CluedoExtendedOrchestrator
 )
 from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
 from argumentation_analysis.agents.core.oracle.cluedo_dataset import RevealPolicy

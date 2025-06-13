@@ -17,7 +17,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 # Import des services JTMS
 from argumentation_analysis.services.jtms_service import JTMSService
 from argumentation_analysis.services.jtms_session_manager import JTMSSessionManager
-from argumentation_analysis.plugins.semantic_kernel.jtms_plugin import create_jtms_plugin, JTMSSemanticKernelPlugin
+from argumentation_analysis.plugins.sk_plugins.jtms_plugin import create_jtms_plugin, JTMSSemanticKernelPlugin
 from argumentation_analysis.integrations.semantic_kernel_integration import create_minimal_jtms_integration
 
 class TestJTMSService:

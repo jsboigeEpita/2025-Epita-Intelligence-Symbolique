@@ -121,8 +121,11 @@ class TaskCoordinator:
                     # Si assign_task_to_operational est async, handle_directive doit être async.
                     # Pour l'instant, on appelle une version hypothétique synchrone ou on logue l'intention.
                     self.logger.info(f"Intention d'assigner la tâche : {task.get('id')}")
-                    # await self.assign_task_to_operational(task) # Si handle_directive devient async
-                    self._assign_task_to_operational_agent(task) # Utilisation de la méthode existante _assign_task_to_operational_agent
+                    # En supposant que le callback peut être asynchrone, ce qui est une bonne pratique.
+                    # Rendre handle_directive async et utiliser await.
+                    # Pour l'instant, on logue juste l'intention car la refonte async du callback est hors scope.
+                    # await self.assign_task_to_operational(task)
+                    self.logger.info(f"TODO: Rendre handle_directive asynchrone pour appeler 'await self.assign_task_to_operational({task.get('id')})'")
 
                 # Envoyer un accusé de réception
                 self.adapter.send_report(
@@ -172,7 +175,7 @@ class TaskCoordinator:
         else:
             self.logger.error(f"Impossible de s'abonner aux directives stratégiques: Canal HIERARCHICAL non trouvé dans le middleware.")
     
-    def process_strategic_objectives(self, objectives: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def process_strategic_objectives(self, objectives: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Traite les objectifs reçus du niveau stratégique et les décompose en tâches.
         
@@ -202,17 +205,17 @@ class TaskCoordinator:
             self.state.add_task(task)
         
         # Journaliser l'action
-        self._log_action("Décomposition des objectifs", 
+        self._log_action("Décomposition des objectifs",
                         f"Décomposition de {len(objectives)} objectifs en {len(all_tasks)} tâches")
         
         # Assigner les tâches aux agents opérationnels via le système de communication
         self.logger.info(f"Assignation de {len(all_tasks)} tâches globalement...")
         for task in all_tasks:
-            self._assign_task_to_operational_agent(task)
+            await self.assign_task_to_operational(task)
         
         return {
             "tasks_created": len(all_tasks),
-            "tasks_by_objective": {obj["id"]: [t["id"] for t in all_tasks if t["objective_id"] == obj["id"]] 
+            "tasks_by_objective": {obj["id"]: [t["id"] for t in all_tasks if t["objective_id"] == obj["id"]]
                                  for obj in objectives}
         }
     

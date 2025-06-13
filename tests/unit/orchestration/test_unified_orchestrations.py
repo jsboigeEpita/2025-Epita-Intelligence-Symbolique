@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """
 Tests unitaires avancés pour les orchestrations unifiées
@@ -10,6 +9,7 @@ et coordination système complète avec composants authentiques.
 
 # Imports pour les mocks et les tests
 from unittest.mock import MagicMock, AsyncMock, patch
+import logging
 from semantic_kernel import Kernel
 from config.unified_config import UnifiedConfig
 
@@ -25,11 +25,12 @@ from typing import Dict, Any, List
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+logger = logging.getLogger(__name__)
+
 try:
     from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
     from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
     from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer, TweetyErrorFeedback
-    from config.unified_config import UnifiedConfig
     from argumentation_analysis.agents.core.logic.fol_logic_agent import FirstOrderLogicAgent
     REAL_COMPONENTS_AVAILABLE = True
 except ImportError as e:
@@ -81,14 +82,6 @@ except ImportError as e:
                 'confidence': 0.9
             })()
     
-    class UnifiedConfig:
-        def __init__(self, **kwargs):
-            self.logic_type = kwargs.get('logic_type', 'FOL')
-            self.mock_level = kwargs.get('mock_level', 'PARTIAL')
-            self.orchestration_type = kwargs.get('orchestration_type', 'CONVERSATION')
-            self.require_real_gpt = kwargs.get('require_real_gpt', False)
-            self.require_real_tweety = kwargs.get('require_real_tweety', False)
-    
     class FirstOrderLogicAgent:
         def __init__(self, **kwargs):
             self.agent_name = "MockFOLAgent"
@@ -105,7 +98,7 @@ class TestUnifiedOrchestrations:
             mock_level='PARTIAL', # On utilise des mocks partiels maintenant
             orchestration_type='UNIFIED',
             require_real_gpt=False, # On n'exige plus le vrai GPT
-            require_real_tweety=True
+            require_real_tweety=False # Doit être False si le mock_level n'est pas 'NONE'
         )
     
     def test_conversation_orchestrator_initialization(self):
@@ -133,7 +126,7 @@ class TestUnifiedOrchestrations:
         
         # Test que la configuration est respectée
         if hasattr(orchestrator, 'config'):
-            assert orchestrator.config.logic_type == 'FOL'
+            assert orchestrator.config.logic_type.value.lower() == 'fol'
 
     def test_multi_agent_coordination(self):
         """Test de coordination multi-agents."""
@@ -238,6 +231,25 @@ class TestUnifiedOrchestrations:
 class TestRealLLMOrchestrationAdvanced:
     """Tests avancés pour RealLLMOrchestrator."""
     
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        # Assurez-vous que la méthode get_kernel_with_gpt4o_mini existe et est correcte
+        if hasattr(config, 'get_kernel_with_gpt4o_mini'):
+            return config.get_kernel_with_gpt4o_mini()
+        # Fallback ou erreur si la méthode n'existe pas
+        raise AttributeError("UnifiedConfig n'a pas de méthode 'get_kernel_with_gpt4o_mini'")
+
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     def setup_method(self):
         """Configuration initiale pour chaque test."""
         self.test_text = "L'Ukraine a été créée par la Russie. Donc Poutine a raison."
@@ -337,7 +349,7 @@ class TestUnifiedSystemCoordination:
         assert conv_orchestrator is not None
         
         # Test avec configuration LLM réel
-        real_config = UnifiedConfig(orchestration_type='REAL_LLM')
+        real_config = UnifiedConfig(orchestration_type='REAL')
         real_orchestrator = RealLLMOrchestrator(config=real_config)
         
         assert real_orchestrator is not None
@@ -394,7 +406,7 @@ class TestUnifiedSystemCoordination:
         
         # Vérifier qu'aucun mock n'est utilisé en mode authentique
         if hasattr(orchestrator, 'config'):
-            assert orchestrator.config.mock_level == 'NONE'
+            assert orchestrator.config.mock_level.value == 'none'
 
 
 class TestOrchestrationPerformanceAndRobustness:

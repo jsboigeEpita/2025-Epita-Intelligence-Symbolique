@@ -107,7 +107,7 @@ class EvidenceManager:
         self.evidence_counter = 0
         self.evidence_catalog = {}
         
-    def add_evidence(self, evidence_data: Dict) -> str:
+    def add_evidence(self, evidence_data: Dict, agent_source: str = "unknown") -> str:
         """Ajoute une nouvelle évidence au système"""
         self.evidence_counter += 1
         evidence_id = f"evidence_{self.evidence_counter}"
@@ -119,6 +119,7 @@ class EvidenceManager:
         # Croyance JTMS pour l'évidence
         evidence_belief = self.jtms_session.add_belief(
             evidence_id,
+            agent_source=agent_source,
             context={
                 "type": "evidence",
                 "evidence_type": evidence_type,
@@ -260,12 +261,15 @@ class SherlockJTMSAgent(JTMSAgentBase):
                 clue_id = f"clue_{i}_{int(datetime.now().timestamp())}"
                 
                 # Convertir indice en évidence JTMS
-                evidence_id = self._evidence_manager.add_evidence({
-                    "type": clue.get("type", "physical_evidence"),
-                    "description": clue.get("description", ""),
-                    "reliability": clue.get("reliability", 0.6),
-                    "source": clue.get("source", "investigation")
-                })
+                evidence_id = self._evidence_manager.add_evidence(
+                    evidence_data={
+                        "type": clue.get("type", "physical_evidence"),
+                        "description": clue.get("description", ""),
+                        "reliability": clue.get("reliability", 0.6),
+                        "source": clue.get("source", "investigation")
+                    },
+                    agent_source=self.agent_name
+                )
                 
                 analysis_results["new_evidence_ids"].append(evidence_id)
                 
@@ -367,7 +371,7 @@ class SherlockJTMSAgent(JTMSAgentBase):
                 return {"error": f"Hypothèse {hypothesis_id} inconnue"}
             
             # Ajouter nouvelle évidence
-            evidence_id = self._evidence_manager.add_evidence(new_evidence)
+            evidence_id = self._evidence_manager.add_evidence(new_evidence, agent_source=self.agent_name)
             
             # Évaluer compatibilité avec hypothèse
             hypothesis_desc = self._hypothesis_tracker.active_hypotheses[hypothesis_id]["description"]
@@ -414,7 +418,7 @@ class SherlockJTMSAgent(JTMSAgentBase):
         
         try:
             # Ajouter évidence au système
-            evidence_id = self._evidence_manager.add_evidence(evidence)
+            evidence_id = self._evidence_manager.add_evidence(evidence, agent_source=self.agent_name)
             
             # Trouver hypothèses affectées
             affected_hypotheses = []

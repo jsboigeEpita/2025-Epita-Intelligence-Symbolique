@@ -1,12 +1,16 @@
 """
-Configuration Playwright compatible avec pytest-playwright.
+Configuration et fixtures communes pour les tests fonctionnels Playwright.
+Fournit des utilitaires réutilisables pour l'ensemble de la suite de tests.
 """
 
-import project_core.core_from_scripts.auto_env
 import pytest
 import time
 from typing import Dict, Any
-from playwright.sync_api import Page, Browser, BrowserContext, expect
+from playwright.sync_api import Page, expect
+
+# ============================================================================
+# CONFIGURATION GÉNÉRALE
+# ============================================================================
 
 # URLs et timeouts configurables
 APP_BASE_URL = "http://localhost:3000/"
@@ -16,9 +20,7 @@ SLOW_OPERATION_TIMEOUT = 20000
 
 # Data-testids standard pour tous les tests
 COMMON_SELECTORS = {
-    'api_status': '.api-status',
     'api_status_connected': '.api-status.connected',
-    'api_status_disconnected': '.api-status.disconnected',
     'analyzer_tab': '[data-testid="analyzer-tab"]',
     'fallacy_detector_tab': '[data-testid="fallacy-detector-tab"]',
     'reconstructor_tab': '[data-testid="reconstructor-tab"]',
@@ -27,126 +29,369 @@ COMMON_SELECTORS = {
     'framework_tab': '[data-testid="framework-tab"]'
 }
 
-def setup_page_for_app(page: Page) -> Page:
-    """Helper pour configurer une page pour l'application."""
-    print(f"DEBUG: Entrée dans setup_page_for_app. URL actuelle de la page: {page.url}")
-    page.set_default_timeout(DEFAULT_TIMEOUT)
-    
-    # Boucle de re-essai pour page.goto
-    max_retries = 3
-    retry_delay_seconds = 5
-    for attempt in range(max_retries):
-        try:
-            page.goto(APP_BASE_URL)
-            # Si goto réussit, sortir de la boucle
-            break
-        except Exception as e:
-            print(f"Tentative {attempt + 1}/{max_retries} de connexion à {APP_BASE_URL} échouée: {e}")
-            if attempt < max_retries - 1:
-                time.sleep(retry_delay_seconds)
-            else:
-                # Si toutes les tentatives échouent, relancer l'exception
-                raise
-    
-    # Attendre que l'API soit connectée (logique existante)
-    try:
-        expect(page.locator(COMMON_SELECTORS['api_status_connected'])).to_be_visible(
-            timeout=API_CONNECTION_TIMEOUT
-        )
-    except Exception:
-        pass  # Continuer même si l'API n'est pas connectée
-    
-    return page
-
 # ============================================================================
-# FIXTURES SPÉCIALISÉES POUR LES ONGLETS
+# FIXTURES DE BASE
 # ============================================================================
 
 @pytest.fixture
 def app_page(page: Page) -> Page:
     """
     Fixture de base qui navigue vers l'application et attend la connexion API.
+    Utilisée par tous les tests nécessitant l'application prête.
     """
-    return setup_page_for_app(page)
-
-@pytest.fixture
-def analyzer_page(page: Page) -> Page:
-    """Page avec l'onglet Analyzer activé."""
-    app_page = setup_page_for_app(page)
-    app_page.locator(COMMON_SELECTORS['analyzer_tab']).click()
-    expect(app_page.locator('[data-testid="analyzer-text-input"]')).to_be_visible()
-    return app_page
-
-@pytest.fixture
-def fallacy_detector_page(page: Page) -> Page:
-    """Page avec l'onglet Détecteur de Sophismes activé."""
-    app_page = setup_page_for_app(page)
-    app_page.locator(COMMON_SELECTORS['fallacy_detector_tab']).click()
-    expect(app_page.locator('[data-testid="fallacy-text-input"]')).to_be_visible()
-    return app_page
-
-@pytest.fixture
-def reconstructor_page(page: Page) -> Page:
-    """Page avec l'onglet Reconstructeur activé."""
-    app_page = setup_page_for_app(page)
-    app_page.locator(COMMON_SELECTORS['reconstructor_tab']).click()
-    expect(app_page.locator('[data-testid="reconstructor-text-input"]')).to_be_visible()
-    return app_page
-
-@pytest.fixture
-def logic_graph_page(page: Page) -> Page:
-    """Page avec l'onglet Graphe Logique activé."""
-    app_page = setup_page_for_app(page)
-    app_page.locator(COMMON_SELECTORS['logic_graph_tab']).click()
-    expect(app_page.locator('[data-testid="logic-statement-input"]')).to_be_visible()
-    return app_page
-
-@pytest.fixture
-def validation_page(page: Page) -> Page:
-    """Page avec l'onglet Validation activé."""
-    app_page = setup_page_for_app(page)
-    app_page.locator(COMMON_SELECTORS['validation_tab']).click()
-    expect(app_page.locator('[data-testid="validation-argument-input"]')).to_be_visible()
-    return app_page
-
-@pytest.fixture
-def framework_page(page: Page) -> Page:
-    """Page avec l'onglet Framework Builder activé."""
-    app_page = setup_page_for_app(page)
-    # Vérification explicite de la visibilité et de l'activation de l'onglet avant le clic
-    framework_tab_selector = COMMON_SELECTORS['framework_tab']
-    expect(app_page.locator(framework_tab_selector)).to_be_visible(timeout=DEFAULT_TIMEOUT)
-    expect(app_page.locator(framework_tab_selector)).to_be_enabled(timeout=DEFAULT_TIMEOUT)
+    page.goto(APP_BASE_URL)
     
-    app_page.locator(framework_tab_selector).click()
-    expect(app_page.locator('#arg-content')).to_be_visible(timeout=DEFAULT_TIMEOUT)
+    # Attendre que l'API soit connectée avant de continuer
+    expect(page.locator(COMMON_SELECTORS['api_status_connected'])).to_be_visible(
+        timeout=API_CONNECTION_TIMEOUT
+    )
+    
+    return page
+
+@pytest.fixture
+def api_ready_page(app_page: Page) -> Page:
+    """
+    Alias pour app_page pour la clarté du code.
+    """
     return app_page
 
 # ============================================================================
-# UTILITAIRES POUR TESTS
+# FIXTURES SPÉCIALISÉES PAR ONGLET
 # ============================================================================
 
-def wait_for_element_and_text(page: Page, selector: str, expected_text: str = None, timeout: int = DEFAULT_TIMEOUT):
+@pytest.fixture
+def analyzer_page(app_page: Page) -> Page:
     """
-    Attend qu'un élément soit visible et optionnellement contienne un texte spécifique.
+    Page avec l'onglet Analyzer activé et prêt à utiliser.
     """
-    element = page.locator(selector)
-    expect(element).to_be_visible(timeout=timeout)
-    if expected_text:
-        expect(element).to_contain_text(expected_text, timeout=timeout)
-    return element
+    analyzer_tab = app_page.locator(COMMON_SELECTORS['analyzer_tab'])
+    expect(analyzer_tab).to_be_enabled()
+    analyzer_tab.click()
+    
+    # Attendre que l'interface soit chargée
+    expect(app_page.locator('[data-testid="analyzer-text-input"]')).to_be_visible()
+    
+    return app_page
 
-def click_and_wait(page: Page, selector: str, wait_selector: str = None, timeout: int = DEFAULT_TIMEOUT):
+@pytest.fixture
+def fallacy_detector_page(app_page: Page) -> Page:
     """
-    Clique sur un élément et attend qu'un autre élément soit visible.
+    Page avec l'onglet Détecteur de Sophismes activé et prêt à utiliser.
     """
-    page.click(selector, timeout=timeout)
-    if wait_selector:
-        expect(page.locator(wait_selector)).to_be_visible(timeout=timeout)
+    fallacy_tab = app_page.locator(COMMON_SELECTORS['fallacy_detector_tab'])
+    expect(fallacy_tab).to_be_enabled()
+    fallacy_tab.click()
+    
+    # Attendre que l'interface soit chargée
+    expect(app_page.locator('[data-testid="fallacy-text-input"]')).to_be_visible()
+    
+    return app_page
 
-def fill_and_submit(page: Page, input_selector: str, text: str, submit_selector: str, timeout: int = DEFAULT_TIMEOUT):
+@pytest.fixture
+def reconstructor_page(app_page: Page) -> Page:
     """
-    Remplit un champ et clique sur un bouton de soumission.
+    Page avec l'onglet Reconstructeur activé et prêt à utiliser.
     """
-    page.fill(input_selector, text, timeout=timeout)
-    page.click(submit_selector, timeout=timeout)
+    reconstructor_tab = app_page.locator(COMMON_SELECTORS['reconstructor_tab'])
+    expect(reconstructor_tab).to_be_enabled()
+    reconstructor_tab.click()
+    
+    # Attendre que l'interface soit chargée
+    expect(app_page.locator('[data-testid="reconstructor-text-input"]')).to_be_visible()
+    
+    return app_page
+
+@pytest.fixture
+def logic_graph_page(app_page: Page) -> Page:
+    """
+    Page avec l'onglet Graphe Logique activé et prêt à utiliser.
+    """
+    logic_tab = app_page.locator(COMMON_SELECTORS['logic_graph_tab'])
+    expect(logic_tab).to_be_enabled()
+    logic_tab.click()
+    
+    # Attendre que l'interface soit chargée
+    expect(app_page.locator('[data-testid="logic-statement-input"]')).to_be_visible()
+    
+    return app_page
+
+@pytest.fixture
+def validation_page(app_page: Page) -> Page:
+    """
+    Page avec l'onglet Validation activé et prêt à utiliser.
+    """
+    validation_tab = app_page.locator(COMMON_SELECTORS['validation_tab'])
+    expect(validation_tab).to_be_enabled()
+    validation_tab.click()
+    
+    # Attendre que l'interface soit chargée - utiliser les vrais sélecteurs
+    expect(app_page.locator('#argument-type')).to_be_visible(timeout=DEFAULT_TIMEOUT)
+    
+    return app_page
+
+@pytest.fixture
+def framework_page(app_page: Page) -> Page:
+    """
+    Page avec l'onglet Framework activé et prêt à utiliser.
+    """
+    framework_tab = app_page.locator(COMMON_SELECTORS['framework_tab'])
+    expect(framework_tab).to_be_enabled()
+    framework_tab.click()
+    
+    # Attendre que l'interface soit chargée - utiliser les vrais sélecteurs
+    expect(app_page.locator('#arg-content')).to_be_visible(timeout=DEFAULT_TIMEOUT)
+    
+    return app_page
+
+# ============================================================================
+# FIXTURES DE DONNÉES DE TEST
+# ============================================================================
+
+@pytest.fixture
+def sample_arguments() -> Dict[str, str]:
+    """
+    Arguments d'exemple pour les tests de reconstruction et d'analyse.
+    """
+    return {
+        'syllogism_valid': "Tous les hommes sont mortels. Socrate est un homme. Donc Socrate est mortel.",
+        'syllogism_invalid': "Tous les chats sont noirs. Mon chat est noir. Donc tous les animaux noirs sont des chats.",
+        'ad_hominem': "Cette théorie sur le climat est fausse parce que son auteur a été condamné pour fraude fiscale.",
+        'slippery_slope': "Si on autorise les gens à conduire à 85 km/h, bientôt ils voudront conduire à 200 km/h.",
+        'straw_man': "Les végétariens disent qu'il ne faut jamais manger de viande, mais c'est ridicule car l'homme a toujours été omnivore.",
+        'complex_argument': """
+        Les énergies renouvelables sont nécessaires pour réduire notre impact environnemental.
+        Le solaire et l'éolien sont des sources d'énergie propres et durables.
+        Les technologies actuelles permettent un stockage efficace de l'énergie.
+        Par conséquent, nous devons investir massivement dans les énergies renouvelables.
+        """,
+        'short_text': "Test.",
+        'no_argument': "J'aime les pommes. Les pommes sont rouges. Le rouge est une couleur."
+    }
+
+@pytest.fixture
+def sample_logic_statements() -> Dict[str, str]:
+    """
+    Énoncés logiques d'exemple pour les tests du graphe logique.
+    """
+    return {
+        'simple_implication': "p -> q",
+        'conjunction': "p && q",
+        'disjunction': "p || q",
+        'negation': "!p",
+        'complex_formula': "(p -> q) && (q -> r) -> (p -> r)",
+        'biconditional': "p <-> q",
+        'invalid_syntax': "p -> q &&",
+        'empty_formula': "",
+        'quantified': "forall x: P(x) -> Q(x)"
+    }
+
+@pytest.fixture
+def sample_validation_scenarios() -> Dict[str, Dict[str, Any]]:
+    """
+    Scénarios de validation avec différents types de données.
+    """
+    return {
+        'basic_argument': {
+            'premises': ['Tous les hommes sont mortels', 'Socrate est un homme'],
+            'conclusion': 'Socrate est mortel',
+            'expected_valid': True
+        },
+        'fallacious_argument': {
+            'premises': ['Cette personne est stupide'],
+            'conclusion': 'Son argument est faux',
+            'expected_valid': False,
+            'expected_fallacy': 'Ad Hominem'
+        },
+        'incomplete_argument': {
+            'premises': ['Il pleut'],
+            'conclusion': 'La route est glissante',
+            'expected_valid': False,
+            'missing_premise': 'Quand il pleut, la route devient glissante'
+        }
+    }
+
+# ============================================================================
+# UTILITAIRES DE TEST
+# ============================================================================
+
+class PlaywrightHelpers:
+    """
+    Classe d'utilitaires pour les opérations communes de test.
+    Peut être utilisée directement dans les tests ou via la fixture test_helpers.
+    """
+    # Constantes de timeout
+    API_CONNECTION_TIMEOUT = API_CONNECTION_TIMEOUT
+    DEFAULT_TIMEOUT = DEFAULT_TIMEOUT
+    SLOW_OPERATION_TIMEOUT = SLOW_OPERATION_TIMEOUT
+    
+    def __init__(self, page: Page):
+        self.page = page
+    
+    def navigate_to_tab(self, tab_name: str):
+        """
+        Navigue vers un onglet spécifique et attend qu'il soit chargé.
+        
+        Args:
+            tab_name: Nom de l'onglet ('validation', 'framework', etc.)
+        """
+        # === DEBUT DE L'AJOUT : Logique de setup_page_for_app ===
+        self.page.set_default_timeout(self.DEFAULT_TIMEOUT)
+        
+        max_retries = 3
+        retry_delay_seconds = 5
+        for attempt in range(max_retries):
+            try:
+                self.page.goto(APP_BASE_URL) # Utiliser APP_BASE_URL défini dans ce fichier
+                break
+            except Exception as e:
+                print(f"Tentative {attempt + 1}/{max_retries} de connexion à {APP_BASE_URL} échouée: {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay_seconds)
+                else:
+                    raise
+        
+        try:
+            # Utiliser COMMON_SELECTORS et API_CONNECTION_TIMEOUT définis dans ce fichier
+            expect(self.page.locator(COMMON_SELECTORS['api_status_connected'])).to_be_visible(
+                timeout=self.API_CONNECTION_TIMEOUT
+            )
+        except Exception:
+            pass # Continuer même si l'API n'est pas connectée
+        # === FIN DE L'AJOUT ===
+
+        # Mapper les noms d'onglets vers leurs sélecteurs data-testid
+        tab_selectors = {
+            'validation': COMMON_SELECTORS['validation_tab'],
+            'framework': COMMON_SELECTORS['framework_tab'],
+            'analyzer': COMMON_SELECTORS['analyzer_tab'],
+            'fallacy_detector': COMMON_SELECTORS['fallacy_detector_tab'],
+            'reconstructor': COMMON_SELECTORS['reconstructor_tab'],
+            'logic_graph': COMMON_SELECTORS['logic_graph_tab']
+        }
+        
+        if tab_name not in tab_selectors:
+            raise ValueError(f"Onglet '{tab_name}' non reconnu. Onglets disponibles: {list(tab_selectors.keys())}")
+        
+        # Cliquer sur l'onglet
+        tab_selector = tab_selectors[tab_name]
+        tab = self.page.locator(tab_selector)
+        expect(tab).to_be_enabled(timeout=DEFAULT_TIMEOUT)
+        tab.click()
+        
+        # Attendre que l'interface de l'onglet soit chargée
+        time.sleep(0.5)  # Petite pause pour la transition
+        
+        # Vérifications spécifiques selon l'onglet
+        if tab_name == 'validation':
+            # Attendre que le formulaire de validation soit visible
+            expect(self.page.locator('#argument-type')).to_be_visible(timeout=DEFAULT_TIMEOUT)
+        elif tab_name == 'framework':
+            # Attendre que l'interface de construction de framework soit visible
+            expect(self.page.locator('#arg-content')).to_be_visible(timeout=DEFAULT_TIMEOUT)
+    
+    def fill_and_submit(self, input_selector: str, text: str, submit_selector: str):
+        """Remplit un champ et soumet le formulaire."""
+        text_input = self.page.locator(input_selector)
+        submit_button = self.page.locator(submit_selector)
+        
+        expect(text_input).to_be_visible()
+        text_input.fill(text)
+        
+        expect(submit_button).to_be_enabled()
+        submit_button.click()
+    
+    def wait_for_results(self, results_selector: str, timeout: int = DEFAULT_TIMEOUT):
+        """Attend l'apparition des résultats."""
+        results = self.page.locator(results_selector)
+        expect(results).to_be_visible(timeout=timeout)
+        return results
+    
+    def reset_form(self, reset_selector: str):
+        """Réinitialise un formulaire."""
+        reset_button = self.page.locator(reset_selector)
+        expect(reset_button).to_be_enabled()
+        reset_button.click()
+    
+    def switch_tab(self, tab_selector: str):
+        """Change d'onglet et attend le chargement."""
+        tab = self.page.locator(tab_selector)
+        expect(tab).to_be_enabled()
+        tab.click()
+        time.sleep(0.5)  # Petite pause pour la transition
+    
+    def verify_error_message(self, container_selector: str, expected_message: str):
+        """Vérifie qu'un message d'erreur attendu est affiché."""
+        container = self.page.locator(container_selector)
+        expect(container).to_be_visible()
+        expect(container).to_contain_text(expected_message)
+    
+    def verify_success_state(self, success_indicators: list):
+        """Vérifie plusieurs indicateurs de succès."""
+        for indicator in success_indicators:
+            expect(self.page.locator(indicator)).to_be_visible()
+    
+    def take_screenshot_on_failure(self, test_name: str):
+        """Prend une capture d'écran en cas d'échec."""
+        try:
+            self.page.screenshot(path=f"test-results/failure-{test_name}.png")
+        except Exception:
+            pass  # Ignore les erreurs de screenshot
+
+
+@pytest.fixture
+def test_helpers(page: Page) -> PlaywrightHelpers:
+    """
+    Fixture qui retourne une instance de PlaywrightHelpers pour la page courante.
+    """
+    return PlaywrightHelpers(page)
+
+# ============================================================================
+# FIXTURES DE CONFIGURATION
+# ============================================================================
+
+@pytest.fixture(scope="session")
+def playwright_config():
+    """
+    Configuration globale pour Playwright.
+    """
+    return {
+        'base_url': APP_BASE_URL,
+        'timeout': DEFAULT_TIMEOUT,
+        'slow_operation_timeout': SLOW_OPERATION_TIMEOUT,
+        'api_connection_timeout': API_CONNECTION_TIMEOUT
+    }
+
+@pytest.fixture(autouse=True)
+def setup_test_environment(page: Page):
+    """
+    Fixture automatique qui configure l'environnement pour chaque test.
+    """
+    # Configuration des timeouts par défaut
+    page.set_default_timeout(DEFAULT_TIMEOUT)
+    
+    # Vérification que l'application est accessible
+    try:
+        page.goto(APP_BASE_URL, timeout=5000)
+    except Exception:
+        pytest.fail(f"L'application n'est pas accessible à {APP_BASE_URL}")
+    
+    yield
+    
+    # Nettoyage après le test si nécessaire
+    # (réinitialisation d'état, etc.)
+
+# ============================================================================
+# MARKERS PERSONNALISÉS
+# ============================================================================
+
+def pytest_configure(config):
+    """Configuration des markers personnalisés."""
+    config.addinivalue_line(
+        "markers", "slow: marque les tests comme lents"
+    )
+    config.addinivalue_line(
+        "markers", "integration: tests d'intégration"
+    )
+    config.addinivalue_line(
+        "markers", "api_dependent: tests dépendants de l'API"
+    )

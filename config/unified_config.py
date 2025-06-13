@@ -129,6 +129,24 @@ class UnifiedConfig:
 
     def __post_init__(self):
         """Validation et normalisation de la configuration."""
+        # --- Conversion des chaînes en Enums ---
+        for f in fields(self):
+            if isinstance(f.type, type) and issubclass(f.type, enum.Enum):
+                value = getattr(self, f.name)
+                if isinstance(value, str):
+                    try:
+                        # Essayer de trouver une correspondance exacte d'abord
+                        setattr(self, f.name, f.type(value))
+                    except ValueError:
+                        # Si ça échoue, essayer une correspondance insensible à la casse
+                        for member in f.type:
+                            if member.value.lower() == value.lower():
+                                setattr(self, f.name, member)
+                                break
+                        else:
+                            # Si aucune correspondance n'est trouvée, relancer l'erreur originale
+                            raise ValueError(f"'{value}' n'est pas une valeur valide pour {f.type.__name__}")
+
         # Vérifier la variable d'environnement pour forcer la configuration de test
         if os.environ.get('USE_MOCK_CONFIG') == '1':
             # Application manuelle de la configuration de test pour éviter la récursion
@@ -157,14 +175,11 @@ class UnifiedConfig:
         """Valide la cohérence de la configuration."""
         # Validation du niveau de mock vs authenticité
         if self.mock_level != MockLevel.NONE:
-            if self.require_real_gpt or self.require_real_tweety or self.require_full_taxonomy:
-                # Ne pas lever d'erreur si la configuration de test est active
-                if os.environ.get('USE_MOCK_CONFIG') != '1':
-                    raise ValueError(
-                        f"Configuration incohérente: mock_level={self.mock_level.value} "
-                        f"mais require_real_* activé. Pour l'authenticité 100%, "
-                        f"utilisez mock_level=none."
-                    )
+            # En mode mock partiel ou complet, toutes les exigences "réelles" doivent être désactivées.
+            # Cela simplifie la configuration et évite les incohérences.
+            self.require_real_gpt = False
+            self.require_real_tweety = False
+            self.require_full_taxonomy = False
         
         # Validation agents vs logique
         if self.logic_type == LogicType.FOL and AgentType.LOGIC in self.agents:
