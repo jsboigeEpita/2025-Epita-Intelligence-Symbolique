@@ -1,9 +1,10 @@
 # argumentation_analysis/orchestration/cluedo_components/logging_handler.py
 import logging
-from typing import Callable, Awaitable
+from typing import Callable, Awaitable, Any
 
 # semantic_kernel imports
-from semantic_kernel.filters.functions.function_invocation_context import FunctionInvocationContext
+# CORRECTIF: FunctionInvocationContext n'est pas disponible dans cette version de semantic_kernel
+# from semantic_kernel.filters.functions.function_invocation_context import FunctionInvocationContext
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,7 @@ class ToolCallLoggingHandler:
     Filtre pour journaliser les appels de fonctions (outils) du kernel,
     utilisant le nouveau système de filtres de Semantic Kernel.
     """
-    async def __call__(self, context: FunctionInvocationContext, next: Callable[..., Awaitable[None]]) -> None:
+    async def __call__(self, context: Any, next: Callable[..., Awaitable[None]]) -> None:
         """Handler de filtre exécuté avant et après l'invocation de la fonction."""
         # Logique "avant" (invoking)
         metadata = context.function.metadata

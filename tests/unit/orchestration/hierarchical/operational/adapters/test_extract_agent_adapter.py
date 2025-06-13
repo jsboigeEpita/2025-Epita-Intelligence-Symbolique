@@ -38,6 +38,8 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 # Import des modules à tester
+import jpype
+
 from argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter import ExtractAgentAdapter, ExtractAgent
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
 

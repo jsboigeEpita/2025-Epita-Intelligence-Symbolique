@@ -1,5 +1,12 @@
+import os
+import sys
+# Ajoute la racine du projet au sys.path pour résoudre les imports
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 # ===== AUTO-ACTIVATION ENVIRONNEMENT =====
-import scripts.core.auto_env
+from project_core.core_from_scripts import auto_env
 # =========================================
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
@@ -46,7 +53,7 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 # Auto-activation de l'environnement et chargement des variables .env
-import scripts.core.auto_env
+# Déjà importé plus haut
 
 # --- Configuration du logging ---
 def setup_logging(session_id: str, workflow: str, level=logging.DEBUG):
@@ -198,12 +205,14 @@ class UnifiedInvestigationEngine:
 
     async def run_cluedo_workflow(self) -> Dict[str, Any]:
         """Exécute le workflow d'investigation Cluedo."""
-        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import run_cluedo_oracle_game
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
         
         initial_question = "Enquête Cluedo: un meurtre a été commis. Découvrez le coupable, l'arme et le lieu."
         
-        logger.info("🎮 Démarrage de l'enquête Cluedo...")
-        cluedo_result = await run_cluedo_oracle_game(self.kernel, initial_question)
+        logger.info("🎮 Démarrage de l'enquête Cluedo via CluedoExtendedOrchestrator...")
+        orchestrator = CluedoExtendedOrchestrator(kernel=self.kernel)
+        await orchestrator.setup_workflow()
+        cluedo_result = await orchestrator.execute_workflow(initial_question)
         
         return {
             "workflow": "cluedo",
@@ -335,7 +344,7 @@ async def main():
 
 if __name__ == "__main__":
     # Activation explicite de l'environnement pour garantir la portabilité
-    from scripts.core.auto_env import ensure_env
+    from project_core.core_from_scripts.auto_env import ensure_env
     print("Activation de l'environnement...")
     if not ensure_env(silent=False):
         print("ERREUR: Impossible d'activer l'environnement. Le script pourrait échouer.", file=sys.stderr)

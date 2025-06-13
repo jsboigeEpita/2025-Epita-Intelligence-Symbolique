@@ -12,7 +12,8 @@ from semantic_kernel import Kernel
 # from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent # N'existe pas dans SK 0.9.6b1
 
 # Import des définitions de base depuis l'orchestrateur principal
-from .cluedo_extended_orchestrator import Agent, SelectionStrategy, TerminationStrategy, CyclicSelectionStrategy
+from argumentation_analysis.orchestration.cluedo_components.strategies import CyclicSelectionStrategy
+from .base import Agent, SelectionStrategy, TerminationStrategy
 # Si AgentGroupChat ou ChatCompletionAgent sont réellement utilisés, il faudra les définir ici
 # ou adapter le code pour utiliser des mécanismes d'orchestration plus simples.
 # Les définitions locales de SequentialSelectionStrategy, ChatCompletionAgent et AgentGroupChat ont été supprimées.

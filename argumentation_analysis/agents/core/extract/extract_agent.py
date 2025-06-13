@@ -87,8 +87,20 @@ def _lazy_imports() -> None:
         )
         # from argumentation_analysis.core.llm_service import create_llm_service # Déplacé
 
-# Appeler la fonction d'importation paresseuse
+# Appeler la fonction d'importation paresseuse avec diagnostic JVM
+try:
+    import jpype
+    print(f"[DIAGNOSTIC] extract_agent.py: État JVM AVANT _lazy_imports(): started={jpype.isJVMStarted()}")
+except ImportError:
+    print("[DIAGNOSTIC] extract_agent.py: jpype non disponible avant _lazy_imports()")
+
 _lazy_imports()
+
+try:
+    import jpype
+    print(f"[DIAGNOSTIC] extract_agent.py: État JVM APRÈS _lazy_imports(): started={jpype.isJVMStarted()}")
+except ImportError:
+    print("[DIAGNOSTIC] extract_agent.py: jpype non disponible après _lazy_imports()")
 
 # Configuration du logging - BaseAgent s'en charge, mais on peut garder le handler spécifique
 # logger = logging.getLogger(__name__) # Sera initialisé par BaseAgent

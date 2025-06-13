@@ -62,7 +62,8 @@ except ImportError as e:
 # Imports des orchestrateurs spécialisés
 try:
     # CORRECTIF: Importe CluedoExtendedOrchestrator et l'aliase en CluedoOrchestrator pour compatibilité
-    from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator as CluedoOrchestrator, run_cluedo_oracle_game as run_cluedo_game
+    from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator as CluedoOrchestrator
+    from argumentation_analysis.orchestration.cluedo_runner import run_cluedo_oracle_game as run_cluedo_game
     from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
     from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
     from argumentation_analysis.orchestration.logique_complexe_orchestrator import LogiqueComplexeOrchestrator
@@ -266,7 +267,14 @@ class UnifiedOrchestrationPipeline:
                 logger.warning("[HIERARCHICAL] Architecture hiérarchique skippée - middleware non disponible")
             
             # 4. Initialisation des orchestrateurs spécialisés (SKIP SI COMPOSANTS NON DISPONIBLES)
+            # DIAGNOSTIC: Log des valeurs pour débugger
+            logger.info(f"[DIAGNOSTIC] enable_specialized_orchestrators: {self.config.enable_specialized_orchestrators}")
+            logger.info(f"[DIAGNOSTIC] CluedoOrchestrator: {CluedoOrchestrator}")
+            logger.info(f"[DIAGNOSTIC] ConversationOrchestrator: {ConversationOrchestrator}")
+            logger.info(f"[DIAGNOSTIC] Condition: {self.config.enable_specialized_orchestrators and (CluedoOrchestrator or ConversationOrchestrator)}")
+            
             if self.config.enable_specialized_orchestrators and (CluedoOrchestrator or ConversationOrchestrator):
+                logger.info("[SPECIALIZED] Appel de _initialize_specialized_orchestrators()")
                 await self._initialize_specialized_orchestrators()
             elif self.config.enable_specialized_orchestrators:
                 logger.warning("[SPECIALIZED] Orchestrateurs spécialisés skippés - composants non disponibles")
@@ -396,7 +404,6 @@ class UnifiedOrchestrationPipeline:
     async def _initialize_specialized_orchestrators(self):
         """Initialise les orchestrateurs spécialisés."""
         logger.info("[SPECIALIZED] Initialisation des orchestrateurs spécialisés...")
-        
         # Orchestrateur Cluedo pour les investigations
         if CluedoOrchestrator:
             self.specialized_orchestrators["cluedo"] = {
@@ -405,6 +412,8 @@ class UnifiedOrchestrationPipeline:
                 "priority": 1
             }
             logger.info("[CLUEDO] Orchestrateur Cluedo initialisé")
+        else:
+            logger.warning("[CLUEDO] CluedoOrchestrator non disponible")
         
         # Orchestrateur de conversation
         if ConversationOrchestrator:
@@ -414,6 +423,8 @@ class UnifiedOrchestrationPipeline:
                 "priority": 2
             }
             logger.info("[CONVERSATION] Orchestrateur de conversation initialisé")
+        else:
+            logger.warning("[CONVERSATION] ConversationOrchestrator non disponible")
         
         # Orchestrateur LLM réel
         if RealLLMOrchestrator and self.kernel:
@@ -433,6 +444,9 @@ class UnifiedOrchestrationPipeline:
                 "priority": 4
             }
             logger.info("[LOGIC_COMPLEX] Orchestrateur logique complexe initialisé")
+        else:
+            logger.warning("[LOGIC_COMPLEX] LogiqueComplexeOrchestrator non disponible")
+        
     
     async def _initialize_communication_middleware(self):
         """Initialise ou lie le middleware de communication."""
@@ -782,7 +796,15 @@ class UnifiedOrchestrationPipeline:
             if self._fallback_pipeline:
                 fallback_results = await self._fallback_pipeline.analyze_text_unified(text)
                 
-                # Mapper les résultats du fallback
+                # CORRECTIF: Mapper les résultats du fallback dans la structure attendue par les tests
+                results["fallback_analysis"] = {
+                    "informal_analysis": fallback_results.get("informal_analysis", {}),
+                    "formal_analysis": fallback_results.get("formal_analysis", {}),
+                    "unified_analysis": fallback_results.get("unified_analysis", {}),
+                    "orchestration_analysis": fallback_results.get("orchestration_analysis", {})
+                }
+                
+                # Conserver aussi la compatibilité avec l'ancienne structure pour d'autres tests
                 results["informal_analysis"] = fallback_results.get("informal_analysis", {})
                 results["formal_analysis"] = fallback_results.get("formal_analysis", {})
                 results["unified_analysis"] = fallback_results.get("unified_analysis", {})
@@ -792,6 +814,10 @@ class UnifiedOrchestrationPipeline:
                     "fallback_status": fallback_results.get("status", "unknown")
                 })
             else:
+                results["fallback_analysis"] = {
+                    "status": "fallback_unavailable",
+                    "message": "Pipeline de fallback non disponible"
+                }
                 results["orchestration_analysis"] = {
                     "status": "fallback_unavailable",
                     "message": "Pipeline de fallback non disponible"
@@ -799,6 +825,12 @@ class UnifiedOrchestrationPipeline:
         
         except Exception as e:
             logger.error(f"[FALLBACK] Erreur dans l'orchestration de fallback: {e}")
+            results["fallback_analysis"] = {
+                "error": str(e),
+                "status": "error"
+            }
+            if "orchestration_analysis" not in results:
+                results["orchestration_analysis"] = {}
             results["orchestration_analysis"]["error"] = str(e)
         
         return results

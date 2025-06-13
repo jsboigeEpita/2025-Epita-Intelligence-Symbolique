@@ -38,6 +38,12 @@ class TweetyInitializer:
 
     def __init__(self, tweety_bridge_instance):
         self._tweety_bridge = tweety_bridge_instance
+
+        if os.environ.get('DISABLE_JAVA_LOGIC') == '1':
+            logger.info("Java logic is disabled via environment variable 'DISABLE_JAVA_LOGIC'. Skipping JVM initialization.")
+            TweetyInitializer._jvm_started = False
+            return
+
         # MODIFICATION: La JVM est maintenant démarrée ici si nécessaire.
         # Cela résout le problème où `conda run` crée un nouveau processus sans l'état de la JVM.
         if not jpype.isJVMStarted():

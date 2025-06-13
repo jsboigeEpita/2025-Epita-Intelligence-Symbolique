@@ -7,6 +7,7 @@ Configuration pytest locale pour les tests d'orchestration.
 """
 
 import project_core.core_from_scripts.auto_env
+import jpype.imports
 import pytest
 import sys
 import os
@@ -21,7 +22,7 @@ project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="function")
 def jvm_session_manager():
     """Initialise la JVM une fois pour toute la session de test et l'arrête à la fin."""
     import jpype
@@ -31,10 +32,11 @@ def jvm_session_manager():
     if not jpype.isJVMStarted():
         initialize_jvm()
     
-    yield  # Les tests s'exécutent ici
-    
-    # Arrêter la JVM à la fin de la session de test
-    shutdown_jvm_if_needed()
+    try:
+        yield
+    finally:
+        # Arrêter la JVM à la fin de la session de test
+        shutdown_jvm_if_needed()
 
 @pytest.fixture
 def llm_service():
