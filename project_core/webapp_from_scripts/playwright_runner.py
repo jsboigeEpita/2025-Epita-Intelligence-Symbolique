@@ -91,6 +91,7 @@ class PlaywrightRunner:
         if not config.get('headless', True):
             parts.append('--headed')
         parts.append(f"--timeout={config['timeout_ms']}")
+        parts.append("--reporter=line")
         return ' '.join(parts)
 
     async def _execute_tests(self, playwright_command_str: str,
