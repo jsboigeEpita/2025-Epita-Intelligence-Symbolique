@@ -20,6 +20,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 
 # Ajouter le répertoire parent au chemin de recherche des modules
@@ -335,7 +336,7 @@ class TestDefinitionService:
         
         # Vérifier que l'exportation a réussi
         assert success is True
-        assert "✅" in message
+        assert "[OK]" in message
         
         # Vérifier que le fichier existe
         assert output_path.exists()
