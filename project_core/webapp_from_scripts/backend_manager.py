@@ -48,8 +48,9 @@ class BackendManager:
         self.start_port = config.get('start_port', 5003)
         self.fallback_ports = config.get('fallback_ports', [5004, 5005, 5006])
         self.max_attempts = config.get('max_attempts', 5)
-        self.timeout_seconds = config.get('timeout_seconds', 60) # Augmenté à 60s
+        self.timeout_seconds = config.get('timeout_seconds', 180) # Augmenté à 180s pour le téléchargement du modèle
         self.health_endpoint = config.get('health_endpoint', '/api/health')
+        self.health_check_timeout = config.get('health_check_timeout', 60) # Timeout pour chaque tentative de health check
         self.env_activation = config.get('env_activation',
                                        'powershell -File scripts/env/activate_project_env.ps1')
         
@@ -198,14 +199,17 @@ class BackendManager:
                     return {'success': False, 'error': error_msg, 'url': None, 'port': None, 'pid': None}
                 
                 backend_host = self.config.get('host', '127.0.0.1')
-                
+
+                # Spécifier l'application et les paramètres directement dans la commande flask
                 cmd = [
-                    python_exe_path, "-m", "uvicorn",
-                    app_module_with_attribute,
+                    python_exe_path, "-m", "flask",
+                    "--app", app_module_with_attribute,
+                    "run",
                     "--host", backend_host,
-                    "--port", str(port),
-                    "--log-level", "info"
+                    "--port", str(port)
                 ]
+                # L'environnement n'a plus besoin des variables FLASK_*
+                env = os.environ.copy()
                 self.logger.info(f"Commande de lancement du backend: {' '.join(cmd)}")
 
             project_root = str(Path.cwd())
@@ -233,7 +237,7 @@ class BackendManager:
                     stdout=f_stdout,
                     stderr=f_stderr,
                     cwd=project_root,
-                    env=env,
+                    env=env, # L'environnement avec les variables FLASK_* est passé ici
                     shell=False
                 )
 
@@ -305,7 +309,7 @@ class BackendManager:
             
             try:
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=self.health_check_timeout)) as response:
                         if response.status == 200:
                             self.logger.info(f"Backend accessible sur {url}")
                             return True
@@ -346,7 +350,7 @@ class BackendManager:
         try:
             url = f"{self.current_url}{self.health_endpoint}"
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=self.health_check_timeout)) as response:
                     if response.status == 200:
                         data = await response.json()
                         self.logger.info(f"Backend health: {data}")

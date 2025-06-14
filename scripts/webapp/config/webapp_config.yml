@@ -9,7 +9,8 @@ backend:
   max_attempts: 5
   module: argumentation_analysis.services.web_api.app:app
   start_port: 5004
-  timeout_seconds: 30
+  timeout_seconds: 180
+  health_check_timeout: 60
 cleanup:
   auto_cleanup: true
   kill_processes:

@@ -40,24 +40,9 @@ from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
 
 # Création d'une classe concrète pour les tests
+# Classe concrète minimale pour instancier l'agent dans les tests
 class ConcreteModalLogicAgent(ModalLogicAgent):
-    def _create_belief_set_from_data(self, belief_set_data):
-        return BeliefSet.from_dict(belief_set_data)
-
-    def setup_kernel(self, kernel_instance):
-        pass
-
-    def text_to_belief_set(self, text):
-        # Implémentation minimale pour les tests
-        return ModalBeliefSet("[]p"), "Implemented for test"
-
-    def generate_queries(self, text, belief_set):
-        # Implémentation minimale pour les tests
-        return ["p"]
-
-    def interpret_results(self, text, belief_set, queries, results):
-        # Implémentation minimale pour les tests
-        return "Interpreted result for test"
+    pass
 
 class TestModalLogicAgentAuthentic:
     """Tests authentiques pour la classe ModalLogicAgent - SANS MOCKS."""
@@ -121,7 +106,7 @@ class TestModalLogicAgentAuthentic:
 
         # Initialisation de l'agent authentique
         self.agent_name = "ModalLogicAgent"
-        self.agent = ConcreteModalLogicAgent(self.kernel, service_id=self.llm_service_id)
+        self.agent = ConcreteModalLogicAgent(self.kernel, service_id=self.llm_service_id, agent_name=self.agent_name)
         
         # Configuration authentique de l'agent
         if self.llm_available:
