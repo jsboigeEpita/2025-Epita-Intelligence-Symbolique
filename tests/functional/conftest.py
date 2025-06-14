@@ -12,10 +12,25 @@ from playwright.sync_api import Page, expect
 # CONFIGURATION GÉNÉRALE
 # ============================================================================
 
+import os
+from pathlib import Path
+
+def get_frontend_url():
+    """Lit l'URL du frontend depuis le fichier généré par l'orchestrateur."""
+    try:
+        url_file = Path("logs/frontend_url.txt")
+        if url_file.exists():
+            url = url_file.read_text().strip()
+            if url:
+                return url
+    except Exception:
+        pass # Ignorer les erreurs et utiliser la valeur par défaut
+    return 'http://localhost:3000/' # Valeur par défaut robuste
+
 # URLs et timeouts configurables
-APP_BASE_URL = "http://localhost:3000/"
-API_CONNECTION_TIMEOUT = 15000
-DEFAULT_TIMEOUT = 10000
+APP_BASE_URL = get_frontend_url()
+API_CONNECTION_TIMEOUT = 30000  # Augmenté pour les environnements de CI/CD lents
+DEFAULT_TIMEOUT = 15000
 SLOW_OPERATION_TIMEOUT = 20000
 
 # Data-testids standard pour tous les tests

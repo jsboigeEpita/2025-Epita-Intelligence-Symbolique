@@ -5,6 +5,7 @@ Test de configuration Playwright - Vérification du système
 
 import sys
 import importlib.util
+import importlib.metadata
 from pathlib import Path
 
 def check_playwright_setup():
@@ -16,9 +17,10 @@ def check_playwright_setup():
     # Vérifier l'import de Playwright
     try:
         import playwright
-        print(f"✅ Playwright Python installé: {playwright.__version__}")
-    except ImportError:
-        print("❌ Playwright Python non installé")
+        version = importlib.metadata.version("playwright")
+        print(f"✅ Playwright Python installé: {version}")
+    except (ImportError, importlib.metadata.PackageNotFoundError):
+        print("❌ Playwright Python non installé ou métadonnées introuvables.")
         return False
     
     # Vérifier playwright.sync_api
