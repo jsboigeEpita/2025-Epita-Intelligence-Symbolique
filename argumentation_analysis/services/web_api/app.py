@@ -145,6 +145,14 @@ def serve_react_app(path):
 
 logger.info("Configuration de l'application Flask terminée.")
 
+# --- Factory function pour l'app Flask ---
+def create_app():
+    """
+    Factory function pour créer l'application Flask.
+    Retourne l'instance de l'application configurée.
+    """
+    return app
+
 # --- Point d'entrée pour le développement local ---
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5004))

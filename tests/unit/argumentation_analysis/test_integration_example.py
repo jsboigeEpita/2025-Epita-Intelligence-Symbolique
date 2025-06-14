@@ -1,4 +1,3 @@
-
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
@@ -15,10 +14,59 @@ Exemple de test d'intégration pour le projet d'analyse d'argumentation.
 import pytest
 from unittest.mock import MagicMock
 
-
 # Importer les modules à tester
 from argumentation_analysis.utils.dev_tools.verification_utils import verify_all_extracts, generate_verification_report
 from argumentation_analysis.services.extract_service import ExtractService
+from argumentation_analysis.services.fetch_service import FetchService
+from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
+
+@pytest.fixture
+def integration_services(monkeypatch):
+    """Provides mocked services for integration tests."""
+    mock_fetch_service = MagicMock(spec=FetchService)
+    mock_extract_service = MagicMock(spec=ExtractService)
+
+    # Configure the mock for fetch_text
+    mock_fetch_service.fetch_text.return_value = (
+        """
+        Ceci est un exemple de texte source.
+        Il contient plusieurs paragraphes.
+        
+        Voici un marqueur de début: DEBUT_EXTRAIT
+        Ceci est le contenu de l'extrait.
+        Il peut contenir plusieurs lignes.
+        Voici un marqueur de fin: FIN_EXTRAIT
+        
+        Et voici la suite du texte après l'extrait.
+        """,
+        "https://example.com/test"
+    )
+
+    integration_sample_definitions = ExtractDefinitions(
+        sources=[
+            SourceDefinition(
+                source_name="Source d'intégration",
+                source_type="URL",
+                schema="https",
+                host_parts=["example", "com"],
+                path="/test",
+                extracts=[
+                    Extract(
+                        extract_name="Extrait d'intégration 1",
+                        start_marker="DEBUT_EXTRAIT",
+                        end_marker="FIN_EXTRAIT"
+                    ),
+                    Extract(
+                        extract_name="Extrait d'intégration 2",
+                        start_marker="DEBUT_AUTRE_EXTRAIT",
+                        end_marker="FIN_AUTRE_EXTRAIT"
+                    )
+                ]
+            )
+        ]
+    )
+    
+    return mock_fetch_service, mock_extract_service, integration_sample_definitions
 
 
 class AuthHelper:
@@ -62,6 +110,11 @@ def test_verify_extracts_integration(mocker, integration_services, tmp_path):
             return None, "invalid", False, True
 
     mock_extract_service.extract_text_with_markers.side_effect = extract_side_effect
+    
+    # Patcher les services utilisés par verify_all_extracts
+    mocker.patch('argumentation_analysis.utils.dev_tools.verification_utils.FetchService', return_value=mock_fetch_service)
+    mocker.patch('argumentation_analysis.utils.dev_tools.verification_utils.ExtractService', return_value=mock_extract_service)
+    
     # Exécuter la fonction verify_extracts
     # La fonction attend maintenant une liste de dictionnaires, et non l'objet plus les services.
     results = verify_all_extracts(
@@ -128,8 +181,7 @@ def test_extract_service_with_fetch_service(integration_services):
 
 
 @pytest.mark.skip(reason="Le module 'scripts.repair_extract_markers' n'est pas trouvé, à corriger plus tard.")
-
-async def test_repair_extract_markers_integration(OrchestrationServiceManagers, integration_services):
+async def test_repair_extract_markers_integration(mocker, integration_services):
     """Test d'intégration pour la fonction repair_extract_markers."""
     from scripts.repair_extract_markers import repair_extract_markers
     
@@ -138,11 +190,11 @@ async def test_repair_extract_markers_integration(OrchestrationServiceManagers, 
     mock_llm_service = await helper._create_authentic_gpt4o_mini_instance()
     mock_llm_service.service_id = "mock_llm_service"
 
-    # Configurer le mock pour setup_agents
-    kernel_mock = mock_llm_service
-    repair_agent_mock = mock_llm_service
-    validation_agent_mock = mock_llm_service
-    OrchestrationServiceManagers.return_value = (kernel_mock, repair_agent_mock, validation_agent_mock)
+    # Mock OrchestrationServiceManagers if it's used in the function
+    mocker.patch(
+        'scripts.repair_extract_markers.OrchestrationServiceManagers',
+        return_value=(mock_llm_service, MagicMock(), MagicMock())
+    )
     
     # Exécuter la fonction repair_extract_markers
     updated_definitions, results = await repair_extract_markers(
