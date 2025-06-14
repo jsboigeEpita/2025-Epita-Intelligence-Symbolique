@@ -23,6 +23,7 @@ from semantic_kernel import Kernel
 import pytest
 from unittest.mock import patch, MagicMock
 
+@pytest.mark.skip(reason="Legacy examples do not exist anymore. Replaced by notebooks and new demos.")
 class TestLogicExamples:
     async def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""

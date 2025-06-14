@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, patch
 from semantic_kernel import Kernel
 
 from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
-from argumentation_analysis.agents.core.logic.abstract_logic_agent import AbstractLogicAgent
+from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
 from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
 from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent
 from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent
@@ -140,7 +140,7 @@ class TestLogicAgentFactory:
     async def test_register_agent_class(self):
         """Test de l'enregistrement d'une nouvelle classe d'agent."""
         await self.async_setUp()
-        class TestLogicAgent(AbstractLogicAgent):
+        class TestLogicAgent(BaseLogicAgent):
             def setup_agent_components(self, llm_service_id: str): pass
             def text_to_belief_set(self, text): pass
             def generate_queries(self, text, belief_set): pass
