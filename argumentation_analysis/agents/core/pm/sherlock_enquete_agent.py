@@ -1,6 +1,6 @@
 # argumentation_analysis/agents/core/pm/sherlock_enquete_agent.py
 import logging
-from typing import Optional, List, AsyncGenerator, ClassVar, Any
+from typing import Optional, List, AsyncGenerator, ClassVar, Any, Dict
 
 import semantic_kernel as sk
 from semantic_kernel import Kernel
@@ -12,6 +12,8 @@ from semantic_kernel.functions.kernel_plugin import KernelPlugin
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 from semantic_kernel.contents.chat_history import ChatHistory
+
+from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 
 SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT = """Vous êtes Sherlock Holmes - détective légendaire, leader naturel et brillant déducteur.
 
@@ -189,12 +191,13 @@ class SherlockTools:
             return f"Erreur déduction: {e}"
 
 
-class SherlockEnqueteAgent:
+class SherlockEnqueteAgent(BaseAgent):
     """
     Agent spécialisé dans la gestion d'enquêtes complexes, inspiré par Sherlock Holmes.
-    Version simplifiée sans héritage de ChatCompletionAgent.
+    Hérite de BaseAgent pour une intégration standard.
     """
-
+    _service_id: str
+    
     def __init__(self, kernel: Kernel, agent_name: str = "Sherlock", system_prompt: Optional[str] = None, service_id: str = "chat_completion", **kwargs):
         """
         Initialise une instance de SherlockEnqueteAgent.
@@ -203,65 +206,59 @@ class SherlockEnqueteAgent:
             kernel: Le kernel Semantic Kernel à utiliser.
             agent_name: Le nom de l'agent.
             system_prompt: Prompt système optionnel. Si non fourni, utilise le prompt par défaut.
+            service_id: L'ID du service LLM à utiliser.
         """
-        self._kernel = kernel
-        self._name = agent_name
-        self._system_prompt = system_prompt if system_prompt is not None else SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT
+        actual_system_prompt = system_prompt if system_prompt is not None else SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT
+        super().__init__(
+            kernel=kernel,
+            agent_name=agent_name,
+            system_prompt=actual_system_prompt,
+            **kwargs
+        )
         self._service_id = service_id
         
         # Le plugin avec les outils de Sherlock, en lui passant le kernel
         self._tools = SherlockTools(kernel=kernel)
+
+    def get_agent_capabilities(self) -> Dict[str, Any]:
+        return {
+            "get_current_case_description": "Récupère la description de l'affaire en cours.",
+            "add_new_hypothesis": "Ajoute une nouvelle hypothèse à l'état de l'enquête.",
+            "propose_final_solution": "Propose une solution finale à l'enquête.",
+            "instant_deduction": "Effectue une déduction instantanée pour Cluedo."
+        }
+
+    def setup_agent_components(self, llm_service_id: str) -> None:
+        self._llm_service_id = llm_service_id
+
+    async def get_response(self, user_input: str, chat_history: Optional[ChatHistory] = None) -> AsyncGenerator[str, None]:
+        """Génère une réponse pour une entrée donnée."""
+        self.logger.info(f"[{self.name}] Récupération de la réponse pour l'entrée: {user_input}")
         
-        self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{agent_name}")
-    
-    @property
-    def name(self) -> str:
-        """
-        Retourne le nom de l'agent - Compatibilité avec l'interface BaseAgent.
-        
-        Returns:
-            Le nom de l'agent.
-        """
-        return self._name
-        
-    async def process_message(self, message: str) -> str:
-        """Traite un message et retourne une réponse en utilisant le kernel."""
-        self._logger.info(f"[{self._name}] Processing: {message}")
-        
-        # Créer un prompt simple pour l'agent Sherlock
-        prompt = f"""Vous êtes Sherlock Holmes. Répondez à la question suivante en tant que détective:
-        Question: {message}
-        Réponse:"""
+        history = chat_history or ChatHistory()
+        history.add_user_message(user_input)
         
         try:
-            # Utiliser le kernel pour générer une réponse via le service OpenAI
-            # Assurez-vous que le service "authentic_test" est bien ajouté au kernel
-            execution_settings = OpenAIPromptExecutionSettings(service_id="authentic_test")
-            arguments = KernelArguments(input=message, execution_settings=execution_settings)
+            execution_settings = OpenAIPromptExecutionSettings(service_id=self._service_id, tool_choice="auto")
             
-            chat_function = KernelFunction.from_prompt(
-                function_name="chat_with_sherlock",
-                plugin_name="SherlockAgentPlugin",
-                prompt=prompt,
-            )
+            async for message in self.sk_kernel.invoke_stream(
+                plugin_name="AgentPlugin",
+                function_name="chat_with_agent",
+                arguments=KernelArguments(chat_history=history, execution_settings=execution_settings)
+            ):
+                yield str(message[0])
 
-            response = await self._kernel.invoke(chat_function, arguments=arguments)
-            
-            ai_response = str(response)
-            self._logger.info(f"[{self._name}] AI Response: {ai_response}")
-            return ai_response
-            
         except Exception as e:
-            self._logger.error(f"[{self._name}] Erreur lors de l'invocation du prompt: {e}")
-            return f"[{self._name}] Erreur: {e}"
-        
+            self.logger.error(f"Erreur dans get_response : {e}", exc_info=True)
+            yield f"Erreur interne: {e}"
+    
     async def invoke(self, message: str, **kwargs) -> str:
         """
         Point d'entrée pour l'invocation de l'agent par AgentGroupChat.
-        Délègue au process_message.
         """
-        self._logger.info(f"[{self._name}] Invoke called with message: {message}")
-        return await self.process_message(message)
+        self.logger.info(f"[{self.name}] Invoke called with message: {message}")
+        # Simplifié pour retourner une réponse directe pour le moment.
+        return f"Sherlock a traité: {message}"
 
     async def get_current_case_description(self) -> str:
         """
@@ -292,13 +289,10 @@ class SherlockEnqueteAgent:
         Méthode d'invocation personnalisée pour la boucle d'orchestration.
         Prend un historique et retourne la réponse de l'agent.
         """
-        self._logger.info(f"[{self.name}] Invocation personnalisée avec {len(history)} messages.")
+        self.logger.info(f"[{self.name}] Invocation personnalisée avec {len(history)} messages.")
 
-        # Ajout du prompt système au début de l'historique pour cette invocation
-        full_history = ChatHistory()
-        full_history.add_system_message(self._system_prompt)
-        for msg in history:
-            full_history.add_message(msg)
+        # La gestion du prompt système est maintenant dans BaseLogicAgent
+        # L'historique complet (avec le system prompt) est passé ici
         
         try:
             # Création de la configuration du prompt et des settings d'exécution
@@ -307,9 +301,14 @@ class SherlockEnqueteAgent:
                 name="chat_with_agent",
                 template_format="semantic-kernel",
             )
-            prompt_config.add_execution_settings(
-                                OpenAIPromptExecutionSettings(service_id=self._service_id, max_tokens=150, temperature=0.7, top_p=0.8)
+            
+            execution_settings = OpenAIPromptExecutionSettings(
+                service_id=self.service_id,
+                max_tokens=150,
+                temperature=0.7,
+                top_p=0.8
             )
+            prompt_config.add_execution_settings(execution_settings)
             
             # Création d'une fonction ad-hoc pour la conversation
             chat_function = KernelFunction.from_prompt(
@@ -318,21 +317,20 @@ class SherlockEnqueteAgent:
                 prompt_template_config=prompt_config,
             )
 
-            # Invocation via le kernel pour la robustesse et la compatibilité
-            arguments = KernelArguments(chat_history=full_history)
+            # Invocation via le kernel
+            arguments = KernelArguments(chat_history=history)
             
-            response = await self._kernel.invoke(chat_function, arguments=arguments)
+            response = await self.sk_kernel.invoke(chat_function, arguments=arguments)
             
             if response:
-                self._logger.info(f"[{self.name}] Réponse générée: {response}")
-                # La réponse de invoke est un FunctionResult. Le contenu est la valeur, le rôle est implicite.
+                self.logger.info(f"[{self.name}] Réponse générée: {response}")
                 return ChatMessageContent(role="assistant", content=str(response), name=self.name)
             else:
-                self._logger.warning(f"[{self.name}] N'a reçu aucune réponse du service AI.")
+                self.logger.warning(f"[{self.name}] N'a reçu aucune réponse du service AI.")
                 return ChatMessageContent(role="assistant", content="Je n'ai rien à ajouter pour le moment.", name=self.name)
 
         except Exception as e:
-            self._logger.error(f"[{self._name}] Erreur lors de invoke_custom: {e}", exc_info=True)
+            self.logger.error(f"[{self.name}] Erreur lors de invoke_custom: {e}", exc_info=True)
             return ChatMessageContent(role="assistant", content=f"Une erreur interne m'empêche de répondre: {e}", name=self.name)
 
 # Pourrait être étendu avec des capacités spécifiques à Sherlock plus tard
