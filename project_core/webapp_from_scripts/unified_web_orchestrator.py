@@ -99,13 +99,6 @@ class UnifiedWebOrchestrator:
         # Routes FastAPI
         {"path": "/api/health", "method": "GET"},
         {"path": "/api/endpoints", "method": "GET"},
-        
-        # Routes Flask montées sur /flask
-        # {"path": "/flask/api/health", "method": "GET"},
-        # {"path": "/flask/api/analyze", "method": "POST", "data": {"text": "test"}},
-        # {"path": "/flask/api/validate", "method": "POST", "data": {"premises": ["p"], "conclusion": "q"}},
-        # {"path": "/flask/api/fallacies", "method": "POST", "data": {"text": "test"}},
-        # {"path": "/flask/api/framework", "method": "POST", "data": {"arguments": [{"id": "a", "content": "a"}]}}
     ]
 
     def __init__(self, args: argparse.Namespace):
@@ -612,6 +605,17 @@ class UnifiedWebOrchestrator:
             self.add_trace("[OK] FRONTEND OPERATIONNEL",
                           f"Port: {result['port']}", 
                           f"URL: {result['url']}")
+
+            # Sauvegarde l'URL du frontend pour que les tests puissent la lire
+            try:
+                log_dir = Path("logs")
+                log_dir.mkdir(exist_ok=True)
+                with open(log_dir / "frontend_url.txt", "w") as f:
+                    f.write(result['url'])
+                self.add_trace("[SAVE] URL FRONTEND SAUVEGARDEE", f"URL {result['url']} écrite dans logs/frontend_url.txt")
+            except Exception as e:
+                self.add_trace("[ERROR] SAUVEGARDE URL FRONTEND", str(e), status="error")
+            
             return True
         else:
             self.add_trace("[WARNING] FRONTEND ECHEC", result['error'], "Continue sans frontend", status="error")
