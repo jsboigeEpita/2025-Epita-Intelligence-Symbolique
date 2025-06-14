@@ -11,7 +11,6 @@ Il fournit également une factory pour créer les agents appropriés et des util
 pour gérer les ensembles de croyances et exécuter des requêtes logiques.
 """
 
-from .abstract_logic_agent import AbstractLogicAgent
 from .propositional_logic_agent import PropositionalLogicAgent
 from .first_order_logic_agent import FirstOrderLogicAgent
 from .modal_logic_agent import ModalLogicAgent
@@ -20,7 +19,6 @@ from .belief_set import BeliefSet, PropositionalBeliefSet, FirstOrderBeliefSet, 
 from .query_executor import QueryExecutor
 
 __all__ = [
-    'AbstractLogicAgent',
     'PropositionalLogicAgent',
     'FirstOrderLogicAgent',
     'ModalLogicAgent',
