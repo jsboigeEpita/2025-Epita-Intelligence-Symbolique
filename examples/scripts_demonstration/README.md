@@ -1,135 +1,200 @@
-# Scripts de Démonstration - Intelligence Symbolique EPITA
+# Script Demonstration EPITA - Guide Complet
 
-Ce répertoire contient des scripts Python conçus pour démontrer les fonctionnalités du projet d'analyse argumentative et d'intelligence symbolique, avec un focus particulier sur l'apprentissage pédagogique pour les étudiants EPITA.
+## 🎯 Objectif
 
-## 🚀 Script Principal : `demonstration_epita.py` (VERSION ENRICHIE)
+Le script `demonstration_epita.py` est un **orchestrateur pédagogique interactif** conçu spécifiquement pour les étudiants EPITA dans le cadre du cours d'Intelligence Symbolique. Il propose **4 modes d'utilisation** adaptés à différents besoins d'apprentissage et de démonstration.
 
-### **Version Révolutionnaire 2.1 - Architecture Modulaire avec Performances ×8.39 + Pipeline Agentique SK**
+**Version révolutionnaire v2.1** : Architecture modulaire avec performances ×8.39 (16.90s vs 141.75s), pipeline agentique SK + GPT-4o-mini opérationnel, et **100% SUCCÈS COMPLET** (6/6 catégories - 92 tests).
 
-Le script principal `demonstration_epita.py` a été complètement transformé avec une architecture révolutionnaire :
+## 🚀 Modes d'Utilisation
 
-- **5 modes d'utilisation** dont le nouveau mode --all-tests ultra-rapide
-- **Performances exceptionnelles** : ×8.39 (141.75s → 16.90s)
-- **Architecture modulaire** : 6 modules spécialisés (< 300 lignes chacun)
-- **100% SUCCÈS COMPLET** : 6/6 catégories - 92 tests - Pipeline agentique SK
-- **Interface interactive colorée** avec quiz et pauses explicatives
-- **Templates de projets** organisés par niveau de difficulté
+### Mode Normal (Par défaut)
+**Commande :** `python examples/scripts_demonstration/demonstration_epita.py`
 
-### Modes Disponibles
+Mode traditionnel qui exécute séquentiellement :
+1. Vérification et installation des dépendances
+2. Démonstration des fonctionnalités de base (`demo_notable_features.py`)
+3. Démonstration des fonctionnalités avancées (`demo_advanced_features.py`)
+4. Exécution de la suite de tests complète (`pytest`)
 
-| Mode | Commande | Usage Recommandé | Performance |
-|------|----------|------------------|-------------|
-| **Normal** | `python demonstration_epita.py` | Démonstration classique complète | 5-8 min |
-| **Interactif** | `python demonstration_epita.py --interactive` | **📚 Recommandé pour étudiants** | 15-20 min |
-| **Quick-Start** | `python demonstration_epita.py --quick-start` | Suggestions de projets personnalisées | 2-3 min |
-| **Métriques** | `python demonstration_epita.py --metrics` | Vérification rapide de l'état du projet | 30 sec |
-| **All-Tests** | `python demonstration_epita.py --all-tests` | **⚡ Exécution complète ultra-rapide + Pipeline SK** | **16.90s** |
-
-### 🎓 Pour les Étudiants EPITA
-
-**Première utilisation recommandée :**
 ```bash
-# Mode interactif avec pauses pédagogiques et quiz
-python examples/scripts_demonstration/demonstration_epita.py --interactive
+# Exemple d'exécution
+PS D:\Dev\2025-Epita-Intelligence-Symbolique> python examples/scripts_demonstration/demonstration_epita.py
+
+[GEAR] --- Vérification des dépendances (seaborn, markdown) ---
+[OK] Le package 'seaborn' est déjà installé.
+[OK] Le package 'markdown' est déjà installé.
+[GEAR] --- Lancement du sous-script : demo_notable_features.py ---
+[OK] --- Sortie de demo_notable_features.py (durée: 3.45s) ---
+...
 ```
 
-**Pour choisir un projet :**
+### Mode Interactif Pédagogique
+**Commande :** `python examples/scripts_demonstration/demonstration_epita.py --interactive`
+
+Mode **recommandé pour les étudiants** avec :
+- 🎓 **Pauses pédagogiques** : Explications détaillées des concepts
+- 📊 **Quiz interactifs** : Validation de la compréhension
+- 📈 **Barre de progression** : Suivi visuel de l'avancement
+- 🎨 **Interface colorée** : Expérience utilisateur enrichie
+- 📚 **Liens documentation** : Ressources pour approfondir
+
 ```bash
-# Suggestions personnalisées par niveau
+# Exemple d'exécution interactive
+PS D:\Dev\2025-Epita-Intelligence-Symbolique> python examples/scripts_demonstration/demonstration_epita.py --interactive
+
++==============================================================================+
+|                    [EPITA] DEMONSTRATION - MODE INTERACTIF                  |
+|                     Intelligence Symbolique & IA Explicable                 |
++==============================================================================+
+
+[START] Bienvenue dans la demonstration interactive du projet !
+[IA] Vous allez explorer les concepts cles de l'intelligence symbolique
+[OBJECTIF] Objectif : Comprendre et maitriser les outils developpes
+
+[IA] QUIZ D'INTRODUCTION
+Qu'est-ce que l'Intelligence Symbolique ?
+  1. Une technique de deep learning
+  2. Une approche basée sur la manipulation de symboles et la logique formelle
+  3. Un langage de programmation
+  4. Une base de données
+
+Votre réponse (1-4) : 2
+[OK] Correct ! L'Intelligence Symbolique utilise des symboles et des règles logiques...
+
+[STATS] Progression :
+[##########------------------------------] 25.0% (1/4)
+[OBJECTIF] Vérification des dépendances
+```
+
+### Mode Quick-Start
+**Commande :** `python examples/scripts_demonstration/demonstration_epita.py --quick-start`
+
+Mode **démarrage rapide** pour obtenir immédiatement :
+- 🚀 Suggestions de projets par niveau de difficulté
+- 📝 Templates de code prêts à utiliser
+- ⏱️ Estimations de durée de développement
+- 🔗 Liens vers la documentation pertinente
+
+```bash
+# Exemple d'exécution Quick-Start
+PS D:\Dev\2025-Epita-Intelligence-Symbolique> python examples/scripts_demonstration/demonstration_epita.py --quick-start
+
+[START] === MODE QUICK-START EPITA ===
+[OBJECTIF] Suggestions de projets personnalisées
+
+Quel est votre niveau en Intelligence Symbolique ?
+  1. Débutant (première fois)
+  2. Intermédiaire (quelques notions)
+  3. Avancé (expérience en IA symbolique)
+
+Votre choix (1-3) : 2
+
+[STAR] === PROJETS RECOMMANDÉS - NIVEAU INTERMÉDIARE ===
+
+📚 Projet : Moteur d'Inférence Avancé
+   Description : Implémentation d'algorithmes d'inférence (forward/backward chaining)
+   Technologies : Python, Algorithmes, Structures de données
+   Durée estimée : 5-8 heures
+   Concepts clés : Chaînage avant, Chaînage arrière, Résolution
+
+   [ASTUCE] Template de code fourni !
+
+# Template pour moteur d'inférence
+class MoteurInference:
+    def __init__(self):
+        self.base_faits = set()
+        self.base_regles = []
+    
+    def chainage_avant(self) -> set:
+        """Algorithme de chaînage avant"""
+        # TODO: Implémenter
+        return self.base_faits
+```
+
+### Mode Métriques
+**Commande :** `python examples/scripts_demonstration/demonstration_epita.py --metrics`
+
+Mode **métriques uniquement** pour afficher rapidement :
+- 📊 **100% de succès** (6/6 catégories - 92 tests)
+- 🏗️ Architecture du projet (Python + Java JPype)
+- 🧠 Domaines couverts (Logique formelle, Argumentation, IA symbolique)
+- 🚀 **NOUVEAU** : Performances ×8.39 (141.75s → 16.90s) + Pipeline agentique SK
+
+### Mode All-Tests (NOUVEAU)
+**Commande :** `python examples/scripts_demonstration/demonstration_epita.py --all-tests`
+
+Mode **exécution complète optimisée** pour :
+- ⚡ **Exécution ultra-rapide** : 16.90 secondes (vs 141.75s avant)
+- 📊 **Traces complètes** : Analyse détaillée de toutes les catégories
+- 🎯 **100% SUCCÈS COMPLET** : 6/6 catégories + 92 tests + Pipeline agentique SK
+- 📈 **Métriques de performance** : Chronométrage précis par module
+
+```bash
+# Exemple d'exécution Mode Métriques
+PS D:\Dev\2025-Epita-Intelligence-Symbolique> python examples/scripts_demonstration/demonstration_epita.py --metrics
+
++==============================================================================+
+|                    [EPITA] DEMONSTRATION - MODE INTERACTIF                  |
+|                     Intelligence Symbolique & IA Explicable                 |
++==============================================================================+
+
+[STATS] Métriques du Projet :
+[OK] Taux de succès des tests : 99.7%
+[GEAR] Architecture : Python + Java (JPype)
+[IA] Domaines couverts : Logique formelle, Argumentation, IA symbolique
+```
+
+## 🎓 Pour les Étudiants EPITA
+
+### Recommandations Pédagogiques
+
+#### **Première Utilisation (Mode Interactif Obligatoire)**
+```bash
+python examples/scripts_demonstration/demonstration_epita.py --interactive
+```
+- ✅ Pauses explicatives pour comprendre chaque concept
+- ✅ Quiz pour valider votre compréhension
+- ✅ Progression visuelle motivante
+- ✅ Liens vers documentation approfondie
+
+#### **Choix de Projet (Mode Quick-Start)**
+```bash
 python examples/scripts_demonstration/demonstration_epita.py --quick-start
 ```
+- 🚀 **Débutant** : Analyseur de Propositions Logiques (2-3h)
+- 🔥 **Intermédiaire** : Moteur d'Inférence Avancé (5-8h)
+- 🚀 **Avancé** : Système Multi-Agents Logiques (10-15h)
 
-📖 **Documentation complète** : Voir [`demonstration_epita_README.md`](demonstration_epita_README.md)
-
-## 📁 Autres Scripts
-
-### `demo_notable_features.py`
-Présente les **fonctionnalités de base** du projet avec des exemples concrets :
-- Analyse de cohérence argumentative
-- Calcul de scores de clarté
-- Extraction d'arguments
-- Génération de visualisations (simulées avec mocks)
-
-**Exécution :** Appelé automatiquement par `demonstration_epita.py` ou individuellement.
-
-### `demo_advanced_features.py`
-Illustre les **fonctionnalités avancées** du système :
-- Moteurs d'inférence complexes (chaînage avant/arrière)
-- Intégration Java-Python via JPype et bibliothèque Tweety
-- Analyse rhétorique sophistiquée
-- Orchestration tactique multi-agents
-- Détection de sophismes composés
-
-**Exécution :** Appelé automatiquement par `demonstration_epita.py` ou individuellement.
-
-### `demo_tweety_interaction_simple.py`
-Démontre l'**interaction avec la bibliothèque Tweety** pour :
-- Manipulation d'arguments logiques formels
-- Utilisation de la logique propositionnelle et des prédicats
-- Interfaçage Java-Python pour l'IA symbolique
-
-## 🛠️ Configuration et Prérequis
-
-### Installation Rapide
-```bash
-# Cloner et se placer à la racine du projet
-cd d:/Dev/2025-Epita-Intelligence-Symbolique
-
-# Exécution avec installation automatique des dépendances
-python examples/scripts_demonstration/demonstration_epita.py --interactive
-```
+## 🛠️ Installation et Prérequis
 
 ### Prérequis Système
-- **Python 3.8+** (testé avec 3.9, 3.10, 3.11)
-- **OS** : Windows 11, macOS, Linux
+- **Python 3.8+**
+- **OS** : Windows 11, macOS, Linux (Ubuntu 20.04+)
 - **RAM** : Minimum 4GB, recommandé 8GB
-- **Dépendances** : Installation automatique de `seaborn`, `markdown`, `pytest`
 
-### ⚠️ Important
-Les scripts doivent être exécutés **depuis la racine du projet** pour fonctionner correctement.
+### Installation Automatique
+Le script gère automatiquement l'installation des dépendances (`seaborn`, `markdown`, `pytest`).
 
-## 📊 Métriques du Projet
-
-- **Taux de succès des tests** : 99.7% (maintenu après optimisation)
-- **Performances** : **×6.26 d'amélioration** (141.75s → 22.63s) ⚡
-- **Architecture** : Modulaire Python + Java (JPype)
-- **Modules parfaits** : 3/6 catégories à 100% de succès
-- **Domaines couverts** : Logique formelle, Argumentation, IA symbolique
-- **Lignes de code** : 15,000+ Python, 5,000+ Java
-
-## 🎯 Cas d'Usage Typiques
-
-### Pour un Cours EPITA
+### Exécution depuis la Racine du Projet
+⚠️ **IMPORTANT** : Le script doit être exécuté depuis la racine du projet pour que les chemins d'importation fonctionnent.
 ```bash
-# Démonstration pédagogique complète
-python examples/scripts_demonstration/demonstration_epita.py --interactive
+# ✅ Correct (depuis la racine)
+python examples/scripts_demonstration/demonstration_epita.py
 ```
 
-### Pour une Présentation Rapide
-```bash
-# Affichage des métriques pour slides
-python examples/scripts_demonstration/demonstration_epita.py --metrics
-```
+### Résolution des Problèmes Courants
 
-### Pour le Développement de Projets Étudiants
-```bash
-# Obtenir des suggestions de projets
-python examples/scripts_demonstration/demonstration_epita.py --quick-start
+- **Erreur "Module not found" :** Installez les dépendances manuellement avec `pip install seaborn markdown pytest`.
+- **Erreur d'encodage (Windows) :** Exécutez `set PYTHONIOENCODING=utf-8` avant de lancer le script.
 
-# Validation ultra-rapide complète (NOUVEAU)
-python examples/scripts_demonstration/demonstration_epita.py --all-tests
-```
+## 📈 Métriques et Concepts Illustrés
 
-## 📚 Documentation et Support
+- **Taux de succès des tests** : 99.7%
+- **Performances** : **×8.39 d'amélioration** (141.75s → 16.90s)
+- **Architecture** : Modulaire Python + Java avec JPype
+- **Domaines Couverts** : Logique formelle, Argumentation, IA symbolique, Systèmes multi-agents.
 
-- **Guide complet** : [`demonstration_epita_README.md`](demonstration_epita_README.md)
-- **Documentation du projet** : `docs/`
+## 🤝 Support
+- **Documentation complète** : `docs/`
 - **Exemples pratiques** : `examples/`
-- **Tests unitaires** : `tests/`
-
----
-
-Ces scripts constituent la **vitrine pédagogique** du projet d'Intelligence Symbolique EPITA et sont particulièrement utiles pour comprendre les concepts d'IA explicable, de logique formelle et d'analyse argumentative à travers des exemples concrets et interactifs.
-
-*Dernière mise à jour : Janvier 2025 - Version 2.0 Révolutionnaire*
-*🚀 Performance ×6.26 - Architecture Modulaire - Production Ready*
