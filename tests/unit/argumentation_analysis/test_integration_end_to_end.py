@@ -63,11 +63,11 @@ def balanced_strategy_fixture(monkeypatch):
     state = RhetoricalAnalysisState(test_text)
     
     mock_fetch_service = MagicMock(spec=FetchService)
-    mock_fetch_service.fetch_text# Mock eliminated - using authentic gpt-4o-mini "Texte source avec DEBUT_EXTRAIT contenu FIN_EXTRAIT.", "https://example.com/test"
-    mock_fetch_service.reconstruct_url# Mock eliminated - using authentic gpt-4o-mini "https://example.com/test"
+    mock_fetch_service.fetch_text.return_value = ("Texte source avec DEBUT_EXTRAIT contenu FIN_EXTRAIT.", "https://example.com/test")
+    mock_fetch_service.reconstruct_url.return_value = "https://example.com/test"
     
     mock_extract_service = MagicMock(spec=ExtractService)
-    mock_extract_service.extract_text_with_markers# Mock eliminated - using authentic gpt-4o-mini "contenu", "Extraction réussie", True, True
+    mock_extract_service.extract_text_with_markers.return_value = ("contenu", "Extraction réussie", True, True)
     
     integration_sample_definitions = ExtractDefinitions(sources=[
         SourceDefinition(source_name="SourceInt", source_type="url", schema="https", host_parts=["example", "com"], path="/test",
