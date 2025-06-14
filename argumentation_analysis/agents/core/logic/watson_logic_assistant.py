@@ -293,10 +293,12 @@ class WatsonTools:
         }
 
 
-class WatsonLogicAssistant:
+from .propositional_logic_agent import PropositionalLogicAgent
+
+class WatsonLogicAssistant(PropositionalLogicAgent):
     """
     Assistant logique spécialisé, inspiré par Dr. Watson.
-    Version simplifiée sans héritage de ChatCompletionAgent.
+    Hérite de PropositionalLogicAgent pour les fonctionnalités logiques de base.
     """
 
     def __init__(self, kernel: Kernel, agent_name: str = "Watson", tweety_bridge: TweetyBridge = None, constants: Optional[List[str]] = None, system_prompt: Optional[str] = None, service_id: str = "chat_completion", **kwargs):
@@ -309,25 +311,12 @@ class WatsonLogicAssistant:
             constants: Une liste optionnelle de constantes logiques à utiliser.
             system_prompt: Prompt système optionnel. Si non fourni, utilise le prompt par défaut.
         """
-        self._kernel = kernel
-        self._name = agent_name
-        self._system_prompt = system_prompt if system_prompt is not None else WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT
-        self._service_id = service_id
+        actual_system_prompt = system_prompt if system_prompt is not None else WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT
+        super().__init__(kernel=kernel, agent_name=agent_name, system_prompt=actual_system_prompt, service_id=service_id)
         
         self._tools = WatsonTools(tweety_bridge=tweety_bridge, constants=constants)
         
-        self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{agent_name}")
-        self._logger.info(f"WatsonLogicAssistant '{agent_name}' initialisé avec les outils logiques.")
-    
-    @property
-    def name(self) -> str:
-        """
-        Retourne le nom de l'agent - Compatibilité avec l'interface BaseAgent.
-        
-        Returns:
-            Le nom de l'agent.
-        """
-        return self._name
+        self.logger.info(f"WatsonLogicAssistant '{agent_name}' initialisé avec les outils logiques.")
         
     async def process_message(self, message: str) -> str:
         """Traite un message et retourne une réponse en utilisant le kernel."""
@@ -387,10 +376,10 @@ class WatsonLogicAssistant:
             # Pour l'instant, on suppose que les arguments sont passés en tant que kwargs à invoke.
             # kernel_arguments = {"belief_set_id": belief_set_id} # Alternative si invoke prend des KernelArguments
             
-            result = await self.kernel.invoke(
+            result = await self.sk_kernel.invoke(
                 plugin_name="EnqueteStatePlugin",
                 function_name="get_belief_set_content",
-                belief_set_id=belief_set_id # Passage direct de l'argument
+                arguments=KernelArguments(belief_set_id=belief_set_id)
             )
             
             # La valeur réelle est souvent dans result.value ou directement result
