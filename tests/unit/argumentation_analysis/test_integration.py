@@ -74,6 +74,7 @@ class TestBasicIntegration:
 
     
     
+    @pytest.mark.asyncio
     async def test_component_interaction(self, mock_agent_class, mock_kernel_class, basic_state):
         """Teste l'interaction de base entre les composants."""
         state = basic_state
@@ -111,6 +112,7 @@ class TestSimulatedAnalysisFlow:
     """Tests simulant un flux d'analyse complet avec des mocks."""
 
     
+    @pytest.mark.asyncio
     async def test_simulated_analysis_flow(self, mock_run_analysis, basic_state):
         """Simule un flux d'analyse complet."""
         state = basic_state
@@ -204,6 +206,7 @@ def mocked_services():
 class TestExtractIntegration:
     """Tests d'intégration pour les composants d'extraction."""
     
+    @pytest.mark.asyncio
     async def test_extract_integration(self, mocked_services):
         """Teste l'intégration entre les services d'extraction et de récupération."""
         mock_fetch_service, mock_extract_service, integration_sample_definitions = mocked_services
