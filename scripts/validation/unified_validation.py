@@ -91,6 +91,12 @@ class ValidationReport:
     recommendations: List[str]
 
 
+class EnumEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Enum):
+            return obj.value
+        return super().default(obj)
+
 @dataclass
 class AuthenticityReport:
     """Rapport d'authenticité du système."""
@@ -1164,7 +1170,7 @@ class UnifiedValidationSystem:
             # Sauvegarde JSON
             report_path = Path(self.config.report_path)
             with open(report_path, 'w', encoding='utf-8') as f:
-                json.dump(report_dict, f, indent=2, ensure_ascii=False)
+                json.dump(report_dict, f, indent=2, ensure_ascii=False, cls=EnumEncoder)
             
             self.logger.info(f"📄 Rapport sauvegardé: {report_path}")
             

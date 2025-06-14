@@ -8,8 +8,6 @@ qui testent réellement les composants LLM et de logique argumentative.
 """
 
 # Auto-activation environnement intelligent
-import scripts.core.auto_env
-
 import asyncio
 import sys
 import os
@@ -152,7 +150,15 @@ class ValidationEpitaComplete:
         
         # Configuration de l'environnement Python
         self._setup_environment()
-    
+        
+        # Importation déplacée ici après la configuration du path
+        try:
+            import scripts.core.auto_env
+            print(f"{Colors.GREEN}[OK] [SETUP] Module auto_env charge avec succes.{Colors.ENDC}")
+        except ImportError as e:
+            print(f"{Colors.FAIL}[CRITICAL] [SETUP] Echec du chargement de auto_env: {e}{Colors.ENDC}")
+            print(f"{Colors.WARNING}[WARN] [SETUP] Le script pourrait ne pas fonctionner correctement sans son environnement.{Colors.ENDC}")
+
     def _setup_environment(self):
         """Configure l'environnement Python avec tous les chemins nécessaires"""
         print(f"{Colors.CYAN}[SETUP] [SETUP] Configuration de l'environnement...{Colors.ENDC}")
