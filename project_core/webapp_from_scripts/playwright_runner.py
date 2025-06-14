@@ -116,6 +116,11 @@ class PlaywrightRunner:
         # Utiliser un reporter qui ne bloque pas la fin du processus
         parts.append('--reporter=list')
 
+        # Mode debug pour voir le navigateur et les actions
+        if os.environ.get('PLAYWRIGHT_DEBUG') == '1':
+            parts.append('--debug')
+            self.logger.info("Mode debug Playwright activé.")
+
         self.logger.info(f"Construction de la commande 'npx playwright': {parts}")
         return parts
 

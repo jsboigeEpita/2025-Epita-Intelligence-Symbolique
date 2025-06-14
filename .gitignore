@@ -278,3 +278,6 @@ docs/sherlock_watson_investigation.md
 debug_imports.py
 # Fichiers de trace d'analyse complets
 analyse_trace_complete_*.json
+
+# Dossier temporaire de l'API web
+services/web_api/_temp_static/
