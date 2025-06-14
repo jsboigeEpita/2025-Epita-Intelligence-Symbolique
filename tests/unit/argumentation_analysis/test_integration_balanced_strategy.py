@@ -22,7 +22,7 @@ import logging
 
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
-# from semantic_kernel.experimental.agents import Agent, AgentGroupChat
+from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 
 # Utiliser la fonction setup_import_paths pour résoudre les problèmes d'imports relatifs
 # from tests import setup_import_paths # Commenté pour investigation
@@ -57,7 +57,8 @@ class TestBalancedStrategyIntegration: # Suppression de l'héritage AsyncTestCas
 
     """Tests d'intégration pour la stratégie d'équilibrage de participation."""
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup_method(self):
         """Initialisation avant chaque test."""
         self.test_text = """
         La Terre est plate car l'horizon semble plat quand on regarde au loin.
@@ -75,24 +76,25 @@ class TestBalancedStrategyIntegration: # Suppression de l'héritage AsyncTestCas
         self.state_manager = StateManagerPlugin(self.state)
         self.kernel.add_plugin(self.state_manager, "StateManager")
         
-        self.pm_agent = MagicMock(spec=Agent)
+        self.pm_agent = MagicMock(spec=BaseAgent)
         self.pm_agent.name = "ProjectManagerAgent"
         self.pm_agent.id = "pm_agent_id"
         
-        self.pl_agent = MagicMock(spec=Agent)
+        self.pl_agent = MagicMock(spec=BaseAgent)
         self.pl_agent.name = "PropositionalLogicAgent"
         self.pl_agent.id = "pl_agent_id"
         
-        self.informal_agent = MagicMock(spec=Agent)
+        self.informal_agent = MagicMock(spec=BaseAgent)
         self.informal_agent.name = "InformalAnalysisAgent"
         self.informal_agent.id = "informal_agent_id"
         
-        self.extract_agent = MagicMock(spec=Agent)
+        self.extract_agent = MagicMock(spec=BaseAgent)
         self.extract_agent.name = "ExtractAgent"
         self.extract_agent.id = "extract_agent_id"
         
         self.agents = [self.pm_agent, self.pl_agent, self.informal_agent, self.extract_agent]
 
+    @pytest.mark.asyncio
     async def test_balanced_strategy_integration(self):
         """Teste l'intégration de la stratégie d'équilibrage avec les autres composants."""
         balanced_strategy = BalancedParticipationStrategy(
@@ -131,6 +133,7 @@ class TestBalancedStrategyIntegration: # Suppression de l'héritage AsyncTestCas
         assert balanced_strategy._participation_counts[selected_agent.name] == 1
         assert balanced_strategy._total_turns == 2
 
+    @pytest.mark.asyncio
     async def test_balanced_strategy_with_designations(self):
         """Teste l'interaction entre la stratégie d'équilibrage et les désignations explicites."""
         balanced_strategy = BalancedParticipationStrategy(
@@ -170,6 +173,7 @@ class TestBalancedStrategyIntegration: # Suppression de l'héritage AsyncTestCas
         assert balanced_strategy._imbalance_budget["ProjectManagerAgent"] >= 0
         assert balanced_strategy._imbalance_budget["ExtractAgent"] >= 0
 
+    @pytest.mark.asyncio
     async def test_balanced_strategy_in_group_chat(self):
         """Teste l'utilisation de la stratégie d'équilibrage dans un AgentGroupChat."""
         balanced_strategy = BalancedParticipationStrategy(
