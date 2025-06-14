@@ -222,7 +222,7 @@ class UnifiedWebOrchestrator:
                 'max_attempts': 5,
                 'timeout_seconds': 30,
                 'health_endpoint': '/health',
-                'env_activation': 'powershell -File scripts/env/activate_project_env.ps1'
+                'env_activation': 'powershell -File ./activate_project_env.ps1'
             },
             'frontend': {
                 'enabled': False,  # Optionnel selon besoins
