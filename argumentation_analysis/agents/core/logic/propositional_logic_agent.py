@@ -389,6 +389,13 @@ class PropositionalLogicAgent(BaseLogicAgent):
             self.logger.error(error_msg, exc_info=True)
             return False, error_msg
 
+    def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> BeliefSet:
+        """
+        Crée un objet `PropositionalBeliefSet` à partir d'un dictionnaire de données.
+        """
+        content = belief_set_data.get("content", "")
+        return PropositionalBeliefSet(content)
+
     async def get_response(
         self,
         chat_history: ChatHistory,

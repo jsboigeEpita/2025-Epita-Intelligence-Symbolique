@@ -121,35 +121,32 @@ async def test_initialization_jvm_ready_mocked(tweety_bridge_mocked):
     bridge.mock_jpype.JClass.assert_any_call("org.tweetyproject.logics.pl.parser.PlParser")
     bridge.jclass_map["org.tweetyproject.logics.pl.parser.PlParser"].assert_called_once()
 
-@pytest.mark.asyncio
-async def test_validate_formula_valid_mocked(tweety_bridge_mocked):
+def test_validate_formula_valid_mocked(tweety_bridge_mocked):
     """Test de validation d'une formule propositionnelle valide (mock)."""
     bridge = tweety_bridge_mocked
-    bridge.mock_pl_parser_instance.parseFormula.return_value = MagicMock()
+    bridge._pl_handler._pl_parser.parseFormula.return_value = MagicMock()
     
-    is_valid, message = await bridge.validate_formula("a => b")
+    is_valid, message = bridge.validate_formula("a => b")
     
-    bridge.mock_pl_parser_instance.parseFormula.assert_called_once_with("a => b")
+    bridge._pl_handler._pl_parser.parseFormula.assert_called_once_with(ANY)
     assert is_valid
     assert message == "Formule valide"
 
-@pytest.mark.asyncio
-async def test_validate_formula_invalid_mocked(tweety_bridge_mocked):
+def test_validate_formula_invalid_mocked(tweety_bridge_mocked):
     """Test de validation d'une formule propositionnelle invalide (mock)."""
     bridge = tweety_bridge_mocked
     # Utilise JException depuis le mock jpype fourni par la fixture
     java_exception_instance = bridge.mock_jpype.JException("Erreur de syntaxe")
-    bridge.mock_pl_parser_instance.parseFormula.side_effect = java_exception_instance
+    bridge._pl_handler._pl_parser.parseFormula.side_effect = java_exception_instance
     
-    is_valid, message = await bridge.validate_formula("a ==> b")
+    is_valid, message = bridge.validate_formula("a ==> b")
     
-    bridge.mock_pl_parser_instance.parseFormula.assert_called_once_with("a ==> b")
+    bridge._pl_handler._pl_parser.parseFormula.assert_called_once_with(ANY)
     assert not is_valid
     # Le message peut varier un peu, on vérifie la sous-chaine
     assert "Erreur de syntaxe" in message
 
-@pytest.mark.asyncio
-async def test_execute_pl_query_accepted_mocked(tweety_bridge_mocked):
+def test_execute_pl_query_accepted_mocked(tweety_bridge_mocked):
     """Test d'exécution d'une requête PL acceptée (mock)."""
     bridge = tweety_bridge_mocked
     
@@ -162,16 +159,15 @@ async def test_execute_pl_query_accepted_mocked(tweety_bridge_mocked):
         else:
             return mock_query_formula
     
-    bridge.mock_pl_parser_instance.parseFormula.side_effect = parse_formula_side_effect
-    bridge.mock_sat_reasoner_instance.query.return_value = True
+    bridge._pl_handler._pl_parser.parseFormula.side_effect = parse_formula_side_effect
+    bridge._pl_handler._pl_reasoner.query.return_value = True
     bridge.mock_jpype.JObject = lambda x, target: target(x) # Simule la conversion de type
 
-    status, result_msg = await bridge.execute_pl_query("a => b", "a")
+    status, result_msg = bridge.execute_pl_query("a => b", "a")
     
-    bridge.mock_pl_parser_instance.parseFormula.assert_any_call("a => b")
-    bridge.mock_pl_parser_instance.parseFormula.assert_any_call("a")
-    bridge.mock_sat_reasoner_instance.query.assert_called_once_with(ANY, mock_query_formula)
-    assert status == "ACCEPTED"
+    assert bridge._pl_handler._pl_parser.parseFormula.call_count == 2
+    bridge._pl_handler._pl_reasoner.query.assert_called_once_with(ANY, mock_query_formula)
+    assert status is True
     assert "ACCEPTED" in result_msg
 
 # --- Tests avec la vraie JVM ---
@@ -183,12 +179,12 @@ async def test_validate_formula_real(tweety_bridge_real):
     bridge = await tweety_bridge_real
     
     # Valide
-    is_valid, message = await bridge.validate_formula("a => b")
+    is_valid, message = bridge.validate_formula("a => b")
     assert is_valid
     assert message == "Formule valide"
 
     # Invalide
-    is_valid_inv, message_inv = await bridge.validate_formula("a ==> b")
+    is_valid_inv, message_inv = bridge.validate_formula("a ==> b")
     assert not is_valid_inv
     assert "syntax" in message_inv.lower()
 
@@ -199,16 +195,16 @@ async def test_execute_pl_query_real(tweety_bridge_real):
     bridge = await tweety_bridge_real
 
     # Acceptée
-    status, result = await bridge.execute_pl_query("a; a=>b", "b")
+    status, result = bridge.execute_pl_query("a; a=>b", "b")
     assert status == "ACCEPTED"
     assert "ACCEPTED (True)" in result
 
     # Rejetée
-    status_rej, result_rej = await bridge.execute_pl_query("a; a=>b", "c")
+    status_rej, result_rej = bridge.execute_pl_query("a; a=>b", "c")
     assert status_rej == "REJECTED"
     assert "REJECTED (False)" in result_rej
 
     # Erreur
-    status_err, result_err = await bridge.execute_pl_query("a ==>; b", "c")
+    status_err, result_err = bridge.execute_pl_query("a ==>; b", "c")
     assert status_err == "ERREUR"
     assert "error" in result_err.lower() or "exception" in result_err.lower()

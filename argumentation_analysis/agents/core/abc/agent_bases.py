@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING
 import logging
 
-from semantic_kernel import Kernel # Exemple d'importation
+from semantic_kernel import Kernel
 
 # Import paresseux pour éviter le cycle d'import - uniquement pour le typage
 if TYPE_CHECKING:
@@ -363,15 +363,115 @@ class BaseLogicAgent(BaseAgent, ABC):
         :rtype: Tuple[bool, str]
         """
         pass
- 
-    # La méthode setup_agent_components de BaseAgent doit être implémentée
-    # par les sous-classes concrètes (PLAgent, FOLAgent) pour enregistrer
-    # leurs fonctions sémantiques spécifiques et initialiser/configurer TweetyBridge.
-    # Exemple dans une sous-classe :
-    # def setup_agent_components(self, llm_service_id: str) -> None:
-    #     super().setup_agent_components(llm_service_id)
-    #     self._tweety_bridge = TweetyBridge(self.logic_type) # Initialisation du bridge
-    #     # Enregistrement des fonctions sémantiques spécifiques à la logique X
-    #     # self.sk_kernel.add_functions(...)
-    #     # Enregistrement du tweety_bridge comme plugin si ses méthodes doivent être appelées par SK
-    #     # self.sk_kernel.add_plugin(self._tweety_bridge, plugin_name=f"{self.name}_TweetyBridge")
+
+    def process_task(self, task_id: str, task_description: str, state_manager: Any) -> Dict[str, Any]:
+        """
+        Traite une tâche assignée à l'agent logique.
+        Migré depuis AbstractLogicAgent pour unifier l'architecture.
+        """
+        self.logger.info(f"Traitement de la tâche {task_id}: {task_description}")
+        state = state_manager.get_current_state_snapshot(summarize=False)
+        if "Traduire" in task_description and "Belief Set" in task_description:
+            return self._handle_translation_task(task_id, task_description, state, state_manager)
+        elif "Exécuter" in task_description and "Requêtes" in task_description:
+            return self._handle_query_task(task_id, task_description, state, state_manager)
+        else:
+            error_msg = f"Type de tâche non reconnu: {task_description}"
+            self.logger.error(error_msg)
+            state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
+            return {"status": "error", "message": error_msg}
+
+    def _handle_translation_task(self, task_id: str, task_description: str, state: Dict[str, Any], state_manager: Any) -> Dict[str, Any]:
+        """
+        Gère une tâche spécifique de conversion de texte en un ensemble de croyances logiques.
+        """
+        raw_text = self._extract_source_text(task_description, state)
+        if not raw_text:
+            error_msg = "Impossible de trouver le texte source pour la traduction"
+            self.logger.error(error_msg)
+            state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
+            return {"status": "error", "message": error_msg}
+        
+        belief_set, status_msg = self.text_to_belief_set(raw_text)
+        if not belief_set:
+            error_msg = f"Échec de la conversion en ensemble de croyances: {status_msg}"
+            self.logger.error(error_msg)
+            state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
+            return {"status": "error", "message": error_msg}
+
+        bs_id = state_manager.add_belief_set(logic_type=belief_set.logic_type, content=belief_set.content)
+        answer_text = f"Ensemble de croyances créé avec succès (ID: {bs_id}).\n\n{status_msg}"
+        state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=answer_text, source_ids=[bs_id])
+        return {"status": "success", "message": answer_text, "belief_set_id": bs_id}
+
+    def _handle_query_task(self, task_id: str, task_description: str, state: Dict[str, Any], state_manager: Any) -> Dict[str, Any]:
+        """
+        Gère une tâche d'exécution de requêtes logiques sur un ensemble de croyances existant.
+        """
+        belief_set_id = self._extract_belief_set_id(task_description)
+        if not belief_set_id:
+            error_msg = "Impossible de trouver l'ID de l'ensemble de croyances dans la description de la tâche"
+            self.logger.error(error_msg)
+            state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
+            return {"status": "error", "message": error_msg}
+
+        belief_sets = state.get("belief_sets", {})
+        if belief_set_id not in belief_sets:
+            error_msg = f"Ensemble de croyances non trouvé: {belief_set_id}"
+            self.logger.error(error_msg)
+            state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
+            return {"status": "error", "message": error_msg}
+
+        belief_set_data = belief_sets[belief_set_id]
+        belief_set = self._create_belief_set_from_data(belief_set_data)
+        raw_text = self._extract_source_text(task_description, state)
+        queries = self.generate_queries(raw_text, belief_set)
+        if not queries:
+            error_msg = "Aucune requête n'a pu être générée"
+            self.logger.error(error_msg)
+            state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[belief_set_id])
+            return {"status": "error", "message": error_msg}
+
+        formatted_results = []
+        log_ids = []
+        raw_results = []
+        for query in queries:
+            result, result_str = self.execute_query(belief_set, query)
+            raw_results.append((result, result_str))
+            formatted_results.append(result_str)
+            log_id = state_manager.log_query_result(belief_set_id=belief_set_id, query=query, raw_result=result_str)
+            log_ids.append(log_id)
+
+        interpretation = self.interpret_results(raw_text, belief_set, queries, raw_results)
+        state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=interpretation, source_ids=[belief_set_id] + log_ids)
+        return {"status": "success", "message": interpretation, "queries": queries, "results": formatted_results, "log_ids": log_ids}
+
+    def _extract_source_text(self, task_description: str, state: Dict[str, Any]) -> str:
+        """
+        Extrait le texte source pertinent pour une tâche.
+        """
+        raw_text = state.get("raw_text", "")
+        if not raw_text and "texte:" in task_description.lower():
+            parts = task_description.split("texte:", 1)
+            if len(parts) > 1:
+                raw_text = parts[1].strip()
+        return raw_text
+
+    def _extract_belief_set_id(self, task_description: str) -> Optional[str]:
+        """
+        Extrait un ID d'ensemble de croyances à partir de la description d'une tâche.
+        """
+        if "belief_set_id:" in task_description.lower():
+            parts = task_description.split("belief_set_id:", 1)
+            if len(parts) > 1:
+                bs_id_part = parts[1].strip()
+                bs_id = bs_id_part.split()[0].strip()
+                return bs_id
+        return None
+
+    @abstractmethod
+    def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> "BeliefSet":
+        """
+        Crée une instance de `BeliefSet` à partir d'un dictionnaire de données.
+        """
+        pass

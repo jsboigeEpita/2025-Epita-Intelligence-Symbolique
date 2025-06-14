@@ -14,8 +14,6 @@ Les agents logiques de ce module suivent la hiérarchie suivante :
     *   [`FirstOrderLogicAgent`](first_order_logic_agent.py:0) : Agent pour la logique du premier ordre.
     *   [`ModalLogicAgent`](modal_logic_agent.py:0) : Agent pour la logique modale.
 
-*Note :* Ce répertoire contient également [`AbstractLogicAgent.py`](abstract_logic_agent.py:0). Bien que son nom suggère qu'il s'agit d'une classe de base pour les agents logiques ici, les agents concrets (`PropositionalLogicAgent`, `FirstOrderLogicAgent`, `ModalLogicAgent`) héritent en réalité de `BaseLogicAgent` (située dans `argumentation_analysis/agents/core/abc/`). `AbstractLogicAgent` pourrait être une version antérieure ou une abstraction destinée à un autre type d'orchestration, car elle inclut des méthodes de gestion de tâches (`process_task`) non présentes dans `BaseLogicAgent`.*
-
 ### Autres Composants Essentiels
 
 *   **[`BeliefSet`](belief_set.py:0) et ses sous-classes (`PropositionalBeliefSet`, `FirstOrderBeliefSet`, `ModalBeliefSet`)**:
