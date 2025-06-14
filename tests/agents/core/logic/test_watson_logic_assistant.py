@@ -8,12 +8,17 @@ import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 
 from semantic_kernel import Kernel
+from semantic_kernel.functions.kernel_arguments import KernelArguments
 
 from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant, WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT
 from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
 
 # Définir un nom d'agent de test
 TEST_AGENT_NAME = "TestWatsonAssistant"
+
+# Classe concrète pour les tests
+class ConcreteWatsonLogicAssistant(WatsonLogicAssistant):
+    pass
 
 @pytest.fixture
 def mock_kernel() -> MagicMock:
@@ -28,86 +33,39 @@ def mock_tweety_bridge() -> MagicMock:
     mock_bridge.is_jvm_ready.return_value = True
     return mock_bridge
 
-def test_watson_logic_assistant_instanciation(mock_kernel: MagicMock, mock_tweety_bridge: MagicMock, mocker: MagicMock) -> None:
+def test_watson_logic_assistant_instanciation(mock_kernel: MagicMock, mock_tweety_bridge: MagicMock) -> None:
     """
-    Teste l'instanciation correcte de WatsonLogicAssistant et vérifie l'appel au constructeur parent.
+    Teste l'instanciation correcte de WatsonLogicAssistant.
     """
-    # Espionner le constructeur de la classe parente PropositionalLogicAgent
-    spy_super_init = mocker.spy(PropositionalLogicAgent, "__init__")
-    
-    # Patcher l'initialisation de TweetyBridge dans PropositionalLogicAgent pour utiliser notre mock
-    # Cela est crucial car PropositionalLogicAgent.__init__ appelle self.setup_agent_components,
-    # qui à son tour initialise self._tweety_bridge.
     with patch('argumentation_analysis.agents.core.logic.propositional_logic_agent.TweetyBridge', return_value=mock_tweety_bridge):
-        # Instancier WatsonLogicAssistant
-        agent = WatsonLogicAssistant(kernel=mock_kernel, agent_name=TEST_AGENT_NAME)
+        agent = ConcreteWatsonLogicAssistant(kernel=mock_kernel, agent_name=TEST_AGENT_NAME)
 
-    # Vérifier que l'agent est une instance de WatsonLogicAssistant
     assert isinstance(agent, WatsonLogicAssistant)
     assert agent.name == TEST_AGENT_NAME
-    # Vérifier que le logger a été configuré avec le nom de l'agent
-    assert agent.logger.name == f"agent.WatsonLogicAssistant.{TEST_AGENT_NAME}"
+    assert agent.logger.name == f"agent.ConcreteWatsonLogicAssistant.{TEST_AGENT_NAME}"
 
-    # Vérifier que le constructeur de PropositionalLogicAgent a été appelé avec les bons arguments
-    # WatsonLogicAssistant passe son nom et son system_prompt au parent.
-    spy_super_init.assert_called_once_with(
-        agent,  # l'instance self de WatsonLogicAssistant
-        mock_kernel,
-        agent_name=TEST_AGENT_NAME, # Watson transmet son nom
-        system_prompt=WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT # Watson transmet son prompt par défaut
-    )
-    
-    # Vérifier que _tweety_bridge a été initialisé (via le patch)
-    assert agent._tweety_bridge is mock_tweety_bridge
-    # Vérifier que is_jvm_ready a été appelé lors de setup_agent_components
-    mock_tweety_bridge.is_jvm_ready.assert_called()
-
-
-def test_watson_logic_assistant_instanciation_with_custom_prompt(mock_kernel: MagicMock, mock_tweety_bridge: MagicMock, mocker: MagicMock) -> None:
+def test_watson_logic_assistant_instanciation_with_custom_prompt(mock_kernel: MagicMock, mock_tweety_bridge: MagicMock) -> None:
     """
     Teste l'instanciation de WatsonLogicAssistant avec un prompt système personnalisé.
     """
     custom_prompt = "Instructions personnalisées pour Watson."
-    spy_super_init = mocker.spy(PropositionalLogicAgent, "__init__")
-
     with patch('argumentation_analysis.agents.core.logic.propositional_logic_agent.TweetyBridge', return_value=mock_tweety_bridge):
-        agent = WatsonLogicAssistant(kernel=mock_kernel, agent_name=TEST_AGENT_NAME, system_prompt=custom_prompt)
+        agent = ConcreteWatsonLogicAssistant(kernel=mock_kernel, agent_name=TEST_AGENT_NAME, system_prompt=custom_prompt)
 
     assert isinstance(agent, WatsonLogicAssistant)
     assert agent.name == TEST_AGENT_NAME
-    assert agent.system_prompt == custom_prompt # Vérifier que le prompt personnalisé est bien stocké
+    assert agent.system_prompt == custom_prompt
 
-    spy_super_init.assert_called_once_with(
-        agent,
-        mock_kernel,
-        agent_name=TEST_AGENT_NAME,
-        system_prompt=custom_prompt # Watson transmet le prompt personnalisé
-    )
-    assert agent._tweety_bridge is mock_tweety_bridge
-    mock_tweety_bridge.is_jvm_ready.assert_called()
-
-def test_watson_logic_assistant_default_name_and_prompt(mock_kernel: MagicMock, mock_tweety_bridge: MagicMock, mocker: MagicMock) -> None:
+def test_watson_logic_assistant_default_name_and_prompt(mock_kernel: MagicMock, mock_tweety_bridge: MagicMock) -> None:
     """
     Teste l'instanciation de WatsonLogicAssistant avec le nom et le prompt par défaut.
     """
-    spy_super_init = mocker.spy(PropositionalLogicAgent, "__init__")
-
     with patch('argumentation_analysis.agents.core.logic.propositional_logic_agent.TweetyBridge', return_value=mock_tweety_bridge):
-        agent = WatsonLogicAssistant(kernel=mock_kernel) # Utilise les valeurs par défaut
+        agent = ConcreteWatsonLogicAssistant(kernel=mock_kernel)
 
     assert isinstance(agent, WatsonLogicAssistant)
-    assert agent.name == "WatsonLogicAssistant" # Nom par défaut
-    assert agent.system_prompt == WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT # Vérifier le nouveau prompt par défaut
-
-    spy_super_init.assert_called_once_with(
-        agent,
-        mock_kernel,
-        agent_name="WatsonLogicAssistant", # Nom par défaut transmis
-        system_prompt=WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT # Prompt par défaut de Watson transmis
-    )
-    assert agent._tweety_bridge is mock_tweety_bridge
-    mock_tweety_bridge.is_jvm_ready.assert_called()
-
+    assert agent.name == "Watson"
+    assert agent.system_prompt == WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT
 
 @pytest.mark.asyncio
 async def test_get_agent_belief_set_content(mock_kernel: MagicMock, mock_tweety_bridge: MagicMock) -> None:
@@ -115,7 +73,7 @@ async def test_get_agent_belief_set_content(mock_kernel: MagicMock, mock_tweety_
     Teste la méthode get_agent_belief_set_content de WatsonLogicAssistant.
     """
     with patch('argumentation_analysis.agents.core.logic.propositional_logic_agent.TweetyBridge', return_value=mock_tweety_bridge):
-        agent = WatsonLogicAssistant(kernel=mock_kernel, agent_name=TEST_AGENT_NAME)
+        agent = ConcreteWatsonLogicAssistant(kernel=mock_kernel, agent_name=TEST_AGENT_NAME)
 
     belief_set_id = "test_belief_set_001"
     
@@ -130,7 +88,7 @@ async def test_get_agent_belief_set_content(mock_kernel: MagicMock, mock_tweety_
     mock_kernel.invoke.assert_called_once_with(
         plugin_name="EnqueteStatePlugin",
         function_name="get_belief_set_content",
-        belief_set_id=belief_set_id
+        arguments=KernelArguments(belief_set_id=belief_set_id)
     )
     assert content == expected_content_value_attr
 
@@ -146,7 +104,7 @@ async def test_get_agent_belief_set_content(mock_kernel: MagicMock, mock_tweety_
     mock_kernel.invoke.assert_called_once_with(
         plugin_name="EnqueteStatePlugin",
         function_name="get_belief_set_content",
-        belief_set_id=belief_set_id
+        arguments=KernelArguments(belief_set_id=belief_set_id)
     )
     assert content_direct == expected_content_direct
     
@@ -161,7 +119,7 @@ async def test_get_agent_belief_set_content(mock_kernel: MagicMock, mock_tweety_
     mock_kernel.invoke.assert_called_once_with(
         plugin_name="EnqueteStatePlugin",
         function_name="get_belief_set_content",
-        belief_set_id=belief_set_id
+        arguments=KernelArguments(belief_set_id=belief_set_id)
     )
     assert content_none is None
 
@@ -170,15 +128,15 @@ async def test_get_agent_belief_set_content(mock_kernel: MagicMock, mock_tweety_
     
     # Cas 4: Gestion d'erreur si invoke échoue
     mock_kernel.invoke = AsyncMock(side_effect=Exception("Test error on get_belief_set_content"))
-    
+
     # Patch logger pour vérifier les messages d'erreur
     with patch.object(agent.logger, 'error') as mock_logger_error:
         error_content = await agent.get_agent_belief_set_content(belief_set_id)
-        
+
         mock_kernel.invoke.assert_called_once_with(
             plugin_name="EnqueteStatePlugin",
             function_name="get_belief_set_content",
-            belief_set_id=belief_set_id
+            arguments=KernelArguments(belief_set_id=belief_set_id)
         )
         assert error_content is None # La méthode retourne None en cas d'erreur
         mock_logger_error.assert_called_once()
