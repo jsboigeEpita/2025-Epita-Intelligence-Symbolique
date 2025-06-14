@@ -51,7 +51,7 @@ configure_utf8()
 # Configuration du projet
 PROJECT_ROOT = Path(__file__).parent.parent.parent.absolute()
 CONDA_ENV_NAME = "projet-is"
-ORCHESTRATOR_PATH = "scripts.webapp.unified_web_orchestrator"
+ORCHESTRATOR_PATH = "project_core.webapp_from_scripts.unified_web_orchestrator"
 
 class Colors:
     """Couleurs pour l'affichage terminal"""
@@ -258,7 +258,7 @@ def fallback_direct_launch(args: argparse.Namespace, logger: logging.Logger) -> 
         sys.path.insert(0, str(PROJECT_ROOT))
         
         # Import et lancement direct
-        from scripts.webapp.unified_web_orchestrator import main as orchestrator_main
+        from project_core.webapp_from_scripts.unified_web_orchestrator import main as orchestrator_main
         
         # Simulation des arguments sys.argv pour l'orchestrateur
         original_argv = sys.argv.copy()

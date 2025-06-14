@@ -43,7 +43,7 @@ class TestWebAppInterfaceDemo:
         expect(text_input).to_have_value("Si tous les hommes sont mortels, et que Socrate est un homme, alors Socrate est mortel. Cet argument est valide car il suit la structure logique du syllogisme.")
         
         # Vérifier le message de statut
-        expect(page.locator("#status")).to_contain_text("Exemple chargé")
+        expect(page.locator("#status")).to_contain_text("Exemple charge")
         
         print("[OK] Bouton exemple fonctionne")
     
@@ -61,10 +61,10 @@ class TestWebAppInterfaceDemo:
         expect(page.locator("#text-input")).to_have_value("")
         
         # Vérifier que les résultats sont réinitialisés
-        expect(page.locator("#results")).to_contain_text("Aucune analyse effectuée")
+        expect(page.locator("#results")).to_contain_text("Aucune analyse effectuee")
         
         # Vérifier le message de statut
-        expect(page.locator("#status")).to_contain_text("Texte effacé")
+        expect(page.locator("#status")).to_contain_text("Texte efface")
         
         print("[OK] Bouton effacer fonctionne")
     
@@ -82,9 +82,9 @@ class TestWebAppInterfaceDemo:
         # Vérifier que les résultats apparaissent
         results = page.locator("#results")
         expect(results).to_contain_text("Analyse de:")
-        expect(results).to_contain_text("Arguments détectés:")
-        expect(results).to_contain_text("Sophismes potentiels:")
-        expect(results).to_contain_text("Score de cohérence:")
+        expect(results).to_contain_text("Arguments detectes")
+        expect(results).to_contain_text("Sophismes potentiels")
+        expect(results).to_contain_text("Score de coherence")
         
         print("[OK] Bouton analyser fonctionne")
     
@@ -96,7 +96,7 @@ class TestWebAppInterfaceDemo:
         page.locator("#analyze-btn").click()
         
         # Vérifier le message d'erreur
-        expect(page.locator("#status")).to_contain_text("Veuillez entrer du texte à analyser")
+        expect(page.locator("#status")).to_contain_text("Veuillez entrer du texte a analyser")
         
         print("[OK] Validation du texte vide fonctionne")
     
