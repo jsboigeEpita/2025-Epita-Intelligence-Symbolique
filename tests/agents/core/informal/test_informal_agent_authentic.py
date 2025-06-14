@@ -460,7 +460,10 @@ class TestInformalAnalysisAgentAuthentic:
         
         print(f"[AUTHENTIC] Performance: {total_analyses} analyses en {execution_time:.2f}s")
         print(f"[AUTHENTIC] Total sophismes détectés: {total_fallacies}")
-        print(f"[AUTHENTIC] Vitesse: {total_analyses/execution_time:.1f} analyses/seconde")
+        if execution_time > 0:
+            print(f"[AUTHENTIC] Vitesse: {total_analyses/execution_time:.1f} analyses/seconde")
+        else:
+            print("[AUTHENTIC] Vitesse: Exécution trop rapide pour mesurer.")
         
         # Performance attendue : traitement rapide local
         assert execution_time < 2.0  # Moins de 2 secondes pour traitement local
