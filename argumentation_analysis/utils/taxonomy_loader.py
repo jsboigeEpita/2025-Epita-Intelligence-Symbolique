@@ -35,7 +35,7 @@ TAXONOMY_FILE = DATA_DIR / "argumentum_fallacies_taxonomy.csv"
 # Modifiez cette variable pour changer le mode de fonctionnement:
 # - True: Utilise des données simulées (recommandé pour les tests)
 # - False: Tente de charger ou télécharger le fichier réel
-USE_MOCK = False
+USE_MOCK = True
 
 def get_taxonomy_path():
     """

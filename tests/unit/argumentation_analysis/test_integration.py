@@ -38,6 +38,22 @@ def basic_state():
     return RhetoricalAnalysisState(test_text)
 
 
+@pytest.fixture
+def mock_agent_class(mocker):
+    """Fixture pour mocker la classe de l'agent."""
+    return mocker.patch('argumentation_analysis.agents.core.logic.fol_logic_agent.ChatCompletionAgent')
+
+@pytest.fixture
+def mock_kernel_class(mocker):
+    """Fixture pour mocker la classe du kernel."""
+    return mocker.patch('semantic_kernel.Kernel')
+
+@pytest.fixture
+def mock_run_analysis(mocker):
+    """Fixture pour mocker la fonction run_analysis."""
+    return mocker.patch('argumentation_analysis.orchestration.analysis_runner.run_analysis')
+
+
 class TestBasicIntegration:
     async def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""

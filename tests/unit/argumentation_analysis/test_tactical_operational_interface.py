@@ -11,6 +11,7 @@ Tests pour l'interface entre les niveaux tactique et opérationnel.
 """
 
 import unittest
+from unittest.mock import MagicMock
 
 import json
 from datetime import datetime

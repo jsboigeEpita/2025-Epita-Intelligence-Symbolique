@@ -192,7 +192,7 @@ class TestUnifiedOrchestrationPipeline:
         assert pipeline.orchestration_trace == []
     
     @pytest.mark.asyncio
-    async def test_pipeline_initialization_async_success(self, basic_config, jvm_session_manager):
+    async def test_pipeline_initialization_async_success(self, basic_config, integration_jvm):
         """Test de l'initialisation asynchrone réussie avec de vrais composants."""
         pipeline = UnifiedOrchestrationPipeline(basic_config)
         
@@ -206,7 +206,7 @@ class TestUnifiedOrchestrationPipeline:
         assert pipeline.llm_service is not None # Doit être initialisé
     
     @pytest.mark.asyncio
-    async def test_pipeline_initialization_with_hierarchical(self, hierarchical_config, jvm_session_manager):
+    async def test_pipeline_initialization_with_hierarchical(self, hierarchical_config, integration_jvm):
         """Test de l'initialisation avec architecture hiérarchique réelle."""
         pipeline = UnifiedOrchestrationPipeline(hierarchical_config)
         
@@ -231,7 +231,7 @@ class TestUnifiedOrchestrationPipeline:
             assert isinstance(pipeline.middleware, MessageMiddleware)
     
     @pytest.mark.asyncio
-    async def test_pipeline_initialization_with_specialized(self, specialized_config, jvm_session_manager):
+    async def test_pipeline_initialization_with_specialized(self, specialized_config, integration_jvm):
         """Test de l'initialisation avec orchestrateurs spécialisés réels."""
         pipeline = UnifiedOrchestrationPipeline(specialized_config)
         
@@ -258,7 +258,7 @@ class TestUnifiedOrchestrationPipeline:
     
     @pytest.mark.asyncio
     @pytest.mark.slow  # Marquer comme test lent car il fait un vrai appel LLM
-    async def test_analyze_text_orchestrated_basic_real(self, basic_config, sample_texts, jvm_session_manager):
+    async def test_analyze_text_orchestrated_basic_real(self, basic_config, sample_texts, integration_jvm):
         """Test de l'analyse orchestrée de base avec un vrai LLM."""
         pipeline = UnifiedOrchestrationPipeline(basic_config)
         

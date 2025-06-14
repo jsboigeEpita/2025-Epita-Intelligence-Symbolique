@@ -7,6 +7,7 @@ from semantic_kernel.core_plugins import ConversationSummaryPlugin
 from config.unified_config import UnifiedConfig
 
 import pytest
+from unittest.mock import MagicMock
 from argumentation_analysis.models.extract_definition import (
     ExtractDefinitions, SourceDefinition, Extract
 )

@@ -21,6 +21,7 @@ import logging
 import json
 import os
 import sys
+from unittest.mock import MagicMock, patch
 from pathlib import Path
 import semantic_kernel as sk
 
@@ -128,176 +129,182 @@ class TestOperationalAgentsIntegration:
     
     
     @pytest.mark.asyncio
-    async def test_extract_agent_task_processing(self, mock_process_task, operational_components):
+    async def test_extract_agent_task_processing(self, operational_components):
         """Teste le traitement d'une tâche par l'agent d'extraction."""
         tactical_state, _, _, manager, sample_text = operational_components
-        # Configurer le mock
-        mock_result = {
-            "id": "result-task-extract-1",
-            "task_id": "op-task-extract-1",
-            "tactical_task_id": "task-extract-1",
-            "status": "completed",
-            "outputs": {
-                "extracted_segments": [
-                    {
-                        "extract_id": "extract-1",
-                        "source": "sample_text",
-                        "start_marker": "La vaccination",
-                        "end_marker": "raisons médicales.",
-                        "extracted_text": sample_text.strip(),
-                        "confidence": 0.9
-                    }
-                ]
-            },
-            "metrics": {
-                "execution_time": 1.5,
-                "confidence": 0.9,
-                "coverage": 1.0,
-                "resource_usage": 0.5
-            },
-            "issues": []
-        }
-        mock_process_task# Mock eliminated - using authentic gpt-4o-mini mock_result
         
-        # Créer une tâche tactique pour l'extraction
-        tactical_task = {
-            "id": "task-extract-1",
-            "description": "Extraire les segments de texte contenant des arguments potentiels",
-            "objective_id": "obj-1",
-            "estimated_duration": "short",
-            "required_capabilities": ["text_extraction"],
-            "priority": "high"
-        }
-        
-        # Ajouter la tâche à l'état tactique
-        tactical_state.add_task(tactical_task)
-        
-        # Traiter la tâche
-        result = await manager.process_tactical_task(tactical_task)
-        
-        # Vérifier que le mock a été appelé
-        assert mock_process_task.called is True
-        
-        # Vérifier le résultat
-        assert result["task_id"] == "task-extract-1"
-        assert result["completion_status"] == "completed"
-        assert RESULTS_DIR in result
-        assert "execution_metrics" in result
+        with patch("argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter.ExtractAgentAdapter.process_task") as mock_process_task:
+            # Configurer le mock
+            mock_result = {
+                "id": "result-task-extract-1",
+                "task_id": "op-task-extract-1",
+                "tactical_task_id": "task-extract-1",
+                "status": "completed",
+                "outputs": {
+                    "extracted_segments": [
+                        {
+                            "extract_id": "extract-1",
+                            "source": "sample_text",
+                            "start_marker": "La vaccination",
+                            "end_marker": "raisons médicales.",
+                            "extracted_text": sample_text.strip(),
+                            "confidence": 0.9
+                        }
+                    ]
+                },
+                "metrics": {
+                    "execution_time": 1.5,
+                    "confidence": 0.9,
+                    "coverage": 1.0,
+                    "resource_usage": 0.5
+                },
+                "issues": []
+            }
+            mock_process_task.return_value = mock_result
+            
+            # Créer une tâche tactique pour l'extraction
+            tactical_task = {
+                "id": "task-extract-1",
+                "description": "Extraire les segments de texte contenant des arguments potentiels",
+                "objective_id": "obj-1",
+                "estimated_duration": "short",
+                "required_capabilities": ["text_extraction"],
+                "priority": "high"
+            }
+            
+            # Ajouter la tâche à l'état tactique
+            tactical_state.add_task(tactical_task)
+            
+            # Traiter la tâche
+            result = await manager.process_tactical_task(tactical_task)
+            
+            # Vérifier que le mock a été appelé
+            mock_process_task.assert_called_once()
+            
+            # Vérifier le résultat
+            assert result["task_id"] == "task-extract-1"
+            assert result["completion_status"] == "completed"
+            assert result["results_path"].startswith(str(RESULTS_DIR))
+            assert "execution_metrics" in result
     
     
-    async def test_informal_agent_task_processing(self, mock_process_task, operational_components):
+    async def test_informal_agent_task_processing(self, operational_components):
         """Teste le traitement d'une tâche par l'agent informel."""
         tactical_state, _, _, manager, _ = operational_components
-        # Configurer le mock
-        mock_result = {
-            "id": "result-task-informal-1",
-            "task_id": "op-task-informal-1",
-            "tactical_task_id": "task-informal-1",
-            "status": "completed",
-            "outputs": {
-                "identified_arguments": [
-                    {
-                        "extract_id": "extract-1",
-                        "source": "sample_text",
-                        "premises": [
-                            "Les vaccins ont été prouvés sûrs par de nombreuses études scientifiques",
-                            "La vaccination de masse crée une immunité collective qui protège les personnes vulnérables"
-                        ],
-                        "conclusion": "La vaccination devrait être obligatoire pour tous les enfants",
-                        "confidence": 0.8
-                    }
-                ]
-            },
-            "metrics": {
-                "execution_time": 2.0,
-                "confidence": 0.8,
-                "coverage": 1.0,
-                "resource_usage": 0.6
-            },
-            "issues": []
-        }
-        mock_process_task# Mock eliminated - using authentic gpt-4o-mini mock_result
         
-        # Créer une tâche tactique pour l'analyse informelle
-        tactical_task = {
-            "id": "task-informal-1",
-            "description": "Identifier les arguments et analyser les sophismes",
-            "objective_id": "obj-1",
-            "estimated_duration": "medium",
-            "required_capabilities": ["argument_identification", "fallacy_detection"],
-            "priority": "high"
-        }
-        
-        # Ajouter la tâche à l'état tactique
-        tactical_state.add_task(tactical_task)
-        
-        # Traiter la tâche
-        result = await manager.process_tactical_task(tactical_task)
-        
-        # Vérifier que le mock a été appelé
-        assert mock_process_task.called is True
-        
-        # Vérifier le résultat
-        assert result["task_id"] == "task-informal-1"
-        assert result["completion_status"] == "completed"
-        assert RESULTS_DIR in result
-        assert "execution_metrics" in result
+        with patch("argumentation_analysis.orchestration.hierarchical.operational.adapters.informal_agent_adapter.InformalAgentAdapter.process_task") as mock_process_task:
+            # Configurer le mock
+            mock_result = {
+                "id": "result-task-informal-1",
+                "task_id": "op-task-informal-1",
+                "tactical_task_id": "task-informal-1",
+                "status": "completed",
+                "outputs": {
+                    "identified_arguments": [
+                        {
+                            "extract_id": "extract-1",
+                            "source": "sample_text",
+                            "premises": [
+                                "Les vaccins ont été prouvés sûrs par de nombreuses études scientifiques",
+                                "La vaccination de masse crée une immunité collective qui protège les personnes vulnérables"
+                            ],
+                            "conclusion": "La vaccination devrait être obligatoire pour tous les enfants",
+                            "confidence": 0.8
+                        }
+                    ]
+                },
+                "metrics": {
+                    "execution_time": 2.0,
+                    "confidence": 0.8,
+                    "coverage": 1.0,
+                    "resource_usage": 0.6
+                },
+                "issues": []
+            }
+            mock_process_task.return_value = mock_result
+            
+            # Créer une tâche tactique pour l'analyse informelle
+            tactical_task = {
+                "id": "task-informal-1",
+                "description": "Identifier les arguments et analyser les sophismes",
+                "objective_id": "obj-1",
+                "estimated_duration": "medium",
+                "required_capabilities": ["argument_identification", "fallacy_detection"],
+                "priority": "high"
+            }
+            
+            # Ajouter la tâche à l'état tactique
+            tactical_state.add_task(tactical_task)
+            
+            # Traiter la tâche
+            result = await manager.process_tactical_task(tactical_task)
+            
+            # Vérifier que le mock a été appelé
+            mock_process_task.assert_called_once()
+            
+            # Vérifier le résultat
+            assert result["task_id"] == "task-informal-1"
+            assert result["completion_status"] == "completed"
+            assert result["results_path"].startswith(str(RESULTS_DIR))
+            assert "execution_metrics" in result
     
     
-    async def test_pl_agent_task_processing(self, mock_process_task, operational_components):
+    async def test_pl_agent_task_processing(self, operational_components):
         """Teste le traitement d'une tâche par l'agent de logique propositionnelle."""
         tactical_state, _, _, manager, _ = operational_components
-        # Configurer le mock
-        mock_result = {
-            "id": "result-task-pl-1",
-            "task_id": "op-task-pl-1",
-            "tactical_task_id": "task-pl-1",
-            "status": "completed",
-            "outputs": {
-                "formal_analyses": [
-                    {
-                        "extract_id": "extract-1",
-                        "source": "sample_text",
-                        "belief_set": "vaccines_safe\nvaccination_creates_herd_immunity\nherd_immunity_protects_vulnerable\nvaccines_safe && vaccination_creates_herd_immunity && herd_immunity_protects_vulnerable => vaccination_mandatory",
-                        "formalism": "propositional_logic",
-                        "confidence": 0.8
-                    }
-                ]
-            },
-            "metrics": {
-                "execution_time": 2.5,
-                "confidence": 0.8,
-                "coverage": 1.0,
-                "resource_usage": 0.7
-            },
-            "issues": []
-        }
-        mock_process_task# Mock eliminated - using authentic gpt-4o-mini mock_result
         
-        # Créer une tâche tactique pour l'analyse formelle
-        tactical_task = {
-            "id": "task-pl-1",
-            "description": "Formaliser les arguments en logique propositionnelle et vérifier leur validité",
-            "objective_id": "obj-1",
-            "estimated_duration": "medium",
-            "required_capabilities": ["formal_logic", "validity_checking"],
-            "priority": "high"
-        }
-        
-        # Ajouter la tâche à l'état tactique
-        tactical_state.add_task(tactical_task)
-        
-        # Traiter la tâche
-        result = await manager.process_tactical_task(tactical_task)
-        
-        # Vérifier que le mock a été appelé
-        assert mock_process_task.called is True
-        
-        # Vérifier le résultat
-        assert result["task_id"] == "task-pl-1"
-        assert result["completion_status"] == "completed"
-        assert RESULTS_DIR in result
-        assert "execution_metrics" in result
+        with patch("argumentation_analysis.orchestration.hierarchical.operational.adapters.pl_agent_adapter.PLAgentAdapter.process_task") as mock_process_task:
+            # Configurer le mock
+            mock_result = {
+                "id": "result-task-pl-1",
+                "task_id": "op-task-pl-1",
+                "tactical_task_id": "task-pl-1",
+                "status": "completed",
+                "outputs": {
+                    "formal_analyses": [
+                        {
+                            "extract_id": "extract-1",
+                            "source": "sample_text",
+                            "belief_set": "vaccines_safe\nvaccination_creates_herd_immunity\nherd_immunity_protects_vulnerable\nvaccines_safe && vaccination_creates_herd_immunity && herd_immunity_protects_vulnerable => vaccination_mandatory",
+                            "formalism": "propositional_logic",
+                            "confidence": 0.8
+                        }
+                    ]
+                },
+                "metrics": {
+                    "execution_time": 2.5,
+                    "confidence": 0.8,
+                    "coverage": 1.0,
+                    "resource_usage": 0.7
+                },
+                "issues": []
+            }
+            mock_process_task.return_value = mock_result
+            
+            # Créer une tâche tactique pour l'analyse formelle
+            tactical_task = {
+                "id": "task-pl-1",
+                "description": "Formaliser les arguments en logique propositionnelle et vérifier leur validité",
+                "objective_id": "obj-1",
+                "estimated_duration": "medium",
+                "required_capabilities": ["formal_logic", "validity_checking"],
+                "priority": "high"
+            }
+            
+            # Ajouter la tâche à l'état tactique
+            tactical_state.add_task(tactical_task)
+            
+            # Traiter la tâche
+            result = await manager.process_tactical_task(tactical_task)
+            
+            # Vérifier que le mock a été appelé
+            mock_process_task.assert_called_once()
+            
+            # Vérifier le résultat
+            assert result["task_id"] == "task-pl-1"
+            assert result["completion_status"] == "completed"
+            assert result["results_path"].startswith(str(RESULTS_DIR))
+            assert "execution_metrics" in result
     
     async def test_agent_selection(self, operational_components):
         """Teste la sélection de l'agent approprié pour une tâche."""

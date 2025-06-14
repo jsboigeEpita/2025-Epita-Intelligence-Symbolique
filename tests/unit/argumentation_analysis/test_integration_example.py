@@ -28,7 +28,7 @@ class AuthHelper:
         return config.get_kernel_with_gpt4o_mini()
 
 
-def test_verify_extracts_integration(mock_get, integration_services, tmp_path):
+def test_verify_extracts_integration(mocker, integration_services, tmp_path):
     """Test d'intégration pour la fonction verify_extracts."""
     mock_fetch_service, mock_extract_service, integration_sample_definitions = integration_services
 
@@ -49,6 +49,9 @@ def test_verify_extracts_integration(mock_get, integration_services, tmp_path):
     def raise_for_status():
         pass
     mock_response.raise_for_status = raise_for_status
+    
+    # Utiliser mocker pour patcher requests.get
+    mock_get = mocker.patch('requests.get')
     mock_get.return_value = mock_response
 
     # Configurer le mock pour simuler un échec d'extraction pour le deuxième extrait

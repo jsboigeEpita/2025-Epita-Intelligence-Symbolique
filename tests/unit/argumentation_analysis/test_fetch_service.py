@@ -94,6 +94,22 @@ def sample_source_info():
     }
 
 
+@pytest.fixture
+def mock_get(mocker):
+    """Fixture pour mocker requests.get."""
+    return mocker.patch('requests.get')
+
+@pytest.fixture
+def mock_put(mocker):
+    """Fixture pour mocker requests.put."""
+    return mocker.patch('requests.put')
+
+@pytest.fixture
+def mock_read_bytes(mocker):
+    """Fixture pour mocker Path.read_bytes."""
+    return mocker.patch('pathlib.Path.read_bytes')
+
+
 class MockResponse:
     """Classe pour simuler une réponse HTTP."""
     
@@ -226,7 +242,7 @@ class TestFetchService:
         mock_get.return_value = MockResponse("Markdown Content:" + sample_text)
         
         # Récupérer le texte
-        with patch.object(fetch_service, 'fetch_with_jina', return_value=sample_text) as mock_fetch_jina:
+        with mocker.patch.object(fetch_service, 'fetch_with_jina', return_value=sample_text) as mock_fetch_jina:
             text, message = fetch_service.fetch_text(jina_source_info)
         
         # Vérifier que le texte est récupéré via Jina
@@ -245,7 +261,7 @@ class TestFetchService:
         mock_get.return_value = MockResponse(sample_text)
         
         # Récupérer le texte
-        with patch.object(fetch_service, 'fetch_with_tika', return_value=sample_text) as mock_fetch_tika:
+        with mocker.patch.object(fetch_service, 'fetch_with_tika', return_value=sample_text) as mock_fetch_tika:
             text, message = fetch_service.fetch_text(tika_source_info)
         
         # Vérifier que le texte est récupéré via Tika
@@ -264,7 +280,7 @@ class TestFetchService:
         mock_get.return_value = MockResponse(sample_text)
         
         # Récupérer le texte
-        with patch.object(fetch_service, 'fetch_direct_text', return_value=sample_text) as mock_fetch_direct:
+        with mocker.patch.object(fetch_service, 'fetch_direct_text', return_value=sample_text) as mock_fetch_direct:
             text, message = fetch_service.fetch_text(tika_source_info)
         
         # Vérifier que le texte est récupéré directement
@@ -396,14 +412,14 @@ class TestFetchService:
         cached_text = fetch_service.cache_service.load_from_cache(sample_url)
         assert cached_text == sample_text
 
-    def test_fetch_with_tika_file_content(self, fetch_service, sample_text):
+    def test_fetch_with_tika_file_content(self, mocker, fetch_service, sample_text):
         """Test de récupération de texte via Tika avec un contenu de fichier."""
         # Contenu du fichier
         file_content = b"binary content"
         file_name = "test.pdf"
         
         # Simuler une réponse HTTP pour Tika
-        with patch('requests.put', return_value=MockResponse(sample_text)) as mock_put:
+        with mocker.patch('requests.put', return_value=MockResponse(sample_text)) as mock_put:
             # Récupérer le texte
             text = fetch_service.fetch_with_tika(
                 file_content=file_content,

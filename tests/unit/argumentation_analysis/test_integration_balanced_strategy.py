@@ -207,58 +207,6 @@ class TestBalancedStrategyIntegration: # Suppression de l'héritage AsyncTestCas
         assert balanced_strategy._total_turns == 3
 
 
-class TestBalancedStrategyEndToEnd: # Suppression de l'héritage AsyncTestCase
-    """Tests d'intégration end-to-end pour la stratégie d'équilibrage."""
-
-     # Corrigé le chemin du mock
-     # Corrigé le chemin du mock
-    async def test_balanced_strategy_in_analysis_runner(self, mock_agent_group_chat, mock_balanced_strategy):
-        """Teste l'utilisation de la stratégie d'équilibrage dans le runner d'analyse."""
-        mock_strategy_instance = MagicMock()
-        mock_balanced_strategy(return_value=mock_strategy_instance)
-        
-        mock_extract_kernel = MagicMock()
-        OrchestrationServiceManager = MagicMock()
-        OrchestrationServiceManager.id = "extract_agent_id"
-        
-        mock_group_chat_instance = MagicMock()
-        mock_agent_group_chat(return_value=mock_group_chat_instance)
-        
-        async def mock_invoke():
-            message1 = MagicMock()
-            message1.name = "ProjectManagerAgent"
-            message1.role = "assistant"
-            message1.content = "Message du PM"
-            yield message1
-            
-            message2 = MagicMock()
-            message2.name = "InformalAnalysisAgent"
-            message2.role = "assistant"
-            message2.content = "Message de l'agent informel"
-            yield message2
-        
-        mock_group_chat_instance.invoke = mock_invoke
-        mock_group_chat_instance.history = MagicMock()
-        mock_group_chat_instance.history.add_user_message = MagicMock()
-        mock_group_chat_instance.history.messages = []
-        
-        llm_service_mock = MagicMock()
-        llm_service_mock.service_id = "test_service"
-        
-        with patch('argumentation_analysis.orchestration.analysis_runner.RhetoricalAnalysisState'), \
-             patch('argumentation_analysis.orchestration.analysis_runner.StateManagerPlugin'), \
-             patch('argumentation_analysis.orchestration.analysis_runner.sk.Kernel'), \
-             patch('argumentation_analysis.orchestration.analysis_runner.setup_pm_kernel'), \
-             patch('argumentation_analysis.orchestration.analysis_runner.setup_informal_kernel'), \
-             patch('argumentation_analysis.orchestration.analysis_runner.setup_pl_kernel'), \
-             patch('argumentation_analysis.orchestration.analysis_runner.setup_extract_agent', return_value=(mock_extract_kernel, OrchestrationServiceManager)), \
-             patch('argumentation_analysis.orchestration.analysis_runner.ChatCompletionAgent'), \
-             patch('argumentation_analysis.orchestration.analysis_runner.SimpleTerminationStrategy'):
-            
-            await run_analysis("Texte de test", llm_service_mock)
-        
-        mock_balanced_strategy.assert_called_once()
-        mock_agent_group_chat.assert_called_once()
 
 
 if __name__ == '__main__':

@@ -16,6 +16,7 @@ Tests pour l'agent de logique du premier ordre et son intégration avec Tweety F
 import pytest
 import sys
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
 
 from typing import Dict, Any, List
 
@@ -50,6 +51,12 @@ except ImportError:
             
         def add_belief(self, belief: str):
             self.beliefs.append(belief)
+
+
+@pytest.fixture
+def mock_solver():
+    """Fixture pour mocker le solveur Tweety (TweetyBridge)."""
+    return MagicMock()
 
 
 class TestFirstOrderLogicAgent:

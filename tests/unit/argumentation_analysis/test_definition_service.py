@@ -119,6 +119,14 @@ def sample_definitions_dict():
     ]
 
 
+@pytest.fixture
+def mock_json_load(mocker):
+    """Fixture pour simuler une erreur lors du chargement JSON."""
+    return mocker.patch(
+        'json.load',
+        side_effect=json.JSONDecodeError("Erreur JSON de test", "", 0)
+    )
+
 class TestDefinitionService:
     async def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
@@ -215,7 +223,7 @@ class TestDefinitionService:
         definition_service.config_file.touch()
         
         # Simuler une erreur JSON
-        mock_json_load# Mock eliminated - using authentic gpt-4o-mini json.JSONDecodeError("Erreur JSON", "", 0)
+        # La fixture mock_json_load est maintenant utilisée.
         
         # Charger les définitions
         definitions, error_message = definition_service.load_definitions()
@@ -280,14 +288,14 @@ class TestDefinitionService:
         assert isinstance(content, bytes)
 
     
-    def test_save_definitions_directory_error(self, mock_mkdir, definition_service, sample_definitions):
+    def test_save_definitions_directory_error(self, mocker, definition_service, sample_definitions):
         """Test de sauvegarde de définitions avec une erreur de création de répertoire."""
         # Simuler une erreur de création de répertoire
-        mock_mkdir# Mock eliminated - using authentic gpt-4o-mini Exception("Erreur de création de répertoire")
-        
+        mocker.patch('pathlib.Path.mkdir', side_effect=OSError("Erreur de création de répertoire de test"))
+
         # Sauvegarder les définitions
         success, error_message = definition_service.save_definitions(sample_definitions)
-        
+
         # Vérifier que la sauvegarde a échoué
         assert success is False
         assert error_message is not None
@@ -340,12 +348,12 @@ class TestDefinitionService:
         assert content[0]["source_name"] == "Test Source"
 
     
-    def test_export_definitions_error(self, mock_mkdir, definition_service, sample_definitions, tmp_path):
+    def test_export_definitions_error(self, mocker, definition_service, sample_definitions, tmp_path):
         """Test d'exportation de définitions avec une erreur."""
         output_path = tmp_path / "export.json"
         
         # Simuler une erreur de création de répertoire
-        mock_mkdir# Mock eliminated - using authentic gpt-4o-mini Exception("Erreur d'exportation")
+        mocker.patch('pathlib.Path.mkdir', side_effect=OSError("Erreur de création de répertoire de test"))
         
         # Exporter les définitions
         success, message = definition_service.export_definitions_to_json(sample_definitions, output_path)
