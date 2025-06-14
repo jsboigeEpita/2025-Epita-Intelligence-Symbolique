@@ -232,7 +232,7 @@ class TestFetchService:
         mock_get.assert_not_called()
 
     
-    def test_fetch_text_jina(self, mock_get, fetch_service, sample_source_info, sample_text):
+    def test_fetch_text_jina(self, mocker, mock_get, fetch_service, sample_source_info, sample_text):
         """Test de récupération de texte via Jina."""
         # Modifier le type de source
         jina_source_info = sample_source_info.copy()
@@ -242,15 +242,15 @@ class TestFetchService:
         mock_get.return_value = MockResponse("Markdown Content:" + sample_text)
         
         # Récupérer le texte
-        with mocker.patch.object(fetch_service, 'fetch_with_jina', return_value=sample_text) as mock_fetch_jina:
-            text, message = fetch_service.fetch_text(jina_source_info)
+        mock_fetch_jina = mocker.patch.object(fetch_service, 'fetch_with_jina', return_value=sample_text)
+        text, message = fetch_service.fetch_text(jina_source_info)
         
         # Vérifier que le texte est récupéré via Jina
         assert text == sample_text
         mock_fetch_jina.assert_called_once_with(fetch_service.reconstruct_url(jina_source_info['schema'], jina_source_info['host_parts'], jina_source_info['path']))
 
     
-    def test_fetch_text_tika(self, mock_get, fetch_service, sample_source_info, sample_text):
+    def test_fetch_text_tika(self, mocker, mock_get, fetch_service, sample_source_info, sample_text):
         """Test de récupération de texte via Tika."""
         # Modifier le type de source
         tika_source_info = sample_source_info.copy()
@@ -261,15 +261,15 @@ class TestFetchService:
         mock_get.return_value = MockResponse(sample_text)
         
         # Récupérer le texte
-        with mocker.patch.object(fetch_service, 'fetch_with_tika', return_value=sample_text) as mock_fetch_tika:
-            text, message = fetch_service.fetch_text(tika_source_info)
+        mock_fetch_tika = mocker.patch.object(fetch_service, 'fetch_with_tika', return_value=sample_text)
+        text, message = fetch_service.fetch_text(tika_source_info)
         
         # Vérifier que le texte est récupéré via Tika
         assert text == sample_text
-        mock_fetch_tika.assert_called_once_with(url=fetch_service.reconstruct_url(tika_source_info['schema'], tika_source_info['host_parts'], tika_source_info['path']))
+        mock_fetch_tika.assert_called_once_with(fetch_service.reconstruct_url(tika_source_info['schema'], tika_source_info['host_parts'], tika_source_info['path']))
 
     
-    def test_fetch_text_tika_plaintext(self, mock_get, fetch_service, sample_source_info, sample_text):
+    def test_fetch_text_tika_plaintext(self, mocker, mock_get, fetch_service, sample_source_info, sample_text):
         """Test de récupération de texte via Tika pour un fichier texte."""
         # Modifier le type de source
         tika_source_info = sample_source_info.copy()
@@ -280,8 +280,8 @@ class TestFetchService:
         mock_get.return_value = MockResponse(sample_text)
         
         # Récupérer le texte
-        with mocker.patch.object(fetch_service, 'fetch_direct_text', return_value=sample_text) as mock_fetch_direct:
-            text, message = fetch_service.fetch_text(tika_source_info)
+        mock_fetch_direct = mocker.patch.object(fetch_service, 'fetch_direct_text', return_value=sample_text)
+        text, message = fetch_service.fetch_text(tika_source_info)
         
         # Vérifier que le texte est récupéré directement
         assert text == sample_text
@@ -403,7 +403,7 @@ class TestFetchService:
         assert text == sample_text
         
         # Vérifier que requests.get a été appelé pour le téléchargement
-        mock_get.assert_called_once_with(sample_url, timeout=30)
+        mock_get.assert_called_once_with(sample_url, stream=True, timeout=60)
         
         # Vérifier que requests.put a été appelé pour Tika
         mock_put.assert_called_once()
@@ -419,12 +419,13 @@ class TestFetchService:
         file_name = "test.pdf"
         
         # Simuler une réponse HTTP pour Tika
-        with mocker.patch('requests.put', return_value=MockResponse(sample_text)) as mock_put:
-            # Récupérer le texte
-            text = fetch_service.fetch_with_tika(
-                file_content=file_content,
-                file_name=file_name
-            )
+        mock_put = mocker.patch('requests.put', return_value=MockResponse(sample_text))
+        
+        # Récupérer le texte
+        text = fetch_service.fetch_with_tika(
+            file_content=file_content,
+            file_name=file_name
+        )
         
         # Vérifier que le texte est récupéré
         assert text == sample_text
@@ -567,4 +568,4 @@ class TestFetchService:
         assert text == sample_text
         
         # Vérifier que requests.get a été appelé pour le téléchargement
-        mock_get.assert_called_once_with(sample_url, timeout=30)
+        mock_get.assert_called_once_with(sample_url, stream=True, timeout=60)
