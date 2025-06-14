@@ -257,7 +257,7 @@ class ModalLogicAgent(BaseLogicAgent):
             retry_settings = PromptExecutionSettings()
         
         # CONFIGURATION CRITIQUE : Activer le retry automatique
-        retry_settings.max_auto_invoke_attempts = 3
+        # retry_settings.max_auto_invoke_attempts = 3 # Obsolète dans la nouvelle version de SK
         
         self.logger.debug(f"Settings de retry configurés avec max_auto_invoke_attempts=3")
         return retry_settings
