@@ -42,7 +42,7 @@ logger = logging.getLogger("WebAPI.LogicRoutes")
 # Ne pas importer logic_service ici pour éviter l'import circulaire.
 # Il sera importé dans chaque fonction de route.
 
-logic_bp = Blueprint('logic_api', __name__, url_prefix='/api/logic')
+logic_bp = Blueprint('logic_api', __name__, url_prefix='/logic')
 
 # La fonction initialize_logic_blueprint n'est plus nécessaire.
 

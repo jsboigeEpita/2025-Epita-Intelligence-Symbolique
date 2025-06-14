@@ -9,7 +9,6 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
   
   // Configuration des ports pour les deux interfaces
   const INTERFACE_REACT_PORT = 3000;
-  const INTERFACE_SIMPLE_PORT = 3001;
   
   test.beforeAll(async () => {
     // Attendre que les interfaces soient disponibles
@@ -23,10 +22,10 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
       await page.goto(`http://localhost:${INTERFACE_REACT_PORT}`);
       
       // Vérifier le titre
-      await expect(page).toHaveTitle(/Argumentation Analysis App/);
+      await expect(page).toHaveTitle("Argumentation Analysis App");
       
       // Vérifier les éléments principaux
-      await expect(page.locator('h1')).toContainText('Analyse Argumentative EPITA');
+      await expect(page.locator('h1')).toContainText("🎯 Interface d'Analyse Argumentative");
       await expect(page.locator('#textInput, textarea')).toBeVisible();
       
       console.log('✅ Interface React accessible et fonctionnelle');
