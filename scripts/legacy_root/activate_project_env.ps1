@@ -3,7 +3,8 @@ param (
     [string]$CommandToRun = $null # Rendre le paramètre explicite dans le wrapper
 )
 
-$realScriptPath = Join-Path $PSScriptRoot "scripts\env\activate_project_env.ps1"
+# Correction: Le script réel est maintenant setup_project_env.ps1 dans le même répertoire
+$realScriptPath = Join-Path $PSScriptRoot "setup_project_env.ps1"
 
 if ($PSBoundParameters.ContainsKey('CommandToRun')) {
     & $realScriptPath -CommandToRun $CommandToRun
