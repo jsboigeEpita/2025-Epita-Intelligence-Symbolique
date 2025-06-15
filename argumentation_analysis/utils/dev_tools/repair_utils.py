@@ -259,7 +259,7 @@ async def run_extract_repair_pipeline(
         
         # extract_service, fetch_service, definition_service sont maintenant disponibles localement
         
-        extract_definitions, error_message = definition_service.load_definitions()
+        extract_definitions, error_message = await definition_service.load_definitions()
         if error_message:
             logger.warning(f"Avertissement lors du chargement des définitions (pipeline): {error_message}")
         
@@ -297,7 +297,7 @@ async def run_extract_repair_pipeline(
         
         if save_changes:
             logger.info("Sauvegarde des modifications (pipeline)...")
-            success, error_msg_save = definition_service.save_definitions(updated_definitions)
+            success, error_msg_save = await definition_service.save_definitions(updated_definitions)
             if success:
                 logger.info("[OK] Modifications sauvegardées avec succès (pipeline).")
             else:
@@ -307,7 +307,7 @@ async def run_extract_repair_pipeline(
             output_json_file = Path(output_json_path_str)
             output_json_file.parent.mkdir(parents=True, exist_ok=True)
             logger.info(f"Exportation des définitions JSON mises à jour vers {output_json_file} (pipeline)...")
-            success_export, msg_export = definition_service.export_definitions_to_json(
+            success_export, msg_export = await definition_service.export_definitions_to_json(
                 updated_definitions, output_json_file
             )
             logger.info(msg_export)

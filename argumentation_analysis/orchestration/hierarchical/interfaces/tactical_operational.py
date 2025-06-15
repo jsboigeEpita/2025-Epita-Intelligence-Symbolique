@@ -742,7 +742,8 @@ class TacticalOperationalInterface:
             "task_id": task_id,
             "tactical_task_id": tactical_task_id,
             "completion_status": result.get("status", "completed"),
-            RESULTS_DIR: self._translate_outputs(outputs),
+            "results": self._translate_outputs(outputs),
+            "results_path": str(RESULTS_DIR / f"{tactical_task_id}_results.json"),
             "execution_metrics": self._translate_metrics(metrics),
             "issues": self._translate_issues(issues)
         }

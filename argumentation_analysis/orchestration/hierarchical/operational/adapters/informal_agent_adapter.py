@@ -80,7 +80,7 @@ class InformalAgentAdapter(OperationalAgent):
             self.logger.info("Initialisation de l'agent informel refactoré...")
             
             self.agent = InformalAnalysisAgent(kernel=self.kernel, agent_name=f"{self.name}_InformalAgent")
-            await self.agent.setup_agent_components(llm_service_id=self.llm_service_id)
+            self.agent.setup_agent_components(llm_service_id=self.llm_service_id)
             
             if self.agent is None: # Vérifier self.agent
                 self.logger.error("Échec de l'initialisation de l'agent informel.")

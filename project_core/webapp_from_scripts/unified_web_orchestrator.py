@@ -165,6 +165,7 @@ class UnifiedWebOrchestrator:
             
     def _load_config(self) -> Dict[str, Any]:
         """Charge la configuration depuis le fichier YAML"""
+        print("[DEBUG] unified_web_orchestrator.py: _load_config()")
         if not self.config_path.exists():
             self._create_default_config()
             
@@ -222,7 +223,7 @@ class UnifiedWebOrchestrator:
                 'max_attempts': 5,
                 'timeout_seconds': 30,
                 'health_endpoint': '/health',
-                'env_activation': 'powershell -File ./activate_project_env.ps1'
+                'env_activation': 'powershell -File activate_project_env.ps1'
             },
             'frontend': {
                 'enabled': False,  # Optionnel selon besoins
@@ -232,7 +233,7 @@ class UnifiedWebOrchestrator:
                 'timeout_seconds': 90
             },
             'playwright': {
-                'enabled': False,
+                'enabled': True,
                 'browser': 'chromium',
                 'headless': True,
                 'timeout_ms': 10000,
@@ -255,6 +256,7 @@ class UnifiedWebOrchestrator:
     
     def _setup_logging(self, log_level: str = 'INFO') -> logging.Logger:
         """Configure le système de logging"""
+        print("[DEBUG] unified_web_orchestrator.py: _setup_logging()")
         logging_config = self.config.get('logging', {})
         log_file = Path(logging_config.get('file', 'logs/webapp_orchestrator.log'))
         log_file.parent.mkdir(parents=True, exist_ok=True)
@@ -310,12 +312,13 @@ class UnifiedWebOrchestrator:
         Returns:
             bool: True si démarrage réussi
         """
+        print("[DEBUG] unified_web_orchestrator.py: start_webapp()")
         self.headless = headless
         self.app_info.start_time = datetime.now()
         
         self.add_trace("[START] DEMARRAGE APPLICATION WEB",
-                      f"Mode: {'Headless' if headless else 'Visible'}", 
-                      "Initialisation orchestrateur")
+                       f"Mode: {'Headless' if headless else 'Visible'}",
+                       "Initialisation orchestrateur")
         
         try:
             # 1. Nettoyage préalable
@@ -568,6 +571,7 @@ class UnifiedWebOrchestrator:
 
     async def _start_backend(self) -> bool:
         """Démarre le backend avec failover de ports"""
+        print("[DEBUG] unified_web_orchestrator.py: _start_backend()")
         self.add_trace("[BACKEND] DEMARRAGE BACKEND", "Lancement avec failover de ports")
         
         result = await self.backend_manager.start_with_failover()
@@ -586,6 +590,7 @@ class UnifiedWebOrchestrator:
     
     async def _start_frontend(self) -> bool:
         """Démarre le frontend React"""
+        print("[DEBUG] unified_web_orchestrator.py: _start_frontend()")
         # La décision de démarrer a déjà été prise en amont
         self.add_trace("[FRONTEND] DEMARRAGE FRONTEND", "Lancement interface React")
         
@@ -607,12 +612,14 @@ class UnifiedWebOrchestrator:
                           f"URL: {result['url']}")
 
             # Sauvegarde l'URL du frontend pour que les tests puissent la lire
+            print("[DEBUG] unified_web_orchestrator.py: Saving frontend URL")
             try:
                 log_dir = Path("logs")
                 log_dir.mkdir(exist_ok=True)
                 with open(log_dir / "frontend_url.txt", "w") as f:
                     f.write(result['url'])
                 self.add_trace("[SAVE] URL FRONTEND SAUVEGARDEE", f"URL {result['url']} écrite dans logs/frontend_url.txt")
+                print(f"[DEBUG] unified_web_orchestrator.py: Frontend URL saved to logs/frontend_url.txt: {result['url']}")
             except Exception as e:
                 self.add_trace("[ERROR] SAUVEGARDE URL FRONTEND", str(e), status="error")
             
@@ -623,6 +630,7 @@ class UnifiedWebOrchestrator:
     
     async def _validate_services(self) -> bool:
         """Valide que les services backend et frontend répondent correctement."""
+        print("[DEBUG] unified_web_orchestrator.py: _validate_services()")
         self.add_trace(
             "[CHECK] VALIDATION SERVICES",
             f"Vérification des endpoints critiques: {[ep['path'] for ep in self.API_ENDPOINTS_TO_CHECK]}"
@@ -768,6 +776,7 @@ class UnifiedWebOrchestrator:
         
         content += f"""
 
+
 ---
 
 ## 📊 RÉSUMÉ D'EXÉCUTION
@@ -787,6 +796,7 @@ class UnifiedWebOrchestrator:
 
 def main():
     """Point d'entrée principal en ligne de commande"""
+    print("[DEBUG] unified_web_orchestrator.py: main()")
     parser = argparse.ArgumentParser(description="Orchestrateur Unifié d'Application Web")
     parser.add_argument('--config', default='scripts/webapp/config/webapp_config.yml',
                        help='Chemin du fichier de configuration')
@@ -805,6 +815,10 @@ def main():
                            help='Niveau de log pour la console et le fichier.')
     parser.add_argument('--no-trace', action='store_true',
                            help='Désactive la génération du rapport de trace Markdown.')
+    parser.add_argument('--no-playwright', action='store_true',
+                        help='Désactive l\'exécution des tests Playwright.')
+    parser.add_argument('--exit-after-start', action='store_true',
+                        help='Démarre les serveurs puis quitte sans lancer les tests.')
 
     # Commandes
     parser.add_argument('--start', action='store_true', help='Démarre seulement l\'application.')
@@ -820,6 +834,18 @@ def main():
     async def run_command():
         success = False
         try:
+            # La configuration de Playwright est modifiée en fonction de l'argument
+            if args.no_playwright:
+                orchestrator.config['playwright']['enabled'] = False
+                orchestrator.logger.info("Tests Playwright désactivés via l'argument --no-playwright.")
+
+            if args.exit_after_start:
+                success = await orchestrator.start_webapp(orchestrator.headless, args.frontend)
+                if success:
+                    orchestrator.logger.info("Application démarrée avec succès. Arrêt immédiat comme demandé.")
+                # Le `finally` se chargera de l'arrêt propre
+                return success
+
             if args.start:
                 success = await orchestrator.start_webapp(orchestrator.headless, args.frontend)
                 if success:

@@ -19,7 +19,7 @@ from argumentation_analysis.orchestration.hierarchical.operational.agent_interfa
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
 from argumentation_analysis.core.communication import MessageMiddleware 
 
-from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent # Removed setup_extract_agent
+from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
 from argumentation_analysis.agents.core.extract.extract_definitions import ExtractResult
 
 
@@ -70,8 +70,8 @@ class ExtractAgentAdapter(OperationalAgent):
             self.logger.info("Initialisation de l'agent d'extraction...")
             # Instancier l'agent refactoré
             self.agent = ExtractAgent(kernel=self.kernel, agent_name=f"{self.name}_ExtractAgent")
-            # Configurer les composants de l'agent
-            await self.agent.setup_agent_components(llm_service_id=self.llm_service_id)
+            # Configurer les composants de l'agent (n'est pas une coroutine)
+            self.agent.setup_agent_components(llm_service_id=self.llm_service_id)
             
             if self.agent is None: # Check self.agent
                 self.logger.error("Échec de l'initialisation de l'agent d'extraction.")

@@ -97,12 +97,12 @@ class TestOperationalAgentsIntegration:
         yield tactical_state, operational_state, interface, manager, sample_text
         
         # Cleanup AsyncIO tasks
-        try:
-            tasks = [task for task in asyncio.all_tasks() if not task.done()]
-            if tasks:
-                await asyncio.gather(*tasks, return_exceptions=True)
-        except Exception:
-            pass
+        # try:
+        #     tasks = [task for task in asyncio.all_tasks() if not task.done()]
+        #     if tasks:
+        #         await asyncio.gather(*tasks, return_exceptions=True)
+        # except Exception:
+        #     pass
         
         await manager.stop()
     
@@ -110,7 +110,11 @@ class TestOperationalAgentsIntegration:
     async def test_agent_registry_initialization(self, operational_components):
         """Teste l'initialisation du registre d'agents."""
         _, operational_state, _, _, _ = operational_components
-        registry = OperationalAgentRegistry(operational_state)
+        registry = OperationalAgentRegistry(
+            operational_state,
+            kernel=MagicMock(spec=sk.Kernel),
+            llm_service_id="mock_service"
+        )
         
         # Vérifier les types d'agents disponibles
         agent_types = registry.get_agent_types()
@@ -182,7 +186,7 @@ class TestOperationalAgentsIntegration:
             mock_process_task.assert_called_once()
             
             # Vérifier le résultat
-            assert result["task_id"] == "task-extract-1"
+            assert result["tactical_task_id"] == "task-extract-1"
             assert result["completion_status"] == "completed"
             assert result["results_path"].startswith(str(RESULTS_DIR))
             assert "execution_metrics" in result
@@ -243,7 +247,7 @@ class TestOperationalAgentsIntegration:
             mock_process_task.assert_called_once()
             
             # Vérifier le résultat
-            assert result["task_id"] == "task-informal-1"
+            assert result["tactical_task_id"] == "task-informal-1"
             assert result["completion_status"] == "completed"
             assert result["results_path"].startswith(str(RESULTS_DIR))
             assert "execution_metrics" in result
@@ -301,7 +305,7 @@ class TestOperationalAgentsIntegration:
             mock_process_task.assert_called_once()
             
             # Vérifier le résultat
-            assert result["task_id"] == "task-pl-1"
+            assert result["tactical_task_id"] == "task-pl-1"
             assert result["completion_status"] == "completed"
             assert result["results_path"].startswith(str(RESULTS_DIR))
             assert "execution_metrics" in result
@@ -309,7 +313,11 @@ class TestOperationalAgentsIntegration:
     async def test_agent_selection(self, operational_components):
         """Teste la sélection de l'agent approprié pour une tâche."""
         _, operational_state, _, _, _ = operational_components
-        registry = OperationalAgentRegistry(operational_state)
+        registry = OperationalAgentRegistry(
+            operational_state,
+            kernel=MagicMock(spec=sk.Kernel),
+            llm_service_id="mock_service"
+        )
         
         # Tâche pour l'agent d'extraction
         extract_task = {
@@ -348,7 +356,7 @@ class TestOperationalAgentsIntegration:
         assert informal_agent.name == "InformalAgent"
         
         assert pl_agent is not None
-        assert pl_agent.name == "PLAgent"
+        assert pl_agent.name == "PlAgent"
     
     async def test_operational_state_management(self): # Ne dépend pas de la fixture operational_components
         """Teste la gestion de l'état opérationnel."""
@@ -453,7 +461,7 @@ class TestOperationalAgentsIntegration:
                 },
                 "issues": []
             }
-            mock_process_task# Mock eliminated - using authentic gpt-4o-mini mock_result
+            mock_process_task.return_value = mock_result
             
             # Traiter la tâche
             result = await manager.process_tactical_task(tactical_task)
@@ -462,9 +470,9 @@ class TestOperationalAgentsIntegration:
             assert mock_process_task.called is True
             
             # Vérifier le résultat
-            assert result["task_id"] == "task-test-1"
+            assert result["tactical_task_id"] == "task-test-1"
             assert result["completion_status"] == "completed"
-            assert RESULTS_DIR in result
+            assert "results_path" in result
             assert "execution_metrics" in result
             
             # Vérifier que les métriques ont été correctement traduites

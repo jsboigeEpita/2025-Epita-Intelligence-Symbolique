@@ -25,6 +25,9 @@ import aiohttp
 import shutil
 import shlex
 
+# Import pour la gestion des dépendances Tweety
+from project_core.setup_core_from_scripts.manage_tweety_libs import download_tweety_jars
+
 from dotenv import load_dotenv, find_dotenv
 
 class BackendManager:
@@ -139,6 +142,20 @@ class BackendManager:
             
             # Plus besoin de gestion complexe de l'environnement, le wrapper s'en charge
             env = os.environ.copy()
+
+            # --- GESTION DES DÉPENDANCES TWEETY ---
+            self.logger.info("Vérification et téléchargement des JARs Tweety...")
+            libs_dir = Path(project_root) / "libs" / "tweety"
+            try:
+                if await asyncio.to_thread(download_tweety_jars, str(libs_dir)):
+                    self.logger.info(f"JARs Tweety prêts dans {libs_dir}")
+                    env['LIBS_DIR'] = str(libs_dir)
+                    self.logger.info(f"Variable d'environnement LIBS_DIR positionnée dans le sous-processus.")
+                else:
+                    self.logger.error("Échec du téléchargement des JARs Tweety. Le backend risque de ne pas démarrer correctement.")
+            except Exception as e:
+                self.logger.error(f"Erreur inattendue lors du téléchargement des JARs Tweety: {e}")
+            # --- FIN GESTION TWEETY ---
 
             self.logger.debug(f"Commande Popen avec wrapper: {cmd}")
             self.logger.debug(f"CWD: {project_root}")
