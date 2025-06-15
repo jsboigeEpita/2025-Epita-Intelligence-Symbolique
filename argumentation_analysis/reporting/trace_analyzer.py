@@ -385,16 +385,15 @@ class TraceAnalyzer:
         """
         try:
             # Détermination automatique des fichiers si non spécifiés
-            if not conversation_log_path:
-                conversation_log_path = os.path.join(
-                    self.logs_directory, 
-                    "rhetorical_analysis_demo_conversation.log"
-                )
-            if not report_json_path:
-                report_json_path = os.path.join(
-                    self.logs_directory,
-                    "rhetorical_analysis_report.json"
-                )
+            if not conversation_log_path or not os.path.exists(conversation_log_path):
+                log_files = [f for f in os.listdir(self.logs_directory) if f.endswith('.log')]
+                if log_files:
+                    conversation_log_path = os.path.join(self.logs_directory, log_files[0])
+
+            if not report_json_path or not os.path.exists(report_json_path):
+                json_files = [f for f in os.listdir(self.logs_directory) if f.endswith('.json')]
+                if json_files:
+                    report_json_path = os.path.join(self.logs_directory, json_files[0])
             
             # Chargement du log de conversation
             if os.path.exists(conversation_log_path):
@@ -453,15 +452,15 @@ class TraceAnalyzer:
                     self.raw_conversation_data
                 )
                 if length_match:
-                    metadata.content_length = int(length_match.group(1))
+                    metadata.content_length = int(length_match.group(1).strip())
                 
                 # Recherche de l'horodatage
                 timestamp_match = re.search(
-                    r"Horodatage de l'analyse : (.+)", 
+                    r"Horodatage de l'analyse\s*:\s*(.+)",
                     self.raw_conversation_data
                 )
                 if timestamp_match:
-                    metadata.analysis_timestamp = timestamp_match.group(1)
+                    metadata.analysis_timestamp = timestamp_match.group(1).strip()
             
             # Extraction depuis le rapport JSON
             if self.raw_report_data:
@@ -513,22 +512,24 @@ class TraceAnalyzer:
         try:
             if self.raw_conversation_data:
                 # Extraction des agents appelés
-                agent_patterns = [
-                    r"SynthesisAgent",
-                    r"agent logique: (propositional|first_order|modal)",
-                    r"agent informel",
-                    r"ExtractAgent", 
-                    r"InformalAgent"
-                ]
+                # Extraction des agents appelés de manière plus robuste
+                agent_matches = re.findall(
+                    r"(?:agent logique:\s*|LogicAgent_)(propositional|first_order|modal)|(SynthesisAgent|ExtractAgent|InformalAgent)",
+                    self.raw_conversation_data,
+                    re.IGNORECASE
+                )
                 
-                for pattern in agent_patterns:
-                    matches = re.findall(pattern, self.raw_conversation_data, re.IGNORECASE)
-                    for match in matches:
-                        if isinstance(match, tuple):
-                            agent_name = f"LogicAgent_{match}"
+                for match in agent_matches:
+                    # Le match est un tuple, ex: ('propositional', '') ou ('', 'SynthesisAgent')
+                    agent_type = match[0] or match[1]
+                    if agent_type:
+                        agent_name = ""
+                        if agent_type.lower() in ["propositional", "first_order", "modal"]:
+                            agent_name = f"LogicAgent_{agent_type.lower()}"
                         else:
-                            agent_name = match
-                        if agent_name not in flow.agents_called:
+                            agent_name = agent_type
+
+                        if agent_name and agent_name not in flow.agents_called:
                             flow.agents_called.append(agent_name)
                 
                 # Séquence d'orchestration
@@ -556,20 +557,26 @@ class TraceAnalyzer:
                     flow.coordination_messages.extend(matches)
                 
                 # Temps d'exécution
-                time_match = re.search(
-                    r"termin.* en ([\d.]+)ms", 
-                    self.raw_conversation_data
-                )
-                if time_match:
-                    flow.total_execution_time = float(time_match.group(1))
+                # Temps d'exécution (prendre la dernière occurrence)
+                last_time_found = 0.0
+                # Regex assoupli pour accepter des mots entre "terminé" et "en"
+                time_pattern = re.compile(r"(?:termin\w*.*en|Temps total:)\s+([\d.]+)\s*ms", re.IGNORECASE)
+                for line in self.raw_conversation_data.splitlines():
+                    match = time_pattern.search(line)
+                    if match:
+                        last_time_found = float(match.group(1))
+                flow.total_execution_time = last_time_found
                 
                 # Statut de succès
-                if "succès" in self.raw_conversation_data.lower():
+                # Ordre de priorité : échec > succès > terminé
+                if re.search(r"(échec|erreur|failed|error)", self.raw_conversation_data, re.IGNORECASE):
+                    flow.success_status = "partial_failure"
+                elif re.search(r"analyse terminée avec succès", self.raw_conversation_data, re.IGNORECASE):
                     flow.success_status = "success"
-                elif "échec" in self.raw_conversation_data.lower():
-                    flow.success_status = "partial_failure" 
+                elif re.search(r"terminé", self.raw_conversation_data, re.IGNORECASE):
+                     flow.success_status = "completed"
                 else:
-                    flow.success_status = "completed"
+                    flow.success_status = "unknown"
                     
         except Exception as e:
             logger.error(f"Erreur lors de l'analyse du flow d'orchestration: {e}")
@@ -634,21 +641,28 @@ class TraceAnalyzer:
                 
                 # Enrichissement progressif
                 enrichment_patterns = [
-                    r"Analyse (.+) simulée",
-                    r"Simulation (.+)",
-                    r"Démarrage (.+)"
+                    r"Analyse PL simulée",
+                    r"Simulation FOL",
+                    r"Démarrage de l'analyse modale"
                 ]
                 
                 for pattern in enrichment_patterns:
-                    matches = re.findall(pattern, self.raw_conversation_data)
-                    evolution.progressive_enrichment.extend(matches)
+                    matches = re.findall(pattern, self.raw_conversation_data, re.IGNORECASE)
+                    # Aplatir la liste de listes/tuples
+                    for match in matches:
+                        if isinstance(match, str):
+                            evolution.progressive_enrichment.append(match)
+                        else: # Tuple de groupes de capture
+                            evolution.progressive_enrichment.extend(item for item in match if item)
                 
                 # Transitions d'état
                 transition_patterns = [
                     (r"Début", r"Fin"),
                     (r"Initialisation", r"Configuration"),
                     (r"Chargement", r"Analyse"),
-                    (r"Analyse", r"Synthèse")
+                    (r"Analyse", r"Synthèse"),
+                    (r"Démarrage", r"terminée"),
+                    (r"construction", r"terminée")
                 ]
                 
                 for start_pattern, end_pattern in transition_patterns:
@@ -807,16 +821,17 @@ class TraceAnalyzer:
                 
                 # Patterns rhétoriques
                 rhetorical_patterns = re.findall(
-                    r"(structure\s+\w+|pattern\s+\w+|rhétorique\s+\w+)", 
-                    self.raw_conversation_data, 
+                    r"(structure argumentative|pattern émotionnel)",
+                    self.raw_conversation_data,
                     re.IGNORECASE
                 )
                 exploration.rhetorical_patterns = list(set(rhetorical_patterns))
                 
                 # Sophismes détectés depuis les logs
                 fallacy_match = re.search(
-                    r"sophismes? détectés? : (\d+)", 
-                    self.raw_conversation_data
+                    r"(\d+)\s+sophismes?\s+détectés?",
+                    self.raw_conversation_data,
+                    re.IGNORECASE
                 )
                 if fallacy_match:
                     count = int(fallacy_match.group(1))

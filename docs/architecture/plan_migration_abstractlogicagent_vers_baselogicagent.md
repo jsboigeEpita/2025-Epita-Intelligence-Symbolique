@@ -1,5 +1,7 @@
 # Plan de Migration - AbstractLogicAgent → BaseLogicAgent
 
+> **[✅ TERMINÉ]** Ce plan de migration a été exécuté avec succès le 14/06/2025. `AbstractLogicAgent` a été supprimé et ses fonctionnalités d'orchestration ont été intégrées dans `BaseLogicAgent`. Ce document est conservé pour référence historique.
+
 ## 🎯 Objectif
 
 Migrer les fonctionnalités d'orchestration de tâches d'`AbstractLogicAgent` vers `BaseLogicAgent` pour unifier l'architecture des agents logiques, puis supprimer `AbstractLogicAgent` devenu obsolète.

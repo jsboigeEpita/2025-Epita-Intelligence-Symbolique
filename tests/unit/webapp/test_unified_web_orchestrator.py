@@ -1,5 +1,6 @@
 import pytest
 import asyncio
+import argparse
 from unittest.mock import MagicMock, patch, AsyncMock, call
 
 # On s'assure que le chemin est correct pour importer l'orchestrateur
@@ -38,9 +39,24 @@ def mock_managers():
 @pytest.fixture
 def orchestrator(webapp_config, test_config_path, mock_managers):
     """Initializes the orchestrator with mocked managers."""
-    # Prevent logging setup from failing
-    with patch('project_core.webapp_from_scripts.unified_web_orchestrator.UnifiedWebOrchestrator._setup_logging'):
-        orch = UnifiedWebOrchestrator(config_path=test_config_path)
+    # Create a mock args object to satisfy the new __init__ signature
+    mock_args = MagicMock(spec=argparse.Namespace)
+    mock_args.config = str(test_config_path)
+    mock_args.log_level = 'DEBUG'
+    mock_args.headless = True
+    mock_args.visible = False
+    mock_args.timeout = 20
+    mock_args.no_trace = False
+
+    # Prevent logging setup from failing as it requires a real config structure
+    with patch('project_core.webapp_from_scripts.unified_web_orchestrator.UnifiedWebOrchestrator._setup_logging'), \
+         patch('project_core.webapp_from_scripts.unified_web_orchestrator.UnifiedWebOrchestrator._load_config') as mock_load_config:
+        
+        # The webapp_config fixture provides the config dictionary
+        mock_load_config.return_value = webapp_config
+        
+        orch = UnifiedWebOrchestrator(args=mock_args)
+        
         # Attach mocks for easy access in tests
         orch.backend_manager = mock_managers['backend']
         orch.frontend_manager = mock_managers['frontend']

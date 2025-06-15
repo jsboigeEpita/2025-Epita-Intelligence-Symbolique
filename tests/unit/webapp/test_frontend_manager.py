@@ -1,4 +1,5 @@
 import pytest
+import os
 import logging
 import subprocess
 from unittest.mock import MagicMock, patch, AsyncMock
@@ -73,7 +74,9 @@ async def test_ensure_dependencies_installs_if_needed(mock_popen, manager, tmp_p
     mock_process.returncode = 0
     mock_popen.return_value = mock_process
 
-    await manager._ensure_dependencies()
+    # Mock the environment dictionary that is now required
+    mock_env = {"PATH": os.environ.get("PATH", "")}
+    await manager._ensure_dependencies(env=mock_env)
 
     mock_popen.assert_called_with(
         ['npm', 'install'],
@@ -93,7 +96,7 @@ async def test_start_success(mock_popen, manager, tmp_path):
     (tmp_path / "package.json").touch()
     (tmp_path / "node_modules").mkdir()
 
-    manager._wait_for_frontend = AsyncMock(return_value=True)
+    manager._wait_for_frontend_output = AsyncMock(return_value=True)
 
     # Mock Popen for npm start
     mock_popen.return_value.pid = 5678 # Set pid on the instance
@@ -109,7 +112,8 @@ async def test_start_success(mock_popen, manager, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_stop_process(manager, mock_popen):
+@patch('subprocess.Popen')
+async def test_stop_process(mock_popen, manager):
     """Tests the stop method."""
     # To test closing files, we need to mock open
     mock_stdout_file = MagicMock()

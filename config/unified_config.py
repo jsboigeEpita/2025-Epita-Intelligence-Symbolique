@@ -79,6 +79,7 @@ class UnifiedConfig:
         AgentType.SYNTHESIS
     ])
     orchestration_type: OrchestrationType = OrchestrationType.UNIFIED
+    manual_mode: bool = False  # Ajout pour le mode manuel
     mock_level: MockLevel = MockLevel.NONE
     taxonomy_size: TaxonomySize = TaxonomySize.FULL
     
@@ -319,7 +320,10 @@ class UnifiedConfig:
         return {
             "logic_type": self.logic_type.value,
             "agents": [agent.value for agent in self.agents],
-            "orchestration_type": self.orchestration_type.value if hasattr(self.orchestration_type, 'value') else self.orchestration_type,
+            "orchestration": {
+                "type": self.orchestration_type.value if hasattr(self.orchestration_type, 'value') else self.orchestration_type,
+                "manual_mode": self.manual_mode
+            },
             "mock_level": self.mock_level.value,
             "taxonomy_size": self.taxonomy_size.value,
             "analysis_modes": self.analysis_modes,

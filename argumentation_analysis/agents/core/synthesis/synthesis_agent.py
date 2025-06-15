@@ -226,6 +226,12 @@ class SynthesisAgent(BaseAgent):
         report_sections.append(f"Généré le: {unified_report.synthesis_timestamp}")
         report_sections.append(f"Version: {unified_report.synthesis_version}")
         report_sections.append("")
+
+        # Texte Original Analysé
+        report_sections.append("## TEXTE ORIGINAL ANALYSÉ")
+        # Utilisation d'un bloc de citation pour une meilleure lisibilité
+        report_sections.append(f"> {unified_report.original_text}")
+        report_sections.append("")
         
         # Résumé exécutif
         report_sections.append("## RÉSUMÉ EXÉCUTIF")

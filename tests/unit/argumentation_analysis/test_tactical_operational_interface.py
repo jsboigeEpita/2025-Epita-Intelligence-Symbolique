@@ -120,7 +120,7 @@ class TestTacticalOperationalInterface(unittest.TestCase):
         }
         
         # Configurer le mock pour assign_task
-        self.mock_tactical_adapter.assign_task# Mock eliminated - using authentic gpt-4o-mini "task-id-123"
+        self.mock_tactical_adapter.assign_task.return_value = "task-id-123"
         
         # Appeler la méthode à tester
         result = self.interface.translate_task(task)
@@ -440,7 +440,7 @@ class TestTacticalOperationalInterface(unittest.TestCase):
         self.assertIsInstance(result, dict)
         self.assertIn("task_id", result)
         self.assertIn("completion_status", result)
-        self.assertIn(RESULTS_DIR, result)
+        self.assertIn("results_path", result)
         self.assertIn("execution_metrics", result)
         self.assertIn("issues", result)
         
@@ -451,7 +451,7 @@ class TestTacticalOperationalInterface(unittest.TestCase):
         self.assertEqual(result["completion_status"], "completed")
         
         # Vérifier que les résultats sont correctement traduits
-        self.assertIn("identified_arguments", result[RESULTS_DIR])
+        self.assertIn("identified_arguments", result["results"])
         
         # Vérifier que les métriques sont correctement traduites
         self.assertIn("processing_time", result["execution_metrics"])
@@ -591,7 +591,7 @@ class TestTacticalOperationalInterface(unittest.TestCase):
             pass
         
         # Configurer le mock pour subscribe_to_operational_updates
-        self.mock_tactical_adapter.subscribe_to_operational_updates# Mock eliminated - using authentic gpt-4o-mini "subscription-id-123"
+        self.mock_tactical_adapter.subscribe_to_operational_updates.return_value = "subscription-id-123"
         
         # Appeler la méthode à tester
         result = self.interface.subscribe_to_operational_updates(
@@ -615,7 +615,7 @@ class TestTacticalOperationalInterface(unittest.TestCase):
             "status": "ok",
             "tasks_in_progress": 2
         }
-        self.mock_tactical_adapter.request_strategic_guidance# Mock eliminated - using authentic gpt-4o-mini expected_response
+        self.mock_tactical_adapter.request_strategic_guidance.return_value = expected_response
         
         # Appeler la méthode à tester
         result = self.interface.request_operational_status("operational_agent", timeout=5.0)

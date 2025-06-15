@@ -348,244 +348,132 @@ class EnqueteCluedoState(EnquetePoliciereState):
 
     def get_elements_jeu(self) -> dict:
         return self.elements_jeu_cluedo
+        
+## Section 8: État Actuel, Roadmap et Conception Étendue (Mise à jour Juin 2025)
 
-    # D'autres méthodes spécifiques au Cluedo pourraient être ajoutées ici,
-## Section 8: État d'Implémentation Actuel (Janvier 2025)
+Cette section remplace les précédentes estimations par une analyse à jour de l'état d'implémentation et une roadmap détaillée pour les futures évolutions, incluant la conception de l'agent Oracle.
 
-### 8.1 Résumé des Réalisations
+### 8.1 Analyse Comparative - Conception vs Implémentation
 
-Le système Sherlock/Watson a été implémenté avec succès et dépasse les objectifs initiaux de cette conception. L'architecture proposée fonctionne et a été étendue avec des capacités avancées.
+#### ✅ **Fonctionnalités Complètement Implémentées**
 
-**Composants Implémentés :**
-- ✅ SherlockEnqueteAgent (ChatCompletionAgent avec outils spécialisés)
-- ✅ WatsonLogicAssistant (ChatCompletionAgent avec TweetyBridge)
-- ✅ EnqueteCluedoState avec génération automatique de solutions
-- ✅ CluedoOrchestrator avec AgentGroupChat et stratégies personnalisées
-- ✅ StateManagerPlugin pour exposition des fonctions d'état
-- ✅ TweetyBridge pour logique propositionnelle
+- **Agents Principaux** : `SherlockEnqueteAgent` et `WatsonLogicAssistant` sont opérationnels.
+- **Hiérarchie d'États** : `BaseWorkflowState`, `EnquetePoliciereState`, et `EnqueteCluedoState` sont implémentés.
+- **Orchestration de Base** : `CluedoOrchestrator` avec `AgentGroupChat` est fonctionnel.
+- **Infrastructure** : `StateManagerPlugin` et `TweetyBridge` sont stables.
 
-**Extensions Réalisées :**
-- ➕ EinsteinsRiddleState pour logique formelle complexe
-- ➕ LogiqueBridgeState pour problèmes de traversée
-- ➕ Normalisation automatique des formules logiques
-- ➕ Système de logging avancé avec filtres
+#### 🚧 **Extensions Réalisées Au-Delà de la Conception Initiale**
 
-### 8.2 Écarts par Rapport à la Conception Initiale
+- **États Avancés** : `EinsteinsRiddleState` et `LogiqueBridgeState` ont été ajoutés pour gérer des problèmes logiques plus complexes.
+- **Capacités Logiques Avancées** : Le système supporte la normalisation de formules, la gestion de constantes et la validation syntaxique stricte.
 
-**Différences d'Implémentation :**
-- Les agents héritent directement de `ChatCompletionAgent` plutôt que des classes de base proposées
-- Les outils sont implémentés comme plugins Semantic Kernel plutôt que méthodes directes
-- L'orchestration utilise `AgentGroupChat` natif avec stratégies personnalisées
+#### ❌ **Gaps Identifiés**
 
-**Fonctionnalités Non Implémentées :**
-- Agent Oracle/Interrogateur (prévu pour Phase 2)
-- Interface utilisateur de visualisation
-- Tests d'intégration complets
-- Documentation d'analyse des orchestrations
+- **Documentation Manquante** :
+    - `analyse_orchestrations_sherlock_watson.md` : Ce fichier a été créé et est à jour.
+    - Manque de tests d'intégration spécifiques à Sherlock/Watson.
+    - Manque un guide utilisateur détaillé.
+- **Fonctionnalités Non Implémentées** :
+    - **Agent Oracle/Interrogateur** : Identifié comme la **nouvelle priorité pour la Phase 1**.
+    - Interface utilisateur, orchestrateur pour la logique complexe, et persistance avancée des états.
 
-### 8.3 Métriques de Performance Actuelles
+### 8.2 Roadmap d'Évolution Détaillée
 
-**Efficacité du Workflow Cluedo :**
-- Temps moyen de résolution : 8-12 tours
-- Taux de succès : ~85% sur solutions correctes
-- Stratégie suggestion/réfutation opérationnelle
+#### 🎯 **Phase 1: Consolidation et Stabilisation (Court terme - 1-2 mois)**
 
-**Capacités Logiques de Watson :**
-- Validation syntaxique BNF stricte fonctionnelle
-- Intégration TweetyProject stable
-- Support des constantes et domaines fermés
+- **Documentation Critique** :
+  - [x] ~~Créer `analyse_orchestrations_sherlock_watson.md`~~ (Déjà fait)
+  - [ ] Rédiger des tests d'intégration complets.
+  - [ ] Rédiger un guide utilisateur.
+- **Corrections Techniques** :
+  - [ ] Implémenter `LogiqueComplexeOrchestrator` pour `EinsteinsRiddleState`.
+  - [ ] Améliorer la gestion des erreurs, notamment pour le bridge JVM.
 
-## Section 9: Roadmap d'Évolution
+#### 🚀 **Phase 2: Extensions Fonctionnelles (Moyen terme - 2-4 mois)**
 
-### 9.1 Phase 1: Consolidation (1-2 mois)
+- **Agent Oracle et Interrogateur** : Intégration complète du nouvel agent `MoriartyInterrogatorAgent` (voir conception détaillée ci-dessous).
+- **Interface Utilisateur** : Développement d'un dashboard web de visualisation.
+- **Nouveaux Types d'Enquêtes** : Support pour les enquêtes textuelles et les énigmes mathématiques.
 
-**Priorités Critiques :**
-1. Créer `docs/analyse_orchestrations_sherlock_watson.md`
-2. Implémenter `LogiqueComplexeOrchestrator` pour EinsteinsRiddleState
-3. Développer suite de tests d'intégration complète
-4. Améliorer la gestion d'erreurs et validation d'entrées
-5. Rédiger guide utilisateur avec exemples concrets
+#### ⚡ **Phase 3 & 4: Optimisations et Innovation (Long terme - 4+ mois)**
 
-**Objectifs Techniques :**
-- Robustesse face aux cas d'erreur
-- Documentation complète et à jour
-- Tests couvrant >85% des modules Sherlock/Watson
+- **Orchestration Intelligente** : Introduction de stratégies adaptatives et d'orchestration par événements.
+- **Capacités Logiques Avancées** : Support pour les logiques modale, temporelle et non-monotone.
+- **Apprentissage et Méta-raisonnement** : Permettre aux agents d'apprendre de leurs performances et de raisonner sur leurs propres stratégies.
 
-### 9.2 Phase 2: Extensions Fonctionnelles (2-4 mois)
+---
 
-**Nouvelles Capacités :**
-- Agent Oracle/Interrogateur pour simulations multi-joueurs
-- Dashboard web de visualisation des enquêtes
-- Support d'enquêtes policières textuelles
-- Interface interactive pour participation humaine
+## Section 9: Conception de l'Extension - Agents Oracle et Interrogateur
 
-**Objectifs d'Architecture :**
-- Modularité pour nouveaux types d'enquêtes
-- API stable pour extensions tierces
-- Performance optimisée pour interactions temps réel
+Cette section détaille l'intégration des nouveaux agents Oracle et Interrogateur.
 
-### 9.3 Phase 3: Optimisations Avancées (4-6 mois)
+### 9.1 Vue d'Ensemble
 
-**Orchestration Intelligente :**
-- Stratégies adaptatives basées sur métriques de performance
-- Orchestration par événements et notifications push
-- Auto-ajustement des paramètres selon le contexte
+L'objectif est d'introduire un troisième agent, l'**Oracle**, qui gère l'accès contrôlé à un dataset. Un **Interrogateur** spécialisé (`Moriarty`) héritera de cet Oracle pour le workflow Cluedo.
 
-**Logiques Expressives :**
-- Support logique modale et temporelle
-- Gestion d'incertitude avec probabilités
-- Fusion d'informations contradictoires
-
-### 9.4 Phase 4: Recherche et Innovation (6+ mois)
-
-**Capacités Émergentes :**
-- Raisonnement causal pour enquêtes complexes
-- Méta-raisonnement et auto-évaluation
-- IA générative pour scénarios d'enquête
-
-**Systèmes Multi-Agents :**
-- Équipes d'enquêteurs spécialisés
-- Négociation entre agents avec opinions divergentes
-- Consensus distribué sur les conclusions
-
-## Section 10: Architecture Évoluée Recommandée
-
-### 10.1 Structure Modulaire Target
-
-```
-argumentation_analysis/
-├── agents/
-│   ├── core/
-│   │   ├── pm/sherlock_enquete_agent.py          [Existant]
-│   │   ├── logic/watson_logic_assistant.py       [Existant]
-│   │   └── oracle/oracle_interrogateur_agent.py  [Phase 2]
-│   └── specialized/                               [Phase 3]
-│       ├── forensic_analyst_agent.py
-│       └── witness_interviewer_agent.py
-├── orchestration/
-│   ├── cluedo_orchestrator.py                     [Existant]
-│   ├── logique_complexe_orchestrator.py           [Phase 1]
-│   └── adaptive_orchestrator.py                   [Phase 3]
-├── core/
-│   ├── enquete_states.py                          [Existant]
-│   ├── logique_complexe_states.py                 [Existant]
-│   └── forensic_states.py                         [Phase 2]
-└── evaluation/                                     [Phase 1]
-    ├── metrics_collector.py
-    └── performance_analyzer.py
+```mermaid
+graph TD
+    subgraph "Écosystème Sherlock/Watson Étendu"
+        direction LR
+        Sherlock["Sherlock<br>(Enquête)"]
+        Watson["Watson<br>(Logique)"]
+        Moriarty["Moriarty<br>(Oracle/Dataset)"]
+        Orchestrator["Orchestrateur Étendu (3 agents)"]
+        SharedState["État Partagé<br>(CluedoOracleState)"]
+        
+        Sherlock -- "Interaction" --> Watson
+        Watson -- "Interaction" --> Moriarty
+        Moriarty -- "Révélation contrôlée" --> Sherlock
+        
+        Orchestrator -- "Contrôle" --> Sherlock
+        Orchestrator -- "Contrôle" --> Watson
+        Orchestrator -- "Contrôle" --> Moriarty
+        
+        Sherlock -- "Accès" --> SharedState
+        Watson -- "Accès" --> SharedState
+        Moriarty -- "Accès" --> SharedState
+    end
 ```
 
-### 10.2 Patterns d'Évolution Adoptés
+### 9.2 Conception de l'Agent Oracle de Base (`OracleBaseAgent`)
 
-**State-Strategy-Observer Pattern :**
-- States encapsulent la logique métier spécifique
-- Strategies permettent l'orchestration adaptative
-- Observers collectent métriques et événements
+- **Responsabilités** :
+    - Détenir un accès exclusif à un `DatasetAccessManager`.
+    - Gérer les permissions via des règles ACL (Access Control List).
+    - Valider et filtrer les requêtes.
+    - Exposer des outils comme `validate_query_permission` et `execute_authorized_query`.
 
-**Plugin Architecture :**
-- Agents comme composants interchangeables
-- Extension facile via nouveaux plugins
-- Configuration dynamique des capacités
+### 9.3 Conception de l'Agent Interrogateur Spécialisé (`MoriartyInterrogatorAgent`)
 
-## Section 11: Métriques de Succès et Validation
+- **Nomenclature** : "Moriarty" est choisi pour sa cohérence littéraire et son rôle de détenteur de secrets.
+- **Héritage** : `MoriartyInterrogatorAgent` hérite de `OracleBaseAgent`.
+- **Spécialisation** :
+    - Gère le dataset spécifique au Cluedo (cartes, solution secrète).
+    - Simule le comportement des autres joueurs.
+    - Applique des stratégies de révélation (coopérative, compétitive).
+    - Expose des outils spécialisés comme `validate_cluedo_suggestion` et `reveal_card_if_owned`.
 
-### 11.1 KPIs Quantitatifs
+### 9.4 État Étendu (`CluedoOracleState`)
 
-**Performance :**
-- Temps moyen résolution Cluedo : < 10 tours
-- Taux succès Einstein's Riddle : > 90%
-- Temps de réponse par interaction : < 5 secondes
-- Couverture de tests : > 85%
+- **Héritage** : Étend `EnqueteCluedoState`.
+- **Ajouts** :
+    - `cartes_distribuees` : Dictionnaire des cartes détenues par chaque "joueur".
+    - `cluedo_dataset`: Instance d'un `CluedoDataset` contenant la logique de gestion des cartes et de la solution.
+    - `revelations_log` : Historique des informations révélées par l'Oracle.
+    - `agent_permissions` : Configuration des droits d'accès pour chaque agent.
 
-**Qualité :**
-- Zéro régression sur fonctionnalités existantes
-- Documentation à jour à 100%
-- Conformité architecturale validée
+### 9.5 Orchestration Étendue (`CluedoExtendedOrchestrator`)
 
-### 11.2 Validation Fonctionnelle
+- **Workflow** : Gère un cycle à 3 agents (Sherlock → Watson → Moriarty).
+- **Stratégie de Sélection** : `CyclicSelectionStrategy` pour alterner les tours.
+- **Stratégie de Terminaison** : `OracleTerminationStrategy` qui termine si une solution correcte est proposée et validée par l'Oracle, ou si toutes les cartes ont été révélées.
 
-**Tests d'Acceptation :**
-- Résolution complète de 10 scénarios Cluedo variés
-- Validation de 5 énigmes d'Einstein complexes
-- Tests de robustesse sur 50 cas d'erreur
-- Performance sous charge de 10 enquêtes simultanées
+### 9.6 Actions Prioritaires Immédiates (Top 7)
 
-**Validation Utilisateur :**
-- Guide utilisateur testé par 3 nouveaux utilisateurs
-- Feedback UX collecté et intégré
-- Documentation technique validée par pairs
-
-## Annexe B: Mise à Jour des Classes d'État Implémentées
-
-### EnqueteCluedoState (Version Réelle)
-
-Les classes d'état ont été implémentées avec les fonctionnalités suivantes :
-
-```python
-class EnqueteCluedoState(EnquetePoliciereState):
-    def __init__(self, nom_enquete_cluedo: str, elements_jeu_cluedo: dict, ...):
-        # Génération automatique de solution aléatoire
-        self.solution_secrete_cluedo = self._generate_random_solution()
-        
-        # Initialisation du belief set pour Watson
-        self.belief_set_initial_watson = {}
-        self.main_cluedo_bs_id = f"cluedo_bs_{self.workflow_id}"
-        
-        # États de progression
-        self.is_solution_proposed = False
-        self.final_solution = None
-        self.suggestions_historique = []
-
-    def _generate_random_solution(self) -> dict:
-        # Sélection aléatoire parmi les éléments disponibles
-        return {
-            "suspect": random.choice(self.elements_jeu_cluedo["suspects"]),
-            "arme": random.choice(self.elements_jeu_cluedo["armes"]),
-            "lieu": random.choice(self.elements_jeu_cluedo["lieux"])
-        }
-
-    def propose_final_solution(self, solution: Dict[str, str]):
-        # Validation et enregistrement de la solution proposée
-        self.final_solution = solution
-        self.is_solution_proposed = True
-```
-
-### EinsteinsRiddleState (Extension)
-
-Nouvelle classe d'état pour problèmes de logique formelle complexe :
-
-```python
-class EinsteinsRiddleState(BaseWorkflowState):
-    def __init__(self, initial_context: dict = None, workflow_id: str = None):
-        # Domaines: 5 maisons, 5 propriétaires, 5 attributs chacun
-        self.positions = [1, 2, 3, 4, 5]
-        self.couleurs = ["Rouge", "Bleue", "Verte", "Jaune", "Blanche"]
-        self.nationalites = ["Anglais", "Suédois", "Danois", "Norvégien", "Allemand"]
-        
-        # Solution générée respectant toutes les contraintes
-        self.solution_secrete = self._generer_solution_valide()
-        
-        # Tracking du raisonnement logique
-        self.clauses_logiques = []
-        self.deductions_watson = []
-        self.contraintes_formulees = set()
-
-    def verifier_progression_logique(self) -> Dict[str, Any]:
-        # Validation que Watson utilise suffisamment la logique formelle
-        return {
-            "clauses_formulees": len(self.clauses_logiques),
-            "requetes_executees": len(self.requetes_executees),
-            "force_logique_formelle": len(self.clauses_logiques) >= 10
-        }
-```
-
-## Conclusion
-
-Cette mise à jour témoigne du succès de l'architecture initiale et de sa capacité d'évolution. Le système Sherlock/Watson est devenu une plateforme robuste pour le raisonnement collaboratif, avec des extensions qui ouvrent de nouvelles perspectives de recherche en IA symbolique.
-
-La roadmap proposée assure une évolution progressive, équilibrant stabilisation technique et innovation, pour faire du système une référence dans le domaine des agents de raisonnement collaboratif.
-
-**Prochaine révision du document :** Mars 2025
-**Responsable de la mise à jour :** Équipe Projet Sherlock/Watson
-**Validation :** Architecture Review Board
-    # par exemple pour gérer les "suggestions" des joueurs, etc.
+1.  **PRIORITÉ #1 : Implémenter les Agents Oracle et Interrogateur**.
+2.  **PRIORITÉ #2 : Implémenter le Workflow Cluedo avec Oracle**.
+3.  Mettre à jour la documentation d'analyse (`analyse_orchestrations_sherlock_watson.md`) pour inclure l'Oracle.
+4.  Implémenter `LogiqueComplexeOrchestrator`.
+5.  Créer une suite de tests d'intégration pour les workflows à 2 et 3 agents.
+6.  Améliorer la gestion des erreurs du `TweetyBridge`.
+7.  Rédiger un guide utilisateur étendu incluant les exemples avec l'Oracle.

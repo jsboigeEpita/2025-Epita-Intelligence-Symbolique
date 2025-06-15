@@ -33,7 +33,8 @@ def test_initialization(manager, backend_config):
     assert manager.process is None
 
 @pytest.mark.asyncio
-async def test_start_with_failover_success_first_port(manager, mock_popen):
+@patch('subprocess.Popen')
+async def test_start_with_failover_success_first_port(mock_popen, manager):
     """
     Tests successful start on the primary port.
     """
@@ -53,7 +54,8 @@ async def test_start_with_failover_success_first_port(manager, mock_popen):
     manager._save_backend_info.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_start_with_failover_uses_fallback_port(manager, mock_popen):
+@patch('subprocess.Popen')
+async def test_start_with_failover_uses_fallback_port(mock_popen, manager):
     """
     Tests that failover to a fallback port works correctly.
     """
@@ -87,13 +89,13 @@ async def test_start_with_failover_all_ports_fail(manager):
     manager._start_on_port.assert_not_called()
 
 @pytest.mark.asyncio
-@patch('project_core.webapp_from_scripts.backend_manager.BackendManager._get_conda_env_python_executable', new_callable=AsyncMock)
-async def test_start_on_port_success(mock_get_python_exe, manager, mock_popen):
+@patch('subprocess.Popen')
+async def test_start_on_port_success(mock_popen, manager):
     """
     Tests the "_start_on_port" method for a successful start.
     """
-    mock_get_python_exe.return_value = "/fake/conda/python"
     manager._wait_for_backend = AsyncMock(return_value=True)
+    mock_popen.return_value.pid = 1234  # Set the expected PID on the mock
     port = 8000
 
     result = await manager._start_on_port(port)
@@ -105,24 +107,24 @@ async def test_start_on_port_success(mock_get_python_exe, manager, mock_popen):
     manager._wait_for_backend.assert_called_once_with(port)
 
 @pytest.mark.asyncio
-@patch('project_core.webapp_from_scripts.backend_manager.BackendManager._get_conda_env_python_executable', new_callable=AsyncMock)
-async def test_start_on_port_backend_wait_fails(mock_get_python_exe, manager, mock_popen):
+@patch('subprocess.Popen')
+async def test_start_on_port_backend_wait_fails(mock_popen, manager):
     """
     Tests "_start_on_port" when waiting for the backend fails.
     """
-    mock_get_python_exe.return_value = "/fake/conda/python"
     manager._wait_for_backend = AsyncMock(return_value=False)
     port = 8000
 
     result = await manager._start_on_port(port)
 
     assert result['success'] is False
-    assert "non accessible" in result['error']
+    assert "Backend failed on port 8000" in result['error']
     mock_popen.return_value.terminate.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_wait_for_backend_process_dies(manager, mock_popen):
+@patch('subprocess.Popen')
+async def test_wait_for_backend_process_dies(mock_popen, manager):
     """
     Tests that _wait_for_backend returns False if the process dies.
     """
@@ -138,11 +140,15 @@ async def test_wait_for_backend_process_dies(manager, mock_popen):
 
 @pytest.mark.asyncio
 @patch('aiohttp.ClientSession.get')
-async def test_wait_for_backend_health_check_ok(mock_get, manager, mock_popen):
+@patch('subprocess.Popen')
+async def test_wait_for_backend_health_check_ok(mock_popen, mock_get, manager):
     """
     Tests _wait_for_backend with a successful health check.
     """
+    # Simulate a running process
+    mock_popen.return_value.poll.return_value = None
     manager.process = mock_popen.return_value
+    
     mock_response = AsyncMock()
     mock_response.status = 200
     mock_get.return_value.__aenter__.return_value = mock_response
@@ -153,7 +159,8 @@ async def test_wait_for_backend_health_check_ok(mock_get, manager, mock_popen):
     assert result is True
 
 @pytest.mark.asyncio
-async def test_stop_process(manager, mock_popen):
+@patch('subprocess.Popen')
+async def test_stop_process(mock_popen, manager):
     """
     Tests the stop method.
     """
