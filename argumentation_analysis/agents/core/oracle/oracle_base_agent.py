@@ -24,6 +24,7 @@ except ImportError:
 from ..abc.agent_bases import BaseAgent
 from .dataset_access_manager import DatasetAccessManager
 from .permissions import QueryType, OracleResponse, PermissionManager
+from argumentation_analysis.utils.performance_monitoring import monitor_performance
 
 
 class OracleTools:
@@ -352,6 +353,7 @@ Vous êtes un gardien impartial mais stratégique des données."""
             dataset_name = "RealDataset_Unknown"  # MOCK ÉLIMINÉ PHASE 3
         self._logger.info(f"OracleBaseAgent '{agent_name}' initialisé avec dataset: {dataset_name}")
     
+    @monitor_performance(log_args=True)
     def process_oracle_request(self, requesting_agent: str, query_type: QueryType, query_params: Dict[str, Any]) -> OracleResponse:
         """
         Interface haut niveau pour traiter une demande Oracle.
