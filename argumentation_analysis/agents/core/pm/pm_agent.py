@@ -159,43 +159,32 @@ class ProjectManagerAgent(BaseAgent):
             # Retourner une chaîne d'erreur ou lever une exception spécifique
             return f"ERREUR: Impossible d'écrire la conclusion. Détails: {e}"
 
-    # Implémentation des méthodes abstraites de BaseAgent
-    async def get_response(self, *args, **kwargs) -> str:
+    async def invoke_single(self, *args, **kwargs) -> str:
         """
-        Méthode implémentée pour satisfaire l'interface de base de l'agent.
-        Retourne une réponse basée sur les capacités de l'agent.
-        """
-        capabilities = self.get_agent_capabilities()
-        return f"ProjectManagerAgent '{self.name}' prêt. Capacités: {', '.join(capabilities.keys())}"
-
-    async def invoke_single(self, *args, **kwargs) -> ChatMessageContent:
-        """
-        Implémentation de la logique de l'agent pour une seule réponse, conforme à BaseAgent.
-        Retourne un ChatMessageContent, comme attendu par le framework.
+        Implémentation de la logique de l'agent pour une seule réponse, appelée par la méthode `invoke` de la classe de base.
         """
         self.logger.info(f"PM Agent invoke_single called with: args={args}, kwargs={kwargs}")
 
+        # Le framework AgentGroupChat passe le `chat_history` comme premier argument positionnel.
+        # Nous l'extrayons pour récupérer le contexte et le texte.
+        # C'est une heuristique basée sur le fonctionnement actuel de SK.
         raw_text = ""
         analysis_state_snapshot = "{}" # Default empty state
         
-        messages_arg = kwargs.get('messages')
-        
-        # Le framework passe un unique objet ChatMessageContent, pas une liste.
-        # Cet objet n'est pas réversible. Nous devons le traiter directement.
-        if isinstance(messages_arg, ChatMessageContent) and messages_arg.role == AuthorRole.USER:
-            raw_text = messages_arg.content
-            self.logger.info(f"Texte brut extrait de l'argument 'messages': '{raw_text[:100]}...'")
-        else:
-            self.logger.warning(f"Impossible d'extraire le texte utilisateur de kwargs['messages']. Type reçu: {type(messages_arg)}")
-            # En cas d'échec, on retourne une réponse d'erreur pour ne pas planter.
-            return ChatMessageContent(role=AuthorRole.ASSISTANT, content="ERREUR: Impossible de traiter le message d'entrée.")
+        if args and isinstance(args[0], list) and len(args[0]) > 0:
+            # L'historique (chat avec les messages précédents) semble être dans args[0]
+            # Le message initial de l'utilisateur est souvent le premier.
+            for msg in args[0]:
+                if msg.role.value.lower() == 'user':
+                    raw_text = msg.content
+                    break # On prend le premier
+            self.logger.info(f"Texte brut extrait de l'historique: '{raw_text[:100]}...'")
 
-
+        # Pour le state_snapshot, c'est plus complexe.
+        # Sans une convention claire, on va appeler define_tasks avec l'état par défaut.
+        # C'est le rôle du PM de démarrer le processus.
         self.logger.info("Déclenchement de 'define_tasks_and_delegate' depuis l'appel invoke_single générique.")
-        response_content = await self.define_tasks_and_delegate(analysis_state_snapshot, raw_text)
-
-        # Encapsuler la réponse string dans un ChatMessageContent
-        return ChatMessageContent(role=AuthorRole.ASSISTANT, content=response_content)
+        return await self.define_tasks_and_delegate(analysis_state_snapshot, raw_text)
 
     # D'autres méthodes métiers pourraient être ajoutées ici si nécessaire,
     # par exemple, une méthode qui encapsule la logique de décision principale du PM

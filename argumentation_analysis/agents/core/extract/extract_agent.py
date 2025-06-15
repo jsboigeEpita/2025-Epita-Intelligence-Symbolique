@@ -673,40 +673,60 @@ class ExtractAgent(BaseAgent):
         self.logger.info(f"Nouvel extrait '{extract_name}' ajouté à '{source_info.get('source_name', '')}' à l'index {new_extract_idx}.")
         return True, new_extract_idx
 
-    async def get_response(self, *args, **kwargs) -> str:
+    async def invoke_single(self, action: str = "extract_from_name", **kwargs) -> Any:
         """
-        Méthode implémentée pour satisfaire l'interface de base de l'agent.
-        Retourne une réponse basée sur les capacités de l'agent.
+        Méthode d'invocation principale pour l'agent d'extraction.
+
+        :param action: L'action à effectuer (par exemple, 'extract_from_name').
+        :type action: str
+        :param kwargs: Arguments variables pour l'action.
+                       Par exemple, `source_info` et `extract_name`.
+        :type kwargs: Any
+        :return: Le résultat de l'action, généralement un objet `ExtractResult`.
+        :rtype: Any
+        :raises ValueError: Si une action inconnue est demandée.
         """
-        capabilities = self.get_agent_capabilities()
-        return f"ExtractAgent '{self.name}' prêt. Capacités: {', '.join(capabilities.keys())}"
+        self.logger.info(f"invoke_single appelée avec l'action: {action}")
+        
+        if action == "extract_from_name":
+            source_info = kwargs.get("source_info")
+            extract_name = kwargs.get("extract_name")
+            if not source_info or not extract_name:
+                raise ValueError("Les arguments 'source_info' et 'extract_name' sont requis pour l'action 'extract_from_name'.")
+            return await self.extract_from_name(source_info, extract_name)
+        
+        elif action == "repair_extract":
+            extract_definitions = kwargs.get("extract_definitions")
+            source_idx = kwargs.get("source_idx")
+            extract_idx = kwargs.get("extract_idx")
+            if extract_definitions is None or source_idx is None or extract_idx is None:
+                raise ValueError("Les arguments 'extract_definitions', 'source_idx' et 'extract_idx' sont requis pour 'repair_extract'.")
+            return await self.repair_extract(extract_definitions, source_idx, extract_idx)
 
-    async def invoke_single(self, *args, **kwargs) -> ChatMessageContent:
-        """
-        Méthode d'invocation principale pour l'agent d'extraction, adaptée pour AgentGroupChat.
-        Retourne un ChatMessageContent, comme attendu par le framework.
+        elif action == "update_extract_markers":
+            extract_definitions = kwargs.get("extract_definitions")
+            source_idx = kwargs.get("source_idx")
+            extract_idx = kwargs.get("extract_idx")
+            result = kwargs.get("result")
+            if extract_definitions is None or source_idx is None or extract_idx is None or result is None:
+                raise ValueError("Arguments manquants pour 'update_extract_markers'.")
+            return await self.update_extract_markers(extract_definitions, source_idx, extract_idx, result)
 
-        Cet agent est spécialisé et attend des appels à des fonctions spécifiques.
-        Un appel générique (comme depuis un chat) se contente de retourner ses capacités
-        pour éviter de planter la conversation.
-        """
-        self.logger.info(f"Extract Agent invoke_single called with: args={args}, kwargs={kwargs}")
-        self.logger.warning(
-            "L'invocation générique de ExtractAgent via AgentGroupChat n'est pas supportée "
-            "car il attend un appel à une fonction spécifique (ex: extract_from_name). "
-            "Retour des capacités de l'agent."
-        )
+        elif action == "add_new_extract":
+            extract_definitions = kwargs.get("extract_definitions")
+            source_idx = kwargs.get("source_idx")
+            extract_name = kwargs.get("extract_name")
+            result = kwargs.get("result")
+            if extract_definitions is None or source_idx is None or extract_name is None or result is None:
+                raise ValueError("Arguments manquants pour 'add_new_extract'.")
+            return await self.add_new_extract(extract_definitions, source_idx, extract_name, result)
+        
+        # Action par défaut ou
+        else:
+            self.logger.warning(f"Action '{action}' non reconnue dans invoke_single. Retourne les capacités de l'agent.")
+            capabilities = self.get_agent_capabilities()
+            return f"ExtractAgent '{self.name}' prêt. Action non reconnue. Capacités: {', '.join(capabilities.keys())}"
 
-        capabilities = self.get_agent_capabilities()
-        response_dict = {
-            "status": "inaction",
-            "message": "ExtractAgent is ready but was invoked in a generic chat context. "
-                       "This agent requires a specific function call.",
-            "capabilities": capabilities
-        }
-
-        response_content = json.dumps(response_dict, indent=2)
-        return ChatMessageContent(role=AuthorRole.ASSISTANT, content=response_content)
 
 # La fonction setup_extract_agent n'est plus nécessaire ici,
 # car l'initialisation du kernel et du service LLM se fait à l'extérieur

@@ -732,39 +732,28 @@ class InformalAnalysisAgent(BaseAgent):
                 "analysis_timestamp": self._get_timestamp()
             }
 
-    async def get_response(self, message: str, **kwargs) -> str:
-        """
-        Méthode implémentée pour satisfaire l'interface de base de l'agent.
-        Retourne une réponse basée sur les capacités d'analyse de l'agent.
-        """
-        capabilities = self.get_agent_capabilities()
-        return f"InformalAnalysisAgent '{self.name}' prêt. Capacités: {', '.join(capabilities.keys())}"
-
-    async def invoke_single(self, *args, **kwargs) -> ChatMessageContent:
+    async def invoke_single(self, *args, **kwargs) -> str:
         """
         Implémentation de la logique de l'agent pour une seule réponse, conforme à BaseAgent.
-        Retourne un ChatMessageContent, comme attendu par le framework.
         """
         self.logger.info(f"Informal Agent invoke_single called with: args={args}, kwargs={kwargs}")
         
         raw_text = ""
-        messages_arg = kwargs.get('messages')
-
-        # Le framework passe un unique objet ChatMessageContent, pas une liste.
-        if isinstance(messages_arg, ChatMessageContent) and messages_arg.role == AuthorRole.USER:
-            raw_text = messages_arg.content
-            self.logger.info(f"Texte brut extrait de l'argument 'messages': '{raw_text[:100]}...'")
+        # Extraire le texte des arguments, similaire au ProjectManagerAgent
+        if args and isinstance(args[0], list) and len(args[0]) > 0:
+            for msg in args[0]:
+                if msg.role.value.lower() == 'user':
+                    raw_text = msg.content
+                    break
         
         if not raw_text:
-            self.logger.warning(f"Impossible d'extraire le texte utilisateur de kwargs['messages']. Type reçu: {type(messages_arg)}")
-            error_content = json.dumps({"error": "No text to analyze from malformed input."})
-            return ChatMessageContent(role=AuthorRole.ASSISTANT, content=error_content)
+            self.logger.warning("Aucun texte trouvé dans les arguments pour l'analyse informelle.")
+            return json.dumps({"error": "No text to analyze."})
 
         self.logger.info(f"Déclenchement de 'perform_complete_analysis' sur le texte: '{raw_text[:100]}...'")
         analysis_result = await self.perform_complete_analysis(raw_text)
         
-        response_content = json.dumps(analysis_result, indent=2, ensure_ascii=False)
-        return ChatMessageContent(role=AuthorRole.ASSISTANT, content=response_content)
+        return json.dumps(analysis_result, indent=2, ensure_ascii=False)
 
 # Log de chargement
 # logging.getLogger(__name__).debug("Module agents.core.informal.informal_agent chargé.") # Géré par BaseAgent

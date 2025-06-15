@@ -33,7 +33,7 @@ import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
 from semantic_kernel.contents.utils.author_role import AuthorRole
-from semantic_kernel.contents.chat_history import ChatHistory
+from semantic_kernel.contents.utils.author_role import AuthorRole
 
 # Correct imports
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
@@ -164,6 +164,8 @@ async def _run_analysis_conversation(
         run_logger.info(f"Création du AgentGroupChat avec les agents: {[agent.name for agent in active_agents]}")
 
         # Créer le groupe de chat
+        group_chat = AgentGroupChat(agents=active_agents)
+
         # Message initial pour lancer la conversation
         initial_message_text = (
             "Vous êtes une équipe d'analystes experts en argumentation. "
@@ -173,15 +175,13 @@ async def _run_analysis_conversation(
             f"Voici le texte à analyser:\n\n---\n{local_state.raw_text}\n---"
         )
         
-        # Créer un historique de chat et y ajouter le message initial
-        chat_history_for_group = ChatHistory()
-        chat_history_for_group.add_user_message(initial_message_text)
+        # Créer le message initial
+        initial_chat_message = ChatMessageContent(role=AuthorRole.USER, content=initial_message_text)
 
-        # Créer le groupe de chat avec l'historique pré-rempli
-        group_chat = AgentGroupChat(agents=active_agents, chat_history=chat_history_for_group)
-
+        # Injecter le message directement dans l'historique du chat
+        group_chat.history.append(initial_chat_message)
+        
         run_logger.info("Démarrage de l'invocation du groupe de chat...")
-        # L'invocation se fait sans argument car le premier message est déjà dans l'historique.
         full_history = [message async for message in group_chat.invoke()]
         run_logger.info("Conversation terminée.")
         

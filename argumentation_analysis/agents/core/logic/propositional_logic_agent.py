@@ -396,18 +396,13 @@ class PropositionalLogicAgent(BaseLogicAgent):
         content = belief_set_data.get("content", "")
         return PropositionalBeliefSet(content)
 
-    async def get_response(self, *args, **kwargs) -> str:
-        """
-        Méthode implémentée pour satisfaire l'interface de base de l'agent.
-        Retourne une réponse basée sur les capacités de l'agent.
-        """
-        capabilities = self.get_agent_capabilities()
-        return f"PropositionalLogicAgent '{self.name}' prêt. Capacités: {', '.join(capabilities.keys())}"
-
-    async def invoke_single(self, *args, **kwargs) -> ChatMessageContent:
+    async def invoke_single(self, *args, **kwargs) -> str:
         """
         Implémentation de `invoke_single` pour l'agent de logique propositionnelle.
-        Retourne un ChatMessageContent, comme attendu par le framework.
+
+        Cet agent est spécialisé et attend des appels à des fonctions spécifiques
+        (comme `text_to_belief_set` ou `execute_query`). Un appel générique
+        se contente de retourner ses capacités.
         """
         import json
         self.logger.info(f"PL Agent invoke_single called with: args={args}, kwargs={kwargs}")
@@ -415,11 +410,10 @@ class PropositionalLogicAgent(BaseLogicAgent):
                             "car il attend un appel à une fonction spécifique. Retour des capacités.")
         
         capabilities = self.get_agent_capabilities()
-        response_dict = {
+        response = {
             "status": "inaction",
             "message": "PropositionalLogicAgent is ready. Invoke a specific capability.",
             "capabilities": capabilities
         }
         
-        response_content = json.dumps(response_dict, indent=2)
-        return ChatMessageContent(role=AuthorRole.ASSISTANT, content=response_content)
+        return json.dumps(response, indent=2)
