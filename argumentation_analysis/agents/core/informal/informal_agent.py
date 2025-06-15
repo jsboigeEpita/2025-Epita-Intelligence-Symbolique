@@ -732,28 +732,31 @@ class InformalAnalysisAgent(BaseAgent):
                 "analysis_timestamp": self._get_timestamp()
             }
 
-    async def invoke_single(self, *args, **kwargs) -> str:
+    async def invoke_single(
+        self,
+        messages: List[ChatMessageContent],
+        **kwargs: Any,
+    ) -> ChatMessageContent:
         """
         Implémentation de la logique de l'agent pour une seule réponse, conforme à BaseAgent.
         """
-        self.logger.info(f"Informal Agent invoke_single called with: args={args}, kwargs={kwargs}")
+        self.logger.info(f"Informal Agent invoke_single called with: {len(messages)} messages.")
         
-        raw_text = ""
-        # Extraire le texte des arguments, similaire au ProjectManagerAgent
-        if args and isinstance(args[0], list) and len(args[0]) > 0:
-            for msg in args[0]:
-                if msg.role.value.lower() == 'user':
-                    raw_text = msg.content
-                    break
-        
-        if not raw_text:
-            self.logger.warning("Aucun texte trouvé dans les arguments pour l'analyse informelle.")
-            return json.dumps({"error": "No text to analyze."})
+        # Le dernier message de l'utilisateur est généralement celui qu'on traite.
+        user_message = next((m.content for m in reversed(messages) if m.role == AuthorRole.USER), None)
 
-        self.logger.info(f"Déclenchement de 'perform_complete_analysis' sur le texte: '{raw_text[:100]}...'")
-        analysis_result = await self.perform_complete_analysis(raw_text)
+        if not user_message:
+            self.logger.warning("Aucun message utilisateur trouvé dans l'historique pour l'analyse informelle.")
+            error_content = json.dumps({"error": "No user message to analyze."})
+            return ChatMessageContent(role=AuthorRole.ASSISTANT, content=error_content)
+
+        self.logger.info(f"Déclenchement de 'perform_complete_analysis' sur le texte: '{user_message[:100]}...'")
+        analysis_result = await self.perform_complete_analysis(user_message)
         
-        return json.dumps(analysis_result, indent=2, ensure_ascii=False)
+        # Encodage du résultat en JSON pour la réponse
+        response_content = json.dumps(analysis_result, indent=2, ensure_ascii=False)
+        
+        return ChatMessageContent(role=AuthorRole.ASSISTANT, content=response_content)
 
 # Log de chargement
 # logging.getLogger(__name__).debug("Module agents.core.informal.informal_agent chargé.") # Géré par BaseAgent

@@ -2,7 +2,7 @@
 from playwright.sync_api import Page, expect, TimeoutError
 
 # Import de la classe PlaywrightHelpers depuis le conftest unifié
-from .conftest import PlaywrightHelpers
+from ..conftest import PlaywrightHelpers
 
 
 @pytest.mark.skip(reason="Disabling all functional tests to isolate backend test failures.")
