@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__) # Déplacé ici pour être utilisé par les
 
 try:
     # Tenter d'importer AnalysisType depuis le pipeline, ajuster si défini ailleurs.
-    from argumentation_analysis.pipelines.unified_orchestration_pipeline import AnalysisType
+    from argumentation_analysis.core.enums import AnalysisType
 except ImportError:
     AnalysisType = None
     logger.warning("Could not import AnalysisType. Specialized orchestrator selection might be affected.")
