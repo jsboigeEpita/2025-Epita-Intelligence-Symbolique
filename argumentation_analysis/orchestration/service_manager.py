@@ -41,6 +41,7 @@ from datetime import datetime
 from pathlib import Path
 import json
 import os
+import inspect
 import semantic_kernel as sk
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
@@ -905,35 +906,33 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
         self.logger.info("Arrêt du ServiceManager...")
         
         try:
-            # Nettoyage des orchestrateurs
-            if self.cluedo_orchestrator and hasattr(self.cluedo_orchestrator, 'shutdown'):
-                await self.cluedo_orchestrator.shutdown()
-                
-            if self.conversation_orchestrator and hasattr(self.conversation_orchestrator, 'shutdown'):
-                await self.conversation_orchestrator.shutdown()
-                
-            if self.llm_orchestrator and hasattr(self.llm_orchestrator, 'shutdown'):
-                await self.llm_orchestrator.shutdown()
-                
-            # Nettoyage des gestionnaires
-            if self.strategic_manager and hasattr(self.strategic_manager, 'shutdown'):
-                await self.strategic_manager.shutdown()
-                
-            if self.tactical_manager and hasattr(self.tactical_manager, 'shutdown'):
-                await self.tactical_manager.shutdown()
-                
-            if self.operational_manager and hasattr(self.operational_manager, 'shutdown'):
-                await self.operational_manager.shutdown()
-                
-            # Nettoyage du middleware
-            if self.middleware and hasattr(self.middleware, 'shutdown'):
-                await self.middleware.shutdown()
-                
+            # Fonction d'aide pour un arrêt sécurisé des composants
+            async def safe_shutdown(component, name):
+                """Appelle shutdown() de manière sécurisée, qu'il soir sync ou async."""
+                if component and hasattr(component, 'shutdown'):
+                    self.logger.debug(f"Tentative d'arrêt de {name}...")
+                    shutdown_call = component.shutdown()
+                    if inspect.isawaitable(shutdown_call):
+                        await shutdown_call
+                        self.logger.debug(f"{name} arrêté (async).")
+                    else:
+                        # La méthode était synchrone, l'appel a déjà eu lieu
+                        self.logger.debug(f"{name} arrêté (sync).")
+
+            # Arrêt des composants en utilisant la fonction sécurisée
+            await safe_shutdown(self.cluedo_orchestrator, "CluedoOrchestrator")
+            await safe_shutdown(self.conversation_orchestrator, "ConversationOrchestrator")
+            await safe_shutdown(self.llm_orchestrator, "RealLLMOrchestrator")
+            await safe_shutdown(self.strategic_manager, "StrategicManager")
+            await safe_shutdown(self.tactical_manager, "TacticalManager")
+            await safe_shutdown(self.operational_manager, "OperationalManager")
+            await safe_shutdown(self.middleware, "MessageMiddleware")
+
             self._shutdown = True
             self.logger.info("ServiceManager arrêté proprement")
-            
+
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'arrêt: {e}")
+            self.logger.error(f"Erreur lors de l'arrêt: {e}", exc_info=True)
             
     def __str__(self) -> str:
         return f"ServiceManager(session_id={self.state.session_id}, initialized={self._initialized})"

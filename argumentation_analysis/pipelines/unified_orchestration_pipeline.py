@@ -25,10 +25,11 @@ Date: 10/06/2025
 import asyncio
 import logging
 import time
+import inspect
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Union, Callable
-from enum import Enum
+from argumentation_analysis.core.enums import OrchestrationMode, AnalysisType
 
 # Imports Semantic Kernel et architecture de base
 import semantic_kernel as sk
@@ -91,40 +92,6 @@ from argumentation_analysis.orchestration.engine.config import OrchestrationConf
 logger = logging.getLogger("UnifiedOrchestrationPipeline")
 
 
-class OrchestrationMode(Enum):
-    """Modes d'orchestration disponibles."""
-    
-    # Modes de base (compatibilité)
-    PIPELINE = "pipeline"
-    REAL = "real"
-    CONVERSATION = "conversation"
-    
-    # Modes hiérarchiques
-    HIERARCHICAL_FULL = "hierarchical_full"
-    STRATEGIC_ONLY = "strategic_only"
-    TACTICAL_COORDINATION = "tactical_coordination"
-    OPERATIONAL_DIRECT = "operational_direct"
-    
-    # Modes spécialisés
-    CLUEDO_INVESTIGATION = "cluedo_investigation"
-    LOGIC_COMPLEX = "logic_complex"
-    ADAPTIVE_HYBRID = "adaptive_hybrid"
-    
-    # Mode automatique
-    AUTO_SELECT = "auto_select"
-
-
-class AnalysisType(Enum):
-    """Types d'analyse supportés."""
-    
-    COMPREHENSIVE = "comprehensive"
-    RHETORICAL = "rhetorical"
-    LOGICAL = "logical"
-    INVESTIGATIVE = "investigative"
-    FALLACY_FOCUSED = "fallacy_focused"
-    ARGUMENT_STRUCTURE = "argument_structure"
-    DEBATE_ANALYSIS = "debate_analysis"
-    CUSTOM = "custom"
 
 
 class ExtendedOrchestrationConfig(UnifiedAnalysisConfig):
@@ -723,8 +690,26 @@ class UnifiedOrchestrationPipeline:
         Returns:
             Nom de la stratégie d'orchestration sélectionnée
         """
+        # --- DEBUT BLOC DE DIAGNOSTIC ---
+        import logging
+        # Assurer que le logging est configuré
+        if not logging.getLogger().hasHandlers():
+            logging.basicConfig(level=logging.INFO)
+
+        # Utiliser getattr pour éviter les erreurs si les attributs n'existent pas
+        orchestration_mode_val = getattr(self.config, 'orchestration_mode_enum', 'N/A')
+        analysis_type_val = getattr(self.config, 'analysis_type', 'N/A')
+
+        logging.info("--- DIAGNOSTIC: Entering _select_orchestration_strategy ---")
+        logging.info(f"Value of self.orchestration_mode: {orchestration_mode_val}")
+        logging.info(f"Type of self.orchestration_mode: {type(orchestration_mode_val)}")
+        logging.info(f"Value of self.analysis_type: {analysis_type_val}")
+        logging.info(f"Type of self.analysis_type: {type(analysis_type_val)}")
+        # --- FIN BLOC DE DIAGNOSTIC ---
+
         # Mode manuel
         if self.config.orchestration_mode_enum != OrchestrationMode.AUTO_SELECT:
+            logging.info("Path taken: Manual selection")
             mode_strategy_map = {
                 OrchestrationMode.HIERARCHICAL_FULL: "hierarchical_full",
                 OrchestrationMode.STRATEGIC_ONLY: "strategic_only",
@@ -734,26 +719,47 @@ class UnifiedOrchestrationPipeline:
                 OrchestrationMode.LOGIC_COMPLEX: "specialized_direct",
                 OrchestrationMode.ADAPTIVE_HYBRID: "hybrid"
             }
-            return mode_strategy_map.get(self.config.orchestration_mode_enum, "fallback")
+            strategy = mode_strategy_map.get(self.config.orchestration_mode_enum, "fallback")
+            logging.info(f"--- DIAGNOSTIC: Exiting _select_orchestration_strategy with strategy: {strategy} ---")
+            return strategy
         
         # Sélection automatique basée sur le type d'analyse
+        logging.info("Path taken: AUTO_SELECT logic")
         if not self.config.auto_select_orchestrator:
+            logging.info("Path taken: Fallback (auto_select disabled)")
+            logging.info("--- DIAGNOSTIC: Exiting _select_orchestration_strategy with strategy: fallback ---")
             return "fallback"
         
         # Analyse du texte pour sélection automatique
         text_features = await self._analyze_text_features(text)
         
-        # Critères de sélection
+        # Critères de sélection - LOGIQUE CORRIGÉE V2
+        strategy = "hybrid"  # On définit 'hybrid' comme le fallback par défaut
+
+        # Priorité 1: Types d'analyse très spécifiques
         if self.config.analysis_type == AnalysisType.INVESTIGATIVE:
-            return "specialized_direct"  # Cluedo orchestrator
+            logging.info("Path taken: Auto -> specialized_direct (INVESTIGATIVE)")
+            strategy = "specialized_direct"
         elif self.config.analysis_type == AnalysisType.LOGICAL:
-            return "specialized_direct"  # Logic complex orchestrator
+            logging.info("Path taken: Auto -> specialized_direct (LOGICAL)")
+            strategy = "specialized_direct"
+            
+        # Priorité 2: Texte long -> architecture hiérarchique
         elif self.config.enable_hierarchical and len(text) > 1000:
-            return "hierarchical_full"
-        elif self.service_manager and self.service_manager._initialized:
-            return "service_manager"
-        else:
-            return "hybrid"
+            logging.info("Path taken: Auto -> hierarchical_full (long text)")
+            strategy = "hierarchical_full"
+            
+        # Priorité 3: Pour une analyse COMPREHENSIVE, si le service manager est prêt, utilisons-le
+        elif self.config.analysis_type == AnalysisType.COMPREHENSIVE and self.service_manager and self.service_manager._initialized:
+            logging.info("Path taken: Auto -> service_manager (COMPREHENSIVE)")
+            strategy = "service_manager"
+        
+        # Si 'strategy' est toujours 'hybrid', log le cas par défaut
+        if strategy == "hybrid":
+             logging.info("Path taken: Auto -> hybrid (default fallback case)")
+
+        logging.info(f"--- DIAGNOSTIC: Exiting _select_orchestration_strategy with strategy: {strategy} ---")
+        return strategy
     
     async def _analyze_text_features(self, text: str) -> Dict[str, Any]:
         """Analyse les caractéristiques du texte pour la sélection d'orchestrateur."""
@@ -1237,28 +1243,35 @@ class UnifiedOrchestrationPipeline:
         logger.info("[SHUTDOWN] Arrêt du pipeline d'orchestration unifié...")
         
         try:
-            # Arrêt du service manager
-            if self.service_manager and hasattr(self.service_manager, 'shutdown'):
-                await self.service_manager.shutdown()
+            # Fonction d'aide pour un arrêt sécurisé
+            async def safe_shutdown(component, name):
+                """Appelle shutdown() de manière sécurisée, qu'il soir sync ou async."""
+                if component and hasattr(component, 'shutdown'):
+                    logger.debug(f"Tentative d'arrêt de {name}...")
+                    shutdown_call = component.shutdown()
+                    if inspect.isawaitable(shutdown_call):
+                        await shutdown_call
+                        logger.debug(f"{name} arrêté (async).")
+                    else:
+                        logger.debug(f"{name} arrêté (sync).")
+
+            # Arrêt du service manager (qui devrait gérer ses propres composants)
+            await safe_shutdown(self.service_manager, "ServiceManager")
             
-            # Arrêt des orchestrateurs spécialisés
+            # Arrêt des orchestrateurs spécialisés (par sécurité, si non gérés par le SM)
             for name, data in self.specialized_orchestrators.items():
-                orchestrator = data["orchestrator"]
-                if hasattr(orchestrator, 'shutdown'):
-                    try:
-                        await orchestrator.shutdown()
-                    except Exception as e:
-                        logger.warning(f"Erreur arrêt orchestrateur {name}: {e}")
+                await safe_shutdown(data.get("orchestrator"), f"SpecializedOrchestrator({name})")
             
-            # Arrêt du middleware
-            if self.middleware and hasattr(self.middleware, 'shutdown'):
-                await self.middleware.shutdown()
-            
+            # Le middleware est normalement arrêté par le ServiceManager.
+            # On le fait ici seulement s'il n'y a pas de ServiceManager.
+            if not self.service_manager:
+                await safe_shutdown(self.middleware, "MessageMiddleware")
+
             self.initialized = False
             logger.info("[SHUTDOWN] Pipeline d'orchestration unifié arrêté")
         
         except Exception as e:
-            logger.error(f"[SHUTDOWN] Erreur lors de l'arrêt: {e}")
+            logger.error(f"[SHUTDOWN] Erreur lors de l'arrêt: {e}", exc_info=True)
 
 
 # ==========================================
