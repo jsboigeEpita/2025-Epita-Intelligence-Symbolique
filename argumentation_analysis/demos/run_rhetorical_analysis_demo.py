@@ -2,6 +2,26 @@ import subprocess
 import os
 import sys
 import json
+from pathlib import Path
+
+# Auto-positionnement dans le bon répertoire
+# Ce bloc assure que le script s'exécute comme s'il avait été lancé
+# depuis le répertoire 'argumentation_analysis', peu importe le CWD actuel.
+try:
+    # Trouver le chemin du répertoire du script actuel
+    script_dir = Path(__file__).resolve().parent
+    # Chercher le répertoire 'argumentation_analysis' en remontant l'arborescence
+    target_dir = script_dir
+    while target_dir.name != 'argumentation_analysis' and target_dir.parent != target_dir:
+        target_dir = target_dir.parent
+    
+    # Si on l'a trouvé et qu'on n'y est pas déjà, on s'y déplace
+    if target_dir.name == 'argumentation_analysis' and os.getcwd() != str(target_dir):
+        os.chdir(target_dir)
+        # Message de débogage pour confirmer le changement.
+        # print(f"Changed current working directory to: {os.getcwd()}", file=sys.stderr)
+except Exception as e:
+    print(f"Could not auto-position working directory: {e}", file=sys.stderr)
 
 # Ensure the script is run from the root of the argumentation_analysis directory
 # This helps locate run_analysis.py correctly.

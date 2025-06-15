@@ -25,7 +25,7 @@ import json
 from typing import Dict, List, Any, Optional, AsyncGenerator
 import semantic_kernel as sk
 from semantic_kernel.functions.kernel_arguments import KernelArguments
-from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents import ChatMessageContent, AuthorRole
 
 # Import de la classe de base
 from ..abc.agent_bases import BaseAgent
@@ -732,53 +732,39 @@ class InformalAnalysisAgent(BaseAgent):
                 "analysis_timestamp": self._get_timestamp()
             }
 
-    async def invoke(
-        self,
-        messages: List[ChatMessageContent],
-        **kwargs: Dict[str, Any],
-    ) -> List[ChatMessageContent]:
+    async def get_response(self, message: str, **kwargs) -> str:
         """
-        Méthode principale pour interagir avec l'agent.
-        Prend le dernier message, effectue une analyse complète et retourne le résultat.
+        Méthode implémentée pour satisfaire l'interface de base de l'agent.
+        Retourne une réponse basée sur les capacités d'analyse de l'agent.
         """
-        if not messages:
-            return []
+        capabilities = self.get_agent_capabilities()
+        return f"InformalAnalysisAgent '{self.name}' prêt. Capacités: {', '.join(capabilities.keys())}"
+
+    async def invoke_single(self, *args, **kwargs) -> ChatMessageContent:
+        """
+        Implémentation de la logique de l'agent pour une seule réponse, conforme à BaseAgent.
+        Retourne un ChatMessageContent, comme attendu par le framework.
+        """
+        self.logger.info(f"Informal Agent invoke_single called with: args={args}, kwargs={kwargs}")
         
-        last_message = messages[-1]
-        text_to_analyze = last_message.content
+        raw_text = ""
+        messages_arg = kwargs.get('messages')
+
+        # Le framework passe un unique objet ChatMessageContent, pas une liste.
+        if isinstance(messages_arg, ChatMessageContent) and messages_arg.role == AuthorRole.USER:
+            raw_text = messages_arg.content
+            self.logger.info(f"Texte brut extrait de l'argument 'messages': '{raw_text[:100]}...'")
         
-        self.logger.info(f"Invocation de l'agent {self.name} avec le message : '{text_to_analyze[:100]}...'")
+        if not raw_text:
+            self.logger.warning(f"Impossible d'extraire le texte utilisateur de kwargs['messages']. Type reçu: {type(messages_arg)}")
+            error_content = json.dumps({"error": "No text to analyze from malformed input."})
+            return ChatMessageContent(role=AuthorRole.ASSISTANT, content=error_content)
+
+        self.logger.info(f"Déclenchement de 'perform_complete_analysis' sur le texte: '{raw_text[:100]}...'")
+        analysis_result = await self.perform_complete_analysis(raw_text)
         
-        analysis_result = await self.perform_complete_analysis(text_to_analyze)
-        
-        # Formatter le résultat en ChatMessageContent
         response_content = json.dumps(analysis_result, indent=2, ensure_ascii=False)
-        
-        return [ChatMessageContent(role="assistant", content=response_content, name=self.name)]
-
-    async def invoke_stream(
-        self,
-        messages: List[ChatMessageContent],
-        **kwargs: Dict[str, Any],
-    ) -> AsyncGenerator[List[ChatMessageContent], None]:
-        """
-        Méthode de streaming pour interagir avec l'agent.
-        Retourne le résultat complet en un seul chunk.
-        """
-        self.logger.info(f"Invocation en streaming de l'agent {self.name}.")
-        response = await self.invoke(messages, **kwargs)
-        yield response
-
-    async def get_response(
-        self,
-        messages: List[ChatMessageContent],
-        **kwargs: Dict[str, Any],
-    ) -> List[ChatMessageContent]:
-        """
-        Alias pour invoke, pour la compatibilité.
-        """
-        self.logger.info(f"Appel de get_response pour l'agent {self.name}.")
-        return await self.invoke(messages, **kwargs)
+        return ChatMessageContent(role=AuthorRole.ASSISTANT, content=response_content)
 
 # Log de chargement
 # logging.getLogger(__name__).debug("Module agents.core.informal.informal_agent chargé.") # Géré par BaseAgent
