@@ -92,230 +92,143 @@ class TraceAnalysisReport:
 
 
 class PlaywrightTraceAnalyzer:
-    """Analyseur intelligent des traces Playwright."""
-    
-    def __init__(self, trace_dir: Path = TRACE_DATA_DIR):
+    """Analyseur intelligent des traces Playwright à partir des fichiers trace.zip."""
+
+    def __init__(self, trace_dir: Path):
         self.trace_dir = trace_dir
         self.report_data = None
-        
-        # Patterns pour extraction intelligente
-        self.api_call_pattern = re.compile(
-            r'"url":\s*"([^"]*)".*?"method":\s*"([^"]*)".*?"status":\s*(\d+)',
-            re.DOTALL
-        )
-        
-        self.analyze_endpoint_pattern = re.compile(
-            r'/analyze|/api/analyze',
-            re.IGNORECASE
-        )
-        
-        self.servicemanager_pattern = re.compile(
-            r'ServiceManager|analysis_id|argumentation_analysis',
-            re.IGNORECASE
-        )
-        
-        # Limites de sécurité pour éviter les débordements
-        self.MAX_FILE_SIZE = 1024 * 1024  # 1MB max par fichier
-        self.MAX_RESPONSE_PREVIEW = 200   # 200 chars max pour preview
-        self.MAX_STEPS_ANALYZE = 50       # Max 50 steps analysés par test
-        
-    def extract_lightweight_metadata(self, md_file: Path) -> Optional[TestResult]:
-        """Extrait les métadonnées légères d'un fichier .md de trace."""
-        try:
-            if md_file.stat().st_size > self.MAX_FILE_SIZE:
-                logger.warning(f"Fichier {md_file.name} trop volumineux ({md_file.stat().st_size} bytes), analyse partielle")
-                return self._extract_partial_metadata(md_file)
-            
-            content = md_file.read_text(encoding='utf-8')
-            
-            # Extraction des informations essentielles seulement
-            test_name = self._extract_test_name(content)
-            status = self._extract_status(content) 
-            duration = self._extract_duration(content)
-            error_msg = self._extract_error_message(content)
-            
-            # Comptage léger des éléments
-            steps_count = len(re.findall(r'"step":', content[:10000]))  # Limite analyse
-            api_calls_count = len(re.findall(r'"request":', content[:10000]))
-            screenshots_count = len(re.findall(r'"screenshot":', content[:10000]))
-            
-            return TestResult(
-                test_name=test_name,
-                status=status,
-                duration_ms=duration,
-                error_message=error_msg,
-                steps_count=steps_count,
-                api_calls_count=api_calls_count,
-                screenshots_count=screenshots_count
-            )
-            
-        except Exception as e:
-            logger.error(f"Erreur lors de l'extraction de {md_file.name}: {e}")
-            return None
-    
-    def _extract_partial_metadata(self, md_file: Path) -> Optional[TestResult]:
-        """Extraction partielle pour les gros fichiers."""
-        try:
-            # Lire seulement les premiers Ko pour les métadonnées de base
-            with open(md_file, 'r', encoding='utf-8') as f:
-                partial_content = f.read(8192)  # 8KB seulement
-            
-            test_name = self._extract_test_name(partial_content) or f"Test_{md_file.stem}"
-            status = self._extract_status(partial_content) or "unknown"
-            duration = self._extract_duration(partial_content) or 0
-            
-            return TestResult(
-                test_name=test_name,
-                status=status, 
-                duration_ms=duration,
-                error_message="Analyse partielle (fichier volumineux)",
-                steps_count=-1,  # Indique une analyse partielle
-                api_calls_count=-1,
-                screenshots_count=-1
-            )
-            
-        except Exception as e:
-            logger.error(f"Erreur extraction partielle {md_file.name}: {e}")
-            return None
-    
-    def _extract_test_name(self, content: str) -> str:
-        """Extrait le nom du test."""
-        match = re.search(r'"title":\s*"([^"]*)"', content)
-        if match:
-            return match.group(1)
-        
-        # Fallback: chercher dans les premiers patterns
-        match = re.search(r'test[_\s]*([a-zA-Z_]+)', content[:1000])
-        return match.group(1) if match else "unknown_test"
-    
-    def _extract_status(self, content: str) -> str:
-        """Extrait le statut du test."""
-        if '"outcome": "passed"' in content:
-            return "passed"
-        elif '"outcome": "failed"' in content:
-            return "failed"
-        elif '"outcome": "skipped"' in content:
-            return "skipped"
-        else:
-            return "unknown"
-    
-    def _extract_duration(self, content: str) -> int:
-        """Extrait la durée du test."""
-        match = re.search(r'"duration":\s*(\d+)', content)
-        return int(match.group(1)) if match else 0
-    
-    def _extract_error_message(self, content: str) -> Optional[str]:
-        """Extrait le message d'erreur s'il existe."""
-        match = re.search(r'"error":\s*"([^"]*)"', content)
-        if match:
-            return match.group(1)[:200]  # Limite la taille
-        return None
-    
-    def extract_api_responses(self, md_file: Path) -> List[APICallSummary]:
-        """Extrait seulement les réponses des endpoints /analyze."""
-        try:
-            if md_file.stat().st_size > self.MAX_FILE_SIZE:
-                logger.warning(f"Fichier {md_file.name} trop volumineux pour extraction API complète")
-                return []
-            
-            content = md_file.read_text(encoding='utf-8')
-            api_calls = []
-            
-            # Recherche ciblée des appels API
-            matches = self.api_call_pattern.finditer(content)
-            
-            for match in matches:
-                url = match.group(1)
-                method = match.group(2)
-                status = int(match.group(3))
-                
-                # Focus sur les endpoints d'analyse
-                is_analyze = bool(self.analyze_endpoint_pattern.search(url))
-                
-                if is_analyze or '/api/' in url:  # Garde tous les appels API importants
-                    # Extraction de la réponse (limitée)
-                    response_start = match.end()
-                    response_chunk = content[response_start:response_start + 1000]
-                    
-                    # Vérifie si c'est une vraie réponse ServiceManager
-                    has_servicemanager = bool(self.servicemanager_pattern.search(response_chunk))
-                    
-                    # Preview de la réponse
-                    response_preview = self._extract_response_preview(response_chunk)
-                    
-                    api_calls.append(APICallSummary(
-                        endpoint=url,
-                        method=method,
-                        status_code=status,
-                        response_preview=response_preview,
-                        is_analyze_endpoint=is_analyze,
-                        contains_servicemanager_data=has_servicemanager
-                    ))
-                    
-                    # Limite le nombre d'appels analysés
-                    if len(api_calls) >= 20:
-                        break
-            
-            return api_calls
-            
-        except Exception as e:
-            logger.error(f"Erreur extraction API de {md_file.name}: {e}")
-            return []
-    
-    def _extract_response_preview(self, response_chunk: str) -> str:
-        """Extrait un aperçu sécurisé de la réponse."""
-        # Cherche le JSON de réponse
-        json_match = re.search(r'"response":\s*({.*?})', response_chunk, re.DOTALL)
-        if json_match:
-            try:
-                response_text = json_match.group(1)[:self.MAX_RESPONSE_PREVIEW]
-                # Nettoie et sécurise
-                response_text = re.sub(r'[^\w\s\{\}":,.-]', '', response_text)
-                return response_text
-            except:
-                pass
-        
-        # Fallback: premiers mots du chunk
-        clean_chunk = re.sub(r'[^\w\s]', ' ', response_chunk)
-        words = clean_chunk.split()[:10]
-        return ' '.join(words)
-    
-    def analyze_traces_summary(self) -> TraceAnalysisReport:
-        """Analyse principale en mode résumé."""
-        logger.info("[TRACE] Démarrage de l'analyse légère des traces Playwright")
-        
+        self.MAX_RESPONSE_PREVIEW = 200
+
+    def _get_trace_files(self) -> List[Path]:
+        """Trouve tous les fichiers trace.zip de manière récursive."""
         if not self.trace_dir.exists():
-            raise FileNotFoundError(f"Répertoire de traces non trouvé: {self.trace_dir}")
+            logger.error(f"Le répertoire de traces spécifié n'existe pas: {self.trace_dir}")
+            return []
         
-        # Collecte des fichiers de métadonnées
-        md_files = list(self.trace_dir.glob("*.md"))
-        logger.info(f"[FILES] {len(md_files)} fichiers de traces trouvés")
+        trace_files = list(self.trace_dir.rglob("trace.zip"))
+        logger.info(f"[FILES] {len(trace_files)} fichier(s) trace.zip trouvé(s) dans {self.trace_dir}")
+        return trace_files
+
+    def _parse_trace_event(self, event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Parse un événement de trace pour extraire les informations pertinentes."""
+        if event.get("type") == "action":
+            return {
+                "type": "action",
+                "class": event.get("class"),
+                "method": event.get("method"),
+                "selector": event.get("params", {}).get("selector"),
+                "error": event.get("error", {}).get("error", {}).get("message"),
+                "duration": event.get("duration"),
+            }
+        if event.get("type") == "resource" and event.get("class") == "api":
+            return {
+                "type": "api_call",
+                "method": event["params"]["method"],
+                "url": event["params"]["url"],
+                "status": event["params"]["response"].get("status"),
+                "response_body": event["params"]["response"].get("body_b64"),
+            }
+        return None
+
+    def analyze_single_trace(self, zip_path: Path) -> Tuple[Optional[TestResult], List[APICallSummary]]:
+        """Analyse un seul fichier trace.zip."""
+        test_result = None
+        api_calls = []
+
+        try:
+            with zipfile.ZipFile(zip_path, 'r') as zf:
+                # Cherche la trace (peut être trace.json, trace.jsonl, etc.)
+                trace_file_name = next((f for f in zf.namelist() if 'trace.' in f), None)
+                if not trace_file_name:
+                    logger.warning(f"Aucun fichier de trace trouvé dans {zip_path.name}")
+                    return None, []
+                
+                with zf.open(trace_file_name) as trace_file:
+                    events = [json.loads(line) for line in trace_file]
+
+                # Informations générales sur le test
+                test_name = zip_path.parent.name
+                end_event = next((e for e in reversed(events) if e.get("type") == "action" and e.get("method") == "close"), None)
+                
+                if end_event:
+                    status = "passed" if "error" not in end_event else "failed"
+                    duration = end_event.get("duration", 0)
+                    error_msg = end_event.get("error", {}).get("error", {}).get("message")
+                else: # Fallback
+                    status = "unknown"
+                    duration = sum(e.get("duration", 0) for e in events if e.get("type") == "action")
+                    error_msg = None
+
+                # Actions et appels API
+                actions = [e for e in events if e.get("type") == "action"]
+                resources = [e for e in events if e.get("type") == "resource"]
+                screenshots = [e for e in events if e.get("method") == "screenshot"]
+
+                for res in resources:
+                    if res.get("class") == "api":
+                        response_body = ""
+                        if res["params"]["response"].get("body_b64"):
+                            try:
+                                response_body = base64.b64decode(res["params"]["response"]["body_b64"]).decode('utf-8', errors='ignore')
+                            except Exception:
+                                response_body = "[corrupted body]"
+                        
+                        is_analyze = '/analyze' in res["params"]["url"] or '/api/analyze' in res["params"]["url"]
+                        
+                        api_calls.append(APICallSummary(
+                            endpoint=res["params"]["url"],
+                            method=res["params"]["method"],
+                            status_code=res["params"]["response"].get("status", 0),
+                            response_preview=response_body[:self.MAX_RESPONSE_PREVIEW],
+                            is_analyze_endpoint=is_analyze,
+                            contains_servicemanager_data='ServiceManager' in response_body # Heuristique simple
+                        ))
+
+                test_result = TestResult(
+                    test_name=test_name,
+                    status=status,
+                    duration_ms=duration,
+                    error_message=error_msg,
+                    steps_count=len(actions),
+                    api_calls_count=len(api_calls),
+                    screenshots_count=len(screenshots),
+                )
+
+        except Exception as e:
+            logger.error(f"Erreur lors de l'analyse du fichier de trace {zip_path.name}: {e}", exc_info=True)
+            # Créer un résultat de test partiel en cas d'erreur
+            test_result = TestResult(test_name=zip_path.parent.name, status="failed", duration_ms=0, error_message=f"Crash de l'analyseur: {e}")
+
+        return test_result, api_calls
+
+    def analyze_traces_summary(self) -> TraceAnalysisReport:
+        """Analyse principale en mode résumé en lisant les fichiers trace.zip."""
+        logger.info("[TRACE] Démarrage de l'analyse des traces Playwright (format .zip)")
         
+        trace_files = self._get_trace_files()
+        if not trace_files:
+            logger.warning("Aucun fichier trace.zip trouvé. L'analyse est annulée.")
+            # Retourner un rapport vide pour ne pas crasher l'orchestrateur
+            return TraceAnalysisReport(datetime.now().isoformat(), 0, 0, 0, 0, 0, 0, 0, [], [], ["Aucun fichier trace.zip trouvé."])
+
+
         tests_summary = []
         all_api_calls = []
         
-        # Analyse chaque fichier de trace
-        for md_file in md_files:
-            logger.info(f"[ANALYZE] Analyse de {md_file.name}")
+        for trace_zip in trace_files:
+            logger.info(f"[ANALYZE] Analyse de {trace_zip.relative_to(self.trace_dir)}")
+            test_result, api_calls = self.analyze_single_trace(trace_zip)
             
-            # Métadonnées du test
-            test_result = self.extract_lightweight_metadata(md_file)
             if test_result:
                 tests_summary.append(test_result)
+            all_api_calls.extend(api_calls)
             
-            # Appels API (seulement pour les tests non partiels)
-            if test_result and test_result.steps_count != -1:
-                api_calls = self.extract_api_responses(md_file)
-                all_api_calls.extend(api_calls)
-        
-        # Calculs statistiques
         passed_tests = sum(1 for t in tests_summary if t.status == "passed")
         failed_tests = sum(1 for t in tests_summary if t.status == "failed")
         analyze_calls = sum(1 for api in all_api_calls if api.is_analyze_endpoint)
         servicemanager_responses = sum(1 for api in all_api_calls if api.contains_servicemanager_data)
         mock_responses = analyze_calls - servicemanager_responses
         
-        # Génération de recommandations
         recommendations = self._generate_recommendations(
             tests_summary, all_api_calls, analyze_calls, servicemanager_responses
         )
@@ -335,8 +248,7 @@ class PlaywrightTraceAnalyzer:
         )
         
         self.report_data = report
-        logger.info("[SUCCESS] Analyse terminée avec succès")
-        
+        logger.info("[SUCCESS] Analyse des traces .zip terminée.")
         return report
     
     def _generate_recommendations(self, tests: List[TestResult], apis: List[APICallSummary], 

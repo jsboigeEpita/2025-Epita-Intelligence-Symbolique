@@ -485,22 +485,22 @@ class UnifiedWebOrchestrator:
         try:
             self.add_trace("[TEST] INTEGRATION COMPLETE",
                           "Démarrage orchestration complète")
-            
+
             # 1. Démarrage application
             if not await self.start_webapp(headless, frontend_enabled):
                 return False
-            
+
             # 2. Attente stabilisation
             await asyncio.sleep(2)
-            
+
             # 3. Exécution tests
+            test_success = False
             try:
                 # Utilisation d'un timeout asyncio global comme filet de sécurité ultime.
-                # Cela garantit que l'orchestrateur ne restera jamais bloqué indéfiniment.
                 test_timeout_s = self.timeout_minutes * 60
                 self.add_trace("[TEST] Lancement avec timeout global", f"{test_timeout_s}s")
-                
-                success = await asyncio.wait_for(
+
+                test_success = await asyncio.wait_for(
                     self.run_tests(test_type=test_type, test_paths=test_paths, **kwargs),
                     timeout=test_timeout_s
                 )
@@ -509,24 +509,32 @@ class UnifiedWebOrchestrator:
                               f"L'étape de test a dépassé le timeout de {self.timeout_minutes} minutes.",
                               "Le processus est probablement bloqué.",
                               status="error")
-                success = False
-            
-            if success:
+                test_success = False
+
+            # 4. Analyse des traces Playwright JS après l'exécution
+            # Cette étape est exécutée même si les tests échouent pour fournir un rapport de débogage.
+            effective_test_type = test_type or self.playwright_runner.test_type
+            if effective_test_type == 'javascript':
+                await self._analyze_playwright_traces()
+
+            if test_success:
                 self.add_trace("[SUCCESS] INTEGRATION REUSSIE",
-                              "Tous les tests ont passé", 
+                              "Tous les tests ont passé",
                               "Application web validée")
             else:
                 self.add_trace("[ERROR] ECHEC INTEGRATION",
-                              "Certains tests ont échoué", 
+                              "Certains tests ont échoué",
                               "Voir logs détaillés", status="error")
             
+            success = test_success # Le succès global dépend de la réussite des tests
+
         finally:
-            # 4. Nettoyage systématique
+            # 5. Nettoyage systématique
             await self.stop_webapp()
-            
-            # 5. Sauvegarde trace
+
+            # 6. Sauvegarde trace
             await self._save_trace_report()
-        
+
         return success
 
     def _find_conda_env_path(self, env_name: str) -> Optional[str]:
@@ -851,6 +859,64 @@ class UnifiedWebOrchestrator:
         
         return content
 
+    async def _analyze_playwright_traces(self):
+        """Lance l'analyseur de traces en tant que sous-processus et logue le résultat."""
+        self.add_trace("[ANALYZE] ANALYSE DES TRACES PLAYWRIGHT", "Lancement du script trace_analyzer.py")
+        analyzer_script_path = "services/web_api/trace_analyzer.py"
+        
+        # Le répertoire de traces pour Playwright JS est défini dans sa config
+        # et est relatif au répertoire de test, donc 'tests/e2e/test-results/'
+        # Playwright génère un dossier par test qui contient 'trace.zip'
+        # Le trace_analyzer.py doit être adapté pour chercher ces .zip, les extraire, et lire le contenu.
+        # Pour l'instant, on pointe vers le dossier où Playwright génère ses rapports
+        # La refactorisation du trace_analyzer est une tâche future
+        trace_dir = Path("tests/e2e/test-results/")
+
+        if not Path(analyzer_script_path).exists():
+            self.add_trace("[ERROR] Script d'analyse non trouvé", f"Chemin: {analyzer_script_path}", status="error")
+            return
+            
+        try:
+            # Utiliser le même interpréteur Python que celui qui exécute l'orchestrateur
+            python_executable = sys.executable
+            
+            command_to_run = [
+                python_executable,
+                analyzer_script_path,
+                '--mode=summary',
+                # On passe le répertoire où sont générés les rapports Playwright
+                '--trace-dir', str(trace_dir)
+            ]
+
+            self.logger.debug(f"Lancement de l'analyseur de trace avec la commande : {' '.join(command_to_run)}")
+            
+            proc = await asyncio.create_subprocess_exec(
+                *command_to_run,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            stdout, stderr = await proc.communicate()
+            
+            stdout_str = stdout.decode('utf-8', errors='ignore')
+            stderr_str = stderr.decode('utf-8', errors='ignore')
+            
+            if proc.returncode == 0:
+                self.add_trace("[OK] ANALYSE DE TRACE TERMINÉE", "Détails ci-dessous")
+                # Loggue le résumé directement dans la trace de l'orchestrateur
+                self.logger.info("\n--- DEBUT RAPPORT D'ANALYSE DE TRACE ---\n"
+                                f"{stdout_str}"
+                                "\n--- FIN RAPPORT D'ANALYSE DE TRACE ---")
+            else:
+                self.add_trace("[ERROR] ECHEC ANALYSE DE TRACE", "Le script a retourné une erreur.", status="error")
+                self.logger.error(f"Erreur lors de l'exécution de {analyzer_script_path}:")
+                self.logger.error("STDOUT:\n" + stdout_str)
+                self.logger.error("STDERR:\n" + stderr_str)
+                
+        except Exception as e:
+            self.add_trace("[ERROR] ERREUR CRITIQUE ANALYSEUR", str(e), status="error")
+
+
 def main():
     """Point d'entrée principal en ligne de commande"""
     print("[DEBUG] unified_web_orchestrator.py: main()")
@@ -938,6 +1004,48 @@ def main():
     exit_code = 0 if success else 1
     orchestrator.logger.info(f"Code de sortie final : {exit_code}")
     sys.exit(exit_code)
+
+    async def _analyze_playwright_traces(self):
+        """Lance l'analyseur de traces en tant que sous-processus et logue le résultat."""
+        self.add_trace("[ANALYZE] ANALYSE DES TRACES PLAYWRIGHT", "Lancement du script trace_analyzer.py")
+        analyzer_script_path = "services/web_api/trace_analyzer.py"
+        
+        if not Path(analyzer_script_path).exists():
+            self.add_trace("[ERROR] Script d'analyse non trouvé", f"Chemin: {analyzer_script_path}", status="error")
+            return
+            
+        try:
+            # Utiliser le même interpréteur Python que celui qui exécute l'orchestrateur
+            python_executable = sys.executable
+            
+            self.logger.debug(f"Lancement de l'analyseur de trace avec la commande : {[python_executable, analyzer_script_path, '--mode=summary']}")
+            
+            proc = await asyncio.create_subprocess_exec(
+                python_executable, analyzer_script_path, '--mode=summary',
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            stdout, stderr = await proc.communicate()
+            
+            # Décoder la sortie
+            stdout_str = stdout.decode('utf-8', errors='ignore')
+            stderr_str = stderr.decode('utf-8', errors='ignore')
+            
+            if proc.returncode == 0:
+                self.add_trace("[OK] ANALYSE DE TRACE TERMINÉE", "Détails ci-dessous")
+                # Loggue le résumé directement dans la trace de l'orchestrateur
+                self.logger.info("\n--- DEBUT RAPPORT D'ANALYSE DE TRACE ---\n"
+                                f"{stdout_str}"
+                                "\n--- FIN RAPPORT D'ANALYSE DE TRACE ---")
+            else:
+                self.add_trace("[ERROR] ECHEC ANALYSE DE TRACE", "Le script a retourné une erreur.", status="error")
+                self.logger.error("Erreur lors de l'exécution de trace_analyzer.py:")
+                self.logger.error("STDOUT:\n" + stdout_str)
+                self.logger.error("STDERR:\n" + stderr_str)
+                
+        except Exception as e:
+            self.add_trace("[ERROR] ERREUR CRITIQUE ANALYSEUR", str(e), status="error")
 
 if __name__ == "__main__":
     from project_core.core_from_scripts import auto_env
