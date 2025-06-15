@@ -158,13 +158,20 @@ class BaseAgent(Agent, ABC):
         """
         pass
 
-    async def invoke(self, *args, **kwargs):
+    async def invoke(
+        self,
+        *args,
+        **kwargs,
+    ):
         """
         Méthode d'invocation principale compatible avec le streaming attendu par le framework SK.
-        Elle transforme la réponse unique de `invoke_single` en un flux.
+        Elle transforme la réponse unique de `invoke_single` en un flux de listes.
         """
+        # Encapsuler le résultat de invoke_single dans une liste pour se conformer
+        # à ce que ChatHistoryChannel attend (un flux de listes de messages).
+        # C'est ce qui corrige l'erreur: 'ChatMessageContent' object has no attribute 'message'
         result = await self.invoke_single(*args, **kwargs)
-        yield result
+        yield [result]
 
     async def invoke_stream(self, *args, **kwargs):
         """
