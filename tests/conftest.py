@@ -187,3 +187,26 @@ if parent_dir not in sys.path:
 # Les fixtures et hooks sont importés depuis leurs modules dédiés.
 # Les commentaires résiduels concernant les déplacements de code et les refactorisations
 # antérieures ont été supprimés pour améliorer la lisibilité.
+
+# --- Fixtures déplacées depuis tests/integration/webapp/conftest.py ---
+
+@pytest.fixture
+def webapp_config():
+    """Provides a basic webapp configuration dictionary."""
+    return {
+        "backend": {
+            "start_port": 8008,
+            "fallback_ports": [8009, 8010]
+        },
+        "frontend": {
+            "port": 3008
+        },
+        "playwright": {
+            "enabled": True
+        }
+    }
+
+@pytest.fixture
+def test_config_path(tmp_path):
+    """Provides a temporary path for a config file."""
+    return tmp_path / "test_config.yml"
