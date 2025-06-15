@@ -57,7 +57,7 @@ class SimpleTerminationStrategy(TerminationStrategy):
         except Exception as e_state_access:
              self._logger.error(f"[{self._instance_id}] Erreur accès état pour conclusion: {e_state_access}")
              terminate = False
-        if not terminate and self._step_count > self._max_steps:
+        if not terminate and self._step_count >= self._max_steps:
             terminate = True
             reason = f"Nombre max étapes ({self._max_steps}) atteint."
         if terminate:
@@ -123,58 +123,38 @@ class DelegatingSelectionStrategy(SelectionStrategy):
     async def next(self, agents: List, history: List[ChatMessageContent]): # Agent type hint commenté dans List et en retour
         """Sélectionne le prochain agent à parler."""
         self._logger.debug(f"[{self._instance_id}] Appel next()...")
-        # *** CORRECTION: Utiliser les attributs privés pour la logique ***
+
+        # 1. Vérifier la désignation explicite en priorité absolue
+        try:
+            designated_agent_name = self._analysis_state.consume_next_agent_designation()
+            if designated_agent_name:
+                self._logger.info(f"[{self._instance_id}] Désignation explicite: '{designated_agent_name}'.")
+                designated_agent = self._agents_map.get(designated_agent_name)
+                if designated_agent:
+                    self._logger.info(f" -> Sélection agent désigné: {designated_agent.name}")
+                    return designated_agent
+                else:
+                    self._logger.error(f"[{self._instance_id}] Agent désigné '{designated_agent_name}' INTROUVABLE! Poursuite avec fallback.")
+        except Exception as e_state_access:
+            self._logger.error(f"[{self._instance_id}] Erreur accès état pour désignation: {e_state_access}. Poursuite avec fallback.")
+
+        # 2. Logique de fallback si aucune désignation valide n'a été trouvée
         default_agent_instance = self._agents_map.get(self._default_agent_name)
         if not default_agent_instance:
             self._logger.error(f"[{self._instance_id}] ERREUR: Agent défaut '{self._default_agent_name}' introuvable! Retourne premier agent.")
-            available_agents = list(self._agents_map.values()) # Utilise _agents_map
+            available_agents = list(self._agents_map.values())
             if not available_agents: raise RuntimeError("Aucun agent disponible.")
             return available_agents[0]
-
-        try:
-            # Utilise l'attribut privé _analysis_state
-            designated_agent_name = self._analysis_state.consume_next_agent_designation()
-        except Exception as e_state_access:
-            self._logger.error(f"[{self._instance_id}] Erreur accès état pour désignation: {e_state_access}. Retour PM.")
-            return default_agent_instance
-
-        if designated_agent_name:
-            self._logger.info(f"[{self._instance_id}] Désignation explicite: '{designated_agent_name}'.")
-            # Utilise _agents_map
-            designated_agent = self._agents_map.get(designated_agent_name)
-            if designated_agent:
-                self._logger.info(f" -> Sélection agent désigné: {designated_agent.name}")
-                return designated_agent
-            else:
-                self._logger.error(f"[{self._instance_id}] Agent désigné '{designated_agent_name}' INTROUVABLE! Retour PM.")
-                return default_agent_instance
-
-        self._logger.debug(f"[{self._instance_id}] Pas de désignation. Fallback.")
+            
+        self._logger.debug(f"[{self._instance_id}] Pas de désignation valide. Logique de fallback.")
         if not history:
-            # Utilise _default_agent_name
             self._logger.info(f" -> Sélection (fallback): Premier tour -> Agent défaut ({self._default_agent_name}).")
             return default_agent_instance
 
+        # Le reste de la logique de fallback...
         last_message = history[-1]
         last_author_name = getattr(last_message, 'name', getattr(last_message, 'author_name', None))
-        last_role = getattr(last_message, 'role', AuthorRole.SYSTEM)
-        self._logger.debug(f"   Dernier message: Role={last_role.name}, Author='{last_author_name}'")
-
-        agent_to_select = default_agent_instance # Par défaut, on retourne au PM
-        # Utilise _default_agent_name
-        if last_role == AuthorRole.ASSISTANT and last_author_name != self._default_agent_name:
-            self._logger.info(f" -> Sélection (fallback): Agent '{last_author_name}' a parlé -> Retour PM.")
-        elif last_role == AuthorRole.USER:
-             # Utilise _default_agent_name
-            self._logger.info(f" -> Sélection (fallback): User a parlé -> Agent défaut ({self._default_agent_name}).")
-        elif last_role == AuthorRole.TOOL:
-             # Utilise _default_agent_name
-             self._logger.info(f" -> Sélection (fallback): Outil a parlé -> Agent défaut ({self._default_agent_name}).")
-        # Si le PM a parlé sans désigner, on retourne au PM (implicite car agent_to_select = default_agent_instance)
-        else: # Autres cas ou PM a parlé sans désigner
-            # Utilise _default_agent_name
-            self._logger.info(f" -> Sélection (fallback): Rôle '{last_role.name}', Author '{last_author_name}' -> Agent défaut ({self._default_agent_name}).")
-
+        agent_to_select = default_agent_instance
         self._logger.info(f" -> Agent sélectionné (fallback): {agent_to_select.name}")
         return agent_to_select
 
@@ -287,47 +267,34 @@ class BalancedParticipationStrategy(SelectionStrategy):
         """
         self._logger.debug(f"[{self._instance_id}] Appel next()...")
         self._total_turns += 1
-        
-        # Récupérer l'agent par défaut
-        default_agent_instance = self._agents_map.get(self._default_agent_name)
-        if not default_agent_instance:
-            self._logger.error(f"[{self._instance_id}] ERREUR: Agent défaut '{self._default_agent_name}' introuvable! Retourne premier agent.")
-            available_agents = list(self._agents_map.values())
-            if not available_agents:
-                raise RuntimeError("Aucun agent disponible.")
-            return available_agents[0]
-        
-        # 1. Vérifier s'il y a une désignation explicite via l'état
+
+        # 1. Vérifier la désignation explicite en priorité absolue
         try:
             designated_agent_name = self._analysis_state.consume_next_agent_designation()
+            if designated_agent_name:
+                self._logger.info(f"[{self._instance_id}] Désignation explicite: '{designated_agent_name}'.")
+                designated_agent = self._agents_map.get(designated_agent_name)
+                if designated_agent:
+                    self._logger.info(f" -> Sélection agent désigné: {designated_agent.name}")
+                    self._update_participation_counts(designated_agent.name)
+                    self._adjust_imbalance_budget(designated_agent.name)
+                    return designated_agent
+                else:
+                    self._logger.error(f"[{self._instance_id}] Agent désigné '{designated_agent_name}' INTROUVABLE! Poursuite avec équilibrage.")
         except Exception as e_state_access:
-            self._logger.error(f"[{self._instance_id}] Erreur accès état pour désignation: {e_state_access}. Retour agent défaut.")
-            return default_agent_instance
-        
-        # 2. Si oui, sélectionner cet agent et ajuster le budget de déséquilibre
-        if designated_agent_name:
-            self._logger.info(f"[{self._instance_id}] Désignation explicite: '{designated_agent_name}'.")
-            designated_agent = self._agents_map.get(designated_agent_name)
-            if designated_agent:
-                self._logger.info(f" -> Sélection agent désigné: {designated_agent.name}")
-                self._update_participation_counts(designated_agent.name)
-                self._adjust_imbalance_budget(designated_agent.name)
-                return designated_agent
-            else:
-                self._logger.error(f"[{self._instance_id}] Agent désigné '{designated_agent_name}' INTROUVABLE! Retour agent défaut.")
-                self._update_participation_counts(default_agent_instance.name)
-                return default_agent_instance
-        
-        # 3. Sinon, calculer les scores de priorité pour chaque agent
+            self._logger.error(f"[{self._instance_id}] Erreur accès état pour désignation: {e_state_access}. Poursuite avec équilibrage.")
+
+        # 2. Sinon, calculer les scores de priorité pour chaque agent
         priority_scores = self._calculate_priority_scores()
         
-        # 4. Sélectionner l'agent avec le score le plus élevé
-        selected_agent_name = max(priority_scores.items(), key=lambda x: x[1])[0]
+        # 3. Sélectionner l'agent avec le score le plus élevé
+        default_agent_instance = self._agents_map.get(self._default_agent_name) # Assurez-vous qu'il y a un fallback
+        selected_agent_name = max(priority_scores, key=priority_scores.get) if priority_scores else self._default_agent_name
         selected_agent = self._agents_map.get(selected_agent_name, default_agent_instance)
         
-        self._logger.info(f" -> Agent sélectionné (équilibrage): {selected_agent.name} (score: {priority_scores[selected_agent.name]:.2f})")
+        self._logger.info(f" -> Agent sélectionné (équilibrage): {selected_agent.name} (score: {priority_scores.get(selected_agent_name, 0):.2f})")
         
-        # 5. Mettre à jour les compteurs et budgets
+        # 4. Mettre à jour les compteurs et budgets
         self._update_participation_counts(selected_agent.name)
         
         return selected_agent
