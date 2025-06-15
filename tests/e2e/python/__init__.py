@@ -1,1 +1,1 @@
-"""Tests module"""
+# This file makes 'python' a package.
