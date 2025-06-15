@@ -75,12 +75,51 @@ def _configure_PersuasionProtocol(jclass_instance: 'MockJClassCore'):
     tweety_agents_logger.debug(f"Configuring MockJClassCore for PersuasionProtocol: {jclass_instance.class_name}")
     pass # Ajouter la logique de mock spécifique ici
 
+def _configure_Dialogue(jclass_instance: 'MockJClassCore'):
+    """Configure le mock pour org.tweetyproject.agents.dialogues.Dialogue."""
+    tweety_agents_logger.debug(f"Configuring mock for Dialogue: {jclass_instance.class_name}")
+
+    def dialogue_constructor(*args, **kwargs):
+        instance_mock = MagicMock()
+        instance_mock.class_name = "org.tweetyproject.agents.dialogues.Dialogue"
+        
+        participants = []
+        instance_mock.getParticipants = MagicMock(return_value=participants)
+
+        def dialogue_add_participant(agent, position):
+            tweety_agents_logger.debug(f"[Dialogue.addParticipant] Ajout de l'agent {getattr(agent, 'getName', lambda: 'N/A')()} avec position {getattr(position, 'name', 'N/A')}")
+            participants.append(agent)
+            return True
+
+        instance_mock.addParticipant = MagicMock(side_effect=dialogue_add_participant)
+        
+        if args and len(args) == 1:
+            protocol_arg = args[0]
+            instance_mock._protocol = protocol_arg
+            instance_mock.getProtocol = MagicMock(return_value=instance_mock._protocol)
+            tweety_agents_logger.debug(f"[MOCK Dialogue] Protocole initial stocké: {getattr(protocol_arg, 'class_name', 'N/A')}")
+
+        def dialogue_run():
+            jclass_provider = jclass_instance.jclass_provider_func
+            DialogueResult = jclass_provider("org.tweetyproject.agents.dialogues.DialogueResult")
+            dialogue_result_mock = DialogueResult()
+            dialogue_result_mock.class_name = "org.tweetyproject.agents.dialogues.DialogueResult"
+            tweety_agents_logger.debug(f"[Dialogue.run] Exécution simulée, retour d'un mock DialogueResult.")
+            return dialogue_result_mock
+        
+        instance_mock.run = MagicMock(side_effect=dialogue_run)
+        tweety_agents_logger.debug(f"[MOCK Dialogue] Méthode run configurée.")
+        
+        return instance_mock
+
+    jclass_instance.constructor_mock = dialogue_constructor
 
 # Enregistrement des configurateurs
 # Les noms de classes doivent correspondre exactement à ceux utilisés par Tweety.
 _agent_class_configs["org.tweetyproject.agents.ArgumentationAgent"] = _configure_ArgumentationAgent
 _agent_class_configs["org.tweetyproject.agents.OpponentModel"] = _configure_OpponentModel
 _agent_class_configs["org.tweetyproject.agents.PersuasionProtocol"] = _configure_PersuasionProtocol
+_agent_class_configs["org.tweetyproject.agents.dialogues.Dialogue"] = _configure_Dialogue
 # Ajouter d'autres classes d'agents ici au besoin
 
 tweety_agents_logger.info(f"Tweety agent class configurators registered: {list(_agent_class_configs.keys())}")
