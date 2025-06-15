@@ -42,9 +42,10 @@ class BackendManager:
     - Arrêt propre avec cleanup
     """
     
-    def __init__(self, config: Dict[str, Any], logger: logging.Logger):
+    def __init__(self, config: Dict[str, Any], logger: logging.Logger, conda_env_path: Optional[str] = None):
         self.config = config
         self.logger = logger
+        self.conda_env_path = conda_env_path  # Stocker le chemin de l'environnement Conda
         
         # Configuration par défaut
         self.module = config.get('module', 'argumentation_analysis.services.web_api.app')
@@ -120,14 +121,19 @@ class BackendManager:
                 "run", "--host", backend_host, "--port", str(port)
             ]
 
-            # Commande finale avec `conda run`. Le séparateur '--' est supprimé car il
-            # cause des problèmes d'interprétation sur Windows dans ce contexte.
-            cmd = [
-                "conda", "run", "-n", conda_env_name,
-                "--no-capture-output"
-            ] + inner_cmd_list
+            # Commande finale avec `conda run`.
+            # Prioriser --prefix si conda_env_path est fourni.
+            if self.conda_env_path:
+                cmd_base = ["conda", "run", "--prefix", self.conda_env_path, "--no-capture-output"]
+                self.logger.info(f"Utilisation de --prefix avec le chemin: {self.conda_env_path}")
+            else:
+                cmd_base = ["conda", "run", "-n", conda_env_name, "--no-capture-output"]
+                self.logger.warning(f"Chemin de l'environnement Conda non fourni, utilisation de '-n {conda_env_name}'. "
+                                    "Ceci pourrait être moins robuste. Envisagez de fournir conda_env_path.")
 
-            self.logger.info(f"Commande de lancement directe avec `conda run`: {cmd}")
+            cmd = cmd_base + inner_cmd_list
+
+            self.logger.info(f"Commande de lancement avec `conda run`: {cmd}")
             
             project_root = str(Path(__file__).resolve().parent.parent.parent)
             log_dir = Path(project_root) / "logs"
