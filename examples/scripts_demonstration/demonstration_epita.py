@@ -34,6 +34,11 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 os.chdir(project_root)
 
+# --- AUTO-ACTIVATION DE L'ENVIRONNEMENT ---
+import project_core.core_from_scripts.auto_env # Auto-activation environnement intelligent
+# --- FIN DE L'AUTO-ACTIVATION ---
+
+
 # Vérifier et installer PyYAML si nécessaire
 def ensure_yaml_dependency():
     try:
