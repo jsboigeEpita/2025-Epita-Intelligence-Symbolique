@@ -49,106 +49,116 @@ except ImportError:
     _JPYPE_MODULE_MOCK_OBJ_GLOBAL = MagicMock(name="fallback_jpype_mock_obj_global_in_integration_fixtures")
 
 # Variable globale pour suivre si initialize_jvm a été appelée avec succès dans la session
-_initialize_jvm_called_successfully_session = False
+_integration_jvm_started_session_scope = False
 
 @pytest.fixture(scope="session")
-def integration_jvm():
-    global _initialize_jvm_called_successfully_session
-    logger.info("Début de la fixture integration_jvm (scope session).")
-
-    if initialize_jvm is None:
-        logger.error("La fonction initialize_jvm n'est pas disponible. Skip.")
-        pytest.skip("initialize_jvm non importée, skip tests d'intégration JPype.")
-        return None
+def integration_jvm(request):
+    """
+    Fixture à portée "session" pour gérer le cycle de vie de la VRAIE JVM pour les tests d'intégration.
+    - Gère le démarrage unique de la JVM pour toute la session de test si nécessaire.
+    - Utilise la logique de `initialize_jvm` de `argumentation_analysis.core.jvm_setup`.
+    - S'assure que le VRAI module `jpype` est utilisé pendant son exécution.
+    - Tente de s'assurer que `jpype.config` est accessible avant `shutdownJVM` pour éviter
+      les `ModuleNotFoundError` dans les handlers `atexit` de JPype.
+    - Laisse le vrai module `jpype` dans `sys.modules` après un arrêt réussi de la JVM
+      par cette fixture, pour permettre aux handlers `atexit` de JPype de s'exécuter correctement.
+    """
+    global _integration_jvm_started_session_scope, _REAL_JPYPE_MODULE
+    logger_conftest_integration = logger # Utiliser le logger de ce module
 
     if _REAL_JPYPE_MODULE is None:
-        logger.error("_REAL_JPYPE_MODULE est None. Impossible de démarrer la JVM pour les tests d'intégration.")
-        pytest.skip("Le vrai module JPype n'a pas pu être chargé, skip tests d'intégration.")
-        return None
+        pytest.skip("Le vrai module JPype n'est pas disponible. Tests d'intégration JPype impossibles.", pytrace=False)
+        return
 
-    # S'assurer que sys.modules['jpype'] est le vrai module pour cette fixture
+    # Sauvegarder l'état actuel de sys.modules pour jpype et _jpype
     original_sys_jpype = sys.modules.get('jpype')
+    original_sys_dot_jpype = sys.modules.get('_jpype')
+
+    # Installer le vrai JPype pour la durée de cette fixture
     sys.modules['jpype'] = _REAL_JPYPE_MODULE
-    logger.info(f"integration_fixtures.py: sys.modules['jpype'] (ID: {id(sys.modules['jpype'])}) mis à _REAL_JPYPE_MODULE (ID: {id(_REAL_JPYPE_MODULE)}).")
-
-    jpype_for_integration = _REAL_JPYPE_MODULE
+    if hasattr(_REAL_JPYPE_MODULE, '_jpype'): # Le module C interne
+        sys.modules['_jpype'] = _REAL_JPYPE_MODULE._jpype
+    elif '_jpype' in sys.modules: # S'il y avait un _jpype (peut-être du mock), l'enlever
+        del sys.modules['_jpype']
     
+    current_jpype_in_use = sys.modules['jpype'] # Devrait être _REAL_JPYPE_MODULE
+    logger.info(f"Fixture 'integration_jvm' (session scope) appelée. Utilisation de JPype ID: {id(current_jpype_in_use)}")
+
     try:
-        if not _initialize_jvm_called_successfully_session:
-            logger.info("initialize_jvm n'a pas encore été appelée avec succès dans cette session. Appel...")
-            
-            if LIBS_DIR is None or TWEETY_VERSION is None:
-                logger.error("LIBS_DIR ou TWEETY_VERSION non défini. Impossible d'appeler initialize_jvm.")
-                pytest.skip("LIBS_DIR ou TWEETY_VERSION manquant pour initialize_jvm.")
-                return None
+        if current_jpype_in_use.isJVMStarted() and _integration_jvm_started_session_scope:
+            logger.info("integration_jvm: La JVM a déjà été initialisée par cette fixture dans cette session.")
+            yield current_jpype_in_use
+            return
 
-            # Construction d'un classpath dynamique incluant Tweety et l'agent Dung
-            current_file_path = pathlib.Path(__file__).resolve()
-            project_root_for_fixture = current_file_path.parent.parent.parent
+        if initialize_jvm is None or LIBS_DIR is None or TWEETY_VERSION is None:
+            pytest.skip("Dépendances manquantes pour démarrer la JVM (initialize_jvm, LIBS_DIR, TWEETY_VERSION).", pytrace=False)
+            return
 
-            # Chemins vers les répertoires contenant les JARs
-            tweety_libs_path = project_root_for_fixture / "libs" / "tweety"
-            dung_libs_path = project_root_for_fixture / "abs_arg_dung" / "libs"
-
-            all_jar_paths = []
-            
-            if tweety_libs_path.is_dir():
-                all_jar_paths.extend(tweety_libs_path.glob('*.jar'))
-                logger.info(f"JARs de Tweety trouvés dans : {tweety_libs_path}")
-            else:
-                 logger.warning(f"Répertoire des JARs de Tweety non trouvé: {tweety_libs_path}")
-
-            if dung_libs_path.is_dir():
-                all_jar_paths.extend(dung_libs_path.glob('*.jar'))
-                logger.info(f"JARs de Dung trouvés dans : {dung_libs_path}")
-            else:
-                logger.warning(f"Répertoire des JARs de Dung non trouvé: {dung_libs_path}")
-
-            if not all_jar_paths:
-                logger.error("Aucun fichier .jar trouvé. Impossible de démarrer la JVM.")
-                pytest.skip("Aucun JAR trouvé pour l'initialisation de la JVM.")
-                return None
-
-            jars_str_list = [str(jar) for jar in all_jar_paths]
-            
-            # Appel direct à jpype.startJVM en contournant initialize_jvm pour passer un classpath complet
-            try:
-                from argumentation_analysis.core.jvm_setup import get_jvm_options
-                jvm_options = get_jvm_options()
-                logger.info(f"Démarrage direct de la JVM avec {len(jars_str_list)} JARs et les options: {jvm_options}")
-                jpype_for_integration.startJVM(classpath=jars_str_list, *jvm_options, convertStrings=False)
-                _initialize_jvm_called_successfully_session = True
-                logger.info("JVM démarrée avec succès via la fixture d'intégration modifiée.")
-            except Exception as e:
-                logger.error(f"Échec du démarrage direct de la JVM: {e}", exc_info=True)
-                pytest.skip("Échec du démarrage direct de la JVM.")
-                return None
+        logger.info("integration_jvm: Tentative d'initialisation de la JVM (via initialize_jvm)...")
+        success = initialize_jvm(
+            lib_dir_path=str(LIBS_DIR),
+            tweety_version=TWEETY_VERSION
+        )
+        
+        if not success or not current_jpype_in_use.isJVMStarted():
+            _integration_jvm_started_session_scope = False
+            pytest.skip("Échec de démarrage de la JVM pour les tests d'intégration.", pytrace=False)
         else:
-            logger.info("initialize_jvm a déjà été appelée avec succès dans cette session. Utilisation de la JVM existante.")
-
-        if not jpype_for_integration.isJVMStarted():
-            logger.error("ERREUR CRITIQUE - JVM non démarrée même après l'appel à initialize_jvm.")
-            pytest.skip("JVM non démarrée après initialize_jvm.")
-            return None
-
-        # Log du classpath effectif
-        if jpype_for_integration.isJVMStarted():
-            system_class = jpype_for_integration.JClass("java.lang.System")
-            class_path = system_class.getProperty("java.class.path")
-            logger.info(f"Java ClassPath effectif: {class_path}")
-        else:
-            logger.warning("JVM non démarrée, impossible de récupérer le classpath.")
+            _integration_jvm_started_session_scope = True # Marquer comme démarrée par cette fixture
+            logger.info("integration_jvm: JVM initialisée avec succès par cette fixture.")
             
-        yield jpype_for_integration
-
+        # Le 'yield' doit être ici pour que le code du test s'exécute, il manquait dans la version du stash
+        yield current_jpype_in_use
+        
     finally:
-        logger.info("Nettoyage de la fixture integration_jvm (restauration de sys.modules['jpype'] si besoin).")
-        if original_sys_jpype is not None:
-            sys.modules['jpype'] = original_sys_jpype
-        elif 'jpype' in sys.modules and sys.modules['jpype'] is _REAL_JPYPE_MODULE:
-            if _REAL_JPYPE_MODULE is not _JPYPE_MODULE_MOCK_OBJ_GLOBAL :
-                 del sys.modules['jpype']
-        logger.info("Fin de la fixture integration_jvm.")
+        # La finalisation est maintenant gérée par request.addfinalizer pour un meilleur contrôle
+        pass
+
+    def fin_integration_jvm():
+        global _integration_jvm_started_session_scope
+        logger_conftest_integration.info("integration_jvm: Finalisation (arrêt JVM si démarrée par elle).")
+        current_jpype_for_shutdown = sys.modules.get('jpype')
+        jvm_was_shutdown_by_this_fixture = False
+
+        if _integration_jvm_started_session_scope and current_jpype_for_shutdown is _REAL_JPYPE_MODULE and current_jpype_for_shutdown.isJVMStarted():
+            try:
+                # S'assurer que jpype.config est accessible avant shutdownJVM
+                if _REAL_JPYPE_MODULE:
+                    logger_conftest_integration.info("integration_jvm: Vérification/Import de jpype.config avant shutdown...")
+                    try:
+                        if not hasattr(sys.modules['jpype'], 'config') or sys.modules['jpype'].config is None:
+                             import jpype.config
+                             logger_conftest_integration.info("   Import explicite de jpype.config réussi.")
+                        else:
+                             logger_conftest_integration.info(f"   jpype.config déjà présent.")
+                    except Exception as e_cfg_imp:
+                        logger_conftest_integration.error(f"   Erreur lors de la vérification/import de jpype.config: {e_cfg_imp}")
+
+                logger_conftest_integration.info("integration_jvm: Tentative d'arrêt de la JVM (vrai JPype)...")
+                current_jpype_for_shutdown.shutdownJVM()
+                logger_conftest_integration.info("integration_jvm: JVM arrêtée (vrai JPype).")
+                jvm_was_shutdown_by_this_fixture = True
+            except Exception as e_shutdown:
+                logger_conftest_integration.error(f"integration_jvm: Erreur arrêt JVM (vrai JPype): {e_shutdown}", exc_info=True)
+            finally:
+                _integration_jvm_started_session_scope = False
+        
+        if not jvm_was_shutdown_by_this_fixture:
+            logger_conftest_integration.info("integration_jvm: Restauration de sys.modules à l'état original (cas non-shutdown ou erreur).")
+            if original_sys_jpype is not None:
+                sys.modules['jpype'] = original_sys_jpype
+            elif 'jpype' in sys.modules:
+                del sys.modules['jpype']
+            if original_sys_dot_jpype is not None:
+                sys.modules['_jpype'] = original_sys_dot_jpype
+            elif '_jpype' in sys.modules:
+                del sys.modules['_jpype']
+        else:
+            logger_conftest_integration.info("integration_jvm: La JVM a été arrêtée. sys.modules['jpype'] reste _REAL_JPYPE_MODULE.")
+            if _REAL_JPYPE_MODULE and hasattr(_REAL_JPYPE_MODULE, '_jpype'):
+                sys.modules['_jpype'] = _REAL_JPYPE_MODULE._jpype
+    
+    request.addfinalizer(fin_integration_jvm)
 
 
 # Fixtures pour les classes Tweety (nécessitent une JVM active via integration_jvm)

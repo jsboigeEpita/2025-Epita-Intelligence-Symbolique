@@ -87,33 +87,46 @@ except ImportError as e_jpype:
 
 @pytest.fixture(scope="function", autouse=True)
 def activate_jpype_mock_if_needed(request):
-    global _JPYPE_MODULE_MOCK_OBJ_GLOBAL, _MOCK_DOT_JPYPE_MODULE_GLOBAL, _REAL_JPYPE_MODULE
+    """
+    Fixture à portée "function" et "autouse=True" pour gérer la sélection entre le mock JPype et le vrai JPype.
 
-    # Déterminer si le vrai JPype doit être utilisé
-    env_use_real_jpype = os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1')
+    Logique de sélection :
+    1. Si un test est marqué avec `@pytest.mark.real_jpype`, le vrai module JPype (`_REAL_JPYPE_MODULE`)
+       est placé dans `sys.modules['jpype']`.
+    2. Si le chemin du fichier de test contient 'tests/integration/' ou 'tests/minimal_jpype_tweety_tests/',
+       le vrai JPype est également utilisé.
+    3. Dans tous les autres cas (tests unitaires par défaut), le mock JPype (`_JPYPE_MODULE_MOCK_OBJ_GLOBAL`)
+       est activé.
+
+    Gestion de l'état du mock :
+    - Avant chaque test utilisant le mock, l'état interne du mock JPype est réinitialisé :
+        - `tests.mocks.jpype_components.jvm._jvm_started` est mis à `False`.
+        - `tests.mocks.jpype_components.jvm._jvm_path` est mis à `None`.
+        - `_JPYPE_MODULE_MOCK_OBJ_GLOBAL.config.jvm_path` est mis à `None`.
+      Cela garantit que chaque test unitaire commence avec une JVM mockée "propre" et non démarrée.
+      `jpype.isJVMStarted()` (version mockée) retournera donc `False` au début de ces tests.
+      Un appel à `jpype.startJVM()` (version mockée) mettra `_jvm_started` à `True` pour la durée du test.
+
+    Restauration :
+    - Après chaque test, l'état original de `sys.modules['jpype']`, `sys.modules['_jpype']`,
+      et `sys.modules['jpype.imports']` est restauré.
+
+    Interaction avec `integration_jvm` :
+    - Pour les tests nécessitant la vraie JVM (marqués `real_jpype` ou dans les chemins d'intégration),
+      cette fixture s'assure que le vrai `jpype` est dans `sys.modules`. La fixture `integration_jvm`
+      (scope session), définie dans `integration_fixtures.py`, est alors responsable du démarrage
+      effectif de la vraie JVM une fois par session et de sa gestion.
+    """
+    global _JPYPE_MODULE_MOCK_OBJ_GLOBAL, _MOCK_DOT_JPYPE_MODULE_GLOBAL, _REAL_JPYPE_MODULE
     
-    use_real_jpype_marker = False
+    use_real_jpype = False
     if request.node.get_closest_marker("real_jpype"):
-        use_real_jpype_marker = True
-        
-    use_real_jpype_path = False
+        use_real_jpype = True
     path_str = str(request.node.fspath).replace(os.sep, '/')
     if 'tests/integration/' in path_str or 'tests/minimal_jpype_tweety_tests/' in path_str:
-        use_real_jpype_path = True
-        
-    final_use_real_jpype = False
-    if env_use_real_jpype:
-        final_use_real_jpype = True
-        logger.info(f"Test {request.node.name}: REAL JPype forcé par la variable d'environnement USE_REAL_JPYPE.")
-    elif use_real_jpype_marker:
-        final_use_real_jpype = True
-        logger.info(f"Test {request.node.name}: REAL JPype demandé par le marqueur 'real_jpype'.")
-    elif use_real_jpype_path:
-        final_use_real_jpype = True
-        logger.info(f"Test {request.node.name}: REAL JPype activé par chemin ({path_str}).")
-    # else: final_use_real_jpype reste False
+        use_real_jpype = True
 
-    if final_use_real_jpype:
+    if use_real_jpype:
         logger.info(f"Test {request.node.name} demande REAL JPype. Configuration de sys.modules pour utiliser le vrai JPype.")
         if _REAL_JPYPE_MODULE:
             sys.modules['jpype'] = _REAL_JPYPE_MODULE
@@ -131,106 +144,43 @@ def activate_jpype_mock_if_needed(request):
         yield
     else:
         logger.info(f"Test {request.node.name} utilise MOCK JPype.")
+        
+        # Réinitialiser l'état _jvm_started et _jvm_path du mock JPype avant chaque test l'utilisant.
         try:
-            jpype_components_jvm_module = sys.modules.get('tests.mocks.jpype_components.jvm')
-            if jpype_components_jvm_module:
-                if hasattr(jpype_components_jvm_module, '_jvm_started'):
-                    jpype_components_jvm_module._jvm_started = False
-                if hasattr(jpype_components_jvm_module, '_jvm_path'):
-                    jpype_components_jvm_module._jvm_path = None
-                if hasattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL, 'config') and hasattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL.config, 'jvm_path'):
-                    _JPYPE_MODULE_MOCK_OBJ_GLOBAL.config.jvm_path = None
-                logger.info("État (_jvm_started, _jvm_path, config.jvm_path) du mock JPype réinitialisé pour le test.")
-            else:
-                logger.warning("Impossible de réinitialiser l'état du mock JPype: module 'tests.mocks.jpype_components.jvm' non trouvé.")
+            # L'import est fait ici pour éviter une dépendance circulaire si jvm.py importe depuis jpype_setup
+            jpype_components_jvm_module = importlib.import_module('tests.mocks.jpype_components.jvm')
+            if hasattr(jpype_components_jvm_module, '_jvm_started'):
+                jpype_components_jvm_module._jvm_started = False
+            if hasattr(jpype_components_jvm_module, '_jvm_path'):
+                jpype_components_jvm_module._jvm_path = None
+            if hasattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL, 'config') and hasattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL.config, 'jvm_path'):
+                _JPYPE_MODULE_MOCK_OBJ_GLOBAL.config.jvm_path = None
+
+            logger.info("État (_jvm_started, _jvm_path, config.jvm_path) du mock JPype réinitialisé pour le test.")
         except Exception as e_reset_mock:
             logger.error(f"Erreur lors de la réinitialisation de l'état du mock JPype: {e_reset_mock}")
 
-        original_modules = {}
-        modules_to_handle = ['jpype', '_jpype', 'jpype._core', 'jpype.imports', 'jpype.types', 'jpype.config', 'jpype.JProxy']
-
-        if 'jpype.imports' in sys.modules and \
-           hasattr(sys.modules['jpype.imports'], '_jpype') and \
-           _MOCK_DOT_JPYPE_MODULE_GLOBAL is not None and \
-           hasattr(_MOCK_DOT_JPYPE_MODULE_GLOBAL, 'isStarted'):
-            if sys.modules['jpype.imports']._jpype is not _MOCK_DOT_JPYPE_MODULE_GLOBAL:
-                if 'jpype.imports._jpype_original' not in original_modules:
-                     original_modules['jpype.imports._jpype_original'] = sys.modules['jpype.imports']._jpype
-                logger.debug(f"Patch direct de sys.modules['jpype.imports']._jpype avec notre mock _jpype.")
-                sys.modules['jpype.imports']._jpype = _MOCK_DOT_JPYPE_MODULE_GLOBAL
-            else:
-                logger.debug("sys.modules['jpype.imports']._jpype est déjà notre mock.")
-
-        for module_name in modules_to_handle:
-            if module_name in sys.modules:
-                is_current_module_our_mock = False
-                if module_name == 'jpype' and sys.modules[module_name] is _JPYPE_MODULE_MOCK_OBJ_GLOBAL: is_current_module_our_mock = True
-                elif module_name in ['_jpype', 'jpype._core'] and sys.modules[module_name] is _MOCK_DOT_JPYPE_MODULE_GLOBAL: is_current_module_our_mock = True
-                elif module_name == 'jpype.imports' and hasattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL, 'imports') and sys.modules[module_name] is _JPYPE_MODULE_MOCK_OBJ_GLOBAL.imports: is_current_module_our_mock = True
-                elif module_name == 'jpype.config' and hasattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL, 'config') and sys.modules[module_name] is _JPYPE_MODULE_MOCK_OBJ_GLOBAL.config: is_current_module_our_mock = True
-
-                if not is_current_module_our_mock and module_name not in original_modules:
-                    original_modules[module_name] = sys.modules.pop(module_name)
-                    logger.debug(f"Supprimé et sauvegardé sys.modules['{module_name}']")
-                elif module_name in sys.modules and is_current_module_our_mock:
-                    del sys.modules[module_name]
-                    logger.debug(f"Supprimé notre mock préexistant pour sys.modules['{module_name}'].")
-                elif module_name in sys.modules:
-                    del sys.modules[module_name]
-                    logger.debug(f"Supprimé sys.modules['{module_name}'] (sauvegarde prioritaire existante).")
+        original_sys_jpype = sys.modules.get('jpype')
+        original_sys_dot_jpype = sys.modules.get('_jpype')
+        original_sys_jpype_imports = sys.modules.get('jpype.imports')
 
         sys.modules['jpype'] = _JPYPE_MODULE_MOCK_OBJ_GLOBAL
         sys.modules['_jpype'] = _MOCK_DOT_JPYPE_MODULE_GLOBAL
-        sys.modules['jpype._core'] = _MOCK_DOT_JPYPE_MODULE_GLOBAL
-        if hasattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL, 'imports'):
-            sys.modules['jpype.imports'] = _JPYPE_MODULE_MOCK_OBJ_GLOBAL.imports
-        else:
-            sys.modules['jpype.imports'] = MagicMock(name="jpype.imports_fallback_in_fixture")
-
-        if hasattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL, 'config'):
-            sys.modules['jpype.config'] = _JPYPE_MODULE_MOCK_OBJ_GLOBAL.config
-        else:
-            sys.modules['jpype.config'] = MagicMock(name="jpype.config_fallback_in_fixture")
-
-        mock_types_module = MagicMock(name="jpype.types_mock_module_dynamic_in_fixture")
-        for type_name in ["JString", "JArray", "JObject", "JBoolean", "JInt", "JDouble", "JLong", "JFloat", "JShort", "JByte", "JChar"]:
-            if hasattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL, type_name):
-                setattr(mock_types_module, type_name, getattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL, type_name))
-            else:
-                setattr(mock_types_module, type_name, MagicMock(name=f"Mock{type_name}_in_fixture"))
-        sys.modules['jpype.types'] = mock_types_module
-
-        sys.modules['jpype.JProxy'] = MagicMock(name="jpype.JProxy_mock_module_dynamic_in_fixture")
-        logger.debug(f"Mocks JPype (principal, _jpype/_core, imports, config, types, JProxy) mis en place.")
+        assert sys.modules['jpype'] is _JPYPE_MODULE_MOCK_OBJ_GLOBAL, "Mock JPype global n'a pas été correctement appliqué!"
         yield
-        logger.debug(f"Nettoyage après test {request.node.name} (utilisation du mock).")
 
-        if 'jpype.imports._jpype_original' in original_modules:
-            if 'jpype.imports' in sys.modules and hasattr(sys.modules['jpype.imports'], '_jpype'):
-                sys.modules['jpype.imports']._jpype = original_modules['jpype.imports._jpype_original']
-                logger.debug("Restauré jpype.imports._jpype à sa valeur originale.")
-            del original_modules['jpype.imports._jpype_original']
-
-        modules_we_set_up_in_fixture = ['jpype', '_jpype', 'jpype._core', 'jpype.imports', 'jpype.config', 'jpype.types', 'jpype.JProxy']
-        for module_name in modules_we_set_up_in_fixture:
-            current_module_in_sys = sys.modules.get(module_name)
-            is_our_specific_mock_from_fixture = False
-            if module_name == 'jpype' and current_module_in_sys is _JPYPE_MODULE_MOCK_OBJ_GLOBAL: is_our_specific_mock_from_fixture = True
-            elif module_name in ['_jpype', 'jpype._core'] and current_module_in_sys is _MOCK_DOT_JPYPE_MODULE_GLOBAL: is_our_specific_mock_from_fixture = True
-            elif module_name == 'jpype.imports' and hasattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL, 'imports') and current_module_in_sys is _JPYPE_MODULE_MOCK_OBJ_GLOBAL.imports: is_our_specific_mock_from_fixture = True
-            elif module_name == 'jpype.config' and hasattr(_JPYPE_MODULE_MOCK_OBJ_GLOBAL, 'config') and current_module_in_sys is _JPYPE_MODULE_MOCK_OBJ_GLOBAL.config: is_our_specific_mock_from_fixture = True
-            elif module_name == 'jpype.types' and current_module_in_sys is mock_types_module: is_our_specific_mock_from_fixture = True
-            elif module_name == 'jpype.JProxy' and isinstance(current_module_in_sys, MagicMock) and hasattr(current_module_in_sys, 'name') and "jpype.JProxy_mock_module_dynamic_in_fixture" in current_module_in_sys.name : is_our_specific_mock_from_fixture = True
-
-            if is_our_specific_mock_from_fixture:
-                if module_name in sys.modules:
-                    del sys.modules[module_name]
-                    logger.debug(f"Supprimé notre mock pour sys.modules['{module_name}']")
-
-        for module_name, original_module in original_modules.items():
-            sys.modules[module_name] = original_module
-            logger.debug(f"Restauré sys.modules['{module_name}'] à {original_module}")
-
+        if original_sys_jpype is not None:
+            sys.modules['jpype'] = original_sys_jpype
+        elif 'jpype' in sys.modules:
+             del sys.modules['jpype']
+        if original_sys_dot_jpype is not None:
+            sys.modules['_jpype'] = original_sys_dot_jpype
+        elif '_jpype' in sys.modules:
+            del sys.modules['_jpype']
+        if original_sys_jpype_imports is not None:
+            sys.modules['jpype.imports'] = original_sys_jpype_imports
+        elif 'jpype.imports' in sys.modules:
+            del sys.modules['jpype.imports']
         logger.info(f"État de JPype restauré après test {request.node.name} (utilisation du mock).")
 
 def pytest_sessionstart(session):
