@@ -159,6 +159,14 @@ class ProjectManagerAgent(BaseAgent):
             # Retourner une chaîne d'erreur ou lever une exception spécifique
             return f"ERREUR: Impossible d'écrire la conclusion. Détails: {e}"
 
+    async def get_response(self, message: str, **kwargs) -> str:
+        """
+        Méthode générique pour obtenir une réponse, non utilisée pour les appels spécifiques.
+        """
+        self.logger.info(f"get_response non implémenté pour l'appel générique, retour des capacités.")
+        capabilities = self.get_agent_capabilities()
+        return f"Agent ProjectManager prêt. Capacités: {', '.join(capabilities.keys())}"
+
     async def invoke_single(self, *args, **kwargs) -> str:
         """
         Implémentation de la logique de l'agent pour une seule réponse, appelée par la méthode `invoke` de la classe de base.
