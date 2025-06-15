@@ -41,6 +41,9 @@ from argumentation_analysis.agents.core.informal.informal_agent import InformalA
 from argumentation_analysis.agents.core.pl.pl_agent import PropositionalLogicAgent
 from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
 
+class AgentChatException(Exception):
+    """Custom exception for errors during the agent chat execution."""
+    pass
 
 class AnalysisRunner:
     """
