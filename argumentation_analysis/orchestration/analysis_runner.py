@@ -27,13 +27,15 @@ from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from semantic_kernel.contents.chat_message_content import ChatMessageContent as SKChatMessageContent # Alias pour éviter conflit
 from semantic_kernel.kernel import Kernel as SKernel # Alias pour éviter conflit avec Kernel de SK
 
-# Imports Semantic Kernel
-from semantic_kernel.agents import AgentGroupChat, Agent
+# Imports Semantic Kernel (partiellement du stash pour compatibilité)
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
-<<<<<<< Updated upstream
-from semantic_kernel.contents.author_role import AuthorRole
+from semantic_kernel.contents import ChatMessageContent, AuthorRole
+# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
+from argumentation_analysis.utils.semantic_kernel_compatibility import AgentGroupChat, Agent
+from semantic_kernel.exceptions import AgentChatException
+from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
+from semantic_kernel.functions.kernel_arguments import KernelArguments
+
 
 # Correct imports
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
@@ -42,10 +44,6 @@ from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
 from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
 from argumentation_analysis.agents.core.pl.pl_agent import PropositionalLogicAgent
 from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
-
-class AgentChatException(Exception):
-    """Custom exception for errors during the agent chat execution."""
-    pass
 
 class AnalysisRunner:
     """

@@ -33,10 +33,9 @@ file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] [%(name
 logger.addHandler(file_handler)
 
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.contents import AuthorRole
+from semantic_kernel.contents import ChatMessageContent, AuthorRole
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
-from semantic_kernel.agents import ChatCompletionAgent
+from argumentation_analysis.utils.semantic_kernel_compatibility import ChatCompletionAgent
 try:
     # Import relatif depuis le package utils
     logger.info("Tentative d'import relatif...")

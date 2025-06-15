@@ -16,6 +16,13 @@ from semantic_kernel.functions.kernel_arguments import KernelArguments
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.functions.kernel_function_decorator import kernel_function
 from semantic_kernel.contents.function_call_content import FunctionCallContent
+# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité pour agents et filters
+from argumentation_analysis.utils.semantic_kernel_compatibility import (
+    Agent, AgentGroupChat, SelectionStrategy, TerminationStrategy,
+    FunctionInvocationContext, FilterTypes
+)
+# from semantic_kernel.processes.runtime.in_process_runtime import InProcessRuntime  # Module non disponible
+from pydantic import Field
 
 
 # Imports locaux des composants

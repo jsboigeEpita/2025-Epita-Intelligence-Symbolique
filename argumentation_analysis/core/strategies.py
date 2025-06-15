@@ -1,4 +1,4 @@
-﻿# core/strategies.py
+# core/strategies.py
 # CORRECTIF COMPATIBILITÉ: Import direct depuis semantic_kernel
 from semantic_kernel.contents import ChatMessageContent
 # from semantic_kernel.agents import Agent # AJOUTÉ POUR CORRIGER NameError - Commenté car non disponible dans SK 0.9.6b1
