@@ -179,7 +179,7 @@ async def _run_analysis_conversation(
         initial_chat_message = ChatMessageContent(role=AuthorRole.USER, content=initial_message_text)
 
         # Injecter le message directement dans l'historique du chat
-        group_chat.history.append(initial_chat_message)
+        group_chat.history.add_message(message=initial_chat_message)
         
         run_logger.info("Démarrage de l'invocation du groupe de chat...")
         full_history = [message async for message in group_chat.invoke()]
