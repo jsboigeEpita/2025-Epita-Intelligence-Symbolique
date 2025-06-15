@@ -447,7 +447,7 @@ async def demo_custom_analysis():
         print(f"❌ Erreur analyse personnalisée: {e}")
 
 
-async def run_full_demo():
+async def run_full_demo(args: argparse.Namespace):
     """Lance la démonstration complète."""
     print_header("DÉMONSTRATION COMPLÈTE DU PIPELINE D'ORCHESTRATION UNIFIÉ", "=", 80)
     
@@ -482,7 +482,7 @@ async def run_full_demo():
             print(f"❌ Erreur lors de la démonstration {demo.__name__}: {e}")
             continue
         
-        if i < len(demos):
+        if i < len(demos) and not args.non_interactive:
             print("\n⏱️ Appuyez sur Entrée pour continuer vers la démonstration suivante...")
             input()
     
@@ -616,6 +616,12 @@ Exemples d'utilisation:
         help="Affichage verbeux avec logs détaillés"
     )
     
+    parser.add_argument(
+        "--non-interactive",
+        action="store_true",
+        help="Désactive les pauses interactives entre les démonstrations"
+    )
+    
     args = parser.parse_args()
     
     # Configuration du logging
@@ -641,7 +647,7 @@ Exemples d'utilisation:
             
         else:
             # Démonstration complète
-            asyncio.run(run_full_demo())
+            asyncio.run(run_full_demo(args))
             
     except KeyboardInterrupt:
         print("\n⏹️ Démonstration interrompue par l'utilisateur.")
