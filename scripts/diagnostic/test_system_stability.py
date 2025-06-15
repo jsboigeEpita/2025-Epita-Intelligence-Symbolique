@@ -1,3 +1,4 @@
+import project_core.core_from_scripts.auto_env
 #!/usr/bin/env python3
 """Test de stabilité du système récupéré sur 3 exécutions"""
 

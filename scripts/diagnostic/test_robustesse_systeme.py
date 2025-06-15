@@ -1,3 +1,4 @@
+import project_core.core_from_scripts.auto_env
 #!/usr/bin/env python3
 """
 Phase 4 - Test de robustesse et gestion d'erreurs

@@ -1,3 +1,4 @@
+import project_core.core_from_scripts.auto_env
 #!/usr/bin/env python3
 """
 Launcher webapp 100% détaché - lance et retourne immédiatement

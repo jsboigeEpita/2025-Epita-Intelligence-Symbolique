@@ -1,3 +1,4 @@
+import project_core.core_from_scripts.auto_env
 #!/usr/bin/env python3
 """
 Script de test pour vérifier les dépendances critiques et les imports AuthorRole

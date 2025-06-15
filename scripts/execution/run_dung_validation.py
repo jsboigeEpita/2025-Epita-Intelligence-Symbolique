@@ -1,3 +1,4 @@
+import project_core.core_from_scripts.auto_env
 # -*- coding: utf-8 -*-
 """
 Script pour lancer la validation complète du projet abs_arg_dung

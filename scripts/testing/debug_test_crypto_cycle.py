@@ -1,3 +1,4 @@
+import project_core.core_from_scripts.auto_env
 # scripts/debug_test_crypto_cycle.py
 import base64
 import sys

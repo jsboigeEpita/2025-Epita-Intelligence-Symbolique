@@ -1,3 +1,4 @@
+import project_core.core_from_scripts.auto_env
 #!/usr/bin/env python3
 """Script de validation de la couverture Oracle Enhanced v2.1.0"""
 
