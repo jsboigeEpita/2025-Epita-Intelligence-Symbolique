@@ -7,11 +7,12 @@ une logique formelle. Ces classes utilisent le pattern Abstract Base Class (ABC)
 pour définir une interface commune que les agents concrets doivent implémenter.
 """
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING
+from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING, AsyncGenerator
 import logging
 
 from semantic_kernel import Kernel
 from semantic_kernel.agents import Agent
+from semantic_kernel.contents import ChatMessageContent
 
 # Import paresseux pour éviter le cycle d'import - uniquement pour le typage
 if TYPE_CHECKING:
@@ -120,14 +121,71 @@ class BaseAgent(Agent, ABC):
         }
     
     @abstractmethod
-    async def get_response(self, *args, **kwargs):
-        """Méthode abstraite pour obtenir une réponse de l'agent."""
+    async def invoke_single(
+        self,
+        messages: List[ChatMessageContent],
+        **kwargs: Any,
+    ) -> ChatMessageContent:
+        """
+        Exécute la logique principale de l'agent pour une seule invocation.
+        Les classes dérivées doivent implémenter cette méthode pour définir le comportement de l'agent.
+        C'est la méthode à surcharger pour la logique de base.
+        
+        Args:
+            messages: L'historique des messages de chat.
+            **kwargs: Arguments supplémentaires pour l'exécution.
+        
+        Returns:
+            La réponse de l'agent sous forme de ChatMessageContent.
+        """
         pass
 
-    @abstractmethod
-    async def invoke(self, *args, **kwargs):
-        """Méthode abstraite pour invoquer l'agent."""
-        pass
+    async def get_response(
+        self,
+        messages: List[ChatMessageContent],
+        **kwargs: Any,
+    ) -> ChatMessageContent:
+        """
+        Implémentation concrète de `get_response` pour la conformité avec sk.Agent.
+        Cette méthode est appelée par l'infrastructure de l'agent de bas niveau.
+        Elle délègue l'exécution à `invoke_single`.
+        
+        Args:
+            messages: L'historique des messages.
+            **kwargs: Arguments supplémentaires.
+        
+        Returns:
+            Le résultat de `invoke_single`.
+        """
+        return await self.invoke_single(messages, **kwargs)
+
+    async def invoke(
+        self,
+        messages: List[ChatMessageContent],
+        **kwargs: Any,
+    ) -> AsyncGenerator[Tuple[bool, ChatMessageContent], None]:
+        """
+        Invoque l'agent avec l'historique de chat et retourne un générateur de résultats.
+        Cette méthode est le point d'entrée principal pour l'interaction via `AgentChat`.
+        
+        Args:
+            messages: L'historique des messages.
+            **kwargs: Arguments supplémentaires.
+        
+        Yields:
+            Un tuple contenant un booléen de visibilité et le message de réponse.
+        """
+        result = await self.invoke_single(messages, **kwargs)
+
+        # Assurez-vous que le résultat est bien un ChatMessageContent, sinon lever une erreur claire.
+        if not isinstance(result, ChatMessageContent):
+            raise TypeError(
+                f"La méthode 'invoke_single' de l'agent {self.name} doit retourner un objet ChatMessageContent, "
+                f"mais a retourné {type(result).__name__}."
+            )
+        
+        # Encapsuler le résultat dans le format attendu par le canal de chat.
+        yield True, result
 
     async def invoke_stream(self, *args, **kwargs):
         """Méthode par défaut pour le streaming - peut être surchargée."""
