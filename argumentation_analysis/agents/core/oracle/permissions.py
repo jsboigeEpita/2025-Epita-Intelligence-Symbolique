@@ -321,7 +321,8 @@ def get_default_cluedo_permissions() -> Dict[str, PermissionRule]:
             agent_name="WatsonLogicAssistant",
             allowed_query_types=[
                 QueryType.LOGICAL_VALIDATION,
-                QueryType.CONSTRAINT_CHECK
+                QueryType.CONSTRAINT_CHECK,
+                QueryType.SUGGESTION_VALIDATION
             ],
             conditions={
                 "max_daily_queries": 100,
