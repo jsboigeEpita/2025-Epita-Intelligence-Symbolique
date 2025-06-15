@@ -15,7 +15,7 @@ from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.functions.kernel_function_decorator import kernel_function
-from semantic_kernel.contents.tool_call_content import ToolCallContent
+from semantic_kernel.contents.function_call_content import FunctionCallContent
 
 
 # Imports locaux des composants
@@ -246,6 +246,7 @@ Vous êtes le Dr. John Watson, un médecin militaire à la retraite, mais surtou
         self.orchestration.initialize_session(session_id, {agent.name: agent for agent in agents})
         
         logger.info(f"Workflow configuré. Solution secrète: {self.oracle_state.get_solution_secrete()}")
+        return self.oracle_state
 
     async def execute_workflow(self, initial_question: str) -> Dict[str, Any]:
         """Exécute la boucle principale du workflow."""
@@ -284,11 +285,11 @@ Vous êtes le Dr. John Watson, un médecin militaire à la retraite, mais surtou
                     history.append(agent_response)
                     logger.info(f"[{active_agent.name}]: {agent_response.content}")
 
-                    # La logique de traitement des tool calls est maintenant DÉLÉGUÉE au plugin lui-même.
-                    # La boucle principale n'a plus besoin d'inspecter les tool_calls, car la réponse de l'agent
+                    # La logique de traitement des function calls est maintenant DÉLÉGUÉE au plugin lui-même.
+                    # La boucle principale n'a plus besoin d'inspecter les function_calls, car la réponse de l'agent
                     # (agent_response) contiendra déjà le résultat de l'exécution de l'outil, y compris
                     # la réponse de Moriarty. Le framework Semantic Kernel gère cela automatiquement
-                    # en ajoutant un message avec le `tool_content` à l'historique.
+                    # en ajoutant un message avec le `function_result` à l'historique.
 
         except Exception as e:
             logger.error(f"Erreur durant la boucle d'orchestration: {e}", exc_info=True)

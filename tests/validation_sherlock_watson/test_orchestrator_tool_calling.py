@@ -1,3 +1,28 @@
+import sys
+import os
+import importlib
+
+print("--- DIAGNOSTIC DE L'ENVIRONNEMENT ---")
+print(f"Version de Python: {sys.version}")
+print("sys.path:")
+for path in sys.path:
+    print(f"  - {path}")
+
+try:
+    import semantic_kernel
+    spec = importlib.util.find_spec("semantic_kernel")
+    if spec and spec.origin:
+        print(f"\n'semantic_kernel' est chargé depuis: {spec.origin}")
+        sk_version = getattr(semantic_kernel, '__version__', 'Version non trouvée')
+        print(f"Version de semantic_kernel: {sk_version}")
+    else:
+        print("\n'semantic_kernel' a été trouvé, mais son chemin d'origine (spec.origin) est introuvable.")
+except ImportError:
+    print("\nERREUR: 'semantic_kernel' ne peut pas être importé.")
+except Exception as e:
+    print(f"\nUne erreur inattendue est survenue lors de l'inspection de semantic_kernel: {e}")
+
+print("--- FIN DU DIAGNOSTIC ---\n")
 import asyncio
 import logging
 import json
