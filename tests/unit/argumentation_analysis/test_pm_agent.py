@@ -46,6 +46,7 @@ class TestPMAgent:
 class TestPMAgentIntegration:
     """Tests d'intégration pour l'agent Project Manager."""
 
+    @pytest.mark.asyncio
     @patch('semantic_kernel.Kernel')
     async def test_pm_agent_workflow(self, mock_kernel):
         """Teste le workflow complet de l'agent PM."""
