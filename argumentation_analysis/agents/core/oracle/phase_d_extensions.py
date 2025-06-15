@@ -341,105 +341,109 @@ class PhaseDExtensions:
         """
         
         metrics = {
-            "naturalite_dialogue": 0.0,
-            "personnalites_distinctes": 0.0, 
-            "fluidite_transitions": 0.0,
-            "progression_logique": 0.0,
-            "dosage_revelations": 0.0,
-            "engagement_global": 0.0,
+            "naturalite_dialogue": {
+                "score_global": 0.0,
+                "naturalite_echanges": 0.0,
+                "qualite_enchainements": 0.0
+            },
+            "personnalites_distinctes": {
+                "score_global": 0.0,
+                "coherence_watson": 0.0,
+                "coherence_sherlock": 0.0,
+                "coherence_moriarty": 0.0
+            },
+            "progression_logique": {
+                "score_global": 0.0,
+                "progression_deductions": 0.0,
+                "efficacite_resolution": 0.0
+            },
+            "dosage_revelations": {
+                "score_global": 0.0,
+                "timing_revelations": 0.0,
+                "impact_revelations": 0.0
+            },
+            "engagement_global": {
+                "score_global": 0.0,
+                "engagement_moriarty": 0.0,
+                "engagement_collaboratif": 0.0
+            },
             "score_trace_ideale": 0.0
         }
-        
-        # Calcul basé sur les données de conversation
+
         total_messages = len(conversation_data.get("messages", []))
-        
         if total_messages == 0:
             return metrics
+
+        # --- 1. Naturalité du dialogue ---
+        natural_indicators = sum(1 for msg in conversation_data.get("messages", []) if any(word in msg.get("content", "").lower() for word in ["brilliant", "exact", "précis", "géni"]))
+        metrics["naturalite_dialogue"]["naturalite_echanges"] = min(7.5 + (natural_indicators / total_messages) * 2.5, 10.0)
         
-        # Naturalité dialogue (Phase B heritage)
-        natural_indicators = 0
-        for msg in conversation_data.get("messages", []):
-            content = msg.get("content", "").lower()
-            if any(word in content for word in ["brilliant", "exact", "précis", "géni"]):
-                natural_indicators += 1
-        
-        metrics["naturalite_dialogue"] = min(7.5 + (natural_indicators / total_messages) * 2.5, 10.0)
-        
-        # Personnalités distinctes (Phase A heritage)
-        personality_indicators = {}
+        transition_indicators = sum(1 for msg in conversation_data.get("messages", [])[1:] if any(phrase in msg.get("content", "").lower() for phrase in ["suite à", "en réaction", "après", "comme dit"]))
+        transition_rate = transition_indicators / max(total_messages - 1, 1)
+        metrics["naturalite_dialogue"]["qualite_enchainements"] = min(6.7 + transition_rate * 3.3, 10.0)
+        metrics["naturalite_dialogue"]["score_global"] = (metrics["naturalite_dialogue"]["naturalite_echanges"] * 0.6 + metrics["naturalite_dialogue"]["qualite_enchainements"] * 0.4)
+
+        # --- 2. Personnalités distinctes ---
+        personality_scores = {"Watson": [], "Sherlock": [], "Moriarty": []}
         for msg in conversation_data.get("messages", []):
             agent = msg.get("agent_name", "")
             content = msg.get("content", "").lower()
-            
-            if agent not in personality_indicators:
-                personality_indicators[agent] = 0
-            
-            # Indicateurs spécifiques par agent
-            if agent == "Watson" and any(word in content for word in ["brilliant", "exact", "admira"]):
-                personality_indicators[agent] += 1
-            elif agent == "Sherlock" and any(word in content for word in ["précis", "observ", "dédu"]):
-                personality_indicators[agent] += 1
-            elif agent == "Moriarty" and any(word in content for word in ["révél", "mystèr", "théâtr"]):
-                personality_indicators[agent] += 1
+            if agent in personality_scores:
+                score = 0
+                if agent == "Watson" and any(word in content for word in ["brilliant", "exact", "admira"]): score = 1
+                elif agent == "Sherlock" and any(word in content for word in ["précis", "observ", "dédu"]): score = 1
+                elif agent == "Moriarty" and any(word in content for word in ["révél", "mystèr", "théâtr"]): score = 1
+                personality_scores[agent].append(score)
+
+        for agent, scores in personality_scores.items():
+            if scores:
+                avg_score = sum(scores) / len(scores)
+                metrics["personnalites_distinctes"][f"coherence_{agent.lower()}"] = min(7.0 + avg_score * 3.0, 10.0)
         
-        personality_score = sum(personality_indicators.values()) / len(personality_indicators) if personality_indicators else 0
-        metrics["personnalites_distinctes"] = min(7.5 + personality_score * 0.5, 10.0)
-        
-        # Fluidité transitions (Phase C heritage)
-        transition_indicators = 0
-        for i, msg in enumerate(conversation_data.get("messages", [])[1:], 1):
-            content = msg.get("content", "").lower()
-            if any(phrase in content for phrase in ["suite à", "en réaction", "après", "comme dit"]):
-                transition_indicators += 1
-        
-        transition_rate = transition_indicators / max(total_messages - 1, 1)
-        metrics["fluidite_transitions"] = min(6.7 + transition_rate * 3.3, 10.0)
-        
-        # Progression logique (nouveau Phase D)
-        logical_progression = 0
-        for msg in conversation_data.get("messages", []):
-            content = msg.get("content", "").lower()
-            if any(word in content for word in ["donc", "ainsi", "par conséquent", "logique"]):
-                logical_progression += 1
-        
+        valid_scores = [s for s in metrics["personnalites_distinctes"].values() if isinstance(s, float) and s > 0]
+        metrics["personnalites_distinctes"]["score_global"] = sum(valid_scores) / len(valid_scores) if valid_scores else 0.0
+
+        # --- 3. Progression logique ---
+        logical_progression = sum(1 for msg in conversation_data.get("messages", []) if any(word in msg.get("content", "").lower() for word in ["donc", "ainsi", "par conséquent", "logique"]))
         progression_rate = logical_progression / total_messages
-        metrics["progression_logique"] = min(7.0 + progression_rate * 3.0, 10.0)
+        metrics["progression_logique"]["progression_deductions"] = min(7.0 + progression_rate * 3.0, 10.0)
+        # Placeholder for resolution efficiency
+        metrics["progression_logique"]["efficacite_resolution"] = 8.0
+        metrics["progression_logique"]["score_global"] = (metrics["progression_logique"]["progression_deductions"] * 0.7 + metrics["progression_logique"]["efficacite_resolution"] * 0.3)
+
+        # --- 4. Dosage révélations ---
+        revelations_count = sum(1 for msg in conversation_data.get("messages", []) if "révél" in msg.get("content", "").lower() or "**" in msg.get("content", ""))
+        dramatic_elements = sum(1 for msg in conversation_data.get("messages", []) if any(element in msg.get("content", "") for element in ["*pause*", "*regard*", "*silence*"]))
         
-        # Dosage révélations (nouveau Phase D)
-        revelations_count = 0
-        dramatic_elements = 0
-        for msg in conversation_data.get("messages", []):
-            content = msg.get("content", "")
-            if "révél" in content.lower() or "**" in content:
-                revelations_count += 1
-            if any(element in content for element in ["*pause*", "*regard*", "*silence*"]):
-                dramatic_elements += 1
-        
-        if revelations_count > 0:
-            dosage_score = min(8.0 + (dramatic_elements / revelations_count) * 2.0, 10.0)
-        else:
-            dosage_score = 7.0
-        
-        metrics["dosage_revelations"] = dosage_score
-        
-        # Engagement global (nouveau Phase D)
+        metrics["dosage_revelations"]["timing_revelations"] = min(8.0 + (dramatic_elements / revelations_count) * 2.0, 10.0) if revelations_count > 0 else 7.0
+        metrics["dosage_revelations"]["impact_revelations"] = 8.5 # Placeholder
+        metrics["dosage_revelations"]["score_global"] = (metrics["dosage_revelations"]["timing_revelations"] * 0.5 + metrics["dosage_revelations"]["impact_revelations"] * 0.5)
+
+        # --- 5. Engagement global ---
         engagement_indicators = dramatic_elements + natural_indicators + transition_indicators
         engagement_rate = engagement_indicators / total_messages
-        metrics["engagement_global"] = min(7.0 + engagement_rate * 3.0, 10.0)
-        
-        # Score trace idéale (moyenne pondérée)
+        metrics["engagement_global"]["engagement_collaboratif"] = min(7.0 + engagement_rate * 3.0, 10.0)
+        metrics["engagement_global"]["engagement_moriarty"] = metrics["dosage_revelations"]["score_global"] # Link to revelations
+        metrics["engagement_global"]["score_global"] = (metrics["engagement_global"]["engagement_collaboratif"] * 0.5 + metrics["engagement_global"]["engagement_moriarty"] * 0.5)
+
+        # --- Score final ---
         weights = {
             "naturalite_dialogue": 0.15,
-            "personnalites_distinctes": 0.15,
-            "fluidite_transitions": 0.15,
-            "progression_logique": 0.20,
+            "personnalites_distinctes": 0.20,
+            "progression_logique": 0.25,
             "dosage_revelations": 0.20,
-            "engagement_global": 0.15
+            "engagement_global": 0.20
         }
         
-        metrics["score_trace_ideale"] = sum(
-            metrics[key] * weight for key, weight in weights.items()
-        )
+        final_score = sum(metrics[key]["score_global"] * weight for key, weight in weights.items())
+        metrics["score_trace_ideale"] = final_score
+
+        # --- 6. Alerting sur dégradation de la qualité ---
+        CRITICAL_THRESHOLD = 7.0
+        if final_score < CRITICAL_THRESHOLD:
+            alert_message = f"CRITICAL: Narrative quality degradation detected! Score: {final_score:.2f}, Threshold: {CRITICAL_THRESHOLD}"
+            print(alert_message)  # Ou utiliser un logger de haut niveau
+            # Idéalement, ici on pourrait notifier un système externe
         
         return metrics
     

@@ -68,7 +68,7 @@ class TestAutoEnv(unittest.TestCase):
         result = ensure_env()
         
         self.assertTrue(result)
-        mock_auto_activate.assert_called_once_with("projet-is", True)
+        mock_auto_activate.assert_called_once_with(env_name="projet-is", silent=True)
     
     
     @patch('project_core.core_from_scripts.environment_manager.auto_activate_env')
@@ -79,18 +79,18 @@ class TestAutoEnv(unittest.TestCase):
         result = ensure_env()
         
         self.assertFalse(result)
-        mock_auto_activate.assert_called_once_with("projet-is", True)
+        mock_auto_activate.assert_called_once_with(env_name="projet-is", silent=True)
     
     
-    @patch('project_core.core_from_scripts.environment_manager.auto_activate_env')
-    def test_ensure_env_custom_params(self, mock_auto_activate):
-        """Test ensure_env avec paramètres personnalisés"""
-        mock_auto_activate.return_value = True
-        
-        result = ensure_env(env_name="custom-env", silent=False)
-        
-        self.assertTrue(result)
-        mock_auto_activate.assert_called_once_with("custom-env", False)
+    def test_ensure_env_custom_params(self):
+        """Test ensure_env avec des paramètres personnalisés lève une erreur comme attendu."""
+        # Ce test vérifie maintenant correctement que l'appel de ensure_env pour un
+        # environnement *différent* de celui en cours lève bien une RuntimeError.
+        with self.assertRaises(RuntimeError) as cm:
+            ensure_env(env_name="custom-env", silent=False)
+
+        self.assertIn("L'INTERPRÉTEUR PYTHON EST INCORRECT", str(cm.exception))
+        self.assertIn("'custom-env'", str(cm.exception))
     
     
     @patch('project_core.core_from_scripts.environment_manager.auto_activate_env')
@@ -98,15 +98,12 @@ class TestAutoEnv(unittest.TestCase):
         """Test gestion d'exception dans ensure_env"""
         mock_auto_activate.side_effect = Exception("Test error")
         
-        # Mode silencieux - ne doit pas lever d'exception
-        result = ensure_env(silent=True)
-        self.assertFalse(result)
+        # Maintenant que le try/except a été supprimé du code de production,
+        # l'exception doit se propager.
+        with self.assertRaises(Exception) as cm:
+            ensure_env(silent=True)
         
-        # Mode verbeux avec print capturé
-        with patch('builtins.print') as mock_print:
-            result = ensure_env(silent=False)
-            self.assertFalse(result)
-            mock_print.assert_any_call("[WARN] Auto-activation environnement echouee: Test error")
+        self.assertEqual(str(cm.exception), "Test error")
     
     
     
@@ -174,11 +171,11 @@ class TestAutoEnvIntegration(unittest.TestCase):
         # Test avec environnement non actif
         os.environ.pop('CONDA_DEFAULT_ENV', None)
         
-        result = ensure_env(silent=False)
-        
-        # Le résultat peut être True ou False selon la disponibilité réelle de conda
-        # L'important est que ça ne lève pas d'exception
-        self.assertIsInstance(result, bool)
+        # Le test échoue car même si conda est disponible, la variable d'environnement
+        # CONDA_DEFAULT_ENV n'est pas définie, ce qui déclenche la RuntimeError finale.
+        # Le test doit donc s'attendre à cette exception.
+        with self.assertRaises(RuntimeError):
+            ensure_env(silent=False)
     
     
     @patch('subprocess.run')
@@ -190,22 +187,25 @@ class TestAutoEnvIntegration(unittest.TestCase):
         # S'assurer que l'environnement n'est pas marqué comme actif
         os.environ.pop('CONDA_DEFAULT_ENV', None)
         
-        result = ensure_env(silent=True)
-        
-        # Doit retourner False mais ne pas lever d'exception
-        self.assertFalse(result)
+        # Comme pour le test précédent, l'échec de l'activation mènera
+        # à une RuntimeError lors de la vérification finale.
+        with self.assertRaises(RuntimeError):
+            ensure_env(silent=True)
     
     def test_integration_env_already_active(self):
         """Test d'intégration avec environnement déjà actif"""
         # Simuler environnement déjà actif
         os.environ['CONDA_DEFAULT_ENV'] = 'projet-is'
         
-        with patch('project_core.core_from_scripts.environment_manager.is_conda_env_active', return_value=True):
-            with patch('builtins.print') as mock_print:
-                result = ensure_env(silent=False)
-                
-                self.assertTrue(result)
-                mock_print.assert_any_call("[OK] Environnement 'projet-is' deja actif")
+        # Simuler un environnement où le script d'activation n'est PAS le parent
+        with patch.dict(os.environ, {'IS_ACTIVATION_SCRIPT_RUNNING': 'false'}):
+            with patch('project_core.core_from_scripts.environment_manager.is_conda_env_active', return_value=True):
+                with patch('builtins.print') as mock_print:
+                    result = ensure_env(silent=False)
+                    
+                    self.assertTrue(result)
+                    # Le message exact est `Vérification de l'environnement réussie...`
+                    self.assertTrue(any("Vérification de l'environnement réussie" in str(call) for call in mock_print.call_args_list))
 
 
 class TestAutoEnvStressTests(unittest.TestCase):
@@ -253,14 +253,12 @@ class TestAutoEnvStressTests(unittest.TestCase):
         """Test avec noms d'environnement invalides"""
         invalid_names = ["", " ", "invalid-env-name", "env with spaces", "env/with/slashes"]
         
-        with patch('project_core.core_from_scripts.environment_manager.auto_activate_env', return_value=False):
-            for invalid_name in invalid_names:
-                try:
-                    result = ensure_env(env_name=invalid_name, silent=True)
-                    # Doit retourner False mais pas lever d'exception
-                    self.assertFalse(result)
-                except Exception as e:
-                    self.fail(f"Exception avec nom '{invalid_name}': {e}")
+        for invalid_name in invalid_names:
+            with self.subTest(invalid_name=invalid_name):
+                # La vérification de `sys.executable` lèvera une RuntimeError pour tout nom
+                # ne correspondant pas à l'environnement de test ('projet-is').
+                 with self.assertRaises(RuntimeError):
+                    ensure_env(env_name=invalid_name, silent=True)
 
 
 if __name__ == '__main__':

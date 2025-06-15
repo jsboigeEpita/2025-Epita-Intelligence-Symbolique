@@ -41,10 +41,11 @@ from typing import Dict, List, Any, Optional
 
 # Import de l'agent FOL
 from argumentation_analysis.agents.core.logic.fol_logic_agent import (
-    FOLLogicAgent, 
-    FOLAnalysisResult, 
+    FOLLogicAgent,
+    FOLAnalysisResult,
     create_fol_agent
 )
+from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
 
 # Import de la configuration unifiée
 from config.unified_config import (
@@ -58,6 +59,15 @@ from config.unified_config import (
 # Import pour les tests d'intégration
 from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer
 
+# Classe concrète pour les tests
+class ConcreteFOLLogicAgent(FOLLogicAgent):
+    def _create_belief_set_from_data(self, data: Any) -> BeliefSet:
+        belief_set = BeliefSet()
+        if isinstance(data, list):
+            for formula in data:
+                if isinstance(formula, str):
+                    belief_set.add_belief(formula)
+        return belief_set
 
 class TestFOLLogicAgentInitialization:
     async def _create_authentic_gpt4o_mini_instance(self):
@@ -84,7 +94,7 @@ class TestFOLLogicAgentInitialization:
         
         # Création de l'agent
         kernel = Kernel() # Instanciation du Kernel
-        agent = FOLLogicAgent(kernel=kernel, agent_name="TestFOLAgent")
+        agent = ConcreteFOLLogicAgent(kernel=kernel, agent_name="TestFOLAgent")
         
         # Vérifications
         assert agent.name == "TestFOLAgent"
@@ -115,7 +125,7 @@ class TestFOLLogicAgentInitialization:
     def test_agent_parameters_configuration(self):
         """Test paramètres agent (expertise, style, contraintes)."""
         kernel = Kernel() # Instanciation du Kernel
-        agent = FOLLogicAgent(kernel=kernel)
+        agent = ConcreteFOLLogicAgent(kernel=kernel)
         
         # Test prompts spécialisés FOL
         assert "∀x" in agent.conversion_prompt
@@ -158,7 +168,7 @@ class TestFOLSyntaxGeneration:
     def fol_agent(self):
         """Agent FOL pour les tests."""
         kernel = Kernel() # Instanciation du Kernel
-        return FOLLogicAgent(kernel=kernel, agent_name="TestAgent")
+        return ConcreteFOLLogicAgent(kernel=kernel, agent_name="TestAgent")
     
     def test_quantifier_universal_generation(self, fol_agent):
         """Tests quantificateurs universels : ∀x(P(x) → Q(x))."""
@@ -254,7 +264,7 @@ class TestFOLTweetyIntegration:
     async def fol_agent_with_tweety(self):
         """Agent FOL avec TweetyBridge mocké."""
         kernel = Kernel() # Instanciation du Kernel
-        agent = FOLLogicAgent(kernel=kernel)
+        agent = ConcreteFOLLogicAgent(kernel=kernel)
         
         # Mock TweetyBridge
         # agent._tweety_bridge devrait être un mock de TweetyBridge, pas un Kernel.
@@ -347,7 +357,7 @@ class TestFOLAnalysisPipeline:
         # AsyncMock crée automatiquement des attributs mockés lorsqu'on y accède.
         # Donc, agent.sk_kernel.invoke sera un AsyncMock par défaut.
 
-        agent = FOLLogicAgent(kernel=mock_kernel_for_agent)
+        agent = ConcreteFOLLogicAgent(kernel=mock_kernel_for_agent)
         
         # Mock TweetyBridge
         # La ligne suivante est problématique car _tweety_bridge attend un TweetyBridge, pas un Kernel.
@@ -535,7 +545,7 @@ class TestFOLAgentFactory:
     def test_fol_agent_summary_statistics(self):
         """Test statistiques résumé agent FOL."""
         kernel = Kernel()
-        agent = FOLLogicAgent(kernel=kernel)
+        agent = ConcreteFOLLogicAgent(kernel=kernel)
         
         # Test sans analyses
         summary = agent.get_analysis_summary()
@@ -564,7 +574,7 @@ class TestFOLAgentFactory:
     def test_fol_cache_key_generation(self):
         """Test génération clés de cache."""
         kernel = Kernel()
-        agent = FOLLogicAgent(kernel=kernel)
+        agent = ConcreteFOLLogicAgent(kernel=kernel)
         
         # Test génération clé
         text = "Test cache"
@@ -629,7 +639,7 @@ async def test_fol_agent_basic_workflow():
     """Test workflow basique complet de l'agent FOL."""
     # Test création agent
     kernel = Kernel()
-    agent = FOLLogicAgent(kernel=kernel)
+    agent = ConcreteFOLLogicAgent(kernel=kernel)
     assert agent.name == "FOLLogicAgent"
     assert agent.logic_type == "first_order"
     
@@ -649,7 +659,7 @@ async def test_fol_agent_basic_workflow():
 def test_fol_syntax_examples_validation():
     """Test validation exemples syntaxe FOL du prompt."""
     kernel = Kernel()
-    agent = FOLLogicAgent(kernel=kernel)
+    agent = ConcreteFOLLogicAgent(kernel=kernel)
     
     # Exemples du prompt
     prompt = agent.conversion_prompt

@@ -23,6 +23,7 @@ from .oracle_base_agent import OracleBaseAgent, OracleTools
 from .dataset_access_manager import CluedoDatasetManager
 from .cluedo_dataset import CluedoDataset, CluedoSuggestion
 from .permissions import QueryType, OracleResponse, RevealPolicy
+from argumentation_analysis.utils.performance_monitoring import monitor_performance
 
 
 class MoriartyTools(OracleTools):
@@ -36,6 +37,7 @@ class MoriartyTools(OracleTools):
         self.cluedo_dataset: CluedoDataset = dataset_manager.dataset
         self._logger = logging.getLogger(self.__class__.__name__)
     
+    @monitor_performance(log_args=True)
     @kernel_function(name="validate_cluedo_suggestion", description="Valide une suggestion Cluedo selon les règles du jeu.")
     def validate_cluedo_suggestion(self, suspect: str, arme: str, lieu: str, suggesting_agent: str) -> str:
         """

@@ -1,5 +1,4 @@
 from typing import Dict, List
-
 class FormalValidator:
     """Validateur formel avec preuves mathématiques"""
     
@@ -151,3 +150,13 @@ class FormalValidator:
         
         proof_lines.append("∴ QED: La croyance est formellement prouvée.")
         return "\n".join(proof_lines)
+
+    def get_validation_summary(self) -> Dict:
+        """Fournit un résumé de l'activité de validation."""
+        total = len(self.validation_cache)
+        return {
+            "total_validations": total,
+            "validation_rate": 1.0, # Placeholder
+            "average_confidence": 0.8, # Placeholder
+            "recent_validations": list(self.validation_cache.values())[-5:]
+        }

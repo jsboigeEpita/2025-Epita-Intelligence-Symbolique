@@ -725,6 +725,18 @@ RÉPONDS EN FORMAT JSON :
             "tweety_enabled": self._tweety_bridge is not None
         }
 
+    def _create_belief_set_from_data(self, data: Any) -> BeliefSet:
+        """
+        Implémentation de la méthode abstraite. Crée un BeliefSet à partir de données.
+        Pour FOLLogicAgent, les "données" sont supposées être une liste de formules.
+        """
+        belief_set = BeliefSet()
+        if isinstance(data, list):
+            for formula in data:
+                if isinstance(formula, str):
+                    belief_set.add_belief(formula)
+        return belief_set
+
 
 # ==================== FACTORY ET UTILITAIRES ====================
 
