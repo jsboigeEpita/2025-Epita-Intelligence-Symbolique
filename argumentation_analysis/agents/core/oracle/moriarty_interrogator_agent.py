@@ -11,6 +11,7 @@ from typing import Dict, List, Any, Optional, ClassVar
 from datetime import datetime
 import random
 import uuid
+from dataclasses import replace
 
 import re
 from semantic_kernel import Kernel
@@ -254,7 +255,7 @@ Votre mission : Fasciner par votre mystère élégant."""
     
     def __init__(self,
                  kernel: Kernel,
-                 cluedo_dataset: CluedoDataset,
+                 dataset_manager: CluedoDatasetManager,
                  game_strategy: str = "balanced",
                  agent_name: str = "MoriartyInterrogator",
                  **kwargs):
@@ -263,12 +264,10 @@ Votre mission : Fasciner par votre mystère élégant."""
         
         Args:
             kernel: Le kernel Semantic Kernel à utiliser
-            cluedo_dataset: Dataset Cluedo avec cartes et solution
+            dataset_manager: Le manager de dataset Cluedo partagé.
             game_strategy: Stratégie de jeu ("cooperative", "competitive", "balanced", "progressive")
             agent_name: Nom de l'agent
         """
-        # Configuration du dataset manager spécialisé Cluedo
-        dataset_manager = CluedoDatasetManager(cluedo_dataset)
         
         # Outils spécialisés Moriarty
         moriarty_tools = MoriartyTools(dataset_manager)
@@ -291,14 +290,14 @@ Votre mission : Fasciner par votre mystère élégant."""
         
         # Configuration de la stratégie de jeu APRÈS super().__init__
         object.__setattr__(self, 'game_strategy', game_strategy)
-        self._configure_strategy(cluedo_dataset, game_strategy)
+        self._configure_strategy(dataset_manager.dataset, game_strategy)
         
         # Tracking des révélations par agent
         object.__setattr__(self, 'cards_revealed_by_agent', {})
         object.__setattr__(self, 'suggestion_history', [])
         
         self._logger.info(f"MoriartyInterrogatorAgent '{agent_name}' initialisé avec stratégie: {game_strategy}")
-        self._logger.info(f"Cartes Moriarty: {cluedo_dataset.get_moriarty_cards()}")
+        self._logger.info(f"Cartes Moriarty: {dataset_manager.dataset.get_moriarty_cards()}")
     
     def _configure_strategy(self, dataset: CluedoDataset, strategy: str) -> None:
         """Configure la stratégie de révélation du dataset."""
@@ -316,27 +315,35 @@ Votre mission : Fasciner par votre mystère élégant."""
             self._logger.warning(f"Stratégie inconnue '{strategy}', utilisation de 'balanced'")
             dataset.reveal_policy = RevealPolicy.BALANCED
     
-    def validate_suggestion_cluedo(self, suspect: str, arme: str, lieu: str, suggesting_agent: str) -> OracleResponse:
+    async def validate_suggestion_cluedo(self, suspect: str, arme: str, lieu: str, suggesting_agent: str) -> OracleResponse:
         """
         Interface directe pour valider une suggestion Cluedo.
         
         Args:
             suspect: Suspect suggéré
-            arme: Arme suggérée  
+            arme: Arme suggérée
             lieu: Lieu suggéré
             suggesting_agent: Agent qui fait la suggestion
             
         Returns:
             OracleResponse avec résultat de validation
         """
-        response = self.dataset_manager.validate_cluedo_suggestion(suggesting_agent, suspect, arme, lieu)
+        response = await self.dataset_manager.validate_cluedo_suggestion(suggesting_agent, suspect, arme, lieu)
         
         # Enrichissement de la réponse avec la personnalité de Moriarty
         original_message = response.message
         if response.authorized and response.data and response.data.can_refute:
             # Cas où Moriarty réfute
-            revealed_card = response.revealed_information[0] if response.revealed_information else "une de mes cartes"
-            response.message = f"Un sourire énigmatique se dessine. C'est un jeu fascinant, n'est-ce pas ? Hélas, votre théorie sur '{suspect}' se heurte à un petit obstacle : j'ai la carte '{revealed_card}'."
+            if response.revealed_information:
+                revealed_card = response.revealed_information[0]
+                response.message = f"Un sourire énigmatique se dessine. C'est un jeu fascinant, n'est-ce pas ? Hélas, votre théorie sur '{suspect}' se heurte à un petit obstacle : j'ai la carte '{revealed_card}'."
+            else:
+                # Ceci est un état incohérent: can_refute est True mais aucune carte n'est révélée.
+                self._logger.error(f"État incohérent détecté : can_refute est True, mais revealed_information est vide pour la suggestion de {suggesting_agent} sur ({suspect}, {arme}, {lieu}).")
+                response.message = f"*semble momentanément confus* Un détail m'échappe... Votre suggestion sur '{suspect}' est... intéressante, mais je dois garder mes cartes pour moi pour l'instant."
+                # On force la réponse à un état non-réfutation pour éviter de bloquer le jeu.
+                # response.data est un ValidationResult, qui est immuable. On le remplace.
+                response.data = replace(response.data, can_refute=False, reason="Forcé en non-réfutation (état incohérent)")
         elif response.authorized:
             # Cas où Moriarty ne peut pas réfuter
             response.message = f"Tiens, tiens... Votre suggestion pour '{suspect}' est délicieuse. Un mystère intrigant. Je ne peux rien dire pour le moment, le spectacle doit continuer."
@@ -478,7 +485,7 @@ Votre mission : Fasciner par votre mystère élégant."""
         suggestion = self._extract_cluedo_suggestion(content_str)
 
         if suggestion:
-            response = self.validate_suggestion_cluedo(
+            response = await self.validate_suggestion_cluedo(
                 suspect=suggestion.get('suspect'),
                 arme=suggestion.get('arme'),
                 lieu=suggestion.get('lieu'),

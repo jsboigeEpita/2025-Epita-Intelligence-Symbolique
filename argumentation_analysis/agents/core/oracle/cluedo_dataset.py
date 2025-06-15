@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 
-from .permissions import QueryType, QueryResult, RevealPolicy
+from .permissions import QueryType, QueryResult, RevealPolicy, ValidationResult
 
 
 @dataclass
@@ -21,7 +21,7 @@ class CluedoSuggestion:
     lieu: str
     suggested_by: str
     timestamp: datetime = field(default_factory=datetime.now)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convertit la suggestion en dictionnaire."""
         return {
@@ -31,28 +31,9 @@ class CluedoSuggestion:
             "suggested_by": self.suggested_by,
             "timestamp": self.timestamp.isoformat()
         }
-    
+
     def __str__(self) -> str:
         return f"Suggestion({self.suspect}, {self.arme}, {self.lieu}) par {self.suggested_by}"
-
-
-@dataclass
-class ValidationResult:
-    """Résultat de validation d'une suggestion Cluedo."""
-    is_valid: bool
-    reason: str
-    revealed_cards: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    
-    @property
-    def authorized(self) -> bool:
-        """Compatibilité avec l'ancienne API."""
-        return True  # Les validations sont toujours autorisées, seule la validité change
-    
-    @property
-    def can_refute(self) -> bool:
-        """Compatibilité avec l'ancienne API - peut réfuter si la suggestion n'est pas valide."""
-        return not self.is_valid
 
 
 @dataclass
@@ -266,7 +247,16 @@ class CluedoDataset:
         for card in suggestion_cards:
             if card in self.moriarty_cards:
                 owned_cards.append(card)
-        
+
+        def _get_card_type(card_name: str) -> str:
+            if card_name in self._all_suspects:
+                return "suspect"
+            if card_name in self._all_weapons:
+                return "arme"
+            if card_name in self._all_rooms:
+                return "lieu"
+            return "inconnu"
+                
         if owned_cards:
             # Moriarty possède au moins une carte, il peut réfuter
             # Choisit une carte à révéler selon la stratégie
@@ -282,27 +272,29 @@ class CluedoDataset:
                     query_type=QueryType.SUGGESTION_VALIDATION
                 )
                 revelations.append(revelation)
+
+            cards_to_reveal_details = [
+                {"type": _get_card_type(card), "value": card}
+                for card in cards_to_reveal
+            ]
             
             return ValidationResult(
-                is_valid=False,
+                can_refute=True,
+                suggestion_valid=False,
                 reason=f"Suggestion réfutée - Moriarty possède: {', '.join(cards_to_reveal)}",
-                revealed_cards=cards_to_reveal,
-                metadata={
-                    "suggestion": suggestion.to_dict(),
-                    "owned_cards_count": len(owned_cards),
-                    "revelations": [r.to_dict() for r in revelations]
-                }
+                revealed_cards=cards_to_reveal_details,
+                refuting_agent="Moriarty",
+                authorized=True
             )
         else:
             # Moriarty ne possède aucune carte de la suggestion
             return ValidationResult(
-                is_valid=True,
+                can_refute=False,
+                suggestion_valid=True,
                 reason="Suggestion non réfutée - Moriarty ne possède aucune de ces cartes",
                 revealed_cards=[],
-                metadata={
-                    "suggestion": suggestion.to_dict(),
-                    "owned_cards_count": 0
-                }
+                refuting_agent="",
+                authorized=True
             )
     
     def can_refute_suggestion(self, suggestion: CluedoSuggestion) -> List[str]:

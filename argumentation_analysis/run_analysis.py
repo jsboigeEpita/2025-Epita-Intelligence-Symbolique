@@ -71,13 +71,24 @@ async def main():
         config_for_services=config_for_services
     )
 
-    if analysis_results:
-        launcher_logger.info("Pipeline d'analyse terminé avec succès.")
-        # Ici, on pourrait afficher un résumé des résultats si nécessaire,
-        # ou simplement se fier aux logs du pipeline.
-        # print("Résultats de l'analyse:", analysis_results) # Décommenter pour affichage direct
-    else:
-        launcher_logger.error("Le pipeline d'analyse n'a pas retourné de résultats ou a échoué.")
+    import json
+    launcher_logger.info(f"Pipeline a retourné: {analysis_results}")
+
+    # Mesure de débogage : toujours essayer d'imprimer quelque chose et de sortir proprement
+    try:
+        if analysis_results and 'history' in analysis_results and analysis_results['history']:
+            serializable_history = []
+            for msg in analysis_results['history']:
+                serializable_history.append({
+                    "author_name": msg.author_name if hasattr(msg, 'author_name') else 'N/A',
+                    "content": msg.content if hasattr(msg, 'content') else str(msg)
+                })
+            analysis_results['history'] = serializable_history
+        
+        print(json.dumps(analysis_results, indent=2, ensure_ascii=False, default=str))
+
+    except Exception as e:
+        print(json.dumps({"status": "error", "message": "Failed to serialize results", "details": str(e)}))
 
 if __name__ == "__main__":
     # S'assurer que l'environnement asyncio est correctement géré

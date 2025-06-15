@@ -7,10 +7,17 @@ une logique formelle. Ces classes utilisent le pattern Abstract Base Class (ABC)
 pour définir une interface commune que les agents concrets doivent implémenter.
 """
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING
+from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING, Coroutine
 import logging
 
 from semantic_kernel import Kernel
+from semantic_kernel.agents import Agent
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.agents.channels.chat_history_channel import ChatHistoryChannel
+from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatHistoryAgentThread
+
+# Résoudre la dépendance circulaire de Pydantic
+ChatHistoryChannel.model_rebuild()
 
 # Import paresseux pour éviter le cycle d'import - uniquement pour le typage
 if TYPE_CHECKING:
@@ -18,7 +25,7 @@ if TYPE_CHECKING:
     from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
 
-class BaseAgent(ABC):
+class BaseAgent(Agent, ABC):
     """
     Classe de base abstraite pour tous les agents du système.
 
@@ -34,92 +41,43 @@ class BaseAgent(ABC):
         _llm_service_id (Optional[str]): L'ID du service LLM utilisé, configuré via `setup_agent_components`.
         _system_prompt (Optional[str]): Le prompt système global pour l'agent.
     """
-    _kernel: "Kernel"  # Utilisation de guillemets pour forward reference si Kernel n'est pas encore importé
-    _agent_name: str
     _logger: logging.Logger
     _llm_service_id: Optional[str]
-    _system_prompt: Optional[str]
-    _description: Optional[str]
 
     def __init__(self, kernel: "Kernel", agent_name: str, system_prompt: Optional[str] = None, description: Optional[str] = None):
         """
         Initialise une instance de BaseAgent.
 
-        :param kernel: Le kernel Semantic Kernel à utiliser.
-        :type kernel: Kernel
-        :param agent_name: Le nom de l'agent.
-        :type agent_name: str
-        :param system_prompt: Le prompt système optionnel pour l'agent.
-        :type system_prompt: Optional[str]
-        :param description: La description optionnelle de l'agent.
-        :type description: Optional[str]
+        Args:
+            kernel: Le kernel Semantic Kernel à utiliser.
+            agent_name: Le nom de l'agent.
+            system_prompt: Le prompt système optionnel pour l'agent.
+            description: La description optionnelle de l'agent.
         """
-        self._kernel = kernel  # Stockage local du kernel pour l'accès via la property sk_kernel
-        self._agent_name = agent_name
-        self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{agent_name}")
-        self._llm_service_id = None # Initialisé dans setup_agent_components
-        self._system_prompt = system_prompt
-        self._description = description if description else (system_prompt if system_prompt else f"Agent {agent_name}")
+        effective_description = description if description else (system_prompt if system_prompt else f"Agent {agent_name}")
+        
+        # Appel du constructeur de la classe parente sk.Agent
+        super().__init__(
+            id=agent_name,
+            name=agent_name,
+            instructions=system_prompt,
+            description=effective_description,
+            kernel=kernel
+        )
 
-    @property
-    def name(self) -> str:
-        """
-        Retourne le nom de l'agent.
-
-        :return: Le nom de l'agent.
-        :rtype: str
-        """
-        return self._agent_name
-    
-    @property
-    def description(self) -> Optional[str]:
-        """
-        Retourne la description de l'agent.
-
-        :return: La description de l'agent.
-        :rtype: Optional[str]
-        """
-        return self._description
-    
-    @property
-    def instructions(self) -> Optional[str]:
-        """
-        Retourne les instructions système de l'agent.
-
-        :return: Les instructions système de l'agent.
-        :rtype: Optional[str]
-        """
-        return self._system_prompt
-
-    @property
-    def sk_kernel(self) -> "Kernel":
-        """
-        Retourne le kernel Semantic Kernel associé à l'agent.
-
-        :return: Le kernel Semantic Kernel.
-        :rtype: Kernel
-        """
-        return self._kernel
+        # Le kernel est déjà stocké dans self.kernel par la classe de base Agent.
+        self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{self.name}")
+        self._llm_service_id = None  # Sera défini par setup_agent_components
 
     @property
     def logger(self) -> logging.Logger:
-        """
-        Retourne le logger de l'agent.
-
-        :return: L'instance du logger.
-        :rtype: logging.Logger
-        """
+        """Retourne le logger de l'agent."""
         return self._logger
 
     @property
     def system_prompt(self) -> Optional[str]:
-        """
-        Retourne le prompt système de l'agent.
-
-        :return: Le prompt système, ou None s'il n'est pas défini.
-        :rtype: Optional[str]
-        """
-        return self._system_prompt
+        """Retourne le prompt système de l'agent (alias pour self.instructions)."""
+        return self.instructions
 
     @abstractmethod
     def get_agent_capabilities(self) -> Dict[str, Any]:
@@ -166,25 +124,59 @@ class BaseAgent(ABC):
             "llm_service_id": self._llm_service_id,
             "capabilities": self.get_agent_capabilities()
         }
-    
+
+    def get_channel_keys(self) -> List[str]:
+        """
+        Retourne les clés uniques pour identifier le canal de communication de l'agent.
+        Cette méthode est requise par AgentGroupChat.
+        """
+        # Utiliser self.id car il est déjà garanti comme étant unique
+        # (initialisé avec agent_name).
+        return [self.id]
+
+    async def create_channel(self) -> ChatHistoryChannel:
+        """
+        Crée un canal de communication pour l'agent.
+
+        Cette méthode est requise par AgentGroupChat pour permettre à l'agent
+        de participer à une conversation. Nous utilisons ChatHistoryChannel,
+        qui est une implémentation générique basée sur ChatHistory.
+        """
+        thread = ChatHistoryAgentThread()
+        return ChatHistoryChannel(thread=thread)
+
     @abstractmethod
     async def get_response(self, *args, **kwargs):
         """Méthode abstraite pour obtenir une réponse de l'agent."""
         pass
 
     @abstractmethod
-    async def invoke(self, *args, **kwargs):
-        """Méthode abstraite pour invoquer l'agent."""
+    async def invoke_single(self, *args, **kwargs):
+        """
+        Méthode abstraite pour l'invocation de l'agent qui retourne une réponse unique.
+        Les agents concrets DOIVENT implémenter cette logique.
+        """
         pass
 
-    async def invoke_stream(self, *args, **kwargs):
-        """Méthode par défaut pour le streaming - peut être surchargée."""
-        result = await self.invoke(*args, **kwargs)
+    async def invoke(self, *args, **kwargs):
+        """
+        Méthode d'invocation principale compatible avec le streaming attendu par le framework SK.
+        Elle transforme la réponse unique de `invoke_single` en un flux.
+        """
+        result = await self.invoke_single(*args, **kwargs)
         yield result
+
+    async def invoke_stream(self, *args, **kwargs):
+        """
+        Implémentation de l'interface de streaming de SK.
+        Cette méthode délègue à `invoke`, qui retourne maintenant un générateur asynchrone.
+        """
+        async for Elt in self.invoke(*args, **kwargs):
+            yield Elt
  
      # Optionnel, à considérer pour une interface d'appel atomique standardisée
      # def invoke_atomic(self, method_name: str, **kwargs) -> Any:
-    #     if hasattr(self, method_name) and callable(getattr(self, method_name)):
+     #     if hasattr(self, method_name) and callable(getattr(self, method_name)):
     #         method_to_call = getattr(self, method_name)
     #         # Potentiellement vérifier si la méthode est "publique" ou listée dans capabilities
     #         return method_to_call(**kwargs)

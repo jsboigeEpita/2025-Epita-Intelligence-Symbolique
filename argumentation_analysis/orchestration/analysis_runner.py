@@ -28,16 +28,19 @@ from semantic_kernel.contents.chat_message_content import ChatMessageContent as 
 from semantic_kernel.kernel import Kernel as SKernel # Alias pour éviter conflit avec Kernel de SK
 
 # Imports Semantic Kernel
+from semantic_kernel.agents import AgentGroupChat, Agent
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
 from semantic_kernel.contents.utils.author_role import AuthorRole
+from semantic_kernel.contents.chat_history import ChatHistory
 
 # Correct imports
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
 from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
 from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
+from argumentation_analysis.agents.core.pl.pl_agent import PropositionalLogicAgent
 from argumentation_analysis.agents.core.pl.pl_agent import PropositionalLogicAgent
 from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
 
@@ -138,8 +141,9 @@ async def _run_analysis_conversation(
         informal_agent_refactored.setup_agent_components(llm_service_id=llm_service_id_str)
         run_logger.info(f"   Agent {informal_agent_refactored.name} instancié et configuré.")
         
-        run_logger.warning("ATTENTION: PropositionalLogicAgent DÉSACTIVÉ temporairement (incompatibilité Java)")
-        pl_agent_refactored = None  # Placeholder pour éviter les erreurs
+        pl_agent_refactored = PropositionalLogicAgent(kernel=local_kernel, agent_name="PropositionalLogicAgent_Refactored")
+        pl_agent_refactored.setup_agent_components(llm_service_id=llm_service_id_str)
+        run_logger.info(f"   Agent {pl_agent_refactored.name} instancié et configuré.")
 
         extract_agent_refactored = ExtractAgent(kernel=local_kernel, agent_name="ExtractAgent_Refactored")
         extract_agent_refactored.setup_agent_components(llm_service_id=llm_service_id_str)
@@ -147,20 +151,52 @@ async def _run_analysis_conversation(
         
         run_logger.debug(f"   Plugins enregistrés dans local_kernel après setup des agents: {list(local_kernel.plugins.keys())}")
 
-        run_logger.info("5. Création des instances Agent de compatibilité pour AgentGroupChat...")
+        run_logger.info("5. Création du groupe de chat et lancement de l'orchestration...")
+
+        # Rassembler les agents actifs
+        agents = [pm_agent_refactored, informal_agent_refactored, pl_agent_refactored, extract_agent_refactored]
+        active_agents = [agent for agent in agents if agent is not None]
+
+        if not active_agents:
+            run_logger.critical("Aucun agent actif n'a pu être initialisé. Annulation de l'analyse.")
+            return {"status": "error", "message": "Aucun agent actif."}
+
+        run_logger.info(f"Création du AgentGroupChat avec les agents: {[agent.name for agent in active_agents]}")
+
+        # Créer le groupe de chat
+        # Message initial pour lancer la conversation
+        initial_message_text = (
+            "Vous êtes une équipe d'analystes experts en argumentation. "
+            "Votre mission est d'analyser le texte suivant de manière collaborative. "
+            "Le Project Manager (PM) doit initier et coordonner. "
+            "Les autres agents attendent les instructions du PM. "
+            f"Voici le texte à analyser:\n\n---\n{local_state.raw_text}\n---"
+        )
         
-        if 'local_state' in locals():
-            print(f"Repr: {repr(local_state)}")
-        else:
-            print("(Instance état locale non disponible)")
+        # Créer un historique de chat et y ajouter le message initial
+        chat_history_for_group = ChatHistory()
+        chat_history_for_group.add_user_message(initial_message_text)
 
-        jvm_status = "(JVM active)" if ('jpype' in globals() and jpype.isJVMStarted()) else "(JVM non active)"
-        print(f"\n{jvm_status}")
-        run_logger.info("Agents de compatibilité configurés.")
+        # Créer le groupe de chat avec l'historique pré-rempli
+        group_chat = AgentGroupChat(agents=active_agents, chat_history=chat_history_for_group)
 
+        run_logger.info("Démarrage de l'invocation du groupe de chat...")
+        # L'invocation se fait sans argument car le premier message est déjà dans l'historique.
+        full_history = [message async for message in group_chat.invoke()]
+        run_logger.info("Conversation terminée.")
+        
+        # Logger l'historique complet pour le débogage
+        if full_history:
+            run_logger.debug("=== Transcription de la Conversation ===")
+            for message in full_history:
+                run_logger.debug(f"[{message.author_name}]:\n{message.content}")
+            run_logger.debug("======================================")
+
+        final_analysis = local_state.to_json()
+        
         run_logger.info(f"--- Fin Run_{run_id} ---")
         
-        return {"status": "success", "message": "Analyse terminée"}
+        return {"status": "success", "analysis": final_analysis, "history": full_history}
         
     except Exception as e:
         run_logger.error(f"Erreur durant l'analyse: {e}", exc_info=True)

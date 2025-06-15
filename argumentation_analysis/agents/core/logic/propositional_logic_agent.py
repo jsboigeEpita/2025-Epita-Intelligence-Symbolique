@@ -16,7 +16,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from semantic_kernel import Kernel
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
-from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents import ChatMessageContent, AuthorRole
 from semantic_kernel.contents.chat_history import ChatHistory
 from pydantic import Field
 from typing import AsyncGenerator
@@ -114,7 +114,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
         prompt_execution_settings = None
         if self._llm_service_id:
             try:
-                prompt_execution_settings = self.sk_kernel.get_prompt_execution_settings_from_service_id(
+                prompt_execution_settings = self.kernel.get_prompt_execution_settings_from_service_id(
                     self._llm_service_id
                 )
                 self.logger.debug(f"Settings LLM récupérés pour {self.name}.")
@@ -139,7 +139,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
                     self.logger.error(f"Prompt invalide pour {self.name}.{func_name}. Skipping.")
                     continue
                 
-                self.sk_kernel.add_function(
+                self.kernel.add_function(
                     prompt=prompt_template,
                     plugin_name=self.name,
                     function_name=func_name,
@@ -171,10 +171,10 @@ class PropositionalLogicAgent(BaseLogicAgent):
         self.logger.info(f"Conversion de texte en ensemble de croyances propositionnelles pour le texte : '{text[:100]}...'")
         
         try:
-            arguments = KernelArguments(input=text) 
-            result = await self.sk_kernel.invoke( 
-                plugin_name=self.name, 
-                function_name="TextToPLBeliefSet", 
+            arguments = KernelArguments(input=text)
+            result = await self.kernel.invoke(
+                plugin_name=self.name,
+                function_name="TextToPLBeliefSet",
                 arguments=arguments
             )
             belief_set_content = str(result) 
@@ -218,10 +218,10 @@ class PropositionalLogicAgent(BaseLogicAgent):
         self.logger.info(f"Génération de requêtes PL pour le texte : '{text[:100]}...'") 
         
         try:
-            arguments = KernelArguments(input=text, belief_set=belief_set.content) 
-            result = await self.sk_kernel.invoke( 
-                plugin_name=self.name, 
-                function_name="GeneratePLQueries", 
+            arguments = KernelArguments(input=text, belief_set=belief_set.content)
+            result = await self.kernel.invoke(
+                plugin_name=self.name,
+                function_name="GeneratePLQueries",
                 arguments=arguments
             )
             queries_text = str(result) 
@@ -334,9 +334,9 @@ class PropositionalLogicAgent(BaseLogicAgent):
                 tweety_result=results_messages_str
             )
             
-            result = await self.sk_kernel.invoke( 
-                plugin_name=self.name, 
-                function_name="InterpretPLResults", 
+            result = await self.kernel.invoke(
+                plugin_name=self.name,
+                function_name="InterpretPLResults",
                 arguments=arguments
             )
             interpretation = str(result) 
@@ -396,40 +396,30 @@ class PropositionalLogicAgent(BaseLogicAgent):
         content = belief_set_data.get("content", "")
         return PropositionalBeliefSet(content)
 
-    async def get_response(
-        self,
-        chat_history: ChatHistory,
-        settings: Optional[Any] = None,
-    ) -> AsyncGenerator[list[ChatMessageContent], None]:
+    async def get_response(self, *args, **kwargs) -> str:
         """
-        Méthode abstraite de `Agent` pour obtenir une réponse.
-        Non implémentée car cet agent utilise des méthodes spécifiques.
+        Méthode implémentée pour satisfaire l'interface de base de l'agent.
+        Retourne une réponse basée sur les capacités de l'agent.
         """
-        logger.warning("La méthode 'get_response' n'est pas implémentée pour PropositionalLogicAgent et ne devrait pas être appelée directement.")
-        yield []
-        return
+        capabilities = self.get_agent_capabilities()
+        return f"PropositionalLogicAgent '{self.name}' prêt. Capacités: {', '.join(capabilities.keys())}"
 
-    async def invoke(
-        self,
-        chat_history: ChatHistory,
-        settings: Optional[Any] = None,
-    ) -> list[ChatMessageContent]:
+    async def invoke_single(self, *args, **kwargs) -> ChatMessageContent:
         """
-        Méthode abstraite de `Agent` pour invoquer l'agent.
-        Non implémentée car cet agent utilise des méthodes spécifiques.
+        Implémentation de `invoke_single` pour l'agent de logique propositionnelle.
+        Retourne un ChatMessageContent, comme attendu par le framework.
         """
-        logger.warning("La méthode 'invoke' n'est pas implémentée pour PropositionalLogicAgent et ne devrait pas être appelée directement.")
-        return []
-
-    async def invoke_stream(
-        self,
-        chat_history: ChatHistory,
-        settings: Optional[Any] = None,
-    ) -> AsyncGenerator[list[ChatMessageContent], None]:
-        """
-        Méthode abstraite de `Agent` pour invoquer l'agent en streaming.
-        Non implémentée car cet agent utilise des méthodes spécifiques.
-        """
-        logger.warning("La méthode 'invoke_stream' n'est pas implémentée pour PropositionalLogicAgent et ne devrait pas être appelée directement.")
-        yield []
-        return
+        import json
+        self.logger.info(f"PL Agent invoke_single called with: args={args}, kwargs={kwargs}")
+        self.logger.warning("L'invocation générique de PropositionalLogicAgent n'effectue aucune action, "
+                            "car il attend un appel à une fonction spécifique. Retour des capacités.")
+        
+        capabilities = self.get_agent_capabilities()
+        response_dict = {
+            "status": "inaction",
+            "message": "PropositionalLogicAgent is ready. Invoke a specific capability.",
+            "capabilities": capabilities
+        }
+        
+        response_content = json.dumps(response_dict, indent=2)
+        return ChatMessageContent(role=AuthorRole.ASSISTANT, content=response_content)
