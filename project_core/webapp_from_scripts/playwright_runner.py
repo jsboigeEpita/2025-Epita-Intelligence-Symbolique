@@ -137,8 +137,9 @@ class PlaywrightRunner:
         parts = [str(npx_executable), 'playwright', 'test']
         parts.extend(test_paths)
         
-        if playwright_config_path:
-            parts.extend(['--config', playwright_config_path])
+        # Toujours utiliser notre configuration unifiée pour assurer la génération des traces
+        config_path = playwright_config_path or 'tests/e2e/playwright.config.js'
+        parts.extend(['--config', config_path])
         
         if not config.get('headless', True):
             parts.append('--headed')

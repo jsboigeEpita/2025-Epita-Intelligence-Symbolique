@@ -4,6 +4,8 @@ from typing import Dict, Any, Optional
 
 from semantic_kernel import Kernel # type: ignore
 from semantic_kernel.functions.kernel_arguments import KernelArguments # type: ignore
+from semantic_kernel.contents import ChatMessageContent, AuthorRole
+
 
 from ..abc.agent_bases import BaseAgent
 from .pm_definitions import PM_INSTRUCTIONS # Ou PM_INSTRUCTIONS_V9 selon la version souhaitée
@@ -47,24 +49,24 @@ class ProjectManagerAgent(BaseAgent):
         # lors de l'ajout de la fonction si llm_service_id est valide.
 
         try:
-            self.sk_kernel.add_function(
+            self.kernel.add_function(
                 prompt=prompt_define_tasks_v11, # Utiliser la dernière version du prompt
                 plugin_name=plugin_name,
                 function_name="DefineTasksAndDelegate", # Nom plus SK-conventionnel
                 description="Defines the NEXT single task, registers it, and designates 1 agent (Exact Name Required).",
-                # prompt_execution_settings=self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id) # Géré par le kernel
+                # prompt_execution_settings=self.kernel.get_prompt_execution_settings_from_service_id(llm_service_id) # Géré par le kernel
             )
             self.logger.debug(f"Fonction sémantique '{plugin_name}.DefineTasksAndDelegate' ajoutée.")
         except Exception as e:
             self.logger.error(f"Erreur lors de l'ajout de la fonction '{plugin_name}.DefineTasksAndDelegate': {e}")
 
         try:
-            self.sk_kernel.add_function(
+            self.kernel.add_function(
                 prompt=prompt_write_conclusion_v7, # Utiliser la dernière version du prompt
                 plugin_name=plugin_name,
                 function_name="WriteAndSetConclusion", # Nom plus SK-conventionnel
                 description="Writes and registers the final conclusion (with pre-check of state).",
-                # prompt_execution_settings=self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id) # Géré par le kernel
+                # prompt_execution_settings=self.kernel.get_prompt_execution_settings_from_service_id(llm_service_id) # Géré par le kernel
             )
             self.logger.debug(f"Fonction sémantique '{plugin_name}.WriteAndSetConclusion' ajoutée.")
         except Exception as e:
@@ -79,7 +81,7 @@ class ProjectManagerAgent(BaseAgent):
         # Si les prompts étaient conçus pour appeler directement {{StateManager.add_analysis_task}},
         # alors il faudrait ajouter le plugin ici.
         # self.logger.info("Vérification pour StateManagerPlugin...")
-        # state_manager_plugin_instance = self.sk_kernel.plugins.get("StateManager")
+        # state_manager_plugin_instance = self.kernel.plugins.get("StateManager")
         # if state_manager_plugin_instance:
         #     self.logger.info("StateManagerPlugin déjà présent dans le kernel global, aucune action supplémentaire ici.")
         # else:
@@ -87,7 +89,7 @@ class ProjectManagerAgent(BaseAgent):
         #                        "doivent l'appeler directement, il doit être ajouté au kernel (typiquement par l'orchestrateur).")
         #     # Exemple si on devait l'ajouter ici (nécessiterait l'instance):
         #     # sm_plugin = StateManagerPlugin(...) # Nécessite l'instance du StateManager
-        #     # self.sk_kernel.add_plugin(sm_plugin, plugin_name="StateManager")
+        #     # self.kernel.add_plugin(sm_plugin, plugin_name="StateManager")
         #     # self.logger.info("StateManagerPlugin ajouté localement au kernel du PM (ceci est un exemple).")
 
         self.logger.info(f"Composants pour {self.name} configurés.")
@@ -111,7 +113,7 @@ class ProjectManagerAgent(BaseAgent):
         args = KernelArguments(analysis_state_snapshot=analysis_state_snapshot, raw_text=raw_text)
         
         try:
-            response = await self.sk_kernel.invoke(
+            response = await self.kernel.invoke(
                 plugin_name=self.name,
                 function_name="DefineTasksAndDelegate",
                 arguments=args
@@ -144,7 +146,7 @@ class ProjectManagerAgent(BaseAgent):
         args = KernelArguments(analysis_state_snapshot=analysis_state_snapshot, raw_text=raw_text)
 
         try:
-            response = await self.sk_kernel.invoke(
+            response = await self.kernel.invoke(
                 plugin_name=self.name,
                 function_name="WriteAndSetConclusion",
                 arguments=args
@@ -158,53 +160,42 @@ class ProjectManagerAgent(BaseAgent):
             return f"ERREUR: Impossible d'écrire la conclusion. Détails: {e}"
 
     # Implémentation des méthodes abstraites de BaseAgent
-    async def get_response(self, request: str, context: str = "", **kwargs) -> str:
+    async def get_response(self, *args, **kwargs) -> str:
         """
-        Méthode pour obtenir une réponse de l'agent basée sur une requête.
-        
-        Args:
-            request: La requête ou question posée à l'agent
-            context: Le contexte supplémentaire pour la requête
-            **kwargs: Arguments supplémentaires
-            
-        Returns:
-            La réponse de l'agent sous forme de chaîne
+        Méthode implémentée pour satisfaire l'interface de base de l'agent.
+        Retourne une réponse basée sur les capacités de l'agent.
         """
-        self.logger.info(f"get_response appelée avec: {request}")
-        
-        # Logique simple pour déterminer le type de réponse selon la requête
-        if "task" in request.lower() or "delegate" in request.lower():
-            return await self.define_tasks_and_delegate(context, request)
-        elif "conclusion" in request.lower() or "final" in request.lower():
-            return await self.write_conclusion(context, request)
-        else:
-            # Réponse générique basée sur les capacités de l'agent
-            capabilities = self.get_agent_capabilities()
-            return f"Agent ProjectManager prêt. Capacités: {', '.join(capabilities.keys())}"
+        capabilities = self.get_agent_capabilities()
+        return f"ProjectManagerAgent '{self.name}' prêt. Capacités: {', '.join(capabilities.keys())}"
 
-    async def invoke(self, function_name: str, **kwargs) -> str:
+    async def invoke_single(self, *args, **kwargs) -> ChatMessageContent:
         """
-        Méthode pour invoquer une fonction spécifique de l'agent.
-        
-        Args:
-            function_name: Le nom de la fonction à invoquer
-            **kwargs: Arguments pour la fonction
-            
-        Returns:
-            Le résultat de l'invocation
+        Implémentation de la logique de l'agent pour une seule réponse, conforme à BaseAgent.
+        Retourne un ChatMessageContent, comme attendu par le framework.
         """
-        self.logger.info(f"invoke appelée pour la fonction: {function_name}")
+        self.logger.info(f"PM Agent invoke_single called with: args={args}, kwargs={kwargs}")
+
+        raw_text = ""
+        analysis_state_snapshot = "{}" # Default empty state
         
-        if function_name == "define_tasks_and_delegate":
-            analysis_state = kwargs.get("analysis_state_snapshot", "")
-            raw_text = kwargs.get("raw_text", "")
-            return await self.define_tasks_and_delegate(analysis_state, raw_text)
-        elif function_name == "write_conclusion":
-            analysis_state = kwargs.get("analysis_state_snapshot", "")
-            raw_text = kwargs.get("raw_text", "")
-            return await self.write_conclusion(analysis_state, raw_text)
+        messages_arg = kwargs.get('messages')
+        
+        # Le framework passe un unique objet ChatMessageContent, pas une liste.
+        # Cet objet n'est pas réversible. Nous devons le traiter directement.
+        if isinstance(messages_arg, ChatMessageContent) and messages_arg.role == AuthorRole.USER:
+            raw_text = messages_arg.content
+            self.logger.info(f"Texte brut extrait de l'argument 'messages': '{raw_text[:100]}...'")
         else:
-            raise ValueError(f"Fonction inconnue: {function_name}")
+            self.logger.warning(f"Impossible d'extraire le texte utilisateur de kwargs['messages']. Type reçu: {type(messages_arg)}")
+            # En cas d'échec, on retourne une réponse d'erreur pour ne pas planter.
+            return ChatMessageContent(role=AuthorRole.ASSISTANT, content="ERREUR: Impossible de traiter le message d'entrée.")
+
+
+        self.logger.info("Déclenchement de 'define_tasks_and_delegate' depuis l'appel invoke_single générique.")
+        response_content = await self.define_tasks_and_delegate(analysis_state_snapshot, raw_text)
+
+        # Encapsuler la réponse string dans un ChatMessageContent
+        return ChatMessageContent(role=AuthorRole.ASSISTANT, content=response_content)
 
     # D'autres méthodes métiers pourraient être ajoutées ici si nécessaire,
     # par exemple, une méthode qui encapsule la logique de décision principale du PM

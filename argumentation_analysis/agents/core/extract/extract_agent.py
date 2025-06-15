@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional, Union, Callable, ClassVar
 
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent # Potentiellement plus nécessaire directement
+from semantic_kernel.contents import ChatMessageContent, AuthorRole
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 from semantic_kernel.prompt_template.prompt_template_config import PromptTemplateConfig
 
@@ -161,9 +161,6 @@ class ExtractAgent(BaseAgent):
         """
         super().__init__(kernel, agent_name, EXTRACT_AGENT_INSTRUCTIONS)
         
-        # Configuration du plugin name pour les tests et l'orchestration
-        self.plugin_name = "extract_plugin"
-        
         # Fonctions helper spécifiques à cet agent
         self.find_similar_text_func = find_similar_text_func or find_similar_text
         self.extract_text_func = extract_text_func or extract_text_with_markers
@@ -201,7 +198,7 @@ class ExtractAgent(BaseAgent):
 
         # 1. Initialiser et enregistrer le plugin natif
         self._native_extract_plugin = ExtractAgentPlugin()
-        self.sk_kernel.add_plugin(self._native_extract_plugin, plugin_name=self.NATIVE_PLUGIN_NAME)
+        self.kernel.add_plugin(self._native_extract_plugin, plugin_name=self.NATIVE_PLUGIN_NAME)
         self.logger.info(f"Plugin natif '{self.NATIVE_PLUGIN_NAME}' enregistré.")
 
         # 2. Enregistrer les fonctions sémantiques
@@ -211,22 +208,22 @@ class ExtractAgent(BaseAgent):
         # correctement avec PromptTemplateConfig dans ce contexte.
 
         # Fonction sémantique pour l'extraction
-        self.sk_kernel.add_function(
+        self.kernel.add_function(
             prompt=EXTRACT_FROM_NAME_PROMPT,
             function_name=self.EXTRACT_SEMANTIC_FUNCTION_NAME,
             plugin_name=self.name,
             description="Propose des bornes (marqueurs de début et de fin) pour un extrait.",
-            execution_settings=self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+            execution_settings=self.kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         )
         self.logger.info(f"Fonction sémantique '{self.EXTRACT_SEMANTIC_FUNCTION_NAME}' enregistrée dans le plugin '{self.name}'.")
 
         # Fonction sémantique pour la validation
-        self.sk_kernel.add_function(
+        self.kernel.add_function(
             prompt=VALIDATE_EXTRACT_PROMPT,
             function_name=self.VALIDATE_SEMANTIC_FUNCTION_NAME,
             plugin_name=self.name,
             description="Valide un extrait proposé.",
-            execution_settings=self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+            execution_settings=self.kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         )
         self.logger.info(f"Fonction sémantique '{self.VALIDATE_SEMANTIC_FUNCTION_NAME}' enregistrée dans le plugin '{self.name}'.")
 
@@ -319,8 +316,8 @@ class ExtractAgent(BaseAgent):
         
         extract_content_result = ""
         try:
-            # Utilisation de self.sk_kernel.invoke pour appeler la fonction sémantique
-            response = await self.sk_kernel.invoke(
+            # Utilisation de self.kernel.invoke pour appeler la fonction sémantique
+            response = await self.kernel.invoke(
                 plugin_name=self.name,
                 function_name=self.EXTRACT_SEMANTIC_FUNCTION_NAME,
                 arguments=arguments
@@ -401,7 +398,7 @@ class ExtractAgent(BaseAgent):
         
         validation_content_result = ""
         try:
-            response = await self.sk_kernel.invoke(
+            response = await self.kernel.invoke(
                 plugin_name=self.name,
                 function_name=self.VALIDATE_SEMANTIC_FUNCTION_NAME,
                 arguments=validation_args
@@ -676,48 +673,40 @@ class ExtractAgent(BaseAgent):
         self.logger.info(f"Nouvel extrait '{extract_name}' ajouté à '{source_info.get('source_name', '')}' à l'index {new_extract_idx}.")
         return True, new_extract_idx
 
-    async def get_response(self, message: str, **kwargs) -> str:
+    async def get_response(self, *args, **kwargs) -> str:
         """
-        Méthode implémentée pour satisfaire l'interface BaseAgent.
-        
-        Retourne une réponse basée sur les capacités d'extraction de l'agent.
-        
-        :param message: Le message/texte à traiter
-        :param kwargs: Arguments supplémentaires
-        :return: Réponse de l'agent
+        Méthode implémentée pour satisfaire l'interface de base de l'agent.
+        Retourne une réponse basée sur les capacités de l'agent.
         """
-        # Pour un agent d'extraction, on peut retourner une description des capacités
-        # ou traiter le message selon le contexte
         capabilities = self.get_agent_capabilities()
         return f"ExtractAgent '{self.name}' prêt. Capacités: {', '.join(capabilities.keys())}"
 
-    async def invoke(self, action: str = "extract_from_name", **kwargs) -> Any:
+    async def invoke_single(self, *args, **kwargs) -> ChatMessageContent:
         """
-        Méthode d'invocation principale pour l'agent d'extraction.
-        
-        :param action: L'action à effectuer ('extract_from_name', 'repair_extract', etc.)
-        :param kwargs: Arguments spécifiques à l'action
-        :return: Résultat de l'action
+        Méthode d'invocation principale pour l'agent d'extraction, adaptée pour AgentGroupChat.
+        Retourne un ChatMessageContent, comme attendu par le framework.
+
+        Cet agent est spécialisé et attend des appels à des fonctions spécifiques.
+        Un appel générique (comme depuis un chat) se contente de retourner ses capacités
+        pour éviter de planter la conversation.
         """
-        if action == "extract_from_name":
-            source_info = kwargs.get("source_info")
-            extract_name = kwargs.get("extract_name")
-            if source_info and extract_name:
-                return await self.extract_from_name(source_info, extract_name)
-            else:
-                raise ValueError("extract_from_name requires 'source_info' and 'extract_name' parameters")
-        
-        elif action == "repair_extract":
-            extract_definitions = kwargs.get("extract_definitions")
-            source_idx = kwargs.get("source_idx")
-            extract_idx = kwargs.get("extract_idx")
-            if extract_definitions is not None and source_idx is not None and extract_idx is not None:
-                return await self.repair_extract(extract_definitions, source_idx, extract_idx)
-            else:
-                raise ValueError("repair_extract requires 'extract_definitions', 'source_idx', and 'extract_idx' parameters")
-        
-        else:
-            raise ValueError(f"Unknown action: {action}. Available actions: extract_from_name, repair_extract")
+        self.logger.info(f"Extract Agent invoke_single called with: args={args}, kwargs={kwargs}")
+        self.logger.warning(
+            "L'invocation générique de ExtractAgent via AgentGroupChat n'est pas supportée "
+            "car il attend un appel à une fonction spécifique (ex: extract_from_name). "
+            "Retour des capacités de l'agent."
+        )
+
+        capabilities = self.get_agent_capabilities()
+        response_dict = {
+            "status": "inaction",
+            "message": "ExtractAgent is ready but was invoked in a generic chat context. "
+                       "This agent requires a specific function call.",
+            "capabilities": capabilities
+        }
+
+        response_content = json.dumps(response_dict, indent=2)
+        return ChatMessageContent(role=AuthorRole.ASSISTANT, content=response_content)
 
 # La fonction setup_extract_agent n'est plus nécessaire ici,
 # car l'initialisation du kernel et du service LLM se fait à l'extérieur

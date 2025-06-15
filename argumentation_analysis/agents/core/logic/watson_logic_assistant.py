@@ -411,7 +411,7 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
                 template_format="semantic-kernel",
             )
             prompt_config.add_execution_settings(
-                                OpenAIPromptExecutionSettings(service_id=self._service_id, max_tokens=200, temperature=0.6, top_p=0.7)
+                                OpenAIPromptExecutionSettings(service_id=self._llm_service_id, max_tokens=200, temperature=0.6, top_p=0.7)
             )
 
             # Création d'une fonction ad-hoc pour la conversation
@@ -435,5 +435,5 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
                 return ChatMessageContent(role="assistant", content="Je dois analyser la situation plus en détail.", name=self.name)
 
         except Exception as e:
-            self._logger.error(f"[{self._name}] Erreur lors de invoke_custom: {e}", exc_info=True)
+            self._logger.error(f"[{self.name}] Erreur lors de invoke_custom: {e}", exc_info=True)
             return ChatMessageContent(role="assistant", content=f"Une erreur logique m'empêche de procéder: {e}", name=self.name)
