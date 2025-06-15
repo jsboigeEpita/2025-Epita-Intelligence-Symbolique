@@ -1,6 +1,7 @@
 # argumentation_analysis/services/web_api/routes/main_routes.py
 from flask import Blueprint, request, jsonify
 import logging
+import asyncio
 
 # Import des services et modèles nécessaires
 # Les imports relatifs devraient maintenant pointer vers les bons modules.
@@ -51,7 +52,7 @@ def health_check():
         ).dict()), 500
 
 @main_bp.route('/analyze', methods=['POST'])
-async def analyze_text():
+def analyze_text():
     """Analyse complète d'un texte argumentatif."""
     analysis_service, _, _, _, _ = get_services_from_app_context()
     try:
@@ -60,7 +61,10 @@ async def analyze_text():
             return jsonify(ErrorResponse(error="Données manquantes", message="Le body JSON est requis", status_code=400).dict()), 400
         
         analysis_request = AnalysisRequest(**data)
-        result = await analysis_service.analyze_text(analysis_request)
+        # Exécute la coroutine dans une boucle d'événements asyncio
+        # Note: Cela crée une nouvelle boucle à chaque appel. Pour la production,
+        # il serait préférable d'utiliser un framework ASGI comme Hypercorn.
+        result = asyncio.run(analysis_service.analyze_text(analysis_request))
         return jsonify(result.dict())
         
     except Exception as e:
