@@ -159,26 +159,26 @@ class TestSourceManager:
     
     def test_load_simple_sources_success(self, mocker, source_manager_simple):
         """Test le chargement réussi des sources simples."""
-        mock_from_dict = mocker.patch('argumentation_analysis.core.source_manager.ExtractDefinitions.from_dict')
+        mock_from_dict_list = mocker.patch('argumentation_analysis.core.source_manager.ExtractDefinitions.from_dict_list')
         mock_extract_def = mocker.Mock(spec=ExtractDefinitions)
-        mock_from_dict.return_value = mock_extract_def
-        
+        mock_from_dict_list.return_value = mock_extract_def
+
         definitions, message = source_manager_simple._load_simple_sources()
-        
+
         assert definitions == mock_extract_def
         assert "Sources simples chargées avec succès" in message
-        mock_from_dict.assert_called_once()
-        
+        mock_from_dict_list.assert_called_once()
+
         # Vérifier la structure des données mockées
-        call_args = mock_from_dict.call_args[0][0]
+        call_args = mock_from_dict_list.call_args[0][0]
         assert isinstance(call_args, list)
         assert len(call_args) == 2  # Deux sources mockées
-        
+
         # Vérifier le contenu des sources mockées
         climate_source = next(s for s in call_args if "climat" in s["source_name"])
         assert "Débat sur le climat" in climate_source["source_name"]
         assert len(climate_source["extracts"]) > 0
-        
+
         political_source = next(s for s in call_args if "politique" in s["source_name"])
         assert "Discours politique" in political_source["source_name"]
         assert len(political_source["extracts"]) > 0
@@ -186,11 +186,11 @@ class TestSourceManager:
     
     def test_load_simple_sources_exception(self, mocker, source_manager_simple):
         """Test la gestion d'exception lors du chargement de sources simples."""
-        mock_from_dict = mocker.patch('argumentation_analysis.core.source_manager.ExtractDefinitions.from_dict')
-        mock_from_dict.side_effect = Exception("Test error")
-        
+        mock_from_dict_list = mocker.patch('argumentation_analysis.core.source_manager.ExtractDefinitions.from_dict_list')
+        mock_from_dict_list.side_effect = Exception("Test error")
+
         definitions, message = source_manager_simple._load_simple_sources()
-        
+
         assert definitions is None
         assert "Erreur lors du chargement des sources simples" in message
         assert "Test error" in message
@@ -204,24 +204,26 @@ class TestSourceManager:
     ):
         """Test le chargement réussi des sources complexes."""
         # Configuration des mocks
-        mock_data_dir = mocker.patch('argumentation_analysis.core.source_manager.DATA_DIR', Path("/mock/data"))
-        mock_load_key = mocker.patch('argumentation_analysis.core.source_manager.CryptoUtils.derive_encryption_key', return_value=b"mock_encryption_key")
-        
+        mocker.patch('argumentation_analysis.core.source_manager.DATA_DIR', Path("/mock/data"))
+        mock_load_key = mocker.patch('argumentation_analysis.core.source_manager.load_encryption_key', return_value=b"mock_encryption_key")
+
         # Mock du fichier chiffré
-        encrypted_file_path = Path("/mock/data/extract_sources.json.gz.enc")
         mocker.patch.object(Path, 'exists', return_value=True)
-        
+
         # Mock des données déchiffrées et décompressées
         original_data = [{"source_name": "Test source", "extracts": []}]
         json_data = json.dumps(original_data).encode('utf-8')
         gzipped_data = gzip.compress(json_data)
-        mock_decrypt = mocker.patch('argumentation_analysis.core.source_manager.CryptoUtils.decrypt_data_fernet', return_value=gzipped_data)
-        
+        mock_decrypt = mocker.patch('argumentation_analysis.core.source_manager.decrypt_data_with_fernet', return_value=gzipped_data)
+
         # Mock ExtractDefinitions
         mock_extract_def = mocker.Mock(spec=ExtractDefinitions)
-        mock_extract_def.sources = [mocker.Mock()]  # Au moins une source
-        mock_from_dict = mocker.patch('argumentation_analysis.core.source_manager.ExtractDefinitions.from_dict', return_value=mock_extract_def)
-        
+        # Configure the mock to have a realistic structure for len() calls
+        mock_source = mocker.Mock()
+        mock_source.extracts = [mocker.Mock()] # Make extracts a list
+        mock_extract_def.sources = [mock_source]
+        mock_from_dict_list = mocker.patch('argumentation_analysis.core.source_manager.ExtractDefinitions.from_dict_list', return_value=mock_extract_def)
+
         # Mock file operations
         mocker.patch('builtins.open', mock_open(read_data=b"encrypted_data"))
         definitions, message = source_manager_complex._load_complex_sources()
@@ -230,39 +232,39 @@ class TestSourceManager:
         assert "Corpus chiffré chargé avec succès" in message
         mock_load_key.assert_called_once_with(passphrase_arg="test_passphrase")
         mock_decrypt.assert_called_once()
-    
-    def test_load_complex_sources_no_passphrase(self):
+
+    def test_load_complex_sources_no_passphrase(self, mocker):
         """Test le chargement complexe sans passphrase."""
         config = SourceConfig(source_type=SourceType.COMPLEX)  # Pas de passphrase
         manager = SourceManager(config)
-        
+
         mocker.patch.dict(os.environ, {}, clear=True)
         definitions, message = manager._load_complex_sources()
-        
+
         assert definitions is None
         assert "Passphrase requise" in message
-    
+
     def test_load_complex_sources_env_passphrase(self, mocker):
         """Test l'utilisation de la passphrase depuis les variables d'environnement."""
         mocker.patch.dict(os.environ, {'TEXT_CONFIG_PASSPHRASE': 'env_passphrase'}, clear=True)
-        mock_load_key = mocker.patch('argumentation_analysis.core.source_manager.CryptoUtils.derive_encryption_key')
+        mock_load_key = mocker.patch('argumentation_analysis.core.source_manager.load_encryption_key')
         config = SourceConfig(source_type=SourceType.COMPLEX)  # Pas de passphrase dans config
         manager = SourceManager(config)
-        
+
         mock_load_key.return_value = None  # Échec volontaire pour tester la passphrase
-        
+
         definitions, message = manager._load_complex_sources()
-        
+
         mock_load_key.assert_called_once_with(passphrase_arg='env_passphrase')
     
     
     def test_load_complex_sources_key_derivation_failure(self, mocker, source_manager_complex):
         """Test l'échec de dérivation de clé."""
-        mock_load_key = mocker.patch('argumentation_analysis.core.source_manager.CryptoUtils.derive_encryption_key')
+        mock_load_key = mocker.patch('argumentation_analysis.core.source_manager.load_encryption_key')
         mock_load_key.return_value = None
-        
+
         definitions, message = source_manager_complex._load_complex_sources()
-        
+
         assert definitions is None
         assert "Impossible de dériver la clé de chiffrement" in message
     
@@ -270,8 +272,8 @@ class TestSourceManager:
     
     def test_load_complex_sources_file_not_found(self, mocker, source_manager_complex):
         """Test avec fichier chiffré introuvable."""
-        mocker.patch('argumentation_analysis.core.source_manager.CryptoUtils.derive_encryption_key', return_value=b"test_key")
-        
+        mocker.patch('argumentation_analysis.core.source_manager.load_encryption_key', return_value=b"test_key")
+
         # Mock du chemin qui n'existe pas
         mocker.patch.object(Path, 'exists', return_value=False)
         
@@ -287,11 +289,11 @@ class TestSourceManager:
         assert "fallback" in text.lower()
         assert "aucune source disponible" in description
     
-    def test_select_text_for_analysis_empty_sources(self, source_manager_simple):
+    def test_select_text_for_analysis_empty_sources(self, mocker, source_manager_simple):
         """Test la sélection de texte avec sources vides."""
         mock_definitions = mocker.MagicMock(spec=ExtractDefinitions)
         mock_definitions.sources = []
-        
+
         text, description = source_manager_simple.select_text_for_analysis(mock_definitions)
         
         assert "fallback" in text.lower()
@@ -451,14 +453,14 @@ class TestSourceManager:
         source_manager_simple.__exit__(None, None, None)
         mock_cleanup.assert_called_once()
     
-    def test_context_manager_usage(self):
+    def test_context_manager_usage(self, mocker):
         """Test d'utilisation complète du context manager."""
         config = SourceConfig(source_type=SourceType.SIMPLE)
-        
+
         mock_cleanup = mocker.patch.object(SourceManager, 'cleanup_sensitive_data')
         with SourceManager(config) as manager:
             assert isinstance(manager, SourceManager)
-        
+
         mock_cleanup.assert_called_once()
 
 
@@ -536,7 +538,7 @@ class TestSourceManagerIntegration:
         """Test du workflow complet avec sources complexes."""
         mocker.patch("pathlib.Path.exists", return_value=True)
         mocker.patch("argumentation_analysis.core.source_manager.DATA_DIR", Path("/mock/data"))
-        mocker.patch("argumentation_analysis.core.source_manager.CryptoUtils.derive_encryption_key", return_value=b"test_key")
+        mocker.patch("argumentation_analysis.core.source_manager.load_encryption_key", return_value=b"test_key")
 
         # Données de test
         test_data = [
@@ -547,8 +549,8 @@ class TestSourceManagerIntegration:
         ]
         json_data = json.dumps(test_data).encode('utf-8')
         gzipped_data = gzip.compress(json_data)
-        mocker.patch("argumentation_analysis.core.source_manager.CryptoUtils.decrypt_data_fernet", return_value=gzipped_data)
-        
+        mocker.patch("argumentation_analysis.core.source_manager.decrypt_data_with_fernet", return_value=gzipped_data)
+
         # Mock ExtractDefinitions
         mock_extract = mocker.MagicMock()
         mock_extract.full_text = "x" * 300
@@ -557,8 +559,8 @@ class TestSourceManagerIntegration:
         mock_source.extracts = [mock_extract]
         mock_definitions = mocker.MagicMock(spec=ExtractDefinitions)
         mock_definitions.sources = [mock_source]
-        mocker.patch("argumentation_analysis.core.source_manager.ExtractDefinitions.from_dict", return_value=mock_definitions)
-        
+        mocker.patch("argumentation_analysis.core.source_manager.ExtractDefinitions.from_dict_list", return_value=mock_definitions)
+
         mocker.patch('builtins.open', mock_open(read_data=b"encrypted_data"))
         mocker.patch.object(Path, 'exists', return_value=True)
         with create_source_manager("complex", passphrase="test") as manager:
@@ -574,20 +576,24 @@ class TestSourceManagerIntegration:
             assert len(text) >= 300
             assert "[ANONYMISÉ]" in description  # Anonymisation par défaut
     
-    def test_error_handling_workflow(self):
+    def test_error_handling_workflow(self, mocker):
         """Test du workflow avec gestion d'erreurs."""
         with create_source_manager("simple") as manager:
             # Test avec sources None
             text, description = manager.select_text_for_analysis(None)
-            
+
             assert "fallback" in text.lower()
             assert "aucune source disponible" in description
-            
+
             # Test avec exception dans le chargement
             mocker.patch.object(manager, '_load_simple_sources', side_effect=Exception("Test error"))
-            definitions, message = manager.load_sources()
-            
-            # Le manager devrait gérer l'exception gracieusement dans load_sources
+            with pytest.raises(Exception, match="Test error"):
+                manager.load_sources()
+
+            # Vérifier que le manager peut continuer à fonctionner
+            # (par exemple, en sélectionnant un texte de fallback)
+            text, description = manager.select_text_for_analysis(None)
+            assert "fallback" in text.lower()
             # ou la laisser remonter selon l'implémentation
     
     def test_logging_integration(self, mocker):

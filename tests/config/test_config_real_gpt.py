@@ -18,6 +18,7 @@ from semantic_kernel.kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from semantic_kernel.contents.chat_history import ChatHistory
 
 
 # Configuration
@@ -94,7 +95,7 @@ class GPTConfigValidator:
             messages = [ChatMessageContent(role="user", content="Test")]
             
             response = await chat_service.get_chat_message_contents(
-                chat_history=messages,
+                chat_history=ChatHistory(messages=messages),
                 settings=settings
             )
             
@@ -260,7 +261,7 @@ class TestKernelConfiguration:
         
         start_time = time.time()
         response = await chat_service.get_chat_message_contents(
-            chat_history=messages,
+            chat_history=ChatHistory(messages=messages),
             settings=optimized_settings
         )
         response_time = time.time() - start_time
@@ -374,7 +375,7 @@ class TestConfigurationIntegration:
         
         start_time = time.time()
         response = await chat_service.get_chat_message_contents(
-            chat_history=messages,
+            chat_history=ChatHistory(messages=messages),
             settings=settings
         )
         execution_time = time.time() - start_time

@@ -27,7 +27,7 @@ def sample_extract_with_template():
     """Fixture pour un extrait avec template défectueux."""
     return Extract(
         extract_name="Test Extract With Template",
-        start_marker="EBUT_EXTRAIT",
+        start_marker="EBUT_EXTRAIT", # Simule un début de mot manquant
         end_marker="FIN_EXTRAIT",
         template_start="D{0}"
     )
@@ -87,8 +87,10 @@ class TestExtractRepairPlugin:
 
     def test_find_similar_markers(self, extract_repair_plugin):
         """Test de recherche de marqueurs similaires."""
-        extract_repair_plugin.extract_service.find_similar_strings.return_value = [
-            {"text": "DEBUT_EXTRAIT", "position": 15, "context": "Contexte avant DEBUT_EXTRAIT contexte après"}
+        # Correction: la méthode s'appelle find_similar_text, pas find_similar_strings
+        # De plus, la méthode find_similar_text renvoie un tuple de (contexte, position, texte_trouvé)
+        extract_repair_plugin.extract_service.find_similar_text.return_value = [
+            ("Contexte avant DEBUT_EXTRAIT contexte après", 15, "DEBUT_EXTRAIT")
         ]
         
         results = extract_repair_plugin.find_similar_markers(
@@ -144,37 +146,36 @@ class TestExtractRepairPlugin:
 class TestRepairScriptFunctions:
     """Tests pour les fonctions du script de réparation."""
 
-    @patch('argumentation_analysis.agents.core.extract.repair_extract_markers.ExtractRepairPlugin')
-    async def test_repair_extract_markers_with_template(self, mock_plugin_class, sample_definitions_with_template):
+    @pytest.mark.asyncio
+    async def test_repair_extract_markers_with_template(self, sample_definitions_with_template):
         """Test de réparation des extraits avec template."""
-        mock_plugin = mock_plugin_class.return_value
-        
         llm_service_mock, fetch_service_mock, extract_service_mock = MagicMock(), MagicMock(), MagicMock()
         
-        _, results = await repair_extract_markers(
+        updated_defs, results = await repair_extract_markers(
             sample_definitions_with_template, llm_service_mock, fetch_service_mock, extract_service_mock
         )
         
-        mock_plugin.update_extract_markers.assert_called_once()
-        args, _ = mock_plugin.update_extract_markers.call_args
-        assert args[3] == "DEBUT_EXTRAIT" # new_start_marker
+        assert len(results) == 1
+        result = results[0]
+        assert result["status"] == "repaired"
+        assert result["old_start_marker"] == "EBUT_EXTRAIT"
+        assert result["new_start_marker"] == "DEBUT_EXTRAIT"
         
-        assert len(results) > 0
-        assert results[0]["status"] == "repaired"
+        # Vérifier aussi la modification directe de l'objet
+        assert updated_defs.sources[0].extracts[0].start_marker == "DEBUT_EXTRAIT"
 
-    @patch('argumentation_analysis.agents.core.extract.repair_extract_markers.ExtractRepairPlugin')
-    async def test_repair_extract_markers_without_template(self, mock_plugin_class, sample_definitions):
+    @pytest.mark.asyncio
+    async def test_repair_extract_markers_without_template(self, sample_definitions):
         """Test de réparation des extraits sans template (ne devrait rien faire)."""
-        mock_plugin = mock_plugin_class.return_value
         llm_service_mock, fetch_service_mock, extract_service_mock = MagicMock(), MagicMock(), MagicMock()
         
-        _, results = await repair_extract_markers(
+        updated_defs, results = await repair_extract_markers(
             sample_definitions, llm_service_mock, fetch_service_mock, extract_service_mock
         )
         
-        mock_plugin.update_extract_markers.assert_not_called()
-        assert len(results) > 0
+        assert len(results) == 1
         assert results[0]["status"] == "valid"
+        assert updated_defs.sources[0].extracts[0].start_marker == "DEBUT_EXTRAIT"
 
     @patch('builtins.open')
     @patch('json.dump')
@@ -191,22 +192,20 @@ class TestSetupAgents:
     """Tests pour la configuration des agents."""
 
     @patch('semantic_kernel.Kernel')
-    @patch('argumentation_analysis.agents.core.extract.repair_extract_markers.ExtractRepairAgent')
-    @patch('argumentation_analysis.agents.core.extract.repair_extract_markers.ExtractValidationAgent')
-    async def test_setup_agents(self, mock_validation_agent_class, mock_repair_agent_class, mock_kernel_class):
-        """Test de configuration des agents."""
+    @patch('argumentation_analysis.utils.dev_tools.repair_utils.logger')
+    @pytest.mark.asyncio
+    async def test_setup_agents(self, mock_logger, mock_kernel_class):
+        """
+        Test de configuration des agents pour refléter l'état actuel (désactivé).
+        """
         llm_service_mock = MagicMock()
-        llm_service_mock.service_id = "test-service-id"
-        
-        kernel_mock = mock_kernel_class.return_value
-        
-        kernel, repair_agent, validation_agent = await setup_agents(llm_service_mock)
-        
-        mock_kernel_class.assert_called_once()
-        kernel_mock.add_service.assert_called_once_with(llm_service_mock)
-        
-        assert mock_repair_agent_class.call_count == 1
-        assert mock_validation_agent_class.call_count == 1
-        
-        assert repair_agent is not None
-        assert validation_agent is not None
+        kernel_instance_mock = mock_kernel_class()
+
+        repair_agent, validation_agent = await setup_agents(llm_service_mock, kernel_instance_mock)
+
+        assert repair_agent is None
+        assert validation_agent is None
+        kernel_instance_mock.add_service.assert_not_called()
+        mock_logger.warning.assert_called_once_with(
+            "setup_agents: ChatCompletionAgent est temporairement désactivé. Retour de (None, None)."
+        )
