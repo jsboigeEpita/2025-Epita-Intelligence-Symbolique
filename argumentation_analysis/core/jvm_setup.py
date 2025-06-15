@@ -83,6 +83,9 @@ def find_jdk_path() -> Optional[Path]:
     java_home = os.getenv('JAVA_HOME')
     if java_home:
         potential_path = Path(java_home)
+        if not potential_path.is_absolute():
+            potential_path = get_project_root() / potential_path
+            
         if potential_path.is_dir():
             _PORTABLE_JDK_PATH = potential_path
             logger.info(f"(OK) JDK détecté via JAVA_HOME : {_PORTABLE_JDK_PATH}")
@@ -191,25 +194,42 @@ def initialize_jvm(lib_dir_path: Optional[str] = None, specific_jar_path: Option
         
         jvm_options = get_jvm_options()
         jdk_path = find_jdk_path()
-        jvm_path = jpype.getDefaultJVMPath() # Essayer la détection par défaut d'abord
+        jvm_path = None
+
+        # Stratégie de recherche de la JVM
+        try:
+            jvm_path = jpype.getDefaultJVMPath()
+            logger.info(f"JPype a trouvé une JVM par défaut : {jvm_path}")
+        except jpype.JVMNotFoundException:
+            logger.warning("JPype n'a pas trouvé de JVM par défaut. Tentative avec JAVA_HOME.")
+            if jdk_path:
+                # Construire le chemin vers jvm.dll sur Windows
+                if os.name == 'nt':
+                    potential_jvm_path = jdk_path / "bin" / "server" / "jvm.dll"
+                # Construire le chemin vers libjvm.so sur Linux
+                else:
+                    potential_jvm_path = jdk_path / "lib" / "server" / "libjvm.so"
+                
+                if potential_jvm_path.exists():
+                    jvm_path = str(potential_jvm_path)
+                    logger.info(f"Chemin JVM construit manuellement à partir de JAVA_HOME: {jvm_path}")
+                else:
+                    logger.error(f"Le fichier de la librairie JVM n'a pas été trouvé à l'emplacement attendu: {potential_jvm_path}")
+            else:
+                logger.error("JAVA_HOME n'est pas défini et la JVM par défaut n'est pas trouvable.")
+
+        if not jvm_path:
+            logger.critical("Impossible de localiser la JVM. Le démarrage est annulé.")
+            return False
 
         logger.info(f"JVM_SETUP: Avant startJVM. isJVMStarted: {jpype.isJVMStarted()}.")
-        
+
         try:
-            logger.info(f"Tentative de démarrage de la JVM avec le chemin par défaut: {jvm_path}")
-            jpype.startJVM(*jvm_options, classpath=jars)  # Supprime convertStrings=False problématique
+            logger.info(f"Tentative de démarrage de la JVM avec le chemin : {jvm_path}")
+            jpype.startJVM(jvm_path, *jvm_options, classpath=jars)
         except Exception as e:
-            logger.warning(f"Échec du démarrage avec le chemin par défaut de JPype. Erreur: {e}")
-            if jdk_path:
-                jvm_path = str(jdk_path / "bin" / "server" / "jvm.dll") # Exemple pour Windows
-                if os.path.exists(jvm_path):
-                     logger.info(f"Tentative de démarrage avec le JDK portable: {jvm_path}")
-                     jpype.startJVM(jvm_path, *jvm_options, classpath=jars)  # Supprime convertStrings=False problématique
-                else:
-                    logger.error("jvm.dll non trouvé dans le JDK portable. Impossible de démarrer la JVM.")
-                    raise RuntimeError("Échec du démarrage de la JVM.") from e
-            else:
-                 raise RuntimeError("Échec du démarrage de la JVM et aucun JDK portable trouvé.") from e
+            logger.error(f"Échec final du démarrage de la JVM avec le chemin '{jvm_path}'. Erreur: {e}", exc_info=True)
+            return False
 
         logger.info(f"JVM démarrée avec succès. isJVMStarted: {jpype.isJVMStarted()}.")
         

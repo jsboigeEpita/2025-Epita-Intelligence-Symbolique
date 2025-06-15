@@ -47,24 +47,24 @@ class ProjectManagerAgent(BaseAgent):
         # lors de l'ajout de la fonction si llm_service_id est valide.
 
         try:
-            self.sk_kernel.add_function(
+            self.kernel.add_function(
                 prompt=prompt_define_tasks_v11, # Utiliser la dernière version du prompt
                 plugin_name=plugin_name,
                 function_name="DefineTasksAndDelegate", # Nom plus SK-conventionnel
                 description="Defines the NEXT single task, registers it, and designates 1 agent (Exact Name Required).",
-                # prompt_execution_settings=self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id) # Géré par le kernel
+                # prompt_execution_settings=self.kernel.get_prompt_execution_settings_from_service_id(llm_service_id) # Géré par le kernel
             )
             self.logger.debug(f"Fonction sémantique '{plugin_name}.DefineTasksAndDelegate' ajoutée.")
         except Exception as e:
             self.logger.error(f"Erreur lors de l'ajout de la fonction '{plugin_name}.DefineTasksAndDelegate': {e}")
 
         try:
-            self.sk_kernel.add_function(
+            self.kernel.add_function(
                 prompt=prompt_write_conclusion_v7, # Utiliser la dernière version du prompt
                 plugin_name=plugin_name,
                 function_name="WriteAndSetConclusion", # Nom plus SK-conventionnel
                 description="Writes and registers the final conclusion (with pre-check of state).",
-                # prompt_execution_settings=self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id) # Géré par le kernel
+                # prompt_execution_settings=self.kernel.get_prompt_execution_settings_from_service_id(llm_service_id) # Géré par le kernel
             )
             self.logger.debug(f"Fonction sémantique '{plugin_name}.WriteAndSetConclusion' ajoutée.")
         except Exception as e:
@@ -79,7 +79,7 @@ class ProjectManagerAgent(BaseAgent):
         # Si les prompts étaient conçus pour appeler directement {{StateManager.add_analysis_task}},
         # alors il faudrait ajouter le plugin ici.
         # self.logger.info("Vérification pour StateManagerPlugin...")
-        # state_manager_plugin_instance = self.sk_kernel.plugins.get("StateManager")
+        # state_manager_plugin_instance = self.kernel.plugins.get("StateManager")
         # if state_manager_plugin_instance:
         #     self.logger.info("StateManagerPlugin déjà présent dans le kernel global, aucune action supplémentaire ici.")
         # else:
@@ -87,7 +87,7 @@ class ProjectManagerAgent(BaseAgent):
         #                        "doivent l'appeler directement, il doit être ajouté au kernel (typiquement par l'orchestrateur).")
         #     # Exemple si on devait l'ajouter ici (nécessiterait l'instance):
         #     # sm_plugin = StateManagerPlugin(...) # Nécessite l'instance du StateManager
-        #     # self.sk_kernel.add_plugin(sm_plugin, plugin_name="StateManager")
+        #     # self.kernel.add_plugin(sm_plugin, plugin_name="StateManager")
         #     # self.logger.info("StateManagerPlugin ajouté localement au kernel du PM (ceci est un exemple).")
 
         self.logger.info(f"Composants pour {self.name} configurés.")
@@ -111,7 +111,7 @@ class ProjectManagerAgent(BaseAgent):
         args = KernelArguments(analysis_state_snapshot=analysis_state_snapshot, raw_text=raw_text)
         
         try:
-            response = await self.sk_kernel.invoke(
+            response = await self.kernel.invoke(
                 plugin_name=self.name,
                 function_name="DefineTasksAndDelegate",
                 arguments=args
@@ -144,7 +144,7 @@ class ProjectManagerAgent(BaseAgent):
         args = KernelArguments(analysis_state_snapshot=analysis_state_snapshot, raw_text=raw_text)
 
         try:
-            response = await self.sk_kernel.invoke(
+            response = await self.kernel.invoke(
                 plugin_name=self.name,
                 function_name="WriteAndSetConclusion",
                 arguments=args

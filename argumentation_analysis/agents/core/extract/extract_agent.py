@@ -161,9 +161,6 @@ class ExtractAgent(BaseAgent):
         """
         super().__init__(kernel, agent_name, EXTRACT_AGENT_INSTRUCTIONS)
         
-        # Configuration du plugin name pour les tests et l'orchestration
-        self.plugin_name = "extract_plugin"
-        
         # Fonctions helper spécifiques à cet agent
         self.find_similar_text_func = find_similar_text_func or find_similar_text
         self.extract_text_func = extract_text_func or extract_text_with_markers
@@ -201,7 +198,7 @@ class ExtractAgent(BaseAgent):
 
         # 1. Initialiser et enregistrer le plugin natif
         self._native_extract_plugin = ExtractAgentPlugin()
-        self.sk_kernel.add_plugin(self._native_extract_plugin, plugin_name=self.NATIVE_PLUGIN_NAME)
+        self.kernel.add_plugin(self._native_extract_plugin, plugin_name=self.NATIVE_PLUGIN_NAME)
         self.logger.info(f"Plugin natif '{self.NATIVE_PLUGIN_NAME}' enregistré.")
 
         # 2. Enregistrer les fonctions sémantiques
@@ -211,22 +208,22 @@ class ExtractAgent(BaseAgent):
         # correctement avec PromptTemplateConfig dans ce contexte.
 
         # Fonction sémantique pour l'extraction
-        self.sk_kernel.add_function(
+        self.kernel.add_function(
             prompt=EXTRACT_FROM_NAME_PROMPT,
             function_name=self.EXTRACT_SEMANTIC_FUNCTION_NAME,
             plugin_name=self.name,
             description="Propose des bornes (marqueurs de début et de fin) pour un extrait.",
-            execution_settings=self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+            execution_settings=self.kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         )
         self.logger.info(f"Fonction sémantique '{self.EXTRACT_SEMANTIC_FUNCTION_NAME}' enregistrée dans le plugin '{self.name}'.")
 
         # Fonction sémantique pour la validation
-        self.sk_kernel.add_function(
+        self.kernel.add_function(
             prompt=VALIDATE_EXTRACT_PROMPT,
             function_name=self.VALIDATE_SEMANTIC_FUNCTION_NAME,
             plugin_name=self.name,
             description="Valide un extrait proposé.",
-            execution_settings=self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+            execution_settings=self.kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         )
         self.logger.info(f"Fonction sémantique '{self.VALIDATE_SEMANTIC_FUNCTION_NAME}' enregistrée dans le plugin '{self.name}'.")
 
@@ -319,8 +316,8 @@ class ExtractAgent(BaseAgent):
         
         extract_content_result = ""
         try:
-            # Utilisation de self.sk_kernel.invoke pour appeler la fonction sémantique
-            response = await self.sk_kernel.invoke(
+            # Utilisation de self.kernel.invoke pour appeler la fonction sémantique
+            response = await self.kernel.invoke(
                 plugin_name=self.name,
                 function_name=self.EXTRACT_SEMANTIC_FUNCTION_NAME,
                 arguments=arguments
@@ -401,7 +398,7 @@ class ExtractAgent(BaseAgent):
         
         validation_content_result = ""
         try:
-            response = await self.sk_kernel.invoke(
+            response = await self.kernel.invoke(
                 plugin_name=self.name,
                 function_name=self.VALIDATE_SEMANTIC_FUNCTION_NAME,
                 arguments=validation_args

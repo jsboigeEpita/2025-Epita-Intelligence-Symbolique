@@ -11,6 +11,7 @@ from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING
 import logging
 
 from semantic_kernel import Kernel
+from semantic_kernel.agents import Agent
 
 # Import paresseux pour éviter le cycle d'import - uniquement pour le typage
 if TYPE_CHECKING:
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
     from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
 
-class BaseAgent(ABC):
+class BaseAgent(Agent, ABC):
     """
     Classe de base abstraite pour tous les agents du système.
 
@@ -34,92 +35,43 @@ class BaseAgent(ABC):
         _llm_service_id (Optional[str]): L'ID du service LLM utilisé, configuré via `setup_agent_components`.
         _system_prompt (Optional[str]): Le prompt système global pour l'agent.
     """
-    _kernel: "Kernel"  # Utilisation de guillemets pour forward reference si Kernel n'est pas encore importé
-    _agent_name: str
     _logger: logging.Logger
     _llm_service_id: Optional[str]
-    _system_prompt: Optional[str]
-    _description: Optional[str]
 
     def __init__(self, kernel: "Kernel", agent_name: str, system_prompt: Optional[str] = None, description: Optional[str] = None):
         """
         Initialise une instance de BaseAgent.
 
-        :param kernel: Le kernel Semantic Kernel à utiliser.
-        :type kernel: Kernel
-        :param agent_name: Le nom de l'agent.
-        :type agent_name: str
-        :param system_prompt: Le prompt système optionnel pour l'agent.
-        :type system_prompt: Optional[str]
-        :param description: La description optionnelle de l'agent.
-        :type description: Optional[str]
+        Args:
+            kernel: Le kernel Semantic Kernel à utiliser.
+            agent_name: Le nom de l'agent.
+            system_prompt: Le prompt système optionnel pour l'agent.
+            description: La description optionnelle de l'agent.
         """
-        self._kernel = kernel  # Stockage local du kernel pour l'accès via la property sk_kernel
-        self._agent_name = agent_name
-        self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{agent_name}")
-        self._llm_service_id = None # Initialisé dans setup_agent_components
-        self._system_prompt = system_prompt
-        self._description = description if description else (system_prompt if system_prompt else f"Agent {agent_name}")
+        effective_description = description if description else (system_prompt if system_prompt else f"Agent {agent_name}")
+        
+        # Appel du constructeur de la classe parente sk.Agent
+        super().__init__(
+            id=agent_name,
+            name=agent_name,
+            instructions=system_prompt,
+            description=effective_description,
+            kernel=kernel
+        )
 
-    @property
-    def name(self) -> str:
-        """
-        Retourne le nom de l'agent.
-
-        :return: Le nom de l'agent.
-        :rtype: str
-        """
-        return self._agent_name
-    
-    @property
-    def description(self) -> Optional[str]:
-        """
-        Retourne la description de l'agent.
-
-        :return: La description de l'agent.
-        :rtype: Optional[str]
-        """
-        return self._description
-    
-    @property
-    def instructions(self) -> Optional[str]:
-        """
-        Retourne les instructions système de l'agent.
-
-        :return: Les instructions système de l'agent.
-        :rtype: Optional[str]
-        """
-        return self._system_prompt
-
-    @property
-    def sk_kernel(self) -> "Kernel":
-        """
-        Retourne le kernel Semantic Kernel associé à l'agent.
-
-        :return: Le kernel Semantic Kernel.
-        :rtype: Kernel
-        """
-        return self._kernel
+        # Le kernel est déjà stocké dans self.kernel par la classe de base Agent.
+        self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{self.name}")
+        self._llm_service_id = None  # Sera défini par setup_agent_components
 
     @property
     def logger(self) -> logging.Logger:
-        """
-        Retourne le logger de l'agent.
-
-        :return: L'instance du logger.
-        :rtype: logging.Logger
-        """
+        """Retourne le logger de l'agent."""
         return self._logger
 
     @property
     def system_prompt(self) -> Optional[str]:
-        """
-        Retourne le prompt système de l'agent.
-
-        :return: Le prompt système, ou None s'il n'est pas défini.
-        :rtype: Optional[str]
-        """
-        return self._system_prompt
+        """Retourne le prompt système de l'agent (alias pour self.instructions)."""
+        return self.instructions
 
     @abstractmethod
     def get_agent_capabilities(self) -> Dict[str, Any]:

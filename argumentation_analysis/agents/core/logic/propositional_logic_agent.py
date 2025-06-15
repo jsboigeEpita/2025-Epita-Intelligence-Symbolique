@@ -114,7 +114,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
         prompt_execution_settings = None
         if self._llm_service_id:
             try:
-                prompt_execution_settings = self.sk_kernel.get_prompt_execution_settings_from_service_id(
+                prompt_execution_settings = self.kernel.get_prompt_execution_settings_from_service_id(
                     self._llm_service_id
                 )
                 self.logger.debug(f"Settings LLM récupérés pour {self.name}.")
@@ -139,7 +139,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
                     self.logger.error(f"Prompt invalide pour {self.name}.{func_name}. Skipping.")
                     continue
                 
-                self.sk_kernel.add_function(
+                self.kernel.add_function(
                     prompt=prompt_template,
                     plugin_name=self.name,
                     function_name=func_name,
@@ -171,10 +171,10 @@ class PropositionalLogicAgent(BaseLogicAgent):
         self.logger.info(f"Conversion de texte en ensemble de croyances propositionnelles pour le texte : '{text[:100]}...'")
         
         try:
-            arguments = KernelArguments(input=text) 
-            result = await self.sk_kernel.invoke( 
-                plugin_name=self.name, 
-                function_name="TextToPLBeliefSet", 
+            arguments = KernelArguments(input=text)
+            result = await self.kernel.invoke(
+                plugin_name=self.name,
+                function_name="TextToPLBeliefSet",
                 arguments=arguments
             )
             belief_set_content = str(result) 
@@ -218,10 +218,10 @@ class PropositionalLogicAgent(BaseLogicAgent):
         self.logger.info(f"Génération de requêtes PL pour le texte : '{text[:100]}...'") 
         
         try:
-            arguments = KernelArguments(input=text, belief_set=belief_set.content) 
-            result = await self.sk_kernel.invoke( 
-                plugin_name=self.name, 
-                function_name="GeneratePLQueries", 
+            arguments = KernelArguments(input=text, belief_set=belief_set.content)
+            result = await self.kernel.invoke(
+                plugin_name=self.name,
+                function_name="GeneratePLQueries",
                 arguments=arguments
             )
             queries_text = str(result) 
@@ -334,9 +334,9 @@ class PropositionalLogicAgent(BaseLogicAgent):
                 tweety_result=results_messages_str
             )
             
-            result = await self.sk_kernel.invoke( 
-                plugin_name=self.name, 
-                function_name="InterpretPLResults", 
+            result = await self.kernel.invoke(
+                plugin_name=self.name,
+                function_name="InterpretPLResults",
                 arguments=arguments
             )
             interpretation = str(result) 
