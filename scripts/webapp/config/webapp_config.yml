@@ -1,6 +1,6 @@
 backend:
   enabled: true
-  env_activation: powershell -File scripts/env/activate_project_env.ps1
+  conda_env: projet-is
   fallback_ports:
   - 5004
   - 5005
@@ -8,7 +8,7 @@ backend:
   health_endpoint: /api/health
   max_attempts: 5
   module: argumentation_analysis.services.web_api.app:app
-  start_port: 5004
+  start_port: 5003
   timeout_seconds: 180
   health_check_timeout: 60
 cleanup:
@@ -31,14 +31,20 @@ logging:
   format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
   level: INFO
 playwright:
-  browser: chromium
   enabled: true
+  test_type: python
+  browser: chromium
   headless: true
-  screenshots_dir: logs/screenshots
-  slow_timeout_ms: 20000
+  process_timeout_s: 600
+  timeout_ms: 30000
   test_paths:
-  - tests_playwright/tests/
-  timeout_ms: 10000
+    python:
+    - tests/e2e/python/
+    javascript:
+    - tests/e2e/js/
+    demos:
+    - tests/e2e/demos/
+  screenshots_dir: logs/screenshots
   traces_dir: logs/traces
 webapp:
   environment: development

@@ -20,11 +20,19 @@ class PlaywrightRunner:
         self.env_manager = EnvironmentManager(logger)
 
         self.enabled = config.get('enabled', True)
+        self.test_type = config.get('test_type', 'python')  # 'python' ou 'javascript'
         self.browser = config.get('browser', 'chromium')
         self.headless = config.get('headless', True)
         self.timeout_ms = config.get('timeout_ms', 30000)
-        self.test_paths = config.get('test_paths', ['tests_playwright/tests/'])
-        self.process_timeout_s = config.get('process_timeout_s', 600)  # Timeout global du processus en secondes
+        
+        default_paths = {
+            'python': ['tests/e2e/python/'],
+            'javascript': ['tests/e2e/js/'],
+            'demos': ['tests/e2e/demos/']
+        }
+        self.test_paths = config.get('test_paths', default_paths.get(self.test_type, []))
+        
+        self.process_timeout_s = config.get('process_timeout_s', 600)
         self.screenshots_dir = Path(config.get('screenshots_dir', 'logs/screenshots'))
         self.traces_dir = Path(config.get('traces_dir', 'logs/traces'))
 
@@ -33,7 +41,9 @@ class PlaywrightRunner:
 
         self.last_results: Optional[Dict[str, Any]] = None
 
-    async def run_tests(self, test_paths: List[str] = None,
+    async def run_tests(self,
+                            test_type: str = None,
+                            test_paths: List[str] = None,
                             runtime_config: Dict[str, Any] = None,
                             pytest_args: List[str] = None,
                             playwright_config_path: str = None) -> bool:
@@ -46,15 +56,23 @@ class PlaywrightRunner:
 
         effective_config = self._merge_runtime_config(runtime_config or {})
         test_paths = test_paths or self.test_paths
+        effective_test_type = test_type or self.test_type
 
         self.logger.info(f"Démarrage tests Playwright: {test_paths}")
         self.logger.info(f"Configuration: {effective_config}")
 
         try:
             await self._prepare_test_environment(effective_config)
-            playwright_command_parts = self._build_playwright_command_string(
-                test_paths, effective_config, playwright_config_path=playwright_config_path)
-            result = await self._execute_tests(playwright_command_parts, effective_config)
+            
+            command_parts = self._build_command(
+                effective_test_type,
+                test_paths,
+                effective_config,
+                pytest_args or [],
+                playwright_config_path
+            )
+            
+            result = await self._execute_tests(command_parts, effective_config)
             success = await self._analyze_results(result)
             return success
         except Exception as e:
@@ -89,19 +107,32 @@ class PlaywrightRunner:
             os.environ[key] = value
         self.logger.info(f"Variables test configurées: {env_vars}")
 
-    def _build_playwright_command_string(self, test_paths: List[str],
-                                             config: Dict[str, Any],
-                                             playwright_config_path: str = None) -> List[str]:
-        """Construit la liste de commande 'npx playwright test ...'."""
+    def _build_command(self,
+                         test_type: str,
+                         test_paths: List[str],
+                         config: Dict[str, Any],
+                         pytest_args: List[str],
+                         playwright_config_path: Optional[str]) -> List[str]:
+        """Construit dynamiquement la commande de test en fonction du type."""
+        if test_type == 'javascript':
+            return self._build_js_command(test_paths, config, playwright_config_path)
+        elif test_type == 'python':
+            return self._build_python_command(test_paths, config, pytest_args)
+        else:
+            raise ValueError(f"Type de test non supporté: {test_type}")
+
+    def _build_js_command(self, test_paths: List[str], config: Dict[str, Any], playwright_config_path: Optional[str]) -> List[str]:
+        """Construit la commande 'npx playwright test ...'."""
+        self.logger.info("Construction de la commande pour les tests JavaScript.")
         node_home = os.getenv('NODE_HOME')
         if not node_home:
-            raise EnvironmentError("La variable d'environnement NODE_HOME n'est pas définie. Impossible de trouver npx.")
+            raise EnvironmentError("NODE_HOME non défini, impossible de trouver npx.")
         
         npx_executable = Path(node_home) / 'npx.cmd'
         if not npx_executable.is_file():
-            raise FileNotFoundError(f"L'exécutable npx.cmd n'a pas été trouvé à l'emplacement attendu: {npx_executable}")
+            raise FileNotFoundError(f"npx.cmd non trouvé: {npx_executable}")
 
-        self.logger.info(f"Utilisation de l'exécutable npx trouvé à: {npx_executable}")
+        self.logger.info(f"Utilisation de npx: {npx_executable}")
 
         parts = [str(npx_executable), 'playwright', 'test']
         parts.extend(test_paths)
@@ -113,34 +144,63 @@ class PlaywrightRunner:
             parts.append('--headed')
             
         parts.append(f"--project={config['browser']}")
-        
         parts.append('--reporter=list,html')
 
         if os.environ.get('PLAYWRIGHT_DEBUG') == '1':
             parts.append('--debug')
-            self.logger.info("Mode debug Playwright activé.")
-
-        self.logger.info(f"Construction de la commande 'npx playwright': {parts}")
+        
+        self.logger.info(f"Commande JS construite: {parts}")
         return parts
 
-    async def _execute_tests(self, playwright_command_parts: List[str],
+    def _build_python_command(self, test_paths: List[str], config: Dict[str, Any], pytest_args: List[str]) -> List[str]:
+        """Construit la commande 'pytest ...'."""
+        self.logger.info("Construction de la commande pour les tests Python (pytest).")
+        
+        # Détecter pytest dans l'environnement virtuel courant
+        # Sur Windows, le venv peut être dans .venv/Scripts/
+        venv_path = Path(os.getenv('VIRTUAL_ENV', '.'))
+        pytest_executable = venv_path / 'Scripts' / 'pytest.exe'
+        if not pytest_executable.is_file():
+             pytest_executable = venv_path / 'bin' / 'pytest' # Pour les systèmes non-Windows
+        
+        if not pytest_executable.is_file():
+            raise FileNotFoundError(f"Exécutable pytest non trouvé dans {venv_path}/Scripts/ ou {venv_path}/bin/")
+        
+        self.logger.info(f"Utilisation de pytest: {pytest_executable}")
+
+        parts = [str(pytest_executable)]
+        parts.extend(test_paths)
+        parts.extend(pytest_args)
+        
+        parts.append(f"--browser={config['browser']}")
+        if not config.get('headless', True):
+            parts.append('--headed')
+            
+        parts.append(f"--screenshot=only-on-failure")
+        parts.append(f"--output={self.screenshots_dir / 'pytest'}")
+        parts.append(f"--traces-dir={self.traces_dir}")
+
+        self.logger.info(f"Commande Python construite: {parts}")
+        return parts
+
+    async def _execute_tests(self, command_parts: List[str],
                            config: Dict[str, Any]) -> subprocess.CompletedProcess:
         """Exécute les tests en utilisant asyncio.create_subprocess_exec pour un contrôle total."""
         
-        self.logger.info(f"Commande à exécuter (via asyncio): {' '.join(playwright_command_parts)}")
+        self.logger.info(f"Commande à exécuter (via asyncio): {' '.join(command_parts)}")
         
         proc = None
-        playwright_stdout_log = Path("logs") / "playwright_stdout.log"
-        playwright_stderr_log = Path("logs") / "playwright_stderr.log"
-        self.logger.info(f"Redirection stdout de Playwright vers: {playwright_stdout_log}")
-        self.logger.info(f"Redirection stderr de Playwright vers: {playwright_stderr_log}")
+        stdout_log = Path("logs") / "runner_stdout.log"
+        stderr_log = Path("logs") / "runner_stderr.log"
+        self.logger.info(f"Redirection stdout vers: {stdout_log}")
+        self.logger.info(f"Redirection stderr vers: {stderr_log}")
 
         try:
-            with open(playwright_stdout_log, 'wb') as stdout_file, \
-                 open(playwright_stderr_log, 'wb') as stderr_file:
+            with open(stdout_log, 'wb') as stdout_file, \
+                 open(stderr_log, 'wb') as stderr_file:
                 
                 proc = await asyncio.create_subprocess_exec(
-                    *playwright_command_parts,
+                    *command_parts,
                     stdout=stdout_file,
                     stderr=stderr_file
                 )
@@ -151,12 +211,12 @@ class PlaywrightRunner:
                 self.logger.info(f"Tests terminés - Code retour: {return_code}")
             
             # Lire le contenu des logs pour le retour
-            stdout = playwright_stdout_log.read_text(encoding='utf-8', errors='ignore')
-            stderr = playwright_stderr_log.read_text(encoding='utf-8', errors='ignore')
+            stdout = stdout_log.read_text(encoding='utf-8', errors='ignore')
+            stderr = stderr_log.read_text(encoding='utf-8', errors='ignore')
 
             # Retourner un objet compatible avec l'analyseur de résultats
             return subprocess.CompletedProcess(
-                args=playwright_command_parts,
+                args=command_parts,
                 returncode=return_code,
                 stdout=stdout,
                 stderr=stderr
@@ -180,7 +240,7 @@ class PlaywrightRunner:
 
         except Exception as e:
             self.logger.error(f"Erreur majeure lors de l'exécution de la commande Playwright avec asyncio: {e}", exc_info=True)
-            return subprocess.CompletedProcess(args=' '.join(playwright_command_parts), returncode=1, stdout="", stderr=str(e))
+            return subprocess.CompletedProcess(args=' '.join(command_parts), returncode=1, stdout="", stderr=str(e))
 
     async def _analyze_results(self, result: subprocess.CompletedProcess) -> bool:
         success = result.returncode == 0
