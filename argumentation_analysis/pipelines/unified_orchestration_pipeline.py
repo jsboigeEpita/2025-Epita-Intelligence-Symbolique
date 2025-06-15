@@ -705,6 +705,16 @@ class UnifiedOrchestrationPipeline:
         logging.info(f"Type of self.orchestration_mode: {type(orchestration_mode_val)}")
         logging.info(f"Value of self.analysis_type: {analysis_type_val}")
         logging.info(f"Type of self.analysis_type: {type(analysis_type_val)}")
+        
+        # --- DEBUT BLOC DE DIAGNOSTIC AVANCÉ ---
+        logging.info(f"ID of self.config.analysis_type: {id(self.config.analysis_type)}")
+        logging.info(f"ID of AnalysisType.COMPREHENSIVE in local scope: {id(AnalysisType.COMPREHENSIVE)}")
+        logging.info(f"Comparison (self.config.analysis_type == AnalysisType.COMPREHENSIVE): {self.config.analysis_type == AnalysisType.COMPREHENSIVE}")
+        logging.info(f"Comparison (self.config.analysis_type is AnalysisType.COMPREHENSIVE): {self.config.analysis_type is AnalysisType.COMPREHENSIVE}")
+        logging.info(f"Analysis Type for check: {self.config.analysis_type}")
+        is_sm_ready = self.service_manager and self.service_manager._initialized
+        logging.info(f"Service Manager ready for check: {is_sm_ready}")
+        # --- FIN BLOC DE DIAGNOSTIC AVANCÉ ---
         # --- FIN BLOC DE DIAGNOSTIC ---
 
         # Mode manuel
@@ -737,10 +747,10 @@ class UnifiedOrchestrationPipeline:
         strategy = "hybrid"  # On définit 'hybrid' comme le fallback par défaut
 
         # Priorité 1: Types d'analyse très spécifiques
-        if self.config.analysis_type == AnalysisType.INVESTIGATIVE:
+        if self.config.analysis_type.value == AnalysisType.INVESTIGATIVE.value:
             logging.info("Path taken: Auto -> specialized_direct (INVESTIGATIVE)")
             strategy = "specialized_direct"
-        elif self.config.analysis_type == AnalysisType.LOGICAL:
+        elif self.config.analysis_type.value == AnalysisType.LOGICAL.value:
             logging.info("Path taken: Auto -> specialized_direct (LOGICAL)")
             strategy = "specialized_direct"
             
@@ -750,7 +760,7 @@ class UnifiedOrchestrationPipeline:
             strategy = "hierarchical_full"
             
         # Priorité 3: Pour une analyse COMPREHENSIVE, si le service manager est prêt, utilisons-le
-        elif self.config.analysis_type == AnalysisType.COMPREHENSIVE and self.service_manager and self.service_manager._initialized:
+        elif self.config.analysis_type.value == AnalysisType.COMPREHENSIVE.value and self.service_manager and self.service_manager._initialized:
             logging.info("Path taken: Auto -> service_manager (COMPREHENSIVE)")
             strategy = "service_manager"
         

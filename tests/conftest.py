@@ -1,3 +1,12 @@
+import sys
+import os
+from pathlib import Path
+
+# Ajoute la racine du projet au sys.path pour résoudre les problèmes d'import
+# causés par le `rootdir` de pytest qui interfère avec la résolution des modules.
+project_root = Path(__file__).parent.parent.resolve()
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 """
 Configuration pour les tests pytest.
 

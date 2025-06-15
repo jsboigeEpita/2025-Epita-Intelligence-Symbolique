@@ -1,4 +1,3 @@
-import project_core.core_from_scripts.auto_env
 from setuptools import setup, find_packages
 import os
 import yaml # PyYAML doit être installé (ajoutez 'pyyaml' à environment.yml si besoin)

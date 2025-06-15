@@ -438,47 +438,31 @@ classDiagram
     }
 ```
 
-### 🎭 **Orchestration Multi-Workflow**
+### 🎭 **Orchestration Actuelle : `CluedoExtendedOrchestrator`**
 
-#### Workflow 2-Agents (Sherlock + Watson)
-```python
-class CluedoOrchestrator:
-    """
-    Orchestration séquentielle pour problèmes de logique formelle
-    Pattern: Sherlock (Leadership) → Watson (Validation) → Cycle
-    """
-    agents = [sherlock_agent, watson_agent]
-    strategy = SequentialSelectionStrategy()
-    termination = CluedoTerminationStrategy(max_turns=10)
-```
+L'architecture d'orchestration a été simplifiée et centralisée. Le composant principal pour gérer les enquêtes de type Cluedo est le `CluedoExtendedOrchestrator`.
 
-#### Workflow 3-Agents (+ Moriarty Oracle) 🆕
 ```python
 class CluedoExtendedOrchestrator:
     """
-    Orchestration cyclique avec Oracle Enhanced
-    Pattern: Sherlock → Watson → Moriarty → Cycle avec révélations
+    Orchestration cyclique avec Oracle Enhanced pour les enquêtes Cluedo.
+    Ce composant gère le déroulement du jeu, les interactions entre les agents
+    (Sherlock, Watson, Moriarty) et l'application des règles Oracle Enhanced.
+    Il est le point central de la logique métier pour ce type de démonstration.
+    Pattern: Sherlock → Watson → Moriarty → Cycle avec révélations.
     """
-    agents = [sherlock_agent, watson_agent, moriarty_agent]
-    strategy = CyclicSelectionStrategy(turn_order=["sherlock", "watson", "moriarty"])
-    termination = OracleTerminationStrategy()
+    # La configuration interne des agents, stratégies et conditions de terminaison
+    # est gérée au sein de cet orchestrateur.
+    # agents = [sherlock_agent, watson_agent, moriarty_agent]
+    # strategy = CyclicSelectionStrategy(turn_order=["sherlock", "watson", "moriarty"])
+    # termination = OracleTerminationStrategy()
 ```
 
-#### Workflow Logique Complexe (En développement)
-```python
-class LogiqueComplexeOrchestrator:
-    """
-    Orchestration dirigée par contraintes pour énigmes formelles
-    Pattern: Watson focus → Sherlock synthèse → Validation
-    """
-    agents = [sherlock_agent, watson_agent]
-    strategy = ProgressBasedSelectionStrategy(min_clauses=10, min_queries=5)
-    termination = LogicTerminationStrategy()
-```
+Les anciens workflows multiples (`CluedoOrchestrator` pour 2 agents, `LogiqueComplexeOrchestrator`) ont été soit intégrés, soit dépréciés au profit de cette approche unifiée et robuste pour la démonstration Cluedo. Pour d'autres types de problèmes logiques, des orchestrateurs spécifiques peuvent exister mais ne sont pas l'objet principal de cette documentation Cluedo.
 
-### 📊 **Flux d'Interaction Détaillé**
+### 📊 **Flux d'Interaction Détaillé avec `CluedoExtendedOrchestrator`**
 
-#### Exemple Complet - Cluedo Oracle Enhanced
+#### Exemple Complet - Cluedo Oracle Enhanced (Utilisant `CluedoExtendedOrchestrator`)
 
 ```
 🎯 INITIALISATION
@@ -789,41 +773,99 @@ class PerformanceMetrics:
             self.oracle_efficacy.record_revelation_impact()
 ```
 
-### 🧪 **Stratégies de Validation**
+### 🧪 **Stratégie de Validation Actuelle**
 
-#### Tests Multi-Niveaux
+La validation du système repose principalement sur des tests d'intégration automatisés qui ciblent le `CluedoExtendedOrchestrator`. Ces tests garantissent que l'ensemble du flux d'enquête fonctionne comme prévu, y compris les interactions entre agents et les mécanismes de l'Oracle.
+
+Le test principal pour la validation de bout en bout est :
+*   [`tests/comparison/test_mock_vs_real_behavior.py`](tests/comparison/test_mock_vs_real_behavior.py)
+
+Ce test (et d'autres tests d'intégration similaires) couvre :
+*   L'exécution complète de scénarios d'enquête.
+*   La validité des révélations de l'Oracle.
+*   La cohérence des déductions des agents.
+*   La robustesse du système face à différentes configurations.
+
+Les tests unitaires continuent de valider les composants individuels (agents, modules spécifiques), mais la confiance dans l'assemblage global est assurée par ces tests d'intégration.
+
 ```python
-# Tests unitaires - Agents isolés
-class TestSherlockAgent:
-    def test_suggestion_extraction(self):
-        # Validation extraction suggestions Cluedo
-        
-    def test_hypothesis_formulation(self):
-        # Validation formulation hypothèses logiques
+# Exemple de structure de test d'intégration (conceptuel)
+# Fichier: tests/comparison/test_mock_vs_real_behavior.py
 
-class TestMoriartyOracle:
-    def test_automatic_revelation(self):
-        # Validation révélations automatiques
+class TestCluedoEndToEnd:
+    def test_full_game_scenario_with_oracle(self, kernel_instance):
+        """
+        Teste un scénario de jeu Cluedo complet avec CluedoExtendedOrchestrator.
+        Vérifie que la solution est trouvée, que les règles sont respectées,
+        et que les interactions des agents sont conformes.
+        """
+        orchestrator = CluedoExtendedOrchestrator(kernel=kernel_instance)
         
-    def test_permission_system(self):
-        # Validation système ACL
+        # Simuler une partie complète
+        # game_result = await orchestrator.run_full_game_simulation_and_report(...)
+        
+        # Assertions sur game_result:
+        # assert game_result.get("status") == "SOLVED"
+        # assert game_result.get("solution_found") is True
+        # assert game_result.get("final_solution") == expected_solution
+        # ... autres assertions sur le nombre de tours, les révélations, etc.
+        pass
 
-# Tests intégration - Workflows complets  
-class TestCluedoExtendedWorkflow:
-    def test_3_agent_cycle_complete(self):
-        # Validation cycle complet Sherlock→Watson→Moriarty
-        
-    def test_oracle_progression_guarantee(self):
-        # Validation progression garantie par révélations
-
-# Tests performance - Charge et robustesse
-class TestSystemPerformance:
-    def test_concurrent_workflows(self):
-        # Validation 10 workflows simultanés
-        
-    def test_large_dataset_handling(self):
-        # Validation datasets volumineux
+    # ... autres cas de tests pour différents scénarios, configurations d'oracle, etc.
 ```
+
+Cette approche garantit une validation continue et fiable du cœur logique du système.
+
+---
+
+## 🚀 Exécution et Validation : La Méthode Canonique (Post-Refactorisation)
+
+Suite à une refactorisation visant à simplifier et à robustifier le système Sherlock-Watson, les méthodes d'exécution des démonstrations et de validation du code ont été centralisées.
+
+**Avis Important :** Les anciens scripts d'exécution dédiés (comme `validation_point1_simple.py` ou l'ancienne version de `run_unified_investigation.py` qui contenait beaucoup de logique) sont désormais **obsolètes**. La logique métier a été encapsulée dans des composants réutilisables et la validation s'appuie sur des tests d'intégration.
+
+L'architecture actuelle repose sur trois piliers :
+
+1.  **Point d'Entrée pour la Démonstration Utilisateur :**
+    *   **Script :** [`scripts/sherlock_watson/run_unified_investigation.py`](scripts/sherlock_watson/run_unified_investigation.py)
+    *   **Rôle :** Fournit une interface simple pour lancer une démonstration complète du scénario Cluedo. Ce script est une coquille légère qui configure l'environnement et appelle l'orchestrateur principal.
+    *   **Usage :** `python scripts/sherlock_watson/run_unified_investigation.py`
+
+2.  **Cœur Logique du Système :**
+    *   **Composant :** [`argumentation_analysis/orchestration/cluedo_extended_orchestrator.py`](argumentation_analysis/orchestration/cluedo_extended_orchestrator.py)
+    *   **Rôle :** Contient toute la logique métier de l'enquête Cluedo, la gestion des agents (Sherlock, Watson, Moriarty), et le déroulement du jeu. C'est le composant central utilisé à la fois par le script de démonstration et les tests de validation.
+
+3.  **Validation pour les Développeurs :**
+    *   **Suite de Tests :** Principalement [`tests/comparison/test_mock_vs_real_behavior.py`](tests/comparison/test_mock_vs_real_behavior.py) (et autres tests d'intégration pertinents dans `tests/`).
+    *   **Rôle :** Assure la non-régression, la robustesse et le comportement attendu du `CluedoExtendedOrchestrator`. Ces tests simulent des scénarios complets et vérifient la validité des interactions et des résultats.
+    *   **Usage (Exemple) :** `pytest tests/comparison/test_mock_vs_real_behavior.py`
+
+### Diagramme du Flux d'Interaction
+
+```mermaid
+graph TD
+    subgraph "👤 Niveaux d'Interaction"
+        U[Utilisateur Final / Démonstrateur]
+        D[Développeur / Mainteneur]
+    end
+
+    subgraph "🚀 Points d'Entrée"
+        ScriptDemo["scripts/sherlock_watson/run_unified_investigation.py"]
+        TestSuite["tests/comparison/test_mock_vs_real_behavior.py"]
+    end
+
+    subgraph "🏛️ Coeur Logique"
+        Orchestrator["argumentation_analysis/orchestration/cluedo_extended_orchestrator.py"]
+    end
+
+    U -- "Lance la démo via le script" --> ScriptDemo
+    ScriptDemo -- "Instancie et exécute" --> Orchestrator
+    
+    D -- "Valide la logique via les tests" --> TestSuite
+    TestSuite -- "Teste en profondeur" --> Orchestrator
+```
+
+Cette approche clarifie les responsabilités et fournit des points d'entrée distincts pour l'utilisation en démonstration et pour la validation technique.
 
 ---
 

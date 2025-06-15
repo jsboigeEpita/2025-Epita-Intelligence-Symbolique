@@ -1,7 +1,9 @@
 import asyncio
+import glob
 import json
 import logging
 import os
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -157,20 +159,38 @@ class PlaywrightRunner:
         """Construit la commande 'pytest ...'."""
         self.logger.info("Construction de la commande pour les tests Python (pytest).")
         
-        # Détecter pytest dans l'environnement virtuel courant
-        # Sur Windows, le venv peut être dans .venv/Scripts/
-        venv_path = Path(os.getenv('VIRTUAL_ENV', '.'))
-        pytest_executable = venv_path / 'Scripts' / 'pytest.exe'
-        if not pytest_executable.is_file():
-             pytest_executable = venv_path / 'bin' / 'pytest' # Pour les systèmes non-Windows
+        # Chercher pytest dans le PATH système, qui est configuré par l'environnement activé.
+        pytest_executable = shutil.which("pytest")
         
-        if not pytest_executable.is_file():
-            raise FileNotFoundError(f"Exécutable pytest non trouvé dans {venv_path}/Scripts/ ou {venv_path}/bin/")
+        if not pytest_executable:
+            # Essayer de construire le chemin manuellement comme fallback pour certains setups Conda
+            conda_prefix = os.getenv('CONDA_PREFIX')
+            if conda_prefix:
+                manual_path = Path(conda_prefix) / 'Scripts' / 'pytest.exe'
+                if manual_path.is_file():
+                    pytest_executable = str(manual_path)
+
+        if not pytest_executable:
+            raise FileNotFoundError("Exécutable 'pytest' non trouvé dans le PATH ou l'environnement Conda.")
         
         self.logger.info(f"Utilisation de pytest: {pytest_executable}")
 
-        parts = [str(pytest_executable)]
-        parts.extend(test_paths)
+        parts = [pytest_executable]
+        # Aplatir la liste des chemins de test au cas où certains seraient des répertoires
+        all_test_files = []
+        for path in test_paths:
+            p = Path(path)
+            if p.is_dir():
+                all_test_files.extend(str(f) for f in p.glob('**/test_*.py'))
+            elif p.is_file():
+                all_test_files.append(str(p))
+        
+        if not all_test_files:
+            self.logger.warning(f"Aucun fichier de test trouvé dans les chemins: {test_paths}")
+            # Retourner une commande qui échouera avec un message clair
+            return ["pytest", "--collect-only", "-m", "not marker_that_does_not_exist"]
+
+        parts.extend(all_test_files)
         parts.extend(pytest_args)
         
         parts.append(f"--browser={config['browser']}")
@@ -179,7 +199,7 @@ class PlaywrightRunner:
             
         parts.append(f"--screenshot=only-on-failure")
         parts.append(f"--output={self.screenshots_dir / 'pytest'}")
-        parts.append(f"--traces-dir={self.traces_dir}")
+        parts.append(f"--trace")
 
         self.logger.info(f"Commande Python construite: {parts}")
         return parts
