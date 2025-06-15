@@ -185,6 +185,14 @@ def initialize_jvm(lib_dir_path: Optional[str] = None, specific_jar_path: Option
                 return False
             
             jars = [str(f) for f in jar_directory.glob("*.jar")]
+# --- DÉBUT DE L'INTÉGRATION DU CHANGEMENT DU STASH ---
+            # Exclure le JAR problématique identifié dans le stash
+            jar_to_exclude = "org.tweetyproject.lp.asp-1.28-with-dependencies.jar"
+            original_jar_count = len(jars)
+            jars = [jar_path for jar_path in jars if jar_to_exclude not in Path(jar_path).name]
+            if len(jars) < original_jar_count:
+                logger.info(f"Exclusion de débogage: '{jar_to_exclude}' retiré du classpath. Nombre de JARs réduit à {len(jars)}.")
+            # --- FIN DE L'INTÉGRATION DU CHANGEMENT DU STASH ---
             logger.info(f"Classpath construit avec {len(jars)} JAR(s) depuis '{jar_directory}'.")
             logger.info(f"Classpath configuré avec {len(jars)} JARs (JPype {jpype.__version__})")
 
