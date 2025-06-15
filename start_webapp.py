@@ -163,9 +163,9 @@ def check_conda_environment(logger: logging.Logger) -> bool:
     try:
         # Lister les environnements
         result = subprocess.run(
-            [conda_exe, "env", "list"], 
-            capture_output=True, 
-            text=True, 
+            [conda_exe, "env", "list"],
+            capture_output=True,
+            text=True,
             check=True
         )
         
