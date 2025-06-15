@@ -28,153 +28,142 @@ logging.basicConfig(level=logging.DEBUG,
                    datefmt='%H:%M:%S')
 logger = logging.getLogger("DirectTest")
 
-class TestRequestResponseDirect(unittest.TestCase):
-    """Test direct du protocole de requête-réponse."""
+import pytest_asyncio
+
+@pytest_asyncio.fixture
+async def middleware_instance():
+    """Fixture pour initialiser et nettoyer le middleware."""
+    logger.info("Setting up middleware fixture")
     
-    @pytest.fixture(autouse=True)
-    async def setup(self):
-        """Initialisation asynchrone avant chaque test."""
-        logger.info("Setting up test environment")
-        
-        # Créer le middleware
-        self.middleware = MessageMiddleware()
-        
-        # Enregistrer les canaux
-        self.hierarchical_channel = HierarchicalChannel("hierarchical")
-        self.collaboration_channel = CollaborationChannel("collaboration")
-        self.data_channel = DataChannel(DATA_DIR)
-        
-        self.middleware.register_channel(self.hierarchical_channel)
-        self.middleware.register_channel(self.collaboration_channel)
-        self.middleware.register_channel(self.data_channel)
-        
-        # Initialiser les protocoles
-        self.middleware.initialize_protocols()
-        
-        logger.info("Test environment setup complete")
-        
-        # Yield pour que le test s'exécute
-        yield
-        
-        # Code de teardown
-        await self._teardown()
+    # Créer le middleware
+    middleware = MessageMiddleware()
     
-    async def _teardown(self):
-        """Nettoyage après chaque test."""
-        logger.info("Tearing down test environment")
-        
-        # Arrêter proprement le middleware
-        self.middleware.shutdown()
-        
-        # Attendre un peu pour que tout se termine
-        await asyncio.sleep(0.5)
-        
-        logger.info("Test environment teardown complete")
+    # Enregistrer les canaux
+    hierarchical_channel = HierarchicalChannel("hierarchical")
+    collaboration_channel = CollaborationChannel("collaboration")
+    data_channel = DataChannel(DATA_DIR)
     
-    @pytest.mark.asyncio
-    async def test_direct_request_response(self):
-        """Test direct du protocole de requête-réponse."""
-        logger.info("Starting test_direct_request_response")
+    middleware.register_channel(hierarchical_channel)
+    middleware.register_channel(collaboration_channel)
+    middleware.register_channel(data_channel)
+    
+    # Initialiser les protocoles
+    middleware.initialize_protocols()
+    
+    logger.info("Middleware fixture setup complete")
+    
+    yield middleware
+    
+    # Code de teardown
+    logger.info("Tearing down middleware fixture")
+    middleware.shutdown()
+    await asyncio.sleep(0.5)  # Laisser le temps pour le nettoyage
+    logger.info("Middleware fixture teardown complete")
+
+@pytest.mark.asyncio
+async def test_direct_request_response(middleware_instance):
+    """Test direct du protocole de requête-réponse en utilisant une fixture pytest."""
+    logger.info("Starting test_direct_request_response")
+    
+    # Le middleware est maintenant passé via la fixture
+    middleware = middleware_instance
+    
+    # Variable pour stocker la réponse entre les tâches
+    response_received = None
+    response_event = asyncio.Event()
+    
+    # Créer une tâche pour simuler l'agent qui répond
+    async def responder_agent():
+        logger.info("Responder agent started")
         
-        # Variable pour stocker la réponse entre les tâches
-        response_received = None
-        response_event = asyncio.Event()
-        
-        # Créer une tâche pour simuler l'agent qui répond
-        async def responder_agent():
-            logger.info("Responder agent started")
-            
-            # Recevoir la requête
-            request = await asyncio.to_thread(
-                self.middleware.receive_message,
-                recipient_id="responder",
-                channel_type=None,  # Tous les canaux
-                timeout=10.0  # Timeout augmenté
-            )
-            
-            logger.info(f"Responder received request: {request.id if request else 'None'}")
-            
-            if request:
-                # Créer une réponse
-                response = request.create_response(
-                    content={"status": "success", "data": {"solution": "Use pattern X"}},
-                    sender_level=AgentLevel.TACTICAL  # Spécifier explicitement le niveau
-                )
-                
-                logger.info(f"Responder created response: {response.id} with reply_to={response.metadata.get('reply_to')}")
-                
-                # Attendre un peu pour s'assurer que la requête est bien enregistrée
-                await asyncio.sleep(1.0)
-                
-                # Envoyer la réponse
-                success = self.middleware.send_message(response)
-                
-                logger.info(f"Response sent: {response.id}, success: {success}")
-                
-                # Stocker la réponse pour la vérification
-                nonlocal response_received
-                response_received = response
-                response_event.set()
-            else:
-                logger.error("No request received by responder")
-        
-        # Démarrer l'agent qui répond
-        responder_task = asyncio.create_task(responder_agent())
-        
-        # Attendre un peu pour que l'agent démarre
-        await asyncio.sleep(1.0)
-        
-        logger.info("Sending request directly via middleware")
-        
-        # Créer et envoyer une requête directement via le middleware
-        request = Message(
-            message_type=MessageType.REQUEST,
-            sender="requester",
-            sender_level=AgentLevel.TACTICAL,
-            content={
-                "request_type": "test_request",
-                "test": "data",
-                "timeout": 15.0
-            },
-            recipient="responder",
-            priority=MessagePriority.NORMAL,
-            metadata={
-                "conversation_id": f"conv-{uuid.uuid4().hex[:8]}",
-                "requires_ack": True
-            }
+        # Recevoir la requête
+        request = await asyncio.to_thread(
+            middleware.receive_message,
+            recipient_id="responder",
+            channel_type=None,  # Tous les canaux
+            timeout=10.0
         )
         
-        # Envoyer la requête
-        self.middleware.send_message(request)
-        logger.info(f"Request sent: {request.id}")
+        logger.info(f"Responder received request: {request.id if request else 'None'}")
         
-        # Attendre que la réponse soit reçue
+        if request:
+            # Créer une réponse
+            response = request.create_response(
+                content={"status": "success", "data": {"solution": "Use pattern X"}},
+                sender_level=AgentLevel.TACTICAL
+            )
+            
+            logger.info(f"Responder created response: {response.id} with reply_to={response.metadata.get('reply_to')}")
+            
+            # Attendre un peu pour s'assurer que la requête est bien enregistrée
+            await asyncio.sleep(1.0)
+            
+            # Envoyer la réponse
+            success = middleware.send_message(response)
+            
+            logger.info(f"Response sent: {response.id}, success: {success}")
+            
+            # Stocker la réponse pour la vérification
+            nonlocal response_received
+            response_received = response
+            response_event.set()
+        else:
+            logger.error("No request received by responder")
+    
+    # Démarrer l'agent qui répond
+    responder_task = asyncio.create_task(responder_agent())
+    
+    # Attendre un peu pour que l'agent démarre
+    await asyncio.sleep(1.0)
+    
+    logger.info("Sending request directly via middleware")
+    
+    # Créer et envoyer une requête
+    request_msg = Message(
+        message_type=MessageType.REQUEST,
+        sender="requester",
+        sender_level=AgentLevel.TACTICAL,
+        content={
+            "request_type": "test_request",
+            "test": "data",
+            "timeout": 15.0
+        },
+        recipient="responder",
+        priority=MessagePriority.NORMAL,
+        metadata={
+            "conversation_id": f"conv-{uuid.uuid4().hex[:8]}",
+            "requires_ack": True
+        }
+    )
+    
+    # Envoyer la requête
+    middleware.send_message(request_msg)
+    logger.info(f"Request sent: {request_msg.id}")
+    
+    # Attendre que la réponse soit reçue
+    try:
+        await asyncio.wait_for(response_event.wait(), timeout=10.0)
+        logger.info("Response event set, response received")
+        
+        # Vérifier la réponse avec des assertions standard
+        assert response_received is not None
+        assert response_received.content.get("data", {}).get("solution") == "Use pattern X"
+        assert response_received.metadata.get("reply_to") == request_msg.id
+        
+        logger.info(f"Received response: {response_received.id}")
+        
+    except asyncio.TimeoutError:
+        logger.error("Timeout waiting for response")
+        pytest.fail("Timeout waiting for response from responder agent.")
+    except Exception as e:
+        logger.error(f"Error in request-response test: {e}")
+        pytest.fail(f"An unexpected error occurred: {e}")
+    finally:
+        # Attendre que la tâche de l'agent se termine
         try:
-            await asyncio.wait_for(response_event.wait(), timeout=10.0)
-            logger.info("Response event set, response received")
-            
-            # Vérifier que la réponse a été reçue
-            self.assertIsNotNone(response_received)
-            self.assertEqual(response_received.content.get("data", {}).get("solution"), "Use pattern X")
-            self.assertEqual(response_received.metadata.get("reply_to"), request.id)
-            
-            logger.info(f"Received response: {response_received.id}")
-            
+            await asyncio.wait_for(responder_task, timeout=5.0)
+            logger.info("Responder task completed")
         except asyncio.TimeoutError:
-            logger.error("Timeout waiting for response")
-            raise
-        except Exception as e:
-            logger.error(f"Error in request-response test: {e}")
-            raise
-        finally:
-            # Attendre que la tâche se termine
-            try:
-                await asyncio.wait_for(responder_task, timeout=5.0)
-                logger.info("Responder task completed")
-            except asyncio.TimeoutError:
-                logger.warning("Responder task timed out, but continuing test")
-        
-        logger.info("test_direct_request_response completed")
-
-if __name__ == "__main__":
-    unittest.main()
+            logger.warning("Responder task timed out. This might indicate an issue.")
+    
+    logger.info("test_direct_request_response completed")
