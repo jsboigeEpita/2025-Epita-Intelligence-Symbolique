@@ -1,11 +1,3 @@
-from unittest.mock import Mock, AsyncMock
-
-# Authentic gpt-4o-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 import pytest
 #!/usr/bin/env python3
 """
@@ -28,7 +20,7 @@ from argumentation_analysis.agents.core.oracle.oracle_base_agent import OracleBa
 from semantic_kernel.kernel import Kernel
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_validate_agent_permissions_success():
     """Test equivalent a test_validate_agent_permissions_success du fichier original."""
     print("Test Groupe 2-1: test_validate_agent_permissions_success")
@@ -70,7 +62,7 @@ async def test_validate_agent_permissions_success():
     print("  REUSSI")
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_validate_agent_permissions_failure():
     """Test equivalent a test_validate_agent_permissions_failure du fichier original."""
     print("Test Groupe 2-2: test_validate_agent_permissions_failure")
@@ -109,7 +101,7 @@ async def test_validate_agent_permissions_failure():
     print("  REUSSI")
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_check_agent_permission_success():
     """Test equivalent a test_check_agent_permission_success du fichier original."""
     print("Test Groupe 2-3: test_check_agent_permission_success")
@@ -152,7 +144,7 @@ async def test_check_agent_permission_success():
     print("  REUSSI")
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_check_agent_permission_failure():
     """Test equivalent a test_check_agent_permission_failure du fichier original."""
     print("Test Groupe 2-4: test_check_agent_permission_failure")
@@ -192,7 +184,7 @@ async def test_check_agent_permission_failure():
     print("  REUSSI")
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def main():
     """Fonction principale pour valider les 4 tests du Groupe 2."""
     print("=" * 80)

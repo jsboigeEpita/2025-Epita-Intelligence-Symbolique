@@ -14,7 +14,7 @@ from playwright.sync_api import Page, expect, sync_playwright
 # Configuration
 REACT_APP_PATH = Path(__file__).parent.parent.parent / "services/web_api/interface-web-argumentative"
 REACT_APP_URL = "http://localhost:3000"
-BACKEND_URL = "http://localhost:5000"
+BACKEND_URL = "http://localhost:5003"
 
 class ReactServerManager:
     """Gestionnaire du serveur React pour les tests"""
@@ -68,9 +68,9 @@ class TestReactWebAppFull:
         try:
             page.goto(REACT_APP_URL, timeout=30000)
             expect(page.locator("body")).to_be_visible()
-            print("✅ Application React chargée")
+            print("[OK] Application React chargée")
         except Exception as e:
-            print(f"⚠️  Application React non accessible: {e}")
+            print(f"[WARNING]  Application React non accessible: {e}")
             # Test de fallback avec l'interface statique
             self.test_static_fallback(page)
     
@@ -82,7 +82,7 @@ class TestReactWebAppFull:
         page.goto(demo_url)
         expect(page).to_have_title("Interface d'Analyse Argumentative - Test")
         expect(page.locator("h1")).to_contain_text("Interface d'Analyse Argumentative")
-        print("✅ Interface statique de fallback chargée")
+        print("[OK] Interface statique de fallback chargée")
     
     def test_navigation_tabs(self, page: Page, server_manager):
         """Test de navigation entre les onglets"""
@@ -105,12 +105,12 @@ class TestReactWebAppFull:
                     if tab.is_visible():
                         tab.click()
                         time.sleep(0.5)
-                        print(f"✅ Onglet {tab_selector} accessible")
+                        print(f"[OK] Onglet {tab_selector} accessible")
                 except:
-                    print(f"⚠️  Onglet {tab_selector} non trouvé")
+                    print(f"[WARNING]  Onglet {tab_selector} non trouvé")
                     
         except Exception as e:
-            print(f"⚠️  Navigation non testable: {e}")
+            print(f"[WARNING]  Navigation non testable: {e}")
     
     def test_api_connectivity(self, page: Page, server_manager):
         """Test de la connectivité API"""
@@ -121,12 +121,12 @@ class TestReactWebAppFull:
             api_status = page.locator('.api-status')
             if api_status.is_visible():
                 expect(api_status).to_be_visible()
-                print("✅ Statut API affiché")
+                print("[OK] Statut API affiché")
             else:
-                print("⚠️  Statut API non trouvé")
+                print("[WARNING]  Statut API non trouvé")
                 
         except Exception as e:
-            print(f"⚠️  Test API non réalisable: {e}")
+            print(f"[WARNING]  Test API non réalisable: {e}")
     
     def test_form_interactions(self, page: Page, server_manager):
         """Test des interactions de formulaire"""
@@ -147,13 +147,13 @@ class TestReactWebAppFull:
                     if text_input.is_visible():
                         text_input.fill("Test de saisie")
                         expect(text_input).to_have_value("Test de saisie")
-                        print(f"✅ Champ {input_selector} fonctionnel")
+                        print(f"[OK] Champ {input_selector} fonctionnel")
                         break
                 except:
                     continue
                     
         except Exception as e:
-            print(f"⚠️  Interactions formulaire non testables: {e}")
+            print(f"[WARNING]  Interactions formulaire non testables: {e}")
 
 def test_standalone_static_interface():
     """Test autonome de l'interface statique"""
@@ -188,11 +188,11 @@ def test_standalone_static_interface():
             
             browser.close()
             
-            print("✅ Interface statique complètement fonctionnelle")
+            print("[OK] Interface statique complètement fonctionnelle")
             return True
             
     except Exception as e:
-        print(f"❌ Erreur test interface statique: {e}")
+        print(f"[FAIL] Erreur test interface statique: {e}")
         return False
 
 def main():
@@ -230,22 +230,22 @@ def main():
                 
                 server_manager.stop_server()
                 
-                print("✅ Tests React terminés")
+                print("[OK] Tests React terminés")
             else:
-                print("⚠️  Application React non trouvée, tests React ignorés")
+                print("[WARNING]  Application React non trouvée, tests React ignorés")
             
             browser.close()
             
     except Exception as e:
-        print(f"⚠️  Tests React échoués: {e}")
+        print(f"[WARNING]  Tests React échoués: {e}")
         print("Interface statique reste disponible comme fallback")
     
     print("\n" + "=" * 60)
     if static_ok:
-        print("✅ SYSTÈME PLAYWRIGHT FONCTIONNEL")
-        print("✅ INTERFACE WEB DE DÉMONSTRATION VALIDÉE")
+        print("[OK] SYSTÈME PLAYWRIGHT FONCTIONNEL")
+        print("[OK] INTERFACE WEB DE DÉMONSTRATION VALIDÉE")
     else:
-        print("❌ SYSTÈME PLAYWRIGHT NON FONCTIONNEL")
+        print("[FAIL] SYSTÈME PLAYWRIGHT NON FONCTIONNEL")
     print("=" * 60)
     
     return 0 if static_ok else 1

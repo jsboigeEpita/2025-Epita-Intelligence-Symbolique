@@ -1,4 +1,3 @@
-import project_core.core_from_scripts.auto_env
 #!/usr/bin/env python3
 """
 Script de test pour vérifier les dépendances critiques et les imports AuthorRole
@@ -21,7 +20,7 @@ def test_semantic_kernel_version():
 def test_author_role_import():
     """Test de l'import AuthorRole"""
     try:
-        from semantic_kernel.agents import AuthorRole
+        from semantic_kernel_compatibility import AuthorRole
         print("[OK] AuthorRole import reussi")
         print(f"[OK] AuthorRole disponible: {AuthorRole}")
         return True

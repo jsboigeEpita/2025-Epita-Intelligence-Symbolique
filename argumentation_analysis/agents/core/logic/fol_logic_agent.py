@@ -31,53 +31,8 @@ from pydantic import Field
 
 # Import de la classe Agent de base depuis l'orchestrateur principal
 # et définition locale de ChatCompletionAgent héritant de celle-ci.
-try:
-    from argumentation_analysis.orchestration.cluedo_extended_orchestrator import Agent
-except ImportError:
-    # Fallback si l'import échoue (ne devrait pas arriver)
-    class Agent:
-        def __init__(self, name: str, kernel: Kernel = None, **kwargs):
-            self.name = name
-            self.kernel = kernel
-            self._logger = logging.getLogger(f"Agent.{self.name}")
-            self._logger.info(f"Agent {name} initialisé (fallback local fol_logic_agent).")
-
-class ChatCompletionAgent(Agent):
-    def __init__(self, name: str, kernel: Kernel, instructions: str = "", **kwargs):
-        super().__init__(name=name, kernel=kernel, instructions=instructions, **kwargs)
-        # Ajouter ici toute logique spécifique à ChatCompletionAgent si nécessaire pour ce fichier
-        self._logger.info(f"ChatCompletionAgent {name} initialisé (définition locale fol_logic_agent).")
-
-# Utiliser une version de ChatMessageContent qui supporte .name pour compatibilité
-# si l'originale ne le fait pas.
-# La version dans cluedo_extended_orchestrator est déjà compatible.
-# Ici, on s'assure d'avoir une version compatible de ChatMessageContent.
-class ChatMessageContent(OriginalChatMessageContent):
-    def __init__(self, role=None, content=None, name=None, **kwargs):
-        if name is not None:
-            if 'metadata' not in kwargs:
-                kwargs['metadata'] = {}
-            kwargs['metadata']['name'] = name
-        super().__init__(role=role, content=content, **kwargs)
-
-    @property
-    def name(self):
-        return self.metadata.get("name", "") if self.metadata else ""
-
-    @name.setter
-    def name(self, value):
-        if self.metadata is None:
-            self.metadata = {}
-        self.metadata["name"] = value
-
-# Le bloc try-except original pour l'import n'est plus nécessaire pour ces classes
-# car nous les définissons ou les importons explicitement.
-# S'il y avait d'autres imports dans le try, ils devraient être gérés séparément.
-    # Mocks pour compatibilité si SK non disponible
-    # Kernel = None
-    # ChatCompletionAgent = object
-    # ChatMessageContent = object
-    # Field = lambda **kwargs: None
+from semantic_kernel_compatibility import ChatCompletionAgent
+from semantic_kernel.contents import ChatMessageContent
 
 from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
 
@@ -773,3 +728,4 @@ async def test_fol_agent_basic():
 if __name__ == "__main__":
     import asyncio
     asyncio.run(test_fol_agent_basic())
+

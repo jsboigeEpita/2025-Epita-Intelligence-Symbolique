@@ -1,11 +1,3 @@
-from unittest.mock import Mock, AsyncMock
-
-# Authentic gpt-4o-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 import pytest
 #!/usr/bin/env python3
 """
@@ -25,7 +17,7 @@ from argumentation_analysis.agents.core.oracle.dataset_access_manager import Dat
 from argumentation_analysis.agents.core.oracle.permissions import QueryType, OracleResponse, PermissionManager
 from semantic_kernel.kernel import Kernel
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_all_group3_fixes():
     """Test complet des 4 corrections appliquées"""
     print("=== VALIDATION FINALE GROUPE 3 ===")
