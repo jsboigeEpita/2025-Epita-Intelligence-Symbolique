@@ -22,7 +22,7 @@ from argumentation_analysis.orchestration.hierarchical.operational.agent_interfa
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
 
 # Import de l'agent PL refactoré
-from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent # Modifié
+from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
 from argumentation_analysis.core.jvm_setup import initialize_jvm # Kept
 
 from argumentation_analysis.paths import RESULTS_DIR
@@ -81,10 +81,9 @@ class PLAgentAdapter(OperationalAgent):
             # Utiliser le nom de classe corrigé et ajouter logic_type_name
             self.agent = PropositionalLogicAgent(
                 kernel=self.kernel,
-                agent_name=f"{self.name}_PLAgent",
-                logic_type_name="propositional" # ou le type spécifique attendu par l'agent
+                agent_name=f"{self.name}_PLAgent"
             )
-            await self.agent.setup_agent_components(llm_service_id=self.llm_service_id)
+            self.agent.setup_agent_components(llm_service_id=self.llm_service_id)
 
             if self.agent is None: # Vérifier self.agent
                 self.logger.error("Échec de l'initialisation de l'agent PL.")

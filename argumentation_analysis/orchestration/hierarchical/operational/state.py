@@ -332,7 +332,11 @@ class OperationalState:
         # Parcourir toutes les catégories de métriques
         for metric_type, metric_dict in self.operational_metrics.items():
             if task_id in metric_dict:
-                metrics[metric_type] = metric_dict[task_id]
+                # Si le type est 'processing_times', utiliser 'execution_time' comme clé
+                if metric_type == "processing_times":
+                    metrics["execution_time"] = metric_dict[task_id]
+                else:
+                    metrics[metric_type] = metric_dict[task_id]
         
         return metrics
     

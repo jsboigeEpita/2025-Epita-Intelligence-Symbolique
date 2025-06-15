@@ -32,8 +32,8 @@ class TestPropositionalLogicPlugin(unittest.TestCase):
         self.assertFalse(plugin._jvm_ok)
         mock_jclass.assert_not_called()
 
-    @patch('jpype.JClass')
-    @patch('jpype.isJVMStarted', return_value=True)
+    @patch('argumentation_analysis.agents.core.pl.pl_definitions.jpype.JClass')
+    @patch('argumentation_analysis.agents.core.pl.pl_definitions.jpype.isJVMStarted', return_value=True)
     def test_initialization_jvm_started(self, mock_is_jvm_started, mock_jclass):
         """Teste l'initialisation lorsque la JVM est démarrée."""
         # Configurer les mocks pour les classes Java
@@ -195,7 +195,7 @@ class TestSetupPLKernel(unittest.TestCase):
         kernel_mock.add_plugin.assert_not_called()
 
     @patch('argumentation_analysis.agents.core.pl.pl_definitions.PropositionalLogicPlugin')
-    @patch('jpype.isJVMStarted', return_value=True)
+    @patch('argumentation_analysis.agents.core.pl.pl_definitions.jpype.isJVMStarted', return_value=True)
     def test_setup_pl_kernel_jvm_started(self, mock_is_jvm_started, mock_plugin_class):
         """Teste la configuration du kernel lorsque la JVM est démarrée."""
         # Créer un mock pour l'instance du plugin
