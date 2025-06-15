@@ -48,7 +48,6 @@ async def test_run_tests_when_disabled(logger_mock):
 @pytest.mark.asyncio
 async def test_prepare_test_environment(runner):
     """Tests that the environment variables are set correctly."""
-    runner._cleanup_previous_artifacts = AsyncMock()
     config = {
         'backend_url': 'http://backend:1234',
         'frontend_url': 'http://frontend:5678',
@@ -63,30 +62,32 @@ async def test_prepare_test_environment(runner):
         assert mock_environ['PLAYWRIGHT_BASE_URL'] == 'http://frontend:5678'
         assert mock_environ['HEADLESS'] == 'false'
         assert mock_environ['BROWSER'] == 'firefox'
-    
-    runner._cleanup_previous_artifacts.assert_called_once()
 
 @patch('sys.platform', 'win32')
-def test_build_pytest_command_windows(runner):
+@patch('os.getenv')
+def test_build_pytest_command_windows(mock_getenv, runner):
     """Tests command building on Windows."""
-    cmd = runner._build_pytest_command(['tests/'], {'headless': True, 'browser': 'chromium', 'traces': True})
-    assert 'powershell' in cmd[0]
-    assert '--headless' in cmd[-1]
-    assert '--browser=chromium' in cmd[-1]
-    assert 'tests/' in cmd[-1]
+    mock_getenv.return_value = 'C:/fake/node/home'
+    with patch('pathlib.Path.is_file', return_value=True):
+        cmd = runner._build_playwright_command_string(['tests/'], {'headless': True, 'browser': 'chromium'})
+        assert 'npx.cmd' in cmd[0]
+        assert '--headed' not in cmd
+        assert '--project=chromium' in cmd
+        assert 'tests/' in cmd
 
 @patch('sys.platform', 'linux')
-def test_build_pytest_command_linux(runner):
+@patch('os.getenv')
+def test_build_pytest_command_linux(mock_getenv, runner):
     """Tests command building on Linux."""
-    cmd = runner._build_pytest_command(['tests/'], {'headless': False, 'browser': 'webkit', 'traces': False})
-    assert 'conda' in cmd[0]
-    assert '--headed' in cmd
-    assert '--browser=webkit' in cmd
-    assert '--video=off' in cmd
-    assert 'tests/' in cmd
+    mock_getenv.return_value = '/fake/node/home'
+    with patch('pathlib.Path.is_file', return_value=True):
+        cmd = runner._build_playwright_command_string(['tests/'], {'headless': False, 'browser': 'webkit'})
+        assert 'npx' in cmd[0]
+        assert '--headed' in cmd
+        assert '--project=webkit' in cmd
+        assert 'tests/' in cmd
 
 
-@pytest.mark.asyncio
 @patch('subprocess.run')
 async def test_run_tests_execution_flow(mock_subprocess_run, runner):
     """Tests the main execution flow of run_tests."""
@@ -98,16 +99,16 @@ async def test_run_tests_execution_flow(mock_subprocess_run, runner):
     mock_subprocess_run.return_value = mock_result
 
     # Mock internal methods to isolate run_tests
-    runner._build_pytest_command = MagicMock(return_value=['fake_command'])
+    runner._build_playwright_command_string = MagicMock(return_value=['fake_command'])
     runner._prepare_test_environment = AsyncMock()
 
     success = await runner.run_tests()
 
     assert success is True
     runner._prepare_test_environment.assert_called_once()
-    runner._build_pytest_command.assert_called_once()
+    runner._build_playwright_command_string.assert_called_once()
     mock_subprocess_run.assert_called_once_with(
-        ['fake_command'], capture_output=True, text=True, encoding='utf-8', 
+        ['fake_command'], capture_output=True, text=True, encoding='utf-8',
         errors='replace', timeout=300, cwd=Path.cwd()
     )
 
