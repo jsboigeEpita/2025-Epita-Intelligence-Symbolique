@@ -38,7 +38,7 @@ class LogicAnalysisResult:
     
     # Métadonnées
     analysis_timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-    processing_time_ms: Optional[float] = None
+    processing_time_ms: float = 0.0
     
     def to_dict(self) -> Dict[str, Any]:
         """Convertit le résultat en dictionnaire."""
@@ -81,7 +81,7 @@ class InformalAnalysisResult:
     
     # Métadonnées
     analysis_timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-    processing_time_ms: Optional[float] = None
+    processing_time_ms: float = 0.0
     
     def to_dict(self) -> Dict[str, Any]:
         """Convertit le résultat en dictionnaire."""
@@ -131,7 +131,7 @@ class UnifiedReport:
     
     # Métadonnées du rapport
     synthesis_timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-    total_processing_time_ms: Optional[float] = None
+    total_processing_time_ms: float = 0.0
     synthesis_version: str = "1.0.0"
     
     def to_dict(self) -> Dict[str, Any]:
