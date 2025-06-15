@@ -307,10 +307,15 @@ def shutdown_jvm_if_needed():
     except Exception as e_shutdown:
         _safe_log(logger, logging.ERROR, f"JVM_SETUP: Erreur lors de jpype.shutdownJVM(): {e_shutdown}", exc_info_val=True)
 
+# --- Exports pour l'importation par d'autres modules ---
+TWEETY_VERSION = "1.28" # Doit correspondre à la version dans libs
+LIBS_DIR = find_libs_dir()
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     
-    if find_libs_dir():
+    # Utiliser la variable exportée maintenant
+    if LIBS_DIR:
         success = initialize_jvm()
         if success:
             logger.info("Test initialize_jvm: SUCCÈS")
