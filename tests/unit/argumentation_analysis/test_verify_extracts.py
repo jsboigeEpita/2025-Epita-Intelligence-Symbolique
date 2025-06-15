@@ -23,10 +23,8 @@ from pathlib import Path
 
 
 # Ajouter le répertoire parent au chemin de recherche des modules
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 # Importer les modèles nécessaires pour les tests
-from models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
+from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
 from unittest.mock import MagicMock
  
  # Créer des mocks pour les fonctions que nous voulons tester
