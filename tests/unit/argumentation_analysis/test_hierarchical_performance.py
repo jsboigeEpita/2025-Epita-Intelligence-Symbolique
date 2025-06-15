@@ -21,6 +21,7 @@ from datetime import datetime
 from typing import Dict, Any
 import statistics
 from pathlib import Path
+from unittest.mock import MagicMock
 
 # Importer les composants de l'ancienne architecture
 from argumentation_analysis.orchestration.analysis_runner import run_analysis
