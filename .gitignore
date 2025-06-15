@@ -189,7 +189,7 @@ test-results/
 node_modules/
 
 # Temporary files
-.temp/
+# .temp/
 environment_evaluation_report.json
 
 # Fichiers temporaires de tests
