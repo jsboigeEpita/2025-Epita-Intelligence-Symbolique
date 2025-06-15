@@ -35,7 +35,8 @@ class PlaywrightRunner:
 
     async def run_tests(self, test_paths: List[str] = None,
                             runtime_config: Dict[str, Any] = None,
-                            pytest_args: List[str] = None) -> bool:
+                            pytest_args: List[str] = None,
+                            playwright_config_path: str = None) -> bool:
         # Configuration de la variable d'environnement pour forcer la config de test
         os.environ['USE_MOCK_CONFIG'] = '1'
         self.logger.info("Variable d'environnement 'USE_MOCK_CONFIG' définie à '1'")
@@ -52,7 +53,7 @@ class PlaywrightRunner:
         try:
             await self._prepare_test_environment(effective_config)
             playwright_command_parts = self._build_playwright_command_string(
-                test_paths, effective_config)
+                test_paths, effective_config, playwright_config_path=playwright_config_path)
             result = await self._execute_tests(playwright_command_parts, effective_config)
             success = await self._analyze_results(result)
             return success
@@ -89,10 +90,9 @@ class PlaywrightRunner:
         self.logger.info(f"Variables test configurées: {env_vars}")
 
     def _build_playwright_command_string(self, test_paths: List[str],
-                                         config: Dict[str, Any]) -> List[str]:
+                                             config: Dict[str, Any],
+                                             playwright_config_path: str = None) -> List[str]:
         """Construit la liste de commande 'npx playwright test ...'."""
-        # Construction d'un chemin absolu vers npx.cmd pour éviter les problèmes de PATH et de shell=True.
-        # C'est la méthode la plus robuste pour Windows.
         node_home = os.getenv('NODE_HOME')
         if not node_home:
             raise EnvironmentError("La variable d'environnement NODE_HOME n'est pas définie. Impossible de trouver npx.")
@@ -106,17 +106,16 @@ class PlaywrightRunner:
         parts = [str(npx_executable), 'playwright', 'test']
         parts.extend(test_paths)
         
+        if playwright_config_path:
+            parts.extend(['--config', playwright_config_path])
+        
         if not config.get('headless', True):
             parts.append('--headed')
             
-        # Lorsque le fichier de configuration utilise des "projets",
-        # il faut utiliser --project au lieu de --browser.
         parts.append(f"--project={config['browser']}")
         
-        # Utiliser un reporter qui ne bloque pas la fin du processus
-        parts.append('--reporter=list')
+        parts.append('--reporter=list,html')
 
-        # Mode debug pour voir le navigateur et les actions
         if os.environ.get('PLAYWRIGHT_DEBUG') == '1':
             parts.append('--debug')
             self.logger.info("Mode debug Playwright activé.")
@@ -214,3 +213,58 @@ class PlaywrightRunner:
     
         self.logger.info(f"Analyse des résultats terminée. Succès: {success}")
         return success
+
+
+if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Exécuteur de tests Playwright.")
+    parser.add_argument(
+        'test_paths',
+        nargs='+',
+        help="Chemins vers les fichiers ou répertoires de test Playwright."
+    )
+    parser.add_argument(
+        '--config',
+        dest='playwright_config_path',
+        help="Chemin vers le fichier de configuration Playwright (ex: playwright.config.js)."
+    )
+    parser.add_argument(
+        '--browser',
+        default='chromium',
+        help="Nom du navigateur à utiliser (ex: chromium, firefox, webkit)."
+    )
+    parser.add_argument(
+        '--headed',
+        action='store_true',
+        help="Exécuter les tests en mode 'headed' (avec interface graphique)."
+    )
+    args = parser.parse_args()
+
+    # Configuration du logger pour la sortie console
+    log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(log_formatter)
+    main_logger = logging.getLogger('PlaywrightRunnerCLI')
+    main_logger.setLevel(logging.INFO)
+    main_logger.addHandler(console_handler)
+
+    # Configuration de base pour le runner
+    runner_config = {
+        'browser': args.browser,
+        'headless': not args.headed,
+    }
+
+    runner = PlaywrightRunner(runner_config, main_logger)
+
+    # Exécution asynchrone des tests
+    main_logger.info("Initialisation de l'exécution des tests depuis le CLI.")
+    
+    success = asyncio.run(runner.run_tests(
+        test_paths=args.test_paths,
+        playwright_config_path=args.playwright_config_path
+    ))
+
+    main_logger.info(f"Exécution terminée. Succès: {success}")
+    exit_code = 0 if success else 1
+    exit(exit_code)
