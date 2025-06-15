@@ -26,6 +26,7 @@ import asyncio
 import logging
 import argparse
 import subprocess
+import shutil # Ajout pour shutil.which
 import threading
 import socket
 import signal
@@ -112,9 +113,17 @@ class UnifiedWebOrchestrator:
         self.enable_trace = not args.no_trace
 
         # Gestionnaires spécialisés
-        self.backend_manager = BackendManager(self.config.get('backend', {}), self.logger)
-        self.frontend_manager: Optional[FrontendManager] = None  # Sera instancié plus tard
+        # Récupérer le chemin de l'environnement Conda avant d'initialiser BackendManager
+        self.conda_env_name = self.config.get('backend', {}).get('conda_env', 'projet-is')
+        self.conda_env_path = self._find_conda_env_path(self.conda_env_name)
 
+        self.backend_manager = BackendManager(
+            self.config.get('backend', {}),
+            self.logger,
+            conda_env_path=self.conda_env_path # Passer le chemin ici
+        )
+        self.frontend_manager: Optional[FrontendManager] = None  # Sera instancié plus tard
+ 
         playwright_config = self.config.get('playwright', {})
         # Le timeout CLI surcharge la config YAML
         playwright_config['timeout_ms'] = self.timeout_minutes * 60 * 1000
@@ -505,7 +514,38 @@ class UnifiedWebOrchestrator:
             await self._save_trace_report()
         
         return success
-    
+
+    def _find_conda_env_path(self, env_name: str) -> Optional[str]:
+        """Trouve le chemin complet d'un environnement Conda."""
+        self.logger.debug(f"Recherche du chemin pour l'environnement Conda: {env_name}")
+        conda_exe = shutil.which("conda")
+        if not conda_exe:
+            self.logger.error("Exécutable Conda non trouvé avec shutil.which.")
+            return None
+        
+        try:
+            result = subprocess.run(
+                [conda_exe, "env", "list", "--json"],
+                capture_output=True, text=True, check=True, encoding='utf-8'
+            )
+            envs_data = json.loads(result.stdout)
+            for env_path_str in envs_data.get("envs", []):
+                if Path(env_path_str).name == env_name:
+                    self.logger.info(f"Chemin de l'environnement Conda '{env_name}' trouvé: {env_path_str}")
+                    return str(env_path_str)
+            self.logger.error(f"Environnement Conda '{env_name}' non trouvé dans la liste.")
+            return None
+        except subprocess.CalledProcessError as e:
+            self.logger.error(f"Erreur lors de l'exécution de 'conda env list --json': {e}")
+            self.logger.error(f"Stderr: {e.stderr}")
+            return None
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Erreur de décodage JSON pour 'conda env list --json': {e}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Erreur inattendue dans _find_conda_env_path: {e}")
+            return None
+
     # ========================================================================
     # MÉTHODES PRIVÉES
     # ========================================================================

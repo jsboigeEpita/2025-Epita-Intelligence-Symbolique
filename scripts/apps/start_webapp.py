@@ -153,42 +153,63 @@ def find_conda_executable() -> Optional[str]:
     
     return None
 
-def check_conda_environment(logger: logging.Logger) -> bool:
-    """Vérifie si l'environnement conda existe"""
+def check_conda_environment(logger: logging.Logger) -> Optional[str]:
+    """Vérifie si l'environnement conda existe et retourne son chemin."""
     conda_exe = find_conda_executable()
     if not conda_exe:
         logger.error("❌ Conda non trouvé sur le système")
-        return False
+        return None
     
     try:
-        # Lister les environnements
+        # Lister les environnements au format JSON pour un parsing fiable
         result = subprocess.run(
-            [conda_exe, "env", "list"], 
-            capture_output=True, 
-            text=True, 
-            check=True
+            [conda_exe, "env", "list", "--json"],
+            capture_output=True,
+            text=True,
+            check=True,
+            encoding='utf-8' # Assurer un décodage correct
         )
         
-        # Vérifier si notre environnement existe
-        if CONDA_ENV_NAME in result.stdout:
-            logger.info(f"[OK] Environnement conda '{CONDA_ENV_NAME}' trouvé")
-            return True
-        else:
-            logger.error(f"[ERROR] Environnement conda '{CONDA_ENV_NAME}' non trouvé")
-            logger.info("[INFO] Conseil: Créez l'environnement avec:")
-            logger.info(f"   conda env create -f environment.yml")
-            return False
+        import json
+        envs_data = json.loads(result.stdout)
+        
+        # Rechercher le chemin de notre environnement
+        # Les chemins peuvent être dans envs_data['envs']
+        for env_path_str in envs_data.get("envs", []):
+            env_path = Path(env_path_str)
+            if env_path.name == CONDA_ENV_NAME:
+                logger.info(f"✅ [OK] Environnement conda '{CONDA_ENV_NAME}' trouvé à: {env_path_str}")
+                return str(env_path_str)
+        
+        logger.error(f"❌ [ERROR] Environnement conda '{CONDA_ENV_NAME}' non trouvé dans la liste.")
+        logger.debug(f"Environnements trouvés: {envs_data.get('envs', [])}")
+        logger.info("💡 [INFO] Conseil: Créez l'environnement avec:")
+        logger.info(f"   conda env create -f environment.yml")
+        return None
             
     except subprocess.CalledProcessError as e:
-        logger.error(f"[ERROR] Erreur lors de la vérification conda: {e}")
-        return False
+        logger.error(f"❌ [ERROR] Erreur lors de la vérification conda (subprocess): {e}")
+        logger.error(f"Stderr: {e.stderr}")
+        return None
+    except json.JSONDecodeError as e:
+        logger.error(f"❌ [ERROR] Erreur lors du parsing JSON de la liste d'environnements conda: {e}")
+        logger.error(f"Sortie brute de conda env list --json: {result.stdout if 'result' in locals() else 'Non disponible'}")
+        return None
+    except Exception as e:
+        logger.error(f"❌ [ERROR] Erreur inattendue dans check_conda_environment: {e}")
+        return None
 
-def run_orchestrator_with_conda(args: argparse.Namespace, logger: logging.Logger) -> bool:
-    """Lance l'orchestrateur via conda run"""
+def run_orchestrator_with_conda(args: argparse.Namespace, logger: logging.Logger, conda_env_path: str) -> bool:
+    """Lance l'orchestrateur via conda run en utilisant --prefix."""
     conda_exe = find_conda_executable()
     if not conda_exe:
+        logger.error("❌ Conda executable non trouvé pour run_orchestrator_with_conda.")
         return False
     
+    if not conda_env_path:
+        logger.error("❌ Chemin de l'environnement Conda non fourni pour run_orchestrator_with_conda.")
+        return False
+
     # Construction de la commande orchestrateur
     orchestrator_cmd = [
         "python", "-m", ORCHESTRATOR_PATH
@@ -197,15 +218,18 @@ def run_orchestrator_with_conda(args: argparse.Namespace, logger: logging.Logger
     # Ajout des options selon les arguments
     if args.visible:
         orchestrator_cmd.append("--visible")
-    elif args.headless:
+    elif args.headless: # Default, mais explicitons si besoin
         orchestrator_cmd.append("--headless")
-    
-    if args.frontend:
+
+    # Logique de lancement des composants
+    start_frontend = not args.backend_only
+    start_backend = not args.frontend_only
+
+    if start_frontend:
         orchestrator_cmd.append("--frontend")
     
-    if args.backend_only:
+    if start_backend:
         orchestrator_cmd.append("--start")
-        # Note: pas d'option --no-frontend, on n'active pas --frontend
     
     if args.config:
         orchestrator_cmd.extend(["--config", args.config])
@@ -213,12 +237,12 @@ def run_orchestrator_with_conda(args: argparse.Namespace, logger: logging.Logger
     if args.timeout:
         orchestrator_cmd.extend(["--timeout", str(args.timeout)])
     
-    # Commande complète avec conda run
+    # Commande complète avec conda run et --prefix
     full_cmd = [
-        conda_exe, "run", "-n", CONDA_ENV_NAME
+        conda_exe, "run", "--prefix", conda_env_path, "--no-capture-output"
     ] + orchestrator_cmd
     
-    print(f"\n{Colors.GREEN}🚀 LANCEMENT ORCHESTRATEUR{Colors.END}")
+    safe_print(f"\n{Colors.GREEN}🚀 LANCEMENT ORCHESTRATEUR{Colors.END}")
     print(f"{Colors.YELLOW}📋 Commande:{Colors.END} {' '.join(orchestrator_cmd)}")
     print(f"{Colors.YELLOW}🐍 Environnement:{Colors.END} {CONDA_ENV_NAME}")
     print()
@@ -272,9 +296,8 @@ def fallback_direct_launch(args: argparse.Namespace, logger: logging.Logger) -> 
         if args.frontend:
             sys.argv.append("--frontend")
         
-        if args.backend_only:
-            sys.argv.extend(["--start"]) # --no-frontend n'est pas un argument valide pour UnifiedWebOrchestrator
-                                         # L'absence de --frontend suffit.
+        # Par défaut, on lance le backend.
+        sys.argv.extend(["--start"])
         
         if args.config:
             sys.argv.extend(["--config", args.config])
@@ -299,17 +322,15 @@ def create_argument_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 EXEMPLES D'USAGE:
-  python start_webapp.py                    # Démarrage complet par défaut
+  python start_webapp.py                    # Lance le backend et le frontend
+  python start_webapp.py --frontend-only      # Lance seulement le frontend
+  python start_webapp.py --backend-only      # Lance seulement le backend
   python start_webapp.py --visible          # Interface visible (debugging)
-  python start_webapp.py --frontend         # Avec interface React
-  python start_webapp.py --backend-only     # API seulement
   python start_webapp.py --config custom.yml # Configuration personnalisée
 
 NOTES:
   - Active automatiquement l'environnement conda 'projet-is'
-  - Remplace l'ancien start_web_application.ps1
-  - Par défaut: mode headless, backend seulement
-  - Gestion d'erreurs intégrée et logs détaillés
+  - Par défaut, lance le frontend et le backend en mode headless.
         """
     )
     
@@ -327,12 +348,12 @@ NOTES:
     # Options de composants
     component_group = parser.add_mutually_exclusive_group()
     component_group.add_argument(
-        '--frontend', action='store_true',
-        help='Lance avec interface React frontend'
+        '--frontend-only', action='store_true',
+        help='Lance uniquement le frontend React'
     )
     component_group.add_argument(
-        '--backend-only', action='store_true', default=True,
-        help='Backend API seulement (par défaut)'
+        '--backend-only', action='store_true',
+        help='Lance uniquement le backend API'
     )
     
     # Configuration
@@ -378,16 +399,18 @@ def main():
         
         # Validation environnement conda (sauf si --no-conda)
         if not args.no_conda:
-            safe_print(f"{Colors.BLUE}[CHECK] VÉRIFICATION ENVIRONNEMENT{Colors.END}")
-            if not check_conda_environment(logger):
-                safe_print(f"\n{Colors.RED}[ERROR] ÉCHEC: Environnement conda non disponible{Colors.END}")
-                safe_print(f"{Colors.YELLOW}[INFO] Solutions:{Colors.END}")
-                safe_print("   1. Créer l'environnement: conda env create -f environment.yml")
-                safe_print("   2. Lancement direct: python start_webapp.py --no-conda")
+            safe_print(f"{Colors.BLUE}🔍 [CHECK] VÉRIFICATION ENVIRONNEMENT{Colors.END}")
+            conda_env_path = check_conda_environment(logger)
+            if not conda_env_path:
+                safe_print(f"\n{Colors.RED}❌ [ERROR] ÉCHEC: Environnement conda '{CONDA_ENV_NAME}' non disponible ou chemin non trouvé.{Colors.END}")
+                safe_print(f"{Colors.YELLOW}💡 [INFO] Solutions possibles:{Colors.END}")
+                safe_print(f"   1. Assurez-vous que l'environnement '{CONDA_ENV_NAME}' existe (conda env list).")
+                safe_print(f"   2. Si non, créez-le: conda env create -f environment.yml")
+                safe_print(f"   3. Essayez un lancement direct (peut ne pas fonctionner si des dépendances manquent): python start_webapp.py --no-conda")
                 sys.exit(1)
             
-            # Lancement via conda
-            success = run_orchestrator_with_conda(args, logger)
+            # Lancement via conda avec --prefix
+            success = run_orchestrator_with_conda(args, logger, conda_env_path)
         else:
             # Lancement direct
             success = fallback_direct_launch(args, logger)
