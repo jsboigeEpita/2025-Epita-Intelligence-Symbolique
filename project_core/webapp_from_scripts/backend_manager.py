@@ -99,38 +99,37 @@ class BackendManager:
     
 
     async def _start_on_port(self, port: int) -> Dict[str, Any]:
-        """Démarre le backend sur un port spécifique en utilisant le script wrapper activate_project_env.ps1"""
+        """Démarre le backend sur un port spécifique en utilisant directement `conda run`."""
         try:
-            if self.config.get('command_list'):
-                # Mode command_list - envelopper avec activate_project_env.ps1
-                inner_cmd = ' '.join(self.config['command_list'] + [str(port)])
-                cmd = ["powershell", "-File", "./activate_project_env.ps1", "-CommandToRun", inner_cmd]
-                self.logger.info(f"Démarrage via command_list avec wrapper: {cmd}")
-            elif self.config.get('command'):
-                # Mode command string - envelopper avec activate_project_env.ps1
-                command_str = self.config['command']
-                inner_cmd = f"{command_str} {port}"
-                cmd = ["powershell", "-File", "./activate_project_env.ps1", "-CommandToRun", inner_cmd]
-                self.logger.info(f"Démarrage via commande directe avec wrapper: {cmd}")
+            # STRATÉGIE SIMPLIFIÉE : On abandonne les wrappers PowerShell et on construit la commande `conda run` directement.
+            # C'est plus robuste et évite les multiples couches d'interprétation de shell.
+            
+            conda_env_name = self.config.get('conda_env', 'projet-is')
+            
+            # Construction de la commande interne (Python/Flask)
+            if ':' in self.module:
+                app_module_with_attribute = self.module
             else:
-                # Mode par défaut - utiliser le script wrapper avec la commande Python
-                if ':' in self.module:
-                    app_module_with_attribute = self.module
-                else:
-                    app_module_with_attribute = f"{self.module}:app"
+                app_module_with_attribute = f"{self.module}:app"
                 
-                backend_host = self.config.get('host', '127.0.0.1')
-                
-                # Construction de la commande Python qui sera exécutée via le wrapper
-                inner_cmd = f"python -m flask --app {app_module_with_attribute} run --host {backend_host} --port {port}"
-                
-                # Utilisation du script wrapper pour garantir l'environnement complet
-                cmd = ["powershell", "-File", "./activate_project_env.ps1", "-CommandToRun", inner_cmd]
-                
-                self.logger.info(f"Commande de lancement du backend avec wrapper: {cmd}")
-                self.logger.info(f"Commande interne: {inner_cmd}")
+            backend_host = self.config.get('host', '127.0.0.1')
+            
+            # Commande interne sous forme de liste pour éviter les problèmes d'échappement
+            inner_cmd_list = [
+                "python", "-m", "flask", "--app", app_module_with_attribute,
+                "run", "--host", backend_host, "--port", str(port)
+            ]
 
-            project_root = str(Path.cwd())
+            # Commande finale avec `conda run`. Le séparateur '--' est supprimé car il
+            # cause des problèmes d'interprétation sur Windows dans ce contexte.
+            cmd = [
+                "conda", "run", "-n", conda_env_name,
+                "--no-capture-output"
+            ] + inner_cmd_list
+
+            self.logger.info(f"Commande de lancement directe avec `conda run`: {cmd}")
+            
+            project_root = str(Path(__file__).resolve().parent.parent.parent)
             log_dir = Path(project_root) / "logs"
             log_dir.mkdir(parents=True, exist_ok=True)
             

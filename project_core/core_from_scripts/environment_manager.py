@@ -66,13 +66,16 @@ except ImportError:
     from common_utils import Logger, LogLevel, safe_exit, get_project_root, ColoredOutput
 
 
+# Déclaration d'un logger global pour le module, en particulier pour les erreurs d'import au niveau du module
+_module_logger = Logger()
+
 try:
     from project_core.setup_core_from_scripts.manage_tweety_libs import download_tweety_jars
 except ImportError:
     # Fallback pour execution directe
-    logger.warning("Could not import download_tweety_jars, Tweety JARs might not be downloaded if missing.")
+    _module_logger.warning("Could not import download_tweety_jars, Tweety JARs might not be downloaded if missing.")
     def download_tweety_jars(*args, **kwargs):
-        logger.error("download_tweety_jars is not available due to an import issue.")
+        _module_logger.error("download_tweety_jars is not available due to an import issue.")
         return False
 # --- Début de l'insertion pour sys.path ---
 # Déterminer la racine du projet (remonter de deux niveaux depuis scripts/core)

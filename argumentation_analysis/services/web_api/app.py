@@ -51,7 +51,7 @@ from .services.logic_service import LogicService
 
 # --- Configuration de l'application Flask ---
 logger.info("Configuration de l'application Flask...")
-react_build_dir = root_dir / "argumentation_analysis" / "services" / "web_api" / "interface-web-argumentative" / "build"
+react_build_dir = root_dir / "services" / "web_api" / "interface-web-argumentative" / "build"
 if not react_build_dir.exists() or not react_build_dir.is_dir():
      logger.warning(f"Le répertoire de build de React n'a pas été trouvé à l'emplacement attendu : {react_build_dir}")
      # Créer un répertoire statique factice pour éviter que Flask ne lève une erreur au démarrage.

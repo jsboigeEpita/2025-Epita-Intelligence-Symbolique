@@ -7,9 +7,17 @@ try {
     Write-Host "🚀 [INFO] Activation de l'environnement Conda 'projet-is' pour la commande..." -ForegroundColor Cyan
     Write-Host " Cde: $CommandToRun" -ForegroundColor Gray
     
-    # Utilisation de l'opérateur d'appel (&) pour exécuter la commande
-    # Ceci est plus sûr car la chaîne est traitée comme une seule commande avec des arguments.
-    conda run -n projet-is --no-capture-output --verbose powershell -Command "& { $CommandToRun }"
+    # Décomposition de la commande pour l'exécuter de manière plus fiable avec conda run
+    # Cela évite les problèmes de "PowerShell-inception" et d'échappement de caractères.
+    $command_parts = $CommandToRun.Split(' ')
+    $executable = $command_parts[0]
+    $arguments = $command_parts[1..($command_parts.Length - 1)]
+
+    Write-Host "  -> Exécutable : $executable" -ForegroundColor Gray
+    Write-Host "  -> Arguments  : $($arguments -join ' ')" -ForegroundColor Gray
+
+    # Exécution directe de la commande via conda run
+    conda run -n projet-is --no-capture-output --verbose -- $executable $arguments
     
     $exitCode = $LASTEXITCODE
     

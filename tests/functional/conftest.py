@@ -15,17 +15,25 @@ from playwright.sync_api import Page, expect
 import os
 from pathlib import Path
 
-def get_frontend_url():
-    """Lit l'URL du frontend depuis le fichier généré par l'orchestrateur."""
-    try:
-        url_file = Path("logs/frontend_url.txt")
+def get_frontend_url(max_wait_seconds: int = 60) -> str:
+    """
+    Lit l'URL du frontend depuis le fichier généré par l'orchestrateur,
+    en attendant sa création si nécessaire.
+    """
+    url_file = Path("logs/frontend_url.txt")
+    
+    for _ in range(max_wait_seconds):
         if url_file.exists():
             url = url_file.read_text().strip()
             if url:
+                print(f"URL du frontend trouvée : {url}")
                 return url
-    except Exception:
-        pass # Ignorer les erreurs et utiliser la valeur par défaut
-    return 'http://localhost:3000/' # Valeur par défaut robuste
+        time.sleep(1)
+        
+    pytest.fail(
+        f"Le fichier d'URL '{url_file}' n'a pas été trouvé ou est vide après "
+        f"{max_wait_seconds} secondes. Assurez-vous que l'orchestrateur est bien démarré."
+    )
 
 # URLs et timeouts configurables
 APP_BASE_URL = get_frontend_url()
@@ -245,35 +253,14 @@ class PlaywrightHelpers:
     def navigate_to_tab(self, tab_name: str):
         """
         Navigue vers un onglet spécifique et attend qu'il soit chargé.
+        La page doit déjà être chargée via la fixture `app_page`.
         
         Args:
             tab_name: Nom de l'onglet ('validation', 'framework', etc.)
         """
-        # === DEBUT DE L'AJOUT : Logique de setup_page_for_app ===
-        self.page.set_default_timeout(self.DEFAULT_TIMEOUT)
+        # La navigation et la vérification de l'API sont maintenant gérées par la fixture `app_page`.
+        # Cette méthode suppose que la page est déjà prête.
         
-        max_retries = 3
-        retry_delay_seconds = 5
-        for attempt in range(max_retries):
-            try:
-                self.page.goto(APP_BASE_URL) # Utiliser APP_BASE_URL défini dans ce fichier
-                break
-            except Exception as e:
-                print(f"Tentative {attempt + 1}/{max_retries} de connexion à {APP_BASE_URL} échouée: {e}")
-                if attempt < max_retries - 1:
-                    time.sleep(retry_delay_seconds)
-                else:
-                    raise
-        
-        try:
-            # Utiliser COMMON_SELECTORS et API_CONNECTION_TIMEOUT définis dans ce fichier
-            expect(self.page.locator(COMMON_SELECTORS['api_status_connected'])).to_be_visible(
-                timeout=self.API_CONNECTION_TIMEOUT
-            )
-        except Exception:
-            pass # Continuer même si l'API n'est pas connectée
-        # === FIN DE L'AJOUT ===
-
         # Mapper les noms d'onglets vers leurs sélecteurs data-testid
         tab_selectors = {
             'validation': COMMON_SELECTORS['validation_tab'],
@@ -376,25 +363,9 @@ def playwright_config():
         'api_connection_timeout': API_CONNECTION_TIMEOUT
     }
 
-@pytest.fixture(autouse=True)
-def setup_test_environment(page: Page):
-    """
-    Fixture automatique qui configure l'environnement pour chaque test.
-    """
-    # Configuration des timeouts par défaut
-    page.set_default_timeout(DEFAULT_TIMEOUT)
-    
-    # Vérification que l'application est accessible
-    try:
-        page.goto(APP_BASE_URL, timeout=5000)
-    except Exception:
-        pytest.fail(f"L'application n'est pas accessible à {APP_BASE_URL}")
-    
-    yield
-    
-    # Nettoyage après le test si nécessaire
-    # (réinitialisation d'état, etc.)
-
+# La fixture `autouse` `setup_test_environment` a été supprimée.
+# La configuration de la page est maintenant gérée exclusivement par la fixture `app_page`,
+# que les tests doivent demander explicitement. Cela rend les dépendances plus claires.
 # ============================================================================
 # MARKERS PERSONNALISÉS
 # ============================================================================

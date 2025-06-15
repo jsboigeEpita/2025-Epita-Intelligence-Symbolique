@@ -10,18 +10,44 @@ Remove-Item -Path .\.pytest_cache -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host "Réinstallation du paquet en mode editable..."
 conda run -n projet-is --no-capture-output --live-stream pip install -e .
 
+# --- Build du Frontend ---
+Write-Host "Vérification et build du frontend React..."
+$frontendDir = "services/web_api/interface-web-argumentative"
+
+if (Test-Path $frontendDir) {
+    Push-Location $frontendDir
+    
+    Write-Host "  -> Installation des dépendances npm..."
+    npm install
+    
+    Write-Host "  -> Lancement du build npm..."
+    npm run build
+    
+    Pop-Location
+    Write-Host "✅ Frontend build terminé."
+} else {
+    Write-Warning "Le répertoire du frontend '$frontendDir' n'a pas été trouvé. Le backend pourrait ne pas fonctionner correctement."
+}
+# --- Fin Build du Frontend ---
+
 # Lancer l'orchestrateur unifié en arrière-plan
 Write-Host "Démarrage de l'orchestrateur unifié en arrière-plan..."
+# Définir le répertoire racine du projet de manière robuste
+$ProjectRoot = Get-Location
+Write-Host "Le répertoire racine du projet est: $ProjectRoot"
+
 Start-Job -ScriptBlock {
-    cd $PWD
+    # On s'assure que le job s'exécute dans le même répertoire que le script principal
+    Set-Location $using:ProjectRoot
+    
     # Exécute l'orchestrateur qui gère le backend et le frontend
     conda run -n projet-is --no-capture-output --live-stream python -m project_core.webapp_from_scripts.unified_web_orchestrator --start --frontend --visible --log-level INFO
-} -Name "Orchestrator"
+} -Name "Orchestrator" -ArgumentList @($ProjectRoot)
 
 # Boucle de vérification pour le fichier URL du frontend
 $max_attempts = 45 # Augmenté pour laisser le temps à l'orchestrateur de démarrer
 $sleep_interval = 2 # secondes
-$url_file_path = "logs/frontend_url.txt"
+$url_file_path = Join-Path $ProjectRoot "logs/frontend_url.txt"
 $orchestrator_ready = $false
 
 # Nettoyer l'ancien fichier s'il existe
