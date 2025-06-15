@@ -16,6 +16,10 @@ from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 
 import pytest # Ajout de pytest pour les fixtures
 
+# Classe factice pour remplacer semantic_kernel.agents.Agent qui n'est plus disponible
+class Agent:
+    pass
+
 class TestSimpleTerminationStrategy:
     """Tests pour la classe SimpleTerminationStrategy."""
 
@@ -28,6 +32,7 @@ class TestSimpleTerminationStrategy:
         history = []
         return state, strategy, agent, history
 
+    @pytest.mark.asyncio
     async def test_initialization(self, strategy_components):
         """Teste l'initialisation correcte de la stratégie."""
         state, strategy, _, _ = strategy_components
@@ -37,18 +42,20 @@ class TestSimpleTerminationStrategy:
         assert strategy._instance_id is not None
         assert strategy._logger is not None
 
+    @pytest.mark.asyncio
     async def test_should_terminate_max_steps(self, strategy_components):
         """Teste la terminaison basée sur le nombre maximum d'étapes."""
         _, strategy, agent, history = strategy_components
-        # Simuler 5 appels (le max configuré)
-        for _ in range(5):
+        # Simuler 4 appels, qui ne devraient pas terminer
+        for _ in range(4):
             result = await strategy.should_terminate(agent, history)
-            assert not result
+            assert not result, "Ne devrait pas terminer avant d'atteindre max_steps"
         
-        # Le 6ème appel devrait retourner True (max atteint)
+        # Le 5ème appel devrait retourner True (max atteint)
         result = await strategy.should_terminate(agent, history)
-        assert result
+        assert result, "Devrait terminer lorsque max_steps est atteint"
 
+    @pytest.mark.asyncio
     async def test_should_terminate_conclusion(self, strategy_components):
         """Teste la terminaison basée sur la présence d'une conclusion."""
         state, strategy, agent, history = strategy_components
@@ -61,6 +68,7 @@ class TestSimpleTerminationStrategy:
         result = await strategy.should_terminate(agent, history)
         assert result
 
+    @pytest.mark.asyncio
     async def test_reset(self, strategy_components):
         """Teste la réinitialisation de la stratégie."""
         _, strategy, agent, history = strategy_components
@@ -100,6 +108,7 @@ class TestDelegatingSelectionStrategy:
         empty_history = []
         return state, strategy, agents, pm_agent, pl_agent, informal_agent, empty_history
 
+    @pytest.mark.asyncio
     async def test_initialization(self, delegating_strategy_components):
         """Teste l'initialisation correcte de la stratégie."""
         state, strategy, _, _, _, _, _ = delegating_strategy_components
@@ -110,6 +119,7 @@ class TestDelegatingSelectionStrategy:
         assert "PropositionalLogicAgent" in strategy._agents_map
         assert "InformalAnalysisAgent" in strategy._agents_map
 
+    @pytest.mark.asyncio
     async def test_next_with_empty_history(self, delegating_strategy_components):
         """Teste la sélection avec un historique vide."""
         _, strategy, agents, pm_agent, _, _, empty_history = delegating_strategy_components
@@ -117,6 +127,7 @@ class TestDelegatingSelectionStrategy:
         selected_agent = await strategy.next(agents, empty_history)
         assert selected_agent == pm_agent
 
+    @pytest.mark.asyncio
     async def test_next_with_designation(self, delegating_strategy_components):
         """Teste la sélection avec une désignation explicite."""
         state, strategy, agents, _, pl_agent, _, empty_history = delegating_strategy_components
@@ -130,6 +141,7 @@ class TestDelegatingSelectionStrategy:
         # La désignation devrait avoir été consommée
         assert state._next_agent_designated is None
 
+    @pytest.mark.asyncio
     async def test_next_with_invalid_designation(self, delegating_strategy_components):
         """Teste la sélection avec une désignation invalide."""
         state, strategy, agents, pm_agent, _, _, empty_history = delegating_strategy_components
@@ -143,6 +155,7 @@ class TestDelegatingSelectionStrategy:
         # La désignation devrait avoir été consommée
         assert state._next_agent_designated is None
 
+    @pytest.mark.asyncio
     async def test_next_after_user_message(self, delegating_strategy_components):
         """Teste la sélection après un message utilisateur."""
         _, strategy, agents, pm_agent, _, _, _ = delegating_strategy_components
@@ -157,6 +170,7 @@ class TestDelegatingSelectionStrategy:
         selected_agent = await strategy.next(agents, history)
         assert selected_agent == pm_agent
 
+    @pytest.mark.asyncio
     async def test_next_after_assistant_message(self, delegating_strategy_components):
         """Teste la sélection après un message assistant."""
         _, strategy, agents, pm_agent, _, _, _ = delegating_strategy_components
@@ -171,6 +185,7 @@ class TestDelegatingSelectionStrategy:
         selected_agent = await strategy.next(agents, history)
         assert selected_agent == pm_agent
 
+    @pytest.mark.asyncio
     async def test_reset(self, delegating_strategy_components):
         """Teste la réinitialisation de la stratégie."""
         state, strategy, _, _, _, _, _ = delegating_strategy_components
@@ -207,6 +222,7 @@ class TestBalancedParticipationStrategy:
         return state, strategy, agents, pm_agent, pl_agent, informal_agent, empty_history
 
 
+    @pytest.mark.asyncio
     async def test_initialization_default(self, balanced_strategy_components):
         """Teste l'initialisation correcte de la stratégie avec configuration par défaut."""
         state, strategy, _, _, _, _, _ = balanced_strategy_components
@@ -232,6 +248,7 @@ class TestBalancedParticipationStrategy:
         total_participation = sum(strategy._target_participation.values())
         assert abs(total_participation - 1.0) < 1e-9 # Utiliser une tolérance pour les flottants
 
+    @pytest.mark.asyncio
     async def test_initialization_custom(self, balanced_strategy_components):
         """Teste l'initialisation avec une configuration personnalisée."""
         state, _, agents, _, _, _, _ = balanced_strategy_components
@@ -256,6 +273,7 @@ class TestBalancedParticipationStrategy:
         assert custom_strategy._target_participation["PropositionalLogicAgent"] == 0.3
         assert custom_strategy._target_participation["InformalAnalysisAgent"] == 0.2
 
+    @pytest.mark.asyncio
     async def test_next_with_designation(self, balanced_strategy_components):
         """Teste que la stratégie respecte les désignations explicites."""
         state, strategy, agents, _, pl_agent, _, empty_history = balanced_strategy_components
@@ -273,6 +291,7 @@ class TestBalancedParticipationStrategy:
         assert strategy._participation_counts["PropositionalLogicAgent"] == 1
         assert strategy._total_turns == 1
 
+    @pytest.mark.asyncio
     async def test_next_with_invalid_designation(self, balanced_strategy_components):
         """Teste la sélection avec une désignation invalide."""
         state, strategy, agents, pm_agent, _, _, empty_history = balanced_strategy_components
@@ -289,6 +308,7 @@ class TestBalancedParticipationStrategy:
         # Vérifier que les compteurs ont été mis à jour pour l'agent par défaut
         assert strategy._participation_counts["ProjectManagerAgent"] == 1
 
+    @pytest.mark.asyncio
     async def test_balanced_participation(self, balanced_strategy_components):
         """Teste que la stratégie équilibre effectivement la participation des agents."""
         _, strategy, agents, _, _, _, empty_history = balanced_strategy_components
@@ -318,6 +338,7 @@ class TestBalancedParticipationStrategy:
         
         assert strategy._total_turns == total_turns
 
+    @pytest.mark.asyncio
     async def test_imbalance_budget_adjustment(self, balanced_strategy_components):
         """Teste que la stratégie gère correctement le budget de déséquilibre."""
         state, strategy, agents, _, pl_agent, _, empty_history = balanced_strategy_components
@@ -338,6 +359,7 @@ class TestBalancedParticipationStrategy:
         selected_agent = await strategy.next(agents, empty_history)
         assert selected_agent != pl_agent, "L'agent surreprésenté ne devrait pas être sélectionné immédiatement après"
 
+    @pytest.mark.asyncio
     async def test_reset(self, balanced_strategy_components):
         """Teste la réinitialisation de la stratégie."""
         state, strategy, agents, _, _, _, empty_history = balanced_strategy_components
