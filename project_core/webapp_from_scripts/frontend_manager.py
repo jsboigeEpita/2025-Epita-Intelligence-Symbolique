@@ -31,10 +31,11 @@ class FrontendManager:
     - Arrêt propre
     """
     
-    def __init__(self, config: Dict[str, Any], logger: logging.Logger, backend_url: Optional[str] = None):
+    def __init__(self, config: Dict[str, Any], logger: logging.Logger, backend_url: Optional[str] = None, env: Optional[Dict[str, str]] = None):
         self.config = config
         self.logger = logger
         self.backend_url = backend_url
+        self.env = env
         
         # Configuration
         self.enabled = config.get('enabled', False)
@@ -87,8 +88,20 @@ class FrontendManager:
                     'pid': None
                 }
             
-            # Préparation de l'environnement qui sera utilisé pour toutes les commandes npm
-            frontend_env = self._get_frontend_env()
+            # Préparation de l'environnement. On utilise celui fourni par l'orchestrateur s'il existe.
+            if self.env:
+                frontend_env = self.env
+                self.logger.info("Utilisation de l'environnement personnalisé fourni par l'orchestrateur.")
+                # Mettre à jour le port du manager si défini dans l'env, pour la cohérence (ex: health_check)
+                if 'PORT' in frontend_env:
+                    try:
+                        self.port = int(frontend_env['PORT'])
+                        self.logger.info(f"Port du FrontendManager synchronisé à {self.port} depuis l'environnement.")
+                    except (ValueError, TypeError):
+                        self.logger.warning(f"La variable d'environnement PORT ('{frontend_env.get('PORT')}') n'est pas un entier valide.")
+            else:
+                self.logger.info("Aucun environnement personnalisé, construction d'un environnement par défaut.")
+                frontend_env = self._get_frontend_env()
 
             # Installation dépendances si nécessaire
             await self._ensure_dependencies(frontend_env)

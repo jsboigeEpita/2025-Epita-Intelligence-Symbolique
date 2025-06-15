@@ -1,7 +1,19 @@
 // Utilisation de la variable d'environnement avec fallback intelligent
 // L'URL injectée par l'orchestrateur via REACT_APP_API_URL est prioritaire.
 // La valeur de secours est alignée sur le port par défaut du backend dans l'orchestrateur.
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5004';
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
+if (!API_BASE_URL) {
+  // En mode test, Jest peut ne pas avoir cette variable. On peut la mocker ou utiliser une valeur sûre.
+  if (process.env.NODE_ENV === 'test') {
+    console.log("REACT_APP_API_URL non définie en mode test, utilisation d'une valeur par défaut.");
+  } else {
+    // En dehors des tests, c'est une erreur fatale.
+    throw new Error("FATAL: La variable d'environnement REACT_APP_API_URL n'est pas définie. " +
+                  "L'application React ne peut pas communiquer avec le backend. " +
+                  "Assurez-vous de lancer l'application via son script orchestrateur.");
+  }
+}
 
 // Configuration par défaut pour les requêtes
 const defaultHeaders = {

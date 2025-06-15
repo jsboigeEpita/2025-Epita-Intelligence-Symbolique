@@ -49,8 +49,8 @@ logger = logging.getLogger(__name__)
 
 # Répertoires de travail
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-PLAYWRIGHT_REPORT_DIR = PROJECT_ROOT / "playwright-report"
-TRACE_DATA_DIR = PLAYWRIGHT_REPORT_DIR / "data"
+# Le répertoire des artefacts de test, où les traces sont réellement stockées.
+TRACE_DATA_DIR = PROJECT_ROOT / "tests" / "e2e" / "test-results"
 LOGS_DIR = PROJECT_ROOT / "logs"
 
 @dataclass
@@ -249,6 +249,8 @@ class PlaywrightTraceAnalyzer:
         
         self.report_data = report
         logger.info("[SUCCESS] Analyse des traces .zip terminée.")
+        # Ajout pour le débogage des événements
+        self._save_raw_events_for_debugging(trace_files)
         return report
     
     def _generate_recommendations(self, tests: List[TestResult], apis: List[APICallSummary], 
@@ -276,6 +278,30 @@ class PlaywrightTraceAnalyzer:
         
         return recommendations
     
+    def _save_raw_events_for_debugging(self, trace_files: List[Path]):
+        """Sauvegarde les événements bruts de la première trace pour le débogage."""
+        if not trace_files:
+            return
+            
+        first_trace = trace_files[0]
+        debug_output_path = LOGS_DIR / "debug_trace_events.json"
+        
+        try:
+            with zipfile.ZipFile(first_trace, 'r') as zf:
+                trace_file_name = next((f for f in zf.namelist() if 'trace.' in f), None)
+                if not trace_file_name:
+                    return
+                
+                with zf.open(trace_file_name) as trace_file:
+                    events = [json.loads(line) for line in trace_file]
+                
+                with open(debug_output_path, 'w', encoding='utf-8') as f:
+                    json.dump(events, f, indent=2, ensure_ascii=False)
+                
+                logger.info(f"[DEBUG] Événements bruts de {first_trace.name} sauvegardés dans {debug_output_path}")
+        except Exception as e:
+            logger.error(f"Erreur lors de la sauvegarde des événements de débogage: {e}")
+
     def save_report(self, report: TraceAnalysisReport, output_file: Optional[Path] = None) -> Path:
         """Sauvegarde le rapport d'analyse."""
         if output_file is None:

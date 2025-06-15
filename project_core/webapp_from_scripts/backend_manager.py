@@ -42,16 +42,17 @@ class BackendManager:
     - Arrêt propre avec cleanup
     """
     
-    def __init__(self, config: Dict[str, Any], logger: logging.Logger, conda_env_path: Optional[str] = None):
+    def __init__(self, config: Dict[str, Any], logger: logging.Logger, conda_env_path: Optional[str] = None, env: Optional[Dict[str, str]] = None):
         self.config = config
         self.logger = logger
-        self.conda_env_path = conda_env_path  # Stocker le chemin de l'environnement Conda
+        self.conda_env_path = conda_env_path
+        self.env = env
         
         # Configuration par défaut
         self.module = config.get('module', 'argumentation_analysis.services.web_api.app')
-        self.start_port = config.get('start_port', 5003)
-        self.fallback_ports = config.get('fallback_ports', [5004, 5005, 5006])
-        self.max_attempts = config.get('max_attempts', 5)
+        self.start_port = config.get('start_port', 5003)  # Peut servir de fallback si non défini dans l'env
+        self.fallback_ports = config.get('fallback_ports', []) # La logique de fallback est déplacée vers l'orchestrateur
+        self.max_attempts = config.get('max_attempts', 1)  # Normalement, une seule tentative sur le port fourni
         self.timeout_seconds = config.get('timeout_seconds', 180) # Augmenté à 180s pour le téléchargement du modèle
         self.health_endpoint = config.get('health_endpoint', '/api/health')
         self.health_check_timeout = config.get('health_check_timeout', 60) # Timeout pour chaque tentative de health check
@@ -64,50 +65,37 @@ class BackendManager:
         self.current_url: Optional[str] = None
         self.pid: Optional[int] = None
         
-    async def start_with_failover(self) -> Dict[str, Any]:
-        """
-        Démarre le backend avec failover automatique sur plusieurs ports
-        
-        Returns:
-            Dict contenant success, url, port, pid, error
-        """
-        ports_to_try = [self.start_port] + self.fallback_ports
-        
-        for attempt, port in enumerate(ports_to_try, 1):
-            self.logger.info(f"Tentative {attempt}/{len(ports_to_try)} - Port {port}")
-            
-            if await self._is_port_occupied(port):
-                self.logger.warning(f"Port {port} occupé, passage au suivant")
-                continue
-                
-            result = await self._start_on_port(port)
-            if result['success']:
-                self.current_port = port
-                self.current_url = result['url']
-                self.pid = result['pid']
-                
-                # Sauvegarde info backend
-                await self._save_backend_info(result)
-                return result
-                
-        return {
-            'success': False,
-            'error': f'Impossible de démarrer sur les ports: {ports_to_try}',
-            'url': None,
-            'port': None,
-            'pid': None
-        }
-    
-
-    async def _start_on_port(self, port: int) -> Dict[str, Any]:
-        """Démarre le backend sur un port spécifique en utilisant directement `conda run`."""
+    async def start(self) -> Dict[str, Any]:
+        """Démarre le backend en utilisant l'environnement et le port fournis."""
         try:
-            # STRATÉGIE SIMPLIFIÉE : On abandonne les wrappers PowerShell et on construit la commande `conda run` directement.
-            # C'est plus robuste et évite les multiples couches d'interprétation de shell.
+            # Déterminer l'environnement à utiliser
+            if self.env:
+                effective_env = self.env
+                self.logger.info("Utilisation de l'environnement personnalisé fourni par l'orchestrateur.")
+            else:
+                effective_env = os.environ.copy()
+                self.logger.info("Aucun environnement personnalisé fourni, utilisation de l'environnement système.")
+
+            # Déterminer le port
+            port_str = effective_env.get('FLASK_RUN_PORT') or str(self.start_port)
+            try:
+                port = int(port_str)
+                self.current_port = port
+            except (ValueError, TypeError):
+                error_msg = f"Port invalide spécifié dans FLASK_RUN_PORT: {port_str}"
+                self.logger.error(error_msg)
+                return {'success': False, 'error': error_msg, 'url': None, 'port': None, 'pid': None}
+            
+            self.logger.info(f"Tentative de démarrage du backend sur le port {port}")
+
+            # Vérifier si le port est déjà occupé avant de lancer
+            if await self._is_port_occupied(port):
+                error_msg = f"Le port {port} est déjà occupé. Le démarrage est annulé."
+                self.logger.error(error_msg)
+                return {'success': False, 'error': error_msg, 'url': None, 'port': None, 'pid': None}
             
             conda_env_name = self.config.get('conda_env', 'projet-is')
             
-            # Construction de la commande interne (Python/Flask)
             if ':' in self.module:
                 app_module_with_attribute = self.module
             else:
@@ -115,25 +103,20 @@ class BackendManager:
                 
             backend_host = self.config.get('host', '127.0.0.1')
             
-            # Commande interne sous forme de liste pour éviter les problèmes d'échappement
+            # La commande flask n'a plus besoin du port, il sera lu depuis l'env FLASK_RUN_PORT
             inner_cmd_list = [
-                "python", "-m", "flask", "--app", app_module_with_attribute,
-                "run", "--host", backend_host, "--port", str(port)
+                "python", "-m", "flask", "--app", app_module_with_attribute, "run", "--host", backend_host
             ]
 
-            # Commande finale avec `conda run`.
-            # Prioriser --prefix si conda_env_path est fourni.
             if self.conda_env_path:
                 cmd_base = ["conda", "run", "--prefix", self.conda_env_path, "--no-capture-output"]
-                self.logger.info(f"Utilisation de --prefix avec le chemin: {self.conda_env_path}")
+                self.logger.info(f"Utilisation de `conda run --prefix`: {self.conda_env_path}")
             else:
                 cmd_base = ["conda", "run", "-n", conda_env_name, "--no-capture-output"]
-                self.logger.warning(f"Chemin de l'environnement Conda non fourni, utilisation de '-n {conda_env_name}'. "
-                                    "Ceci pourrait être moins robuste. Envisagez de fournir conda_env_path.")
+                self.logger.warning(f"Utilisation de `conda run -n {conda_env_name}`. Fournir conda_env_path est plus robuste.")
 
             cmd = cmd_base + inner_cmd_list
-
-            self.logger.info(f"Commande de lancement avec `conda run`: {cmd}")
+            self.logger.info(f"Commande de lancement finale: {cmd}")
             
             project_root = str(Path(__file__).resolve().parent.parent.parent)
             log_dir = Path(project_root) / "logs"
@@ -142,28 +125,22 @@ class BackendManager:
             stdout_log_path = log_dir / f"backend_stdout_{port}.log"
             stderr_log_path = log_dir / f"backend_stderr_{port}.log"
 
-            self.logger.info(f"Redirection stdout -> {stdout_log_path}")
-            self.logger.info(f"Redirection stderr -> {stderr_log_path}")
+            self.logger.info(f"Logs redirigés vers {stdout_log_path.name} et {stderr_log_path.name}")
             
-            # Plus besoin de gestion complexe de l'environnement, le wrapper s'en charge
-            env = os.environ.copy()
-
             # --- GESTION DES DÉPENDANCES TWEETY ---
             self.logger.info("Vérification et téléchargement des JARs Tweety...")
             libs_dir = Path(project_root) / "libs" / "tweety"
-            try:
-                if await asyncio.to_thread(download_tweety_jars, str(libs_dir)):
-                    self.logger.info(f"JARs Tweety prêts dans {libs_dir}")
-                    env['LIBS_DIR'] = str(libs_dir)
-                    self.logger.info(f"Variable d'environnement LIBS_DIR positionnée dans le sous-processus.")
-                else:
-                    self.logger.error("Échec du téléchargement des JARs Tweety. Le backend risque de ne pas démarrer correctement.")
-            except Exception as e:
-                self.logger.error(f"Erreur inattendue lors du téléchargement des JARs Tweety: {e}")
-            # --- FIN GESTION TWEETY ---
-
-            self.logger.debug(f"Commande Popen avec wrapper: {cmd}")
-            self.logger.debug(f"CWD: {project_root}")
+            if 'LIBS_DIR' not in effective_env:
+                try:
+                    if await asyncio.to_thread(download_tweety_jars, str(libs_dir)):
+                        self.logger.info(f"JARs Tweety prêts dans {libs_dir}")
+                        effective_env['LIBS_DIR'] = str(libs_dir)
+                    else:
+                        self.logger.error("Échec du téléchargement des JARs Tweety.")
+                except Exception as e:
+                    self.logger.error(f"Erreur lors du téléchargement des JARs Tweety: {e}")
+            
+            self.logger.debug(f"Lancement du processus avec CWD: {project_root}")
 
             with open(stdout_log_path, 'wb') as f_stdout, open(stderr_log_path, 'wb') as f_stderr:
                 self.process = subprocess.Popen(
@@ -171,55 +148,55 @@ class BackendManager:
                     stdout=f_stdout,
                     stderr=f_stderr,
                     cwd=project_root,
-                    env=env,
+                    env=effective_env,
                     shell=False
                 )
 
             backend_ready = await self._wait_for_backend(port)
 
             if backend_ready:
-                url = f"http://localhost:{port}"
-                return {
+                self.current_url = f"http://localhost:{port}"
+                self.pid = self.process.pid
+                result = {
                     'success': True,
-                    'url': url,
+                    'url': self.current_url,
                     'port': port,
-                    'pid': self.process.pid,
+                    'pid': self.pid,
                     'error': None
                 }
-            
-            # Si le backend n'est pas prêt, on logue et on nettoie
-            self.logger.error(f"Backend sur port {port} n'a pas démarré. Diagnostic des logs.")
-            
-            await asyncio.sleep(0.5)
+                await self._save_backend_info(result)
+                return result
 
-            for log_path in [stdout_log_path, stderr_log_path]:
-                try:
-                    with open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
-                        log_content = f.read().strip()
-                        if log_content:
-                            self.logger.info(f"--- Contenu {log_path.name} ---\n{log_content}\n--------------------")
-                        else:
-                            self.logger.info(f"Log {log_path.name} est vide.")
-                except FileNotFoundError:
-                    self.logger.warning(f"Log {log_path.name} non trouvé.")
-
-            if self.process:
-                if self.process.poll() is None:
-                    self.logger.info(f"Processus {self.process.pid} encore actif, terminaison.")
-                    self.process.terminate()
-                    try:
-                        await asyncio.to_thread(self.process.wait, timeout=5)
-                    except subprocess.TimeoutExpired:
-                        self.process.kill()
-                else:
-                    self.logger.info(f"Processus terminé avec code: {self.process.returncode}")
-                self.process = None
-
-            return { 'success': False, 'error': f'Backend failed on port {port}', 'url': None, 'port': None, 'pid': None }
+            # Échec du démarrage
+            self.logger.error(f"Le backend n'a pas pu démarrer sur le port {port}. Consultation des logs pour diagnostic.")
+            await self._cleanup_failed_process(stdout_log_path, stderr_log_path)
+            return {'success': False, 'error': f'Le backend a échoué à démarrer sur le port {port}', 'url': None, 'port': port, 'pid': None}
 
         except Exception as e:
-            self.logger.error(f"Erreur démarrage backend port {port}: {e}", exc_info=True)
-            return {'success': False, 'error': str(e), 'url': None, 'port': None, 'pid': None}
+            self.logger.error(f"Erreur majeure lors du démarrage du backend sur le port {self.current_port}: {e}", exc_info=True)
+            return {'success': False, 'error': str(e), 'url': None, 'port': self.current_port, 'pid': None}
+    
+    async def _cleanup_failed_process(self, stdout_log_path: Path, stderr_log_path: Path):
+        """Nettoie le processus et affiche les logs en cas d'échec de démarrage."""
+        await asyncio.sleep(0.5) # Laisser le temps aux logs de s'écrire
+
+        for log_path in [stdout_log_path, stderr_log_path]:
+            try:
+                with open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    log_content = f.read().strip()
+                    if log_content:
+                        self.logger.info(f"--- Contenu de {log_path.name} ---\n{log_content}\n--------------------")
+            except FileNotFoundError:
+                self.logger.warning(f"Fichier de log {log_path.name} non trouvé.")
+
+        if self.process and self.process.poll() is None:
+            self.logger.info(f"Tentative de terminaison du processus backend {self.process.pid} qui n'a pas démarré.")
+            self.process.terminate()
+            try:
+                await asyncio.to_thread(self.process.wait, timeout=5)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+        self.process = None
 
     async def _wait_for_backend(self, port: int) -> bool:
         """Attend que le backend soit accessible via health check"""

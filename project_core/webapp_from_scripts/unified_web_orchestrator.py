@@ -175,6 +175,22 @@ class UnifiedWebOrchestrator:
                 self.logger.info(f"Port {port} détecté comme étant utilisé.")
             return is_used
             
+    def _find_free_port(self, start_port: int, max_attempts: int = 100) -> Optional[int]:
+        """Trouve un port TCP libre en commençant à partir de start_port."""
+        self.logger.debug(f"Recherche d'un port libre à partir de {start_port}")
+        for i in range(max_attempts):
+            port = start_port + i
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.bind(('localhost', port))
+                    self.logger.info(f"Port {port} trouvé et est libre.")
+                    return port
+            except OSError:
+                self.logger.debug(f"Port {port} est déjà utilisé, tentative suivante.")
+                continue
+        self.logger.error(f"Impossible de trouver un port libre après {max_attempts} tentatives.")
+        return None
+    
     def _load_config(self) -> Dict[str, Any]:
         """Charge la configuration depuis le fichier YAML"""
         print("[DEBUG] unified_web_orchestrator.py: _load_config()")
@@ -635,37 +651,86 @@ class UnifiedWebOrchestrator:
             self.playwright = None
 
     async def _start_backend(self) -> bool:
-        """Démarre le backend avec failover de ports"""
-        print("[DEBUG] unified_web_orchestrator.py: _start_backend()")
-        self.add_trace("[BACKEND] DEMARRAGE BACKEND", "Lancement avec failover de ports")
+        """Démarre le backend en lui allouant un port dynamique."""
+        self.add_trace("[BACKEND] DEMARRAGE BACKEND", "Recherche d'un port libre et lancement.")
+
+        backend_config = self.config.get('backend', {})
+        preferred_port = backend_config.get('start_port', 5003)
+
+        # 1. Trouver un port libre
+        free_port = self._find_free_port(preferred_port)
+        if not free_port:
+            self.add_trace("[ERROR] ECHEC BACKEND", "Aucun port libre trouvé pour le backend.", status="error")
+            return False
+
+        # 2. Préparer l'environnement
+        backend_env = os.environ.copy()
+        # Flask lit automatiquement FLASK_RUN_PORT
+        backend_env['FLASK_RUN_PORT'] = str(free_port)
         
-        result = await self.backend_manager.start_with_failover()
-        if result['success']:
+        self.add_trace("[BACKEND] ENV VARS",
+                       f"FLASK_RUN_PORT={free_port}",
+                       "Variables d'environnement pour le processus backend")
+
+        # 3. Ré-instancier le BackendManager avec l'environnement dynamique
+        self.backend_manager = BackendManager(
+            backend_config,
+            self.logger,
+            conda_env_path=self.conda_env_path,
+            env=backend_env
+        )
+
+        result = await self.backend_manager.start()
+        if result.get('success'):
             self.app_info.backend_url = result['url']
             self.app_info.backend_port = result['port']
             self.app_info.backend_pid = result['pid']
             
             self.add_trace("[OK] BACKEND OPERATIONNEL",
-                          f"Port: {result['port']} | PID: {result['pid']}", 
+                          f"Port: {result['port']} | PID: {result['pid']}",
                           f"URL: {result['url']}")
             return True
         else:
-            self.add_trace("[ERROR] ECHEC BACKEND", result['error'], "", status="error")
+            error_details = result.get('error', 'Erreur inconnue lors du démarrage du backend.')
+            self.add_trace("[ERROR] ECHEC BACKEND", error_details, status="error")
             return False
     
     async def _start_frontend(self) -> bool:
-        """Démarre le frontend React"""
+        """Démarre le frontend React avec un port dynamique."""
         print("[DEBUG] unified_web_orchestrator.py: _start_frontend()")
-        # La décision de démarrer a déjà été prise en amont
-        self.add_trace("[FRONTEND] DEMARRAGE FRONTEND", "Lancement interface React")
+        self.add_trace("[FRONTEND] DEMARRAGE FRONTEND", "Recherche d'un port libre et lancement de l'interface React")
+    
+        frontend_config = self.config.get('frontend', {})
+        preferred_port = frontend_config.get('port', 8081)
         
-        # Instanciation tardive du FrontendManager pour lui passer l'URL du backend
+        # 1. Trouver un port libre pour le frontend
+        free_port = self._find_free_port(preferred_port)
+        if not free_port:
+            self.add_trace("[ERROR] ECHEC FRONTEND", "Aucun port libre trouvé pour le serveur de développement.", status="error")
+            return False  # Bloquant car le port est essentiel
+    
+        self.app_info.frontend_port = free_port
+        self.app_info.frontend_url = f"http://localhost:{free_port}"
+        
+        # 2. Préparer les variables d'environnement pour le frontend
+        #    - PORT: le port sur lequel le serveur de dev doit démarrer
+        #    - REACT_APP_API_URL: l'URL complète du backend que l'app React utilisera
+        frontend_env = os.environ.copy()
+        frontend_env['PORT'] = str(free_port)
+        frontend_env['REACT_APP_API_URL'] = self.app_info.backend_url
+        
+        self.add_trace("[FRONTEND] ENV VARS",
+                       f"PORT={free_port}, REACT_APP_API_URL={self.app_info.backend_url}",
+                       "Variables d'environnement pour le process frontend")
+    
+        # 3. Instancier et démarrer le FrontendManager
         self.frontend_manager = FrontendManager(
-            self.config.get('frontend', {}),
+            frontend_config,
             self.logger,
-            backend_url=self.app_info.backend_url
+            backend_url=self.app_info.backend_url,
+            env=frontend_env  # Passer l'environnement complet
         )
-
+    
         result = await self.frontend_manager.start()
         if result['success']:
             # Assigner les URLs et ports
