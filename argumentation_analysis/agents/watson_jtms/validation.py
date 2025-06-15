@@ -1,3 +1,4 @@
+from typing import Dict, List
 class FormalValidator:
     """Validateur formel avec preuves mathématiques"""
     
