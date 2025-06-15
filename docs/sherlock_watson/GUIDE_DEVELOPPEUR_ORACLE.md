@@ -235,6 +235,67 @@ while True:
     time.sleep(10)
 ```
 
+### 🆕 Monitoring de Performance
+
+Le système Oracle intègre un utilitaire de monitoring de performance via le décorateur `@monitor_performance` pour mesurer et logger le temps d'exécution des fonctions critiques.
+
+**Rôle et Utilisation**
+
+- **Décorateur** : Appliquez `@monitor_performance(log_args=True)` à toute fonction dont vous souhaitez suivre la performance. `log_args=True` est optionnel et permet d'inclure les arguments de la fonction dans les logs (à utiliser avec prudence pour ne pas exposer de données sensibles).
+- **Fichier de logs** : Les données de performance sont enregistrées dans `logs/oracle_performance.log`.
+- **Format JSON** : Les logs sont structurés en JSON pour une analyse facile :
+  ```json
+  {
+    "timestamp": "YYYY-MM-DD HH:MM:SS,ms",
+    "level": "INFO", 
+    "module": "nom_du_module",
+    "function": "nom_de_la_fonction",
+    "message": {
+      "execution_time_ms": 123.45,
+      "function_name": "Classe.fonction"
+    }
+  }
+  ```
+
+**Exemple d'application dans les agents Oracle :**
+```python
+# argumentation_analysis/agents/core/oracle/oracle_base_agent.py
+from argumentation_analysis.utils.performance_monitoring import monitor_performance
+
+class OracleBaseAgent:
+    @monitor_performance(log_args=True)
+    def process_oracle_request(self, ...):
+        # ... logique métier ...
+```
+
+### Métriques Enrichies et Qualité Narrative
+
+Le module `phase_d_extensions` fournit un système avancé pour évaluer la qualité narrative d'une session.
+
+**Principe**
+
+La méthode `get_ideal_trace_metrics()` (accessible via une instance d'un agent Oracle) retourne un dictionnaire de métriques détaillées, incluant un score global `score_trace_ideale`.
+
+**Exemple de métriques :**
+```json
+{
+    "naturalite_dialogue": {"score_global": 8.5, ...},
+    "personnalites_distinctes": {"score_global": 9.1, ...},
+    "progression_logique": {"score_global": 8.8, ...},
+    "dosage_revelations": {"score_global": 8.2, ...},
+    "engagement_global": {"score_global": 8.7, ...},
+    "score_trace_ideale": 8.65
+}
+```
+
+### Système d'Alerte sur la Qualité
+
+Un système d'alerte est intégré pour détecter une dégradation de la qualité narrative en temps réel.
+
+- **Seuil par défaut** : Le système déclenche une alerte si le `score_trace_ideale` tombe en dessous de **7.0**.
+- **Message d'alerte** : Un message est affiché dans la console :
+  `CRITICAL: Narrative quality degradation detected! Score: 6.85, Threshold: 7.0`
+- **Déclenchement** : L'alerte est vérifiée à chaque appel de `get_ideal_trace_metrics()`.
 ## 📦 Build et Déploiement
 
 ### Préparation Release
