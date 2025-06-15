@@ -84,6 +84,10 @@ except ImportError as e:
     logging.warning(f"Système de communication non disponible: {e}")
     MessageMiddleware = None
 
+# Imports pour le nouveau MainOrchestrator
+from argumentation_analysis.orchestration.engine.main_orchestrator import MainOrchestrator
+from argumentation_analysis.orchestration.engine.config import OrchestrationConfig, create_config_from_legacy
+
 logger = logging.getLogger("UnifiedOrchestrationPipeline")
 
 
@@ -147,25 +151,27 @@ class ExtendedOrchestrationConfig(UnifiedAnalysisConfig):
                  hierarchical_coordination_level: str = "full",
                  specialized_orchestrator_priority: List[str] = None,
                  save_orchestration_trace: bool = True,
-                 middleware_config: Dict[str, Any] = None):
-        """
-        Initialise la configuration étendue.
-        
-        Args:
-            analysis_type: Type d'analyse à effectuer
-            enable_hierarchical: Active l'architecture hiérarchique
-            enable_specialized_orchestrators: Active les orchestrateurs spécialisés
-            enable_communication_middleware: Active le middleware de communication
-            max_concurrent_analyses: Nombre max d'analyses simultanées
-            analysis_timeout: Timeout en secondes pour les analyses
-            auto_select_orchestrator: Sélection automatique de l'orchestrateur
-            hierarchical_coordination_level: Niveau de coordination ("full", "strategic", "tactical")
-            specialized_orchestrator_priority: Ordre de priorité des orchestrateurs spécialisés
-            save_orchestration_trace: Sauvegarde la trace d'orchestration
-            middleware_config: Configuration du middleware
-        """
-        # Initialiser la configuration de base
-        super().__init__(
+                 middleware_config: Dict[str, Any] = None,
+                 use_new_orchestrator: bool = False):
+       """
+       Initialise la configuration étendue.
+       
+       Args:
+           analysis_type: Type d'analyse à effectuer
+           enable_hierarchical: Active l'architecture hiérarchique
+           enable_specialized_orchestrators: Active les orchestrateurs spécialisés
+           enable_communication_middleware: Active le middleware de communication
+           max_concurrent_analyses: Nombre max d'analyses simultanées
+           analysis_timeout: Timeout en secondes pour les analyses
+           auto_select_orchestrator: Sélection automatique de l'orchestrateur
+           hierarchical_coordination_level: Niveau de coordination ("full", "strategic", "tactical")
+           specialized_orchestrator_priority: Ordre de priorité des orchestrateurs spécialisés
+           save_orchestration_trace: Sauvegarde la trace d'orchestration
+           middleware_config: Configuration du middleware
+           use_new_orchestrator: Active le nouveau MainOrchestrator
+       """
+       # Initialiser la configuration de base
+       super().__init__(
             analysis_modes=analysis_modes,
             orchestration_mode=orchestration_mode if isinstance(orchestration_mode, str) else orchestration_mode.value,
             logic_type=logic_type,
@@ -175,23 +181,24 @@ class ExtendedOrchestrationConfig(UnifiedAnalysisConfig):
             enable_conversation_logging=enable_conversation_logging
         )
         
-        # Configuration étendue
-        self.analysis_type = analysis_type if isinstance(analysis_type, AnalysisType) else AnalysisType(analysis_type)
-        self.orchestration_mode_enum = orchestration_mode if isinstance(orchestration_mode, OrchestrationMode) else OrchestrationMode(orchestration_mode)
-        
-        # Configuration hiérarchique
-        self.enable_hierarchical = enable_hierarchical
-        self.enable_specialized_orchestrators = enable_specialized_orchestrators
-        self.enable_communication_middleware = enable_communication_middleware
-        self.max_concurrent_analyses = max_concurrent_analyses
-        self.analysis_timeout = analysis_timeout
-        self.auto_select_orchestrator = auto_select_orchestrator
-        self.hierarchical_coordination_level = hierarchical_coordination_level
-        self.specialized_orchestrator_priority = specialized_orchestrator_priority or [
+       # Configuration étendue
+       self.analysis_type = analysis_type if isinstance(analysis_type, AnalysisType) else AnalysisType(analysis_type)
+       self.orchestration_mode_enum = orchestration_mode if isinstance(orchestration_mode, OrchestrationMode) else OrchestrationMode(orchestration_mode)
+
+       # Configuration hiérarchique
+       self.enable_hierarchical = enable_hierarchical
+       self.enable_specialized_orchestrators = enable_specialized_orchestrators
+       self.enable_communication_middleware = enable_communication_middleware
+       self.max_concurrent_analyses = max_concurrent_analyses
+       self.analysis_timeout = analysis_timeout
+       self.auto_select_orchestrator = auto_select_orchestrator
+       self.hierarchical_coordination_level = hierarchical_coordination_level
+       self.specialized_orchestrator_priority = specialized_orchestrator_priority or [
             "cluedo_investigation", "logic_complex", "conversation", "real"
-        ]
-        self.save_orchestration_trace = save_orchestration_trace
-        self.middleware_config = middleware_config or {}
+       ]
+       self.save_orchestration_trace = save_orchestration_trace
+       self.middleware_config = middleware_config or {}
+       self.use_new_orchestrator = use_new_orchestrator
 
 
 class UnifiedOrchestrationPipeline:
@@ -615,52 +622,78 @@ class UnifiedOrchestrationPipeline:
             "status": "in_progress"
         }
         
-        try:
-            # Sélection de la stratégie d'orchestration
-            orchestration_strategy = await self._select_orchestration_strategy(text, custom_config)
-            logger.info(f"[ORCHESTRATION] Stratégie sélectionnée: {orchestration_strategy}")
+        # Vérification pour utiliser le nouveau MainOrchestrator
+        if self.config.use_new_orchestrator is True:
+            logger.info("Routing request to the new MainOrchestrator engine.")
             
-            # DIAGNOSTIC: Log pour débugger le test d'erreur
-            logger.info(f"[DIAGNOSTIC] Configuration: use_mocks={self.config.use_mocks}, orchestration_mode={self.config.orchestration_mode_enum}")
+            # Utiliser la fonction utilitaire pour convertir la config legacy en nouvelle config.
+            # Ceci évite les erreurs de mappage manuel des champs.
+            orchestration_config = create_config_from_legacy(self.config)
             
-            # Exécution selon la stratégie d'orchestration
-            if orchestration_strategy == "hierarchical_full":
-                results = await self._execute_hierarchical_full_orchestration(text, results)
-            elif orchestration_strategy == "specialized_direct":
-                results = await self._execute_specialized_orchestration(text, results)
-            elif orchestration_strategy == "service_manager":
-                results = await self._execute_service_manager_orchestration(text, results)
-            elif orchestration_strategy == "fallback":
-                results = await self._execute_fallback_orchestration(text, results)
-            else:
-                # Orchestration hybride (par défaut)
-                results = await self._execute_hybrid_orchestration(text, results)
-            
-            # Post-traitement des résultats
-            results = await self._post_process_orchestration_results(results)
-            
-            # CORRECTIF: Propager le statut du fallback si disponible
-            fallback_status = None
-            if orchestration_strategy == "fallback" and "fallback_analysis" in results:
-                fallback_status = results["fallback_analysis"].get("status")
-            elif orchestration_strategy == "hybrid" and "informal_analysis" in results:
-                # Pour l'orchestration hybride, vérifier les résultats de l'analyse informelle
-                fallback_status = results["informal_analysis"].get("status")
-            
-            # DIAGNOSTIC: Log du statut fallback
-            logger.info(f"[DIAGNOSTIC] Statut fallback détecté: {fallback_status}")
-            
-            if fallback_status:
-                results["status"] = fallback_status
-                logger.info(f"[ORCHESTRATION] Statut propagé depuis fallback: {fallback_status}")
-            else:
-                results["status"] = "success"
-            
-        except Exception as e:
-            logger.error(f"[ORCHESTRATION] Erreur durant l'analyse orchestrée: {e}")
-            results["status"] = "error"
-            results["error"] = str(e)
-            self._trace_orchestration("analysis_error", {"error": str(e)})
+            # Instancier et exécuter le nouveau moteur
+            new_orchestrator = MainOrchestrator(
+                config=orchestration_config,
+                strategic_manager=self.strategic_manager,
+                tactical_coordinator=self.tactical_coordinator,
+                operational_manager=self.operational_manager
+            )
+            # En supposant que run_analysis peut prendre text, source_info, et custom_config
+            # et qu'elle est asynchrone.
+            # Le résultat du nouveau moteur est directement retourné.
+            return await new_orchestrator.run_analysis(
+                text,
+                source_info=source_info,
+                custom_config=custom_config
+            )
+
+        else:
+            # Logique originale du pipeline
+            try:
+                # Sélection de la stratégie d'orchestration
+                orchestration_strategy = await self._select_orchestration_strategy(text, custom_config)
+                logger.info(f"[ORCHESTRATION] Stratégie sélectionnée: {orchestration_strategy}")
+                
+                # DIAGNOSTIC: Log pour débugger le test d'erreur
+                logger.info(f"[DIAGNOSTIC] Configuration: use_mocks={self.config.use_mocks}, orchestration_mode={self.config.orchestration_mode_enum}")
+                
+                # Exécution selon la stratégie d'orchestration
+                if orchestration_strategy == "hierarchical_full":
+                    results = await self._execute_hierarchical_full_orchestration(text, results)
+                elif orchestration_strategy == "specialized_direct":
+                    results = await self._execute_specialized_orchestration(text, results)
+                elif orchestration_strategy == "service_manager":
+                    results = await self._execute_service_manager_orchestration(text, results)
+                elif orchestration_strategy == "fallback":
+                    results = await self._execute_fallback_orchestration(text, results)
+                else:
+                    # Orchestration hybride (par défaut)
+                    results = await self._execute_hybrid_orchestration(text, results)
+                
+                # Post-traitement des résultats
+                results = await self._post_process_orchestration_results(results)
+                
+                # CORRECTIF: Propager le statut du fallback si disponible
+                fallback_status = None
+                if orchestration_strategy == "fallback" and "fallback_analysis" in results:
+                    fallback_status = results["fallback_analysis"].get("status")
+                elif orchestration_strategy == "hybrid" and "informal_analysis" in results:
+                    # Pour l'orchestration hybride, vérifier les résultats de l'analyse informelle
+                    fallback_status = results["informal_analysis"].get("status")
+                
+                # DIAGNOSTIC: Log du statut fallback
+                logger.info(f"[DIAGNOSTIC] Statut fallback détecté: {fallback_status}")
+                
+                if fallback_status:
+                    results["status"] = fallback_status
+                    logger.info(f"[ORCHESTRATION] Statut propagé depuis fallback: {fallback_status}")
+                else:
+                    results["status"] = "success"
+                
+            except Exception as e:
+                logger.error(f"[ORCHESTRATION] Erreur durant l'analyse orchestrée: {e}")
+                results["status"] = "error"
+                results["error"] = str(e)
+                self._trace_orchestration("analysis_error", {"error": str(e)})
         
         # Finalisation
         results["execution_time"] = time.time() - analysis_start
@@ -1315,6 +1348,7 @@ def create_extended_config_from_params(
     enable_hierarchical: bool = True,
     enable_specialized: bool = True,
     use_mocks: bool = False,
+    use_new_orchestrator: bool = False,
     **kwargs
 ) -> ExtendedOrchestrationConfig:
     """
@@ -1326,6 +1360,7 @@ def create_extended_config_from_params(
         enable_hierarchical: Active l'architecture hiérarchique
         enable_specialized: Active les orchestrateurs spécialisés
         use_mocks: Utilisation des mocks pour les tests
+        use_new_orchestrator: Active le nouveau MainOrchestrator
         **kwargs: Paramètres additionnels
     
     Returns:
@@ -1353,9 +1388,10 @@ def create_extended_config_from_params(
         enable_hierarchical=enable_hierarchical,
         enable_specialized_orchestrators=enable_specialized,
         use_mocks=use_mocks,
+        use_new_orchestrator=use_new_orchestrator,
         auto_select_orchestrator=kwargs.get("auto_select", True),
         save_orchestration_trace=kwargs.get("save_trace", True),
-        **{k: v for k, v in kwargs.items() if k not in ["auto_select", "save_trace"]}
+        **{k: v for k, v in kwargs.items() if k not in ["auto_select", "save_trace", "use_new_orchestrator"]}
     )
 
 

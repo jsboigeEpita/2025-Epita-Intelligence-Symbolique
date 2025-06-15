@@ -1,7 +1,7 @@
-from argumentation_analysis.agents.watson_jtms.consistency import ConsistencyChecker
-from argumentation_analysis.agents.watson_jtms.validation import FormalValidator
-from argumentation_analysis.agents.watson_jtms.critique import CritiqueEngine
-from argumentation_analysis.agents.watson_jtms.synthesis import SynthesisEngine
+from .consistency import ConsistencyChecker
+from .validation import FormalValidator
+from .critique import CritiqueEngine
+from .synthesis import SynthesisEngine
 # Importer les modèles et utilitaires si nécessaire plus tard
 # from .models import ...
 # from .utils import ...

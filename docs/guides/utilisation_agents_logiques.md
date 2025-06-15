@@ -2,24 +2,33 @@
 
 ## Table des matières
 
-1. [Introduction](#introduction)
-2. [Concepts fondamentaux](#concepts-fondamentaux)
-   - [Ensembles de croyances (Belief Sets)](#ensembles-de-croyances-belief-sets)
-   - [Types de logiques supportés](#types-de-logiques-supportés)
-   - [Requêtes logiques](#requêtes-logiques)
-3. [Architecture du système](#architecture-du-système)
-   - [Composants principaux](#composants-principaux)
-   - [Flux de travail](#flux-de-travail)
-4. [Utilisation des agents logiques](#utilisation-des-agents-logiques)
-   - [Initialisation](#initialisation)
-   - [Conversion de texte en ensemble de croyances](#conversion-de-texte-en-ensemble-de-croyances)
-   - [Génération de requêtes](#génération-de-requêtes)
-   - [Exécution de requêtes](#exécution-de-requêtes)
-   - [Interprétation des résultats](#interprétation-des-résultats)
-5. [Intégration avec d'autres composants](#intégration-avec-dautres-composants)
-6. [Bonnes pratiques](#bonnes-pratiques)
-7. [Dépannage](#dépannage)
-8. [Ressources supplémentaires](#ressources-supplémentaires)
+- [Guide d'utilisation des agents logiques](#guide-dutilisation-des-agents-logiques)
+  - [Table des matières](#table-des-matières)
+  - [Introduction](#introduction)
+  - [Concepts fondamentaux](#concepts-fondamentaux)
+    - [Ensembles de croyances (Belief Sets)](#ensembles-de-croyances-belief-sets)
+    - [Types de logiques supportés](#types-de-logiques-supportés)
+    - [Requêtes logiques](#requêtes-logiques)
+  - [Architecture du système](#architecture-du-système)
+    - [Composants principaux](#composants-principaux)
+    - [Flux de travail](#flux-de-travail)
+  - [Utilisation des agents logiques](#utilisation-des-agents-logiques)
+    - [Initialisation](#initialisation)
+    - [Conversion de texte en ensemble de croyances](#conversion-de-texte-en-ensemble-de-croyances)
+    - [Génération de requêtes](#génération-de-requêtes)
+    - [Exécution de requêtes](#exécution-de-requêtes)
+    - [Interprétation des résultats](#interprétation-des-résultats)
+  - [Intégration avec d'autres composants](#intégration-avec-dautres-composants)
+    - [Intégration avec l'orchestrateur](#intégration-avec-lorchestrateur)
+    - [Intégration avec l'API Web](#intégration-avec-lapi-web)
+  - [Bonnes pratiques](#bonnes-pratiques)
+    - [Optimisation des ensembles de croyances](#optimisation-des-ensembles-de-croyances)
+    - [Formulation des requêtes](#formulation-des-requêtes)
+    - [Performance](#performance)
+  - [Dépannage](#dépannage)
+    - [Problèmes courants](#problèmes-courants)
+    - [Journalisation](#journalisation)
+  - [Ressources supplémentaires](#ressources-supplémentaires)
 
 ## Introduction
 
@@ -72,7 +81,7 @@ Les requêtes logiques permettent d'interroger un ensemble de croyances pour vé
 
 Le système d'agents logiques est composé des éléments suivants:
 
-1. **`BaseLogicAgent`**: Classe abstraite ([`argumentation_analysis/agents/core/abc/agent_bases.py`](../../argumentation_analysis/agents/core/abc/agent_bases.py:159)) définissant l'interface commune à tous les agents logiques concrets. (`AbstractLogicAgent` existe mais semble être une conception antérieure).
+1. **`BaseLogicAgent`**: Classe abstraite **unifiée** ([`argumentation_analysis/agents/core/abc/agent_bases.py`](../../argumentation_analysis/agents/core/abc/agent_bases.py:159)) définissant l'interface commune à tous les agents logiques. Suite à un refactoring, elle intègre désormais à la fois les capacités de raisonnement formel et la logique d'orchestration de tâches (précédemment dans `AbstractLogicAgent`, qui a été supprimé).
 2. **Agents spécifiques**: Implémentations concrètes héritant de `BaseLogicAgent`:
    - [`PropositionalLogicAgent`](../../argumentation_analysis/agents/core/logic/propositional_logic_agent.py:35): Pour la logique propositionnelle
    - [`FirstOrderLogicAgent`](../../argumentation_analysis/agents/core/logic/first_order_logic_agent.py:131): Pour la logique du premier ordre
