@@ -603,25 +603,28 @@ class UnifiedWebOrchestrator:
 
         result = await self.frontend_manager.start()
         if result['success']:
-            self.app_info.frontend_url = result['url']
-            self.app_info.frontend_port = result['port']
-            self.app_info.frontend_pid = result['pid']
-            
-            self.add_trace("[OK] FRONTEND OPERATIONNEL",
-                          f"Port: {result['port']}", 
-                          f"URL: {result['url']}")
+            # Assigner les URLs et ports
+            if result['url']: # Cas serveur de dev
+                self.app_info.frontend_url = result['url']
+                self.app_info.frontend_port = result['port']
+                self.app_info.frontend_pid = result['pid']
+                self.add_trace("[OK] FRONTEND (DEV SERVER) OPERATIONNEL", f"URL: {result['url']}")
+            else: # Cas statique servi par le backend
+                self.app_info.frontend_url = self.app_info.backend_url
+                self.app_info.frontend_port = self.app_info.backend_port
+                self.add_trace("[OK] FRONTEND (STATIQUE) PRÊT", f"Servi par backend: {self.app_info.frontend_url}")
 
-            # Sauvegarde l'URL du frontend pour que les tests puissent la lire
-            print("[DEBUG] unified_web_orchestrator.py: Saving frontend URL")
+            # Écrire l'URL du frontend dans tous les cas pour signaler au script parent
+            # self.app_info.frontend_url aura toujours une valeur ici.
             try:
                 log_dir = Path("logs")
                 log_dir.mkdir(exist_ok=True)
-                with open(log_dir / "frontend_url.txt", "w") as f:
-                    f.write(result['url'])
-                self.add_trace("[SAVE] URL FRONTEND SAUVEGARDEE", f"URL {result['url']} écrite dans logs/frontend_url.txt")
-                print(f"[DEBUG] unified_web_orchestrator.py: Frontend URL saved to logs/frontend_url.txt: {result['url']}")
+                url_to_write = self.app_info.frontend_url
+                with open(log_dir / "frontend_url.txt", "w", encoding='utf-8') as f:
+                    f.write(url_to_write)
+                self.add_trace("[SYNC] FICHIER URL ECRIT", f"Fichier: logs/frontend_url.txt, URL: {url_to_write}")
             except Exception as e:
-                self.add_trace("[ERROR] SAUVEGARDE URL FRONTEND", str(e), status="error")
+                self.add_trace("[ERROR] ECRITURE FICHIER URL", str(e), status="error")
             
             return True
         else:
