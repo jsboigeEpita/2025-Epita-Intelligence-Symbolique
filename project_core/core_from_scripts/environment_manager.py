@@ -346,6 +346,20 @@ class EnvironmentManager:
                 base_command = shlex.split(command, posix=(os.name != 'nt'))
             else:
                 base_command = command
+
+            # --- Injection automatique de l'option asyncio pour pytest ---
+            is_pytest_command = 'pytest' in base_command
+            has_asyncio_option = any('asyncio_mode' in arg for arg in base_command)
+
+            if is_pytest_command and not has_asyncio_option:
+                self.logger.info("Injection de l'option asyncio_mode=auto pour pytest.")
+                try:
+                    pytest_index = base_command.index('pytest')
+                    base_command.insert(pytest_index + 1, '-o')
+                    base_command.insert(pytest_index + 2, 'asyncio_mode=auto')
+                except (ValueError, IndexError):
+                    self.logger.warning("Erreur lors de la tentative d'injection de l'option asyncio pour pytest.")
+            # --- Fin de l'injection ---
             
             final_command = [
                 conda_exe, 'run', '--prefix', env_path,

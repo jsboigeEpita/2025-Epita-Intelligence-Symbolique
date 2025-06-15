@@ -9,6 +9,7 @@ import pytest
 import uuid
 import random
 
+from unittest.mock import patch, MagicMock
 
 from argumentation_analysis.core.enquete_states import BaseWorkflowState, EnquetePoliciereState, EnqueteCluedoState
 
