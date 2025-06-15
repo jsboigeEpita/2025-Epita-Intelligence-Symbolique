@@ -8,12 +8,15 @@ except ImportError:
 import jpype
 import logging
 from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
+# from argumentation_analysis.utils.core_utils.path_operations import get_project_root # Différé
 from pathlib import Path
-import os
-import subprocess
+import os # Ajout de l'import os
 
-setup_logging("INFO")
-logger = logging.getLogger(__name__)
+# Initialisation du logger pour ce module.
+# setup_logging() est appelé pour configurer le logging global.
+# Il est important que setup_logging soit idempotent ou gère les appels multiples (ce qu'il fait avec force=True).
+setup_logging("INFO")  # Appel avec un niveau de log valide comme "INFO" ou selon la config souhaitée.
+logger = logging.getLogger(__name__) # Obtention correcte du logger pour ce module.
 
 class TweetyInitializer:
     """
@@ -48,87 +51,45 @@ class TweetyInitializer:
 
     def _start_jvm(self):
         """Starts the JVM and sets up the classpath."""
-        global logger
+        global logger # Assurer qu'on référence le logger du module
+        # Le logger devrait maintenant être initialisé correctement au niveau du module.
+        # Ce bloc if logger is None peut rester comme une double sécurité, mais ne devrait idéalement pas être atteint.
         if logger is None:
+            # Cela ne devrait plus se produire si l'initialisation au niveau du module est correcte.
             setup_logging("INFO")
             logger = logging.getLogger(__name__)
-            logger.error("CRITICAL: TweetyInitializer module logger was None and had to be re-initialized in _start_jvm.")
+            logger.error("CRITICAL: TweetyInitializer module logger was None and had to be re-initialized in _start_jvm. This indicates an issue in module loading or initial logger setup.")
 
         if TweetyInitializer._jvm_started:
             logger.info("JVM already started.")
             return
 
         try:
-            project_root = Path(__file__).resolve().parents[4]
+            # Importation dynamique de get_project_root UNIQUEMENT si on doit démarrer la JVM
+            from argumentation_analysis.utils.system_utils import get_project_root # Chemin corrigé
+            project_root = get_project_root()
             tweety_lib_path = project_root / "libs" / "tweety"
-            logger.info(f"Contenu de tweety_lib_path ({tweety_lib_path}):")
-            try:
-                for item in os.listdir(tweety_lib_path):
-                    logger.info(f"  - {item}")
-            except Exception as e_ls:
-                logger.error(f"    Impossible de lister {tweety_lib_path}: {e_ls}")
-
-            tweety_jar_file = tweety_lib_path / "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
-
-            classpath_entries = [tweety_jar_file]
+            
+            # Updated classpath based on previous successful runs
+            classpath_entries = [
+                tweety_lib_path / "tweety.jar",
+                # tweety_lib_path / "lib" / "*", # General libs - Répertoire vide, donc inutile pour l'instant
+            ]
+            
+            # Convert Path objects to strings for jpype
             classpath = [str(p) for p in classpath_entries]
             logger.info(f"Calculated Classpath: {classpath}")
 
             if not jpype.isJVMStarted():
                 logger.info("Starting JVM...")
-                try:
-                    java_home = os.environ.get('JAVA_HOME')
-                    jvm_path = None
-                    if java_home:
-                        java_home_path = Path(java_home)
-                        if not java_home_path.is_absolute():
-                            java_home_path = (project_root / java_home.lstrip('./')).resolve()
-                        
-                        logger.info(f"Chemin JAVA_HOME résolu: {java_home_path}")
-
-                        if os.name == 'nt':  # Windows
-                            possible_jvm_paths = [
-                                java_home_path / 'bin' / 'server' / 'jvm.dll',
-                                java_home_path / 'bin' / 'client' / 'jvm.dll',
-                                java_home_path / 'bin' / 'jvm.dll'
-                            ]
-                            for path in possible_jvm_paths:
-                                if path.exists():
-                                    jvm_path = str(path)
-                                    logger.info(f"Utilisation du JVM depuis JAVA_HOME: {jvm_path}")
-                                    break
-                            if not jvm_path:
-                                logger.warning(f"JVM introuvable dans les chemins standards de JAVA_HOME: {java_home_path}")
-                        else:  # Unix/Linux
-                            path = java_home_path / 'lib' / 'server' / 'libjvm.so'
-                            if path.exists():
-                                jvm_path = str(path)
-                                logger.info(f"Utilisation du JVM depuis JAVA_HOME: {jvm_path}")
-                            else:
-                                logger.warning(f"JVM introuvable dans JAVA_HOME: {path}")
-
-                    if not jvm_path:
-                        logger.info("Utilisation du JVM par défaut du système")
-                        jvm_path = jpype.getDefaultJVMPath()
-
-                    logger.info(f"Using JVM Path: {jvm_path}")
-                    
-                    jpype.startJVM(
-                        jvm_path,
-                        f"-Djava.class.path={os.pathsep.join(classpath)}",
-                        "-Xmx1g",
-                        "-Xms256m",
-                        "-XX:+UseG1GC",
-                        "-XX:MaxMetaspaceSize=256m",
-                        "-Dfile.encoding=UTF-8",
-                        convertStrings=False,
-                        ignoreUnrecognized=False
-                    )
-                    TweetyInitializer._jvm_started = True
-                    logger.info("JVM started successfully.")
-                except Exception as e:
-                    logger.error(f"Échec d'initialisation JVM: {e}")
-                    raise RuntimeError(f"Impossible d'initialiser la JVM: {e}") from e
+                jpype.startJVM(
+                    jpype.getDefaultJVMPath(),
+                    "-ea",
+                    f"-Djava.class.path={os.pathsep.join(classpath)}", # Utilisation de os.pathsep
+                    convertStrings=False
+                )
+                TweetyInitializer._jvm_started = True
+                logger.info("JVM started successfully.")
             else:
                 logger.info("JVM was already started by another component.")
                 TweetyInitializer._jvm_started = True

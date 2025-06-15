@@ -81,9 +81,9 @@ class TweetyBridge:
 
         # Initialiser les handlers spécifiques
         try:
-            self._pl_handler = PLHandler(self._initializer)
-            self._fol_handler = FOLHandler(self._initializer)
-            self._modal_handler = ModalHandler(self._initializer)
+            self._pl_handler = PLHandler()
+            self._fol_handler = FOLHandler()
+            self._modal_handler = ModalHandler()
             self._jvm_ok = True # Indique que les handlers Python sont prêts
             self._logger.info("TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialisés avec succès.")
         except RuntimeError as e:
@@ -151,7 +151,7 @@ class TweetyBridge:
 
     # --- Méthodes pour la logique propositionnelle ---
     
-    def validate_formula(self, formula_string: str, constants: Optional[List[str]] = None) -> Tuple[bool, str]:
+    def validate_formula(self, formula_string: str) -> Tuple[bool, str]:
         """
         Valide la syntaxe d'une formule de logique propositionnelle.
         Délègue la validation au PLHandler.
@@ -163,7 +163,7 @@ class TweetyBridge:
         try:
             # PLHandler.parse_pl_formula lève une ValueError en cas d'échec de parsing.
             # Si elle ne lève pas d'exception, la formule est syntaxiquement valide.
-            self._pl_handler.parse_pl_formula(formula_string, constants)
+            self._pl_handler.parse_pl_formula(formula_string)
             self._logger.info(f"Formule PL '{formula_string}' validée avec succès par PLHandler.")
             return True, "Formule valide"
         except ValueError as e_val:
@@ -173,7 +173,7 @@ class TweetyBridge:
             self._logger.error(f"Erreur inattendue lors de la validation PL de '{formula_string}': {e_generic}", exc_info=True)
             return False, f"Erreur inattendue: {str(e_generic)}"
 
-    def validate_belief_set(self, belief_set_string: str, constants: Optional[List[str]] = None) -> Tuple[bool, str]:
+    def validate_belief_set(self, belief_set_string: str) -> Tuple[bool, str]:
         """
         Valide la syntaxe d'un ensemble de croyances en logique propositionnelle.
         Délègue la validation au PLHandler.
@@ -204,7 +204,7 @@ class TweetyBridge:
                 return False, "Ensemble de croyances vide ou ne contenant que des commentaires"
 
             for formula_str in cleaned_formulas:
-                self._pl_handler.parse_pl_formula(formula_str, constants) # Lèvera ValueError si invalide
+                self._pl_handler.parse_pl_formula(formula_str) # Lèvera ValueError si invalide
 
             self._logger.info(f"Ensemble de croyances PL validé avec succès par PLHandler (parsing individuel).")
             return True, "Ensemble de croyances valide"
@@ -220,19 +220,24 @@ class TweetyBridge:
         description="Exécute une requête en Logique Propositionnelle (syntaxe Tweety: !,||,=>,<=>,^^) sur un Belief Set fourni.",
         name="execute_pl_query"
     )
-    def perform_pl_query(self, belief_set_content: str, query_string: str, constants: Optional[List[str]] = None) -> Tuple[Optional[bool], str]:
+    def execute_pl_query(self, belief_set_content: str, query_string: str) -> str:
         """
-        Exécute une requête PL et retourne le résultat booléen brut et une chaîne de sortie.
+        Exécute une requête en logique propositionnelle sur un ensemble de croyances donné.
+        Délègue l'exécution au PLHandler.
         """
-        self._logger.info(f"TweetyBridge.perform_pl_query: Query='{query_string}' sur BS: ('{belief_set_content[:60]}...')")
+        self._logger.info(f"TweetyBridge.execute_pl_query: Query='{query_string}' sur BS: ('{belief_set_content[:60]}...')")
+        
         if not self.is_jvm_ready() or not hasattr(self, '_pl_handler'):
-            self._logger.error("TweetyBridge.perform_pl_query: TweetyBridge ou PLHandler non prêt.")
-            return None, "Erreur: TweetyBridge ou PLHandler non prêt."
-
+            self._logger.error("TweetyBridge.execute_pl_query: TweetyBridge ou PLHandler non prêt.")
+            return "FUNC_ERROR: TweetyBridge ou PLHandler non prêt."
+        
         try:
-            result_bool = self._pl_handler.pl_query(belief_set_content, query_string, constants)
+            # PLHandler.pl_query gère le parsing du BS et de la requête, et l'exécution.
+            # Il devrait retourner True, False, ou lever une exception.
+            result_bool = self._pl_handler.pl_query(belief_set_content, query_string)
             
-            if result_bool is None:
+            # Formater le résultat comme attendu par l'ancienne interface
+            if result_bool is None: # Cas où le handler pourrait retourner None (même si non prévu actuellement)
                 result_str = f"Tweety Result: Unknown for query '{query_string}'."
                 self._logger.warning(f"Requête PL '{query_string}' -> indéterminé (None) via PLHandler.")
             else:
@@ -240,38 +245,16 @@ class TweetyBridge:
                 result_str = f"Tweety Result: Query '{query_string}' is {result_label}."
                 self._logger.info(f"Résultat formaté requête PL '{query_string}' via PLHandler: {result_label}")
             
-            return result_bool, result_str
-
-        except ValueError as e_val:
+            return result_str
+        
+        except ValueError as e_val: # Erreurs de parsing ou autres erreurs logiques du handler
             error_msg = f"Erreur lors de l'exécution de la requête PL via PLHandler: {str(e_val)}"
             self._logger.error(error_msg, exc_info=True)
-            return None, f"ERREUR: {error_msg}"
-        except Exception as e_generic:
+            return f"FUNC_ERROR: {error_msg}"
+        except Exception as e_generic: # Autres erreurs inattendues
             error_msg = f"Erreur inattendue lors de l'exécution de la requête PL: {str(e_generic)}"
             self._logger.error(error_msg, exc_info=True)
-            return None, f"ERREUR: {error_msg}"
-
-    def execute_pl_query(self, belief_set_content: str, query_string: str, constants: Optional[List[str]] = None) -> Tuple[Optional[bool], str]:
-        """
-        Exécute une requête en logique propositionnelle sur un ensemble de croyances donné.
-        Délègue l'exécution au PLHandler et retourne un tuple (résultat_bool, chaîne_formatée).
-        """
-        self._logger.info(f"TweetyBridge.execute_pl_query: Query='{query_string}' sur BS: ('{belief_set_content[:60]}...')")
-        # La méthode perform_pl_query est maintenant la méthode publique principale
-        return self.perform_pl_query(belief_set_content, query_string, constants)
-
-    def is_pl_kb_consistent(self, belief_set_content: str) -> Tuple[bool, str]:
-        """Vérifie la cohérence d'une base de connaissances propositionnelle."""
-        self._logger.info(f"TweetyBridge.is_pl_kb_consistent sur BS: ('{belief_set_content[:60]}...')")
-        if not self.is_jvm_ready() or not hasattr(self, '_pl_handler'):
-            return False, "TweetyBridge ou PLHandler non prêt."
-        try:
-            is_consistent = self._pl_handler.pl_check_consistency(belief_set_content)
-            return is_consistent, f"Consistency check returned: {is_consistent}"
-        except Exception as e:
-            self._logger.error(f"Erreur lors de la vérification de cohérence PL: {e}", exc_info=True)
-            return False, f"Error during PL consistency check: {e}"
-
+            return f"FUNC_ERROR: {error_msg}"
     # Les méthodes _parse_pl_formula, _parse_pl_belief_set, _execute_pl_query_internal
     # sont maintenant encapsulées dans PLHandler et peuvent être supprimées ici.
             
@@ -299,25 +282,33 @@ class TweetyBridge:
             self._logger.error(f"Erreur inattendue lors de la validation FOL de '{formula_string}': {e_generic}", exc_info=True)
             return False, f"Erreur FOL inattendue: {str(e_generic)}"
 
-    def validate_fol_belief_set(self, belief_set_string: str) -> Tuple[bool, str]:
+    def validate_fol_belief_set(self, belief_set_string: str, signature_declarations_str: Optional[str] = None) -> Tuple[bool, str]:
         """
-        Valide la syntaxe d'un ensemble de croyances FOL, qui doit inclure une ligne de signature.
-        Délègue le parsing complet au FOLHandler.
+        Valide la syntaxe d'un ensemble de croyances en logique du premier ordre (FOL).
+        Délègue la validation au FOLHandler.
         """
         if not self.is_jvm_ready() or not hasattr(self, '_fol_handler'):
             return False, "TweetyBridge ou FOLHandler non prêt."
 
         self._logger.debug(f"TweetyBridge.validate_fol_belief_set appelée pour BS: '{belief_set_string[:100]}...'")
         try:
-            # Délègue le parsing complet du belief set (signature + formules) au handler.
-            # La méthode parse_fol_belief_set lèvera une exception si le format est invalide.
-            self._fol_handler.parse_fol_belief_set(belief_set_string)
+            # Similaire à PL, FOLHandler devrait avoir une méthode pour valider la syntaxe du BS.
+            # En attendant, on parse chaque formule individuellement après nettoyage.
+            # FOLHandler.fol_check_consistency parse aussi, mais son but est la cohérence.
             
-            self._logger.info("Ensemble de croyances FOL validé avec succès par FOLHandler.")
+            # Solution temporaire : utiliser _remove_comments_and_empty_lines ici
+            # et parser chaque formule via le handler.
+            cleaned_formulas = self._remove_comments_and_empty_lines(belief_set_string)
+            if not cleaned_formulas:
+                return False, "Ensemble de croyances FOL vide ou ne contenant que des commentaires"
+
+            for formula_str in cleaned_formulas:
+                self._fol_handler.parse_fol_formula(formula_str, signature_declarations_str) # Lèvera ValueError
+
+            self._logger.info(f"Ensemble de croyances FOL validé avec succès par FOLHandler (parsing individuel).")
             return True, "Ensemble de croyances FOL valide"
             
-        except (ValueError, RuntimeError) as e_val:
-            # Attrape les erreurs de parsing spécifiques du handler.
+        except ValueError as e_val:
             self._logger.warning(f"Erreur de syntaxe dans le BS FOL détectée par FOLHandler: {e_val}")
             return False, f"Erreur de syntaxe FOL: {str(e_val)}"
         except Exception as e_generic:
@@ -361,36 +352,9 @@ class TweetyBridge:
             self._logger.error(error_msg, exc_info=True)
             return f"FUNC_ERROR: {error_msg}"
 
-    def is_fol_kb_consistent(self, belief_set_content: str, signature_declarations_str: Optional[str] = None) -> Tuple[bool, str]:
-        """Vérifie la cohérence d'une base de connaissances FOL."""
-        self._logger.info(f"TweetyBridge.is_fol_kb_consistent sur BS: ('{belief_set_content[:60]}...')")
-        if not self.is_jvm_ready() or not hasattr(self, '_fol_handler'):
-            return False, "TweetyBridge ou FOLHandler non prêt."
-        try:
-            is_consistent = self._fol_handler.fol_check_consistency(belief_set_content, signature_declarations_str)
-            return is_consistent, f"Consistency check returned: {is_consistent}"
-        except Exception as e:
-            self._logger.error(f"Erreur lors de la vérification de cohérence FOL: {e}", exc_info=True)
-            return False, f"Error during FOL consistency check: {e}"
-
     # Les méthodes _parse_fol_formula, _parse_fol_belief_set, _execute_fol_query_internal
     # sont maintenant encapsulées dans FOLHandler et peuvent être supprimées ici.
     
-    def validate_fol_query_with_context(self, belief_set_str: str, query_str: str) -> Tuple[bool, str]:
-        """
-        Valide une requête FOL en utilisant le contexte (signature) d'une base de connaissances.
-        Délègue la validation au FOLHandler.
-        """
-        if not self.is_jvm_ready() or not hasattr(self, '_fol_handler'):
-            return False, "TweetyBridge ou FOLHandler non prêt."
-
-        self._logger.debug(f"TweetyBridge.validate_fol_query_with_context appelée pour query: '{query_str}'")
-        try:
-            return self._fol_handler.validate_fol_query_with_context(belief_set_str, query_str)
-        except (ValueError, RuntimeError) as e:
-            self._logger.error(f"Erreur lors de la validation contextuelle de la requête FOL '{query_str}': {e}", exc_info=True)
-            return False, str(e)
-
     # --- Méthodes pour la logique modale ---
 
     def validate_modal_formula(self, formula_string: str, modal_logic_str: str = "S4", signature_declarations_str: Optional[str] = None) -> Tuple[bool, str]:
@@ -479,35 +443,6 @@ class TweetyBridge:
             error_msg = f"Erreur inattendue lors de l'exécution de la requête Modale: {str(e_generic)}"
             self._logger.error(error_msg, exc_info=True)
             return f"FUNC_ERROR: {error_msg}"
-
-    def is_modal_kb_consistent(self, belief_set_content: str, modal_logic_str: str = "S4", signature_declarations_str: Optional[str] = None) -> Tuple[bool, str]:
-        """Vérifie la cohérence d'une base de connaissances modale."""
-        self._logger.info(f"TweetyBridge.is_modal_kb_consistent sur BS: ('{belief_set_content[:60]}...')")
-        if not self.is_jvm_ready() or not hasattr(self, '_modal_handler'):
-            return False, "TweetyBridge ou ModalHandler non prêt."
-        try:
-            is_consistent = self._modal_handler.modal_check_consistency(belief_set_content, modal_logic_str, signature_declarations_str)
-            return is_consistent, f"Consistency check returned: {is_consistent}"
-        except Exception as e:
-            self._logger.error(f"Erreur lors de la vérification de cohérence modale: {e}", exc_info=True)
-            return False, f"Error during Modal consistency check: {e}"
-
-    def validate_modal_query_with_context(self, belief_set_str: str, query_str: str, modal_logic_str: str = "S4") -> Tuple[bool, str]:
-        """
-        Valide une requête modale en utilisant le contexte d'une base de connaissances.
-        Délègue la validation au ModalHandler.
-        """
-        if not self.is_jvm_ready() or not hasattr(self, '_modal_handler'):
-            return False, "TweetyBridge ou ModalHandler non prêt."
-
-        self._logger.debug(f"TweetyBridge.validate_modal_query_with_context appelée pour query: '{query_str}', Logic: {modal_logic_str}")
-        try:
-            # Valider la requête en essayant de la parser avec le même contexte que le belief set
-            self._modal_handler.parse_modal_formula(query_str, modal_logic_str)
-            return True, "Requête modale valide dans le contexte"
-        except (ValueError, RuntimeError) as e:
-            self._logger.error(f"Erreur lors de la validation contextuelle de la requête modale '{query_str}': {e}", exc_info=True)
-            return False, str(e)
 
     # Les méthodes _parse_modal_formula, _parse_modal_belief_set, _execute_modal_query_internal
     # sont maintenant encapsulées dans ModalHandler et peuvent être supprimées ici.
