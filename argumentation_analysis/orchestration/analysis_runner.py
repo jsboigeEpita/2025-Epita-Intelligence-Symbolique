@@ -164,8 +164,6 @@ async def _run_analysis_conversation(
         run_logger.info(f"Création du AgentGroupChat avec les agents: {[agent.name for agent in active_agents]}")
 
         # Créer le groupe de chat
-        group_chat = AgentGroupChat(agents=active_agents)
-
         # Message initial pour lancer la conversation
         initial_message_text = (
             "Vous êtes une équipe d'analystes experts en argumentation. "

@@ -7,12 +7,17 @@ une logique formelle. Ces classes utilisent le pattern Abstract Base Class (ABC)
 pour définir une interface commune que les agents concrets doivent implémenter.
 """
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING, AsyncGenerator
+from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING, Coroutine
 import logging
 
 from semantic_kernel import Kernel
 from semantic_kernel.agents import Agent
-from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.agents.channels.chat_history_channel import ChatHistoryChannel
+from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatHistoryAgentThread
+
+# Résoudre la dépendance circulaire de Pydantic
+ChatHistoryChannel.model_rebuild()
 
 # Import paresseux pour éviter le cycle d'import - uniquement pour le typage
 if TYPE_CHECKING:
@@ -119,81 +124,58 @@ class BaseAgent(Agent, ABC):
             "llm_service_id": self._llm_service_id,
             "capabilities": self.get_agent_capabilities()
         }
-    
-    @abstractmethod
-    async def invoke_single(
-        self,
-        messages: List[ChatMessageContent],
-        **kwargs: Any,
-    ) -> ChatMessageContent:
+
+    def get_channel_keys(self) -> List[str]:
         """
-        Exécute la logique principale de l'agent pour une seule invocation.
-        Les classes dérivées doivent implémenter cette méthode pour définir le comportement de l'agent.
-        C'est la méthode à surcharger pour la logique de base.
-        
-        Args:
-            messages: L'historique des messages de chat.
-            **kwargs: Arguments supplémentaires pour l'exécution.
-        
-        Returns:
-            La réponse de l'agent sous forme de ChatMessageContent.
+        Retourne les clés uniques pour identifier le canal de communication de l'agent.
+        Cette méthode est requise par AgentGroupChat.
+        """
+        # Utiliser self.id car il est déjà garanti comme étant unique
+        # (initialisé avec agent_name).
+        return [self.id]
+
+    async def create_channel(self) -> ChatHistoryChannel:
+        """
+        Crée un canal de communication pour l'agent.
+
+        Cette méthode est requise par AgentGroupChat pour permettre à l'agent
+        de participer à une conversation. Nous utilisons ChatHistoryChannel,
+        qui est une implémentation générique basée sur ChatHistory.
+        """
+        thread = ChatHistoryAgentThread()
+        return ChatHistoryChannel(thread=thread)
+
+    @abstractmethod
+    async def get_response(self, *args, **kwargs):
+        """Méthode abstraite pour obtenir une réponse de l'agent."""
+        pass
+
+    @abstractmethod
+    async def invoke_single(self, *args, **kwargs):
+        """
+        Méthode abstraite pour l'invocation de l'agent qui retourne une réponse unique.
+        Les agents concrets DOIVENT implémenter cette logique.
         """
         pass
 
-    async def get_response(
-        self,
-        messages: List[ChatMessageContent],
-        **kwargs: Any,
-    ) -> ChatMessageContent:
+    async def invoke(self, *args, **kwargs):
         """
-        Implémentation concrète de `get_response` pour la conformité avec sk.Agent.
-        Cette méthode est appelée par l'infrastructure de l'agent de bas niveau.
-        Elle délègue l'exécution à `invoke_single`.
-        
-        Args:
-            messages: L'historique des messages.
-            **kwargs: Arguments supplémentaires.
-        
-        Returns:
-            Le résultat de `invoke_single`.
+        Méthode d'invocation principale compatible avec le streaming attendu par le framework SK.
+        Elle transforme la réponse unique de `invoke_single` en un flux.
         """
-        return await self.invoke_single(messages, **kwargs)
-
-    async def invoke(
-        self,
-        messages: List[ChatMessageContent],
-        **kwargs: Any,
-    ) -> AsyncGenerator[Tuple[bool, ChatMessageContent], None]:
-        """
-        Invoque l'agent avec l'historique de chat et retourne un générateur de résultats.
-        Cette méthode est le point d'entrée principal pour l'interaction via `AgentChat`.
-        
-        Args:
-            messages: L'historique des messages.
-            **kwargs: Arguments supplémentaires.
-        
-        Yields:
-            Un tuple contenant un booléen de visibilité et le message de réponse.
-        """
-        result = await self.invoke_single(messages, **kwargs)
-
-        # Assurez-vous que le résultat est bien un ChatMessageContent, sinon lever une erreur claire.
-        if not isinstance(result, ChatMessageContent):
-            raise TypeError(
-                f"La méthode 'invoke_single' de l'agent {self.name} doit retourner un objet ChatMessageContent, "
-                f"mais a retourné {type(result).__name__}."
-            )
-        
-        # Encapsuler le résultat dans le format attendu par le canal de chat.
-        yield True, result
+        result = await self.invoke_single(*args, **kwargs)
+        yield result
 
     async def invoke_stream(self, *args, **kwargs):
-        """Méthode par défaut pour le streaming - peut être surchargée."""
-        result = await self.invoke(*args, **kwargs)
-        yield result
- 
-     # Optionnel, à considérer pour une interface d'appel atomique standardisée
-     # def invoke_atomic(self, method_name: str, **kwargs) -> Any:
+        """
+        Implémentation de l'interface de streaming de SK.
+        Cette méthode délègue à `invoke`, qui retourne maintenant un générateur asynchrone.
+        """
+        async for Elt in self.invoke(*args, **kwargs):
+            yield Elt
+  
+      # Optionnel, à considérer pour une interface d'appel atomique standardisée
+      # def invoke_atomic(self, method_name: str, **kwargs) -> Any:
     #     if hasattr(self, method_name) and callable(getattr(self, method_name)):
     #         method_to_call = getattr(self, method_name)
     #         # Potentiellement vérifier si la méthode est "publique" ou listée dans capabilities
