@@ -61,16 +61,26 @@ Write-Host "[INFO] Environnement cible: conda 'projet-is'" -ForegroundColor Cyan
 Write-Host "[INFO] [COMMANDE] $CommandToRun" -ForegroundColor Cyan
 
 # Raccourci vers le script de setup principal
-$realScriptPath = Join-Path $PSScriptRoot "activate_project_env.ps1"
+# $realScriptPath = Join-Path $PSScriptRoot "activate_project_env.ps1"
+#
+# if (!(Test-Path $realScriptPath)) {
+#     Write-Host "[ERREUR] Script d'activation non trouvé: $realScriptPath" -ForegroundColor Red
+#     Write-Host "[INFO] Vérifiez l'intégrité du projet" -ForegroundColor Yellow
+#     exit 1
+# }
+#
+# & $realScriptPath -CommandToRun $CommandToRun
+# $exitCode = $LASTEXITCODE
+Write-Host "[AVERTISSEMENT] Le mécanisme d'appel au script d'activation a été désactivé temporairement suite à un refactoring." -ForegroundColor Yellow
+Write-Host "[AVERTISSEMENT] Le script ne fait qu'exécuter la commande directement. Pour une activation complète, utilisez le terminal." -ForegroundColor Yellow
+$exitCode = 0 # Placeholder
 
-if (!(Test-Path $realScriptPath)) {
-    Write-Host "[ERREUR] Script d'activation non trouvé: $realScriptPath" -ForegroundColor Red
-    Write-Host "[INFO] Vérifiez l'intégrité du projet" -ForegroundColor Yellow
-    exit 1
+# Exécution directe de la commande pour maintenir une fonctionnalité minimale
+Invoke-Expression $CommandToRun
+if ($LASTEXITCODE -ne $null) {
+    $exitCode = $LASTEXITCODE
 }
 
-& $realScriptPath -CommandToRun $CommandToRun
-$exitCode = $LASTEXITCODE
 
 # Message final informatif
 Write-Host ""
@@ -81,6 +91,5 @@ if ($exitCode -eq 0) {
 } else {
     Write-Host "[ECHEC] Vérifiez l'environnement avec: .\setup_project_env.ps1 -Status" -ForegroundColor Red
 }
-# Write-Host "EXECUTION TERMINEE CHECKPOINT"
 
 exit $exitCode
