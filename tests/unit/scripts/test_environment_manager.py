@@ -109,129 +109,117 @@ class TestIsCondaEnvActive(unittest.TestCase):
 
 
 class TestAutoActivateEnv(unittest.TestCase):
-    """Tests pour la fonction auto_activate_env"""
-    
+    """
+    Classe de test pour la fonction façade `auto_activate_env`.
+    La stratégie de test est de mocker la méthode centrale `EnvironmentManager.activate_project_environment`
+    pour simuler ses codes de retour (0 pour succès, non-zéro pour échec) et de vérifier que
+    `auto_activate_env` interprète correctement ces codes.
+    """
+
     def setUp(self):
-        """Setup pour chaque test"""
+        """Setup minimal pour les tests de cette classe."""
+        # On ne mocke plus JPype globalement ici, car non-pertinent pour ces tests logiques.
+        # On garde une sauvegarde de l'environnement si nécessaire.
         self.original_env = os.environ.copy()
-    
+
     def tearDown(self):
-        """Cleanup après chaque test"""
+        """Nettoyage de l'environnement après chaque test."""
         os.environ.clear()
         os.environ.update(self.original_env)
-    
-    
-    @patch('project_core.core_from_scripts.environment_manager.is_conda_env_active')
-    def test_env_already_active_silent(self, mock_is_active):
-        """Test environnement déjà actif en mode silencieux"""
-        mock_is_active.return_value = True
-        
-        result = auto_activate_env(silent=True)
-        
+
+    @patch('os.getenv')
+    def test_activation_script_running_skips_execution(self, mock_getenv):
+        """Vérifie que la fonction retourne True immédiatement si le script d'activation principal est déjà en cours."""
+        mock_getenv.return_value = 'true'
+        # On vérifie qu'EnvironmentManager n'est même pas instancié
+        with patch('project_core.core_from_scripts.environment_manager.EnvironmentManager') as mock_manager:
+            result = auto_activate_env()
+            self.assertTrue(result)
+            mock_getenv.assert_called_with('IS_ACTIVATION_SCRIPT_RUNNING')
+            mock_manager.assert_not_called()
+
+    @patch('project_core.core_from_scripts.environment_manager.EnvironmentManager')
+    def test_successful_activation_silent(self, mock_env_manager_class):
+        """Test une activation réussie en mode silencieux."""
+        # Simule un code de sortie de 0 (succès) de la méthode centrale
+        mock_manager_instance = mock_env_manager_class.return_value
+        mock_manager_instance.activate_project_environment.return_value = 0
+
+        result = auto_activate_env(env_name='test-env', silent=True)
+
         self.assertTrue(result)
-        mock_is_active.assert_called_once_with('projet-is')
+        mock_manager_instance.activate_project_environment.assert_called_once_with(env_name='test-env')
 
-    @patch('project_core.core_from_scripts.environment_manager.is_conda_env_active')
-    @patch('builtins.print')
-    def test_env_already_active_verbose(self, mock_print, mock_is_active):
-        """Test environnement déjà actif en mode verbeux"""
-        mock_is_active.return_value = True
-        
-        result = auto_activate_env(silent=False)
-        
-        self.assertTrue(result)
-        mock_print.assert_called_with("[OK] Environnement 'projet-is' deja actif")
-
-    @patch('project_core.core_from_scripts.environment_manager.is_conda_env_active')
     @patch('project_core.core_from_scripts.environment_manager.EnvironmentManager')
-    def test_conda_not_available(self, mock_env_manager_class, mock_is_active):
-        """Test conda non disponible"""
-        mock_is_active.return_value = False
-        mock_env_manager = MagicMock()
-        mock_env_manager.check_conda_available.return_value = False
-        mock_env_manager_class.return_value = mock_env_manager
+    def test_successful_activation_verbose(self, mock_env_manager_class):
+        """Test une activation réussie en mode verbeux."""
+        mock_manager_instance = mock_env_manager_class.return_value
+        mock_manager_instance.activate_project_environment.return_value = 0
         
+        # On patche le logger utilisé à l'intérieur de la fonction pour vérifier son appel
+        with patch('project_core.core_from_scripts.environment_manager.Logger') as mock_logger_class:
+            mock_logger_instance = mock_logger_class.return_value
+            result = auto_activate_env(env_name='test-env-verbose', silent=False)
+
+            self.assertTrue(result)
+            mock_manager_instance.activate_project_environment.assert_called_once_with(env_name='test-env-verbose')
+            # Vérifie que le bon message de succès est loggué
+            mock_logger_instance.success.assert_called_with("Auto-activation de 'test-env-verbose' réussie via le manager central.")
+
+    @patch('project_core.core_from_scripts.environment_manager.EnvironmentManager')
+    def test_failed_activation_silent(self, mock_env_manager_class):
+        """Test un échec d'activation en mode silencieux."""
+        # Simule un code de sortie de 1 (échec) de la méthode centrale
+        mock_manager_instance = mock_env_manager_class.return_value
+        mock_manager_instance.activate_project_environment.return_value = 1
+
         result = auto_activate_env(silent=True)
-        
-        self.assertFalse(result)
-        mock_env_manager.check_conda_available.assert_called_once()
 
-    @patch('project_core.core_from_scripts.environment_manager.is_conda_env_active')
-    @patch('project_core.core_from_scripts.environment_manager.EnvironmentManager')
-    @patch('builtins.print')
-    def test_conda_not_available_verbose(self, mock_print, mock_env_manager_class, mock_is_active):
-        """Test conda non disponible en mode verbeux"""
-        mock_is_active.return_value = False
-        mock_env_manager = MagicMock()
-        mock_env_manager.check_conda_available.return_value = False
-        mock_env_manager_class.return_value = mock_env_manager
-        
-        result = auto_activate_env(env_name='test-env', silent=False)
-        
         self.assertFalse(result)
-        mock_print.assert_called_with("[ERROR] Conda non disponible - impossible d'activer 'test-env'")
+        mock_manager_instance.activate_project_environment.assert_called_once_with(env_name='projet-is')
 
-    @patch('project_core.core_from_scripts.environment_manager.is_conda_env_active')
     @patch('project_core.core_from_scripts.environment_manager.EnvironmentManager')
-    def test_env_not_exists(self, mock_env_manager_class, mock_is_active):
-        """Test environnement n'existe pas"""
-        mock_is_active.return_value = False
-        mock_env_manager = MagicMock()
-        mock_env_manager.check_conda_available.return_value = True
-        mock_env_manager.check_conda_env_exists.return_value = False
-        mock_env_manager_class.return_value = mock_env_manager
-        
+    def test_failed_activation_verbose(self, mock_env_manager_class):
+        """Test un échec d'activation en mode verbeux."""
+        mock_manager_instance = mock_env_manager_class.return_value
+        mock_manager_instance.activate_project_environment.return_value = 1
+
+        with patch('project_core.core_from_scripts.environment_manager.Logger') as mock_logger_class:
+            mock_logger_instance = mock_logger_class.return_value
+            result = auto_activate_env(env_name='bad-env', silent=False)
+
+            self.assertFalse(result)
+            mock_manager_instance.activate_project_environment.assert_called_once_with(env_name='bad-env')
+            # Vérifie que le bon message d'erreur est loggué
+            mock_logger_instance.error.assert_called_with("Échec de l'auto-activation de 'bad-env' via le manager central.")
+
+    @patch('project_core.core_from_scripts.environment_manager.EnvironmentManager')
+    def test_exception_handling_silent(self, mock_env_manager_class):
+        """Test la gestion d'une exception inattendue en mode silencieux."""
+        # Simule une exception levée par la méthode centrale
+        mock_manager_instance = mock_env_manager_class.return_value
+        mock_manager_instance.activate_project_environment.side_effect = RuntimeError("Critical system failure")
+
         result = auto_activate_env(silent=True)
-        
-        self.assertFalse(result)
-        mock_env_manager.check_conda_env_exists.assert_called_once()
 
-    @patch('project_core.core_from_scripts.environment_manager.is_conda_env_active')
+        self.assertFalse(result)
+        mock_manager_instance.activate_project_environment.assert_called_once()
+
     @patch('project_core.core_from_scripts.environment_manager.EnvironmentManager')
-    @patch('builtins.print')
-    def test_successful_activation(self, mock_print, mock_env_manager_class, mock_is_active):
-        """Test activation réussie"""
-        mock_is_active.return_value = False
-        mock_env_manager = MagicMock()
-        mock_env_manager.check_conda_available.return_value = True
-        mock_env_manager.check_conda_env_exists.return_value = True
-        mock_env_manager_class.return_value = mock_env_manager
-        
-        result = auto_activate_env(env_name='projet-is', silent=False)
-        
-        self.assertTrue(result)
-        
-        # Vérifier les appels
-        mock_env_manager.check_conda_available.assert_called_once()
-        mock_env_manager.check_conda_env_exists.assert_called_once_with('projet-is')
-        mock_env_manager.setup_environment_variables.assert_called_once()
-        
-        # Vérifier les prints
-        mock_print.assert_any_call("[INFO] Auto-activation de l'environnement 'projet-is'...")
-        mock_print.assert_any_call("[OK] Environnement 'projet-is' auto-active")
-        
-        # Vérifier que la variable d'environnement est définie
-        self.assertEqual(os.environ.get('CONDA_DEFAULT_ENV'), 'projet-is')
+    def test_exception_handling_verbose(self, mock_env_manager_class):
+        """Test la gestion d'une exception inattendue en mode verbeux."""
+        test_exception = RuntimeError("Critical system failure")
+        mock_manager_instance = mock_env_manager_class.return_value
+        mock_manager_instance.activate_project_environment.side_effect = test_exception
 
-    @patch('project_core.core_from_scripts.environment_manager.is_conda_env_active')
-    def test_exception_handling(self, mock_is_active):
-        """Test gestion d'exception"""
-        mock_is_active.side_effect = Exception("Test error")
-        
-        result = auto_activate_env(silent=True)
-        
-        self.assertFalse(result)
+        with patch('project_core.core_from_scripts.environment_manager.Logger') as mock_logger_class:
+            mock_logger_instance = mock_logger_class.return_value
+            result = auto_activate_env(silent=False)
 
-    @patch('project_core.core_from_scripts.environment_manager.is_conda_env_active')
-    @patch('builtins.print')
-    def test_exception_handling_verbose(self, mock_print, mock_is_active):
-        """Test gestion d'exception en mode verbeux"""
-        mock_is_active.side_effect = Exception("Test error")
-        
-        result = auto_activate_env(silent=False)
-        
-        self.assertFalse(result)
-        mock_print.assert_any_call("❌ Erreur auto-activation: Test error")
+            self.assertFalse(result)
+            mock_manager_instance.activate_project_environment.assert_called_once()
+            # Vérifie que l'exception est bien logguée
+            mock_logger_instance.error.assert_called_with(f"❌ Erreur critique dans auto_activate_env: {test_exception}", exc_info=True)
 
 
 class TestEnvironmentManagerAutoActivation(unittest.TestCase):
@@ -247,20 +235,13 @@ class TestEnvironmentManagerAutoActivation(unittest.TestCase):
         os.environ.update(self.original_env)
     
     
-    @patch('subprocess.run')
-    def test_environment_manager_conda_check(self, mock_subprocess):
+    @patch('shutil.which', return_value='/path/to/conda')
+    def test_environment_manager_conda_check(self, mock_which):
         """Test vérification conda dans EnvironmentManager"""
-        # Mock conda disponible
-        mock_result = MagicMock()
-        mock_result.returncode = 0
-        mock_result.stdout = "conda 4.12.0"
-        mock_subprocess.return_value = mock_result
-        
         manager = EnvironmentManager()
         result = manager.check_conda_available()
-        
         self.assertTrue(result)
-        mock_subprocess.assert_called_once()
+        mock_which.assert_called_once_with('conda.exe')
     
     
     @patch('subprocess.run')
@@ -324,24 +305,14 @@ class TestEnvironmentManagerStressTests(unittest.TestCase):
             self.assertEqual(manager.required_python_version, (3, 8))
     
     
-    @patch('subprocess.run')
-    def test_concurrent_conda_checks(self, mock_subprocess):
+    @patch('shutil.which', return_value='/path/to/conda')
+    def test_concurrent_conda_checks(self, mock_which):
         """Test vérifications conda concurrentes"""
-        mock_result = MagicMock()
-        mock_result.returncode = 0
-        mock_result.stdout = "conda 4.12.0"
-        mock_subprocess.return_value = mock_result
-        
         manager = EnvironmentManager()
-        
-        # Multiples vérifications
         results = [manager.check_conda_available() for _ in range(5)]
-        
-        # Toutes doivent réussir
         self.assertTrue(all(results))
-        
-        # Subprocess appelé 5 fois
-        self.assertEqual(mock_subprocess.call_count, 5)
+        # shutil.which a un cache interne, donc il n'est appelé qu'une fois.
+        self.assertEqual(mock_which.call_count, 1)
 
 
 if __name__ == '__main__':

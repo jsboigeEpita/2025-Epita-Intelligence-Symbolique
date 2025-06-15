@@ -126,20 +126,31 @@ class TestConfigurationCLI:
         assert args.analysis_modes == ['unified']
         assert args.require_real_gpt is True
 
+    @pytest.mark.asyncio
     @patch('project_core.rhetorical_analysis_from_scripts.unified_production_analyzer.UnifiedProductionAnalyzer')
-    @patch('project_core.rhetorical_analysis_from_scripts.unified_production_analyzer.asyncio.run')
-    def test_end_to_end_cli_flow(self, mock_async_run, mock_analyzer_class):
+    async def test_end_to_end_cli_flow(self, mock_analyzer_class):
         """Simule un flux CLI complet avec des mocks pour vérifier l'intégration."""
-        
+
         # 1. Configuration des mocks
         mock_analyzer_instance = mock_analyzer_class.return_value
-        mock_analyzer_instance.initialize.return_value = asyncio.Future()
-        mock_analyzer_instance.initialize.return_value.set_result(True)
 
-        mock_analyzer_instance.analyze_text.return_value = asyncio.Future()
-        mock_analyzer_instance.analyze_text.return_value.set_result({"id": "analysis_123"})
+        # Utilisation de AsyncMock pour les méthodes asynchrones (plus propre depuis Python 3.8)
+        # Ceci élimine également les DeprecationWarning
+        from unittest.mock import AsyncMock
+        mock_analyzer_instance.initialize = AsyncMock(return_value=True)
+        mock_analyzer_instance.analyze_text = AsyncMock(return_value={"id": "analysis_123"})
         
-        mock_analyzer_instance.generate_report.return_value = {"summary": "mocked report"}
+        # Correction du mock pour `generate_report` afin qu'il retourne la structure attendue
+        mock_report = {
+            "results_summary": {
+                "successful_analyses": 1,
+                "failed_analyses": 0,
+                "total_execution_time": 1.23,
+                "average_execution_time": 1.23
+            }
+        }
+        mock_analyzer_instance.generate_report = MagicMock(return_value=mock_report)
+
 
         # 2. Définition des arguments CLI pour la simulation
         cli_args = [
@@ -154,8 +165,8 @@ class TestConfigurationCLI:
             # 4. Importation de la fonction `main` à l'intérieur du contexte du patch
             from project_core.rhetorical_analysis_from_scripts.unified_production_analyzer import main
             
-            # 5. Appel de la fonction `main` (elle sera exécutée de manière synchrone grâce au mock d'asyncio.run)
-            asyncio.run(main())
+            # 5. Appel de la fonction `main`
+            await main()
 
             # 6. Vérifications
             mock_analyzer_class.assert_called_once()

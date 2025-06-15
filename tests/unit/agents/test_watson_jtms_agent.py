@@ -39,8 +39,8 @@ class TestWatsonJTMSAgent:
         """Test d'initialisation de l'agent Watson"""
         assert watson_agent.agent_name == "watson_test"
         assert watson_agent.specialization == "critical_analysis"
-        assert hasattr(watson_agent, 'validation_history')
-        assert hasattr(watson_agent, 'critique_patterns')
+        assert hasattr(watson_agent.validator, 'validation_history')
+        assert hasattr(watson_agent.critique_engine, 'critique_patterns')
     
     @pytest.mark.asyncio
     async def test_validate_hypothesis(self, watson_agent):
@@ -209,13 +209,13 @@ class TestWatsonJTMSAgent:
     def test_get_validation_summary(self, watson_agent):
         """Test de résumé de validation"""
         # Simuler quelques validations
-        watson_agent.validation_history["val_1"] = {
+        watson_agent.validator.validation_history["val_1"] = {
             "hypothesis": "test_hyp",
             "result": True,
             "confidence": 0.8
         }
         
-        summary = watson_agent.get_validation_summary()
+        summary = watson_agent.validator.get_validation_summary()
         
         assert summary is not None
         assert "total_validations" in summary
@@ -226,19 +226,18 @@ class TestWatsonJTMSAgent:
     def test_export_critique_state(self, watson_agent):
         """Test d'export d'état de critique"""
         # Ajouter quelques éléments de test
-        watson_agent.critique_patterns["pattern_1"] = {
+        watson_agent.critique_engine.critique_patterns["pattern_1"] = {
             "type": "logical_gap",
             "frequency": 3
         }
         
-        state = watson_agent.export_critique_state()
+        state = watson_agent.critique_engine.export_critique_state()
         
         assert state is not None
         assert "agent_type" in state
-        assert state["agent_type"] == "watson_validator"
-        assert "validation_history" in state
+        assert state["engine_type"] == "critique_engine"
         assert "critique_patterns" in state
-        assert "session_state" in state
+        assert "last_critique_timestamp" in state
 
 if __name__ == "__main__":
     # Tests rapides

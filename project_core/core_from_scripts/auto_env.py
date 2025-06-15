@@ -143,11 +143,6 @@ def ensure_env(env_name: str = "projet-is", silent: bool = True) -> bool:
             print(f"             Vérifiez PYTHONPATH ou la structure du projet.")
             print(f"             sys.path actuel: {sys.path}")
         return False
-    except Exception as e:
-        if not silent:
-            # Message d'erreur générique pour d'autres exceptions inattendues
-            print(f"[auto_env] ERREUR INATTENDUE lors de l'ensure_env: {e}")
-        return False
 
 # Les fonctions _discover_and_persist_conda_path, _update_conda_path_from_env,
 # _load_dotenv_intelligent, et _auto_activate_conda_env sont maintenant supprimées
