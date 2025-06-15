@@ -243,11 +243,16 @@ class UnifiedWebOrchestrator:
             },
             'playwright': {
                 'enabled': True,
+                'test_type': 'python',  # Type de test par défaut
                 'browser': 'chromium',
                 'headless': True,
-                'timeout_ms': 10000,
-                'slow_timeout_ms': 20000,
-                'test_paths': ['tests/functional/'],
+                'timeout_ms': 30000,
+                'process_timeout_s': 600,
+                'test_paths': {
+                    'python': ['tests/e2e/python/'],
+                    'javascript': ['tests/e2e/js/'],
+                    'demos': ['tests/e2e/demos/']
+                },
                 'screenshots_dir': 'logs/screenshots',
                 'traces_dir': 'logs/traces'
             },
@@ -373,7 +378,7 @@ class UnifiedWebOrchestrator:
             self.app_info.status = WebAppStatus.ERROR
             return False
     
-    async def run_tests(self, test_paths: List[str] = None, **kwargs) -> bool:
+    async def run_tests(self, test_type: str = None, test_paths: List[str] = None, **kwargs) -> bool:
         """
         Exécute les tests Playwright avec le support natif.
         """
@@ -414,10 +419,18 @@ class UnifiedWebOrchestrator:
                       f"BASE_URL={base_url}",
                       f"BACKEND_URL={backend_url}")
 
-        # L'ancienne gestion de subprocess.TimeoutExpired n'est plus nécessaire car
-        # le runner utilise maintenant create_subprocess_exec.
-        # Le timeout est géré plus haut par asyncio.wait_for.
-        return await self.playwright_runner.run_tests(test_paths, test_config)
+        # Le test_type est passé en priorité, sinon celui de la config
+        effective_test_type = test_type or self.playwright_runner.test_type
+
+        # Si les chemins ne sont pas fournis, utiliser ceux par défaut pour le type de test
+        paths_for_type = self.config.get('playwright', {}).get('test_paths', {})
+        effective_paths = test_paths or paths_for_type.get(effective_test_type)
+
+        return await self.playwright_runner.run_tests(
+            test_type=effective_test_type,
+            test_paths=effective_paths,
+            runtime_config=test_config
+        )
     
     async def stop_webapp(self):
         """Arrête l'application web et nettoie les ressources de manière gracieuse."""
@@ -456,6 +469,7 @@ class UnifiedWebOrchestrator:
     
     async def full_integration_test(self, headless: bool = True,
                                    frontend_enabled: bool = None,
+                                   test_type: str = None,
                                    test_paths: List[str] = None,
                                    **kwargs) -> bool:
         """
@@ -487,7 +501,7 @@ class UnifiedWebOrchestrator:
                 self.add_trace("[TEST] Lancement avec timeout global", f"{test_timeout_s}s")
                 
                 success = await asyncio.wait_for(
-                    self.run_tests(test_paths, **kwargs),
+                    self.run_tests(test_type=test_type, test_paths=test_paths, **kwargs),
                     timeout=test_timeout_s
                 )
             except asyncio.TimeoutError:
@@ -850,24 +864,27 @@ def main():
     parser.add_argument('--frontend', action='store_true',
                        help='Force activation frontend')
     parser.add_argument('--tests', nargs='*',
-                       help='Chemins spécifiques des tests à exécuter')
+                       help='Chemins spécifiques des tests à exécuter.')
+    parser.add_argument('--test-type', type=str,
+                       choices=['python', 'javascript', 'demos'],
+                       help='Type de tests à exécuter (python, javascript, demos).')
     parser.add_argument('--timeout', type=int, default=20,
-                           help='Timeout global en minutes pour l\'orchestration.')
+                           help="Timeout global en minutes pour l'orchestration.")
     parser.add_argument('--log-level', type=str, default='INFO',
                            choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
                            help='Niveau de log pour la console et le fichier.')
     parser.add_argument('--no-trace', action='store_true',
                            help='Désactive la génération du rapport de trace Markdown.')
     parser.add_argument('--no-playwright', action='store_true',
-                        help='Désactive l\'exécution des tests Playwright.')
+                        help="Désactive l'exécution des tests Playwright.")
     parser.add_argument('--exit-after-start', action='store_true',
                         help='Démarre les serveurs puis quitte sans lancer les tests.')
 
     # Commandes
-    parser.add_argument('--start', action='store_true', help='Démarre seulement l\'application.')
-    parser.add_argument('--stop', action='store_true', help='Arrête l\'application.')
-    parser.add_argument('--test', action='store_true', help='Exécute seulement les tests sur une app déjà démarrée ou en la démarrant.')
-    parser.add_argument('--integration', action='store_true', default=True, help='Test d\'intégration complet (défaut).')
+    parser.add_argument('--start', action='store_true', help="Démarre seulement l'application.")
+    parser.add_argument('--stop', action='store_true', help="Arrête l'application.")
+    parser.add_argument('--test', action='store_true', help="Exécute seulement les tests sur une app déjà démarrée ou en la démarrant.")
+    parser.add_argument('--integration', action='store_true', default=True, help="Test d'intégration complet (défaut).")
 
     args, unknown = parser.parse_known_args()
 
@@ -900,10 +917,10 @@ def main():
             elif args.test:
                 # Pour les tests seuls, on fait un cycle complet mais sans arrêt entre les étapes.
                 if await orchestrator.start_webapp(orchestrator.headless, args.frontend):
-                    success = await orchestrator.run_tests(args.tests)
+                    success = await orchestrator.run_tests(test_type=args.test_type, test_paths=args.tests)
             else:  # --integration par défaut
                 success = await orchestrator.full_integration_test(
-                    orchestrator.headless, args.frontend, args.tests)
+                    orchestrator.headless, args.frontend, args.test_type, args.tests)
         except KeyboardInterrupt:
             print("\n🛑 Interruption utilisateur détectée. Arrêt en cours...")
             # L'arrêt est géré par le signal handler
