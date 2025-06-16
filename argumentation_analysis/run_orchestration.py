@@ -108,14 +108,13 @@ async def run_orchestration(text_content: str, llm_service: Any, agents: Optiona
     logging.info(f"Lancement de l'orchestration sur un texte de {len(text_content)} caractères...")
     
     try:
-        from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
+        from argumentation_analysis.orchestration.analysis_runner import run_analysis
         
-        # Note: La fonction run_analysis_conversation n'accepte pas le paramètre enabled_agents
-        # Les agents sont configurés en interne dans la fonction
+        # Note: La fonction run_analysis gère l'orchestration complète.
         
         # Exécution de l'analyse
-        await run_analysis_conversation(
-            texte_a_analyser=text_content,
+        await run_analysis(
+            text_content=text_content,
             llm_service=llm_service
         )
         

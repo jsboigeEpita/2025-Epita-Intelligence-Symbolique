@@ -11,7 +11,7 @@ from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING, Coroutine
 import logging
 
 from semantic_kernel import Kernel
-# from semantic_kernel.agents import Agent # Cet import est supprimé car Agent n'existe plus
+from semantic_kernel.agents import Agent
 # Note pour le futur : BaseAgent a précédemment hérité de semantic_kernel.agents.Agent,
 # puis de semantic_kernel.agents.chat_completion.ChatCompletionAgent.
 # Cet héritage a été supprimé (voir commit e968f26d).
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     # Pour l'instant, il n'est pas explicitement typé dans les signatures de BaseAgent.
 
 
-class BaseAgent(ABC): # Suppression de l'héritage de sk.Agent (voir note ci-dessus)
+class BaseAgent(Agent): # Suppression de l'héritage de sk.Agent (voir note ci-dessus)
     """
     Classe de base abstraite pour tous les agents du système.
 
@@ -51,7 +51,7 @@ class BaseAgent(ABC): # Suppression de l'héritage de sk.Agent (voir note ci-des
     _logger: logging.Logger
     _llm_service_id: Optional[str]
 
-    def __init__(self, kernel: "Kernel", agent_name: str, system_prompt: Optional[str] = None, description: Optional[str] = None):
+    def __init__(self, kernel: "Kernel", agent_name: str, system_prompt: Optional[str] = None, description: Optional[str] = None, **kwargs):
         """
         Initialise une instance de BaseAgent.
 
@@ -63,13 +63,14 @@ class BaseAgent(ABC): # Suppression de l'héritage de sk.Agent (voir note ci-des
         """
         effective_description = description if description else (system_prompt if system_prompt else f"Agent {agent_name}")
         
-        # L'appel à super().__init__ de sk.Agent est supprimé.
-        # Nous initialisons les attributs nécessaires manuellement.
-        self.id = agent_name
-        self.name = agent_name
-        self.kernel = kernel # Le kernel est maintenant explicitement stocké ici.
-        self.instructions = system_prompt # Équivalent au system_prompt
-        self.description = effective_description
+        super().__init__(
+            id=agent_name,
+            name=agent_name,
+            kernel=kernel,
+            instructions=system_prompt,
+            description=effective_description,
+            **kwargs
+        )
 
         self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{self.name}")
         self._llm_service_id = None  # Sera défini par setup_agent_components

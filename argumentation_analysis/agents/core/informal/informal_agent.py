@@ -732,60 +732,57 @@ class InformalAnalysisAgent(BaseAgent):
                 "analysis_timestamp": self._get_timestamp()
             }
 
-    async def invoke_custom(self, history: list[ChatMessageContent]) -> ChatMessageContent:
+    async def get_response(
+        self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None
+    ) -> list[ChatMessageContent]:
+        """Implémentation de la méthode abstraite requise."""
+        self.logger.debug(f"get_response appelé, délégation à invoke_single pour {self.name}.")
+        return await self.invoke_single(kernel, arguments)
+
+    async def invoke_single(
+        self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None
+    ) -> list[ChatMessageContent]:
         """
-        Logique d'invocation principale de l'agent, utilisant l'historique de chat.
+        Logique d'invocation principale de l'agent, qui décide de la prochaine action
+        en fonction du dernier message de l'historique.
         """
-        self.logger.info(f"invoke_custom called for {self.name}")
+        if not arguments or "chat_history" not in arguments:
+            raise ValueError("L'historique de chat ('chat_history') est manquant dans les arguments.")
 
-        # Extraire le contenu du dernier message utilisateur
-        # ou de la dernière réponse d'un autre agent comme entrée principale.
-        input_text = next((m.content for m in reversed(history) if m.role in ["user", "assistant"] and m.content), None)
+        history = arguments["chat_history"]
+        last_message = history.messages[-1].content
+        # On cherche le premier message de l'utilisateur qui contient le texte à analyser.
+        # La logique de l'orchestrateur place le texte brut dans le premier message.
+        raw_text_user_message = next((m.content for m in history if m.role == "user"), None)
 
-        if not isinstance(input_text, str) or not input_text.strip():
-            self.logger.warning("Aucun contenu textuel valide trouvé dans l'historique récent pour l'analyse.")
-            error_msg = {"error": "No valid text content found in recent history to analyze."}
-            return ChatMessageContent(role="assistant", content=json.dumps(error_msg), name=self.name)
+        if not raw_text_user_message:
+            self.logger.error("Aucun message utilisateur trouvé dans l'historique pour l'analyse.")
+            # Retourner un message d'erreur structuré
+            error_content = json.dumps({"error": "Message utilisateur initial non trouvé dans l'historique."})
+            return [ChatMessageContent(role="assistant", content=error_content, name=self.name)]
 
-        self.logger.info(f"Déclenchement de l'analyse et catégorisation pour le texte : '{input_text[:100]}...'")
+        # On suppose que le premier message utilisateur contient le texte brut à analyser.
+        raw_text = str(raw_text_user_message)
+
+        # Logique de décision basée sur le contenu du dernier message
+        if "identifier les arguments" in last_message.lower():
+            self.logger.info("Tâche détectée: Identification des arguments.")
+            arguments_list = await self.identify_arguments(raw_text)
+            response_content = json.dumps({"identified_arguments": arguments_list}, indent=2, ensure_ascii=False)
         
-        try:
-            # Utiliser une des méthodes d'analyse principales de l'agent
-            analysis_result = await self.analyze_and_categorize(input_text)
-            response_content = json.dumps(analysis_result, indent=2, ensure_ascii=False)
+        elif "analyser les sophismes" in last_message.lower():
+            self.logger.info("Tâche détectée: Analyse des sophismes.")
+            fallacies_list = await self.analyze_fallacies(raw_text)
+            response_content = json.dumps({"identified_fallacies": fallacies_list}, indent=2, ensure_ascii=False)
             
-            return ChatMessageContent(role="assistant", content=response_content, name=self.name)
+        else:
+            self.logger.warning(f"Aucune tâche reconnue dans le message: '{last_message[:100]}...'. Action par défaut.")
+            # Action par défaut: analyse complète
+            analysis_result = await self.analyze_and_categorize(raw_text)
+            response_content = json.dumps(analysis_result, indent=2, ensure_ascii=False)
 
-        except Exception as e:
-            self.logger.error(f"Erreur durant 'analyze_and_categorize' dans invoke_custom: {e}", exc_info=True)
-            error_msg = {"error": f"An unexpected error occurred during analysis: {e}"}
-            return ChatMessageContent(role="assistant", content=json.dumps(error_msg), name=self.name)
-
-    async def invoke_single(self, history: list[ChatMessageContent], **kwargs):
-        """
-        Implémentation de la méthode abstraite invoke_single exigée par BaseAgent.
-        Délègue à la méthode d'invocation principale `invoke_custom`.
-        """
-        # On suppose que l'historique est le principal argument d'entrée.
-        # Les kwargs supplémentaires sont ignorés pour l'instant, mais la signature les accepte
-        # pour la compatibilité avec l'interface de BaseAgent.
-        return await self.invoke_custom(history)
-
-    async def invoke(self, history: list[ChatMessageContent]) -> ChatMessageContent:
-        """Méthode dépréciée, utilisez invoke_custom."""
-        import warnings
-        warnings.warn("The 'invoke' method is deprecated, use 'invoke_custom' instead.", DeprecationWarning)
-        return await self.invoke_custom(history)
-
-    async def get_response(self, history: list[ChatMessageContent], **kwargs) -> ChatMessageContent:
-        """
-        Implémentation de la méthode abstraite get_response.
-        Délègue à la méthode d'invocation principale de l'agent.
-        """
-        # La méthode get_response est souvent utilisée dans des contextes plus anciens ou différents
-        # de 'invoke'. Nous la faisons pointer vers la même logique de base pour la cohérence.
-        self.logger.info("Appel à la méthode get_response, délégation vers invoke_custom.")
-        return await self.invoke_custom(history)
+        response_message = ChatMessageContent(role="assistant", content=response_content, name=self.name)
+        return [response_message]
 
 # Log de chargement
 # logging.getLogger(__name__).debug("Module agents.core.informal.informal_agent chargé.") # Géré par BaseAgent

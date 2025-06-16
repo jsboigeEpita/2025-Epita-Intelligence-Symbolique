@@ -14,6 +14,7 @@ import asyncio
 import logging
 import json
 import random
+import re
 from typing import List, Optional, Union, Any, Dict
 
 # from argumentation_analysis.core.jvm_setup import initialize_jvm
@@ -45,7 +46,7 @@ from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
 from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
 from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
-from argumentation_analysis.agents.core.pl.pl_agent import PropositionalLogicAgent
+from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
 from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
 
 class AnalysisRunner:
@@ -173,60 +174,101 @@ async def _run_analysis_conversation(
         chat.add_user_message(initial_user_message)
         run_logger.info("Historique de chat initialisé avec le message utilisateur.")
 
-        full_history: List[ChatMessageContent] = [chat.messages[-1]]
+        # ABANDON DE AgentGroupChat - retour à une boucle manuelle contrôlée.
+        # L'API de AgentGroupChat est trop instable ou obscure dans cette version.
+        run_logger.info("Début de la boucle de conversation manuelle...")
+
+        full_history = chat  # Utiliser l'historique de chat initial
+        max_turns = 15
         
-        # Boucle de conversation manuelle
-        for i in range(15): # Limite de sécurité de 15 tours
-            run_logger.info(f"--- Tour de Conversation {i+1}/15 ---")
+        current_agent = None
+        for i in range(max_turns):
+            run_logger.info(f"--- Tour de conversation {i+1}/{max_turns} ---")
 
-            # 1. Utiliser le PM pour déterminer le prochain agent
-            run_logger.debug("Invocation du ProjectManagerAgent pour désigner le prochain agent...")
-            pm_response = await pm_agent_refactored.invoke_custom(history=full_history)
-            full_history.append(pm_response)
+            # Logique de sélection d'agent améliorée
+            if i == 0:
+                # Le premier tour est toujours pour le ProjectManagerAgent
+                next_agent = pm_agent_refactored
+            else:
+                # Si l'agent précédent N'ÉTAIT PAS le PM, le prochain DOIT être le PM.
+                if current_agent.name != pm_agent_refactored.name:
+                    next_agent = pm_agent_refactored
+                    run_logger.info("Le tour précédent a été exécuté par un agent travailleur. Le contrôle revient au ProjectManagerAgent.")
+                else:
+                    # Si l'agent précédent ÉTAIT le PM, on cherche sa désignation.
+                    last_message_content = full_history.messages[-1].content
+                    next_agent_name_str = "TERMINATE"  # Par défaut
 
-            try:
-                # Le PM doit répondre avec un JSON contenant le nom de l'agent
-                response_data = json.loads(pm_response.content or "{}")
-                next_agent_name = response_data.get("next_agent")
-                
-                if next_agent_name == "FINISH":
-                    run_logger.info("Le ProjectManagerAgent a signalé la fin de l'analyse.")
-                    break
-                
-                if not next_agent_name:
-                    run_logger.warning("Le PM n'a pas désigné de prochain agent. Fin de la boucle.")
-                    break
+                    import re
+                    match = re.search(r'designate_next_agent\(agent_name="([^"]+)"\)', last_message_content)
+                    
+                    if match:
+                        next_agent_name_str = match.group(1)
+                        run_logger.info(f"Prochain agent désigné par le PM : '{next_agent_name_str}'")
+                        next_agent = next((agent for agent in active_agents if agent.name == next_agent_name_str), None)
+                    else:
+                        run_logger.warning(f"Le PM n'a pas désigné de prochain agent. Réponse: {last_message_content[:150]}... Fin de la conversation.")
+                        next_agent = None # Force la fin
 
-                # 2. Trouver l'agent désigné
-                next_agent = next((agent for agent in active_agents if agent.name == next_agent_name), None)
-                if not next_agent:
-                    run_logger.error(f"Agent désigné '{next_agent_name}' non trouvé. Fin de la boucle.")
-                    break
-                
-                run_logger.info(f"Agent désigné par le PM: {next_agent.name}")
-
-                # 3. Invoquer l'agent désigné
-                run_logger.debug(f"Invocation de l'agent '{next_agent.name}'...")
-                agent_response = await next_agent.invoke_custom(history=full_history)
-                full_history.append(agent_response)
-                run_logger.info(f"Réponse reçue de {next_agent.name}.")
-
-            except json.JSONDecodeError:
-                run_logger.error("Réponse du PM non-JSON. Fin de la boucle.")
+            if not next_agent:
+                run_logger.info(f"Aucun prochain agent valide trouvé. Fin de la boucle de conversation.")
                 break
-            except Exception as e:
-                run_logger.error(f"Erreur pendant le tour de conversation: {e}", exc_info=True)
-                break
-        else:
-            run_logger.warning("Limite de 15 tours de conversation atteinte.")
+            
+            current_agent = next_agent # Mémoriser l'agent actuel pour la logique du prochain tour
 
-        run_logger.info("Cycle de conversation terminé.")
+            run_logger.info(f"Agent sélectionné pour ce tour: {next_agent.name}")
+
+            # Invoquer l'agent sélectionné
+            arguments = KernelArguments(chat_history=full_history)
+            result_stream = next_agent.invoke_stream(local_kernel, arguments=arguments)
+            
+            # Collecter la réponse complète du stream
+            response_messages = [message async for message in result_stream]
+            
+            if not response_messages:
+                run_logger.warning(f"L'agent {next_agent.name} n'a retourné aucune réponse. Fin de la conversation.")
+                break
+            
+            # Ajouter les nouvelles réponses à l'historique
+            last_message_content = ""
+            for message_list in response_messages:
+                for msg_content in message_list:
+                    full_history.add_message(message=msg_content)
+                    last_message_content = msg_content.content
+            
+            run_logger.info(f"Réponse de {next_agent.name} reçue et ajoutée à l'historique.")
+
+            # ---- NOUVELLE LOGIQUE: Exécution des Tool Calls du PM ----
+            if current_agent.name == pm_agent_refactored.name and last_message_content:
+                run_logger.info("Détection des appels d'outils planifiés par le ProjectManagerAgent...")
+                
+                # Regex pour trouver StateManager.add_analysis_task(description="...")
+                task_match = re.search(r'StateManager\.add_analysis_task\(description="([^"]+)"\)', last_message_content)
+                if task_match:
+                    task_description = task_match.group(1)
+                    run_logger.info(f"Appel à 'add_analysis_task' trouvé. Description: '{task_description}'")
+                    try:
+                        await local_kernel.invoke(
+                            plugin_name="StateManager",
+                            function_name="add_analysis_task",
+                            arguments=KernelArguments(description=task_description)
+                        )
+                        run_logger.info("Exécution de 'add_analysis_task' réussie. L'état a été mis à jour.")
+                    except Exception as e:
+                        run_logger.error(f"Erreur lors de l'exécution de 'add_analysis_task': {e}", exc_info=True)
+
+                # La désignation du prochain agent est déjà gérée par la logique de sélection de boucle,
+                # mais nous pourrions aussi appeler la fonction ici pour plus de rigueur.
+                # Pour l'instant, on laisse la logique de boucle principale s'en charger.
+
+        run_logger.info("Boucle de conversation manuelle terminée.")
         
         # Logger l'historique complet pour le débogage
         if full_history:
             run_logger.debug("=== Transcription de la Conversation ===")
             for message in full_history:
-                run_logger.debug(f"[{message.author_name}]:\n{message.content}")
+                author_info = message.name or f"Role:{message.role}"
+                run_logger.debug(f"[{author_info}]:\n{message.content}")
             run_logger.debug("======================================")
 
         final_analysis = local_state.to_json()
@@ -250,7 +292,7 @@ async def _run_analysis_conversation(
          
          if final_history_messages:
              for msg_idx, msg in enumerate(final_history_messages):
-                 author = msg.name or getattr(msg, 'author_name', f"Role:{msg.role.name}")
+                 author = msg.name or f"Role:{msg.role.name}"
                  role_name = msg.role.name
                  content_display = str(msg.content)[:2000] + "..." if len(str(msg.content)) > 2000 else str(msg.content)
                  print(f"[{msg_idx}] [{author} ({role_name})]: {content_display}")
@@ -402,7 +444,7 @@ async def run_analysis(text_content, llm_service=None):
    if llm_service is None:
        from argumentation_analysis.core.llm_service import create_llm_service
        llm_service = create_llm_service()
-   return await run_analysis_conversation(
+   return await _run_analysis_conversation(
        texte_a_analyser=text_content,
        llm_service=llm_service
    )
