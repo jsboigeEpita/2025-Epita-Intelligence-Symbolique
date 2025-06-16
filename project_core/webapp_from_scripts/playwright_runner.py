@@ -128,16 +128,25 @@ class PlaywrightRunner:
 
     def _build_python_command(self, test_paths: List[str], config: Dict[str, Any], pytest_args: List[str]):
         """Construit la commande pour les tests basés sur Pytest."""
-        # Utilise python -m pytest pour être sûr d'utiliser l'environnement courant
         parts = [sys.executable, '-m', 'pytest']
-        parts.extend(test_paths)
         
+        # Passer les URLs en tant qu'options et non en tant que chemins de test
+        if config.get('backend_url'):
+            parts.append(f"--backend-url={config['backend_url']}")
+        if config.get('frontend_url'):
+            parts.append(f"--frontend-url={config['frontend_url']}")
+            
+        # Passer les options de navigateur
         if config.get('browser'):
             parts.append(f"--browser={config['browser']}")
         if not config.get('headless', True):
             parts.append("--headed")
+
+        # Ajouter les chemins de test réels
+        if test_paths:
+            parts.extend(test_paths)
         
-        # Ajout des arguments pytest supplémentaires
+        # Ajouter les arguments pytest supplémentaires
         if pytest_args:
             parts.extend(pytest_args)
             
