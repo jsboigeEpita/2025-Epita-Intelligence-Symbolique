@@ -10,6 +10,7 @@ Auteur: Projet Intelligence Symbolique EPITA
 Date: 07/06/2025
 """
 
+import functools
 import os
 import sys
 import time
@@ -257,13 +258,14 @@ class FrontendManager:
         if not self.build_dir or not self.build_dir.exists():
             raise FileNotFoundError(f"Le répertoire de build '{self.build_dir}' est introuvable.")
 
-        class Handler(http.server.SimpleHTTPRequestHandler):
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, directory=str(self.build_dir), **kwargs)
-
+        handler_with_directory = functools.partial(
+            http.server.SimpleHTTPRequestHandler,
+            directory=str(self.build_dir)
+        )
+        
         # Utilisation de 0.0.0.0 pour être accessible depuis l'extérieur du conteneur si nécessaire
         address = ("127.0.0.1", self.port)
-        self.static_server = socketserver.TCPServer(address, Handler)
+        self.static_server = socketserver.TCPServer(address, handler_with_directory)
         
         self.static_server_thread = threading.Thread(target=self.static_server.serve_forever)
         self.static_server_thread.daemon = True
