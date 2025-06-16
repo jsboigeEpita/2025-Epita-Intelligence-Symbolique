@@ -6,6 +6,8 @@ from semantic_kernel.contents.utils.author_role import AuthorRole
 from typing import List, Dict, TYPE_CHECKING, Optional # Ajout de Optional
 import logging
 from pydantic import PrivateAttr
+from argumentation_analysis.orchestration.base import SelectionStrategy, TerminationStrategy
+
 # L'import de 'argumentation_analysis.orchestration.base.SelectionStrategy' et 
 # 'argumentation_analysis.orchestration.base.TerminationStrategy' est omis
 # car ces noms sont maintenant fournis par 'argumentation_analysis.utils.semantic_kernel_compatibility'.
