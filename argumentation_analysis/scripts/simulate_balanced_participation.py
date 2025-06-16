@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from typing import Dict, List, Tuple
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
-from argumentation_analysis.utils.semantic_kernel_compatibility import Agent
+from semantic_kernel.agents import Agent
 from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole
 from unittest.mock import MagicMock
 
