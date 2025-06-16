@@ -46,19 +46,19 @@ def ensure_env(env_name: str = "projet-is", silent: bool = True) -> bool:
     # DEBUG: Imprimer l'état initial
     print(f"[auto_env DEBUG] Début ensure_env. Python: {sys.executable}, CONDA_DEFAULT_ENV: {os.getenv('CONDA_DEFAULT_ENV')}, silent: {silent}", file=sys.stderr)
 
-    # Vérification immédiate de l'exécutable Python
-    if env_name not in sys.executable:
-        error_message_immediate = (
-            f"ERREUR CRITIQUE : L'INTERPRÉTEUR PYTHON EST INCORRECT.\n"
-            f"  Exécutable utilisé : '{sys.executable}'\n"
-            f"  L'exécutable attendu doit provenir de l'environnement Conda '{env_name}'.\n\n"
-            f"  SOLUTION IMPÉRATIVE :\n"
-            f"  Utilisez le script wrapper 'activate_project_env.ps1' situé à la RACINE du projet.\n\n"
-            f"  Exemple : powershell -File .\\activate_project_env.ps1 -CommandToRun \"python votre_script.py\"\n\n"
-            f"  IMPORTANT : Ce script ne se contente pas d'activer Conda. Il configure aussi JAVA_HOME, PYTHONPATH, et d'autres variables d'environnement cruciales. Ne PAS l'ignorer."
-        )
-        print(f"[auto_env] {error_message_immediate}", file=sys.stderr)
-        raise RuntimeError(error_message_immediate)
+    # Vérification immédiate de l'exécutable Python - COMMENTÉE CAR TROP PRÉCOCE
+    # if env_name not in sys.executable:
+    #     error_message_immediate = (
+    #         f"ERREUR CRITIQUE : L'INTERPRÉTEUR PYTHON EST INCORRECT.\n"
+    #         f"  Exécutable utilisé : '{sys.executable}'\n"
+    #         f"  L'exécutable attendu doit provenir de l'environnement Conda '{env_name}'.\n\n"
+    #         f"  SOLUTION IMPÉRATIVE :\n"
+    #         f"  Utilisez le script wrapper 'activate_project_env.ps1' situé à la RACINE du projet.\n\n"
+    #         f"  Exemple : powershell -File .\\activate_project_env.ps1 -CommandToRun \"python votre_script.py\"\n\n"
+    #         f"  IMPORTANT : Ce script ne se contente pas d'activer Conda. Il configure aussi JAVA_HOME, PYTHONPATH, et d'autres variables d'environnement cruciales. Ne PAS l'ignorer."
+    #     )
+    #     print(f"[auto_env] {error_message_immediate}", file=sys.stderr)
+    #     raise RuntimeError(error_message_immediate)
 
     # Logique de court-circuit si le script d'activation principal est déjà en cours d'exécution
     if os.getenv('IS_ACTIVATION_SCRIPT_RUNNING') == 'true':

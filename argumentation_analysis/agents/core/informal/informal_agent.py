@@ -26,7 +26,7 @@ from typing import Dict, List, Any, Optional
 import semantic_kernel as sk
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
-from semantic_kernel.contents.role import Role
+from semantic_kernel.contents.author_role import AuthorRole
 
 # Import de la classe de base
 from ..abc.agent_bases import BaseAgent
@@ -741,12 +741,12 @@ class InformalAnalysisAgent(BaseAgent):
 
         # Extraire le contenu du dernier message utilisateur
         # ou de la dernière réponse d'un autre agent comme entrée principale.
-        input_text = next((m.content for m in reversed(history) if m.role in [Role.USER, Role.ASSISTANT] and m.content), None)
+        input_text = next((m.content for m in reversed(history) if m.role in [AuthorRole.USER, AuthorRole.ASSISTANT] and m.content), None)
 
         if not isinstance(input_text, str) or not input_text.strip():
             self.logger.warning("Aucun contenu textuel valide trouvé dans l'historique récent pour l'analyse.")
             error_msg = {"error": "No valid text content found in recent history to analyze."}
-            return ChatMessageContent(role=Role.ASSISTANT, content=json.dumps(error_msg), name=self.name)
+            return ChatMessageContent(role=AuthorRole.ASSISTANT, content=json.dumps(error_msg), name=self.name)
 
         self.logger.info(f"Déclenchement de l'analyse et catégorisation pour le texte : '{input_text[:100]}...'")
         
@@ -755,12 +755,12 @@ class InformalAnalysisAgent(BaseAgent):
             analysis_result = await self.analyze_and_categorize(input_text)
             response_content = json.dumps(analysis_result, indent=2, ensure_ascii=False)
             
-            return ChatMessageContent(role=Role.ASSISTANT, content=response_content, name=self.name)
+            return ChatMessageContent(role=AuthorRole.ASSISTANT, content=response_content, name=self.name)
 
         except Exception as e:
             self.logger.error(f"Erreur durant 'analyze_and_categorize' dans invoke_custom: {e}", exc_info=True)
             error_msg = {"error": f"An unexpected error occurred during analysis: {e}"}
-            return ChatMessageContent(role=Role.ASSISTANT, content=json.dumps(error_msg), name=self.name)
+            return ChatMessageContent(role=AuthorRole.ASSISTANT, content=json.dumps(error_msg), name=self.name)
 
     async def invoke(self, history: list[ChatMessageContent]) -> ChatMessageContent:
         """Méthode dépréciée, utilisez invoke_custom."""
