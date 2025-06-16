@@ -192,44 +192,52 @@ class FrontendManager:
         """S'assure que les dépendances npm sont installées"""
         node_modules = self.frontend_path / 'node_modules'
         
-        if not node_modules.exists():
-            self.logger.info("Le répertoire 'node_modules' est manquant. Lancement de 'npm install'...")
+        # Toujours exécuter `npm install` pour garantir la fraîcheur des dépendances dans un contexte de test.
+        # Cela évite les erreurs dues à un `node_modules` incomplet ou obsolète.
+        self.logger.info("Lancement de 'npm install' pour garantir la fraîcheur des dépendances...")
+        
+        try:
+            # Utilisation de l'environnement préparé pour trouver npm
+            cmd = ['npm', 'install']
+            # Sur Windows, npm.cmd est un script batch, il est donc plus fiable de l'exécuter avec `shell=True`.
+            # La commande est jointe en une chaîne pour que le shell puisse l'interpréter correctement.
+            is_windows = sys.platform == "win32"
+            command_to_run = ' '.join(cmd) if is_windows else cmd
+
+            process = subprocess.Popen(
+                command_to_run,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=self.frontend_path,
+                env=env,
+                shell=is_windows,
+                text=True, # Utiliser le mode texte pour un décodage automatique
+                encoding='utf-8',
+                errors='replace'
+            )
             
-            try:
-                # Utilisation de l'environnement préparé pour trouver npm
-                cmd = ['npm', 'install']
-                if sys.platform == "win32":
-                    # Sur windows, Popen a besoin de shell=True pour trouver npm.cmd via le PATH modifié
-                    process = subprocess.Popen(
-                        ' '.join(cmd),
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        cwd=self.frontend_path,
-                        env=env,
-                        shell=True
-                    )
-                else:
-                    # Sur les autres systèmes, la liste de commandes avec env fonctionne bien.
-                    process = subprocess.Popen(
-                        cmd,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        cwd=self.frontend_path,
-                        env=env
-                    )
+            # Utilisation de communicate() pour lire stdout/stderr et attendre la fin.
+            # Un timeout long est nécessaire car npm install peut être lent.
+            stdout, stderr = process.communicate(timeout=300)  # 5 minutes de timeout
+            
+            if process.returncode != 0:
+                self.logger.error(f"Échec de 'npm install'. Code de retour: {process.returncode}")
+                self.logger.error(f"--- STDOUT ---\n{stdout}")
+                self.logger.error(f"--- STDERR ---\n{stderr}")
+                # Lever une exception pour que l'échec soit clair.
+                raise RuntimeError(f"npm install a échoué avec le code {process.returncode}")
+            else:
+                self.logger.info("'npm install' terminé avec succès.")
+                if stdout:
+                     self.logger.debug(f"--- STDOUT de npm install ---\n{stdout}")
                 
-                stdout, stderr = process.communicate(timeout=120)  # 2 min max
-                
-                if process.returncode != 0:
-                    self.logger.error(f"Échec npm install: {stderr.decode()}")
-                else:
-                    self.logger.info("Dépendances npm installées")
-                    
-            except subprocess.TimeoutExpired:
-                process.kill()
-                self.logger.error("Timeout installation npm")
-            except Exception as e:
-                self.logger.error(f"Erreur npm install: {e}")
+        except subprocess.TimeoutExpired:
+            process.kill()
+            self.logger.error("Timeout de 5 minutes dépassé pour 'npm install'. Le processus a été tué.")
+            raise
+        except Exception as e:
+            self.logger.error(f"Erreur inattendue pendant 'npm install': {e}", exc_info=True)
+            raise
     
     def _get_frontend_env(self) -> Dict[str, str]:
         """Prépare l'environnement pour le frontend"""
@@ -241,7 +249,7 @@ class FrontendManager:
             'PORT': str(self.port),
             'GENERATE_SOURCEMAP': 'false',  # Performance
             'SKIP_PREFLIGHT_CHECK': 'true',  # Évite erreurs compatibilité
-            'CI': 'true' # Force le mode non-interactif
+            'CI': 'false' # Force le mode non-interactif, mais en ignorant les warnings comme des erreurs
         })
 
         if self.backend_url:

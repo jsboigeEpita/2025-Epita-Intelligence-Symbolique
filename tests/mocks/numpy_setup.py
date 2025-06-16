@@ -317,9 +317,9 @@ def setup_numpy():
 @pytest.fixture(scope="function", autouse=True)
 def setup_numpy_for_tests_fixture(request):
     # E2E tests have their own conftest.py, so this fixture should ignore them.
-    path_str_for_e2e_check = str(request.node.fspath).replace(os.sep, '/')
-    if 'tests/e2e/python/' in path_str_for_e2e_check:
-        logger.info(f"NUMPY_SETUP: Skipping for E2E test {request.node.name} (handled by e2e/conftest.py).")
+    # Utiliser un marqueur pour identifier les tests E2E. C'est plus robuste que de tester les chemins.
+    if request.node.get_closest_marker("e2e_test"):
+        logger.info(f"NUMPY_SETUP: Skipping for E2E test {request.node.name} marked with 'e2e_test'.")
         yield
         return
     # Nettoyage FORCÉ au tout début de chaque exécution de la fixture

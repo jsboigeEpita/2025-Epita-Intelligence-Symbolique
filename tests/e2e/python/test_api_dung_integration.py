@@ -2,7 +2,7 @@ import pytest
 from playwright.sync_api import APIRequestContext, expect
 
 # Marqueur pour facilement cibler ces tests
-pytestmark = pytest.mark.api_integration
+pytestmark = [pytest.mark.api_integration, pytest.mark.e2e_test]
 
 def test_dung_framework_analysis_api(api_request_context: APIRequestContext):
     """
