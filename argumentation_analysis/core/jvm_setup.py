@@ -676,6 +676,12 @@ def shutdown_jvm():
     _JVM_INITIALIZED_THIS_SESSION = False
     _JVM_WAS_SHUTDOWN = True
 
+def is_jvm_owned_by_session_fixture() -> bool:
+    """Retourne True si la JVM est contrôlée par une fixture de session pytest."""
+    # Cette fonction permet d'éviter l'import direct d'une variable privée
+    global _SESSION_FIXTURE_OWNS_JVM
+    return _SESSION_FIXTURE_OWNS_JVM
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     main_logger = logging.getLogger(__name__)

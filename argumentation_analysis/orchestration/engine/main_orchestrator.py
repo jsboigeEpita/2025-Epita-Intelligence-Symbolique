@@ -261,8 +261,7 @@ class MainOrchestrator:
 
     async def _synthesize_hierarchical_results(self, current_results: Dict[str, Any]) -> Dict[str, Any]:
         """Synthétise les résultats de l'orchestration hiérarchique."""
-        # Note: HierarchicalReport (importé) pourrait être utilisé ici pour structurer la sortie de manière plus formelle.
-        # Pour l'instant, la logique migrée de unified_orchestration_pipeline.py ne l'utilise pas directement.
+        # Note: HierarchicalReport pourrait être utilisé ici pour structurer la sortie.
         synthesis = {
             "coordination_effectiveness": 0.0,
             "strategic_alignment": 0.0,

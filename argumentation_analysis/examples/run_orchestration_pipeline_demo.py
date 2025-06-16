@@ -44,20 +44,12 @@ logging.basicConfig(
     datefmt='%H:%M:%S'
 )
 
-# Imports du pipeline d'orchestration
+# Import du nouveau pipeline unifié
 try:
-    from argumentation_analysis.pipelines.unified_orchestration_pipeline import (
-        run_unified_orchestration_pipeline,
-        run_extended_unified_analysis,
-        compare_orchestration_approaches,
-        ExtendedOrchestrationConfig,
-        OrchestrationMode,
-        AnalysisType,
-        create_extended_config_from_params
-    )
+    from argumentation_analysis.pipelines.unified_pipeline import analyze_text
     ORCHESTRATION_AVAILABLE = True
 except ImportError as e:
-    print(f"⚠️ Pipeline d'orchestration non disponible: {e}")
+    print(f"⚠️ Pipeline unifié non disponible: {e}")
     ORCHESTRATION_AVAILABLE = False
 
 # Import du pipeline original pour comparaison
@@ -217,7 +209,7 @@ async def demo_basic_usage():
     start_time = time.time()
     
     try:
-        results = await run_unified_orchestration_pipeline(text)
+        results = await analyze_text(text, mode="orchestration")
         execution_time = time.time() - start_time
         
         print(f"✅ Analyse terminée en {execution_time:.2f}s")
@@ -233,19 +225,14 @@ async def demo_hierarchical_orchestration():
     
     text = EXAMPLE_TEXTS["comprehensive"]
     
-    config = ExtendedOrchestrationConfig(
-        analysis_modes=["informal", "formal", "unified"],
-        orchestration_mode=OrchestrationMode.HIERARCHICAL_FULL,
-        analysis_type=AnalysisType.COMPREHENSIVE,
-        enable_hierarchical=True,
-        enable_specialized_orchestrators=False,  # Désactiver pour se concentrer sur hiérarchique
-        save_orchestration_trace=True
-    )
-    
     print("🏗️ Lancement de l'orchestration hiérarchique complète...")
     
     try:
-        results = await run_unified_orchestration_pipeline(text, config)
+        results = await analyze_text(
+            text,
+            mode="orchestration",
+            orchestration_mode="hierarchical_full"
+        )
         print_results_summary(results, "Orchestration Hiérarchique Complète")
         
         # Affichage détaillé de la trace d'orchestration
@@ -268,36 +255,30 @@ async def demo_specialized_orchestrators():
     specialized_demos = [
         {
             "name": "Investigation Cluedo",
-            "mode": OrchestrationMode.CLUEDO_INVESTIGATION,
-            "type": AnalysisType.INVESTIGATIVE,
+            "mode": "cluedo",
             "text": EXAMPLE_TEXTS["investigative"]
         },
         {
             "name": "Analyse Rhétorique",
-            "mode": OrchestrationMode.CONVERSATION,
-            "type": AnalysisType.RHETORICAL,
+            "mode": "conversation",
             "text": EXAMPLE_TEXTS["rhetorical"]
         },
         {
             "name": "Détection de Sophismes",
-            "mode": OrchestrationMode.REAL,
-            "type": AnalysisType.FALLACY_FOCUSED,
+            "mode": "real_llm",
             "text": EXAMPLE_TEXTS["fallacy_focused"]
         }
     ]
-    
+
     for demo in specialized_demos:
         print(f"\n🚀 {demo['name']}...")
         
-        config = ExtendedOrchestrationConfig(
-            orchestration_mode=demo["mode"],
-            analysis_type=demo["type"],
-            enable_hierarchical=False,
-            enable_specialized_orchestrators=True
-        )
-        
         try:
-            results = await run_unified_orchestration_pipeline(demo["text"], config)
+            results = await analyze_text(
+                demo["text"],
+                mode="orchestration",
+                orchestration_mode=demo["mode"]
+            )
             print_results_summary(results, f"Orchestrateur Spécialisé - {demo['name']}")
             
         except Exception as e:
@@ -313,15 +294,14 @@ async def demo_api_compatibility():
     print("🔄 Test avec l'API de compatibilité...")
     
     try:
-        # Nouvelle API compatible
-        results = await run_extended_unified_analysis(
-            text=text,
-            mode="comprehensive",
+        # Nouvelle API
+        results = await analyze_text(
+            text,
+            mode="orchestration",
             orchestration_mode="auto_select",
             use_mocks=False
         )
-        
-        print_results_summary(results, "API de Compatibilité")
+        print_results_summary(results, "Analyse via API unifiée")
         
         # Comparaison avec l'API originale si disponible
         if ORIGINAL_PIPELINE_AVAILABLE:
@@ -356,47 +336,8 @@ async def demo_orchestration_comparison():
     print("🔄 Lancement des analyses comparatives...")
     
     try:
-        comparison = await compare_orchestration_approaches(text, approaches)
-        
-        print("\n📊 Résultats de la comparaison:")
-        print(f"   • Texte analysé: {comparison['text']}")
-        
-        # Résultats par approche
-        for approach, results in comparison["approaches"].items():
-            status = results.get("status", "unknown")
-            exec_time = results.get("execution_time", 0)
-            
-            if status == "success":
-                print(f"   • {approach}: ✅ {exec_time:.2f}s")
-                
-                # Détails de l'orchestration
-                summary = results.get("summary", {})
-                active_components = [k for k, v in summary.items() if v]
-                if active_components:
-                    print(f"     └─ Composants actifs: {', '.join(active_components)}")
-            else:
-                error = results.get("error", "Erreur inconnue")
-                print(f"   • {approach}: ❌ {error}")
-        
-        # Recommandations de la comparaison
-        comp_results = comparison.get("comparison", {})
-        if comp_results:
-            print("\n🏆 Résultats comparatifs:")
-            fastest = comp_results.get("fastest")
-            most_comprehensive = comp_results.get("most_comprehensive")
-            
-            if fastest:
-                print(f"   • Approche la plus rapide: {fastest}")
-            if most_comprehensive:
-                print(f"   • Approche la plus complète: {most_comprehensive}")
-        
-        # Recommandations générales
-        recommendations = comparison.get("recommendations", [])
-        if recommendations:
-            print("\n💡 Recommandations:")
-            for rec in recommendations:
-                print(f"   • {rec}")
-                
+        print("La comparaison des approches est maintenant gérée par le mode 'hybrid'.")
+        # Laisser vide car la fonction a été Dépréciée.
     except Exception as e:
         print(f"❌ Erreur comparaison: {e}")
 
@@ -405,27 +346,18 @@ async def demo_custom_analysis():
     """Démonstration d'une analyse personnalisée."""
     print_header("Démonstration - Analyse Personnalisée")
     
-    # Configuration personnalisée avancée
-    config = ExtendedOrchestrationConfig(
-        analysis_modes=["informal", "unified"],
-        orchestration_mode=OrchestrationMode.ADAPTIVE_HYBRID,
-        analysis_type=AnalysisType.DEBATE_ANALYSIS,
-        enable_hierarchical=True,
-        enable_specialized_orchestrators=True,
-        auto_select_orchestrator=True,
-        max_concurrent_analyses=3,
-        analysis_timeout=60,
-        save_orchestration_trace=True,
-        specialized_orchestrator_priority=["conversation", "cluedo", "real_llm"]
-    )
-    
     text = EXAMPLE_TEXTS["debate"]
     
     print("🎯 Analyse de débat avec configuration hybride adaptative...")
     print(f"📝 Texte: {text[:150]}...")
     
     try:
-        results = await run_unified_orchestration_pipeline(text, config)
+        results = await analyze_text(
+            text,
+            mode="hybrid",
+            orchestration_mode="adaptive_hybrid",
+            analysis_type="debate_analysis"
+        )
         print_results_summary(results, "Analyse Personnalisée - Débat")
         
         # Affichage des détails de configuration
