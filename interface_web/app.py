@@ -22,6 +22,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
+from a2wsgi import ASGIMiddleware
+
 # Activation automatique de l'environnement
 try:
     from scripts.core.auto_env import ensure_env
@@ -72,12 +74,12 @@ except Exception as e:
     raise ImportError(f"ServiceManager requis mais erreur d'import: {e}")
 
 # Configuration de l'application Flask
-app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'dev-key-EPITA-2025')
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
+app_flask = Flask(__name__)
+app_flask.secret_key = os.environ.get('SECRET_KEY', 'dev-key-EPITA-2025')
+app_flask.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
 # Configuration CORS simple sans dépendance externe
-@app.after_request
+@app_flask.after_request
 def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
@@ -127,7 +129,7 @@ def initialize_services():
             from argumentation_analysis.services.jtms_session_manager import JTMSSessionManager
             
             jtms_service = JTMSService()
-            jtms_session_manager = JTMSSessionManager()
+            jtms_session_manager = JTMSSessionManager(jtms_service=jtms_service)
             JTMS_SERVICES_AVAILABLE = True
             
             logger.info("Services JTMS initialisés avec succès")
@@ -148,19 +150,19 @@ def setup_app_context():
     """Configure le contexte global de l'application pour les services JTMS."""
     if JTMS_SERVICES_AVAILABLE and jtms_blueprint:
         # Rendre les services disponibles dans le contexte Flask
-        app.config['JTMS_SERVICE'] = jtms_service
-        app.config['JTMS_SESSION_MANAGER'] = jtms_session_manager
-        app.config['JTMS_AVAILABLE'] = True
+        app_flask.config['JTMS_SERVICE'] = jtms_service
+        app_flask.config['JTMS_SESSION_MANAGER'] = jtms_session_manager
+        app_flask.config['JTMS_AVAILABLE'] = True
         
         # Enregistrer le blueprint JTMS
-        app.register_blueprint(jtms_blueprint, url_prefix='/jtms')
+        app_flask.register_blueprint(jtms_blueprint, url_prefix='/jtms')
         logger.info("Blueprint JTMS enregistré avec succès sur /jtms")
     else:
-        app.config['JTMS_AVAILABLE'] = False
+        app_flask.config['JTMS_AVAILABLE'] = False
         logger.warning("Services JTMS non disponibles - Blueprint non enregistré")
 
 
-@app.route('/')
+@app_flask.route('/')
 def index():
     """Page d'accueil de l'interface web."""
     # Vérifier la disponibilité des services pour l'affichage
@@ -171,7 +173,7 @@ def index():
     return render_template('index.html', **context)
 
 
-@app.route('/analyze', methods=['POST'])
+@app_flask.route('/analyze', methods=['POST'])
 def analyze():
     """
     Route pour l'analyse de texte.
@@ -247,7 +249,7 @@ def analyze():
         return jsonify({'error': 'Erreur interne du serveur'}), 500
 
 
-@app.route('/status')
+@app_flask.route('/status')
 def status():
     """
     Route pour vérifier le statut des services.
@@ -277,6 +279,7 @@ def status():
             status_info['services']['health_check'] = health_status
             status_info['services']['service_details'] = service_status
             
+        logger.info(f"Returning status: {json.dumps(status_info)}")
         return jsonify(status_info)
             
     except Exception as e:
@@ -288,7 +291,7 @@ def status():
         }), 500
 
 
-@app.route('/api/examples')
+@app_flask.route('/api/examples')
 def get_examples():
     """
     Route pour obtenir des exemples de textes d'analyse.
@@ -371,53 +374,46 @@ def _generate_analysis_summary(result: Dict[str, Any], text: str) -> Dict[str, A
 # L'application doit crasher si l'environnement n'est pas opérationnel
 
 
-@app.errorhandler(404)
+@app_flask.errorhandler(404)
 def page_not_found(e):
     """Gestionnaire d'erreur 404."""
     return render_template('index.html'), 404
 
 
-@app.errorhandler(500)
+@app_flask.errorhandler(500)
 def internal_server_error(e):
     """Gestionnaire d'erreur 500."""
     logger.error(f"Erreur interne: {e}")
     return jsonify({'error': 'Erreur interne du serveur'}), 500
 
 
+# Initialisation des services et configuration du contexte
+initialize_services()
+setup_app_context()
+
+# Enveloppement avec A2WSGI pour la compatibilité ASGI
+app = ASGIMiddleware(app_flask)
+
 if __name__ == '__main__':
-    # Gestion des arguments de la ligne de commande
-    parser = argparse.ArgumentParser(description="Lance l'interface web Flask pour l'analyse argumentative.")
-    parser.add_argument('--port', type=int, default=int(os.environ.get('PORT', 5001)),
-                        help='Port pour exécuter le serveur Flask.')
-    parser.add_argument('--debug', action='store_true',
-                        help='Active le mode debug de Flask.')
+    # Cette section permet de lancer le serveur en mode développement avec Uvicorn
+    # directement depuis ce script, ce qui est pratique pour le débogage.
+    # Dans un environnement de production ou de test automatisé, un serveur Gunicorn ou Uvicorn
+    # serait lancé en pointant vers 'interface_web.app:app'.
+    import uvicorn
+    
+    parser = argparse.ArgumentParser(description="Lance le serveur web Flask via Uvicorn.")
+    parser.add_argument('--port', type=int, default=int(os.environ.get('PORT', 5003)),
+                        help='Port pour exécuter le serveur.')
+    parser.add_argument('--host', type=str, default='127.0.0.1',
+                        help='Hôte sur lequel écouter.')
     args = parser.parse_args()
 
-    port = args.port
-    debug = args.debug or (os.environ.get('DEBUG', 'False').lower() == 'true')
+    logger.info(f"Démarrage du serveur Uvicorn sur http://{args.host}:{args.port}")
     
-    logger.info(f"Démarrage de l'interface web sur le port {port}")
-    logger.info(f"Mode debug: {debug}")
-    logger.info(f"ServiceManager disponible: {SERVICE_MANAGER_AVAILABLE}")
-    
-    # Initialisation des répertoires
-    RESULTS_DIR.mkdir(exist_ok=True)
-    DATA_DIR.mkdir(exist_ok=True)
-    
-    # Initialisation des services
-    initialize_services()
-    
-    # Configuration du contexte d'application
-    setup_app_context()
-    
-    logger.info(f"JTMS disponible: {JTMS_SERVICES_AVAILABLE}")
-    if JTMS_AVAILABLE:
-        logger.info("Routes JTMS disponibles sur: /jtms/dashboard, /jtms/sessions, /jtms/sherlock_watson, /jtms/tutorial, /jtms/playground")
-    
-    # Démarrage de l'application
-    app.run(
-        host='0.0.0.0',
-        port=port,
-        debug=debug,
-        threaded=True
+    uvicorn.run(
+        "interface_web.app:app",
+        host=args.host,
+        port=args.port,
+        log_level="info",
+        reload=True  # Activer le rechargement automatique pour le développement
     )
