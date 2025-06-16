@@ -84,30 +84,39 @@ class DungAnalysisService:
         print("Service d'analyse Dung initialisé, utilisant EnhancedDungAgent.")
 
 
-    def analyze_framework(self, arguments: list[str], attacks: list[tuple[str, str]]) -> dict:
+    def analyze_framework(self, arguments: list[str], attacks: list[tuple[str, str]], options: dict = None) -> dict:
         """
         Analyse complète d'un framework d'argumentation en utilisant EnhancedDungAgent.
         """
+        if options is None:
+            options = {}
+
         # 1. Créer et peupler l'agent de l'étudiant
         agent = self.agent_class()
         for arg_name in arguments:
             agent.add_argument(arg_name)
         for source, target in attacks:
             agent.add_attack(source, target)
-
-        # 2. Obtenir les résultats de l'agent
-        grounded_ext = agent.get_grounded_extension()
-        preferred_ext = agent.get_preferred_extensions()
-        stable_ext = agent.get_stable_extensions()
-        complete_ext = agent.get_complete_extensions()
-        admissible_sets = agent.get_admissible_sets()
-        
-        # Note: 'ideal' et 'semi_stable' ne sont pas implémentés par l'agent de base.
-        # Nous les laissons vides pour maintenir la compatibilité de l'API.
         
         # 3. Formater les résultats dans la structure attendue
         results = {
-            'semantics': {
+            'argument_status': {}, # Sera rempli plus bas
+            'graph_properties': self._get_framework_properties(agent)
+        }
+
+        # 2. Calculer les extensions et le statut des arguments si demandé
+        if options.get('compute_extensions', False):
+            grounded_ext = agent.get_grounded_extension()
+            preferred_ext = agent.get_preferred_extensions()
+            stable_ext = agent.get_stable_extensions()
+            complete_ext = agent.get_complete_extensions()
+            admissible_sets = agent.get_admissible_sets()
+
+            # Remplir le statut des arguments
+            results['argument_status'] = self._get_all_arguments_status(arguments, preferred_ext, grounded_ext, stable_ext)
+            
+            # Renommer la clé 'semantics' en 'extensions' pour correspondre au test
+            results['extensions'] = {
                 'grounded': sorted(grounded_ext),
                 'preferred': sorted(preferred_ext),
                 'stable': sorted(stable_ext),
@@ -115,10 +124,7 @@ class DungAnalysisService:
                 'admissible': sorted(admissible_sets),
                 'ideal': [],
                 'semi_stable': []
-            },
-            'argument_status': self._get_all_arguments_status(arguments, preferred_ext, grounded_ext, stable_ext),
-            'graph_properties': self._get_framework_properties(agent)
-        }
+            }
         
         return results
 

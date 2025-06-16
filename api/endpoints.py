@@ -45,12 +45,13 @@ async def analyze_framework_endpoint(
     analysis_result = await asyncio.to_thread(
         dung_service.analyze_framework,
         request.arguments,
-        [tuple(attack) for attack in request.attacks] # Convertit les listes en tuples
+        [tuple(attack) for attack in request.attacks], # Convertit les listes en tuples
+        request.options.dict() if request.options else {}
     )
     
     # Pas besoin de convertir le résultat car le service retourne déjà un dictionnaire
     # qui correspond à la structure du modèle Pydantic FrameworkAnalysisResponse.
-    return analysis_result
+    return {"analysis": analysis_result}
 
 # --- Ancien routeur (peut être conservé, modifié ou supprimé selon la stratégie) ---
 @router.post("/analyze", response_model=AnalysisResponse)

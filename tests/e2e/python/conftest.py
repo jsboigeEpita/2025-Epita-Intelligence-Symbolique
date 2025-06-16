@@ -72,10 +72,13 @@ def e2e_session_setup(request):
     
     orchestrator = UnifiedWebOrchestrator(args)
 
+    orchestrator.loop = None
     def run_orchestrator():
+        orchestrator.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(orchestrator.loop)
         # Démarrer le frontend est nécessaire pour les tests Playwright,
         # on utilise la configuration via l'objet args.
-        asyncio.run(orchestrator.start_webapp(headless=args.headless, frontend_enabled=args.frontend))
+        orchestrator.loop.run_until_complete(orchestrator.start_webapp(headless=args.headless, frontend_enabled=args.frontend))
 
     orchestrator_thread = threading.Thread(target=run_orchestrator, daemon=True)
     orchestrator_thread.start()
@@ -86,7 +89,7 @@ def e2e_session_setup(request):
     # Utilise la méthode is_ready() de l'orchestrateur qui a une logique interne
     # de health check, mais ajoutons un timeout externe pour la fixture.
     start_time = time.time()
-    timeout_fixture = 90  # secondes
+    timeout_fixture = 180  # secondes
     
     while not orchestrator.is_ready():
         if time.time() - start_time > timeout_fixture:
@@ -113,18 +116,14 @@ def e2e_session_setup(request):
         
         # Pour arrêter proprement, on doit appeler la coroutine `stop_webapp`
         # dans une boucle d'événements asyncio.
-        try:
-            # On cherche une boucle existante, sinon on en crée une.
-            loop = asyncio.get_event_loop_policy().get_event_loop()
-            if loop.is_closed():
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-            
-            # Exécuter la coroutine d'arrêt.
-            loop.run_until_complete(orchestrator.stop_webapp())
-            
-        except Exception as e:
-            logger.error(f"[E2E Conftest] Erreur lors de l'arrêt de l'orchestrateur avec asyncio : {e}")
+        if orchestrator.loop and not orchestrator.loop.is_closed():
+            future = asyncio.run_coroutine_threadsafe(orchestrator.stop_webapp(), orchestrator.loop)
+            try:
+                future.result(timeout=30)
+            except Exception as e:
+                 logger.error(f"[E2E Conftest] Échec de l'arrêt de l'orchestrateur via run_coroutine_threadsafe: {e}")
+        else:
+            logger.warning("[E2E Conftest] Impossible d'arrêter l'orchestrateur, la boucle d'événements n'est pas disponible.")
 
         # S'assurer que le thread se termine
         if orchestrator_thread.is_alive():

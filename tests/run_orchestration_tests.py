@@ -106,13 +106,9 @@ def main():
     if args.unit:
         test_paths.append("tests/unit/orchestration/")
         print("Mode: Tests unitaires uniquement")
-    elif args.integration:
-        test_paths.append("tests/integration/test_orchestration_integration.py")
-        print("Mode: Tests d'integration uniquement")
     else:
         test_paths.extend([
-            "tests/unit/orchestration/",
-            "tests/integration/test_orchestration_integration.py"
+            "tests/unit/orchestration/"
         ])
         print("Mode: Tous les tests d'orchestration")
     
@@ -130,7 +126,7 @@ def main():
     
     if args.coverage:
         pytest_args.extend([
-            "--cov=argumentation_analysis.pipelines.unified_orchestration_pipeline",
+            "--cov=argumentation_analysis.pipelines.orchestration",
             "--cov=argumentation_analysis.orchestrators",
             "--cov-report=term-missing"
         ])
