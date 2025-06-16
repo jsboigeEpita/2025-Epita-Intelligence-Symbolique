@@ -367,14 +367,17 @@ class PathManager:
         Charge les variables d'environnement depuis le fichier .env du projet.
         Cette méthode est un point d'entrée simple pour charger .env.
         """
-        dotenv_path = find_dotenv(filename=".env", project_root=self.project_root, usecwd=False, raise_error_if_not_found=False)
-        if dotenv_path:
+        # Utiliser un chemin direct et fiable vers le .env basé sur la racine du projet
+        dotenv_path = self.project_root / ".env"
+
+        if dotenv_path.is_file():
             self.logger.info(f"Chargement du fichier .env depuis: {dotenv_path}")
             load_dotenv(dotenv_path, override=True)
         else:
-            self.logger.info("Aucun fichier .env trouvé à la racine du projet. Tentative de découverte/création de CONDA_PATH.")
-            # Tenter de découvrir CONDA_PATH même si .env n'existe pas, car cela peut le créer.
-            self._discover_and_persist_conda_path_in_env_file(silent=False)
+            self.logger.info(f"Aucun fichier .env trouvé à {dotenv_path}. Ce fichier sera créé si des variables comme CONDA_PATH sont découvertes.")
+            # La logique suivante (_discover_and_persist_conda_path_in_env_file)
+            # créera le fichier si nécessaire, mais ne l'écrasera plus par erreur.
+            pass # On laisse initialize_environment_paths gérer la découverte
 
 
     def initialize_environment_paths(self) -> None:

@@ -544,16 +544,17 @@ class EnvironmentManager:
         # --- BLOC D'ACTIVATION UNIFIÉ ---
         self.logger.info("Début du bloc d'activation unifié...")
 
-        # 1. Charger le fichier .env de base (depuis le bon répertoire de projet)
-        dotenv_path = find_dotenv()
-        if dotenv_path:
+        # 1. Charger le fichier .env de base (depuis le bon répertoire de projet) de manière robuste
+        dotenv_path = self.project_root / ".env"
+        if dotenv_path.is_file():
             self.logger.info(f"Fichier .env trouvé et chargé depuis : {dotenv_path}")
             load_dotenv(dotenv_path, override=True)
         else:
-            self.logger.info("Aucun fichier .env trouvé, tentative de création/mise à jour.")
+            self.logger.info(f"Aucun fichier .env trouvé à {dotenv_path}, il sera créé si nécessaire.")
 
         # 2. Découvrir et persister CONDA_PATH dans le .env si nécessaire
         # Cette méthode met à jour le fichier .env et recharge les variables dans os.environ
+        # Elle ne sera plus destructive car elle est appelée après un chargement fiable.
         self._discover_and_persist_conda_path_in_env_file(self.project_root, silent=False)
 
         # 3. Mettre à jour le PATH du processus courant à partir de CONDA_PATH (maintenant dans os.environ)
