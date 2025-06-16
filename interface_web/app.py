@@ -27,6 +27,7 @@ from contextlib import asynccontextmanager
 from starlette.applications import Starlette
 from a2wsgi import ASGIMiddleware
 from contextlib import asynccontextmanager # Ajout pour le lifespan manager
+from starlette.staticfiles import StaticFiles
 
 # Activation automatique de l'environnement
 try:
@@ -401,15 +402,23 @@ async def lifespan(app_instance: Flask):
         pass
     logger.info("LIFESPAN: Nettoyage terminé.")
 
-# Enveloppement de l'application Flask avec le middleware ASGI et le lifespan
-# On passe `app_flask` à ASGIMiddleware, et on utilise ce dernier pour créer l'app finale avec le lifespan.
-asgi_app = ASGIMiddleware(app_flask)
-app = Starlette(routes=getattr(asgi_app, 'routes', []), lifespan=lifespan)
-# Correction pour la compatibilité Starlette: Starlette attend des routes.
-# a2wsgi ne fournit pas directement `.routes`, mais nous pouvons reconstruire le montage.
-if not hasattr(asgi_app, 'routes'):
-    from starlette.routing import Mount
-    app = Starlette(routes=[Mount('/', app=asgi_app)], lifespan=lifespan)
+# --- Création de l'application ASGI finale ---
+
+# Chemin vers le build de l'application React
+STATIC_FILES_DIR = PROJECT_ROOT / "services" / "web_api" / "interface-web-argumentative" / "build"
+
+# Encapsulation de l'application Flask pour la rendre compatible ASGI
+api_app = ASGIMiddleware(app_flask)
+
+# Création de l'application Starlette qui montera l'API et servira les fichiers statiques
+app = Starlette(lifespan=lifespan, routes=[
+    # Montage de l'API Flask sous le préfixe /api
+    # Toutes les routes comme /status, /analyze, etc. seront accessibles via /api/status, /api/analyze
+    Mount("/api", app=api_app),
+    # Montage des fichiers statiques de l'application React
+    # Ceci sert l'application React (index.html, JS, CSS) pour toutes les autres routes
+    Mount("/", app=StaticFiles(directory=str(STATIC_FILES_DIR), html=True), name="static")
+])
     
 
 if __name__ == '__main__':

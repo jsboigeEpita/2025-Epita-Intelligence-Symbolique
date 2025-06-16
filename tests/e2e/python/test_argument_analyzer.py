@@ -19,14 +19,8 @@ def test_successful_simple_argument_analysis(page: Page):
     # Wait for the API to be connected
     expect(page.locator(".api-status.connected")).to_be_visible(timeout=30000)
 
-    # Pause for debugging if the element is not found
-    try:
-        # Wait for the form to be visible, which indicates the app has loaded
-        expect(page.locator("form.analyzer-form")).to_be_visible(timeout=10000)
-    except Exception:
-        print("Could not find the form. Here is the page content:")
-        print(page.content())
-        page.pause() # This will pause the test and open a browser for inspection
+    # Navigate to the "Analyse" tab to ensure the correct view is active
+    page.get_by_role("tab", name="Analyse").click()
 
     # Use the selectors identified in the architecture analysis
     argument_input = page.locator("#argument-text")
@@ -65,6 +59,9 @@ def test_empty_argument_submission_displays_error(page: Page):
     # Wait for the API to be connected
     expect(page.locator(".api-status.connected")).to_be_visible(timeout=30000)
 
+    # Navigate to the "Analyse" tab
+    page.get_by_role("tab", name="Analyse").click()
+
     # Locate the submit button and the argument input
     submit_button = page.locator("form.analyzer-form button[type=\"submit\"]")
     argument_input = page.locator("#argument-text")
@@ -93,6 +90,9 @@ def test_reset_button_clears_input_and_results(page: Page):
 
     # Wait for the API to be connected
     expect(page.locator(".api-status.connected")).to_be_visible(timeout=30000)
+
+    # Navigate to the "Analyse" tab
+    page.get_by_role("tab", name="Analyse").click()
 
     # --- Perform an analysis first ---
     argument_input = page.locator("#argument-text")

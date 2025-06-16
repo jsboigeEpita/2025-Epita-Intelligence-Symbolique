@@ -6,6 +6,7 @@ from requests.exceptions import ConnectionError
 import os
 import sys
 import logging
+import socket
 from typing import Generator
 from pathlib import Path
 from playwright.sync_api import expect
@@ -31,41 +32,25 @@ def pytest_configure(config):
 # Webapp Service Fixture for E2E Tests
 # ============================================================================
 
-@pytest.fixture(scope="session", autouse=True)
+def find_free_port():
+    """Trouve et retourne un port TCP libre."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("", 0))
+        return s.getsockname()[1]
+
+@pytest.fixture(scope="session")
 def webapp_service() -> Generator:
     """
-    Fixture de session E2E qui gère le cycle de vie du serveur web complet.
-    REMARQUE : Cette fixture suppose qu'elle s'exécute dans un processus propre,
-    sans mocks pré-chargés. L'environnement d'exécution des tests e2e
-    doit être configuré pour NE PAS injecter de mocks.
-    
-    Étapes :
-    1. Initialise la JVM (requise par le backend).
-    2. Démarre le serveur web (Flask/Uvicorn) en arrière-plan.
-    3. Attend que le serveur soit prêt en sondant un point de terminaison de santé.
-    4. Cède le contrôle aux tests.
-    5. Arrête proprement le serveur à la fin de la session de test.
+    Fixture de session qui démarre et arrête le serveur web Uvicorn.
+    Utilise un port libre et s'assure que l'environnement est propagé.
     """
-    # 1. Initialiser la JVM pour JPype
-    try:
-        from argumentation_analysis.core.jvm_setup import initialize_jvm
-        import jpype
-
-        logger.info("[E2E Conftest] Initialisation de la JVM pour les tests E2E...")
-        # Il est crucial que les tests E2E s'exécutent dans un environnement
-        # où les mocks (ex: pour jpype) ne sont pas dans le sys.path.
-        initialize_jvm()
-        if not jpype.isJVMStarted():
-            pytest.fail("[E2E Conftest] La JVM n'a pas pu être démarrée. L'environnement est peut-être corrompu.")
-        logger.info(f"[E2E Conftest] JVM démarrée avec JPype version {jpype.__version__}.")
-
-    except Exception as e:
-        pytest.fail(f"[E2E Conftest] Échec critique de l'initialisation de la JVM: {e}")
-
-    # 2. Démarrer le serveur backend
-    backend_port = 5003
-    # L'URL de santé pointe maintenant vers la route /status de l'application Flask
-    api_health_url = f"http://127.0.0.1:{backend_port}/status"
+    # 1. Démarrer le serveur backend sur un port libre
+    host = "127.0.0.1"
+    backend_port = find_free_port()
+    api_health_url = f"http://{host}:{backend_port}/api/status"
+    
+    # Mettre à jour la variable d'environnement pour que les tests API la trouvent
+    os.environ["BACKEND_URL"] = f"http://{host}:{backend_port}"
     
     # La commande lance maintenant l'application principale Flask (interface_web/app.py)
     # et non plus l'API FastAPI (api/main.py).
@@ -73,8 +58,12 @@ def webapp_service() -> Generator:
     # Cela permet à 'environment_manager.py' de la traiter comme une commande Python directe,
     # ce qui est plus robuste car cela évite une couche de 'conda run'.
     command = [
-        "powershell", "-File", ".\\activate_project_env.ps1",
-        "-CommandToRun", f"python -m uvicorn interface_web.app:app --host 127.0.0.1 --port {backend_port} --log-level debug"
+        sys.executable,
+        "-m", "uvicorn",
+        "interface_web.app:app",
+        "--host", host,
+        "--port", str(backend_port),
+        "--log-level", "debug"
     ]
     
     print(f"\n[E2E Fixture] Starting Flask webapp server on port {backend_port}...")
@@ -87,13 +76,19 @@ def webapp_service() -> Generator:
     stdout_log_path = log_dir / f"backend_stdout_{backend_port}.log"
     stderr_log_path = log_dir / f"backend_stderr_{backend_port}.log"
 
+    # Préparation de l'environnement pour le sous-processus
+    # On copie l'environnement actuel pour y inclure JAVA_HOME etc.
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(project_root) + os.pathsep + env.get("PYTHONPATH", "")
+
     with open(stdout_log_path, "wb") as stdout_log, open(stderr_log_path, "wb") as stderr_log:
         process = subprocess.Popen(
             command,
             stdout=stdout_log,
             stderr=stderr_log,
             cwd=str(project_root),
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP # For Windows to kill the whole process tree
+            env=env,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0
         )
         
         # Wait for the backend to be ready by polling the health endpoint
