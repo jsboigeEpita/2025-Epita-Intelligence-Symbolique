@@ -8,9 +8,7 @@ import time
 from typing import Dict, Any
 from playwright.sync_api import Page, expect
 
-# This mark ensures that the 'orchestrator_session' fixture is used for all tests in this module,
-# which starts the web server and sets the base_url for playwright.
-pytestmark = pytest.mark.usefixtures("orchestrator_session")
+
 
 
 # Timeouts étendus pour les workflows d'intégration

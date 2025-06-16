@@ -4,9 +4,7 @@ from playwright.sync_api import Page, expect, TimeoutError
 # L'import de PlaywrightHelpers est supprimé car la classe n'existe plus.
 # Les appels sont remplacés par des localisateurs directs de Playwright.
 
-# This mark ensures that the 'orchestrator_session' fixture is used for all tests in this module,
-# which starts the web server and sets the base_url for playwright.
-pytestmark = pytest.mark.usefixtures("orchestrator_session")
+
 
 
 @pytest.mark.skip(reason="Disabling all functional tests to isolate backend test failures.")
