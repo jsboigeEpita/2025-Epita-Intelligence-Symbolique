@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
@@ -14,7 +14,7 @@ def test_imports_critiques():
     print("=== TEST IMPORTS CRITIQUES ===")
     
     tests = [
-        ("semantic_kernel.contents.AuthorRole", "from semantic_kernel.contents import AuthorRole"),
+        ("semantic_kernel.contents.AuthorRole", "from semantic_kernel.contents.utils.author_role import AuthorRole"),
         ("semantic_kernel.agents", "from semantic_kernel import agents"),
         ("semantic_kernel.contents.ChatMessageContent", "from semantic_kernel.contents import ChatMessageContent"),
         ("semantic_kernel.contents.utils.author_role", "from semantic_kernel.contents.utils.author_role import AuthorRole"),

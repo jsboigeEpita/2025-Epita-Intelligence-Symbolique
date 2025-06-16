@@ -15,7 +15,8 @@ from typing import Dict, List, Any, Optional, Union
 from datetime import datetime
 
 import semantic_kernel as sk # Kept for type hints if necessary, but direct use might be reduced
-# from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole # Potentially unused if agent handles chat history
+# from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents.utils.author_role import AuthorRole # Potentially unused if agent handles chat history
 # from semantic_kernel.functions.kernel_arguments import KernelArguments # Potentially unused
 
 from argumentation_analysis.orchestration.hierarchical.operational.agent_interface import OperationalAgent
@@ -481,3 +482,4 @@ class InformalAgentAdapter(OperationalAgent):
         except Exception as e:
             self.logger.error(f"Erreur lors de l'obtention des détails du sophisme: {e}")
             return {"error": str(e)}
+

@@ -12,7 +12,8 @@ import numpy as np
 from typing import Dict, List, Tuple
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
-from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole
+from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents.utils.author_role import AuthorRole
 from unittest.mock import MagicMock
 
 # Import des modules du projet
@@ -327,3 +328,4 @@ if __name__ == "__main__":
     
     # Pour exécuter la simulation comparative, décommenter:
     # asyncio.run(run_comparison_simulation())
+

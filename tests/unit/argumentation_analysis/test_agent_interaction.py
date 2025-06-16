@@ -11,7 +11,8 @@ import asyncio
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole
+from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents.utils.author_role import AuthorRole
 from semantic_kernel.agents import Agent, AgentGroupChat
 
 # Utiliser la fonction setup_import_paths pour résoudre les problèmes d'imports relatifs
@@ -368,4 +369,5 @@ if __name__ == '__main__':
     # Utiliser pytest pour exécuter les tests si ce fichier est exécuté directement
     # Cela permet de bénéficier des fixtures et des plugins pytest comme anyio.
     pytest.main(['-xvs', __file__])
+
 

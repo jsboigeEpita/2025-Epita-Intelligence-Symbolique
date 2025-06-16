@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Tests d'intégration pour la stratégie d'équilibrage de participation des agents.
 
@@ -14,7 +14,8 @@ import pytest
 import logging
 
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole
+from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents.utils.author_role import AuthorRole
 from semantic_kernel.agents import Agent, AgentGroupChat
 
 # Utiliser la fonction setup_import_paths pour résoudre les problèmes d'imports relatifs
@@ -208,4 +209,5 @@ class TestBalancedStrategyIntegration: # Suppression de l'héritage AsyncTestCas
 
 if __name__ == '__main__':
     pytest.main(['-xvs', __file__])
+
 

@@ -34,7 +34,8 @@ if project_root not in sys.path:
 
 # Imports Semantic Kernel
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole
+from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents.utils.author_role import AuthorRole
 from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent, Agent
 from semantic_kernel.exceptions import AgentChatException
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
@@ -648,5 +649,6 @@ class EnhancedPMAnalysisRunner:
             llm_service = create_llm_service()
         
         return await run_enhanced_pm_orchestration_demo(text_content, llm_service)
+
 
 

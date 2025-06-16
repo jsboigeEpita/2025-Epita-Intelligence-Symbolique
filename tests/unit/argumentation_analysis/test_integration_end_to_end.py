@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Tests d'intégration end-to-end pour le système d'analyse argumentative.
 
@@ -15,7 +15,8 @@ import time
 from unittest.mock import MagicMock, AsyncMock, patch
 
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole
+from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents.utils.author_role import AuthorRole
 from semantic_kernel.agents import Agent, AgentGroupChat
 
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
@@ -119,4 +120,5 @@ class TestExtractIntegrationWithBalancedStrategy:
 
 if __name__ == '__main__':
     pytest.main(['-xvs', __file__])
+
 

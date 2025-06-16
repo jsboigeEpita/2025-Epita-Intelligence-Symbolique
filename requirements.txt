@@ -50,7 +50,7 @@ transformers>=4.20.0
 # Ensure the correct Python environment (3.10+) is active.
 # Downgrading will break the application.
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-semantic-kernel<=1.33.0
+semantic-kernel==1.33.0
 # NOTE: Using latest version (>1.0.0) a modern API
 # CRITICAL UPDATE: Resolves Pydantic import errors and modernizes API
 # Provides: Core semantic kernel functionality

@@ -18,7 +18,7 @@ current_dir = Path(__file__).parent.parent
 if str(current_dir) not in sys.path:
     sys.path.insert(0, str(current_dir))
 
-from services.fallacy_detector import get_fallacy_detection_service
+from speech_to_text.services.fallacy_detector import get_fallacy_detection_service
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

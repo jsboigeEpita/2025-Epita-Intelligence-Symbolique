@@ -1,11 +1,11 @@
-# argumentation_analysis/agents/core/pm/pm_agent.py
+﻿# argumentation_analysis/agents/core/pm/pm_agent.py
 import logging
 from typing import Dict, Any, Optional
 
 from semantic_kernel import Kernel # type: ignore
 from semantic_kernel.functions.kernel_arguments import KernelArguments # type: ignore
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
-from semantic_kernel.contents import AuthorRole as Role
+from semantic_kernel.contents.utils.author_role import AuthorRole as Role
 
 
 from ..abc.agent_bases import BaseAgent
