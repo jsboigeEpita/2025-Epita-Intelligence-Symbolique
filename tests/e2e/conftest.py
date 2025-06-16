@@ -13,17 +13,6 @@ from playwright.sync_api import expect
 # Configuration du logger
 logger = logging.getLogger(__name__)
 
-def deep_delete_from_sys_modules(module_name_prefix):
-    """Supprime un module et tous ses sous-modules de sys.modules."""
-    keys_to_delete = [k for k in sys.modules if k == module_name_prefix or k.startswith(module_name_prefix + '.')]
-    if keys_to_delete:
-        logger.info(f"[E2E Conftest] Nettoyage en profondeur des modules pour le préfixe '{module_name_prefix}': {keys_to_delete}")
-    for key in keys_to_delete:
-        try:
-            del sys.modules[key]
-        except KeyError:
-            pass
-
 # ============================================================================
 # Pytest Configuration Hooks
 # ============================================================================
@@ -35,50 +24,43 @@ def pytest_configure(config):
     ce qui est crucial pour les tests UI de Playwright.
     """
     if not config.option.base_url:
-        # L'URL du frontend est généralement servie par un serveur de développement React,
-        # mais pour les tests E2E, on peut la pointer vers le backend directement
-        # si les tests n'interagissent qu'avec l'API via l'UI.
-        # Pour une vraie UI, ce serait l'URL du serveur React.
-        # On assume que le frontend est servi ou que les tests ne nécessitent que l'API.
         config.option.base_url = os.environ.get("FRONTEND_URL", "http://127.0.0.1:3001")
 
 
 # ============================================================================
-# Simplified Webapp Service Fixture
+# Webapp Service Fixture for E2E Tests
 # ============================================================================
 
 @pytest.fixture(scope="session", autouse=True)
 def webapp_service() -> Generator:
     """
-    Fixture de session E2E complète:
-    1. Nettoie l'environnement des mocks (NumPy, JPype).
-    2. Initialise le vrai JPype et la JVM.
-    3. Démarre l'orchestrateur web complet (backend & frontend).
-    4. Exécute les tests.
-    5. Arrête proprement l'orchestrateur.
-    """
-    # 1. Éradiquer les mocks et initialiser la JVM
-    logger.info("[E2E Conftest] Éradication de tout mock résiduel.")
-    deep_delete_from_sys_modules("numpy")
-    deep_delete_from_sys_modules("jpype")
+    Fixture de session E2E qui gère le cycle de vie du serveur web complet.
+    REMARQUE : Cette fixture suppose qu'elle s'exécute dans un processus propre,
+    sans mocks pré-chargés. L'environnement d'exécution des tests e2e
+    doit être configuré pour NE PAS injecter de mocks.
     
+    Étapes :
+    1. Initialise la JVM (requise par le backend).
+    2. Démarre le serveur web (Flask/Uvicorn) en arrière-plan.
+    3. Attend que le serveur soit prêt en sondant un point de terminaison de santé.
+    4. Cède le contrôle aux tests.
+    5. Arrête proprement le serveur à la fin de la session de test.
+    """
+    # 1. Initialiser la JVM pour JPype
     try:
-        # S'assurer que le chemin des mocks n'est pas dans sys.path
-        mocks_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../mocks'))
-        if mocks_path in sys.path:
-            sys.path.remove(mocks_path)
-            
-        import jpype
-        import jpype.imports
         from argumentation_analysis.core.jvm_setup import initialize_jvm
-        
-        logger.info(f"[E2E Conftest] Vrai JPype (version {jpype.__version__}) importé.")
-        initialize_jvm(force_restart=False)
+        import jpype
+
+        logger.info("[E2E Conftest] Initialisation de la JVM pour les tests E2E...")
+        # Il est crucial que les tests E2E s'exécutent dans un environnement
+        # où les mocks (ex: pour jpype) ne sont pas dans le sys.path.
+        initialize_jvm()
         if not jpype.isJVMStarted():
-            pytest.fail("[E2E Conftest] La JVM n'a pas pu démarrer après le nettoyage.")
+            pytest.fail("[E2E Conftest] La JVM n'a pas pu être démarrée. L'environnement est peut-être corrompu.")
+        logger.info(f"[E2E Conftest] JVM démarrée avec JPype version {jpype.__version__}.")
 
     except Exception as e:
-        pytest.fail(f"[E2E Conftest] Échec critique de l'initialisation de JPype/JVM: {e}")
+        pytest.fail(f"[E2E Conftest] Échec critique de l'initialisation de la JVM: {e}")
 
     # 2. Démarrer le serveur backend
     backend_port = 5003

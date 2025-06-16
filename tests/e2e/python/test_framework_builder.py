@@ -12,25 +12,22 @@ from playwright.sync_api import Page, expect, TimeoutError
 def framework_page(page: Page) -> Page:
     """Fixture qui prépare la page et navigue vers l'onglet Framework."""
     page.goto("/")
-    expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
+    # L'attente de l'état de connexion de l'API est maintenant dans chaque test
+    # pour une meilleure isolation et un débogage plus facile.
     
-    helpers = PlaywrightHelpers(page)
-    helpers.navigate_to_tab("framework")
-    
-    # Attendre un élément spécifique à l'onglet framework pour s'assurer que la navigation est terminée
-    expect(page.locator('#arg-content')).to_be_visible(timeout=10000)
-    
+    # La navigation vers l'onglet est également gérée dans chaque test.
     return page
 
 class TestFrameworkBuilder:
     """Tests fonctionnels pour l'onglet Framework basés sur la structure réelle"""
 
-    def test_framework_creation_workflow(self, page: Page):
+    def test_framework_creation_workflow(self, framework_page: Page):
         """Test du workflow principal de création de framework"""
         
-        # Navigation vers l'onglet Framework
+        page = framework_page
+        expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
         page.get_by_role("tab", name="Framework").click()
-        
+
         # Vérification de la présence des éléments du formulaire réels
         expect(page.locator('#arg-content')).to_be_visible()
         expect(page.get_by_role("button", name="Ajouter l'argument")).to_be_visible()
@@ -79,7 +76,9 @@ class TestFrameworkBuilder:
 
     def test_framework_rule_management(self, framework_page: Page):
         """Test de la gestion des règles et contraintes du framework"""
-        # La fixture framework_page navigue déjà vers l'onglet
+        page = framework_page
+        expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
+        page.get_by_role("tab", name="Framework").click()
         
         # Ajout de plusieurs arguments
         arguments = [
@@ -127,10 +126,12 @@ class TestFrameworkBuilder:
 
     def test_framework_validation_integration(self, framework_page: Page):
         """Test de l'intégration avec le système de validation"""
-        # La fixture framework_page navigue déjà vers l'onglet
+        page = framework_page
+        expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
+        page.get_by_role("tab", name="Framework").click()
         
         # Construction d'un framework simple mais valide
-        framework_page.locator('#arg-content').fill('Argument A')
+        page.locator('#arg-content').fill('Argument A')
         framework_page.get_by_role("button", name="Ajouter l'argument").click()
         
         framework_page.locator('#arg-content').fill('Argument B')
@@ -162,7 +163,9 @@ class TestFrameworkBuilder:
 
     def test_framework_persistence(self, framework_page: Page):
         """Test de la persistance et sauvegarde du framework"""
-        # La fixture framework_page navigue déjà vers l'onglet
+        page = framework_page
+        expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
+        page.get_by_role("tab", name="Framework").click()
         
         # Construction d'un framework avec données de test
         test_arguments = [
@@ -202,7 +205,9 @@ class TestFrameworkBuilder:
 
     def test_framework_extension_analysis(self, framework_page: Page):
         """Test de l'analyse des extensions du framework"""
-        # La fixture framework_page navigue déjà vers l'onglet
+        page = framework_page
+        expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
+        page.get_by_role("tab", name="Framework").click()
         
         # Construction d'un framework plus complexe pour générer des extensions intéressantes
         complex_arguments = [
