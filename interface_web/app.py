@@ -22,7 +22,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
+# Importations nécessaires pour le lifespan et Starlette
+from contextlib import asynccontextmanager
+from starlette.applications import Starlette
 from a2wsgi import ASGIMiddleware
+from contextlib import asynccontextmanager # Ajout pour le lifespan manager
 
 # Activation automatique de l'environnement
 try:
@@ -103,11 +107,12 @@ jtms_session_manager = None
 JTMS_SERVICES_AVAILABLE = False
 
 
-def initialize_services():
-    """Initialise les services au démarrage de l'application."""
+async def initialize_services():
+    """Initialise les services de manière asynchrone."""
     global service_manager, jtms_service, jtms_session_manager, JTMS_SERVICES_AVAILABLE
     
     try:
+        logger.info("Début de l'initialisation du ServiceManager...")
         service_manager = ServiceManager(config={
             'enable_hierarchical': True,
             'enable_specialized_orchestrators': True,
@@ -116,14 +121,11 @@ def initialize_services():
             'results_dir': str(RESULTS_DIR)
         })
         
-        # Initialisation asynchrone requise
-        async def init_service_manager():
-            await service_manager.initialize()
-            
-        asyncio.run(init_service_manager())
+        await service_manager.initialize()
         logger.info("ServiceManager configuré et initialisé")
         
         # Initialisation des services JTMS (optionnel)
+        # Ceci reste synchrone pour l'instant
         try:
             from argumentation_analysis.services.jtms_service import JTMSService
             from argumentation_analysis.services.jtms_session_manager import JTMSSessionManager
@@ -131,30 +133,21 @@ def initialize_services():
             jtms_service = JTMSService()
             jtms_session_manager = JTMSSessionManager(jtms_service=jtms_service)
             JTMS_SERVICES_AVAILABLE = True
-            
             logger.info("Services JTMS initialisés avec succès")
-            
         except ImportError as e:
             logger.warning(f"Services JTMS non disponibles: {e}")
             JTMS_SERVICES_AVAILABLE = False
-        except Exception as e:
-            logger.error(f"Erreur lors de l'initialisation des services JTMS: {e}")
-            JTMS_SERVICES_AVAILABLE = False
             
     except Exception as e:
-        logger.error(f"Erreur critique lors de l'initialisation des services: {e}")
+        logger.error(f"Erreur critique lors de l'initialisation asynchrone des services: {e}", exc_info=True)
         raise RuntimeError(f"Impossible d'initialiser le ServiceManager: {e}")
 
-
 def setup_app_context():
-    """Configure le contexte global de l'application pour les services JTMS."""
+    """Configure le contexte de l'application Flask."""
     if JTMS_SERVICES_AVAILABLE and jtms_blueprint:
-        # Rendre les services disponibles dans le contexte Flask
         app_flask.config['JTMS_SERVICE'] = jtms_service
         app_flask.config['JTMS_SESSION_MANAGER'] = jtms_session_manager
         app_flask.config['JTMS_AVAILABLE'] = True
-        
-        # Enregistrer le blueprint JTMS
         app_flask.register_blueprint(jtms_blueprint, url_prefix='/jtms')
         logger.info("Blueprint JTMS enregistré avec succès sur /jtms")
     else:
@@ -174,7 +167,7 @@ def index():
 
 
 @app_flask.route('/analyze', methods=['POST'])
-def analyze():
+async def analyze():
     """
     Route pour l'analyse de texte.
     
@@ -204,11 +197,8 @@ def analyze():
         
         # Analyse avec ServiceManager - OBLIGATOIRE
         try:
-            # Appel asynchrone au ServiceManager réel
-            async def run_analysis():
-                return await service_manager.analyze_text(text, analysis_type, options)
-            
-            result = asyncio.run(run_analysis())
+            # Appel asynchrone direct car nous sommes dans un contexte async géré par la route
+            result = await service_manager.analyze_text(text, analysis_type, options)
             end_time = datetime.now()
             duration = (end_time - start_time).total_seconds()
             
@@ -387,12 +377,40 @@ def internal_server_error(e):
     return jsonify({'error': 'Erreur interne du serveur'}), 500
 
 
-# Initialisation des services et configuration du contexte
-initialize_services()
-setup_app_context()
+# --- Lifespan Management for ASGI ---
 
-# Enveloppement avec A2WSGI pour la compatibilité ASGI
-app = ASGIMiddleware(app_flask)
+@asynccontextmanager
+async def lifespan(app_instance: Flask):
+    """
+    Gestionnaire de cycle de vie (lifespan) pour l'application ASGI.
+    Initialise les services au démarrage et les nettoie à l'arrêt.
+    """
+    logger.info("LIFESPAN: Démarrage de l'application...")
+    # Initialisation des services asynchrones
+    await initialize_services()
+    # Configuration du contexte de l'application (routes, etc.)
+    setup_app_context()
+    logger.info("LIFESPAN: Initialisation terminée, l'application est prête.")
+    
+    yield # L'application s'exécute ici
+    
+    logger.info("LIFESPAN: Arrêt de l'application...")
+    if service_manager:
+        # Potentielle logique de nettoyage (si nécessaire)
+        # await service_manager.cleanup()
+        pass
+    logger.info("LIFESPAN: Nettoyage terminé.")
+
+# Enveloppement de l'application Flask avec le middleware ASGI et le lifespan
+# On passe `app_flask` à ASGIMiddleware, et on utilise ce dernier pour créer l'app finale avec le lifespan.
+asgi_app = ASGIMiddleware(app_flask)
+app = Starlette(routes=getattr(asgi_app, 'routes', []), lifespan=lifespan)
+# Correction pour la compatibilité Starlette: Starlette attend des routes.
+# a2wsgi ne fournit pas directement `.routes`, mais nous pouvons reconstruire le montage.
+if not hasattr(asgi_app, 'routes'):
+    from starlette.routing import Mount
+    app = Starlette(routes=[Mount('/', app=asgi_app)], lifespan=lifespan)
+    
 
 if __name__ == '__main__':
     # Cette section permet de lancer le serveur en mode développement avec Uvicorn

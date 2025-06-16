@@ -87,9 +87,12 @@ def webapp_service() -> Generator:
     
     # La commande lance maintenant l'application principale Flask (interface_web/app.py)
     # et non plus l'API FastAPI (api/main.py).
+    # La commande est modifiée pour utiliser 'python -m uvicorn'.
+    # Cela permet à 'environment_manager.py' de la traiter comme une commande Python directe,
+    # ce qui est plus robuste car cela évite une couche de 'conda run'.
     command = [
         "powershell", "-File", ".\\activate_project_env.ps1",
-        "-CommandToRun", f"uvicorn interface_web.app:app --host 127.0.0.1 --port {backend_port}"
+        "-CommandToRun", f"python -m uvicorn interface_web.app:app --host 127.0.0.1 --port {backend_port} --log-level debug"
     ]
     
     print(f"\n[E2E Fixture] Starting Flask webapp server on port {backend_port}...")
