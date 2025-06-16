@@ -38,12 +38,7 @@ playwright:
   process_timeout_s: 600
   timeout_ms: 30000
   test_paths:
-    python:
-    - tests/e2e/python/
-    javascript:
-    - tests/e2e/js/
-    demos:
-    - tests/e2e/demos/
+  - tests_playwright/tests/
   screenshots_dir: logs/screenshots
   traces_dir: logs/traces
 webapp:

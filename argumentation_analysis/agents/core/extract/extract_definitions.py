@@ -123,6 +123,14 @@ class ExtractResult: # De la version HEAD (Updated upstream)
             "extracted_text": self.extracted_text
         }
     
+    def to_json(self) -> str:
+        """Convertit l'instance `ExtractResult` en une chaîne JSON.
+
+        :return: Une chaîne JSON représentant l'objet.
+        :rtype: str
+        """
+        return json.dumps(self.to_dict(), indent=2)
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ExtractResult':
         """Crée une instance de `ExtractResult` à partir d'un dictionnaire.

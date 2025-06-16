@@ -103,7 +103,7 @@ def test_add_revelation():
     assert oracle_state.cards_revealed == 1
     print("[OK] add_revelation compatible")
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_validate_suggestion_async():
     """Test de la méthode async validate_suggestion_with_oracle."""
     print("\n[TEST] validate_suggestion_with_oracle (async)...")
@@ -116,7 +116,7 @@ async def test_validate_suggestion_async():
 
 # Tests de test_oracle_fixes_simple.py
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_oracle_fixes_consolidated():
     """Test consolidé des corrections Oracle."""
     print("\n=== Test consolidé des corrections Oracle ===")

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Script de simulation pour démontrer l'équilibrage de la participation des agents
@@ -12,7 +12,7 @@ import numpy as np
 from typing import Dict, List, Tuple
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
 from argumentation_analysis.utils.semantic_kernel_compatibility import Agent
-from semantic_kernel.contents import ChatMessageContent, AuthorRole
+from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole
 from unittest.mock import MagicMock
 
 # Import des modules du projet

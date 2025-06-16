@@ -1,6 +1,3 @@
-# Auto-activation de l'environnement intelligent
-import project_core.core_from_scripts.auto_env
-# ---
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -29,7 +26,6 @@ import asyncio
 import logging
 import argparse
 import subprocess
-import shutil # Ajout pour shutil.which
 import threading
 import socket
 import signal
@@ -116,17 +112,9 @@ class UnifiedWebOrchestrator:
         self.enable_trace = not args.no_trace
 
         # Gestionnaires spécialisés
-        # Récupérer le chemin de l'environnement Conda avant d'initialiser BackendManager
-        self.conda_env_name = self.config.get('backend', {}).get('conda_env', 'projet-is')
-        self.conda_env_path = self._find_conda_env_path(self.conda_env_name)
-
-        self.backend_manager = BackendManager(
-            self.config.get('backend', {}),
-            self.logger,
-            conda_env_path=self.conda_env_path # Passer le chemin ici
-        )
+        self.backend_manager = BackendManager(self.config.get('backend', {}), self.logger)
         self.frontend_manager: Optional[FrontendManager] = None  # Sera instancié plus tard
- 
+
         playwright_config = self.config.get('playwright', {})
         # Le timeout CLI surcharge la config YAML
         playwright_config['timeout_ms'] = self.timeout_minutes * 60 * 1000
@@ -175,22 +163,6 @@ class UnifiedWebOrchestrator:
                 self.logger.info(f"Port {port} détecté comme étant utilisé.")
             return is_used
             
-    def _find_free_port(self, start_port: int, max_attempts: int = 100) -> Optional[int]:
-        """Trouve un port TCP libre en commençant à partir de start_port."""
-        self.logger.debug(f"Recherche d'un port libre à partir de {start_port}")
-        for i in range(max_attempts):
-            port = start_port + i
-            try:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.bind(('localhost', port))
-                    self.logger.info(f"Port {port} trouvé et est libre.")
-                    return port
-            except OSError:
-                self.logger.debug(f"Port {port} est déjà utilisé, tentative suivante.")
-                continue
-        self.logger.error(f"Impossible de trouver un port libre après {max_attempts} tentatives.")
-        return None
-    
     def _load_config(self) -> Dict[str, Any]:
         """Charge la configuration depuis le fichier YAML"""
         print("[DEBUG] unified_web_orchestrator.py: _load_config()")
@@ -262,16 +234,11 @@ class UnifiedWebOrchestrator:
             },
             'playwright': {
                 'enabled': True,
-                'test_type': 'python',  # Type de test par défaut
                 'browser': 'chromium',
                 'headless': True,
-                'timeout_ms': 30000,
-                'process_timeout_s': 600,
-                'test_paths': {
-                    'python': ['tests/e2e/python/'],
-                    'javascript': ['tests/e2e/js/'],
-                    'demos': ['tests/e2e/demos/']
-                },
+                'timeout_ms': 10000,
+                'slow_timeout_ms': 20000,
+                'test_paths': ['tests/functional/'],
                 'screenshots_dir': 'logs/screenshots',
                 'traces_dir': 'logs/traces'
             },
@@ -350,7 +317,7 @@ class UnifiedWebOrchestrator:
         self.app_info.start_time = datetime.now()
         
         self.add_trace("[START] DEMARRAGE APPLICATION WEB",
-                       f"Mode: {'Headless' if headless else 'Visible'}",
+                       f"Mode: {'Headless' if headless else 'Visible'}", 
                        "Initialisation orchestrateur")
         
         try:
@@ -397,7 +364,7 @@ class UnifiedWebOrchestrator:
             self.app_info.status = WebAppStatus.ERROR
             return False
     
-    async def run_tests(self, test_type: str = None, test_paths: List[str] = None, **kwargs) -> bool:
+    async def run_tests(self, test_paths: List[str] = None, **kwargs) -> bool:
         """
         Exécute les tests Playwright avec le support natif.
         """
@@ -438,18 +405,10 @@ class UnifiedWebOrchestrator:
                       f"BASE_URL={base_url}",
                       f"BACKEND_URL={backend_url}")
 
-        # Le test_type est passé en priorité, sinon celui de la config
-        effective_test_type = test_type or self.playwright_runner.test_type
-
-        # Si les chemins ne sont pas fournis, utiliser ceux par défaut pour le type de test
-        paths_for_type = self.config.get('playwright', {}).get('test_paths', {})
-        effective_paths = test_paths or paths_for_type.get(effective_test_type)
-
-        return await self.playwright_runner.run_tests(
-            test_type=effective_test_type,
-            test_paths=effective_paths,
-            runtime_config=test_config
-        )
+        # L'ancienne gestion de subprocess.TimeoutExpired n'est plus nécessaire car
+        # le runner utilise maintenant create_subprocess_exec.
+        # Le timeout est géré plus haut par asyncio.wait_for.
+        return await self.playwright_runner.run_tests(test_paths, test_config)
     
     async def stop_webapp(self):
         """Arrête l'application web et nettoie les ressources de manière gracieuse."""
@@ -488,7 +447,6 @@ class UnifiedWebOrchestrator:
     
     async def full_integration_test(self, headless: bool = True,
                                    frontend_enabled: bool = None,
-                                   test_type: str = None,
                                    test_paths: List[str] = None,
                                    **kwargs) -> bool:
         """
@@ -504,23 +462,23 @@ class UnifiedWebOrchestrator:
         try:
             self.add_trace("[TEST] INTEGRATION COMPLETE",
                           "Démarrage orchestration complète")
-
+            
             # 1. Démarrage application
             if not await self.start_webapp(headless, frontend_enabled):
                 return False
-
+            
             # 2. Attente stabilisation
             await asyncio.sleep(2)
-
+            
             # 3. Exécution tests
-            test_success = False
             try:
                 # Utilisation d'un timeout asyncio global comme filet de sécurité ultime.
+                # Cela garantit que l'orchestrateur ne restera jamais bloqué indéfiniment.
                 test_timeout_s = self.timeout_minutes * 60
                 self.add_trace("[TEST] Lancement avec timeout global", f"{test_timeout_s}s")
-
-                test_success = await asyncio.wait_for(
-                    self.run_tests(test_type=test_type, test_paths=test_paths, **kwargs),
+                
+                success = await asyncio.wait_for(
+                    self.run_tests(test_paths, **kwargs),
                     timeout=test_timeout_s
                 )
             except asyncio.TimeoutError:
@@ -528,65 +486,26 @@ class UnifiedWebOrchestrator:
                               f"L'étape de test a dépassé le timeout de {self.timeout_minutes} minutes.",
                               "Le processus est probablement bloqué.",
                               status="error")
-                test_success = False
-
-            # 4. Analyse des traces Playwright JS après l'exécution
-            # Cette étape est exécutée même si les tests échouent pour fournir un rapport de débogage.
-            effective_test_type = test_type or self.playwright_runner.test_type
-            if effective_test_type == 'javascript':
-                await self._analyze_playwright_traces()
-
-            if test_success:
+                success = False
+            
+            if success:
                 self.add_trace("[SUCCESS] INTEGRATION REUSSIE",
-                              "Tous les tests ont passé",
+                              "Tous les tests ont passé", 
                               "Application web validée")
             else:
                 self.add_trace("[ERROR] ECHEC INTEGRATION",
-                              "Certains tests ont échoué",
+                              "Certains tests ont échoué", 
                               "Voir logs détaillés", status="error")
             
-            success = test_success # Le succès global dépend de la réussite des tests
-
         finally:
-            # 5. Nettoyage systématique
+            # 4. Nettoyage systématique
             await self.stop_webapp()
-
-            # 6. Sauvegarde trace
+            
+            # 5. Sauvegarde trace
             await self._save_trace_report()
-
-        return success
-
-    def _find_conda_env_path(self, env_name: str) -> Optional[str]:
-        """Trouve le chemin complet d'un environnement Conda."""
-        self.logger.debug(f"Recherche du chemin pour l'environnement Conda: {env_name}")
-        conda_exe = shutil.which("conda")
-        if not conda_exe:
-            self.logger.error("Exécutable Conda non trouvé avec shutil.which.")
-            return None
         
-        try:
-            result = subprocess.run(
-                [conda_exe, "env", "list", "--json"],
-                capture_output=True, text=True, check=True, encoding='utf-8'
-            )
-            envs_data = json.loads(result.stdout)
-            for env_path_str in envs_data.get("envs", []):
-                if Path(env_path_str).name == env_name:
-                    self.logger.info(f"Chemin de l'environnement Conda '{env_name}' trouvé: {env_path_str}")
-                    return str(env_path_str)
-            self.logger.error(f"Environnement Conda '{env_name}' non trouvé dans la liste.")
-            return None
-        except subprocess.CalledProcessError as e:
-            self.logger.error(f"Erreur lors de l'exécution de 'conda env list --json': {e}")
-            self.logger.error(f"Stderr: {e.stderr}")
-            return None
-        except json.JSONDecodeError as e:
-            self.logger.error(f"Erreur de décodage JSON pour 'conda env list --json': {e}")
-            return None
-        except Exception as e:
-            self.logger.error(f"Erreur inattendue dans _find_conda_env_path: {e}")
-            return None
-
+        return success
+    
     # ========================================================================
     # MÉTHODES PRIVÉES
     # ========================================================================
@@ -651,110 +570,58 @@ class UnifiedWebOrchestrator:
             self.playwright = None
 
     async def _start_backend(self) -> bool:
-        """Démarre le backend en lui allouant un port dynamique."""
-        self.add_trace("[BACKEND] DEMARRAGE BACKEND", "Recherche d'un port libre et lancement.")
-
-        backend_config = self.config.get('backend', {})
-        preferred_port = backend_config.get('start_port', 5003)
-
-        # 1. Trouver un port libre
-        free_port = self._find_free_port(preferred_port)
-        if not free_port:
-            self.add_trace("[ERROR] ECHEC BACKEND", "Aucun port libre trouvé pour le backend.", status="error")
-            return False
-
-        # 2. Préparer l'environnement
-        backend_env = os.environ.copy()
-        # Flask lit automatiquement FLASK_RUN_PORT
-        backend_env['FLASK_RUN_PORT'] = str(free_port)
+        """Démarre le backend avec failover de ports"""
+        print("[DEBUG] unified_web_orchestrator.py: _start_backend()")
+        self.add_trace("[BACKEND] DEMARRAGE BACKEND", "Lancement avec failover de ports")
         
-        self.add_trace("[BACKEND] ENV VARS",
-                       f"FLASK_RUN_PORT={free_port}",
-                       "Variables d'environnement pour le processus backend")
-
-        # 3. Ré-instancier le BackendManager avec l'environnement dynamique
-        self.backend_manager = BackendManager(
-            backend_config,
-            self.logger,
-            conda_env_path=self.conda_env_path,
-            env=backend_env
-        )
-
         result = await self.backend_manager.start()
-        if result.get('success'):
+        if result['success']:
             self.app_info.backend_url = result['url']
             self.app_info.backend_port = result['port']
             self.app_info.backend_pid = result['pid']
             
             self.add_trace("[OK] BACKEND OPERATIONNEL",
-                          f"Port: {result['port']} | PID: {result['pid']}",
+                          f"Port: {result['port']} | PID: {result['pid']}", 
                           f"URL: {result['url']}")
             return True
         else:
-            error_details = result.get('error', 'Erreur inconnue lors du démarrage du backend.')
-            self.add_trace("[ERROR] ECHEC BACKEND", error_details, status="error")
+            self.add_trace("[ERROR] ECHEC BACKEND", result['error'], "", status="error")
             return False
     
     async def _start_frontend(self) -> bool:
-        """Démarre le frontend React avec un port dynamique."""
+        """Démarre le frontend React"""
         print("[DEBUG] unified_web_orchestrator.py: _start_frontend()")
-        self.add_trace("[FRONTEND] DEMARRAGE FRONTEND", "Recherche d'un port libre et lancement de l'interface React")
-    
-        frontend_config = self.config.get('frontend', {})
-        preferred_port = frontend_config.get('port', 8081)
+        # La décision de démarrer a déjà été prise en amont
+        self.add_trace("[FRONTEND] DEMARRAGE FRONTEND", "Lancement interface React")
         
-        # 1. Trouver un port libre pour le frontend
-        free_port = self._find_free_port(preferred_port)
-        if not free_port:
-            self.add_trace("[ERROR] ECHEC FRONTEND", "Aucun port libre trouvé pour le serveur de développement.", status="error")
-            return False  # Bloquant car le port est essentiel
-    
-        self.app_info.frontend_port = free_port
-        self.app_info.frontend_url = f"http://localhost:{free_port}"
-        
-        # 2. Préparer les variables d'environnement pour le frontend
-        #    - PORT: le port sur lequel le serveur de dev doit démarrer
-        #    - REACT_APP_API_URL: l'URL complète du backend que l'app React utilisera
-        frontend_env = os.environ.copy()
-        frontend_env['PORT'] = str(free_port)
-        frontend_env['REACT_APP_API_URL'] = self.app_info.backend_url
-        
-        self.add_trace("[FRONTEND] ENV VARS",
-                       f"PORT={free_port}, REACT_APP_API_URL={self.app_info.backend_url}",
-                       "Variables d'environnement pour le process frontend")
-    
-        # 3. Instancier et démarrer le FrontendManager
+        # Instanciation tardive du FrontendManager pour lui passer l'URL du backend
         self.frontend_manager = FrontendManager(
-            frontend_config,
+            self.config.get('frontend', {}),
             self.logger,
-            backend_url=self.app_info.backend_url,
-            env=frontend_env  # Passer l'environnement complet
+            backend_url=self.app_info.backend_url
         )
-    
+
         result = await self.frontend_manager.start()
         if result['success']:
-            # Assigner les URLs et ports
-            if result['url']: # Cas serveur de dev
-                self.app_info.frontend_url = result['url']
-                self.app_info.frontend_port = result['port']
-                self.app_info.frontend_pid = result['pid']
-                self.add_trace("[OK] FRONTEND (DEV SERVER) OPERATIONNEL", f"URL: {result['url']}")
-            else: # Cas statique servi par le backend
-                self.app_info.frontend_url = self.app_info.backend_url
-                self.app_info.frontend_port = self.app_info.backend_port
-                self.add_trace("[OK] FRONTEND (STATIQUE) PRÊT", f"Servi par backend: {self.app_info.frontend_url}")
+            self.app_info.frontend_url = result['url']
+            self.app_info.frontend_port = result['port']
+            self.app_info.frontend_pid = result['pid']
+            
+            self.add_trace("[OK] FRONTEND OPERATIONNEL",
+                          f"Port: {result['port']}", 
+                          f"URL: {result['url']}")
 
-            # Écrire l'URL du frontend dans tous les cas pour signaler au script parent
-            # self.app_info.frontend_url aura toujours une valeur ici.
+            # Sauvegarde l'URL du frontend pour que les tests puissent la lire
+            print("[DEBUG] unified_web_orchestrator.py: Saving frontend URL")
             try:
                 log_dir = Path("logs")
                 log_dir.mkdir(exist_ok=True)
-                url_to_write = self.app_info.frontend_url
-                with open(log_dir / "frontend_url.txt", "w", encoding='utf-8') as f:
-                    f.write(url_to_write)
-                self.add_trace("[SYNC] FICHIER URL ECRIT", f"Fichier: logs/frontend_url.txt, URL: {url_to_write}")
+                with open(log_dir / "frontend_url.txt", "w") as f:
+                    f.write(result['url'])
+                self.add_trace("[SAVE] URL FRONTEND SAUVEGARDEE", f"URL {result['url']} écrite dans logs/frontend_url.txt")
+                print(f"[DEBUG] unified_web_orchestrator.py: Frontend URL saved to logs/frontend_url.txt: {result['url']}")
             except Exception as e:
-                self.add_trace("[ERROR] ECRITURE FICHIER URL", str(e), status="error")
+                self.add_trace("[ERROR] SAUVEGARDE URL FRONTEND", str(e), status="error")
             
             return True
         else:
@@ -927,64 +794,6 @@ class UnifiedWebOrchestrator:
         
         return content
 
-    async def _analyze_playwright_traces(self):
-        """Lance l'analyseur de traces en tant que sous-processus et logue le résultat."""
-        self.add_trace("[ANALYZE] ANALYSE DES TRACES PLAYWRIGHT", "Lancement du script trace_analyzer.py")
-        analyzer_script_path = "services/web_api/trace_analyzer.py"
-        
-        # Le répertoire de traces pour Playwright JS est défini dans sa config
-        # et est relatif au répertoire de test, donc 'tests/e2e/test-results/'
-        # Playwright génère un dossier par test qui contient 'trace.zip'
-        # Le trace_analyzer.py doit être adapté pour chercher ces .zip, les extraire, et lire le contenu.
-        # Pour l'instant, on pointe vers le dossier où Playwright génère ses rapports
-        # La refactorisation du trace_analyzer est une tâche future
-        trace_dir = Path("tests/e2e/test-results/")
-
-        if not Path(analyzer_script_path).exists():
-            self.add_trace("[ERROR] Script d'analyse non trouvé", f"Chemin: {analyzer_script_path}", status="error")
-            return
-            
-        try:
-            # Utiliser le même interpréteur Python que celui qui exécute l'orchestrateur
-            python_executable = sys.executable
-            
-            command_to_run = [
-                python_executable,
-                analyzer_script_path,
-                '--mode=summary',
-                # On passe le répertoire où sont générés les rapports Playwright
-                '--trace-dir', str(trace_dir)
-            ]
-
-            self.logger.debug(f"Lancement de l'analyseur de trace avec la commande : {' '.join(command_to_run)}")
-            
-            proc = await asyncio.create_subprocess_exec(
-                *command_to_run,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            stdout, stderr = await proc.communicate()
-            
-            stdout_str = stdout.decode('utf-8', errors='ignore')
-            stderr_str = stderr.decode('utf-8', errors='ignore')
-            
-            if proc.returncode == 0:
-                self.add_trace("[OK] ANALYSE DE TRACE TERMINÉE", "Détails ci-dessous")
-                # Loggue le résumé directement dans la trace de l'orchestrateur
-                self.logger.info("\n--- DEBUT RAPPORT D'ANALYSE DE TRACE ---\n"
-                                f"{stdout_str}"
-                                "\n--- FIN RAPPORT D'ANALYSE DE TRACE ---")
-            else:
-                self.add_trace("[ERROR] ECHEC ANALYSE DE TRACE", "Le script a retourné une erreur.", status="error")
-                self.logger.error(f"Erreur lors de l'exécution de {analyzer_script_path}:")
-                self.logger.error("STDOUT:\n" + stdout_str)
-                self.logger.error("STDERR:\n" + stderr_str)
-                
-        except Exception as e:
-            self.add_trace("[ERROR] ERREUR CRITIQUE ANALYSEUR", str(e), status="error")
-
-
 def main():
     """Point d'entrée principal en ligne de commande"""
     print("[DEBUG] unified_web_orchestrator.py: main()")
@@ -999,26 +808,23 @@ def main():
                        help='Force activation frontend')
     parser.add_argument('--tests', nargs='*',
                        help='Chemins spécifiques des tests à exécuter.')
-    parser.add_argument('--test-type', type=str,
-                       choices=['python', 'javascript', 'demos'],
-                       help='Type de tests à exécuter (python, javascript, demos).')
     parser.add_argument('--timeout', type=int, default=20,
-                           help="Timeout global en minutes pour l'orchestration.")
+                           help='Timeout global en minutes pour l\'orchestration.')
     parser.add_argument('--log-level', type=str, default='INFO',
                            choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
                            help='Niveau de log pour la console et le fichier.')
     parser.add_argument('--no-trace', action='store_true',
                            help='Désactive la génération du rapport de trace Markdown.')
     parser.add_argument('--no-playwright', action='store_true',
-                        help="Désactive l'exécution des tests Playwright.")
+                        help='Désactive l\'exécution des tests Playwright.')
     parser.add_argument('--exit-after-start', action='store_true',
                         help='Démarre les serveurs puis quitte sans lancer les tests.')
 
     # Commandes
-    parser.add_argument('--start', action='store_true', help="Démarre seulement l'application.")
-    parser.add_argument('--stop', action='store_true', help="Arrête l'application.")
-    parser.add_argument('--test', action='store_true', help="Exécute seulement les tests sur une app déjà démarrée ou en la démarrant.")
-    parser.add_argument('--integration', action='store_true', default=True, help="Test d'intégration complet (défaut).")
+    parser.add_argument('--start', action='store_true', help='Démarre seulement l\'application.')
+    parser.add_argument('--stop', action='store_true', help='Arrête l\'application.')
+    parser.add_argument('--test', action='store_true', help='Exécute seulement les tests sur une app déjà démarrée ou en la démarrant.')
+    parser.add_argument('--integration', action='store_true', default=True, help='Test d\'intégration complet (défaut).')
 
     args, unknown = parser.parse_known_args()
 
@@ -1051,10 +857,10 @@ def main():
             elif args.test:
                 # Pour les tests seuls, on fait un cycle complet mais sans arrêt entre les étapes.
                 if await orchestrator.start_webapp(orchestrator.headless, args.frontend):
-                    success = await orchestrator.run_tests(test_type=args.test_type, test_paths=args.tests)
+                    success = await orchestrator.run_tests(args.tests)
             else:  # --integration par défaut
                 success = await orchestrator.full_integration_test(
-                    orchestrator.headless, args.frontend, args.test_type, args.tests)
+                    orchestrator.headless, args.frontend, args.tests)
         except KeyboardInterrupt:
             print("\n🛑 Interruption utilisateur détectée. Arrêt en cours...")
             # L'arrêt est géré par le signal handler
@@ -1072,48 +878,6 @@ def main():
     exit_code = 0 if success else 1
     orchestrator.logger.info(f"Code de sortie final : {exit_code}")
     sys.exit(exit_code)
-
-    async def _analyze_playwright_traces(self):
-        """Lance l'analyseur de traces en tant que sous-processus et logue le résultat."""
-        self.add_trace("[ANALYZE] ANALYSE DES TRACES PLAYWRIGHT", "Lancement du script trace_analyzer.py")
-        analyzer_script_path = "services/web_api/trace_analyzer.py"
-        
-        if not Path(analyzer_script_path).exists():
-            self.add_trace("[ERROR] Script d'analyse non trouvé", f"Chemin: {analyzer_script_path}", status="error")
-            return
-            
-        try:
-            # Utiliser le même interpréteur Python que celui qui exécute l'orchestrateur
-            python_executable = sys.executable
-            
-            self.logger.debug(f"Lancement de l'analyseur de trace avec la commande : {[python_executable, analyzer_script_path, '--mode=summary']}")
-            
-            proc = await asyncio.create_subprocess_exec(
-                python_executable, analyzer_script_path, '--mode=summary',
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            stdout, stderr = await proc.communicate()
-            
-            # Décoder la sortie
-            stdout_str = stdout.decode('utf-8', errors='ignore')
-            stderr_str = stderr.decode('utf-8', errors='ignore')
-            
-            if proc.returncode == 0:
-                self.add_trace("[OK] ANALYSE DE TRACE TERMINÉE", "Détails ci-dessous")
-                # Loggue le résumé directement dans la trace de l'orchestrateur
-                self.logger.info("\n--- DEBUT RAPPORT D'ANALYSE DE TRACE ---\n"
-                                f"{stdout_str}"
-                                "\n--- FIN RAPPORT D'ANALYSE DE TRACE ---")
-            else:
-                self.add_trace("[ERROR] ECHEC ANALYSE DE TRACE", "Le script a retourné une erreur.", status="error")
-                self.logger.error("Erreur lors de l'exécution de trace_analyzer.py:")
-                self.logger.error("STDOUT:\n" + stdout_str)
-                self.logger.error("STDERR:\n" + stderr_str)
-                
-        except Exception as e:
-            self.add_trace("[ERROR] ERREUR CRITIQUE ANALYSEUR", str(e), status="error")
 
 if __name__ == "__main__":
     from project_core.core_from_scripts import auto_env

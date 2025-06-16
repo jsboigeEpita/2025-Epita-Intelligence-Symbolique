@@ -1,12 +1,3 @@
-import sys
-import os
-from pathlib import Path
-
-# Ajoute la racine du projet au sys.path pour résoudre les problèmes d'import
-# causés par le `rootdir` de pytest qui interfère avec la résolution des modules.
-project_root = Path(__file__).parent.parent.resolve()
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
 """
 Configuration pour les tests pytest.
 
@@ -15,7 +6,6 @@ Il configure les mocks nécessaires pour les tests et utilise les vraies bibliot
 lorsqu'elles sont disponibles. Pour Python 3.12 et supérieur, le mock JPype1 est
 automatiquement utilisé en raison de problèmes de compatibilité.
 """
-import project_core.core_from_scripts.auto_env
 import sys
 import os
 import pytest
@@ -39,7 +29,6 @@ if not logging.getLogger().handlers: # Si le root logger n'a pas de handlers, ba
 else:
     _conftest_setup_logger.info("Configuration globale du logging déjà présente ou appliquée par un autre module.")
 # --- Début Patching JPype Mock au niveau module si nécessaire ---
-os.environ['USE_REAL_JPYPE'] = 'false'
 _SHOULD_USE_REAL_JPYPE = os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1')
 _conftest_setup_logger.info(f"conftest.py: USE_REAL_JPYPE={os.environ.get('USE_REAL_JPYPE', 'false')}, _SHOULD_USE_REAL_JPYPE={_SHOULD_USE_REAL_JPYPE}")
 
@@ -187,35 +176,12 @@ logger = logging.getLogger(__name__)
 # Ceci est particulièrement utile si les tests sont exécutés d'une manière où le répertoire racine
 # n'est pas automatiquement inclus dans PYTHONPATH (par exemple, exécution directe de pytest
 # depuis un sous-répertoire ou avec certaines configurations d'IDE).
-parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if parent_dir not in sys.path:
-    sys.path.insert(0, parent_dir)
-    _conftest_setup_logger.info(f"Ajout du répertoire racine du projet ({parent_dir}) à sys.path.")
-# Décommenté car l'environnement de test actuel en a besoin pour trouver les modules locaux.
+# parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# if parent_dir not in sys.path:
+#     sys.path.insert(0, parent_dir)
+#     _conftest_setup_logger.info(f"Ajout du répertoire racine du projet ({parent_dir}) à sys.path.")
+# Commenté car l'installation du package via `pip install -e .` devrait gérer l'accessibilité.
 
 # Les fixtures et hooks sont importés depuis leurs modules dédiés.
 # Les commentaires résiduels concernant les déplacements de code et les refactorisations
 # antérieures ont été supprimés pour améliorer la lisibilité.
-
-# --- Fixtures déplacées depuis tests/integration/webapp/conftest.py ---
-
-@pytest.fixture
-def webapp_config():
-    """Provides a basic webapp configuration dictionary."""
-    return {
-        "backend": {
-            "start_port": 8008,
-            "fallback_ports": [8009, 8010]
-        },
-        "frontend": {
-            "port": 3008
-        },
-        "playwright": {
-            "enabled": True
-        }
-    }
-
-@pytest.fixture
-def test_config_path(tmp_path):
-    """Provides a temporary path for a config file."""
-    return tmp_path / "test_config.yml"

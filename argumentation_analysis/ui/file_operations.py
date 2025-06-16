@@ -17,8 +17,9 @@ file_ops_logger = utils_logger
 
 def load_extract_definitions(
     config_file: Path,
-    b64_derived_key: Optional[str], 
-    app_config: Optional[Dict[str, Any]] = None 
+    b64_derived_key: Optional[str],
+    app_config: Optional[Dict[str, Any]] = None,
+    raise_on_decrypt_error: bool = False
 ) -> list:
     """Charge, déchiffre et décompresse les définitions depuis le fichier chiffré."""
     # Utiliser uniquement DEFAULT_EXTRACT_SOURCES comme fallback pour éviter le cycle avec EXTRACT_SOURCES
@@ -35,16 +36,19 @@ def load_extract_definitions(
             with open(config_file, 'rb') as f: encrypted_data = f.read()
             decrypted_compressed_data = decrypt_data_with_fernet(encrypted_data, b64_derived_key)
             
-            if not decrypted_compressed_data: # decrypt_data_with_fernet retourne None en cas d'InvalidToken ou autre erreur de déchiffrement
-                file_ops_logger.warning(f"[WARN] Echec du dechiffrement pour '{config_file}' (decrypt_data_with_fernet a retourne None). Utilisation des definitions par defaut.")
-                return [item.copy() for item in fallback_definitions]
-            
+            if not decrypted_compressed_data:
+                file_ops_logger.error(f"Échec du déchiffrement pour '{config_file}'. Le token est peut-être invalide.")
+                raise InvalidToken(f"Échec du déchiffrement pour '{config_file}'.")
+
             decompressed_data = gzip.decompress(decrypted_compressed_data)
             definitions = json.loads(decompressed_data.decode('utf-8'))
-            file_ops_logger.info("[OK] Definitions chargees et dechiffrees.")
+            file_ops_logger.info("✅ Définitions chargées et déchiffrées.")
 
         except InvalidToken:
-            file_ops_logger.error(f"[FAIL] InvalidToken explicitement levee lors du dechiffrement de '{config_file}'. Utilisation definitions par defaut.", exc_info=True)
+            # Ce bloc est spécifiquement pour quand decrypt_data_with_fernet lève InvalidToken
+            file_ops_logger.error(f"❌ Token invalide (InvalidToken) lors du déchiffrement de '{config_file}'.", exc_info=True)
+            if raise_on_decrypt_error:
+                raise
             return [item.copy() for item in fallback_definitions]
         except Exception as e:
             file_ops_logger.error(f"[FAIL] Erreur chargement/dechiffrement '{config_file}': {e}. Utilisation definitions par defaut.", exc_info=True)

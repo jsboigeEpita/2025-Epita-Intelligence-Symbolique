@@ -28,7 +28,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_phase_d_trace_ideale():
     """
     Test complet de la Phase D pour atteindre la trace idéale (8.0+/10).
@@ -337,7 +337,7 @@ async def test_phase_d_trace_ideale():
         return None
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def demonstration_trace_ideale():
     """
     Démonstration complète d'une conversation trace idéale.

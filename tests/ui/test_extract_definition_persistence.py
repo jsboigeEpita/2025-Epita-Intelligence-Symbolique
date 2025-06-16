@@ -105,12 +105,12 @@ def test_load_definitions_encrypted_no_key(test_env):
 def test_load_definitions_encrypted_wrong_key(test_env):
     wrong_key = test_env['crypto_service'].generate_key() # bytes
     
-    # La fonction gère maintenant l'erreur et retourne une liste par défaut.
-    definitions = load_extract_definitions(
-        config_file=test_env['encrypted_definitions_file'],
-        b64_derived_key=wrong_key.decode('utf-8')
-    )
-    assert isinstance(definitions, list)
+    with pytest.raises(InvalidToken):
+        load_extract_definitions(
+            config_file=test_env['encrypted_definitions_file'],
+            b64_derived_key=wrong_key.decode('utf-8'),
+            raise_on_decrypt_error=True
+        )
 
 @pytest.mark.skip("La fonction save_extract_definitions chiffre toujours ; ce test pour la sauvegarde non chiffrée est obsolète.")
 def test_save_definitions_unencrypted(test_env):
@@ -167,6 +167,5 @@ def test_load_malformed_json(test_env):
     with open(malformed_encrypted_file, 'wb') as f:
         f.write(b"this is not encrypted data")
 
-    # La fonction gère maintenant l'erreur et retourne une liste par défaut.
-    definitions = load_extract_definitions(config_file=malformed_encrypted_file, b64_derived_key=test_env['key'].decode('utf-8'))
-    assert isinstance(definitions, list)
+    with pytest.raises(InvalidToken):
+        load_extract_definitions(config_file=malformed_encrypted_file, b64_derived_key=test_env['key'].decode('utf-8'), raise_on_decrypt_error=True)

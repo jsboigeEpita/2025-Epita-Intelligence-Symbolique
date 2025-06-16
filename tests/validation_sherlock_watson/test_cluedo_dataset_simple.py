@@ -47,7 +47,7 @@ def test_revelation_record_creation():
     """Test de création d'enregistrement de révélation."""
     revelation = RevelationRecord(
         card_revealed="Professeur Violet",
-        revelation_type="owned_card",
+        revelation_type="card_inquiry",
         message="Test révélation",
         revealed_to="TestAgent",
         timestamp=datetime.now(),

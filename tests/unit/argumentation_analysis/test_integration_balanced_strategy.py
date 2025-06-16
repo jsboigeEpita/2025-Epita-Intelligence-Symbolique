@@ -1,10 +1,3 @@
-
-# Authentic gpt-4o-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 # -*- coding: utf-8 -*-
 """
 Tests d'intégration pour la stratégie d'équilibrage de participation des agents.
@@ -21,8 +14,8 @@ import pytest
 import logging
 
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent
-from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
+from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole
+from semantic_kernel_compatibility import Agent, AgentGroupChat
 
 # Utiliser la fonction setup_import_paths pour résoudre les problèmes d'imports relatifs
 # from tests import setup_import_paths # Commenté pour investigation
@@ -215,3 +208,4 @@ class TestBalancedStrategyIntegration: # Suppression de l'héritage AsyncTestCas
 
 if __name__ == '__main__':
     pytest.main(['-xvs', __file__])
+

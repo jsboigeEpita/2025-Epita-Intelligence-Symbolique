@@ -120,7 +120,7 @@ class FrontendManager:
                 try:
                     self.frontend_stdout_log_file.close()
                 except Exception:
-                    pass # Ignorer les erreurs de fermeture
+                    pass
             if self.frontend_stderr_log_file:
                 try:
                     self.frontend_stderr_log_file.close()
@@ -141,7 +141,7 @@ class FrontendManager:
             self.process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,  # Capture de la sortie standard
-                stderr=subprocess.STDOUT, # Fusionner stdout et stderr pour tout capturer
+                stderr=self.frontend_stderr_log_file,
                 cwd=self.frontend_path,
                 env=frontend_env,
                 shell=shell,
@@ -317,7 +317,7 @@ class FrontendManager:
         """Tâche asynchrone pour lire stdout ligne par ligne."""
         loop = asyncio.get_event_loop()
          # La chaîne à rechercher. Peut être adaptée si les logs de react-scripts changent.
-        success_strings = ["Compiled successfully!", "webpack compiled successfully", "webpack compiled with"]
+        success_strings = ["Compiled successfully!", "webpack compiled successfully"]
         
         while True:
             if not self.process or not self.process.stdout:
