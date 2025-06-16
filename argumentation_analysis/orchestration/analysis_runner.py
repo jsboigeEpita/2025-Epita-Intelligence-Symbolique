@@ -199,7 +199,6 @@ async def _run_analysis_conversation(
                     last_message_content = full_history.messages[-1].content
                     next_agent_name_str = "TERMINATE"  # Par défaut
 
-                    import re
                     match = re.search(r'designate_next_agent\(agent_name="([^"]+)"\)', last_message_content)
                     
                     if match:
