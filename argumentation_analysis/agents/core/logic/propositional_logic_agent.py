@@ -229,7 +229,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
         prompt_execution_settings = None
         if self._llm_service_id:
             try:
-                prompt_execution_settings = self.sk_kernel.get_prompt_execution_settings_from_service_id(self._llm_service_id)
+                prompt_execution_settings = self.kernel.get_prompt_execution_settings_from_service_id(self._llm_service_id)
                 self.logger.debug(f"Settings LLM récupérés pour {self.name}.")
             except Exception as e:
                 self.logger.warning(f"Impossible de récupérer les settings LLM pour {self.name}: {e}")
@@ -243,7 +243,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
 
         for func_name, prompt, description in semantic_functions:
             try:
-                self.sk_kernel.add_function(
+                self.kernel.add_function(
                     prompt=prompt,
                     plugin_name=self.name,
                     function_name=func_name,
@@ -255,7 +255,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
                 self.logger.error(f"Erreur lors de l'ajout de la fonction sémantique {self.name}.{func_name}: {e}", exc_info=True)
         
         self.logger.info(f"Composants pour {self.name} configurés.")
-
+    
     def _extract_json_block(self, text: str) -> str:
         """Extrait le premier bloc JSON valide de la réponse du LLM."""
         match = re.search(r'```json\s*(\{.*?\})\s*```', text, re.DOTALL)
@@ -374,7 +374,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
             }, indent=2)
 
             arguments = KernelArguments(input=text, belief_set=belief_set_for_prompt)
-            result = await self.sk_kernel.invoke(
+            result = await self.kernel.invoke(
                 plugin_name=self.name,
                 function_name="GeneratePLQueryIdeas",
                 arguments=arguments
@@ -466,7 +466,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
                 tweety_result=results_messages_str
             )
             
-            result = await self.sk_kernel.invoke(
+            result = await self.kernel.invoke(
                 plugin_name=self.name,
                 function_name="InterpretPLResults",
                 arguments=arguments
@@ -505,40 +505,73 @@ class PropositionalLogicAgent(BaseLogicAgent):
             self.logger.error(error_msg, exc_info=True)
             return False, error_msg
 
-    async def get_response(
-        self,
-        chat_history: ChatHistory,
-        settings: Optional[Any] = None,
-    ) -> AsyncGenerator[list[ChatMessageContent], None]:
+    async def _create_belief_set_from_data(self, data: str, context: Optional[Dict[str, Any]] = None) -> Optional[BeliefSet]:
         """
-        Méthode abstraite de `Agent` pour obtenir une réponse.
-        Non implémentée car cet agent utilise des méthodes spécifiques.
+        Implémentation de la méthode abstraite pour créer un BeliefSet
+        à partir de données textuelles brutes.
         """
-        logger.warning("La méthode 'get_response' n'est pas implémentée pour PropositionalLogicAgent et ne devrait pas être appelée directement.")
-        yield []
-        return
+        self.logger.debug(f"_create_belief_set_from_data appelé pour {self.name}.")
+        belief_set, _ = await self.text_to_belief_set(text=data, context=context)
+        return belief_set
 
-    async def invoke(
-        self,
-        chat_history: ChatHistory,
-        settings: Optional[Any] = None,
-    ) -> list[ChatMessageContent]:
-        """
-        Méthode abstraite de `Agent` pour invoquer l'agent.
-        Non implémentée car cet agent utilise des méthodes spécifiques.
-        """
-        logger.warning("La méthode 'invoke' n'est pas implémentée pour PropositionalLogicAgent et ne devrait pas être appelée directement.")
-        return []
+    async def get_response(self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None) -> list[ChatMessageContent]:
+        """Délègue l'invocation à la méthode invoke_single."""
+        self.logger.debug(f"get_response appelé, délégation à invoke_single pour {self.name}.")
+        return await self.invoke_single(kernel, arguments)
 
-    async def invoke_stream(
-        self,
-        chat_history: ChatHistory,
-        settings: Optional[Any] = None,
-    ) -> AsyncGenerator[list[ChatMessageContent], None]:
+    async def invoke_single(self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None) -> list[ChatMessageContent]:
         """
-        Méthode abstraite de `Agent` pour invoquer l'agent en streaming.
-        Non implémentée car cet agent utilise des méthodes spécifiques.
+        Gère l'invocation de l'agent en analysant la dernière instruction du chat
+        et en appelant la méthode interne appropriée.
         """
-        logger.warning("La méthode 'invoke_stream' n'est pas implémentée pour PropositionalLogicAgent et ne devrait pas être appelée directement.")
-        yield []
-        return
+        self.logger.info(f"Invocation de {self.name} avec les arguments fournis.")
+        history = arguments.get("chat_history") if arguments else None
+        if not history or len(history) == 0:
+            error_msg = "L'historique du chat est vide, impossible de continuer."
+            self.logger.error(error_msg)
+            return [ChatMessageContent(role="assistant", content=f'{{"error": "{error_msg}"}}', name=self.name)]
+
+        last_user_message = history[-1].content
+        self.logger.debug(f"Analyse de la dernière instruction: {last_user_message[:200]}...")
+
+        # Analyser la tâche demandée (simplifié)
+        if "belief set" in last_user_message.lower():
+            task = "text_to_belief_set"
+            self.logger.info("Tâche détectée: text_to_belief_set")
+            # Extraire le texte source, qui est généralement l'historique avant ce message
+            source_text = history[0].content if len(history) > 1 else ""
+            belief_set, message = await self.text_to_belief_set(source_text)
+            if belief_set:
+                response_content = belief_set.to_json()
+            else:
+                response_content = f'{{"error": "Échec de la création du belief set", "details": "{message}"}}'
+        
+        elif "generate queries" in last_user_message.lower():
+            task = "generate_queries"
+            self.logger.info("Tâche détectée: generate_queries")
+            # Pour cette tâche, il faut un belief_set existant. On suppose qu'il est dans le contexte.
+            # Cette logique est simplifiée et pourrait nécessiter d'être enrichie.
+            source_text = history[0].content
+            # NOTE: La récupération du belief_set est un point critique.
+            # Ici, on suppose qu'il faut le reconstruire.
+            belief_set, _ = await self.text_to_belief_set(source_text)
+            if belief_set:
+                queries = await self.generate_queries(source_text, belief_set)
+                response_content = json.dumps({"generated_queries": queries})
+            else:
+                response_content = f'{{"error": "Impossible de générer les requêtes car le belief set n_a pas pu être créé."}}'
+
+        else:
+            self.logger.warning(f"Aucune tâche spécifique reconnue dans la dernière instruction pour {self.name}.")
+            response_content = f'{{"error": "Tâche non reconnue pour {self.name}", "instruction": "{last_user_message}"}}'
+            task = "unknown"
+
+        self.logger.info(f"Tâche '{task}' terminée. Préparation de la réponse.")
+        
+        response_message = ChatMessageContent(
+            role="assistant",
+            content=response_content,
+            name=self.name,
+            metadata={'task_name': task}
+        )
+        return [response_message]

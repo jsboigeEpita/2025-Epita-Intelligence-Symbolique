@@ -75,9 +75,8 @@ class ExtractAgent(BaseAgent):
         extract_text_func: Optional[Callable] = None
     ):
         super().__init__(kernel, agent_name, EXTRACT_AGENT_INSTRUCTIONS)
-        self.plugin_name = "extract_plugin"
-        self.find_similar_text_func = find_similar_text_func or find_similar_text
-        self.extract_text_func = extract_text_func or extract_text_with_markers
+        self._find_similar_text_func = find_similar_text_func or find_similar_text
+        self._extract_text_func = extract_text_func or extract_text_with_markers
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         return {
@@ -89,7 +88,7 @@ class ExtractAgent(BaseAgent):
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants pour {self.name} avec le service LLM ID: {llm_service_id}")
         self._native_extract_plugin = ExtractAgentPlugin()
-        self.sk_kernel.add_plugin(self._native_extract_plugin, plugin_name=self.NATIVE_PLUGIN_NAME)
+        self.kernel.add_plugin(self._native_extract_plugin, plugin_name=self.NATIVE_PLUGIN_NAME)
         self.logger.info(f"Plugin natif '{self.NATIVE_PLUGIN_NAME}' enregistré.")
         extract_prompt_template_config = PromptTemplateConfig(
             template=EXTRACT_FROM_NAME_PROMPT,
@@ -100,9 +99,9 @@ class ExtractAgent(BaseAgent):
                 {"name": "source_name", "description": "Nom de la source", "is_required": True},
                 {"name": "extract_context", "description": "Texte source dans lequel chercher", "is_required": True}
             ],
-            execution_settings=self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+            execution_settings=self.kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         )
-        self.sk_kernel.add_function(
+        self.kernel.add_function(
             function_name=self.EXTRACT_SEMANTIC_FUNCTION_NAME,
             prompt_template_config=extract_prompt_template_config,
             plugin_name=self.name
@@ -121,9 +120,9 @@ class ExtractAgent(BaseAgent):
                 {"name": "extracted_text", "description": "Texte extrait", "is_required": True},
                 {"name": "explanation", "description": "Explication de l'extraction LLM", "is_required": True}
             ],
-            execution_settings=self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+            execution_settings=self.kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         )
-        self.sk_kernel.add_function(
+        self.kernel.add_function(
             function_name=self.VALIDATE_SEMANTIC_FUNCTION_NAME,
             prompt_template_config=validate_prompt_template_config,
             plugin_name=self.name
@@ -157,7 +156,7 @@ class ExtractAgent(BaseAgent):
             extract_context=source_text # On passe le texte complet
         )
         try:
-            response = await self.sk_kernel.invoke(
+            response = await self.kernel.invoke(
                 plugin_name=self.name,
                 function_name=self.EXTRACT_SEMANTIC_FUNCTION_NAME,
                 arguments=arguments
@@ -180,7 +179,7 @@ class ExtractAgent(BaseAgent):
         if not start_marker or not end_marker:
             return ExtractResult(source_name=source_name, extract_name=extract_name, status="error", message="Bornes invalides ou manquantes proposées par l'agent.", explanation=explanation)
 
-        extracted_text, status_msg, start_found, end_found = self.extract_text_func(source_text, start_marker, end_marker, "")
+        extracted_text, status_msg, start_found, end_found = self._extract_text_func(source_text, start_marker, end_marker, "")
         if not start_found or not end_found:
             return ExtractResult(source_name=source_name, extract_name=extract_name, status="error", message=f"Bornes non trouvées dans le texte: {status_msg}", start_marker=start_marker, end_marker=end_marker, explanation=explanation)
         
@@ -195,42 +194,55 @@ class ExtractAgent(BaseAgent):
             extracted_text=extracted_text
         )
 
-    async def invoke_custom(self, history: list[ChatMessageContent]) -> ChatMessageContent:
-        self.logger.info(f"invoke_custom appelée pour {self.name}")
+    async def get_response(self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None) -> list[ChatMessageContent]:
+        """Délègue l'invocation à la méthode invoke_single."""
+        self.logger.debug(f"get_response appelé, délégation à invoke_single pour {self.name}.")
+        return await self.invoke_single(kernel, arguments)
 
-        source_text = ""
-        if history:
-            user_message = next((msg for msg in history if msg.role == "user"), None)
-            if user_message and user_message.content:
-                source_text = str(user_message.content)
-            else:
-                first_message = history[0]
-                if first_message and first_message.content:
-                    source_text = str(first_message.content)
+    async def invoke_single(self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None) -> list[ChatMessageContent]:
+        """
+        Gère l'invocation de l'agent en extrayant le contenu pertinent de l'historique du chat.
+        """
+        self.logger.info(f"Invocation de {self.name} via invoke_single.")
+        history = arguments.get("chat_history") if arguments else None
 
-        if not source_text:
-            return ChatMessageContent(role="assistant", content="ERREUR: Impossible de trouver le texte source dans l'historique.", name=self.name)
+        if not history:
+            error_msg = "L'historique du chat est vide, impossible d'extraire."
+            self.logger.error(error_msg)
+            return [ChatMessageContent(role="assistant", content=json.dumps({"error": error_msg}), name=self.name)]
 
-        extract_name = "Le point principal de l'auteur"
+        # Stratégie : prendre le premier message utilisateur comme source principale
+        source_message = next((msg for msg in history if msg.role == "user"), history[0])
+        source_text = source_message.content
+        
+        # Le nom de l'extrait est déterminé par le dernier message (instruction du PM)
+        last_message = history[-1].content
+        # Regex pour trouver une instruction comme extract(name="...")
+        match = re.search(r'extract\s*\(\s*name="([^"]+)"', last_message)
+        if match:
+            extract_name = match.group(1)
+            self.logger.info(f"Nom d'extrait trouvé dans l'instruction: '{extract_name}'")
+        else:
+            extract_name = "Le point principal de l'auteur" # Fallback
+            self.logger.warning(f"Aucun nom d'extrait spécifique trouvé, utilisation du nom par défaut: '{extract_name}'")
+
         source_info = {"source_name": "Source Conversationnelle"}
 
         try:
-            result = await self.extract_from_name(source_info, extract_name, source_text=source_text)
+            result = await self.extract_from_name(source_info, extract_name, source_text=str(source_text))
             response_content = result.to_json()
-            return ChatMessageContent(role="assistant", content=response_content, name=self.name)
+            response_message = ChatMessageContent(
+                role="assistant",
+                content=response_content,
+                name=self.name,
+                metadata={'task_name': 'extract_from_name', 'status': result.status}
+            )
         except Exception as e:
-            self.logger.error(f"Erreur dans invoke_custom de ExtractAgent: {e}", exc_info=True)
-            return ChatMessageContent(role="assistant", content=f"Erreur lors de l'extraction: {e}", name=self.name)
-
-    async def get_response(self, request: str, context: str = "", **kwargs) -> str:
-        self.logger.warning("La méthode 'get_response' est dépréciée. Redirection vers 'invoke_custom'.")
-        history = [ChatMessageContent(role="user", content=request)]
-        response_message = await self.invoke_custom(history)
-        return str(response_message.content)
-
-    async def invoke(self, function_name: str = "extract_from_name", **kwargs) -> str:
-        self.logger.warning(f"La méthode 'invoke' est dépréciée. Redirection vers 'invoke_custom' pour la fonction '{function_name}'.")
-        raw_text = kwargs.get("source_text", "")
-        history = [ChatMessageContent(role="user", content=raw_text)]
-        response_message = await self.invoke_custom(history)
-        return str(response_message.content)
+            self.logger.error(f"Erreur dans invoke_single de ExtractAgent: {e}", exc_info=True)
+            response_message = ChatMessageContent(
+                role="assistant",
+                content=json.dumps({"error": f"Erreur lors de l'extraction: {str(e)}"}),
+                name=self.name
+            )
+        
+        return [response_message]
