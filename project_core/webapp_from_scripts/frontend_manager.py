@@ -305,7 +305,7 @@ class FrontendManager:
         
         # Pause initiale pour laisser le temps au serveur de dev de se lancer.
         # Create-react-app peut être lent à démarrer.
-        initial_pause_s = 15
+        initial_pause_s = 30
         self.logger.info(f"Pause initiale de {initial_pause_s}s avant health checks...")
         await asyncio.sleep(initial_pause_s)
 

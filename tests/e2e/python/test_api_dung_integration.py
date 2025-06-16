@@ -1,14 +1,21 @@
 import pytest
-from playwright.sync_api import APIRequestContext, expect
+from playwright.sync_api import Playwright, expect
+import os
 
 # Marqueur pour facilement cibler ces tests
 pytestmark = [pytest.mark.api_integration, pytest.mark.e2e_test]
 
-def test_dung_framework_analysis_api(api_request_context: APIRequestContext):
+@pytest.mark.playwright
+def test_dung_framework_analysis_api(playwright: Playwright):
     """
     Teste directement l'endpoint de l'API pour l'analyse de A.F. Dung.
     Ceci valide l'intégration du service Dung sans passer par l'UI.
     """
+    # Création manuelle du contexte API
+    api_request_context = playwright.request.new_context(
+        base_url=os.environ.get("BACKEND_URL", "http://localhost:5003")
+    )
+    
     # Données d'exemple pour un framework d'argumentation simple
     test_data = {
         "arguments": ["a", "b", "c"],

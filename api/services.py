@@ -116,18 +116,20 @@ class DungAnalysisService:
                 'ideal': [],
                 'semi_stable': []
             },
-            'argument_status': self._get_all_arguments_status(arguments, preferred_ext, grounded_ext),
+            'argument_status': self._get_all_arguments_status(arguments, preferred_ext, grounded_ext, stable_ext),
             'graph_properties': self._get_framework_properties(agent)
         }
         
         return results
 
-    def _get_all_arguments_status(self, arg_names: list[str], preferred_ext: list, grounded_ext: list) -> dict:
+    def _get_all_arguments_status(self, arg_names: list[str], preferred_ext: list, grounded_ext: list, stable_ext: list) -> dict:
         all_status = {}
         for name in arg_names:
             all_status[name] = {
                 'credulously_accepted': any(name in ext for ext in preferred_ext),
                 'skeptically_accepted': all(name in ext for ext in preferred_ext) if preferred_ext else False,
+                'grounded_accepted': name in grounded_ext,
+                'stable_accepted': all(name in ext for ext in stable_ext) if stable_ext else False,
             }
         return all_status
     

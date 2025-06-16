@@ -14,6 +14,7 @@ import semantic_kernel as sk # Ajout de l'import
 
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
 from argumentation_analysis.orchestration.hierarchical.operational.agent_registry import OperationalAgentRegistry
+from argumentation_analysis.core.bootstrap import ProjectContext # Ajout de l'import
 # Import différé pour éviter l'importation circulaire
 from argumentation_analysis.paths import RESULTS_DIR
 from typing import TYPE_CHECKING
@@ -38,7 +39,8 @@ class OperationalManager:
                  tactical_operational_interface: Optional['TacticalOperationalInterface'] = None,
                  middleware: Optional[MessageMiddleware] = None,
                  kernel: Optional[sk.Kernel] = None,  # Ajout du kernel
-                 llm_service_id: Optional[str] = None): # Ajout de llm_service_id
+                 llm_service_id: Optional[str] = None, # Ajout de llm_service_id
+                 project_context: Optional[ProjectContext] = None):
         """
         Initialise un nouveau gestionnaire opérationnel.
         
@@ -48,15 +50,18 @@ class OperationalManager:
             middleware: Le middleware de communication à utiliser.
             kernel: Le kernel Semantic Kernel à utiliser pour les agents.
             llm_service_id: L'ID du service LLM à utiliser.
+            project_context: Le contexte global du projet.
         """
         self.operational_state = operational_state if operational_state else OperationalState()
         self.tactical_operational_interface = tactical_operational_interface
         self.kernel = kernel # Stocker le kernel
         self.llm_service_id = llm_service_id # Stocker llm_service_id
+        self.project_context = project_context # Stocker le contexte du projet
         self.agent_registry = OperationalAgentRegistry(
             operational_state=self.operational_state,
             kernel=self.kernel,
-            llm_service_id=self.llm_service_id
+            llm_service_id=self.llm_service_id,
+            project_context=self.project_context
         )
         self.logger = logging.getLogger("OperationalManager")
         self.task_queue = asyncio.Queue()
