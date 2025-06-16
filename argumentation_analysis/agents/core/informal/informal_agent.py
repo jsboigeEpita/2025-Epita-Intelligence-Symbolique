@@ -26,7 +26,7 @@ from typing import Dict, List, Any, Optional
 import semantic_kernel as sk
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
-from semantic_kernel.contents.author_role import AuthorRole
+from semantic_kernel.contents.chat_role import ChatRole as AuthorRole
 
 # Import de la classe de base
 from ..abc.agent_bases import BaseAgent
