@@ -159,6 +159,26 @@ else:
 # # --- Fin Gestion des imports conditionnels ---
 # --- Fin Configuration globale du Logging ---
 
+def pytest_addoption(parser):
+    """Ajoute des options de ligne de commande personnalisées à pytest."""
+    parser.addoption(
+        "--backend-url", action="store", default="http://localhost:5003",
+        help="URL du backend à tester"
+    )
+    parser.addoption(
+        "--frontend-url", action="store", default="http://localhost:3000",
+        help="URL du frontend à tester (si applicable)"
+    )
+
+@pytest.fixture(scope="session")
+def backend_url(request):
+    """Fixture pour récupérer l'URL du backend depuis les options pytest."""
+    return request.config.getoption("--backend-url")
+
+@pytest.fixture(scope="session")
+def frontend_url(request):
+    """Fixture pour récupérer l'URL du frontend depuis les options pytest."""
+    return request.config.getoption("--frontend-url")
 # --- Gestion du Path pour les Mocks (déplacé ici AVANT les imports des mocks) ---
 current_dir_for_mock = os.path.dirname(os.path.abspath(__file__))
 mocks_dir_for_mock = os.path.join(current_dir_for_mock, 'mocks')
