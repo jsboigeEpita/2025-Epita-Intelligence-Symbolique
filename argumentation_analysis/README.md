@@ -6,7 +6,7 @@ Ce document fournit une description technique du système d'analyse d'argumentat
 
 ## 1. Architecture Générale
 
-Le système est conçu autour d'un pipeline d'orchestration unifié, `UnifiedOrchestrationPipeline` (implémenté via `analysis_runner.py`), qui coordonne une flotte d'agents d'IA spécialisés. Chaque agent a un rôle précis et collabore en partageant un état commun (`RhetoricalAnalysisState`) via un `Kernel` Semantic Kernel.
+Le système est conçu autour d'un pipeline d'orchestration modulaire, accessible via `argumentation_analysis.pipelines.unified_pipeline`. Ce dernier agit comme un point d'entrée qui sélectionne et exécute des stratégies d'analyse via le `MainOrchestrator`. Ce moteur coordonne une flotte d'agents d'IA spécialisés. Chaque agent a un rôle précis et collabore en partageant un état commun (`RhetoricalAnalysisState`) via un `Kernel` Semantic Kernel.
 
 ```mermaid
 graph TD
@@ -15,8 +15,11 @@ graph TD
     end
 
     subgraph "Pipeline d'Orchestration"
-        Pipeline["UnifiedOrchestrationPipeline<br>(_run_analysis_conversation)"]
+        EntryPoint["unified_pipeline.py<br>(Point d'Entrée)"]
+        Orchestrator["MainOrchestrator<br>(Moteur d'orchestration)"]
         SharedState["RhetoricalAnalysisState<br>(État partagé)"]
+
+        EntryPoint --> Orchestrator
     end
 
     subgraph "Coeur (Semantic Kernel)"
@@ -58,7 +61,8 @@ graph TD
 
 ## 2. Composants Clés
 
--   **`UnifiedOrchestrationPipeline`** (`analysis_runner.py`): Le chef d'orchestre. Il initialise tous les composants (Kernel, état, agents) et lance la conversation collaborative entre les agents.
+-   **`unified_pipeline.py`**: Le principal point d'entrée du système. Il sélectionne le mode d'analyse (natif, orchestration, hybride) et invoque les composants appropriés.
+-   **`MainOrchestrator`**: Le véritable chef d'orchestre. En fonction de la stratégie choisie, il coordonne les managers hiérarchiques (stratégique, tactique, opérationnel) ou les orchestrateurs spécialisés.
 
 -   **`RhetoricalAnalysisState`** (`shared_state.py`): L'état partagé de l'analyse. C'est un objet qui contient le texte initial, les arguments identifiés, les sophismes, les conclusions, etc. Il sert de "tableau blanc" pour les agents.
 

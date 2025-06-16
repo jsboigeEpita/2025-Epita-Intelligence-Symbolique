@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-Le pipeline d'orchestration unifié (`unified_orchestration_pipeline.py`) étend les capacités du `unified_text_analysis.py` original en intégrant l'architecture hiérarchique complète à 3 niveaux et les orchestrateurs spécialisés disponibles dans le projet.
+Le pipeline d'orchestration unifié (`la classe `UnifiedPipeline` du module `argumentation_analysis/pipelines/unified_pipeline.py``) étend les capacités du `unified_text_analysis.py` original en intégrant l'architecture hiérarchique complète à 3 niveaux et les orchestrateurs spécialisés disponibles dans le projet.
 
 ## Architecture Hiérarchique
 
