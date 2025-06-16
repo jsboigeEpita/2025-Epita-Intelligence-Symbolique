@@ -71,15 +71,27 @@ Write-Host "[INFO] [COMMANDE] $CommandToRun" -ForegroundColor Cyan
 #
 # & $realScriptPath -CommandToRun $CommandToRun
 # $exitCode = $LASTEXITCODE
-Write-Host "[AVERTISSEMENT] Le mécanisme d'appel au script d'activation a été désactivé temporairement suite à un refactoring." -ForegroundColor Yellow
-Write-Host "[AVERTISSEMENT] Le script ne fait qu'exécuter la commande directement. Pour une activation complète, utilisez le terminal." -ForegroundColor Yellow
-$exitCode = 0 # Placeholder
+# --- VALIDATION D'ENVIRONNEMENT DÉLÉGUÉE À PYTHON ---
+# Le mécanisme 'project_core/core_from_scripts/auto_env.py' gère la validation, l'activation
+# et le coupe-circuit de manière robuste. Ce script PowerShell se contente de l'invoquer.
 
-# Exécution directe de la commande pour maintenir une fonctionnalité minimale
-Invoke-Expression $CommandToRun
-if ($LASTEXITCODE -ne $null) {
-    $exitCode = $LASTEXITCODE
-}
+Write-Host "[INFO] Délégation de la validation de l'environnement à 'project_core.core_from_scripts.auto_env.py'" -ForegroundColor Cyan
+
+# Échapper les guillemets simples et doubles dans la commande pour l'injection dans la chaîne Python.
+# PowerShell utilise ` comme caractère d'échappement pour les guillemets doubles.
+$EscapedCommand = $CommandToRun.Replace("'", "\'").replace('"', '\"')
+
+# Construction de la commande Python
+# 1. Importe auto_env (active et valide l'environnement, lève une exception si échec)
+# 2. Importe les modules 'os' et 'sys'
+# 3. Exécute la commande passée au script et propage le code de sortie
+$PythonCommand = "python -c `"import sys; import os; import project_core.core_from_scripts.auto_env; exit_code = os.system('$EscapedCommand'); sys.exit(exit_code)`""
+
+Write-Host "[DEBUG] Commande Python complète à exécuter: $PythonCommand" -ForegroundColor Magenta
+
+# Exécution de la commande
+Invoke-Expression $PythonCommand
+$exitCode = $LASTEXITCODE
 
 
 # Message final informatif

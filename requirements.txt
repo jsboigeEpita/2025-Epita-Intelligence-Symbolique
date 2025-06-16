@@ -8,14 +8,14 @@ pandas==2.2.3
 scipy==1.15.3
 scikit-learn==1.6.1
 nltk>=3.8
-spacy>=3.7
+spacy==3.7.4
 
 # ===== WEB & API =====
 flask>=2.0.0
 Flask-CORS>=4.0.0
 flask_socketio>=5.3.6
 requests>=2.28.0
-uvicorn[standard]>=0.20.0 # Ajout pour le serveur ASGI
+uvicorn[standard]<=0.23.1 # Ajout pour le serveur ASGI
 a2wsgi>=1.8.0 # Ajout pour servir Flask avec Uvicorn
 
 # ===== UTILITIES =====
@@ -31,7 +31,7 @@ markdown>=3.4.0
 matplotlib>=3.5.0
 seaborn>=0.11.0
 statsmodels>=0.13.0
-networkx==3.4.2
+networkx==3.2.1
 
 pyvis>=0.3.0
 # ===== LOGIC & REASONING =====
