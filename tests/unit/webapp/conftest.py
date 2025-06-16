@@ -39,3 +39,7 @@ def webapp_config():
             'auto_cleanup': False
         }
     }
+@pytest.fixture
+def test_config_path(tmp_path: Path) -> Path:
+    """Crée un chemin vers un fichier de configuration temporaire."""
+    return tmp_path / "test_config.yml"

@@ -60,34 +60,50 @@ async def test_prepare_test_environment(runner):
         assert mock_environ['BACKEND_URL'] == 'http://backend:1234'
         assert mock_environ['FRONTEND_URL'] == 'http://frontend:5678'
         assert mock_environ['PLAYWRIGHT_BASE_URL'] == 'http://frontend:5678'
-        assert mock_environ['HEADLESS'] == 'false'
-        assert mock_environ['BROWSER'] == 'firefox'
+        # HEADLESS et BROWSER sont passés en ligne de commande, pas en variable d'environnement
+        # On vérifie juste qu'elles ne sont PAS dans l'environnement
+        assert 'HEADLESS' not in mock_environ
+        assert 'BROWSER' not in mock_environ
 
-@patch('shutil.which')
-def test_build_python_command(mock_which, runner):
-    """Tests the Python command building logic."""
-    mock_which.return_value = '/fake/path/to/pytest'
+def test_build_command_for_python(runner):
+    """Tests the command building logic for Python tests."""
+    cmd = runner._build_command(
+        'python',
+        ['tests/my_test.py'],
+        {'browser': 'chromium', 'headless': True},
+        ['-k', 'my_keyword'],
+        None
+    )
     
-    cmd = runner._build_python_command(['tests/my_test.py'], {'browser': 'chromium', 'headless': True}, [])
-    
-    # Check that the command starts with a pytest executable, path can vary
-    assert 'pytest' in cmd[0]
+    assert sys.executable in cmd
+    assert '-m' in cmd
+    assert 'pytest' in cmd
     assert 'tests/my_test.py' in cmd
     assert '--browser=chromium' in cmd
     assert '--headed' not in cmd
+    assert '-k' in cmd
+    assert 'my_keyword' in cmd
 
-def test_build_js_command(runner):
-    """Tests the JS command building logic."""
-    with patch('os.getenv', return_value='C:/fake_node_home'), \
-         patch('pathlib.Path.is_file', return_value=True):
-        
-        cmd = runner._build_js_command(['tests/js/my_test.spec.js'], {'browser': 'firefox'}, None)
+@patch('sys.platform', 'win32')
+def test_build_command_for_js(runner):
+    """Tests the command building logic for JavaScript tests."""
+    with patch('os.getenv', return_value='C:/fake_node_home'):
+        cmd = runner._build_command(
+            'javascript',
+            ['tests/js/my_test.spec.js'],
+            {'browser': 'firefox', 'headless': False, 'timeout_ms': 5000},
+            [],
+            'my.config.js'
+        )
         
         assert str(cmd[0]).endswith('npx.cmd')
         assert 'playwright' in cmd
         assert 'test' in cmd
         assert 'tests/js/my_test.spec.js' in cmd
+        assert '--config=my.config.js' in cmd
         assert '--project=firefox' in cmd
+        assert '--headed' in cmd
+        assert '--timeout=5000' in cmd
 
 @pytest.mark.asyncio
 async def test_run_tests_happy_path(runner):

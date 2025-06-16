@@ -5,6 +5,7 @@ import logging
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -110,27 +111,63 @@ class PlaywrightRunner:
                 os.environ[key] = str(value)
         self.logger.info(f"Variables test configurées: {env_vars}")
 
-    def _build_playwright_command_string(self, test_paths: List[str],
-                                         config: Dict[str, Any]) -> List[str]:
-        """Construit la liste de commande 'npx playwright test ...'."""
+    def _build_command(self,
+                       test_type: str,
+                       test_paths: List[str],
+                       config: Dict[str, Any],
+                       pytest_args: List[str],
+                       playwright_config_path: Optional[str]) -> List[str]:
+        """Construit dynamiquement la commande de test en fonction du type."""
+        self.logger.info(f"Building command for test_type: {test_type}")
+        if test_type == 'python':
+            return self._build_python_command(test_paths, config, pytest_args)
+        elif test_type == 'javascript':
+            return self._build_js_command(test_paths, config, playwright_config_path)
+        else:
+            raise ValueError(f"Type de test inconnu : '{test_type}'")
+
+    def _build_python_command(self, test_paths: List[str], config: Dict[str, Any], pytest_args: List[str]):
+        """Construit la commande pour les tests basés sur Pytest."""
+        # Utilise python -m pytest pour être sûr d'utiliser l'environnement courant
+        parts = [sys.executable, '-m', 'pytest']
+        parts.extend(test_paths)
+        
+        if config.get('browser'):
+            parts.append(f"--browser={config['browser']}")
+        if not config.get('headless', True):
+            parts.append("--headed")
+        
+        # Ajout des arguments pytest supplémentaires
+        if pytest_args:
+            parts.extend(pytest_args)
+            
+        self.logger.info(f"Commande Pytest construite: {parts}")
+        return parts
+
+    def _build_js_command(self, test_paths: List[str], config: Dict[str, Any], playwright_config_path: Optional[str]):
+        """Construit la commande pour les tests JS natifs Playwright."""
         node_home = os.getenv('NODE_HOME')
         if not node_home:
             raise RuntimeError("NODE_HOME n'est pas défini. Impossible de trouver npx.")
         
-        npx_executable = str(Path(node_home) / 'npx.cmd')
-        
+        npx_executable = str(Path(node_home) / 'npx.cmd') if sys.platform == "win32" else str(Path(node_home) / 'bin' / 'npx')
+
         parts = [npx_executable, 'playwright', 'test']
         parts.extend(test_paths)
         
+        if playwright_config_path:
+            parts.append(f"--config={playwright_config_path}")
+
         if not config.get('headless', True):
             parts.append('--headed')
             
-        # Lorsque le fichier de configuration utilise des "projets",
-        # il faut utiliser --project au lieu de --browser.
-        parts.append(f"--project={config['browser']}")
-        parts.append(f"--timeout={config['timeout_ms']}")
+        if config.get('browser'):
+            parts.append(f"--project={config['browser']}")
+        
+        if config.get('timeout_ms'):
+            parts.append(f"--timeout={config['timeout_ms']}")
 
-        self.logger.info(f"Construction de la commande 'npx playwright': {parts}")
+        self.logger.info(f"Commande JS Playwright construite: {parts}")
         return parts
 
     async def _execute_tests(self, playwright_command_parts: List[str],

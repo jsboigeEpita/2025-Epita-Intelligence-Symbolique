@@ -94,43 +94,52 @@ class BackendManager:
                 self.logger.error(error_msg)
                 return {'success': False, 'error': error_msg, 'url': None, 'port': None, 'pid': None}
             
-            conda_env_name = self.config.get('conda_env', 'projet-is')
-            
-            if ':' in self.module:
-                app_module_with_attribute = self.module
+            command_list = self.config.get('command_list')
+            if command_list:
+                self.logger.info(f"Utilisation de la command_list directe: {command_list}")
+                # Le test d'intégration avec fake_backend attend le port en argument
+                cmd = command_list + [str(port)]
             else:
-                app_module_with_attribute = f"{self.module}:app"
+                conda_env_name = self.config.get('conda_env', 'projet-is')
                 
-            backend_host = self.config.get('host', '127.0.0.1')
-            
-            # La commande flask n'a plus besoin du port, il sera lu depuis l'env FLASK_RUN_PORT
-            inner_cmd_list = [
-                "-m", "flask", "--app", app_module_with_attribute, "run", "--host", backend_host
-            ]
+                if not self.module:
+                    raise ValueError("La configuration du backend doit contenir soit 'module', soit 'command_list'.")
 
-            # Vérifier si nous sommes déjà dans le bon environnement Conda
-            current_conda_env = os.getenv('CONDA_DEFAULT_ENV')
-            python_executable = sys.executable # Chemin vers l'interpréteur Python actuel
+                if ':' in self.module:
+                    app_module_with_attribute = self.module
+                else:
+                    app_module_with_attribute = f"{self.module}:app"
+                    
+                backend_host = self.config.get('host', '127.0.0.1')
             
-            is_already_in_target_env = False
-            if current_conda_env == conda_env_name and conda_env_name in python_executable:
-                is_already_in_target_env = True
-            
-            if is_already_in_target_env:
-                self.logger.info(f"Déjà dans l'environnement Conda '{conda_env_name}'. Utilisation directe de: {python_executable}")
-                cmd = [python_executable] + inner_cmd_list
-            elif self.conda_env_path:
-                # Garder la logique existante si conda_env_path est fourni explicitement
-                cmd_base = ["conda", "run", "--prefix", self.conda_env_path, "--no-capture-output"]
-                self.logger.info(f"Utilisation de `conda run --prefix {self.conda_env_path}` pour lancer: {['python'] + inner_cmd_list}")
-                cmd = cmd_base + ["python"] + inner_cmd_list # Ajout de "python" ici
-            else:
-                # Fallback sur conda run -n si pas dans l'env et pas de path explicite
-                cmd_base = ["conda", "run", "-n", conda_env_name, "--no-capture-output"]
-                self.logger.warning(f"Utilisation de `conda run -n {conda_env_name}` pour lancer: {['python'] + inner_cmd_list}. Fournir conda_env_path est plus robuste.")
-                cmd = cmd_base + ["python"] + inner_cmd_list # Ajout de "python" ici
-            
-            self.logger.info(f"Commande de lancement backend construite: {cmd}")
+                # La commande flask n'a plus besoin du port, il sera lu depuis l'env FLASK_RUN_PORT
+                inner_cmd_list = [
+                    "-m", "flask", "--app", app_module_with_attribute, "run", "--host", backend_host
+                ]
+
+                # Vérifier si nous sommes déjà dans le bon environnement Conda
+                current_conda_env = os.getenv('CONDA_DEFAULT_ENV')
+                python_executable = sys.executable # Chemin vers l'interpréteur Python actuel
+                
+                is_already_in_target_env = False
+                if current_conda_env == conda_env_name and conda_env_name in python_executable:
+                    is_already_in_target_env = True
+                
+                if is_already_in_target_env:
+                    self.logger.info(f"Déjà dans l'environnement Conda '{conda_env_name}'. Utilisation directe de: {python_executable}")
+                    cmd = [python_executable] + inner_cmd_list
+                elif self.conda_env_path:
+                    # Garder la logique existante si conda_env_path est fourni explicitement
+                    cmd_base = ["conda", "run", "--prefix", self.conda_env_path, "--no-capture-output"]
+                    self.logger.info(f"Utilisation de `conda run --prefix {self.conda_env_path}` pour lancer: {['python'] + inner_cmd_list}")
+                    cmd = cmd_base + ["python"] + inner_cmd_list # Ajout de "python" ici
+                else:
+                    # Fallback sur conda run -n si pas dans l'env et pas de path explicite
+                    cmd_base = ["conda", "run", "-n", conda_env_name, "--no-capture-output"]
+                    self.logger.warning(f"Utilisation de `conda run -n {conda_env_name}` pour lancer: {['python'] + inner_cmd_list}. Fournir conda_env_path est plus robuste.")
+                    cmd = cmd_base + ["python"] + inner_cmd_list # Ajout de "python" ici
+                
+                self.logger.info(f"Commande de lancement backend construite: {cmd}")
             
             project_root = str(Path(__file__).resolve().parent.parent.parent)
             log_dir = Path(project_root) / "logs"

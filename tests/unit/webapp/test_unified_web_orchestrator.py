@@ -79,9 +79,10 @@ async def test_start_webapp_success_flow(orchestrator):
     """Tests the successful startup flow of the webapp."""
     # Configure mocks to simulate success
     orchestrator._cleanup_previous_instances = AsyncMock()
-    orchestrator.backend_manager.start_with_failover = AsyncMock(return_value={'success': True, 'url': 'http://b', 'port': 1, 'pid': 10})
+    orchestrator.backend_manager.start = AsyncMock(return_value={'success': True, 'url': 'http://b', 'port': 1, 'pid': 10})
     orchestrator.frontend_manager.start = AsyncMock(return_value={'success': True, 'url': 'http://f', 'port': 2, 'pid': 20})
     orchestrator.config['frontend']['enabled'] = True # Ensure frontend is enabled for this test
+    orchestrator.config['playwright']['enabled'] = True # Ensure playwright is enabled for this test
     orchestrator._validate_services = AsyncMock(return_value=True)
     orchestrator._launch_playwright_browser = AsyncMock()
 
@@ -89,7 +90,7 @@ async def test_start_webapp_success_flow(orchestrator):
 
     assert result is True
     orchestrator._cleanup_previous_instances.assert_called_once()
-    orchestrator.backend_manager.start_with_failover.assert_called_once()
+    orchestrator.backend_manager.start.assert_called_once()
     orchestrator.frontend_manager.start.assert_called_once()
     orchestrator._validate_services.assert_called_once()
     orchestrator._launch_playwright_browser.assert_called_once()
@@ -101,12 +102,12 @@ async def test_start_webapp_success_flow(orchestrator):
 async def test_start_webapp_backend_fails(orchestrator):
     """Tests the startup flow when the backend fails to start."""
     orchestrator._cleanup_previous_instances = AsyncMock()
-    orchestrator.backend_manager.start_with_failover = AsyncMock(return_value={'success': False, 'error': 'failure'})
+    orchestrator.backend_manager.start = AsyncMock(return_value={'success': False, 'error': 'failure'})
     
     result = await orchestrator.start_webapp()
 
     assert result is False
-    orchestrator.backend_manager.start_with_failover.assert_called_once()
+    orchestrator.backend_manager.start.assert_called_once()
     orchestrator.frontend_manager.start.assert_not_called() # Should not be called if backend fails
     assert orchestrator.app_info.status == WebAppStatus.ERROR
 

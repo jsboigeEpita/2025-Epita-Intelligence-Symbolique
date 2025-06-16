@@ -20,6 +20,7 @@ def integration_config(webapp_config, tmp_path):
     config['backend']['health_endpoint'] = '/api/health'
     config['backend']['start_port'] = 9020  # Use a higher port to be safer
     config['backend']['fallback_ports'] = [9021, 9022]
+    config['backend']['timeout_seconds'] = 20 # > 15s initial wait
     config['backend']['module'] = None
     
     config['frontend']['enabled'] = False
@@ -30,13 +31,25 @@ def integration_config(webapp_config, tmp_path):
 @pytest.fixture
 def orchestrator(integration_config, test_config_path, mocker):
     """Fixture to get an orchestrator instance for integration tests."""
-    mocker.patch('project_core.webapp_from_scripts.unified_web_orchestrator.UnifiedWebOrchestrator._setup_signal_handlers')
-    
+    import argparse
     import yaml
+    
+    mocker.patch('project_core.webapp_from_scripts.unified_web_orchestrator.UnifiedWebOrchestrator._setup_signal_handlers')
+
     with open(test_config_path, 'w') as f:
         yaml.dump(integration_config, f)
+
+    # Create a mock args object that mirrors the one from command line parsing
+    mock_args = argparse.Namespace(
+        config=str(test_config_path),
+        log_level='DEBUG',
+        headless=True,
+        visible=False,
+        timeout=5, # 5 minutes for integration tests
+        no_trace=True # Disable trace generation for speed
+    )
         
-    return UnifiedWebOrchestrator(config_path=test_config_path)
+    return UnifiedWebOrchestrator(args=mock_args)
 
 @pytest.mark.asyncio
 async def test_backend_lifecycle(orchestrator):

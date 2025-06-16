@@ -39,7 +39,7 @@ initialize_jvm_func = None
 CryptoService_class = None
 DefinitionService_class = None
 create_llm_service_func = None
-InformalAgent_class = None # Changé de InformalAnalysisAgent à InformalAgent
+InformalAgent_class = None
 ContextualFallacyDetector_class = None
 sk_module = None
 ENCRYPTION_KEY_imported = None
@@ -65,16 +65,18 @@ try:
 except ImportError as e:
     logger.error(f"Failed to import create_llm_service: {e}")
 
-try:
-    # Correction du nom de la classe importée pour correspondre à la définition
-    from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent as InformalAgent_class
-except ImportError as e:
-    logger.error(f"Failed to import InformalAnalysisAgent: {e}")
-
-try:
-    import semantic_kernel as sk_module
-except ImportError as e:
-    logger.error(f"Failed to import semantic_kernel: {e}")
+# Imports liés à l'agent informel et semantic-kernel ont été supprimés
+# car la dépendance a été retirée du projet.
+# try:
+#     from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent as InformalAgent_class
+# except ImportError as e:
+#     logger.error(f"Failed to import InformalAnalysisAgent: {e}")
+#
+# try:
+#     import semantic_kernel as sk_module
+# except ImportError as e:
+#     logger.error(f"Failed to import semantic_kernel: {e}")
+sk_module = None
 
 try:
     from argumentation_analysis.ui.config import ENCRYPTION_KEY as ENCRYPTION_KEY_imported
@@ -119,7 +121,7 @@ class ProjectContext:
         self.crypto_service = None
         self.definition_service = None
         self.llm_service = None
-        self.informal_agent = None
+        # self.informal_agent = None # Supprimé car l'agent n'est plus utilisé
         self.fallacy_detector = None
         self.tweety_classes = {}
         self.config = {}
@@ -158,11 +160,7 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
                     from argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import ContextualFallacyDetector as ContextualFallacyDetector_class
                     logger.info("Late import: ContextualFallacyDetector_class")
                 except ImportError: pass
-            if not InformalAgent_class: # Ajout pour InformalAgent
-                try:
-                    from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent as InformalAgent_class
-                    logger.info("Late import: InformalAgent_class")
-                except ImportError: pass
+            # L'import tardif de InformalAgent a été supprimé.
 
 
     context.project_root_path = current_project_root
@@ -303,40 +301,9 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
     else:
         logger.error("ContextualFallacyDetector_class n'a pas pu être importé.")
 
-    if InformalAgent_class and context.llm_service and sk_module and context.fallacy_detector:
-        logger.info("Initialisation de InformalAgent...")
-        try:
-            kernel = sk_module.Kernel()
-            kernel.add_service(context.llm_service)
-            
-            informal_agent_tools = {
-                "fallacy_detector": context.fallacy_detector
-            }
-            
-            context.informal_agent = InformalAgent_class(
-                kernel=kernel,
-                agent_name="bootstrap_informal_agent"
-            )
-            
-            # Configuration des plugins et fonctions sémantiques de l'agent
-            if context.llm_service:
-                llm_service_id = getattr(context.llm_service, 'service_id', 'default')
-                context.informal_agent.setup_agent_components(llm_service_id=llm_service_id)
-                logger.info(f"Composants de l'agent configurés avec le service LLM ID: {llm_service_id}")
-            else:
-                logger.warning("LLM Service non disponible, impossible de configurer les composants de l'agent.")
-
-            logger.info("InformalAgent initialisé et configuré.")
-        except Exception as e:
-            logger.error(f"Erreur lors de l'initialisation de InformalAgent : {e}", exc_info=True)
-    elif not context.llm_service:
-         logger.error("LLMService non initialisé. Impossible d'initialiser InformalAgent.")
-    elif not sk_module:
-        logger.error("Semantic Kernel (sk_module) non importé.")
-    elif not context.fallacy_detector:
-        logger.error("FallacyDetector non initialisé. Impossible d'initialiser InformalAgent.")
-    else:
-        logger.error("InformalAgent_class n'a pas pu être importé.")
+    # Le bloc d'initialisation de InformalAgent a été complètement supprimé
+    # car il dépendait de semantic-kernel, qui n'est plus dans le projet.
+    # Cela résout l'erreur de démarrage du backend.
 
     logger.info("--- Fin de l'initialisation de l'environnement du projet ---")
     return context
@@ -371,7 +338,7 @@ if __name__ == '__main__':
     print(f"CryptoService: {'Oui' if initialized_context.crypto_service else 'Non'} (Type: {type(initialized_context.crypto_service).__name__ if initialized_context.crypto_service else 'N/A'})")
     print(f"DefinitionService: {'Oui' if initialized_context.definition_service else 'Non'} (Type: {type(initialized_context.definition_service).__name__ if initialized_context.definition_service else 'N/A'})")
     print(f"LLMService: {'Oui' if initialized_context.llm_service else 'Non'} (Type: {type(initialized_context.llm_service).__name__ if initialized_context.llm_service else 'N/A'})")
-    print(f"InformalAgent: {'Oui' if initialized_context.informal_agent else 'Non'} (Type: {type(initialized_context.informal_agent).__name__ if initialized_context.informal_agent else 'N/A'})")
+    # print(f"InformalAgent: {'Oui' if initialized_context.informal_agent else 'Non'} (Type: {type(initialized_context.informal_agent).__name__ if initialized_context.informal_agent else 'N/A'})")
     print(f"Configuration chargée (.env):")
     for key, value in initialized_context.config.items():
         display_value = value
