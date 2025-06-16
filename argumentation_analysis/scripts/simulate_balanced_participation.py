@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from typing import Dict, List, Tuple
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
-from semantic_kernel.agents import Agent
+from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole
 from unittest.mock import MagicMock
 
@@ -54,13 +54,13 @@ class ConversationSimulator:
         
         logger.info(f"Simulateur initialisé avec {len(agent_names)} agents: {', '.join(agent_names)}")
     
-    def _create_real_agents(self, agent_names: List[str]) -> List[Agent]:
+    def _create_real_agents(self, agent_names: List[str]) -> List[BaseAgent]:
         """Crée de VRAIS agents pour la simulation - PLUS AUCUN MOCK !
 
         :param agent_names: Liste des noms pour les agents.
         :type agent_names: List[str]
         :return: Une liste d'objets Agent RÉELS.
-        :rtype: List[Agent]
+        :rtype: List[BaseAgent]
         """
         agents = []
         for name in agent_names:

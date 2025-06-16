@@ -33,5 +33,4 @@ openai>=1.0.0
 trio
 
 a2wsgi
-
 pyvis

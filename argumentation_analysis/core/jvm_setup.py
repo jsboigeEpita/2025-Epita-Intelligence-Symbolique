@@ -1,5 +1,6 @@
 # core/jvm_setup.py
 import os
+import re
 import sys
 import jpype
 import logging
@@ -10,11 +11,13 @@ import zipfile
 import requests
 from pathlib import Path
 from typing import Optional, List, Dict
-from tqdm import tqdm
+from tqdm.auto import tqdm
+import stat
 
+# Configuration du logger pour ce module
+logger = logging.getLogger("Orchestration.JPype")
 
-# --- Configuration et Constantes ---
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# --- Fonctions de téléchargement et de provisioning (issues du stash de HEAD) ---
 
 # --- Constantes de Configuration ---
 # Répertoires (utilisant pathlib pour la robustesse multi-plateforme)
@@ -46,6 +49,12 @@ JDK_URL_TEMPLATE = "https://github.com/adoptium/temurin{maj_v}-binaries/releases
 # Windows: x64_windows, aarch64_windows | Linux: x64_linux, aarch64_linux | macOS: x64_mac, aarch64_mac
 
 # --- Fonctions Utilitaires ---
+class TqdmUpTo(tqdm):
+    """Provides `update_to(block_num, block_size, total_size)`."""
+    def update_to(self, b=1, bsize=1, tsize=None):
+         if tsize is not None: self.total = tsize
+         self.update(b * bsize - self.n)
+
 def get_os_arch_for_jdk() -> Dict[str, str]:
     """Détermine l'OS et l'architecture pour l'URL de téléchargement du JDK."""
     system = platform.system().lower()
@@ -62,194 +71,229 @@ def get_os_arch_for_jdk() -> Dict[str, str]:
     return {"os": os_map[system], "arch": arch_map[arch]}
 
 
-def download_file(url: str, dest_path: Path):
-    """Télécharge un fichier avec une barre de progression."""
-    logging.info(f"Téléchargement de {url} vers {dest_path}...")
+def download_file(url: str, dest_path: Path, description: Optional[str] = None):
+    """Télécharge un fichier depuis une URL vers un chemin cible avec une barre de progression."""
+    if description is None:
+        description = dest_path.name
+
     try:
         # S'assurer que le répertoire parent de dest_path existe
         dest_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        response = requests.get(url, stream=True, timeout=30)
+
+        # Vérifier si le fichier existe déjà et est non vide (de HEAD)
+        if dest_path.exists() and dest_path.stat().st_size > 0:
+            logger.debug(f"Fichier '{dest_path.name}' déjà présent et non vide. Skip.")
+            return True, False # Fichier présent, pas de nouveau téléchargement
+
+        logger.info(f"Tentative de téléchargement: {url} vers {dest_path}")
+        headers = {'User-Agent': 'Mozilla/5.0'} # De HEAD
+        # Timeout de la version entrante (30s), allow_redirects de HEAD
+        response = requests.get(url, stream=True, timeout=30, headers=headers, allow_redirects=True)
+
+        if response.status_code == 404: # De HEAD
+             logger.error(f"❌ Fichier non trouvé (404) à l'URL: {url}")
+             return False, False
+
+        response.raise_for_status() # De HEAD / version entrante implicitement
+
+        total_size = int(response.headers.get('content-length', 0))
+
+        # Utiliser logger au lieu de logging
+        with TqdmUpTo(unit='B', unit_scale=True, unit_divisor=1024, total=total_size, miniters=1, desc=description[:40]) as t:
+            with open(dest_path, 'wb') as f: # Utiliser dest_path
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        t.update(len(chunk))
+
+        # Vérification après téléchargement (de HEAD)
+        if dest_path.exists() and dest_path.stat().st_size > 0:
+            # Ajout d'une vérification de taille si total_size était connu
+            if total_size != 0 and dest_path.stat().st_size != total_size:
+                 logger.warning(f"⚠️ Taille du fichier téléchargé '{dest_path.name}' ({dest_path.stat().st_size}) "
+                                f"ne correspond pas à la taille attendue ({total_size}).")
+            logger.info(f" -> Téléchargement de '{dest_path.name}' réussi.")
+            return True, True # Fichier présent, et il a été (re)téléchargé
+        else:
+            logger.error(f"❓ Téléchargement de '{dest_path.name}' semblait terminé mais fichier vide ou absent.")
+            if dest_path.exists(): dest_path.unlink(missing_ok=True) # Nettoyer si fichier vide
+            return False, False
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"❌ Échec connexion/téléchargement pour '{dest_path.name}': {e}")
+        if dest_path.exists(): dest_path.unlink(missing_ok=True)
+        return False, False
+    except Exception as e_other:
+        logger.error(f"❌ Erreur inattendue pendant téléchargement de '{dest_path.name}': {e_other}", exc_info=True)
+        if dest_path.exists(): dest_path.unlink(missing_ok=True)
+        return False, False
+
+def get_project_root_for_libs() -> Path: # Renamed to avoid conflict if get_project_root is defined elsewhere
+    return Path(__file__).resolve().parents[3]
+
+def find_libs_dir() -> Optional[Path]:
+    proj_root_temp = get_project_root_for_libs()
+    libs_dir_temp = proj_root_temp / "libs"
+    libs_dir_temp.mkdir(parents=True, exist_ok=True)
+    return libs_dir_temp
+
+def download_tweety_jars(
+    version: str = TWEETY_VERSION,
+    target_dir: Optional[Path] = None,
+    native_subdir: str = "native"
+    ) -> bool:
+    """
+    Vérifie et télécharge les JARs Tweety (Core + Modules) et les binaires natifs nécessaires.
+    """
+    if target_dir is None:
+        target_dir_path = LIBS_DIR
+    else:
+        target_dir_path = Path(target_dir)
+
+    try:
+        target_dir_path.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        logger.error(f"Impossible de créer le répertoire cible {target_dir_path} pour Tweety JARs: {e}")
+        return False
+
+    logger.info(f"\n--- Vérification/Téléchargement des JARs Tweety v{version} ---")
+    BASE_URL = f"https://tweetyproject.org/builds/{version}/"
+    NATIVE_LIBS_DIR = target_dir_path / native_subdir
+    try:
+        NATIVE_LIBS_DIR.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        logger.error(f"Impossible de créer le répertoire des binaires natifs {NATIVE_LIBS_DIR}: {e}")
+
+    CORE_JAR_NAME = f"org.tweetyproject.tweety-full-{version}-with-dependencies.jar"
+    system = platform.system()
+    native_binaries_repo_path = "https://raw.githubusercontent.com/TweetyProjectTeam/TweetyProject/main/org-tweetyproject-arg-adf/src/main/resources/"
+    native_binaries = {
+        "Windows": ["picosat.dll", "lingeling.dll", "minisat.dll"],
+        "Linux":   ["picosat.so", "lingeling.so", "minisat.so"],
+        "Darwin":  ["picosat.dylib", "lingeling.dylib", "minisat.dylib"]
+    }.get(system, [])
+
+    logger.info(f"Vérification de l'accès à {BASE_URL}...")
+    url_accessible = False
+    try:
+        response = requests.head(BASE_URL, timeout=10)
         response.raise_for_status()
+        logger.info(f"✔️ URL de base Tweety v{version} accessible.")
+        url_accessible = True
+    except requests.exceptions.RequestException as e:
+        logger.error(f"❌ Impossible d'accéder à l'URL de base {BASE_URL}. Erreur : {e}")
+        logger.warning("   Le téléchargement des JARs/binaires manquants échouera. Seuls les fichiers locaux seront utilisables.")
 
-        total_size = int(response.headers.get("content-length", 0))
-        with open(dest_path, "wb") as f, tqdm(
-            desc=dest_path.name,
-            total=total_size,
-            unit="iB",
-            unit_scale=True,
-            unit_divisor=1024,
-        ) as bar:
-            for chunk in response.iter_content(chunk_size=8192):
-                size = f.write(chunk)
-                bar.update(size)
-    except requests.RequestException as e:
-        logging.error(f"Erreur de téléchargement pour {url}: {e}")
-        if dest_path.exists():
-            dest_path.unlink() # Nettoyer le fichier partiel
-        raise
-    except IOError as e:
-        logging.error(f"Erreur d'écriture du fichier {dest_path}: {e}")
-        if dest_path.exists():
-            dest_path.unlink()
-        raise
+    logger.info(f"\n--- Vérification/Téléchargement JAR Core (Full) ---")
+    core_present, core_newly_downloaded = download_file(BASE_URL + CORE_JAR_NAME, target_dir_path / CORE_JAR_NAME, CORE_JAR_NAME)
+    status_core = "téléchargé" if core_newly_downloaded else ("déjà présent" if core_present else "MANQUANT")
+    logger.info(f"✔️ JAR Core '{CORE_JAR_NAME}': {status_core}.")
+    if not core_present:
+        logger.critical(f"❌ ERREUR CRITIQUE : Le JAR core Tweety est manquant et n'a pas pu être téléchargé.")
+        return False
 
+    logger.info(f"\n--- Vérification/Téléchargement des {len(native_binaries)} binaires natifs ({system}) ---")
+    native_present_count = 0
+    native_downloaded_count = 0
+    native_missing = []
+    if not native_binaries:
+         logger.info(f"   (Aucun binaire natif connu pour {system})")
+    else:
+        for name in tqdm(native_binaries, desc="Binaires Natifs"):
+             present, new_dl = download_file(native_binaries_repo_path + name, NATIVE_LIBS_DIR / name, name)
+             if present:
+                 native_present_count += 1
+                 if new_dl: native_downloaded_count += 1
+                 if new_dl and system != "Windows":
+                     try:
+                         target_path_native = NATIVE_LIBS_DIR / name
+                         current_permissions = target_path_native.stat().st_mode
+                         target_path_native.chmod(current_permissions | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+                         logger.debug(f"      Permissions d'exécution ajoutées à {name}")
+                     except Exception as e_chmod:
+                         logger.warning(f"      Impossible d'ajouter les permissions d'exécution à {name}: {e_chmod}")
+             elif url_accessible:
+                  native_missing.append(name)
+        logger.info(f"-> Binaires natifs: {native_downloaded_count} téléchargés, {native_present_count}/{len(native_binaries)} présents.")
+        if native_missing:
+            logger.warning(f"   Binaires natifs potentiellement manquants: {', '.join(native_missing)}")
+        if native_present_count > 0:
+             logger.info(f"   Note: S'assurer que le chemin '{NATIVE_LIBS_DIR.resolve()}' est inclus dans java.library.path lors du démarrage JVM.")
+    logger.info("--- Fin Vérification/Téléchargement Tweety ---")
+    return core_present
 
 def unzip_file(zip_path: Path, dest_dir: Path):
     """Décompresse un fichier ZIP."""
-    logging.info(f"Décompression de {zip_path} vers {dest_dir}...")
+    logger.info(f"Décompression de {zip_path} vers {dest_dir}...")
     try:
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            # Pour éviter les problèmes de "répertoire dans un répertoire"
-            # On vérifie si tout le contenu est dans un seul dossier
             file_list = zip_ref.namelist()
-            top_level_dirs = {Path(f).parts[0] for f in file_list}
-            
-            if len(top_level_dirs) == 1:
-                 # Cas où le contenu est dans un sous-répertoire (ex: jdk-17.0.2+8/...)
-                 # On extrait directement le contenu de ce sous-répertoire
-                temp_extract_dir = dest_dir / "temp_extract"
-                if temp_extract_dir.exists(): # S'assurer que le répertoire temporaire est propre
-                    shutil.rmtree(temp_extract_dir)
-                temp_extract_dir.mkdir(parents=True, exist_ok=True) # Recréer au cas où
-                zip_ref.extractall(temp_extract_dir)
-                
-                source_dir = temp_extract_dir / top_level_dirs.pop()
-                for item in source_dir.iterdir():
-                    shutil.move(str(item), str(dest_dir / item.name))
-                temp_extract_dir.rmdir() # rm -r
-            else:
-                 # Le contenu est déjà à la racine du zip
-                 zip_ref.extractall(dest_dir)
+            # Identifie les répertoires de premier niveau dans le zip
+            top_level_contents = {Path(f).parts[0] for f in file_list}
 
-        zip_path.unlink() # Nettoyer l'archive
-        logging.info("Décompression terminée.")
-    except (zipfile.BadZipFile, IOError) as e:
-        logging.error(f"Erreur lors de la décompression de {zip_path}: {e}")
+            if len(file_list) > 0 and len(top_level_contents) == 1:
+                # Cas où tout le contenu est dans un seul dossier racine DANS le zip
+                # ex: le zip contient "jdk-17.0.2+8/" qui contient "bin", "lib", etc.
+                single_root_dir_in_zip_name = top_level_contents.pop()
+                
+                # Vérifier si tous les fichiers commencent par ce dossier racine
+                if all(f.startswith(single_root_dir_in_zip_name + os.sep) or f == single_root_dir_in_zip_name for f in file_list if f):
+
+
+                    temp_extract_dir = dest_dir.parent / (dest_dir.name + "_temp_extract_strip")
+                    if temp_extract_dir.exists():
+                        shutil.rmtree(temp_extract_dir)
+                    temp_extract_dir.mkdir(parents=True, exist_ok=True)
+                    
+                    zip_ref.extractall(temp_extract_dir)
+                    
+                    source_dir_to_move_from = temp_extract_dir / single_root_dir_in_zip_name
+                    
+                    # Vider dest_dir avant de déplacer (sauf si c'est la même chose que source_dir_to_move_from)
+                    if dest_dir.resolve() != source_dir_to_move_from.resolve():
+                        for item in dest_dir.iterdir():
+                            if item.is_dir():
+                                shutil.rmtree(item)
+                            else:
+                                item.unlink()
+                    else: # Ne devrait pas arriver avec _temp_extract_strip
+                        logger.warning("Le répertoire de destination est le même que le répertoire source temporaire.")
+
+                    for item in source_dir_to_move_from.iterdir():
+                        shutil.move(str(item), str(dest_dir / item.name))
+                    
+                    shutil.rmtree(temp_extract_dir)
+                    logger.info(f"Contenu de '{single_root_dir_in_zip_name}' extrait et déplacé vers '{dest_dir}'.")
+                else:
+                    # Structure de fichiers mixte, extraire normalement
+                    zip_ref.extractall(dest_dir)
+                    logger.info("Extraction standard effectuée (pas de strip de dossier racine).")
+            else:
+                 # Le contenu est déjà à la racine du zip, ou plusieurs éléments à la racine.
+                 zip_ref.extractall(dest_dir)
+                 logger.info("Extraction standard effectuée (contenu à la racine ou multiple).")
+
+        if zip_path.exists():
+            zip_path.unlink()
+        logger.info("Décompression terminée.")
+    except (zipfile.BadZipFile, IOError, shutil.Error) as e:
+        logger.error(f"Erreur lors de la décompression de {zip_path}: {e}", exc_info=True)
+        # Essayer de nettoyer dest_dir en cas d'erreur d'extraction pour éviter un état partiel
+        if dest_dir.exists():
+            shutil.rmtree(dest_dir, ignore_errors=True)
+            dest_dir.mkdir(parents=True, exist_ok=True) # Recréer le dossier vide
         raise
 
-# --- Fonctions de Gestion des Dépendances ---
 
-# --- Fonction Principale de Téléchargement Tweety ---
-def download_tweety_jars() -> bool: # Pas d'arguments nécessaires pour cette version simplifiée
-    """
-    Vérifie et télécharge le JAR principal de Tweety (full-with-dependencies) depuis tweetyproject.org.
-    Place le JAR dans LIBS_DIR (qui est configuré globalement pour être .../libs/tweety).
-    Retourne True en cas de succès (JAR présent ou téléchargé), False en cas d'échec critique.
-    """
-    # LIBS_DIR est déjà configuré globalement comme PROJ_ROOT / "libs" / "tweety"
-    # TWEETY_VERSION est aussi global ("1.28")
+# --- Constantes et Fonctions pour la gestion du JDK ---
+PORTABLE_JDK_DIR_NAME = "portable_jdk"
+TEMP_DIR_NAME = "_temp_jdk_download"
+# MIN_JAVA_VERSION, JDK_VERSION, JDK_BUILD, JDK_URL_TEMPLATE sont définis plus haut
 
-    try:
-        LIBS_DIR.mkdir(parents=True, exist_ok=True) # Assure que .../libs/tweety existe
-    except OSError as e:
-        logging.error(f"Impossible de créer le répertoire des bibliothèques {LIBS_DIR}: {e}")
-        return False
-
-    jar_filename = f"org.tweetyproject.tweety-full-{TWEETY_VERSION}-with-dependencies.jar"
-    jar_path = LIBS_DIR / jar_filename
-    
-    file_downloaded_this_run = False
-
-    if not jar_path.exists():
-        logging.info(f"Le JAR Tweety {jar_filename} n'existe pas dans {LIBS_DIR}. Tentative de téléchargement...")
-        url = f"https://tweetyproject.org/builds/{TWEETY_VERSION}/{jar_filename}"
-        try:
-            download_file(url, jar_path) # download_file gère déjà la création de dest_path.parent si besoin
-            file_downloaded_this_run = True
-            logging.info(f"Téléchargement de {jar_filename} terminé avec succès.")
-        except Exception as e: # download_file lève des exceptions spécifiques, mais on capture tout ici.
-            logging.error(f"Échec du téléchargement pour {jar_filename} depuis {url}: {e}")
-            # download_file devrait nettoyer le fichier partiel en cas d'erreur.
-            return False # Échec critique si le JAR principal ne peut être téléchargé
-    else:
-        logging.info(f"Le JAR Tweety {jar_filename} est déjà présent dans {LIBS_DIR}.")
-
-    # Vérification finale que le fichier existe après l'opération
-    if not jar_path.exists(): # Cette vérification est cruciale
-        logging.error(f"Échec critique : le JAR Tweety {jar_filename} n'a pas pu être trouvé ou téléchargé dans {LIBS_DIR}.")
-        return False # Assurer qu'on retourne False si le fichier n'est toujours pas là.
-        
-    if file_downloaded_this_run:
-        logging.info("Processus de vérification/téléchargement du JAR Tweety terminé (téléchargement effectué).")
-    else:
-        logging.info("Processus de vérification/téléchargement du JAR Tweety terminé (fichier déjà à jour).")
-        
-    return True # Succès si on arrive ici, le JAR est là.
-
-
-# --- Fonction de détection JAVA_HOME (modifiée pour prioriser Java >= MIN_JAVA_VERSION) ---
-def find_valid_java_home() -> Optional[str]:
-    """
-    Cherche un JAVA_HOME valide ou un JDK portable.
-    1. Vérifie la variable d'environnement JAVA_HOME.
-    2. Si invalide, cherche un JDK portable local.
-    3. Si non trouvé, télécharge et installe un JDK portable.
-    """
-    # 1. Vérifier JAVA_HOME
-    java_home_env = os.environ.get("JAVA_HOME")
-    if java_home_env:
-        logging.info(f"Variable JAVA_HOME trouvée : {java_home_env}")
-        if is_valid_jdk(Path(java_home_env)):
-            return java_home_env
-
-    # 2. Chercher un JDK portable
-    portable_jdk_dir = PROJ_ROOT / "jdk"
-    if portable_jdk_dir.exists() and is_valid_jdk(portable_jdk_dir):
-        logging.info(f"JDK portable valide trouvé : {portable_jdk_dir}")
-        return str(portable_jdk_dir)
-
-    # 3. Télécharger un nouveau JDK portable
-    logging.warning("Aucun JDK valide trouvé. Tentative de téléchargement d'un JDK portable.")
-    return download_portable_jdk(portable_jdk_dir)
-
-
-def download_portable_jdk(target_dir: Path) -> Optional[str]:
-    """Télécharge et extrait un JDK portable."""
-    try:
-        os_arch = get_os_arch_for_jdk()
-    except OSError as e:
-        logging.error(e)
-        return None
-
-    jdk_url = JDK_URL_TEMPLATE.format(
-        maj_v=JDK_VERSION.split('.')[0],
-        v=JDK_VERSION,
-        b=JDK_BUILD,
-        b_flat=JDK_BUILD, # Le format de l'URL est parfois incohérent
-        arch=os_arch['arch'],
-        os=os_arch['os']
-    )
-    
-    target_dir.mkdir(parents=True, exist_ok=True) # Assurer que le répertoire cible existe
-    zip_path = target_dir / "jdk.zip"
-
-    try:
-        download_file(jdk_url, zip_path)
-        # Supprimer le contenu précédent avant de décompresser
-        for item in target_dir.iterdir():
-            if item.name == zip_path.name: # Ne pas supprimer le zip qu'on vient de télécharger
-                continue
-            if item.is_dir():
-                shutil.rmtree(item)
-            elif item.is_file(): # item.suffix != '.zip' était trop restrictif
-                item.unlink()
-
-        unzip_file(zip_path, target_dir)
-        
-        # Vérifier que le JDK est maintenant valide
-        if is_valid_jdk(target_dir):
-            logging.info(f"JDK portable installé avec succès dans {target_dir}")
-            return str(target_dir)
-        else:
-            logging.error("L'extraction du JDK n'a pas produit une installation valide.")
-            return None
-
-    except (requests.RequestException, IOError, zipfile.BadZipFile, shutil.Error) as e:
-        logging.error(f"Échec de l'installation du JDK portable : {e}")
-        shutil.rmtree(target_dir, ignore_errors=True) # Nettoyage complet
-        return None
-
+def get_project_root() -> Path: # S'assurer qu'elle est bien définie ou la définir ici si ce n'est pas le cas plus haut.
+    # Si elle est déjà définie globalement, cette redéfinition peut être enlevée.
+    # Pour l'instant, je la garde pour m'assurer qu'elle est disponible pour les fonctions JDK.
+    return Path(__file__).resolve().parents[3]
 
 def is_valid_jdk(path: Path) -> bool:
     """Vérifie si un répertoire est un JDK valide et respecte la version minimale."""
@@ -257,145 +301,396 @@ def is_valid_jdk(path: Path) -> bool:
         return False
         
     java_exe = path / "bin" / ("java.exe" if platform.system() == "Windows" else "java")
-    if not java_exe.exists():
-        logging.warning(f"Validation JDK échouée: 'java' non trouvé dans {path / 'bin'}")
+    if not java_exe.is_file():
+        logger.debug(f"Validation JDK: 'java' non trouvé ou n'est pas un fichier dans {path / 'bin'}")
         return False
 
     try:
-        # Exécuter `java -version` et capturer la sortie
-        # stderr est utilisé par Java pour afficher la version
         result = subprocess.run(
             [str(java_exe), "-version"],
             capture_output=True,
             text=True,
-            check=True,
-            # stderr=subprocess.PIPE # Redondant avec capture_output=True
+            check=False
         )
-        version_output = result.stderr
-        
-        # Parser la version (ex: "openjdk version "11.0.12" 2021-07-20")
-        first_line = version_output.splitlines()[0]
-        version_str = first_line.split('"')[1] # "11.0.12"
-        major_version = int(version_str.split('.')[0])
-
-        if major_version >= MIN_JAVA_VERSION:
-            logging.info(f"Version Java détectée: {version_str} (Majeure: {major_version}) -> Valide.")
-            return True
-        else:
-            logging.warning(f"Version Java {major_version} est inférieure au minimum requis ({MIN_JAVA_VERSION}).")
+        version_output = result.stderr if result.stderr else result.stdout
+        if not version_output:
+            logger.warning(f"Impossible d'obtenir la sortie de version pour le JDK à {path} (commande: '{str(java_exe)} -version'). stderr: {result.stderr}, stdout: {result.stdout}")
             return False
 
-    except (subprocess.CalledProcessError, FileNotFoundError, IndexError, ValueError) as e:
-        logging.error(f"Erreur lors de la validation de la version de Java à {path}: {e}")
-        return False
+        # Tenter de parser plusieurs formats de sortie de version
+        # Format OpenJDK: openjdk version "17.0.11" 2024-04-16
+        # Format Oracle: java version "1.8.0_202"
+        version_pattern = r'version "(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:_(\d+))?.*"'
         
+        match = None
+        for line in version_output.splitlines():
+            match = re.search(version_pattern, line)
+            if match:
+                break
+        
+        if not match:
+            logger.warning(f"Impossible de parser la chaîne de version du JDK à '{path}'. Sortie: {version_output.strip()}")
+            return False
+        
+        major_version_str = match.group(1)
+        minor_version_str = match.group(2)
+
+        major_version = int(major_version_str)
+        if major_version == 1 and minor_version_str: # Format "1.X" (Java 8 et moins)
+            major_version = int(minor_version_str)
+
+        if major_version >= MIN_JAVA_VERSION:
+            logger.info(f"Version Java détectée à '{path}': \"{match.group(0).split('"')[1]}\" (Majeure: {major_version}) -> Valide.")
+            return True
+        else:
+            logger.warning(f"Version Java détectée à '{path}': \"{match.group(0).split('"')[1]}\" (Majeure: {major_version}) -> INVALIDE (minimum requis: {MIN_JAVA_VERSION}).")
+            return False
+    except FileNotFoundError:
+        logger.error(f"Exécutable Java non trouvé à {java_exe} lors de la vérification de version.")
+        return False
+    except Exception as e:
+        logger.error(f"Erreur lors de la validation du JDK à {path}: {e}", exc_info=True)
+        return False
+
+def find_existing_jdk() -> Optional[Path]:
+    """Tente de trouver un JDK valide via JAVA_HOME ou un JDK portable pré-existant."""
+    logger.debug("Recherche d'un JDK pré-existant valide...")
+    
+    java_home_env = os.environ.get("JAVA_HOME")
+    if java_home_env:
+        logger.info(f"Variable JAVA_HOME trouvée : {java_home_env}")
+        potential_path = Path(java_home_env)
+        if is_valid_jdk(potential_path):
+            logger.info(f"JDK validé via JAVA_HOME : {potential_path}")
+            return potential_path
+        else:
+            logger.warning(f"JAVA_HOME ('{potential_path}') n'est pas un JDK valide ou ne respecte pas la version minimale.")
+
+    project_r = get_project_root()
+    portable_jdk_dir = project_r / PORTABLE_JDK_DIR_NAME
+    
+    if portable_jdk_dir.is_dir():
+        if is_valid_jdk(portable_jdk_dir):
+             logger.info(f"JDK portable validé directement dans : {portable_jdk_dir}")
+             return portable_jdk_dir
+        for item in portable_jdk_dir.iterdir():
+            if item.is_dir() and item.name.startswith("jdk-"): # Typique pour les extractions Adoptium
+                if is_valid_jdk(item):
+                    logger.info(f"JDK portable validé dans sous-dossier : {item}")
+                    return item
+    
+    logger.info("Aucun JDK pré-existant valide trouvé (JAVA_HOME ou portable).")
+    return None
+
+def find_valid_java_home() -> Optional[str]:
+    """
+    Trouve un JAVA_HOME valide. Vérifie les JDK existants, puis tente de télécharger
+    et d'installer un JDK portable si nécessaire.
+    """
+    logger.info("Recherche d'un environnement Java valide...")
+    
+    existing_jdk_path = find_existing_jdk()
+    if existing_jdk_path:
+        logger.info(f"🎉 Utilisation du JDK existant validé: '{existing_jdk_path}'")
+        return str(existing_jdk_path.resolve())
+
+    logger.info("Aucun JDK valide existant. Tentative d'installation d'un JDK portable.")
+    project_r = get_project_root()
+    portable_jdk_install_dir = project_r / PORTABLE_JDK_DIR_NAME
+    temp_download_dir = project_r / TEMP_DIR_NAME
+    
+    try:
+        portable_jdk_install_dir.mkdir(parents=True, exist_ok=True)
+        temp_download_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        logger.error(f"Impossible de créer les répertoires pour JDK portable ({portable_jdk_install_dir} ou {temp_download_dir}): {e}")
+        return None
+
+    os_arch_info = get_os_arch_for_jdk()
+    
+    # Utiliser les constantes globales JDK_VERSION, JDK_BUILD, JDK_URL_TEMPLATE
+    # JDK_VERSION ex: "17.0.11", JDK_BUILD ex: "9"
+    # JDK_URL_TEMPLATE ex: "https://github.com/adoptium/temurin{maj_v}-binaries/releases/download/jdk-{v}%2B{b}/OpenJDK{maj_v}U-jdk_{arch}_{os}_hotspot_{v}_{b_flat}.zip"
+
+    jdk_major_for_url = JDK_VERSION.split('.')[0] # ex: "17"
+    
+    # Le nom du fichier zip peut varier légèrement, mais l'URL est la clé.
+    # On va nommer le zip de manière générique pour le téléchargement.
+    generic_zip_name = f"portable_jdk_{JDK_VERSION}_{JDK_BUILD}_{os_arch_info['os']}_{os_arch_info['arch']}.zip"
+    jdk_zip_target_path = temp_download_dir / generic_zip_name
+
+    jdk_url = JDK_URL_TEMPLATE.format(
+        maj_v=jdk_major_for_url,
+        v=JDK_VERSION,
+        b=JDK_BUILD,
+        arch=os_arch_info['arch'],
+        os=os_arch_info['os'],
+        b_flat=JDK_BUILD # Dans l'URL d'Adoptium, b_flat est souvent juste le build number
+    )
+    logger.info(f"URL du JDK portable construite: {jdk_url}")
+
+    logger.info(f"Téléchargement du JDK portable depuis {jdk_url} vers {jdk_zip_target_path}...")
+    downloaded_ok, _ = download_file(jdk_url, jdk_zip_target_path, description=f"JDK {JDK_VERSION}+{JDK_BUILD}")
+    
+    if not downloaded_ok or not jdk_zip_target_path.exists():
+        logger.error(f"Échec du téléchargement du JDK portable depuis {jdk_url}.")
+        return None
+
+    logger.info(f"Décompression du JDK portable {jdk_zip_target_path} vers {portable_jdk_install_dir}...")
+    try:
+        # Nettoyer le répertoire d'installation avant de décompresser pour éviter les conflits
+        if portable_jdk_install_dir.exists():
+            for item in portable_jdk_install_dir.iterdir():
+                # Ne pas supprimer le zip lui-même s'il a été téléchargé ici par erreur
+                if item.resolve() == jdk_zip_target_path.resolve(): continue
+                if item.is_dir():
+                    shutil.rmtree(item)
+                else:
+                    item.unlink()
+        portable_jdk_install_dir.mkdir(parents=True, exist_ok=True) # S'assurer qu'il existe après nettoyage
+
+        unzip_file(jdk_zip_target_path, portable_jdk_install_dir) # unzip_file supprime le zip après succès
+
+        # Valider le JDK fraîchement décompressé
+        # Le JDK peut être directement dans portable_jdk_install_dir ou dans un sous-dossier (ex: jdk-17.0.11+9)
+        final_jdk_path = None
+        if is_valid_jdk(portable_jdk_install_dir):
+            final_jdk_path = portable_jdk_install_dir
+        else:
+            for item in portable_jdk_install_dir.iterdir():
+                if item.is_dir() and item.name.startswith("jdk-") and is_valid_jdk(item):
+                    final_jdk_path = item
+                    break
+        
+        if final_jdk_path:
+            logger.info(f"🎉 JDK portable installé et validé avec succès dans: '{final_jdk_path}'")
+            return str(final_jdk_path.resolve())
+        else:
+            logger.error(f"L'extraction du JDK dans '{portable_jdk_install_dir}' n'a pas produit une installation valide. Contenu: {list(portable_jdk_install_dir.iterdir())}")
+            return None
+            
+    except Exception as e_unzip:
+        logger.error(f"Erreur lors de la décompression ou validation du JDK portable: {e_unzip}", exc_info=True)
+        if jdk_zip_target_path.exists(): jdk_zip_target_path.unlink(missing_ok=True)
+        return None
+
 # --- Gestion du cycle de vie de la JVM ---
+# (Les variables globales _JVM_INITIALIZED_THIS_SESSION etc. et les fonctions get_jvm_options, initialize_jvm, shutdown_jvm
+#  seront traitées dans le prochain bloc de conflit)
+# _JVM_INITIALIZED_THIS_SESSION, _JVM_WAS_SHUTDOWN, _SESSION_FIXTURE_OWNS_JVM sont définis plus haut (après la section JDK)
+# ou devraient l'être. S'ils manquent, il faudra les ajouter.
+# Pour l'instant, on assume qu'ils sont juste avant cette section.
 
-_jvm_started = False
+_JVM_INITIALIZED_THIS_SESSION = False
+_JVM_WAS_SHUTDOWN = False
+_SESSION_FIXTURE_OWNS_JVM = False
 
-def start_jvm_if_needed(force_restart: bool = False):
+def get_jvm_options() -> List[str]:
+    options = [
+        "-Xms64m",
+        "-Xmx512m",
+        "-Dfile.encoding=UTF-8",
+        "-Djava.awt.headless=true"
+    ]
+    
+    if os.name == 'nt':
+        options.extend([
+            "-XX:+UseG1GC",
+            "-XX:+DisableExplicitGC",
+            "-XX:-UsePerfData",
+        ])
+        logger.info("Options JVM Windows spécifiques ajoutées.")
+    
+    logger.info(f"Options JVM de base définies : {options}")
+    return options
+
+def initialize_jvm(
+    lib_dir_path: Optional[str] = None,
+    specific_jar_path: Optional[str] = None,
+    force_restart: bool = False
+    ) -> bool:
     """
-    Démarre la JVM avec le classpath configuré, si elle n'est pas déjà démarrée.
-    Cette fonction est idempotente par défaut.
+    Initialise la JVM avec le classpath configuré, si elle n'est pas déjà démarrée.
+    Gère la logique de session et la possibilité de forcer un redémarrage.
     """
-    global _jvm_started
-    if _jvm_started and not force_restart:
-        logging.debug("La JVM est déjà démarrée. Aucune action requise.")
-        return
+    global _JVM_INITIALIZED_THIS_SESSION, _JVM_WAS_SHUTDOWN, _SESSION_FIXTURE_OWNS_JVM
+
+    logger.info(f"Appel à initialize_jvm. isJVMStarted: {jpype.isJVMStarted()}, force_restart: {force_restart}")
+    logger.debug(f"État JVM: _INITIALIZED_THIS_SESSION={_JVM_INITIALIZED_THIS_SESSION}, _WAS_SHUTDOWN={_JVM_WAS_SHUTDOWN}, _SESSION_FIXTURE_OWNS={_SESSION_FIXTURE_OWNS_JVM}")
 
     if force_restart and jpype.isJVMStarted():
-        logging.info("Forçage du redémarrage de la JVM...")
+        logger.info("Forçage du redémarrage de la JVM...")
         shutdown_jvm()
 
-    # 1. S'assurer que les dépendances sont présentes
-    if not download_tweety_jars(): # Appel de la fonction modifiée
-        # Si download_tweety_jars retourne False, c'est un échec critique.
-        raise RuntimeError("Échec du téléchargement des JARs Tweety nécessaires. Impossible de démarrer la JVM.")
+    if _JVM_WAS_SHUTDOWN and not jpype.isJVMStarted():
+        logger.error("ERREUR CRITIQUE: Tentative de redémarrage d'une JVM qui a été explicitement arrêtée dans cette session.")
+        return False
     
-    # 2. Trouver un JAVA_HOME valide (ou installer un JDK)
-    java_home = find_valid_java_home()
-    if not java_home:
-        raise RuntimeError(
-            "Impossible de trouver ou d'installer un JDK valide. "
-            "Veuillez définir JAVA_HOME sur un JDK version 11+ ou assurer une connexion internet."
-        )
+    if _SESSION_FIXTURE_OWNS_JVM and jpype.isJVMStarted():
+        logger.info("JVM contrôlée par une fixture de session et déjà démarrée.")
+        _JVM_INITIALIZED_THIS_SESSION = True
+        return True
+    
+    if _JVM_INITIALIZED_THIS_SESSION and jpype.isJVMStarted() and not force_restart:
+        logger.info("JVM déjà initialisée dans cette session (et pas de forçage).")
+        return True
+    
+    if jpype.isJVMStarted() and not _JVM_INITIALIZED_THIS_SESSION and not _SESSION_FIXTURE_OWNS_JVM and not force_restart:
+        logger.warning("JVM déjà démarrée par un autre moyen. Tentative de l'utiliser telle quelle.")
+        _JVM_INITIALIZED_THIS_SESSION = True
+        return True
 
-    # 3. Construire le Classpath
-    # LIBS_DIR pointe maintenant vers .../libs/tweety
-    jar_paths = [str(p) for p in LIBS_DIR.glob("*.jar")] 
-    if not jar_paths: # S'il n'y a aucun JAR dans libs/tweety
-        # Essayer de vérifier si le JAR spécifique attendu est là, au cas où glob aurait un souci
-        expected_jar_name = f"org.tweetyproject.tweety-full-{TWEETY_VERSION}-with-dependencies.jar"
-        if not (LIBS_DIR / expected_jar_name).exists():
-            raise RuntimeError(f"Aucune bibliothèque (.jar) trouvée dans {LIBS_DIR}, y compris {expected_jar_name}. Le classpath est vide.")
-        else: # Le JAR est là, mais glob ne l'a pas trouvé ? Peu probable mais on ajoute au cas où.
-            jar_paths = [str(LIBS_DIR / expected_jar_name)]
+    logger.info("Vérification/Téléchargement des JARs Tweety...")
+    if not download_tweety_jars():
+        logger.error("Échec du provisioning des bibliothèques Tweety. Démarrage de la JVM annulé.")
+        return False
+    logger.info("Bibliothèques Tweety provisionnées.")
 
-
-    classpath = os.pathsep.join(jar_paths)
-    if not classpath: # Double vérification
-         raise RuntimeError(f"Classpath est vide après tentative de construction à partir de {LIBS_DIR}.")
+    java_home_str = find_valid_java_home()
+    if not java_home_str:
+        logger.error("Impossible de trouver ou d'installer un JDK valide.")
+        return False
+    logger.info(f"Utilisation de JAVA_HOME (ou équivalent portable) : {java_home_str}")
+    
+    # Forcer JPype à utiliser le JAVA_HOME trouvé s'il n'est pas déjà pris en compte
+    # Cela peut être nécessaire si JPype a déjà mis en cache un autre chemin JVM.
+    # Cependant, jpype.getDefaultJVMPath() devrait refléter le JAVA_HOME actuel.
+    # Si jpype.cfg est utilisé, il peut surcharger cela.
+    # os.environ["JAVA_HOME"] = java_home_str # S'assurer que l'env est à jour pour JPype
+    
+    jvm_path_dll_so = jpype.getDefaultJVMPath()
+    logger.info(f"Chemin JVM par défaut détecté par JPype (attendu basé sur JAVA_HOME): {jvm_path_dll_so}")
+    if not Path(jvm_path_dll_so).exists():
+        logger.warning(f"Le chemin JVM par défaut '{jvm_path_dll_so}' ne semble pas exister. "
+                       f"Vérifiez la configuration de JPype ou la validité de JAVA_HOME ('{java_home_str}').")
+        # Tentative de construction manuelle du chemin si getDefaultJVMPath échoue de manière inattendue
+        # Ceci est une solution de contournement et peut ne pas être robuste
+        java_exe_dir = Path(java_home_str) / "bin"
+        if platform.system() == "Windows":
+            # Chercher jvm.dll dans des emplacements communs (ex: bin/server, bin/client)
+            potential_jvm_paths = [
+                Path(java_home_str) / "bin" / "server" / "jvm.dll",
+                Path(java_home_str) / "jre" / "bin" / "server" / "jvm.dll",
+                Path(java_home_str) / "lib" / "server" / "jvm.dll" # Pour certains JDK plus récents
+            ]
+        elif platform.system() == "Darwin": # macOS
+            potential_jvm_paths = [
+                Path(java_home_str) / "lib" / "server" / "libjvm.dylib",
+                Path(java_home_str) / "jre" / "lib" / "server" / "libjvm.dylib"
+            ]
+        else: # Linux
+            potential_jvm_paths = [
+                Path(java_home_str) / "lib" / "server" / "libjvm.so",
+                Path(java_home_str) / "jre" / "lib" / "server" / "libjvm.so", # Moins courant pour les JDK modernes
+                Path(java_home_str) / "lib" / platform.machine() / "server" / "libjvm.so"
+            ]
         
-    logging.info(f"Classpath configuré : {classpath}")
-    
-    # 4. Démarrer la JVM
+        found_jvm_path = None
+        for p_path in potential_jvm_paths:
+            if p_path.exists():
+                found_jvm_path = str(p_path)
+                logger.info(f"Chemin JVM trouvé manuellement: {found_jvm_path}")
+                break
+        if found_jvm_path:
+            jvm_path_dll_so = found_jvm_path
+        else:
+            logger.error(f"Impossible de localiser la bibliothèque JVM (jvm.dll/libjvm.so) dans '{java_home_str}'.")
+            return False
+
+
+    jars_classpath_list: List[str] = []
+    if specific_jar_path:
+        specific_jar_file = Path(specific_jar_path)
+        if specific_jar_file.is_file():
+            jars_classpath_list = [str(specific_jar_file.resolve())]
+            logger.info(f"Utilisation du JAR spécifique pour classpath: {specific_jar_path}")
+        else:
+            logger.error(f"Fichier JAR spécifique introuvable: '{specific_jar_path}'.")
+            return False
+    else:
+        actual_lib_dir = Path(lib_dir_path) if lib_dir_path else LIBS_DIR
+        if not actual_lib_dir.is_dir():
+            logger.error(f"Répertoire des bibliothèques '{actual_lib_dir}' invalide.")
+            return False
+        jars_classpath_list = [str(f.resolve()) for f in actual_lib_dir.glob("*.jar") if f.is_file()]
+        logger.info(f"Classpath construit avec {len(jars_classpath_list)} JAR(s) depuis '{actual_lib_dir}'.")
+
+    if not jars_classpath_list:
+        logger.error("Classpath est vide. Démarrage de la JVM annulé.")
+        return False
+
+    jvm_options = get_jvm_options()
+
+    logger.info(f"Tentative de démarrage de la JVM avec classpath: {os.pathsep.join(jars_classpath_list)}")
+    logger.info(f"Options JVM: {jvm_options}")
+    logger.info(f"Chemin DLL/SO JVM utilisé: {jvm_path_dll_so}")
+
     try:
-        logging.info("Démarrage de la JVM...")
         jpype.startJVM(
-            #jpype.getDefaultJVMPath(), # Laisser JPype trouver la libjvm
-            jvmpath=jpype.getDefaultJVMPath(), # Utiliser le JDK trouvé par JPype par défaut, qui devrait être celui de java_home si bien configuré
-            classpath=classpath,
+            jvm_path_dll_so,
+            *jvm_options,
+            classpath=jars_classpath_list,
             ignoreUnrecognized=True,
-            convertStrings=False,
+            convertStrings=False
         )
-        _jvm_started = True
-        logging.info("JVM démarrée avec succès.")
-
+        _JVM_INITIALIZED_THIS_SESSION = True
+        _JVM_WAS_SHUTDOWN = False
+        logger.info("🎉 JVM démarrée avec succès.")
+        return True
+    except TypeError as te: # Souvent lié à des problèmes de classpath ou d'options
+        logger.error(f"Erreur de type lors du démarrage de la JVM (vérifiez classpath/options): {te}", exc_info=True)
+        return False
     except Exception as e:
-        logging.error(f"Erreur fatale lors du démarrage de la JVM : {e}")
-        logging.error(f"JAVA_HOME utilisé (si trouvé) : {java_home}")
-        logging.error(f"Chemin JVM par défaut de JPype : {jpype.getDefaultJVMPath()}")
-        # Tenter d'offrir plus de diagnostics
-        if sys.platform == "win32" and "Error: Could not find " in str(e):
-             logging.error("Astuce Windows: Assurez-vous que Microsoft Visual C++ Redistributable est installé.")
-        elif "No matching overloads found" in str(e):
-             logging.error("Astuce: Cette erreur peut survenir si le classpath est incorrect ou si une dépendance manque.")
-        raise
-
+        logger.error(f"Erreur fatale lors du démarrage de la JVM: {e}", exc_info=True)
+        if "RuntimeError: No matching overloads found." in str(e) or "No matching overloads found" in str(e):
+             logger.error("Astuce: Cette erreur peut survenir si le classpath est incorrect, si une dépendance manque, ou incompatibilité de version JAR/JVM.")
+        elif sys.platform == "win32" and ("java.lang.UnsatisfiedLinkError" in str(e) or "Can't load IA 32-bit .dll on a AMD 64-bit platform" in str(e)):
+             logger.error("Astuce Windows: Vérifiez la cohérence 32/64 bits entre Python, JPype et le JDK. Assurez-vous que Microsoft Visual C++ Redistributable est installé.")
+        _JVM_INITIALIZED_THIS_SESSION = False
+        return False
 
 def shutdown_jvm():
-    """Arrête la JVM si elle est en cours d'exécution."""
-    global _jvm_started
+    global _JVM_INITIALIZED_THIS_SESSION, _JVM_WAS_SHUTDOWN, _SESSION_FIXTURE_OWNS_JVM
+    
+    if _SESSION_FIXTURE_OWNS_JVM and jpype.isJVMStarted():
+        logger.info("Arrêt de la JVM contrôlé par la fixture de session, ne rien faire ici explicitement.")
+        # La fixture devrait gérer la réinitialisation des états si nécessaire.
+        return
+
     if jpype.isJVMStarted():
-        logging.info("Arrêt de la JVM...")
+        logger.info("Arrêt de la JVM...")
         jpype.shutdownJVM()
-        _jvm_started = False
-        logging.info("JVM arrêtée.")
+        logger.info("JVM arrêtée.")
     else:
-        logging.debug("La JVM n'est pas en cours d'exécution.")
+        logger.debug("La JVM n'est pas en cours d'exécution, aucun arrêt nécessaire.")
+    
+    _JVM_INITIALIZED_THIS_SESSION = False
+    _JVM_WAS_SHUTDOWN = True
 
-# --- Point d'entrée pour exemple ou test ---
 if __name__ == "__main__":
-    logging.info("--- Démonstration du module jvm_setup ---")
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    main_logger = logging.getLogger(__name__)
+
+    main_logger.info("--- Démonstration du module jvm_setup ---")
     try:
-        logging.info("\n1. Première tentative de démarrage de la JVM...")
-        start_jvm_if_needed()
+        main_logger.info("\n1. Première tentative de démarrage de la JVM...")
+        if initialize_jvm():
+            main_logger.info("\n2. Tentative de démarrage redondante (devrait être ignorée)...")
+            initialize_jvm()
 
-        logging.info("\n2. Tentative de démarrage redondante (devrait être ignorée)...")
-        start_jvm_if_needed()
+            try:
+                JString = jpype.JClass("java.lang.String")
+                my_string = JString("Ceci est un test depuis Python!")
+                main_logger.info(f"Test Java réussi: {my_string}")
+            except Exception as e_java_test:
+                main_logger.error(f"Le test d'importation Java a échoué: {e_java_test}")
+        else:
+            main_logger.error("Échec du premier démarrage de la JVM. Démonstration interrompue.")
 
-        # Test simple d'importation Java
-        try:
-            JString = jpype.JClass("java.lang.String")
-            my_string = JString("Ceci est un test depuis Python!")
-            logging.info(f"Test Java réussi: {my_string}")
-        except Exception as e:
-            logging.error(f"Le test d'importation Java a échoué: {e}")
-
-    except Exception as e:
-        logging.error(f"Une erreur est survenue durant la démonstration : {e}")
+    except Exception as e_demo:
+        main_logger.error(f"Une erreur est survenue durant la démonstration : {e_demo}", exc_info=True)
 
     finally:
-        logging.info("\n3. Arrêt de la JVM...")
+        main_logger.info("\n3. Arrêt de la JVM...")
         shutdown_jvm()
-        logging.info("\n--- Fin de la démonstration ---")
+        main_logger.info("\n--- Fin de la démonstration ---")

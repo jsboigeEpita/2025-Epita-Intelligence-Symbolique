@@ -36,7 +36,6 @@ Cet outil est essentiel pour maintenir la qualité des extraits utilisés dans l
   * **[`repair_report.html`](./docs/repair_report.html)** : Rapport HTML généré par le script de réparation.
   * **[`verify_extracts_report.html`](./docs/verify_extracts_report.html)** : Rapport HTML généré par le script de vérification.
   * **[`extract_sources_updated.json`](./docs/extract_sources_updated.json)** : Version mise à jour des sources d'extraits après réparation.
-
 #### Vue d'ensemble du contenu de `docs/`
 
 Le module de réparation des extraits (`extract_repair`) est conçu pour résoudre les problèmes liés aux marqueurs de début et de fin dans les définitions d'extraits. Cette documentation fournit des informations détaillées sur :

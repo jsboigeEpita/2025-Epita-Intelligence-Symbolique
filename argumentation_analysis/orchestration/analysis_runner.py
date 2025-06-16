@@ -38,11 +38,7 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureCha
 from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
-# Imports Semantic Kernel
-import semantic_kernel as sk
 from semantic_kernel.contents.chat_history import ChatHistory
-from semantic_kernel.contents.chat_message_content import ChatMessageContent
-from semantic_kernel.contents.chat_role import ChatRole as Role
 
 # Correct imports
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
@@ -50,12 +46,7 @@ from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
 from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
 from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
 from argumentation_analysis.agents.core.pl.pl_agent import PropositionalLogicAgent
-from argumentation_analysis.agents.core.pl.pl_agent import PropositionalLogicAgent
 from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
-
-class AgentChatException(Exception):
-    """Custom exception for errors during the agent chat execution."""
-    pass
 
 class AnalysisRunner:
     """

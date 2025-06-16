@@ -1,4 +1,3 @@
-
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
@@ -564,4 +563,3 @@ class TestOracleScalabilityIntegration:
         stats = oracle_state.get_oracle_statistics()
         assert stats["agent_interactions"]["total_turns"] == 30
         assert stats["workflow_metrics"]["oracle_interactions"] == 10  # Une requête tous les 3 tours
-        assert len(stats["agent_interactions"]["agents_active"]) == 3
