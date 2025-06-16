@@ -553,29 +553,46 @@ def initialize_jvm(
     os.environ['JAVA_HOME'] = java_home_str
     logger.info(f"Variable d'env JAVA_HOME positionnée à : {java_home_str}")
 
+    # Logique de recherche de la JVM DLL/SO unifiée et fiabilisée
+    logger.info(f"Recherche manuelle de la bibliothèque JVM dans le JDK validé : {java_home_str}")
+    java_home_path = Path(java_home_str)
     jvm_path_dll_so = None
-    try:
-        jvm_path_dll_so = jpype.getDefaultJVMPath()
-        logger.info(f"Chemin JVM par défaut trouvé par JPype : {jvm_path_dll_so}")
-    except jpype.JVMNotFoundException:
-        logger.warning(f"JPype n'a pas trouvé la JVM automatiquement. Tentative de recherche manuelle dans {java_home_str}...")
-        java_home_path = Path(java_home_str)
-        if platform.system() == "Windows":
-            search_paths = [java_home_path / "bin" / "server" / "jvm.dll", java_home_path / "lib" / "server" / "jvm.dll"]
-        elif platform.system() == "Darwin":
-            search_paths = [java_home_path / "lib" / "server" / "libjvm.dylib"]
-        else:
-            search_paths = [java_home_path / "lib" / "server" / "libjvm.so", java_home_path / "lib" / platform.machine() / "server" / "libjvm.so"]
 
-        for path_to_check in search_paths:
-            if path_to_check.exists():
-                jvm_path_dll_so = str(path_to_check)
-                logger.info(f"Bibliothèque JVM trouvée manuellement à : {jvm_path_dll_so}")
-                break
+    system = platform.system()
+    if system == "Windows":
+        # Ordre de recherche commun pour les JDK modernes
+        search_paths = [java_home_path / "bin" / "server" / "jvm.dll"]
+    elif system == "Darwin": # macOS
+        search_paths = [java_home_path / "lib" / "server" / "libjvm.dylib"]
+    else: # Linux et autres
+        search_paths = [
+            java_home_path / "lib" / "server" / "libjvm.so",
+            java_home_path / "lib" / platform.machine() / "server" / "libjvm.so"
+        ]
+
+    # Tentative pour contourner les problèmes de chemin avec JPype
+    try:
+        default_jvm = jpype.getDefaultJVMPath()
+        if Path(default_jvm).exists():
+             logger.info(f"JPype a trouvé un chemin JVM par défaut valide : {default_jvm}. Ajout en priorité.")
+             search_paths.insert(0, Path(default_jvm))
+    except jpype.JVMNotFoundException:
+        logger.info("jpype.getDefaultJVMPath() n'a rien trouvé, ce qui est attendu si JAVA_HOME n'était pas préconfiguré.")
+
+    for path_to_check in search_paths:
+        if path_to_check.exists():
+            jvm_path_dll_so = str(path_to_check.resolve()) # Utiliser le chemin absolu résolu
+            logger.info(f"Bibliothèque JVM trouvée et validée à : {jvm_path_dll_so}")
+            break
     
     if not jvm_path_dll_so:
-        logger.error(f"Échec final de la localisation de la bibliothèque JVM (jvm.dll/libjvm.so).")
-        return False
+        logger.critical(f"Échec final de la localisation de la bibliothèque partagée JVM (jvm.dll/libjvm.so) dans les chemins de recherche : {search_paths}")
+        # En dernier recours, on fait confiance à JPype, même s'il a déjà échoué avant.
+        try:
+             jvm_path_dll_so = jpype.getDefaultJVMPath()
+        except jpype.JVMNotFoundException:
+             logger.error("Échec ultime : jpype.getDefaultJVMPath() a aussi échoué.")
+             return False
 
     jars_classpath_list: List[str] = []
     if specific_jar_path:
