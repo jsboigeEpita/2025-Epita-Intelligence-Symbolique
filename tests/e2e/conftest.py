@@ -8,6 +8,45 @@ import time
 from typing import Dict, Any
 from playwright.sync_api import Page, expect
 
+import threading
+from project_core.webapp_from_scripts.unified_web_orchestrator import UnifiedWebOrchestrator
+
+
+# ============================================================================
+# WEBAPP SERVICE FIXTURE (AUTO-START)
+# ============================================================================
+
+@pytest.fixture(scope="session", autouse=True)
+def webapp_service():
+    """
+    Fixture qui démarre et arrête l'application web complète (backend + frontend)
+    pour la durée de la session de tests E2E.
+    """
+    print("\n[WebApp Fixture] Démarrage des services web...")
+    orchestrator = UnifiedWebOrchestrator()
+    
+    # L'exécution dans un thread daemon garantit que le thread s'arrêtera
+    # si le processus principal se termine de manière inattendue.
+    orchestrator_thread = threading.Thread(target=orchestrator.run_all_in_background, daemon=True)
+    orchestrator_thread.start()
+    
+    # Attendre que les serveurs soient prêts.
+    # Une meilleure approche serait de sonder les ports, mais cela suffit pour l'instant.
+    print("[WebApp Fixture] Attente du démarrage des serveurs (8s)...")
+    time.sleep(8)
+    
+    # La fixture fournit l'orchestrateur, bien qu'il ne soit pas utilisé directement
+    # par les tests, cela suit un bon modèle.
+    yield orchestrator
+    
+    # Cette partie s'exécute après la fin de la session de test
+    print("\n[WebApp Fixture] Arrêt des services web...")
+    orchestrator.stop_all()
+    # Donner un peu de temps pour que les processus se terminent proprement
+    time.sleep(2)
+    print("[WebApp Fixture] Services arrêtés.")
+
+
 # ============================================================================
 # CONFIGURATION GÉNÉRALE
 # ============================================================================

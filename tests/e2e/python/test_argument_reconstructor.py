@@ -10,7 +10,7 @@ def test_argument_reconstruction_workflow(page: Page):
     Valide le workflow de reconstruction avec détection automatique de prémisses/conclusion
     """
     # 1. Navigation et attente API connectée
-    page.goto("http://localhost:3000/")
+    page.goto("/")
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     # 2. Activation de l'onglet Reconstructeur
@@ -58,7 +58,7 @@ def test_reconstructor_basic_functionality(page: Page):
     Vérifie qu'un deuxième argument peut être analysé correctement
     """
     # 1. Navigation et activation onglet
-    page.goto("http://localhost:3000/")
+    page.goto("/")
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     reconstructor_tab = page.locator('[data-testid="reconstructor-tab"]')
@@ -89,7 +89,7 @@ def test_reconstructor_error_handling(page: Page):
     Vérifie le comportement avec un texte invalide ou sans structure argumentative claire
     """
     # 1. Navigation et activation onglet
-    page.goto("http://localhost:3000/")
+    page.goto("/")
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     reconstructor_tab = page.locator('[data-testid="reconstructor-tab"]')
@@ -126,7 +126,7 @@ def test_reconstructor_reset_functionality(page: Page):
     Vérifie que le reset nettoie complètement l'interface et revient à l'état initial
     """
     # 1. Navigation et activation onglet
-    page.goto("http://localhost:3000/")
+    page.goto("/")
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     reconstructor_tab = page.locator('[data-testid="reconstructor-tab"]')
@@ -163,7 +163,7 @@ def test_reconstructor_content_persistence(page: Page):
     Vérifie que le contenu reste affiché après reconstruction
     """
     # 1. Navigation et activation onglet
-    page.goto("http://localhost:3000/")
+    page.goto("/")
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     reconstructor_tab = page.locator('[data-testid="reconstructor-tab"]')

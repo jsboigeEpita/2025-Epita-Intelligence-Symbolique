@@ -10,6 +10,7 @@ Auteur: Projet Intelligence Symbolique EPITA
 Date: 07/06/2025
 """
 
+import functools
 import os
 import sys
 import time
@@ -119,7 +120,7 @@ class FrontendManager:
             
             # Démarrage du serveur de fichiers statiques
             self.logger.info(f"Démarrage du serveur de fichiers statiques sur le port {self.port}")
-            self._start_static_server()
+            await self._start_static_server()
             
             # Attente démarrage via health check
             frontend_ready = await self._wait_for_health_check()
@@ -138,7 +139,7 @@ class FrontendManager:
                 }
             else:
                 # Échec - cleanup
-                self._stop_static_server()
+                await self._stop_static_server()
                     
                 return {
                     'success': False,
@@ -252,25 +253,26 @@ class FrontendManager:
             raise
 
 
-    def _start_static_server(self):
+    async def _start_static_server(self):
         """Démarre un serveur HTTP simple pour les fichiers statiques dans un thread séparé."""
         if not self.build_dir or not self.build_dir.exists():
             raise FileNotFoundError(f"Le répertoire de build '{self.build_dir}' est introuvable.")
 
-        class Handler(http.server.SimpleHTTPRequestHandler):
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, directory=str(self.build_dir), **kwargs)
-
+        handler_with_directory = functools.partial(
+            http.server.SimpleHTTPRequestHandler,
+            directory=str(self.build_dir)
+        )
+        
         # Utilisation de 0.0.0.0 pour être accessible depuis l'extérieur du conteneur si nécessaire
         address = ("127.0.0.1", self.port)
-        self.static_server = socketserver.TCPServer(address, Handler)
+        self.static_server = socketserver.TCPServer(address, handler_with_directory)
         
         self.static_server_thread = threading.Thread(target=self.static_server.serve_forever)
         self.static_server_thread.daemon = True
         self.static_server_thread.start()
         self.logger.info(f"Serveur statique démarré pour {self.build_dir} sur http://{address[0]}:{address[1]}")
 
-    def _stop_static_server(self):
+    async def _stop_static_server(self):
         """Arrête le serveur de fichiers statiques."""
         if self.static_server:
             self.logger.info("Arrêt du serveur de fichiers statiques...")
@@ -351,8 +353,8 @@ class FrontendManager:
         start_time = time.monotonic()
         
         # Pause initiale pour laisser le temps au serveur de dev de se lancer.
-        # Create-react-app peut être lent à démarrer.
-        initial_pause_s = 120
+        # Le serveur statique est rapide, une courte pause suffit.
+        initial_pause_s = 1
         self.logger.info(f"Pause initiale de {initial_pause_s}s avant health checks...")
         await asyncio.sleep(initial_pause_s)
 
@@ -402,7 +404,7 @@ class FrontendManager:
     
     async def stop(self):
         """Arrête le frontend proprement"""
-        self._stop_static_server() # Arrête le serveur de fichiers statiques
+        await self._stop_static_server() # Arrête le serveur de fichiers statiques
     
     def get_status(self) -> Dict[str, Any]:
         """Retourne l'état actuel du frontend"""

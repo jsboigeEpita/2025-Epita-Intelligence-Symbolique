@@ -150,7 +150,7 @@ class ColoredOutput:
     @staticmethod
     def print_section(title: str):
         """Affiche un titre de section"""
-        print(f"\n🔸 {title}")
+        print(f"\n[+] {title}")
         print("-" * (len(title) + 4))
 
 

@@ -35,7 +35,7 @@ from argumentation_analysis.core.enums import OrchestrationMode, AnalysisType
 import semantic_kernel as sk
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.llm_service import create_llm_service
-from argumentation_analysis.core.jvm_setup import initialize_jvm
+from argumentation_analysis.core.jvm_setup import initialize_jvm, _SESSION_FIXTURE_OWNS_JVM
 from argumentation_analysis.core.bootstrap import initialize_project_environment, ProjectContext
 import jpype
 from argumentation_analysis.paths import LIBS_DIR, DATA_DIR, RESULTS_DIR
@@ -316,15 +316,11 @@ class UnifiedOrchestrationPipeline:
         if "formal" in self.config.analysis_modes or "unified" in self.config.analysis_modes:
             logger.info("[JVM] Vérification du statut de la JVM...")
             
-            from argumentation_analysis.core.jvm_setup import is_session_fixture_owns_jvm
-            
             loop = asyncio.get_event_loop()
             
             try:
                 # Vérifier si la fixture de session contrôle la JVM
-                fixture_owns_jvm = await loop.run_in_executor(None, is_session_fixture_owns_jvm)
-                
-                if fixture_owns_jvm:
+                if _SESSION_FIXTURE_OWNS_JVM:
                     logger.info("[JVM] La fixture de session contrôle la JVM. Utilisation de l'instance existante.")
                     self.jvm_ready = await loop.run_in_executor(None, jpype.isJVMStarted)
                     if not self.jvm_ready:

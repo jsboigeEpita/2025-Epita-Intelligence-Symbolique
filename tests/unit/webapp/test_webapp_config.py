@@ -99,6 +99,7 @@ def test_create_default_config_with_port_manager(tmp_path, mocker):
     assert config['frontend']['port'] == 3100
     assert config['backend']['fallback_ports'] == [8101, 8102]
 
+@patch('project_core.webapp_from_scripts.unified_web_orchestrator.CENTRAL_PORT_MANAGER_AVAILABLE', False)
 def test_handle_invalid_yaml_config(tmp_path, capsys):
     """
     Tests that the orchestrator handles a corrupted YAML file by loading default config.
