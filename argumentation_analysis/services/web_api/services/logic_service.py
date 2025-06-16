@@ -124,7 +124,7 @@ class LogicService:
                     creation_timestamp=datetime.now()
                 ),
                 processing_time=time.time() - start_time,
-                conversion_options=request.options.dict() if request.options else {}
+                conversion_options=request.options if request.options else {}
             )
             
             return response

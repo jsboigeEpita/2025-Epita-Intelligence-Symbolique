@@ -19,5 +19,5 @@ def test_homepage_has_correct_title_and_header(page: Page):
     expect(page).to_have_title(re.compile("Argumentation Analysis App"))
 
     # Vérifier qu'un élément h1 contenant le texte "Argumentation Analysis" est visible
-    heading = page.locator("h1", has_text=re.compile(r"Analyse Argumentative EPITA", re.IGNORECASE))
+    heading = page.locator("h1", has_text=re.compile(r"Interface d'Analyse Argumentative", re.IGNORECASE))
     expect(heading).to_be_visible()
