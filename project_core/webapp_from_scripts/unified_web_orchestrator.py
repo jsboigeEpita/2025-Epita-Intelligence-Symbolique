@@ -223,7 +223,7 @@ class UnifiedWebOrchestrator:
             },
             'backend': {
                 'enabled': True,
-                'module': 'argumentation_analysis.services.web_api.app:app',
+                'module': 'api.main:app',
                 'start_port': backend_port,
                 'fallback_ports': fallback_ports,
                 'max_attempts': 5,

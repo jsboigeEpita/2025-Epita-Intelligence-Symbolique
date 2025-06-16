@@ -57,6 +57,10 @@ import glob
 import jpype
 import jpype.imports
 import networkx as nx
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from enhanced_agent import EnhancedDungAgent
 
 # L'agent est maintenant importable car le PYTHONPATH est géré dans api/main.py
 # from enhanced_agent import EnhancedDungAgent # Déplacé pour éviter conflit JVM
@@ -127,7 +131,7 @@ class DungAnalysisService:
             }
         return all_status
     
-    def _get_framework_properties(self, agent: EnhancedDungAgent) -> dict:
+    def _get_framework_properties(self, agent: "EnhancedDungAgent") -> dict:
         """Extrait les propriétés du graphe directement depuis l'agent ou son framework Java."""
         # L'agent de l'étudiant ne stocke pas directement le graphe networkx
         # Nous le reconstruisons ici pour l'analyse des propriétés
