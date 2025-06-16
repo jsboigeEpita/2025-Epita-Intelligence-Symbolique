@@ -54,6 +54,13 @@ if (-not $?) {
 # Installer les dépendances de test
 Write-Step "Installation des dépendances de test"
 $requirementsFile = Join-Path -Path $projectDir -ChildPath "config\requirements-test.txt"
+Write-Host "================================================================================"
+Write-Host "  Validation des versions des dépendances critiques"
+Write-Host "================================================================================"
+pip list | findstr "spacy thinc blis"
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Certaines dépendances critiques (spacy, thinc, blis) n'ont pas pu être vérifiées."
+}
 python -m pip install -r $requirementsFile
 if (-not $?) {
     Write-Host "Échec de l'installation des dépendances de test." -ForegroundColor Red

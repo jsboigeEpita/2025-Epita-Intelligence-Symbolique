@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { analyzeDungFramework as buildFramework } from '../services/api';
 import './FrameworkBuilder.css';
 
@@ -28,7 +28,7 @@ const FrameworkBuilder = () => {
   });
 
   // État de l'interface
-  const [selectedArguments, setSelectedArguments] = useState([]);
+  // const [selectedArguments, setSelectedArguments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
@@ -71,7 +71,7 @@ const FrameworkBuilder = () => {
     setAttacks(prev => prev.filter(attack => 
       attack.source !== id && attack.target !== id
     ));
-    setSelectedArguments(prev => prev.filter(argId => argId !== id));
+    // setSelectedArguments(prev => prev.filter(argId => argId !== id));
   };
 
   // Ajout d'une attaque
