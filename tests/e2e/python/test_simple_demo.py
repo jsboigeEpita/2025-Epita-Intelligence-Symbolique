@@ -14,7 +14,7 @@ def test_app_loads_successfully(page: Page):
     try:
         # Navigation vers l'application
         print("[START] Navigation vers http://localhost:3000/")
-        page.goto("http://localhost:3000/", timeout=10000)
+        page.goto("/", timeout=10000)
         
         # Attendre que la page soit chargée
         page.wait_for_load_state('networkidle', timeout=10000)
@@ -68,7 +68,7 @@ def test_api_connectivity(page: Page):
         print("[API] Test connectivite API")
         
         # Navigation
-        page.goto("http://localhost:3000/", timeout=10000)
+        page.goto("/", timeout=10000)
         page.wait_for_load_state('networkidle', timeout=5000)
         
         # Attendre indicateur de statut API
@@ -112,7 +112,7 @@ def test_navigation_tabs(page: Page):
     try:
         print("[NAV] Test navigation onglets")
         
-        page.goto("http://localhost:3000/", timeout=10000)
+        page.goto("/", timeout=10000)
         page.wait_for_load_state('networkidle', timeout=5000)
         
         # Chercher des éléments cliquables qui ressemblent à des onglets

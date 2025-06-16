@@ -4,7 +4,7 @@ from playwright.sync_api import Page, expect
 @pytest.fixture(scope="function")
 def validation_page(page: Page) -> Page:
     """Navigue vers la page et l'onglet de validation."""
-    page.goto("http://localhost:3000/")
+    page.goto("/")
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     validation_tab = page.locator('[data-testid="validation-tab"]')
     expect(validation_tab).to_be_enabled()

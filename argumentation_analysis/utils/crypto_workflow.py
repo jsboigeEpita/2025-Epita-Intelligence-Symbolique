@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from cryptography.fernet import Fernet
 import base64
 import hashlib
-
+from argumentation_analysis.ui.file_operations import load_extract_definitions
 
 @dataclass
 class CorpusDecryptionResult:
@@ -72,9 +72,6 @@ class CryptoWorkflowManager:
         )
         
         try:
-            # Import dynamique pour éviter les erreurs de dépendances
-            from argumentation_analysis.ui.file_operations import load_extract_definitions
-            
             encryption_key = self.derive_encryption_key()
             self.logger.info(f"🔓 Déchiffrement de {len(corpus_files)} fichiers de corpus")
             

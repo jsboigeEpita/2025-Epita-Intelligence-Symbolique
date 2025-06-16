@@ -14,6 +14,10 @@ from flask_cors import CORS
 from typing import Dict, Any
 
 # Add project paths
+# Correctly add project root to sys.path for module resolution
+_project_root = Path(__file__).resolve().parents[2]
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
 
 from services.fallacy_detector import get_fallacy_detection_service
 

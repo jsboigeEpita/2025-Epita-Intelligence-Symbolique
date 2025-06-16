@@ -11,7 +11,7 @@ def test_successful_simple_argument_analysis(page: Page):
     This test targets the React application on port 3000.
     """
     # Navigate to the React app
-    page.goto("http://localhost:3000/")
+    page.goto("/")
 
     # Wait for the API to be connected
     expect(page.locator(".api-status.connected")).to_be_visible(timeout=30000)
@@ -55,7 +55,7 @@ def test_empty_argument_submission_displays_error(page: Page):
     Checks if an error message is displayed when submitting an empty argument.
     """
     # Navigate to the React app
-    page.goto("http://localhost:3000/")
+    page.goto("/")
 
     # Wait for the API to be connected
     expect(page.locator(".api-status.connected")).to_be_visible(timeout=30000)
@@ -82,7 +82,7 @@ def test_reset_button_clears_input_and_results(page: Page):
     Ensures the reset button clears the input field and the analysis results.
     """
     # Navigate to the React app
-    page.goto("http://localhost:3000/")
+    page.goto("/")
 
     # Wait for the API to be connected
     expect(page.locator(".api-status.connected")).to_be_visible(timeout=30000)
