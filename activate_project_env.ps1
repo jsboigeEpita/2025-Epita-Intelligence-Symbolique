@@ -24,11 +24,6 @@ param(
     [switch]$Verbose = $false
 )
 
-# Configuration
-Write-Host "[DEBUG] Activating environment..."
-$ProjectRoot = $PSScriptRoot
-$PythonModule = "project_core/core_from_scripts/environment_manager.py"
-
 # Fonction de logging simple
 function Write-Log {
     param([string]$Message, [string]$Level = "INFO")
@@ -40,6 +35,17 @@ function Write-Log {
     }
     Write-Host "[$timestamp] $Message" -ForegroundColor $color
 }
+
+# --- LA CONFIGURATION JAVA EST DÉLÉGUÉE AU SCRIPT PYTHON ---
+# Le script 'environment_manager.py' est maintenant entièrement responsable
+# de la détection, validation, et auto-installation du JDK via le fichier .env.
+# Cela centralise la logique et la rend plus robuste.
+Write-Log "La configuration de JAVA_HOME est déléguée à environment_manager.py." "INFO"
+
+# Configuration
+Write-Host "[DEBUG] Activating environment..."
+$ProjectRoot = $PSScriptRoot
+$PythonModule = "project_core/core_from_scripts/environment_manager.py"
 
 try {
     # Si un chemin de script Python est fourni, on construit la commande à exécuter

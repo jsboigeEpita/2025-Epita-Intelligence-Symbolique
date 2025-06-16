@@ -364,6 +364,13 @@ class EnvironmentManager:
         if 'PYTHONPATH' in self.env_vars:
             self.sub_process_env['PYTHONPATH'] = self.env_vars['PYTHONPATH']
             self.logger.info(f"Propagation du PYTHONPATH au sous-processus: {self.sub_process_env['PYTHONPATH']}")
+        
+        # --- CORRECTIF CRUCIAL : Propagation de JAVA_HOME ---
+        # S'assure que la variable JAVA_HOME, validée par activate_project_environment,
+        # est bien transmise au sous-processus final qui exécute les tests.
+        if 'JAVA_HOME' in os.environ:
+            self.sub_process_env['JAVA_HOME'] = os.environ['JAVA_HOME']
+            self.logger.info(f"Propagation de JAVA_HOME au sous-processus: {self.sub_process_env['JAVA_HOME']}")
 
         self.logger.info(f"Variables d'environnement préparées pour le sous-processus (extrait): "
                          f"CONDA_DEFAULT_ENV={self.sub_process_env.get('CONDA_DEFAULT_ENV')}, "

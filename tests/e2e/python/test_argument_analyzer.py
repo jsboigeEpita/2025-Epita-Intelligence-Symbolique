@@ -3,12 +3,10 @@ from playwright.sync_api import Page, expect
 
 import pytest
 
-# This mark ensures that the 'orchestrator_session' fixture is used for all tests in this module,
-# which starts the web server and sets the base_url for playwright.
-pytestmark = pytest.mark.usefixtures("orchestrator_session")
+# The 'webapp_service' session fixture in conftest.py is autouse=True,
+# so the web server is started automatically for all tests in this module.
+# The base_url for Playwright is also configured in conftest.py.
 
-
-@pytest.mark.skip(reason="Disabling all functional tests to isolate backend test failures.")
 @pytest.mark.playwright
 def test_successful_simple_argument_analysis(page: Page):
     """

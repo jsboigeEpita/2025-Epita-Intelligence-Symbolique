@@ -115,7 +115,7 @@ def setup_numpy_for_tests_fixture(request):
                 backend_agg_mock = matplotlib_mock.backends.backend_agg
                 backend_agg_mock.FigureCanvas = MagicMock()
                 backend_agg_mock.FigureManager = MagicMock()
-                backend_ag_mock.backend_version = '1.0.mock'
+                backend_agg_mock.backend_version = '1.0.mock'
             if 'scipy' not in sys.modules:
                 sys.modules['scipy'] = create_module_mock('scipy', submodules=['stats'])
                 sys.modules['scipy.stats'] = sys.modules['scipy'].stats

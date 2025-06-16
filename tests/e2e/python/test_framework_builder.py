@@ -4,12 +4,24 @@ from playwright.sync_api import Page, expect, TimeoutError
 # Import de la classe PlaywrightHelpers depuis le conftest unifié
 from ..conftest import PlaywrightHelpers
 
-# This mark ensures that the 'orchestrator_session' fixture is used for all tests in this module,
-# which starts the web server and sets the base_url for playwright.
-pytestmark = pytest.mark.usefixtures("orchestrator_session")
+# The 'webapp_service' session fixture in conftest.py is autouse=True,
+# so the web server is started automatically for all tests in this module.
+# The base_url for Playwright is also configured in conftest.py.
 
+@pytest.fixture(scope="function")
+def framework_page(page: Page) -> Page:
+    """Fixture qui prépare la page et navigue vers l'onglet Framework."""
+    page.goto("/")
+    expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
+    
+    helpers = PlaywrightHelpers(page)
+    helpers.navigate_to_tab("framework")
+    
+    # Attendre un élément spécifique à l'onglet framework pour s'assurer que la navigation est terminée
+    expect(page.locator('#arg-content')).to_be_visible(timeout=10000)
+    
+    return page
 
-@pytest.mark.skip(reason="Disabling all functional tests to isolate backend test failures.")
 class TestFrameworkBuilder:
     """Tests fonctionnels pour l'onglet Framework basés sur la structure réelle"""
 

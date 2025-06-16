@@ -5,6 +5,7 @@ import os
 import glob
 import logging
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from .endpoints import router as api_router, framework_router
 
 # --- Ajout dynamique de abs_arg_dung au PYTHONPATH ---
@@ -71,6 +72,26 @@ app = FastAPI(
     on_startup=[start_jvm],
     on_shutdown=[shutdown_jvm]
 )
+
+# --- Configuration CORS ---
+# Le frontend est servi sur le port 3001 (ou une autre URL en production),
+# le backend sur 5003. Le navigateur bloque les requêtes cross-origin
+# par défaut. On autorise explicitement l'origine du frontend.
+origins = [
+    os.environ.get("FRONTEND_URL", "http://127.0.0.1:3001"),
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # Inclure les routeurs
 app.include_router(api_router, prefix="/api")

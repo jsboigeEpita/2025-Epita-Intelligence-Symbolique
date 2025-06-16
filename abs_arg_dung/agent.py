@@ -6,65 +6,24 @@ import random
 import jpype
 import jpype.imports
 
-try:
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    libs_dir = os.path.join(script_dir, 'libs')
-    jar_files = glob.glob(os.path.join(libs_dir, '*.jar'))
+# Assurez-vous que le pont est démarré en amont (par ex. dans l'API)
+import matplotlib.pyplot as plt
+import networkx as nx
+from jpype import JClass
 
-    if not jar_files:
-        raise FileNotFoundError(f"Aucun fichier .jar n'a été trouvé dans {libs_dir}")
+# Classes pour la structure du graphe
+DungTheory = JClass('org.tweetyproject.arg.dung.syntax.DungTheory')
+Argument = JClass('org.tweetyproject.arg.dung.syntax.Argument')
+Attack = JClass('org.tweetyproject.arg.dung.syntax.Attack')
 
-    TWEETY_CLASSPATH = os.pathsep.join(jar_files)
-    
-    if not jpype.isJVMStarted():
-        print("--- Démarrage de la JVM avec JPype ---")
-        java_home = os.environ.get('JAVA_HOME', '').strip(' \t\r\n"')
-        if not java_home:
-            raise RuntimeError("La variable d'environnement JAVA_HOME n'est pas définie ou est vide.")
-
-        # Construire le chemin vers la dll/so de la JVM
-        jvm_path = os.path.join(java_home, 'bin', 'server', 'jvm.dll')
-        if not os.path.exists(jvm_path):
-             # Fallback pour Linux ou autres structures
-             jvm_path_so = os.path.join(java_home, 'lib', 'server', 'libjvm.so')
-             if not os.path.exists(jvm_path_so):
-                raise FileNotFoundError(f"jvm.dll ou libjvm.so introuvable dans JAVA_HOME: {java_home}")
-             jvm_path = jvm_path_so
-        
-        print(f"Utilisation de la JVM trouvée à: {jvm_path}")
-        jpype.startJVM(
-            jvm_path,
-            "-ea",
-            f"-Djava.class.path={TWEETY_CLASSPATH}"
-        )
-        print("JVM démarrée.")
-
-    # --- Démarrage du pont et du reste du script ---
-    import matplotlib.pyplot as plt
-    import networkx as nx
-    from jpype import JClass
-
-    # Classes pour la structure du graphe
-    DungTheory = JClass('org.tweetyproject.arg.dung.syntax.DungTheory')
-    Argument = JClass('org.tweetyproject.arg.dung.syntax.Argument')
-    Attack = JClass('org.tweetyproject.arg.dung.syntax.Attack')
-
-    # Classes pour le raisonnement (calcul des extensions)
-    SimpleGroundedReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleGroundedReasoner')
-    SimplePreferredReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimplePreferredReasoner')
-    SimpleStableReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleStableReasoner')
-    SimpleCompleteReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleCompleteReasoner')
-    SimpleAdmissibleReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleAdmissibleReasoner')
-    SimpleIdealReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleIdealReasoner')
-    SimpleSemiStableReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleSemiStableReasoner')
-    # LA LIGNE SUIVANTE A ÉTÉ SUPPRIMÉE CAR LA CLASSE N'EXISTE PAS
-    # Cf2Reasoner = autoclass('org.tweetyproject.arg.dung.reasoner.Cf2Reasoner')
-
-    print("Tweety-Python bridge initialisé avec succès via JPype.")
-
-except Exception as e:
-    print(f"\nERREUR LORS DE L'INITIALISATION DU PONT TWEETY-PYTHON AVEC JPYPE.\n{e}")
-    exit()
+# Classes pour le raisonnement (calcul des extensions)
+SimpleGroundedReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleGroundedReasoner')
+SimplePreferredReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimplePreferredReasoner')
+SimpleStableReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleStableReasoner')
+SimpleCompleteReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleCompleteReasoner')
+SimpleAdmissibleReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleAdmissibleReasoner')
+SimpleIdealReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleIdealReasoner')
+SimpleSemiStableReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleSemiStableReasoner')
 
 
 # --- Définition de l'Agent d'Argumentation ---

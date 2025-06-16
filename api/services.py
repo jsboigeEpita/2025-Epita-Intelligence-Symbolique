@@ -117,11 +117,11 @@ class DungAnalysisService:
             
             # Renommer la clé 'semantics' en 'extensions' pour correspondre au test
             results['extensions'] = {
-                'grounded': sorted(grounded_ext),
-                'preferred': sorted(preferred_ext),
-                'stable': sorted(stable_ext),
-                'complete': sorted(complete_ext),
-                'admissible': sorted(admissible_sets),
+                'grounded': sorted([str(arg) for arg in grounded_ext]),
+                'preferred': sorted([[str(arg) for arg in ext] for ext in preferred_ext]),
+                'stable': sorted([[str(arg) for arg in ext] for ext in stable_ext]),
+                'complete': sorted([[str(arg) for arg in ext] for ext in complete_ext]),
+                'admissible': sorted([[str(arg) for arg in ext] for ext in admissible_sets]),
                 'ideal': [],
                 'semi_stable': []
             }
@@ -144,15 +144,15 @@ class DungAnalysisService:
         """Extrait les propriétés du graphe directement depuis l'agent ou son framework Java."""
         # L'agent de l'étudiant ne stocke pas directement le graphe networkx
         # Nous le reconstruisons ici pour l'analyse des propriétés
-        nodes = [arg.getName() for arg in agent.af.getNodes()]
-        attacks = [(a.getAttacker().getName(), a.getAttacked().getName()) for a in agent.af.getAttacks()]
+        nodes = [str(arg.getName()) for arg in agent.af.getNodes()]
+        attacks = [(str(a.getAttacker().getName()), str(a.getAttacked().getName())) for a in agent.af.getAttacks()]
         
         G = nx.DiGraph()
         G.add_nodes_from(nodes)
         G.add_edges_from(attacks)
         
-        cycles = [list(c) for c in nx.simple_cycles(G)]
-        self_attacking = [a.getAttacker().getName() for a in agent.af.getAttacks() if a.getAttacker() == a.getAttacked()]
+        cycles = [list(map(str, c)) for c in nx.simple_cycles(G)]
+        self_attacking = [str(a.getAttacker().getName()) for a in agent.af.getAttacks() if a.getAttacker() == a.getAttacked()]
 
         return {
             'num_arguments': len(nodes),
