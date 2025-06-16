@@ -123,6 +123,7 @@ class DungAnalysisService:
         return results
 
     def _get_all_arguments_status(self, arg_names: list[str], preferred_ext: list, grounded_ext: list, stable_ext: list) -> dict:
+        # NOTE: Assurer la présence des statuts grounded et stable.
         all_status = {}
         for name in arg_names:
             all_status[name] = {
