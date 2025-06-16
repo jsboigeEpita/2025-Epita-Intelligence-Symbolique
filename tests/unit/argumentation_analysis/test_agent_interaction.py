@@ -12,14 +12,7 @@ import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole
-# Fallback classes for compatibility after removing semantic_kernel_compatibility
-class Agent:
-    def __init__(self, name=""):
-        self.name = name
-
-class AgentGroupChat:
-    def __init__(self, *args, **kwargs):
-        pass
+from semantic_kernel.agents import Agent, AgentGroupChat
 
 # Utiliser la fonction setup_import_paths pour résoudre les problèmes d'imports relatifs
 # from tests import setup_import_paths # Commenté pour investigation

@@ -16,14 +16,7 @@ from unittest.mock import MagicMock, AsyncMock, patch
 
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole
-# Fallback classes for compatibility after removing semantic_kernel_compatibility
-class Agent:
-    def __init__(self, name=""):
-        self.name = name
-
-class AgentGroupChat:
-    def __init__(self, *args, **kwargs):
-        pass
+from semantic_kernel.agents import Agent, AgentGroupChat
 
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
