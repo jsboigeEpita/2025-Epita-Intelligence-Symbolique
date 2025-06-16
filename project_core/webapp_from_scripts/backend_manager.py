@@ -112,9 +112,9 @@ class BackendManager:
                     
                 backend_host = self.config.get('host', '127.0.0.1')
             
-                # La commande flask n'a plus besoin du port, il sera lu depuis l'env FLASK_RUN_PORT
+                # La commande flask utilisera explicitement le port déterminé.
                 inner_cmd_list = [
-                    "-m", "flask", "--app", app_module_with_attribute, "run", "--host", backend_host
+                    "-m", "flask", "--app", app_module_with_attribute, "run", "--host", backend_host, "--port", str(port)
                 ]
 
                 # Vérifier si nous sommes déjà dans le bon environnement Conda
