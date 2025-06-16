@@ -96,10 +96,20 @@ class BackendManager:
             app_module_with_attribute = f"{self.module}:app" if ':' not in self.module else self.module
             backend_host = self.config.get('host', '127.0.0.1')
             
-            # La commande flask utilise maintenant --port pour être explicite
-            inner_cmd_list = [
-                "-m", "flask", "--app", app_module_with_attribute, "run", "--host", backend_host, "--port", str(port_to_use)
-            ]
+            # --- Construction de la commande en fonction du type de serveur ---
+            server_type = self.config.get('server_type', 'flask') # 'flask' par défaut pour la compatibilité
+            self.logger.info(f"Type de serveur configuré : {server_type}")
+            
+            if server_type == 'fastapi':
+                # Commande pour un serveur ASGI (uvicorn)
+                inner_cmd_list = [
+                    "-m", "uvicorn", self.module, "--host", backend_host, "--port", str(port_to_use)
+                ]
+            else: # Par défaut, ou si server_type == 'flask'
+                # Commande pour un serveur WSGI (flask run)
+                inner_cmd_list = [
+                    "-m", "flask", "--app", app_module_with_attribute, "run", "--host", backend_host, "--port", str(port_to_use)
+                ]
 
             # Vérifier si nous sommes déjà dans le bon environnement Conda
             current_conda_env = os.getenv('CONDA_DEFAULT_ENV')
