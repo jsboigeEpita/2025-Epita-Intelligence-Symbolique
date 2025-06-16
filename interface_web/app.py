@@ -22,6 +22,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
+# Importations nécessaires pour le lifespan et Starlette
+from contextlib import asynccontextmanager
+from starlette.applications import Starlette
 from a2wsgi import ASGIMiddleware
 from contextlib import asynccontextmanager # Ajout pour le lifespan manager
 
@@ -401,12 +404,13 @@ async def lifespan(app_instance: Flask):
 # Enveloppement de l'application Flask avec le middleware ASGI et le lifespan
 # On passe `app_flask` à ASGIMiddleware, et on utilise ce dernier pour créer l'app finale avec le lifespan.
 asgi_app = ASGIMiddleware(app_flask)
-app = Starlette(routes=asgi_app.routes, lifespan=lifespan)
-
-# Importations nécessaires pour le lifespan
-from contextlib import asynccontextmanager
-from starlette.applications import Starlette
-from flask import Flask
+app = Starlette(routes=getattr(asgi_app, 'routes', []), lifespan=lifespan)
+# Correction pour la compatibilité Starlette: Starlette attend des routes.
+# a2wsgi ne fournit pas directement `.routes`, mais nous pouvons reconstruire le montage.
+if not hasattr(asgi_app, 'routes'):
+    from starlette.routing import Mount
+    app = Starlette(routes=[Mount('/', app=asgi_app)], lifespan=lifespan)
+    
 
 if __name__ == '__main__':
     # Cette section permet de lancer le serveur en mode développement avec Uvicorn
