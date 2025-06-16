@@ -44,6 +44,12 @@ torch>=1.12.0
 transformers>=4.20.0
 
 # Semantic Kernel - CRITICAL DEPENDENCY
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# CRITICAL WARNING: DO NOT DOWNGRADE SEMANTIC-KERNEL BELOW 1.33.0.
+# This version IS REQUIRED and supports Python 3.10+.
+# Ensure the correct Python environment (3.10+) is active.
+# Downgrading will break the application.
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 semantic-kernel>=1.33.0
 # NOTE: Using latest version (>1.0.0) a modern API
 # CRITICAL UPDATE: Resolves Pydantic import errors and modernizes API
