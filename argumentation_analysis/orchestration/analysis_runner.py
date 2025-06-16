@@ -237,28 +237,76 @@ async def _run_analysis_conversation(
             
             run_logger.info(f"Réponse de {next_agent.name} reçue et ajoutée à l'historique.")
 
-            # ---- NOUVELLE LOGIQUE: Exécution des Tool Calls du PM ----
+            # ---- NOUVELLE LOGIQUE: Exécution des Tool Calls du PM et mise à jour de l'état ----
             if current_agent.name == pm_agent_refactored.name and last_message_content:
                 run_logger.info("Détection des appels d'outils planifiés par le ProjectManagerAgent...")
-                
-                # Regex pour trouver StateManager.add_analysis_task(description="...")
+
                 task_match = re.search(r'StateManager\.add_analysis_task\(description="([^"]+)"\)', last_message_content)
                 if task_match:
                     task_description = task_match.group(1)
                     run_logger.info(f"Appel à 'add_analysis_task' trouvé. Description: '{task_description}'")
                     try:
-                        await local_kernel.invoke(
+                        # On récupère l'ID de la tâche directement depuis l'appel
+                        result = await local_kernel.invoke(
                             plugin_name="StateManager",
                             function_name="add_analysis_task",
                             arguments=KernelArguments(description=task_description)
                         )
-                        run_logger.info("Exécution de 'add_analysis_task' réussie. L'état a été mis à jour.")
+                        # Stocker l'ID de la tâche active pour le prochain tour
+                        active_task_id = result.value
+                        run_logger.info(f"Exécution de 'add_analysis_task' réussie. Tâche '{active_task_id}' créée.")
                     except Exception as e:
                         run_logger.error(f"Erreur lors de l'exécution de 'add_analysis_task': {e}", exc_info=True)
+            
+            # Si l'agent n'est pas le PM, sa réponse doit mettre à jour l'état.
+            elif current_agent.name != pm_agent_refactored.name and last_message_content:
+                run_logger.info(f"Traitement de la réponse de l'agent travailleur: {current_agent.name}")
+                try:
+                    # Récupérer la dernière tâche non terminée
+                    # NOTE: C'est une simplification. Une vraie implémentation aurait besoin d'un ID de tâche
+                    # passé dans le contexte de l'agent. Pour l'instant, on prend la dernière.
+                    last_task_id = local_state.get_last_task_id()
 
-                # La désignation du prochain agent est déjà gérée par la logique de sélection de boucle,
-                # mais nous pourrions aussi appeler la fonction ici pour plus de rigueur.
-                # Pour l'instant, on laisse la logique de boucle principale s'en charger.
+                    if last_task_id:
+                        run_logger.info(f"La tâche active est '{last_task_id}'. Mise à jour de l'état avec la réponse.")
+                        # Ici, on devrait avoir une logique pour router la réponse
+                        # vers la bonne fonction du StateManager en fonction de la description de la tâche.
+                        # Pour l'instant, on suppose que c'est une réponse d'identification d'arguments.
+                        
+                        # Tentative de parser le JSON de la réponse
+                        try:
+                            response_data = json.loads(last_message_content)
+                            if "identified_arguments" in response_data:
+                                await local_kernel.invoke(
+                                    plugin_name="StateManager",
+                                    function_name="add_identified_arguments",
+                                    arguments=KernelArguments(arguments=response_data["identified_arguments"])
+                                )
+                                run_logger.info(f"Arguments identifiés par {current_agent.name} ajoutés à l'état.")
+                            elif "identified_fallacies" in response_data:
+                                await local_kernel.invoke(
+                                    plugin_name="StateManager",
+                                    function_name="add_identified_fallacies",
+                                    arguments=KernelArguments(fallacies=response_data["identified_fallacies"])
+                                )
+                                run_logger.info(f"Sophismes identifiés par {current_agent.name} ajoutés à l'état.")
+                        except json.JSONDecodeError:
+                            run_logger.warning(f"La réponse de {current_agent.name} n'est pas un JSON valide. Contenu: {last_message_content}")
+                            # On pourrait mettre le contenu brut dans la réponse de la tâche
+
+                        # Marquer la tâche comme terminée
+                        await local_kernel.invoke(
+                            plugin_name="StateManager",
+                            function_name="mark_task_as_answered",
+                            arguments=KernelArguments(task_id=last_task_id, answer=last_message_content)
+                        )
+                        run_logger.info(f"Tâche '{last_task_id}' marquée comme terminée.")
+                    else:
+                        run_logger.warning("Agent travailleur a répondu mais aucune tâche active trouvée dans l'état.")
+
+                except Exception as e:
+                    run_logger.error(f"Erreur lors de la mise à jour de l'état avec la réponse de {current_agent.name}: {e}", exc_info=True)
+
 
         run_logger.info("Boucle de conversation manuelle terminée.")
         

@@ -65,6 +65,42 @@ class StateManagerPlugin:
             self._logger.error(f"Erreur lors de l'ajout de l'argument '{description[:60]}...': {e}", exc_info=True)
             return f"FUNC_ERROR: Erreur ajout argument: {e}"
 
+    @kernel_function(description="Ajoute une liste d'arguments identifiés à l'état.", name="add_identified_arguments")
+    def add_identified_arguments(self, arguments: List[str]) -> str:
+        """Interface Kernel Function pour ajouter une liste d'arguments via l'état."""
+        self._logger.info(f"Appel add_identified_arguments (state id: {id(self._state)}) avec {len(arguments)} arguments...")
+        try:
+            self._state.add_identified_arguments(arguments)
+            self._logger.info(f" -> {len(arguments)} arguments ajoutés avec succès via l'état.")
+            return f"OK: {len(arguments)} arguments ajoutés."
+        except Exception as e:
+            self._logger.error(f"Erreur lors de l'ajout de la liste d'arguments: {e}", exc_info=True)
+            return f"FUNC_ERROR: Erreur ajout liste d'arguments: {e}"
+
+    @kernel_function(description="Ajoute une liste de sophismes identifiés à l'état.", name="add_identified_fallacies")
+    def add_identified_fallacies(self, fallacies: List[Dict[str, str]]) -> str:
+        """Interface Kernel Function pour ajouter une liste de sophismes via l'état."""
+        self._logger.info(f"Appel add_identified_fallacies (state id: {id(self._state)}) avec {len(fallacies)} sophismes...")
+        try:
+            self._state.add_identified_fallacies(fallacies)
+            self._logger.info(f" -> {len(fallacies)} sophismes ajoutés avec succès via l'état.")
+            return f"OK: {len(fallacies)} sophismes ajoutés."
+        except Exception as e:
+            self._logger.error(f"Erreur lors de l'ajout de la liste de sophismes: {e}", exc_info=True)
+            return f"FUNC_ERROR: Erreur ajout liste de sophismes: {e}"
+
+    @kernel_function(description="Marque une tâche comme répondue dans l'état.", name="mark_task_as_answered")
+    def mark_task_as_answered(self, task_id: str, answer: str) -> str:
+        """Interface Kernel Function pour marquer une tâche comme terminée."""
+        self._logger.info(f"Appel mark_task_as_answered (state id: {id(self._state)}): TaskID='{task_id}'")
+        try:
+            self._state.mark_task_as_answered(task_id, answer)
+            self._logger.info(f" -> Tâche '{task_id}' marquée comme répondue avec succès.")
+            return f"OK: Tâche {task_id} marquée comme répondue."
+        except Exception as e:
+            self._logger.error(f"Erreur lors du marquage de la tâche '{task_id}' comme répondue: {e}", exc_info=True)
+            return f"FUNC_ERROR: Erreur marquage tâche {task_id}: {e}"
+
     @kernel_function(description="Ajoute un sophisme identifié à l'état.", name="add_identified_fallacy")
     def add_identified_fallacy(self, fallacy_type: str, justification: str, target_argument_id: Optional[str] = None) -> str:
         """Interface Kernel Function pour ajouter un sophisme via l'état."""

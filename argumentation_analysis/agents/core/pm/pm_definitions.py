@@ -2,7 +2,7 @@
 import semantic_kernel as sk
 import logging
 # Importer les prompts depuis le fichier voisin
-from .prompts import prompt_define_tasks_v10, prompt_write_conclusion_v6
+from .prompts import prompt_define_tasks_v12, prompt_write_conclusion_v6
 
 logger = logging.getLogger("Orchestration.AgentPM.Defs")
 setup_logger = logging.getLogger("Orchestration.AgentPM.Setup") # Pour la fonction setup
@@ -37,7 +37,7 @@ def setup_pm_kernel(kernel: sk.Kernel, llm_service):
 
     try:
         kernel.add_function(
-            prompt=prompt_define_tasks_v10,
+            prompt=prompt_define_tasks_v12,
             plugin_name=plugin_name, function_name="semantic_DefineTasksAndDelegate",
             description="Définit la PROCHAINE tâche unique, l'enregistre, désigne 1 agent (Nom Exact Requis).",
             prompt_execution_settings=default_settings
