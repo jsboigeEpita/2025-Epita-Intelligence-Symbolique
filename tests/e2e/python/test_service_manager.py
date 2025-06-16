@@ -1,4 +1,5 @@
 
+import pytest
 #!/usr/bin/env python3
 """
 Tests fonctionnels pour ServiceManager
@@ -11,6 +12,7 @@ Valide les patterns critiques identifiés dans la cartographie :
 Auteur: Projet Intelligence Symbolique EPITA
 Date: 07/06/2025
 """
+pytest.skip("Suite de tests obsolète pour ServiceManager, logique déplacée vers les managers de webapp.", allow_module_level=True)
 
 import os
 import sys

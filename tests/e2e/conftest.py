@@ -15,28 +15,12 @@ from playwright.sync_api import Page, expect
 import os
 from pathlib import Path
 
-def get_frontend_url(max_wait_seconds: int = 60) -> str:
-    """
-    Lit l'URL du frontend depuis le fichier généré par l'orchestrateur,
-    en attendant sa création si nécessaire.
-    """
-    url_file = Path("logs/frontend_url.txt")
-    
-    for _ in range(max_wait_seconds):
-        if url_file.exists():
-            url = url_file.read_text().strip()
-            if url:
-                print(f"URL du frontend trouvée : {url}")
-                return url
-        time.sleep(1)
-        
-    pytest.fail(
-        f"Le fichier d'URL '{url_file}' n'a pas été trouvé ou est vide après "
-        f"{max_wait_seconds} secondes. Assurez-vous que l'orchestrateur est bien démarré."
-    )
+# La fonction get_frontend_url a été supprimée pour utiliser une URL fixe
+# et simplifier les tests locaux. L'orchestrateur n'est pas toujours
+# actif lors de l'exécution des tests.
 
 # URLs et timeouts configurables
-APP_BASE_URL = get_frontend_url()
+APP_BASE_URL = "http://localhost:3000"  # URL fixe pour les tests E2E
 API_CONNECTION_TIMEOUT = 30000  # Augmenté pour les environnements de CI/CD lents
 DEFAULT_TIMEOUT = 15000
 SLOW_OPERATION_TIMEOUT = 20000

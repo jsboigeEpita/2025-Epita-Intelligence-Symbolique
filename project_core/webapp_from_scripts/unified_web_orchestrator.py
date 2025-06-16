@@ -171,7 +171,13 @@ class UnifiedWebOrchestrator:
             
         try:
             with open(self.config_path, 'r', encoding='utf-8') as f:
-                return yaml.safe_load(f)
+                config = yaml.safe_load(f)
+            # Si le fichier yaml est vide, safe_load retourne None.
+            # On retourne la config par défaut pour éviter un crash.
+            if not isinstance(config, dict):
+                print(f"[WARNING] Le contenu de {self.config_path} est vide ou n'est pas un dictionnaire. Utilisation de la configuration par défaut.")
+                return self._get_default_config()
+            return config
         except Exception as e:
             print(f"Erreur chargement config {self.config_path}: {e}")
             return self._get_default_config()

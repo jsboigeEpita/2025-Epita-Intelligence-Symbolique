@@ -94,28 +94,37 @@ class BackendManager:
                 self.logger.error(error_msg)
                 return {'success': False, 'error': error_msg, 'url': None, 'port': None, 'pid': None}
             
-            conda_env_name = self.config.get('conda_env', 'projet-is')
-            
-            if ':' in self.module:
-                app_module_with_attribute = self.module
+            command_list = self.config.get('command_list')
+            if command_list:
+                self.logger.info(f"Utilisation de la command_list directe: {command_list}")
+                # Le test d'intégration avec fake_backend attend le port en argument
+                cmd = command_list + [str(port)]
             else:
-                app_module_with_attribute = f"{self.module}:app"
+                conda_env_name = self.config.get('conda_env', 'projet-is')
                 
-            backend_host = self.config.get('host', '127.0.0.1')
-            
-            # La commande flask n'a plus besoin du port, il sera lu depuis l'env FLASK_RUN_PORT
-            inner_cmd_list = [
-                "python", "-m", "flask", "--app", app_module_with_attribute, "run", "--host", backend_host
-            ]
+                if not self.module:
+                    raise ValueError("La configuration du backend doit contenir soit 'module', soit 'command_list'.")
 
-            if self.conda_env_path:
-                cmd_base = ["conda", "run", "--prefix", self.conda_env_path, "--no-capture-output"]
-                self.logger.info(f"Utilisation de `conda run --prefix`: {self.conda_env_path}")
-            else:
-                cmd_base = ["conda", "run", "-n", conda_env_name, "--no-capture-output"]
-                self.logger.warning(f"Utilisation de `conda run -n {conda_env_name}`. Fournir conda_env_path est plus robuste.")
+                if ':' in self.module:
+                    app_module_with_attribute = self.module
+                else:
+                    app_module_with_attribute = f"{self.module}:app"
+                    
+                backend_host = self.config.get('host', '127.0.0.1')
+                
+                # La commande flask n'a plus besoin du port, il sera lu depuis l'env FLASK_RUN_PORT
+                inner_cmd_list = [
+                    "python", "-m", "flask", "--app", app_module_with_attribute, "run", "--host", backend_host
+                ]
 
-            cmd = cmd_base + inner_cmd_list
+                if self.conda_env_path:
+                    cmd_base = ["conda", "run", "--prefix", self.conda_env_path, "--no-capture-output"]
+                    self.logger.info(f"Utilisation de `conda run --prefix`: {self.conda_env_path}")
+                else:
+                    cmd_base = ["conda", "run", "-n", conda_env_name, "--no-capture-output"]
+                    self.logger.warning(f"Utilisation de `conda run -n {conda_env_name}`. Fournir conda_env_path est plus robuste.")
+
+                cmd = cmd_base + inner_cmd_list
             self.logger.info(f"Commande de lancement finale: {cmd}")
             
             project_root = str(Path(__file__).resolve().parent.parent.parent)
