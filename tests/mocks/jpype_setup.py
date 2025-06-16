@@ -3,7 +3,7 @@ import os
 import pytest
 from unittest.mock import MagicMock
 import importlib.util
-from argumentation_analysis.core.jvm_setup import shutdown_jvm_if_needed
+from argumentation_analysis.core.jvm_setup import shutdown_jvm # MODIFIED
 import logging
 
 # --- Configuration du Logger ---
