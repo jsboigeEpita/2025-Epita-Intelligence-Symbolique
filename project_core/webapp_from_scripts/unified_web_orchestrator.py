@@ -270,21 +270,32 @@ class UnifiedWebOrchestrator:
         # La CLI surcharge la config YAML
         level = log_level or logging_config.get('level', 'INFO').upper()
 
-        # Supprimer les handlers existants pour éviter les logs dupliqués
-        for handler in logging.root.handlers[:]:
-            logging.root.removeHandler(handler)
+        # Ne plus supprimer les handlers existants pour permettre la cohabitation
+        # for handler in logging.root.handlers[:]:
+        #     logging.root.removeHandler(handler)
             
-        logging.basicConfig(
-            level=level,
-            format=logging_config.get('format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s'),
-            handlers=[
-                logging.FileHandler(log_file, encoding='utf-8'),
-                logging.StreamHandler(sys.stdout)
-            ]
-        )
-        
+        # On configure le logger de la librairie, sans toucher à la config de base
+        # pour permettre au script appelant de garder sa propre configuration.
         logger = logging.getLogger(__name__)
-        logger.info(f"Niveau de log configuré sur : {level}")
+        logger.setLevel(level)
+        
+        # S'assurer de ne pas ajouter de handlers si ils existent déjà
+        if not logger.handlers:
+            # Création des handlers spécifiques à l'orchestrateur
+            file_handler = logging.FileHandler(log_file, encoding='utf-8')
+            file_handler.setFormatter(logging.Formatter(logging_config.get('format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')))
+            
+            stream_handler = logging.StreamHandler(sys.stdout)
+            stream_handler.setFormatter(logging.Formatter(logging_config.get('format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')))
+            
+            logger.addHandler(file_handler)
+            logger.addHandler(stream_handler)
+
+        # Empêcher les logs de remonter au root logger pour éviter les duplications
+        logger.propagate = False
+        
+        # Le logger est déjà configuré, on le retourne simplement.
+        logger.info(f"Niveau de log pour l'orchestrateur configuré sur : {level}")
         return logger
     
     def add_trace(self, action: str, details: str = "", result: str = "", 

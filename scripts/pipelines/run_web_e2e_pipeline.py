@@ -1,97 +1,105 @@
-import project_core.core_from_scripts.auto_env
 import os
 import sys
-import subprocess
-import logging
 from pathlib import Path
 
-# Ajouter project_core au path pour l'import de ServiceManager et UnifiedWebOrchestrator
-# S'assurer que le chemin est relatif à ce script ou au CWD
-# Ici, on suppose que le script est dans scripts/pipelines/ et project_core est à la racine
-# donc ../../
+# --- Configuration du PYTHONPATH ---
+# Cette section doit être la première pour que les imports du projet fonctionnent.
 try:
-    # Tentative de résolution relative au script actuel
+    # Résoudre le chemin racine du projet par rapport à l'emplacement de ce script.
     current_script_path = Path(__file__).resolve()
     project_root = current_script_path.parent.parent.parent
 except NameError:
-    # __file__ n'est pas défini (par exemple, dans un interpréteur interactif)
-    # On suppose que le CWD est la racine du projet
+    # Fallback si __file__ n'est pas défini (ex: REPL), en supposant que CWD est la racine.
     project_root = Path(os.getcwd())
 
-# Ajout des chemins nécessaires pour les imports
-# Chemin vers project_core pour les modules partagés
-sys.path.insert(0, str(project_root))
-# Le PYTHONPATH est déjà configuré par l'activateur, plus besoin de manipuler sys.path ici.
+# Insérer la racine du projet au début de sys.path pour prioriser les modules locaux.
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
+# Maintenant que le path est configuré, on peut importer les modules du projet.
+import project_core.core_from_scripts.auto_env
+import subprocess
+import logging
 
-try:
-    from project_core.webapp_from_scripts.unified_web_orchestrator import UnifiedWebOrchestrator
-except ImportError as e:
-    print(f"Erreur: Impossible d'importer UnifiedWebOrchestrator. Vérifiez PYTHONPATH et l'emplacement du module.")
-    print(f"Détails de l'erreur: {e}")
-    print(f"project_root calculé: {project_root}")
-    print(f"sys.path: {sys.path}")
-    sys.exit(1)
 
 # Configuration du logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+log_dir = project_root / "logs"
+log_dir.mkdir(exist_ok=True)
+main_log_file = log_dir / "pipeline_e2e.log"
+pytest_stdout_log = log_dir / "pytest_stdout.log"
+pytest_stderr_log = log_dir / "pytest_stderr.log"
+
+# Nettoyage des anciens logs
+for log_file in [main_log_file, pytest_stdout_log, pytest_stderr_log]:
+    if log_file.exists():
+        log_file.unlink()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(main_log_file),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 logger = logging.getLogger("WebE2EPipeline")
 
-# Configuration des tests Playwright
-# S'assurer que le CWD pour Playwright est correct pour qu'il trouve sa config
-PLAYWRIGHT_TEST_COMMAND = ["npx", "playwright", "test"]
-PLAYWRIGHT_WORKING_DIR = str(project_root / "tests_playwright")
 
-async def run_pipeline_async():
+def run_pytest_tests():
     """
-    Orchestre le démarrage des services, l'exécution des tests et l'arrêt des services
-    de manière asynchrone, en utilisant les vraies méthodes de l'orchestrateur.
+    Exécute les tests E2E avec pytest, en redirigeant stdout et stderr vers des fichiers de log.
+    Toute la gestion des services est désormais déléguée aux fixtures pytest.
     """
-    import argparse
-    default_args = argparse.Namespace(
-        config='scripts/webapp/config/webapp_config.yml',
-        headless=True,
-        visible=False,
-        log_level='INFO',
-        timeout=20,
-        no_trace=False,
-        no_playwright=False,
-        exit_after_start=False,
-        start=False,
-        stop=False,
-        test=True, # Par défaut, on veut exécuter les tests
-        integration=True,
-        frontend=True,
-        tests=None
-    )
+    test_dir = str(project_root / "tests" / "e2e")
     
-    orchestrator = UnifiedWebOrchestrator(args=default_args)
+    command = [
+        "pytest",
+        test_dir,
+        "--verbose",
+        "--headed"  # Lancer avec un navigateur visible pour le débogage
+    ]
+
+    logger.info(f"Lancement de la commande pytest : {' '.join(command)}")
+    logger.info(f"La sortie standard sera redirigée vers : {pytest_stdout_log}")
+    logger.info(f"La sortie d'erreur sera redirigée vers : {pytest_stderr_log}")
 
     try:
-        logger.info("Lancement du test d'intégration complet via l'orchestrateur...")
-        # La méthode full_integration_test gère le démarrage, les tests et l'arrêt.
-        success = await orchestrator.full_integration_test(
-            headless=default_args.headless,
-            frontend_enabled=default_args.frontend
-        )
-
-        if success:
-            logger.info("Pipeline de tests E2E terminé avec SUCCÈS.")
+        with open(pytest_stdout_log, 'w') as f_stdout, open(pytest_stderr_log, 'w') as f_stderr:
+            process = subprocess.run(
+                command,
+                cwd=str(project_root),
+                stdout=f_stdout,
+                stderr=f_stderr,
+                text=True,
+                encoding='utf-8'
+            )
+        
+        if process.returncode == 0:
+            logger.info("Pytest a terminé avec SUCCÈS.")
+            return True
         else:
-            logger.error("Pipeline de tests E2E terminé en ÉCHEC.")
+            logger.error(f"Pytest a terminé en ÉCHEC avec le code de retour {process.returncode}.")
+            logger.error(f"Consultez les logs pour plus de détails:")
+            logger.error(f"  - Sortie standard: {pytest_stdout_log}")
+            logger.error(f"  - Sortie d'erreur: {pytest_stderr_log}")
+            return False
 
+    except FileNotFoundError:
+        logger.error("Erreur: La commande 'pytest' n'a pas été trouvée.")
+        logger.error("Assurez-vous que pytest est installé et que l'environnement virtuel est activé.")
+        return False
     except Exception as e:
-        logger.error(f"Une erreur majeure est survenue dans le pipeline: {e}", exc_info=True)
-    finally:
-        # L'arrêt est déjà géré dans full_integration_test, mais on s'assure
-        # qu'un arrêt est tenté en cas de crash avant.
-        logger.info("Nettoyage final du pipeline...")
-        await orchestrator.shutdown()
+        logger.error(f"Une erreur est survenue lors de l'exécution de pytest : {e}", exc_info=True)
+        return False
 
 
 if __name__ == "__main__":
-    import asyncio
     logger.info("Démarrage du pipeline de tests E2E Web...")
-    # Exécution de la nouvelle fonction asynchrone
-    asyncio.run(run_pipeline_async())
-    logger.info("Pipeline de tests E2E Web terminé.")
+    success = run_pytest_tests()
+    
+    if success:
+        logger.info("Pipeline de tests E2E Web terminé avec SUCCÈS.")
+        sys.exit(0)
+    else:
+        logger.error("Pipeline de tests E2E Web terminé en ÉCHEC.")
+        sys.exit(1)

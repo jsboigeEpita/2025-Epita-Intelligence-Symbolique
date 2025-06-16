@@ -2,6 +2,11 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
+# This mark ensures that the 'orchestrator_session' fixture is used for all tests in this module,
+# which starts the web server and sets the base_url for playwright.
+pytestmark = pytest.mark.usefixtures("orchestrator_session")
+
+
 @pytest.mark.playwright
 def test_successful_graph_visualization(page: Page):
     """
