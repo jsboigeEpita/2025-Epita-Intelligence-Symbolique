@@ -22,10 +22,11 @@ L'agent est conçu pour :
 
 import logging
 import json
-from typing import Dict, List, Any, Optional, AsyncGenerator
+from typing import Dict, List, Any, Optional
 import semantic_kernel as sk
 from semantic_kernel.functions.kernel_arguments import KernelArguments
-from semantic_kernel.contents import ChatMessageContent, AuthorRole
+from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from semantic_kernel.contents.role import Role
 
 # Import de la classe de base
 from ..abc.agent_bases import BaseAgent
@@ -732,31 +733,46 @@ class InformalAnalysisAgent(BaseAgent):
                 "analysis_timestamp": self._get_timestamp()
             }
 
-    async def invoke_single(
-        self,
-        messages: List[ChatMessageContent],
-        **kwargs: Any,
-    ) -> ChatMessageContent:
+    async def invoke_custom(self, history: list[ChatMessageContent]) -> ChatMessageContent:
         """
-        Implémentation de la logique de l'agent pour une seule réponse, conforme à BaseAgent.
+        Logique d'invocation principale de l'agent, utilisant l'historique de chat.
         """
-        self.logger.info(f"Informal Agent invoke_single called with: {len(messages)} messages.")
-        
-        # Le dernier message de l'utilisateur est généralement celui qu'on traite.
-        user_message = next((m.content for m in reversed(messages) if m.role == AuthorRole.USER), None)
+        self.logger.info(f"invoke_custom called for {self.name}")
 
-        if not user_message:
-            self.logger.warning("Aucun message utilisateur trouvé dans l'historique pour l'analyse informelle.")
-            error_content = json.dumps({"error": "No user message to analyze."})
-            return ChatMessageContent(role=AuthorRole.ASSISTANT, content=error_content)
+        # Extraire le contenu du dernier message utilisateur
+        # ou de la dernière réponse d'un autre agent comme entrée principale.
+        input_text = next((m.content for m in reversed(history) if m.role in [Role.USER, Role.ASSISTANT] and m.content), None)
 
-        self.logger.info(f"Déclenchement de 'perform_complete_analysis' sur le texte: '{user_message[:100]}...'")
-        analysis_result = await self.perform_complete_analysis(user_message)
+        if not isinstance(input_text, str) or not input_text.strip():
+            self.logger.warning("Aucun contenu textuel valide trouvé dans l'historique récent pour l'analyse.")
+            error_msg = {"error": "No valid text content found in recent history to analyze."}
+            return ChatMessageContent(role=Role.ASSISTANT, content=json.dumps(error_msg), name=self.name)
+
+        self.logger.info(f"Déclenchement de l'analyse et catégorisation pour le texte : '{input_text[:100]}...'")
         
-        # Encodage du résultat en JSON pour la réponse
-        response_content = json.dumps(analysis_result, indent=2, ensure_ascii=False)
-        
-        return ChatMessageContent(role=AuthorRole.ASSISTANT, content=response_content)
+        try:
+            # Utiliser une des méthodes d'analyse principales de l'agent
+            analysis_result = await self.analyze_and_categorize(input_text)
+            response_content = json.dumps(analysis_result, indent=2, ensure_ascii=False)
+            
+            return ChatMessageContent(role=Role.ASSISTANT, content=response_content, name=self.name)
+
+        except Exception as e:
+            self.logger.error(f"Erreur durant 'analyze_and_categorize' dans invoke_custom: {e}", exc_info=True)
+            error_msg = {"error": f"An unexpected error occurred during analysis: {e}"}
+            return ChatMessageContent(role=Role.ASSISTANT, content=json.dumps(error_msg), name=self.name)
+
+    async def invoke(self, history: list[ChatMessageContent]) -> ChatMessageContent:
+        """Méthode dépréciée, utilisez invoke_custom."""
+        import warnings
+        warnings.warn("The 'invoke' method is deprecated, use 'invoke_custom' instead.", DeprecationWarning)
+        return await self.invoke_custom(history)
+
+    async def get_response(self, history: list[ChatMessageContent]) -> ChatMessageContent:
+        """Méthode dépréciée, utilisez invoke_custom."""
+        import warnings
+        warnings.warn("The 'get_response' method is deprecated, use 'invoke_custom' instead.", DeprecationWarning)
+        return await self.invoke_custom(history)
 
 # Log de chargement
 # logging.getLogger(__name__).debug("Module agents.core.informal.informal_agent chargé.") # Géré par BaseAgent

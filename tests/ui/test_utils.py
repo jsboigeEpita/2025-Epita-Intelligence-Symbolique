@@ -513,7 +513,7 @@ def test_load_extract_definitions_decryption_fails(mock_decrypt_data_with_fernet
     # Le message vient de load_extract_definitions quand InvalidToken est attrapée
     error_logged = False
     # Le message exact loggué par load_extract_definitions pour InvalidToken attrapée
-    expected_log_part = f"❌ InvalidToken explicitement levée lors du déchiffrement de '{config_file_path}'"
+    expected_log_part = f"❌ Token invalide (InvalidToken) lors du déchiffrement de '{config_file_path}'"
     for call_args_tuple in mock_logger.error.call_args_list: # C'est une erreur maintenant
         args, kwargs = call_args_tuple
         if args and isinstance(args[0], str) and expected_log_part in args[0] and kwargs.get('exc_info') is True:

@@ -4,7 +4,8 @@ from typing import Dict, Any, Optional
 
 from semantic_kernel import Kernel # type: ignore
 from semantic_kernel.functions.kernel_arguments import KernelArguments # type: ignore
-from semantic_kernel.contents import ChatMessageContent, AuthorRole
+from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from semantic_kernel.contents.role import Role
 
 
 from ..abc.agent_bases import BaseAgent
@@ -159,40 +160,56 @@ class ProjectManagerAgent(BaseAgent):
             # Retourner une chaîne d'erreur ou lever une exception spécifique
             return f"ERREUR: Impossible d'écrire la conclusion. Détails: {e}"
 
-    async def get_response(self, message: str, **kwargs) -> str:
-        """
-        Méthode générique pour obtenir une réponse, non utilisée pour les appels spécifiques.
-        """
-        self.logger.info(f"get_response non implémenté pour l'appel générique, retour des capacités.")
-        capabilities = self.get_agent_capabilities()
-        return f"Agent ProjectManager prêt. Capacités: {', '.join(capabilities.keys())}"
+    async def invoke(self, history: list[ChatMessageContent]) -> ChatMessageContent:
+        """Méthode dépréciée, utilisez invoke_custom."""
+        import warnings
+        warnings.warn("The 'invoke' method is deprecated, use 'invoke_custom' instead.", DeprecationWarning)
+        return await self.invoke_custom(history)
 
-    async def invoke_single(self, *args, **kwargs) -> str:
-        """
-        Implémentation de la logique de l'agent pour une seule réponse, appelée par la méthode `invoke` de la classe de base.
-        """
-        self.logger.info(f"PM Agent invoke_single called with: args={args}, kwargs={kwargs}")
+    async def get_response(self, history: list[ChatMessageContent]) -> ChatMessageContent:
+        """Méthode dépréciée, utilisez invoke_custom."""
+        import warnings
+        warnings.warn("The 'get_response' method is deprecated, use 'invoke_custom' instead.", DeprecationWarning)
+        return await self.invoke_custom(history)
 
-        # Le framework AgentGroupChat passe le `chat_history` comme premier argument positionnel.
-        # Nous l'extrayons pour récupérer le contexte et le texte.
-        # C'est une heuristique basée sur le fonctionnement actuel de SK.
-        raw_text = ""
-        analysis_state_snapshot = "{}" # Default empty state
+    async def invoke_custom(self, history: list[ChatMessageContent]) -> ChatMessageContent:
+        """
+        Logique d'invocation principale du PM, qui décide de la prochaine action.
+        """
+        self.logger.info(f"invoke_custom called for {self.name} with {len(history)} messages.")
+
+        # Extraire le texte brut initial (typiquement le premier message utilisateur)
+        raw_text = next((m.content for m in history if m.role == Role.USER and m.content), "")
         
-        if args and isinstance(args[0], list) and len(args[0]) > 0:
-            # L'historique (chat avec les messages précédents) semble être dans args[0]
-            # Le message initial de l'utilisateur est souvent le premier.
-            for msg in args[0]:
-                if msg.role.value.lower() == 'user':
-                    raw_text = msg.content
-                    break # On prend le premier
-            self.logger.info(f"Texte brut extrait de l'historique: '{raw_text[:100]}...'")
+        # Extraire l'état d'analyse (typiquement un résumé JSON dans un message d'assistant récent)
+        analysis_state_snapshot = next((m.content for m in reversed(history) if m.role == Role.ASSISTANT and m.content and 'tasks_defined' in m.content), "{}")
 
-        # Pour le state_snapshot, c'est plus complexe.
-        # Sans une convention claire, on va appeler define_tasks avec l'état par défaut.
-        # C'est le rôle du PM de démarrer le processus.
-        self.logger.info("Déclenchement de 'define_tasks_and_delegate' depuis l'appel invoke_single générique.")
-        return await self.define_tasks_and_delegate(analysis_state_snapshot, raw_text)
+        if not raw_text:
+            self.logger.warning("Aucun texte brut (message utilisateur initial) trouvé dans l'historique.")
+            return ChatMessageContent(role=Role.ASSISTANT, content='{"error": "Initial text (user message) not found in history."}', name=self.name)
+
+        # Décider de l'action : écrire la conclusion ou définir la prochaine tâche.
+        # Cette logique est simplifiée. Une vraie implémentation analyserait `analysis_state_snapshot`
+        # pour voir si toutes les tâches sont complétées.
+        # Si le prompt v11 est assez intelligent, il peut faire ce choix lui-même.
+        action_to_perform = "conclusion" if '"final_conclusion": null' not in analysis_state_snapshot and len(analysis_state_snapshot) > 10 else "define_tasks"
+
+        self.logger.info(f"PM Agent সিদ্ধান্ত (decision): {action_to_perform}")
+
+        try:
+            if action_to_perform == "conclusion" and '"conclusion"' in self.system_prompt: # Vérifie si la conclusion est une étape attendue
+                self.logger.info("Tentative de rédaction de la conclusion.")
+                result_str = await self.write_conclusion(analysis_state_snapshot, raw_text)
+            else:
+                self.logger.info("Définition de la prochaine tâche.")
+                result_str = await self.define_tasks_and_delegate(analysis_state_snapshot, raw_text)
+            
+            return ChatMessageContent(role=Role.ASSISTANT, content=result_str, name=self.name)
+
+        except Exception as e:
+            self.logger.error(f"Erreur durant l'invocation du PM Agent: {e}", exc_info=True)
+            error_msg = f'{{"error": "An unexpected error occurred in ProjectManagerAgent: {e}"}}'
+            return ChatMessageContent(role=Role.ASSISTANT, content=error_msg, name=self.name)
 
     # D'autres méthodes métiers pourraient être ajoutées ici si nécessaire,
     # par exemple, une méthode qui encapsule la logique de décision principale du PM

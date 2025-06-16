@@ -25,6 +25,7 @@ param(
 )
 
 # Configuration
+Write-Host "[DEBUG] Activating environment..."
 $ProjectRoot = $PSScriptRoot
 $PythonModule = "project_core/core_from_scripts/environment_manager.py"
 
@@ -117,3 +118,4 @@ try {
     Write-Log "Erreur critique: $($_.Exception.Message)" "ERROR"
     exit 1
 }
+Write-Host "[DEBUG] Environment script finished."

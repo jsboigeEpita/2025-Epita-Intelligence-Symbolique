@@ -28,12 +28,10 @@ from semantic_kernel.contents.chat_message_content import ChatMessageContent as 
 from semantic_kernel.kernel import Kernel as SKernel # Alias pour éviter conflit avec Kernel de SK
 
 # Imports Semantic Kernel
-from semantic_kernel.agents import AgentGroupChat, Agent
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
-from semantic_kernel.contents.utils.author_role import AuthorRole
 from semantic_kernel.contents.chat_history import ChatHistory
+from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from semantic_kernel.contents.role import Role
 
 # Correct imports
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
@@ -161,29 +159,66 @@ async def _run_analysis_conversation(
             run_logger.critical("Aucun agent actif n'a pu être initialisé. Annulation de l'analyse.")
             return {"status": "error", "message": "Aucun agent actif."}
 
-        run_logger.info(f"Création du AgentGroupChat avec les agents: {[agent.name for agent in active_agents]}")
+        run_logger.info(f"Agents actifs pour la conversation: {[agent.name for agent in active_agents]}")
 
-        # Créer le groupe de chat
-        # Message initial pour lancer la conversation
-        initial_message_text = (
-            "Vous êtes une équipe d'analystes experts en argumentation. "
-            "Votre mission est d'analyser le texte suivant de manière collaborative. "
-            "Le Project Manager (PM) doit initier et coordonner. "
-            "Les autres agents attendent les instructions du PM. "
-            f"Voici le texte à analyser:\n\n---\n{local_state.raw_text}\n---"
+        # Création de l'historique de chat et message initial
+        chat = ChatHistory()
+        initial_user_message = (
+            "Vous êtes une équipe d'analystes experts en argumentation. Votre mission est d'analyser le texte suivant. "
+            "Le ProjectManagerAgent doit commencer par définir les tâches. Les autres agents attendent ses instructions. "
+            f"Le texte à analyser est:\n\n---\n{texte_a_analyser}\n---"
         )
-        
-        # Créer un historique de chat et y ajouter le message initial
-        chat_history_for_group = ChatHistory()
-        chat_history_for_group.add_user_message(initial_message_text)
+        chat.add_user_message(initial_user_message)
+        run_logger.info("Historique de chat initialisé avec le message utilisateur.")
 
-        # Créer le groupe de chat avec l'historique pré-rempli
-        group_chat = AgentGroupChat(agents=active_agents, chat_history=chat_history_for_group)
+        full_history: List[ChatMessageContent] = [chat.messages[-1]]
         
-        run_logger.info("Démarrage de l'invocation du groupe de chat...")
-        # L'invocation se fait sans argument car le premier message est déjà dans l'historique.
-        full_history = [message async for message in group_chat.invoke()]
-        run_logger.info("Conversation terminée.")
+        # Boucle de conversation manuelle
+        for i in range(15): # Limite de sécurité de 15 tours
+            run_logger.info(f"--- Tour de Conversation {i+1}/15 ---")
+
+            # 1. Utiliser le PM pour déterminer le prochain agent
+            run_logger.debug("Invocation du ProjectManagerAgent pour désigner le prochain agent...")
+            pm_response = await pm_agent_refactored.invoke_custom(history=full_history)
+            full_history.append(pm_response)
+
+            try:
+                # Le PM doit répondre avec un JSON contenant le nom de l'agent
+                response_data = json.loads(pm_response.content or "{}")
+                next_agent_name = response_data.get("next_agent")
+                
+                if next_agent_name == "FINISH":
+                    run_logger.info("Le ProjectManagerAgent a signalé la fin de l'analyse.")
+                    break
+                
+                if not next_agent_name:
+                    run_logger.warning("Le PM n'a pas désigné de prochain agent. Fin de la boucle.")
+                    break
+
+                # 2. Trouver l'agent désigné
+                next_agent = next((agent for agent in active_agents if agent.name == next_agent_name), None)
+                if not next_agent:
+                    run_logger.error(f"Agent désigné '{next_agent_name}' non trouvé. Fin de la boucle.")
+                    break
+                
+                run_logger.info(f"Agent désigné par le PM: {next_agent.name}")
+
+                # 3. Invoquer l'agent désigné
+                run_logger.debug(f"Invocation de l'agent '{next_agent.name}'...")
+                agent_response = await next_agent.invoke_custom(history=full_history)
+                full_history.append(agent_response)
+                run_logger.info(f"Réponse reçue de {next_agent.name}.")
+
+            except json.JSONDecodeError:
+                run_logger.error("Réponse du PM non-JSON. Fin de la boucle.")
+                break
+            except Exception as e:
+                run_logger.error(f"Erreur pendant le tour de conversation: {e}", exc_info=True)
+                break
+        else:
+            run_logger.warning("Limite de 15 tours de conversation atteinte.")
+
+        run_logger.info("Cycle de conversation terminé.")
         
         # Logger l'historique complet pour le débogage
         if full_history:
