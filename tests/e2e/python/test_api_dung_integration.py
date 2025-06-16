@@ -3,17 +3,24 @@ from playwright.sync_api import Playwright, expect
 import os
 
 # Marqueur pour facilement cibler ces tests
-pytestmark = [pytest.mark.api_integration, pytest.mark.e2e_test]
+# La fixture `webapp_service` dans conftest.py est `autouse=True` pour la session,
+# donc le démarrage du serveur est géré automatiquement.
+pytestmark = [
+    pytest.mark.api_integration,
+    pytest.mark.e2e_test
+]
 
 @pytest.mark.playwright
 def test_dung_framework_analysis_api(playwright: Playwright):
     """
     Teste directement l'endpoint de l'API pour l'analyse de A.F. Dung.
     Ceci valide l'intégration du service Dung sans passer par l'UI.
+    Le serveur backend est démarré par la fixture de session `webapp_service`.
     """
-    # Création manuelle du contexte API
+    # Création du contexte API. L'URL est récupérée depuis les variables d'environnement
+    # ou une valeur par défaut, ce qui correspond à la configuration de la fixture `webapp_service`.
     api_request_context = playwright.request.new_context(
-        base_url=os.environ.get("BACKEND_URL", "http://localhost:5003")
+        base_url=os.environ.get("BACKEND_URL", "http://127.0.0.1:5003")
     )
     
     # Données d'exemple pour un framework d'argumentation simple

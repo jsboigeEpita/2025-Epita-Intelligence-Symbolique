@@ -3,6 +3,11 @@ from playwright.sync_api import Page, expect
 
 import pytest
 
+# This mark ensures that the 'orchestrator_session' fixture is used for all tests in this module,
+# which starts the web server and sets the base_url for playwright.
+pytestmark = pytest.mark.usefixtures("orchestrator_session")
+
+
 @pytest.mark.skip(reason="Disabling all functional tests to isolate backend test failures.")
 @pytest.mark.playwright
 def test_successful_simple_argument_analysis(page: Page):
@@ -48,6 +53,8 @@ def test_successful_simple_argument_analysis(page: Page):
     # Wait for the results to be displayed and check for content
     expect(results_container).to_be_visible()
     expect(results_container).to_contain_text("Structure argumentative")
+
+
 @pytest.mark.playwright
 def test_empty_argument_submission_displays_error(page: Page):
     """
@@ -75,6 +82,8 @@ def test_empty_argument_submission_displays_error(page: Page):
     expect(submit_button).to_be_enabled()
     argument_input.fill("")
     expect(submit_button).to_be_disabled()
+
+
 @pytest.mark.playwright
 def test_reset_button_clears_input_and_results(page: Page):
     """
