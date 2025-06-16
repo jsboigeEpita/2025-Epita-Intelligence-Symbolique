@@ -7,7 +7,7 @@ def test_successful_graph_visualization(page: Page):
     """
     Scenario 4.1: Successful visualization of a logic graph (Happy Path)
     """
-    page.goto("http://localhost:3000/")
+    page.goto("/")
     
     # Attendre que l'API soit connectée
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
@@ -37,7 +37,7 @@ def test_logic_graph_api_error(page: Page):
     """
     Scenario 4.2: API error during graph generation
     """
-    page.goto("http://localhost:3000/")
+    page.goto("/")
     
     # Attendre que l'API soit connectée
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
@@ -72,7 +72,7 @@ def test_logic_graph_reset_button(page: Page):
     """
     Scenario 4.3: Reset button clears input and graph
     """
-    page.goto("http://localhost:3000/")
+    page.goto("/")
     
     # Attendre que l'API soit connectée
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)

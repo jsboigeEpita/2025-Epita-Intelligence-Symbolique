@@ -10,7 +10,7 @@ def test_fallacy_detection_basic_workflow(page: Page):
     Valide le workflow complet de détection avec un exemple prédéfini
     """
     # 1. Navigation et attente API connectée
-    page.goto("http://localhost:3000/")
+    page.goto("/")
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     # 2. Activation de l'onglet Sophismes
@@ -50,7 +50,7 @@ def test_severity_threshold_adjustment(page: Page):
     Vérifie l'impact du seuil sur les résultats de détection
     """
     # 1. Navigation et activation onglet
-    page.goto("http://localhost:3000/")
+    page.goto("/")
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     fallacy_tab = page.locator('[data-testid="fallacy-detector-tab"]')
@@ -93,7 +93,7 @@ def test_fallacy_example_loading(page: Page):
     Valide le fonctionnement des boutons "Tester" sur les cartes d'exemples
     """
     # 1. Navigation et activation onglet
-    page.goto("http://localhost:3000/")
+    page.goto("/")
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     fallacy_tab = page.locator('[data-testid="fallacy-detector-tab"]')
@@ -135,7 +135,7 @@ def test_fallacy_detector_reset_functionality(page: Page):
     Vérifie que le bouton reset nettoie complètement l'interface
     """
     # 1. Navigation et activation onglet
-    page.goto("http://localhost:3000/")
+    page.goto("/")
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     fallacy_tab = page.locator('[data-testid="fallacy-detector-tab"]')
