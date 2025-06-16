@@ -1,9 +1,20 @@
+import sys
+from pathlib import Path
 import jpype
 import os
 import glob
 import logging
 from fastapi import FastAPI
 from .endpoints import router as api_router, framework_router
+
+# --- Ajout dynamique de abs_arg_dung au PYTHONPATH ---
+# Cela garantit que le service d'analyse peut importer l'agent de l'étudiant.
+current_dir = Path(__file__).parent.resolve()
+abs_arg_dung_path = current_dir.parent / 'abs_arg_dung'
+if str(abs_arg_dung_path) not in sys.path:
+    # On l'insère au début pour prioriser ce chemin si nécessaire
+    sys.path.insert(0, str(abs_arg_dung_path))
+# --- Fin de l'ajout ---
 
 # --- Gestion du cycle de vie de la JVM ---
 
