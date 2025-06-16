@@ -6,7 +6,7 @@ Tests unitaires pour le module strategies.
 import unittest
 from unittest.mock import MagicMock, AsyncMock, patch
 import asyncio
-from semantic_kernel_compatibility import Agent
+from semantic_kernel.agents import Agent
 from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole
 from argumentation_analysis.core.strategies import SimpleTerminationStrategy, DelegatingSelectionStrategy, BalancedParticipationStrategy
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
@@ -14,10 +14,6 @@ from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 
 
 import pytest # Ajout de pytest pour les fixtures
-
-# Classe factice pour remplacer semantic_kernel.agents.Agent qui n'est plus disponible
-class Agent:
-    pass
 
 class TestSimpleTerminationStrategy:
     """Tests pour la classe SimpleTerminationStrategy."""

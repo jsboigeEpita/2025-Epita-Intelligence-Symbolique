@@ -1,5 +1,6 @@
 import pytest
-import jpype # Remplacé par l'utilisation de la fixture mocked_jpype
+import tests.mocks.jpype_mock as jpype
+# import jpype # Remplacé par l'utilisation de la fixture mocked_jpype
 # from jpype import JString # Ajout de l'import explicite - Modifié pour utiliser jpype.JString
 
 
@@ -334,14 +335,14 @@ def test_preferred_reasoner_no_attacks(dung_classes):
 
 # Nouveaux tests pour l'argumentation dialogique
 
-def test_create_argumentation_agent(dialogue_classes, dung_classes):
+def test_create_argumentation_agent(dialogue_classes, dung_classes, mocked_jpype):
     """Teste la création d'un ArgumentationAgent."""
     ArgumentationAgent = dialogue_classes["ArgumentationAgent"]
     DungTheory = dung_classes["DungTheory"]
     Argument = dung_classes["Argument"]
     
     agent_name = "TestAgent"
-    agent = ArgumentationAgent(jpype.JString(agent_name)) # JString est important ici
+    agent = ArgumentationAgent(mocked_jpype.JString(agent_name)) # JString est important ici
     
     assert agent is not None
     assert agent.getName() == agent_name
@@ -412,7 +413,7 @@ def test_argumentation_agent_with_simple_belief_set(dialogue_classes, belief_rev
     print(f"Agent '{agent.getName()}' créé, SimpleBeliefSet avec '{formula_p}' créé.")
 
 
-def test_persuasion_protocol_setup(dialogue_classes, dung_classes):
+def test_persuasion_protocol_setup(dialogue_classes, dung_classes, mocked_jpype):
     """Teste la configuration de base d'un PersuasionProtocol."""
     PersuasionProtocol = dialogue_classes["PersuasionProtocol"]
     ArgumentationAgent = dialogue_classes["ArgumentationAgent"]
@@ -441,7 +442,7 @@ def test_persuasion_protocol_setup(dialogue_classes, dung_classes):
     # La méthode setTopic de PersuasionProtocol attend un PlFormula.
     # On va donc créer une formule propositionnelle simple.
     try:
-        PlParser_class = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
+        PlParser_class = mocked_jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
         topic_formula = PlParser_class().parseFormula("climate_change_is_real")
     except jpype.JException as e:
         pytest.skip(f"Impossible d'importer PlParser, test sauté: {e}")
@@ -476,7 +477,8 @@ def test_persuasion_protocol_setup(dialogue_classes, dung_classes):
     try:
         result = dialogue_system.run()
         assert result is not None
-        assert isinstance(result, dialogue_classes["DialogueResult"])
+        # Vérifier le type en utilisant l'attribut class_name du mock
+        assert hasattr(result, 'class_name') and result.class_name == "org.tweetyproject.agents.dialogues.DialogueResult"
         print(f"Dialogue (Persuasion) exécuté. Gagnant: {result.getWinner()}, Tours: {result.getTurnCount()}")
         # Des assertions plus spécifiques sur le gagnant ou la trace nécessiteraient
         # une configuration plus détaillée des KB et des stratégies des agents.

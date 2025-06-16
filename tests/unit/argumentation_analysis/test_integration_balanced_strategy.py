@@ -15,7 +15,7 @@ import logging
 
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole
-from semantic_kernel_compatibility import Agent, AgentGroupChat
+from semantic_kernel.agents import Agent, AgentGroupChat
 
 # Utiliser la fonction setup_import_paths pour résoudre les problèmes d'imports relatifs
 # from tests import setup_import_paths # Commenté pour investigation

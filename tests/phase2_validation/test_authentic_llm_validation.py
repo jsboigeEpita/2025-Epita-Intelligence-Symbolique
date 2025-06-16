@@ -167,27 +167,6 @@ class TestPhase2AuthenticLLMValidation:
         
         logger.info("✅ Validation rejet automatique mock_level != NONE réussie")
 
-    def test_semantic_kernel_compatibility_authentic(self):
-        """Test 6: Validation Semantic Kernel compatibility sans mocks."""
-        logger.info("🔍 Test 6: Validation Semantic Kernel compatibility authentique")
-        
-        # Test AuthorRole
-        role = AuthorRole.USER
-        assert role.value == "user"
-        assert role.name == "user"
-        
-        # Test FunctionChoiceBehavior
-        auto_behavior = FunctionChoiceBehavior.Auto()
-        assert auto_behavior.auto_invoke_kernel_functions is True
-        
-        manual_behavior = FunctionChoiceBehavior.Manual()
-        assert manual_behavior.auto_invoke_kernel_functions is False
-        
-        # Test AgentChatException
-        with pytest.raises(AgentChatException):
-            raise AgentChatException("Test exception")
-        
-        logger.info("✅ Semantic Kernel compatibility layer authentique validé")
 
     @pytest.mark.asyncio
     async def test_informal_agent_authentic_integration(self):

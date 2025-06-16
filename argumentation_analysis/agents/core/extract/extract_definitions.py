@@ -15,6 +15,7 @@ import re
 import logging
 from pathlib import Path # De la version stashed
 from typing import List, Dict, Any, Tuple, Optional, Union
+import json
 
 # Importer PROJECT_ROOT depuis la configuration centrale (de la version stashed)
 try:
@@ -60,7 +61,7 @@ class ExtractResult: # De la version HEAD (Updated upstream)
         explanation (str): Explication fournie par l'agent pour l'extraction.
         extracted_text (str): Le texte effectivement extrait.
     """
-    
+
     def __init__(
         self,
         source_name: str,
@@ -104,7 +105,7 @@ class ExtractResult: # De la version HEAD (Updated upstream)
         self.template_start = template_start
         self.explanation = explanation
         self.extracted_text = extracted_text
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convertit l'instance `ExtractResult` en un dictionnaire.
 
@@ -122,7 +123,7 @@ class ExtractResult: # De la version HEAD (Updated upstream)
             "explanation": self.explanation,
             "extracted_text": self.extracted_text
         }
-    
+
     def to_json(self) -> str:
         """Convertit l'instance `ExtractResult` en une chaîne JSON.
 
@@ -166,7 +167,7 @@ class ExtractAgentPlugin: # De la version HEAD (Updated upstream)
             des opérations d'extraction effectuées, à des fins de journalisation ou de suivi.
             (Note: L'utilisation de cette liste pourrait être revue pour une meilleure gestion d'état).
     """
-    
+
     def __init__(self):
         """Initialise le plugin `ExtractAgentPlugin`.
 
@@ -174,11 +175,11 @@ class ExtractAgentPlugin: # De la version HEAD (Updated upstream)
         des opérations d'extraction effectuées par ce plugin.
         """
         self.extract_results: List[Dict[str, Any]] = []
-    
+
     def find_similar_markers(
-        self, 
-        text: str, 
-        marker: str, 
+        self,
+        text: str,
+        marker: str,
         max_results: int = 5,
         find_similar_text_func=None
     ) -> List[Dict[str, Any]]:
@@ -206,28 +207,28 @@ class ExtractAgentPlugin: # De la version HEAD (Updated upstream)
         """
         if not text or not marker:
             return []
-        
+
         if find_similar_text_func is None:
             # Implémentation par défaut si la fonction n'est pas fournie
             logger.warning("Fonction find_similar_text non fournie, utilisation d'une implémentation basique")
-            
+
             similar_markers = []
             try:
                 # Recherche simple avec regex
                 pattern = re.escape(marker[:min(10, len(marker))])
                 matches = list(re.finditer(pattern, text, re.IGNORECASE))
-                
+
                 for match in matches[:max_results]:
                     start_pos = max(0, match.start() - 50)
                     end_pos = min(len(text), match.end() + 50)
                     context = text[start_pos:end_pos]
-                    
+
                     similar_markers.append({
                         "marker": match.group(),
                         "position": match.start(),
                         "context": context
                     })
-                
+
                 return similar_markers
             except Exception as e:
                 logger.error(f"Erreur lors de la recherche de marqueurs similaires: {e}")
@@ -236,21 +237,21 @@ class ExtractAgentPlugin: # De la version HEAD (Updated upstream)
             # Utiliser la fonction fournie
             similar_markers = []
             results = find_similar_text_func(text, marker, context_size=50, max_results=max_results)
-            
+
             for context, position, found_text in results:
                 similar_markers.append({
                     "marker": found_text,
                     "position": position,
                     "context": context
                 })
-            
+
             return similar_markers
-    
+
     def search_text_dichotomically(
-        self, 
-        text: str, 
-        search_term: str, 
-        block_size: int = 500, 
+        self,
+        text: str,
+        search_term: str,
+        block_size: int = 500,
         overlap: int = 50
     ) -> List[Dict[str, Any]]:
         """
@@ -277,28 +278,28 @@ class ExtractAgentPlugin: # De la version HEAD (Updated upstream)
         """
         if not text or not search_term:
             return []
-        
+
         results = []
         text_length = len(text)
-        
+
         # Diviser le texte en blocs avec chevauchement
         for i in range(0, text_length, block_size - overlap):
             start_pos = i
             end_pos = min(i + block_size, text_length)
             block = text[start_pos:end_pos]
-            
+
             # Rechercher le terme dans le bloc
             if search_term.lower() in block.lower():
                 # Trouver toutes les occurrences
                 for match in re.finditer(re.escape(search_term), block, re.IGNORECASE):
                     match_start = start_pos + match.start()
                     match_end = start_pos + match.end()
-                    
+
                     # Extraire le contexte
                     context_start = max(0, match_start - 50)
                     context_end = min(text_length, match_end + 50)
                     context = text[context_start:context_end]
-                    
+
                     results.append({
                         "match": match.group(),
                         "position": match_start,
@@ -306,13 +307,13 @@ class ExtractAgentPlugin: # De la version HEAD (Updated upstream)
                         "block_start": start_pos,
                         "block_end": end_pos
                     })
-        
+
         return results
-    
+
     def extract_blocks(
-        self, 
-        text: str, 
-        block_size: int = 500, 
+        self,
+        text: str,
+        block_size: int = 500,
         overlap: int = 50
     ) -> List[Dict[str, Any]]:
         """
@@ -333,23 +334,23 @@ class ExtractAgentPlugin: # De la version HEAD (Updated upstream)
         """
         if not text:
             return []
-        
+
         blocks = []
         text_length = len(text)
-        
+
         for i in range(0, text_length, block_size - overlap):
             start_pos = i
             end_pos = min(i + block_size, text_length)
             block = text[start_pos:end_pos]
-            
+
             blocks.append({
                 "block": block,
                 "start_pos": start_pos,
                 "end_pos": end_pos
             })
-        
+
         return blocks
-    
+
     def get_extract_results(self) -> List[Dict[str, Any]]:
         """Récupère la liste des résultats des opérations d'extraction stockées.
 
@@ -376,7 +377,7 @@ class ExtractDefinition: # De la version HEAD (Updated upstream)
         template_start (str): Un template optionnel qui peut précéder le `start_marker`.
         description (str): Une description optionnelle de ce que représente l'extrait.
     """
-    
+
     def __init__(
         self,
         source_name: str,
@@ -408,7 +409,7 @@ class ExtractDefinition: # De la version HEAD (Updated upstream)
         self.end_marker = end_marker
         self.template_start = template_start
         self.description = description
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convertit l'instance `ExtractDefinition` en un dictionnaire.
 
@@ -423,7 +424,7 @@ class ExtractDefinition: # De la version HEAD (Updated upstream)
             "template_start": self.template_start,
             "description": self.description
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ExtractDefinition':
         """Crée une instance de `ExtractDefinition` à partir d'un dictionnaire.

@@ -33,6 +33,7 @@ import argparse
 import logging
 import time
 import json
+import sys
 from pathlib import Path
 from typing import Dict, Any, List
 
@@ -483,16 +484,23 @@ async def run_full_demo(args: argparse.Namespace):
             continue
         
         if i < len(demos) and not args.non_interactive:
-            print("\n⏱️ Appuyez sur Entrée pour continuer vers la démonstration suivante...")
-            input()
+            # Désactivation de l'attente pour l'automatisation.
+            # print("\n⏱️ Appuyez sur Entrée pour continuer vers la démonstration suivante...")
+            # input()
+            pass
     
     total_time = time.time() - total_start
     print(f"\n🏁 Démonstration complète terminée en {total_time:.1f}s")
     print("   Merci d'avoir testé le pipeline d'orchestration unifié !")
 
 
-async def run_specific_demo(mode: str, analysis_type: str, text: str = None):
-    """Lance une démonstration spécifique."""
+async def run_specific_demo(args: argparse.Namespace):
+    """Lance une démonstration spécifique en utilisant les arguments parsés."""
+    mode = args.mode
+    analysis_type = args.type
+    text = args.text
+    output_dir = args.output_dir
+
     print_header(f"Démonstration Spécifique - {mode.upper()}")
     
     if not text:
@@ -509,48 +517,19 @@ async def run_specific_demo(mode: str, analysis_type: str, text: str = None):
         text = EXAMPLE_TEXTS[text_key]
     
     try:
-        # Mapper les paramètres vers les énumérations
-        mode_mapping = {
-            "auto_select": OrchestrationMode.AUTO_SELECT,
-            "hierarchical": OrchestrationMode.HIERARCHICAL_FULL,
-            "hierarchical_full": OrchestrationMode.HIERARCHICAL_FULL,
-            "strategic_only": OrchestrationMode.STRATEGIC_ONLY,
-            "tactical_coordination": OrchestrationMode.TACTICAL_COORDINATION,
-            "operational_direct": OrchestrationMode.OPERATIONAL_DIRECT,
-            "cluedo_investigation": OrchestrationMode.CLUEDO_INVESTIGATION,
-            "logic_complex": OrchestrationMode.LOGIC_COMPLEX,
-            "adaptive_hybrid": OrchestrationMode.ADAPTIVE_HYBRID,
-            "pipeline": OrchestrationMode.PIPELINE,
-            "real": OrchestrationMode.REAL,
-            "conversation": OrchestrationMode.CONVERSATION
-        }
-        
-        type_mapping = {
-            "comprehensive": AnalysisType.COMPREHENSIVE,
-            "rhetorical": AnalysisType.RHETORICAL,
-            "logical": AnalysisType.LOGICAL,
-            "investigative": AnalysisType.INVESTIGATIVE,
-            "fallacy_focused": AnalysisType.FALLACY_FOCUSED,
-            "argument_structure": AnalysisType.ARGUMENT_STRUCTURE,
-            "debate_analysis": AnalysisType.DEBATE_ANALYSIS,
-            "custom": AnalysisType.CUSTOM
-        }
-        
-        orchestration_mode = mode_mapping.get(mode.lower(), OrchestrationMode.AUTO_SELECT)
-        analysis_type_enum = type_mapping.get(analysis_type.lower(), AnalysisType.COMPREHENSIVE)
-        
-        config = ExtendedOrchestrationConfig(
-            orchestration_mode=orchestration_mode,
-            analysis_type=analysis_type_enum,
-            enable_hierarchical=True,
-            enable_specialized_orchestrators=True,
+        # Utiliser la fonction factory pour créer la configuration à partir des arguments
+        config = create_extended_config_from_params(
+            orchestration_mode=mode,
+            analysis_type=analysis_type,
+            output_dir=output_dir,
             save_orchestration_trace=True
         )
         
-        print(f"🎯 Mode d'orchestration: {orchestration_mode.value}")
-        print(f"📊 Type d'analyse: {analysis_type_enum.value}")
+        print(f"🎯 Mode d'orchestration: {config.orchestration_mode.value}")
+        print(f"📊 Type d'analyse: {config.analysis_type.value}")
         print(f"📝 Texte: {text[:100]}...")
-        
+        print(f"📁 Répertoire de sortie: {config.output_dir}")
+
         print("\n🔄 Lancement de l'analyse...")
         
         results = await run_unified_orchestration_pipeline(text, config)
@@ -605,6 +584,13 @@ Exemples d'utilisation:
     )
     
     parser.add_argument(
+        "--output-dir",
+        type=str,
+        default="results",
+        help="Répertoire pour sauvegarder les résultats et les traces"
+    )
+
+    parser.add_argument(
         "--compare",
         action="store_true",
         help="Lancer une comparaison des différentes approches d'orchestration"
@@ -623,32 +609,32 @@ Exemples d'utilisation:
     )
     
     args = parser.parse_args()
-    
+
     # Configuration du logging
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
-    
+
     # Vérification de la disponibilité
     if not ORCHESTRATION_AVAILABLE:
         print("❌ Erreur: Le pipeline d'orchestration unifié n'est pas disponible.")
         print("   Vérifiez que tous les modules et dépendances sont correctement installés.")
         return 1
-    
+
     # Exécution selon les arguments
     try:
         if args.compare:
             # Comparaison des approches
             text = args.text or EXAMPLE_TEXTS["comprehensive"]
             asyncio.run(compare_orchestration_approaches(text))
-            
+
         elif args.mode:
             # Démonstration spécifique
-            asyncio.run(run_specific_demo(args.mode, args.type, args.text))
-            
+            asyncio.run(run_specific_demo(args))
+
         else:
             # Démonstration complète
             asyncio.run(run_full_demo(args))
-            
+
     except KeyboardInterrupt:
         print("\n⏹️ Démonstration interrompue par l'utilisateur.")
         return 0
@@ -658,9 +644,9 @@ Exemples d'utilisation:
             import traceback
             traceback.print_exc()
         return 1
-    
+
     return 0
 
 
 if __name__ == "__main__":
-    exit(main())
+    sys.exit(main())

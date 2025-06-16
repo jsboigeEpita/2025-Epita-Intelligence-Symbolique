@@ -29,7 +29,7 @@ if not verification_logger.handlers and not verification_logger.propagate:
 # La version HEAD de verify_extract_definitions reconstruit l'URL pour le cache_key.
 
 # La fonction reconstruct_url est maintenant importée depuis .utils
-from .utils import reconstruct_url
+# from .utils import reconstruct_url # Commenté pour suspicion de circularité/inutilisé
 
 def verify_extract_definitions(definitions_list: List[Dict[str, Any]], app_config: Optional[Dict[str, Any]] = None) -> str:
     """Vérifie la présence des marqueurs de début et de fin pour chaque extrait défini. (Version HEAD)"""

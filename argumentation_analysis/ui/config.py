@@ -9,10 +9,8 @@ from cryptography.hazmat.backends import default_backend
 import base64
 import json
 from argumentation_analysis.paths import DATA_DIR
-# Import pour la fonction de chargement JSON mutualisée (chemin corrigé)
-from argumentation_analysis.utils.core_utils.file_utils import load_json_file
-from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Optional
+# Import pour la fonction de chargement JSON mutualisée
+from project_core.utils.file_utils import load_json_file
 
 config_logger = logging.getLogger("App.UI.Config")
 if not config_logger.handlers and not config_logger.propagate:
@@ -29,7 +27,7 @@ FIXED_SALT = b'q\x8b\t\x97\x8b\xe9\xa3\xf2\xe4\x8e\xea\xf5\xe8\xb7\xd6\x8c' # Se
 
 config_logger.info(f"Utilisation de la phrase secrète fixe pour la dérivation de la clé.")
 if passphrase: # Cette condition sera toujours vraie maintenant
-    config_logger.info(f"[OK] Phrase secrète définie sur \"{passphrase}\". Dérivation de la clé...")
+    config_logger.info(f"✅ Phrase secrète définie sur \"{passphrase}\". Dérivation de la clé...")
     try:
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(), length=32, salt=FIXED_SALT,
@@ -37,7 +35,7 @@ if passphrase: # Cette condition sera toujours vraie maintenant
         )
         derived_key_raw = kdf.derive(passphrase.encode('utf-8'))
         ENCRYPTION_KEY = base64.urlsafe_b64encode(derived_key_raw)
-        if ENCRYPTION_KEY: config_logger.info("[OK] Clé de chiffrement dérivée et encodée.")
+        if ENCRYPTION_KEY: config_logger.info("✅ Clé de chiffrement dérivée et encodée.")
     except Exception as e:
         config_logger.error(f"⚠️ Erreur dérivation clé : {e}. Chiffrement désactivé.", exc_info=True)
         ENCRYPTION_KEY = None
@@ -92,34 +90,6 @@ except Exception as e:
 
 
 # --- Définitions Sources par Défaut ---
-
-class ExtractItem(BaseModel):
-    extract_name: str
-    start_marker: str
-    end_marker: str
-    template_start: Optional[str] = None
-    description: Optional[str] = None
-    extracted_text: Optional[str] = None # Champ pour stocker le texte extrait
-
-class SourceDefinition(BaseModel):
-    source_name: str
-    source_type: str # 'url', 'file', 'jina', 'text'
-    schema_val: Optional[str] = Field(None, alias="schema") # 'http', 'https', 'file'
-    host_parts: Optional[List[str]] = None # Pour URL/Jina
-    path: Optional[str] = None # Pour URL/Jina/File
-    full_text: Optional[str] = None # Texte brut si type 'text' ou cache
-    extracts: List[ExtractItem] = Field(default_factory=list)
-    # Champs optionnels pour la gestion UI
-    is_expanded: Optional[bool] = True
-    is_editing: Optional[bool] = False
-    # Champs pour le cache et la récupération
-    last_fetched: Optional[str] = None # Timestamp ISO
-    fetch_error: Optional[str] = None
-    # Champs pour Jina
-    jina_url: Optional[str] = None # URL complète pour Jina (r.jina.ai/...)
-
-    class Config:
-        populate_by_name = True
 DEFAULT_EXTRACT_SOURCES = [
     {"source_name": "Exemple Vide (Config manquante)", "source_type": "jina",
      "schema": "https:", "host_parts": ["example", "com"], "path": "/",

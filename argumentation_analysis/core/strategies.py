@@ -1,6 +1,5 @@
 # core/strategies.py
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
-from argumentation_analysis.utils.semantic_kernel_compatibility import Agent, TerminationStrategy, SelectionStrategy
 from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole
 
 from typing import List, Dict, TYPE_CHECKING, Optional # Ajout de Optional

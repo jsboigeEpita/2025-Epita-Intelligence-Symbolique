@@ -14,13 +14,33 @@ from datetime import datetime
 import semantic_kernel as sk
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.kernel import Kernel
-from semantic_kernel.contents.function_call_content import FunctionCallContent
+from argumentation_analysis.orchestration.base import SelectionStrategy, TerminationStrategy
+from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent as Agent
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
-# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité pour agents et filters
-from argumentation_analysis.utils.semantic_kernel_compatibility import (
-    Agent, AgentGroupChat, SelectionStrategy, TerminationStrategy,
-    FunctionInvocationContext, FilterTypes
-)
+
+class AgentGroupChat:
+    """Fallback class for compatibility."""
+    def __init__(self, agents: List[Agent] = None, **kwargs):
+        self.agents = agents or []
+        
+AGENTS_AVAILABLE = True
+from semantic_kernel.functions.kernel_arguments import KernelArguments
+
+# Import conditionnel pour les modules filters qui peuvent ne pas exister
+try:
+    from semantic_kernel.filters.functions.function_invocation_context import FunctionInvocationContext
+    from semantic_kernel.filters.filter_types import FilterTypes
+    FILTERS_AVAILABLE = True
+except ImportError:
+    # Fallbacks pour compatibilité
+    class FunctionInvocationContext:
+        def __init__(self, **kwargs):
+            pass
+            
+    class FilterTypes:
+        pass
+        
+    FILTERS_AVAILABLE = False
 # from semantic_kernel.processes.runtime.in_process_runtime import InProcessRuntime  # Module non disponible
 from pydantic import Field
 
@@ -318,9 +338,9 @@ class CluedoExtendedOrchestrator:
         # Configuration des éléments par défaut
         if elements_jeu is None:
             elements_jeu = {
-                "suspects": ["Colonel Moutarde", "Professeur Violet", "Mademoiselle Rose", "Docteur Orchidée"],
-                "armes": ["Poignard", "Chandelier", "Revolver", "Corde"],
-                "lieux": ["Salon", "Cuisine", "Bureau", "Bibliothèque"]
+                "suspects": ["Colonel Moutarde", "Professeur Violet", "Mademoiselle Rose"],
+                "armes": ["Poignard", "Chandelier", "Revolver"],
+                "lieux": ["Salon", "Cuisine", "Bureau"]
             }
         
         # Création de l'état Oracle étendu

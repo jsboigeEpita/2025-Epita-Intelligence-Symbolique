@@ -4,6 +4,7 @@ Ce fichier sert de point d'entrée principal pour le mock JPype,
 important les composants spécifiques depuis le package jpype_components.
 """
 
+import os
 import sys
 import logging
 from unittest.mock import MagicMock # Gardé pour _MockInternalJpypeModule si besoin, ou autres mocks directs
@@ -72,11 +73,15 @@ class _MockJpypeCoreModule: # Renommée pour clarifier son rôle
         mock_logger.debug(f"[MOCK jpype._core.isPackage('{name}')] Appelée. _jvm_started: {_jvm_started}. Retourne: {_jvm_started}")
         return _jvm_started
 
-_jpype_core_mock_instance = _MockJpypeCoreModule()
-sys.modules['jpype._jpype'] = _jpype_core_mock_instance # Historique, peut-être encore utilisé par d'anciens imports
-sys.modules['_jpype'] = _jpype_core_mock_instance      # Pour jpype.imports qui fait "from . import _jpype"
-sys.modules['jpype._core'] = _jpype_core_mock_instance # Pour s'assurer que si jpype._core est accédé, c'est notre mock
-mock_logger.info("Instance de _MockJpypeCoreModule injectée dans sys.modules['jpype._jpype'], sys.modules['_jpype'] et sys.modules['jpype._core'].")
+if os.environ.get('USE_REAL_JPYPE', 'false').lower() != 'true':
+    _jpype_core_mock_instance = _MockJpypeCoreModule()
+    sys.modules['jpype._jpype'] = _jpype_core_mock_instance
+    sys.modules['_jpype'] = _jpype_core_mock_instance
+    sys.modules['jpype._core'] = _jpype_core_mock_instance
+    mock_logger.info("MOCK JPYPE: Instance de _MockJpypeCoreModule injectée dans sys.modules.")
+else:
+    _jpype_core_mock_instance = None # Définir à None si on utilise le vrai JPype
+    mock_logger.info("MOCK JPYPE: USE_REAL_JPYPE est true. Injection du mock _MockJpypeCoreModule ANNULÉE. _jpype_core_mock_instance est None.")
 
 
 # --- MockJavaNamespace ---

@@ -150,7 +150,7 @@ def save_extract_definitions(
         file_ops_logger.info(f"[OK] Définitions sauvegardées dans '{config_file}'.")
         return True
     except Exception as e:
-        file_ops_logger.error(f"[FAIL] Erreur lors de la sauvegarde chiffree vers '{config_file}': {e}", exc_info=True)
+        file_ops_logger.error(f"[FAIL] Erreur lors de la sauvegarde chiffrée vers '{config_file}': {e}", exc_info=True)
         return False
 
 file_ops_logger.info("Fonctions d'opérations sur fichiers UI définies.")

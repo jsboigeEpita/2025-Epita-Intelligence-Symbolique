@@ -22,7 +22,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
-from semantic_kernel_compatibility import ChatCompletionAgent
+from semantic_kernel.agents import ChatCompletionAgent
 
 # Import des composants spécialisés pour l'énigme complexe
 from argumentation_analysis.orchestration.logique_complexe_orchestrator import LogiqueComplexeOrchestrator
