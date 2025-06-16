@@ -584,7 +584,7 @@ class UnifiedWebOrchestrator:
         print("[DEBUG] unified_web_orchestrator.py: _start_backend()")
         self.add_trace("[BACKEND] DEMARRAGE BACKEND", "Lancement avec failover de ports")
         
-        result = await self.backend_manager.start()
+        result = await self.backend_manager.start(self.app_info.backend_port)
         if result['success']:
             self.app_info.backend_url = result['url']
             self.app_info.backend_port = result['port']

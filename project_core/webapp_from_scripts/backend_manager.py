@@ -65,7 +65,7 @@ class BackendManager:
         self.current_url: Optional[str] = None
         self.pid: Optional[int] = None
         
-    async def start(self) -> Dict[str, Any]:
+    async def start(self, port_override: Optional[int] = None) -> Dict[str, Any]:
         """Démarre le backend en utilisant l'environnement et le port fournis."""
         try:
             # Déterminer l'environnement à utiliser
@@ -76,77 +76,53 @@ class BackendManager:
                 effective_env = os.environ.copy()
                 self.logger.info("Aucun environnement personnalisé fourni, utilisation de l'environnement système.")
 
-            # Déterminer le port
-            port_str = effective_env.get('FLASK_RUN_PORT') or str(self.start_port)
-            try:
-                port = int(port_str)
-                self.current_port = port
-            except (ValueError, TypeError):
-                error_msg = f"Port invalide spécifié dans FLASK_RUN_PORT: {port_str}"
-                self.logger.error(error_msg)
-                return {'success': False, 'error': error_msg, 'url': None, 'port': None, 'pid': None}
+            # Déterminer le port : priorité au port surchargé par l'appel
+            port_to_use = port_override if port_override is not None else self.start_port
+            effective_env['FLASK_RUN_PORT'] = str(port_to_use)
+            self.current_port = port_to_use
             
-            self.logger.info(f"Tentative de démarrage du backend sur le port {port}")
+            self.logger.info(f"Tentative de démarrage du backend sur le port {port_to_use}")
 
             # Vérifier si le port est déjà occupé avant de lancer
-            if await self._is_port_occupied(port):
-                error_msg = f"Le port {port} est déjà occupé. Le démarrage est annulé."
+            if await self._is_port_occupied(port_to_use):
+                error_msg = f"Le port {port_to_use} est déjà occupé. Le démarrage est annulé."
                 self.logger.error(error_msg)
                 return {'success': False, 'error': error_msg, 'url': None, 'port': None, 'pid': None}
+
+            conda_env_name = self.config.get('conda_env', 'projet-is')
+            if not self.module:
+                raise ValueError("La configuration du backend doit contenir 'module'.")
+
+            app_module_with_attribute = f"{self.module}:app" if ':' not in self.module else self.module
+            backend_host = self.config.get('host', '127.0.0.1')
             
-            command_list = self.config.get('command_list')
-            if command_list:
-                self.logger.info(f"Utilisation de la command_list directe: {command_list}")
-                # Le test d'intégration avec fake_backend attend le port en argument
-                cmd = command_list + [str(port)]
+            # La commande flask utilise maintenant --port pour être explicite
+            inner_cmd_list = [
+                "-m", "flask", "--app", app_module_with_attribute, "run", "--host", backend_host, "--port", str(port_to_use)
+            ]
+
+            # Vérifier si nous sommes déjà dans le bon environnement Conda
+            current_conda_env = os.getenv('CONDA_DEFAULT_ENV')
+            python_executable = sys.executable # Chemin vers l'interpréteur Python actuel
+            
+            is_already_in_target_env = (current_conda_env == conda_env_name and conda_env_name in python_executable)
+            
+            if is_already_in_target_env:
+                self.logger.info(f"Déjà dans l'environnement Conda '{conda_env_name}'. Utilisation directe de: {python_executable}")
+                cmd = [python_executable] + inner_cmd_list
             else:
-                conda_env_name = self.config.get('conda_env', 'projet-is')
-                
-                if not self.module:
-                    raise ValueError("La configuration du backend doit contenir soit 'module', soit 'command_list'.")
-
-                if ':' in self.module:
-                    app_module_with_attribute = self.module
-                else:
-                    app_module_with_attribute = f"{self.module}:app"
-                    
-                backend_host = self.config.get('host', '127.0.0.1')
+                cmd_base = ["conda", "run", "-n", conda_env_name, "--no-capture-output"]
+                self.logger.warning(f"Utilisation de `conda run -n {conda_env_name}`. Fournir un path est plus robuste.")
+                cmd = cmd_base + ["python"] + inner_cmd_list
             
-                # La commande flask utilisera explicitement le port déterminé.
-                inner_cmd_list = [
-                    "-m", "flask", "--app", app_module_with_attribute, "run", "--host", backend_host, "--port", str(port)
-                ]
+            self.logger.info(f"Commande de lancement backend construite: {cmd}")
 
-                # Vérifier si nous sommes déjà dans le bon environnement Conda
-                current_conda_env = os.getenv('CONDA_DEFAULT_ENV')
-                python_executable = sys.executable # Chemin vers l'interpréteur Python actuel
-                
-                is_already_in_target_env = False
-                if current_conda_env == conda_env_name and conda_env_name in python_executable:
-                    is_already_in_target_env = True
-                
-                if is_already_in_target_env:
-                    self.logger.info(f"Déjà dans l'environnement Conda '{conda_env_name}'. Utilisation directe de: {python_executable}")
-                    cmd = [python_executable] + inner_cmd_list
-                elif self.conda_env_path:
-                    # Garder la logique existante si conda_env_path est fourni explicitement
-                    cmd_base = ["conda", "run", "--prefix", self.conda_env_path, "--no-capture-output"]
-                    self.logger.info(f"Utilisation de `conda run --prefix {self.conda_env_path}` pour lancer: {['python'] + inner_cmd_list}")
-                    cmd = cmd_base + ["python"] + inner_cmd_list # Ajout de "python" ici
-                else:
-                    # Fallback sur conda run -n si pas dans l'env et pas de path explicite
-                    cmd_base = ["conda", "run", "-n", conda_env_name, "--no-capture-output"]
-                    self.logger.warning(f"Utilisation de `conda run -n {conda_env_name}` pour lancer: {['python'] + inner_cmd_list}. Fournir conda_env_path est plus robuste.")
-                    cmd = cmd_base + ["python"] + inner_cmd_list # Ajout de "python" ici
-                
-                self.logger.info(f"Commande de lancement backend construite: {cmd}")
-            
             project_root = str(Path(__file__).resolve().parent.parent.parent)
             log_dir = Path(project_root) / "logs"
             log_dir.mkdir(parents=True, exist_ok=True)
             
-            stdout_log_path = log_dir / f"backend_stdout_{port}.log"
-            stderr_log_path = log_dir / f"backend_stderr_{port}.log"
+            stdout_log_path = log_dir / f"backend_stdout_{port_to_use}.log"
+            stderr_log_path = log_dir / f"backend_stderr_{port_to_use}.log"
 
             self.logger.info(f"Logs redirigés vers {stdout_log_path.name} et {stderr_log_path.name}")
             
@@ -162,8 +138,6 @@ class BackendManager:
                         self.logger.error("Échec du téléchargement des JARs Tweety.")
                 except Exception as e:
                     self.logger.error(f"Erreur lors du téléchargement des JARs Tweety: {e}")
-            
-            self.logger.debug(f"Lancement du processus avec CWD: {project_root}")
 
             with open(stdout_log_path, 'wb') as f_stdout, open(stderr_log_path, 'wb') as f_stderr:
                 self.process = subprocess.Popen(
@@ -175,28 +149,21 @@ class BackendManager:
                     shell=False
                 )
 
-            backend_ready = await self._wait_for_backend(port)
+            backend_ready = await self._wait_for_backend(port_to_use)
 
             if backend_ready:
-                self.current_url = f"http://localhost:{port}"
+                self.current_url = f"http://localhost:{port_to_use}"
                 self.pid = self.process.pid
-                result = {
-                    'success': True,
-                    'url': self.current_url,
-                    'port': port,
-                    'pid': self.pid,
-                    'error': None
-                }
+                result = {'success': True, 'url': self.current_url, 'port': port_to_use, 'pid': self.pid, 'error': None}
                 await self._save_backend_info(result)
                 return result
 
-            # Échec du démarrage
-            self.logger.error(f"Le backend n'a pas pu démarrer sur le port {port}. Consultation des logs pour diagnostic.")
+            self.logger.error(f"Le backend n'a pas pu démarrer sur le port {port_to_use}.")
             await self._cleanup_failed_process(stdout_log_path, stderr_log_path)
-            return {'success': False, 'error': f'Le backend a échoué à démarrer sur le port {port}', 'url': None, 'port': port, 'pid': None}
+            return {'success': False, 'error': f'Le backend a échoué à démarrer sur le port {port_to_use}', 'url': None, 'port': port_to_use, 'pid': None}
 
         except Exception as e:
-            self.logger.error(f"Erreur majeure lors du démarrage du backend sur le port {self.current_port}: {e}", exc_info=True)
+            self.logger.error(f"Erreur majeure lors du démarrage du backend : {e}", exc_info=True)
             return {'success': False, 'error': str(e), 'url': None, 'port': self.current_port, 'pid': None}
     
     async def _cleanup_failed_process(self, stdout_log_path: Path, stderr_log_path: Path):
