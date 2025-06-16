@@ -22,6 +22,16 @@ Pour vous guider et stimuler votre créativité, nous avons compilé une liste d
 
 ---
 
+## 🎓 **Objectif du Projet**
+
+Ce projet a été développé dans le cadre du cours d'Intelligence Symbolique à EPITA. Il sert de plateforme pour explorer des concepts avancés, notamment :
+- Les fondements de l'intelligence symbolique et de l'IA explicable.
+- Les techniques d'analyse argumentative, de raisonnement logique et de détection de sophismes.
+- L'orchestration de systèmes complexes, incluant des services web et des pipelines de traitement.
+- L'intégration de technologies modernes comme Python, Flask, React et Playwright.
+
+---
+
 ## 🧭 **Comment Naviguer dans ce Vaste Projet : Les 5 Points d'Entrée Clés**
 
 Ce projet est riche et comporte de nombreuses facettes. Pour vous aider à vous orienter, nous avons défini 5 points d'entrée principaux, chacun ouvrant la porte à un aspect spécifique du système.
@@ -114,20 +124,22 @@ Suivez ces étapes pour mettre en place votre environnement de développement.
     ```
 
 4.  **Configuration des Clés d'API (Optionnel mais Recommandé) :**
-    Certaines fonctionnalités, notamment celles impliquant des interactions avec des modèles de langage externes (LLM), nécessitent des clés d'API.
-    *   Créez un fichier `.env` à la racine du projet.
-    *   Vous pouvez vous inspirer de [`config/.env.example`](config/.env.example:0) (s'il existe) ou ajouter les variables nécessaires.
-    *   Pour OpenRouter (une plateforme d'accès à divers LLMs) :
-        ```
-        OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxx
-        OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-        OPENROUTER_MODEL=gpt-4o-mini 
-        ```
-    *   Pour OpenAI directement :
+    Certaines fonctionnalités, notamment celles impliquant des interactions avec des modèles de langage (LLM), nécessitent des clés d'API. Pour ce faire, créez un fichier `.env` à la racine du projet en vous inspirant de [`config/.env.example`](config/.env.example:0).
+
+    *   **Cas 1 : Utilisation d'une clé OpenAI standard**
+        Si vous utilisez une clé API directement depuis OpenAI, seule cette variable est nécessaire. La plupart des clés étudiantes fonctionnent ainsi.
         ```
         OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxx
         ```
-    *Note : Le projet est conçu pour être flexible. Si les clés ne sont pas fournies, les fonctionnalités dépendantes des LLM externes pourraient être limitées ou utiliser des mocks, selon la configuration des composants.*
+
+    *   **Cas 2 : Utilisation d'un service compatible (OpenRouter, LLM local, etc.)**
+        Si vous utilisez un service tiers comme OpenRouter ou un modèle hébergé localement, vous devez fournir **à la fois** l'URL de base du service **et** la clé d'API correspondante.
+        ```
+        # Exemple pour OpenRouter
+        BASE_URL=https://openrouter.ai/api/v1
+        API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxx
+        ```
+    *Note : Le projet est conçu pour être flexible. Si aucune clé n'est fournie, les fonctionnalités dépendantes des LLM externes pourraient être limitées ou utiliser des simulations (mocks), selon la configuration des composants.*
 
 ---
 
