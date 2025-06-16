@@ -414,7 +414,10 @@ class UnifiedWebOrchestrator:
         # L'ancienne gestion de subprocess.TimeoutExpired n'est plus nécessaire car
         # le runner utilise maintenant create_subprocess_exec.
         # Le timeout est géré plus haut par asyncio.wait_for.
-        return await self.playwright_runner.run_tests(test_paths, test_config)
+        return await self.playwright_runner.run_tests(
+            test_paths=test_paths,
+            runtime_config=test_config
+        )
     
     async def stop_webapp(self):
         """Arrête l'application web et nettoie les ressources de manière gracieuse."""
