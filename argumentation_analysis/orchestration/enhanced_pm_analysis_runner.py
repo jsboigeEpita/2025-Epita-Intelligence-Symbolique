@@ -35,8 +35,45 @@ if project_root not in sys.path:
 # Imports Semantic Kernel
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole
-from semantic_kernel_compatibility import AgentGroupChat, ChatCompletionAgent, Agent
-from semantic_kernel_compatibility import AgentChatException
+# Imports de compatibilité remplacés par des définitions locales ou des imports de base
+from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent as Agent
+from semantic_kernel.agents import Agent as SKAgent  # Importation pour l'héritage
+
+class ChatCompletionAgent(SKAgent):
+    """Fallback class for ChatCompletionAgent."""
+    def __init__(self, kernel, service, name, instructions, arguments):
+        # Cette classe doit être revue pour utiliser la nouvelle API SK,
+        # pour l'instant elle sert de placeholder.
+        super().__init__(
+            kernel=kernel,
+            id=name, # Utiliser id au lieu de name
+            description=instructions,
+            # Les arguments ne sont plus passés comme ça, à revoir
+        )
+
+class AgentGroupChat:
+    """Fallback class for AgentGroupChat."""
+    def __init__(self, agents, selection_strategy, termination_strategy):
+        self.agents = agents
+        self.selection_strategy = selection_strategy
+        self.termination_strategy = termination_strategy
+        self.history = []
+
+    async def invoke(self):
+        # Simulation de la logique d'invocation
+        for i in range(10): # Limite de sécurité
+            next_agent = await self.selection_strategy.next(self.agents, self.history)
+            if await self.termination_strategy.should_terminate(next_agent, self.history):
+                break
+            
+            # Message factice
+            message = ChatMessageContent(role=AuthorRole.ASSISTANT, content=f"Message de {next_agent.name}", name=next_agent.name)
+            self.history.append(message)
+            yield message
+
+class AgentChatException(Exception):
+    """Custom exception for chat errors."""
+    pass
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 

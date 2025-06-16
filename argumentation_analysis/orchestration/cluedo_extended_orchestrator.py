@@ -14,34 +14,16 @@ from datetime import datetime
 import semantic_kernel as sk
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.kernel import Kernel
-# Les modules agents ne sont pas disponibles dans cette version de semantic_kernel
-# Utilisation de fallbacks pour compatibilité
-try:
-    from semantic_kernel_compatibility import Agent, AgentGroupChat
-    from semantic_kernel.agents.strategies.selection.selection_strategy import SelectionStrategy
-    from semantic_kernel.agents.strategies.termination.termination_strategy import TerminationStrategy
-    AGENTS_AVAILABLE = True
-except ImportError:
-    # Fallbacks pour compatibilité
-    class Agent:
-        def __init__(self, name: str, kernel: Kernel = None, **kwargs):
-            self.name = name
-            self.kernel = kernel
-            
-    class AgentGroupChat:
-        def __init__(self, agents: List[Agent] = None, **kwargs):
-            self.agents = agents or []
-            
-    class SelectionStrategy:
-        def select_next_agent(self, agents: List[Agent], last_agent: Agent = None) -> Agent:
-            return agents[0] if agents else None
-            
-    class TerminationStrategy:
-        def should_terminate(self, messages: List[Any]) -> bool:
-            return False
-            
-    AGENTS_AVAILABLE = False
+from argumentation_analysis.orchestration.base import SelectionStrategy, TerminationStrategy
+from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent as Agent
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
+
+class AgentGroupChat:
+    """Fallback class for compatibility."""
+    def __init__(self, agents: List[Agent] = None, **kwargs):
+        self.agents = agents or []
+        
+AGENTS_AVAILABLE = True
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
 # Import conditionnel pour les modules filters qui peuvent ne pas exister

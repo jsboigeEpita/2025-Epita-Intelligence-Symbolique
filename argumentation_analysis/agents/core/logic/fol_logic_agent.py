@@ -31,7 +31,6 @@ from pydantic import Field
 
 # Import de la classe Agent de base depuis l'orchestrateur principal
 # et définition locale de ChatCompletionAgent héritant de celle-ci.
-from semantic_kernel_compatibility import ChatCompletionAgent
 from semantic_kernel.contents import ChatMessageContent
 
 from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
