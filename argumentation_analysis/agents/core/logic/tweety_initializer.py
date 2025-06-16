@@ -72,7 +72,7 @@ class TweetyInitializer:
             
             # Updated classpath based on previous successful runs
             classpath_entries = [
-                tweety_lib_path / "tweety.jar",
+                tweety_lib_path / "org.tweetyproject.tweety-full-1.28-with-dependencies.jar",
                 # tweety_lib_path / "lib" / "*", # General libs - Répertoire vide, donc inutile pour l'instant
             ]
             
