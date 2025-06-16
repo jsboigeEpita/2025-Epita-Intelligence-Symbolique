@@ -548,11 +548,12 @@ def initialize_jvm(
         _JVM_INITIALIZED_THIS_SESSION = True
         return True
 
-    logger.info("Vérification/Téléchargement des JARs Tweety...")
-    if not download_tweety_jars():
-        logger.error("Échec du provisioning des bibliothèques Tweety. Démarrage de la JVM annulé.")
-        return False
-    logger.info("Bibliothèques Tweety provisionnées.")
+    if not _SESSION_FIXTURE_OWNS_JVM:
+        logger.info("Vérification/Téléchargement des JARs Tweety...")
+        if not download_tweety_jars():
+            logger.error("Échec du provisioning des bibliothèques Tweety. Démarrage de la JVM annulé.")
+            return False
+        logger.info("Bibliothèques Tweety provisionnées.")
 
     java_home_str = find_valid_java_home()
     if not java_home_str:

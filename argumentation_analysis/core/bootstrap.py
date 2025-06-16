@@ -201,21 +201,18 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
                  context.jvm_initialized = True
             else:
                 if initialize_jvm_func:
-                    logger.info("Initialisation de la JVM via jvm_setup.start_jvm_if_needed()...")
+                    logger.info("Initialisation de la JVM via jvm_setup.initialize_jvm()...")
                     try:
-                        initialize_jvm_func() # Appelle start_jvm_if_needed qui ne retourne rien d'utile
-                        
-                        import jpype # S'assurer que jpype est accessible
-                        if jpype.isJVMStarted():
+                        if initialize_jvm_func(): # Appelle initialize_jvm qui retourne un booléen
                             context.jvm_initialized = True
                             sys._jvm_initialized = True # Marquer globalement pour ce processus
-                            logger.info("JVM initialisée avec succès (vérifié via jpype.isJVMStarted()).")
+                            logger.info("JVM initialisée avec succès (confirmé par le retour de initialize_jvm).")
                         else:
                             context.jvm_initialized = False
                             sys._jvm_initialized = False # Assurer la cohérence
-                            logger.error("Échec de l'initialisation de la JVM (jpype.isJVMStarted() est False après l'appel à start_jvm_if_needed).")
-                    except Exception as e: # Capturer les exceptions potentielles de start_jvm_if_needed
-                        logger.error(f"Erreur lors de l'appel à initialize_jvm_func (start_jvm_if_needed) : {e}", exc_info=True)
+                            logger.error("Échec de l'initialisation de la JVM (initialize_jvm a retourné False).")
+                    except Exception as e: # Capturer les exceptions potentielles de initialize_jvm
+                        logger.error(f"Erreur lors de l'appel à initialize_jvm_func : {e}", exc_info=True)
                         context.jvm_initialized = False
                         sys._jvm_initialized = False # Assurer que c'est False en cas d'erreur
                 else:
