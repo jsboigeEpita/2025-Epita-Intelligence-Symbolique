@@ -5,7 +5,7 @@ from typing import Dict, Any, Optional
 from semantic_kernel import Kernel # type: ignore
 from semantic_kernel.functions.kernel_arguments import KernelArguments # type: ignore
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
-from semantic_kernel.contents.role import Role
+from semantic_kernel.contents.chat_role import ChatRole as Role
 
 
 from ..abc.agent_bases import BaseAgent
