@@ -14,8 +14,15 @@ async def run_unified_orchestration_pipeline(
 ) -> Dict[str, Any]
 
 # Alternative avec classe
-pipeline = UnifiedOrchestrationPipeline(config)
-result = await pipeline.analyze_text_extended(text)
+from argumentation_analysis.pipelines import unified_pipeline
+
+# ... (configuration) ...
+
+result = await unified_pipeline.analyze_text(
+    text,
+    mode="orchestration",  # Forcer le nouveau pipeline
+    analysis_type="comprehensive"
+)
 ```
 
 ### **Configuration Unifiée**

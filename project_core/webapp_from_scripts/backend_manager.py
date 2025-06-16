@@ -222,9 +222,9 @@ class BackendManager:
         await asyncio.sleep(initial_wait)
 
         while time.time() - start_time < self.timeout_seconds:
-            if self.process and self.process.returncode is not None:
-                self.logger.error(f"Processus backend terminé prématurément (code: {self.process.returncode})")
-                return False
+            # if self.process and self.process.returncode is not None:
+            #     self.logger.error(f"Processus backend terminé prématurément (code: {self.process.returncode})")
+            #     return False
             
             try:
                 async with aiohttp.ClientSession() as session:
