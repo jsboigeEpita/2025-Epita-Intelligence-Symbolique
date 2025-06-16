@@ -1,8 +1,8 @@
 ﻿import pytest
 from playwright.sync_api import Page, expect, TimeoutError
 
-# Import de la classe PlaywrightHelpers depuis le conftest unifié
-from ..conftest import PlaywrightHelpers
+# L'import de PlaywrightHelpers est supprimé car la classe n'existe plus.
+# Les appels sont remplacés par des localisateurs directs de Playwright.
 
 # The 'webapp_service' session fixture in conftest.py is autouse=True,
 # so the web server is started automatically for all tests in this module.
@@ -27,10 +27,9 @@ class TestFrameworkBuilder:
 
     def test_framework_creation_workflow(self, page: Page):
         """Test du workflow principal de création de framework"""
-        test_helpers = PlaywrightHelpers(page)
         
         # Navigation vers l'onglet Framework
-        test_helpers.navigate_to_tab("framework")
+        page.get_by_role("tab", name="Framework").click()
         
         # Vérification de la présence des éléments du formulaire réels
         expect(page.locator('#arg-content')).to_be_visible()
@@ -163,7 +162,6 @@ class TestFrameworkBuilder:
 
     def test_framework_persistence(self, framework_page: Page):
         """Test de la persistance et sauvegarde du framework"""
-        test_helpers = PlaywrightHelpers(framework_page)
         # La fixture framework_page navigue déjà vers l'onglet
         
         # Construction d'un framework avec données de test
@@ -195,8 +193,8 @@ class TestFrameworkBuilder:
         
         # Test de navigation et retour (simulation de persistance)
         # Aller vers un autre onglet puis revenir
-        test_helpers.navigate_to_tab("validation")
-        test_helpers.navigate_to_tab("framework")
+        framework_page.get_by_role("tab", name="Validation").click()
+        framework_page.get_by_role("tab", name="Framework").click()
         
         # Vérification que le framework est toujours là (dans la session)
         # Note: La persistance dépend de l'implémentation React et du state management

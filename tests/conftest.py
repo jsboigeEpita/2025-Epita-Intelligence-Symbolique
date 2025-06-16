@@ -129,16 +129,9 @@ mocks_dir_for_mock = os.path.join(current_dir_for_mock, 'mocks')
 #     sys.path.insert(0, mocks_dir_for_mock)
 #     _conftest_setup_logger.info(f"Ajout de {mocks_dir_for_mock} à sys.path pour l'accès aux mocks locaux.")
 
-from .mocks.jpype_setup import (
-    _REAL_JPYPE_MODULE,
-    _REAL_JPYPE_AVAILABLE, # Ajouté pour skipif
-    _JPYPE_MODULE_MOCK_OBJ_GLOBAL,
-    _MOCK_DOT_JPYPE_MODULE_GLOBAL,
-    activate_jpype_mock_if_needed,
-    pytest_sessionstart,
-    pytest_sessionfinish
-)
-from .mocks.numpy_setup import setup_numpy_for_tests_fixture
+# L'initialisation des mocks jpype et numpy est maintenant gérée par le bootstrap
+# via l'option `addopts = -p tests.mocks.bootstrap` dans pytest.ini.
+# Les imports de jpype_setup et numpy_setup ne sont plus nécessaires ici.
 
 from .fixtures.integration_fixtures import (
     integration_jvm, dung_classes, dl_syntax_parser, fol_syntax_parser,

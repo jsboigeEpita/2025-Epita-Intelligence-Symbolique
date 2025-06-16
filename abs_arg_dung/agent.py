@@ -3,9 +3,10 @@ import glob
 import random
 
 # --- CONFIGURATION AVEC JPYPE ---
+# Ce fichier ne doit PAS démarrer la JVM. Il suppose qu'elle est déjà démarrée
+# par le point d'entrée de l'application (ex: api/main.py ou une fixture de test).
 import jpype
 import jpype.imports
-
 # Assurez-vous que le pont est démarré en amont (par ex. dans l'API)
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -30,7 +31,31 @@ SimpleSemiStableReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleSem
 
 class DungAgent:
     def __init__(self):
-        self.af = DungTheory()
+        """
+        Initialise l'agent. Les classes Java sont importées ici pour s'assurer
+        que la JVM est prête au moment de l'instanciation.
+        """
+        if not jpype.isJVMStarted():
+            raise RuntimeError(
+                "La JVM doit être démarrée avant d'instancier un DungAgent. "
+                "Vérifiez le point d'entrée de l'application."
+            )
+
+        # Classes pour la structure du graphe
+        self.DungTheory = JClass('org.tweetyproject.arg.dung.syntax.DungTheory')
+        self.Argument = JClass('org.tweetyproject.arg.dung.syntax.Argument')
+        self.Attack = JClass('org.tweetyproject.arg.dung.syntax.Attack')
+
+        # Classes pour le raisonnement (calcul des extensions)
+        self.SimpleGroundedReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleGroundedReasoner')
+        self.SimplePreferredReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimplePreferredReasoner')
+        self.SimpleStableReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleStableReasoner')
+        self.SimpleCompleteReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleCompleteReasoner')
+        self.SimpleAdmissibleReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleAdmissibleReasoner')
+        self.SimpleIdealReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleIdealReasoner')
+        self.SimpleSemiStableReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleSemiStableReasoner')
+        
+        self.af = self.DungTheory()
         self._arguments = {}
         # Attributs pour le cache des extensions
         self._cached_extensions = {}
@@ -38,7 +63,7 @@ class DungAgent:
 
     def add_argument(self, name: str):
         if name not in self._arguments:
-            arg = Argument(name)
+            arg = self.Argument(name)
             self.af.add(arg)
             self._arguments[name] = arg
             self._invalidate_cache()
@@ -47,7 +72,7 @@ class DungAgent:
 
     def add_attack(self, source_name: str, target_name: str):
         if source_name in self._arguments and target_name in self._arguments:
-            self.af.add(Attack(self._arguments[source_name], self._arguments[target_name]))
+            self.af.add(self.Attack(self._arguments[source_name], self._arguments[target_name]))
             self._invalidate_cache()
         else:
             print(f"Erreur : Un ou plusieurs arguments ('{source_name}', '{target_name}') n'existent pas.")
@@ -62,13 +87,13 @@ class DungAgent:
         if not self._cache_valid:
             print("(Calcul des extensions en cours...)")
             self._cached_extensions = {
-                'grounded': sorted([str(arg.getName()) for arg in SimpleGroundedReasoner().getModel(self.af)]),
-                'preferred': self._format_extensions(SimplePreferredReasoner().getModels(self.af)),
-                'stable': self._format_extensions(SimpleStableReasoner().getModels(self.af)),
-                'complete': self._format_extensions(SimpleCompleteReasoner().getModels(self.af)),
-                'admissible': self._format_extensions(SimpleAdmissibleReasoner().getModels(self.af)),
-                'ideal': sorted([str(arg.getName()) for arg in SimpleIdealReasoner().getModel(self.af)]),
-                'semi_stable': self._format_extensions(SimpleSemiStableReasoner().getModels(self.af))
+                'grounded': sorted([str(arg.getName()) for arg in self.SimpleGroundedReasoner().getModel(self.af)]),
+                'preferred': self._format_extensions(self.SimplePreferredReasoner().getModels(self.af)),
+                'stable': self._format_extensions(self.SimpleStableReasoner().getModels(self.af)),
+                'complete': self._format_extensions(self.SimpleCompleteReasoner().getModels(self.af)),
+                'admissible': self._format_extensions(self.SimpleAdmissibleReasoner().getModels(self.af)),
+                'ideal': sorted([str(arg.getName()) for arg in self.SimpleIdealReasoner().getModel(self.af)]),
+                'semi_stable': self._format_extensions(self.SimpleSemiStableReasoner().getModels(self.af))
             }
             self._cache_valid = True
 
@@ -112,6 +137,9 @@ class DungAgent:
     #     return self._format_extensions(Cf2Reasoner().getModels(self.af))
         
     def visualize_graph(self, extension_to_highlight: list = None, title_suffix: str = ""):
+        import matplotlib.pyplot as plt
+        import networkx as nx
+        
         G = nx.DiGraph()
         nodes = [arg.getName() for arg in self.af.getNodes()]
         G.add_nodes_from(nodes)
@@ -231,6 +259,7 @@ class DungAgent:
         attacks = list(self.af.getAttacks())
         
         # Vérifier s'il y a des cycles
+        import networkx as nx
         G = nx.DiGraph()
         G.add_nodes_from([arg.getName() for arg in nodes])
         G.add_edges_from([(a.getAttacker().getName(), a.getAttacked().getName()) for a in attacks])
@@ -267,44 +296,60 @@ class DungAgent:
 # --- Cas d'étude et Démonstration ---
 
 if __name__ == "__main__":
-    
-    print("\n--- CAS D'ÉTUDE ÉTENDU ---")
-    
-    # Cas d'étude original
-    agent = DungAgent()
-    agent.add_argument("a")
-    agent.add_argument("b")
-    agent.add_argument("c")
+    print("\n--- DÉMONSTRATION DE LA CLASSE DungAgent ---")
+    print("NOTE: Ce bloc n'est exécuté que si le script est lancé directement.")
+    print("Pour fonctionner, une JVM doit être disponible et configurée.")
 
-    agent.add_attack("a", "b")
-    agent.add_attack("b", "c")
+    try:
+        if not jpype.isJVMStarted():
+            print("\n[__main__] Démarrage d'une JVM pour la démo...")
+            # Chargement des libs depuis le dossier central, pas le dossier local
+            project_root = Path(__file__).parent.parent
+            libs_dir = project_root / 'libs' / 'tweety'
+            
+            if not libs_dir.exists():
+                raise FileNotFoundError(f"Le répertoire des librairies Tweety est introuvable: {libs_dir}")
 
-    print("\n--- Analyse Sémantique Complète ---")
-    agent.analyze_semantics_relationships()
-    agent.print_all_arguments_status()
-    
-    # Nouveau cas d'étude plus complexe
-    print("\n\n--- CAS D'ÉTUDE COMPLEXE ---")
-    complex_agent = DungAgent()
-    
-    # Arguments: a, b, c, d, e
-    for arg in ["a", "b", "c", "d", "e"]:
-        complex_agent.add_argument(arg)
-    
-    # Cycle d'attaques et autres relations
-    complex_agent.add_attack("a", "b")
-    complex_agent.add_attack("b", "c")
-    complex_agent.add_attack("c", "a")  # Cycle
-    complex_agent.add_attack("d", "c")
-    complex_agent.add_attack("e", "d")
-    
-    print("Framework avec cycle d'arguments:")
-    complex_agent.analyze_semantics_relationships()
-    complex_agent.analyze_framework_properties()
-    
-    # Visualisation des deux cas
-    if preferred := agent.get_preferred_extensions():
-        agent.visualize_graph(extension_to_highlight=preferred[0], title_suffix=" - Cas Simple")
-    
-    if complex_preferred := complex_agent.get_preferred_extensions():
-        complex_agent.visualize_graph(extension_to_highlight=complex_preferred[0], title_suffix=" - Cas Complexe")
+            jar_files = glob.glob(str(libs_dir / '*.jar'))
+            if not jar_files:
+                raise FileNotFoundError(f"Aucun JAR trouvé dans {libs_dir}")
+            
+            classpath = os.pathsep.join(jar_files)
+            
+            jpype.startJVM(jpype.getDefaultJVMPath(), "-ea", f"-Djava.class.path={classpath}")
+            print("[__main__] JVM démarrée pour la démo.")
+
+        # --- Le reste du code de démo ---
+        print("\n--- CAS D'ÉTUDE ÉTENDU ---")
+        
+        agent = DungAgent()
+        agent.add_argument("a")
+        agent.add_argument("b")
+        agent.add_argument("c")
+
+        agent.add_attack("a", "b")
+        agent.add_attack("b", "c")
+
+        print("\n--- Analyse Sémantique Complète ---")
+        agent.analyze_semantics_relationships()
+        agent.print_all_arguments_status()
+        
+        print("\n\n--- CAS D'ÉTUDE COMPLEXE ---")
+        complex_agent = DungAgent()
+        
+        for arg in ["a", "b", "c", "d", "e"]:
+            complex_agent.add_argument(arg)
+        
+        complex_agent.add_attack("a", "b")
+        complex_agent.add_attack("b", "c")
+        complex_agent.add_attack("c", "a")
+        complex_agent.add_attack("d", "c")
+        complex_agent.add_attack("e", "d")
+        
+        print("Framework avec cycle d'arguments:")
+        complex_agent.analyze_semantics_relationships()
+        complex_agent.analyze_framework_properties()
+
+    except Exception as e:
+        print(f"\nERREUR lors de l'exécution de la démo : {e}")
+        print("Assurez-vous que JAVA_HOME est configuré et que les JARs Tweety sont dans libs/tweety.")
