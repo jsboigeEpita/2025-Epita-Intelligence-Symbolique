@@ -94,60 +94,46 @@ async def test_ensure_dependencies_installs_if_needed(mock_popen, manager, tmp_p
 
 
 @pytest.mark.asyncio
-@patch('subprocess.Popen')
-async def test_start_success(mock_popen, manager, tmp_path):
-    """Tests the full successful start sequence."""
+async def test_start_success(manager, tmp_path):
+    """Tests the full successful start sequence with the new build logic."""
     manager.frontend_path = tmp_path
+    build_path = tmp_path / "build"
+    build_path.mkdir()
     (tmp_path / "package.json").touch()
-    (tmp_path / "node_modules").mkdir()
 
     # Mock dependencies
     manager._ensure_dependencies = AsyncMock()
+    manager._build_react_app = AsyncMock()  # On mocke l'étape de build
+    manager._start_static_server = AsyncMock()
+    # Le pid sera celui du thread, simulons-le
+    manager.static_server_thread = MagicMock()
+    manager.static_server_thread.ident = 5678
     manager._wait_for_health_check = AsyncMock(return_value=True)
-    
+
     # Mock backend_manager for env setup
     manager.backend_manager = MagicMock()
     manager.backend_manager.host = 'localhost'
     manager.backend_manager.port = 5000
-
-    # Mock Popen for npm start
-    mock_process = MagicMock()
-    mock_process.pid = 5678
-    mock_popen.return_value = mock_process
     
-    # The manager now requires a proper env dictionary to be passed from the orchestrator
     manager.env = manager._get_frontend_env()
 
     result = await manager.start()
 
     assert result['success'] is True, f"start() a échoué, retour: {result.get('error', 'N/A')}"
     assert result['pid'] == 5678
-    assert result['port'] == manager.port
-    mock_popen.assert_called_once()
-    manager._wait_for_health_check.assert_awaited_once()
+    assert result['port'] == manager.port # Le port est maintenant géré directement par le manager
+    
     manager._ensure_dependencies.assert_awaited_once()
+    manager._build_react_app.assert_awaited_once() # On vérifie l'appel de la méthode de build
+    manager._start_static_server.assert_awaited_once()
+    manager._wait_for_health_check.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-@patch('subprocess.Popen')
-async def test_stop_process(mock_popen, manager):
-    """Tests the stop method."""
-    # To test closing files, we need to mock open
-    mock_stdout_file = MagicMock()
-    mock_stderr_file = MagicMock()
-    with patch("builtins.open") as mock_open:
-        # Simulate that open returns our mocks
-        mock_open.side_effect = [mock_stdout_file, mock_stderr_file]
-        
-        manager.process = mock_popen.return_value
-        manager.pid = 1234
-        # Simulate that these files were opened
-        manager.frontend_stdout_log_file = mock_stdout_file
-        manager.frontend_stderr_log_file = mock_stderr_file
+async def test_stop_process(manager):
+    """Tests that stop correctly calls the static server shutdown."""
+    manager._stop_static_server = AsyncMock()
+    
+    await manager.stop()
 
-        await manager.stop()
-
-        mock_popen.return_value.terminate.assert_called_once()
-        mock_stdout_file.close.assert_called_once()
-        mock_stderr_file.close.assert_called_once()
-        assert manager.process is None
+    manager._stop_static_server.assert_awaited_once()
