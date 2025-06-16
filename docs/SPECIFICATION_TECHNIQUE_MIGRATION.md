@@ -1,7 +1,7 @@
 # 📋 Spécification Technique - Migration vers Pipeline Unifié Central
 
 ## 🎯 **Objectif**
-Transformer les 3 scripts consolidés pour utiliser `unified_orchestration_pipeline.py` comme moteur central, en préservant leurs interfaces et fonctionnalités.
+Transformer les 3 scripts consolidés pour utiliser `la classe `UnifiedPipeline` du module `argumentation_analysis/pipelines/unified_pipeline.py`` comme moteur central, en préservant leurs interfaces et fonctionnalités.
 
 ## 🔌 **API Pipeline Unifié - Points d'Entrée**
 

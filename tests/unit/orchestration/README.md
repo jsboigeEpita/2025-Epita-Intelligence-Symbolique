@@ -8,7 +8,7 @@ Cette suite de tests valide le fonctionnement complet du système d'orchestratio
 
 ### Tests Unitaires (`tests/unit/orchestration/`)
 
-#### 1. `test_unified_orchestration_pipeline.py` (676 lignes)
+#### 1. `test_la classe `UnifiedPipeline` du module `argumentation_analysis/pipelines/unified_pipeline.py`` (676 lignes)
 **Pipeline d'orchestration principal**
 
 - **TestExtendedOrchestrationConfig** : Configuration étendue
@@ -156,7 +156,7 @@ pytest tests/integration/test_orchestration_integration.py -v
 pytest tests/unit/orchestration/ --cov=argumentation_analysis.pipelines.unified_orchestration_pipeline --cov-report=html
 
 # Tests spécifiques
-pytest tests/unit/orchestration/test_unified_orchestration_pipeline.py::TestUnifiedOrchestrationPipeline::test_analyze_text_orchestrated_basic -v
+pytest tests/unit/orchestration/test_la classe `UnifiedPipeline` du module `argumentation_analysis/pipelines/unified_pipeline.py`::TestUnifiedOrchestrationPipeline::test_analyze_text_orchestrated_basic -v
 ```
 
 ## Couverture de Code

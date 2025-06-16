@@ -14,7 +14,7 @@ Cette architecture centralisée consolide **42+ scripts disparates** en **3 scri
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                PIPELINE UNIFIÉ CENTRAL                     │
-│         unified_orchestration_pipeline.py                  │
+│         la classe `UnifiedPipeline` du module `argumentation_analysis/pipelines/unified_pipeline.py`                  │
 │  • Orchestration Hiérarchique (3 niveaux)                │
 │  • Orchestrateurs Spécialisés (8+)                       │
 │  • Middleware Communication Agentielle                    │

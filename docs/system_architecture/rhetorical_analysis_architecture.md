@@ -23,7 +23,7 @@ Ce répertoire est le cœur du système.
 
 - **`argumentation_analysis/orchestration/`**: Modules responsables de l'orchestration des différents agents et outils pour réaliser une analyse complète.
 
-- **`argumentation_analysis/pipelines/`**: Pipelines de traitement de données, comme `unified_orchestration_pipeline.py` et `unified_text_analysis.py`, qui semblent chaîner les opérations.
+- **`argumentation_analysis/pipelines/`**: Pipelines de traitement de données, comme `la classe `UnifiedPipeline` du module `argumentation_analysis/pipelines/unified_pipeline.py`` et `unified_text_analysis.py`, qui semblent chaîner les opérations.
 
 - **`argumentation_analysis/demos/`**: Scripts de démonstration.
     - `run_rhetorical_analysis_demo.py`: Point d'entrée principal pour lancer une analyse rhétorique de démonstration.

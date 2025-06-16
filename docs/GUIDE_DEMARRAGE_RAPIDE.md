@@ -227,7 +227,7 @@ python -m pytest tests/unit/mocks/test_numpy_rec_mock.py -v
 python -m pytest tests/validation_sherlock_watson/test_phase_a_personnalites_distinctes.py -v
 
 # Tests orchestration
-python -m pytest tests/unit/orchestration/test_unified_orchestration_pipeline.py -v
+python -m pytest tests/unit/orchestration/test_la classe `UnifiedPipeline` du module `argumentation_analysis/pipelines/unified_pipeline.py` -v
 ```
 
 ---
