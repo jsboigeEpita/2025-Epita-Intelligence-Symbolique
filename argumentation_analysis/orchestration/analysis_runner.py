@@ -29,7 +29,8 @@ from semantic_kernel.kernel import Kernel as SKernel # Alias pour éviter confli
 # KernelArguments est déjà importé plus bas
  # Imports Semantic Kernel
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole, ChatHistory
+from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents.chat_role import ChatRole as AuthorRole
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
 from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent, Agent
 from semantic_kernel.exceptions import AgentChatException
@@ -37,6 +38,7 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureCha
 from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
+from semantic_kernel.contents.chat_history import ChatHistory
 
 # Correct imports
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
