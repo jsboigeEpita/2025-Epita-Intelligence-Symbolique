@@ -15,14 +15,22 @@ import asyncio
 import argparse
 import logging
 from pathlib import Path
+from typing import Any, Optional, List
 
 # Ajouter le répertoire parent au chemin de recherche des modules
 current_dir = Path(__file__).parent
 if str(current_dir) not in sys.path:
     sys.path.append(str(current_dir))
 
-def setup_logging(verbose=False):
-    """Configuration du logging pour l'orchestration"""
+def setup_logging(verbose: bool = False) -> None:
+    """Configuration du logging pour l'orchestration.
+
+    :param verbose: Si True, configure le logging au niveau DEBUG.
+                    Sinon, configure au niveau INFO.
+    :type verbose: bool
+    :return: None
+    :rtype: None
+    """
     level = logging.DEBUG if verbose else logging.INFO
     
     logging.basicConfig(
@@ -40,12 +48,18 @@ def setup_logging(verbose=False):
     
     # Garder INFO pour l'orchestration et les agents
     logging.getLogger("Orchestration").setLevel(level)
-    logging.getLogger("semantic_kernel.agents").setLevel(level)
+    # logging.getLogger("semantic_kernel.agents").setLevel(level) # Module inexistant
     
     logging.info("Logging configuré pour l'orchestration.")
 
-async def setup_environment():
-    """Initialise l'environnement nécessaire pour l'orchestration"""
+async def setup_environment() -> Any:
+    """Initialise l'environnement nécessaire pour l'orchestration.
+
+    Charge les variables d'environnement, initialise la JVM et crée le service LLM.
+
+    :return: L'instance du service LLM si la création est réussie, sinon None.
+    :rtype: Any
+    """
     # 1. Chargement de l'environnement (.env)
     from dotenv import load_dotenv, find_dotenv
     loaded = load_dotenv(find_dotenv(), override=True)
@@ -65,15 +79,28 @@ async def setup_environment():
     logging.info("Création du service LLM...")
     try:
         llm_service = create_llm_service()
-        logging.info(f"✅ Service LLM créé avec succès (ID: {llm_service.service_id}).")
+        logging.info(f"[OK] Service LLM créé avec succès (ID: {llm_service.service_id}).")
         return llm_service
     except Exception as e:
         logging.critical(f"❌ Échec de la création du service LLM: {e}", exc_info=True)
         print(f"❌ ERREUR: Impossible de créer le service LLM. Vérifiez la configuration .env.")
         return None
 
-async def run_orchestration(text_content, llm_service, agents=None, verbose=False):
-    """Exécute l'orchestration des agents sur le texte fourni"""
+async def run_orchestration(text_content: str, llm_service: Any, agents: Optional[List[str]] = None, verbose: bool = False) -> None:
+    """Exécute l'orchestration des agents sur le texte fourni.
+
+    :param text_content: Le contenu textuel à analyser.
+    :type text_content: str
+    :param llm_service: L'instance du service LLM initialisée.
+    :type llm_service: Any
+    :param agents: Liste optionnelle des noms des agents à utiliser.
+                   Actuellement non utilisé directement par `run_analysis_conversation`.
+    :type agents: Optional[List[str]]
+    :param verbose: Indicateur de verbosité (non utilisé directement ici, mais pourrait l'être).
+    :type verbose: bool
+    :return: None
+    :rtype: None
+    """
     if not text_content or not llm_service:
         logging.error("Orchestration impossible: texte vide ou service LLM non disponible.")
         return
@@ -81,18 +108,17 @@ async def run_orchestration(text_content, llm_service, agents=None, verbose=Fals
     logging.info(f"Lancement de l'orchestration sur un texte de {len(text_content)} caractères...")
     
     try:
-        from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
+        from argumentation_analysis.orchestration.analysis_runner import run_analysis
         
-        # Note: La fonction run_analysis_conversation n'accepte pas le paramètre enabled_agents
-        # Les agents sont configurés en interne dans la fonction
+        # Note: La fonction run_analysis gère l'orchestration complète.
         
         # Exécution de l'analyse
-        await run_analysis_conversation(
-            texte_a_analyser=text_content,
+        await run_analysis(
+            text_content=text_content,
             llm_service=llm_service
         )
         
-        logging.info("🏁 Orchestration terminée avec succès.")
+        logging.info("✅ Orchestration terminée avec succès.")
     except Exception as e:
         logging.error(f"❌ Erreur lors de l'orchestration: {e}", exc_info=True)
 

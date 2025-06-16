@@ -3,476 +3,182 @@
 
 """
 Mock pour numpy pour les tests.
-Ce mock permet d'exécuter les tests sans avoir besoin d'installer numpy.
+Ce mock permet d'exécuter les tests sans avoir besoin d'installer numpy,
+en simulant sa structure de package et ses attributs essentiels.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Union, Callable, Tuple
+from unittest.mock import MagicMock, Mock
 
 # Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
-    datefmt='%H:%M:%S'
-)
-logger = logging.getLogger("NumpyMock")
+logger = logging.getLogger(__name__)
 
-# Version
-__version__ = "1.24.3"
+def create_numpy_mock():
+    """
+    Crée un mock complet pour la bibliothèque NumPy, en simulant sa structure
+    de package et les attributs essentiels nécessaires pour que des bibliothèques
+    comme pandas, matplotlib et scipy puissent être importées sans erreur.
+    """
+    # ----- Création du mock principal (le package numpy) -----
+    numpy_mock = MagicMock(name='numpy_mock_package')
+    numpy_mock.__version__ = '1.24.3.mock'
+    
+    # Pour que le mock soit considéré comme un package, il doit avoir un __path__
+    numpy_mock.__path__ = ['/mock/path/numpy']
 
-# Classes de base
-class dtype:
-    """Mock pour numpy.dtype."""
-    
-    def __init__(self, type_spec):
-        self.type = type_spec
-        self.name = str(type_spec)
-    
-    def __str__(self):
-        return self.name
-    
-    def __repr__(self):
-        return f"dtype('{self.name}')"
-
-class ndarray:
-    """Mock pour numpy.ndarray."""
-    
-    def __init__(self, shape=None, dtype=None, buffer=None, offset=0,
-                 strides=None, order=None):
-        self.shape = shape if shape is not None else (0,)
-        self.dtype = dtype
-        self.data = buffer
-        self.size = 0
-        if shape:
-            self.size = 1
-            for dim in shape:
-                self.size *= dim
-    
-    def __getitem__(self, key):
-        """Simule l'accès aux éléments."""
-        return 0
-    
-    def __setitem__(self, key, value):
-        """Simule la modification des éléments."""
-        pass
-    
-    def __len__(self):
-        """Retourne la taille du premier axe."""
-        return self.shape[0] if self.shape else 0
-    
-    def __str__(self):
-        return f"ndarray(shape={self.shape}, dtype={self.dtype})"
-    
-    def __repr__(self):
-        return self.__str__()
-    
-    def reshape(self, *args):
-        """Simule le changement de forme."""
-        if len(args) == 1 and isinstance(args[0], tuple):
-            new_shape = args[0]
-        else:
-            new_shape = args
-        return ndarray(shape=new_shape, dtype=self.dtype)
-    
-    def mean(self, axis=None):
-        """Simule le calcul de la moyenne."""
-        return 0.0
-    
-    def sum(self, axis=None):
-        """Simule le calcul de la somme."""
-        return 0.0
-    
-    def max(self, axis=None):
-        """Simule le calcul du maximum."""
-        return 0.0
-    
-    def min(self, axis=None):
-        """Simule le calcul du minimum."""
-        return 0.0
-
-# Fonctions principales
-def array(object, dtype=None, copy=True, order='K', subok=False, ndmin=0):
-    """Crée un tableau numpy."""
-    if isinstance(object, (list, tuple)):
-        shape = (len(object),)
-        if object and isinstance(object[0], (list, tuple)):
-            shape = (len(object), len(object[0]))
-    else:
-        shape = (1,)
-    return ndarray(shape=shape, dtype=dtype)
-
-def zeros(shape, dtype=None):
-    """Crée un tableau de zéros."""
-    return ndarray(shape=shape, dtype=dtype)
-
-def ones(shape, dtype=None):
-    """Crée un tableau de uns."""
-    return ndarray(shape=shape, dtype=dtype)
-
-def empty(shape, dtype=None):
-    """Crée un tableau vide."""
-    return ndarray(shape=shape, dtype=dtype)
-
-def arange(start, stop=None, step=1, dtype=None):
-    """Crée un tableau avec des valeurs espacées régulièrement."""
-    if stop is None:
-        stop = start
-        start = 0
-    size = max(0, int((stop - start) / step))
-    return ndarray(shape=(size,), dtype=dtype)
-
-def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None):
-    """Crée un tableau avec des valeurs espacées linéairement."""
-    arr = ndarray(shape=(num,), dtype=dtype)
-    if retstep:
-        return arr, (stop - start) / (num - 1 if endpoint else num)
-    return arr
-
-def random_sample(size=None):
-    """Génère des nombres aléatoires uniformes."""
-    if size is None:
-        return 0.5
-    if isinstance(size, int):
-        size = (size,)
-    return ndarray(shape=size, dtype=float)
-
-# Fonctions supplémentaires requises par conftest.py
-def mean(a, axis=None):
-    """Calcule la moyenne d'un tableau."""
-    if isinstance(a, ndarray):
-        return a.mean(axis)
-    return 0.0
-
-def sum(a, axis=None):
-    """Calcule la somme d'un tableau."""
-    if isinstance(a, ndarray):
-        return a.sum(axis)
-    return 0.0
-
-def max(a, axis=None):
-    """Calcule le maximum d'un tableau."""
-    if isinstance(a, ndarray):
-        return a.max(axis)
-    return 0.0
-
-def min(a, axis=None):
-    """Calcule le minimum d'un tableau."""
-    if isinstance(a, ndarray):
-        return a.min(axis)
-    return 0.0
-
-def dot(a, b):
-    """Calcule le produit scalaire de deux tableaux."""
-    return ndarray(shape=(1,))
-
-def concatenate(arrays, axis=0):
-    """Concatène des tableaux."""
-    return ndarray(shape=(1,))
-
-def vstack(arrays):
-    """Empile des tableaux verticalement."""
-    return ndarray(shape=(1,))
-
-def hstack(arrays):
-    """Empile des tableaux horizontalement."""
-    return ndarray(shape=(1,))
-
-def argmax(a, axis=None):
-    """Retourne l'indice du maximum."""
-    return 0
-
-def argmin(a, axis=None):
-    """Retourne l'indice du minimum."""
-    return 0
-
-# Sous-modules
-class BitGenerator:
-    """Mock pour numpy.random.BitGenerator."""
-    
-    def __init__(self, seed=None):
-        self.seed = seed
-
-class RandomState:
-    """Mock pour numpy.random.RandomState."""
-    
-    def __init__(self, seed=None):
-        self.seed = seed
-    
-    def random(self, size=None):
-        """Génère des nombres aléatoires uniformes."""
-        if size is None:
-            return 0.5
-        if isinstance(size, int):
-            size = (size,)
-        return ndarray(shape=size, dtype=float)
-    
-    def randint(self, low, high=None, size=None, dtype=int):
-        """Génère des entiers aléatoires."""
-        if high is None:
-            high = low
-            low = 0
-        if size is None:
-            return low
-        if isinstance(size, int):
-            size = (size,)
-        return ndarray(shape=size, dtype=dtype)
-
-class Generator:
-    """Mock pour numpy.random.Generator."""
-    
-    def __init__(self, bit_generator=None):
-        self.bit_generator = bit_generator
-    
-    def random(self, size=None, dtype=float, out=None):
-        """Génère des nombres aléatoires uniformes."""
-        if size is None:
-            return 0.5
-        if isinstance(size, int):
-            size = (size,)
-        return ndarray(shape=size, dtype=dtype)
-    
-    def integers(self, low, high=None, size=None, dtype=int, endpoint=False):
-        """Génère des entiers aléatoires."""
-        if high is None:
-            high = low
-            low = 0
-        if size is None:
-            return low
-        if isinstance(size, int):
-            size = (size,)
-        return ndarray(shape=size, dtype=dtype)
-
-class random:
-    """Mock pour numpy.random."""
-    
-    # Classes pour pandas
-    BitGenerator = BitGenerator
-    Generator = Generator
-    RandomState = RandomState
-    
-    @staticmethod
-    def rand(*args):
-        """Génère des nombres aléatoires uniformes."""
-        if not args:
-            return 0.5
-        shape = args
-        return ndarray(shape=shape, dtype=float)
-    
-    @staticmethod
-    def randn(*args):
-        """Génère des nombres aléatoires normaux."""
-        if not args:
-            return 0.0
-        shape = args
-        return ndarray(shape=shape, dtype=float)
-    
-    @staticmethod
-    def randint(low, high=None, size=None, dtype=int):
-        """Génère des entiers aléatoires."""
-        if high is None:
-            high = low
-            low = 0
-        if size is None:
-            return low
-        if isinstance(size, int):
-            size = (size,)
-        return ndarray(shape=size, dtype=dtype)
-    
-    @staticmethod
-    def normal(loc=0.0, scale=1.0, size=None):
-        """Génère des nombres aléatoires normaux."""
-        if size is None:
-            return loc
-        if isinstance(size, int):
-            size = (size,)
-        return ndarray(shape=size, dtype=float)
-    
-    @staticmethod
-    def uniform(low=0.0, high=1.0, size=None):
-        """Génère des nombres aléatoires uniformes."""
-        if size is None:
-            return (low + high) / 2
-        if isinstance(size, int):
-            size = (size,)
-        return ndarray(shape=size, dtype=float)
-
-# Module rec pour les record arrays
-class rec:
-    """Mock pour numpy.rec (record arrays)."""
-    
-    class recarray(ndarray):
-        """Mock pour numpy.rec.recarray."""
-        
-        def __init__(self, shape=None, dtype=None, formats=None, names=None, **kwargs):
-            # Gérer les différents formats d'arguments pour recarray
-            if isinstance(shape, tuple):
-                super().__init__(shape=shape, dtype=dtype)
-            elif shape is not None:
-                super().__init__(shape=(shape,), dtype=dtype)
+    # ----- Types de données scalaires et de base -----
+    # Imiter les types de données de base de NumPy
+    class MockDtype:
+        def __init__(self, dtype_info):
+            self.descr = []
+            if isinstance(dtype_info, list):
+                # Gère les dtypes structurés comme [('field1', 'i4'), ('field2', 'f8')]
+                self.names = tuple(item[0] for item in dtype_info if isinstance(item, tuple) and len(item) > 0)
+                self.descr = dtype_info
             else:
-                super().__init__(shape=(0,), dtype=dtype)
-            
-            self._names = names or []
-            self._formats = formats or []
-        
-        @property
-        def names(self):
-            return self._names
-        
-        @property
-        def formats(self):
-            return self._formats
+                 self.names = ()
         
         def __getattr__(self, name):
-            # Simule l'accès aux champs par nom
-            return ndarray(shape=(len(self),))
+            # Retourne un mock pour tout autre attribut non défini
+            return MagicMock(name=f'Dtype.{name}')
 
-# Instance du module rec pour l'exposition
-rec.recarray = rec.recarray
+    class ndarray(Mock):
+        def __init__(self, shape=(0,), dtype='float64', *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.shape = shape
+            self.dtype = MockDtype(dtype)
+            # Simuler d'autres attributs si nécessaire
+            self.size = 0
+            if shape:
+                self.size = 1
+                for dim in shape:
+                    if isinstance(dim, int): self.size *= dim
+            self.ndim = len(shape) if isinstance(shape, tuple) else 1
 
-# Classes de types de données pour compatibilité PyTorch
-class dtype_base(type):
-    """Métaclasse de base pour les types de données NumPy."""
-    def __new__(cls, name, bases=(), attrs=None):
-        if attrs is None:
-            attrs = {}
-        attrs['__name__'] = name
-        attrs['__module__'] = 'numpy'
-        return super().__new__(cls, name, bases, attrs)
+        def __getattr__(self, name):
+            # Comportement par défaut pour les attributs inconnus
+            if name == 'dtype':
+                 return self.dtype
+            return MagicMock(name=f'ndarray.{name}')
+
+    class MockRecarray(ndarray):
+        def __init__(self, shape=(0,), formats=None, names=None, dtype=None, *args, **kwargs):
+            # Le constructeur de recarray peut prendre un simple entier pour la shape
+            if isinstance(shape, int):
+                shape = (shape,)
+            
+            # Pour un recarray, `formats` ou `dtype` définit la structure.
+            # `formats` est juste une autre façon de spécifier `dtype`.
+            dtype_arg = formats or dtype
+            
+            super().__init__(shape=shape, dtype=dtype_arg, *args, **kwargs)
+            
+            # `names` peut être passé séparément et devrait surcharger ceux du dtype.
+            if names:
+                self.dtype.names = tuple(names) if names else self.dtype.names
+            
+            # Assigner `formats` pour la compatibilité
+            self.formats = formats
+
+    class generic: pass
+    class number: pass
+    class integer(number): pass
+    class signedinteger(integer): pass
+    class unsignedinteger(integer): pass
+    class floating(number): pass
+    class complexfloating(number): pass
     
-    def __str__(cls):
-        return cls.__name__
+    # Attacher les classes de base au mock
+    numpy_mock.ndarray = ndarray
+    numpy_mock.generic = generic
+    numpy_mock.number = number
+    numpy_mock.integer = integer
+    numpy_mock.signedinteger = signedinteger
+    numpy_mock.unsignedinteger = unsignedinteger
+    numpy_mock.floating = floating
+    numpy_mock.complexfloating = complexfloating
+    numpy_mock.dtype = MagicMock(name='dtype_constructor', return_value=MagicMock(name='dtype_instance', kind='f', itemsize=8))
+
+    # Types spécifiques
+    for type_name in ['float64', 'float32', 'int64', 'int32', 'uint8', 'bool_', 'object_']:
+        setattr(numpy_mock, type_name, type(type_name, (object,), {}))
     
-    def __repr__(cls):
-        return f"<class 'numpy.{cls.__name__}'>"
-
-class bool_(metaclass=dtype_base):
-    """Type booléen NumPy."""
-    __name__ = 'bool_'
-    __module__ = 'numpy'
+    # ----- Fonctions de base de NumPy -----
+    numpy_mock.array = MagicMock(name='array', return_value=ndarray())
+    numpy_mock.zeros = MagicMock(name='zeros', return_value=ndarray())
+    numpy_mock.ones = MagicMock(name='ones', return_value=ndarray())
+    numpy_mock.empty = MagicMock(name='empty', return_value=ndarray())
+    numpy_mock.isfinite = MagicMock(name='isfinite', return_value=True)
     
-    def __new__(cls, value=False):
-        return bool(value)
-
-class number(metaclass=dtype_base):
-    """Type numérique de base NumPy."""
-    __name__ = 'number'
-    __module__ = 'numpy'
-
-class object_(metaclass=dtype_base):
-    """Type objet NumPy."""
-    __name__ = 'object_'
-    __module__ = 'numpy'
+    # ----- Création des sous-modules internes (_core, core, etc.) -----
     
-    def __new__(cls, value=None):
-        return object() if value is None else value
-
-# Types de données (classes, pas instances)
-class float64(metaclass=dtype_base):
-    __name__ = 'float64'
-    __module__ = 'numpy'
-
-class float32(metaclass=dtype_base):
-    __name__ = 'float32'
-    __module__ = 'numpy'
-
-class int64(metaclass=dtype_base):
-    __name__ = 'int64'
-    __module__ = 'numpy'
-
-class int32(metaclass=dtype_base):
-    __name__ = 'int32'
-    __module__ = 'numpy'
-
-class uint64(metaclass=dtype_base):
-    __name__ = 'uint64'
-    __module__ = 'numpy'
-
-class uint32(metaclass=dtype_base):
-    __name__ = 'uint32'
-    __module__ = 'numpy'
-
-# Alias pour compatibilité
-int_ = int64
-uint = uint64
-
-# Ajouter des logs pour diagnostiquer l'utilisation par PyTorch
-logger.info(f"Types NumPy définis: bool_={bool_}, number={number}, object_={object_}")
-logger.info(f"Type de bool_: {type(bool_)}, Type de number: {type(number)}, Type de object_: {type(object_)}")
-
-# Types de données temporelles requis par pandas
-datetime64 = "datetime64"
-timedelta64 = "timedelta64"
-
-# Types de données supplémentaires requis par pandas
-float_ = dtype_base("float64")  # Alias pour float64
-str_ = "str"
-unicode_ = "unicode"
-
-# Types numériques supplémentaires
-integer = dtype_base("int64")  # Type entier générique
-floating = dtype_base("float64")  # Type flottant générique
-complexfloating = dtype_base("complex128")  # Type complexe
-signedinteger = dtype_base("int64")  # Type entier signé
-unsignedinteger = dtype_base("uint64")  # Type entier non signé
-
-# Types de données complexes
-complex64 = "complex64"
-complex128 = "complex128"
-complex_ = "complex128"
-
-# Types de données entiers supplémentaires
-int8 = "int8"
-int16 = "int16"
-uint8 = "uint8"
-uint16 = "uint16"
-
-# Types de données flottants supplémentaires
-float16 = "float16"
-
-# Classes utilitaires pour pandas
-class busdaycalendar:
-    """Mock pour numpy.busdaycalendar."""
+    # Sub-module: numpy._core
+    _core_mock = MagicMock(name='_core_submodule')
+    _core_mock.__path__ = ['/mock/path/numpy/_core']
     
-    def __init__(self, weekmask='1111100', holidays=None):
-        self.weekmask = weekmask
-        self.holidays = holidays or []
-
-# Fonctions utilitaires supplémentaires
-def busday_count(begindates, enddates, weekmask='1111100', holidays=None, busdaycal=None, out=None):
-    """Mock pour numpy.busday_count."""
-    return 0
-
-def is_busday(dates, weekmask='1111100', holidays=None, busdaycal=None, out=None):
-    """Mock pour numpy.is_busday."""
-    return True
-
-def busday_offset(dates, offsets, roll='raise', weekmask='1111100', holidays=None, busdaycal=None, out=None):
-    """Mock pour numpy.busday_offset."""
-    return dates
-
-# Sous-modules internes pour pandas
-class _core:
-    """Mock pour numpy._core."""
+    # Sub-sub-module: numpy._core._multiarray_umath
+    _multiarray_umath_mock = MagicMock(name='_multiarray_umath_submodule')
+    _multiarray_umath_mock.add = MagicMock(name='add_ufunc')
+    _multiarray_umath_mock.subtract = MagicMock(name='subtract_ufunc')
+    _multiarray_umath_mock.multiply = MagicMock(name='multiply_ufunc')
+    _multiarray_umath_mock.divide = MagicMock(name='divide_ufunc')
+    _multiarray_umath_mock.implement_array_function = None
+    _core_mock._multiarray_umath = _multiarray_umath_mock
     
-    class multiarray:
-        """Mock pour numpy._core.multiarray."""
-        pass
-    
-    class umath:
-        """Mock pour numpy._core.umath."""
-        pass
+    # Attacher _core au mock numpy principal
+    numpy_mock._core = _core_mock
 
-class core:
-    """Mock pour numpy.core."""
-    
-    class multiarray:
-        """Mock pour numpy.core.multiarray."""
-        pass
-    
-    class umath:
-        """Mock pour numpy.core.umath."""
-        pass
+    # Sub-module: numpy.core (souvent un alias ou une surcouche de _core)
+    core_mock = MagicMock(name='core_submodule')
+    core_mock.__path__ = ['/mock/path/numpy/core']
+    core_mock.multiarray = MagicMock(name='core_multiarray') # Alias/Compatibilité
+    core_mock.umath = MagicMock(name='core_umath')             # Alias/Compatibilité
+    core_mock._multiarray_umath = _multiarray_umath_mock      # Rendre accessible via core également
+    numpy_mock.core = core_mock
 
-# Log de chargement
-logger.info("Module numpy_mock chargé")
+    # Sub-module: numpy.linalg
+    linalg_mock = MagicMock(name='linalg_submodule')
+    linalg_mock.__path__ = ['/mock/path/numpy/linalg']
+    linalg_mock.LinAlgError = type('LinAlgError', (Exception,), {})
+    numpy_mock.linalg = linalg_mock
+    
+    # Sub-module: numpy.fft
+    fft_mock = MagicMock(name='fft_submodule')
+    fft_mock.__path__ = ['/mock/path/numpy/fft']
+    numpy_mock.fft = fft_mock
+
+    # Sub-module: numpy.random
+    random_mock = MagicMock(name='random_submodule')
+    random_mock.__path__ = ['/mock/path/numpy/random']
+    random_mock.rand = MagicMock(return_value=0.5)
+    numpy_mock.random = random_mock
+    
+    # Sub-module: numpy.rec (pour les recarrays)
+    rec_mock = MagicMock(name='rec_submodule')
+    rec_mock.__path__ = ['/mock/path/numpy/rec']
+    rec_mock.recarray = MockRecarray
+    numpy_mock.rec = rec_mock
+    
+    # Sub-module: numpy.typing
+    typing_mock = MagicMock(name='typing_submodule')
+    typing_mock.__path__ = ['/mock/path/numpy/typing']
+    typing_mock.NDArray = MagicMock()
+    numpy_mock.typing = typing_mock
+
+    # Sub-module: numpy.lib
+    lib_mock = MagicMock(name='lib_submodule')
+    lib_mock.__path__ = ['/mock/path/numpy/lib']
+    class NumpyVersion:
+        def __init__(self, version_string):
+            self.version = version_string
+        def __ge__(self, other): return True
+        def __lt__(self, other): return False
+    lib_mock.NumpyVersion = NumpyVersion
+    numpy_mock.lib = lib_mock
+
+    logger.info(f"Mock NumPy créé avec __version__='{numpy_mock.__version__}' et la structure de sous-modules.")
+    
+    return numpy_mock
+
+# Pourrait être utilisé pour un import direct, mais la création via `create_numpy_mock` est plus sûre.
+numpy_mock_instance = create_numpy_mock()

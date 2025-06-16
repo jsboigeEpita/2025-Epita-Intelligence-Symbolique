@@ -85,8 +85,11 @@ def decrypt_data(encrypted_data: bytes, key: bytes) -> Optional[bytes]:
     try:
         f = Fernet(key)
         return f.decrypt(encrypted_data)
-    except (InvalidToken, InvalidSignature, Exception) as e:
-        utils_logger.error(f"Erreur déchiffrement: {e}")
+    except (InvalidToken, InvalidSignature) as e: # Intercepter spécifiquement et relancer
+        utils_logger.error(f"Erreur déchiffrement (InvalidToken/Signature): {e}")
+        raise # Relancer l'exception capturée (InvalidToken ou InvalidSignature)
+    except Exception as e: # Intercepter les autres exceptions
+        utils_logger.error(f"Erreur déchiffrement (Autre): {e}")
         return None
 
 # Les fonctions load_extract_definitions et save_extract_definitions ont été déplacées
@@ -450,7 +453,7 @@ def verify_extract_definitions(definitions_list: list) -> str:
          if total_checks > 0: summary += "<br/>Tous les marqueurs semblent corrects."
          else: summary += "<br/>Aucun extrait n'a pu être vérifié."
 
-    utils_logger.info(f"\n{summary.replace('<br/>', '\n').replace('<li>', '- ').replace('</li>', '').replace('<ul>', '').replace('</ul>', '').replace('<strong>', '').replace('</strong>', '')}")
+    utils_logger.info("\n" + f"{summary.replace('<br/>', chr(10)).replace('<li>', '- ').replace('</li>', '').replace('<ul>', '').replace('</ul>', '').replace('<strong>', '').replace('</strong>', '')}")
     return summary
 
 

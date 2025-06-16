@@ -2,12 +2,7 @@
   "mcpServers": {
     "argumentation_analysis": {
       "command": "uv",
-      "args": [
-        "--directory",
-        "./mcp",
-        "run",
-        "main.py"
-      ]
+      "args": ["--directory", "./mcp", "run", "main.py"]
     }
   }
 }

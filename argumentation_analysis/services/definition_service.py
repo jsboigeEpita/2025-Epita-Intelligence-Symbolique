@@ -40,12 +40,18 @@ class DefinitionService:
     ):
         """
         Initialise le service de définitions.
-        
-        Args:
-            crypto_service: Service de chiffrement
-            config_file: Chemin vers le fichier de configuration principal (chaîne ou Path)
-            fallback_file: Chemin vers le fichier de secours (optionnel, chaîne ou Path)
-            default_definitions: Définitions par défaut (optionnel)
+
+        :param crypto_service: L'instance du service de chiffrement à utiliser.
+        :type crypto_service: CryptoService
+        :param config_file: Chemin vers le fichier de configuration principal
+                            (peut être chiffré ou JSON brut).
+        :type config_file: Union[str, Path]
+        :param fallback_file: Chemin optionnel vers un fichier de configuration JSON
+                              de secours, utilisé si le fichier principal échoue.
+        :type fallback_file: Optional[Union[str, Path]]
+        :param default_definitions: Liste optionnelle de dictionnaires de définitions
+                                    à utiliser si aucun fichier ne peut être chargé.
+        :type default_definitions: Optional[List[Dict[str, Any]]]
         """
         self.crypto_service = crypto_service
         self.config_file = config_file # Peut être une chaîne ou un Path
@@ -57,12 +63,18 @@ class DefinitionService:
         if fallback_file:
             self.logger.info(f"Fichier de secours configuré: {fallback_file}")
     
-    def load_definitions(self) -> ExtractDefinitions:
+    def load_definitions(self) -> Tuple[ExtractDefinitions, Optional[str]]:
         """
-        Charge les définitions d'extraits avec gestion d'erreurs robuste.
-        
-        Returns:
-            Objet ExtractDefinitions contenant les définitions chargées.
+        Charge les définitions d'extraits à partir du fichier de configuration.
+
+        Tente de charger depuis le fichier principal (`self.config_file`).
+        Si chiffré et `crypto_service` activé, déchiffre et décompresse.
+        Si le fichier principal échoue ou n'existe pas, tente de charger depuis
+        `self.fallback_file` (JSON brut). Si tout échoue, utilise
+        `self.default_definitions`.
+
+        :return: Un tuple contenant un objet `ExtractDefinitions` et un message d'erreur optionnel.
+        :rtype: Tuple[ExtractDefinitions, Optional[str]]
         """
         definitions_list = []
         error_message = None
@@ -81,7 +93,7 @@ class DefinitionService:
                     definitions_list = self.crypto_service.decrypt_and_decompress_json(encrypted_data)
                     
                     if definitions_list:
-                        self.logger.info(f"✅ Définitions chargées depuis le fichier chiffré {config_file_path.name}")
+                        self.logger.info(f"[OK] Définitions chargées depuis le fichier chiffré {config_file_path.name}")
                     else:
                         error_message = f"Échec du déchiffrement de {config_file_path.name}"
                         self.logger.error(error_message)
@@ -90,7 +102,7 @@ class DefinitionService:
                     with open(config_file_path, 'r', encoding='utf-8') as f:
                         definitions_list = json.load(f)
                     
-                    self.logger.info(f"✅ Définitions chargées depuis {config_file_path.name}")
+                    self.logger.info(f"[OK] Définitions chargées depuis {config_file_path.name}")
             except Exception as e:
                 error_message = f"Erreur lors du chargement de {config_file_path.name}: {str(e)}"
                 self.logger.error(error_message)
@@ -105,7 +117,7 @@ class DefinitionService:
                 with open(fallback_file_path, 'r', encoding='utf-8') as f:
                     definitions_list = json.load(f)
                 
-                self.logger.info(f"✅ Définitions chargées depuis le fichier de secours {fallback_file_path.name}")
+                self.logger.info(f"[OK] Définitions chargées depuis le fichier de secours {fallback_file_path.name}")
                 error_message = None # Erreur principale gérée, le secours a fonctionné
             except Exception as e:
                 # Conserver le message d'erreur original si existant, sinon utiliser celui du fallback
@@ -122,6 +134,8 @@ class DefinitionService:
             log_message = "Aucune définition trouvée ou erreur de chargement persistante, utilisation des définitions par défaut."
             if error_message: # Si une erreur précédente a été loggée
                 self.logger.warning(f"{log_message} (Erreur précédente: {error_message})")
+                # Mettre à jour le message d'erreur pour refléter l'utilisation des définitions par défaut
+                error_message = f"Utilisation des définitions par défaut. (Erreur précédente: {error_message})"
             else: # Si aucune définition n'a été trouvée sans erreur explicite
                  error_message = "Aucune définition trouvée, utilisation des définitions par défaut." # Pour info interne
                  self.logger.warning(log_message)
@@ -142,17 +156,23 @@ class DefinitionService:
         if error_message: # Log final de l'erreur si une s'est produite et n'a pas été résolue par un fallback
             self.logger.info(f"Processus de chargement des définitions terminé avec message: {error_message}")
             
-        return extract_definitions
+        return extract_definitions, error_message
     
     def save_definitions(self, definitions: ExtractDefinitions) -> Tuple[bool, Optional[str]]:
         """
-        Sauvegarde les définitions d'extraits avec gestion d'erreurs robuste.
-        
-        Args:
-            definitions: Définitions d'extraits à sauvegarder
-            
-        Returns:
-            Tuple contenant (success, error_message)
+        Sauvegarde les définitions d'extraits dans le fichier de configuration.
+
+        Convertit l'objet `ExtractDefinitions` en liste de dictionnaires.
+        Si le chiffrement est activé via `crypto_service`, chiffre et compresse
+        les données avant de les écrire dans `self.config_file`. Sinon, sauvegarde
+        en JSON brut. En cas d'échec, tente de sauvegarder dans `self.fallback_file`
+        (en JSON brut uniquement).
+
+        :param definitions: L'objet `ExtractDefinitions` à sauvegarder.
+        :type definitions: ExtractDefinitions
+        :return: Un tuple contenant un booléen indiquant le succès de l'opération
+                 et un message d'erreur optionnel en cas d'échec.
+        :rtype: Tuple[bool, Optional[str]]
         """
         success = False
         error_message = None
@@ -175,7 +195,7 @@ class DefinitionService:
                     with open(config_file_path, 'wb') as f:
                         f.write(encrypted_data)
                     
-                    self.logger.info(f"✅ Définitions sauvegardées dans le fichier chiffré {config_file_path.name}")
+                    self.logger.info(f"[OK] Définitions sauvegardées dans le fichier chiffré {config_file_path.name}")
                     success = True
                 else:
                     error_message = "Échec du chiffrement des définitions"
@@ -185,7 +205,7 @@ class DefinitionService:
                 with open(config_file_path, 'w', encoding='utf-8') as f:
                     json.dump(definitions_list, f, indent=2, ensure_ascii=False)
                 
-                self.logger.info(f"✅ Définitions sauvegardées dans {config_file_path.name}")
+                self.logger.info(f"[OK] Définitions sauvegardées dans {config_file_path.name}")
                 success = True
         except Exception as e:
             error_message = f"Erreur lors de la sauvegarde dans {config_file_path.name}: {str(e)}"
@@ -199,7 +219,7 @@ class DefinitionService:
                 with open(fallback_file_path, 'w', encoding='utf-8') as f:
                     json.dump(definitions_list, f, indent=2, ensure_ascii=False)
                 
-                self.logger.info(f"✅ Définitions sauvegardées dans le fichier de secours {fallback_file_path.name}")
+                self.logger.info(f"[OK] Définitions sauvegardées dans le fichier de secours {fallback_file_path.name}")
                 success = True
                 error_message = None # Effacer le message d'erreur précédent si le secours réussit
             except Exception as e:
@@ -216,14 +236,15 @@ class DefinitionService:
     
     def export_definitions_to_json(self, definitions: ExtractDefinitions, output_path: Union[str, Path]) -> Tuple[bool, str]:
         """
-        Exporte les définitions d'extraits vers un fichier JSON.
-        
-        Args:
-            definitions: Définitions d'extraits à exporter
-            output_path: Chemin vers le fichier de sortie (chaîne ou Path)
-            
-        Returns:
-            Tuple contenant (success, message)
+        Exporte les définitions d'extraits vers un fichier JSON non chiffré.
+
+        :param definitions: L'objet `ExtractDefinitions` à exporter.
+        :type definitions: ExtractDefinitions
+        :param output_path: Le chemin du fichier de sortie JSON (chaîne ou Path).
+        :type output_path: Union[str, Path]
+        :return: Un tuple contenant un booléen indiquant le succès de l'exportation
+                 et un message (succès ou erreur).
+        :rtype: Tuple[bool, str]
         """
         output_file_path = Path(output_path)
         try:
@@ -237,8 +258,8 @@ class DefinitionService:
             with open(output_file_path, 'w', encoding='utf-8') as f:
                 json.dump(definitions_list, f, indent=2, ensure_ascii=False)
             
-            self.logger.info(f"✅ Définitions exportées vers {output_file_path}")
-            return True, f"✅ Définitions exportées vers {output_file_path}"
+            self.logger.info(f"[OK] Définitions exportées vers {output_file_path}")
+            return True, f"[OK] Définitions exportées vers {output_file_path}"
         except Exception as e:
             error_message = f"❌ Erreur lors de l'exportation vers {output_file_path}: {str(e)}"
             self.logger.error(error_message)
@@ -246,13 +267,13 @@ class DefinitionService:
     
     def import_definitions_from_json(self, input_path: Union[str, Path]) -> Tuple[bool, Union[ExtractDefinitions, str]]:
         """
-        Importe les définitions d'extraits depuis un fichier JSON.
-        
-        Args:
-            input_path: Chemin vers le fichier d'entrée (chaîne ou Path)
-            
-        Returns:
-            Tuple contenant (success, definitions_or_error_message)
+        Importe les définitions d'extraits depuis un fichier JSON non chiffré.
+
+        :param input_path: Le chemin du fichier d'entrée JSON (chaîne ou Path).
+        :type input_path: Union[str, Path]
+        :return: Un tuple contenant un booléen indiquant le succès de l'importation
+                 et soit l'objet `ExtractDefinitions` importé, soit un message d'erreur (str).
+        :rtype: Tuple[bool, Union[ExtractDefinitions, str]]
         """
         input_file_path = Path(input_path)
         try:
@@ -269,7 +290,7 @@ class DefinitionService:
             # Convertir en modèle ExtractDefinitions
             extract_definitions = ExtractDefinitions.from_dict_list(definitions_list)
             
-            self.logger.info(f"✅ Définitions importées depuis {input_file_path}")
+            self.logger.info(f"[OK] Définitions importées depuis {input_file_path}")
             return True, extract_definitions
         except json.JSONDecodeError as e:
             error_message = f"❌ Erreur de format JSON dans {input_file_path}: {str(e)}"
@@ -282,13 +303,16 @@ class DefinitionService:
     
     def validate_definitions(self, definitions: ExtractDefinitions) -> Tuple[bool, List[str]]:
         """
-        Valide les définitions d'extraits.
-        
-        Args:
-            definitions: Définitions d'extraits à valider
-            
-        Returns:
-            Tuple contenant (is_valid, error_messages)
+        Valide la structure et les champs requis des définitions d'extraits.
+
+        Vérifie la présence des champs obligatoires pour chaque source et chaque extrait
+        au sein des sources (par exemple, `source_name`, `extract_name`, `start_marker`, `end_marker`).
+
+        :param definitions: L'objet `ExtractDefinitions` à valider.
+        :type definitions: ExtractDefinitions
+        :return: Un tuple contenant un booléen indiquant si les définitions sont valides
+                 et une liste des messages d'erreur trouvés.
+        :rtype: Tuple[bool, List[str]]
         """
         errors = []
         

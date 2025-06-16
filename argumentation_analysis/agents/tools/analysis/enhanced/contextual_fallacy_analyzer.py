@@ -45,9 +45,23 @@ def _lazy_imports():
         from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
         from sklearn.metrics.pairwise import cosine_similarity
         HAS_TRANSFORMERS = True
-    except ImportError:
-        HAS_TRANSFORMERS = False
-        logging.warning("Les bibliothèques transformers et/ou torch ne sont pas installées. "
+    except (ImportError, OSError) as e:
+        # Essayer d'utiliser le mock en cas d'erreur de chargement
+        try:
+            from .torch_mock import mock_torch
+            mock_torch()
+            import torch
+            import transformers
+            from sklearn.metrics.pairwise import cosine_similarity
+            # Mock des classes transformers
+            AutoTokenizer = transformers.AutoTokenizer
+            AutoModelForSequenceClassification = transformers.AutoModel
+            pipeline = transformers.pipeline
+            HAS_TRANSFORMERS = True
+            logging.info("Utilisation du mock PyTorch pour les tests")
+        except Exception:
+            HAS_TRANSFORMERS = False
+            logging.warning("Les bibliothèques transformers et/ou torch ne sont pas installées. "
                        "L'analyseur utilisera des méthodes alternatives.")
 
 # Configuration du logging
@@ -726,14 +740,14 @@ class EnhancedContextualFallacyAnalyzer(BaseAnalyzer):
         # Explications détaillées par type de sophisme et contexte
         explanations = {
             "Appel à l'autorité": {
-                "politique": f"Dans cet exemple, l'argument fait appel à une autorité qui n'est pas pertinente dans le domaine politique. Le fait que '{example}' constitue un sophisme car l'expertise citée n'est pas dans le domaine concerné.",
-                "scientifique": f"Dans un contexte scientifique, cet exemple constitue un sophisme car il s'appuie sur une autorité sans fournir de preuves empiriques. '{example}' devrait être soutenu par des données et des méthodes scientifiques rigoureuses.",
-                "commercial": f"Dans un contexte commercial, '{example}' est un sophisme car il utilise l'autorité pour persuader plutôt que de présenter les mérites réels du produit ou service."
+                "politique": f"Dans cet exemple, l'argument '{example}' constitue un sophisme de type '{fallacy_type}' car il fait appel à une autorité qui n'est pas pertinente dans le domaine politique. L'expertise citée n'est pas dans le domaine concerné.",
+                "scientifique": f"Dans un contexte scientifique, l'argument '{example}' est un sophisme de type '{fallacy_type}' car il s'appuie sur une autorité sans fournir de preuves empiriques. Il devrait être soutenu par des données et des méthodes scientifiques rigoureuses.",
+                "commercial": f"Dans un contexte commercial, l'argument '{example}' est un sophisme de type '{fallacy_type}' car il utilise l'autorité pour persuader plutôt que de présenter les mérites réels du produit ou service."
             },
             "Appel à la popularité": {
-                "politique": f"Cet exemple, '{example}', est un sophisme dans un contexte politique car il suggère qu'une position est correcte simplement parce qu'elle est populaire, ignorant les questions de fond.",
-                "scientifique": f"Dans un contexte scientifique, '{example}' constitue un sophisme car la vérité scientifique ne dépend pas de l'opinion populaire mais de preuves empiriques.",
-                "commercial": f"Dans un contexte commercial, '{example}' est un sophisme car la popularité d'un produit n'est pas nécessairement un indicateur de sa qualité ou de son adéquation aux besoins spécifiques."
+                "politique": f"Cet exemple, '{example}', est un sophisme de type '{fallacy_type}' dans un contexte politique car il suggère qu'une position est correcte simplement parce qu'elle est populaire, ignorant les questions de fond.",
+                "scientifique": f"Dans un contexte scientifique, '{example}' constitue un sophisme de type '{fallacy_type}' car la vérité scientifique ne dépend pas de l'opinion populaire mais de preuves empiriques.",
+                "commercial": f"Dans un contexte commercial, '{example}' est un sophisme de type '{fallacy_type}' car la popularité d'un produit n'est pas nécessairement un indicateur de sa qualité ou de son adéquation aux besoins spécifiques."
             }
         }
         
@@ -757,11 +771,11 @@ class EnhancedContextualFallacyAnalyzer(BaseAnalyzer):
         """
         # Suggestions de correction par type de sophisme
         correction_suggestions = {
-            "Appel à l'autorité": f"Au lieu de dire '{example}', il serait préférable de présenter des preuves concrètes ou des données pertinentes qui soutiennent directement l'argument, ou de citer une autorité dont l'expertise est directement liée au sujet.",
-            "Appel à la popularité": f"Au lieu de dire '{example}', il serait plus rigoureux de présenter les mérites intrinsèques de l'argument, indépendamment de sa popularité, ou d'expliquer pourquoi cette position est valide sur le fond.",
-            "Faux dilemme": f"Au lieu de présenter seulement deux options comme dans '{example}', il serait plus honnête d'explorer le spectre complet des possibilités et de reconnaître la complexité de la situation.",
-            "Ad hominem": f"Au lieu d'attaquer la personne comme dans '{example}', il serait plus constructif de se concentrer sur les arguments eux-mêmes et de les réfuter sur le fond.",
-            "Pente glissante": f"Au lieu de suggérer une cascade d'événements improbables comme dans '{example}', il serait plus rigoureux d'examiner chaque étape du raisonnement et d'évaluer sa probabilité réelle."
+            "Appel à l'autorité": f"Pour corriger le sophisme '{fallacy_type}' dans '{example}', il serait préférable de présenter des preuves concrètes ou des données pertinentes qui soutiennent directement l'argument, ou de citer une autorité dont l'expertise est directement liée au sujet.",
+            "Appel à la popularité": f"Pour corriger le sophisme '{fallacy_type}' dans '{example}', il serait plus rigoureux de présenter les mérites intrinsèques de l'argument, indépendamment de sa popularité, ou d'expliquer pourquoi cette position est valide sur le fond.",
+            "Faux dilemme": f"Pour corriger le sophisme '{fallacy_type}' en présentant seulement deux options comme dans '{example}', il serait plus honnête d'explorer le spectre complet des possibilités et de reconnaître la complexité de la situation.",
+            "Ad hominem": f"Pour corriger le sophisme '{fallacy_type}' en attaquant la personne comme dans '{example}', il serait plus constructif de se concentrer sur les arguments eux-mêmes et de les réfuter sur le fond.",
+            "Pente glissante": f"Pour corriger le sophisme '{fallacy_type}' en suggérant une cascade d'événements improbables comme dans '{example}', il serait plus rigoureux d'examiner chaque étape du raisonnement et d'évaluer sa probabilité réelle."
         }
         
         # Si une suggestion spécifique existe, la retourner
@@ -769,7 +783,7 @@ class EnhancedContextualFallacyAnalyzer(BaseAnalyzer):
             return correction_suggestions[fallacy_type]
         
         # Sinon, générer une suggestion générique
-        return f"Pour corriger ce sophisme, il faudrait reformuler l'argument en évitant le raisonnement fallacieux et en se concentrant sur des preuves objectives et des raisonnements logiques valides."
+        return f"Pour corriger le sophisme '{fallacy_type}' dans '{example}', il faudrait reformuler l'argument en évitant le raisonnement fallacieux et en se concentrant sur des preuves objectives et des raisonnements logiques valides."
 
 
 # Test de la classe si exécutée directement

@@ -9,6 +9,8 @@ from cryptography.hazmat.backends import default_backend
 import base64
 import json
 from argumentation_analysis.paths import DATA_DIR
+# Import pour la fonction de chargement JSON mutualisée
+from argumentation_analysis.utils.core_utils.file_utils import load_json_file
 
 config_logger = logging.getLogger("App.UI.Config")
 if not config_logger.handlers and not config_logger.propagate:
@@ -45,20 +47,32 @@ else:
 # --- URLs et Chemins ---
 # Utiliser l'URL du serveur Tika depuis le fichier .env ou utiliser l'URL par défaut
 # Assurez-vous que l'URL du serveur Tika se termine par '/tika'
-tika_url = os.getenv("TIKA_SERVER_ENDPOINT", "https://tika.open-webui.myia.io/tika")
-TIKA_SERVER_URL = tika_url if tika_url.endswith('/tika') else f"{tika_url.rstrip('/')}/tika"
+tika_url_from_env = os.getenv("TIKA_SERVER_ENDPOINT")
+if tika_url_from_env:
+    # Nettoyer les guillemets potentiels au début/fin et s'assurer que c'est une chaîne
+    tika_url = str(tika_url_from_env).strip('"')
+    config_logger.info(f"TIKA_SERVER_ENDPOINT depuis .env (nettoyé): '{tika_url}'")
+else:
+    tika_url = "https://tika.open-webui.myia.io/tika" # Valeur par défaut si non définie
+    config_logger.info(f"TIKA_SERVER_ENDPOINT non trouvé dans .env, utilisation de la valeur par défaut: '{tika_url}'")
+
+# S'assurer que l'URL se termine correctement par /tika
+if tika_url.endswith('/tika'):
+    TIKA_SERVER_URL = tika_url
+else:
+    TIKA_SERVER_URL = f"{tika_url.rstrip('/')}/tika"
 TIKA_SERVER_TIMEOUT = int(os.getenv("TIKA_SERVER_TIMEOUT", "30"))
 config_logger.info(f"URL du serveur Tika: {TIKA_SERVER_URL}")
 JINA_READER_PREFIX = "https://r.jina.ai/"
 
 # Chemins relatifs au projet
-_project_root = Path(__file__).parent.parent # Remonte de ui/ vers la racine
-CACHE_DIR = _project_root / "text_cache"
-CONFIG_DIR = _project_root / DATA_DIR # Fichier de config UI dans data/
-CONFIG_FILE_JSON = CONFIG_DIR / "extract_sources.json" # Chemin vers le fichier JSON non chiffré
-CONFIG_FILE_ENC = CONFIG_DIR / "extract_sources.json.gz.enc" # Chemin vers le futur fichier chiffré
-CONFIG_FILE = CONFIG_FILE_ENC  # Variable utilisée par app.py pour charger les définitions
-TEMP_DOWNLOAD_DIR = _project_root / "temp_downloads" # Pour cache brut Tika
+_project_root = Path(__file__).parent.parent.parent # Remonte de ui/ -> argumentation_analysis/ -> racine du projet
+CACHE_DIR = _project_root / "_temp" / "text_cache" # Modifié
+CONFIG_DIR = _project_root / "argumentation_analysis" / "data" # Maintenu ici (contient extract_sources.json.gz.enc)
+CONFIG_FILE_JSON = CONFIG_DIR / "extract_sources.json"
+CONFIG_FILE_ENC = CONFIG_DIR / "extract_sources.json.gz.enc"
+CONFIG_FILE = CONFIG_FILE_ENC
+TEMP_DOWNLOAD_DIR = _project_root / "_temp" / "temp_downloads" # Modifié
 
 # Extensions texte simple
 PLAINTEXT_EXTENSIONS = ['.txt', '.md', '.json', '.csv', '.xml', '.py', '.js', '.html', '.htm']
@@ -84,73 +98,23 @@ DEFAULT_EXTRACT_SOURCES = [
 
 # --- Chargement des Sources d'Extraction ---
 
-def load_extract_sources(config_path: Path) -> list:
-    """Charge les définitions des sources depuis un fichier JSON."""
-    if config_path.exists() and config_path.is_file():
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                sources = json.load(f)
-            config_logger.info(f"✅ Configuration chargée depuis {config_path.name}")
-            return sources
-        except json.JSONDecodeError as e:
-            config_logger.warning(f"⚠️ Erreur décodage JSON dans {config_path.name}: {e}. Utilisation config par défaut.")
-            return DEFAULT_EXTRACT_SOURCES
-        except Exception as e:
-            config_logger.error(f"❌ Erreur lecture fichier config {config_path.name}: {e}. Utilisation config par défaut.", exc_info=True)
-            return DEFAULT_EXTRACT_SOURCES
-    else:
-        config_logger.warning(f"⚠️ Fichier config {config_path.name} non trouvé. Utilisation config par défaut.")
-        return DEFAULT_EXTRACT_SOURCES
+# La fonction load_extract_sources est maintenant remplacée par l'utilisation directe de
+# project_core.utils.file_utils.load_json_file où c'est nécessaire.
+# La logique de chargement initiale des EXTRACT_SOURCES est adaptée ci-dessous.
 
-# Tentative de chargement des sources depuis le fichier chiffré
-EXTRACT_SOURCES = DEFAULT_EXTRACT_SOURCES
+EXTRACT_SOURCES = DEFAULT_EXTRACT_SOURCES # Initialisation par défaut
 
-# Si la clé de chiffrement est disponible, essayer de charger depuis le fichier chiffré
-if ENCRYPTION_KEY and CONFIG_FILE_ENC.exists():
-    try:
-        config_logger.info(f"Tentative de chargement depuis le fichier chiffré {CONFIG_FILE_ENC.name}...")
-        # Import local pour éviter l'import circulaire
-        from .file_operations import load_extract_definitions
-        # load_extract_definitions de file_operations n'a pas besoin d'app_config pour le chargement simple
-        loaded_sources = load_extract_definitions(CONFIG_FILE_ENC, ENCRYPTION_KEY)
-        if loaded_sources:
-            EXTRACT_SOURCES = loaded_sources
-            config_logger.info(f"✅ Définitions chargées depuis le fichier chiffré {CONFIG_FILE_ENC.name}.")
-        else:
-            config_logger.warning(f"⚠️ Échec du chargement depuis le fichier chiffré. Utilisation des définitions par défaut.")
-    except Exception as e:
-        config_logger.error(f"❌ Erreur lors du chargement du fichier chiffré: {e}", exc_info=True)
-elif CONFIG_FILE_JSON.exists() and ENCRYPTION_KEY:
-    # Migration: si le fichier JSON existe mais pas le fichier chiffré, créer le fichier chiffré
-    try:
-        from .file_operations import save_extract_definitions # MODIFIÉ
-        config_logger.info(f"Migration: création du fichier chiffré à partir de {CONFIG_FILE_JSON.name}...")
-        json_sources = load_extract_sources(CONFIG_FILE_JSON)
-        # save_extract_definitions de file_operations attend encryption_key et config_file
-        # et le paramètre 'config' (app_config) est optionnel si embed_full_text=False
-        success = save_extract_definitions(
-            extract_definitions=json_sources,
-            config_file=CONFIG_FILE_ENC,
-            encryption_key=ENCRYPTION_KEY,
-            embed_full_text=False # Pour la migration initiale, ne pas essayer de fetch
-        )
-        if success:
-            config_logger.info(f"✅ Fichier chiffré {CONFIG_FILE_ENC.name} créé avec succès à partir de {CONFIG_FILE_JSON.name}.")
-            EXTRACT_SOURCES = json_sources
-            # Suppression du fichier JSON après migration réussie
-            try:
-                CONFIG_FILE_JSON.unlink()
-                config_logger.info(f"✅ Fichier JSON {CONFIG_FILE_JSON.name} supprimé après migration.")
-            except Exception as e_unlink:
-                config_logger.warning(f"⚠️ Impossible de supprimer le fichier JSON après migration: {e_unlink}")
-        else:
-            config_logger.warning(f"⚠️ Échec de la migration vers le fichier chiffré. Utilisation des définitions par défaut.")
-    except Exception as e:
-        config_logger.error(f"❌ Erreur lors de la migration vers le fichier chiffré: {e}", exc_info=True)
+# La logique de chargement dynamique de EXTRACT_SOURCES sera gérée par les scripts appelants
+# pour éviter les importations circulaires lors de l'initialisation du module.
+# EXTRACT_SOURCES reste initialisé avec DEFAULT_EXTRACT_SOURCES.
+config_logger.info(f"Config UI initialisée. EXTRACT_SOURCES est sur DEFAULT_EXTRACT_SOURCES. Le chargement dynamique est délégué.")
 
 # --- État Global (pour ce module UI) ---
-# Note: Utiliser global ici est une simplification liée à la structure UI originale.
-# Une approche plus orientée objet pourrait encapsuler cela.
-current_extract_definitions = [] # Sera peuplé par load_extract_definitions
+# current_extract_definitions n'est plus pertinent ici si le chargement est externe.
+# Si d'autres parties de ui/ l'utilisaient, il faudrait revoir. Pour l'instant, on le commente/supprime.
+# current_extract_definitions = []
 
-config_logger.info(f"Config UI initialisée. {len(EXTRACT_SOURCES)} sources chargées.")
+config_logger.info(f"Module config.py initialisé. {len(EXTRACT_SOURCES)} sources par défaut disponibles dans EXTRACT_SOURCES.")
+
+PROJECT_ROOT = _project_root
+config_logger.info(f"PROJECT_ROOT exporté: {PROJECT_ROOT}")

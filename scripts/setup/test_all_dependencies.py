@@ -7,6 +7,7 @@ Script amélioré pour vérifier que toutes les dépendances sont correctement i
 Ce script teste toutes les dépendances nécessaires pour le projet, y compris numpy, pandas, jpype,
 cryptography, pytest et leurs plugins.
 """
+import project_core.core_from_scripts.auto_env
 
 import sys
 import os
@@ -15,6 +16,11 @@ import importlib
 import subprocess
 import platform
 from pathlib import Path
+
+# Ajout du répertoire racine du projet au chemin pour permettre l'import des modules
+project_root_path_setup = Path(__file__).resolve().parent.parent.parent
+if str(project_root_path_setup) not in sys.path:
+    sys.path.insert(0, str(project_root_path_setup))
 
 # Configuration du logging
 logging.basicConfig(
@@ -30,7 +36,7 @@ DEPENDENCIES = [
     {"name": "numpy", "min_version": "1.24.0"},
     {"name": "pandas", "min_version": "2.0.0"},
     {"name": "matplotlib", "min_version": "3.5.0"},
-    {"name": "jpype", "min_version": "1.4.0", "import_name": "jpype1"},
+    {"name": "jpype", "min_version": "1.4.0", "import_name": "jpype"},
     {"name": "cryptography", "min_version": "37.0.0"},
     {"name": "cffi", "min_version": "1.15.0"},
     

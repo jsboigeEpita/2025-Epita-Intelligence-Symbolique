@@ -1,3 +1,12 @@
+import sys
+import os
+from pathlib import Path
+
+# Ajoute la racine du projet au sys.path pour résoudre les problèmes d'import
+# causés par le `rootdir` de pytest qui interfère avec la résolution des modules.
+project_root = Path(__file__).parent.parent.resolve()
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 """
 Configuration pour les tests pytest.
 
@@ -6,402 +15,180 @@ Il configure les mocks nécessaires pour les tests et utilise les vraies bibliot
 lorsqu'elles sont disponibles. Pour Python 3.12 et supérieur, le mock JPype1 est
 automatiquement utilisé en raison de problèmes de compatibilité.
 """
+# ========================== ATTENTION - PROTECTION CRITIQUE ==========================
+# L'import suivant active le module 'auto_env', qui est ESSENTIEL pour la sécurité
+# et la stabilité de tous les tests et scripts. Il garantit que le code s'exécute
+# dans l'environnement Conda approprié (par défaut 'projet-is').
+#
+# NE JAMAIS DÉSACTIVER, COMMENTER OU SUPPRIMER CET IMPORT.
+# Le faire contourne les gardes-fous de l'environnement et peut entraîner :
+#   - Des erreurs de dépendances subtiles et difficiles à diagnostiquer.
+#   - Des comportements imprévisibles des tests.
+#   - L'utilisation de mocks à la place de composants réels (ex: JPype).
+#   - Des résultats de tests corrompus ou non fiables.
+#
+# Ce mécanisme lève une RuntimeError si l'environnement n'est pas correctement activé,
+# empêchant l'exécution des tests dans une configuration incorrecte.
+# Voir project_core/core_from_scripts/auto_env.py pour plus de détails.
+# =====================================================================================
+import project_core.core_from_scripts.auto_env
 
 import sys
 import os
 import pytest
 from unittest.mock import patch, MagicMock
 import importlib.util
+import logging
+import threading # Ajout de l'import pour l'inspection des threads
+# --- Configuration globale du Logging pour les tests ---
+# Le logger global pour conftest est déjà défini plus bas,
+# mais nous avons besoin de configurer basicConfig tôt.
+# Nous allons utiliser un logger temporaire ici ou le logger racine.
+_conftest_setup_logger = logging.getLogger("conftest.setup")
 
-# --- Mock Matplotlib et NetworkX au plus tôt ---
-try:
-    current_dir_for_mock = os.path.dirname(os.path.abspath(__file__))
-    mocks_dir_for_mock = os.path.join(current_dir_for_mock, 'mocks')
-    if mocks_dir_for_mock not in sys.path:
-        sys.path.insert(0, mocks_dir_for_mock) # Ajoute tests/mocks au path
-
-    # Matplotlib
-    from matplotlib_mock import pyplot as mock_pyplot_instance # Import direct car mocks_dir_for_mock est dans le path
-    from matplotlib_mock import cm as mock_cm_instance
-    from matplotlib_mock import MatplotlibMock as MockMatplotlibModule_class
-    
-    sys.modules['matplotlib.pyplot'] = mock_pyplot_instance
-    sys.modules['matplotlib.cm'] = mock_cm_instance
-    mock_mpl_module = MockMatplotlibModule_class()
-    mock_mpl_module.pyplot = mock_pyplot_instance
-    mock_mpl_module.cm = mock_cm_instance
-    sys.modules['matplotlib'] = mock_mpl_module
-    print("INFO: Matplotlib mocké globalement.")
-
-    # NetworkX
-    import tests.mocks.networkx_mock # Laisse networkx_mock.py s'enregistrer
-    # from networkx_mock import NetworkXMock as MockNetworkXModule_class # Import direct
-    # sys.modules['networkx'] = MockNetworkXModule_class()
-    print("INFO: NetworkX mocké globalement.")
-
-except ImportError as e:
-    print(f"ERREUR CRITIQUE lors du mocking global de matplotlib ou networkx: {e}")
-    # Fallback à des MagicMock génériques
-    if 'matplotlib' not in str(e).lower():
-        sys.modules['matplotlib.pyplot'] = MagicMock()
-        sys.modules['matplotlib.cm'] = MagicMock()
-        sys.modules['matplotlib'] = MagicMock()
-        sys.modules['matplotlib'].pyplot = sys.modules['matplotlib.pyplot']
-        sys.modules['matplotlib'].cm = sys.modules['matplotlib.cm']
-    if 'networkx' not in str(e).lower():
-        sys.modules['networkx'] = MagicMock()
-# --- Fin des Mocks Globaux ---
-
-# --- Mock NumPy Immédiat ---
-# Installation immédiate du mock NumPy pour éviter les problèmes d'import pandas
-# def _install_numpy_mock_immediately():
-#     """Installe le mock NumPy immédiatement pour éviter les conflits avec pandas."""
-#     if 'numpy' not in sys.modules:
-#         try:
-#             from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec, _core, core, bool_, number, object_, float64, float32, int64, int32, int_, uint, uint64, uint32
-#             sys.modules['numpy'] = type('numpy', (), {
-#                 'array': array, 'ndarray': ndarray, 'mean': mean, 'sum': sum, 'zeros': zeros, 'ones': ones,
-#                 'dot': dot, 'concatenate': concatenate, 'vstack': vstack, 'hstack': hstack,
-#                 'argmax': argmax, 'argmin': argmin, 'max': max, 'min': min, 'random': random, 'rec': rec,
-#                 '_core': _core, 'core': core, '__version__': '1.24.3',
-#                 # Types de données pour compatibilité PyTorch
-#                 'bool_': bool_, 'number': number, 'object_': object_,
-#                 'float64': float64, 'float32': float32, 'int64': int64, 'int32': int32, 'int_': int_,
-#                 'uint': uint, 'uint64': uint64, 'uint32': uint32,
-#             })
-#             # Installation explicite des sous-modules dans sys.modules
-#             sys.modules['numpy._core'] = _core
-#             sys.modules['numpy.core'] = core
-#             sys.modules['numpy._core.multiarray'] = _core.multiarray
-#             sys.modules['numpy.core.multiarray'] = core.multiarray
-#             print("INFO: Mock NumPy installé immédiatement dans conftest.py")
-#         except ImportError as e:
-#             print(f"ERREUR lors de l'installation immédiate du mock NumPy: {e}")
-
-# Installation immédiate si Python 3.12+ ou si numpy n'est pas disponible
-# if (sys.version_info.major == 3 and sys.version_info.minor >= 12):
-#     _install_numpy_mock_immediately()
-
-# --- Mock Pandas Immédiat ---
-# Installation immédiate du mock Pandas pour éviter les problèmes d'import
-# def _install_pandas_mock_immediately():
-#     """Installe le mock Pandas immédiatement pour éviter les conflits avec numpy."""
-#     if 'pandas' not in sys.modules:
-#         try:
-#             from pandas_mock import DataFrame, read_csv, read_json
-#             sys.modules['pandas'] = type('pandas', (), {
-#                 'DataFrame': DataFrame, 'read_csv': read_csv, 'read_json': read_json, 'Series': list,
-#                 'NA': None, 'NaT': None, 'isna': lambda x: x is None, 'notna': lambda x: x is not None,
-#                 '__version__': '1.5.3',
-#             })
-#             # Installation des sous-modules pandas critiques
-#             sys.modules['pandas.core'] = type('pandas.core', (), {})
-#             sys.modules['pandas.core.api'] = type('pandas.core.api', (), {})
-#             sys.modules['pandas._libs'] = type('pandas._libs', (), {})
-#             sys.modules['pandas._libs.pandas_datetime'] = type('pandas._libs.pandas_datetime', (), {})
-#             print("INFO: Mock Pandas installé immédiatement dans conftest.py")
-#         except ImportError as e:
-#             print(f"ERREUR lors de l'installation immédiate du mock Pandas: {e}")
-
-# Installation immédiate si Python 3.12+ ou si pandas n'est pas disponible
-# if (sys.version_info.major == 3 and sys.version_info.minor >= 12):
-#     _install_pandas_mock_immediately()
-
-# --- Mock JPype ---
-# mocks_dir_for_mock (tests/mocks) est déjà dans sys.path depuis le bloc ci-dessus.
-    # L'import suivant permet à tests/mocks/jpype_mock.py de s'auto-enregistrer.
-    import tests.mocks.jpype_mock
-    # L'ancien code ci-dessous est conservé pour référence mais commenté.
+if not logging.getLogger().handlers: # Si le root logger n'a pas de handlers, basicConfig n'a probablement pas été appelé efficacement.
+    logging.basicConfig(
+        level=logging.INFO, # Ou un autre niveau pertinent pour les tests globaux
+        format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
+        datefmt='%H:%M:%S'
+    )
+    _conftest_setup_logger.info("Configuration globale du logging appliquée.")
+else:
+    _conftest_setup_logger.info("Configuration globale du logging déjà présente ou appliquée par un autre module.")
+# Le patching global de JPype est maintenant géré exclusivement par `jpype_setup.py`
+# et ses hooks `pytest_sessionstart`/`pytest_sessionfinish`, qui sont importés plus bas.
+# Cela centralise la logique, élimine les conflits de chargement potentiels et
+# garantit que le patching est appliqué de manière cohérente au bon moment.
+# # --- Gestion des imports conditionnels NumPy et Pandas ---
+# _conftest_setup_logger.info("Début de la gestion des imports conditionnels pour NumPy et Pandas.")
 # try:
-#     from jpype_mock import ( # Import direct car tests/mocks est dans sys.path
-#         isJVMStarted, startJVM, getJVMPath, getJVMVersion, getDefaultJVMPath,
-#         JClass, JException, JObject, JVMNotFoundException, shutdownJVM, JString, JArray
-#     )
+#     import numpy
+#     import pandas
+#     _conftest_setup_logger.info("NumPy et Pandas réels importés avec succès.")
+# except ImportError:
+#     _conftest_setup_logger.warning("Échec de l'import de NumPy et/ou Pandas. Tentative d'utilisation des mocks.")
+    
+#     # Mock pour NumPy
+#     try:
+#         # Tenter d'importer le contenu spécifique du mock si disponible
+#         from tests.mocks.numpy_mock import array as numpy_array_mock # Importer un élément spécifique pour vérifier
+#         # Si l'import ci-dessus fonctionne, on peut supposer que le module mock est complet
+#         # et sera utilisé par les imports suivants dans le code testé.
+#         # Cependant, pour forcer l'utilisation du mock complet, on le met dans sys.modules.
+#         import tests.mocks.numpy_mock as numpy_mock_content
+#         sys.modules['numpy'] = numpy_mock_content
+#         _conftest_setup_logger.info("Mock pour NumPy (tests.mocks.numpy_mock) activé via sys.modules.")
+#     except ImportError:
+#         _conftest_setup_logger.error("Mock spécifique tests.mocks.numpy_mock non trouvé. Utilisation de MagicMock pour NumPy.")
+#         sys.modules['numpy'] = MagicMock()
+#     except Exception as e_numpy_mock:
+#         _conftest_setup_logger.error(f"Erreur inattendue lors du chargement du mock NumPy: {e_numpy_mock}. Utilisation de MagicMock.")
+#         sys.modules['numpy'] = MagicMock()
 
-#     mock_jpype_imports_module = MagicMock(name="jpype.imports_mock")
-#     sys.modules['jpype.imports'] = mock_jpype_imports_module
+#     # Mock pour Pandas
+#     try:
+#         # Tenter d'importer le contenu spécifique du mock
+#         from tests.mocks.pandas_mock import DataFrame as pandas_dataframe_mock # Importer un élément spécifique
+#         import tests.mocks.pandas_mock as pandas_mock_content
+#         sys.modules['pandas'] = pandas_mock_content
+#         _conftest_setup_logger.info("Mock pour Pandas (tests.mocks.pandas_mock) activé via sys.modules.")
+#     except ImportError:
+#         _conftest_setup_logger.error("Mock spécifique tests.mocks.pandas_mock non trouvé. Utilisation de MagicMock pour Pandas.")
+#         sys.modules['pandas'] = MagicMock()
+#     except Exception as e_pandas_mock:
+#         _conftest_setup_logger.error(f"Erreur inattendue lors du chargement du mock Pandas: {e_pandas_mock}. Utilisation de MagicMock.")
+#         sys.modules['pandas'] = MagicMock()
+# _conftest_setup_logger.info("Fin de la gestion des imports conditionnels pour NumPy et Pandas.")
+# # --- Fin Gestion des imports conditionnels ---
+# --- Fin Configuration globale du Logging ---
 
-#     jpype_module_mock_obj = MagicMock(name="jpype_module_mock")
-#     jpype_module_mock_obj.__path__ = []
-#     jpype_module_mock_obj.isJVMStarted = isJVMStarted
-#     jpype_module_mock_obj.startJVM = startJVM
-#     # Assurez-vous que toutes les fonctions nécessaires sont assignées
-#     # Par exemple, shutdownJVM, JString, JArray manquaient dans la version précédente du diff
-#     if 'shutdownJVM' in locals(): jpype_module_mock_obj.shutdownJVM = shutdownJVM
-#     if 'JString' in locals(): jpype_module_mock_obj.JString = JString
-#     if 'JArray' in locals(): jpype_module_mock_obj.JArray = JArray
+def pytest_addoption(parser):
+    """Ajoute des options de ligne de commande personnalisées à pytest."""
+    parser.addoption(
+        "--backend-url", action="store", default="http://localhost:5003",
+        help="URL du backend à tester"
+    )
+    parser.addoption(
+        "--frontend-url", action="store", default="http://localhost:3000",
+        help="URL du frontend à tester (si applicable)"
+    )
 
-#     jpype_module_mock_obj.getJVMPath = getJVMPath
-#     jpype_module_mock_obj.getJVMVersion = getJVMVersion
-#     jpype_module_mock_obj.getDefaultJVMPath = getDefaultJVMPath
-#     jpype_module_mock_obj.JClass = JClass
-#     jpype_module_mock_obj.JException = JException
-#     jpype_module_mock_obj.JObject = JObject
-#     jpype_module_mock_obj.JVMNotFoundException = JVMNotFoundException
-#     jpype_module_mock_obj.__version__ = '1.4.1.mock' # ou la version de jpype_mock
-#     jpype_module_mock_obj.imports = mock_jpype_imports_module
+@pytest.fixture(scope="session")
+def backend_url(request):
+    """Fixture pour récupérer l'URL du backend depuis les options pytest."""
+    return request.config.getoption("--backend-url")
 
+@pytest.fixture(scope="session")
+def frontend_url(request):
+    """Fixture pour récupérer l'URL du frontend depuis les options pytest."""
+    return request.config.getoption("--frontend-url")
+# --- Gestion du Path pour les Mocks (déplacé ici AVANT les imports des mocks) ---
+current_dir_for_mock = os.path.dirname(os.path.abspath(__file__))
+mocks_dir_for_mock = os.path.join(current_dir_for_mock, 'mocks')
+# if mocks_dir_for_mock not in sys.path:
+#     sys.path.insert(0, mocks_dir_for_mock)
+#     _conftest_setup_logger.info(f"Ajout de {mocks_dir_for_mock} à sys.path pour l'accès aux mocks locaux.")
 
-#     sys.modules['jpype'] = jpype_module_mock_obj
-#     sys.modules['jpype1'] = jpype_module_mock_obj # Pour couvrir les deux noms d'importation
-#     sys.modules['_jpype'] = MagicMock(name="_jpype_mock") # Mock du module C interne si nécessaire
-#     print("INFO: JPype (et jpype.imports) mocké globalement via MagicMock.")
-# except ImportError as e_jpype:
-#     print(f"ERREUR CRITIQUE lors du mocking global de JPype: {e_jpype}")
-#     # Fallback si l'import initial échoue, bien que ce ne devrait pas être le cas si jpype_mock.py est correct
-#     # et que getJVMVersion y est défini.
-#     # Ce fallback est probablement redondant maintenant.
-#     fallback_jpype = MagicMock(name="jpype_fallback_mock")
-#     class JVMState:
-#         def __init__(self): self.started = False
-#     jvm_state = JVMState()
-#     def mock_isJVMStarted(): return jvm_state.started
-#     def mock_startJVM(*args, **kwargs): jvm_state.started = True
-#     def mock_shutdownJVM(): jvm_state.started = False
-#     class MockJClass:
-#         def __init__(self, name): self.__name__ = name; self.class_name = name
-#         def __call__(self, *args, **kwargs): return MagicMock()
-#     def mock_JClass(name): return MockJClass(name)
-#     class MockJException(Exception):
-#         def __init__(self, message="Mock Java Exception"): super().__init__(message)
-#     fallback_jpype.isJVMStarted = mock_isJVMStarted
-#     fallback_jpype.startJVM = mock_startJVM
-#     fallback_jpype.shutdownJVM = mock_shutdownJVM
-#     fallback_jpype.JClass = mock_JClass
-#     fallback_jpype.JException = MockJException
-#     # Ajoutez d'autres attributs nécessaires au fallback_jpype ici
-#     sys.modules['jpype'] = fallback_jpype
-#     sys.modules['jpype1'] = fallback_jpype
-    # Créer un mock JPype plus robuste avec les méthodes nécessaires
-    fallback_jpype = MagicMock(name="jpype_fallback_mock")
-    
-    # Variables globales pour simuler l'état de la JVM
-    class JVMState:
-        def __init__(self):
-            self.started = False
-    
-    jvm_state = JVMState()
-    
-    def mock_isJVMStarted():
-        return jvm_state.started
-    
-    def mock_startJVM(*args, **kwargs):
-        jvm_state.started = True
-    
-    def mock_shutdownJVM():
-        jvm_state.started = False
-    
-    class MockJClass:
-        def __init__(self, name):
-            self.__name__ = name
-            self.class_name = name
-        
-        def __call__(self, *args, **kwargs):
-            """Permet d'instancier la classe Java mockée."""
-            return MagicMock()
-    
-    def mock_JClass(name):
-        return MockJClass(name)
-    
-    class MockJException(Exception):
-        def __init__(self, message="Mock Java Exception"):
-            super().__init__(message)
-            self.message = message
-        
-        def getClass(self):
-            class MockClass:
-                def getName(self):
-                    return "org.mockexception.MockException"
-            return MockClass()
-        
-        def getMessage(self):
-            return self.message
-    
-    # Configurer le mock fallback
-    fallback_jpype.isJVMStarted = mock_isJVMStarted
-    fallback_jpype.startJVM = mock_startJVM
-    fallback_jpype.shutdownJVM = mock_shutdownJVM
-    fallback_jpype.JClass = mock_JClass
-    fallback_jpype.JException = MockJException
-    fallback_jpype.getDefaultJVMPath = lambda: "C:\\Program Files\\Java\\jdk-11\\bin\\server\\jvm.dll"
-    
-    # Ajouter des attributs pour la compatibilité avec les tests
-    def get_jvm_started():
-        return jvm_state.started
-    
-    def set_jvm_started(value):
-        jvm_state.started = value
-    
-    fallback_jpype._jvm_started = property(get_jvm_started, set_jvm_started)
-    
-    # Permettre aussi l'accès direct comme attribut
-    class JPypeMockWrapper:
-        def __getattr__(self, name):
-            if name == '_jvm_started':
-                return jvm_state.started
-            return getattr(fallback_jpype, name)
-        
-        def __setattr__(self, name, value):
-            if name == '_jvm_started':
-                jvm_state.started = value
-            else:
-                setattr(fallback_jpype, name, value)
-    
-    jpype_wrapper = JPypeMockWrapper()
-    # Copier tous les attributs du fallback_jpype vers le wrapper
-    for attr_name in dir(fallback_jpype):
-        if not attr_name.startswith('_'):
-            setattr(jpype_wrapper, attr_name, getattr(fallback_jpype, attr_name))
-    
-    sys.modules['jpype'] = jpype_wrapper
-    sys.modules['jpype.imports'] = MagicMock(name="jpype.imports_fallback_mock")
-    sys.modules['_jpype'] = MagicMock(name="_jpype_fallback_mock")
-# --- Fin Mock JPype ---
+# L'initialisation des mocks jpype et numpy est maintenant gérée par le bootstrap
+# via l'option `addopts = -p tests.mocks.bootstrap` dans pytest.ini.
+# Les imports de jpype_setup et numpy_setup ne sont plus nécessaires ici.
 
-# --- Mock ExtractDefinitions ---
-try:
-    # mocks_dir_for_mock (tests/mocks) est déjà dans sys.path
-    from extract_definitions_mock import setup_extract_definitions_mock
-    setup_extract_definitions_mock()
-    print("INFO: ExtractDefinitions mocké globalement.")
-except ImportError as e_extract:
-    print(f"ERREUR lors du mocking d'ExtractDefinitions: {e_extract}")
-except Exception as e_extract_setup:
-    print(f"ERREUR lors de la configuration du mock ExtractDefinitions: {e_extract_setup}")
-# --- Fin Mock ExtractDefinitions ---
+from .fixtures.integration_fixtures import (
+    integration_jvm, dung_classes, dl_syntax_parser, fol_syntax_parser,
+    pl_syntax_parser, cl_syntax_parser, tweety_logics_classes,
+    tweety_string_utils, tweety_math_utils, tweety_probability,
+    tweety_conditional_probability, tweety_parser_exception,
+    tweety_io_exception, tweety_qbf_classes, belief_revision_classes,
+    dialogue_classes
+)
 
+# --- Configuration du Logger (déplacé avant la sauvegarde JPype pour l'utiliser) ---
+logger = logging.getLogger(__name__)
+
+# _REAL_JPYPE_MODULE, _JPYPE_MODULE_MOCK_OBJ_GLOBAL, _MOCK_DOT_JPYPE_MODULE_GLOBAL sont maintenant importés de jpype_setup.py
+
+# Nécessaire pour la fixture integration_jvm
+# La variable _integration_jvm_started_session_scope et les imports de jvm_setup
+# ne sont plus nécessaires ici, gérés dans integration_fixtures.py
+
+# Les sections de code commentées pour le mocking global de Matplotlib, NetworkX,
+# l'installation immédiate de Pandas, et ExtractDefinitions ont été supprimées.
+# Ces mocks, s'ils sont nécessaires, devraient être gérés par des fixtures spécifiques
+# ou une configuration au niveau du module mock lui-même, similaire à NumPy/Pandas.
+
+# Ajout du répertoire racine du projet à sys.path pour assurer la découverte des modules du projet.
+# Ceci est particulièrement utile si les tests sont exécutés d'une manière où le répertoire racine
+# n'est pas automatiquement inclus dans PYTHONPATH (par exemple, exécution directe de pytest
+# depuis un sous-répertoire ou avec certaines configurations d'IDE).
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
+    _conftest_setup_logger.info(f"Ajout du répertoire racine du projet ({parent_dir}) à sys.path.")
+# Décommenté car l'environnement de test actuel en a besoin pour trouver les modules locaux.
 
-def is_module_available(module_name):
-    if module_name in sys.modules:
-        # Vérifier si c'est un de nos mocks principaux ou un MagicMock générique
-        if isinstance(sys.modules[module_name], MagicMock) or \
-           (module_name == 'jpype' and sys.modules[module_name] is jpype_module_mock_obj):
-            return True
-    try:
-        spec = importlib.util.find_spec(module_name)
-        return spec is not None
-    except (ImportError, ValueError):
-        return False
+# Les fixtures et hooks sont importés depuis leurs modules dédiés.
+# Les commentaires résiduels concernant les déplacements de code et les refactorisations
+# antérieures ont été supprimés pour améliorer la lisibilité.
 
-def is_python_version_compatible_with_jpype():
-    major = sys.version_info.major
-    minor = sys.version_info.minor
-    if (major == 3 and minor >= 12) or major > 3:
-        return False
-    return True
-
-# def setup_numpy():
-#     if (sys.version_info.major == 3 and sys.version_info.minor >= 12) or not is_module_available('numpy'):
-#         if not is_module_available('numpy'): print("NumPy non disponible, utilisation du mock.")
-#         else: print("Python 3.12+ détecté, utilisation du mock NumPy.")
-#         # mocks_dir_for_mock (tests/mocks) est déjà dans sys.path
-#         from numpy_mock import array, ndarray, mean, sum, zeros, ones, dot, concatenate, vstack, hstack, argmax, argmin, max, min, random, rec, _core, core, bool_, number, object_, float64, float32, int64, int32, int_, uint, uint64, uint32
-#         sys.modules['numpy'] = type('numpy', (), {
-#             'array': array, 'ndarray': ndarray, 'mean': mean, 'sum': sum, 'zeros': zeros, 'ones': ones,
-#             'dot': dot, 'concatenate': concatenate, 'vstack': vstack, 'hstack': hstack,
-#             'argmax': argmax, 'argmin': argmin, 'max': max, 'min': min, 'random': random, 'rec': rec,
-#             '_core': _core, 'core': core, '__version__': '1.24.3',
-#             # Types de données pour compatibilité PyTorch
-#             'bool_': bool_, 'number': number, 'object_': object_,
-#             'float64': float64, 'float32': float32, 'int64': int64, 'int32': int32, 'int_': int_,
-#             'uint': uint, 'uint64': uint64, 'uint32': uint32,
-#         })
-#         # Installation explicite des sous-modules dans sys.modules
-#         sys.modules['numpy._core'] = _core
-#         sys.modules['numpy.core'] = core
-#         sys.modules['numpy._core.multiarray'] = _core.multiarray
-#         sys.modules['numpy.core.multiarray'] = core.multiarray
-#         return sys.modules['numpy']
-#     else:
-#         import numpy
-#         print(f"Utilisation de la vraie bibliothèque NumPy (version {getattr(numpy, '__version__', 'inconnue')})")
-#         return numpy
-
-# def setup_pandas():
-#     if (sys.version_info.major == 3 and sys.version_info.minor >= 12) or not is_module_available('pandas'):
-#         if not is_module_available('pandas'): print("Pandas non disponible, utilisation du mock.")
-#         else: print("Python 3.12+ détecté, utilisation du mock Pandas.")
-#         # mocks_dir_for_mock (tests/mocks) est déjà dans sys.path
-#         from pandas_mock import DataFrame, read_csv, read_json
-#         sys.modules['pandas'] = type('pandas', (), {
-#             'DataFrame': DataFrame, 'read_csv': read_csv, 'read_json': read_json, 'Series': list,
-#             'NA': None, 'NaT': None, 'isna': lambda x: x is None, 'notna': lambda x: x is not None,
-#             '__version__': '1.5.3',
-#         })
-#         return sys.modules['pandas']
-#     else:
-#         import pandas
-#         print(f"Utilisation de la vraie bibliothèque Pandas (version {getattr(pandas, '__version__', 'inconnue')})")
-#         return pandas
-
-# @pytest.fixture(scope="session", autouse=True)
-# def setup_numpy_for_tests_fixture():
-#     if 'PYTEST_CURRENT_TEST' in os.environ:
-#         # numpy_module = setup_numpy() # Commenté
-#         import numpy # Forcer l'utilisation du vrai numpy
-#         sys.modules['numpy'] = numpy
-#         if sys.modules.get('numpy') is not numpy:
-#              sys.modules['numpy'] = numpy
-#         print(f"INFO: conftest.py force l'utilisation du vrai NumPy (version {getattr(numpy, '__version__', 'inconnue')})")
-#         yield
-#     else:
-#         yield
-
-# @pytest.fixture(scope="session", autouse=True)
-# def setup_pandas_for_tests_fixture():
-#     if 'PYTEST_CURRENT_TEST' in os.environ:
-#         # pandas_module = setup_pandas() # Commenté
-#         import pandas # Forcer l'utilisation du vrai pandas
-#         sys.modules['pandas'] = pandas
-#         if sys.modules.get('pandas') is not pandas:
-#             sys.modules['pandas'] = pandas
-#         print(f"INFO: conftest.py force l'utilisation du vrai Pandas (version {getattr(pandas, '__version__', 'inconnue')})")
-#         yield
-#     else:
-#         yield
-# Ajouter le répertoire racine au chemin Python
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-# Configuration asyncio provenant de l'ancien conftest.py racine
-def pytest_configure(config):
-    """
-    Configure pytest avec les paramètres nécessaires pour pytest-asyncio.
-    
-    Cette fonction est appelée automatiquement par pytest lors de son initialisation.
-    """
-    # Enregistrer le marqueur asyncio pour éviter les avertissements
-    config.addinivalue_line(
-        "markers",
-        "asyncio: marque les tests asynchrones qui nécessitent une boucle d'événements"
-    )
-
+# --- Fixtures déplacées depuis tests/integration/webapp/conftest.py ---
 
 @pytest.fixture
-def event_loop_policy():
-    """
-    Fixture pour configurer la politique de boucle d'événements asyncio.
-    
-    Retourne None pour utiliser la politique par défaut.
-    """
-    return None
+def webapp_config():
+    """Provides a basic webapp configuration dictionary."""
+    return {
+        "backend": {
+            "start_port": 8008,
+            "fallback_ports": [8009, 8010]
+        },
+        "frontend": {
+            "port": 3008
+        },
+        "playwright": {
+            "enabled": True
+        }
+    }
 
-
-# Configuration pour auto-marquer les fonctions de test asynchrones
-def pytest_collection_modifyitems(items):
-    """
-    Marque automatiquement les fonctions de test asynchrones avec @pytest.mark.asyncio.
-    
-    Cette fonction est appelée automatiquement par pytest après la collecte des tests.
-    """
-    for item in items:
-        if item.name.startswith('test_') and 'async' in item.name:
-            # Si le nom de la fonction commence par 'test_' et contient 'async'
-            item.add_marker(pytest.mark.asyncio)
-        
-        # Marquer automatiquement les méthodes de test asynchrones
-        if hasattr(item.function, '__code__'):
-            if item.function.__code__.co_flags & 0x80:  # 0x80 est le flag pour les fonctions async
-                item.add_marker(pytest.mark.asyncio)
+@pytest.fixture
+def test_config_path(tmp_path):
+    """Provides a temporary path for a config file."""
+    return tmp_path / "test_config.yml"

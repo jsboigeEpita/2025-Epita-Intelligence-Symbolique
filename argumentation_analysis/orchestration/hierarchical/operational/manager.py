@@ -10,9 +10,11 @@ import asyncio
 from typing import Dict, List, Any, Optional, Union, Callable
 from datetime import datetime
 import uuid
+import semantic_kernel as sk # Ajout de l'import
 
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
 from argumentation_analysis.orchestration.hierarchical.operational.agent_registry import OperationalAgentRegistry
+from argumentation_analysis.core.bootstrap import ProjectContext # Ajout de l'import
 # Import différé pour éviter l'importation circulaire
 from argumentation_analysis.paths import RESULTS_DIR
 from typing import TYPE_CHECKING
@@ -32,21 +34,35 @@ class OperationalManager:
     le niveau tactique et les agents opérationnels.
     """
     
-    def __init__(self, operational_state: Optional[OperationalState] = None,
-                tactical_operational_interface: Optional['TacticalOperationalInterface'] = None,
-                middleware: Optional[MessageMiddleware] = None):
+    def __init__(self,
+                 operational_state: Optional[OperationalState] = None,
+                 tactical_operational_interface: Optional['TacticalOperationalInterface'] = None,
+                 middleware: Optional[MessageMiddleware] = None,
+                 kernel: Optional[sk.Kernel] = None,  # Ajout du kernel
+                 llm_service_id: Optional[str] = None, # Ajout de llm_service_id
+                 project_context: Optional[ProjectContext] = None):
         """
         Initialise un nouveau gestionnaire opérationnel.
         
         Args:
             operational_state: État opérationnel à utiliser. Si None, un nouvel état est créé.
             tactical_operational_interface: Interface tactique-opérationnelle à utiliser.
-                Si None, une nouvelle interface est créée.
-            middleware: Le middleware de communication à utiliser. Si None, un nouveau middleware est créé.
+            middleware: Le middleware de communication à utiliser.
+            kernel: Le kernel Semantic Kernel à utiliser pour les agents.
+            llm_service_id: L'ID du service LLM à utiliser.
+            project_context: Le contexte global du projet.
         """
         self.operational_state = operational_state if operational_state else OperationalState()
         self.tactical_operational_interface = tactical_operational_interface
-        self.agent_registry = OperationalAgentRegistry(self.operational_state)
+        self.kernel = kernel # Stocker le kernel
+        self.llm_service_id = llm_service_id # Stocker llm_service_id
+        self.project_context = project_context # Stocker le contexte du projet
+        self.agent_registry = OperationalAgentRegistry(
+            operational_state=self.operational_state,
+            kernel=self.kernel,
+            llm_service_id=self.llm_service_id,
+            project_context=self.project_context
+        )
         self.logger = logging.getLogger("OperationalManager")
         self.task_queue = asyncio.Queue()
         self.result_queue = asyncio.Queue()
@@ -117,36 +133,40 @@ class OperationalManager:
                 # Ajouter la tâche à la file d'attente
                 asyncio.create_task(self._process_task_async(task_data, message.sender))
         
-        # S'abonner aux tâches opérationnelles
-        self.middleware.get_channel(ChannelType.HIERARCHICAL).subscribe(
-            subscriber_id="operational_manager",
-            callback=handle_task,
-            filter_criteria={
-                "recipient": "operational_manager",
-                "type": MessageType.COMMAND,
-                "sender_level": AgentLevel.TACTICAL
-            }
-        )
-        
-        # S'abonner aux demandes de statut
-        def handle_status_request(message: Message) -> None:
-            request_type = message.content.get("request_type")
+        hierarchical_channel = self.middleware.get_channel(ChannelType.HIERARCHICAL)
+
+        if hierarchical_channel:
+            # S'abonner aux tâches opérationnelles
+            hierarchical_channel.subscribe(
+                subscriber_id="operational_manager",
+                callback=handle_task,
+                filter_criteria={
+                    "recipient": "operational_manager",
+                    "type": MessageType.COMMAND,
+                    "sender_level": AgentLevel.TACTICAL
+                }
+            )
             
-            if request_type == "operational_status":
-                # Envoyer le statut opérationnel
-                asyncio.create_task(self._send_operational_status(message.sender))
-        
-        self.middleware.get_channel(ChannelType.HIERARCHICAL).subscribe(
-            subscriber_id="operational_manager_status",
-            callback=handle_status_request,
-            filter_criteria={
-                "recipient": "operational_manager",
-                "type": MessageType.REQUEST,
-                "content.request_type": "operational_status"
-            }
-        )
-        
-        self.logger.info("Abonnement aux tâches et messages effectué")
+            # S'abonner aux demandes de statut
+            def handle_status_request(message: Message) -> None:
+                request_type = message.content.get("request_type")
+                
+                if request_type == "operational_status":
+                    # Envoyer le statut opérationnel
+                    asyncio.create_task(self._send_operational_status(message.sender))
+            
+            hierarchical_channel.subscribe(
+                subscriber_id="operational_manager_status",
+                callback=handle_status_request,
+                filter_criteria={
+                    "recipient": "operational_manager",
+                    "type": MessageType.REQUEST,
+                    "content.request_type": "operational_status"
+                }
+            )
+            self.logger.info("Abonnement aux tâches et messages effectué sur le canal HIERARCHICAL.")
+        else:
+            self.logger.error("Impossible de s'abonner aux tâches et messages: Canal HIERARCHICAL non trouvé dans le middleware.")
     
     async def _process_task_async(self, task: Dict[str, Any], sender_id: str) -> None:
         """

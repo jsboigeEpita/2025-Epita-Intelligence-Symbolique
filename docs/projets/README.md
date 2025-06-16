@@ -1,3 +1,4 @@
+<!-- TODO: Vérifier manuellement que toutes les ancres dans les liens de ce document pointent vers des sections existantes dans les fichiers cibles. -->
 # Projets d'Intelligence Symbolique
 
 Ce dossier contient l'ensemble des sujets de projets proposés aux étudiants dans le cadre du cours d'intelligence symbolique, ainsi que les ressources associées pour leur réalisation. Ces projets permettent d'appliquer concrètement les méthodes et outils d'intelligence symbolique, avec un focus particulier sur l'argumentation et son intégration par l'IA générative agentique orchestrée.
@@ -22,7 +23,10 @@ Ce dossier contient l'ensemble des sujets de projets proposés aux étudiants da
 
 Le dossier "projets" est le point central pour les étudiants souhaitant s'engager dans la réalisation d'un projet d'intelligence symbolique. Il offre une variété de sujets couvrant différents aspects de l'IA symbolique, de l'argumentation computationnelle et de l'intégration avec l'IA générative.
 
-Ces projets sont conçus pour permettre aux étudiants de contribuer à l'amélioration d'un système d'orchestration agentique d'analyse rhétorique, une plateforme avancée qui utilise plusieurs agents IA spécialisés collaborant pour analyser des textes argumentatifs sous différents angles.
+Ces projets sont conçus pour permettre aux étudiants de contribuer à l'amélioration d'un système d'orchestration agentique d'analyse rhétorique, une plateforme avancée qui utilise plusieurs agents IA spécialisés collaborant pour analyser des textes argumentatifs sous différents angles. Pour bien appréhender l'écosystème dans lequel ces projets s'inscrivent, il est fortement recommandé de consulter les documentations de référence du système :
+- La **[Documentation d'Architecture](../architecture/README.md)** : pour comprendre la conception globale, les flux de communication (notamment via le `MessageMiddleware`) et l'architecture hiérarchique des agents.
+- La **[Documentation des Composants](../composants/README.md)** : pour découvrir les modules réutilisables existants (comme le `Moteur de Raisonnement`, le `Pont Tweety` ou l'`API Web`) et comment ils interagissent.
+- Le **[Portail des Guides](../guides/README.md)** : qui centralise les guides pratiques pour les développeurs, les utilisateurs, et des exemples d'utilisation des différentes logiques.
 
 Chaque projet est présenté avec une structure standardisée incluant le contexte, les objectifs, les technologies clés, le niveau de difficulté, l'estimation d'effort, les interdépendances avec d'autres projets, les références et les livrables attendus.
 
@@ -41,8 +45,10 @@ Organisation des fichiers et sous-dossiers du dossier projets :
 - **`message_annonce_etudiants.md`** : Message d'annonce des projets aux étudiants.
 - **`sujets_projets_detailles.md`** : Présentation détaillée des sujets de projets.
 - **`sujets/`** : Dossier contenant les descriptions détaillées de chaque sujet de projet.
+  - **`README.md`** <!-- TODO: Confirmer si un README.md général pour `sujets/` doit être listé ici. Il est présent dans la structure fournie. -->
   - **`aide/`** : Ressources pratiques spécialisées pour faciliter la réalisation des projets.
-    - **`interface-web/`** : Exemples et guides pour le développement d'interfaces web.
+    - **`README.md`** <!-- TODO: Le fichier `docs/projets/sujets/aide/README.md` est présent dans la structure mais n'était pas explicitement listé ici. Ajouté pour cohérence. -->
+    - **`interface-web/`** : Exemples et guides pour le développement d'interfaces web (voir [./sujets/aide/interface-web/README.md](./sujets/aide/interface-web/README.md)).
     - **`DEMARRAGE_RAPIDE.md`** : Guide de démarrage rapide pour les projets.
     - **`FAQ_DEVELOPPEMENT.md`** : Réponses aux questions fréquentes sur le développement.
     - **`GUIDE_INTEGRATION_PROJETS.md`** : Guide pour l'intégration des projets.
@@ -59,14 +65,14 @@ Les projets sont organisés en trois catégories thématiques principales :
    - Maintenance de la vérité et révision de croyances
 
 2. **[Développement système et infrastructure](./developpement_systeme.md)** - Projets axés sur l'architecture, l'orchestration et les composants techniques, incluant :
-   - Architecture et orchestration
+   - Architecture et orchestration (voir [Documentation d'Architecture](../architecture/README.md))
    - Gestion des sources et données
-   - Moteur agentique et agents spécialistes
+   - Moteur agentique et agents spécialistes (voir [Documentation des Composants](../composants/README.md))
    - Indexation sémantique
    - Automatisation et intégration MCP
 
 3. **[Expérience utilisateur et applications](./experience_utilisateur.md)** - Projets orientés vers les interfaces, visualisations et cas d'usage concrets, incluant :
-   - Interfaces utilisateurs
+   - Interfaces utilisateurs (s'appuyant souvent sur l'[API Web](../composants/api_web.md) <!-- TODO: Confirmer l'existence et le nom exact du fichier cible 'api_web.md' pour ce lien. -->)
    - Visualisations
    - Applications spécifiques
    - Lutte contre la désinformation
@@ -91,11 +97,12 @@ Les projets sont documentés à travers plusieurs fichiers complémentaires :
    - [sujets_projets_detailles.md](./sujets_projets_detailles.md) - Présentation détaillée des sujets
 
 3. **Dossier de ressources d'aide** :
-   - [sujets/aide/README.md](./sujets/aide/README.md) - Point d'entrée pour les ressources d'aide
+   - [sujets/aide/README.md](./sujets/aide/README.md) - Point d'entrée pour les ressources d'aide spécifiques aux projets (ce document pointe également vers le [Portail des Guides](../guides/README.md) pour une aide plus générale).
    - [sujets/aide/DEMARRAGE_RAPIDE.md](./sujets/aide/DEMARRAGE_RAPIDE.md) - Guide de démarrage rapide
    - [sujets/aide/FAQ_DEVELOPPEMENT.md](./sujets/aide/FAQ_DEVELOPPEMENT.md) - FAQ pour le développement
    - [sujets/aide/GUIDE_INTEGRATION_PROJETS.md](./sujets/aide/GUIDE_INTEGRATION_PROJETS.md) - Guide d'intégration
-   - [sujets/aide/interface-web/](./sujets/aide/interface-web/) - Ressources pour les interfaces web
+   - [sujets/aide/PRESENTATION_KICKOFF.md](./sujets/aide/PRESENTATION_KICKOFF.md) <!-- TODO: Le fichier `PRESENTATION_KICKOFF.md` est dans la structure mais n'était pas listé ici. Ajouté pour cohérence. -->
+   - [sujets/aide/interface-web/README.md](./sujets/aide/interface-web/README.md) <!-- TODO: Ce lien pointait vers un dossier. Vérifier s'il doit pointer vers un fichier spécifique (ex: README.md) à l'intérieur de ce dossier. Le lien a été modifié pour pointer vers README.md en supposant son existence. --> - Ressources pour les interfaces web
 
 Les fichiers sont interconnectés par des liens relatifs pour faciliter la navigation entre les différents aspects des projets.
 
@@ -253,24 +260,31 @@ TweetyProject est une bibliothèque Java pour l'intelligence artificielle symbol
 
 ## Ressources Disponibles
 
-Pour faciliter la réalisation des projets, plusieurs ressources sont mises à disposition des étudiants :
+Pour faciliter la réalisation des projets, plusieurs ressources sont mises à disposition des étudiants. Il est crucial de commencer par consulter les documentations générales du système pour acquérir une compréhension globale :
 
-1. **Documentation technique** :
-   - [Exemples TweetyProject](./exemples_tweety.md) - Guide d'utilisation de la bibliothèque TweetyProject
-   - [Exemples TweetyProject par projet](./exemples_tweety_par_projet.md) - Exemples spécifiques pour chaque projet
+1.  **Documentation Générale du Système (Fortement Recommandé)**:
+    *   **[Portail des Guides](../guides/README.md)** : Point d'entrée principal vers tous les guides pratiques (développement, utilisation, API web, conventions, exemples de logiques, etc.). **À consulter en priorité.**
+    *   **[Documentation d'Architecture](../architecture/README.md)** : Décrit l'architecture globale du système, l'orchestration des agents, la communication inter-agents, l'architecture hiérarchique, et d'autres concepts fondamentaux. Essentiel pour les projets touchant au cœur du système.
+    *   **[Documentation des Composants](../composants/README.md)** : Présente les différents modules et composants réutilisables du système (Moteur de Raisonnement, Pont Tweety, API Web, etc.), leurs fonctionnalités et comment les intégrer.
 
-2. **Ressources d'aide pratique** :
-   - [Guide de démarrage rapide](./sujets/aide/DEMARRAGE_RAPIDE.md) - Instructions pour commencer rapidement
-   - [FAQ Développement](./sujets/aide/FAQ_DEVELOPPEMENT.md) - Réponses aux questions fréquentes
-   - [Guide d'intégration](./sujets/aide/GUIDE_INTEGRATION_PROJETS.md) - Comment intégrer votre projet
+2.  **Documentation Spécifique aux Projets**:
+    *   [Exemples TweetyProject](./exemples_tweety.md) - Guide d'utilisation de la bibliothèque TweetyProject pour l'argumentation.
+    *   [Exemples TweetyProject par projet](./exemples_tweety_par_projet.md) - Exemples spécifiques pour chaque projet.
 
-3. **Exemples de code** :
-   - [Exemples d'interfaces web](./sujets/aide/interface-web/exemples-react/) - Composants React réutilisables
-   - Code prêt à l'emploi pour démarrer rapidement
-   - Solutions aux problèmes courants
+3.  **Ressources d'Aide Pratique (au sein de `docs/projets/`)**:
+    *   [Point d'entrée de l'aide aux projets](./sujets/aide/README.md) - Centralise les ressources d'aide spécifiques aux projets et oriente vers les guides généraux.
+    *   [Guide de démarrage rapide](./sujets/aide/DEMARRAGE_RAPIDE.md) - Instructions pour commencer rapidement.
+    *   [FAQ Développement](./sujets/aide/FAQ_DEVELOPPEMENT.md) - Réponses aux questions fréquentes.
+    *   [Guide d'intégration des projets](./sujets/aide/GUIDE_INTEGRATION_PROJETS.md) - Comment intégrer votre projet.
+    *   [Présentation Kickoff des Projets](./sujets/aide/PRESENTATION_KICKOFF.md) <!-- TODO: Le fichier `PRESENTATION_KICKOFF.md` est dans la structure mais n'était pas listé ici. Ajouté pour cohérence. -->
 
-4. **Modèles d'affaires et cas d'usage** :
-   - [Modèles d'affaires pour l'IA](./modeles_affaires_ia.md) - Applications commerciales potentielles
+4.  **Exemples de Code**:
+    *   [Exemples d'interfaces web (React)](./sujets/aide/interface-web/exemples-react/) <!-- TODO: Ce lien pointe vers un dossier. Vérifier s'il doit pointer vers un fichier spécifique (ex: README.md) à l'intérieur de ce dossier 'exemples-react'. --> - Composants React réutilisables.
+    *   Code prêt à l'emploi pour démarrer rapidement (disponible dans les dépôts spécifiques ou les sections d'aide).
+    *   Solutions aux problèmes courants (voir FAQ et guides).
+
+5.  **Contexte et Applications**:
+    *   [Modèles d'affaires pour l'IA](./modeles_affaires_ia.md) - Applications commerciales potentielles et cas d'usage.
 
 ## Modalités de Réalisation
 
@@ -298,7 +312,7 @@ Le projet peut être réalisé individuellement ou en groupe de 2 à 4 étudiant
 
 Pour chaque projet, vous devrez fournir :
 1. Le code source de votre implémentation
-2. Une documentation détaillée expliquant votre approche
+2. Une documentation détaillée expliquant votre approche (en s'appuyant sur et en référençant la documentation existante)
 3. Des tests unitaires et d'intégration
 4. Un rapport final résumant votre travail
 
@@ -308,8 +322,8 @@ L'évaluation des présentations avec slides et démo sera collégiale. La note 
 
 L'évaluation portera sur 4 critères :
 1. **Forme/communication** : Qualité de la présentation, clarté des explications, structure des slides et de la démo
-2. **Théorie** : Exploration et explication de l'état de l'art et des techniques utilisées
-3. **Technique** : Réalisations, performances, tests et qualité du code
+2. **Théorie** : Exploration et explication de l'état de l'art et des techniques utilisées, pertinence par rapport aux documentations de référence.
+3. **Technique** : Réalisations, performances, tests et qualité du code, intégration avec l'écosystème existant.
 4. **Gestion de projet/collaboration** : Gestion intelligente de GitHub et du travail collaboratif durant la durée du projet
 
 ## Choix d'un Sujet
@@ -318,7 +332,8 @@ Lors du choix de votre sujet, tenez compte de :
 - La taille de votre groupe
 - Vos compétences et intérêts
 - Le temps disponible pour réaliser le projet
-- Les interdépendances avec d'autres projets
+- Les interdépendances avec d'autres projets (voir [matrice_interdependances.md](./matrice_interdependances.md))
+- **La nécessité de bien comprendre l'écosystème via les documentations d'architecture, des composants et les guides.**
 
 Consultez les pages spécifiques à chaque catégorie pour une description détaillée des projets disponibles :
 
@@ -328,11 +343,13 @@ Consultez les pages spécifiques à chaque catégorie pour une description déta
 
 ## Ressources associées
 
+Ces documents au sein de `docs/projets/` fournissent un contexte supplémentaire pour les projets :
+
 - [Matrice d'interdépendances](./matrice_interdependances.md) - Relations entre les différents projets
 - [Message d'annonce aux étudiants](./message_annonce_etudiants.md) - Présentation initiale des projets
-- [Modèles d'affaires pour l'IA](./modeles_affaires_ia.md) - Applications commerciales potentielles
+- [Modèles d'affaires pour l'IA](./modeles_affaires_ia.md) - Applications commerciales potentielles (aussi listé dans "Ressources Disponibles")
 - [Sujets de projets détaillés](./sujets_projets_detailles.md) - Présentation alternative des projets
 
 ---
 
-*Dernière mise à jour : 27/05/2025*
+*Dernière mise à jour : 04/06/2025*

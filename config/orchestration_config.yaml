@@ -1,0 +1,230 @@
+# Configuration unifiée du système d'orchestration Enhanced PM
+# Version: 2.0.0 - Refactorisation consolidée
+
+system:
+  project_name: "Enhanced PM Orchestration"
+  version: "2.0.0"
+  description: "Système d'analyse rhétorique unifié et consolidé"
+  
+# Profils de configuration prédéfinis
+profiles:
+  development:
+    logging_level: "DEBUG"
+    use_mocks: true
+    timeout_seconds: 30
+    enable_jvm: false
+    output_format: "console"
+    auto_cleanup: true
+    
+  production:
+    logging_level: "INFO"  
+    use_mocks: false
+    timeout_seconds: 120
+    enable_jvm: true
+    output_format: "markdown"
+    auto_cleanup: true
+    
+  demonstration:
+    logging_level: "INFO"
+    use_mocks: false
+    generate_detailed_reports: true
+    enable_jvm: true
+    output_format: "html"
+    auto_cleanup: false
+    
+  testing:
+    logging_level: "WARNING"
+    use_mocks: true
+    timeout_seconds: 10
+    enable_jvm: false
+    output_format: "json"
+    auto_cleanup: true
+
+# Configuration des agents
+agents:
+  project_manager:
+    class: "EnhancedProjectManagerAgent"
+    max_iterations: 50
+    enable_advanced_features: true
+    
+  informal_analysis:
+    class: "InformalAnalysisAgent"  
+    fallacy_detection: true
+    advanced_analyzers: true
+    
+  modal_logic:
+    class: "ModalLogicAgent"
+    logic_type: "modal"
+    enable_inference: true
+    
+  synthesis:
+    class: "SynthesisAgent"
+    enable_advanced_features: false  # Phase 1
+    unified_reporting: true
+
+# Configuration des sources de données
+sources:
+  simple:
+    type: "demo"
+    require_passphrase: false
+    anonymize_logs: false
+    
+  complex:
+    type: "encrypted_corpus"
+    require_passphrase: true
+    anonymize_logs: true
+    default_files:
+      - "tests/extract_sources_backup.enc"
+      - "tests/extract_sources_with_full_text.enc"
+    
+  custom:
+    type: "user_defined"
+    require_passphrase: true
+    anonymize_logs: true
+    supported_formats: [".enc", ".txt", ".md"]
+
+# Configuration des rapports
+reporting:
+  default_format: "markdown"
+  output_directory: "./reports"
+  templates_directory: "./config/templates"
+  
+  formats:
+    console:
+      max_lines: 20
+      color_support: true
+      highlight_errors: true
+      show_summary_only: true
+      
+    markdown:
+      include_metadata: true
+      conversation_format: true
+      technical_details: true
+      include_toc: false
+      state_evolution: true
+      appendices: true
+      
+    json:
+      pretty_print: true
+      include_metadata: true
+      structured_output: true
+      
+    html:
+      responsive: true
+      include_charts: false
+      css_embedded: true
+      
+  templates:
+    default:
+      sections: ["metadata", "summary", "informal_analysis", "formal_analysis", "recommendations"]
+      
+    summary:
+      sections: ["summary", "informal_analysis"]
+      max_fallacies_shown: 3
+      
+    detailed:
+      sections: ["metadata", "summary", "informal_analysis", "formal_analysis", "conversation", "recommendations"]
+      include_raw_data: true
+      
+    web:
+      sections: ["metadata", "summary", "informal_analysis", "formal_analysis"]
+      interactive_elements: true
+
+# Configuration de l'analyse
+analysis:
+  default_modes: ["fallacies", "coherence", "semantic"]
+  
+  modes:
+    fallacies:
+      enabled: true
+      use_enhanced_tools: true
+      confidence_threshold: 0.7
+      
+    coherence:
+      enabled: true
+      check_logical_consistency: true
+      
+    semantic:
+      enabled: true
+      extract_arguments: true
+      
+    formal:
+      enabled: true
+      require_jvm: true
+      logic_types: ["propositional", "first_order", "modal"]
+      default_logic_type: "propositional"
+      
+    unified:
+      enabled: true
+      require_synthesis_agent: true
+      combine_all_analyses: true
+
+# Configuration JVM et dépendances
+dependencies:
+  jvm:
+    enable_by_default: true
+    libs_directory: "./libs"
+    required_for: ["formal_analysis", "modal_logic"]
+    
+  llm_service:
+    enable_by_default: true
+    fallback_to_mocks: true
+    required_for: ["synthesis_agent", "unified_analysis"]
+    
+  encryption:
+    passphrase_env_var: "TEXT_CONFIG_PASSPHRASE"
+    key_derivation_method: "PBKDF2"
+    fallback_interactive: true
+
+# Configuration de performance
+performance:
+  max_processing_time_ms: 300000  # 5 minutes
+  max_text_length: 50000  # 50k caractères
+  max_fallacies_per_analysis: 50
+  cache_analysis_results: false
+  
+# Configuration de sécurité
+security:
+  anonymize_sensitive_logs: true
+  auto_cleanup_temp_files: true
+  secure_passphrase_handling: true
+  log_level_for_sensitive: "WARNING"
+  
+# Migration et compatibilité
+migration:
+  legacy_script_support: true
+  deprecated_warnings: true
+  legacy_scripts_directory: "./scripts/legacy"
+  
+  script_mappings:
+    "rhetorical_analysis.py": "scripts/main/analyze_text.py --source-type simple --modes fallacies,coherence,semantic"
+    "advanced_rhetorical_analysis.py": "scripts/main/analyze_text.py --advanced --modes fallacies,coherence,semantic"
+    "complete_rhetorical_analysis_demo.py": "scripts/main/analyze_text.py --interactive --modes unified"
+    "run_rhetorical_analysis_demo.py": "scripts/main/analyze_text.py --source-type complex --modes fallacies,formal,unified"
+    "run_full_python_analysis_workflow.py": "scripts/main/analyze_text.py --enc-file FILE --modes fallacies,coherence,semantic"
+
+# Validation et tests
+validation:
+  run_system_checks: true
+  validate_dependencies: true
+  test_source_access: true
+  verify_output_formats: true
+  
+  required_components:
+    - "UnifiedSourceSelector"
+    - "UnifiedReportGenerator" 
+    - "AnalysisConfig"
+    - "UnifiedTextAnalyzer"
+    
+  test_cases:
+    - name: "simple_source_analysis"
+      command: "scripts/main/analyze_text.py --source-type simple --format console"
+      expected_output: "console_report"
+      
+    - name: "interactive_selection"
+      command: "scripts/main/analyze_text.py --interactive"
+      requires_user_input: true
+      
+    - name: "advanced_analysis"
+      command: "scripts/main/analyze_text.py --source-type simple --advanced --modes fallacies,coherence,semantic,unified"
+      expected_formats: ["markdown", "json"]

@@ -140,7 +140,7 @@ def main():
     
     # Afficher le résultat global
     if dirs_ok and files_ok and imports_ok:
-        logger.info("✅ La structure du dossier agents est correcte.")
+        logger.info("[OK] La structure du dossier agents est correcte.")
     else:
         logger.error("❌ La structure du dossier agents présente des problèmes.")
         

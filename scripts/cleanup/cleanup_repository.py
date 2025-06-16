@@ -7,6 +7,7 @@ qui ne devraient pas être versionnés, tout en préservant les fichiers de conf
 existants.
 """
 
+import project_core.core_from_scripts.auto_env
 import os
 import shutil
 import subprocess
@@ -55,8 +56,8 @@ def main():
     current_dir = os.getcwd()
     print(f"Répertoire de travail actuel: {current_dir}")
     
-    # Chemin de base du projet (répertoire courant)
-    base_path = Path(current_dir)
+    # Chemin de base du projet (racine du projet)
+    base_path = Path(__file__).resolve().parent.parent.parent
     
     print("\n=== Nettoyage des fichiers du suivi Git ===")
     

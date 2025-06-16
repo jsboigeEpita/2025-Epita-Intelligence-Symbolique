@@ -146,6 +146,25 @@ L'Intelligence Symbolique combine les approches symboliques traditionnelles de l
 - Bibliothèques de visualisation
 - Outils de test et de débogage
 
+### Exemples Concrets et Guides Pratiques
+
+Pour vous aider à démarrer et à comprendre comment interagir avec les différents composants du projet, voici quelques ressources clés :
+
+*   **Scripts de démonstration :**
+    *   Pour une illustration simple des interactions de base avec le système, consultez le script [`demo_tweety_interaction_simple.py`](../../../../examples/scripts_demonstration/demo_tweety_interaction_simple.py) dans le dossier [`examples/scripts_demonstration/`](../../../../examples/scripts_demonstration/).
+*   **Notebooks Jupyter :**
+    *   Un tutoriel interactif sur l'utilisation de l'API logique est disponible sous forme de notebook Jupyter : [`api_logic_tutorial.ipynb`](../../../../examples/notebooks/api_logic_tutorial.ipynb).
+*   **Exemples d'intégration API :**
+    *   Un exemple concret d'intégration avec l'API pour les agents logiques se trouve ici : [`api_integration_example.py`](../../../../examples/logic_agents/api_integration_example.py).
+*   **Script de test de l'API :**
+    *   Pour voir comment l'API peut être testée et utilisée, référez-vous au script [`test_api.py`](../../../../libs/web_api/test_api.py). Cela peut vous donner des idées pour vos propres tests et interactions.
+*   **Guides Généraux Importants :**
+    *   Le document principal pour démarrer avec les projets étudiants : [`README_PROJETS_ETUDIANTS.md`](../../../README_PROJETS_ETUDIANTS.md).
+    *   Un guide d'utilisation général du système : [`guide_utilisation.md`](../../../guides/guide_utilisation.md).
+    *   Pour ceux qui travaillent sur l'interface web, le guide de démarrage rapide est essentiel : [`DEMARRAGE_RAPIDE.md`](./interface-web/DEMARRAGE_RAPIDE.md).
+
+N'hésitez pas à explorer ces ressources pour accélérer votre compréhension et votre développement.
+
 ## 5. Planning et jalons
 
 ### Semaine 1 : Mise en place et familiarisation

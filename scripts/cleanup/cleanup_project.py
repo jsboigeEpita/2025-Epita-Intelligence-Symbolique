@@ -8,6 +8,7 @@ Ce script effectue les opérations suivantes :
 3. Crée le répertoire `data` s'il n'existe pas
 4. Met à jour le fichier `.gitignore` pour ignorer les fichiers sensibles et temporaires
 5. Supprime les fichiers de rapports obsolètes
+import project_core.core_from_scripts.auto_env
 6. Vérifie que les fichiers sensibles ne sont pas suivis par Git
 """
 
@@ -21,8 +22,8 @@ from pathlib import Path
 from datetime import datetime, timedelta
 
 # Configuration
-PROJECT_ROOT = Path(__file__).parent
-ARGUMENTIATION_ANALYSIS_DIR = PROJECT_ROOT / "argumentiation_analysis"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent # Racine du projet
+ARGUMENTIATION_ANALYSIS_DIR = PROJECT_ROOT / "argumentation_analysis" # Chemin corrigé
 DATA_DIR = ARGUMENTIATION_ANALYSIS_DIR / "data"
 LOG_RETENTION_DAYS = 30  # Nombre de jours à conserver les logs
 

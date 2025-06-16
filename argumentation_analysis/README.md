@@ -1,197 +1,109 @@
-# 🚀 Analyse Rhétorique Collaborative par Agents IA (v_py) 🧠
+# Moteur d'Analyse d'Argumentation
 
-Ce projet implémente une analyse rhétorique multi-agents en utilisant Python et le framework Semantic Kernel. Plusieurs agents IA spécialisés collaborent pour analyser un texte fourni par l'utilisateur via une interface web simple intégrée dans Jupyter.
+*Dernière mise à jour : 15/06/2025*
 
-**Objectif Principal :** Analyser un texte sous différents angles (informel via identification d'arguments/sophismes et formel simple via logique propositionnelle avec Tweety) en observant la collaboration des agents via la modification d'un état partagé, avec une orchestration basée sur la désignation explicite de l'agent suivant.
+Ce document fournit une description technique du système d'analyse d'argumentation. Il est destiné aux développeurs souhaitant comprendre, utiliser et étendre le pipeline d'analyse.
 
-## Navigation Rapide
+## 1. Architecture Générale
 
-* [Structure du Projet](#structure-du-projet)
-* [Prérequis](#prérequis)
-* [Installation](#installation)
-* [Exécution](#exécution)
-* [Guide de Contribution pour Étudiants](#guide-de-contribution-pour-étudiants)
-* [Approche Multi-Instance](#approche-multi-instance)
-* [Pistes d'Amélioration Futures](#pistes-damélioration-futures)
+Le système est conçu autour d'un pipeline d'orchestration modulaire, accessible via `argumentation_analysis.pipelines.unified_pipeline`. Ce dernier agit comme un point d'entrée qui sélectionne et exécute des stratégies d'analyse via le `MainOrchestrator`. Ce moteur coordonne une flotte d'agents d'IA spécialisés. Chaque agent a un rôle précis et collabore en partageant un état commun (`RhetoricalAnalysisState`) via un `Kernel` Semantic Kernel.
 
-## Structure du Projet
+```mermaid
+graph TD
+    subgraph "Point d'Entrée"
+        CLI["Ligne de Commande<br>(run_orchestration.py)"]
+    end
 
-Le projet est organisé en modules Python pour une meilleure maintenabilité :
+    subgraph "Pipeline d'Orchestration"
+        EntryPoint["unified_pipeline.py<br>(Point d'Entrée)"]
+        Orchestrator["MainOrchestrator<br>(Moteur d'orchestration)"]
+        SharedState["RhetoricalAnalysisState<br>(État partagé)"]
 
-### Scripts Principaux
-* [`main_orchestrator.py`](./main_orchestrator.py) : Script principal d'orchestration.
-* [`run_analysis.py`](./run_analysis.py) : Script pour lancer l'analyse argumentative.
-* [`run_extract_editor.py`](./run_extract_editor.py) : Script pour lancer l'éditeur de marqueurs d'extraits.
-* [`run_extract_repair.py`](./run_extract_repair.py) : Script pour lancer la réparation des bornes défectueuses.
-* [`run_orchestration.py`](./run_orchestration.py) : Script pour lancer l'orchestration des agents.
+        EntryPoint --> Orchestrator
+    end
 
-### Modules Principaux
-* [`core/`](./core/README.md) 🧱 : Composants fondamentaux partagés (État, StateManager, Stratégies, Setup JVM & LLM).
-* [`core/communication/`](./core/communication/) 📡 : Système de communication entre agents.
-* [`agents/`](./agents/README.md) 🧠 : Définitions des agents spécialisés (PM, Informal, PL, Extract).
-* [`agents/core/`](./agents/core/) 🧠 : Implémentations des agents spécialistes.
-  * [`agents/extract/`](./agents/extract/) 📋 : Module de redirection vers agents.core.extract.
-  * [`agents/tools/`](./agents/tools/) 🛠️ : Outils utilisés par les agents.
-  * [`agents/tools/encryption/`](./agents/tools/encryption/README_encryption_system.md) 🔒 : Outils de gestion des configurations chiffrées.
-* [`orchestration/hierarchical/`](./orchestration/hierarchical/) 🔄 : Implémentation de l'orchestration hiérarchique.
-* [`orchestration/`](./orchestration/README.md) ⚙️ : Logique d'exécution de la conversation (`analysis_runner.py`).
-* [`ui/`](./ui/README.md) 🎨 : Logique de l'interface utilisateur (configuration du texte).
-  * [`ui/extract_editor/`](./ui/extract_editor/README.md) ✏️ : Éditeur de marqueurs d'extraits.
-* [`utils/`](./utils/README.md) 🔧 : Fonctions utilitaires générales.
-  * [`utils/extract_repair/`](./utils/extract_repair/README.md) 🔄 : Outils de réparation des bornes d'extraits défectueuses.
-* [`tests/`](./tests/) 🧪 : Tests unitaires et d'intégration.
-* [`tests/tools/`](./tests/tools/README.md) 🧪 : Tests des outils rhétoriques.
-* [`models/`](./models/README.md) 📊 : Modèles de données du projet.
-* [`services/`](./services/README.md) 🔌 : Services partagés (cache, crypto, extraction, etc.).
-* [`examples/`](./examples/README.md) 📝 : Exemples d'utilisation du système.
-* [`results/`](./results/README.md) 📈 : Résultats des analyses.
-* [`temp_downloads/`](./temp_downloads/README.md) 📥 : Répertoire de téléchargements temporaires.
-* [`text_cache/`](./text_cache/README.md) 📋 : Répertoire de cache de textes.
-* [`scripts/`](./scripts/README.md) 📜 : Scripts utilitaires pour le projet.
+    subgraph "Coeur (Semantic Kernel)"
+        Kernel["SK Kernel"]
+        LLM_Service["Service LLM"]
+        StateManager["Plugin: StateManager"]
+    end
 
-### Ressources et Configuration
-* [`config/`](./config/) : Fichiers de configuration (`.env.template`).
-* [`libs/`](./libs/) : Contient les JARs TweetyProject (téléchargés ou manuels).
-* [`data/`](./data/README.md) : Données utilisées/générées (config UI sauvegardée, CSV sophismes).
-* [`requirements.txt`](./requirements.txt) : Dépendances Python.
-* [`.env`](./.env) : Fichier de configuration des variables d'environnement (à créer à partir de `.env.template`).
+    subgraph "Agents Spécialisés"
+        AgentPM["ProjectManagerAgent"]
+        AgentInformal["InformalAnalysisAgent"]
+        AgentPL["PropositionalLogicAgent"]
+        AgentExtract["ExtractAgent"]
+    end
 
-### Rapports et Documentation
-* [`rapport_verification.html`](./rapport_verification.html) : Rapport de vérification des extraits.
-* [`repair_report.html`](./repair_report.html) : Rapport de réparation des extraits.
-* [`README.md`](./README.md) : Ce fichier.
+    CLI -- "Texte à analyser" --> Pipeline
+    Pipeline -- "crée et gère" --> Kernel
+    Pipeline -- "crée et gère" --> SharedState
 
-## Prérequis
+    Kernel -- "utilise" --> LLM_Service
+    Kernel -- "enregistre" --> StateManager
+    StateManager -- "encapsule" --> SharedState
 
-* **Python :** Version 3.10+ recommandée.
-* **Java :** JDK >= 11. La variable d'environnement `JAVA_HOME` **doit pointer vers le répertoire racine du JDK** pour une détection fiable par JPype (bien qu'une détection automatique soit tentée). Voir [instructions détaillées](#configuration-java).
-* **Dépendances Python :** Installer via `pip install -r requirements.txt`. Inclut `semantic-kernel`, `python-dotenv`, `ipywidgets`, `jupyter-ui-poll`, `requests`, `pandas`, `jpype1`, `cryptography`, `ipykernel`, `nest-asyncio`.
-* **Fichier `.env` :** Un fichier `.env` à la racine du projet est **indispensable**. Créez-le à partir de `.env.example` et remplissez :
-    * Vos clés API LLM (OpenAI ou Azure OpenAI).
-    * Vos identifiants de modèle/déploiement (`OPENAI_CHAT_MODEL_ID`, `OPENAI_ENDPOINT` si Azure).
-    * Une phrase secrète pour chiffrer la configuration UI (`TEXT_CONFIG_PASSPHRASE`).
-* **JARs Tweety :** Doivent être présents dans le dossier `libs/`. Le script d'initialisation (`core/jvm_setup.py`) tentera de télécharger la version `1.28` (Core + modules + binaires natifs) si le dossier est vide ou les fichiers manquants. Vous pouvez aussi les placer manuellement.
-* **(Optionnel) Fichier Config UI :** Le fichier `data/extract_sources.json.gz.enc` sera créé lors de la première sauvegarde via l'interface.
+    AgentPM -- "utilise" --> Kernel
+    AgentInformal -- "utilise" --> Kernel
+    AgentPL -- "utilise" --> Kernel
+    AgentExtract -- "utilise" --> Kernel
 
-<details>
-<summary>Configuration JAVA_HOME (Détails)</summary>
+    AgentPM -- "interagit avec l'état via" --> StateManager
+    AgentInformal -- "interagit avec l'état via" --> StateManager
+    AgentPL -- "interagit avec l'état via" --> StateManager
+    AgentExtract -- "interagit avec l'état via" --> StateManager
 
-* **Windows :** ex: `C:\Program Files\Java\jdk-17` (Adaptez). Ajoutez aux variables d'environnement système/utilisateur.
-* **Linux/macOS :** ex: `/usr/lib/jvm/java-17-openjdk-amd64` ou `/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home`. Ajoutez `export JAVA_HOME=/chemin/vers/jdk` à votre `~/.bashrc`, `~/.zshrc` ou profil équivalent.
-* **Redémarrage OBLIGATOIRE :** Après avoir défini `JAVA_HOME`, **redémarrez votre terminal/IDE et votre serveur Jupyter** pour qu'elle soit prise en compte.
-
-</details>
-
-## Installation
-
-1. **Créez un fork du dépôt principal** :
-   - Connectez-vous à votre compte GitHub
-   - Accédez au dépôt principal : [https://github.com/jsboigeEpita/2025-Epita-Intelligence-Symbolique](https://github.com/jsboigeEpita/2025-Epita-Intelligence-Symbolique)
-   - Cliquez sur le bouton "Fork" en haut à droite de la page
-   - Sélectionnez votre compte comme destination du fork
-
-2. **Clonez votre fork** :
-   ```bash
-   git clone https://github.com/VOTRE_NOM_UTILISATEUR/2025-Epita-Intelligence-Symbolique.git
-   cd 2025-Epita-Intelligence-Symbolique
-   ```
-
-3. **Créez un environnement virtuel** :
-   ```bash
-   python -m venv venv
-   ```
-
-4. **Activez l'environnement** :
-   - Windows PowerShell : `..\venv\Scripts\activate` (peut nécessiter `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process`)
-   - Windows CMD : `..\venv\Scripts\activate.bat`
-   - Linux/macOS : `source venv/bin/activate`
-
-5. **Installez les dépendances** :
-   ```bash
-   cd argumentation_analysis
-   pip install -r requirements.txt
-   ```
-
-6. **Créez et configurez votre fichier `.env`** :
-   ```bash
-   cp .env.example .env
-   ```
-   Puis modifiez le fichier `.env` avec vos propres informations (clés API, etc.).
-
-7. **Assurez-vous que `JAVA_HOME` est correctement configuré**.
-
-## Exécution
-
-### Utilisation des scripts Python
-
-Le projet a été transformé pour utiliser des scripts Python dédiés au lieu des notebooks, ce qui permet une meilleure intégration avec VSCode et une approche multi-instance.
-
-#### Analyse Argumentative
-
-Pour lancer l'analyse argumentative :
-
-```bash
-# Avec l'interface utilisateur
-python run_analysis.py --ui
-
-# Avec un fichier texte
-python run_analysis.py --file chemin/vers/fichier.txt
-
-# Avec du texte direct
-python run_analysis.py --text "Votre texte à analyser ici"
-
-# Avec logs détaillés
-python run_analysis.py --ui --verbose
+    style Pipeline fill:#bde0fe,stroke:#4a8aec,stroke-width:2px
+    style Kernel fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px
+    style SharedState fill:#fff4cc,stroke:#ffbf00,stroke-width:2px
+    style AgentPM,AgentInformal,AgentPL,AgentExtract fill:#cce5cc,stroke:#006400,stroke-width:2px
 ```
 
-#### Orchestrateur Principal
+## 2. Composants Clés
 
-Pour lancer l'orchestrateur principal (équivalent au notebook) :
+-   **`unified_pipeline.py`**: Le principal point d'entrée du système. Il sélectionne le mode d'analyse (natif, orchestration, hybride) et invoque les composants appropriés.
+-   **`MainOrchestrator`**: Le véritable chef d'orchestre. En fonction de la stratégie choisie, il coordonne les managers hiérarchiques (stratégique, tactique, opérationnel) ou les orchestrateurs spécialisés.
 
+-   **`RhetoricalAnalysisState`** (`shared_state.py`): L'état partagé de l'analyse. C'est un objet qui contient le texte initial, les arguments identifiés, les sophismes, les conclusions, etc. Il sert de "tableau blanc" pour les agents.
+
+-   **`StateManagerPlugin`** (`state_manager_plugin.py`): Le pont entre les agents et l'état partagé. Ce plugin expose des fonctions sémantiques (ex: `add_identified_argument`) que les agents peuvent appeler pour lire ou modifier l'état de manière structurée.
+
+-   **Agents Spécialisés** (`agents/core/`):
+    -   **`ProjectManagerAgent`**: Supervise l'analyse, distribue les tâches et s'assure que le processus atteint une conclusion.
+    -   **`InformalAnalysisAgent`**: Spécialisé dans la détection de sophismes informels (ex: homme de paille, pente glissante).
+    -   **`PropositionalLogicAgent`**: Analyse la structure logique formelle des arguments, en s'appuyant sur le bridge Java/Tweety.
+    -   **`ExtractAgent`**: Extrait les propositions et les arguments clés du texte brut pour les structurer.
+
+## 3. Guide d'Utilisation Pratique
+
+Toutes les analyses sont lancées via le script `run_orchestration.py`.
+
+### a. Configuration
+Assurez-vous d'avoir un fichier `.env` à la racine avec vos clés API (voir la section correspondante dans le README de Sherlock Watson).
+
+### b. Analyse Simple (texte en argument)
+Pour une analyse rapide sur une chaîne de caractères.
 ```bash
-# Avec l'interface utilisateur (comportement par défaut)
-python main_orchestrator.py
-
-# Sans l'interface, avec un fichier texte
-python main_orchestrator.py --skip-ui --text-file chemin/vers/fichier.txt
+python -m argumentation_analysis.run_orchestration --text "Si tous les hommes sont mortels et que Socrate est un homme, alors Socrate est mortel."
 ```
 
-#### Outils d'édition et de réparation des extraits
-
+### c. Analyse depuis un Fichier
+Pour analyser le contenu d'un fichier texte.
 ```bash
-# Éditeur de marqueurs d'extraits
-python run_extract_editor.py
-
-# Réparation des bornes défectueuses
-python run_extract_repair.py
+python -m argumentation_analysis.run_orchestration --file "chemin/vers/mon_fichier.txt"
 ```
 
-#### Outils de gestion des configurations chiffrées
-
-Les outils de gestion des configurations chiffrées sont maintenant disponibles dans le répertoire `agents/tools/encryption/` :
-
+### d. Lancement avec des Agents Spécifiques
+Pour ne lancer qu'un sous-ensemble d'agents.
 ```bash
-# Créer et archiver une configuration chiffrée complète
-python -m agents.tools.encryption.create_and_archive_encrypted_config
-
-# Créer une configuration chiffrée complète
-python -m agents.tools.encryption.create_complete_encrypted_config
-
-# Charger une configuration chiffrée
-python -m agents.tools.encryption.load_complete_encrypted_config
-
-# Nettoyer les fichiers après chiffrement
-python -m agents.tools.encryption.cleanup_after_encryption
-
-# Inspecter un fichier chiffré
-python -m agents.tools.encryption.inspect_encrypted_file
-
-# Vérifier une configuration chiffrée
-python -m agents.tools.encryption.verify_encrypted_config
+python -m argumentation_analysis.run_orchestration --file "chemin/vers/mon_fichier.txt" --agents informal pl
 ```
 
-### Utilisation des notebooks (méthode alternative)
+## 4. Interprétation des Résultats
 
+Le script affiche les interactions entre les agents dans la console. Le résultat final de l'analyse est contenu dans l'objet `RhetoricalAnalysisState`. Pour le moment, l'état final est affiché en fin d'exécution dans les logs `DEBUG`. De futurs développements permettront de sauvegarder cet état dans un fichier JSON pour une analyse plus aisée.
+
+### Utilisation via les Notebooks (Legacy)
 Les notebooks originaux sont toujours disponibles pour une utilisation interactive :
 
 1. Lancez Jupyter Lab ou Notebook depuis la **racine du projet** : `jupyter lab`
@@ -199,6 +111,556 @@ Les notebooks originaux sont toujours disponibles pour une utilisation interacti
 3. Exécutez les cellules séquentiellement.
 4. L'interface utilisateur apparaîtra. Interagissez pour sélectionner une source, préparer le texte et cliquez sur **"Lancer l'Analyse"**.
 
+### Exemples d'Utilisation et Tests Pertinents
+
+**Calcul de scores moyens à partir de résultats groupés (`stats_calculator.py`)**
+
+La fonction `calculate_average_scores` permet de calculer des moyennes pour différentes métriques numériques à partir d'un dictionnaire de résultats groupés par corpus.
+```python
+from argumentation_analysis.analytics.stats_calculator import calculate_average_scores
+
+sample_grouped_results = {
+    "CorpusA": [
+        {"id": "doc1", "confidence_score": 0.8, "richness_score": 0.9, "length": 100},
+        {"id": "doc2", "confidence_score": 0.7, "richness_score": 0.85, "length": 150},
+    ],
+    "CorpusB": [
+        {"id": "doc3", "confidence_score": 0.9, "richness_score": 0.95, "length": 120},
+    ]
+}
+
+averages = calculate_average_scores(sample_grouped_results)
+# averages vaudra approx:
+# {
+#     "CorpusA": {
+#         "average_confidence_score": 0.75,
+#         "average_richness_score": 0.875,
+#         "average_length": 125.0
+#     },
+#     "CorpusB": {
+#         "average_confidence_score": 0.9,
+#         "average_richness_score": 0.95,
+#         "average_length": 120.0
+#     }
+# }
+```
+Voir [ce test](tests/unit/argumentation_analysis/analytics/test_stats_calculator.py:37) pour un exemple complet de calcul de scores moyens.
+---
+**Initiation d'une analyse de texte (`text_analyzer.py`)**
+
+La fonction `perform_text_analysis` initie une analyse de texte d'un type donné en utilisant un service LLM configuré. L'analyse principale est déléguée à une fonction interne `run_analysis_conversation`.
+```python
+from argumentation_analysis.analytics.text_analyzer import perform_text_analysis
+
+# Supposons que 'services' est un dictionnaire configuré contenant 'llm_service'
+# et que 'run_analysis_conversation' est la fonction qui effectue l'analyse réelle.
+
+text_to_analyze = "Ceci est un texte d'exemple pour l'analyse."
+# services = {"llm_service": my_llm_service_instance, "jvm_ready": True} # Exemple de structure
+analysis_type = "default_analysis"
+
+# Cette fonction semble retourner None en cas de succès et loguer les résultats.
+# L'analyse réelle est déléguée.
+# await perform_text_analysis(text_to_analyze, services, analysis_type)
+```
+Voir [ce test](tests/unit/argumentation_analysis/analytics/test_text_analyzer.py:30) pour un exemple d'initiation d'analyse de texte.
+---
+**Utilisation des outils d'analyse rhétorique avancée (simulés) (`mocks/test_advanced_tools.py`)**
+
+Ce fichier montre comment interagir avec les versions *simulées* des outils d'analyse rhétorique avancée. Utile pour comprendre l'interface attendue de ces outils.
+```python
+from argumentation_analysis.mocks.advanced_tools import create_mock_advanced_rhetorical_tools
+
+mock_tools = create_mock_advanced_rhetorical_tools()
+complex_fallacy_analyzer = mock_tools["complex_fallacy_analyzer"]
+contextual_fallacy_analyzer = mock_tools["contextual_fallacy_analyzer"]
+
+arguments = ["Argument 1.", "Argument 2."]
+context = {"source": "test_source"}
+complex_fallacies = complex_fallacy_analyzer.detect_composite_fallacies(arguments, context)
+
+text = "Ceci est un texte de test."
+context_audience = {"audience": "general"}
+contextual_analysis = contextual_fallacy_analyzer.analyze_context(text, context_audience)
+```
+Consultez [les tests dans ce fichier](tests/unit/argumentation_analysis/mocks/test_advanced_tools.py) pour voir comment les outils d'analyse rhétorique avancée (simulés) sont utilisés.
+---
+**Extraction d'arguments (simulée) (`mocks/test_argument_mining.py`)**
+
+Le `MockArgumentMiner` simule l'extraction d'arguments explicites et implicites.
+```python
+from argumentation_analysis.mocks.argument_mining import MockArgumentMiner
+
+miner = MockArgumentMiner()
+text_explicit = "Prémisse: Les chats sont des animaux. Conclusion: Les chats aiment le lait."
+result_explicit = miner.mine_arguments(text_explicit)
+# result_explicit contiendra un argument de type 'Argument Explicite (Mock)'
+
+text_implicit = "Il pleut des cordes. Donc le sol sera mouillé."
+result_implicit = miner.mine_arguments(text_implicit)
+# result_implicit contiendra un argument de type 'Argument Implicite (Mock - donc)'
+```
+Voir [ce test pour l'explicite](tests/unit/argumentation_analysis/mocks/test_argument_mining.py:71) et [ce test pour l'implicite](tests/unit/argumentation_analysis/mocks/test_argument_mining.py:105).
+---
+**Détection de biais (simulée) (`mocks/test_bias_detection.py`)**
+
+Le `MockBiasDetector` simule la détection de divers biais cognitifs dans un texte.
+```python
+from argumentation_analysis.mocks.bias_detection import MockBiasDetector
+
+detector = MockBiasDetector()
+text = "Il est évident que cette solution est la meilleure pour tout le monde."
+result = detector.detect_biases(text)
+# result contiendra potentiellement un 'Biais de Confirmation (Mock)'
+```
+Voir [ce test](tests/unit/argumentation_analysis/mocks/test_bias_detection.py:62) pour un exemple de détection de biais (simulée).
+---
+**Extraction de revendications (simulée) (`mocks/test_claim_mining.py`)**
+
+Le `MockClaimMiner` simule l'extraction de revendications, soit par mot-clé, soit en identifiant des phrases assertives.
+```python
+from argumentation_analysis.mocks.claim_mining import MockClaimMiner
+
+miner = MockClaimMiner()
+text_keyword = "D'abord, il est clair que le ciel est bleu."
+result_keyword = miner.extract_claims(text_keyword)
+# result_keyword contiendra une 'Revendication par Mot-Clé (Mock)'
+
+text_assertive = "Ceci est une phrase assertive. Elle est assez longue."
+result_assertive = miner.extract_claims(text_assertive)
+# result_assertive contiendra des 'Revendication Assertive (Mock)'
+```
+Voir [ce test pour les mots-clés](tests/unit/argumentation_analysis/mocks/test_claim_mining.py:81) et [ce test pour les phrases assertives](tests/unit/argumentation_analysis/mocks/test_claim_mining.py:128).
+---
+**Évaluation de la clarté (simulée) (`mocks/test_clarity_scoring.py`)**
+
+Le `MockClarityScorer` évalue la clarté d'un texte en pénalisant des facteurs comme les phrases longues, le jargon, ou les mots ambigus.
+```python
+from argumentation_analysis.mocks.clarity_scoring import MockClarityScorer
+
+scorer = MockClarityScorer()
+text_ideal = "Ceci est une phrase simple. Elle est courte. Les mots sont clairs."
+result_ideal = scorer.score_clarity(text_ideal) # Attendu: score proche de 1.0
+
+text_jargon = "Nous devons optimiser la synergie pour un paradigm shift efficient."
+result_jargon = scorer.score_clarity(text_jargon) # Attendu: score plus bas
+```
+Consultez les tests dans [ce fichier](tests/unit/argumentation_analysis/mocks/test_clarity_scoring.py) pour des exemples d'évaluation de clarté (simulée).
+---
+**Analyse de cohérence (simulée) (`mocks/test_coherence_analysis.py`)**
+
+Le `MockCoherenceAnalyzer` simule une évaluation de la cohérence textuelle, en considérant les mots de transition, la répétition de mots-clés, les contradictions, etc.
+```python
+from argumentation_analysis.mocks.coherence_analysis import MockCoherenceAnalyzer
+
+analyzer = MockCoherenceAnalyzer()
+text_coherent = "Ce texte est un exemple de cohérence. Donc, il suit une logique claire."
+result_coherent = analyzer.analyze_coherence(text_coherent) # Score attendu élevé
+
+text_contradiction = "J'aime le chocolat. Mais parfois, je n'aime pas le chocolat du tout."
+result_contradiction = analyzer.analyze_coherence(text_contradiction) # Score attendu bas
+```
+Consultez les tests dans [ce fichier](tests/unit/argumentation_analysis/mocks/test_coherence_analysis.py) pour des exemples d'analyse de cohérence (simulée).
+---
+**Analyse de ton émotionnel (simulée) (`mocks/test_emotional_tone_analysis.py`)**
+
+Le `MockEmotionalToneAnalyzer` simule la détection du ton émotionnel dominant dans un texte en se basant sur des mots-clés.
+```python
+from argumentation_analysis.mocks.emotional_tone_analysis import MockEmotionalToneAnalyzer
+
+analyzer = MockEmotionalToneAnalyzer()
+text_joy = "Je suis tellement heureux et content aujourd'hui, c'est une journée joyeuse !"
+result_joy = analyzer.analyze_tone(text_joy)
+# result_joy devrait indiquer 'Joie (Mock)' comme émotion dominante.
+```
+Voir [ce test](tests/unit/argumentation_analysis/mocks/test_emotional_tone_analysis.py:66) pour un exemple d'analyse de ton émotionnel (simulée).
+---
+**Analyse d'engagement (simulée) (`mocks/test_engagement_analysis.py`)**
+
+Le `MockEngagementAnalyzer` simule une évaluation du niveau d'engagement d'un texte en se basant sur des signaux comme les questions directes, les appels à l'action, et le vocabulaire.
+```python
+from argumentation_analysis.mocks.engagement_analysis import MockEngagementAnalyzer
+
+analyzer = MockEngagementAnalyzer()
+text_questions = "Que pensez-vous de cela ? C'est une bonne idée, n'est-ce pas ?"
+result_questions = analyzer.analyze_engagement(text_questions)
+# result_questions devrait indiquer un score d'engagement élevé.
+```
+Consultez les tests dans [ce fichier](tests/unit/argumentation_analysis/mocks/test_engagement_analysis.py) pour des exemples d'analyse d'engagement (simulée).
+---
+**Détection de preuves (simulée) (`mocks/test_evidence_detection.py`)**
+
+Le `MockEvidenceDetector` simule la détection de différents types de preuves dans un texte (par mot-clé, factuelles, citations).
+```python
+from argumentation_analysis.mocks.evidence_detection import MockEvidenceDetector
+
+detector = MockEvidenceDetector()
+text_keyword = "En effet, selon l'étude les résultats sont concluants."
+result_keyword = detector.detect_evidence(text_keyword)
+# result_keyword contiendra une 'Preuve par Mot-Clé (Mock)'
+```
+Consultez les tests dans [ce fichier](tests/unit/argumentation_analysis/mocks/test_evidence_detection.py) pour des exemples de détection de preuves (simulée).
+---
+**Catégorisation de sophismes (simulée) (`mocks/test_fallacy_categorization.py`)**
+
+Le `MockFallacyCategorizer` simule la catégorisation de sophismes préalablement détectés.
+```python
+from argumentation_analysis.mocks.fallacy_categorization import MockFallacyCategorizer
+
+categorizer = MockFallacyCategorizer()
+detected_fallacies = [
+    {"fallacy_type": "Ad Hominem (Mock)", "description": "..."},
+    {"fallacy_type": "Généralisation Hâtive (Mock)", "description": "..."}
+]
+categorized_result = categorizer.categorize_fallacies(detected_fallacies)
+# categorized_result groupera les sophismes par catégorie.
+```
+Voir [ce test](tests/unit/argumentation_analysis/mocks/test_fallacy_categorization.py:66) pour un exemple de catégorisation de sophismes (simulée).
+---
+**Détection de sophismes (simulée) (`mocks/test_fallacy_detection.py`)**
+
+Le `MockFallacyDetector` simule la détection de sophismes dans un texte.
+```python
+from argumentation_analysis.mocks.fallacy_detection import MockFallacyDetector
+
+detector = MockFallacyDetector()
+text_specific = "Ceci est un exemple de sophisme spécifique pour test, pour voir."
+result_specific = detector.detect(text_specific)
+# result_specific contiendra un 'Specific Mock Fallacy'.
+```
+Voir [ce test](tests/unit/argumentation_analysis/mocks/test_fallacy_detection.py:18) pour un exemple de détection de sophismes (simulée).
+---
+**Analyse rhétorique (simulée) (`mocks/test_rhetorical_analysis.py`)**
+
+Le `MockRhetoricalAnalyzer` simule une analyse rhétorique identifiant figures de style, tonalité et score d'engagement.
+```python
+from argumentation_analysis.mocks.rhetorical_analysis import MockRhetoricalAnalyzer
+
+analyzer = MockRhetoricalAnalyzer()
+text_metaphor = "Ceci est un exemple de métaphore pour illustrer."
+result_metaphor = analyzer.analyze(text_metaphor)
+# result_metaphor identifiera une 'Métaphore (Mock)' et une tonalité 'Imagée'.
+```
+Voir [ce test](tests/unit/argumentation_analysis/mocks/test_rhetorical_analysis.py:58) pour un exemple d'analyse rhétorique (simulée).
+---
+**Génération d'embeddings (`nlp/embedding_utils.py`)**
+
+La fonction `get_embeddings_for_chunks` permet de générer des représentations vectorielles (embeddings) pour une liste de textes en utilisant soit des modèles OpenAI, soit des modèles Sentence Transformers.
+```python
+from argumentation_analysis.nlp.embedding_utils import get_embeddings_for_chunks
+
+sample_text_chunks = ["Ceci est un texte.", "Un autre texte ici."]
+# Pour SentenceTransformer (nécessite la librairie):
+# embeddings_st = get_embeddings_for_chunks(sample_text_chunks, "all-MiniLM-L6-v2")
+# embeddings_st sera une liste de vecteurs.
+```
+Voir [ce test](tests/unit/argumentation_analysis/nlp/test_embedding_utils.py:66) pour un exemple de génération d'embeddings avec SentenceTransformer. La fonction `save_embeddings_data` permet ensuite de sauvegarder ces embeddings. Voir [ce test pour la sauvegarde](tests/unit/argumentation_analysis/nlp/test_embedding_utils.py:132).
+---
+**Orchestration d'analyse avancée (`orchestration/advanced_analyzer.py`)**
+
+La fonction `analyze_extract_advanced` orchestre une série d'analyses rhétoriques avancées sur un extrait de texte donné, en utilisant potentiellement les résultats d'une analyse de base.
+```python
+from argumentation_analysis.orchestration.advanced_analyzer import analyze_extract_advanced
+
+# sample_extract_definition = {
+#     "extract_name": "Test Extrait 1",
+#     "extract_text": "Ceci est le premier argument. Et voici un second argument.",
+#     "context": {"domain": "general_test"}
+# }
+# source_name = "TestSource"
+# mock_tools = { ... } # Initialisé avec les analyseurs nécessaires (mocks ou réels)
+# sample_base_result = None # ou les résultats d'une analyse précédente
+
+# results = analyze_extract_advanced(
+#     sample_extract_definition,
+#     source_name,
+#     sample_base_result,
+#     mock_tools
+# )
+# 'results' contiendra une structure agrégée des analyses avancées.
+```
+Voir [ce test](tests/unit/argumentation_analysis/orchestration/test_advanced_analyzer.py:49) pour un exemple d'orchestration d'analyse avancée.
+---
+**Pipeline d'analyse rhétorique avancée (`pipelines/advanced_rhetoric.py`)**
+
+La fonction `run_advanced_rhetoric_pipeline` prend une liste de définitions d'extraits, effectue des analyses rhétoriques avancées sur chaque extrait, et sauvegarde les résultats consolidés.
+```python
+from argumentation_analysis.pipelines.advanced_rhetoric import run_advanced_rhetoric_pipeline
+from pathlib import Path
+
+# sample_extract_definitions = [
+#     {"source_name": "Source1", "extracts": [{"extract_name": "Ext1.1", "extract_text": "..."}, ...]},
+#     ...
+# ]
+# sample_base_results = [] # Optionnel
+# output_file_path = Path("chemin/vers/advanced_results.json")
+
+# run_advanced_rhetoric_pipeline(sample_extract_definitions, sample_base_results, output_file_path)
+```
+Voir [ce test](tests/unit/argumentation_analysis/pipelines/test_advanced_rhetoric.py:51) pour un exemple d'exécution du pipeline.
+---
+**Pipeline d'analyse de texte (`pipelines/analysis_pipeline.py`)**
+
+La fonction `run_text_analysis_pipeline` initialise les services d'analyse et exécute `perform_text_analysis` sur un texte donné.
+```python
+from argumentation_analysis.pipelines.analysis_pipeline import run_text_analysis_pipeline
+
+text_input = "Un texte à analyser en profondeur."
+# config_for_services = {"lang": "en"}
+
+# results = await run_text_analysis_pipeline(
+#     input_text_content=text_input,
+#     config_for_services=config_for_services
+# )
+```
+Voir [ce test](tests/unit/argumentation_analysis/pipelines/test_analysis_pipeline.py:27) pour un exemple d'exécution du pipeline.
+---
+**Pipeline de génération d'embeddings (`pipelines/embedding_pipeline.py`)**
+
+La fonction `run_embedding_generation_pipeline` orchestre le chargement de documents, leur prétraitement, la génération d'embeddings, et leur sauvegarde.
+```python
+from argumentation_analysis.pipelines.embedding_pipeline import run_embedding_generation_pipeline
+
+# input_file_path = "chemin/vers/documents.txt"
+# output_file_path = "chemin/vers/embeddings_output.json"
+# config = {
+#     "load_config": {"file_type": "txt"},
+#     "preprocess_config": {"chunk_size": 100},
+#     "embedding_config": {"model": "all-MiniLM-L6-v2"},
+#     "save_config": {"format": "json"}
+# }
+
+# pipeline_result = run_embedding_generation_pipeline(input_file_path, output_file_path, config)
+```
+Voir [ce test](tests/unit/argumentation_analysis/pipelines/test_embedding_pipeline.py:38) pour un exemple d'exécution du pipeline.
+---
+**Pipeline de génération de rapport complet (`pipelines/reporting_pipeline.py`)**
+
+La fonction `run_comprehensive_report_pipeline` charge des résultats d'analyse, les traite, et génère un rapport HTML complet.
+```python
+from argumentation_analysis.pipelines.reporting_pipeline import run_comprehensive_report_pipeline
+
+# results_file_path = "chemin/vers/analysis_results.json"
+# output_report_path = "chemin/vers/comprehensive_report.html"
+# config = {"load_config": {"format": "json"}}
+
+# pipeline_report_result = run_comprehensive_report_pipeline(results_file_path, output_report_path, config)
+```
+Voir [ce test](tests/unit/argumentation_analysis/pipelines/test_reporting_pipeline.py:48) pour un exemple d'exécution du pipeline.
+---
+**Pipeline de génération de résumés (`reporting/summary_generator.py`)**
+
+La fonction `run_summary_generation_pipeline` simule des analyses rhétoriques, génère des résumés Markdown et un rapport global.
+```python
+from argumentation_analysis.reporting.summary_generator import run_summary_generation_pipeline
+from pathlib import Path
+
+# sample_simulated_sources_data = [...]
+# sample_rhetorical_agents_data = [...]
+# sample_common_fallacies_data = [...]
+# output_directory = Path("chemin/vers/output_reports")
+
+# run_summary_generation_pipeline(
+#     sample_simulated_sources_data,
+#     sample_rhetorical_agents_data,
+#     sample_common_fallacies_data,
+#     output_directory
+# )
+```
+Voir [ce test](tests/unit/argumentation_analysis/reporting/test_summary_generator.py:54) pour un exemple d'exécution du pipeline.
+---
+**Initialisation des services d'analyse (`service_setup/analysis_services.py`)**
+
+La fonction `initialize_analysis_services` configure et initialise les services externes requis (JVM pour Tweety, service LLM).
+```python
+from argumentation_analysis.service_setup.analysis_services import initialize_analysis_services
+
+# config = {"LIBS_DIR_PATH": "/chemin/vers/libs_tweety", ...}
+# services = initialize_analysis_services(config)
+# # 'services' contiendra {"jvm_ready": True/False, "llm_service": instance_llm/None}
+```
+Voir [ce test](tests/unit/argumentation_analysis/service_setup/test_analysis_services.py:34) pour un exemple d'initialisation des services.
+---
+**Comparaison d'analyses rhétoriques (`utils/analysis_comparison.py`)**
+
+La fonction `compare_rhetorical_analyses` compare les résultats d'une analyse "avancée" avec ceux d'une analyse de "base".
+```python
+from argumentation_analysis.utils.analysis_comparison import compare_rhetorical_analyses
+
+# sample_advanced_results = { ... }
+# sample_base_results = { ... }
+
+# comparison_report = compare_rhetorical_analyses(sample_advanced_results, sample_base_results)
+# 'comparison_report' détaille les différences.
+```
+Voir [ce test](tests/unit/argumentation_analysis/utils/test_analysis_comparison.py:46) pour un exemple de comparaison.
+---
+**Génération de texte d'exemple (`utils/data_generation.py`)**
+
+La fonction `generate_sample_text` produit des textes d'exemple prédéfinis basés sur des mots-clés.
+```python
+from argumentation_analysis.utils.data_generation import generate_sample_text
+
+# text_lincoln = generate_sample_text(extract_name="Discours de Lincoln", source_name="Histoire")
+# text_default = generate_sample_text(extract_name="Autre", source_name="Divers")
+```
+Voir [ce test](tests/unit/argumentation_analysis/utils/test_data_generation.py:11) pour un exemple.
+---
+**Chargement de résultats JSON (`utils/data_loader.py`)**
+
+La fonction `load_results_from_json` charge une liste de résultats à partir d'un fichier JSON.
+```python
+from argumentation_analysis.utils.data_loader import load_results_from_json
+from pathlib import Path
+
+# json_file_path = Path("chemin/vers/results.json")
+# loaded_data = load_results_from_json(json_file_path)
+```
+Voir [ce test](tests/unit/argumentation_analysis/utils/test_data_loader.py:26) pour un exemple.
+---
+**Groupement de résultats par corpus (`utils/data_processing_utils.py`)**
+
+La fonction `group_results_by_corpus` regroupe des résultats d'analyse en corpus en fonction de leur `source_name`.
+```python
+from argumentation_analysis.utils.data_processing_utils import group_results_by_corpus
+
+# sample_results = [
+#     {"id": 1, "source_name": "Discours d'Hitler - 1933"}, ...
+# ]
+# grouped_data = group_results_by_corpus(sample_results)
+# # grouped_data sera un dict avec des clés comme "Discours d'Hitler".
+```
+Voir [ce test](tests/unit/argumentation_analysis/utils/test_data_processing_utils.py:46) pour un exemple.
+---
+**Estimation des taux d'erreur FP/FN (`utils/error_estimation.py`)**
+
+La fonction `estimate_false_positives_negatives_rates` compare les détections de sophismes entre analyses de base et avancées.
+```python
+from argumentation_analysis.utils.error_estimation import estimate_false_positives_negatives_rates
+
+# sample_base_results = [...]
+# sample_advanced_results = [...]
+
+# error_rates_report = estimate_false_positives_negatives_rates(sample_base_results, sample_advanced_results)
+# Le rapport contiendra les taux de FP/FN.
+```
+Voir [ce test](tests/unit/argumentation_analysis/utils/test_error_estimation.py:42) pour un exemple.
+---
+**Agrégation de métriques de performance (`utils/metrics_aggregation.py`)**
+
+La fonction `generate_performance_metrics_for_agents` agrège diverses métriques pour différents types d'analyse.
+```python
+from argumentation_analysis.utils.metrics_aggregation import generate_performance_metrics_for_agents
+
+# sample_base_results = [...]
+# sample_advanced_results = [...]
+
+# aggregated_metrics = generate_performance_metrics_for_agents(sample_base_results, sample_advanced_results)
+# 'aggregated_metrics' contiendra des métriques comme 'fallacy_count', 'execution_time'.
+```
+Voir [ce test](tests/unit/argumentation_analysis/utils/test_metrics_aggregation.py:74) pour un exemple.
+---
+**Extraction de métriques spécifiques (`utils/metrics_extraction.py`)**
+
+Ce module fournit des fonctions pour extraire des métriques comme le temps d'exécution, le nombre de sophismes, les scores de confiance, etc.
+```python
+# from argumentation_analysis.utils.metrics_extraction import extract_execution_time_from_results, count_fallacies_in_results
+# sample_results = [...]
+# execution_times = extract_execution_time_from_results(sample_results)
+# fallacy_counts = count_fallacies_in_results(sample_results)
+```
+Consultez les tests dans [ce fichier](tests/unit/argumentation_analysis/utils/test_metrics_extraction.py) pour des exemples d'extraction de diverses métriques.
+---
+**Génération de rapport de performance Markdown (`utils/report_generator.py`)**
+
+La fonction `generate_markdown_performance_report` produit un rapport Markdown comparant les performances d'agents/analyses.
+```python
+from argumentation_analysis.utils.report_generator import generate_markdown_performance_report
+from pathlib import Path
+
+# sample_aggregated_metrics = {"agent_A": {...}, "agent_B": {...}}
+# base_summary = {"count": 10}
+# advanced_summary = {"count": 8}
+# output_markdown_file = Path("report.md")
+
+# generate_markdown_performance_report(sample_aggregated_metrics, base_summary, advanced_summary, output_markdown_file)
+```
+Voir [ce test](tests/unit/argumentation_analysis/utils/test_report_generator.py:37) pour un exemple.
+---
+**Division de texte en arguments/phrases (`utils/text_processing.py`)**
+
+La fonction `split_text_into_arguments` segmente un texte en une liste de chaînes, représentant des arguments ou phrases potentiels.
+```python
+from argumentation_analysis.utils.text_processing import split_text_into_arguments
+
+text1 = "Ceci est le premier argument. Et voici le deuxième argument."
+arguments1 = split_text_into_arguments(text1, min_arg_length=5)
+# arguments1: ["Ceci est le premier argument.", "Et voici le deuxième argument."]
+```
+Voir [ce test](tests/unit/argumentation_analysis/utils/test_text_processing.py:7) pour un exemple.
+---
+**Intégration Agent Informel et Outils (`integration/test_agents_tools_integration.py`)**
+
+Ce test montre comment un `InformalAgent` peut être configuré avec des outils d'analyse (ici, un détecteur de sophismes simulé) et comment sa méthode `analyze_text` est utilisée pour obtenir une analyse d'un texte donné.
+Voir [ce test](tests/integration/test_agents_tools_integration.py:69) pour un scénario d'utilisation.
+---
+**Intégration des Agents Logiques (`integration/test_logic_agents_integration.py`)**
+
+Ces tests illustrent comment les agents logiques (`PropositionalLogicAgent`, `FirstOrderLogicAgent`, `ModalLogicAgent`) peuvent être utilisés pour convertir du langage naturel en représentations logiques formelles, générer et exécuter des requêtes (via un TweetyBridge simulé), et interpréter les résultats.
+Voir [ce test](tests/integration/test_logic_agents_integration.py:219) pour un exemple de flux de travail complet.
+---
+**Construction d'un Framework d'Argumentation de Dung avec JPype (`integration/jpype_tweety/test_argumentation_syntax.py`)**
+
+Ce test montre comment créer une théorie d'argumentation de Dung, y ajouter des arguments et des relations d'attaque en utilisant les classes Java de Tweety via JPype. Il montre aussi l'utilisation de raisonneurs sémantiques.
+```python
+# import jpype
+# # Supposons que dung_classes est un dictionnaire avec les classes Java chargées
+# DungTheory = dung_classes["DungTheory"]
+# Argument = dung_classes["Argument"]
+# Attack = dung_classes["Attack"]
+# CompleteReasoner = dung_classes["CompleteReasoner"]
+#
+# dung_theory = DungTheory()
+# arg_a = Argument(jpype.JString("a"))
+# arg_b = Argument(jpype.JString("b"))
+# dung_theory.add(arg_a)
+# dung_theory.add(arg_b)
+# dung_theory.add(Attack(arg_a, arg_b)) # a attaque b
+#
+# reasoner = CompleteReasoner()
+# extensions = reasoner.getModels(dung_theory)
+```
+Voir [ce test](tests/integration/jpype_tweety/test_argumentation_syntax.py:17) pour la construction et [ce test](tests/integration/jpype_tweety/test_argumentation_syntax.py:173) pour l'utilisation d'un raisonneur.
+---
+**Mise en place d'un Dialogue de Persuasion avec JPype (`integration/jpype_tweety/test_dialogical_argumentation.py`)**
+
+Ce test montre comment configurer un protocole de dialogue de persuasion, y ajouter des agents participants avec des positions définies (PRO/CONTRA) sur un sujet donné, et potentiellement lancer le dialogue en utilisant les composants de Tweety via JPype.
+```python
+# import jpype
+# # Supposons que dialogue_classes et dung_classes sont configurés
+# PersuasionProtocol = dialogue_classes["PersuasionProtocol"]
+# ArgumentationAgent = dialogue_classes["ArgumentationAgent"]
+# PlParser_class = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
+# Dialogue = dialogue_classes["Dialogue"]
+# Position = dialogue_classes["Position"]
+# DungTheory = dung_classes["DungTheory"]
+#
+# proponent = ArgumentationAgent("Proponent")
+# opponent = ArgumentationAgent("Opponent")
+# proponent.setArgumentationFramework(DungTheory())
+# opponent.setArgumentationFramework(DungTheory())
+#
+# topic_formula = PlParser_class().parseFormula("sujet_du_debat")
+# protocol = PersuasionProtocol()
+# protocol.setTopic(topic_formula)
+#
+# dialogue_system = Dialogue(protocol)
+# dialogue_system.addParticipant(proponent, Position.PRO)
+# dialogue_system.addParticipant(opponent, Position.CONTRA)
+#
+# # dialogue_result = dialogue_system.run()
+```
+Voir [ce test](tests/integration/jpype_tweety/test_dialogical_argumentation.py:415) pour un exemple de mise en place d'un dialogue de persuasion.
 ## Guide de Contribution pour Étudiants
 
 Cette section explique comment contribuer efficacement au projet en tant qu'étudiant, que vous travailliez seul ou en groupe.

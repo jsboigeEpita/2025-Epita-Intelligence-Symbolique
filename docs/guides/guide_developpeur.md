@@ -55,7 +55,7 @@ Ce guide complète le guide d'utilisation en se concentrant sur les aspects tech
 
 Pour tirer le meilleur parti de ce guide, vous devriez avoir :
 
-- Une bonne connaissance de Python (3.8+)
+- Une bonne connaissance de Python (3.10)
 - Une compréhension des principes de la programmation orientée objet
 - Une familiarité avec les concepts de communication entre agents
 - Des connaissances de base en architecture logicielle et patterns de conception
@@ -71,14 +71,14 @@ Le système de communication multi-canal est organisé autour des classes princi
 
 ```
 ┌───────────────────┐      ┌───────────────────┐
-│  MessageMiddleware│◄─────┤ChannelInterface   │
+│  MessageMiddleware│◄─────┤Channel            │
 └───────┬───────────┘      └───────────────────┘
         │                           ▲
         │                           │
         │                  ┌────────┴────────┐
         │                  │                 │
 ┌───────▼───────────┐    ┌─┴──────────────┐ ┌┴───────────────┐
-│ProtocolInterface  │    │HierarchicalChan│ │CollaborationCha│...
+│RequestResponse    │    │HierarchicalChan│ │CollaborationCha│...
 └───────────────────┘    └────────────────┘ └────────────────┘
         ▲
         │
@@ -89,7 +89,7 @@ Le système de communication multi-canal est organisé autour des classes princi
 └─────────────────┘ └─────────────────┘
 
 ┌───────────────────┐
-│  AgentAdapter     │
+│StrategicAdapter   │
 └───────┬───────────┘
         │
         ▼
@@ -114,11 +114,11 @@ Le système de communication multi-canal est organisé autour des classes princi
 Les principales classes et leurs responsabilités sont :
 
 1. **MessageMiddleware** : Composant central qui gère les canaux, les protocoles et le routage des messages.
-2. **ChannelInterface** : Interface que tous les canaux de communication doivent implémenter.
+2. **Channel** : Classe de base abstraite que tous les canaux de communication doivent implémenter. Définie dans [`argumentation_analysis/core/communication/channel_interface.py`](argumentation_analysis/core/communication/channel_interface.py:30).
 3. **Canaux spécifiques** (HierarchicalChannel, CollaborationChannel, etc.) : Implémentations concrètes des canaux.
-4. **ProtocolInterface** : Interface que tous les protocoles de communication doivent implémenter.
+4. **Protocoles de communication** : Il n'existe pas d'interface formelle `ProtocolInterface`. Les protocoles comme `RequestResponseProtocol` (défini dans [`argumentation_analysis/core/communication/request_response.py`](argumentation_analysis/core/communication/request_response.py:25)) et `PublishSubscribeProtocol` (défini dans [`argumentation_analysis/core/communication/pub_sub.py`](argumentation_analysis/core/communication/pub_sub.py:235)) sont implémentés directement.
 5. **Protocoles spécifiques** (RequestResponse, PublishSubscribe, etc.) : Implémentations concrètes des protocoles.
-6. **AgentAdapter** : Classe de base pour tous les adaptateurs d'agents.
+6. **Adaptateurs d'agents** : Il n'existe pas de classe de base formelle `AgentAdapter`. Les adaptateurs spécifiques comme `StrategicAdapter` (défini dans [`argumentation_analysis/core/communication/strategic_adapter.py`](argumentation_analysis/core/communication/strategic_adapter.py:23)), `TacticalAdapter` (défini dans [`argumentation_analysis/core/communication/tactical_adapter.py`](argumentation_analysis/core/communication/tactical_adapter.py:23)), et `OperationalAdapter` (défini dans [`argumentation_analysis/core/communication/operational_adapter.py`](argumentation_analysis/core/communication/operational_adapter.py:22)) sont implémentés directement. Chaque adaptateur interagit avec le `MessageMiddleware`.
 7. **Adaptateurs spécifiques** (StrategicAdapter, TacticalAdapter, etc.) : Implémentations concrètes des adaptateurs.
 8. **Message** : Classe de base pour tous les types de messages.
 9. **Types de messages spécifiques** (CommandMessage, InformationMessage, etc.) : Implémentations concrètes des messages.
@@ -130,7 +130,7 @@ Voici un diagramme de séquence simplifié montrant le flux d'un message du nive
 ```
 ┌─────────┐          ┌─────────┐          ┌─────────┐          ┌─────────┐          ┌─────────┐
 │Strategic│          │Strategic│          │Message  │          │Hierarchi│          │Tactical │
-│Agent    │          │Adapter  │          │Middlewar│          │calChanne│          │Adapter  │
+│Agent    │          │StrategicAdapter│   │MessageMiddleware│  │HierarchicalChannel││TacticalAdapter│
 └────┬────┘          └────┬────┘          └────┬────┘          └────┬────┘          └────┬────┘
      │                    │                    │                    │                    │
      │ issue_directive    │                    │                    │                    │
@@ -164,7 +164,7 @@ Voici un diagramme de séquence simplifié montrant le flux d'un message du nive
      │                    │                    │                    │                    │
 ┌────┴────┐          ┌────┴────┐          ┌────┴────┐          ┌────┴────┐          ┌────┴────┐
 │Strategic│          │Strategic│          │Message  │          │Hierarchi│          │Tactical │
-│Agent    │          │Adapter  │          │Middlewar│          │calChanne│          │Adapter  │
+│Agent    │          │StrategicAdapter│   │MessageMiddleware│  │HierarchicalChannel││TacticalAdapter│
 └─────────┘          └─────────┘          └─────────┘          └─────────┘          └─────────┘
 ```
 
@@ -213,11 +213,11 @@ La structure typique d'un canal comprend :
 
 ### Interface à implémenter
 
-Tous les canaux de communication doivent implémenter l'interface `ChannelInterface` qui définit les méthodes requises pour interagir avec le middleware. Voici les principales méthodes de cette interface :
+Tous les canaux de communication doivent hériter de la classe abstraite `Channel` (définie dans [`argumentation_analysis/core/communication/channel_interface.py`](argumentation_analysis/core/communication/channel_interface.py:30)) qui définit les méthodes requises pour interagir avec le middleware. Voici les principales méthodes de cette classe :
 
 ```python
-class ChannelInterface:
-    """Interface que tous les canaux de communication doivent implémenter."""
+class Channel(abc.ABC):
+    """Classe de base abstraite que tous les canaux de communication doivent implémenter."""
     
     def __init__(self, name, config=None):
         """
@@ -311,7 +311,7 @@ La gestion des messages est au cœur de l'implémentation d'un canal. Voici les 
 Chaque canal doit maintenir une file d'attente pour les messages en attente de livraison. Cette file peut être implémentée de différentes manières selon les besoins du canal :
 
 ```python
-class MyChannel(ChannelInterface):
+class MyChannel(Channel):
     def __init__(self, name, config=None):
         super().__init__(name, config)
         
@@ -381,7 +381,7 @@ def receive_message(self, recipient_id, timeout=None):
 
 Pour intégrer un nouveau canal avec le middleware, vous devez :
 
-1. Implémenter l'interface `ChannelInterface`
+1. Hériter de la classe `Channel`
 2. Enregistrer le canal auprès du middleware
 3. Configurer les règles de routage pour le canal
 
@@ -404,13 +404,13 @@ middleware.add_routing_rule(
 Voici un exemple complet de création d'un nouveau canal de communication pour la gestion des alertes :
 
 ```python
-from argumentiation_analysis.core.communication.channel_interface import ChannelInterface
+from argumentiation_analysis.core.communication.channel_interface import Channel
 from argumentiation_analysis.core.communication.message import MessagePriority
 import threading
 import time
 import logging
 
-class AlertChannel(ChannelInterface):
+class AlertChannel(Channel):
     """
     Canal spécialisé pour la diffusion d'alertes.
     
@@ -697,6 +697,16 @@ class AlertMessage(Message):
             type=MessageType.ALERT,
             sender=sender,
             sender_level=sender_level,
+### Tests pour les canaux
+
+Il est crucial de tester vos implémentations de canaux. Vous pouvez vous inspirer des tests unitaires existants pour vérifier :
+- L'envoi et la réception corrects des messages.
+- La gestion des files d'attente.
+- Le fonctionnement des abonnements et des filtres.
+- La gestion des erreurs.
+
+Par exemple, consultez les tests unitaires pour les composants principaux dans [`tests/unit/project_core/`](tests/unit/project_core/) pour des idées sur la structure des tests.
+
 ## Comment créer de nouveaux adaptateurs
 
 ### Structure d'un adaptateur
@@ -713,116 +723,38 @@ La structure typique d'un adaptateur comprend :
 
 ### Interface à implémenter
 
-Tous les adaptateurs d'agents doivent étendre la classe de base `AgentAdapter` qui fournit les fonctionnalités communes à tous les adaptateurs. Voici la structure de cette classe :
+Il n'existe pas de classe de base `AgentAdapter` formelle à étendre. Chaque adaptateur spécifique (par exemple, `StrategicAdapter` dans [`argumentation_analysis/core/communication/strategic_adapter.py`](argumentation_analysis/core/communication/strategic_adapter.py:23), `TacticalAdapter` dans [`argumentation_analysis/core/communication/tactical_adapter.py`](argumentation_analysis/core/communication/tactical_adapter.py:23), et `OperationalAdapter` dans [`argumentation_analysis/core/communication/operational_adapter.py`](argumentation_analysis/core/communication/operational_adapter.py:22)) est une classe distincte.
 
-```python
-class AgentAdapter:
-    """Classe de base pour tous les adaptateurs d'agents."""
-    
-    def __init__(self, agent_id, middleware):
-        """
-        Initialise un nouvel adaptateur d'agent.
-        
-        Args:
-            agent_id: Identifiant unique de l'agent
-            middleware: Le middleware de messagerie
-        """
-        self.agent_id = agent_id
-        self.middleware = middleware
-        self.logger = logging.getLogger(f"AgentAdapter.{agent_id}")
-    
-    def send_message(self, message_type, content, recipient=None, priority=MessagePriority.NORMAL, metadata=None):
-        """
-        Envoie un message générique.
-        
-        Args:
-            message_type: Type de message
-            content: Contenu du message
-            recipient: Destinataire (optionnel)
-            priority: Priorité du message
-            metadata: Métadonnées du message (optionnel)
-            
-        Returns:
-            L'identifiant du message envoyé
-        """
-        # Créer le message
-        message = Message(
-            type=message_type,
-            sender=self.agent_id,
-            sender_level=self._get_agent_level(),
-            recipient=recipient,
-            content=content,
-            priority=priority,
-            metadata=metadata or {}
-        )
-        
-        # Envoyer le message via le middleware
-        return self.middleware.send_message(message)
-    
-    def receive_message(self, message_type=None, timeout=None, filter_criteria=None):
-        """
-        Reçoit un message.
-        
-        Args:
-            message_type: Type de message à recevoir (optionnel)
-            timeout: Délai d'attente maximum en secondes (optionnel)
-            filter_criteria: Critères de filtrage supplémentaires (optionnel)
-            
-        Returns:
-            Le message reçu ou None si aucun message n'est disponible
-        """
-        # Préparer les critères de filtrage
-        criteria = filter_criteria or {}
-        if message_type:
-            criteria["type"] = message_type
-        
-        # Recevoir le message via le middleware
-        return self.middleware.receive_message(
-            recipient_id=self.agent_id,
-            timeout=timeout,
-            filter_criteria=criteria
-        )
-    
-    def subscribe(self, topic, callback=None, filter_criteria=None):
-        """
-        S'abonne à un sujet.
-        
-        Args:
-            topic: Sujet auquel s'abonner
-            callback: Fonction de rappel à appeler lors de la réception d'un message (optionnel)
-            filter_criteria: Critères de filtrage (optionnel)
-            
-        Returns:
-            Un identifiant d'abonnement
-        """
-        return self.middleware.subscribe(
-            subscriber_id=self.agent_id,
-            topic_id=topic,
-            callback=callback,
-            filter_criteria=filter_criteria
-        )
-    
-    def unsubscribe(self, subscription_id):
-        """
-        Désabonne d'un sujet.
-        
-        Args:
-            subscription_id: Identifiant de l'abonnement
-            
-        Returns:
-            True si le désabonnement a réussi, False sinon
-        """
-        return self.middleware.unsubscribe(subscription_id)
-    
-    def _get_agent_level(self):
-        """
-        Récupère le niveau de l'agent.
-        
-        Returns:
-            Le niveau de l'agent (AgentLevel)
-        """
-        raise NotImplementedError("Les sous-classes doivent implémenter cette méthode")
-```
+Lors de la création d'un nouvel adaptateur, vous devriez vous inspirer de ces implémentations existantes. Typiquement, un adaptateur :
+- Prend un `agent_id` et une instance du `MessageMiddleware` dans son constructeur.
+- Initialise un logger spécifique.
+- Implémente une méthode `_get_agent_level()` qui retourne la valeur appropriée de l'énumération `AgentLevel` (définie dans [`argumentation_analysis/core/communication/message.py`](argumentation_analysis/core/communication/message.py:38)).
+- Fournit des méthodes spécifiques pour envoyer et recevoir des types de messages pertinents pour le niveau de l'agent qu'il sert. Ces méthodes construisent des objets `Message` et utilisent le `MessageMiddleware` pour les envoyer ou les recevoir. Par exemple, une méthode `send_message` générique pourrait ressembler à ceci (adapté des adaptateurs existants) :
+  ```python
+  # Dans votre classe d'adaptateur spécifique:
+  # def __init__(self, agent_id: str, middleware: MessageMiddleware, agent_level: AgentLevel):
+  #     self.agent_id = agent_id
+  #     self.middleware = middleware
+  #     self.agent_level = agent_level # Stocker le niveau de l'agent
+  #     self.logger = logging.getLogger(f"{self.__class__.__name__}.{agent_id}")
+
+  def send_message(self, message_type, content, recipient=None, priority=MessagePriority.NORMAL, metadata=None):
+      # Créer le message
+      message = Message(
+          type=message_type,
+          sender=self.agent_id,
+          sender_level=self.agent_level, # Utiliser le niveau stocké
+          recipient=recipient,
+          content=content,
+          priority=priority,
+          metadata=metadata or {}
+      )
+      # Envoyer le message via le middleware
+      return self.middleware.send_message(message)
+  ```
+- Peut inclure des méthodes pour s'abonner à des sujets via le `MessageMiddleware`.
+
+Le `MessageMiddleware` possède une méthode `get_adapter(self, agent_id: str, level: AgentLevel)` (patchée via [`argumentation_analysis/core/communication/middleware_patch.py`](argumentation_analysis/core/communication/middleware_patch.py:8)) qui peut instancier l'adaptateur approprié en fonction du niveau de l'agent.
 
 ### Traduction des messages
 
@@ -833,7 +765,7 @@ La traduction des messages est une fonctionnalité clé des adaptateurs. Elle co
 Chaque adaptateur doit fournir des méthodes d'envoi spécifiques au type d'agent :
 
 ```python
-class StrategicAdapter(AgentAdapter):
+class StrategicAdapter:
     """Adaptateur pour les agents stratégiques."""
     
     def _get_agent_level(self):
@@ -908,11 +840,11 @@ def receive_report(self, timeout=None, filter_criteria=None):
 Voici un exemple complet de création d'un nouvel adaptateur pour un agent de visualisation :
 
 ```python
-from argumentiation_analysis.core.communication.agent_adapter import AgentAdapter
+from argumentation_analysis.core.communication.message import Message, MessageType, MessagePriority, AgentLevel # Assurez-vous que Message est importé si utilisé dans l'exemple VisualizationAdapter
 from argumentiation_analysis.core.communication.message import MessageType, MessagePriority, AgentLevel
 import logging
 
-class VisualizationAdapter(AgentAdapter):
+class VisualizationAdapter:
     """
     Adaptateur pour les agents de visualisation.
     
@@ -1149,6 +1081,15 @@ subscription_id = visualization_adapter.subscribe_to_data_updates(
 )
 ```
 
+### Tests pour les adaptateurs
+
+Les adaptateurs doivent être testés pour s'assurer qu'ils traduisent correctement les appels et les messages.
+- Testez chaque méthode spécifique de l'adaptateur.
+- Vérifiez la création correcte des messages sortants.
+- Assurez-vous que les messages entrants sont correctement interprétés.
+
+Vous trouverez des exemples de tests d'adaptateurs dans le répertoire [`tests/unit/argumentation_analysis/`](tests/unit/argumentation_analysis/) ou en examinant les tests des modules principaux.
+
 ## Bonnes pratiques de développement
 
 ### Gestion des erreurs
@@ -1294,6 +1235,8 @@ class TestStrategicAdapter(unittest.TestCase):
         self.assertEqual(message.priority, MessagePriority.HIGH)
 ```
 
+Pour un exemple concret de test unitaire, vous pouvez examiner [`tests/unit/argumentation_analysis/utils/core_utils/test_file_utils.py`](tests/unit/argumentation_analysis/utils/core_utils/test_file_utils.py:0) qui teste les utilitaires de fichiers.
+
 #### 2. Tests d'intégration
 
 Écrivez des tests d'intégration pour valider les interactions entre les composants :
@@ -1360,6 +1303,8 @@ class TestCommunicationIntegration(unittest.TestCase):
         # Attendre que le thread se termine
         tactical_thread.join()
 ```
+
+Un exemple de test d'intégration pertinent est [`../../tests/unit/argumentation_analysis/test_communication_integration.py`](../../tests/unit/argumentation_analysis/test_communication_integration.py:0), qui vérifie l'interaction entre différents composants de communication.
 
 #### 3. Tests de performance
 
@@ -1489,7 +1434,7 @@ def optimize_message(message):
 Utilisez des mécanismes de mise en cache pour éviter les opérations répétitives :
 
 ```python
-class CachedAdapter(AgentAdapter):
+class CachedAdapter: # Note: N'hérite pas d'une AgentAdapter formelle
     def __init__(self, agent_id, middleware, cache_size=100, cache_ttl=300):
         super().__init__(agent_id, middleware)
         
@@ -1545,7 +1490,7 @@ Utilisez le traitement asynchrone pour améliorer les performances :
 ```python
 import asyncio
 
-class AsyncAdapter(AgentAdapter):
+class AsyncAdapter: # Note: N'hérite pas d'une AgentAdapter formelle
     async def send_message_async(self, message_type, content, recipient=None, priority=MessagePriority.NORMAL, metadata=None):
         """
         Envoie un message de manière asynchrone.
@@ -1594,62 +1539,17 @@ La structure typique d'un protocole comprend :
 4. **Gestion des erreurs** : Mécanismes pour gérer les erreurs et les timeouts
 5. **Validation** : Vérification de la conformité des messages au protocole
 
-### Interface à implémenter
+### Structure d'un protocole
 
-Tous les protocoles de communication doivent implémenter l'interface `ProtocolInterface` qui définit les méthodes requises pour interagir avec le middleware. Voici les principales méthodes de cette interface :
+Bien qu'il n'y ait pas d'interface `ProtocolInterface` formelle à implémenter, les protocoles existants comme `RequestResponseProtocol` ([`argumentation_analysis/core/communication/request_response.py`](argumentation_analysis/core/communication/request_response.py:25)) et `PublishSubscribeProtocol` ([`argumentation_analysis/core/communication/pub_sub.py`](argumentation_analysis/core/communication/pub_sub.py:235)) suivent une structure similaire. Un nouveau protocole devrait typiquement :
 
-```python
-class ProtocolInterface:
-    """Interface que tous les protocoles de communication doivent implémenter."""
-    
-    def __init__(self, middleware):
-        """
-        Initialise un nouveau protocole.
-        
-        Args:
-            middleware: Le middleware de messagerie
-        """
-        self.middleware = middleware
-    
-    def initialize(self):
-        """
-        Initialise le protocole.
-        
-        Returns:
-            True si l'initialisation a réussi, False sinon
-        """
-        raise NotImplementedError("Les sous-classes doivent implémenter cette méthode")
-    
-    def handle_message(self, message):
-        """
-        Traite un message selon ce protocole.
-        
-        Args:
-            message: Le message à traiter
-            
-        Returns:
-            True si le message a été traité, False sinon
-        """
-        raise NotImplementedError("Les sous-classes doivent implémenter cette méthode")
-    
-    def get_protocol_name(self):
-        """
-        Récupère le nom du protocole.
-        
-        Returns:
-            Le nom du protocole
-        """
-        raise NotImplementedError("Les sous-classes doivent implémenter cette méthode")
-    
-    def get_supported_message_types(self):
-        """
-        Récupère les types de messages supportés par ce protocole.
-        
-        Returns:
-            Liste des types de messages supportés
-        """
-        raise NotImplementedError("Les sous-classes doivent implémenter cette méthode")
-```
+- Prendre le `MessageMiddleware` en argument de son constructeur.
+- Posséder une méthode pour initialiser le protocole (si nécessaire).
+- Posséder une méthode `handle_message(self, message)` pour traiter les messages entrants relevant de ce protocole.
+- Définir une méthode pour obtenir son nom (par exemple, `get_protocol_name()`).
+- Définir une méthode pour lister les types de messages qu'il supporte (par exemple, `get_supported_message_types()`).
+
+Le middleware ([`argumentation_analysis/core/communication/middleware.py`](argumentation_analysis/core/communication/middleware.py:19)) instancie et utilise ces protocoles.
 
 ### Gestion des échanges
 
@@ -1660,7 +1560,7 @@ La gestion des échanges est au cœur de l'implémentation d'un protocole. Voici
 Chaque protocole doit maintenir un suivi des conversations en cours pour associer les messages de réponse aux messages de requête :
 
 ```python
-class MyProtocol(ProtocolInterface):
+class MyProtocol: # Note: N'hérite pas d'une ProtocolInterface formelle
     def __init__(self, middleware):
         super().__init__(middleware)
         
@@ -1734,14 +1634,15 @@ def _handle_response(self, message):
 Voici un exemple complet de création d'un nouveau protocole de communication pour la négociation :
 
 ```python
-from argumentiation_analysis.core.communication.protocol_interface import ProtocolInterface
+# Note: L'import de ProtocolInterface est supprimé car elle n'existe pas.
+# from argumentiation_analysis.core.communication.protocol_interface import ProtocolInterface
 from argumentiation_analysis.core.communication.message import MessageType, Message
 import threading
 import time
 import uuid
 import logging
 
-class NegotiationProtocol(ProtocolInterface):
+class NegotiationProtocol: # Note: N'hérite pas d'une ProtocolInterface formelle
     """
     Protocole de négociation pour la résolution de conflits et l'allocation de ressources.
     

@@ -1,27 +1,29 @@
+"""Core package for the project.
+
+This package contains the functional core of the application,
+including utilities, pipelines, and other essential modules.
+It serves as the primary entry point for accessing the project's
+core functionalities.
 """
-Module core contenant les composants partagés.
 
-Ce module inclut les services LLM, la configuration JVM, la gestion d'état partagé,
-et d'autres composants fondamentaux utilisés par le reste du système.
-"""
+# Imports des composants core (sans dépendance circulaire)
+from .shared_state import RhetoricalAnalysisState
+from .llm_service import create_llm_service
+# from .bootstrap import * # COMMENTÉ - L'initialisation doit être explicite
 
-# Importations des sous-modules
-try:
-    from . import shared_state
-    from . import jvm_setup
-    from . import llm_service
-    from . import state_manager_plugin
-    from . import strategies
-    from . import communication
-except ImportError as e:
-    import logging
-    logging.warning(f"Certains sous-modules de 'core' n'ont pas pu être importés: {e}")
+# Exports principaux
+__all__ = [
+    'RhetoricalAnalysisState',
+    'create_llm_service'
+]
 
-# Exposer les fonctions et classes importantes
-try:
-    from .llm_service import create_llm_service
-    from .jvm_setup import initialize_jvm, download_tweety_jars
-    from .shared_state import SharedState
-except ImportError as e:
-    import logging
-    logging.warning(f"Certaines fonctions/classes de 'core' n'ont pas pu être exposées: {e}")
+# Import conditionnel pour éviter la dépendance circulaire
+def get_argumentation_analyzer():
+    """Importe et retourne ArgumentationAnalyzer de manière lazy."""
+    from .argumentation_analyzer import ArgumentationAnalyzer
+    return ArgumentationAnalyzer
+
+def get_analyzer():
+    """Importe et retourne Analyzer de manière lazy."""
+    from .argumentation_analyzer import Analyzer
+    return Analyzer

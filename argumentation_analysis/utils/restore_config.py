@@ -73,7 +73,7 @@ def restore_config_files():
         logger.error("Les définitions d'extraits n'ont pas été chargées correctement.")
         return False
     
-    logger.info(f"✅ Définitions d'extraits chargées avec succès: {len(extract_definitions)} sources trouvées.")
+    logger.info(f"[OK] Définitions d'extraits chargées avec succès: {len(extract_definitions)} sources trouvées.")
     
     # Sauvegarder les définitions d'extraits dans le fichier JSON en clair
     logger.info(f"Sauvegarde des définitions d'extraits dans {CONFIG_FILE_JSON}...")
@@ -85,7 +85,7 @@ def restore_config_files():
     with open(CONFIG_FILE_JSON, 'w', encoding='utf-8') as f:
         json.dump(extract_definitions, f, indent=4, ensure_ascii=False)
     
-    logger.info(f"✅ Définitions d'extraits sauvegardées dans {CONFIG_FILE_JSON}.")
+    logger.info(f"[OK] Définitions d'extraits sauvegardées dans {CONFIG_FILE_JSON}.")
     
     # Sauvegarder également dans le fichier extract_sources_updated.json pour les outils de réparation
     repair_config_path = Path(__file__).parent / "extract_repair" / "docs" / "extract_sources_updated.json"
@@ -97,7 +97,7 @@ def restore_config_files():
     with open(repair_config_path, 'w', encoding='utf-8') as f:
         json.dump(extract_definitions, f, indent=4, ensure_ascii=False)
     
-    logger.info(f"✅ Définitions d'extraits sauvegardées dans {repair_config_path}.")
+    logger.info(f"[OK] Définitions d'extraits sauvegardées dans {repair_config_path}.")
     
     return True
 
@@ -107,7 +107,7 @@ def main():
     
     # Restaurer les fichiers de configuration
     if restore_config_files():
-        logger.info("\n✅ Restauration terminée avec succès.")
+        logger.info("\n[OK] Restauration terminée avec succès.")
         logger.info("\nFichiers restaurés:")
         logger.info(f"   - {CONFIG_FILE_JSON}")
         logger.info(f"   - {Path(__file__).parent / 'extract_repair' / 'docs' / 'extract_sources_updated.json'}")

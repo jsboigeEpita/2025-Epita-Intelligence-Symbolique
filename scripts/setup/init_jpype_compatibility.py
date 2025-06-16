@@ -6,8 +6,15 @@ Script d'initialisation pour la compatibilité JPype1/pyjnius.
 Ce script détecte la version de Python et importe le module mock si nécessaire.
 """
 
+import project_core.core_from_scripts.auto_env
 import sys
 import logging
+from pathlib import Path # Ajout pour la clarté
+
+# Ajout du répertoire racine du projet au chemin pour permettre l'import des modules
+project_root = Path(__file__).resolve().parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 # Configuration du logging
 logging.basicConfig(

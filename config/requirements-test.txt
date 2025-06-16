@@ -1,6 +1,7 @@
+pydantic==2.7.1 # Version spécifique pour compatibilité avec semantic-kernel
 # Dépendances principales
 # Versions spécifiques pour résoudre les problèmes d'importation et d'incompatibilités
-numpy>=2.1.0  # Version mise à jour pour compatibilité Python 3.13+
+numpy>=1.26.4  # Version compatible avec un plus grand nombre de versions Python
 pandas>=2.2.0  # Version mise à jour pour compatibilité Python 3.13+ et wheels
 matplotlib>=3.5.0
 jpype1>=1.5.0  # Version mise à jour pour compatibilité Python 3.13+ et wheels
@@ -36,3 +37,4 @@ jupyter>=1.0.0
 notebook>=6.4.0
 jupyter_ui_poll>=0.2.0
 ipywidgets>=7.7.0
+semantic-kernel>=0.9.0b1 # Ajout pour semantic_kernel

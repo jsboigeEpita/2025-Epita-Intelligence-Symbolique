@@ -436,7 +436,8 @@ class OperationalAdapter:
             
             if response:
                 self.logger.info(f"Received assistance from {recipient_id} for issue {issue_type}")
-                self.last_assistance_response = response.content.get("data", {})
+                # DATA_DIR est la clé correcte utilisée dans les tests et la logique de message
+                self.last_assistance_response = response.content.get(DATA_DIR)
                 return self.last_assistance_response
             
             self.logger.warning(f"Assistance request for issue {issue_type} timed out")

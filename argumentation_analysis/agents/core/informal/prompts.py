@@ -1,3 +1,17 @@
+"""
+Prompts pour l'agent d'analyse informelle des arguments.
+
+Ce module centralise les templates de prompts utilisés par `InformalAnalysisAgent`
+pour interagir avec les modèles de langage (LLM). Ces prompts sont conçus pour
+des tâches spécifiques telles que :
+    - L'identification d'arguments distincts dans un texte.
+    - L'analyse d'un argument pour y détecter des sophismes potentiels.
+    - La justification détaillée de l'attribution d'un type de sophisme spécifique
+      à un argument donné.
+
+Chaque prompt spécifie le format d'entrée attendu (via des variables comme `{{$input}}`)
+et le format de sortie souhaité.
+"""
 # agents/core/informal/prompts.py
 import logging
 
@@ -25,25 +39,37 @@ Retournez UNIQUEMENT la liste des arguments, un par ligne, sans numérotation, p
 +++++
 [Arguments Identifiés (un par ligne)]
 """
+"""
+Prompt pour l'identification d'arguments (Version 8).
+
+Demande au LLM d'analyser un texte (`$input`) et d'extraire les arguments
+ou affirmations distincts, en respectant des critères de clarté, concision,
+et neutralité. La sortie attendue est une liste d'arguments, un par ligne.
+"""
 
 # --- Fonction Sémantique (Prompt) pour Analyse de Sophismes (Nouveau) ---
-prompt_analyze_fallacies_v1 = """
+prompt_analyze_fallacies_v2 = """
 [Instructions]
 Analysez l'argument fourni ($input) et identifiez les sophismes potentiels qu'il contient.
-
-Pour chaque sophisme identifié, vous devez:
-1. Nommer précisément le type de sophisme selon la taxonomie standard
-2. Expliquer pourquoi cet argument constitue ce type de sophisme
-3. Citer la partie spécifique du texte qui illustre le sophisme
-4. Proposer une reformulation non fallacieuse de l'argument (si possible)
-
-Concentrez-vous sur les sophismes les plus évidents et significatifs. Soyez précis dans votre analyse.
+Votre réponse doit être un objet JSON valide contenant une seule clé "sophismes", qui est une liste d'objets.
+Chaque objet doit représenter un sophisme identifié et contenir les clés suivantes : "nom", "explication", "citation", "reformulation".
+Si aucun sophisme n'est identifié, retournez un objet JSON avec une liste vide : {"sophismes": []}.
+Ne retournez aucun texte ou explication en dehors de l'objet JSON.
 
 [Argument à Analyser]
 {{$input}}
 +++++
-[Sophismes Identifiés]
+[Sophismes Identifiés (JSON)]
 """
+"""
+Prompt pour l'analyse des sophismes dans un argument donné (Version 2).
+
+Demande au LLM d'identifier les sophismes dans un argument (`$input`) et de retourner
+le résultat sous forme d'un objet JSON structuré. Si aucun sophisme n'est trouvé,
+il doit retourner une liste vide.
+"""
+# Renommer l'ancien prompt pour référence, mais utiliser le nouveau
+prompt_analyze_fallacies_v1 = prompt_analyze_fallacies_v2
 
 # --- Fonction Sémantique (Prompt) pour Justification d'Attribution (Nouveau) ---
 prompt_justify_fallacy_attribution_v1 = """
@@ -68,6 +94,15 @@ Votre justification doit:
 +++++
 [Justification Détaillée]
 """
+"""
+Prompt pour la justification de l'attribution d'un sophisme (Version 1).
+
+Demande au LLM de fournir une justification détaillée expliquant pourquoi
+un argument (`$argument`) spécifique contient un type de sophisme donné
+(`$fallacy_type`), en s'appuyant sur la définition du sophisme
+(`$fallacy_definition`). La justification doit inclure une explication
+du mécanisme, des citations, un exemple et l'impact du sophisme.
+"""
 
 # Log de chargement
-logging.getLogger(__name__).debug("Module agents.core.informal.prompts chargé (V8 - Amélioré).")
+logging.getLogger(__name__).debug("Module agents.core.informal.prompts chargé (V8 - Amélioré, AnalyzeFallacies V1).")

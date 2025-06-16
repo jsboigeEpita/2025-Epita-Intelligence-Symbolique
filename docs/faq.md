@@ -38,10 +38,11 @@ R: Le projet nécessite :
 - Au moins 4 Go de RAM (8 Go recommandés)
 - Environ 500 Mo d'espace disque
 - Connexion Internet pour l'installation des dépendances
+Pour une aide à la configuration de l'environnement, vous pouvez consulter le script [`setup_project_env.ps1`](setup_project_env.ps1:0).
 
 **Q: Le projet fonctionne-t-il sur tous les systèmes d'exploitation ?**
 
-R: Oui, le projet est compatible avec Windows, macOS et Linux. Cependant, certaines fonctionnalités avancées peuvent nécessiter des configurations spécifiques selon le système d'exploitation.
+R: Oui, le projet est compatible avec Windows, macOS et Linux. Cependant, certaines fonctionnalités avancées peuvent nécessiter des configurations spécifiques selon le système d'exploitation. Des guides plus détaillés par plateforme peuvent être disponibles dans le répertoire [`docs/guides/`](docs/guides/).
 
 ### Problèmes d'installation courants
 
@@ -51,7 +52,8 @@ R: Les erreurs d'installation sont souvent liées à des conflits de dépendance
 1. Utilisez un environnement virtuel propre
 2. Mettez à jour pip : `pip install --upgrade pip`
 3. Installez les dépendances une par une pour identifier celle qui pose problème
-4. Consultez le fichier `docs/troubleshooting.md` pour des solutions spécifiques
+4. Consultez le fichier [`docs/troubleshooting.md`](docs/troubleshooting.md:0) pour des solutions spécifiques
+5. La FAQ dédiée au développement [`docs/projets/sujets/aide/FAQ_DEVELOPPEMENT.md`](docs/projets/sujets/aide/FAQ_DEVELOPPEMENT.md:0) peut également contenir des pistes.
 
 **Q: Comment résoudre les problèmes avec JPype ?**
 
@@ -83,7 +85,7 @@ R: Si vous rencontrez des conflits, essayez d'installer les dépendances dans ce
 
 R: Pour une utilisation rapide, suivez ces étapes :
 1. Installez le package : `pip install -e .`
-2. Exécutez l'analyse sur un exemple : `python scripts/execution/run_analysis.py --file examples/exemple_sophisme.txt`
+2. Exécutez l'analyse sur un exemple : `python scripts/execution/run_analysis.py --file examples/exemple_sophisme.txt`. Pour d'autres exemples de scripts prêts à l'emploi, explorez le répertoire [`examples/scripts_demonstration/`](examples/scripts_demonstration/). Si vous souhaitez utiliser l'interface web, consultez le guide de démarrage rapide : [`docs/projets/sujets/aide/interface-web/DEMARRAGE_RAPIDE.md`](docs/projets/sujets/aide/interface-web/DEMARRAGE_RAPIDE.md:0).
 3. Consultez les résultats dans le dossier `results/`
 
 **Q: Comment utiliser l'API web ?**
@@ -93,7 +95,7 @@ R: L'API web peut être démarrée avec :
 cd services/web_api
 python app.py
 ```
-Ensuite, accédez à `http://localhost:5000/docs` pour la documentation interactive de l'API.
+Ensuite, accédez à `http://localhost:5000/docs` pour la documentation interactive de l'API. Un exemple d'interaction programmatique avec l'API peut être trouvé dans le script de test [`libs/web_api/test_api.py`](libs/web_api/test_api.py:0).
 
 ### Configuration
 
@@ -103,6 +105,7 @@ R: La configuration des modèles se fait dans le fichier `config/llm_config.json
 - Le fournisseur de modèle (OpenAI, Hugging Face, etc.)
 - Les clés API nécessaires
 - Les paramètres de génération (température, tokens max, etc.)
+Des exemples de configurations pour différents cas d'usage ou tests peuvent se trouver dans [`examples/test_data/config/`](examples/test_data/config/) (si disponible).
 
 **Q: Comment ajuster les seuils de détection des sophismes ?**
 
@@ -110,6 +113,7 @@ R: Les seuils sont configurables dans `config/analysis_config.json`. Vous pouvez
 - Le seuil de confiance minimum pour signaler un sophisme
 - La sensibilité de détection par type de sophisme
 - Les paramètres de regroupement des sophismes similaires
+Des exemples de configurations pour différents cas d'usage ou tests peuvent se trouver dans [`examples/test_data/config/`](examples/test_data/config/) (si disponible).
 
 ### Exemples d'utilisation
 
@@ -144,6 +148,7 @@ R: Le système est composé de plusieurs composants clés :
 2. **Orchestrateur tactique** : Coordonne les agents et consolide les résultats
 3. **Services partagés** : LLM, cache, journalisation, etc.
 4. **API web** : Interface REST pour l'accès au système
+Pour une description plus détaillée de l'architecture et des composants, veuillez consulter le [Guide du Développeur](docs/guides/guide_developpeur.md:0).
 
 **Q: Comment les agents communiquent-ils entre eux ?**
 
@@ -152,6 +157,7 @@ R: Les agents communiquent via l'orchestrateur tactique qui :
 2. Collecte leurs résultats
 3. Résout les conflits potentiels
 4. Produit un rapport consolidé
+Le [Guide du Développeur](docs/guides/guide_developpeur.md:0) et le guide sur [l'Utilisation des Agents Logiques](docs/guides/utilisation_agents_logiques.md:0) fournissent plus de détails sur ces interactions.
 
 ### Flux de données
 
@@ -165,6 +171,7 @@ R: Le flux de données suit généralement ces étapes :
 5. Consolidation des résultats
 6. Génération du rapport final
 7. Visualisation des résultats
+Le [Guide du Développeur](docs/guides/guide_developpeur.md:0) illustre ce flux de manière plus détaillée.
 
 **Q: Comment sont stockés les résultats d'analyse ?**
 
@@ -173,6 +180,7 @@ R: Les résultats sont stockés dans plusieurs formats :
 - Markdown pour la lisibilité humaine
 - Base de données (optionnel) pour la persistance
 - Visualisations graphiques pour la présentation
+Vous pouvez trouver des exemples de ces formats de sortie dans le répertoire [`examples/test_data/results/`](examples/test_data/results/) (si disponible) ou générés par les scripts dans [`examples/scripts_demonstration/`](examples/scripts_demonstration/).
 
 ### Extension du système
 
@@ -183,6 +191,7 @@ R: Pour ajouter un nouvel agent :
 2. Implémentez les méthodes requises (`analyze`, `get_capabilities`, etc.)
 3. Enregistrez l'agent dans l'orchestrateur tactique
 4. Mettez à jour la configuration pour inclure votre agent
+Le [Guide du Développeur](docs/guides/guide_developpeur.md:0) contient une section dédiée à l'[Extension des Agents](docs/guides/guide_developpeur.md#extension-des-agents) (ou une section similaire) qui détaille ce processus. Vous pouvez également vous inspirer des agents existants dans le répertoire `argumentation_analysis/agents/`.
 
 **Q: Est-il possible d'utiliser un modèle de langage personnalisé ?**
 
@@ -191,6 +200,7 @@ R: Oui, vous pouvez intégrer votre propre modèle en :
 2. Implémentant l'interface requise
 3. Enregistrant votre adaptateur dans le service LLM
 4. Configurant le système pour utiliser votre modèle
+Consultez la section sur l'[Utilisation de LLMs Personnalisés](docs/guides/guide_developpeur.md#utilisation-de-llms-personnalises) (ou une section similaire) dans le [Guide du Développeur](docs/guides/guide_developpeur.md:0) pour les instructions complètes.
 
 ## Dépannage
 
@@ -210,6 +220,7 @@ R: Si vous rencontrez des erreurs de mémoire :
 2. Ajustez les paramètres de batch dans la configuration
 3. Utilisez l'option `--low-memory` avec les scripts d'analyse
 4. Augmentez la RAM disponible si possible
+Des configurations optimisées pour la mémoire ou des scripts de test de charge peuvent être trouvés dans [`examples/test_data/config/`](examples/test_data/config/) ou [`scripts/testing/`](scripts/testing/).
 
 ### Problèmes de performance
 
@@ -220,6 +231,7 @@ R: Pour améliorer les performances :
 2. Utilisez des modèles plus légers pour les analyses préliminaires
 3. Parallélisez les analyses avec l'option `--parallel`
 4. Réduisez la verbosité des logs avec `--log-level WARNING`
+Des scripts de benchmark pour évaluer et comparer les performances se trouvent dans [`scripts/testing/benchmarks/`](scripts/testing/benchmarks/) (si disponible).
 
 **Q: Comment réduire les coûts d'API pour les modèles externes ?**
 
@@ -228,6 +240,7 @@ R: Pour réduire les coûts :
 2. Utilisez des modèles locaux quand c'est possible
 3. Ajustez les paramètres de tokenisation pour optimiser les requêtes
 4. Implémentez une stratégie de batching pour les requêtes
+Des exemples de configuration du cache LLM sont disponibles dans [`examples/test_data/config/`](examples/test_data/config/) (si disponible).
 
 ### Compatibilité
 
@@ -253,7 +266,7 @@ R: En cas de problèmes de compatibilité :
 
 R: Vous pouvez contribuer de plusieurs façons :
 1. Corriger des bugs et soumettre des pull requests
-2. Ajouter de nouveaux exemples dans le dossier `examples/`
+2. Ajouter de nouveaux exemples (scripts, notebooks, données de test) dans les sous-répertoires de [`examples/`](examples/) tels que [`examples/logic_agents/`](examples/logic_agents/), [`examples/scripts_demonstration/`](examples/scripts_demonstration/), [`examples/notebooks/`](examples/notebooks/) ou [`examples/test_data/`](examples/test_data/).
 3. Améliorer la documentation
 4. Proposer de nouvelles fonctionnalités via les issues GitHub
 

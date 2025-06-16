@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Optional, Tuple, List, Dict, Any, Union
 from dotenv import load_dotenv, find_dotenv
 
+from argumentation_analysis.models.extract_definition import SourceDefinition
 from .cache_service import CacheService
 
 # Charger les variables d'environnement
@@ -35,14 +36,25 @@ class FetchService:
         plaintext_extensions: Optional[List[str]] = None
     ):
         """
-        Initialise le service de récupération.
-        
-        Args:
-            cache_service: Service de cache
-            jina_reader_prefix: Préfixe pour le lecteur Jina
-            tika_server_url: URL du serveur Tika
-            temp_download_dir: Répertoire temporaire pour les téléchargements
-            plaintext_extensions: Extensions de fichiers texte
+        Initialise le service de récupération de texte.
+
+        :param cache_service: Instance du service de cache à utiliser.
+        :type cache_service: CacheService
+        :param jina_reader_prefix: Préfixe de l'URL pour le service Jina Reader.
+        :type jina_reader_prefix: str
+        :param tika_server_url: URL optionnelle du serveur Tika. Si non fournie,
+                                utilise la valeur de la variable d'environnement
+                                `TIKA_SERVER_ENDPOINT` ou une valeur par défaut.
+        :type tika_server_url: Optional[str]
+        :param tika_server_timeout: Timeout optionnel en secondes pour les requêtes Tika.
+                                    Si non fourni, utilise `TIKA_SERVER_TIMEOUT` ou 30s.
+        :type tika_server_timeout: Optional[int]
+        :param temp_download_dir: Répertoire optionnel pour stocker les fichiers bruts
+                                  téléchargés avant traitement par Tika.
+        :type temp_download_dir: Optional[Path]
+        :param plaintext_extensions: Liste optionnelle des extensions de fichiers à considérer
+                                     comme du texte brut (pour éviter Tika si possible).
+        :type plaintext_extensions: Optional[List[str]]
         """
         self.cache_service = cache_service
         self.jina_reader_prefix = jina_reader_prefix
@@ -66,15 +78,18 @@ class FetchService:
     
     def reconstruct_url(self, schema: str, host_parts: List[str], path: str) -> Optional[str]:
         """
-        Reconstruit une URL à partir de schema, host_parts, et path.
-        
-        Args:
-            schema: Schéma de l'URL (http, https, etc.)
-            host_parts: Parties de l'hôte
-            path: Chemin de l'URL
-            
-        Returns:
-            URL reconstruite ou None si invalide
+        Reconstruit une URL complète à partir de ses composants.
+
+        :param schema: Le schéma de l'URL (par exemple, "http", "https").
+        :type schema: str
+        :param host_parts: Une liste des parties composant le nom d'hôte
+                           (par exemple, ["www", "example", "com"]).
+        :type host_parts: List[str]
+        :param path: Le chemin de la ressource sur le serveur (par exemple, "/page.html").
+        :type path: str
+        :return: L'URL reconstruite sous forme de chaîne de caractères, ou None si
+                 l'un des composants essentiels est manquant.
+        :rtype: Optional[str]
         """
         if not schema or not host_parts or not path:
             return None
@@ -86,30 +101,41 @@ class FetchService:
     
     def fetch_text(
         self,
-        source_info: Dict[str, Any],
+        source_info: Union[Dict[str, Any], SourceDefinition],
         force_refresh: bool = False
     ) -> Tuple[Optional[str], str]:
         """
-        Récupère le texte d'une source en utilisant la méthode appropriée.
-        
-        Args:
-            source_info: Informations sur la source
-            force_refresh: Si True, ignore le cache et force la récupération
-            
-        Returns:
-            Tuple contenant (texte_source, message_ou_url)
+        Récupère le texte d'une source en utilisant la méthode de récupération appropriée
+        (direct, Jina, Tika) et gère le cache.
+
+        :param source_info: Un dictionnaire ou un objet SourceDefinition contenant les
+                            informations de la source.
+        :type source_info: Union[Dict[str, Any], SourceDefinition]
+        :param force_refresh: Si True, ignore le cache et force une nouvelle récupération
+                              du contenu. Par défaut à False.
+        :type force_refresh: bool
+        :return: Un tuple contenant:
+                 - Le texte source récupéré (str, ou None si échec).
+                 - Un message de statut ou l'URL traitée (str).
+        :rtype: Tuple[Optional[str], str]
         """
-        # Reconstruire l'URL
-        schema = source_info.get("schema")
-        host_parts = source_info.get("host_parts", [])
-        path = source_info.get("path")
-        
-        url = self.reconstruct_url(schema, host_parts, path)
+        url = None
+        source_type = "direct_download"
+        path = ""
+
+        if isinstance(source_info, SourceDefinition):
+            url = source_info.get_url()
+            source_type = source_info.source_type
+            path = source_info.path
+        elif isinstance(source_info, dict):
+            schema = source_info.get("schema")
+            host_parts = source_info.get("host_parts", [])
+            path = source_info.get("path", "")
+            url = self.reconstruct_url(schema, host_parts, path)
+            source_type = source_info.get("source_type", "direct_download")
+
         if not url:
-            return None, "URL invalide"
-        
-        # Déterminer la méthode de récupération
-        source_type = source_info.get("source_type", "direct_download")
+            return None, "URL invalide ou informations de source incomplètes"
         
         # Vérifier le cache si force_refresh est False
         if not force_refresh:
@@ -136,14 +162,15 @@ class FetchService:
     
     def fetch_direct_text(self, url: str, timeout: int = 60) -> Optional[str]:
         """
-        Récupère le contenu texte brut d'une URL.
-        
-        Args:
-            url: URL à récupérer
-            timeout: Délai d'attente en secondes
-            
-        Returns:
-            Texte récupéré ou None en cas d'erreur
+        Récupère le contenu texte brut d'une URL par téléchargement direct.
+
+        :param url: L'URL à partir de laquelle récupérer le texte.
+        :type url: str
+        :param timeout: Le délai d'attente en secondes pour la requête HTTP.
+        :type timeout: int
+        :return: Le contenu textuel de la réponse si la requête réussit, sinon None.
+                 Le texte est décodé en UTF-8.
+        :rtype: Optional[str]
         """
         self.logger.info(f"Téléchargement direct depuis: {url}...")
         
@@ -166,14 +193,17 @@ class FetchService:
     
     def fetch_with_jina(self, url: str, timeout: int = 90) -> Optional[str]:
         """
-        Récupère et extrait le texte via Jina.
-        
-        Args:
-            url: URL à récupérer
-            timeout: Délai d'attente en secondes
-            
-        Returns:
-            Texte récupéré ou None en cas d'erreur
+        Récupère et extrait le contenu textuel d'une URL en utilisant le service Jina Reader.
+
+        Le service Jina est préfixé à l'URL fournie. La réponse attendue est en Markdown.
+
+        :param url: L'URL originale à traiter via Jina.
+        :type url: str
+        :param timeout: Le délai d'attente en secondes pour la requête HTTP vers Jina.
+        :type timeout: int
+        :return: Le contenu textuel extrait par Jina (potentiellement en Markdown),
+                 ou None si une erreur survient.
+        :rtype: Optional[str]
         """
         jina_url = f"{self.jina_reader_prefix}{url}"
         self.logger.info(f"Récupération via Jina: {jina_url}...")
@@ -209,18 +239,31 @@ class FetchService:
         timeout_tika: Optional[int] = None
     ) -> Optional[str]:
         """
-        Traite une source via Tika.
-        
-        Args:
-            url: URL à récupérer
-            file_content: Contenu du fichier
-            file_name: Nom du fichier
-            raw_file_cache_path: Chemin du cache brut
-            timeout_dl: Délai d'attente pour le téléchargement
-            timeout_tika: Délai d'attente pour Tika
-            
-        Returns:
-            Texte récupéré ou None en cas d'erreur
+        Récupère et extrait le contenu textuel d'une URL ou d'un contenu binaire
+        de fichier en utilisant un serveur Apache Tika.
+
+        Si une URL est fournie et qu'elle ne pointe pas vers un type de fichier texte simple,
+        le contenu est d'abord téléchargé (et mis en cache brut si `temp_download_dir`
+        est configuré), puis envoyé à Tika. Si `file_content` est fourni, il est
+        directement envoyé à Tika (sauf s'il s'agit d'un type texte simple).
+
+        :param url: URL optionnelle du fichier à traiter.
+        :type url: Optional[str]
+        :param file_content: Contenu binaire optionnel du fichier à traiter.
+        :type file_content: Optional[bytes]
+        :param file_name: Nom du fichier (utilisé pour le cache et la détection de type
+                          si `file_content` est fourni). Par défaut "fichier".
+        :type file_name: str
+        :param raw_file_cache_path: Chemin optionnel pour stocker le fichier brut téléchargé.
+        :type raw_file_cache_path: Optional[Union[Path, str]]
+        :param timeout_dl: Délai d'attente en secondes pour le téléchargement du fichier si `url` est utilisé.
+        :type timeout_dl: int
+        :param timeout_tika: Délai d'attente optionnel en secondes pour la requête au serveur Tika.
+                             Utilise `self.tika_server_timeout` si None.
+        :type timeout_tika: Optional[int]
+        :return: Le contenu textuel extrait par Tika, ou None si une erreur survient.
+                 Retourne une chaîne vide si Tika ne retourne aucun texte mais que la requête réussit.
+        :rtype: Optional[str]
         """
         cache_key = url if url else f"file://{file_name}"
         

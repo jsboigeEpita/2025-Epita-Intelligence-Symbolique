@@ -7,6 +7,7 @@ Script pour vérifier que les dépendances sont correctement installées et fonc
 Ce script teste les dépendances problématiques (numpy, pandas, jpype) pour s'assurer
 qu'elles sont correctement installées et fonctionnelles.
 """
+import project_core.core_from_scripts.auto_env
 
 import sys
 import os

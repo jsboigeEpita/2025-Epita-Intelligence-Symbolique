@@ -1,34 +1,30 @@
-# 🔧 Utilitaires (`utils/`)
+# Utilitaires d'Analyse d'Argumentation
 
-Ce répertoire contient des fonctions utilitaires générales non spécifiques à un domaine particulier de l'application.
+Ce répertoire contient des modules utilitaires transverses utilisés par différents composants du projet d'analyse d'argumentation.
 
-[Retour au README Principal](../README.md)
+## Modules Disponibles
 
-## Contenu
+### `performance_monitoring.py`
 
-* **[`system_utils.py`](./system_utils.py)** :
-    * `check_and_install`: Fonction (reprise de l'ancien notebook) pour vérifier/installer des packages Python via pip. Utilité limitée maintenant que `requirements.txt` est utilisé, mais peut servir pour des dépendances optionnelles.
-* **[`extract_repair/`](./extract_repair/README.md)** 🔄 : Sous-module pour la réparation des bornes d'extraits défectueuses.
+Ce module fournit des outils pour monitorer la performance des fonctions critiques, notamment via des décorateurs et des gestionnaires de contexte.
 
-## Sous-modules
+#### Fonctionnalités principales
 
-### Réparation des bornes d'extraits (`extract_repair/`) 🔄
+- **Décorateur `@monitor_performance`**: Un décorateur simple à utiliser pour mesurer le temps d'exécution d'une fonction. Il logue le résultat dans un fichier structuré.
+- **Logging Structuré**: Les logs de performance sont écrits au format JSON dans `logs/oracle_performance.log`, ce qui facilite leur parsing et leur analyse par des outils externes.
+- **Configuration Centralisée**: La configuration du logger (destination, format, niveau) est gérée de manière centralisée dans le module.
 
-Ce sous-module contient les outils pour réparer automatiquement les bornes défectueuses des extraits de texte:
+#### Comment l'utiliser
 
-* **[`repair_extract_markers.py`](./extract_repair/repair_extract_markers.py)** : Script de réparation automatique des bornes.
-* **[`repair_extract_markers.ipynb`](./extract_repair/repair_extract_markers.ipynb)** : Notebook interactif pour la réparation des bornes.
-* **[`docs/repair_extract_markers_report.md`](./extract_repair/docs/repair_extract_markers_report.md)** : Documentation sur la réparation des bornes.
-* **[`docs/repair_report.html`](./extract_repair/docs/repair_report.html)** : Rapport HTML généré par le script de réparation.
+Pour monitorer une fonction, il suffit d'importer le décorateur et de l'appliquer à la définition de la fonction :
 
-Pour lancer l'outil de réparation, vous pouvez utiliser le script à la racine du projet:
-```bash
-python ../run_extract_repair.py
+```python
+from argumentation_analysis.utils.performance_monitoring import monitor_performance
+
+@monitor_performance(log_args=True)
+def ma_fonction_critique(param1, param2):
+    # Logique métier à monitorer
+    pass
 ```
 
-Ou ouvrir directement le notebook:
-```bash
-jupyter notebook extract_repair/repair_extract_markers.ipynb
-```
-
-Pour plus de détails, consultez le [README de l'outil de réparation](./extract_repair/README.md).
+L'argument `log_args=True` est optionnel et permet de capturer les arguments passés à la fonction dans les logs de performance.

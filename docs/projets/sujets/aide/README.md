@@ -130,20 +130,25 @@ Les ressources d'aide doivent être :
 
 ## 📚 Relation avec la Documentation Principale
 
+Ces ressources d'aide sont conçues pour être un complément pratique aux documentations principales du projet. Pour une compréhension approfondie des concepts, de l'architecture et des bonnes pratiques, veuillez consulter en priorité :
+- Le **[Portail des Guides Officiels](../../guides/README.md)**
+- La **[Documentation d'Architecture](../../architecture/README.md)**
+- La **[Documentation des Composants](../../composants/README.md)**
+
 ### Complémentarité des Ressources
 
 | Type de Documentation | Objectif | Exemple |
 |----------------------|----------|---------|
-| **Guides théoriques** (`docs/projets/sujets/`) | Expliquer les concepts et architectures | Guide Interface Web complet |
+| **[Portail des Guides](../../guides/README.md)** (`docs/guides/`) | Expliquer les concepts, fournir des tutoriels et bonnes pratiques | Guide Interface Web complet |
 | **Ressources d'aide** (`docs/projets/sujets/aide/`) | Fournir du code prêt à l'emploi | Composants React fonctionnels |
 | **API et services** (`services/`) | Exposer les fonctionnalités | API REST Flask |
-| **Documentation technique** (`docs/`) | Documenter l'architecture | Architecture globale |
+| **Documentation Technique** | Documenter l'architecture et les composants | [Architecture Globale](../../architecture/architecture_globale.md), [Composants Clés](../../composants/README.md) |
 
 ### Parcours de Développement Recommandé
 
-1. **📖 Lisez** le guide théorique de votre sujet
-2. **🚀 Suivez** le démarrage rapide dans l'aide
-3. **🔧 Utilisez** les composants et exemples fournis
+1. **📖 Lisez** le guide théorique de votre sujet (via le Portail des Guides)
+2. **🚀 Suivez** le démarrage rapide dans l'aide spécifique à votre sujet
+3. **🔧 Utilisez** les composants et exemples fournis ici
 4. **🎨 Adaptez** selon vos besoins spécifiques
 5. **🚀 Déployez** votre solution finale
 
@@ -151,7 +156,9 @@ Les ressources d'aide doivent être :
 
 ### Ressources de Support
 
-- **Documentation principale** : [`docs/`](../../README.md)
+- **Portail des Guides Officiels** : [`docs/guides/README.md`](../../guides/README.md) - **Source principale d'information recommandée.**
+- **Documentation d'Architecture** : [`docs/architecture/README.md`](../../architecture/README.md)
+- **Documentation des Composants** : [`docs/composants/README.md`](../../composants/README.md)
 - **Issues GitHub** : Pour signaler des problèmes ou demander des fonctionnalités
 - **Discussions** : Pour poser des questions générales
 - **Pull Requests** : Pour contribuer des améliorations

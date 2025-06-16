@@ -17,13 +17,15 @@ class Extract:
     start_marker: str
     end_marker: str
     template_start: str = ""
+    full_text: str = ""
     
     def to_dict(self) -> Dict[str, Any]:
         """Convertit l'extrait en dictionnaire."""
         result = {
             "extract_name": self.extract_name,
             "start_marker": self.start_marker,
-            "end_marker": self.end_marker
+            "end_marker": self.end_marker,
+            "full_text": self.full_text
         }
         
         if self.template_start:
@@ -38,7 +40,8 @@ class Extract:
             extract_name=data.get("extract_name", ""),
             start_marker=data.get("start_marker", ""),
             end_marker=data.get("end_marker", ""),
-            template_start=data.get("template_start", "")
+            template_start=data.get("template_start", ""),
+            full_text=data.get("full_text", "")
         )
 
 
@@ -96,6 +99,41 @@ class SourceDefinition:
             return self.extracts[index]
         return None
 
+    def get_url(self) -> str:
+        """Construit et retourne l'URL complète de la source."""
+        host = ".".join(self.host_parts)
+        return f"{self.schema}://{host}{self.path}"
+
+@dataclass
+class ExtractResult:
+    """Classe représentant le résultat d'une extraction."""
+    
+    extract_name: str
+    extracted_text: Optional[str]
+    status: str
+    start_marker_found: bool
+    end_marker_found: bool
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convertit le résultat de l'extraction en dictionnaire."""
+        return {
+            "extract_name": self.extract_name,
+            "extracted_text": self.extracted_text,
+            "status": self.status,
+            "start_marker_found": self.start_marker_found,
+            "end_marker_found": self.end_marker_found
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'ExtractResult':
+        """Crée un résultat d'extraction à partir d'un dictionnaire."""
+        return cls(
+            extract_name=data.get("extract_name", ""),
+            extracted_text=data.get("extracted_text"),
+            status=data.get("status", ""),
+            start_marker_found=data.get("start_marker_found", False),
+            end_marker_found=data.get("end_marker_found", False)
+        )
 
 class ExtractDefinitions:
     """Classe pour gérer l'ensemble des définitions d'extraits."""

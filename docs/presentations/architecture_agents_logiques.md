@@ -53,12 +53,12 @@ Notre architecture repose sur plusieurs principes fondamentaux :
 
 ## Composants principaux
 
-### 1. AbstractLogicAgent
+### 1. BaseLogicAgent (Classe de Base Unifiée)
 
-Classe abstraite définissant l'interface commune pour tous les agents logiques :
+Classe abstraite fondamentale qui définit l'interface commune pour tous les agents logiques, en intégrant à la fois le raisonnement formel et l'orchestration de tâches :
 
 ```java
-public abstract class AbstractLogicAgent {
+public abstract class BaseLogicAgent {
     // Méthodes principales
     public abstract BeliefSet createBeliefSet(String text);
     public abstract QueryResult executeQuery(BeliefSet beliefSet, String query);
@@ -134,7 +134,7 @@ Fabrique pour créer l'agent approprié selon le type de logique :
 
 ```java
 public class LogicFactory {
-    public static AbstractLogicAgent createAgent(LogicType type) {
+    public static BaseLogicAgent createAgent(LogicType type) {
         switch (type) {
             case PROPOSITIONAL:
                 return new PropositionalLogicAgent();
@@ -173,14 +173,14 @@ L'architecture est conçue pour être facilement extensible :
 
 ### Ajout d'un nouveau type de logique
 
-1. Créer une nouvelle implémentation de AbstractLogicAgent
+1. Créer une nouvelle implémentation de `BaseLogicAgent`
 2. Définir une classe BeliefSet spécifique si nécessaire
 3. Ajouter le nouveau type à LogicFactory
 4. Mettre à jour l'API Web pour prendre en charge le nouveau type
 
 ### Ajout de nouvelles fonctionnalités
 
-1. Étendre l'interface AbstractLogicAgent
+1. Étendre l'interface `BaseLogicAgent`
 2. Implémenter la fonctionnalité dans chaque agent
 3. Mettre à jour l'API Web pour exposer la nouvelle fonctionnalité
 

@@ -1,0 +1,9 @@
+digraph argumentation {
+  rankdir=LR;
+  node [shape=circle];
+  "a";
+  "b";
+  "c";
+  "b" -> "c";
+  "a" -> "b";
+}

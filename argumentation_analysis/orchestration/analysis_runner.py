@@ -1,70 +1,86 @@
-# orchestration/analysis_runner.py
+﻿# orchestration/analysis_runner.py
+import project_core.core_from_scripts.auto_env  # Auto-activation environnement intelligent
+import sys
+import os
+# Ajout pour résoudre les problèmes d'import de project_core
+current_script_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_script_dir, "..", ".."))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 import time
 import traceback
 import asyncio
 import logging
 import json
 import random
-import os
-import jpype # Pour la vérification finale de la JVM
-from typing import List, Optional, Union # Ajout Union
+import re
+from typing import List, Optional, Union, Any, Dict
 
-# Imports Semantic Kernel
+# from argumentation_analysis.core.jvm_setup import initialize_jvm
+# from argumentation_analysis.paths import LIBS_DIR # Nécessaire pour initialize_jvm
+
+import jpype # Pour la vérification finale de la JVM
+# Imports pour le hook LLM
+from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
+from semantic_kernel.contents.chat_message_content import ChatMessageContent as SKChatMessageContent # Alias pour éviter conflit
+from semantic_kernel.kernel import Kernel as SKernel # Alias pour éviter conflit avec Kernel de SK
+# KernelArguments est déjà importé plus bas
+ # Imports Semantic Kernel
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent, AuthorRole
+from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents.utils.author_role import AuthorRole
+# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
 from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent, Agent
 from semantic_kernel.exceptions import AgentChatException
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion # Pour type hint
 from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
-# Imports depuis les modules du projet
+from semantic_kernel.contents.chat_history import ChatHistory
+
+# Correct imports
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
-from argumentation_analysis.core.strategies import SimpleTerminationStrategy, BalancedParticipationStrategy
-# NOTE: create_llm_service n'est plus importé ici, le service est passé en argument
+from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
+from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
+from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
+from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
 
-# Fonction d'importation paresseuse pour éviter les importations circulaires
-def _lazy_imports():
-    """Importe les modules de manière paresseuse pour éviter les importations circulaires."""
-    global setup_pm_kernel, PM_INSTRUCTIONS
-    global setup_informal_kernel, INFORMAL_AGENT_INSTRUCTIONS
-    global setup_pl_kernel, PL_AGENT_INSTRUCTIONS
-    global setup_extract_agent, EXTRACT_AGENT_INSTRUCTIONS
-    
-    # Imports des définitions d'agents (setup + instructions)
-    from argumentation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel, PM_INSTRUCTIONS
-    from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel, INFORMAL_AGENT_INSTRUCTIONS
-    from argumentation_analysis.agents.core.pl.pl_definitions import setup_pl_kernel, PL_AGENT_INSTRUCTIONS
-    from argumentation_analysis.agents.core.extract.extract_agent import setup_extract_agent
-    from argumentation_analysis.agents.core.extract.prompts import EXTRACT_AGENT_INSTRUCTIONS
+class AnalysisRunner:
+    """
+    Orchestre l'analyse d'argumentation en utilisant une flotte d'agents spécialisés.
+    """
+    def __init__(self, llm_service: Optional[Union[OpenAIChatCompletion, AzureChatCompletion]] = None):
+        self._llm_service = llm_service
 
-# Appeler la fonction d'importation paresseuse
-_lazy_imports()
-
-# Logger principal pour cette fonction
-logger = logging.getLogger("Orchestration.Run")
-# Assurer un handler de base si non configuré globalement
-if not logger.handlers and not logger.propagate:
-    handler = logging.StreamHandler(); formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S'); handler.setFormatter(formatter); logger.addHandler(handler); logger.setLevel(logging.INFO)
+    async def run_analysis_async(self, text_content: str, llm_service: Optional[Union[OpenAIChatCompletion, AzureChatCompletion]] = None):
+        """Exécute le pipeline d'analyse complet."""
+        # Utilise le service fourni en priorité, sinon celui de l'instance
+        active_llm_service = llm_service or self._llm_service
+        if not active_llm_service:
+            # Ici, ajouter la logique pour créer un service par défaut si aucun n'est fourni
+            # Pour l'instant, on lève une erreur comme dans le test.
+            raise ValueError("Un service LLM doit être fourni soit à l'initialisation, soit à l'appel de la méthode.")
+        
+        return await _run_analysis_conversation(
+            texte_a_analyser=text_content,
+            llm_service=active_llm_service
+        )
 
 
-# --- Fonction Principale d'Exécution (Modifiée V10.7 - Accepte Service LLM) ---
-async def run_analysis_conversation(
+async def run_analysis(text_content: str, llm_service: Optional[Union[OpenAIChatCompletion, AzureChatCompletion]] = None):
+    """Fonction wrapper pour une exécution simple."""
+    runner = AnalysisRunner()
+    return await runner.run_analysis_async(text_content=text_content, llm_service=llm_service)
+
+
+async def _run_analysis_conversation(
     texte_a_analyser: str,
     llm_service: Union[OpenAIChatCompletion, AzureChatCompletion] # Service LLM passé en argument
     ):
-    """
-    Orchestre une conversation d'analyse rhétorique multi-agents.
-
-    Crée des instances locales de l'état, du kernel, des agents,
-    des stratégies et lance la conversation via AgentGroupChat.
-
-    Args:
-        texte_a_analyser (str): Le texte brut à analyser.
-        llm_service (Union[OpenAIChatCompletion, AzureChatCompletion]): L'instance
-                                 du service LLM (OpenAI ou Azure) à utiliser.
-    """
     run_start_time = time.time()
     run_id = random.randint(1000, 9999)
     print("\n=====================================================")
@@ -73,7 +89,20 @@ async def run_analysis_conversation(
     run_logger = logging.getLogger(f"Orchestration.Run.{run_id}")
     run_logger.info("--- Début Nouveau Run ---")
 
-    # Vérification argument llm_service
+    run_logger.info(f"Type de llm_service: {type(llm_service)}")
+    
+    class RawResponseLogger: 
+        def __init__(self, logger_instance): self.logger = logger_instance
+        def on_chat_completion_response(self, message, raw_response): 
+            self.logger.debug(f"Raw LLM Response for message ID {message.id if hasattr(message, 'id') else 'N/A'}: {raw_response}")
+
+    if hasattr(llm_service, "add_chat_hook_handler"):
+        raw_logger_hook = RawResponseLogger(run_logger) 
+        llm_service.add_chat_hook_handler(raw_logger_hook)
+        run_logger.info("RawResponseLogger hook ajouté au service LLM.")
+    else:
+        run_logger.warning("Le service LLM ne supporte pas add_chat_hook_handler. Le RawResponseLogger ne sera pas actif.")
+
     if not llm_service or not hasattr(llm_service, 'service_id'):
          run_logger.critical("❌ Service LLM invalide ou manquant fourni à run_analysis_conversation.")
          raise ValueError("Un service LLM valide est requis.")
@@ -81,184 +110,243 @@ async def run_analysis_conversation(
 
     local_state: Optional[RhetoricalAnalysisState] = None
     local_kernel: Optional[sk.Kernel] = None
-    local_group_chat: Optional[AgentGroupChat] = None
+    local_group_chat: Optional[Any] = None # AgentGroupChat non disponible
     local_state_manager_plugin: Optional[StateManagerPlugin] = None
-    agent_list_local: List[Agent] = []
+
+    agent_list_local: List[Any] = []
 
     try:
-        # 1. Créer instance état locale
         run_logger.info("1. Création instance état locale...")
         local_state = RhetoricalAnalysisState(initial_text=texte_a_analyser)
         run_logger.info(f"   Instance état locale créée (id: {id(local_state)}) avec texte (longueur: {len(texte_a_analyser)}).")
 
-        # 2. Créer instance StateManagerPlugin locale
         run_logger.info("2. Création instance StateManagerPlugin locale...")
         local_state_manager_plugin = StateManagerPlugin(local_state)
         run_logger.info(f"   Instance StateManagerPlugin locale créée (id: {id(local_state_manager_plugin)}).")
 
-        # 3. Créer Kernel local
         run_logger.info("3. Création Kernel local...")
         local_kernel = sk.Kernel()
-        # Utiliser l'instance de service LLM passée en argument
         local_kernel.add_service(llm_service)
         run_logger.info(f"   Service LLM '{llm_service.service_id}' ajouté.")
         local_kernel.add_plugin(local_state_manager_plugin, plugin_name="StateManager")
         run_logger.info(f"   Plugin 'StateManager' (local) ajouté.")
 
-        # 4. Configurer plugins agents sur Kernel local
-        run_logger.info("4. Configuration plugins agents sur Kernel local...")
-        # Passer l'instance de service LLM aux fonctions setup
-        setup_pm_kernel(local_kernel, llm_service)
-        setup_informal_kernel(local_kernel, llm_service)
-        setup_pl_kernel(local_kernel, llm_service) # Cette fonction vérifie maintenant la JVM en interne
-        # Configuration de l'agent d'extraction
-        extract_kernel, extract_agent_instance = await setup_extract_agent(llm_service)
-        run_logger.info("   Plugins agents configurés.")
-        run_logger.debug(f"   Plugins enregistrés: {list(local_kernel.plugins.keys())}")
+        run_logger.info("4. Création et configuration des instances d'agents refactorés...")
+        llm_service_id_str = llm_service.service_id
 
-        # 5. Créer instances agents locales
-        run_logger.info("5. Création instances agents...")
-        # Utiliser l'instance de service LLM passée en argument pour obtenir les settings
-        prompt_exec_settings = local_kernel.get_prompt_execution_settings_from_service_id(llm_service.service_id)
-        prompt_exec_settings.function_choice_behavior = FunctionChoiceBehavior.Auto(auto_invoke_kernel_functions=True, max_auto_invoke_attempts=5)
-        run_logger.info(f"   Settings LLM (auto function call): {prompt_exec_settings.function_choice_behavior}")
+        pm_agent_refactored = ProjectManagerAgent(kernel=local_kernel, agent_name="ProjectManagerAgent_Refactored")
+        pm_agent_refactored.setup_agent_components(llm_service_id=llm_service_id_str)
+        run_logger.info(f"   Agent {pm_agent_refactored.name} instancié et configuré.")
 
-        # Utiliser l'instance de service LLM passée en argument pour créer les agents
-        local_pm_agent = ChatCompletionAgent(
-            kernel=local_kernel, service=llm_service, name="ProjectManagerAgent",
-            instructions=PM_INSTRUCTIONS, arguments=KernelArguments(settings=prompt_exec_settings)
-        )
-        local_informal_agent = ChatCompletionAgent(
-            kernel=local_kernel, service=llm_service, name="InformalAnalysisAgent",
-            instructions=INFORMAL_AGENT_INSTRUCTIONS, arguments=KernelArguments(settings=prompt_exec_settings)
-        )
-        local_pl_agent = ChatCompletionAgent(
-            kernel=local_kernel, service=llm_service, name="PropositionalLogicAgent",
-            instructions=PL_AGENT_INSTRUCTIONS, arguments=KernelArguments(settings=prompt_exec_settings)
-        )
-        # Création de l'agent d'extraction
-        local_extract_agent = ChatCompletionAgent(
-            kernel=local_kernel, service=llm_service, name="ExtractAgent",
-            instructions=EXTRACT_AGENT_INSTRUCTIONS, arguments=KernelArguments(settings=prompt_exec_settings)
-        )
-        agent_list_local = [local_pm_agent, local_informal_agent, local_pl_agent, local_extract_agent]
-        run_logger.info(f"   Instances agents créées: {[agent.name for agent in agent_list_local]}.")
-
-        # 6. Créer instances stratégies locales
-        run_logger.info("6. Création instances stratégies locales...")
-        local_termination_strategy = SimpleTerminationStrategy(local_state, max_steps=15)
+        informal_agent_refactored = InformalAnalysisAgent(kernel=local_kernel, agent_name="InformalAnalysisAgent_Refactored")
+        informal_agent_refactored.setup_agent_components(llm_service_id=llm_service_id_str)
+        run_logger.info(f"   Agent {informal_agent_refactored.name} instancié et configuré.")
         
-        # Utilisation de la nouvelle stratégie d'équilibrage de participation
-        local_selection_strategy = BalancedParticipationStrategy(
-            agents=agent_list_local,
-            state=local_state,
-            default_agent_name="ProjectManagerAgent"
+        pl_agent_refactored = PropositionalLogicAgent(kernel=local_kernel, agent_name="PropositionalLogicAgent_Refactored")
+        pl_agent_refactored.setup_agent_components(llm_service_id=llm_service_id_str)
+        run_logger.info(f"   Agent {pl_agent_refactored.name} instancié et configuré.")
+
+        extract_agent_refactored = ExtractAgent(kernel=local_kernel, agent_name="ExtractAgent_Refactored")
+        extract_agent_refactored.setup_agent_components(llm_service_id=llm_service_id_str)
+        run_logger.info(f"   Agent {extract_agent_refactored.name} instancié et configuré.")
+        
+        run_logger.debug(f"   Plugins enregistrés dans local_kernel après setup des agents: {list(local_kernel.plugins.keys())}")
+
+        run_logger.info("5. Création du groupe de chat et lancement de l'orchestration...")
+
+        # Rassembler les agents actifs
+        agents = [pm_agent_refactored, informal_agent_refactored, pl_agent_refactored, extract_agent_refactored]
+        active_agents = [agent for agent in agents if agent is not None]
+
+        if not active_agents:
+            run_logger.critical("Aucun agent actif n'a pu être initialisé. Annulation de l'analyse.")
+            return {"status": "error", "message": "Aucun agent actif."}
+
+        run_logger.info(f"Agents actifs pour la conversation: {[agent.name for agent in active_agents]}")
+
+        # Création de l'historique de chat et message initial
+        chat = ChatHistory()
+        initial_user_message = (
+            "Vous êtes une équipe d'analystes experts en argumentation. Votre mission est d'analyser le texte suivant. "
+            "Le ProjectManagerAgent doit commencer par définir les tâches. Les autres agents attendent ses instructions. "
+            f"Le texte à analyser est:\n\n---\n{texte_a_analyser}\n---"
         )
-        run_logger.info(f"   Instances stratégies créées (Terminaison id: {id(local_termination_strategy)}, Sélection id: {id(local_selection_strategy)}).")
+        chat.add_user_message(initial_user_message)
+        run_logger.info("Historique de chat initialisé avec le message utilisateur.")
 
-        # 7. Créer instance AgentGroupChat locale
-        run_logger.info("7. Création instance AgentGroupChat locale...")
-        local_group_chat = AgentGroupChat(
-            agents=agent_list_local,
-            selection_strategy=local_selection_strategy,
-            termination_strategy=local_termination_strategy
-        )
-        run_logger.info(f"   Instance AgentGroupChat locale créée (id: {id(local_group_chat)}).")
+        # ABANDON DE AgentGroupChat - retour à une boucle manuelle contrôlée.
+        # L'API de AgentGroupChat est trop instable ou obscure dans cette version.
+        run_logger.info("Début de la boucle de conversation manuelle...")
 
-        # 8. Initialiser historique et lancer invoke
-        run_logger.info("8. Initialisation historique et lancement invoke...")
-        # Utiliser le texte reçu dans le prompt initial
-        initial_prompt = f"Bonjour à tous. Le texte à analyser est :\n'''\n{texte_a_analyser}\n'''\nProjectManagerAgent, merci de définir les premières tâches d'analyse en suivant la séquence logique."
+        full_history = chat  # Utiliser l'historique de chat initial
+        max_turns = 15
+        
+        current_agent = None
+        for i in range(max_turns):
+            run_logger.info(f"--- Tour de conversation {i+1}/{max_turns} ---")
 
-        print(f"\n--- Tour 0 (Utilisateur) --- \n{initial_prompt}\n")
-        run_logger.info(f"Message initial (Utilisateur): {initial_prompt}")
+            # Logique de sélection d'agent améliorée
+            if i == 0:
+                # Le premier tour est toujours pour le ProjectManagerAgent
+                next_agent = pm_agent_refactored
+            else:
+                # Si l'agent précédent N'ÉTAIT PAS le PM, le prochain DOIT être le PM.
+                if current_agent.name != pm_agent_refactored.name:
+                    next_agent = pm_agent_refactored
+                    run_logger.info("Le tour précédent a été exécuté par un agent travailleur. Le contrôle revient au ProjectManagerAgent.")
+                else:
+                    # Si l'agent précédent ÉTAIT le PM, on cherche sa désignation.
+                    last_message_content = full_history.messages[-1].content
+                    next_agent_name_str = "TERMINATE"  # Par défaut
 
-        # Ajouter le message initial à l'historique INTERNE du chat
-        if hasattr(local_group_chat, 'history') and hasattr(local_group_chat.history, 'add_user_message'):
-            local_group_chat.history.add_user_message(initial_prompt)
-            run_logger.info("   Message initial ajouté à l'historique interne de AgentGroupChat.")
-        else:
-            run_logger.warning("   Impossible d'ajouter le message initial à l'historique interne de AgentGroupChat (attribut manquant?).")
+                    match = re.search(r'designate_next_agent\(agent_name="([^"]+)"\)', last_message_content)
+                    
+                    if match:
+                        next_agent_name_str = match.group(1)
+                        run_logger.info(f"Prochain agent désigné par le PM : '{next_agent_name_str}'")
+                        next_agent = next((agent for agent in active_agents if agent.name == next_agent_name_str), None)
+                    else:
+                        run_logger.warning(f"Le PM n'a pas désigné de prochain agent. Réponse: {last_message_content[:150]}... Fin de la conversation.")
+                        next_agent = None # Force la fin
 
-        invoke_start_time = time.time()
-        run_logger.info(">>> Début boucle invocation AgentGroupChat <<<")
-        turn = 0
+            if not next_agent:
+                run_logger.info(f"Aucun prochain agent valide trouvé. Fin de la boucle de conversation.")
+                break
+            
+            current_agent = next_agent # Mémoriser l'agent actuel pour la logique du prochain tour
 
-        # --- Boucle Invoke ---
-        async for message in local_group_chat.invoke():
-             turn += 1
-             if not message: # Vérifier si l'objet message lui-même est None/vide
-                 run_logger.warning(f"Tour {turn}: Invoke a retourné un message vide. Arrêt.")
-                 break
+            run_logger.info(f"Agent sélectionné pour ce tour: {next_agent.name}")
 
-             author_display_name = message.name or getattr(message, 'author_name', f"Role:{message.role.name}")
-             role_display_name = message.role.name
+            # Invoquer l'agent sélectionné
+            arguments = KernelArguments(chat_history=full_history)
+            result_stream = next_agent.invoke_stream(local_kernel, arguments=arguments)
+            
+            # Collecter la réponse complète du stream
+            response_messages = [message async for message in result_stream]
+            
+            if not response_messages:
+                run_logger.warning(f"L'agent {next_agent.name} n'a retourné aucune réponse. Fin de la conversation.")
+                break
+            
+            # Ajouter les nouvelles réponses à l'historique
+            last_message_content = ""
+            for message_list in response_messages:
+                for msg_content in message_list:
+                    full_history.add_message(message=msg_content)
+                    last_message_content = msg_content.content
+            
+            run_logger.info(f"Réponse de {next_agent.name} reçue et ajoutée à l'historique.")
 
-             print(f"\n--- Tour {turn} ({author_display_name} / {role_display_name}) ---")
-             run_logger.info(f"----- Début Tour {turn} - Agent/Author: '{author_display_name}', Role: {role_display_name} -----")
+            # ---- NOUVELLE LOGIQUE: Exécution des Tool Calls du PM et mise à jour de l'état ----
+            if current_agent.name == pm_agent_refactored.name and last_message_content:
+                run_logger.info("Détection des appels d'outils planifiés par le ProjectManagerAgent...")
 
-             content_str = str(message.content) if message.content else ""
-             content_display = content_str[:500] + "..." if len(content_str) > 500 else content_str
-             print(f"  Content: {content_display}")
-             run_logger.debug(f"  Msg Content T{turn} (Full): {content_str}")
+                task_match = re.search(r'StateManager\.add_analysis_task\(description="([^"]+)"\)', last_message_content)
+                if task_match:
+                    task_description = task_match.group(1)
+                    run_logger.info(f"Appel à 'add_analysis_task' trouvé. Description: '{task_description}'")
+                    try:
+                        # On récupère l'ID de la tâche directement depuis l'appel
+                        result = await local_kernel.invoke(
+                            plugin_name="StateManager",
+                            function_name="add_analysis_task",
+                            arguments=KernelArguments(description=task_description)
+                        )
+                        # Stocker l'ID de la tâche active pour le prochain tour
+                        active_task_id = result.value
+                        run_logger.info(f"Exécution de 'add_analysis_task' réussie. Tâche '{active_task_id}' créée.")
+                    except Exception as e:
+                        run_logger.error(f"Erreur lors de l'exécution de 'add_analysis_task': {e}", exc_info=True)
+            
+            # Si l'agent n'est pas le PM, sa réponse doit mettre à jour l'état.
+            elif current_agent.name != pm_agent_refactored.name and last_message_content:
+                run_logger.info(f"Traitement de la réponse de l'agent travailleur: {current_agent.name}")
+                try:
+                    # Récupérer la dernière tâche non terminée
+                    # NOTE: C'est une simplification. Une vraie implémentation aurait besoin d'un ID de tâche
+                    # passé dans le contexte de l'agent. Pour l'instant, on prend la dernière.
+                    last_task_id = local_state.get_last_task_id()
 
-             tool_calls = getattr(message, 'tool_calls', []) or []
-             if tool_calls:
-                 print("   Tool Calls:")
-                 run_logger.info("   Tool Calls:")
-                 for tc in tool_calls:
-                     plugin_name, func_name = 'N/A', 'N/A'
-                     function_name_attr = getattr(getattr(tc, 'function', None), 'name', None)
-                     if function_name_attr and isinstance(function_name_attr, str) and '-' in function_name_attr:
-                         parts = function_name_attr.split('-', 1)
-                         if len(parts) == 2: plugin_name, func_name = parts
-                     args_dict = getattr(getattr(tc, 'function', None), 'arguments', {}) or {}
-                     args_str = json.dumps(args_dict) if args_dict else "{}"
-                     args_display = args_str[:200] + "..." if len(args_str) > 200 else args_str
-                     log_msg_tc = f"     - ID: {getattr(tc, 'id', 'N/A')}, Func: {plugin_name}-{func_name}, Args: {args_display}"
-                     print(log_msg_tc)
-                     run_logger.info(log_msg_tc)
-                     run_logger.debug(f"     - Tool Call Full Args: {args_str}")
+                    if last_task_id:
+                        run_logger.info(f"La tâche active est '{last_task_id}'. Mise à jour de l'état avec la réponse.")
+                        # Ici, on devrait avoir une logique pour router la réponse
+                        # vers la bonne fonction du StateManager en fonction de la description de la tâche.
+                        # Pour l'instant, on suppose que c'est une réponse d'identification d'arguments.
+                        
+                        # Tentative de parser le JSON de la réponse
+                        try:
+                            response_data = json.loads(last_message_content)
+                            if "identified_arguments" in response_data:
+                                await local_kernel.invoke(
+                                    plugin_name="StateManager",
+                                    function_name="add_identified_arguments",
+                                    arguments=KernelArguments(arguments=response_data["identified_arguments"])
+                                )
+                                run_logger.info(f"Arguments identifiés par {current_agent.name} ajoutés à l'état.")
+                            elif "identified_fallacies" in response_data:
+                                await local_kernel.invoke(
+                                    plugin_name="StateManager",
+                                    function_name="add_identified_fallacies",
+                                    arguments=KernelArguments(fallacies=response_data["identified_fallacies"])
+                                )
+                                run_logger.info(f"Sophismes identifiés par {current_agent.name} ajoutés à l'état.")
+                        except json.JSONDecodeError:
+                            run_logger.warning(f"La réponse de {current_agent.name} n'est pas un JSON valide. Contenu: {last_message_content}")
+                            # On pourrait mettre le contenu brut dans la réponse de la tâche
 
-             await asyncio.sleep(0.05) # Garder un petit sleep
+                        # Marquer la tâche comme terminée
+                        await local_kernel.invoke(
+                            plugin_name="StateManager",
+                            function_name="mark_task_as_answered",
+                            arguments=KernelArguments(task_id=last_task_id, answer=last_message_content)
+                        )
+                        run_logger.info(f"Tâche '{last_task_id}' marquée comme terminée.")
+                    else:
+                        run_logger.warning("Agent travailleur a répondu mais aucune tâche active trouvée dans l'état.")
 
-        invoke_duration = time.time() - invoke_start_time
-        run_logger.info(f"<<< Fin boucle invocation ({invoke_duration:.2f} sec) >>>")
-        print("\n--- Conversation Terminée ---")
+                except Exception as e:
+                    run_logger.error(f"Erreur lors de la mise à jour de l'état avec la réponse de {current_agent.name}: {e}", exc_info=True)
 
-    except AgentChatException as chat_complete_error:
-        if "Chat is already complete" in str(chat_complete_error):
-            run_logger.warning(f"Chat déjà terminé: {chat_complete_error}")
-            print("\n⚠️ Chat déjà marqué comme terminé.")
-        else:
-            run_logger.error(f"Erreur AgentChatException: {chat_complete_error}", exc_info=True)
-            print(f"\n❌ Erreur AgentChatException : {chat_complete_error}")
-            traceback.print_exc()
+
+        run_logger.info("Boucle de conversation manuelle terminée.")
+        
+        # Logger l'historique complet pour le débogage
+        if full_history:
+            run_logger.debug("=== Transcription de la Conversation ===")
+            for message in full_history:
+                author_info = message.name or f"Role:{message.role}"
+                run_logger.debug(f"[{author_info}]:\n{message.content}")
+            run_logger.debug("======================================")
+
+        final_analysis = local_state.to_json()
+        
+        run_logger.info(f"--- Fin Run_{run_id} ---")
+        
+        return {"status": "success", "analysis": final_analysis, "history": full_history}
+        
     except Exception as e:
-        run_logger.error(f"Erreur majeure exécution conversation: {e}", exc_info=True)
-        print(f"\n❌ Erreur majeure : {e}")
-        traceback.print_exc()
+        run_logger.error(f"Erreur durant l'analyse: {e}", exc_info=True)
+        return {"status": "error", "message": str(e)}
     finally:
-        # --- Affichage Final ---
          run_end_time = time.time()
          total_duration = run_end_time - run_start_time
          run_logger.info(f"Fin analyse. Durée totale: {total_duration:.2f} sec.")
-
-         print("\n--- Historique Détaillé ---")
+ 
+         print("\n--- Historique Détaillé de la Conversation ---")
          final_history_messages = []
          if local_group_chat and hasattr(local_group_chat, 'history') and hasattr(local_group_chat.history, 'messages'):
              final_history_messages = local_group_chat.history.messages
-
+         
          if final_history_messages:
-             for msg_idx, msg in enumerate(final_history_messages): # Ajouter index pour clarté
-                 author = msg.name or getattr(msg, 'author_name', f"Role:{msg.role.name}")
+             for msg_idx, msg in enumerate(final_history_messages):
+                 author = msg.name or f"Role:{msg.role.name}"
                  role_name = msg.role.name
-                 content_display = str(msg.content)[:500] + "..." if len(str(msg.content)) > 500 else str(msg.content)
-                 print(f"[{msg_idx}] [{author} ({role_name})]: {content_display}") # Index ajouté
+                 content_display = str(msg.content)[:2000] + "..." if len(str(msg.content)) > 2000 else str(msg.content)
+                 print(f"[{msg_idx}] [{author} ({role_name})]: {content_display}")
                  tool_calls = getattr(msg, 'tool_calls', []) or []
                  if tool_calls:
                      print("   Tool Calls:")
-                     for tc in tool_calls:
+                     for tc_idx, tc in enumerate(tool_calls):
                          plugin_name, func_name = 'N/A', 'N/A'
                          function_name_attr = getattr(getattr(tc, 'function', None), 'name', None)
                          if function_name_attr and isinstance(function_name_attr, str) and '-' in function_name_attr:
@@ -266,12 +354,19 @@ async def run_analysis_conversation(
                              if len(parts) == 2: plugin_name, func_name = parts
                          args_dict = getattr(getattr(tc, 'function', None), 'arguments', {}) or {}
                          args_str = json.dumps(args_dict) if args_dict else "{}"
-                         args_display = args_str[:100] + "..." if len(args_str) > 100 else args_str
-                         print(f"     - {plugin_name}-{func_name}({args_display})")
+                         args_display = args_str[:200] + "..." if len(args_str) > 200 else args_str
+                         print(f"     [{tc_idx}] - {plugin_name}-{func_name}({args_display})")
          else:
              print("(Historique final vide ou inaccessible)")
-         print("---------------------------\n")
-
+         print("----------------------------------------------\n")
+         
+         if 'raw_logger_hook' in locals() and hasattr(llm_service, "remove_chat_hook_handler"):
+             try:
+                 llm_service.remove_chat_hook_handler(raw_logger_hook)
+                 run_logger.info("RawResponseLogger hook retiré du service LLM.")
+             except Exception as e_rm_hook:
+                 run_logger.warning(f"Erreur lors du retrait du RawResponseLogger hook: {e_rm_hook}")
+ 
          print("=========================================")
          print("== Fin de l'Analyse Collaborative ==")
          print(f"== Durée: {total_duration:.2f} secondes ==")
@@ -281,13 +376,12 @@ async def run_analysis_conversation(
              try: print(local_state.to_json(indent=2))
              except Exception as e_json: print(f"(Erreur sérialisation état final: {e_json})"); print(f"Repr: {repr(local_state)}")
          else: print("(Instance état locale non disponible)")
-
+ 
          jvm_status = "(JVM active)" if ('jpype' in globals() and jpype.isJVMStarted()) else "(JVM non active)"
          print(f"\n{jvm_status}")
          run_logger.info(f"État final JVM: {jvm_status}")
          run_logger.info(f"--- Fin Run_{run_id} ---")
-
-# Classe AnalysisRunner pour encapsuler la fonction run_analysis_conversation
+ 
 class AnalysisRunner:
    """
    Classe pour encapsuler la fonction run_analysis_conversation.
@@ -297,53 +391,24 @@ class AnalysisRunner:
    """
    
    def __init__(self, strategy=None):
-       """
-       Initialise un AnalysisRunner.
-       
-       Args:
-           strategy: La stratégie à utiliser pour l'analyse (non utilisée actuellement)
-       """
        self.strategy = strategy
        self.logger = logging.getLogger("AnalysisRunner")
        self.logger.info("AnalysisRunner initialisé.")
    
    def run_analysis(self, text_content=None, input_file=None, output_dir=None, agent_type=None, analysis_type=None, llm_service=None, use_informal_agent=True, use_pl_agent=True, message_hook=None):
-       """
-       Exécute une analyse rhétorique sur le texte fourni.
-       
-       Args:
-           text_content: Le texte à analyser (optionnel si input_file est fourni)
-           input_file: Fichier d'entrée à analyser (optionnel si text_content est fourni)
-           output_dir: Répertoire de sortie pour les résultats
-           agent_type: Type d'agent à utiliser pour l'analyse
-           analysis_type: Type d'analyse à effectuer
-           llm_service: Le service LLM à utiliser
-           use_informal_agent: Indique si l'agent informel doit être utilisé
-           use_pl_agent: Indique si l'agent PL doit être utilisé
-           message_hook: Hook pour intercepter les messages entre agents
-           
-       Returns:
-           str: Le chemin du fichier de résultats généré
-       """
-       # Obtenir le texte à analyser
        if text_content is None and input_file is not None:
-           # Utiliser l'agent d'extraction pour lire le fichier
            extract_agent = self._get_agent_instance("extract")
            text_content = extract_agent.extract_text_from_file(input_file)
        elif text_content is None:
            raise ValueError("text_content ou input_file doit être fourni")
            
-       # Exécuter l'analyse
        self.logger.info(f"Exécution de l'analyse sur un texte de {len(text_content)} caractères")
        
-       # Obtenir l'agent approprié
        if agent_type:
            agent = self._get_agent_instance(agent_type)
-           # Exécuter l'analyse avec l'agent spécifique
            if hasattr(agent, 'analyze_text'):
                analysis_results = agent.analyze_text(text_content)
            else:
-               # Fallback vers des résultats simulés pour les tests
                analysis_results = {
                    "fallacies": [],
                    "analysis_metadata": {
@@ -353,7 +418,6 @@ class AnalysisRunner:
                    }
                }
        else:
-           # Résultats simulés si aucun agent spécifique
            analysis_results = {
                "fallacies": [],
                "analysis_metadata": {
@@ -362,7 +426,6 @@ class AnalysisRunner:
                }
            }
        
-       # Générer le rapport
        if output_dir:
            os.makedirs(output_dir, exist_ok=True)
            timestamp = time.strftime("%Y%m%d_%H%M%S")
@@ -373,58 +436,24 @@ class AnalysisRunner:
        return generate_report(analysis_results, output_file)
    
    async def run_analysis_async(self, text_content, llm_service=None, use_informal_agent=True, use_pl_agent=True, message_hook=None):
-       """
-       Version asynchrone de run_analysis pour la conversation complète.
-       
-       Args:
-           text_content: Le texte à analyser
-           llm_service: Le service LLM à utiliser
-           use_informal_agent: Indique si l'agent informel doit être utilisé
-           use_pl_agent: Indique si l'agent PL doit être utilisé
-           message_hook: Hook pour intercepter les messages entre agents
-           
-       Returns:
-           Les résultats de l'analyse
-       """
-       # Créer le service LLM si non fourni
        if llm_service is None:
            from argumentation_analysis.core.llm_service import create_llm_service
            llm_service = create_llm_service()
            
-       # Exécuter l'analyse
        self.logger.info(f"Exécution de l'analyse asynchrone sur un texte de {len(text_content)} caractères")
        
-       # Appeler la fonction run_analysis_conversation
        return await run_analysis_conversation(
            texte_a_analyser=text_content,
            llm_service=llm_service
        )
    
    def run_multi_document_analysis(self, input_files, output_dir=None, agent_type=None, analysis_type=None):
-       """
-       Exécute une analyse rhétorique sur plusieurs documents.
-       
-       Args:
-           input_files: Liste des fichiers d'entrée à analyser
-           output_dir: Répertoire de sortie pour les résultats
-           agent_type: Type d'agent à utiliser pour l'analyse
-           analysis_type: Type d'analyse à effectuer
-           
-       Returns:
-           str: Le chemin du fichier de résultats consolidé
-       """
        self.logger.info(f"Exécution de l'analyse multi-documents sur {len(input_files)} fichiers")
-       
        all_results = []
-       
-       # Analyser chaque fichier
        for input_file in input_files:
            try:
-               # Utiliser l'agent d'extraction pour lire le fichier
                extract_agent = self._get_agent_instance("extract")
                text_content = extract_agent.extract_text_from_file(input_file)
-               
-               # Obtenir l'agent approprié pour l'analyse
                if agent_type:
                    agent = self._get_agent_instance(agent_type)
                    if hasattr(agent, 'analyze_text'):
@@ -433,105 +462,113 @@ class AnalysisRunner:
                        file_results = {"error": "Agent ne supporte pas analyze_text"}
                else:
                    file_results = {"error": "Type d'agent non spécifié"}
-               
-               all_results.append({
-                   "file": input_file,
-                   "results": file_results
-               })
-               
+               all_results.append({"file": input_file, "results": file_results})
            except Exception as e:
                self.logger.error(f"Erreur lors de l'analyse de {input_file}: {e}")
-               all_results.append({
-                   "file": input_file,
-                   "error": str(e)
-               })
+               all_results.append({"file": input_file, "error": str(e)})
        
-       # Générer le rapport consolidé
        if output_dir:
            os.makedirs(output_dir, exist_ok=True)
            timestamp = time.strftime("%Y%m%d_%H%M%S")
            output_file = os.path.join(output_dir, f"multi_analysis_result_{timestamp}.json")
        else:
            output_file = None
-           
        return generate_report(all_results, output_file)
    
    def _get_agent_instance(self, agent_type, **kwargs):
-       """
-       Obtient une instance d'agent du type spécifié.
-       
-       Args:
-           agent_type: Le type d'agent à créer ("informal", "extract", etc.)
-           **kwargs: Arguments supplémentaires pour la création de l'agent
-           
-       Returns:
-           L'instance de l'agent
-       """
        self.logger.debug(f"Création d'une instance d'agent de type: {agent_type}")
-       
        if agent_type == "informal":
-           from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
-           return InformalAgent(agent_id=f"informal_agent_{agent_type}", **kwargs)
+           from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
+           return InformalAnalysisAgent(agent_id=f"informal_agent_{agent_type}", **kwargs)
        elif agent_type == "extract":
-           from argumentation_analysis.orchestration.hierarchical.operational.adapters.extract_agent_adapter import ExtractAgentAdapter
-           return ExtractAgentAdapter(**kwargs)
+           from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
+           temp_kernel_for_extract = sk.Kernel()
+           return ExtractAgent(kernel=temp_kernel_for_extract, agent_name=f"temp_extract_agent_for_file_read", **kwargs)
        else:
            raise ValueError(f"Type d'agent non supporté: {agent_type}")
-
-# Fonction pour exécuter l'analyse depuis l'extérieur du module
+ 
 async def run_analysis(text_content, llm_service=None):
-   """Fonction wrapper pour exécuter l'analyse depuis l'extérieur du module."""
    if llm_service is None:
        from argumentation_analysis.core.llm_service import create_llm_service
        llm_service = create_llm_service()
-   
-   return await run_analysis_conversation(
+   return await _run_analysis_conversation(
        texte_a_analyser=text_content,
        llm_service=llm_service
    )
-
+ 
 def generate_report(analysis_results, output_path=None):
-    """
-    Génère un rapport d'analyse rhétorique.
-    
-    Args:
-        analysis_results: Les résultats de l'analyse
-        output_path: Le chemin de sortie pour le rapport (optionnel)
-        
-    Returns:
-        str: Le chemin du fichier de rapport généré
-    """
-    logger = logging.getLogger("generate_report")
-    
-    if output_path is None:
-        timestamp = time.strftime("%Y%m%d_%H%M%S")
-        output_path = f"rapport_analyse_{timestamp}.json"
-    
-    # Créer le répertoire de sortie si nécessaire
-    output_dir = os.path.dirname(output_path)
-    if output_dir and not os.path.exists(output_dir):
-        os.makedirs(output_dir, exist_ok=True)
-    
-    # Préparer les données du rapport
-    report_data = {
-        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "analysis_results": analysis_results,
-        "metadata": {
-            "generator": "AnalysisRunner",
-            "version": "1.0"
-        }
-    }
-    
-    # Écrire le rapport
-    try:
-        with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(report_data, f, indent=2, ensure_ascii=False)
-        logger.info(f"Rapport généré: {output_path}")
-        return output_path
-    except Exception as e:
-        logger.error(f"Erreur lors de la génération du rapport: {e}")
-        raise
-
-# Log de chargement
+     logger = logging.getLogger("generate_report")
+     if output_path is None:
+         timestamp = time.strftime("%Y%m%d_%H%M%S")
+         output_path = f"rapport_analyse_{timestamp}.json"
+     output_dir = os.path.dirname(output_path)
+     if output_dir and not os.path.exists(output_dir):
+         os.makedirs(output_dir, exist_ok=True)
+     report_data = {
+         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+         "analysis_results": analysis_results,
+         "metadata": {"generator": "AnalysisRunner", "version": "1.0"}
+     }
+     try:
+         with open(output_path, 'w', encoding='utf-8') as f:
+             json.dump(report_data, f, indent=2, ensure_ascii=False)
+         logger.info(f"Rapport généré: {output_path}")
+         return output_path
+     except Exception as e:
+         logger.error(f"Erreur lors de la génération du rapport: {e}")
+         raise
+ 
 module_logger = logging.getLogger(__name__)
 module_logger.debug("Module orchestration.analysis_runner chargé.")
+ 
+if __name__ == "__main__":
+     import argparse
+     parser = argparse.ArgumentParser(description="Exécute l'analyse d'argumentation sur un texte donné.")
+     group = parser.add_mutually_exclusive_group(required=True)
+     group.add_argument("--text", type=str, help="Le texte à analyser directement.")
+     group.add_argument("--file-path", type=str, help="Chemin vers le fichier texte à analyser.")
+     args = parser.parse_args()
+ 
+     if not logging.getLogger().handlers:
+         logging.basicConfig(level=logging.DEBUG,
+                             format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
+                             datefmt='%Y-%m-%d %H:%M:%S')
+  
+     runner_logger = logging.getLogger("AnalysisRunnerCLI")
+     
+     text_to_analyze = ""
+     if args.text:
+         text_to_analyze = args.text
+         runner_logger.info(f"Lancement de AnalysisRunner en mode CLI pour le texte fourni (début) : \"{text_to_analyze[:100]}...\"")
+     elif args.file_path:
+         runner_logger.info(f"Lancement de AnalysisRunner en mode CLI pour le fichier : \"{args.file_path}\"")
+         try:
+             with open(args.file_path, 'r', encoding='utf-8') as f:
+                 text_to_analyze = f.read()
+             runner_logger.info(f"Contenu du fichier '{args.file_path}' lu (longueur: {len(text_to_analyze)}).")
+             if not text_to_analyze.strip():
+                  runner_logger.error(f"Le fichier {args.file_path} est vide ou ne contient que des espaces.")
+                  sys.exit(1)
+         except FileNotFoundError:
+             runner_logger.error(f"Fichier non trouvé : {args.file_path}")
+             sys.exit(1)
+         except Exception as e:
+             runner_logger.error(f"Erreur lors de la lecture du fichier {args.file_path}: {e}", exc_info=True)
+             sys.exit(1)
+     
+     try:
+         runner_logger.info("Initialisation explicite de la JVM depuis analysis_runner...")
+         jvm_ready = initialize_jvm(lib_dir_path=str(LIBS_DIR))
+         if not jvm_ready:
+             runner_logger.error("Échec de l'initialisation de la JVM. L'agent PL et d'autres fonctionnalités Java pourraient ne pas fonctionner.")
+         else:
+             runner_logger.info("JVM initialisée avec succès (ou déjà prête).")
+ 
+         runner = AnalysisRunner()
+         asyncio.run(runner.run_analysis_async(text_content=text_to_analyze))
+         runner_logger.info("Analyse terminée avec succès.")
+     except Exception as e:
+         runner_logger.error(f"Une erreur est survenue lors de l'exécution de l'analyse : {e}", exc_info=True)
+         print(f"ERREUR CLI: {e}")
+         traceback.print_exc()
+

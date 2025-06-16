@@ -1,3 +1,4 @@
+import project_core.core_from_scripts.auto_env
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -13,7 +14,7 @@ import traceback
 from pathlib import Path
 
 # Ajouter le répertoire racine au path
-PROJECT_ROOT = Path(__file__).resolve().parent.parent # Remonter de testing/ et scripts/ pour atteindre la racine du projet
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent # MODIFIÉ: Remonter à la racine du projet
 sys.path.insert(0, str(PROJECT_ROOT))
 
 def setup_environment():

@@ -48,10 +48,11 @@ CONFIG_FILE_ENC = ui_config.CONFIG_FILE_ENC
 
 def verify_encrypted_file():
     """
-    Vérifie que le fichier chiffré existe et peut être déchiffré correctement.
-    
-    Returns:
-        bool: True si le fichier chiffré peut être déchiffré, False sinon
+    Vérifie que le fichier de configuration chiffré principal existe et peut être
+    déchiffré correctement en utilisant la clé de chiffrement configurée.
+
+    :return: True si le fichier chiffré est valide et déchiffrable, False sinon.
+    :rtype: bool
     """
     logger.info(f"Vérification du fichier chiffré {CONFIG_FILE_ENC}...")
     
@@ -77,17 +78,20 @@ def verify_encrypted_file():
         logger.error("Les définitions d'extraits n'ont pas été chargées correctement.")
         return False
     
-    logger.info(f"✅ Le fichier chiffré {CONFIG_FILE_ENC} peut être déchiffré correctement.")
+    logger.info(f"[OK] Le fichier chiffré {CONFIG_FILE_ENC} peut être déchiffré correctement.")
     logger.info(f"   - {len(extract_definitions)} sources trouvées.")
     
     return True
 
 def update_gitignore():
     """
-    Met à jour le fichier .gitignore pour s'assurer que tous les fichiers sensibles sont ignorés.
-    
-    Returns:
-        bool: True si le fichier .gitignore a été mis à jour, False sinon
+    Met à jour le fichier .gitignore à la racine du projet pour s'assurer que
+    les fichiers de configuration sensibles et temporaires spécifiés sont ignorés
+    par Git.
+
+    :return: True si le fichier .gitignore a été trouvé et mis à jour (si nécessaire),
+             False si le fichier .gitignore n'a pas été trouvé.
+    :rtype: bool
     """
     logger.info("Mise à jour du fichier .gitignore...")
     
@@ -123,20 +127,23 @@ def update_gitignore():
         with open(gitignore_path, 'a', encoding='utf-8') as f:
             f.write("\n\n" + "\n".join(entries_to_add) + "\n")
         
-        logger.info(f"✅ Fichier .gitignore mis à jour avec {len(entries_added)} nouvelles entrées:")
+        logger.info(f"[OK] Fichier .gitignore mis à jour avec {len(entries_added)} nouvelles entrées:")
         for entry in entries_added:
             logger.info(f"   - {entry}")
     else:
-        logger.info("✅ Toutes les entrées nécessaires sont déjà présentes dans le fichier .gitignore.")
+        logger.info("[OK] Toutes les entrées nécessaires sont déjà présentes dans le fichier .gitignore.")
     
     return True
 
 def delete_sensitive_files():
     """
-    Supprime les fichiers sensibles.
-    
-    Returns:
-        list: Liste des fichiers supprimés
+    Supprime les fichiers de configuration en clair et les fichiers du cache de texte.
+
+    Les fichiers ciblés incluent `CONFIG_FILE_JSON`, un fichier `extract_sources_updated.json`
+    spécifique, et tous les fichiers `.txt` dans le répertoire de cache de texte.
+
+    :return: Une liste des chemins (str) des fichiers qui ont été effectivement supprimés.
+    :rtype: list[str]
     """
     logger.info("Suppression des fichiers sensibles...")
     
@@ -157,7 +164,7 @@ def delete_sensitive_files():
         if file_path.exists():
             try:
                 file_path.unlink()
-                logger.info(f"✅ Fichier supprimé: {file_path}")
+                logger.info(f"[OK] Fichier supprimé: {file_path}")
                 deleted_files.append(str(file_path))
             except Exception as e:
                 logger.error(f"❌ Erreur lors de la suppression du fichier {file_path}: {e}")
@@ -171,7 +178,7 @@ def delete_sensitive_files():
             for cache_file in cache_files:
                 try:
                     cache_file.unlink()
-                    logger.info(f"✅ Fichier cache supprimé: {cache_file}")
+                    logger.info(f"[OK] Fichier cache supprimé: {cache_file}")
                     deleted_files.append(str(cache_file))
                 except Exception as e:
                     logger.error(f"❌ Erreur lors de la suppression du fichier cache {cache_file}: {e}")
@@ -213,7 +220,7 @@ def main():
     else:
         logger.info("Aucun fichier n'a été supprimé.")
     
-    logger.info("\n✅ Nettoyage terminé avec succès.")
+    logger.info("\n[OK] Nettoyage terminé avec succès.")
 
 if __name__ == "__main__":
     main()

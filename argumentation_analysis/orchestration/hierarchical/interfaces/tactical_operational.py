@@ -98,6 +98,7 @@ class TacticalOperationalInterface:
             "tactical_task_id": task.get("id"),
             "description": task_description,
             "objective_id": objective_id,
+            "required_capabilities": required_capabilities,
             "techniques": techniques,
             "text_extracts": text_extracts,
             "parameters": self._determine_execution_parameters(task),
@@ -738,9 +739,11 @@ class TacticalOperationalInterface:
         
         # Traduire en résultat tactique
         tactical_result = {
-            "task_id": tactical_task_id,
+            "task_id": task_id,
+            "tactical_task_id": tactical_task_id,
             "completion_status": result.get("status", "completed"),
-            RESULTS_DIR: self._translate_outputs(outputs),
+            "results": self._translate_outputs(outputs),
+            "results_path": str(RESULTS_DIR / f"{tactical_task_id}_results.json"),
             "execution_metrics": self._translate_metrics(metrics),
             "issues": self._translate_issues(issues)
         }
@@ -756,7 +759,7 @@ class TacticalOperationalInterface:
             result_content = pending_results.content.get(DATA_DIR, {})
             
             if "outputs" in result_content:
-                tactical_result[RESULTS_DIR].update(self._translate_outputs(result_content["outputs"]))
+                tactical_result["results"].update(self._translate_outputs(result_content["outputs"]))
             
             if "metrics" in result_content:
                 tactical_result["execution_metrics"].update(self._translate_metrics(result_content["metrics"]))

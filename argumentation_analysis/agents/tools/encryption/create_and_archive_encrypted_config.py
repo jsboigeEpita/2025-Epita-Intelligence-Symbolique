@@ -8,6 +8,7 @@ Script principal pour créer, vérifier et archiver le fichier encrypté complet
 import os
 import sys
 import time
+import shutil
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -22,6 +23,10 @@ load_dotenv(override=True)
 
 # Importer les modules nécessaires
 from argumentation_analysis.ui.config import CONFIG_FILE_ENC
+from argumentation_analysis.paths import DATA_DIR
+
+# Afficher les chemins pour le débogage
+print(f"Chemin du fichier encrypté: {CONFIG_FILE_ENC}")
 
 # Importer les fonctions des autres scripts
 from create_complete_encrypted_config import create_complete_encrypted_config
@@ -45,7 +50,7 @@ def main():
         print("\n❌ Échec de la création du fichier encrypté complet. Arrêt du processus.")
         sys.exit(1)
     
-    print("\n✅ Création du fichier encrypté complet réussie !")
+    print("\n[OK] Création du fichier encrypté complet réussie !")
     print(f"   Fichier créé: '{CONFIG_FILE_ENC}'")
     print(f"   Taille: {CONFIG_FILE_ENC.stat().st_size} octets.")
     
@@ -58,7 +63,7 @@ def main():
     time.sleep(2)
     
     # Créer un répertoire temporaire pour la vérification
-    temp_cache_dir = TEXT_CACHE_DIR = parent_dir / "text_cache"
+    temp_cache_dir = parent_dir / "text_cache"
     
     # Sauvegarder le répertoire de cache original
     original_cache_dir = parent_dir / "text_cache_original"
@@ -68,7 +73,7 @@ def main():
         else:
             try:
                 temp_cache_dir.rename(original_cache_dir)
-                print(f"✅ Répertoire de cache original sauvegardé dans '{original_cache_dir}'.")
+                print(f"[OK] Répertoire de cache original sauvegardé dans '{original_cache_dir}'.")
             except Exception as e:
                 print(f"⚠️ Erreur lors de la sauvegarde du répertoire de cache original: {e}")
     
@@ -82,19 +87,18 @@ def main():
         if original_cache_dir.exists():
             if temp_cache_dir.exists():
                 try:
-                    import shutil
                     shutil.rmtree(temp_cache_dir)
                 except Exception:
                     pass
             try:
                 original_cache_dir.rename(temp_cache_dir)
-                print(f"✅ Répertoire de cache original restauré.")
+                print(f"[OK] Répertoire de cache original restauré.")
             except Exception as e:
                 print(f"⚠️ Erreur lors de la restauration du répertoire de cache original: {e}")
         
         sys.exit(1)
     
-    print("\n✅ Vérification du fichier encrypté complet réussie !")
+    print("\n[OK] Vérification du fichier encrypté complet réussie !")
     
     # Étape 3: Demander à l'utilisateur s'il souhaite nettoyer les fichiers non nécessaires
     print("\n--- Étape 3: Nettoyage des fichiers non nécessaires ---\n")
@@ -113,18 +117,16 @@ def main():
         # Supprimer le répertoire de cache
         if temp_cache_dir.exists():
             try:
-                import shutil
                 shutil.rmtree(temp_cache_dir)
-                print(f"✅ Répertoire de cache '{temp_cache_dir}' supprimé.")
+                print(f"[OK] Répertoire de cache '{temp_cache_dir}' supprimé.")
             except Exception as e:
                 print(f"⚠️ Erreur lors de la suppression du répertoire de cache: {e}")
         
         # Supprimer le répertoire de cache original
         if original_cache_dir.exists():
             try:
-                import shutil
                 shutil.rmtree(original_cache_dir)
-                print(f"✅ Répertoire de cache original '{original_cache_dir}' supprimé.")
+                print(f"[OK] Répertoire de cache original '{original_cache_dir}' supprimé.")
             except Exception as e:
                 print(f"⚠️ Erreur lors de la suppression du répertoire de cache original: {e}")
         
@@ -133,11 +135,11 @@ def main():
         if extract_sources_json.exists():
             try:
                 extract_sources_json.unlink()
-                print(f"✅ Fichier '{extract_sources_json}' supprimé.")
+                print(f"[OK] Fichier '{extract_sources_json}' supprimé.")
             except Exception as e:
                 print(f"⚠️ Erreur lors de la suppression du fichier '{extract_sources_json}': {e}")
         
-        print("\n✅ Nettoyage des fichiers non nécessaires terminé.")
+        print("\n[OK] Nettoyage des fichiers non nécessaires terminé.")
     else:
         print("\nLes fichiers non nécessaires n'ont pas été supprimés.")
         
@@ -145,16 +147,12 @@ def main():
         if original_cache_dir.exists():
             if temp_cache_dir.exists():
                 try:
-                    import shutil
-
-from argumentation_analysis.paths import DATA_DIR
-
                     shutil.rmtree(temp_cache_dir)
                 except Exception:
                     pass
             try:
                 original_cache_dir.rename(temp_cache_dir)
-                print(f"✅ Répertoire de cache original restauré.")
+                print(f"[OK] Répertoire de cache original restauré.")
             except Exception as e:
                 print(f"⚠️ Erreur lors de la restauration du répertoire de cache original: {e}")
     

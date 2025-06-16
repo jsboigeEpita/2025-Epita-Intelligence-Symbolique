@@ -55,8 +55,8 @@ def get_project_root():
     # Obtenir le répertoire du script courant
     current_dir = Path(os.path.dirname(os.path.abspath(__file__)))
     
-    # Remonter d'un niveau pour obtenir la racine du projet
-    project_root = current_dir.parent
+    # Remonter de deux niveaux pour obtenir la racine du projet (depuis utils -> argumentation_analysis -> project_root)
+    project_root = current_dir.parent.parent
     
     return project_root
 
@@ -83,7 +83,7 @@ def check_and_install(package_import_name: str, package_install_name: str):
         try:
             # Utilisation de -q pour une sortie moins verbeuse, --disable-pip-version-check pour éviter les warnings
             subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "--disable-pip-version-check", package_install_name])
-            logger.info(f"✅ {package_install_name} installé avec succès.")
+            logger.info(f"[OK] {package_install_name} installé avec succès.")
             # Recharger les modules ou invalider les caches peut être nécessaire dans certains environnements
             importlib.invalidate_caches()
             importlib.import_module(package_import_name) # Re-tester l'import

@@ -17,19 +17,71 @@ from pathlib import Path
 
 from argumentation_analysis.orchestration.hierarchical.operational.agent_interface import OperationalAgent
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
+from argumentation_analysis.core.bootstrap import ProjectContext # Importer ProjectContext
 
-# Import des outils d'analyse rhétorique améliorés
+# Placeholder pour l'agent rhétorique refactoré
+# from argumentation_analysis.agents.core.rhetorical.rhetorical_agent import RhetoricalAnalysisAgent # TODO: Create this agent
+
+# Les imports des outils spécifiques pourraient être retirés si l'agent les encapsule complètement.
+# Pour l'instant, on les garde au cas où l'adaptateur aurait besoin de types ou de constantes.
 from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
 from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
 from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator
-
-# Import des nouveaux outils d'analyse rhétorique
 from argumentation_analysis.agents.tools.analysis.new.argument_structure_visualizer import ArgumentStructureVisualizer
 from argumentation_analysis.agents.tools.analysis.new.argument_coherence_evaluator import ArgumentCoherenceEvaluator
 from argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer import SemanticArgumentAnalyzer
-from argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import ContextualFallacyDetector
+# L'import direct de ContextualFallacyDetector n'est plus nécessaire ici, il est géré par ProjectContext
+# from argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import ContextualFallacyDetector
+
 
 from argumentation_analysis.paths import RESULTS_DIR
+
+
+# Supposons qu'un agent RhetoricalAnalysisAgent sera créé et gérera ces outils.
+# Pour l'instant, nous allons simuler son interface.
+class MockRhetoricalAnalysisAgent:
+    def __init__(self, kernel, agent_name, project_context: ProjectContext):
+        self.kernel = kernel
+        self.agent_name = agent_name
+        self.logger = logging.getLogger(agent_name)
+        self.project_context = project_context
+        # L'initialisation se fait maintenant de manière paresseuse via le contexte
+        self.complex_fallacy_analyzer = None # Remplacer par un getter si nécessaire
+        self.contextual_fallacy_analyzer = None # Remplacer par un getter si nécessaire
+        self.fallacy_severity_evaluator = None # Remplacer par un getter si nécessaire
+        self.argument_structure_visualizer = None # Remplacer par un getter si nécessaire
+        self.argument_coherence_evaluator = None # Remplacer par un getter si nécessaire
+        self.semantic_argument_analyzer = None # Remplacer par un getter si nécessaire
+        self.contextual_fallacy_detector = self.project_context.get_fallacy_detector()
+
+    async def setup_agent_components(self, llm_service_id):
+        self.logger.info(f"MockRhetoricalAnalysisAgent setup_agent_components called with {llm_service_id}")
+        # En réalité, ici on configurerait les outils avec le kernel/llm_service si besoin.
+        pass
+
+    async def analyze_complex_fallacies(self, arguments: List[str], context: str, parameters: Optional[Dict] = None) -> Any:
+        return self.complex_fallacy_analyzer.detect_composite_fallacies(arguments, context)
+
+    async def analyze_contextual_fallacies(self, text: str, context: str, parameters: Optional[Dict] = None) -> Any:
+        return self.contextual_fallacy_analyzer.analyze_contextual_fallacies(text, context)
+
+    async def evaluate_fallacy_severity(self, arguments: List[str], context: str, parameters: Optional[Dict] = None) -> Any:
+        return self.fallacy_severity_evaluator.evaluate_fallacy_severity(arguments, context)
+
+    async def visualize_argument_structure(self, arguments: List[str], context: str, output_format: str = "json", parameters: Optional[Dict] = None) -> Any:
+        return self.argument_structure_visualizer.visualize_argument_structure(arguments, context, output_format)
+
+    async def evaluate_argument_coherence(self, arguments: List[str], context: str, parameters: Optional[Dict] = None) -> Any:
+        return self.argument_coherence_evaluator.evaluate_argument_coherence(arguments, context)
+
+    async def analyze_semantic_arguments(self, arguments: List[str], parameters: Optional[Dict] = None) -> Any:
+        return self.semantic_argument_analyzer.analyze_multiple_arguments(arguments)
+    
+    async def detect_contextual_fallacies(self, arguments: List[str], context: str, parameters: Optional[Dict] = None) -> Any:
+        return self.contextual_fallacy_detector.detect_contextual_fallacies(arguments, context)
+
+# Remplacer par le vrai agent quand il sera créé
+RhetoricalAnalysisAgent = MockRhetoricalAnalysisAgent
 
 
 
@@ -41,59 +93,63 @@ class RhetoricalToolsAdapter(OperationalAgent):
     de fonctionner comme un agent opérationnel dans l'architecture hiérarchique.
     """
     
-    def __init__(self, name: str = "RhetoricalTools", operational_state: Optional[OperationalState] = None):
+    def __init__(self, name: str = "RhetoricalTools", operational_state: Optional[OperationalState] = None, project_context: Optional[ProjectContext] = None):
         """
         Initialise un nouvel adaptateur pour les outils d'analyse rhétorique.
         
         Args:
             name: Nom de l'agent
             operational_state: État opérationnel à utiliser. Si None, un nouvel état est créé.
+            project_context: Le contexte global du projet.
         """
         super().__init__(name, operational_state)
         self.logger = logging.getLogger(f"RhetoricalToolsAdapter.{name}")
         
-        # Initialiser les outils d'analyse rhétorique améliorés
-        self.complex_fallacy_analyzer = None
-        self.contextual_fallacy_analyzer = None
-        self.fallacy_severity_evaluator = None
-        
-        # Initialiser les nouveaux outils d'analyse rhétorique
-        self.argument_structure_visualizer = None
-        self.argument_coherence_evaluator = None
-        self.semantic_argument_analyzer = None
-        self.contextual_fallacy_detector = None
+        self.agent: Optional[RhetoricalAnalysisAgent] = None # Agent refactoré (ou son mock)
+        self.kernel: Optional[Any] = None # Passé à initialize
+        self.llm_service_id: Optional[str] = None # Passé à initialize
+        self.project_context = project_context
         
         self.initialized = False
     
-    async def initialize(self) -> bool:
+    async def initialize(self, kernel: Any, llm_service_id: str, project_context: ProjectContext) -> bool:
         """
-        Initialise les outils d'analyse rhétorique.
+        Initialise l'agent d'analyse rhétorique.
         
+        Args:
+            kernel: Le kernel Semantic Kernel à utiliser.
+            llm_service_id: L'ID du service LLM à utiliser.
+            project_context: Le contexte global du projet.
+
         Returns:
             True si l'initialisation a réussi, False sinon
         """
         if self.initialized:
             return True
         
+        self.kernel = kernel
+        self.llm_service_id = llm_service_id
+        self.project_context = project_context
+
+        if not self.project_context:
+            self.logger.error("ProjectContext non fourni, impossible d'initialiser RhetoricalToolsAdapter.")
+            return False
+
         try:
-            self.logger.info("Initialisation des outils d'analyse rhétorique...")
+            self.logger.info("Initialisation de l'agent d'analyse rhétorique...")
             
-            # Initialiser les outils d'analyse rhétorique améliorés
-            self.complex_fallacy_analyzer = EnhancedComplexFallacyAnalyzer()
-            self.contextual_fallacy_analyzer = EnhancedContextualFallacyAnalyzer()
-            self.fallacy_severity_evaluator = EnhancedFallacySeverityEvaluator()
+            self.agent = RhetoricalAnalysisAgent(kernel=self.kernel, agent_name=f"{self.name}_RhetoricalAgent", project_context=self.project_context)
+            await self.agent.setup_agent_components(llm_service_id=self.llm_service_id)
             
-            # Initialiser les nouveaux outils d'analyse rhétorique
-            self.argument_structure_visualizer = ArgumentStructureVisualizer()
-            self.argument_coherence_evaluator = ArgumentCoherenceEvaluator()
-            self.semantic_argument_analyzer = SemanticArgumentAnalyzer()
-            self.contextual_fallacy_detector = ContextualFallacyDetector()
-            
+            if self.agent is None:
+                 self.logger.error("Échec de l'initialisation de l'agent d'analyse rhétorique.")
+                 return False
+
             self.initialized = True
-            self.logger.info("Outils d'analyse rhétorique initialisés avec succès.")
+            self.logger.info("Agent d'analyse rhétorique initialisé avec succès.")
             return True
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'initialisation des outils d'analyse rhétorique: {e}")
+            self.logger.error(f"Erreur lors de l'initialisation de l'agent d'analyse rhétorique: {e}")
             return False
     
     def get_capabilities(self) -> List[str]:
@@ -146,7 +202,22 @@ class RhetoricalToolsAdapter(OperationalAgent):
         """
         # Vérifier si les outils sont initialisés
         if not self.initialized:
-            success = await self.initialize()
+            if self.kernel is None or self.llm_service_id is None:
+                self.logger.error("Kernel ou llm_service_id non configuré avant process_task pour RhetoricalToolsAdapter.")
+                return {
+                    "id": f"result-{task.get('id')}",
+                    "task_id": task.get("id"),
+                    "tactical_task_id": task.get("tactical_task_id"),
+                    "status": "failed",
+                    "outputs": {},
+                    "metrics": {},
+                    "issues": [{
+                        "type": "configuration_error",
+                        "description": "Kernel ou llm_service_id non configuré pour RhetoricalToolsAdapter",
+                        "severity": "high"
+                    }]
+                }
+            success = await self.initialize(self.kernel, self.llm_service_id)
             if not success:
                 return {
                     "id": f"result-{task.get('id')}",
@@ -206,7 +277,11 @@ class RhetoricalToolsAdapter(OperationalAgent):
                         
                         # Analyser les sophismes complexes
                         context = technique_params.get("context", "général")
-                        analysis_results = self.complex_fallacy_analyzer.detect_composite_fallacies(arguments, context)
+                        analysis_results = await self.agent.analyze_complex_fallacies(
+                            arguments=arguments,
+                            context=context,
+                            parameters=technique_params
+                        )
                         
                         results.append({
                             "type": "complex_fallacy_analysis",
@@ -225,7 +300,11 @@ class RhetoricalToolsAdapter(OperationalAgent):
                         
                         # Analyser les sophismes contextuels
                         context = technique_params.get("context", "général")
-                        analysis_results = self.contextual_fallacy_analyzer.analyze_contextual_fallacies(extract_content, context)
+                        analysis_results = await self.agent.analyze_contextual_fallacies(
+                            text=extract_content,
+                            context=context,
+                            parameters=technique_params
+                        )
                         
                         results.append({
                             "type": "contextual_fallacy_analysis",
@@ -247,7 +326,11 @@ class RhetoricalToolsAdapter(OperationalAgent):
                         
                         # Évaluer la gravité des sophismes
                         context = technique_params.get("context", "général")
-                        evaluation_results = self.fallacy_severity_evaluator.evaluate_fallacy_severity(arguments, context)
+                        evaluation_results = await self.agent.evaluate_fallacy_severity(
+                            arguments=arguments,
+                            context=context,
+                            parameters=technique_params
+                        )
                         
                         results.append({
                             "type": "fallacy_severity_evaluation",
@@ -270,8 +353,11 @@ class RhetoricalToolsAdapter(OperationalAgent):
                         # Visualiser la structure des arguments
                         context = technique_params.get("context", "général")
                         output_format = technique_params.get("output_format", "json")
-                        visualization_results = self.argument_structure_visualizer.visualize_argument_structure(
-                            arguments, context, output_format
+                        visualization_results = await self.agent.visualize_argument_structure(
+                            arguments=arguments,
+                            context=context,
+                            output_format=output_format,
+                            parameters=technique_params
                         )
                         
                         results.append({
@@ -294,7 +380,11 @@ class RhetoricalToolsAdapter(OperationalAgent):
                         
                         # Évaluer la cohérence des arguments
                         context = technique_params.get("context", "général")
-                        evaluation_results = self.argument_coherence_evaluator.evaluate_argument_coherence(arguments, context)
+                        evaluation_results = await self.agent.evaluate_argument_coherence(
+                            arguments=arguments,
+                            context=context,
+                            parameters=technique_params
+                        )
                         
                         results.append({
                             "type": "argument_coherence_evaluation",
@@ -315,7 +405,10 @@ class RhetoricalToolsAdapter(OperationalAgent):
                         arguments = self._extract_arguments(extract_content)
                         
                         # Analyser la sémantique des arguments
-                        analysis_results = self.semantic_argument_analyzer.analyze_multiple_arguments(arguments)
+                        analysis_results = await self.agent.analyze_semantic_arguments(
+                            arguments=arguments,
+                            parameters=technique_params
+                        )
                         
                         results.append({
                             "type": "semantic_argument_analysis",
@@ -337,7 +430,11 @@ class RhetoricalToolsAdapter(OperationalAgent):
                         
                         # Détecter les sophismes contextuels
                         context = technique_params.get("context", "général")
-                        detection_results = self.contextual_fallacy_detector.detect_contextual_fallacies(arguments, context)
+                        detection_results = await self.agent.detect_contextual_fallacies(
+                            arguments=arguments,
+                            context=context,
+                            parameters=technique_params
+                        )
                         
                         results.append({
                             "type": "contextual_fallacy_detection",

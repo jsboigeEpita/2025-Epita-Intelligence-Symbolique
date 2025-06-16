@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
@@ -33,8 +33,10 @@ file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] [%(name
 logger.addHandler(file_handler)
 
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent, AuthorRole
-from semantic_kernel.agents import ChatCompletionAgent
+from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents.utils.author_role import AuthorRole
+# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
+from autogen.agentchat.contrib.llm_assistant_agent import LLMAssistantAgent
 try:
     # Import relatif depuis le package utils
     logger.info("Tentative d'import relatif...")
@@ -215,7 +217,7 @@ async def setup_evaluation_agent(llm_service):
         prompt_exec_settings = {}
     
     try:
-        evaluation_agent = ChatCompletionAgent(
+        evaluation_agent = LLMAssistantAgent(
             kernel=kernel,
             service=llm_service,
             name="EvaluationAgent",
@@ -560,3 +562,4 @@ def generate_report(results: List[Dict[str, Any]], output_file: str = "verify_ex
     logger.info(f"Rapport généré dans '{output_file}'.")
 # La fonction main() et la section if __name__ == "__main__": ont été déplacées
 # vers argumentation_analysis/scripts/run_verify_extracts_llm.py
+

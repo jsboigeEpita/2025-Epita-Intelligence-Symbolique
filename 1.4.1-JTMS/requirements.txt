@@ -1,0 +1,13 @@
+# JTMS Module Dependencies
+# Justification-based Truth Maintenance System
+
+# Core dependencies
+pyvis>=0.3.2          # Network visualization
+networkx>=3.0         # Graph algorithms and structures
+
+# Testing dependencies  
+pytest>=7.0           # Unit testing framework
+
+# Optional dependencies for development
+jupyter>=1.0          # For interactive development
+matplotlib>=3.5       # Additional plotting capabilities

@@ -32,7 +32,7 @@ Tous nos agents logiques partagent une architecture commune :
 
 ```
 ┌─────────────────────────┐
-│   AbstractLogicAgent    │
+│     BaseLogicAgent      │
 └─────────────────────────┘
             ▲
             │
@@ -45,7 +45,7 @@ Tous nos agents logiques partagent une architecture commune :
 
 ### Composants clés
 
-1. **Interface commune** : Tous les agents implémentent une interface commune définie par `AbstractLogicAgent`
+1. **Interface commune unifiée** : Tous les agents héritent de `BaseLogicAgent`, qui définit l'interface pour le raisonnement ET l'orchestration de tâches.
 2. **Ensembles de croyances** : Représentation formelle des connaissances (`BeliefSet`)
 3. **Moteur d'inférence** : Mécanismes de raisonnement adaptés à chaque type de logique
 4. **TweetyBridge** : Interface avec la bibliothèque TweetyProject pour les opérations logiques complexes

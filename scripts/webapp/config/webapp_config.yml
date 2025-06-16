@@ -1,0 +1,47 @@
+backend:
+  enabled: true
+  conda_env: projet-is
+  fallback_ports:
+  - 5004
+  - 5005
+  - 5006
+  health_endpoint: /api/health
+  max_attempts: 5
+  module: api.main:app
+  server_type: uvicorn
+  start_port: 5003
+  timeout_seconds: 180
+  health_check_timeout: 60
+cleanup:
+  auto_cleanup: true
+  kill_processes:
+  - python*
+  - node*
+  process_filters:
+  - app.py
+  - web_api
+  - serve
+frontend:
+  enabled: true
+  path: services/web_api/interface-web-argumentative
+  port: 3001
+  timeout_seconds: 180
+logging:
+  file: logs/webapp_orchestrator.log
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  level: INFO
+playwright:
+  enabled: true
+  test_type: python
+  browser: chromium
+  headless: true
+  process_timeout_s: 600
+  timeout_ms: 30000
+  test_paths:
+    - tests/e2e/python/
+  screenshots_dir: logs/screenshots
+  traces_dir: logs/traces
+webapp:
+  environment: development
+  name: Argumentation Analysis Web App
+  version: 1.0.0

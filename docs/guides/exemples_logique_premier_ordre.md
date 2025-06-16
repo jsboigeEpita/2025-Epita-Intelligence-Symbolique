@@ -49,7 +49,12 @@ Notre système utilise la syntaxe de TweetyProject pour la logique du premier or
 | Équivalence | `<=>` | SI ET SEULEMENT SI | `Carre(x) <=> Rectangle(x) && CotesEgaux(x)` |
 | Égalité | `=` | Identité | `pere(pere(x)) = grand_pere(x)` |
 
+Pour voir ces concepts en action et des exemples d'utilisation de l'agent de logique du premier ordre avec la syntaxe décrite, consultez le script suivant :
+- Code source : [`examples/logic_agents/first_order_logic_example.py`](../../examples/logic_agents/first_order_logic_example.py)
+
 ## Exemples de base
+
+Les exemples qui suivent (Syllogisme, Quantificateurs mixtes, Relations) sont illustrés par des implémentations concrètes dans le script [`first_order_logic_example.py`](../../examples/logic_agents/first_order_logic_example.py). Vous y trouverez notamment les fonctions `process_syllogism_example`, `process_quantifiers_example`, et `process_relations_example` qui correspondent aux Exemples 1, 2 et 3 ci-dessous.
 
 ### Exemple 1: Syllogisme catégorique
 
@@ -83,8 +88,8 @@ print(belief_set.content)
 
 **Résultat (ensemble de croyances):**
 ```
-forall x: (Homme(x) => Mortel(x))
-Homme(socrate)
+forall x: (Homme(x) => Mortel(x));
+Homme(socrate);
 ```
 
 **Requête et exécution:**
@@ -130,8 +135,8 @@ print(belief_set.content)
 
 **Résultat (ensemble de croyances):**
 ```
-forall x: (Etudiant(x) => exists y: (Cours(y) && Suit(x,y)))
-forall z: (Cours(z) => !Facile(z))
+forall x: (Etudiant(x) => exists y: (Cours(y) && Suit(x,y)));
+forall z: (Cours(z) => !Facile(z));
 ```
 
 **Requête et exécution:**
@@ -177,9 +182,9 @@ print(belief_set.content)
 
 **Résultat (ensemble de croyances):**
 ```
-forall x: forall y: (Parent(x,y) => Aime(x,y))
-Mere(marie,jean)
-forall x: forall y: (Mere(x,y) => Parent(x,y))
+forall x: forall y: (Parent(x,y) => Aime(x,y));
+Mere(marie,jean);
+forall x: forall y: (Mere(x,y) => Parent(x,y));
 ```
 
 **Requête et exécution:**
@@ -231,10 +236,10 @@ print(belief_set.content)
 
 **Résultat (ensemble de croyances):**
 ```
-directeur = pierre
-president = pierre
-forall x: (Employe(x) => Respecte(x,directeur))
-Employe(jean)
+directeur = pierre;
+president = pierre;
+forall x: (Employe(x) => Respecte(x,directeur));
+Employe(jean);
 ```
 
 **Requête et exécution:**
@@ -303,6 +308,8 @@ L'argument est valide. Alice est la mère de Bob, donc elle est son parent. Bob 
 
 ## Exemples avancés
 
+L'Exemple 6 ("Analyse d'un argument complexe") présenté ci-dessous est également implémenté dans la fonction `process_complex_example` du script [`first_order_logic_example.py`](../../examples/logic_agents/first_order_logic_example.py).
+
 ### Exemple 6: Analyse d'un argument complexe
 
 Analysons un argument plus complexe avec plusieurs prémisses et des relations imbriquées.
@@ -331,10 +338,10 @@ print(belief_set.content)
 
 **Résultat (ensemble de croyances):**
 ```
-forall x: (Mammifere(x) => Vertebre(x))
-forall x: (Chat(x) => Mammifere(x))
-forall x: (Vertebre(x) => ACœur(x))
-Chat(felix)
+forall x: (Mammifere(x) => Vertebre(x));
+forall x: (Chat(x) => Mammifere(x));
+forall x: (Vertebre(x) => ACœur(x));
+Chat(felix);
 ```
 
 **Requête et exécution:**
@@ -382,10 +389,10 @@ print(belief_set.content)
 
 **Résultat (ensemble de croyances):**
 ```
-forall x: (Premier(x) <=> EntierNaturel(x) && Superieur(x,1) && forall y: (Divise(y,x) => (y = 1 || y = x)))
-EntierNaturel(2)
-Superieur(2,1)
-forall y: (Divise(y,2) => (y = 1 || y = 2))
+forall x: (Premier(x) <=> EntierNaturel(x) && Superieur(x,1) && forall y: (Divise(y,x) => (y = 1 || y = x)));
+EntierNaturel(2);
+Superieur(2,1);
+forall y: (Divise(y,2) => (y = 1 || y = 2));
 ```
 
 **Requête et exécution:**
@@ -433,9 +440,9 @@ print(belief_set.content)
 
 **Résultat (ensemble de croyances):**
 ```
-forall x: (Eucaryote(x) => PossedeNoyau(x))
-forall x: (PossedeNoyau(x) => ContientADN(x))
-forall x: (Bacterienne(x) => !PossedeNoyau(x))
+forall x: (Eucaryote(x) => PossedeNoyau(x));
+forall x: (PossedeNoyau(x) => ContientADN(x));
+forall x: (Bacterienne(x) => !PossedeNoyau(x));
 ```
 
 **Requête et exécution:**
@@ -481,10 +488,10 @@ print(belief_set.content)
 
 **Résultat (ensemble de croyances):**
 ```
-forall x: (Personne(x) && CommetCrimePremeditation(x) => CoupableMeurtrePremierDegre(x))
-forall x: (Personne(x) && CoupableMeurtrePremierDegre(x) => EncourtPerpetuite(x))
-Personne(accuse)
-CommetCrimePremeditation(accuse)
+forall x: (Personne(x) && CommetCrimePremeditation(x) => CoupableMeurtrePremierDegre(x));
+forall x: (Personne(x) && CoupableMeurtrePremierDegre(x) => EncourtPerpetuite(x));
+Personne(accuse);
+CommetCrimePremeditation(accuse);
 ```
 
 **Requête et exécution:**
@@ -535,3 +542,5 @@ L'argument est valide. Puisque l'accusé est une personne qui a commis un crime 
 - [Exemples de logique modale](exemples_logique_modale.md)
 - [Tutoriel interactif sur les agents logiques](../../examples/notebooks/logic_agents_tutorial.ipynb)
 - [Documentation de TweetyProject sur la logique du premier ordre](http://tweetyproject.org/doc/first-order-logic.html)
+- Script d'exemples complets pour l'agent de Logique du Premier Ordre : [`examples/logic_agents/first_order_logic_example.py`](../../examples/logic_agents/first_order_logic_example.py)
+- Tutoriel interactif via API (incluant une section LPO) : [`examples/notebooks/api_logic_tutorial.ipynb`](../../examples/notebooks/api_logic_tutorial.ipynb) (voir section 4.2)

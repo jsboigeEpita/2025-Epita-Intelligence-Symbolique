@@ -1,11 +1,11 @@
 import pytest
-import jpype
+# import jpype # Commenté, sera importé localement
 
 
 # Les classes Java sont importées via la fixture 'qbf_classes' de conftest.py
 # et 'dung_classes' n'est pas nécessaire ici.
 
-def test_qbf_parser_simple_formula(qbf_classes):
+def test_qbf_parser_simple_formula(tweety_qbf_classes):
     """
     Teste le parsing d'une formule QBF simple : exists x forall y (x or not y)
     """
@@ -27,6 +27,7 @@ def test_qbf_parser_simple_formula(qbf_classes):
     # Pour un test robuste, il faudrait inspecter la structure de l'objet Formula.
 
     try:
+        import jpype # Import local
         formula = parser.parseFormula(qbf_string)
         assert formula is not None, "La formule parsée ne devrait pas être nulle."
         
@@ -60,10 +61,10 @@ def test_qbf_parser_simple_formula(qbf_classes):
         # Un test plus strict serait :
         # assert parsed_formula_str in [rep.replace(" ", "") for rep in expected_representations]
 
-    except jpype.JException as e:
+    except jpype.JException as e: # jpype doit être importé
         pytest.fail(f"Erreur Java lors du parsing de la QBF '{qbf_string}': {e.stacktrace()}")
 
-def test_qbf_programmatic_creation_exists(qbf_classes):
+def test_qbf_programmatic_creation_exists(tweety_qbf_classes):
     """
     Teste la création programmatique d'une QBF simple : exists x (x)
     (Nécessite que la classe Variable soit bien importée et utilisable)
@@ -73,6 +74,7 @@ def test_qbf_programmatic_creation_exists(qbf_classes):
     Variable = qbf_classes["Variable"]
 
     try:
+        import jpype # Import local
         x_var = Variable("x")
         # La formule interne est juste 'x'.
         # Pour créer QuantifiedBooleanFormula(Quantifier, JArray(Variable), Formula interne)
@@ -98,10 +100,10 @@ def test_qbf_programmatic_creation_exists(qbf_classes):
         assert str(qbf.getVariables()[0].getName()) == "x"
         assert str(qbf.getFormula().toString()) == "x" # La formule interne est x
 
-    except jpype.JException as e:
+    except jpype.JException as e: # jpype doit être importé
         pytest.fail(f"Erreur Java lors de la création programmatique de la QBF : {e.stacktrace()}")
 
-def test_qbf_programmatic_creation_forall_nested(qbf_classes):
+def test_qbf_programmatic_creation_forall_nested(tweety_qbf_classes):
     """
     Teste la création programmatique d'une QBF imbriquée : forall y exists x (y)
     (Nécessite Variable, Quantifier, QuantifiedBooleanFormula)
@@ -117,6 +119,7 @@ def test_qbf_programmatic_creation_forall_nested(qbf_classes):
     # alors on pourrait faire : inner_formula = Or(x_var, Not(y_var))
 
     try:
+        import jpype # Import local
         x_var = Variable("x")
         y_var = Variable("y")
 
@@ -145,15 +148,15 @@ def test_qbf_programmatic_creation_forall_nested(qbf_classes):
         assert str(outer_qbf.getVariables()[0].getName()) == "y"
         
         nested_formula = outer_qbf.getFormula()
-        assert isinstance(nested_formula, QuantifiedBooleanFormula) # Java: nested_formula instanceof QuantifiedBooleanFormula
+        assert isinstance(nested_formula, QuantifiedBooleanFormula) # Java: nested_formula instanceof QuantifiedBooleanFormula # type: ignore
         assert nested_formula.getQuantifier() == Quantifier.EXISTS
         assert str(nested_formula.getVariables()[0].getName()) == "x"
         assert str(nested_formula.getFormula().toString()) == "y" # La formule la plus interne
 
-    except jpype.JException as e:
+    except jpype.JException as e: # jpype doit être importé
         pytest.fail(f"Erreur Java lors de la création de QBF imbriquée : {e.stacktrace()}")
 
-def test_qbf_programmatic_creation_example_from_subject_fiche(qbf_classes):
+def test_qbf_programmatic_creation_example_from_subject_fiche(tweety_qbf_classes):
     """
     Teste la création programmatique de la QBF ∃x ∀y (x ∧ ¬y) de la fiche sujet.
     """
@@ -164,6 +167,7 @@ def test_qbf_programmatic_creation_example_from_subject_fiche(qbf_classes):
 
     # Classes de la logique propositionnelle pour la matrice de la formule
     # Importées directement car non garanties d'être dans qbf_classes et pour ne pas modifier conftest.py
+    import jpype # Import local
     Proposition = jpype.JClass("org.tweetyproject.logics.propositional.syntax.Proposition")
     Conjunction = jpype.JClass("org.tweetyproject.logics.propositional.syntax.Conjunction")
     Negation = jpype.JClass("org.tweetyproject.logics.propositional.syntax.Negation")
@@ -216,7 +220,7 @@ def test_qbf_programmatic_creation_example_from_subject_fiche(qbf_classes):
         assert "Conjunction(" in str(final_matrix.toString()) or "&" in matrix_str_representation or "AND" in matrix_str_representation.upper()
         assert "Negation(" in str(final_matrix.toString()) or "!" in matrix_str_representation or "NOT" in matrix_str_representation.upper()
 
-    except jpype.JException as e:
+    except jpype.JException as e: # jpype doit être importé
         pytest.fail(f"Erreur Java lors de la création programmatique de la QBF ∃x ∀y (x ∧ ¬y) : {e.stacktrace()}")
     except Exception as e:
         pytest.fail(f"Erreur Python inattendue lors de la création de QBF : {str(e)}")
@@ -225,7 +229,7 @@ def test_qbf_programmatic_creation_example_from_subject_fiche(qbf_classes):
 # Ces tests sont donc commentés pour l'instant et pourront être ajoutés
 # une fois que l'environnement de test pour les solveurs est clarifié.
 
-# def test_qbf_satisfiability_simple_true(qbf_classes):
+# def test_qbf_satisfiability_simple_true(tweety_qbf_classes):
 #     """Teste la satisfiabilité d'une QBF simple vraie : exists x (x)"""
 #     QbfParser = qbf_classes["QbfParser"]
 #     QBFSolver = qbf_classes.get("QBFSolver") # Peut être None
@@ -258,7 +262,7 @@ def test_qbf_programmatic_creation_example_from_subject_fiche(qbf_classes):
 #         else:
 #             pytest.fail(f"Erreur Java lors du test de satisfiabilité QBF (true) : {e.stacktrace()}")
 #
-# def test_qbf_satisfiability_simple_false(qbf_classes):
+# def test_qbf_satisfiability_simple_false(tweety_qbf_classes):
 #     """Teste la satisfiabilité d'une QBF simple fausse : forall x (x and not x)"""
 #     QbfParser = qbf_classes["QbfParser"]
 #     QBFSolver = qbf_classes.get("QBFSolver")
@@ -291,7 +295,7 @@ def test_qbf_programmatic_creation_example_from_subject_fiche(qbf_classes):
 # - Explorer d'autres fonctionnalités de l'API QBF de Tweety (conversion en CNF/DNF, etc.)
 #   et ajouter des tests correspondants.
 # - Gérer les cas d'erreur (parsing de formules incorrectes, etc.).
-def test_qbf_prenex_normal_form_transformation(qbf_classes):
+def test_qbf_prenex_normal_form_transformation(tweety_qbf_classes):
     """
     Teste la transformation d'une QBF en forme normale prénexe.
     Exemple: forall x ( (exists y (y)) and (exists z (z)) )
@@ -304,6 +308,7 @@ def test_qbf_prenex_normal_form_transformation(qbf_classes):
     QbfParser = qbf_classes["QbfParser"]
     # Supposons l'existence d'un converter, ex: PrenexNormalFormConverter
     # Le nom exact et le package doivent être vérifiés dans Tweety.
+    import jpype # Import local
     try:
         PrenexConverter = jpype.JClass("org.tweetyproject.logics.qbf.transform.PrenexNormalFormConverter")
     except jpype.JException as e:
@@ -355,7 +360,7 @@ def test_qbf_prenex_normal_form_transformation(qbf_classes):
         # Vérifier que les quantificateurs sont au début.
         # Ceci est une heuristique. Une vraie vérification nécessiterait d'inspecter la structure de l'objet.
         # Par exemple, la formule interne de la QBF prénexe ne devrait plus être une QuantifiedBooleanFormula.
-        if isinstance(prenex_qbf.getFormula(), QuantifiedBooleanFormula):
+        if isinstance(prenex_qbf.getFormula(), QuantifiedBooleanFormula): # type: ignore
              pytest.fail("La matrice de la formule prénexe ne devrait plus être quantifiée.")
 
         # Vérifier que la matrice est correcte (y and z)
@@ -366,7 +371,7 @@ def test_qbf_prenex_normal_form_transformation(qbf_classes):
         assert "z" in matrix_str
         assert "&" in matrix_str or "and" in matrix_str.lower() or "conjunction" in matrix_str.lower()
 
-    except jpype.JException as e:
+    except jpype.JException as e: # jpype doit être importé
         if "Could not find class" in str(e) or "NoSuchMethodException" in str(e):
              pytest.skip(f"Dépendance ou méthode manquante pour la transformation prénexe: {e}")
         else:
@@ -376,7 +381,7 @@ def test_qbf_prenex_normal_form_transformation(qbf_classes):
 
 
 @pytest.mark.skip(reason="Parsing DIMACS QBF non clairement documenté pour QbfParser sans solveur.")
-def test_qbf_parser_dimacs_format(qbf_classes):
+def test_qbf_parser_dimacs_format(tweety_qbf_classes):
     """
     Teste le parsing d'une QBF au format DIMACS (si supporté directement par QbfParser).
     Ce test est marqué comme skip car la fonctionnalité n'est pas évidente.
@@ -412,9 +417,9 @@ def test_qbf_parser_dimacs_format(qbf_classes):
         # Si QbfParser a une méthode pour lire un fichier, on pourrait créer un fichier temporaire.
         # Tentative avec une méthode hypothétique:
         if hasattr(parser, "parseDimacsString"):
-            formula = parser.parseDimacsString(jpype.JString(dimacs_qbf_true_example))
+            formula = parser.parseDimacsString(jpype.JString(dimacs_qbf_true_example)) # jpype doit être importé
         elif hasattr(parser, "parseDimacs"): # Autre nom possible
-            formula = parser.parseDimacs(jpype.JString(dimacs_qbf_true_example))
+            formula = parser.parseDimacs(jpype.JString(dimacs_qbf_true_example)) # jpype doit être importé
         else:
             pytest.skip("Aucune méthode évidente pour parser DIMACS trouvée sur QbfParser.")
             return
@@ -426,7 +431,7 @@ def test_qbf_parser_dimacs_format(qbf_classes):
         assert "exists" in str(formula.toString()).lower()
         # La vérification de la satisfiabilité nécessiterait un solveur.
 
-    except jpype.JException as e:
+    except jpype.JException as e: # jpype doit être importé
         if "NoSuchMethodException" in str(e) or "method not found" in str(e).lower():
             pytest.skip(f"Méthode de parsing DIMACS non trouvée sur QbfParser: {e}")
         else:
@@ -436,7 +441,7 @@ def test_qbf_parser_dimacs_format(qbf_classes):
 
 # Test pour l'extraction de modèles (nécessite un solveur)
 @pytest.mark.skip(reason="Extraction de modèles QBF nécessite un solveur configuré.")
-def test_qbf_model_extraction(qbf_classes):
+def test_qbf_model_extraction(tweety_qbf_classes):
     """
     Teste l'extraction d'un modèle pour une QBF satisfiable.
     Exemple: exists x, y (x and y) -> modèle x=true, y=true
@@ -448,8 +453,8 @@ def test_qbf_model_extraction(qbf_classes):
     if not QBFSolver:
         # Tentative d'importation directe si non présent dans la fixture
         try:
-            QBFSolver = jpype.JClass("org.tweetyproject.logics.qbf.solver.QBFSolver")
-        except jpype.JException:
+            QBFSolver = jpype.JClass("org.tweetyproject.logics.qbf.solver.QBFSolver") # jpype doit être importé
+        except jpype.JException: # jpype doit être importé
             pytest.skip("QBFSolver non disponible, test d'extraction de modèle sauté.")
             return
 
@@ -468,7 +473,7 @@ def test_qbf_model_extraction(qbf_classes):
             if not solver_instance: # Si getDefaultSolver() retourne null
                  pytest.skip("Aucun solveur QBF par défaut n'a pu être obtenu.")
                  return
-        except jpype.JException as e_solver:
+        except jpype.JException as e_solver: # jpype doit être importé
             # Si getDefaultSolver() lève une exception (ex: aucun solveur configuré)
             pytest.skip(f"Impossible d'obtenir un solveur QBF par défaut: {e_solver}. Test sauté.")
             return
@@ -526,7 +531,7 @@ def test_qbf_model_extraction(qbf_classes):
             assert not model.isEmpty() if hasattr(model, "isEmpty") else True, "Le modèle ne devrait pas être vide."
 
 
-    except jpype.JException as e:
+    except jpype.JException as e: # jpype doit être importé
         if "No QBF solver installed" in str(e) or "No default QBF solver specified" in str(e) or "Could not find class" in str(e):
             pytest.skip(f"Solveur QBF non configuré ou classe de solveur non trouvée: {e}")
         elif "NoSuchMethodException" in str(e) or "method not found" in str(e).lower():

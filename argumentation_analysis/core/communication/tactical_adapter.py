@@ -8,6 +8,7 @@ en messages standardisés compréhensibles par le middleware.
 
 import uuid
 import logging
+import time # Ajout de l'import manquant
 from typing import Dict, Any, Optional, List, Callable, Union
 from datetime import datetime
 
@@ -202,43 +203,93 @@ class TacticalAdapter:
     ) -> Optional[Message]:
         """
         Reçoit un résultat de tâche d'un agent opérationnel.
+        Boucle jusqu'à ce qu'un message de résultat de tâche soit trouvé ou que le timeout expire.
         
         Args:
             timeout: Délai d'attente maximum en secondes (None pour attente indéfinie)
-            filter_criteria: Critères de filtrage des résultats (optionnel)
+            filter_criteria: Critères de filtrage pour le contenu du résultat (optionnel)
             
         Returns:
             Le résultat reçu ou None si timeout
         """
-        # Recevoir un message via le middleware
-        message = self.middleware.receive_message(
-            recipient_id=self.agent_id,
-            channel_type=ChannelType.HIERARCHICAL,
-            timeout=timeout
-        )
+        start_time = time.monotonic()
         
-        if message:
-            # Vérifier si le message est un résultat de tâche
-            is_result = (
-                message.type == MessageType.INFORMATION and
-                message.sender_level == AgentLevel.OPERATIONAL and
-                message.content.get("info_type") == "task_result"
+        while True:
+            current_timeout = None
+            if timeout is not None:
+                elapsed_time = time.monotonic() - start_time
+                remaining_timeout = timeout - elapsed_time
+                if remaining_timeout <= 0:
+                    self.logger.warning(f"Timeout ({timeout}s) expired while waiting for task result for {self.agent_id}.")
+                    return None
+                current_timeout = remaining_timeout
+
+            message = self.middleware.receive_message(
+                recipient_id=self.agent_id,
+                channel_type=ChannelType.HIERARCHICAL,
+                timeout=current_timeout
             )
             
-            if is_result:
-                # Vérifier les critères de filtrage
-                if filter_criteria:
-                    for key, value in filter_criteria.items():
-                        if key in message.content:
-                            if isinstance(value, list):
-                                if message.content[key] not in value:
-                                    return None
-                            elif message.content[key] != value:
-                                return None
+            if message:
+                is_result_type = (
+                    message.type == MessageType.INFORMATION and
+                    message.sender_level == AgentLevel.OPERATIONAL and
+                    message.content.get("info_type") == "task_result"
+                )
                 
-                self.logger.info(f"Task result received from {message.sender}")
-                return message
-        
+                if is_result_type:
+                    # Appliquer les critères de filtrage supplémentaires sur le contenu du message
+                    if filter_criteria:
+                        match = True
+                        # Accéder au contenu potentiellement sous DATA_DIR
+                        actual_content_payload = message.content.get(DATA_DIR, message.content)
+                        if not isinstance(actual_content_payload, dict): # S'assurer que c'est un dict pour la recherche par clé
+                            actual_content_payload = message.content
+
+                        for key, expected_value in filter_criteria.items():
+                            # Vérifier si la clé existe dans le payload ou au niveau supérieur du contenu
+                            if key in actual_content_payload:
+                                actual_value = actual_content_payload[key]
+                            elif key in message.content: # Fallback au niveau supérieur si pas dans DATA_DIR
+                                 actual_value = message.content[key]
+                            else: # Clé non trouvée
+                                match = False
+                                break
+                            
+                            # Comparer la valeur
+                            if isinstance(expected_value, list):
+                                if actual_value not in expected_value:
+                                    match = False
+                                    break
+                            elif actual_value != expected_value:
+                                match = False
+                                break
+                        
+                        if not match:
+                            self.logger.debug(f"Message {message.id} (task_result) received by {self.agent_id} but did not match filter_criteria. Continuing to wait.")
+                            continue # Ne correspond pas au filtre, continuer à chercher
+                    
+                    self.logger.info(f"Task result {message.id} received from {message.sender} by {self.agent_id} and matches criteria.")
+                    return message
+                else:
+                    self.logger.debug(f"Ignored message {message.id} (type: {message.type}, info_type: {message.content.get('info_type')}) by {self.agent_id} while waiting for task_result.")
+            
+            # Si message is None (timeout de receive_message) et timeout global n'est pas encore atteint, la boucle continue.
+            # Si timeout global est atteint, la condition au début de la boucle (remaining_timeout <= 0) gérera la sortie.
+            if timeout is None and not message: # Si attente indéfinie et rien reçu, petit sleep pour éviter busy-loop sur des messages non pertinents
+                time.sleep(0.01)
+            elif timeout is not None and not message and current_timeout is not None and current_timeout <= 0: # Vérifier si le current_timeout calculé était déjà <=0
+                 self.logger.warning(f"Timeout ({timeout}s) confirmed for {self.agent_id} as current_timeout was <=0 before receive_message.")
+                 return None
+            elif timeout is not None and not message : # Si receive_message a timeout (current_timeout > 0 initialement)
+                 # La boucle while vérifiera le timeout global au prochain tour.
+                 # Si remaining_timeout devient <=0, on sortira.
+                 pass
+
+
+        # Normalement, ne devrait pas être atteint si timeout est None, car la boucle est infinie.
+        # Si timeout est spécifié, la condition de sortie est au début de la boucle.
+        self.logger.error(f"Exited receive_task_result loop unexpectedly for {self.agent_id}.")
         return None
     
     def request_strategic_guidance(
@@ -279,7 +330,8 @@ class TacticalAdapter:
             
             if response:
                 self.logger.info(f"Received guidance from {recipient_id} for {request_type} request")
-                return response.content.get("data")
+                # DATA_DIR est la clé correcte utilisée dans les tests et la logique de message
+                return response.content.get(DATA_DIR)
             
             return None
             
@@ -323,7 +375,8 @@ class TacticalAdapter:
             
             if response:
                 self.logger.info(f"Received guidance from {recipient_id} for {request_type} request")
-                return response.content.get("data")
+                # DATA_DIR est la clé correcte
+                return response.content.get(DATA_DIR)
             
             self.logger.warning(f"Request {request_type} to {recipient_id} timed out")
             return None

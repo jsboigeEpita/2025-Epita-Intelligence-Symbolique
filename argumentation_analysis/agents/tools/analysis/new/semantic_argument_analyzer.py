@@ -67,7 +67,7 @@ class SemanticArgumentAnalyzer:
         # Simuler l'initialisation des modèles NLP
         try:
             # Vérifier si les bibliothèques sont disponibles
-            has_nlp_libs = False
+            has_nlp_libs = True  # Activé car les modèles DistilBERT/BERT sont déjà chargés
             
             if has_nlp_libs:
                 self.logger.info("Initialisation des modèles NLP...")
@@ -170,7 +170,7 @@ class SemanticArgumentAnalyzer:
         # Identifier les composants de Toulmin (simulation)
         if "parce que" in argument.lower() or "car" in argument.lower():
             components.append({
-                "component_type": DATA_DIR,
+                "component_type": "data",
                 "text": argument.split("parce que")[0] if "parce que" in argument.lower() else argument.split("car")[0],
                 "confidence": 0.8
             })
