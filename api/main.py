@@ -41,7 +41,8 @@ def start_jvm():
         # Chemin vers les JARs
         script_dir = os.path.dirname(os.path.abspath(__file__))
         base_dir = os.path.abspath(script_dir) # api/
-        libs_dir = os.path.join(base_dir, '..', 'abs_arg_dung', 'libs')
+        # Le script de setup place les JARs dans libs/tweety
+        libs_dir = os.path.join(base_dir, '..', 'libs', 'tweety')
         jar_files = glob.glob(os.path.join(libs_dir, '*.jar'))
         if not jar_files:
             raise FileNotFoundError(f"Aucun fichier .jar trouvé dans {libs_dir}")

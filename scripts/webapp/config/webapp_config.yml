@@ -24,9 +24,9 @@ cleanup:
 frontend:
   enabled: true
   path: services/web_api/interface-web-argumentative
-  port: 3000
+  port: 3001
   start_command: npm start
-  timeout_seconds: 90
+  timeout_seconds: 180
 logging:
   file: logs/webapp_orchestrator.log
   format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
