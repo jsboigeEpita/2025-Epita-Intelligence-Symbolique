@@ -16,7 +16,7 @@ module.exports = defineConfig({
   outputDir: 'test-results/',
   
   use: {
-    baseURL: process.env.BACKEND_URL || process.env.FRONTEND_URL || 'http://localhost:3000',
+    baseURL: process.env.BASE_URL || process.env.FRONTEND_URL || process.env.BACKEND_URL || 'http://localhost:3000',
     headless: true,
     trace: 'on-first-retry',
     screenshot: 'always',

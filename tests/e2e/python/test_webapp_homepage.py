@@ -13,7 +13,7 @@ def test_homepage_has_correct_title_and_header(page: Page):
     # L'URL doit être spécifiée ici ou dans une configuration pytest.
     # Pour ce test, nous supposons que le serveur de développement tourne sur localhost:3000.
     # L'utilisateur devra lancer le serveur frontend manuellement avant d'exécuter ce test.
-    page.goto("http://localhost:3000/", wait_until='networkidle')
+    page.goto("/", wait_until='networkidle')
 
     # Vérifier que le titre de la page est correct
     expect(page).to_have_title(re.compile("Argumentation Analysis App"))
