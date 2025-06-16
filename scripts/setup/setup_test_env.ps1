@@ -12,12 +12,12 @@ function Write-Step {
 }
 
 # Vérifier le répertoire courant
-$scriptDir = Get-Location
-$projectDir = (Get-Item $scriptDir).Parent.Parent.FullName
-Write-Step "Configuration de l'environnement de test dans $projectDir"
+# Le script est exécuté depuis la racine du projet
+$projectDir = Get-Location
+Write-Step "Configuration de l'environnement de test dans $($projectDir.Path)"
 
 # Vérifier si un environnement virtuel existe déjà
-$venvDir = Join-Path -Path $projectDir -ChildPath "venv_test"
+$venvDir = Join-Path -Path $projectDir.Path -ChildPath "venv_test"
 if (Test-Path $venvDir) {
     Write-Step "Suppression de l'ancien environnement virtuel"
     Remove-Item -Path $venvDir -Recurse -Force

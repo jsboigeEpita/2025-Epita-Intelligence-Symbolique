@@ -21,12 +21,11 @@ except NameError:
 # Ajout des chemins nécessaires pour les imports
 # Chemin vers project_core pour les modules partagés
 sys.path.insert(0, str(project_root))
-# Chemin vers le répertoire scripts pour l'orchestrateur
-sys.path.insert(0, str(project_root / "scripts"))
+# Le PYTHONPATH est déjà configuré par l'activateur, plus besoin de manipuler sys.path ici.
 
 
 try:
-    from webapp.unified_web_orchestrator import UnifiedWebOrchestrator
+    from project_core.webapp_from_scripts.unified_web_orchestrator import UnifiedWebOrchestrator
 except ImportError as e:
     print(f"Erreur: Impossible d'importer UnifiedWebOrchestrator. Vérifiez PYTHONPATH et l'emplacement du module.")
     print(f"Détails de l'erreur: {e}")
@@ -43,57 +42,56 @@ logger = logging.getLogger("WebE2EPipeline")
 PLAYWRIGHT_TEST_COMMAND = ["npx", "playwright", "test"]
 PLAYWRIGHT_WORKING_DIR = str(project_root / "tests_playwright")
 
-def run_pipeline():
+async def run_pipeline_async():
     """
-    Orchestre le démarrage des services via UnifiedWebOrchestrator,
-    l'exécution des tests E2E et l'arrêt des services.
+    Orchestre le démarrage des services, l'exécution des tests et l'arrêt des services
+    de manière asynchrone, en utilisant les vraies méthodes de l'orchestrateur.
     """
-    orchestrator = UnifiedWebOrchestrator()
+    import argparse
+    default_args = argparse.Namespace(
+        config='scripts/webapp/config/webapp_config.yml',
+        headless=True,
+        visible=False,
+        log_level='INFO',
+        timeout=20,
+        no_trace=False,
+        no_playwright=False,
+        exit_after_start=False,
+        start=False,
+        stop=False,
+        test=True, # Par défaut, on veut exécuter les tests
+        integration=True,
+        frontend=False,
+        tests=None
+    )
+    
+    orchestrator = UnifiedWebOrchestrator(args=default_args)
 
     try:
-        logger.info("Démarrage des services via UnifiedWebOrchestrator...")
-        orchestrator.start()
-        logger.info("Services démarrés avec succès.")
+        logger.info("Lancement du test d'intégration complet via l'orchestrateur...")
+        # La méthode full_integration_test gère le démarrage, les tests et l'arrêt.
+        success = await orchestrator.full_integration_test(
+            headless=default_args.headless,
+            frontend_enabled=default_args.frontend
+        )
 
-        # Exécution des tests Playwright
-        logger.info("Démarrage des tests Playwright...")
-        try:
-            playwright_process = subprocess.run(
-                PLAYWRIGHT_TEST_COMMAND,
-                cwd=PLAYWRIGHT_WORKING_DIR,
-                capture_output=True,
-                text=True,
-                check=False, # Ne pas lever d'exception si le code de retour n'est pas 0
-                shell=sys.platform == "win32" # shell=True pour Windows pour les .cmd
-            )
-            logger.info("Sortie des tests Playwright (stdout):")
-            logger.info(playwright_process.stdout)
-            if playwright_process.stderr:
-                logger.error("Sortie d'erreur des tests Playwright (stderr):")
-                logger.error(playwright_process.stderr)
-            
-            if playwright_process.returncode == 0:
-                logger.info("Tests Playwright terminés avec succès.")
-            else:
-                logger.error(f"Les tests Playwright ont échoué avec le code de retour: {playwright_process.returncode}")
-
-        except FileNotFoundError:
-            logger.error(f"Erreur: Commande Playwright non trouvée ('npx'). Assurez-vous que Node.js et npm sont installés et dans le PATH.")
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Erreur lors de l'exécution des tests Playwright: {e}")
-            logger.error(f"Stdout: {e.stdout}")
-            logger.error(f"Stderr: {e.stderr}")
-        except Exception as e:
-            logger.error(f"Une erreur inattendue est survenue lors de l'exécution des tests Playwright: {e}")
+        if success:
+            logger.info("Pipeline de tests E2E terminé avec SUCCÈS.")
+        else:
+            logger.error("Pipeline de tests E2E terminé en ÉCHEC.")
 
     except Exception as e:
-        logger.error(f"Une erreur est survenue lors du démarrage des services avec UnifiedWebOrchestrator: {e}")
+        logger.error(f"Une erreur majeure est survenue dans le pipeline: {e}", exc_info=True)
     finally:
-        logger.info("Nettoyage: Arrêt de tous les services via UnifiedWebOrchestrator...")
-        orchestrator.stop()
-        logger.info("Tous les services ont été arrêtés.")
+        # L'arrêt est déjà géré dans full_integration_test, mais on s'assure
+        # qu'un arrêt est tenté en cas de crash avant.
+        logger.info("Nettoyage final du pipeline...")
+        await orchestrator.shutdown()
+
 
 if __name__ == "__main__":
+    import asyncio
     logger.info("Démarrage du pipeline de tests E2E Web...")
-    run_pipeline()
+    # Exécution de la nouvelle fonction asynchrone
+    asyncio.run(run_pipeline_async())
     logger.info("Pipeline de tests E2E Web terminé.")
