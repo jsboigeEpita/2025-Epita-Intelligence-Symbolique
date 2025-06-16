@@ -61,7 +61,7 @@ async def run_pipeline_async():
         stop=False,
         test=True, # Par défaut, on veut exécuter les tests
         integration=True,
-        frontend=False,
+        frontend=True,
         tests=None
     )
     
