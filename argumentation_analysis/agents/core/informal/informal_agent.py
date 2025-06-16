@@ -761,16 +761,30 @@ class InformalAnalysisAgent(BaseAgent):
             error_msg = {"error": f"An unexpected error occurred during analysis: {e}"}
             return ChatMessageContent(role="assistant", content=json.dumps(error_msg), name=self.name)
 
+    async def invoke_single(self, history: list[ChatMessageContent], **kwargs):
+        """
+        Implémentation de la méthode abstraite invoke_single exigée par BaseAgent.
+        Délègue à la méthode d'invocation principale `invoke_custom`.
+        """
+        # On suppose que l'historique est le principal argument d'entrée.
+        # Les kwargs supplémentaires sont ignorés pour l'instant, mais la signature les accepte
+        # pour la compatibilité avec l'interface de BaseAgent.
+        return await self.invoke_custom(history)
+
     async def invoke(self, history: list[ChatMessageContent]) -> ChatMessageContent:
         """Méthode dépréciée, utilisez invoke_custom."""
         import warnings
         warnings.warn("The 'invoke' method is deprecated, use 'invoke_custom' instead.", DeprecationWarning)
         return await self.invoke_custom(history)
 
-    async def get_response(self, history: list[ChatMessageContent]) -> ChatMessageContent:
-        """Méthode dépréciée, utilisez invoke_custom."""
-        import warnings
-        warnings.warn("The 'get_response' method is deprecated, use 'invoke_custom' instead.", DeprecationWarning)
+    async def get_response(self, history: list[ChatMessageContent], **kwargs) -> ChatMessageContent:
+        """
+        Implémentation de la méthode abstraite get_response.
+        Délègue à la méthode d'invocation principale de l'agent.
+        """
+        # La méthode get_response est souvent utilisée dans des contextes plus anciens ou différents
+        # de 'invoke'. Nous la faisons pointer vers la même logique de base pour la cohérence.
+        self.logger.info("Appel à la méthode get_response, délégation vers invoke_custom.")
         return await self.invoke_custom(history)
 
 # Log de chargement

@@ -46,7 +46,7 @@ ENCRYPTION_KEY_imported = None
 ExtractDefinitions_class, SourceDefinition_class, Extract_class = None, None, None
 
 try:
-    from argumentation_analysis.core.jvm_setup import start_jvm_if_needed as initialize_jvm_func
+    from argumentation_analysis.core.jvm_setup import initialize_jvm as initialize_jvm_func
 except ImportError as e:
     logger.error(f"Failed to import start_jvm_if_needed (aliased as initialize_jvm_func): {e}")
 

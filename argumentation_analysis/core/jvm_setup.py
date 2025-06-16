@@ -340,10 +340,12 @@ def is_valid_jdk(path: Path) -> bool:
             major_version = int(minor_version_str)
 
         if major_version >= MIN_JAVA_VERSION:
-            logger.info(f"Version Java détectée à '{path}': \"{match.group(0).split('"')[1]}\" (Majeure: {major_version}) -> Valide.")
+            java_version_str = match.group(0).split('"')[1]
+            logger.info(f"Version Java détectée à '{path}': \"{java_version_str}\" (Majeure: {major_version}) -> Valide.")
             return True
         else:
-            logger.warning(f"Version Java détectée à '{path}': \"{match.group(0).split('"')[1]}\" (Majeure: {major_version}) -> INVALIDE (minimum requis: {MIN_JAVA_VERSION}).")
+            java_version_str = match.group(0).split('"')[1]
+            logger.warning(f"Version Java détectée à '{path}': \"{java_version_str}\" (Majeure: {major_version}) -> INVALIDE (minimum requis: {MIN_JAVA_VERSION}).")
             return False
     except FileNotFoundError:
         logger.error(f"Exécutable Java non trouvé à {java_exe} lors de la vérification de version.")
