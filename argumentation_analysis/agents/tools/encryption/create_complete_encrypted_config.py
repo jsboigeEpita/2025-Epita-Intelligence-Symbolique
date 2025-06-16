@@ -27,9 +27,9 @@ load_dotenv(override=True)
 from argumentation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE_ENC
 from argumentation_analysis.ui.utils import reconstruct_url, get_cache_filepath
 
-# Définir les constantes
-EXTRACT_SOURCES_UPDATED_PATH = parent_dir / "utils" / "extract_repair" / "docs" / "extract_sources_updated.json"
-TEXT_CACHE_DIR = parent_dir / "text_cache"
+# Définir les constantes avec le chemin absolu correct
+EXTRACT_SOURCES_UPDATED_PATH = current_dir.parent.parent.parent / "utils" / "extract_repair" / "docs" / "extract_sources_updated.json"
+TEXT_CACHE_DIR = current_dir.parent.parent.parent / "text_cache"
 
 # Afficher les chemins pour le débogage
 print(f"Chemin du fichier de configuration: {EXTRACT_SOURCES_UPDATED_PATH}")
