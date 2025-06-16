@@ -153,43 +153,44 @@ def setup_env_file(project_root, logger_instance=None, tool_paths=None):
         logger.debug(f"TIKA_SERVER_ENDPOINT trouvé dans .env : {env_vars['TIKA_SERVER_ENDPOINT']}")
 
 
-    output_lines = []
-    written_keys = set()
-
-    source_for_structure = template_env_path if os.path.exists(template_env_path) else env_file_path
-
     try:
-        with open(source_for_structure, 'r', encoding='utf-8') as f_template:
-            for line in f_template:
-                stripped_line = line.strip()
-                if not stripped_line or stripped_line.startswith('#'):
-                    output_lines.append(line.rstrip('\r\n'))
-                    continue
-                
-                if '=' in stripped_line:
-                    key, _ = stripped_line.split('=', 1)
-                    key = key.strip()
-                    if key in env_vars:
-                        output_lines.append(f"{key}={env_vars[key]}")
-                        written_keys.add(key)
-                    else:
-                        output_lines.append(stripped_line)
-                else:
-                    output_lines.append(stripped_line)
+        # Lire le contenu actuel de .env
+        if os.path.exists(env_file_path):
+            with open(env_file_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+        else:
+            lines = []
 
+        # Mettre à jour les clés existantes et identifier les nouvelles
+        keys_to_update_or_add = set(env_vars.keys())
+        
+        for i, line in enumerate(lines):
+            stripped_line = line.strip()
+            if not stripped_line or stripped_line.startswith('#') or '=' not in stripped_line:
+                continue
 
-        for key, value in env_vars.items():
-            if key not in written_keys:
-                output_lines.append(f"{key}={value}")
-                written_keys.add(key)
+            key = stripped_line.split('=', 1)[0].strip()
+            if key in keys_to_update_or_add:
+                # Mettre à jour la ligne avec la nouvelle valeur
+                lines[i] = f'{key}={env_vars[key]}\n'
+                keys_to_update_or_add.remove(key)
 
+        # Ajouter les nouvelles clés à la fin du fichier
+        if keys_to_update_or_add:
+            if lines and lines[-1].strip() != '':
+                lines.append('\n')  # Ajouter une ligne vide pour la séparation
+            
+            for key in sorted(list(keys_to_update_or_add)): # trier pour un ordre déterministe
+                lines.append(f'{key}={env_vars[key]}\n')
+
+        # Écrire le contenu mis à jour dans le fichier
         with open(env_file_path, 'w', encoding='utf-8') as f:
-            for line_to_write in output_lines:
-                f.write(line_to_write + '\n')
-        logger.info(f"Fichier .env mis à jour : {env_file_path}")
+            f.writelines(lines)
+            
+        logger.info(f"Fichier .env mis à jour en toute sécurité: {env_file_path}")
 
     except IOError as e:
-        logger.error(f"Erreur lors de l'écriture du fichier .env: {e}", exc_info=True)
+        logger.error(f"Erreur lors de la mise à jour du fichier .env: {e}", exc_info=True)
 
 
 def setup_project_structure(project_root, logger_instance=None, tool_paths=None, interactive=False, perform_cleanup=True):
