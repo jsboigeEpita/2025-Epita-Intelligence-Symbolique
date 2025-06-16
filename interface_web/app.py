@@ -26,6 +26,7 @@ from typing import Dict, List, Any, Optional
 from contextlib import asynccontextmanager
 from starlette.applications import Starlette
 from a2wsgi import ASGIMiddleware
+from contextlib import asynccontextmanager # Ajout pour le lifespan manager
 
 # Activation automatique de l'environnement
 try:

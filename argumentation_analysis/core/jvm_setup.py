@@ -526,29 +526,17 @@ def initialize_jvm(
     global _JVM_INITIALIZED_THIS_SESSION, _JVM_WAS_SHUTDOWN, _SESSION_FIXTURE_OWNS_JVM
 
     logger.info(f"Appel à initialize_jvm. isJVMStarted: {jpype.isJVMStarted()}, force_restart: {force_restart}")
-    logger.debug(f"État JVM: _INITIALIZED_THIS_SESSION={_JVM_INITIALIZED_THIS_SESSION}, _WAS_SHUTDOWN={_JVM_WAS_SHUTDOWN}, _SESSION_FIXTURE_OWNS={_SESSION_FIXTURE_OWNS_JVM}")
-
     if force_restart and jpype.isJVMStarted():
         logger.info("Forçage du redémarrage de la JVM...")
         shutdown_jvm()
 
-    if _JVM_WAS_SHUTDOWN and not jpype.isJVMStarted():
-        logger.error("ERREUR CRITIQUE: Tentative de redémarrage d'une JVM qui a été explicitement arrêtée dans cette session.")
+    if jpype.isJVMStarted():
+        logger.info("la JVM est déjà démarrée.")
+        return True
+
+    if _JVM_WAS_SHUTDOWN:
+        logger.error("ERREUR CRITIQUE: Tentative de redémarrage d'une JVM qui a été explicitement arrêtée.")
         return False
-    
-    if _SESSION_FIXTURE_OWNS_JVM and jpype.isJVMStarted():
-        logger.info("JVM contrôlée par une fixture de session et déjà démarrée.")
-        _JVM_INITIALIZED_THIS_SESSION = True
-        return True
-    
-    if _JVM_INITIALIZED_THIS_SESSION and jpype.isJVMStarted() and not force_restart:
-        logger.info("JVM déjà initialisée dans cette session (et pas de forçage).")
-        return True
-    
-    if jpype.isJVMStarted() and not _JVM_INITIALIZED_THIS_SESSION and not _SESSION_FIXTURE_OWNS_JVM and not force_restart:
-        logger.warning("JVM déjà démarrée par un autre moyen. Tentative de l'utiliser telle quelle.")
-        _JVM_INITIALIZED_THIS_SESSION = True
-        return True
 
     if not _SESSION_FIXTURE_OWNS_JVM:
         logger.info("Vérification/Téléchargement des JARs Tweety...")
@@ -561,60 +549,39 @@ def initialize_jvm(
     if not java_home_str:
         logger.error("Impossible de trouver ou d'installer un JDK valide.")
         return False
-    logger.info(f"Utilisation de JAVA_HOME (ou équivalent portable) : {java_home_str}")
-    
-    # Forcer JPype à utiliser le JAVA_HOME trouvé s'il n'est pas déjà pris en compte
-    # Cela peut être nécessaire si JPype a déjà mis en cache un autre chemin JVM.
-    # Cependant, jpype.getDefaultJVMPath() devrait refléter le JAVA_HOME actuel.
-    # Si jpype.cfg est utilisé, il peut surcharger cela.
-    # os.environ["JAVA_HOME"] = java_home_str # S'assurer que l'env est à jour pour JPype
-    
-    jvm_path_dll_so = jpype.getDefaultJVMPath()
-    logger.info(f"Chemin JVM par défaut détecté par JPype (attendu basé sur JAVA_HOME): {jvm_path_dll_so}")
-    if not Path(jvm_path_dll_so).exists():
-        logger.warning(f"Le chemin JVM par défaut '{jvm_path_dll_so}' ne semble pas exister. "
-                       f"Vérifiez la configuration de JPype ou la validité de JAVA_HOME ('{java_home_str}').")
-        # Tentative de construction manuelle du chemin si getDefaultJVMPath échoue de manière inattendue
-        # Ceci est une solution de contournement et peut ne pas être robuste
-        java_exe_dir = Path(java_home_str) / "bin"
-        if platform.system() == "Windows":
-            # Chercher jvm.dll dans des emplacements communs (ex: bin/server, bin/client)
-            potential_jvm_paths = [
-                Path(java_home_str) / "bin" / "server" / "jvm.dll",
-                Path(java_home_str) / "jre" / "bin" / "server" / "jvm.dll",
-                Path(java_home_str) / "lib" / "server" / "jvm.dll" # Pour certains JDK plus récents
-            ]
-        elif platform.system() == "Darwin": # macOS
-            potential_jvm_paths = [
-                Path(java_home_str) / "lib" / "server" / "libjvm.dylib",
-                Path(java_home_str) / "jre" / "lib" / "server" / "libjvm.dylib"
-            ]
-        else: # Linux
-            potential_jvm_paths = [
-                Path(java_home_str) / "lib" / "server" / "libjvm.so",
-                Path(java_home_str) / "jre" / "lib" / "server" / "libjvm.so", # Moins courant pour les JDK modernes
-                Path(java_home_str) / "lib" / platform.machine() / "server" / "libjvm.so"
-            ]
         
-        found_jvm_path = None
-        for p_path in potential_jvm_paths:
-            if p_path.exists():
-                found_jvm_path = str(p_path)
-                logger.info(f"Chemin JVM trouvé manuellement: {found_jvm_path}")
-                break
-        if found_jvm_path:
-            jvm_path_dll_so = found_jvm_path
-        else:
-            logger.error(f"Impossible de localiser la bibliothèque JVM (jvm.dll/libjvm.so) dans '{java_home_str}'.")
-            return False
+    os.environ['JAVA_HOME'] = java_home_str
+    logger.info(f"Variable d'env JAVA_HOME positionnée à : {java_home_str}")
 
+    jvm_path_dll_so = None
+    try:
+        jvm_path_dll_so = jpype.getDefaultJVMPath()
+        logger.info(f"Chemin JVM par défaut trouvé par JPype : {jvm_path_dll_so}")
+    except jpype.JVMNotFoundException:
+        logger.warning(f"JPype n'a pas trouvé la JVM automatiquement. Tentative de recherche manuelle dans {java_home_str}...")
+        java_home_path = Path(java_home_str)
+        if platform.system() == "Windows":
+            search_paths = [java_home_path / "bin" / "server" / "jvm.dll", java_home_path / "lib" / "server" / "jvm.dll"]
+        elif platform.system() == "Darwin":
+            search_paths = [java_home_path / "lib" / "server" / "libjvm.dylib"]
+        else:
+            search_paths = [java_home_path / "lib" / "server" / "libjvm.so", java_home_path / "lib" / platform.machine() / "server" / "libjvm.so"]
+
+        for path_to_check in search_paths:
+            if path_to_check.exists():
+                jvm_path_dll_so = str(path_to_check)
+                logger.info(f"Bibliothèque JVM trouvée manuellement à : {jvm_path_dll_so}")
+                break
+    
+    if not jvm_path_dll_so:
+        logger.error(f"Échec final de la localisation de la bibliothèque JVM (jvm.dll/libjvm.so).")
+        return False
 
     jars_classpath_list: List[str] = []
     if specific_jar_path:
         specific_jar_file = Path(specific_jar_path)
         if specific_jar_file.is_file():
             jars_classpath_list = [str(specific_jar_file.resolve())]
-            logger.info(f"Utilisation du JAR spécifique pour classpath: {specific_jar_path}")
         else:
             logger.error(f"Fichier JAR spécifique introuvable: '{specific_jar_path}'.")
             return False
@@ -624,14 +591,12 @@ def initialize_jvm(
             logger.error(f"Répertoire des bibliothèques '{actual_lib_dir}' invalide.")
             return False
         jars_classpath_list = [str(f.resolve()) for f in actual_lib_dir.glob("*.jar") if f.is_file()]
-        logger.info(f"Classpath construit avec {len(jars_classpath_list)} JAR(s) depuis '{actual_lib_dir}'.")
 
     if not jars_classpath_list:
         logger.error("Classpath est vide. Démarrage de la JVM annulé.")
         return False
 
     jvm_options = get_jvm_options()
-
     logger.info(f"Tentative de démarrage de la JVM avec classpath: {os.pathsep.join(jars_classpath_list)}")
     logger.info(f"Options JVM: {jvm_options}")
     logger.info(f"Chemin DLL/SO JVM utilisé: {jvm_path_dll_so}")
@@ -648,15 +613,8 @@ def initialize_jvm(
         _JVM_WAS_SHUTDOWN = False
         logger.info("🎉 JVM démarrée avec succès.")
         return True
-    except TypeError as te: # Souvent lié à des problèmes de classpath ou d'options
-        logger.error(f"Erreur de type lors du démarrage de la JVM (vérifiez classpath/options): {te}", exc_info=True)
-        return False
     except Exception as e:
         logger.error(f"Erreur fatale lors du démarrage de la JVM: {e}", exc_info=True)
-        if "RuntimeError: No matching overloads found." in str(e) or "No matching overloads found" in str(e):
-             logger.error("Astuce: Cette erreur peut survenir si le classpath est incorrect, si une dépendance manque, ou incompatibilité de version JAR/JVM.")
-        elif sys.platform == "win32" and ("java.lang.UnsatisfiedLinkError" in str(e) or "Can't load IA 32-bit .dll on a AMD 64-bit platform" in str(e)):
-             logger.error("Astuce Windows: Vérifiez la cohérence 32/64 bits entre Python, JPype et le JDK. Assurez-vous que Microsoft Visual C++ Redistributable est installé.")
         _JVM_INITIALIZED_THIS_SESSION = False
         return False
 
