@@ -1,4 +1,5 @@
 import sys
+import os
 from unittest.mock import MagicMock
 import pytest
 import importlib # Ajouté pour numpy_mock si besoin d'import dynamique
@@ -108,6 +109,10 @@ class MockRecarray:
 
 def _install_numpy_mock_immediately():
     print("INFO: numpy_setup.py: _install_numpy_mock_immediately: Tentative d'installation/réinstallation du mock NumPy.")
+    if 'legacy_numpy_array_mock' not in globals():
+        print("ERREUR: legacy_numpy_array_mock non trouvé dans les variables globales. Installation d'un mock de bas niveau.")
+        sys.modules['numpy'] = MagicMock(name="numpy_mock_from_install_immediate_fallback")
+        return
     try:
         # Utiliser legacy_numpy_array_mock directement ici
         mock_numpy_attrs = {attr: getattr(legacy_numpy_array_mock, attr) for attr in dir(legacy_numpy_array_mock) if not attr.startswith('__')}
@@ -311,6 +316,12 @@ def setup_numpy():
 
 @pytest.fixture(scope="function", autouse=True)
 def setup_numpy_for_tests_fixture(request):
+    # E2E tests have their own conftest.py, so this fixture should ignore them.
+    path_str_for_e2e_check = str(request.node.fspath).replace(os.sep, '/')
+    if 'tests/e2e/python/' in path_str_for_e2e_check:
+        logger.info(f"NUMPY_SETUP: Skipping for E2E test {request.node.name} (handled by e2e/conftest.py).")
+        yield
+        return
     # Nettoyage FORCÉ au tout début de chaque exécution de la fixture
     logger.info(f"Fixture numpy_setup pour {request.node.name}: Nettoyage FORCÉ initial systématique de numpy, pandas, scipy, sklearn.")
     deep_delete_from_sys_modules("numpy", logger)
@@ -344,7 +355,7 @@ def setup_numpy_for_tests_fixture(request):
     
     # La logique de nettoyage spécifique à la branche (use_real_numpy vs mock) suit.
     # Le nettoyage ci-dessous est donc une DEUXIÈME passe de nettoyage pour la branche use_real_numpy.
-    if use_real_numpy_marker or real_jpype_marker:
+    if use_real_numpy_marker or request.node.get_closest_marker("real_jpype"):
         marker_name = "use_real_numpy" if use_real_numpy_marker else "real_jpype"
         logger.info(f"Test {request.node.name} marqué {marker_name}: Configuration pour VRAI NumPy.")
 

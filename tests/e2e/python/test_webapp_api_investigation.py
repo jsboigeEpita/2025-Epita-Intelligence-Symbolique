@@ -7,6 +7,7 @@ Test d'investigation de la démo web - API et Interface
 Script d'investigation systématique de la démo web du projet d'Intelligence Symbolique.
 """
 
+import os
 import pytest
 import requests
 import json
@@ -17,11 +18,11 @@ from pathlib import Path
 class TestWebAppAPIInvestigation:
     """Tests d'investigation de l'API d'analyse argumentative"""
     
-    BASE_URL = "http://localhost:3000"
+    BASE_URL = os.environ.get("BACKEND_URL", "http://localhost:5003")
     
     def test_api_health(self):
         """Test de santé de l'API"""
-        response = requests.get(f"{self.BASE_URL}/status", timeout=10)
+        response = requests.get(f"{self.BASE_URL}/api/health", timeout=10)
         assert response.status_code == 200
         
         health_data = response.json()

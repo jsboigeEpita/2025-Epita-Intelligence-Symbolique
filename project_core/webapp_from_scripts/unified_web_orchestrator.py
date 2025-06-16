@@ -414,7 +414,11 @@ class UnifiedWebOrchestrator:
         # L'ancienne gestion de subprocess.TimeoutExpired n'est plus nécessaire car
         # le runner utilise maintenant create_subprocess_exec.
         # Le timeout est géré plus haut par asyncio.wait_for.
-        return await self.playwright_runner.run_tests(test_paths, test_config)
+        return await self.playwright_runner.run_tests(
+            test_type='python',
+            test_paths=test_paths,
+            runtime_config=test_config
+        )
     
     async def stop_webapp(self):
         """Arrête l'application web et nettoie les ressources de manière gracieuse."""
@@ -484,7 +488,7 @@ class UnifiedWebOrchestrator:
                 self.add_trace("[TEST] Lancement avec timeout global", f"{test_timeout_s}s")
                 
                 success = await asyncio.wait_for(
-                    self.run_tests(test_paths, **kwargs),
+                    self.run_tests(test_paths=test_paths, **kwargs),
                     timeout=test_timeout_s
                 )
             except asyncio.TimeoutError:
@@ -863,7 +867,7 @@ def main():
             elif args.test:
                 # Pour les tests seuls, on fait un cycle complet mais sans arrêt entre les étapes.
                 if await orchestrator.start_webapp(orchestrator.headless, args.frontend):
-                    success = await orchestrator.run_tests(args.tests)
+                    success = await orchestrator.run_tests(test_paths=args.tests)
             else:  # --integration par défaut
                 success = await orchestrator.full_integration_test(
                     orchestrator.headless, args.frontend, args.tests)

@@ -87,6 +87,12 @@ except ImportError as e_jpype:
 
 @pytest.fixture(scope="function", autouse=True)
 def activate_jpype_mock_if_needed(request):
+    # E2E tests have their own conftest.py, so this fixture should ignore them.
+    path_str_for_e2e_check = str(request.node.fspath).replace(os.sep, '/')
+    if 'tests/e2e/python/' in path_str_for_e2e_check:
+        logger.info(f"JPYPE_SETUP: Skipping for E2E test {request.node.name} (handled by e2e/conftest.py).")
+        yield
+        return
     """
     Fixture à portée "function" et "autouse=True" pour gérer la sélection entre le mock JPype et le vrai JPype.
 
@@ -123,10 +129,20 @@ def activate_jpype_mock_if_needed(request):
     if request.node.get_closest_marker("real_jpype"):
         use_real_jpype = True
     path_str = str(request.node.fspath).replace(os.sep, '/')
-    if 'tests/integration/' in path_str or 'tests/minimal_jpype_tweety_tests/' in path_str:
+    logger.info(f"JPYPE_SETUP_DEBUG: Test Path for evaluation: {path_str}")
+    is_e2e = 'tests/e2e/' in path_str
+    logger.info(f"JPYPE_SETUP_DEBUG: Checking if path contains 'tests/e2e/'. Result: {is_e2e}")
+    if 'tests/integration/' in path_str or is_e2e or 'tests/minimal_jpype_tweety_tests/' in path_str:
         use_real_jpype = True
+    logger.info(f"JPYPE_SETUP_DEBUG: Final decision for test '{request.node.name}'. use_real_jpype = {use_real_jpype}")
 
     if use_real_jpype:
+        # Dynamically add the 'real_jpype' marker so other fixtures can see it
+        # This is the key to synchronizing with numpy_setup
+        if not request.node.get_closest_marker("real_jpype"):
+            logger.info(f"Dynamically adding 'real_jpype' marker to test '{request.node.name}'.")
+            request.node.add_marker(pytest.mark.real_jpype)
+        
         logger.info(f"Test {request.node.name} demande REAL JPype. Configuration de sys.modules pour utiliser le vrai JPype.")
         if _REAL_JPYPE_MODULE:
             sys.modules['jpype'] = _REAL_JPYPE_MODULE
@@ -266,7 +282,7 @@ def pytest_sessionfinish(session, exitstatus):
                 logger.info(f"   pytest_sessionfinish: Temporairement, sys.modules['jpype'] = _REAL_JPYPE_MODULE (ID: {id(_REAL_JPYPE_MODULE)}) pour shutdown.")
                 sys.modules['jpype'] = _REAL_JPYPE_MODULE
             
-            shutdown_jvm_if_needed() # Appel de notre fonction centralisée
+            shutdown_jvm() # Appel de notre fonction centralisée
             
             # Restaurer l'état précédent de sys.modules['jpype'] si modifié
             if original_jpype_in_sys is not None and sys.modules.get('jpype') is not original_jpype_in_sys:
@@ -277,7 +293,7 @@ def pytest_sessionfinish(session, exitstatus):
                 logger.info("   pytest_sessionfinish: sys.modules['jpype'] supprimé car il n'était pas là initialement.")
 
         except Exception as e_shutdown:
-            logger.error(f"   pytest_sessionfinish: Erreur lors de l'appel à shutdown_jvm_if_needed(): {e_shutdown}", exc_info=True)
+            logger.error(f"   pytest_sessionfinish: Erreur lors de l'appel à shutdown_jvm(): {e_shutdown}", exc_info=True)
         
         # La logique ci-dessous pour restaurer sys.modules['jpype'] et sys.modules['jpype.config']
         # est importante si la JVM n'est PAS arrêtée par JPype via atexit (destroy_jvm=False).
