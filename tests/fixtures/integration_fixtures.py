@@ -40,13 +40,15 @@ except ImportError as e:
 
 # Importer _REAL_JPYPE_MODULE depuis jpype_setup
 # et potentiellement _JPYPE_MODULE_MOCK_OBJ_GLOBAL si des comparaisons sont faites
-try:
-    from tests.mocks.jpype_setup import _REAL_JPYPE_MODULE, _JPYPE_MODULE_MOCK_OBJ_GLOBAL
-    logger.info("_REAL_JPYPE_MODULE et _JPYPE_MODULE_MOCK_OBJ_GLOBAL importés de jpype_setup.")
-except ImportError:
-    logger.error("ERREUR CRITIQUE: Impossible d'importer _REAL_JPYPE_MODULE de jpype_setup.")
-    _REAL_JPYPE_MODULE = None # Fallback pour éviter des NameError, mais les tests d'intégration échoueront.
-    _JPYPE_MODULE_MOCK_OBJ_GLOBAL = MagicMock(name="fallback_jpype_mock_obj_global_in_integration_fixtures")
+# L'import de jpype_setup est obsolète. Le bootstrap gère le mock.
+# Pour les tests d'intégration, nous attendons que l'environnement soit configuré
+# pour utiliser le vrai JPype.
+import jpype
+from unittest.mock import MagicMock
+# MagicMock peut être nécessaire si jpype est un mock et que nous voulons vérifier ses attributs
+# Définir des placeholders pour la clarté, mais le but est d'utiliser le module 'jpype' importé directement
+_REAL_JPYPE_MODULE = jpype if hasattr(jpype, 'isJVMStarted') and not isinstance(jpype, MagicMock) else None
+_JPYPE_MODULE_MOCK_OBJ_GLOBAL = jpype if isinstance(jpype, MagicMock) else MagicMock(name="fallback_jpype_mock_obj_global_in_integration_fixtures")
 
 # Variable globale pour suivre si initialize_jvm a été appelée avec succès dans la session
 _integration_jvm_started_session_scope = False

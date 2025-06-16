@@ -1,6 +1,6 @@
+import os
 import pytest
 import sys
-import os
 import logging
 import threading
 import asyncio
@@ -34,27 +34,32 @@ def e2e_session_setup(request):
     """
     logger.warning("[E2E Conftest] Démarrage de la configuration de session E2E.")
 
-    # 1. Éradiquer les mocks
-    logger.warning("[E2E Conftest] Éradication de tout mock de NumPy.")
-    deep_delete_from_sys_modules("numpy")
-
-    # 2. Forcer l'utilisation du vrai JPype et démarrer la JVM
-    try:
-        mocks_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../mocks'))
-        if mocks_path in sys.path:
-            sys.path.remove(mocks_path)
-        
-        import jpype
-        import jpype.imports
-        logger.warning(f"[E2E Conftest] Vrai JPype (version {jpype.__version__}) importé.")
-
-        from argumentation_analysis.core.jvm_setup import initialize_jvm
-        initialize_jvm(force_restart=False)
-        if not jpype.isJVMStarted():
-            pytest.fail("[E2E Conftest] La JVM n'a pas pu démarrer.")
-
-    except Exception as e:
-        pytest.fail(f"[E2E Conftest] Échec de l'initialisation de JPype/JVM: {e}")
+    # 1. & 2. GESTION DE LA JVM DANS LE PROCESSUS DE TEST (DÉSACTIVÉ)
+    #
+    # NOTE: La tentative d'initialiser une seconde JVM dans le processus de test
+    # (alors que le serveur backend en exécute déjà une dans un sous-processus)
+    # semble être la cause des crashs "access violation" sur Windows.
+    # Les tests E2E ne devraient pas avoir besoin d'accéder directement à des
+    # composants Java. Ils doivent traiter le backend comme une boîte noire via HTTP.
+    # Nous désactivons donc cette section. L'état "mocké" de jpype dans ce
+    # processus n'est pas pertinent pour les tests E2E.
+    #
+    # logger.warning("[E2E Conftest] Éradication de tout mock (NumPy, JPype).")
+    # deep_delete_from_sys_modules("numpy")
+    # deep_delete_from_sys_modules("jpype")
+    #
+    # try:
+    #     import jpype
+    #     import jpype.imports
+    #     logger.warning(f"[E2E Conftest] Vrai JPype (version {jpype.__version__}) importé.")
+    #
+    #     from argumentation_analysis.core.jvm_setup import initialize_jvm
+    #     initialize_jvm(force_restart=False)
+    #     if not jpype.isJVMStarted():
+    #         pytest.fail("[E2E Conftest] La JVM n'a pas pu démarrer.")
+    #
+    # except Exception as e:
+    #     pytest.fail(f"[E2E Conftest] Échec de l'initialisation de JPype/JVM: {e}")
 
     # 3. Démarrer l'orchestrateur web
     # Simuler les arguments de ligne de commande nécessaires pour l'orchestrateur

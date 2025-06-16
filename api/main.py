@@ -1,6 +1,5 @@
 import sys
 from pathlib import Path
-import jpype
 import os
 import glob
 import logging
@@ -20,6 +19,7 @@ if str(abs_arg_dung_path) not in sys.path:
 
 def start_jvm():
     """Démarre la JVM avec les JARs nécessaires."""
+    import jpype
     try:
         logging.info("Tentative de démarrage de la JVM...")
         
@@ -60,6 +60,7 @@ def start_jvm():
 
 def shutdown_jvm():
     """Arrête la JVM proprement."""
+    import jpype
     if jpype.isJVMStarted():
         logging.info("Arrêt de la JVM.")
         jpype.shutdownJVM()
@@ -78,4 +79,5 @@ app.include_router(framework_router)
 
 @app.get("/")
 async def root():
+    import jpype
     return {"message": "Welcome to the Argumentation Analysis API. JVM status: " + ("Running" if jpype.isJVMStarted() else "Stopped")}

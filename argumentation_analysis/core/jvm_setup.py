@@ -2,7 +2,7 @@
 import os
 import re
 import sys
-import jpype
+# import jpype  # IMPORTANT: L'import est déplacé dans les fonctions pour chargement tardif
 import logging
 import platform
 import shutil
@@ -521,6 +521,8 @@ def initialize_jvm(
     Initialise la JVM avec le classpath configuré, si elle n'est pas déjà démarrée.
     Gère la logique de session et la possibilité de forcer un redémarrage.
     """
+    import jpype
+    import jpype.imports
     global _JVM_INITIALIZED_THIS_SESSION, _JVM_WAS_SHUTDOWN, _SESSION_FIXTURE_OWNS_JVM
 
     logger.info(f"Appel à initialize_jvm. isJVMStarted: {jpype.isJVMStarted()}, force_restart: {force_restart}")
@@ -666,6 +668,7 @@ def shutdown_jvm():
         # La fixture devrait gérer la réinitialisation des états si nécessaire.
         return
 
+    import jpype
     if jpype.isJVMStarted():
         logger.info("Arrêt de la JVM...")
         jpype.shutdownJVM()
@@ -694,6 +697,7 @@ if __name__ == "__main__":
             initialize_jvm()
 
             try:
+                import jpype
                 JString = jpype.JClass("java.lang.String")
                 my_string = JString("Ceci est un test depuis Python!")
                 main_logger.info(f"Test Java réussi: {my_string}")

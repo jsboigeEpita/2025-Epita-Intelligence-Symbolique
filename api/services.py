@@ -54,8 +54,6 @@ class AnalysisService:
 # --- Service d'analyse d'argumentation de Dung ---
 import os
 import glob
-import jpype
-import jpype.imports
 import networkx as nx
 from typing import TYPE_CHECKING
 
@@ -73,6 +71,8 @@ class DungAnalysisService:
     """
 
     def __init__(self):
+        import jpype
+        import jpype.imports
         if not jpype.isJVMStarted():
             raise RuntimeError(
                 "La JVM n'est pas démarrée. "
