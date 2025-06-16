@@ -121,11 +121,37 @@ class ProjectContext:
         self.crypto_service = None
         self.definition_service = None
         self.llm_service = None
-        # self.informal_agent = None # Supprimé car l'agent n'est plus utilisé
-        self.fallacy_detector = None
+        self._fallacy_detector_instance = None
+        self._fallacy_detector_lock = threading.Lock()
         self.tweety_classes = {}
         self.config = {}
         self.project_root_path = None
+
+    def get_fallacy_detector(self):
+        """
+        Initialise de manière paresseuse et retourne le ContextualFallacyDetector.
+        L'initialisation est thread-safe.
+        """
+        if self._fallacy_detector_instance is None:
+            with self._fallacy_detector_lock:
+                # Double-vérification pour s'assurer que l'instance n'a pas été créée
+                # pendant que le thread attendait le verrou.
+                if self._fallacy_detector_instance is None:
+                    logger.info("Initialisation paresseuse de ContextualFallacyDetector...")
+                    if ContextualFallacyDetector_class:
+                        try:
+                            original_detector = ContextualFallacyDetector_class()
+                            self._fallacy_detector_instance = ContextualFallacyDetectorAdapter(original_detector)
+                            logger.info("ContextualFallacyDetector initialisé et mis en cache.")
+                        except Exception as e:
+                            logger.error(f"Erreur lors de l'initialisation paresseuse de ContextualFallacyDetector : {e}", exc_info=True)
+                            # On retourne None pour que l'application puisse continuer
+                            # sans le détecteur si l'initialisation échoue.
+                            return None
+                    else:
+                        logger.error("Impossible d'initialiser paresseusement : ContextualFallacyDetector_class n'a pas été importé.")
+                        return None
+        return self._fallacy_detector_instance
 
 
 def initialize_project_environment(env_path_str: str = None, root_path_str: str = None) -> ProjectContext:
@@ -287,17 +313,9 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
     # else:
     #     logger.error("create_llm_service_func n'a pas pu être importé.")
 
-    # DIÉSACTIVÉ POUR DÉBOGAGE
-    if ContextualFallacyDetector_class:
-        logger.info("Initialisation de ContextualFallacyDetector...")
-        try:
-            original_detector = ContextualFallacyDetector_class()
-            context.fallacy_detector = ContextualFallacyDetectorAdapter(original_detector)
-            logger.info("ContextualFallacyDetector initialisé et enveloppé dans l'adaptateur.")
-        except Exception as e:
-            logger.error(f"Erreur lors de l'initialisation de ContextualFallacyDetector ou de son adaptateur : {e}", exc_info=True)
-    else:
-        logger.error("ContextualFallacyDetector_class n'a pas pu être importé.")
+    # L'initialisation de ContextualFallacyDetector est maintenant paresseuse
+    # et gérée via la méthode context.get_fallacy_detector().
+    # Le bloc d'initialisation rapide ici est donc supprimé.
 
     # Le bloc d'initialisation de InformalAgent a été complètement supprimé
     # car il dépendait de semantic-kernel, qui n'est plus dans le projet.

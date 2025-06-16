@@ -47,11 +47,12 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
 # Imports du système de base
 from argumentation_analysis.paths import DATA_DIR, RESULTS_DIR
+from argumentation_analysis.core.bootstrap import initialize_project_environment, ProjectContext
 
 # Imports des gestionnaires hiérarchiques
 try:
     from argumentation_analysis.orchestration.hierarchical.strategic.manager import StrategicManager
-    from argumentation_analysis.orchestration.hierarchical.tactical.manager import TacticalManager  
+    from argumentation_analysis.orchestration.hierarchical.tactical.manager import TacticalManager
     from argumentation_analysis.orchestration.hierarchical.operational.manager import OperationalManager
 except ImportError as e:
     logging.warning(f"Certains gestionnaires hiérarchiques ne sont pas disponibles: {e}")
@@ -179,6 +180,7 @@ class OrchestrationServiceManager:
         # Kernel Semantic Kernel et service LLM principal
         self.kernel: Optional[sk.Kernel] = None
         self.llm_service_id: Optional[str] = "gpt-4o-mini" # Default, sera confirmé lors de l'ajout au kernel
+        self.project_context: Optional[ProjectContext] = None # Contexte du projet
         
         # État d'initialisation
         self._initialized = False
@@ -222,7 +224,13 @@ class OrchestrationServiceManager:
         try:
             self.logger.info("Initialisation du ServiceManager...")
 
-            # 1. Initialisation du Kernel Semantic Kernel et du service LLM
+            # 1. Initialisation du contexte du projet (bootstrap)
+            self.project_context = initialize_project_environment()
+            if not self.project_context:
+                raise ServiceManagerError("Échec de l'initialisation du contexte du projet (bootstrap).")
+            self.logger.info("Contexte du projet initialisé.")
+
+            # 2. Initialisation du Kernel Semantic Kernel et du service LLM
             self.kernel = sk.Kernel()
             api_key = os.getenv("OPENAI_API_KEY")
             # Utiliser un ID de service cohérent, par exemple le nom du modèle
@@ -244,12 +252,11 @@ class OrchestrationServiceManager:
             else:
                 self.logger.warning("OPENAI_API_KEY non trouvée. Le service LLM ne sera pas configuré dans le kernel.")
             
-            # 2. Initialisation du middleware de communication
-            # 2. Initialisation du middleware de communication
+            # 3. Initialisation du middleware de communication
             if self.config.get('enable_communication_middleware', True):
                 await self.initialize_middleware()
 
-            # 3. Initialisation des gestionnaires hiérarchiques (après le middleware)
+            # 4. Initialisation des gestionnaires hiérarchiques (après le middleware)
             if self.config.get('enable_hierarchical', True):
                 await self._initialize_hierarchical_managers()
 
@@ -310,7 +317,8 @@ class OrchestrationServiceManager:
                 self.operational_manager = OperationalManager(
                     middleware=self.middleware,
                     kernel=self.kernel,
-                    llm_service_id=self.llm_service_id
+                    llm_service_id=self.llm_service_id,
+                    project_context=self.project_context
                 )
                 self.logger.info("OperationalManager initialisé et abonné au middleware.")
                     

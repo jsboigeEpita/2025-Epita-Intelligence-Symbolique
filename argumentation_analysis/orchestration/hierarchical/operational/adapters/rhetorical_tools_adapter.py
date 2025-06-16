@@ -17,6 +17,7 @@ from pathlib import Path
 
 from argumentation_analysis.orchestration.hierarchical.operational.agent_interface import OperationalAgent
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
+from argumentation_analysis.core.bootstrap import ProjectContext # Importer ProjectContext
 
 # Placeholder pour l'agent rhétorique refactoré
 # from argumentation_analysis.agents.core.rhetorical.rhetorical_agent import RhetoricalAnalysisAgent # TODO: Create this agent
@@ -29,7 +30,8 @@ from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_eval
 from argumentation_analysis.agents.tools.analysis.new.argument_structure_visualizer import ArgumentStructureVisualizer
 from argumentation_analysis.agents.tools.analysis.new.argument_coherence_evaluator import ArgumentCoherenceEvaluator
 from argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer import SemanticArgumentAnalyzer
-from argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import ContextualFallacyDetector
+# L'import direct de ContextualFallacyDetector n'est plus nécessaire ici, il est géré par ProjectContext
+# from argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import ContextualFallacyDetector
 
 
 from argumentation_analysis.paths import RESULTS_DIR
@@ -38,18 +40,19 @@ from argumentation_analysis.paths import RESULTS_DIR
 # Supposons qu'un agent RhetoricalAnalysisAgent sera créé et gérera ces outils.
 # Pour l'instant, nous allons simuler son interface.
 class MockRhetoricalAnalysisAgent:
-    def __init__(self, kernel, agent_name):
+    def __init__(self, kernel, agent_name, project_context: ProjectContext):
         self.kernel = kernel
         self.agent_name = agent_name
         self.logger = logging.getLogger(agent_name)
-        # Simuler l'initialisation des outils en interne
-        self.complex_fallacy_analyzer = EnhancedComplexFallacyAnalyzer()
-        self.contextual_fallacy_analyzer = EnhancedContextualFallacyAnalyzer()
-        self.fallacy_severity_evaluator = EnhancedFallacySeverityEvaluator()
-        self.argument_structure_visualizer = ArgumentStructureVisualizer()
-        self.argument_coherence_evaluator = ArgumentCoherenceEvaluator()
-        self.semantic_argument_analyzer = SemanticArgumentAnalyzer()
-        self.contextual_fallacy_detector = ContextualFallacyDetector()
+        self.project_context = project_context
+        # L'initialisation se fait maintenant de manière paresseuse via le contexte
+        self.complex_fallacy_analyzer = None # Remplacer par un getter si nécessaire
+        self.contextual_fallacy_analyzer = None # Remplacer par un getter si nécessaire
+        self.fallacy_severity_evaluator = None # Remplacer par un getter si nécessaire
+        self.argument_structure_visualizer = None # Remplacer par un getter si nécessaire
+        self.argument_coherence_evaluator = None # Remplacer par un getter si nécessaire
+        self.semantic_argument_analyzer = None # Remplacer par un getter si nécessaire
+        self.contextual_fallacy_detector = self.project_context.get_fallacy_detector()
 
     async def setup_agent_components(self, llm_service_id):
         self.logger.info(f"MockRhetoricalAnalysisAgent setup_agent_components called with {llm_service_id}")
@@ -90,13 +93,14 @@ class RhetoricalToolsAdapter(OperationalAgent):
     de fonctionner comme un agent opérationnel dans l'architecture hiérarchique.
     """
     
-    def __init__(self, name: str = "RhetoricalTools", operational_state: Optional[OperationalState] = None):
+    def __init__(self, name: str = "RhetoricalTools", operational_state: Optional[OperationalState] = None, project_context: Optional[ProjectContext] = None):
         """
         Initialise un nouvel adaptateur pour les outils d'analyse rhétorique.
         
         Args:
             name: Nom de l'agent
             operational_state: État opérationnel à utiliser. Si None, un nouvel état est créé.
+            project_context: Le contexte global du projet.
         """
         super().__init__(name, operational_state)
         self.logger = logging.getLogger(f"RhetoricalToolsAdapter.{name}")
@@ -104,16 +108,18 @@ class RhetoricalToolsAdapter(OperationalAgent):
         self.agent: Optional[RhetoricalAnalysisAgent] = None # Agent refactoré (ou son mock)
         self.kernel: Optional[Any] = None # Passé à initialize
         self.llm_service_id: Optional[str] = None # Passé à initialize
+        self.project_context = project_context
         
         self.initialized = False
     
-    async def initialize(self, kernel: Any, llm_service_id: str) -> bool: # Prend kernel et llm_service_id
+    async def initialize(self, kernel: Any, llm_service_id: str, project_context: ProjectContext) -> bool:
         """
         Initialise l'agent d'analyse rhétorique.
         
         Args:
             kernel: Le kernel Semantic Kernel à utiliser.
             llm_service_id: L'ID du service LLM à utiliser.
+            project_context: Le contexte global du projet.
 
         Returns:
             True si l'initialisation a réussi, False sinon
@@ -123,11 +129,16 @@ class RhetoricalToolsAdapter(OperationalAgent):
         
         self.kernel = kernel
         self.llm_service_id = llm_service_id
+        self.project_context = project_context
+
+        if not self.project_context:
+            self.logger.error("ProjectContext non fourni, impossible d'initialiser RhetoricalToolsAdapter.")
+            return False
 
         try:
             self.logger.info("Initialisation de l'agent d'analyse rhétorique...")
             
-            self.agent = RhetoricalAnalysisAgent(kernel=self.kernel, agent_name=f"{self.name}_RhetoricalAgent")
+            self.agent = RhetoricalAnalysisAgent(kernel=self.kernel, agent_name=f"{self.name}_RhetoricalAgent", project_context=self.project_context)
             await self.agent.setup_agent_components(llm_service_id=self.llm_service_id)
             
             if self.agent is None:
