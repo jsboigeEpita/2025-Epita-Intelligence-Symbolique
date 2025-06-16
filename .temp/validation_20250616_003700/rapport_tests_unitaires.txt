@@ -1,0 +1,25 @@
+INFO     App.ProjectCore.FileLoaders:file_loaders.py:153 Utilitaires de chargement de fichiers (FileLoaders) définis.
+INFO     App.ProjectCore.FileSavers:file_savers.py:99 Utilitaires de sauvegarde de fichiers (FileSavers) définis.
+INFO     App.ProjectCore.MarkdownUtils:markdown_utils.py:155 Utilitaires Markdown (MarkdownUtils) définis.
+INFO     App.ProjectCore.PathOperations:path_operations.py:232 Utilitaires d'opérations sur les chemins (PathOperations) définis.
+INFO     argumentation_analysis.utils.core_utils.file_utils:file_utils.py:35 Module principal des utilitaires de fichiers (file_utils.py) initialisé et sous-modules importés.
+INFO     App.UI.Config:config.py:30 Utilisation de la phrase secrète fixe pour la dérivation de la clé.
+INFO     App.UI.Config:config.py:32 [OK] Phrase secrète définie sur "Propaganda". Dérivation de la clé...
+INFO     App.UI.Config:config.py:40 [OK] Clé de chiffrement dérivée et encodée.
+INFO     App.UI.Config:config.py:56 TIKA_SERVER_ENDPOINT depuis .env (nettoyé): 'https://tika.open-webui.myia.io/'
+INFO     App.UI.Config:config.py:67 URL du serveur Tika: https://tika.open-webui.myia.io/tika
+INFO     App.UI.Config:config.py:85 Cache répertoire assuré : D:\2025-Epita-Intelligence-Symbolique\_temp\text_cache
+INFO     App.UI.Config:config.py:87 Répertoire config UI assuré : D:\2025-Epita-Intelligence-Symbolique\argumentation_analysis\data
+INFO     App.UI.Config:config.py:89 Répertoire temporaire assuré : D:\2025-Epita-Intelligence-Symbolique\_temp\temp_downloads
+INFO     App.UI.Config:config.py:140 Config UI initialisée. EXTRACT_SOURCES est sur DEFAULT_EXTRACT_SOURCES. Le chargement dynamique est délégué.
+INFO     App.UI.Config:config.py:147 Module config.py initialisé. 1 sources par défaut disponibles dans EXTRACT_SOURCES.
+INFO     App.UI.Config:config.py:150 PROJECT_ROOT exporté: D:\2025-Epita-Intelligence-Symbolique
+INFO     App.UI.CacheUtils:cache_utils.py:77 Utilitaires de cache UI définis.
+INFO     App.UI.FetchUtils:fetch_utils.py:337 Utilitaires de fetch UI définis.
+INFO     App.UI.VerificationUtils:verification_utils.py:185 Utilitaires de vérification UI définis.
+INFO     App.UI.Utils:utils.py:63 Module principal des utilitaires UI (utils.py) initialisé et sous-modules importés.
+INFO     Services.CacheService:cache_service.py:32 Répertoire de cache initialisé: D:\2025-Epita-Intelligence-Symbolique\_temp\text_cache
+INFO     Services.FetchService:fetch_service.py:72 FetchService initialisé avec Tika URL: https://tika.open-webui.myia.io/tika, timeout: 30s
+WARNING  Services.CryptoService:crypto_service.py:42 Service de chiffrement initialisé sans clé. Le chiffrement est désactivé.
+INFO     InformalDefinitions:informal_definitions.py:773 Classe InformalAnalysisPlugin (V12 avec nouvelles fonctions) définie.
+INFO     InformalDefinitions:informal_definitions.py:988 Instructions Système INFORMAL_AGENT_INSTRUCTIONS (V15 avec nouvelles fonctions) définies.

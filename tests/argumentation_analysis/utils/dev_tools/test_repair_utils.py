@@ -1,9 +1,3 @@
-# Authentic gpt-4o-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 # -*- coding: utf-8 -*-
 """Tests pour les utilitaires de réparation d'extraits."""
 
@@ -18,7 +12,7 @@ from typing import Dict # Ajout pour le typage
 from argumentation_analysis.utils.dev_tools.repair_utils import run_extract_repair_pipeline, setup_agents, repair_extract_markers
 from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract # Pour typer les mocks
 import semantic_kernel as sk # Pour setup_agents
-# from semantic_kernel.agents import ChatCompletionAgent # Pour setup_agents (Commenté: non utilisé directement)
+# from semantic_kernel_compatibility import ChatCompletionAgent # Pour setup_agents (Commenté: non utilisé directement)
 from argumentation_analysis.utils.extract_repair.marker_repair_logic import REPAIR_AGENT_INSTRUCTIONS, VALIDATION_AGENT_INSTRUCTIONS # Pour setup_agents
 
 

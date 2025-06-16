@@ -77,7 +77,8 @@ class BeliefSet(ABC):
         content = data.get("content", "")
         
         if logic_type == "propositional":
-            return PropositionalBeliefSet(content)
+            propositions = data.get("propositions")
+            return PropositionalBeliefSet(content, propositions=propositions)
         elif logic_type == "first_order":
             return FirstOrderBeliefSet(content)
         elif logic_type == "modal":
@@ -91,6 +92,10 @@ class PropositionalBeliefSet(BeliefSet):
     Classe pour représenter un ensemble de croyances en logique propositionnelle.
     """
     
+    def __init__(self, content: str, propositions: Optional[list[str]] = None):
+        super().__init__(content)
+        self.propositions = propositions if propositions is not None else []
+
     @property
     def logic_type(self) -> str:
         """

@@ -10,161 +10,165 @@
 
 const { test, expect } = require('@playwright/test');
 
-// Configuration des tests
-const BASE_URL = process.env.BASE_URL || 'http://localhost:5001';
+// Configuration
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 const JTMS_PREFIX = '/jtms';
 
 test.describe('Interface Web JTMS - Tests d\'Intégration Complète', () => {
     
+    // Avant chaque test, on visite la page d'accueil pour s'assurer
+    // que l'application est chargée et prête.
     test.beforeEach(async ({ page }) => {
-        // Vérifier que le serveur est disponible
-        await page.goto(BASE_URL);
-        await expect(page).toHaveTitle(/Argumentation Analysis App/);
+        await page.goto(FRONTEND_URL);
+        await expect(page).toHaveTitle("Argumentation Analysis App");
     });
 
     test.describe('Dashboard JTMS', () => {
         
-        test('Accès au dashboard principal', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/dashboard`);
+        test('Accès au dashboard principal via la navigation', async ({ page }) => {
+            await page.click('nav a:has-text("Dashboard JTMS")');
+            await expect(page).toHaveURL(`${FRONTEND_URL}${JTMS_PREFIX}/dashboard`);
             
-            // Vérifier les éléments principaux du dashboard Flask
-            await expect(page.locator('h4')).toContainText('Graphe de Croyances');
-            await expect(page.locator('#network-container')).toBeVisible();
-            await expect(page.locator('#stats-panel')).toBeVisible();
-            await expect(page.locator('#activity-log')).toBeVisible();
+            // Vérifier les éléments principaux avec des sélecteurs robustes (data-testid)
+            await expect(page.locator('[data-testid="dashboard-title"]')).toContainText("Interface d'Analyse Argumentative");
+            await expect(page.locator('[data-testid="network-container"]')).toBeVisible();
+            await expect(page.locator('[data-testid="stats-panel"]')).toBeVisible();
+            await expect(page.locator('[data-testid="activity-log"]')).toBeVisible();
         });
 
         test('Ajout d\'une croyance via l\'interface', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/dashboard`);
+            await page.click('nav a:has-text("Dashboard JTMS")');
+
+            const beliefName = `test-belief-${Date.now()}`;
+            await page.fill('[data-testid="new-belief-input"]', beliefName);
+            await page.click('[data-testid="create-belief-button"]');
             
-            // Ajouter une nouvelle croyance
-            const beliefName = `test_belief_${Date.now()}`;
-            await page.fill('#new-belief', beliefName);
-            await page.click('button:has-text("Créer")');
+            await expect(page.locator('[data-testid="activity-log"]')).toContainText(beliefName);
             
-            // Vérifier que l'ajout est loggué
-            await expect(page.locator('#activity-log')).toContainText(beliefName);
-            
-            // Vérifier que le réseau se met à jour (il devrait y avoir des noeuds)
-            const nodeCount = await page.locator('#network-container .vis-network svg .vis-node').count();
+            // Attendre dynamiquement que le réseau se mette à jour
+            const nodeLocator = page.locator('[data-testid="network-container"] g.vis-nodes g.vis-node');
+            await expect(nodeLocator.first()).toBeVisible({ timeout: 5000 });
+            const nodeCount = await nodeLocator.count();
             expect(nodeCount).toBeGreaterThan(0);
         });
 
         test('Création et suppression de justification', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/dashboard`);
+            await page.click('nav a:has-text("Dashboard JTMS")');
 
-            // Créer les croyances nécessaires
-            await page.fill('#new-belief', 'premise_a');
-            await page.click('button:has-text("Créer")');
-            await page.fill('#new-belief', 'premise_b');
-            await page.click('button:has-text("Créer")');
-            await page.fill('#new-belief', 'conclusion_c');
-            await page.click('button:has-text("Créer")');
+            // Créer les croyances
+            for (const belief of ['premise_a', 'premise_b', 'conclusion_c']) {
+                await page.fill('[data-testid="new-belief-input"]', belief);
+                await page.click('[data-testid="create-belief-button"]');
+            }
 
             // Créer la justification
-            await page.fill('#premises', 'premise_a, premise_b');
-            await page.fill('#conclusion', 'conclusion_c');
-            await page.click('button:has-text("Ajouter Justification")');
+            await page.fill('[data-testid="premises-input"]', 'premise_a, premise_b');
+            await page.fill('[data-testid="conclusion-input"]', 'conclusion_c');
+            await page.click('[data-testid="add-justification-button"]');
 
-            // Vérifier que la justification est logguée
-            await expect(page.locator('#activity-log')).toContainText('Justification ajoutée pour conclusion_c');
+            await expect(page.locator('[data-testid="activity-log"]')).toContainText('Justification ajoutée pour conclusion_c');
 
-            // Vérifier que le réseau contient des arêtes
-            await page.waitForTimeout(1000); // Laisser le temps au graphe de se redessiner
-            const edgeCount = await page.locator('#network-container .vis-network svg .vis-edge').count();
+            // Attendre que le graphe se redessine avec une arête
+            const edgeLocator = page.locator('[data-testid="network-container"] g.vis-edges g.vis-edge');
+            await expect(edgeLocator.first()).toBeVisible({ timeout: 5000 });
+            const edgeCount = await edgeLocator.count();
             expect(edgeCount).toBeGreaterThan(0);
         });
 
         test('Vérification de cohérence', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/dashboard`);
+            await page.click('nav a:has-text("Dashboard JTMS")');
             
-            // Créer un système simple
-            await page.fill('#new-belief', 'test_coherence');
-            await page.click('button:has-text("Créer")');
+            await page.fill('[data-testid="new-belief-input"]', 'test_coherence');
+            await page.click('[data-testid="create-belief-button"]');
             
-            // Lancer la vérification de cohérence
-            await page.click('button:has-text("Vérifier Cohérence")');
+            await page.click('[data-testid="check-consistency-button"]');
             
-            // Vérifier que le résultat est loggué
-            await expect(page.locator('#activity-log')).toContainText(/cohérent/);
+            await expect(page.locator('[data-testid="activity-log"]')).toContainText(/cohérent/);
         });
 
         test('Export des données JTMS', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/dashboard`);
+            await page.click('nav a:has-text("Dashboard JTMS")');
             
-            // Créer quelques données
-            await page.fill('#beliefNameInput', 'export_test');
-            await page.click('#addBeliefBtn');
+            await page.fill('[data-testid="new-belief-input"]', 'export_test_belief');
+            await page.click('[data-testid="create-belief-button"]');
             
-            // Tester l'export
             const downloadPromise = page.waitForEvent('download');
-            await page.click('#exportBtn');
+            await page.click('[data-testid="export-jtms-button"]');
             const download = await downloadPromise;
             
-            // Vérifier le fichier téléchargé
-            expect(download.suggestedFilename()).toMatch(/jtms.*\.json$/);
+            expect(download.suggestedFilename()).toMatch(/jtms-export-.*\.json$/);
         });
     });
 
     test.describe('Gestion des Sessions', () => {
         
         test('Liste des sessions', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/sessions`);
+            await page.click('nav a:has-text("Sessions")');
+            await expect(page).toHaveURL(`${FRONTEND_URL}${JTMS_PREFIX}/sessions`);
             
-            await expect(page.locator('h1')).toContainText('Gestion des Sessions JTMS');
-            await expect(page.locator('#sessionsList')).toBeVisible();
-            await expect(page.locator('#createSessionBtn')).toBeVisible();
+            await expect(page.locator('[data-testid="sessions-title"]')).toContainText('Gestion des Sessions JTMS');
+            await expect(page.locator('[data-testid="sessions-list"]')).toBeVisible();
+            await expect(page.locator('[data-testid="create-session-button"]')).toBeVisible();
         });
 
         test('Création d\'une nouvelle session', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/sessions`);
+            await page.click('nav a:has-text("Sessions")');
             
-            // Ouvrir le modal de création
-            await page.click('#createSessionBtn');
-            await expect(page.locator('#createSessionModal')).toBeVisible();
+            await page.click('[data-testid="create-session-button"]');
+            await expect(page.locator('[data-testid="create-session-modal"]')).toBeVisible();
             
-            // Remplir le formulaire
-            const sessionName = `Test Session ${Date.now()}`;
-            await page.fill('#sessionNameInput', sessionName);
-            await page.fill('#sessionDescriptionInput', 'Session de test automatisé');
+            const sessionName = `Test-Session-${Date.now()}`;
+            await page.fill('[data-testid="session-name-input"]', sessionName);
+            await page.fill('[data-testid="session-description-input"]', 'Session de test automatisé');
             
-            // Créer la session
-            await page.click('#confirmCreateSessionBtn');
+            await page.click('[data-testid="confirm-create-session-button"]');
             
-            // Vérifier que la session apparaît dans la liste
-            await expect(page.locator('#sessionsList')).toContainText(sessionName);
+            await expect(page.locator('[data-testid="sessions-list"]')).toContainText(sessionName);
         });
 
         test('Suppression d\'une session', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/sessions`);
+            await page.click('nav a:has-text("Sessions")');
             
-            // Créer une session temporaire
-            await page.click('#createSessionBtn');
-            const tempSessionName = `Temp Session ${Date.now()}`;
-            await page.fill('#sessionNameInput', tempSessionName);
-            await page.click('#confirmCreateSessionBtn');
+            // Créer une session temporaire pour la supprimer
+            const tempSessionName = `Temp-Session-To-Delete-${Date.now()}`;
+            await page.click('[data-testid="create-session-button"]');
+            await page.fill('[data-testid="session-name-input"]', tempSessionName);
+            await page.click('[data-testid="confirm-create-session-button"]');
+
+            // Attendre que la nouvelle carte de session soit visible
+            const sessionCard = page.locator(`[data-testid="session-card-${tempSessionName}"]`);
+            await expect(sessionCard).toBeVisible();
+
+            await sessionCard.locator('button:has-text("Supprimer")').click();
+            await page.click('[data-testid="confirm-delete-button"]');
             
-            // Supprimer la session
-            await page.click(`[data-session-name="${tempSessionName}"] .delete-btn`);
-            await page.click('#confirmDeleteBtn');
-            
-            // Vérifier que la session a disparu
-            await expect(page.locator('#sessionsList')).not.toContainText(tempSessionName);
+            // Attendre la confirmation de la suppression
+            await expect(sessionCard).not.toBeVisible({ timeout: 5000 });
         });
 
         test('Changement de session active', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/sessions`);
+             await page.click('nav a:has-text("Sessions")');
+
+            // Créer deux sessions pour le test
+            const session1 = `Session-Active-Test-1-${Date.now()}`;
+            const session2 = `Session-Active-Test-2-${Date.now()}`;
+            for (const name of [session1, session2]) {
+                await page.click('[data-testid="create-session-button"]');
+                await page.fill('[data-testid="session-name-input"]', name);
+                await page.click('[data-testid="confirm-create-session-button"]');
+                await expect(page.locator(`[data-testid="session-card-${name}"]`)).toBeVisible();
+            }
             
-            // Sélectionner une session différente
-            const sessionCard = page.locator('.session-card').first();
-            await sessionCard.click();
+            // Cliquer sur la deuxième session pour l'activer
+            const sessionCard2 = page.locator(`[data-testid="session-card-${session2}"]`);
+            await sessionCard2.click();
             
-            // Vérifier que le statut change
-            await expect(sessionCard.locator('.session-status')).toContainText('Active');
+            // Vérifier que le statut "Active" s'affiche
+            await expect(sessionCard2.locator('[data-testid="session-status"]')).toContainText('Active');
             
-            // Retourner au dashboard pour vérifier le changement
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/dashboard`);
-            await expect(page.locator('#currentSessionName')).not.toBeEmpty();
+            // Vérifier le changement sur le dashboard
+            await page.click('nav a:has-text("Dashboard JTMS")');
+            await expect(page.locator('[data-testid="current-session-name"]')).toContainText(session2);
         });
     });
 

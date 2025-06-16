@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Importer les modèles et fonctions nécessaires pour les tests
-from models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
+from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
 # Importer depuis le script principal
 # Correction du chemin d'importation basé sur l'analyse du code source
 from argumentation_analysis.utils.dev_tools.repair_utils import (

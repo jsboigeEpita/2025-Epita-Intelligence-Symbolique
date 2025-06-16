@@ -1,8 +1,7 @@
 ﻿# core/strategies.py
-# CORRECTIF COMPATIBILITÉ: Import direct depuis semantic_kernel
-from semantic_kernel.contents import ChatMessageContent
-# from semantic_kernel.agents import Agent # AJOUTÉ POUR CORRIGER NameError - Commenté car non disponible dans SK 0.9.6b1
-# Note: Agent, TerminationStrategy, SelectionStrategy non disponibles dans SK 0.9.6b1
+# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
+from argumentation_analysis.utils.semantic_kernel_compatibility import Agent, TerminationStrategy, SelectionStrategy
+from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole
 from typing import List, Dict, TYPE_CHECKING
 import logging
 from pydantic import PrivateAttr

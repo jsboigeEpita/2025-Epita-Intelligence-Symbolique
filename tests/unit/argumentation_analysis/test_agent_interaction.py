@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Tests d'intégration pour l'interaction entre les différents agents.
 
@@ -11,20 +11,8 @@ import asyncio
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 import semantic_kernel as sk
-# Import fixe pour AuthorRole - créer un mock simple si nécessaire
-try:
-    from semantic_kernel.contents import ChatMessageContent
-except ImportError:
-    ChatMessageContent = None
-
-# Import AuthorRole (maintenant ChatRole) depuis le module de compatibilité
-from semantic_kernel.contents.utils.author_role import AuthorRole
-
-# try:
-#     from semantic_kernel.agents import Agent, AgentGroupChat # Commenté car non disponible dans SK 0.9.6b1
-# except ImportError:
-#     Agent = None
-#     AgentGroupChat = None
+from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole
+from semantic_kernel_compatibility import Agent, AgentGroupChat
 
 # Utiliser la fonction setup_import_paths pour résoudre les problèmes d'imports relatifs
 # from tests import setup_import_paths # Commenté pour investigation
@@ -380,3 +368,4 @@ if __name__ == '__main__':
     # Utiliser pytest pour exécuter les tests si ce fichier est exécuté directement
     # Cela permet de bénéficier des fixtures et des plugins pytest comme anyio.
     pytest.main(['-xvs', __file__])
+
