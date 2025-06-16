@@ -13,7 +13,7 @@ function Write-Step {
 
 # Vérifier le répertoire courant
 $scriptDir = Get-Location
-$projectDir = if ($env:PROJECT_DIR_OVERRIDE_TEST_SETUP) { $env:PROJECT_DIR_OVERRIDE_TEST_SETUP } else { (Get-Item $PSScriptRoot).Parent.Parent.FullName }
+$projectDir = (Get-Item $scriptDir).Parent.Parent.FullName
 Write-Step "Configuration de l'environnement de test dans $projectDir"
 
 # Vérifier si un environnement virtuel existe déjà
@@ -34,8 +34,9 @@ if (-not $?) {
 # Activer l'environnement virtuel
 Write-Step "Activation de l'environnement virtuel"
 $activateScript = Join-Path -Path $venvDir -ChildPath "Scripts\Activate.ps1"
+Write-Host "DEBUG: Chemin du script d'activation : '$($activateScript)'"
 try {
-    & $activateScript
+    . $activateScript
 } catch {
     Write-Host "Échec de l'activation de l'environnement virtuel." -ForegroundColor Red
     Write-Host "Erreur: $_" -ForegroundColor Red

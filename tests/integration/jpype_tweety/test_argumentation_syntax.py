@@ -1,47 +1,23 @@
 import pytest
-# import jpype # Commenté pour éviter le démarrage prématuré, sera importé localement
+import jpype
 
 
 # Les classes Java sont importées via la fixture 'dung_classes' de conftest.py
 
-def test_create_argument(dung_classes, integration_jvm): # Ajout de integration_jvm pour l'utiliser directement
-    """Teste le chargement de StableExtension."""
-    import jpype # Import local
-    logger = jpype.JClass("org.slf4j.LoggerFactory").getLogger("test_create_argument_simplified")
-    logger.info("Début du test simplifié pour StableExtension.")
-    
-    try:
-        # Assurer que integration_jvm (et donc la JVM) est active
-        if not integration_jvm or not integration_jvm.isJVMStarted():
-            pytest.skip("JVM non disponible pour test_create_argument_simplified.")
-            return
-
-        StableExtension = integration_jvm.JClass("org.tweetyproject.arg.dung.semantics.StableExtension")
-        logger.info(f"StableExtension chargée avec succès: {StableExtension}")
-        assert StableExtension is not None
-        # Optionnel: tenter une instanciation si elle a un constructeur simple ou statique
-        # Pour l'instant, se concentrer sur le chargement de la classe.
-        # stable_ext_instance = StableExtension() # Cela pourrait échouer si constructeur non vide
-        # logger.info(f"Instance de StableExtension créée (si constructeur simple): {stable_ext_instance}")
-
-    except jpype.JException as e:
-        logger.error(f"Erreur JPype lors du chargement/test de StableExtension: {e}")
-        if hasattr(e, 'stacktrace'):
-            logger.error(f"Stacktrace Java: {e.stacktrace()}")
-        pytest.fail(f"Erreur JPype: {e}")
-    except Exception as e_py:
-        logger.error(f"Erreur Python lors du test de StableExtension: {e_py}")
-        pytest.fail(f"Erreur Python: {e_py}")
-    finally:
-        logger.info("Fin du test simplifié pour StableExtension.")
-
+def test_create_argument(dung_classes):
+    """Teste la création d'un argument simple."""
+    Argument = dung_classes["Argument"]
+    arg_name = "test_argument"
+    arg = Argument(jpype.JString(arg_name))
+    assert arg is not None
+    assert arg.getName() == arg_name
+    print(f"Argument créé: {arg.toString()}")
 
 def test_create_dung_theory_with_arguments_and_attacks(dung_classes):
     """
     Teste la création d'une théorie de Dung, l'ajout d'arguments et d'attaques,
     en se basant sur l'exemple de la section 4.1.2 de la fiche sujet 1.2.7.
     """
-    import jpype # Import local
     DungTheory = dung_classes["DungTheory"]
     Argument = dung_classes["Argument"]
     Attack = dung_classes["Attack"]
@@ -111,7 +87,6 @@ def test_argument_equality_and_hashcode(dung_classes):
     Teste l'égalité et le hashcode des objets Argument.
     Important pour leur utilisation dans des collections (Set, Map).
     """
-    import jpype # Import local
     Argument = dung_classes["Argument"]
     arg1_a = Argument(jpype.JString("a"))
     arg2_a = Argument(jpype.JString("a"))
@@ -153,7 +128,6 @@ def test_argument_equality_and_hashcode(dung_classes):
 
 def test_attack_equality_and_hashcode(dung_classes):
     """Teste l'égalité et le hashcode des objets Attack."""
-    import jpype # Import local
     Argument = dung_classes["Argument"]
     Attack = dung_classes["Attack"]
 
@@ -320,7 +294,6 @@ def test_parse_dung_theory_from_tgf_string(dung_classes):
     DungTheory = dung_classes["DungTheory"]
     Argument = dung_classes["Argument"] # Pour vérification
     # Supposer l'existence d'un parser TGF
-    import jpype # Import local
     TgfParser = None
     try:
         # Tentative de localisation du parser TGF

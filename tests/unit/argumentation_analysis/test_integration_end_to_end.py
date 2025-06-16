@@ -1,10 +1,3 @@
-
-# Authentic gpt-4o-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 # -*- coding: utf-8 -*-
 """
 Tests d'intégration end-to-end pour le système d'analyse argumentative.
@@ -22,8 +15,8 @@ import time
 from unittest.mock import MagicMock, AsyncMock, patch
 
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent
-# from semantic_kernel.agents import Agent, AgentGroupChat
+from semantic_kernel.contents import ChatMessageContent, ChatRole as AuthorRole
+from semantic_kernel_compatibility import Agent, AgentGroupChat
 
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
@@ -126,3 +119,4 @@ class TestExtractIntegrationWithBalancedStrategy:
 
 if __name__ == '__main__':
     pytest.main(['-xvs', __file__])
+

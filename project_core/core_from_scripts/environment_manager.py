@@ -375,6 +375,7 @@ class EnvironmentManager:
             result = subprocess.run(
                 final_command,
                 cwd=cwd,
+                capture_output=capture_output,
                 text=True,
                 encoding='utf-8',
                 errors='replace',
