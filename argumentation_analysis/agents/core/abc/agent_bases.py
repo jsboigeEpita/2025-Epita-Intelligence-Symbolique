@@ -12,6 +12,11 @@ import logging
 
 from semantic_kernel import Kernel
 # from semantic_kernel.agents import Agent # Cet import est supprimé car Agent n'existe plus
+# Note pour le futur : BaseAgent a précédemment hérité de semantic_kernel.agents.Agent,
+# puis de semantic_kernel.agents.chat_completion.ChatCompletionAgent.
+# Cet héritage a été supprimé (voir commit e968f26d).
+# Si des problèmes d'intégration avec des fonctionnalités SK (ex: AgentGroupChat)
+# surviennent, réintroduire l'héritage de ChatCompletionAgent pourrait être une solution.
 from semantic_kernel.contents import ChatHistory
 # from semantic_kernel.agents.channels.chat_history_channel import ChatHistoryChannel # Commenté, module/classe potentiellement déplacé/supprimé
 # from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatHistoryAgentThread # Commenté, module/classe potentiellement déplacé/supprimé
@@ -27,7 +32,7 @@ if TYPE_CHECKING:
     # Pour l'instant, il n'est pas explicitement typé dans les signatures de BaseAgent.
 
 
-class BaseAgent(ABC): # Suppression de l'héritage de sk.Agent
+class BaseAgent(ABC): # Suppression de l'héritage de sk.Agent (voir note ci-dessus)
     """
     Classe de base abstraite pour tous les agents du système.
 

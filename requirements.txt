@@ -5,10 +5,10 @@
 # Python ML/Data Science Stack
 numpy>=2.0
 pandas==2.2.3
-scipy==1.15.3
+scipy>=1.13.0
 scikit-learn==1.6.1
 nltk>=3.8
-spacy>=3.7
+spacy==3.7.4
 
 # ===== WEB & API =====
 flask>=2.0.0
@@ -31,7 +31,7 @@ markdown>=3.4.0
 matplotlib>=3.5.0
 seaborn>=0.11.0
 statsmodels>=0.13.0
-networkx==3.4.2
+networkx>=3.2.0,<=3.2.1
 
 pyvis>=0.3.0
 # ===== LOGIC & REASONING =====
@@ -50,7 +50,7 @@ transformers>=4.20.0
 # Ensure the correct Python environment (3.10+) is active.
 # Downgrading will break the application.
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-semantic-kernel>=1.33.0
+semantic-kernel<=1.33.0
 # NOTE: Using latest version (>1.0.0) a modern API
 # CRITICAL UPDATE: Resolves Pydantic import errors and modernizes API
 # Provides: Core semantic kernel functionality

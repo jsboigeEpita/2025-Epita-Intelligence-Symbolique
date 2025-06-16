@@ -356,6 +356,14 @@ class EnvironmentManager:
         env_scripts_dir = Path(env_path) / ('Scripts' if platform.system() == "Windows" else 'bin')
         # S'assurer que le PATH de l'environnement cible est prioritaire
         self.sub_process_env['PATH'] = f"{env_scripts_dir}{os.pathsep}{os.environ.get('PATH', '')}"
+        
+        # --- CORRECTIF : Propagation du PYTHONPATH ---
+        # Le PYTHONPATH a été défini dans self.env_vars mais n'était pas propagé
+        # au sous-processus. On le récupère depuis self.env_vars (qui a la bonne valeur)
+        # et on le force dans l'environnement du sous-processus.
+        if 'PYTHONPATH' in self.env_vars:
+            self.sub_process_env['PYTHONPATH'] = self.env_vars['PYTHONPATH']
+            self.logger.info(f"Propagation du PYTHONPATH au sous-processus: {self.sub_process_env['PYTHONPATH']}")
 
         self.logger.info(f"Variables d'environnement préparées pour le sous-processus (extrait): "
                          f"CONDA_DEFAULT_ENV={self.sub_process_env.get('CONDA_DEFAULT_ENV')}, "

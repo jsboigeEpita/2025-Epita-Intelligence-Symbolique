@@ -57,13 +57,15 @@ import glob
 import jpype
 import jpype.imports
 import networkx as nx
-# Remarque: L'initialisation de la JVM est maintenant gérée de manière centralisée
-# au démarrage de l'application (dans main.py) ou via conftest.py pour les tests.
+
+# L'agent est maintenant importable car le PYTHONPATH est géré dans api/main.py
+# from enhanced_agent import EnhancedDungAgent # Déplacé pour éviter conflit JVM
+
 
 class DungAnalysisService:
     """
     Service pour analyser les frameworks d'argumentation de Dung.
-    Suppose que la JVM a déjà été démarrée.
+    Utilise l'implémentation de l'étudiant (`EnhancedDungAgent`) comme moteur principal.
     """
 
     def __init__(self):
@@ -72,94 +74,72 @@ class DungAnalysisService:
                 "La JVM n'est pas démarrée. "
                 "Veuillez l'initialiser au point d'entrée de l'application."
             )
-        self._import_java_classes()
-
-    def _import_java_classes(self):
-        """Importe les classes Java nécessaires une fois la JVM démarrée."""
-        from jpype import JClass
-        # Syntaxe
-        self.DungTheory = JClass('org.tweetyproject.arg.dung.syntax.DungTheory')
-        self.Argument = JClass('org.tweetyproject.arg.dung.syntax.Argument')
-        self.Attack = JClass('org.tweetyproject.arg.dung.syntax.Attack')
-        # Raisonneurs
-        self.SimpleGroundedReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleGroundedReasoner')
-        self.SimplePreferredReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimplePreferredReasoner')
-        self.SimpleStableReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleStableReasoner')
-        self.SimpleCompleteReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleCompleteReasoner')
-        self.SimpleAdmissibleReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleAdmissibleReasoner')
-        self.SimpleIdealReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleIdealReasoner')
-        self.SimpleSemiStableReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleSemiStableReasoner')
-        print("Classes Java de TweetyProject liées au service.")
+        # Importer l'agent ici pour s'assurer que la JVM est prête
+        from enhanced_agent import EnhancedDungAgent
+        self.agent_class = EnhancedDungAgent
+        print("Service d'analyse Dung initialisé, utilisant EnhancedDungAgent.")
 
 
     def analyze_framework(self, arguments: list[str], attacks: list[tuple[str, str]]) -> dict:
         """
-        Analyse complète d'un framework d'argumentation.
-        Prend une liste de noms d'arguments et une liste de tuples pour les attaques.
+        Analyse complète d'un framework d'argumentation en utilisant EnhancedDungAgent.
         """
-        af = self.DungTheory()
-        arg_map = {name: self.Argument(name) for name in arguments}
-        
-        for arg_obj in arg_map.values():
-            af.add(arg_obj)
-            
+        # 1. Créer et peupler l'agent de l'étudiant
+        agent = self.agent_class()
+        for arg_name in arguments:
+            agent.add_argument(arg_name)
         for source, target in attacks:
-            if source in arg_map and target in arg_map:
-                af.add(self.Attack(arg_map[source], arg_map[target]))
+            agent.add_attack(source, target)
+
+        # 2. Obtenir les résultats de l'agent
+        grounded_ext = agent.get_grounded_extension()
+        preferred_ext = agent.get_preferred_extensions()
+        stable_ext = agent.get_stable_extensions()
+        complete_ext = agent.get_complete_extensions()
+        admissible_sets = agent.get_admissible_sets()
         
-        # Calcul des sémantiques
-        preferred_ext = self._format_extensions(self.SimplePreferredReasoner().getModels(af))
+        # Note: 'ideal' et 'semi_stable' ne sont pas implémentés par l'agent de base.
+        # Nous les laissons vides pour maintenir la compatibilité de l'API.
         
-        # Analyse et résultats
+        # 3. Formater les résultats dans la structure attendue
         results = {
             'semantics': {
-                'grounded': sorted([str(arg.getName()) for arg in self.SimpleGroundedReasoner().getModel(af)]),
-                'preferred': preferred_ext,
-                'stable': self._format_extensions(self.SimpleStableReasoner().getModels(af)),
-                'complete': self._format_extensions(self.SimpleCompleteReasoner().getModels(af)),
-                'admissible': self._format_extensions(self.SimpleAdmissibleReasoner().getModels(af)),
-                'ideal': sorted([str(arg.getName()) for arg in self.SimpleIdealReasoner().getModel(af)]),
-                'semi_stable': self._format_extensions(self.SimpleSemiStableReasoner().getModels(af))
+                'grounded': sorted(grounded_ext),
+                'preferred': sorted(preferred_ext),
+                'stable': sorted(stable_ext),
+                'complete': sorted(complete_ext),
+                'admissible': sorted(admissible_sets),
+                'ideal': [],
+                'semi_stable': []
             },
-            'argument_status': self._get_all_arguments_status(arg_map.keys(), af),
-            'graph_properties': self._get_framework_properties(af)
+            'argument_status': self._get_all_arguments_status(arguments, preferred_ext, grounded_ext),
+            'graph_properties': self._get_framework_properties(agent)
         }
         
         return results
 
-    def _format_extensions(self, java_collection) -> list:
-        return [sorted([str(arg.getName()) for arg in extension]) for extension in java_collection]
-
-    def _get_argument_status(self, arg_name: str, af, preferred_ext, grounded_ext, stable_ext) -> dict:
-        status = {
-            'credulously_accepted': any(arg_name in ext for ext in preferred_ext),
-            'skeptically_accepted': all(arg_name in ext for ext in preferred_ext) if preferred_ext else False,
-            'grounded_accepted': arg_name in grounded_ext,
-            'stable_accepted': any(arg_name in ext for ext in stable_ext) if stable_ext else False
-        }
-        return status
-
-    def _get_all_arguments_status(self, arg_names: list[str], af) -> dict:
-        # Calculer les extensions une seule fois
-        preferred = self._format_extensions(self.SimplePreferredReasoner().getModels(af))
-        grounded = sorted([str(arg.getName()) for arg in self.SimpleGroundedReasoner().getModel(af)])
-        stable = self._format_extensions(self.SimpleStableReasoner().getModels(af))
-        
+    def _get_all_arguments_status(self, arg_names: list[str], preferred_ext: list, grounded_ext: list) -> dict:
         all_status = {}
         for name in arg_names:
-            all_status[name] = self._get_argument_status(name, af, preferred, grounded, stable)
+            all_status[name] = {
+                'credulously_accepted': any(name in ext for ext in preferred_ext),
+                'skeptically_accepted': all(name in ext for ext in preferred_ext) if preferred_ext else False,
+            }
         return all_status
     
-    def _get_framework_properties(self, af) -> dict:
-        nodes = list(af.getNodes())
-        attacks = list(af.getAttacks())
+    def _get_framework_properties(self, agent: EnhancedDungAgent) -> dict:
+        """Extrait les propriétés du graphe directement depuis l'agent ou son framework Java."""
+        # L'agent de l'étudiant ne stocke pas directement le graphe networkx
+        # Nous le reconstruisons ici pour l'analyse des propriétés
+        nodes = [arg.getName() for arg in agent.af.getNodes()]
+        attacks = [(a.getAttacker().getName(), a.getAttacked().getName()) for a in agent.af.getAttacks()]
         
         G = nx.DiGraph()
-        G.add_nodes_from([arg.getName() for arg in nodes])
-        G.add_edges_from([(a.getAttacker().getName(), a.getAttacked().getName()) for a in attacks])
+        G.add_nodes_from(nodes)
+        G.add_edges_from(attacks)
         
         cycles = [list(c) for c in nx.simple_cycles(G)]
-        self_attacking = [a.getAttacker().getName() for a in attacks if a.getAttacker() == a.getAttacked()]
+        self_attacking = [a.getAttacker().getName() for a in agent.af.getAttacks() if a.getAttacker() == a.getAttacked()]
 
         return {
             'num_arguments': len(nodes),

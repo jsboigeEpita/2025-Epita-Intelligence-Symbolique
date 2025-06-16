@@ -1,38 +1,22 @@
-import project_core.core_from_scripts.auto_env
 # -*- coding: utf-8 -*-
 """
 Script pour lancer la validation complète du projet abs_arg_dung
 dans l'environnement conda projet-is.
+Ce script DOIT être lancé via le wrapper `scripts/env/activate_project_env.ps1`.
 """
-
 import os
 import sys
 import subprocess
 from pathlib import Path
-
-# --- Activation de l'environnement ---
-try:
-    project_root = Path(__file__).parent.parent
-    scripts_core_path = project_root / "scripts" / "core"
-    
-    if str(scripts_core_path) not in sys.path:
-        sys.path.insert(0, str(scripts_core_path))
-    if str(project_root) not in sys.path:
-        sys.path.insert(0, str(project_root))
-
-    print("[VALIDATION SCRIPT] Import de 'scripts.core.auto_env' pour activation...")
-    import scripts.core.auto_env
-    print("[VALIDATION SCRIPT] Environnement prêt.")
-
-except Exception as e:
-    print(f"[VALIDATION SCRIPT] ERREUR CRITIQUE lors de l'activation de l'environnement: {e}")
-    sys.exit(1)
 
 # --- DÉBUT DE LA VALIDATION ---
 
 print("\n" + "="*50)
 print("   LANCEMENT DE LA VALIDATION DU PROJET 'abs_arg_dung'")
 print("="*50 + "\n")
+
+# Définir la racine du projet en remontant de deux niveaux depuis le script actuel
+project_root = Path(__file__).resolve().parent.parent.parent
 
 # Chemin vers le répertoire du projet étudiant
 dung_dir_path = project_root / 'abs_arg_dung'
