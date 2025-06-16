@@ -18,7 +18,7 @@ from .shared_state import RhetoricalAnalysisState
 
 # Type hinting
 if TYPE_CHECKING:
-    pass
+    from argumentation_analysis.agents.core.abc.agent_bases import Agent
 
 # Loggers
 termination_logger = logging.getLogger("Orchestration.Termination")
@@ -49,7 +49,7 @@ class SimpleTerminationStrategy(TerminationStrategy):
         self._logger = termination_logger
         self._logger.info(f"SimpleTerminationStrategy instance {self._instance_id} créée (max_steps={self._max_steps}, state_id={id(self._state)}).")
 
-    async def should_terminate(self, agent: Agent, history: List[ChatMessageContent]) -> bool:
+    async def should_terminate(self, agent: "Agent", history: List[ChatMessageContent]) -> bool:
         """Vérifie si la conversation doit se terminer."""
         self._step_count += 1
         step_info = f"Tour {self._step_count}/{self._max_steps}"
@@ -85,13 +85,13 @@ class SimpleTerminationStrategy(TerminationStrategy):
 
 class DelegatingSelectionStrategy(SelectionStrategy):
     """Stratégie de sélection qui priorise la désignation explicite via l'état."""
-    _agents_map: Dict[str, Agent] = PrivateAttr()
+    _agents_map: Dict[str, "Agent"] = PrivateAttr()
     _default_agent_name: str = PrivateAttr(default="ProjectManagerAgent")
     _analysis_state: 'RhetoricalAnalysisState' = PrivateAttr()
     _instance_id: int # Non géré par Pydantic, initialisé dans __init__
     _logger: logging.Logger # Non géré par Pydantic, initialisé dans __init__
 
-    def __init__(self, agents: List[Agent], state: 'RhetoricalAnalysisState', default_agent_name: str = "ProjectManagerAgent"):
+    def __init__(self, agents: List["Agent"], state: 'RhetoricalAnalysisState', default_agent_name: str = "ProjectManagerAgent"):
         super().__init__()
         if not isinstance(agents, list):
             raise TypeError("'agents' doit être une liste d'agents.")
@@ -116,7 +116,7 @@ class DelegatingSelectionStrategy(SelectionStrategy):
 
         self._logger.info(f"DelegatingSelectionStrategy instance {self._instance_id} créée (agents: {list(self._agents_map.keys())}, default: '{self._default_agent_name}', state_id={id(self._analysis_state)}).")
 
-    async def next(self, agents: List[Agent], history: List[ChatMessageContent]) -> Agent:
+    async def next(self, agents: List["Agent"], history: List[ChatMessageContent]) -> "Agent":
         """Sélectionne le prochain agent à parler."""
         self._logger.debug(f"[{self._instance_id}] Appel next()...")
 
@@ -161,7 +161,7 @@ class DelegatingSelectionStrategy(SelectionStrategy):
 
 class BalancedParticipationStrategy(SelectionStrategy):
     """Stratégie de sélection qui équilibre la participation des agents tout en respectant les désignations explicites."""
-    _agents_map: Dict[str, Agent] = PrivateAttr(default_factory=dict)
+    _agents_map: Dict[str, "Agent"] = PrivateAttr(default_factory=dict)
     _default_agent_name: str = PrivateAttr(default="ProjectManagerAgent")
     _analysis_state: 'RhetoricalAnalysisState' = PrivateAttr() # Doit être passé à __init__
     _participation_counts: Dict[str, int] = PrivateAttr(default_factory=dict)
@@ -172,7 +172,7 @@ class BalancedParticipationStrategy(SelectionStrategy):
     _logger: logging.Logger = PrivateAttr() # Sera initialisé dans __init__
     _instance_id: int # Sera initialisé dans __init__
 
-    def __init__(self, agents: List[Agent], state: 'RhetoricalAnalysisState',
+    def __init__(self, agents: List["Agent"], state: 'RhetoricalAnalysisState',
                  default_agent_name: str = "ProjectManagerAgent",
                  target_participation: Optional[Dict[str, float]] = None):
         super().__init__()
@@ -225,7 +225,7 @@ class BalancedParticipationStrategy(SelectionStrategy):
         self._logger.info(f"BalancedParticipationStrategy instance {self._instance_id} créée (agents: {list(self._agents_map.keys())}, default: '{self._default_agent_name}', state_id={id(self._analysis_state)}).")
         self._logger.info(f"Participations cibles: {self._target_participation}")
 
-    async def next(self, agents: List[Agent], history: List[ChatMessageContent]) -> Agent:
+    async def next(self, agents: List["Agent"], history: List[ChatMessageContent]) -> "Agent":
         self._logger.debug(f"[{self._instance_id}] Appel next()...")
         self._total_turns += 1
 
@@ -338,4 +338,3 @@ class BalancedParticipationStrategy(SelectionStrategy):
 
 module_logger = logging.getLogger(__name__)
 module_logger.debug("Module core.strategies chargé.")
-
