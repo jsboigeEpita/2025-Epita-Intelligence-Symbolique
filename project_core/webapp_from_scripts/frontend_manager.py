@@ -291,7 +291,7 @@ class FrontendManager:
 
     async def _wait_for_health_check(self) -> bool:
         """Attend que le frontend soit prêt en effectuant des health checks réseau."""
-        self.logger.info(f"Attente du frontend sur http://localhost:{self.port} (timeout: {self.timeout_seconds}s)")
+        self.logger.info(f"Attente du frontend sur http://127.0.0.1:{self.port} (timeout: {self.timeout_seconds}s)")
         
         start_time = time.monotonic()
         
@@ -323,8 +323,10 @@ class FrontendManager:
             return False
             
         try:
+            # Utiliser 127.0.0.1 au lieu de self.current_url qui peut contenir 'localhost'
+            health_check_url = f"http://127.0.0.1:{self.port}"
             async with aiohttp.ClientSession() as session:
-                async with session.get(self.current_url, 
+                async with session.get(health_check_url,
                                      timeout=aiohttp.ClientTimeout(total=10)) as response:
                     if response.status == 200:
                         self.logger.info("Frontend health OK")
