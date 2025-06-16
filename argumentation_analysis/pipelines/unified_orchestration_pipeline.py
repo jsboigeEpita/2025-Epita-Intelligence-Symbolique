@@ -36,6 +36,7 @@ import semantic_kernel as sk
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.llm_service import create_llm_service
 from argumentation_analysis.core.jvm_setup import initialize_jvm
+from argumentation_analysis.core.bootstrap import initialize_project_environment, ProjectContext
 import jpype
 from argumentation_analysis.paths import LIBS_DIR, DATA_DIR, RESULTS_DIR
 
@@ -185,6 +186,7 @@ class UnifiedOrchestrationPipeline:
         self.config = config
         self.llm_service = None
         self.kernel = None  # Kernel Semantic Kernel - CORRECTION CRITIQUE
+        self.project_context: Optional[ProjectContext] = None # Contexte du projet
         
         # Service manager centralisé
         self.service_manager: Optional[OrchestrationServiceManager] = None
@@ -282,6 +284,14 @@ class UnifiedOrchestrationPipeline:
         """Initialise les services de base (LLM, JVM)."""
         logger.info("[INIT] Initialisation des services de base...")
         
+        # 0. Initialisation du contexte du projet (bootstrap)
+        self.project_context = initialize_project_environment()
+        if not self.project_context:
+            logger.error("[INIT] Échec de l'initialisation du contexte du projet (bootstrap).")
+            # Décider si on doit lever une exception ou continuer en mode dégradé
+            raise RuntimeError("Échec de l'initialisation du contexte du projet.")
+        logger.info("[INIT] Contexte du projet initialisé.")
+
         # CORRECTION CRITIQUE: Créer le kernel Semantic Kernel et y ajouter le service LLM
         try:
             # 1. Créer le kernel Semantic Kernel
@@ -404,7 +414,11 @@ class UnifiedOrchestrationPipeline:
         
         # Gestionnaire opérationnel
         if OperationalManager and self.middleware:
-            self.operational_manager = OperationalManager(middleware=self.middleware)
+            self.operational_manager = OperationalManager(
+                middleware=self.middleware,
+                project_context=self.project_context,
+                kernel=self.kernel
+            )
             logger.info("[OPERATIONAL] Gestionnaire opérationnel initialisé")
         elif OperationalManager:
             logger.warning("[OPERATIONAL] Middleware non disponible, gestionnaire opérationnel non initialisé")
