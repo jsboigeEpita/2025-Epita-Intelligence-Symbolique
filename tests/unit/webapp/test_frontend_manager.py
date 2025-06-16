@@ -78,14 +78,18 @@ async def test_ensure_dependencies_installs_if_needed(mock_popen, manager, tmp_p
     mock_env = {"PATH": os.environ.get("PATH", "")}
     await manager._ensure_dependencies(env=mock_env)
 
+    # On Windows, shell=True is used, so the command is a string.
+    expected_cmd = 'npm install'
     mock_popen.assert_called_with(
-        ['npm', 'install'],
+        expected_cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        cwd=tmp_path
+        cwd=tmp_path,
+        env=mock_env,
+        shell=True
     )
-    # Fix: Use assert_any_call because other logs might happen
-    manager.logger.info.assert_any_call("Installation dépendances npm...")
+    # Check for the more descriptive log message
+    manager.logger.info.assert_any_call("Le répertoire 'node_modules' est manquant. Lancement de 'npm install'...")
 
 
 @pytest.mark.asyncio
@@ -108,7 +112,7 @@ async def test_start_success(mock_popen, manager, tmp_path):
     assert result['pid'] == 5678
     assert result['port'] == manager.port
     mock_popen.assert_called_once()
-    assert manager._wait_for_frontend.call_count == 1
+    assert manager._wait_for_frontend_output.call_count == 1
 
 
 @pytest.mark.asyncio

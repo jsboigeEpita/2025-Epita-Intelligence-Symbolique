@@ -1,20 +1,23 @@
 import pytest
 import logging
 import subprocess
-import json
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, patch, AsyncMock, ANY
 from pathlib import Path
 
-# On s'assure que le chemin est correct pour importer le runner
 import sys
 sys.path.insert(0, '.')
 
 from project_core.webapp_from_scripts.playwright_runner import PlaywrightRunner
 
 @pytest.fixture
-def playwright_config(webapp_config):
-    """Provides a base playwright config."""
-    return webapp_config['playwright']
+def playwright_config(webapp_config, tmp_path):
+    """Provides a base playwright config, ensuring temp dirs are used."""
+    config = webapp_config['playwright']
+    # Force 'enabled' for most tests and use temp paths
+    config['enabled'] = True
+    config['screenshots_dir'] = str(tmp_path / 'screenshots')
+    config['traces_dir'] = str(tmp_path / 'traces')
+    return config
 
 @pytest.fixture
 def logger_mock():
@@ -22,23 +25,20 @@ def logger_mock():
     return MagicMock(spec=logging.Logger)
 
 @pytest.fixture
-def runner(playwright_config, logger_mock, tmp_path):
-    """Initializes PlaywrightRunner with a default config."""
-    # Ensure artifact dirs are using a temporary path
-    playwright_config['screenshots_dir'] = str(tmp_path / 'screenshots')
-    playwright_config['traces_dir'] = str(tmp_path / 'traces')
+def runner(playwright_config, logger_mock):
+    """Initializes PlaywrightRunner with a test-safe config."""
     return PlaywrightRunner(playwright_config, logger_mock)
 
 def test_initialization(runner, playwright_config):
     """Tests that the runner initializes correctly."""
     assert runner.enabled is True
-    assert runner.browser == 'chromium'
+    assert runner.browser == 'chromium' # Default from the mock config
     assert Path(runner.screenshots_dir).exists()
     assert Path(runner.traces_dir).exists()
 
 @pytest.mark.asyncio
 async def test_run_tests_when_disabled(logger_mock):
-    """Tests that run_tests returns True if disabled."""
+    """Tests that run_tests returns True if the runner is disabled."""
     config = {'enabled': False}
     runner = PlaywrightRunner(config, logger_mock)
     result = await runner.run_tests()
@@ -63,59 +63,60 @@ async def test_prepare_test_environment(runner):
         assert mock_environ['HEADLESS'] == 'false'
         assert mock_environ['BROWSER'] == 'firefox'
 
-@patch('sys.platform', 'win32')
-@patch('os.getenv')
-def test_build_pytest_command_windows(mock_getenv, runner):
-    """Tests command building on Windows."""
-    mock_getenv.return_value = 'C:/fake/node/home'
-    with patch('pathlib.Path.is_file', return_value=True):
-        cmd = runner._build_playwright_command_string(['tests/'], {'headless': True, 'browser': 'chromium'})
-        assert 'npx.cmd' in cmd[0]
-        assert '--headed' not in cmd
-        assert '--project=chromium' in cmd
-        assert 'tests/' in cmd
+@patch('shutil.which')
+def test_build_python_command(mock_which, runner):
+    """Tests the Python command building logic."""
+    mock_which.return_value = '/fake/path/to/pytest'
+    
+    cmd = runner._build_python_command(['tests/my_test.py'], {'browser': 'chromium', 'headless': True}, [])
+    
+    # Check that the command starts with a pytest executable, path can vary
+    assert 'pytest' in cmd[0]
+    assert 'tests/my_test.py' in cmd
+    assert '--browser=chromium' in cmd
+    assert '--headed' not in cmd
 
-@patch('sys.platform', 'linux')
-@patch('os.getenv')
-def test_build_pytest_command_linux(mock_getenv, runner):
-    """Tests command building on Linux."""
-    mock_getenv.return_value = '/fake/node/home'
-    with patch('pathlib.Path.is_file', return_value=True):
-        cmd = runner._build_playwright_command_string(['tests/'], {'headless': False, 'browser': 'webkit'})
-        assert 'npx' in cmd[0]
-        assert '--headed' in cmd
-        assert '--project=webkit' in cmd
-        assert 'tests/' in cmd
+def test_build_js_command(runner):
+    """Tests the JS command building logic."""
+    with patch('os.getenv', return_value='C:/fake_node_home'), \
+         patch('pathlib.Path.is_file', return_value=True):
+        
+        cmd = runner._build_js_command(['tests/js/my_test.spec.js'], {'browser': 'firefox'}, None)
+        
+        assert str(cmd[0]).endswith('npx.cmd')
+        assert 'playwright' in cmd
+        assert 'test' in cmd
+        assert 'tests/js/my_test.spec.js' in cmd
+        assert '--project=firefox' in cmd
 
-
-@patch('subprocess.run')
-async def test_run_tests_execution_flow(mock_subprocess_run, runner):
-    """Tests the main execution flow of run_tests."""
-    # Mock the subprocess call
-    mock_result = MagicMock(spec=subprocess.CompletedProcess)
-    mock_result.returncode = 0
-    mock_result.stdout = "================= 1 passed in 5.00s =================="
-    mock_result.stderr = ""
-    mock_subprocess_run.return_value = mock_result
-
-    # Mock internal methods to isolate run_tests
-    runner._build_playwright_command_string = MagicMock(return_value=['fake_command'])
+@pytest.mark.asyncio
+async def test_run_tests_happy_path(runner):
+    """Tests the main execution flow of run_tests on a successful run."""
     runner._prepare_test_environment = AsyncMock()
+    runner._build_command = MagicMock(return_value=['fake_command'])
+    runner._execute_tests = AsyncMock(return_value=MagicMock(returncode=0))
+    runner._analyze_results = AsyncMock(return_value=True)
 
     success = await runner.run_tests()
 
     assert success is True
     runner._prepare_test_environment.assert_called_once()
-    runner._build_playwright_command_string.assert_called_once()
-    mock_subprocess_run.assert_called_once_with(
-        ['fake_command'], capture_output=True, text=True, encoding='utf-8',
-        errors='replace', timeout=300, cwd=Path.cwd()
-    )
+    runner._build_command.assert_called_once()
+    runner._execute_tests.assert_called_once_with(['fake_command'], ANY)
+    runner._analyze_results.assert_called_once()
 
-    # Check if report was created
-    report_file = Path(runner.traces_dir) / 'test_report.json'
-    assert report_file.exists()
-    with open(report_file, 'r') as f:
-        report_data = json.load(f)
-        assert report_data['success'] is True
-        assert report_data['stats']['passed'] == 1
+@pytest.mark.asyncio
+async def test_run_tests_execution_fails(runner):
+    """Tests the main execution flow when the test subprocess fails."""
+    runner._prepare_test_environment = AsyncMock()
+    runner._build_command = MagicMock(return_value=['fake_command'])
+    # Simulate a non-zero return code
+    runner._execute_tests = AsyncMock(return_value=MagicMock(returncode=1))
+    # _analyze_results should still be called to log the failure
+    runner._analyze_results = AsyncMock(return_value=False) 
+
+    success = await runner.run_tests()
+
+    assert success is False
+    runner._execute_tests.assert_called_once()
+    runner._analyze_results.assert_called_once()
