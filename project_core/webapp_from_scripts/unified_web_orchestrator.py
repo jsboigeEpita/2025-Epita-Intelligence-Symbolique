@@ -338,7 +338,7 @@ class UnifiedWebOrchestrator:
             
             # 3. Démarrage frontend (optionnel)
             frontend_config_enabled = self.config.get('frontend', {}).get('enabled', False)
-            frontend_enabled_effective = frontend_enabled if frontend_enabled is not None else frontend_config_enabled
+            frontend_enabled_effective = frontend_config_enabled or (frontend_enabled is True)
             
             self.logger.info(f"[FRONTEND_DECISION] Config 'frontend.enabled': {frontend_config_enabled}")
             self.logger.info(f"[FRONTEND_DECISION] Argument CLI '--frontend' (via paramètre frontend_enabled): {frontend_enabled}")
