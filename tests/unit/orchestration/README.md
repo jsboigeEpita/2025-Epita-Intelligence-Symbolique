@@ -17,7 +17,7 @@ Cette suite de tests valide le fonctionnement complet du système d'orchestratio
   - Priorités d'orchestrateurs spécialisés
   - Configuration du middleware
 
-- **TestUnifiedOrchestrationPipeline** : Pipeline unifié complet
+- **TestOrchestrationEngine** : Teste le moteur principal d'orchestration et la sélection de stratégie.
   - Initialisation (basic, hiérarchique, spécialisée)
   - Analyse orchestrée avec validation
   - Sélection de stratégie d'orchestration
@@ -156,13 +156,14 @@ pytest tests/integration/test_orchestration_integration.py -v
 pytest tests/unit/orchestration/ --cov=argumentation_analysis.pipelines.unified_orchestration_pipeline --cov-report=html
 
 # Tests spécifiques
-pytest tests/unit/orchestration/test_unified_orchestration_pipeline.py::TestUnifiedOrchestrationPipeline::test_analyze_text_orchestrated_basic -v
+pytest tests/unit/orchestration/test_main_orchestrator.py -v
 ```
 
 ## Couverture de Code
 
 ### Composants testés
-- ✅ `UnifiedOrchestrationPipeline` (pipeline principal)
+- ✅ `MainOrchestrator` (moteur principal d'orchestration)
+- ✅ `UnifiedPipeline` (point d'entrée et routeur)
 - ✅ `ExtendedOrchestrationConfig` (configuration étendue)
 - ✅ `StrategicManager` (gestionnaire stratégique)
 - ✅ `TaskCoordinator` (coordinateur tactique)
