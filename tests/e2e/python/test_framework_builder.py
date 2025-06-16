@@ -6,12 +6,10 @@ from playwright.sync_api import Page, expect, TimeoutError
 
 # The 'webapp_service' session fixture in conftest.py is autouse=True,
 # so the web server is started automatically for all tests in this module.
-# The base_url for Playwright is also configured in conftest.py.
-
 @pytest.fixture(scope="function")
-def framework_page(page: Page) -> Page:
+def framework_page(page: Page, webapp_service: str) -> Page:
     """Fixture qui prépare la page et navigue vers l'onglet Framework."""
-    page.goto("/")
+    page.goto(webapp_service)
     # L'attente de l'état de connexion de l'API est maintenant dans chaque test
     # pour une meilleure isolation et un débogage plus facile.
     
@@ -26,7 +24,7 @@ class TestFrameworkBuilder:
         
         page = framework_page
         expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
-        page.get_by_role("tab", name="Framework").click()
+        page.locator('[data-testid="framework-tab"]').click()
 
         # Vérification de la présence des éléments du formulaire réels
         expect(page.locator('#arg-content')).to_be_visible()
@@ -78,7 +76,7 @@ class TestFrameworkBuilder:
         """Test de la gestion des règles et contraintes du framework"""
         page = framework_page
         expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
-        page.get_by_role("tab", name="Framework").click()
+        page.locator('[data-testid="framework-tab"]').click()
         
         # Ajout de plusieurs arguments
         arguments = [
@@ -128,7 +126,7 @@ class TestFrameworkBuilder:
         """Test de l'intégration avec le système de validation"""
         page = framework_page
         expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
-        page.get_by_role("tab", name="Framework").click()
+        page.locator('[data-testid="framework-tab"]').click()
         
         # Construction d'un framework simple mais valide
         page.locator('#arg-content').fill('Argument A')
@@ -165,7 +163,7 @@ class TestFrameworkBuilder:
         """Test de la persistance et sauvegarde du framework"""
         page = framework_page
         expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
-        page.get_by_role("tab", name="Framework").click()
+        page.locator('[data-testid="framework-tab"]').click()
         
         # Construction d'un framework avec données de test
         test_arguments = [
@@ -196,8 +194,8 @@ class TestFrameworkBuilder:
         
         # Test de navigation et retour (simulation de persistance)
         # Aller vers un autre onglet puis revenir
-        framework_page.get_by_role("tab", name="Validation").click()
-        framework_page.get_by_role("tab", name="Framework").click()
+        framework_page.locator('[data-testid="validation-tab"]').click()
+        framework_page.locator('[data-testid="framework-tab"]').click()
         
         # Vérification que le framework est toujours là (dans la session)
         # Note: La persistance dépend de l'implémentation React et du state management
@@ -207,7 +205,7 @@ class TestFrameworkBuilder:
         """Test de l'analyse des extensions du framework"""
         page = framework_page
         expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
-        page.get_by_role("tab", name="Framework").click()
+        page.locator('[data-testid="framework-tab"]').click()
         
         # Construction d'un framework plus complexe pour générer des extensions intéressantes
         complex_arguments = [

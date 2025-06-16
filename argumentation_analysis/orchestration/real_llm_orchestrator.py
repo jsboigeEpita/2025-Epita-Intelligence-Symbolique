@@ -281,7 +281,7 @@ class RealLLMOrchestrator:
             return await self._validate_consistency(text, context, parameters)
         elif analysis_type == 'coherence_validation':
             return await self._validate_coherence(text, context, parameters)
-        elif analysis_type == 'unified_analysis':
+        elif analysis_type == 'simple' or analysis_type == 'unified_analysis':
             return await self._unified_analysis(text, context, parameters)
         else:
             raise ValueError(f"Type d'analyse non supporté: {analysis_type}")

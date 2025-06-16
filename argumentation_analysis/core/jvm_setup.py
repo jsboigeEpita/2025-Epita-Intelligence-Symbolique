@@ -178,7 +178,7 @@ def download_tweety_jars(
     try:
         response = requests.head(BASE_URL, timeout=10)
         response.raise_for_status()
-        logger.info(f"✔️ URL de base Tweety v{version} accessible.")
+        logger.info(f"[OK] URL de base Tweety v{version} accessible.")
         url_accessible = True
     except requests.exceptions.RequestException as e:
         logger.error(f"❌ Impossible d'accéder à l'URL de base {BASE_URL}. Erreur : {e}")
@@ -187,7 +187,7 @@ def download_tweety_jars(
     logger.info(f"\n--- Vérification/Téléchargement JAR Core (Full) ---")
     core_present, core_newly_downloaded = download_file(BASE_URL + CORE_JAR_NAME, target_dir_path / CORE_JAR_NAME, CORE_JAR_NAME)
     status_core = "téléchargé" if core_newly_downloaded else ("déjà présent" if core_present else "MANQUANT")
-    logger.info(f"✔️ JAR Core '{CORE_JAR_NAME}': {status_core}.")
+    logger.info(f"[OK] JAR Core '{CORE_JAR_NAME}': {status_core}.")
     if not core_present:
         logger.critical(f"❌ ERREUR CRITIQUE : Le JAR core Tweety est manquant et n'a pas pu être téléchargé.")
         return False
@@ -399,7 +399,7 @@ def find_valid_java_home() -> Optional[str]:
     
     existing_jdk_path = find_existing_jdk()
     if existing_jdk_path:
-        logger.info(f"🎉 Utilisation du JDK existant validé: '{existing_jdk_path}'")
+        logger.info(f"[SUCCESS] Utilisation du JDK existant validé: '{existing_jdk_path}'")
         return str(existing_jdk_path.resolve())
 
     logger.info("Aucun JDK valide existant. Tentative d'installation d'un JDK portable.")
@@ -471,7 +471,7 @@ def find_valid_java_home() -> Optional[str]:
                     break
         
         if final_jdk_path:
-            logger.info(f"🎉 JDK portable installé et validé avec succès dans: '{final_jdk_path}'")
+            logger.info(f"[SUCCESS] JDK portable installé et validé avec succès dans: '{final_jdk_path}'")
             return str(final_jdk_path.resolve())
         else:
             logger.error(f"L'extraction du JDK dans '{portable_jdk_install_dir}' n'a pas produit une installation valide. Contenu: {list(portable_jdk_install_dir.iterdir())}")
@@ -628,7 +628,7 @@ def initialize_jvm(
         )
         _JVM_INITIALIZED_THIS_SESSION = True
         _JVM_WAS_SHUTDOWN = False
-        logger.info("🎉 JVM démarrée avec succès.")
+        logger.info("[SUCCESS] JVM démarrée avec succès.")
         return True
     except Exception as e:
         logger.error(f"Erreur fatale lors du démarrage de la JVM: {e}", exc_info=True)

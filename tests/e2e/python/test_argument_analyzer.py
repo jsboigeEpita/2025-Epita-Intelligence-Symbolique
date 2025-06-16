@@ -3,24 +3,20 @@ from playwright.sync_api import Page, expect
 
 import pytest
 
-# The 'webapp_service' session fixture in conftest.py is autouse=True,
-# so the web server is started automatically for all tests in this module.
-# The base_url for Playwright is also configured in conftest.py.
-
 @pytest.mark.playwright
-def test_successful_simple_argument_analysis(page: Page):
+def test_successful_simple_argument_analysis(page: Page, webapp_service: str):
     """
     Scenario 1.1: Successful analysis of a simple argument (Happy Path)
     This test targets the React application on port 3000.
     """
     # Navigate to the React app
-    page.goto("/")
+    page.goto(webapp_service)
 
     # Wait for the API to be connected
     expect(page.locator(".api-status.connected")).to_be_visible(timeout=30000)
 
-    # Navigate to the "Analyse" tab to ensure the correct view is active
-    page.get_by_role("tab", name="Analyse").click()
+    # Navigate to the "Analyse" tab using the robust data-testid selector
+    page.locator('[data-testid="analyzer-tab"]').click()
 
     # Use the selectors identified in the architecture analysis
     argument_input = page.locator("#argument-text")
@@ -48,19 +44,19 @@ def test_successful_simple_argument_analysis(page: Page):
 
 
 @pytest.mark.playwright
-def test_empty_argument_submission_displays_error(page: Page):
+def test_empty_argument_submission_displays_error(page: Page, webapp_service: str):
     """
     Scenario 1.2: Empty submission (Error Path)
     Checks if an error message is displayed when submitting an empty argument.
     """
     # Navigate to the React app
-    page.goto("/")
+    page.goto(webapp_service)
 
     # Wait for the API to be connected
     expect(page.locator(".api-status.connected")).to_be_visible(timeout=30000)
 
-    # Navigate to the "Analyse" tab
-    page.get_by_role("tab", name="Analyse").click()
+    # Navigate to the "Analyse" tab using the robust data-testid selector
+    page.locator('[data-testid="analyzer-tab"]').click()
 
     # Locate the submit button and the argument input
     submit_button = page.locator("form.analyzer-form button[type=\"submit\"]")
@@ -80,19 +76,19 @@ def test_empty_argument_submission_displays_error(page: Page):
 
 
 @pytest.mark.playwright
-def test_reset_button_clears_input_and_results(page: Page):
+def test_reset_button_clears_input_and_results(page: Page, webapp_service: str):
     """
     Scenario 1.3: Reset functionality
     Ensures the reset button clears the input field and the analysis results.
     """
     # Navigate to the React app
-    page.goto("/")
+    page.goto(webapp_service)
 
     # Wait for the API to be connected
     expect(page.locator(".api-status.connected")).to_be_visible(timeout=30000)
 
-    # Navigate to the "Analyse" tab
-    page.get_by_role("tab", name="Analyse").click()
+    # Navigate to the "Analyse" tab using the robust data-testid selector
+    page.locator('[data-testid="analyzer-tab"]').click()
 
     # --- Perform an analysis first ---
     argument_input = page.locator("#argument-text")

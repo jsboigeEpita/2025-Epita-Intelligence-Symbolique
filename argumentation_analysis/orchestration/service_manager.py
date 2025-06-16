@@ -401,7 +401,7 @@ class OrchestrationServiceManager:
             if orchestrator:
                 # Analyse avec orchestrateur spécialisé
                 orchestrator_results = await self._run_specialized_analysis(
-                    orchestrator, text, options
+                    orchestrator, text, analysis_type, options
                 )
                 results['results']['specialized'] = orchestrator_results
             else:
@@ -463,6 +463,7 @@ class OrchestrationServiceManager:
     async def _run_specialized_analysis(self,
                                       orchestrator: Any,
                                       text: str,
+                                      analysis_type: str,  # Ajout du paramètre
                                       options: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Lance une analyse avec un orchestrateur spécialisé."""
         try:
@@ -471,7 +472,8 @@ class OrchestrationServiceManager:
                 from .real_llm_orchestrator import LLMAnalysisRequest
                 request = LLMAnalysisRequest(
                     text=text,
-                    analysis_type=options.get('analysis_type', 'comprehensive') if options else 'comprehensive',
+                    # Correction: Utilise le analysis_type propagé
+                    analysis_type=analysis_type,
                     context=options.get('context') if options else None,
                     parameters=options or {}
                 )

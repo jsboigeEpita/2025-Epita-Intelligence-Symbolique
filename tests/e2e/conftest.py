@@ -14,18 +14,7 @@ from playwright.sync_api import expect
 # Configuration du logger
 logger = logging.getLogger(__name__)
 
-# ============================================================================
-# Pytest Configuration Hooks
-# ============================================================================
 
-def pytest_configure(config):
-    """
-    Hook pour configurer pytest avant le début des tests.
-    Définit une base_url par défaut si elle n'est pas déjà fournie,
-    ce qui est crucial pour les tests UI de Playwright.
-    """
-    if not config.option.base_url:
-        config.option.base_url = os.environ.get("FRONTEND_URL", "http://127.0.0.1:3001")
 
 
 # ============================================================================
@@ -38,8 +27,8 @@ def find_free_port():
         s.bind(("", 0))
         return s.getsockname()[1]
 
-@pytest.fixture(scope="session")
-def webapp_service() -> Generator:
+@pytest.fixture(scope="function")
+def webapp_service(request) -> Generator:
     """
     Fixture de session qui démarre et arrête le serveur web Uvicorn.
     Utilise un port libre et s'assure que l'environnement est propagé.
@@ -47,14 +36,16 @@ def webapp_service() -> Generator:
     # 1. Démarrer le serveur backend sur un port libre
     host = "127.0.0.1"
     backend_port = find_free_port()
-    api_health_url = f"http://{host}:{backend_port}/api/status"
+    base_url = f"http://{host}:{backend_port}"
+    api_health_url = f"{base_url}/api/status"
     
-    # Mettre à jour la variable d'environnement pour que les tests API la trouvent
-    os.environ["BACKEND_URL"] = f"http://{host}:{backend_port}"
+    # Mettre à jour la variable d'environnement pour que les tests API la trouvent.
+    # C'est la seule variable nécessaire car les tests UI utiliseront
+    # l'URL injectée directement depuis cette fixture.
+    os.environ["BACKEND_URL"] = base_url
     
-    # La commande lance maintenant l'application principale Flask (interface_web/app.py)
-    # et non plus l'API FastAPI (api/main.py).
-    # La commande est modifiée pour utiliser 'python -m uvicorn'.
+    # La commande lance maintenant l'application principale Starlette (interface_web/app.py)
+    # via Uvicorn.
     # Cela permet à 'environment_manager.py' de la traiter comme une commande Python directe,
     # ce qui est plus robuste car cela évite une couche de 'conda run'.
     command = [
@@ -66,7 +57,7 @@ def webapp_service() -> Generator:
         "--log-level", "debug"
     ]
     
-    print(f"\n[E2E Fixture] Starting Flask webapp server on port {backend_port}...")
+    print(f"\n[E2E Fixture] Starting Starlette webapp server on port {backend_port}...")
     
     # Use Popen to run the server in the background
     project_root = Path(__file__).parent.parent.parent
@@ -101,9 +92,9 @@ def webapp_service() -> Generator:
         while time.time() - start_time < timeout:
             try:
                 response = requests.get(api_health_url, timeout=2)
-                # L'application Flask renvoie un JSON. On vérifie que le statut interne est 'operational'.
+                # L'application Starlette renvoie un JSON. On vérifie que le statut interne est 'operational'.
                 if response.status_code == 200 and response.json().get('status') == 'operational':
-                    print(f"[E2E Fixture] Flask webapp is ready! (took {time.time() - start_time:.2f}s)")
+                    print(f"[E2E Fixture] Starlette webapp is ready! (took {time.time() - start_time:.2f}s)")
                     ready = True
                     break
             except ConnectionError:
@@ -119,7 +110,7 @@ def webapp_service() -> Generator:
             pytest.fail(f"Backend failed to start within {timeout} seconds. Check logs in {log_dir}")
 
         # At this point, the server is running. Yield control to the tests.
-        yield
+        yield base_url
         
         # Teardown: Stop the server after tests are done
         print("\n[E2E Fixture] Stopping backend server...")
