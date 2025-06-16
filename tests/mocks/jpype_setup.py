@@ -87,10 +87,11 @@ except ImportError as e_jpype:
 
 @pytest.fixture(scope="function", autouse=True)
 def activate_jpype_mock_if_needed(request):
-    # E2E tests have their own conftest.py, so this fixture should ignore them.
-    path_str_for_e2e_check = str(request.node.fspath).replace(os.sep, '/')
-    if 'tests/e2e/python/' in path_str_for_e2e_check:
-        logger.info(f"JPYPE_SETUP: Skipping for E2E test {request.node.name} (handled by e2e/conftest.py).")
+    # La logique de détection a été améliorée pour utiliser un marqueur.
+    # Si le marqueur 'e2e_test' est présent, cette fixture ne fait rien,
+    # car 'tests/e2e/python/conftest.py' gère la session.
+    if request.node.get_closest_marker("e2e_test"):
+        logger.info(f"JPYPE_SETUP: Skipping for E2E test {request.node.name} marked with 'e2e_test'.")
         yield
         return
     """

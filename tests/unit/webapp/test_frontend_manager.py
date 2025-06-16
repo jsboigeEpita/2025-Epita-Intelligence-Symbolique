@@ -64,32 +64,33 @@ async def test_start_fails_if_package_json_missing(manager, tmp_path):
 @pytest.mark.asyncio
 @patch('subprocess.Popen')
 async def test_ensure_dependencies_installs_if_needed(mock_popen, manager, tmp_path):
-    """Tests that 'npm install' is run when node_modules is missing."""
+    """Vérifie que 'npm install' est toujours exécuté."""
     manager.frontend_path = tmp_path
     (tmp_path / "package.json").touch()
     
-    # Mock Popen for npm install
     mock_process = MagicMock()
-    mock_process.communicate.return_value = (b'success', b'')
+    mock_process.communicate.return_value = ('success', '') # text=True now returns strings
     mock_process.returncode = 0
     mock_popen.return_value = mock_process
 
-    # Mock the environment dictionary that is now required
     mock_env = {"PATH": os.environ.get("PATH", "")}
     await manager._ensure_dependencies(env=mock_env)
 
-    # On Windows, shell=True is used, so the command is a string.
-    expected_cmd = 'npm install'
+    is_windows = sys.platform == "win32"
+    expected_cmd = 'npm install' if is_windows else ['npm', 'install']
+
     mock_popen.assert_called_with(
         expected_cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         cwd=tmp_path,
         env=mock_env,
-        shell=True
+        shell=is_windows,
+        text=True,
+        encoding='utf-8',
+        errors='replace'
     )
-    # Check for the more descriptive log message
-    manager.logger.info.assert_any_call("Le répertoire 'node_modules' est manquant. Lancement de 'npm install'...")
+    manager.logger.info.assert_any_call("Lancement de 'npm install' pour garantir la fraîcheur des dépendances...")
 
 
 @pytest.mark.asyncio
@@ -100,19 +101,31 @@ async def test_start_success(mock_popen, manager, tmp_path):
     (tmp_path / "package.json").touch()
     (tmp_path / "node_modules").mkdir()
 
-    manager._wait_for_frontend_output = AsyncMock(return_value=True)
+    # Mock dependencies
+    manager._ensure_dependencies = AsyncMock()
+    manager._wait_for_health_check = AsyncMock(return_value=True)
+    
+    # Mock backend_manager for env setup
+    manager.backend_manager = MagicMock()
+    manager.backend_manager.host = 'localhost'
+    manager.backend_manager.port = 5000
 
     # Mock Popen for npm start
-    mock_popen.return_value.pid = 5678 # Set pid on the instance
-    manager.process = mock_popen.return_value # Assign the mock instance here
+    mock_process = MagicMock()
+    mock_process.pid = 5678
+    mock_popen.return_value = mock_process
+    
+    # The manager now requires a proper env dictionary to be passed from the orchestrator
+    manager.env = manager._get_frontend_env()
 
     result = await manager.start()
 
-    assert result['success'] is True
+    assert result['success'] is True, f"start() a échoué, retour: {result.get('error', 'N/A')}"
     assert result['pid'] == 5678
     assert result['port'] == manager.port
     mock_popen.assert_called_once()
-    assert manager._wait_for_frontend_output.call_count == 1
+    manager._wait_for_health_check.assert_awaited_once()
+    manager._ensure_dependencies.assert_awaited_once()
 
 
 @pytest.mark.asyncio

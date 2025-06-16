@@ -515,6 +515,15 @@ class UnifiedWebOrchestrator:
             await self._save_trace_report()
         
         return success
+
+    def is_ready(self) -> bool:
+        """
+        Vérifie si l'application web est entièrement démarrée et opérationnelle.
+        
+        Returns:
+            bool: True si l'état est RUNNING, sinon False.
+        """
+        return self.app_info.status == WebAppStatus.RUNNING
     
     # ========================================================================
     # MÉTHODES PRIVÉES

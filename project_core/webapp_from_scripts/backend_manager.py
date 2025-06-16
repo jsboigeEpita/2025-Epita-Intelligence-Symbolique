@@ -90,40 +90,53 @@ class BackendManager:
                 return {'success': False, 'error': error_msg, 'url': None, 'port': None, 'pid': None}
 
             conda_env_name = self.config.get('conda_env', 'projet-is')
-            if not self.module:
-                raise ValueError("La configuration du backend doit contenir 'module'.")
-
-            app_module_with_attribute = f"{self.module}:app" if ':' not in self.module else self.module
-            backend_host = self.config.get('host', '127.0.0.1')
+            # La logique de commande a été modifiée pour permettre soit 'module', soit 'command_list'
+            command_list = self.config.get('command_list')
             
-            # --- Construction de la commande en fonction du type de serveur ---
-            server_type = self.config.get('server_type', 'flask') # 'flask' par défaut pour la compatibilité
-            self.logger.info(f"Type de serveur configuré : {server_type}")
-            
-            if server_type == 'fastapi':
-                # Commande pour un serveur ASGI (uvicorn)
-                inner_cmd_list = [
-                    "-m", "uvicorn", self.module, "--host", backend_host, "--port", str(port_to_use)
-                ]
-            else: # Par défaut, ou si server_type == 'flask'
-                # Commande pour un serveur WSGI (flask run)
-                inner_cmd_list = [
-                    "-m", "flask", "--app", app_module_with_attribute, "run", "--host", backend_host, "--port", str(port_to_use)
-                ]
-
-            # Vérifier si nous sommes déjà dans le bon environnement Conda
-            current_conda_env = os.getenv('CONDA_DEFAULT_ENV')
-            python_executable = sys.executable # Chemin vers l'interpréteur Python actuel
-            
-            is_already_in_target_env = (current_conda_env == conda_env_name and conda_env_name in python_executable)
-            
-            if is_already_in_target_env:
-                self.logger.info(f"Déjà dans l'environnement Conda '{conda_env_name}'. Utilisation directe de: {python_executable}")
-                cmd = [python_executable] + inner_cmd_list
+            if command_list:
+                # Si une liste de commandes est fournie, on l'utilise directement
+                cmd = command_list
+                self.logger.info(f"Utilisation de la commande personnalisée: {' '.join(cmd)}")
+            elif self.module:
+                # Sinon, on construit la commande flask à partir du module
+                app_module_with_attribute = f"{self.module}:app" if ':' not in self.module else self.module
+                backend_host = self.config.get('host', '127.0.0.1')
+                
+                # Déterminer le type de serveur à partir de la configuration, avec un fallback
+                server_type = self.config.get('server_type', 'uvicorn') # Par défaut à uvicorn maintenant
+                
+                if server_type == 'flask':
+                    self.logger.info("Configuration pour un serveur Flask détectée.")
+                    inner_cmd_list = [
+                        "python", "-m", "flask", "--app", app_module_with_attribute, "run", "--host", backend_host, "--port", str(port_to_use)
+                    ]
+                elif server_type == 'uvicorn':
+                    self.logger.info("Configuration pour un serveur Uvicorn (FastAPI) détectée.")
+                    inner_cmd_list = [
+                        "python", "-m", "uvicorn", app_module_with_attribute, "--host", backend_host, "--port", str(port_to_use)
+                    ]
+                else:
+                    raise ValueError(f"Type de serveur non supporté: {server_type}. Choisissez 'flask' ou 'uvicorn'.")
+                
+                # Gestion de l'environnement Conda
+                conda_env_name = self.config.get('conda_env', 'projet-is')
+                current_conda_env = os.getenv('CONDA_DEFAULT_ENV')
+                python_executable = sys.executable
+                
+                is_already_in_target_env = (current_conda_env == conda_env_name and conda_env_name in python_executable)
+                
+                if is_already_in_target_env:
+                    self.logger.info(f"Déjà dans l'environnement Conda '{conda_env_name}'. Utilisation de l'interpréteur courant.")
+                    cmd = [python_executable] + inner_cmd_list[1:] # On remplace 'python' par le chemin complet
+                else:
+                    self.logger.warning(f"Utilisation de `conda run` pour activer l'environnement '{conda_env_name}'.")
+                    cmd = ["conda", "run", "-n", conda_env_name, "--no-capture-output"] + inner_cmd_list
             else:
-                cmd_base = ["conda", "run", "-n", conda_env_name, "--no-capture-output"]
-                self.logger.warning(f"Utilisation de `conda run -n {conda_env_name}`. Fournir un path est plus robuste.")
-                cmd = cmd_base + ["python"] + inner_cmd_list
+                # Cas d'erreur : ni module, ni command_list
+                raise ValueError("La configuration du backend doit contenir soit 'module', soit 'command_list'.")
+
+            # Le reste de la logique de lancement est maintenant unifié
+            
             
             self.logger.info(f"Commande de lancement backend construite: {cmd}")
 
