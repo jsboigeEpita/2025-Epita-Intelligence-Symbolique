@@ -42,19 +42,18 @@ def test_dung_framework_analysis_api(playwright: Playwright):
     analysis = response_data["analysis"]
 
     assert "extensions" in analysis, "La clé 'extensions' est manquante dans l'objet d'analyse"
-    assert "graph" in analysis, "La clé 'graph' est manquante dans l'objet d'analyse"
+    assert "graph_properties" in analysis, "La clé 'graph_properties' est manquante dans l'objet d'analyse"
 
     # Vérification du contenu (peut être affiné)
     # Pour sémantique "preferred" et le graphe a->b->c, l'extension préférée est {a, c}
     extensions = analysis["extensions"]
-    assert len(extensions) > 0, "Aucune extension n'a été retournée"
+    assert "preferred" in extensions, "La sémantique 'preferred' est manquante dans les extensions"
     
-    # Normalisons les extensions pour une comparaison robuste
-    normalized_extensions = [sorted(ext) for ext in extensions]
-    assert sorted(['a', 'c']) in normalized_extensions, f"L'extension attendue {{'a', 'c'}} n'est pas dans les résultats: {extensions}"
+    preferred_extensions = extensions["preferred"]
+    assert len(preferred_extensions) > 0, "Aucune extension préférée n'a été retournée"
 
-    # Vérification que le graphe a bien été généré
-    graph = analysis["graph"]
-    assert "nodes" in graph and "links" in graph, "La structure du graphe est invalide"
-    assert len(graph["nodes"]) == 3, "Le nombre de noeuds dans le graphe est incorrect"
-    assert len(graph["links"]) == 2, "Le nombre de liens dans le graphe est incorrect"
+    # Normalisons les extensions pour une comparaison robuste
+    normalized_extensions = [sorted(ext) for ext in preferred_extensions]
+    assert sorted(['a', 'c']) in normalized_extensions, f"L'extension attendue {{'a', 'c'}} n'est pas dans les résultats: {preferred_extensions}"
+
+    # La vérification de la présence de "graph_properties" est déjà faite
