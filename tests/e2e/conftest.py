@@ -45,7 +45,7 @@ def webapp_service() -> Generator:
     # et non plus l'API FastAPI (api/main.py).
     command = [
         "powershell", "-File", ".\\activate_project_env.ps1",
-        "-CommandToRun", f"conda run -n projet-is --no-capture-output python interface_web/app.py --port {backend_port}"
+        "-CommandToRun", f"uvicorn interface_web.app:app --host 127.0.0.1 --port {backend_port}"
     ]
     
     print(f"\n[E2E Fixture] Starting Flask webapp server on port {backend_port}...")
