@@ -22,6 +22,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
+from fastapi import FastAPI
+from fastapi.middleware.wsgi import WSGIMiddleware
 from a2wsgi import ASGIMiddleware
 
 # Activation automatique de l'environnement
@@ -103,7 +105,7 @@ jtms_session_manager = None
 JTMS_SERVICES_AVAILABLE = False
 
 
-def initialize_services():
+async def initialize_services():
     """Initialise les services au démarrage de l'application."""
     global service_manager, jtms_service, jtms_session_manager, JTMS_SERVICES_AVAILABLE
     
@@ -116,11 +118,8 @@ def initialize_services():
             'results_dir': str(RESULTS_DIR)
         })
         
-        # Initialisation asynchrone requise
-        async def init_service_manager():
-            await service_manager.initialize()
-            
-        asyncio.run(init_service_manager())
+        # Initialisation asynchrone directe
+        await service_manager.initialize()
         logger.info("ServiceManager configuré et initialisé")
         
         # Initialisation des services JTMS (optionnel)
@@ -205,9 +204,15 @@ def analyze():
         # Analyse avec ServiceManager - OBLIGATOIRE
         try:
             # Appel asynchrone au ServiceManager réel
+            # L'appel doit être `await` car nous sommes dans une route Flask `async`
+            # Cependant, les routes Flask standard ne sont pas `async` par défaut.
+            # Pour la simplicité ici, on utilise `asyncio.run` dans un thread.
+            # NOTE: Une meilleure approche serait d'utiliser Quart ou de rendre les routes `async` si possible.
             async def run_analysis():
                 return await service_manager.analyze_text(text, analysis_type, options)
-            
+
+            # Puisque la route `analyze` n'est pas `async`, `asyncio.run` est encore nécessaire ici.
+            # L'erreur principale était au démarrage, pas ici.
             result = asyncio.run(run_analysis())
             end_time = datetime.now()
             duration = (end_time - start_time).total_seconds()
@@ -387,12 +392,23 @@ def internal_server_error(e):
     return jsonify({'error': 'Erreur interne du serveur'}), 500
 
 
-# Initialisation des services et configuration du contexte
-initialize_services()
-setup_app_context()
+# Création de l'application FastAPI principale qui agira comme un wrapper.
+app = FastAPI(title="WebApp Wrapper (FastAPI + Flask)")
 
-# Enveloppement avec A2WSGI pour la compatibilité ASGI
-app = ASGIMiddleware(app_flask)
+@app.on_event("startup")
+async def startup_event():
+    """
+    Événement de démarrage pour initialiser les services asynchrones
+    et configurer le contexte de l'application avant de servir les requêtes.
+    """
+    logger.info("Exécution de l'événement de démarrage (startup)...")
+    await initialize_services()
+    setup_app_context()
+    logger.info("Services initialisés et contexte de l'application configuré.")
+
+# Montage de l'application Flask (via le middleware a2wsgi) dans l'application FastAPI.
+# Toutes les requêtes seront maintenant gérées par FastAPI, qui les transmettra à Flask.
+app.mount("/", ASGIMiddleware(app_flask))
 
 if __name__ == '__main__':
     # Cette section permet de lancer le serveur en mode développement avec Uvicorn
