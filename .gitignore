@@ -49,7 +49,9 @@ coverage.xml
 coverage.json
 *.cover
 .hypothesis/
+# Pytest
 .pytest_cache/
+pytest_results.log
 htmlcov_demonstration/
 tests/reports/
 

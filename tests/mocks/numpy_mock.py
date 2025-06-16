@@ -30,10 +30,13 @@ def create_numpy_mock():
     # Imiter les types de données de base de NumPy
     class MockDtype:
         def __init__(self, dtype_info):
-            self.names = ()
+            self.descr = []
             if isinstance(dtype_info, list):
                 # Gère les dtypes structurés comme [('field1', 'i4'), ('field2', 'f8')]
                 self.names = tuple(item[0] for item in dtype_info if isinstance(item, tuple) and len(item) > 0)
+                self.descr = dtype_info
+            else:
+                 self.names = ()
         
         def __getattr__(self, name):
             # Retourne un mock pour tout autre attribut non défini
@@ -72,7 +75,7 @@ def create_numpy_mock():
             
             # `names` peut être passé séparément et devrait surcharger ceux du dtype.
             if names:
-                self.dtype.names = names
+                self.dtype.names = tuple(names) if names else self.dtype.names
             
             # Assigner `formats` pour la compatibilité
             self.formats = formats

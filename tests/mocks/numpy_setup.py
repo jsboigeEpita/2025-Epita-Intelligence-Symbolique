@@ -11,19 +11,27 @@ logger = logging.getLogger(__name__)
 def create_module_mock(name, submodules=None):
     """
     Crée un mock de module avec un __spec__ et potentiellement des sous-modules.
+    `submodules` peut être une liste de chaînes ou un dictionnaire pour une structure récursive.
     """
     mock = MagicMock(name=f'{name}_mock')
-    mock.__spec__ = ModuleSpec(name, None) # Le 'None' loader est suffisant pour la plupart des vérifications
+    mock.__spec__ = ModuleSpec(name, None)
     mock.__name__ = name
-    
+    mock.__path__ = [f"/mock/path/{name.replace('.', '/')}"]
+
     if submodules:
-        for sub_name in submodules:
-            full_sub_name = f"{name}.{sub_name}"
-            sub_mock = MagicMock(name=f'{full_sub_name}_mock')
-            sub_mock.__spec__ = ModuleSpec(full_sub_name, None)
-            sub_mock.__name__ = full_sub_name
-            setattr(mock, sub_name, sub_mock)
-            
+        if isinstance(submodules, dict):
+            for sub_name, sub_submodules in submodules.items():
+                full_sub_name = f"{name}.{sub_name}"
+                sub_mock = create_module_mock(full_sub_name, sub_submodules)
+                setattr(mock, sub_name, sub_mock)
+                sys.modules[full_sub_name] = sub_mock
+        elif isinstance(submodules, list):
+            for sub_name in submodules:
+                full_sub_name = f"{name}.{sub_name}"
+                sub_mock = create_module_mock(full_sub_name)
+                setattr(mock, sub_name, sub_mock)
+                sys.modules[full_sub_name] = sub_mock
+
     return mock
 
 def deep_delete_from_sys_modules(module_name_prefix, logger_instance):
@@ -92,8 +100,22 @@ def setup_numpy_for_tests_fixture(request):
                 sys.modules['pandas'] = create_module_mock('pandas')
             if 'matplotlib' not in sys.modules:
                 # Mock matplotlib et son sous-module commun 'pyplot'
-                sys.modules['matplotlib'] = create_module_mock('matplotlib', submodules=['pyplot'])
-                sys.modules['matplotlib.pyplot'] = sys.modules['matplotlib'].pyplot # Assurer la cohérence
+                # Le mock doit simuler la structure d'un package avec des sous-modules
+                matplotlib_mock = create_module_mock('matplotlib', submodules={
+                    'pyplot': None,
+                    'backends': {
+                        'backend_agg': None
+                    }
+                })
+                sys.modules['matplotlib'] = matplotlib_mock
+                sys.modules['matplotlib.pyplot'] = matplotlib_mock.pyplot
+                sys.modules['matplotlib.backends'] = matplotlib_mock.backends
+                sys.modules['matplotlib.backends.backend_agg'] = matplotlib_mock.backends.backend_agg
+                # Ajouter les attributs attendus par matplotlib sur le backend mocké
+                backend_agg_mock = matplotlib_mock.backends.backend_agg
+                backend_agg_mock.FigureCanvas = MagicMock()
+                backend_agg_mock.FigureManager = MagicMock()
+                backend_ag_mock.backend_version = '1.0.mock'
             if 'scipy' not in sys.modules:
                 sys.modules['scipy'] = create_module_mock('scipy', submodules=['stats'])
                 sys.modules['scipy.stats'] = sys.modules['scipy'].stats

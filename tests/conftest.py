@@ -55,67 +55,10 @@ if not logging.getLogger().handlers: # Si le root logger n'a pas de handlers, ba
     _conftest_setup_logger.info("Configuration globale du logging appliquée.")
 else:
     _conftest_setup_logger.info("Configuration globale du logging déjà présente ou appliquée par un autre module.")
-# --- Début Patching JPype Mock au niveau module si nécessaire ---
-os.environ['USE_REAL_JPYPE'] = 'false'
-_SHOULD_USE_REAL_JPYPE = os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1')
-_conftest_setup_logger.info(f"conftest.py: USE_REAL_JPYPE={os.environ.get('USE_REAL_JPYPE', 'false')}, _SHOULD_USE_REAL_JPYPE={_SHOULD_USE_REAL_JPYPE}")
-
-if not _SHOULD_USE_REAL_JPYPE:
-    _conftest_setup_logger.info("conftest.py: Application du mock JPype au niveau module dans sys.modules.")
-    try:
-        # S'assurer que le répertoire des mocks est dans le path pour les imports suivants
-        _current_dir_for_jpype_mock_patch = os.path.dirname(os.path.abspath(__file__))
-        _mocks_dir_for_jpype_mock_patch = os.path.join(_current_dir_for_jpype_mock_patch, 'mocks')
-        # if _mocks_dir_for_jpype_mock_patch not in sys.path:
-        #     sys.path.insert(0, _mocks_dir_for_jpype_mock_patch)
-        #     _conftest_setup_logger.info(f"Ajout de {_mocks_dir_for_jpype_mock_patch} à sys.path pour jpype_mock.")
-
-        from .mocks import jpype_mock # Importer le module mock principal
-        from .mocks.jpype_components.imports import imports_module as actual_mock_jpype_imports_module
-
-        # Préparer l'objet mock principal pour 'jpype'
-        _jpype_module_mock_obj = MagicMock(name="jpype_module_mock_from_conftest")
-        _jpype_module_mock_obj.__path__ = [] # Nécessaire pour simuler un package
-        _jpype_module_mock_obj.isJVMStarted = jpype_mock.isJVMStarted
-        _jpype_module_mock_obj.startJVM = jpype_mock.startJVM
-        _jpype_module_mock_obj.getJVMPath = jpype_mock.getJVMPath
-        _jpype_module_mock_obj.getJVMVersion = jpype_mock.getJVMVersion
-        _jpype_module_mock_obj.getDefaultJVMPath = jpype_mock.getDefaultJVMPath
-        _jpype_module_mock_obj.JClass = jpype_mock.JClass
-        _jpype_module_mock_obj.JException = jpype_mock.JException
-        _jpype_module_mock_obj.JObject = jpype_mock.JObject
-        _jpype_module_mock_obj.JVMNotFoundException = jpype_mock.JVMNotFoundException
-        _jpype_module_mock_obj.__version__ = getattr(jpype_mock, '__version__', '1.x.mock.conftest')
-        _jpype_module_mock_obj.imports = actual_mock_jpype_imports_module
-        # Simuler d'autres attributs/méthodes si nécessaire pour la collecte
-        _jpype_module_mock_obj.config = MagicMock(name="jpype.config_mock_from_conftest")
-        _jpype_module_mock_obj.config.destroy_jvm = True # Comportement par défaut sûr pour un mock
-
-        # Préparer le mock pour '_jpype' (le module C)
-        _mock_dot_jpype_module = jpype_mock._jpype
-
-        # Appliquer les mocks à sys.modules
-        sys.modules['jpype'] = _jpype_module_mock_obj
-        sys.modules['_jpype'] = _mock_dot_jpype_module 
-        sys.modules['jpype._core'] = _mock_dot_jpype_module 
-        sys.modules['jpype.imports'] = actual_mock_jpype_imports_module
-        sys.modules['jpype.config'] = _jpype_module_mock_obj.config
-        
-        _mock_types_module = MagicMock(name="jpype.types_mock_from_conftest")
-        for type_name in ["JString", "JArray", "JObject", "JBoolean", "JInt", "JDouble", "JLong", "JFloat", "JShort", "JByte", "JChar"]:
-             setattr(_mock_types_module, type_name, getattr(jpype_mock, type_name, MagicMock(name=f"Mock{type_name}")))
-        sys.modules['jpype.types'] = _mock_types_module
-        sys.modules['jpype.JProxy'] = MagicMock(name="jpype.JProxy_mock_from_conftest")
-
-        _conftest_setup_logger.info("Mock JPype appliqué à sys.modules DEPUIS conftest.py.")
-
-    except ImportError as e_mock_load:
-        _conftest_setup_logger.error(f"conftest.py: ERREUR CRITIQUE lors du chargement des mocks JPype (jpype_mock ou jpype_components): {e_mock_load}. Le mock JPype pourrait ne pas être actif.")
-    except Exception as e_patching:
-        _conftest_setup_logger.error(f"conftest.py: Erreur inattendue lors du patching de JPype: {e_patching}", exc_info=True)
-else:
-    _conftest_setup_logger.info("conftest.py: _SHOULD_USE_REAL_JPYPE est True. Aucun mock JPype appliqué au niveau module depuis conftest.py.")
-# --- Fin Patching JPype Mock ---
+# Le patching global de JPype est maintenant géré exclusivement par `jpype_setup.py`
+# et ses hooks `pytest_sessionstart`/`pytest_sessionfinish`, qui sont importés plus bas.
+# Cela centralise la logique, élimine les conflits de chargement potentiels et
+# garantit que le patching est appliqué de manière cohérente au bon moment.
 # # --- Gestion des imports conditionnels NumPy et Pandas ---
 # _conftest_setup_logger.info("Début de la gestion des imports conditionnels pour NumPy et Pandas.")
 # try:
