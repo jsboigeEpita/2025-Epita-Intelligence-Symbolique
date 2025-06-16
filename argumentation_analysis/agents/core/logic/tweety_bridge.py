@@ -81,9 +81,9 @@ class TweetyBridge:
 
         # Initialiser les handlers spécifiques
         try:
-            self._pl_handler = PLHandler()
-            self._fol_handler = FOLHandler()
-            self._modal_handler = ModalHandler()
+            self._pl_handler = PLHandler(self._initializer)
+            self._fol_handler = FOLHandler(self._initializer)
+            self._modal_handler = ModalHandler(self._initializer)
             self._jvm_ok = True # Indique que les handlers Python sont prêts
             self._logger.info("TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialisés avec succès.")
         except RuntimeError as e:

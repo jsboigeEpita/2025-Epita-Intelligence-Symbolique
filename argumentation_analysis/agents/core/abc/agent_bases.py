@@ -11,21 +11,23 @@ from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING, Coroutine
 import logging
 
 from semantic_kernel import Kernel
-from semantic_kernel.agents import Agent
+# from semantic_kernel.agents import Agent # Cet import est supprimé car Agent n'existe plus
 from semantic_kernel.contents import ChatHistory
-from semantic_kernel.agents.channels.chat_history_channel import ChatHistoryChannel
-from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatHistoryAgentThread
+# from semantic_kernel.agents.channels.chat_history_channel import ChatHistoryChannel # Commenté, module/classe potentiellement déplacé/supprimé
+# from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatHistoryAgentThread # Commenté, module/classe potentiellement déplacé/supprimé
 
 # Résoudre la dépendance circulaire de Pydantic
-ChatHistoryChannel.model_rebuild()
+# ChatHistoryChannel.model_rebuild() # Commenté car ChatHistoryChannel est commenté
 
 # Import paresseux pour éviter le cycle d'import - uniquement pour le typage
 if TYPE_CHECKING:
     from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
     from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+    # Si ChatHistoryChannel était utilisé dans le typage, il faudrait aussi le gérer ici.
+    # Pour l'instant, il n'est pas explicitement typé dans les signatures de BaseAgent.
 
 
-class BaseAgent(Agent, ABC):
+class BaseAgent(ABC): # Suppression de l'héritage de sk.Agent
     """
     Classe de base abstraite pour tous les agents du système.
 
@@ -56,16 +58,14 @@ class BaseAgent(Agent, ABC):
         """
         effective_description = description if description else (system_prompt if system_prompt else f"Agent {agent_name}")
         
-        # Appel du constructeur de la classe parente sk.Agent
-        super().__init__(
-            id=agent_name,
-            name=agent_name,
-            instructions=system_prompt,
-            description=effective_description,
-            kernel=kernel
-        )
+        # L'appel à super().__init__ de sk.Agent est supprimé.
+        # Nous initialisons les attributs nécessaires manuellement.
+        self.id = agent_name
+        self.name = agent_name
+        self.kernel = kernel # Le kernel est maintenant explicitement stocké ici.
+        self.instructions = system_prompt # Équivalent au system_prompt
+        self.description = effective_description
 
-        # Le kernel est déjà stocké dans self.kernel par la classe de base Agent.
         self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{self.name}")
         self._llm_service_id = None  # Sera défini par setup_agent_components
 
@@ -125,25 +125,25 @@ class BaseAgent(Agent, ABC):
             "capabilities": self.get_agent_capabilities()
         }
 
-    def get_channel_keys(self) -> List[str]:
-        """
-        Retourne les clés uniques pour identifier le canal de communication de l'agent.
-        Cette méthode est requise par AgentGroupChat.
-        """
-        # Utiliser self.id car il est déjà garanti comme étant unique
-        # (initialisé avec agent_name).
-        return [self.id]
+    # def get_channel_keys(self) -> List[str]:
+    #     """
+    #     Retourne les clés uniques pour identifier le canal de communication de l'agent.
+    #     Cette méthode est requise par AgentGroupChat.
+    #     """
+    #     # Utiliser self.id car il est déjà garanti comme étant unique
+    #     # (initialisé avec agent_name).
+    #     return [self.id]
 
-    async def create_channel(self) -> ChatHistoryChannel:
-        """
-        Crée un canal de communication pour l'agent.
+    # async def create_channel(self) -> ChatHistoryChannel: # ChatHistoryChannel est commenté
+    #     """
+    #     Crée un canal de communication pour l'agent.
 
-        Cette méthode est requise par AgentGroupChat pour permettre à l'agent
-        de participer à une conversation. Nous utilisons ChatHistoryChannel,
-        qui est une implémentation générique basée sur ChatHistory.
-        """
-        thread = ChatHistoryAgentThread()
-        return ChatHistoryChannel(thread=thread)
+    #     Cette méthode est requise par AgentGroupChat pour permettre à l'agent
+    #     de participer à une conversation. Nous utilisons ChatHistoryChannel,
+    #     qui est une implémentation générique basée sur ChatHistory.
+    #     """
+    #     thread = ChatHistoryAgentThread() # ChatHistoryAgentThread est commenté
+    #     return ChatHistoryChannel(thread=thread) # ChatHistoryChannel est commenté
 
     @abstractmethod
     async def get_response(self, *args, **kwargs):

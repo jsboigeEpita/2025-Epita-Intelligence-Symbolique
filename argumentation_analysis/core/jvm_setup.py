@@ -19,23 +19,24 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # --- Constantes de Configuration ---
 # Répertoires (utilisant pathlib pour la robustesse multi-plateforme)
 PROJ_ROOT = Path(__file__).resolve().parents[3]
-LIBS_DIR = PROJ_ROOT / "libs"
-TWEETY_VERSION = "1.24" # Mettre à jour au besoin
+LIBS_DIR = PROJ_ROOT / "libs" / "tweety" # JARs Tweety dans un sous-répertoire dédié
+TWEETY_VERSION = "1.28" # Mettre à jour au besoin
 # TODO: Lire depuis un fichier de config centralisé (par ex. pyproject.toml ou un .conf)
 # Au lieu de TWEETY_VERSION = "1.24", on pourrait avoir get_config("tweety.version")
 
 # Configuration des URLs des dépendances
-TWEETY_BASE_URL = "https://repo.maven.apache.org/maven2"
-TWEETY_ARTIFACTS: Dict[str, Dict[str, str]] = {
-    # Core
-    "tweety-arg": {"group": "net.sf.tweety", "version": TWEETY_VERSION},
-    # Modules principaux (à adapter selon les besoins du projet)
-    "tweety-lp": {"group": "net.sf.tweety.lp", "version": TWEETY_VERSION},
-    "tweety-log": {"group": "net.sf.tweety.log", "version": TWEETY_VERSION},
-    "tweety-math": {"group": "net.sf.tweety.math", "version": TWEETY_VERSION},
-    # Natives (exemple ; peuvent ne pas exister pour toutes les versions)
-    "tweety-native-maxsat": {"group": "net.sf.tweety.native", "version": TWEETY_VERSION, "classifier": f"maxsat-{platform.system().lower()}"}
-}
+# TWEETY_BASE_URL = "https://repo.maven.apache.org/maven2" # Plus utilisé directement pour le JAR principal
+# TWEETY_ARTIFACTS n'est plus utilisé dans sa forme précédente pour le JAR principal
+# TWEETY_ARTIFACTS: Dict[str, Dict[str, str]] = {
+#     # Core
+#     "tweety-arg": {"group": "net.sf.tweety", "version": TWEETY_VERSION},
+#     # Modules principaux (à adapter selon les besoins du projet)
+#     "tweety-lp": {"group": "net.sf.tweety.lp", "version": TWEETY_VERSION},
+#     "tweety-log": {"group": "net.sf.tweety.log", "version": TWEETY_VERSION},
+#     "tweety-math": {"group": "net.sf.tweety.math", "version": TWEETY_VERSION},
+#     # Natives (exemple ; peuvent ne pas exister pour toutes les versions)
+#     "tweety-native-maxsat": {"group": "net.sf.tweety.native", "version": TWEETY_VERSION, "classifier": f"maxsat-{platform.system().lower()}"}
+# }
 
 # Configuration JDK portable
 MIN_JAVA_VERSION = 11
@@ -65,6 +66,9 @@ def download_file(url: str, dest_path: Path):
     """Télécharge un fichier avec une barre de progression."""
     logging.info(f"Téléchargement de {url} vers {dest_path}...")
     try:
+        # S'assurer que le répertoire parent de dest_path existe
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        
         response = requests.get(url, stream=True, timeout=30)
         response.raise_for_status()
 
@@ -105,6 +109,9 @@ def unzip_file(zip_path: Path, dest_dir: Path):
                  # Cas où le contenu est dans un sous-répertoire (ex: jdk-17.0.2+8/...)
                  # On extrait directement le contenu de ce sous-répertoire
                 temp_extract_dir = dest_dir / "temp_extract"
+                if temp_extract_dir.exists(): # S'assurer que le répertoire temporaire est propre
+                    shutil.rmtree(temp_extract_dir)
+                temp_extract_dir.mkdir(parents=True, exist_ok=True) # Recréer au cas où
                 zip_ref.extractall(temp_extract_dir)
                 
                 source_dir = temp_extract_dir / top_level_dirs.pop()
@@ -124,47 +131,51 @@ def unzip_file(zip_path: Path, dest_dir: Path):
 # --- Fonctions de Gestion des Dépendances ---
 
 # --- Fonction Principale de Téléchargement Tweety ---
-def download_tweety_jars(
-    version: str = TWEETY_VERSION,
-    target_dir: str = LIBS_DIR,
-    native_subdir: str = "native"
-    ) -> bool:
+def download_tweety_jars() -> bool: # Pas d'arguments nécessaires pour cette version simplifiée
     """
-    Vérifie et télécharge les JARs Tweety (Core + Modules) et les binaires natifs nécessaires.
+    Vérifie et télécharge le JAR principal de Tweety (full-with-dependencies) depuis tweetyproject.org.
+    Place le JAR dans LIBS_DIR (qui est configuré globalement pour être .../libs/tweety).
+    Retourne True en cas de succès (JAR présent ou téléchargé), False en cas d'échec critique.
+    """
+    # LIBS_DIR est déjà configuré globalement comme PROJ_ROOT / "libs" / "tweety"
+    # TWEETY_VERSION est aussi global ("1.28")
 
-    Returns:
-        bool: True si des téléchargements ont eu lieu, False sinon.
-    """
-    LIBS_DIR.mkdir(exist_ok=True)
-    (LIBS_DIR / native_subdir).mkdir(exist_ok=True)
+    try:
+        LIBS_DIR.mkdir(parents=True, exist_ok=True) # Assure que .../libs/tweety existe
+    except OSError as e:
+        logging.error(f"Impossible de créer le répertoire des bibliothèques {LIBS_DIR}: {e}")
+        return False
+
+    jar_filename = f"org.tweetyproject.tweety-full-{TWEETY_VERSION}-with-dependencies.jar"
+    jar_path = LIBS_DIR / jar_filename
     
-    downloaded = False
-    for name, a_info in TWEETY_ARTIFACTS.items():
-        group_path = a_info["group"].replace('.', '/')
-        a_version = a_info["version"]
-        
-        jar_name_parts = [name, a_version]
-        if "classifier" in a_info:
-            jar_name_parts.append(a_info['classifier'])
+    file_downloaded_this_run = False
 
-        jar_filename = f"{'-'.join(jar_name_parts)}.jar"
-        jar_path = LIBS_DIR / jar_filename
-
-        if not jar_path.exists():
-            downloaded = True
-            url = f"{TWEETY_BASE_URL}/{group_path}/{name}/{a_version}/{jar_filename}"
-            try:
-                download_file(url, jar_path)
-            except Exception:
-                logging.error(f"Échec du téléchargement pour {name}. Le projet pourrait ne pas fonctionner.")
-                return False # On arrête si un JAR critique manque
-
-    if downloaded:
-        logging.info("Téléchargement des bibliothèques Tweety terminé.")
+    if not jar_path.exists():
+        logging.info(f"Le JAR Tweety {jar_filename} n'existe pas dans {LIBS_DIR}. Tentative de téléchargement...")
+        url = f"https://tweetyproject.org/builds/{TWEETY_VERSION}/{jar_filename}"
+        try:
+            download_file(url, jar_path) # download_file gère déjà la création de dest_path.parent si besoin
+            file_downloaded_this_run = True
+            logging.info(f"Téléchargement de {jar_filename} terminé avec succès.")
+        except Exception as e: # download_file lève des exceptions spécifiques, mais on capture tout ici.
+            logging.error(f"Échec du téléchargement pour {jar_filename} depuis {url}: {e}")
+            # download_file devrait nettoyer le fichier partiel en cas d'erreur.
+            return False # Échec critique si le JAR principal ne peut être téléchargé
     else:
-        logging.info("Toutes les bibliothèques Tweety sont déjà à jour.")
+        logging.info(f"Le JAR Tweety {jar_filename} est déjà présent dans {LIBS_DIR}.")
+
+    # Vérification finale que le fichier existe après l'opération
+    if not jar_path.exists(): # Cette vérification est cruciale
+        logging.error(f"Échec critique : le JAR Tweety {jar_filename} n'a pas pu être trouvé ou téléchargé dans {LIBS_DIR}.")
+        return False # Assurer qu'on retourne False si le fichier n'est toujours pas là.
         
-    return downloaded
+    if file_downloaded_this_run:
+        logging.info("Processus de vérification/téléchargement du JAR Tweety terminé (téléchargement effectué).")
+    else:
+        logging.info("Processus de vérification/téléchargement du JAR Tweety terminé (fichier déjà à jour).")
+        
+    return True # Succès si on arrive ici, le JAR est là.
 
 
 # --- Fonction de détection JAVA_HOME (modifiée pour prioriser Java >= MIN_JAVA_VERSION) ---
@@ -210,16 +221,18 @@ def download_portable_jdk(target_dir: Path) -> Optional[str]:
         os=os_arch['os']
     )
     
-    target_dir.mkdir(exist_ok=True)
+    target_dir.mkdir(parents=True, exist_ok=True) # Assurer que le répertoire cible existe
     zip_path = target_dir / "jdk.zip"
 
     try:
         download_file(jdk_url, zip_path)
         # Supprimer le contenu précédent avant de décompresser
         for item in target_dir.iterdir():
+            if item.name == zip_path.name: # Ne pas supprimer le zip qu'on vient de télécharger
+                continue
             if item.is_dir():
                 shutil.rmtree(item)
-            elif item.is_file() and item.suffix != '.zip':
+            elif item.is_file(): # item.suffix != '.zip' était trop restrictif
                 item.unlink()
 
         unzip_file(zip_path, target_dir)
@@ -256,7 +269,7 @@ def is_valid_jdk(path: Path) -> bool:
             capture_output=True,
             text=True,
             check=True,
-            stderr=subprocess.PIPE
+            # stderr=subprocess.PIPE # Redondant avec capture_output=True
         )
         version_output = result.stderr
         
@@ -295,7 +308,9 @@ def start_jvm_if_needed(force_restart: bool = False):
         shutdown_jvm()
 
     # 1. S'assurer que les dépendances sont présentes
-    download_tweety_jars()
+    if not download_tweety_jars(): # Appel de la fonction modifiée
+        # Si download_tweety_jars retourne False, c'est un échec critique.
+        raise RuntimeError("Échec du téléchargement des JARs Tweety nécessaires. Impossible de démarrer la JVM.")
     
     # 2. Trouver un JAVA_HOME valide (ou installer un JDK)
     java_home = find_valid_java_home()
@@ -306,11 +321,20 @@ def start_jvm_if_needed(force_restart: bool = False):
         )
 
     # 3. Construire le Classpath
-    jar_paths = [str(p) for p in LIBS_DIR.glob("*.jar")]
-    classpath = os.pathsep.join(jar_paths)
+    # LIBS_DIR pointe maintenant vers .../libs/tweety
+    jar_paths = [str(p) for p in LIBS_DIR.glob("*.jar")] 
+    if not jar_paths: # S'il n'y a aucun JAR dans libs/tweety
+        # Essayer de vérifier si le JAR spécifique attendu est là, au cas où glob aurait un souci
+        expected_jar_name = f"org.tweetyproject.tweety-full-{TWEETY_VERSION}-with-dependencies.jar"
+        if not (LIBS_DIR / expected_jar_name).exists():
+            raise RuntimeError(f"Aucune bibliothèque (.jar) trouvée dans {LIBS_DIR}, y compris {expected_jar_name}. Le classpath est vide.")
+        else: # Le JAR est là, mais glob ne l'a pas trouvé ? Peu probable mais on ajoute au cas où.
+            jar_paths = [str(LIBS_DIR / expected_jar_name)]
 
-    if not jar_paths:
-        raise RuntimeError(f"Aucune bibliothèque (.jar) trouvée dans {LIBS_DIR}. Le classpath est vide.")
+
+    classpath = os.pathsep.join(jar_paths)
+    if not classpath: # Double vérification
+         raise RuntimeError(f"Classpath est vide après tentative de construction à partir de {LIBS_DIR}.")
         
     logging.info(f"Classpath configuré : {classpath}")
     
@@ -319,12 +343,10 @@ def start_jvm_if_needed(force_restart: bool = False):
         logging.info("Démarrage de la JVM...")
         jpype.startJVM(
             #jpype.getDefaultJVMPath(), # Laisser JPype trouver la libjvm
-            jvmpath=jpype.getDefaultJVMPath(),
+            jvmpath=jpype.getDefaultJVMPath(), # Utiliser le JDK trouvé par JPype par défaut, qui devrait être celui de java_home si bien configuré
             classpath=classpath,
             ignoreUnrecognized=True,
             convertStrings=False,
-            # Passer le JAVA_HOME trouvé permet de s'assurer que JPype utilise le bon JDK
-            # C'est implicite si la libjvm est trouvée via le path, mais c'est plus sûr
         )
         _jvm_started = True
         logging.info("JVM démarrée avec succès.")

@@ -46,9 +46,9 @@ ENCRYPTION_KEY_imported = None
 ExtractDefinitions_class, SourceDefinition_class, Extract_class = None, None, None
 
 try:
-    from argumentation_analysis.core.jvm_setup import initialize_jvm as initialize_jvm_func
+    from argumentation_analysis.core.jvm_setup import start_jvm_if_needed as initialize_jvm_func
 except ImportError as e:
-    logger.error(f"Failed to import initialize_jvm: {e}")
+    logger.error(f"Failed to import start_jvm_if_needed (aliased as initialize_jvm_func): {e}")
 
 try:
     from argumentation_analysis.services.crypto_service import CryptoService as CryptoService_class
@@ -203,19 +203,23 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
                  context.jvm_initialized = True
             else:
                 if initialize_jvm_func:
-                    logger.info("Initialisation de la JVM via jvm_setup.initialize_jvm()...")
+                    logger.info("Initialisation de la JVM via jvm_setup.start_jvm_if_needed()...")
                     try:
-                        context.jvm_initialized = initialize_jvm_func()
-                        if context.jvm_initialized:
-                            logger.info("JVM initialisée avec succès. Marquage global (sys._jvm_initialized = True).")
-                            sys._jvm_initialized = True
+                        initialize_jvm_func() # Appelle start_jvm_if_needed qui ne retourne rien d'utile
+                        
+                        import jpype # S'assurer que jpype est accessible
+                        if jpype.isJVMStarted():
+                            context.jvm_initialized = True
+                            sys._jvm_initialized = True # Marquer globalement pour ce processus
+                            logger.info("JVM initialisée avec succès (vérifié via jpype.isJVMStarted()).")
                         else:
-                            logger.error("Échec de l'initialisation de la JVM.")
-                            sys._jvm_initialized = False
-                    except Exception as e:
-                        logger.error(f"Erreur lors de l'initialisation de la JVM : {e}", exc_info=True)
+                            context.jvm_initialized = False
+                            sys._jvm_initialized = False # Assurer la cohérence
+                            logger.error("Échec de l'initialisation de la JVM (jpype.isJVMStarted() est False après l'appel à start_jvm_if_needed).")
+                    except Exception as e: # Capturer les exceptions potentielles de start_jvm_if_needed
+                        logger.error(f"Erreur lors de l'appel à initialize_jvm_func (start_jvm_if_needed) : {e}", exc_info=True)
                         context.jvm_initialized = False
-                        sys._jvm_initialized = False
+                        sys._jvm_initialized = False # Assurer que c'est False en cas d'erreur
                 else:
                     logger.error("La fonction initialize_jvm n'a pas pu être importée. Impossible d'initialiser la JVM.")
                     context.jvm_initialized = False
