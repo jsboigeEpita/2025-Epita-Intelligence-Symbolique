@@ -209,6 +209,83 @@ class FrontendManager:
             self.logger.error(f"Erreur inattendue pendant 'npm install': {e}", exc_info=True)
             raise
     
+    async def _build_react_app(self, env: Dict[str, str]):
+        """Compile l'application React et la place dans le répertoire `build`."""
+        self.build_dir = self.frontend_path / 'build'
+        self.logger.info(f"Début de la construction de l'application React dans {self.build_dir}...")
+        
+        try:
+            cmd = ['npm', 'run', 'build']
+            is_windows = sys.platform == "win32"
+            command_to_run = ' '.join(cmd) if is_windows else cmd
+
+            process = subprocess.Popen(
+                command_to_run,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=self.frontend_path,
+                env=env,
+                shell=is_windows,
+                text=True,
+                encoding='utf-8',
+                errors='replace'
+            )
+            
+            stdout, stderr = process.communicate(timeout=600)  # 10 minutes timeout
+
+            if process.returncode != 0:
+                self.logger.error(f"Échec de 'npm run build'. Code de retour: {process.returncode}")
+                self.logger.error(f"--- STDOUT ---\n{stdout}")
+                self.logger.error(f"--- STDERR ---\n{stderr}")
+                raise RuntimeError(f"npm run build a échoué avec le code {process.returncode}")
+            else:
+                self.logger.info("'npm run build' terminé avec succès.")
+                if stdout:
+                    self.logger.debug(f"--- STDOUT de npm run build ---\n{stdout}")
+
+        except subprocess.TimeoutExpired:
+            process.kill()
+            self.logger.error("Timeout de 10 minutes dépassé pour 'npm run build'. Le processus a été tué.")
+            raise
+        except Exception as e:
+            self.logger.error(f"Erreur inattendue pendant 'npm run build': {e}", exc_info=True)
+            raise
+
+
+    def _start_static_server(self):
+        """Démarre un serveur HTTP simple pour les fichiers statiques dans un thread séparé."""
+        if not self.build_dir or not self.build_dir.exists():
+            raise FileNotFoundError(f"Le répertoire de build '{self.build_dir}' est introuvable.")
+
+        class Handler(http.server.SimpleHTTPRequestHandler):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, directory=str(self.build_dir), **kwargs)
+
+        # Utilisation de 0.0.0.0 pour être accessible depuis l'extérieur du conteneur si nécessaire
+        address = ("127.0.0.1", self.port)
+        self.static_server = socketserver.TCPServer(address, Handler)
+        
+        self.static_server_thread = threading.Thread(target=self.static_server.serve_forever)
+        self.static_server_thread.daemon = True
+        self.static_server_thread.start()
+        self.logger.info(f"Serveur statique démarré pour {self.build_dir} sur http://{address[0]}:{address[1]}")
+
+    def _stop_static_server(self):
+        """Arrête le serveur de fichiers statiques."""
+        if self.static_server:
+            self.logger.info("Arrêt du serveur de fichiers statiques...")
+            self.static_server.shutdown()
+            self.static_server.server_close()
+            self.logger.info("Serveur de fichiers statiques arrêté.")
+            
+            if self.static_server_thread:
+                self.static_server_thread.join(timeout=5)
+                if self.static_server_thread.is_alive():
+                    self.logger.warning("Le thread du serveur statique n'a pas pu être arrêté proprement.")
+
+            self.static_server = None
+            self.static_server_thread = None
+
     def _get_frontend_env(self) -> Dict[str, str]:
         """Prépare l'environnement pour le frontend"""
         env = os.environ.copy()
@@ -325,43 +402,7 @@ class FrontendManager:
     
     async def stop(self):
         """Arrête le frontend proprement"""
-        if self.process:
-            try:
-                self.logger.info(f"Arrêt frontend PID {self.process.pid}")
-                
-                # Terminaison progressive
-                self.process.terminate()
-                
-                # Attente arrêt propre (10s max pour React)
-                try:
-                    self.process.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    # Force kill si nécessaire
-                    self.process.kill()
-                    self.process.wait()
-                    
-                self.logger.info("Frontend arrêté")
-                
-            except Exception as e:
-                self.logger.error(f"Erreur arrêt frontend: {e}")
-            finally:
-                if self.frontend_stdout_log_file:
-                    try:
-                        self.frontend_stdout_log_file.close()
-                    except Exception as log_e:
-                        self.logger.error(f"Erreur fermeture frontend_stdout_log_file: {log_e}")
-                    self.frontend_stdout_log_file = None
-                
-                if self.frontend_stderr_log_file:
-                    try:
-                        self.frontend_stderr_log_file.close()
-                    except Exception as log_e:
-                        self.logger.error(f"Erreur fermeture frontend_stderr_log_file: {log_e}")
-                    self.frontend_stderr_log_file = None
-
-                self.process = None
-                self.current_url = None
-                self.pid = None
+        self._stop_static_server() # Arrête le serveur de fichiers statiques
     
     def get_status(self) -> Dict[str, Any]:
         """Retourne l'état actuel du frontend"""
