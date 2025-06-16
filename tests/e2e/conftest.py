@@ -82,16 +82,17 @@ def webapp_service() -> Generator:
 
     # 2. Démarrer le serveur backend
     backend_port = 5003
-    api_health_url = f"http://127.0.0.1:{backend_port}/api/health"
+    # L'URL de santé pointe maintenant vers la route /status de l'application Flask
+    api_health_url = f"http://127.0.0.1:{backend_port}/status"
     
-    # Command to run the backend via the project activation script
-    # We force the use of conda run to ensure environment consistency
+    # La commande lance maintenant l'application principale Flask (interface_web/app.py)
+    # et non plus l'API FastAPI (api/main.py).
     command = [
         "powershell", "-File", ".\\activate_project_env.ps1",
-        "-CommandToRun", f"conda run -n projet-is --no-capture-output python -m uvicorn api.main:app --host 127.0.0.1 --port {backend_port}"
+        "-CommandToRun", f"conda run -n projet-is --no-capture-output python interface_web/app.py --port {backend_port}"
     ]
     
-    print(f"\n[E2E Fixture] Starting backend server on port {backend_port}...")
+    print(f"\n[E2E Fixture] Starting Flask webapp server on port {backend_port}...")
     
     # Use Popen to run the server in the background
     project_root = Path(__file__).parent.parent.parent
@@ -120,8 +121,9 @@ def webapp_service() -> Generator:
         while time.time() - start_time < timeout:
             try:
                 response = requests.get(api_health_url, timeout=2)
-                if response.status_code == 200:
-                    print(f"[E2E Fixture] Backend is ready! (took {time.time() - start_time:.2f}s)")
+                # L'application Flask renvoie un JSON. On vérifie que le statut interne est 'operational'.
+                if response.status_code == 200 and response.json().get('status') == 'operational':
+                    print(f"[E2E Fixture] Flask webapp is ready! (took {time.time() - start_time:.2f}s)")
                     ready = True
                     break
             except ConnectionError:

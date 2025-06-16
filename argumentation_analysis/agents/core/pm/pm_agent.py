@@ -160,29 +160,58 @@ class ProjectManagerAgent(BaseAgent):
             # Retourner une chaîne d'erreur ou lever une exception spécifique
             return f"ERREUR: Impossible d'écrire la conclusion. Détails: {e}"
 
-    async def invoke(self, history: list[ChatMessageContent]) -> ChatMessageContent:
-        """Méthode dépréciée, utilisez invoke_custom."""
-        import warnings
-        warnings.warn("The 'invoke' method is deprecated, use 'invoke_custom' instead.", DeprecationWarning)
-        return await self.invoke_custom(history)
+    async def get_response(
+        self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None
+    ) -> list[ChatMessageContent]:
+        """Implémentation de la méthode abstraite requise."""
+        self.logger.debug(f"get_response appelé, délégation à invoke_single pour {self.name}.")
+        return await self.invoke_single(kernel, arguments)
 
-    async def get_response(self, history: list[ChatMessageContent]) -> ChatMessageContent:
-        """Méthode dépréciée, utilisez invoke_custom."""
-        import warnings
-        warnings.warn("The 'get_response' method is deprecated, use 'invoke_custom' instead.", DeprecationWarning)
-        return await self.invoke_custom(history)
+    async def invoke_single(
+        self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None
+    ) -> list[ChatMessageContent]:
+        """
+        Implémentation requise par la classe de base abstraite.
+        Délègue à la méthode principale de l'agent.
+        """
+        self.logger.debug(f"invoke_single appelé, délégation à invoke_custom pour {self.name}.")
+        
+        # Surcharge pour retourner une liste comme attendu par la nouvelle interface d'agent
+        response_message = await self.invoke_custom(kernel, arguments)
+        return [response_message]
 
-    async def invoke_custom(self, history: list[ChatMessageContent]) -> ChatMessageContent:
+
+    async def invoke_custom(
+        self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None
+    ) -> ChatMessageContent:
         """
         Logique d'invocation principale du PM, qui décide de la prochaine action.
         """
+        if not arguments or "chat_history" not in arguments:
+            raise ValueError("L'historique de chat ('chat_history') est manquant dans les arguments.")
+
+        history = arguments["chat_history"]
         self.logger.info(f"invoke_custom called for {self.name} with {len(history)} messages.")
 
-        # Extraire le texte brut initial (typiquement le premier message utilisateur)
-        raw_text = next((m.content for m in history if m.role == Role.USER and m.content), "")
+        # Extraire le texte brut initial du message utilisateur dans l'historique
+        raw_text_user_message = next((m.content for m in history if m.role == Role.USER), None)
+        if not raw_text_user_message:
+             raise ValueError("Message utilisateur initial non trouvé dans l'historique.")
+        # Isoler le texte brut de l'invite système
+        raw_text = raw_text_user_message.split("---\n")[-2].strip() if "---" in raw_text_user_message else raw_text_user_message
+
+
+        # Le StateManager est maintenant dans le kernel, on peut l'appeler
+        state_manager_plugin = kernel.plugins.get("StateManager")
+        if not state_manager_plugin:
+            raise RuntimeError("StateManagerPlugin non trouvé dans le kernel.")
         
-        # Extraire l'état d'analyse (typiquement un résumé JSON dans un message d'assistant récent)
-        analysis_state_snapshot = next((m.content for m in reversed(history) if m.role == Role.ASSISTANT and m.content and 'tasks_defined' in m.content), "{}")
+        # Correction: Utiliser le nom de fonction correct ("get_current_state_snapshot") et appeler la fonction.
+        snapshot_function = state_manager_plugin["get_current_state_snapshot"]
+        # Correction : Les fonctions natives du kernel nécessitent que le kernel
+        # soit passé comme argument lors de l'appel.
+        snapshot_result = await snapshot_function(kernel=kernel)
+        analysis_state_snapshot = str(snapshot_result)
 
         if not raw_text:
             self.logger.warning("Aucun texte brut (message utilisateur initial) trouvé dans l'historique.")
