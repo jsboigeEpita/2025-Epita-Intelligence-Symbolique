@@ -60,7 +60,7 @@ class BackendManager:
                                        'powershell -File scripts/env/activate_project_env.ps1')
         
         # État runtime
-        self.process: Optional[subprocess.Popen] = None
+        self.process: Optional[asyncio.subprocess.Process] = None
         self.current_port: Optional[int] = None
         self.current_url: Optional[str] = None
         self.pid: Optional[int] = None
@@ -125,12 +125,8 @@ class BackendManager:
                 
                 is_already_in_target_env = (current_conda_env == conda_env_name and conda_env_name in python_executable)
                 
-                if is_already_in_target_env:
-                    self.logger.info(f"Déjà dans l'environnement Conda '{conda_env_name}'. Utilisation de l'interpréteur courant.")
-                    cmd = [python_executable] + inner_cmd_list[1:] # On remplace 'python' par le chemin complet
-                else:
-                    self.logger.warning(f"Utilisation de `conda run` pour activer l'environnement '{conda_env_name}'.")
-                    cmd = ["conda", "run", "-n", conda_env_name, "--no-capture-output"] + inner_cmd_list
+                self.logger.warning(f"Forçage de `conda run` pour garantir l'activation de l'environnement '{conda_env_name}'.")
+                cmd = ["conda", "run", "-n", conda_env_name, "--no-capture-output"] + inner_cmd_list
             else:
                 # Cas d'erreur : ni module, ni command_list
                 raise ValueError("La configuration du backend doit contenir soit 'module', soit 'command_list'.")
@@ -163,13 +159,12 @@ class BackendManager:
                     self.logger.error(f"Erreur lors du téléchargement des JARs Tweety: {e}")
 
             with open(stdout_log_path, 'wb') as f_stdout, open(stderr_log_path, 'wb') as f_stderr:
-                self.process = subprocess.Popen(
-                    cmd,
+                self.process = await asyncio.create_subprocess_exec(
+                    *cmd,
                     stdout=f_stdout,
                     stderr=f_stderr,
                     cwd=project_root,
-                    env=effective_env,
-                    shell=False
+                    env=effective_env
                 )
 
             backend_ready = await self._wait_for_backend(port_to_use)
@@ -227,7 +222,7 @@ class BackendManager:
         await asyncio.sleep(initial_wait)
 
         while time.time() - start_time < self.timeout_seconds:
-            if self.process and self.process.poll() is not None:
+            if self.process and self.process.returncode is not None:
                 self.logger.error(f"Processus backend terminé prématurément (code: {self.process.returncode})")
                 return False
             
@@ -292,11 +287,11 @@ class BackendManager:
                 
                 self.process.terminate()
                 try:
-                    await asyncio.to_thread(self.process.wait, timeout=5)
-                except subprocess.TimeoutExpired:
+                    await self.process.wait()
+                except asyncio.TimeoutError:
                     self.logger.warning("Timeout à l'arrêt, forçage...")
                     self.process.kill()
-                    await asyncio.to_thread(self.process.wait, timeout=5)
+                    await self.process.wait()
                     
                 self.logger.info("Backend arrêté")
                 

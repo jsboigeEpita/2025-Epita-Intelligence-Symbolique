@@ -60,10 +60,14 @@ class Semantics(BaseModel):
     ideal: List[str]
     semi_stable: List[List[str]]
 
-class FrameworkAnalysisResponse(BaseModel):
-    """
-    Modèle de réponse pour l'analyse complète du framework.
-    """
+class FrameworkAnalysisResult(BaseModel):
+    """Contient les résultats détaillés de l'analyse du framework."""
     semantics: Semantics
     argument_status: Dict[str, ArgumentStatus]
     graph_properties: GraphProperties
+
+class FrameworkAnalysisResponse(BaseModel):
+    """
+    Modèle de réponse pour l'analyse complète du framework, enveloppé dans une clé 'analysis'.
+    """
+    analysis: FrameworkAnalysisResult
