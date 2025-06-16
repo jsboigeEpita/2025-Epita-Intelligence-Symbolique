@@ -105,18 +105,32 @@ class BackendManager:
             
             # La commande flask n'a plus besoin du port, il sera lu depuis l'env FLASK_RUN_PORT
             inner_cmd_list = [
-                "python", "-m", "flask", "--app", app_module_with_attribute, "run", "--host", backend_host
+                "-m", "flask", "--app", app_module_with_attribute, "run", "--host", backend_host
             ]
 
-            if self.conda_env_path:
+            # Vérifier si nous sommes déjà dans le bon environnement Conda
+            current_conda_env = os.getenv('CONDA_DEFAULT_ENV')
+            python_executable = sys.executable # Chemin vers l'interpréteur Python actuel
+            
+            is_already_in_target_env = False
+            if current_conda_env == conda_env_name and conda_env_name in python_executable:
+                is_already_in_target_env = True
+            
+            if is_already_in_target_env:
+                self.logger.info(f"Déjà dans l'environnement Conda '{conda_env_name}'. Utilisation directe de: {python_executable}")
+                cmd = [python_executable] + inner_cmd_list
+            elif self.conda_env_path:
+                # Garder la logique existante si conda_env_path est fourni explicitement
                 cmd_base = ["conda", "run", "--prefix", self.conda_env_path, "--no-capture-output"]
-                self.logger.info(f"Utilisation de `conda run --prefix`: {self.conda_env_path}")
+                self.logger.info(f"Utilisation de `conda run --prefix {self.conda_env_path}` pour lancer: {['python'] + inner_cmd_list}")
+                cmd = cmd_base + ["python"] + inner_cmd_list # Ajout de "python" ici
             else:
+                # Fallback sur conda run -n si pas dans l'env et pas de path explicite
                 cmd_base = ["conda", "run", "-n", conda_env_name, "--no-capture-output"]
-                self.logger.warning(f"Utilisation de `conda run -n {conda_env_name}`. Fournir conda_env_path est plus robuste.")
-
-            cmd = cmd_base + inner_cmd_list
-            self.logger.info(f"Commande de lancement finale: {cmd}")
+                self.logger.warning(f"Utilisation de `conda run -n {conda_env_name}` pour lancer: {['python'] + inner_cmd_list}. Fournir conda_env_path est plus robuste.")
+                cmd = cmd_base + ["python"] + inner_cmd_list # Ajout de "python" ici
+            
+            self.logger.info(f"Commande de lancement backend construite: {cmd}")
             
             project_root = str(Path(__file__).resolve().parent.parent.parent)
             log_dir = Path(project_root) / "logs"
