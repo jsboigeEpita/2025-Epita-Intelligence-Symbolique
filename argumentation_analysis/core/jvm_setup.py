@@ -339,11 +339,19 @@ def is_valid_jdk(path: Path) -> bool:
         if major_version == 1 and minor_version_str: # Format "1.X" (Java 8 et moins)
             major_version = int(minor_version_str)
 
+        try:
+            raw_version_detail = match.group(0).split('"')[1]
+        except IndexError:
+            logger.error(f"Impossible d'extraire le numéro de version de '{match.group(0)}'. Format inattendu.")
+            raw_version_detail = "FORMAT_INCONNU" # Fallback
+        
+        version_details_str = raw_version_detail.replace('\\', '\\\\')
+
         if major_version >= MIN_JAVA_VERSION:
-            logger.info(f"Version Java détectée à '{path}': \"{match.group(0).split('"')[1]}\" (Majeure: {major_version}) -> Valide.")
+            logger.info(f"Version Java détectée à '{path}': \"{version_details_str}\" (Majeure: {major_version}) -> Valide.")
             return True
         else:
-            logger.warning(f"Version Java détectée à '{path}': \"{match.group(0).split('"')[1]}\" (Majeure: {major_version}) -> INVALIDE (minimum requis: {MIN_JAVA_VERSION}).")
+            logger.warning(f"Version Java détectée à '{path}': \"{version_details_str}\" (Majeure: {major_version}) -> INVALIDE (minimum requis: {MIN_JAVA_VERSION}).")
             return False
     except FileNotFoundError:
         logger.error(f"Exécutable Java non trouvé à {java_exe} lors de la vérification de version.")
