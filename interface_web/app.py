@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 
 from a2wsgi import ASGIMiddleware
+from contextlib import asynccontextmanager # Ajout pour le lifespan manager
 
 # Activation automatique de l'environnement
 try:
