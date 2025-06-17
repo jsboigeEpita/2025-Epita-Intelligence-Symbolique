@@ -19,7 +19,7 @@ if str(modules_path) not in sys.path:
 
 # Import des utilitaires communs avec gestion d'erreur
 try:
-    from demo_utils import (
+    from .demo_utils import (
         DemoLogger, Colors, Symbols, charger_config_categories,
         afficher_progression, executer_tests, afficher_stats_tests,
         afficher_menu_module, pause_interactive, confirmer_action

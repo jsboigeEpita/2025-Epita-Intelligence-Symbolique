@@ -561,12 +561,16 @@ class TestPerformanceComparison:
         unique_solutions_3 = len(set(tuple(sorted(sol.items())) for sol in solutions_3))
         
         # Analyse de la validité
-        valid_solutions_2 = sum(1 for sol in solutions_2 if all(
-            sol[key] in performance_elements[key + "s"] for key in ["suspect", "arme", "lieu"]
-        ))
-        valid_solutions_3 = sum(1 for sol in solutions_3 if all(
-            sol[key] in performance_elements[key + "s"] for key in ["suspect", "arme", "lieu"]
-        ))
+        valid_solutions_2 = sum(1 for sol in solutions_2 if all((
+            sol['suspect'] in performance_elements['suspects'],
+            sol['arme'] in performance_elements['armes'],
+            sol['lieu'] in performance_elements['lieux']
+        )))
+        valid_solutions_3 = sum(1 for sol in solutions_3 if all((
+            sol['suspect'] in performance_elements['suspects'],
+            sol['arme'] in performance_elements['armes'],
+            sol['lieu'] in performance_elements['lieux']
+        )))
         
         # Toutes les solutions devraient être valides
         assert valid_solutions_2 == 5

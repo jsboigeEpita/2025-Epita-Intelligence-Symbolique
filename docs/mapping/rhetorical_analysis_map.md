@@ -1,59 +1,62 @@
-# Cartographie du Système d'Analyse Rhétorique Unifié
+# Cartographie du Système d'Analyse Rhétorique
 
-Ce document décrit l'architecture, les composants clés et les interactions du système d'analyse rhétorique.
+Ce document décrit l'architecture, les composants clés et leurs interactions au sein du système d'analyse rhétorique situé dans le répertoire `argumentation_analysis`.
 
-## 1. Vue d'Ensemble de l'Architecture
+## Vue d'ensemble de l'architecture
 
-Le système est conçu autour d'une architecture modulaire et hiérarchique, principalement localisée dans le répertoire `argumentation_analysis/`. Il combine plusieurs types d'agents (logiques, informels, de synthèse) coordonnés par un système d'orchestration multi-niveaux.
+Le système est organisé autour d'une architecture modulaire composée de plusieurs packages principaux :
 
-L'objectif est d'analyser un texte de discours pour en extraire la structure argumentative, identifier les sophismes et autres figures rhétoriques, et évaluer la cohérence et la qualité de l'argumentation.
+- **`agents`**: Définit les agents autonomes responsables de tâches d'analyse spécifiques.
+- **`core`**: Fournit les fonctionnalités de base comme la gestion de la JVM, la gestion d'état et la communication inter-agents.
+- **`orchestration`**: Coordonne les agents et les outils pour exécuter des pipelines d'analyse complexes.
+- **`tools`**: Contient des outils spécialisés pour l'analyse rhétorique, la détection de sophismes, etc.
+- **`demos`**: Présente des scripts d'exemple qui illustrent comment utiliser le système.
+- **`utils`**: Regroupe des fonctions et classes utilitaires transverses.
 
-## 2. Composants Principaux
+## Description des Composants
 
-### 2.1. `argumentation_analysis/` - Coeur du Système
+### 1. `argumentation_analysis/core`
 
-- **`agents/`**: Contient les différents types d'agents intelligents qui effectuent les tâches d'analyse.
-    - `core/`: Classes de base et abstractions pour les agents.
-    - `extract/`: Agents responsables de l'extraction d'informations brutes du texte.
-    - `informal/`: Agents spécialisés dans l'analyse informelle, notamment la détection de sophismes.
-    - `logic/`: Agents basés sur la logique formelle (propositionnelle, premier ordre, modale) pour l'analyse structurelle, s'appuyant sur Tweety.
-    - `synthesis/`: Agents qui agrègent et synthétisent les résultats des autres agents.
-    - `pm/`: Agents de type "Project Manager" (e.g., Sherlock) pour l'orchestration de haut niveau.
+Le cœur du système.
 
-- **`tools/`**: Outils spécialisés utilisés par les agents pour des analyses spécifiques.
-    - `analysis/`: Analyseurs de sophismes (complexes, contextuels), évaluateurs de sévérité, et analyseurs de résultats rhétoriques.
-    - `new/`: Nouveaux outils comme l'évaluateur de cohérence d'argument et le visualiseur de structure.
+- **`jvm_setup.py`**: Gère le cycle de vie de la machine virtuelle Java (JVM), essentielle pour l'intégration avec des bibliothèques Java comme Tweety.
+- **`shared_state.py`**: Gère l'état partagé entre les différents composants du système.
+- **`communication/`**: Implémente le système de communication inter-agents (canaux, messages, etc.).
 
-- **`orchestration/`**: Gère la collaboration et le flux de travail entre les agents.
-    - `hierarchical/`: Implémente une structure de commandement à plusieurs niveaux (Stratégique, Tactique, Opérationnel).
-    - `engine/`: Le moteur d'orchestration principal (`main_orchestrator.py`).
-    - `service_manager.py`: Gère le cycle de vie et l'accès aux services.
-    - `analysis_runner.py`: Un runner de haut niveau pour exécuter des analyses complètes.
+### 2. `argumentation_analysis/agents`
 
-- **`core/`**: Composants fondamentaux et partagés.
-    - `jvm_setup.py`: Gestion de la JVM pour l'intégration Java (Tweety).
-    - `llm_service.py`: Service pour interagir avec les grands modèles de langage.
-    - `shared_state.py`: État partagé entre les différents composants du système.
+Ce répertoire contient les différentes familles d'agents. Chaque agent est spécialisé dans un type d'analyse.
 
-- **`demos/`**: Scripts de démonstration pour illustrer l'utilisation du système.
-    - `run_rhetorical_analysis_demo.py`: Point d'entrée pour la démo d'analyse rhétorique.
-    - `jtms_demo_complete.py`: Démonstration spécifique au système JTMS (Justification-Truth-Maintenance-System).
+- **`core/abc/agent_bases.py`**: Définit les classes de base abstraites pour tous les agents.
+- **`core/informal/`**: Agents pour l'analyse de la logique informelle et la détection de sophismes.
+- **`core/logic/`**: Agents capables de raisonnement en logique formelle (propositionnelle, premier ordre) via l'intégration avec Tweety.
+- **`core/pm/`**: Agents pour l'analyse dialectique (par exemple, l'agent "Sherlock").
+- **`core/extract/`**: Agents spécialisés dans l'extraction d'arguments depuis un texte.
 
-### 2.2. `scripts/` - Scripts Utilitaires et d'Exécution
+### 3. `argumentation_analysis/tools`
 
-Ce répertoire contient des scripts de support pour diverses tâches :
-- `execution/`: Scripts pour lancer des analyses. Le `README_rhetorical_analysis.md` fournit des instructions.
-- `maintenance/`: Scripts pour le nettoyage, la refactorisation, et la mise à jour du projet.
-- `validation/`: Scripts pour valider la fonctionnalité et l'intégrité du système.
+Collection d'outils utilisés par les agents ou l'orchestrateur pour des tâches d'analyse fine.
 
-## 3. Flux de Travail d'une Analyse
+- **`analysis/`**: Outils pour analyser la cohérence, la structure des arguments, et les sophismes. `rhetorical_result_analyzer.py` et `rhetorical_result_visualizer.py` sont des composants clés.
 
-1.  **Point d'Entrée**: Une analyse est généralement initiée via un script de haut niveau comme [`argumentation_analysis/demos/run_rhetorical_analysis_demo.py`](argumentation_analysis/demos/run_rhetorical_analysis_demo.py:0) ou un pipeline défini dans `pipelines/`.
-2.  **Orchestration**: L'orchestrateur principal (e.g. `MainOrchestrator`) prend le contrôle. Il configure l'environnement, initialise les agents et les services nécessaires.
-3.  **Coordination Hiérarchique**:
-    - Le **Manager Stratégique** définit les objectifs globaux de l'analyse.
-    - Le **Coordinateur Tactique** décompose les objectifs en tâches et les assigne aux managers opérationnels.
-    - Le **Manager Opérationnel** fait appel aux agents spécialisés (extraction, analyse informelle, logique) pour exécuter les tâches.
-4.  **Exécution par les Agents**: Chaque agent utilise ses outils (`tools/`) pour analyser le texte.
-5.  **Synthèse**: L'agent de synthèse collecte les résultats intermédiaires, les agrège et produit un rapport final.
-6.  **Rapport**: Le résultat final est formaté et présenté, potentiellement avec des visualisations.
+### 4. `argumentation_analysis/orchestration`
+
+Ce package est responsable de la coordination des agents pour réaliser une analyse complète.
+
+- **`analysis_runner.py`** et **`enhanced_pm_analysis_runner.py`**: Classes principales qui exécutent les pipelines d'analyse. Elles configurent l'environnement, instancient les agents et gèrent le flux de données.
+- **`hierarchical/`**: Implémente une architecture d'orchestration hiérarchique (stratégique, tactique, opérationnel).
+
+### 5. `argumentation_analysis/demos`
+
+- **`run_rhetorical_analysis_demo.py`**: Le script de démonstration central pour le système d'analyse rhétorique. Il met en œuvre plusieurs scénarios de test pour valider le pipeline d'analyse.
+
+## Interactions et Flux de Données
+
+1.  Un script de haut niveau (comme `run_rhetorical_analysis_demo.py`) initialise un `AnalysisRunner`.
+2.  Le `AnalysisRunner` charge la configuration, met en place les services nécessaires (comme la JVM via `jvm_setup`), et instancie les agents requis.
+3.  Le texte à analyser est passé au premier agent du pipeline (souvent un `ExtractAgent`).
+4.  Les agents communiquent et transmettent leurs résultats via les canaux de communication définis dans `core/communication`.
+5.  Les outils d'analyse (`tools/`) sont invoqués par les agents pour affiner les résultats.
+6.  L'orchestrateur `AnalysisRunner` collecte les résultats finaux et génère un rapport.
+
+Ce flux permet de chaîner des analyses complexes, où le résultat d'un agent sert d'entrée pour le suivant.

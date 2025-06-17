@@ -40,7 +40,7 @@ Ce projet est riche et comporte de nombreuses facettes. Pour vous aider à vous 
 | :------------------------- | :------------------------------------------ | :--------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------- |
 | **1. Démo Pédagogique EPITA** | Étudiants (première découverte)             | Un menu interactif et guidé pour explorer les concepts clés et les fonctionnalités du projet de manière ludique. | [`examples/scripts_demonstration/README.md`](examples/scripts_demonstration/README.md:0) |
 | **2. Système Sherlock & Co.** | Passionnés d'IA, logique, multi-agents    | Lancez des investigations complexes (Cluedo, Einstein) avec les agents Sherlock, Watson et Moriarty.             | [`scripts/sherlock_watson/README.md`](scripts/sherlock_watson/README.md:0)                 |
-| **3. Analyse Rhétorique**   | Développeurs IA, linguistes computationnels | Accédez au cœur du système d'analyse d'arguments, de détection de sophismes et de raisonnement formel.        | [`argumentation_analysis/README.md`](argumentation_analysis/README.md:0)                 |
+| **3. Analyse Rhétorique**   | Développeurs IA, linguistes computationnels | Accédez au cœur du système d'analyse d'arguments, de détection de sophismes et de raisonnement formel.        | **[Cartographie du Système](docs/mapping/rhetorical_analysis_map.md)** <br> **[Rapports de Test](docs/reports/rhetorical_analysis/)** <br> **[README Technique](argumentation_analysis/README.md)** |
 | **4. Application Web**      | Développeurs Web, testeurs UI               | Démarrez et interagir avec l'écosystème de microservices web (API, frontend, outils JTMS).                   | [`project_core/webapp_from_scripts/README.md`](project_core/webapp_from_scripts/README.md:0) |
 | **5. Suite de Tests**       | Développeurs, Assurance Qualité             | Exécutez les tests unitaires, d'intégration et end-to-end (Pytest & Playwright) pour valider le projet.        | [`tests/README.md`](tests/README.md:0)                                                   |
 
@@ -50,9 +50,9 @@ Ce projet est riche et comporte de nombreuses facettes. Pour vous aider à vous 
 Conçue pour une introduction en douceur, cette démo vous guide à travers les fonctionnalités principales.
 *   **Lancement recommandé (mode interactif guidé) :**
     ```bash
-    python examples/scripts_demonstration/demonstration_epita.py --interactive
+    python demos/validation_complete_epita.py --mode standard --complexity medium --synthetic
     ```
-*   Pour plus de détails et d'autres modes de lancement : **[Consultez le README de la Démo Epita](examples/scripts_demonstration/README.md)**
+*   Pour plus de détails et d'autres modes de lancement : **[Consultez le README de la Démo Epita](examples/scripts_demonstration/README.md)**. Le script `validation_complete_epita.py` est maintenant le point d'entrée recommandé pour une évaluation complète.
 
 #### **2. 🕵️ Système Sherlock, Watson & Moriarty**
 Plongez au cœur du raisonnement multi-agents avec des scénarios d'investigation.
@@ -63,10 +63,12 @@ Plongez au cœur du raisonnement multi-agents avec des scénarios d'investigatio
 *   Pour découvrir les autres workflows (Einstein, JTMS) et les options : **[Consultez le README du Système Sherlock](scripts/sherlock_watson/README.md)**
 
 #### **3. 🗣️ Analyse Rhétorique Approfondie**
-Accédez directement aux capacités d'analyse d'arguments du projet.
-*   **Exemple de lancement d'une analyse via un script Python (voir le README pour le code complet) :**
-    Ce point d'entrée est plus avancé et implique généralement d'appeler les pipelines et agents directement depuis votre propre code Python.
-*   Pour comprendre l'architecture et voir des exemples d'utilisation : **[Consultez le README de l'Analyse Rhétorique](argumentation_analysis/README.md)**
+Accédez directement aux capacités d'analyse d'arguments du projet via son script de démonstration.
+*   **Lancement de la démonstration d'analyse rhétorique :**
+    ```bash
+    python argumentation_analysis/demos/run_rhetorical_analysis_demo.py
+    ```
+*   Pour comprendre l'architecture et les résultats, consultez la **[Cartographie du Système](docs/mapping/rhetorical_analysis_map.md)** et les **[Rapports de Test](docs/reports/rhetorical_analysis/)**.
 
 #### **4. 🌐 Application et Services Web**
 Démarrez l'ensemble des microservices (API backend, frontend React, outils JTMS).

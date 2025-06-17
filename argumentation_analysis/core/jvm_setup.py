@@ -546,7 +546,7 @@ def get_jvm_options() -> List[str]:
             "-XX:+DisableExplicitGC",
             "-XX:-UsePerfData",
         ])
-        logger.info("Options JVM Windows spécifiques ajoutées.")
+        # logger.warning("Options JVM Windows spécifiques temporairement désactivées pour débogage (Access Violation).")
     
     logger.info(f"Options JVM de base définies : {options}")
     return options
@@ -649,7 +649,7 @@ def initialize_jvm(
 
         # 3. Validation : construire le classpath à partir du répertoire cible APRES provisioning
         logger.info(f"Construction du classpath depuis '{actual_lib_dir.resolve()}'...")
-        jars_classpath_list = [str(f.resolve()) for f in actual_lib_dir.glob("*.jar") if f.is_file()]
+        jars_classpath_list = [str(f.resolve()) for f in actual_lib_dir.rglob("*.jar") if f.is_file()]
         if jars_classpath_list:
              logger.info(f"  {len(jars_classpath_list)} JAR(s) trouvé(s) pour le classpath.")
         else:

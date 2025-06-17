@@ -2,7 +2,7 @@
 """
 Module de démonstration : Scénario Complet (Squelette)
 """
-from demo_utils import DemoLogger
+from .demo_utils import DemoLogger
 
 def run_demo_rapide(custom_data: str = None) -> bool:
     """Démonstration rapide, conçue pour passer la validation custom."""
