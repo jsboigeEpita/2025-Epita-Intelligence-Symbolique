@@ -50,9 +50,9 @@ Ce projet est riche et comporte de nombreuses facettes. Pour vous aider à vous 
 Conçue pour une introduction en douceur, cette démo vous guide à travers les fonctionnalités principales.
 *   **Lancement recommandé (mode interactif guidé) :**
     ```bash
-    python examples/scripts_demonstration/demonstration_epita.py --interactive
+    python demos/validation_complete_epita.py --mode standard --complexity medium --synthetic
     ```
-*   Pour plus de détails et d'autres modes de lancement : **[Consultez le README de la Démo Epita](examples/scripts_demonstration/README.md)**
+*   Pour plus de détails et d'autres modes de lancement : **[Consultez le README de la Démo Epita](examples/scripts_demonstration/README.md)**. Le script `validation_complete_epita.py` est maintenant le point d'entrée recommandé pour une évaluation complète.
 
 #### **2. 🕵️ Système Sherlock, Watson & Moriarty**
 Plongez au cœur du raisonnement multi-agents avec des scénarios d'investigation.
