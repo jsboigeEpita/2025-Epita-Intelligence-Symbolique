@@ -11,7 +11,7 @@ from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING, Coroutine
 import logging
 
 from semantic_kernel import Kernel
-from semantic_kernel.agents import Agent
+# from semantic_kernel.agents import Agent  # Supprimé car le module n'existe plus
 # Note pour le futur : BaseAgent a précédemment hérité de semantic_kernel.agents.Agent,
 # puis de semantic_kernel.agents.chat_completion.ChatCompletionAgent.
 # Cet héritage a été supprimé (voir commit e968f26d).
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     # Pour l'instant, il n'est pas explicitement typé dans les signatures de BaseAgent.
 
 
-class BaseAgent(Agent): # Suppression de l'héritage de sk.Agent (voir note ci-dessus)
+class BaseAgent(ABC): # Suppression de l'héritage de sk.Agent (voir note ci-dessus)
     """
     Classe de base abstraite pour tous les agents du système.
 
@@ -61,17 +61,12 @@ class BaseAgent(Agent): # Suppression de l'héritage de sk.Agent (voir note ci-d
             system_prompt: Le prompt système optionnel pour l'agent.
             description: La description optionnelle de l'agent.
         """
-        effective_description = description if description else (system_prompt if system_prompt else f"Agent {agent_name}")
+        self._kernel = kernel
+        self.id = agent_name
+        self.name = agent_name
+        self.instructions = system_prompt
+        self.description = description if description else (system_prompt if system_prompt else f"Agent {agent_name}")
         
-        super().__init__(
-            id=agent_name,
-            name=agent_name,
-            kernel=kernel,
-            instructions=system_prompt,
-            description=effective_description,
-            **kwargs
-        )
-
         self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{self.name}")
         self._llm_service_id = None  # Sera défini par setup_agent_components
 

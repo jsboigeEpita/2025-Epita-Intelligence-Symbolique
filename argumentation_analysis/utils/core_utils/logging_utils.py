@@ -54,7 +54,7 @@ def setup_logging(log_level_str: str = "INFO") -> None:
         level=numeric_level,
         format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
         datefmt='%H:%M:%S',
-        handlers=[logging.StreamHandler(sys.stdout)], # Assure que les logs vont vers stdout
+        handlers=[logging.StreamHandler(sys.stderr)], # Dirige les logs vers stderr
         force=True # Assure que les handlers existants sont retirés et la config appliquée.
     )
     

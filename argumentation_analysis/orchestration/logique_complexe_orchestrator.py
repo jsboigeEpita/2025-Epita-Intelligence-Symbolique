@@ -22,20 +22,20 @@ from .base import Agent, SelectionStrategy, TerminationStrategy
 
 # Tentative d'import des classes AgentGroupChat et ChatCompletionAgent depuis semantic_kernel.agents
 # Si cela échoue, le code qui les utilise devra être adapté.
-try:
-    from semantic_kernel.agents import AgentGroupChat as SKAgentGroupChat
-    from semantic_kernel.agents import ChatCompletionAgent as SKChatCompletionAgent
-    # Si l'import réussit, on pourrait les utiliser. Sinon, il faudra une autre solution.
-except ImportError:
-    # Fallback: si les imports directs échouent, on loggue un avertissement.
-    # Le code plus bas qui utilise AgentGroupChat ou ChatCompletionAgent pourrait planter
-    # ou devra être adapté pour utiliser GroupChatOrchestration ou Agent de cluedo_extended_orchestrator.
-    logging.warning("Impossible d'importer AgentGroupChat ou ChatCompletionAgent depuis semantic_kernel.agents. "
-                    "Les fonctionnalités dépendantes pourraient être affectées.")
-    # On définit des placeholders pour éviter des NameError immédiats si le code n'est pas entièrement purgé
-    # de leurs références, mais cela ne les rendra pas fonctionnels.
-    class SKAgentGroupChat: pass
-    class SKChatCompletionAgent(Agent): pass # Hérite de notre Agent de base pour un minimum de structure
+# try:
+#     from semantic_kernel.agents import AgentGroupChat as SKAgentGroupChat
+#     from semantic_kernel.agents import ChatCompletionAgent as SKChatCompletionAgent
+#     # Si l'import réussit, on pourrait les utiliser. Sinon, il faudra une autre solution.
+# except ImportError:
+#     # Fallback: si les imports directs échouent, on loggue un avertissement.
+#     # Le code plus bas qui utilise AgentGroupChat ou ChatCompletionAgent pourrait planter
+#     # ou devra être adapté pour utiliser GroupChatOrchestration ou Agent de cluedo_extended_orchestrator.
+#     logging.warning("Impossible d'importer AgentGroupChat ou ChatCompletionAgent depuis semantic_kernel.agents. "
+#                     "Les fonctionnalités dépendantes pourraient être affectées.")
+#     # On définit des placeholders pour éviter des NameError immédiats si le code n'est pas entièrement purgé
+#     # de leurs références, mais cela ne les rendra pas fonctionnels.
+#     class SKAgentGroupChat: pass
+#     class SKChatCompletionAgent(Agent): pass # Hérite de notre Agent de base pour un minimum de structure
 
 
 # Le code suivant qui instancie AgentGroupChat devra être vérifié.
