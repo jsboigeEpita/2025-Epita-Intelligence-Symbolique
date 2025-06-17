@@ -85,25 +85,27 @@ def integration_jvm(request):
     if not all([initialize_jvm, LIBS_DIR, TWEETY_VERSION]):
          pytest.skip("Dépendances (initialize_jvm, LIBS_DIR, TWEETY_VERSION) manquantes.")
 
-    # Construction du classpath de manière plus directe pour la stabilité
-    jar_path = os.path.join(LIBS_DIR, "org.tweetyproject.tweety-full-1.28-with-dependencies.jar")
-    
-    if not os.path.exists(jar_path):
-        pytest.fail(f"Fichier JAR de Tweety introuvable: {jar_path}")
+    # Construction explicite et robuste du classpath pour la JVM
+    logger.info(f"Construction du classpath à partir du répertoire configuré : {LIBS_DIR.resolve()}")
+    if not LIBS_DIR or not LIBS_DIR.is_dir():
+        pytest.fail(f"Le répertoire des bibliothèques ({LIBS_DIR}) est manquant ou invalide.", pytrace=False)
 
-    logger.info(f"Tentative d'initialisation de la JVM avec classpath: {jar_path}")
+    all_jars = [str(p.resolve()) for p in LIBS_DIR.glob("*.jar")]
+    if not all_jars:
+        # Échec si aucun JAR n'est trouvé, car le classpath sera vide.
+        pytest.fail(f"Aucun fichier .jar trouvé dans {LIBS_DIR}. Le test ne peut pas continuer.", pytrace=False)
 
-    # Démarrage de la JVM. `initialize_jvm` gère l'appel à jpype.startJVM
+    classpath_str = os.pathsep.join(all_jars)
+    logger.info(f"Classpath construit avec {len(all_jars)} JARs. Longueur: {len(classpath_str)} caractères.")
+    logger.debug(f"Classpath final: {classpath_str}")
+
+    # Démarrage de la JVM. `initialize_jvm` gère l'appel à jpype.startJVM.
     try:
         # *** BLOC CRITIQUE ***
-        # C'est ici que l'Access Violation se produit.
-        # On logue juste avant et juste après l'appel à initialize_jvm.
-        logger.info("APPEL imminent à initialize_jvm (donc à jpype.startJVM)...")
-        success = initialize_jvm(
-            lib_dir_path=str(LIBS_DIR),
-            classpath=jar_path
-        )
-        logger.info("RETOUR de initialize_jvm. Si vous voyez ce message, le crash n'a pas eu lieu.")
+        # L'appel est maintenant corrigé pour passer le classpath construit explicitement.
+        logger.info("APPEL imminent à initialize_jvm avec classpath explicite...")
+        success = initialize_jvm(classpath=classpath_str)
+        logger.info("RETOUR de initialize_jvm. Si le crash n'a pas eu lieu, le classpath a été accepté.")
         if not success:
             pytest.fail("La fonction initialize_jvm() a renvoyé False, échec du démarrage de la JVM.")
     except Exception as e:

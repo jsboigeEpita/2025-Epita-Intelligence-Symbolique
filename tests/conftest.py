@@ -1,3 +1,31 @@
+# -*- coding: utf-8 -*-
+"""
+Fichier de configuration racine pour les tests pytest, s'applique à l'ensemble du projet.
+
+Ce fichier est exécuté avant tous les tests et est l'endroit idéal pour :
+1. Charger les fixtures globales (portée "session").
+2. Configurer l'environnement de test (ex: logging).
+3. Définir des hooks pytest personnalisés.
+4. Effectuer des imports critiques qui doivent avoir lieu avant tout autre code.
+"""
+
+# --- Step 1: Résolution du Conflit de Librairies Natives (torch vs jpype) ---
+# Un crash "Fatal Python error: Aborted" ou "access violation" peut se produire
+# lors du démarrage de la JVM, avec une trace d'appel impliquant `torch_python.dll`.
+# Ceci indique un conflit entre les librairies C de JPype et de PyTorch.
+# L'import de `torch` au tout début, avant tout autre import (surtout jpype),
+# force son initialisation et semble résoudre ce conflit.
+try:
+    import torch
+except ImportError:
+    # Si torch n'est pas installé, nous ne pouvons rien faire mais nous ne voulons pas
+    # que les tests plantent à cause de ça si l'environnement d'un utilisateur
+    # ne l'inclut pas. Les tests dépendant de la JVM risquent de planter plus tard.
+    pass
+
+import pytest
+import os
+import sys
 import sys
 import os
 from pathlib import Path

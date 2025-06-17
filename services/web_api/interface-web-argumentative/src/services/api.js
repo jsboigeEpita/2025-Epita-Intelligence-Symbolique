@@ -1,7 +1,7 @@
 // L'application étant servie par le même backend que l'API, nous pouvons utiliser des chemins relatifs.
 // Cela supprime la dépendance à la variable d'environnement REACT_APP_API_URL au moment du build,
 // ce qui est crucial pour les tests E2E où l'URL du backend est dynamique.
-const API_BASE_URL = process.env.REACT_APP_API_URL;
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
 // Configuration par défaut pour les requêtes
 const defaultHeaders = {
