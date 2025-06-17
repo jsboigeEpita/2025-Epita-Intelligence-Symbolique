@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Interface Web pour l'Analyse Argumentative EPITA
-===============================================
+Interface Web pour l'Analyse Argumentative EPITA (Version Starlette)
+=====================================================================
 
-Application Flask pour l'interface web du système d'analyse argumentative.
+Application Starlette pure pour l'interface web du système d'analyse argumentative.
 Fournit une interface utilisateur pour soumettre des textes et visualiser les résultats d'analyse.
+Cette version élimine Flask pour une pile ASGI native plus simple et robuste.
 
-Version: 1.0.0
+Version: 2.0.0
 Auteur: Intelligence Symbolique EPITA
-Date: 09/06/2025
+Date: 16/06/2025
 """
 
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 import asyncio
 import json
 import logging
@@ -20,50 +20,34 @@ import uuid
 import argparse
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 
-# Importations nécessaires pour le lifespan et Starlette
+# --- Imports ASGI/Starlette ---
 from contextlib import asynccontextmanager
 from starlette.applications import Starlette
-from a2wsgi import ASGIMiddleware
-from contextlib import asynccontextmanager # Ajout pour le lifespan manager
+from starlette.responses import JSONResponse, HTMLResponse
+from starlette.requests import Request
+from starlette.staticfiles import StaticFiles
+from starlette.routing import Mount, Route
+from starlette.middleware import Middleware
+from starlette.middleware.cors import CORSMiddleware
 
-# Activation automatique de l'environnement
+# --- Activation de l'environnement et imports du projet ---
 try:
     from scripts.core.auto_env import ensure_env
     ensure_env()
 except ImportError:
     try:
-        # Fallback: Chemin alternatif pour auto_env
         import sys
-        from pathlib import Path
         project_root = Path(__file__).resolve().parent.parent
         if str(project_root) not in sys.path:
             sys.path.insert(0, str(project_root))
         from scripts.core.auto_env import ensure_env
         ensure_env()
     except ImportError:
-        # Dernier fallback: continuer sans auto_env
         print("[WARNING] Auto-env non disponible, environnement non activé automatiquement")
 
-# Import du blueprint JTMS avec gestion d'erreur
-JTMS_AVAILABLE = False
-jtms_blueprint = None
-try:
-    from interface_web.routes.jtms_routes import jtms_bp as jtms_blueprint
-    JTMS_AVAILABLE = True
-    logging.info("Blueprint JTMS importé avec succès")
-except ImportError as e:
-    logging.warning(f"Blueprint JTMS non disponible: {e}")
-except Exception as e:
-    logging.error(f"Erreur lors de l'import du blueprint JTMS: {e}")
-
-# Configuration des chemins
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DATA_DIR = PROJECT_ROOT / "data"
-RESULTS_DIR = PROJECT_ROOT / "results"
-
-# Import du ServiceManager avec gestion d'erreur améliorée
+# --- Imports des services de l'application ---
 ServiceManager = None
 SERVICE_MANAGER_AVAILABLE = False
 try:
@@ -72,358 +56,286 @@ try:
     logging.info("ServiceManager importé avec succès")
 except ImportError as e:
     logging.error(f"ServiceManager non disponible: {e}")
+    # Cette dépendance est critique, on lève une exception si elle manque.
     raise ImportError(f"ServiceManager requis mais non disponible: {e}")
-except Exception as e:
-    logging.error(f"Erreur lors de l'import du ServiceManager: {e}")
-    raise ImportError(f"ServiceManager requis mais erreur d'import: {e}")
 
-# Configuration de l'application Flask
-app_flask = Flask(__name__)
-app_flask.secret_key = os.environ.get('SECRET_KEY', 'dev-key-EPITA-2025')
-app_flask.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
+# Importation du gestionnaire de modèles NLP
+try:
+    from argumentation_analysis.agents.tools.analysis.enhanced.nlp_model_manager import nlp_model_manager
+    NLP_MODELS_AVAILABLE = True
+    logging.info("NLPModelManager importé avec succès.")
+except ImportError as e:
+    logging.warning(f"NLPModelManager non disponible: {e}")
+    nlp_model_manager = None
+    NLP_MODELS_AVAILABLE = False
 
-# Configuration CORS simple sans dépendance externe
-@app_flask.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    return response
 
-# Configuration du logging
+# --- Configuration du Logging ---
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] [WebApp] %(message)s',
+    format='%(asctime)s [%(levelname)s] [StarletteApp] %(message)s',
     datefmt='%H:%M:%S'
 )
 logger = logging.getLogger(__name__)
 
-# Instance globale du ServiceManager
-service_manager = None
+# --- Configuration des chemins ---
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+STATIC_FILES_DIR = PROJECT_ROOT / "services" / "web_api" / "interface-web-argumentative" / "build"
+RESULTS_DIR = PROJECT_ROOT / "results"
 
-# Services JTMS globaux
-jtms_service = None
-jtms_session_manager = None
-JTMS_SERVICES_AVAILABLE = False
-
-
-async def initialize_services():
-    """Initialise les services de manière asynchrone."""
-    global service_manager, jtms_service, jtms_session_manager, JTMS_SERVICES_AVAILABLE
-    
-    try:
-        logger.info("Début de l'initialisation du ServiceManager...")
-        service_manager = ServiceManager(config={
-            'enable_hierarchical': True,
-            'enable_specialized_orchestrators': True,
-            'enable_communication_middleware': True,
-            'save_results': True,
-            'results_dir': str(RESULTS_DIR)
-        })
-        
-        await service_manager.initialize()
-        logger.info("ServiceManager configuré et initialisé")
-        
-        # Initialisation des services JTMS (optionnel)
-        # Ceci reste synchrone pour l'instant
-        try:
-            from argumentation_analysis.services.jtms_service import JTMSService
-            from argumentation_analysis.services.jtms_session_manager import JTMSSessionManager
-            
-            jtms_service = JTMSService()
-            jtms_session_manager = JTMSSessionManager(jtms_service=jtms_service)
-            JTMS_SERVICES_AVAILABLE = True
-            logger.info("Services JTMS initialisés avec succès")
-        except ImportError as e:
-            logger.warning(f"Services JTMS non disponibles: {e}")
-            JTMS_SERVICES_AVAILABLE = False
-            
-    except Exception as e:
-        logger.error(f"Erreur critique lors de l'initialisation asynchrone des services: {e}", exc_info=True)
-        raise RuntimeError(f"Impossible d'initialiser le ServiceManager: {e}")
-
-def setup_app_context():
-    """Configure le contexte de l'application Flask."""
-    if JTMS_SERVICES_AVAILABLE and jtms_blueprint:
-        app_flask.config['JTMS_SERVICE'] = jtms_service
-        app_flask.config['JTMS_SESSION_MANAGER'] = jtms_session_manager
-        app_flask.config['JTMS_AVAILABLE'] = True
-        app_flask.register_blueprint(jtms_blueprint, url_prefix='/jtms')
-        logger.info("Blueprint JTMS enregistré avec succès sur /jtms")
-    else:
-        app_flask.config['JTMS_AVAILABLE'] = False
-        logger.warning("Services JTMS non disponibles - Blueprint non enregistré")
-
-
-@app_flask.route('/')
-def index():
-    """Page d'accueil de l'interface web."""
-    # Vérifier la disponibilité des services pour l'affichage
-    context = {
-        'jtms_available': JTMS_SERVICES_AVAILABLE,
-        'timestamp': datetime.now().isoformat()
-    }
-    return render_template('index.html', **context)
-
-
-@app_flask.route('/analyze', methods=['POST'])
-async def analyze():
-    """
-    Route pour l'analyse de texte.
-    
-    Reçoit un texte via POST et retourne les résultats d'analyse.
-    """
-    try:
-        # Récupération des données
-        data = request.get_json()
-        if not data:
-            return jsonify({'error': 'Aucune donnée reçue'}), 400
-            
-        text = data.get('text', '').strip()
-        analysis_type = data.get('analysis_type', 'comprehensive')
-        options = data.get('options', {})
-        
-        if not text:
-            return jsonify({'error': 'Texte vide fourni'}), 400
-            
-        if len(text) > 10000:  # Limite de 10k caractères
-            return jsonify({'error': 'Texte trop long (max 10000 caractères)'}), 400
-            
-        # Génération d'un ID d'analyse
-        analysis_id = str(uuid.uuid4())[:8]
-        start_time = datetime.now()
-        
-        logger.info(f"Analyse {analysis_id} démarrée - Type: {analysis_type}")
-        
-        # Analyse avec ServiceManager - OBLIGATOIRE
-        try:
-            # Appel asynchrone direct car nous sommes dans un contexte async géré par la route
-            result = await service_manager.analyze_text(text, analysis_type, options)
-            end_time = datetime.now()
-            duration = (end_time - start_time).total_seconds()
-            
-            # Formatage des résultats pour l'interface web
-            formatted_result = {
-                'analysis_id': analysis_id,
-                'status': 'success',
-                'timestamp': start_time.isoformat(),
-                'input': {
-                    'text': text[:200] + '...' if len(text) > 200 else text,
-                    'text_length': len(text),
-                    'analysis_type': analysis_type
-                },
-                'results': result.get('results', {}),
-                'metadata': {
-                    'duration': duration,
-                    'service_status': 'active',
-                    'components_used': _extract_components_used(result),
-                    'real_llm_used': True
-                },
-                'summary': _generate_analysis_summary(result, text)
-            }
-            
-            logger.info(f"Analyse {analysis_id} terminée avec succès - Durée: {duration:.2f}s")
-            return jsonify(formatted_result)
-            
-        except Exception as e:
-            logger.error(f"Erreur critique dans l'analyse {analysis_id}: {e}")
-            return jsonify({
-                'analysis_id': analysis_id,
-                'status': 'error',
-                'error': f"Erreur ServiceManager: {str(e)}",
-                'timestamp': start_time.isoformat()
-            }), 500
-            
-    except Exception as e:
-        logger.error(f"Erreur inattendue dans /analyze: {e}")
-        return jsonify({'error': 'Erreur interne du serveur'}), 500
-
-
-@app_flask.route('/status')
-def status():
-    """
-    Route pour vérifier le statut des services.
-    
-    Retourne l'état de santé des composants du système.
-    """
-    try:
-        status_info = {
-            'status': 'operational' if service_manager else 'degraded',
-            'timestamp': datetime.now().isoformat(),
-            'services': {
-                'service_manager': 'active' if service_manager else 'unavailable',
-                'jtms_service': 'active' if JTMS_SERVICES_AVAILABLE else 'unavailable',
-                'jtms_blueprint': 'registered' if JTMS_AVAILABLE else 'unavailable'
-            },
-            'webapp': {
-                'version': '1.0.0',
-                'mode': 'full' if service_manager and JTMS_SERVICES_AVAILABLE else 'partial'
-            }
-        }
-        
-        if service_manager:
-            # Simplification synchrone pour les tests
-            health_status = {'status': 'healthy'}
-            service_status = {'components': ['ServiceManager']}
-            
-            status_info['services']['health_check'] = health_status
-            status_info['services']['service_details'] = service_status
-            
-        logger.info(f"Returning status: {json.dumps(status_info)}")
-        return jsonify(status_info)
-            
-    except Exception as e:
-        logger.error(f"Erreur lors de la vérification du statut: {e}")
-        return jsonify({
-            'status': 'error',
-            'error': str(e),
-            'timestamp': datetime.now().isoformat()
-        }), 500
-
-
-@app_flask.route('/api/examples')
-def get_examples():
-    """
-    Route pour obtenir des exemples de textes d'analyse.
-    
-    Retourne une liste d'exemples prédéfinis pour faciliter les tests.
-    """
-    examples = [
-        {
-            'title': 'Logique Propositionnelle',
-            'text': 'Si il pleut, alors la route est mouillée. Il pleut. Donc la route est mouillée.',
-            'type': 'propositional'
-        },
-        {
-            'title': 'Logique Modale',
-            'text': 'Il est nécessaire que tous les hommes soient mortels. Socrate est un homme. Il est donc nécessaire que Socrate soit mortel.',
-            'type': 'modal'
-        },
-        {
-            'title': 'Argumentation Complexe',
-            'text': 'L\'intelligence artificielle représente à la fois une opportunité et un défi. D\'un côté, elle peut révolutionner la médecine et l\'éducation. De l\'autre, elle pose des questions éthiques fondamentales sur l\'emploi et la vie privée.',
-            'type': 'comprehensive'
-        },
-        {
-            'title': 'Paradoxe Logique',
-            'text': 'Cette phrase est fausse. Si elle est vraie, alors elle est fausse. Si elle est fausse, alors elle est vraie.',
-            'type': 'paradox'
-        }
-    ]
-    
-    return jsonify({'examples': examples})
-
-
-def _extract_components_used(result: Dict[str, Any]) -> List[str]:
-    """Extrait la liste des composants utilisés lors de l'analyse."""
-    components = []
-    
-    if 'results' in result:
-        results = result['results']
-        
-        if 'specialized' in results:
-            components.append('Orchestrateur Spécialisé')
-            
-        if 'hierarchical' in results:
-            hierarchical = results['hierarchical']
-            if 'strategic' in hierarchical:
-                components.append('Gestionnaire Stratégique')
-            if 'tactical' in hierarchical:
-                components.append('Gestionnaire Tactique')
-            if 'operational' in hierarchical:
-                components.append('Gestionnaire Opérationnel')
-                
-    return components if components else ['Analyse Basique']
-
-
-def _generate_analysis_summary(result: Dict[str, Any], text: str) -> Dict[str, Any]:
-    """Génère un résumé de l'analyse pour l'interface utilisateur."""
-    word_count = len(text.split())
-    sentence_count = text.count('.') + text.count('!') + text.count('?')
-    
-    # Analyse basique de mots-clés logiques
-    logic_keywords = ['si', 'alors', 'donc', 'tous', 'nécessairement', 'possible', 'probable']
-    logic_score = sum(1 for keyword in logic_keywords if keyword.lower() in text.lower())
-    
-    return {
-        'text_metrics': {
-            'word_count': word_count,
-            'sentence_count': sentence_count,
-            'character_count': len(text)
-        },
-        'analysis_metrics': {
-            'logic_keywords_found': logic_score,
-            'complexity_level': 'élevée' if word_count > 100 else 'moyenne' if word_count > 50 else 'simple'
-        },
-        'components_summary': _extract_components_used(result),
-        'processing_time': result.get('duration', 0)
-    }
-
-
-# Fonction _fallback_analysis supprimée - Pas de fallback autorisé
-# L'application doit crasher si l'environnement n'est pas opérationnel
-
-
-@app_flask.errorhandler(404)
-def page_not_found(e):
-    """Gestionnaire d'erreur 404."""
-    return render_template('index.html'), 404
-
-
-@app_flask.errorhandler(500)
-def internal_server_error(e):
-    """Gestionnaire d'erreur 500."""
-    logger.error(f"Erreur interne: {e}")
-    return jsonify({'error': 'Erreur interne du serveur'}), 500
-
-
-# --- Lifespan Management for ASGI ---
+# ==============================================================================
+# CYCLE DE VIE DE L'APPLICATION (LIFESPAN)
+# ==============================================================================
 
 @asynccontextmanager
-async def lifespan(app_instance: Flask):
+async def lifespan(app: Starlette):
     """
-    Gestionnaire de cycle de vie (lifespan) pour l'application ASGI.
-    Initialise les services au démarrage et les nettoie à l'arrêt.
+    Gestionnaire de cycle de vie. S'exécute au démarrage et à l'arrêt de l'application.
+    C'est ici qu'on initialise et qu'on nettoie les ressources partagées comme le ServiceManager.
     """
     logger.info("LIFESPAN: Démarrage de l'application...")
-    # Initialisation des services asynchrones
-    await initialize_services()
-    # Configuration du contexte de l'application (routes, etc.)
-    setup_app_context()
+    
+    # 1. Initialiser les conteneurs d'état
+    app.state.service_manager = None
+    app.state.nlp_model_manager = None
+
+    # 2. Créer les instances des gestionnaires
+    logger.info("Création des instances de ServiceManager et NLPModelManager.")
+    service_manager_instance = ServiceManager(config={
+        'enable_hierarchical': True,
+        'enable_specialized_orchestrators': True,
+        'enable_communication_middleware': True,
+        'save_results': True,
+        'results_dir': str(RESULTS_DIR)
+    })
+    app.state.service_manager = service_manager_instance
+
+    if NLP_MODELS_AVAILABLE:
+        app.state.nlp_model_manager = nlp_model_manager
+    else:
+        logger.warning("NLPModelManager non initialisé car non disponible.")
+
+    # 3. Lancer les initialisations asynchrones en parallèle
+    logger.info("Démarrage des initialisations asynchrones (ServiceManager et NLP Models)...")
+    init_tasks = []
+    
+    # Tâche pour initialiser le ServiceManager
+    async def init_service_manager():
+        try:
+            await service_manager_instance.initialize()
+            logger.info("ServiceManager initialisé avec succès.")
+        except Exception as e:
+            logger.error(f"Erreur critique lors de l'initialisation du ServiceManager: {e}", exc_info=True)
+            app.state.service_manager = None # Marquer comme non disponible
+            logger.warning("ServiceManager marqué comme indisponible.")
+            
+    init_tasks.append(init_service_manager())
+
+    # Tâche pour charger les modèles NLP
+    if app.state.nlp_model_manager:
+        # Exécuter la méthode de chargement synchrone dans un thread pour ne pas bloquer la boucle asyncio
+        loop = asyncio.get_running_loop()
+        init_tasks.append(loop.run_in_executor(
+            None, app.state.nlp_model_manager.load_models_sync
+        ))
+
+    # Exécuter les tâches en parallèle
+    await asyncio.gather(*init_tasks)
+
     logger.info("LIFESPAN: Initialisation terminée, l'application est prête.")
     
-    yield # L'application s'exécute ici
+    yield  # L'application s'exécute ici
     
     logger.info("LIFESPAN: Arrêt de l'application...")
-    if service_manager:
-        # Potentielle logique de nettoyage (si nécessaire)
-        # await service_manager.cleanup()
+    if hasattr(app.state, 'service_manager') and app.state.service_manager:
+        # Logique de nettoyage si nécessaire (ex: await app.state.service_manager.cleanup())
         pass
     logger.info("LIFESPAN: Nettoyage terminé.")
 
-# Enveloppement de l'application Flask avec le middleware ASGI et le lifespan
-# On passe `app_flask` à ASGIMiddleware, et on utilise ce dernier pour créer l'app finale avec le lifespan.
-asgi_app = ASGIMiddleware(app_flask)
-app = Starlette(routes=getattr(asgi_app, 'routes', []), lifespan=lifespan)
-# Correction pour la compatibilité Starlette: Starlette attend des routes.
-# a2wsgi ne fournit pas directement `.routes`, mais nous pouvons reconstruire le montage.
-if not hasattr(asgi_app, 'routes'):
-    from starlette.routing import Mount
-    app = Starlette(routes=[Mount('/', app=asgi_app)], lifespan=lifespan)
+
+# ==============================================================================
+# DÉFINITION DES ROUTES DE L'API
+# ==============================================================================
+
+async def homepage(request: Request):
+    """Sert la page d'accueil (index.html)."""
+    index_path = os.path.join(STATIC_FILES_DIR, 'index.html')
+    if os.path.exists(index_path):
+        with open(index_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return HTMLResponse(content)
+    return JSONResponse({'error': 'Fichier index.html non trouvé'}, status_code=404)
+
+async def status_endpoint(request: Request):
+    """Route pour vérifier le statut des services."""
+    service_manager = getattr(request.app.state, 'service_manager', None)
+    nlp_manager = getattr(request.app.state, 'nlp_model_manager', None)
+
+    sm_status = 'active' if service_manager else 'unavailable'
     
+    nlp_status = 'unavailable'
+    if nlp_manager:
+        nlp_status = 'loaded' if nlp_manager.are_models_loaded() else 'initializing'
+
+    # Le statut global est 'initializing' si un service majeur est en cours de chargement
+    app_status = 'operational'
+    if sm_status != 'active' or nlp_status == 'initializing':
+        app_status = 'initializing'
+    if sm_status == 'unavailable' and nlp_status != 'initializing':
+        app_status = 'degraded'
+
+
+    status_info = {
+        'status': app_status,
+        'timestamp': datetime.now().isoformat(),
+        'services': {
+            'service_manager': sm_status,
+            'nlp_models': nlp_status,
+        },
+        'webapp': {
+            'version': '2.0.0',
+            'framework': 'Starlette'
+        }
+    }
+    return JSONResponse(status_info)
+
+async def analyze_endpoint(request: Request):
+    """Route pour l'analyse de texte."""
+    service_manager = request.app.state.service_manager
+    if not service_manager:
+        return JSONResponse({'error': 'Le service d\'analyse est indisponible.'}, status_code=503)
+
+    try:
+        data = await request.json()
+        text = data.get('text', '').strip()
+        analysis_type = data.get('analysis_type', 'unified_analysis')
+        options = data.get('options', {})
+
+        if not text:
+            return JSONResponse({'error': 'Texte vide fourni'}, status_code=400)
+        
+        if len(text) > 10000:
+             return JSONResponse({'error': 'Texte trop long (max 10000 caractères)'}, status_code=400)
+
+        analysis_id = str(uuid.uuid4())[:8]
+        start_time = datetime.now()
+        logger.info(f"Analyse {analysis_id} démarrée - Type: {analysis_type}")
+
+        # Ajout d'un timeout pour éviter que le serveur ne gèle indéfiniment
+        # si le service d'analyse est bloqué.
+        timeout_seconds = 25.0
+        try:
+            result_data = await asyncio.wait_for(
+                service_manager.analyze_text(text, analysis_type, options),
+                timeout=timeout_seconds
+            )
+        except asyncio.TimeoutError:
+            logger.error(f"L'analyse {analysis_id} a dépassé le timeout de {timeout_seconds}s.")
+            return JSONResponse({
+                'error': f'L\'analyse a dépassé le temps imparti de {timeout_seconds} secondes.'
+            }, status_code=504) # 504 Gateway Timeout
+        
+        end_time = datetime.now()
+        duration = (end_time - start_time).total_seconds()
+        
+        # Le formatage des résultats reste le même
+        formatted_result = {
+            'analysis_id': analysis_id,
+            'status': 'success',
+            'timestamp': start_time.isoformat(),
+            'results': result_data.get('results', {}),
+            'metadata': {
+                'duration': duration,
+            }
+        }
+        logger.info(f"Analyse {analysis_id} terminée avec succès - Durée: {duration:.2f}s")
+        return JSONResponse(formatted_result)
+
+    except json.JSONDecodeError:
+        return JSONResponse({'error': 'Corps de la requête JSON invalide'}, status_code=400)
+    except Exception as e:
+        logger.error(f"Erreur inattendue dans /api/analyze: {e}", exc_info=True)
+        return JSONResponse({'error': f'Erreur interne du serveur: {e}'}, status_code=500)
+
+async def examples_endpoint(request: Request):
+    """Route pour obtenir des exemples de textes d'analyse."""
+    examples = [
+        {'title': 'Logique Propositionnelle', 'text': 'Si il pleut, alors la route est mouillée. Il pleut. Donc la route est mouillée.', 'type': 'propositional'},
+        {'title': 'Argumentation Complexe', 'text': 'L\'IA est une opportunité et un défi. Elle peut révolutionner la médecine, mais pose des questions éthiques.', 'type': 'unified_analysis'},
+    ]
+    return JSONResponse({'examples': examples})
+
+async def framework_analyze_endpoint(request: Request):
+    """Route pour l'analyse d'un A.F. de Dung."""
+    service_manager = request.app.state.service_manager
+    if not service_manager:
+        return JSONResponse({'error': 'Le service d\'analyse est indisponible.'}, status_code=503)
+
+    try:
+        data = await request.json()
+        arguments = data.get("arguments")
+        attacks = data.get("attacks")
+        options = data.get("options", {})
+
+        if not arguments or not isinstance(arguments, list) or not isinstance(attacks, list):
+            return JSONResponse({'error': 'Les arguments et les attaques sont requis et doivent être des listes.'}, status_code=400)
+
+        # Appel direct de la méthode du service manager.
+        # Si la méthode n'existe pas, une AttributeError sera levée, ce qui est correct.
+        result_data = await service_manager.analyze_dung_framework(arguments=arguments, attacks=attacks, options=options)
+        
+        return JSONResponse(result_data)
+
+    except json.JSONDecodeError:
+        return JSONResponse({'error': 'Corps de la requête JSON invalide'}, status_code=400)
+    except AttributeError as e:
+        logger.error(f"La méthode requise est manquante dans le ServiceManager: {e}", exc_info=True)
+        return JSONResponse({'error': f'Fonctionnalité non implémentée sur le serveur: {e}'}, status_code=501)
+    except Exception as e:
+        logger.error(f"Erreur inattendue dans /api/v1/framework/analyze: {e}", exc_info=True)
+        return JSONResponse({'error': f'Erreur interne du serveur: {e}'}, status_code=500)
+
+# ==============================================================================
+# CONFIGURATION DE L'APPLICATION STARLETTE
+# ==============================================================================
+
+# --- Définition des Routes ---
+# On combine les routes de l'API et le service des fichiers statiques.
+routes = [
+    Route('/', endpoint=homepage, methods=['GET']),
+    Route('/api/status', endpoint=status_endpoint, methods=['GET']),
+    Route('/api/analyze', endpoint=analyze_endpoint, methods=['POST']),
+    Route('/api/examples', endpoint=examples_endpoint, methods=['GET']),
+    Route('/api/v1/framework/analyze', endpoint=framework_analyze_endpoint, methods=['POST']),
+    # Le Mount pour les fichiers statiques doit venir après les routes spécifiques
+    # pour que '/' soit géré par homepage et non par StaticFiles directement.
+    Mount('/', app=StaticFiles(directory=str(STATIC_FILES_DIR), html=False), name="static_assets")
+]
+
+# --- Middlewares ---
+# Configuration de CORS pour autoriser les requêtes cross-origin (utile pour les tests et le dev local)
+middleware = [
+    Middleware(CORSMiddleware, allow_origins=['*'], allow_methods=['*'], allow_headers=['*'])
+]
+
+# --- Création de l'Application ---
+app = Starlette(
+    debug=True, 
+    routes=routes,
+    middleware=middleware,
+    lifespan=lifespan
+)
+
+# ==============================================================================
+# POINT D'ENTRÉE POUR LE DÉMARRAGE DIRECT
+# ==============================================================================
 
 if __name__ == '__main__':
-    # Cette section permet de lancer le serveur en mode développement avec Uvicorn
-    # directement depuis ce script, ce qui est pratique pour le débogage.
-    # Dans un environnement de production ou de test automatisé, un serveur Gunicorn ou Uvicorn
-    # serait lancé en pointant vers 'interface_web.app:app'.
     import uvicorn
     
-    parser = argparse.ArgumentParser(description="Lance le serveur web Flask via Uvicorn.")
-    parser.add_argument('--port', type=int, default=int(os.environ.get('PORT', 5003)),
-                        help='Port pour exécuter le serveur.')
-    parser.add_argument('--host', type=str, default='127.0.0.1',
-                        help='Hôte sur lequel écouter.')
+    parser = argparse.ArgumentParser(description="Lance le serveur web Starlette.")
+    parser.add_argument('--port', type=int, default=int(os.environ.get('PORT', 5003)), help='Port pour exécuter le serveur.')
+    parser.add_argument('--host', type=str, default='127.0.0.1', help='Hôte sur lequel écouter.')
     args = parser.parse_args()
 
     logger.info(f"Démarrage du serveur Uvicorn sur http://{args.host}:{args.port}")
@@ -433,5 +345,5 @@ if __name__ == '__main__':
         host=args.host,
         port=args.port,
         log_level="info",
-        reload=True  # Activer le rechargement automatique pour le développement
+        reload=True
     )

@@ -10,21 +10,18 @@ from playwright.sync_api import Page, expect
 
 # The 'webapp_service' session fixture in conftest.py is autouse=True,
 # so the web server is started automatically for all tests in this module.
-# The base_url for Playwright is also configured in conftest.py.
-
-
 # Timeouts étendus pour les workflows d'intégration
 WORKFLOW_TIMEOUT = 30000  # 30s pour workflows complets
 TAB_TRANSITION_TIMEOUT = 15000  # 15s pour transitions d'onglets
 STRESS_TEST_TIMEOUT = 20000  # 20s pour tests de performance (optimisé)
 
 @pytest.fixture(scope="function")
-def app_page(page: Page) -> Page:
+def app_page(page: Page, webapp_service: str) -> Page:
     """
     Fixture de base pour les tests d'intégration.
     Navigue vers la racine et attend que l'API soit connectée.
     """
-    page.goto("/")
+    page.goto(webapp_service)
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=WORKFLOW_TIMEOUT)
     return page
 

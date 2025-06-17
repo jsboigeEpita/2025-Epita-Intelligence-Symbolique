@@ -3,6 +3,11 @@
 Test de configuration Playwright - Vérification du système
 """
 
+import pytest
+
+# On skip ce fichier de test car il s'agit d'un script de diagnostic
+# qui n'est pas un test e2e réel et cause des problèmes avec le runner asyncio.
+pytestmark = pytest.mark.skip(reason="Désactivé: script de diagnostic, pas un test e2e.")
 import sys
 import importlib.util
 import importlib.metadata

@@ -17,7 +17,7 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 # Maintenant que le path est configuré, on peut importer les modules du projet.
-import project_core.core_from_scripts.auto_env
+from argumentation_analysis.core.bootstrap import initialize_project_environment
 import subprocess
 import logging
 
@@ -43,6 +43,67 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger("WebE2EPipeline")
+
+
+def build_frontend():
+    """
+    Construit l'application frontend React.
+    Cette fonction s'assure que les dépendances Node.js sont installées et
+    que le build de production est généré.
+    """
+    frontend_dir = project_root / "services" / "web_api" / "interface-web-argumentative"
+    logger.info(f"Début du build du frontend dans : {frontend_dir}")
+
+    if not frontend_dir.exists():
+        logger.error(f"Le répertoire du frontend n'a pas été trouvé à l'emplacement attendu.")
+        return False
+
+    try:
+        # Étape 1: Installer les dépendances npm
+        logger.info("Exécution de 'npm install'...")
+        install_process = subprocess.run(
+            ["npm", "install"],
+            cwd=str(frontend_dir),
+            capture_output=True,
+            text=True,
+            shell=True  # Requis pour trouver npm sous Windows
+        )
+        if install_process.returncode != 0:
+            logger.error("Échec de 'npm install'.")
+            logger.error(install_process.stderr)
+            return False
+        logger.info("'npm install' terminé avec succès.")
+
+        # Étape 2: Construire l'application React
+        logger.info("Exécution de 'npm run build'...")
+        build_process = subprocess.run(
+            ["npm", "run", "build"],
+            cwd=str(frontend_dir),
+            capture_output=True,
+            text=True,
+            shell=True
+        )
+        if build_process.returncode != 0:
+            logger.error("Échec de 'npm run build'.")
+            logger.error(build_process.stderr)
+            return False
+        logger.info("'npm run build' terminé avec succès.")
+        
+        # Vérifier si le répertoire de build a été créé
+        build_dir = frontend_dir / "build"
+        if not build_dir.exists():
+            logger.error("Le répertoire 'build' n'a pas été créé après le build.")
+            return False
+
+        logger.info("Build du frontend terminé avec succès.")
+        return True
+
+    except FileNotFoundError:
+        logger.error("La commande 'npm' est introuvable. Assurez-vous que Node.js est installé et dans le PATH.")
+        return False
+    except Exception as e:
+        logger.error(f"Une erreur inattendue est survenue lors du build du frontend: {e}", exc_info=True)
+        return False
 
 
 def run_pytest_tests():
@@ -95,6 +156,23 @@ def run_pytest_tests():
 
 if __name__ == "__main__":
     logger.info("Démarrage du pipeline de tests E2E Web...")
+    
+    # --- Étape 1: Construire le frontend ---
+    logger.info("Étape 1: Démarrage du build de l'application frontend React...")
+    frontend_built = build_frontend()
+    if not frontend_built:
+        logger.error("Le build du frontend a échoué. Arrêt du pipeline.")
+        sys.exit(1)
+    
+    # --- Étape 2: Initialisation de l'environnement Python ---
+    logger.info("Étape 2: Initialisation de l'environnement du projet avant de lancer les tests...")
+    env_initialized = initialize_project_environment()
+    if not env_initialized:
+        logger.error("Échec de l'initialisation de l'environnement. Le pipeline est arrêté.")
+        sys.exit(1)
+    
+    # --- Étape 3: Lancement des tests ---
+    logger.info("Étape 3: Environnement initialisé. Lancement des tests pytest.")
     success = run_pytest_tests()
     
     if success:

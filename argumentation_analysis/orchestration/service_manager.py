@@ -358,8 +358,8 @@ class OrchestrationServiceManager:
             raise Exception(f"Impossible d'initialiser les orchestrateurs: {e}")
             
     async def analyze_text(self, 
-                          text: str, 
-                          analysis_type: str = "comprehensive",
+                          text: str,
+                          analysis_type: str = "unified_analysis",
                           options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Lance une analyse de texte en utilisant les services appropriés.
@@ -401,7 +401,7 @@ class OrchestrationServiceManager:
             if orchestrator:
                 # Analyse avec orchestrateur spécialisé
                 orchestrator_results = await self._run_specialized_analysis(
-                    orchestrator, text, options
+                    orchestrator, text, analysis_type, options
                 )
                 results['results']['specialized'] = orchestrator_results
             else:
@@ -449,7 +449,8 @@ class OrchestrationServiceManager:
             'llm': self.llm_orchestrator,
             'language_model': self.llm_orchestrator,
             # Force tous les types d'analyse vers RealLLMOrchestrator
-            'comprehensive': self.llm_orchestrator,
+            'comprehensive': self.llm_orchestrator, # Gardé pour rétrocompatibilité potentielle
+            'unified_analysis': self.llm_orchestrator,
             'modal': self.llm_orchestrator,
             'propositional': self.llm_orchestrator,
             'logical': self.llm_orchestrator,
@@ -463,6 +464,7 @@ class OrchestrationServiceManager:
     async def _run_specialized_analysis(self,
                                       orchestrator: Any,
                                       text: str,
+                                      analysis_type: str,  # Ajout du paramètre
                                       options: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Lance une analyse avec un orchestrateur spécialisé."""
         try:
@@ -471,7 +473,8 @@ class OrchestrationServiceManager:
                 from .real_llm_orchestrator import LLMAnalysisRequest
                 request = LLMAnalysisRequest(
                     text=text,
-                    analysis_type=options.get('analysis_type', 'comprehensive') if options else 'comprehensive',
+                    # Correction: Utilise le analysis_type propagé
+                    analysis_type=analysis_type,
                     context=options.get('context') if options else None,
                     parameters=options or {}
                 )

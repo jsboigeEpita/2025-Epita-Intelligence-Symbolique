@@ -3,13 +3,10 @@ from playwright.sync_api import Page, expect
 
 # The 'webapp_service' session fixture in conftest.py is autouse=True,
 # so the web server is started automatically for all tests in this module.
-# The base_url for Playwright is also configured in conftest.py.
-
-
 @pytest.fixture(scope="function")
-def validation_page(page: Page) -> Page:
+def validation_page(page: Page, webapp_service: str) -> Page:
     """Navigue vers la page et l'onglet de validation."""
-    page.goto("/")
+    page.goto(webapp_service)
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     validation_tab = page.locator('[data-testid="validation-tab"]')
     expect(validation_tab).to_be_enabled()
