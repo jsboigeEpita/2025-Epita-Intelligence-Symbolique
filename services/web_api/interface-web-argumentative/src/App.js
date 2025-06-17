@@ -11,12 +11,16 @@ import { checkAPIHealth } from './services/api';
 function App() {
   const [activeTab, setActiveTab] = useState('analyzer');
   const [apiStatus, setApiStatus] = useState('checking');
+  const [apiError, setApiError] = useState(null);
 
   useEffect(() => {
     // Vérifier l'état de l'API au démarrage
     checkAPIHealth()
       .then(() => setApiStatus('connected'))
-      .catch(() => setApiStatus('disconnected'));
+      .catch((error) => {
+        setApiStatus('disconnected');
+        setApiError(error.message);
+      });
   }, []);
 
   const tabs = [
@@ -49,6 +53,7 @@ function App() {
             <span className="status-indicator"></span>
             API: {apiStatus === 'connected' ? '✅ Connectée' : 
                   apiStatus === 'disconnected' ? '❌ Déconnectée' : '🔄 Vérification...'}
+            {apiError && <p className="api-error-message">Erreur: {apiError}</p>}
           </div>
         </div>
       </header>

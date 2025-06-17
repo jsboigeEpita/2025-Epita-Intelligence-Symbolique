@@ -88,7 +88,7 @@ class ExtractAgent(BaseAgent):
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants pour {self.name} avec le service LLM ID: {llm_service_id}")
         self._native_extract_plugin = ExtractAgentPlugin()
-        self.kernel.add_plugin(self._native_extract_plugin, plugin_name=self.NATIVE_PLUGIN_NAME)
+        self._kernel.add_plugin(self._native_extract_plugin, plugin_name=self.NATIVE_PLUGIN_NAME)
         self.logger.info(f"Plugin natif '{self.NATIVE_PLUGIN_NAME}' enregistré.")
         extract_prompt_template_config = PromptTemplateConfig(
             template=EXTRACT_FROM_NAME_PROMPT,
@@ -99,9 +99,9 @@ class ExtractAgent(BaseAgent):
                 {"name": "source_name", "description": "Nom de la source", "is_required": True},
                 {"name": "extract_context", "description": "Texte source dans lequel chercher", "is_required": True}
             ],
-            execution_settings=self.kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+            execution_settings=self._kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         )
-        self.kernel.add_function(
+        self._kernel.add_function(
             function_name=self.EXTRACT_SEMANTIC_FUNCTION_NAME,
             prompt_template_config=extract_prompt_template_config,
             plugin_name=self.name
@@ -120,9 +120,9 @@ class ExtractAgent(BaseAgent):
                 {"name": "extracted_text", "description": "Texte extrait", "is_required": True},
                 {"name": "explanation", "description": "Explication de l'extraction LLM", "is_required": True}
             ],
-            execution_settings=self.kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+            execution_settings=self._kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         )
-        self.kernel.add_function(
+        self._kernel.add_function(
             function_name=self.VALIDATE_SEMANTIC_FUNCTION_NAME,
             prompt_template_config=validate_prompt_template_config,
             plugin_name=self.name
@@ -156,7 +156,7 @@ class ExtractAgent(BaseAgent):
             extract_context=source_text # On passe le texte complet
         )
         try:
-            response = await self.kernel.invoke(
+            response = await self._kernel.invoke(
                 plugin_name=self.name,
                 function_name=self.EXTRACT_SEMANTIC_FUNCTION_NAME,
                 arguments=arguments

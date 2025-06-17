@@ -2,33 +2,14 @@ import subprocess
 import os
 import sys
 import json
+import base64
+import tempfile
 from pathlib import Path
 
-# Auto-positionnement dans le bon répertoire
-# Ce bloc assure que le script s'exécute comme s'il avait été lancé
-# depuis le répertoire 'argumentation_analysis', peu importe le CWD actuel.
-try:
-    # Trouver le chemin du répertoire du script actuel
-    script_dir = Path(__file__).resolve().parent
-    # Chercher le répertoire 'argumentation_analysis' en remontant l'arborescence
-    target_dir = script_dir
-    while target_dir.name != 'argumentation_analysis' and target_dir.parent != target_dir:
-        target_dir = target_dir.parent
-    
-    # Si on l'a trouvé et qu'on n'y est pas déjà, on s'y déplace
-    if target_dir.name == 'argumentation_analysis' and os.getcwd() != str(target_dir):
-        os.chdir(target_dir)
-        # Message de débogage pour confirmer le changement.
-        # print(f"Changed current working directory to: {os.getcwd()}", file=sys.stderr)
-except Exception as e:
-    print(f"Could not auto-position working directory: {e}", file=sys.stderr)
-
-# Ensure the script is run from the root of the argumentation_analysis directory
-# This helps locate run_analysis.py correctly.
-# A more robust solution might involve setting Python paths, but for a demo, this is sufficient.
-if not os.path.exists('run_analysis.py'):
-    print("Error: This script must be run from the 'argumentation_analysis' directory.", file=sys.stderr)
-    sys.exit(1)
+# Ensure the project root is in the Python path to allow for absolute-like imports
+project_root = Path(__file__).resolve().parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 # Define a list of sample texts for demonstration
 sample_texts = [
@@ -55,48 +36,74 @@ for demo in sample_texts:
     print(f"\n\n--- {demo['title']} ---\n")
     print(f"Analyzing text: \"{demo['text']}\"\n")
 
-    # Construct the command to run the analysis
-    command = [
-        "python",
-        "run_analysis.py",
-        "--text",
-        demo["text"]
-    ]
-
-    # Execute the command
+    input_temp_path = None
+    output_temp_path = None
     try:
+        # Create temporary files for both input text and JSON output
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8', suffix='.txt', dir='argumentation_analysis') as input_fp:
+            input_fp.write(demo['text'])
+            input_temp_path = Path(input_fp.name)
+
+        with tempfile.NamedTemporaryFile(mode='r', delete=False, encoding='utf-8', suffix='.json') as output_fp:
+            output_temp_path = Path(output_fp.name)
+
+        analysis_input_file = input_temp_path.as_posix()
+        analysis_output_file = output_temp_path.as_posix()
+
+        # Construct the command to use --file for input and --output-file for JSON result
+        script_path = ".\\activate_project_env.ps1"
+        python_command = f'python argumentation_analysis/run_analysis.py --file "{analysis_input_file}" --output-file "{analysis_output_file}"'
+        full_ps_command = f"& '{script_path}' -CommandToRun '{python_command}'"
+
+        encoded_command = base64.b64encode(full_ps_command.encode('utf-16-le')).decode('ascii')
+        command = [
+            "powershell", "-ExecutionPolicy", "Bypass",
+            "-EncodedCommand", encoded_command
+        ]
+
+        # Execute the command, capturing stderr for logging/debugging
         result = subprocess.run(command, check=True, text=True, capture_output=True, encoding='utf-8')
+        
         print("--- ANALYSIS RESULT ---")
         
-        # Le stdout peut contenir des logs avant le JSON. Trouver le début du JSON.
-        json_output_str = result.stdout
-        json_start_index = json_output_str.find('{')
-        if json_start_index != -1:
-            json_output_str = json_output_str[json_start_index:]
-            try:
+        # Read the JSON result from the temporary output file
+        json_output_str = output_temp_path.read_text(encoding='utf-8')
+
+        try:
+            # Check if the output string is not empty before trying to load it
+            if json_output_str:
                 analysis_data = json.loads(json_output_str)
                 print(json.dumps(analysis_data, indent=2, ensure_ascii=False))
-            except json.JSONDecodeError:
-                print("Could not decode JSON from analysis script output:")
-                print(result.stdout)
-        else:
-            print("No JSON object found in the output.")
-            print("--- RAW STDOUT ---")
-            print(result.stdout)
+            else:
+                print("Analysis script returned an empty output file.")
+                print("--- RAW STDERR ---")
+                print(result.stderr)
+
+        except json.JSONDecodeError:
+            print("Could not decode JSON from the analysis script's output file:")
+            print("--- RAW FILE CONTENT ---")
+            print(json_output_str)
             print("--- RAW STDERR ---")
             print(result.stderr)
 
         print(f"\n--- {demo['title']} COMPLETED ---")
+
     except subprocess.CalledProcessError as e:
         print(f"\n--- ERROR during {demo['title']} ---", file=sys.stderr)
         print("Stderr:", e.stderr, file=sys.stderr)
     except FileNotFoundError:
-        print("\n--- ERROR: 'python' command not found. Make sure Python is in your PATH.", file=sys.stderr)
+        print("\n--- ERROR: 'python' or 'powershell' command not found. Make sure they are in your PATH.", file=sys.stderr)
         break
+    finally:
+        # Ensure temporary files are cleaned up
+        if input_temp_path and input_temp_path.exists():
+            os.remove(input_temp_path)
+        if output_temp_path and output_temp_path.exists():
+            os.remove(output_temp_path)
 
 
 # --- Demo from file ---
-demo_file_path = "demos/sample_epita_discourse.txt"
+demo_file_path = "argumentation_analysis/demos/sample_epita_discourse.txt"
 demo_file_content = """
 Le projet EPITA Intelligence Symbolique 2025 est un défi majeur.
 Certains disent qu'il est trop ambitieux et voué à l'échec car aucun projet étudiant n'a jamais atteint ce niveau d'intégration.
@@ -105,31 +112,62 @@ Nous devons nous concentrer sur une livraison incrémentale et prouver que la r�
 """
 
 print(f"\n\n--- Demonstration 4: Analysis from File ---\n")
+output_temp_path_demo4 = None
 try:
+    # Write the content to the demo file
     with open(demo_file_path, "w", encoding="utf-8") as f:
         f.write(demo_file_content)
     print(f"Created demo file: {demo_file_path}")
 
+    # Create a temporary file for the JSON output
+    with tempfile.NamedTemporaryFile(mode='r', delete=False, encoding='utf-8', suffix='.json') as output_fp:
+        output_temp_path_demo4 = Path(output_fp.name)
+
     print(f"Analyzing text from file...\n")
+    
+    analysis_output_file = output_temp_path_demo4.as_posix()
+
+    # Construct the command to use --file for input and --output-file for JSON result
+    script_path = ".\\activate_project_env.ps1"
+    python_command = f'python argumentation_analysis/run_analysis.py --file "{demo_file_path}" --output-file "{analysis_output_file}"'
+    full_ps_command = f"& '{script_path}' -CommandToRun '{python_command}'"
+
+    encoded_command = base64.b64encode(full_ps_command.encode('utf-16-le')).decode('ascii')
+
     command = [
-        "python",
-        "run_analysis.py",
-        "--file",
-        demo_file_path
+        "powershell", "-ExecutionPolicy", "Bypass",
+        "-EncodedCommand", encoded_command
     ]
     result = subprocess.run(command, check=True, text=True, capture_output=True, encoding='utf-8')
+    
     print("--- ANALYSIS RESULT ---")
+    
+    # Read the JSON result from the temporary output file
+    json_output_str = output_temp_path_demo4.read_text(encoding='utf-8')
     try:
-        analysis_data = json.loads(result.stdout)
-        print(json.dumps(analysis_data, indent=2, ensure_ascii=False))
+        if json_output_str:
+            analysis_data = json.loads(json_output_str)
+            print(json.dumps(analysis_data, indent=2, ensure_ascii=False))
+        else:
+            print("Analysis script returned an empty output file for Demonstration 4.")
+            print("--- RAW STDERR ---")
+            print(result.stderr)
     except json.JSONDecodeError:
-        print("Could not decode JSON from analysis script output:")
-        print(result.stdout)
+        print("Could not decode JSON from the analysis script's output file:")
+        print("--- RAW FILE CONTENT ---")
+        print(json_output_str)
+        print("--- RAW STDERR ---")
+        print(result.stderr)
+
     print(f"\n--- Demonstration 4 COMPLETED ---")
 
 except Exception as e:
     print(f"\n--- ERROR during Demonstration 4 ---", file=sys.stderr)
     print(e, file=sys.stderr)
+finally:
+    # Ensure temporary file is cleaned up
+    if output_temp_path_demo4 and output_temp_path_demo4.exists():
+        os.remove(output_temp_path_demo4)
 
 
 print("\n\n" + "=" * 80)

@@ -119,6 +119,40 @@ class RhetoricalAnalysisState:
         state_logger.info(f"Conclusion finale enregistrée : '{conclusion[:60]}...'")
         state_logger.debug(f"État final_conclusion après enregistrement: {self.final_conclusion is not None}")
 
+    def add_identified_arguments(self, arguments: List[str]):
+        """Ajoute une liste d'arguments identifiés."""
+        state_logger.info(f"Ajout de {len(arguments)} arguments identifiés...")
+        for arg_desc in arguments:
+            self.add_argument(arg_desc)
+
+    def add_identified_fallacies(self, fallacies: List[Dict[str, str]]):
+        """Ajoute une liste de sophismes identifiés."""
+        state_logger.info(f"Ajout de {len(fallacies)} sophismes identifiés...")
+        for fallacy_data in fallacies:
+            self.add_fallacy(
+                fallacy_type=fallacy_data.get("nom", "Type Inconnu"),
+                justification=fallacy_data.get("explication", "Justification manquante"),
+                # On pourrait aussi extraire la citation et la passer dans la justification
+            )
+
+    def mark_task_as_answered(self, task_id: str, answer: str, author: str = "Unknown"):
+        """Marque une tâche comme terminée en lui ajoutant une réponse."""
+        if task_id not in self.analysis_tasks:
+            state_logger.warning(f"Tentative de marquer comme répondue une tâche inexistante: '{task_id}'")
+            return
+        self.answers[task_id] = {"answer_text": answer, "author_agent": author}
+        state_logger.info(f"Tâche '{task_id}' marquée comme répondue.")
+
+    def get_last_task_id(self) -> Optional[str]:
+        """Retourne l'ID de la dernière tâche non répondue."""
+        defined_tasks = set(self.analysis_tasks.keys())
+        answered_tasks = set(self.answers.keys())
+        unanswered_tasks = list(defined_tasks - answered_tasks)
+        if not unanswered_tasks:
+            return None
+        # On pourrait avoir une logique plus complexe, mais pour l'instant on prend la dernière créée
+        return unanswered_tasks[-1]
+
     def designate_next_agent(self, agent_name: str):
         """Désigne l'agent qui doit parler au prochain tour."""
         self._next_agent_designated = agent_name

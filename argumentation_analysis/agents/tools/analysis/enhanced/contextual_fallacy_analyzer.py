@@ -48,7 +48,7 @@ def _lazy_imports():
     except (ImportError, OSError) as e:
         # Essayer d'utiliser le mock en cas d'erreur de chargement
         try:
-            from .torch_mock import mock_torch
+            
             mock_torch()
             import torch
             import transformers
@@ -82,7 +82,7 @@ class EnhancedContextualFallacyAnalyzer(BaseAnalyzer):
     la précision de l'analyse des sophismes dans leur contexte.
     """
     
-    def __init__(self, taxonomy_path: Optional[str] = None, model_name: str = "distilbert-base-uncased"):
+    def __init__(self, taxonomy_path: Optional[str] = None, model_name: Optional[str] = "distilbert-base-uncased-finetuned-sst-2-english"):
         """
         Initialise l'analyseur contextuel de sophismes amélioré.
         

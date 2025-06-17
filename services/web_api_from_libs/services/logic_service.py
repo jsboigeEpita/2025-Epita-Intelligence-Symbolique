@@ -17,17 +17,18 @@ import uuid
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 
-from semantic_kernel import Kernel # Déjà présent, pas de changement nécessaire
+from semantic_kernel import Kernel
 
 from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
-from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent as AbstractLogicAgent
+from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
 from argumentation_analysis.agents.core.logic.query_executor import QueryExecutor
+from argumentation_analysis.core.llm_service import create_llm_service
 
-from .models.request_models import ( # Modifié de ..models à .models
+from ..models.request_models import (
     LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest, LogicOptions
 )
-from .models.response_models import ( # Modifié de ..models à .models
+from ..models.response_models import (
     LogicBeliefSet, LogicBeliefSetResponse, LogicQueryResult, LogicQueryResponse,
     LogicGenerateQueriesResponse, LogicInterpretationResponse
 )
@@ -41,8 +42,14 @@ class LogicService:
         self.logger = logging.getLogger("WebAPI.LogicService")
         self.logger.info("Initialisation du service LogicService")
         
-        # Initialisation du kernel
+        # Initialisation du kernel et du service LLM
         self.kernel = Kernel()
+        try:
+            llm_service = create_llm_service(service_id="default_logic_llm")
+            self.kernel.add_service(llm_service)
+            self.logger.info("Service LLM 'default_logic_llm' créé et ajouté au kernel pour LogicService.")
+        except Exception as e:
+            self.logger.error(f"Erreur lors de la création du service LLM pour LogicService: {e}")
         
         # Initialisation de l'exécuteur de requêtes
         self.query_executor = QueryExecutor()
@@ -67,18 +74,15 @@ class LogicService:
             self.logger.error(f"Erreur lors du health check: {str(e)}")
             return False
     
-    def text_to_belief_set(self, request: LogicBeliefSetRequest) -> LogicBeliefSetResponse:
+    async def text_to_belief_set(self, request: LogicBeliefSetRequest) -> LogicBeliefSetResponse:
         """
-        Convertit un texte en un ensemble de croyances logiques en utilisant un agent approprié.
-
-        :param request: La requête `LogicBeliefSetRequest` contenant le texte à convertir,
-                        le type de logique, et les options de conversion.
-        :type request: LogicBeliefSetRequest
-        :return: Une réponse `LogicBeliefSetResponse` contenant l'ensemble de croyances créé,
-                 l'ID, le type de logique, le texte source, et le temps de traitement.
-        :rtype: LogicBeliefSetResponse
-        :raises ValueError: Si un agent ne peut pas être créé pour le type de logique spécifié,
-                            ou si la conversion du texte échoue.
+        Convertit un texte en ensemble de croyances logiques.
+        
+        Args:
+            request: La requête contenant le texte à convertir
+            
+        Returns:
+            Une réponse contenant l'ensemble de croyances créé
         """
         self.logger.info(f"Conversion de texte en ensemble de croyances de type '{request.logic_type}'")
         start_time = time.time()
@@ -89,8 +93,11 @@ class LogicService:
             if not agent:
                 raise ValueError(f"Impossible de créer un agent pour le type de logique '{request.logic_type}'")
             
+            # Configurer l'agent
+            agent.setup_agent_components(llm_service_id="default_logic_llm")
+            
             # Convertir le texte en ensemble de croyances
-            belief_set, message = agent.text_to_belief_set(request.text)
+            belief_set, message = await agent.text_to_belief_set(request.text)
             if not belief_set:
                 raise ValueError(f"Échec de la conversion: {message}")
             
@@ -117,31 +124,30 @@ class LogicService:
                     creation_timestamp=datetime.now()
                 ),
                 processing_time=time.time() - start_time,
-                conversion_options=request.options.dict() if request.options else {}
+                conversion_options=request.options if request.options else {}
             )
             
             return response
         
         except Exception as e:
             self.logger.error(f"Erreur lors de la conversion: {str(e)}", exc_info=True)
-            raise ValueError(f"Erreur lors de la conversion: {str(e)}")
+            import traceback
+            tb_str = traceback.format_exc()
+            raise ValueError(f"Erreur lors de la conversion: {str(e)}\nTRACEBACK:\n{tb_str}")
         
         finally:
             processing_time = time.time() - start_time
             self.logger.info(f"Conversion terminée en {processing_time:.2f} secondes")
     
-    def execute_query(self, request: LogicQueryRequest) -> LogicQueryResponse:
+    async def execute_query(self, request: LogicQueryRequest) -> LogicQueryResponse:
         """
-        Exécute une requête logique sur un ensemble de croyances stocké.
-
-        :param request: La requête `LogicQueryRequest` contenant l'ID de l'ensemble de croyances,
-                        la requête logique, le type de logique, et les options d'exécution.
-        :type request: LogicQueryRequest
-        :return: Une réponse `LogicQueryResponse` contenant le résultat de la requête,
-                 l'ID de l'ensemble de croyances, le type de logique, et le temps de traitement.
-        :rtype: LogicQueryResponse
-        :raises ValueError: Si l'ensemble de croyances n'est pas trouvé, si le type de logique
-                            est incompatible, ou si une erreur survient pendant l'exécution.
+        Exécute une requête logique sur un ensemble de croyances.
+        
+        Args:
+            request: La requête contenant l'ID de l'ensemble de croyances et la requête à exécuter
+            
+        Returns:
+            Une réponse contenant le résultat de la requête
         """
         self.logger.info(f"Exécution de la requête '{request.query}' sur l'ensemble de croyances '{request.belief_set_id}'")
         start_time = time.time()
@@ -165,7 +171,7 @@ class LogicService:
             belief_set = self._create_belief_set_from_data(belief_set_data)
             
             # Exécuter la requête
-            result, formatted_result = agent.execute_query(belief_set, request.query)
+            result, formatted_result = await agent.execute_query(belief_set, request.query)
             
             # Créer la réponse
             response = LogicQueryResponse(
@@ -192,18 +198,15 @@ class LogicService:
             processing_time = time.time() - start_time
             self.logger.info(f"Exécution terminée en {processing_time:.2f} secondes")
     
-    def generate_queries(self, request: LogicGenerateQueriesRequest) -> LogicGenerateQueriesResponse:
+    async def generate_queries(self, request: LogicGenerateQueriesRequest) -> LogicGenerateQueriesResponse:
         """
-        Génère des requêtes logiques pertinentes à partir d'un texte source et d'un ensemble de croyances.
-
-        :param request: La requête `LogicGenerateQueriesRequest` contenant l'ID de l'ensemble
-                        de croyances, le texte source, le type de logique, et les options de génération.
-        :type request: LogicGenerateQueriesRequest
-        :return: Une réponse `LogicGenerateQueriesResponse` contenant la liste des requêtes générées,
-                 l'ID de l'ensemble de croyances, le type de logique, et le temps de traitement.
-        :rtype: LogicGenerateQueriesResponse
-        :raises ValueError: Si l'ensemble de croyances n'est pas trouvé, si le type de logique
-                            est incompatible, ou si une erreur survient pendant la génération.
+        Génère des requêtes logiques pertinentes.
+        
+        Args:
+            request: La requête contenant l'ID de l'ensemble de croyances et le texte source
+            
+        Returns:
+            Une réponse contenant les requêtes générées
         """
         self.logger.info(f"Génération de requêtes pour l'ensemble de croyances '{request.belief_set_id}'")
         start_time = time.time()
@@ -227,7 +230,7 @@ class LogicService:
             belief_set = self._create_belief_set_from_data(belief_set_data)
             
             # Générer les requêtes
-            queries = agent.generate_queries(request.text, belief_set)
+            queries = await agent.generate_queries(request.text, belief_set)
             
             # Limiter le nombre de requêtes si nécessaire
             max_queries = request.options.max_queries if request.options else 5
@@ -253,30 +256,22 @@ class LogicService:
             processing_time = time.time() - start_time
             self.logger.info(f"Génération terminée en {processing_time:.2f} secondes")
     
-    def interpret_results(self, belief_set_id: str, logic_type: str, text: str, 
-                         queries: List[str], results: List[LogicQueryResult], 
-                         options: Optional[LogicOptions] = None) -> LogicInterpretationResponse:
+    async def interpret_results(self, belief_set_id: str, logic_type: str, text: str,
+                                 queries: List[str], results: List[LogicQueryResult],
+                                 options: Optional[LogicOptions] = None) -> LogicInterpretationResponse:
         """
-        Interprète les résultats de plusieurs requêtes logiques par rapport à un texte source
-        et un ensemble de croyances.
-
-        :param belief_set_id: L'ID de l'ensemble de croyances utilisé.
-        :type belief_set_id: str
-        :param logic_type: Le type de logique utilisé (par exemple, "propositional").
-        :type logic_type: str
-        :param text: Le texte source original à partir duquel l'ensemble de croyances a été dérivé.
-        :type text: str
-        :param queries: Une liste des requêtes logiques qui ont été exécutées.
-        :type queries: List[str]
-        :param results: Une liste des objets `LogicQueryResult` correspondant aux requêtes.
-        :type results: List[LogicQueryResult]
-        :param options: Options optionnelles pour l'interprétation.
-        :type options: Optional[LogicOptions]
-        :return: Une réponse `LogicInterpretationResponse` contenant l'interprétation textuelle
-                 des résultats, ainsi que les détails des requêtes et des résultats.
-        :rtype: LogicInterpretationResponse
-        :raises ValueError: Si l'ensemble de croyances n'est pas trouvé, si le type de logique
-                            est incompatible, ou si une erreur survient pendant l'interprétation.
+        Interprète les résultats de requêtes logiques.
+        
+        Args:
+            belief_set_id: L'ID de l'ensemble de croyances
+            logic_type: Le type de logique
+            text: Le texte source
+            queries: Les requêtes exécutées
+            results: Les résultats des requêtes
+            options: Les options d'interprétation
+            
+        Returns:
+            Une réponse contenant l'interprétation des résultats
         """
         self.logger.info(f"Interprétation des résultats pour l'ensemble de croyances '{belief_set_id}'")
         start_time = time.time()
@@ -303,7 +298,7 @@ class LogicService:
             formatted_results = [result.formatted_result for result in results]
             
             # Interpréter les résultats
-            interpretation = agent.interpret_results(text, belief_set, queries, formatted_results)
+            interpretation = await agent.interpret_results(text, belief_set, queries, formatted_results)
             
             # Créer la réponse
             response = LogicInterpretationResponse(
@@ -329,25 +324,25 @@ class LogicService:
     
     def _get_belief_set(self, belief_set_id: str) -> Optional[Dict[str, Any]]:
         """
-        Récupère un ensemble de croyances stocké en mémoire par son ID.
-
-        :param belief_set_id: L'ID de l'ensemble de croyances à récupérer.
-        :type belief_set_id: str
-        :return: Un dictionnaire contenant les données de l'ensemble de croyances,
-                 ou None s'il n'est pas trouvé.
-        :rtype: Optional[Dict[str, Any]]
+        Récupère un ensemble de croyances par son ID.
+        
+        Args:
+            belief_set_id: L'ID de l'ensemble de croyances
+            
+        Returns:
+            Les données de l'ensemble de croyances ou None s'il n'existe pas
         """
         return self.belief_sets.get(belief_set_id)
     
     def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> BeliefSet:
         """
-        Crée un objet `BeliefSet` à partir d'un dictionnaire de données.
-
-        :param belief_set_data: Un dictionnaire contenant les données de l'ensemble de croyances,
-                                typiquement avec les clés "logic_type" et "content".
-        :type belief_set_data: Dict[str, Any]
-        :return: Une instance de `BeliefSet`.
-        :rtype: BeliefSet
+        Crée un objet BeliefSet à partir des données stockées.
+        
+        Args:
+            belief_set_data: Les données de l'ensemble de croyances
+            
+        Returns:
+            Un objet BeliefSet
         """
         return BeliefSet.from_dict({
             "logic_type": belief_set_data["logic_type"],
@@ -357,22 +352,16 @@ class LogicService:
     def _generate_explanation(self, belief_set: BeliefSet, query: str, 
                              result: Optional[bool], formatted_result: str) -> str:
         """
-        Génère une explication simple pour le résultat d'une requête logique.
-
-        NOTE: Ceci est une implémentation basique. Dans une application réelle,
-        un LLM pourrait être utilisé pour générer une explication plus détaillée et
-        contextualisée.
-
-        :param belief_set: L'ensemble de croyances sur lequel la requête a été exécutée.
-        :type belief_set: BeliefSet
-        :param query: La requête logique qui a été exécutée.
-        :type query: str
-        :param result: Le résultat booléen de la requête (True, False, ou None si indéterminé).
-        :type result: Optional[bool]
-        :param formatted_result: La représentation textuelle formatée du résultat.
-        :type formatted_result: str
-        :return: Une chaîne de caractères expliquant le résultat.
-        :rtype: str
+        Génère une explication pour le résultat d'une requête.
+        
+        Args:
+            belief_set: L'ensemble de croyances
+            query: La requête exécutée
+            result: Le résultat de la requête
+            formatted_result: Le résultat formaté
+            
+        Returns:
+            Une explication du résultat
         """
         # Dans une application réelle, on utiliserait un LLM pour générer une explication
         # plus détaillée et personnalisée

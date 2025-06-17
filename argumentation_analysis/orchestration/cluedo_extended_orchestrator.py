@@ -360,13 +360,17 @@ class CluedoExtendedOrchestrator:
         
         # Préparation des constantes pour Watson
         all_constants = [name.replace(" ", "") for category in elements_jeu.values() for name in category]
+
+        # Création du DatasetManager pour Moriarty
+        from ..agents.core.oracle.dataset_access_manager import CluedoDatasetManager
+        dataset_manager = CluedoDatasetManager(self.oracle_state.cluedo_dataset)
         
         # Création des agents
         self.sherlock_agent = SherlockEnqueteAgent(kernel=self.kernel, agent_name="Sherlock")
         self.watson_agent = WatsonLogicAssistant(kernel=self.kernel, agent_name="Watson", constants=all_constants)
         self.moriarty_agent = MoriartyInterrogatorAgent(
             kernel=self.kernel,
-            cluedo_dataset=self.oracle_state.cluedo_dataset,
+            dataset_manager=dataset_manager,
             game_strategy=self.oracle_strategy,
             agent_name="Moriarty"
         )

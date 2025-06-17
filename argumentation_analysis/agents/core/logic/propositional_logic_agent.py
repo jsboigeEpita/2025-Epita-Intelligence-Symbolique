@@ -229,7 +229,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
         prompt_execution_settings = None
         if self._llm_service_id:
             try:
-                prompt_execution_settings = self.kernel.get_prompt_execution_settings_from_service_id(self._llm_service_id)
+                prompt_execution_settings = self._kernel.get_prompt_execution_settings_from_service_id(self._llm_service_id)
                 self.logger.debug(f"Settings LLM récupérés pour {self.name}.")
             except Exception as e:
                 self.logger.warning(f"Impossible de récupérer les settings LLM pour {self.name}: {e}")
@@ -243,7 +243,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
 
         for func_name, prompt, description in semantic_functions:
             try:
-                self.kernel.add_function(
+                self._kernel.add_function(
                     prompt=prompt,
                     plugin_name=self.name,
                     function_name=func_name,
@@ -279,7 +279,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
         defs_json = None
         for attempt in range(max_retries):
             try:
-                defs_result = await self.sk_kernel.plugins[self.name]["TextToPLDefs"].invoke(self.sk_kernel, input=text)
+                defs_result = await self._kernel.plugins[self.name]["TextToPLDefs"].invoke(self._kernel, input=text)
                 defs_json_str = self._extract_json_block(str(defs_result))
                 defs_json = json.loads(defs_json_str)
                 if "propositions" in defs_json and isinstance(defs_json["propositions"], list):
@@ -303,8 +303,8 @@ class PropositionalLogicAgent(BaseLogicAgent):
         for attempt in range(max_retries):
             try:
                 definitions_for_prompt = json.dumps(defs_json, indent=2)
-                formulas_result = await self.sk_kernel.plugins[self.name]["TextToPLFormulas"].invoke(
-                    self.sk_kernel, input=text, definitions=definitions_for_prompt
+                formulas_result = await self._kernel.plugins[self.name]["TextToPLFormulas"].invoke(
+                    self._kernel, input=text, definitions=definitions_for_prompt
                 )
                 formulas_json_str = self._extract_json_block(str(formulas_result))
                 formulas_json = json.loads(formulas_json_str)
@@ -374,7 +374,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
             }, indent=2)
 
             arguments = KernelArguments(input=text, belief_set=belief_set_for_prompt)
-            result = await self.kernel.invoke(
+            result = await self._kernel.invoke(
                 plugin_name=self.name,
                 function_name="GeneratePLQueryIdeas",
                 arguments=arguments
@@ -466,7 +466,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
                 tweety_result=results_messages_str
             )
             
-            result = await self.kernel.invoke(
+            result = await self._kernel.invoke(
                 plugin_name=self.name,
                 function_name="InterpretPLResults",
                 arguments=arguments

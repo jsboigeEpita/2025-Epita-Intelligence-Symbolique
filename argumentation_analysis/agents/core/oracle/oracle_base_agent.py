@@ -256,6 +256,8 @@ Vous détenez l'accès exclusif à un dataset spécifique et vous gérez les ré
 
 Vous êtes un gardien impartial mais stratégique des données."""
     
+    dataset_manager: DatasetAccessManager
+    
     def __init__(self,
                  kernel: Kernel,
                  dataset_manager: DatasetAccessManager,
@@ -321,7 +323,6 @@ Vous êtes un gardien impartial mais stratégique des données."""
         self.kernel = kernel
         
         # Initialisation des attributs spécifiques à Oracle
-        self.dataset_manager = dataset_manager
         self.access_log = []
         self.revealed_information = set()
         self.access_level = access_level or "standard"

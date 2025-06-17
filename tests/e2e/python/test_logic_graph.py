@@ -4,15 +4,12 @@ from playwright.sync_api import Page, expect
 
 # The 'webapp_service' session fixture in conftest.py is autouse=True,
 # so the web server is started automatically for all tests in this module.
-# The base_url for Playwright is also configured in conftest.py.
-
-
 @pytest.mark.playwright
-def test_successful_graph_visualization(page: Page):
+def test_successful_graph_visualization(page: Page, webapp_service: str):
     """
     Scenario 4.1: Successful visualization of a logic graph (Happy Path)
     """
-    page.goto("/")
+    page.goto(webapp_service)
     
     # Attendre que l'API soit connectée
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
@@ -38,11 +35,11 @@ def test_successful_graph_visualization(page: Page):
     expect(graph_svg).to_have_attribute("data-testid", "logic-graph-svg")
 
 @pytest.mark.playwright
-def test_logic_graph_api_error(page: Page):
+def test_logic_graph_api_error(page: Page, webapp_service: str):
     """
     Scenario 4.2: API error during graph generation
     """
-    page.goto("/")
+    page.goto(webapp_service)
     
     # Attendre que l'API soit connectée
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
@@ -73,11 +70,11 @@ def test_logic_graph_api_error(page: Page):
     expect(graph_svg).not_to_be_visible()
 
 @pytest.mark.playwright
-def test_logic_graph_reset_button(page: Page):
+def test_logic_graph_reset_button(page: Page, webapp_service: str):
     """
     Scenario 4.3: Reset button clears input and graph
     """
-    page.goto("/")
+    page.goto(webapp_service)
     
     # Attendre que l'API soit connectée
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)

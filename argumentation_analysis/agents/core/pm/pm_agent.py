@@ -50,7 +50,7 @@ class ProjectManagerAgent(BaseAgent):
         # lors de l'ajout de la fonction si llm_service_id est valide.
 
         try:
-            self.kernel.add_function(
+            self._kernel.add_function(
                 prompt=prompt_define_tasks_v11, # Utiliser la dernière version du prompt
                 plugin_name=plugin_name,
                 function_name="DefineTasksAndDelegate", # Nom plus SK-conventionnel
@@ -62,7 +62,7 @@ class ProjectManagerAgent(BaseAgent):
             self.logger.error(f"Erreur lors de l'ajout de la fonction '{plugin_name}.DefineTasksAndDelegate': {e}")
 
         try:
-            self.kernel.add_function(
+            self._kernel.add_function(
                 prompt=prompt_write_conclusion_v7, # Utiliser la dernière version du prompt
                 plugin_name=plugin_name,
                 function_name="WriteAndSetConclusion", # Nom plus SK-conventionnel
@@ -114,7 +114,7 @@ class ProjectManagerAgent(BaseAgent):
         args = KernelArguments(analysis_state_snapshot=analysis_state_snapshot, raw_text=raw_text)
         
         try:
-            response = await self.kernel.invoke(
+            response = await self._kernel.invoke(
                 plugin_name=self.name,
                 function_name="DefineTasksAndDelegate",
                 arguments=args
@@ -147,7 +147,7 @@ class ProjectManagerAgent(BaseAgent):
         args = KernelArguments(analysis_state_snapshot=analysis_state_snapshot, raw_text=raw_text)
 
         try:
-            response = await self.kernel.invoke(
+            response = await self._kernel.invoke(
                 plugin_name=self.name,
                 function_name="WriteAndSetConclusion",
                 arguments=args

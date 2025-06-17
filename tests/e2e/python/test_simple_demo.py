@@ -6,15 +6,15 @@ import pytest
 from playwright.sync_api import Page, expect
 
 
-def test_app_loads_successfully(page: Page):
+def test_app_loads_successfully(page: Page, webapp_service: str):
     """
     Test basique qui vérifie que l'application se charge.
     SANS marker playwright problématique.
     """
     try:
         # Navigation vers l'application
-        print("[START] Navigation vers http://localhost:3000/")
-        page.goto("/", timeout=10000)
+        print(f"[START] Navigation vers {webapp_service}")
+        page.goto(webapp_service, timeout=10000)
         
         # Attendre que la page soit chargée
         page.wait_for_load_state('networkidle', timeout=10000)
@@ -60,7 +60,7 @@ def test_app_loads_successfully(page: Page):
         raise
 
 
-def test_api_connectivity(page: Page):
+def test_api_connectivity(page: Page, webapp_service: str):
     """
     Test qui vérifie la connectivité API.
     """
@@ -68,7 +68,7 @@ def test_api_connectivity(page: Page):
         print("[API] Test connectivite API")
         
         # Navigation
-        page.goto("/", timeout=10000)
+        page.goto(webapp_service, timeout=10000)
         page.wait_for_load_state('networkidle', timeout=5000)
         
         # Attendre indicateur de statut API
@@ -105,14 +105,14 @@ def test_api_connectivity(page: Page):
         raise
 
 
-def test_navigation_tabs(page: Page):
+def test_navigation_tabs(page: Page, webapp_service: str):
     """
     Test basique de navigation entre onglets.
     """
     try:
         print("[NAV] Test navigation onglets")
         
-        page.goto("/", timeout=10000)
+        page.goto(webapp_service, timeout=10000)
         page.wait_for_load_state('networkidle', timeout=5000)
         
         # Chercher des éléments cliquables qui ressemblent à des onglets

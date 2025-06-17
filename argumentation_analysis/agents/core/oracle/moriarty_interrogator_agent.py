@@ -457,21 +457,18 @@ Votre mission : Fasciner par votre mystère élégant."""
         self.suggestion_history.clear()
         self._logger.info(f"État de jeu Moriarty remis à zéro")
 
-    async def invoke_custom(self, history: ChatHistory) -> ChatMessageContent:
+    async def invoke_single(self, *args, **kwargs) -> ChatMessageContent:
         """
-        Méthode Oracle pour répondre à une suggestion.
-        Moriarty ne génère pas de texte, il applique les règles du jeu.
+        Implémentation de l'invocation single-shot requise par BaseAgent.
+        Moriarty ne génère pas de texte, il réagit aux suggestions du jeu.
         """
+        history = next((arg for arg in args if isinstance(arg, ChatHistory)), None)
+        if not history:
+             history = kwargs.get("history", ChatHistory())
+
         self._logger.info(f"[{self.name}] Invocation Oracle avec {len(history)} messages.")
-        
-        last_user_message = None
-        # On cherche le dernier message qui n'est pas de Moriarty pour savoir à qui il répond.
-        for message in reversed(history):
-            # Utilise getattr pour éviter une erreur si l'attribut 'name' n'existe pas
-            author_name = getattr(message, 'name', None)
-            if author_name != self.name:
-                last_user_message = message
-                break
+         
+        last_user_message = next((msg for msg in reversed(history) if getattr(msg, 'name', self.name) != self.name), None)
         if not last_user_message or not last_user_message.content:
             return ChatMessageContent(role="assistant", content="*Silence énigmatique*", name=self.name)
             

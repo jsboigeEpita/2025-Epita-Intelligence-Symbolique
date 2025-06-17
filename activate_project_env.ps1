@@ -26,14 +26,15 @@ param(
 
 # Fonction de logging simple
 function Write-Log {
-    param([string]$Message, [string]$Level = "INFO")
+    param(
+        [string]$Message,
+        [string]$Level = "INFO"
+    )
+    # On écrit tout sur le flux d'erreur (stderr) pour ne pas polluer le stdout
+    # qui est utilisé pour récupérer le résultat JSON des scripts Python.
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $color = switch ($Level) {
-        "ERROR" { "Red" }
-        "SUCCESS" { "Green" }
-        default { "White" }
-    }
-    Write-Host "[$timestamp] $Message" -ForegroundColor $color
+    $logLine = "[$timestamp] [$Level] $Message"
+    $Host.UI.WriteErrorLine($logLine)
 }
 
 # --- LA CONFIGURATION JAVA EST DÉLÉGUÉE AU SCRIPT PYTHON ---
@@ -43,7 +44,7 @@ function Write-Log {
 Write-Log "La configuration de JAVA_HOME est déléguée à environment_manager.py." "INFO"
 
 # Configuration
-Write-Host "[DEBUG] Activating environment..."
+Write-Log "Activating environment..." "DEBUG"
 $ProjectRoot = $PSScriptRoot
 $PythonModule = "project_core/core_from_scripts/environment_manager.py"
 
@@ -124,4 +125,4 @@ try {
     Write-Log "Erreur critique: $($_.Exception.Message)" "ERROR"
     exit 1
 }
-Write-Host "[DEBUG] Environment script finished."
+Write-Log "Environment script finished." "DEBUG"
