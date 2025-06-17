@@ -102,6 +102,9 @@ else:
 # # --- Fin Gestion des imports conditionnels ---
 # --- Fin Configuration globale du Logging ---
 
+# Charger les fixtures définies dans d'autres fichiers comme des plugins
+pytest_plugins = ["tests.fixtures.integration_fixtures"]
+
 def pytest_addoption(parser):
     """Ajoute des options de ligne de commande personnalisées à pytest."""
     parser.addoption(
@@ -132,15 +135,6 @@ mocks_dir_for_mock = os.path.join(current_dir_for_mock, 'mocks')
 # L'initialisation des mocks jpype et numpy est maintenant gérée par le bootstrap
 # via l'option `addopts = -p tests.mocks.bootstrap` dans pytest.ini.
 # Les imports de jpype_setup et numpy_setup ne sont plus nécessaires ici.
-
-from .fixtures.integration_fixtures import (
-    integration_jvm, dung_classes, dl_syntax_parser, fol_syntax_parser,
-    pl_syntax_parser, cl_syntax_parser, tweety_logics_classes,
-    tweety_string_utils, tweety_math_utils, tweety_probability,
-    tweety_conditional_probability, tweety_parser_exception,
-    tweety_io_exception, tweety_qbf_classes, belief_revision_classes,
-    dialogue_classes
-)
 
 # --- Configuration du Logger (déplacé avant la sauvegarde JPype pour l'utiliser) ---
 logger = logging.getLogger(__name__)

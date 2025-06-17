@@ -258,7 +258,10 @@ class SherlockEnqueteAgent(BaseAgent):
         """
         self.logger.info(f"[{self.name}] Invoke called with message: {message}")
         # Simplifié pour retourner une réponse directe pour le moment.
-        return f"Sherlock a traité: {message}"
+        final_answer = ""
+        async for chunk in self.get_response(message):
+            final_answer += chunk
+        return final_answer
 
     async def get_current_case_description(self) -> str:
         """
@@ -284,7 +287,7 @@ class SherlockEnqueteAgent(BaseAgent):
         # Méthode temporaire pour les tests - à implémenter correctement plus tard
         return {"status": "success", "hypothesis": hypothesis_text, "confidence": confidence_score}
 
-    async def invoke_custom(self, history: ChatHistory) -> ChatMessageContent:
+    async def invoke_single(self, history: ChatHistory) -> ChatMessageContent:
         """
         Méthode d'invocation personnalisée pour la boucle d'orchestration.
         Prend un historique et retourne la réponse de l'agent.

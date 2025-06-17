@@ -514,8 +514,9 @@ def get_jvm_options() -> List[str]:
 
 def initialize_jvm(
     lib_dir_path: Optional[str] = None,
-    specific_jar_path: Optional[str] = None,
-    force_restart: bool = False
+    specific_jar_path: Optional[str] = None, # Conserver pour compatibilité descendante si nécessaire
+    force_restart: bool = False,
+    classpath: Optional[str] = None  # Nouveau paramètre pour un classpath direct
     ) -> bool:
     """
     Initialise la JVM avec le classpath configuré, si elle n'est pas déjà démarrée.
@@ -610,7 +611,12 @@ def initialize_jvm(
 
 
     jars_classpath_list: List[str] = []
-    if specific_jar_path:
+    if classpath:
+        # Le classpath est fourni directement, on lui fait confiance.
+        # On peut passer un seul chemin ou une liste jointe par le séparateur de l'OS.
+        jars_classpath_list = classpath.split(os.pathsep)
+        logger.info(f"Utilisation du classpath fourni directement ({len(jars_classpath_list)} entrées).")
+    elif specific_jar_path:
         specific_jar_file = Path(specific_jar_path)
         if specific_jar_file.is_file():
             jars_classpath_list = [str(specific_jar_file.resolve())]

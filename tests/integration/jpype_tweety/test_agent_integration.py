@@ -8,7 +8,7 @@ class TestAgentIntegration:
     Tests d'intégration pour les agents logiques Tweety et leurs interactions.
     """
 
-    def test_basic_agent_creation_and_kb_access(self, logic_classes, integration_jvm):
+    def test_basic_agent_creation_and_kb_access(self, tweety_logics_classes, integration_jvm):
         """
         Scénario: Créer un agent logique simple et vérifier l'accès à sa base de connaissances.
         Données de test: Aucune donnée externe, création programmatique.
@@ -20,7 +20,7 @@ class TestAgentIntegration:
         # Préparation (setup)
         pass
 
-    def test_agent_perception_and_belief_update(self, logic_classes, integration_jvm):
+    def test_agent_perception_and_belief_update(self, tweety_logics_classes, integration_jvm):
         """
         Scénario: Simuler la perception d'un agent et la mise à jour de ses croyances.
         Données de test: Une formule représentant une perception.
@@ -32,7 +32,7 @@ class TestAgentIntegration:
         # Préparation (setup)
         pass
 
-    def test_agent_action_and_effect_on_environment(self, logic_classes, integration_jvm):
+    def test_agent_action_and_effect_on_environment(self, tweety_logics_classes, integration_jvm):
         """
         Scénario: Simuler une action d'un agent et son effet sur un environnement (simulé).
         Données de test: Une action et un état d'environnement initial.
@@ -44,7 +44,7 @@ class TestAgentIntegration:
         # Préparation (setup)
         pass
 
-    def test_agent_deliberation_and_goal_achievement(self, logic_classes, integration_jvm):
+    def test_agent_deliberation_and_goal_achievement(self, tweety_logics_classes, integration_jvm):
         """
         Scénario: Tester la délibération d'un agent pour atteindre un objectif.
         Données de test: Une base de croyances, un ensemble d'objectifs et des plans/règles d'action.
@@ -56,7 +56,7 @@ class TestAgentIntegration:
         # Préparation (setup)
         pass
 
-    def test_multi_agent_communication(self, logic_classes, integration_jvm):
+    def test_multi_agent_communication(self, tweety_logics_classes, integration_jvm):
         """
         Scénario: Tester la communication entre plusieurs agents.
         Données de test: Messages échangés entre agents.
@@ -68,7 +68,7 @@ class TestAgentIntegration:
         # Préparation (setup)
         pass
 
-    def test_agent_with_advanced_reasoner(self, logic_classes, integration_jvm):
+    def test_agent_with_advanced_reasoner(self, tweety_logics_classes, integration_jvm):
         """
         Scénario: Tester un agent utilisant un reasoner avancé (ex: ASP ou DL) pour sa délibération.
         Données de test: KB de l'agent, objectifs, et configuration du reasoner avancé.

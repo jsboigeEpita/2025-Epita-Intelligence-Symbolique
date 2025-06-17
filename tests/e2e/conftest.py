@@ -47,7 +47,7 @@ def pytest_configure(config):
 # Simplified Webapp Service Fixture
 # ============================================================================
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def webapp_service() -> Generator:
     """
     Fixture de session E2E complète:
@@ -73,7 +73,7 @@ def webapp_service() -> Generator:
         from argumentation_analysis.core.jvm_setup import initialize_jvm
         
         logger.info(f"[E2E Conftest] Vrai JPype (version {jpype.__version__}) importé.")
-        initialize_jvm(force_restart=False)
+        initialize_jvm(force_restart=True)
         if not jpype.isJVMStarted():
             pytest.fail("[E2E Conftest] La JVM n'a pas pu démarrer après le nettoyage.")
 
@@ -81,7 +81,7 @@ def webapp_service() -> Generator:
         pytest.fail(f"[E2E Conftest] Échec critique de l'initialisation de JPype/JVM: {e}")
 
     # 2. Démarrer le serveur backend
-    backend_port = 5003
+    backend_port = 5004
     # L'URL de santé pointe maintenant vers la route /status de l'application Flask
     api_health_url = f"http://127.0.0.1:{backend_port}/status"
     

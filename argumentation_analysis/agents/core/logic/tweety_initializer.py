@@ -41,51 +41,68 @@ class TweetyInitializer:
             TweetyInitializer._jvm_started = False
             return
 
+        # It's crucial to ensure the classpath is correct BEFORE any JVM interaction.
+        self._ensure_classpath()
+
         if not jpype.isJVMStarted():
             logger.info("JVM not detected as started. TweetyInitializer will now attempt to start it.")
             self._start_jvm()
         else:
             logger.info("TweetyInitializer confirmed that JVM is already started by another component.")
+            # Even if started, we must ensure our classes are available.
             TweetyInitializer._jvm_started = True
             self._import_java_classes()
 
+    def _ensure_classpath(self):
+        """Ensures the Tweety JAR is in the JPype classpath."""
+        try:
+            from argumentation_analysis.utils.system_utils import get_project_root
+            project_root = get_project_root()
+            jar_path = project_root / "libs" / "tweety" / "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
+            jar_path_str = str(jar_path)
+
+            if not jar_path.exists():
+                logger.error(f"Tweety JAR not found at {jar_path_str}")
+                raise RuntimeError(f"Tweety JAR not found at {jar_path_str}")
+
+            # This check needs to happen before the JVM starts if possible,
+            # but jpype.getClassPath() works even on a running JVM.
+            current_classpath = jpype.getClassPath()
+            if jar_path_str not in current_classpath:
+                logger.info(f"Adding Tweety JAR to classpath: {jar_path_str}")
+                jpype.addClassPath(jar_path_str)
+                # Verification after adding
+                new_classpath = jpype.getClassPath()
+                if jar_path_str not in new_classpath:
+                     logger.warning(f"Failed to dynamically add {jar_path_str} to classpath. This might cause issues.")
+            else:
+                logger.debug(f"Tweety JAR already in classpath.")
+
+        except Exception as e:
+            logger.error(f"Failed to ensure Tweety classpath: {e}", exc_info=True)
+            raise RuntimeError(f"Classpath configuration failed: {e}") from e
+
+
     def _start_jvm(self):
-        """Starts the JVM and sets up the classpath."""
-        global logger # Assurer qu'on référence le logger du module
-        # Le logger devrait maintenant être initialisé correctement au niveau du module.
-        # Ce bloc if logger is None peut rester comme une double sécurité, mais ne devrait idéalement pas être atteint.
+        """Starts the JVM. The classpath should have been configured by _ensure_classpath."""
+        global logger
         if logger is None:
-            # Cela ne devrait plus se produire si l'initialisation au niveau du module est correcte.
             setup_logging("INFO")
             logger = logging.getLogger(__name__)
-            logger.error("CRITICAL: TweetyInitializer module logger was None and had to be re-initialized in _start_jvm. This indicates an issue in module loading or initial logger setup.")
+            logger.error("CRITICAL: TweetyInitializer logger re-initialized in _start_jvm.")
 
         if TweetyInitializer._jvm_started:
             logger.info("JVM already started.")
             return
 
         try:
-            # Importation dynamique de get_project_root UNIQUEMENT si on doit démarrer la JVM
-            from argumentation_analysis.utils.system_utils import get_project_root # Chemin corrigé
-            project_root = get_project_root()
-            tweety_lib_path = project_root / "libs" / "tweety"
-            
-            # Updated classpath based on previous successful runs
-            classpath_entries = [
-                tweety_lib_path / "org.tweetyproject.tweety-full-1.28-with-dependencies.jar",
-                # tweety_lib_path / "lib" / "*", # General libs - Répertoire vide, donc inutile pour l'instant
-            ]
-            
-            # Convert Path objects to strings for jpype
-            classpath = [str(p) for p in classpath_entries]
-            logger.info(f"Calculated Classpath: {classpath}")
-
             if not jpype.isJVMStarted():
                 logger.info("Starting JVM...")
+                # The classpath is now managed by _ensure_classpath and addClassPath.
+                # startJVM will pick up the modified classpath.
                 jpype.startJVM(
                     jpype.getDefaultJVMPath(),
                     "-ea",
-                    f"-Djava.class.path={os.pathsep.join(classpath)}", # Utilisation de os.pathsep
                     convertStrings=False
                 )
                 TweetyInitializer._jvm_started = True
