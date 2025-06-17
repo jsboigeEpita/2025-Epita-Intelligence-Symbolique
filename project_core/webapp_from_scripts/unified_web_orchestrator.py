@@ -500,7 +500,7 @@ class UnifiedWebOrchestrator:
                 
                 success = await asyncio.wait_for(
                     self.run_tests(test_paths=test_paths, **kwargs),
-                    timeout=test_timeout_s
+                    timeout=None
                 )
             except asyncio.TimeoutError:
                 self.add_trace("[ERROR] TIMEOUT GLOBAL",

@@ -1,6 +1,6 @@
 import re
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.async_api import Page, expect
 
 @pytest.mark.playwright
 @pytest.mark.asyncio

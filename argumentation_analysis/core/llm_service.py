@@ -11,8 +11,8 @@ import json  # Ajout de l'import manquant
 import asyncio
 from semantic_kernel.contents.chat_history import ChatHistory
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
-from semantic_kernel.contents.role import Role
-from semantic_kernel.services.chat_completion_service import ChatCompletionService
+from semantic_kernel.contents.utils.author_role import AuthorRole as Role
+from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
 
 # Logger pour ce module
 logger = logging.getLogger("Orchestration.LLM")
@@ -24,7 +24,7 @@ if not logger.handlers and not logger.propagate:
     logger.setLevel(logging.INFO)
 logger.info("<<<<< MODULE llm_service.py LOADED >>>>>")
 
-class MockChatCompletion(ChatCompletionService):
+class MockChatCompletion(ChatCompletionClientBase):
     """
     Service de complétion de chat mocké qui retourne des réponses prédéfinies.
     Simule le comportement de OpenAIChatCompletion pour les tests E2E.
