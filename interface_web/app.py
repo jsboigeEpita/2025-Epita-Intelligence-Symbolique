@@ -380,7 +380,7 @@ def internal_server_error(e):
 # --- Lifespan Management for ASGI ---
 
 @asynccontextmanager
-async def lifespan(app_instance: Flask):
+async def lifespan(app_instance: Starlette):
     """
     Gestionnaire de cycle de vie (lifespan) pour l'application ASGI.
     Initialise les services au démarrage et les nettoie à l'arrêt.
@@ -403,13 +403,14 @@ async def lifespan(app_instance: Flask):
 
 # Enveloppement de l'application Flask avec le middleware ASGI et le lifespan
 # On passe `app_flask` à ASGIMiddleware, et on utilise ce dernier pour créer l'app finale avec le lifespan.
-asgi_app = ASGIMiddleware(app_flask)
-app = Starlette(routes=getattr(asgi_app, 'routes', []), lifespan=lifespan)
-# Correction pour la compatibilité Starlette: Starlette attend des routes.
-# a2wsgi ne fournit pas directement `.routes`, mais nous pouvons reconstruire le montage.
-if not hasattr(asgi_app, 'routes'):
-    from starlette.routing import Mount
-    app = Starlette(routes=[Mount('/', app=asgi_app)], lifespan=lifespan)
+from starlette.routing import Mount
+
+app = Starlette(
+    routes=[
+        Mount('/', app=ASGIMiddleware(app_flask)),
+    ],
+    lifespan=lifespan,
+)
     
 
 if __name__ == '__main__':
