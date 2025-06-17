@@ -153,12 +153,13 @@ class ValidationEpitaComplete:
         self._setup_environment()
         
         # Importation déplacée ici après la configuration du path
-        try:
-            import scripts.core.auto_env
-            print(f"{Colors.GREEN}[OK] [SETUP] Module auto_env charge avec succes.{Colors.ENDC}")
-        except ImportError as e:
-            print(f"{Colors.FAIL}[CRITICAL] [SETUP] Echec du chargement de auto_env: {e}{Colors.ENDC}")
-            print(f"{Colors.WARNING}[WARN] [SETUP] Le script pourrait ne pas fonctionner correctement sans son environnement.{Colors.ENDC}")
+        # Vérification si le module d'environnement a été chargé.
+        # Ceci est redondant car l'import en haut du fichier devrait déjà l'avoir fait,
+        # mais sert de vérification de sanité.
+        if "project_core.core_from_scripts.auto_env" in sys.modules:
+            print(f"{Colors.GREEN}[OK] [SETUP] Module auto_env est bien chargé.{Colors.ENDC}")
+        else:
+            print(f"{Colors.WARNING}[WARN] [SETUP] Le module auto_env n'a pas été pré-chargé comme prévu.{Colors.ENDC}")
 
     def _setup_environment(self):
         """Configure l'environnement Python avec tous les chemins nécessaires"""
@@ -260,8 +261,9 @@ class ValidationEpitaComplete:
                         continue
                     
                     cmd = [sys.executable, str(demo_script)] + params
+                    env = os.environ.copy()
                     result = subprocess.run(cmd, capture_output=True, text=True,
-                                          timeout=120, cwd=str(PROJECT_ROOT))
+                                          timeout=120, cwd=str(PROJECT_ROOT), env=env)
                     
                     if result.returncode == 0:
                         param_success += 1
@@ -299,7 +301,8 @@ class ValidationEpitaComplete:
                     # Test d'importation authentique
                     scripts_path = str(SCRIPTS_DEMO_DIR).replace('\\', '/')
                     cmd = [sys.executable, "-c", f"import sys; sys.path.insert(0, r'{scripts_path}'); import modules.{module_file.stem}"]
-                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+                    env = os.environ.copy()
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, env=env)
                     
                     exec_time = time.time() - start_time
                     
@@ -309,7 +312,7 @@ class ValidationEpitaComplete:
                                     "Module importé avec succès", exec_time, 0.8)
                     else:
                         self.log_test("Scripts EPITA", f"module_{module_file.stem}", "FAILED",
-                                    f"Erreur importation: {result.stderr[:100]}", exec_time, 0.0)
+                                    f"Erreur importation: {result.stderr}", exec_time, 0.0)
                         
                 except Exception as e:
                     self.log_test("Scripts EPITA", f"module_{module_file.stem}", "FAILED",
@@ -438,7 +441,7 @@ class ValidationEpitaComplete:
         """Validation des tests Playwright"""
         print(f"\n{Colors.BOLD}VALIDATION TESTS PLAYWRIGHT{Colors.ENDC}")
         
-        playwright_dir = DEMOS_DIR / "playwright"
+        playwright_dir = PROJECT_ROOT / "tests_playwright"
         if not playwright_dir.exists():
             self.log_test("Tests Playwright", "directory_check", "FAILED", "Dossier playwright introuvable", 0.0, 0.0)
             return False
@@ -451,7 +454,8 @@ class ValidationEpitaComplete:
                 start_time = time.time()
                 # Test syntaxique
                 cmd = [sys.executable, "-m", "py_compile", str(test_file)]
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+                env = os.environ.copy()
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, env=env)
                 exec_time = time.time() - start_time
                 
                 if result.returncode == 0:
