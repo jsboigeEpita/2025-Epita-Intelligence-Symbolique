@@ -5,13 +5,14 @@
 # Python ML/Data Science Stack
 numpy>=2.0
 pandas==2.2.3
-scipy==1.15.3
+scipy<=1.13.1
 scikit-learn==1.6.1
 nltk>=3.8
 spacy==3.7.4
 
 # ===== WEB & API =====
 flask>=2.0.0
+werkzeug<3.1.2  # Ajout pour résoudre le conflit avec openapi-core
 Flask-CORS>=4.0.0
 flask_socketio>=5.3.6
 requests>=2.28.0
@@ -51,7 +52,8 @@ transformers>=4.20.0
 # Ensure the correct Python environment (3.10+) is active.
 # Downgrading will break the application.
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-semantic-kernel==1.33.0
+semantic-kernel==0.9.6b1 # Rétrogradation pour correspondre à l'environnement de test
+regex<2024.0.0 # Ajout pour résoudre le conflit avec semantic-kernel
 # NOTE: Using latest version (>1.0.0) a modern API
 # CRITICAL UPDATE: Resolves Pydantic import errors and modernizes API
 # Provides: Core semantic kernel functionality

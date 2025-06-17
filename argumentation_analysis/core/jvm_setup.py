@@ -1,4 +1,6 @@
 # core/jvm_setup.py
+# NOTE DEV: La demande de commenter l'import de 'Agent' de 'semantic_kernel.agents' a été notée.
+# Cet import n'étant pas présent dans ce fichier, aucune action n'a été nécessaire ici.
 import os
 import re
 import sys
@@ -13,15 +15,64 @@ from pathlib import Path
 from typing import Optional, List, Dict
 from tqdm.auto import tqdm
 import stat
+from dotenv import load_dotenv
 
 # Configuration du logger pour ce module
 logger = logging.getLogger("Orchestration.JPype")
 
 # --- Fonctions de téléchargement et de provisioning (issues du stash de HEAD) ---
 
+def find_and_load_dotenv():
+    """
+    Recherche et charge le fichier .env en remontant depuis le CWD, puis depuis le fichier.
+    Ceci assure que les configurations sont chargées même si le script est dans site-packages.
+    """
+    # Stratégie 1: Partir du répertoire de travail actuel
+    start_path = Path.cwd()
+    for path in [start_path] + list(start_path.parents):
+        dotenv_path = path / ".env"
+        if dotenv_path.exists():
+            logger.info(f"Fichier .env trouvé via CWD à : {dotenv_path}")
+            load_dotenv(dotenv_path=dotenv_path, override=True)
+            return
+
+    # Stratégie 2: Partir du chemin du fichier (fallback)
+    start_path = Path(__file__).resolve()
+    for path in start_path.parents:
+        dotenv_path = path / ".env"
+        if dotenv_path.exists():
+            logger.info(f"Fichier .env trouvé via chemin du script à : {dotenv_path}")
+            load_dotenv(dotenv_path=dotenv_path, override=True)
+            return
+            
+    logger.info("Aucun fichier .env trouvé dans les chemins parents. Utilisation des variables d'environnement existantes.")
+
+def get_project_root_robust() -> Path:
+    """
+    Trouve la racine du projet ou du package pour localiser les ressources internes (libs).
+    Marqueurs cherchés : .git, pyproject.toml, requirements.txt
+    """
+    current_path = Path(__file__).resolve()
+    # Recherche de la racine du projet en mode développement
+    for parent in [current_path] + list(current_path.parents):
+        if any((parent / marker).exists() for marker in ['.git', 'pyproject.toml', 'requirements.txt']):
+            logger.info(f"Racine du projet (mode dév) trouvée à : {parent}")
+            return parent
+    
+    # Fallback pour exécution depuis un package (ex: site-packages).
+    # La racine correspond au dossier du package 'argumentation_analysis'.
+    # Chemin: .../site-packages/argumentation_analysis/core/jvm_setup.py
+    # parents[0] est .../core, parents[1] est .../argumentation_analysis
+    package_root = current_path.parents[1]
+    logger.warning(f"Marqueurs de racine non trouvés. Utilisation de la racine du package supposée : {package_root}")
+    return package_root
+
 # --- Constantes de Configuration ---
 # Répertoires (utilisant pathlib pour la robustesse multi-plateforme)
-PROJ_ROOT = Path(__file__).resolve().parents[3]
+find_and_load_dotenv()
+PROJ_ROOT = get_project_root_robust()
+
+
 LIBS_DIR = PROJ_ROOT / "libs" / "tweety" # JARs Tweety dans un sous-répertoire dédié
 TWEETY_VERSION = "1.28" # Mettre à jour au besoin
 # TODO: Lire depuis un fichier de config centralisé (par ex. pyproject.toml ou un .conf)
@@ -128,14 +179,8 @@ def download_file(url: str, dest_path: Path, description: Optional[str] = None):
         if dest_path.exists(): dest_path.unlink(missing_ok=True)
         return False, False
 
-def get_project_root_for_libs() -> Path: # Renamed to avoid conflict if get_project_root is defined elsewhere
-    return Path(__file__).resolve().parents[3]
-
-def find_libs_dir() -> Optional[Path]:
-    proj_root_temp = get_project_root_for_libs()
-    libs_dir_temp = proj_root_temp / "libs"
-    libs_dir_temp.mkdir(parents=True, exist_ok=True)
-    return libs_dir_temp
+# Les fonctions get_project_root_for_libs et find_libs_dir sont obsolètes
+# et remplacées par la nouvelle fonction get_project_root_robust.
 
 def download_tweety_jars(
     version: str = TWEETY_VERSION,
@@ -150,13 +195,14 @@ def download_tweety_jars(
     else:
         target_dir_path = Path(target_dir)
 
+    logger.info(f"Préparation du répertoire des bibliothèques Tweety : '{target_dir_path.resolve()}'")
     try:
         target_dir_path.mkdir(parents=True, exist_ok=True)
     except OSError as e:
         logger.error(f"Impossible de créer le répertoire cible {target_dir_path} pour Tweety JARs: {e}")
         return False
 
-    logger.info(f"\n--- Vérification/Téléchargement des JARs Tweety v{version} ---")
+    logger.info(f"\n--- Vérification/Téléchargement des JARs Tweety v{version} vers '{target_dir_path.resolve()}' ---")
     BASE_URL = f"https://tweetyproject.org/builds/{version}/"
     NATIVE_LIBS_DIR = target_dir_path / native_subdir
     try:
@@ -290,10 +336,9 @@ PORTABLE_JDK_DIR_NAME = "portable_jdk"
 TEMP_DIR_NAME = "_temp_jdk_download"
 # MIN_JAVA_VERSION, JDK_VERSION, JDK_BUILD, JDK_URL_TEMPLATE sont définis plus haut
 
-def get_project_root() -> Path: # S'assurer qu'elle est bien définie ou la définir ici si ce n'est pas le cas plus haut.
-    # Si elle est déjà définie globalement, cette redéfinition peut être enlevée.
-    # Pour l'instant, je la garde pour m'assurer qu'elle est disponible pour les fonctions JDK.
-    return Path(__file__).resolve().parents[3]
+def get_project_root() -> Path:
+    """Retourne la racine du projet, qui est maintenant déterminée de manière robuste."""
+    return PROJ_ROOT
 
 def is_valid_jdk(path: Path) -> bool:
     """Vérifie si un répertoire est un JDK valide et respecte la version minimale."""
@@ -538,12 +583,6 @@ def initialize_jvm(
         logger.error("ERREUR CRITIQUE: Tentative de redémarrage d'une JVM qui a été explicitement arrêtée.")
         return False
 
-    if not _SESSION_FIXTURE_OWNS_JVM:
-        logger.info("Vérification/Téléchargement des JARs Tweety...")
-        if not download_tweety_jars():
-            logger.error("Échec du provisioning des bibliothèques Tweety. Démarrage de la JVM annulé.")
-            return False
-        logger.info("Bibliothèques Tweety provisionnées.")
 
     java_home_str = find_valid_java_home()
     if not java_home_str:
@@ -553,46 +592,34 @@ def initialize_jvm(
     os.environ['JAVA_HOME'] = java_home_str
     logger.info(f"Variable d'env JAVA_HOME positionnée à : {java_home_str}")
 
-    # Logique de recherche de la JVM DLL/SO unifiée et fiabilisée
-    logger.info(f"Recherche manuelle de la bibliothèque JVM dans le JDK validé : {java_home_str}")
+    # --- Logique de recherche de la JVM DLL/SO simplifiée et fiabilisée ---
+    logger.info(f"Construction du chemin de la bibliothèque JVM à partir du JDK validé : {java_home_str}")
     java_home_path = Path(java_home_str)
     jvm_path_dll_so = None
 
     system = platform.system()
     if system == "Windows":
-        # Ordre de recherche commun pour les JDK modernes
-        search_paths = [java_home_path / "bin" / "server" / "jvm.dll"]
-    elif system == "Darwin": # macOS
-        search_paths = [java_home_path / "lib" / "server" / "libjvm.dylib"]
-    else: # Linux et autres
-        search_paths = [
-            java_home_path / "lib" / "server" / "libjvm.so",
-            java_home_path / "lib" / platform.machine() / "server" / "libjvm.so"
-        ]
+        # Chemin standard pour la plupart des JDK sur Windows
+        jvm_path_candidate = java_home_path / "bin" / "server" / "jvm.dll"
+    elif system == "Darwin":  # macOS
+        jvm_path_candidate = java_home_path / "lib" / "server" / "libjvm.dylib"
+    else:  # Linux et autres
+        # Le chemin peut varier, mais "lib/server" est le plus commun
+        jvm_path_candidate = java_home_path / "lib" / "server" / "libjvm.so"
 
-    # Tentative pour contourner les problèmes de chemin avec JPype
-    try:
-        default_jvm = jpype.getDefaultJVMPath()
-        if Path(default_jvm).exists():
-             logger.info(f"JPype a trouvé un chemin JVM par défaut valide : {default_jvm}. Ajout en priorité.")
-             search_paths.insert(0, Path(default_jvm))
-    except jpype.JVMNotFoundException:
-        logger.info("jpype.getDefaultJVMPath() n'a rien trouvé, ce qui est attendu si JAVA_HOME n'était pas préconfiguré.")
-
-    for path_to_check in search_paths:
-        if path_to_check.exists():
-            jvm_path_dll_so = str(path_to_check.resolve()) # Utiliser le chemin absolu résolu
-            logger.info(f"Bibliothèque JVM trouvée et validée à : {jvm_path_dll_so}")
-            break
-    
-    if not jvm_path_dll_so:
-        logger.critical(f"Échec final de la localisation de la bibliothèque partagée JVM (jvm.dll/libjvm.so) dans les chemins de recherche : {search_paths}")
-        # En dernier recours, on fait confiance à JPype, même s'il a déjà échoué avant.
+    if jvm_path_candidate.exists():
+        jvm_path_dll_so = str(jvm_path_candidate.resolve())
+        logger.info(f"Bibliothèque JVM trouvée et validée à l'emplacement : {jvm_path_dll_so}")
+    else:
+        # Si le chemin standard échoue, JPype peut parfois trouver le bon chemin par lui-même MAINTENANT que JAVA_HOME est défini.
+        logger.warning(f"Le chemin standard de la JVM '{jvm_path_candidate}' n'a pas été trouvé. Tentative de fallback avec jpype.getDefaultJVMPath()...")
         try:
-             jvm_path_dll_so = jpype.getDefaultJVMPath()
+            jvm_path_dll_so = jpype.getDefaultJVMPath()
+            logger.info(f"Succès du fallback : JPype a trouvé la JVM à '{jvm_path_dll_so}'.")
         except jpype.JVMNotFoundException:
-             logger.error("Échec ultime : jpype.getDefaultJVMPath() a aussi échoué.")
-             return False
+            logger.critical(f"ÉCHEC CRITIQUE: La bibliothèque JVM n'a été trouvée ni à l'emplacement standard '{jvm_path_candidate}' ni via la découverte automatique de JPype.")
+            logger.error("Veuillez vérifier l'intégrité de l'installation du JDK ou configurer le chemin manuellement.")
+            return False
 
     jars_classpath_list: List[str] = []
     if specific_jar_path:
@@ -603,11 +630,30 @@ def initialize_jvm(
             logger.error(f"Fichier JAR spécifique introuvable: '{specific_jar_path}'.")
             return False
     else:
+        # 1. Définir le répertoire cible pour les bibliothèques
         actual_lib_dir = Path(lib_dir_path) if lib_dir_path else LIBS_DIR
-        if not actual_lib_dir.is_dir():
-            logger.error(f"Répertoire des bibliothèques '{actual_lib_dir}' invalide.")
-            return False
+        logger.info(f"Répertoire des bibliothèques cible : '{actual_lib_dir.resolve()}'")
+        
+        # S'assurer que le répertoire existe avant toute opération
+        actual_lib_dir.mkdir(parents=True, exist_ok=True)
+
+        # 2. Provisioning : télécharger les JARs si nécessaire (logique inversée)
+        if not _SESSION_FIXTURE_OWNS_JVM:
+            logger.info("Lancement du processus de provisioning des bibliothèques Tweety...")
+            if not download_tweety_jars(target_dir=actual_lib_dir):
+                logger.warning("Le provisioning des bibliothèques a signalé une erreur (ex: JAR core manquant). Le classpath sera probablement vide.")
+            else:
+                logger.info("Provisioning des bibliothèques terminé.")
+        else:
+            logger.info("Le provisioning des bibliothèques est géré par une fixture de session, il est donc sauté ici.")
+
+        # 3. Validation : construire le classpath à partir du répertoire cible APRES provisioning
+        logger.info(f"Construction du classpath depuis '{actual_lib_dir.resolve()}'...")
         jars_classpath_list = [str(f.resolve()) for f in actual_lib_dir.glob("*.jar") if f.is_file()]
+        if jars_classpath_list:
+             logger.info(f"  {len(jars_classpath_list)} JAR(s) trouvé(s) pour le classpath.")
+        else:
+             logger.warning(f"  Aucun fichier JAR n'a été trouvé dans '{actual_lib_dir.resolve()}'. Le classpath sera vide.")
 
     if not jars_classpath_list:
         logger.error("Classpath est vide. Démarrage de la JVM annulé.")

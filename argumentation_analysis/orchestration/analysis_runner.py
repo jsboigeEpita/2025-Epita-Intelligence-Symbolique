@@ -33,7 +33,7 @@ import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.contents.utils.author_role import AuthorRole
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
-from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent, Agent
+# from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent, Agent
 from semantic_kernel.exceptions import AgentChatException
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion # Pour type hint
 from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
@@ -318,11 +318,25 @@ async def _run_analysis_conversation(
                 run_logger.debug(f"[{author_info}]:\n{message.content}")
             run_logger.debug("======================================")
 
-        final_analysis = local_state.to_json()
+        final_analysis = json.loads(local_state.to_json())
         
+        # Conversion de l'historique pour la sérialisation JSON
+        history_list = []
+        if full_history:
+            for message in full_history:
+                history_list.append({
+                    "role": message.role.name if hasattr(message.role, 'name') else str(message.role),
+                    "name": getattr(message, 'name', None),
+                    "content": str(message.content)
+                })
+
         run_logger.info(f"--- Fin Run_{run_id} ---")
         
-        return {"status": "success", "analysis": final_analysis, "history": full_history}
+        # Impression du JSON final sur stdout pour le script de démo
+        final_output = {"status": "success", "analysis": final_analysis, "history": history_list}
+        print(json.dumps(final_output, indent=2))
+        
+        return final_output
         
     except Exception as e:
         run_logger.error(f"Erreur durant l'analyse: {e}", exc_info=True)

@@ -10,10 +10,15 @@ et configure automatiquement l'environnement nécessaire.
 """
 
 import sys
+import io
 import asyncio
 import argparse
 import logging
 from pathlib import Path
+
+# Force UTF-8 for stdout and stderr
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 # Configuration initiale pour s'assurer que les modules du projet sont accessibles
 # Cela est particulièrement utile si le script est exécuté directement.
@@ -42,6 +47,7 @@ async def main():
     
     # Options supplémentaires
     parser.add_argument("--verbose", "-v", action="store_true", help="Afficher les logs détaillés")
+    parser.add_argument("--output-file", type=str, default=None, help="Chemin du fichier où écrire le JSON de sortie.")
     
     args = parser.parse_args()
     
@@ -85,10 +91,33 @@ async def main():
                 })
             analysis_results['history'] = serializable_history
         
-        print(json.dumps(analysis_results, indent=2, ensure_ascii=False, default=str))
+        output_json_str = json.dumps(analysis_results, indent=2, ensure_ascii=False, default=str)
+        
+        if args.output_file:
+            try:
+                # Créer le répertoire parent si nécessaire
+                output_path = Path(args.output_file)
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                output_path.write_text(output_json_str, encoding='utf-8')
+                launcher_logger.info(f"Les résultats de l'analyse ont été sauvegardés dans : {args.output_file}")
+            except Exception as write_error:
+                launcher_logger.error(f"Impossible d'écrire dans le fichier de sortie {args.output_file}: {write_error}")
+                # En cas d'erreur d'écriture, on imprime sur stdout comme solution de repli
+                print(output_json_str)
+        else:
+            # Comportement par défaut : imprimer sur la sortie standard
+            print(output_json_str)
 
     except Exception as e:
-        print(json.dumps({"status": "error", "message": "Failed to serialize results", "details": str(e)}))
+        error_json = json.dumps({"status": "error", "message": "Failed to serialize results", "details": str(e)})
+        if args.output_file:
+             try:
+                Path(args.output_file).write_text(error_json, encoding='utf-8')
+             except Exception as write_error:
+                 launcher_logger.error(f"Impossible d'écrire l'erreur dans le fichier de sortie {args.output_file}: {write_error}")
+                 print(error_json) # Fallback
+        else:
+            print(error_json)
 
 if __name__ == "__main__":
     # S'assurer que l'environnement asyncio est correctement géré
