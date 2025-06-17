@@ -54,49 +54,45 @@ async def analyze_framework_endpoint(
     return {"analysis": analysis_result}
 
 # --- Ancien routeur (peut être conservé, modifié ou supprimé selon la stratégie) ---
-@router.post("/analyze", response_model=AnalysisResponse)
+@router.post("/analyze") # Temporairement sans response_model pour la flexibilité
 async def analyze_text_endpoint(
     request: AnalysisRequest,
     analysis_service: AnalysisService = Depends(get_analysis_service)
 ):
     """
-    Analyzes a given text for logical fallacies.
-    Utilizes the AnalysisService injected via FastAPI's dependency system.
-    Returns the analysis result.
+    Analyzes a given text for logical fallacies and structure.
+    Returns a nested analysis result compatible with the frontend.
     """
     analysis_id = str(uuid.uuid4())[:8]
-    # Note: start_time could be used to calculate endpoint processing time if needed,
-    # but service_result usually provides its own processing duration.
-    # start_time = datetime.now()
+    
+    # Appel du service d'analyse
+    service_result = await analysis_service.analyze_text(request.text)
 
-    # Call the analysis service
-    # Assuming analysis_service.analyze_text is an async method
-    # and returns a dict: {'fallacies': [], 'duration': float, 'components_used': [], 'summary': str}
-    service_result = await analysis_service.analyze_text(request.text) # Correction: analyze -> analyze_text
-
-    # Extract and map fallacies
+    # Construction de la nouvelle structure de réponse imbriquée
     fallacies_data = service_result.get('fallacies', [])
     fallacies = [Fallacy(**f_data) for f_data in fallacies_data]
-
-    status = "success"  # Assuming success, error handling can be added
-
-    # Construct metadata, inspired by interface_web/app.py
-    metadata = {
-        "duration_seconds": service_result.get('duration', 0.0),  # Duration from the service
-        "service_status": "active",  # Simplified status
-        "components_used": service_result.get('components_used', [])  # Components from the service
+    
+    # Données attendues par le frontend
+    results_payload = {
+        "overall_quality": service_result.get('overall_quality', 0.0), # Fournir une valeur par défaut
+        "fallacy_count": len(fallacies),
+        "fallacies": fallacies,
+        "argument_structure": service_result.get('argument_structure', None),
+        "suggestions": service_result.get('suggestions', []),
+        "summary": service_result.get('summary', "L'analyse a été complétée."),
+        "metadata": {
+            "duration": service_result.get('duration', 0.0),
+            "service_status": "active",
+            "components_used": service_result.get('components_used', [])
+        }
     }
-
-    # Get summary from the service
-    summary = service_result.get('summary', "L'analyse a été complétée.")
-
-    return AnalysisResponse(
-        analysis_id=analysis_id,
-        status=status,
-        fallacies=fallacies,
-        metadata=metadata,
-        summary=summary
-    )
+    
+    # La réponse finale est un dictionnaire qui correspond au modèle implicite attendu
+    return {
+        "analysis_id": analysis_id,
+        "status": "success",
+        "results": results_payload
+    }
 
 @router.get("/status", response_model=StatusResponse)
 async def status_endpoint(

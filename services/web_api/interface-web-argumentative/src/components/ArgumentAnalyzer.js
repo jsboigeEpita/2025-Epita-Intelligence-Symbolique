@@ -44,7 +44,7 @@ const ArgumentAnalyzer = () => {
     
     try {
       const result = await analyzeText(text, options);
-      setAnalysis(result);
+setAnalysis(result);
     } catch (err) {
       setError('Erreur lors de l\'analyse : ' + err.message);
       setAnalysis(null);
