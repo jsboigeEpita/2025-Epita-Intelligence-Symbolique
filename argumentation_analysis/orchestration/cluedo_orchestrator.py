@@ -7,8 +7,7 @@ from semantic_kernel.functions import kernel_function
 from semantic_kernel.kernel import Kernel
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité pour agents et filters
 from autogen.agentchat import GroupChat as AgentGroupChat
-from semantic_kernel.functions.kernel_function_context import KernelFunctionContext as FunctionInvocationContext
-from semantic_kernel.filters.filter_types import FilterTypes
+from semantic_kernel.functions.function_invocation_context import FunctionInvocationContext
 # Agent, TerminationStrategy sont importés depuis .base
 # SequentialSelectionStrategy est géré par speaker_selection_method dans GroupChat
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
@@ -91,7 +90,7 @@ async def run_cluedo_game(
 
     plugin = EnqueteStateManagerPlugin(enquete_state)
     kernel.add_plugin(plugin, "EnqueteStatePlugin")
-    kernel.add_filter(FilterTypes.FUNCTION_INVOCATION, logging_filter)
+    kernel.add_function_invocation_filter(logging_filter)
 
     elements = enquete_state.elements_jeu_cluedo
     all_constants = [name.replace(" ", "") for category in elements.values() for name in category]
