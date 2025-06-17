@@ -6,10 +6,11 @@ from playwright.sync_api import Page, expect, TimeoutError
 
 # The 'webapp_service' session fixture in conftest.py is autouse=True,
 # so the web server is started automatically for all tests in this module.
+@pytest.mark.asyncio
 @pytest.fixture(scope="function")
-def framework_page(page: Page, webapp_service: str) -> Page:
+async def framework_page(page: Page, webapp_service: dict) -> Page:
     """Fixture qui prépare la page et navigue vers l'onglet Framework."""
-    page.goto(webapp_service)
+    await page.goto(webapp_service["frontend_url"])
     # L'attente de l'état de connexion de l'API est maintenant dans chaque test
     # pour une meilleure isolation et un débogage plus facile.
     
@@ -19,7 +20,8 @@ def framework_page(page: Page, webapp_service: str) -> Page:
 class TestFrameworkBuilder:
     """Tests fonctionnels pour l'onglet Framework basés sur la structure réelle"""
 
-    def test_framework_creation_workflow(self, framework_page: Page):
+    @pytest.mark.asyncio
+    async def test_framework_creation_workflow(self, framework_page: Page):
         """Test du workflow principal de création de framework"""
         
         page = framework_page
@@ -72,7 +74,8 @@ class TestFrameworkBuilder:
         # Nous vérifions que l'état du framework persiste correctement
         expect(page.locator('.argument-card')).to_have_count(2)
 
-    def test_framework_rule_management(self, framework_page: Page):
+    @pytest.mark.asyncio
+    async def test_framework_rule_management(self, framework_page: Page):
         """Test de la gestion des règles et contraintes du framework"""
         page = framework_page
         expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
@@ -122,7 +125,8 @@ class TestFrameworkBuilder:
         framework_page.locator('.attack-item .remove-button').first.click()
         expect(framework_page.locator('.attack-item')).to_have_count(1)
 
-    def test_framework_validation_integration(self, framework_page: Page):
+    @pytest.mark.asyncio
+    async def test_framework_validation_integration(self, framework_page: Page):
         """Test de l'intégration avec le système de validation"""
         page = framework_page
         expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
@@ -159,7 +163,8 @@ class TestFrameworkBuilder:
         # Vérification que les arguments persistent
         expect(framework_page.locator('.argument-card')).to_have_count(2)
 
-    def test_framework_persistence(self, framework_page: Page):
+    @pytest.mark.asyncio
+    async def test_framework_persistence(self, framework_page: Page):
         """Test de la persistance et sauvegarde du framework"""
         page = framework_page
         expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
@@ -201,7 +206,8 @@ class TestFrameworkBuilder:
         # Note: La persistance dépend de l'implémentation React et du state management
         expect(framework_page.locator('.framework-section').first).to_be_visible()
 
-    def test_framework_extension_analysis(self, framework_page: Page):
+    @pytest.mark.asyncio
+    async def test_framework_extension_analysis(self, framework_page: Page):
         """Test de l'analyse des extensions du framework"""
         page = framework_page
         expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)

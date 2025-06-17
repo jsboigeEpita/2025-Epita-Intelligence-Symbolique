@@ -6,15 +6,16 @@ import pytest
 from playwright.sync_api import Page, expect
 
 
-def test_app_loads_successfully(page: Page, webapp_service: str):
+@pytest.mark.asyncio
+async def test_app_loads_successfully(page: Page, webapp_service: dict):
     """
     Test basique qui vérifie que l'application se charge.
     SANS marker playwright problématique.
     """
     try:
         # Navigation vers l'application
-        print(f"[START] Navigation vers {webapp_service}")
-        page.goto(webapp_service, timeout=10000)
+        print(f"[START] Navigation vers {webapp_service['frontend_url']}")
+        await page.goto(webapp_service["frontend_url"], timeout=10000)
         
         # Attendre que la page soit chargée
         page.wait_for_load_state('networkidle', timeout=10000)
@@ -60,7 +61,8 @@ def test_app_loads_successfully(page: Page, webapp_service: str):
         raise
 
 
-def test_api_connectivity(page: Page, webapp_service: str):
+@pytest.mark.asyncio
+async def test_api_connectivity(page: Page, webapp_service: dict):
     """
     Test qui vérifie la connectivité API.
     """
@@ -68,7 +70,7 @@ def test_api_connectivity(page: Page, webapp_service: str):
         print("[API] Test connectivite API")
         
         # Navigation
-        page.goto(webapp_service, timeout=10000)
+        await page.goto(webapp_service["frontend_url"], timeout=10000)
         page.wait_for_load_state('networkidle', timeout=5000)
         
         # Attendre indicateur de statut API
@@ -105,14 +107,15 @@ def test_api_connectivity(page: Page, webapp_service: str):
         raise
 
 
-def test_navigation_tabs(page: Page, webapp_service: str):
+@pytest.mark.asyncio
+async def test_navigation_tabs(page: Page, webapp_service: dict):
     """
     Test basique de navigation entre onglets.
     """
     try:
         print("[NAV] Test navigation onglets")
         
-        page.goto(webapp_service, timeout=10000)
+        await page.goto(webapp_service["frontend_url"], timeout=10000)
         page.wait_for_load_state('networkidle', timeout=5000)
         
         # Chercher des éléments cliquables qui ressemblent à des onglets

@@ -406,19 +406,13 @@ def is_valid_jdk(path: Path) -> bool:
         return False
 
 def find_existing_jdk() -> Optional[Path]:
-    """Tente de trouver un JDK valide via JAVA_HOME ou un JDK portable pré-existant."""
-    logger.debug("Recherche d'un JDK pré-existant valide...")
+    """
+    Tente de trouver un JDK valide.
+    Note : La vérification de JAVA_HOME est désactivée pour forcer
+    l'utilisation du JDK portable et garantir la consistance.
+    """
+    logger.debug("Recherche d'un JDK portable pré-existant valide (JAVA_HOME est ignoré).")
     
-    java_home_env = os.environ.get("JAVA_HOME")
-    if java_home_env:
-        logger.info(f"Variable JAVA_HOME trouvée : {java_home_env}")
-        potential_path = Path(java_home_env)
-        if is_valid_jdk(potential_path):
-            logger.info(f"JDK validé via JAVA_HOME : {potential_path}")
-            return potential_path
-        else:
-            logger.warning(f"JAVA_HOME ('{potential_path}') n'est pas un JDK valide ou ne respecte pas la version minimale.")
-
     project_r = get_project_root()
     portable_jdk_dir = project_r / PORTABLE_JDK_DIR_NAME
     
@@ -432,7 +426,7 @@ def find_existing_jdk() -> Optional[Path]:
                     logger.info(f"JDK portable validé dans sous-dossier : {item}")
                     return item
     
-    logger.info("Aucun JDK pré-existant valide trouvé (JAVA_HOME ou portable).")
+    logger.info("Aucun JDK pré-existant valide trouvé. Le téléchargement va être tenté.")
     return None
 
 def find_valid_java_home() -> Optional[str]:

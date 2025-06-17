@@ -7,9 +7,12 @@ import os
 import sys
 import logging
 import socket
-from typing import Generator
+import asyncio
+from typing import Generator, Dict
 from pathlib import Path
 from playwright.sync_api import expect
+
+from project_core.webapp_from_scripts.frontend_manager import FrontendManager
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -25,31 +28,16 @@ def find_free_port():
 # ============================================================================
 
 @pytest.fixture(scope="session")
-def webapp_service() -> Generator:
+async def webapp_service() -> Generator[Dict[str, str], None, None]:
     """
-    Fixture de session qui démarre et arrête le serveur web Uvicorn.
+    Fixture de session qui démarre et arrête les serveurs backend (Uvicorn)
+    et frontend (React).
     S'assure que la JVM est réinitialisée, utilise un port libre et s'assure
     que l'environnement est propagé.
     """
     # 1. S'assurer d'un environnement JVM propre avant de faire quoi que ce soit
-    try:
-        # S'assurer que le chemin des mocks n'est pas dans sys.path
-        mocks_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../mocks'))
-        if mocks_path in sys.path:
-            sys.path.remove(mocks_path)
-
-        import jpype
-        import jpype.imports
-        from argumentation_analysis.core.jvm_setup import initialize_jvm
-
-        logger.info(f"[E2E Conftest] Vrai JPype (version {jpype.__version__}) importé.")
-        # force_restart est crucial pour les tests E2E pour garantir un état propre
-        initialize_jvm(force_restart=True)
-        if not jpype.isJVMStarted():
-            pytest.fail("[E2E Conftest] La JVM n'a pas pu démarrer après le nettoyage.")
-
-    except Exception as e:
-        pytest.fail(f"[E2E Conftest] Échec critique de l'initialisation de JPype/JVM: {e}")
+    # Le démarrage de la JVM est maintenant entièrement délégué au serveur backend.
+    # Le processus de test n'interagit plus du tout avec JPype.
 
     # 2. Démarrer le serveur backend sur un port libre
     host = "127.0.0.1"
@@ -60,20 +48,30 @@ def webapp_service() -> Generator:
     # Mettre à jour la variable d'environnement pour que les tests API la trouvent.
     os.environ["BACKEND_URL"] = base_url
 
-    # La commande lance maintenant l'application principale Starlette
+    # La commande doit maintenant utiliser le script d'activation pour garantir
+    # que l'environnement du sous-processus est correctement configuré.
+    project_root = Path(__file__).parent.parent.parent
+    activation_script = project_root / "activate_project_env.ps1"
+    
+    # La commande à exécuter par le script d'activation
+    backend_command_to_run = (
+        f"python -m uvicorn interface_web.app:app "
+        f"--host {host} --port {backend_port} --log-level debug"
+    )
+
+    # Commande complète pour Popen
     command = [
-        sys.executable,
-        "-m", "uvicorn",
-        "interface_web.app:app",
-        "--host", host,
-        "--port", str(backend_port),
-        "--log-level", "debug"
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-Command",
+        f"& '{activation_script}' -CommandToRun \"{backend_command_to_run}\""
     ]
 
-    print(f"\n[E2E Fixture] Starting Starlette webapp server on port {backend_port}...")
+    print(f"\n[E2E Fixture] Starting Starlette webapp server on port {backend_port} via activation script...")
+    print(f"[E2E Fixture] Full command: {' '.join(command)}")
 
     # Use Popen to run the server in the background
-    project_root = Path(__file__).parent.parent.parent
     log_dir = project_root / "logs"
     log_dir.mkdir(exist_ok=True)
 
@@ -96,7 +94,7 @@ def webapp_service() -> Generator:
 
         # Wait for the backend to be ready by polling the health endpoint
         start_time = time.time()
-        timeout = 90  # 90 seconds timeout for startup
+        timeout = 300  # 300 seconds (5 minutes) timeout for startup
         ready = False
 
         print(f"[E2E Fixture] Waiting for backend at {api_health_url}...")
@@ -130,28 +128,71 @@ def webapp_service() -> Generator:
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 process.kill()
-
             pytest.fail(f"Backend failed to start within {timeout} seconds. Check logs in {log_dir}")
+        
+        # 3. Démarrer le serveur frontend
+        frontend_manager = None
+        urls = {"backend_url": base_url, "frontend_url": None}
 
-        # At this point, the server is running. Yield control to the tests.
-        yield base_url
-
-        # Teardown: Stop the server after tests are done
-        print("\n[E2E Fixture] Stopping backend server...")
         try:
-            if os.name == 'nt':
-                # On Windows, terminate the whole process group
-                subprocess.call(['taskkill', '/F', '/T', '/PID', str(process.pid)])
-            else:
-                process.terminate()
+            frontend_port = find_free_port()
+            
+            # Le chemin est relatif à la racine du projet
+            frontend_path = project_root / 'services' / 'web_api' / 'interface-web-argumentative'
 
-            process.wait(timeout=10)
-        except (subprocess.TimeoutExpired, ProcessLookupError):
-            if process.poll() is None:
-                print("[E2E Fixture] process.terminate() timed out, killing.")
-                process.kill()
+            # Préparation de l'environnement pour le frontend manager
+            frontend_env = os.environ.copy()
+            frontend_env["PYTHONPATH"] = str(project_root) + os.pathsep + frontend_env.get("PYTHONPATH", "")
+            frontend_env['REACT_APP_API_URL'] = base_url
+            frontend_env['PORT'] = str(frontend_port)
+            
+            frontend_config = {
+                'enabled': True,
+                'path': str(frontend_path),
+                'port': frontend_port,
+                'timeout_seconds': 300
+            }
+
+            print(f"\n[E2E Fixture] Starting Frontend service...")
+            
+            frontend_manager = FrontendManager(
+                config=frontend_config,
+                logger=logger,
+                backend_url=base_url,
+                env=frontend_env
+            )
+
+            frontend_status = await frontend_manager.start()
+
+            if not frontend_status.get('success'):
+                pytest.fail(f"Frontend failed to start: {frontend_status.get('error')}. Check logs/ for frontend_*.log files.")
+            
+            urls["frontend_url"] = frontend_status['url']
+            print(f"[E2E Fixture] Frontend service is ready at {urls['frontend_url']}")
+
+            # Yield control to the tests avec les deux URLs
+            yield urls
+
         finally:
-            print("[E2E Fixture] Backend server stopped.")
+            # Teardown: Stop the servers after tests are done
+            if frontend_manager:
+                print("\n[E2E Fixture] Stopping frontend service...")
+                await frontend_manager.stop()
+                print("[E2E Fixture] Frontend service stopped.")
+
+            print("\n[E2E Fixture] Stopping backend server...")
+            try:
+                if os.name == 'nt':
+                    subprocess.call(['taskkill', '/F', '/T', '/PID', str(process.pid)])
+                else:
+                    process.terminate()
+                process.wait(timeout=10)
+            except (subprocess.TimeoutExpired, ProcessLookupError):
+                if process.poll() is None:
+                    print("[E2E Fixture] process.terminate() timed out, killing.")
+                    process.kill()
+            finally:
+                print("[E2E Fixture] Backend server stopped.")
 # ============================================================================
 # Helper Classes
 # ============================================================================

@@ -5,13 +5,14 @@ from playwright.sync_api import Page, expect
 # The 'webapp_service' session fixture in conftest.py is autouse=True,
 # so the web server is started automatically for all tests in this module.
 @pytest.mark.playwright
-def test_fallacy_detection_basic_workflow(page: Page, webapp_service: str):
+@pytest.mark.asyncio
+async def test_fallacy_detection_basic_workflow(page: Page, webapp_service: dict):
     """
     Test principal : détection d'un sophisme Ad Hominem
     Valide le workflow complet de détection avec un exemple prédéfini
     """
     # 1. Navigation et attente API connectée
-    page.goto(webapp_service)
+    await page.goto(webapp_service["frontend_url"])
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     # 2. Activation de l'onglet Sophismes
@@ -45,13 +46,14 @@ def test_fallacy_detection_basic_workflow(page: Page, webapp_service: str):
     expect(severity_badge).to_be_visible()
 
 @pytest.mark.playwright
-def test_severity_threshold_adjustment(page: Page, webapp_service: str):
+@pytest.mark.asyncio
+async def test_severity_threshold_adjustment(page: Page, webapp_service: dict):
     """
     Test curseur seuil de sévérité
     Vérifie l'impact du seuil sur les résultats de détection
     """
     # 1. Navigation et activation onglet
-    page.goto(webapp_service)
+    await page.goto(webapp_service["frontend_url"])
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     fallacy_tab = page.locator('[data-testid="fallacy-detector-tab"]')
@@ -88,13 +90,14 @@ def test_severity_threshold_adjustment(page: Page, webapp_service: str):
     expect(results_container).to_contain_text("sophisme(s) détecté(s)")
 
 @pytest.mark.playwright
-def test_fallacy_example_loading(page: Page, webapp_service: str):
+@pytest.mark.asyncio
+async def test_fallacy_example_loading(page: Page, webapp_service: dict):
     """
     Test chargement des exemples prédéfinis
     Valide le fonctionnement des boutons "Tester" sur les cartes d'exemples
     """
     # 1. Navigation et activation onglet
-    page.goto(webapp_service)
+    await page.goto(webapp_service["frontend_url"])
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     fallacy_tab = page.locator('[data-testid="fallacy-detector-tab"]')
@@ -130,13 +133,14 @@ def test_fallacy_example_loading(page: Page, webapp_service: str):
     expect(submit_button).to_be_enabled()
 
 @pytest.mark.playwright
-def test_fallacy_detector_reset_functionality(page: Page, webapp_service: str):
+@pytest.mark.asyncio
+async def test_fallacy_detector_reset_functionality(page: Page, webapp_service: dict):
     """
     Test bouton de réinitialisation
     Vérifie que le bouton reset nettoie complètement l'interface
     """
     # 1. Navigation et activation onglet
-    page.goto(webapp_service)
+    await page.goto(webapp_service["frontend_url"])
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     fallacy_tab = page.locator('[data-testid="fallacy-detector-tab"]')

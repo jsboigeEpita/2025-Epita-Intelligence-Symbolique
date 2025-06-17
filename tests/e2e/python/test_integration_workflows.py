@@ -15,13 +15,14 @@ WORKFLOW_TIMEOUT = 30000  # 30s pour workflows complets
 TAB_TRANSITION_TIMEOUT = 15000  # 15s pour transitions d'onglets
 STRESS_TEST_TIMEOUT = 20000  # 20s pour tests de performance (optimisé)
 
+@pytest.mark.asyncio
 @pytest.fixture(scope="function")
-def app_page(page: Page, webapp_service: str) -> Page:
+async def app_page(page: Page, webapp_service: dict) -> Page:
     """
     Fixture de base pour les tests d'intégration.
     Navigue vers la racine et attend que l'API soit connectée.
     """
-    page.goto(webapp_service)
+    await page.goto(webapp_service["frontend_url"])
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=WORKFLOW_TIMEOUT)
     return page
 
@@ -186,7 +187,8 @@ def integration_helpers(page: Page) -> IntegrationWorkflowHelpers:
 # ============================================================================
 
 @pytest.mark.integration
-def test_full_argument_analysis_workflow(app_page: Page, integration_helpers: IntegrationWorkflowHelpers, complex_test_data: Dict[str, Any]):
+@pytest.mark.asyncio
+async def test_full_argument_analysis_workflow(app_page: Page, integration_helpers: IntegrationWorkflowHelpers, complex_test_data: Dict[str, Any]):
     """
     Test A: Workflow complet d'analyse d'argument (Analyzer → Fallacies → Reconstructor → Validation).
     Valide que les données se propagent correctement entre tous les onglets.
@@ -260,7 +262,8 @@ def test_full_argument_analysis_workflow(app_page: Page, integration_helpers: In
     assert performance['full_workflow'] < 60, "Le workflow complet ne doit pas dépasser 60 secondes"
 
 @pytest.mark.integration
-def test_framework_based_validation_workflow(app_page: Page, integration_helpers: IntegrationWorkflowHelpers, complex_test_data: Dict[str, Any]):
+@pytest.mark.asyncio
+async def test_framework_based_validation_workflow(app_page: Page, integration_helpers: IntegrationWorkflowHelpers, complex_test_data: Dict[str, Any]):
     """
     Test B: Workflow Framework → Validation → Export.
     Création d'un framework personnalisé puis validation avec ce framework.
@@ -333,7 +336,8 @@ def test_framework_based_validation_workflow(app_page: Page, integration_helpers
     assert framework_performance['framework_workflow'] < 45, "Le workflow framework ne doit pas dépasser 45 secondes"
 
 @pytest.mark.integration
-def test_logic_graph_fallacy_integration(app_page: Page, integration_helpers: IntegrationWorkflowHelpers, complex_test_data: Dict[str, Any]):
+@pytest.mark.asyncio
+async def test_logic_graph_fallacy_integration(app_page: Page, integration_helpers: IntegrationWorkflowHelpers, complex_test_data: Dict[str, Any]):
     """
     Test C: Intégration Logic Graph → Fallacies.
     Analyse logique puis détection de sophismes sur le même contenu.
@@ -389,7 +393,8 @@ def test_logic_graph_fallacy_integration(app_page: Page, integration_helpers: In
     assert performance['logic_fallacy_integration'] < 30, "L'intégration logique-sophismes ne doit pas dépasser 30 secondes"
 
 @pytest.mark.integration
-def test_cross_tab_data_persistence(app_page: Page, integration_helpers: IntegrationWorkflowHelpers, complex_test_data: Dict[str, Any]):
+@pytest.mark.asyncio
+async def test_cross_tab_data_persistence(app_page: Page, integration_helpers: IntegrationWorkflowHelpers, complex_test_data: Dict[str, Any]):
     """
     Test D: Persistance des données entre onglets.
     Navigation complète avec validation que les données restent disponibles.
@@ -454,7 +459,8 @@ def test_cross_tab_data_persistence(app_page: Page, integration_helpers: Integra
 
 @pytest.mark.integration
 @pytest.mark.slow
-def test_performance_stress_workflow(app_page: Page, integration_helpers: IntegrationWorkflowHelpers, complex_test_data: Dict[str, Any]):
+@pytest.mark.asyncio
+async def test_performance_stress_workflow(app_page: Page, integration_helpers: IntegrationWorkflowHelpers, complex_test_data: Dict[str, Any]):
     """
     Test E: Test de performance avec données volumineuses.
     Validation des timeouts et gestion d'erreurs sur tous les onglets.
@@ -546,7 +552,8 @@ def test_performance_stress_workflow(app_page: Page, integration_helpers: Integr
 # ============================================================================
 
 @pytest.mark.integration
-def test_integration_suite_health_check(app_page: Page):
+@pytest.mark.asyncio
+async def test_integration_suite_health_check(app_page: Page):
     """
     Test de santé pour vérifier que tous les composants d'intégration fonctionnent.
     """

@@ -3,10 +3,11 @@ from playwright.sync_api import Page, expect
 
 # The 'webapp_service' session fixture in conftest.py is autouse=True,
 # so the web server is started automatically for all tests in this module.
+@pytest.mark.asyncio
 @pytest.fixture(scope="function")
-def validation_page(page: Page, webapp_service: str) -> Page:
+async def validation_page(page: Page, webapp_service: dict) -> Page:
     """Navigue vers la page et l'onglet de validation."""
-    page.goto(webapp_service)
+    await page.goto(webapp_service["frontend_url"])
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     validation_tab = page.locator('[data-testid="validation-tab"]')
     expect(validation_tab).to_be_enabled()
@@ -16,7 +17,8 @@ def validation_page(page: Page, webapp_service: str) -> Page:
 class TestValidationForm:
     """Tests fonctionnels pour l'onglet Validation."""
 
-    def test_validation_form_argument_validation(self, validation_page: Page):
+    @pytest.mark.asyncio
+    async def test_validation_form_argument_validation(self, validation_page: Page):
         """Test du workflow principal de validation d'argument."""
         expect(validation_page.locator('#argument-type')).to_be_visible()
         expect(validation_page.locator('.premise-textarea')).to_be_visible()
@@ -36,7 +38,8 @@ class TestValidationForm:
         if confidence_score.is_visible():
             expect(confidence_score).to_contain_text('%')
 
-    def test_validation_error_scenarios(self, validation_page: Page):
+    @pytest.mark.asyncio
+    async def test_validation_error_scenarios(self, validation_page: Page):
         """Test des scénarios d'erreur et de validation invalide."""
         validate_button = validation_page.locator('.validate-button')
         expect(validate_button).to_be_disabled()
@@ -49,7 +52,8 @@ class TestValidationForm:
         validation_page.locator('#conclusion').fill('')
         expect(validate_button).to_be_disabled()
 
-    def test_validation_form_reset_functionality(self, validation_page: Page):
+    @pytest.mark.asyncio
+    async def test_validation_form_reset_functionality(self, validation_page: Page):
         """Test de la fonctionnalité de réinitialisation du formulaire."""
         validation_page.locator('#argument-type').select_option('inductive')
         validation_page.locator('.premise-textarea').first.fill('Test prémisse pour reset')
@@ -65,7 +69,8 @@ class TestValidationForm:
         expect(validation_page.locator('#conclusion')).to_have_value('')
         expect(validation_page.locator('#argument-type')).to_have_value('deductive')  # Valeur par défaut
 
-    def test_validation_example_functionality(self, validation_page: Page):
+    @pytest.mark.asyncio
+    async def test_validation_example_functionality(self, validation_page: Page):
         """Test de la fonctionnalité de chargement d'exemple."""
         validation_page.locator('.example-button').click()
 

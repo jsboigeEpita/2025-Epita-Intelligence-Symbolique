@@ -3,14 +3,15 @@ import pytest
 from playwright.sync_api import Page, expect
 
 @pytest.mark.playwright
-def test_homepage_has_correct_title_and_header(page: Page, webapp_service: str):
+@pytest.mark.asyncio
+async def test_homepage_has_correct_title_and_header(page: Page, webapp_service: dict):
     """
     Ce test vérifie que la page d'accueil de l'application web se charge correctement,
     affiche le bon titre et un en-tête H1 visible.
-    Il dépend de la fixture `webapp_service` pour obtenir l'URL de base dynamique.
+    Il dépend de la fixture `webapp_service["frontend_url"]` pour obtenir l'URL de base dynamique.
     """
     # Naviguer vers la racine de l'application web en utilisant l'URL fournie par la fixture.
-    page.goto(webapp_service, wait_until='networkidle')
+    await page.goto(webapp_service["frontend_url"], wait_until='networkidle')
 
     # Vérifier que le titre de la page est correct
     expect(page).to_have_title(re.compile("Argumentation Analysis App"))

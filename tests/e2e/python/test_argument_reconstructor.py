@@ -5,13 +5,14 @@ from playwright.sync_api import Page, expect
 # The 'webapp_service' session fixture in conftest.py is autouse=True,
 # so the web server is started automatically for all tests in this module.
 @pytest.mark.playwright
-def test_argument_reconstruction_workflow(page: Page, webapp_service: str):
+@pytest.mark.asyncio
+async def test_argument_reconstruction_workflow(page: Page, webapp_service: dict):
     """
     Test principal : reconstruction d'argument complet
     Valide le workflow de reconstruction avec détection automatique de prémisses/conclusion
     """
     # 1. Navigation et attente API connectée
-    page.goto(webapp_service)
+    await page.goto(webapp_service["frontend_url"])
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     # 2. Activation de l'onglet Reconstructeur
@@ -53,13 +54,14 @@ def test_argument_reconstruction_workflow(page: Page, webapp_service: str):
     expect(results_container).to_contain_text("Socrate est mortel")
 
 @pytest.mark.playwright
-def test_reconstructor_basic_functionality(page: Page, webapp_service: str):
+@pytest.mark.asyncio
+async def test_reconstructor_basic_functionality(page: Page, webapp_service: dict):
     """
     Test fonctionnalité de base du reconstructeur
     Vérifie qu'un deuxième argument peut être analysé correctement
     """
     # 1. Navigation et activation onglet
-    page.goto(webapp_service)
+    await page.goto(webapp_service["frontend_url"])
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     reconstructor_tab = page.locator('[data-testid="reconstructor-tab"]')
@@ -84,13 +86,14 @@ def test_reconstructor_basic_functionality(page: Page, webapp_service: str):
     expect(results_container).to_contain_text("Conclusion")
 
 @pytest.mark.playwright
-def test_reconstructor_error_handling(page: Page, webapp_service: str):
+@pytest.mark.asyncio
+async def test_reconstructor_error_handling(page: Page, webapp_service: dict):
     """
     Test gestion d'erreurs
     Vérifie le comportement avec un texte invalide ou sans structure argumentative claire
     """
     # 1. Navigation et activation onglet
-    page.goto(webapp_service)
+    await page.goto(webapp_service["frontend_url"])
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     reconstructor_tab = page.locator('[data-testid="reconstructor-tab"]')
@@ -121,13 +124,14 @@ def test_reconstructor_error_handling(page: Page, webapp_service: str):
     expect(results_container).to_contain_text("Conclusion")
 
 @pytest.mark.playwright
-def test_reconstructor_reset_functionality(page: Page, webapp_service: str):
+@pytest.mark.asyncio
+async def test_reconstructor_reset_functionality(page: Page, webapp_service: dict):
     """
     Test bouton de réinitialisation
     Vérifie que le reset nettoie complètement l'interface et revient à l'état initial
     """
     # 1. Navigation et activation onglet
-    page.goto(webapp_service)
+    await page.goto(webapp_service["frontend_url"])
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     reconstructor_tab = page.locator('[data-testid="reconstructor-tab"]')
@@ -158,13 +162,14 @@ def test_reconstructor_reset_functionality(page: Page, webapp_service: str):
     expect(submit_button).to_be_enabled()
 
 @pytest.mark.playwright
-def test_reconstructor_content_persistence(page: Page, webapp_service: str):
+@pytest.mark.asyncio
+async def test_reconstructor_content_persistence(page: Page, webapp_service: dict):
     """
     Test persistance du contenu
     Vérifie que le contenu reste affiché après reconstruction
     """
     # 1. Navigation et activation onglet
-    page.goto(webapp_service)
+    await page.goto(webapp_service["frontend_url"])
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     reconstructor_tab = page.locator('[data-testid="reconstructor-tab"]')
