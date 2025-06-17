@@ -1,7 +1,7 @@
 // L'application étant servie par le même backend que l'API, nous pouvons utiliser des chemins relatifs.
 // Cela supprime la dépendance à la variable d'environnement REACT_APP_API_URL au moment du build,
 // ce qui est crucial pour les tests E2E où l'URL du backend est dynamique.
-const API_BASE_URL = '';
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 
 // Configuration par défaut pour les requêtes
 const defaultHeaders = {
@@ -184,7 +184,7 @@ export const analyzeLogicGraph = async (data) => {
 
 // Vérification de l'état de l'API
 export const checkAPIHealth = async () => {
-  const response = await fetchWithTimeout(`${API_BASE_URL}/api/status`, {
+  const response = await fetchWithTimeout(`${API_BASE_URL}/api/health`, {
     method: 'GET',
     headers: defaultHeaders
   }, 5000); // Timeout plus court pour le health check

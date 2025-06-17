@@ -156,15 +156,6 @@ async def lifespan(app: Starlette):
 # DÉFINITION DES ROUTES DE L'API
 # ==============================================================================
 
-async def homepage(request: Request):
-    """Sert la page d'accueil (index.html)."""
-    index_path = os.path.join(STATIC_FILES_DIR, 'index.html')
-    if os.path.exists(index_path):
-        with open(index_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-        return HTMLResponse(content)
-    return JSONResponse({'error': 'Fichier index.html non trouvé'}, status_code=404)
-
 async def status_endpoint(request: Request):
     """Route pour vérifier le statut des services."""
     service_manager = getattr(request.app.state, 'service_manager', None)
@@ -301,14 +292,13 @@ async def framework_analyze_endpoint(request: Request):
 # --- Définition des Routes ---
 # On combine les routes de l'API et le service des fichiers statiques.
 routes = [
-    Route('/', endpoint=homepage, methods=['GET']),
     Route('/api/status', endpoint=status_endpoint, methods=['GET']),
     Route('/api/analyze', endpoint=analyze_endpoint, methods=['POST']),
     Route('/api/examples', endpoint=examples_endpoint, methods=['GET']),
     Route('/api/v1/framework/analyze', endpoint=framework_analyze_endpoint, methods=['POST']),
-    # Le Mount pour les fichiers statiques doit venir après les routes spécifiques
-    # pour que '/' soit géré par homepage et non par StaticFiles directement.
-    Mount('/', app=StaticFiles(directory=str(STATIC_FILES_DIR), html=False), name="static_assets")
+    # Le Mount pour les fichiers statiques doit gérer le service de l'application React,
+    # y compris la route index.html pour le chemin racine.
+    Mount('/', app=StaticFiles(directory=str(STATIC_FILES_DIR), html=True), name="static_assets")
 ]
 
 # --- Middlewares ---

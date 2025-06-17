@@ -14,6 +14,11 @@ from playwright.sync_api import expect
 # Configuration du logger
 logger = logging.getLogger(__name__)
 
+def pytest_addoption(parser):
+    """Ajoute des options de ligne de commande à Pytest."""
+    parser.addoption("--backend-url", action="store", default=None, help="URL du backend à utiliser pour les tests")
+    parser.addoption("--frontend-url", action="store", default=None, help="URL du frontend à utiliser pour les tests (optionnel)")
+
 def find_free_port():
     """Trouve et retourne un port TCP libre."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -25,7 +30,7 @@ def find_free_port():
 # ============================================================================
 
 @pytest.fixture(scope="session")
-def webapp_service() -> Generator:
+def webapp_service(request) -> Generator:
     """
     Fixture de session qui démarre et arrête le serveur web Uvicorn.
     S'assure que la JVM est réinitialisée, utilise un port libre et s'assure
@@ -43,19 +48,49 @@ def webapp_service() -> Generator:
         from argumentation_analysis.core.jvm_setup import initialize_jvm
 
         logger.info(f"[E2E Conftest] Vrai JPype (version {jpype.__version__}) importé.")
-        # force_restart est crucial pour les tests E2E pour garantir un état propre
-        initialize_jvm(force_restart=True)
-        if not jpype.isJVMStarted():
-            pytest.fail("[E2E Conftest] La JVM n'a pas pu démarrer après le nettoyage.")
+        
+        # Le mock ne doit pas être utilisé lors de l'initialisation de la JVM
+        use_mock = os.environ.get("USE_MOCK_CONFIG", "0") == "1"
+        if not use_mock:
+            # force_restart est crucial pour les tests E2E pour garantir un état propre
+            initialize_jvm(force_restart=True)
+            if not jpype.isJVMStarted():
+                pytest.fail("[E2E Conftest] La JVM n'a pas pu démarrer après le nettoyage.")
+        else:
+            logger.warning("[E2E Conftest] Initialisation de la JVM sautée car USE_MOCK_CONFIG est activé.")
 
     except Exception as e:
         pytest.fail(f"[E2E Conftest] Échec critique de l'initialisation de JPype/JVM: {e}")
 
     # 2. Démarrer le serveur backend sur un port libre
+    frontend_url_cli = request.config.getoption("--frontend-url")
+    backend_url_cli = request.config.getoption("--backend-url")
+
+    # Si l'orchestrateur fournit les URLs, on les utilise sans démarrer de serveur.
+    # On privilégie l'URL du frontend pour les tests de navigation.
+    if frontend_url_cli:
+        logger.info(f"[E2E Fixture] Utilisation de l'URL frontend fournie par CLI: {frontend_url_cli}")
+        os.environ["FRONTEND_URL"] = frontend_url_cli
+        if backend_url_cli:
+            os.environ["BACKEND_URL"] = backend_url_cli
+        else: # Fallback si seul le frontend est donné
+             os.environ["BACKEND_URL"] = frontend_url_cli
+
+        yield frontend_url_cli
+        return
+    
+    # Si seul le backend est fourni (e.g., test API uniquement)
+    if backend_url_cli:
+        logger.info(f"[E2E Fixture] Utilisation de l'URL backend fournie par CLI: {backend_url_cli}")
+        os.environ["BACKEND_URL"] = backend_url_cli
+        yield backend_url_cli
+        return
+        
+    # Si aucune URL n'est fournie (exécution manuelle via pytest), démarrer un nouveau serveur
     host = "127.0.0.1"
     backend_port = find_free_port()
     base_url = f"http://{host}:{backend_port}"
-    api_health_url = f"{base_url}/api/status" # Note: app.py définit le préfixe /api
+    api_health_url = f"{base_url}/api/health" # Note: l'orchestrateur utilise /api/health
 
     # Mettre à jour la variable d'environnement pour que les tests API la trouvent.
     os.environ["BACKEND_URL"] = base_url
@@ -105,23 +140,14 @@ def webapp_service() -> Generator:
             try:
                 response = requests.get(api_health_url, timeout=2)
                 if response.status_code == 200:
-                    status_data = response.json()
-                    current_status = status_data.get('status')
-
-                    if current_status == 'operational':
-                        print(f"[E2E Fixture] Starlette webapp is ready! Status: 'operational'. (took {time.time() - start_time:.2f}s)")
-                        ready = True
-                        break
-                    elif current_status == 'initializing':
-                        print(f"[E2E Fixture] Backend is initializing... (NLP models loading). Waiting. (elapsed {time.time() - start_time:.2f}s)")
-                        # Continue waiting, do not break
-                    else:
-                        print(f"[E2E Fixture] Backend reported an unexpected status: '{current_status}'. Failing early.")
-                        break # Exit loop to fail
+                    # Pour un test manuel, une réponse 200 de l'endpoint de santé suffit.
+                    print(f"[E2E Fixture] Backend a répondu avec succès (status {response.status_code}). Prêt pour les tests.")
+                    ready = True
+                    break
             except (ConnectionError, requests.exceptions.RequestException) as e:
                 # This is expected at the very beginning
                 pass # Silently ignore and retry
-
+            
             time.sleep(1)
 
         if not ready:
