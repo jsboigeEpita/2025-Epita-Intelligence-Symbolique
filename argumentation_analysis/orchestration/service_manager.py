@@ -358,8 +358,8 @@ class OrchestrationServiceManager:
             raise Exception(f"Impossible d'initialiser les orchestrateurs: {e}")
             
     async def analyze_text(self, 
-                          text: str, 
-                          analysis_type: str = "comprehensive",
+                          text: str,
+                          analysis_type: str = "unified_analysis",
                           options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Lance une analyse de texte en utilisant les services appropriés.
@@ -449,7 +449,8 @@ class OrchestrationServiceManager:
             'llm': self.llm_orchestrator,
             'language_model': self.llm_orchestrator,
             # Force tous les types d'analyse vers RealLLMOrchestrator
-            'comprehensive': self.llm_orchestrator,
+            'comprehensive': self.llm_orchestrator, # Gardé pour rétrocompatibilité potentielle
+            'unified_analysis': self.llm_orchestrator,
             'modal': self.llm_orchestrator,
             'propositional': self.llm_orchestrator,
             'logical': self.llm_orchestrator,

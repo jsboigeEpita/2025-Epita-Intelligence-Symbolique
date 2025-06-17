@@ -59,6 +59,17 @@ except ImportError as e:
     # Cette dépendance est critique, on lève une exception si elle manque.
     raise ImportError(f"ServiceManager requis mais non disponible: {e}")
 
+# Importation du gestionnaire de modèles NLP
+try:
+    from argumentation_analysis.agents.tools.analysis.enhanced.nlp_model_manager import nlp_model_manager
+    NLP_MODELS_AVAILABLE = True
+    logging.info("NLPModelManager importé avec succès.")
+except ImportError as e:
+    logging.warning(f"NLPModelManager non disponible: {e}")
+    nlp_model_manager = None
+    NLP_MODELS_AVAILABLE = False
+
+
 # --- Configuration du Logging ---
 logging.basicConfig(
     level=logging.INFO,
@@ -84,26 +95,52 @@ async def lifespan(app: Starlette):
     """
     logger.info("LIFESPAN: Démarrage de l'application...")
     
-    # 1. Créer l'instance du ServiceManager
-    app.state.service_manager = ServiceManager(config={
+    # 1. Initialiser les conteneurs d'état
+    app.state.service_manager = None
+    app.state.nlp_model_manager = None
+
+    # 2. Créer les instances des gestionnaires
+    logger.info("Création des instances de ServiceManager et NLPModelManager.")
+    service_manager_instance = ServiceManager(config={
         'enable_hierarchical': True,
         'enable_specialized_orchestrators': True,
         'enable_communication_middleware': True,
         'save_results': True,
         'results_dir': str(RESULTS_DIR)
     })
-    logger.info("Instance de ServiceManager créée.")
+    app.state.service_manager = service_manager_instance
+
+    if NLP_MODELS_AVAILABLE:
+        app.state.nlp_model_manager = nlp_model_manager
+    else:
+        logger.warning("NLPModelManager non initialisé car non disponible.")
+
+    # 3. Lancer les initialisations asynchrones en parallèle
+    logger.info("Démarrage des initialisations asynchrones (ServiceManager et NLP Models)...")
+    init_tasks = []
     
-    # 2. Démarrer les services asynchrones
-    try:
-        await app.state.service_manager.initialize()
-        logger.info("ServiceManager initialisé avec succès.")
-    except Exception as e:
-        logger.error(f"Erreur critique lors de l'initialisation du ServiceManager: {e}", exc_info=True)
-        # On pourrait choisir d'arrêter l'application ici si le service est vital
-        # raise RuntimeError("Échec de l'initialisation du ServiceManager") from e
-        app.state.service_manager = None # Marquer comme non disponible
-        logger.warning("ServiceManager marqué comme indisponible.")
+    # Tâche pour initialiser le ServiceManager
+    async def init_service_manager():
+        try:
+            await service_manager_instance.initialize()
+            logger.info("ServiceManager initialisé avec succès.")
+        except Exception as e:
+            logger.error(f"Erreur critique lors de l'initialisation du ServiceManager: {e}", exc_info=True)
+            app.state.service_manager = None # Marquer comme non disponible
+            logger.warning("ServiceManager marqué comme indisponible.")
+            
+    init_tasks.append(init_service_manager())
+
+    # Tâche pour charger les modèles NLP
+    if app.state.nlp_model_manager:
+        # Exécuter la méthode de chargement synchrone dans un thread pour ne pas bloquer la boucle asyncio
+        loop = asyncio.get_running_loop()
+        init_tasks.append(loop.run_in_executor(
+            None, app.state.nlp_model_manager.load_models_sync
+        ))
+
+    # Exécuter les tâches en parallèle
+    await asyncio.gather(*init_tasks)
 
     logger.info("LIFESPAN: Initialisation terminée, l'application est prête.")
     
@@ -131,12 +168,29 @@ async def homepage(request: Request):
 
 async def status_endpoint(request: Request):
     """Route pour vérifier le statut des services."""
-    service_manager = request.app.state.service_manager
+    service_manager = getattr(request.app.state, 'service_manager', None)
+    nlp_manager = getattr(request.app.state, 'nlp_model_manager', None)
+
+    sm_status = 'active' if service_manager else 'unavailable'
+    
+    nlp_status = 'unavailable'
+    if nlp_manager:
+        nlp_status = 'loaded' if nlp_manager.are_models_loaded() else 'initializing'
+
+    # Le statut global est 'initializing' si un service majeur est en cours de chargement
+    app_status = 'operational'
+    if sm_status != 'active' or nlp_status == 'initializing':
+        app_status = 'initializing'
+    if sm_status == 'unavailable' and nlp_status != 'initializing':
+        app_status = 'degraded'
+
+
     status_info = {
-        'status': 'operational' if service_manager else 'degraded',
+        'status': app_status,
         'timestamp': datetime.now().isoformat(),
         'services': {
-            'service_manager': 'active' if service_manager else 'unavailable',
+            'service_manager': sm_status,
+            'nlp_models': nlp_status,
         },
         'webapp': {
             'version': '2.0.0',
@@ -154,7 +208,7 @@ async def analyze_endpoint(request: Request):
     try:
         data = await request.json()
         text = data.get('text', '').strip()
-        analysis_type = data.get('analysis_type', 'comprehensive')
+        analysis_type = data.get('analysis_type', 'unified_analysis')
         options = data.get('options', {})
 
         if not text:
@@ -207,7 +261,7 @@ async def examples_endpoint(request: Request):
     """Route pour obtenir des exemples de textes d'analyse."""
     examples = [
         {'title': 'Logique Propositionnelle', 'text': 'Si il pleut, alors la route est mouillée. Il pleut. Donc la route est mouillée.', 'type': 'propositional'},
-        {'title': 'Argumentation Complexe', 'text': 'L\'IA est une opportunité et un défi. Elle peut révolutionner la médecine, mais pose des questions éthiques.', 'type': 'comprehensive'},
+        {'title': 'Argumentation Complexe', 'text': 'L\'IA est une opportunité et un défi. Elle peut révolutionner la médecine, mais pose des questions éthiques.', 'type': 'unified_analysis'},
     ]
     return JSONResponse({'examples': examples})
 

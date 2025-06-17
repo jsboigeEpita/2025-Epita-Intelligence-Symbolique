@@ -92,13 +92,25 @@ def webapp_service(request) -> Generator:
         while time.time() - start_time < timeout:
             try:
                 response = requests.get(api_health_url, timeout=2)
-                # L'application Starlette renvoie un JSON. On vérifie que le statut interne est 'operational'.
-                if response.status_code == 200 and response.json().get('status') == 'operational':
-                    print(f"[E2E Fixture] Starlette webapp is ready! (took {time.time() - start_time:.2f}s)")
-                    ready = True
-                    break
-            except ConnectionError:
-                time.sleep(1) # Wait and retry
+                if response.status_code == 200:
+                    status_data = response.json()
+                    current_status = status_data.get('status')
+                    
+                    if current_status == 'operational':
+                        print(f"[E2E Fixture] Starlette webapp is ready! Status: 'operational'. (took {time.time() - start_time:.2f}s)")
+                        ready = True
+                        break
+                    elif current_status == 'initializing':
+                        print(f"[E2E Fixture] Backend is initializing... (NLP models loading). Waiting. (elapsed {time.time() - start_time:.2f}s)")
+                        # Continue waiting, do not break
+                    else:
+                        print(f"[E2E Fixture] Backend reported an unexpected status: '{current_status}'. Failing early.")
+                        break # Exit loop to fail
+            except (ConnectionError, requests.exceptions.RequestException) as e:
+                # This is expected at the very beginning
+                pass # Silently ignore and retry
+            
+            time.sleep(1)
                 
         if not ready:
             process.terminate()
