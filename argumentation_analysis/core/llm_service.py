@@ -6,36 +6,86 @@ from dotenv import load_dotenv
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
 from typing import Union # Pour type hint
 import httpx # Ajout pour le client HTTP personnalisé
-from openai import AsyncOpenAI # Ajout pour instancier le client OpenAI
-import json # Ajout de l'import manquant
+from openai import AsyncOpenAI  # Ajout pour instancier le client OpenAI
+import json  # Ajout de l'import manquant
+import asyncio
+from semantic_kernel.contents.chat_history import ChatHistory
+from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from semantic_kernel.contents.role import Role
+from semantic_kernel.services.chat_completion_service import ChatCompletionService
 
 # Logger pour ce module
 logger = logging.getLogger("Orchestration.LLM")
 if not logger.handlers and not logger.propagate:
-    handler = logging.StreamHandler(); formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S'); handler.setFormatter(formatter); logger.addHandler(handler); logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
 logger.info("<<<<< MODULE llm_service.py LOADED >>>>>")
 
-
-def create_llm_service(service_id: str = "global_llm_service", force_mock: bool = False) -> Union[OpenAIChatCompletion, AzureChatCompletion]:
+class MockChatCompletion(ChatCompletionService):
     """
-    Charge la configuration depuis .env et crée une instance du service LLM
-    (OpenAI ou Azure OpenAI).
+    Service de complétion de chat mocké qui retourne des réponses prédéfinies.
+    Simule le comportement de OpenAIChatCompletion pour les tests E2E.
+    """
+    async def get_chat_message_contents(
+        self,
+        chat_history: ChatHistory,
+        **kwargs,
+    ) -> list[ChatMessageContent]:
+        """Retourne une réponse mockée basée sur le contenu de l'historique."""
+        logger.warning(f"--- MOCK LLM SERVICE USED (service_id: {self.service_id}) ---")
+        
+        # Simuler une réponse JSON valide pour une analyse d'argument
+        mock_response_content = {
+            "analysis_id": "mock-12345",
+            "argument_summary": {
+                "main_conclusion": "Socrate est mortel.",
+                "premises": ["Tous les hommes sont mortels.", "Socrate est un homme."],
+                "structure": "Deductif"
+            },
+            "quality_assessment": {
+                "clarity": 85,
+                "relevance": 95,
+                "coherence": 90,
+                "overall_score": 91
+            },
+            "fallacies": [],
+            "suggestions": "Aucune suggestion, l'argument est valide."
+        }
+        
+        # Créer un ChatMessageContent avec la réponse mockée
+        response_message = ChatMessageContent(
+            role=Role.ASSISTANT,
+            content=json.dumps(mock_response_content, indent=2, ensure_ascii=False)
+        )
+        
+        # Simuler une latence réseau
+        await asyncio.sleep(0.1)
+        
+        return [response_message]
+
+def create_llm_service(service_id: str = "global_llm_service", force_mock: bool = False) -> Union[OpenAIChatCompletion, AzureChatCompletion, MockChatCompletion]:
+    """
+    Charge la configuration depuis .env et crée une instance du service LLM.
+    Supporte maintenant un mode mock pour les tests.
 
     Args:
         service_id (str): ID à assigner au service dans Semantic Kernel.
+        force_mock (bool): Si True, force la création d'un service mocké.
 
     Returns:
-        Union[OpenAIChatCompletion, AzureChatCompletion]: L'instance du service LLM configurée.
-
-    Raises:
-        ValueError: Si la configuration .env est incomplète ou invalide.
-        RuntimeError: Si la création de l'instance échoue pour une autre raison.
+        Instance du service LLM (réel ou mocké).
     """
-    logger.critical("<<<<< get_llm_service FUNCTION CALLED >>>>>")
+    logger.critical("<<<<< create_llm_service FUNCTION CALLED >>>>>")
     logger.info(f"--- Configuration du Service LLM ({service_id}) ---")
-    
-    # Déterminer la racine du projet à partir de l'emplacement de ce fichier
-    # pour assurer une découverte fiable du fichier .env
+    logger.info(f"--- Force Mock: {force_mock} ---")
+
+    if force_mock:
+        logger.warning("Création d'un service LLM mocké (MockChatCompletion).")
+        return MockChatCompletion(service_id=service_id)
+
     project_root = Path(__file__).resolve().parent.parent.parent
     dotenv_path = project_root / '.env'
     logger.info(f"Project root determined from __file__: {project_root}")
@@ -45,100 +95,59 @@ def create_llm_service(service_id: str = "global_llm_service", force_mock: bool 
     logger.info(f"load_dotenv success with absolute path '{dotenv_path}': {success}")
 
     api_key = os.getenv("OPENAI_API_KEY")
-    logger.info(f"Value of api_key directly from os.getenv: '{api_key}'")
-    # AJOUT POUR DEBUGGING
-    if api_key and len(api_key) > 10: # Vérifier que la clé existe et est assez longue
-        logger.info(f"OpenAI API Key (first 5, last 5): {api_key[:5]}...{api_key[-5:]}")
-    elif api_key:
-        logger.info(f"OpenAI API Key loaded (short key): {api_key}")
-    else:
-        logger.warning("OpenAI API Key is None or empty after os.getenv.")
-    # FIN AJOUT
     model_id = os.getenv("OPENAI_CHAT_MODEL_ID")
     endpoint = os.getenv("OPENAI_ENDPOINT")
-    base_url = os.getenv("OPENAI_BASE_URL")  # Support pour OpenRouter et autres providers
+    base_url = os.getenv("OPENAI_BASE_URL")
     org_id = os.getenv("OPENAI_ORG_ID")
-    
-    # Log de la configuration détectée
+
     logger.info(f"Configuration détectée - base_url: {base_url}, endpoint: {endpoint}")
     use_azure_openai = bool(endpoint)
 
     llm_instance = None
     try:
-        if force_mock:
-            logger.warning("Mode mock demandé mais non supporté. Tentative de création d'un service LLM réel.")
-            # Le mode mock n'est plus supporté - on continue avec la logique réelle
-
         if use_azure_openai:
             logger.info("Configuration Service: AzureChatCompletion...")
             if not all([api_key, model_id, endpoint]):
-                raise ValueError("Configuration Azure OpenAI incomplète dans .env (OPENAI_API_KEY, OPENAI_CHAT_MODEL_ID, OPENAI_ENDPOINT requis).")
+                raise ValueError("Configuration Azure OpenAI incomplète (.env).")
             
-            # Pour Azure, nous pourrions aussi vouloir injecter un client httpx personnalisé si nécessaire,
-            # mais la complexité est plus grande à cause de la gestion des credentials Azure.
-            # Pour l'instant, on se concentre sur OpenAI standard.
-            azure_async_client = httpx.AsyncClient() # Client standard pour l'instant
-            # TODO: Rechercher comment injecter un transport personnalisé pour AzureOpenAI si besoin de logs bruts.
-            # Pour l'instant, on utilise le client par défaut pour Azure.
-            # Si on voulait un client personnalisé pour Azure, il faudrait probablement passer un `AzureOpenAI` client
-            # à `AzureChatCompletion` de la même manière qu'on passe `AsyncOpenAI` à `OpenAIChatCompletion`.
-
             llm_instance = AzureChatCompletion(
                 service_id=service_id,
                 deployment_name=model_id,
                 endpoint=endpoint,
                 api_key=api_key
-                # azure_ad_token_provider=... , # si auth Azure AD
-                # http_client=azure_async_client # Exemple si supporté
             )
-            logger.info(f"Service LLM Azure ({model_id}) créé avec ID '{service_id}'.")
+            logger.info(f"Service LLM Azure ({model_id}) créé.")
         else:
             logger.info("Configuration Service: OpenAIChatCompletion...")
             if not all([api_key, model_id]):
-                raise ValueError("Configuration OpenAI standard incomplète dans .env (OPENAI_API_KEY, OPENAI_CHAT_MODEL_ID requis).")
+                raise ValueError("Configuration OpenAI standard incomplète (.env).")
 
-            # Création du transport et du client httpx personnalisés
             logging_http_transport = LoggingHttpTransport(logger=logger)
             custom_httpx_client = httpx.AsyncClient(transport=logging_http_transport)
-
-            # Création du client AsyncOpenAI avec le client httpx personnalisé
-            # Création du client AsyncOpenAI avec le client httpx personnalisé
-            org_to_use = org_id if (org_id and "your_openai_org_id_here" not in org_id) else None
             
-            # Configuration du client avec support pour OpenRouter et autres providers
-            client_kwargs = {
-                "api_key": api_key,
-                "http_client": custom_httpx_client
-            }
-            
-            # Ajouter base_url si configuré (pour OpenRouter, etc.)
+            client_kwargs = {"api_key": api_key, "http_client": custom_httpx_client}
             if base_url:
                 client_kwargs["base_url"] = base_url
-                logger.info(f"Utilisation de base_url personnalisée: {base_url}")
-            
-            # Ajouter organization si configuré
-            if org_to_use:
-                client_kwargs["organization"] = org_to_use
+            if org_id and "your_openai_org_id_here" not in org_id:
+                client_kwargs["organization"] = org_id
                 
             openai_custom_async_client = AsyncOpenAI(**client_kwargs)
             
             llm_instance = OpenAIChatCompletion(
                 service_id=service_id,
                 ai_model_id=model_id,
-                async_client=openai_custom_async_client # Utilisation du client OpenAI personnalisé
-                # api_key et org_id ne sont plus passés directement ici, car gérés par openai_custom_async_client
+                async_client=openai_custom_async_client
             )
-            logger.info(f"Service LLM OpenAI ({model_id}) créé avec ID '{service_id}' et HTTP client personnalisé.")
+            logger.info(f"Service LLM OpenAI ({model_id}) créé avec HTTP client personnalisé.")
 
-    except ValueError as ve: # Attraper specific ValueError de la validation
+    except ValueError as ve:
         logger.critical(f"Erreur de configuration LLM: {ve}")
-        raise # Renvoyer l'erreur de configuration
+        raise
     except Exception as e:
         logger.critical(f"Erreur critique lors de la création du service LLM: {e}", exc_info=True)
         raise RuntimeError(f"Impossible de configurer le service LLM: {e}")
 
     if not llm_instance:
-        # Ne devrait pas arriver si les exceptions sont bien gérées
         raise RuntimeError("Configuration du service LLM a échoué silencieusement.")
 
     return llm_instance

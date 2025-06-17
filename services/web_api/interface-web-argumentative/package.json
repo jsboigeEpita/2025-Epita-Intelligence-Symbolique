@@ -2,6 +2,7 @@
   "name": "interface-web-argumentative",
   "version": "0.1.0",
   "private": true,
+  "proxy": "http://localhost:5003",
   "dependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
