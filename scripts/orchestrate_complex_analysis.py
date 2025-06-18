@@ -130,11 +130,19 @@ class ConversationTracker:
 ### Mode Fallacies
 """
         
-        fallacies_result = final_results.get('fallacies', {})
-        
-        # La liste réelle des sophismes est sous la clé 'fallacies' dans l'objet résultat
-        fallacies_list = fallacies_result.get('fallacies', [])
-        
+        fallacies_data = final_results.get('fallacies', {})
+
+        # Naviguer dans la structure de données imbriquée pour trouver la liste
+        # La structure peut être {'fallacies': {'result': {'fallacies': [...]}}}
+        fallacies_list = []
+        if isinstance(fallacies_data, dict):
+            fallacies_level1 = fallacies_data.get('fallacies', {})
+            if isinstance(fallacies_level1, dict):
+                 # Cas où le résultat est directement sous 'result'
+                result_data = fallacies_level1.get('result', fallacies_level1)
+                if isinstance(result_data, dict):
+                    fallacies_list = result_data.get('fallacies', [])
+
         if fallacies_list and isinstance(fallacies_list, list):
             report += f"**Sophismes détectés:** {len(fallacies_list)}\n\n"
             for i, fallacy in enumerate(fallacies_list, 1):
@@ -149,9 +157,9 @@ class ConversationTracker:
         
         # Le reste des métadonnées (authenticité, etc.) peut être affiché après
         report += f"""
-**Authenticité:** {'✅ Analyse LLM authentique' if fallacies_result.get('authentic') else '❌ Fallback utilisé'}
-**Modèle:** {fallacies_result.get('model_used', 'N/A')}
-**Confiance:** {fallacies_result.get('confidence', 0):.2f}
+**Authenticité:** {'✅ Analyse LLM authentique' if fallacies_data.get('authentic') else '❌ Fallback utilisé'}
+**Modèle:** {fallacies_data.get('model_used', 'N/A')}
+**Confiance:** {fallacies_data.get('confidence', 0):.2f}
 
 ## 📈 Métriques de Performance
 
@@ -380,7 +388,7 @@ async def orchestrate_complex_analysis():
         
         # 6. Compilation des résultats finaux
         final_results = {
-            "fallacies": parsed_fallacies,
+            "fallacies": fallacies_result.results,
             "rhetoric": rhetoric_result,
             "synthesis": synthesis_result,
             "success_rate": 1.0 if parsed_fallacies.get('fallacies') else 0.5,
