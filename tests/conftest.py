@@ -214,3 +214,6 @@ def webapp_config():
 def test_config_path(tmp_path):
     """Provides a temporary path for a config file."""
     return tmp_path / "test_config.yml"
+pytest_plugins = [
+   "tests.fixtures.jvm_subprocess_fixture"
+]
