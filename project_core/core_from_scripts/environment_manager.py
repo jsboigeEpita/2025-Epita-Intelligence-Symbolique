@@ -100,14 +100,20 @@ class EnvironmentManager:
         """
         self.logger = logger or Logger()
         self.project_root = Path(get_project_root())
-        # Le chargement initial de .env (y compris la découverte/persistance de CONDA_PATH)
-        # est maintenant géré au début de la méthode auto_activate_env.
-        # L'appel à _load_dotenv_intelligent ici est donc redondant et supprimé.
+
+        # Chargement prioritaire du .env pour récupérer le nom de l'environnement
+        dotenv_path = self.project_root / ".env"
+        if dotenv_path.is_file():
+            self.logger.debug(f"Chargement initial du .env depuis : {dotenv_path}")
+            load_dotenv(dotenv_path, override=True)
         
         # Le code pour rendre JAVA_HOME absolu est déplacé vers la méthode activate_project_environment
         # pour s'assurer qu'il s'exécute APRÈS le chargement du fichier .env.
         
-        self.default_conda_env = "projet-is"
+        # Priorité : Variable d'environnement > 'projet-is' par défaut
+        self.default_conda_env = os.environ.get('CONDA_ENV_NAME', "projet-is")
+        self.logger.info(f"Nom de l'environnement Conda par défaut utilisé : '{self.default_conda_env}'")
+
         self.required_python_version = (3, 8)
         
         # Variables d'environnement importantes
@@ -317,7 +323,7 @@ class EnvironmentManager:
         if env_name is None:
             env_name = self.default_conda_env
         if cwd is None:
-            cwd = self.project_root
+            cwd = str(self.project_root)
         
         conda_exe = self._find_conda_executable()
         if not conda_exe:
@@ -546,7 +552,7 @@ class EnvironmentManager:
         if env_name is None:
             env_name = self.default_conda_env
         
-        self.logger.info(f"Activation de l'environnement '{env_name}'...")
+        self.logger.info(f"Activation de l'environnement '{env_name}' (déterminé par .env ou défaut)...")
 
         # --- BLOC D'ACTIVATION UNIFIÉ ---
         self.logger.info("Début du bloc d'activation unifié...")
@@ -930,19 +936,24 @@ class EnvironmentManager:
             self.logger.info(f"Fichier .env mis à jour en toute sécurité : {env_file_path}")
 
 
-def is_conda_env_active(env_name: str = "projet-is") -> bool:
+def is_conda_env_active(env_name: str = None) -> bool:
     """Vérifie si l'environnement conda spécifié est actuellement actif"""
+    # Utilise le nom d'env du .env par défaut si `env_name` non fourni
+    if env_name is None:
+        load_dotenv(find_dotenv())
+        env_name = os.environ.get('CONDA_ENV_NAME', 'projet-is')
     current_env = os.environ.get('CONDA_DEFAULT_ENV', '')
     return current_env == env_name
 
 
-def check_conda_env(env_name: str = "projet-is", logger: Logger = None) -> bool:
+def check_conda_env(env_name: str = None, logger: Logger = None) -> bool:
     """Fonction utilitaire pour vérifier un environnement conda"""
     manager = EnvironmentManager(logger)
-    return manager.check_conda_env_exists(env_name)
+    # Si env_name est None, le manager utilisera la valeur par défaut chargée depuis .env
+    return manager.check_conda_env_exists(env_name or manager.default_conda_env)
 
 
-def auto_activate_env(env_name: str = "projet-is", silent: bool = True) -> bool:
+def auto_activate_env(env_name: str = None, silent: bool = True) -> bool:
     """
     One-liner auto-activateur d'environnement intelligent.
     Cette fonction est maintenant une façade pour la logique d'activation centrale.
@@ -963,9 +974,10 @@ def auto_activate_env(env_name: str = "projet-is", silent: bool = True) -> bool:
         
         if not silent:
             if is_success:
-                logger.success(f"Auto-activation de '{env_name}' réussie via le manager central.")
+                # Le nom de l'env est géré par le manager, on le récupère pour un log correct
+                logger.success(f"Auto-activation de '{manager.default_conda_env}' réussie via le manager central.")
             else:
-                logger.error(f"Échec de l'auto-activation de '{env_name}' via le manager central.")
+                logger.error(f"Échec de l'auto-activation de '{manager.default_conda_env}' via le manager central.")
 
         return is_success
 
@@ -977,9 +989,10 @@ def auto_activate_env(env_name: str = "projet-is", silent: bool = True) -> bool:
         return False
 
 
-def activate_project_env(command: str = None, env_name: str = "projet-is", logger: Logger = None) -> int:
+def activate_project_env(command: str = None, env_name: str = None, logger: Logger = None) -> int:
     """Fonction utilitaire pour activer l'environnement projet"""
     manager = EnvironmentManager(logger)
+    # Laisser `activate_project_environment` gérer la valeur par défaut si env_name est None
     return manager.activate_project_environment(command, env_name)
 
 
@@ -1104,8 +1117,8 @@ def main():
     parser.add_argument(
         '--env-name', '-e',
         type=str,
-        default='projet-is',
-        help='Nom de l\'environnement conda (défaut: projet-is)'
+        default=None, # Le défaut sera géré par l'instance du manager
+        help='Nom de l\'environnement conda (par défaut, utilise la valeur de CONDA_ENV_NAME dans .env)'
     )
     
     parser.add_argument(
@@ -1142,7 +1155,8 @@ def main():
     # 1. Gérer la réinstallation si demandée.
     if args.reinstall:
         reinstall_choices = set(args.reinstall)
-        env_name = args.env_name
+        # Priorité : argument CLI > .env/défaut du manager
+        env_name = args.env_name or manager.default_conda_env
         
         if ReinstallComponent.ALL.value in reinstall_choices or ReinstallComponent.CONDA.value in reinstall_choices:
             reinstall_conda_environment(manager, env_name)
@@ -1217,9 +1231,9 @@ def main():
         if not manager.check_conda_available():
             logger.error("Conda non disponible"); safe_exit(1, logger)
         logger.success("Conda disponible")
-        if not manager.check_conda_env_exists(args.env_name):
-            logger.error(f"Environnement '{args.env_name}' non trouvé"); safe_exit(1, logger)
-        logger.success(f"Environnement '{args.env_name}' trouvé")
+        if not manager.check_conda_env_exists(args.env_name or manager.default_conda_env):
+            logger.error(f"Environnement '{args.env_name or manager.default_conda_env}' non trouvé"); safe_exit(1, logger)
+        logger.success(f"Environnement '{args.env_name or manager.default_conda_env}' trouvé")
         logger.success("Environnement validé.")
         safe_exit(0, logger)
 
@@ -1230,7 +1244,7 @@ def main():
     logger.info("Phase d'activation/exécution de commande...")
     exit_code = manager.activate_project_environment(
         command_to_run=command_to_run_final,
-        env_name=args.env_name
+        env_name=args.env_name or manager.default_conda_env # Utiliser le nom CLI ou fallback sur .env
     )
     
     if command_to_run_final:

@@ -119,13 +119,14 @@ class BackendManager:
                     raise ValueError(f"Type de serveur non supporté: {server_type}. Choisissez 'flask' ou 'uvicorn'.")
                 
                 # Gestion de l'environnement Conda
-                conda_env_name = self.config.get('conda_env', 'projet-is')
+                # Lire le nom de l'environnement depuis les variables d'environnement, avec un fallback.
+                conda_env_name = os.environ.get('CONDA_ENV_NAME', self.config.get('conda_env', 'projet-is'))
                 current_conda_env = os.getenv('CONDA_DEFAULT_ENV')
                 python_executable = sys.executable
                 
                 is_already_in_target_env = (current_conda_env == conda_env_name and conda_env_name in python_executable)
                 
-                self.logger.warning(f"Forçage de `conda run` pour garantir l'activation de l'environnement '{conda_env_name}'.")
+                self.logger.warning(f"Utilisation de `conda run` pour garantir l'activation de l'environnement '{conda_env_name}'.")
                 cmd = ["conda", "run", "-n", conda_env_name, "--no-capture-output"] + inner_cmd_list
             else:
                 # Cas d'erreur : ni module, ni command_list
@@ -197,7 +198,7 @@ class BackendManager:
             except FileNotFoundError:
                 self.logger.warning(f"Fichier de log {log_path.name} non trouvé.")
 
-        if self.process and self.process.poll() is None:
+        if self.process and self.process.returncode is None:
             self.logger.info(f"Tentative de terminaison du processus backend {self.process.pid} qui n'a pas démarré.")
             self.process.terminate()
             try:
