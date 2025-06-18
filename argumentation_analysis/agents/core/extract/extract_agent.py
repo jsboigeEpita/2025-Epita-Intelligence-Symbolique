@@ -46,14 +46,10 @@ def _lazy_imports() -> None:
     Importe les modules de manière paresseuse pour éviter les importations circulaires.
     """
     global load_source_text, extract_text_with_markers, find_similar_text
-    try:
-        from ...ui.extract_utils import (
-            load_source_text, extract_text_with_markers, find_similar_text,
-        )
-    except ImportError:
-        from argumentation_analysis.ui.extract_utils import (
-            load_source_text, extract_text_with_markers, find_similar_text,
-        )
+    # Correction de l'import pour utiliser un chemin absolu et robuste
+    from argumentation_analysis.ui.extract_utils import (
+        load_source_text, extract_text_with_markers, find_similar_text,
+    )
 
 _lazy_imports()
 

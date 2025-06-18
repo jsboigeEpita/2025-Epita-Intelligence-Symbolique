@@ -4,23 +4,39 @@
 
 L'application web constitue un point d'entrée majeur pour interagir avec les fonctionnalités d'analyse argumentative du projet. Elle fournit une interface utilisateur permettant de soumettre des textes, de configurer des options d'analyse et de visualiser les résultats de manière structurée.
 
-## 2. Flux de Lancement de l'Application
+## 2. Point d'Entrée Canonique et Lancement
 
-Le processus de démarrage est entièrement unifié et géré par un script central :
+Après la phase de stabilisation, le lancement de l'application web et de ses dépendances a été consolidé en un **point d'entrée unique et fiable**.
 
--   **Script de Démarrage :** [`scripts/apps/start_webapp.py`](scripts/apps/start_webapp.py)
--   **Rôles :**
-    -   Active automatiquement l'environnement Conda `projet-is` pour garantir que toutes les dépendances sont disponibles.
-    -   Lance l'orchestrateur web unifié, qui est le véritable chef d'orchestre de l'application.
+-   **Orchestrateur Principal :** [`project_core/webapp_from_scripts/unified_web_orchestrator.py`](project_core/webapp_from_scripts/unified_web_orchestrator.py)
 
-## 3. Composant Principal : L'Orchestrateur Unifié
+Toute interaction avec l'application (lancement, tests, etc.) **doit** passer par ce script. Il garantit que l'environnement est correctement configuré et que tous les composants (backend, frontend, tests) sont démarrés de manière cohérente.
 
-Le composant central de l'architecture est le `UnifiedWebOrchestrator`, situé dans [`project_core/webapp_from_scripts/unified_web_orchestrator.py`](project_core/webapp_from_scripts/unified_web_orchestrator.py).
+### Commande de Référence
+
+La commande suivante illustre l'utilisation standard pour lancer l'application en mode visible, avec le frontend, et en exécutant un jeu de tests spécifiques. Elle a été utilisée pour la validation finale et sert d'exemple canonique :
+
+```powershell
+powershell -File ./activate_project_env.ps1 -CommandToRun "python project_core/webapp_from_scripts/unified_web_orchestrator.py --visible --frontend --tests tests/e2e/python/test_argument_analyzer.py"
+```
+
+## 3. Contexte Technique : Corrections Clés Post-Stabilisation
+
+L'état actuel de l'application intègre plusieurs corrections critiques issues de la phase de test intensive :
+
+-   **Chargement Asynchrone du Backend :** Pour améliorer la réactivité et la robustesse, le chargement des modèles lourds au démarrage du backend a été rendu asynchrone. Cela évite les timeouts et permet à l'application de démarrer plus rapidement.
+-   **Fiabilisation de la Connexion API :** La communication entre le frontend et le backend a été stabilisée pour résoudre des problèmes de connexion intermittents, garantissant une transmission de données fiable pour l'analyse.
+
+Ces modifications sont désormais gérées nativement par l'orchestrateur.
+
+## 4. Composant Principal : L'Orchestrateur Unifié
+
+Le composant central de l'architecture reste le `UnifiedWebOrchestrator`.
 
 -   **Responsabilités Clés :**
     -   **Gestion du Cycle de Vie :** Il contrôle le démarrage, l'arrêt et le nettoyage de tous les processus liés à l'application web.
     -   **Gestion du Backend :** Il instancie et lance le `BackendManager`, qui est responsable du démarrage de l'application Flask principale.
-    -   **Gestion du Frontend :** De manière optionnelle, il peut lancer un `FrontendManager` pour un serveur de développement React, bien que l'interface actuelle soit principalement rendue via les templates Flask.
+    -   **Gestion du Frontend :** Il gère le serveur de développement React (si activé).
     -   **Tests d'Intégration :** Il intègre et exécute des tests de bout en bout à l'aide de **Playwright**.
     -   **Configuration et Journalisation :** Il centralise la lecture de la configuration et la gestion des logs pour toute la session.
 
@@ -64,30 +80,29 @@ Le lien crucial entre l'interface web (la façade) et les algorithmes d'analyse 
 
 La configuration de l'application est flexible et séparée du code.
 
--   **Configuration de l'Orchestrateur :** [`scripts/apps/config/webapp_config.yml`](scripts/apps/config/webapp_config.yml). Ce fichier YAML définit des paramètres essentiels comme les ports, les chemins, les timeouts, et les options d'activation pour les différents composants (backend, frontend, Playwright).
-
--   **Surcharge par Ligne de Commande :** Le script de lancement [`scripts/apps/start_webapp.py`](scripts/apps/start_webapp.py) permet de surcharger dynamiquement certains paramètres de la configuration via des arguments CLI (par exemple, `--visible`, `--backend-only`).
+-   **Configuration de l'Orchestrateur :** La configuration est gérée via des fichiers YAML et peut être surchargée par des arguments en ligne de commande directement passés à `unified_web_orchestrator.py` (par exemple, `--visible`, `--frontend`, `--tests`).
 
 ## 8. Diagramme de Flux Architectural
 
 ```mermaid
 graph TD
-    subgraph "Phase 1: Lancement"
-        A[Utilisateur exécute `start_webapp.py`] --> B{UnifiedWebOrchestrator};
-        B --> C[BackendManager lance l'app Flask];
+    subgraph "Phase 1: Lancement Unifié"
+        A[Utilisateur exécute `unified_web_orchestrator.py` via PowerShell] --> B{UnifiedWebOrchestrator};
+        B --> C[BackendManager lance l'app Flask (chargement asynchrone)];
         B --> D[FrontendManager lance le serveur React (si activé)];
+        B --> E[Playwright Test Runner (si activé)];
     end
 
     subgraph "Phase 2: Requête d'Analyse"
-        E[Utilisateur soumet un texte via le Navigateur] --> F{Application Flask (`app.py`)};
-        F -- "Requête sur /analyze" --> G[ServiceManager];
-        G -- "Appel à `analyze_text()`" --> H[Pipelines d'Analyse (Coeur du projet)];
+        F[Utilisateur soumet un texte via le Navigateur] --> G{Application Flask (`app.py`)};
+        G -- "Requête sur /analyze" --> H[ServiceManager];
+        H -- "Appel à `analyze_text()`" --> I[Pipelines d'Analyse (Coeur du projet)];
+        I --> H;
         H --> G;
-        G --> F;
-        F -- "Réponse JSON" --> E;
+        G -- "Réponse JSON" --> F;
     end
 
     subgraph "Composants d'Analyse"
-        G -.-> I[Orchestrateurs Spécialisés];
-        G -.-> J[Gestionnaires Hiérarchiques];
+        H -.-> J[Orchestrateurs Spécialisés];
+        H -.-> K[Gestionnaires Hiérarchiques];
     end

@@ -131,17 +131,27 @@ class ConversationTracker:
 """
         
         fallacies_result = final_results.get('fallacies', {})
-        if fallacies_result.get('fallacies'):
-            report += f"**Sophismes détectés:** {len(fallacies_result['fallacies'])}\n\n"
-            for i, fallacy in enumerate(fallacies_result['fallacies'], 1):
-                report += f"{i}. **{fallacy}**\n"
-        else:
-            report += "**Aucun sophisme détecté**\n"
         
+        # La liste réelle des sophismes est sous la clé 'fallacies' dans l'objet résultat
+        fallacies_list = fallacies_result.get('fallacies', [])
+        
+        if fallacies_list and isinstance(fallacies_list, list):
+            report += f"**Sophismes détectés:** {len(fallacies_list)}\n\n"
+            for i, fallacy in enumerate(fallacies_list, 1):
+                fallacy_name = fallacy.get('nom', 'N/A')
+                fallacy_expl = fallacy.get('explication', 'N/A')
+                fallacy_quote = fallacy.get('citation', 'N/A')
+                report += f"#### {i}. {fallacy_name}\n\n"
+                report += f"**Explication:** {fallacy_expl}\n\n"
+                report += f"**Citation:**\n> {fallacy_quote}\n\n---\n\n"
+        else:
+            report += "**Aucun sophisme valide détecté ou le format de la réponse est incorrect.**\n"
+        
+        # Le reste des métadonnées (authenticité, etc.) peut être affiché après
         report += f"""
-**Authenticité:** {'✅ Analyse LLM authentique' if fallacies_result.get('authentic') else '❌ Fallback utilisé'}  
-**Modèle:** {fallacies_result.get('model_used', 'N/A')}  
-**Confiance:** {fallacies_result.get('confidence', 0):.2f}  
+**Authenticité:** {'✅ Analyse LLM authentique' if fallacies_result.get('authentic') else '❌ Fallback utilisé'}
+**Modèle:** {fallacies_result.get('model_used', 'N/A')}
+**Confiance:** {fallacies_result.get('confidence', 0):.2f}
 
 ## 📈 Métriques de Performance
 
@@ -180,34 +190,73 @@ class ConversationTracker:
         return report
 
 async def load_random_extract():
-    """Charge un extrait aléatoire du corpus chiffré."""
+    """Charge et extrait un contenu textuel aléatoire à partir des définitions du corpus."""
     try:
-        # Tenter d'utiliser une approche de chargement de données mise à jour
-        # Remplace l'ancien CorpusManager
-        from argumentation_analysis.utils.data_loader import load_corpus_data
-        
-        # Cette fonction est hypothétique, à adapter si une autre existe
-        # Pour l'instant, on simule un échec pour utiliser le fallback
-        raise ImportError("Le module de chargement de données n'est pas encore implémenté comme prévu.")
+        from project_core.rhetorical_analysis_from_scripts.comprehensive_workflow_processor import CorpusManager, WorkflowConfig
+        from argumentation_analysis.ui.extract_utils import load_source_text, extract_text_with_markers
+        import random
 
-    except (ImportError, ModuleNotFoundError, Exception) as e:
-        logger.warning(f"Erreur chargement corpus: {e}")
+        config = WorkflowConfig(corpus_files=["tests/extract_sources_backup.enc"])
+        corpus_manager = CorpusManager(config)
+        
+        corpus_results = await corpus_manager.load_corpus_data()
+
+        if corpus_results["status"] == "success" and corpus_results["loaded_files"]:
+            source_definitions = corpus_results["loaded_files"][0]["definitions"]
+            if not source_definitions:
+                raise ValueError("Aucune définition de source trouvée dans le corpus.")
+
+            # Sélectionner une source et un extrait au hasard
+            random_source_def = random.choice(source_definitions)
+            if not random_source_def.get('extracts'):
+                raise ValueError("La définition de source choisie n'a pas d'extraits.")
+            random_extract_def = random.choice(random_source_def['extracts'])
+
+            logger.info(f"Source sélectionnée: {random_source_def.get('source_name')}")
+            logger.info(f"Extrait sélectionné: {random_extract_def.get('extract_name')}")
+            
+            # 1. Charger le texte complet de la source
+            full_text, source_url = load_source_text(random_source_def)
+            if not full_text:
+                raise ValueError(f"Impossible de charger le texte depuis la source: {source_url}")
+            
+            logger.info(f"Texte complet chargé depuis {source_url} ({len(full_text)} caractères).")
+
+            # 2. Extraire le passage spécifique en utilisant les marqueurs
+            extracted_text, status, _, _ = extract_text_with_markers(
+                full_text,
+                random_extract_def['start_marker'],
+                random_extract_def['end_marker']
+            )
+
+            if not extracted_text:
+                raise ValueError(f"Impossible d'extraire le texte avec les marqueurs. Statut: {status}")
+
+            logger.info(f"Texte extrait avec succès ({len(extracted_text)} caractères).")
+
+            return {
+                'text': extracted_text,
+                'title': random_extract_def.get('extract_name', "Titre inconnu"),
+                'source': f"Source: {random_source_def.get('source_name')}",
+                'length': len(extracted_text),
+                'type': "Extrait de corpus réel",
+                'preview': extracted_text[:500]
+            }
+
+        raise ValueError("Échec du chargement du corpus via CorpusManager.")
+
+    except (ImportError, ModuleNotFoundError, ValueError, Exception) as e:
+        logger.error(f"Erreur critique lors du chargement de l'extrait: {e}", exc_info=True)
         # Fallback avec texte politique de test
         fallback_text = """
-        Le gouvernement français doit absolument réformer le système éducatif. 
-        Tous les pédagogues reconnus s'accordent à dire que notre méthode est révolutionnaire.
-        Si nous n'agissons pas immédiatement, c'est l'échec scolaire garanti pour toute une génération.
-        Les partis d'opposition ne proposent que des mesures dépassées qui ont échoué en Finlande.
-        Cette réforme permettra de créer des millions d'emplois et de sauver notre économie.
-        Les parents responsables soutiendront forcément cette initiative pour l'avenir de leurs enfants.
+        Le gouvernement français doit absolument réformer le système éducatif.
         """
-        
         return {
             'text': fallback_text,
-            'title': 'Discours Politique Test - Réforme Éducative',
-            'source': 'Texte de test',
+            'title': "Discours sur l'éducation (Fallback)",
+            'source': "Texte statique",
             'length': len(fallback_text),
-            'type': 'Texte politique simulé',
+            'type': "Texte statique de secours",
             'preview': fallback_text[:500]
         }
 

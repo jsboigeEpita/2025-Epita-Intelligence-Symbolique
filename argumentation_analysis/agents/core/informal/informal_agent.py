@@ -22,6 +22,7 @@ L'agent est conçu pour :
 
 import logging
 import json
+import re
 from typing import Dict, List, Any, Optional
 import semantic_kernel as sk
 from semantic_kernel.functions.kernel_arguments import KernelArguments
@@ -174,6 +175,17 @@ class InformalAnalysisAgent(BaseAgent):
 
         self.logger.info(f"Composants de {self.name} configurés avec succès.")
 
+    def _extract_json_from_llm_output(self, raw_str: str) -> str:
+        """
+        Extrait une chaîne JSON d'une sortie de LLM qui peut contenir des
+        délimiteurs de bloc de code (comme ```json ... ```).
+        """
+        match = re.search(r'```\s*json\s*(.*?)\s*```', raw_str, re.DOTALL)
+        if match:
+            return match.group(1).strip()
+        else:
+            return raw_str.strip()
+
     async def analyze_fallacies(self, text: str) -> List[Dict[str, Any]]:
         """
         Analyse les sophismes dans un texte en utilisant la fonction sémantique `semantic_AnalyzeFallacies`.
@@ -197,15 +209,11 @@ class InformalAnalysisAgent(BaseAgent):
             )
             
             # Le traitement du résultat dépendra du format de sortie du prompt.
-            # Pour l'instant, on suppose qu'il retourne une chaîne JSON ou un format parsable.
-            # Exemple basique:
             raw_result = str(result)
-            # Ici, il faudrait parser raw_result pour le transformer en List[Dict[str, Any]]
-            # Pour l'instant, on retourne une structure basique.
-            # Une implémentation réelle nécessiterait un parsing robuste.
-            # Exemple: si le prompt retourne un JSON de liste de sophismes:
+            cleaned_json_str = self._extract_json_from_llm_output(raw_result)
+
             try:
-                parsed_result = json.loads(raw_result)
+                parsed_result = json.loads(cleaned_json_str)
                 
                 # Gérer le cas où le LLM retourne un objet {"sophismes": [...]}
                 if isinstance(parsed_result, dict) and "sophismes" in parsed_result:
@@ -233,7 +241,7 @@ class InformalAnalysisAgent(BaseAgent):
                 self.logger.info(f"{len(filtered_fallacies)} sophismes (sémantiques) détectés et filtrés.")
                 return filtered_fallacies
             except json.JSONDecodeError:
-                self.logger.warning(f"Impossible de parser le résultat JSON de semantic_AnalyzeFallacies: {raw_result}")
+                self.logger.warning(f"Impossible de parser le résultat JSON de semantic_AnalyzeFallacies: {cleaned_json_str}")
                 return [{"error": "Résultat non JSON", "details": raw_result}]
 
         except Exception as e:
