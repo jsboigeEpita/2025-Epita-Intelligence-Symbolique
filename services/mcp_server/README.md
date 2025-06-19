@@ -44,4 +44,3 @@ Un exemple pourrait être :
     }
   }
 }
-
