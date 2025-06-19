@@ -112,18 +112,6 @@ def test_load_definitions_encrypted_wrong_key(test_env):
             raise_on_decrypt_error=True
         )
 
-@pytest.mark.skip("La fonction save_extract_definitions chiffre toujours ; ce test pour la sauvegarde non chiffrée est obsolète.")
-def test_save_definitions_unencrypted(test_env):
-    new_definitions_file = test_env['test_dir'] / "new_extract_definitions.json"
-    definitions_obj = ExtractDefinitions.model_validate(test_env['sample_data'])
-    
-    save_extract_definitions(definitions_obj.to_dict_list(), config_file=new_definitions_file, b64_derived_key=test_env['key'].decode('utf-8'))
-    assert new_definitions_file.exists()
-    
-    with open(new_definitions_file, 'r') as f:
-        pass 
-    # assert loaded_data["sources"][0]["source_name"] == "Test Source 1"
-
 def test_save_definitions_encrypted(test_env):
     new_encrypted_file = test_env['test_dir'] / "new_extract_definitions.json.enc"
     definitions_obj = ExtractDefinitions.model_validate(test_env['sample_data'])
