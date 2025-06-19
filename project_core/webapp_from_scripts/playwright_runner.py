@@ -128,7 +128,7 @@ class PlaywrightRunner:
 
     def _build_python_command(self, test_paths: List[str], config: Dict[str, Any], pytest_args: List[str]):
         """Construit la commande pour les tests basés sur Pytest."""
-        parts = [sys.executable, '-m', 'pytest']
+        parts = [sys.executable, '-m', 'pytest', '-v', '-x']
         
         # Passer les URLs en tant qu'options et non en tant que chemins de test
         if config.get('backend_url'):
