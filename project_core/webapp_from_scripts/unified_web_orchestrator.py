@@ -898,7 +898,9 @@ def main():
             orchestrator.logger.error(f"❌ Erreur inattendue dans l'orchestration : {e}", exc_info=True)
             success = False
         finally:
-            await orchestrator.shutdown()
+            # Ne pas arrêter les serveurs si on veut juste les laisser tourner
+            if not args.exit_after_start:
+                await orchestrator.shutdown()
         return success
     
     # Exécution asynchrone
