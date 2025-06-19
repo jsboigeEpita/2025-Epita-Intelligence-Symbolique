@@ -1,92 +1,34 @@
 import pytest
-from api.services import DungAnalysisService
-from api.dependencies import get_dung_analysis_service
 import os
 
-# S'assurer que JAVA_HOME est défini pour les tests
-if not os.environ.get('JAVA_HOME'):
-    pytest.fail("La variable d'environnement JAVA_HOME est requise pour ces tests.")
+# Le chemin vers le script worker qui exécute les tests dépendants de la JVM.
+# Ce chemin est relatif au répertoire racine du projet.
+WORKER_SCRIPT_PATH = "tests/unit/api/workers/worker_dung_service.py"
 
-@pytest.fixture(scope="module")
-def dung_service(integration_jvm) -> DungAnalysisService:
+def test_dung_service_via_worker(run_in_jvm_subprocess):
     """
-    Fixture pour fournir une instance unique du service pour tous les tests du module.
-    Dépend de 'integration_jvm' pour s'assurer que la JVM est démarrée.
+    Exécute les tests du service Dung dans un sous-processus isolé.
+    
+    Ce test s'appuie sur la fixture 'run_in_jvm_subprocess' pour:
+    1. Configurer un environnement Python avec les dépendances nécessaires.
+    2. Démarrer une JVM dédiée pour le sous-processus.
+    3. Exécuter le script worker spécifié.
+    4. Capturer la sortie (stdout/stderr) et le code de sortie.
+    
+    Le worker contient la logique de test détaillée (initialisation du service,
+    appels de méthodes, assertions). Ce test principal ne fait que valider
+    que le worker s'est exécuté sans erreur et a renvoyé un signal de succès.
     """
-    if not integration_jvm or not integration_jvm.isJVMStarted():
-        pytest.fail("La fixture integration_jvm n'a pas réussi à démarrer la JVM.")
-    return get_dung_analysis_service()
+    # Vérifie que le script worker existe avant de tenter de l'exécuter.
+    # Le chemin est construit à partir de la racine du projet.
+    assert os.path.exists(WORKER_SCRIPT_PATH), f"Le script worker est introuvable: {WORKER_SCRIPT_PATH}"
 
-def test_service_initialization(dung_service: DungAnalysisService):
-    """Vérifie que le service est initialisé sans erreur."""
-    assert dung_service is not None
-    # La gestion de la JVM est maintenant externe (via conftest),
-    # donc on vérifie juste qu'une classe Java a pu être chargée.
-    assert hasattr(dung_service, 'DungTheory'), "L'attribut 'DungTheory' devrait exister après l'initialisation."
+    # Appel de la fixture qui exécute le script dans un environnement contrôlé.
+    result = run_in_jvm_subprocess(WORKER_SCRIPT_PATH)
 
-def test_analyze_simple_framework(dung_service: DungAnalysisService):
-    """Teste l'analyse d'un framework simple (a -> b -> c)."""
-    arguments = ["a", "b", "c"]
-    attacks = [["a", "b"], ["b", "c"]]
+    # Validation de la sortie du worker.
+    # On s'attend à ce que le worker imprime un message de succès.
+    assert "SUCCESS" in result.stdout, f"L'exécution du worker a échoué. Sortie: {result.stdout}\nErreurs: {result.stderr}"
     
-    result = dung_service.analyze_framework(arguments, [(s, t) for s, t in attacks])
-    
-    # Vérification des sémantiques
-    # c n'est pas attaqué, il doit donc être dans la grounded extension
-    assert result['semantics']['grounded'] == ["a", "c"]
-    assert result['semantics']['preferred'] == [["a", "c"]]
-    assert result['semantics']['stable'] == [["a", "c"]]
-    
-    # Vérification du statut des arguments
-    assert result['argument_status']['a']['credulously_accepted'] is True
-    assert result['argument_status']['a']['skeptically_accepted'] is True
-    assert result['argument_status']['c']['credulously_accepted'] is True
-    
-    # Vérification des propriétés du graphe
-    assert result['graph_properties']['num_arguments'] == 3
-    assert result['graph_properties']['num_attacks'] == 2
-    assert result['graph_properties']['has_cycles'] is False
-
-def test_analyze_cyclic_framework(dung_service: DungAnalysisService):
-    """Teste un framework avec un cycle (a <-> b)."""
-    arguments = ["a", "b"]
-    attacks = [["a", "b"], ["b", "a"]]
-    
-    result = dung_service.analyze_framework(arguments, [(s, t) for s, t in attacks])
-    
-    # Dans un cycle simple, l'extension fondée est vide
-    assert result['semantics']['grounded'] == []
-    # Les extensions préférées contiennent chaque argument séparément
-    assert result['semantics']['preferred'] == [["a"], ["b"]]
-    assert result['semantics']['stable'] == [["a"], ["b"]]
-    
-    # Vérification des propriétés du graphe
-    assert result['graph_properties']['has_cycles'] is True
-    assert len(result['graph_properties']['cycles']) > 0
-
-def test_analyze_empty_framework(dung_service: DungAnalysisService):
-    """Teste un framework vide."""
-    arguments = []
-    attacks = []
-    
-    result = dung_service.analyze_framework(arguments, [(s, t) for s, t in attacks])
-    
-    assert result['semantics']['grounded'] == []
-    assert result['semantics']['preferred'] == [[]]
-    assert result['graph_properties']['num_arguments'] == 0
-    assert result['graph_properties']['num_attacks'] == 0
-
-def test_self_attacking_argument(dung_service: DungAnalysisService):
-    """Teste un argument qui s'auto-attaque (a -> a)."""
-    arguments = ["a", "b"]
-    attacks = [["a", "a"], ["a", "b"]]
-    
-    result = dung_service.analyze_framework(arguments, [(s, t) for s, t in attacks])
-
-    # Un argument qui s'auto-attaque ne peut pas être dans une extension
-    assert result['semantics']['grounded'] == []
-    assert result['semantics']['preferred'] == [[]]
-    assert result['argument_status']['a']['credulously_accepted'] is False
-    
-    # Vérification des propriétés
-    assert result['graph_properties']['self_attacking_nodes'] == ["a"]
+    # Vérifie que le worker s'est terminé avec un code de sortie 0 (succès).
+    assert result.returncode == 0, f"Le worker s'est terminé avec un code d'erreur. Code: {result.returncode}"
