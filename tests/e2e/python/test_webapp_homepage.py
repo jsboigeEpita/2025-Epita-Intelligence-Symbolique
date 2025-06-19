@@ -1,7 +1,6 @@
 import re
 import pytest
-import time
-from playwright.sync_api import Page, expect
+from playwright.async_api import Page, expect
 
 
 @pytest.mark.asyncio
@@ -11,9 +10,6 @@ async def test_homepage_has_correct_title_and_header(page: Page, frontend_url: s
     affiche le bon titre, un en-tête H1 visible et que la connexion à l'API est active.
     Il dépend de la fixture `frontend_url` pour obtenir l'URL de base dynamique.
     """
-    # Attente forcée pour laisser le temps au serveur de démarrer
-    time.sleep(15)
-    
     # Naviguer vers la racine de l'application web en utilisant l'URL fournie par la fixture.
     await page.goto(frontend_url, wait_until='networkidle', timeout=30000)
 

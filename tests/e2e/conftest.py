@@ -1,45 +1,25 @@
 import pytest
 from typing import Dict
+from playwright.async_api import expect
+
+# La fonction pytest_addoption est supprimée car les plugins pytest (comme pytest-base-url
+# ou pytest-playwright) gèrent maintenant la définition des options d'URL,
+# ce qui créait un conflit.
 
 @pytest.fixture(scope="session")
-def urls(request) -> Dict[str, str]:
-    """
-    Fixture synchrone qui récupère les URLs des services web depuis les
-    arguments de la ligne de commande.
-
-    L'orchestrateur `unified_web_orchestrator.py` est maintenant la seule
-    source de vérité pour démarrer et arrêter les services. Cette fixture
-    ne fait que consommer les URLs qu'il fournit.
-    """
-    backend_url = request.config.getoption("--backend-url")
-    frontend_url = request.config.getoption("--frontend-url")
-
-    if not backend_url or not frontend_url:
-        pytest.fail(
-            "Les URLs du backend et du frontend doivent être fournies via "
-            "`--backend-url` et `--frontend-url`. "
-            "Exécutez les tests via `unified_web_orchestrator.py`."
-        )
-
-    print("\n[E2E Fixture] URLs des services récupérées depuis l'orchestrateur:")
-    print(f"[E2E Fixture]   - Backend: {backend_url}")
-    print(f"[E2E Fixture]   - Frontend: {frontend_url}")
-
-    return {"backend_url": backend_url, "frontend_url": frontend_url}
-
+def frontend_url(request) -> str:
+    """Fixture qui fournit l'URL du frontend, récupérée depuis les options pytest."""
+    # On utilise directement request.config.getoption, en supposant que l'option
+    # est fournie par un autre plugin ou sur la ligne de commande.
+    return request.config.getoption("--frontend-url")
 
 @pytest.fixture(scope="session")
-def backend_url(urls: Dict[str, str]) -> str:
-    """Fixture pour obtenir l'URL du backend."""
-    return urls["backend_url"]
-
-@pytest.fixture(scope="session")
-def frontend_url(urls: Dict[str, str]) -> str:
-    """Fixture pour obtenir l'URL du frontend."""
-    return urls["frontend_url"]
+def backend_url(request) -> str:
+    """Fixture qui fournit l'URL du backend, récupérée depuis les options pytest."""
+    return request.config.getoption("--backend-url")
 
 # ============================================================================
-# Helper Classes
+# Helper Classes (provenant de la branche distante)
 # ============================================================================
 
 class PlaywrightHelpers:

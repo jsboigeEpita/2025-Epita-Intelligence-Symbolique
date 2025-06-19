@@ -1,62 +1,51 @@
-import asyncio
 import uvicorn
 import os
-from multiprocessing import Process
+from pathlib import Path
+import asyncio
+import sys
 
-# Le même nom de fichier sentinelle que dans conftest.py
+# Le nom du fichier sentinelle, partagé avec le script de test
 SERVER_READY_SENTINEL = "SERVER_READY.tmp"
+PROJECT_ROOT = Path(__file__).parent.parent.parent
 
-async def run_backend_server():
-    """Démarre le serveur backend uvicorn."""
-    # Note: Le chemin est relatif au répertoire de travail au moment de l'exécution
-    config = uvicorn.Config(
-        "interface_web.backend.main:app",
-        host="127.0.0.1",
-        port=8000,
-        log_level="info",
-        reload=False
-    )
-    server = uvicorn.Server(config)
-    print("[ServerScript] Backend server started.")
-    await server.serve()
-
-async def run_frontend_server():
-    """Démarre le serveur de développement du frontend."""
-    # Ceci est un exemple simple. Adaptez si votre frontend a une commande de démarrage différente.
-    # Pour un frontend Dash, le démarrage se fait généralement via le même processus Python
-    # que le backend. Si vous utilisez un serveur de dev distinct (par ex. npm),
-    # vous devrez utiliser asyncio.create_subprocess_exec ici.
-    # Dans notre cas, Dash est servi par la même app.
-    # Cette fonction est donc un placeholder si un serveur distinct était nécessaire.
-    await asyncio.sleep(1) # Simule le démarrage
-    print("[ServerScript] Frontend logic running (if any).")
+# Ajouter la racine du projet au PYTHONPATH
+sys.path.insert(0, str(PROJECT_ROOT))
 
 
-async def main():
+def main():
     """
-    Fonction principale pour démarrer les serveurs et créer le fichier sentinelle.
+    Démarre le serveur web uvicorn pour les tests E2E.
+    Utilise un fichier sentinelle pour signaler que le serveur est prêt.
     """
-    print("[ServerScript] Starting servers...")
+    # S'assurer que le répertoire du sentinel existe
+    sentinel_path = PROJECT_ROOT / SERVER_READY_SENTINEL
     
-    # Lancer le backend. Pour une app Dash, il sert aussi le frontend.
-    server_task = asyncio.create_task(run_backend_server())
+    # Supprimer l'ancien fichier sentinelle s'il existe
+    if sentinel_path.exists():
+        sentinel_path.unlink()
 
-    # Laisser un peu de temps au serveur pour démarrer
-    await asyncio.sleep(5) 
-    
-    # Créer le fichier sentinelle pour signaler que les serveurs sont prêts
-    with open(SERVER_READY_SENTINEL, "w") as f:
-        f.write("ready")
-    print(f"[ServerScript] Sentinel file '{SERVER_READY_SENTINEL}' created.")
-    print("[ServerScript] Servers are ready and running.")
-    
-    # Attendre que la tâche du serveur se termine (ce qui n'arrivera jamais
-    # à moins d'une erreur ou d'une interruption externe).
-    await server_task
+    # Créer le fichier sentinelle pour signaler que le serveur est prêt
+    sentinel_path.touch()
 
+    try:
+        uvicorn.run(
+            "interface_web.app:app",
+            host="127.0.0.1",
+            port=8000,
+            log_level="info",
+            reload=False
+        )
+    except Exception as e:
+        # En cas d'erreur de démarrage, écrire l'erreur dans un fichier
+        # pour que le processus parent puisse la lire.
+        with open("server_startup_error.log", "w") as f:
+            f.write(str(e))
+        # S'assurer que le fichier sentinelle n'existe pas si le démarrage a échoué
+        if sentinel_path.exists():
+            sentinel_path.unlink()
+        raise
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("\n[ServerScript] Shutting down...")
+    # Définir la variable d'environnement pour contourner la vérification de l'environnement
+    os.environ['E2E_TEST_RUNNING'] = 'true' 
+    main()
