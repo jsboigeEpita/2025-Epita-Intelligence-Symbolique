@@ -49,23 +49,18 @@ def find_and_load_dotenv():
 
 def get_project_root_robust() -> Path:
     """
-    Trouve la racine du projet ou du package pour localiser les ressources internes (libs).
-    Marqueurs cherchés : .git, pyproject.toml, requirements.txt
+    Trouve la racine du projet en remontant depuis l'emplacement de ce fichier.
+    Chemin: .../racine_projet/argumentation_analysis/core/jvm_setup.py
+    La racine est 2 niveaux au-dessus du dossier 'core'.
     """
+    # current_path.parents[0] -> .../core
+    # current_path.parents[1] -> .../argumentation_analysis
+    # current_path.parents[2] -> .../racine_projet
     current_path = Path(__file__).resolve()
-    # Recherche de la racine du projet en mode développement
-    for parent in [current_path] + list(current_path.parents):
-        if any((parent / marker).exists() for marker in ['.git', 'pyproject.toml', 'requirements.txt']):
-            logger.info(f"Racine du projet (mode dév) trouvée à : {parent}")
-            return parent
-    
-    # Fallback pour exécution depuis un package (ex: site-packages).
-    # La racine correspond au dossier du package 'argumentation_analysis'.
-    # Chemin: .../site-packages/argumentation_analysis/core/jvm_setup.py
-    # parents[0] est .../core, parents[1] est .../argumentation_analysis
-    package_root = current_path.parents[1]
-    logger.warning(f"Marqueurs de racine non trouvés. Utilisation de la racine du package supposée : {package_root}")
-    return package_root
+    # Utiliser parents[2] pour remonter de core -> argumentation_analysis -> racine
+    project_root = current_path.parents[2]
+    logger.debug(f"Racine du projet déterminée de manière statique à : {project_root}")
+    return project_root
 
 # --- Constantes de Configuration ---
 # Répertoires (utilisant pathlib pour la robustesse multi-plateforme)
@@ -189,84 +184,26 @@ def download_tweety_jars(
     ) -> bool:
     """
     Vérifie et télécharge les JARs Tweety (Core + Modules) et les binaires natifs nécessaires.
+    NOTE: Cette fonction est actuellement désactivée car les JARs sont fournis localement.
     """
+    logger.info("La fonction de téléchargement des JARs Tweety est désactivée. Utilisation des fichiers locaux.")
+    
     if target_dir is None:
         target_dir_path = LIBS_DIR
     else:
         target_dir_path = Path(target_dir)
 
-    logger.info(f"Préparation du répertoire des bibliothèques Tweety : '{target_dir_path.resolve()}'")
-    try:
-        target_dir_path.mkdir(parents=True, exist_ok=True)
-    except OSError as e:
-        logger.error(f"Impossible de créer le répertoire cible {target_dir_path} pour Tweety JARs: {e}")
+    if not target_dir_path.exists():
+        logger.error(f"Le répertoire des bibliothèques {target_dir_path} n'existe pas, et le téléchargement est désactivé.")
         return False
 
-    logger.info(f"\n--- Vérification/Téléchargement des JARs Tweety v{version} vers '{target_dir_path.resolve()}' ---")
-    BASE_URL = f"https://tweetyproject.org/builds/{version}/"
-    NATIVE_LIBS_DIR = target_dir_path / native_subdir
-    try:
-        NATIVE_LIBS_DIR.mkdir(parents=True, exist_ok=True)
-    except OSError as e:
-        logger.error(f"Impossible de créer le répertoire des binaires natifs {NATIVE_LIBS_DIR}: {e}")
-
-    CORE_JAR_NAME = f"org.tweetyproject.tweety-full-{version}-with-dependencies.jar"
-    system = platform.system()
-    native_binaries_repo_path = "https://raw.githubusercontent.com/TweetyProjectTeam/TweetyProject/main/org-tweetyproject-arg-adf/src/main/resources/"
-    native_binaries = {
-        "Windows": ["picosat.dll", "lingeling.dll", "minisat.dll"],
-        "Linux":   ["picosat.so", "lingeling.so", "minisat.so"],
-        "Darwin":  ["picosat.dylib", "lingeling.dylib", "minisat.dylib"]
-    }.get(system, [])
-
-    logger.info(f"Vérification de l'accès à {BASE_URL}...")
-    url_accessible = False
-    try:
-        response = requests.head(BASE_URL, timeout=10)
-        response.raise_for_status()
-        logger.info(f"[OK] URL de base Tweety v{version} accessible.")
-        url_accessible = True
-    except requests.exceptions.RequestException as e:
-        logger.error(f"❌ Impossible d'accéder à l'URL de base {BASE_URL}. Erreur : {e}")
-        logger.warning("   Le téléchargement des JARs/binaires manquants échouera. Seuls les fichiers locaux seront utilisables.")
-
-    logger.info(f"\n--- Vérification/Téléchargement JAR Core (Full) ---")
-    core_present, core_newly_downloaded = download_file(BASE_URL + CORE_JAR_NAME, target_dir_path / CORE_JAR_NAME, CORE_JAR_NAME)
-    status_core = "téléchargé" if core_newly_downloaded else ("déjà présent" if core_present else "MANQUANT")
-    logger.info(f"[OK] JAR Core '{CORE_JAR_NAME}': {status_core}.")
-    if not core_present:
-        logger.critical(f"❌ ERREUR CRITIQUE : Le JAR core Tweety est manquant et n'a pas pu être téléchargé.")
-        return False
-
-    logger.info(f"\n--- Vérification/Téléchargement des {len(native_binaries)} binaires natifs ({system}) ---")
-    native_present_count = 0
-    native_downloaded_count = 0
-    native_missing = []
-    if not native_binaries:
-         logger.info(f"   (Aucun binaire natif connu pour {system})")
+    # On vérifie simplement la présence d'au moins un fichier .jar pour simuler un succès
+    if any(target_dir_path.rglob("*.jar")):
+        logger.info("Au moins un fichier JAR trouvé dans le répertoire local. On continue.")
+        return True
     else:
-        for name in tqdm(native_binaries, desc="Binaires Natifs"):
-             present, new_dl = download_file(native_binaries_repo_path + name, NATIVE_LIBS_DIR / name, name)
-             if present:
-                 native_present_count += 1
-                 if new_dl: native_downloaded_count += 1
-                 if new_dl and system != "Windows":
-                     try:
-                         target_path_native = NATIVE_LIBS_DIR / name
-                         current_permissions = target_path_native.stat().st_mode
-                         target_path_native.chmod(current_permissions | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-                         logger.debug(f"      Permissions d'exécution ajoutées à {name}")
-                     except Exception as e_chmod:
-                         logger.warning(f"      Impossible d'ajouter les permissions d'exécution à {name}: {e_chmod}")
-             elif url_accessible:
-                  native_missing.append(name)
-        logger.info(f"-> Binaires natifs: {native_downloaded_count} téléchargés, {native_present_count}/{len(native_binaries)} présents.")
-        if native_missing:
-            logger.warning(f"   Binaires natifs potentiellement manquants: {', '.join(native_missing)}")
-        if native_present_count > 0:
-             logger.info(f"   Note: S'assurer que le chemin '{NATIVE_LIBS_DIR.resolve()}' est inclus dans java.library.path lors du démarrage JVM.")
-    logger.info("--- Fin Vérification/Téléchargement Tweety ---")
-    return core_present
+        logger.critical(f"❌ ERREUR CRITIQUE : Aucun fichier JAR trouvé dans {target_dir_path} et le téléchargement est désactivé.")
+        return False
 
 def unzip_file(zip_path: Path, dest_dir: Path):
     """Décompresse un fichier ZIP."""
@@ -649,7 +586,16 @@ def initialize_jvm(
 
         # 3. Validation : construire le classpath à partir du répertoire cible APRES provisioning
         logger.info(f"Construction du classpath depuis '{actual_lib_dir.resolve()}'...")
-        jars_classpath_list = [str(f.resolve()) for f in actual_lib_dir.rglob("*.jar") if f.is_file()]
+        jars_classpath_list = []
+        logger.debug(f"Début du scan de JARs dans : {actual_lib_dir}")
+        for root, dirs, files in os.walk(actual_lib_dir):
+            logger.debug(f"Scanning in root: {root}")
+            for file in files:
+                if file.endswith(".jar"):
+                    found_path = os.path.join(root, file)
+                    logger.debug(f"  -> JAR trouvé : {found_path}")
+                    jars_classpath_list.append(found_path)
+        logger.debug(f"Scan terminé. Total JARs trouvés: {len(jars_classpath_list)}")
         if jars_classpath_list:
              logger.info(f"  {len(jars_classpath_list)} JAR(s) trouvé(s) pour le classpath.")
         else:

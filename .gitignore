@@ -283,3 +283,8 @@ analyse_trace_complete_*.json
 
 # Dossier temporaire de l'API web
 services/web_api/_temp_static/
+
+# Fichiers de résultats de tests et de couverture
+*.txt
+coverage_results.txt
+unit_test_results.txt

@@ -31,18 +31,31 @@ from pathlib import Path
 # Note: L'import de Logger et EnvironmentManager sera fait à l'intérieur de ensure_env
 # pour éviter les problèmes d'imports circulaires potentiels si auto_env est importé tôt.
 
-def ensure_env(env_name: str = "projet-is", silent: bool = True) -> bool:
+def ensure_env(env_name: str = None, silent: bool = True) -> bool:
     """
     One-liner auto-activateur d'environnement.
     Délègue la logique complexe à EnvironmentManager.
     
     Args:
-        env_name: Nom de l'environnement conda.
+        env_name: Nom de l'environnement conda. Si None, il est lu depuis .env.
         silent: Si True, réduit la verbosité des logs.
     
     Returns:
         True si l'environnement est (ou a été) activé avec succès, False sinon.
     """
+    # --- Logique de détermination du nom de l'environnement ---
+    if env_name is None:
+        try:
+            # Assurer que dotenv est importé
+            from dotenv import load_dotenv, find_dotenv
+            # Charger le fichier .env s'il existe
+            dotenv_path = find_dotenv()
+            if dotenv_path:
+                load_dotenv(dotenv_path)
+            # Récupérer le nom de l'environnement, avec 'projet-is' comme fallback
+            env_name = os.environ.get('CONDA_ENV_NAME', 'projet-is')
+        except ImportError:
+            env_name = 'projet-is' # Fallback si dotenv n'est pas installé
     # DEBUG: Imprimer l'état initial
     print(f"[auto_env DEBUG] Début ensure_env. Python: {sys.executable}, CONDA_DEFAULT_ENV: {os.getenv('CONDA_DEFAULT_ENV')}, silent: {silent}", file=sys.stderr)
 
@@ -174,7 +187,7 @@ if __name__ != "__main__":
     # Cette protection est intentionnellement non-silencieuse pour rendre tout échec
     # d'activation de l'environnement immédiatement visible.
     # =====================================================================================
-    ensure_env(silent=False)
+    ensure_env(env_name=None, silent=False)
 
 
 if __name__ == "__main__":

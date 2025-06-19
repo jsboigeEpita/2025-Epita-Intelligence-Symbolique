@@ -5,7 +5,7 @@
 # Python ML/Data Science Stack
 numpy>=2.0
 pandas==2.2.3
-scipy<=1.13.1
+scipy
 scikit-learn==1.6.1
 nltk>=3.8
 spacy==3.7.4
@@ -52,7 +52,7 @@ transformers>=4.20.0
 # Ensure the correct Python environment (3.10+) is active.
 # Downgrading will break the application.
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-semantic-kernel==0.9.6b1 # Rétrogradation pour correspondre à l'environnement de test
+semantic-kernel>=1.33.0,<2.0.0 # Rétabli à la version minimale requise pour la stabilité
 regex<2024.0.0 # Ajout pour résoudre le conflit avec semantic-kernel
 # NOTE: Using latest version (>1.0.0) a modern API
 # CRITICAL UPDATE: Resolves Pydantic import errors and modernizes API
