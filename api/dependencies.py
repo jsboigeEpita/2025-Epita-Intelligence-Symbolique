@@ -135,7 +135,20 @@ def get_dung_analysis_service() -> DungAnalysisService:
     global _global_dung_service
     if _global_dung_service is None:
         logging.info("[API] Initialisation du DungAnalysisService...")
-        # L'initialisation de la JVM est gérée au sein du constructeur du service.
+        import jpype
+        import jpype.imports
+        from argumentation_analysis.core.orchestration.jpype_manager import JPypeManager
+        
+        if not jpype.isJVMStarted():
+            # Instance du manager pour la configuration centralisée
+            jpype_manager = JPypeManager()
+            
+            # Définir le chemin vers les fichiers JAR
+            jpype_manager.set_jars_path('libs/java')
+            
+            # Lancer la JVM avec la configuration du manager
+            jpype_manager.start_jvm()
+
         _global_dung_service = DungAnalysisService()
         logging.info("[API] DungAnalysisService initialisé avec succès.")
     return _global_dung_service

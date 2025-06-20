@@ -16,6 +16,7 @@ def run_in_jvm_subprocess():
         Exécute le script de test donné dans un sous-processus en utilisant
         le même interpréteur Python et en passant par le wrapper d'environnement.
         """
+        script_path = Path(script_path)
         if not script_path.exists():
             raise FileNotFoundError(f"Le script de test à exécuter n'a pas été trouvé : {script_path}")
 

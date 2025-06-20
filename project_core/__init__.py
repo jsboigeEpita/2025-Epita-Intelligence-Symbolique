@@ -18,22 +18,16 @@ from .service_manager import (
     create_default_configs
 )
 
-from .test_runner import (
-    TestRunner,
-    TestConfig,
-    TestType,
-    EnvironmentManager
-)
+# Les modules de test ont été refactorisés dans core_from_scripts
+# Pour éviter de polluer l'api publique de project_core, ils ne sont
+# plus exposés ici. Les utilisateurs devraient importer directement depuis
+# project_core.core_from_scripts si nécessaire.
 
 __version__ = "1.0.0"
 __all__ = [
     'ServiceManager',
     'ServiceConfig',
-    'PortManager', 
+    'PortManager',
     'ProcessCleanup',
-    'create_default_configs',
-    'TestRunner',
-    'TestConfig',
-    'TestType',
-    'EnvironmentManager'
+    'create_default_configs'
 ]
