@@ -21,7 +21,7 @@ __author__ = "Intelligence Symbolique EPITA"
 
 from .common_utils import *
 from .environment_manager import *
-from .test_runner import *
+from .test_config_definition import *
 from .validation_engine import *
 from .project_setup import *
 
@@ -33,7 +33,7 @@ __all__ = [
     'EnvironmentManager', 'check_conda_env', 'activate_project_env',
     
     # Test runner
-    'TestRunner', 'run_pytest', 'run_python_script',
+    'TestRunner', 'TestConfig', 'TestMode', 'run_pytest', 'run_python_script',
     
     # Validation engine
     'ValidationEngine', 'check_prerequisites', 'validate_system',
