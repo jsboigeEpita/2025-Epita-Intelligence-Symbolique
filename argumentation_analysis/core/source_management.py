@@ -30,7 +30,7 @@ from contextlib import contextmanager
 # Imports core existants
 from argumentation_analysis.core.source_manager import SourceManager, SourceConfig, SourceType as LegacySourceType
 from argumentation_analysis.core.utils.crypto_utils import derive_encryption_key, load_encryption_key
-from argumentation_analysis.ui.file_operations import load_extract_definitions
+from argumentation_analysis.core.io_manager import load_extract_definitions
 from argumentation_analysis.models.extract_definition import ExtractDefinitions
 
 logger = logging.getLogger(__name__)
@@ -204,7 +204,7 @@ class UnifiedSourceManager:
                 return None, "Impossible de dériver la clé de chiffrement"
             
             # Charger les définitions
-            definitions = load_extract_definitions(config_file=enc_path, b64_derived_key=encryption_key)
+            definitions = load_extract_definitions(config_file=enc_path, b64_derived_key=encryption_key, fallback_definitions=[])
             if not definitions:
                 return None, "Impossible de charger les définitions depuis le fichier .enc"
             

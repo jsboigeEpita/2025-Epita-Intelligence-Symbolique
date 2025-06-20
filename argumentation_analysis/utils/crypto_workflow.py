@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from cryptography.fernet import Fernet
 import base64
 import hashlib
-from argumentation_analysis.ui.file_operations import load_extract_definitions
+from argumentation_analysis.core.io_manager import load_extract_definitions
 
 @dataclass
 class CorpusDecryptionResult:
@@ -90,7 +90,8 @@ class CryptoWorkflowManager:
                     # Chargement et déchiffrement
                     definitions = load_extract_definitions(
                         config_file=corpus_path,
-                        key=encryption_key
+                        b64_derived_key=encryption_key,
+                        fallback_definitions=[]
                     )
                     
                     if definitions:

@@ -39,7 +39,7 @@ except NameError: # __file__ n'est pas défini si exécuté dans un interpréteu
 
 from argumentation_analysis.core.utils.logging_utils import setup_logging
 from argumentation_analysis.core.utils.file_utils import load_json_file, sanitize_filename, load_document_content
-from argumentation_analysis.ui.file_operations import load_extract_definitions, save_extract_definitions
+from argumentation_analysis.core.io_manager import load_extract_definitions, save_extract_definitions
 from argumentation_analysis.ui.fetch_utils import get_full_text_for_source
 from argumentation_analysis.ui.config import ENCRYPTION_KEY as CONFIG_UI_ENCRYPTION_KEY
 from argumentation_analysis.nlp.embedding_utils import get_embeddings_for_chunks, save_embeddings_data
@@ -199,7 +199,8 @@ def run_embedding_generation_pipeline(
             # Utilisation de la clé directement depuis ui.config
             loaded_defs = load_extract_definitions(
                 config_file=input_config_path,
-                b64_derived_key=encryption_key_to_use
+                b64_derived_key=encryption_key_to_use,
+                fallback_definitions=[]
             )
             # load_extract_definitions gère les erreurs internes et peut retourner une liste vide ou des valeurs par défaut.
             # Il est crucial de vérifier si le chargement a réussi.
@@ -330,7 +331,8 @@ def run_embedding_generation_pipeline(
             extract_definitions=extract_definitions,
             config_file=output_config_path,
             b64_derived_key=encryption_key_to_use,
-            embed_full_text=True
+            embed_full_text=True,
+            text_retriever=get_full_text_for_source
         )
         if save_success:
             logger.info(f"Définitions d'extraits sauvegardées avec succès dans {output_config_path}.")
