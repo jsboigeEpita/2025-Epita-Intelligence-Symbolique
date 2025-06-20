@@ -1,5 +1,0 @@
-
-Le projet EPITA Intelligence Symbolique 2025 est un défi majeur.
-Certains disent qu'il est trop ambitieux et voué à l'échec car aucun projet étudiant n'a jamais atteint ce niveau d'intégration.
-Cependant, cet argument ignore les compétences uniques de notre équipe et les avancées technologiques récentes.
-Nous devons nous concentrer sur une livraison incrémentale et prouver que la réussite est possible.
