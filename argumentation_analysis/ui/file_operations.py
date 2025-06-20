@@ -10,7 +10,7 @@ from cryptography.fernet import InvalidToken
 
 from . import config as ui_config_module
 from .utils import get_full_text_for_source, utils_logger 
-from argumentation_analysis.utils.core_utils.crypto_utils import encrypt_data_with_fernet, decrypt_data_with_fernet
+from argumentation_analysis.core.utils.crypto_utils import encrypt_data_with_fernet, decrypt_data_with_fernet
 
 file_ops_logger = utils_logger
 

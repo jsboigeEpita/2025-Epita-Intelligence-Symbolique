@@ -7,8 +7,8 @@ except ImportError:
 # =========================================
 import jpype
 import logging
-from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
-# from argumentation_analysis.utils.core_utils.path_operations import get_project_root # Différé
+from argumentation_analysis.core.utils.logging_utils import setup_logging
+# from argumentation_analysis.core.utils.path_operations import get_project_root # Différé
 from pathlib import Path
 import os # Ajout de l'import os
 

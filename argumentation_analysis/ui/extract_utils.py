@@ -14,20 +14,14 @@ from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional, Union
 
 # Imports depuis les modules du projet
-try:
-    # Import relatif depuis le package ui
-    from ..services.extract_service import ExtractService
-    from ..services.fetch_service import FetchService
-    from ..models.extract_definition import ExtractDefinitions, SourceDefinition
-    from .config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON, CACHE_DIR
-    from ..services.crypto_service import CryptoService
-except ImportError:
-    # Fallback pour les imports absolus
-    from argumentation_analysis.services.extract_service import ExtractService
-    from argumentation_analysis.services.fetch_service import FetchService
-    from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition
-    from argumentation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON, CACHE_DIR
-    from argumentation_analysis.services.crypto_service import CryptoService
+# Imports depuis les modules du projet (chemins absolus pour la robustesse)
+from argumentation_analysis.services.extract_service import ExtractService
+from argumentation_analysis.services.fetch_service import FetchService
+from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition
+from argumentation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON, CACHE_DIR
+from argumentation_analysis.services.crypto_service import CryptoService
+from argumentation_analysis.services.cache_service import CacheService
+
 
 # Configuration du logging
 logger = logging.getLogger("UI.ExtractUtils")
@@ -36,16 +30,7 @@ logger = logging.getLogger("UI.ExtractUtils")
 extract_service = ExtractService()
 
 # Le FetchService nécessite un CacheService avec un répertoire de cache
-try:
-    # Import relatif
-    from ..services.cache_service import CacheService
-    from ..ui.config import CACHE_DIR
-    cache_service = CacheService(CACHE_DIR)
-except ImportError:
-    # Import absolu
-    from services.cache_service import CacheService
-    from argumentation_analysis.ui.config import CACHE_DIR
-    cache_service = CacheService(CACHE_DIR)
+cache_service = CacheService(CACHE_DIR)
 
 fetch_service = FetchService(cache_service)
 crypto_service = CryptoService()

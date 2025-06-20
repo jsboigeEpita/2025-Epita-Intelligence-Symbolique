@@ -7,7 +7,7 @@ spécifiques à l'analyse d'argumentation (par exemple, extract_sources.json).
 import logging
 import json
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Set # Ajout de Set
+from typing import List, Dict, Any, Optional, Set, Union, Tuple # Ajout de Set, Union, et Tuple
 
 logger = logging.getLogger(__name__)
 

@@ -29,7 +29,7 @@ from contextlib import contextmanager
 
 # Imports core existants
 from argumentation_analysis.core.source_manager import SourceManager, SourceConfig, SourceType as LegacySourceType
-from argumentation_analysis.utils.core_utils.crypto_utils import derive_encryption_key, load_encryption_key
+from argumentation_analysis.core.utils.crypto_utils import derive_encryption_key, load_encryption_key
 from argumentation_analysis.ui.file_operations import load_extract_definitions
 from argumentation_analysis.models.extract_definition import ExtractDefinitions
 

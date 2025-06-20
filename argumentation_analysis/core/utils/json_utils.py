@@ -6,7 +6,7 @@ Utilitaires pour la manipulation de données et de fichiers JSON.
 import logging
 import json
 from pathlib import Path
-from typing import List, Dict, Any, Union, Optional, Callable # Ajout de Union, Optional, Callable
+from typing import List, Dict, Any, Union, Optional, Callable, Tuple # Ajout de Union, Optional, Callable et Tuple
 
 logger = logging.getLogger(__name__)
 

@@ -12,7 +12,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 # Importer les modules nécessaires
-from argumentation_analysis.ui.utils import save_extract_definitions
+from argumentation_analysis.ui.file_operations import save_extract_definitions
 from argumentation_analysis.ui import config as ui_config
 
 def update_encrypted_config():

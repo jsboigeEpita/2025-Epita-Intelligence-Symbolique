@@ -3,7 +3,7 @@ import logging
 from typing import Optional, List
 # La configuration du logging (appel à setup_logging()) est supposée être faite globalement,
 # par exemple au point d'entrée de l'application ou dans conftest.py pour les tests.
-from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
+from argumentation_analysis.core.utils.logging_utils import setup_logging
 # Import TweetyInitializer to access its static methods for parser/reasoner
 from .tweety_initializer import TweetyInitializer
 

@@ -20,7 +20,7 @@ from enum import Enum
 from dataclasses import dataclass
 
 # Imports pour le déchiffrement
-from argumentation_analysis.utils.core_utils.crypto_utils import load_encryption_key, decrypt_data_with_fernet
+from argumentation_analysis.core.utils.crypto_utils import load_encryption_key, decrypt_data_with_fernet
 from argumentation_analysis.models.extract_definition import ExtractDefinitions
 from argumentation_analysis.paths import DATA_DIR
 

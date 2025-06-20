@@ -10,7 +10,7 @@ import base64
 import json
 from argumentation_analysis.paths import DATA_DIR
 # Import pour la fonction de chargement JSON mutualisée
-from argumentation_analysis.utils.core_utils.file_utils import load_json_file
+# from argumentation_analysis.core.utils.file_utils import load_json_file # Désactivé pour casser une dépendance circulaire suspectée
 
 config_logger = logging.getLogger("App.UI.Config")
 if not config_logger.handlers and not config_logger.propagate:

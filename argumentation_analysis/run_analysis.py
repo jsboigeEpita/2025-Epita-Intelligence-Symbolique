@@ -28,7 +28,7 @@ if str(project_root) not in sys.path:
     sys.path.append(str(project_root))
 
 # Imports des modules du projet après ajustement du path
-from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
+from argumentation_analysis.core.utils.logging_utils import setup_logging
 from argumentation_analysis.pipelines.analysis_pipeline import run_text_analysis_pipeline
 from argumentation_analysis.paths import LIBS_DIR
 

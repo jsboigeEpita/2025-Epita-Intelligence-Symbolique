@@ -1,7 +1,7 @@
 import jpype
 import logging
 # La configuration du logging (appel à setup_logging()) est supposée être faite globalement.
-from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
+from argumentation_analysis.core.utils.logging_utils import setup_logging
 from .tweety_initializer import TweetyInitializer # To access Modal parser
 
 setup_logging()
@@ -188,7 +188,7 @@ class ModalHandler:
 
 if __name__ == '__main__':
     # Basic test setup
-    from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
+    from argumentation_analysis.core.utils.logging_utils import setup_logging
     logger = setup_logging(__name__, level=logging.DEBUG)
 
     try:

@@ -11,6 +11,7 @@ Tests unitaires pour le module EnhancedContextualFallacyAnalyzer.
 """
 
 import unittest
+from unittest.mock import patch
 
 import json
 import os

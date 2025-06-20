@@ -5,7 +5,7 @@ Utilitaires pour l'exécution de commandes shell et l'interaction avec le systè
 
 import logging
 import subprocess
-from typing import List, Tuple, Optional, Union # Ajout de Union et Optional
+from typing import List, Tuple, Optional, Union, Dict # Ajout de Union et Optional
 from pathlib import Path # Ajout pour cwd
 
 logger = logging.getLogger(__name__)
