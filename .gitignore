@@ -288,3 +288,6 @@ services/web_api/_temp_static/
 *.txt
 coverage_results.txt
 unit_test_results.txt
+
+# Logs
+logs/
