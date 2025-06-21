@@ -28,14 +28,16 @@ from semantic_kernel.functions.kernel_arguments import KernelArguments
 
 # Import conditionnel pour les modules filters qui peuvent ne pas exister
 try:
-    from semantic_kernel.filters.functions.function_invocation_context import FunctionInvocationContext
-    from semantic_kernel.filters.filter_types import FilterTypes
+    from semantic_kernel.functions.kernel_function_context import KernelFunctionContext as FunctionInvocationContext
+    from semantic_kernel.functions.kernel_function_context import KernelFunctionContext
     FILTERS_AVAILABLE = True
 except ImportError:
     # Fallbacks pour compatibilité
-    class FunctionInvocationContext:
+    class KernelFunctionContext:
         def __init__(self, **kwargs):
             pass
+    
+    FunctionInvocationContext = KernelFunctionContext
             
     class FilterTypes:
         pass
@@ -252,7 +254,7 @@ class OracleTerminationStrategy(TerminationStrategy):
         }
 
 
-async def oracle_logging_filter(context: FunctionInvocationContext, next):
+async def oracle_logging_filter(context: KernelFunctionContext, next):
     """Filtre de logging spécialisé pour les interactions Oracle."""
     agent_name = getattr(context, 'agent_name', 'Unknown')
     
@@ -425,48 +427,56 @@ class CluedoExtendedOrchestrator:
         # Historique des messages
         history: List[ChatMessageContent] = []
         
-        # Boucle principale d'orchestration avec la nouvelle API
+        # Boucle principale d'orchestration
         self._logger.info("🔄 Début de la boucle d'orchestration 3-agents...")
         
-        try:
-            # Lancement de l'orchestration avec coordinate_analysis_async
-            orchestration_result = self.orchestration.coordinate_analysis_async(
-                text=initial_question,
-                target_agents=list(self.orchestration.active_agents.keys()),
-                timeout=120.0
-            )
-
-            # Récupération du résultat (coordinate_analysis_async retourne directement un dict)
-            result_value = orchestration_result
-            self._logger.info(f"🎯 Résultat de l'orchestration: {str(result_value)[:200]}...")
-            
-            # Pour maintenir la compatibilité, simulons l'historique avec le résultat
-            final_message = ChatMessageContent(
-                role="assistant",
-                content=str(result_value),
-                name="AgentGroupChat"
-            )
-            history.append(final_message)
-            
-            # PHASE C: Enregistrement du résultat pour mémoire contextuelle
-            self.oracle_state.add_conversation_message(
-                agent_name="AgentGroupChat",
-                content=str(result_value),
-                message_type="result"
-            )
-            
-            # Analyse des références contextuelles et réactions émotionnelles
-            self._analyze_contextual_elements("AgentGroupChat", str(result_value), history)
-            
-            # Enregistrement du tour dans l'état Oracle
-            self.oracle_state.record_agent_turn(
-                agent_name="AgentGroupChat",
-                action_type="orchestration_result",
-                action_details={"content": str(result_value)[:200]}  # Tronqué pour logging
-            )
-            
-            self._logger.info(f"📩 Orchestration complétée: {str(result_value)[:100]}...")
+        last_message_content = initial_question
         
+        try:
+            # Nous devons passer l'agent'None' la première fois.
+            fake_initial_agent = self.sherlock_agent
+            while not await self.termination_strategy.should_terminate(agent=fake_initial_agent, history=history):
+
+                # 1. Sélectionner l'agent
+                next_agent = await self.selection_strategy.next(agents=list(self.orchestration.active_agents.values()), history=history)
+                fake_initial_agent = next_agent # L'agent sera utilisé pour le prochain tour
+                
+                # 2. Exécuter le tour de l'agent
+                self._logger.info(f"--- Tour de {next_agent.name} ---")
+                
+                # Le message au prochain agent est le contenu du dernier message
+                # La méthode `invoke` est le point d'entrée standard pour les agents SK.
+                agent_response_raw = await next_agent.invoke(input=last_message_content, arguments=KernelArguments())
+                
+                # Le résultat de invoke peut être un ChatMessageContent, une liste, ou un objet résultat
+                if isinstance(agent_response_raw, list) and len(agent_response_raw) > 0:
+                    response_content_obj = agent_response_raw[0]
+                elif isinstance(agent_response_raw, ChatMessageContent):
+                    response_content_obj = agent_response_raw
+                else:
+                    # Gestion du cas où le résultat est un objet `KernelContent` ou un `str`
+                    response_content_str = str(agent_response_raw)
+                    response_content_obj = ChatMessageContent(role="assistant", content=response_content_str, name=next_agent.name)
+
+                # 3. Mettre à jour l'historique et préparer le prochain tour
+                history.append(response_content_obj)
+                last_message_content = str(response_content_obj.content)
+                
+                # Log et mise à jour de l'état
+                self._logger.info(f"Réponse de {next_agent.name}: {last_message_content[:150]}...")
+                self.oracle_state.add_conversation_message(
+                    agent_name=next_agent.name,
+                    content=last_message_content,
+                    message_type=self._detect_message_type(last_message_content)
+                )
+                # Utiliser `initial_question` comme `input` pour le premier tour, puis `last_message_content`
+                turn_input = initial_question if len(history) == 1 else history[-2].content
+                self.oracle_state.record_agent_turn(
+                    agent_name=next_agent.name,
+                    action_type="invoke",
+                    action_details={"input": str(turn_input)[:150], "output": last_message_content[:150]}
+                )
+
         except Exception as e:
             self._logger.error(f"Erreur durant l'orchestration: {e}", exc_info=True)
             raise

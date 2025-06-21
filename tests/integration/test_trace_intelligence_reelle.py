@@ -28,6 +28,7 @@ logging.basicConfig(
 import pytest
 from typing import Dict, Any
 import json
+from starlette.testclient import TestClient
 
 # Configuration du logging
 logger = logging.getLogger(__name__)
@@ -62,14 +63,14 @@ def test_interface_web_reelle(capsys):
 
         endpoints_to_test = ['/', '/health', '/api/status', '/jtms', '/cluedo', '/playground']
         working_endpoints = 0
-        with app.test_client() as client:
-            for endpoint in endpoints_to_test:
-                try:
-                    resp = client.get(endpoint)
-                    if resp.status_code < 500:
-                        working_endpoints += 1
-                except Exception:
-                    pass  # Ignorer les erreurs d'endpoint pour le moment
+        client = TestClient(app)
+        for endpoint in endpoints_to_test:
+            try:
+                resp = client.get(endpoint)
+                if resp.status_code < 500:
+                    working_endpoints += 1
+            except Exception:
+                pass  # Ignorer les erreurs d'endpoint pour le moment
         assert working_endpoints > 0, "Aucun endpoint de l'interface web ne fonctionne."
     except (ImportError, AssertionError) as e:
         pytest.fail(f"Test de l'interface web a échoué: {e}")

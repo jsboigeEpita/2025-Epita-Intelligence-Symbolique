@@ -457,6 +457,18 @@ Votre mission : Fasciner par votre mystère élégant."""
         self.suggestion_history.clear()
         self._logger.info(f"État de jeu Moriarty remis à zéro")
 
+    async def invoke(self, input: str, **kwargs) -> str:
+        """
+        Point d'entrée pour l'invocation de l'agent par l'orchestrateur.
+        """
+        self._logger.info(f"[{self.name}] Invoke called with input: {input}")
+        # Moriarty ne génère pas de texte, il réagit. On peut simuler cela
+        # en utilisant son TchatHistory personnel.
+        history = ChatHistory()
+        history.add_user_message(input)
+        response_message = await self.invoke_single(history=history)
+        return response_message.content
+
     async def invoke_single(self, *args, **kwargs) -> ChatMessageContent:
         """
         Implémentation de l'invocation single-shot requise par BaseAgent.

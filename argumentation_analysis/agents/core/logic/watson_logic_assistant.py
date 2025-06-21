@@ -320,7 +320,7 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
         
     async def process_message(self, message: str) -> str:
         """Traite un message et retourne une réponse en utilisant le kernel."""
-        self._logger.info(f"[{self._name}] Processing: {message}")
+        self._logger.info(f"[{self.name}] Processing: {message}")
         
         # Créer un prompt simple pour l'agent Watson
         prompt = f"""Vous êtes Watson, l'assistant logique de Sherlock Holmes. Répondez à la question suivante en tant que logicien:
@@ -342,20 +342,21 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
             response = await self._kernel.invoke(chat_function, arguments=arguments)
             
             ai_response = str(response)
-            self._logger.info(f"[{self._name}] AI Response: {ai_response}")
+            self._logger.info(f"[{self.name}] AI Response: {ai_response}")
             return ai_response
             
         except Exception as e:
-            self._logger.error(f"[{self._name}] Erreur lors de l'invocation du prompt: {e}")
-            return f"[{self._name}] Erreur: {e}"
+            self._logger.error(f"[{self.name}] Erreur lors de l'invocation du prompt: {e}")
+            return f"[{self.name}] Erreur: {e}"
 
-    async def invoke(self, message: str, **kwargs) -> str:
+    async def invoke(self, input: str, **kwargs) -> str:
         """
-        Point d'entrée pour l'invocation de l'agent par AgentGroupChat.
-        Délègue au process_message.
+        Point d'entrée pour l'invocation de l'agent par l'orchestrateur.
+        Le nom du paramètre est 'input' pour la compatibilité avec l'API invoke de SK.
         """
-        self._logger.info(f"[{self._name}] Invoke called with message: {message}")
-        return await self.process_message(message)
+        self._logger.info(f"DEBUGGING: Attributs de l'objet Watson: {dir(self)}")
+        self._logger.info(f"[{self.name}] Invoke called with input: {input}")
+        return await self.process_message(input)
 
     async def get_agent_belief_set_content(self, belief_set_id: str) -> Optional[str]:
         """

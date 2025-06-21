@@ -17,8 +17,10 @@ class WatsonJTMSAgent(JTMSAgentBase):
         Initialise le nouvel agent WatsonJTMS.
         """
         # Appel au constructeur parent pour initialiser le JTMS et la session
+        system_prompt = kwargs.pop('system_prompt', None)
         super().__init__(kernel=kernel, agent_name=agent_name, **kwargs)
         
+        self.system_prompt = system_prompt
         self.watson_tools = kwargs.get("watson_tools", {})
         self.specialization = "critical_analysis"
         
@@ -73,15 +75,55 @@ class WatsonJTMSAgent(JTMSAgentBase):
 
     async def validate_reasoning_chain(self, chain: list) -> dict:
         """
-        Validation de chaînes de raisonnement.
+        Validation de chaînes de raisonnement en utilisant la nouvelle méthode de preuve.
         """
-        return await self.validator.validate_reasoning_chain(chain)
+        self._logger.info(f"Validation d'une chaîne de raisonnement de {len(chain)} étape(s)...")
+        overall_result = {
+            "is_valid": True,
+            "confidence": 1.0,
+            "steps": []
+        }
+        
+        for step in chain:
+            proposition = step.get("proposition") or step.get("hypothesis")
+            if not proposition:
+                self._logger.warning(f"Étape de raisonnement ignorée car aucune proposition/hypothèse n'a été trouvée: {step}")
+                continue
+
+            self._logger.debug(f"Preuve de la proposition: '{proposition}'")
+            # La proposition doit exister comme croyance dans le JTMS pour que prove_belief fonctionne.
+            proof = await self.validator.prove_belief(proposition)
+            
+            step_result = {
+                "proposition": proposition,
+                "is_valid": proof.get("provable", False),
+                "confidence": proof.get("confidence", 0.0),
+                "details": proof
+            }
+            overall_result["steps"].append(step_result)
+            
+            if not step_result["is_valid"]:
+                overall_result["is_valid"] = False
+                overall_result["confidence"] = min(overall_result["confidence"], step_result["confidence"])
+
+        return overall_result
 
     async def validate_hypothesis(self, hypothesis_id: str, hypothesis_data: dict) -> dict:
         """
-        Valide une hypothèse spécifique.
+        Valide une hypothèse spécifique en utilisant la logique de preuve de croyance.
         """
-        return await self.validator.validate_hypothesis(hypothesis_id, hypothesis_data)
+        proposition = hypothesis_data.get("hypothesis", hypothesis_id)
+        self._logger.info(f"Validation de l'hypothèse '{proposition}' (ID: {hypothesis_id}) via prove_belief.")
+        
+        # On suppose que l'hypothèse a été ajoutée comme croyance au préalable.
+        proof = await self.validator.prove_belief(proposition)
+        
+        return {
+            "hypothesis_id": hypothesis_id,
+            "is_valid": proof.get("provable", False),
+            "confidence": proof.get("confidence", 0.0),
+            "details": proof
+        }
 
     async def cross_validate_evidence(self, evidence_set: list) -> dict:
         """

@@ -48,193 +48,173 @@ class FOLHandler:
 
     def parse_fol_belief_set(self, belief_set_str: str):
         """
-        Parses a complete FOL belief set string, which must include a 'signature:' line.
-        The parser will read the signature and formulas from the same string.
-        Returns a tuple of (FolBeliefSet, FolSignature, FolParser).
+        This method is deprecated. Use `create_programmatic_fol_signature` and
+        `create_belief_set_from_formulas` for robust, programmatic creation.
         """
-        logger.debug(f"Attempting to parse FOL belief set: {belief_set_str[:100]}...")
+        logger.warning("`parse_fol_belief_set` is deprecated. Use programmatic creation methods instead.")
+        # Keeping original implementation for reference, but it should not be used.
+        FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
+        parser = FolParser()
+        java_belief_set_str = jpype.JClass("java.lang.String")(belief_set_str)
         try:
-            # Create a new parser instance for this specific operation.
-            FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
-            parser = FolParser()
-
-            # The parseBeliefBase method is designed to handle the entire string,
-            # including the "signature:" line. No need to split manually.
-            java_belief_set_str = jpype.JClass("java.lang.String")(belief_set_str)
             belief_set_obj = parser.parseBeliefBase(java_belief_set_str)
-            
-            # After parsing, we can retrieve the signature from the parsed object.
             signature_obj = belief_set_obj.getSignature()
-
-            # For consistency, we can create and return a new parser that is
-            # explicitly configured with the signature from the parsed belief set.
-            # This is useful if the caller wants to parse individual formulas later.
             new_configured_parser = FolParser()
             new_configured_parser.setSignature(signature_obj)
-
-            logger.info("Successfully parsed FOL belief set with its signature.")
             return belief_set_obj, signature_obj, new_configured_parser
-
         except jpype.JException as e:
-            # Make the error message more informative
-            msg = f"JPype JException parsing FOL belief set: {e.getMessage()}. Belief Set was:\n{belief_set_str}"
-            logger.error(msg, exc_info=True)
-            raise ValueError(msg) from e
-        except Exception as e:
-            msg = f"Unexpected error parsing FOL belief set: {e}. Belief Set was:\n{belief_set_str}"
-            logger.error(msg, exc_info=True)
-            raise RuntimeError(msg) from e
+            raise ValueError(f"JPype Error: {e.getMessage()}") from e
 
-    def fol_add_sort(self, sort_name: str):
-        """Adds a sort to the FOL environment. Not directly available in Tweety parsers, managed by knowledge base."""
-        # In Tweety, sorts are typically part of the FolBeliefSet or Signature.
-        # This method might be a conceptual placeholder or would interact with a Signature object.
-        # For now, we'll assume sorts are implicitly handled or defined within formulas/KB.
-        logger.warning(f"FOL sort management ({sort_name}) is typically handled by the knowledge base structure in TweetyProject.")
-        # Example if interacting with a Signature:
-        # FolSignature = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolSignature")
-        # signature = FolSignature() # Or get it from somewhere
-        # Sort = jpype.JClass("org.tweetyproject.logics.commons.syntax.Sort")
-        # new_sort = Sort(JString(sort_name))
-        # signature.add(new_sort)
-        # logger.info(f"Sort '{sort_name}' conceptually added (actual mechanism depends on KB/Signature).")
-        pass # Placeholder
-
-    def fol_add_predicate(self, predicate_name: str, arity: int, sort_names: list = None):
-        """Adds a predicate to the FOL environment. Managed by knowledge base/signature."""
-        logger.warning(f"FOL predicate management ({predicate_name}/{arity}) is handled by KB/Signature in TweetyProject.")
-        # Example:
-        # FolSignature = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolSignature")
-        # signature = FolSignature() # Or get it
-        # Predicate = jpype.JClass("org.tweetyproject.logics.commons.syntax.Predicate")
-        # Sort = jpype.JClass("org.tweetyproject.logics.commons.syntax.Sort")
-        # if sort_names and len(sort_names) == arity:
-        #     j_sorts = jpype.java.util.ArrayList()
-        #     for s_name in sort_names:
-        #         j_sorts.add(Sort(JString(s_name)))
-        #     new_predicate = Predicate(JString(predicate_name), j_sorts)
-        # else:
-        #     # Create predicate with default sorts or handle error
-        #     # This part needs careful mapping to Tweety's Predicate constructor
-        #     # For simplicity, assuming arity implies number of default sorts if not specified
-        #     j_sorts_list = [Sort(JString(f"default_sort_{i+1}")) for i in range(arity)]
-        #     new_predicate = Predicate(JString(predicate_name), jpype.java.util.Arrays.asList(j_sorts_list))
-
-        # signature.add(new_predicate)
-        # logger.info(f"Predicate '{predicate_name}/{arity}' conceptually added.")
-        pass # Placeholder
-
-    def fol_check_consistency(self, knowledge_base_str: str, signature_declarations_str: str = None) -> bool:
+    def create_programmatic_fol_signature(self, signature_json: dict):
         """
-        Checks if an FOL knowledge base is consistent.
-        knowledge_base_str: semicolon-separated FOL formulas.
-        signature_declarations_str: semicolon-separated declarations (e.g., "sort person;", "predicate Friends(person,person);").
-                                   This part needs a robust parser or a more structured input.
+        Creates an FolSignature object programmatically from a JSON definition.
+        
+        :param signature_json: A dictionary containing 'sorts' and 'predicates'.
+                               e.g., {"sorts": {"person": ["socrates"]}, "predicates": [{"name": "Is", "args": ["person"]}]}
+        :return: A jpype._jclass.org.tweetyproject.logics.fol.syntax.FolSignature object.
         """
-        logger.debug(f"Checking FOL consistency for KB: {knowledge_base_str}")
-        try:
-            # Combine signature and knowledge base for parsing
-            full_kb_str = knowledge_base_str
-            if signature_declarations_str:
-                full_kb_str = signature_declarations_str + "\n" + knowledge_base_str
+        FolSignature = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolSignature")
+        Sort = jpype.JClass("org.tweetyproject.logics.commons.syntax.Sort")
+        Constant = jpype.JClass("org.tweetyproject.logics.commons.syntax.Constant")
+        Predicate = jpype.JClass("org.tweetyproject.logics.commons.syntax.Predicate")
+        String = jpype.JClass("java.lang.String")
+        ArrayList = jpype.JClass("java.util.ArrayList")
 
-            # Use the robust parsing method
-            kb, _, _ = self.parse_fol_belief_set(full_kb_str)
+        signature = FolSignature()
+        sorts_map = {} # Python-side mapping from name to Java Sort object
 
-            # Actual FOL consistency check requires a prover.
-            # This is a placeholder until a proper prover is implemented.
-            logger.warning("FOL consistency check in TweetyProject is complex and may require specific reasoners. This implementation is a placeholder and assumes consistency if parsing succeeds.")
+        # 1. Create and add Sorts
+        sorts_data = signature_json.get("sorts", {})
+        for sort_name in sorts_data.keys():
+            java_sort = Sort(String(sort_name))
+            signature.add(java_sort)
+            sorts_map[sort_name] = java_sort
+            logger.debug(f"Programmatically added sort: {sort_name}")
+
+        # 2. Create and add Constants associated with their Sorts
+        for sort_name, constants_list in sorts_data.items():
+            if sort_name in sorts_map:
+                parent_sort = sorts_map[sort_name]
+                for const_name in constants_list:
+                    java_constant = Constant(String(const_name), parent_sort)
+                    signature.add(java_constant)
+                    logger.debug(f"Programmatically added constant: {const_name} of sort {sort_name}")
+
+        # 3. Create and add Predicates
+        predicates_data = signature_json.get("predicates", [])
+        for pred_data in predicates_data:
+            pred_name = pred_data.get("name")
+            arg_sort_names = pred_data.get("args", [])
             
-            # A real implementation would look like this:
+            java_arg_sorts = ArrayList()
+            valid_predicate = True
+            for arg_sort_name in arg_sort_names:
+                if arg_sort_name in sorts_map:
+                    java_arg_sorts.add(sorts_map[arg_sort_name])
+                else:
+                    logger.error(f"Cannot create predicate '{pred_name}': Argument sort '{arg_sort_name}' not found in declared sorts.")
+                    valid_predicate = False
+                    break
+            
+            if valid_predicate:
+                java_predicate = Predicate(String(pred_name), java_arg_sorts)
+                signature.add(java_predicate)
+                logger.debug(f"Programmatically added predicate: {pred_name} with args {arg_sort_names}")
+        
+        return signature
+
+    def create_belief_set_from_formulas(self, signature, formulas: list[str]):
+        """
+        Creates a FolBeliefSet by parsing formulas against a pre-built signature.
+
+        :param signature: A pre-built FolSignature Java object.
+        :param formulas: A list of FOL formula strings.
+        :return: A jpype._jclass.org.tweetyproject.logics.fol.syntax.FolBeliefSet object.
+        """
+        FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
+        FolBeliefSet = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolBeliefSet")
+        
+        parser = FolParser()
+        parser.setSignature(signature) # Use the programmatically built signature
+        
+        belief_set = FolBeliefSet() # Initialize with the empty constructor
+        
+        for formula_str in formulas:
+            try:
+                parsed_formula = self.parse_fol_formula(formula_str, custom_parser=parser)
+                belief_set.add(parsed_formula)
+                logger.debug(f"Successfully parsed and added to belief set: {formula_str}")
+            except ValueError as e:
+                logger.warning(f"Skipping invalid formula '{formula_str}': {e}")
+                # Optionally re-raise or collect errors
+                raise e # Re-raising to let the caller know validation failed.
+        
+        return belief_set
+
+    def fol_check_consistency(self, belief_set):
+        """
+        Checks if an FOL knowledge base (as a Java object) is consistent.
+        """
+        logger.debug(f"Checking FOL consistency for belief set of size {belief_set.size()}")
+        try:
+            # A real implementation would use a prover
             # Prover = jpype.JClass("org.tweetyproject.logics.fol.reasoner.ResolutionProver")()
             # Contradiction = jpype.JClass("org.tweetyproject.logics.fol.syntax.Contradiction").getInstance()
-            # is_consistent = not Prover.query(kb, Contradiction)
-            # logger.info(f"FOL Knowledge base consistency check result: {is_consistent}")
-            # return is_consistent
-            
-            # For now, return True if parsing was successful.
-            return True
-
-        except ValueError as e: # Catch parsing errors
-            logger.error(f"Error parsing formula for FOL consistency check: {e}", exc_info=True)
-            raise
+            # is_consistent = not Prover.query(belief_set, Contradiction)
+            # return is_consistent, f"Consistency check result: {is_consistent}"
+            logger.warning("FOL consistency check is a placeholder and assumes consistency.")
+            return True, "Consistency check is a placeholder and currently assumes success."
         except jpype.JException as e:
-            logger.error(f"JPype JException during FOL consistency check for '{knowledge_base_str}': {e.getMessage()}", exc_info=True)
+            logger.error(f"JPype JException during FOL consistency check: {e.getMessage()}", exc_info=True)
             raise RuntimeError(f"FOL consistency check failed: {e.getMessage()}") from e
-        except Exception as e:
-            logger.error(f"Unexpected error during FOL consistency check for '{knowledge_base_str}': {e}", exc_info=True)
-            raise
 
-    def fol_query(self, knowledge_base_str: str, query_formula_str: str, signature_declarations_str: str = None) -> bool:
+    def fol_query(self, belief_set, query_formula_str: str) -> bool:
         """
-        Checks if a query formula is entailed by an FOL knowledge base.
+        Checks if a query formula is entailed by an FOL belief base object.
         """
-        logger.debug(f"Performing FOL query. KB: '{knowledge_base_str}', Query: '{query_formula_str}'")
+        logger.debug(f"Performing FOL query. Query: '{query_formula_str}'")
         try:
-            # La méthode parse_fol_belief_set gère la création de la KB et de la signature
-            # à partir de la chaîne de caractères complète.
-            # On combine les déclarations de signature et la base de connaissances en une seule chaîne.
-            full_kb_str = knowledge_base_str
-            if signature_declarations_str:
-                full_kb_str = signature_declarations_str + "\n" + knowledge_base_str
-
-            kb, signature, parser_with_signature = self.parse_fol_belief_set(full_kb_str)
+            signature = belief_set.getSignature()
             
-            # Utiliser le parser qui a été configuré avec la signature de la KB
-            query_formula = self.parse_fol_formula(query_formula_str, custom_parser=parser_with_signature)
+            FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
+            parser = FolParser()
+            parser.setSignature(signature)
             
-            # FOL querying requires a specific reasoner.
-            # Example with ResolutionProver:
+            query_formula = self.parse_fol_formula(query_formula_str, custom_parser=parser)
+            
+            # Real implementation needed here
             # Prover = jpype.JClass("org.tweetyproject.logics.fol.reasoner.ResolutionProver")()
-            # entails = Prover.query(kb, query_formula)
+            # entails = Prover.query(belief_set, query_formula)
+            entails = True # PLACEHOLDER
             
-            logger.warning("FOL query in TweetyProject requires specific reasoners and signature setup. This implementation is a placeholder.")
-            # Placeholder:
-            # entails = False # Default to false as we don't have a real prover here.
-            # This needs to be implemented with a proper FOL reasoner from TweetyProject.
-            # For now, to avoid breaking flow, assume true if parsing works. This is incorrect for actual logic.
-            entails = True # THIS IS A PLACEHOLDER AND INCORRECT FOR REAL FOL QUERYING
-            
+            logger.warning("FOL query is a placeholder.")
             logger.info(f"FOL Query: KB entails '{query_formula_str}'? {entails} (Placeholder result)")
             return bool(entails)
-        except ValueError as e: # Catch parsing errors
-            logger.error(f"Error parsing formula for FOL query: {e}", exc_info=True)
-            raise
-        except jpype.JException as e:
-            logger.error(f"JPype JException during FOL query: {e.getMessage()}", exc_info=True)
-            raise RuntimeError(f"FOL query failed: {e.getMessage()}") from e
-        except Exception as e:
-            logger.error(f"Unexpected error during FOL query: {e}", exc_info=True)
+        except (ValueError, jpype.JException) as e:
+            logger.error(f"Error during FOL query: {e}", exc_info=True)
             raise
 
-    def validate_fol_query_with_context(self, belief_set_str: str, query_str: str) -> tuple[bool, str]:
+    def validate_formula_with_signature(self, signature, formula_str: str) -> tuple[bool, str]:
         """
-        Validates a FOL query using the context (signature) from a belief set.
+        Validates a FOL formula string against a given programmatic signature.
 
-        This method first parses the belief set to establish a context (sorts, predicates, etc.)
-        and then parses the query within that same context.
-
-        :param belief_set_str: The full string of the knowledge base, including signature.
-        :param query_str: The query string to validate.
+        :param signature: A pre-built FolSignature Java object.
+        :param formula_str: The formula string to validate.
         :return: A tuple (bool, str) indicating success and a message.
         """
-        logger.debug(f"Validating query '{query_str}' with context from belief set.")
+        logger.debug(f"Validating formula '{formula_str}' against provided signature.")
         try:
-            # This method creates a dedicated, configured parser for the validation task,
-            # avoiding state conflicts with the shared self._fol_parser.
-            # It parses the belief set and returns a parser ready for use.
-            _, _, parser_with_signature = self.parse_fol_belief_set(belief_set_str)
-
-            # Use the newly created parser, which has the correct signature, to parse the query.
-            # This ensures the validation happens in the right context without causing re-declaration errors.
-            self.parse_fol_formula(query_str, custom_parser=parser_with_signature)
-
-            msg = f"Query '{query_str}' successfully validated against the belief set's context."
+            FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
+            parser = FolParser()
+            parser.setSignature(signature)
+            
+            # The actual parsing is the validation
+            self.parse_fol_formula(formula_str, custom_parser=parser)
+            
+            msg = f"Formula '{formula_str}' successfully validated against the signature."
             logger.info(msg)
             return True, msg
         except (jpype.JException, ValueError) as e:
-            # Catches both JPype exceptions (e.g., parsing errors from Tweety) and ValueErrors
-            # that might be raised from our Python wrappers (e.g., from parse_fol_belief_set).
-            error_msg = f"Validation failed for query '{query_str}': {e}"
+            error_msg = f"Validation failed for formula '{formula_str}': {e}"
             logger.warning(error_msg)
             return False, str(e)

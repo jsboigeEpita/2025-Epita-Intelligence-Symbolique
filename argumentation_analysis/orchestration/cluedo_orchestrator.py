@@ -7,7 +7,6 @@ from semantic_kernel.functions import kernel_function
 from semantic_kernel.kernel import Kernel
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité pour agents et filters
 from autogen.agentchat import GroupChat as AgentGroupChat
-from semantic_kernel.functions.function_invocation_context import FunctionInvocationContext
 # Agent, TerminationStrategy sont importés depuis .base
 # SequentialSelectionStrategy est géré par speaker_selection_method dans GroupChat
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
@@ -56,7 +55,7 @@ class CluedoTerminationStrategy(TerminationStrategy):
         return False
 
 
-async def logging_filter(context: FunctionInvocationContext, next):
+async def logging_filter(context: Any, next):
     """Filtre pour logger les appels de fonction."""
     logger.info(f"[FILTER PRE] Appel de: {context.function.plugin_name}-{context.function.name}")
     logger.info(f"[FILTER PRE] Arguments: {context.arguments}")

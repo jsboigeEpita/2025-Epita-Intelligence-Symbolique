@@ -110,8 +110,19 @@ class PropositionalBeliefSet(BeliefSet):
 class FirstOrderBeliefSet(BeliefSet):
     """
     Classe pour représenter un ensemble de croyances en logique du premier ordre.
+    Peut également contenir une référence à l'objet Java FolBeliefSet de Tweety.
     """
     
+    def __init__(self, content: str, java_object: Optional[Any] = None):
+        """
+        Initialise l'ensemble de croyances FOL.
+
+        :param content: Le contenu textuel, typiquement le JSON source.
+        :param java_object: L'objet org.tweetyproject.logics.fol.syntax.FolBeliefSet correspondant.
+        """
+        super().__init__(content)
+        self.java_belief_set = java_object
+
     @property
     def logic_type(self) -> str:
         """
@@ -121,6 +132,16 @@ class FirstOrderBeliefSet(BeliefSet):
         :rtype: str
         """
         return "first_order"
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convertit l'instance en dictionnaire. Exclut l'objet Java.
+        """
+        return {
+            "logic_type": self.logic_type,
+            "content": self.content
+            # Note: self.java_belief_set is not serialized
+        }
 
 
 class ModalBeliefSet(BeliefSet):

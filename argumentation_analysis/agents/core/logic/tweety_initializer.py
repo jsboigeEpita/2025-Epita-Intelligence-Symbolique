@@ -139,6 +139,8 @@ class TweetyInitializer:
             _ = jpype.JClass("org.tweetyproject.commons.ParserException")
             _ = jpype.JClass("org.tweetyproject.logics.commons.syntax.Sort")
             logger.info("Successfully imported TweetyProject Java classes.")
+            
+
         except Exception as e:
             logger.error(f"Error importing Java classes: {e}", exc_info=True)
             raise RuntimeError(f"Java class import failed: {e}") from e

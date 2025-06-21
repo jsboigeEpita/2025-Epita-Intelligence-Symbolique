@@ -1,14 +1,12 @@
-
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
 from config.unified_config import UnifiedConfig
 
-# tests/integration/recovered/test_cluedo_extended_workflow.py
+# tests/integration/test_cluedo_extended_workflow.py
 """
 Tests de comparaison entre workflows Cluedo 2-agents vs 3-agents.
-Récupéré et adapté pour Oracle Enhanced v2.1.0
 
 Tests couvrant:
 - Comparaison des performances Sherlock+Watson vs Sherlock+Watson+Moriarty
@@ -21,6 +19,8 @@ Tests couvrant:
 import pytest
 import asyncio
 import time
+import logging
+from unittest.mock import Mock
 
 from typing import Dict, Any, List, Tuple
 from datetime import datetime
@@ -28,57 +28,76 @@ from datetime import datetime
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
-# Imports des orchestrateurs (adaptés v2.1.0)
-# from argumentation_analysis.orchestration.cluedo_orchestrator import run_cluedo_game
-# from argumentation_analysis.orchestration.cluedo_extended_orchestrator import run_cluedo_oracle_game
+# Imports des orchestrateurs
+from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
 
-# Imports des états (adaptés v2.1.0)
+# Imports des états
 from argumentation_analysis.core.enquete_states import EnqueteCluedoState
 from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
 
-# Imports des agents (adaptés v2.1.0)
+# Imports des agents
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
 from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
 from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent
 
+logger = logging.getLogger(__name__)
 
-@pytest.mark.skip(reason="Legacy tests for old orchestrator, disabling to fix collection.")
+async def _create_authentic_gpt4o_mini_instance():
+    """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+    config = UnifiedConfig()
+    return config.get_kernel_with_gpt4o_mini()
+
+@pytest.fixture
+async def mock_kernel():
+    """Kernel mocké pour tests comparatifs."""
+    return await _create_authentic_gpt4o_mini_instance()
+
+@pytest.fixture
+def comparison_elements():
+    """Éléments Cluedo standardisés pour comparaisons équitables."""
+    return {
+        "suspects": ["Colonel Moutarde", "Professeur Violet", "Mademoiselle Rose"],
+        "armes": ["Poignard", "Chandelier", "Revolver"],
+        "lieux": ["Salon", "Cuisine", "Bureau"]
+    }
+
 @pytest.mark.integration
 @pytest.mark.comparison
+class TestNewOrchestrator:
+    @pytest.mark.asyncio
+    async def test_orchestrator_runs_successfully(self, mock_kernel, comparison_elements):
+        """Vérifie que le nouvel orchestrateur s'exécute sans erreur."""
+        kernel_instance = await mock_kernel
+        orchestrator = CluedoExtendedOrchestrator(
+            kernel=kernel_instance,
+            max_turns=3,
+            max_cycles=1,
+            oracle_strategy="cooperative"
+        )
+
+        await orchestrator.setup_workflow(elements_jeu=comparison_elements)
+        
+        initial_question = "Qui a commis le meurtre ?"
+        results = await orchestrator.execute_workflow(initial_question)
+
+        assert "workflow_info" in results
+        assert "final_metrics" in results
+        assert results["workflow_info"]["strategy"] == "cooperative"
+        assert len(results["final_metrics"]["history"]) > 0
+
 class TestWorkflowComparison:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
         
     async def _make_authentic_llm_call(self, prompt: str) -> str:
         """Fait un appel authentique à gpt-4o-mini."""
         try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
+            kernel = await _create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke(prompt)
             return str(result)
         except Exception as e:
             logger.warning(f"Appel LLM authentique échoué: {e}")
             return "Authentic LLM call failed"
 
-    """Tests de comparaison entre workflows 2-agents et 3-agents Oracle Enhanced v2.1.0."""
-    
-    @pytest.fixture
-    async def mock_kernel(self):
-        """Kernel mocké pour tests comparatifs."""
-        kernel = Mock(spec=Kernel)
-        kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
-        kernel.add_filter = await self._create_authentic_gpt4o_mini_instance()
-        return kernel
-    
-    @pytest.fixture
-    def comparison_elements(self):
-        """Éléments Cluedo standardisés pour comparaisons équitables."""
-        return {
-            "suspects": ["Colonel Moutarde", "Professeur Violet", "Mademoiselle Rose"],
-            "armes": ["Poignard", "Chandelier", "Revolver"],
-            "lieux": ["Salon", "Cuisine", "Bureau"]
-        }
+    """Tests de comparaison entre workflows 2-agents et 3-agents."""
     
     @pytest.fixture
     def mock_conversation_2agents(self):
@@ -111,7 +130,7 @@ class TestWorkflowComparison:
             initial_context={"details": "Contexte de test"}
         )
         
-        # Configuration 3-agents Oracle Enhanced v2.1.0
+        # Configuration 3-agents
         state_3agents = CluedoOracleState(
             nom_enquete_cluedo="Comparison Test 3-Agents",
             elements_jeu_cluedo=comparison_elements,
@@ -121,8 +140,8 @@ class TestWorkflowComparison:
         )
         
         # Comparaison des configurations
-        assert state_2agents.nom_enquete == "Comparison Test 2-Agents"
-        assert state_3agents.nom_enquete == "Comparison Test 3-Agents"
+        assert state_2agents.nom_enquete_cluedo == "Comparison Test 2-Agents"
+        assert state_3agents.nom_enquete_cluedo == "Comparison Test 3-Agents"
         
         # Vérification des capacités étendues du 3-agents
         assert hasattr(state_3agents, 'oracle_interactions')
@@ -140,31 +159,35 @@ class TestWorkflowComparison:
             assert solution["arme"] in comparison_elements["armes"]
             assert solution["lieu"] in comparison_elements["lieux"]
     
-    def test_agent_capabilities_comparison(self, mock_kernel, comparison_elements):
+    @pytest.mark.asyncio
+    async def test_agent_capabilities_comparison(self, mock_kernel, comparison_elements):
         """Test la comparaison des capacités des agents."""
+        kernel_instance = await mock_kernel
         # Agents 2-agents
-        sherlock_2 = SherlockEnqueteAgent(kernel=mock_kernel, agent_name="Sherlock2")
+        sherlock_2 = SherlockEnqueteAgent(kernel=kernel_instance, agent_name="Sherlock2")
         watson_2 = WatsonLogicAssistant(
-            kernel=mock_kernel, 
+            kernel=kernel_instance, 
             agent_name="Watson2",
             constants=[name.replace(" ", "") for category in comparison_elements.values() for name in category]
         )
         
         # Agents 3-agents (avec Moriarty)
-        sherlock_3 = SherlockEnqueteAgent(kernel=mock_kernel, agent_name="Sherlock3")
+        sherlock_3 = SherlockEnqueteAgent(kernel=kernel_instance, agent_name="Sherlock3")
         watson_3 = WatsonLogicAssistant(
-            kernel=mock_kernel,
+            kernel=kernel_instance,
             agent_name="Watson3",
             constants=[name.replace(" ", "") for category in comparison_elements.values() for name in category]
         )
         
-        # Création d'un dataset pour Moriarty (v2.1.0)
+        # Création d'un dataset pour Moriarty
         from argumentation_analysis.agents.core.oracle.cluedo_dataset import CluedoDataset
         cluedo_dataset = CluedoDataset(elements_jeu=comparison_elements)
         
+        from argumentation_analysis.agents.core.oracle.dataset_access_manager import CluedoDatasetManager
+        dataset_manager = CluedoDatasetManager(cluedo_dataset)
         moriarty = MoriartyInterrogatorAgent(
-            kernel=mock_kernel,
-            cluedo_dataset=cluedo_dataset,
+            kernel=kernel_instance,
+            dataset_manager=dataset_manager,
             game_strategy="balanced",
             agent_name="Moriarty"
         )
@@ -177,11 +200,12 @@ class TestWorkflowComparison:
         assert len(agents_3) == 3
         
         # Vérification des capacités uniques de Moriarty
-        assert hasattr(moriarty, 'moriarty_tools')
-        assert hasattr(moriarty, 'cluedo_dataset')
-        assert not hasattr(sherlock_2, 'moriarty_tools')
-        assert not hasattr(watson_2, 'moriarty_tools')
-    
+        assert hasattr(moriarty, '_tools')
+        assert_moriarty_has_dataset = hasattr(moriarty, 'dataset_manager') and hasattr(moriarty.dataset_manager, '_dataset')
+        assert assert_moriarty_has_dataset
+        assert not hasattr(sherlock_2, '_tools') or "reveal_card" not in sherlock_2.get_agent_capabilities()
+        assert not hasattr(watson_2, '_tools') or "reveal_card" not in watson_2.get_agent_capabilities()
+
     @pytest.mark.asyncio
     async def test_conversation_length_comparison(self, mock_kernel, mock_conversation_2agents, mock_conversation_3agents):
         """Test la comparaison de la longueur des conversations."""
@@ -215,7 +239,7 @@ class TestWorkflowComparison:
             initial_context={"details": "Contexte de test"}
         )
         
-        # État 3-agents Oracle Enhanced v2.1.0
+        # État 3-agents
         state_3 = CluedoOracleState(
             nom_enquete_cluedo="Info Test 3-Agents",
             elements_jeu_cluedo=comparison_elements,
@@ -235,7 +259,7 @@ class TestWorkflowComparison:
         state_3.add_hypothesis("Hypothesis 2", 0.6)
         state_3.add_task("Investigate library", "Sherlock")
         
-        # Ajout de révélations Oracle (v2.1.0)
+        # Ajout de révélations Oracle
         from argumentation_analysis.agents.core.oracle.cluedo_dataset import RevelationRecord
         revelation = RevelationRecord(
             card_revealed="Professeur Violet",
@@ -266,7 +290,7 @@ class TestWorkflowComparison:
     
     @pytest.mark.asyncio
     async def test_resolution_efficiency_simulation(self, mock_kernel, comparison_elements):
-        """Test de simulation d'efficacité de résolution Oracle Enhanced v2.1.0."""
+        """Test de simulation d'efficacité de résolution."""
         
         # Métriques simulées pour workflow 2-agents
         metrics_2agents = {
@@ -277,7 +301,7 @@ class TestWorkflowComparison:
             "resolution_confidence": 0.7
         }
         
-        # Métriques simulées pour workflow 3-agents Oracle Enhanced
+        # Métriques simulées pour workflow 3-agents
         metrics_3agents = {
             "setup_time": 0.8,  # Légèrement plus long (Oracle setup)
             "average_turn_duration": 1.8,  # Plus rapide grâce aux révélations
@@ -298,9 +322,10 @@ class TestWorkflowComparison:
         assert metrics_3agents["total_turns"] <= metrics_2agents["total_turns"]
         assert metrics_3agents["resolution_confidence"] > metrics_2agents["resolution_confidence"]
     
-    def test_scalability_comparison(self, mock_kernel):
+    @pytest.mark.asyncio
+    async def test_scalability_comparison(self, mock_kernel):
         """Test la comparaison de scalabilité."""
-        
+        kernel_instance = await mock_kernel
         # Éléments de jeu de tailles différentes
         small_elements = {
             "suspects": ["Colonel Moutarde", "Professeur Violet"],
@@ -369,7 +394,7 @@ class TestWorkflowComparison:
     
     @pytest.mark.asyncio
     async def test_strategy_adaptation_comparison(self, mock_kernel, comparison_elements):
-        """Test la comparaison d'adaptation stratégique Oracle Enhanced v2.1.0."""
+        """Test la comparaison d'adaptation stratégique."""
         
         # Workflow 2-agents : stratégie fixe
         state_2 = EnqueteCluedoState(
@@ -379,7 +404,7 @@ class TestWorkflowComparison:
             initial_context={"details": "Contexte de test"}
         )
         
-        # Workflow 3-agents : différentes stratégies Oracle Enhanced
+        # Workflow 3-agents : différentes stratégies Oracle
         strategies = ["cooperative", "competitive", "balanced", "progressive"]
         states_3 = []
         
@@ -417,7 +442,7 @@ class TestWorkflowComparison:
 @pytest.mark.comparison
 @pytest.mark.performance
 class TestPerformanceComparison:
-    """Tests de comparaison de performance détaillée Oracle Enhanced v2.1.0."""
+    """Tests de comparaison de performance détaillée."""
     
     @pytest.fixture
     def performance_elements(self):
@@ -428,7 +453,8 @@ class TestPerformanceComparison:
             "lieux": ["Salon", "Cuisine", "Bureau"]
         }
     
-    def test_memory_usage_comparison(self, performance_elements):
+    @pytest.mark.asyncio
+    async def test_memory_usage_comparison(self, performance_elements):
         """Test la comparaison d'utilisation mémoire."""
         import sys
         
@@ -448,7 +474,7 @@ class TestPerformanceComparison:
         # Estimation de l'utilisation mémoire 2-agents
         memory_2 = sys.getsizeof(state_2.__dict__)
         
-        # Mesure pour workflow 3-agents Oracle Enhanced
+        # Mesure pour workflow 3-agents
         state_3 = CluedoOracleState(
             nom_enquete_cluedo="Memory Test 3-Agents",
             elements_jeu_cluedo=performance_elements,
@@ -470,11 +496,8 @@ class TestPerformanceComparison:
         memory_overhead = memory_3 - memory_2
         overhead_percentage = (memory_overhead / memory_2) * 100 if memory_2 > 0 else 0
         
-        # Le surcoût mémoire devrait être raisonnable (< 250%)
-        # NOTE: Le seuil a été augmenté de 200 à 250 pour tenir compte
-        # de l'empreinte mémoire plus élevée de l'état Oracle v2.1.0.
-        # Une optimisation future pourrait être nécessaire.
-        assert overhead_percentage < 250
+        # Le surcoût mémoire devrait être raisonnable (< 200%)
+        assert overhead_percentage < 200
         
         # Vérification que l'état 3-agents contient bien plus de données
         data_2 = len(state_2.get_hypotheses()) + len(state_2.get_tasks())
@@ -484,7 +507,7 @@ class TestPerformanceComparison:
     
     @pytest.mark.asyncio
     async def test_query_performance_comparison(self, performance_elements):
-        """Test la comparaison de performance des requêtes Oracle Enhanced v2.1.0."""
+        """Test la comparaison de performance des requêtes."""
         
         # État 2-agents (requêtes simples)
         state_2 = EnqueteCluedoState(
@@ -511,7 +534,7 @@ class TestPerformanceComparison:
             solution = state_2.get_solution_secrete()
         time_2agents = time.time() - start_time
         
-        # Test de performance requêtes 3-agents Oracle Enhanced
+        # Test de performance requêtes 3-agents
         start_time = time.time()
         for i in range(10):
             # Opérations Oracle
@@ -549,7 +572,7 @@ class TestPerformanceComparison:
             )
             solutions_2.append(state_2.get_solution_secrete())
             
-            # Workflow 3-agents Oracle Enhanced
+            # Workflow 3-agents
             state_3 = CluedoOracleState(
                 nom_enquete_cluedo=f"Quality Test 3-Agents {i}",
                 elements_jeu_cluedo=performance_elements,
@@ -564,16 +587,16 @@ class TestPerformanceComparison:
         unique_solutions_3 = len(set(tuple(sorted(sol.items())) for sol in solutions_3))
         
         # Analyse de la validité
-        valid_solutions_2 = sum(1 for sol in solutions_2 if all((
-            sol['suspect'] in performance_elements['suspects'],
-            sol['arme'] in performance_elements['armes'],
-            sol['lieu'] in performance_elements['lieux']
-        )))
-        valid_solutions_3 = sum(1 for sol in solutions_3 if all((
-            sol['suspect'] in performance_elements['suspects'],
-            sol['arme'] in performance_elements['armes'],
-            sol['lieu'] in performance_elements['lieux']
-        )))
+        valid_solutions_2 = sum(1 for sol in solutions_2 if (
+            sol["suspect"] in performance_elements["suspects"] and
+            sol["arme"] in performance_elements["armes"] and
+            sol["lieu"] in performance_elements["lieux"]
+        ))
+        valid_solutions_3 = sum(1 for sol in solutions_3 if (
+            sol["suspect"] in performance_elements["suspects"] and
+            sol["arme"] in performance_elements["armes"] and
+            sol["lieu"] in performance_elements["lieux"]
+        ))
         
         # Toutes les solutions devraient être valides
         assert valid_solutions_2 == 5
@@ -588,7 +611,7 @@ class TestPerformanceComparison:
 @pytest.mark.comparison
 @pytest.mark.user_experience
 class TestUserExperienceComparison:
-    """Tests de comparaison d'expérience utilisateur Oracle Enhanced v2.1.0."""
+    """Tests de comparaison d'expérience utilisateur."""
     
     def test_output_richness_comparison(self):
         """Test la comparaison de richesse des sorties."""
@@ -607,7 +630,7 @@ class TestUserExperienceComparison:
             }
         }
         
-        # Simulation de sortie 3-agents Oracle Enhanced
+        # Simulation de sortie 3-agents
         output_3agents = {
             "conversation_history": [
                 {"sender": "Sherlock", "message": "Investigation hypothesis"},
@@ -657,7 +680,7 @@ class TestUserExperienceComparison:
             "final_solution_validation"
         ]
         
-        # Capacités de debugging 3-agents Oracle Enhanced v2.1.0
+        # Capacités de debugging 3-agents
         debug_3agents = [
             "hypothesis_tracking",
             "task_management",
@@ -703,7 +726,7 @@ class TestUserExperienceComparison:
             "sequential_reasoning"
         ]
         
-        # Concepts éducatifs 3-agents Oracle Enhanced
+        # Concepts éducatifs 3-agents
         educational_3agents = [
             "logical_deduction",
             "hypothesis_formation", 
@@ -731,3 +754,5 @@ class TestUserExperienceComparison:
         assert "information_asymmetry" in advanced_concepts
         assert "strategic_revelation" in advanced_concepts
         assert "oracle_pattern_implementation" in advanced_concepts
+if __name__ == "__main__":
+    pytest.main([__file__])

@@ -85,30 +85,31 @@ async def run_demo():
         # Elle pourrait prendre des paramètres (ex: description du cas).
         # result = await orchestrator.start_investigation("Un meurtre a été commis au manoir Tudor.")
         
-        # Placeholder pour la logique d'appel - à remplacer par l'appel réel
-        # à la méthode de CluedoExtendedOrchestrator qui lance le jeu/l'enquête.
-        # Par exemple, si CluedoExtendedOrchestrator a une méthode `async def play_game()`:
-        game_summary = await orchestrator.run_full_game_simulation_and_report(
-            human_player_name="Joueur Humain Démo",
-            human_player_persona="Un détective amateur perspicace",
-            log_level="INFO" # ou "DEBUG" pour plus de détails
+        # Lancement du workflow en deux étapes
+        await orchestrator.setup_workflow()
+        game_summary = await orchestrator.execute_workflow(
+            initial_question="Sherlock, un meurtre a été commis. Veuillez commencer l'enquête."
         )
 
         logger.info("\n🏁 Enquête Terminée !")
         logger.info("Résumé de la partie :")
         
-        # Affichage structuré du résultat (à adapter selon le retour de l'orchestrateur)
+        # Affichage structuré du résultat
         if game_summary:
-            logger.info(f"  Statut: {game_summary.get('status', 'N/A')}")
-            solution_found = game_summary.get('solution_found', False)
-            logger.info(f"  Solution trouvée: {'Oui' if solution_found else 'Non'}")
-            if solution_found:
-                logger.info(f"  Coupable: {game_summary.get('final_solution', {}).get('suspect', 'N/A')}")
-                logger.info(f"  Arme: {game_summary.get('final_solution', {}).get('weapon', 'N/A')}")
-                logger.info(f"  Lieu: {game_summary.get('final_solution', {}).get('room', 'N/A')}")
-            logger.info(f"  Nombre de tours: {game_summary.get('total_turns', 'N/A')}")
-            if game_summary.get('error_message'):
-                logger.error(f"  Erreur: {game_summary.get('error_message')}")
+            solution_analysis = game_summary.get('solution_analysis', {})
+            workflow_info = game_summary.get('workflow_info', {})
+            oracle_stats = game_summary.get('oracle_statistics', {})
+            
+            logger.info(f"  Succès: {solution_analysis.get('success', 'N/A')}")
+            if solution_analysis.get('success'):
+                logger.info(f"  Solution: {solution_analysis.get('proposed_solution', 'N/A')}")
+            else:
+                logger.info(f"  Solution proposée: {solution_analysis.get('proposed_solution', 'N/A')}")
+                logger.info(f"  Solution correcte: {solution_analysis.get('correct_solution', 'N/A')}")
+
+            total_turns = oracle_stats.get('agent_interactions', {}).get('total_turns', 'N/A')
+            logger.info(f"  Nombre de tours: {total_turns}")
+            logger.info(f"  Temps d'exécution: {workflow_info.get('execution_time_seconds', 'N/A')}s")
         else:
             logger.warning("Aucun résumé de partie n'a été retourné par l'orchestrateur.")
 

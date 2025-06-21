@@ -80,6 +80,8 @@ class InformalAnalysisAgent(BaseAgent):
         :param agent_name: Le nom de cet agent. Par défaut "InformalAnalysisAgent".
         :type agent_name: str
         """
+        if not kernel:
+            raise ValueError("Le Kernel Semantic Kernel ne peut pas être None lors de l'initialisation de l'agent.")
         super().__init__(kernel, agent_name, system_prompt=INFORMAL_AGENT_INSTRUCTIONS)
         self.logger.info(f"Initialisation de l'agent informel {self.name}...")
         self._taxonomy_file_path = taxonomy_file_path # Stocker le chemin

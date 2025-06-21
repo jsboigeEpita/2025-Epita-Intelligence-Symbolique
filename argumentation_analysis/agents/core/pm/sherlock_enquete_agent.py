@@ -219,6 +219,7 @@ class SherlockEnqueteAgent(BaseAgent):
         
         # Le plugin avec les outils de Sherlock, en lui passant le kernel
         self._tools = SherlockTools(kernel=kernel)
+        self._kernel.add_plugin(self._tools, plugin_name="SherlockAgentPlugin")
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         return {
@@ -241,9 +242,9 @@ class SherlockEnqueteAgent(BaseAgent):
         try:
             execution_settings = OpenAIPromptExecutionSettings(service_id=self._service_id, tool_choice="auto")
             
-            async for message in self.sk_kernel.invoke_stream(
-                plugin_name="AgentPlugin",
-                function_name="chat_with_agent",
+            async for message in self._kernel.invoke_stream(
+                plugin_name="SherlockAgentPlugin",
+                function_name="chat",
                 arguments=KernelArguments(chat_history=history, execution_settings=execution_settings)
             ):
                 yield str(message[0])
@@ -252,14 +253,15 @@ class SherlockEnqueteAgent(BaseAgent):
             self.logger.error(f"Erreur dans get_response : {e}", exc_info=True)
             yield f"Erreur interne: {e}"
     
-    async def invoke(self, message: str, **kwargs) -> str:
+    async def invoke(self, input: str, **kwargs) -> str:
         """
-        Point d'entrée pour l'invocation de l'agent par AgentGroupChat.
+        Point d'entrée pour l'invocation de l'agent par l'orchestrateur.
+        Le nom du paramètre est 'input' pour la compatibilité avec l'API invoke de SK.
         """
-        self.logger.info(f"[{self.name}] Invoke called with message: {message}")
+        self.logger.info(f"[{self.name}] Invoke called with input: {input}")
         # Simplifié pour retourner une réponse directe pour le moment.
         final_answer = ""
-        async for chunk in self.get_response(message):
+        async for chunk in self.get_response(input):
             final_answer += chunk
         return final_answer
 
@@ -316,14 +318,14 @@ class SherlockEnqueteAgent(BaseAgent):
             # Création d'une fonction ad-hoc pour la conversation
             chat_function = KernelFunction.from_prompt(
                 function_name="chat_with_agent",
-                plugin_name="AgentPlugin",
+                plugin_name="SherlockAgentPlugin",
                 prompt_template_config=prompt_config,
             )
 
             # Invocation via le kernel
             arguments = KernelArguments(chat_history=history)
             
-            response = await self.sk_kernel.invoke(chat_function, arguments=arguments)
+            response = await self._kernel.invoke(chat_function, arguments=arguments)
             
             if response:
                 self.logger.info(f"[{self.name}] Réponse générée: {response}")

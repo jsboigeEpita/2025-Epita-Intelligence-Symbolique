@@ -209,8 +209,8 @@ class SherlockJTMSAgent(JTMSAgentBase):
         
         try:
             # Générer hypothèse via l'agent Sherlock de base
-            base_hypothesis = await self._base_sherlock.process_message(
-                f"Formulez une hypothèse pour cette situation: {context}"
+            base_hypothesis = await self._base_sherlock.invoke(
+                input=f"Formulez une hypothèse pour cette situation: {context}"
             )
             
             # Créer hypothèse dans le tracker JTMS
@@ -341,7 +341,7 @@ class SherlockJTMSAgent(JTMSAgentBase):
                 Proposez une solution finale détaillée.
                 """
                 
-                detailed_solution = await self._base_sherlock.process_message(solution_prompt)
+                detailed_solution = await self._base_sherlock.invoke(input=solution_prompt)
                 
                 # Vérification de cohérence JTMS
                 consistency_check = self.check_consistency()
