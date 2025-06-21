@@ -19,7 +19,8 @@ import asyncio
 import logging
 import subprocess
 import psutil
-from typing import Dict, List, Optional, Any
+import threading
+from typing import Dict, List, Optional, Any, IO
 from pathlib import Path
 import aiohttp
 
@@ -34,7 +35,7 @@ class BackendManager:
     - Monitoring des processus
     - Arrêt propre avec cleanup
     """
-    
+
     def __init__(self, config: Dict[str, Any], logger: logging.Logger):
         self.config = config
         self.logger = logger
@@ -44,9 +45,9 @@ class BackendManager:
         self.start_port = config.get('start_port', 5003)
         self.fallback_ports = config.get('fallback_ports', [5004, 5005, 5006])
         self.max_attempts = config.get('max_attempts', 5)
-        self.timeout_seconds = config.get('timeout_seconds', 30)
+        self.timeout_seconds = config.get('timeout_seconds', 180) # Augmentation du timeout
         self.health_endpoint = config.get('health_endpoint', '/api/health')
-        self.env_activation = config.get('env_activation', 
+        self.env_activation = config.get('env_activation',
                                        'powershell -File scripts/env/activate_project_env.ps1')
         
         # État runtime
@@ -54,6 +55,7 @@ class BackendManager:
         self.current_port: Optional[int] = None
         self.current_url: Optional[str] = None
         self.pid: Optional[int] = None
+        self.log_threads: List[threading.Thread] = []
         
     async def start_with_failover(self) -> Dict[str, Any]:
         """
@@ -64,49 +66,61 @@ class BackendManager:
         """
         ports_to_try = [self.start_port] + self.fallback_ports
         
-        for attempt, port in enumerate(ports_to_try, 1):
-            self.logger.info(f"Tentative {attempt}/{len(ports_to_try)} - Port {port}")
-            
+        for attempt in range(1, self.max_attempts + 1):
+            port = ports_to_try[(attempt - 1) % len(ports_to_try)]
+            self.logger.info(f"Tentative {attempt}/{self.max_attempts} - Port {port}")
+
             if await self._is_port_occupied(port):
-                self.logger.warning(f"Port {port} occupé, passage au suivant")
+                self.logger.warning(f"Port {port} occupé, nouvelle tentative dans 2s...")
+                await asyncio.sleep(2)
                 continue
-                
+
             result = await self._start_on_port(port)
             if result['success']:
                 self.current_port = port
                 self.current_url = result['url']
                 self.pid = result['pid']
                 
-                # Sauvegarde info backend
                 await self._save_backend_info(result)
                 return result
-                
+            else:
+                 self.logger.warning(f"Echec tentative {attempt} sur le port {port}. Erreur: {result.get('error', 'Inconnue')}")
+                 await asyncio.sleep(1) # Courte pause avant de réessayer
+
         return {
             'success': False,
-            'error': f'Impossible de démarrer sur les ports: {ports_to_try}',
+            'error': f"Impossible de démarrer le backend après {self.max_attempts} tentatives sur les ports {ports_to_try}",
             'url': None,
             'port': None,
             'pid': None
         }
     
+    def _log_stream(self, stream: IO[str], log_level: int):
+        """Lit un stream et logue chaque ligne."""
+        try:
+            for line in iter(stream.readline, ''):
+                if line:
+                    self.logger.log(log_level, f"[BACKEND] {line.strip()}")
+            stream.close()
+        except Exception as e:
+            self.logger.error(f"Erreur dans le thread de logging: {e}")
+
     async def _start_on_port(self, port: int) -> Dict[str, Any]:
         """Démarre le backend sur un port spécifique"""
         try:
-            # Commande de démarrage en fonction du type de serveur
-            server_type = self.config.get('server_type', 'python')
+            server_type = self.config.get('server_type', 'uvicorn')
             if server_type == 'uvicorn':
-                # Format pour uvicorn avec wrapper ASGI: uvicorn path.to.asgi:app --port 5003
                 asgi_module = 'argumentation_analysis.services.web_api.asgi:app'
                 cmd = ['uvicorn', asgi_module, '--port', str(port), '--host', '0.0.0.0']
             else:
-                # Format classique: python -m module.main --port 5003
                 cmd = ['python', '-m', self.module, '--port', str(port)]
             
             self.logger.info(f"Démarrage backend: {' '.join(cmd)}")
             
-            # Démarrage processus en arrière-plan
             env = os.environ.copy()
-            env['PYTHONPATH'] = str(Path.cwd())  # Assurer que PYTHONPATH inclut le répertoire courant
+            env['PYTHONPATH'] = str(Path.cwd())
+            env['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+            self.logger.info("Variable d'environnement KMP_DUPLICATE_LIB_OK=TRUE définie pour contourner le conflit OpenMP.")
             
             self.process = subprocess.Popen(
                 cmd,
@@ -115,82 +129,84 @@ class BackendManager:
                 cwd=Path.cwd(),
                 env=env,
                 text=True,
-                encoding='utf-8'
+                encoding='utf-8',
+                errors='replace'
             )
             
-            # Attente démarrage
+            # Démarrer les threads de logging
+            self.log_threads = []
+            if self.process.stdout:
+                stdout_thread = threading.Thread(target=self._log_stream, args=(self.process.stdout, logging.INFO))
+                stdout_thread.daemon = True
+                stdout_thread.start()
+                self.log_threads.append(stdout_thread)
+
+            if self.process.stderr:
+                stderr_thread = threading.Thread(target=self._log_stream, args=(self.process.stderr, logging.ERROR))
+                stderr_thread.daemon = True
+                stderr_thread.start()
+                self.log_threads.append(stderr_thread)
+
             backend_ready = await self._wait_for_backend(port)
             
             if backend_ready:
                 url = f"http://localhost:{port}"
-                return {
-                    'success': True,
-                    'url': url,
-                    'port': port,
-                    'pid': self.process.pid,
-                    'error': None
-                }
+                return {'success': True, 'url': url, 'port': port, 'pid': self.process.pid, 'error': None}
             else:
-                # Échec - cleanup processus
-                if self.process:
-                    self.process.terminate()
-                    self.process = None
-                    
-                return {
-                    'success': False,
-                    'error': f'Backend non accessible sur port {port} après {self.timeout_seconds}s',
-                    'url': None,
-                    'port': None,
-                    'pid': None
-                }
+                error_msg = f'Backend non accessible sur port {port} après {self.timeout_seconds}s'
+                # Le processus est déjà terminé via _wait_for_backend
+                return {'success': False, 'error': error_msg, 'url': None, 'port': None, 'pid': None}
                 
         except Exception as e:
-            self.logger.error(f"Erreur démarrage backend port {port}: {e}")
-            return {
-                'success': False,
-                'error': str(e),
-                'url': None,
-                'port': None,
-                'pid': None
-            }
+            self.logger.error(f"Erreur Démarrage Backend (port {port}): {e}", exc_info=True)
+            return {'success': False, 'error': str(e), 'url': None, 'port': None, 'pid': None}
     
     async def _wait_for_backend(self, port: int) -> bool:
-        """Attend que le backend soit accessible via health check"""
+        """Attend que le backend soit accessible via health check avec une patience accrue."""
         url = f"http://localhost:{port}{self.health_endpoint}"
         start_time = time.time()
-        
         self.logger.info(f"Attente backend sur {url} (timeout: {self.timeout_seconds}s)")
-        
+
+        # Boucle principale avec un timeout global long
         while time.time() - start_time < self.timeout_seconds:
+            # Vérifie si le processus est toujours en cours d'exécution
+            if self.process.poll() is not None:
+                self.logger.error(f"Processus backend terminé prématurément (code: {self.process.returncode}). Voir logs pour détails.")
+                return False
+
             try:
-                # Vérifier d'abord si le processus est toujours vivant
-                if self.process and self.process.poll() is not None:
-                    self.logger.error(f"Processus backend terminé prématurément (code: {self.process.returncode})")
-                    # Essayer de lire la sortie disponible (non-bloquant)
-                    try:
-                        # Lire stderr et stdout pour obtenir plus de contexte sur l'erreur
-                        stdout_output = self.process.stdout.read() if self.process.stdout else ""
-                        stderr_output = self.process.stderr.read() if self.process.stderr else ""
-                        if stdout_output:
-                            self.logger.error(f"Sortie standard du processus backend:\n{stdout_output}")
-                        if stderr_output:
-                            self.logger.error(f"Sortie d'erreur du processus backend:\n{stderr_output}")
-                    except Exception as e:
-                        self.logger.error(f"Impossible de lire la sortie du processus : {e}")
-                    return False
-                
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as response:
+                # Tente une connexion avec un timeout de connexion raisonnable (10s)
+                timeout = aiohttp.ClientTimeout(total=10)
+                async with aiohttp.ClientSession(timeout=timeout) as session:
+                    async with session.get(url) as response:
                         if response.status == 200:
-                            self.logger.info(f"Backend accessible sur {url}")
+                            self.logger.info(f"🎉 Backend accessible sur {url} après {time.time() - start_time:.1f}s.")
                             return True
-            except Exception as e:
+                        else:
+                            self.logger.debug(f"Health check a échoué avec status {response.status}")
+            except aiohttp.ClientConnectorError as e:
                 elapsed = time.time() - start_time
-                self.logger.debug(f"Tentative health check après {elapsed:.1f}s: {type(e).__name__}")
-                
-            await asyncio.sleep(2)
-        
-        self.logger.error(f"Timeout - Backend non accessible sur {url}")
+                self.logger.debug(f"Tentative health check (connexion refusée) après {elapsed:.1f}s: {type(e).__name__}")
+            except asyncio.TimeoutError:
+                 elapsed = time.time() - start_time
+                 self.logger.debug(f"Tentative health check (timeout) après {elapsed:.1f}s.")
+            except aiohttp.ClientError as e:
+                elapsed = time.time() - start_time
+                self.logger.warning(f"Erreur client inattendue lors du health check après {elapsed:.1f}s: {type(e).__name__} - {e}")
+
+            # Pause substantielle entre les tentatives pour ne pas surcharger et laisser le temps au serveur de démarrer.
+            await asyncio.sleep(5)
+
+        # Si la boucle se termine, c'est un échec définitif par timeout global.
+        self.logger.error(f"Timeout global atteint ({self.timeout_seconds}s) - Backend non accessible sur {url}")
+        if self.process.poll() is None:
+            self.logger.error("Le processus Backend est toujours en cours mais ne répond pas. Terminaison forcée...")
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.logger.warning("La terminaison a échoué, forçage (kill)...")
+                self.process.kill()
         return False
     
     async def _is_port_occupied(self, port: int) -> bool:

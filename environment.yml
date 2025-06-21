@@ -17,7 +17,7 @@ dependencies:
   - spacy # Laisser conda choisir
   - pytorch
   - transformers
-  - sympy
+  - sympy=1.13.1
   - thinc # Laisser conda choisir en fonction de spacy
 
   # Web & API
@@ -27,8 +27,9 @@ dependencies:
   - uvicorn
   - whitenoise
   - flask-cors
+  - starlette
   - a2wsgi
-
+  
   # Utilities
   - pydantic
   - python-dotenv
@@ -65,5 +66,3 @@ dependencies:
     - playwright
     - pytest-playwright
     - psutil
-    - playwright
-    - pytest-playwright

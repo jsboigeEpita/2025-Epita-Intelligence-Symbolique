@@ -16,6 +16,7 @@ import time
 import asyncio
 import logging
 import subprocess
+import re
 from typing import Dict, Optional, Any
 from pathlib import Path
 import aiohttp
@@ -208,27 +209,63 @@ class FrontendManager:
         return env
     
     async def _wait_for_frontend(self) -> bool:
-        """Attend que le frontend soit accessible"""
-        url = f"http://localhost:{self.port}"
+        """Attend que le frontend soit accessible, en gérant le failover de port de React."""
         start_time = time.time()
+        url = None
         
-        # Attente initiale pour démarrage React
-        await asyncio.sleep(10)
+        # Attendre un peu que le log soit écrit
+        await asyncio.sleep(15)
+
+        end_time = time.time() + self.timeout_seconds
         
-        while time.time() - start_time < self.timeout_seconds:
+        while time.time() < end_time:
+            # 1. Essayer de détecter le port depuis les logs
+            try:
+                log_file = Path("logs/frontend_stdout.log")
+                if log_file.exists():
+                    # Fermer et rouvrir pour lire le contenu le plus récent
+                    if self.frontend_stdout_log_file:
+                        self.frontend_stdout_log_file.close()
+
+                    with open(log_file, "r", encoding="utf-8") as f:
+                        log_content = f.read()
+
+                    # Ré-ouvrir en mode binaire pour l'écriture
+                    self.frontend_stdout_log_file = open(log_file, "ab")
+                    
+                    match = re.search(r"Local:\s+(http://localhost:(\d+))", log_content)
+                    if match:
+                        detected_url = match.group(1)
+                        detected_port = int(match.group(2))
+                        if self.port != detected_port:
+                            self.logger.info(f"Port frontend détecté: {detected_port} (failover de {self.port})")
+                            self.port = detected_port
+                        url = detected_url
+                        break # Port trouvé, passer au health check
+            except Exception as e:
+                self.logger.warning(f"Impossible de lire le log du frontend pour détecter le port: {e}")
+
+            await asyncio.sleep(5)
+
+        if not url:
+            url = f"http://localhost:{self.port}"
+            self.logger.warning(f"Port non détecté dans les logs, tentative sur le port par défaut : {self.port}")
+
+        # 2. Health check sur l'URL (détectée ou par défaut)
+        while time.time() < end_time:
             try:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as response:
                         if response.status == 200:
                             self.logger.info(f"Frontend accessible sur {url}")
+                            self.current_url = url # Mettre à jour l'URL finale
                             return True
             except Exception:
-                # Continue à attendre
-                pass
-                
+                pass  # Continue à attendre
+            
             await asyncio.sleep(3)
-        
-        self.logger.error(f"Timeout - Frontend non accessible sur {url}")
+
+        self.logger.error(f"Timeout - Frontend non accessible sur {url} après {self.timeout_seconds}s")
         return False
     
     async def health_check(self) -> bool:

@@ -388,8 +388,22 @@ class UnifiedWebOrchestrator:
     # ========================================================================
     
     async def _cleanup_previous_instances(self):
-        """Nettoie les instances précédentes"""
-        self.add_trace("[CLEAN] NETTOYAGE PREALABLE", "Arret instances existantes")
+        """Nettoie les instances précédentes, en ciblant d'abord les ports."""
+        self.add_trace("[CLEAN] NETTOYAGE PREALABLE", "Forçage de la libération des ports et arrêt des instances existantes")
+
+        # Récupération de tous les ports depuis la config pour un nettoyage ciblé
+        backend_ports = [self.config['backend']['start_port']] + self.config['backend'].get('fallback_ports', [])
+        frontend_ports = [self.config['frontend']['port']] if self.config['frontend'].get('port') else []
+        all_ports = list(set(backend_ports + frontend_ports))
+
+        self.logger.info(f"Nettoyage forcé des processus sur les ports : {all_ports}")
+        self.process_cleaner.cleanup_by_port(all_ports)
+        
+        # On attend un court instant pour laisser le temps aux processus de se terminer
+        await asyncio.sleep(1)
+
+        # On exécute ensuite le nettoyage général pour les processus qui n'utiliseraient pas de port
+        self.logger.info("Nettoyage général des processus restants...")
         await self.process_cleaner.cleanup_webapp_processes()
     
     async def _start_backend(self) -> bool:

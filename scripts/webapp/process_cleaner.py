@@ -132,41 +132,51 @@ class ProcessCleaner:
         
         return unique_processes
     
+    def _terminate_process_tree(self, proc: psutil.Process, timeout=3):
+        """Termine un processus et tous ses enfants."""
+        try:
+            children = proc.children(recursive=True)
+            all_procs = [proc] + children
+
+            # Phase 1: SIGTERM
+            for p in all_procs:
+                try:
+                    p.terminate()
+                except psutil.NoSuchProcess:
+                    continue
+            
+            gone, alive = psutil.wait_procs(all_procs, timeout=timeout)
+
+            # Phase 2: SIGKILL pour les récalcitrants
+            if alive:
+                self.logger.warning(f"Processus récalcitrants détectés, envoi de SIGKILL: {[p.pid for p in alive]}")
+                for p in alive:
+                    try:
+                        p.kill()
+                    except psutil.NoSuchProcess:
+                        continue
+                psutil.wait_procs(alive, timeout=timeout)
+
+            self.logger.info(f"Arbre du processus PID {proc.pid} nettoyé.")
+
+        except psutil.NoSuchProcess:
+            self.logger.info(f"Processus PID {proc.pid} n'existait déjà plus.")
+        except Exception as e:
+            self.logger.error(f"Erreur lors de la terminaison de l'arbre du processus PID {proc.pid}: {e}")
+
+
     async def _terminate_processes_gracefully(self, processes: List[psutil.Process]):
-        """Termine les processus de manière progressive"""
+        """Termine les processus de manière progressive en nettoyant leur arbre complet."""
         if not processes:
             return
         
-        self.logger.info("Envoi signal TERM aux processus...")
+        self.logger.info("Envoi signal TERM aux processus et à leurs enfants...")
         
-        # Phase 1: SIGTERM
-        terminated_pids = set()
         for proc in processes:
-            try:
-                proc.terminate()
-                terminated_pids.add(proc.pid)
-                self.logger.info(f"TERM envoyé à PID {proc.pid}")
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                pass
-        
-        # Attente arrêt propre (5 secondes)
-        if terminated_pids:
-            self.logger.info("Attente arrêt propre (5s)...")
-            time.sleep(5)
-            
-            # Vérification processus encore actifs
-            still_running = []
-            for proc in processes:
-                try:
-                    if proc.is_running():
-                        still_running.append(proc)
-                except psutil.NoSuchProcess:
-                    pass
-            
-            if still_running:
-                self.logger.warning(f"{len(still_running)} processus encore actifs")
-            else:
-                self.logger.info("Tous les processus arrêtés proprement")
+            self._terminate_process_tree(proc)
+
+        # La vérification se fait maintenant dans _terminate_process_tree
+        self.logger.info("Nettoyage par arbre de processus terminé.")
     
     async def _force_kill_remaining_processes(self):
         """Force l'arrêt des processus récalcitrants"""
@@ -251,18 +261,8 @@ class ProcessCleaner:
             try:
                 proc = psutil.Process(pid)
                 
-                # Tentative arrêt propre
-                proc.terminate()
-                
-                # Attente
-                try:
-                    proc.wait(timeout=5)
-                    self.logger.info(f"Processus PID {pid} arrêté proprement")
-                except psutil.TimeoutExpired:
-                    # Force kill
-                    proc.kill()
-                    proc.wait()
-                    self.logger.warning(f"Processus PID {pid} tué de force")
+                # Utilise la nouvelle méthode pour nettoyer l'arbre complet
+                self._terminate_process_tree(proc)
                     
             except psutil.NoSuchProcess:
                 self.logger.info(f"Processus PID {pid} déjà terminé")
