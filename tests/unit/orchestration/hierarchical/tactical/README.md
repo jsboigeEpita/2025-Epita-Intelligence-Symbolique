@@ -36,6 +36,5 @@ Les tests se concentrent sur deux composants principaux :
 
 ## Liste des Fichiers de Test
 
-*   [`test_tactical_state.py`](test_tactical_state.py:1) : Valide l'ensemble des opérations de la machine à états tactique.
-*   [`test_tactical_resolver.py`](test_tactical_resolver.py:1) : Teste les scénarios de base de détection et de résolution de conflits.
-*   [`test_tactical_resolver_advanced.py`](test_tactical_resolver_advanced.py:1) : Couvre des scénarios plus complexes, notamment le mécanisme d'escalade des conflits non résolus.
+*   [`test_tactical_state.py`](test_tactical_state.py) : Valide l'ensemble des opérations de la machine à états tactique.
+*   [`test_tactical_resolver.py`](test_tactical_resolver.py) : Teste les scénarios de base de détection et de résolution de conflits.
