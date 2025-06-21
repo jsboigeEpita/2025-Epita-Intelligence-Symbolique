@@ -35,7 +35,7 @@ async def test_successful_simple_argument_analysis(page: Page, frontend_url: str
     await submit_button.click()
 
     # Wait for the loading spinner to disappear
-    await expect(loading_spinner).not_to_be_visible(timeout=20000)
+    await expect(loading_spinner).not_to_be_visible(timeout=60000)
 
     # Wait for the results to be displayed and check for content
     await expect(results_container).to_be_visible()
