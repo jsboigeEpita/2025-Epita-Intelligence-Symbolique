@@ -28,7 +28,7 @@ backend:
   # Gestion des ports avec failover automatique
   start_port: 5003
   fallback_ports: [5004, 5005, 5006]
-  max_attempts: 5
+  max_attempts: 10
   timeout_seconds: 30
   
   # Endpoints de surveillance
