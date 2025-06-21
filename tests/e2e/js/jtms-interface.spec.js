@@ -175,7 +175,7 @@ test.describe('Interface Web JTMS - Tests d\'Intégration Complète', () => {
     test.describe('Interface Sherlock/Watson', () => {
         
         test('Chargement de l\'interface agents', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/sherlock_watson`);
+            await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/sherlock_watson`);
             
             await expect(page.locator('h1')).toContainText('Agents Sherlock & Watson JTMS');
             await expect(page.locator('.sherlock-panel')).toBeVisible();
@@ -184,7 +184,7 @@ test.describe('Interface Web JTMS - Tests d\'Intégration Complète', () => {
         });
 
         test('Sélection d\'un scénario d\'enquête', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/sherlock_watson`);
+            await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/sherlock_watson`);
             
             // Sélectionner le scénario Cluedo
             await page.click('[data-scenario="cluedo"]');
@@ -197,7 +197,7 @@ test.describe('Interface Web JTMS - Tests d\'Intégration Complète', () => {
         });
 
         test('Démarrage d\'une enquête', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/sherlock_watson`);
+            await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/sherlock_watson`);
             
             // Sélectionner un scénario et démarrer
             await page.click('[data-scenario="cluedo"]');
@@ -213,7 +213,7 @@ test.describe('Interface Web JTMS - Tests d\'Intégration Complète', () => {
         });
 
         test('Interaction avec les agents', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/sherlock_watson`);
+            await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/sherlock_watson`);
             
             // Démarrer une enquête
             await page.click('[data-scenario="theft"]');
@@ -240,7 +240,7 @@ test.describe('Interface Web JTMS - Tests d\'Intégration Complète', () => {
     test.describe('Tutoriel Interactif', () => {
         
         test('Navigation dans les leçons', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/tutorial`);
+            await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/tutorial`);
             
             await expect(page.locator('h1')).toContainText('Introduction au JTMS');
             await expect(page.locator('.lesson-item.active')).toContainText('Introduction');
@@ -252,7 +252,7 @@ test.describe('Interface Web JTMS - Tests d\'Intégration Complète', () => {
         });
 
         test('Démonstration interactive Tweety', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/tutorial`);
+            await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/tutorial`);
             
             // Tester la démo Tweety
             await page.click('button:has-text("Appliquer la règle")');
@@ -266,7 +266,7 @@ test.describe('Interface Web JTMS - Tests d\'Intégration Complète', () => {
         });
 
         test('Quiz et progression', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/tutorial`);
+            await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/tutorial`);
             
             // Répondre au quiz
             await page.click('.quiz-option[data-answer="b"]');
@@ -280,7 +280,7 @@ test.describe('Interface Web JTMS - Tests d\'Intégration Complète', () => {
         });
 
         test('Création de justification personnalisée', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/tutorial`);
+            await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/tutorial`);
             
             // Aller à la leçon 2
             await page.click('.lesson-item[data-lesson="2"]');
@@ -301,7 +301,7 @@ test.describe('Interface Web JTMS - Tests d\'Intégration Complète', () => {
     test.describe('Playground JTMS', () => {
         
         test('Interface de développement', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/playground`);
+            await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/playground`);
             
             await expect(page.locator('h5:has-text("Éditeur JTMS")')).toBeVisible();
             await expect(page.locator('#codeEditor')).toBeVisible();
@@ -310,7 +310,7 @@ test.describe('Interface Web JTMS - Tests d\'Intégration Complète', () => {
         });
 
         test('Chargement et exécution de templates', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/playground`);
+            await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/playground`);
             
             // Charger le template des animaux
             await page.click('.template-card[onclick*="animals"]');
@@ -330,7 +330,7 @@ test.describe('Interface Web JTMS - Tests d\'Intégration Complète', () => {
         });
 
         test('Création de code personnalisé', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/playground`);
+            await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/playground`);
             
             // Effacer l'éditeur
             await page.click('.btn-clear');
@@ -358,7 +358,7 @@ execute()
         });
 
         test('Visualisation du réseau', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/playground`);
+            await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/playground`);
             
             // Charger un template simple
             await page.click('.template-card[onclick*="basic"]');
@@ -373,7 +373,7 @@ execute()
         });
 
         test('Sauvegarde et export', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/playground`);
+            await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/playground`);
             
             // Écrire du code
             await page.fill('#codeEditor', 'add_belief("test_sauvegarde")');
@@ -395,11 +395,11 @@ execute()
         
         test('Temps de chargement des pages', async ({ page }) => {
             const pages = [
-                `${BASE_URL}${JTMS_PREFIX}/dashboard`,
-                `${BASE_URL}${JTMS_PREFIX}/sessions`,
-                `${BASE_URL}${JTMS_PREFIX}/sherlock_watson`,
-                `${BASE_URL}${JTMS_PREFIX}/tutorial`,
-                `${BASE_URL}${JTMS_PREFIX}/playground`
+                `${FRONTEND_URL}${JTMS_PREFIX}/dashboard`,
+                `${FRONTEND_URL}${JTMS_PREFIX}/sessions`,
+                `${FRONTEND_URL}${JTMS_PREFIX}/sherlock_watson`,
+                `${FRONTEND_URL}${JTMS_PREFIX}/tutorial`,
+                `${FRONTEND_URL}${JTMS_PREFIX}/playground`
             ];
             
             for (const url of pages) {
@@ -414,7 +414,7 @@ execute()
         });
 
         test('Navigation entre les sections', async ({ page }) => {
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/dashboard`);
+            await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/dashboard`);
             
             // Tester la navigation complète
             const sections = [
@@ -434,11 +434,11 @@ execute()
 
         test('Gestion des erreurs', async ({ page }) => {
             // Test d'une route inexistante
-            const response = await page.goto(`${BASE_URL}${JTMS_PREFIX}/route-inexistante`);
+            const response = await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/route-inexistante`);
             expect(response.status()).toBe(404);
             
             // Test de résistance aux erreurs JavaScript
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/dashboard`);
+            await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/dashboard`);
             
             // Injecter une erreur et vérifier que l'interface reste fonctionnelle
             await page.evaluate(() => {
@@ -454,7 +454,7 @@ execute()
         test('Responsivité mobile', async ({ page }) => {
             // Simuler un écran mobile
             await page.setViewportSize({ width: 375, height: 667 });
-            await page.goto(`${BASE_URL}${JTMS_PREFIX}/dashboard`);
+            await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/dashboard`);
             
             // Vérifier que l'interface s'adapte
             await expect(page.locator('.navbar-toggler')).toBeVisible();
@@ -481,7 +481,7 @@ execute()
     test.describe('API et Communication', () => {
         
         test('API de statut des services', async ({ page }) => {
-            const response = await page.request.get(`${BASE_URL}/status`);
+            const response = await page.request.get(`${FRONTEND_URL}/status`);
             expect(response.ok()).toBeTruthy();
             
             const status = await response.json();
@@ -491,7 +491,7 @@ execute()
         });
 
         test('API JTMS - Création de session', async ({ page }) => {
-            const response = await page.request.post(`${BASE_URL}${JTMS_PREFIX}/api/sessions`, {
+            const response = await page.request.post(`${FRONTEND_URL}${JTMS_PREFIX}/api/sessions`, {
                 data: {
                     session_id: `test_api_${Date.now()}`,
                     name: 'Session API Test',
@@ -507,7 +507,7 @@ execute()
 
         test('API JTMS - Gestion des croyances', async ({ page }) => {
             // Créer une session d'abord
-            const sessionResponse = await page.request.post(`${BASE_URL}${JTMS_PREFIX}/api/sessions`, {
+            const sessionResponse = await page.request.post(`${FRONTEND_URL}${JTMS_PREFIX}/api/sessions`, {
                 data: {
                     session_id: `belief_test_${Date.now()}`,
                     name: 'Test Croyances'
@@ -518,7 +518,7 @@ execute()
             const sessionId = session.session_id;
             
             // Ajouter une croyance
-            const beliefResponse = await page.request.post(`${BASE_URL}${JTMS_PREFIX}/api/belief`, {
+            const beliefResponse = await page.request.post(`${FRONTEND_URL}${JTMS_PREFIX}/api/belief`, {
                 data: {
                     session_id: sessionId,
                     belief_name: 'test_api_belief'
@@ -536,7 +536,7 @@ execute()
 test.describe('Utilitaires de Test', () => {
     
     test('Génération de données de test', async ({ page }) => {
-        await page.goto(`${BASE_URL}${JTMS_PREFIX}/dashboard`);
+        await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/dashboard`);
         
         // Générer un ensemble de test complet
         const testData = {
@@ -561,7 +561,7 @@ test.describe('Utilitaires de Test', () => {
 
     test('Nettoyage après tests', async ({ page }) => {
         // Nettoyer les sessions de test
-        await page.goto(`${BASE_URL}${JTMS_PREFIX}/sessions`);
+        await page.goto(`${FRONTEND_URL}${JTMS_PREFIX}/sessions`);
         
         // Supprimer les sessions de test (celles qui commencent par "Test" ou "test_")
         const testSessions = page.locator('.session-card:has([data-session-name*="test" i], [data-session-name*="Test"])');

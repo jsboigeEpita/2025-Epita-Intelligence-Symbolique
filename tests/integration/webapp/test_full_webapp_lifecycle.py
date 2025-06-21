@@ -5,7 +5,7 @@ import asyncio
 
 sys.path.insert(0, '.')
 
-from project_core.webapp_from_scripts.unified_web_orchestrator import UnifiedWebOrchestrator, WebAppStatus
+from argumentation_analysis.webapp.orchestrator import UnifiedWebOrchestrator, WebAppStatus
 
 @pytest.fixture
 def integration_config(webapp_config, tmp_path):
@@ -34,7 +34,7 @@ def orchestrator(integration_config, test_config_path, mocker):
     import argparse
     import yaml
     
-    mocker.patch('project_core.webapp_from_scripts.unified_web_orchestrator.UnifiedWebOrchestrator._setup_signal_handlers')
+    mocker.patch('argumentation_analysis.webapp.orchestrator.UnifiedWebOrchestrator._setup_signal_handlers')
 
     with open(test_config_path, 'w') as f:
         yaml.dump(integration_config, f)

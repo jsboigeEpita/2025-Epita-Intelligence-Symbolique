@@ -92,8 +92,14 @@ class BackendManager:
     async def _start_on_port(self, port: int) -> Dict[str, Any]:
         """Démarre le backend sur un port spécifique"""
         try:
-            # Commande de démarrage directe avec services de fallback
-            cmd = ['python', '-m', self.module, '--port', str(port)]
+            # Commande de démarrage en fonction du type de serveur
+            server_type = self.config.get('server_type', 'python')
+            if server_type == 'uvicorn':
+                # Format pour uvicorn: uvicorn api.main:app --port 5003
+                cmd = ['uvicorn', self.module, '--port', str(port), '--host', '0.0.0.0']
+            else:
+                # Format classique: python -m module.main --port 5003
+                cmd = ['python', '-m', self.module, '--port', str(port)]
             
             self.logger.info(f"Démarrage backend: {' '.join(cmd)}")
             

@@ -79,7 +79,7 @@ except ImportError:
         return False
 # --- Début de l'insertion pour sys.path ---
 # Déterminer la racine du projet (remonter de deux niveaux depuis scripts/core)
-# __file__ est scripts/core/environment_manager.py
+# __file__ est scripts/core/auto_env.py
 # .parent est scripts/core
 # .parent.parent est scripts
 # .parent.parent.parent est la racine du projet
@@ -1145,7 +1145,7 @@ def main():
     args = parser.parse_args()
     
     logger = Logger(verbose=True) # FORCER VERBOSE POUR DEBUG (ou utiliser args.verbose)
-    logger.info("DEBUG: Début de main() dans environment_manager.py (après parsing)")
+    logger.info("DEBUG: Début de main() dans auto_env.py (après parsing)")
     logger.info(f"DEBUG: Args parsés par argparse: {args}")
     
     manager = EnvironmentManager(logger)

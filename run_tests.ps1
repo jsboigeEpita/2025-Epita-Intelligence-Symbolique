@@ -31,7 +31,7 @@
 #>
 param(
     [Parameter(Mandatory=$true)]
-    [ValidateSet("unit", "functional", "e2e", "all")]
+    [ValidateSet("unit", "functional", "e2e", "all", "validation")]
     [string]$Type,
 
     [string]$Path,
@@ -67,6 +67,10 @@ if ($PSBoundParameters.ContainsKey('Browser')) {
 }
 
 $CommandToRun = "python $($runnerArgs -join ' ')"
+
+if ($Type -eq "validation") {
+    $CommandToRun = "python tests/e2e/web_interface/validate_jtms_web_interface.py; python -m tests.functional.test_phase3_web_api_authentic"
+}
 
 Write-Host "[INFO] Commande à exécuter : $CommandToRun" -ForegroundColor Cyan
 Write-Host "[INFO] Lancement des tests via $ActivationScript..." -ForegroundColor Cyan

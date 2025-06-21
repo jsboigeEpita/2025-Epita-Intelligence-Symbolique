@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch, AsyncMock, call
 import sys
 sys.path.insert(0, '.')
 
-from project_core.webapp_from_scripts.unified_web_orchestrator import UnifiedWebOrchestrator, WebAppStatus
+from argumentation_analysis.webapp.orchestrator import UnifiedWebOrchestrator, WebAppStatus
 
 # We need to mock the manager classes before they are imported by the orchestrator
 sys.modules['project_core.webapp_from_scripts.backend_manager'] = MagicMock()
@@ -18,16 +18,16 @@ sys.modules['project_core.webapp_from_scripts.process_cleaner'] = MagicMock()
 # This patch will apply to all tests in this module for signal handlers
 @pytest.fixture(autouse=True)
 def mock_signal_handlers():
-    with patch('project_core.webapp_from_scripts.unified_web_orchestrator.UnifiedWebOrchestrator._setup_signal_handlers') as mock_setup:
+    with patch('argumentation_analysis.webapp.orchestrator.UnifiedWebOrchestrator._setup_signal_handlers') as mock_setup:
         yield mock_setup
 
 @pytest.fixture
 def mock_managers():
     """Mocks all the specialized manager classes."""
-    with patch('project_core.webapp_from_scripts.unified_web_orchestrator.BackendManager') as MockBackend, \
-         patch('project_core.webapp_from_scripts.unified_web_orchestrator.FrontendManager') as MockFrontend, \
-         patch('project_core.webapp_from_scripts.unified_web_orchestrator.PlaywrightRunner') as MockPlaywright, \
-         patch('project_core.webapp_from_scripts.unified_web_orchestrator.ProcessCleaner') as MockCleaner:
+    with patch('argumentation_analysis.webapp.orchestrator.BackendManager') as MockBackend, \
+         patch('argumentation_analysis.webapp.orchestrator.FrontendManager') as MockFrontend, \
+         patch('argumentation_analysis.webapp.orchestrator.PlaywrightRunner') as MockPlaywright, \
+         patch('argumentation_analysis.webapp.orchestrator.ProcessCleaner') as MockCleaner:
         
         yield {
             "backend": MockBackend.return_value,
@@ -49,8 +49,8 @@ def orchestrator(webapp_config, test_config_path, mock_managers):
     mock_args.no_trace = False
 
     # Prevent logging setup from failing as it requires a real config structure
-    with patch('project_core.webapp_from_scripts.unified_web_orchestrator.UnifiedWebOrchestrator._setup_logging'), \
-         patch('project_core.webapp_from_scripts.unified_web_orchestrator.UnifiedWebOrchestrator._load_config') as mock_load_config:
+    with patch('argumentation_analysis.webapp.orchestrator.UnifiedWebOrchestrator._setup_logging'), \
+         patch('argumentation_analysis.webapp.orchestrator.UnifiedWebOrchestrator._load_config') as mock_load_config:
         
         # The webapp_config fixture provides the config dictionary
         mock_load_config.return_value = webapp_config

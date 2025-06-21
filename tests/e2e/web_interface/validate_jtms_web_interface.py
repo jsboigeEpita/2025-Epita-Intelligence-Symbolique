@@ -19,22 +19,11 @@ import argparse
 from pathlib import Path
 from typing import Dict, Any, List
 
-# Auto-activation environnement
-try:
-    # Remonte à la racine du projet depuis validation/web_interface/
-    project_root = Path(__file__).resolve().parent.parent.parent
-    if str(project_root) not in sys.path:
-        sys.path.insert(0, str(project_root))
-    
-    from scripts.core.auto_env import ensure_env
-    ensure_env()
-except ImportError as e:
-    print(f"[ERROR] Auto-env OBLIGATOIRE manquant: {e}")
-    print("Vérifiez que scripts/core/auto_env.py existe et est accessible")
-    sys.exit(1)
+# L'activation de l'environnement est gérée par le script de lancement.
 
 # Import du runner JavaScript non-bloquant
-from validation.runners.playwright_js_runner import PlaywrightJSRunner
+from tests.e2e.runners.playwright_js_runner import PlaywrightJSRunner
+from scripts.webapp.unified_web_orchestrator import UnifiedWebOrchestrator
 
 class JTMSWebValidator:
     """
@@ -49,11 +38,14 @@ class JTMSWebValidator:
     - API et communication
     """
     
-    def __init__(self, headless: bool = True, port: int = 5001):
-        self.port = port
+    def __init__(self, headless: bool = True, backend_port: int = 5001, frontend_port: int = 3000):
+        self.headless = headless
+        self.backend_port = backend_port
+        self.frontend_port = frontend_port
         self.logger = self._setup_logging()
-        self.config = self._get_jtms_test_config(headless, port)
-        self.playwright_runner = PlaywrightJSRunner(self.config, self.logger)
+        
+        # L'orchestrateur sera initialisé plus tard
+        self.orchestrator = None
         
     def _setup_logging(self) -> logging.Logger:
         """Configuration logging avec formatage coloré"""
@@ -63,23 +55,6 @@ class JTMSWebValidator:
             datefmt='%H:%M:%S'
         )
         return logging.getLogger(__name__)
-    
-    def _get_jtms_test_config(self, headless: bool, port: int) -> Dict[str, Any]:
-        """Configuration spécialisée pour tests JTMS"""
-        base_url = f"http://localhost:{port}"
-        return {
-            'enabled': True,
-            'browser': 'chromium',
-            'headless': headless,
-            'timeout_ms': 300000,
-            'slow_timeout_ms': 600000,
-            'test_paths': ['tests_playwright/tests/jtms-interface.spec.js'],
-            'screenshots_dir': 'logs/screenshots/jtms',
-            'traces_dir': 'logs/traces/jtms',
-            'base_url': base_url,
-            'retry_attempts': 2,
-            'parallel_workers': 1  # Séquentiel pour diagnostic
-        }
     
     async def validate_web_interface(self) -> Dict[str, Any]:
         """
@@ -92,61 +67,68 @@ class JTMSWebValidator:
         self.logger.info("🧪 PHASE 1 - VALIDATION WEB INTERFACE JTMS COMPLÈTE")
         self.logger.info("=" * 60)
         
-        # Configuration runtime pour tests JTMS
-        runtime_config = {
-            'backend_url': f"http://localhost:{self.port}",
-            'jtms_prefix': '/jtms',
-            'test_mode': 'jtms_complete',
-            'headless': self.config.get('headless', True),
-            'capture_screenshots': True,
-            'capture_traces': True
-        }
-        
-        self.logger.info("🔧 Configuration JTMS:")
-        for key, value in runtime_config.items():
-            self.logger.info(f"   {key}: {value}")
+        # Configuration de l'orchestrateur
+        project_root = Path(__file__).resolve().parent.parent.parent.parent
+        config_path = project_root / 'scripts' / 'webapp' / 'config' / 'webapp_config.yml'
+        self.orchestrator = UnifiedWebOrchestrator(str(config_path))
+        self.orchestrator.headless = self.headless
         
         try:
-            # Exécution tests JTMS avec PlaywrightRunner
-            self.logger.info("🚀 Lancement tests Web Interface JTMS...")
-            
-            success = await self.playwright_runner.run_tests(
-                test_paths=['tests_playwright/tests/jtms-interface.spec.js'],
-                runtime_config=runtime_config
+            # Démarrage des services
+            self.logger.info("📡 Démarrage des services web (Backend & Frontend)...")
+            success_start = await self.orchestrator.start_webapp(
+                headless=self.headless,
+                frontend_enabled=True
             )
             
-            # Récupération des résultats détaillés
-            results = self.playwright_runner.last_results or {}
+            if not success_start:
+                self.logger.error("❌ Échec du démarrage des services web.")
+                return {'success': False, 'error': 'Failed to start web services'}
             
-            # Analyse des résultats
+            self.logger.info(f"🌐 Frontend démarré sur: {self.orchestrator.app_info.frontend_url}")
+            
+            # Création du runner Playwright AVEC la bonne URL
+            playwright_config = self._get_jtms_test_config(self.headless, self.orchestrator.app_info.frontend_url)
+            playwright_runner = PlaywrightJSRunner(playwright_config, self.logger)
+
+            # Exécution des tests
+            success = await playwright_runner.run_tests(runtime_config={'base_url': self.orchestrator.app_info.frontend_url})
+            
+            results = playwright_runner.last_results or {}
+            
             validation_result = {
                 'phase': 'Phase 1 - Validation Web Interface JTMS',
                 'success': success,
-                'timestamp': '11/06/2025 10:34:00',
-                'results': results,
-                'components_tested': [
-                    'Dashboard JTMS avec visualisation réseau',
-                    'Gestion des sessions JTMS',
-                    'Interface Sherlock/Watson',
-                    'Tutoriel interactif',
-                    'Playground JTMS',
-                    'API et communication',
-                    'Tests de performance',
-                    'Utilitaires et nettoyage'
-                ]
+                'results': results
             }
             
             self._report_validation_results(validation_result)
             return validation_result
             
         except Exception as e:
-            self.logger.error(f"❌ Erreur lors de la validation: {e}")
-            return {
-                'phase': 'Phase 1 - Validation Web Interface JTMS',
-                'success': False,
-                'error': str(e),
-                'timestamp': '11/06/2025 10:34:00'
-            }
+            self.logger.error(f"❌ Erreur lors de la validation: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+        finally:
+            if self.orchestrator:
+                self.logger.info("🔄 Arrêt des services web...")
+                await self.orchestrator.stop_webapp()
+                self.logger.info("✅ Services web arrêtés.")
+                
+    def _get_jtms_test_config(self, headless: bool, base_url: str) -> Dict[str, Any]:
+        """Configuration spécialisée pour tests JTMS"""
+        return {
+            'enabled': True,
+            'browser': 'chromium',
+            'headless': headless,
+            'timeout_ms': 300000,
+            'slow_timeout_ms': 600000,
+            'test_paths': ['tests/e2e/js/jtms-interface.spec.js'],
+            'screenshots_dir': 'logs/screenshots/jtms',
+            'traces_dir': 'logs/traces/jtms',
+            'base_url': base_url, # Utilisation de l'URL dynamique
+            'retry_attempts': 2,
+            'parallel_workers': 1
+        }
     
     def _report_validation_results(self, results: Dict[str, Any]):
         """Rapport détaillé des résultats de validation"""
@@ -175,16 +157,18 @@ async def main():
     """Point d'entrée principal"""
     parser = argparse.ArgumentParser(description="Validation Web Interface JTMS")
     parser.add_argument('--headed', action='store_true', help="Lancer les tests en mode visible (non-headless)")
-    parser.add_argument('--port', type=int, default=5001, help="Port de l'interface web à tester")
+    parser.add_argument('--backend-port', type=int, default=5001, help="Port du serveur backend")
+    parser.add_argument('--frontend-port', type=int, default=3000, help="Port du serveur frontend")
     args = parser.parse_args()
 
     print("🧪 Démarrage Validation Web Interface JTMS")
-    print("Utilisation du PlaywrightRunner asynchrone de haut niveau")
+    print("Utilisation de l'orchestrateur web pour démarrer les services.")
     print(f"Mode headless: {not args.headed}")
-    print(f"Port de l'interface: {args.port}")
+    print(f"Port backend: {args.backend_port}")
+    print(f"Port frontend: {args.frontend_port}")
     print()
     
-    validator = JTMSWebValidator(headless=not args.headed, port=args.port)
+    validator = JTMSWebValidator(headless=not args.headed, backend_port=args.backend_port, frontend_port=args.frontend_port)
     
     # Exécution de la validation
     results = await validator.validate_web_interface()

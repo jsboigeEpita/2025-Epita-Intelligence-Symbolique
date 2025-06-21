@@ -44,8 +44,9 @@ class PlaywrightJSRunner:
         self.timeout_ms = config.get('timeout_ms', 30000)
         self.slow_timeout_ms = config.get('slow_timeout_ms', 60000)
         self.base_url = config.get('base_url', 'http://localhost:3000')
-        self.screenshots_dir = Path(config.get('screenshots_dir', 'logs/screenshots'))
-        self.traces_dir = Path(config.get('traces_dir', 'logs/traces'))
+        self.project_root = Path(__file__).resolve().parent.parent.parent.parent
+        self.screenshots_dir = self.project_root / config.get('screenshots_dir', 'logs/screenshots')
+        self.traces_dir = self.project_root / config.get('traces_dir', 'logs/traces')
         self.test_timeout = config.get('test_timeout', 600)  # 10 minutes
         
         # Création répertoires
@@ -73,7 +74,7 @@ class PlaywrightJSRunner:
         
         # Configuration effective
         effective_config = self._merge_runtime_config(runtime_config or {})
-        test_paths = test_paths or ['tests/jtms-interface.spec.js']
+        test_paths = test_paths or ['tests/e2e/js/jtms-interface.spec.js']
         
         self.logger.info(f"Démarrage tests Playwright JS: {test_paths}")
         self.logger.info(f"Configuration: {effective_config}")
@@ -119,7 +120,7 @@ class PlaywrightJSRunner:
         """Prépare l'environnement pour les tests"""
         # Variables d'environnement pour Playwright
         env_vars = {
-            'BASE_URL': config['base_url'],
+            'FRONTEND_URL': config['base_url'], # Correction ici pour correspondre au code JS
             'HEADLESS': 'false' if not config['headless'] else 'true',
             'BROWSER': config['browser'],
             'TIMEOUT': str(config['timeout_ms']),
@@ -177,7 +178,7 @@ class PlaywrightJSRunner:
         self.logger.info(f"Commande Playwright: {' '.join(cmd)}")
         
         # Répertoire de travail
-        cwd = Path.cwd() / 'tests_playwright'
+        cwd = Path.cwd()
         
         # Fichiers de log
         stdout_file = self.traces_dir / 'playwright_stdout.log'
@@ -324,7 +325,7 @@ class PlaywrightJSRunner:
         """Collecte les artefacts générés par Playwright"""
         try:
             # Screenshots
-            screenshots_path = Path('tests_playwright/test-results')
+            screenshots_path = Path.cwd() / 'test-results'
             if screenshots_path.exists():
                 screenshots = list(screenshots_path.rglob('*.png'))
                 self.last_results['artifacts']['screenshots'] = [str(p) for p in screenshots]
