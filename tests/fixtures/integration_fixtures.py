@@ -415,6 +415,11 @@ def dialogue_classes(tweety_classpath_initializer, integration_jvm):
     except jpype_instance.JException as e: pytest.fail(f"Echec import classes Dialogue: {e.stacktrace() if hasattr(e, 'stacktrace') else str(e)}")
     except Exception as e_py: pytest.fail(f"Erreur Python (dialogue_classes): {str(e_py)}")
 # --- Fixture pour les tests E2E ---
+import sys
+from pathlib import Path
+project_root_fixture = Path(__file__).parent.parent.parent.resolve()
+if str(project_root_fixture) not in sys.path:
+    sys.path.insert(0, str(project_root_fixture))
 import asyncio
 from argumentation_analysis.webapp.orchestrator import UnifiedWebOrchestrator
 import argparse
@@ -447,6 +452,10 @@ def e2e_servers(request):
     )
 
     orchestrator = UnifiedWebOrchestrator(args)
+    # On force l'activation du frontend dans la configuration en mémoire de l'orchestrateur
+    # pour ce test E2E. C'est plus propre que de modifier le fichier de config.
+    orchestrator.config['frontend']['enabled'] = True
+    logger.info("Configuration de l'orchestrateur modifiée en mémoire pour forcer l'activation du frontend.")
 
     # Le scope "session" de pytest s'exécute en dehors de la boucle d'événement
     # d'un test individuel. On doit gérer la boucle manuellement ici.
@@ -456,7 +465,8 @@ def e2e_servers(request):
         # C'est un scénario complexe, on skippe pour l'instant.
         pytest.skip("Impossible de démarrer les serveurs E2E dans une boucle asyncio déjà active.")
 
-    success = loop.run_until_complete(orchestrator.start_webapp(headless=True, frontend_enabled=True))
+    # L'argument frontend_enabled n'est plus nécessaire car on a modifié la config
+    success = loop.run_until_complete(orchestrator.start_webapp(headless=True))
     
     # Vérification que le backend est bien démarré, car c'est bloquant.
     if not orchestrator.app_info.backend_pid:

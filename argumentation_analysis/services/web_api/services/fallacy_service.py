@@ -67,9 +67,9 @@ class FallacyService:
             
             # Analyseur contextuel amélioré
             if EnhancedContextualAnalyzer:
-                # self.enhanced_analyzer = EnhancedContextualAnalyzer()
-                self.enhanced_analyzer = None # Désactivé pour les tests
-                self.logger.warning("[OK] EnhancedContextualAnalyzer temporarily disabled for testing")
+                self.enhanced_analyzer = EnhancedContextualAnalyzer()
+                # self.enhanced_analyzer = None # Désactivé pour les tests
+                self.logger.info("[OK] EnhancedContextualAnalyzer initialized")
             else:
                 self.enhanced_analyzer = None
             

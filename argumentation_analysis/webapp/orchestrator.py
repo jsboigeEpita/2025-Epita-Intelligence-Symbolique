@@ -40,11 +40,11 @@ import psutil
 
 # Imports internes (sans activation d'environnement au niveau du module)
 # Le bootstrap se fera dans la fonction main()
-from project_core.webapp_from_scripts.backend_manager import BackendManager
-from project_core.webapp_from_scripts.frontend_manager import FrontendManager
+# from project_core.webapp_from_scripts.backend_manager import BackendManager
+# from project_core.webapp_from_scripts.frontend_manager import FrontendManager
 # from project_core.webapp_from_scripts.playwright_runner import PlaywrightRunner
-from project_core.webapp_from_scripts.process_cleaner import ProcessCleaner
-from project_core.setup_core_from_scripts.manage_tweety_libs import download_tweety_jars
+# from project_core.webapp_from_scripts.process_cleaner import ProcessCleaner
+from argumentation_analysis.core.jvm_setup import download_tweety_jars
 
 # Import du gestionnaire centralisé des ports
 try:
@@ -53,6 +53,329 @@ try:
 except ImportError:
     CENTRAL_PORT_MANAGER_AVAILABLE = False
     print("[WARNING] Gestionnaire centralisé des ports non disponible, utilisation des ports par défaut")
+
+# --- DÉBUT DES CLASSES MINIMALES DE REMPLACEMENT ---
+
+class MinimalProcessCleaner:
+    def __init__(self, logger):
+        self.logger = logger
+
+    async def cleanup_webapp_processes(self, ports_to_check: List[int] = None):
+        """Nettoie les instances précédentes de manière robuste."""
+        self.logger.info("[CLEANER] Démarrage du nettoyage robuste des instances webapp.")
+        ports_to_check = ports_to_check or []
+        
+        # --- Nettoyage radical basé sur le nom du processus ---
+        current_pid = os.getpid()
+        self.logger.info(f"Recherche de tous les processus 'python' et 'node' à terminer (sauf le PID actuel: {current_pid})...")
+        killed_pids = []
+        # On recherche les processus qui contiennent les mots clés de nos applications
+        process_filters = self.config.get('cleanup', {}).get('process_filters', ['app.py', 'web_api', 'serve', 'uvicorn'])
+        
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                cmdline = ' '.join(proc.info['cmdline'] or [])
+                # Si un de nos filtres est dans la ligne de commande, et que ce n'est pas nous-même
+                if any(f in cmdline for f in process_filters) and proc.info['pid'] != current_pid:
+                    p = psutil.Process(proc.info['pid'])
+                    p.kill()
+                    killed_pids.append(proc.info['pid'])
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+        
+        if killed_pids:
+            self.logger.warning(f"[CLEANER] Processus terminés de force par filtre de commande: {killed_pids}")
+        else:
+            self.logger.info("[CLEANER] Aucun processus correspondant aux filtres de commande trouvé.")
+
+        # --- Nettoyage basé sur les ports ---
+        if not ports_to_check:
+            return
+
+        max_retries = 3
+        retry_delay_s = 2
+
+        for i in range(max_retries):
+            pids_on_ports = self._get_pids_on_ports(ports_to_check)
+            
+            if not pids_on_ports:
+                self.logger.info(f"[CLEANER] Aucun processus détecté sur les ports cibles: {ports_to_check}.")
+                return
+
+            self.logger.info(f"[CLEANER] Tentative {i+1}/{max_retries}: PIDs {list(pids_on_ports.keys())} trouvés sur les ports {list(pids_on_ports.values())}. Terminaison...")
+            for pid in pids_on_ports:
+                try:
+                    p = psutil.Process(pid)
+                    p.kill()
+                except psutil.NoSuchProcess:
+                    pass
+            
+            await asyncio.sleep(retry_delay_s)
+
+        final_pids = self._get_pids_on_ports(ports_to_check)
+        if final_pids:
+            self.logger.error(f"[CLEANER] ECHEC du nettoyage. PIDs {list(final_pids.keys())} occupent toujours les ports après {max_retries} tentatives.")
+        else:
+            self.logger.info("[CLEANER] SUCCES du nettoyage. Tous les ports cibles sont libres.")
+
+
+    def _get_pids_on_ports(self, ports: List[int]) -> Dict[int, int]:
+        """Retourne un dictionnaire {pid: port} pour les ports utilisés."""
+        pids_map = {}
+        for conn in psutil.net_connections(kind='inet'):
+            if conn.laddr.port in ports and conn.status == psutil.CONN_LISTEN and conn.pid:
+                pids_map[conn.pid] = conn.laddr.port
+        return pids_map
+
+class MinimalBackendManager:
+    def __init__(self, config, logger):
+        self.config = config
+        self.logger = logger
+        self.process: Optional[asyncio.subprocess.Process] = None
+        self.port = 0
+
+    def _find_free_port(self) -> int:
+        """Trouve un port TCP libre et le retourne."""
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(('localhost', 0))
+            return s.getsockname()[1]
+
+    async def start(self, port_override=0):
+        """Démarre le serveur backend et attend qu'il soit prêt."""
+        self.port = port_override or self._find_free_port()
+        self.logger.info(f"[BACKEND] Tentative de démarrage du backend sur le port {self.port}...")
+
+        module_spec = self.config.get('module', 'api.main:app')
+        
+        # On utilise directement le nom correct de l'environnement.
+        # Idéalement, cela viendrait d'une source de configuration plus fiable.
+        env_name = "projet-is-roo"
+        self.logger.info(f"[BACKEND] Utilisation du nom d'environnement Conda: '{env_name}'")
+        
+        command = [
+            'conda', 'run', '-n', env_name, '--no-capture-output',
+            'python', '-m', 'uvicorn', module_spec,
+            '--host', '127.0.0.1',
+            '--port', str(self.port)
+        ]
+        
+        self.logger.info(f"[BACKEND] Commande de lancement: {' '.join(command)}")
+
+        try:
+            # Lancement du processus en redirigeant stdout et stderr
+            self.process = await asyncio.create_subprocess_exec(
+                *command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            self.logger.info(f"[BACKEND] Processus backend (PID: {self.process.pid}) lancé.")
+
+            # Attendre que le serveur soit prêt en lisant sa sortie
+            timeout_seconds = self.config.get('timeout_seconds', 30)
+            
+            try:
+                # On lit les deux flux (stdout, stderr) jusqu'à ce qu'on trouve le message de succès ou que le timeout soit atteint.
+                ready = False
+                output_lines = []
+
+                async def read_stream(stream, stream_name):
+                    """Lit une ligne d'un stream et la traite."""
+                    nonlocal ready
+                    line = await stream.readline()
+                    if line:
+                        line_str = line.decode('utf-8', errors='ignore').strip()
+                        output_lines.append(f"[{stream_name}] {line_str}")
+                        self.logger.info(f"[BACKEND_LOGS] {line_str}")
+                        if "Application startup complete" in line_str:
+                            ready = True
+                    return line
+                
+                end_time = asyncio.get_event_loop().time() + timeout_seconds
+                while not ready and asyncio.get_event_loop().time() < end_time:
+                    # Création des tâches pour lire une ligne de chaque flux
+                    tasks = [
+                        asyncio.create_task(read_stream(self.process.stdout, "STDOUT")),
+                        asyncio.create_task(read_stream(self.process.stderr, "STDERR"))
+                    ]
+                    # Attente que l'une des tâches se termine
+                    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+                    
+                    for task in pending:
+                        task.cancel() # On annule la tâche qui n'a pas fini
+                    
+                    if not any(task.result() for task in done): # Si les deux streams sont fermés
+                        break
+                
+                if not ready:
+                     raise asyncio.TimeoutError("Le message 'Application startup complete' n'a pas été trouvé dans les logs.")
+
+
+            except asyncio.TimeoutError:
+                log_output = "\n".join(output_lines)
+                self.logger.error(f"[BACKEND] Timeout de {timeout_seconds}s atteint. Le serveur backend n'a pas démarré correctement. Logs:\n{log_output}")
+                await self.stop()
+                return {'success': False, 'error': 'Timeout lors du démarrage du backend.'}
+
+            url = f"http://localhost:{self.port}"
+            self.logger.info(f"[BACKEND] Backend démarré et prêt sur {url}")
+            return {
+                'success': True,
+                'url': url,
+                'port': self.port,
+                'pid': self.process.pid
+            }
+
+        except Exception as e:
+            self.logger.error(f"[BACKEND] Erreur critique lors du lancement du processus backend: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    async def stop(self):
+        if self.process and self.process.returncode is None:
+            self.logger.info(f"[BACKEND] Arrêt du processus backend (PID: {self.process.pid})...")
+            try:
+                self.process.terminate()
+                await asyncio.wait_for(self.process.wait(), timeout=5.0)
+                self.logger.info(f"[BACKEND] Processus backend (PID: {self.process.pid}) arrêté.")
+            except asyncio.TimeoutError:
+                self.logger.warning(f"[BACKEND] Le processus backend (PID: {self.process.pid}) n'a pas répondu à terminate. Utilisation de kill.")
+                self.process.kill()
+                await self.process.wait()
+        self.process = None
+
+
+class MinimalFrontendManager:
+    def __init__(self, config, logger, backend_url=None):
+        self.config = config
+        self.logger = logger
+        self.backend_url = backend_url
+        self.process: Optional[asyncio.subprocess.Process] = None
+
+    async def start(self):
+        """Démarre le serveur de développement frontend."""
+        if not self.config.get('enabled', False):
+            return {'success': True, 'error': 'Frontend disabled in config.'}
+
+        path = self.config.get('path')
+        if not path or not Path(path).exists():
+            self.logger.error(f"[FRONTEND] Chemin '{path}' non valide ou non trouvé.")
+            return {'success': False, 'error': f"Path not found: {path}"}
+        
+        port = self.config.get('port', 3000)
+        start_command_str = self.config.get('start_command', 'npm start')
+        # Sur Windows, il est plus robuste d'appeler npm.cmd directement
+        if sys.platform == "win32":
+            start_command_str = start_command_str.replace("npm", "npm.cmd", 1)
+        start_command = start_command_str.split()
+        
+        self.logger.info(f"[FRONTEND] Tentative de démarrage du frontend dans '{path}' sur le port {port}...")
+
+        # Préparation de l'environnement pour le processus frontend
+        env = os.environ.copy()
+        env['BROWSER'] = 'none' # Empêche l'ouverture d'un nouvel onglet
+        env['PORT'] = str(port)
+        if self.backend_url:
+            env['REACT_APP_BACKEND_URL'] = self.backend_url
+            self.logger.info(f"[FRONTEND] Variable d'environnement REACT_APP_BACKEND_URL définie sur: {self.backend_url}")
+
+        try:
+            self.process = await asyncio.create_subprocess_exec(
+                *start_command,
+                cwd=path,
+                env=env,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            self.logger.info(f"[FRONTEND] Processus frontend (PID: {self.process.pid}) lancé.")
+
+            timeout_seconds = self.config.get('timeout_seconds', 90)
+            
+            try:
+                ready_line = "Compiled successfully!"
+                ready = False
+                output_lines = []
+
+                async def read_stream(stream, stream_name):
+                    nonlocal ready
+                    line = await stream.readline()
+                    if line:
+                        line_str = line.decode('utf-8', errors='ignore').strip()
+                        output_lines.append(f"[{stream_name}] {line_str}")
+                        self.logger.info(f"[FRONTEND_LOGS] {line_str}")
+                        if ready_line in line_str:
+                            ready = True
+                    return line
+
+                end_time = asyncio.get_event_loop().time() + timeout_seconds
+                while not ready and asyncio.get_event_loop().time() < end_time:
+                    tasks = [
+                        asyncio.create_task(read_stream(self.process.stdout, "STDOUT")),
+                        asyncio.create_task(read_stream(self.process.stderr, "STDERR"))
+                    ]
+                    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+                    
+                    for task in pending:
+                        task.cancel()
+                    
+                    if not any(task.result() for task in done):
+                        break
+
+                if not ready:
+                    raise asyncio.TimeoutError("Le message 'Compiled successfully!' n'a pas été trouvé.")
+
+            except asyncio.TimeoutError:
+                log_output = "\n".join(output_lines)
+                self.logger.error(f"[FRONTEND] Timeout de {timeout_seconds}s atteint. Le serveur frontend n'a pas démarré. Logs:\n{log_output}")
+                await self.stop()
+                return {'success': False, 'error': 'Timeout lors du démarrage du frontend.'}
+
+            url = f"http://localhost:{port}"
+            self.logger.info(f"[FRONTEND] Frontend démarré et prêt sur {url}")
+            return {'success': True, 'url': url, 'port': port, 'pid': self.process.pid}
+
+        except Exception as e:
+            self.logger.error(f"[FRONTEND] Erreur critique lors du lancement du processus frontend: {e}", exc_info=True)
+            return {'success': False, 'error': str(e)}
+
+    async def stop(self):
+         if self.process and self.process.returncode is None:
+            self.logger.info(f"[FRONTEND] Arrêt du processus frontend (PID: {self.process.pid})...")
+            # La logique d'arrêt pour `npm` peut être complexe car il lance des enfants.
+            # On utilise psutil pour tuer l'arbre de processus.
+            if not self.process: return
+            try:
+                parent = psutil.Process(self.process.pid)
+                children = parent.children(recursive=True)
+                for child in children:
+                    self.logger.info(f"[FRONTEND] Arrêt du processus enfant (PID: {child.pid})...")
+                    child.kill()
+                self.logger.info(f"[FRONTEND] Arrêt du processus parent (PID: {parent.pid})...")
+                parent.kill()
+                # Attendre que le processus principal soit bien terminé
+                await asyncio.wait_for(self.process.wait(), timeout=10.0)
+                self.logger.info(f"[FRONTEND] Processus frontend (PID: {self.process.pid}) et ses enfants ({len(children)}) arrêtés.")
+            except (psutil.NoSuchProcess, asyncio.TimeoutError) as e:
+                self.logger.error(f"[FRONTEND] Erreur lors de l'arrêt du processus frontend (PID: {self.process.pid}): {e}")
+                # En dernier recours, on fait un kill simple si le processus existe encore
+                if self.process and self.process.returncode is None:
+                    self.process.kill()
+                    await self.process.wait()
+            finally:
+                self.process = None
+
+    async def health_check(self) -> bool:
+        """Vérifie si le serveur frontend répond."""
+        url = f"http://localhost:{self.config.get('port', 3000)}"
+        self.logger.info(f"[FRONTEND] Health Check sur {url}")
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=10) as response:
+                    return response.status == 200
+        except aiohttp.ClientError as e:
+            self.logger.warning(f"[FRONTEND] Health check a échoué: {e}")
+            return False
+
+# --- FIN DES CLASSES MINIMALES DE REMPLACEMENT ---
+
 
 class WebAppStatus(Enum):
     """États de l'application web"""
@@ -114,15 +437,15 @@ class UnifiedWebOrchestrator:
         self.enable_trace = not args.no_trace
 
         # Gestionnaires spécialisés
-        self.backend_manager = BackendManager(self.config.get('backend', {}), self.logger)
-        self.frontend_manager: Optional[FrontendManager] = None  # Sera instancié plus tard
+        self.backend_manager = MinimalBackendManager(self.config.get('backend', {}), self.logger)
+        self.frontend_manager: Optional[MinimalFrontendManager] = None  # Sera instancié plus tard
 
         playwright_config = self.config.get('playwright', {})
         # Le timeout CLI surcharge la config YAML
         playwright_config['timeout_ms'] = self.timeout_minutes * 60 * 1000
 
         # self.playwright_runner = PlaywrightRunner(playwright_config, self.logger)
-        self.process_cleaner = ProcessCleaner(self.logger)
+        self.process_cleaner = MinimalProcessCleaner(self.logger)
 
         # État de l'application
         self.app_info = WebAppInfo()
@@ -548,60 +871,32 @@ class UnifiedWebOrchestrator:
     # ========================================================================
     
     async def _cleanup_previous_instances(self):
-        """Nettoie les instances précédentes de manière robuste."""
-        self.add_trace("[CLEAN] NETTOYAGE PREALABLE", "Arrêt robuste des instances existantes")
+        """Nettoie les instances précédentes en utilisant le cleaner centralisé."""
+        self.add_trace("[CLEAN] NETTOYAGE PREALABLE", "Arrêt robuste des instances existantes via ProcessCleaner")
 
-        # --- AJOUT: Tuerie des processus Python non-essentiels ---
-        current_pid = os.getpid()
-        self.logger.warning(f"Nettoyage radical: recherche de tous les processus 'python.exe' à terminer (sauf le PID actuel: {current_pid})...")
-        killed_pids = []
-        for proc in psutil.process_iter(['pid', 'name']):
-            if 'python' in proc.info['name'].lower() and proc.info['pid'] != current_pid:
-                try:
-                    p = psutil.Process(proc.info['pid'])
-                    p.kill()
-                    killed_pids.append(proc.info['pid'])
-                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                    pass # Le processus a peut-être déjà disparu ou je n'ai pas les droits, on continue
-        if killed_pids:
-            self.logger.warning(f"Processus Python terminés de force: {killed_pids}")
-        else:
-            self.logger.info("Aucun autre processus Python à terminer.")
-        # --- FIN DE L'AJOUT ---
+        # Je dois injecter la config dans le cleaner car il en a besoin
+        self.process_cleaner.config = self.config
 
         backend_config = self.config.get('backend', {})
+        frontend_config = self.config.get('frontend', {})
+        
         ports_to_check = []
         if backend_config.get('enabled'):
-            ports_to_check.append(backend_config.get('start_port'))
-            ports_to_check.extend(backend_config.get('fallback_ports', []))
-        
+            start_port = backend_config.get('start_port')
+            if start_port: ports_to_check.append(start_port)
+            
+            fallback_ports = backend_config.get('fallback_ports')
+            if fallback_ports: ports_to_check.extend(fallback_ports)
+
+        if frontend_config.get('enabled'):
+            frontend_port = frontend_config.get('port')
+            if frontend_port: ports_to_check.append(frontend_port)
+
         ports_to_check = [p for p in ports_to_check if p is not None]
-
-        max_retries = 3
-        retry_delay_s = 2
-
-        for i in range(max_retries):
-            used_ports = [p for p in ports_to_check if self._is_port_in_use(p)]
-            
-            if not used_ports:
-                self.add_trace("[CLEAN] PORTS LIBRES", f"Aucun service détecté sur {ports_to_check}.")
-                return
-
-            self.add_trace(f"[CLEAN] TENTATIVE {i+1}/{max_retries}", f"Ports occupés: {used_ports}. Nettoyage forcé.")
-            
-            # Utilise la méthode de nettoyage la plus générale qui cherche par port et par nom de processus
-            await self.process_cleaner.cleanup_webapp_processes()
-            
-            # Pause pour laisser le temps au système d'exploitation de libérer les ports
-            await asyncio.sleep(retry_delay_s)
-
-        # Vérification finale
-        used_ports_after_cleanup = [p for p in ports_to_check if self._is_port_in_use(p)]
-        if used_ports_after_cleanup:
-            self.add_trace("[ERROR] ECHEC NETTOYAGE", f"Ports {used_ports_after_cleanup} toujours occupés après {max_retries} tentatives.", status="error")
-            # Envisager une action plus radicale si nécessaire, ou lever une exception
-        else:
-            self.add_trace("[OK] NETTOYAGE REUSSI", "Tous les ports cibles sont libres.")
+        
+        # On passe la main au cleaner centralisé
+        await self.process_cleaner.cleanup_webapp_processes(ports_to_check=ports_to_check)
+        self.add_trace("[OK] NETTOYAGE PREALABLE TERMINE", f"Ports vérifiés: {ports_to_check}")
 
     async def _launch_playwright_browser(self):
         """Lance et configure le navigateur Playwright."""
@@ -673,7 +968,7 @@ class UnifiedWebOrchestrator:
         self.add_trace("[FRONTEND] DEMARRAGE FRONTEND", "Lancement interface React")
         
         # Instanciation tardive du FrontendManager pour lui passer l'URL du backend
-        self.frontend_manager = FrontendManager(
+        self.frontend_manager = MinimalFrontendManager(
             self.config.get('frontend', {}),
             self.logger,
             backend_url=self.app_info.backend_url

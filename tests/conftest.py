@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+import sys
+from pathlib import Path
+
+# Ajoute la racine du projet au sys.path pour résoudre les problèmes d'import
+# causés par le `rootdir` de pytest qui interfère avec la résolution des modules.
+project_root_conftest = Path(__file__).parent.parent.resolve()
+if str(project_root_conftest) not in sys.path:
+    sys.path.insert(0, str(project_root_conftest))
 """
 Fichier de configuration racine pour les tests pytest, s'applique à l'ensemble du projet.
 
