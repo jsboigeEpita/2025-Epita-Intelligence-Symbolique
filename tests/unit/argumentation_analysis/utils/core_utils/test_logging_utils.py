@@ -15,7 +15,7 @@ from unittest.mock import MagicMock, patch
 
 import sys # Ajout pour sys.stdout dans le test modifié
 
-from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
+from argumentation_analysis.core.utils.logging_utils import setup_logging
 
 # Liste des niveaux de log valides pour les tests paramétrés
 VALID_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]

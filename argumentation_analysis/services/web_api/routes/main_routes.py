@@ -1,15 +1,10 @@
 # argumentation_analysis/services/web_api/routes/main_routes.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import logging
 import asyncio
 
 # Import des services et modèles nécessaires
 # Les imports relatifs devraient maintenant pointer vers les bons modules.
-from ..services.analysis_service import AnalysisService
-from ..services.validation_service import ValidationService
-from ..services.fallacy_service import FallacyService
-from ..services.framework_service import FrameworkService
-from ..services.logic_service import LogicService
 from ..models.request_models import (
     AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest
 )
@@ -22,25 +17,21 @@ main_bp = Blueprint('main_api', __name__)
 # Note: Pour une meilleure architecture, les services devraient être injectés
 # plutôt qu'importés de cette manière.
 # On importe directement depuis le contexte de l'application.
-def get_services_from_app_context():
-    from ..app import analysis_service, validation_service, fallacy_service, framework_service, logic_service
-    return analysis_service, validation_service, fallacy_service, framework_service, logic_service
-
 @main_bp.route('/health', methods=['GET'])
 def health_check():
     """Vérification de l'état de l'API."""
-    analysis_service, validation_service, fallacy_service, framework_service, logic_service = get_services_from_app_context()
     try:
+        services = current_app.services
         return jsonify({
             "status": "healthy",
             "message": "API d'analyse argumentative opérationnelle",
             "version": "1.0.0",
             "services": {
-                "analysis": analysis_service.is_healthy(),
-                "validation": validation_service.is_healthy(),
-                "fallacy": fallacy_service.is_healthy(),
-                "framework": framework_service.is_healthy(),
-                "logic": logic_service.is_healthy()
+                "analysis": services.analysis_service.is_healthy(),
+                "validation": services.validation_service.is_healthy(),
+                "fallacy": services.fallacy_service.is_healthy(),
+                "framework": services.framework_service.is_healthy(),
+                "logic": services.logic_service.is_healthy()
             }
         })
     except Exception as e:
@@ -54,8 +45,8 @@ def health_check():
 @main_bp.route('/analyze', methods=['POST'])
 def analyze_text():
     """Analyse complète d'un texte argumentatif."""
-    analysis_service, _, _, _, _ = get_services_from_app_context()
     try:
+        analysis_service = current_app.services.analysis_service
         data = request.get_json()
         if not data:
             return jsonify(ErrorResponse(error="Données manquantes", message="Le body JSON est requis", status_code=400).dict()), 400
@@ -74,8 +65,8 @@ def analyze_text():
 @main_bp.route('/validate', methods=['POST'])
 def validate_argument():
     """Validation logique d'un argument."""
-    _, validation_service, _, _, _ = get_services_from_app_context()
     try:
+        validation_service = current_app.services.validation_service
         data = request.get_json()
         if not data:
             return jsonify(ErrorResponse(error="Données manquantes", message="Le body JSON est requis", status_code=400).dict()), 400
@@ -91,8 +82,8 @@ def validate_argument():
 @main_bp.route('/fallacies', methods=['POST'])
 def detect_fallacies():
     """Détection de sophismes dans un texte."""
-    _, _, fallacy_service, _, _ = get_services_from_app_context()
     try:
+        fallacy_service = current_app.services.fallacy_service
         data = request.get_json()
         if not data:
             return jsonify(ErrorResponse(error="Données manquantes", message="Le body JSON est requis", status_code=400).dict()), 400
@@ -108,8 +99,8 @@ def detect_fallacies():
 @main_bp.route('/framework', methods=['POST'])
 def build_framework():
     """Construction d'un framework de Dung."""
-    _, _, _, framework_service, _ = get_services_from_app_context()
     try:
+        framework_service = current_app.services.framework_service
         data = request.get_json()
         if not data:
             return jsonify(ErrorResponse(error="Données manquantes", message="Le body JSON est requis", status_code=400).dict()), 400

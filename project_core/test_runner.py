@@ -133,7 +133,7 @@ class TestRunner:
             print(f"Type de test '{self.test_type}' non reconnu pour pytest.")
             return
 
-        command = [sys.executable, "-m", "pytest"] + test_paths
+        command = [sys.executable, "-m", "pytest", "-s"] + test_paths
         
         # Ne lance pas les tests e2e avec pytest, ils sont gérés par playwright
         if self.test_type == "e2e":
@@ -144,7 +144,7 @@ class TestRunner:
 
         if result.returncode != 0:
             print("Pytest a rencontré des erreurs.")
-            # sys.exit(result.returncode) # On peut décider de stopper ici ou de continuer
+            sys.exit(result.returncode) # On peut décider de stopper ici ou de continuer
 
     def _run_playwright(self):
         """Lance les tests Playwright."""

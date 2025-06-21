@@ -15,7 +15,7 @@ from pathlib import Path
 
 import requests # Pour les exceptions
 
-from argumentation_analysis.utils.core_utils.network_utils import download_file
+from argumentation_analysis.core.utils.network_utils import download_file
 
 @pytest.fixture
 def mock_requests_get():

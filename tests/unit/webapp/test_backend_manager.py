@@ -34,20 +34,23 @@ def test_initialization(manager, backend_config):
 @patch('subprocess.Popen')
 async def test_start_success(mock_popen, mock_download_jars, manager):
     """Tests a successful start call."""
-    manager._wait_for_backend = AsyncMock(return_value=True)
+    # La nouvelle signature de _wait_for_backend retourne (bool, Optional[int])
+    manager._wait_for_backend = AsyncMock(return_value=(True, 5003))
     manager._is_port_occupied = AsyncMock(return_value=False)
     manager._save_backend_info = AsyncMock()
     mock_download_jars.return_value = True
 
     mock_popen.return_value.pid = 1234
     
-    result = await manager.start()
+    # Le port est maintenant passé via start()
+    result = await manager.start(port_override=5003)
 
     assert result['success'] is True
-    assert result['port'] == manager.start_port
+    assert result['port'] == 5003
     assert result['pid'] == 1234
     mock_popen.assert_called_once()
-    manager._wait_for_backend.assert_called_once_with(manager.start_port)
+    # On vérifie que la méthode est appelée, mais on ne se soucie pas des chemins de log exacts dans ce test.
+    manager._wait_for_backend.assert_called_once()
     manager._save_backend_info.assert_called_once()
 
 @pytest.mark.asyncio
@@ -64,14 +67,15 @@ async def test_start_port_occupied(manager):
 @patch('subprocess.Popen')
 async def test_start_fails_if_wait_fails(mock_popen, manager):
     """Tests that start fails if _wait_for_backend returns False."""
-    manager._wait_for_backend = AsyncMock(return_value=False)
+    # La nouvelle signature de _wait_for_backend retourne (bool, Optional[int])
+    manager._wait_for_backend = AsyncMock(return_value=(False, None))
     manager._is_port_occupied = AsyncMock(return_value=False)
     manager._cleanup_failed_process = AsyncMock()
 
     result = await manager.start()
 
     assert result['success'] is False
-    assert f"a échoué à démarrer sur le port {manager.start_port}" in result['error']
+    assert f"Le backend a échoué à démarrer sur le port {manager.start_port}" in result['error']
     manager._cleanup_failed_process.assert_called_once()
 
 @pytest.mark.asyncio
@@ -83,9 +87,11 @@ async def test_wait_for_backend_process_dies(manager):
     
     # We need to mock the sleep to ensure the loop doesn't timeout before checking poll()
     with patch('asyncio.sleep', new_callable=AsyncMock):
-        result = await manager._wait_for_backend(8000)
+        # On passe des Mocks pour les chemins de logs
+        result, port = await manager._wait_for_backend(MagicMock(spec=Path), MagicMock(spec=Path))
     
     assert result is False
+    assert port is None
     manager.logger.error.assert_called_with("Processus backend terminé prématurément (code: 1)")
 
 @pytest.mark.asyncio
@@ -101,9 +107,14 @@ async def test_wait_for_backend_health_check_ok(mock_get, manager):
 
     # Mock asyncio.sleep to avoid actual waiting
     with patch('asyncio.sleep', new_callable=AsyncMock):
-        result = await manager._wait_for_backend(8000)
+        with patch('pathlib.Path.exists', return_value=True): # Simuler que les fichiers de log existent
+            with patch('project_core.webapp_from_scripts.backend_manager.asyncio.to_thread') as mock_read:
+                 # Simuler la lecture du log qui trouve le port
+                mock_read.return_value = "Uvicorn running on http://127.0.0.1:8000"
+                result, port = await manager._wait_for_backend(MagicMock(spec=Path), MagicMock(spec=Path))
 
     assert result is True
+    assert port == 8000
 
 @pytest.mark.asyncio
 async def test_wait_for_backend_timeout(manager):
@@ -114,10 +125,16 @@ async def test_wait_for_backend_timeout(manager):
     # Make health checks fail continuously
     manager._is_port_occupied = AsyncMock(return_value=False) # Should not be called here but for safety
     with patch('aiohttp.ClientSession.get', side_effect=asyncio.TimeoutError("Test Timeout")):
-        result = await manager._wait_for_backend(8000)
-    
+        with patch('pathlib.Path.exists', return_value=True):
+            with patch('project_core.webapp_from_scripts.backend_manager.asyncio.to_thread') as mock_read:
+                # Simuler la lecture du log qui trouve le port.
+                # On simule ici que le health check échoue après la découverte du port
+                mock_read.return_value = "Uvicorn running on http://127.0.0.1:8000"
+                result, port = await manager._wait_for_backend(MagicMock(spec=Path), MagicMock(spec=Path))
+
     assert result is False
-    manager.logger.error.assert_called_with("Timeout dépassé - Backend inaccessible sur http://127.0.0.1:8000/api/health")
+    assert port is None # Le port a été trouvé mais le health check a échoué
+    manager.logger.error.assert_called_with("Timeout dépassé - Health check inaccessible sur http://127.0.0.1:8000/api/health")
 
 @pytest.mark.asyncio
 async def test_stop_process(manager):
