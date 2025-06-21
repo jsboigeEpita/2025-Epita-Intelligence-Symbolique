@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch, AsyncMock
 import sys
 sys.path.insert(0, '.')
 
-from project_core.webapp_from_scripts.backend_manager import BackendManager
+from scripts.apps.webapp.backend_manager import BackendManager
 
 @pytest.fixture
 def backend_config(webapp_config):

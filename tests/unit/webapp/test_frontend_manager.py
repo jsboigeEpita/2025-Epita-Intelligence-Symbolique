@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, '.')
 
-from project_core.webapp_from_scripts.frontend_manager import FrontendManager
+from scripts.apps.webapp.frontend_manager import FrontendManager
 
 @pytest.fixture
 def frontend_config(webapp_config):

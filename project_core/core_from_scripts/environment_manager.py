@@ -621,34 +621,10 @@ class EnvironmentManager:
                 else:
                     self.logger.warning(f"Le chemin JAVA_HOME '{absolute_java_home}' est invalide. Tentative d'auto-installation...")
                     try:
-                        # On importe ici pour éviter dépendance circulaire si ce module est importé ailleurs
-                        from project_core.setup_core_from_scripts.manage_portable_tools import setup_tools
-                        
-                        # Le répertoire de base pour l'installation est le parent du chemin attendu pour JAVA_HOME
-                        # Ex: si JAVA_HOME est .../libs/portable_jdk/jdk-17..., le base_dir est .../libs/portable_jdk
-                        jdk_install_base_dir = absolute_java_home.parent
-                        self.logger.info(f"Le JDK sera installé dans : {jdk_install_base_dir}")
-                        
-                        installed_tools = setup_tools(
-                            tools_dir_base_path=str(jdk_install_base_dir),
-                            logger_instance=self.logger,
-                            skip_octave=True  # On ne veut que le JDK
-                        )
-
-                        # Vérifier si l'installation a retourné un chemin pour JAVA_HOME
-                        if 'JAVA_HOME' in installed_tools and Path(installed_tools['JAVA_HOME']).exists():
-                            self.logger.success(f"JDK auto-installé avec succès dans: {installed_tools['JAVA_HOME']}")
-                            os.environ['JAVA_HOME'] = installed_tools['JAVA_HOME']
-                            # On refait la vérification pour mettre à jour le PATH etc.
-                            if Path(os.environ['JAVA_HOME']).exists() and Path(os.environ['JAVA_HOME']).is_dir():
-                                self.logger.info(f"Le chemin JAVA_HOME après installation est maintenant valide.")
-                            else:
-                                self.logger.error("Échec critique : le chemin JAVA_HOME est toujours invalide après l'installation.")
-                        else:
-                            self.logger.error("L'auto-installation du JDK a échoué ou n'a retourné aucun chemin.")
-
+                        from project_core.environment.tool_installer import ensure_tools_are_installed
+                        ensure_tools_are_installed(tools_to_ensure=['jdk'], logger=self.logger)
                     except ImportError as ie:
-                        self.logger.error(f"Échec de l'import de 'manage_portable_tools' pour l'auto-installation: {ie}")
+                        self.logger.error(f"Échec de l'import de 'tool_installer' pour l'auto-installation de JAVA: {ie}")
                     except Exception as e:
                         self.logger.error(f"Une erreur est survenue durant l'auto-installation du JDK: {e}", exc_info=True)
         
@@ -663,33 +639,14 @@ class EnvironmentManager:
         
         # --- BLOC D'AUTO-INSTALLATION NODE.JS ---
         if 'NODE_HOME' not in os.environ or not Path(os.environ.get('NODE_HOME', '')).is_dir():
-            self.logger.warning("NODE_HOME non défini ou invalide. Tentative d'auto-installation...")
-            try:
-                from project_core.setup_core_from_scripts.manage_portable_tools import setup_tools
-
-                # Définir l'emplacement d'installation par défaut pour Node.js
-                node_install_base_dir = self.project_root / 'libs'
-                node_install_base_dir.mkdir(exist_ok=True)
-                
-                self.logger.info(f"Node.js sera installé dans : {node_install_base_dir}")
-
-                installed_tools = setup_tools(
-                    tools_dir_base_path=str(node_install_base_dir),
-                    logger_instance=self.logger,
-                    skip_jdk=True,
-                    skip_octave=True,
-                    skip_node=False
-                )
-
-                if 'NODE_HOME' in installed_tools and Path(installed_tools['NODE_HOME']).exists():
-                    self.logger.success(f"Node.js auto-installé avec succès dans: {installed_tools['NODE_HOME']}")
-                    os.environ['NODE_HOME'] = installed_tools['NODE_HOME']
-                else:
-                    self.logger.error("L'auto-installation de Node.js a échoué.")
-            except ImportError as ie:
-                self.logger.error(f"Échec de l'import de 'manage_portable_tools' pour l'auto-installation de Node.js: {ie}")
-            except Exception as e:
-                self.logger.error(f"Une erreur est survenue durant l'auto-installation de Node.js: {e}", exc_info=True)
+             self.logger.warning("NODE_HOME non défini ou invalide. Tentative d'auto-installation...")
+             try:
+                 from project_core.environment.tool_installer import ensure_tools_are_installed
+                 ensure_tools_are_installed(tools_to_ensure=['node'], logger=self.logger)
+             except ImportError as ie:
+                 self.logger.error(f"Échec de l'import de 'tool_installer' pour l'auto-installation de Node.js: {ie}")
+             except Exception as e:
+                 self.logger.error(f"Une erreur est survenue durant l'auto-installation de Node.js: {e}", exc_info=True)
 
 
         # Vérifications préalables

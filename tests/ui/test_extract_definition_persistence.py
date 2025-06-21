@@ -6,7 +6,7 @@ from cryptography.fernet import InvalidToken
 import gzip
 
 from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
-from argumentation_analysis.ui.file_operations import load_extract_definitions, save_extract_definitions
+from argumentation_analysis.core.io_manager import load_extract_definitions, save_extract_definitions
 from argumentation_analysis.services.crypto_service import CryptoService
 
 @pytest.fixture

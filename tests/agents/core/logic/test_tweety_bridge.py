@@ -16,7 +16,7 @@ print(f"DEBUG: sys.path[0] in test_tweety_bridge.py set to: {str(project_root_fo
 
 import unittest
 from unittest.mock import MagicMock, patch, PropertyMock
-from tests.mocks.jpype_mock import JException as MockedJException
+from tests.mocks.jpype_mock import jpype_mock
 
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
@@ -61,7 +61,7 @@ class TestTweetyBridge(unittest.TestCase):
             # 1. Patcher jpype dans tweety_bridge (principalement pour JException)
             self.jpype_patcher = patch('argumentation_analysis.agents.core.logic.tweety_bridge.jpype')
             self.mock_jpype = self.jpype_patcher.start()
-            self.mock_jpype.JException = MockedJException
+            self.mock_jpype.JException = jpype_mock.JException
 
             # 2. Patcher TweetyInitializer
             #    Patch la classe TweetyInitializer là où elle est importée par TweetyBridge et les Handlers.

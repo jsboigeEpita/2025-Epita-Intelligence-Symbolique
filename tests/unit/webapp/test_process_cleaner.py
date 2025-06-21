@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch, AsyncMock, call
 import sys
 sys.path.insert(0, '.')
 
-from project_core.webapp_from_scripts.process_cleaner import ProcessCleaner
+from scripts.apps.webapp.process_cleaner import ProcessCleaner
 
 @pytest.fixture
 def logger_mock():

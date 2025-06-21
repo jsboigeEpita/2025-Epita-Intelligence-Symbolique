@@ -5,7 +5,7 @@ from typing import Dict, Any, Optional
 from semantic_kernel import Kernel # type: ignore
 from semantic_kernel.functions.kernel_arguments import KernelArguments # type: ignore
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
-from semantic_kernel.contents.chat_role import ChatRole
+from semantic_kernel.contents import AuthorRole
 
 
 from ..abc.agent_bases import BaseAgent
@@ -227,12 +227,12 @@ class ProjectManagerAgent(BaseAgent):
 
         try:
             result_str = await self.define_tasks_and_delegate(analysis_state_snapshot, raw_text)
-            return ChatMessageContent(role=ChatRole.ASSISTANT, content=result_str, name=self.name)
+            return ChatMessageContent(role=AuthorRole.ASSISTANT, content=result_str, name=self.name)
 
         except Exception as e:
             self.logger.error(f"Erreur durant l'invocation du PM Agent: {e}", exc_info=True)
             error_msg = f'{{"error": "An unexpected error occurred in ProjectManagerAgent: {e}"}}'
-            return ChatMessageContent(role=ChatRole.ASSISTANT, content=error_msg, name=self.name)
+            return ChatMessageContent(role=AuthorRole.ASSISTANT, content=error_msg, name=self.name)
 
     # D'autres méthodes métiers pourraient être ajoutées ici si nécessaire,
     # par exemple, une méthode qui encapsule la logique de décision principale du PM
