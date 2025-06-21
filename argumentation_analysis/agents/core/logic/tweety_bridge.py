@@ -1,13 +1,13 @@
 # argumentation_analysis/agents/core/logic/tweety_bridge.py
 """
-Interface avec TweetyProject via JPype pour l'exécution de requêtes logiques.
+Pont d'interface avec TweetyProject pour l'exécution de requêtes logiques.
 
-Ce module fournit la classe `TweetyBridge` qui sert d'interface Python
-pour interagir avec les bibliothèques Java de TweetyProject. Elle permet
-de parser des formules et des ensembles de croyances, de valider leur syntaxe,
-et d'exécuter des requêtes pour la logique propositionnelle, la logique du
-premier ordre, et la logique modale. L'interaction avec Java est gérée
-par la bibliothèque JPype.
+Ce module définit la classe `TweetyBridge`, qui sert de façade unifiée pour
+interagir avec la bibliothèque Java TweetyProject. Elle délègue les opérations
+spécifiques à chaque type de logique (PL, FOL, Modale) à des classes de
+gestionnaires (`handlers`) dédiées.
+
+L'initialisation de la JVM et des composants Java est gérée par `TweetyInitializer`.
 """
 
 import logging
@@ -28,30 +28,30 @@ logger = logging.getLogger("Orchestration.TweetyBridge")
 
 class TweetyBridge:
     """
-    Interface avec TweetyProject via JPype pour différents types de logiques.
+    Façade pour interagir avec TweetyProject via JPype.
 
-    Cette classe encapsule la communication avec TweetyProject, permettant
-    l'analyse syntaxique, la validation et le raisonnement sur des bases de
-    croyances en logique propositionnelle (PL), logique du premier ordre (FOL),
-    et logique modale (ML). Elle utilise les handlers dédiés (PLHandler,
-    FOLHandler, ModalHandler) qui s'appuient sur TweetyInitializer pour la
-    gestion de la JVM et des composants Java de TweetyProject.
+    Cette classe délègue les tâches spécifiques à chaque logique à des gestionnaires
+    dédiés (`PLHandler`, `FOLHandler`, `ModalHandler`). Elle assure que la JVM
+    et les composants nécessaires sont initialisés via `TweetyInitializer` avant
+    de créer les gestionnaires.
 
     Attributes:
-        _logger (logging.Logger): Logger pour cette classe.
-        _jvm_ok (bool): Indique si les handlers Python sont prêts.
-        _initializer (TweetyInitializer): Instance du gestionnaire d'initialisation Tweety.
-        _pl_handler (PLHandler): Handler pour la logique propositionnelle.
-        _fol_handler (FOLHandler): Handler pour la logique du premier ordre.
-        _modal_handler (ModalHandler): Handler pour la logique modale.
+        _logger (logging.Logger): Logger partagé pour le pont et ses composants.
+        _jvm_ok (bool): Indicateur interne de l'état de préparation des gestionnaires.
+        _initializer (TweetyInitializer): Gestionnaire d'initialisation de la JVM et Tweety.
+        _pl_handler (PLHandler): Gestionnaire pour la logique propositionnelle.
+        _fol_handler (FOLHandler): Gestionnaire pour la logique du premier ordre.
+        _modal_handler (ModalHandler): Gestionnaire pour la logique modale.
     """
     
     def __init__(self):
         """
-        Initialise l'interface TweetyBridge et ses handlers.
+        Initialise le pont TweetyBridge et ses gestionnaires.
 
-        S'appuie sur TweetyInitializer pour la gestion de la JVM et des
-        composants Java sous-jacents.
+        Ce constructeur orchestre la séquence d'initialisation :
+        1. Création de `TweetyInitializer` qui démarre la JVM si nécessaire.
+        2. Initialisation des composants Java pour chaque logique (PL, FOL, Modale).
+        3. Instanciation des gestionnaires Python qui s'interfacent avec ces composants.
         """
         self._logger = logger
         self._logger.info("TWEETY_BRIDGE: __init__ - Début (Refactored)")
@@ -96,10 +96,11 @@ class TweetyBridge:
     
     def is_jvm_ready(self) -> bool:
         """
-        Vérifie si la JVM, TweetyInitializer et les handlers Python sont prêts.
+        Vérifie si le pont et tous ses composants sont prêts à l'emploi.
 
-        :return: True si tout est initialisé correctement, False sinon.
-        :rtype: bool
+        Returns:
+            bool: True si la JVM est démarrée et tous les gestionnaires sont
+                  correctement initialisés, False sinon.
         """
         # Vérifie que l'initializer est là, que la JVM est prête via l'initializer,
         # et que les handlers Python ont été instanciés (indiqué par self._jvm_ok dans __init__).
@@ -154,7 +155,14 @@ class TweetyBridge:
     def validate_formula(self, formula_string: str) -> Tuple[bool, str]:
         """
         Valide la syntaxe d'une formule de logique propositionnelle.
-        Délègue la validation au PLHandler.
+
+        Délègue l'opération au `PLHandler`.
+
+        Args:
+            formula_string (str): La formule à valider.
+
+        Returns:
+            Tuple[bool, str]: Un tuple (succès, message).
         """
         if not self.is_jvm_ready() or not hasattr(self, '_pl_handler'):
             return False, "TweetyBridge ou PLHandler non prêt."
@@ -176,7 +184,14 @@ class TweetyBridge:
     def validate_belief_set(self, belief_set_string: str) -> Tuple[bool, str]:
         """
         Valide la syntaxe d'un ensemble de croyances en logique propositionnelle.
-        Délègue la validation au PLHandler.
+
+        Délègue l'opération au `PLHandler` en parsant chaque formule individuellement.
+
+        Args:
+            belief_set_string (str): Le contenu de l'ensemble de croyances.
+
+        Returns:
+            Tuple[bool, str]: Un tuple (succès, message).
         """
         if not self.is_jvm_ready() or not hasattr(self, '_pl_handler'):
             return False, "TweetyBridge ou PLHandler non prêt."
@@ -220,10 +235,18 @@ class TweetyBridge:
         description="Exécute une requête en Logique Propositionnelle (syntaxe Tweety: !,||,=>,<=>,^^) sur un Belief Set fourni.",
         name="execute_pl_query"
     )
-    def execute_pl_query(self, belief_set_content: str, query_string: str) -> str:
+    def execute_pl_query(self, belief_set_content: str, query_string: str) -> Tuple[bool, str]:
         """
-        Exécute une requête en logique propositionnelle sur un ensemble de croyances donné.
-        Délègue l'exécution au PLHandler.
+        Exécute une requête en logique propositionnelle sur un ensemble de croyances.
+
+        Délègue l'exécution au `PLHandler`.
+
+        Args:
+            belief_set_content (str): L'ensemble de croyances.
+            query_string (str): La requête à exécuter.
+
+        Returns:
+            Tuple[bool, str]: Un tuple (résultat booléen, message brut de Tweety).
         """
         self._logger.info(f"TweetyBridge.execute_pl_query: Query='{query_string}' sur BS: ('{belief_set_content[:60]}...')")
         
@@ -263,7 +286,16 @@ class TweetyBridge:
     def validate_fol_formula(self, formula_string: str, signature_declarations_str: Optional[str] = None) -> Tuple[bool, str]:
         """
         Valide la syntaxe d'une formule de logique du premier ordre (FOL).
-        Délègue la validation au FOLHandler.
+
+        Délègue l'opération au `FOLHandler`.
+
+        Args:
+            formula_string (str): La formule à valider.
+            signature_declarations_str (Optional[str]): Déclarations de signature
+                optionnelles.
+
+        Returns:
+            Tuple[bool, str]: Un tuple (succès, message).
         """
         if not self.is_jvm_ready() or not hasattr(self, '_fol_handler'):
             return False, "TweetyBridge ou FOLHandler non prêt."
@@ -285,7 +317,16 @@ class TweetyBridge:
     def validate_fol_belief_set(self, belief_set_string: str, signature_declarations_str: Optional[str] = None) -> Tuple[bool, str]:
         """
         Valide la syntaxe d'un ensemble de croyances en logique du premier ordre (FOL).
-        Délègue la validation au FOLHandler.
+
+        Délègue l'opération au `FOLHandler`.
+
+        Args:
+            belief_set_string (str): Le contenu de l'ensemble de croyances.
+            signature_declarations_str (Optional[str]): Déclarations de signature
+                optionnelles.
+
+        Returns:
+            Tuple[bool, str]: Un tuple (succès, message).
         """
         if not self.is_jvm_ready() or not hasattr(self, '_fol_handler'):
             return False, "TweetyBridge ou FOLHandler non prêt."
@@ -319,10 +360,20 @@ class TweetyBridge:
         description="Exécute une requête en Logique du Premier Ordre sur un Belief Set fourni. Peut inclure des déclarations de signature.",
         name="execute_fol_query"
     )
-    def execute_fol_query(self, belief_set_content: str, query_string: str, signature_declarations_str: Optional[str] = None) -> str:
+    def execute_fol_query(self, belief_set_content: str, query_string: str, signature_declarations_str: Optional[str] = None) -> Tuple[Optional[bool], str]:
         """
         Exécute une requête en logique du premier ordre (FOL) sur un ensemble de croyances.
-        Délègue l'exécution au FOLHandler.
+
+        Délègue l'exécution au `FOLHandler`.
+
+        Args:
+            belief_set_content (str): L'ensemble de croyances.
+            query_string (str): La requête à exécuter.
+            signature_declarations_str (Optional[str]): Déclarations de signature
+                optionnelles.
+
+        Returns:
+            Tuple[Optional[bool], str]: Un tuple (résultat booléen ou None, message).
         """
         self._logger.info(f"TweetyBridge.execute_fol_query: Query='{query_string}' sur BS: ('{belief_set_content[:60]}...'), Signature: '{str(signature_declarations_str)[:60]}...'")
         
