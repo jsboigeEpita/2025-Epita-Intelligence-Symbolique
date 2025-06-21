@@ -5,7 +5,6 @@ from typing import Dict, Any, Optional
 from semantic_kernel import Kernel # type: ignore
 from semantic_kernel.functions.kernel_arguments import KernelArguments # type: ignore
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
-from semantic_kernel.contents import AuthorRole as Role
 
 
 from ..abc.agent_bases import BaseAgent
@@ -194,7 +193,7 @@ class ProjectManagerAgent(BaseAgent):
         self.logger.info(f"invoke_custom called for {self.name} with {len(history)} messages.")
 
         # Extraire le texte brut initial du message utilisateur dans l'historique
-        raw_text_user_message = next((m.content for m in history if m.role == Role.USER), None)
+        raw_text_user_message = next((m.content for m in history if m.role == "user"), None)
         if not raw_text_user_message:
              raise ValueError("Message utilisateur initial non trouvé dans l'historique.")
         # Isoler le texte brut de l'invite système

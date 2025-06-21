@@ -19,33 +19,21 @@ import subprocess
 import time
 from pathlib import Path
 
-def find_conda_python():
-    """Trouve l'exécutable Python de l'environnement projet-is"""
-    possible_paths = [
-        "C:/Users/MYIA/miniconda3/envs/projet-is/python.exe",
-        os.path.expanduser("~/miniconda3/envs/projet-is/python.exe"),
-        os.path.expanduser("~/anaconda3/envs/projet-is/python.exe"),
-        "python"  # fallback
-    ]
-    
-    for path in possible_paths:
-        if os.path.exists(path):
-            return path
-    
-    return "python"
-
 def launch_backend_detached():
     """Lance le backend Uvicorn en arrière-plan complet"""
     # Le garde-fou garantit que sys.executable est le bon python
     python_exe = sys.executable
     project_root = str(Path(__file__).parent.parent.absolute())
     
+    # Rendre le port configurable, avec une valeur par défaut
+    port = os.environ.get("WEB_API_PORT", "5003")
+    
     cmd = [
         python_exe,
         "-m", "uvicorn",
         "argumentation_analysis.services.web_api.app:app",
         "--host", "0.0.0.0",
-        "--port", "5003"
+        "--port", port
     ]
     
     # os.environ est déjà correctement configuré par le wrapper activate_project_env.ps1
@@ -53,7 +41,7 @@ def launch_backend_detached():
     print(f"[LAUNCH] Lancement du backend détaché...")
     print(f"[DIR] Répertoire de travail: {project_root}")
     print(f"[PYTHON] Exécutable Python: {python_exe}")
-    print(f"[URL] URL prevue: http://localhost:5003/api/health")
+    print(f"[URL] URL prevue: http://localhost:{port}/api/health")
     
     try:
         # Windows: DETACHED_PROCESS pour vraie indépendance
@@ -93,7 +81,8 @@ def check_backend_status():
     """Vérifie rapidement si le backend répond (non-bloquant)"""
     try:
         import requests
-        response = requests.get("http://localhost:5003/api/health", timeout=2)
+        port = os.environ.get("WEB_API_PORT", "5003")
+        response = requests.get(f"http://localhost:{port}/api/health", timeout=2)
         if response.status_code == 200:
             print(f"[OK] Backend actif et repond: {response.json()}")
             return True

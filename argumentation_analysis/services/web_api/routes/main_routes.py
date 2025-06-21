@@ -1,7 +1,8 @@
 # argumentation_analysis/services/web_api/routes/main_routes.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import logging
 import asyncio
+import jpype
 
 # Import des services et modèles nécessaires
 # Les imports relatifs devraient maintenant pointer vers les bons modules.
@@ -19,37 +20,45 @@ logger = logging.getLogger("WebAPI.MainRoutes")
 
 main_bp = Blueprint('main_api', __name__)
 
-# Note: Pour une meilleure architecture, les services devraient être injectés
-# plutôt qu'importés de cette manière.
-# On importe directement depuis le contexte de l'application.
 def get_services_from_app_context():
-    from ..app import analysis_service, validation_service, fallacy_service, framework_service, logic_service
-    return analysis_service, validation_service, fallacy_service, framework_service, logic_service
+    """Récupère les services depuis le contexte de l'application Flask."""
+    services = current_app.services
+    return (
+        services.analysis_service,
+        services.validation_service,
+        services.fallacy_service,
+        services.framework_service,
+        services.logic_service
+    )
 
 @main_bp.route('/health', methods=['GET'])
 def health_check():
-    """Vérification de l'état de l'API."""
-    analysis_service, validation_service, fallacy_service, framework_service, logic_service = get_services_from_app_context()
-    try:
-        return jsonify({
-            "status": "healthy",
-            "message": "API d'analyse argumentative opérationnelle",
-            "version": "1.0.0",
-            "services": {
-                "analysis": analysis_service.is_healthy(),
-                "validation": validation_service.is_healthy(),
-                "fallacy": fallacy_service.is_healthy(),
-                "framework": framework_service.is_healthy(),
-                "logic": logic_service.is_healthy()
-            }
-        })
-    except Exception as e:
-        logger.error(f"Erreur lors du health check: {str(e)}")
-        return jsonify(ErrorResponse(
-            error="Erreur de health check",
-            message=str(e),
-            status_code=500
-        ).dict()), 500
+    """Vérification de l'état de l'API, y compris les dépendances critiques comme la JVM."""
+    services = current_app.services
+    
+    # Vérification de l'état de la JVM
+    is_jvm_started = jpype.isJVMStarted()
+    
+    # Construction de la réponse
+    response_data = {
+        "status": "healthy" if is_jvm_started else "unhealthy",
+        "message": "API d'analyse argumentative opérationnelle",
+        "version": "1.0.0",
+        "services": {
+            "jvm": {"running": is_jvm_started, "status": "OK" if is_jvm_started else "Not Running"},
+            "analysis": services.analysis_service.is_healthy(),
+            "validation": services.validation_service.is_healthy(),
+            "fallacy": services.fallacy_service.is_healthy(),
+            "framework": services.framework_service.is_healthy(),
+            "logic": services.logic_service.is_healthy()
+        }
+    }
+    
+    if not is_jvm_started:
+        logger.error("Health check failed: JVM is not running.")
+        return jsonify(response_data), 503  # 503 Service Unavailable
+
+    return jsonify(response_data)
 
 @main_bp.route('/analyze', methods=['POST'])
 def analyze_text():
