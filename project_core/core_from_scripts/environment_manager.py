@@ -642,11 +642,11 @@ class EnvironmentManager:
              self.logger.warning("NODE_HOME non défini ou invalide. Tentative d'auto-installation...")
              try:
                  from project_core.environment.tool_installer import ensure_tools_are_installed
-                 ensure_tools_are_installed(tools_to_ensure=['node'], logger=self.logger)
+                 ensure_tools_are_installed(tools_to_ensure=['node'], logger_instance=self.logger)
              except ImportError as ie:
                  self.logger.error(f"Échec de l'import de 'tool_installer' pour l'auto-installation de Node.js: {ie}")
              except Exception as e:
-                 self.logger.error(f"Une erreur est survenue durant l'auto-installation de Node.js: {e}", exc_info=True)
+                 self.logger.error(f"Une erreur est survenue durant l'auto-installation de Node.js: {e}")
 
 
         # Vérifications préalables

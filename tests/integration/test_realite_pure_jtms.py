@@ -76,7 +76,7 @@ def test_imports_jtms_reels():
     """Vérifie les imports essentiels du système JTMS."""
     try:
         from argumentation_analysis.services.jtms_service import JTMSService
-        from argumentation_analysis.plugins.sk_plugins.jtms_plugin import JTMSSemanticKernelPlugin
+        from argumentation_analysis.plugins.semantic_kernel.jtms_plugin import JTMSSemanticKernelPlugin
         from argumentation_analysis.api.jtms_models import CreateBeliefRequest
         
         assert JTMSService is not None
@@ -90,7 +90,7 @@ def test_existence_fichiers_reels():
     fichiers_importants = [
         "argumentation_analysis/services/jtms_service.py",
         "argumentation_analysis/agents/sherlock_jtms_agent.py",
-        "argumentation_analysis/plugins/sk_plugins/jtms_plugin.py",
+        "argumentation_analysis/plugins/semantic_kernel/jtms_plugin.py",
     ]
     for fichier in fichiers_importants:
         assert os.path.exists(fichier), f"Le fichier {fichier} est manquant."
