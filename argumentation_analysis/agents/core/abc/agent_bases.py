@@ -1,10 +1,17 @@
 """
-Module définissant les classes de base abstraites pour les agents.
+Fournit les fondations architecturales pour tous les agents du système.
 
-Ce module fournit `BaseAgent` comme fondation pour tous les agents,
-et `BaseLogicAgent` comme spécialisation pour les agents basés sur
-une logique formelle. Ces classes utilisent le pattern Abstract Base Class (ABC)
-pour définir une interface commune que les agents concrets doivent implémenter.
+Ce module contient les classes de base abstraites (ABC) qui définissent les
+contrats et les interfaces pour tous les agents. Il a pour rôle de standardiser
+le comportement des agents, qu'ils soient basés sur des LLMs, de la logique
+formelle ou d'autres mécanismes.
+
+- `BaseAgent` : Le contrat fondamental pour tout agent, incluant la gestion
+  d'un kernel Semantic Kernel, un cycle de vie d'invocation et des
+  mécanismes de description de capacités.
+- `BaseLogicAgent` : Une spécialisation pour les agents qui interagissent avec
+  des systèmes de raisonnement logique formel, ajoutant des abstractions pour
+  la manipulation de croyances et l'exécution de requêtes.
 """
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, Tuple, List, TYPE_CHECKING, Coroutine
@@ -34,19 +41,29 @@ if TYPE_CHECKING:
 
 class BaseAgent(ABC): # Suppression de l'héritage de sk.Agent (voir note ci-dessus)
     """
-    Classe de base abstraite pour tous les agents du système.
+    Classe de base abstraite (ABC) pour tous les agents du système.
 
-    Cette classe définit l'interface commune que tous les agents doivent respecter,
-    y compris la gestion d'un kernel Semantic Kernel, un nom d'agent, un logger,
-    et un prompt système optionnel. Elle impose l'implémentation de méthodes
-    pour décrire les capacités de l'agent et configurer ses composants.
+    Cette classe établit un contrat que tous les agents doivent suivre. Elle
+    définit l'interface commune pour l'initialisation, la configuration,
+    la description des capacités et le cycle d'invocation. Chaque agent
+    doit être associé à un `Kernel` de Semantic Kernel.
+
+    Le contrat impose aux classes dérivées d'implémenter des méthodes
+    clés pour la configuration (`setup_agent_components`) et l'exécution
+    de leur logique métier (`invoke_single`).
 
     Attributes:
-        _kernel (Kernel): Le kernel Semantic Kernel associé à l'agent.
-        _agent_name (str): Le nom unique de l'agent.
-        _logger (logging.Logger): Le logger spécifique à cette instance d'agent.
-        _llm_service_id (Optional[str]): L'ID du service LLM utilisé, configuré via `setup_agent_components`.
-        _system_prompt (Optional[str]): Le prompt système global pour l'agent.
+        kernel (Kernel): Le kernel Semantic Kernel utilisé par l'agent.
+        id (str): L'identifiant unique de l'agent.
+        name (str): Le nom de l'agent, alias de `id`.
+        instructions (Optional[str]): Le prompt système ou les instructions
+            de haut niveau pour l'agent.
+        description (Optional[str]): Une description textuelle du rôle et
+            des capacités de l'agent.
+        logger (logging.Logger): Une instance de logger préconfigurée pour
+            cet agent.
+        llm_service_id (Optional[str]): L'ID du service LLM configuré
+            pour cet agent via `setup_agent_components`.
     """
     _logger: logging.Logger
     _llm_service_id: Optional[str]
@@ -56,10 +73,11 @@ class BaseAgent(ABC): # Suppression de l'héritage de sk.Agent (voir note ci-des
         Initialise une instance de BaseAgent.
 
         Args:
-            kernel: Le kernel Semantic Kernel à utiliser.
-            agent_name: Le nom de l'agent.
-            system_prompt: Le prompt système optionnel pour l'agent.
-            description: La description optionnelle de l'agent.
+            kernel (Kernel): Le kernel Semantic Kernel à associer à l'agent.
+            agent_name (str): Le nom unique de l'agent.
+            system_prompt (Optional[str]): Le prompt système qui guide le
+                comportement de l'agent.
+            description (Optional[str]): Une description concise du rôle de l'agent.
         """
         self._kernel = kernel
         self.id = agent_name
@@ -83,27 +101,33 @@ class BaseAgent(ABC): # Suppression de l'héritage de sk.Agent (voir note ci-des
     @abstractmethod
     def get_agent_capabilities(self) -> Dict[str, Any]:
         """
-        Méthode abstraite pour décrire les capacités spécifiques de l'agent.
+        Décrit les capacités spécifiques et la configuration de l'agent.
 
-        Les classes dérivées doivent implémenter cette méthode pour retourner un
-        dictionnaire décrivant leurs fonctionnalités.
+        Cette méthode doit être implémentée par les classes dérivées pour
+        retourner un dictionnaire structuré qui détaille leurs fonctionnalités,
+        les plugins utilisés, ou toute autre information pertinente sur leur
+        configuration.
 
-        :return: Un dictionnaire des capacités.
-        :rtype: Dict[str, Any]
+        Returns:
+            Dict[str, Any]: Un dictionnaire décrivant les capacités de l'agent.
         """
         pass
 
     @abstractmethod
     def setup_agent_components(self, llm_service_id: str) -> None:
         """
-        Méthode abstraite pour configurer les composants spécifiques de l'agent.
+        Configure les composants internes de l'agent.
 
-        Les classes dérivées doivent implémenter cette méthode pour initialiser
-        leurs dépendances, enregistrer les fonctions sémantiques et natives
-        dans le kernel Semantic Kernel, et stocker l'ID du service LLM.
+        Cette méthode abstraite doit être implémentée pour effectuer toute
+        l'initialisation nécessaire après la création de l'agent. Cela inclut
+        typiquement:
+        - L'enregistrement de fonctions sémantiques ou natives dans le kernel.
+        - L'initialisation de clients ou de services externes.
+        - Le stockage de l'ID du service LLM pour les appels futurs.
 
-        :param llm_service_id: L'ID du service LLM à utiliser.
-        :type llm_service_id: str
+        Args:
+            llm_service_id (str): L'identifiant du service LLM à utiliser pour
+                les opérations de l'agent.
         """
         self._llm_service_id = llm_service_id
         pass
@@ -148,14 +172,30 @@ class BaseAgent(ABC): # Suppression de l'héritage de sk.Agent (voir note ci-des
 
     @abstractmethod
     async def get_response(self, *args, **kwargs):
-        """Méthode abstraite pour obtenir une réponse de l'agent."""
+        """
+        Point d'entrée principal pour l'exécution d'une tâche par l'agent.
+        
+        Cette méthode est destinée à être un wrapper de haut niveau autour
+        de la logique d'invocation (`invoke` ou `invoke_single`). Les classes filles
+        doivent l'implémenter pour définir comment l'agent répond à une sollicitation.
+
+        Returns:
+            La réponse de l'agent, dont le format peut varier.
+        """
         pass
 
     @abstractmethod
     async def invoke_single(self, *args, **kwargs):
         """
-        Méthode abstraite pour l'invocation de l'agent qui retourne une réponse unique.
-        Les agents concrets DOIVENT implémenter cette logique.
+        Exécute la logique principale de l'agent et retourne une réponse unique.
+
+        C'est ici que le cœur du travail de l'agent doit être implémenté.
+        La méthode doit retourner une seule réponse et ne pas utiliser de streaming.
+        Le framework d'invocation se chargera de la transformer en stream si
+        nécessaire via la méthode `invoke`.
+
+        Returns:
+            La réponse unique résultant de l'invocation.
         """
         pass
 
@@ -185,18 +225,21 @@ class BaseAgent(ABC): # Suppression de l'héritage de sk.Agent (voir note ci-des
 
 class BaseLogicAgent(BaseAgent, ABC):
     """
-    Classe de base abstraite pour les agents utilisant une logique formelle.
+    Spécialisation de `BaseAgent` pour les agents qui raisonnent en logique formelle.
 
-    Hérite de `BaseAgent` et ajoute des abstractions spécifiques aux agents
-    logiques, telles que la gestion d'un type de logique, l'utilisation
-    d'un `TweetyBridge` pour interagir avec des solveurs logiques, et des
-    méthodes pour la manipulation d'ensembles de croyances et l'exécution
-    de requêtes.
+    Cette classe de base abstraite étend `BaseAgent` en introduisant des concepts
+    et des contrats spécifiques aux agents logiques. Elle standardise l'interaction
+    avec un moteur logique (via `TweetyBridge`) et définit un pipeline de traitement
+    typique pour les tâches logiques :
+    1. Conversion de texte en un ensemble de croyances (`text_to_belief_set`).
+    2. Génération de requêtes pertinentes (`generate_queries`).
+    3. Exécution de ces requêtes (`execute_query`).
+    4. Interprétation des résultats (`interpret_results`).
 
     Attributes:
-        _tweety_bridge (TweetyBridge): Instance de `TweetyBridge` pour la logique spécifique.
-        _logic_type_name (str): Nom du type de logique (ex: "PL", "FOL", "ML").
-        _syntax_bnf (Optional[str]): Description BNF de la syntaxe logique (optionnel).
+        tweety_bridge (TweetyBridge): Le pont vers la bibliothèque logique Tweety.
+        logic_type_name (str): Le nom de la logique formelle utilisée (ex: "PL", "FOL").
+        syntax_bnf (Optional[str]): Une description de la syntaxe logique au format BNF.
     """
     _tweety_bridge: "TweetyBridge"
     _logic_type_name: str
@@ -208,14 +251,11 @@ class BaseLogicAgent(BaseAgent, ABC):
         """
         Initialise une instance de BaseLogicAgent.
 
-        :param kernel: Le kernel Semantic Kernel à utiliser.
-        :type kernel: Kernel
-        :param agent_name: Le nom de l'agent.
-        :type agent_name: str
-        :param logic_type_name: Le nom du type de logique (ex: "PL", "FOL").
-        :type logic_type_name: str
-        :param system_prompt: Le prompt système optionnel pour l'agent.
-        :type system_prompt: Optional[str]
+        Args:
+            kernel (Kernel): Le kernel Semantic Kernel à utiliser.
+            agent_name (str): Le nom de l'agent.
+            logic_type_name (str): Le nom du type de logique (ex: "PL", "FOL").
+            system_prompt (Optional[str]): Le prompt système optionnel.
         """
         super().__init__(kernel, agent_name, system_prompt)
         self._logic_type_name = logic_type_name
@@ -257,67 +297,68 @@ class BaseLogicAgent(BaseAgent, ABC):
     @abstractmethod
     def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional["BeliefSet"], str]:
         """
-        Méthode abstraite pour convertir un texte en langage naturel en un ensemble de croyances.
+        Convertit un texte en langage naturel en un ensemble de croyances formelles.
 
-        :param text: Le texte à convertir.
-        :type text: str
-        :param context: Contexte additionnel optionnel.
-        :type context: Optional[Dict[str, Any]]
-        :return: Un tuple contenant l'objet `BeliefSet` et un message de statut.
-        :rtype: Tuple[Optional['BeliefSet'], str]
+        Args:
+            text (str): Le texte à convertir.
+            context (Optional[Dict[str, Any]]): Contexte additionnel pour
+                guider la conversion.
+
+        Returns:
+            Tuple[Optional['BeliefSet'], str]: Un tuple contenant l'objet
+            `BeliefSet` créé (ou None en cas d'échec) et un message de statut.
         """
         pass
 
     @abstractmethod
     def generate_queries(self, text: str, belief_set: "BeliefSet", context: Optional[Dict[str, Any]] = None) -> List[str]:
         """
-        Méthode abstraite pour générer des requêtes logiques pertinentes.
+        Génère des requêtes logiques pertinentes à partir d'un texte et/ou d'un ensemble de croyances.
 
-        :param text: Le texte source.
-        :type text: str
-        :param belief_set: L'ensemble de croyances associé.
-        :type belief_set: BeliefSet
-        :param context: Contexte additionnel optionnel.
-        :type context: Optional[Dict[str, Any]]
-        :return: Une liste de requêtes sous forme de chaînes de caractères.
-        :rtype: List[str]
+        Args:
+            text (str): Le texte source pour inspirer les requêtes.
+            belief_set (BeliefSet): L'ensemble de croyances sur lequel les
+                requêtes seront basées.
+            context (Optional[Dict[str, Any]]): Contexte additionnel.
+
+        Returns:
+            List[str]: Une liste de requêtes logiques sous forme de chaînes.
         """
         pass
 
     @abstractmethod
     def execute_query(self, belief_set: "BeliefSet", query: str) -> Tuple[Optional[bool], str]:
         """
-        Méthode abstraite pour exécuter une requête logique sur un ensemble de croyances.
+        Exécute une requête logique sur un ensemble de croyances.
 
-        Devrait utiliser `self.tweety_bridge` et son solveur spécifique à la logique.
+        Utilise `self.tweety_bridge` pour interagir avec le solveur logique.
 
-        :param belief_set: L'ensemble de croyances sur lequel exécuter la requête.
-        :type belief_set: BeliefSet
-        :param query: La requête à exécuter.
-        :type query: str
-        :return: Un tuple contenant le résultat booléen (True, False, ou None si indéterminé)
-                 et un message de statut/résultat brut.
-        :rtype: Tuple[Optional[bool], str]
+        Args:
+            belief_set (BeliefSet): La base de connaissances sur laquelle la
+                requête est exécutée.
+            query (str): La requête logique à exécuter.
+
+        Returns:
+            Tuple[Optional[bool], str]: Un tuple avec le résultat (True, False,
+            ou None si indéterminé) et un message de statut du solveur.
         """
         pass
 
     @abstractmethod
     def interpret_results(self, text: str, belief_set: "BeliefSet", queries: List[str], results: List[Tuple[Optional[bool], str]], context: Optional[Dict[str, Any]] = None) -> str:
         """
-        Méthode abstraite pour interpréter les résultats des requêtes logiques en langage naturel.
+        Interprète les résultats des requêtes logiques en langage naturel.
 
-        :param text: Le texte source original.
-        :type text: str
-        :param belief_set: L'ensemble de croyances utilisé.
-        :type belief_set: BeliefSet
-        :param queries: La liste des requêtes qui ont été exécutées.
-        :type queries: List[str]
-        :param results: La liste des résultats (booléen/None, message) pour chaque requête.
-        :type results: List[Tuple[Optional[bool], str]]
-        :param context: Contexte additionnel optionnel.
-        :type context: Optional[Dict[str, Any]]
-        :return: Une interprétation en langage naturel des résultats.
-        :rtype: str
+        Args:
+            text (str): Le texte source original.
+            belief_set (BeliefSet): L'ensemble de croyances utilisé.
+            queries (List[str]): La liste des requêtes qui ont été exécutées.
+            results (List[Tuple[Optional[bool], str]]): La liste des résultats
+                correspondant aux requêtes.
+            context (Optional[Dict[str, Any]]): Contexte additionnel.
+
+        Returns:
+            str: Une synthèse en langage naturel des résultats logiques.
         """
         pass
 
@@ -328,30 +369,31 @@ class BaseLogicAgent(BaseAgent, ABC):
     @abstractmethod
     def validate_formula(self, formula: str) -> bool:
         """
-        Méthode abstraite pour valider la syntaxe d'une formule logique.
+        Valide la syntaxe d'une formule logique.
 
-        Devrait utiliser `self.tweety_bridge` et son parser spécifique à la logique.
+        Utilise `self.tweety_bridge` pour accéder au parser de la logique cible.
 
-        :param formula: La formule à valider.
-        :type formula: str
-        :return: True si la formule est valide, False sinon.
-        :rtype: bool
+        Args:
+            formula (str): La formule à valider.
+
+        Returns:
+            bool: True si la syntaxe de la formule est correcte, False sinon.
         """
         pass
 
     @abstractmethod
     def is_consistent(self, belief_set: "BeliefSet") -> Tuple[bool, str]:
         """
-        Vérifie si un ensemble de croyances est cohérent.
+        Vérifie si un ensemble de croyances est logiquement cohérent.
 
-        Utilise le TweetyBridge pour appeler la méthode de vérification de
-        cohérence appropriée pour la logique de l'agent.
+        Utilise le `TweetyBridge` pour appeler le solveur approprié.
 
-        :param belief_set: L'ensemble de croyances à vérifier.
-        :type belief_set: BeliefSet
-        :return: Un tuple contenant un booléen (True si cohérent, False sinon)
-                 et un message de détails du solveur.
-        :rtype: Tuple[bool, str]
+        Args:
+            belief_set (BeliefSet): L'ensemble de croyances à vérifier.
+
+        Returns:
+            Tuple[bool, str]: Un tuple contenant un booléen (True si cohérent)
+            et un message de statut du solveur.
         """
         pass
 
