@@ -1,14 +1,15 @@
 # argumentation_analysis/agents/core/extract/extract_definitions.py
 """
-Définitions et structures de données pour l'agent d'extraction.
+Structures de données et définitions pour l'agent d'extraction.
 
-Ce module contient les classes Pydantic (ou similaires) et les structures de données
-utilisées par `ExtractAgent` et ses composants. Il définit :
-    - `ExtractResult`: Pour encapsuler le résultat d'une opération d'extraction.
-    - `ExtractAgentPlugin`: Un plugin contenant des fonctions natives utiles
-      pour le traitement de texte dans le contexte de l'extraction.
-    - `ExtractDefinition`: Pour représenter la définition d'un extrait spécifique
-      à rechercher dans un texte source.
+Ce module fournit les briques de base pour l'`ExtractAgent` :
+1.  `ExtractResult`: Une classe pour encapsuler de manière structurée le
+    résultat d'une opération d'extraction.
+2.  `ExtractDefinition`: Une classe pour définir les paramètres d'un
+    extrait à rechercher.
+3.  `ExtractAgentPlugin`: Un plugin pour Semantic Kernel qui regroupe des
+    fonctions natives (non-LLM) pour la manipulation de texte, comme la
+    recherche par bloc ou la division de texte.
 """
 
 import re
@@ -42,24 +43,24 @@ file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] [%(name
 logger.addHandler(file_handler)
 
 
-class ExtractResult: # De la version HEAD (Updated upstream)
+class ExtractResult:
     """
-    Classe représentant le résultat d'une opération d'extraction.
+    Encapsule le résultat d'une opération d'extraction de texte.
 
-    Cette classe encapsule toutes les informations pertinentes suite à une tentative
-    d'extraction, y compris le statut, les marqueurs, le texte extrait et
-    toute explication ou message d'erreur.
+    Cette classe sert de structure de données standardisée pour retourner les
+    informations issues d'une tentative d'extraction, qu'elle ait réussi ou
+    échoué.
 
     Attributes:
-        source_name (str): Nom de la source du texte.
-        extract_name (str): Nom de l'extrait.
-        status (str): Statut de l'extraction (ex: "valid", "rejected", "error").
-        message (str): Message descriptif concernant le résultat.
-        start_marker (str): Marqueur de début utilisé ou proposé.
-        end_marker (str): Marqueur de fin utilisé ou proposé.
-        template_start (str): Template de début utilisé ou proposé.
-        explanation (str): Explication fournie par l'agent pour l'extraction.
-        extracted_text (str): Le texte effectivement extrait.
+        source_name (str): Nom de la source du texte (ex: nom de fichier).
+        extract_name (str): Nom sémantique de l'extrait recherché.
+        status (str): Statut de l'opération ('valid', 'rejected', 'error').
+        message (str): Message lisible décrivant le résultat.
+        start_marker (str): Le marqueur de début trouvé ou proposé.
+        end_marker (str): Le marqueur de fin trouvé ou proposé.
+        template_start (str): Template de début optionnel associé.
+        explanation (str): Justification potentiellement fournie par le LLM.
+        extracted_text (str): Le contenu textuel effectivement extrait.
     """
 
     def __init__(
@@ -74,28 +75,7 @@ class ExtractResult: # De la version HEAD (Updated upstream)
         explanation: str = "",
         extracted_text: str = ""
     ):
-        """
-        Initialise un objet `ExtractResult`.
-
-        :param source_name: Nom de la source du texte.
-        :type source_name: str
-        :param extract_name: Nom de l'extrait.
-        :type extract_name: str
-        :param status: Statut de l'extraction (par exemple, "valid", "rejected", "error").
-        :type status: str
-        :param message: Message descriptif concernant le résultat de l'extraction.
-        :type message: str
-        :param start_marker: Marqueur de début utilisé ou proposé. Par défaut "".
-        :type start_marker: str
-        :param end_marker: Marqueur de fin utilisé ou proposé. Par défaut "".
-        :type end_marker: str
-        :param template_start: Template de début utilisé ou proposé. Par défaut "".
-        :type template_start: str
-        :param explanation: Explication fournie par l'agent pour l'extraction. Par défaut "".
-        :type explanation: str
-        :param extracted_text: Le texte effectivement extrait. Par défaut "".
-        :type extracted_text: str
-        """
+        """Initialise une instance de ExtractResult."""
         self.source_name = source_name
         self.extract_name = extract_name
         self.status = status
@@ -107,10 +87,11 @@ class ExtractResult: # De la version HEAD (Updated upstream)
         self.extracted_text = extracted_text
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convertit l'instance `ExtractResult` en un dictionnaire.
+        """
+        Convertit l'instance en un dictionnaire sérialisable.
 
-        :return: Un dictionnaire représentant l'objet.
-        :rtype: Dict[str, Any]
+        Returns:
+            Dict[str, Any]: Une représentation de l'objet sous forme de dictionnaire.
         """
         return {
             "source_name": self.source_name,
@@ -125,21 +106,24 @@ class ExtractResult: # De la version HEAD (Updated upstream)
         }
 
     def to_json(self) -> str:
-        """Convertit l'instance `ExtractResult` en une chaîne JSON.
+        """
+        Convertit l'instance en une chaîne de caractères JSON.
 
-        :return: Une chaîne JSON représentant l'objet.
-        :rtype: str
+        Returns:
+            str: Une représentation JSON de l'objet.
         """
         return json.dumps(self.to_dict(), indent=2)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ExtractResult':
-        """Crée une instance de `ExtractResult` à partir d'un dictionnaire.
+        """
+        Crée une instance de `ExtractResult` à partir d'un dictionnaire.
 
-        :param data: Dictionnaire contenant les données pour initialiser l'objet.
-        :type data: Dict[str, Any]
-        :return: Une nouvelle instance de `ExtractResult`.
-        :rtype: ExtractResult
+        Args:
+            data (Dict[str, Any]): Dictionnaire contenant les attributs de l'objet.
+
+        Returns:
+            ExtractResult: Une nouvelle instance de la classe.
         """
         return cls(
             source_name=data.get("source_name", ""),
@@ -154,26 +138,18 @@ class ExtractResult: # De la version HEAD (Updated upstream)
         )
 
 
-class ExtractAgentPlugin: # De la version HEAD (Updated upstream)
+class ExtractAgentPlugin:
     """
-    Plugin contenant des fonctions natives utiles pour l'agent d'extraction.
+    Boîte à outils de fonctions natives pour la manipulation de texte.
 
-    Ce plugin regroupe des méthodes de traitement de texte qui ne nécessitent pas
-    d'appel à un LLM mais sont utiles pour préparer les données ou analyser
-    les textes sources dans le cadre du processus d'extraction.
-
-    Attributes:
-        extract_results (List[Dict[str, Any]]): Une liste pour stocker les résultats
-            des opérations d'extraction effectuées, à des fins de journalisation ou de suivi.
-            (Note: L'utilisation de cette liste pourrait être revue pour une meilleure gestion d'état).
+    Ce plugin pour Semantic Kernel ne contient aucune fonction sémantique (LLM).
+    Il sert de collection de fonctions utilitaires déterministes qui peuvent
+    être appelées par l'agent ou d'autres composants pour effectuer des tâches
+    de traitement de texte, telles que la recherche ou le découpage en blocs.
     """
 
     def __init__(self):
-        """Initialise le plugin `ExtractAgentPlugin`.
-
-        Initialise une liste vide `extract_results` pour stocker les résultats
-        des opérations d'extraction effectuées par ce plugin.
-        """
+        """Initialise le plugin."""
         self.extract_results: List[Dict[str, Any]] = []
 
     def find_similar_markers(
@@ -184,26 +160,23 @@ class ExtractAgentPlugin: # De la version HEAD (Updated upstream)
         find_similar_text_func=None
     ) -> List[Dict[str, Any]]:
         """
-        Trouve des marqueurs textuels similaires à un marqueur donné dans un texte source.
+        Trouve des passages de texte similaires à un marqueur donné.
 
-        Utilise soit une fonction `find_similar_text_func` fournie, soit une
-        implémentation basique par défaut basée sur des regex simples.
+        Cette fonction peut opérer de deux manières :
+        - Si `find_similar_text_func` est fourni, elle l'utilise pour une recherche
+          potentiellement sémantique ou avancée.
+        - Sinon, elle effectue une recherche par expression régulière simple.
 
-        :param text: Le texte source complet dans lequel rechercher.
-        :type text: str
-        :param marker: Le marqueur (chaîne de caractères) à rechercher.
-        :type marker: str
-        :param max_results: Le nombre maximum de résultats similaires à retourner.
-        :type max_results: int
-        :param find_similar_text_func: Fonction optionnelle à utiliser pour trouver
-                                       du texte similaire. Si None, une recherche
-                                       basique est effectuée.
-        :type find_similar_text_func: Optional[Callable]
-        :return: Une liste de dictionnaires, chaque dictionnaire représentant un marqueur
-                 similaire trouvé et contenant "marker", "position", et "context".
-                 Retourne une liste vide si aucun marqueur similaire n'est trouvé ou
-                 si `text` ou `marker` sont vides.
-        :rtype: List[Dict[str, Any]]
+        Args:
+            text (str): Le texte source dans lequel effectuer la recherche.
+            marker (str): Le texte du marqueur à rechercher.
+            max_results (int): Le nombre maximum de résultats à retourner.
+            find_similar_text_func (Optional[Callable]): Fonction externe optionnelle
+                pour effectuer la recherche.
+
+        Returns:
+            List[Dict[str, Any]]: Une liste de dictionnaires, où chaque dictionnaire
+            représente une correspondance et contient 'marker', 'position', et 'context'.
         """
         if not text or not marker:
             return []
@@ -255,26 +228,21 @@ class ExtractAgentPlugin: # De la version HEAD (Updated upstream)
         overlap: int = 50
     ) -> List[Dict[str, Any]]:
         """
-        Recherche un terme dans un texte en le divisant d'abord en blocs.
+        Recherche un terme par balayage de blocs (recherche non dichotomique).
 
-        Cette méthode est une simplification et ne réalise pas une recherche
-        dichotomique au sens strict algorithmique, mais plutôt une recherche
-        par blocs. Elle divise le texte en blocs avec chevauchement et recherche
-        le terme (insensible à la casse) dans chaque bloc.
+        Note: Le nom de la méthode est un héritage historique. L'implémentation
+        actuelle effectue une recherche par fenêtres glissantes (blocs) et non
+        une recherche dichotomique.
 
-        :param text: Le texte source complet dans lequel rechercher.
-        :type text: str
-        :param search_term: Le terme à rechercher.
-        :type search_term: str
-        :param block_size: La taille des blocs dans lesquels diviser le texte.
-        :type block_size: int
-        :param overlap: Le chevauchement entre les blocs consécutifs.
-        :type overlap: int
-        :return: Une liste de dictionnaires. Chaque dictionnaire représente une
-                 correspondance trouvée et contient "match", "position", "context",
-                 "block_start", et "block_end".
-                 Retourne une liste vide si `text` ou `search_term` sont vides.
-        :rtype: List[Dict[str, Any]]
+        Args:
+            text (str): Le texte à analyser.
+            search_term (str): Le terme de recherche.
+            block_size (int): La taille de chaque bloc d'analyse.
+            overlap (int): Le nombre de caractères de chevauchement entre les blocs.
+
+        Returns:
+            List[Dict[str, Any]]: Une liste de correspondances, chacune étant un
+            dictionnaire avec les détails de la correspondance.
         """
         if not text or not search_term:
             return []
@@ -317,20 +285,19 @@ class ExtractAgentPlugin: # De la version HEAD (Updated upstream)
         overlap: int = 50
     ) -> List[Dict[str, Any]]:
         """
-        Divise un texte en blocs de taille spécifiée avec un chevauchement défini.
+        Divise un texte en blocs de taille spécifiée avec chevauchement.
 
-        Utile pour traiter de grands textes par morceaux.
+        Cette fonction est utile pour traiter de grands textes en les segmentant
+        en morceaux plus petits qui peuvent être traités individuellement.
 
-        :param text: Le texte source complet à diviser en blocs.
-        :type text: str
-        :param block_size: La taille souhaitée pour chaque bloc de texte.
-        :type block_size: int
-        :param overlap: Le nombre de caractères de chevauchement entre les blocs consécutifs.
-        :type overlap: int
-        :return: Une liste de dictionnaires. Chaque dictionnaire représente un bloc et
-                 contient "block", "start_pos", et "end_pos".
-                 Retourne une liste vide si le texte d'entrée est vide.
-        :rtype: List[Dict[str, Any]]
+        Args:
+            text (str): Le texte source à segmenter.
+            block_size (int): La taille de chaque bloc.
+            overlap (int): La taille du chevauchement entre les blocs consécutifs.
+
+        Returns:
+            List[Dict[str, Any]]: Une liste de dictionnaires, où chaque dictionnaire
+            représente un bloc et contient 'block', 'start_pos', et 'end_pos'.
         """
         if not text:
             return []
@@ -352,30 +319,33 @@ class ExtractAgentPlugin: # De la version HEAD (Updated upstream)
         return blocks
 
     def get_extract_results(self) -> List[Dict[str, Any]]:
-        """Récupère la liste des résultats des opérations d'extraction stockées.
+        """
+        Récupère les résultats d'extraction stockés.
 
-        :return: Une liste de dictionnaires, chaque dictionnaire représentant
-                 le résultat d'une opération d'extraction.
-        :rtype: List[Dict[str, Any]]
+        Note: La gestion de l'état via un attribut de classe est simple mais
+        peut ne pas être robuste dans des scénarios complexes.
+
+        Returns:
+            List[Dict[str, Any]]: La liste des résultats stockés.
         """
         return self.extract_results
 
 
-class ExtractDefinition: # De la version HEAD (Updated upstream)
+class ExtractDefinition:
     """
-    Classe représentant la définition d'un extrait à rechercher ou à gérer.
+    Définit les paramètres pour une opération d'extraction.
 
-    Cette structure de données contient les informations nécessaires pour identifier
-    et localiser un segment de texte spécifique (un "extrait") au sein d'un
-    document source plus large.
+    Cette classe est une structure de données qui contient toutes les
+    informations nécessaires pour qu'un agent ou un outil puisse localiser
+    un extrait de texte.
 
     Attributes:
-        source_name (str): Nom de la source du texte.
-        extract_name (str): Nom ou description de l'extrait.
-        start_marker (str): Le marqueur textuel indiquant le début de l'extrait.
-        end_marker (str): Le marqueur textuel indiquant la fin de l'extrait.
-        template_start (str): Un template optionnel qui peut précéder le `start_marker`.
-        description (str): Une description optionnelle de ce que représente l'extrait.
+        source_name (str): Nom de la source (ex: nom de fichier).
+        extract_name (str): Nom sémantique de l'extrait à rechercher.
+        start_marker (str): Texte du marqueur de début de l'extrait.
+        end_marker (str): Texte du marqueur de fin de l'extrait.
+        template_start (str): Template optionnel précédant le marqueur de début.
+        description (str): Description textuelle de ce que représente l'extrait.
     """
 
     def __init__(
@@ -387,22 +357,7 @@ class ExtractDefinition: # De la version HEAD (Updated upstream)
         template_start: str = "",
         description: str = ""
     ):
-        """
-        Initialise un objet `ExtractDefinition`.
-
-        :param source_name: Nom de la source du texte.
-        :type source_name: str
-        :param extract_name: Nom de l'extrait.
-        :type extract_name: str
-        :param start_marker: Marqueur de début pour l'extrait.
-        :type start_marker: str
-        :param end_marker: Marqueur de fin pour l'extrait.
-        :type end_marker: str
-        :param template_start: Template optionnel pour le marqueur de début. Par défaut "".
-        :type template_start: str
-        :param description: Description optionnelle de l'extraction. Par défaut "".
-        :type description: str
-        """
+        """Initialise une instance de ExtractDefinition."""
         self.source_name = source_name
         self.extract_name = extract_name
         self.start_marker = start_marker
@@ -411,10 +366,11 @@ class ExtractDefinition: # De la version HEAD (Updated upstream)
         self.description = description
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convertit l'instance `ExtractDefinition` en un dictionnaire.
+        """
+        Convertit l'instance en un dictionnaire sérialisable.
 
-        :return: Un dictionnaire représentant l'objet.
-        :rtype: Dict[str, Any]
+        Returns:
+            Dict[str, Any]: Une représentation de l'objet sous forme de dictionnaire.
         """
         return {
             "source_name": self.source_name,
@@ -427,12 +383,14 @@ class ExtractDefinition: # De la version HEAD (Updated upstream)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ExtractDefinition':
-        """Crée une instance de `ExtractDefinition` à partir d'un dictionnaire.
+        """
+        Crée une instance de `ExtractDefinition` à partir d'un dictionnaire.
 
-        :param data: Dictionnaire contenant les données pour initialiser l'objet.
-        :type data: Dict[str, Any]
-        :return: Une nouvelle instance de `ExtractDefinition`.
-        :rtype: ExtractDefinition
+        Args:
+            data (Dict[str, Any]): Dictionnaire contenant les attributs de l'objet.
+
+        Returns:
+            ExtractDefinition: Une nouvelle instance de la classe.
         """
         return cls(
             source_name=data.get("source_name", ""),

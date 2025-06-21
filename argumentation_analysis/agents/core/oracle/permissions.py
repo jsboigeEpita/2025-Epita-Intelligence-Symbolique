@@ -1,9 +1,13 @@
 # argumentation_analysis/agents/core/oracle/permissions.py
 """
-Système de permissions et structures de données pour les agents Oracle.
+Définit le système de gestion des permissions pour les agents Oracle.
 
-Ce module définit les structures de données et classes nécessaires pour le système
-de permissions ACL et les réponses des agents Oracle.
+Ce module contient les briques logicielles pour un système de contrôle d'accès
+granulaire (ACL - Access Control List). Il définit :
+-   Les types de requêtes et politiques de révélation (`QueryType`, `RevealPolicy`).
+-   Les règles de permissions par agent (`PermissionRule`).
+-   Le gestionnaire central (`PermissionManager`) qui applique ces règles.
+-   Les structures de données standard pour les réponses (`OracleResponse`) et l'audit.
 """
 
 import logging
@@ -24,43 +28,67 @@ class InvalidQueryError(Exception):
 
 
 class QueryType(Enum):
-    """Types de requêtes supportées par le système Oracle."""
+    """Énumère les types de requêtes possibles qu'un agent peut faire à un Oracle."""
     CARD_INQUIRY = "card_inquiry"
+    """Demander des informations sur une carte spécifique."""
     SUGGESTION_VALIDATION = "suggestion_validation"
+    """Valider une suggestion (hypothèse) de jeu."""
     CLUE_REQUEST = "clue_request"
+    """Demander un indice."""
     LOGICAL_VALIDATION = "logical_validation"
+    """Demander une validation logique à un assistant."""
     CONSTRAINT_CHECK = "constraint_check"
+    """Vérifier une contrainte logique."""
     DATASET_ACCESS = "dataset_access"
+    """Accéder directement au jeu de données (généralement restreint)."""
     REVELATION_REQUEST = "revelation_request"
+    """Demander une révélation d'information stratégique."""
     GAME_STATE = "game_state"
+    """Demander l'état actuel du jeu."""
     ADMIN_COMMAND = "admin_command"
+    """Exécuter une commande administrative (très restreint)."""
     PERMISSION_CHECK = "permission_check"
-    PROGRESSIVE_HINT = "progressive_hint"  # Enhanced Oracle functionality
-    RAPID_TEST = "rapid_test"  # Enhanced Oracle rapid testing
+    """Vérifier une permission."""
+    PROGRESSIVE_HINT = "progressive_hint"
+    """Demander un indice progressif (fonctionnalité avancée)."""
+    RAPID_TEST = "rapid_test"
+    """Lancer un test rapide (fonctionnalité avancée)."""
 
 
 class RevealPolicy(Enum):
-    """Politiques de révélation pour les agents Oracle."""
-    PROGRESSIVE = "progressive"  # Révélation progressive selon stratégie
-    COOPERATIVE = "cooperative"  # Mode coopératif maximum
-    COMPETITIVE = "competitive"  # Mode compétitif minimal
-    BALANCED = "balanced"       # Équilibre entre coopération et compétition
+    """Définit les différentes stratégies de révélation d'information."""
+    PROGRESSIVE = "progressive"
+    """Révèle l'information de manière graduelle et stratégique."""
+    COOPERATIVE = "cooperative"
+    """Révèle le maximum d'informations utiles pour aider les autres agents."""
+    COMPETITIVE = "competitive"
+    """Révèle le minimum d'informations possible pour garder un avantage."""
+    BALANCED = "balanced"
+    """Un équilibre entre les politiques coopérative et compétitive."""
 
 
 @dataclass
 class PermissionRule:
     """
-    Règle de permission pour l'accès aux données Oracle.
-    
-    Définit les permissions qu'un agent possède pour accéder aux données
-    et les conditions associées à ces accès.
+    Définit une règle de permission pour un agent spécifique.
+
+    Cette structure de données associe un nom d'agent à une liste de types de
+    requêtes autorisées et à un ensemble de conditions (quota, champs interdits,
+    politique de révélation).
+
+    Attributes:
+        agent_name (str): Nom de l'agent auquel la règle s'applique.
+        allowed_query_types (List[QueryType]): La liste des types de requêtes
+            que l'agent est autorisé à effectuer.
+        conditions (Dict[str, Any]): Un dictionnaire de conditions supplémentaires,
+            comme le nombre maximum de requêtes ou les champs interdits.
     """
     agent_name: str
     allowed_query_types: List[QueryType]
     conditions: Dict[str, Any] = field(default_factory=dict)
-    
+
     def __post_init__(self):
-        """Initialise les valeurs par défaut des conditions."""
+        """Applique les valeurs par défaut pour les conditions après l'initialisation."""
         if "max_daily_queries" not in self.conditions:
             self.conditions["max_daily_queries"] = 50
         if "forbidden_fields" not in self.conditions:
@@ -118,18 +146,34 @@ class ValidationResult:
 
 @dataclass
 class OracleResponse:
-    """Réponse standard d'un agent Oracle."""
+    """
+    Structure de données standard pour les réponses émises par le système Oracle.
+
+    Elle encapsule si une requête a été autorisée, les données résultantes,
+    les informations révélées et divers messages et métadonnées.
+    """
     authorized: bool
+    """`True` si la requête a été autorisée et exécutée, `False` sinon."""
     data: Any = None
+    """Les données utiles retournées par la requête si elle a réussi."""
     message: str = ""
+    """Un message lisible décrivant le résultat."""
     query_type: Optional[QueryType] = None
+    """Le type de la requête qui a généré cette réponse."""
     revealed_information: List[str] = field(default_factory=list)
+    """Liste des informations spécifiques qui ont été révélées lors de cette transaction."""
     agent_name: str = ""
+    """Le nom de l'agent qui a fait la requête."""
     timestamp: datetime = field(default_factory=datetime.now)
+    """L'horodatage de la réponse."""
     metadata: Dict[str, Any] = field(default_factory=dict)
-    revelation_triggered: bool = False  # Enhanced Oracle functionality
-    hint_content: Optional[str] = None  # Progressive hints for Enhanced Oracle
-    error_code: Optional[str] = None  # Error code for failed responses
+    """Métadonnées additionnelles."""
+    revelation_triggered: bool = False
+    """Indique si une révélation d'information a été déclenchée."""
+    hint_content: Optional[str] = None
+    """Contenu d'un indice progressif, le cas échéant."""
+    error_code: Optional[str] = None
+    """Code d'erreur standardisé en cas d'échec."""
     
     @property
     def success(self) -> bool:
@@ -154,20 +198,29 @@ class AccessLog:
 
 class PermissionManager:
     """
-    Gestionnaire centralisé des permissions pour les agents Oracle.
-    
-    Gère l'autorisation des requêtes selon les règles ACL définies
-    et maintient un historique d'accès pour l'auditabilité.
+    Gestionnaire centralisé des permissions et de l'audit pour le système Oracle.
+
+    Cette classe est le cœur du système de contrôle d'accès. Elle :
+    -   Stocke toutes les règles de permission (`PermissionRule`).
+    -   Vérifie si une requête d'un agent est autorisée (`is_authorized`).
+    -   Tient un journal d'audit de toutes les requêtes (`_access_log`).
+    -   Gère les quotas (ex: nombre de requêtes par jour).
     """
-    
+
     def __init__(self):
+        """Initialise le gestionnaire de permissions."""
         self._permission_rules: Dict[str, PermissionRule] = {}
         self._access_log: List[AccessLog] = []
         self._daily_query_counts: Dict[str, int] = {}
         self._logger = logging.getLogger(self.__class__.__name__)
-    
+
     def add_permission_rule(self, rule: PermissionRule) -> None:
-        """Ajoute une règle de permission."""
+        """
+        Enregistre ou met à jour une règle de permission pour un agent.
+
+        Args:
+            rule (PermissionRule): L'objet règle à ajouter.
+        """
         self._permission_rules[rule.agent_name] = rule
         self._logger.info(f"Règle de permission ajoutée pour l'agent: {rule.agent_name}")
     
