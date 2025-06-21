@@ -9,15 +9,13 @@ import sys
 import os
 from datetime import datetime
 from typing import Dict, List, Any
-
-# Ajouter le chemin du projet
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from pathlib import Path
 
 # Import des services JTMS
-from services.jtms_service import JTMSService
-from services.jtms_session_manager import JTMSSessionManager
-from plugins.semantic_kernel.jtms_plugin import create_jtms_plugin
-from integrations.semantic_kernel_integration import create_minimal_jtms_integration
+from argumentation_analysis.services.jtms_service import JTMSService
+from argumentation_analysis.services.jtms_session_manager import JTMSSessionManager
+from argumentation_analysis.plugins.semantic_kernel.jtms_plugin import create_jtms_plugin
+from argumentation_analysis.integrations.semantic_kernel_integration import create_minimal_jtms_integration
 
 class JTMSCompleteDemo:
     """
