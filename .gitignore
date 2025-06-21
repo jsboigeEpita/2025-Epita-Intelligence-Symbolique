@@ -290,3 +290,6 @@ coverage_results.txt
 unit_test_results.txt
 # Cython debug symbols
 cython_debug/
+
+# Fichiers de verrouillage de JAR Tweety
+*.jar.locked
