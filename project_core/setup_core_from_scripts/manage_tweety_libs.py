@@ -95,6 +95,28 @@ def download_tweety_jars(
 
     CORE_JAR_NAME = f"org.tweetyproject.tweety-full-{version}-with-dependencies.jar"
     
+    # --- Contournement du verrou en renommant le fichier JAR existant ---
+    jar_to_rename_path = LIB_DIR / CORE_JAR_NAME
+    if jar_to_rename_path.exists():
+        locked_file_path = jar_to_rename_path.with_suffix(jar_to_rename_path.suffix + '.locked')
+        logger.warning(f"Tentative de renommage du JAR potentiellement verrouillé: {jar_to_rename_path} -> {locked_file_path}")
+        try:
+            # S'assurer qu'un ancien fichier .locked ne bloque pas le renommage
+            if locked_file_path.exists():
+                try:
+                    locked_file_path.unlink()
+                except OSError as e_unlink:
+                    logger.error(f"Impossible de supprimer l'ancien fichier .locked '{locked_file_path}': {e_unlink}")
+                    # Ne pas bloquer, le renommage va probablement échouer mais on loggue le problème.
+
+            jar_to_rename_path.rename(locked_file_path)
+            logger.info(f"Renommage réussi. Le chemin est libre pour un nouveau téléchargement.")
+        except OSError as e:
+            logger.error(f"Impossible de renommer le JAR existant. Le verrou est probablement très fort. Erreur: {e}")
+            # L'échec ici est grave, car le téléchargement échouera probablement aussi.
+            # On continue quand même pour voir les logs du downloader.
+    # --- Fin du contournement ---
+    
     logger.info(f"Vérification de l'accès à {BASE_URL}...")
     try:
         response = requests.head(BASE_URL, timeout=10)

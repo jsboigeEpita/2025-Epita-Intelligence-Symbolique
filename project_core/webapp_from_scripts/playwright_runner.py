@@ -65,6 +65,7 @@ class PlaywrightRunner:
         self.logger.info(f"Configuration: {effective_config}")
 
         try:
+            # La préparation de l'environnement reste asynchrone si nécessaire (même si ici elle est synchrone)
             await self._prepare_test_environment(effective_config)
             
             command_parts = self._build_command(
@@ -75,7 +76,12 @@ class PlaywrightRunner:
                 playwright_config_path
             )
             
-            result = await self._execute_tests(command_parts, effective_config)
+            # Exécution synchrone dans un thread pour ne pas bloquer la boucle asyncio
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(
+                None, self._execute_tests_sync, command_parts, effective_config
+            )
+            
             success = await self._analyze_results(result)
             return success
         except Exception as e:
@@ -128,7 +134,11 @@ class PlaywrightRunner:
 
     def _build_python_command(self, test_paths: List[str], config: Dict[str, Any], pytest_args: List[str]):
         """Construit la commande pour les tests basés sur Pytest."""
-        parts = [sys.executable, '-m', 'pytest', '-v', '-x']
+        parts = [
+            sys.executable, '-m', 'pytest',
+            '-s', '-v',  # Options de verbosité
+            '--log-cli-level=DEBUG' # Niveau de log détaillé
+        ]
         
         # Passer les URLs en tant qu'options et non en tant que chemins de test
         if config.get('backend_url'):
@@ -179,38 +189,42 @@ class PlaywrightRunner:
         self.logger.info(f"Commande JS Playwright construite: {parts}")
         return parts
 
-    async def _execute_tests(self, playwright_command_parts: List[str],
-                           config: Dict[str, Any]) -> subprocess.CompletedProcess:
+    def _execute_tests_sync(self, playwright_command_parts: List[str],
+                            config: Dict[str, Any]) -> subprocess.CompletedProcess:
+        """Exécute les tests de manière synchrone en utilisant subprocess.run."""
         
-        self.logger.info(f"Commande à exécuter: {' '.join(playwright_command_parts)}")
+        self.logger.info(f"Commande (synchrone) à exécuter: {' '.join(playwright_command_parts)}")
         
-        # Le répertoire de travail doit être la racine du projet
         test_dir = '.'
-
+        
         try:
-            # Utilisation de asyncio.create_subprocess_shell pour une meilleure gestion async
-            process = await asyncio.create_subprocess_shell(
-                ' '.join(playwright_command_parts),
+            # Utilisation de subprocess.run pour une exécution simple et robuste
+            result = subprocess.run(
+                playwright_command_parts,
                 cwd=test_dir,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='ignore',
+                timeout=self.process_timeout_s # Timeout directement géré par subprocess.run
             )
             
-            stdout, stderr = await process.communicate()
-            
-            result = subprocess.CompletedProcess(
-                args=playwright_command_parts,
-                returncode=process.returncode,
-                stdout=stdout.decode('utf-8', errors='ignore'),
-                stderr=stderr.decode('utf-8', errors='ignore')
-            )
-            
-            self.logger.info(f"Tests terminés - Code retour: {result.returncode}")
+            self.logger.info(f"Tests terminés (synchrone) - Code retour: {result.returncode}")
             return result
             
+        except subprocess.TimeoutExpired as e:
+            self.logger.error(f"Timeout de {self.process_timeout_s}s dépassé pour le processus de test.", exc_info=True)
+            return subprocess.CompletedProcess(
+                args=e.cmd,
+                returncode=1,
+                stdout=e.stdout,
+                stderr=e.stderr + "\n--- ERREUR: TIMEOUT ATTEINT ---"
+            )
         except Exception as e:
-            self.logger.error(f"Erreur majeure lors de l'exécution de la commande Playwright: {e}", exc_info=True)
-            return subprocess.CompletedProcess(args=' '.join(playwright_command_parts), returncode=1, stdout="", stderr=str(e))
+            self.logger.error(f"Erreur majeure lors de l'exécution (synchrone) de la commande Playwright: {e}", exc_info=True)
+            return subprocess.CompletedProcess(
+                args=' '.join(playwright_command_parts), returncode=1, stdout="", stderr=str(e)
+            )
 
     async def _analyze_results(self, result: subprocess.CompletedProcess) -> bool:
         success = result.returncode == 0

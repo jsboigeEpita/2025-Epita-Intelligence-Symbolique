@@ -112,8 +112,9 @@ class BackendManager:
                     ]
                 elif server_type == 'uvicorn':
                     self.logger.info("Configuration pour un serveur Uvicorn (FastAPI) détectée.")
+                    self.logger.info("Configuration pour un serveur Uvicorn (FastAPI) détectée. Utilisation du port 0 pour une allocation dynamique.")
                     inner_cmd_list = [
-                        "python", "-m", "uvicorn", app_module_with_attribute, "--host", backend_host, "--port", str(port_to_use)
+                        "python", "-m", "uvicorn", app_module_with_attribute, "--host", backend_host, "--port", "0", "--reload"
                     ]
                 else:
                     raise ValueError(f"Type de serveur non supporté: {server_type}. Choisissez 'flask' ou 'uvicorn'.")
@@ -168,12 +169,15 @@ class BackendManager:
                     env=effective_env
                 )
 
-            backend_ready = await self._wait_for_backend(port_to_use)
+            
+            # Attendre que le backend soit prêt. Cette méthode va maintenant trouver le port dynamique.
+            backend_ready, dynamic_port = await self._wait_for_backend(stdout_log_path, stderr_log_path)
 
-            if backend_ready:
-                self.current_url = f"http://localhost:{port_to_use}"
+            if backend_ready and dynamic_port:
+                self.current_port = dynamic_port
+                self.current_url = f"http://localhost:{self.current_port}"
                 self.pid = self.process.pid
-                result = {'success': True, 'url': self.current_url, 'port': port_to_use, 'pid': self.pid, 'error': None}
+                result = {'success': True, 'url': self.current_url, 'port': self.current_port, 'pid': self.pid, 'error': None}
                 await self._save_backend_info(result)
                 return result
 
@@ -202,47 +206,74 @@ class BackendManager:
             self.logger.info(f"Tentative de terminaison du processus backend {self.process.pid} qui n'a pas démarré.")
             self.process.terminate()
             try:
-                await asyncio.to_thread(self.process.wait, timeout=5)
+                await self.process.wait()
             except subprocess.TimeoutExpired:
                 self.process.kill()
         self.process = None
 
-    async def _wait_for_backend(self, port: int) -> bool:
-        """Attend que le backend soit accessible via health check"""
+    async def _wait_for_backend(self, stdout_log_path: Path, stderr_log_path: Path) -> tuple[bool, Optional[int]]:
+        """
+        Attend que le backend soit accessible. Si le port est dynamique (0),
+        le parse depuis les logs stdout.
+        """
+        import re
+        start_time = time.time()
+        self.logger.info(f"Analyse des logs backend ({stdout_log_path.name}, {stderr_log_path.name}) pour le port dynamique (timeout: {self.timeout_seconds}s)")
+
+        dynamic_port = None
+        log_paths_to_check = [stdout_log_path, stderr_log_path]
+        
+        #Regex pour trouver le port dans la sortie d'Uvicorn
+        port_regex = re.compile(r"Uvicorn running on https?://[0-9\.]+:(?P<port>\d+)")
+
+        # 1. Boucle pour trouver le port dans les logs
+        while time.time() - start_time < self.timeout_seconds:
+            if self.process and self.process.returncode is not None:
+                self.logger.error(f"Processus backend terminé prématurément (code: {self.process.returncode})")
+                return False, None
+
+            for log_path in log_paths_to_check:
+                if log_path.exists():
+                    try:
+                        log_content = await asyncio.to_thread(log_path.read_text, encoding='utf-8', errors='ignore')
+                        match = port_regex.search(log_content)
+                        if match:
+                            dynamic_port = int(match.group('port'))
+                            self.logger.info(f"Port dynamique {dynamic_port} détecté dans {log_path.name}")
+                            break  # Sortir de la boucle for
+                    except Exception as e:
+                        self.logger.warning(f"Impossible de lire le fichier de log {log_path.name}: {e}")
+            
+            if dynamic_port:
+                break # Sortir de la boucle while
+
+            await asyncio.sleep(2) # Attendre avant de relire le fichier
+        
+        if not dynamic_port:
+            self.logger.error("Timeout: Port dynamique non trouvé dans les logs du backend.")
+            return False, None
+
+        # 2. Boucle de health check une fois le port trouvé
         backend_host_for_url = self.config.get('host', '127.0.0.1')
         connect_host = "127.0.0.1" if backend_host_for_url == "0.0.0.0" else backend_host_for_url
-
-        url = f"http://{connect_host}:{port}{self.health_endpoint}"
-        start_time = time.time()
+        url = f"http://{connect_host}:{dynamic_port}{self.health_endpoint}"
         
-        self.logger.info(f"Attente backend sur {url} (timeout: {self.timeout_seconds}s)")
+        self.logger.info(f"Port trouvé. Attente du health check sur {url}")
         
-        # Pause initiale pour laisser le temps au serveur de démarrer
-        initial_wait = 15
-        self.logger.info(f"Pause initiale de {initial_wait}s avant health checks...")
-        await asyncio.sleep(initial_wait)
-
-        while time.time() - start_time < self.timeout_seconds:
-            # if self.process and self.process.returncode is not None:
-            #     self.logger.error(f"Processus backend terminé prématurément (code: {self.process.returncode})")
-            #     return False
-            
+        health_check_start_time = time.time()
+        while time.time() - health_check_start_time < self.health_check_timeout:
             try:
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=self.health_check_timeout)) as response:
+                    async with session.get(url, timeout=5) as response:
                         if response.status == 200:
                             self.logger.info(f"Backend accessible sur {url}")
-                            return True
-                        else:
-                            self.logger.warning(f"Health check a échoué avec status {response.status}")
-            except Exception as e:
-                elapsed = time.time() - start_time
-                self.logger.warning(f"Health check échoué ({elapsed:.1f}s): {type(e).__name__}")
-                
-            await asyncio.sleep(5)
-        
-        self.logger.error(f"Timeout dépassé - Backend inaccessible sur {url}")
-        return False
+                            return True, dynamic_port
+            except Exception:
+                pass # Les erreurs sont attendues pendant le démarrage
+            await asyncio.sleep(2)
+
+        self.logger.error(f"Timeout dépassé - Health check inaccessible sur {url}")
+        return False, None
     
     async def _is_port_occupied(self, port: int) -> bool:
         """Vérifie si un port est déjà occupé"""

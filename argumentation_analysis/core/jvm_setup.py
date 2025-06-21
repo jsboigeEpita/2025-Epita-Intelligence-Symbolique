@@ -179,31 +179,51 @@ def download_file(url: str, dest_path: Path, description: Optional[str] = None):
 
 def download_tweety_jars(
     version: str = TWEETY_VERSION,
-    target_dir: Optional[Path] = None,
-    native_subdir: str = "native"
-    ) -> bool:
+    target_dir: Optional[Path] = None
+) -> bool:
     """
-    Vérifie et télécharge les JARs Tweety (Core + Modules) et les binaires natifs nécessaires.
-    NOTE: Cette fonction est actuellement désactivée car les JARs sont fournis localement.
+    Vérifie la présence du JAR 'full-with-dependencies' de Tweety et le télécharge si manquant.
     """
-    logger.info("La fonction de téléchargement des JARs Tweety est désactivée. Utilisation des fichiers locaux.")
-    
-    if target_dir is None:
-        target_dir_path = LIBS_DIR
-    else:
-        target_dir_path = Path(target_dir)
+    logger.info(f"--- Démarrage de la vérification/téléchargement des JARs Tweety v{version} ---")
+    target_dir_path = Path(target_dir) if target_dir else LIBS_DIR
+    target_dir_path.mkdir(parents=True, exist_ok=True)
 
-    if not target_dir_path.exists():
-        logger.error(f"Le répertoire des bibliothèques {target_dir_path} n'existe pas, et le téléchargement est désactivé.")
-        return False
+    # Configuration pour le JAR "full-with-dependencies"
+    jar_filename = f"org.tweetyproject.tweety-full-{version}-with-dependencies.jar"
+    jar_url = f"https://tweetyproject.org/builds/{version}/{jar_filename}"
+    jar_target_path = target_dir_path / jar_filename
 
-    # On vérifie simplement la présence d'au moins un fichier .jar pour simuler un succès
-    if any(target_dir_path.rglob("*.jar")):
-        logger.info("Au moins un fichier JAR trouvé dans le répertoire local. On continue.")
+    logger.info(f"Vérification de la présence de: {jar_target_path}")
+
+    # Si le fichier existe et n'est pas vide, on ne fait rien
+    if jar_target_path.exists() and jar_target_path.stat().st_size > 0:
+        logger.info(f"JAR Core '{jar_filename}': déjà présent.")
+        logger.info("--- Fin de la vérification/téléchargement des JARs Tweety ---")
         return True
-    else:
-        logger.critical(f"❌ ERREUR CRITIQUE : Aucun fichier JAR trouvé dans {target_dir_path} et le téléchargement est désactivé.")
+
+    # Si le fichier n'existe pas, on le télécharge
+    logger.info(f"JAR '{jar_filename}' non trouvé ou vide. Tentative de téléchargement...")
+    
+    # Vérifier l'accessibilité de l'URL de base avant de tenter le téléchargement
+    base_url = f"https://tweetyproject.org/builds/{version}/"
+    try:
+        response = requests.head(base_url, timeout=10)
+        response.raise_for_status()
+        logger.info(f"URL de base Tweety v{version} accessible.")
+    except requests.RequestException as e:
+        logger.error(f"Impossible d'accéder à l'URL de base de Tweety {base_url}. Erreur: {e}")
+        logger.error("Vérifiez la connexion internet ou la disponibilité du site de Tweety.")
         return False
+
+    success, _ = download_file(jar_url, jar_target_path, description=jar_filename)
+
+    if success:
+        logger.info(f"JAR '{jar_filename}' téléchargé avec succès.")
+    else:
+        logger.error(f"Échec du téléchargement du JAR '{jar_filename}' depuis {jar_url}.")
+
+    logger.info("--- Fin de la vérification/téléchargement des JARs Tweety ---")
+    return success
 
 def unzip_file(zip_path: Path, dest_dir: Path):
     """Décompresse un fichier ZIP."""
@@ -502,111 +522,121 @@ def initialize_jvm(
     import jpype.imports
     global _JVM_INITIALIZED_THIS_SESSION, _JVM_WAS_SHUTDOWN, _SESSION_FIXTURE_OWNS_JVM
 
-    logger.info(f"Appel à initialize_jvm. isJVMStarted: {jpype.isJVMStarted()}, force_restart: {force_restart}")
+    # --- Logging verbeux pour le débogage ---
+    logger.info("="*50)
+    logger.info(f"APPEL À initialize_jvm | isJVMStarted: {jpype.isJVMStarted()}, force_restart: {force_restart}")
+    logger.info("="*50)
+
     if force_restart and jpype.isJVMStarted():
-        logger.info("Forçage du redémarrage de la JVM...")
+        logger.info("Forçage explicite du redémarrage de la JVM...")
         shutdown_jvm()
 
     if jpype.isJVMStarted():
-        logger.info("la JVM est déjà démarrée.")
+        logger.info("La JVM est déjà démarrée. Aucune action.")
         return True
 
     if _JVM_WAS_SHUTDOWN:
-        logger.error("ERREUR CRITIQUE: Tentative de redémarrage d'une JVM qui a été explicitement arrêtée.")
+        logger.critical("ERREUR: Tentative de redémarrage d'une JVM qui a été explicitement arrêtée. C'est une opération non supportée par JPype.")
         return False
 
-
+    # --- 1. Validation de Java Home ---
+    logger.info("\n--- ÉTAPE 1: RECHERCHE ET VALIDATION DE JAVA_HOME ---")
     java_home_str = find_valid_java_home()
     if not java_home_str:
-        logger.error("Impossible de trouver ou d'installer un JDK valide.")
+        logger.critical("ÉCHEC CRITIQUE: Impossible de trouver ou d'installer un JDK valide. Démarrage JVM annulé.")
         return False
         
     os.environ['JAVA_HOME'] = java_home_str
-    logger.info(f"Variable d'env JAVA_HOME positionnée à : {java_home_str}")
+    logger.info(f"-> JAVA_HOME positionné à : {java_home_str}")
 
-    # --- Logique de recherche de la JVM DLL/SO simplifiée et fiabilisée ---
-    logger.info(f"Construction du chemin de la bibliothèque JVM à partir du JDK validé : {java_home_str}")
+    # --- 2. Recherche de la bibliothèque JVM (DLL/SO) ---
+    logger.info("\n--- ÉTAPE 2: LOCALISATION DE LA BIBLIOTHÈQUE JVM (DLL/SO) ---")
     java_home_path = Path(java_home_str)
-    jvm_path_dll_so = None
-
+    
     system = platform.system()
     if system == "Windows":
-        # Chemin standard pour la plupart des JDK sur Windows
         jvm_path_candidate = java_home_path / "bin" / "server" / "jvm.dll"
-    elif system == "Darwin":  # macOS
-        jvm_path_candidate = java_home_path / "lib" / "server" / "libjvm.dylib"
-    else:  # Linux et autres
-        # Le chemin peut varier, mais "lib/server" est le plus commun
+    elif system == "Darwin":
+        jvm_pjpypeath_candidate = java_home_path / "lib" / "server" / "libjvm.dylib"
+    else:
         jvm_path_candidate = java_home_path / "lib" / "server" / "libjvm.so"
+    
+    logger.info(f"Chemin standard candidat pour la JVM: {jvm_path_candidate}")
 
     if jvm_path_candidate.exists():
         jvm_path_dll_so = str(jvm_path_candidate.resolve())
-        logger.info(f"Bibliothèque JVM trouvée et validée à l'emplacement : {jvm_path_dll_so}")
+        logger.info(f"-> Bibliothèque JVM trouvée et validée à l'emplacement : {jvm_path_dll_so}")
     else:
-        # Si le chemin standard échoue, JPype peut parfois trouver le bon chemin par lui-même MAINTENANT que JAVA_HOME est défini.
-        logger.warning(f"Le chemin standard de la JVM '{jvm_path_candidate}' n'a pas été trouvé. Tentative de fallback avec jpype.getDefaultJVMPath()...")
+        logger.warning(f"Le chemin standard '{jvm_path_candidate}' n'existe pas. Tentative de fallback avec jpype.getDefaultJVMPath()...")
         try:
             jvm_path_dll_so = jpype.getDefaultJVMPath()
-            logger.info(f"Succès du fallback : JPype a trouvé la JVM à '{jvm_path_dll_so}'.")
+            logger.info(f"-> Succès du fallback : JPype a trouvé la JVM à '{jvm_path_dll_so}'.")
         except jpype.JVMNotFoundException:
-            logger.critical(f"ÉCHEC CRITIQUE: La bibliothèque JVM n'a été trouvée ni à l'emplacement standard '{jvm_path_candidate}' ni via la découverte automatique de JPype.")
-            logger.error("Veuillez vérifier l'intégrité de l'installation du JDK ou configurer le chemin manuellement.")
+            logger.critical(f"ÉCHEC CRITIQUE: La bibliothèque JVM est introuvable. Vérifiez l'intégrité du JDK à {java_home_str}.")
             return False
 
+# --- 2.BIS. Nettoyage des anciens fichiers JAR verrouillés ---
+    logger.info("\n--- ÉTAPE 2.BIS: NETTOYAGE DES ANCIENS JARS VERROUILLÉS (.locked) ---")
+    actual_lib_dir_for_cleanup = Path(lib_dir_path) if lib_dir_path else LIBS_DIR
+    locked_files = list(actual_lib_dir_for_cleanup.rglob("*.jar.locked"))
+    if locked_files:
+        logger.warning(f"Trouvé {len(locked_files)} fichier(s) JAR verrouillé(s) à nettoyer.")
+        for f in locked_files:
+            try:
+                f.unlink()
+                logger.info(f" -> Ancien fichier verrouillé supprimé: {f.name}")
+            except OSError as e:
+                logger.error(f" -> Impossible de supprimer l'ancien fichier verrouillé '{f.name}'. Il est peut-être toujours utilisé. Erreur: {e}")
+    else:
+        logger.info("Aucun ancien fichier .jar.locked à nettoyer.")
+    # --- 3. Construction du Classpath ---
+    logger.info("\n--- ÉTAPE 3: CONSTRUCTION DU CLASSPATH JAVA ---")
     jars_classpath_list: List[str] = []
+    
     if classpath:
-        # Le classpath est fourni directement, on lui fait confiance.
-        # On peut passer un seul chemin ou une liste jointe par le séparateur de l'OS.
         jars_classpath_list = classpath.split(os.pathsep)
-        logger.info(f"Utilisation du classpath fourni directement ({len(jars_classpath_list)} entrées).")
+        logger.info(f"Utilisation du classpath fourni directement. Nombre d'entrées: {len(jars_classpath_list)}")
     elif specific_jar_path:
         specific_jar_file = Path(specific_jar_path)
         if specific_jar_file.is_file():
             jars_classpath_list = [str(specific_jar_file.resolve())]
+            logger.info(f"Utilisation du JAR spécifique: {jars_classpath_list[0]}")
         else:
-            logger.error(f"Fichier JAR spécifique introuvable: '{specific_jar_path}'.")
+            logger.error(f"Fichier JAR spécifique fourni mais introuvable: '{specific_jar_path}'.")
             return False
     else:
-        # 1. Définir le répertoire cible pour les bibliothèques
         actual_lib_dir = Path(lib_dir_path) if lib_dir_path else LIBS_DIR
-        logger.info(f"Répertoire des bibliothèques cible : '{actual_lib_dir.resolve()}'")
+        logger.info(f"Recherche de JARs dans le répertoire par défaut: '{actual_lib_dir.resolve()}'")
         
-        # S'assurer que le répertoire existe avant toute opération
         actual_lib_dir.mkdir(parents=True, exist_ok=True)
 
-        # 2. Provisioning : télécharger les JARs si nécessaire (logique inversée)
         if not _SESSION_FIXTURE_OWNS_JVM:
-            logger.info("Lancement du processus de provisioning des bibliothèques Tweety...")
+            logger.info("Lancement du provisioning des bibliothèques Tweety (vérification/téléchargement)...")
             if not download_tweety_jars(target_dir=actual_lib_dir):
-                logger.warning("Le provisioning des bibliothèques a signalé une erreur (ex: JAR core manquant). Le classpath sera probablement vide.")
+                logger.warning("Le provisioning a signalé un problème (JARs potentiellement manquants).")
             else:
-                logger.info("Provisioning des bibliothèques terminé.")
+                logger.info("Provisioning terminé.")
         else:
-            logger.info("Le provisioning des bibliothèques est géré par une fixture de session, il est donc sauté ici.")
+            logger.info("Provisioning des bibliothèques géré par une fixture de session, sauté ici.")
 
-        # 3. Validation : construire le classpath à partir du répertoire cible APRES provisioning
-        logger.info(f"Construction du classpath depuis '{actual_lib_dir.resolve()}'...")
-        jars_classpath_list = []
-        logger.debug(f"Début du scan de JARs dans : {actual_lib_dir}")
-        for root, dirs, files in os.walk(actual_lib_dir):
-            logger.debug(f"Scanning in root: {root}")
-            for file in files:
-                if file.endswith(".jar"):
-                    found_path = os.path.join(root, file)
-                    logger.debug(f"  -> JAR trouvé : {found_path}")
-                    jars_classpath_list.append(found_path)
-        logger.debug(f"Scan terminé. Total JARs trouvés: {len(jars_classpath_list)}")
-        if jars_classpath_list:
-             logger.info(f"  {len(jars_classpath_list)} JAR(s) trouvé(s) pour le classpath.")
-        else:
-             logger.warning(f"  Aucun fichier JAR n'a été trouvé dans '{actual_lib_dir.resolve()}'. Le classpath sera vide.")
+        logger.info(f"Scan récursif (rglob) de '{actual_lib_dir.resolve()}' pour les fichiers .jar...")
+        jars_classpath_list = [str(p.resolve()) for p in actual_lib_dir.rglob("*.jar")]
 
-    if not jars_classpath_list:
-        logger.error("Classpath est vide. Démarrage de la JVM annulé.")
+    if jars_classpath_list:
+        logger.info(f"-> {len(jars_classpath_list)} JAR(s) trouvés pour le classpath.")
+        # Afficher chaque JAR sur une nouvelle ligne pour une meilleure lisibilité
+        formatted_classpath = "\n".join([f"  - {jar}" for jar in jars_classpath_list])
+        logger.info(f"Classpath final à utiliser:\n{formatted_classpath}")
+    else:
+        logger.warning(f"-> Aucun fichier JAR trouvé. Le classpath est vide. Le démarrage de la JVM va probablement échouer.")
         return False
 
+    # --- 4. Démarrage de la JVM ---
+    logger.info("\n--- ÉTAPE 4: DÉMARRAGE DE LA JVM ---")
     jvm_options = get_jvm_options()
-    logger.info(f"Tentative de démarrage de la JVM avec classpath: {os.pathsep.join(jars_classpath_list)}")
+    logger.info(f"Options JVM: {jvm_options}")
+    logger.info(f"Chemin DLL/SO: {jvm_path_dll_so}")
+    logger.info(f"Classpath (brut): {os.pathsep.join(jars_classpath_list)}")
     logger.info(f"Options JVM: {jvm_options}")
     logger.info(f"Chemin DLL/SO JVM utilisé: {jvm_path_dll_so}")
 
