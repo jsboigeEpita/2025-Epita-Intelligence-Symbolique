@@ -149,7 +149,7 @@ class MinimalBackendManager:
         
         # On utilise directement le nom correct de l'environnement.
         # Idéalement, cela viendrait d'une source de configuration plus fiable.
-        env_name = "projet-is-roo"
+        env_name = self.config.get('backend', {}).get('conda_env', 'projet-is')
         self.logger.info(f"[BACKEND] Utilisation du nom d'environnement Conda: '{env_name}'")
         
         command = [
@@ -488,6 +488,16 @@ class UnifiedWebOrchestrator:
                 self.logger.info(f"Port {port} détecté comme étant utilisé.")
             return is_used
             
+    def _deep_merge_dicts(self, base: dict, new: dict) -> dict:
+        """Fusionne récursivement deux dictionnaires."""
+        merged = base.copy()
+        for key, value in new.items():
+            if isinstance(value, dict) and key in merged and isinstance(merged[key], dict):
+                merged[key] = self._deep_merge_dicts(merged[key], value)
+            else:
+                merged[key] = value
+        return merged
+
     def _load_config(self) -> Dict[str, Any]:
         """Charge la configuration depuis le fichier YAML et la fusionne avec les valeurs par défaut."""
         print("[DEBUG] unified_web_orchestrator.py: _load_config()")
