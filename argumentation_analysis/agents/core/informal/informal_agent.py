@@ -2,22 +2,17 @@
 # -*- coding: utf-8 -*-
 
 """
-Agent d'analyse informelle pour l'identification et l'analyse des sophismes.
+Définit l'agent d'analyse informelle pour l'identification des sophismes.
 
-Ce module implémente `InformalAnalysisAgent`, un agent spécialisé dans
-l'analyse informelle des arguments, en particulier la détection et la
-catégorisation des sophismes (fallacies). Il s'appuie sur Semantic Kernel
-pour interagir avec des modèles de langage via des prompts spécifiques
-et peut intégrer un plugin natif (`InformalAnalysisPlugin`) pour des
-opérations liées à la taxonomie des sophismes.
+Ce module fournit `InformalAnalysisAgent`, un agent spécialisé dans l'analyse
+informelle d'arguments. Il combine des capacités sémantiques (via LLM) et
+natives pour détecter, justifier et catégoriser les sophismes dans un texte.
 
-L'agent est conçu pour :
-- Identifier les arguments dans un texte.
-- Analyser un texte ou un argument spécifique pour y détecter des sophismes.
-- Justifier l'attribution de ces sophismes.
-- Explorer une hiérarchie de taxonomie des sophismes.
-- Catégoriser les sophismes détectés.
-- Effectuer une analyse complète combinant ces étapes.
+Fonctionnalités principales :
+- Identification d'arguments.
+- Détection de sophismes avec score de confiance.
+- Justification de l'attribution des sophismes.
+- Navigation et interrogation d'une taxonomie de sophismes via un plugin natif.
 """
 
 import logging
@@ -48,13 +43,17 @@ class InformalAnalysisAgent(BaseAgent):
     """
     Agent spécialiste de la détection de sophismes et de l'analyse informelle.
 
-    Cet agent combine des fonctions sémantiques (pour l'analyse de texte) et des
-    fonctions natives (pour la gestion d'une taxonomie de sophismes) afin de
-    détecter, catégoriser et justifier la présence de sophismes dans un texte.
+    Cet agent orchestre des fonctions sémantiques et natives pour analyser un
+    texte. Il peut identifier des arguments, détecter des sophismes potentiels,
+    justifier ses conclusions et classer les sophismes selon une taxonomie.
+
+    L'interaction avec la taxonomie (par exemple, pour explorer la hiérarchie
+    des sophismes) est gérée par un plugin natif (`InformalAnalysisPlugin`).
 
     Attributes:
-        config (Dict[str, Any]): Configuration de l'agent (profondeur d'analyse, seuils).
-        _taxonomy_file_path (Optional[str]): Chemin vers le fichier de taxonomie des sophismes.
+        config (Dict[str, Any]): Configuration pour l'analyse (profondeur, seuils).
+        _taxonomy_file_path (Optional[str]): Chemin vers le fichier JSON de la
+            taxonomie, utilisé par le plugin natif.
     """
     config: Dict[str, Any] = {
         "analysis_depth": "standard",
@@ -73,11 +72,10 @@ class InformalAnalysisAgent(BaseAgent):
         Initialise l'agent d'analyse informelle.
 
         Args:
-            kernel (sk.Kernel): L'instance du kernel Semantic Kernel à utiliser.
-            agent_name (str): Le nom de l'agent.
-            taxonomy_file_path (Optional[str]): Le chemin vers le fichier JSON
-                contenant la taxonomie des sophismes. Ce fichier est utilisé par
-                le plugin natif `InformalAnalysisPlugin`.
+            kernel (sk.Kernel): L'instance du kernel Semantic Kernel.
+            agent_name (str, optional): Le nom de l'agent.
+            taxonomy_file_path (Optional[str], optional): Chemin vers le fichier
+                JSON de la taxonomie pour le plugin natif.
         """
         if not kernel:
             raise ValueError("Le Kernel Semantic Kernel est requis.")
@@ -88,10 +86,10 @@ class InformalAnalysisAgent(BaseAgent):
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         """
-        Retourne les capacités de l'agent d'analyse informelle.
+        Retourne les capacités spécifiques de l'agent d'analyse informelle.
 
-        :return: Un dictionnaire mappant les noms des capacités à leurs descriptions.
-        :rtype: Dict[str, Any]
+        Returns:
+            Dict[str, Any]: Un dictionnaire décrivant les méthodes principales.
         """
         return {
             "identify_arguments": "Identifies main arguments in a text using semantic functions.",
@@ -104,17 +102,15 @@ class InformalAnalysisAgent(BaseAgent):
 
     def setup_agent_components(self, llm_service_id: str) -> None:
         """
-        Configure les composants spécifiques de l'agent d'analyse informelle dans le kernel SK.
+        Configure les composants de l'agent dans le kernel.
 
-        Enregistre le plugin natif `InformalAnalysisPlugin` et les fonctions sémantiques
-        pour l'identification d'arguments, l'analyse de sophismes et la justification
-        d'attribution de sophismes.
+        Cette méthode enregistre à la fois le plugin natif (`InformalAnalysisPlugin`)
+        pour la gestion de la taxonomie et les fonctions sémantiques (prompts)
+        pour l'analyse de texte.
 
-        :param llm_service_id: L'ID du service LLM à utiliser pour les fonctions sémantiques.
-        :type llm_service_id: str
-        :return: None
-        :rtype: None
-        :raises Exception: Si une erreur survient lors de l'enregistrement des fonctions sémantiques.
+        Args:
+            llm_service_id (str): L'ID du service LLM à utiliser pour les
+                fonctions sémantiques.
         """
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants pour {self.name} avec le service LLM: {llm_service_id}...")
