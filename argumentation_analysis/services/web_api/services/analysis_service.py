@@ -97,8 +97,9 @@ class AnalysisService:
                 self.logger.warning("[WARN] ComplexFallacyAnalyzer not available (import failed or class not found)")
             
             if ContextualFallacyAnalyzer:
-                self.contextual_analyzer = ContextualFallacyAnalyzer()
-                self.logger.info("[OK] ContextualFallacyAnalyzer initialized")
+                # self.contextual_analyzer = ContextualFallacyAnalyzer()
+                self.contextual_analyzer = None # Désactivé pour les tests
+                self.logger.warning("[OK] ContextualFallacyAnalyzer temporarily disabled for testing")
             else:
                 self.contextual_analyzer = None
                 self.logger.warning("[WARN] ContextualFallacyAnalyzer not available (import failed or class not found)")

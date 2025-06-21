@@ -11,7 +11,6 @@ import json  # Ajout de l'import manquant
 import asyncio
 from semantic_kernel.contents.chat_history import ChatHistory
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
-from semantic_kernel.contents.utils.author_role import AuthorRole as Role
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
 
 # Logger pour ce module
@@ -57,7 +56,7 @@ class MockChatCompletion(ChatCompletionClientBase):
         
         # Créer un ChatMessageContent avec la réponse mockée
         response_message = ChatMessageContent(
-            role=Role.ASSISTANT,
+            role="assistant",
             content=json.dumps(mock_response_content, indent=2, ensure_ascii=False)
         )
         

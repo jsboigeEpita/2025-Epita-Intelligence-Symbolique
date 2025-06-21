@@ -131,7 +131,10 @@ else:
 # --- Fin Configuration globale du Logging ---
 
 # Charger les fixtures définies dans d'autres fichiers comme des plugins
-pytest_plugins = ["tests.fixtures.integration_fixtures"]
+pytest_plugins = [
+   "tests.fixtures.integration_fixtures",
+   "tests.fixtures.jvm_subprocess_fixture"
+]
 
 def pytest_addoption(parser):
     """Ajoute des options de ligne de commande personnalisées à pytest."""
@@ -214,6 +217,3 @@ def webapp_config():
 def test_config_path(tmp_path):
     """Provides a temporary path for a config file."""
     return tmp_path / "test_config.yml"
-pytest_plugins = [
-   "tests.fixtures.jvm_subprocess_fixture"
-]

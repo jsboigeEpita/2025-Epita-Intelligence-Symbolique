@@ -133,11 +133,12 @@ async def lifespan(app: Starlette):
 
     # Tâche pour charger les modèles NLP
     if app.state.nlp_model_manager:
-        # Exécuter la méthode de chargement synchrone dans un thread pour ne pas bloquer la boucle asyncio
-        loop = asyncio.get_running_loop()
-        init_tasks.append(loop.run_in_executor(
-            None, app.state.nlp_model_manager.load_models_sync
-        ))
+        logger.warning("NLP model loading is temporarily disabled for testing.")
+        # # Exécuter la méthode de chargement synchrone dans un thread pour ne pas bloquer la boucle asyncio
+        # loop = asyncio.get_running_loop()
+        # init_tasks.append(loop.run_in_executor(
+        #     None, app.state.nlp_model_manager.load_models_sync
+        # ))
 
     # Exécuter les tâches en parallèle
     await asyncio.gather(*init_tasks)

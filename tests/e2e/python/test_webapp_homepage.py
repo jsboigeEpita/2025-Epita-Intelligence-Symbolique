@@ -2,14 +2,18 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-def test_homepage_has_correct_title_and_header(page: Page, frontend_url: str):
+def test_homepage_has_correct_title_and_header(page: Page, e2e_servers):
     """
     Ce test vérifie que la page d'accueil de l'application web se charge correctement,
     affiche le bon titre, un en-tête H1 visible et que la connexion à l'API est active.
-    Il dépend de la fixture `frontend_url` pour obtenir l'URL de base dynamique.
+    Il dépend de la fixture `e2e_servers` pour démarrer les serveurs et obtenir l'URL dynamique.
     """
-    # Naviguer vers la racine de l'application web en utilisant l'URL fournie par la fixture.
-    page.goto(frontend_url, wait_until='networkidle', timeout=30000)
+    # Obtenir l'URL dynamique directement depuis la fixture des serveurs
+    frontend_url_dynamic = e2e_servers.app_info.frontend_url
+    assert frontend_url_dynamic, "L'URL du frontend n'a pas été définie par la fixture e2e_servers"
+
+    # Naviguer vers la racine de l'application web en utilisant l'URL dynamique.
+    page.goto(frontend_url_dynamic, wait_until='networkidle', timeout=30000)
 
     # Attendre que l'indicateur de statut de l'API soit visible et connecté
     api_status_indicator = page.locator('.api-status.connected')

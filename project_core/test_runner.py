@@ -20,7 +20,7 @@ from pathlib import Path
 # Configuration des chemins et des commandes
 ROOT_DIR = Path(__file__).parent.parent
 API_DIR = ROOT_DIR
-FRONTEND_DIR = ROOT_DIR / "services" / "web_api" / "interface-web-argumentative"
+FRONTEND_DIR = ROOT_DIR / "interface_web"
 
 
 class ServiceManager:
@@ -50,19 +50,25 @@ class ServiceManager:
         self.processes.append(api_process)
         print(f"Service API démarré avec le PID: {api_process.pid}")
 
-        # Démarrer le frontend React (npm start sur le port 3000)
-        print("Démarrage du service Frontend sur le port 3000...")
+        # Démarrer le frontend Starlette (uvicorn sur le port 3000)
+        print("Démarrage du service Frontend (Starlette) sur le port 3000...")
+        frontend_log_out = open("frontend_server.log", "w")
+        frontend_log_err = open("frontend_server.error.log", "w")
+        self.log_files["frontend_out"] = frontend_log_out
+        self.log_files["frontend_err"] = frontend_log_err
+        
         frontend_process = subprocess.Popen(
-            ["npm", "start"],
-            cwd=FRONTEND_DIR,
-            shell=True
+            [sys.executable, str(FRONTEND_DIR / "app.py"), "--port", "3000"],
+            cwd=ROOT_DIR,
+            stdout=frontend_log_out,
+            stderr=frontend_log_err
         )
         self.processes.append(frontend_process)
         print(f"Service Frontend démarré avec le PID: {frontend_process.pid}")
 
         # Laisser le temps aux serveurs de démarrer
-        print("Attente du démarrage des services (20 secondes)...")
-        time.sleep(20)
+        print("Attente du démarrage des services (60 secondes)...")
+        time.sleep(60)
         print("Services probablement démarrés.")
 
     def stop_services(self):

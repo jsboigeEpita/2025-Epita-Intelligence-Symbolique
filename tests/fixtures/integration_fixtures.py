@@ -414,3 +414,63 @@ def dialogue_classes(tweety_classpath_initializer, integration_jvm):
         }
     except jpype_instance.JException as e: pytest.fail(f"Echec import classes Dialogue: {e.stacktrace() if hasattr(e, 'stacktrace') else str(e)}")
     except Exception as e_py: pytest.fail(f"Erreur Python (dialogue_classes): {str(e_py)}")
+# --- Fixture pour les tests E2E ---
+import asyncio
+from argumentation_analysis.webapp.orchestrator import UnifiedWebOrchestrator
+import argparse
+
+@pytest.fixture(scope="session")
+def e2e_servers(request):
+    """
+    Fixture à portée session qui démarre les serveurs backend et frontend
+    pour les tests End-to-End.
+    """
+    logger.info("--- DEBUT FIXTURE 'e2e_servers' (démarrage des serveurs E2E) ---")
+
+    # Crée un Namespace d'arguments simple pour l'orchestrateur
+    # On force les valeurs nécessaires pour un scénario de test E2E.
+    args = argparse.Namespace(
+        config='argumentation_analysis/webapp/config/webapp_config.yml',
+        headless=True,
+        visible=False,
+        frontend=True,  # Crucial pour les tests E2E
+        tests=None,
+        timeout=5, # Timeout plus court pour le démarrage en test
+        log_level='DEBUG',
+        no_trace=True, # Pas besoin de trace MD pour les tests automatisés
+        no_playwright=True, # On ne veut pas que l'orchestrateur lance les tests, seulement les serveurs
+        exit_after_start=False,
+        start=True, # Simule l'option de démarrage
+        stop=False,
+        test=False,
+        integration=False,
+    )
+
+    orchestrator = UnifiedWebOrchestrator(args)
+
+    # Le scope "session" de pytest s'exécute en dehors de la boucle d'événement
+    # d'un test individuel. On doit gérer la boucle manuellement ici.
+    loop = asyncio.get_event_loop_policy().get_event_loop()
+    if loop.is_running():
+        # Si la boucle tourne (rare en scope session), on ne peut pas utiliser run_until_complete
+        # C'est un scénario complexe, on skippe pour l'instant.
+        pytest.skip("Impossible de démarrer les serveurs E2E dans une boucle asyncio déjà active.")
+
+    success = loop.run_until_complete(orchestrator.start_webapp(headless=True, frontend_enabled=True))
+    
+    # Vérification que le backend est bien démarré, car c'est bloquant.
+    if not orchestrator.app_info.backend_pid:
+        logger.error("Le backend n'a pas pu démarrer. Arrêt de la fixture.")
+        loop.run_until_complete(orchestrator.stop_webapp())
+        pytest.fail("Echec du démarrage du serveur backend pour les tests E2E.", pytrace=False)
+        
+    def finalizer():
+        logger.info("--- FIN FIXTURE 'e2e_servers' (arrêt des serveurs E2E) ---")
+        # S'assurer que la boucle est disponible pour le nettoyage
+        cleanup_loop = asyncio.get_event_loop_policy().get_event_loop()
+        cleanup_loop.run_until_complete(orchestrator.stop_webapp())
+
+    request.addfinalizer(finalizer)
+
+    # Fournir l'orchestrateur aux tests s'ils en ont besoin
+    yield orchestrator
