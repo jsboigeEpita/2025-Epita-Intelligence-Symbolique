@@ -8,7 +8,7 @@ Fonctionnalités:
 - Adaptation automatique pour Oracle Enhanced v2.1.0
 - Génération de rapports de récupération
 - Validation de l'intégrité du code récupéré
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 
 Usage:
     python scripts/maintenance/recover_precious_code.py [--priority=8] [--validate] [--report]

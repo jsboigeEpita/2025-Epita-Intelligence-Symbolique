@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Investigation Semantic Kernel - Version et modules disponibles"""
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 import sys
 import os
 

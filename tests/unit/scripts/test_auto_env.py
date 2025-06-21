@@ -29,7 +29,7 @@ scripts_core = current_dir / "scripts" / "core"
 if str(scripts_core) not in sys.path:
     sys.path.insert(0, str(scripts_core))
 
-from project_core.core_from_scripts.auto_env import ensure_env, get_one_liner, get_simple_import
+from argumentation_analysis.core.environment import ensure_env, get_one_liner, get_simple_import
 
 
 class TestAutoEnv(unittest.TestCase):
@@ -136,7 +136,7 @@ class TestAutoEnv(unittest.TestCase):
         simple_import = get_simple_import()
         
         self.assertIsInstance(simple_import, str)
-        self.assertIn("import project_core.core_from_scripts.auto_env", simple_import)
+        self.assertIn("import argumentation_analysis.core.environment", simple_import)
         self.assertIn("Auto-activation", simple_import)
 
 

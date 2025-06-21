@@ -7,7 +7,7 @@ Script amélioré pour résoudre tous les problèmes de dépendances pour les te
 Ce script installe toutes les dépendances nécessaires à partir de requirements-test.txt
 et gère spécifiquement les problèmes connus avec certaines bibliothèques.
 """
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 
 import subprocess
 import sys

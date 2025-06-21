@@ -8,7 +8,7 @@ Script de Validation Système Complet - Phase 3
 Valide l'intégrité et le fonctionnement de tous les fichiers consolidés
 après la suppression des fichiers redondants (Phase 2).
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 Fichiers consolidés à valider :
 1. demos/demo_unified_system.py
 2. scripts/maintenance/unified_maintenance.py  

@@ -1,4 +1,4 @@
-﻿import project_core.core_from_scripts.auto_env
+﻿import argumentation_analysis.core.environment
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 

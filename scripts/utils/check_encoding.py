@@ -6,7 +6,7 @@ Script pour vérifier l'encodage UTF-8 des fichiers Python du projet
 en utilisant l'utilitaire de project_core.
 """
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 import sys
 import os
 

@@ -8,7 +8,7 @@ Ce script recherche les importations problématiques et les remplace par
 les importations correctes, en utilisant le nom complet du package.
 """
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 import re
 import sys
 from pathlib import Path

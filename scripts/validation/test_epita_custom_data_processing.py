@@ -4,7 +4,7 @@ Script de validation : Élimination des mocks et traitement réel des données c
 Démo Épita - Validation post-amélioration
 """
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 import sys
 import json
 from datetime import datetime

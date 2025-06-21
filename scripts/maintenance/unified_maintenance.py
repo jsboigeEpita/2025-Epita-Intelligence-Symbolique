@@ -8,7 +8,7 @@ Système de maintenance unifié - Consolidation des scripts de maintenance
 Ce fichier consolide la logique de :
 - scripts/maintenance/depot_cleanup_migration.ps1
 - scripts/maintenance/depot_cleanup_migration_simple.ps1  
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 - scripts/maintenance/cleanup_obsolete_files.py
 - scripts/maintenance/safe_file_deletion.py
 - scripts/utils/cleanup_decrypt_traces.py

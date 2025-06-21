@@ -6,7 +6,7 @@ Script de validation rapide de l'environnement.
 Généré automatiquement par diagnostic_environnement.py
 """
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 import sys
 import importlib
 from pathlib import Path # Ajout pour la clarté

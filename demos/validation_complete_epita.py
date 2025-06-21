@@ -1,4 +1,4 @@
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 #!/usr/bin/env python3
 """
 Validation Complète EPITA - Intelligence Symbolique
@@ -156,7 +156,7 @@ class ValidationEpitaComplete:
         # Vérification si le module d'environnement a été chargé.
         # Ceci est redondant car l'import en haut du fichier devrait déjà l'avoir fait,
         # mais sert de vérification de sanité.
-        if "project_core.core_from_scripts.auto_env" in sys.modules:
+        if "argumentation_analysis.core.environment" in sys.modules:
             print(f"{Colors.GREEN}[OK] [SETUP] Module auto_env est bien chargé.{Colors.ENDC}")
         else:
             print(f"{Colors.WARNING}[WARN] [SETUP] Le module auto_env n'a pas été pré-chargé comme prévu.{Colors.ENDC}")

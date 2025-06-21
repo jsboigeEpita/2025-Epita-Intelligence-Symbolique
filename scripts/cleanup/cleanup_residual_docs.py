@@ -8,7 +8,7 @@ Ce script permet de:
 2. Vérifier que la sauvegarde est complète et valide
 3. Supprimer les fichiers résiduels de leur emplacement d'origine
 4. Générer un rapport détaillé des opérations effectuées
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 5. Restaurer les fichiers si nécessaire
 
 Options:

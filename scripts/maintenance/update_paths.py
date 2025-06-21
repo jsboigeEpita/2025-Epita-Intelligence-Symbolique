@@ -7,7 +7,7 @@ Script pour mettre à jour les références aux chemins dans les fichiers exista
 Ce script recherche les références aux chemins codés en dur et les remplace par
 des références au module paths.py, ce qui centralise la gestion des chemins.
 """
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 
 import re
 import sys

@@ -46,7 +46,7 @@ if str(current_dir) not in sys.path:
     sys.path.append(str(current_dir))
 
 # Activation automatique de l'environnement
-from project_core.core_from_scripts.auto_env import ensure_env
+from argumentation_analysis.core.environment import ensure_env
 ensure_env()
 
 def setup_logging():

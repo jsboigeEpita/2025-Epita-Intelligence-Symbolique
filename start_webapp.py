@@ -8,7 +8,7 @@ OBJECTIF :
 - Remplace l'ancien start_web_application.ps1
 - Active automatiquement l'environnement conda 'projet-is'
 - Lance l'UnifiedWebOrchestrator avec des options par défaut intelligentes
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 - Interface CLI simple et intuitive
 
 USAGE :

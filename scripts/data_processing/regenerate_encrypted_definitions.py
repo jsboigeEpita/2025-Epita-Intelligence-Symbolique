@@ -1,4 +1,4 @@
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 """
 Script pour reconstituer le fichier chiffré extract_sources.json.gz.enc
 à partir des métadonnées JSON fournies.

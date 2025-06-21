@@ -9,7 +9,7 @@ Tests simplifiés pour Point d'Entrée 2 : Applications Web
 
 # AUTO_ENV: Activation automatique environnement
 try:
-    import project_core.core_from_scripts.auto_env  # Auto-activation environnement intelligent
+    import argumentation_analysis.core.environment  # Auto-activation environnement intelligent
 except ImportError:
     print("[WARNING] auto_env non disponible - environnement non activé")
 
