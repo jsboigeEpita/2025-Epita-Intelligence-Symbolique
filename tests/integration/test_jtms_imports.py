@@ -20,7 +20,7 @@ def test_axe_b_jtms_imports():
         errors.append(f"Erreur import JTMSSessionManager: {e}")
 
     try:
-        from argumentation_analysis.plugins.sk_plugins.jtms_plugin import JTMSSemanticKernelPlugin
+        from argumentation_analysis.plugins.semantic_kernel.jtms_plugin import JTMSSemanticKernelPlugin
         assert JTMSSemanticKernelPlugin is not None
     except ImportError as e:
         errors.append(f"Erreur import JTMSSemanticKernelPlugin: {e}")
