@@ -4,7 +4,7 @@
 import pytest
 import os
 from unittest.mock import patch
-from argumentation_analysis.utils.core_utils.crypto_utils import (
+from argumentation_analysis.core.utils.crypto_utils import (
     derive_encryption_key,
     load_encryption_key,
     encrypt_data_with_fernet,

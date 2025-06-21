@@ -35,7 +35,7 @@ if project_root not in sys.path:
 # Imports Semantic Kernel
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.contents.utils.author_role import AuthorRole
+from semantic_kernel.contents import AuthorRole
 # from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent, Agent # Supprimé car le module n'existe plus
 from semantic_kernel.exceptions import AgentChatException
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion

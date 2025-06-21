@@ -15,7 +15,7 @@ import subprocess
 
 
 from unittest.mock import MagicMock, patch
-from argumentation_analysis.utils.core_utils.system_utils import run_shell_command
+from argumentation_analysis.core.utils.system_utils import run_shell_command
  
 @pytest.fixture
 def mock_subprocess_run():

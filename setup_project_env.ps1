@@ -71,26 +71,30 @@ Write-Host "[INFO] [COMMANDE] $CommandToRun" -ForegroundColor Cyan
 #
 # & $realScriptPath -CommandToRun $CommandToRun
 # $exitCode = $LASTEXITCODE
-# --- VALIDATION D'ENVIRONNEMENT DÉLÉGUÉE À PYTHON ---
-# Le mécanisme 'project_core/core_from_scripts/auto_env.py' gère la validation, l'activation
-# et le coupe-circuit de manière robuste. Ce script PowerShell se contente de l'invoquer.
+# --- DÉLÉGATION AU SCRIPT D'ACTIVATION MODERNE ---
+# Ce script est maintenant un simple alias pour activate_project_env.ps1
+# qui contient la logique d'activation et d'exécution à jour.
 
-Write-Host "[INFO] Délégation de la validation de l'environnement à 'project_core.core_from_scripts.auto_env.py'" -ForegroundColor Cyan
+Write-Host "[INFO] Délégation de l'exécution au script moderne 'activate_project_env.ps1'" -ForegroundColor Cyan
 
-# Échapper les guillemets simples et doubles dans la commande pour l'injection dans la chaîne Python.
-# PowerShell utilise ` comme caractère d'échappement pour les guillemets doubles.
-$EscapedCommand = $CommandToRun.Replace("'", "\'").replace('"', '\"')
+$ActivationScriptPath = Join-Path $PSScriptRoot "activate_project_env.ps1"
 
-# Construction de la commande Python
-# 1. Importe auto_env (active et valide l'environnement, lève une exception si échec)
-# 2. Importe les modules 'os' et 'sys'
-# 3. Exécute la commande passée au script et propage le code de sortie
-$PythonCommand = "python -c `"import sys; import os; import project_core.core_from_scripts.auto_env; exit_code = os.system('$EscapedCommand'); sys.exit(exit_code)`""
+if (-not (Test-Path $ActivationScriptPath)) {
+    Write-Host "[ERREUR] Le script d'activation principal 'activate_project_env.ps1' est introuvable." -ForegroundColor Red
+    Write-Host "[INFO] Assurez-vous que le projet est complet." -ForegroundColor Yellow
+    exit 1
+}
 
-Write-Host "[DEBUG] Commande Python complète à exécuter: $PythonCommand" -ForegroundColor Magenta
+# Construire les arguments pour le script d'activation
+$ActivationArgs = @{
+    CommandToRun = $CommandToRun
+}
+if ($Verbose) {
+    $ActivationArgs['Verbose'] = $true
+}
 
-# Exécution de la commande
-Invoke-Expression $PythonCommand
+# Exécuter le script d'activation moderne en passant les arguments
+& $ActivationScriptPath @ActivationArgs
 $exitCode = $LASTEXITCODE
 
 

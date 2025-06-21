@@ -34,7 +34,7 @@ logger.addHandler(file_handler)
 
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.contents.utils.author_role import AuthorRole
+from semantic_kernel.contents import AuthorRole
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
 from autogen.agentchat.contrib.llm_assistant_agent import LLMAssistantAgent
 try:
