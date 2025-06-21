@@ -6,7 +6,10 @@ from config.unified_config import UnifiedConfig
 
 # -*- coding: utf-8 -*-
 """
-Tests unitaires pour le module analysis_runner.
+Tests unitaires pour le `AnalysisRunner`.
+
+Ce module contient les tests unitaires pour la classe `AnalysisRunner`,
+qui orchestre l'analyse argumentative d'un texte.
 """
 
 import unittest
@@ -17,6 +20,7 @@ from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner
 
 
 class TestAnalysisRunner(unittest.TestCase):
+    """Suite de tests pour la classe `AnalysisRunner`."""
     async def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
         config = UnifiedConfig()
@@ -31,8 +35,6 @@ class TestAnalysisRunner(unittest.TestCase):
         except Exception as e:
             logger.warning(f"Appel LLM authentique échoué: {e}")
             return "Authentic LLM call failed"
-
-    """Tests pour la classe AnalysisRunner."""
 
     def setUp(self):
         """Initialisation avant chaque test."""
