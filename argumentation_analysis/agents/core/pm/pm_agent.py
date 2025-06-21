@@ -10,7 +10,7 @@ from semantic_kernel.contents.chat_role import ChatRole
 
 from ..abc.agent_bases import BaseAgent
 from .pm_definitions import PM_INSTRUCTIONS # Ou PM_INSTRUCTIONS_V9 selon la version souhaitée
-from .prompts import prompt_define_tasks_v11, prompt_write_conclusion_v7
+from .prompts import prompt_define_tasks_v13, prompt_write_conclusion_v7
 
 # Supposons que StateManagerPlugin est importable si nécessaire
 # from ...services.state_manager_plugin import StateManagerPlugin # Exemple
@@ -51,7 +51,7 @@ class ProjectManagerAgent(BaseAgent):
 
         try:
             self._kernel.add_function(
-                prompt=prompt_define_tasks_v11, # Utiliser la dernière version du prompt
+                prompt=prompt_define_tasks_v13, # Utiliser la dernière version du prompt
                 plugin_name=plugin_name,
                 function_name="DefineTasksAndDelegate", # Nom plus SK-conventionnel
                 description="Defines the NEXT single task, registers it, and designates 1 agent (Exact Name Required).",
