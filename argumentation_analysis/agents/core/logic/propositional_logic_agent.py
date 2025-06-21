@@ -496,10 +496,17 @@ class PropositionalLogicAgent(BaseLogicAgent):
         self.logger.debug("Vérification de la cohérence de l'ensemble de croyances PL.")
         try:
             belief_set_content = belief_set.content
-            is_valid, message = self._tweety_bridge.is_pl_kb_consistent(belief_set_content)
-            if not is_valid:
-                self.logger.warning(f"Ensemble de croyances PL incohérent: {message}")
-            return is_valid, message
+            # Correction: Appeler pl_check_consistency sur le _pl_handler du bridge.
+            is_valid = self._tweety_bridge._pl_handler.pl_check_consistency(belief_set_content)
+            
+            if is_valid:
+                details = "Belief set is consistent."
+                self.logger.info(details)
+            else:
+                details = "Belief set is inconsistent."
+                self.logger.warning(details)
+            
+            return is_valid, details
         except Exception as e:
             error_msg = f"Erreur inattendue lors de la vérification de la cohérence: {e}"
             self.logger.error(error_msg, exc_info=True)
@@ -538,28 +545,48 @@ class PropositionalLogicAgent(BaseLogicAgent):
         if "belief set" in last_user_message.lower():
             task = "text_to_belief_set"
             self.logger.info("Tâche détectée: text_to_belief_set")
-            # Extraire le texte source, qui est généralement l'historique avant ce message
             source_text = history[0].content if len(history) > 1 else ""
             belief_set, message = await self.text_to_belief_set(source_text)
             if belief_set:
-                response_content = belief_set.to_json()
+                response_content = json.dumps(belief_set.to_dict(), indent=2)
             else:
                 response_content = f'{{"error": "Échec de la création du belief set", "details": "{message}"}}'
         
         elif "generate queries" in last_user_message.lower():
             task = "generate_queries"
             self.logger.info("Tâche détectée: generate_queries")
-            # Pour cette tâche, il faut un belief_set existant. On suppose qu'il est dans le contexte.
-            # Cette logique est simplifiée et pourrait nécessiter d'être enrichie.
             source_text = history[0].content
-            # NOTE: La récupération du belief_set est un point critique.
-            # Ici, on suppose qu'il faut le reconstruire.
             belief_set, _ = await self.text_to_belief_set(source_text)
             if belief_set:
                 queries = await self.generate_queries(source_text, belief_set)
                 response_content = json.dumps({"generated_queries": queries})
             else:
                 response_content = f'{{"error": "Impossible de générer les requêtes car le belief set n_a pas pu être créé."}}'
+        
+        elif "traduire le texte" in last_user_message.lower():
+            task = "text_to_belief_set"
+            self.logger.info("Tâche détectée: text_to_belief_set (via 'traduire le texte')")
+            source_text = history[0].content if len(history) > 1 else ""
+            belief_set, message = await self.text_to_belief_set(source_text)
+            if belief_set:
+                response_content = json.dumps(belief_set.to_dict(), indent=2)
+            else:
+                response_content = f'{{"error": "Échec de la création du belief set", "details": "{message}"}}'
+
+        elif "exécuter des requêtes" in last_user_message.lower():
+            task = "execute_query"
+            self.logger.info("Tâche détectée: execute_query (via 'exécuter des requêtes')")
+            source_text = history[0].content if len(history) > 1 else ""
+            belief_set, message = await self.text_to_belief_set(source_text)
+            if belief_set:
+                is_consistent, details = self.is_consistent(belief_set)
+                response_content = json.dumps({
+                    "task": "check_consistency",
+                    "is_consistent": is_consistent,
+                    "details": details
+                }, indent=2)
+            else:
+                response_content = f'{{"error": "Impossible d\'exécuter la requête car le belief set n\'a pas pu être créé.", "details": "{message}"}}'
 
         else:
             self.logger.warning(f"Aucune tâche spécifique reconnue dans la dernière instruction pour {self.name}.")

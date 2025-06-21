@@ -1,120 +1,128 @@
-# Plan de Vérification : `scripts/orchestrate_complex_analysis.py`
+# Plan de Vérification : `argumentation_analysis/orchestration/analysis_runner.py`
 
-Ce document détaille le plan de vérification pour le point d'entrée `scripts/orchestrate_complex_analysis.py`. L'objectif est de cartographier son fonctionnement, de définir une stratégie de test, d'identifier des pistes d'amélioration et de planifier la documentation.
+Ce document détaille le plan de vérification pour le nouveau point d'entrée `argumentation_analysis/orchestration/analysis_runner.py`. L'objectif est de valider son fonctionnement, de définir une stratégie de test robuste, d'identifier des pistes d'amélioration et de planifier la mise à jour de la documentation.
 
 ## Phase 1 : Map (Analyse)
 
-Cette phase vise à comprendre le rôle, le fonctionnement et les dépendances du script.
+Cette phase vise à comprendre le rôle, le fonctionnement et les dépendances du nouveau script d'orchestration.
 
 ### 1.1. Objectif Principal
 
-Le script orchestre une analyse de texte multi-étapes en simulant une collaboration entre plusieurs agents d'analyse (sophismes, rhétorique, synthèse). Son objectif principal est de produire un rapport de synthèse détaillé au format Markdown, qui inclut les résultats de l'analyse, des métriques de performance et une trace complète des interactions.
+Le script orchestre une analyse d'argumentation complexe en utilisant une conversation entre plusieurs agents basés sur `semantic-kernel`. Chaque agent a un rôle spécialisé (gestion de projet, analyse informelle, analyse logique, extraction). L'objectif est de produire un état final d'analyse complet au format JSON, ainsi qu'une transcription détaillée de la conversation entre les agents.
 
 ### 1.2. Fonctionnement et Composants Clés
 
-*   **Arguments en ligne de commande** : Le script n'accepte aucun argument. Il est conçu pour être lancé directement.
-*   **Tracker d'Interactions** : La classe `ConversationTracker` est au cœur du script. Elle enregistre chaque étape de l'analyse pour construire le rapport final.
-*   **Chargement des Données** :
-    *   La fonction `load_random_extract` tente de charger un extrait de texte à partir d'un corpus chiffré (`tests/extract_sources_backup.enc`).
-    *   **Comportement de Fallback** : En cas d'échec (fichier manquant, erreur de déchiffrement), il utilise un texte statique prédéfini, garantissant que le script peut toujours s'exécuter.
-*   **Pipeline d'Analyse** :
-    *   Utilise `UnifiedAnalysisPipeline` pour réaliser l'analyse.
-    *   **Tour 1 (Analyse des Sophismes)** : C'est la seule étape d'analyse **réelle**. Elle fait un appel à un LLM (configuré pour `gpt-4o-mini`) pour détecter les sophismes dans le texte.
-    *   **Tours 2 & 3 (Rhétorique et Synthèse)** : Ces étapes sont actuellement **simulées**. Le script utilise des données en dur pour représenter les résultats de ces analyses, sans faire d'appels LLM supplémentaires.
+*   **Arguments en ligne de commande** : Le script est conçu pour être exécuté en tant que module et accepte deux arguments mutuellement exclusifs :
+    *   `--text "..."` : Permet de passer le texte à analyser directement en ligne de commande.
+    *   `--file-path "..."` : Permet de spécifier le chemin vers un fichier contenant le texte à analyser.
+*   **Orchestration par Conversation** :
+    *   Le script n'utilise plus un pipeline linéaire, mais une boucle de conversation manuelle.
+    *   Le `ProjectManagerAgent` initie et pilote la conversation. Il désigne les autres agents pour effectuer des tâches spécifiques.
+*   **Gestion de l'État** :
+    *   La classe `RhetoricalAnalysisState` centralise toutes les informations collectées durant l'analyse (texte initial, tâches, arguments identifiés, sophismes, etc.).
+    *   Le `StateManagerPlugin` est un plugin `semantic-kernel` qui permet aux agents de manipuler l'état de manière contrôlée.
+*   **Agents Spécialisés** :
+    *   `ProjectManagerAgent` : Le chef d'orchestre.
+    *   `InformalAnalysisAgent` : Spécialisé dans l'analyse des sophismes.
+    *   `PropositionalLogicAgent` : Spécialisé dans l'analyse logique.
+    *   `ExtractAgent` : Spécialisé dans l'extraction de contenu.
 *   **Génération de la Sortie** :
-    *   Le script génère un fichier de rapport Markdown dont le nom est dynamique (ex: `rapport_analyse_complexe_20240521_143000.md`).
-    *   Ce rapport est sauvegardé à la racine du répertoire où le script est exécuté.
+    *   Le script affiche le résultat principal au format JSON sur la sortie standard.
+    *   Il génère également un fichier de rapport JSON (ex: `rapport_analyse_*.json`) si un répertoire de sortie est spécifié.
 
 ### 1.3. Dépendances
 
 *   **Fichiers de Configuration** :
     *   `.env` : Essentiel pour charger les variables d'environnement, notamment la clé API pour le LLM.
 *   **Variables d'Environnement** :
-    *   `OPENAI_API_KEY` : Requise pour l'appel réel au LLM dans le Tour 1.
-    *   Probablement `ENCRYPTION_KEY` ou `TEXT_CONFIG_PASSPHRASE` pour déchiffrer le corpus (hérité des dépendances de `CorpusManager`).
+    *   `OPENAI_API_KEY` ou configuration équivalente pour le service LLM utilisé.
 *   **Fichiers de Données** :
-    *   `tests/extract_sources_backup.enc` : Source de données principale pour les extraits de texte.
+    *   Aucune dépendance à un corpus chiffré. Le texte est fourni via les arguments.
 
-### 1.4. Diagramme de Séquence
+### 1.4. Diagramme de Séquence (Mis à jour)
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant Script as orchestrate_complex_analysis.py
-    participant Corpus as load_random_extract()
-    participant Pipeline as UnifiedAnalysisPipeline
+    participant Runner as analysis_runner.py
+    participant PM_Agent as ProjectManagerAgent
+    participant Worker_Agent as (Informal, PL, etc.)
+    participant State as RhetoricalAnalysisState
     participant LLM_Service
-    participant Report as ConversationTracker
 
-    User->>Script: Exécute le script
-    Script->>Corpus: Demande un extrait de texte aléatoire
-    alt Le corpus est accessible
-        Corpus->>Script: Fournit un extrait du fichier chiffré
-    else Le corpus est inaccessible
-        Corpus->>Script: Fournit un texte de fallback
+    User->>Runner: Exécute avec --file-path ou --text
+    Runner->>PM_Agent: Lance la conversation avec le texte
+    
+    loop Conversation (plusieurs tours)
+        PM_Agent->>LLM_Service: Réfléchit au plan d'action
+        LLM_Service-->>PM_Agent: Plan avec tâches
+        PM_Agent->>State: Ajoute les nouvelles tâches
+        PM_Agent->>Worker_Agent: Délègue une tâche
+        
+        Worker_Agent->>LLM_Service: Exécute la tâche
+        LLM_Service-->>Worker_Agent: Résultat de la tâche
+        Worker_Agent->>State: Met à jour l'état avec le résultat
+        Worker_Agent-->>PM_Agent: Confirme la fin de la tâche
     end
-    Script->>Pipeline: Lance l'analyse des sophismes (Tour 1)
-    Pipeline->>LLM_Service: Appel API pour détection
-    LLM_Service-->>Pipeline: Résultats des sophismes
-    Pipeline-->>Script: Retourne les résultats
-    Script->>Report: Log l'interaction du Tour 1
-    
-    Script->>Script: Simule l'analyse rhétorique (Tour 2)
-    Script->>Report: Log l'interaction (simulée) du Tour 2
-    
-    Script->>Script: Simule la synthèse (Tour 3)
-    Script->>Report: Log l'interaction (simulée) du Tour 3
 
-    Script->>Report: Demande la génération du rapport Markdown
-    Report-->>Script: Fournit le contenu du rapport
-    Script->>User: Sauvegarde le fichier .md et affiche le résumé
+    Runner->>State: Récupère l'état final
+    State-->>Runner: Fournit l'état JSON complet
+    Runner->>User: Affiche le JSON sur stdout
 ```
 
 ---
 
-## Phase 2 : Test (Plan de Test)
+## Phase 2 : Test (Plan de Test Mis à Jour)
+
+*   **Prérequis** : Créer un fichier de test simple `tests/data/sample_text.txt`.
+*   **Contenu de `sample_text.txt`**: "Les OGM sont mauvais pour la santé. C'est un scientifique qui l'a dit à la télé."
 
 *   **Tests de Cas Nominaux**
-    1.  **Test de Lancement Complet** :
-        *   **Action** : Exécuter `conda run -n projet-is python scripts/orchestrate_complex_analysis.py`.
-        *   **Critères de Succès** : Le script se termine avec un code de sortie `0`. Un fichier `rapport_analyse_complexe_*.md` est créé. Le rapport contient des résultats réels pour les sophismes et indique que la source est un "Extrait de corpus réel".
-    2.  **Test du Mécanisme de Fallback** :
-        *   **Action** : Renommer temporairement `tests/extract_sources_backup.enc`. Exécuter le script.
-        *   **Critères de Succès** : Le script se termine avec un code de sortie `0`. Un rapport est créé. Le rapport indique que la source est le "Texte statique de secours" et analyse le discours sur l'éducation.
+    1.  **Test de Lancement Complet avec Fichier** :
+        *   **Action** : Exécuter `conda run -n projet-is python -m argumentation_analysis.orchestration.analysis_runner --file-path tests/data/sample_text.txt`.
+        *   **Critères de Succès** : Le script se termine avec un code de sortie `0`. La sortie JSON sur stdout contient un statut de "success" et une section "analysis" non vide. La transcription ("history") doit montrer des échanges entre les agents.
+    2.  **Test de Lancement Complet avec Texte Direct** :
+        *   **Action** : Exécuter `conda run -n projet-is python -m argumentation_analysis.orchestration.analysis_runner --text "Les OGM sont mauvais pour la santé."`.
+        *   **Critères de Succès** : Identiques au test précédent.
 
 *   **Tests des Cas d'Erreur**
     1.  **Test sans Fichier `.env`** :
-        *   **Action** : Renommer `.env`. Exécuter le script.
-        *   **Critères de Succès** : Le script doit échouer ou se terminer en erreur. Les logs doivent indiquer clairement que la clé API (`OPENAI_API_KEY`) est manquante.
+        *   **Action** : Renommer `.env`. Exécuter le test de lancement complet.
+        *   **Critères de Succès** : Le script doit échouer avec une erreur claire indiquant que la configuration du service LLM (comme la clé API) est manquante.
     2.  **Test avec Clé API Invalide** :
         *   **Action** : Mettre une fausse valeur pour `OPENAI_API_KEY` dans `.env`. Exécuter le script.
-        *   **Critères de Succès** : Le script doit gérer l'échec de l'appel LLM. Le rapport final doit soit indiquer une erreur dans l'analyse des sophismes, soit montrer un résultat vide pour cette section, et le taux de succès (`success_rate`) doit être de `0.5`.
+        *   **Critères de Succès** : Le script doit gérer l'échec des appels LLM. La sortie JSON doit indiquer un statut "error" avec un message détaillé sur l'échec de l'authentification ou de l'appel API.
+    3.  **Test avec Fichier Inexistant** :
+        *   **Action** : Exécuter avec `--file-path chemin/vers/fichier/inexistant.txt`.
+        *   **Critères de Succès** : Le script doit se terminer avec un code de sortie non nul et afficher une erreur `FileNotFoundError`.
 
 ---
 
 ## Phase 3 : Clean (Pistes de Nettoyage)
 
-*   **Analyse Simulée** :
-    *   **Problème** : Les tours 2 (rhétorique) et 3 (synthèse) sont simulés. Le nom du script (`orchestrate_complex_analysis`) est donc trompeur.
-    *   **Suggestion** : Implémenter réellement ces étapes d'analyse en utilisant `UnifiedAnalysisPipeline` ou des agents dédiés. Si ce n'est pas l'objectif, renommer le script pour refléter son fonctionnement actuel (ex: `generate_fallacy_analysis_report.py`).
-*   **Configuration** :
-    *   **Chemin de Sortie en Dur** : Le rapport est toujours sauvegardé dans le répertoire courant.
-    *   **Suggestion** : Permettre de configurer le répertoire de sortie via une variable d'environnement (`ANALYSIS_REPORT_DIR`) ou un argument en ligne de commande.
-*   **Modularité** :
-    *   **Problème** : La classe `ConversationTracker` mélange la collecte de données et la génération du rendu Markdown.
-    *   **Suggestion** : Scinder les responsabilités. `ConversationTracker` ne devrait que collecter les traces. Une autre classe, `MarkdownReportGenerator`, pourrait prendre les données du tracker en entrée pour produire le fichier.
+*   **Gestion des Erreurs** :
+    *   **Problème** : La boucle de conversation manuelle a une gestion d'erreur basique. Si un agent échoue de manière inattendue, la boucle peut s'arrêter sans état clair.
+    *   **Suggestion** : Implémenter un mécanisme de "retry" ou de "safe failure" où le PM peut être notifié de l'échec d'un agent et décider de continuer avec les tâches restantes ou de s'arrêter proprement.
+*   **Complexité de la Boucle** :
+    *   **Problème** : La logique de sélection d'agent et de mise à jour de l'état dans `_run_analysis_conversation` est longue et complexe.
+    *   **Suggestion** : Extraire la logique de la boucle principale dans une classe `ConversationOrchestrator` dédiée pour mieux séparer les responsabilités.
+*   **Configuration du LLM** :
+    *   **Problème** : La création du service LLM est faite à plusieurs endroits.
+    *   **Suggestion** : Centraliser la création du service LLM dans une factory ou un utilitaire unique pour garantir la cohérence.
 
 ---
 
-## Phase 4 : Document (Plan de Documentation)
+## Phase 4 : Document (Plan de Documentation Mis à Jour)
 
-*   **Créer `docs/usage/complex_analysis.md`** :
-    *   **Section "Objectif"** : Décrire ce que fait le script et son principal produit : le rapport d'analyse.
+*   **Mettre à jour `docs/entry_points/`** :
+    *   Créer (ou renommer) un document pour `analysis_runner.py`.
+    *   **Section "Objectif"** : Décrire l'orchestration par conversation d'agents.
     *   **Section "Prérequis"** :
-        *   Lister les variables d'environnement nécessaires dans le fichier `.env` (`OPENAI_API_KEY`, etc.).
-        *   Spécifier la dépendance au fichier de corpus chiffré `tests/extract_sources_backup.enc`.
-    *   **Section "Utilisation"** : Fournir la commande exacte pour lancer le script.
+        *   Lister les variables d'environnement (`.env`) critiques.
+    *   **Section "Utilisation"** :
+        *   Fournir les deux commandes exactes pour lancer le script (avec `--text` et `--file-path`).
+        *   Expliquer comment exécuter le script en tant que module (`python -m ...`).
     *   **Section "Sorties"** :
-        *   Décrire le format du nom du fichier de rapport (`rapport_analyse_complexe_*.md`).
-        *   Expliquer la structure du rapport (les différentes sections) pour que les utilisateurs sachent à quoi s'attendre.
-    *   **Section "Limitations Actuelles"** : **Documenter explicitement que les analyses rhétorique et de synthèse sont actuellement simulées**. C'est crucial pour éviter toute confusion pour les futurs développeurs.
+        *   Décrire la structure de la sortie JSON principale (status, analysis, history).
+        *   Expliquer le contenu de chaque section.
+    *   **Section "Limitations"**: Documenter les limitations connues (ex: gestion des erreurs).

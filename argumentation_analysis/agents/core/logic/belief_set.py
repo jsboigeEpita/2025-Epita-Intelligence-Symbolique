@@ -106,6 +106,14 @@ class PropositionalBeliefSet(BeliefSet):
         """
         return "propositional"
 
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convertit l'instance en dictionnaire, en incluant les propositions.
+        """
+        data = super().to_dict()
+        data["propositions"] = self.propositions
+        return data
+
 
 class FirstOrderBeliefSet(BeliefSet):
     """
