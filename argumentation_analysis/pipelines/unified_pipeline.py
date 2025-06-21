@@ -13,26 +13,41 @@ except ImportError as e:
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Pipeline Unifié - Point d'Entrée Principal avec Orchestration Étendue
-====================================================================
+"""Point d'entrée unifié et intelligent pour l'analyse argumentative.
 
-Ce module sert de point d'entrée principal pour l'analyse argumentative,
-intégrant à la fois le pipeline original et le nouveau pipeline d'orchestration
-avec l'architecture hiérarchique complète.
+Objectif:
+    Fournir une interface unique (`analyze_text`) pour lancer une analyse
+    argumentative, tout en masquant la complexité du choix du moteur
+    d'exécution sous-jacent. Ce module agit comme un routeur qui sélectionne
+    automatiquement le pipeline le plus approprié (original, hiérarchique,
+    spécialisé) en fonction des entrées et des capacités disponibles.
 
-MIGRATION VERS L'ORCHESTRATION ÉTENDUE :
-Ce fichier facilite la transition depuis l'API existante vers les nouvelles
-capacités d'orchestration hiérarchique et spécialisée.
+Données d'entrée:
+    - Un texte brut à analyser.
+    - Des paramètres de configuration (`mode`, `analysis_type`, etc.) qui
+      guident la sélection du pipeline.
 
-Usage recommandé :
-- Pour une compatibilité maximale : utiliser les fonctions de ce module
-- Pour les nouvelles fonctionnalités : utiliser directement unified_orchestration_pipeline
-- Pour des performances optimales : utiliser l'orchestration automatique
+Étapes (Logique de routage):
+    1.  **Détection du Mode**: En mode "auto", détermine le meilleur pipeline
+        disponible (`_detect_best_pipeline_mode`).
+    2.  **Validation**: Vérifie la validité des entrées.
+    3.  **Exécution du Pipeline Sélectionné**:
+        - **Mode "orchestration"**: Aiguille vers un orchestrateur spécialisé
+          (`Cluedo`, `Conversation`, etc.) en fonction du contenu du texte ou
+          des paramètres (`_run_orchestration_pipeline`).
+        - **Mode "original"**: Appelle l'ancien pipeline `unified_text_analysis`
+          pour la rétrocompatibilité (`_run_original_pipeline`).
+        - **Mode "hybrid"**: Exécute les deux pipelines et tente de synthétiser
+          les résultats (`_run_hybrid_pipeline`).
+    4.  **Enrichissement**: Peut ajouter des comparaisons de performance et des
+        recommandations aux résultats finaux.
+    5.  **Fallback**: En cas d'échec du pipeline principal, peut tenter de
+        s'exécuter avec le pipeline original.
 
-Version: 2.0.0 (avec orchestration étendue)
-Auteur: Intelligence Symbolique EPITA
-Date: 10/06/2025
+Artefacts produits:
+    - Un dictionnaire de résultats unifié, contenant les métadonnées de
+      l'exécution, les résultats bruts du pipeline choisi, et des informations
+      additionnelles (comparaison, recommandations).
 """
 
 import asyncio

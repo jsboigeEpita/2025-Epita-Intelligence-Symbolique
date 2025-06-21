@@ -74,6 +74,7 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
 
     @pytest.mark.asyncio
     async def test_pm_informal_interaction(self):
+        """Vérifie la transition du PM à l'agent Informal."""
         history = []
         
         self.state.add_task("Identifier les arguments dans le texte")
@@ -109,6 +110,7 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
 
     @pytest.mark.asyncio
     async def test_informal_pl_interaction(self):
+        """Vérifie la transition de l'agent Informal à l'agent PL."""
         history = []
         
         arg_id = self.state.add_argument("La Terre est plate car l'horizon semble plat")
@@ -139,6 +141,7 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
 
     @pytest.mark.asyncio
     async def test_pl_extract_interaction(self):
+        """Vérifie la transition de l'agent PL à l'agent Extract."""
         history = []
         
         bs_id = self.state.add_belief_set("Propositional", "p => q\np\n")
@@ -167,6 +170,7 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
 
     @pytest.mark.asyncio
     async def test_extract_pm_interaction(self):
+        """Vérifie la transition de l'agent Extract au PM pour la conclusion."""
         history = []
         
         extract_id = self.state.add_extract("Extrait du texte", "La Terre est plate car l'horizon semble plat")
@@ -195,6 +199,7 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
 
     @pytest.mark.asyncio
     async def test_full_agent_interaction_cycle(self):
+        """Vérifie un cycle complet d'interaction entre tous les agents."""
         history = []
         
         self.state.add_task("Identifier les arguments dans le texte")
@@ -307,6 +312,7 @@ class TestAgentInteractionWithErrors: # Suppression de l'héritage AsyncTestCase
 
     @pytest.mark.asyncio
     async def test_error_recovery_interaction(self):
+        """Teste la capacité du PM à gérer une erreur d'un autre agent."""
         history = []
         
         self.state.add_task("Identifier les arguments dans le texte")

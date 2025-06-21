@@ -1,12 +1,57 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Post-Processeurs d'Analyse
-===========================
+"""Post-Processeurs pour la Finalisation des Pipelines.
 
-Ce module contient les fonctions de post-traitement des résultats 
-d'orchestration, comme la génération de recommandations finales.
+Objectif:
+    Ce module est dédié aux "post-processeurs" (`PostProcessors`). Ce sont des
+    étapes de traitement qui s'exécutent à la toute fin d'un pipeline, une
+    fois que toutes les analyses principales (extraction, analyse informelle,
+    formelle, etc.) sont terminées. Leur rôle est de préparer les résultats
+    finaux pour la présentation, le stockage ou la distribution.
+
+Concept Clé:
+    Un post-processeur prend l'état complet et final de l'analyse et effectue
+    des opérations de "nettoyage", de formatage, d'enrichissement ou de
+    sauvegarde. Contrairement aux processeurs d'analyse, ils ne modifient
+    généralement pas les conclusions de l'analyse mais plutôt leur forme.
+
+Post-Processeurs Principaux (Exemples cibles):
+    -   `ResultFormattingProcessor`:
+        Met en forme les données brutes de l'analyse en formats lisibles
+        comme JSON, Markdown, ou un résumé textuel pour la console.
+    -   `ReportGenerationProcessor`:
+        Génère des artéfacts complexes comme des rapports PDF ou des pages
+        HTML interactives à partir des résultats.
+    -   `DatabaseStorageProcessor`:
+        Prend les résultats finaux et les insère dans une base de données (ex:
+        PostgreSQL, MongoDB) pour archivage et analyse ultérieure.
+    -   `RecommendationProcessor`:
+        Passe en revue l'ensemble des résultats (sophismes, cohérence logique,
+        etc.) pour générer une liste finale de recommandations actionnables
+        pour l'utilisateur.
+    -   `AlertingProcessor`:
+        Déclenche des alertes (ex: email, notification Slack) si certains
+        seuils sont atteints (ex: plus de 5 sophismes critiques détectés).
+
+Utilisation:
+    Les post-processeurs sont généralement invoqués par le moteur d'exécution
+    du pipeline (`ExecutionEngine`) après que la boucle principale des
+    processeurs d'analyse est terminée.
+
+    Exemple (conceptuel):
+    ```python
+    engine = ExecutionEngine(state)
+    # ... ajout des processeurs d'analyse ...
+    await engine.run_analysis()
+
+    # ... exécution des post-processeurs ...
+    await engine.run_post_processing([
+        RecommendationProcessor(),
+        ResultFormattingProcessor(format="json"),
+        DatabaseStorageProcessor(db_connection)
+    ])
+    ```
 """
 
 import logging

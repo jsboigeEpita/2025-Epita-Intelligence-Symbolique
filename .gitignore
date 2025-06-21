@@ -93,7 +93,7 @@ env.bak/
 venv.bak/
 config/.env
 config/.env.authentic
-**/.env # Plus générique que *.env
+**/.env
 .api_key_backup
 *.api_key*
 
@@ -114,7 +114,7 @@ Thumbs.db
 
 # Java / Maven / Gradle
 libs/*.jar
-libs/tweety/**/*.jar # Plus spécifique pour tweety
+libs/tweety/**/*.jar
 libs/tweety/native/
 target/
 .gradle/
@@ -153,7 +153,6 @@ argumentation_analysis/tests/tools/reports/test_report_*.txt
 results/rhetorical_analysis_*.json
 libs/portable_jdk/
 libs/portable_octave/
-# Protection contre duplication portable_jdk à la racine
 portable_jdk/
 libs/_temp*/
 results/
@@ -161,23 +160,16 @@ rapport_ia_2024.txt
 discours_attal_20240130.txt
 pytest_hierarchical_full_v4.txt
 scripts/debug_jpype_classpath.py
-argumentation_analysis/text_cache/ # Aussi text_cache/ plus bas, celui-ci est plus spécifique
-text_cache/ # Cache générique
+argumentation_analysis/text_cache/
+text_cache/
 /.tools/
 temp_downloads/
 data/
 !data/.gitkeep
 !data/extract_sources.json.gz.enc
-data/extract_sources.json # Configuration UI non chiffrée
+data/extract_sources.json
 **/backups/
 !**/backups/__init__.py
-
-# Fichiers JAR (déjà couvert par libs/*.jar mais peut rester pour clarté)
-# *.jar
-
-#*.txt
-
-_temp/
 
 # Documentation analysis large files
 logs/documentation_analysis_data.json
@@ -222,8 +214,6 @@ validation_report.md
 phase_c_test_results_*.json
 phase_d_simple_results.json
 phase_d_trace_ideale_results_*.json
-logs/
-reports/
 venv_temp/
 "sessions/"
 
@@ -246,23 +236,11 @@ rapport_*.md
 temp_*.txt
 
 # Ajouté par le script de nettoyage
-# Fichiers temporaires Python
-# Environnements virtuels
 env/
-# Fichiers de configuration sensibles
 *.env
-**/.env
-# Cache et téléchargements
 text_cache/
-# Données
 data/extract_sources.json
-# Rapports de tests et couverture
 .coverage*
-# Dossiers de backups
-*.jar
-# Fichiers temporaires Jupyter Notebook
-# Fichiers de configuration IDE / Editeur
-# Fichiers spécifiques OS
 
 # Fichiers de rapport de trace complexes
 complex_trace_report_*.json
@@ -293,3 +271,6 @@ cython_debug/
 
 # Fichiers de verrouillage de JAR Tweety
 *.jar.locked
+
+# Image files
+*.png

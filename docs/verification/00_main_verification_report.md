@@ -21,8 +21,21 @@ Ce document suit l'état de la vérification des points d'entrée principaux du 
 
 ## 2. Point d'Entrée : `scripts/orchestrate_complex_analysis.py`
 
-- **Statut :** ⏳ Pending
+- **Statut :** ✅ Vérifié
 - **Résumé des Phases :**
-    - La vérification de ce point d'entrée est en attente.
+    - **Plan :** Planification de la vérification.
+    - **Test & Fix :** Exécution et correction.
 - **Artefacts :**
-    - N/A
+    - **Plan :** [`02_orchestrate_complex_analysis_plan.md`](./02_orchestrate_complex_analysis_plan.md)
+    - **Résultats de Test & Fix :** [`02_orchestrate_complex_analysis_test_results.md`](./02_orchestrate_complex_analysis_test_results.md)
+---
+
+## 3. Point d'Entrée : `argumentation_analysis/scripts/simulate_balanced_participation.py`
+
+- **Statut :** Vérifié ✅
+- **Résumé des Phases :**
+    - **Plan :** Planification de la vérification.
+    - **Test & Fix :** Exécution et correction.
+- **Artefacts :**
+    - **Plan :** [`03_simulate_balanced_participation_plan.md`](./03_simulate_balanced_participation_plan.md)
+    - **Résultats de Test & Fix :** [`03_simulate_balanced_participation_test_results.md`](./03_simulate_balanced_participation_test_results.md)

@@ -1,12 +1,60 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Moteur d'Exécution du Pipeline d'Orchestration
-==============================================
+"""Moteur d'Exécution de Pipeline.
 
-Ce module contient la logique principale pour exécuter une analyse
-orchestrée. Il sélectionne une stratégie et gère le flux d'exécution.
+Objectif:
+    Ce module définit la classe `ExecutionEngine`, le cœur de l'architecture
+    de pipeline. L'`ExecutionEngine` est le chef d'orchestre qui prend une
+    séquence de processeurs (`Processors` et `PostProcessors`) et les exécute
+    dans le bon ordre, en gérant le flux de données et l'état de l'analyse.
+
+Concept Clé:
+    L'`ExecutionEngine` est initialisé avec un état de base (généralement
+    contenant le texte d'entrée). Il maintient une liste de processeurs
+    enregistrés. Lorsqu'il est exécuté, il applique chaque processeur
+    séquentiellement, passant l'état mis à jour d'un processeur au suivant.
+    Il s'appuie sur des stratégies d'exécution (définies dans `strategies.py`)
+    pour déterminer comment exécuter les processeurs (ex: séquentiellement,
+    en parallèle, conditionnellement).
+
+Fonctionnalités Principales:
+    -   **Gestion de l'État**: Maintient et met à jour un objet d'état
+        (`RhetoricalAnalysisState` ou un dictionnaire) tout au long du pipeline.
+    -   **Enregistrement des Processeurs**: Fournit des méthodes pour ajouter
+        des étapes d'analyse (`add_processor`) et des étapes de
+        post-traitement (`add_post_processor`).
+    -   **Exécution Stratégique**: Utilise un objet `Strategy` pour contrôler
+        le flux d'exécution, permettant une flexibilité maximale (séquentiel,
+        parallèle, etc.).
+    -   **Gestion des Erreurs**: Encapsule la logique de gestion des erreurs
+        pour rendre les pipelines plus robustes.
+    -   **Traçabilité**: Peut intégrer un système de logging ou de traçage pour
+        suivre le déroulement de l'analyse à chaque étape.
+
+Utilisation:
+    L'utilisateur du moteur assemble un pipeline en instanciant l'engine et
+    en y ajoutant les briques de traitement souhaitées.
+
+    Exemple (conceptuel):
+    ```python
+    from .strategies import SequentialStrategy
+    from ..analysis.processors import ExtractProcessor, InformalAnalysisProcessor
+    from ..analysis.post_processors import ResultFormattingProcessor
+
+    # 1. Initialiser l'état et le moteur avec une stratégie
+    initial_state = {"text": "Le texte à analyser..."}
+    engine = ExecutionEngine(initial_state, strategy=SequentialStrategy())
+
+    # 2. Enregistrer les étapes du pipeline
+    engine.add_processor(ExtractProcessor())
+    engine.add_processor(InformalAnalysisProcessor())
+    engine.add_post_processor(ResultFormattingProcessor(format="json"))
+
+    # 3. Exécuter le pipeline
+    final_results = await engine.run()
+    print(final_results)
+    ```
 """
 
 import logging

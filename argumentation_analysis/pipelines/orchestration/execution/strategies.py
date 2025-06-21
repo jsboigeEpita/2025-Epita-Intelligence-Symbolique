@@ -1,12 +1,68 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Stratégies d'Orchestration pour le Pipeline Unifié
-==================================================
+"""Stratégies d'Exécution pour le Moteur de Pipeline.
 
-Ce module contient les différentes stratégies d'exécution que le moteur
-d'orchestration (engine.py) peut utiliser pour traiter une analyse.
+Objectif:
+    Ce module est conçu pour héberger différentes classes de "Stratégies"
+    d'exécution. Une stratégie définit la logique de haut niveau sur la
+    manière dont les processeurs d'un pipeline doivent être exécutés. En
+    découplant l'`ExecutionEngine` de la stratégie d'exécution, on gagne en
+    flexibilité pour créer des workflows simples ou très complexes.
+
+Concept Clé:
+    Chaque stratégie est une classe qui implémente une interface commune,
+    typiquement une méthode `execute(state, processors)`. L'`ExecutionEngine`
+    délègue entièrement sa logique d'exécution à l'objet `Strategy` qui lui
+    est fourni lors de son initialisation. La stratégie est responsable de
+    l'itération à travers les processeurs et de la gestion du flux de contrôle.
+
+Stratégies Principales (Exemples cibles):
+    -   `SequentialStrategy`:
+        La stratégie la plus fondamentale. Elle exécute chaque processeur de
+        la liste l'un après l'autre, dans l'ordre où ils ont été ajoutés.
+    -   `ParallelStrategy`:
+        Pour les tâches indépendantes, cette stratégie exécute un ensemble de
+        processeurs en parallèle en utilisant `asyncio.gather`, ce qui peut
+        considérablement accélérer le pipeline.
+    -   `ConditionalStrategy`:
+        Une stratégie plus avancée qui prend une condition et deux autres
+        stratégies (une pour le `if`, une pour le `else`). Elle exécute l'une
+        ou l'autre en fonction de l'état actuel de l'analyse.
+    -   `FallbackStrategy`:
+        Tente d'exécuter une stratégie primaire. Si une exception se produit,
+        elle l'attrape et exécute une stratégie secondaire de secours.
+    -   `HybridStrategy`:
+        Combine plusieurs stratégies pour créer des workflows complexes, par
+        exemple en exécutant certains groupes de tâches en parallèle et d'autres
+        séquentiellement.
+
+Utilisation:
+    Une instance de stratégie est passée au constructeur de l'`ExecutionEngine`
+    pour dicter son comportement.
+
+    Exemple (conceptuel):
+    ```python
+    from .engine import ExecutionEngine
+    from .strategies import SequentialStrategy, ParallelStrategy
+    from ..analysis.processors import (
+        ExtractProcessor,
+        InformalAnalysisProcessor,
+        FormalAnalysisProcessor
+    )
+
+    # Créer un moteur avec une stratégie séquentielle
+    engine = ExecutionEngine(initial_state, strategy=SequentialStrategy())
+    engine.add_processor(ExtractProcessor())
+    engine.add_processor(InformalAnalysisProcessor())
+    await engine.run()
+
+    # Utiliser une stratégie parallèle pour des tâches indépendantes
+    parallel_engine = ExecutionEngine(state, strategy=ParallelStrategy())
+    parallel_engine.add_processor(CheckSourcesProcessor())
+    parallel_engine.add_processor(CheckAuthorReputationProcessor())
+    await parallel_engine.run()
+    ```
 """
 
 import logging

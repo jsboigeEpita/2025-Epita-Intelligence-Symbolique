@@ -1,18 +1,31 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Module pour le pipeline d'analyse argumentative.
+"""Pipeline d'analyse argumentative standard.
 
-Ce module fournit la fonction `run_text_analysis_pipeline` qui orchestre
-l'ensemble du processus d'analyse argumentative. Cela inclut la configuration,
-la récupération des données d'entrée (texte), l'initialisation des services
-nécessaires (comme les modèles de NLP et les ponts vers des logiques
-formelles), l'exécution de l'analyse elle-même, et potentiellement
-la sauvegarde des résultats.
+Objectif:
+    Orchestrer une analyse complète et générale d'un texte fourni en entrée.
+    Cette pipeline est un point d'entrée de haut niveau pour des analyses
+    simples et non spécialisées.
 
-Le pipeline est conçu pour être flexible, acceptant du texte provenant de
-diverses sources (fichier, chaîne de caractères directe, ou interface utilisateur)
-et permettant une configuration détaillée des services et du type d'analyse.
+Données d'entrée:
+    - Un texte brut, fourni via un fichier, une chaîne de caractères ou une UI.
+
+Étapes (Processeurs):
+    1.  **Configuration**: Mise en place du logging.
+    2.  **Chargement des données**: Lecture du texte depuis la source spécifiée.
+    3.  **Initialisation des Services**: Démarrage des services sous-jacents
+        nécessaires à l'analyse (ex: modèles NLP, JVM pour la logique formelle)
+        via `initialize_analysis_services`.
+    4.  **Exécution de l'Analyse**: Appel à `perform_text_analysis`, qui exécute
+        la logique d'analyse réelle. Le type d'analyse peut être spécifié
+        (ex: "rhetorical", "fallacy_detection").
+    5.  **Formatage de la Sortie**: Les résultats sont retournés sous forme
+        de dictionnaire.
+
+Artefacts produits:
+    - Un dictionnaire Python contenant les résultats structurés de l'analyse.
+      La structure exacte dépend du `analysis_type` demandé.
 """
 
 import asyncio

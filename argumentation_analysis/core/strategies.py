@@ -193,6 +193,17 @@ class BalancedParticipationStrategy(SelectionStrategy):
         self._last_selected = {agent.name: 0 for agent in agents}
         
         if target_participation and isinstance(target_participation, dict):
+            # Validation #1: S'assurer que tous les agents ciblés sont connus.
+            known_agent_names = set(self._agents_map.keys())
+            for name in target_participation:
+                if name not in known_agent_names:
+                    raise ValueError(f"L'agent '{name}' défini dans target_participation est inconnu.")
+
+            # Validation #2: S'assurer que la somme des participations est (proche de) 1.0.
+            total_participation = sum(target_participation.values())
+            if not (0.99 < total_participation < 1.01):
+                raise ValueError(f"La somme des participations cibles doit être 1.0, mais est de {total_participation}.")
+
             self._target_participation = target_participation.copy() # Copier pour éviter modif externe
         else:
             num_agents = len(agents)
