@@ -1,12 +1,53 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Processeurs d'Analyse
-=======================
+"""Processeurs d'Analyse Modulaires pour Pipelines.
 
-Ce module contient les fonctions de traitement brut des résultats provenant
-des différentes couches d'orchestration.
+Objectif:
+    Ce module fournit une collection de "processeurs" (`Processors`), qui sont
+    les briques de construction fondamentales pour les pipelines d'analyse
+    argumentative. Chaque processeur est une classe autonome encapsulant une
+    étape de traitement spécifique et réutilisable. En les assemblant, on peut
+    construire des workflows d'analyse complexes et personnalisés.
+
+Concept Clé:
+    Chaque processeur implémente une interface commune (par exemple, une méthode
+    `process(state)` ou `__call__(state)`). Il prend en entrée l'état actuel de
+    l'analyse (souvent un dictionnaire ou un objet `RhetoricalAnalysisState`),
+    effectue sa tâche, et retourne l'état mis à jour avec ses résultats.
+    Cette conception favorise la modularité, la testabilité et la
+    réutilisabilité.
+
+Processeurs Principaux (Exemples cibles):
+    -   `ExtractProcessor`:
+        Charge un agent d'extraction pour identifier et extraire les
+        propositions, prémisses, et conclusions du texte brut.
+    -   `InformalAnalysisProcessor`:
+        Utilise l'agent d'analyse informelle pour détecter les sophismes
+        dans les arguments extraits.
+    -   `FormalAnalysisProcessor`:
+        Fait appel à un agent logique pour convertir le texte en un ensemble
+        de croyances, vérifier la cohérence et exécuter des requêtes.
+    -   `SynthesisProcessor`:
+        Prend les résultats des analyses informelle et formelle et utilise
+        un agent de synthèse pour générer un rapport consolidé.
+    -   `DeduplicationProcessor`:
+        Analyse les résultats pour identifier et fusionner les arguments ou
+        les sophismes redondants.
+
+Utilisation:
+    Ces processeurs sont destinés à être utilisés par un moteur d'exécution de
+    pipeline (comme `ExecutionEngine`). Le moteur les exécute séquentiellement,
+    en passant l'état de l'un à l'autre.
+
+    Exemple (conceptuel):
+    ```python
+    engine = ExecutionEngine(state)
+    engine.add(ExtractProcessor())
+    engine.add(InformalAnalysisProcessor())
+    engine.add(SynthesisProcessor())
+    final_state = await engine.run()
+    ```
 """
 
 import logging

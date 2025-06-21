@@ -1,18 +1,34 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Ce module fournit un pipeline pour la génération d'embeddings à partir de diverses sources de données.
+"""Pipeline de génération et de gestion d'embeddings.
 
-Le pipeline principal, `run_embedding_generation_pipeline`, prend en entrée des
-configurations de sources (soit via un fichier chiffré, une chaîne JSON, ou un
-fichier JSON non chiffré), récupère le contenu textuel complet pour chaque source si
-nécessaire, génère optionnellement des embeddings pour ces textes en utilisant un
-modèle spécifié, et sauvegarde les configurations mises à jour (incluant les textes
-récupérés) ainsi que les embeddings générés dans des fichiers séparés.
+Objectif:
+    Créer et mettre à jour des représentations vectorielles (embeddings) pour un
+    ensemble de documents sources. Cette pipeline est essentielle pour les
+    tâches de recherche sémantique et de similarité.
 
-Il gère le chiffrement/déchiffrement des fichiers de configuration et la
-sauvegarde des embeddings dans un répertoire structuré. Ce module respecte PEP 257
-pour les docstrings et PEP 8 pour le style de code.
+Données d'entrée:
+    - Une configuration de sources, fournie sous forme de fichier JSON (chiffré
+      ou non) ou de chaîne de caractères. Chaque source spécifie son origine
+      (fichier local, URL, etc.).
+
+Étapes (Processeurs):
+    1.  **Chargement de la configuration**: Lecture et déchiffrement (si nécessaire)
+        des définitions de sources.
+    2.  **Récupération du contenu**: Pour chaque source où le texte complet est
+        manquant, utilisation de `get_full_text_for_source` pour le télécharger.
+    3.  **Génération des Embeddings**: Si un nom de modèle est fourni, le texte complet
+        de chaque source est découpé en "chunks" et encodé en vecteurs via
+        `get_embeddings_for_chunks`.
+    4.  **Sauvegarde**:
+        - Les définitions de sources (mises à jour avec les textes récupérés)
+          sont sauvegardées dans un nouveau fichier de configuration chiffré.
+        - Les embeddings générés sont stockés dans des fichiers JSON dédiés.
+
+Artefacts produits:
+    - Un fichier de configuration de sortie mis à jour.
+    - Une collection de fichiers d'embeddings, un par document source traité.
 """
 
 import argparse
