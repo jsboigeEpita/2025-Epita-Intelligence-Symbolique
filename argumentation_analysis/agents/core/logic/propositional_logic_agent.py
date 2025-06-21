@@ -1,13 +1,18 @@
 # argumentation_analysis/agents/core/logic/propositional_logic_agent.py
 """
-Agent spécialisé pour la logique propositionnelle (PL).
+Définit l'agent spécialisé dans le raisonnement en logique propositionnelle (PL).
 
-Ce module définit `PropositionalLogicAgent`, une classe qui hérite de
-`BaseLogicAgent` et implémente les fonctionnalités spécifiques pour interagir
-avec la logique propositionnelle. Il utilise `TweetyBridge` pour la communication
-avec TweetyProject et s'appuie sur des prompts sémantiques définis dans
-`argumentation_analysis.agents.core.pl.prompts` pour la conversion
-texte-vers-PL, la génération de requêtes et l'interprétation des résultats.
+Ce module fournit la classe `PropositionalLogicAgent`, une implémentation concrète
+de `BaseLogicAgent`. Son rôle est d'orchestrer le traitement de texte en langage
+naturel pour le convertir en un format logique, exécuter des raisonnements et
+interpréter les résultats.
+
+L'agent s'appuie sur deux piliers :
+1.  **Semantic Kernel** : Pour les tâches basées sur les LLMs, comme la traduction
+    de texte en formules PL et l'interprétation des résultats. Les prompts
+    dédiés à ces tâches sont définis directement dans ce module.
+2.  **TweetyBridge** : Pour l'interaction avec le solveur logique sous-jacent,
+    notamment pour valider la syntaxe des formules et vérifier l'inférence.
 """
 
 import logging
@@ -188,21 +193,28 @@ class PropositionalLogicAgent(BaseLogicAgent):
     """
     Agent spécialiste de l'analyse en logique propositionnelle (PL).
 
-    Cet agent transforme un texte en un `BeliefSet` (ensemble de croyances)
-    formalisé en PL. Il utilise des fonctions sémantiques pour extraire les
-    propositions et les formules, puis s'appuie sur `TweetyBridge` pour valider
-    la syntaxe et exécuter des requêtes logiques.
+    Cet agent transforme un texte en un `PropositionalBeliefSet` (ensemble de
+    croyances) formalisé en PL. Il orchestre l'utilisation de fonctions sémantiques
+    (via LLM) pour l'extraction de propositions et de formules, et s'appuie sur
+    `TweetyBridge` pour valider la syntaxe et exécuter des requêtes logiques.
 
-    Le processus typique est :
-    1. `text_to_belief_set` : Convertit le texte en un `BeliefSet` PL valide.
-    2. `generate_queries` : Propose des requêtes pertinentes.
-    3. `execute_query` : Exécute une requête sur le `BeliefSet`.
-    4. `interpret_results` : Explique le résultat de la requête en langage naturel.
+    Le workflow typique de l'agent est le suivant :
+    1.  `text_to_belief_set` : Convertit un texte en langage naturel en un
+        `PropositionalBeliefSet` structuré et validé.
+    2.  `generate_queries` : Propose une liste de requêtes pertinentes à partir
+        du `BeliefSet` et du contexte textuel initial.
+    3.  `execute_query` : Exécute une requête logique sur le `BeliefSet` en utilisant
+        le moteur logique de TweetyProject.
+    4.  `interpret_results` : Fait appel au LLM pour traduire les résultats logiques
+        bruts en une explication compréhensible en langage naturel.
 
     Attributes:
-        service (Optional[ChatCompletionClientBase]): Le client de complétion de chat.
-        settings (Optional[Any]): Les paramètres d'exécution.
-        _tweety_bridge (TweetyBridge): Le pont vers la bibliothèque logique Java Tweety.
+        service (Optional[ChatCompletionClientBase]): Le client de complétion de chat
+            fourni par le Kernel. Inutilisé directement, les appels passent par le Kernel.
+        settings (Optional[Any]): Les paramètres d'exécution pour les fonctions
+            sémantiques, récupérés depuis le Kernel.
+        _tweety_bridge (TweetyBridge): Instance privée du pont vers la bibliothèque
+            logique Java TweetyProject.
     """
     service: Optional[ChatCompletionClientBase] = Field(default=None, exclude=True)
     settings: Optional[Any] = Field(default=None, exclude=True)
@@ -297,19 +309,25 @@ class PropositionalLogicAgent(BaseLogicAgent):
         """
         Convertit un texte brut en un `PropositionalBeliefSet` structuré et validé.
 
-        Ce processus se déroule en plusieurs étapes :
-        1.  **Génération des Propositions** : Le LLM identifie les propositions atomiques.
-        2.  **Génération des Formules** : Le LLM traduit le texte en formules en utilisant les propositions.
-        3.  **Filtrage** : Les formules utilisant des propositions non déclarées sont rejetées.
-        4.  **Validation** : La syntaxe de l'ensemble de croyances final est validée par TweetyBridge.
+        Ce processus complexe s'appuie sur le LLM et `TweetyBridge` :
+        1.  **Génération des Propositions** : Le LLM identifie et extrait les
+            propositions atomiques candidates à partir du texte.
+        2.  **Génération des Formules** : Le LLM traduit le texte en formules
+            logiques en se basant sur les propositions précédemment identifiées.
+        3.  **Filtrage Rigoureux** : Les formules qui utiliseraient des propositions
+            non déclarées à l'étape 1 sont systématiquement rejetées pour garantir
+            la cohérence.
+        4.  **Validation Syntaxique** : L'ensemble de croyances final est soumis à
+            `TweetyBridge` pour une validation syntaxique complète.
 
         Args:
-            text (str): Le texte à convertir.
-            context (Optional[Dict[str, Any]]): Contexte additionnel (non utilisé actuellement).
+            text (str): Le texte en langage naturel à convertir.
+            context (Optional[Dict[str, Any]]): Contexte additionnel (non utilisé
+                actuellement).
 
         Returns:
             Tuple[Optional[BeliefSet], str]: Un tuple contenant le `BeliefSet` créé
-            (ou `None` en cas d'échec) et un message de statut.
+            (ou `None` en cas d'échec) et un message de statut détaillé.
         """
         self.logger.info(f"Début de la conversion de texte en BeliefSet PL pour '{text[:100]}...'")
         max_retries = 3
@@ -351,17 +369,20 @@ class PropositionalLogicAgent(BaseLogicAgent):
         Génère une liste de requêtes PL pertinentes pour un `BeliefSet` donné.
 
         Cette méthode utilise le LLM pour suggérer des "idées" de requêtes basées
-        sur le texte original et l'ensemble de croyances. Elle valide ensuite que
-        ces idées correspondent à des propositions déclarées pour former des
-        requêtes valides.
+        sur le texte original et l'ensemble de croyances. Elle filtre ensuite ces
+        suggestions pour ne conserver que celles qui sont syntaxiquement valides
+        et qui correspondent à des propositions déclarées dans le `BeliefSet`.
 
         Args:
-            text (str): Le texte original pour donner un contexte au LLM.
-            belief_set (BeliefSet): L'ensemble de croyances à interroger.
+            text (str): Le texte original, utilisé pour fournir un contexte au LLM.
+            belief_set (BeliefSet): L'ensemble de croyances sur lequel les
+                requêtes seront basées.
             context (Optional[Dict[str, Any]]): Contexte additionnel (non utilisé).
 
         Returns:
-            List[str]: Une liste de requêtes PL valides et prêtes à être exécutées.
+            List[str]: Une liste de requêtes PL (chaînes de caractères) validées et
+            prêtes à être exécutées par `execute_query`. Retourne une liste vide
+            en cas d'échec ou si aucune idée pertinente n'est trouvée.
         """
         self.logger.info(f"Génération de requêtes PL via le modèle de requête pour '{text[:100]}...'")
         
@@ -428,14 +449,19 @@ class PropositionalLogicAgent(BaseLogicAgent):
         """
         Exécute une seule requête PL sur un `BeliefSet` via `TweetyBridge`.
 
+        Cette méthode valide d'abord la syntaxe de la requête avant de la soumettre
+        au moteur logique de Tweety.
+
         Args:
-            belief_set (BeliefSet): L'ensemble de croyances sur lequel exécuter la requête.
-            query (str): La formule PL à vérifier.
+            belief_set (BeliefSet): L'ensemble de croyances sur lequel la requête
+                doit être exécutée.
+            query (str): La formule PL à vérifier (par exemple, "socrates_is_mortal").
 
         Returns:
-            Tuple[Optional[bool], str]: Un tuple contenant le résultat booléen
-            (`True` si la requête est prouvée, `False` sinon, `None` en cas d'erreur)
-            et le message de sortie brut de Tweety.
+            Tuple[Optional[bool], str]: Un tuple contenant :
+            - Le résultat booléen (`True` si la requête est prouvée, `False` sinon,
+              `None` en cas d'erreur).
+            - Le message de sortie brut de Tweety, utile pour le débogage.
         """
         self.logger.info(f"Exécution de la requête PL: '{query}'...")
         
