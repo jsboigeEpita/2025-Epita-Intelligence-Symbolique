@@ -230,7 +230,7 @@ class UnifiedWebOrchestrator:
                 'fallback_ports': fallback_ports,
                 'max_attempts': 5,
                 'timeout_seconds': 30,
-                'health_endpoint': '/health',
+                'health_endpoint': '/api/health',
                 'env_activation': 'powershell -File activate_project_env.ps1'
             },
             'frontend': {
@@ -960,6 +960,6 @@ def main():
     sys.exit(exit_code)
 
 if __name__ == "__main__":
-    from argumentation_analysis.core.environment import auto_env
-    auto_env.ensure_env()
+    from argumentation_analysis.core.environment import ensure_env
+    ensure_env()
     main()
