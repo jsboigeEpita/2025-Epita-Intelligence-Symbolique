@@ -149,7 +149,7 @@ class MinimalBackendManager:
         
         # On utilise directement le nom correct de l'environnement.
         # Idéalement, cela viendrait d'une source de configuration plus fiable.
-        env_name = self.config.get('backend', {}).get('conda_env', 'projet-is')
+        env_name = self.config.get('backend', {}).get('conda_env', 'projet-is-roo')
         self.logger.info(f"[BACKEND] Utilisation du nom d'environnement Conda: '{env_name}'")
         
         command = [
@@ -301,7 +301,7 @@ class MinimalFrontendManager:
                         line_str = line.decode('utf-8', errors='ignore').strip()
                         output_lines.append(f"[{stream_name}] {line_str}")
                         self.logger.info(f"[FRONTEND_LOGS] {line_str}")
-                        if ready_line in line_str:
+                        if "Compiled successfully!" in line_str or "Compiled with warnings" in line_str:
                             ready = True
                     return line
 
@@ -527,6 +527,16 @@ class UnifiedWebOrchestrator:
         except Exception as e:
             print(f"ERROR: Erreur lors du chargement de la configuration {self.config_path}: {e}. Utilisation de la configuration par défaut.")
             return self._get_default_config()
+    
+        def _deep_merge_dicts(self, base_dict: Dict, new_dict: Dict) -> Dict:
+            """Fusionne récursivement deux dictionnaires."""
+            merged = base_dict.copy()
+            for key, value in new_dict.items():
+                if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
+                    merged[key] = self._deep_merge_dicts(merged[key], value)
+                else:
+                    merged[key] = value
+            return merged
     
     def _create_default_config(self):
         """Crée une configuration par défaut"""
@@ -768,7 +778,7 @@ class UnifiedWebOrchestrator:
         self.add_trace("[TEST] LANCEMENT DES TESTS PYTEST", f"Tests: {test_paths or 'tous'}")
 
         import shlex
-        conda_env_name = os.environ.get('CONDA_ENV_NAME', self.config.get('backend', {}).get('conda_env', 'projet-is'))
+        conda_env_name = os.environ.get('CONDA_ENV_NAME', self.config.get('backend', {}).get('conda_env', 'projet-is-roo'))
         
         self.logger.warning(f"Construction de la commande de test via 'powershell.exe' pour garantir l'activation de l'environnement Conda '{conda_env_name}'.")
         
