@@ -1,14 +1,16 @@
 # FORCE_RELOAD
 # argumentation_analysis/agents/core/logic/first_order_logic_agent.py
 """
-Agent spécialisé pour la logique du premier ordre (FOL).
+Définit l'agent spécialisé dans le raisonnement en logique du premier ordre (FOL).
 
-Ce module définit `FirstOrderLogicAgent`, une classe qui hérite de
-`BaseLogicAgent` et implémente les fonctionnalités spécifiques pour interagir
-avec la logique du premier ordre. Il utilise `TweetyBridge` pour la communication
-avec TweetyProject et s'appuie sur des prompts sémantiques définis dans ce
-module pour la conversion texte-vers-FOL, la génération de requêtes et
-l'interprétation des résultats.
+Ce module fournit la classe `FirstOrderLogicAgent`, une implémentation pour la FOL,
+héritant de `BaseLogicAgent`. Son rôle est d'orchestrer le traitement de texte
+en langage naturel pour le convertir en un format logique FOL structuré,
+d'exécuter des raisonnements et d'interpréter les résultats.
+
+L'agent utilise une combinaison de prompts sémantiques pour le LLM (définis ici)
+et d'appels à `TweetyBridge` pour la validation et l'interrogation de la base de
+connaissances.
 """
 
 import logging
@@ -36,10 +38,6 @@ Vous utilisez la syntaxe de TweetyProject pour représenter les formules FOL.
 Vos tâches principales incluent la traduction de texte en formules FOL, la génération de requêtes FOL pertinentes,
 l'exécution de ces requêtes sur un ensemble de croyances FOL, et l'interprétation des résultats obtenus.
 """
-"""
-Prompt système pour l'agent de logique du premier ordre.
-Définit le rôle et les capacités générales de l'agent pour le LLM.
-"""
 
 # Prompts pour la logique du premier ordre (optimisés)
 PROMPT_TEXT_TO_FOL_DEFS = """Expert FOL : Extrayez sorts et prédicats du texte en format JSON strict.
@@ -52,10 +50,6 @@ Exemple : "Jean aime Paris" → {"sorts": {"person": ["jean"], "place": ["paris"
 
 Texte : {{$input}}
 """
-"""
-Prompt pour extraire les sorts et prédicats d'un texte.
-Attend `$input` (le texte source).
-"""
 
 PROMPT_TEXT_TO_FOL_FORMULAS = """Expert FOL : Traduisez le texte en formules FOL en JSON strict.
 
@@ -66,10 +60,6 @@ Règles : Utilisez UNIQUEMENT les sorts/prédicats fournis. Variables majuscules
 Texte : {{$input}}
 Définitions : {{$definitions}}
 """
-"""
-Prompt pour générer des formules FOL à partir d'un texte et de définitions.
-Attend `$input` (texte source) et `$definitions` (JSON des sorts et prédicats).
-"""
 
 PROMPT_GEN_FOL_QUERIES_IDEAS = """Expert FOL : Générez des requêtes pertinentes en JSON strict.
 
@@ -79,10 +69,6 @@ Règles : Utilisez UNIQUEMENT les prédicats/constantes du belief set. Priorité
 
 Texte : {{$input}}
 Belief Set : {{$belief_set}}
-"""
-"""
-Prompt pour générer des idées de requêtes FOL au format JSON.
-Attend `$input` (texte source) et `$belief_set` (l'ensemble de croyances FOL).
 """
 
 PROMPT_INTERPRET_FOL = """Expert FOL : Interprétez les résultats de requêtes FOL en langage accessible.
@@ -95,26 +81,29 @@ Résultats : {{$tweety_result}}
 Pour chaque requête : objectif, statut (ACCEPTED/REJECTED), signification, implications.
 Conclusion générale concise.
 """
-"""
-Prompt pour interpréter les résultats de requêtes FOL en langage naturel.
-Attend `$input` (texte source), `$belief_set` (ensemble de croyances FOL),
-`$queries` (les requêtes exécutées), et `$tweety_result` (les résultats bruts de Tweety).
-"""
 
 from ..abc.agent_bases import BaseLogicAgent
 
 class FirstOrderLogicAgent(BaseLogicAgent):
     """
-    Agent spécialisé pour la logique du premier ordre (FOL).
+    Agent spécialiste de l'analyse en logique du premier ordre (FOL).
 
-    Cet agent étend `BaseLogicAgent` pour fournir des capacités de traitement
-    spécifiques à la logique du premier ordre. Il intègre des fonctions sémantiques
-    pour traduire le langage naturel en ensembles de croyances FOL, générer des
-    requêtes FOL pertinentes, exécuter ces requêtes via `TweetyBridge`, et
-    interpréter les résultats en langage naturel.
+    Cet agent étend `BaseLogicAgent` pour le traitement spécifique à la FOL.
+    Il combine des fonctions sémantiques (via LLM) pour l'interprétation du
+    langage naturel et `TweetyBridge` pour la rigueur logique.
+
+    Le workflow principal est similaire à celui des autres agents logiques :
+    1.  `text_to_belief_set` : Convertit le texte en `FirstOrderBeliefSet`.
+    2.  `generate_queries` : Suggère des requêtes FOL pertinentes.
+    3.  `execute_query` : Exécute une requête sur le `FirstOrderBeliefSet`.
+    4.  `interpret_results` : Traduit le résultat logique en explication naturelle.
+
+    La complexité de la FOL impose une gestion plus fine de la signature (sorts,
+    constantes, prédicats), qui est gérée en interne par cet agent.
 
     Attributes:
-        _tweety_bridge (TweetyBridge): Instance de `TweetyBridge` configurée pour la FOL.
+        _tweety_bridge (TweetyBridge): Pont vers la bibliothèque logique Java Tweety.
+            Cette instance est créée dynamiquement lors du `setup_agent_components`.
     """
     
     # Attributs requis par Pydantic V2 pour la nouvelle classe de base Agent
@@ -127,11 +116,13 @@ class FirstOrderLogicAgent(BaseLogicAgent):
 
     def __init__(self, kernel: Kernel, agent_name: str = "FirstOrderLogicAgent", service_id: Optional[str] = None):
         """
-        Initialise une instance de `FirstOrderLogicAgent`.
+        Initialise l'agent de logique du premier ordre.
 
-        :param kernel: Le kernel Semantic Kernel à utiliser pour les fonctions sémantiques.
-        :param agent_name: Le nom de l'agent (par défaut "FirstOrderLogicAgent").
-        :param service_id: L'ID du service LLM à utiliser.
+        Args:
+            kernel (Kernel): L'instance du kernel Semantic Kernel.
+            agent_name (str, optional): Nom de l'agent.
+            service_id (Optional[str], optional): ID du service LLM à utiliser
+                pour les fonctions sémantiques.
         """
         super().__init__(
             kernel=kernel,
@@ -150,11 +141,11 @@ class FirstOrderLogicAgent(BaseLogicAgent):
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         """
-        Retourne un dictionnaire décrivant les capacités spécifiques de cet agent FOL.
+        Retourne un dictionnaire décrivant les capacités de l'agent.
 
-        :return: Un dictionnaire détaillant le nom, le type de logique, la description
-                 et les méthodes de l'agent.
-        :rtype: Dict[str, Any]
+        Returns:
+            Dict[str, Any]: Un dictionnaire détaillant le nom, le type de logique,
+            la description et les méthodes principales de l'agent.
         """
         return {
             "name": self.name,
@@ -173,14 +164,14 @@ class FirstOrderLogicAgent(BaseLogicAgent):
 
     def setup_agent_components(self, llm_service_id: str) -> None:
         """
-        Configure les composants spécifiques de l'agent de logique du premier ordre.
+        Configure les composants de l'agent, notamment le pont logique et les fonctions sémantiques.
 
-        Initialise `TweetyBridge` pour la logique FOL et enregistre les fonctions
-        sémantiques nécessaires (TextToFOLBeliefSet, GenerateFOLQueries,
-        InterpretFOLResult) dans le kernel Semantic Kernel.
+        Cette méthode initialise `TweetyBridge` et enregistre tous les prompts
+        spécifiques à la FOL en tant que fonctions dans le kernel.
 
-        :param llm_service_id: L'ID du service LLM à utiliser pour les fonctions sémantiques.
-        :type llm_service_id: str
+        Args:
+            llm_service_id (str): L'ID du service LLM à utiliser pour les
+                fonctions sémantiques enregistrées.
         """
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants pour {self.name}...")
@@ -249,7 +240,20 @@ class FirstOrderLogicAgent(BaseLogicAgent):
 
     async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
         """
-        Converts natural language text to a FOL belief set using a programmatic approach.
+        Convertit un texte en langage naturel en un `FirstOrderBeliefSet` validé.
+
+        Ce processus multi-étapes utilise le LLM pour la génération de la signature
+        (sorts, prédicats) et des formules, puis s'appuie sur `TweetyBridge` pour
+        la validation rigoureuse de chaque formule par rapport à la signature.
+
+        Args:
+            text (str): Le texte en langage naturel à convertir.
+            context (Optional[Dict[str, Any]]): Contexte additionnel (non utilisé).
+
+        Returns:
+            Tuple[Optional[BeliefSet], str]: Un tuple contenant le `FirstOrderBeliefSet`
+            créé (qui inclut l'objet Java pour les opérations futures) ou `None`
+            en cas d'échec, et un message de statut.
         """
         self.logger.info(f"Converting text to FOL belief set for {self.name} (programmatic approach)...")
         
@@ -364,7 +368,23 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             return {"constants": set(), "predicates": {}}
 
     async def generate_queries(self, text: str, belief_set: FirstOrderBeliefSet, context: Optional[Dict[str, Any]] = None) -> List[str]:
-        """Generates valid FOL queries using a Request-Validation-Assembly model."""
+        """
+        Génère une liste de requêtes FOL pertinentes et valides pour un `BeliefSet` donné.
+
+        Le processus :
+        1. Utilise le LLM pour suggérer des "idées" de requêtes.
+        2. Valide que chaque idée est conforme à la signature du `BeliefSet` (prédicats, constantes, arité).
+        3. Assemble les idées valides en chaînes de requêtes FOL.
+        4. Valide la syntaxe finale de chaque requête assemblée avec `TweetyBridge`.
+
+        Args:
+            text (str): Le texte original pour le contexte.
+            belief_set (FirstOrderBeliefSet): Le `BeliefSet` à interroger.
+            context (Optional[Dict[str, Any]]): Contexte additionnel (non utilisé).
+
+        Returns:
+            List[str]: Une liste de chaînes de requêtes FOL prêtes à être exécutées.
+        """
         self.logger.info(f"Generating FOL queries for {self.name}...")
         try:
             kb_details = self._parse_belief_set_content(belief_set)
@@ -399,7 +419,21 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             return []
 
     def execute_query(self, belief_set: FirstOrderBeliefSet, query: str) -> Tuple[Optional[bool], str]:
-        """Executes a FOL query on a given belief set using the pre-built Java object."""
+        """
+        Exécute une requête FOL sur un `FirstOrderBeliefSet` donné.
+
+        Cette méthode s'appuie sur l'objet Java `BeliefSet` stocké dans l'instance
+        `FirstOrderBeliefSet` pour effectuer l'interrogation via `TweetyBridge`.
+
+        Args:
+            belief_set (FirstOrderBeliefSet): L'ensemble de croyances contenant l'objet Java.
+            query (str): La requête FOL à exécuter.
+
+        Returns:
+            Tuple[Optional[bool], str]: Un tuple contenant le résultat (`True` si
+            prouvé, `False` sinon, `None` en cas d'erreur) et un statut textuel
+            ("ACCEPTED", "REJECTED", ou message d'erreur).
+        """
         self.logger.info(f"Executing query: {query} for agent {self.name}")
         if not belief_set.java_belief_set:
             return None, "Java belief set object not found."
@@ -415,6 +449,23 @@ class FirstOrderLogicAgent(BaseLogicAgent):
     async def interpret_results(self, text: str, belief_set: BeliefSet,
                          queries: List[str], results: List[Tuple[Optional[bool], str]],
                          context: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Traduit les résultats bruts d'une ou plusieurs requêtes en une explication en langage naturel.
+
+        Utilise un prompt sémantique pour fournir au LLM le contexte complet
+        (texte original, ensemble de croyances, requêtes, résultats bruts) afin qu'il
+        génère une explication cohérente.
+
+        Args:
+            text (str): Le texte original.
+            belief_set (BeliefSet): L'ensemble de croyances utilisé.
+            queries (List[str]): La liste des requêtes qui ont été exécutées.
+            results (List[Tuple[Optional[bool], str]]): La liste des résultats correspondants.
+            context (Optional[Dict[str, Any]]): Contexte additionnel (non utilisé).
+
+        Returns:
+            str: L'explication générée par le LLM.
+        """
         self.logger.info(f"Interpreting results for agent {self.name}...")
         try:
             queries_str = "\n".join(queries)
