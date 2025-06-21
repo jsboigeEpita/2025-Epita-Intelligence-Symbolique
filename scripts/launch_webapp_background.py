@@ -1,3 +1,11 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# --- Garde-fou pour l'environnement ---
+# Cet import est crucial. Il assure que le script s'exécute dans l'environnement
+# Conda et avec les variables (JAVA_HOME, etc.) correctement configurés.
+# Si l'environnement n'est pas bon, il lèvera une exception claire.
+import argumentation_analysis.core.environment
 import argumentation_analysis.core.environment
 #!/usr/bin/env python3
 """
@@ -28,36 +36,37 @@ def find_conda_python():
 
 def launch_backend_detached():
     """Lance le backend Uvicorn en arrière-plan complet"""
-    python_exe = find_conda_python()
-    project_root = str(Path(__file__).parent.absolute())
+    # Le garde-fou garantit que sys.executable est le bon python
+    python_exe = sys.executable
+    project_root = str(Path(__file__).parent.parent.absolute())
     
     cmd = [
         python_exe,
         "-m", "uvicorn",
         "argumentation_analysis.services.web_api.app:app",
         "--host", "0.0.0.0",
-        "--port", "5003",
-        "--reload"
+        "--port", "5003"
     ]
     
-    env = os.environ.copy()
-    env["PYTHONPATH"] = f"{project_root};{env.get('PYTHONPATH', '')}"
+    # os.environ est déjà correctement configuré par le wrapper activate_project_env.ps1
     
-    print(f"[LAUNCH] Backend detache...")
-    print(f"[DIR] Working dir: {project_root}")
-    print(f"[PYTHON] Python: {python_exe}")
+    print(f"[LAUNCH] Lancement du backend détaché...")
+    print(f"[DIR] Répertoire de travail: {project_root}")
+    print(f"[PYTHON] Exécutable Python: {python_exe}")
     print(f"[URL] URL prevue: http://localhost:5003/api/health")
     
     try:
         # Windows: DETACHED_PROCESS pour vraie indépendance
         if os.name == 'nt':
+            stdout_log = open("backend_stdout.log", "w")
+            stderr_log = open("backend_stderr.log", "w")
             process = subprocess.Popen(
                 cmd,
                 cwd=project_root,
-                env=env,
+                env=os.environ,
                 creationflags=subprocess.DETACHED_PROCESS,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=stdout_log,
+                stderr=stderr_log,
                 stdin=subprocess.DEVNULL
             )
         else:
@@ -65,7 +74,7 @@ def launch_backend_detached():
             process = subprocess.Popen(
                 cmd,
                 cwd=project_root,
-                env=env,
+                env=os.environ,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 stdin=subprocess.DEVNULL,

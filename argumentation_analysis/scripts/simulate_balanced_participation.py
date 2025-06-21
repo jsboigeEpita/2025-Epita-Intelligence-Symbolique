@@ -13,7 +13,7 @@ from typing import Dict, List, Tuple
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.contents.utils.author_role import AuthorRole
+from semantic_kernel.contents import AuthorRole
 from unittest.mock import MagicMock
 
 # Import des modules du projet
