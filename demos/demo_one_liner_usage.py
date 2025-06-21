@@ -13,7 +13,7 @@ Date: 09/06/2025
 
 # ===== ONE-LINER AUTO-ACTIVATEUR =====
 # La ligne suivante s'assure que tout l'environnement est configuré.
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 
 # ===== SCRIPT PRINCIPAL =====
 import sys

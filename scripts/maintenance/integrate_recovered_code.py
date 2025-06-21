@@ -4,7 +4,7 @@ Script d'intégration du code récupéré - Oracle Enhanced v2.1.0
 Traite l'intégration du code récupéré identifié dans les phases précédentes
 """
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 import os
 import sys
 import json

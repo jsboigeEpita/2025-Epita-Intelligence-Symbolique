@@ -7,7 +7,7 @@ Date: 08/06/2025
 Ce script vérifie que la migration depuis PowerShell vers Python
 a été effectuée correctement et que tous les composants fonctionnent.
 """
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 
 import os
 import sys

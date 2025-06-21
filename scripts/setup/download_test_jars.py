@@ -5,7 +5,7 @@ Ce script télécharge une version minimale des JARs Tweety nécessaires
 pour les tests et les place dans le répertoire tests/resources/libs/.
 """
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 import sys
 from pathlib import Path
 import argparse

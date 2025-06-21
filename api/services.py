@@ -3,45 +3,80 @@
 
 from .models import AnalysisResponse, Fallacy
 
+import jpype
+import jpype.imports
+import time
+from typing import Dict
+
 class AnalysisService:
     def __init__(self):
-        # Initialisation du service, par exemple chargement de modèles, connexion à une base de données, etc.
-        # Pour l'instant, nous n'avons pas de dépendances complexes.
-        pass
-
-    async def analyze_text(self, text: str) -> dict:
         """
-        Effectue une analyse simulée du texte.
-        Retourne un dictionnaire qui sera utilisé pour construire AnalysisResponse.
+        Initialise le service d'analyse. Assure que la JVM est démarrée.
         """
-        import uuid
-        import time
+        if not jpype.isJVMStarted():
+            raise RuntimeError("La JVM n'est pas démarrée. Veuillez l'initialiser au point d'entrée de l'application.")
+        
+        # Import des classes Java nécessaires
+        try:
+            from org.tweetyproject.arg.text import ArgumentParser
+            from org.tweetyproject.arg.structures import PropositionalFormula
+            self.ArgumentParser = ArgumentParser
+            print("INFO: AnalysisService initialisé avec succès et classes Tweety importées.")
+        except Exception as e:
+            print(f"ERREUR: Impossible d'importer les classes Tweety. Vérifiez le classpath. Erreur: {e}")
+            raise ImportError("Les classes Tweety n'ont pu être importées.") from e
 
+    async def analyze_text(self, text: str) -> Dict:
+        """
+        Effectue une analyse de reconstruction d'argument en utilisant Tweety.
+        """
         start_time = time.time()
         
-        if "example fallacy" in text.lower():
-            fallacies = [
-                {"type": "Ad Hominem (Service)", "description": "Attacking the person instead of the argument."},
-                {"type": "Straw Man (Service)", "description": "Misrepresenting the opponent's argument."}
-            ]
-            summary = "Plusieurs sophismes potentiels détectés."
-        elif "no fallacy" in text.lower():
-            fallacies = []
-            summary = "Aucun sophisme évident détecté."
-        else:
-            fallacies = [
-                {"type": "Hasty Generalization (Service)", "description": "Drawing a conclusion based on a small sample size."}
-            ]
-            summary = "Analyse préliminaire effectuée."
+        try:
+            # 1. Utilisation du parseur d'arguments de Tweety
+            parser = self.ArgumentParser()
+            kb = parser.parse(text)
+            
+            # 2. Extraction des prémisses et de la conclusion
+            # La base de connaissance (kb) contient des formules.
+            # La dernière formule est généralement la conclusion.
+            formulas = kb.getFormulas()
+            
+            premises = []
+            conclusion = None
+
+            if formulas:
+                if len(formulas) > 1:
+                    for i in range(len(formulas) - 1):
+                        premises.append(str(formulas.get(i)))
+                conclusion = str(formulas.get(len(formulas) - 1))
+
+            argument_structure = {
+                "premises": [{"id": f"p{i+1}", "text": premise} for i, premise in enumerate(premises)],
+                "conclusion": {"id": "c1", "text": conclusion} if conclusion else None
+            }
+            summary = "La reconstruction de l'argument a été effectuée avec succès."
+            service_result = {
+                "argument_structure": argument_structure,
+                "fallacies": [], # L'analyse de sophisme n'est pas implémentée ici
+                "suggestions": ["Vérifiez la validité logique de la structure."],
+                "summary": summary
+            }
+
+        except Exception as e:
+            print(f"ERREUR lors de l'analyse du texte avec Tweety: {e}")
+            service_result = {
+                "argument_structure": None,
+                "fallacies": [],
+                "suggestions": ["Une erreur est survenue pendant l'analyse."],
+                "summary": f"Erreur du service d'analyse: {e}",
+            }
 
         duration = time.time() - start_time
+        service_result["duration"] = duration
+        service_result["components_used"] = ["TweetyArgumentReconstructor"]
         
-        return {
-            "fallacies": fallacies,
-            "duration": duration,
-            "components_used": ["MockAnalysisComponent"],
-            "summary": summary
-        }
+        return service_result
 
 # Exemple d'autres services qui pourraient être ajoutés :
 # class UserService:

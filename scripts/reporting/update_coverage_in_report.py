@@ -1,4 +1,4 @@
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 """
 Script pour ajouter une section sur la couverture des tests mockés au rapport de suivi.
 """

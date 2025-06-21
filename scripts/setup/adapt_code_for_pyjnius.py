@@ -6,7 +6,7 @@ Script pour adapter le code du projet pour utiliser pyjnius au lieu de JPype1.
 Ce script recherche les importations et utilisations de JPype1 dans le code et les remplace par pyjnius.
 """
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 import os
 import re
 import sys

@@ -3,7 +3,7 @@ Script d'analyse de documentation obsolète via liens internes brisés
 Oracle Enhanced v2.1.0 - Maintenance Documentation
 """
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 import os
 import re
 import json

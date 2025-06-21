@@ -87,7 +87,7 @@ except ImportError:
 # if str(_project_root_for_sys_path) not in sys.path:
 #     sys.path.insert(0, str(_project_root_for_sys_path))
 # --- Fin de l'insertion pour sys.path ---
-# from project_core.core_from_scripts.auto_env import _load_dotenv_intelligent # MODIFIÉ ICI - Sera supprimé
+# from argumentation_analysis.core.environment import _load_dotenv_intelligent # MODIFIÉ ICI - Sera supprimé
 class EnvironmentManager:
     """Gestionnaire centralisé des environnements Python/conda"""
     

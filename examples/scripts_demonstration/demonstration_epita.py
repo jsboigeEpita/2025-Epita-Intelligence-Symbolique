@@ -35,7 +35,7 @@ if str(project_root) not in sys.path:
 os.chdir(project_root)
 
 # --- AUTO-ACTIVATION DE L'ENVIRONNEMENT ---
-import project_core.core_from_scripts.auto_env # Auto-activation environnement intelligent
+import argumentation_analysis.core.environment # Auto-activation environnement intelligent
 # --- FIN DE L'AUTO-ACTIVATION ---
 
 

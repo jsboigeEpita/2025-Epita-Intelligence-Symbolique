@@ -59,7 +59,7 @@ automatiquement utilisé en raison de problèmes de compatibilité.
 # empêchant l'exécution des tests dans une configuration incorrecte.
 # Voir project_core/core_from_scripts/auto_env.py pour plus de détails.
 # =====================================================================================
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 
 import sys
 import os

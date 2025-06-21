@@ -54,19 +54,86 @@ async def analyze_framework_endpoint(
     return {"analysis": analysis_result}
 
 # --- Ancien routeur (peut être conservé, modifié ou supprimé selon la stratégie) ---
-@router.post("/analyze") # Temporairement sans response_model pour la flexibilité
+import time
+import logging
+
+logger = logging.getLogger(__name__)
+
+@router.post("/analyze")
 async def analyze_text_endpoint(
-    request: AnalysisRequest,
-    analysis_service: AnalysisService = Depends(get_analysis_service)
+    analysis_req: AnalysisRequest,
+    fastapi_req: Request
 ):
     """
-    Analyzes a given text for logical fallacies and structure.
-    Returns a nested analysis result compatible with the frontend.
+    Analyse un texte donné pour en extraire la structure argumentative (prémisses/conclusion).
+    Utilise le contexte du projet initialisé au démarrage de FastAPI.
     """
     analysis_id = str(uuid.uuid4())[:8]
+    logger.info(f"[{analysis_id}] Requête d'analyse reçue pour le texte: '{analysis_req.text[:80]}...'")
     
-    # Appel du service d'analyse
-    service_result = await analysis_service.analyze_text(request.text)
+    # Récupérer le contexte du projet depuis l'état de l'application FastAPI
+    project_context = fastapi_req.app.state.project_context
+    
+    start_time = time.time()
+    service_result = {}
+    
+    # Vérifier si la JVM et les classes nécessaires sont prêtes
+    if not project_context or not project_context.jvm_initialized:
+        logger.error(f"[{analysis_id}] Erreur: Le contexte du projet ou la JVM n'est pas initialisé.")
+        service_result = {
+            "summary": "Erreur serveur: La JVM n'est pas disponible.",
+        }
+    elif 'ArgumentParser' not in project_context.tweety_classes:
+        logger.error(f"[{analysis_id}] Erreur: La classe 'ArgumentParser' n'a pas été chargée dans le contexte.")
+        service_result = {
+            "summary": "Erreur serveur: Le service d'analyse d'arguments n'est pas configuré.",
+        }
+    else:
+        try:
+            # Utiliser la classe pré-chargée depuis le contexte
+            ArgumentParser = project_context.tweety_classes['ArgumentParser']
+            
+            parser = ArgumentParser()
+            kb = parser.parse(analysis_req.text)
+            formulas = kb.getFormulas()
+            
+            premises = []
+            conclusion = None
+
+            if formulas:
+                if len(formulas) > 1:
+                    for i in range(len(formulas) - 1):
+                        premises.append(str(formulas.get(i)))
+                conclusion = str(formulas.get(len(formulas) - 1))
+
+            argument_structure = {
+                "premises": [{"id": f"p{i+1}", "text": premise} for i, premise in enumerate(premises)],
+                "conclusion": {"id": "c1", "text": conclusion} if conclusion else None
+            }
+            summary = "La reconstruction de l'argument a été effectuée avec succès."
+            service_result = {
+                "argument_structure": argument_structure,
+                "fallacies": [],
+                "suggestions": ["Vérifiez la validité logique de la structure."],
+                "summary": summary
+            }
+            logger.info(f"[{analysis_id}] Reconstruction réussie.")
+
+        except Exception as e:
+            logger.error(f"[{analysis_id}] ERREUR lors de l'analyse du texte avec Tweety: {e}", exc_info=True)
+            service_result = {
+                "summary": f"Erreur du service d'analyse: {e}",
+            }
+
+    duration = time.time() - start_time
+    # S'assurer que les clés existent avant de les utiliser
+    service_result.setdefault("duration", duration)
+    service_result.setdefault("components_used", ["TweetyArgumentReconstructor_centralized"])
+    service_result.setdefault("fallacies", [])
+    service_result.setdefault("argument_structure", None)
+    service_result.setdefault("suggestions", [])
+    service_result.setdefault("overall_quality", 0.0)
+
 
     # Construction de la nouvelle structure de réponse imbriquée
     fallacies_data = service_result.get('fallacies', [])

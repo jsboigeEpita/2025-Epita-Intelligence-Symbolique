@@ -3,7 +3,7 @@ Analyseur des résultats de documentation obsolète pour priorisation des correc
 Oracle Enhanced v2.1.0 - Mise à jour Documentation
 """
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 import json
 import re
 from pathlib import Path

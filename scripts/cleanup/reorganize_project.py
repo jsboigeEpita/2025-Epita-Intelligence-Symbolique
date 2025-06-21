@@ -6,7 +6,7 @@ Ce script crée une structure de répertoires plus propre et y déplace les fich
 appropriés depuis la racine du projet.
 """
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 import os
 import shutil
 from pathlib import Path

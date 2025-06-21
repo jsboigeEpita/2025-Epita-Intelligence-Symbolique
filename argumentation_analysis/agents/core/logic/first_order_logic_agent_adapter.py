@@ -9,7 +9,7 @@ de continuer à fonctionner avec la nouvelle architecture basée sur Semantic Ke
 """
 
 # ===== AUTO-ACTIVATION ENVIRONNEMENT =====
-import project_core.core_from_scripts.auto_env  # Auto-activation environnement intelligent
+import argumentation_analysis.core.environment  # Auto-activation environnement intelligent
 # =========================================
 import logging
 from typing import Dict, List, Any, Optional, Tuple
