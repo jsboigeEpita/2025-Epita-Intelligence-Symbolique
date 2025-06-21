@@ -10,16 +10,19 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 from typing import Dict, List, Tuple
+
+# Import des modules du projet
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+import semantic_kernel as sk
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 from semantic_kernel.contents import ChatMessageContent
 # from semantic_kernel.contents import AuthorRole
 from unittest.mock import MagicMock
 
-# Import des modules du projet
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from argumentation_analysis.core.strategies import BalancedParticipationStrategy
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 
@@ -66,24 +69,24 @@ class ConversationSimulator:
         agents = []
         for name in agent_names:
             # Créer de vrais agents selon le type
-            if "informal" in name.lower() or "rhetorical" in name.lower():
+            # Création d'un mock pour le kernel, car il est requis mais non utilisé dans la simulation
+            mock_kernel = MagicMock(spec=sk.Kernel)
+
+            if "informal" in name.lower() or "rhetorical" in name.lower() or "projectmanager" in name.lower():
                 agent = InformalAnalysisAgent(
-                    agent_id=name,
-                    tools={},
-                    semantic_kernel=None,
-                    informal_plugin=None,
-                    strict_validation=False
+                    kernel=mock_kernel,
+                    agent_name=name
                 )
             elif "extract" in name.lower():
-                agent = ExtractAgent(kernel=None, agent_name=name)
+                agent = ExtractAgent(
+                    kernel=mock_kernel,
+                    agent_name=name
+                )
             else:
-                # Agent par défaut de type informal
+                # Agent par défaut de type Informal
                 agent = InformalAnalysisAgent(
-                    agent_id=name,
-                    tools={},
-                    semantic_kernel=None,
-                    informal_plugin=None,
-                    strict_validation=False
+                    kernel=mock_kernel,
+                    agent_name=name
                 )
             
             agent.name = name
