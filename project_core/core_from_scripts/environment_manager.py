@@ -78,7 +78,6 @@ class ReinstallComponent(Enum):
 
     ALL = auto()
     CONDA = auto()
-    PIP = auto()
     JAVA = auto()
     # OCTAVE = auto() # Placeholder pour le futur
     # TWEETY = auto() # Placeholder pour le futur
@@ -161,7 +160,7 @@ class EnvironmentManager:
 
         self.env_vars = {
             'PYTHONIOENCODING': 'utf-8',
-            'PYTHONPATH': project_path_str, # Simplifié
+            # 'PYTHONPATH': project_path_str, # Simplifié - CAUSE DES CONFLITS D'IMPORT
             'PROJECT_ROOT': project_path_str
         }
         self.conda_executable_path = None # Cache pour le chemin de l'exécutable conda
@@ -408,6 +407,12 @@ class EnvironmentManager:
         if 'JAVA_HOME' in os.environ:
             self.sub_process_env['JAVA_HOME'] = os.environ['JAVA_HOME']
             self.logger.info(f"Propagation de JAVA_HOME au sous-processus: {self.sub_process_env['JAVA_HOME']}")
+
+        # --- CORRECTIF OMP: Error #15 ---
+        # Force la variable d'environnement pour éviter les conflits de librairies OpenMP
+        # (souvent entre la version de PyTorch et celle de scikit-learn/numpy).
+        self.sub_process_env['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+        self.logger.info("Injection de KMP_DUPLICATE_LIB_OK=TRUE pour éviter les erreurs OMP.")
 
         self.logger.info(f"Variables d'environnement préparées pour le sous-processus (extrait): "
                          f"CONDA_DEFAULT_ENV={self.sub_process_env.get('CONDA_DEFAULT_ENV')}, "
@@ -1027,89 +1032,53 @@ def activate_project_env(command: str = None, env_name: str = None, logger: Logg
     return manager.activate_project_environment(command, env_name)
 
 
-def reinstall_pip_dependencies(manager: 'EnvironmentManager', env_name: str):
-    """Force la réinstallation des dépendances pip depuis le fichier requirements.txt."""
-    logger = manager.logger
-    ColoredOutput.print_section("Réinstallation forcée des paquets PIP")
-    
-    # ÉTAPE CRUCIALE : S'assurer que l'environnement Java est parfait AVANT l'installation de JPype1.
-    logger.info("Validation préalable de l'environnement Java avant l'installation des paquets pip...")
-    recheck_java_environment(manager)
-
-    if not manager.check_conda_env_exists(env_name):
-        logger.critical(f"L'environnement '{env_name}' n'existe pas. Impossible de réinstaller les dépendances.")
-        safe_exit(1, logger)
-        
-    requirements_path = manager.project_root / 'argumentation_analysis' / 'requirements.txt'
-    if not requirements_path.exists():
-        logger.critical(f"Le fichier de dépendances n'a pas été trouvé: {requirements_path}")
-        safe_exit(1, logger)
-
-    logger.info(f"Lancement de la réinstallation depuis {requirements_path}...")
-    pip_install_command = [
-        'pip', 'install',
-        '--no-cache-dir',
-        '-r', str(requirements_path)
-    ]
-    
-    result = manager.run_in_conda_env(pip_install_command, env_name=env_name)
-    
-    if result.returncode != 0:
-        logger.error(f"Échec de la réinstallation des dépendances PIP. Voir logs ci-dessus.")
-        safe_exit(1, logger)
-    
-    logger.success("Réinstallation des dépendances PIP terminée.")
 
 def reinstall_conda_environment(manager: 'EnvironmentManager', env_name: str):
-    """Supprime et recrée intégralement l'environnement conda."""
+    """Supprime et recrée intégralement l'environnement conda à partir de environment.yml."""
     logger = manager.logger
-    ColoredOutput.print_section(f"Réinstallation complète de l'environnement Conda '{env_name}'")
+    ColoredOutput.print_section(f"Réinstallation complète de l'environnement Conda '{env_name}' à partir de environment.yml")
 
     conda_exe = manager._find_conda_executable()
     if not conda_exe:
         logger.critical("Impossible de trouver l'exécutable Conda. La réinstallation ne peut pas continuer.")
         safe_exit(1, logger)
     logger.info(f"Utilisation de l'exécutable Conda : {conda_exe}")
-
-    if manager.check_conda_env_exists(env_name):
-        logger.info(f"Suppression de l'environnement existant '{env_name}'...")
-        
-        # Créer un environnement "propre" pour ne pas que conda pense qu'on est DANS l'env à supprimer
-        clean_env = os.environ.copy()
-        keys_to_remove = [k for k in clean_env if k.startswith('CONDA_')]
-        for k in keys_to_remove:
-            del clean_env[k]
-            logger.debug(f"Variable d'environnement {k} retirée pour la suppression de l'environnement.")
-
-        subprocess.run([conda_exe, 'env', 'remove', '-n', env_name, '--y'], check=True, env=clean_env)
-        
-        logger.success(f"Environnement '{env_name}' supprimé.")
-    else:
-        logger.info(f"L'environnement '{env_name}' n'existe pas, pas besoin de le supprimer.")
-
-    logger.info(f"Création du nouvel environnement '{env_name}' avec Python 3.10...")
-    subprocess.run([conda_exe, 'create', '-n', env_name, 'python=3.10', '--y'], check=True)
-    logger.success(f"Environnement '{env_name}' recréé.")
-
-    logger.info("Installation des dépendances d'amorçage pour le gestionnaire d'environnement...")
-    bootstrap_deps = ['python-dotenv', 'pyyaml', 'requests', 'psutil']
-    pip_bootstrap_command = ['pip', 'install'] + bootstrap_deps
-    bootstrap_result = manager.run_in_conda_env(pip_bootstrap_command, env_name=env_name)
-    if bootstrap_result.returncode != 0:
-        logger.critical("Échec de l'installation des dépendances d'amorçage. Impossible de continuer.")
+    
+    env_file_path = manager.project_root / 'environment.yml'
+    if not env_file_path.exists():
+        logger.critical(f"Fichier d'environnement non trouvé : {env_file_path}")
         safe_exit(1, logger)
-    logger.success("Dépendances d'amorçage installées.")
 
-# S'assurer que les JARs de Tweety sont présents
+    logger.info(f"Lancement de la réinstallation depuis {env_file_path}...")
+    # La commande 'conda env create --force' supprime l'environnement existant avant de créer le nouveau.
+    conda_create_command = [
+        conda_exe, 'env', 'create',
+        '--file', str(env_file_path),
+        '--name', env_name,
+        '--force'
+    ]
+    
+    # Utiliser run_in_conda_env n'est pas approprié ici car l'environnement peut ne pas exister.
+    # On exécute directement avec subprocess.run
+    result = subprocess.run(conda_create_command, capture_output=True, text=True, encoding='utf-8', errors='replace')
+
+    if result.returncode != 0:
+        logger.error(f"Échec de la création de l'environnement Conda. Voir logs ci-dessous.")
+        logger.error("STDOUT:")
+        logger.error(result.stdout)
+        logger.error("STDERR:")
+        logger.error(result.stderr)
+        safe_exit(1, logger)
+    
+    logger.success(f"Environnement '{env_name}' recréé avec succès depuis {env_file_path}.")
+
+    # S'assurer que les JARs de Tweety sont présents après la réinstallation
     tweety_libs_dir = manager.project_root / "libs" / "tweety"
     logger.info(f"Vérification des JARs Tweety dans : {tweety_libs_dir}")
     if not download_tweety_jars(target_dir=str(tweety_libs_dir)):
         logger.warning("Échec du téléchargement ou de la vérification des JARs Tweety. JPype pourrait échouer.")
     else:
         logger.success("Les JARs de Tweety sont présents ou ont été téléchargés.")
-    
-    # La recréation de l'environnement Conda implique forcément la réinstallation des dépendances pip.
-    reinstall_pip_dependencies(manager, env_name)
 
 def recheck_java_environment(manager: 'EnvironmentManager'):
     """Revalide la configuration de l'environnement Java."""
@@ -1207,16 +1176,16 @@ def main():
         # Priorité : argument CLI > .env/défaut du manager
         env_name = args.env_name or manager.default_conda_env
         
+        # Si 'all' ou 'conda' est demandé, on réinstalle l'environnement Conda, ce qui inclut les paquets pip.
         if ReinstallComponent.ALL.value in reinstall_choices or ReinstallComponent.CONDA.value in reinstall_choices:
             reinstall_conda_environment(manager, env_name)
-            if ReinstallComponent.PIP.value in reinstall_choices:
-                reinstall_choices.remove(ReinstallComponent.PIP.value)
+        # Si seulement 'pip' est demandé, c'est maintenant géré par la reinstall de conda, mais on peut imaginer
+        # une simple mise à jour dans le futur. Pour l'instant on ne fait rien de plus.
+        # la logique ci-dessus suffit.
         
-        for choice in reinstall_choices:
-            if choice == ReinstallComponent.PIP.value:
-                reinstall_pip_dependencies(manager, env_name)
-            elif choice == ReinstallComponent.JAVA.value:
-                recheck_java_environment(manager)
+        # On vérifie si une autre action est nécessaire, comme la vérification Java
+        if ReinstallComponent.JAVA.value in reinstall_choices:
+             recheck_java_environment(manager)
                 
         ColoredOutput.print_section("Vérification finale post-réinstallation")
         logger.info("Lancement du script de diagnostic complet via un fichier temporaire...")

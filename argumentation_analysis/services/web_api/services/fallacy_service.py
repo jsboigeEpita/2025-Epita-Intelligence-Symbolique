@@ -66,8 +66,10 @@ class FallacyService:
                 self.severity_evaluator = None
             
             # Analyseur contextuel amélioré
-            if EnhancedContextualAnalyzer: 
+            if EnhancedContextualAnalyzer:
                 self.enhanced_analyzer = EnhancedContextualAnalyzer()
+                # self.enhanced_analyzer = None # Désactivé pour les tests
+                self.logger.info("[OK] EnhancedContextualAnalyzer initialized")
             else:
                 self.enhanced_analyzer = None
             

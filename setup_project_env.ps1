@@ -53,29 +53,32 @@ if (-not $FinalCommand) {
     exit 1
 }
 
-# --- Exécution ---
-# Si le mode -Setup est activé, on exécute directement le script Python
-# car l'environnement n'existe peut-être pas encore, et l'activation échouerait.
-if ($Setup) {
-    Write-Host "[INFO] Exécution directe de la commande de réinstallation..." -ForegroundColor Cyan
-    # Exécuter python directement
-    python project_core/core_from_scripts/environment_manager.py --reinstall all
-    $exitCode = $LASTEXITCODE
-} else {
-    # Pour toutes les autres commandes, on utilise le script d'activation
-    $ActivationScript = Join-Path $PSScriptRoot "activate_project_env.ps1"
-    if (-not (Test-Path $ActivationScript)) {
-        Write-Host "[ERREUR] Script d'activation principal introuvable: $ActivationScript" -ForegroundColor Red
-        exit 1
-    }
-    
-    Write-Host "[INFO] Délégation au script: $ActivationScript" -ForegroundColor Cyan
-    Write-Host "[INFO] Commande à exécuter: $FinalCommand" -ForegroundColor Cyan
-    
-    # Exécution du script d'activation avec la commande finale
-    & $ActivationScript -CommandToRun $FinalCommand
-    $exitCode = $LASTEXITCODE
+# Information sur l'environnement requis
+Write-Host "[INFO] Environnement cible: conda 'projet-is'" -ForegroundColor Cyan
+Write-Host "[INFO] [COMMANDE] $CommandToRun" -ForegroundColor Cyan
+
+# --- DÉLÉGATION AU SCRIPT D'ACTIVATION MODERNE ---
+# Ce script est maintenant un simple alias pour activate_project_env.ps1
+# qui contient la logique d'activation et d'exécution à jour.
+
+Write-Host "[INFO] Délégation de l'exécution au script moderne 'activate_project_env.ps1'" -ForegroundColor Cyan
+
+$ActivationScriptPath = Join-Path $PSScriptRoot "activate_project_env.ps1"
+
+if (-not (Test-Path $ActivationScriptPath)) {
+    Write-Host "[ERREUR] Le script d'activation principal 'activate_project_env.ps1' est introuvable." -ForegroundColor Red
+    Write-Host "[INFO] Assurez-vous que le projet est complet." -ForegroundColor Yellow
+    exit 1
 }
+
+# Construire les arguments pour le script d'activation
+$ActivationArgs = @{
+    CommandToRun = $FinalCommand
+}
+
+# Exécuter le script d'activation moderne en passant les arguments
+& $ActivationScriptPath @ActivationArgs
+$exitCode = $LASTEXITCODE
 
 # --- Résultat ---
 Write-Host "=================================================================" -ForegroundColor Green

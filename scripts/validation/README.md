@@ -1,85 +1,62 @@
-# Scripts de validation
+# Scripts de Diagnostic et Tests Autonomes
 
-Ce répertoire contient les scripts de validation des fichiers Markdown et des ancres du projet d'analyse argumentative.
+## 📁 Contenu
+Ce répertoire contient tous les scripts de diagnostic et de test autonomes qui étaient précédemment à la racine du projet.
 
-## Scripts disponibles
+## 🎯 Types de Scripts
 
-### 1. validate_section_anchors.ps1
+### Scripts de Diagnostic Système
+- `test_critical_dependencies.py` - Diagnostic des dépendances critiques
+- `test_environment_evaluation.py` - Évaluation complète de l'environnement
+- `test_validation_environnement.py` - Validation environnement
+- `test_system_stability.py` - Tests de stabilité système
+- `test_performance_systeme.py` - Tests de performance
+- `test_robustesse_systeme.py` - Tests de robustesse
 
-Script PowerShell qui vérifie que toutes les ancres dans la section "Sujets de Projets" correspondent à des sections existantes dans le fichier de contenu.
+### Scripts Sherlock/Watson
+- `test_sherlock_watson_system_diagnostic.py` - Diagnostic système Sherlock/Watson
+- `test_sherlock_watson_workflows_functional.py` - Tests workflows fonctionnels
+- `test_orchestration_corrections_sherlock_watson.py` - Corrections orchestration
 
-**Fonctionnalités :**
-- Extraction des ancres de la table des matières
-- Extraction des ancres des sections du contenu
-- Vérification que chaque ancre de la table des matières existe dans les sections
-- Vérification des sections manquantes dans la table des matières
+### Scripts API et Web
+- `test_api.py` - Tests API
+- `test_web_api_direct.py` - Tests API web directs
+- `test_backend_fixed.ps1` - Script PowerShell backend
 
-**Paramètres :**
-- `$tocFile` : Fichier de la table des matières (défaut: "section_sujets_projets_toc.md")
-- `$contentFile` : Fichier de contenu (défaut: "nouvelle_section_sujets_projets.md")
+### Scripts d'Analyse Rhétorique
+- `test_advanced_rhetorical_enhanced.py` - Tests rhétoriques avancés
+- `test_sophismes_detection.py` - Détection de sophismes
 
-**Utilisation :**
-```powershell
-# Exécution avec les paramètres par défaut
-./scripts/validation/validate_section_anchors.ps1
+### Scripts d'Intégration
+- `test_unified_system.py` - Tests système unifié
+- `test_simple_unified_pipeline.py` - Tests pipeline unifié
+- `test_pipeline_bout_en_bout.py` - Tests bout en bout
+- `test_micro_orchestration.py` - Tests micro-orchestration
 
-# Exécution avec des paramètres personnalisés
-./scripts/validation/validate_section_anchors.ps1 -tocFile "mon_toc.md" -contentFile "mon_contenu.md"
+### Scripts de Correctifs et Compatibilité
+- `test_compatibility_fixes.py` - Correctifs de compatibilité
+- `test_intelligent_modal_correction.py` - Corrections modales intelligentes
+- `test_modal_retry_mechanism.py` - Mécanisme de retry modal
+- `test_importation_consolidee.py` - Importation consolidée
+
+### Scripts de Démonstration
+- `test_fol_demo_simple.py` - Démonstration logique du premier ordre
+- `test_trace_analyzer_conversation_format.py` - Analyseur de traces
+
+### Utilitaires
+- `test_report_generation.py` - Génération de rapports
+- `TEST_MAPPING.md` - Mapping des tests
+
+## 🚀 Utilisation
+Tous ces scripts sont autonomes et peuvent être exécutés directement avec :
+```bash
+python script_name.py
 ```
 
-### 2. validate_toc_anchors.ps1
-
-Script PowerShell qui vérifie que toutes les ancres dans la table des matières correspondent à des sections existantes dans le fichier de contenu.
-
-**Fonctionnalités :**
-- Extraction des ancres de la table des matières
-- Extraction des ancres des sections du contenu
-- Vérification que chaque ancre de la table des matières existe dans les sections
-
-**Paramètres :**
-- `$tocFile` : Fichier de la table des matières (défaut: "nouvelle_table_des_matieres.md")
-- `$contentFile` : Fichier de contenu (défaut: "nouvelle_section_sujets_projets.md")
-
-**Utilisation :**
+Ou pour PowerShell :
 ```powershell
-# Exécution avec les paramètres par défaut
-./scripts/validation/validate_toc_anchors.ps1
-
-# Exécution avec des paramètres personnalisés
-./scripts/validation/validate_toc_anchors.ps1 -tocFile "mon_toc.md" -contentFile "mon_contenu.md"
+.\test_backend_fixed.ps1
 ```
 
-### 3. compare_markdown.ps1
-
-Script PowerShell pour comparer le rendu avant/après modification du README.md.
-
-**Fonctionnalités :**
-- Sauvegarde du README.md actuel
-- Génération du rendu HTML du README.md original
-- Génération du rendu HTML du README.md modifié
-- Comparaison des rendus HTML en les ouvrant dans le navigateur
-- Validation de la syntaxe Markdown avec markdownlint
-
-**Prérequis :**
-- grip (pour la prévisualisation Markdown avec le style GitHub)
-- markdownlint-cli (pour la validation de la syntaxe Markdown)
-
-**Utilisation :**
-```powershell
-# Exécution du script
-./scripts/validation/compare_markdown.ps1
-```
-
-Le script propose un menu interactif avec les options suivantes :
-1. Sauvegarder le README.md actuel
-2. Générer le rendu HTML du README.md original
-3. Générer le rendu HTML du README.md modifié
-4. Comparer les rendus HTML (ouvrir dans le navigateur)
-5. Valider la syntaxe Markdown avec markdownlint
-6. Quitter
-
-## Bonnes pratiques
-
-1. **Exécuter les scripts depuis la racine du projet** pour garantir que les chemins relatifs fonctionnent correctement.
-2. **Valider les ancres avant de committer** des modifications aux fichiers Markdown pour éviter les liens brisés.
-3. **Utiliser le script compare_markdown.ps1** pour vérifier visuellement les modifications apportées au README.md.
+## 📝 Note
+Ces scripts sont distingués des vrais tests pytest qui se trouvent dans le répertoire `tests/` et suivent les conventions `def test_*()` avec `import pytest`.

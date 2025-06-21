@@ -29,7 +29,8 @@ dependencies:
   - flask-cors
   - starlette
   - a2wsgi
-  
+  - asgiref
+
   # Utilities
   - pydantic
   - python-dotenv

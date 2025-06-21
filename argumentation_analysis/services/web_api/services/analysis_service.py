@@ -98,6 +98,7 @@ class AnalysisService:
             
             if ContextualFallacyAnalyzer:
                 self.contextual_analyzer = ContextualFallacyAnalyzer()
+                # self.contextual_analyzer = None # Désactivé pour les tests
                 self.logger.info("[OK] ContextualFallacyAnalyzer initialized")
             else:
                 self.contextual_analyzer = None
