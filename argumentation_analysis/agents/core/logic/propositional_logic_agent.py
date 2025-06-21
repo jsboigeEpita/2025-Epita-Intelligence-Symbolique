@@ -186,23 +186,46 @@ Fournissez ensuite une conclusion générale. Votre réponse doit être claire e
 
 class PropositionalLogicAgent(BaseLogicAgent):
     """
-    Agent spécialisé pour la logique propositionnelle (PL).
-    Refactorisé pour une robustesse et une transparence accrues, inspiré par FirstOrderLogicAgent.
+    Agent spécialiste de l'analyse en logique propositionnelle (PL).
+
+    Cet agent transforme un texte en un `BeliefSet` (ensemble de croyances)
+    formalisé en PL. Il utilise des fonctions sémantiques pour extraire les
+    propositions et les formules, puis s'appuie sur `TweetyBridge` pour valider
+    la syntaxe et exécuter des requêtes logiques.
+
+    Le processus typique est :
+    1. `text_to_belief_set` : Convertit le texte en un `BeliefSet` PL valide.
+    2. `generate_queries` : Propose des requêtes pertinentes.
+    3. `execute_query` : Exécute une requête sur le `BeliefSet`.
+    4. `interpret_results` : Explique le résultat de la requête en langage naturel.
+
+    Attributes:
+        service (Optional[ChatCompletionClientBase]): Le client de complétion de chat.
+        settings (Optional[Any]): Les paramètres d'exécution.
+        _tweety_bridge (TweetyBridge): Le pont vers la bibliothèque logique Java Tweety.
     """
     service: Optional[ChatCompletionClientBase] = Field(default=None, exclude=True)
     settings: Optional[Any] = Field(default=None, exclude=True)
 
     def __init__(self, kernel: Kernel, agent_name: str = "PropositionalLogicAgent", system_prompt: Optional[str] = None, service_id: Optional[str] = None):
-        actual_system_prompt = system_prompt if system_prompt is not None else SYSTEM_PROMPT_PL
-        super().__init__(kernel,
-                         agent_name=agent_name,
-                         logic_type_name="PL",
-                         system_prompt=actual_system_prompt)
+        """
+        Initialise l'agent de logique propositionnelle.
+
+        Args:
+            kernel (Kernel): L'instance du kernel Semantic Kernel.
+            agent_name (str, optional): Nom de l'agent.
+            system_prompt (Optional[str], optional): Prompt système à utiliser.
+                Si `None`, `SYSTEM_PROMPT_PL` est utilisé.
+            service_id (Optional[str], optional): ID du service LLM à utiliser
+                pour les fonctions sémantiques.
+        """
+        actual_system_prompt = system_prompt or SYSTEM_PROMPT_PL
+        super().__init__(kernel, agent_name=agent_name, logic_type_name="PL", system_prompt=actual_system_prompt)
         self._llm_service_id = service_id
         self._tweety_bridge = TweetyBridge()
         self.logger.info(f"TweetyBridge initialisé pour {self.name}. JVM prête: {self._tweety_bridge.is_jvm_ready()}")
         if not self._tweety_bridge.is_jvm_ready():
-            self.logger.error("La JVM n'est pas prête. Les fonctionnalités de TweetyBridge pourraient ne pas fonctionner.")
+            self.logger.error("La JVM n'est pas prête. Les fonctionnalités logiques sont compromises.")
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         return {
@@ -271,95 +294,75 @@ class PropositionalLogicAgent(BaseLogicAgent):
         return text
 
     async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
-        self.logger.info(f"Conversion de texte en ensemble de croyances PL pour '{text[:100]}...'")
+        """
+        Convertit un texte brut en un `PropositionalBeliefSet` structuré et validé.
+
+        Ce processus se déroule en plusieurs étapes :
+        1.  **Génération des Propositions** : Le LLM identifie les propositions atomiques.
+        2.  **Génération des Formules** : Le LLM traduit le texte en formules en utilisant les propositions.
+        3.  **Filtrage** : Les formules utilisant des propositions non déclarées sont rejetées.
+        4.  **Validation** : La syntaxe de l'ensemble de croyances final est validée par TweetyBridge.
+
+        Args:
+            text (str): Le texte à convertir.
+            context (Optional[Dict[str, Any]]): Contexte additionnel (non utilisé actuellement).
+
+        Returns:
+            Tuple[Optional[BeliefSet], str]: Un tuple contenant le `BeliefSet` créé
+            (ou `None` en cas d'échec) et un message de statut.
+        """
+        self.logger.info(f"Début de la conversion de texte en BeliefSet PL pour '{text[:100]}...'")
         max_retries = 3
-        
-        # --- Étape 1: Génération des Propositions ---
-        self.logger.info("Étape 1: Génération des propositions atomiques...")
-        defs_json = None
-        for attempt in range(max_retries):
-            try:
-                defs_result = await self._kernel.plugins[self.name]["TextToPLDefs"].invoke(self._kernel, input=text)
-                defs_json_str = self._extract_json_block(str(defs_result))
-                defs_json = json.loads(defs_json_str)
-                if "propositions" in defs_json and isinstance(defs_json["propositions"], list):
-                    self.logger.info(f"Propositions générées avec succès à la tentative {attempt + 1}.")
-                    break
-                else:
-                    raise ValueError("Le JSON ne contient pas la clé 'propositions' ou ce n'est pas une liste.")
-            except (json.JSONDecodeError, ValueError, Exception) as e:
-                self.logger.warning(f"Tentative {attempt + 1}/{max_retries} échouée pour générer les propositions: {e}")
-                if attempt + 1 == max_retries:
-                    error_msg = f"Échec final de la génération des propositions: {e}"
-                    self.logger.error(error_msg)
-                    return None, error_msg
-        
-        if defs_json is None:
-            return None, "Impossible de générer les propositions après plusieurs tentatives."
 
-        # --- Étape 2: Génération des Formules ---
-        self.logger.info("Étape 2: Génération des formules...")
-        formulas_json = None
-        for attempt in range(max_retries):
-            try:
-                definitions_for_prompt = json.dumps(defs_json, indent=2)
-                formulas_result = await self._kernel.plugins[self.name]["TextToPLFormulas"].invoke(
-                    self._kernel, input=text, definitions=definitions_for_prompt
-                )
-                formulas_json_str = self._extract_json_block(str(formulas_result))
-                formulas_json = json.loads(formulas_json_str)
-                if "formulas" in formulas_json and isinstance(formulas_json["formulas"], list):
-                    self.logger.info(f"Formules générées avec succès à la tentative {attempt + 1}.")
-                    break
-                else:
-                    raise ValueError("Le JSON ne contient pas la clé 'formulas' ou ce n'est pas une liste.")
-            except (json.JSONDecodeError, ValueError, Exception) as e:
-                self.logger.warning(f"Tentative {attempt + 1}/{max_retries} échouée pour générer les formules: {e}")
-                if attempt + 1 == max_retries:
-                    error_msg = f"Échec final de la génération des formules: {e}"
-                    self.logger.error(error_msg)
-                    return None, error_msg
+        # Étape 1: Génération des Propositions
+        defs_json, error_msg = await self._invoke_llm_for_json(
+            self._kernel, self.name, "TextToPLDefs", {"input": text},
+            ["propositions"], "prop-gen", max_retries
+        )
+        if not defs_json: return None, error_msg
 
-        if formulas_json is None:
-            return None, "Impossible de générer les formules après plusieurs tentatives."
+        # Étape 2: Génération des Formules
+        formulas_json, error_msg = await self._invoke_llm_for_json(
+            self._kernel, self.name, "TextToPLFormulas",
+            {"input": text, "definitions": json.dumps(defs_json, indent=2)},
+            ["formulas"], "formula-gen", max_retries
+        )
+        if not formulas_json: return None, error_msg
 
-        # --- Étape 3: Filtrage programmatique des formules ---
-        self.logger.info("Étape 3: Filtrage des formules...")
+        # Étape 3: Filtrage et Validation
         declared_propositions = set(defs_json.get("propositions", []))
-        valid_formulas = []
         all_formulas = formulas_json.get("formulas", [])
-        
-        for formula in all_formulas:
-            # Extraire tous les identifiants (propositions atomiques) de la formule
-            used_propositions = set(re.findall(r'\b[a-z_][a-z0-9_]*\b', formula))
-            
-            # Vérifier si toutes les propositions utilisées ont été déclarées
-            if used_propositions.issubset(declared_propositions):
-                valid_formulas.append(formula)
-            else:
-                invalid_props = used_propositions - declared_propositions
-                self.logger.warning(f"Formule rejetée: '{formula}'. Contient des propositions non déclarées: {invalid_props}")
+        valid_formulas = self._filter_formulas(all_formulas, declared_propositions)
+        if not valid_formulas:
+            return None, "Aucune formule valide n'a pu être générée ou conservée après filtrage."
 
-        self.logger.info(f"Filtrage terminé. {len(valid_formulas)}/{len(all_formulas)} formules conservées.")
-        
-        # --- Étape 4: Assemblage et Validation Finale ---
-        self.logger.info("Étape 4: Assemblage et validation finale...")
         belief_set_content = "\n".join(valid_formulas)
-        
-        if not belief_set_content.strip():
-            self.logger.error("La conversion a produit un ensemble de croyances vide après filtrage.")
-            return None, "Ensemble de croyances vide après filtrage."
-            
-        is_valid, validation_msg = self._tweety_bridge.validate_belief_set(belief_set_string=belief_set_content)
+        is_valid, validation_msg = self._tweety_bridge.validate_belief_set(belief_set_content)
         if not is_valid:
             self.logger.error(f"Ensemble de croyances final invalide: {validation_msg}\nContenu:\n{belief_set_content}")
             return None, f"Ensemble de croyances invalide: {validation_msg}"
-        
+
         belief_set = PropositionalBeliefSet(belief_set_content, propositions=list(declared_propositions))
-        self.logger.info("Conversion et validation réussies.")
+        self.logger.info("Conversion et validation du BeliefSet réussies.")
         return belief_set, "Conversion réussie."
 
     async def generate_queries(self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None) -> List[str]:
+        """
+        Génère une liste de requêtes PL pertinentes pour un `BeliefSet` donné.
+
+        Cette méthode utilise le LLM pour suggérer des "idées" de requêtes basées
+        sur le texte original et l'ensemble de croyances. Elle valide ensuite que
+        ces idées correspondent à des propositions déclarées pour former des
+        requêtes valides.
+
+        Args:
+            text (str): Le texte original pour donner un contexte au LLM.
+            belief_set (BeliefSet): L'ensemble de croyances à interroger.
+            context (Optional[Dict[str, Any]]): Contexte additionnel (non utilisé).
+
+        Returns:
+            List[str]: Une liste de requêtes PL valides et prêtes à être exécutées.
+        """
         self.logger.info(f"Génération de requêtes PL via le modèle de requête pour '{text[:100]}...'")
         
         if not isinstance(belief_set, PropositionalBeliefSet) or not belief_set.propositions:
@@ -422,6 +425,18 @@ class PropositionalLogicAgent(BaseLogicAgent):
             return []
     
     def execute_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
+        """
+        Exécute une seule requête PL sur un `BeliefSet` via `TweetyBridge`.
+
+        Args:
+            belief_set (BeliefSet): L'ensemble de croyances sur lequel exécuter la requête.
+            query (str): La formule PL à vérifier.
+
+        Returns:
+            Tuple[Optional[bool], str]: Un tuple contenant le résultat booléen
+            (`True` si la requête est prouvée, `False` sinon, `None` en cas d'erreur)
+            et le message de sortie brut de Tweety.
+        """
         self.logger.info(f"Exécution de la requête PL: '{query}'...")
         
         try:
@@ -451,8 +466,25 @@ class PropositionalLogicAgent(BaseLogicAgent):
             return None, f"FUNC_ERROR: {error_msg}"
 
     async def interpret_results(self, text: str, belief_set: BeliefSet,
-                                queries: List[str], results: List[Tuple[Optional[bool], str]],
-                                context: Optional[Dict[str, Any]] = None) -> str:
+                                 queries: List[str], results: List[Tuple[Optional[bool], str]],
+                                 context: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Traduit les résultats bruts d'une ou plusieurs requêtes en une explication en langage naturel.
+
+        Utilise un prompt sémantique pour fournir au LLM le contexte complet
+        (texte original, ensemble de croyances, requêtes, résultats bruts) afin qu'il
+        génère une explication cohérente.
+
+        Args:
+            text (str): Le texte original.
+            belief_set (BeliefSet): L'ensemble de croyances utilisé.
+            queries (List[str]): La liste des requêtes qui ont été exécutées.
+            results (List[Tuple[Optional[bool], str]]): La liste des résultats correspondants.
+            context (Optional[Dict[str, Any]]): Contexte additionnel (non utilisé).
+
+        Returns:
+            str: L'explication générée par le LLM.
+        """
         self.logger.info("Interprétation des résultats des requêtes PL...")
         
         try:

@@ -56,7 +56,18 @@ _lazy_imports()
 
 class ExtractAgent(BaseAgent):
     """
-    Agent spécialisé dans l'extraction d'informations pertinentes de textes sources.
+    Agent spécialisé dans la localisation et l'extraction de passages de texte.
+
+    Cet agent utilise des fonctions sémantiques pour proposer des marqueurs de début et de
+    fin pour un extrait pertinent, et un plugin natif pour valider et extraire
+    le texte correspondant.
+
+    Attributes:
+        EXTRACT_SEMANTIC_FUNCTION_NAME (ClassVar[str]): Nom de la fonction sémantique d'extraction.
+        VALIDATE_SEMANTIC_FUNCTION_NAME (ClassVar[str]): Nom de la fonction sémantique de validation.
+        NATIVE_PLUGIN_NAME (ClassVar[str]): Nom du plugin natif associé.
+        _find_similar_text_func (Callable): Fonction pour trouver un texte similaire.
+        _extract_text_func (Callable): Fonction pour extraire le texte entre des marqueurs.
     """
     
     EXTRACT_SEMANTIC_FUNCTION_NAME: ClassVar[str] = "extract_from_name_semantic"
@@ -70,9 +81,25 @@ class ExtractAgent(BaseAgent):
         find_similar_text_func: Optional[Callable] = None,
         extract_text_func: Optional[Callable] = None
     ):
+        """
+        Initialise l'agent d'extraction.
+
+        Args:
+            kernel (sk.Kernel): L'instance de `Kernel` de Semantic Kernel utilisée pour
+                invoquer les fonctions sémantiques et gérer les plugins.
+            agent_name (str): Le nom de l'agent, utilisé pour l'enregistrement des
+                fonctions dans le kernel.
+            find_similar_text_func (Optional[Callable]): Une fonction optionnelle pour
+                trouver un texte similaire. Si `None`, la fonction par défaut
+                `find_similar_text` est utilisée.
+            extract_text_func (Optional[Callable]): Une fonction optionnelle pour
+                extraire le texte entre des marqueurs. Si `None`, la fonction par défaut
+                `extract_text_with_markers` est utilisée.
+        """
         super().__init__(kernel, agent_name, EXTRACT_AGENT_INSTRUCTIONS)
         self._find_similar_text_func = find_similar_text_func or find_similar_text
         self._extract_text_func = extract_text_func or extract_text_with_markers
+        self._native_extract_plugin: Optional[ExtractAgentPlugin] = None
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         return {
@@ -137,19 +164,43 @@ class ExtractAgent(BaseAgent):
         extract_name: str,
         source_text: Optional[str] = None
     ) -> ExtractResult:
+        """
+        Coordonne le processus complet d'extraction d'un passage à partir de son nom.
+
+        Ce workflow implique plusieurs étapes :
+        1.  Charge le texte source si non fourni.
+        2.  Appelle la fonction sémantique `extract_from_name_semantic` pour obtenir une
+            proposition de marqueurs de début et de fin.
+        3.  Parse la réponse JSON du LLM.
+        4.  Utilise la fonction native `_extract_text_func` pour extraire physiquement le
+            texte entre les marqueurs proposés.
+        5.  Retourne un objet `ExtractResult` encapsulant le succès ou l'échec de
+            chaque étape.
+
+        Args:
+            source_info (Dict[str, Any]): Dictionnaire contenant des informations sur
+                le texte source (par exemple, le chemin du fichier).
+            extract_name (str): Le nom ou la description sémantique de l'extrait à trouver.
+            source_text (Optional[str]): Le texte source complet. S'il est `None`, il est
+                chargé dynamiquement en utilisant `source_info`.
+
+        Returns:
+            ExtractResult: Un objet de résultat détaillé contenant le statut, les marqueurs,
+            le texte extrait et les messages d'erreur éventuels.
+        """
         source_name = source_info.get("source_name", "Source inconnue")
-        self.logger.info(f"Extraction à partir du nom '{extract_name}' dans la source '{source_name}'...")
-        
+        self.logger.info(f"Extraction pour '{extract_name}' dans la source '{source_name}'.")
+
         if source_text is None:
-            self.logger.debug("Aucun texte source direct fourni. Tentative de chargement depuis source_info.")
             source_text, url = load_source_text(source_info)
             if not source_text:
-                return ExtractResult(source_name=source_name, extract_name=extract_name, status="error", message=f"Impossible de charger le texte source: {url}")
-        
+                msg = f"Impossible de charger le texte source depuis {url}"
+                return ExtractResult(source_name=source_name, extract_name=extract_name, status="error", message=msg)
+
         arguments = KernelArguments(
             extract_name=extract_name,
             source_name=source_name,
-            extract_context=source_text # On passe le texte complet
+            extract_context=source_text,
         )
         try:
             response = await self._kernel.invoke(
@@ -197,7 +248,16 @@ class ExtractAgent(BaseAgent):
 
     async def invoke_single(self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None) -> list[ChatMessageContent]:
         """
-        Gère l'invocation de l'agent en extrayant le contenu pertinent de l'historique du chat.
+        Point d'entrée principal pour l'invocation de l'agent dans un scénario de chat.
+
+        Cette méthode est conçue pour être appelée par un planificateur ou un orchestrateur.
+        Elle analyse l'historique de la conversation pour extraire deux informations clés :
+        1.  Le **texte source** : typiquement le premier message de l'utilisateur.
+        2.  Le **nom de l'extrait** : recherché dans la dernière instruction, souvent
+            fournie par un agent planificateur.
+
+        Elle délègue ensuite le travail à la méthode `extract_from_name` et formate
+        le résultat en `ChatMessageContent`.
         """
         self.logger.info(f"Invocation de {self.name} via invoke_single.")
         history = arguments.get("chat_history") if arguments else None

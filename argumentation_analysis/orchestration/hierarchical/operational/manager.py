@@ -28,51 +28,63 @@ from argumentation_analysis.core.communication import (
 
 class OperationalManager:
     """
-    Gestionnaire opérationnel.
-    
-    Cette classe gère les agents opérationnels et sert d'interface entre
-    le niveau tactique et les agents opérationnels.
+    Le `OperationalManager` est le "chef d'atelier" du niveau opérationnel.
+    Il reçoit des tâches du `TaskCoordinator`, les place dans une file d'attente
+    et les délègue à des agents spécialisés via un `OperationalAgentRegistry`.
+
+    Il fonctionne de manière asynchrone avec un worker pour traiter les tâches
+    et retourne les résultats au niveau tactique.
+
+    Attributes:
+        operational_state (OperationalState): L'état interne du manager.
+        agent_registry (OperationalAgentRegistry): Le registre des agents opérationnels.
+        logger (logging.Logger): Le logger.
+        task_queue (asyncio.Queue): La file d'attente pour les tâches entrantes.
+        result_queue (asyncio.Queue): La file d'attente pour les résultats sortants.
+        adapter (OperationalAdapter): L'adaptateur pour la communication.
     """
-    
+
     def __init__(self,
                  operational_state: Optional[OperationalState] = None,
                  tactical_operational_interface: Optional['TacticalOperationalInterface'] = None,
                  middleware: Optional[MessageMiddleware] = None,
-                 kernel: Optional[sk.Kernel] = None,  # Ajout du kernel
-                 llm_service_id: Optional[str] = None, # Ajout de llm_service_id
+                 kernel: Optional[sk.Kernel] = None,
+                 llm_service_id: Optional[str] = None,
                  project_context: Optional[ProjectContext] = None):
         """
-        Initialise un nouveau gestionnaire opérationnel.
-        
+        Initialise une nouvelle instance du `OperationalManager`.
+
         Args:
-            operational_state: État opérationnel à utiliser. Si None, un nouvel état est créé.
-            tactical_operational_interface: Interface tactique-opérationnelle à utiliser.
-            middleware: Le middleware de communication à utiliser.
-            kernel: Le kernel Semantic Kernel à utiliser pour les agents.
-            llm_service_id: L'ID du service LLM à utiliser.
-            project_context: Le contexte global du projet.
+            operational_state (Optional[OperationalState]): L'état pour stocker les tâches,
+                résultats et statuts. Si `None`, un nouvel état est créé.
+            tactical_operational_interface (Optional['TacticalOperationalInterface']): L'interface
+                pour traduire les tâches et résultats entre les niveaux tactique et opérationnel.
+            middleware (Optional[MessageMiddleware]): Le middleware de communication centralisé.
+                Si `None`, un nouveau est instancié.
+            kernel (Optional[sk.Kernel]): Le kernel Semantic Kernel à passer aux agents
+                qui en ont besoin pour exécuter des fonctions sémantiques.
+            llm_service_id (Optional[str]): L'identifiant du service LLM à utiliser,
+                passé au registre d'agents pour configurer les clients LLM.
+            project_context (Optional[ProjectContext]): Le contexte global du projet,
+                contenant les configurations et ressources partagées.
         """
-        self.operational_state = operational_state if operational_state else OperationalState()
+        self.operational_state = operational_state or OperationalState()
         self.tactical_operational_interface = tactical_operational_interface
-        self.kernel = kernel # Stocker le kernel
-        self.llm_service_id = llm_service_id # Stocker llm_service_id
-        self.project_context = project_context # Stocker le contexte du projet
+        self.kernel = kernel
+        self.llm_service_id = llm_service_id
+        self.project_context = project_context
         self.agent_registry = OperationalAgentRegistry(
             operational_state=self.operational_state,
             kernel=self.kernel,
             llm_service_id=self.llm_service_id,
             project_context=self.project_context
         )
-        self.logger = logging.getLogger("OperationalManager")
+        self.logger = logging.getLogger(__name__)
         self.task_queue = asyncio.Queue()
         self.result_queue = asyncio.Queue()
         self.running = False
         self.worker_task = None
-        
-        # Initialiser le middleware de communication
-        self.middleware = middleware if middleware else MessageMiddleware()
-        
-        # Créer l'adaptateur opérationnel
+        self.middleware = middleware or MessageMiddleware()
         self.adapter = OperationalAdapter(
             agent_id="operational_manager",
             middleware=self.middleware
@@ -93,7 +105,10 @@ class OperationalManager:
     
     async def start(self) -> None:
         """
-        Démarre le gestionnaire opérationnel.
+        Démarre le worker asynchrone du gestionnaire opérationnel.
+
+        Crée une tâche asyncio pour la méthode `_worker` qui s'exécutera en
+        arrière-plan pour traiter les tâches de la `task_queue`.
         """
         if self.running:
             self.logger.warning("Le gestionnaire opérationnel est déjà en cours d'exécution")
@@ -105,7 +120,10 @@ class OperationalManager:
     
     async def stop(self) -> None:
         """
-        Arrête le gestionnaire opérationnel.
+        Arrête le worker asynchrone du gestionnaire opérationnel.
+
+        Annule la tâche du worker et attend sa terminaison propre.
+        Cela arrête le traitement de nouvelles tâches.
         """
         if not self.running:
             self.logger.warning("Le gestionnaire opérationnel n'est pas en cours d'exécution")
@@ -276,13 +294,19 @@ class OperationalManager:
     
     async def process_tactical_task(self, tactical_task: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Traite une tâche tactique.
+        Traite une tâche de haut niveau provenant du coordinateur tactique.
+
+        Cette méthode orchestre le cycle de vie complet d'une tâche :
+        1. Traduit la tâche tactique en une tâche opérationnelle plus granulaire.
+        2. Met la tâche opérationnelle dans la file d'attente pour le `_worker`.
+        3. Attend la complétion de la tâche via un `asyncio.Future`.
+        4. Retraduit le résultat opérationnel en un format attendu par le niveau tactique.
         
         Args:
-            tactical_task: La tâche tactique à traiter
+            tactical_task (Dict[str, Any]): La tâche à traiter, provenant du niveau tactique.
             
         Returns:
-            Le résultat du traitement de la tâche
+            Dict[str, Any]: Le résultat de la tâche, formaté pour le niveau tactique.
         """
         self.logger.info(f"Traitement de la tâche tactique {tactical_task.get('id', 'unknown')}")
         
@@ -341,7 +365,17 @@ class OperationalManager:
     
     async def _worker(self) -> None:
         """
-        Traite les tâches de la file d'attente.
+        Le worker principal qui traite les tâches en continu et en asynchrone.
+
+        Ce worker boucle indéfiniment (tant que `self.running` est `True`) et effectue
+        les actions suivantes :
+        1. Attend qu'une tâche apparaisse dans `self.task_queue`.
+        2. Délègue la tâche au `OperationalAgentRegistry` pour trouver l'agent
+           approprié et l'exécuter.
+        3. Place le résultat de l'exécution dans `self.result_queue` et notifie
+           également les `Future` en attente.
+        4. Publie le résultat sur le canal de communication pour informer les
+           autres composants.
         """
         self.logger.info("Worker opérationnel démarré")
         

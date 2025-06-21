@@ -29,7 +29,19 @@ class ChannelType(enum.Enum):
 
 class Channel(abc.ABC):
     """
-    Interface abstraite pour tous les canaux de communication.
+    Interface de base abstraite pour un canal de communication.
+
+    Définit le contrat que tous les canaux de communication doivent respecter,
+    qu'il s'agisse de canaux en mémoire, en réseau ou basés sur des messages.
+    Fournit des méthodes pour l'envoi, la réception, l'abonnement et la gestion
+    des messages.
+
+    Attributs:
+        id (str): Identifiant unique du canal.
+        type (ChannelType): Le type de canal (par exemple, HIERARCHICAL, DATA).
+        config (Dict[str, Any]): Dictionnaire de configuration pour le canal.
+        subscribers (Dict[str, Dict]): Dictionnaire des abonnés au canal.
+        _message_queue (List[Message]): File d'attente de messages en mémoire.
     """
     
     def __init__(self, channel_id: str, channel_type: ChannelType, config: Optional[Dict[str, Any]] = None):
@@ -41,27 +53,33 @@ class Channel(abc.ABC):
     
     @abc.abstractmethod
     def send_message(self, message: Message) -> bool:
+        """Envoie un message sur le canal."""
         pass
     
     @abc.abstractmethod
     def receive_message(self, recipient_id: str, timeout: Optional[float] = None) -> Optional[Message]:
+        """Reçoit un message destiné à un destinataire spécifique."""
         pass
     
     @abc.abstractmethod
-    def subscribe(self, subscriber_id: str, callback: Optional[Callable[[Message], None]] = None, 
+    def subscribe(self, subscriber_id: str, callback: Optional[Callable[[Message], None]] = None,
                  filter_criteria: Optional[Dict[str, Any]] = None) -> str:
+        """Abonne un composant pour recevoir des messages."""
         pass
     
     @abc.abstractmethod
     def unsubscribe(self, subscription_id: str) -> bool:
+        """Désabonne un composant."""
         pass
     
     @abc.abstractmethod
     def get_pending_messages(self, recipient_id: str, max_count: Optional[int] = None) -> List[Message]:
+        """Récupère les messages en attente pour un destinataire."""
         pass
     
     @abc.abstractmethod
     def get_channel_info(self) -> Dict[str, Any]:
+        """Retourne des informations sur l'état et la configuration du canal."""
         pass
     
     def matches_filter(self, message: Message, filter_criteria: Dict[str, Any]) -> bool:
@@ -95,7 +113,15 @@ class Channel(abc.ABC):
 # Implémentation simple de LocalChannel pour les tests
 class LocalChannel(Channel):
     """
-    Un canal de communication simple en mémoire pour les tests ou la communication locale.
+    Canal de communication local et en mémoire.
+
+    Cette implémentation de `Channel` utilise une simple file d'attente en mémoire
+    pour stocker les messages. Elle est idéale pour la communication intra-processus,
+    les tests unitaires ou les scénarios où une communication réseau complexe
+    n'est pas nécessaire.
+
+    Le mécanisme de souscription notifie les abonnés de manière synchrone lorsqu'un
+    message correspondant à leurs filtres est envoyé.
     """
     def __init__(self, channel_id: str, middleware: Optional[Any] = None, config: Optional[Dict[str, Any]] = None):
         # Le middleware n'est pas directement utilisé par ce canal simple, mais l'API est conservée.

@@ -12,29 +12,38 @@ logger = logging.getLogger(__name__)
 
 def load_json_from_file(file_path: Path) -> Optional[Union[List[Any], Dict[str, Any]]]:
     """
-    Charge des données JSON depuis un fichier.
+    Charge des données JSON depuis un fichier de manière sécurisée.
 
     Args:
         file_path (Path): Chemin vers le fichier JSON.
 
     Returns:
-        Optional[Union[List[Any], Dict[str, Any]]]: Les données JSON chargées
-                                                    (liste ou dictionnaire),
-                                                    ou None en cas d'erreur.
+        Les données JSON chargées (liste ou dictionnaire), ou `None` si le fichier
+        n'existe pas, n'est pas un fichier valide ou contient un JSON malformé.
+
+    Examples:
+        >>> from pathlib import Path
+        >>> file = Path("data.json")
+        >>> with file.open("w") as f:
+        ...     f.write('{"key": "value"}')
+        >>> data = load_json_from_file(file)
+        >>> print(data)
+        {'key': 'value'}
+        >>> file.unlink()
     """
-    if not file_path.exists() or not file_path.is_file():
-        logger.error(f"Fichier JSON non trouvé ou n'est pas un fichier: {file_path}")
+    if not file_path.is_file():
+        logger.error(f"Fichier JSON non trouvé ou invalide : {file_path}")
         return None
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with file_path.open('r', encoding='utf-8') as f:
             data = json.load(f)
-        logger.info(f"Données JSON chargées avec succès depuis {file_path}")
+        logger.debug(f"Données JSON chargées avec succès depuis {file_path}")
         return data
-    except json.JSONDecodeError as e_json:
-        logger.error(f"Erreur de décodage JSON dans {file_path}: {e_json}", exc_info=True)
+    except json.JSONDecodeError as e:
+        logger.error(f"Erreur de décodage JSON dans {file_path}: {e}", exc_info=True)
         return None
-    except Exception as e_read:
-        logger.error(f"Erreur de lecture du fichier JSON {file_path}: {e_read}", exc_info=True)
+    except IOError as e:
+        logger.error(f"Erreur de lecture du fichier JSON {file_path}: {e}", exc_info=True)
         return None
 
 def save_json_to_file(
@@ -44,32 +53,40 @@ def save_json_to_file(
     ensure_ascii: bool = False
 ) -> bool:
     """
-    Sauvegarde des données Python dans un fichier JSON.
+    Sauvegarde une structure de données Python (dict ou list) dans un fichier JSON.
+
+    Crée les répertoires parents si nécessaire.
 
     Args:
-        data: Les données à sauvegarder (liste ou dictionnaire).
-        file_path (Path): Chemin du fichier de sortie JSON.
-        indent (int): Niveau d'indentation pour le JSON.
-        ensure_ascii (bool): Si True, la sortie est garantie d'avoir tous les
-                             caractères non-ASCII échappés. Si False (défaut),
-                             ces caractères sont sortis tels quels.
+        data: Les données à sauvegarder.
+        file_path (Path): Le chemin du fichier de destination.
+        indent (int): Le niveau d'indentation pour un affichage lisible.
+        ensure_ascii (bool): Si `True`, les caractères non-ASCII sont échappés.
+
     Returns:
-        bool: True si la sauvegarde a réussi, False sinon.
+        `True` si la sauvegarde a réussi, `False` sinon.
+
+    Examples:
+        >>> from pathlib import Path
+        >>> file = Path("output.json")
+        >>> success = save_json_to_file({"key": "value"}, file)
+        >>> print(success)
+        True
+        >>> with file.open("r") as f:
+        ...     print(f.read())
+        {
+          "key": "value"
+        }
+        >>> file.unlink()
     """
     try:
         file_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(file_path, 'w', encoding='utf-8') as f:
+        with file_path.open('w', encoding='utf-8') as f:
             json.dump(data, f, indent=indent, ensure_ascii=ensure_ascii)
-        logger.info(f"Données JSON sauvegardées avec succès dans : {file_path.resolve()}")
+        logger.debug(f"Données JSON sauvegardées avec succès dans : {file_path.resolve()}")
         return True
-    except TypeError as e_type:
-        logger.error(f"Erreur de type lors de la sérialisation JSON pour {file_path}: {e_type}", exc_info=True)
-        return False
-    except IOError as e_io:
-        logger.error(f"Erreur d'E/S lors de la sauvegarde JSON dans {file_path}: {e_io}", exc_info=True)
-        return False
-    except Exception as e_gen:
-        logger.error(f"Erreur inattendue lors de la sauvegarde JSON dans {file_path}: {e_gen}", exc_info=True)
+    except (TypeError, IOError) as e:
+        logger.error(f"Échec de la sauvegarde JSON dans {file_path}: {e}", exc_info=True)
         return False
 
 def filter_list_in_json_data(
@@ -93,12 +110,25 @@ def filter_list_in_json_data(
                                        indique où trouver la liste à filtrer.
                                        Si None, `json_data` est supposé être la liste elle-même.
     Returns:
-        Tuple[Union[List[Dict[str, Any]], Dict[str, Any]], int]: 
+        Tuple[Union[List[Dict[str, Any]], Dict[str, Any]], int]:
             Un tuple contenant:
             - Les données JSON modifiées (avec la liste filtrée).
             - Le nombre d'éléments supprimés.
             Si `json_data` n'est pas du type attendu ou si `list_path_key` est invalide,
             les données originales et 0 sont retournés.
+
+    Examples:
+        >>> data = [{"id": 1, "status": "active"}, {"id": 2, "status": "deleted"}]
+        >>> filtered_data, count = filter_list_in_json_data(data, "status", "deleted")
+        >>> print(filtered_data)
+        [{'id': 1, 'status': 'active'}]
+        >>> print(count)
+        1
+
+        >>> data_dict = {"users": [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]}
+        >>> filtered_data, count = filter_list_in_json_data(data_dict, "name", "Alice", "users")
+        >>> print(filtered_data)
+        {'users': [{'id': 2, 'name': 'Bob'}]}
     """
     items_removed_count = 0
     

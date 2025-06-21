@@ -21,41 +21,50 @@ from argumentation_analysis.core.communication import (
 
 class StrategicManager:
     """
-    Classe représentant le Gestionnaire Stratégique de l'architecture hiérarchique.
-    
-    Le Gestionnaire Stratégique est responsable de:
-    - La coordination globale entre les agents stratégiques
-    - L'interface principale avec l'utilisateur et le niveau tactique
-    - La prise de décisions finales concernant la stratégie d'analyse
-    - L'évaluation des résultats finaux et la formulation de la conclusion globale
-    """
-    
-    def __init__(self, strategic_state: Optional[StrategicState] = None,
-                middleware: Optional[MessageMiddleware] = None):
-        """
-        Initialise un nouveau Gestionnaire Stratégique.
-        
-        Args:
-            strategic_state: L'état stratégique à utiliser. Si None, un nouvel état est créé.
-            middleware: Le middleware de communication à utiliser. Si None, un nouveau middleware est créé.
-        """
-        self.state = strategic_state if strategic_state else StrategicState()
-        self.logger = logging.getLogger(__name__)
-        
-        # Initialiser le middleware de communication
-        self.middleware = middleware if middleware else MessageMiddleware()
-        
-        # Créer l'adaptateur stratégique
-        self.adapter = StrategicAdapter(
-            agent_id="strategic_manager",
-            middleware=self.middleware
-        )
+    Le `StrategicManager` est le chef d'orchestre du niveau stratégique dans une architecture hiérarchique.
+    Il est responsable de la définition des objectifs globaux, de la planification, de l'allocation des
+    ressources et de l'évaluation finale de l'analyse.
 
-    def define_strategic_goal(self, goal: Dict[str, Any]):
-        """Définit un objectif stratégique et le publie pour le niveau tactique."""
-        self.logger.info(f"Définition du but stratégique: {goal.get('id')}")
+    Il interagit avec le niveau tactique pour déléguer des tâches et reçoit en retour des
+    feedbacks pour ajuster sa stratégie.
+
+    Attributes:
+        state (StrategicState): L'état interne du manager, qui contient les objectifs, le plan, etc.
+        logger (logging.Logger): Le logger pour enregistrer les événements.
+        middleware (MessageMiddleware): Le middleware pour la communication inter-agents.
+        adapter (StrategicAdapter): L'adaptateur pour simplifier la communication.
+    """
+
+    def __init__(self,
+                 strategic_state: Optional[StrategicState] = None,
+                 middleware: Optional[MessageMiddleware] = None):
+        """
+        Initialise une nouvelle instance du `StrategicManager`.
+
+        Args:
+            strategic_state (Optional[StrategicState]): L'état stratégique initial à utiliser.
+                Si `None`, un nouvel état `StrategicState` est instancié par défaut.
+                Cet état contient la configuration, les objectifs, et l'historique des décisions.
+            middleware (Optional[MessageMiddleware]): Le middleware pour la communication inter-agents.
+                Si `None`, un nouveau `MessageMiddleware` est instancié. Ce middleware
+                gère la logique de publication, d'abonnement et de routage des messages.
+        """
+        self.state = strategic_state or StrategicState()
+        self.logger = logging.getLogger(__name__)
+        self.middleware = middleware or MessageMiddleware()
+        self.adapter = StrategicAdapter(agent_id="strategic_manager", middleware=self.middleware)
+
+    def define_strategic_goal(self, goal: Dict[str, Any]) -> None:
+        """
+        Définit un objectif stratégique, l'ajoute à l'état et le publie
+        pour le niveau tactique via une directive.
+
+        Args:
+            goal (Dict[str, Any]): Un dictionnaire représentant l'objectif stratégique.
+                Exemple: `{'id': 'obj-1', 'description': '...', 'priority': 'high'}`
+        """
+        self.logger.info(f"Définition du but stratégique : {goal.get('id')}")
         self.state.add_global_objective(goal)
-        # Simuler la publication d'une directive pour le coordinateur tactique
         self.adapter.issue_directive(
             directive_type="new_strategic_goal",
             parameters=goal,
@@ -64,13 +73,18 @@ class StrategicManager:
     
     def initialize_analysis(self, text: str) -> Dict[str, Any]:
         """
-        Initialise une nouvelle analyse rhétorique.
-        
+        Initialise une nouvelle analyse rhétorique pour un texte donné.
+
+        Cette méthode est le point de départ d'une analyse. Elle configure l'état
+        initial, définit les objectifs à long terme, élabore un plan stratégique
+        et alloue les ressources nécessaires pour les phases initiales.
+
         Args:
-            text: Le texte à analyser
+            text (str): Le texte brut à analyser.
             
         Returns:
-            Un dictionnaire contenant les objectifs initiaux et le plan stratégique
+            Dict[str, Any]: Un dictionnaire contenant les objectifs initiaux (`global_objectives`)
+            et le plan stratégique (`strategic_plan`) qui a été généré.
         """
         self.logger.info("Initialisation d'une nouvelle analyse rhétorique")
         self.state.set_raw_text(text)
@@ -199,13 +213,20 @@ class StrategicManager:
     
     def process_tactical_feedback(self, feedback: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Traite le feedback du niveau tactique et ajuste la stratégie si nécessaire.
-        
+        Traite le feedback reçu du niveau tactique et ajuste la stratégie globale si nécessaire.
+
+        Cette méthode analyse les rapports de progression et les problèmes remontés par le niveau
+        inférieur. En fonction de la gravité et du type de problème, elle peut décider de
+        modifier les objectifs, de réallouer des ressources ou de changer le plan d'action.
+
         Args:
-            feedback: Dictionnaire contenant le feedback du niveau tactique
+            feedback (Dict[str, Any]): Un dictionnaire de feedback provenant du coordinateur tactique.
+                Il contient généralement des métriques de progression et une liste de problèmes.
             
         Returns:
-            Un dictionnaire contenant les ajustements stratégiques à appliquer
+            Dict[str, Any]: Un dictionnaire détaillant les ajustements stratégiques décidés,
+            incluant les modifications du plan, la réallocation des ressources et les changements
+            d'objectifs. Contient aussi les métriques mises à jour.
         """
         self.logger.info("Traitement du feedback du niveau tactique")
         
@@ -374,13 +395,19 @@ class StrategicManager:
     
     def evaluate_final_results(self, results: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Évalue les résultats finaux de l'analyse et formule une conclusion globale.
-        
+        Évalue les résultats finaux consolidés de l'analyse et formule une conclusion globale.
+
+        Cette méthode synthétise toutes les informations collectées durant l'analyse, les compare
+        aux objectifs stratégiques initiaux et génère un rapport final incluant un score de
+        succès, les points forts, les faiblesses et une conclusion narrative.
+
         Args:
-            results: Dictionnaire contenant les résultats finaux de l'analyse
+            results (Dict[str, Any]): Un dictionnaire contenant les résultats finaux de l'analyse,
+                provenant de toutes les couches de l'orchestration.
             
         Returns:
-            Un dictionnaire contenant la conclusion finale et l'évaluation
+            Dict[str, Any]: Un dictionnaire contenant la conclusion textuelle, l'évaluation
+            détaillée par rapport aux objectifs, et un snapshot de l'état final du manager.
         """
         self.logger.info("Évaluation des résultats finaux de l'analyse")
         
@@ -501,8 +528,8 @@ class StrategicManager:
         # pour générer une conclusion cohérente basée sur les résultats
         
         overall_rate = evaluation["overall_success_rate"]
-        strengths = evaluation["strengths"]
-        weaknesses = evaluation["weaknesses"]
+        strengths = evaluation.get("strengths", [])
+        weaknesses = evaluation.get("weaknesses", [])
         
         conclusion_parts = []
         
@@ -519,26 +546,25 @@ class StrategicManager:
         # Forces
         if strengths:
             conclusion_parts.append("\n\nPoints forts de l'analyse:")
-            for strength in strengths[:3]:  # Limiter à 3 forces principales
+            for strength in strengths[:3]:
                 conclusion_parts.append(f"- {strength}")
         
         # Faiblesses
         if weaknesses:
             conclusion_parts.append("\n\nPoints à améliorer:")
-            for weakness in weaknesses[:3]:  # Limiter à 3 faiblesses principales
+            for weakness in weaknesses[:3]:
                 conclusion_parts.append(f"- {weakness}")
         
         # Synthèse des résultats clés
         conclusion_parts.append("\n\nSynthèse des résultats clés:")
         
-        # Ajouter quelques résultats clés
         if "identified_arguments" in results:
-            arg_count = len(results["identified_arguments"])
-            conclusion_parts.append(f"- {arg_count} arguments principaux identifiés")
+            arg_count = len(results.get("identified_arguments", []))
+            conclusion_parts.append(f"- {arg_count} arguments principaux identifiés.")
         
         if "identified_fallacies" in results:
-            fallacy_count = len(results["identified_fallacies"])
-            conclusion_parts.append(f"- {fallacy_count} sophismes détectés")
+            fallacy_count = len(results.get("identified_fallacies", []))
+            conclusion_parts.append(f"- {fallacy_count} sophismes détectés.")
         
         # Conclusion finale
         conclusion_parts.append("\n\nConclusion générale:")
@@ -548,7 +574,7 @@ class StrategicManager:
             conclusion_parts.append("Le texte présente une argumentation de qualité moyenne avec des forces et des faiblesses notables.")
         else:
             conclusion_parts.append("Le texte présente une argumentation faible avec des problèmes logiques significatifs.")
-        
+            
         return "\n".join(conclusion_parts)
     
     def _log_decision(self, decision_type: str, description: str) -> None:
@@ -608,10 +634,15 @@ class StrategicManager:
     
     def request_tactical_status(self) -> Optional[Dict[str, Any]]:
         """
-        Demande le statut actuel au niveau tactique.
+        Demande et récupère le statut actuel du niveau tactique.
+
+        Cette méthode envoie une requête synchrone au coordinateur tactique pour obtenir
+        un aperçu de son état actuel, incluant la progression des tâches et les
+        problèmes en cours.
         
         Returns:
-            Le statut tactique ou None si la demande échoue
+            Optional[Dict[str, Any]]: Un dictionnaire représentant le statut du niveau
+            tactique, ou `None` si la requête échoue ou si le délai d'attente est dépassé.
         """
         try:
             response = self.adapter.request_tactical_status(

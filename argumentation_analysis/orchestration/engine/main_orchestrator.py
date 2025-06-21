@@ -53,7 +53,19 @@ from argumentation_analysis.orchestration.engine.strategy import OrchestrationSt
 
 class MainOrchestrator:
     """
-    Orchestre le processus d'analyse d'argumentation.
+    Chef d'orchestre principal pour le processus d'analyse d'argumentation.
+
+    Cette classe est le point d'entrée central pour l'exécution d'analyses.
+    Elle sélectionne une stratégie d'orchestration appropriée en fonction de la
+    configuration et des entrées, puis délègue l'exécution à la méthode
+    correspondante. Elle gère le flux de travail de haut niveau, de l'analyse
+    stratégique à la synthèse des résultats.
+
+    Attributs:
+        config (OrchestrationConfig): L'objet de configuration pour l'orchestration.
+        strategic_manager (Optional[Any]): Le gestionnaire pour le niveau stratégique.
+        tactical_coordinator (Optional[Any]): Le coordinateur pour le niveau tactique.
+        operational_manager (Optional[Any]): Le gestionnaire pour le niveau opérationnel.
     """
 
     def __init__(self,
@@ -62,12 +74,14 @@ class MainOrchestrator:
                  tactical_coordinator: Optional[Any] = None,
                  operational_manager: Optional[Any] = None):
         """
-        Initialise l'orchestrateur principal.
+        Initialise l'orchestrateur principal avec sa configuration et ses composants.
+
         Args:
-            config: La configuration d'orchestration.
-            strategic_manager: Instance du gestionnaire stratégique.
-            tactical_coordinator: Instance du coordinateur tactique.
-            operational_manager: Instance du gestionnaire opérationnel.
+            config (OrchestrationConfig): La configuration d'orchestration qui contient
+                                          les paramètres et les instances des composants.
+            strategic_manager (Optional[Any]): Instance optionnelle du gestionnaire stratégique.
+            tactical_coordinator (Optional[Any]): Instance optionnelle du coordinateur tactique.
+            operational_manager (Optional[Any]): Instance optionnelle du gestionnaire opérationnel.
         """
         self.config = config
         self.strategic_manager = strategic_manager
@@ -81,15 +95,24 @@ class MainOrchestrator:
         custom_config: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Exécute le pipeline d'analyse d'argumentation.
+        Exécute le pipeline d'analyse d'argumentation en sélectionnant la stratégie appropriée.
+
+        C'est la méthode principale de l'orchestrateur. Elle détermine dynamiquement
+        la meilleure stratégie à utiliser (par exemple, hiérarchique, directe, hybride)
+        via `select_strategy` et délègue ensuite l'exécution à la méthode `_execute_*`
+        correspondante.
 
         Args:
-            text_input: Le texte d'entrée à analyser.
-            source_info: Informations optionnelles sur la source du texte.
-            custom_config: Configuration optionnelle personnalisée pour l'analyse.
+            text_input (str): Le texte d'entrée à analyser.
+            source_info (Optional[Dict[str, Any]]): Informations contextuelles sur la source
+                                                    du texte (par exemple, auteur, date).
+            custom_config (Optional[Dict[str, Any]]): Configuration personnalisée pour cette
+                                                      analyse spécifique, pouvant surcharger
+                                                      la configuration globale.
 
         Returns:
-            Un dictionnaire contenant les résultats de l'analyse.
+            Dict[str, Any]: Un dictionnaire contenant les résultats complets de l'analyse,
+                            incluant le statut, la stratégie utilisée et les données produites.
         """
         logger.info(f"Received analysis request for text_input (length: {len(text_input)}).")
         if source_info:
@@ -131,7 +154,21 @@ class MainOrchestrator:
             }
 
     async def _execute_hierarchical_full(self, text_input: str) -> Dict[str, Any]:
-        """Exécute l'orchestration hiérarchique complète."""
+        """
+        Exécute le flux d'orchestration hiérarchique complet de bout en bout.
+
+        Cette stratégie implique les trois niveaux :
+        1.  **Stratégique**: Analyse initiale pour définir les grands objectifs.
+        2.  **Tactique**: Décomposition des objectifs en tâches concrètes.
+        3.  **Opérationnel**: Exécution des tâches.
+        4.  **Synthèse**: Agrégation et rapport des résultats.
+
+        Args:
+            text_input (str): Le texte à analyser.
+
+        Returns:
+            Dict[str, Any]: Un dictionnaire contenant les résultats de chaque niveau.
+        """
         logger.info("[HIERARCHICAL] Exécution de l'orchestration hiérarchique complète...")
         results: Dict[str, Any] = {
             "status": "pending",
@@ -203,7 +240,25 @@ class MainOrchestrator:
         return results
 
     async def _execute_operational_tasks(self, text_input: str, tactical_coordination_results: Dict[str, Any]) -> Dict[str, Any]:
-        """Exécute les tâches opérationnelles."""
+        """
+        Exécute un ensemble de tâches opérationnelles définies par le niveau tactique.
+
+        Cette méthode simule l'exécution des tâches en se basant sur les informations
+        fournies par la coordination tactique. Dans une implémentation réelle, elle
+        interagirait avec le `OperationalManager` pour exécuter des analyses concrètes
+        (par exemple, extraire des arguments, détecter des sophismes).
+
+        Args:
+            text_input (str): Le texte d'entrée original, potentiellement utilisé
+                              par les tâches.
+            tactical_coordination_results (Dict[str, Any]): Les résultats du coordinateur
+                                                            tactique, contenant la liste
+                                                            des tâches à exécuter.
+
+        Returns:
+            Dict[str, Any]: Un rapport sur les tâches exécutées, incluant leur statut
+                            et un résumé.
+        """
         logger.info(f"Exécution des tâches opérationnelles avec text_input: {text_input[:50]}... et tactical_results: {str(tactical_coordination_results)[:100]}...")
         
         operational_manager = getattr(self.config, 'operational_manager_instance', None)
@@ -260,7 +315,21 @@ class MainOrchestrator:
         return operational_results
 
     async def _synthesize_hierarchical_results(self, current_results: Dict[str, Any]) -> Dict[str, Any]:
-        """Synthétise les résultats de l'orchestration hiérarchique."""
+        """
+        Synthétise et évalue les résultats des différents niveaux hiérarchiques.
+
+        Cette méthode agrège les résultats des niveaux stratégique, tactique et
+        opérationnel pour calculer des scores de performance (par exemple, efficacité,
+        alignement) et générer une évaluation globale de l'orchestration.
+
+        Args:
+            current_results (Dict[str, Any]): Le dictionnaire contenant les résultats
+                                              partiels des niveaux précédents.
+
+        Returns:
+            Dict[str, Any]: Un dictionnaire de synthèse avec les scores et
+                            recommandations.
+        """
         # Note: HierarchicalReport pourrait être utilisé ici pour structurer la sortie.
         synthesis = {
             "coordination_effectiveness": 0.0,

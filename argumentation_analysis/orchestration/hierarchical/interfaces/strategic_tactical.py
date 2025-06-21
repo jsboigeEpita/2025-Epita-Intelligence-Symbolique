@@ -21,57 +21,59 @@ from argumentation_analysis.core.communication import (
 
 class StrategicTacticalInterface:
     """
-    Classe représentant l'interface entre les niveaux stratégique et tactique.
-    
-    Cette interface est responsable de:
-    - Traduire les objectifs stratégiques en directives tactiques
-    - Transmettre le contexte global nécessaire au niveau tactique
-    - Remonter les rapports de progression du niveau tactique au niveau stratégique
-    - Remonter les résultats agrégés du niveau tactique au niveau stratégique
-    - Gérer les demandes d'ajustement entre les niveaux
-    
-    Cette interface utilise le système de communication multi-canal pour faciliter
-    les échanges entre les niveaux stratégique et tactique.
+    Traducteur et médiateur entre les niveaux stratégique et tactique.
+
+    Cette interface ne se contente pas de transmettre des données. Elle enrichit
+    les objectifs stratégiques avec un contexte tactique et, inversement, agrège
+    et traduit les rapports tactiques en informations exploitables par le niveau stratégique.
+
+    Attributes:
+        strategic_state (StrategicState): L'état du niveau stratégique.
+        tactical_state (TacticalState): L'état du niveau tactique.
+        logger (logging.Logger): Le logger pour les événements.
+        middleware (MessageMiddleware): Le middleware de communication.
+        strategic_adapter (StrategicAdapter): Adaptateur pour communiquer en tant qu'agent stratégique.
+        tactical_adapter (TacticalAdapter): Adaptateur pour communiquer en tant qu'agent tactique.
     """
-    
-    def __init__(self, strategic_state: Optional[StrategicState] = None,
-               tactical_state: Optional[TacticalState] = None,
-               middleware: Optional[MessageMiddleware] = None):
+
+    def __init__(self,
+                 strategic_state: Optional[StrategicState] = None,
+                 tactical_state: Optional[TacticalState] = None,
+                 middleware: Optional[MessageMiddleware] = None):
         """
-        Initialise une nouvelle interface stratégique-tactique.
-        
+        Initialise l'interface stratégique-tactique.
+
         Args:
-            strategic_state: L'état stratégique à utiliser. Si None, un nouvel état est créé.
-            tactical_state: L'état tactique à utiliser. Si None, un nouvel état est créé.
-            middleware: Le middleware de communication à utiliser. Si None, un nouveau middleware est créé.
+            strategic_state (Optional[StrategicState]): Une référence à l'état du niveau
+                stratégique pour accéder au plan global, aux métriques, etc.
+            tactical_state (Optional[TacticalState]): Une référence à l'état du niveau
+                tactique pour comprendre sa charge de travail et son état actuel.
+            middleware (Optional[MessageMiddleware]): Le middleware de communication
+                partagé pour envoyer et recevoir des messages entre les niveaux.
         """
-        self.strategic_state = strategic_state if strategic_state else StrategicState()
-        self.tactical_state = tactical_state if tactical_state else TacticalState()
+        self.strategic_state = strategic_state or StrategicState()
+        self.tactical_state = tactical_state or TacticalState()
         self.logger = logging.getLogger(__name__)
-        
-        # Initialiser le middleware de communication
-        self.middleware = middleware if middleware else MessageMiddleware()
-        
-        # Créer les adaptateurs pour les niveaux stratégique et tactique
-        self.strategic_adapter = StrategicAdapter(
-            agent_id="strategic_interface",
-            middleware=self.middleware
-        )
-        
-        self.tactical_adapter = TacticalAdapter(
-            agent_id="tactical_interface",
-            middleware=self.middleware
-        )
+
+        self.middleware = middleware or MessageMiddleware()
+        self.strategic_adapter = StrategicAdapter(agent_id="strategic_interface", middleware=self.middleware)
+        self.tactical_adapter = TacticalAdapter(agent_id="tactical_interface", middleware=self.middleware)
     
     def translate_objectives(self, objectives: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Traduit les objectifs stratégiques en directives tactiques.
-        
+        Traduit des objectifs stratégiques de haut niveau en directives tactiques détaillées.
+
+        Cette méthode prend des objectifs généraux et les enrichit avec un contexte
+        nécessaire pour leur exécution au niveau tactique. Elle ajoute des informations sur
+        la phase du plan, les dépendances, les critères de succès et les contraintes de ressources.
+        Le résultat est une structure de données riche qui guide le `TaskCoordinator`.
+
         Args:
-            objectives: Liste des objectifs stratégiques
+            objectives (List[Dict[str, Any]]): La liste des objectifs stratégiques à traduire.
             
         Returns:
-            Un dictionnaire contenant les directives tactiques
+            Dict[str, Any]: Un dictionnaire complexe représentant les directives tactiques,
+            contenant les objectifs enrichis, le contexte global et les paramètres de contrôle.
         """
         self.logger.info(f"Traduction de {len(objectives)} objectifs stratégiques en directives tactiques")
         
@@ -545,13 +547,20 @@ class StrategicTacticalInterface:
     
     def process_tactical_report(self, report: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Traite un rapport tactique et le traduit en informations stratégiques.
-        
+        Traite un rapport de progression du niveau tactique et le traduit en informations
+        significatives pour le niveau stratégique.
+
+        Cette méthode agrège les données brutes (ex: nombre de tâches terminées) et en déduit
+        des métriques de plus haut niveau comme des indicateurs de qualité, l'utilisation
+        des ressources et identifie des problèmes potentiels qui nécessitent un ajustement
+        stratégique.
+
         Args:
-            report: Le rapport tactique
+            report (Dict[str, Any]): Le rapport de statut envoyé par le `TaskCoordinator`.
             
         Returns:
-            Un dictionnaire contenant les informations stratégiques
+            Dict[str, Any]: Un dictionnaire contenant des métriques agrégées, une liste de
+            problèmes stratégiques identifiés, et des suggestions d'ajustements.
         """
         self.logger.info("Traitement d'un rapport tactique")
         
@@ -860,13 +869,17 @@ class StrategicTacticalInterface:
     
     def request_tactical_status(self, timeout: float = 5.0) -> Optional[Dict[str, Any]]:
         """
-        Demande un rapport de statut au niveau tactique.
-        
+        Demande activement un rapport de statut au niveau tactique.
+
+        Utilise l'adaptateur de communication pour envoyer une requête synchrone
+        au `TaskCoordinator` et attendre une réponse contenant son état actuel.
+
         Args:
-            timeout: Délai d'attente maximum en secondes
+            timeout (float): Le délai d'attente maximum en secondes.
             
         Returns:
-            Le rapport de statut ou None si timeout
+            Optional[Dict[str, Any]]: Le rapport de statut reçu, ou `None` si la
+            requête échoue ou expire.
         """
         try:
             response = self.strategic_adapter.request_tactical_info(
@@ -890,12 +903,15 @@ class StrategicTacticalInterface:
     def send_strategic_adjustment(self, adjustment: Dict[str, Any]) -> bool:
         """
         Envoie un ajustement stratégique au niveau tactique.
-        
+
+        Encapsule une décision d'ajustement (par exemple, changer la priorité d'un objectif)
+        dans une directive et l'envoie au `TaskCoordinator` via le middleware.
+
         Args:
-            adjustment: L'ajustement à envoyer
+            adjustment (Dict[str, Any]): Le dictionnaire contenant les détails de l'ajustement.
             
         Returns:
-            True si l'ajustement a été envoyé avec succès, False sinon
+            bool: `True` si l'ajustement a été envoyé avec succès, `False` sinon.
         """
         try:
             # Déterminer la priorité en fonction de l'importance de l'ajustement

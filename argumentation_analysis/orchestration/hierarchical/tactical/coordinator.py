@@ -16,24 +16,39 @@ from argumentation_analysis.core.communication import (
 
 
 class TaskCoordinator:
-    """Classe représentant le Coordinateur de Tâches de l'architecture hiérarchique."""
-    
-    def __init__(self, tactical_state: Optional[TacticalState] = None,
-                middleware: Optional[MessageMiddleware] = None):
+    """
+    Le `TaskCoordinator` (ou `TacticalManager`) est le pivot du niveau tactique.
+    Il traduit les objectifs stratégiques en tâches concrètes, les assigne aux
+    agents opérationnels appropriés et supervise leur exécution.
+
+    Il gère les dépendances entre les tâches, traite les résultats et rapporte
+    la progression au `StrategicManager`.
+
+    Attributes:
+        state (TacticalState): L'état interne du coordinateur.
+        logger (logging.Logger): Le logger pour les événements.
+        middleware (MessageMiddleware): Le middleware de communication.
+        adapter (TacticalAdapter): L'adaptateur pour la communication tactique.
+        agent_capabilities (Dict[str, List[str]]): Un mapping des agents à leurs capacités.
+    """
+
+    def __init__(self,
+                 tactical_state: Optional[TacticalState] = None,
+                 middleware: Optional[MessageMiddleware] = None):
         """
-        Initialise un nouveau Coordinateur de Tâches.
-        
+        Initialise une nouvelle instance du `TaskCoordinator`.
+
         Args:
-            tactical_state: L'état tactique à utiliser. Si None, un nouvel état est créé.
-            middleware: Le middleware de communication à utiliser. Si None, un nouveau middleware est créé.
+            tactical_state (Optional[TacticalState]): L'état tactique initial à utiliser.
+                Si `None`, un nouvel état `TacticalState` est instancié. Il suit les tâches,
+                leurs dépendances, et les résultats intermédiaires.
+            middleware (Optional[MessageMiddleware]): Le middleware de communication.
+                Si `None`, un `MessageMiddleware` par défaut est créé pour gérer les
+                échanges avec les niveaux stratégique et opérationnel.
         """
-        self.state = tactical_state if tactical_state else TacticalState()
+        self.state = tactical_state or TacticalState()
         self.logger = logging.getLogger(__name__)
-        
-        # Initialiser le middleware de communication
-        self.middleware = middleware if middleware else MessageMiddleware()
-        
-        # Créer l'adaptateur tactique
+        self.middleware = middleware or MessageMiddleware()
         self.adapter = TacticalAdapter(
             agent_id="tactical_coordinator",
             middleware=self.middleware
@@ -70,80 +85,43 @@ class TaskCoordinator:
         self.logger.info(f"Action tactique: {action_type} - {description}")
     
     def _subscribe_to_strategic_directives(self) -> None:
-        """S'abonne aux directives stratégiques."""
-        # Définir le callback pour les directives
-        def handle_directive(message: Message) -> None:
+        """
+        S'abonne aux messages provenant du niveau stratégique.
+
+        Met en place un callback (`handle_directive`) qui réagit aux nouvelles
+        directives, telles que la définition d'un nouvel objectif ou
+        un ajustement stratégique.
+        """
+
+        async def handle_directive(message: Message) -> None:
             directive_type = message.content.get("directive_type")
-            # Le 'goal' est dans les 'parameters' du message envoyé par StrategicManager
             parameters = message.content.get("parameters", {})
-            
-            self.logger.info(f"TaskCoordinator.handle_directive reçue: type='{directive_type}', sender='{message.sender}', content='{message.content}'")
+            self.logger.info(f"Directive reçue: type='{directive_type}', sender='{message.sender}'")
 
             if directive_type == "new_strategic_goal":
-                objective_data = parameters # 'parameters' contient directement le dictionnaire de l'objectif
-                if not isinstance(objective_data, dict) or not objective_data.get("id"):
-                    self.logger.error(f"Données d'objectif invalides ou manquantes dans la directive 'new_strategic_goal': {objective_data}")
+                if not isinstance(parameters, dict) or not parameters.get("id"):
+                    self.logger.error(f"Données d'objectif invalides: {parameters}")
                     return
 
-                self.logger.info(f"Directive stratégique 'new_strategic_goal' reçue pour l'objectif: {objective_data.get('id')}")
-                
-                # Ajouter l'objectif à l'état tactique
-                self.state.add_assigned_objective(objective_data)
-                self.logger.info(f"Objectif {objective_data.get('id')} ajouté à TacticalState.")
-                
-                # Décomposer l'objectif en tâches
-                tasks = self._decompose_objective_to_tasks(objective_data)
-                self.logger.info(f"Objectif {objective_data.get('id')} décomposé en {len(tasks)} tâches.")
-                
-                # Établir les dépendances entre les tâches
+                self.state.add_assigned_objective(parameters)
+                tasks = self._decompose_objective_to_tasks(parameters)
                 self._establish_task_dependencies(tasks)
-                self.logger.info(f"Dépendances établies pour les tâches de l'objectif {objective_data.get('id')}.")
-                
-                # Ajouter les tâches à l'état tactique
                 for task in tasks:
                     self.state.add_task(task)
-                self.logger.info(f"{len(tasks)} tâches ajoutées à TacticalState pour l'objectif {objective_data.get('id')}.")
-                
-                # Journaliser l'action
-                self._log_action(
-                    "Décomposition d'objectif",
-                    f"Décomposition de l'objectif {objective_data.get('id')} en {len(tasks)} tâches"
-                )
-                
-                # Assigner les tâches (nouvel ajout basé sur la logique de process_strategic_objectives)
-                self.logger.info(f"Assignation des {len(tasks)} tâches pour l'objectif {objective_data.get('id')}...")
-                for task in tasks:
-                    # Utiliser la méthode assign_task_to_operational qui est async
-                    # Si handle_directive est synchrone, cela pourrait nécessiter une refonte
-                    # ou l'exécution dans une tâche asyncio séparée.
-                    # Pour l'instant, on suppose que le middleware gère l'exécution du callback
-                    # d'une manière qui permet les opérations asynchrones ou qu'elles sont non bloquantes.
-                    # Si assign_task_to_operational est async, handle_directive doit être async.
-                    # Pour l'instant, on appelle une version hypothétique synchrone ou on logue l'intention.
-                    self.logger.info(f"Intention d'assigner la tâche : {task.get('id')}")
-                    # En supposant que le callback peut être asynchrone, ce qui est une bonne pratique.
-                    # Rendre handle_directive async et utiliser await.
-                    # Pour l'instant, on logue juste l'intention car la refonte async du callback est hors scope.
-                    # await self.assign_task_to_operational(task)
-                    self.logger.info(f"TODO: Rendre handle_directive asynchrone pour appeler 'await self.assign_task_to_operational({task.get('id')})'")
 
-                # Envoyer un accusé de réception
+                self._log_action("Décomposition d'objectif",f"Objectif {parameters.get('id')} décomposé en {len(tasks)} tâches")
+
+                for task in tasks:
+                    await self.assign_task_to_operational(task)
+
                 self.adapter.send_report(
                     report_type="directive_acknowledgement",
-                    content={
-                        "objective_id": objective_data.get("id"),
-                        "tasks_created": len(tasks)
-                    },
-                    recipient_id=message.sender,
-                    priority=MessagePriority.NORMAL
-                )
-            
+                    content={"objective_id": parameters.get("id"),"tasks_created": len(tasks)},
+                    recipient_id=message.sender)
+
             elif directive_type == "strategic_adjustment":
-                # Traiter l'ajustement stratégique
-                self.logger.info("Ajustement stratégique reçu")
-                
-                # Appliquer les ajustements
-                self._apply_strategic_adjustments(content)
+                self.logger.info("Ajustement stratégique reçu.")
+                self._apply_strategic_adjustments(message.content)
                 
                 # Journaliser l'action
                 self._log_action(
@@ -177,13 +155,19 @@ class TaskCoordinator:
     
     async def process_strategic_objectives(self, objectives: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Traite les objectifs reçus du niveau stratégique et les décompose en tâches.
-        
+        Traite une liste d'objectifs stratégiques en les décomposant en un plan d'action tactique.
+
+        Pour chaque objectif, cette méthode génère une série de tâches granulaires,
+        établit les dépendances entre elles, les enregistre dans l'état tactique,
+        et les assigne aux agents opérationnels appropriés.
+
         Args:
-            objectives: Liste des objectifs stratégiques
+            objectives (List[Dict[str, Any]]): Une liste de dictionnaires, où chaque
+                dictionnaire représente un objectif stratégique à atteindre.
             
         Returns:
-            Un dictionnaire contenant les tâches créées et leur organisation
+            Dict[str, Any]: Un résumé de l'opération, incluant le nombre total de tâches
+            créées et une cartographie des tâches par objectif.
         """
         self.logger.info(f"Traitement de {len(objectives)} objectifs stratégiques")
         
@@ -221,10 +205,17 @@ class TaskCoordinator:
     
     async def assign_task_to_operational(self, task: Dict[str, Any]) -> None:
         """
-        Assigne une tâche à un agent opérationnel approprié.
-        
+        Assigne une tâche spécifique à un agent opérationnel compétent.
+
+        La méthode détermine d'abord l'agent le plus qualifié en fonction des
+        capacités requises par la tâche. Ensuite, elle envoie une directive
+        d'assignation à cet agent via le middleware de communication.
+        Si aucun agent spécifique n'est trouvé, la tâche est publiée sur un
+        canal général pour que tout agent disponible puisse la prendre.
+
         Args:
-            task: La tâche à assigner
+            task (Dict[str, Any]): Le dictionnaire représentant la tâche à assigner.
+                Doit contenir des clés comme `id`, `description`, et `required_capabilities`.
         """
         required_capabilities = task.get("required_capabilities", [])
         priority = task.get("priority", "medium")
@@ -313,13 +304,18 @@ class TaskCoordinator:
     
     async def decompose_strategic_goal(self, objective: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Décompose un objectif stratégique en un plan tactique (liste de tâches).
-        
+        Décompose un objectif stratégique en un plan tactique (une liste de tâches).
+
+        Cette méthode sert de point d'entrée pour la décomposition. Elle utilise
+        `_decompose_objective_to_tasks` pour la logique de décomposition,
+        établit les dépendances, et stocke les tâches générées dans l'état.
+
         Args:
-            objective: L'objectif stratégique à décomposer.
+            objective (Dict[str, Any]): L'objectif stratégique à décomposer.
             
         Returns:
-            Un dictionnaire représentant le plan tactique.
+            Dict[str, Any]: Un dictionnaire contenant la liste des tâches (`tasks`)
+            qui composent le plan tactique pour cet objectif.
         """
         tasks = self._decompose_objective_to_tasks(objective)
         self._establish_task_dependencies(tasks)
@@ -331,13 +327,19 @@ class TaskCoordinator:
 
     def _decompose_objective_to_tasks(self, objective: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
-        Décompose un objectif en tâches concrètes.
+        Implémente la logique de décomposition d'un objectif en tâches granulaires.
         
+        Cette méthode privée analyse la description d'un objectif stratégique
+        pour en déduire une séquence de tâches opérationnelles. Par exemple, un objectif
+        d'"identification d'arguments" sera décomposé en tâches d'extraction,
+        d'identification de prémisses/conclusions, etc.
+
         Args:
-            objective: L'objectif à décomposer
+            objective (Dict[str, Any]): Le dictionnaire de l'objectif à décomposer.
             
         Returns:
-            Liste des tâches créées
+            List[Dict[str, Any]]: Une liste de dictionnaires, chaque dictionnaire
+            représentant une tâche concrète avec ses propres exigences et métadonnées.
         """
         tasks = []
         obj_id = objective["id"]
@@ -588,13 +590,19 @@ class TaskCoordinator:
     
     def handle_task_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Traite le résultat d'une tâche opérationnelle.
-        
+        Traite le résultat d'une tâche reçue d'un agent opérationnel.
+
+        Cette méthode met à jour l'état de la tâche (par exemple, de "en cours" à "terminée"),
+        stocke les données de résultat, et vérifie si la complétion de cette tâche
+        entraîne la complétion d'un objectif plus large. Si un objectif est
+        entièrement atteint, un rapport est envoyé au niveau stratégique.
+
         Args:
-            result: Le résultat de la tâche
+            result (Dict[str, Any]): Le dictionnaire de résultat envoyé par un agent
+                opérationnel. Doit contenir `tactical_task_id` et le statut de complétion.
             
         Returns:
-            Un dictionnaire contenant le statut du traitement
+            Dict[str, Any]: Un dictionnaire confirmant le statut du traitement du résultat.
         """
         task_id = result.get("task_id")
         tactical_task_id = result.get("tactical_task_id")
@@ -662,10 +670,18 @@ class TaskCoordinator:
     
     def generate_status_report(self) -> Dict[str, Any]:
         """
-        Génère un rapport de statut pour le niveau stratégique.
-        
+        Génère un rapport de statut complet destiné au niveau stratégique.
+
+        Ce rapport synthétise l'état actuel du niveau tactique, incluant :
+        - La progression globale en pourcentage.
+        - Le nombre de tâches par statut (terminée, en cours, etc.).
+        - La progression détaillée pour chaque objectif stratégique.
+        - Une liste des problèmes ou conflits identifiés.
+
+        Le rapport est ensuite envoyé au `StrategicManager` via le middleware.
+
         Returns:
-            Un dictionnaire contenant le rapport de statut
+            Dict[str, Any]: Le rapport de statut détaillé.
         """
         # Calculer la progression globale
         total_tasks = 0

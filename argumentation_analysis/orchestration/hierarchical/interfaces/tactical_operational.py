@@ -21,59 +21,65 @@ from argumentation_analysis.core.communication import (
 
 class TacticalOperationalInterface:
     """
-    Classe représentant l'interface entre les niveaux tactique et opérationnel.
-    
-    Cette interface est responsable de:
-    - Traduire les tâches tactiques en tâches opérationnelles spécifiques
-    - Transmettre le contexte local nécessaire aux agents opérationnels
-    - Remonter les résultats d'analyse du niveau opérationnel au niveau tactique
-    - Remonter les métriques d'exécution du niveau opérationnel au niveau tactique
-    - Gérer les signalements de problèmes entre les niveaux
-    
-    Cette interface utilise le système de communication multi-canal pour faciliter
-    les échanges entre les niveaux tactique et opérationnel.
+    Pont de traduction entre la planification tactique et l'exécution opérationnelle.
+
+    Cette classe prend des tâches définies au niveau tactique et les transforme
+    en commandes détaillées et exécutables pour les agents opérationnels.
+    Elle enrichit les tâches avec des techniques spécifiques, des paramètres
+    d'exécution et les extraits de texte pertinents.
+
+    Inversement, elle traite les résultats bruts des agents pour les agréger
+    en informations utiles pour le niveau tactique.
+
+    Attributes:
+        tactical_state (TacticalState): L'état du niveau tactique.
+        operational_state (Optional[OperationalState]): L'état du niveau opérationnel.
+        logger (logging.Logger): Le logger.
+        middleware (MessageMiddleware): Le middleware de communication.
+        tactical_adapter (TacticalAdapter): Adaptateur pour la communication.
+        operational_adapter (OperationalAdapter): Adaptateur pour la communication.
     """
-    
-    def __init__(self, tactical_state: Optional[TacticalState] = None,
-               operational_state: Optional[OperationalState] = None,
-               middleware: Optional[MessageMiddleware] = None):
+
+    def __init__(self,
+                 tactical_state: Optional[TacticalState] = None,
+                 operational_state: Optional[OperationalState] = None,
+                 middleware: Optional[MessageMiddleware] = None):
         """
-        Initialise une nouvelle interface tactique-opérationnelle.
-        
+        Initialise l'interface tactique-opérationnelle.
+
         Args:
-            tactical_state: L'état tactique à utiliser. Si None, un nouvel état est créé.
-            operational_state: L'état opérationnel à utiliser. Si None, un nouvel état est créé.
-            middleware: Le middleware de communication à utiliser. Si None, un nouveau middleware est créé.
+            tactical_state (Optional[TacticalState]): L'état du niveau tactique, utilisé pour
+                accéder au contexte des tâches (dépendances, objectifs parents).
+            operational_state (Optional[OperationalState]): L'état du niveau opérationnel,
+                utilisé pour suivre les tâches en cours d'exécution.
+            middleware (Optional[MessageMiddleware]): Le middleware de communication partagé.
         """
-        self.tactical_state = tactical_state if tactical_state else TacticalState()
-        # Note: Comme OperationalState n'est pas encore implémenté, nous utilisons None pour l'instant
-        # Dans une implémentation complète, il faudrait créer une instance d'OperationalState
+        self.tactical_state = tactical_state or TacticalState()
         self.operational_state = operational_state
         self.logger = logging.getLogger(__name__)
-        
-        # Initialiser le middleware de communication
-        self.middleware = middleware if middleware else MessageMiddleware()
-        
-        # Créer les adaptateurs pour les niveaux tactique et opérationnel
-        self.tactical_adapter = TacticalAdapter(
-            agent_id="tactical_interface",
-            middleware=self.middleware
-        )
-        
-        self.operational_adapter = OperationalAdapter(
-            agent_id="operational_interface",
-            middleware=self.middleware
-        )
+
+        self.middleware = middleware or MessageMiddleware()
+        self.tactical_adapter = TacticalAdapter(agent_id="tactical_interface", middleware=self.middleware)
+        self.operational_adapter = OperationalAdapter(agent_id="operational_interface", middleware=self.middleware)
     
     def translate_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Traduit une tâche tactique en tâche opérationnelle.
-        
+        Traduit une tâche tactique abstraite en une commande opérationnelle détaillée et exécutable.
+
+        Cette méthode est le cœur de l'interface. Elle enrichit une tâche tactique avec
+        des détails concrets nécessaires à son exécution :
+        - Choix des techniques algorithmiques spécifiques (`_determine_techniques`).
+        - Identification des extraits de texte pertinents à analyser.
+        - Définition des paramètres d'exécution (timeouts, etc.).
+        - Spécification du format des résultats attendus.
+
+        La tâche opérationnelle résultante est ensuite assignée à un agent compétent.
+
         Args:
-            task: La tâche tactique à traduire
+            task (Dict[str, Any]): La tâche tactique à traduire.
             
         Returns:
-            Un dictionnaire contenant la tâche opérationnelle
+            Dict[str, Any]: La tâche opérationnelle enrichie, prête à être exécutée.
         """
         self.logger.info(f"Traduction de la tâche {task.get('id', 'unknown')} en tâche opérationnelle")
         
@@ -719,13 +725,19 @@ class TacticalOperationalInterface:
     
     def process_operational_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Traite un résultat opérationnel et le traduit en information tactique.
-        
+        Traite un résultat brut provenant d'un agent opérationnel et le traduit
+        en un format structuré pour le niveau tactique.
+
+        Cette méthode prend les `outputs` d'un agent, ses `metrics` de performance et les
+        `issues` qu'il a pu rencontrer, et les agrège en un rapport de résultat
+        unique. Ce rapport est ensuite plus facile à interpréter pour le `TaskCoordinator`.
+
         Args:
-            result: Le résultat opérationnel
+            result (Dict[str, Any]): Le dictionnaire de résultat brut de l'agent opérationnel.
             
         Returns:
-            Un dictionnaire contenant l'information tactique
+            Dict[str, Any]: Le résultat traduit et agrégé, prêt à être envoyé au
+            niveau tactique.
         """
         self.logger.info(f"Traitement du résultat opérationnel de la tâche {result.get('task_id', 'unknown')}")
         
@@ -928,14 +940,17 @@ class TacticalOperationalInterface:
     
     def subscribe_to_operational_updates(self, update_types: List[str], callback: callable) -> str:
         """
-        S'abonne aux mises à jour des agents opérationnels.
+        Permet au niveau tactique de s'abonner aux mises à jour provenant du niveau opérationnel.
         
         Args:
-            update_types: Types de mises à jour (task_progress, resource_usage, etc.)
-            callback: Fonction de rappel à appeler lors de la réception d'une mise à jour
+            update_types (List[str]): Une liste de types de mise à jour à écouter
+                (ex: "task_progress", "resource_usage").
+            callback (Callable): La fonction de rappel à invoquer lorsqu'une mise à jour
+                correspondante est reçue.
             
         Returns:
-            Un identifiant d'abonnement
+            str: Un identifiant unique pour l'abonnement, qui peut être utilisé pour
+            se désabonner plus tard.
         """
         return self.tactical_adapter.subscribe_to_operational_updates(
             update_types=update_types,
@@ -944,14 +959,15 @@ class TacticalOperationalInterface:
     
     def request_operational_status(self, agent_id: str, timeout: float = 5.0) -> Optional[Dict[str, Any]]:
         """
-        Demande le statut d'un agent opérationnel.
+        Demande le statut d'un agent opérationnel spécifique.
         
         Args:
-            agent_id: Identifiant de l'agent opérationnel
-            timeout: Délai d'attente maximum en secondes
+            agent_id (str): L'identifiant de l'agent opérationnel dont le statut est demandé.
+            timeout (float): Le délai d'attente en secondes.
             
         Returns:
-            Le statut de l'agent ou None si timeout
+            Optional[Dict[str, Any]]: Un dictionnaire contenant le statut de l'agent,
+            ou `None` si la requête échoue ou expire.
         """
         try:
             response = self.tactical_adapter.request_strategic_guidance(

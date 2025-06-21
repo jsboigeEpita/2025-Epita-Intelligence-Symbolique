@@ -67,15 +67,26 @@ class MockChatCompletion(ChatCompletionClientBase):
 
 def create_llm_service(service_id: str = "global_llm_service", force_mock: bool = False) -> Union[OpenAIChatCompletion, AzureChatCompletion, MockChatCompletion]:
     """
-    Charge la configuration depuis .env et crée une instance du service LLM.
-    Supporte maintenant un mode mock pour les tests.
+    Factory pour créer et configurer une instance de service de complétion de chat.
+
+    Cette fonction lit la configuration à partir d'un fichier .env pour déterminer
+    quel service instancier (OpenAI standard ou Azure OpenAI). Elle peut également
+    forcer la création d'un service mocké pour les tests.
 
     Args:
-        service_id (str): ID à assigner au service dans Semantic Kernel.
-        force_mock (bool): Si True, force la création d'un service mocké.
+        service_id (str): L'ID de service à utiliser pour l'instance dans
+                          le kernel Semantic Kernel.
+        force_mock (bool): Si True, retourne une instance de `MockChatCompletion`
+                           ignorant la configuration du .env.
 
     Returns:
-        Instance du service LLM (réel ou mocké).
+        Union[OpenAIChatCompletion, AzureChatCompletion, MockChatCompletion]:
+            Une instance configurée du service de chat.
+
+    Raises:
+        ValueError: Si la configuration requise pour le service choisi (OpenAI ou Azure)
+                    est manquante dans le fichier .env.
+        RuntimeError: Si la création du service échoue pour une raison inattendue.
     """
     logger.critical("<<<<< create_llm_service FUNCTION CALLED >>>>>")
     logger.info(f"--- Configuration du Service LLM ({service_id}) ---")
@@ -153,12 +164,47 @@ def create_llm_service(service_id: str = "global_llm_service", force_mock: bool 
 
 # Classe pour le transport HTTP personnalisé avec logging
 class LoggingHttpTransport(httpx.AsyncBaseTransport):
+    """
+    Transport HTTP asynchrone personnalisé pour `httpx` qui logge les détails
+    des requêtes et des réponses.
+
+    S'intercale dans la pile réseau de `httpx` pour intercepter et logger le contenu
+    des communications avec les services externes, ce qui est très utile pour le débogage
+    des appels aux API LLM.
+
+    Attributs:
+        logger (logging.Logger): L'instance du logger à utiliser.
+        _wrapped_transport (httpx.AsyncBaseTransport): Le transport `httpx` original
+                                                      qui exécute réellement la requête.
+    """
     def __init__(self, logger: logging.Logger, wrapped_transport: httpx.AsyncBaseTransport = None):
+        """
+        Initialise le transport de logging.
+
+        Args:
+            logger (logging.Logger): Le logger à utiliser pour afficher les informations.
+            wrapped_transport (httpx.AsyncBaseTransport, optional):
+                Le transport sous-jacent à utiliser. Si None, un `httpx.AsyncHTTPTransport`
+                par défaut est créé.
+        """
         self.logger = logger
-        # Si aucun transport n'est fourni, utiliser un transport HTTP standard
-        self._wrapped_transport = wrapped_transport if wrapped_transport else httpx.AsyncHTTPTransport()
+        self._wrapped_transport = wrapped_transport or httpx.AsyncHTTPTransport()
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        """
+        Intercepte, logge et transmet une requête HTTP asynchrone.
+
+        Cette méthode logge les détails de la requête, la transmet au transport
+        sous-jacent, puis logge les détails de la réponse avant de la retourner.
+        Elle prend soin de ne pas consommer le corps de la requête ou de la réponse,
+        afin qu'ils restent lisibles par le client `httpx`.
+
+        Args:
+            request (httpx.Request): L'objet requête `httpx` à traiter.
+
+        Returns:
+            httpx.Response: L'objet réponse `httpx` reçu du serveur.
+        """
         self.logger.info(f"--- RAW HTTP REQUEST (LLM Service) ---")
         self.logger.info(f"  Method: {request.method}")
         self.logger.info(f"  URL: {request.url}")

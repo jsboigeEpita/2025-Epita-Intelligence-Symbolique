@@ -1,8 +1,9 @@
 """
 Module principal pour l'analyse d'argumentation.
 
-Ce module fournit la classe ArgumentationAnalyzer qui sert de point d'entrée
-principal pour toutes les analyses d'argumentation du projet.
+Ce module définit la classe `ArgumentationAnalyzer`, qui est la façade centrale et le point d'entrée principal
+pour toutes les opérations d'analyse d'argumentation. Elle orchestre l'utilisation de pipelines,
+de services et d'autres composants pour fournir une analyse complète et unifiée.
 """
 
 from typing import Dict, Any, Optional, List
@@ -16,19 +17,33 @@ from argumentation_analysis.services.web_api.services.analysis_service import An
 
 class ArgumentationAnalyzer:
     """
-    Analyseur principal d'argumentation.
-    
-    Cette classe sert de façade pour tous les services d'analyse d'argumentation
-    disponibles dans le projet. Elle coordonne les différents analyseurs
-    spécialisés et fournit une interface unifiée.
+    Analyseur d'argumentation principal agissant comme une façade.
+
+    Cette classe orchestre les différents composants d'analyse (pipelines, services)
+    pour fournir une interface unifiée et robuste. Elle est conçue pour être le point
+    d'entrée unique pour l'analyse de texte et peut être configurée pour utiliser
+    différentes stratégies d'analyse.
+
+    Attributs:
+        config (Dict[str, Any]): Dictionnaire de configuration.
+        logger (logging.Logger): Logger pour les messages de diagnostic.
+        analysis_config (UnifiedAnalysisConfig): Configuration pour le pipeline unifié.
+        pipeline (UnifiedTextAnalysisPipeline): Pipeline d'analyse de texte.
+        analysis_service (AnalysisService): Service d'analyse externe.
     """
     
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """
         Initialise l'analyseur d'argumentation.
-        
+
+        Le constructeur met en place la configuration, le logger et initialise
+        les composants internes comme le pipeline et les services d'analyse.
+        En cas d'échec de l'initialisation d'un composant, l'analyseur passe en mode dégradé.
+
         Args:
-            config: Configuration optionnelle pour l'analyseur
+            config (Optional[Dict[str, Any]]):
+                Un dictionnaire de configuration pour surcharger les paramètres par défaut.
+                Exemples de clés : 'enable_fallacy_detection', 'enable_rhetorical_analysis'.
         """
         self.config = config or {}
         self.logger = logging.getLogger(__name__)
@@ -63,14 +78,30 @@ class ArgumentationAnalyzer:
     
     def analyze_text(self, text: str, options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Analyse un texte pour identifier les arguments et sophismes.
-        
+        Analyse un texte pour identifier les arguments, sophismes et autres structures rhétoriques.
+
+        Cette méthode est le point d'entrée principal pour l'analyse. Elle utilise les composants
+        internes (pipeline, service) pour effectuer une analyse complète. Si les composants
+        principaux ne sont pas disponibles, elle se rabat sur une analyse basique.
+
         Args:
-            text: Le texte à analyser
-            options: Options d'analyse optionnelles
-            
+            text (str): Le texte à analyser.
+            options (Optional[Dict[str, Any]]):
+                Options d'analyse supplémentaires à passer aux services sous-jacents.
+
         Returns:
-            Dictionnaire contenant les résultats d'analyse
+            Dict[str, Any]: Un dictionnaire contenant les résultats de l'analyse,
+                            structuré comme suit :
+                            {
+                                'status': 'success' | 'failed' | 'partial',
+                                'text': Le texte original,
+                                'analysis': {
+                                    'unified': (résultats du pipeline),
+                                    'service': (résultats du service),
+                                    'basic': (résultats de l'analyse de fallback)
+                                },
+                                'error': (message d'erreur si le statut est 'failed')
+                            }
         """
         if not text or not text.strip():
             return {
@@ -131,10 +162,17 @@ class ArgumentationAnalyzer:
     
     def get_available_features(self) -> List[str]:
         """
-        Retourne la liste des fonctionnalités disponibles.
-        
+        Retourne la liste des fonctionnalités d'analyse actuellement disponibles.
+
+        Une fonctionnalité est "disponible" si le composant correspondant a été
+        initialisé avec succès.
+
         Returns:
-            Liste des fonctionnalités disponibles
+            List[str]: Une liste de chaînes de caractères identifiant les
+                         fonctionnalités disponibles.
+                         - 'unified_pipeline': Le pipeline d'analyse complet est actif.
+                         - 'analysis_service': Le service d'analyse externe est accessible.
+                         - 'basic_analysis': L'analyse de base est toujours disponible en fallback.
         """
         features = []
         
@@ -159,10 +197,21 @@ class ArgumentationAnalyzer:
     
     def validate_configuration(self) -> Dict[str, Any]:
         """
-        Valide la configuration actuelle.
-        
+        Valide la configuration actuelle de l'analyseur et l'état de ses composants.
+
+        Cette méthode vérifie que les composants essentiels (pipeline, service) sont
+        correctement initialisés.
+
         Returns:
-            Dictionnaire avec le statut de validation
+            Dict[str, Any]: Un dictionnaire décrivant l'état de la validation.
+                            {
+                                'status': 'valid' | 'partial',
+                                'components': {
+                                    'pipeline': (bool),
+                                    'analysis_service': (bool)
+                                },
+                                'warnings': (List[str])
+                            }
         """
         validation = {
             'status': 'valid',

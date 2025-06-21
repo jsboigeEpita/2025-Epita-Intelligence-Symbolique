@@ -88,19 +88,30 @@ async def handle_jtms_error(operation: str, error: Exception, **context) -> JTMS
 
 # ===== ENDPOINTS POUR LES CROYANCES =====
 
-@jtms_router.post("/beliefs", response_model=CreateBeliefResponse)
+@jtms_router.post(
+    "/beliefs",
+    response_model=CreateBeliefResponse,
+    summary="Créer une nouvelle croyance",
+    description="""
+Crée une nouvelle croyance (noeud) dans une instance JTMS.
+
+- Si `session_id` ou `instance_id` ne sont pas fournis, ils sont créés automatiquement.
+- `initial_value` peut être "true", "false", ou "unknown".
+""",
+    responses={
+        400: {"model": JTMSError, "description": "Erreur lors de la création de la croyance."}
+    }
+)
 async def create_belief(
     request: CreateBeliefRequest,
     jtms_service: JTMSService = Depends(get_jtms_service),
     session_manager: JTMSSessionManager = Depends(get_session_manager)
 ):
     """
-    Crée une nouvelle croyance dans le système JTMS.
-    
-    Gère automatiquement la création de sessions et d'instances si nécessaires.
+    Crée une nouvelle croyance (noeud) dans une instance JTMS.
+    Si la session ou l'instance n'existent pas, elles sont créées à la volée.
     """
     try:
-        # Assurer la session et instance
         session_id = request.session_id
         instance_id = request.instance_id
         
@@ -160,17 +171,30 @@ async def create_belief(
         )
         raise HTTPException(status_code=400, detail=error.dict())
 
-@jtms_router.post("/justifications", response_model=AddJustificationResponse)
+@jtms_router.post(
+    "/justifications",
+    response_model=AddJustificationResponse,
+    summary="Ajouter une justification",
+    description="""
+Ajoute une règle de déduction (justification) qui lie des croyances entre elles.
+
+- Une justification est de la forme: `in_beliefs & NOT out_beliefs -> conclusion`.
+- Crée la session/instance si nécessaire.
+    """,
+    responses={
+        400: {"model": JTMSError, "description": "Erreur lors de l'ajout de la justification."}
+    }
+)
 async def add_justification(
     request: AddJustificationRequest,
     jtms_service: JTMSService = Depends(get_jtms_service),
     session_manager: JTMSSessionManager = Depends(get_session_manager)
 ):
     """
-    Ajoute une justification (règle de déduction) au système JTMS.
+    Ajoute une règle de déduction (justification) qui lie des croyances entre elles.
+    La justification est de la forme: in_beliefs & NOT out_beliefs -> conclusion.
     """
     try:
-        # Assurer la session et instance
         session_id = request.session_id
         instance_id = request.instance_id
         
@@ -223,17 +247,25 @@ async def add_justification(
         )
         raise HTTPException(status_code=400, detail=error.dict())
 
-@jtms_router.post("/beliefs/validity", response_model=SetBeliefValidityResponse)
+@jtms_router.post(
+    "/beliefs/validity",
+    response_model=SetBeliefValidityResponse,
+    summary="Modifier la validité d'une croyance",
+    description="Force la validité d'une croyance et propage les conséquences à travers le réseau de justifications.",
+    responses={
+        400: {"model": JTMSError, "description": "Erreur lors de la mise à jour de la validité."}
+    }
+)
 async def set_belief_validity(
     request: SetBeliefValidityRequest,
     jtms_service: JTMSService = Depends(get_jtms_service)
 ):
     """
-    Définit la validité d'une croyance et propage les changements.
+    Force la validité d'une croyance et propage les conséquences à travers le réseau.
     """
     try:
         if not request.instance_id:
-            raise ValueError("Instance ID requis pour cette opération")
+            raise ValueError("Un `instance_id` est requis pour cette opération.")
         
         result = await jtms_service.set_belief_validity(
             instance_id=request.instance_id,
@@ -270,6 +302,9 @@ async def explain_belief(
 ):
     """
     Génère une explication détaillée pour une croyance donnée.
+
+    Retourne le statut actuel de la croyance et la liste des justifications
+    qui la supportent ou l'invalident.
     """
     try:
         if not request.instance_id:
@@ -323,7 +358,8 @@ async def query_beliefs(
     jtms_service: JTMSService = Depends(get_jtms_service)
 ):
     """
-    Interroge et filtre les croyances selon leur statut.
+    Interroge et filtre les croyances au sein d'une instance JTMS selon leur statut.
+    Les filtres valides sont "valid", "invalid", "unknown", "non_monotonic", "all".
     """
     try:
         if not request.instance_id:
@@ -383,7 +419,8 @@ async def get_jtms_state(
     session_manager: JTMSSessionManager = Depends(get_session_manager)
 ):
     """
-    Récupère l'état complet du système JTMS.
+    Récupère l'état complet d'une instance JTMS, avec la possibilité d'inclure
+    le graphe de justifications et des statistiques détaillées.
     """
     try:
         if not request.instance_id:
@@ -462,7 +499,8 @@ async def create_session(
     session_manager: JTMSSessionManager = Depends(get_session_manager)
 ):
     """
-    Crée une nouvelle session JTMS pour un agent.
+    Crée une nouvelle session de travail pour un agent, qui peut contenir
+    plusieurs instances JTMS.
     """
     try:
         session_id = await session_manager.create_session(
@@ -495,7 +533,8 @@ async def list_sessions(
     session_manager: JTMSSessionManager = Depends(get_session_manager)
 ):
     """
-    Liste les sessions selon les critères spécifiés.
+    Liste toutes les sessions existantes, avec la possibilité de filtrer par
+    agent_id et par statut.
     """
     try:
         sessions_data = await session_manager.list_sessions(
@@ -676,7 +715,10 @@ async def get_plugin_status(
     sk_plugin: JTMSSemanticKernelPlugin = Depends(get_sk_plugin)
 ):
     """
-    Récupère le statut du plugin Semantic Kernel.
+    Vérifie et retourne le statut du plugin JTMSSemanticKernelPlugin.
+
+    Indique si le kernel, le service JTMS et le gestionnaire de session sont actifs,
+    et liste les fonctions disponibles.
     """
     try:
         status = await sk_plugin.get_plugin_status()
