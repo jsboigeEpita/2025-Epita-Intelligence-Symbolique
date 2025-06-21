@@ -34,7 +34,7 @@ logger.addHandler(file_handler)
 
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.contents import AuthorRole
+# from semantic_kernel.contents import AuthorRole
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
 from autogen.agentchat.contrib.llm_assistant_agent import LLMAssistantAgent
 try:
@@ -163,7 +163,7 @@ except ImportError as e:
                     "integrity": 5,
                     "comments": "Ceci est une réponse simulée pour les tests."
                 }
-                return ChatMessageContent(role=AuthorRole.ASSISTANT, content=json.dumps(response))
+                return ChatMessageContent(role="assistant", content=json.dumps(response))
             
             def instantiate_prompt_execution_settings(self):
                 """Méthode requise par Semantic Kernel."""
@@ -562,4 +562,3 @@ def generate_report(results: List[Dict[str, Any]], output_file: str = "verify_ex
     logger.info(f"Rapport généré dans '{output_file}'.")
 # La fonction main() et la section if __name__ == "__main__": ont été déplacées
 # vers argumentation_analysis/scripts/run_verify_extracts_llm.py
-
