@@ -38,8 +38,39 @@ from playwright.async_api import async_playwright, Playwright, Browser
 import aiohttp
 import psutil
 
-# Imports internes (sans activation d'environnement au niveau du module)
-# Le bootstrap se fera dans la fonction main()
+# BOOTSTRAP: Ajout du chemin racine du projet pour résoudre les imports
+# ----------------------------------------------------------------------
+# Cette section doit être exécutée avant tout import de module du projet.
+# Elle garantit que, peu importe d'où le script est lancé, les répertoires
+# racines ('argumentation_analysis' et le parent contenant 'project_core')
+# sont dans le PYTHONPATH.
+
+def bootstrap_project_path():
+    """Ajoute le répertoire racine du projet au sys.path."""
+    try:
+        # Le script se trouve dans .../argumentation_analysis/webapp/orchestrator.py
+        # On remonte de trois niveaux pour atteindre la racine du projet qui contient 'project_core'
+        script_path = Path(__file__).resolve()
+        project_root = script_path.parent.parent.parent
+        
+        # Ajout de la racine du projet (contenant project_core, etc.)
+        if str(project_root) not in sys.path:
+            sys.path.insert(0, str(project_root))
+            print(f"[BOOTSTRAP] Ajout de '{project_root}' au sys.path")
+
+    except NameError:
+        # __file__ n'est pas défini dans certains environnements (ex: notebook interactif)
+        # On utilise le CWD comme fallback, ce qui est moins robuste.
+        project_root = Path.cwd()
+        if str(project_root) not in sys.path:
+            sys.path.insert(0, str(project_root))
+            print(f"[BOOTSTRAP-FALLBACK] Ajout de '{project_root}' (CWD) au sys.path")
+
+# Exécution immédiate du bootstrap
+bootstrap_project_path()
+# ----------------------------------------------------------------------
+
+# Imports internes
 from project_core.webapp_from_scripts.backend_manager import BackendManager
 from project_core.webapp_from_scripts.frontend_manager import FrontendManager
 # from project_core.webapp_from_scripts.playwright_runner import PlaywrightRunner
@@ -166,22 +197,33 @@ class UnifiedWebOrchestrator:
             return is_used
             
     def _load_config(self) -> Dict[str, Any]:
-        """Charge la configuration depuis le fichier YAML"""
+        """Charge la configuration depuis le fichier YAML et la fusionne avec les valeurs par défaut."""
         print("[DEBUG] unified_web_orchestrator.py: _load_config()")
+        
+        default_config = self._get_default_config()
+
         if not self.config_path.exists():
+            # Utilise le logger ici, qui est déjà initialisé via self.config (un dictionnaire vide au début)
+            # mais qui sera reconfiguré plus tard.
+            print(f"INFO: Le fichier de configuration '{self.config_path}' n'existe pas. Création avec les valeurs par défaut.")
             self._create_default_config()
-            
+            return default_config
+
         try:
             with open(self.config_path, 'r', encoding='utf-8') as f:
-                config = yaml.safe_load(f)
-            # Si le fichier yaml est vide, safe_load retourne None.
-            # On retourne la config par défaut pour éviter un crash.
-            if not isinstance(config, dict):
-                print(f"[WARNING] Le contenu de {self.config_path} est vide ou n'est pas un dictionnaire. Utilisation de la configuration par défaut.")
-                return self._get_default_config()
-            return config
+                user_config = yaml.safe_load(f)
+
+            if not isinstance(user_config, dict):
+                print(f"WARNING: Le contenu de {self.config_path} est vide ou invalide. Utilisation de la configuration par défaut.")
+                return default_config
+            
+            # Fusionner la config utilisateur sur la config par défaut
+            merged_config = self._deep_merge_dicts(default_config, user_config)
+            print("INFO: Configuration utilisateur chargée et fusionnée avec les valeurs par défaut.")
+            return merged_config
+
         except Exception as e:
-            print(f"Erreur chargement config {self.config_path}: {e}")
+            print(f"ERROR: Erreur lors du chargement de la configuration {self.config_path}: {e}. Utilisation de la configuration par défaut.")
             return self._get_default_config()
     
     def _create_default_config(self):
@@ -225,13 +267,25 @@ class UnifiedWebOrchestrator:
             },
             'backend': {
                 'enabled': True,
+                # 'module' et 'server_type' ne sont plus nécessaires car on utilise command_list
+                # On les garde pour la clarté mais ils ne seront pas utilisés par le backend_manager.
                 'module': 'api.main:app',
+                'server_type': 'uvicorn',
+
                 'start_port': backend_port,
                 'fallback_ports': fallback_ports,
                 'max_attempts': 5,
-                'timeout_seconds': 30,
+                'timeout_seconds': 180, # Timeout long pour le 1er démarrage
                 'health_endpoint': '/api/health',
-                'env_activation': 'powershell -File activate_project_env.ps1'
+
+                # La solution robuste: on passe une commande complète qui peut être exécutée
+                # directement par le système sans dépendre d'un PATH spécifique.
+                # On utilise "powershell.exe -Command" pour chaîner l'activation et l'exécution.
+                'command_list': [
+                    "powershell.exe",
+                    "-Command",
+                    "conda activate projet-is; python -m uvicorn api.main:app --host 127.0.0.1 --port 0 --reload"
+                ]
             },
             'frontend': {
                 'enabled': False,  # Optionnel selon besoins
@@ -385,58 +439,105 @@ class UnifiedWebOrchestrator:
     
     async def run_tests(self, test_paths: List[str] = None, **kwargs) -> bool:
         """
-        Exécute les tests Playwright avec le support natif.
+        Exécute les tests du projet (fonctionnels, E2E) via pytest dans l'environnement Conda.
         """
+        # On utilise le même flag de configuration pour activer/désactiver les tests.
         if not self.config.get('playwright', {}).get('enabled', False):
-            self.add_trace("[INFO] TESTS DESACTIVES", "Les tests Playwright sont désactivés dans la configuration.", "Tests non exécutés")
+            self.add_trace("[INFO] TESTS DESACTIVES", "Les tests sont désactivés dans la configuration ('playwright.enabled: false').", "Tests non exécutés")
             return True
 
+        # Les tests d'intégration nécessitent que l'application soit démarrée.
         if self.app_info.status != WebAppStatus.RUNNING:
-            self.add_trace("[WARNING] APPLICATION NON DEMARREE", "", "Démarrage requis avant tests", status="error")
+            self.add_trace("[WARNING] APPLICATION NON DEMARREE", "L'application doit être démarrée pour lancer les tests d'intégration.", "Démarrage requis avant tests", status="error")
             return False
             
-        if not self.browser and self.config.get('playwright', {}).get('enabled'):
-            self.add_trace("[WARNING] NAVIGATEUR PLAYWRIGHT NON PRÊT", "Tentative de lancement...", status="warning")
-            await self._launch_playwright_browser()
-            if not self.browser:
-                self.add_trace("[ERROR] ECHEC LANCEMENT NAVIGATEUR", "Impossible d'exécuter les tests", status="error")
-                return False
-
-        # Pause de stabilisation pour le serveur de développement React
-        if self.app_info.frontend_url:
-            delay = self.config.get('frontend', {}).get('stabilization_delay_s', 10)
-            self.add_trace("[STABILIZE] PAUSE STABILISATION", f"Attente de {delay}s pour que le frontend (Create React App) se stabilise...")
-            await asyncio.sleep(delay)
-
-        self.add_trace("[TEST] EXECUTION TESTS PLAYWRIGHT", f"Tests: {test_paths or 'tous'}")
-        
-        test_config = {
-            'backend_url': self.app_info.backend_url,
-            'frontend_url': self.app_info.frontend_url or self.app_info.backend_url,
-            'headless': self.headless,
-            **kwargs
-        }
-
-        # La communication avec Playwright se fait via les variables d'environnement
-        # que playwright.config.js lira (par exemple, BASE_URL)
+        # Configuration des variables d'environnement pour les tests
         base_url = self.app_info.frontend_url or self.app_info.backend_url
         backend_url = self.app_info.backend_url
-        os.environ['BASE_URL'] = base_url
-        os.environ['BACKEND_URL'] = backend_url
+        if base_url:
+            os.environ['BASE_URL'] = base_url
+        if backend_url:
+            os.environ['BACKEND_URL'] = backend_url
         
-        self.add_trace("[PLAYWRIGHT] CONFIGURATION URLS",
-                      f"BASE_URL={base_url}",
-                      f"BACKEND_URL={backend_url}")
+        self.add_trace("[TEST] CONFIGURATION URLS",
+                      f"BASE_URL={os.environ.get('BASE_URL')}",
+                      f"BACKEND_URL={os.environ.get('BACKEND_URL')}")
 
-        # L'ancienne gestion de subprocess.TimeoutExpired n'est plus nécessaire car
-        # le runner utilise maintenant create_subprocess_exec.
-        # Le timeout est géré plus haut par asyncio.wait_for.
-        # return await self.playwright_runner.run_tests(
-        #     test_type='python',
-        #     test_paths=test_paths,
-        #     runtime_config=test_config
-        # )
-        return True
+        self.add_trace("[TEST] LANCEMENT DES TESTS PYTEST", f"Tests: {test_paths or 'tous'}")
+
+        import shlex
+        conda_env_name = os.environ.get('CONDA_ENV_NAME', self.config.get('backend', {}).get('conda_env', 'projet-is'))
+        
+        self.logger.warning(f"Construction de la commande de test via 'powershell.exe' pour garantir l'activation de l'environnement Conda '{conda_env_name}'.")
+        
+        # La commande interne est maintenant "python -m pytest ..."
+        inner_cmd_list = ["python", "-m", "pytest"]
+        if test_paths:
+            inner_cmd_list.extend(test_paths)
+        
+        inner_cmd_str = " ".join(shlex.quote(arg) for arg in inner_cmd_list)
+        
+        # La commande complète pour PowerShell inclut l'activation via le script dédié
+        project_root_path = Path(__file__).resolve().parent.parent.parent
+        activation_script_path = project_root_path / "activate_project_env.ps1"
+        
+        # S'assurer que le chemin est correctement formaté pour PowerShell
+        # La commande complète exécute le script d'activation puis la commande interne
+        full_command_str = f". '{activation_script_path}'; {inner_cmd_str}"
+        
+        command = [
+            "powershell.exe",
+            "-Command",
+            full_command_str
+        ]
+
+        self.add_trace("[TEST] COMMANDE", " ".join(command))
+        
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                # Les variables d'environnement sont héritées, y compris celles qu'on vient de définir
+            )
+
+            # Log en temps réel
+            async def log_stream(stream, logger_func):
+                while not stream.at_eof():
+                    line = await stream.readline()
+                    if line:
+                        logger_func(line.decode('utf-8', errors='ignore').strip())
+
+            # Le 'self.logger.info' pour stdout et 'self.logger.error' pour stderr
+            # permet une distinction claire dans les logs.
+            await asyncio.gather(
+                log_stream(process.stdout, self.logger.info),
+                log_stream(process.stderr, self.logger.error)
+            )
+
+            return_code = await process.wait()
+
+            if return_code == 0:
+                self.add_trace("[TEST] SUCCES", f"Pytest a terminé avec succès (code {return_code}).", "Tests passés")
+                return True
+            else:
+                error_message = f"Pytest a échoué avec le code de sortie {return_code}."
+                self.add_trace("[TEST] ECHEC", error_message, status="error")
+                # On lève une exception pour que le pipeline d'intégration échoue
+                raise subprocess.CalledProcessError(return_code, command, "La sortie est dans les logs ci-dessus.")
+
+        except FileNotFoundError:
+            error_msg = "La commande 'conda' est introuvable. Assurez-vous que Conda est installé et configuré dans le PATH de l'environnement."
+            self.add_trace("[ERROR] COMMANDE INTROUVABLE", error_msg, status="error")
+            raise Exception(error_msg)
+        except subprocess.CalledProcessError as e:
+            # Cette exception a déjà été tracée, on la relance pour que le pipeline échoue.
+            self.logger.error(f"L'exécution des tests a échoué. Voir les logs pour la sortie de pytest.")
+            raise e
+        except Exception as e:
+            self.add_trace("[ERROR] ERREUR INATTENDUE TESTS", str(e), status="error")
+            self.logger.error(f"Une erreur inattendue est survenue pendant l'exécution des tests: {e}", exc_info=True)
+            raise e
     
     async def stop_webapp(self):
         """Arrête l'application web et nettoie les ressources de manière gracieuse."""
@@ -960,6 +1061,4 @@ def main():
     sys.exit(exit_code)
 
 if __name__ == "__main__":
-    from argumentation_analysis.core.environment import ensure_env
-    ensure_env()
     main()

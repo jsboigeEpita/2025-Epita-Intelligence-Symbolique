@@ -111,14 +111,14 @@ class ProcessCleanup:
     
     def __init__(self, logger: logging.Logger):
         self.logger = logger
-        self.managed_processes: Dict[str, psutil.Popen] = {}
+        self.managed_processes: Dict[str, subprocess.Popen] = {}
         self.cleanup_handlers: List[Callable] = []
         
         # Enregistrer gestionnaire de signal pour nettoyage automatique
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
     
-    def register_process(self, name: str, process: psutil.Popen):
+    def register_process(self, name: str, process: subprocess.Popen):
         """Enregistre un processus pour nettoyage automatique"""
         self.managed_processes[name] = process
         self.logger.info(f"Processus enregistré: {name} (PID: {process.pid})")

@@ -17,6 +17,37 @@ import sys
 import subprocess
 import argparse
 import json # Ajout de l'import json au niveau supérieur
+
+# --- Début du bloc d'auto-amorçage ---
+# Ce bloc vérifie les dépendances minimales requises pour que ce script fonctionne
+# et les installe si elles sont manquantes. C'est crucial car ce script peut
+# être appelé par un interpréteur Python qui n'est pas encore dans un environnement conda.
+try:
+    import pip
+except ImportError:
+    print("ERREUR CRITIQUE: pip n'est pas disponible. Impossible de continuer.", file=sys.stderr)
+    sys.exit(1)
+
+def _bootstrap_dependency(package_name, import_name=None):
+    if import_name is None:
+        import_name = package_name
+    try:
+        __import__(import_name)
+    except ImportError:
+        print(f"INFO: Le module '{import_name}' est manquant. Tentative d'installation via pip...")
+        try:
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', package_name])
+            print(f"INFO: Le paquet '{package_name}' a été installé avec succès.")
+        except subprocess.CalledProcessError as e:
+            print(f"ERREUR: Impossible d'installer '{package_name}'. Code de sortie: {e.returncode}", file=sys.stderr)
+            sys.exit(1)
+
+_bootstrap_dependency('python-dotenv', 'dotenv')
+_bootstrap_dependency('PyYAML', 'yaml')
+_bootstrap_dependency('requests')
+_bootstrap_dependency('psutil')
+# --- Fin du bloc d'auto-amorçage ---
+
 from enum import Enum, auto
 from typing import Dict, List, Optional, Tuple, Any, Union
 from pathlib import Path
@@ -1018,7 +1049,6 @@ def reinstall_pip_dependencies(manager: 'EnvironmentManager', env_name: str):
     pip_install_command = [
         'pip', 'install',
         '--no-cache-dir',
-        '--force-reinstall',
         '-r', str(requirements_path)
     ]
     
@@ -1043,7 +1073,16 @@ def reinstall_conda_environment(manager: 'EnvironmentManager', env_name: str):
 
     if manager.check_conda_env_exists(env_name):
         logger.info(f"Suppression de l'environnement existant '{env_name}'...")
-        subprocess.run([conda_exe, 'env', 'remove', '-n', env_name, '--y'], check=True)
+        
+        # Créer un environnement "propre" pour ne pas que conda pense qu'on est DANS l'env à supprimer
+        clean_env = os.environ.copy()
+        keys_to_remove = [k for k in clean_env if k.startswith('CONDA_')]
+        for k in keys_to_remove:
+            del clean_env[k]
+            logger.debug(f"Variable d'environnement {k} retirée pour la suppression de l'environnement.")
+
+        subprocess.run([conda_exe, 'env', 'remove', '-n', env_name, '--y'], check=True, env=clean_env)
+        
         logger.success(f"Environnement '{env_name}' supprimé.")
     else:
         logger.info(f"L'environnement '{env_name}' n'existe pas, pas besoin de le supprimer.")
@@ -1051,6 +1090,16 @@ def reinstall_conda_environment(manager: 'EnvironmentManager', env_name: str):
     logger.info(f"Création du nouvel environnement '{env_name}' avec Python 3.10...")
     subprocess.run([conda_exe, 'create', '-n', env_name, 'python=3.10', '--y'], check=True)
     logger.success(f"Environnement '{env_name}' recréé.")
+
+    logger.info("Installation des dépendances d'amorçage pour le gestionnaire d'environnement...")
+    bootstrap_deps = ['python-dotenv', 'pyyaml', 'requests', 'psutil']
+    pip_bootstrap_command = ['pip', 'install'] + bootstrap_deps
+    bootstrap_result = manager.run_in_conda_env(pip_bootstrap_command, env_name=env_name)
+    if bootstrap_result.returncode != 0:
+        logger.critical("Échec de l'installation des dépendances d'amorçage. Impossible de continuer.")
+        safe_exit(1, logger)
+    logger.success("Dépendances d'amorçage installées.")
+
 # S'assurer que les JARs de Tweety sont présents
     tweety_libs_dir = manager.project_root / "libs" / "tweety"
     logger.info(f"Vérification des JARs Tweety dans : {tweety_libs_dir}")
@@ -1223,7 +1272,10 @@ def main():
                 logger.debug(f"Fichier de diagnostic temporaire {temp_diag_file} supprimé.")
         
         logger.success("Toutes les opérations de réinstallation et de vérification se sont terminées avec succès.")
-        # Ne pas quitter ici pour permettre l'enchaînement avec --command.
+        logger.success("Toutes les opérations de réinstallation et de vérification se sont terminées avec succès.")
+        # Après une réinstallation, il est plus sûr de terminer ici.
+        # Le script appelant (ex: setup_project_env.ps1) peut alors le ré-exécuter pour l'activation.
+        safe_exit(0, logger)
 
     # 2. Gérer --check-only, qui est une action terminale.
     if args.check_only:

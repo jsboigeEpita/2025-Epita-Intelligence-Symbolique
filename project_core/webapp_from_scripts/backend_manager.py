@@ -113,6 +113,7 @@ class BackendManager:
                 elif server_type == 'uvicorn':
                     self.logger.info("Configuration pour un serveur Uvicorn (FastAPI) détectée.")
                     self.logger.info("Configuration pour un serveur Uvicorn (FastAPI) détectée. Utilisation du port 0 pour une allocation dynamique.")
+                    # Utilisation explicite de "python -m" pour plus de robustesse
                     inner_cmd_list = [
                         "python", "-m", "uvicorn", app_module_with_attribute, "--host", backend_host, "--port", "0", "--reload"
                     ]
@@ -127,8 +128,27 @@ class BackendManager:
                 
                 is_already_in_target_env = (current_conda_env == conda_env_name and conda_env_name in python_executable)
                 
-                self.logger.warning(f"Utilisation de `conda run` pour garantir l'activation de l'environnement '{conda_env_name}'.")
-                cmd = ["conda", "run", "-n", conda_env_name, "--no-capture-output"] + inner_cmd_list
+                self.logger.warning(f"Construction de la commande via 'powershell.exe' pour garantir l'activation de l'environnement Conda '{conda_env_name}'.")
+                
+                # Construction de la commande interne (ex: python -m uvicorn ...)
+                inner_cmd_str = " ".join(shlex.quote(arg) for arg in inner_cmd_list)
+                
+                # Construction de la commande complète pour PowerShell
+                # La commande complète pour PowerShell inclut maintenant l'activation de l'environnement via le script dédié
+                project_root_path = Path(__file__).resolve().parent.parent.parent
+                activation_script_path = project_root_path / "activate_project_env.ps1"
+                
+                # S'assurer que le chemin est correctement formaté pour PowerShell
+                # ` risolve le chemin complet
+                # . ` exécute le script
+                # `. ` exécute le script d'activation, puis la commande interne (qui contient déjà "python -m ...") est exécutée.
+                full_command_str = f". '{activation_script_path}'; {inner_cmd_str}"
+                
+                cmd = [
+                    "powershell.exe",
+                    "-Command",
+                    full_command_str
+                ]
             else:
                 # Cas d'erreur : ni module, ni command_list
                 raise ValueError("La configuration du backend doit contenir soit 'module', soit 'command_list'.")
