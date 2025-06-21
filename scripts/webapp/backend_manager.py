@@ -95,8 +95,9 @@ class BackendManager:
             # Commande de démarrage en fonction du type de serveur
             server_type = self.config.get('server_type', 'python')
             if server_type == 'uvicorn':
-                # Format pour uvicorn: uvicorn api.main:app --port 5003
-                cmd = ['uvicorn', self.module, '--port', str(port), '--host', '0.0.0.0']
+                # Format pour uvicorn avec wrapper ASGI: uvicorn path.to.asgi:app --port 5003
+                asgi_module = 'argumentation_analysis.services.web_api.asgi:app'
+                cmd = ['uvicorn', asgi_module, '--port', str(port), '--host', '0.0.0.0']
             else:
                 # Format classique: python -m module.main --port 5003
                 cmd = ['python', '-m', self.module, '--port', str(port)]
@@ -109,10 +110,12 @@ class BackendManager:
             
             self.process = subprocess.Popen(
                 cmd,
-                stdout=subprocess.DEVNULL,  # Éviter les problèmes d'encodage
-                stderr=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 cwd=Path.cwd(),
-                env=env
+                env=env,
+                text=True,
+                encoding='utf-8'
             )
             
             # Attente démarrage
@@ -165,12 +168,15 @@ class BackendManager:
                     self.logger.error(f"Processus backend terminé prématurément (code: {self.process.returncode})")
                     # Essayer de lire la sortie disponible (non-bloquant)
                     try:
-                        if self.process.stdout:
-                            output = self.process.stdout.read()
-                            if output:
-                                self.logger.error(f"Sortie processus: {output}")
-                    except:
-                        pass
+                        # Lire stderr et stdout pour obtenir plus de contexte sur l'erreur
+                        stdout_output = self.process.stdout.read() if self.process.stdout else ""
+                        stderr_output = self.process.stderr.read() if self.process.stderr else ""
+                        if stdout_output:
+                            self.logger.error(f"Sortie standard du processus backend:\n{stdout_output}")
+                        if stderr_output:
+                            self.logger.error(f"Sortie d'erreur du processus backend:\n{stderr_output}")
+                    except Exception as e:
+                        self.logger.error(f"Impossible de lire la sortie du processus : {e}")
                     return False
                 
                 async with aiohttp.ClientSession() as session:
