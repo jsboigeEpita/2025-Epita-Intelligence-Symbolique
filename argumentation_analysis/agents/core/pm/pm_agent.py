@@ -5,6 +5,7 @@ from typing import Dict, Any, Optional
 from semantic_kernel import Kernel # type: ignore
 from semantic_kernel.functions.kernel_arguments import KernelArguments # type: ignore
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from semantic_kernel.contents.chat_role import ChatRole
 
 
 from ..abc.agent_bases import BaseAgent
@@ -209,35 +210,29 @@ class ProjectManagerAgent(BaseAgent):
         snapshot_function = state_manager_plugin["get_current_state_snapshot"]
         # Correction : Les fonctions natives du kernel nécessitent que le kernel
         # soit passé comme argument lors de l'appel.
-        snapshot_result = await snapshot_function(kernel=kernel)
+        # Ajout du paramètre summarize requis.
+        arguments = KernelArguments(summarize=False)
+        snapshot_result = await snapshot_function(kernel=kernel, arguments=arguments)
         analysis_state_snapshot = str(snapshot_result)
 
         if not raw_text:
             self.logger.warning("Aucun texte brut (message utilisateur initial) trouvé dans l'historique.")
             return ChatMessageContent(role=Role.ASSISTANT, content='{"error": "Initial text (user message) not found in history."}', name=self.name)
 
-        # Décider de l'action : écrire la conclusion ou définir la prochaine tâche.
-        # Cette logique est simplifiée. Une vraie implémentation analyserait `analysis_state_snapshot`
-        # pour voir si toutes les tâches sont complétées.
-        # Si le prompt v11 est assez intelligent, il peut faire ce choix lui-même.
-        action_to_perform = "conclusion" if '"final_conclusion": null' not in analysis_state_snapshot and len(analysis_state_snapshot) > 10 else "define_tasks"
-
-        self.logger.info(f"PM Agent সিদ্ধান্ত (decision): {action_to_perform}")
+        # La logique de décision est maintenant entièrement déléguée à la fonction sémantique
+        # `DefineTasksAndDelegate` qui utilise `prompt_define_tasks_v11`.
+        # Ce prompt est conçu pour analyser l'état et déterminer s'il faut
+        # créer une tâche ou conclure.
+        self.logger.info("Délégation de la décision et de la définition de la tâche à la fonction sémantique.")
 
         try:
-            if action_to_perform == "conclusion" and '"conclusion"' in self.system_prompt: # Vérifie si la conclusion est une étape attendue
-                self.logger.info("Tentative de rédaction de la conclusion.")
-                result_str = await self.write_conclusion(analysis_state_snapshot, raw_text)
-            else:
-                self.logger.info("Définition de la prochaine tâche.")
-                result_str = await self.define_tasks_and_delegate(analysis_state_snapshot, raw_text)
-            
-            return ChatMessageContent(role=Role.ASSISTANT, content=result_str, name=self.name)
+            result_str = await self.define_tasks_and_delegate(analysis_state_snapshot, raw_text)
+            return ChatMessageContent(role=ChatRole.ASSISTANT, content=result_str, name=self.name)
 
         except Exception as e:
             self.logger.error(f"Erreur durant l'invocation du PM Agent: {e}", exc_info=True)
             error_msg = f'{{"error": "An unexpected error occurred in ProjectManagerAgent: {e}"}}'
-            return ChatMessageContent(role=Role.ASSISTANT, content=error_msg, name=self.name)
+            return ChatMessageContent(role=ChatRole.ASSISTANT, content=error_msg, name=self.name)
 
     # D'autres méthodes métiers pourraient être ajoutées ici si nécessaire,
     # par exemple, une méthode qui encapsule la logique de décision principale du PM
