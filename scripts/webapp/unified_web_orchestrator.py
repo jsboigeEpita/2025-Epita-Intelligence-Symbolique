@@ -167,7 +167,7 @@ class UnifiedWebOrchestrator:
                 'module': 'argumentation_analysis.services.web_api.app',
                 'start_port': backend_port,
                 'fallback_ports': fallback_ports,
-                'max_attempts': 5,
+                'max_attempts': 10,
                 'timeout_seconds': 30,
                 'health_endpoint': '/api/health',
                 'env_activation': 'powershell -File scripts/env/activate_project_env.ps1'
