@@ -22,11 +22,11 @@ from unittest.mock import patch, MagicMock, ANY
 
 from argumentation_analysis.ui import utils as aa_utils
 # Importer les fonctions déplacées depuis file_operations pour les tests qui les concernent directement
-from argumentation_analysis.ui.file_operations import load_extract_definitions, save_extract_definitions
+from argumentation_analysis.core.io_manager import load_extract_definitions, save_extract_definitions
 from argumentation_analysis.ui import config as ui_config_module # Pour mocker les constantes
 from cryptography.fernet import Fernet, InvalidToken # Ajout InvalidToken
 # Importer les fonctions de crypto directement pour les tests qui les utilisent
-from argumentation_analysis.utils.core_utils.crypto_utils import encrypt_data_with_fernet, decrypt_data_with_fernet
+from argumentation_analysis.core.utils.crypto_utils import encrypt_data_with_fernet, decrypt_data_with_fernet
 import base64 # Ajouté pour la fixture test_key
 
 

@@ -2,7 +2,7 @@ import pytest
 import pytest_asyncio
 from unittest.mock import patch, MagicMock, AsyncMock
 
-from argumentation_analysis.orchestration.analysis_runner import run_analysis, AgentChatException
+from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner
 
 @pytest_asyncio.fixture
 async def mock_llm_service():
@@ -34,7 +34,8 @@ async def test_run_analysis_success(
     test_text = "This is a test text."
 
     # --- Act ---
-    result = await run_analysis(text_content=test_text, llm_service=mock_llm_service)
+    runner = AnalysisRunner()
+    result = await runner.run_analysis_async(text_content=test_text, llm_service=mock_llm_service)
 
     # --- Assert ---
     # 1. State and Plugin creation
@@ -72,7 +73,8 @@ async def test_run_analysis_invalid_llm_service():
     del invalid_service.service_id  # Make it invalid
 
     with pytest.raises(ValueError, match="Un service LLM valide est requis."):
-        await run_analysis(text_content="test", llm_service=invalid_service)
+        runner = AnalysisRunner()
+        await runner.run_analysis_async(text_content="test", llm_service=invalid_service)
 
 @pytest.mark.asyncio
 @patch('argumentation_analysis.orchestration.analysis_runner.ProjectManagerAgent', side_effect=Exception("Agent Initialization Failed"))
@@ -82,7 +84,8 @@ async def test_run_analysis_agent_setup_exception(mock_pm_agent_raises_exception
     and returned in the result dictionary.
     """
     # --- Act ---
-    result = await run_analysis(text_content="test", llm_service=mock_llm_service)
+    runner = AnalysisRunner()
+    result = await runner.run_analysis_async(text_content="test", llm_service=mock_llm_service)
 
     # --- Assert ---
     assert result["status"] == "error"

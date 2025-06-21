@@ -2,7 +2,7 @@ import os
 import pytest # Importer pytest pour s'assurer qu'on est dans son contexte
 import jpype
 from pathlib import Path # Pour construire jvmpath dans la fonction locale
-from argumentation_analysis.core.jvm_setup import shutdown_jvm_if_needed, PORTABLE_JDK_PATH, LIBS_DIR # initialize_jvm n'est plus utilisé directement ici
+from argumentation_analysis.core.jvm_setup import shutdown_jvm, find_valid_java_home, LIBS_DIR # initialize_jvm n'est plus utilisé directement ici
 import logging
 
 # Configurer un logger pour voir les messages de jvm_setup et d'autres modules
@@ -22,7 +22,10 @@ def local_start_the_jvm_directly():
     """Fonction locale pour encapsuler l'appel direct à jpype.startJVM qui fonctionnait."""
     print("Appel direct de jpype.startJVM() depuis une fonction LOCALE au test...")
     
-    jvmpath = str(Path(PORTABLE_JDK_PATH) / "bin" / "server" / "jvm.dll")
+    portable_jdk_path = find_valid_java_home()
+    if not portable_jdk_path:
+        pytest.fail("Impossible de trouver un JDK valide pour le test minimal.")
+    jvmpath = str(Path(portable_jdk_path) / "bin" / "server" / "jvm.dll")
     classpath = [] # Classpath vide pour le test
     # Utiliser les options qui ont fonctionné lors de l'appel direct
     jvm_options = ['-Xms128m', '-Xmx512m', '-Dfile.encoding=UTF-8', '-Djava.awt.headless=true']
@@ -53,7 +56,8 @@ def test_minimal_jvm_startup_in_pytest(caplog): # Nom de fixture retiré
     os.environ['USE_REAL_JPYPE'] = 'true'
     print(f"Variable d'environnement USE_REAL_JPYPE (forcée pour ce test): '{os.environ.get('USE_REAL_JPYPE')}'")
     
-    print(f"Chemin JDK portable (variable globale importée): {PORTABLE_JDK_PATH}")
+    # La ligne suivante est supprimée car PORTABLE_JDK_PATH n'est plus importé.
+    # Le chemin est maintenant obtenu dynamiquement dans local_start_the_jvm_directly.
     print(f"Chemin LIBS_DIR (variable globale importée): {LIBS_DIR}")
 
     jvm_was_started_before_this_test = jpype.isJVMStarted()
@@ -85,11 +89,11 @@ def test_minimal_jvm_startup_in_pytest(caplog): # Nom de fixture retiré
         # Si jvm_was_started_before_this_test est True, un autre test/fixture l'a démarrée.
         if call_succeeded and jpype.isJVMStarted() and not jvm_was_started_before_this_test:
              print("Tentative d'arrêt de la JVM (car démarrée par l'appel local)...")
-             shutdown_jvm_if_needed() # Utilise toujours la fonction de jvm_setup pour l'arrêt
+             shutdown_jvm() # Utilise toujours la fonction de jvm_setup pour l'arrêt
              print("Arrêt de la JVM tenté.")
         elif not call_succeeded and jpype.isJVMStarted() and not jvm_was_started_before_this_test:
              print("Appel local a échoué mais la JVM semble démarrée. Tentative d'arrêt...")
-             shutdown_jvm_if_needed()
+             shutdown_jvm()
              print("Arrêt de la JVM tenté après échec de l'appel local.")
         else:
             print("La JVM n'a pas été (re)démarrée par ce test ou était déjà démarrée / est déjà arrêtée.")

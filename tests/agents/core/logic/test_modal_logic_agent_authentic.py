@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 # Import du système d'auto-activation d'environnement
-import project_core.core_from_scripts.auto_env
+from argumentation_analysis.core import environment as auto_env
 
 # Imports authentiques - vrai Semantic Kernel
 from semantic_kernel import Kernel
