@@ -31,7 +31,7 @@ from semantic_kernel.kernel import Kernel as SKernel # Alias pour éviter confli
  # Imports Semantic Kernel
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.contents import AuthorRole
+# from semantic_kernel.contents import AuthorRole
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
 # from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent, Agent
 from semantic_kernel.exceptions import AgentChatException
@@ -366,7 +366,7 @@ async def _run_analysis_conversation(
                          if function_name_attr and isinstance(function_name_attr, str) and '-' in function_name_attr:
                              parts = function_name_attr.split('-', 1)
                              if len(parts) == 2: plugin_name, func_name = parts
-                         args_dict = getattr(getattr(tc, 'function', None), 'arguments', {}) or {}
+                         args_dict = getattr(getattr(tc, 'function', None), 'arguments', {}) or []
                          args_str = json.dumps(args_dict) if args_dict else "{}"
                          args_display = args_str[:200] + "..." if len(args_str) > 200 else args_str
                          print(f"     [{tc_idx}] - {plugin_name}-{func_name}({args_display})")
@@ -585,4 +585,3 @@ if __name__ == "__main__":
          runner_logger.error(f"Une erreur est survenue lors de l'exécution de l'analyse : {e}", exc_info=True)
          print(f"ERREUR CLI: {e}")
          traceback.print_exc()
-

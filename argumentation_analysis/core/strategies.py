@@ -1,7 +1,7 @@
 ﻿# core/strategies.py
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
 from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.contents import AuthorRole
+# from semantic_kernel.contents import AuthorRole
 
 from typing import List, Dict, TYPE_CHECKING, Optional # Ajout de Optional
 import logging
