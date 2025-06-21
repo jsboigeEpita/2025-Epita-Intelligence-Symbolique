@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 
 # Ensure the project root is in the Python path to allow for absolute-like imports
-project_root = Path(__file__).resolve().parent.parent.parent
+project_root = Path(__file__).resolve().parent.parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
@@ -40,7 +40,7 @@ for demo in sample_texts:
     output_temp_path = None
     try:
         # Create temporary files for both input text and JSON output
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8', suffix='.txt', dir='argumentation_analysis') as input_fp:
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8', suffix='.txt') as input_fp:
             input_fp.write(demo['text'])
             input_temp_path = Path(input_fp.name)
 
@@ -103,7 +103,7 @@ for demo in sample_texts:
 
 
 # --- Demo from file ---
-demo_file_path = "argumentation_analysis/demos/sample_epita_discourse.txt"
+demo_file_path = "argumentation_analysis/demos/rhetorical_analysis/sample_epita_discourse.txt"
 demo_file_content = """
 Le projet EPITA Intelligence Symbolique 2025 est un défi majeur.
 Certains disent qu'il est trop ambitieux et voué à l'échec car aucun projet étudiant n'a jamais atteint ce niveau d'intégration.
