@@ -153,6 +153,43 @@ class ProjectContext:
                         return None
         return self._fallacy_detector_instance
 
+def _load_tweety_classes(context: 'ProjectContext'):
+    """Charge les classes Tweety nécessaires si la JVM est démarrée."""
+    if not context.jvm_initialized:
+        logger.warning("Tentative de chargement des classes Tweety alors que la JVM n'est pas initialisée.")
+        return
+
+    try:
+        import jpype
+        import jpype.imports
+        logger.info("Chargement des classes Java depuis Tweety pour l'analyse d'argumentation textuelle...")
+        
+        # 1. Charger le parser pour la logique propositionnelle (langage sous-jacent)
+        PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
+        pl_parser_instance = PlParser()
+        logger.info("Classe 'org.tweetyproject.logics.pl.parser.PlParser' chargée et instanciée.")
+
+        # 2. Charger le générateur de formules pour les règles ASPIC basées sur la logique prop.
+        PlFormulaGenerator = jpype.JClass("org.tweetyproject.arg.aspic.ruleformulagenerator.PlFormulaGenerator")
+        pl_formula_generator_instance = PlFormulaGenerator()
+        logger.info("Classe 'org.tweetyproject.arg.aspic.ruleformulagenerator.PlFormulaGenerator' chargée et instanciée.")
+
+        # 3. Charger et instancier le parser ASPIC principal avec ses dépendances
+        AspicParser = jpype.JClass("org.tweetyproject.arg.aspic.parser.AspicParser")
+        aspic_parser_instance = AspicParser(pl_parser_instance, pl_formula_generator_instance)
+        logger.info("Classe 'org.tweetyproject.arg.aspic.parser.AspicParser' chargée et instanciée.")
+
+        # 4. Stocker l'instance du parser dans le contexte de l'application
+        context.tweety_classes['AspicParser'] = aspic_parser_instance
+        logger.info("Instance de AspicParser stockée dans context.tweety_classes['AspicParser'].")
+        
+        # L'ancien 'ArgumentParser' est maintenant remplacé par le 'AspicParser' configuré.
+
+    except ImportError as e:
+        logger.critical(f"Échec critique de l'import d'une classe Tweety après le démarrage de la JVM: {e}", exc_info=True)
+    except Exception as e:
+        logger.critical(f"Erreur inattendue lors du chargement des classes Tweety: {e}", exc_info=True)
+
 
 def initialize_project_environment(env_path_str: str = None, root_path_str: str = None) -> ProjectContext:
     global project_root
@@ -227,6 +264,7 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
                  context.jvm_initialized = True
             else:
                 if initialize_jvm_func:
+                    logger.info("APPEL IMMINENT : Initialisation de la JVM via jvm_setup.initialize_jvm()...") # LOG AJOUTÉ
                     logger.info("Initialisation de la JVM via jvm_setup.initialize_jvm()...")
                     try:
                         if initialize_jvm_func(): # Appelle initialize_jvm qui retourne un booléen
@@ -245,6 +283,10 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
                     logger.error("La fonction initialize_jvm n'a pas pu être importée. Impossible d'initialiser la JVM.")
                     context.jvm_initialized = False
                     sys._jvm_initialized = False
+        
+    # --- Chargement des classes Java si la JVM a été initialisée ---
+    if context.jvm_initialized:
+        _load_tweety_classes(context)
 
     if CryptoService_class:
         logger.info("Initialisation de CryptoService...")
