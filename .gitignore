@@ -120,19 +120,20 @@ target/
 .gradle/
 *.class
 hs_err_pid*.log
+*.locked
 
 # Fichiers temporaires et sorties
 *.tmp
-*.log # Ajouté depuis HEAD
-*.bak # Ajouté depuis HEAD
+*.log
+*.bak
 temp/
-_temp/ # Ajouté depuis HEAD
-temp_*.py # Ajouté depuis HEAD
+_temp/
+temp_*.py
 temp_extracts/
 pr1_diff.txt
 {output_file_path}
-logs/ # Ajouté depuis HEAD
-reports/ # Dossier des rapports temporaires
+logs/
+reports/
 
 # Logs spécifiques au projet
 extract_agent.log
@@ -224,15 +225,10 @@ phase_d_trace_ideale_results_*.json
 logs/
 reports/
 venv_temp/
-<<<<<<< HEAD
-"sessions/" 
-=======
 "sessions/"
->>>>>>> b14ac385a3ae2d5a5c0c77d3891fc4cebd474c43
 
 # Log files
 # Fichiers de log
-*.log
 orchestration_finale_reelle.log
 
 # Dung agent logs
@@ -292,12 +288,5 @@ services/web_api/_temp_static/
 *.txt
 coverage_results.txt
 unit_test_results.txt
-<<<<<<< HEAD
-=======
-
-# Logs
-logs/
-
 # Cython debug symbols
 cython_debug/
->>>>>>> b14ac385a3ae2d5a5c0c77d3891fc4cebd474c43
