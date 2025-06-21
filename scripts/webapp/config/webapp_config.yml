@@ -6,7 +6,7 @@ backend:
   - 5005
   - 5006
   health_endpoint: /api/health
-  max_attempts: 5
+  max_attempts: 10
   module: api.main:app
   server_type: uvicorn
   start_port: 5003
