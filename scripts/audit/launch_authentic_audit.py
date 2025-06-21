@@ -7,7 +7,7 @@ Script de lancement pour l'audit d'authenticité avec préparation de l'environn
 Vérifie les prérequis et configure l'environnement avant le test.
 """
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 import os
 import sys
 import subprocess

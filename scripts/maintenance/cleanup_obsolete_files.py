@@ -11,7 +11,7 @@ Fonctionnalités :
 - Traçabilité complète
 """
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 import os
 import sys
 import json

@@ -6,7 +6,7 @@ Solution de contournement pour les problèmes de pip/setuptools.
 Configure manuellement le PYTHONPATH pour permettre l'importation du package.
 """
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 import sys
 import os
 from pathlib import Path

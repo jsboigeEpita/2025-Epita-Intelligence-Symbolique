@@ -7,7 +7,7 @@ Cette simulation reproduit fidèlement les patterns conversationnels observés
 dans le système Oracle pour identifier les axes d'amélioration.
 """
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 import json
 import logging
 from datetime import datetime

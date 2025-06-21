@@ -122,14 +122,14 @@ async def main():
 if __name__ == "__main__":
     # Activation de l'environnement
     try:
-        from project_core.core_from_scripts.auto_env import ensure_env
+        from argumentation_analysis.core.environment import ensure_env
         logger.info("Activation de l'environnement...")
         if not ensure_env(silent=False): # Mettre silent=True pour moins de verbosité
             logger.error("ERREUR: Impossible d'activer l'environnement. Le script pourrait échouer.")
             # Décommenter pour sortir si l'environnement est critique
             # sys.exit(1)
     except ImportError:
-        logger.error("ERREUR: Impossible d'importer 'ensure_env' depuis 'project_core.core_from_scripts.auto_env'.")
+        logger.error("ERREUR: Impossible d'importer 'ensure_env' depuis 'argumentation_analysis.core.environment'.")
         logger.error("Veuillez vérifier que le PYTHONPATH est correctement configuré ou que le script est lancé depuis la racine du projet.")
         sys.exit(1)
     

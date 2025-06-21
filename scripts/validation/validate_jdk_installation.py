@@ -3,7 +3,7 @@
 Script de validation de l'installation JDK 17 portable
 """
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 import os
 import subprocess
 import sys

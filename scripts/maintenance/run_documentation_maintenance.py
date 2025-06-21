@@ -3,7 +3,7 @@ Script d'intégration pour la maintenance de documentation Oracle Enhanced v2.1.
 Coordonne les différents outils de maintenance documentaire
 """
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 import os
 import sys
 import argparse

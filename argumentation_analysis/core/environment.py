@@ -7,11 +7,11 @@ Ce module fournit l'auto-activation automatique de l'environnement conda 'projet
 Conçu pour être utilisé par les agents AI et développeurs sans se soucier de l'état d'activation.
 
 UTILISATION SIMPLE (one-liner) :
-from project_core.core_from_scripts.auto_env import ensure_env
+from argumentation_analysis.core.environment import ensure_env
 ensure_env()
 
 OU ENCORE PLUS SIMPLE :
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 
 Le module s'auto-exécute à l'import et active l'environnement si nécessaire.
 
@@ -80,20 +80,12 @@ def ensure_env(env_name: str = None, silent: bool = True) -> bool:
         return True # On considère que l'environnement est déjà correctement configuré
 
     try:
-        # --- Début de l'insertion pour sys.path (si nécessaire pour trouver project_core.core_from_scripts) ---
-        # Cette section assure que project_core.core_from_scripts est dans sys.path pour les imports suivants.
-        # Elle est contextuelle à l'emplacement de ce fichier auto_env.py.
-        # Racine du projet = parent de 'scripts' = parent.parent.parent de __file__
-        project_root_path = Path(__file__).resolve().parent.parent.parent
-        scripts_core_path = project_root_path / "scripts" / "core"
-        if str(scripts_core_path) not in sys.path:
-            sys.path.insert(0, str(scripts_core_path))
-        if str(project_root_path) not in sys.path: # Assurer que la racine du projet est aussi dans le path
-             sys.path.insert(0, str(project_root_path))
-        # --- Fin de l'insertion pour sys.path ---
-
+        # L'ancienne manipulation de sys.path n'est plus nécessaire car ce module
+        # fait maintenant partie d'un package standard.
+        # Les dépendances sont gérées par l'installation du package.
+        # Les dépendances sont maintenant gérées via les imports standards du projet
         from project_core.core_from_scripts.environment_manager import EnvironmentManager, auto_activate_env as env_man_auto_activate_env
-        from project_core.core_from_scripts.common_utils import Logger # Assumant que Logger est dans common_utils
+        from project_core.core_from_scripts.common_utils import Logger
 
         # Le logger peut être configuré ici ou EnvironmentManager peut en créer un par défaut.
         # Pour correspondre à l'ancienne verbosité contrôlée par 'silent':
@@ -162,13 +154,13 @@ def ensure_env(env_name: str = None, silent: bool = True) -> bool:
 # car leur logique a été transférée à EnvironmentManager.
 
 def get_one_liner() -> str:
-    """Retourne le one-liner exact à utiliser dans les scripts"""
+    """Retourne le one-liner legacy. Cette fonction est conservée pour la compatibilité mais son usage est déprécié."""
     return "import sys, os; sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__ if '__file__' in globals() else os.getcwd())), 'scripts', 'core')) if os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__ if '__file__' in globals() else os.getcwd())), 'scripts', 'core')) else None; exec('try:\\n from auto_env import ensure_env; ensure_env()\\nexcept: pass')"
 
 
 def get_simple_import() -> str:
     """Retourne l'import simple à utiliser"""
-    return "import project_core.core_from_scripts.auto_env  # Auto-activation environnement intelligent"
+    return "import argumentation_analysis.core.environment  # Auto-activation environnement intelligent"
 
 
 # Auto-exécution à l'import pour usage ultra-simple
@@ -211,10 +203,10 @@ if __name__ == "__main__":
     
     print("\n[INFO] INTEGRATION DANS VOS SCRIPTS :")
     print("   # Methode 1 (ultra-simple) :")
-    print("   import project_core.core_from_scripts.auto_env")
+    print("   import argumentation_analysis.core.environment")
     print("")
     print("   # Methode 2 (explicite) :")
-    print("   from project_core.core_from_scripts.auto_env import ensure_env")
+    print("   from argumentation_analysis.core.environment import ensure_env")
     print("   ensure_env()")
     print("")
     print("   # Methode 3 (one-liner complet) :")

@@ -19,7 +19,7 @@ Date: 09/06/2025
 
 # ===== AUTO-ACTIVATION ENVIRONNEMENT =====
 try:
-    import project_core.core_from_scripts.auto_env  # Auto-activation environnement intelligent
+    import argumentation_analysis.core.environment  # Auto-activation environnement intelligent
 except ImportError:
     # Fallback si l'import direct ne fonctionne pas
     import sys
@@ -28,7 +28,7 @@ except ImportError:
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
     try:
-        import project_core.core_from_scripts.auto_env
+        import argumentation_analysis.core.environment
     except ImportError:
         # Si ça ne marche toujours pas, ignorer l'auto-env pour les tests
         pass

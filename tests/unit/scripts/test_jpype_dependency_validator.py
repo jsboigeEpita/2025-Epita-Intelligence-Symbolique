@@ -124,7 +124,7 @@ class TestJPypeDependencyValidator:
     def test_auto_env_activation(self):
         """Test 7: Vérifier que auto_env fonctionne correctement"""
         try:
-            from project_core.core_from_scripts.auto_env import ensure_env
+            from argumentation_analysis.core.environment import ensure_env
             # Ne pas appeler ensure_env() dans les tests pour éviter les effets de bord
             print("✅ Module auto_env importé avec succès")
         except ImportError as e:

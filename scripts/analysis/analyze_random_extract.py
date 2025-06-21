@@ -5,7 +5,7 @@ Script pour lancer l'analyse rhétorique sur un extrait aléatoire du corpus
 en utilisant l'analyseur modulaire existant.
 """
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 import os
 import sys
 import asyncio

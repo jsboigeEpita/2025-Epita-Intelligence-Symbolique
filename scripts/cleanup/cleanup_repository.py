@@ -7,7 +7,7 @@ qui ne devraient pas être versionnés, tout en préservant les fichiers de conf
 existants.
 """
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 import os
 import shutil
 import subprocess

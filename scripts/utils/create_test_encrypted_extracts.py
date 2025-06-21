@@ -8,7 +8,7 @@ Ce script génère un corpus d'exemple chiffré pour tester le système de déch
 et de listage d'extraits. Il simule la structure d'un vrai corpus politique sans
 contenu sensible.
 
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
 Usage:
     python scripts/utils/create_test_encrypted_extracts.py [--passphrase PASSPHRASE]
 """

@@ -8,7 +8,7 @@ Script de démonstration rapide pour valider l'utilisation
 authentique de GPT-4o-mini dans l'API web.
 
 Usage:
-import project_core.core_from_scripts.auto_env
+import argumentation_analysis.core.environment
     python scripts/demo_validation_point2.py
     python scripts/demo_validation_point2.py --start-only
 """
