@@ -6,11 +6,6 @@ import jpype
 
 # Import des services et modèles nécessaires
 # Les imports relatifs devraient maintenant pointer vers les bons modules.
-from ..services.analysis_service import AnalysisService
-from ..services.validation_service import ValidationService
-from ..services.fallacy_service import FallacyService
-from ..services.framework_service import FrameworkService
-from ..services.logic_service import LogicService
 from ..models.request_models import (
     AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest
 )
@@ -34,37 +29,45 @@ def get_services_from_app_context():
 @main_bp.route('/health', methods=['GET'])
 def health_check():
     """Vérification de l'état de l'API, y compris les dépendances critiques comme la JVM."""
-    services = current_app.services
-    
-    # Vérification de l'état de la JVM
-    is_jvm_started = jpype.isJVMStarted()
-    
-    # Construction de la réponse
-    response_data = {
-        "status": "healthy" if is_jvm_started else "unhealthy",
-        "message": "API d'analyse argumentative opérationnelle",
-        "version": "1.0.0",
-        "services": {
-            "jvm": {"running": is_jvm_started, "status": "OK" if is_jvm_started else "Not Running"},
-            "analysis": services.analysis_service.is_healthy(),
-            "validation": services.validation_service.is_healthy(),
-            "fallacy": services.fallacy_service.is_healthy(),
-            "framework": services.framework_service.is_healthy(),
-            "logic": services.logic_service.is_healthy()
+    try:
+        services = current_app.services
+        
+        # Vérification de l'état de la JVM
+        is_jvm_started = jpype.isJVMStarted()
+        
+        # Construction de la réponse
+        response_data = {
+            "status": "healthy" if is_jvm_started else "unhealthy",
+            "message": "API d'analyse argumentative opérationnelle",
+            "version": "1.0.0",
+            "services": {
+                "jvm": {"running": is_jvm_started, "status": "OK" if is_jvm_started else "Not Running"},
+                "analysis": services.analysis_service.is_healthy(),
+                "validation": services.validation_service.is_healthy(),
+                "fallacy": services.fallacy_service.is_healthy(),
+                "framework": services.framework_service.is_healthy(),
+                "logic": services.logic_service.is_healthy()
+            }
         }
-    }
-    
-    if not is_jvm_started:
-        logger.error("Health check failed: JVM is not running.")
-        return jsonify(response_data), 503  # 503 Service Unavailable
+        
+        if not is_jvm_started:
+            logger.error("Health check failed: JVM is not running.")
+            return jsonify(response_data), 503  # 503 Service Unavailable
 
-    return jsonify(response_data)
+        return jsonify(response_data)
+    except Exception as e:
+        logger.error(f"Erreur lors du health check: {str(e)}", exc_info=True)
+        return jsonify(ErrorResponse(
+            error="Erreur de health check",
+            message=str(e),
+            status_code=500
+        ).dict()), 500
 
 @main_bp.route('/analyze', methods=['POST'])
 def analyze_text():
     """Analyse complète d'un texte argumentatif."""
-    analysis_service, _, _, _, _ = get_services_from_app_context()
     try:
+        analysis_service = current_app.services.analysis_service
         data = request.get_json()
         if not data:
             return jsonify(ErrorResponse(error="Données manquantes", message="Le body JSON est requis", status_code=400).dict()), 400
@@ -83,8 +86,8 @@ def analyze_text():
 @main_bp.route('/validate', methods=['POST'])
 def validate_argument():
     """Validation logique d'un argument."""
-    _, validation_service, _, _, _ = get_services_from_app_context()
     try:
+        validation_service = current_app.services.validation_service
         data = request.get_json()
         if not data:
             return jsonify(ErrorResponse(error="Données manquantes", message="Le body JSON est requis", status_code=400).dict()), 400
@@ -100,8 +103,8 @@ def validate_argument():
 @main_bp.route('/fallacies', methods=['POST'])
 def detect_fallacies():
     """Détection de sophismes dans un texte."""
-    _, _, fallacy_service, _, _ = get_services_from_app_context()
     try:
+        fallacy_service = current_app.services.fallacy_service
         data = request.get_json()
         if not data:
             return jsonify(ErrorResponse(error="Données manquantes", message="Le body JSON est requis", status_code=400).dict()), 400
@@ -117,8 +120,8 @@ def detect_fallacies():
 @main_bp.route('/framework', methods=['POST'])
 def build_framework():
     """Construction d'un framework de Dung."""
-    _, _, _, framework_service, _ = get_services_from_app_context()
     try:
+        framework_service = current_app.services.framework_service
         data = request.get_json()
         if not data:
             return jsonify(ErrorResponse(error="Données manquantes", message="Le body JSON est requis", status_code=400).dict()), 400
