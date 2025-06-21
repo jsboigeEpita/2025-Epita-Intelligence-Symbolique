@@ -1,20 +1,22 @@
 """
-Agent d'extraction pour l'analyse argumentative.
+Implémentation de l'agent spécialisé dans l'extraction de texte.
 
-Ce module implémente `ExtractAgent`, un agent spécialisé dans l'extraction
-d'informations pertinentes à partir de textes sources. Il utilise une combinaison
-de fonctions sémantiques (via Semantic Kernel) et de fonctions natives pour
-proposer, valider et gérer des extraits de texte. L'agent est conçu pour
-interagir avec des définitions d'extraits et peut gérer des textes volumineux
-grâce à des stratégies de découpage et de recherche contextuelle.
+Ce module définit `ExtractAgent`, un agent dont la mission est de localiser
+et d'extraire avec précision des passages de texte pertinents à partir de
+documents sources volumineux.
 
-Fonctionnalités principales :
-- Proposition de marqueurs (début/fin) pour un extrait basé sur son nom.
-- Validation de la pertinence d'un extrait proposé.
-- Réparation d'extraits existants dont les marqueurs sont invalides.
-- Mise à jour et ajout de nouveaux extraits dans une structure de données.
-- Utilisation d'un plugin natif (`ExtractAgentPlugin`) pour des opérations
-  textuelles spécifiques (recherche dichotomique, extraction de blocs).
+L'architecture de l'agent repose sur une collaboration entre :
+-   **Fonctions Sémantiques** : Utilisent un LLM pour proposer de manière
+    intelligente des marqueurs de début et de fin pour un extrait de texte,
+    en se basant sur une description sémantique (son "nom").
+-   **Plugin Natif (`ExtractAgentPlugin`)** : Fournit des outils déterministes
+    pour manipuler le texte, comme l'extraction effective du contenu entre
+    deux marqueurs.
+-   **Fonctions Utilitaires** : Offrent des services de support comme le
+    chargement de texte à partir de diverses sources.
+
+Cette approche hybride permet de combiner la compréhension contextuelle du LLM
+avec la précision et la fiabilité du code natif.
 """
 
 import os
@@ -56,18 +58,28 @@ _lazy_imports()
 
 class ExtractAgent(BaseAgent):
     """
-    Agent spécialisé dans la localisation et l'extraction de passages de texte.
+    Agent spécialisé dans l'extraction de passages de texte sémantiquement pertinents.
 
-    Cet agent utilise des fonctions sémantiques pour proposer des marqueurs de début et de
-    fin pour un extrait pertinent, et un plugin natif pour valider et extraire
-    le texte correspondant.
+    Cet agent orchestre un processus en plusieurs étapes pour extraire un passage
+    de texte (un "extrait") à partir d'un document source plus large. Il ne se
+    contente pas d'une simple recherche par mot-clé, mais utilise un LLM pour
+    localiser un passage basé sur sa signification.
+
+    Le flux de travail typique est le suivant :
+    1.  Le LLM propose des marqueurs de début et de fin pour l'extrait (`extract_from_name`).
+    2.  Une fonction native extrait le texte entre ces marqueurs.
+    3.  (Optionnel) Le LLM valide si le texte extrait correspond bien à la demande initiale.
 
     Attributes:
-        EXTRACT_SEMANTIC_FUNCTION_NAME (ClassVar[str]): Nom de la fonction sémantique d'extraction.
-        VALIDATE_SEMANTIC_FUNCTION_NAME (ClassVar[str]): Nom de la fonction sémantique de validation.
-        NATIVE_PLUGIN_NAME (ClassVar[str]): Nom du plugin natif associé.
-        _find_similar_text_func (Callable): Fonction pour trouver un texte similaire.
-        _extract_text_func (Callable): Fonction pour extraire le texte entre des marqueurs.
+        EXTRACT_SEMANTIC_FUNCTION_NAME (ClassVar[str]): Nom de la fonction sémantique
+            utilisée pour proposer les marqueurs d'un extrait.
+        VALIDATE_SEMANTIC_FUNCTION_NAME (ClassVar[str]): Nom de la fonction sémantique
+            utilisée pour valider la pertinence d'un extrait.
+        NATIVE_PLUGIN_NAME (ClassVar[str]): Nom sous lequel le plugin natif
+            (`ExtractAgentPlugin`) est enregistré dans le kernel.
+        _find_similar_text_func (Callable): Dépendance injectée pour la recherche de texte.
+        _extract_text_func (Callable): Dépendance injectée pour l'extraction de texte.
+        _native_extract_plugin (Optional[ExtractAgentPlugin]): Instance du plugin natif.
     """
     
     EXTRACT_SEMANTIC_FUNCTION_NAME: ClassVar[str] = "extract_from_name_semantic"
@@ -108,11 +120,28 @@ class ExtractAgent(BaseAgent):
         }
 
     def setup_agent_components(self, llm_service_id: str) -> None:
+        """
+        Initialise et enregistre les composants de l'agent dans le kernel.
+
+        Cette méthode est responsable de :
+        1.  Instancier et enregistrer le plugin natif `ExtractAgentPlugin`.
+        2.  Créer et enregistrer les fonctions sémantiques (`extract_from_name_semantic`
+            et `validate_extract_semantic`) à partir des prompts.
+
+        Args:
+            llm_service_id (str): L'identifiant du service LLM à utiliser pour les
+                fonctions sémantiques.
+        """
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants pour {self.name} avec le service LLM ID: {llm_service_id}")
+
+        # Enregistrement du plugin natif
         self._native_extract_plugin = ExtractAgentPlugin()
         self._kernel.add_plugin(self._native_extract_plugin, plugin_name=self.NATIVE_PLUGIN_NAME)
         self.logger.info(f"Plugin natif '{self.NATIVE_PLUGIN_NAME}' enregistré.")
+
+        # Configuration et enregistrement de la fonction sémantique d'extraction
+        execution_settings = self._kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         extract_prompt_template_config = PromptTemplateConfig(
             template=EXTRACT_FROM_NAME_PROMPT,
             name=self.EXTRACT_SEMANTIC_FUNCTION_NAME,
@@ -122,7 +151,7 @@ class ExtractAgent(BaseAgent):
                 {"name": "source_name", "description": "Nom de la source", "is_required": True},
                 {"name": "extract_context", "description": "Texte source dans lequel chercher", "is_required": True}
             ],
-            execution_settings=self._kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+            execution_settings=execution_settings
         )
         self._kernel.add_function(
             function_name=self.EXTRACT_SEMANTIC_FUNCTION_NAME,
@@ -130,6 +159,8 @@ class ExtractAgent(BaseAgent):
             plugin_name=self.name
         )
         self.logger.info(f"Fonction sémantique '{self.EXTRACT_SEMANTIC_FUNCTION_NAME}' enregistrée dans le plugin '{self.name}'.")
+
+        # Configuration et enregistrement de la fonction sémantique de validation
         validate_prompt_template_config = PromptTemplateConfig(
             template=VALIDATE_EXTRACT_PROMPT,
             name=self.VALIDATE_SEMANTIC_FUNCTION_NAME,
@@ -143,7 +174,7 @@ class ExtractAgent(BaseAgent):
                 {"name": "extracted_text", "description": "Texte extrait", "is_required": True},
                 {"name": "explanation", "description": "Explication de l'extraction LLM", "is_required": True}
             ],
-            execution_settings=self._kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+            execution_settings=execution_settings
         )
         self._kernel.add_function(
             function_name=self.VALIDATE_SEMANTIC_FUNCTION_NAME,

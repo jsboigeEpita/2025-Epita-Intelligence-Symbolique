@@ -2,11 +2,19 @@
 # -*- coding: utf-8 -*-
 
 """
-Script pour tester l'orchestration complète avec tous les agents sur un texte complexe.
+Test d'intégration complet pour l'orchestration des agents.
 
-Ce script sélectionne un texte complexe depuis les sources disponibles,
-extrait son contenu et lance l'orchestration avec tous les agents,
-en s'assurant que l'agent Informel amélioré est bien utilisé.
+Ce script exécute un scénario de test de bout en bout :
+1.  Charge un texte d'analyse prédéfini (discours du Kremlin depuis un cache).
+2.  Initialise l'environnement complet (JVM, service LLM).
+3.  Instancie un `ConversationTracer` pour enregistrer tous les échanges.
+4.  Lance une conversation d'analyse complète entre tous les agents.
+5.  À la fin de l'exécution, génère deux artefacts :
+    - Un **fichier de trace JSON** détaillé (ex: `trace_complete_*.json`).
+    - Un **rapport d'analyse Markdown** (ex: `rapport_analyse_*.md`).
+
+Ce script est le "moteur" exécuté par le script parent
+`run_complete_test_and_analysis.py`.
 """
 
 import os
@@ -66,7 +74,15 @@ async def load_kremlin_speech():
 
 class ConversationTracer:
     """
-    Classe pour tracer la conversation entre les agents.
+    Enregistre les messages échangés durant une conversation d'agents.
+
+    Cette classe agit comme un "enregistreur" qui peut être branché au système
+    d'orchestration via un "hook". Chaque fois qu'un message est envoyé, la
+    méthode `add_message` est appelée, ce qui permet de construire une trace
+    complète de la conversation.
+
+    À la fin du processus, `finalize_trace` sauvegarde l'historique complet,
+    y compris les statistiques, dans un fichier JSON horodaté.
     """
     def __init__(self, output_dir):
         self.output_dir = Path(output_dir)
@@ -129,7 +145,15 @@ class ConversationTracer:
 
 async def run_orchestration_test():
     """
-    Exécute le test d'orchestration complète avec tous les agents.
+    Orchestre le scénario de test complet de l'analyse d'un texte.
+
+    Cette fonction est le cœur du script. Elle exécute séquentiellement toutes
+    les étapes nécessaires pour le test :
+    - Chargement du texte source.
+    - Initialisation de la JVM et du service LLM.
+    - Création du `ConversationTracer`.
+    - Lancement de `run_analysis_conversation` avec le hook de traçage.
+    - Finalisation de la trace et génération du rapport post-exécution.
     """
     # Charger le texte du discours du Kremlin directement depuis le cache
     text_content = await load_kremlin_speech()
@@ -197,9 +221,20 @@ async def run_orchestration_test():
     except Exception as e:
         logger.error(f"❌ Erreur lors de l'orchestration: {e}", exc_info=True)
 
-async def generate_analysis_report(trace_path, duration):
+async def generate_analysis_report(trace_path: str, duration: float):
     """
-    Génère un rapport d'analyse basé sur la trace de conversation.
+    Génère un rapport d'analyse sommaire à partir d'un fichier de trace.
+
+    Cette fonction ne réalise pas d'analyse sémantique. Elle charge le fichier
+    de trace JSON, en extrait des statistiques de haut niveau (nombre de messages,
+    agents impliqués, etc.) et les formate dans un fichier Markdown lisible.
+
+    Le rapport généré contient des sections "À évaluer manuellement", indiquant
+    qu'il sert de base pour une analyse humaine plus approfondie.
+
+    Args:
+        trace_path (str): Le chemin vers le fichier de trace JSON.
+        duration (float): La durée totale de l'exécution en secondes.
     """
     logger.info("Génération du rapport d'analyse...")
     

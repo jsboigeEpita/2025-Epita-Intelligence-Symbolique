@@ -1,9 +1,15 @@
 # argumentation_analysis/agents/core/oracle/oracle_base_agent.py
 """
-Agent Oracle de base avec système ACL et gestion de datasets.
+Fondations pour les agents de type "Oracle".
 
-Ce module implémente l'agent Oracle de base qui sert de fondation pour tous
-les agents Oracle spécialisés, avec contrôle d'accès granulaire et API standardisée.
+Ce module fournit deux classes essentielles :
+1.  `OracleTools`: Un plugin natif pour Semantic Kernel qui expose des fonctions
+    (outils) pour interagir avec le système de permissions et d'accès aux
+    données. C'est la "façade" que le LLM de l'agent peut utiliser.
+2.  `OracleBaseAgent`: Une classe de base abstraite pour tous les agents qui
+    agissent comme des gardiens de données. Elle intègre le `OracleTools` et
+    le `DatasetAccessManager` pour fournir une base robuste avec un contrôle
+    d'accès et un logging intégrés.
 """
 
 import logging
@@ -29,18 +35,39 @@ from argumentation_analysis.utils.performance_monitoring import monitor_performa
 
 class OracleTools:
     """
-    Plugin contenant les outils natifs pour les agents Oracle.
-    Ces méthodes interagissent avec le DatasetAccessManager.
+    Plugin d'outils natifs pour l'interaction avec le système Oracle.
+
+    Cette classe regroupe des fonctions natives (`@kernel_function`) qui
+    servent d'interface entre le monde du LLM (qui manipule des chaînes de
+    caractères) et la logique métier de l'Oracle (gérée par le
+    `DatasetAccessManager`).
     """
-    
+
     def __init__(self, dataset_manager: DatasetAccessManager, agent_name: Optional[str] = None):
+        """
+        Initialise le plugin d'outils.
+
+        Args:
+            dataset_manager (DatasetAccessManager): L'instance du gestionnaire
+                d'accès aux données qui contient la logique de permission et de requête.
+            agent_name (Optional[str]): Le nom de l'agent propriétaire de ces outils.
+        """
         self.dataset_manager = dataset_manager
         self.agent_name = agent_name or "OracleTools"
         self._logger = logging.getLogger(self.__class__.__name__)
-    
+
     @kernel_function(name="validate_query_permission", description="Valide qu'un agent a la permission pour un type de requête.")
     def validate_query_permission(self, agent_name: str, query_type: str) -> str:
-        """Valide les permissions d'un agent pour un type de requête."""
+        """
+        Vérifie si un agent a la permission d'exécuter un type de requête.
+
+        Args:
+            agent_name (str): Le nom de l'agent dont la permission est vérifiée.
+            query_type (str): Le type de requête (ex: 'card_inquiry').
+
+        Returns:
+            str: Un message confirmant ou infirmant l'autorisation.
+        """
         try:
             query_type_enum = QueryType(query_type)
             is_authorized = self.dataset_manager.check_permission(agent_name, query_type_enum)
@@ -58,7 +85,21 @@ class OracleTools:
     
     @kernel_function(name="execute_authorized_query", description="Exécute une requête autorisée sur le dataset.")
     def execute_authorized_query(self, agent_name: str, query_type: str, query_params: str) -> str:
-        """Exécute une requête Oracle autorisée."""
+        """
+        Exécute une requête après avoir implicitement validé les permissions.
+
+        Cette fonction délègue l'exécution au `DatasetAccessManager`, qui
+        gère à la fois la vérification des permissions et l'exécution de la
+        requête.
+
+        Args:
+            agent_name (str): Le nom de l'agent qui soumet la requête.
+            query_type (str): Le type de requête.
+            query_params (str): Les paramètres de la requête, sous forme de chaîne JSON.
+
+        Returns:
+            str: Un message décrivant le résultat de l'exécution.
+        """
         try:
             import json
             
@@ -89,7 +130,16 @@ class OracleTools:
     
     @kernel_function(name="get_available_query_types", description="Récupère les types de requêtes autorisés pour un agent.")
     def get_available_query_types(self, agent_name: str) -> str:
-        """Retourne les types de requêtes autorisés pour un agent."""
+        """
+        Récupère la liste des requêtes autorisées et les statistiques pour un agent.
+
+        Args:
+            agent_name (str): Le nom de l'agent concerné.
+
+        Returns:
+            str: Une chaîne de caractères résumant les permissions, le quota
+                 et la politique de révélation de l'agent.
+        """
         try:
             permission_rule = self.dataset_manager.get_agent_permissions(agent_name)
             
@@ -111,7 +161,22 @@ class OracleTools:
     
     @kernel_function(name="reveal_information_controlled", description="Révèle des informations selon la politique de révélation.")
     def reveal_information_controlled(self, target_agent: str, information_type: str, context: str = "") -> str:
-        """Révèle des informations de manière contrôlée."""
+        """
+        Révèle des informations de manière contrôlée (placeholder).
+
+        Note:
+            Cette fonction est un placeholder destiné à être surchargé par des
+            agents Oracle spécialisés pour implémenter des logiques de
+            révélation complexes.
+
+        Args:
+            target_agent (str): L'agent à qui l'information est révélée.
+            information_type (str): Le type d'information à révéler.
+            context (str): Contexte additionnel pour la décision.
+
+        Returns:
+            str: Un message confirmant la demande de révélation.
+        """
         try:
             # Cette méthode sera surchargée par les agents spécialisés
             return f"Révélation d'information demandée pour {target_agent} - Type: {information_type}"
@@ -122,7 +187,18 @@ class OracleTools:
     
     @kernel_function(name="query_oracle_dataset", description="Exécute une requête sur le dataset Oracle.")
     async def query_oracle_dataset(self, query_type: str, query_params: str) -> str:
-        """Exécute une requête sur le dataset Oracle de manière asynchrone."""
+        """
+        Exécute une requête sur le dataset pour le compte de l'agent propriétaire.
+
+        Cette fonction est une version asynchrone de `execute_authorized_query`.
+
+        Args:
+            query_type (str): Le type de requête à exécuter.
+            query_params (str): Les paramètres de la requête en format JSON.
+
+        Returns:
+            str: Un message résumant le résultat de la requête.
+        """
         try:
             import json
             
@@ -160,7 +236,21 @@ class OracleTools:
     
     @kernel_function(name="execute_oracle_query", description="Exécute une requête Oracle avec gestion complète.")
     async def execute_oracle_query(self, query_type: str, query_params: str) -> str:
-        """Exécute une requête Oracle avec validation complète."""
+        """
+        Exécute une requête Oracle (version sémantiquement redondante).
+
+        Note:
+            Cette fonction semble être fonctionnellement identique à
+            `query_oracle_dataset`. À conserver pour la compatibilité
+            sémantique si des plans l'utilisent.
+
+        Args:
+            query_type (str): Le type de requête.
+            query_params (str): Les paramètres de la requête en format JSON.
+
+        Returns:
+            str: Un message résumant le résultat de la requête.
+        """
         try:
             import json
             
@@ -195,7 +285,19 @@ class OracleTools:
     
     @kernel_function(name="check_agent_permission", description="Vérifie les permissions d'un agent.")
     async def check_agent_permission(self, query_type: str, target_agent: str = None) -> str:
-        """Vérifie les permissions d'un agent pour un type de requête."""
+        """
+        Vérifie les permissions d'un agent pour un type de requête.
+
+        Version asynchrone de `validate_query_permission`.
+
+        Args:
+            query_type (str): Le type de requête à vérifier.
+            target_agent (str, optional): L'agent à vérifier. Si None, vérifie
+                les permissions de l'agent propriétaire de l'outil. Defaults to None.
+
+        Returns:
+            str: Un message confirmant ou infirmant l'autorisation.
+        """
         try:
             query_type_enum = QueryType(query_type)
             agent_to_check = target_agent or self.agent_name
@@ -215,19 +317,29 @@ class OracleTools:
     
     @kernel_function(name="validate_agent_permissions", description="Valide les permissions d'un agent.")
     async def validate_agent_permissions(self, target_agent: str, query_type: str) -> str:
-        """Valide les permissions d'un agent pour un type de requête."""
+        """
+        Valide les permissions d'un agent (alias sémantique).
+
+        Cette fonction est un alias de `check_agent_permission` pour des raisons
+        de clarté sémantique dans les plans du LLM.
+        """
         return await self.check_agent_permission(query_type, target_agent)
 
 
 class OracleBaseAgent(BaseAgent):
     """
-    Agent Oracle de base pour la gestion d'accès aux datasets avec contrôle de permissions.
-    
-    Responsabilités:
-    - Détient l'accès exclusif à un dataset spécifique
-    - Gère les permissions d'accès par agent et par type de requête
-    - Valide et filtre les requêtes selon les règles définies
-    - Log toutes les interactions pour auditabilité
+    Classe de base pour les agents qui agissent comme des gardiens de données.
+
+    Cet agent sert de fondation pour des agents spécialisés (comme un agent
+    gérant un deck de cartes, un autre gérant des archives, etc.). Il intègre
+    nativement un `DatasetAccessManager` pour le contrôle fin des permissions
+    et un `OracleTools` pour exposer ses capacités à un LLM.
+
+    Les responsabilités principales de cette classe de base sont :
+    -   Recevoir et traiter des requêtes via `process_oracle_request`.
+    -   Déléguer la logique de permission et d'exécution au `DatasetAccessManager`.
+    -   Tenir un journal d'audit de toutes les interactions (`access_log`).
+    -   Exposer un ensemble standard d'outils et de statistiques.
     """
     
     # Prompt système de base pour tous les agents Oracle
@@ -269,16 +381,20 @@ Vous êtes un gardien impartial mais stratégique des données."""
                  plugins: Optional[List] = None,
                  **kwargs):
         """
-        Initialise une instance d'OracleBaseAgent.
-        
+        Initialise une instance de `OracleBaseAgent`.
+
         Args:
-            kernel: Le kernel Semantic Kernel à utiliser
-            dataset_manager: Gestionnaire d'accès aux datasets
-            agent_name: Le nom de l'agent Oracle
-            custom_instructions: Instructions personnalisées (optionnel)
-            access_level: Niveau d'accès de l'agent (optionnel, pour tests)
-            system_prompt_suffix: Suffixe du prompt système (optionnel, pour tests)
-            plugins: Liste des plugins à ajouter (optionnel)
+            kernel (Kernel): L'instance du kernel Semantic Kernel.
+            dataset_manager (DatasetAccessManager): Le gestionnaire qui contrôle
+                l'accès au jeu de données sous-jacent.
+            agent_name (str): Le nom de cet agent.
+            custom_instructions (Optional[str]): Instructions spécialisées à ajouter
+                au prompt système de base.
+            access_level (Optional[str]): Niveau d'accès de l'agent (pour tests).
+            system_prompt_suffix (Optional[str]): Suffixe à ajouter au prompt système.
+            allowed_query_types (Optional[List[QueryType]]): Types de requêtes que
+                cet agent peut traiter.
+            plugins (Optional[List]): Plugins additionnels à enregistrer dans le kernel.
         """
         # Instructions système (base + personnalisées)
         base_prompt = """Vous êtes un Agent Oracle, gardien des données et des informations.
@@ -357,15 +473,19 @@ Vous êtes un gardien impartial mais stratégique des données."""
     @monitor_performance(log_args=True)
     def process_oracle_request(self, requesting_agent: str, query_type: QueryType, query_params: Dict[str, Any]) -> OracleResponse:
         """
-        Interface haut niveau pour traiter une demande Oracle.
-        
+        Traite une requête adressée à l'Oracle de manière sécurisée.
+
+        C'est le point d'entrée principal pour les interactions internes (agent-à-agent).
+        Il délègue la requête au `DatasetAccessManager` et enregistre l'interaction
+        pour l'audit.
+
         Args:
-            requesting_agent: Agent qui fait la demande
-            query_type: Type de requête Oracle
-            query_params: Paramètres de la requête
-            
+            requesting_agent (str): Le nom de l'agent qui effectue la requête.
+            query_type (QueryType): Le type de requête (enum).
+            query_params (Dict[str, Any]): Les paramètres de la requête.
+
         Returns:
-            OracleResponse avec autorisation et données
+            OracleResponse: Un objet structuré contenant le résultat de l'opération.
         """
         self._logger.info(f"Traitement demande Oracle: {requesting_agent} -> {query_type.value}")
         

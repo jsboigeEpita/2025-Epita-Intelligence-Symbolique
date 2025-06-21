@@ -2,11 +2,17 @@
 # -*- coding: utf-8 -*-
 
 """
-Gestionnaire de modèles NLP pour l'analyse rhétorique.
+Gestionnaire Singleton pour les modèles NLP de Hugging Face.
 
-Ce module fournit un singleton pour charger et gérer les modèles NLP de Hugging Face
-de manière centralisée, afin d'éviter les rechargements multiples et de
-standardiser les modèles utilisés à travers l'application.
+Ce module crucial fournit la classe `NLPModelManager`, un Singleton responsable
+du chargement et de la distribution des modèles NLP (de la bibliothèque `transformers`)
+à travers toute l'application.
+
+Son rôle est de :
+- Assurer que chaque modèle NLP n'est chargé en mémoire qu'une seule fois.
+- Centraliser la configuration des noms de modèles utilisés.
+- Fournir une interface thread-safe pour le chargement et l'accès aux modèles.
+- Gérer gracieusement l'absence de la bibliothèque `transformers`.
 """
 
 import logging
@@ -39,7 +45,18 @@ TEXT_GENERATION_MODEL = "gpt2"
 
 class NLPModelManager:
     """
-    Singleton pour gérer le chargement et l'accès aux modèles NLP de manière asynchrone.
+    Singleton qui gère le cycle de vie des modèles NLP.
+
+    Cette classe utilise le design pattern Singleton pour garantir une seule instance
+    à travers l'application. Le chargement des modèles est une opération coûteuse,
+    ce pattern évite donc le gaspillage de ressources.
+
+    Le cycle de vie est le suivant :
+    1. L'instance est créée (ex: `nlp_model_manager = NLPModelManager()`).
+       Le constructeur est non-bloquant.
+    2. Le chargement réel est déclenché par l'appel à `load_models_sync()`.
+       Cette méthode est bloquante et doit être gérée avec soin.
+    3. Les modèles sont ensuite accessibles via `get_model(model_name)`.
     """
     _instance = None
     _lock = Lock()
@@ -62,9 +79,18 @@ class NLPModelManager:
 
     def load_models_sync(self):
         """
-        Charge tous les modèles NLP requis de manière synchrone.
-        Cette méthode est bloquante et doit être exécutée dans un thread séparé
-        pour ne pas geler l'application principale.
+        Charge tous les modèles NLP de manière synchrone et thread-safe.
+
+        Cette méthode est le point d'entrée pour le chargement des modèles. Elle est
+        conçue pour être appelée une seule fois au démarrage de l'application.
+        
+        Caractéristiques :
+        - **Bloquante :** L'appelant attendra que tous les modèles soient chargés.
+          À utiliser dans un thread de démarrage pour ne pas geler une IHM.
+        - **Thread-safe :** Utilise un verrou pour empêcher les chargements multiples
+          si la méthode est appelée par plusieurs threads simultanément.
+        - **Idempotente :** Si les modèles sont déjà chargés, la méthode retourne
+          immédiatement sans rien faire.
         """
         if self._models_loaded or not HAS_TRANSFORMERS:
             if self._models_loaded:
@@ -94,7 +120,13 @@ class NLPModelManager:
 
     def get_model(self, model_name: str):
         """
-        Récupère un modèle pré-chargé. Attention : vérifier si les modèles sont chargés.
+        Récupère un pipeline de modèle NLP pré-chargé.
+
+        Args:
+            model_name (str): Le nom du modèle à récupérer (ex: 'sentiment', 'ner').
+
+        Returns:
+            Le pipeline Hugging Face si le modèle est chargé et trouvé, sinon None.
         """
         if not self._models_loaded:
             logger.warning(f"Tentative d'accès au modèle '{model_name}' avant la fin du chargement.")
