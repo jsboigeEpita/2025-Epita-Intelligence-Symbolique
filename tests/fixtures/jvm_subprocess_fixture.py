@@ -41,12 +41,22 @@ def run_in_jvm_subprocess():
         
         # On exécute le processus. `check=True` lèvera une exception si le
         # sous-processus retourne un code d'erreur.
+        # Cloner l'environnement actuel et ajouter la racine du projet au PYTHONPATH.
+        # C'est crucial pour que les imports comme `from tests.fixtures...` fonctionnent
+        # dans le sous-processus.
+        env = os.environ.copy()
+        project_root = str(Path(__file__).parent.parent.parent.resolve())
+        python_path = env.get('PYTHONPATH', '')
+        if project_root not in python_path:
+            env['PYTHONPATH'] = f"{project_root}{os.pathsep}{python_path}"
+
         result = subprocess.run(
             wrapper_command,
             capture_output=True,
             text=True,
             encoding='utf-8',
-            check=False # On met à False pour pouvoir afficher les logs même si ça plante
+            check=False, # On met à False pour pouvoir afficher les logs même si ça plante
+            env=env
         )
         
         # Afficher la sortie pour le débogage, surtout en cas d'échec
