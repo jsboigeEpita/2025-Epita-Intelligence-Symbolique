@@ -994,39 +994,51 @@ def activate_project_env(command: str = None, env_name: str = None, logger: Logg
 def reinstall_conda_environment(manager: 'EnvironmentManager', env_name: str, verbose_level: int = 0):
     """Supprime et recrée intégralement l'environnement conda à partir de environment.yml."""
     logger = manager.logger
-    ColoredOutput.print_section(f"Réinstallation complète de l'environnement Conda '{env_name}' à partir de environment.yml")
+    ColoredOutput.print_section(f"Réinstallation complète de l'environnement '{env_name}' à partir de environment.yml")
 
-    conda_exe = manager._find_conda_executable()
-    if not conda_exe:
-        logger.critical("Impossible de trouver l'exécutable Conda. La réinstallation ne peut pas continuer.")
+    # --- Stratégie d'utilisation de Mamba ---
+    # 1. Tenter de trouver mamba. C'est le choix préféré pour sa vitesse.
+    # 2. Si mamba n'est pas trouvé, se rabattre sur conda.
+    installer_exe = shutil.which("mamba.exe") or shutil.which("mamba")
+    installer_name = "mamba"
+
+    if installer_exe:
+        logger.info(f"🚀 Utilisation de Mamba pour une installation rapide : {installer_exe}")
+    else:
+        logger.info("Mamba non trouvé. Utilisation de l'exécutable Conda standard.")
+        installer_exe = manager._find_conda_executable()
+        installer_name = "conda"
+
+    if not installer_exe:
+        logger.critical(f"Impossible de trouver un exécutable ({installer_name} ou conda). La réinstallation ne peut pas continuer.")
         safe_exit(1, logger)
-    logger.info(f"Utilisation de l'exécutable Conda : {conda_exe}")
-    
+
     env_file_path = manager.project_root / 'environment.yml'
     if not env_file_path.exists():
         logger.critical(f"Fichier d'environnement non trouvé : {env_file_path}")
         safe_exit(1, logger)
 
-    logger.info(f"Lancement de la réinstallation depuis {env_file_path}...")
-    # La commande 'conda env create --force' supprime l'environnement existant avant de créer le nouveau.
-    conda_create_command = [
-        conda_exe, 'env', 'create',
+    logger.info(f"Lancement de la réinstallation depuis {env_file_path} avec {installer_name}...")
+    
+    # La commande est la même pour `conda env create` et `mamba env create`
+    create_command = [
+        installer_exe, 'env', 'create',
         '--file', str(env_file_path),
         '--name', env_name,
-        '--force'
+        '--yes' # Accepter automatiquement toutes les confirmations
     ]
-    if verbose_level > 0:
-        conda_create_command.append(f"-{'v' * verbose_level}")
+
+    if installer_name == 'conda':
+        create_command.append('--force')
+
+    if verbose_level > 0 and installer_name == 'conda': # Mamba gère différemment la verbosité
+        create_command.append(f"-{'v' * verbose_level}")
         logger.info(f"Niveau de verbosité Conda activé : {verbose_level}")
-    
-    # Utiliser run_in_conda_env n'est pas approprié ici car l'environnement peut ne pas exister.
-    # On exécute directement avec subprocess.run
+
     try:
-        # On exécute directement avec subprocess.run, sans capturer la sortie.
-        # La sortie du sous-processus (stdout, stderr) sera directement affichée sur la console
-        # parente, fournissant un retour en temps réel plus robuste.
+        # La sortie est directement affichée sur la console pour un retour en temps réel.
         result = subprocess.run(
-            conda_create_command,
+            create_command,
             text=True,
             encoding='utf-8',
             errors='replace',
@@ -1034,14 +1046,16 @@ def reinstall_conda_environment(manager: 'EnvironmentManager', env_name: str, ve
         )
         
         if result.returncode != 0:
-            logger.error(f"Échec de la création de l'environnement Conda. Le log ci-dessus devrait contenir les détails.")
+            logger.error(f"Échec de la création de l'environnement avec {installer_name}. Le log ci-dessus devrait contenir les détails.")
+            if installer_name == "conda":
+                logger.warning("Conda peut être très lent. L'installation de 'mamba' (`conda install mamba -n base -c conda-forge`) est fortement recommandée.")
             safe_exit(1, logger)
 
     except (subprocess.SubprocessError, FileNotFoundError) as e:
-        logger.critical(f"Une erreur majeure est survenue lors de l'exécution de la commande conda : {e}")
+        logger.critical(f"Une erreur majeure est survenue lors de l'exécution de la commande {installer_name} : {e}")
         safe_exit(1, logger)
     
-    logger.success(f"Environnement '{env_name}' recréé avec succès depuis {env_file_path}.")
+    logger.success(f"Environnement '{env_name}' recréé avec succès depuis {env_file_path} en utilisant {installer_name}.")
 
     # S'assurer que les JARs de Tweety sont présents après la réinstallation
     tweety_libs_dir = manager.project_root / "libs" / "tweety"
