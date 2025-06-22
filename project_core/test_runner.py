@@ -15,12 +15,18 @@ import argparse
 import subprocess
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 # Configuration des chemins et des commandes
 ROOT_DIR = Path(__file__).parent.parent
 API_DIR = ROOT_DIR
 FRONTEND_DIR = ROOT_DIR / "interface_web"
+
+def _log(message):
+    """Affiche un message de log avec un timestamp."""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] {message}")
 
 
 class ServiceManager:
@@ -32,28 +38,28 @@ class ServiceManager:
 
     def start_services(self):
         """Démarre l'API backend et le frontend React en arrière-plan."""
-        print("Démarrage des services pour les tests E2E...")
+        _log("Démarrage des services pour les tests E2E...")
 
-        # Démarrer le backend API (Uvicorn sur le port 5004)
-        print("Démarrage du service API sur le port 5004...")
-        api_log_out = open("api_server.log", "w")
-        api_log_err = open("api_server.error.log", "w")
+        # Démarrer le backend API (Uvicorn sur le port 5003)
+        _log(f"Démarrage du service API sur le port 5003 (CWD: {API_DIR})")
+        api_log_out = open("api_server.log", "w", encoding="utf-8")
+        api_log_err = open("api_server.error.log", "w", encoding="utf-8")
         self.log_files["api_out"] = api_log_out
         self.log_files["api_err"] = api_log_err
         
         api_process = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "argumentation_analysis.services.web_api.app:app", "--port", "5004"],
+            [sys.executable, "-m", "uvicorn", "argumentation_analysis.services.web_api.app:app", "--port", "5003"],
             cwd=API_DIR,
             stdout=api_log_out,
             stderr=api_log_err
         )
         self.processes.append(api_process)
-        print(f"Service API démarré avec le PID: {api_process.pid}")
+        _log(f"Service API démarré avec le PID: {api_process.pid}")
 
         # Démarrer le frontend Starlette (uvicorn sur le port 3000)
-        print("Démarrage du service Frontend (Starlette) sur le port 3000...")
-        frontend_log_out = open("frontend_server.log", "w")
-        frontend_log_err = open("frontend_server.error.log", "w")
+        _log(f"Démarrage du service Frontend (Starlette) sur le port 3000 (CWD: {ROOT_DIR})")
+        frontend_log_out = open("frontend_server.log", "w", encoding="utf-8")
+        frontend_log_err = open("frontend_server.error.log", "w", encoding="utf-8")
         self.log_files["frontend_out"] = frontend_log_out
         self.log_files["frontend_err"] = frontend_log_err
         
@@ -64,30 +70,34 @@ class ServiceManager:
             stderr=frontend_log_err
         )
         self.processes.append(frontend_process)
-        print(f"Service Frontend démarré avec le PID: {frontend_process.pid}")
+        _log(f"Service Frontend démarré avec le PID: {frontend_process.pid}")
 
         # Laisser le temps aux serveurs de démarrer
-        print("Attente du démarrage des services (60 secondes)...")
+        _log("Attente du démarrage des services (60 secondes)...")
         time.sleep(60)
-        print("Services probablement démarrés.")
+        _log("Services probablement démarrés.")
 
     def stop_services(self):
         """Arrête proprement tous les services démarrés."""
-        print("Arrêt des services...")
+        _log("Arrêt des services...")
         for process in self.processes:
             try:
+                _log(f"Tentative d'arrêt du processus {process.pid}...")
                 process.terminate()
                 process.wait(timeout=10)
-                print(f"Processus {process.pid} arrêté.")
+                _log(f"Processus {process.pid} arrêté avec succès.")
             except subprocess.TimeoutExpired:
+                _log(f"Le processus {process.pid} ne s'est pas arrêté à temps, forçage...")
                 process.kill()
-                print(f"Processus {process.pid} forcé à s'arrêter.")
+                _log(f"Processus {process.pid} forcé à s'arrêter.")
         self.processes = []
 
         # Fermer les fichiers de log
+        _log("Fermeture des fichiers de log...")
         for log_file in self.log_files.values():
             log_file.close()
         self.log_files = {}
+        _log("Fichiers de log fermés.")
 
 
 class TestRunner:
@@ -108,8 +118,6 @@ class TestRunner:
 
         try:
             self._run_pytest()
-            if self.test_type in ["e2e", "all"]:
-                self._run_playwright()
         finally:
             if needs_services:
                 self.service_manager.stop_services()
@@ -133,52 +141,49 @@ class TestRunner:
 
 
     def _run_pytest(self):
-        """Lance pytest avec les arguments appropriés."""
+        """Lance pytest avec les arguments appropriés et une journalisation en temps réel."""
         test_paths = self._get_test_paths()
         if not test_paths:
-            print(f"Type de test '{self.test_type}' non reconnu pour pytest.")
+            _log(f"Type de test '{self.test_type}' non reconnu ou aucun chemin de test trouvé.")
             return
 
-        command = [sys.executable, "-m", "pytest", "-s"] + test_paths
+        # Ajout de -v pour un output plus verbeux
+        command = [sys.executable, "-m", "pytest", "-s", "-v"] + test_paths
         
-        # Ne lance pas les tests e2e avec pytest, ils sont gérés par playwright
-        if self.test_type == "e2e":
-            return
-
-        print(f"Lancement de pytest avec la commande : {' '.join(command)}")
-        result = subprocess.run(command, cwd=ROOT_DIR)
-
-        if result.returncode != 0:
-            print("Pytest a rencontré des erreurs.")
-            sys.exit(result.returncode) # On peut décider de stopper ici ou de continuer
-
-    def _run_playwright(self):
-        """Lance les tests Playwright."""
-        test_paths = self._get_test_paths()
-        if not test_paths:
-            print("Aucun chemin de test trouvé pour Playwright.")
-            return
-
-        command = ["npx", "playwright", "test"] + test_paths
         if self.browser:
             command.extend(["--browser", self.browser])
+        
+        _log(f"Lancement de pytest avec la commande: {' '.join(command)}")
+        _log(f"Répertoire de travail: {ROOT_DIR}")
 
-        print("Lancement de 'npm install' pour s'assurer que les dépendances Playwright sont installées...")
-        install_command = ["npm", "install"]
-        install_result = subprocess.run(install_command, cwd=ROOT_DIR, shell=True, capture_output=True, text=True)
-        if install_result.returncode != 0:
-            print("Erreur pendant 'npm install'.")
-            print(f"STDOUT:\n{install_result.stdout}")
-            print(f"STDERR:\n{install_result.stderr}")
-            return # Arrêter si l'installation échoue
+        process = subprocess.Popen(
+            command,
+            cwd=ROOT_DIR,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding='utf-8'
+        )
 
-        print(f"Lancement de Playwright avec la commande : {' '.join(command)}")
-        # On exécute depuis la racine du projet pour que les chemins soient corrects
-        result = subprocess.run(command, cwd=ROOT_DIR, shell=True)
+        # Lire et afficher la sortie en temps réel
+        while True:
+            output = process.stdout.readline()
+            if output == '' and process.poll() is not None:
+                break
+            if output:
+                print(output.strip())
+        
+        # Gérer les erreurs
+        stderr_output = process.stderr.read()
+        if stderr_output:
+            _log("Erreurs de pytest (stderr):")
+            print(stderr_output.strip())
 
-        if result.returncode != 0:
-            print("Playwright a rencontré des erreurs.")
-            # sys.exit(result.returncode)
+        if process.returncode != 0:
+            _log(f"Pytest a terminé avec le code d'erreur {process.returncode}.")
+            sys.exit(process.returncode)
+        else:
+            _log("Pytest a terminé avec succès.")
 
 
 def main():

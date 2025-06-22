@@ -142,7 +142,7 @@ else:
 pytest_plugins = [
    "tests.fixtures.integration_fixtures",
    "tests.fixtures.jvm_subprocess_fixture",
-   "pytest_playwright.pytest_playwright"
+#    "pytest_playwright.pytest_playwright"
 ]
 
 def pytest_addoption(parser):

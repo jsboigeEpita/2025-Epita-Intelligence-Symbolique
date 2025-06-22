@@ -75,7 +75,61 @@ if ($Type -eq "validation") {
 Write-Host "[INFO] Commande à exécuter : $CommandToRun" -ForegroundColor Cyan
 Write-Host "[INFO] Lancement des tests via $ActivationScript..." -ForegroundColor Cyan
 
-& $ActivationScript -CommandToRun $CommandToRun
+# & $ActivationScript -CommandToRun $CommandToRun
+
+# --- NOUVELLE LOGIQUE D'EXÉCUTION DIRECTE ---
+# Contournement de activate_project_env.ps1 et environment_manager.py pour le débogage.
+
+# 1. Charger manuellement les variables depuis .env
+$envFile = Join-Path $ProjectRoot ".env"
+if (-not (Test-Path $envFile)) {
+    Write-Host "[ERREUR] Fichier .env introuvable à la racine. Impossible de continuer." -ForegroundColor Red
+    exit 1
+}
+
+# Lire le fichier .env et charger les variables dans l'environnement du script
+Get-Content $envFile | ForEach-Object {
+    if ($_ -match "^\s*([\w.-]+)\s*=\s*(.*)\s*$") {
+        $key = $matches[1]
+        $value = $matches[2]
+        # Supprimer les guillemets optionnels
+        $value = $value -replace '^"|"$'
+        $value = $value -replace "^'|'$"
+        Set-Item -Path "env:$key" -Value $value
+        Write-Host "[INFO] Variable depuis .env chargée: $key" -ForegroundColor Gray
+    }
+}
+
+# 2. Vérifier que les variables essentielles sont là
+if (-not $env:CONDA_ENV_NAME) {
+    Write-Host "[ERREUR] CONDA_ENV_NAME n'est pas défini dans le fichier .env." -ForegroundColor Red
+    exit 1
+}
+
+$CondaEnvName = $env:CONDA_ENV_NAME
+Write-Host "[INFO] Environnement Conda cible : $CondaEnvName" -ForegroundColor Green
+
+# 3. Définir les variables d'environnement cruciales
+$env:PROJECT_ROOT = $ProjectRoot
+$env:PYTHONPATH = $ProjectRoot
+# Les autres variables comme les ports sont déjà chargées depuis .env
+
+Write-Host "[INFO] PYTHONPATH défini sur: $($env:PYTHONPATH)" -ForegroundColor Cyan
+
+# 4. Exécuter la commande directement avec 'conda run'
+Write-Host "[INFO] Exécution directe via 'conda run'..." -ForegroundColor Green
+
+try {
+    # --no-capture-output permet de voir la sortie en temps réel
+    # On passe explicitement la commande à exécuter à powershell
+    conda run -n $CondaEnvName --no-capture-output powershell -c "$CommandToRun"
+}
+catch {
+    Write-Host "[ERREUR] Échec de l'exécution de conda run." -ForegroundColor Red
+    Write-Host $_.Exception.Message -ForegroundColor Red
+    exit 1
+}
+# --- FIN DE LA NOUVELLE LOGIQUE ---
 
 $exitCode = $LASTEXITCODE
 Write-Host "[INFO] Exécution terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan
