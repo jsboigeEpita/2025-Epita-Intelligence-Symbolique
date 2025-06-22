@@ -41,7 +41,7 @@ class PlaywrightRunner:
         self.headless = config.get('headless', True)
         self.timeout_ms = config.get('timeout_ms', 10000)
         self.slow_timeout_ms = config.get('slow_timeout_ms', 20000)
-        self.test_paths = config.get('test_paths')
+        self.test_paths = config.get('test_paths', ["tests/integration/webapp/"])
         self.screenshots_dir = Path(config.get('screenshots_dir', 'logs/screenshots'))
         self.traces_dir = Path(config.get('traces_dir', 'logs/traces'))
         
@@ -197,7 +197,7 @@ class PlaywrightRunner:
                     capture_output=True,
                     text=True,
                     timeout=config.get('test_timeout', 300),  # 5 min par défaut
-                    cwd=Path.cwd() / "tests" / "integration" / "webapp"
+                    cwd=Path.cwd()
                 )
             else:
                 result = subprocess.run(
@@ -205,7 +205,7 @@ class PlaywrightRunner:
                     capture_output=True,
                     text=True,
                     timeout=config.get('test_timeout', 300),
-                    cwd=Path.cwd() / "tests" / "integration" / "webapp"
+                    cwd=Path.cwd()
                 )
             
             # Sauvegarde logs
@@ -348,3 +348,37 @@ class PlaywrightRunner:
             'traces_dir': str(self.traces_dir),
             'last_results': self.last_results
         }
+if __name__ == '__main__':
+    """
+    Point d'entrée pour l'exécution directe du script.
+    Permet de lancer les tests Playwright de manière autonome.
+    """
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(name)s - %(message)s')
+    logger = logging.getLogger("PlaywrightRunnerCLI")
+
+    # Configuration par défaut pour le lancement direct
+    default_config = {
+        'enabled': True,
+        'browser': 'chromium',
+        'headless': True,
+        'test_paths': ['integration/webapp/'],
+        'backend_url': os.getenv('BACKEND_URL', 'http://127.0.0.1:5003'),
+        'frontend_url': os.getenv('FRONTEND_URL', 'http://127.0.0.1:3000'),
+    }
+
+    runner = PlaywrightRunner(config=default_config, logger=logger)
+    
+    # Exécution des tests
+    async def main():
+        success = await runner.run_tests()
+        
+        # Affichage des résultats
+        results = runner.get_last_results()
+        if results:
+            logger.info(f"Résultats finaux: {json.dumps(results['stats'], indent=2)}")
+        
+        # Propagation du code de sortie pour l'intégration CI/CD
+        if not success:
+            sys.exit(1)
+
+    asyncio.run(main())

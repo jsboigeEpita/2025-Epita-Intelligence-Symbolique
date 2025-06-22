@@ -97,6 +97,10 @@ class ProcessCleaner:
                         if proc_info['cmdline']:
                             cmdline = ' '.join(proc_info['cmdline']).lower()
                             
+                            # Exclure les processus de test Playwright du nettoyage précoce
+                            if 'playwright' in cmdline:
+                               continue
+
                             if any(pattern in cmdline for pattern in self.process_patterns):
                                 webapp_processes.append(proc)
                                 self.logger.info(f"Processus trouvé: PID {proc_info['pid']} - {cmdline[:100]}")
