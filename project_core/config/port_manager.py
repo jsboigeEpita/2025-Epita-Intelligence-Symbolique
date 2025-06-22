@@ -6,6 +6,8 @@ Remplace la configuration dispersée des ports dans tout le projet.
 import json
 import os
 import socket
+import sys
+import argparse
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
@@ -33,6 +35,7 @@ class PortManager:
             config_path = project_root / "config" / "ports.json"
         
         self.config_path = Path(config_path)
+        self.lock_file_path = self.config_path.parent / ".port_lock"
         self.config = self._load_config()
         
     def _load_config(self) -> Dict:
@@ -265,6 +268,31 @@ class PortManager:
         _extract_services(self.config['ports'])
         return services
 
+    def lock_port(self, service: str) -> Optional[int]:
+        """Trouve un port disponible, le verrouille dans .port_lock et le retourne."""
+        try:
+            port = self.get_port(service)
+            lock_data = {'service': service, 'port': port}
+            with open(self.lock_file_path, 'w', encoding='utf-8') as f:
+                json.dump(lock_data, f)
+            return port
+        except (RuntimeError, ValueError):
+            return None
+
+    def get_locked_info(self) -> Optional[Dict]:
+        """Lit les informations de port depuis le fichier .port_lock."""
+        if not self.lock_file_path.exists():
+            return None
+        try:
+            with open(self.lock_file_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError):
+            return None
+
+    def unlock_port(self):
+        """Supprime le fichier de verrouillage."""
+        if self.lock_file_path.exists():
+            self.lock_file_path.unlink()
 
 # Instance globale pour utilisation simple
 _port_manager = None
@@ -299,18 +327,78 @@ def is_port_available(port: int) -> bool:
 
 
 if __name__ == "__main__":
-    # Test du gestionnaire de ports
+    parser = argparse.ArgumentParser(description="Port Manager CLI")
+    parser.add_argument(
+        '--export-env',
+        action='store_true',
+        help="Affiche les variables d'environnement au format KEY=VALUE. Utilise .port_lock si présent."
+    )
+    parser.add_argument(
+        '--lock-service',
+        type=str,
+        help="Trouve, verrouille et affiche le port pour le service spécifié."
+    )
+    parser.add_argument(
+        '--unlock',
+        action='store_true',
+        help="Supprime le fichier de verrouillage .port_lock."
+    )
+    args = parser.parse_args()
+
     manager = PortManager()
-    
-    print("=== Configuration des Ports ===")
-    for service, info in manager.list_all_services().items():
-        print(f"{service}: {info}")
-    
-    print("\n=== Variables d'environnement ===")
-    for var, value in manager.get_environment_variables().items():
-        print(f"{var}={value}")
-    
-    print(f"\n=== URLs ===")
-    print(f"Backend: {manager.get_url('backend')}")
-    print(f"Frontend: {manager.get_url('frontend')}")
-    print(f"API: {manager.get_api_base_url()}")
+
+    if args.lock_service:
+        port = manager.lock_port(args.lock_service)
+        if port:
+            print(port)
+        else:
+            sys.exit(1)
+            
+    elif args.unlock:
+        manager.unlock_port()
+        print("Port unlocked.")
+
+    elif args.export_env:
+        env_vars = {}
+        locked_info = manager.get_locked_info()
+
+        # DEBUG: Afficher les informations de verrouillage
+        print(f"DEBUG [port_manager]: lock_file_path={manager.lock_file_path}", file=sys.stderr)
+        print(f"DEBUG [port_manager]: locked_info={locked_info}", file=sys.stderr)
+        
+        if locked_info and locked_info.get('service') == 'backend':
+            # Utilise le port verrouillé pour générer les variables
+            locked_port = locked_info['port']
+            env_template = manager.config.get('environment_variables', {})
+            for var_name, template in env_template.items():
+                value = template.replace('{{backend.primary}}', str(locked_port))
+                if '{{frontend.primary}}' in value:
+                     # Si le frontend est nécessaire, il faut quand même le chercher
+                    frontend_port = manager.get_port('frontend')
+                    value = value.replace('{{frontend.primary}}', str(frontend_port))
+                env_vars[var_name] = value
+        else:
+            # Comportement par défaut
+            env_vars = manager.get_environment_variables()
+
+        for var, value in env_vars.items():
+            print(f"{var}={value}")
+            
+    else:
+        # Sortie de débogage pour exécution manuelle
+        locked_info = manager.get_locked_info()
+        if locked_info:
+            print(f"=== Port Verrouillé: {locked_info['service']} sur le port {locked_info['port']} ===")
+
+        print("\n=== Configuration des Ports (actuellement disponible) ===")
+        for service, info in manager.list_all_services().items():
+            print(f"{service}: {info}")
+        
+        print("\n=== Variables d'environnement (si générées maintenant) ===")
+        for var, value in manager.get_environment_variables().items():
+            print(f"{var}={value}")
+        
+        print(f"\n=== URLs (basées sur les ports disponibles) ===")
+        print(f"Backend: {manager.get_url('backend')}")
+        print(f"Frontend: {manager.get_url('frontend')}")
+        print(f"API: {manager.get_api_base_url()}")

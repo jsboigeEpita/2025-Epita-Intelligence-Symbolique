@@ -33,19 +33,25 @@ from datetime import datetime
 from dataclasses import dataclass, asdict
 from enum import Enum
 
+# Correction du chemin pour les imports internes
+# Le script est dans D:/.../scripts/apps/webapp/ ; la racine du projet est 3 niveaux au-dessus.
+project_root = Path(__file__).resolve().parents[3]
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 # Imports internes
-from scripts.webapp.backend_manager import BackendManager
-from scripts.webapp.frontend_manager import FrontendManager
-# from scripts.webapp.playwright_runner import PlaywrightRunner
-from scripts.webapp.process_cleaner import ProcessCleaner
+from scripts.apps.webapp.backend_manager import BackendManager
+from scripts.apps.webapp.frontend_manager import FrontendManager
+from scripts.apps.webapp.playwright_runner import PlaywrightRunner
+from scripts.apps.webapp.process_cleaner import ProcessCleaner
 
 # Import du gestionnaire centralisé des ports
 try:
-    from project_core.config.port_manager import get_port_manager, set_environment_variables
+    from project_core.config.port_manager import PortManager, get_port_manager, set_environment_variables
     CENTRAL_PORT_MANAGER_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     CENTRAL_PORT_MANAGER_AVAILABLE = False
-    print("[WARNING] Gestionnaire centralisé des ports non disponible, utilisation des ports par défaut")
+    print(f"[WARNING] Gestionnaire centralisé des ports non disponible ({e}), utilisation des ports par défaut")
 
 class WebAppStatus(Enum):
     """États de l'application web"""
@@ -98,7 +104,7 @@ class UnifiedWebOrchestrator:
         # Gestionnaires spécialisés
         self.backend_manager = BackendManager(self.config.get('backend', {}), self.logger)
         self.frontend_manager = FrontendManager(self.config.get('frontend', {}), self.logger)
-        # self.playwright_runner = PlaywrightRunner(self.config.get('playwright', {}), self.logger)
+        self.playwright_runner = PlaywrightRunner(self.config.get('playwright', {}), self.logger)
         self.process_cleaner = ProcessCleaner(self.logger)
         
         # État de l'application
@@ -140,7 +146,7 @@ class UnifiedWebOrchestrator:
                 port_manager = get_port_manager()
                 backend_port = port_manager.get_port('backend')
                 frontend_port = port_manager.get_port('frontend')
-                fallback_ports = port_manager.config['ports']['backend'].get('fallback', [5004, 5005, 5006])
+                fallback_ports = port_manager.config['ports']['backend'].get('fallback', list(range(backend_port + 1, backend_port + 21)))
                 
                 # Configuration des variables d'environnement
                 set_environment_variables()
@@ -148,13 +154,13 @@ class UnifiedWebOrchestrator:
                 
             except Exception as e:
                 print(f"[PORTS] Erreur gestionnaire centralisé: {e}, utilisation des valeurs par défaut")
-                backend_port = 5003
+                backend_port = 5010
                 frontend_port = 3000
-                fallback_ports = [5004, 5005, 5006]
+                fallback_ports = list(range(backend_port + 1, backend_port + 21))
         else:
-            backend_port = 5003
+            backend_port = 5010
             frontend_port = 3000
-            fallback_ports = [5004, 5005, 5006]
+            fallback_ports = list(range(backend_port + 1, backend_port + 21))
         
         return {
             'webapp': {
@@ -167,7 +173,7 @@ class UnifiedWebOrchestrator:
                 'module': 'argumentation_analysis.services.web_api.app',
                 'start_port': backend_port,
                 'fallback_ports': fallback_ports,
-                'max_attempts': 10,
+                'max_attempts': 3,
                 'timeout_seconds': 30,
                 'health_endpoint': '/api/health',
                 'env_activation': 'powershell -File scripts/env/activate_project_env.ps1'
@@ -185,7 +191,7 @@ class UnifiedWebOrchestrator:
                 'headless': True,
                 'timeout_ms': 10000,
                 'slow_timeout_ms': 20000,
-                'test_paths': ['tests/functional/'],
+                'test_paths': ['tests/e2e/python'],
                 'screenshots_dir': 'logs/screenshots',
                 'traces_dir': 'logs/traces'
             },
@@ -212,7 +218,7 @@ class UnifiedWebOrchestrator:
             format=logging_config.get('format', '%(asctime)s - %(levelname)s - %(message)s'),
             handlers=[
                 logging.FileHandler(log_file, encoding='utf-8'),
-                logging.StreamHandler(sys.stdout)
+                logging.StreamHandler(sys.stdout.reconfigure(encoding='utf-8'))
             ]
         )
         
@@ -285,33 +291,37 @@ class UnifiedWebOrchestrator:
             self.app_info.status = WebAppStatus.ERROR
             return False
     
-    # async def run_tests(self, test_paths: List[str] = None, **kwargs) -> bool:
-    #     """
-    #     Exécute les tests Playwright
+    async def run_tests(self, test_paths: List[str] = None, **kwargs) -> bool:
+        """
+        Exécute les tests Playwright
         
-    #     Args:
-    #         test_paths: Chemins des tests à exécuter
-    #         **kwargs: Options supplémentaires pour Playwright
+        Args:
+            test_paths: Chemins des tests à exécuter
+            **kwargs: Options supplémentaires pour Playwright
             
-    #     Returns:
-    #         bool: True si tests réussis
-    #     """
-    #     if self.app_info.status != WebAppStatus.RUNNING:
-    #         self.add_trace("[WARNING] APPLICATION NON DEMARREE", "", "Demarrage requis avant tests", status="error")
-    #         return False
+        Returns:
+            bool: True si tests réussis
+        """
+        if self.app_info.status != WebAppStatus.RUNNING:
+            self.add_trace("[WARNING] APPLICATION NON DEMARREE", "", "Demarrage requis avant tests", status="error")
+            if not await self.start_webapp(self.headless):
+                self.add_trace("[ERROR] ECHEC DEMARRAGE PRE-TEST", "", "Impossible de lancer l'application pour les tests", status="error")
+                return False
         
-    #     self.add_trace("[TEST] EXECUTION TESTS PLAYWRIGHT",
-    #                   f"Tests: {test_paths or 'tous'}")
+        self.add_trace("[TEST] EXECUTION TESTS PLAYWRIGHT",
+                      f"Tests: {test_paths or 'tous'}")
         
-    #     # Configuration runtime pour Playwright
-    #     test_config = {
-    #         'backend_url': self.app_info.backend_url,
-    #         'frontend_url': self.app_info.frontend_url or self.app_info.backend_url,
-    #         'headless': self.headless,
-    #         **kwargs
-    #     }
+        # Configuration runtime pour Playwright
+        test_config = {
+            'backend_url': self.app_info.backend_url,
+            'frontend_url': self.app_info.frontend_url or self.app_info.backend_url,
+            'headless': self.headless,
+            **kwargs
+        }
         
-    #     return await self.playwright_runner.run_tests(test_paths, test_config)
+        test_success = await self.playwright_runner.run_tests(test_paths, test_config)
+
+        return test_success
     
     async def stop_webapp(self):
         """Arrête l'application web et nettoie les ressources"""
@@ -329,6 +339,10 @@ class UnifiedWebOrchestrator:
                 
             # Cleanup processus
             await self.process_cleaner.cleanup_webapp_processes()
+
+            # Déverrouillage du port
+            if CENTRAL_PORT_MANAGER_AVAILABLE:
+                self._unlock_port()
             
             self.app_info = WebAppInfo()  # Reset
             self.add_trace("[OK] ARRET TERMINE", "", "Toutes les ressources liberees")
@@ -361,9 +375,7 @@ class UnifiedWebOrchestrator:
             await asyncio.sleep(2)
             
             # 3. Exécution tests
-            # success = await self.run_tests(test_paths)
-            self.logger.warning("La méthode de test de l'orchestrateur est désactivée. Les tests doivent être lancés séparément.")
-            success = True # On suppose que les tests externes seront lancés
+            success = await self.run_tests(test_paths)
             
             if success:
                 self.add_trace("[SUCCESS] INTEGRATION REUSSIE",
@@ -416,9 +428,13 @@ class UnifiedWebOrchestrator:
             self.app_info.backend_port = result['port']
             self.app_info.backend_pid = result['pid']
             
+            # Verrouillage du port pour les autres processus
+            if CENTRAL_PORT_MANAGER_AVAILABLE:
+                self._lock_port('backend', self.app_info.backend_port)
+
             self.add_trace("[OK] BACKEND OPERATIONNEL",
-                          f"Port: {result['port']} | PID: {result['pid']}", 
-                          f"URL: {result['url']}")
+                           f"Port: {result['port']} (verrouillé) | PID: {result['pid']}",
+                           f"URL: {result['url']}")
             return True
         else:
             self.add_trace("[ERROR] ECHEC BACKEND", result['error'], "", status="error")
@@ -462,6 +478,32 @@ class UnifiedWebOrchestrator:
         
         self.add_trace("[OK] SERVICES VALIDES", "Tous les endpoints repondent")
         return True
+
+    def _lock_port(self, service: str, port: int):
+        """Utilise PortManager pour verrouiller le port dans .port_lock."""
+        self.add_trace(f"[LOCK] VERROUILLAGE PORT", f"Service: {service}, Port: {port}")
+        try:
+            # On utilise une instance fraîche pour éviter les conflits d'état
+            pm = PortManager()
+            lock_data = {'service': service, 'port': port}
+            with open(pm.lock_file_path, 'w', encoding='utf-8') as f:
+                json.dump(lock_data, f)
+            # DEBUG: Vérifier le contenu du fichier de verrouillage juste après l'écriture
+            with open(pm.lock_file_path, 'r', encoding='utf-8') as f_read:
+                self.logger.info(f"DEBUG: Contenu de .port_lock écrit : {f_read.read()}")
+            self.logger.info(f"Port {port} pour le service {service} verrouillé dans {pm.lock_file_path}")
+        except Exception as e:
+            self.add_trace("[ERROR] ECHEC VERROUILLAGE", str(e), status="error")
+
+    def _unlock_port(self):
+        """Utilise PortManager pour déverrouiller le port."""
+        self.add_trace("[UNLOCK] DEVERROUILLAGE PORT", "Suppression du fichier .port_lock")
+        try:
+            pm = PortManager()
+            pm.unlock_port()
+            self.logger.info("Fichier de verrouillage des ports supprimé.")
+        except Exception as e:
+            self.add_trace("[ERROR] ECHEC DEVERROUILLAGE", str(e), status="error")
     
     async def _save_trace_report(self):
         """Sauvegarde le rapport de trace"""
@@ -572,9 +614,22 @@ def main():
                 await orchestrator.stop_webapp()
                 return True
             elif args.start:
-                return await orchestrator.start_webapp(headless, args.frontend)
+                # Démarrage simple, mais on maintient le processus en vie
+                if await orchestrator.start_webapp(headless, args.frontend):
+                    print(f"Backend démarré en arrière-plan. PID de l'orchestrateur : {os.getpid()}. PID du backend : {orchestrator.app_info.backend_pid}")
+                    # La boucle de maintien est supprimée pour un comportement non bloquant.
+                    # Le processus se terminera, mais le serveur backend (uvicorn) continuera de tourner.
+                    return True # Renvoyer True pour indiquer le succès
+                else:
+                    return False
+
             elif args.test:
-                return await orchestrator.run_tests(args.tests)
+                # Si on lance les tests seuls, on ne s'attend pas à ce que l'app soit déjà lancée
+                # On passe None si args.tests est une liste vide pour utiliser la config par défaut
+                success = await orchestrator.run_tests(args.tests if args.tests else None)
+                # Arrêt post-test
+                await orchestrator.stop_webapp()
+                return success
             else:  # Integration par défaut
                 return await orchestrator.full_integration_test(
                     headless, args.frontend, args.tests)

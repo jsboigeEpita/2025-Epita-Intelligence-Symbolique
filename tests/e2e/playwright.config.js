@@ -18,7 +18,8 @@ module.exports = defineConfig({
   /* Configuration partagée pour tous les projets */
   use: {
     /* URL de base pour les actions comme `await page.goto('/')` */
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    /* URL de base pour les actions. Utilise FRONTEND_URL pour la cohérence avec le reste des tests. */
+    baseURL: process.env.FRONTEND_URL || 'http://localhost:3000',
 
     /* Options de traçage - C'est la clé pour l'analyse ! */
     trace: 'on', // 'on' pour toujours, 'retain-on-failure' pour les échecs uniquement

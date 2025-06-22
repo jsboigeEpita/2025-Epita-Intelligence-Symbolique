@@ -95,9 +95,22 @@ class TestValidationService:
     
     @pytest.fixture
     def validation_service(self):
-        """Instance du service de validation."""
+        """Instance du service de validation avec un LogicService mocké."""
+        # Mock du LogicService pour éviter ses dépendances (Kernel, LLM, etc.)
+        mock_logic_service = Mock()
+        mock_logic_service.is_healthy.return_value = True
+
+        # Simuler une coroutine pour validate_argument_from_components
+        async def mock_validate_argument(request):
+            # Comportement simple pour le test : valide si la conclusion est "B"
+            if request.conclusion == "B":
+                return True
+            return False
+            
+        mock_logic_service.validate_argument_from_components = Mock(wraps=mock_validate_argument)
+        
         from ..services.validation_service import ValidationService
-        return ValidationService()
+        return ValidationService(logic_service=mock_logic_service)
     
     def test_service_initialization(self, validation_service):
         """Test de l'initialisation du service."""
@@ -108,6 +121,38 @@ class TestValidationService:
         """Test de la vérification de santé."""
         health_status = validation_service.is_healthy()
         assert isinstance(health_status, bool)
+        assert health_status is True # Doit être True car le mock est configuré ainsi
+
+    def test_validate_formal_argument_valid(self, validation_service):
+        """Test de validation d'un argument formel valide via le LogicService mocké."""
+        request = ValidationRequest(
+            premises=["Si A alors B", "A"],
+            conclusion="B",
+            logic_type="propositional"
+        )
+        
+        response = validation_service.validate_argument(request)
+        
+        assert response.success is True
+        assert response.result.is_valid is True
+        assert response.result.validity_score == 1.0
+        assert validation_service.logic_service.validate_argument_from_components.called
+
+    def test_validate_formal_argument_invalid(self, validation_service):
+        """Test de validation d'un argument formel invalide via le LogicService mocké."""
+        request = ValidationRequest(
+            premises=["Si A alors B", "B"],
+            conclusion="A", # Fallacy: Affirming the consequent
+            logic_type="propositional"
+        )
+        
+        response = validation_service.validate_argument(request)
+        
+        assert response.success is True
+        assert response.result.is_valid is False
+        assert response.result.validity_score == 0.0
+        assert "L'argument n'est pas logiquement valide" in response.result.issues[0]
+        assert validation_service.logic_service.validate_argument_from_components.called
     
     def test_validate_deductive_argument(self, validation_service):
         """Test de validation d'un argument déductif."""
@@ -343,12 +388,18 @@ class TestServiceIntegration:
             from ..services.validation_service import ValidationService
             from ..services.fallacy_service import FallacyService
             from ..services.framework_service import FrameworkService
+            from ..services.logic_service import LogicService
+
+            # Créer un mock pour LogicService qui sera partagé
+            mock_logic_service = Mock()
+            mock_logic_service.is_healthy.return_value = True
             
             services = [
                 AnalysisService(),
-                ValidationService(),
+                ValidationService(logic_service=mock_logic_service),
                 FallacyService(),
                 FrameworkService()
+                # On n'a pas besoin d'ajouter le LogicService lui-même ici
             ]
             
             for service_instance in services: # Renommé pour éviter conflit avec module 'service'

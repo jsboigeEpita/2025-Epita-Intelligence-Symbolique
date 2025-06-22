@@ -41,7 +41,7 @@ class PlaywrightRunner:
         self.headless = config.get('headless', True)
         self.timeout_ms = config.get('timeout_ms', 10000)
         self.slow_timeout_ms = config.get('slow_timeout_ms', 20000)
-        self.test_paths = config.get('test_paths', ['tests/functional/'])
+        self.test_paths = config.get('test_paths')
         self.screenshots_dir = Path(config.get('screenshots_dir', 'logs/screenshots'))
         self.traces_dir = Path(config.get('traces_dir', 'logs/traces'))
         
@@ -143,24 +143,15 @@ class PlaywrightRunner:
                     except Exception:
                         pass  # Ignore erreurs de suppression
     
-    def _build_pytest_command(self, test_paths: List[str], 
+    def _build_pytest_command(self, test_paths: List[str],
                              config: Dict[str, Any]) -> List[str]:
         """Construit la commande pytest avec options Playwright"""
         
-        # Base command avec activation environnement
-        if sys.platform == "win32":
-            cmd = [
-                'powershell', '-File', 'scripts/env/activate_project_env.ps1',
-                '-CommandToRun', 'python -m pytest'
-            ]
-        else:
-            cmd = ['conda', 'run', '-n', 'projet-is', 'python', '-m', 'pytest']
-        
         # Options pytest
         pytest_args = [
-            '-v',  # Verbose
-            '-s',  # Pas de capture stdout
-            '--tb=short',  # Traceback court
+            '-v',
+            '-s',
+            '--tb=short',
         ]
         
         # Options Playwright
@@ -178,15 +169,12 @@ class PlaywrightRunner:
         # Chemins de tests
         pytest_args.extend(test_paths)
         
-        # Marqueurs Playwright - temporairement désactivé pour débuggage
-        # pytest_args.extend(['-m', 'playwright'])
-        
-        # Intégration dans commande
-        if sys.platform == "win32":
-            # Pour PowerShell, joindre les arguments pytest
-            cmd[-1] += ' ' + ' '.join(pytest_args)
-        else:
-            cmd.extend(pytest_args)
+        # Construction de la commande finale
+        # La logique a été unifiée pour être plus directe.
+        # L'environnement est déjà activé, on peut appeler python directement.
+        python_executable = sys.executable  # Utilise l'interpréteur courant
+        cmd = [python_executable, '-m', 'pytest']
+        cmd.extend(pytest_args)
         
         return cmd
     

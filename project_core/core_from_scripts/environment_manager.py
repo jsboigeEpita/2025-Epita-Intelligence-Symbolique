@@ -412,8 +412,8 @@ class EnvironmentManager:
         # --- CORRECTIF OMP: Error #15 ---
         # Force la variable d'environnement pour éviter les conflits de librairies OpenMP
         # (souvent entre la version de PyTorch et celle de scikit-learn/numpy).
-        self.sub_process_env['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
-        self.logger.info("Injection de KMP_DUPLICATE_LIB_OK=TRUE pour éviter les erreurs OMP.")
+        # self.sub_process_env['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+        # self.logger.info("Injection de KMP_DUPLICATE_LIB_OK=TRUE pour éviter les erreurs OMP.")
 
         self.logger.info(f"Variables d'environnement préparées pour le sous-processus (extrait): "
                          f"CONDA_DEFAULT_ENV={self.sub_process_env.get('CONDA_DEFAULT_ENV')}, "

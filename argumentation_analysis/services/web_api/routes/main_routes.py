@@ -65,22 +65,24 @@ def health_check():
         ).dict()), 500
 
 @main_bp.route('/analyze', methods=['POST'])
-def analyze_text():
+async def analyze_text():
     """Analyse complète d'un texte argumentatif."""
+    logger.info("Entering analyze_text route")
     try:
         analysis_service = current_app.services.analysis_service
         data = request.get_json()
         if not data:
             return jsonify(ErrorResponse(error="Données manquantes", message="Le body JSON est requis", status_code=400).dict()), 400
-        
+
         analysis_request = AnalysisRequest(**data)
-        result = asyncio.run(analysis_service.analyze_text(analysis_request))
+        result = await analysis_service.analyze_text(analysis_request)
+        logger.info("Exiting analyze_text route")
         return jsonify(result.dict())
-        
+
     except ValidationError as e:
         logger.warning(f"Validation des données d'analyse a échoué: {str(e)}")
         return jsonify(ErrorResponse(error="Données invalides", message=str(e), status_code=400).dict()), 400
-        
+
     except Exception as e:
         logger.error(f"Erreur lors de l'analyse: {str(e)}", exc_info=True)
         return jsonify(ErrorResponse(error="Erreur d'analyse", message=str(e), status_code=500).dict()), 500
@@ -127,6 +129,20 @@ def build_framework():
         data = request.get_json()
         if not data:
             return jsonify(ErrorResponse(error="Données manquantes", message="Le body JSON est requis", status_code=400).dict()), 400
+
+        # Gérer le format de requête alternatif avec 'attack_relations' pour la compatibilité
+        if 'arguments' in data and 'attack_relations' in data:
+            args_by_id = {arg['id']: arg for arg in data['arguments']}
+            for rel in data.get('attack_relations', []):
+                attacker_id = rel.get('from')
+                target_id = rel.get('to')
+                if attacker_id and target_id and attacker_id in args_by_id:
+                    if 'attacks' not in args_by_id[attacker_id]:
+                        args_by_id[attacker_id]['attacks'] = []
+                    if target_id not in args_by_id[attacker_id]['attacks']:
+                        args_by_id[attacker_id]['attacks'].append(target_id)
+            
+            data['arguments'] = list(args_by_id.values())
 
         framework_request = FrameworkRequest(**data)
         result = framework_service.build_framework(framework_request)
