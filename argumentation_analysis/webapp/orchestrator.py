@@ -1086,15 +1086,11 @@ class UnifiedWebOrchestrator:
 
             # Sauvegarde l'URL du frontend pour que les tests puissent la lire
             print("[DEBUG] unified_web_orchestrator.py: Saving frontend URL")
-            try:
-                log_dir = Path("logs")
-                log_dir.mkdir(exist_ok=True)
-                with open(log_dir / "frontend_url.txt", "w") as f:
-                    f.write(result['url'])
-                self.add_trace("[SAVE] URL FRONTEND SAUVEGARDEE", f"URL {result['url']} écrite dans logs/frontend_url.txt")
-                print(f"[DEBUG] unified_web_orchestrator.py: Frontend URL saved to logs/frontend_url.txt: {result['url']}")
-            except Exception as e:
-                self.add_trace("[ERROR] SAUVEGARDE URL FRONTEND", str(e), status="error")
+            # La communication de l'URL se fait maintenant via les variables d'environnement
+            # et la sortie standard de l'orchestrateur. Le fichier n'est plus nécessaire.
+            self.add_trace("[INFO] URL FRONTEND DISPONIBLE", f"URL: {result['url']}", status="success")
+            # Afficher l-URL sur la sortie standard pour que les scripts externes puissent la capturer.
+            print(f"FRONTEND_URL_READY={result['url']}")
             
             return True
         else:

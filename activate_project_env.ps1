@@ -37,92 +37,106 @@ function Write-Log {
     $Host.UI.WriteErrorLine($logLine)
 }
 
-# --- LA CONFIGURATION JAVA EST DÉLÉGUÉE AU SCRIPT PYTHON ---
-# Le script 'environment_manager.py' est maintenant entièrement responsable
-# de la détection, validation, et auto-installation du JDK via le fichier .env.
-# Cela centralise la logique et la rend plus robuste.
-Write-Log "La configuration de JAVA_HOME est déléguée à environment_manager.py." "INFO"
+# Fonction pour trouver un exécutable Python robuste
+function Get-PythonExecutable {
+    # Windows: py.exe est le plus fiable
+    if ($IsWindows) {
+        $pythonExec = Get-Command "py.exe" -ErrorAction SilentlyContinue
+        if ($pythonExec) {
+            Write-Log "Lanceur Python 'py.exe' trouvé. Utilisation recommandée."
+            return $pythonExec.Source
+        }
+    }
+    # Ordre de préférence: python3, python
+    $candidates = @("python3", "python")
+    foreach ($candidate in $candidates) {
+        $pythonExec = Get-Command $candidate -ErrorAction SilentlyContinue
+        if ($pythonExec) {
+            Write-Log "Exécutable Python trouvé: $($pythonExec.Source)"
+            return $pythonExec.Source
+        }
+    }
+    Write-Log "Aucun exécutable Python (py.exe, python3, python) n'a été trouvé dans le PATH." "ERROR"
+    return $null
+}
 
-# Configuration
-Write-Log "Activating environment..." "DEBUG"
-$ProjectRoot = $PSScriptRoot
-$PythonModule = "project_core/core_from_scripts/environment_manager.py"
+
+# --- Début du Script ---
 
 try {
-    # Si un chemin de script Python est fourni, on construit la commande à exécuter
-    # Cela offre un raccourci pratique par rapport à --CommandToRun "python ..."
+    # === 1. Configuration et Validation des chemins ===
+    Write-Log "Initialisation du script d'environnement."
+
+    $ProjectRoot = $PSScriptRoot
+    $PythonManagerModule = "project_core/core_from_scripts/environment_manager.py"
+    $PythonManagerScriptPath = Join-Path $ProjectRoot $PythonManagerModule
+
+    if (-not (Test-Path $PythonManagerScriptPath)) {
+        throw "Le script de gestion d'environnement Python est introuvable: $PythonManagerScriptPath"
+    }
+
+    # === 2. Détection de l'interpréteur Python ===
+    $PythonExecutable = Get-PythonExecutable
+    if (-not $PythonExecutable) {
+        throw "Python n'est pas installé ou non accessible. Veuillez l'installer et l'ajouter à votre PATH."
+    }
+    Write-Log "Utilisation de l'interpréteur: $PythonExecutable"
+
+    # === 3. Construction de la commande à exécuter ===
+    $FinalCommandToRun = $CommandToRun
+    
+    # Raccourci pour exécuter un script python directement
     if ($PythonScriptPath) {
         $FullScriptPath = Join-Path $ProjectRoot $PythonScriptPath
         if (-not (Test-Path $FullScriptPath)) {
-            Write-Log "Le fichier Python spécifié via -PythonScriptPath est introuvable: $FullScriptPath" "ERROR"
-            exit 1
+            throw "Le fichier Python spécifié via -PythonScriptPath est introuvable: $FullScriptPath"
         }
         # On met la commande entre guillemets pour gérer les espaces dans les chemins
-        $CommandToRun = "python `"$FullScriptPath`""
-        Write-Log "Commande à exécuter définie via -PythonScriptPath: $CommandToRun"
+        $FinalCommandToRun = "$PythonExecutable `"$FullScriptPath`""
+        Write-Log "Commande à exécuter définie via -PythonScriptPath: $FinalCommandToRun"
     }
-
-    Write-Log "Activation environnement projet via Python..."
     
-    # Chemin vers le script Python environment_manager.py
-    $pythonScriptPath = Join-Path $ProjectRoot $PythonModule
-
-    # Commande 1: Activer l'environnement (sans exécuter de commande interne pour l'instant)
-    # $pythonActivateArgs = @("python", $pythonScriptPath)
-    # Write-Log "Activation initiale de l'environnement..."
-    # & $pythonActivateArgs[0] $pythonActivateArgs[1..($pythonActivateArgs.Length-1)]
-    # if ($LASTEXITCODE -ne 0) {
-    #     Write-Log "Échec de l'activation initiale de l'environnement." "ERROR"
-    #     exit 1
-    # }
-    # Write-Log "Activation initiale réussie." "SUCCESS"
-
-    # Si une commande est fournie, la décomposer et l'exécuter séquentiellement
-    # Chaque commande sera passée à environment_manager.py pour être exécutée DANS l'environnement activé.
-    if ($CommandToRun) {
-        Write-Log "Commandes à exécuter séquentiellement: $CommandToRun"
-        $commands = $CommandToRun.Split(';') | ForEach-Object {$_.Trim()}
-        
-        foreach ($cmd in $commands) {
+    # === 4. Préparation des arguments pour le script Python manager ===
+    $ManagerArgs = @($PythonManagerScriptPath)
+    if ($FinalCommandToRun) {
+        # On décompose les commandes si nécessaire (support du ';')
+         $commands = $FinalCommandToRun.Split(';') | ForEach-Object {$_.Trim()}
+         foreach ($cmd in $commands) {
             if (-not [string]::IsNullOrWhiteSpace($cmd)) {
-                Write-Log "Exécution de la sous-commande: $cmd"
-                $pythonExecArgs = @("python", $pythonScriptPath, "--command", $cmd)
-                if ($Verbose) {
-                    $pythonExecArgs += "--verbose"
-                }
-                
-                # Exécution via le module Python
-                & $pythonExecArgs[0] $pythonExecArgs[1..($pythonExecArgs.Length-1)]
-                $exitCode = $LASTEXITCODE
-                
-                if ($exitCode -ne 0) {
-                    Write-Log "Échec de la sous-commande '$cmd' (Code: $exitCode)" "ERROR"
-                    exit $exitCode # Arrêter si une sous-commande échoue
-                }
-                Write-Log "Sous-commande '$cmd' exécutée avec succès." "SUCCESS"
+                $ManagerArgs += "--command", $cmd
             }
-        }
-        Write-Log "Toutes les sous-commandes exécutées." "SUCCESS"
-        exit 0 # Succès global si toutes les sous-commandes ont réussi
-    } else {
-        # Si aucune commande n'est fournie, juste activer l'environnement
-        Write-Log "Activation simple de l'environnement (pas de commande à exécuter)."
-        $pythonActivateOnlyArgs = @("python", $pythonScriptPath)
-        if ($Verbose) {
-            $pythonActivateOnlyArgs += "--verbose"
-        }
-        & $pythonActivateOnlyArgs[0] $pythonActivateOnlyArgs[1..($pythonActivateOnlyArgs.Length-1)]
-        $exitCode = $LASTEXITCODE
-        if ($exitCode -eq 0) {
-            Write-Log "Environnement activé avec succès (sans commande)." "SUCCESS"
-        } else {
-            Write-Log "Échec de l'activation de l'environnement (sans commande) (Code: $exitCode)." "ERROR"
-        }
-        exit $exitCode
+         }
+    }
+    if ($Verbose) {
+        $ManagerArgs += "--verbose"
     }
     
+    Write-Log "Arguments passés au manager Python: $ManagerArgs" "DEBUG"
+
+    # === 5. Exécution ===
+    Write-Log "Lancement du gestionnaire d'environnement Python pour activation et exécution..."
+    & $PythonExecutable $ManagerArgs
+    $exitCode = $LASTEXITCODE
+
+    if ($exitCode -ne 0) {
+        Write-Log "Le script gestionnaire Python a terminé avec un code d'erreur: $exitCode" "ERROR"
+    } else {
+        Write-Log "Le script gestionnaire Python a terminé avec succès." "SUCCESS"
+    }
+    
+    exit $exitCode
+
 } catch {
-    Write-Log "Erreur critique: $($_.Exception.Message)" "ERROR"
+    # Capture toutes les erreurs (PowerShell ou `throw`)
+    Write-Log "Erreur critique dans le script $($MyInvocation.MyCommand.Name):" "ERROR"
+    Write-Log "Message: $($_.Exception.Message)" "ERROR"
+    # Endroit où l'erreur a eu lieu
+    $errorRecord = $_
+    $line = $errorRecord.InvocationInfo.ScriptLineNumber
+    $pos = $errorRecord.InvocationInfo.OffsetInLine
+    $scriptName = $errorRecord.InvocationInfo.ScriptName
+    Write-Log "Erreur à: $scriptName (Ligne: $line, Colonne: $pos)" "ERROR"
     exit 1
 }
-Write-Log "Environment script finished." "DEBUG"
+
+Write-Log "Fin du script d'environnement." "DEBUG"

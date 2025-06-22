@@ -9,7 +9,10 @@ dependencies:
   - pip
 
   # Core ML/Data Science
-  - numpy # Laisser conda choisir la version compatible
+  - intel-openmp # Force une version unifiée d'OpenMP
+  - mkl # Force l'utilisation des librairies Intel MKL
+  - tbb # Threading Building Blocks, souvent lié à MKL
+  - numpy
   - pandas
   - scipy
   - scikit-learn
