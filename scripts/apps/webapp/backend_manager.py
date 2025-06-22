@@ -51,7 +51,8 @@ class BackendManager:
         self.health_endpoint = config.get('health_endpoint', '/api/health')
         # Forcer l'utilisation d'un chemin absolu pour la robustesse
         # Forcer l'utilisation d'un chemin absolu pour la robustesse et pointer vers le bon script
-        self.env_activation = f'powershell -File "{project_root.joinpath("scripts", "utils", "activate_conda_env.ps1")}"'
+        # Forcer l'utilisation du script d'activation à la racine du projet, comme demandé par l'audit
+        self.env_activation = f'powershell -Command ". ./activate_project_env.ps1"'
         
         # État runtime
         self.process: Optional[subprocess.Popen] = None
@@ -119,44 +120,51 @@ class BackendManager:
             # Construction de la commande interne (Python + uvicorn/flask)
             if server_type == 'uvicorn':
                 asgi_module = 'argumentation_analysis.services.web_api.asgi:app'
+                log_config_path = project_root.joinpath('argumentation_analysis', 'config', 'uvicorn_logging.json')
+                
                 # La commande est maintenant une liste d'arguments pour `conda run`
-                internal_cmd_list = ['python', '-m', 'uvicorn', asgi_module, '--port', str(port), '--host', '127.0.0.1']
+                internal_cmd_list = [
+                    'python', '-m', 'uvicorn', asgi_module,
+                    '--port', str(port),
+                    '--host', '127.0.0.1',
+                    '--log-config', str(log_config_path)
+                ]
             else:
                 internal_cmd_list = ['python', '-m', self.module, '--port', str(port), '--host', '127.0.0.1']
             
-            # Commande finale avec `conda run` pour garantir l'activation de l'environnement
-            cmd = [
-                'conda',
-                'run',
-                '-n',
-                conda_env_name,
-                '--no-capture-output'
-            ] + internal_cmd_list
+            # Construction de la commande finale en utilisant le script d'activation centralisé
+            # Ceci est un changement pour se conformer au plan d'audit, visant à standardiser l'activation de l'environnement.
+            # Construction de la commande PowerShell complète et robuste
+            internal_cmd_str = ' '.join(internal_cmd_list)
+            full_command = f'. ./activate_project_env.ps1; {internal_cmd_str}'
+            
+            # Utilisation de `powershell -Command` pour encapsuler toute la logique d'activation et d'exécution
+            # Cela évite les problèmes de parsing de chemins et de guillemets.
+            cmd = ["powershell", "-Command", full_command]
 
-            self.logger.info(f"Exécution directe avec Conda Run: {' '.join(cmd)}")
+            self.logger.info(f"Exécution de la commande PowerShell complète: {full_command}")
             
             env = os.environ.copy()
             env['PYTHONPATH'] = str(Path.cwd())
             
-            # Redirection des logs vers des fichiers dédiés pour un débogage robuste
-            log_dir = Path.cwd() / "logs"
-            log_dir.mkdir(exist_ok=True)
-            self.stdout_log_file = log_dir / "backend_stdout.log"
-            self.stderr_log_file = log_dir / "backend_stderr.log"
-
-            with open(self.stdout_log_file, 'w', encoding='utf-8') as stdout_f, \
-                 open(self.stderr_log_file, 'w', encoding='utf-8') as stderr_f:
-                self.logger.info(f"Redirection de la sortie du backend vers: {self.stdout_log_file} et {self.stderr_log_file}")
-                self.process = subprocess.Popen(
-                    cmd,
-                    stdout=stdout_f,
-                    stderr=stderr_f,
-                    cwd=Path.cwd(),
-                    env=env,
-                    text=True,
-                    encoding='utf-8',
-                    errors='replace'
-                )
+            self.process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=Path.cwd(),
+                env=env,
+                text=True,
+                encoding='utf-8',
+                errors='replace'
+            )
+            # Démarrage des threads pour logger stdout et stderr du sous-processus
+            self.log_threads = [
+                threading.Thread(target=self._log_stream, args=(self.process.stdout, logging.INFO)),
+                threading.Thread(target=self._log_stream, args=(self.process.stderr, logging.ERROR))
+            ]
+            for t in self.log_threads:
+                t.daemon = True
+                t.start()
 
             backend_ready = await self._wait_for_backend(port)
             
