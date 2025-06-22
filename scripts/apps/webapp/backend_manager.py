@@ -109,13 +109,24 @@ class BackendManager:
         """Démarre le backend sur un port spécifique"""
         try:
             server_type = self.config.get('server_type', 'uvicorn')
+            
+            # Construction de la commande interne (Python + uvicorn/flask)
             if server_type == 'uvicorn':
                 asgi_module = 'argumentation_analysis.services.web_api.asgi:app'
-                cmd = ['uvicorn', asgi_module, '--port', str(port), '--host', '0.0.0.0']
+                internal_cmd_list = ['python', '-m', 'uvicorn', asgi_module, '--port', str(port), '--host', '0.0.0.0']
             else:
-                cmd = ['python', '-m', self.module, '--port', str(port)]
+                internal_cmd_list = ['python', '-m', self.module, '--port', str(port)]
+
+            # Encapsulation de la commande interne dans le wrapper PowerShell
+            # La commande doit être passée comme une seule chaîne de caractères.
+            # Sur Windows, les guillemets autour des arguments avec espaces doivent être gérés
+            internal_cmd_str = ' '.join(f'"{arg}"' if ' ' in arg else arg for arg in internal_cmd_list)
             
-            self.logger.info(f"Démarrage backend: {' '.join(cmd)}")
+            # Récupération de la commande d'activation depuis la config et décomposition
+            activation_cmd_parts = self.env_activation.split()
+            cmd = activation_cmd_parts + ['-CommandToRun', f'"{internal_cmd_str}"']
+            
+            self.logger.info(f"Construction de la commande finale via wrapper: {' '.join(cmd)}")
             
             env = os.environ.copy()
             env['PYTHONPATH'] = str(Path.cwd())

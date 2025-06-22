@@ -274,3 +274,6 @@ cython_debug/
 
 # Image files
 *.png
+
+# Roo added
+config/.port_lock

@@ -8,6 +8,10 @@ import os
 import sys
 import logging
 from pathlib import Path
+
+# Ajout pour la résolution des imports locaux en contexte d'exécution directe
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
+
 from flask import Flask, send_from_directory, jsonify, request, g
 from flask_cors import CORS
 from asgiref.wsgi import WsgiToAsgi
@@ -20,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 # --- Imports des Blueprints et des modèles de données ---
-from .routes.main_routes import main_bp
+from argumentation_analysis.services.web_api.routes.main_routes import main_bp
 from .routes.logic_routes import logic_bp
 from .models.response_models import ErrorResponse
 # Import des classes de service

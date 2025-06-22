@@ -221,7 +221,8 @@ test.describe('API Backend - Services d\'Analyse', () => {
     
     expect(response.status()).toBe(200);
     const headers = response.headers();
-    expect(headers).toHaveProperty('access-control-allow-origin', '*');
+    const expectedOrigin = process.env.FRONTEND_URL || 'http://localhost:3000';
+    expect(headers).toHaveProperty('access-control-allow-origin', expectedOrigin);
   });
 
   test('Test de la limite de requêtes simultanées', async ({ request }) => {
