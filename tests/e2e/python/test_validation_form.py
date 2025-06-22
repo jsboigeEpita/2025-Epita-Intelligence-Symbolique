@@ -5,9 +5,9 @@ from playwright.sync_api import Page, expect
 # so the web server is started automatically for all tests in this module.
 @pytest.mark.asyncio
 @pytest.fixture(scope="function")
-async def validation_page(page: Page, webapp_service: dict) -> Page:
+async def validation_page(page: Page, frontend_url: str) -> Page:
     """Navigue vers la page et l'onglet de validation."""
-    await page.goto(webapp_service["frontend_url"])
+    await page.goto(frontend_url)
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     validation_tab = page.locator('[data-testid="validation-tab"]')
     expect(validation_tab).to_be_enabled()

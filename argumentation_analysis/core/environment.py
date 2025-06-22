@@ -43,6 +43,14 @@ def ensure_env(env_name: str = None, silent: bool = True) -> bool:
     Returns:
         True si l'environnement est (ou a été) activé avec succès, False sinon.
     """
+    # --- COURT-CIRCUIT POUR LES ENVIRONNEMENTS GÉRÉS EXTERIEUREMENT ---
+    # Si cette variable est positionnée (par ex. par EnvironmentManager.run_in_conda_env),
+    # cela signifie que l'environnement est déjà activé et géré. On ne fait rien
+    # pour éviter une double activation qui peut corrompre les chemins et la découverte de packages.
+    if os.getenv('RUNNING_VIA_ENV_MANAGER') == 'true':
+        if not silent:
+            print("[auto_env] Court-circuit: Exécution dans un environnement déjà géré par EnvironmentManager.")
+        return True
     # --- Logique de détermination du nom de l'environnement ---
     if env_name is None:
         try:

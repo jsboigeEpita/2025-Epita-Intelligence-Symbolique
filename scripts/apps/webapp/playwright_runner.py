@@ -19,6 +19,28 @@ from typing import Dict, List, Optional, Any
 from pathlib import Path
 import json
 
+# Ajout pour accéder à l'EnvironmentManager et aux utilitaires du projet
+try:
+    # Ce chemin est relatif à la structure attendue du projet
+    from project_core.core_from_scripts.environment_manager import EnvironmentManager
+    from project_core.core_from_scripts.common_utils import get_project_root
+except ImportError:
+    # Fallback robuste si le script est exécuté depuis un contexte inattendu
+    # On remonte à la racine du projet et on l'ajoute au path
+    current_dir = Path(__file__).resolve().parent
+    project_root_path = None
+    # Remonter jusqu'à trouver un marqueur de racine (ex: .git, pyproject.toml)
+    for parent in current_dir.parents:
+        if (parent / '.git').exists() or (parent / 'pyproject.toml').exists():
+            project_root_path = parent
+            break
+    if project_root_path and str(project_root_path) not in sys.path:
+        sys.path.insert(0, str(project_root_path))
+    
+    from project_core.core_from_scripts.environment_manager import EnvironmentManager
+    from project_core.core_from_scripts.common_utils import get_project_root
+
+
 class PlaywrightRunner:
     """
     Gestionnaire d'exécution des tests Playwright
@@ -147,46 +169,33 @@ class PlaywrightRunner:
     
     def _build_playwright_command(self, test_paths: List[str],
                                  config: Dict[str, Any]) -> List[str]:
-        """Construit la commande en appelant directement le script Playwright."""
+        """Construit la commande pour exécuter les tests via Pytest."""
 
-        # Construction d'un chemin absolu vers l'exécutable Playwright
-        # pour garantir qu'il soit trouvé par asyncio.create_subprocess_exec.
-        base_path = Path.cwd()
-        playwright_executable_path = base_path / 'node_modules' / '.bin' / 'playwright'
-
-        if sys.platform == "win32":
-            # Sous Windows, l'exécutable est un script .cmd
-            playwright_executable_path = playwright_executable_path.with_suffix('.cmd')
-
-        if not playwright_executable_path.exists():
-            self.logger.error(f"L'exécutable Playwright n'a pas été trouvé à: {playwright_executable_path}")
-            # On pourrait vouloir lever une exception ici pour arrêter le processus
-            # au lieu de continuer avec une commande qui échouera.
-            raise FileNotFoundError(f"Playwright executable not found at {playwright_executable_path}")
-
-        cmd = [str(playwright_executable_path), 'test']
+        # On passe à Pytest qui est plus standard pour l'écosystème Python
+        # et gère mieux l'intégration.
+        self.logger.info(f"Utilisation de Pytest avec l'interpréteur : {sys.executable}")
         
-        # Ajout des chemins de tests
+        cmd = [
+            sys.executable, '-m', 'pytest',
+            '-v',                 # Augmente la verbosité
+            '--capture=no',       # Affiche stdout/stderr en temps réel
+            '--slowmo=50'         # Ralentit les opérations pour l'observation
+        ]
+
+        # Ajout du répertoire de test pour que pytest le découvre
         cmd.extend(test_paths)
-        
-        # Options Playwright
-        # On ne spécifie plus --browser car le fichier de config Playwright
-        # contient déjà des projets qui le définissent.
-        # cmd.append(f'--browser={config["browser"]}')
-        
+
+        # Les options sont maintenant celles de pytest-playwright
         if not config['headless']:
             cmd.append('--headed')
         
-        # La configuration pour les screenshots, traces et vidéos
-        # est généralement gérée dans le fichier playwright.config.js
-        # pour plus de robustesse. On s'assure que les répertoires
-        # sont définis via les variables d'environnement.
-        # On peut forcer certaines options ici si nécessaire.
-        
-        # Exemple pour forcer le traçage :
+        # --tracing on est l'équivalent de --trace=on pour pytest-playwright
         if config.get('traces', True):
-            cmd.append('--trace=on')
+            cmd.append('--tracing=on')
             
+        # Spécifier le navigateur à utiliser
+        cmd.append(f'--browser={config["browser"]}')
+        
         return cmd
     
     async def _read_stream(self, stream: asyncio.StreamReader, log_method):
@@ -198,82 +207,64 @@ class PlaywrightRunner:
 
     async def _execute_tests(self, cmd: List[str],
                              config: Dict[str, Any]) -> subprocess.CompletedProcess:
-        """Exécute les tests en streamant la sortie en temps réel."""
-        self.logger.info(f"Commande test à exécuter: {' '.join(cmd)}")
-        self.logger.info(f"Répertoire de travail: {Path.cwd()}")
+        """Exécute les tests en utilisant EnvironmentManager.run_in_conda_env pour une activation robuste."""
+        
+        self.logger.info("Utilisation de EnvironmentManager pour l'exécution des tests.")
+        
+        # Le EnvironmentManager.run_in_conda_env est synchrone.
+        # Nous devons l'appeler dans un thread séparé pour ne pas bloquer la boucle asyncio.
+        
+        def blocking_test_execution():
+            """Wrapper synchrone pour l'exécution des tests."""
+            try:
+                manager = EnvironmentManager(self.logger)
+                # La commande `cmd` est déjà correctement formatée (ex: ['python', '-m', 'pytest', ...])
+                # run_in_conda_env s'occupera de l'exécuter via `conda run` ou via chemin direct.
+                self.logger.info(f"Commande à exécuter dans l'environnement conda: {' '.join(cmd)}")
+                
+                # On utilise capture_output=True pour récupérer stdout/stderr
+                result = manager.run_in_conda_env(
+                    cmd,
+                    capture_output=True,
+                    # Le manager utilisera l'env par défaut (`projet-is`)
+                )
+                
+                # Logger la sortie directement depuis le résultat
+                if result.stdout:
+                    for line in result.stdout.splitlines():
+                        self.logger.info(f"[PYTEST_STDOUT] {line}")
+                if result.stderr:
+                    for line in result.stderr.splitlines():
+                        self.logger.warning(f"[PYTEST_STDERR] {line}")
+                        
+                return result
+            except Exception as e:
+                self.logger.critical(f"Erreur fatale dans le thread d'exécution des tests: {e}", exc_info=True)
+                return subprocess.CompletedProcess(
+                    ' '.join(cmd),
+                    returncode=1,
+                    stdout="",
+                    stderr=str(e)
+                )
+
         timeout = config.get('test_timeout', 600)
         self.logger.info(f"Timeout configuré: {timeout}s")
-
-        stdout_capture = []
-        stderr_capture = []
-
-        def log_stdout(line):
-            self.logger.info(f"[PW_STDOUT] {line}")
-            stdout_capture.append(line)
-
-        def log_stderr(line):
-            self.logger.warning(f"[PW_STDERR] {line}")
-            stderr_capture.append(line)
-
-        process = None
+        
         try:
-            self.logger.debug("Démarrage du sous-processus async pour Playwright...")
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=Path.cwd(),
-                env=os.environ
-            )
-            self.logger.debug(f"Processus Playwright démarré avec PID: {process.pid}")
-
-            # Créer des tâches pour lire stdout et stderr en parallèle
-            stdout_task = asyncio.create_task(self._read_stream(process.stdout, log_stdout))
-            stderr_task = asyncio.create_task(self._read_stream(process.stderr, log_stderr))
-
-            # Attendre que le processus et les lecteurs de flux se terminent
-            await asyncio.wait_for(
-                asyncio.gather(process.wait(), stdout_task, stderr_task),
+            # Exécuter la fonction bloquante dans un thread et attendre le résultat
+            completed_process = await asyncio.wait_for(
+                asyncio.to_thread(blocking_test_execution),
                 timeout=timeout
             )
+            self.logger.info(f"Exécution des tests via EnvironmentManager terminée avec le code: {completed_process.returncode}")
+            return completed_process
             
-            return_code = process.returncode
-            self.logger.info(f"Sous-processus Playwright terminé avec le code: {return_code}.")
-
         except asyncio.TimeoutError:
-            self.logger.error(f"Timeout ({timeout}s) atteint lors de l'exécution des tests Playwright.")
-            if process:
-                self.logger.warning(f"Tentative d'arrêt du processus PID: {process.pid}")
-                try:
-                    process.terminate()
-                    await asyncio.sleep(2) # Laisser le temps de terminer
-                    if process.returncode is None: # Toujours en cours
-                         process.kill()
-                except ProcessLookupError:
-                    self.logger.warning(f"Le processus {process.pid} n'existait déjà plus.")
-                except Exception as e:
-                    self.logger.error(f"Erreur lors de la tentative d'arrêt du processus: {e}")
-
-            return_code = 1 # Code d'erreur pour timeout
-            
+            self.logger.error(f"Timeout ({timeout}s) atteint lors de l'exécution des tests.")
+            return subprocess.CompletedProcess( ' '.join(cmd), returncode=-1, stdout="", stderr="Timeout expired")
         except Exception as e:
-            self.logger.critical(f"Erreur critique non gérée lors de l'exécution du processus: {e}", exc_info=True)
-            return_code = -1 # Code d'erreur pour échec grave
-        
-        finally:
-            # S'assurer que les tâches de lecture sont annulées pour éviter les fuites
-            if 'stdout_task' in locals() and not stdout_task.done():
-                stdout_task.cancel()
-            if 'stderr_task' in locals() and not stderr_task.done():
-                stderr_task.cancel()
-
-        # Retourner un objet CompletedProcess pour la compatibilité avec le reste du code
-        return subprocess.CompletedProcess(
-            cmd,
-            returncode=return_code,
-            stdout='\n'.join(stdout_capture),
-            stderr='\n'.join(stderr_capture)
-        )
+            self.logger.critical(f"Erreur critique non gérée lors de l'attente du thread de test: {e}", exc_info=True)
+            return subprocess.CompletedProcess(' '.join(cmd), returncode=-2, stdout="", stderr=f"Unhandled exception: {e}")
     
     async def _analyze_results(self, result: subprocess.CompletedProcess) -> bool:
         """Analyse les résultats de test et génère un rapport."""
@@ -302,8 +293,16 @@ class PlaywrightRunner:
             self.logger.info("Tests Playwright réussis.")
             # Optionnel: extraire des infos de la sortie si besoin
         else:
-            self.logger.error(f"Échec des tests Playwright (code: {result.returncode}).")
-            self.logger.error("Consulter les logs ci-dessus et les artifacts pour les détails.")
+            # NOTE DE FUSION: On garde la sortie détaillée du stderr du stash.
+            self.logger.error(f"Échec des tests (code de retour: {result.returncode}).")
+            
+            if stderr_content:
+                self.logger.error("--- Erreurs (stderr) ---")
+                # Pas besoin de logger chaque ligne car elles ont déjà été loggées en temps réel
+                self.logger.error("Voir les logs [PYTEST_STDERR] ci-dessus pour les détails complets.")
+                self.logger.error("--- Fin des erreurs ---")
+            else:
+                self.logger.error("Aucune sortie d'erreur (stderr) n'a été capturée, mais le code de retour indique un échec.")
         
         await self._save_test_report()
         
