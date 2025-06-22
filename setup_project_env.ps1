@@ -39,7 +39,13 @@ $FinalCommand = $CommandToRun
 
 if ($Setup) {
     Write-Host "[INFO] Mode SETUP activé." -ForegroundColor Cyan
-    $FinalCommand = "python project_core/core_from_scripts/environment_manager.py --reinstall all"
+    # On crée une séquence de commandes à exécuter
+    $SetupCommands = @(
+        "pip install -r requirements.txt",
+        "pip install -e ."
+    )
+    # On assigne une valeur factice pour passer la validation
+    $FinalCommand = "setup"
 }
 
 if ($Status) {
@@ -77,8 +83,24 @@ $ActivationArgs = @{
 }
 
 # Exécuter le script d'activation moderne en passant les arguments
-& $ActivationScriptPath @ActivationArgs
-$exitCode = $LASTEXITCODE
+if ($Setup) {
+    # Itérer sur chaque commande de setup
+    foreach ($cmd in $SetupCommands) {
+        Write-Host "=================================================================" -ForegroundColor Green
+        Write-Host "Exécution de la sous-commande SETUP: $cmd" -ForegroundColor Yellow
+        $ActivationArgs = @{ CommandToRun = $cmd }
+        & $ActivationScriptPath @ActivationArgs
+        $exitCode = $LASTEXITCODE
+        if ($exitCode -ne 0) {
+            Write-Host "La sous-commande '$cmd' a échoué avec le code $exitCode. Arrêt du setup." -ForegroundColor Red
+            exit $exitCode
+        }
+    }
+} else {
+    # Exécution normale pour les autres commandes
+    & $ActivationScriptPath @ActivationArgs
+    $exitCode = $LASTEXITCODE
+}
 
 # --- Résultat ---
 Write-Host "=================================================================" -ForegroundColor Green

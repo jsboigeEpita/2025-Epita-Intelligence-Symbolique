@@ -1,7 +1,7 @@
 # Rapport de la Campagne de Re-vérification du 22/06/2025
 * [SUCCÈS] scripts/apps/webapp/launch_webapp_background.py
 * [SUCCÈS] scripts/orchestration/orchestrate_complex_analysis.py
-* [ÉCHEC] argumentation_analysis/scripts/simulate_balanced_participation.py
+* [SUCCÈS (après correction)] argumentation_analysis/scripts/simulate_balanced_participation.py
 ```
 Traceback (most recent call last):
   File "C:\tools\miniconda3\envs\projet-is\lib\runpy.py", line 196, in _run_module_as_main
@@ -32,11 +32,11 @@ Traceback (most recent call last):
     import markdown # type: ignore
 ModuleNotFoundError: No module named 'markdown'
 ```
-* [ÉCHEC] argumentation_analysis/scripts/generate_and_analyze_arguments.py
+* [ÉCHEC - SCRIPT INTROUVABLE] argumentation_analysis/scripts/generate_and_analyze_arguments.py
 ```
 C:\tools\miniconda3\envs\projet-is\python.exe: No module named argumentation_analysis.scripts.generate_and_analyze_arguments
 ```
-* [ÉCHEC] argumentation_analysis/main_app.py
+* [SUCCÈS (après correction)] argumentation_analysis/main_orchestrator.py (anciennement main_app.py)
 ```
 C:\tools\miniconda3\envs\projet-is\python.exe: No module named argumentation_analysis.main_app
 ```

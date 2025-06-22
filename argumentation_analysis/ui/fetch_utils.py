@@ -13,7 +13,7 @@ from .cache_utils import load_from_cache, save_to_cache
 # reconstruct_url sera importé depuis le utils.py principal ou un common_utils
 # from .utils import reconstruct_url # Cet import sera ajusté plus tard
 # L'import correct, maintenant que utils.py est l'index et contient reconstruct_url
-from . import utils as circular_utils_ref_fetch
+from .utils import reconstruct_url
 
 fetch_logger = logging.getLogger("App.UI.FetchUtils")
 if not fetch_logger.handlers and not fetch_logger.propagate:
@@ -242,7 +242,7 @@ def get_full_text_for_source(source_info: Dict[str, Any], app_config: Optional[D
     if not target_url:
         fetch_logger.debug(f"Champ 'url' non trouvé pour {source_name_for_log}, tentative de reconstruction avec schema/host/path.")
         # Utilisation du reconstruct_url défini localement en attendant la refonte
-        target_url = circular_utils_ref_fetch.reconstruct_url(
+        target_url = reconstruct_url(
             source_info.get("schema"), source_info.get("host_parts", []), source_info.get("path")
         )
     
