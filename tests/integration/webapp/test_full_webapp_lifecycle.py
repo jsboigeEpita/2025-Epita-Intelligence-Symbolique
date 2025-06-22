@@ -9,21 +9,19 @@ from argumentation_analysis.webapp.orchestrator import UnifiedWebOrchestrator, W
 
 @pytest.fixture
 def integration_config(webapp_config, tmp_path):
-    """Override the config for integration tests to use the fake backend."""
+    """Override the config for integration tests to use the real backend."""
     config = webapp_config
     
-    # Use a command list for robustness
-    # On passe le port au fake_backend.py comme argument de ligne de commande.
-    # On sait que le port sera 9020 car on le force dans la config juste après.
-    fake_backend_command_list = [sys.executable, 'tests/integration/webapp/fake_backend.py', '9020']
+    # The command_list is now inherited from the orchestrator's default config,
+    # which launches the real uvicorn backend.
     
-    config['backend']['command_list'] = fake_backend_command_list
-    config['backend']['command'] = None # Ensure list is used
+    # config['backend']['command_list'] = fake_backend_command_list
+    # config['backend']['command'] = None # Ensure list is used
     config['backend']['health_endpoint'] = '/api/health'
     config['backend']['start_port'] = 9020  # Use a higher port to be safer
     config['backend']['fallback_ports'] = [9021, 9022]
     config['backend']['timeout_seconds'] = 20 # > 15s initial wait
-    config['backend']['module'] = None
+    # config['backend']['module'] = None # Let the orchestrator use the default real module
     
     config['frontend']['enabled'] = False
     config['playwright']['enabled'] = False
@@ -71,7 +69,8 @@ async def test_backend_lifecycle(orchestrator):
         # Check if the process actually exists
         assert psutil.pid_exists(pid_before_stop)
         proc = psutil.Process(pid_before_stop)
-        assert 'fake_backend.py' in ' '.join(proc.cmdline())
+        # Check for 'uvicorn' which indicates the real backend is running
+        assert 'uvicorn' in ' '.join(proc.cmdline())
         
         # Check that the port is in use
         assert orchestrator.app_info.backend_port in [9020, 9021, 9022]
