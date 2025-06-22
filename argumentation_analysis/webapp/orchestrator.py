@@ -156,9 +156,15 @@ class MinimalBackendManager:
         command_list = self.config.get('command_list')
         if command_list:
             self.logger.info("[BACKEND] Utilisation de 'command_list' pour le lancement.")
-            # Remplacer les placeholders comme {port}
-            command = list(command_list)  # Copie
-            command[-1] = command[-1].format(port=self.port, module_spec=module_spec)
+            # Remplacer les placeholders comme {port}, {module_spec}, {env_name}
+            # dans tous les éléments de la liste.
+            command = [
+                str(item).format(
+                    port=self.port,
+                    module_spec=module_spec,
+                    env_name=env_name
+                ) for item in command_list
+            ]
         else:
             self.logger.info("[BACKEND] Utilisation de la méthode 'conda run' classique.")
             # Ancien comportement si command_list n'est pas défini
@@ -172,11 +178,20 @@ class MinimalBackendManager:
         self.logger.info(f"[BACKEND] Commande de lancement: {' '.join(command)}")
 
         try:
+            # Préparation de l'environnement pour le sous-processus
+            project_root = str(Path(__file__).parent.parent.parent.resolve())
+            env = os.environ.copy()
+            python_path = env.get('PYTHONPATH', '')
+            if project_root not in python_path:
+                env['PYTHONPATH'] = f"{project_root}{os.pathsep}{python_path}"
+            self.logger.info(f"[BACKEND] PYTHONPATH for subprocess: {env.get('PYTHONPATH')}")
+
             # Lancement du processus en redirigeant stdout et stderr
             self.process = await asyncio.create_subprocess_exec(
                 *command,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
+                env=env
             )
             self.logger.info(f"[BACKEND] Processus backend (PID: {self.process.pid}) lancé.")
 
@@ -604,9 +619,9 @@ class UnifiedWebOrchestrator:
                 # directement par le système sans dépendre d'un PATH spécifique.
                 # On utilise "powershell.exe -Command" pour chaîner l'activation et l'exécution.
                 'command_list': [
-                    "powershell.exe",
-                    "-Command",
-                    "conda activate projet-is; python -m uvicorn {module_spec} --host 127.0.0.1 --port {port}"
+                    "conda", "run", "-n", "{env_name}", "--no-capture-output",
+                    "python", "-m", "uvicorn", "{module_spec}",
+                    "--host", "127.0.0.1", "--port", "{port}"
                 ]
             },
             'frontend': {
@@ -1047,7 +1062,11 @@ class UnifiedWebOrchestrator:
         self.add_trace("[OK] LIBS JAVA PRESENTES", "Les JARs Tweety sont prêts.")
         
         # Forcer le port dynamique pour éviter les conflits
-        result = await self.backend_manager.start(port_override=0)
+        backend_config = self.config.get('backend', {})
+        start_port = backend_config.get('start_port', 0)
+        self.logger.info(f"Démarage du backend avec le port de la configuration: {start_port}")
+
+        result = await self.backend_manager.start(port_override=start_port)
         if result['success']:
             self.app_info.backend_url = result['url']
             self.app_info.backend_port = result['port']

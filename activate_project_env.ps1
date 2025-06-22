@@ -21,7 +21,9 @@ Refactorisé - Utilise scripts/core/environment_manager.py
 param(
     [string]$CommandToRun = $null,
     [string]$PythonScriptPath = $null,
-    [switch]$Verbose = $false
+    [switch]$Verbose = $false,
+    [switch]$ForceReinstall = $false,
+    [int]$CondaVerboseLevel = 0
 )
 
 # Fonction de logging simple
@@ -98,20 +100,29 @@ try {
     
     # === 4. Préparation des arguments pour le script Python manager ===
     $ManagerArgs = @($PythonManagerScriptPath)
+    
     if ($FinalCommandToRun) {
-        # On décompose les commandes si nécessaire (support du ';')
-         $commands = $FinalCommandToRun.Split(';') | ForEach-Object {$_.Trim()}
-         foreach ($cmd in $commands) {
-            if (-not [string]::IsNullOrWhiteSpace($cmd)) {
-                $ManagerArgs += "--command", $cmd
-            }
-         }
+        # Le script Python gère maintenant la décomposition des commandes si nécessaire
+        $ManagerArgs += "--command", $FinalCommandToRun
+    } else {
+         Write-Log "Aucune commande à exécuter. Activation simple de l'environnement." "INFO"
     }
+
     if ($Verbose) {
         $ManagerArgs += "--verbose"
     }
     
-    Write-Log "Arguments passés au manager Python: $ManagerArgs" "DEBUG"
+    if ($ForceReinstall) {
+        Write-Log "Option -ForceReinstall détectée. L'environnement Conda sera forcé à la réinstallation." "INFO"
+        $ManagerArgs += "--reinstall", "conda"
+    }
+
+    if ($CondaVerboseLevel -gt 0) {
+        Write-Log "Niveau de verbosité Conda: $CondaVerboseLevel" "INFO"
+        $ManagerArgs += "--conda-verbose-level", $CondaVerboseLevel
+    }
+    
+    Write-Log "Arguments passés au manager Python: $($ManagerArgs -join ' ')" "DEBUG"
 
     # === 5. Exécution ===
     Write-Log "Lancement du gestionnaire d'environnement Python pour activation et exécution..."

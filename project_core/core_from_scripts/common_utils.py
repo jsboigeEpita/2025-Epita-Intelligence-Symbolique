@@ -60,16 +60,18 @@ class ColorCodes:
 class Logger:
     """Logger centralisé avec support couleurs et formatage"""
     
-    def __init__(self, use_colors: bool = None, verbose: bool = False):
+    def __init__(self, use_colors: bool = None, verbose: bool = False, log_file_path: Optional[str] = None):
         """
         Initialise le logger
         
         Args:
             use_colors: Utiliser les couleurs (auto-détecté si None)
             verbose: Mode verbeux pour plus de détails
+            log_file_path: Chemin vers le fichier de log
         """
         self.verbose = verbose
         self.use_colors = use_colors if use_colors is not None else self._supports_color()
+        self.log_file_path = log_file_path
         self.color_map = {
             LogLevel.DEBUG: ColorCodes.CYAN,
             LogLevel.INFO: ColorCodes.WHITE,
@@ -78,6 +80,11 @@ class Logger:
             LogLevel.ERROR: ColorCodes.BRIGHT_RED,
             LogLevel.CRITICAL: ColorCodes.RED + ColorCodes.BOLD
         }
+        if self.log_file_path:
+            # S'assurer que le répertoire de log existe
+            log_dir = os.path.dirname(self.log_file_path)
+            if log_dir and not os.path.exists(log_dir):
+                os.makedirs(log_dir)
     
     def _supports_color(self) -> bool:
         """Détecte si le terminal supporte les couleurs"""
@@ -110,6 +117,19 @@ class Logger:
             print(formatted, file=sys.stderr)
         else:
             print(formatted)
+
+        if self.log_file_path:
+            try:
+                # Écrire le message formaté (sans les couleurs) dans le fichier de log
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                # Recréer le message sans couleur pour le fichier
+                file_formatted_message = f"[{timestamp}] [{level.value}] {message}"
+                with open(self.log_file_path, 'a', encoding='utf-8') as f:
+                    f.write(file_formatted_message + '\\n')
+            except Exception as e:
+                # Si le logging de fichier échoue, on affiche une erreur sur stderr
+                # pour ne pas entrer dans une boucle infinie.
+                print(f"[LOGGER FILE ERROR] Could not write to {self.log_file_path}: {e}", file=sys.stderr)
     
     def debug(self, message: str):
         """Log un message de debug"""

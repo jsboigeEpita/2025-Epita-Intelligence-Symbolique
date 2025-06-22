@@ -97,15 +97,15 @@ except ImportError:
 
 
 # Déclaration d'un logger global pour le module, en particulier pour les erreurs d'import au niveau du module
-_module_logger = Logger()
+_module_logger = Logger(log_file_path="logs/environment_manager.log")
 
 try:
-    from project_core.setup_core_from_scripts.manage_tweety_libs import download_tweety_jars
+    from argumentation_analysis.core.jvm_setup import download_tweety_jars
 except ImportError:
     # Fallback pour execution directe
-    _module_logger.warning("Could not import download_tweety_jars, Tweety JARs might not be downloaded if missing.")
+    _module_logger.warning("Could not import download_tweety_jars from argumentation_analysis.core.jvm_setup, Tweety JARs might not be downloaded if missing.")
     def download_tweety_jars(*args, **kwargs):
-        _module_logger.error("download_tweety_jars is not available due to an import issue.")
+        _module_logger.error("download_tweety_jars is not available due to a critical import issue.")
         return False
 # --- Début de l'insertion pour sys.path ---
 # Déterminer la racine du projet (remonter de deux niveaux depuis scripts/core)
@@ -623,11 +623,11 @@ class EnvironmentManager:
                     self.logger.warning(f"Le chemin JAVA_HOME '{absolute_java_home}' est invalide. Tentative d'auto-installation...")
                     try:
                         from project_core.environment.tool_installer import ensure_tools_are_installed
-                        ensure_tools_are_installed(tools_to_ensure=['jdk'], logger=self.logger)
+                        ensure_tools_are_installed(tools_to_ensure=['jdk'], logger_instance=self.logger)
                     except ImportError as ie:
                         self.logger.error(f"Échec de l'import de 'tool_installer' pour l'auto-installation de JAVA: {ie}")
                     except Exception as e:
-                        self.logger.error(f"Une erreur est survenue durant l'auto-installation du JDK: {e}", exc_info=True)
+                        self.logger.error(f"Une erreur est survenue durant l'auto-installation du JDK: {e}")
         
         # **CORRECTION DE ROBUSTESSE POUR JPYPE**
         # S'assurer que le répertoire bin de la JVM est dans le PATH
@@ -979,7 +979,7 @@ def auto_activate_env(env_name: str = None, silent: bool = True) -> bool:
         if not silent:
             # Créer un logger temporaire si l'initialisation a échoué.
             temp_logger = Logger(verbose=True)
-            temp_logger.error(f"❌ Erreur critique dans auto_activate_env: {e}", exc_info=True)
+            temp_logger.error(f"❌ Erreur critique dans auto_activate_env: {e}")
         return False
 
 
@@ -991,7 +991,7 @@ def activate_project_env(command: str = None, env_name: str = None, logger: Logg
 
 
 
-def reinstall_conda_environment(manager: 'EnvironmentManager', env_name: str):
+def reinstall_conda_environment(manager: 'EnvironmentManager', env_name: str, verbose_level: int = 0):
     """Supprime et recrée intégralement l'environnement conda à partir de environment.yml."""
     logger = manager.logger
     ColoredOutput.print_section(f"Réinstallation complète de l'environnement Conda '{env_name}' à partir de environment.yml")
@@ -1015,17 +1015,30 @@ def reinstall_conda_environment(manager: 'EnvironmentManager', env_name: str):
         '--name', env_name,
         '--force'
     ]
+    if verbose_level > 0:
+        conda_create_command.append(f"-{'v' * verbose_level}")
+        logger.info(f"Niveau de verbosité Conda activé : {verbose_level}")
     
     # Utiliser run_in_conda_env n'est pas approprié ici car l'environnement peut ne pas exister.
     # On exécute directement avec subprocess.run
-    result = subprocess.run(conda_create_command, capture_output=True, text=True, encoding='utf-8', errors='replace')
+    try:
+        # On exécute directement avec subprocess.run, sans capturer la sortie.
+        # La sortie du sous-processus (stdout, stderr) sera directement affichée sur la console
+        # parente, fournissant un retour en temps réel plus robuste.
+        result = subprocess.run(
+            conda_create_command,
+            text=True,
+            encoding='utf-8',
+            errors='replace',
+            check=False  # On gère le code de retour nous-mêmes
+        )
+        
+        if result.returncode != 0:
+            logger.error(f"Échec de la création de l'environnement Conda. Le log ci-dessus devrait contenir les détails.")
+            safe_exit(1, logger)
 
-    if result.returncode != 0:
-        logger.error(f"Échec de la création de l'environnement Conda. Voir logs ci-dessous.")
-        logger.error("STDOUT:")
-        logger.error(result.stdout)
-        logger.error("STDERR:")
-        logger.error(result.stderr)
+    except (subprocess.SubprocessError, FileNotFoundError) as e:
+        logger.critical(f"Une erreur majeure est survenue lors de l'exécution de la commande conda : {e}")
         safe_exit(1, logger)
     
     logger.success(f"Environnement '{env_name}' recréé avec succès depuis {env_file_path}.")
@@ -1118,9 +1131,18 @@ def main():
              f"'all' réinstalle tout (équivaut à l'ancien --force-reinstall)."
     )
     
+    parser.add_argument(
+        '--conda-verbose-level',
+        type=int,
+        choices=[1, 2, 3],
+        default=0,
+        help="Niveau de verbosité pour les commandes conda (1 pour -v, 2 pour -vv, 3 pour -vvv)."
+    )
+    
     args = parser.parse_args()
     
-    logger = Logger(verbose=True) # FORCER VERBOSE POUR DEBUG (ou utiliser args.verbose)
+    log_file = "logs/environment_manager.log"
+    logger = Logger(verbose=True, log_file_path=log_file) # FORCER VERBOSE POUR DEBUG (ou utiliser args.verbose)
     logger.info("DEBUG: Début de main() dans auto_env.py (après parsing)")
     logger.info(f"DEBUG: Args parsés par argparse: {args}")
     
@@ -1136,7 +1158,7 @@ def main():
         
         # Si 'all' ou 'conda' est demandé, on réinstalle l'environnement Conda, ce qui inclut les paquets pip.
         if ReinstallComponent.ALL.value in reinstall_choices or ReinstallComponent.CONDA.value in reinstall_choices:
-            reinstall_conda_environment(manager, env_name)
+            reinstall_conda_environment(manager, env_name, verbose_level=args.conda_verbose_level)
         # Si seulement 'pip' est demandé, c'est maintenant géré par la reinstall de conda, mais on peut imaginer
         # une simple mise à jour dans le futur. Pour l'instant on ne fait rien de plus.
         # la logique ci-dessus suffit.
@@ -1220,6 +1242,14 @@ def main():
     # Ce bloc s'exécute soit en mode normal, soit après une réinstallation réussie.
     command_to_run_final = args.command
         
+    # --- AJOUT: TENTATIVE DE CRÉATION AUTOMATIQUE SI MANQUANT ---
+    env_name_for_check = args.env_name or manager.default_conda_env
+    if not manager.check_conda_env_exists(env_name_for_check):
+        logger.warning(f"L'environnement '{env_name_for_check}' n'existe pas. Tentative de création automatique...")
+        reinstall_conda_environment(manager, env_name_for_check, verbose_level=args.conda_verbose_level)
+        logger.info("La création est terminée (succès ou échec). Le script va maintenant procéder à l'activation.")
+    # --- FIN DE L'AJOUT ---
+
     logger.info("Phase d'activation/exécution de commande...")
     exit_code = manager.activate_project_environment(
         command_to_run=command_to_run_final,

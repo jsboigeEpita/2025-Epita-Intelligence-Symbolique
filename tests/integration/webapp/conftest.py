@@ -15,10 +15,10 @@ def webapp_config():
         },
         'backend': {
             'enabled': True,
-            'module': 'fake.backend.module:app',
+            'module': 'argumentation_analysis.services.web_api.app:app',
             'start_port': 8000,
             'fallback_ports': [8001, 8002],
-            'timeout_seconds': 5,
+            'timeout_seconds': 180,
             'health_endpoint': '/api/health'
         },
         'frontend': {

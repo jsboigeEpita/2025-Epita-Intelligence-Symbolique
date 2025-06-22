@@ -29,6 +29,8 @@ async def main(port):
     try:
         await site.start()
         logging.info(f"Fake aiohttp backend started on http://localhost:{port}")
+        # THIS IS THE CRITICAL LINE THE ORCHESTRATOR IS WAITING FOR
+        logging.info("Application startup complete.")
         # Keep the server running indefinitely
         await asyncio.Event().wait()
     except Exception as e:
