@@ -122,7 +122,7 @@ class PlaywrightRunner:
             'BROWSER': config['browser'],
             'SCREENSHOTS_DIR': str(self.screenshots_dir),
             'TRACES_DIR': str(self.traces_dir),
-            'KMP_DUPLICATE_LIB_OK': 'TRUE' # Contournement pour le conflit OpenMP
+
         }
         
         for key, value in env_vars.items():
