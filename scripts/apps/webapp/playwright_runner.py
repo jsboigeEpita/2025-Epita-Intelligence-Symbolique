@@ -147,45 +147,32 @@ class PlaywrightRunner:
     
     def _build_playwright_command(self, test_paths: List[str],
                                  config: Dict[str, Any]) -> List[str]:
-        """Construit la commande en appelant directement le script Playwright."""
+        """Construit la commande pour exécuter les tests via Pytest."""
 
-        # Construction d'un chemin absolu vers l'exécutable Playwright
-        # pour garantir qu'il soit trouvé par asyncio.create_subprocess_exec.
-        base_path = Path.cwd()
-        playwright_executable_path = base_path / 'node_modules' / '.bin' / 'playwright'
-
-        if sys.platform == "win32":
-            # Sous Windows, l'exécutable est un script .cmd
-            playwright_executable_path = playwright_executable_path.with_suffix('.cmd')
-
-        if not playwright_executable_path.exists():
-            self.logger.error(f"L'exécutable Playwright n'a pas été trouvé à: {playwright_executable_path}")
-            # On pourrait vouloir lever une exception ici pour arrêter le processus
-            # au lieu de continuer avec une commande qui échouera.
-            raise FileNotFoundError(f"Playwright executable not found at {playwright_executable_path}")
-
-        cmd = [str(playwright_executable_path), 'test']
+        # On passe à Pytest qui est plus standard pour l'écosystème Python
+        # et gère mieux l'intégration.
+        self.logger.info(f"Utilisation de Pytest avec l'interpréteur : {sys.executable}")
         
-        # Ajout des chemins de tests
+        cmd = [
+            sys.executable, '-m', 'pytest',
+            '-v',                 # Augmente la verbosité
+            '--capture=no',       # Affiche stdout/stderr en temps réel
+            '--slowmo=50'         # Ralentit les opérations pour l'observation
+        ]
+
+        # Ajout du répertoire de test pour que pytest le découvre
         cmd.extend(test_paths)
-        
-        # Options Playwright
-        # On ne spécifie plus --browser car le fichier de config Playwright
-        # contient déjà des projets qui le définissent.
-        # cmd.append(f'--browser={config["browser"]}')
-        
+
+        # Les options sont maintenant celles de pytest-playwright
         if not config['headless']:
             cmd.append('--headed')
         
-        # La configuration pour les screenshots, traces et vidéos
-        # est généralement gérée dans le fichier playwright.config.js
-        # pour plus de robustesse. On s'assure que les répertoires
-        # sont définis via les variables d'environnement.
-        # On peut forcer certaines options ici si nécessaire.
-        
-        # Exemple pour forcer le traçage :
+        # --tracing on est l'équivalent de --trace=on pour pytest-playwright
         if config.get('traces', True):
-            cmd.append('--trace=on')
+            cmd.append('--tracing=on')
+            
+        # Spécifier le navigateur à utiliser
+        cmd.append(f'--browser={config["browser"]}')
             
         return cmd
     

@@ -376,7 +376,10 @@ class UnifiedWebOrchestrator:
             await asyncio.sleep(2)
             
             # 3. Exécution tests
-            success = await self.run_tests(test_paths)
+            # DEBUG: Forcer l'exécution d'un seul test pour isoler le problème de blocage.
+            isolated_test_path = ['tests/e2e/python/test_validation_form.py']
+            self.logger.warning(f"DEBUGGING: Exécution d'un test isolé: {isolated_test_path}")
+            success = await self.run_tests(isolated_test_path)
             
             if success:
                 self.add_trace("[SUCCESS] INTEGRATION REUSSIE",
