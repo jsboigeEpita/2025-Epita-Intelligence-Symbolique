@@ -30,7 +30,9 @@ def _get_logger_tools(logger_instance=None):
 # --- Configurations des Outils ---
 JDK_CONFIG = {
     "name": "JDK",
-    "url_windows": "https://download.oracle.com/java/17/latest/jdk-17_windows-x64_bin.zip",
+    "url_windows": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.11%2B9/OpenJDK17U-jdk_x64_windows_hotspot_17.0.11_9.zip",
+    "url_linux": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.11%2B9/OpenJDK17U-jdk_x64_linux_hotspot_17.0.11_9.tar.gz",
+    "url_darwin": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.11%2B9/OpenJDK17U-x64_mac_hotspot_17.0.11_9.tar.gz",
     "dir_name_pattern": r"jdk-17.*",
     "home_env_var": "JAVA_HOME"
 }

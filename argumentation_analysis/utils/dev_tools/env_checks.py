@@ -19,46 +19,27 @@ import importlib.metadata # Ajouté pour la vérification des versions
 from typing import List, Tuple, Optional
 
 # Imports pour alternatives à pkg_resources
-try:
-    from packaging.version import parse as parse_version
-    from packaging.requirements import Requirement
-    PACKAGING_AVAILABLE = True
-except ImportError:
-    PACKAGING_AVAILABLE = False
-    parse_version = None
-    Requirement = None
-
-try:
-    import pkg_resources # Pour parser les requirements
-    PKG_RESOURCES_AVAILABLE = True
-except (ImportError, PermissionError) as e:
-    # pkg_resources est déprécié et peut causer des erreurs de permissions lors des tests
-    PKG_RESOURCES_AVAILABLE = False
-    pkg_resources = None
+from packaging.version import parse as parse_version
+from packaging.requirements import Requirement
 
 # Logger défini après les imports
 logger = logging.getLogger(__name__)
 
-if not PKG_RESOURCES_AVAILABLE:
-    logger.warning(f"pkg_resources n'est pas disponible. Utilisation d'alternatives modernes.")
-
 def _parse_requirement(req_string):
-    """Parse une requirement string en utilisant pkg_resources ou packaging comme fallback."""
-    if PKG_RESOURCES_AVAILABLE:
-        return pkg_resources.Requirement.parse(req_string)
-    elif PACKAGING_AVAILABLE:
+    """Parse une requirement string en utilisant packaging."""
+    try:
         return Requirement(req_string)
-    else:
-        raise ImportError("Ni pkg_resources ni packaging ne sont disponibles pour parser les requirements")
+    except Exception as e:
+        logger.error(f"Impossible de parser la chaîne de prérequis '{req_string}' avec la bibliothèque 'packaging'. Erreur : {e}")
+        raise
 
 def _parse_version(version_string):
-    """Parse une version string en utilisant pkg_resources ou packaging comme fallback."""
-    if PKG_RESOURCES_AVAILABLE:
-        return pkg_resources.parse_version(version_string)
-    elif PACKAGING_AVAILABLE:
+    """Parse une version string en utilisant packaging."""
+    try:
         return parse_version(version_string)
-    else:
-        raise ImportError("Ni pkg_resources ni packaging ne sont disponibles pour parser les versions")
+    except Exception as e:
+        logger.error(f"Impossible de parser la chaîne de version '{version_string}' avec la bibliothèque 'packaging'. Erreur : {e}")
+        raise
 
 # Configuration du logging pour ce module
 logger = logging.getLogger(__name__)
@@ -319,11 +300,6 @@ def check_python_dependencies(requirements_file_path: typing.Union[str, _PathInt
         logger.error(f"    Le fichier de dépendances {requirements_file_path} n'a pas été trouvé.")
         return False
 
-    # S'assurer que pkg_resources a été importé
-    if pkg_resources is None:
-        logger.error("    pkg_resources n'est pas disponible. Impossible de parser le fichier de dépendances.")
-        return False
-
     try:
         with open(requirements_file_path, 'r', encoding='utf-8') as f:
             requirements_content = f.read()
@@ -356,75 +332,39 @@ def check_python_dependencies(requirements_file_path: typing.Union[str, _PathInt
                 parsed_requirements.append(parsed_req)
                 line_successfully_parsed_or_recovered = True
             except ValueError as ve_initial_parse:
-                # Essayer d'extraire le nom du package au cas où.
-                # Ceci est une heuristique et peut ne pas être précis.
-                # D'abord, nettoyer les commentaires et marqueurs d'environnement comme pour line_parts
-                # Ensuite, essayer d'isoler le nom du package avant un crochet ou un opérateur de version
-                potential_name = current_processing_line.split("==")[0].split(">=")[0].split("<=")[0].split("!=")[0].split("~=")[0].split(";")[0].split("[")[0].split(" ")[0].strip()
+                # Tentative de récupération en extrayant juste le nom du paquet.
+                potential_name = current_processing_line.split("==")[0].split(">=")[0].split("<=")[0].split("!=")[0].split("~=")[0].split(";")[0].split("[")[0].strip()
                 
-                if potential_name and not any(c in potential_name for c in "[](),"): # Simple vérification que le nom est "propre"
-                    logger.warning(f"    Impossible de parser complètement la ligne '{current_processing_line}' avec pkg_resources: {ve_initial_parse}. Tentative avec nom '{potential_name}'.")
-                    # Créer un requirement sans specifier si le parsing échoue mais qu'on a un nom
+                if potential_name:
+                    logger.warning(f"    Impossible de parser complètement la ligne '{current_processing_line}': {ve_initial_parse}. Tentative avec le nom '{potential_name}'.")
                     try:
+                        # On réessaye de parser juste avec le nom, ce qui devrait toujours fonctionner.
                         parsed_requirements.append(_parse_requirement(potential_name))
                         line_successfully_parsed_or_recovered = True
-                        # La vérification de version ci-dessous déterminera si overall_all_ok doit être False
-                        # car un requirement sans specifier sera toujours "satisfait" s'il est installé,
-                        # mais si la ligne originale avait un specifier, on a perdu cette info.
-                        # On pourrait considérer cela comme un échec partiel si la ligne originale avait un specifier.
-                        # Pour l'instant, on le traite comme un succès de parsing, et la vérification de version
-                        # pour un requirement sans specifier ne mettra pas overall_all_ok à False.
-                    except ValueError as ve_heuristic_parse:
-                        # Si même l'heuristique échoue, c'est un échec de parsing pour cette ligne.
-                        cleaned_line_for_log = current_processing_line.split('#')[0].strip() # Utiliser la ligne nettoyée pour le log
-                        logger.error(f"    Impossible de parser la ligne de dépendance '{cleaned_line_for_log}' même après heuristique: {ve_heuristic_parse}")
-                        overall_all_ok = False # Échec définitif pour cette ligne
+                        # Marquer comme un échec global car la contrainte de version a été perdue.
+                        overall_all_ok = False
+                    except Exception as ve_heuristic_parse:
+                        logger.error(f"    Échec critique du parsing de la ligne '{current_processing_line}' même après heuristique: {ve_heuristic_parse}")
+                        overall_all_ok = False
                 else:
-                    # Si on ne peut même pas extraire un nom potentiel propre, c'est un échec de parsing.
-                    cleaned_line_for_log = current_processing_line.split('#')[0].strip() # Utiliser la ligne nettoyée pour le log
-                    logger.error(f"    Impossible de parser la ligne de dépendance '{cleaned_line_for_log}': {ve_initial_parse}")
-                    overall_all_ok = False # Échec définitif pour cette ligne
-            
-            # Si après toutes les tentatives, la ligne n'est pas gérée et n'a pas été skippée (continue),
-            # et que line_successfully_parsed_or_recovered est toujours False,
-            # cela signifie un échec de parsing non récupéré pour cette ligne.
-            # La logique ci-dessus devrait déjà avoir mis overall_all_ok à False dans ces cas.
-            if not line_successfully_parsed_or_recovered and not (
-                current_processing_line.startswith('-e') or \
-                current_processing_line.startswith('git+') or \
-                '.git@' in current_processing_line or \
-                current_processing_line.startswith('-r')
-            ):
-                # Ce cas devrait être couvert par les `overall_all_ok = False` ci-dessus.
-                # On peut ajouter un log ici si on veut être très explicite.
-                logger.debug(f"    La ligne '{current_processing_line}' n'a pas pu être parsée et n'a pas été ignorée.")
-                # overall_all_ok devrait déjà être False si on arrive ici.
-
-
-        # Si un parsing a complètement échoué au point de ne pas pouvoir ajouter à parsed_requirements
-        # et a mis overall_all_ok à False, on peut vouloir s'arrêter plus tôt.
-        # Cependant, la boucle continue pour logger toutes les erreurs de parsing.
-        # Si overall_all_ok est déjà False à cause d'un parsing, on peut retourner False ici.
-        # Mais il est préférable de vérifier toutes les versions des packages qui ONT PU être parsés.
+                    logger.error(f"    Impossible de parser la ligne de dépendance et d'extraire un nom de package: '{current_processing_line}': {ve_initial_parse}")
+                    overall_all_ok = False
 
         for req in parsed_requirements:
-            req_name = req.project_name # Utiliser project_name qui est normalisé
+            req_name = req.name
             try:
                 installed_version_str = importlib.metadata.version(req_name)
-                # Utiliser la fonction helper pour parser la version
                 installed_version = _parse_version(installed_version_str)
-                
-                # Si req.specifier est vide (pas de version spécifiée dans le fichier reqs)
-                if not req.specs: # req.specs est une liste de tuples (opérateur, version)
+
+                if not req.specifier:
                     logger.info(f"    [OK] {req_name}: Version {installed_version_str} installée (aucune version spécifique requise).")
-                # Utiliser req.specifier qui est un objet SpecifierSet
-                elif req.specifier.contains(installed_version_str, prereleases=True): # Autoriser les pré-releases si spécifiées
+                elif req.specifier.contains(installed_version_str, prereleases=True):
                     logger.info(f"    [OK] {req_name}: Version {installed_version_str} installée satisfait {req.specifier}")
                 else:
                     logger.warning(f"    ❌ {req_name}: Version {installed_version_str} installée ne satisfait PAS {req.specifier}")
                     overall_all_ok = False
             except importlib.metadata.PackageNotFoundError:
-                logger.warning(f"    ❌ {req_name}: Non installé (requis: {req.specifier if req.specs else 'any version'})")
+                logger.warning(f"    ❌ {req_name}: Non installé (requis: {req.specifier if req.specifier else 'any version'})")
                 overall_all_ok = False
             except Exception as e: # Capturer d'autres erreurs potentielles (ex: parsing de version invalide)
                 logger.error(f"    ❓ Erreur lors de la vérification de {req_name}: {e}")

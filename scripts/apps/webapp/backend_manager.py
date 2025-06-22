@@ -113,80 +113,57 @@ class BackendManager:
         try:
             server_type = self.config.get('server_type', 'uvicorn')
             
+            # Définition de l'environnement Conda cible
+            conda_env_name = os.getenv("CONDA_DEFAULT_ENV", "projet-is-roo")
+
             # Construction de la commande interne (Python + uvicorn/flask)
             if server_type == 'uvicorn':
                 asgi_module = 'argumentation_analysis.services.web_api.asgi:app'
-                internal_cmd_str = f'python -m uvicorn {asgi_module} --port {port} --host 0.0.0.0'
+                # La commande est maintenant une liste d'arguments pour `conda run`
+                internal_cmd_list = ['python', '-m', 'uvicorn', asgi_module, '--port', str(port), '--host', '127.0.0.1']
             else:
-                internal_cmd_str = f'python -m {self.module} --port {port}'
-
-            # Correction du chemin du script d'activation et simplification du wrapper
-            activation_script_path = project_root.joinpath("scripts", "utils", "activate_conda_env.ps1")
-
-            wrapper_script_content = f"""
-# Script wrapper simple pour démarrer le backend
-$ErrorActionPreference = "Stop"
-try {{
-    Write-Host "Wrapper: Tentative de sourcing du script d'activation: {activation_script_path}"
-    . "{activation_script_path}"
-    Write-Host "Wrapper: Sourcing réussi."
-    
-    Write-Host "Wrapper: Lancement du serveur backend..."
-    {internal_cmd_str}
-}} catch {{
-    Write-Host "Wrapper CRITICAL: Une erreur PowerShell est survenue."
-    Write-Host "Message: $_"
-    exit 1
-}}
-"""
+                internal_cmd_list = ['python', '-m', self.module, '--port', str(port), '--host', '127.0.0.1']
             
-            wrapper_script_path = Path.cwd() / f"temp_backend_runner_{port}.ps1"
-            with open(wrapper_script_path, "w", encoding="utf-8") as f:
-                f.write(wrapper_script_content)
-
+            # Commande finale avec `conda run` pour garantir l'activation de l'environnement
             cmd = [
-                'powershell',
-                '-ExecutionPolicy', 'Bypass',
-                '-File',
-                str(wrapper_script_path)
-            ]
+                'conda',
+                'run',
+                '-n',
+                conda_env_name,
+                '--no-capture-output'
+            ] + internal_cmd_list
 
-            self.logger.info(f"Exécution du wrapper PowerShell: {' '.join(cmd)}")
+            self.logger.info(f"Exécution directe avec Conda Run: {' '.join(cmd)}")
             
             env = os.environ.copy()
             env['PYTHONPATH'] = str(Path.cwd())
             env['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
             self.logger.info("Variable d'environnement KMP_DUPLICATE_LIB_OK=TRUE définie pour contourner le conflit OpenMP.")
             
-            self.process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                cwd=Path.cwd(),
-                env=env,
-                text=True,
-                encoding='utf-8',
-                errors='replace'
-            )
-            
-            # Démarrer les threads de logging
-            self.log_threads = []
-            if self.process.stdout:
-                stdout_thread = threading.Thread(target=self._log_stream, args=(self.process.stdout, logging.INFO))
-                stdout_thread.daemon = True
-                stdout_thread.start()
-                self.log_threads.append(stdout_thread)
+            # Redirection des logs vers des fichiers dédiés pour un débogage robuste
+            log_dir = Path.cwd() / "logs"
+            log_dir.mkdir(exist_ok=True)
+            self.stdout_log_file = log_dir / "backend_stdout.log"
+            self.stderr_log_file = log_dir / "backend_stderr.log"
 
-            if self.process.stderr:
-                stderr_thread = threading.Thread(target=self._log_stream, args=(self.process.stderr, logging.ERROR))
-                stderr_thread.daemon = True
-                stderr_thread.start()
-                self.log_threads.append(stderr_thread)
+            with open(self.stdout_log_file, 'w', encoding='utf-8') as stdout_f, \
+                 open(self.stderr_log_file, 'w', encoding='utf-8') as stderr_f:
+                self.logger.info(f"Redirection de la sortie du backend vers: {self.stdout_log_file} et {self.stderr_log_file}")
+                self.process = subprocess.Popen(
+                    cmd,
+                    stdout=stdout_f,
+                    stderr=stderr_f,
+                    cwd=Path.cwd(),
+                    env=env,
+                    text=True,
+                    encoding='utf-8',
+                    errors='replace'
+                )
 
             backend_ready = await self._wait_for_backend(port)
             
             if backend_ready:
-                url = f"http://localhost:{port}"
+                url = f"http://127.0.0.1:{port}"
                 return {'success': True, 'url': url, 'port': port, 'pid': self.process.pid, 'error': None}
             else:
                 error_msg = f'Backend non accessible sur port {port} après {self.timeout_seconds}s'
@@ -199,7 +176,7 @@ try {{
     
     async def _wait_for_backend(self, port: int) -> bool:
         """Attend que le backend soit accessible via health check avec une patience accrue."""
-        url = f"http://localhost:{port}{self.health_endpoint}"
+        url = f"http://127.0.0.1:{port}{self.health_endpoint}"
         start_time = time.time()
         self.logger.info(f"Attente backend sur {url} (timeout: {self.timeout_seconds}s)")
 
@@ -255,7 +232,7 @@ try {{
             # Fallback - tentative connexion
             try:
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(f"http://localhost:{port}", 
+                    async with session.get(f"http://127.0.0.1:{port}",
                                          timeout=aiohttp.ClientTimeout(total=1)) as response:
                         return True  # Port répond
             except:

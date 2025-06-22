@@ -627,11 +627,15 @@ def main():
                     return False
 
             elif args.test:
-                # Si on lance les tests seuls, on ne s'attend pas à ce que l'app soit déjà lancée
-                # On passe None si args.tests est une liste vide pour utiliser la config par défaut
-                success = await orchestrator.run_tests(args.tests if args.tests else None)
-                # Arrêt post-test
-                await orchestrator.stop_webapp()
+                # Test d'intégration qui encapsule le démarrage, l'exécution et l'arrêt
+                success = False
+                try:
+                    # Démarrage de l'application (partie de run_tests si nécessaire)
+                    # Exécution des tests et récupération du résultat
+                    success = await orchestrator.run_tests(args.tests if args.tests else None)
+                finally:
+                    # Arrêt systématique de l'application
+                    await orchestrator.stop_webapp()
                 return success
             else:  # Integration par défaut
                 return await orchestrator.full_integration_test(
