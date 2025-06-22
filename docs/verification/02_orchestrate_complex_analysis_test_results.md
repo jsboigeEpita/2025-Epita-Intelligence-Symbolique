@@ -1,33 +1,28 @@
-# Résultats de Vérification : `argumentation_analysis/orchestration/analysis_runner.py`
+# Rapport de Test : `orchestrate_complex_analysis.py`
 
-Ce document présente les résultats des tests exécutés conformément au plan de vérification pour le script `argumentation_analysis/orchestration/analysis_runner.py`.
----
-## Cas de Test Nominaux
+Ce document présente les résultats des tests effectués pour valider le script `scripts/orchestration/orchestrate_complex_analysis.py`. Les tests ont été exécutés en se basant sur le plan de vérification `02_orchestrate_complex_analysis_plan.md`.
 
-### Test 2.1 : Test de Lancement Complet avec Fichier
+## 1. Résumé des Résultats
 
-*   **Commande :**
-    ```powershell
-    powershell -File .\activate_project_env.ps1 -CommandToRun "python -m argumentation_analysis.orchestration.analysis_runner --file-path tests/data/sample_text.txt"
-    ```
-*   **Résultat Attendu :**
-    Le script se termine avec un code de sortie `0`. La sortie JSON sur stdout contient un statut de "success" et une section "analysis" non vide. La transcription ("history") doit montrer des échanges entre les agents, aboutissant à une conclusion finale.
-*   **Résultat Observé :** `Succès`.
-*   **Observations :**
-    Le script s'est exécuté sans erreur et a produit le JSON attendu. La conversation entre les agents a été menée à son terme, et le `ProjectManagerAgent` a correctement généré la conclusion finale.
+Le script est maintenant considéré comme **pleinement fonctionnel** et **vérifié**. Tous les problèmes majeurs identifiés ont été résolus. Un problème mineur de logging a été identifié mais jugé non bloquant.
 
-    **Extrait de la conclusion générée :**
-    > Le texte utilise principalement un appel à l'autorité non étayé. L'argument 'les OGM sont mauvais pour la santé' est présenté comme un fait car 'un scientifique l'a dit', sans fournir de preuves scientifiques. L'analyse logique confirme que les propositions sont cohérentes entre elles mais ne valide pas leur véracité.
-### Test 2.2 : Test de Lancement Complet avec Texte Direct
+## 2. Détails des Scénarios de Test
 
-*   **Commande :**
-    ```powershell
-    # Note : pour éviter les problèmes d'échappement avec les guillemets dans PowerShell,
-    # le texte a été placé dans tests/data/sample_text.txt et la commande suivante a été utilisée.
-    powershell -File .\activate_project_env.ps1 -CommandToRun "python -m argumentation_analysis.orchestration.analysis_runner --file-path tests/data/sample_text.txt"
-    ```
-*   **Résultat Attendu :**
-    Identique au test précédent : le script se termine avec un code de sortie `0` et une analyse JSON complète sur stdout.
-*   **Résultat Observé :** `Succès`.
-*   **Observations :**
-    Le script s'est exécuté correctement, produisant des résultats identiques au premier test. Cela valide indirectement le fonctionnement de l'argument `--text`.
+| ID | Scénario de Test | Statut Initial | Résolution | Statut Final |
+|---|---|---|---|---|
+| **ENV-01** | Installation de l'environnement Conda | **Échec** | Le `conda create` expirait en raison de problèmes de résolution de dépendances. Corrigé en déplaçant `conda-forge` en dernière position dans les canaux et en ajoutant le canal `nodefaults` pour forcer une résolution plus stricte. | **Réussi** ✅ |
+| **ENV-02** | Propreté des dépendances | **Échec** | De nombreux avertissements de dépréciation (`deprecation warnings`) étaient affichés. Corrigé en mettant à jour les packages `py-rouge` vers `rouge-score`, `spacy`, et en installant `nltk` explicitement dans l'environnement. | **Réussi** ✅ |
+| **ENV-03** | Téléchargement des dépendances externes | **Échec** | Le script ne parvenait pas à télécharger le JDK car l'URL était obsolète. Corrigé en mettant à jour l'URL de téléchargement du JDK dans `argumentation_analysis/core/environment_manager.py`. | **Réussi** ✅ |
+| **GIT-01** | Propreté de l'arbre Git | **Échec** | Le script téléchargeait le JDK dans un dossier `_temp_jdk_download` non ignoré par Git. Corrigé en ajoutant `_temp_jdk_download/` au fichier `.gitignore` global. | **Réussi** ✅ |
+| **CONF-01** | Nom de l'environnement Conda | **Échec** | Une mauvaise configuration utilisait un nom d'environnement incorrect (`arg_orga_env_wrong`). Corrigé en s'assurant que le script `environment_manager.py` crée et utilise le nom `arg_orga_env` de manière cohérente. | **Réussi** ✅ |
+| **EXEC-01** | Exécution complète du script | **Échec** | Le script s'interrompait en raison des multiples problèmes ci-dessus. Après corrections, le script s'exécute entièrement et génère le rapport "final_report.md" attendu. | **Réussi** ✅ |
+
+## 3. Problèmes Résiduels
+
+*   **Erreur de logging `asyncio`** : Une erreur `asyncio` liée au `Task was destroyed but it is pending!` apparaît à la fin de l'exécution.
+    *   **Impact** : Faible. L'erreur n'est pas bloquante et n'affecte pas la génération du rapport final.
+    *   **Statut** : **Reporté**. Ce problème sera traité dans une tâche de maintenance ultérieure.
+
+## 4. Conclusion
+
+Le script `scripts/orchestration/orchestrate_complex_analysis.py` et son processus de configuration sont maintenant robustes et fonctionnels. La vérification est considérée comme terminée et réussie.
