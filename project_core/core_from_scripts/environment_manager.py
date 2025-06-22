@@ -1022,35 +1022,23 @@ def reinstall_conda_environment(manager: 'EnvironmentManager', env_name: str, ve
     # Utiliser run_in_conda_env n'est pas approprié ici car l'environnement peut ne pas exister.
     # On exécute directement avec subprocess.run
     try:
-        # Utilisation de Popen pour un affichage en temps réel de la sortie
-        process = subprocess.Popen(
+        # On exécute directement avec subprocess.run, sans capturer la sortie.
+        # La sortie du sous-processus (stdout, stderr) sera directement affichée sur la console
+        # parente, fournissant un retour en temps réel plus robuste.
+        result = subprocess.run(
             conda_create_command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
             text=True,
             encoding='utf-8',
-            errors='replace'
+            errors='replace',
+            check=False  # On gère le code de retour nous-mêmes
         )
-
-        # Afficher la sortie en temps réel
-        while True:
-            output = process.stdout.readline()
-            if output == '' and process.poll() is not None:
-                break
-            if output:
-                logger.info(output.strip())
-
-        # Vider le reste du stderr
-        stderr_output = process.communicate()[1]
-        if stderr_output:
-            logger.error(stderr_output.strip())
-
-        if process.returncode != 0:
-            logger.error(f"Échec de la création de l'environnement Conda. Code de retour : {process.returncode}")
+        
+        if result.returncode != 0:
+            logger.error(f"Échec de la création de l'environnement Conda. Le log ci-dessus devrait contenir les détails.")
             safe_exit(1, logger)
 
     except (subprocess.SubprocessError, FileNotFoundError) as e:
-        logger.critical(f"Une erreur subprocess est survenue lors de la création de l'environnement : {e}")
+        logger.critical(f"Une erreur majeure est survenue lors de l'exécution de la commande conda : {e}")
         safe_exit(1, logger)
     
     logger.success(f"Environnement '{env_name}' recréé avec succès depuis {env_file_path}.")
