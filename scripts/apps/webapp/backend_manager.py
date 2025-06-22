@@ -137,8 +137,6 @@ class BackendManager:
             
             env = os.environ.copy()
             env['PYTHONPATH'] = str(Path.cwd())
-            env['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
-            self.logger.info("Variable d'environnement KMP_DUPLICATE_LIB_OK=TRUE définie pour contourner le conflit OpenMP.")
             
             # Redirection des logs vers des fichiers dédiés pour un débogage robuste
             log_dir = Path.cwd() / "logs"

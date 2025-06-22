@@ -4,6 +4,15 @@
 Script de simulation pour démontrer l'équilibrage de la participation des agents
 avec la stratégie BalancedParticipationStrategy.
 """
+#
+# Ce script utilise de véritables instances d'agents (et non des mocks) pour simuler
+# une conversation. Il démontre comment la `BalancedParticipationStrategy` peut être utilisée pour
+# guider la conversation vers des objectifs de participation définis pour chaque agent,
+# même en présence de désignations explicites qui pourraient biaiser la discussion.
+#
+# Le script génère un graphique (`balanced_participation_simulation.png`) qui visualise
+# la convergence des taux de participation réels vers les cibles au fil du temps.
+#
 
 import asyncio
 import logging

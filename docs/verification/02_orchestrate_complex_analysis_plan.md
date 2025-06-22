@@ -1,48 +1,26 @@
 # Plan de Vérification : `orchestrate_complex_analysis.py`
 
-**Objectif :** Valider le fonctionnement autonome, la robustesse et la génération de rapports du script `scripts/orchestration/orchestrate_complex_analysis.py`.
+Ce document décrit le plan de test (défini rétrospectivement) pour la validation du script `scripts/orchestration/orchestrate_complex_analysis.py` et de son environnement de configuration.
 
-## 1. Test de base (Happy Path)
+## 1. Objectifs de la Vérification
 
-*   **Description :** Exécuter le script sans aucun argument pour s'assurer qu'il se termine sans erreur, en utilisant le flux par défaut (chargement d'extrait aléatoire, analyse et génération de rapport).
-*   **Commande :**
-    ```powershell
-    ./scripts/system/activate_project_env.ps1 -ScriptPath "python" -ScriptArgs "scripts/orchestration/orchestrate_complex_analysis.py"
-    ```
-*   **Critères de succès :**
-    *   Le script se termine avec un code de sortie 0.
-    *   Un message "ORCHESTRATION COMPLEXE TERMINEE" est affiché.
-    *   Un fichier de rapport Markdown (ex: `rapport_analyse_complexe_YYYYMMDD_HHMMSS.md`) est créé dans le répertoire racine.
-    *   Le rapport contient une section "Résultats Finaux" avec des données.
+L'objectif principal est de s'assurer que le script d'orchestration complexe peut être configuré et exécuté de manière fiable, sans erreur bloquante, et qu'il produit le rapport d'analyse attendu.
 
-## 2. Validation des Entrées (Gestion d'Erreurs)
+## 2. Périmètre de Test
 
-*   **Description :** Simuler un échec de chargement du corpus pour vérifier que le mécanisme de fallback du script est correctement activé. Cela se fait en modifiant temporairement le chemin du fichier corpus dans le script ou en s'assurant que le fichier est inaccessible.
-*   **Hypothèse :** Le test de base couvre déjà implicitement le cas d'echec si le fichier `tests/extract_sources_backup.enc` n'est pas ou ne peut pas être lu. Le script devrait utiliser le texte de fallback.
-*   **Critères de succès :**
-    *   Le script se termine avec succès (code 0).
-    *   Le rapport généré indique "Texte statique de secours" comme type de source.
-    *   Un log de niveau `ERROR` ou `WARNING` est généré, indiquant l'échec du chargement du corpus.
+*   **Gestion de l'environnement Conda** : Création, configuration et activation.
+*   **Installation des dépendances** : Téléchargement et installation des packages requis, y compris les dépendances externes comme le JDK.
+*   **Exécution du script** : Lancement et exécution complète du script `orchestrate_complex_analysis.py`.
+*   **Génération des artefacts** : Production du rapport d'analyse final.
+*   **Intégrité de l'environnement de développement** : Propreté de l'arbre Git après exécution.
 
-## 3. Validation des Sorties
+## 3. Scénarios de Test
 
-*   **Description :** Analyser le contenu du rapport Markdown généré pour s'assurer de sa complétude et de sa structure.
-*   **Actions :**
-    1.  Ouvrir le rapport généré lors du test de base.
-    2.  Vérifier la présence des sections suivantes :
-        *   `Source Analysée`
-        *   `Agents Orchestrés`
-        *   `Outils Utilisés`
-        *   `Trace Conversationnelle Détaillée`
-        *   `Résultats Finaux` (avec une section `Mode Fallacies`)
-        *   `Métriques de Performance`
-    3.  Vérifier que le nombre d'interactions, d'agents et d'outils n'est pas nul.
-    4.  Valider que la section des sophismes (`Mode Fallacies`) contient soit des sophismes détectés, soit le message "Aucun sophisme valide détecté...".
-
-## 4. Test d'Intégration des Agents
-
-*   **Description :** Confirmer que les agents (réels ou simulés) sont correctement invoqués et que leurs interactions sont tracées.
-*   **Hypothèse :** Le test de base couvre ce point, car le script orchestre `InformalAnalysisAgent` (réel) et simule `RhetoricalAnalysisAgent` et `SynthesisAgent`.
-*   **Critères de succès :**
-    *   Le rapport de test mentionne les agents suivants dans la section `Agents Orchestrés` : `CorpusManager`, `InformalAnalysisAgent`, `RhetoricalAnalysisAgent`, `SynthesisAgent`.
-    *   La trace conversationnelle détaillée montre des interactions pour chaque agent listé.
+| ID | Scénario de Test | Critères de Succès |
+|---|---|---|
+| **ENV-01** | Installation de l'environnement Conda | L'environnement `arg_orga_env` est créé et activé sans erreur de timeout lors du `conda create`. |
+| **ENV-02** | Propreté des dépendances | L'exécution du script ne génère aucun avertissement de dépréciation (`deprecation warnings`). |
+| **ENV-03** | Téléchargement des dépendances externes | Le script télécharge et installe correctement le JDK depuis l'URL spécifiée. |
+| **GIT-01** | Propreté de l'arbre Git | L'exécution du script ne modifie/crée aucun fichier suivi par Git (ex: pas de `_temp_jdk_download` ajouté au suivi). L'état de `git status` reste propre. |
+| **CONF-01** | Nom de l'environnement Conda | Le script utilise le nom d'environnement `arg_orga_env` et non un nom incorrect comme `arg_orga_env_wrong`. |
+| **EXEC-01** | Exécution complète du script | Le script s'exécute jusqu'à la fin sans interruption et génère le rapport d'analyse final dans le répertoire attendu. |

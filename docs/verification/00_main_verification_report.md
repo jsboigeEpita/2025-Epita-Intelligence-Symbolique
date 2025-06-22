@@ -6,7 +6,7 @@ Ce document suit l'état de la vérification des points d'entrée principaux du 
 
 ## 1. Point d'Entrée : `scripts/launch_webapp_background.py`
 
-- **Statut :** ✅  Vérifié
+- **Statut :** Vérifié ✅
 - **Résumé des Phases :**
     - **Map :** Analyse et planification de la couverture de test.
     - **Test & Fix :** Exécution des tests, identification et correction des anomalies.
@@ -21,7 +21,7 @@ Ce document suit l'état de la vérification des points d'entrée principaux du 
 
 ## 2. Point d'Entrée : `scripts/orchestrate_complex_analysis.py`
 
-- **Statut :** ✅ Vérifié
+- **Statut :** Vérifié ✅
 - **Résumé des Phases :**
     - **Plan :** Planification de la vérification.
     - **Test & Fix :** Exécution et correction.
@@ -39,3 +39,14 @@ Ce document suit l'état de la vérification des points d'entrée principaux du 
 - **Artefacts :**
     - **Plan :** [`03_simulate_balanced_participation_plan.md`](./03_simulate_balanced_participation_plan.md)
     - **Résultats de Test & Fix :** [`03_simulate_balanced_participation_test_results.md`](./03_simulate_balanced_participation_test_results.md)
+---
+
+## 4. Point d'Entrée : `project_core/rhetorical_analysis_from_scripts/unified_production_analyzer.py`
+
+- **Statut :** Vérifié ✅
+- **Résumé des Phases :**
+    - **Map :** Planification de la vérification.
+    - **Test & Fix :** Exécution et correction.
+- **Artefacts :**
+    - **Plan :** [`04_generate_and_analyze_arguments_plan.md`](./04_generate_and_analyze_arguments_plan.md)
+    - **Résultats de Test & Fix :** [`04_generate_and_analyze_arguments_test_results.md`](./04_generate_and_analyze_arguments_test_results.md)
