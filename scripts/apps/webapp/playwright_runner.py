@@ -19,6 +19,28 @@ from typing import Dict, List, Optional, Any
 from pathlib import Path
 import json
 
+# Ajout pour accéder à l'EnvironmentManager et aux utilitaires du projet
+try:
+    # Ce chemin est relatif à la structure attendue du projet
+    from project_core.core_from_scripts.environment_manager import EnvironmentManager
+    from project_core.core_from_scripts.common_utils import get_project_root
+except ImportError:
+    # Fallback robuste si le script est exécuté depuis un contexte inattendu
+    # On remonte à la racine du projet et on l'ajoute au path
+    current_dir = Path(__file__).resolve().parent
+    project_root_path = None
+    # Remonter jusqu'à trouver un marqueur de racine (ex: .git, pyproject.toml)
+    for parent in current_dir.parents:
+        if (parent / '.git').exists() or (parent / 'pyproject.toml').exists():
+            project_root_path = parent
+            break
+    if project_root_path and str(project_root_path) not in sys.path:
+        sys.path.insert(0, str(project_root_path))
+    
+    from project_core.core_from_scripts.environment_manager import EnvironmentManager
+    from project_core.core_from_scripts.common_utils import get_project_root
+
+
 class PlaywrightRunner:
     """
     Gestionnaire d'exécution des tests Playwright
@@ -204,7 +226,9 @@ class PlaywrightRunner:
         pytest_args.extend(test_paths)
         
         # La commande est construite pour être utilisée avec l'activation d'environnement
-        cmd = ['python', '-m', 'pytest']
+        # MODIFICATION : On appelle directement 'pytest' pour que 'conda run' puisse le trouver
+        # au lieu d'utiliser 'python -m pytest', ce qui change le contexte d'exécution.
+        cmd = ['pytest']
         cmd.extend(pytest_args)
         
         return cmd
@@ -218,88 +242,64 @@ class PlaywrightRunner:
 
     async def _execute_tests(self, cmd: List[str],
                              config: Dict[str, Any]) -> subprocess.CompletedProcess:
-        """Exécute les tests en utilisant la commande PowerShell pour garantir l'activation de l'environnement."""
+        """Exécute les tests en utilisant EnvironmentManager.run_in_conda_env pour une activation robuste."""
         
-        # NOTE DE FUSION: On combine la logique d'activation de l'environnement du `stash`
-        # avec l'exécution asynchrone de `Updated upstream` pour rester non-bloquant.
+        self.logger.info("Utilisation de EnvironmentManager pour l'exécution des tests.")
         
-        # Isoler les arguments de la commande pytest
-        pytest_args_str = ' '.join(cmd[1:])
+        # Le EnvironmentManager.run_in_conda_env est synchrone.
+        # Nous devons l'appeler dans un thread séparé pour ne pas bloquer la boucle asyncio.
         
-        # Construire une commande PowerShell robuste qui trouve le bon exécutable python
-        # après l'activation de l'environnement.
-        full_command = f". ./activate_project_env.ps1; & (Get-Command python).Source {pytest_args_str}"
-        final_cmd = ["powershell", "-Command", full_command]
+        def blocking_test_execution():
+            """Wrapper synchrone pour l'exécution des tests."""
+            try:
+                manager = EnvironmentManager(self.logger)
+                # La commande `cmd` est déjà correctement formatée (ex: ['python', '-m', 'pytest', ...])
+                # run_in_conda_env s'occupera de l'exécuter via `conda run` ou via chemin direct.
+                self.logger.info(f"Commande à exécuter dans l'environnement conda: {' '.join(cmd)}")
+                
+                # On utilise capture_output=True pour récupérer stdout/stderr
+                result = manager.run_in_conda_env(
+                    cmd,
+                    capture_output=True,
+                    # Le manager utilisera l'env par défaut (`projet-is`)
+                )
+                
+                # Logger la sortie directement depuis le résultat
+                if result.stdout:
+                    for line in result.stdout.splitlines():
+                        self.logger.info(f"[PYTEST_STDOUT] {line}")
+                if result.stderr:
+                    for line in result.stderr.splitlines():
+                        self.logger.warning(f"[PYTEST_STDERR] {line}")
+                        
+                return result
+            except Exception as e:
+                self.logger.critical(f"Erreur fatale dans le thread d'exécution des tests: {e}", exc_info=True)
+                return subprocess.CompletedProcess(
+                    ' '.join(cmd),
+                    returncode=1,
+                    stdout="",
+                    stderr=str(e)
+                )
 
-        self.logger.info(f"Commande PowerShell complète à exécuter : {full_command}")
-        self.logger.info(f"Répertoire de travail: {Path.cwd()}")
         timeout = config.get('test_timeout', 600)
         self.logger.info(f"Timeout configuré: {timeout}s")
-
-        stdout_capture = []
-        stderr_capture = []
         
-        def log_stdout(line):
-            self.logger.info(f"[PYTEST_STDOUT] {line}")
-            stdout_capture.append(line)
-
-        def log_stderr(line):
-            self.logger.warning(f"[PYTEST_STDERR] {line}")
-            stderr_capture.append(line)
-        
-        process = None
         try:
-            self.logger.debug("Démarrage du sous-processus async pour Pytest via PowerShell...")
-            process = await asyncio.create_subprocess_exec(
-                *final_cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=Path.cwd(),
-                env=os.environ
-            )
-            self.logger.debug(f"Processus PowerShell démarré avec PID: {process.pid}")
-
-            # Lancer la lecture des flux en parallèle
-            stdout_task = asyncio.create_task(self._read_stream(process.stdout, log_stdout))
-            stderr_task = asyncio.create_task(self._read_stream(process.stderr, log_stderr))
-
-            # Attendre la fin du processus et des lecteurs
-            await asyncio.wait_for(
-                asyncio.gather(process.wait(), stdout_task, stderr_task),
+            # Exécuter la fonction bloquante dans un thread et attendre le résultat
+            completed_process = await asyncio.wait_for(
+                asyncio.to_thread(blocking_test_execution),
                 timeout=timeout
             )
+            self.logger.info(f"Exécution des tests via EnvironmentManager terminée avec le code: {completed_process.returncode}")
+            return completed_process
             
-            return_code = process.returncode
-            self.logger.info(f"Sous-processus Pytest terminé avec le code: {return_code}.")
-
         except asyncio.TimeoutError:
             self.logger.error(f"Timeout ({timeout}s) atteint lors de l'exécution des tests.")
-            if process:
-                self.logger.warning(f"Tentative d'arrêt du processus PID: {process.pid}")
-                try:
-                    process.terminate()
-                except ProcessLookupError:
-                    self.logger.warning(f"Le processus {process.pid} n'existait déjà plus.")
-                except Exception as e:
-                     self.logger.error(f"Erreur lors de la tentative d'arrêt du processus: {e}")
-            return_code = -1 # Code spécifique pour le timeout
-            
+            return subprocess.CompletedProcess( ' '.join(cmd), returncode=-1, stdout="", stderr="Timeout expired")
         except Exception as e:
-            self.logger.critical(f"Erreur critique non gérée lors de l'exécution: {e}", exc_info=True)
-            return_code = -2 # Code spécifique pour une erreur non gérée
-        
-        finally:
-            if 'stdout_task' in locals() and not stdout_task.done():
-                stdout_task.cancel()
-            if 'stderr_task' in locals() and not stderr_task.done():
-                stderr_task.cancel()
-
-        return subprocess.CompletedProcess(
-            ' '.join(final_cmd),
-            returncode=return_code,
-            stdout='\n'.join(stdout_capture),
-            stderr='\n'.join(stderr_capture)
-        )
+            self.logger.critical(f"Erreur critique non gérée lors de l'attente du thread de test: {e}", exc_info=True)
+            return subprocess.CompletedProcess(' '.join(cmd), returncode=-2, stdout="", stderr=f"Unhandled exception: {e}")
     
     async def _analyze_results(self, result: subprocess.CompletedProcess) -> bool:
         """Analyse les résultats de test et génère un rapport."""
