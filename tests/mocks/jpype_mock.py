@@ -2,7 +2,9 @@ from unittest.mock import MagicMock
 
 # --- Mock de base ---
 # Remplacer create_autospec par MagicMock pour permettre l'assignation dynamique d'attributs.
-jpype_mock = MagicMock()
+# Pour que le mock soit considéré comme un package, il doit avoir un __path__
+jpype_mock = MagicMock(name='jpype_mock_package')
+jpype_mock.__path__ = ['/mock/path/jpype']
 
 # --- Partie 1 : Mocker les types pour isinstance() ---
 class MockJType:

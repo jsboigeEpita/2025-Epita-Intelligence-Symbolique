@@ -1,23 +1,39 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
+import sys
+from pathlib import Path
+import subprocess
+import time
+
+# --- Correction du PYTHONPATH ---
+# Ajoute la racine du projet au PYTHONPATH pour permettre les imports 'argumentation_analysis'
+# Doit être fait avant tout import du projet.
+project_root_path = Path(__file__).resolve().parent.parent.parent.parent
+sys.path.insert(0, str(project_root_path))
+
+
 # --- Garde-fou pour l'environnement ---
 # Cet import est crucial. Il assure que le script s'exécute dans l'environnement
 # Conda et avec les variables (JAVA_HOME, etc.) correctement configurés.
 # Si l'environnement n'est pas bon, il lèvera une exception claire.
 import argumentation_analysis.core.environment
-import argumentation_analysis.core.environment
-#!/usr/bin/env python3
-"""
-Launcher webapp 100% détaché - lance et retourne immédiatement
-Utilise subprocess.DETACHED_PROCESS sur Windows pour vraie indépendance
-"""
 
-import os
-import sys
-import subprocess
-import time
-from pathlib import Path
+
+"""
+Lance le serveur backend de l'application en processus d'arrière-plan.
+
+Ce script gère le cycle de vie du serveur Uvicorn pour l'API :
+- 'start': Lance le serveur après avoir nettoyé les instances précédentes.
+- 'status': Vérifie si le serveur répond correctement.
+- 'kill': Termine tous les processus serveur correspondants.
+
+Utilisation impérative via le wrapper d'environnement pour garantir que
+l'environnement Conda ('projet-is') et les variables critiques sont chargés.
+Exemple:
+  powershell -File ./activate_project_env.ps1 -CommandToRun "python scripts/apps/webapp/launch_webapp_background.py start"
+"""
 
 def launch_backend_detached():
     """Lance le backend Uvicorn en arrière-plan complet"""
@@ -78,26 +94,38 @@ def launch_backend_detached():
         return False, None
 
 def check_backend_status():
-    """Vérifie rapidement si le backend répond (non-bloquant)"""
+    """
+    Vérifie rapidement si le backend répond (non-bloquant).
+
+    Notes:
+        Cette fonction requiert le module 'requests'. Si non disponible,
+        le statut sera indeterminé.
+    """
     try:
         import requests
         port = os.environ.get("WEB_API_PORT", "5003")
         response = requests.get(f"http://localhost:{port}/api/health", timeout=2)
         if response.status_code == 200:
-            print(f"[OK] Backend actif et repond: {response.json()}")
+            print(f"[OK] Backend actif et répond: {response.json()}")
             return True
         else:
-            print(f"[WARN] Backend repond mais status {response.status_code}")
+            print(f"[WARN] Backend répond mais avec un statut inattendu: {response.status_code}")
             return False
     except requests.exceptions.RequestException:
-        print("[INFO] Backend pas encore pret ou non demarre")
+        print("[INFO] Backend pas encore prêt ou non démarré.")
         return False
     except ImportError:
-        print("[INFO] Module requests non disponible pour test")
+        print("[WARN] Le module 'requests' n'est pas installé. Test de statut impossible.")
         return None
 
 def kill_existing_backends():
-    """Tue les processus backend existants"""
+    """
+    Tue les processus backend (Uvicorn) existants liés à ce projet.
+
+    Notes:
+        Cette fonction requiert le module 'psutil'. Si non disponible,
+        le nettoyage ne pourra pas être effectué.
+    """
     try:
         import psutil
         killed = 0
@@ -107,19 +135,19 @@ def kill_existing_backends():
                 if 'uvicorn' in cmdline and 'argumentation_analysis' in cmdline:
                     proc.terminate()
                     killed += 1
-                    print(f"[KILL] Processus backend termine: PID {proc.info['pid']}")
+                    print(f"[KILL] Processus backend terminé: PID {proc.info['pid']}")
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
         
         if killed > 0:
             time.sleep(2)  # Délai pour nettoyage
-            print(f"[CLEAN] {killed} processus backend nettoyes")
+            print(f"[INFO] {killed} processus backend nettoyé(s).")
         else:
-            print("[INFO] Aucun processus backend a nettoyer")
+            print("[INFO] Aucun processus backend à nettoyer.")
             
         return killed
     except ImportError:
-        print("[WARN] Module psutil non disponible pour nettoyage")
+        print("[WARN] Le module 'psutil' n'est pas installé. Nettoyage impossible.")
         return 0
 
 if __name__ == "__main__":
