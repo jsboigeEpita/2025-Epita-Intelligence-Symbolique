@@ -1047,7 +1047,11 @@ class UnifiedWebOrchestrator:
         self.add_trace("[OK] LIBS JAVA PRESENTES", "Les JARs Tweety sont prêts.")
         
         # Forcer le port dynamique pour éviter les conflits
-        result = await self.backend_manager.start(port_override=0)
+        backend_config = self.config.get('backend', {})
+        start_port = backend_config.get('start_port', 0)
+        self.logger.info(f"Démarage du backend avec le port de la configuration: {start_port}")
+
+        result = await self.backend_manager.start(port_override=start_port)
         if result['success']:
             self.app_info.backend_url = result['url']
             self.app_info.backend_port = result['port']
