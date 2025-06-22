@@ -102,10 +102,10 @@ class UnifiedWebOrchestrator:
         self.logger = self._setup_logging()
         
         # Gestionnaires spécialisés
+        self.process_cleaner = ProcessCleaner(self.logger)
         self.backend_manager = BackendManager(self.config.get('backend', {}), self.logger)
         self.frontend_manager = FrontendManager(self.config.get('frontend', {}), self.logger, self.process_cleaner)
         self.playwright_runner = PlaywrightRunner(self.config.get('playwright', {}), self.logger)
-        self.process_cleaner = ProcessCleaner(self.logger)
         
         # État de l'application
         self.app_info = WebAppInfo()
@@ -658,8 +658,13 @@ def main():
                     await orchestrator.stop_webapp()
                 return success
             else:  # Integration par défaut
+                # Pour un test d'intégration complet, le frontend est TOUJOURS requis.
+                # Le flag --frontend sert à l'activer pour d'autres commandes comme --start.
                 return await orchestrator.full_integration_test(
-                    headless, args.frontend, args.tests)
+                    headless=headless,
+                    frontend_enabled=True,
+                    test_paths=args.tests
+                )
         except KeyboardInterrupt:
             print("\n🛑 Interruption utilisateur")
             await orchestrator.stop_webapp()
