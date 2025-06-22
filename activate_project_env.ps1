@@ -21,7 +21,9 @@ Refactorisé - Utilise scripts/core/environment_manager.py
 param(
     [string]$CommandToRun = $null,
     [string]$PythonScriptPath = $null,
-    [switch]$Verbose = $false
+    [switch]$Verbose = $false,
+    [switch]$ForceReinstall = $false,
+    [int]$CondaVerboseLevel = 0
 )
 
 # Fonction de logging simple
@@ -77,49 +79,43 @@ try {
     # }
     # Write-Log "Activation initiale réussie." "SUCCESS"
 
-    # Si une commande est fournie, la décomposer et l'exécuter séquentiellement
-    # Chaque commande sera passée à environment_manager.py pour être exécutée DANS l'environnement activé.
-    if ($CommandToRun) {
-        Write-Log "Commandes à exécuter séquentiellement: $CommandToRun"
-        $commands = $CommandToRun.Split(';') | ForEach-Object {$_.Trim()}
-        
-        foreach ($cmd in $commands) {
-            if (-not [string]::IsNullOrWhiteSpace($cmd)) {
-                Write-Log "Exécution de la sous-commande: $cmd"
-                $pythonExecArgs = @("python", $pythonScriptPath, "--command", $cmd)
-                if ($Verbose) {
-                    $pythonExecArgs += "--verbose"
-                }
-                
-                # Exécution via le module Python
-                & $pythonExecArgs[0] $pythonExecArgs[1..($pythonExecArgs.Length-1)]
-                $exitCode = $LASTEXITCODE
-                
-                if ($exitCode -ne 0) {
-                    Write-Log "Échec de la sous-commande '$cmd' (Code: $exitCode)" "ERROR"
-                    exit $exitCode # Arrêter si une sous-commande échoue
-                }
-                Write-Log "Sous-commande '$cmd' exécutée avec succès." "SUCCESS"
-            }
-        }
-        Write-Log "Toutes les sous-commandes exécutées." "SUCCESS"
-        exit 0 # Succès global si toutes les sous-commandes ont réussi
-    } else {
-        # Si aucune commande n'est fournie, juste activer l'environnement
-        Write-Log "Activation simple de l'environnement (pas de commande à exécuter)."
-        $pythonActivateOnlyArgs = @("python", $pythonScriptPath)
-        if ($Verbose) {
-            $pythonActivateOnlyArgs += "--verbose"
-        }
-        & $pythonActivateOnlyArgs[0] $pythonActivateOnlyArgs[1..($pythonActivateOnlyArgs.Length-1)]
-        $exitCode = $LASTEXITCODE
-        if ($exitCode -eq 0) {
-            Write-Log "Environnement activé avec succès (sans commande)." "SUCCESS"
-        } else {
-            Write-Log "Échec de l'activation de l'environnement (sans commande) (Code: $exitCode)." "ERROR"
-        }
-        exit $exitCode
+    # Construction dynamique des arguments pour le script Python
+    $pythonArgs = @($pythonScriptPath)
+
+    if ($ForceReinstall) {
+        Write-Log "Option -ForceReinstall détectée. L'environnement Conda sera forcé à la réinstallation." "INFO"
+        $pythonArgs += "--reinstall", "conda"
     }
+
+    if ($CommandToRun) {
+        Write-Log "Commandes à exécuter: $CommandToRun"
+        # Le script Python gère maintenant la décomposition des commandes si nécessaire
+        $pythonArgs += "--command", $CommandToRun
+    } else {
+         Write-Log "Aucune commande à exécuter. Activation simple de l'environnement." "INFO"
+    }
+    
+    if ($Verbose) {
+        $pythonArgs += "--verbose"
+    }
+
+    if ($CondaVerboseLevel -gt 0) {
+        Write-Log "Niveau de verbosité Conda: $CondaVerboseLevel" "INFO"
+        $pythonArgs += "--conda-verbose-level", $CondaVerboseLevel
+    }
+
+    Write-Log "Exécution du script environment_manager.py avec les arguments: $($pythonArgs -join ' ')" "DEBUG"
+
+    # Exécution de la commande finale
+    & python $pythonArgs
+    $exitCode = $LASTEXITCODE
+
+    if ($exitCode -eq 0) {
+        Write-Log "Script de gestion de l'environnement exécuté avec succès." "SUCCESS"
+    } else {
+        Write-Log "Le script de gestion de l'environnement a échoué avec le code: $exitCode." "ERROR"
+    }
+    exit $exitCode
     
 } catch {
     Write-Log "Erreur critique: $($_.Exception.Message)" "ERROR"

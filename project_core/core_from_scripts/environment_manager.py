@@ -991,7 +991,7 @@ def activate_project_env(command: str = None, env_name: str = None, logger: Logg
 
 
 
-def reinstall_conda_environment(manager: 'EnvironmentManager', env_name: str):
+def reinstall_conda_environment(manager: 'EnvironmentManager', env_name: str, verbose_level: int = 0):
     """Supprime et recrée intégralement l'environnement conda à partir de environment.yml."""
     logger = manager.logger
     ColoredOutput.print_section(f"Réinstallation complète de l'environnement Conda '{env_name}' à partir de environment.yml")
@@ -1015,6 +1015,9 @@ def reinstall_conda_environment(manager: 'EnvironmentManager', env_name: str):
         '--name', env_name,
         '--force'
     ]
+    if verbose_level > 0:
+        conda_create_command.append(f"-{'v' * verbose_level}")
+        logger.info(f"Niveau de verbosité Conda activé : {verbose_level}")
     
     # Utiliser run_in_conda_env n'est pas approprié ici car l'environnement peut ne pas exister.
     # On exécute directement avec subprocess.run
@@ -1140,6 +1143,14 @@ def main():
              f"'all' réinstalle tout (équivaut à l'ancien --force-reinstall)."
     )
     
+    parser.add_argument(
+        '--conda-verbose-level',
+        type=int,
+        choices=[1, 2, 3],
+        default=0,
+        help="Niveau de verbosité pour les commandes conda (1 pour -v, 2 pour -vv, 3 pour -vvv)."
+    )
+    
     args = parser.parse_args()
     
     log_file = "logs/environment_manager.log"
@@ -1159,7 +1170,7 @@ def main():
         
         # Si 'all' ou 'conda' est demandé, on réinstalle l'environnement Conda, ce qui inclut les paquets pip.
         if ReinstallComponent.ALL.value in reinstall_choices or ReinstallComponent.CONDA.value in reinstall_choices:
-            reinstall_conda_environment(manager, env_name)
+            reinstall_conda_environment(manager, env_name, verbose_level=args.conda_verbose_level)
         # Si seulement 'pip' est demandé, c'est maintenant géré par la reinstall de conda, mais on peut imaginer
         # une simple mise à jour dans le futur. Pour l'instant on ne fait rien de plus.
         # la logique ci-dessus suffit.
@@ -1247,7 +1258,7 @@ def main():
     env_name_for_check = args.env_name or manager.default_conda_env
     if not manager.check_conda_env_exists(env_name_for_check):
         logger.warning(f"L'environnement '{env_name_for_check}' n'existe pas. Tentative de création automatique...")
-        reinstall_conda_environment(manager, env_name_for_check)
+        reinstall_conda_environment(manager, env_name_for_check, verbose_level=args.conda_verbose_level)
         logger.info("La création est terminée (succès ou échec). Le script va maintenant procéder à l'activation.")
     # --- FIN DE L'AJOUT ---
 
