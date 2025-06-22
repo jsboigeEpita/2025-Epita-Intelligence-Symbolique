@@ -598,6 +598,9 @@ def main():
     parser.add_argument('--integration', action='store_true', default=True,
                        help='Test d\'intégration complet (défaut)')
     
+    parser.add_argument('--no-playwright', action='store_true',
+                       help='Désactive l\'exécution des tests Playwright')
+    
     args = parser.parse_args()
     
     # Override headless si --visible

@@ -121,7 +121,8 @@ class PlaywrightRunner:
             'HEADLESS': str(config['headless']).lower(),
             'BROWSER': config['browser'],
             'SCREENSHOTS_DIR': str(self.screenshots_dir),
-            'TRACES_DIR': str(self.traces_dir)
+            'TRACES_DIR': str(self.traces_dir),
+            'KMP_DUPLICATE_LIB_OK': 'TRUE' # Contournement pour le conflit OpenMP
         }
         
         for key, value in env_vars.items():
@@ -196,7 +197,7 @@ class PlaywrightRunner:
                     capture_output=True,
                     text=True,
                     timeout=config.get('test_timeout', 300),  # 5 min par défaut
-                    cwd=Path.cwd()
+                    cwd=Path.cwd() / "tests" / "integration" / "webapp"
                 )
             else:
                 result = subprocess.run(
@@ -204,7 +205,7 @@ class PlaywrightRunner:
                     capture_output=True,
                     text=True,
                     timeout=config.get('test_timeout', 300),
-                    cwd=Path.cwd()
+                    cwd=Path.cwd() / "tests" / "integration" / "webapp"
                 )
             
             # Sauvegarde logs

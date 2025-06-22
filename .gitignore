@@ -277,3 +277,9 @@ cython_debug/
 
 # Roo added
 config/.port_lock
+
+# Temporary runner scripts
+temp_backend_runner_*.ps1
+
+# Generated commit analysis reports
+docs/commit_analysis_reports/

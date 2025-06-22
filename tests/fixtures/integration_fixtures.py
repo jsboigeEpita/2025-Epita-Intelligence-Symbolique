@@ -467,13 +467,13 @@ def e2e_servers(request):
 
     # L'argument frontend_enabled n'est plus nécessaire car on a modifié la config
     success = loop.run_until_complete(orchestrator.start_webapp(headless=True))
-    
+
     # Vérification que le backend est bien démarré, car c'est bloquant.
     if not orchestrator.app_info.backend_pid:
         logger.error("Le backend n'a pas pu démarrer. Arrêt de la fixture.")
         loop.run_until_complete(orchestrator.stop_webapp())
         pytest.fail("Echec du démarrage du serveur backend pour les tests E2E.", pytrace=False)
-        
+
     def finalizer():
         logger.info("--- FIN FIXTURE 'e2e_servers' (arrêt des serveurs E2E) ---")
         # S'assurer que la boucle est disponible pour le nettoyage
