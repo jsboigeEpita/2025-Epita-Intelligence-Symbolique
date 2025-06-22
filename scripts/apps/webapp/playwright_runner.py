@@ -195,9 +195,10 @@ class PlaywrightRunner:
         pytest_args.extend([
             f'--browser={config["browser"]}',
             '--screenshot=on',
-            # la trace est plus utile pour le debug que la vidéo
-            '--trace=on' if config.get('traces', True) else '--trace=off'
         ])
+
+        if config.get('traces', True):
+            pytest_args.append('--trace')
         
         # Chemins de tests
         pytest_args.extend(test_paths)
