@@ -176,7 +176,7 @@ class UnifiedWebOrchestrator:
                 'max_attempts': 3,
                 'timeout_seconds': 30,
                 'health_endpoint': '/api/health',
-                'env_activation': 'powershell -File scripts/env/activate_project_env.ps1'
+                'env_activation': f'powershell -File "{project_root.joinpath("scripts", "env", "activate_project_env.ps1")}"'
             },
             'frontend': {
                 'enabled': False,  # Optionnel selon besoins

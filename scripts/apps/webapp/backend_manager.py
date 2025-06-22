@@ -24,6 +24,8 @@ from typing import Dict, List, Optional, Any, IO
 from pathlib import Path
 import aiohttp
 
+# Correction du chemin pour la racine du projet
+project_root = Path(__file__).resolve().parents[3]
 class BackendManager:
     """
     Gestionnaire du backend Flask avec failover de ports
@@ -47,8 +49,9 @@ class BackendManager:
         self.max_attempts = config.get('max_attempts', 5)
         self.timeout_seconds = config.get('timeout_seconds', 180) # Augmentation du timeout
         self.health_endpoint = config.get('health_endpoint', '/api/health')
-        self.env_activation = config.get('env_activation',
-                                       'powershell -File scripts/env/activate_project_env.ps1')
+        # Forcer l'utilisation d'un chemin absolu pour la robustesse
+        # Forcer l'utilisation d'un chemin absolu pour la robustesse et pointer vers le bon script
+        self.env_activation = f'powershell -File "{project_root.joinpath("scripts", "utils", "activate_conda_env.ps1")}"'
         
         # État runtime
         self.process: Optional[subprocess.Popen] = None
@@ -113,20 +116,42 @@ class BackendManager:
             # Construction de la commande interne (Python + uvicorn/flask)
             if server_type == 'uvicorn':
                 asgi_module = 'argumentation_analysis.services.web_api.asgi:app'
-                internal_cmd_list = ['python', '-m', 'uvicorn', asgi_module, '--port', str(port), '--host', '0.0.0.0']
+                internal_cmd_str = f'python -m uvicorn {asgi_module} --port {port} --host 0.0.0.0'
             else:
-                internal_cmd_list = ['python', '-m', self.module, '--port', str(port)]
+                internal_cmd_str = f'python -m {self.module} --port {port}'
 
-            # Encapsulation de la commande interne dans le wrapper PowerShell
-            # La commande doit être passée comme une seule chaîne de caractères.
-            # Sur Windows, les guillemets autour des arguments avec espaces doivent être gérés
-            internal_cmd_str = ' '.join(f'"{arg}"' if ' ' in arg else arg for arg in internal_cmd_list)
+            # Correction du chemin du script d'activation et simplification du wrapper
+            activation_script_path = project_root.joinpath("scripts", "utils", "activate_conda_env.ps1")
+
+            wrapper_script_content = f"""
+# Script wrapper simple pour démarrer le backend
+$ErrorActionPreference = "Stop"
+try {{
+    Write-Host "Wrapper: Tentative de sourcing du script d'activation: {activation_script_path}"
+    . "{activation_script_path}"
+    Write-Host "Wrapper: Sourcing réussi."
+    
+    Write-Host "Wrapper: Lancement du serveur backend..."
+    {internal_cmd_str}
+}} catch {{
+    Write-Host "Wrapper CRITICAL: Une erreur PowerShell est survenue."
+    Write-Host "Message: $_"
+    exit 1
+}}
+"""
             
-            # Récupération de la commande d'activation depuis la config et décomposition
-            activation_cmd_parts = self.env_activation.split()
-            cmd = activation_cmd_parts + ['-CommandToRun', f'"{internal_cmd_str}"']
-            
-            self.logger.info(f"Construction de la commande finale via wrapper: {' '.join(cmd)}")
+            wrapper_script_path = Path.cwd() / f"temp_backend_runner_{port}.ps1"
+            with open(wrapper_script_path, "w", encoding="utf-8") as f:
+                f.write(wrapper_script_content)
+
+            cmd = [
+                'powershell',
+                '-ExecutionPolicy', 'Bypass',
+                '-File',
+                str(wrapper_script_path)
+            ]
+
+            self.logger.info(f"Exécution du wrapper PowerShell: {' '.join(cmd)}")
             
             env = os.environ.copy()
             env['PYTHONPATH'] = str(Path.cwd())
