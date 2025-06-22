@@ -144,7 +144,7 @@ async def test_watson_jtms_validation(watson_agent, group_chat):
     print_results("WATSON JTMS", validation_result)
     # Le test est modifié pour refléter l'état actuel de l'implémentation.
     # La validation déductive n'est pas encore implémentée, donc 'chain_valid' est attendu à False.
-    assert not validation_result.get('chain_valid', True), "La chaîne de raisonnement de Watson aurait dû être marquée comme invalide."
+    assert not validation_result.get('is_valid', True), "La chaîne de raisonnement de Watson aurait dû être marquée comme invalide."
     
     # Vérifier que l'échec est dû à la fonctionnalité non implémentée
     first_step_details = validation_result.get('steps', [{}])[0].get('details', {})

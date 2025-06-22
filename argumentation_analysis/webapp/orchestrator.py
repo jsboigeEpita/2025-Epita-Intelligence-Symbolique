@@ -149,15 +149,25 @@ class MinimalBackendManager:
         
         # On utilise directement le nom correct de l'environnement.
         # Idéalement, cela viendrait d'une source de configuration plus fiable.
-        env_name = self.config.get('backend', {}).get('conda_env', 'projet-is-roo')
+        env_name = self.config.get('backend', {}).get('conda_env', 'projet-is')
         self.logger.info(f"[BACKEND] Utilisation du nom d'environnement Conda: '{env_name}'")
         
-        command = [
-            'conda', 'run', '-n', env_name, '--no-capture-output',
-            'python', '-m', 'uvicorn', module_spec,
-            '--host', '127.0.0.1',
-            '--port', str(self.port)
-        ]
+        # PRIVILÉGIER command_list si elle existe pour une commande plus robuste
+        command_list = self.config.get('command_list')
+        if command_list:
+            self.logger.info("[BACKEND] Utilisation de 'command_list' pour le lancement.")
+            # Remplacer les placeholders comme {port}
+            command = list(command_list)  # Copie
+            command[-1] = command[-1].format(port=self.port, module_spec=module_spec)
+        else:
+            self.logger.info("[BACKEND] Utilisation de la méthode 'conda run' classique.")
+            # Ancien comportement si command_list n'est pas défini
+            command = [
+                'conda', 'run', '-n', env_name, '--no-capture-output',
+                'python', '-m', 'uvicorn', module_spec,
+                '--host', '127.0.0.1',
+                '--port', str(self.port)
+            ]
         
         self.logger.info(f"[BACKEND] Commande de lancement: {' '.join(command)}")
 
@@ -596,7 +606,7 @@ class UnifiedWebOrchestrator:
                 'command_list': [
                     "powershell.exe",
                     "-Command",
-                    "conda activate projet-is; python -m uvicorn api.main:app --host 127.0.0.1 --port 0 --reload"
+                    "conda activate projet-is; python -m uvicorn {module_spec} --host 127.0.0.1 --port {port}"
                 ]
             },
             'frontend': {
@@ -778,7 +788,7 @@ class UnifiedWebOrchestrator:
         self.add_trace("[TEST] LANCEMENT DES TESTS PYTEST", f"Tests: {test_paths or 'tous'}")
 
         import shlex
-        conda_env_name = os.environ.get('CONDA_ENV_NAME', self.config.get('backend', {}).get('conda_env', 'projet-is-roo'))
+        conda_env_name = os.environ.get('CONDA_ENV_NAME', self.config.get('backend', {}).get('conda_env', 'projet-is'))
         
         self.logger.warning(f"Construction de la commande de test via 'powershell.exe' pour garantir l'activation de l'environnement Conda '{conda_env_name}'.")
         
