@@ -50,3 +50,17 @@ Ce document suit l'état de la vérification des points d'entrée principaux du 
 - **Artefacts :**
     - **Plan :** [`04_generate_and_analyze_arguments_plan.md`](./04_generate_and_analyze_arguments_plan.md)
     - **Résultats de Test & Fix :** [`04_generate_and_analyze_arguments_test_results.md`](./04_generate_and_analyze_arguments_test_results.md)
+---
+
+## 5. Point d'Entrée : `argumentation_analysis/main_orchestrator.py`
+
+- **Statut :** Vérifié ✅
+- **Résumé des Phases :**
+    - **Map :** Planification des tests pour le mode non-interactif (`--skip-ui`).
+    - **Test & Fix :**
+        - **Résolution d'une boucle infinie** causée par une logique de prompt obsolète dans l'agent PM.
+        - **Correction de la gestion des arguments** pour rendre `--text-file` obligatoire en mode non-interactif.
+        - **Ajout de la gestion des `FileNotFoundError`** pour les chemins de fichiers invalides.
+- **Artefacts :**
+    - **Plan :** [`05_main_app_plan.md`](./05_main_app_plan.md)
+    - **Résultats de Test & Fix :** [`05_main_app_test_results.md`](./05_main_app_test_results.md)

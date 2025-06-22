@@ -716,72 +716,72 @@ class PropositionalLogicAgent(BaseLogicAgent):
             metadata={'task_name': task}
         )
         return [response_message]
-def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> "BeliefSet":
-    """
-    Crée une instance de `BeliefSet` à partir d'un dictionnaire de données.
-    """
-    # Pour PropositionalLogicAgent, le 'content' est une chaîne, et 'propositions' est une liste
-    return PropositionalBeliefSet(
-        content=belief_set_data.get("content", ""),
-        propositions=belief_set_data.get("propositions", [])
-    )
-
-async def validate_argument(self, premises: List[str], conclusion: str) -> bool:
+    def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> "BeliefSet":
         """
-        Valide un argument structuré (prémisses, conclusion) en utilisant la logique propositionnelle.
+        Crée une instance de `BeliefSet` à partir d'un dictionnaire de données.
         """
-        self.logger.info("Validation d'un argument en logique propositionnelle...")
-        
-        # 1. Combiner prémisses et conclusion en un seul texte pour l'extraction de propositions
-        full_text = " ".join(premises) + " " + conclusion
-        
-        # 2. Extraire les propositions atomiques de l'ensemble du texte
-        defs_json, error_msg = await self._invoke_llm_for_json(
-            self._kernel, self.name, "TextToPLDefs", {"input": full_text},
-            ["propositions"], "arg-val-prop-gen", 3
+        # Pour PropositionalLogicAgent, le 'content' est une chaîne, et 'propositions' est une liste
+        return PropositionalBeliefSet(
+            content=belief_set_data.get("content", ""),
+            propositions=belief_set_data.get("propositions", [])
         )
-        if not defs_json:
-            self.logger.error(f"Impossible d'extraire les propositions pour l'argument: {error_msg}")
-            return False
+
+    async def validate_argument(self, premises: List[str], conclusion: str) -> bool:
+            """
+            Valide un argument structuré (prémisses, conclusion) en utilisant la logique propositionnelle.
+            """
+            self.logger.info("Validation d'un argument en logique propositionnelle...")
             
-        declared_propositions = set(defs_json.get("propositions", []))
-        
-        # 3. Traduire les prémisses en un ensemble de croyances
-        premises_text = " ".join(premises)
-        formulas_json, error_msg = await self._invoke_llm_for_json(
-            self._kernel, self.name, "TextToPLFormulas",
-            {"input": premises_text, "definitions": json.dumps(defs_json, indent=2)},
-            ["formulas"], "arg-val-premise-gen", 3
-        )
-        if not formulas_json:
-            self.logger.error(f"Impossible de traduire les prémisses en formules: {error_msg}")
-            return False
+            # 1. Combiner prémisses et conclusion en un seul texte pour l'extraction de propositions
+            full_text = " ".join(premises) + " " + conclusion
+            
+            # 2. Extraire les propositions atomiques de l'ensemble du texte
+            defs_json, error_msg = await self._invoke_llm_for_json(
+                self._kernel, self.name, "TextToPLDefs", {"input": full_text},
+                ["propositions"], "arg-val-prop-gen", 3
+            )
+            if not defs_json:
+                self.logger.error(f"Impossible d'extraire les propositions pour l'argument: {error_msg}")
+                return False
+                
+            declared_propositions = set(defs_json.get("propositions", []))
+            
+            # 3. Traduire les prémisses en un ensemble de croyances
+            premises_text = " ".join(premises)
+            formulas_json, error_msg = await self._invoke_llm_for_json(
+                self._kernel, self.name, "TextToPLFormulas",
+                {"input": premises_text, "definitions": json.dumps(defs_json, indent=2)},
+                ["formulas"], "arg-val-premise-gen", 3
+            )
+            if not formulas_json:
+                self.logger.error(f"Impossible de traduire les prémisses en formules: {error_msg}")
+                return False
 
-        premise_formulas = self._filter_formulas(formulas_json.get("formulas", []), declared_propositions)
-        belief_set_content = "\n".join(premise_formulas)
-        belief_set = PropositionalBeliefSet(belief_set_content, propositions=list(declared_propositions))
+            premise_formulas = self._filter_formulas(formulas_json.get("formulas", []), declared_propositions)
+            belief_set_content = "\n".join(premise_formulas)
+            belief_set = PropositionalBeliefSet(belief_set_content, propositions=list(declared_propositions))
 
-        # 4. Traduire la conclusion en une formule logique (la requête)
-        conclusion_formulas_json, error_msg = await self._invoke_llm_for_json(
-            self._kernel, self.name, "TextToPLFormulas",
-            {"input": conclusion, "definitions": json.dumps(defs_json, indent=2)},
-            ["formulas"], "arg-val-conclusion-gen", 3
-        )
-        if not conclusion_formulas_json or not conclusion_formulas_json.get("formulas"):
-            self.logger.error(f"Impossible de traduire la conclusion en formule: {error_msg}")
-            return False
+            # 4. Traduire la conclusion en une formule logique (la requête)
+            conclusion_formulas_json, error_msg = await self._invoke_llm_for_json(
+                self._kernel, self.name, "TextToPLFormulas",
+                {"input": conclusion, "definitions": json.dumps(defs_json, indent=2)},
+                ["formulas"], "arg-val-conclusion-gen", 3
+            )
+            if not conclusion_formulas_json or not conclusion_formulas_json.get("formulas"):
+                self.logger.error(f"Impossible de traduire la conclusion en formule: {error_msg}")
+                return False
 
-        # Assurez-vous qu'on a au moins une formule pour la conclusion
-        conclusion_formulas = self._filter_formulas(conclusion_formulas_json.get("formulas", []), declared_propositions)
-        if not conclusion_formulas:
-            self.logger.error("La traduction de la conclusion n'a produit aucune formule valide.")
-            return False
-        
-        # Concaténer toutes les formules de conclusion avec '&&'
-        # Cela rend la requête plus robuste si le LLM décompose la conclusion.
-        query_formula = " && ".join(f"({f})" for f in conclusion_formulas)
+            # Assurez-vous qu'on a au moins une formule pour la conclusion
+            conclusion_formulas = self._filter_formulas(conclusion_formulas_json.get("formulas", []), declared_propositions)
+            if not conclusion_formulas:
+                self.logger.error("La traduction de la conclusion n'a produit aucune formule valide.")
+                return False
+            
+            # Concaténer toutes les formules de conclusion avec '&&'
+            # Cela rend la requête plus robuste si le LLM décompose la conclusion.
+            query_formula = " && ".join(f"({f})" for f in conclusion_formulas)
 
-        # 5. Exécuter la requête
-        is_entailed, _ = self.execute_query(belief_set, query_formula)
+            # 5. Exécuter la requête
+            is_entailed, _ = self.execute_query(belief_set, query_formula)
 
-        return is_entailed is True
+            return is_entailed is True
