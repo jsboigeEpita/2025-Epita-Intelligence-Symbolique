@@ -13,7 +13,9 @@ def integration_config(webapp_config, tmp_path):
     config = webapp_config
     
     # Use a command list for robustness
-    fake_backend_command_list = [sys.executable, 'tests/integration/webapp/fake_backend.py']
+    # On passe le port au fake_backend.py comme argument de ligne de commande.
+    # On sait que le port sera 9020 car on le force dans la config juste après.
+    fake_backend_command_list = [sys.executable, 'tests/integration/webapp/fake_backend.py', '9020']
     
     config['backend']['command_list'] = fake_backend_command_list
     config['backend']['command'] = None # Ensure list is used
