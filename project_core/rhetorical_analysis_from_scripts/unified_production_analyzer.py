@@ -20,6 +20,13 @@ Version: 1.0.0
 Créé: 10/06/2025
 Auteur: Roo
 """
+# Workflow d'Exécution :
+# 1. Parsing des arguments CLI et/ou d'un fichier de configuration.
+# 2. Validation des dépendances critiques (Python, Tweety, LLM).
+# 3. Initialisation des services (LLM, TraceAnalyzer).
+# 4. Traitement de l'entrée (texte simple, fichier, ou dossier en mode batch).
+# 5. Orchestration de l'analyse via le UnifiedProductionAnalyzer.
+# 6. Génération et sauvegarde d'un rapport de session détaillé.
 import os # Déplacé ici
 import sys # Déplacé ici
 
