@@ -223,8 +223,12 @@ class PlaywrightRunner:
         # NOTE DE FUSION: On combine la logique d'activation de l'environnement du `stash`
         # avec l'exécution asynchrone de `Updated upstream` pour rester non-bloquant.
         
-        pytest_command_str = ' '.join(cmd)
-        full_command = f". ./activate_project_env.ps1; {pytest_command_str}"
+        # Isoler les arguments de la commande pytest
+        pytest_args_str = ' '.join(cmd[1:])
+        
+        # Construire une commande PowerShell robuste qui trouve le bon exécutable python
+        # après l'activation de l'environnement.
+        full_command = f". ./activate_project_env.ps1; & (Get-Command python).Source {pytest_args_str}"
         final_cmd = ["powershell", "-Command", full_command]
 
         self.logger.info(f"Commande PowerShell complète à exécuter : {full_command}")
