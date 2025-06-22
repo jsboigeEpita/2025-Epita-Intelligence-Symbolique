@@ -10,6 +10,7 @@ Auteur: Projet Intelligence Symbolique EPITA
 Date: 07/06/2025
 """
 
+import subprocess
 import os
 import sys
 import time
@@ -276,33 +277,56 @@ class ProcessCleaner:
                 self.logger.error(f"Erreur nettoyage PID {pid}: {e}")
     
     def cleanup_by_port(self, ports: List[int]):
-        """Nettoie les processus utilisant des ports spécifiques"""
-        self.logger.info(f"Nettoyage processus sur ports: {ports}")
-        
-        processes_to_kill = []
-        
+        """Nettoie les processus utilisant des ports spécifiques, en utilisant une approche système robuste."""
+        self.logger.info(f"Nettoyage robuste des processus sur les ports: {ports}")
+        pids_to_kill = set()
+
+        # Approche 1: psutil (rapide mais peut échouer)
         try:
             for conn in psutil.net_connections():
-                if (hasattr(conn, 'laddr') and conn.laddr and 
-                    conn.laddr.port in ports and
-                    conn.status == psutil.CONN_LISTEN):
-                    
-                    try:
-                        proc = psutil.Process(conn.pid)
-                        processes_to_kill.append(proc)
-                        self.logger.info(f"Processus trouvé sur port {conn.laddr.port}: PID {conn.pid}")
-                    except (psutil.NoSuchProcess, psutil.AccessDenied):
-                        pass
-                        
+                if (hasattr(conn, 'laddr') and conn.laddr and
+                    conn.laddr.port in ports and conn.status == psutil.CONN_LISTEN):
+                    if conn.pid:
+                        pids_to_kill.add(conn.pid)
         except (psutil.AccessDenied, AttributeError):
-            self.logger.warning("Impossible d'énumérer toutes les connexions")
-        
-        # Nettoyage des processus trouvés
-        if processes_to_kill:
-            pids = [proc.pid for proc in processes_to_kill]
-            self.cleanup_by_pid(pids)
+            self.logger.warning("Énumération des connexions avec psutil a échoué, passage à netstat.")
+
+        # Approche 2: Commande système (plus lente mais plus fiable)
+        if sys.platform == "win32":
+            try:
+                # La commande 'netstat -aon' trouve toutes les connexions et le PID associé.
+                # On filtre les lignes en Python pour plus de robustesse.
+                result = subprocess.run(['netstat', '-aon'], capture_output=True, text=True, check=False, encoding='utf-8', errors='ignore')
+                lines = result.stdout.splitlines() if result.stdout else []
+
+                for line in lines:
+                    if 'LISTENING' in line:
+                        for port in ports:
+                            if f":{port}" in line.split()[1]:
+                                parts = line.split()
+                                pid = int(parts[-1])
+                                if pid > 0:
+                                    pids_to_kill.add(pid)
+                                break # Port trouvé, passe à la ligne suivante
+            except (subprocess.CalledProcessError, FileNotFoundError) as e:
+                self.logger.error(f"Erreur lors de l'exécution de netstat: {e}")
+        else: # Pour Linux/macOS
+            # Logique 'lsof' pour les systèmes UNIX
+            for port in ports:
+                try:
+                    cmd = ['lsof', '-ti', f':{port}', '-sTCP:LISTEN']
+                    result = subprocess.run(cmd, capture_output=True, text=True)
+                    if result.stdout.strip():
+                        pids = [int(p) for p in result.stdout.strip().splitlines()]
+                        pids_to_kill.update(pids)
+                except (subprocess.CalledProcessError, FileNotFoundError) as e:
+                    self.logger.error(f"Erreur lors de l'exécution de lsof pour le port {port}: {e}")
+
+        if pids_to_kill:
+            self.logger.info(f"PIDs trouvés sur les ports {ports}: {list(pids_to_kill)}")
+            self.cleanup_by_pid(list(pids_to_kill))
         else:
-            self.logger.info("Aucun processus trouvé sur les ports spécifiés")
+            self.logger.info("Aucun processus trouvé sur les ports spécifiés avec les méthodes psutil et système.")
     
     def get_webapp_processes_info(self) -> List[Dict[str, Any]]:
         """Retourne informations sur les processus webapp actifs"""
