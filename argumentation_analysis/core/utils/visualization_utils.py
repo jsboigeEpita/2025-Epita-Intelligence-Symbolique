@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Dict, Any
 import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
+# import seaborn as sns
 
 logger = logging.getLogger(__name__)
 
@@ -141,6 +141,7 @@ def generate_performance_visualizations(
         logger.debug(f"Données de la matrice de performance sauvegardées en CSV : {csv_path}")
         
         plt.figure(figsize=(12, 8))
+        import seaborn as sns
         sns.heatmap(df, annot=True, cmap="YlGnBu", linewidths=0.5, fmt=".2f") # fmt pour les floats
         plt.title("Matrice de comparaison des performances des agents")
         plt.tight_layout()
