@@ -65,22 +65,24 @@ def health_check():
         ).dict()), 500
 
 @main_bp.route('/analyze', methods=['POST'])
-def analyze_text():
+async def analyze_text():
     """Analyse complète d'un texte argumentatif."""
+    logger.info("Entering analyze_text route")
     try:
         analysis_service = current_app.services.analysis_service
         data = request.get_json()
         if not data:
             return jsonify(ErrorResponse(error="Données manquantes", message="Le body JSON est requis", status_code=400).dict()), 400
-        
+
         analysis_request = AnalysisRequest(**data)
-        result = asyncio.run(analysis_service.analyze_text(analysis_request))
+        result = await analysis_service.analyze_text(analysis_request)
+        logger.info("Exiting analyze_text route")
         return jsonify(result.dict())
-        
+
     except ValidationError as e:
         logger.warning(f"Validation des données d'analyse a échoué: {str(e)}")
         return jsonify(ErrorResponse(error="Données invalides", message=str(e), status_code=400).dict()), 400
-        
+
     except Exception as e:
         logger.error(f"Erreur lors de l'analyse: {str(e)}", exc_info=True)
         return jsonify(ErrorResponse(error="Erreur d'analyse", message=str(e), status_code=500).dict()), 500

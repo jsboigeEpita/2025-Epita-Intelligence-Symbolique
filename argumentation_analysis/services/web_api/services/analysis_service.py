@@ -56,8 +56,8 @@ from argumentation_analysis.services.web_api.models.response_models import (
     AnalysisResponse, FallacyDetection, ArgumentStructure
 )
 
-# Import du FallacyService corrigé
-from argumentation_analysis.services.web_api.services.fallacy_service import FallacyService
+# L'import de FallacyService est supprimé pour éviter l'appel circulaire.
+# from argumentation_analysis.services.web_api.services.fallacy_service import FallacyService
 
 logger = logging.getLogger("AnalysisService")
 
@@ -111,13 +111,9 @@ class AnalysisService:
                 self.severity_evaluator = None
                 self.logger.warning("[WARN] FallacySeverityEvaluator not available (import failed or class not found)")
             
-            # Initialisation du FallacyService corrigé
-            try:
-                self.fallacy_service = FallacyService()
-                self.logger.info("FallacyService initialized successfully")
-            except Exception as e:
-                self.logger.error(f"Error initializing FallacyService: {e}")
-                self.fallacy_service = None
+            # La section responsable de l'appel circulaire est supprimée.
+            # self.fallacy_service = FallacyService()
+            self.fallacy_service = None
             
             # Configuration des outils pour l'agent informel
             self.tools = {}
@@ -197,16 +193,13 @@ class AnalysisService:
         """
         has_informal = self.informal_agent is not None
         has_analyzers = any([self.complex_analyzer, self.contextual_analyzer, self.severity_evaluator])
-        has_fallback_service = hasattr(self, 'fallacy_service') and self.fallacy_service is not None
-        
-        # Mode fallback : si on a au moins le FallacyService, on considère le service comme opérationnel
-        is_healthy = self.is_initialized and (has_informal or has_analyzers or has_fallback_service)
+        # Le health check est simplifié pour ne plus dépendre de FallacyService.
+        is_healthy = self.is_initialized and (has_informal or has_analyzers)
         
         self.logger.info(f"=== Health Check: Analysis Service ===")
         self.logger.info(f"is_initialized: {self.is_initialized}")
         self.logger.info(f"has_informal_agent: {has_informal}")
         self.logger.info(f"has_analyzers: {has_analyzers}")
-        self.logger.info(f"has_fallback_service: {has_fallback_service}")
         self.logger.info(f"complex_analyzer: {self.complex_analyzer is not None}")
         self.logger.info(f"contextual_analyzer: {self.contextual_analyzer is not None}")
         self.logger.info(f"severity_evaluator: {self.severity_evaluator is not None}")
@@ -231,7 +224,7 @@ class AnalysisService:
         """
         start_time = time.time()
         
-        self.logger.info(f"analyze_text called with text: '{request.text[:50]}...'")
+        self.logger.info(f"ENTERING AnalysisService.analyze_text with text: '{request.text[:50]}...'")
         self.logger.debug(f"Analysis options: {request.options}")
         
         try:
@@ -240,18 +233,28 @@ class AnalysisService:
                 self.logger.warning("AnalysisService is not healthy - creating fallback response.")
                 return self._create_fallback_response(request, start_time)
             
+            # --- START DEBUG BLOCK ---
             self.logger.debug("AnalysisService is healthy - proceeding with analysis.")
-            # Analyse des sophismes
-            fallacies = await self._detect_fallacies(request.text, request.options)
-            
-            # Analyse de la structure argumentative
-            structure = self._analyze_structure(request.text, request.options)
-            
-            # Calcul des métriques globales
-            overall_quality = self._calculate_overall_quality(fallacies, structure)
-            coherence_score = self._calculate_coherence_score(structure)
-            
+            try:
+                # Analyse des sophismes
+                fallacies = await self._detect_fallacies(request.text, request.options)
+                
+                # Analyse de la structure argumentative
+                structure = self._analyze_structure(request.text, request.options)
+                
+                # Calcul des métriques globales
+                overall_quality = self._calculate_overall_quality(fallacies, structure)
+                coherence_score = self._calculate_coherence_score(structure)
+            except Exception as analysis_exception:
+                self.logger.critical("--- CATCHING THE BUG! ---")
+                self.logger.critical(f"An unexpected error occurred during the core analysis logic: {analysis_exception}", exc_info=True)
+                # On relève l'exception pour que le gestionnaire global la transforme en 500,
+                # mais nous aurons maintenant la trace précise.
+                raise
+            # --- END DEBUG BLOCK ---
+
             processing_time = time.time() - start_time
+            self.logger.info(f"EXITING AnalysisService.analyze_text successfully in {processing_time:.2f}s")
             
             return AnalysisResponse(
                 success=True,
@@ -266,9 +269,9 @@ class AnalysisService:
             )
             
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'analyse: {e}")
+            self.logger.error(f"Erreur lors de l'analyse: {e}", exc_info=True)
             processing_time = time.time() - start_time
-            
+            self.logger.info(f"EXITING AnalysisService.analyze_text with ERROR in {processing_time:.2f}s")
             return AnalysisResponse(
                 success=False,
                 text_analyzed=request.text,
@@ -297,66 +300,16 @@ class AnalysisService:
         """
         fallacies = []
         
-        self.logger.info(f"_detect_fallacies called with text: '{text[:50]}...'")
+        self.logger.info(f"ENTERING _detect_fallacies with text: '{text[:50]}...'")
         
         try:
-            # DÉBOGAGE CRITIQUE: Vérifier l'état du FallacyService
-            fallacy_service_exists = hasattr(self, 'fallacy_service')
-            fallacy_service_not_none = self.fallacy_service if fallacy_service_exists else None # Garder cette variable locale
-            self.logger.debug(f"FallacyService exists: {fallacy_service_exists}, FallacyService is not None: {fallacy_service_not_none is not None}")
-            if fallacy_service_not_none: # Utiliser la variable locale
-                self.logger.debug(f"Type of FallacyService: {type(fallacy_service_not_none)}")
-            
-            # PRIORITÉ 1: Utilisation du FallacyService corrigé avec les patterns regex fixes
-            if fallacy_service_not_none: # Utiliser la variable locale
-                self.logger.info("Using FallacyService for detection.")
-                try:
-                    # Créer une requête compatible
-                    from argumentation_analysis.services.web_api.models.request_models import FallacyRequest, FallacyOptions
-                    # Conversion correcte AnalysisOptions → FallacyOptions
-                    if not options:
-                        fallacy_options = FallacyOptions()
-                    else:
-                        fallacy_options = FallacyOptions(
-                            detect_fallacies=getattr(options, 'detect_fallacies', True),
-                            analyze_structure=getattr(options, 'analyze_structure', True),
-                            evaluate_coherence=getattr(options, 'evaluate_coherence', True),
-                            include_context=getattr(options, 'include_context', True),
-                            severity_threshold=getattr(options, 'severity_threshold', 0.5)
-                        )
-                    fallacy_request = FallacyRequest(text=text, options=fallacy_options)
-                    
-                    result = self.fallacy_service.detect_fallacies(fallacy_request)
-                    
-                    if result and hasattr(result, 'fallacies'):
-                        for fallacy_data in result.fallacies:
-                            if hasattr(fallacy_data, 'dict'):
-                                fallacy_dict = fallacy_data.dict()
-                            else:
-                                fallacy_dict = fallacy_data
-                                
-                            fallacy = FallacyDetection(
-                                type=fallacy_dict.get('type', 'pattern'),
-                                name=fallacy_dict.get('name', 'Sophisme détecté'),
-                                description=fallacy_dict.get('description', ''),
-                                severity=fallacy_dict.get('severity', 0.7),
-                                confidence=fallacy_dict.get('confidence', 0.8),
-                                location=fallacy_dict.get('location'),
-                                context=fallacy_dict.get('context'),
-                                explanation=fallacy_dict.get('explanation')
-                            )
-                            fallacies.append(fallacy)
-                            
-                    self.logger.info(f"FallacyService a détecté {len(fallacies)} sophismes")
-                    
-                except Exception as e:
-                    self.logger.error(f"Erreur avec FallacyService: {e}")
-                    # Continuer avec les autres méthodes en cas d'erreur
-            
-            # PRIORITÉ 2: Utilisation de l'agent informel si FallacyService non disponible
-            if not fallacies and self.informal_agent: # Sera False
-                self.logger.info("Utilisation de l'agent informel pour la détection (ne devrait pas arriver avec imports commentés)")
-                result = await self.informal_agent.analyze_text(text) # La signature de analyze_text peut varier
+            # La logique d'appel circulaire via FallacyService a été supprimée.
+            # L'analyse se base maintenant sur les composants internes comme prévu.
+
+            # PRIORITÉ 1: Utilisation de l'agent informel
+            if self.informal_agent:
+                self.logger.info("Using InformalAgent for fallacy detection.")
+                result = await self.informal_agent.analyze_text(text)
                 if result and 'fallacies' in result:
                     for fallacy_data in result['fallacies']:
                         fallacy = FallacyDetection(
@@ -365,15 +318,15 @@ class AnalysisService:
                             description=fallacy_data.get('explication', fallacy_data.get('description', fallacy_data.get('explanation', ''))),
                             severity=fallacy_data.get('severity', 0.7),
                             confidence=fallacy_data.get('confidence', 0.8),
-                            location=fallacy_data.get('location'),  # Garde seulement le vrai dict de position
+                            location=fallacy_data.get('location'),
                             context=fallacy_data.get('context', fallacy_data.get('reformulation')),
                             explanation=fallacy_data.get('explication', fallacy_data.get('explanation', ''))
                         )
                         fallacies.append(fallacy)
             
             # PRIORITÉ 3: Analyse contextuelle si les autres méthodes n'ont rien donné
-            elif not fallacies and self.contextual_analyzer: # Sera False
-                self.logger.info("Utilisation de l'analyseur contextuel pour la détection (ne devrait pas arriver avec imports commentés)")
+            elif not fallacies and self.contextual_analyzer:
+                self.logger.info("Using ContextualAnalyzer for fallacy detection.")
                 result = self.contextual_analyzer.analyze_fallacies(text)
                 if result:
                     for fallacy_data in result:
@@ -389,11 +342,15 @@ class AnalysisService:
             
             # Filtrage par seuil de sévérité
             if options and hasattr(options, 'severity_threshold') and options.severity_threshold is not None:
+                self.logger.info(f"Filtering fallacies with severity >= {options.severity_threshold}")
+                initial_count = len(fallacies)
                 fallacies = [f for f in fallacies if f.severity >= options.severity_threshold]
-            
+                self.logger.info(f"Filtered {initial_count - len(fallacies)} fallacies.")
+
         except Exception as e:
-            self.logger.error(f"Erreur lors de la détection de sophismes: {e}")
+            self.logger.error(f"Erreur lors de la détection de sophismes: {e}", exc_info=True)
         
+        self.logger.info(f"EXITING _detect_fallacies, found {len(fallacies)} fallacies.")
         return fallacies
     
     def _analyze_structure(self, text: str, options: Optional[Any]) -> Optional[ArgumentStructure]:

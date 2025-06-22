@@ -62,8 +62,8 @@ function Get-PythonExecutable {
     return $null
 }
 
-
 # --- Début du Script ---
+$portManagerScript = Join-Path $PSScriptRoot "project_core/config/port_manager.py"
 
 try {
     # === 1. Configuration et Validation des chemins ===
@@ -83,6 +83,28 @@ try {
         throw "Python n'est pas installé ou non accessible. Veuillez l'installer et l'ajouter à votre PATH."
     }
     Write-Log "Utilisation de l'interpréteur: $PythonExecutable"
+
+    # === INJECTION DES VARIABLES D'ENV DES PORTS ===
+    Write-Log "Injection des variables d'environnement des ports..." "INFO"
+    if (-not (Test-Path $portManagerScript)) {
+        Write-Log "Script port_manager.py introuvable à: $portManagerScript" "ERROR"
+        exit 1
+    }
+    try {
+        $envVars = & $PythonExecutable $portManagerScript --export-env
+        foreach ($line in $envVars) {
+            if ($line -match "^(.+?)=(.+)$") {
+                $key = $matches[1]
+                $value = $matches[2]
+                Set-Item -Path "env:$key" -Value $value
+                Write-Log "Variable d'environnement injectée: $key=$value" "DEBUG"
+            }
+        }
+        Write-Log "Variables d'environnement des ports injectées avec succès." "SUCCESS"
+    } catch {
+        Write-Log "Échec de l'injection des variables d'environnement des ports : $($_.Exception.Message)" "ERROR"
+        exit 1
+    }
 
     # === 3. Construction de la commande à exécuter ===
     $FinalCommandToRun = $CommandToRun
@@ -148,6 +170,16 @@ try {
     $scriptName = $errorRecord.InvocationInfo.ScriptName
     Write-Log "Erreur à: $scriptName (Ligne: $line, Colonne: $pos)" "ERROR"
     exit 1
+}
+finally {
+    # Assurer le déverrouillage systématique du port
+    Write-Log "Nettoyage du verrouillage de port (finally)..." "INFO"
+    try {
+        & $PythonExecutable $portManagerScript --unlock
+        Write-Log "Verrouillage de port nettoyé." "SUCCESS"
+    } catch {
+        Write-Log "Avertissement: Échec du nettoyage du verrouillage de port. Un nettoyage manuel peut être requis." "WARNING"
+    }
 }
 
 Write-Log "Fin du script d'environnement." "DEBUG"
