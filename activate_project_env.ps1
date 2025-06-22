@@ -23,7 +23,8 @@ param(
     [string]$PythonScriptPath = $null,
     [switch]$Verbose = $false,
     [switch]$ForceReinstall = $false,
-    [int]$CondaVerboseLevel = 0
+    [int]$CondaVerboseLevel = 0,
+    [switch]$LaunchWebApp = $false
 )
 
 # Fonction de logging simple
@@ -76,6 +77,7 @@ function Get-PythonExecutable {
 
 # --- Début du Script ---
 $portManagerScript = Join-Path $PSScriptRoot "project_core/config/port_manager.py"
+$WebAppLauncherScript = Join-Path $PSScriptRoot "scripts/apps/webapp/launch_webapp_background.py"
 
 try {
     # === 1. Configuration et Validation des chemins ===
@@ -158,13 +160,31 @@ try {
     
     Write-Log "Arguments passés au manager Python: $($ManagerArgs -join ' ')" "DEBUG"
 
-    # === 5. Exécution ===
-    Write-Log "Lancement du gestionnaire d'environnement Python pour activation et exécution..."
+    # === 5. Lancement optionnel de la WebApp ===
+    if ($LaunchWebApp) {
+        Write-Log "Lancement du serveur web en arrière-plan..." "INFO"
+        if (-not (Test-Path $WebAppLauncherScript)) {
+            throw "Le script de lancement de la webapp est introuvable: $WebAppLauncherScript"
+        }
+        # On passe la commande de démarrage au manager pour qu'elle s'exécute dans l'env Conda
+        $launchArgs = $ManagerArgs.Clone()
+        $launchArgs += "--command", "$PythonExecutable `"$WebAppLauncherScript`" start"
+        
+        & $PythonExecutable $launchArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "Échec du lancement du serveur web en arrière-plan."
+        }
+        Write-Log "Commande de lancement du serveur envoyée. Attente pour la stabilisation..." "DEBUG"
+        Start-Sleep -Seconds 15 # Attente pour que le serveur soit prêt
+    }
+
+    # === 6. Exécution ===
+    Write-Log "Lancement du gestionnaire d'environnement Python pour activation et exécution de la commande principale..."
     & $PythonExecutable $ManagerArgs
     $exitCode = $LASTEXITCODE
 
     if ($exitCode -ne 0) {
-        Write-Log "Le script gestionnaire Python a terminé avec un code d'erreur: $exitCode" "ERROR"
+        Write-Log "La commande principale a terminé avec un code d'erreur: $exitCode" "ERROR"
     } else {
         Write-Log "Le script gestionnaire Python a terminé avec succès." "SUCCESS"
     }
@@ -191,6 +211,19 @@ finally {
         Write-Log "Verrouillage de port nettoyé." "SUCCESS"
     } catch {
         Write-Log "Avertissement: Échec du nettoyage du verrouillage de port. Un nettoyage manuel peut être requis." "WARNING"
+    }
+
+    # Et on s'assure que le serveur web est bien terminé
+    if ($LaunchWebApp) {
+        Write-Log "Arrêt du serveur web en arrière-plan (finally)..." "INFO"
+        try {
+            $killArgs = $ManagerArgs.Clone()
+            $killArgs += "--command", "$PythonExecutable `"$WebAppLauncherScript`" kill"
+            & $PythonExecutable $killArgs
+            Write-Log "Commande d'arrêt du serveur envoyée." "SUCCESS"
+        } catch {
+            Write-Log "Avertissement: Échec de l'envoi de la commande d'arrêt du serveur." "WARNING"
+        }
     }
 }
 

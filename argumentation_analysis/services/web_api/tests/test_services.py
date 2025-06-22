@@ -123,7 +123,8 @@ class TestValidationService:
         assert isinstance(health_status, bool)
         assert health_status is True # Doit être True car le mock est configuré ainsi
 
-    def test_validate_formal_argument_valid(self, validation_service):
+    @pytest.mark.asyncio
+    async def test_validate_formal_argument_valid(self, validation_service):
         """Test de validation d'un argument formel valide via le LogicService mocké."""
         request = ValidationRequest(
             premises=["Si A alors B", "A"],
@@ -131,14 +132,15 @@ class TestValidationService:
             logic_type="propositional"
         )
         
-        response = validation_service.validate_argument(request)
+        response = await validation_service.validate_argument(request)
         
         assert response.success is True
         assert response.result.is_valid is True
         assert response.result.validity_score == 1.0
         assert validation_service.logic_service.validate_argument_from_components.called
 
-    def test_validate_formal_argument_invalid(self, validation_service):
+    @pytest.mark.asyncio
+    async def test_validate_formal_argument_invalid(self, validation_service):
         """Test de validation d'un argument formel invalide via le LogicService mocké."""
         request = ValidationRequest(
             premises=["Si A alors B", "B"],
@@ -146,7 +148,7 @@ class TestValidationService:
             logic_type="propositional"
         )
         
-        response = validation_service.validate_argument(request)
+        response = await validation_service.validate_argument(request)
         
         assert response.success is True
         assert response.result.is_valid is False
@@ -154,7 +156,8 @@ class TestValidationService:
         assert "L'argument n'est pas logiquement valide" in response.result.issues[0]
         assert validation_service.logic_service.validate_argument_from_components.called
     
-    def test_validate_deductive_argument(self, validation_service):
+    @pytest.mark.asyncio
+    async def test_validate_deductive_argument(self, validation_service):
         """Test de validation d'un argument déductif."""
         request = ValidationRequest(
             premises=["Tous les hommes sont mortels", "Socrate est un homme"],
@@ -162,7 +165,7 @@ class TestValidationService:
             argument_type="deductive"
         )
         
-        response = validation_service.validate_argument(request)
+        response = await validation_service.validate_argument(request)
         
         assert response is not None
         assert hasattr(response, 'success')
@@ -171,7 +174,8 @@ class TestValidationService:
         assert response.conclusion == request.conclusion
         assert response.argument_type == request.argument_type
     
-    def test_validate_inductive_argument(self, validation_service):
+    @pytest.mark.asyncio
+    async def test_validate_inductive_argument(self, validation_service):
         """Test de validation d'un argument inductif."""
         request = ValidationRequest(
             premises=["Le soleil s'est levé tous les jours jusqu'à présent"],
@@ -179,7 +183,7 @@ class TestValidationService:
             argument_type="inductive"
         )
         
-        response = validation_service.validate_argument(request)
+        response = await validation_service.validate_argument(request)
         
         assert response is not None
         assert response.argument_type == "inductive"

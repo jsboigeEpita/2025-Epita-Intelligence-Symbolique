@@ -88,7 +88,7 @@ async def analyze_text():
         return jsonify(ErrorResponse(error="Erreur d'analyse", message=str(e), status_code=500).dict()), 500
 
 @main_bp.route('/validate', methods=['POST'])
-def validate_argument():
+async def validate_argument():
     """Validation logique d'un argument."""
     try:
         validation_service = current_app.services.validation_service
@@ -97,7 +97,7 @@ def validate_argument():
             return jsonify(ErrorResponse(error="Données manquantes", message="Le body JSON est requis", status_code=400).dict()), 400
         
         validation_request = ValidationRequest(**data)
-        result = validation_service.validate_argument(validation_request)
+        result = await validation_service.validate_argument(validation_request)
         return jsonify(result.dict())
         
     except Exception as e:

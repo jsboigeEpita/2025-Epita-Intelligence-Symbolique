@@ -49,7 +49,7 @@ class ValidationService:
         """Vérifie l'état de santé du service."""
         return self.is_initialized and self.logic_service.is_healthy()
 
-    def validate_argument(self, request: ValidationRequest) -> ValidationResponse:
+    async def validate_argument(self, request: ValidationRequest) -> ValidationResponse:
         """
         Valide un argument logique.
         
@@ -64,7 +64,7 @@ class ValidationService:
         try:
             # Branche 1: Validation formelle via LogicService si logic_type est fourni
             if request.logic_type and request.logic_type != "heuristic":
-                is_formally_valid = asyncio.run(self.logic_service.validate_argument_from_components(request))
+                is_formally_valid = await self.logic_service.validate_argument_from_components(request)
                 
                 result = ValidationResult(
                     is_valid=is_formally_valid,
