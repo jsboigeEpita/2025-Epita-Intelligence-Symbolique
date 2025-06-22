@@ -181,9 +181,10 @@ class UnifiedWebOrchestrator:
             'frontend': {
                 'enabled': False,  # Optionnel selon besoins
                 'path': 'services/web_api/interface-web-argumentative',
-                'port': frontend_port,
+                'start_port': frontend_port,
+                'fallback_ports': list(range(frontend_port + 1, frontend_port + 11)),
                 'start_command': 'npm start',
-                'timeout_seconds': 90
+                'timeout_seconds': 180
             },
             'playwright': {
                 'enabled': True,
@@ -405,7 +406,8 @@ class UnifiedWebOrchestrator:
 
         # Récupération de tous les ports depuis la config pour un nettoyage ciblé
         backend_ports = [self.config['backend']['start_port']] + self.config['backend'].get('fallback_ports', [])
-        frontend_ports = [self.config['frontend']['port']] if self.config['frontend'].get('port') else []
+        frontend_config = self.config['frontend']
+        frontend_ports = [frontend_config['start_port']] + frontend_config.get('fallback_ports', []) if frontend_config.get('start_port') else []
         all_ports = list(set(backend_ports + frontend_ports))
 
         self.logger.info(f"Nettoyage forcé des processus sur les ports : {all_ports}")
@@ -447,7 +449,7 @@ class UnifiedWebOrchestrator:
             
         self.add_trace("[FRONTEND] DEMARRAGE FRONTEND", "Lancement interface React")
         
-        result = await self.frontend_manager.start()
+        result = await self.frontend_manager.start_with_failover()
         if result['success']:
             self.app_info.frontend_url = result['url']
             self.app_info.frontend_port = result['port']

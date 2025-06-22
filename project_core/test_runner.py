@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+print("[DEBUG] test_runner.py a démarré")
 """
 Orchestrateur de test unifié pour le projet.
 

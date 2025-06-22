@@ -351,11 +351,14 @@ class EnvironmentManager:
         Exécute une commande dans un environnement conda de manière robuste en utilisant `conda run`.
         Cette méthode utilise le chemin complet de l'environnement (`-p` ou `--prefix`) pour éviter les ambiguïtés.
         """
+        self.logger.info(f"[DEBUG-EM] Entrée dans run_in_conda_env avec la commande: {command}")
         if env_name is None:
             env_name = self.default_conda_env
         if cwd is None:
             cwd = str(self.project_root)
         
+        self.logger.info(f"[DEBUG-EM] Environnement cible: {env_name}, CWD: {cwd}")
+
         conda_exe = self._find_conda_executable()
         if not conda_exe:
             self.logger.error("Exécutable Conda non trouvé.")
@@ -383,6 +386,8 @@ class EnvironmentManager:
         elif isinstance(command, list) and command and command[0].lower() == 'python':
             is_direct_python_command = True
             base_command_list_for_python_direct = list(command) # Copie
+        
+        self.logger.info(f"[DEBUG-EM] Type de commande détecté: DirectPython={is_direct_python_command}, ComplexShell={is_complex_string_command}")
 
         # Préparer l'environnement pour le sous-processus
         # Cet environnement sera utilisé pour TOUS les types d'appels à subprocess.run ci-dessous
@@ -421,6 +426,7 @@ class EnvironmentManager:
                          f"PATH starts with: {self.sub_process_env.get('PATH', '')[:100]}...")
 
         if is_direct_python_command:
+            self.logger.info("[DEBUG-EM] Branche sélectionnée: is_direct_python_command")
             # Nouvelle logique pour trouver python.exe
             python_exe_direct_in_env_root = Path(env_path) / ('python.exe' if platform.system() == "Windows" else 'python')
             python_exe_in_env_scripts_dir = env_scripts_dir / ('python.exe' if platform.system() == "Windows" else 'python')
@@ -437,16 +443,18 @@ class EnvironmentManager:
                 raise RuntimeError(f"Python introuvable dans {env_name}")
             
             final_command = [str(selected_python_exe)] + base_command_list_for_python_direct[1:]
-            self.logger.info(f"Exécution directe de Python: {' '.join(final_command)}")
+            self.logger.info(f"Exécution directe de Python: {' '.join(map(str,final_command))}")
         
         elif is_complex_string_command:
+            self.logger.info("[DEBUG-EM] Branche sélectionnée: is_complex_string_command")
             if platform.system() == "Windows":
                 final_command = [conda_exe, 'run', '--prefix', env_path, '--no-capture-output', 'cmd.exe', '/c', command]
             else:
                 final_command = [conda_exe, 'run', '--prefix', env_path, '--no-capture-output', 'bash', '-c', command]
-            self.logger.info(f"Exécution de commande shell complexe via 'conda run': {' '.join(final_command)}")
+            self.logger.info(f"Exécution de commande shell complexe via 'conda run': {' '.join(map(str,final_command))}")
 
         else: # Autres commandes (non-Python directes, non complexes)
+            self.logger.info("[DEBUG-EM] Branche sélectionnée: Autre (standard)")
             if isinstance(command, str):
                 base_command_list_for_others = shlex.split(command, posix=(os.name != 'nt'))
             else:
@@ -470,9 +478,11 @@ class EnvironmentManager:
                 conda_exe, 'run', '--prefix', env_path,
                 '--no-capture-output'
             ] + base_command_list_for_others
-            self.logger.info(f"Exécution de commande standard via 'conda run': {' '.join(final_command)}")
+            self.logger.info(f"Exécution de commande standard via 'conda run': {' '.join(map(str,final_command))}")
 
         try:
+            self.logger.info(f"[DEBUG-EM] COMMANDE FINALE A EXECUTER: {' '.join(map(str, final_command))}")
+            self.logger.info("[DEBUG-EM] Avant subprocess.run...")
             # Utilisation de subprocess.run SANS capture_output.
             # La sortie du sous-processus sera directement affichée sur la console
             # parente, fournissant un retour en temps réel, ce qui est plus robuste.
@@ -487,6 +497,7 @@ class EnvironmentManager:
                 timeout=3600,  # 1h de timeout pour les installations très longues.
                 env=self.sub_process_env
             )
+            self.logger.info(f"[DEBUG-EM] Après subprocess.run. Code de sortie: {result.returncode}")
 
             if result.returncode == 0:
                 self.logger.debug(f"'conda run' exécuté avec succès (code {result.returncode}).")

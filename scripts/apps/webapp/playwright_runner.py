@@ -41,7 +41,7 @@ class PlaywrightRunner:
         self.headless = config.get('headless', True)
         self.timeout_ms = config.get('timeout_ms', 10000)
         self.slow_timeout_ms = config.get('slow_timeout_ms', 20000)
-        self.test_paths = config.get('test_paths')
+        self.test_paths = config.get('test_paths', ["tests/integration/webapp/"])
         self.screenshots_dir = Path(config.get('screenshots_dir', 'logs/screenshots'))
         self.traces_dir = Path(config.get('traces_dir', 'logs/traces'))
         
@@ -79,8 +79,8 @@ class PlaywrightRunner:
             # Préparation environnement test
             await self._prepare_test_environment(effective_config)
             
-            # Construction commande pytest
-            cmd = self._build_pytest_command(test_paths, effective_config)
+            # Construction commande Playwright
+            cmd = self._build_playwright_command(test_paths, effective_config)
             
             # Exécution tests
             result = await self._execute_tests(cmd, effective_config)
@@ -101,8 +101,8 @@ class PlaywrightRunner:
             'frontend_url': 'http://localhost:3000',
             'headless': self.headless,
             'browser': self.browser,
-            'timeout_ms': self.timeout_ms,
-            'slow_timeout_ms': self.slow_timeout_ms,
+            'timeout_ms': self.config.get('timeout_ms', 30000),
+            'slow_timeout_ms': self.config.get('slow_timeout_ms', 60000),
             'screenshots': True,
             'traces': True
         }
@@ -122,7 +122,8 @@ class PlaywrightRunner:
             'BROWSER': config['browser'],
             'SCREENSHOTS_DIR': str(self.screenshots_dir),
             'TRACES_DIR': str(self.traces_dir),
-            'KMP_DUPLICATE_LIB_OK': 'TRUE' # Contournement pour le conflit OpenMP
+            'KMP_DUPLICATE_LIB_OK': 'TRUE', # Contournement pour le conflit OpenMP
+            'DEBUG': 'pw:api' # Ajout du logging de debug pour Playwright
         }
         
         for key, value in env_vars.items():
@@ -144,156 +145,175 @@ class PlaywrightRunner:
                     except Exception:
                         pass  # Ignore erreurs de suppression
     
-    def _build_pytest_command(self, test_paths: List[str],
-                             config: Dict[str, Any]) -> List[str]:
-        """Construit la commande pytest avec options Playwright"""
+    def _build_playwright_command(self, test_paths: List[str],
+                                 config: Dict[str, Any]) -> List[str]:
+        """Construit la commande en appelant directement le script Playwright."""
+
+        # Construction d'un chemin absolu vers l'exécutable Playwright
+        # pour garantir qu'il soit trouvé par asyncio.create_subprocess_exec.
+        base_path = Path.cwd()
+        playwright_executable_path = base_path / 'node_modules' / '.bin' / 'playwright'
+
+        if sys.platform == "win32":
+            # Sous Windows, l'exécutable est un script .cmd
+            playwright_executable_path = playwright_executable_path.with_suffix('.cmd')
+
+        if not playwright_executable_path.exists():
+            self.logger.error(f"L'exécutable Playwright n'a pas été trouvé à: {playwright_executable_path}")
+            # On pourrait vouloir lever une exception ici pour arrêter le processus
+            # au lieu de continuer avec une commande qui échouera.
+            raise FileNotFoundError(f"Playwright executable not found at {playwright_executable_path}")
+
+        cmd = [str(playwright_executable_path), 'test']
         
-        # Options pytest
-        pytest_args = [
-            '-v',
-            '-s',
-            '--tb=short',
-        ]
+        # Ajout des chemins de tests
+        cmd.extend(test_paths)
         
         # Options Playwright
-        if config['headless']:
-            pytest_args.append('--headless')
-        else:
-            pytest_args.append('--headed')
+        # On ne spécifie plus --browser car le fichier de config Playwright
+        # contient déjà des projets qui le définissent.
+        # cmd.append(f'--browser={config["browser"]}')
+        
+        if not config['headless']:
+            cmd.append('--headed')
+        
+        # La configuration pour les screenshots, traces et vidéos
+        # est généralement gérée dans le fichier playwright.config.js
+        # pour plus de robustesse. On s'assure que les répertoires
+        # sont définis via les variables d'environnement.
+        # On peut forcer certaines options ici si nécessaire.
+        
+        # Exemple pour forcer le traçage :
+        if config.get('traces', True):
+            cmd.append('--trace=on')
             
-        pytest_args.extend([
-            f'--browser={config["browser"]}',
-            '--screenshot=on',
-            '--video=on' if config.get('traces', True) else '--video=off'
-        ])
-        
-        # Chemins de tests
-        pytest_args.extend(test_paths)
-        
-        # Construction de la commande finale
-        # La logique a été unifiée pour être plus directe.
-        # L'environnement est déjà activé, on peut appeler python directement.
-        python_executable = sys.executable  # Utilise l'interpréteur courant
-        cmd = [python_executable, '-m', 'pytest']
-        cmd.extend(pytest_args)
-        
         return cmd
     
-    async def _execute_tests(self, cmd: List[str], 
-                           config: Dict[str, Any]) -> subprocess.CompletedProcess:
-        """Exécute les tests et capture la sortie"""
-        self.logger.info(f"Commande test: {' '.join(cmd)}")
-        
-        # Fichiers de log
-        stdout_file = self.traces_dir / 'pytest_stdout.log'
-        stderr_file = self.traces_dir / 'pytest_stderr.log'
-        
+    async def _read_stream(self, stream: asyncio.StreamReader, log_method):
+        """Lit un flux ligne par ligne et l'enregistre."""
+        while not stream.at_eof():
+            line = await stream.readline()
+            if line:
+                log_method(line.decode(encoding='utf-8', errors='replace').rstrip())
+
+    async def _execute_tests(self, cmd: List[str],
+                             config: Dict[str, Any]) -> subprocess.CompletedProcess:
+        """Exécute les tests en streamant la sortie en temps réel."""
+        self.logger.info(f"Commande test à exécuter: {' '.join(cmd)}")
+        self.logger.info(f"Répertoire de travail: {Path.cwd()}")
+        timeout = config.get('test_timeout', 600)
+        self.logger.info(f"Timeout configuré: {timeout}s")
+
+        stdout_capture = []
+        stderr_capture = []
+
+        def log_stdout(line):
+            self.logger.info(f"[PW_STDOUT] {line}")
+            stdout_capture.append(line)
+
+        def log_stderr(line):
+            self.logger.warning(f"[PW_STDERR] {line}")
+            stderr_capture.append(line)
+
+        process = None
         try:
-            # Exécution avec capture
-            if sys.platform == "win32":
-                # PowerShell nécessite gestion spéciale
-                result = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    timeout=config.get('test_timeout', 300),  # 5 min par défaut
-                    cwd=Path.cwd() / "tests" / "integration" / "webapp"
-                )
-            else:
-                result = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    timeout=config.get('test_timeout', 300),
-                    cwd=Path.cwd() / "tests" / "integration" / "webapp"
-                )
+            self.logger.debug("Démarrage du sous-processus async pour Playwright...")
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=Path.cwd(),
+                env=os.environ
+            )
+            self.logger.debug(f"Processus Playwright démarré avec PID: {process.pid}")
+
+            # Créer des tâches pour lire stdout et stderr en parallèle
+            stdout_task = asyncio.create_task(self._read_stream(process.stdout, log_stdout))
+            stderr_task = asyncio.create_task(self._read_stream(process.stderr, log_stderr))
+
+            # Attendre que le processus et les lecteurs de flux se terminent
+            await asyncio.wait_for(
+                asyncio.gather(process.wait(), stdout_task, stderr_task),
+                timeout=timeout
+            )
             
-            # Sauvegarde logs
-            with open(stdout_file, 'w', encoding='utf-8') as f:
-                f.write(result.stdout)
-            with open(stderr_file, 'w', encoding='utf-8') as f:
-                f.write(result.stderr)
+            return_code = process.returncode
+            self.logger.info(f"Sous-processus Playwright terminé avec le code: {return_code}.")
+
+        except asyncio.TimeoutError:
+            self.logger.error(f"Timeout ({timeout}s) atteint lors de l'exécution des tests Playwright.")
+            if process:
+                self.logger.warning(f"Tentative d'arrêt du processus PID: {process.pid}")
+                try:
+                    process.terminate()
+                    await asyncio.sleep(2) # Laisser le temps de terminer
+                    if process.returncode is None: # Toujours en cours
+                         process.kill()
+                except ProcessLookupError:
+                    self.logger.warning(f"Le processus {process.pid} n'existait déjà plus.")
+                except Exception as e:
+                    self.logger.error(f"Erreur lors de la tentative d'arrêt du processus: {e}")
+
+            return_code = 1 # Code d'erreur pour timeout
             
-            self.logger.info(f"Tests terminés - Code retour: {result.returncode}")
-            return result
-            
-        except subprocess.TimeoutExpired as e:
-            self.logger.error(f"Timeout tests après {e.timeout}s")
-            raise
         except Exception as e:
-            self.logger.error(f"Erreur exécution tests: {e}")
-            raise
+            self.logger.critical(f"Erreur critique non gérée lors de l'exécution du processus: {e}", exc_info=True)
+            return_code = -1 # Code d'erreur pour échec grave
+        
+        finally:
+            # S'assurer que les tâches de lecture sont annulées pour éviter les fuites
+            if 'stdout_task' in locals() and not stdout_task.done():
+                stdout_task.cancel()
+            if 'stderr_task' in locals() and not stderr_task.done():
+                stderr_task.cancel()
+
+        # Retourner un objet CompletedProcess pour la compatibilité avec le reste du code
+        return subprocess.CompletedProcess(
+            cmd,
+            returncode=return_code,
+            stdout='\n'.join(stdout_capture),
+            stderr='\n'.join(stderr_capture)
+        )
     
     async def _analyze_results(self, result: subprocess.CompletedProcess) -> bool:
-        """Analyse les résultats de test et génère rapport"""
+        """Analyse les résultats de test et génère un rapport."""
         success = result.returncode == 0
         
-        # Parsing sortie pytest
-        stdout_lines = result.stdout.split('\n') if result.stdout else []
-        stderr_lines = result.stderr.split('\n') if result.stderr else []
+        stdout_content = result.stdout or ""
+        stderr_content = result.stderr or ""
         
-        # Extraction statistiques
-        stats = self._extract_pytest_stats(stdout_lines)
-        
-        # Sauvegarde résultats détaillés
+        # Sauvegarde des logs bruts dans les fichiers
+        stdout_file = self.traces_dir / 'playwright_stdout.log'
+        stderr_file = self.traces_dir / 'playwright_stderr.log'
+        with open(stdout_file, 'w', encoding='utf-8') as f:
+            f.write(stdout_content)
+        with open(stderr_file, 'w', encoding='utf-8') as f:
+            f.write(stderr_content)
+
         self.last_results = {
             'success': success,
             'return_code': result.returncode,
-            'stats': stats,
-            'stdout_lines': len(stdout_lines),
-            'stderr_lines': len(stderr_lines),
+            'stdout_lines': len(stdout_content.splitlines()),
+            'stderr_lines': len(stderr_content.splitlines()),
             'artifacts': self._collect_artifacts()
         }
         
-        # Log résumé
         if success:
-            self.logger.info(f"Tests réussis: {stats}")
+            self.logger.info("Tests Playwright réussis.")
+            # Optionnel: extraire des infos de la sortie si besoin
         else:
-            self.logger.error(f"[ERROR] Tests échoués: {stats}")
-            
-            # Log premières erreurs
-            error_lines = [line for line in stderr_lines if line.strip()][:10]
-            for error_line in error_lines:
-                self.logger.error(f"   {error_line}")
+            self.logger.error(f"Échec des tests Playwright (code: {result.returncode}).")
+            self.logger.error("Consulter les logs ci-dessus et les artifacts pour les détails.")
         
-        # Génération rapport JSON
         await self._save_test_report()
         
         return success
     
     def _extract_pytest_stats(self, stdout_lines: List[str]) -> Dict[str, Any]:
-        """Extrait les statistiques de pytest"""
-        stats = {
-            'total': 0,
-            'passed': 0,
-            'failed': 0,
-            'skipped': 0,
-            'errors': 0,
-            'duration': 0.0
-        }
-        
-        for line in stdout_lines:
-            # Ligne de résumé pytest
-            if ' passed' in line or ' failed' in line:
-                # Ex: "5 passed, 2 failed in 23.45s"
-                parts = line.split()
-                for i, part in enumerate(parts):
-                    if part == 'passed' and i > 0:
-                        stats['passed'] = int(parts[i-1])
-                    elif part == 'failed' and i > 0:
-                        stats['failed'] = int(parts[i-1])
-                    elif part == 'skipped' and i > 0:
-                        stats['skipped'] = int(parts[i-1])
-                    elif part == 'error' and i > 0:
-                        stats['errors'] = int(parts[i-1])
-                    elif 'in' in parts and i < len(parts) - 1:
-                        try:
-                            duration_str = parts[i+1].rstrip('s')
-                            stats['duration'] = float(duration_str)
-                        except (ValueError, IndexError):
-                            pass
-        
-        stats['total'] = stats['passed'] + stats['failed'] + stats['skipped'] + stats['errors']
+        """(Obsolète) Extrait les statistiques de pytest. Conservé pour antiquité."""
+        # Cette fonction est maintenant largement obsolète car nous n'analysons plus
+        # la sortie de pytest. On se base sur le code de retour de Playwright.
+        stats = { 'detail': 'Parsing de sortie non effectué. Se baser sur success et return_code.' }
         return stats
     
     def _collect_artifacts(self) -> Dict[str, List[str]]:
@@ -348,3 +368,37 @@ class PlaywrightRunner:
             'traces_dir': str(self.traces_dir),
             'last_results': self.last_results
         }
+if __name__ == '__main__':
+    """
+    Point d'entrée pour l'exécution directe du script.
+    Permet de lancer les tests Playwright de manière autonome.
+    """
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(name)s - %(message)s')
+    logger = logging.getLogger("PlaywrightRunnerCLI")
+
+    # Configuration par défaut pour le lancement direct
+    default_config = {
+        'enabled': True,
+        'browser': 'chromium',
+        'headless': True,
+        'test_paths': ['integration/webapp/'],
+        'backend_url': os.getenv('BACKEND_URL', 'http://127.0.0.1:5003'),
+        'frontend_url': os.getenv('FRONTEND_URL', 'http://127.0.0.1:3000'),
+    }
+
+    runner = PlaywrightRunner(config=default_config, logger=logger)
+    
+    # Exécution des tests
+    async def main():
+        success = await runner.run_tests()
+        
+        # Affichage des résultats
+        results = runner.get_last_results()
+        if results:
+            logger.info(f"Résultats finaux: {json.dumps(results['stats'], indent=2)}")
+        
+        # Propagation du code de sortie pour l'intégration CI/CD
+        if not success:
+            sys.exit(1)
+
+    asyncio.run(main())

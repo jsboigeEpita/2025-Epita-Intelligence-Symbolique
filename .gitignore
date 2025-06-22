@@ -285,3 +285,6 @@ temp_backend_runner_*.ps1
 
 # Generated commit analysis reports
 docs/commit_analysis_reports/
+
+# Uvicorn logging configuration
+argumentation_analysis/config/uvicorn_logging.json
