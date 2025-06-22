@@ -160,7 +160,20 @@ class DelegatingSelectionStrategy(SelectionStrategy):
 
 
 class BalancedParticipationStrategy(SelectionStrategy):
-    """Stratégie de sélection qui équilibre la participation des agents tout en respectant les désignations explicites."""
+    """Stratégie de sélection qui équilibre la participation des agents tout en respectant les désignations explicites.
+
+    Cette stratégie poursuit deux objectifs principaux :
+    1.  **Respecter les désignations explicites** : Si l'état partagé (`RhetoricalAnalysisState`)
+        désigne un agent spécifique pour le prochain tour, cet agent est prioritaire.
+    2.  **Équilibrer la participation** : En l'absence de désignation, la stratégie calcule un
+        score de priorité pour chaque agent. Ce score vise à combler l'écart entre le taux de
+        participation actuel de l'agent et son taux cible, tout en tenant compte de la
+        récence de sa dernière intervention.
+
+    La stratégie maintient un "budget de déséquilibre" (`_imbalance_budget`) pour compenser
+    les tours où la désignation explicite a empêché la sélection d'un agent qui en avait
+    pourtant besoin pour atteindre sa cible.
+    """
     _agents_map: Dict[str, "Agent"] = PrivateAttr(default_factory=dict)
     _default_agent_name: str = PrivateAttr(default="ProjectManagerAgent")
     _analysis_state: 'RhetoricalAnalysisState' = PrivateAttr() # Doit être passé à __init__
