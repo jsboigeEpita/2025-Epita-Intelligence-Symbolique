@@ -361,6 +361,10 @@ if __name__ == "__main__":
     elif args.export_env:
         env_vars = {}
         locked_info = manager.get_locked_info()
+
+        # DEBUG: Afficher les informations de verrouillage
+        print(f"DEBUG [port_manager]: lock_file_path={manager.lock_file_path}", file=sys.stderr)
+        print(f"DEBUG [port_manager]: locked_info={locked_info}", file=sys.stderr)
         
         if locked_info and locked_info.get('service') == 'backend':
             # Utilise le port verrouillé pour générer les variables

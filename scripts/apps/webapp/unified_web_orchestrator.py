@@ -486,6 +486,9 @@ class UnifiedWebOrchestrator:
             lock_data = {'service': service, 'port': port}
             with open(pm.lock_file_path, 'w', encoding='utf-8') as f:
                 json.dump(lock_data, f)
+            # DEBUG: Vérifier le contenu du fichier de verrouillage juste après l'écriture
+            with open(pm.lock_file_path, 'r', encoding='utf-8') as f_read:
+                self.logger.info(f"DEBUG: Contenu de .port_lock écrit : {f_read.read()}")
             self.logger.info(f"Port {port} pour le service {service} verrouillé dans {pm.lock_file_path}")
         except Exception as e:
             self.add_trace("[ERROR] ECHEC VERROUILLAGE", str(e), status="error")
@@ -611,10 +614,10 @@ def main():
             elif args.start:
                 # Démarrage simple, mais on maintient le processus en vie
                 if await orchestrator.start_webapp(headless, args.frontend):
-                    print("Backend démarré. Appuyez sur Ctrl+C pour arrêter.")
-                    # Boucle pour maintenir le script en vie
-                    while True:
-                        await asyncio.sleep(1)
+                    print(f"Backend démarré en arrière-plan. PID de l'orchestrateur : {os.getpid()}. PID du backend : {orchestrator.app_info.backend_pid}")
+                    # La boucle de maintien est supprimée pour un comportement non bloquant.
+                    # Le processus se terminera, mais le serveur backend (uvicorn) continuera de tourner.
+                    return True # Renvoyer True pour indiquer le succès
                 else:
                     return False
 
