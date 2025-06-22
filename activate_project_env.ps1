@@ -41,24 +41,36 @@ function Write-Log {
 
 # Fonction pour trouver un exécutable Python robuste
 function Get-PythonExecutable {
-    # Windows: py.exe est le plus fiable
-    if ($IsWindows) {
-        $pythonExec = Get-Command "py.exe" -ErrorAction SilentlyContinue
-        if ($pythonExec) {
-            Write-Log "Lanceur Python 'py.exe' trouvé. Utilisation recommandée."
-            return $pythonExec.Source
-        }
-    }
-    # Ordre de préférence: python3, python
-    $candidates = @("python3", "python")
+    $candidates = @("py", "python3", "python")
+    $StoreAppPath = [System.IO.Path]::Combine($env:LOCALAPPDATA, "Microsoft", "WindowsApps")
+
     foreach ($candidate in $candidates) {
-        $pythonExec = Get-Command $candidate -ErrorAction SilentlyContinue
-        if ($pythonExec) {
-            Write-Log "Exécutable Python trouvé: $($pythonExec.Source)"
-            return $pythonExec.Source
+        $executables = Get-Command $candidate -All -ErrorAction SilentlyContinue
+        if (-not $executables) {
+            continue
+        }
+
+        # Itérer sur tous les exécutables trouvés pour ce candidat
+        foreach ($exec in $executables) {
+            try {
+                $path = $exec.Source
+                $resolvedPath = [System.IO.Path]::GetFullPath($path)
+                
+                # Vérifier si le chemin résolu n'est pas dans le dossier des applications du store
+                if ($IsWindows -and $resolvedPath.StartsWith($StoreAppPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+                    Write-Log "Ignoré: Exécutable Python '$path' semble être un stub du Microsoft Store." "DEBUG"
+                    continue
+                }
+
+                Write-Log "Exécutable Python valide trouvé: $path"
+                return $path
+            } catch {
+                Write-Log "Erreur lors de la résolution du chemin pour '$($exec.Source)': $($_.Exception.Message)" "WARNING"
+            }
         }
     }
-    Write-Log "Aucun exécutable Python (py.exe, python3, python) n'a été trouvé dans le PATH." "ERROR"
+
+    Write-Log "Aucun exécutable Python valide (non-stub) n'a été trouvé dans le PATH." "ERROR"
     return $null
 }
 

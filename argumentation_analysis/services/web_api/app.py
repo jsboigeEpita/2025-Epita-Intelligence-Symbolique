@@ -39,11 +39,11 @@ class AppServices:
     """Conteneur pour les instances de service."""
     def __init__(self):
         logger.info("Initializing app services container...")
+        self.logic_service = LogicService()
         self.analysis_service = AnalysisService()
-        self.validation_service = ValidationService()
+        self.validation_service = ValidationService(self.logic_service)
         self.fallacy_service = FallacyService()
         self.framework_service = FrameworkService()
-        self.logic_service = LogicService()
         logger.info("App services container initialized.")
 
 def initialize_heavy_dependencies():

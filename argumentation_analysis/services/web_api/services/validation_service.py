@@ -8,10 +8,12 @@ Service de validation d'arguments logiques.
 import time
 import logging
 from typing import Dict, List, Any, Optional
+import asyncio
 
 # Imports des modèles (style HEAD)
 from argumentation_analysis.services.web_api.models.request_models import ValidationRequest
 from argumentation_analysis.services.web_api.models.response_models import ValidationResponse, ValidationResult
+from .logic_service import LogicService
 
 logger = logging.getLogger("ValidationService")
 
@@ -24,9 +26,10 @@ class ValidationService:
     en analysant la relation entre prémisses et conclusion.
     """
     
-    def __init__(self):
+    def __init__(self, logic_service: LogicService):
         """Initialise le service de validation."""
         self.logger = logger
+        self.logic_service = logic_service
         self.is_initialized = True
         
         # Mots-clés logiques pour l'analyse
@@ -44,8 +47,8 @@ class ValidationService:
     
     def is_healthy(self) -> bool:
         """Vérifie l'état de santé du service."""
-        return self.is_initialized
-    
+        return self.is_initialized and self.logic_service.is_healthy()
+
     def validate_argument(self, request: ValidationRequest) -> ValidationResponse:
         """
         Valide un argument logique.
@@ -59,7 +62,33 @@ class ValidationService:
         start_time = time.time()
         
         try:
-            # Vérification des entrées (de la branche 0813790)
+            # Branche 1: Validation formelle via LogicService si logic_type est fourni
+            if request.logic_type and request.logic_type != "heuristic":
+                is_formally_valid = asyncio.run(self.logic_service.validate_argument_from_components(request))
+                
+                result = ValidationResult(
+                    is_valid=is_formally_valid,
+                    validity_score=1.0 if is_formally_valid else 0.0,
+                    soundness_score=0.0, # La solidité n'est pas évaluée ici
+                    premise_analysis=[],
+                    conclusion_analysis={},
+                    logical_structure={'argument_type': request.logic_type, 'method': 'formal'},
+                    issues=[] if is_formally_valid else ["L'argument n'est pas logiquement valide selon le moteur formel."],
+                    suggestions=[]
+                )
+                
+                return ValidationResponse(
+                    success=True,
+                    premises=request.premises,
+                    conclusion=request.conclusion,
+                    argument_type=request.argument_type,
+                    result=result,
+                    processing_time=time.time() - start_time
+                )
+
+
+            # Branche 2: Validation heuristique (comportement existant)
+            # Vérification des entrées
             if not request.premises:
                 raise ValueError("Aucune prémisse fournie. Un argument valide nécessite au moins une prémisse.")
             
@@ -76,6 +105,7 @@ class ValidationService:
             logical_structure = self._analyze_logical_structure(
                 request.premises, request.conclusion, request.argument_type
             )
+            logical_structure['method'] = 'heuristic' # Ajout pour clarté
             
             # Calcul des scores
             validity_score = self._calculate_validity_score(
@@ -86,12 +116,12 @@ class ValidationService:
                 premise_analysis, validity_score
             )
             
-            # Identification des problèmes (logique de la branche 0813790)
+            # Identification des problèmes
             issues = self._identify_issues(
                 premise_analysis, conclusion_analysis, logical_structure
             )
             
-            # Génération de suggestions (logique de la branche 0813790)
+            # Génération de suggestions
             suggestions = self._generate_suggestions(issues, logical_structure)
             
             # Création du résultat

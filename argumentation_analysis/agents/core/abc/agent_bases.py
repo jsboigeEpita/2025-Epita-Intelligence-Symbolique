@@ -396,6 +396,19 @@ class BaseLogicAgent(BaseAgent, ABC):
             et un message de statut du solveur.
         """
         pass
+    @abstractmethod
+    def validate_argument(self, premises: List[str], conclusion: str) -> bool:
+        """
+        Valide un argument structuré (prémisses, conclusion).
+
+        Args:
+            premises (List[str]): La liste des prémisses en langage naturel ou formel.
+            conclusion (str): La conclusion en langage naturel ou formel.
+
+        Returns:
+            bool: True si la conclusion découle logiquement des prémisses, False sinon.
+        """
+        pass
 
     def process_task(self, task_id: str, task_description: str, state_manager: Any) -> Dict[str, Any]:
         """

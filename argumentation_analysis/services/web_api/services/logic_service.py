@@ -26,7 +26,7 @@ from argumentation_analysis.agents.core.logic.query_executor import QueryExecuto
 from argumentation_analysis.core.llm_service import create_llm_service
 
 from ..models.request_models import (
-    LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest, LogicOptions
+    LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest, LogicOptions, ValidationRequest
 )
 from ..models.response_models import (
     LogicBeliefSet, LogicBeliefSetResponse, LogicQueryResult, LogicQueryResponse,
@@ -373,3 +373,21 @@ class LogicService:
             return f"La requête '{query}' est acceptée par l'ensemble de croyances. Cela signifie que la formule est une conséquence logique des axiomes définis dans l'ensemble de croyances."
         else:
             return f"La requête '{query}' est rejetée par l'ensemble de croyances. Cela signifie que la formule n'est pas une conséquence logique des axiomes définis dans l'ensemble de croyances."
+
+    async def validate_argument_from_components(self, request: ValidationRequest) -> bool:
+        """
+        Valide un argument logique à partir de ses composants (prémisses, conclusion).
+        """
+        self.logger.info(f"Validation d'argument de type '{request.logic_type}'")
+        try:
+            agent = LogicAgentFactory.create_agent(request.logic_type, self.kernel)
+            if not agent:
+                raise ValueError(f"Impossible de créer un agent pour le type de logique '{request.logic_type}'")
+            
+            # La méthode validate_argument est maintenant directement sur l'agent
+            is_valid = await agent.validate_argument(request.premises, request.conclusion)
+            return is_valid
+            
+        except Exception as e:
+            self.logger.error(f"Erreur lors de la validation de l'argument: {str(e)}", exc_info=True)
+            return False
