@@ -155,6 +155,8 @@ libs/portable_jdk/
 libs/portable_octave/
 portable_jdk/
 libs/_temp*/
+libs/jdk-*/
+libs/octave-*/
 results/
 rapport_ia_2024.txt
 discours_attal_20240130.txt
@@ -277,3 +279,4 @@ cython_debug/
 
 # Roo added
 config/.port_lock
+
