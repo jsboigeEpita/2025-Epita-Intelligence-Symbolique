@@ -424,6 +424,11 @@ class EnvironmentManager:
                          f"CONDA_DEFAULT_ENV={self.sub_process_env.get('CONDA_DEFAULT_ENV')}, "
                          f"CONDA_PREFIX={self.sub_process_env.get('CONDA_PREFIX')}, "
                          f"PATH starts with: {self.sub_process_env.get('PATH', '')[:100]}...")
+       
+        # --- INJECTION DE LA VARIABLE DE COURT-CIRCUIT ---
+        # Indique aux sous-processus (comme auto_env.py) que l'environnement est déjà géré.
+        self.sub_process_env['RUNNING_VIA_ENV_MANAGER'] = 'true'
+        self.logger.info("Injection de RUNNING_VIA_ENV_MANAGER=true pour court-circuiter la double activation.")
 
         if is_direct_python_command:
             self.logger.info("[DEBUG-EM] Branche sélectionnée: is_direct_python_command")
@@ -461,7 +466,11 @@ class EnvironmentManager:
                 base_command_list_for_others = command # C'est déjà une liste
             
             # --- Injection automatique de l'option asyncio pour pytest ---
-            is_pytest_command = 'pytest' in base_command_list_for_others
+            #
+            # La détection est maintenant plus stricte: elle vérifie si 'pytest' est le premier
+            # élément de la commande, et non juste "quelque part" dans la commande.
+            # Cela évite d'injecter l'option dans des commandes comme 'pip install pytest'.
+            is_pytest_command = base_command_list_for_others and base_command_list_for_others[0] == 'pytest'
             has_asyncio_option = any('asyncio_mode' in arg for arg in base_command_list_for_others)
 
             if is_pytest_command and not has_asyncio_option:

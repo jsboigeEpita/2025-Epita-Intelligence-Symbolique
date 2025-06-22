@@ -5,12 +5,12 @@ from typing import Dict, Any, Optional
 from semantic_kernel import Kernel # type: ignore
 from semantic_kernel.functions.kernel_arguments import KernelArguments # type: ignore
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
-from semantic_kernel.contents import AuthorRole
+from semantic_kernel.contents.chat_role import ChatRole
 
 
 from ..abc.agent_bases import BaseAgent
 from .pm_definitions import PM_INSTRUCTIONS # Ou PM_INSTRUCTIONS_V9 selon la version souhaitée
-from .prompts import prompt_define_tasks_v13, prompt_write_conclusion_v7
+from .prompts import prompt_define_tasks_v15, prompt_write_conclusion_v7
 
 # Supposons que StateManagerPlugin est importable si nécessaire
 # from ...services.state_manager_plugin import StateManagerPlugin # Exemple
@@ -51,7 +51,7 @@ class ProjectManagerAgent(BaseAgent):
 
         try:
             self._kernel.add_function(
-                prompt=prompt_define_tasks_v13, # Utiliser la dernière version du prompt
+                prompt=prompt_define_tasks_v15, # Utiliser la dernière version du prompt
                 plugin_name=plugin_name,
                 function_name="DefineTasksAndDelegate", # Nom plus SK-conventionnel
                 description="Defines the NEXT single task, registers it, and designates 1 agent (Exact Name Required).",
@@ -227,12 +227,12 @@ class ProjectManagerAgent(BaseAgent):
 
         try:
             result_str = await self.define_tasks_and_delegate(analysis_state_snapshot, raw_text)
-            return ChatMessageContent(role=AuthorRole.ASSISTANT, content=result_str, name=self.name)
+            return ChatMessageContent(role=ChatRole.ASSISTANT, content=result_str, name=self.name)
 
         except Exception as e:
             self.logger.error(f"Erreur durant l'invocation du PM Agent: {e}", exc_info=True)
             error_msg = f'{{"error": "An unexpected error occurred in ProjectManagerAgent: {e}"}}'
-            return ChatMessageContent(role=AuthorRole.ASSISTANT, content=error_msg, name=self.name)
+            return ChatMessageContent(role=ChatRole.ASSISTANT, content=error_msg, name=self.name)
 
     # D'autres méthodes métiers pourraient être ajoutées ici si nécessaire,
     # par exemple, une méthode qui encapsule la logique de décision principale du PM
