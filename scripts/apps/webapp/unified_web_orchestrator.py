@@ -103,7 +103,7 @@ class UnifiedWebOrchestrator:
         
         # Gestionnaires spécialisés
         self.backend_manager = BackendManager(self.config.get('backend', {}), self.logger)
-        self.frontend_manager = FrontendManager(self.config.get('frontend', {}), self.logger)
+        self.frontend_manager = FrontendManager(self.config.get('frontend', {}), self.logger, self.process_cleaner)
         self.playwright_runner = PlaywrightRunner(self.config.get('playwright', {}), self.logger)
         self.process_cleaner = ProcessCleaner(self.logger)
         
@@ -413,14 +413,19 @@ class UnifiedWebOrchestrator:
         """Nettoie les instances précédentes, en ciblant d'abord les ports."""
         self.add_trace("[CLEAN] NETTOYAGE PREALABLE", "Forçage de la libération des ports et arrêt des instances existantes")
 
-        # Récupération de tous les ports depuis la config pour un nettoyage ciblé
-        backend_ports = [self.config['backend']['start_port']] + self.config['backend'].get('fallback_ports', [])
-        frontend_config = self.config['frontend']
-        frontend_ports = [frontend_config['start_port']] + frontend_config.get('fallback_ports', []) if frontend_config.get('start_port') else []
-        all_ports = list(set(backend_ports + frontend_ports))
+        # Nettoyage ciblé des ports backend (toujours nécessaire)
+        backend_ports_to_clean = [self.config['backend']['start_port']] + self.config['backend'].get('fallback_ports', [])
+        self.logger.info(f"Nettoyage des ports du BACKEND: {backend_ports_to_clean}")
+        self.process_cleaner.cleanup_by_port(backend_ports_to_clean)
 
-        self.logger.info(f"Nettoyage forcé des processus sur les ports : {all_ports}")
-        self.process_cleaner.cleanup_by_port(all_ports)
+        # Nettoyage ciblé des ports frontend (si configurés)
+        frontend_config = self.config.get('frontend', {})
+        if frontend_config and frontend_config.get('start_port'):
+            frontend_ports_to_clean = [frontend_config['start_port']] + frontend_config.get('fallback_ports', [])
+            self.logger.info(f"Nettoyage des ports du FRONTEND: {frontend_ports_to_clean}")
+            self.process_cleaner.cleanup_by_port(frontend_ports_to_clean)
+        else:
+            self.logger.info("Aucun port frontend à nettoyer (non configuré ou start_port manquant).")
         
         # On attend un court instant pour laisser le temps aux processus de se terminer
         await asyncio.sleep(1)
@@ -641,9 +646,13 @@ def main():
                 # Test d'intégration qui encapsule le démarrage, l'exécution et l'arrêt
                 success = False
                 try:
-                    # Démarrage de l'application (partie de run_tests si nécessaire)
-                    # Exécution des tests et récupération du résultat
-                    success = await orchestrator.run_tests(args.tests if args.tests else None)
+                    # DEBUG: Forcer l'exécution d'un seul test pour isoler le problème de blocage.
+                    isolated_test_path = ['tests/e2e/python/test_validation_form.py']
+                    orchestrator.logger.warning(f"DEBUGGING: Exécution d'un test isolé: {isolated_test_path}")
+                    
+                    # On utilise le test isolé si aucun autre n'est spécifié via la ligne de commande
+                    tests_to_run = args.tests or isolated_test_path
+                    success = await orchestrator.run_tests(tests_to_run)
                 finally:
                     # Arrêt systématique de l'application
                     await orchestrator.stop_webapp()

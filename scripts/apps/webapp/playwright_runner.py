@@ -195,6 +195,12 @@ class PlaywrightRunner:
             
         # Spécifier le navigateur à utiliser
         cmd.append(f'--browser={config["browser"]}')
+
+        # Ajout des URLs via les options de ligne de commande pour pytest
+        if 'backend_url' in config:
+            cmd.append(f'--backend-url={config["backend_url"]}')
+        if 'frontend_url' in config:
+            cmd.append(f'--frontend-url={config["frontend_url"]}')
         
         return cmd
     

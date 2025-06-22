@@ -22,6 +22,8 @@ from pathlib import Path
 import aiohttp
 import psutil
 
+from .process_cleaner import ProcessCleaner
+
 
 class FrontendManager:
     """
@@ -35,9 +37,10 @@ class FrontendManager:
     - Création de build pour la production
     """
 
-    def __init__(self, config: Dict[str, Any], logger: logging.Logger):
+    def __init__(self, config: Dict[str, Any], logger: logging.Logger, process_cleaner: ProcessCleaner):
         self.config = config
         self.logger = logger
+        self.process_cleaner = process_cleaner
         
         # NOTE DE FUSION: On combine la recherche de chemin du stash et la gestion de port de l'upstream.
         self.enabled = config.get('enabled', True)
@@ -264,44 +267,49 @@ class FrontendManager:
         return False
     
     async def stop(self):
-        """Arrête le frontend proprement"""
-        if self.process:
-            try:
-                self.logger.info(f"Arrêt frontend PID {self.process.pid}")
-                
-                # Terminaison progressive
-                self.process.terminate()
-                
-                # Attente arrêt propre (10s max pour React)
-                try:
-                    self.process.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    # Force kill si nécessaire
-                    self.process.kill()
-                    self.process.wait()
-                    
-                self.logger.info("Frontend arrêté")
-                
-            except Exception as e:
-                self.logger.error(f"Erreur arrêt frontend: {e}")
-            finally:
-                if self.frontend_stdout_log_file:
-                    try:
-                        self.frontend_stdout_log_file.close()
-                    except Exception as log_e:
-                        self.logger.error(f"Erreur fermeture frontend_stdout_log_file: {log_e}")
-                    self.frontend_stdout_log_file = None
-                
-                if self.frontend_stderr_log_file:
-                    try:
-                        self.frontend_stderr_log_file.close()
-                    except Exception as log_e:
-                        self.logger.error(f"Erreur fermeture frontend_stderr_log_file: {log_e}")
-                    self.frontend_stderr_log_file = None
+        """Arrête le frontend proprement en nettoyant agressivement son port."""
+        self.logger.info("Début de l'arrêt du serveur de développement frontend.")
 
+        # 1. Tenter d'arrêter le processus principal que nous avons lancé
+        if self.process:
+            self.logger.info(f"Arrêt du processus Popen du frontend (PID: {self.process.pid})")
+            try:
+                self.process.terminate()
+                self.process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.logger.warning(f"Le processus Popen du frontend (PID: {self.process.pid}) n'a pas terminé, on le tue.")
+                self.process.kill()
+            except Exception as e:
+                self.logger.error(f"Erreur lors de l'arrêt du processus Popen du frontend: {e}")
+            finally:
                 self.process = None
-                self.current_url = None
-                self.pid = None
+        
+        # 2. Nettoyage agressif du port pour s'assurer qu'aucun processus enfant (node.exe) ne reste.
+        # C'est la partie la plus importante pour éviter les conflits de port.
+        ports_to_clean = [self.start_port] + self.fallback_ports
+        self.logger.info(f"Nettoyage robuste des ports du frontend: {ports_to_clean}")
+        self.process_cleaner.cleanup_by_port(ports_to_clean)
+
+        # 3. Fermeture des fichiers de log
+        if self.frontend_stdout_log_file:
+            try:
+                self.frontend_stdout_log_file.close()
+            except Exception as log_e:
+                self.logger.error(f"Erreur fermeture frontend_stdout_log_file: {log_e}")
+            self.frontend_stdout_log_file = None
+        
+        if self.frontend_stderr_log_file:
+            try:
+                self.frontend_stderr_log_file.close()
+            except Exception as log_e:
+                self.logger.error(f"Erreur fermeture frontend_stderr_log_file: {log_e}")
+            self.frontend_stderr_log_file = None
+
+        # 4. Réinitialisation de l'état
+        self.logger.info("Arrêt du frontend terminé.")
+        self.current_url = None
+        self.current_port = None
+        self.pid = None
     
     def get_status(self) -> Dict[str, Any]:
         """Retourne l'état actuel du frontend"""

@@ -10,6 +10,7 @@ Auteur: Projet Intelligence Symbolique EPITA
 Date: 07/06/2025
 """
 
+import subprocess
 import os
 import sys
 import time
@@ -91,7 +92,7 @@ class ProcessCleaner:
                     
                     # Vérification par nom de processus
                     if proc_info['name'] and any(name in proc_info['name'].lower()
-                                               for name in self.process_names):
+                                                 for name in self.process_names):
                         
                         # Vérification par ligne de commande
                         if proc_info['cmdline']:
@@ -276,52 +277,79 @@ class ProcessCleaner:
                 self.logger.error(f"Erreur nettoyage PID {pid}: {e}")
     
     def cleanup_by_port(self, ports: List[int], max_attempts: int = 5, delay: float = 1.0):
-        """Nettoie les processus utilisant des ports spécifiques de manière agressive."""
-        self.logger.info(f"Nettoyage AGRESSIF des processus sur les ports: {ports} (max {max_attempts} tentatives)")
+        """
+        Nettoie les processus utilisant des ports spécifiques de manière agressive et robuste,
+        en combinant une approche itérative avec des fallbacks au niveau système.
+        """
+        self.logger.info(f"Nettoyage AGRESSIF et ROBUSTE des processus sur les ports: {ports} (max {max_attempts} tentatives)")
 
         for attempt in range(max_attempts):
-            processes_to_kill = []
-            occupied_ports = set()
-            
+            pids_to_kill = set()
+
+            # --- Début de la logique de détection fusionnée (de la branche distante) ---
+            # Approche 1: psutil (rapide mais peut échouer)
             try:
                 for conn in psutil.net_connections('tcp'):
-                    if conn.status == psutil.CONN_LISTEN and conn.laddr and conn.laddr.port in ports:
-                        occupied_ports.add(conn.laddr.port)
-                        if conn.pid:
-                            try:
-                                proc = psutil.Process(conn.pid)
-                                if proc not in processes_to_kill:
-                                    processes_to_kill.append(proc)
-                                    self.logger.info(f"[Tentative {attempt+1}] Processus trouvé sur port {conn.laddr.port}: PID {conn.pid} ({proc.name()})")
-                            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                                self.logger.warning(f"Impossible d'accéder au processus avec PID {conn.pid} sur le port {conn.laddr.port}")
-            except (psutil.AccessDenied, AttributeError) as e:
-                self.logger.warning(f"Impossible d'énumérer les connexions réseau: {e}")
+                    if conn.status == psutil.CONN_LISTEN and conn.laddr and conn.laddr.port in ports and conn.pid:
+                        pids_to_kill.add(conn.pid)
+            except (psutil.AccessDenied, AttributeError):
+                self.logger.warning(f"[Tentative {attempt+1}] Énumération psutil échouée, passage à la commande système.")
 
-            if not processes_to_kill:
-                if not occupied_ports:
-                    self.logger.info("Succès. Tous les ports ciblés sont libres.")
-                    return
+            # Approche 2: Commande système (plus lente mais plus fiable)
+            if sys.platform == "win32":
+                try:
+                    result = subprocess.run(['netstat', '-aon'], capture_output=True, text=True, check=False, encoding='utf-8', errors='ignore')
+                    lines = result.stdout.splitlines() if result.stdout else []
+                    for line in lines:
+                        if 'LISTENING' in line:
+                            for port in ports:
+                                if f":{port}" in line.split()[1]:
+                                    try:
+                                        pid = int(line.split()[-1])
+                                        if pid > 0: pids_to_kill.add(pid)
+                                    except (ValueError, IndexError):
+                                        pass # Ignorer les lignes mal formées
+                                    break
+                except (subprocess.CalledProcessError, FileNotFoundError) as e:
+                    self.logger.error(f"[Tentative {attempt+1}] Erreur netstat: {e}")
+            else:  # Pour Linux/macOS
+                for port in ports:
+                    try:
+                        cmd = ['lsof', '-ti', f':{port}', '-sTCP:LISTEN']
+                        result = subprocess.run(cmd, capture_output=True, text=True)
+                        if result.stdout.strip():
+                            pids_to_kill.update(int(p) for p in result.stdout.strip().splitlines())
+                    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+                        self.logger.error(f"[Tentative {attempt+1}] Erreur lsof pour port {port}: {e}")
+            # --- Fin de la logique de détection fusionnée ---
+
+            if not pids_to_kill:
+                # Vérifier si les ports sont vraiment libres
+                still_occupied = [p for p in ports if self._is_port_occupied(p)]
+                if not still_occupied:
+                    if attempt > 0: # N'afficher que si on a dû se battre
+                        self.logger.info(f"Succès. Tous les ports ciblés sont libres après {attempt + 1} tentative(s).")
+                    return # C'est propre, on sort
                 else:
-                    self.logger.warning(f"Ports {list(occupied_ports)} sont occupés mais aucun processus correspondant n'a pu être identifié. Il s'agit peut-être de processus système.")
-
-            # Nettoyage des processus trouvés
-            if processes_to_kill:
-                pids_to_kill = [p.pid for p in processes_to_kill]
-                self.logger.info(f"Envoi du signal de terminaison aux PIDs: {pids_to_kill}")
-                self.cleanup_by_pid(pids_to_kill)
+                     self.logger.warning(f"[Tentative {attempt+1}] Ports {still_occupied} occupés mais PIDs non identifiables. Nouvelle tentative...")
             
+            if pids_to_kill:
+                self.logger.info(f"[Tentative {attempt+1}] PIDs à tuer: {list(pids_to_kill)}")
+                self.cleanup_by_pid(list(pids_to_kill))
+
             # Attendre avant la prochaine vérification
             self.logger.info(f"Attente de {delay}s avant la prochaine vérification...")
             time.sleep(delay)
 
-        # Vérification finale
+        # Vérification finale après toutes les tentatives
         final_occupied = [p for p in ports if self._is_port_occupied(p)]
         if final_occupied:
             self.logger.error(f"ÉCHEC du nettoyage : les ports {final_occupied} sont toujours occupés après {max_attempts} tentatives.")
         else:
-            self.logger.success(f"Nettoyage par port réussi après {attempt + 1} tentative(s).")
-    
+            # self.logger.info(f"Nettoyage par port réussi après {max_attempts} tentative(s).")
+            # NOTE: la fonction logger.success n'existe pas, on la remplace par info
+            self.logger.info(f"Nettoyage par port réussi après {max_attempts} tentative(s).")
+
     def get_webapp_processes_info(self) -> List[Dict[str, Any]]:
         """Retourne informations sur les processus webapp actifs"""
         processes = self._find_webapp_processes()

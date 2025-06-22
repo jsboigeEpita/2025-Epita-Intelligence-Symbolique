@@ -4,7 +4,7 @@ Ce document suit l'état de la vérification des points d'entrée principaux du 
 
 ---
 
-## 1. Point d'Entrée : `scripts/launch_webapp_background.py`
+## 1. Point d'Entrée : `scripts/apps/webapp/launch_webapp_background.py`
 
 - **Statut :** Vérifié ✅
 - **Résumé des Phases :**
@@ -19,7 +19,7 @@ Ce document suit l'état de la vérification des points d'entrée principaux du 
 
 ---
 
-## 2. Point d'Entrée : `scripts/orchestrate_complex_analysis.py`
+## 2. Point d'Entrée : `scripts/orchestration/orchestrate_complex_analysis.py`
 
 - **Statut :** Vérifié ✅
 - **Résumé des Phases :**
@@ -41,9 +41,9 @@ Ce document suit l'état de la vérification des points d'entrée principaux du 
     - **Résultats de Test & Fix :** [`03_simulate_balanced_participation_test_results.md`](./03_simulate_balanced_participation_test_results.md)
 ---
 
-## 4. Point d'Entrée : `project_core/rhetorical_analysis_from_scripts/unified_production_analyzer.py`
+## 4. Point d'Entrée : `argumentation_analysis/scripts/generate_and_analyze_arguments.py`
 
-- **Statut :** Vérifié ✅
+- **Statut :** 🗑️ Supprimé (confirmé lors de la re-vérification)
 - **Résumé des Phases :**
     - **Map :** Planification de la vérification.
     - **Test & Fix :** Exécution et correction.
@@ -54,7 +54,7 @@ Ce document suit l'état de la vérification des points d'entrée principaux du 
 
 ## 5. Point d'Entrée : `argumentation_analysis/main_orchestrator.py`
 
-- **Statut :** Vérifié ✅
+- **Statut :** ✅ Vérifié (remplace main_app.py)
 - **Résumé des Phases :**
     - **Map :** Planification des tests pour le mode non-interactif (`--skip-ui`).
     - **Test & Fix :**

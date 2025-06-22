@@ -5,12 +5,22 @@ from playwright.sync_api import Page, expect
 # so the web server is started automatically for all tests in this module.
 @pytest.fixture(scope="function")
 def validation_page(page: Page, frontend_url: str) -> Page:
-    """Navigue vers la page et l'onglet de validation."""
-    page.goto(frontend_url)
+    """Navigue vers la page, attend le chargement et clique sur l'onglet de validation."""
+    # Attend que le réseau soit inactif, ce qui est un bon indicateur que le chargement initial est terminé.
+    page.goto(frontend_url, wait_until="networkidle")
+
+    # Vérification robuste que nous sommes sur la bonne application.
+    expect(page).to_have_title("Argumentation Analysis App", timeout=10000)
+
+    # Attendre que le backend soit connecté
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     validation_tab = page.locator('[data-testid="validation-tab"]')
-    expect(validation_tab).to_be_enabled()
+    expect(validation_tab).to_be_enabled(timeout=10000)
     validation_tab.click()
+
+    # Attendre que le panneau de l'onglet soit visible après le clic
+    expect(page.locator('div[role="tabpanel"][aria-hidden="false"]')).to_be_visible()
+
     return page
 
 class TestValidationForm:
