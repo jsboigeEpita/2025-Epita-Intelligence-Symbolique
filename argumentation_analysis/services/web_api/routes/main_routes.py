@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify, current_app
 import logging
 import asyncio
 import jpype
+from pydantic import ValidationError
 
 # Import des services et modèles nécessaires
 # Les imports relatifs devraient maintenant pointer vers les bons modules.
@@ -73,11 +74,12 @@ def analyze_text():
             return jsonify(ErrorResponse(error="Données manquantes", message="Le body JSON est requis", status_code=400).dict()), 400
         
         analysis_request = AnalysisRequest(**data)
-        # Exécute la coroutine dans une boucle d'événements asyncio
-        # Note: Cela crée une nouvelle boucle à chaque appel. Pour la production,
-        # il serait préférable d'utiliser un framework ASGI comme Hypercorn.
         result = asyncio.run(analysis_service.analyze_text(analysis_request))
         return jsonify(result.dict())
+        
+    except ValidationError as e:
+        logger.warning(f"Validation des données d'analyse a échoué: {str(e)}")
+        return jsonify(ErrorResponse(error="Données invalides", message=str(e), status_code=400).dict()), 400
         
     except Exception as e:
         logger.error(f"Erreur lors de l'analyse: {str(e)}", exc_info=True)

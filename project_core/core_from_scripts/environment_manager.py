@@ -150,17 +150,18 @@ class EnvironmentManager:
         # On construit le PYTHONPATH en ajoutant la racine du projet au PYTHONPATH existant
         # pour ne pas écraser les chemins qui pourraient être nécessaires (ex: par VSCode pour les tests)
         project_path_str = str(self.project_root)
-        # existing_pythonpath = os.environ.get('PYTHONPATH', '')
+        existing_pythonpath = os.environ.get('PYTHONPATH', '')
         
-        # path_components = existing_pythonpath.split(os.pathsep) if existing_pythonpath else []
-        # if project_path_str not in path_components:
-        #     path_components.insert(0, project_path_str)
+        path_components = existing_pythonpath.split(os.pathsep) if existing_pythonpath else []
+        if project_path_str not in path_components:
+            # On insère la racine du projet au début pour prioriser les modules locaux
+            path_components.insert(0, project_path_str)
         
-        # new_pythonpath = os.pathsep.join(path_components)
+        new_pythonpath = os.pathsep.join(path_components)
 
         self.env_vars = {
             'PYTHONIOENCODING': 'utf-8',
-            # 'PYTHONPATH': project_path_str, # Simplifié - CAUSE DES CONFLITS D'IMPORT
+            'PYTHONPATH': new_pythonpath,
             'PROJECT_ROOT': project_path_str
         }
         self.conda_executable_path = None # Cache pour le chemin de l'exécutable conda
