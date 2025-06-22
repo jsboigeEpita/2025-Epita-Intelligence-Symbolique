@@ -270,22 +270,23 @@ class ProcessCleaner:
             self.logger.info("Aucun fichier temporaire à nettoyer")
     
     def cleanup_by_pid(self, pids: List[int]):
-        """Nettoie des processus spécifiques par PID"""
-        self.logger.info(f"Nettoyage processus spécifiques: {pids}")
+        """Nettoie des processus spécifiques par PID de manière plus directe."""
+        self.logger.info(f"Nettoyage direct des processus par PID: {pids}")
         
         for pid in pids:
             try:
-                proc = psutil.Process(pid)
-                
-                # Utilise la nouvelle méthode pour nettoyer l'arbre complet
-                self._terminate_process_tree(proc)
+                # On essaie de tuer directement, ce qui est plus robuste pour les processus orphelins.
+                if sys.platform == "win32":
+                    subprocess.run(['taskkill', '/F', '/PID', str(pid)], check=False, capture_output=True)
+                    self.logger.info(f"Tentative de `taskkill /F` sur PID {pid}")
+                else:
+                    proc = psutil.Process(pid)
+                    self._terminate_process_tree(proc)
                     
             except psutil.NoSuchProcess:
-                self.logger.info(f"Processus PID {pid} déjà terminé")
-            except psutil.AccessDenied:
-                self.logger.error(f"Accès refusé pour PID {pid}")
+                self.logger.info(f"Processus PID {pid} non trouvé par psutil (probablement déjà terminé).")
             except Exception as e:
-                self.logger.error(f"Erreur nettoyage PID {pid}: {e}")
+                self.logger.error(f"Erreur lors du nettoyage du PID {pid}: {e}")
     
     def cleanup_by_port(self, ports: List[int], max_attempts: int = 5, delay: float = 1.0):
         """
