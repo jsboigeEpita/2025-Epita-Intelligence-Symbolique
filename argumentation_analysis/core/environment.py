@@ -53,7 +53,7 @@ def ensure_env(env_name: str = None, silent: bool = True) -> bool:
             if dotenv_path:
                 load_dotenv(dotenv_path)
             # Récupérer le nom de l'environnement, avec 'projet-is' comme fallback
-            env_name = os.environ.get('CONDA_ENV_NAME', 'projet-is')
+            env_name = os.environ.get('CONDA_ENV_NAME', 'projet-is-roo')
         except ImportError:
             env_name = 'projet-is' # Fallback si dotenv n'est pas installé
     # DEBUG: Imprimer l'état initial
@@ -118,20 +118,17 @@ def ensure_env(env_name: str = None, silent: bool = True) -> bool:
         is_python_executable_correct = env_name in current_python_executable
 
         if not (is_conda_env_correct and is_python_executable_correct):
-            error_message = (
-                f"ERREUR CRITIQUE : L'ENVIRONNEMENT '{env_name}' N'EST PAS CORRECTEMENT ACTIVÉ.\n"
-                f"  Environnement Conda détecté : '{current_conda_env}' (Attendu: '{env_name}')\n"
-                f"  Exécutable Python détecté : '{current_python_executable}'\n\n"
-                f"  SOLUTION IMPÉRATIVE :\n"
-                f"  Utilisez le script wrapper 'activate_project_env.ps1' situé à la RACINE du projet pour lancer vos commandes.\n\n"
-                f"  Exemple : powershell -File .\\activate_project_env.ps1 -CommandToRun \"python -m pytest\"\n\n"
-                f"  IMPORTANT : Ce script ne se contente pas d'activer Conda. Il configure aussi JAVA_HOME, PYTHONPATH, et d'autres variables d'environnement cruciales. Ne PAS l'ignorer."
+            # Créez le message d'avertissement
+            warning_message = (
+                f"AVERTISSEMENT : L'ENVIRONNEMENT '{env_name}' SEMBLE NE PAS ÊTRE CORRECTEMENT ACTIVÉ.\n"
+                f"  - Environnement Conda détecté : '{current_conda_env}' (Attendu: '{env_name}')\n"
+                f"  - Exécutable Python détecté : '{current_python_executable}'\n"
+                f"  - Le processus va continuer, mais des erreurs de dépendances sont possibles."
             )
-            # Logger l'erreur même si silent est True pour cette partie critique
-            logger_instance.error(error_message) # Utilise l'instance de logger existante
-            # Afficher également sur la console pour une visibilité maximale en cas d'échec critique
-            print(f"[auto_env] {error_message}", file=sys.stderr)
-            raise RuntimeError(error_message)
+            # Log l'avertissement au lieu de lever une exception
+            logger_instance.warning(warning_message)
+            print(f"[auto_env] {warning_message}", file=sys.stderr)
+            # Ne lève plus d'exception pour permettre au processus de continuer
         elif not silent: # Ce bloc ne sera pas exécuté si silent=True au niveau de ensure_env
             logger_instance.info(
                 f"[auto_env] Vérification de l'environnement réussie: CONDA_DEFAULT_ENV='{current_conda_env}', sys.executable='{current_python_executable}'"

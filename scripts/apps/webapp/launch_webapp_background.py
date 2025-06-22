@@ -48,7 +48,7 @@ def launch_backend_detached():
         python_exe,
         "-m", "uvicorn",
         "argumentation_analysis.services.web_api.app:app",
-        "--host", "0.0.0.0",
+        "--host", "127.0.0.1",
         "--port", port
     ]
     
@@ -57,7 +57,7 @@ def launch_backend_detached():
     print(f"[LAUNCH] Lancement du backend détaché...")
     print(f"[DIR] Répertoire de travail: {project_root}")
     print(f"[PYTHON] Exécutable Python: {python_exe}")
-    print(f"[URL] URL prevue: http://localhost:{port}/api/health")
+    print(f"[URL] URL prevue: http://127.0.0.1:{port}/api/health")
     
     try:
         # Windows: DETACHED_PROCESS pour vraie indépendance
