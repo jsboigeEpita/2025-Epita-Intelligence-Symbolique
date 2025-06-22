@@ -21,7 +21,7 @@ def create_numpy_mock():
     """
     # ----- Création du mock principal (le package numpy) -----
     numpy_mock = MagicMock(name='numpy_mock_package')
-    numpy_mock.__version__ = '1.24.3.mock'
+    numpy_mock.__version__ = '1.24.3'
     
     # Pour que le mock soit considéré comme un package, il doit avoir un __path__
     numpy_mock.__path__ = ['/mock/path/numpy']
@@ -101,7 +101,9 @@ def create_numpy_mock():
 
     # Types spécifiques
     for type_name in ['float64', 'float32', 'int64', 'int32', 'uint8', 'bool_', 'object_']:
-        setattr(numpy_mock, type_name, type(type_name, (object,), {}))
+        # Crée un type qui accepte des arguments dans son constructeur
+        mock_type = type(type_name, (object,), {'__init__': lambda self, *args, **kwargs: None})
+        setattr(numpy_mock, type_name, mock_type)
     
     # ----- Fonctions de base de NumPy -----
     numpy_mock.array = MagicMock(name='array', return_value=ndarray())
@@ -124,7 +126,11 @@ def create_numpy_mock():
     _multiarray_umath_mock.divide = MagicMock(name='divide_ufunc')
     _multiarray_umath_mock.implement_array_function = None
     _core_mock._multiarray_umath = _multiarray_umath_mock
-    
+    # Ajout du sous-module manquant que pandas tente d'importer
+    _core_mock.multiarray = MagicMock(name='_core_multiarray_submodule')
+    # Ajout du sous-module manquant que pandas tente d'importer
+    _core_mock.multiarray = MagicMock(name='_core_multiarray_submodule')
+
     # Attacher _core au mock numpy principal
     numpy_mock._core = _core_mock
 
@@ -134,6 +140,12 @@ def create_numpy_mock():
     core_mock.multiarray = MagicMock(name='core_multiarray') # Alias/Compatibilité
     core_mock.umath = MagicMock(name='core_umath')             # Alias/Compatibilité
     core_mock._multiarray_umath = _multiarray_umath_mock      # Rendre accessible via core également
+    # Pour que `from numpy.core import multiarray` fonctionne
+    core_mock.multiarray = MagicMock(name='core_multiarray_submodule')
+    core_mock._multiarray_umath = _multiarray_umath_mock # Rendre accessible via core également
+    # Pour que `from numpy.core import multiarray` fonctionne
+    core_mock.multiarray = MagicMock(name='core_multiarray_submodule')
+    core_mock._multiarray_umath = _multiarray_umath_mock # Rendre accessible via core également
     numpy_mock.core = core_mock
 
     # Sub-module: numpy.linalg
