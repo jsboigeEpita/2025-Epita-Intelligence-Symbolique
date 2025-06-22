@@ -1,4 +1,5 @@
 # argumentation_analysis/agents/core/logic/propositional_logic_agent.py
+# Refreshing file for git tracking
 """
 Définit l'agent spécialisé dans le raisonnement en logique propositionnelle (PL).
 
