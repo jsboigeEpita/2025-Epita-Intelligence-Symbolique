@@ -41,6 +41,7 @@ dependencies:
   - tqdm
   - pyyaml
   - regex
+  - markdown
 
   # Plotting & Graphing
   - matplotlib
