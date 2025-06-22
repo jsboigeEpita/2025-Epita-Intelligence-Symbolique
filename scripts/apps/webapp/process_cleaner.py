@@ -275,34 +275,52 @@ class ProcessCleaner:
             except Exception as e:
                 self.logger.error(f"Erreur nettoyage PID {pid}: {e}")
     
-    def cleanup_by_port(self, ports: List[int]):
-        """Nettoie les processus utilisant des ports spécifiques"""
-        self.logger.info(f"Nettoyage processus sur ports: {ports}")
-        
-        processes_to_kill = []
-        
-        try:
-            for conn in psutil.net_connections():
-                if (hasattr(conn, 'laddr') and conn.laddr and 
-                    conn.laddr.port in ports and
-                    conn.status == psutil.CONN_LISTEN):
-                    
-                    try:
-                        proc = psutil.Process(conn.pid)
-                        processes_to_kill.append(proc)
-                        self.logger.info(f"Processus trouvé sur port {conn.laddr.port}: PID {conn.pid}")
-                    except (psutil.NoSuchProcess, psutil.AccessDenied):
-                        pass
-                        
-        except (psutil.AccessDenied, AttributeError):
-            self.logger.warning("Impossible d'énumérer toutes les connexions")
-        
-        # Nettoyage des processus trouvés
-        if processes_to_kill:
-            pids = [proc.pid for proc in processes_to_kill]
-            self.cleanup_by_pid(pids)
+    def cleanup_by_port(self, ports: List[int], max_attempts: int = 5, delay: float = 1.0):
+        """Nettoie les processus utilisant des ports spécifiques de manière agressive."""
+        self.logger.info(f"Nettoyage AGRESSIF des processus sur les ports: {ports} (max {max_attempts} tentatives)")
+
+        for attempt in range(max_attempts):
+            processes_to_kill = []
+            occupied_ports = set()
+            
+            try:
+                for conn in psutil.net_connections('tcp'):
+                    if conn.status == psutil.CONN_LISTEN and conn.laddr and conn.laddr.port in ports:
+                        occupied_ports.add(conn.laddr.port)
+                        if conn.pid:
+                            try:
+                                proc = psutil.Process(conn.pid)
+                                if proc not in processes_to_kill:
+                                    processes_to_kill.append(proc)
+                                    self.logger.info(f"[Tentative {attempt+1}] Processus trouvé sur port {conn.laddr.port}: PID {conn.pid} ({proc.name()})")
+                            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                                self.logger.warning(f"Impossible d'accéder au processus avec PID {conn.pid} sur le port {conn.laddr.port}")
+            except (psutil.AccessDenied, AttributeError) as e:
+                self.logger.warning(f"Impossible d'énumérer les connexions réseau: {e}")
+
+            if not processes_to_kill:
+                if not occupied_ports:
+                    self.logger.info("Succès. Tous les ports ciblés sont libres.")
+                    return
+                else:
+                    self.logger.warning(f"Ports {list(occupied_ports)} sont occupés mais aucun processus correspondant n'a pu être identifié. Il s'agit peut-être de processus système.")
+
+            # Nettoyage des processus trouvés
+            if processes_to_kill:
+                pids_to_kill = [p.pid for p in processes_to_kill]
+                self.logger.info(f"Envoi du signal de terminaison aux PIDs: {pids_to_kill}")
+                self.cleanup_by_pid(pids_to_kill)
+            
+            # Attendre avant la prochaine vérification
+            self.logger.info(f"Attente de {delay}s avant la prochaine vérification...")
+            time.sleep(delay)
+
+        # Vérification finale
+        final_occupied = [p for p in ports if self._is_port_occupied(p)]
+        if final_occupied:
+            self.logger.error(f"ÉCHEC du nettoyage : les ports {final_occupied} sont toujours occupés après {max_attempts} tentatives.")
         else:
-            self.logger.info("Aucun processus trouvé sur les ports spécifiés")
+            self.logger.success(f"Nettoyage par port réussi après {attempt + 1} tentative(s).")
     
     def get_webapp_processes_info(self) -> List[Dict[str, Any]]:
         """Retourne informations sur les processus webapp actifs"""

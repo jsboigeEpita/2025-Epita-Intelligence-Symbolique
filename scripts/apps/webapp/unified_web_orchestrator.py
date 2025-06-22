@@ -315,7 +315,7 @@ class UnifiedWebOrchestrator:
         # Configuration runtime pour Playwright
         test_config = {
             'backend_url': self.app_info.backend_url,
-            'frontend_url': self.app_info.frontend_url or self.app_info.backend_url,
+            'frontend_url': self.app_info.frontend_url,
             'headless': self.headless,
             **kwargs
         }
@@ -351,8 +351,8 @@ class UnifiedWebOrchestrator:
         except Exception as e:
             self.add_trace("[WARNING] ERREUR ARRET", str(e), "Nettoyage partiel", status="error")
     
-    async def full_integration_test(self, headless: bool = True, 
-                                   frontend_enabled: bool = None,
+    async def full_integration_test(self, headless: bool = True,
+                                   frontend_enabled: bool = True, # Forcer le frontend pour les tests E2E
                                    test_paths: List[str] = None) -> bool:
         """
         Test d'intégration complet : démarrage + tests + arrêt
@@ -370,21 +370,27 @@ class UnifiedWebOrchestrator:
             
             # 1. Démarrage application
             if not await self.start_webapp(headless, frontend_enabled):
+                self.add_trace("[ERROR] ECHEC DEMARRAGE PRE-TEST", "L'application web n'a pas pu démarrer.", "", status="error")
+                return False
+
+            # S'assurer que le frontend a démarré si les tests sont exécutés
+            if not self.app_info.frontend_url:
+                self.add_trace("[ERROR] FRONTEND INDISPONIBLE",
+                               "Le frontend n'a pas démarré, impossible de lancer les tests E2E.",
+                               "", status="error")
                 return False
             
             # 2. Attente stabilisation
             await asyncio.sleep(2)
             
             # 3. Exécution tests
-            # DEBUG: Forcer l'exécution d'un seul test pour isoler le problème de blocage.
-            isolated_test_path = ['tests/e2e/python/test_validation_form.py']
-            self.logger.warning(f"DEBUGGING: Exécution d'un test isolé: {isolated_test_path}")
-            success = await self.run_tests(isolated_test_path)
+            self.logger.info(f"Lancement de la suite de tests complète: {test_paths or 'par défaut'}")
+            success = await self.run_tests(test_paths)
             
             if success:
                 self.add_trace("[SUCCESS] INTEGRATION REUSSIE",
-                              "Tous les tests ont passé", 
-                              "Application web validée")
+                               "Tous les tests ont passé",
+                               "Application web validée")
             else:
                 self.add_trace("[ERROR] ECHEC INTEGRATION",
                               "Certains tests ont échoué", 

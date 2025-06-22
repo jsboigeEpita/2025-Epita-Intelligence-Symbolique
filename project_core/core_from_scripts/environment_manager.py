@@ -430,27 +430,7 @@ class EnvironmentManager:
         self.sub_process_env['RUNNING_VIA_ENV_MANAGER'] = 'true'
         self.logger.info("Injection de RUNNING_VIA_ENV_MANAGER=true pour court-circuiter la double activation.")
 
-        if is_direct_python_command:
-            self.logger.info("[DEBUG-EM] Branche sélectionnée: is_direct_python_command")
-            # Nouvelle logique pour trouver python.exe
-            python_exe_direct_in_env_root = Path(env_path) / ('python.exe' if platform.system() == "Windows" else 'python')
-            python_exe_in_env_scripts_dir = env_scripts_dir / ('python.exe' if platform.system() == "Windows" else 'python')
-
-            selected_python_exe = None
-            if python_exe_direct_in_env_root.is_file():
-                selected_python_exe = python_exe_direct_in_env_root
-                self.logger.debug(f"Utilisation de Python directement depuis le répertoire racine de l'environnement: {selected_python_exe}")
-            elif python_exe_in_env_scripts_dir.is_file():
-                selected_python_exe = python_exe_in_env_scripts_dir
-                self.logger.debug(f"Utilisation de Python depuis le sous-répertoire Scripts/bin: {selected_python_exe}")
-            else:
-                self.logger.error(f"L'exécutable Python n'a été trouvé ni dans '{python_exe_direct_in_env_root}' ni dans '{python_exe_in_env_scripts_dir}'.")
-                raise RuntimeError(f"Python introuvable dans {env_name}")
-            
-            final_command = [str(selected_python_exe)] + base_command_list_for_python_direct[1:]
-            self.logger.info(f"Exécution directe de Python: {' '.join(map(str,final_command))}")
-        
-        elif is_complex_string_command:
+        if is_complex_string_command:
             self.logger.info("[DEBUG-EM] Branche sélectionnée: is_complex_string_command")
             if platform.system() == "Windows":
                 final_command = [conda_exe, 'run', '--prefix', env_path, '--no-capture-output', 'cmd.exe', '/c', command]

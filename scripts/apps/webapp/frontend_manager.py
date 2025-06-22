@@ -215,11 +215,14 @@ class FrontendManager:
             url_to_check = f"http://localhost:{detected_port}"
             try:
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(url_to_check, timeout=5) as response:
+                    self.logger.info(f"Tentative de connexion à {url_to_check}...")
+                    async with session.get(url_to_check, timeout=15) as response:
+                        self.logger.info(f"Réponse reçue de {url_to_check} avec statut: {response.status}")
                         if response.status == 200:
                             self.logger.info(f"🎉 Frontend accessible sur {url_to_check} après {time.time() - start_time:.1f}s.")
                             return True, detected_port, url_to_check
-            except aiohttp.ClientError:
+            except aiohttp.ClientError as e:
+                self.logger.warning(f"Échec de connexion à {url_to_check}: {e}")
                 pass # On continue d'attendre
 
             await asyncio.sleep(2)
