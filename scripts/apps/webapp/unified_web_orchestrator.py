@@ -420,12 +420,12 @@ class UnifiedWebOrchestrator:
 
         # Nettoyage ciblé des ports frontend (si configurés)
         frontend_config = self.config.get('frontend', {})
-        if frontend_config and frontend_config.get('start_port'):
-            frontend_ports_to_clean = [frontend_config['start_port']] + frontend_config.get('fallback_ports', [])
+        if frontend_config and frontend_config.get('port'):
+            frontend_ports_to_clean = [frontend_config['port']] + frontend_config.get('fallback_ports', [])
             self.logger.info(f"Nettoyage des ports du FRONTEND: {frontend_ports_to_clean}")
             self.process_cleaner.cleanup_by_port(frontend_ports_to_clean)
         else:
-            self.logger.info("Aucun port frontend à nettoyer (non configuré ou start_port manquant).")
+            self.logger.info("Aucun port frontend à nettoyer (non configuré ou clé 'port' manquante).")
         
         # On attend un court instant pour laisser le temps aux processus de se terminer
         await asyncio.sleep(1)
