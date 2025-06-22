@@ -184,9 +184,28 @@ class PlaywrightRunner:
         # On peut forcer certaines options ici si nécessaire.
         
         # Exemple pour forcer le traçage :
-        if config.get('traces', True):
-            cmd.append('--trace=on')
+        # NOTE DE FUSION: On garde la logique du stash qui utilise pytest, car c'est
+        # l'implémentation actuelle. La migration vers l'exécutable playwright natif
+        # (de "Updated upstream") est un changement trop important pour cette correction.
+        
+        pytest_args = []
+        if config.get('headless', True):
+            pytest_args.append('--headless')
             
+        pytest_args.extend([
+            f'--browser={config["browser"]}',
+            '--screenshot=on',
+            # la trace est plus utile pour le debug que la vidéo
+            '--trace=on' if config.get('traces', True) else '--trace=off'
+        ])
+        
+        # Chemins de tests
+        pytest_args.extend(test_paths)
+        
+        # La commande est construite pour être utilisée avec l'activation d'environnement
+        cmd = ['python', '-m', 'pytest']
+        cmd.extend(pytest_args)
+        
         return cmd
     
     async def _read_stream(self, stream: asyncio.StreamReader, log_method):
@@ -198,78 +217,80 @@ class PlaywrightRunner:
 
     async def _execute_tests(self, cmd: List[str],
                              config: Dict[str, Any]) -> subprocess.CompletedProcess:
-        """Exécute les tests en streamant la sortie en temps réel."""
-        self.logger.info(f"Commande test à exécuter: {' '.join(cmd)}")
+        """Exécute les tests en utilisant la commande PowerShell pour garantir l'activation de l'environnement."""
+        
+        # NOTE DE FUSION: On combine la logique d'activation de l'environnement du `stash`
+        # avec l'exécution asynchrone de `Updated upstream` pour rester non-bloquant.
+        
+        pytest_command_str = ' '.join(cmd)
+        full_command = f". ./activate_project_env.ps1; {pytest_command_str}"
+        final_cmd = ["powershell", "-Command", full_command]
+
+        self.logger.info(f"Commande PowerShell complète à exécuter : {full_command}")
         self.logger.info(f"Répertoire de travail: {Path.cwd()}")
         timeout = config.get('test_timeout', 600)
         self.logger.info(f"Timeout configuré: {timeout}s")
 
         stdout_capture = []
         stderr_capture = []
-
+        
         def log_stdout(line):
-            self.logger.info(f"[PW_STDOUT] {line}")
+            self.logger.info(f"[PYTEST_STDOUT] {line}")
             stdout_capture.append(line)
 
         def log_stderr(line):
-            self.logger.warning(f"[PW_STDERR] {line}")
+            self.logger.warning(f"[PYTEST_STDERR] {line}")
             stderr_capture.append(line)
-
+        
         process = None
         try:
-            self.logger.debug("Démarrage du sous-processus async pour Playwright...")
+            self.logger.debug("Démarrage du sous-processus async pour Pytest via PowerShell...")
             process = await asyncio.create_subprocess_exec(
-                *cmd,
+                *final_cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=Path.cwd(),
                 env=os.environ
             )
-            self.logger.debug(f"Processus Playwright démarré avec PID: {process.pid}")
+            self.logger.debug(f"Processus PowerShell démarré avec PID: {process.pid}")
 
-            # Créer des tâches pour lire stdout et stderr en parallèle
+            # Lancer la lecture des flux en parallèle
             stdout_task = asyncio.create_task(self._read_stream(process.stdout, log_stdout))
             stderr_task = asyncio.create_task(self._read_stream(process.stderr, log_stderr))
 
-            # Attendre que le processus et les lecteurs de flux se terminent
+            # Attendre la fin du processus et des lecteurs
             await asyncio.wait_for(
                 asyncio.gather(process.wait(), stdout_task, stderr_task),
                 timeout=timeout
             )
             
             return_code = process.returncode
-            self.logger.info(f"Sous-processus Playwright terminé avec le code: {return_code}.")
+            self.logger.info(f"Sous-processus Pytest terminé avec le code: {return_code}.")
 
         except asyncio.TimeoutError:
-            self.logger.error(f"Timeout ({timeout}s) atteint lors de l'exécution des tests Playwright.")
+            self.logger.error(f"Timeout ({timeout}s) atteint lors de l'exécution des tests.")
             if process:
                 self.logger.warning(f"Tentative d'arrêt du processus PID: {process.pid}")
                 try:
                     process.terminate()
-                    await asyncio.sleep(2) # Laisser le temps de terminer
-                    if process.returncode is None: # Toujours en cours
-                         process.kill()
                 except ProcessLookupError:
                     self.logger.warning(f"Le processus {process.pid} n'existait déjà plus.")
                 except Exception as e:
-                    self.logger.error(f"Erreur lors de la tentative d'arrêt du processus: {e}")
-
-            return_code = 1 # Code d'erreur pour timeout
+                     self.logger.error(f"Erreur lors de la tentative d'arrêt du processus: {e}")
+            return_code = -1 # Code spécifique pour le timeout
             
         except Exception as e:
-            self.logger.critical(f"Erreur critique non gérée lors de l'exécution du processus: {e}", exc_info=True)
-            return_code = -1 # Code d'erreur pour échec grave
+            self.logger.critical(f"Erreur critique non gérée lors de l'exécution: {e}", exc_info=True)
+            return_code = -2 # Code spécifique pour une erreur non gérée
         
         finally:
-            # S'assurer que les tâches de lecture sont annulées pour éviter les fuites
             if 'stdout_task' in locals() and not stdout_task.done():
                 stdout_task.cancel()
             if 'stderr_task' in locals() and not stderr_task.done():
                 stderr_task.cancel()
 
-        # Retourner un objet CompletedProcess pour la compatibilité avec le reste du code
         return subprocess.CompletedProcess(
-            cmd,
+            ' '.join(final_cmd),
             returncode=return_code,
             stdout='\n'.join(stdout_capture),
             stderr='\n'.join(stderr_capture)
@@ -302,8 +323,16 @@ class PlaywrightRunner:
             self.logger.info("Tests Playwright réussis.")
             # Optionnel: extraire des infos de la sortie si besoin
         else:
-            self.logger.error(f"Échec des tests Playwright (code: {result.returncode}).")
-            self.logger.error("Consulter les logs ci-dessus et les artifacts pour les détails.")
+            # NOTE DE FUSION: On garde la sortie détaillée du stderr du stash.
+            self.logger.error(f"Échec des tests (code de retour: {result.returncode}).")
+            
+            if stderr_content:
+                self.logger.error("--- Erreurs (stderr) ---")
+                # Pas besoin de logger chaque ligne car elles ont déjà été loggées en temps réel
+                self.logger.error("Voir les logs [PYTEST_STDERR] ci-dessus pour les détails complets.")
+                self.logger.error("--- Fin des erreurs ---")
+            else:
+                self.logger.error("Aucune sortie d'erreur (stderr) n'a été capturée, mais le code de retour indique un échec.")
         
         await self._save_test_report()
         

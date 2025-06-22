@@ -32,18 +32,20 @@ class FrontendManager:
     - Installation dépendances automatique
     - Health check de l'interface
     - Arrêt propre
+    - Création de build pour la production
     """
-    
+
     def __init__(self, config: Dict[str, Any], logger: logging.Logger):
         self.config = config
         self.logger = logger
         
-        # Configuration
-        self.enabled = config.get('enabled', False)
-        self.frontend_path = Path(config.get('path', 'services/web_api/interface-web-argumentative'))
+        # NOTE DE FUSION: On combine la recherche de chemin du stash et la gestion de port de l'upstream.
+        self.enabled = config.get('enabled', True)
+        self.frontend_path = self._find_frontend_path(config.get('path'))
         self.start_port = config.get('start_port', 3000)
         self.fallback_ports = config.get('fallback_ports', [3001, 3002])
         self.start_command = config.get('start_command', 'npm start')
+        self.build_command = config.get('build_command', 'npm run build')
         self.timeout_seconds = config.get('timeout_seconds', 90)
         self.max_attempts = config.get('max_attempts', 5)
         
@@ -55,83 +57,92 @@ class FrontendManager:
         self.frontend_stdout_log_file: Optional[Any] = None
         self.frontend_stderr_log_file: Optional[Any] = None
 
+    # NOTE DE FUSION: On garde la logique de recherche de `_find_frontend_path`
+    # tout en intégrant la logique de démarrage robuste de l'upstream.
+    def _find_frontend_path(self, configured_path: Optional[str]) -> Optional[Path]:
+        """Trouve le chemin du projet frontend de manière robuste."""
+        if configured_path and Path(configured_path).exists():
+            self.logger.info(f"Utilisation du chemin frontend configuré : {configured_path}")
+            return Path(configured_path)
+
+        project_root = Path.cwd()
+        candidate_paths = [
+            project_root / "interface_web",
+            project_root / "frontend",
+            project_root / "services/web_api/interface-web-argumentative"
+        ]
+        for path in candidate_paths:
+            if (path / "package.json").exists():
+                self.logger.info(f"Chemin frontend auto-détecté : {path}")
+                return path
+        
+        self.logger.error("Impossible de trouver le répertoire du projet frontend : vérifiez la config ou la structure des dossiers.")
+        return None
+
     async def start_with_failover(self) -> Dict[str, Any]:
         """
-        Démarre le frontend avec failover automatique sur plusieurs ports.
+        Démarre le frontend avec failover si le port est occupé.
         """
         if not self.enabled:
             return {'success': True, 'error': 'Frontend désactivé'}
 
+        if not self.frontend_path:
+            return {'success': False, 'error': 'Chemin du frontend non trouvé.'}
+
         ports_to_try = [self.start_port] + self.fallback_ports
-
-        for attempt in range(1, self.max_attempts + 1):
-            port = ports_to_try[(attempt - 1) % len(ports_to_try)]
-            self.logger.info(f"Tentative Démarrage Frontend {attempt}/{self.max_attempts} - Port {port}")
-
+        
+        for port in ports_to_try:
+            self.logger.info(f"Tentative de démarrage du Frontend sur le port {port}")
             if await self._is_port_occupied(port):
-                self.logger.warning(f"Port {port} occupé, prochaine tentative...")
-                await asyncio.sleep(1)
+                self.logger.warning(f"Le port {port} est déjà occupé.")
                 continue
 
             result = await self._start_on_port(port)
             if result['success']:
-                self.current_port = result['port']
-                self.current_url = result['url']
-                self.pid = result['pid']
                 return result
-
-        return {
-            'success': False,
-            'error': f"Impossible de démarrer le frontend après {self.max_attempts} tentatives."
-        }
+        
+        error_msg = f"Impossible de démarrer le frontend sur les ports configurés: {ports_to_try}"
+        self.logger.error(error_msg)
+        return {'success': False, 'error': error_msg}
 
     async def _start_on_port(self, port: int) -> Dict[str, Any]:
         """
-        Démarre le frontend sur un port spécifique.
+        Tente de démarrer le serveur de développement sur un port donné.
         """
+        if not await self._ensure_dependencies():
+            return {'success': False, 'error': "Échec de l'installation des dépendances npm"}
+
         try:
-            if not self.frontend_path.exists() or not (self.frontend_path / 'package.json').exists():
-                return {'success': False, 'error': f'Chemin frontend ou package.json invalide: {self.frontend_path}'}
-
-            await self._ensure_dependencies()
-
-            self.logger.info(f"Lancement frontend sur port {port} avec: {self.start_command}")
+            self.logger.info(f"Exécution de la commande de démarrage: {self.start_command}")
+            cmd = ['cmd', '/c'] + self.start_command.split() if sys.platform == "win32" else ['sh', '-c', self.start_command]
             
-            cmd = self.start_command.split()
-            if sys.platform == "win32":
-                cmd = ['cmd', '/c'] + cmd
-
-            log_dir = Path("logs")
-            log_dir.mkdir(exist_ok=True)
+            log_dir = Path("logs"); log_dir.mkdir(exist_ok=True)
+            self.frontend_stdout_log_file = open(log_dir / "frontend_stdout.log", "wb")
+            self.frontend_stderr_log_file = open(log_dir / "frontend_stderr.log", "wb")
             
-            stdout_log = log_dir / "frontend_stdout.log"
-            stderr_log = log_dir / "frontend_stderr.log"
-
-            # Utilisation de with pour s'assurer que les fichiers sont fermés
-            with open(stdout_log, "wb") as stdout_f, open(stderr_log, "wb") as stderr_f:
-                self.process = subprocess.Popen(
-                    cmd,
-                    stdout=stdout_f,
-                    stderr=stderr_f,
-                    cwd=self.frontend_path,
-                    env=self._get_frontend_env(port)
-                )
-
+            self.process = subprocess.Popen(
+                cmd,
+                stdout=self.frontend_stdout_log_file,
+                stderr=self.frontend_stderr_log_file,
+                cwd=self.frontend_path,
+                env=self._get_frontend_env(port),
+            )
+            
             frontend_ready, final_port, final_url = await self._wait_for_frontend(port)
 
             if frontend_ready:
                 self.current_port = final_port
                 self.current_url = final_url
                 self.pid = self.process.pid
+                self.logger.info(f"Frontend démarré avec succès. PID: {self.pid}, URL: {self.current_url}")
                 return {'success': True, 'url': self.current_url, 'port': self.current_port, 'pid': self.pid}
             else:
-                if self.process:
-                    self.process.terminate()
-                    self.process = None
-                return {'success': False, 'error': f'Frontend non accessible sur le port {port} après {self.timeout_seconds}s'}
+                await self.stop()
+                return {'success': False, 'error': f"Échec du démarrage du frontend sur le port {port}"}
 
         except Exception as e:
-            self.logger.error(f"Erreur majeure au démarrage du frontend sur port {port}: {e}", exc_info=True)
+            self.logger.critical(f"Erreur critique lors du démarrage du frontend sur le port {port}: {e}", exc_info=True)
+            await self.stop()
             return {'success': False, 'error': str(e)}
     
     async def _ensure_dependencies(self):
@@ -300,3 +311,54 @@ class FrontendManager:
             'path': str(self.frontend_path),
             'process': self.process
         }
+if __name__ == '__main__':
+    """
+    Point d'entrée pour l'exécution directe.
+    Exemple:
+    python scripts/apps/webapp/frontend_manager.py build
+    python scripts/apps/webapp/frontend_manager.py start
+    """
+    import argparse
+    
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(name)s - %(message)s')
+    logger = logging.getLogger("FrontendManagerCLI")
+
+    parser = argparse.ArgumentParser(description="Gestionnaire de build et de serveur de développement Frontend.")
+    parser.add_argument('action', choices=['build', 'start'], help="L'action à effectuer: 'build' pour créer les fichiers statiques, 'start' pour lancer le serveur de dev.")
+    args = parser.parse_args()
+
+    manager = FrontendManager(config={}, logger=logger)
+
+    async def main():
+        if not manager.enabled or not manager.frontend_path:
+            logger.error("Frontend Manager n'est pas activé ou le chemin est introuvable. Arrêt.")
+            sys.exit(1)
+
+        if args.action == 'build':
+            logger.info("--- Démarrage du Build Frontend ---")
+            success = await manager.build()
+            if success:
+                logger.info("--- Build terminé avec succès ---")
+                sys.exit(0)
+            else:
+                logger.error("--- Le Build a échoué ---")
+                sys.exit(1)
+        
+        elif args.action == 'start':
+            logger.info("--- Démarrage du Serveur de Développement Frontend ---")
+            result = await manager.start_dev_server()
+            if result.get('success'):
+                logger.info(f"Serveur démarré avec succès sur {result.get('url')}")
+                # Le script reste en cours d'exécution car le serveur est un processus de longue durée
+                try:
+                    while True:
+                        await asyncio.sleep(60)
+                except KeyboardInterrupt:
+                    logger.info("Arrêt manuel du serveur...")
+                    await manager.stop()
+                    logger.info("Serveur arrêté.")
+            else:
+                logger.error(f"--- Échec du démarrage du serveur de développement: {result.get('error')} ---")
+                sys.exit(1)
+
+    asyncio.run(main())
