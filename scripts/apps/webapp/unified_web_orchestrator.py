@@ -34,10 +34,10 @@ from dataclasses import dataclass, asdict
 from enum import Enum
 
 # Imports internes
-from scripts.webapp.backend_manager import BackendManager
-from scripts.webapp.frontend_manager import FrontendManager
-# from scripts.webapp.playwright_runner import PlaywrightRunner
-from scripts.webapp.process_cleaner import ProcessCleaner
+from scripts.apps.webapp.backend_manager import BackendManager
+from scripts.apps.webapp.frontend_manager import FrontendManager
+from scripts.apps.webapp.playwright_runner import PlaywrightRunner
+from scripts.apps.webapp.process_cleaner import ProcessCleaner
 
 # Import du gestionnaire centralisé des ports
 try:
@@ -98,7 +98,7 @@ class UnifiedWebOrchestrator:
         # Gestionnaires spécialisés
         self.backend_manager = BackendManager(self.config.get('backend', {}), self.logger)
         self.frontend_manager = FrontendManager(self.config.get('frontend', {}), self.logger)
-        # self.playwright_runner = PlaywrightRunner(self.config.get('playwright', {}), self.logger)
+        self.playwright_runner = PlaywrightRunner(self.config.get('playwright', {}), self.logger)
         self.process_cleaner = ProcessCleaner(self.logger)
         
         # État de l'application
@@ -185,7 +185,7 @@ class UnifiedWebOrchestrator:
                 'headless': True,
                 'timeout_ms': 10000,
                 'slow_timeout_ms': 20000,
-                'test_paths': ['tests/functional/'],
+                'test_paths': ['tests/e2e/python'],
                 'screenshots_dir': 'logs/screenshots',
                 'traces_dir': 'logs/traces'
             },
@@ -285,33 +285,37 @@ class UnifiedWebOrchestrator:
             self.app_info.status = WebAppStatus.ERROR
             return False
     
-    # async def run_tests(self, test_paths: List[str] = None, **kwargs) -> bool:
-    #     """
-    #     Exécute les tests Playwright
+    async def run_tests(self, test_paths: List[str] = None, **kwargs) -> bool:
+        """
+        Exécute les tests Playwright
         
-    #     Args:
-    #         test_paths: Chemins des tests à exécuter
-    #         **kwargs: Options supplémentaires pour Playwright
+        Args:
+            test_paths: Chemins des tests à exécuter
+            **kwargs: Options supplémentaires pour Playwright
             
-    #     Returns:
-    #         bool: True si tests réussis
-    #     """
-    #     if self.app_info.status != WebAppStatus.RUNNING:
-    #         self.add_trace("[WARNING] APPLICATION NON DEMARREE", "", "Demarrage requis avant tests", status="error")
-    #         return False
+        Returns:
+            bool: True si tests réussis
+        """
+        if self.app_info.status != WebAppStatus.RUNNING:
+            self.add_trace("[WARNING] APPLICATION NON DEMARREE", "", "Demarrage requis avant tests", status="error")
+            if not await self.start_webapp(self.headless):
+                self.add_trace("[ERROR] ECHEC DEMARRAGE PRE-TEST", "", "Impossible de lancer l'application pour les tests", status="error")
+                return False
         
-    #     self.add_trace("[TEST] EXECUTION TESTS PLAYWRIGHT",
-    #                   f"Tests: {test_paths or 'tous'}")
+        self.add_trace("[TEST] EXECUTION TESTS PLAYWRIGHT",
+                      f"Tests: {test_paths or 'tous'}")
         
-    #     # Configuration runtime pour Playwright
-    #     test_config = {
-    #         'backend_url': self.app_info.backend_url,
-    #         'frontend_url': self.app_info.frontend_url or self.app_info.backend_url,
-    #         'headless': self.headless,
-    #         **kwargs
-    #     }
+        # Configuration runtime pour Playwright
+        test_config = {
+            'backend_url': self.app_info.backend_url,
+            'frontend_url': self.app_info.frontend_url or self.app_info.backend_url,
+            'headless': self.headless,
+            **kwargs
+        }
         
-    #     return await self.playwright_runner.run_tests(test_paths, test_config)
+        test_success = await self.playwright_runner.run_tests(test_paths, test_config)
+
+        return test_success
     
     async def stop_webapp(self):
         """Arrête l'application web et nettoie les ressources"""
@@ -361,9 +365,7 @@ class UnifiedWebOrchestrator:
             await asyncio.sleep(2)
             
             # 3. Exécution tests
-            # success = await self.run_tests(test_paths)
-            self.logger.warning("La méthode de test de l'orchestrateur est désactivée. Les tests doivent être lancés séparément.")
-            success = True # On suppose que les tests externes seront lancés
+            success = await self.run_tests(test_paths)
             
             if success:
                 self.add_trace("[SUCCESS] INTEGRATION REUSSIE",
@@ -574,7 +576,12 @@ def main():
             elif args.start:
                 return await orchestrator.start_webapp(headless, args.frontend)
             elif args.test:
-                return await orchestrator.run_tests(args.tests)
+                # Si on lance les tests seuls, on ne s'attend pas à ce que l'app soit déjà lancée
+                # On passe None si args.tests est une liste vide pour utiliser la config par défaut
+                success = await orchestrator.run_tests(args.tests if args.tests else None)
+                # Arrêt post-test
+                await orchestrator.stop_webapp()
+                return success
             else:  # Integration par défaut
                 return await orchestrator.full_integration_test(
                     headless, args.frontend, args.tests)

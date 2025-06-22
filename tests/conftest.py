@@ -141,7 +141,8 @@ else:
 # Charger les fixtures définies dans d'autres fichiers comme des plugins
 pytest_plugins = [
    "tests.fixtures.integration_fixtures",
-   "tests.fixtures.jvm_subprocess_fixture"
+   "tests.fixtures.jvm_subprocess_fixture",
+   "pytest_playwright.pytest_playwright"
 ]
 
 def pytest_addoption(parser):
