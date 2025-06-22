@@ -305,6 +305,61 @@ class PropositionalLogicAgent(BaseLogicAgent):
         self.logger.warning("Impossible d'isoler un bloc JSON. Tentative de parsing de la chaîne complète.")
         return text
 
+    def _filter_formulas(self, formulas: List[str], declared_propositions: set) -> List[str]:
+        """Filtre les formules pour ne garder que celles qui utilisent des propositions déclarées."""
+        valid_formulas = []
+        # Regex pour extraire les identifiants qui ressemblent à des propositions
+        proposition_pattern = re.compile(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b')
+        
+        for formula in formulas:
+            # Extrait tous les identifiants potentiels de la formule
+            used_propositions = set(proposition_pattern.findall(formula))
+            
+            # Vérifie si tous les identifiants utilisés sont dans l'ensemble des propositions déclarées
+            if used_propositions.issubset(declared_propositions):
+                valid_formulas.append(formula)
+            else:
+                unknown_props = used_propositions - declared_propositions
+                self.logger.warning(
+                    f"Formule rejetée: '{formula}'. "
+                    f"Contient des propositions non déclarées: {unknown_props}"
+                )
+        self.logger.info(f"{len(valid_formulas)}/{len(formulas)} formules conservées après filtrage.")
+        return valid_formulas
+
+    async def _invoke_llm_for_json(self, kernel: Kernel, plugin_name: str, function_name: str, arguments: Dict[str, Any],
+                                 expected_keys: List[str], log_tag: str, max_retries: int) -> Tuple[Optional[Dict[str, Any]], str]:
+        """Méthode helper pour invoquer une fonction sémantique et parser une réponse JSON."""
+        for attempt in range(max_retries):
+            self.logger.debug(f"[{log_tag}] Tentative {attempt + 1}/{max_retries} pour {plugin_name}.{function_name}...")
+            try:
+                result = await kernel.invoke(
+                    plugin_name=plugin_name,
+                    function_name=function_name,
+                    arguments=KernelArguments(**arguments)
+                )
+                response_text = str(result)
+                json_block = self._extract_json_block(response_text)
+                data = json.loads(json_block)
+
+                if all(key in data for key in expected_keys):
+                    self.logger.info(f"[{log_tag}] Succès de l'invocation et du parsing JSON.")
+                    return data, ""
+                else:
+                    error_msg = f"Les clés attendues {expected_keys} ne sont pas dans la réponse: {list(data.keys())}"
+                    self.logger.warning(f"[{log_tag}] {error_msg}")
+
+            except json.JSONDecodeError as e:
+                error_msg = f"Erreur de décodage JSON: {e}. Réponse: {response_text}"
+                self.logger.error(f"[{log_tag}] {error_msg}")
+            except Exception as e:
+                error_msg = f"Erreur inattendue lors de l'invocation LLM: {e}"
+                self.logger.error(f"[{log_tag}] {error_msg}", exc_info=True)
+        
+        final_error = f"[{log_tag}] Échec de l'obtention d'une réponse JSON valide après {max_retries} tentatives."
+        self.logger.error(final_error)
+        return None, final_error
+
     async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
         """
         Convertit un texte brut en un `PropositionalBeliefSet` structuré et validé.
