@@ -118,7 +118,6 @@ def main():
 
 
     success = run_test_environment_setup_pipeline(
-        config_path=args.config_path,
         requirements_path=args.requirements_path,
         mock_jpype=args.mock_jpype,
         venv_path=args.venv_path,

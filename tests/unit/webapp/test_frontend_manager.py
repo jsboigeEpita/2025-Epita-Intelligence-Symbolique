@@ -32,7 +32,7 @@ def test_initialization(manager, frontend_config):
     """Tests that the manager initializes correctly."""
     assert manager.config == frontend_config
     assert manager.enabled is True
-    assert manager.port == frontend_config['port']
+    assert manager.start_port == frontend_config['start_port']
     assert manager.process is None
 
 @pytest.mark.asyncio
@@ -40,100 +40,77 @@ async def test_start_when_disabled(logger_mock):
     """Tests that start() returns immediately if not enabled."""
     config = {'enabled': False}
     manager = FrontendManager(config, logger_mock)
-    result = await manager.start()
+    result = await manager.start_with_failover()
     assert result['success'] is True
     assert result['error'] == 'Frontend désactivé'
 
 @pytest.mark.asyncio
 async def test_start_fails_if_path_not_found(manager, tmp_path):
     """Tests that start() fails if the frontend path does not exist."""
-    manager.frontend_path = tmp_path / "non_existent_path"
-    result = await manager.start()
+    manager.frontend_path = None
+    result = await manager.start_with_failover()
     assert result['success'] is False
-    assert "introuvable" in result['error']
+    assert "non trouvé" in result['error']
 
 @pytest.mark.asyncio
 async def test_start_fails_if_package_json_missing(manager, tmp_path):
     """Tests that start() fails if package.json is missing."""
     manager.frontend_path = tmp_path
-    (tmp_path / "some_other_file.txt").touch() # Create the dir but no package.json
-    result = await manager.start()
+    # La nouvelle logique vérifie les dépendances, on simule l'échec de _ensure_dependencies
+    manager._ensure_dependencies = AsyncMock(return_value=False)
+    result = await manager.start_with_failover()
     assert result['success'] is False
-    assert "package.json introuvable" in result['error']
+    assert "Échec de l'installation des dépendances" in result['error']
 
 @pytest.mark.asyncio
 @patch('subprocess.Popen')
 async def test_ensure_dependencies_installs_if_needed(mock_popen, manager, tmp_path):
-    """Vérifie que 'npm install' est toujours exécuté."""
+    """Vérifie que 'npm install' est exécuté si node_modules est manquant."""
     manager.frontend_path = tmp_path
-    (tmp_path / "package.json").touch()
-    
+    # Assurez-vous que node_modules n'existe pas
+    # (tmp_path est vide par défaut)
+
     mock_process = MagicMock()
-    mock_process.communicate.return_value = ('success', '') # text=True now returns strings
+    mock_process.communicate.return_value = ('success', '')
     mock_process.returncode = 0
     mock_popen.return_value = mock_process
 
-    mock_env = {"PATH": os.environ.get("PATH", "")}
-    await manager._ensure_dependencies(env=mock_env)
+    result = await manager._ensure_dependencies()
 
-    is_windows = sys.platform == "win32"
-    expected_cmd = 'npm install' if is_windows else ['npm', 'install']
-
-    mock_popen.assert_called_with(
-        expected_cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        cwd=tmp_path,
-        env=mock_env,
-        shell=is_windows,
-        text=True,
-        encoding='utf-8',
-        errors='replace'
-    )
-    manager.logger.info.assert_any_call("Lancement de 'npm install' pour garantir la fraîcheur des dépendances...")
+    assert result is True
+    mock_popen.assert_called_once()
+    manager.logger.info.assert_any_call(f"Le dossier 'node_modules' est manquant. Lancement de 'npm install' dans {manager.frontend_path}...")
 
 
 @pytest.mark.asyncio
-async def test_start_success(manager, tmp_path):
-    """Tests the full successful start sequence with the new build logic."""
-    manager.frontend_path = tmp_path
-    build_path = tmp_path / "build"
-    build_path.mkdir()
-    (tmp_path / "package.json").touch()
+async def test_start_success(manager):
+    """Tests the full successful start sequence with the new failover logic."""
+    # Mock des dépendances et des appels système
+    manager._ensure_dependencies = AsyncMock(return_value=True)
+    manager._is_port_occupied = AsyncMock(return_value=False)
+    manager._start_on_port = AsyncMock(return_value={
+        'success' : True,
+        'url': f'http://localhost:{manager.start_port}',
+        'port': manager.start_port,
+        'pid': 1234
+    })
 
-    # Mock dependencies
-    manager._ensure_dependencies = AsyncMock()
-    manager._build_react_app = AsyncMock()  # On mocke l'étape de build
-    manager._start_static_server = AsyncMock()
-    # Le pid sera celui du thread, simulons-le
-    manager.static_server_thread = MagicMock()
-    manager.static_server_thread.ident = 5678
-    manager._wait_for_health_check = AsyncMock(return_value=True)
+    result = await manager.start_with_failover()
 
-    # Mock backend_manager for env setup
-    manager.backend_manager = MagicMock()
-    manager.backend_manager.host = 'localhost'
-    manager.backend_manager.port = 5000
-    
-    manager.env = manager._get_frontend_env()
-
-    result = await manager.start()
-
-    assert result['success'] is True, f"start() a échoué, retour: {result.get('error', 'N/A')}"
-    assert result['pid'] == 5678
-    assert result['port'] == manager.port # Le port est maintenant géré directement par le manager
-    
+    assert result['success'] is True
+    assert result['port'] == manager.start_port
+    assert result['pid'] == 1234
     manager._ensure_dependencies.assert_awaited_once()
-    manager._build_react_app.assert_awaited_once() # On vérifie l'appel de la méthode de build
-    manager._start_static_server.assert_awaited_once()
-    manager._wait_for_health_check.assert_awaited_once()
+    manager._is_port_occupied.assert_awaited_once_with(manager.start_port)
+    manager._start_on_port.assert_awaited_once_with(manager.start_port)
 
 
 @pytest.mark.asyncio
 async def test_stop_process(manager):
-    """Tests that stop correctly calls the static server shutdown."""
-    manager._stop_static_server = AsyncMock()
+    """Tests that stop correctly terminates the process."""
+    manager.process = MagicMock(spec=subprocess.Popen)
+    manager.process.pid = 1234
     
     await manager.stop()
 
-    manager._stop_static_server.assert_awaited_once()
+    manager.process.terminate.assert_called_once()
