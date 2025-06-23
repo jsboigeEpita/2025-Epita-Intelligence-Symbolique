@@ -6,11 +6,12 @@ API Flask pour l'analyse argumentative.
 """
 import os
 import sys
+
+# Assurer que la racine du projet est dans le sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
+
 import logging
 from pathlib import Path
-
-# Ajout pour la résolution des imports locaux en contexte d'exécution directe
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
 from flask import Flask, send_from_directory, jsonify, request, g
 from flask_cors import CORS
@@ -25,14 +26,14 @@ logger = logging.getLogger(__name__)
 
 # --- Imports des Blueprints et des modèles de données ---
 from argumentation_analysis.services.web_api.routes.main_routes import main_bp
-from .routes.logic_routes import logic_bp
-from .models.response_models import ErrorResponse
+from argumentation_analysis.services.web_api.routes.logic_routes import logic_bp
+from argumentation_analysis.services.web_api.models.response_models import ErrorResponse
 # Import des classes de service
-from .services.analysis_service import AnalysisService
-from .services.validation_service import ValidationService
-from .services.fallacy_service import FallacyService
-from .services.framework_service import FrameworkService
-from .services.logic_service import LogicService
+from argumentation_analysis.services.web_api.services.analysis_service import AnalysisService
+from argumentation_analysis.services.web_api.services.validation_service import ValidationService
+from argumentation_analysis.services.web_api.services.fallacy_service import FallacyService
+from argumentation_analysis.services.web_api.services.framework_service import FrameworkService
+from argumentation_analysis.services.web_api.services.logic_service import LogicService
 from argumentation_analysis.core.bootstrap import initialize_project_environment
 
 class AppServices:

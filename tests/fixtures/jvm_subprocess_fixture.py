@@ -3,6 +3,7 @@ import subprocess
 import sys
 import os
 from pathlib import Path
+from dotenv import load_dotenv, find_dotenv
 
 @pytest.fixture(scope="function")
 def run_in_jvm_subprocess():
@@ -44,6 +45,13 @@ def run_in_jvm_subprocess():
         # Cloner l'environnement actuel et ajouter la racine du projet au PYTHONPATH.
         # C'est crucial pour que les imports comme `from tests.fixtures...` fonctionnent
         # dans le sous-processus.
+        # Forcer le rechargement du .env pour s'assurer que les dernières
+        # modifications sont prises en compte dans le sous-processus.
+        # C'est CRUCIAL car le processus pytest principal ne relit pas le .env
+        # après son démarrage initial. override=True garantit que les
+        # variables en mémoire (potentiellement périmées) sont écrasées.
+        load_dotenv(find_dotenv(), override=True)
+        
         env = os.environ.copy()
         project_root = str(Path(__file__).parent.parent.parent.resolve())
         python_path = env.get('PYTHONPATH', '')

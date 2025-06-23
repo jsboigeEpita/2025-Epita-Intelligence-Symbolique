@@ -48,8 +48,11 @@ class ServiceManager:
         self.log_files["api_out"] = api_log_out
         self.log_files["api_err"] = api_log_err
         
+        # AJOUT: Augmentation du niveau de log pour le débogage
+        _log(f"Démarrage du service API sur le port 5003 (CWD: {API_DIR}) avec log level DEBUG")
         api_process = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "argumentation_analysis.services.web_api.app:app", "--port", "5003"],
+            # MODIFICATION: Ajout de --log-level debug
+            [sys.executable, "-m", "uvicorn", "argumentation_analysis.services.web_api.app:app", "--port", "5003", "--log-level", "debug"],
             cwd=API_DIR,
             stdout=api_log_out,
             stderr=api_log_err
@@ -57,25 +60,46 @@ class ServiceManager:
         self.processes.append(api_process)
         _log(f"Service API démarré avec le PID: {api_process.pid}")
 
-        # Démarrer le frontend Starlette (uvicorn sur le port 3000)
-        _log(f"Démarrage du service Frontend (Starlette) sur le port 3000 (CWD: {ROOT_DIR})")
-        frontend_log_out = open("frontend_server.log", "w", encoding="utf-8")
-        frontend_log_err = open("frontend_server.error.log", "w", encoding="utf-8")
-        self.log_files["frontend_out"] = frontend_log_out
-        self.log_files["frontend_err"] = frontend_log_err
+        # MODIFICATION: Démarrage du frontend désactivé pour isoler l'API
+        _log("--- DÉBOGAGE: Le démarrage du service Frontend est temporairement désactivé. ---")
+        # _log(f"Démarrage du service Frontend (Starlette) sur le port 3000 (CWD: {ROOT_DIR})")
+        # frontend_log_out = open("frontend_server.log", "w", encoding="utf-8")
+        # frontend_log_err = open("frontend_server.error.log", "w", encoding="utf-8")
+        # self.log_files["frontend_out"] = frontend_log_out
+        # self.log_files["frontend_err"] = frontend_log_err
         
-        frontend_process = subprocess.Popen(
-            [sys.executable, str(FRONTEND_DIR / "app.py"), "--port", "3000"],
-            cwd=ROOT_DIR,
-            stdout=frontend_log_out,
-            stderr=frontend_log_err
-        )
-        self.processes.append(frontend_process)
-        _log(f"Service Frontend démarré avec le PID: {frontend_process.pid}")
+        # frontend_process = subprocess.Popen(
+        #     [sys.executable, str(FRONTEND_DIR / "app.py"), "--port", "3000"],
+        #     cwd=ROOT_DIR,
+        #     stdout=frontend_log_out,
+        #     stderr=frontend_log_err
+        # )
+        # self.processes.append(frontend_process)
+        # _log(f"Service Frontend démarré avec le PID: {frontend_process.pid}")
 
         # Laisser le temps aux serveurs de démarrer
         _log("Attente du démarrage des services (60 secondes)...")
-        time.sleep(60)
+        time.sleep(15) # Réduction du temps d'attente pour accélérer le feedback
+
+        # AJOUT : Vérification des logs d'erreurs
+        _log("Vérification des logs d'erreurs des services...")
+        for name, log_path in [("API", "api_server.error.log"), ("Frontend", "frontend_server.error.log")]:
+            error_log_full_path = ROOT_DIR / log_path
+            if not error_log_full_path.exists():
+                _log(f"Le fichier de log d'erreur {error_log_full_path} n'a pas été trouvé.")
+                continue
+            try:
+                with open(error_log_full_path, "r", encoding="utf-8") as f:
+                    error_content = f.read()
+                    if error_content.strip():
+                        _log(f"--- Contenu du log d'erreur pour {name} ({error_log_full_path}) ---")
+                        print(error_content)
+                        _log(f"--- Fin du log d'erreur pour {name} ---")
+                    else:
+                        _log(f"Le fichier de log d'erreur pour {name} est vide.")
+            except Exception as e:
+                _log(f"Impossible de lire le fichier de log {error_log_full_path}: {e}")
+
         _log("Services probablement démarrés.")
 
     def stop_services(self):

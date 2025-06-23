@@ -248,7 +248,6 @@ class SherlockEnqueteAgent(BaseAgent):
                 execution_settings={
                     self._service_id: OpenAIPromptExecutionSettings(
                         service_id=self._service_id,
-                        ai_model_id=self._kernel.get_service(self._service_id).ai_model_id,
                         max_tokens=2000,
                         temperature=0.7,
                         top_p=0.8,
@@ -256,9 +255,9 @@ class SherlockEnqueteAgent(BaseAgent):
                     )
                 }
             )
-            chat_function = self._kernel.create_function_from_prompt(
+            chat_function = KernelFunction.from_prompt(
                 function_name="chat",
-                plugin_name="SherlockAgentPluginTemp", # Utilise un nom de plugin temporaire pour éviter les conflits
+                plugin_name="SherlockAgentPlugin",
                 prompt_template_config=prompt_config
             )
 

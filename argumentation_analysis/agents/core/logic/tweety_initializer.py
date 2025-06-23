@@ -7,6 +7,8 @@ except ImportError:
 # =========================================
 import jpype
 import logging
+import platform
+import sys
 from argumentation_analysis.core.utils.logging_utils import setup_logging
 # from argumentation_analysis.core.utils.path_operations import get_project_root # Différé
 from pathlib import Path
@@ -98,10 +100,20 @@ class TweetyInitializer:
         try:
             if not jpype.isJVMStarted():
                 logger.info("Starting JVM...")
+
+                # --- DEBUGGING ARCHITECTURE AND PATHS ---
+                logger.info(f"Python Executable: {sys.executable}")
+                logger.info(f"Python Architecture: {platform.architecture()}")
+                default_jvm_path = jpype.getDefaultJVMPath()
+                logger.info(f"Default JVM Path (from JPype): {default_jvm_path}")
+                java_home_env = os.environ.get("JAVA_HOME")
+                logger.info(f"JAVA_HOME environment variable: {java_home_env}")
+                # --- END DEBUGGING ---
+
                 # The classpath is now managed by _ensure_classpath and addClassPath.
                 # startJVM will pick up the modified classpath.
                 jpype.startJVM(
-                    jpype.getDefaultJVMPath(),
+                    default_jvm_path, # Use the path we just logged
                     "-ea",
                     convertStrings=False
                 )
