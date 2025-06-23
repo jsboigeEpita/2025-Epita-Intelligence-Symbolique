@@ -10,10 +10,10 @@ sys.path.insert(0, '.')
 from argumentation_analysis.webapp.orchestrator import UnifiedWebOrchestrator, WebAppStatus
 
 # We need to mock the manager classes before they are imported by the orchestrator
-sys.modules['project_core.core_from_scripts.backend_manager'] = MagicMock()
-sys.modules['project_core.core_from_scripts.frontend_manager'] = MagicMock()
-sys.modules['project_core.core_from_scripts.playwright_runner'] = MagicMock()
-sys.modules['project_core.core_from_scripts.process_cleaner'] = MagicMock()
+sys.modules['scripts.apps.webapp.backend_manager'] = MagicMock()
+sys.modules['scripts.apps.webapp.frontend_manager'] = MagicMock()
+sys.modules['scripts.apps.webapp.playwright_runner'] = MagicMock()
+sys.modules['scripts.apps.webapp.process_cleaner'] = MagicMock()
 
 # This patch will apply to all tests in this module for signal handlers
 @pytest.fixture(autouse=True)
