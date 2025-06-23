@@ -1,262 +1,228 @@
 """
-Tests unitaires pour WatsonJTMSAgent.
-Valide les fonctionnalités spécialisées de l'agent critique/validateur.
+Tests unitaires refactorisés pour WatsonJTMSAgent.
+Ces tests valident que l'agent délègue correctement les appels à ses moteurs internes (critique, validation, etc.)
+en utilisant des mocks pour isoler le comportement de l'agent.
 """
 
 import pytest
 import asyncio
-from datetime import datetime
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock, AsyncMock, patch
 
-import semantic_kernel as sk
-from semantic_kernel import Kernel
+from argumentation_analysis.agents.watson_jtms.agent import WatsonJTMSAgent
 
-# Import du code à tester
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+# #####################################################################################
 
-from argumentation_analysis.agents.watson_jtms_agent import WatsonJTMSAgent
-from argumentation_analysis.models.extended_belief_model import BeliefType, ConfidenceLevel
-from argumentation_analysis.models.agent_communication_model import AgentMessage
+# Mocker les dépendances (moteurs) de l'agent
+@pytest.fixture(autouse=True)
+def mock_engines():
+    """
+    Patche les classes des moteurs pour s'assurer que toute instance de WatsonJTMSAgent
+    sera créée avec des mocks.
+    """
+    with patch('argumentation_analysis.agents.watson_jtms.agent.ConsistencyChecker', new_callable=Mock) as mock_consistency, \
+         patch('argumentation_analysis.agents.watson_jtms.agent.FormalValidator', new_callable=Mock) as mock_validator, \
+         patch('argumentation_analysis.agents.watson_jtms.agent.CritiqueEngine', new_callable=Mock) as mock_critique, \
+         patch('argumentation_analysis.agents.watson_jtms.agent.SynthesisEngine', new_callable=Mock) as mock_synthesis:
+        
+        mock_critique.return_value.suggest_alternatives = AsyncMock()
+        mock_critique.return_value.analyze_sherlock_conclusions = AsyncMock()
+        mock_critique.return_value.critique_reasoning_chain = AsyncMock()
+        mock_critique.return_value.challenge_assumption = AsyncMock()
+        mock_critique.return_value.identify_logical_fallacies = AsyncMock()
+        mock_critique.return_value.export_critique_state = Mock()
+
+        mock_validator.return_value.validate_sherlock_reasoning = AsyncMock()
+        mock_validator.return_value.prove_belief = AsyncMock()
+        mock_validator.return_value.cross_validate_evidence = AsyncMock()
+        mock_validator.return_value.get_validation_summary = Mock()
+
+        mock_synthesis.return_value.provide_alternative_theory = AsyncMock()
+        mock_synthesis.return_value.process_jtms_inference = AsyncMock()
+        
+        mock_consistency.return_value.resolve_conflicts = AsyncMock()
+
+        yield {
+            "consistency": mock_consistency,
+            "validator": mock_validator,
+            "critique": mock_critique,
+            "synthesis": mock_synthesis
+        }
+        
+# La fixture stop_module_patcher n'est plus nécessaire car le patcher au niveau du module a été supprimé.
 
 @pytest.fixture
 def mock_kernel():
-    """Kernel mocké pour les tests"""
-    kernel = Mock(spec=Kernel)
-    return kernel
+    """Kernel mocké simple pour l'initialisation de l'agent."""
+    return Mock(name="MockKernel")
 
 @pytest.fixture
-def watson_agent(mock_kernel):
-    """Agent Watson de test"""
-    return WatsonJTMSAgent(mock_kernel, "watson_test")
+def watson_agent(mock_kernel, mock_engines):
+    """
+    Fixture pour créer une instance de WatsonJTMSAgent avec des moteurs mockés.
+    """
+    agent = WatsonJTMSAgent(kernel=mock_kernel, agent_name="WatsonTest")
+    return agent
 
-class TestWatsonJTMSAgent:
-    """Tests pour la classe WatsonJTMSAgent"""
-    
-    @pytest.mark.asyncio
-    async def test_agent_initialization(self, watson_agent):
-        """Test d'initialisation de l'agent Watson"""
-        assert watson_agent.agent_name == "watson_test"
+class TestWatsonJTMSAgentRefactored:
+    """Suite de tests refactorisés pour WatsonJTMSAgent."""
+
+    def test_agent_initialization(self, watson_agent, mock_engines):
+        """Vérifie que l'agent et ses moteurs sont initialisés correctement."""
+        assert watson_agent.agent_name == "WatsonTest"
         assert watson_agent.specialization == "critical_analysis"
-        assert hasattr(watson_agent.validator, 'validation_history')
-        assert hasattr(watson_agent.critique_engine, 'critique_patterns')
-    
+        
+        mock_engines["consistency"].assert_called_once()
+        mock_engines["validator"].assert_called_once()
+        mock_engines["critique"].assert_called_once()
+        mock_engines["synthesis"].assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_validate_sherlock_reasoning(self, watson_agent):
+        """Teste la délégation de la validation du raisonnement de Sherlock."""
+        expected_result = {"status": "valid"}
+        watson_agent.validator.validate_sherlock_reasoning.return_value = expected_result
+        
+        result = await watson_agent.validate_sherlock_reasoning({"state": "test"})
+        
+        watson_agent.validator.validate_sherlock_reasoning.assert_awaited_once_with({"state": "test"})
+        assert result == expected_result
+
+    @pytest.mark.asyncio
+    async def test_suggest_alternatives(self, watson_agent):
+        """Teste la délégation de la suggestion d'alternatives."""
+        expected_result = ["alt1", "alt2"]
+        watson_agent.critique_engine.suggest_alternatives.return_value = expected_result
+        
+        result = await watson_agent.suggest_alternatives("belief", context={})
+        
+        watson_agent.critique_engine.suggest_alternatives.assert_awaited_once_with("belief", {})
+        assert result == expected_result
+
+    @pytest.mark.asyncio
+    async def test_resolve_conflicts(self, watson_agent):
+        """Teste la délégation de la résolution de conflits."""
+        expected_result = ["resolved_conflict"]
+        watson_agent.consistency_checker.resolve_conflicts.return_value = expected_result
+        
+        result = await watson_agent.resolve_conflicts(["conflict1"])
+        
+        watson_agent.consistency_checker.resolve_conflicts.assert_awaited_once_with(["conflict1"])
+        assert result == expected_result
+
+    @pytest.mark.asyncio
+    async def test_process_jtms_inference(self, watson_agent):
+        """Teste la délégation du traitement d'inférence JTMS."""
+        expected_result = {"processed": True}
+        watson_agent.synthesis_engine.process_jtms_inference.return_value = expected_result
+        
+        result = await watson_agent.process_jtms_inference("context_str")
+        
+        watson_agent.synthesis_engine.process_jtms_inference.assert_awaited_once_with("context_str")
+        assert result == expected_result
+
     @pytest.mark.asyncio
     async def test_validate_hypothesis(self, watson_agent):
-        """Test de validation d'hypothèse"""
-        # Ajouter d'abord une hypothèse à valider
-        hypothesis_data = {
-            "content": "Colonel Moutarde a tué avec le couteau dans la bibliothèque",
-            "supporting_evidence": ["couteau_trouve", "empreintes"],
-            "confidence": 0.7
-        }
-        
-        watson_agent.add_belief("hyp_test", {"type": "hypothesis"}, 0.7)
-        
-        result = await watson_agent.validate_hypothesis("hyp_test", hypothesis_data)
-        
-        assert result is not None
-        assert "validation_result" in result
-        assert "critique_points" in result
-        assert "adjusted_confidence" in result
-        assert "validation_reasoning" in result
-        assert isinstance(result["validation_result"], bool)
-    
-    @pytest.mark.asyncio
-    async def test_critique_reasoning_chain(self, watson_agent):
-        """Test de critique de chaîne de raisonnement"""
-        reasoning_chain = [
-            {"step": "Couteau trouvé dans bibliothèque", "type": "evidence", "confidence": 0.9},
-            {"step": "Empreintes de Moutarde sur couteau", "type": "evidence", "confidence": 0.8},
-            {"step": "Donc Moutarde est le meurtrier", "type": "conclusion", "confidence": 0.6}
-        ]
-        
-        result = await watson_agent.critique_reasoning_chain("chain_test", reasoning_chain)
-        
-        assert result is not None
-        assert "chain_id" in result
-        assert "logical_issues" in result
-        assert "missing_evidence" in result
-        assert "alternative_explanations" in result
-        assert "revised_confidence" in result
-    
+        """Teste la délégation de la validation d'hypothèse."""
+        expected_proof = {"provable": True}
+        watson_agent.validator.prove_belief.return_value = expected_proof
+        hypothesis_data = {"hypothesis": "le colonel est coupable"}
+
+        result = await watson_agent.validate_hypothesis("hyp_1", hypothesis_data)
+
+        watson_agent.validator.prove_belief.assert_awaited_once_with("le colonel est coupable")
+        assert result["is_valid"] == True
+        assert result["details"] == expected_proof
+
     @pytest.mark.asyncio
     async def test_cross_validate_evidence(self, watson_agent):
-        """Test de validation croisée d'indices"""
-        evidence_set = [
-            {"id": "ev1", "description": "Couteau ensanglanté", "reliability": 0.9},
-            {"id": "ev2", "description": "Empreintes digitales", "reliability": 0.8},
-            {"id": "ev3", "description": "Témoignage suspect", "reliability": 0.4}
-        ]
+        """Teste la délégation de la validation croisée d'évidences."""
+        expected_result = {"summary": "all good"}
+        watson_agent.validator.cross_validate_evidence.return_value = expected_result
+        evidence_set = [{"id": "e1"}]
         
         result = await watson_agent.cross_validate_evidence(evidence_set)
         
-        assert result is not None
-        assert "validation_summary" in result
-        assert "reliability_scores" in result
-        assert "contradictions" in result
-        assert "recommendations" in result
-    
-    @pytest.mark.asyncio
-    async def test_challenge_assumption(self, watson_agent):
-        """Test de remise en question d'hypothèse"""
-        assumption_data = {
-            "assumption": "Le meurtrier était seul",
-            "basis": ["une_seule_arme", "pas_de_temoin_multiple"],
-            "confidence": 0.6
-        }
-        
-        result = await watson_agent.challenge_assumption("assump_1", assumption_data)
-        
-        assert result is not None
-        assert "challenge_id" in result
-        assert "counter_arguments" in result
-        assert "alternative_scenarios" in result
-        assert "confidence_impact" in result
-    
-    @pytest.mark.asyncio
-    async def test_process_jtms_inference(self, watson_agent):
-        """Test du traitement d'inférence JTMS spécialisé"""
-        context = "Validation des déductions de Sherlock sur le meurtre"
-        
-        result = await watson_agent.process_jtms_inference(context)
-        
-        assert result is not None
-        assert "inference_type" in result
-        assert result["inference_type"] == "critical_validation"
-        assert "validation_points" in result
-        assert "confidence" in result
-    
-    @pytest.mark.asyncio
-    async def test_validate_reasoning_chain(self, watson_agent):
-        """Test de validation de chaîne de raisonnement"""
-        chain = [
-            {"premise": "Arme du crime identifiée", "type": "evidence", "strength": 0.9},
-            {"premise": "Suspect présent sur les lieux", "type": "evidence", "strength": 0.7},
-            {"conclusion": "Suspect est coupable", "type": "deduction", "strength": 0.5}
-        ]
-        
-        result = await watson_agent.validate_reasoning_chain(chain)
-        
-        assert result is not None
-        assert "valid" in result
-        assert "validation_details" in result
-        assert "weak_links" in result
-        assert "suggested_improvements" in result
-    
+        watson_agent.validator.cross_validate_evidence.assert_awaited_once_with(evidence_set)
+        assert result == expected_result
+
     @pytest.mark.asyncio
     async def test_analyze_sherlock_conclusions(self, watson_agent):
-        """Test d'analyse des conclusions de Sherlock"""
-        sherlock_state = {
-            "beliefs": {
-                "conclusion_1": {
-                    "name": "Colonel Moutarde coupable",
-                    "confidence": 0.8,
-                    "agent_source": "sherlock",
-                    "context": {"evidence": ["couteau", "lieu"]}
-                }
-            },
-            "session_summary": {
-                "owner_agent": "sherlock"
-            }
-        }
-        
+        """Teste la délégation de l'analyse des conclusions de Sherlock."""
+        expected_result = {"analysis": "looks ok"}
+        watson_agent.critique_engine.analyze_sherlock_conclusions.return_value = expected_result
+        sherlock_state = {"conclusions": []}
+
         result = await watson_agent.analyze_sherlock_conclusions(sherlock_state)
-        
-        assert result is not None
-        assert "analysis_id" in result
-        assert "validated_conclusions" in result
-        assert "challenged_conclusions" in result
-        assert "overall_assessment" in result
-    
+
+        watson_agent.critique_engine.analyze_sherlock_conclusions.assert_awaited_once_with(sherlock_state)
+        assert result == expected_result
+
     @pytest.mark.asyncio
     async def test_provide_alternative_theory(self, watson_agent):
-        """Test de proposition de théorie alternative"""
-        primary_theory = {
-            "suspect": "Colonel Moutarde",
-            "weapon": "Couteau",
-            "location": "Bibliothèque",
-            "confidence": 0.7
-        }
+        """Teste la délégation de la création de théorie alternative."""
+        expected_result = {"theory": "Mme Leblanc a fait le coup"}
+        watson_agent.synthesis_engine.provide_alternative_theory.return_value = expected_result
         
-        available_evidence = ["couteau_biblio", "cheveu_salon", "temoin_couloir"]
+        result = await watson_agent.provide_alternative_theory("t1", {}, [])
         
-        result = await watson_agent.provide_alternative_theory("alt_theory_1", primary_theory, available_evidence)
+        watson_agent.synthesis_engine.provide_alternative_theory.assert_awaited_once_with("t1", {}, [])
+        assert result == expected_result
+
+    @pytest.mark.asyncio
+    async def test_critique_reasoning_chain(self, watson_agent):
+        """Teste la délégation de la critique de chaîne de raisonnement."""
+        expected_result = {"critique": "flawed"}
+        watson_agent.critique_engine.critique_reasoning_chain.return_value = expected_result
         
-        assert result is not None
-        assert "theory_id" in result
-        assert "alternative_suspect" in result or "alternative_weapon" in result or "alternative_location" in result
-        assert "supporting_evidence" in result
-        assert "plausibility_score" in result
-    
+        result = await watson_agent.critique_reasoning_chain("c1", [])
+        
+        watson_agent.critique_engine.critique_reasoning_chain.assert_awaited_once_with("c1", [])
+        assert result == expected_result
+
+    @pytest.mark.asyncio
+    async def test_challenge_assumption(self, watson_agent):
+        """Teste la délégation du défi d'une supposition."""
+        expected_result = {"challenge": "refuted"}
+        watson_agent.critique_engine.challenge_assumption.return_value = expected_result
+        
+        result = await watson_agent.challenge_assumption("a1", {})
+        
+        watson_agent.critique_engine.challenge_assumption.assert_awaited_once_with("a1", {})
+        assert result == expected_result
+
     @pytest.mark.asyncio
     async def test_identify_logical_fallacies(self, watson_agent):
-        """Test d'identification d'erreurs logiques"""
-        reasoning_text = """
-        Puisque le couteau était dans la bibliothèque, et que Colonel Moutarde était dans la bibliothèque,
-        alors Colonel Moutarde a forcément utilisé le couteau. De plus, tous les militaires sont violents,
-        donc Colonel Moutarde est nécessairement le meurtrier.
-        """
+        """Teste la délégation de l'identification de sophismes."""
+        expected_result = {"fallacies": ["hasty generalization"]}
+        watson_agent.critique_engine.identify_logical_fallacies.return_value = expected_result
         
-        result = await watson_agent.identify_logical_fallacies("reasoning_1", reasoning_text)
+        result = await watson_agent.identify_logical_fallacies("r1", "texte...")
         
-        assert result is not None
-        assert "fallacies_found" in result
-        assert "severity_scores" in result
-        assert "corrections_suggested" in result
-    
-    def test_get_validation_summary(self, watson_agent):
-        """Test de résumé de validation"""
-        # Simuler quelques validations
-        watson_agent.validator.validation_history["val_1"] = {
-            "hypothesis": "test_hyp",
-            "result": True,
-            "confidence": 0.8
-        }
-        
-        summary = watson_agent.validator.get_validation_summary()
-        
-        assert summary is not None
-        assert "total_validations" in summary
-        assert "validation_rate" in summary
-        assert "average_confidence" in summary
-        assert "recent_validations" in summary
-    
-    def test_export_critique_state(self, watson_agent):
-        """Test d'export d'état de critique"""
-        # Ajouter quelques éléments de test
-        watson_agent.critique_engine.critique_patterns["pattern_1"] = {
-            "type": "logical_gap",
-            "frequency": 3
-        }
-        
-        state = watson_agent.critique_engine.export_critique_state()
-        
-        assert state is not None
-        assert "agent_type" in state
-        assert state["engine_type"] == "critique_engine"
-        assert "critique_patterns" in state
-        assert "last_critique_timestamp" in state
+        watson_agent.critique_engine.identify_logical_fallacies.assert_awaited_once_with("r1", "texte...")
+        assert result == expected_result
 
-if __name__ == "__main__":
-    # Tests rapides
-    async def run_basic_watson_tests():
-        from unittest.mock import Mock
+    def test_export_critique_state(self, watson_agent):
+        """Teste la délégation de l'export de l'état de la critique."""
+        expected_result = {"state": "exported"}
+        watson_agent.critique_engine.export_critique_state.return_value = expected_result
         
-        mock_kernel = Mock(spec=Kernel)
-        agent = WatsonJTMSAgent(mock_kernel, "test_watson")
+        result = watson_agent.export_critique_state()
         
-        print("Test de validation d'hypothèse...")
-        agent.add_belief("test_hyp", {"type": "hypothesis"}, 0.7)
-        result = await agent.validate_hypothesis("test_hyp", {"content": "Test hypothesis"})
-        print(f"Résultat: {result}")
+        watson_agent.critique_engine.export_critique_state.assert_called_once()
+        assert result == expected_result
         
-        print("Test de critique de raisonnement...")
-        chain = [{"step": "test", "type": "evidence"}]
-        result2 = await agent.critique_reasoning_chain("test_chain", chain)
-        print(f"Résultat: {result2}")
+    def test_get_validation_summary(self, watson_agent):
+        """Teste la délégation de l'obtention du résumé de validation."""
+        # Test du fallback au cas où le validateur n'a pas la nouvelle méthode
+        del watson_agent.validator.get_validation_summary
+        watson_agent.validator.validation_cache = {"val1": {}}
         
-        print("✅ Tests Watson de base passent!")
-    
-    asyncio.run(run_basic_watson_tests())
+        summary = watson_agent.get_validation_summary()
+        assert summary["total_validations"] > 0
+        
+        # Test du chemin normal
+        watson_agent.validator.get_validation_summary = Mock(return_value={"summary": "ok"})
+        result = watson_agent.get_validation_summary()
+        
+        watson_agent.validator.get_validation_summary.assert_called_once()
+        assert result == {"summary": "ok"}
