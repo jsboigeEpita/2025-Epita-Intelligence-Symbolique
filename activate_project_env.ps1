@@ -44,7 +44,7 @@ try {
         # 2. --run-command: Exécuter la commande passée par PowerShell.
         # `$CommandToRun` doit être la fin de la ligne de commande car `nargs=REMAINDER`
         # dans le script Python consomme tout ce qui suit.
-        $PythonCommand = "python -m $PythonModule --setup-vars --run-command `"$CommandToRun`""
+        $PythonCommand = "python -m $PythonModule --setup-vars --run-command $CommandToRun"
         
         # Commande finale à exécuter dans l'environnement conda.
         $CondaCommand = "conda run --no-capture-output -n projet-is $PythonCommand"

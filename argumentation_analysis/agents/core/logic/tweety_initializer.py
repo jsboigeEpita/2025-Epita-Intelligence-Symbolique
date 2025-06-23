@@ -114,12 +114,18 @@ class TweetyInitializer:
                 # C'est souvent plus stable que d'utiliser addClassPath avant de démarrer.
                 from argumentation_analysis.utils.system_utils import get_project_root
                 project_root = get_project_root()
-                jar_path = project_root / "libs" / "tweety" / "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
+                # On charge maintenant le JAR 'full' ET le JAR 'commons' pour s'assurer que toutes les dépendances sont présentes.
+                tweety_libs_path = project_root / "libs" / "tweety"
+                full_jar_path = tweety_libs_path / "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
+                commons_jar_path = tweety_libs_path / "org.tweetyproject.logics.commons-1.28-with-dependencies.jar"
                 
+                classpath = [str(full_jar_path), str(commons_jar_path)]
+                logger.info(f"Using classpath: {classpath}")
+
                 jpype.startJVM(
                     default_jvm_path,
                     "-ea",
-                    classpath=[str(jar_path)],  # Passer explicitement le chemin du JAR
+                    classpath=classpath,  # Passer explicitement les chemins des JARs
                     convertStrings=False
                 )
                 TweetyInitializer._jvm_started = True
@@ -157,7 +163,8 @@ class TweetyInitializer:
             _ = jpype.JClass("org.tweetyproject.logics.commons.syntax.Sort")
             # --- AJOUT CRUCIAL POUR LE PARSING PROGRAMMATIQUE ---
             # Ces classes sont nécessaires pour construire les belief sets modal/fol manuellement.
-            _ = jpype.JClass("org.tweetyproject.logics.commons.syntax.Signature")
+            # Corrigé suite à l'analyse du JAR: la classe a été déplacée dans le package parent.
+            _ = jpype.JClass("org.tweetyproject.commons.Signature")
             _ = jpype.JClass("org.tweetyproject.logics.commons.syntax.Constant")
             # --- FIN DE L'AJOUT ---
             logger.info("Successfully imported TweetyProject Java classes.")

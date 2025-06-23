@@ -131,7 +131,7 @@ elseif ($Type -eq "e2e-python") {
         # Le pipe (redirection) doit être exécuté dans un sous-shell pour que le runner le comprenne.
         # On passe directement la commande python, le sous-shell est implicite à cause du pipe.
         $commandToRunPytest = "$pytestFinalCommand *>&1 | Tee-Object -FilePath `"$pytestLogFile`" -Append"
-        & $ActivationScript -CommandToRun "powershell -Command `"$commandToRunPytest`""
+        & $ActivationScript -CommandToRun $pytestFinalCommand *>&1 | Tee-Object -FilePath "$pytestLogFile" -Append
         $exitCode = $LASTEXITCODE
 
         if ($exitCode -ne 0) {
