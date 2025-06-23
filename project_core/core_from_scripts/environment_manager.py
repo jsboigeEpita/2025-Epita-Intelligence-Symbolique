@@ -1109,10 +1109,16 @@ def main():
         help="Construit la commande finale et l'affiche sur stdout sans l'exécuter."
     )
     
+    parser.add_argument(
+        '--output-command-file',
+        type=str,
+        help="Fichier où écrire la commande finale (au lieu de stdout)."
+    )
+
     args = parser.parse_args()
     
     log_file = "logs/environment_manager.log"
-    logger = Logger(verbose=True, log_file_path=log_file) # FORCER VERBOSE POUR DEBUG (ou utiliser args.verbose)
+    logger = Logger(verbose=args.verbose, log_file_path=log_file)
     logger.info("DEBUG: Début de main() dans auto_env.py (après parsing)")
     logger.info(f"DEBUG: Args parsés par argparse: {args}")
     
@@ -1225,15 +1231,27 @@ def main():
             logger.error("--get-command-only nécessite un --command.")
             safe_exit(1, logger)
         try:
-            # S'assurer que l'environnement est "activé" pour avoir les bons chemins
-            manager.activate_project_environment(env_name=env_name_for_check)
+            # S'assurer que les variables d'environnement sont à jour pour la session
+            load_dotenv(find_dotenv(), override=True)
+            manager._discover_and_persist_conda_path_in_env_file(manager.project_root, silent=True)
+            manager._update_system_path_from_conda_env_var(silent=True)
+
             final_cmd_list = manager.build_final_command(command_to_run_final, env_name=env_name_for_check)
             # Important: Échapper correctement pour PowerShell/Invoke-Expression
             import shlex
             # Ne pas utiliser shlex.quote ici, car Invoke-Expression gère les arguments.
             # On retourne la liste d'arguments comme une chaîne, c'est PowerShell qui reconstruira.
             final_cmd_str = ' '.join(final_cmd_list)
-            print(final_cmd_str) # Écrit la commande sur stdout
+            if args.output_command_file:
+                try:
+                    with open(args.output_command_file, 'w', encoding='utf-8') as f:
+                        f.write(final_cmd_str)
+                except IOError as e:
+                    logger.error(f"Impossible d'écrire la commande dans le fichier {args.output_command_file}: {e}")
+                    safe_exit(1, logger)
+            else:
+                print(final_cmd_str) # Écrit la commande sur stdout pour compatibilité
+            
             safe_exit(0, logger)
         except Exception as e:
             logger.error(f"Erreur lors de la construction de la commande : {e}")
@@ -1254,4 +1272,14 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        # Catch-all pour s'assurer que toute exception non gérée est loggée avant de quitter.
+        import traceback
+        import sys
+        # Recréer un logger au cas où l'initialisation aurait échoué.
+        logger = Logger(verbose=True)
+        logger.critical(f"Exception non gérée interceptée au plus haut niveau : {e}")
+        logger.critical(traceback.format_exc())
+        sys.exit(99) # Quitter avec un code unique pour l'identification

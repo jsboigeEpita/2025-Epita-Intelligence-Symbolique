@@ -617,9 +617,6 @@ def main():
     parser.add_argument('--integration', action='store_true', default=True,
                        help='Test d\'intégration complet (défaut)')
     
-    parser.add_argument('--no-playwright', action='store_true',
-                       help='Désactive l\'exécution des tests Playwright')
-    
     args = parser.parse_args()
     
     # Override headless si --visible
@@ -646,15 +643,22 @@ def main():
                     return False
 
             elif args.test:
-                # Test d'intégration qui encapsule le démarrage, l'exécution et l'arrêt
+                # Exécute seulement les tests : démarre l'app, teste, arrête l'app.
                 success = False
-                try:
-                    # DEBUG: Forcer l'exécution d'un seul test pour isoler le problème de blocage.
-                    isolated_test_path = ['tests/e2e/python/test_validation_form.py']
-                    orchestrator.logger.warning(f"DEBUGGING: Exécution d'un test isolé: {isolated_test_path}")
+                
+                # Les chemins de test sont soit passés en argument, soit lus depuis la config
+                tests_to_run = args.tests or orchestrator.config.get('playwright', {}).get('test_paths')
+                if not tests_to_run:
+                    orchestrator.logger.error("Aucun chemin de test à exécuter. Spécifiez via --tests ou dans la config.")
+                    return False
                     
-                    # On utilise le test isolé si aucun autre n'est spécifié via la ligne de commande
-                    tests_to_run = args.tests or isolated_test_path
+                try:
+                    # Le frontend est généralement requis pour les tests E2E.
+                    frontend_enabled = args.frontend or True
+                    if not await orchestrator.start_webapp(headless, frontend_enabled):
+                        orchestrator.logger.error("Impossible de démarrer l'application pour les tests.")
+                        return False
+                    
                     success = await orchestrator.run_tests(tests_to_run)
                 finally:
                     # Arrêt systématique de l'application
