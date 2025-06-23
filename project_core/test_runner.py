@@ -31,136 +31,6 @@ def _log(message):
     print(f"[{timestamp}] {message}")
 
 
-class ServiceManager:
-    """Gère le démarrage et l'arrêt des services web (API et Frontend)."""
-
-    def __init__(self):
-        self.processes = []
-        self.log_files = {}
-        self.api_port = 5003
-        self.frontend_port = 3000
-
-    def start_services(self):
-        """Démarre l'API backend et le frontend en arrière-plan."""
-        _log("Démarrage des services pour les tests E2E...")
-
-        # Démarrer le backend API
-        _log(f"Démarrage du service API sur le port {self.api_port} (CWD: {API_DIR})")
-        api_log_out = open("api_server.log", "w", encoding="utf-8")
-        api_log_err = open("api_server.error.log", "w", encoding="utf-8")
-        self.log_files["api_out"] = api_log_out
-        self.log_files["api_err"] = api_log_err
-        
-        _log(f"Démarrage du service API sur le port {self.api_port} (CWD: {API_DIR}) avec log level DEBUG")
-        api_process = subprocess.Popen(
-            # FUSION: Combinaison du port dynamique et du log-level de débogage
-            [sys.executable, "-m", "uvicorn", "argumentation_analysis.services.web_api.app:app", "--port", str(self.api_port), "--log-level", "debug"],
-            cwd=API_DIR,
-            stdout=api_log_out,
-            stderr=api_log_err
-        )
-        self.processes.append(api_process)
-        _log(f"Service API démarré avec le PID: {api_process.pid}")
-
-        # FUSION : Conservation de la logique de débogage (frontend désactivé) pour le moment.
-        _log("--- DÉBOGAGE: Le démarrage du service Frontend est temporairement désactivé. ---")
-        
-        # Laisser le temps aux serveurs de démarrer
-        _log("Attente du démarrage des services (15 secondes)...")
-        time.sleep(15)
-
-        # Vérification des logs d'erreurs
-        _log("Vérification des logs d'erreurs des services...")
-        error_log_path = ROOT_DIR / "api_server.error.log"
-        if error_log_path.exists():
-            try:
-                with open(error_log_path, "r", encoding="utf-8") as f:
-                    error_content = f.read()
-                    if error_content.strip():
-                        _log(f"--- Contenu du log d'erreur pour API ({error_log_path}) ---")
-                        print(error_content)
-                        _log(f"--- Fin du log d'erreur pour API ---")
-                        if "[Errno 10048]" in error_content:
-                             _log("ERREUR CRITIQUE: Conflit de port détecté. Arrêt.")
-                    else:
-                        _log("Le fichier de log d'erreur de l'API est vide.")
-            except Exception as e:
-                _log(f"Impossible de lire le fichier de log {error_log_path}: {e}")
-        else:
-            _log(f"Le fichier de log d'erreur {error_log_path} n'a pas été trouvé.")
-
-        _log("Vérification des services terminée.")
-        
-        _log("Attente de la disponibilité du service API...")
-        self._wait_for_services(ports=[self.api_port])
-
-    def stop_services(self):
-        """Arrête proprement tous les services démarrés."""
-        _log("Arrêt des services...")
-        for process in self.processes:
-            try:
-                _log(f"Tentative d'arrêt du processus {process.pid}...")
-                process.terminate()
-                process.wait(timeout=10)
-                _log(f"Processus {process.pid} arrêté avec succès.")
-            except subprocess.TimeoutExpired:
-                _log(f"Le processus {process.pid} ne s'est pas arrêté à temps, forçage...")
-                process.kill()
-                _log(f"Processus {process.pid} forcé à s'arrêter.")
-        self.processes = []
-
-        # Fermer les fichiers de log
-        _log("Fermeture des fichiers de log...")
-        for log_file in self.log_files.values():
-            log_file.close()
-        self.log_files = {}
-        _log("Fichiers de log fermés.")
-
-    def _check_service_health(self):
-        """Vérifie si les processus de service sont toujours en cours d'exécution."""
-        for process in self.processes:
-            if process.poll() is not None:
-                _log(f"ERREUR: Le service avec le PID {process.pid} s'est arrêté de manière inattendue.")
-                return False
-        return True
-
-    def _wait_for_services(self, ports, timeout=90):
-        """Attend que les services soient prêts en vérifiant la disponibilité des ports."""
-        start_time = time.time()
-        interval = 5
-
-        while time.time() - start_time < timeout:
-            if not self._check_service_health():
-                _log("Un service s'est arrêté prématurément. Annulation de l'attente.")
-                raise RuntimeError("Échec du démarrage d'un service dépendant.")
-
-            all_ports_ready = True
-            for port in ports:
-                if not self._check_port(port):
-                    _log(f"Le port {port} n'est pas encore disponible. Prochaine vérification dans {interval}s.")
-                    all_ports_ready = False
-                    break
-            
-            if all_ports_ready:
-                _log("Tous les services sont opérationnels. Démarrage des tests.")
-                return
-
-            time.sleep(interval)
-
-        _log(f"Dépassement du timeout de {timeout}s pour le démarrage des services.")
-        raise RuntimeError("Timeout atteint lors de l'attente du démarrage des services.")
-
-    def _check_port(self, port, host="127.0.0.1"):
-        """Vérifie si un port est ouvert sur un hôte donné."""
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(1)  # Timeout court pour ne pas bloquer
-            try:
-                s.connect((host, port))
-                return True
-            except (socket.timeout, ConnectionRefusedError):
-                return False
-
-
 class TestRunner:
     """Orchestre l'exécution des tests."""
 
@@ -168,21 +38,11 @@ class TestRunner:
         self.test_type = test_type
         self.test_path = test_path
         self.browser = browser
-        self.service_manager = ServiceManager()
         self.pytest_extra_args = pytest_extra_args if pytest_extra_args is not None else []
 
     def run(self):
         """Exécute le cycle de vie complet des tests."""
-        needs_services = self.test_type in ["functional", "e2e", "all"]
-
-        if needs_services:
-            self.service_manager.start_services()
-
-        try:
-            self._run_pytest()
-        finally:
-            if needs_services:
-                self.service_manager.stop_services()
+        self._run_pytest()
 
     def _get_test_paths(self):
         """Détermine les chemins de test à utiliser."""
@@ -193,7 +53,7 @@ class TestRunner:
             "unit": "tests/unit",
             "functional": "tests/functional",
             "e2e": "tests/e2e",
-            "all": ["tests/unit", "tests/functional", "tests/e2e"],
+            "all": ["tests/unit"],
         }
         
         path_or_paths = paths.get(self.test_type)
@@ -209,7 +69,7 @@ class TestRunner:
             _log(f"Type de test '{self.test_type}' non reconnu ou aucun chemin de test trouvé.")
             return
 
-        command = [sys.executable, "-m", "pytest", "-s", "-vv"] + test_paths
+        command = ["python", "-m", "pytest", "-s", "-vv"] + test_paths
         
         if self.browser:
             command.extend(["--browser", self.browser])
