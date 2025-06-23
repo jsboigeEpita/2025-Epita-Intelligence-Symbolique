@@ -61,7 +61,7 @@ def ensure_env(env_name: str = None, silent: bool = True) -> bool:
             if dotenv_path:
                 load_dotenv(dotenv_path)
             # Récupérer le nom de l'environnement, avec 'projet-is' comme fallback
-            env_name = os.environ.get('CONDA_ENV_NAME', 'epita_symbolic_ai')
+            env_name = os.environ.get('CONDA_ENV_NAME', 'projet-is')
         except ImportError:
             env_name = 'projet-is' # Fallback si dotenv n'est pas installé
     # DEBUG: Imprimer l'état initial

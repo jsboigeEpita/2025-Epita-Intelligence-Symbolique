@@ -219,7 +219,7 @@ finally {
     # Assurer le déverrouillage systématique du port
     Write-Log "Nettoyage du verrouillage de port (finally)..." "INFO"
     try {
-        & $PythonExecutable $portManagerScript --unlock
+        & $PythonExecutable $portManagerScript --unlock *> $null
         Write-Log "Verrouillage de port nettoyé." "SUCCESS"
     } catch {
         Write-Log "Avertissement: Échec du nettoyage du verrouillage de port. Un nettoyage manuel peut être requis." "WARNING"

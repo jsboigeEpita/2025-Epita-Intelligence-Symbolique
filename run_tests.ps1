@@ -39,7 +39,9 @@ param(
     [ValidateSet("chromium", "firefox", "webkit")]
     [string]$Browser,
 
-    [switch]$DebugMode
+    [switch]$DebugMode,
+
+    [string]$PytestArgs
 )
 
 # --- Script Body ---
@@ -62,11 +64,16 @@ $runnerArgs = @(
     $TestRunnerScript,
     "--type", $Type
 )
-if ($PSBoundParameters.ContainsKey('Path')) {
+if ($PSBoundParameters.ContainsKey('Path') -and -not [string]::IsNullOrEmpty($Path)) {
     $runnerArgs += "--path", $Path
 }
 if ($PSBoundParameters.ContainsKey('Browser')) {
     $runnerArgs += "--browser", $Browser
+}
+if (-not [string]::IsNullOrEmpty($PytestArgs)) {
+    # On doit splitter la chaine pour obtenir les arguments individuels
+    $pytestArgsArray = $PytestArgs.Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)
+    $runnerArgs += $pytestArgsArray
 }
 
 $CommandToRun = "python $($runnerArgs -join ' ')"
