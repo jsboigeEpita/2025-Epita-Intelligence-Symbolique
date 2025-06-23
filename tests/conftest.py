@@ -32,6 +32,14 @@ except ImportError:
     pass
 
 import pytest
+from unittest.mock import patch
+
+@pytest.fixture(scope='session', autouse=True)
+def mock_openai_api_key():
+    """Ensure OpenAI API key is mocked for all test sessions."""
+    with patch.dict('os.environ', {'OPENAI_API_KEY': 'mock_api_key_for_testing'}):
+        yield
+import pytest
 import os
 import sys
 import sys
