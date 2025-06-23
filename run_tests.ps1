@@ -162,7 +162,7 @@ else {
     }
 
     # Construire la liste d'arguments pour le test_runner.py
-    $runnerArgs = @( "python", $TestRunnerScript, "--type", $Type )
+    $runnerArgs = @( "python", "`"$TestRunnerScript`"", "--type", $Type )
     if ($PSBoundParameters.ContainsKey('Path') -and -not [string]::IsNullOrEmpty($Path)) {
         $runnerArgs += "--path", $Path
     }

@@ -82,6 +82,11 @@ class CryptoWorkflowManager:
             processing_time=0.0
         )
         
+        if not corpus_files:
+            self.logger.info("La liste des fichiers de corpus est vide, aucune action requise.")
+            result.processing_time = time.time() - start_time
+            return result
+
         try:
             encryption_key = self.derive_encryption_key()
             self.logger.info(f"🔓 Déchiffrement de {len(corpus_files)} fichiers de corpus")
@@ -121,12 +126,20 @@ class CryptoWorkflowManager:
                         result.errors.append(error_msg)
                         self.logger.error(error_msg)
                         
+                except ImportError as ie:
+                    error_msg = f"Modules de déchiffrement non disponibles: {ie}"
+                    result.errors.append(error_msg)
+                    self.logger.error(error_msg)
+                    result.success = False # En cas d'erreur d'import, l'opération globale échoue
                 except Exception as e:
                     error_msg = f"Erreur traitement {corpus_path}: {e}"
                     result.errors.append(error_msg)
                     self.logger.error(error_msg)
-            
-            result.success = len(result.loaded_files) > 0
+
+            if not result.errors:
+                 result.success = True
+            else:
+                 result.success = len(result.loaded_files) > 0 and not any("non disponibles" in err for err in result.errors)
             result.processing_time = time.time() - start_time
             
             self.logger.info(f"🎯 Déchiffrement terminé: {len(result.loaded_files)} fichiers, {result.total_definitions} définitions")

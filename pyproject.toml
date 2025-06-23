@@ -8,6 +8,9 @@ testpaths = [
     "tests",
     "argumentation_analysis",
 ]
+dotenv_files = [
+    ".env"
+]
 markers = [
     "authentic",
     "phase5",

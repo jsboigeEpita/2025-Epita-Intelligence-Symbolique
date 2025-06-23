@@ -31,14 +31,23 @@ def sherlock_agent(mock_kernel):
     agent = SherlockJTMSAgent(mock_kernel, "sherlock_test")
     # Mock de la réponse de l'agent de base pour contrôler les descriptions
     async def side_effect(*args, **kwargs):
-        if "Contexte initial" in args[0]:
+        input_str = ""
+        # Gérer les différents types d'input du kernel
+        if args:
+            input_val = args[0]
+            if isinstance(input_val, str):
+                input_str = input_val
+            elif hasattr(input_val, 'value'): # Compatible avec InputValue
+                 input_str = str(input_val.value)
+        
+        if "Contexte initial" in input_str:
             return "Hypothèse: Le suspect est un homme grand."
-        if "Témoin a vu" in args[0]:
+        if "Témoin a vu" in input_str:
             return "Évidence: Un homme grand a été vu."
         return "Réponse par défaut du mock."
-    
+
     agent.validate_hypothesis_against_evidence = AsyncMock(return_value={"validation_result": "supports", "updated_strength": {"strength_score": 0.9}})
-    agent._base_sherlock.process_message = AsyncMock(side_effect=side_effect)
+    agent._base_sherlock.invoke = AsyncMock(side_effect=side_effect)
     return agent
 
 class TestSherlockJTMSAgent:

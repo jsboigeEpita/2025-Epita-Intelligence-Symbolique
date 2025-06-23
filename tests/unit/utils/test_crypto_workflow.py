@@ -140,13 +140,14 @@ class TestCryptoWorkflowManager:
     @pytest.mark.asyncio
     async def test_load_encrypted_corpus_import_error(self):
         """Test avec modules de déchiffrement non disponibles."""
-        with patch('argumentation_analysis.utils.crypto_workflow.load_extract_definitions', side_effect=ImportError("Module not found")):
-            manager = CryptoWorkflowManager("test_key")
-            result = await manager.load_encrypted_corpus(["dummy.enc"])
-            
-            assert not result.success
-            assert len(result.errors) > 0
-            assert "non disponibles" in result.errors[0]
+        with tempfile.NamedTemporaryFile(suffix=".enc", delete=True) as tmp_file:
+            with patch('argumentation_analysis.utils.crypto_workflow.load_extract_definitions', side_effect=ImportError("Module not found")):
+                manager = CryptoWorkflowManager("test_key")
+                result = await manager.load_encrypted_corpus([tmp_file.name])
+                
+                assert not result.success
+                assert len(result.errors) > 0
+                assert "non disponibles" in result.errors[0]
     
     def test_validate_corpus_integrity_empty(self):
         """Test validation avec corpus vide."""
