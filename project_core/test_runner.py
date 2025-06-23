@@ -14,6 +14,7 @@ Utilisation :
 
 import argparse
 import subprocess
+import socket
 import sys
 import time
 from datetime import datetime
@@ -36,23 +37,24 @@ class ServiceManager:
     def __init__(self):
         self.processes = []
         self.log_files = {}
+        self.api_port = 5003
+        self.frontend_port = 3000
 
     def start_services(self):
-        """Démarre l'API backend et le frontend React en arrière-plan."""
+        """Démarre l'API backend et le frontend en arrière-plan."""
         _log("Démarrage des services pour les tests E2E...")
 
-        # Démarrer le backend API (Uvicorn sur le port 5003)
-        _log(f"Démarrage du service API sur le port 5003 (CWD: {API_DIR})")
+        # Démarrer le backend API
+        _log(f"Démarrage du service API sur le port {self.api_port} (CWD: {API_DIR})")
         api_log_out = open("api_server.log", "w", encoding="utf-8")
         api_log_err = open("api_server.error.log", "w", encoding="utf-8")
         self.log_files["api_out"] = api_log_out
         self.log_files["api_err"] = api_log_err
         
-        # AJOUT: Augmentation du niveau de log pour le débogage
-        _log(f"Démarrage du service API sur le port 5003 (CWD: {API_DIR}) avec log level DEBUG")
+        _log(f"Démarrage du service API sur le port {self.api_port} (CWD: {API_DIR}) avec log level DEBUG")
         api_process = subprocess.Popen(
-            # MODIFICATION: Ajout de --log-level debug
-            [sys.executable, "-m", "uvicorn", "argumentation_analysis.services.web_api.app:app", "--port", "5003", "--log-level", "debug"],
+            # FUSION: Combinaison du port dynamique et du log-level de débogage
+            [sys.executable, "-m", "uvicorn", "argumentation_analysis.services.web_api.app:app", "--port", str(self.api_port), "--log-level", "debug"],
             cwd=API_DIR,
             stdout=api_log_out,
             stderr=api_log_err
@@ -60,47 +62,37 @@ class ServiceManager:
         self.processes.append(api_process)
         _log(f"Service API démarré avec le PID: {api_process.pid}")
 
-        # MODIFICATION: Démarrage du frontend désactivé pour isoler l'API
+        # FUSION : Conservation de la logique de débogage (frontend désactivé) pour le moment.
         _log("--- DÉBOGAGE: Le démarrage du service Frontend est temporairement désactivé. ---")
-        # _log(f"Démarrage du service Frontend (Starlette) sur le port 3000 (CWD: {ROOT_DIR})")
-        # frontend_log_out = open("frontend_server.log", "w", encoding="utf-8")
-        # frontend_log_err = open("frontend_server.error.log", "w", encoding="utf-8")
-        # self.log_files["frontend_out"] = frontend_log_out
-        # self.log_files["frontend_err"] = frontend_log_err
         
-        # frontend_process = subprocess.Popen(
-        #     [sys.executable, str(FRONTEND_DIR / "app.py"), "--port", "3000"],
-        #     cwd=ROOT_DIR,
-        #     stdout=frontend_log_out,
-        #     stderr=frontend_log_err
-        # )
-        # self.processes.append(frontend_process)
-        # _log(f"Service Frontend démarré avec le PID: {frontend_process.pid}")
-
         # Laisser le temps aux serveurs de démarrer
-        _log("Attente du démarrage des services (60 secondes)...")
-        time.sleep(15) # Réduction du temps d'attente pour accélérer le feedback
+        _log("Attente du démarrage des services (15 secondes)...")
+        time.sleep(15)
 
-        # AJOUT : Vérification des logs d'erreurs
+        # Vérification des logs d'erreurs
         _log("Vérification des logs d'erreurs des services...")
-        for name, log_path in [("API", "api_server.error.log"), ("Frontend", "frontend_server.error.log")]:
-            error_log_full_path = ROOT_DIR / log_path
-            if not error_log_full_path.exists():
-                _log(f"Le fichier de log d'erreur {error_log_full_path} n'a pas été trouvé.")
-                continue
+        error_log_path = ROOT_DIR / "api_server.error.log"
+        if error_log_path.exists():
             try:
-                with open(error_log_full_path, "r", encoding="utf-8") as f:
+                with open(error_log_path, "r", encoding="utf-8") as f:
                     error_content = f.read()
                     if error_content.strip():
-                        _log(f"--- Contenu du log d'erreur pour {name} ({error_log_full_path}) ---")
+                        _log(f"--- Contenu du log d'erreur pour API ({error_log_path}) ---")
                         print(error_content)
-                        _log(f"--- Fin du log d'erreur pour {name} ---")
+                        _log(f"--- Fin du log d'erreur pour API ---")
+                        if "[Errno 10048]" in error_content:
+                             _log("ERREUR CRITIQUE: Conflit de port détecté. Arrêt.")
                     else:
-                        _log(f"Le fichier de log d'erreur pour {name} est vide.")
+                        _log("Le fichier de log d'erreur de l'API est vide.")
             except Exception as e:
-                _log(f"Impossible de lire le fichier de log {error_log_full_path}: {e}")
+                _log(f"Impossible de lire le fichier de log {error_log_path}: {e}")
+        else:
+            _log(f"Le fichier de log d'erreur {error_log_path} n'a pas été trouvé.")
 
-        _log("Services probablement démarrés.")
+        _log("Vérification des services terminée.")
+        
+        _log("Attente de la disponibilité du service API...")
+        self._wait_for_services(ports=[self.api_port])
 
     def stop_services(self):
         """Arrête proprement tous les services démarrés."""
@@ -124,15 +116,60 @@ class ServiceManager:
         self.log_files = {}
         _log("Fichiers de log fermés.")
 
+    def _check_service_health(self):
+        """Vérifie si les processus de service sont toujours en cours d'exécution."""
+        for process in self.processes:
+            if process.poll() is not None:
+                _log(f"ERREUR: Le service avec le PID {process.pid} s'est arrêté de manière inattendue.")
+                return False
+        return True
+
+    def _wait_for_services(self, ports, timeout=90):
+        """Attend que les services soient prêts en vérifiant la disponibilité des ports."""
+        start_time = time.time()
+        interval = 5
+
+        while time.time() - start_time < timeout:
+            if not self._check_service_health():
+                _log("Un service s'est arrêté prématurément. Annulation de l'attente.")
+                raise RuntimeError("Échec du démarrage d'un service dépendant.")
+
+            all_ports_ready = True
+            for port in ports:
+                if not self._check_port(port):
+                    _log(f"Le port {port} n'est pas encore disponible. Prochaine vérification dans {interval}s.")
+                    all_ports_ready = False
+                    break
+            
+            if all_ports_ready:
+                _log("Tous les services sont opérationnels. Démarrage des tests.")
+                return
+
+            time.sleep(interval)
+
+        _log(f"Dépassement du timeout de {timeout}s pour le démarrage des services.")
+        raise RuntimeError("Timeout atteint lors de l'attente du démarrage des services.")
+
+    def _check_port(self, port, host="127.0.0.1"):
+        """Vérifie si un port est ouvert sur un hôte donné."""
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(1)  # Timeout court pour ne pas bloquer
+            try:
+                s.connect((host, port))
+                return True
+            except (socket.timeout, ConnectionRefusedError):
+                return False
+
 
 class TestRunner:
     """Orchestre l'exécution des tests."""
 
-    def __init__(self, test_type, test_path, browser):
+    def __init__(self, test_type, test_path, browser, pytest_extra_args=None):
         self.test_type = test_type
         self.test_path = test_path
         self.browser = browser
         self.service_manager = ServiceManager()
+        self.pytest_extra_args = pytest_extra_args if pytest_extra_args is not None else []
 
     def run(self):
         """Exécute le cycle de vie complet des tests."""
@@ -172,37 +209,23 @@ class TestRunner:
             _log(f"Type de test '{self.test_type}' non reconnu ou aucun chemin de test trouvé.")
             return
 
-        # Ajout de -v pour un output plus verbeux
-        command = [sys.executable, "-m", "pytest", "-s", "-v"] + test_paths
+        command = [sys.executable, "-m", "pytest", "-s", "-vv"] + test_paths
         
         if self.browser:
             command.extend(["--browser", self.browser])
+
+        if self.pytest_extra_args:
+            command.extend(self.pytest_extra_args)
         
         _log(f"Lancement de pytest avec la commande: {' '.join(command)}")
         _log(f"Répertoire de travail: {ROOT_DIR}")
 
-        process = subprocess.Popen(
+        process = subprocess.run(
             command,
             cwd=ROOT_DIR,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
             text=True,
             encoding='utf-8'
         )
-
-        # Lire et afficher la sortie en temps réel
-        while True:
-            output = process.stdout.readline()
-            if output == '' and process.poll() is not None:
-                break
-            if output:
-                print(output.strip())
-        
-        # Gérer les erreurs
-        stderr_output = process.stderr.read()
-        if stderr_output:
-            _log("Erreurs de pytest (stderr):")
-            print(stderr_output.strip())
 
         if process.returncode != 0:
             _log(f"Pytest a terminé avec le code d'erreur {process.returncode}.")
@@ -229,9 +252,9 @@ def main():
         choices=["chromium", "firefox", "webkit"],
         help="Navigateur pour les tests Playwright (optionnel)."
     )
-    args = parser.parse_args()
-
-    runner = TestRunner(args.type, args.path, args.browser)
+    args, unknown_args = parser.parse_known_args()
+ 
+    runner = TestRunner(args.type, args.path, args.browser, pytest_extra_args=unknown_args)
     runner.run()
 
 
