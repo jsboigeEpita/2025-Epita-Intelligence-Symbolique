@@ -68,7 +68,16 @@ class JTMSWebValidator:
         self.logger.info("=" * 60)
         
         # Configuration de l'orchestrateur
-        self.orchestrator = UnifiedWebOrchestrator()
+        # Fournir un mock pour `args`
+        mock_args = argparse.Namespace(
+            config='argumentation_analysis/webapp/config/webapp_config.yml',
+            log_level='INFO',
+            headless=self.headless,
+            visible=not self.headless,
+            timeout=20,
+            no_trace=False
+        )
+        self.orchestrator = UnifiedWebOrchestrator(args=mock_args)
         self.orchestrator.headless = self.headless
         
         try:
