@@ -65,15 +65,33 @@ def integration_jvm(request):
     """
     logger.info("--- DEBUT FIXTURE 'integration_jvm' ---")
 
+    # Condition 0: Test E2E avec serveur externe.
+    # Si BACKEND_URL est défini, cela signifie que l'orchestrateur a déjà démarré
+    # le backend, et donc potentiellement la JVM. La fixture ne doit RIEN faire
+    # et simplement passer le contrôle, en supposant que l'environnement est correct.
+    if os.environ.get("BACKEND_URL"):
+        logger.info("Variable d'environnement BACKEND_URL détectée. Fixture 'integration_jvm' saute l'initialisation.")
+        logger.info("Hypothèse: la JVM est gérée par le processus serveur externe.")
+        # On vérifie quand même si la JVM est active dans CE processus. Si ce n'est pas le cas,
+        # le bootstrap du module testé devrait l'initialiser.
+        if not jpype.isJVMStarted():
+            logger.warning("La JVM n'est PAS démarrée dans le processus de test, même en mode E2E. Initialisation en cours...")
+            # On continue vers le bloc d'initialisation normal.
+        else:
+            logger.info("La JVM est déjà démarrée dans le processus de test. On la réutilise.")
+            yield jpype
+            logger.info("--- FIN FIXTURE 'integration_jvm' (E2E, instance réutilisée) ---")
+            return
+
+
     # Condition 1: Le vrai module JPype n'est pas disponible.
     if not hasattr(jpype, 'isJVMStarted') or isinstance(jpype, MagicMock):
         logger.warning("Le vrai module JPype n'est pas disponible. SKIP.")
         pytest.skip("Le vrai module JPype n'est pas disponible.")
 
-    # Condition 2: La JVM est DÉJÀ démarrée par un autre composant.
-    # On l'utilise telle quelle et on ne la gère pas (ni démarrage, ni arrêt).
+    # Condition 2: La JVM est DÉJÀ démarrée par un autre composant (contexte non-E2E).
     if jpype.isJVMStarted():
-        logger.info("La JVM est déjà démarrée. Réutilisation de l'instance existante pour cette session.")
+        logger.info("La JVM est déjà démarrée (contexte non-E2E). Réutilisation de l'instance existante.")
         yield jpype
         logger.info("--- FIN FIXTURE 'integration_jvm' (instance réutilisée) ---")
         return
@@ -103,9 +121,10 @@ def integration_jvm(request):
     try:
         # *** BLOC CRITIQUE ***
         # L'appel est maintenant corrigé pour passer le classpath construit explicitement.
-        logger.info("APPEL imminent à initialize_jvm avec classpath explicite...")
+        logger.info("FIXTURE: APPEL IMMINENT à initialize_jvm...")
+        logger.info(f"FIXTURE: Classpath passé: {classpath_str[:200]}...") # Log tronqué pour la lisibilité
         success = initialize_jvm(classpath=classpath_str)
-        logger.info("RETOUR de initialize_jvm. Si le crash n'a pas eu lieu, le classpath a été accepté.")
+        logger.info("FIXTURE: RETOUR de initialize_jvm. Le blocage n'a pas eu lieu dans la fixture.")
         if not success:
             pytest.fail("La fonction initialize_jvm() a renvoyé False, échec du démarrage de la JVM.")
     except Exception as e:
@@ -424,63 +443,50 @@ import asyncio
 from argumentation_analysis.webapp.orchestrator import UnifiedWebOrchestrator
 import argparse
 
-@pytest.fixture(scope="session")
-def e2e_servers(request):
+@pytest.fixture(scope="session", autouse=True)
+def webapp_service(request):
     """
-    Fixture à portée session qui démarre les serveurs backend et frontend
-    pour les tests End-to-End.
+    Fixture E2E qui NE démarre PAS les serveurs, mais récupère leurs URLs
+    depuis les options de la ligne de commande fournies par l'orchestrateur principal.
+    Ceci évite le conflit de double démarrage.
     """
-    logger.info("--- DEBUT FIXTURE 'e2e_servers' (démarrage des serveurs E2E) ---")
+    logger.info("--- DEBUT FIXTURE 'webapp_service' (récupération des URLs E2E) ---")
 
-    # Crée un Namespace d'arguments simple pour l'orchestrateur
-    # On force les valeurs nécessaires pour un scénario de test E2E.
-    args = argparse.Namespace(
-        config='argumentation_analysis/webapp/config/webapp_config.yml',
-        headless=True,
-        visible=False,
-        frontend=True,  # Crucial pour les tests E2E
-        tests=None,
-        timeout=5, # Timeout plus court pour le démarrage en test
-        log_level='DEBUG',
-        no_trace=True, # Pas besoin de trace MD pour les tests automatisés
-        no_playwright=True, # On ne veut pas que l'orchestrateur lance les tests, seulement les serveurs
-        exit_after_start=False,
-        start=True, # Simule l'option de démarrage
-        stop=False,
-        test=False,
-        integration=False,
+    # Vérifier si la fixture est désactivée explicitement (garde la porte ouverte)
+    if request.config.getoption("--disable-e2e-servers-fixture"):
+        pytest.skip("Fixture webapp_service désactivée via la ligne de commande.")
+
+    # Récupérer les URLs depuis les options pytest
+    backend_url = request.config.getoption("--backend-url")
+    frontend_url = request.config.getoption("--frontend-url")
+
+    # Valider que les URLs sont bien présentes, sinon les tests E2E n'ont pas de sens.
+    if not backend_url or not frontend_url:
+        pytest.fail(
+            "Les options --backend-url et --frontend-url sont requises pour les tests E2E. "
+            "Assurez-vous que le script de lancement (playwright_runner.py) les fournit.",
+            pytrace=False
+        )
+
+    logger.info(f"URL Backend récupérée: {backend_url}")
+    logger.info(f"URL Frontend récupérée: {frontend_url}")
+
+    # Créer un objet factice ressemblant à la structure de l'orchestrateur
+    # pour assurer la compatibilité avec les tests existants.
+    # On imite la structure orchestrator.app_info.backend_url etc.
+    app_info_mock = argparse.Namespace(
+        backend_url=backend_url,
+        frontend_url=frontend_url,
+        backend_pid=None, # PID non pertinent car géré par le processus parent
+        frontend_pid=None
+    )
+    
+    orchestrator_mock = argparse.Namespace(
+        app_info=app_info_mock,
+        config=None # La config n'est probablement pas utilisée dans les tests
     )
 
-    orchestrator = UnifiedWebOrchestrator(args)
-    # On force l'activation du frontend dans la configuration en mémoire de l'orchestrateur
-    # pour ce test E2E. C'est plus propre que de modifier le fichier de config.
-    orchestrator.config['frontend']['enabled'] = True
-    logger.info("Configuration de l'orchestrateur modifiée en mémoire pour forcer l'activation du frontend.")
-
-    # Le scope "session" de pytest s'exécute en dehors de la boucle d'événement
-    # d'un test individuel. On doit gérer la boucle manuellement ici.
-    loop = asyncio.get_event_loop_policy().get_event_loop()
-    if loop.is_running():
-        # Si la boucle tourne (rare en scope session), on ne peut pas utiliser run_until_complete
-        # C'est un scénario complexe, on skippe pour l'instant.
-        pytest.skip("Impossible de démarrer les serveurs E2E dans une boucle asyncio déjà active.")
-
-    # L'argument frontend_enabled n'est plus nécessaire car on a modifié la config
-    success = loop.run_until_complete(orchestrator.start_webapp(headless=True))
-
-    # Vérification que le backend est bien démarré, car c'est bloquant.
-    if not orchestrator.app_info.backend_pid:
-        logger.error("Le backend n'a pas pu démarrer. Arrêt de la fixture.")
-        loop.run_until_complete(orchestrator.stop_webapp())
-        pytest.fail("Echec du démarrage du serveur backend pour les tests E2E.", pytrace=False)
-
-    def finalizer():
-        logger.info("--- FIN FIXTURE 'e2e_servers' (arrêt des serveurs E2E) ---")
-        # S'assurer que la boucle est disponible pour le nettoyage
-        cleanup_loop = asyncio.get_event_loop_policy().get_event_loop()
-        cleanup_loop.run_until_complete(orchestrator.stop_webapp())
-
-    request.addfinalizer(finalizer)
-
-    # Fournir l'orchestrateur aux tests s'ils en ont besoin
-    yield orchestrator
+    # Le yield fournit l'objet aux tests. Pas de finalizer car rien n'est démarré ici.
+    yield orchestrator_mock
+    
+    logger.info("--- FIN FIXTURE 'webapp_service' ---")

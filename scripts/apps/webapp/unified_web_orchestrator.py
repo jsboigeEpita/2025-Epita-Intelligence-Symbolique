@@ -43,8 +43,6 @@ if str(project_root) not in sys.path:
 from scripts.apps.webapp.backend_manager import BackendManager
 from scripts.apps.webapp.frontend_manager import FrontendManager
 from scripts.apps.webapp.playwright_runner import PlaywrightRunner
-from scripts.apps.webapp.process_cleaner import ProcessCleaner
-
 # Import du gestionnaire centralisé des ports
 try:
     from project_core.config.port_manager import PortManager, get_port_manager, set_environment_variables
@@ -102,9 +100,8 @@ class UnifiedWebOrchestrator:
         self.logger = self._setup_logging()
         
         # Gestionnaires spécialisés
-        self.process_cleaner = ProcessCleaner(self.logger)
         self.backend_manager = BackendManager(self.config.get('backend', {}), self.logger)
-        self.frontend_manager = FrontendManager(self.config.get('frontend', {}), self.logger, self.process_cleaner)
+        self.frontend_manager = FrontendManager(self.config.get('frontend', {}), self.logger)
         self.playwright_runner = PlaywrightRunner(self.config.get('playwright', {}), self.logger)
         
         # État de l'application
@@ -264,10 +261,7 @@ class UnifiedWebOrchestrator:
                       "Initialisation orchestrateur")
         
         try:
-            # 1. Nettoyage préalable
-            await self._cleanup_previous_instances()
-            
-            # 2. Démarrage backend (obligatoire)
+            # 1. Démarrage backend (obligatoire)
             if not await self._start_backend():
                 return False
             
@@ -338,9 +332,6 @@ class UnifiedWebOrchestrator:
             if self.app_info.backend_pid:
                 await self.backend_manager.stop()
                 
-            # Cleanup processus
-            await self.process_cleaner.cleanup_webapp_processes()
-
             # Déverrouillage du port
             if CENTRAL_PORT_MANAGER_AVAILABLE:
                 self._unlock_port()
@@ -408,31 +399,6 @@ class UnifiedWebOrchestrator:
     # ========================================================================
     # MÉTHODES PRIVÉES
     # ========================================================================
-    
-    async def _cleanup_previous_instances(self):
-        """Nettoie les instances précédentes, en ciblant d'abord les ports."""
-        self.add_trace("[CLEAN] NETTOYAGE PREALABLE", "Forçage de la libération des ports et arrêt des instances existantes")
-
-        # Nettoyage ciblé des ports backend (toujours nécessaire)
-        backend_ports_to_clean = [self.config['backend']['start_port']] + self.config['backend'].get('fallback_ports', [])
-        self.logger.info(f"Nettoyage des ports du BACKEND: {backend_ports_to_clean}")
-        self.process_cleaner.cleanup_by_port(backend_ports_to_clean)
-
-        # Nettoyage ciblé des ports frontend (si configurés)
-        frontend_config = self.config.get('frontend', {})
-        if frontend_config and frontend_config.get('port'):
-            frontend_ports_to_clean = [frontend_config['port']] + frontend_config.get('fallback_ports', [])
-            self.logger.info(f"Nettoyage des ports du FRONTEND: {frontend_ports_to_clean}")
-            self.process_cleaner.cleanup_by_port(frontend_ports_to_clean)
-        else:
-            self.logger.info("Aucun port frontend à nettoyer (non configuré ou clé 'port' manquante).")
-        
-        # On attend un court instant pour laisser le temps aux processus de se terminer
-        await asyncio.sleep(1)
-
-        # On exécute ensuite le nettoyage général pour les processus qui n'utiliseraient pas de port
-        self.logger.info("Nettoyage général des processus restants...")
-        await self.process_cleaner.cleanup_webapp_processes()
     
     async def _start_backend(self) -> bool:
         """Démarre le backend avec failover de ports"""

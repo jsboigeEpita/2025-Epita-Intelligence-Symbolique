@@ -122,29 +122,28 @@ class BackendManager:
                 asgi_module = 'argumentation_analysis.services.web_api.asgi:app'
                 log_config_path = project_root.joinpath('argumentation_analysis', 'config', 'uvicorn_logging.json')
                 
-                # La commande est maintenant une liste d'arguments pour `conda run`
-                internal_cmd_list = [
-                    'python', '-m', 'uvicorn', asgi_module,
+                # Correction robuste: Utiliser le chemin absolu vers python.exe et construire une liste d'arguments
+                # pour subprocess.Popen, ce qui est plus sûr que de construire une chaîne de commande.
+                python_executable = r'C:\Users\MYIA\miniconda3\envs\projet-is\python.exe'
+                self.logger.info(f"Utilisation de l'interpréteur Python explicite : {python_executable}")
+
+                cmd = [
+                    python_executable,
+                    '-m', 'uvicorn', asgi_module,
                     '--port', str(port),
                     '--host', '127.0.0.1',
                     '--log-config', str(log_config_path)
                 ]
             else:
-                internal_cmd_list = ['python', '-m', self.module, '--port', str(port), '--host', '127.0.0.1']
+                # Fallback pour d'autres types de serveurs, bien que non utilisé actuellement
+                python_executable = r'C:\Users\MYIA\miniconda3\envs\projet-is\python.exe'
+                cmd = [python_executable, '-m', self.module, '--port', str(port), '--host', '127.0.0.1']
             
-            # Construction de la commande finale en utilisant le script d'activation centralisé
-            # Ceci est un changement pour se conformer au plan d'audit, visant à standardiser l'activation de l'environnement.
-            # Construction de la commande PowerShell complète et robuste
-            internal_cmd_str = ' '.join(internal_cmd_list)
-            full_command = f'. ./activate_project_env.ps1; {internal_cmd_str}'
-            
-            # Utilisation de `powershell -Command` pour encapsuler toute la logique d'activation et d'exécution
-            # Cela évite les problèmes de parsing de chemins et de guillemets.
-            cmd = ["powershell", "-Command", full_command]
-
-            self.logger.info(f"Exécution de la commande PowerShell complète: {full_command}")
+            self.logger.info(f"Exécution de la commande: {' '.join(cmd)}")
             
             env = os.environ.copy()
+            # Ajout de la variable d'environnement pour contourner le conflit de DLL OpenMP
+            env['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
             env['PYTHONPATH'] = str(Path.cwd())
             
             self.process = subprocess.Popen(

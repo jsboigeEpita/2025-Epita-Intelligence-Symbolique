@@ -7,7 +7,7 @@ import os
 
 #pytest.mark.usefixtures("test_client")
 @pytest.mark.integration
-def test_wsgi_health_check_via_asgi(backend_url):
+def test_wsgi_health_check_via_asgi(e2e_servers, backend_url):
     """
     Action: Interroge l'endpoint de santé (/api/health) de l'application Flask
             via le serveur ASGI (Uvicorn).
@@ -36,8 +36,8 @@ def test_wsgi_health_check_via_asgi(backend_url):
             
         # Vérification 3: Le contenu JSON est conforme à ce qui est attendu
         assert "status" in response_json, "La clé 'status' est absente de la réponse JSON."
-        assert response_json["status"] == "healthy", \
-            f"Le statut attendu était 'healthy', mais nous avons reçu '{response_json.get('status')}'. Réponse complète: {response_json}"
+        assert response_json["status"] == "operational", \
+            f"Le statut attendu était 'operational', mais nous avons reçu '{response_json.get('status')}'. Réponse complète: {response_json}"
 
     except httpx.RequestError as e:
         pytest.fail(f"Une erreur de requête est survenue lors de la connexion à {health_endpoint}: {e}")

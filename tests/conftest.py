@@ -155,6 +155,10 @@ def pytest_addoption(parser):
         "--frontend-url", action="store", default="http://localhost:3000",
         help="URL du frontend à tester (si applicable)"
     )
+    parser.addoption(
+        "--disable-e2e-servers-fixture", action="store_true", default=False,
+        help="Désactive la fixture e2e_servers pour éviter les conflits."
+    )
 
 @pytest.fixture(scope="session")
 def backend_url(request):
