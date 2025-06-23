@@ -474,6 +474,7 @@ class UnifiedWebOrchestrator:
 
         # self.playwright_runner = PlaywrightRunner(playwright_config, self.logger)
         self.process_cleaner = MinimalProcessCleaner(self.logger)
+        self.process_cleaner.config = self.config # Injection de la config au moment de l'initialisation
 
         # État de l'application
         self.app_info = WebAppInfo()
@@ -904,7 +905,22 @@ class UnifiedWebOrchestrator:
                 await asyncio.gather(*tasks, return_exceptions=True)
                 
             # 3. Cleanup final des processus
-            await self.process_cleaner.cleanup_webapp_processes()
+            # La logique de nettoyage est maintenant plus robuste même si la config est vide
+            backend_config = self.config.get('backend', {})
+            frontend_config = self.config.get('frontend', {})
+            
+            ports_to_check = []
+            if backend_config.get('enabled'):
+                start_port = backend_config.get('start_port')
+                if start_port: ports_to_check.append(start_port)
+                fallback_ports = backend_config.get('fallback_ports')
+                if fallback_ports: ports_to_check.extend(fallback_ports)
+            if frontend_config.get('enabled'):
+                frontend_port = frontend_config.get('port')
+                if frontend_port: ports_to_check.append(frontend_port)
+            ports_to_check = [p for p in ports_to_check if p is not None]
+
+            await self.process_cleaner.cleanup_webapp_processes(ports_to_check=ports_to_check)
             
             self.app_info = WebAppInfo()  # Reset
             self.add_trace("[OK] ARRET TERMINE", "", "Toutes les ressources libérées")
@@ -993,7 +1009,8 @@ class UnifiedWebOrchestrator:
         self.add_trace("[CLEAN] NETTOYAGE PREALABLE", "Arrêt robuste des instances existantes via ProcessCleaner")
 
         # Je dois injecter la config dans le cleaner car il en a besoin
-        self.process_cleaner.config = self.config
+        # L'injection de la config se fait maintenant dans le __init__
+        pass
 
         backend_config = self.config.get('backend', {})
         frontend_config = self.config.get('frontend', {})

@@ -21,11 +21,13 @@ Refactorisé - Utilise scripts/core/environment_manager.py
 param(
     [string]$CommandToRun = $null,
     [string]$PythonScriptPath = $null,
-    [switch]$Verbose = $false,
+    [switch]$EnableVerboseLogging = $false,
     [switch]$ForceReinstall = $false,
     [int]$CondaVerboseLevel = 0,
     [switch]$LaunchWebApp = $false,
-    [switch]$DebugMode = $false
+    [switch]$DebugMode = $false,
+    [Parameter(Mandatory=$true)]
+    [string]$CommandOutputFile
 )
 
 # Fonction de logging simple
@@ -202,7 +204,7 @@ try {
          Write-Log "Aucune commande à exécuter. Activation simple de l'environnement." "INFO"
     }
 
-    if ($Verbose) {
+    if ($EnableVerboseLogging) {
         $ManagerArgs += "--verbose"
     }
     
@@ -230,21 +232,30 @@ try {
    Write-Log "Génération de la commande d'exécution finale via le manager Python..."
 
    # Appel du script Python, qui va maintenant écrire la commande finale sur stdout
-   $FinalExecutableCommand = & $PythonExecutable $ManagerArgs
+   # Le chemin du fichier de sortie est maintenant fourni par le paramètre -CommandOutputFile
+   $ManagerArgs += "--output-command-file", $CommandOutputFile
+   
+   # Exécuter le script Python. Les erreurs critiques iront sur stderr.
+   & $PythonExecutable $ManagerArgs
    $exitCode = $LASTEXITCODE
 
    if ($exitCode -ne 0) {
-       # Si le script de génération de commande échoue, c'est une erreur critique.
-       # Les logs d'erreur de Python devraient être sur stderr.
-       throw "Le script de génération de commande a échoué avec le code: $exitCode."
+       throw "Le script de génération de commande a échoué avec le code: $exitCode. Voir les logs d'erreur ci-dessus."
+   }
+   
+   if (-not (Test-Path $CommandOutputFile)) {
+       throw "Le fichier de sortie de commande '$CommandOutputFile' n'a pas été créé."
    }
 
+   $FinalExecutableCommand = Get-Content $CommandOutputFile
    if (-not $FinalExecutableCommand) {
-       throw "Le script de génération n'a renvoyé aucune commande."
+       throw "Le fichier de sortie de commande '$CommandOutputFile' est vide."
    }
    
    # Écrire la commande finale sur la sortie standard pour que le script appelant la récupère
    Write-Output $FinalExecutableCommand
+
+   # La gestion (création/suppression) du fichier est de la responsabilité de l'appelant.
    
    # Le script se termine ici. Le code de sortie de la commande sera géré par l'appelant.
 
