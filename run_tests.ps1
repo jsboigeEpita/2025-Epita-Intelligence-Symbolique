@@ -85,52 +85,48 @@ if ($Type -eq "validation") {
 Write-Host "[INFO] Commande à exécuter : $CommandToRun" -ForegroundColor Cyan
 Write-Host "[INFO] Lancement des tests via $ActivationScript..." -ForegroundColor Cyan
 
+# --- Exécution via le gestionnaire d'environnement ---
+# Créer un fichier temporaire pour la sortie de la commande
+$outputFile = [System.IO.Path]::GetTempFileName()
+
 # Préparer les arguments pour le script d'activation en utilisant le "splatting"
 $activationArgs = @{
-   CommandToRun = $CommandToRun
+    CommandToRun      = $CommandToRun
+    CommandOutputFile = $outputFile
 }
 if ($DebugMode) {
-   $activationArgs['DebugMode'] = $true
-   Write-Host "[INFO] Mode Débogage activé." -ForegroundColor Yellow
+    $activationArgs['DebugMode'] = $true
+    Write-Host "[INFO] Mode Débogage activé." -ForegroundColor Yellow
 }
 
-# Le script d'activation écrit la commande finale dans un fichier.
-# Créer le répertoire temporaire si nécessaire
-$TempDir = Join-Path $ProjectRoot ".temp"
-if (-not (Test-Path -Path $TempDir)) {
-    New-Item -ItemType Directory -Path $TempDir
+try {
+    # Appeler le script d'activation pour qu'il écrive la commande finale dans le fichier
+    # Note: On redirige la sortie d'erreur (logs de activate_project_env) vers la console
+    & $ActivationScript @activationArgs 2>&1
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Le script d'activation a échoué. Voir les logs ci-dessus."
+    }
+
+    # Lire la commande finale depuis le fichier
+    $finalCommand = Get-Content $outputFile
+    if ([string]::IsNullOrWhiteSpace($finalCommand)) {
+        throw "La commande générée par le script d'activation est vide."
+    }
+
+    Write-Host "[INFO] Commande finale à exécuter: $finalCommand" -ForegroundColor Green
+
+    # Exécuter la commande finale
+    Invoke-Expression $finalCommand
+    $exitCode = $LASTEXITCODE
+
+    Write-Host "[INFO] Exécution terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan
+    exit $exitCode
+
 }
-$OutputFile = Join-Path $TempDir "final_command.txt"
-$activationArgs['CommandOutputFile'] = $OutputFile
-
-Write-Host "[INFO] Génération de la commande d'exécution via le script d'activation vers '$OutputFile'..."
-& $ActivationScript @activationArgs
-$exitCode = $LASTEXITCODE
-
-if ($exitCode -ne 0) {
-   Write-Host "[ERREUR] Le script d'activation a échoué. Voir les logs ci-dessus." -ForegroundColor Red
-   if (Test-Path $OutputFile) { Remove-Item $OutputFile }
-   exit $exitCode
+finally {
+    # Nettoyer le fichier temporaire
+    if (Test-Path $outputFile) {
+        Remove-Item $outputFile -Force
+    }
 }
-
-if (-not (Test-Path $OutputFile)) {
-    Write-Host "[ERREUR] Le script d'activation n'a pas généré le fichier de commande '$OutputFile'." -ForegroundColor Red
-    exit 1
-}
-
-$CommandString = Get-Content $OutputFile
-Remove-Item $OutputFile # Nettoyage
-
-if ([string]::IsNullOrWhiteSpace($CommandString)) {
-   Write-Host "[ERREUR] Le fichier de commande généré est vide." -ForegroundColor Red
-   exit 1
-}
-
-Write-Host "[INFO] Commande finale à exécuter :" -ForegroundColor Green
-Write-Host $CommandString -ForegroundColor Green
-
-Invoke-Expression -Command $CommandString
-
-$exitCode = $LASTEXITCODE
-Write-Host "[INFO] Exécution terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan
-exit $exitCode
