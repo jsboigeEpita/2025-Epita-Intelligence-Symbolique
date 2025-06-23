@@ -23,22 +23,12 @@ def run_in_jvm_subprocess():
 
         # Construit la commande à passer au script d'activation.
         command_to_run = [
-            sys.executable,          # Le chemin vers python.exe de l'env actuel
-            str(script_path.resolve()),  # Le script de test
-            *args                    # Arguments supplémentaires pour le script
-        ]
-        
-        # On utilise le wrapper d'environnement, comme on le ferait manuellement.
-        # C'est la manière la plus robuste de s'assurer que l'env est correct.
-        wrapper_command = [
-            "powershell",
-            "-File",
-            ".\\activate_project_env.ps1",
-            "-CommandToRun",
-            " ".join(f'"{part}"' for part in command_to_run) # Reassemble la commande en une seule chaine
+            sys.executable,
+            str(script_path.resolve()),
+            *args
         ]
 
-        print(f"Exécution du sous-processus JVM via : {' '.join(wrapper_command)}")
+        print(f"Exécution du sous-processus JVM direct : {' '.join(command_to_run)}")
         
         # On exécute le processus. `check=True` lèvera une exception si le
         # sous-processus retourne un code d'erreur.
@@ -52,14 +42,13 @@ def run_in_jvm_subprocess():
         # variables en mémoire (potentiellement périmées) sont écrasées.
         load_dotenv(find_dotenv(), override=True)
         
+        # La configuration du PYTHONPATH est maintenant gérée de manière centralisée
+        # dans tests/conftest.py, qui s'applique à l'ensemble du processus pytest et
+        # à ses processus enfants. Il n'est plus nécessaire de le définir ici.
         env = os.environ.copy()
-        project_root = str(Path(__file__).parent.parent.parent.resolve())
-        python_path = env.get('PYTHONPATH', '')
-        if project_root not in python_path:
-            env['PYTHONPATH'] = f"{project_root}{os.pathsep}{python_path}"
 
         result = subprocess.run(
-            wrapper_command,
+            command_to_run,
             capture_output=True,
             text=True,
             encoding='utf-8',

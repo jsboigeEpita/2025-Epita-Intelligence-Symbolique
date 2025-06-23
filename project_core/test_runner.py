@@ -188,7 +188,7 @@ class TestRunner:
             _log(f"Type de test '{self.test_type}' non reconnu ou aucun chemin de test trouvé.")
             return
 
-        command = ["python", "-m", "pytest", "-s", "-vv"] + test_paths
+        command = ["python", "-m", "pytest", "-q"] + test_paths
         
         # Passer les URLs aux tests seulement si les services sont démarrés
         needs_services = self.test_type in ["functional", "e2e", "all"]

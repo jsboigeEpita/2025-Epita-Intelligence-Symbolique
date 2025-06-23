@@ -33,11 +33,8 @@ except ImportError:
 
 import os
 
-# Ajoute la racine du projet au sys.path pour résoudre les problèmes d'import
-# causés par le `rootdir` de pytest qui interfère avec la résolution des modules.
-project_root = Path(__file__).parent.parent.resolve()
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
+# L'ajout de la racine du projet à sys.path est déjà effectué au début de ce fichier.
+# Cette section est redondante et a été supprimée pour la clarté.
 """
 Configuration pour les tests pytest.
 
@@ -190,14 +187,8 @@ logger = logging.getLogger(__name__)
 # ou une configuration au niveau du module mock lui-même, similaire à NumPy/Pandas.
 
 # Ajout du répertoire racine du projet à sys.path pour assurer la découverte des modules du projet.
-# Ceci est particulièrement utile si les tests sont exécutés d'une manière où le répertoire racine
-# n'est pas automatiquement inclus dans PYTHONPATH (par exemple, exécution directe de pytest
-# depuis un sous-répertoire ou avec certaines configurations d'IDE).
-parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if parent_dir not in sys.path:
-    sys.path.insert(0, parent_dir)
-    _conftest_setup_logger.info(f"Ajout du répertoire racine du projet ({parent_dir}) à sys.path.")
-# Décommenté car l'environnement de test actuel en a besoin pour trouver les modules locaux.
+# L'ajout de la racine du projet à sys.path est déjà effectué au début de ce fichier.
+# Cette section est redondante et a été supprimée pour la clarté.
 
 # Les fixtures et hooks sont importés depuis leurs modules dédiés.
 # Les commentaires résiduels concernant les déplacements de code et les refactorisations

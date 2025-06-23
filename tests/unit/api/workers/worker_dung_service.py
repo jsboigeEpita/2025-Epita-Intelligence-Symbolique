@@ -4,16 +4,8 @@ import pytest
 from api.services import DungAnalysisService
 from api.dependencies import get_dung_analysis_service
 
-# Ajout du chemin du projet pour l'import de modules
-# Logique de chemin plus robuste
-project_root_path = os.getenv("PYTHONPATH")
-if project_root_path and os.path.isdir(project_root_path) and project_root_path not in sys.path:
-    sys.path.insert(0, project_root_path)
-else:
-    # Fallback au cas où PYTHONPATH ne serait pas défini
-    fallback_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..'))
-    if fallback_path not in sys.path:
-        sys.path.insert(0, fallback_path)
+# Le PYTHONPATH est maintenant configuré par la fixture appelante (run_in_jvm_subprocess).
+# La logique manuelle d'ajout du chemin du projet n'est plus nécessaire ici.
 
 def main():
     """
