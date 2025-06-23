@@ -5,7 +5,7 @@ from typing import Optional, List
 from pathlib import Path
 
 class OpenAISettings(BaseSettings):
-    api_key: SecretStr
+    api_key: SecretStr = "YOUR_DEFAULT_API_KEY"
     chat_model_id: str = 'gpt-4o-mini'
     base_url: Optional[HttpUrl] = None
     model_config = SettingsConfigDict(env_prefix='OPENAI_')
