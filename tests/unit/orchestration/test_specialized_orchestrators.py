@@ -20,6 +20,15 @@ import asyncio
 import logging
 from unittest.mock import patch, AsyncMock
 from typing import Dict, Any, List
+from unittest.mock import Mock
+
+@pytest.fixture
+def llm_service():
+    """Fixture pour un service LLM mocké."""
+    mock_service = Mock()
+    # Simuler la méthode get_instance qui peut être appelée
+    mock_service.get_instance.return_value = mock_service
+    return mock_service
 
 # Configuration du logging pour les tests
 logging.basicConfig(level=logging.WARNING)
