@@ -38,7 +38,14 @@ ENCRYPTION_KEY = settings.encryption_key.get_secret_value() if settings.encrypti
 
 # Chemins de répertoires
 # Utilise les valeurs de `settings.ui` et construit des chemins absolus si nécessaire.
-TEMP_DOWNLOAD_DIR = PROJECT_ROOT / settings.ui.temp_download_dir
+# Correction pour robustesse aux tests : si `settings` est un mock, `settings.ui.temp_download_dir`
+# ne sera pas une chaîne et l'opérateur de chemin plantera. On vérifie le type
+# et on fournit une valeur par défaut si ce n'est pas une chaîne.
+temp_dir_value = settings.ui.temp_download_dir
+if not isinstance(temp_dir_value, str):
+    temp_dir_value = "_temp/downloads_mock" # Valeur par défaut sûre pour les tests
+TEMP_DOWNLOAD_DIR = PROJECT_ROOT / temp_dir_value
+
 # Les répertoires suivants sont conservés pour compatibilité s'ils sont importés ailleurs.
 CACHE_DIR = PROJECT_ROOT / "_temp" / "text_cache"
 CONFIG_DIR = PROJECT_ROOT / "argumentation_analysis" / "data"

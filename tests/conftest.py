@@ -31,12 +31,7 @@ except ImportError:
     # ne l'inclut pas. Les tests dépendant de la JVM risquent de planter plus tard.
     pass
 
-import pytest
 import os
-import sys
-import sys
-import os
-from pathlib import Path
 
 # Ajoute la racine du projet au sys.path pour résoudre les problèmes d'import
 # causés par le `rootdir` de pytest qui interfère avec la résolution des modules.

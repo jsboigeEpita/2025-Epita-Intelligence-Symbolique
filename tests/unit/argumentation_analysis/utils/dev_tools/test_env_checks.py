@@ -1,4 +1,3 @@
-
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
@@ -546,6 +545,7 @@ def test_check_python_dependencies_parsing_error_heuristic_recovery(mock_file_op
         if package_name == "complex_pkg": return "2.5" # Found via heuristic
         if package_name == "another_good": return "3.0"
         raise importlib.metadata.PackageNotFoundError
+        
     mock_importlib_metadata_deps_fixture.side_effect = version_side_effect
 
     # The overall check should be False because a version spec was lost

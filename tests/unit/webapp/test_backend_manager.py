@@ -2,6 +2,7 @@ import pytest
 import asyncio
 import logging
 from unittest.mock import MagicMock, patch, AsyncMock
+from pathlib import Path
 
 # On s'assure que le chemin est correct pour importer le manager
 import sys
@@ -30,7 +31,7 @@ def test_initialization(manager, backend_config):
     assert manager.module == backend_config['module']
 
 @pytest.mark.asyncio
-@patch('scripts.apps.webapp.backend_manager.download_tweety_jars', new_callable=AsyncMock)
+@patch('argumentation_analysis.core.jvm_setup.download_tweety_jars', new_callable=AsyncMock)
 @patch('subprocess.Popen')
 async def test_start_success(mock_popen, mock_download_jars, manager):
     """Tests a successful start call."""
@@ -43,7 +44,7 @@ async def test_start_success(mock_popen, mock_download_jars, manager):
     mock_popen.return_value.pid = 1234
     
     # Le port est maintenant passé via start()
-    result = await manager.start(port_override=5003)
+    result = await manager.start_with_failover(port_override=5003)
 
     assert result['success'] is True
     assert result['port'] == 5003
@@ -58,7 +59,7 @@ async def test_start_port_occupied(manager):
     """Tests that start fails if the port is already occupied."""
     manager._is_port_occupied = AsyncMock(return_value=True)
     
-    result = await manager.start()
+    result = await manager.start_with_failover()
     
     assert result['success'] is False
     assert "est déjà occupé" in result['error']
@@ -72,7 +73,7 @@ async def test_start_fails_if_wait_fails(mock_popen, manager):
     manager._is_port_occupied = AsyncMock(return_value=False)
     manager._cleanup_failed_process = AsyncMock()
 
-    result = await manager.start()
+    result = await manager.start_with_failover()
 
     assert result['success'] is False
     assert f"Le backend a échoué à démarrer sur le port {manager.start_port}" in result['error']
@@ -88,7 +89,7 @@ async def test_wait_for_backend_process_dies(manager):
     # We need to mock the sleep to ensure the loop doesn't timeout before checking poll()
     with patch('asyncio.sleep', new_callable=AsyncMock):
         # On passe des Mocks pour les chemins de logs
-        result, port = await manager._wait_for_backend(MagicMock(spec=Path), MagicMock(spec=Path))
+        result, port = await manager._wait_for_backend(port=manager.start_port)
     
     assert result is False
     assert port is None
@@ -111,7 +112,7 @@ async def test_wait_for_backend_health_check_ok(mock_get, manager):
             with patch('scripts.apps.webapp.backend_manager.asyncio.to_thread') as mock_read:
                  # Simuler la lecture du log qui trouve le port
                 mock_read.return_value = "Uvicorn running on http://127.0.0.1:8000"
-                result, port = await manager._wait_for_backend(MagicMock(spec=Path), MagicMock(spec=Path))
+                result, port = await manager._wait_for_backend(port=8000)
 
     assert result is True
     assert port == 8000
@@ -130,21 +131,21 @@ async def test_wait_for_backend_timeout(manager):
                 # Simuler la lecture du log qui trouve le port.
                 # On simule ici que le health check échoue après la découverte du port
                 mock_read.return_value = "Uvicorn running on http://127.0.0.1:8000"
-                result, port = await manager._wait_for_backend(MagicMock(spec=Path), MagicMock(spec=Path))
+                result, port = await manager._wait_for_backend(port=8000)
 
     assert result is False
     assert port is None # Le port a été trouvé mais le health check a échoué
     manager.logger.error.assert_called_with("Timeout dépassé - Health check inaccessible sur http://127.0.0.1:8000/api/health")
 
 @pytest.mark.asyncio
-async def test_stop_process(manager):
-    """Tests the stop method."""
-    mock_process = MagicMock()
-    mock_process.pid = 1234
-    manager.process = mock_process
+@patch('scripts.apps.webapp.backend_manager.ProcessCleaner.terminate_process_by_pid', new_callable=AsyncMock)
+async def test_stop_process(mock_terminate, manager):
+    """Tests the stop method delegates to ProcessCleaner."""
+    manager.pid = 1234
+    manager.process = MagicMock() # The stop method checks if process is not None before setting it to None
     
     await manager.stop()
     
-    mock_process.terminate.assert_called_once()
+    mock_terminate.assert_awaited_once_with(1234, manager.logger, "backend")
     assert manager.process is None
     assert manager.pid is None

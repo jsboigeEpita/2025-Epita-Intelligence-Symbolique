@@ -73,4 +73,5 @@ dependencies:
     - psutil
     - pyautogen>=0.2.0
     - pybreaker
+    - pytest-dotenv
     - tenacity
