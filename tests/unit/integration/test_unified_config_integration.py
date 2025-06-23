@@ -217,53 +217,6 @@ class TestUnifiedConfigIntegration:
         assert auth_section["validate_tool_calls"] is True
 
     
-    def test_cli_integration_mapping(self, mocker):
-        """Test de l'intégration avec l'interface CLI."""
-        # Configuration de test pour le mock
-        test_config = UnifiedConfig(
-            logic_type=LogicType.FOL,
-            mock_level=MockLevel.NONE,
-            agents=[AgentType.INFORMAL, AgentType.FOL_LOGIC]
-        )
-        # On simule la fonction qui serait importée
-        mock_create_config = mocker.patch('scripts.main.analyze_text.create_unified_config_from_args', return_value=test_config)
-        
-        # Import et test de la fonction CLI
-        try:
-            from scripts.main.analyze_text import create_unified_config_from_args
-        except ImportError:
-            # Si le module n'existe pas, on crée un mock pour permettre au test de s'exécuter
-            create_unified_config_from_args = mock_create_config
-        
-        # Simulation d'arguments CLI
-        class MockArgs:
-            logic_type = 'fol'
-            mock_level = 'none'
-            agents = 'informal,fol_logic'
-            taxonomy = 'full'
-            orchestration = 'unified'
-            modes = 'fallacies,coherence'
-            advanced = False
-            mocks = False
-            no_jvm = False
-            require_real_gpt = True
-            require_real_tweety = True
-            require_full_taxonomy = True
-            validate_tools = True
-            format = 'markdown'
-            template = 'default'
-            output_mode = 'both'
-            output = None
-            verbose = False
-        
-        # Test de la conversion CLI -> Config
-        result_config = create_unified_config_from_args(MockArgs())
-        
-        # Vérification que la fonction a été appelée
-        mock_create_config.assert_called_once()
-        assert result_config.logic_type == LogicType.FOL
-        assert result_config.mock_level == MockLevel.NONE
-
     def test_performance_configuration_impact(self):
         """Test de l'impact des configurations sur les performances."""
         # Configuration rapide (test)

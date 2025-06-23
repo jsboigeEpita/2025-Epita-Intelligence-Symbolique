@@ -43,9 +43,15 @@ class SimpleAnalysisService:
             
         try:
             self.client = OpenAI(api_key=api_key)
-            self.logger.info("✅ Client OpenAI GPT-4o-mini initialisé")
+            # Test a simple call to validate the key
+            self.client.models.list()
+            self.logger.info("✅ Client OpenAI GPT-4o-mini initialisé et clé validée.")
+        except openai.AuthenticationError as e:
+            self.logger.error(f"❌ Erreur d'authentification OpenAI: La clé API est probablement invalide. Détails: {e}")
+            self.client = None
         except Exception as e:
-            self.logger.error(f"❌ Erreur initialisation OpenAI: {e}")
+            self.logger.error(f"❌ Erreur inattendue lors de l'initialisation d'OpenAI: {e}")
+            self.client = None
     
     async def analyze_text(self, text: str) -> dict:
         """

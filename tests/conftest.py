@@ -245,9 +245,21 @@ def jvm_session():
     if not jpype.isJVMStarted():
         try:
             print("\n[JVM Fixture] Démarrage de la JVM pour la session de test...")
+            
+            # --- Dynamically build classpath from tweety libs ---
+            tweety_libs_path = os.path.join(project_root, "argumentation_analysis", "libs", "tweety")
+            if not os.path.exists(tweety_libs_path):
+                pytest.fail(f"Le répertoire des librairies Tweety est introuvable: {tweety_libs_path}")
+                
+            classpath = [os.path.join(tweety_libs_path, f) for f in os.listdir(tweety_libs_path) if f.endswith('.jar')]
+            if not classpath:
+                pytest.fail(f"Aucun fichier .jar n'a été trouvé dans {tweety_libs_path}")
+            
+            print(f"[JVM Fixture] Classpath construit avec {len(classpath)} JARs.")
+
             jpype.startJVM(
                 jvmpath=jvm_dll_path,
-                classpath=[],
+                classpath=classpath,
                 convertStrings=False
             )
             print("[JVM Fixture] JVM démarrée avec succès.")
