@@ -22,9 +22,6 @@ from pathlib import Path
 import aiohttp
 import psutil
 
-from .process_cleaner import ProcessCleaner
-
-
 class FrontendManager:
     """
     Gestionnaire du frontend React
@@ -37,16 +34,15 @@ class FrontendManager:
     - Création de build pour la production
     """
 
-    def __init__(self, config: Dict[str, Any], logger: logging.Logger, process_cleaner: ProcessCleaner):
+    def __init__(self, config: Dict[str, Any], logger: logging.Logger):
         self.config = config
         self.logger = logger
-        self.process_cleaner = process_cleaner
         
         # NOTE DE FUSION: On combine la recherche de chemin du stash et la gestion de port de l'upstream.
         self.enabled = config.get('enabled', True)
         self.frontend_path = self._find_frontend_path(config.get('path'))
         self.start_port = config.get('start_port', 3000)
-        self.fallback_ports = config.get('fallback_ports', [3001, 3002])
+        self.fallback_ports = config.get('fallback_ports', list(range(3001, 3011)))
         self.start_command = config.get('start_command', 'npm start')
         self.build_command = config.get('build_command', 'npm run build')
         self.timeout_seconds = config.get('timeout_seconds', 90)
@@ -92,6 +88,9 @@ class FrontendManager:
         if not self.frontend_path:
             return {'success': False, 'error': 'Chemin du frontend non trouvé.'}
 
+        if not await self._ensure_dependencies():
+            return {'success': False, 'error': "Échec de l'installation des dépendances npm"}
+
         ports_to_try = [self.start_port] + self.fallback_ports
         
         for port in ports_to_try:
@@ -103,6 +102,8 @@ class FrontendManager:
             result = await self._start_on_port(port)
             if result['success']:
                 return result
+            else:
+                self.logger.warning(f"Échec de la tentative sur le port {port}. Raison: {result.get('error', 'Inconnue')}")
         
         error_msg = f"Impossible de démarrer le frontend sur les ports configurés: {ports_to_try}"
         self.logger.error(error_msg)
@@ -112,9 +113,6 @@ class FrontendManager:
         """
         Tente de démarrer le serveur de développement sur un port donné.
         """
-        if not await self._ensure_dependencies():
-            return {'success': False, 'error': "Échec de l'installation des dépendances npm"}
-
         try:
             self.logger.info(f"Exécution de la commande de démarrage: {self.start_command}")
             cmd = ['cmd', '/c'] + self.start_command.split() if sys.platform == "win32" else ['sh', '-c', self.start_command]
@@ -148,33 +146,47 @@ class FrontendManager:
             await self.stop()
             return {'success': False, 'error': str(e)}
     
-    async def _ensure_dependencies(self):
-        """S'assure que les dépendances npm sont installées"""
+    async def _ensure_dependencies(self) -> bool:
+        """S'assure que les dépendances npm sont installées. Retourne True si succès."""
         node_modules = self.frontend_path / 'node_modules'
         
-        if not node_modules.exists():
-            self.logger.info("Installation dépendances npm...")
+        if node_modules.exists():
+            self.logger.info("Le dossier 'node_modules' existe déjà. Installation des dépendances sautée.")
+            return True
+
+        self.logger.info(f"Le dossier 'node_modules' est manquant. Lancement de 'npm install' dans {self.frontend_path}...")
+        
+        try:
+            cmd = ['cmd', '/c', 'npm', 'install'] if sys.platform == "win32" else ['npm', 'install']
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=self.frontend_path,
+                text=True,
+                encoding='utf-8'
+            )
             
-            try:
-                process = subprocess.Popen(
-                    ['npm', 'install'],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    cwd=self.frontend_path
-                )
+            stdout, stderr = process.communicate(timeout=180)  # 3 min max
+            
+            if process.returncode != 0:
+                self.logger.error(f"--- ERREUR NPM INSTALL ---")
+                self.logger.error(f"Code de retour: {process.returncode}")
+                self.logger.error(f"STDOUT:\n{stdout}")
+                self.logger.error(f"STDERR:\n{stderr}")
+                self.logger.error(f"--- FIN ERREUR NPM INSTALL ---")
+                return False
+            else:
+                self.logger.info("Dépendances npm installées avec succès.")
+                return True
                 
-                stdout, stderr = process.communicate(timeout=120)  # 2 min max
-                
-                if process.returncode != 0:
-                    self.logger.error(f"Échec npm install: {stderr.decode()}")
-                else:
-                    self.logger.info("Dépendances npm installées")
-                    
-            except subprocess.TimeoutExpired:
-                process.kill()
-                self.logger.error("Timeout installation npm")
-            except Exception as e:
-                self.logger.error(f"Erreur npm install: {e}")
+        except subprocess.TimeoutExpired:
+            process.kill()
+            self.logger.error("Timeout (3 minutes) dépassé lors de l'installation des dépendances npm.")
+            return False
+        except Exception as e:
+            self.logger.error(f"Erreur imprévue lors de 'npm install': {e}", exc_info=True)
+            return False
     
     def _get_frontend_env(self, port: int) -> Dict[str, str]:
         """
@@ -318,13 +330,7 @@ class FrontendManager:
             finally:
                 self.process = None
         
-        # 2. Nettoyage agressif du port pour s'assurer qu'aucun processus enfant (node.exe) ne reste.
-        # C'est la partie la plus importante pour éviter les conflits de port.
-        ports_to_clean = [self.start_port] + self.fallback_ports
-        self.logger.info(f"Nettoyage robuste des ports du frontend: {ports_to_clean}")
-        self.process_cleaner.cleanup_by_port(ports_to_clean)
-
-        # 3. Fermeture des fichiers de log
+        # 2. Fermeture des fichiers de log
         if self.frontend_stdout_log_file:
             try:
                 self.frontend_stdout_log_file.close()

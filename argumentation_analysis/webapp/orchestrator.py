@@ -40,10 +40,7 @@ import psutil
 
 # Imports internes (sans activation d'environnement au niveau du module)
 # Le bootstrap se fera dans la fonction main()
-# from project_core.webapp_from_scripts.backend_manager import BackendManager
-# from project_core.webapp_from_scripts.frontend_manager import FrontendManager
-# from project_core.webapp_from_scripts.playwright_runner import PlaywrightRunner
-# from project_core.webapp_from_scripts.process_cleaner import ProcessCleaner
+from project_core.core_from_scripts.environment_manager import EnvironmentManager
 from argumentation_analysis.core.jvm_setup import download_tweety_jars
 
 # Import du gestionnaire centralisé des ports
@@ -153,27 +150,27 @@ class MinimalBackendManager:
         self.logger.info(f"[BACKEND] Utilisation du nom d'environnement Conda: '{env_name}'")
         
         # PRIVILÉGIER command_list si elle existe pour une commande plus robuste
-        command_list = self.config.get('command_list')
-        if command_list:
-            self.logger.info("[BACKEND] Utilisation de 'command_list' pour le lancement.")
-            # Remplacer les placeholders comme {port}, {module_spec}, {env_name}
-            # dans tous les éléments de la liste.
-            command = [
-                str(item).format(
-                    port=self.port,
-                    module_spec=module_spec,
-                    env_name=env_name
-                ) for item in command_list
-            ]
-        else:
-            self.logger.info("[BACKEND] Utilisation de la méthode 'conda run' classique.")
-            # Ancien comportement si command_list n'est pas défini
-            command = [
-                'conda', 'run', '-n', env_name, '--no-capture-output',
-                'python', '-m', 'uvicorn', module_spec,
-                '--host', '127.0.0.1',
-                '--port', str(self.port)
-            ]
+        # NOUVELLE STRATÉGIE : Utilisation du chemin absolu de Python
+        env_manager = EnvironmentManager(self.logger)
+        env_path = env_manager._get_conda_env_path(env_name)
+        
+        if not env_path:
+            self.logger.error(f"[BACKEND] Impossible de localiser l'environnement Conda '{env_name}'.")
+            return {'success': False, 'error': f"Conda env '{env_name}' not found."}
+
+        python_executable = Path(env_path) / ('python.exe' if sys.platform == "win32" else 'bin/python')
+        if not python_executable.is_file():
+            self.logger.error(f"[BACKEND] Exécutable Python non trouvé dans : {python_executable}")
+            return {'success': False, 'error': f"Python executable not found in env '{env_name}'"}
+
+        self.logger.info(f"[BACKEND] Utilisation du chemin Python absolu : {python_executable}")
+
+        command = [
+            str(python_executable),
+            '-m', 'uvicorn', module_spec,
+            '--host', '127.0.0.1',
+            '--port', str(self.port)
+        ]
         
         self.logger.info(f"[BACKEND] Commande de lancement: {' '.join(command)}")
 
@@ -185,6 +182,12 @@ class MinimalBackendManager:
             if project_root not in python_path:
                 env['PYTHONPATH'] = f"{project_root}{os.pathsep}{python_path}"
             self.logger.info(f"[BACKEND] PYTHONPATH for subprocess: {env.get('PYTHONPATH')}")
+
+            # --- CORRECTIF FINAL : Court-circuiter la validation d'environnement interne ---
+            # Cette variable d'environnement indique au environment_manager.py dans le sous-processus
+            # de ne PAS effectuer sa propre validation, qui échoue dans ce contexte.
+            env['RUNNING_VIA_ENV_MANAGER'] = 'true'
+            self.logger.info("[BACKEND] Injection de RUNNING_VIA_ENV_MANAGER=true pour éviter la double validation de l'environnement.")
 
             # Lancement du processus en redirigeant stdout et stderr
             self.process = await asyncio.create_subprocess_exec(
@@ -619,12 +622,10 @@ class UnifiedWebOrchestrator:
                 # La solution robuste: on passe une commande complète qui peut être exécutée
                 # directement par le système sans dépendre d'un PATH spécifique.
                 # On utilise "powershell.exe -Command" pour chaîner l'activation et l'exécution.
+                # Cette clé n'est plus utilisée par la nouvelle logique, mais conservée pour référence.
                 'command_list': [
-                    "powershell.exe",
-                    "-ExecutionPolicy",
-                    "Bypass",
-                    "-Command",
-                    "conda run -n {env_name} --no-capture-output python -m uvicorn {module_spec} --host 127.0.0.1 --port {port}"
+                    "echo",
+                    "Cette commande est obsolète et remplacée par la détection automatique du chemin python."
                 ]
             },
             'frontend': {

@@ -1102,6 +1102,12 @@ def main():
         default=0,
         help="Niveau de verbosité pour les commandes conda (1 pour -v, 2 pour -vv, 3 pour -vvv)."
     )
+
+    parser.add_argument(
+        '--get-python-path',
+        action='store_true',
+        help="Affiche le chemin de l'exécutable Python de l'environnement Conda cible et quitte."
+    )
     
     parser.add_argument(
         '--get-command-only',
@@ -1125,6 +1131,24 @@ def main():
     manager = EnvironmentManager(logger)
     
     # --- NOUVELLE LOGIQUE D'EXÉCUTION ---
+
+    # 0. Gérer --get-python-path (action prioritaire et terminale)
+    if args.get_python_path:
+        env_name_for_path = args.env_name or manager.default_conda_env
+        env_path = manager._get_conda_env_path(env_name_for_path)
+        if not env_path:
+            logger.error(f"Impossible de trouver le chemin pour l'environnement '{env_name_for_path}'.")
+            safe_exit(1, logger)
+        
+        python_exe_in_env = Path(env_path) / ('python.exe' if platform.system() == "Windows" else 'bin/python')
+        if not python_exe_in_env.is_file():
+            logger.error(f"Exécutable Python non trouvé à l'emplacement attendu: {python_exe_in_env}")
+            safe_exit(1, logger)
+        
+        # Imprimer le chemin sur stdout pour que le script appelant puisse le récupérer
+        print(str(python_exe_in_env))
+        safe_exit(0, logger) # Terminer proprement
+
 
     # 1. Gérer la réinstallation si demandée.
     if args.reinstall:
