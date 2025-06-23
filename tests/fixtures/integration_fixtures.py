@@ -471,22 +471,22 @@ def webapp_service(request):
     logger.info(f"URL Backend récupérée: {backend_url}")
     logger.info(f"URL Frontend récupérée: {frontend_url}")
 
-    # Créer un objet factice ressemblant à la structure de l'orchestrateur
-    # pour assurer la compatibilité avec les tests existants.
-    # On imite la structure orchestrator.app_info.backend_url etc.
-    app_info_mock = argparse.Namespace(
-        backend_url=backend_url,
-        frontend_url=frontend_url,
-        backend_pid=None, # PID non pertinent car géré par le processus parent
-        frontend_pid=None
-    )
-    
-    orchestrator_mock = argparse.Namespace(
-        app_info=app_info_mock,
-        config=None # La config n'est probablement pas utilisée dans les tests
-    )
+    # Pour résoudre `TypeError: 'Namespace' object is not subscriptable`,
+    # on retourne un simple dictionnaire, qui est l'interface attendue par les tests.
+    service_info = {
+        "backend_url": backend_url,
+        "frontend_url": frontend_url,
+        # On inclut la structure imbriquée `app_info` pour la compatibilité
+        # avec les tests qui pourraient utiliser `service.app_info.backend_url`.
+        "app_info": argparse.Namespace(
+            backend_url=backend_url,
+            frontend_url=frontend_url,
+            backend_pid=None,
+            frontend_pid=None
+        )
+    }
 
-    # Le yield fournit l'objet aux tests. Pas de finalizer car rien n'est démarré ici.
-    yield orchestrator_mock
+    # Le yield fournit le dictionnaire aux tests.
+    yield service_info
     
     logger.info("--- FIN FIXTURE 'webapp_service' ---")

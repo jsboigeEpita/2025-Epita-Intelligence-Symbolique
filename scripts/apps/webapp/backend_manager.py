@@ -13,6 +13,7 @@ Date: 07/06/2025
 
 import os
 import sys
+import sys
 import time
 import json
 import asyncio
@@ -124,8 +125,8 @@ class BackendManager:
                 
                 # Correction robuste: Utiliser le chemin absolu vers python.exe et construire une liste d'arguments
                 # pour subprocess.Popen, ce qui est plus sûr que de construire une chaîne de commande.
-                python_executable = r'C:\Users\MYIA\miniconda3\envs\projet-is\python.exe'
-                self.logger.info(f"Utilisation de l'interpréteur Python explicite : {python_executable}")
+                python_executable = sys.executable # Correction pour utiliser l'interpréteur courant
+                self.logger.info(f"Utilisation de l'interpréteur Python dynamique : {python_executable}")
 
                 cmd = [
                     python_executable,
@@ -136,7 +137,7 @@ class BackendManager:
                 ]
             else:
                 # Fallback pour d'autres types de serveurs, bien que non utilisé actuellement
-                python_executable = r'C:\Users\MYIA\miniconda3\envs\projet-is\python.exe'
+                python_executable = sys.executable # Correction pour utiliser l'interpréteur courant
                 cmd = [python_executable, '-m', self.module, '--port', str(port), '--host', '127.0.0.1']
             
             self.logger.info(f"Exécution de la commande: {' '.join(cmd)}")

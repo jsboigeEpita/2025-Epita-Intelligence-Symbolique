@@ -29,7 +29,7 @@ async def test_page_title(page: Page, frontend_url: str):
     
     try:
         # Augmenter le timeout ici est crucial pour les environnements de CI lents.
-        await page.goto(frontend_url, timeout=60000, waitUntil='domcontentloaded')
+        await page.goto(frontend_url, timeout=60000, wait_until='domcontentloaded')
         logger.info("SUCCES: page.goto() a terminé sans erreur.")
 
         logger.info("Attente de l'élément #root...")

@@ -382,6 +382,25 @@ class EnvironmentManager:
             shell_cmd = ['cmd.exe', '/c'] if platform.system() == "Windows" else ['bash', '-c']
             return [conda_exe, 'run', '--prefix', env_path, '--no-capture-output'] + shell_cmd + [command]
         
+        # --- AJOUT: Détection des scripts PowerShell ---
+        is_powershell_script = (
+            isinstance(command, str) and command.strip().lower().endswith('.ps1')
+        ) or (
+            isinstance(command, list) and command and command[0].lower().endswith('.ps1')
+        )
+
+        if is_powershell_script:
+            self.logger.info("Script PowerShell (.ps1) détecté. Construction de la commande avec l'interpréteur PowerShell.")
+            script_path = cmd_list[0]
+            # On reconstruit une commande avec l'interpréteur powershell et -File pour la robustesse
+            ps_command = [
+                'powershell.exe',
+                '-ExecutionPolicy', 'Bypass', # S'assure que le script peut s'exécuter
+                '-File', script_path
+            ] + cmd_list[1:]
+            return [conda_exe, 'run', '--prefix', env_path, '--no-capture-output'] + ps_command
+        # --- FIN DE L'AJOUT ---
+
         # Standard command
         return [conda_exe, 'run', '--prefix', env_path, '--no-capture-output'] + cmd_list
 
