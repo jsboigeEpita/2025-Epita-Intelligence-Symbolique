@@ -20,76 +20,67 @@ Refactorisé - Utilise scripts/core/environment_manager.py
 
 param(
     [string]$CommandToRun = $null,
-    [string]$PythonScriptPath = $null,
-    [switch]$EnableVerboseLogging = $false,
-    [switch]$ForceReinstall = $false,
-    [int]$CondaVerboseLevel = 0,
-    [switch]$LaunchWebApp = $false,
-    [switch]$DebugMode = $false,
     [string]$CommandOutputFile = $null
 )
 
-# Fonction de logging simple
-function Write-Log {
-    param(
-        [string]$Message,
-        [string]$Level = "INFO"
-    )
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logLine = "[$timestamp] [$Level] $Message"
-    # Écrire sur le flux d'erreur pour ne pas interférer avec la sortie de commande
-    $Host.UI.WriteErrorLine($logLine)
-}
+# Ce script est maintenant un "wrapper mince". Toute la logique de configuration
+# est déléguée au module Python pour garantir qu'elle soit indépendante de l'OS.
 
 $ErrorActionPreference = "Stop"
-$ProjectRoot = $PSScriptRoot
+
+# Nom du module Python qui sert de point d'entrée central
+$PythonModule = "project_core.core_from_scripts.environment_manager"
+
+# Fonction pour écrire les messages sur la sortie d'erreur, pour ne pas polluer stdout
+function Write-Stderr {
+    param([string]$Message)
+    $Host.UI.WriteErrorLine($Message)
+}
 
 try {
-    # La logique complexe de détection d'environnement est supprimée au profit
-    # d'une exécution directe via `conda run`, qui est plus robuste.
-    Write-Log "Script d'activation refactorisé. Utilisation de 'conda run' privilégiée."
+    if ($CommandToRun) {
+        # La commande est construite pour que le module Python fasse deux choses:
+        # 1. --setup-vars: Charger les variables d'environnement.
+        # 2. --run-command: Exécuter la commande passée par PowerShell.
+        # `$CommandToRun` doit être la fin de la ligne de commande car `nargs=REMAINDER`
+        # dans le script Python consomme tout ce qui suit.
+        $PythonCommand = "python -m $PythonModule --setup-vars --run-command $CommandToRun"
+        
+        # Commande finale à exécuter dans l'environnement conda.
+        $CondaCommand = "conda run --no-capture-output -n projet-is $PythonCommand"
 
-    # Injection des variables d'environnement nécessaires aux tests
-    $env:OPENAI_API_KEY = "dummy_key_for_testing_purposes"
-    Write-Log "Variable injectée: OPENAI_API_KEY" "DEBUG"
-
-    # --- PORTAGE DU CORRECTIF PYTHONPATH DEPUIS L'ANCIENNE BRANCHE ---
-    # Assure que les imports python fonctionnent correctement depuis la racine
-    $env:PYTHONPATH = $ProjectRoot
-    Write-Log "Variable injectée: PYTHONPATH=$($env:PYTHONPATH)" "DEBUG"
-
-    # Contournement pour le conflit OpenMP (OMP: Error #15)
-    $env:KMP_DUPLICATE_LIB_OK = "TRUE"
-    Write-Log "Variable injectée: KMP_DUPLICATE_LIB_OK" "DEBUG"
-
-    # Si une commande doit être écrite dans un fichier de sortie (pour `run_tests.ps1`)
-    if ($CommandOutputFile) {
-         # 'conda run' est la méthode moderne et robuste.
-         # --no-capture-output permet de voir la sortie de la commande en temps réel.
-        $CondaCommand = "conda run --no-capture-output -n projet-is $CommandToRun"
-        Write-Log "Génération de la commande pour le fichier de sortie: $CondaCommand"
-        Set-Content -Path $CommandOutputFile -Value $CondaCommand
-    }
-    # Si aucune sortie de fichier n'est demandée, mais qu'une commande est fournie, on l'exécute directement
-    elseif ($CommandToRun) {
-        $CondaCommand = "conda run --no-capture-output -n projet-is $CommandToRun"
-        Write-Log "Exécution directe de la commande: $CondaCommand"
+        if ($CommandOutputFile) {
+            Write-Stderr "Génération de la commande pour le fichier de sortie : $CommandOutputFile"
+            Set-Content -Path $CommandOutputFile -Value $CondaCommand
+            Write-Stderr "Commande générée avec succès."
+        } else {
+            Write-Stderr "Exécution de la commande via le wrapper Python : $PythonCommand"
+            Invoke-Expression -Command $CondaCommand
+            $exitCode = $LASTEXITCODE
+            if ($exitCode -ne 0) {
+                Write-Stderr "ERREUR: La commande a échoué avec le code de sortie: $exitCode"
+            }
+            exit $exitCode
+        }
+    } else {
+        # Si aucune commande n'est fournie, on exécute seulement le setup des variables.
+        $PythonCommand = "python -m $PythonModule --setup-vars"
+        $CondaCommand = "conda run --no-capture-output -n projet-is $PythonCommand"
+        
+        Write-Stderr "Activation de l'environnement (setup des variables via Python)..."
         Invoke-Expression -Command $CondaCommand
         $exitCode = $LASTEXITCODE
         if ($exitCode -ne 0) {
-            Write-Log "La commande a échoué avec le code de sortie: $exitCode" "ERROR"
+            Write-Stderr "ERREUR: Le setup de l'environnement a échoué avec le code de sortie: $exitCode"
         }
         exit $exitCode
     }
-    else {
-        Write-Log "Activation simple terminée. Aucun fichier de sortie ou commande à exécuter."
-    }
 }
 catch {
-    Write-Log "Erreur critique dans le script $($MyInvocation.MyCommand.Name):" "ERROR"
+    Write-Stderr "--- ERREUR CRITIQUE DANS activate_project_env.ps1 ---"
     $errorRecord = $_
     $line = $errorRecord.InvocationInfo.ScriptLineNumber
     $scriptName = $errorRecord.InvocationInfo.ScriptName
-    Write-Log "Message: $($_.Exception.Message) à $scriptName (Ligne: $line)" "ERROR"
+    Write-Stderr "Message: $($_.Exception.Message) à $scriptName (Ligne: $line)"
     exit 1
 }
