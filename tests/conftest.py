@@ -67,7 +67,7 @@ automatiquement utilisé en raison de problèmes de compatibilité.
 # empêchant l'exécution des tests dans une configuration incorrecte.
 # Voir project_core/core_from_scripts/auto_env.py pour plus de détails.
 # =====================================================================================
-import argumentation_analysis.core.environment
+# import argumentation_analysis.core.environment
 
 import sys
 import os
@@ -154,6 +154,10 @@ def pytest_addoption(parser):
     parser.addoption(
         "--frontend-url", action="store", default="http://localhost:3000",
         help="URL du frontend à tester (si applicable)"
+    )
+    parser.addoption(
+        "--disable-e2e-servers-fixture", action="store_true", default=False,
+        help="Désactive la fixture e2e_servers pour éviter les conflits."
     )
 
 @pytest.fixture(scope="session")

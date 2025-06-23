@@ -2,7 +2,8 @@
 const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({
-  testDir: './', // Changed from './tests_playwright/tests' to allow explicit test paths from root
+  testDir: './tests/e2e/python',
+  testMatch: '**/*_test.py',
   timeout: 5 * 60 * 1000, // 5 minutes global timeout per test file
   fullyParallel: false,
   forbidOnly: !!process.env.CI,

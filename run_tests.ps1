@@ -37,9 +37,14 @@ param(
     [string]$Path,
 
     [ValidateSet("chromium", "firefox", "webkit")]
-    [string]$Browser
+    [string]$Browser,
+
+    [switch]$DebugMode,
+
+    [string]$PytestArgs
 )
 
+# --- Script Body ---
 $ProjectRoot = $PSScriptRoot
 $ActivationScript = Join-Path $ProjectRoot "activate_project_env.ps1"
 $TestRunnerScript = Join-Path $ProjectRoot "project_core/test_runner.py"
@@ -59,11 +64,16 @@ $runnerArgs = @(
     $TestRunnerScript,
     "--type", $Type
 )
-if ($PSBoundParameters.ContainsKey('Path')) {
+if ($PSBoundParameters.ContainsKey('Path') -and -not [string]::IsNullOrEmpty($Path)) {
     $runnerArgs += "--path", $Path
 }
 if ($PSBoundParameters.ContainsKey('Browser')) {
     $runnerArgs += "--browser", $Browser
+}
+if (-not [string]::IsNullOrEmpty($PytestArgs)) {
+    # On doit splitter la chaine pour obtenir les arguments individuels
+    $pytestArgsArray = $PytestArgs.Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)
+    $runnerArgs += $pytestArgsArray
 }
 
 $CommandToRun = "python $($runnerArgs -join ' ')"
@@ -75,7 +85,46 @@ if ($Type -eq "validation") {
 Write-Host "[INFO] Commande à exécuter : $CommandToRun" -ForegroundColor Cyan
 Write-Host "[INFO] Lancement des tests via $ActivationScript..." -ForegroundColor Cyan
 
-& $ActivationScript -CommandToRun $CommandToRun
+# Préparer les arguments pour le script d'activation en utilisant le "splatting"
+$activationArgs = @{
+   CommandToRun = $CommandToRun
+}
+if ($DebugMode) {
+   $activationArgs['DebugMode'] = $true
+   Write-Host "[INFO] Mode Débogage activé." -ForegroundColor Yellow
+}
+
+# Le script d'activation génère maintenant la commande finale sur sa sortie standard.
+# Les logs sont sur stderr, donc on peut capturer stdout sans être pollué.
+Write-Host "[INFO] Génération de la commande d'exécution via le script d'activation..."
+$FinalCommand = & $ActivationScript @activationArgs
+$exitCode = $LASTEXITCODE
+
+if ($exitCode -ne 0) {
+   Write-Host "[ERREUR] Le script d'activation a échoué. Voir les logs ci-dessus." -ForegroundColor Red
+   exit $exitCode
+}
+
+if (-not $FinalCommand) {
+   Write-Host "[ERREUR] Le script d'activation n'a pas retourné de commande à exécuter." -ForegroundColor Red
+   exit 1
+}
+
+Write-Host "[INFO] Commande finale à exécuter :" -ForegroundColor Green
+Write-Host $FinalCommand -ForegroundColor Green
+
+# Exécution de la commande générée. Invoke-Expression est nécessaire pour
+# interpréter correctement la chaîne de commande complexe retournée.
+# À ce stade, $FinalCommand peut contenir plusieurs lignes de sortie.
+# On ne garde que la ligne qui contient la commande python.exe
+$CommandString = $FinalCommand | Where-Object { $_ -like '*python.exe*' } | ForEach-Object { $_.Trim() }
+
+if (-not $CommandString) {
+   Write-Host "[ERREUR] Impossible d'isoler la commande d'exécution finale depuis la sortie du script d'activation." -ForegroundColor Red
+   exit 1
+}
+
+Invoke-Expression -Command $CommandString
 
 $exitCode = $LASTEXITCODE
 Write-Host "[INFO] Exécution terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan

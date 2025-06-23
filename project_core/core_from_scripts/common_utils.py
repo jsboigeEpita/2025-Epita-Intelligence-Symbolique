@@ -112,11 +112,9 @@ class Logger:
         
         formatted = self._format_message(message, level)
         
-        # Erreurs et critiques vers stderr
-        if level in [LogLevel.ERROR, LogLevel.CRITICAL]:
-            print(formatted, file=sys.stderr)
-        else:
-            print(formatted)
+        # Tous les logs sont dirigés vers stderr pour ne pas polluer la sortie standard (stdout),
+        # qui peut être utilisée pour retourner des données (ex: une commande à exécuter).
+        print(formatted, file=sys.stderr)
 
         if self.log_file_path:
             try:
@@ -163,15 +161,15 @@ class ColoredOutput:
     def print_banner(title: str, char: str = "="):
         """Affiche une bannière stylée"""
         banner_line = char * max(60, len(title) + 4)
-        print(f"\n{banner_line}")
-        print(f"{char} {title.center(len(banner_line) - 4)} {char}")
-        print(f"{banner_line}\n")
+        print(f"\n{banner_line}", file=sys.stderr)
+        print(f"{char} {title.center(len(banner_line) - 4)} {char}", file=sys.stderr)
+        print(f"{banner_line}\n", file=sys.stderr)
     
     @staticmethod
     def print_section(title: str):
         """Affiche un titre de section"""
-        print(f"\n[+] {title}")
-        print("-" * (len(title) + 4))
+        print(f"\n[+] {title}", file=sys.stderr)
+        print("-" * (len(title) + 4), file=sys.stderr)
 
 
 def format_timestamp(dt: datetime = None) -> str:
@@ -299,9 +297,9 @@ def create_progress_indicator(total: int, prefix: str = "Progression"):
         bar_length = 50
         filled_length = int(bar_length * current // total)
         bar = '█' * filled_length + '-' * (bar_length - filled_length)
-        print(f'\r{prefix}: |{bar}| {percent:.1f}% {suffix}', end='', flush=True)
+        print(f'\r{prefix}: |{bar}| {percent:.1f}% {suffix}', end='', flush=True, file=sys.stderr)
         if current == total:
-            print()  # Nouvelle ligne à la fin
+            print(file=sys.stderr)  # Nouvelle ligne à la fin
     
     return update_progress
 
@@ -372,11 +370,11 @@ def print_colored(message: str, color: str = "white", bold: bool = False):
     
     # Gestion de l'encodage Unicode sur Windows
     try:
-        print(formatted_message)
+        print(formatted_message, file=sys.stderr)
     except UnicodeEncodeError:
         # Fallback sans caractères Unicode problématiques
         safe_message = formatted_message.encode('ascii', 'replace').decode('ascii')
-        print(safe_message)
+        print(safe_message, file=sys.stderr)
 
 
 def setup_logging(verbose: bool = False, use_colors: bool = None) -> Logger:

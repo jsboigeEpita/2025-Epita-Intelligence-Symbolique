@@ -31,17 +31,18 @@ def setup_logging():
 
 def create_backend_config() -> ServiceConfig:
     """Configuration backend Uvicorn avec a2wsgi"""
-    # Détection de l'interpréteur Python Conda
-    python_exe = "python"
-    
-    # Chercher l'environnement Conda projet-is
-    conda_base = os.path.expanduser("~/miniconda3")
-    if not os.path.exists(conda_base):
-        conda_base = "C:/Users/MYIA/miniconda3"
-    
-    projet_is_python = os.path.join(conda_base, "envs", "projet-is", "python.exe")
-    if os.path.exists(projet_is_python):
-        python_exe = projet_is_python
+    # Forcer l'utilisation de l'interpréteur Python de l'environnement Conda
+    python_exe = "C:/Users/MYIA/miniconda3/envs/projet-is/python.exe"
+    if not os.path.exists(python_exe):
+        # Fallback pour les systèmes où miniconda n'est pas dans le dossier utilisateur
+        conda_base_alt = "C:/Tools/miniconda3"
+        python_exe_alt = os.path.join(conda_base_alt, "envs", "projet-is", "python.exe")
+        if os.path.exists(python_exe_alt):
+            python_exe = python_exe_alt
+        else:
+            # Si tout échoue, on revient au python par défaut, mais on log un avertissement
+            logging.warning("Impossible de trouver l'interpréteur python de 'projet-is', utilisation du python par défaut.")
+            python_exe = "python"
     
     return ServiceConfig(
         name="backend-uvicorn",

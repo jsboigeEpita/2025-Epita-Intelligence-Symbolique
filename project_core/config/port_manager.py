@@ -356,7 +356,7 @@ if __name__ == "__main__":
             
     elif args.unlock:
         manager.unlock_port()
-        print("Port unlocked.")
+        print("Port unlocked.", file=sys.stderr)
 
     elif args.export_env:
         env_vars = {}

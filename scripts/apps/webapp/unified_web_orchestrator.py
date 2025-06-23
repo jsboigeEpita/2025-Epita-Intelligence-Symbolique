@@ -43,8 +43,6 @@ if str(project_root) not in sys.path:
 from scripts.apps.webapp.backend_manager import BackendManager
 from scripts.apps.webapp.frontend_manager import FrontendManager
 from scripts.apps.webapp.playwright_runner import PlaywrightRunner
-from scripts.apps.webapp.process_cleaner import ProcessCleaner
-
 # Import du gestionnaire centralisé des ports
 try:
     from project_core.config.port_manager import PortManager, get_port_manager, set_environment_variables
@@ -105,7 +103,6 @@ class UnifiedWebOrchestrator:
         self.backend_manager = BackendManager(self.config.get('backend', {}), self.logger)
         self.frontend_manager = FrontendManager(self.config.get('frontend', {}), self.logger)
         self.playwright_runner = PlaywrightRunner(self.config.get('playwright', {}), self.logger)
-        self.process_cleaner = ProcessCleaner(self.logger)
         
         # État de l'application
         self.app_info = WebAppInfo()
@@ -264,17 +261,14 @@ class UnifiedWebOrchestrator:
                       "Initialisation orchestrateur")
         
         try:
-            # 1. Nettoyage préalable
-            await self._cleanup_previous_instances()
-            
-            # 2. Démarrage backend (obligatoire)
+            # 1. Démarrage backend (obligatoire)
             if not await self._start_backend():
                 return False
             
             # 3. Démarrage frontend (optionnel)
             frontend_enabled = frontend_enabled if frontend_enabled is not None else self.config['frontend']['enabled']
             if frontend_enabled:
-                await self._start_frontend()
+                await self._start_frontend(frontend_enabled)
             
             # 4. Validation des services
             if not await self._validate_services():
@@ -315,7 +309,7 @@ class UnifiedWebOrchestrator:
         # Configuration runtime pour Playwright
         test_config = {
             'backend_url': self.app_info.backend_url,
-            'frontend_url': self.app_info.frontend_url or self.app_info.backend_url,
+            'frontend_url': self.app_info.frontend_url,
             'headless': self.headless,
             **kwargs
         }
@@ -338,9 +332,6 @@ class UnifiedWebOrchestrator:
             if self.app_info.backend_pid:
                 await self.backend_manager.stop()
                 
-            # Cleanup processus
-            await self.process_cleaner.cleanup_webapp_processes()
-
             # Déverrouillage du port
             if CENTRAL_PORT_MANAGER_AVAILABLE:
                 self._unlock_port()
@@ -351,8 +342,8 @@ class UnifiedWebOrchestrator:
         except Exception as e:
             self.add_trace("[WARNING] ERREUR ARRET", str(e), "Nettoyage partiel", status="error")
     
-    async def full_integration_test(self, headless: bool = True, 
-                                   frontend_enabled: bool = None,
+    async def full_integration_test(self, headless: bool = True,
+                                   frontend_enabled: bool = True, # Forcer le frontend pour les tests E2E
                                    test_paths: List[str] = None) -> bool:
         """
         Test d'intégration complet : démarrage + tests + arrêt
@@ -370,21 +361,27 @@ class UnifiedWebOrchestrator:
             
             # 1. Démarrage application
             if not await self.start_webapp(headless, frontend_enabled):
+                self.add_trace("[ERROR] ECHEC DEMARRAGE PRE-TEST", "L'application web n'a pas pu démarrer.", "", status="error")
+                return False
+
+            # S'assurer que le frontend a démarré si les tests sont exécutés
+            if not self.app_info.frontend_url:
+                self.add_trace("[ERROR] FRONTEND INDISPONIBLE",
+                               "Le frontend n'a pas démarré, impossible de lancer les tests E2E.",
+                               "", status="error")
                 return False
             
             # 2. Attente stabilisation
             await asyncio.sleep(2)
             
             # 3. Exécution tests
-            # DEBUG: Forcer l'exécution d'un seul test pour isoler le problème de blocage.
-            isolated_test_path = ['tests/e2e/python/test_validation_form.py']
-            self.logger.warning(f"DEBUGGING: Exécution d'un test isolé: {isolated_test_path}")
-            success = await self.run_tests(isolated_test_path)
+            self.logger.info(f"Lancement de la suite de tests complète: {test_paths or 'par défaut'}")
+            success = await self.run_tests(test_paths)
             
             if success:
                 self.add_trace("[SUCCESS] INTEGRATION REUSSIE",
-                              "Tous les tests ont passé", 
-                              "Application web validée")
+                               "Tous les tests ont passé",
+                               "Application web validée")
             else:
                 self.add_trace("[ERROR] ECHEC INTEGRATION",
                               "Certains tests ont échoué", 
@@ -402,26 +399,6 @@ class UnifiedWebOrchestrator:
     # ========================================================================
     # MÉTHODES PRIVÉES
     # ========================================================================
-    
-    async def _cleanup_previous_instances(self):
-        """Nettoie les instances précédentes, en ciblant d'abord les ports."""
-        self.add_trace("[CLEAN] NETTOYAGE PREALABLE", "Forçage de la libération des ports et arrêt des instances existantes")
-
-        # Récupération de tous les ports depuis la config pour un nettoyage ciblé
-        backend_ports = [self.config['backend']['start_port']] + self.config['backend'].get('fallback_ports', [])
-        frontend_config = self.config['frontend']
-        frontend_ports = [frontend_config['start_port']] + frontend_config.get('fallback_ports', []) if frontend_config.get('start_port') else []
-        all_ports = list(set(backend_ports + frontend_ports))
-
-        self.logger.info(f"Nettoyage forcé des processus sur les ports : {all_ports}")
-        self.process_cleaner.cleanup_by_port(all_ports)
-        
-        # On attend un court instant pour laisser le temps aux processus de se terminer
-        await asyncio.sleep(1)
-
-        # On exécute ensuite le nettoyage général pour les processus qui n'utiliseraient pas de port
-        self.logger.info("Nettoyage général des processus restants...")
-        await self.process_cleaner.cleanup_webapp_processes()
     
     async def _start_backend(self) -> bool:
         """Démarre le backend avec failover de ports"""
@@ -445,9 +422,12 @@ class UnifiedWebOrchestrator:
             self.add_trace("[ERROR] ECHEC BACKEND", result['error'], "", status="error")
             return False
     
-    async def _start_frontend(self) -> bool:
+    async def _start_frontend(self, force_start: bool = False) -> bool:
         """Démarre le frontend React"""
-        if not self.config['frontend']['enabled']:
+        # La condition de démarrage prend en compte la configuration ET le flag de forçage
+        should_start = self.config['frontend'].get('enabled', False) or force_start
+        if not should_start:
+            self.add_trace("[FRONTEND] DEMARRAGE IGNORE", "Frontend désactivé dans la configuration et non forcé.", status="success")
             return True
             
         self.add_trace("[FRONTEND] DEMARRAGE FRONTEND", "Lancement interface React")
@@ -635,16 +615,25 @@ def main():
                 # Test d'intégration qui encapsule le démarrage, l'exécution et l'arrêt
                 success = False
                 try:
-                    # Démarrage de l'application (partie de run_tests si nécessaire)
-                    # Exécution des tests et récupération du résultat
-                    success = await orchestrator.run_tests(args.tests if args.tests else None)
+                    # DEBUG: Forcer l'exécution d'un seul test pour isoler le problème de blocage.
+                    isolated_test_path = ['tests/e2e/python/test_validation_form.py']
+                    orchestrator.logger.warning(f"DEBUGGING: Exécution d'un test isolé: {isolated_test_path}")
+                    
+                    # On utilise le test isolé si aucun autre n'est spécifié via la ligne de commande
+                    tests_to_run = args.tests or isolated_test_path
+                    success = await orchestrator.run_tests(tests_to_run)
                 finally:
                     # Arrêt systématique de l'application
                     await orchestrator.stop_webapp()
                 return success
             else:  # Integration par défaut
+                # Pour un test d'intégration complet, le frontend est TOUJOURS requis.
+                # Le flag --frontend sert à l'activer pour d'autres commandes comme --start.
                 return await orchestrator.full_integration_test(
-                    headless, args.frontend, args.tests)
+                    headless=headless,
+                    frontend_enabled=True,
+                    test_paths=args.tests
+                )
         except KeyboardInterrupt:
             print("\n🛑 Interruption utilisateur")
             await orchestrator.stop_webapp()

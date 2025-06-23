@@ -24,7 +24,8 @@ param(
     [switch]$Verbose = $false,
     [switch]$ForceReinstall = $false,
     [int]$CondaVerboseLevel = 0,
-    [switch]$LaunchWebApp = $false
+    [switch]$LaunchWebApp = $false,
+    [switch]$DebugMode = $false
 )
 
 # Fonction de logging simple
@@ -115,7 +116,15 @@ try {
     Write-Log "Initialisation du script d'environnement."
 
     $ProjectRoot = $PSScriptRoot
-    $PythonManagerModule = "project_core/core_from_scripts/environment_manager.py"
+    
+    # Sélection du script de gestion en fonction du mode de débogage
+    if ($DebugMode) {
+        Write-Log "Mode de débogage activé. Utilisation du gestionnaire d'environnement de débogage." "WARNING"
+        $PythonManagerModule = "project_core/core_from_scripts/environment_manager.debug.py"
+    } else {
+        $PythonManagerModule = "project_core/core_from_scripts/environment_manager.py"
+    }
+    
     $PythonManagerScriptPath = Join-Path $ProjectRoot $PythonManagerModule
 
     if (-not (Test-Path $PythonManagerScriptPath)) {
@@ -185,7 +194,11 @@ try {
     if ($FinalCommandToRun) {
         # Le script Python gère maintenant la décomposition des commandes si nécessaire
         $ManagerArgs += "--command", $FinalCommandToRun
+        # On ajoute le nouvel argument pour seulement construire la commande
+        $ManagerArgs += "--get-command-only"
     } else {
+         # Si pas de commande, on ne peut pas utiliser get-command-only.
+         # Le script s'arrête après l'activation simple.
          Write-Log "Aucune commande à exécuter. Activation simple de l'environnement." "INFO"
     }
 
@@ -205,36 +218,35 @@ try {
     
     Write-Log "Arguments passés au manager Python: $($ManagerArgs -join ' ')" "DEBUG"
 
-    # === 5. Lancement optionnel de la WebApp ===
-    if ($LaunchWebApp) {
-        Write-Log "Lancement du serveur web en arrière-plan..." "INFO"
-        if (-not (Test-Path $WebAppLauncherScript)) {
-            throw "Le script de lancement de la webapp est introuvable: $WebAppLauncherScript"
-        }
-        # On passe la commande de démarrage au manager pour qu'elle s'exécute dans l'env Conda
-        $launchArgs = $ManagerArgs.Clone()
-        $launchArgs += "--command", "$PythonExecutable `"$WebAppLauncherScript`" start"
-        
-        & $PythonExecutable $launchArgs
-        if ($LASTEXITCODE -ne 0) {
-            throw "Échec du lancement du serveur web en arrière-plan."
-        }
-        Write-Log "Commande de lancement du serveur envoyée. Attente pour la stabilisation..." "DEBUG"
-        Start-Sleep -Seconds 15 # Attente pour que le serveur soit prêt
-    }
+   # === 5. Construction de la commande finale ===
+   # Le script n'exécute plus rien, il génère la commande pour le script appelant.
 
-    # === 6. Exécution ===
-    Write-Log "Lancement du gestionnaire d'environnement Python pour activation et exécution de la commande principale..."
-    & $PythonExecutable $ManagerArgs
-    $exitCode = $LASTEXITCODE
+   # Si pas de commande spécifiée, le travail est déjà fait (variables d'env injectées)
+   if (-not $FinalCommandToRun) {
+       Write-Log "Activation simple terminée. Aucune commande à générer." "SUCCESS"
+       exit 0
+   }
+   
+   Write-Log "Génération de la commande d'exécution finale via le manager Python..."
 
-    if ($exitCode -ne 0) {
-        Write-Log "La commande principale a terminé avec un code d'erreur: $exitCode" "ERROR"
-    } else {
-        Write-Log "Le script gestionnaire Python a terminé avec succès." "SUCCESS"
-    }
-    
-    exit $exitCode
+   # Appel du script Python, qui va maintenant écrire la commande finale sur stdout
+   $FinalExecutableCommand = & $PythonExecutable $ManagerArgs
+   $exitCode = $LASTEXITCODE
+
+   if ($exitCode -ne 0) {
+       # Si le script de génération de commande échoue, c'est une erreur critique.
+       # Les logs d'erreur de Python devraient être sur stderr.
+       throw "Le script de génération de commande a échoué avec le code: $exitCode."
+   }
+
+   if (-not $FinalExecutableCommand) {
+       throw "Le script de génération n'a renvoyé aucune commande."
+   }
+   
+   # Écrire la commande finale sur la sortie standard pour que le script appelant la récupère
+   Write-Output $FinalExecutableCommand
+   
+   # Le script se termine ici. Le code de sortie de la commande sera géré par l'appelant.
 
 } catch {
     # Capture toutes les erreurs (PowerShell ou `throw`)
@@ -252,7 +264,7 @@ finally {
     # Assurer le déverrouillage systématique du port
     Write-Log "Nettoyage du verrouillage de port (finally)..." "INFO"
     try {
-        & $PythonExecutable $portManagerScript --unlock
+        & $PythonExecutable $portManagerScript --unlock *> $null
         Write-Log "Verrouillage de port nettoyé." "SUCCESS"
     } catch {
         Write-Log "Avertissement: Échec du nettoyage du verrouillage de port. Un nettoyage manuel peut être requis." "WARNING"

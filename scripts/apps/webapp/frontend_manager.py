@@ -22,7 +22,6 @@ from pathlib import Path
 import aiohttp
 import psutil
 
-
 class FrontendManager:
     """
     Gestionnaire du frontend React
@@ -43,7 +42,7 @@ class FrontendManager:
         self.enabled = config.get('enabled', True)
         self.frontend_path = self._find_frontend_path(config.get('path'))
         self.start_port = config.get('start_port', 3000)
-        self.fallback_ports = config.get('fallback_ports', [3001, 3002])
+        self.fallback_ports = config.get('fallback_ports', list(range(3001, 3011)))
         self.start_command = config.get('start_command', 'npm start')
         self.build_command = config.get('build_command', 'npm run build')
         self.timeout_seconds = config.get('timeout_seconds', 90)
@@ -89,6 +88,9 @@ class FrontendManager:
         if not self.frontend_path:
             return {'success': False, 'error': 'Chemin du frontend non trouvé.'}
 
+        if not await self._ensure_dependencies():
+            return {'success': False, 'error': "Échec de l'installation des dépendances npm"}
+
         ports_to_try = [self.start_port] + self.fallback_ports
         
         for port in ports_to_try:
@@ -100,6 +102,8 @@ class FrontendManager:
             result = await self._start_on_port(port)
             if result['success']:
                 return result
+            else:
+                self.logger.warning(f"Échec de la tentative sur le port {port}. Raison: {result.get('error', 'Inconnue')}")
         
         error_msg = f"Impossible de démarrer le frontend sur les ports configurés: {ports_to_try}"
         self.logger.error(error_msg)
@@ -109,9 +113,6 @@ class FrontendManager:
         """
         Tente de démarrer le serveur de développement sur un port donné.
         """
-        if not await self._ensure_dependencies():
-            return {'success': False, 'error': "Échec de l'installation des dépendances npm"}
-
         try:
             self.logger.info(f"Exécution de la commande de démarrage: {self.start_command}")
             cmd = ['cmd', '/c'] + self.start_command.split() if sys.platform == "win32" else ['sh', '-c', self.start_command]
@@ -145,43 +146,91 @@ class FrontendManager:
             await self.stop()
             return {'success': False, 'error': str(e)}
     
-    async def _ensure_dependencies(self):
-        """S'assure que les dépendances npm sont installées"""
+    async def _ensure_dependencies(self) -> bool:
+        """S'assure que les dépendances npm sont installées. Retourne True si succès."""
         node_modules = self.frontend_path / 'node_modules'
         
-        if not node_modules.exists():
-            self.logger.info("Installation dépendances npm...")
+        if node_modules.exists():
+            self.logger.info("Le dossier 'node_modules' existe déjà. Installation des dépendances sautée.")
+            return True
+
+        self.logger.info(f"Le dossier 'node_modules' est manquant. Lancement de 'npm install' dans {self.frontend_path}...")
+        
+        try:
+            cmd = ['cmd', '/c', 'npm', 'install'] if sys.platform == "win32" else ['npm', 'install']
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=self.frontend_path,
+                text=True,
+                encoding='utf-8'
+            )
             
-            try:
-                process = subprocess.Popen(
-                    ['npm', 'install'],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    cwd=self.frontend_path
-                )
+            stdout, stderr = process.communicate(timeout=180)  # 3 min max
+            
+            if process.returncode != 0:
+                self.logger.error(f"--- ERREUR NPM INSTALL ---")
+                self.logger.error(f"Code de retour: {process.returncode}")
+                self.logger.error(f"STDOUT:\n{stdout}")
+                self.logger.error(f"STDERR:\n{stderr}")
+                self.logger.error(f"--- FIN ERREUR NPM INSTALL ---")
+                return False
+            else:
+                self.logger.info("Dépendances npm installées avec succès.")
+                return True
                 
-                stdout, stderr = process.communicate(timeout=120)  # 2 min max
-                
-                if process.returncode != 0:
-                    self.logger.error(f"Échec npm install: {stderr.decode()}")
-                else:
-                    self.logger.info("Dépendances npm installées")
-                    
-            except subprocess.TimeoutExpired:
-                process.kill()
-                self.logger.error("Timeout installation npm")
-            except Exception as e:
-                self.logger.error(f"Erreur npm install: {e}")
+        except subprocess.TimeoutExpired:
+            process.kill()
+            self.logger.error("Timeout (3 minutes) dépassé lors de l'installation des dépendances npm.")
+            return False
+        except Exception as e:
+            self.logger.error(f"Erreur imprévue lors de 'npm install': {e}", exc_info=True)
+            return False
     
     def _get_frontend_env(self, port: int) -> Dict[str, str]:
-        """Prépare l'environnement pour le frontend avec un port dynamique."""
+        """
+        Prépare un environnement isolé pour le frontend.
+        Ceci est CRUCIAL pour éviter les conflits avec les installations globales de Node.js.
+        Nous construisons un PATH qui priorise notre environnement portable.
+        """
         env = os.environ.copy()
+
+        # 1. Obtenir la racine du projet pour construire les chemins relatifs
+        project_root = Path(__file__).resolve().parents[3]
+        
+        # 2. Définir les chemins vers les outils portables (Node.js, etc.)
+        # Ces chemins pourraient être lus depuis une configuration plus globale à l'avenir.
+        # Corrigé: les outils portables sont dans 'libs', pas 'env'
+        portable_node_path = project_root / "libs" / "node-v20.14.0-win-x64"
+        
+        # 3. Construire la variable PATH
+        # On met le chemin de Node portable en PREMIER pour qu'il soit utilisé en priorité.
+        original_path = env.get("PATH", "")
+        
+        if sys.platform == "win32":
+            # Sur Windows, les chemins sont séparés par des points-virgules
+            new_path = f"{str(portable_node_path)};{original_path}"
+        else:
+            # Sur Linux/macOS, les chemins sont séparés par des deux-points
+            new_path = f"{str(portable_node_path)}:{original_path}"
+
+        self.logger.info(f"Création d'un PATH isolé pour le frontend: {new_path[:200]}...") # Affiche le début pour le debug
+
+        # 4. Mettre à jour l'environnement
         env.update({
             'BROWSER': 'none',
             'PORT': str(port),
             'GENERATE_SOURCEMAP': 'false',
-            'SKIP_PREFLIGHT_CHECK': 'true'
+            'SKIP_PREFLIGHT_CHECK': 'true',
+            'PATH': new_path
         })
+        
+        # Log des variables clés pour le débogage
+        self.logger.debug(f"Variables d'environnement pour le frontend: \n"
+                         f"  - PORT: {env.get('PORT')}\n"
+                         f"  - PATH: {env.get('PATH')}")
+
         return env
 
     async def _wait_for_frontend(self, initial_port: int) -> Tuple[bool, Optional[int], Optional[str]]:
@@ -215,11 +264,14 @@ class FrontendManager:
             url_to_check = f"http://localhost:{detected_port}"
             try:
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(url_to_check, timeout=5) as response:
+                    self.logger.info(f"Tentative de connexion à {url_to_check}...")
+                    async with session.get(url_to_check, timeout=15) as response:
+                        self.logger.info(f"Réponse reçue de {url_to_check} avec statut: {response.status}")
                         if response.status == 200:
                             self.logger.info(f"🎉 Frontend accessible sur {url_to_check} après {time.time() - start_time:.1f}s.")
                             return True, detected_port, url_to_check
-            except aiohttp.ClientError:
+            except aiohttp.ClientError as e:
+                self.logger.warning(f"Échec de connexion à {url_to_check}: {e}")
                 pass # On continue d'attendre
 
             await asyncio.sleep(2)
@@ -261,44 +313,43 @@ class FrontendManager:
         return False
     
     async def stop(self):
-        """Arrête le frontend proprement"""
-        if self.process:
-            try:
-                self.logger.info(f"Arrêt frontend PID {self.process.pid}")
-                
-                # Terminaison progressive
-                self.process.terminate()
-                
-                # Attente arrêt propre (10s max pour React)
-                try:
-                    self.process.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    # Force kill si nécessaire
-                    self.process.kill()
-                    self.process.wait()
-                    
-                self.logger.info("Frontend arrêté")
-                
-            except Exception as e:
-                self.logger.error(f"Erreur arrêt frontend: {e}")
-            finally:
-                if self.frontend_stdout_log_file:
-                    try:
-                        self.frontend_stdout_log_file.close()
-                    except Exception as log_e:
-                        self.logger.error(f"Erreur fermeture frontend_stdout_log_file: {log_e}")
-                    self.frontend_stdout_log_file = None
-                
-                if self.frontend_stderr_log_file:
-                    try:
-                        self.frontend_stderr_log_file.close()
-                    except Exception as log_e:
-                        self.logger.error(f"Erreur fermeture frontend_stderr_log_file: {log_e}")
-                    self.frontend_stderr_log_file = None
+        """Arrête le frontend proprement en nettoyant agressivement son port."""
+        self.logger.info("Début de l'arrêt du serveur de développement frontend.")
 
+        # 1. Tenter d'arrêter le processus principal que nous avons lancé
+        if self.process:
+            self.logger.info(f"Arrêt du processus Popen du frontend (PID: {self.process.pid})")
+            try:
+                self.process.terminate()
+                self.process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.logger.warning(f"Le processus Popen du frontend (PID: {self.process.pid}) n'a pas terminé, on le tue.")
+                self.process.kill()
+            except Exception as e:
+                self.logger.error(f"Erreur lors de l'arrêt du processus Popen du frontend: {e}")
+            finally:
                 self.process = None
-                self.current_url = None
-                self.pid = None
+        
+        # 2. Fermeture des fichiers de log
+        if self.frontend_stdout_log_file:
+            try:
+                self.frontend_stdout_log_file.close()
+            except Exception as log_e:
+                self.logger.error(f"Erreur fermeture frontend_stdout_log_file: {log_e}")
+            self.frontend_stdout_log_file = None
+        
+        if self.frontend_stderr_log_file:
+            try:
+                self.frontend_stderr_log_file.close()
+            except Exception as log_e:
+                self.logger.error(f"Erreur fermeture frontend_stderr_log_file: {log_e}")
+            self.frontend_stderr_log_file = None
+
+        # 4. Réinitialisation de l'état
+        self.logger.info("Arrêt du frontend terminé.")
+        self.current_url = None
+        self.current_port = None
+        self.pid = None
     
     def get_status(self) -> Dict[str, Any]:
         """Retourne l'état actuel du frontend"""

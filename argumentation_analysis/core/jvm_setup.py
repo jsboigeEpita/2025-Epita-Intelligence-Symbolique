@@ -641,6 +641,7 @@ def initialize_jvm(
     logger.info(f"Chemin DLL/SO JVM utilisé: {jvm_path_dll_so}")
 
     try:
+        logger.info("JVM_SETUP: APPEL IMMINENT à jpype.startJVM...")
         jpype.startJVM(
             jvm_path_dll_so,
             *jvm_options,
@@ -648,11 +649,13 @@ def initialize_jvm(
             ignoreUnrecognized=True,
             convertStrings=False
         )
+        logger.info("JVM_SETUP: RETOUR de jpype.startJVM. Le blocage n'a pas eu lieu.")
         _JVM_INITIALIZED_THIS_SESSION = True
         _JVM_WAS_SHUTDOWN = False
         logger.info("[SUCCESS] JVM démarrée avec succès.")
         return True
     except Exception as e:
+        logger.error(f"JVM_SETUP: EXCEPTION lors de jpype.startJVM: {e}", exc_info=True)
         logger.error(f"Erreur fatale lors du démarrage de la JVM: {e}", exc_info=True)
         _JVM_INITIALIZED_THIS_SESSION = False
         return False

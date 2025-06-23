@@ -120,7 +120,7 @@ except ImportError:
 # from argumentation_analysis.core.environment import _load_dotenv_intelligent # MODIFIÉ ICI - Sera supprimé
 class EnvironmentManager:
     """Gestionnaire centralisé des environnements Python/conda"""
-    
+
     def __init__(self, logger: Logger = None):
         """
         Initialise le gestionnaire d'environnement
@@ -345,182 +345,112 @@ class EnvironmentManager:
             self.logger.error(f"Erreur lors de la recherche du chemin de l'environnement '{env_name}': {e}")
             return None
 
-    def run_in_conda_env(self, command: Union[str, List[str]], env_name: str = None,
-                         cwd: str = None, capture_output: bool = False) -> subprocess.CompletedProcess:
+    def build_final_command(self, command: Union[str, List[str]], env_name: str = None) -> List[str]:
         """
-        Exécute une commande dans un environnement conda de manière robuste en utilisant `conda run`.
-        Cette méthode utilise le chemin complet de l'environnement (`-p` ou `--prefix`) pour éviter les ambiguïtés.
+        Construit la liste de commande finale à exécuter, sans l'exécuter.
+        Contient la logique pour choisir entre l'exécution directe de Python et 'conda run'.
         """
-        self.logger.info(f"[DEBUG-EM] Entrée dans run_in_conda_env avec la commande: {command}")
         if env_name is None:
             env_name = self.default_conda_env
-        if cwd is None:
-            cwd = str(self.project_root)
-        
-        self.logger.info(f"[DEBUG-EM] Environnement cible: {env_name}, CWD: {cwd}")
 
         conda_exe = self._find_conda_executable()
         if not conda_exe:
-            self.logger.error("Exécutable Conda non trouvé.")
-            raise RuntimeError("Exécutable Conda non trouvé, impossible de continuer.")
+            raise RuntimeError("Exécutable Conda non trouvé pour construire la commande.")
 
         env_path = self._get_conda_env_path(env_name)
         if not env_path:
-            self.logger.error(f"Impossible de trouver le chemin pour l'environnement conda '{env_name}'.")
-            raise RuntimeError(f"Environnement conda '{env_name}' non disponible ou chemin inaccessible.")
+            raise RuntimeError(f"Chemin pour l'environnement conda '{env_name}' introuvable.")
 
-        # Si la commande est une chaîne et contient des opérateurs de shell,
-        # il est plus sûr de l'exécuter via un shell.
-        import shlex # Déplacé ici pour être disponible globalement dans la fonction
+        import shlex
+        is_complex = isinstance(command, str) and any(op in command for op in [';', '&&', '|'])
+        
+        cmd_list = shlex.split(command, posix=(os.name != 'nt')) if isinstance(command, str) else command
+        is_python_direct = cmd_list and cmd_list[0].lower() == 'python'
 
-        is_complex_string_command = isinstance(command, str) and (';' in command or '&&' in command or '|' in command)
-        
-        # Déterminer si c'est une commande Python directe
-        is_direct_python_command = False
-        base_command_list_for_python_direct = []
-        if isinstance(command, str) and not is_complex_string_command:
-            temp_split_command = shlex.split(command, posix=(os.name != 'nt'))
-            if temp_split_command and temp_split_command[0].lower() == 'python':
-                is_direct_python_command = True
-                base_command_list_for_python_direct = temp_split_command
-        elif isinstance(command, list) and command and command[0].lower() == 'python':
-            is_direct_python_command = True
-            base_command_list_for_python_direct = list(command) # Copie
-        
-        self.logger.info(f"[DEBUG-EM] Type de commande détecté: DirectPython={is_direct_python_command}, ComplexShell={is_complex_string_command}")
+        if is_python_direct:
+            python_exe_path = Path(env_path) / ('python.exe' if platform.system() == "Windows" else 'bin/python')
+            if not python_exe_path.is_file():
+                # Fallback for windows store python or other weird installs
+                python_exe_path = Path(env_path) / 'Scripts' / 'python.exe' if platform.system() == "Windows" else python_exe_path
+            
+            if not python_exe_path.is_file():
+                 raise RuntimeError(f"Exécutable Python introuvable dans '{env_path}'.")
+            
+            return [str(python_exe_path)] + cmd_list[1:]
 
-        # Préparer l'environnement pour le sous-processus
-        # Cet environnement sera utilisé pour TOUS les types d'appels à subprocess.run ci-dessous
-        self.sub_process_env = os.environ.copy() # Stocker dans self pour y accéder dans le bloc finally si besoin
-        self.sub_process_env['CONDA_DEFAULT_ENV'] = env_name
-        self.sub_process_env['CONDA_PREFIX'] = env_path
+        if is_complex:
+            shell_cmd = ['cmd.exe', '/c'] if platform.system() == "Windows" else ['bash', '-c']
+            return [conda_exe, 'run', '--prefix', env_path, '--no-capture-output'] + shell_cmd + [command]
         
-        env_scripts_dir = Path(env_path) / ('Scripts' if platform.system() == "Windows" else 'bin')
+        # Standard command
+        return [conda_exe, 'run', '--prefix', env_path, '--no-capture-output'] + cmd_list
+
+    def run_in_conda_env(self, command: Union[str, List[str]], env_name: str = None,
+                         cwd: str = None, capture_output: bool = False) -> subprocess.CompletedProcess:
+        """Exécute une commande dans un environnement conda de manière robuste."""
+        if env_name is None: env_name = self.default_conda_env
+        if cwd is None: cwd = str(self.project_root)
+
+        final_command = self.build_final_command(command, env_name)
+        self.logger.info(f"Commande finale à exécuter: {' '.join(final_command)}")
+
+        # Préparation de l'environnement
+        env_path = self._get_conda_env_path(env_name)
+        sub_process_env = os.environ.copy()
+        sub_process_env['CONDA_DEFAULT_ENV'] = env_name
+        sub_process_env['CONDA_PREFIX'] = env_path
         # S'assurer que le PATH de l'environnement cible est prioritaire
-        self.sub_process_env['PATH'] = f"{env_scripts_dir}{os.pathsep}{os.environ.get('PATH', '')}"
+        sub_process_env['PATH'] = f"{env_scripts_dir}{os.pathsep}{os.environ.get('PATH', '')}"
         
         # --- CORRECTIF : Propagation du PYTHONPATH ---
         # Le PYTHONPATH a été défini dans self.env_vars mais n'était pas propagé
         # au sous-processus. On le récupère depuis self.env_vars (qui a la bonne valeur)
         # et on le force dans l'environnement du sous-processus.
         if 'PYTHONPATH' in self.env_vars:
-            self.sub_process_env['PYTHONPATH'] = self.env_vars['PYTHONPATH']
-            self.logger.info(f"Propagation du PYTHONPATH au sous-processus: {self.sub_process_env['PYTHONPATH']}")
+            sub_process_env['PYTHONPATH'] = self.env_vars['PYTHONPATH']
+            self.logger.info(f"Propagation du PYTHONPATH au sous-processus: {sub_process_env['PYTHONPATH']}")
         
         # --- CORRECTIF CRUCIAL : Propagation de JAVA_HOME ---
         # S'assure que la variable JAVA_HOME, validée par activate_project_environment,
         # est bien transmise au sous-processus final qui exécute les tests.
         if 'JAVA_HOME' in os.environ:
-            self.sub_process_env['JAVA_HOME'] = os.environ['JAVA_HOME']
-            self.logger.info(f"Propagation de JAVA_HOME au sous-processus: {self.sub_process_env['JAVA_HOME']}")
+            sub_process_env['JAVA_HOME'] = os.environ['JAVA_HOME']
+            self.logger.info(f"Propagation de JAVA_HOME au sous-processus: {sub_process_env['JAVA_HOME']}")
 
         # --- CORRECTIF OMP: Error #15 ---
         # Force la variable d'environnement pour éviter les conflits de librairies OpenMP
         # (souvent entre la version de PyTorch et celle de scikit-learn/numpy).
-        # self.sub_process_env['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+        # sub_process_env['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
         # self.logger.info("Injection de KMP_DUPLICATE_LIB_OK=TRUE pour éviter les erreurs OMP.")
 
         self.logger.info(f"Variables d'environnement préparées pour le sous-processus (extrait): "
-                         f"CONDA_DEFAULT_ENV={self.sub_process_env.get('CONDA_DEFAULT_ENV')}, "
-                         f"CONDA_PREFIX={self.sub_process_env.get('CONDA_PREFIX')}, "
-                         f"PATH starts with: {self.sub_process_env.get('PATH', '')[:100]}...")
+                         f"CONDA_DEFAULT_ENV={sub_process_env.get('CONDA_DEFAULT_ENV')}, "
+                         f"CONDA_PREFIX={sub_process_env.get('CONDA_PREFIX')}, "
+                         f"PATH starts with: {sub_process_env.get('PATH', '')[:100]}...")
        
         # --- INJECTION DE LA VARIABLE DE COURT-CIRCUIT ---
         # Indique aux sous-processus (comme auto_env.py) que l'environnement est déjà géré.
-        self.sub_process_env['RUNNING_VIA_ENV_MANAGER'] = 'true'
+        sub_process_env['RUNNING_VIA_ENV_MANAGER'] = 'true'
         self.logger.info("Injection de RUNNING_VIA_ENV_MANAGER=true pour court-circuiter la double activation.")
-
-        if is_direct_python_command:
-            self.logger.info("[DEBUG-EM] Branche sélectionnée: is_direct_python_command")
-            # Nouvelle logique pour trouver python.exe
-            python_exe_direct_in_env_root = Path(env_path) / ('python.exe' if platform.system() == "Windows" else 'python')
-            python_exe_in_env_scripts_dir = env_scripts_dir / ('python.exe' if platform.system() == "Windows" else 'python')
-
-            selected_python_exe = None
-            if python_exe_direct_in_env_root.is_file():
-                selected_python_exe = python_exe_direct_in_env_root
-                self.logger.debug(f"Utilisation de Python directement depuis le répertoire racine de l'environnement: {selected_python_exe}")
-            elif python_exe_in_env_scripts_dir.is_file():
-                selected_python_exe = python_exe_in_env_scripts_dir
-                self.logger.debug(f"Utilisation de Python depuis le sous-répertoire Scripts/bin: {selected_python_exe}")
-            else:
-                self.logger.error(f"L'exécutable Python n'a été trouvé ni dans '{python_exe_direct_in_env_root}' ni dans '{python_exe_in_env_scripts_dir}'.")
-                raise RuntimeError(f"Python introuvable dans {env_name}")
-            
-            final_command = [str(selected_python_exe)] + base_command_list_for_python_direct[1:]
-            self.logger.info(f"Exécution directe de Python: {' '.join(map(str,final_command))}")
         
-        elif is_complex_string_command:
-            self.logger.info("[DEBUG-EM] Branche sélectionnée: is_complex_string_command")
-            if platform.system() == "Windows":
-                final_command = [conda_exe, 'run', '--prefix', env_path, '--no-capture-output', 'cmd.exe', '/c', command]
-            else:
-                final_command = [conda_exe, 'run', '--prefix', env_path, '--no-capture-output', 'bash', '-c', command]
-            self.logger.info(f"Exécution de commande shell complexe via 'conda run': {' '.join(map(str,final_command))}")
+        # Cette logique de `is_complex_string_command` a été déplacée plus haut,
+        # dans la méthode `build_final_command`. Ici, on ne devrait plus avoir à
+        # la gérer. `final_command` est déjà la liste d'arguments prête à l'emploi.
+        # On peut simplifier cette section.
 
-        else: # Autres commandes (non-Python directes, non complexes)
-            self.logger.info("[DEBUG-EM] Branche sélectionnée: Autre (standard)")
-            if isinstance(command, str):
-                base_command_list_for_others = shlex.split(command, posix=(os.name != 'nt'))
-            else:
-                base_command_list_for_others = command # C'est déjà une liste
-            
-            # --- Injection automatique de l'option asyncio pour pytest ---
-            #
-            # La détection est maintenant plus stricte: elle vérifie si 'pytest' est le premier
-            # élément de la commande, et non juste "quelque part" dans la commande.
-            # Cela évite d'injecter l'option dans des commandes comme 'pip install pytest'.
-            is_pytest_command = base_command_list_for_others and base_command_list_for_others[0] == 'pytest'
-            has_asyncio_option = any('asyncio_mode' in arg for arg in base_command_list_for_others)
-
-            if is_pytest_command and not has_asyncio_option:
-                self.logger.info("Injection de l'option asyncio_mode=auto pour pytest.")
-                try:
-                    pytest_index = base_command_list_for_others.index('pytest')
-                    base_command_list_for_others.insert(pytest_index + 1, '-o')
-                    base_command_list_for_others.insert(pytest_index + 2, 'asyncio_mode=auto')
-                except (ValueError, IndexError):
-                    self.logger.warning("Erreur lors de la tentative d'injection de l'option asyncio pour pytest.")
-            # --- Fin de l'injection ---
-            
-            final_command = [
-                conda_exe, 'run', '--prefix', env_path,
-                '--no-capture-output'
-            ] + base_command_list_for_others
-            self.logger.info(f"Exécution de commande standard via 'conda run': {' '.join(map(str,final_command))}")
+        # La variable "is_complex_string_command" n'est plus disponible dans ce scope.
+        # La logique a été déplacée et centralisée dans `build_final_command`.
+        # Par conséquent, je supprime tout le bloc `if is_complex_string_command / else`.
+        # `final_command` est déjà correctement formatée par `build_final_command`.
 
         try:
-            self.logger.info(f"[DEBUG-EM] COMMANDE FINALE A EXECUTER: {' '.join(map(str, final_command))}")
-            self.logger.info("[DEBUG-EM] Avant subprocess.run...")
-            # Utilisation de subprocess.run SANS capture_output.
-            # La sortie du sous-processus sera directement affichée sur la console
-            # parente, fournissant un retour en temps réel, ce qui est plus robuste.
-            result = subprocess.run(
-                final_command,
-                cwd=cwd,
-                capture_output=capture_output,
-                text=True,
-                encoding='utf-8',
-                errors='replace',
-                check=False,  # On gère le code de retour nous-mêmes
-                timeout=3600,  # 1h de timeout pour les installations très longues.
-                env=self.sub_process_env
+            return subprocess.run(
+                final_command, cwd=cwd, capture_output=capture_output, text=True,
+                encoding='utf-8', errors='replace', check=False, timeout=3600,
+                env=sub_process_env
             )
-            self.logger.info(f"[DEBUG-EM] Après subprocess.run. Code de sortie: {result.returncode}")
-
-            if result.returncode == 0:
-                self.logger.debug(f"'conda run' exécuté avec succès (code {result.returncode}).")
-            else:
-                self.logger.warning(f"'conda run' terminé avec le code: {result.returncode}, affichage de la sortie ci-dessus.")
-            
-            return result
-
-        except subprocess.TimeoutExpired as e:
-            self.logger.error(f"La commande a dépassé le timeout de 3600 secondes : {e}")
-            # En cas de timeout, result n'existe pas, on lève l'exception pour arrêter proprement.
-            raise
-        except (subprocess.SubprocessError, FileNotFoundError) as e:
-            self.logger.error(f"Erreur majeure lors de l'exécution de 'conda run': {e}")
+        except (subprocess.SubprocessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
+            self.logger.error(f"Erreur majeure lors de l'exécution de la commande: {e}")
             raise
     
     def check_python_dependencies(self, requirements: List[str], env_name: str = None) -> Dict[str, bool]:
@@ -1179,6 +1109,12 @@ def main():
         help="Affiche le chemin de l'exécutable Python de l'environnement Conda cible et quitte."
     )
     
+    parser.add_argument(
+        '--get-command-only',
+        action='store_true',
+        help="Construit la commande finale et l'affiche sur stdout sans l'exécuter."
+    )
+    
     args = parser.parse_args()
     
     log_file = "logs/environment_manager.log"
@@ -1297,7 +1233,6 @@ def main():
         safe_exit(0, logger)
 
     # 3. Exécuter la commande (ou juste activer si aucune commande n'est fournie).
-    # Ce bloc s'exécute soit en mode normal, soit après une réinstallation réussie.
     command_to_run_final = args.command
         
     # --- AJOUT: TENTATIVE DE CRÉATION AUTOMATIQUE SI MANQUANT ---
@@ -1307,6 +1242,26 @@ def main():
         reinstall_conda_environment(manager, env_name_for_check, verbose_level=args.conda_verbose_level)
         logger.info("La création est terminée (succès ou échec). Le script va maintenant procéder à l'activation.")
     # --- FIN DE L'AJOUT ---
+
+    # 4. Gérer --get-command-only si présent
+    if args.get_command_only:
+        if not command_to_run_final:
+            logger.error("--get-command-only nécessite un --command.")
+            safe_exit(1, logger)
+        try:
+            # S'assurer que l'environnement est "activé" pour avoir les bons chemins
+            manager.activate_project_environment(env_name=env_name_for_check)
+            final_cmd_list = manager.build_final_command(command_to_run_final, env_name=env_name_for_check)
+            # Important: Échapper correctement pour PowerShell/Invoke-Expression
+            import shlex
+            # Ne pas utiliser shlex.quote ici, car Invoke-Expression gère les arguments.
+            # On retourne la liste d'arguments comme une chaîne, c'est PowerShell qui reconstruira.
+            final_cmd_str = ' '.join(final_cmd_list)
+            print(final_cmd_str) # Écrit la commande sur stdout
+            safe_exit(0, logger)
+        except Exception as e:
+            logger.error(f"Erreur lors de la construction de la commande : {e}")
+            safe_exit(1, logger)
 
     logger.info("Phase d'activation/exécution de commande...")
     exit_code = manager.activate_project_environment(
