@@ -73,7 +73,7 @@ class TestEnvironmentManagerCLI(unittest.TestCase):
         
         self.assertIn(str(manager.project_root), os.environ.get('PYTHONPATH'))
         self.assertEqual(os.environ.get('KMP_DUPLICATE_LIB_OK'), 'TRUE')
-        self.assertEqual(os.environ.get('OPENAI_API_KEY'), 'dummy_key_for_testing_purposes')
+        self.assertIsNone(os.environ.get('OPENAI_API_KEY'))
 
     @patch('project_core.core_from_scripts.environment_manager.EnvironmentManager')
     def test_main_with_run_command(self, MockEnvironmentManager):
