@@ -72,3 +72,5 @@ dependencies:
     - pytest-playwright
     - psutil
     - pyautogen>=0.2.0
+    - pybreaker
+    - tenacity

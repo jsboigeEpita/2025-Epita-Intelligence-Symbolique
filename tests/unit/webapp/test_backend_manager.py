@@ -30,7 +30,7 @@ def test_initialization(manager, backend_config):
     assert manager.module == backend_config['module']
 
 @pytest.mark.asyncio
-@patch('project_core.webapp_from_scripts.backend_manager.download_tweety_jars', new_callable=AsyncMock)
+@patch('project_core.core_from_scripts.backend_manager.download_tweety_jars', new_callable=AsyncMock)
 @patch('subprocess.Popen')
 async def test_start_success(mock_popen, mock_download_jars, manager):
     """Tests a successful start call."""
@@ -108,7 +108,7 @@ async def test_wait_for_backend_health_check_ok(mock_get, manager):
     # Mock asyncio.sleep to avoid actual waiting
     with patch('asyncio.sleep', new_callable=AsyncMock):
         with patch('pathlib.Path.exists', return_value=True): # Simuler que les fichiers de log existent
-            with patch('project_core.webapp_from_scripts.backend_manager.asyncio.to_thread') as mock_read:
+            with patch('project_core.core_from_scripts.backend_manager.asyncio.to_thread') as mock_read:
                  # Simuler la lecture du log qui trouve le port
                 mock_read.return_value = "Uvicorn running on http://127.0.0.1:8000"
                 result, port = await manager._wait_for_backend(MagicMock(spec=Path), MagicMock(spec=Path))
@@ -126,7 +126,7 @@ async def test_wait_for_backend_timeout(manager):
     manager._is_port_occupied = AsyncMock(return_value=False) # Should not be called here but for safety
     with patch('aiohttp.ClientSession.get', side_effect=asyncio.TimeoutError("Test Timeout")):
         with patch('pathlib.Path.exists', return_value=True):
-            with patch('project_core.webapp_from_scripts.backend_manager.asyncio.to_thread') as mock_read:
+            with patch('project_core.core_from_scripts.backend_manager.asyncio.to_thread') as mock_read:
                 # Simuler la lecture du log qui trouve le port.
                 # On simule ici que le health check échoue après la découverte du port
                 mock_read.return_value = "Uvicorn running on http://127.0.0.1:8000"

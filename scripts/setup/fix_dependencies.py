@@ -19,10 +19,9 @@ project_root_path = Path(__file__).resolve().parent.parent.parent
 if str(project_root_path) not in sys.path:
     sys.path.insert(0, str(project_root_path))
 
-# Importation de la nouvelle fonction pour exécuter des commandes pip
-from project_core.setup_core_from_scripts.run_pip_commands import _run_command_in_conda_env
-from project_core.core_from_scripts.environment_manager import EnvironmentManager
-from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
+# Imports mis à jour pour la nouvelle architecture
+from argumentation_analysis.core.utils.shell_utils import run_shell_command
+from argumentation_analysis.core.utils.logging_utils import setup_logging
 
 # Configuration du logger pour ce script (avant l'appel au pipeline)
 # Le pipeline configurera son propre logging ou utilisera celui configuré globalement.
@@ -68,13 +67,9 @@ def main():
     logger.info(f"Script {Path(__file__).name} démarré.")
     logger.info(f"Appel du pipeline d'installation des dépendances avec les arguments: {args}")
 
-    env_manager = EnvironmentManager(project_root_path=str(project_root_path))
-    conda_env_name = env_manager.get_project_env_name()
-
-    if not conda_env_name:
-        logger.error("Nom de l'environnement Conda non trouvé. Impossible de continuer.")
-        sys.exit(1)
-
+    # L'activation de l'environnement est maintenant gérée par l'importation de
+    # argumentation_analysis.core.environment et les scripts wrappers.
+    # On exécute directement pip dans l'environnement courant.
     pip_command = ["pip", "install", "-r", args.requirements_file]
     if args.force_reinstall:
         pip_command.append("--force-reinstall")
@@ -82,15 +77,19 @@ def main():
         pip_command.extend(args.pip_options.split())
 
     logger.info(f"Construction de la commande pip : {' '.join(pip_command)}")
-    
-    success = _run_command_in_conda_env(
-        conda_env_name=conda_env_name,
-        command_list=pip_command,
-        project_root=str(project_root_path),
-        logger_instance=logger
+
+    # Utilisation du nouvel utilitaire pour lancer la commande
+    return_code, stdout, stderr = run_shell_command(
+        command=pip_command,
+        description="Installation des dépendances via pip",
+        capture_output=True,
+        shell_mode=False # Plus sûr d'utiliser une liste d'arguments
     )
 
-    if success:
+    if stderr:
+        logger.warning(f"Sortie d'erreur de pip:\n{stderr}")
+
+    if return_code == 0:
         logger.info("Pipeline d'installation des dépendances terminé avec succès.")
         sys.exit(0)
     else:
