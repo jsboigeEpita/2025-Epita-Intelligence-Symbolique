@@ -1,53 +1,54 @@
 # Plan de Recommandations Stratégiques pour la Santé du Projet
 
 ## 1. Synthèse des Problèmes de Fond Récurrents
-
-Basé sur l'ensemble des analyses, les 3 thèmes de problèmes les plus persistants qui transcendent les différentes phases du projet sont :
-
-*   **Complexité et Fragilité de la Chaîne d'Outillage de Test :** L'historique du projet montre la construction progressive d'une chaîne de test complexe (PowerShell, Conda, Python, processus isolés) pour répondre à des défis techniques (crashs JVM, asynchronisme). Bien que des efforts récents aient visé à la stabiliser (centralisation, variables d'environnement), elle reste un point central de fragilité, difficile à maintenir et source potentielle d'erreurs.
-*   **Volatilité des Dépendances Externes et Manque de Robustesse du Mocking :** Le projet a été fortement impacté par l'instabilité de dépendances clés (ex: `semantic-kernel`), forçant des refactorisations réactives. Ce problème persiste aujourd'hui avec les tests E2E qui sont invalidés par les timeouts d'un service LLM, révélant une stratégie de "mock" insuffisante pour garantir des tests CI/CD fiables et déterministes.
-*   **Risques de Performance et Dette Technique masquée :** Des signaux d'alerte clairs indiquent des risques de performance. Le plus critique est l'augmentation massive du seuil de tolérance mémoire pour le composant `CluedoOracleState` (+450%), signalant une potentielle fuite ou une consommation excessive non maîtrisée. Des contournements passés (ex: `KMP_DUPLICATE_LIB_OK`) montrent aussi une tendance à masquer des problèmes de fond liés à l'environnement.
+*   **Complexité et Fragilité de l'Outillage de Test et de Build :** Le problème le plus persistant. L'historique montre des crashs de JVM et des tests E2E instables. Actuellement, la chaîne de lancement (PowerShell, Conda, Python, Batch) est excessivement complexe, difficile à maintenir et source d'erreurs, malgré les efforts de stabilisation.
+*   **Risques de Performance Non Maîtrisés :** Un thème émergent et critique. Une augmentation récente et massive (+450%) du surcoût mémoire de `CluedoOracleState` a été acceptée sans investigation approfondie. Cela représente un risque majeur pour la stabilité et la scalabilité de l'application.
+*   **Instabilité des Dépendances Externes :** Le projet reste vulnérable aux services externes. Le service LLM, central pour les fonctionnalités d'IA, est actuellement instable (timeouts), ce qui bloque les tests E2E et révèle un manque de stratégie de résilience (ex: mocks, circuit breakers).
+*   **Gestion Hétérogène de la Configuration :** Malgré des progrès vers la centralisation, la configuration reste dispersée. La communication de paramètres critiques (comme l'URL du frontend pour les tests) a nécessité des solutions de contournement fragiles (fichier de log, puis variables d'environnement), et la dépendance à un unique script PowerShell (`activate_project_env.ps1`) crée un point de défaillance unique.
 
 ## 2. Recommandations Stratégiques Priorisées
+*Listez les actions recommandées, classées par ordre de priorité.*
 
-| Priorité | Recommandation                                               | Problème Adressé                                         |
-|----------|--------------------------------------------------------------|----------------------------------------------------------|
-| **P1**   | Analyser et optimiser la consommation mémoire de `CluedoOracleState` | Risques de Performance et Dette Technique masquée        |
-| **P1**   | Industrialiser la stratégie de mock pour les services externes (LLM) | Volatilité des Dépendances Externes et Mocking           |
-| **P2**   | Simplifier et documenter la chaîne d'outillage de test E2E      | Complexité et Fragilité de la Chaîne d'Outillage         |
-| **P3**   | Auditer et résoudre les contournements techniques restants   | Risques de Performance et Dette Technique masquée        |
+| Priorité | Recommandation                                    | Problème Adressé                          |
+|----------|---------------------------------------------------|-------------------------------------------|
+| **P1**   | Analyser et maîtriser la consommation mémoire de `CluedoOracleState` | Risques de Performance Non Maîtrisés      |
+| **P1**   | Simplifier et documenter la chaîne de tests E2E     | Complexité et Fragilité de l'Outillage    |
+| **P2**   | Améliorer la Robustesse et l'Observabilité des Appels aux Services d'IA | Instabilité des Dépendances Externes      |
+| **P3**   | Centraliser la configuration dans un socle d'exécution unifié | Gestion Hétérogène de la Configuration    |
 
 ## 3. Détail des Recommandations
-
-### P1 - Analyser et optimiser la consommation mémoire de `CluedoOracleState`
-*   **Problème Adressé :** Le commit `388b333b` a révélé une augmentation non soutenable du seuil de tolérance mémoire pour ce composant. L'ignorer pourrait mener à des crashs en production ou à une dégradation sévère des performances globales.
+### P1 - Analyser et maîtriser la consommation mémoire de `CluedoOracleState`
+*   **Problème Adressé :** Le commit `388b333b` a révélé une augmentation non maîtrisée du seuil de tolérance mémoire pour le composant `CluedoOracleState` de 250% à 450%, sans analyse de la cause racine. Laisser cette situation perdurer expose le projet à des risques de crashs en production, de ralentissements et de coûts d'infrastructure imprévus.
 *   **Plan d'Action Suggéré :**
-    1.  Mettre en place un scénario de test d'intégration isolé qui reproduit la charge sur `CluedoOracleState`.
-    2.  Utiliser des outils de profilage mémoire (ex: `memory-profiler` en Python) pour identifier précisément les objets et les allocations responsables de cette consommation.
-    3.  Analyser le code du composant pour trouver la cause racine (ex: fuite mémoire, cache non borné, structures de données inefficaces).
-    4.  Implémenter une correction et valider avec le même test de profilage que la consommation est maîtrisée.
-*   **Bénéfices Attendus :** Stabilité accrue, prévention des erreurs de type "Out of Memory", meilleure performance et prédictibilité du système.
+    1.  Mettre en place un scénario de test de charge reproduisant l'utilisation de `CluedoOracleState`.
+    2.  Utiliser des outils de profiling mémoire (ex: `memory-profiler` en Python) pour identifier précisément les fonctions ou objets responsables de la surconsommation.
+    3.  Analyser le cycle de vie des objets pour détecter d'éventuelles fuites mémoire.
+    4.  Établir un budget mémoire clair pour ce composant et mettre en place une alerte en cas de dépassement dans la CI.
+*   **Bénéfices Attendus :** Prévention des pannes, amélioration des performances globales, maîtrise des coûts d'infrastructure et augmentation de la fiabilité du système.
 
-### P1 - Industrialiser la stratégie de mock pour les services externes (LLM)
-*   **Problème Adressé :** La dépendance des tests E2E à des services externes (LLM) qui sont sujets à des timeouts les rend non fiables, ce qui bloque les pipelines de CI/CD et ralentit la validation des changements. Le "mock" actuel est un contournement temporaire et non une solution pérenne.
+### P1 - Simplifier et documenter la chaîne de tests E2E
+*   **Problème Adressé :** La chaîne actuelle pour lancer les tests E2E est une pile complexe et fragile (PowerShell > Conda > Python > Batch) qui est difficile à déboguer et à maintenir. La communication entre ces couches (ex: passage de l'URL du frontend) a été un point de douleur récurrent.
 *   **Plan d'Action Suggéré :**
-    1.  Créer une bibliothèque de "mocks" dédiée pour les services d'IA, simulant différents scénarios de réponse (succès, échec, contenu spécifique, temps de réponse variables).
-    2.  Intégrer cette bibliothèque dans la chaîne de test E2E pour qu'elle soit activée par défaut en environnement de CI.
-    3.  Permettre aux développeurs de lancer facilement les tests en mode "mock" ou en mode "réel" pour des tests de bout en bout complets.
-*   **Bénéfices Attendus :** Tests CI/CD fiables et rapides, vélocité des développeurs accrue, capacité à tester des cas d'erreur sans dépendre de l'état du service externe.
+    1.  Remplacer la chaîne de scripts par un unique orchestrateur de test (ex: `nox`, `tox`, ou même un script Python amélioré) qui gère l'activation de l'environnement, le lancement des services et l'exécution des tests.
+    2.  Utiliser les capacités natives des frameworks de test pour la gestion des services (ex: fixtures `pytest` pour démarrer/arrêter les serveurs).
+    3.  Documenter le processus de lancement des tests de manière claire et concise dans un `CONTRIBUTING.md`.
+    4.  Intégrer cette commande unique et simplifiée dans le pipeline de CI.
+*   **Bénéfices Attendus :** Réduction du temps de maintenance, accélération du débogage, baisse du risque d'erreurs liées à l'environnement et amélioration de l'expérience développeur.
 
-### P2 - Simplifier et documenter la chaîne d'outillage de test E2E
-*   **Problème Adressé :** La complexité actuelle (mélange de PowerShell, Python, Conda, .bat) rend le débogage des tests difficile, l'intégration de nouveaux développeurs lente et augmente le risque d'erreurs d'environnement. Le script `activate_project_env.ps1` est un point de défaillance unique et critique.
+### P2 - Améliorer la Robustesse et l'Observabilité des Appels aux Services d'IA
+*   **Problème Adressé :** Notre code d'intégration avec les services LLM (OpenAI, Semantic Kernel) est fragile (timeouts, erreurs lors des tests E2E). L'objectif est de le renforcer sans engager de refactorisation risquée qui pourrait impacter les agents existants. La priorité est de rationaliser et de sécuriser les points d'entrée actuels, et non d'en créer de nouveaux.
 *   **Plan d'Action Suggéré :**
-    1.  Rédiger une documentation claire (ex: dans un `README.md` à la racine des tests) qui explique l'architecture de la chaîne de test, le rôle de chaque script et la manière de lancer et déboguer les tests.
-    2.  Explorer des alternatives pour réduire la dépendance à des scripts multiples. Par exemple, utiliser un orchestrateur de tâches comme `Invoke` (en Python) ou `Makefile` pour unifier les commandes.
-    3.  Refactoriser le script `activate_project_env.ps1` pour le rendre plus modulaire et ajouter des tests de validation sur ses sorties.
-*   **Bénéfices Attendus :** Maintenance simplifiée, réduction du temps de débogage des échecs de test, onboarding plus rapide pour les nouveaux membres de l'équipe.
+    1.  **Instrumentation Non-Intrusive :** Ajouter un logging détaillé (latence, codes de retour) *autour* des appels LLM existants sans en modifier la logique interne pour mieux diagnostiquer les erreurs.
+    2.  **Introduction Ciblée de Patrons de Résilience :** Envelopper les appels réseau existants dans des utilitaires ou décorateurs de "retry" (avec backoff exponentiel) pour gérer les erreurs passagères sans modifier le code des agents.
+    3.  **Audit et Optimisation de la Configuration :** Analyser et ajuster la configuration des clients `semantic-kernel` et `openai` (timeouts, pool de connexions) pour optimiser les performances et la stabilité. Cette action ne modifie pas le code.
+    4.  **Tests d'Intégration de Non-Régression :** Créer des tests qui valident spécifiquement le comportement actuel de la couche de communication face aux erreurs (4xx, 5xx, timeouts), afin d'établir une baseline et de garantir que les améliorations de robustesse n'introduisent pas de régressions.
+*   **Bénéfices Attendus :** Augmentation de la stabilité des fonctionnalités IA sans risque de régression, meilleure visibilité sur les erreurs de communication, et réduction des échecs liés à des problèmes réseau temporaires.
 
-### P3 - Auditer et résoudre les contournements techniques restants
-*   **Problème Adressé :** Des contournements comme la version rétrogradée de TypeScript (`4.9.5`) indiquent une dette technique qui, si elle n'est pas traitée, peut entraîner des problèmes de compatibilité, de sécurité ou bloquer des évolutions futures.
+### P3 - Centraliser la configuration dans un socle d'exécution unifié
+*   **Problème Adressé :** La configuration (ports, URLs, chemins) est encore aujourd'hui gérée de manière éclatée, ce qui complique les déploiements et les tests dans différents environnements. La forte dépendance au script `activate_project_env.ps1` est un risque.
 *   **Plan d'Action Suggéré :**
-    1.  Créer une liste exhaustive des "hacks" et contournements connus dans le code.
-    2.  Pour chaque point, investiguer la cause racine (ex: pourquoi la mise à jour de TypeScript échoue-t-elle ?).
-    3.  Planifier la résolution de chaque problème dans le backlog, en commençant par ceux qui présentent le plus grand risque.
-*   **Bénéfices Attendus :** Base de code plus saine et plus maintenable, réduction des risques de sécurité, capacité à utiliser les dernières versions des librairies et frameworks.
+    1.  Adopter une bibliothèque de gestion de configuration centralisée (ex: `Pydantic` avec lecture de fichiers `.env`).
+    2.  Migrer tous les paramètres actuellement hardcodés ou passés par des mécanismes ad-hoc vers ce système central.
+    3.  Le "socle d'exécution" (cf. P1) doit charger cette configuration au démarrage et la propager de manière cohérente à tous les composants (backend, frontend, tests).
+    4.  Documenter la hiérarchie de chargement de la configuration (ex: `config.default.yml` > `.env` > variables d'environnement système).
+*   **Bénéfices Attendus :** Simplification radicale du déploiement, configuration cohérente entre les environnements (dev, test, prod), réduction des erreurs de configuration.

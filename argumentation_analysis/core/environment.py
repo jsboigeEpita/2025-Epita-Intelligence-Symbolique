@@ -53,17 +53,15 @@ def ensure_env(env_name: str = None, silent: bool = True) -> bool:
         return True
     # --- Logique de détermination du nom de l'environnement ---
     if env_name is None:
+        # Pydantic-settings dans le module `settings` a déjà chargé le fichier .env.
+        # Nous pouvons donc lire directement depuis les variables d'environnement.
+        # L'import de `settings` garantit que le chargement a eu lieu.
         try:
-            # Assurer que dotenv est importé
-            from dotenv import load_dotenv, find_dotenv
-            # Charger le fichier .env s'il existe
-            dotenv_path = find_dotenv()
-            if dotenv_path:
-                load_dotenv(dotenv_path)
-            # Récupérer le nom de l'environnement, avec 'projet-is' comme fallback
+            from argumentation_analysis.config.settings import settings
+            env_name = settings.model_dump().get('CONDA_ENV_NAME', os.environ.get('CONDA_ENV_NAME', 'projet-is'))
+        except (ImportError, AttributeError):
+             # Fallback si settings n'est pas disponible ou si la variable n'y est pas.
             env_name = os.environ.get('CONDA_ENV_NAME', 'projet-is')
-        except ImportError:
-            env_name = 'projet-is' # Fallback si dotenv n'est pas installé
     # DEBUG: Imprimer l'état initial
     print(f"[auto_env DEBUG] Début ensure_env. Python: {sys.executable}, CONDA_DEFAULT_ENV: {os.getenv('CONDA_DEFAULT_ENV')}, silent: {silent}", file=sys.stderr)
 
@@ -114,23 +112,23 @@ def ensure_env(env_name: str = None, silent: bool = True) -> bool:
                 print(f"[auto_env] Activation de '{env_name}' via EnvironmentManager: ÉCHEC")
         
         # --- DEBUT DE LA VERIFICATION CRITIQUE DE L'ENVIRONNEMENT ---
-        current_conda_env = os.environ.get('CONDA_DEFAULT_ENV')
-        current_python_executable = sys.executable
-
+        # --- DEBUT DE LA VERIFICATION CRITIQUE DE L'ENVIRONNEMENT (ROBUSTE) ---
+        # Méthode de détection basée sur les préfixes système, plus fiable que les variables d'environnement.
+        is_in_virtual_env = sys.prefix != sys.base_prefix
+        current_env_name = os.path.basename(sys.prefix) if is_in_virtual_env else 'base'
+        
         # DEBUG: Imprimer l'état avant la vérification critique
-        print(f"[auto_env DEBUG] Avant vérif critique. Python: {current_python_executable}, CONDA_DEFAULT_ENV: {current_conda_env}", file=sys.stderr)
+        print(f"[auto_env DEBUG] Avant vérif critique. Python: {sys.executable}, sys.prefix: {sys.prefix}, sys.base_prefix: {sys.base_prefix}, Current Env: {current_env_name}", file=sys.stderr)
 
-        is_conda_env_correct = (current_conda_env == env_name)
-        # Vérification plus robuste pour le chemin de l'exécutable
-        # Il peut être dans 'envs/env_name/bin/python' ou 'env_name/bin/python' ou similaire
-        is_python_executable_correct = env_name in current_python_executable
-
-        if not (is_conda_env_correct and is_python_executable_correct):
+        # La condition de succès est simple : le nom de l'environnement actuel doit être celui attendu.
+        is_env_correct = (current_env_name == env_name)
+        
+        if not is_env_correct:
             # Créez le message d'avertissement
             warning_message = (
                 f"AVERTISSEMENT : L'ENVIRONNEMENT '{env_name}' SEMBLE NE PAS ÊTRE CORRECTEMENT ACTIVÉ.\n"
-                f"  - Environnement Conda détecté : '{current_conda_env}' (Attendu: '{env_name}')\n"
-                f"  - Exécutable Python détecté : '{current_python_executable}'\n"
+                f"  - Environnement détecté (via sys.prefix): '{current_env_name}' (Attendu: '{env_name}')\n"
+                f"  - Exécutable Python détecté : '{sys.executable}'\n"
                 f"  - Le processus va continuer, mais des erreurs de dépendances sont possibles."
             )
             # Log l'avertissement au lieu de lever une exception
@@ -139,7 +137,7 @@ def ensure_env(env_name: str = None, silent: bool = True) -> bool:
             # Ne lève plus d'exception pour permettre au processus de continuer
         elif not silent: # Ce bloc ne sera pas exécuté si silent=True au niveau de ensure_env
             logger_instance.info(
-                f"[auto_env] Vérification de l'environnement réussie: CONDA_DEFAULT_ENV='{current_conda_env}', sys.executable='{current_python_executable}'"
+                f"[auto_env] Vérification de l'environnement réussie: sys.prefix pointe vers '{sys.prefix}', ce qui correspond à l'environnement '{env_name}'."
             )
         # --- FIN DE LA VERIFICATION CRITIQUE DE L'ENVIRONNEMENT ---
                 

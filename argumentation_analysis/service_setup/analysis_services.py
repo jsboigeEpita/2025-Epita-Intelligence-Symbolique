@@ -19,55 +19,40 @@ import logging
 from pathlib import Path
 from typing import Dict, Any
 
-from dotenv import load_dotenv, find_dotenv
+from argumentation_analysis.config.settings import settings
 from argumentation_analysis.core.jvm_setup import initialize_jvm
 from argumentation_analysis.core.llm_service import create_llm_service
-from config.unified_config import UnifiedConfig  # Importer UnifiedConfig
 
-try:
-    from argumentation_analysis.paths import LIBS_DIR
-except ImportError:
-    logging.warning("Impossible d'importer LIBS_DIR depuis argumentation_analysis.paths. Fallback.")
-    try:
-        from ..paths import LIBS_DIR
-    except ImportError:
-        logging.error("LIBS_DIR n'a pas pu être importé.")
-        LIBS_DIR = None
-
-def initialize_analysis_services(config: UnifiedConfig) -> Dict[str, Any]:
+def initialize_analysis_services() -> Dict[str, Any]:
     """
-    Initialise et configure les services en se basant sur une instance de UnifiedConfig.
+    Initialise et configure les services en se basant sur la configuration centrale.
     """
     services = {}
-    logging.info(f"--- Initialisation des services avec mock_level='{config.mock_level.value}' ---")
+    logging.info(f"--- Initialisation des services (mock LLM: {settings.use_mock_llm}, JVM: {settings.enable_jvm}) ---")
 
-    # 1. Chargement des variables d'environnement (toujours utile pour les clés API, etc.)
-    loaded = load_dotenv(find_dotenv(), override=True)
-    logging.info(f"Résultat du chargement de .env: {loaded}")
-
-    # 2. Initialisation de la JVM (contrôlée par la config)
-    if config.enable_jvm:
-        libs_dir_path = LIBS_DIR
-        if libs_dir_path is None:
-            logging.error("enable_jvm=True mais LIBS_DIR n'est pas configuré.")
+    # 1. Initialisation de la JVM (contrôlée par la config)
+    if settings.enable_jvm:
+        libs_dir_path = settings.libs_dir
+        if libs_dir_path is None or not libs_dir_path.exists():
+            logging.error(f"enable_jvm=True mais settings.libs_dir n'est pas configuré ou n'existe pas: {libs_dir_path}")
             services["jvm_ready"] = False
         else:
             logging.info(f"Initialisation de la JVM avec LIBS_DIR: {libs_dir_path}...")
-            jvm_ready_status = initialize_jvm(lib_dir_path=libs_dir_path)
+            jvm_ready_status = initialize_jvm(lib_dir_path=str(libs_dir_path))
             services["jvm_ready"] = jvm_ready_status
             if not jvm_ready_status:
                 logging.warning("La JVM n'a pas pu être initialisée.")
     else:
-        logging.info("Initialisation de la JVM sautée (enable_jvm=False).")
+        logging.info("Initialisation de la JVM sautée (settings.enable_jvm=False).")
         services["jvm_ready"] = False
 
-    # 3. Création du Service LLM (contrôlé par la config)
+    # 2. Création du Service LLM (contrôlé par la config)
     logging.info("Création du service LLM...")
     try:
         # Le paramètre force_mock est directement déduit de la configuration
         llm_service = create_llm_service(
             service_id="default_llm_service",
-            force_mock=config.use_mock_llm
+            force_mock=settings.use_mock_llm
         )
         services["llm_service"] = llm_service
         
@@ -85,17 +70,15 @@ def initialize_analysis_services(config: UnifiedConfig) -> Dict[str, Any]:
     return services
 
 if __name__ == '__main__':
-    # Exemple d'utilisation (pourrait nécessiter une configuration de logging)
+    # Exemple d'utilisation (pourrait nécessiter une configuration de logging et .env)
     from argumentation_analysis.core.utils.logging_utils import setup_logging
-    setup_logging() # Configuration de base du logging
+    setup_logging()
 
-    # Simuler un dictionnaire de configuration
-    sample_config = {
-        "LIBS_DIR_PATH": "../libs" # Exemple, ajuster si nécessaire
-    }
+    # Note: Pour tester, assurez-vous que votre fichier .env est configuré
+    # avec les variables `ENABLE_JVM`, `USE_MOCK_LLM`, et `LIBS_DIR` si nécessaire.
     
     logging.info("Test de initialize_analysis_services...")
-    initialized_services = initialize_analysis_services(sample_config)
+    initialized_services = initialize_analysis_services()
     logging.info(f"Services initialisés: {initialized_services}")
 
     if initialized_services.get("llm_service"):

@@ -45,8 +45,9 @@ import inspect
 import semantic_kernel as sk
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
+from argumentation_analysis.config.settings import settings
+from argumentation_analysis.core.llm_service import create_llm_service
 # Imports du système de base
-from argumentation_analysis.paths import DATA_DIR, RESULTS_DIR
 from argumentation_analysis.core.bootstrap import initialize_project_environment, ProjectContext
 
 # Imports des gestionnaires hiérarchiques
@@ -143,20 +144,18 @@ class OrchestrationServiceManager:
     ```
     """
     
-    def __init__(self, 
-                 config: Optional[Dict[str, Any]] = None,
-                 enable_logging: bool = True,
-                 log_level: int = logging.INFO):
+    def __init__(self, enable_logging: bool = True, log_level: int = logging.INFO):
         """
         Initialise le ServiceManager.
         
+        La configuration est maintenant lue depuis `argumentation_analysis.config.settings`.
+
         Args:
-            config: Configuration optionnelle du service manager
             enable_logging: Active/désactive le logging
             log_level: Niveau de logging
         """
-        # Configuration de base
-        self.config = config or self._get_default_config()
+        # La configuration est maintenant gérée par l'objet `settings` global.
+        self.config = None # Cet attribut est obsolète mais conservé pour éviter de casser des `hasattr` potentiels.
         self.state = ServiceManagerState()
         
         # Configuration du logging
@@ -188,19 +187,7 @@ class OrchestrationServiceManager:
         
         self.logger.info(f"ServiceManager créé avec session_id: {self.state.session_id}")
         
-    def _get_default_config(self) -> Dict[str, Any]:
-        """Retourne la configuration par défaut."""
-        return {
-            'enable_hierarchical': True,
-            'enable_specialized_orchestrators': True,
-            'enable_communication_middleware': True,
-            'max_concurrent_analyses': 10,
-            'analysis_timeout': 300,  # 5 minutes
-            'auto_cleanup': True,
-            'save_results': True,
-            'results_dir': str(RESULTS_DIR),
-            'data_dir': str(DATA_DIR)
-        }
+    # La méthode _get_default_config est supprimée car la configuration est gérée par `settings`.
         
     def _setup_logging(self, log_level: int):
         """Configure le système de logging."""
@@ -232,36 +219,29 @@ class OrchestrationServiceManager:
 
             # 2. Initialisation du Kernel Semantic Kernel et du service LLM
             self.kernel = sk.Kernel()
-            api_key = os.getenv("OPENAI_API_KEY")
-            # Utiliser un ID de service cohérent, par exemple le nom du modèle
-            self.llm_service_id = self.config.get("default_llm_service_id", "gpt-4o-mini")
+            api_key = settings.openai.api_key.get_secret_value() if settings.openai.api_key else None
+            self.llm_service_id = settings.service_manager.default_llm_service_id
 
             if api_key:
                 try:
-                    self.kernel.add_service(
-                        OpenAIChatCompletion(
-                            service_id=self.llm_service_id,
-                            ai_model_id="gpt-4o-mini", # ou un autre modèle si configurable
-                            api_key=api_key
-                        )
-                    )
-                    self.logger.info(f"Service LLM '{self.llm_service_id}' (gpt-4o-mini) ajouté au kernel.")
+                    llm_service = create_llm_service(service_id=self.llm_service_id)
+                    self.kernel.add_service(llm_service)
+                    self.logger.info(f"Service LLM résilient '{self.llm_service_id}' ajouté au kernel.")
                 except Exception as e_kernel_service:
-                    self.logger.error(f"Échec de l'ajout du service LLM au kernel: {e_kernel_service}", exc_info=True)
-                    # Continuer sans service LLM fonctionnel dans le kernel peut être problématique
+                    self.logger.error(f"Échec de l'ajout du service LLM résilient au kernel: {e_kernel_service}", exc_info=True)
             else:
-                self.logger.warning("OPENAI_API_KEY non trouvée. Le service LLM ne sera pas configuré dans le kernel.")
-            
+                self.logger.warning("API Key OpenAI non trouvée dans la configuration. Le service LLM ne sera pas configuré.")
+
             # 3. Initialisation du middleware de communication
-            if self.config.get('enable_communication_middleware', True):
+            if settings.service_manager.enable_communication_middleware:
                 await self.initialize_middleware()
 
             # 4. Initialisation des gestionnaires hiérarchiques (après le middleware)
-            if self.config.get('enable_hierarchical', True):
+            if settings.service_manager.enable_hierarchical:
                 await self._initialize_hierarchical_managers()
 
-            # 4. Initialisation des orchestrateurs spécialisés
-            if self.config.get('enable_specialized_orchestrators', True):
+            # 5. Initialisation des orchestrateurs spécialisés
+            if settings.service_manager.enable_specialized_orchestrators:
                 await self._initialize_specialized_orchestrators()
                 
             self._initialized = True
@@ -280,14 +260,14 @@ class OrchestrationServiceManager:
             self.logger.info("Middleware déjà initialisé.")
             return
 
-        if self.config.get('enable_communication_middleware', True) and MessageMiddleware:
+        if settings.service_manager.enable_communication_middleware and MessageMiddleware:
             self.middleware = MessageMiddleware()
             self.logger.info("Middleware de communication instancié.")
 
             # Enregistrer les canaux nécessaires
             if HierarchicalChannel:
                 try:
-                    hierarchical_channel_id = self.config.get('hierarchical_channel_id', 'hierarchical_main')
+                    hierarchical_channel_id = settings.service_manager.hierarchical_channel_id
                     hc = HierarchicalChannel(channel_id=hierarchical_channel_id)
                     self.middleware.register_channel(hc)
                     self.logger.info(f"Canal HIERARCHICAL '{hierarchical_channel_id}' enregistré dans le middleware.")
@@ -420,7 +400,7 @@ class OrchestrationServiceManager:
             })
             
             # Sauvegarde si configurée
-            if self.config.get('save_results', True):
+            if settings.service_manager.save_results:
                 await self._save_results(results)
                 
             self.state.update_activity()
@@ -602,9 +582,9 @@ class OrchestrationServiceManager:
             import openai
             import time
             
-            api_key = os.getenv("OPENAI_API_KEY")
+            api_key = settings.openai.api_key.get_secret_value() if settings.openai.api_key else None
             if not api_key:
-                self.logger.error("OPENAI_API_KEY non configuré")
+                self.logger.error("OPENAI_API_KEY non configuré dans les settings")
                 return {
                     'level': 'tactical',
                     'status': 'error',
@@ -635,18 +615,15 @@ Réponds au format JSON avec les clés: arguments, sophismes, structure_rhetoriq
             start_time = time.time()
             
             # Faire l'appel LLM authentique async
-            response = await client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": tactical_prompt}],
-                max_tokens=1500,
-                temperature=0.3
-            )
+            # Utiliser le kernel pour l'invocation, ce qui bénéficie de la résilience
+            chat_function = self.kernel.create_function_from_prompt(prompt=tactical_prompt, function_name="tactical_analysis")
+            response = await self.kernel.invoke(chat_function)
             
             # Mesurer le temps de fin
             end_time = time.time()
             response_time = end_time - start_time
             
-            llm_result = response.choices[0].message.content if response.choices else "Aucune réponse du LLM"
+            llm_result = str(response)
             
             return {
                 'level': 'tactical',
@@ -686,9 +663,9 @@ Réponds au format JSON avec les clés: arguments, sophismes, structure_rhetoriq
             import openai
             import time
             
-            api_key = os.getenv("OPENAI_API_KEY")
+            api_key = settings.openai.api_key.get_secret_value() if settings.openai.api_key else None
             if not api_key:
-                self.logger.error("OPENAI_API_KEY non configuré")
+                self.logger.error("OPENAI_API_KEY non configuré dans les settings")
                 return {
                     'level': 'operational',
                     'status': 'error',
@@ -721,18 +698,14 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
             start_time = time.time()
             
             # Faire l'appel LLM authentique async
-            response = await client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": operational_prompt}],
-                max_tokens=2000,
-                temperature=0.2
-            )
+            chat_function = self.kernel.create_function_from_prompt(prompt=operational_prompt, function_name="operational_analysis")
+            response = await self.kernel.invoke(chat_function)
             
             # Mesurer le temps de fin
             end_time = time.time()
             response_time = end_time - start_time
             
-            llm_result = response.choices[0].message.content if response.choices else "Aucune réponse du LLM"
+            llm_result = str(response)
             
             return {
                 'level': 'operational',
@@ -757,8 +730,8 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
     async def _save_results(self, results: Dict[str, Any]):
         """Sauvegarde les résultats d'analyse."""
         try:
-            results_dir = Path(self.config['results_dir'])
-            results_dir.mkdir(exist_ok=True)
+            results_dir = settings.service_manager.results_dir
+            results_dir.mkdir(parents=True, exist_ok=True)
             
             filename = f"analysis_{results['analysis_id']}.json"
             filepath = results_dir / filename
@@ -786,8 +759,8 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
                 'conversation_orchestrator': self.conversation_orchestrator is not None,
                 'llm_orchestrator': self.llm_orchestrator is not None,
                 'middleware': self.middleware is not None
-            },
-            'config': self.config
+            }
+            # 'config' est obsolète, les paramètres sont dans `settings`
         }
         
     async def health_check(self) -> Dict[str, Any]:
@@ -845,13 +818,13 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
             'last_activity': self.state.last_activity.isoformat(),
             'initialized': self._initialized,
             'shutdown_initiated': self._shutdown,
-            'configuration': self.config,
+            'configuration': "obsolete (see settings module)",
             'active_components': {},
             'component_specific_status': {}
         }
 
         # Statut des gestionnaires hiérarchiques
-        if self.config.get('enable_hierarchical', True):
+        if settings.service_manager.enable_hierarchical:
             service_details['active_components']['strategic_manager'] = self.strategic_manager is not None
             service_details['active_components']['tactical_manager'] = self.tactical_manager is not None
             service_details['active_components']['operational_manager'] = self.operational_manager is not None
@@ -875,7 +848,7 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
                     service_details['component_specific_status']['operational_manager'] = {'error': str(e)}
 
         # Statut des orchestrateurs spécialisés
-        if self.config.get('enable_specialized_orchestrators', True):
+        if settings.service_manager.enable_specialized_orchestrators:
             service_details['active_components']['cluedo_orchestrator'] = self.cluedo_orchestrator is not None
             service_details['active_components']['conversation_orchestrator'] = self.conversation_orchestrator is not None
             service_details['active_components']['llm_orchestrator'] = self.llm_orchestrator is not None
@@ -899,7 +872,7 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
                     service_details['component_specific_status']['llm_orchestrator'] = {'error': str(e)}
         
         # Statut du middleware de communication
-        if self.config.get('enable_communication_middleware', True):
+        if settings.service_manager.enable_communication_middleware:
             service_details['active_components']['middleware'] = self.middleware is not None
             if self.middleware and hasattr(self.middleware, 'get_status'):
                 try:

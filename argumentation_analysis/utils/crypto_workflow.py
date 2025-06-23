@@ -13,7 +13,6 @@ Composant réutilisable pour :
 Intégré dans l'architecture modulaire pour éviter la duplication de code.
 """
 
-import os
 import logging
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
@@ -21,7 +20,9 @@ from dataclasses import dataclass
 from cryptography.fernet import Fernet
 import base64
 import hashlib
+
 from argumentation_analysis.core.io_manager import load_extract_definitions
+from argumentation_analysis.config.settings import settings
 
 @dataclass
 class CorpusDecryptionResult:
@@ -38,12 +39,22 @@ class CryptoWorkflowManager:
     
     def __init__(self, passphrase: Optional[str] = None):
         self.logger = logging.getLogger(f"{__name__}.CryptoWorkflowManager")
-        self.passphrase = passphrase or os.getenv("TEXT_CONFIG_PASSPHRASE", "epita_ia_symb_2025_temp_key")
+        
+        passphrase_to_use = passphrase
+        if not passphrase_to_use and settings.passphrase:
+            passphrase_to_use = settings.passphrase.get_secret_value()
+            
+        if not passphrase_to_use:
+            self.logger.warning("Aucune passphrase fournie ou configurée dans les settings. Le déchiffrement échouera probablement.")
+            
+        self.passphrase = passphrase_to_use
         self._encryption_key = None
         
     def derive_encryption_key(self) -> bytes:
         """Dérive une clé de chiffrement depuis la passphrase."""
         if self._encryption_key is None:
+            if not self.passphrase:
+                raise ValueError("Impossible de dériver la clé: aucune passphrase n'est définie.")
             # Dérivation compatible avec le système existant
             key_material = self.passphrase.encode('utf-8')
             key_hash = hashlib.sha256(key_material).digest()

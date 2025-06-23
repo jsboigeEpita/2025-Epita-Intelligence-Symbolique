@@ -11,43 +11,69 @@ import logging
 import os
 from pathlib import Path
 import requests
-from typing import Optional
+import httpx
+from typing import Optional, Any
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from pybreaker import CircuitBreaker, CircuitBreakerError
+
+from argumentation_analysis.config.settings import settings
 
 logger = logging.getLogger(__name__)
 
+# --- Configuration de la résilience ---
+
+# 1. Disjoncteur (Circuit Breaker)
+# Les paramètres sont maintenant lus depuis la configuration centrale.
+network_breaker = CircuitBreaker(
+    fail_max=settings.network.breaker_fail_max,
+    reset_timeout=settings.network.breaker_reset_timeout
+)
+
+# 2. Stratégie de rejeu (Retry) avec Tenacity
+# Les paramètres sont maintenant lus depuis la configuration centrale.
+retry_on_network_error = retry(
+    stop=stop_after_attempt(settings.network.retry_stop_after_attempt),
+    wait=wait_exponential(
+        multiplier=settings.network.retry_wait_multiplier,
+        min=settings.network.retry_wait_min,
+        max=settings.network.retry_wait_max
+    ),
+    retry=retry_if_exception_type((
+        requests.exceptions.ConnectionError,
+        requests.exceptions.Timeout,
+        requests.exceptions.HTTPError,
+    )),
+    before_sleep=lambda retry_state: logger.warning(
+        f"Tentative {retry_state.attempt_number} échouée. "
+        f"Nouvelle tentative dans {retry_state.next_action.sleep:.2f}s. "
+        f"Erreur: {retry_state.outcome.exception()}"
+    )
+)
+
+# --- Fonctions Utilitaires Réseau ---
+
+@retry_on_network_error
+@network_breaker
 def download_file(url: str, destination_path: Path, expected_size: Optional[int] = None) -> bool:
     """
-    Télécharge un fichier depuis une URL et le sauvegarde à destination_path.
-
-    Gère les erreurs de requête HTTP, les problèmes d'écriture de fichier et
-    vérifie optionnellement la taille du fichier téléchargé.
-
+    Télécharge un fichier de manière robuste en utilisant une stratégie de rejeu et un disjoncteur.
+    
     :param url: L'URL du fichier à télécharger.
-    :type url: str
-    :param destination_path: Le chemin (objet Path) où sauvegarder le fichier.
-                             Le répertoire parent sera créé s'il n'existe pas.
-    :type destination_path: Path
-    :param expected_size: La taille attendue du fichier en octets. Si fournie,
-                          la taille du fichier téléchargé sera vérifiée.
-    :type expected_size: Optional[int], optional
-    :return: True si le téléchargement a réussi et si la taille (si vérifiée) correspond,
-             False sinon.
-    :rtype: bool
-    :raises requests.exceptions.RequestException: Si une erreur liée à la requête HTTP survient
-                                                  (ex: erreur réseau, code HTTP 4xx/5xx).
-    :raises OSError: Si une erreur survient lors de l'écriture du fichier sur le disque
-                     ou lors de la suppression d'un fichier partiel.
+    :param destination_path: Le chemin où sauvegarder le fichier.
+    :param expected_size: La taille attendue du fichier en octets pour validation.
+    :return: True si le téléchargement est réussi et validé, False sinon.
+    :raises CircuitBreakerError: Si le disjoncteur est ouvert.
+    :raises requests.exceptions.RequestException: Après épuisement des tentatives de rejeu.
     """
     try:
         logger.info(f"Début du téléchargement de {url} vers {destination_path}")
-        # S'assurer que le répertoire de destination existe
         destination_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with requests.get(url, stream=True, timeout=30) as r:
-            r.raise_for_status()  # Lève une HTTPError pour les codes d'erreur HTTP (4xx ou 5xx)
+        with requests.get(url, stream=True, timeout=settings.network.default_timeout) as r:
+            r.raise_for_status()
             with open(destination_path, 'wb') as f:
-                for chunk in r.iter_content(chunk_size=8192): # 8KB chunks
-                    if chunk: # Filtrer les keep-alive new chunks
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:
                         f.write(chunk)
         
         actual_size = destination_path.stat().st_size
@@ -68,28 +94,110 @@ def download_file(url: str, destination_path: Path, expected_size: Optional[int]
                 return False
         return True
 
+        actual_size = destination_path.stat().st_size
+        logger.info(f"Fichier téléchargé : {destination_path} (Taille : {actual_size} octets)")
+
+        if expected_size is not None and actual_size != expected_size:
+            logger.error(f"Erreur de taille : {actual_size} octets reçus, {expected_size} attendus.")
+            return False
+        
+        return True
+
+    except CircuitBreakerError:
+        logger.critical(f"Disjoncteur OUVERT pour {url}. La requête est bloquée.")
+        return False
     except requests.exceptions.RequestException as e:
-        logger.error(f"Erreur de téléchargement (RequestException) depuis {url}: {e}")
-        # Nettoyer si le fichier a été partiellement créé
+        logger.error(f"Erreur de téléchargement persistante pour {url} après plusieurs tentatives: {e}")
+        # Le nettoyage est géré par la logique de rejeu qui relance l'exception finale.
         if destination_path.exists():
-             try:
+            try:
                 os.remove(destination_path)
-                logger.info(f"Fichier partiel {destination_path} supprimé après RequestException.")
-             except OSError as ose: # Erreur lors de la suppression
-                logger.error(f"Impossible de supprimer le fichier partiel {destination_path} après RequestException: {ose}")
+            except OSError as ose:
+                logger.error(f"Impossible de nettoyer le fichier partiel {destination_path}: {ose}")
+        raise  # Fait remonter l'exception pour que Tenacity la gère
+    except OSError as e:
+        logger.error(f"Erreur IO pour le fichier {destination_path}: {e}")
         return False
-    except OSError as e: # Erreurs liées au système de fichiers (écriture, suppression)
-        logger.error(f"Erreur d'écriture ou de suppression du fichier {destination_path} (OSError): {e}")
-        return False
-    except Exception as e: # Capturer toute autre exception non prévue
-        logger.error(f"Une erreur inattendue est survenue lors du téléchargement de {url}: {e}")
-        if destination_path.exists():
-             try:
-                os.remove(destination_path)
-                logger.info(f"Fichier partiel {destination_path} supprimé après erreur inattendue.")
-             except OSError as ose:
-                logger.error(f"Impossible de supprimer le fichier partiel {destination_path} après erreur inattendue: {ose}")
-        return False
+
+# --- Fonctions Asynchrones pour httpx ---
+
+import json
+
+class LoggingHttpTransport(httpx.AsyncBaseTransport):
+    """
+    Transport HTTP asynchrone personnalisé pour `httpx` qui logge les détails
+    des requêtes et des réponses.
+    """
+    def __init__(self, logger: logging.Logger, wrapped_transport: httpx.AsyncBaseTransport = None):
+        self.logger = logger
+        self._wrapped_transport = wrapped_transport or httpx.AsyncHTTPTransport()
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        self.logger.info(f"--- RAW HTTP REQUEST (LLM Service) ---")
+        self.logger.info(f"  Method: {request.method}")
+        self.logger.info(f"  URL: {request.url}")
+        if request.content:
+            try:
+                content_bytes = await request.aread()
+                request.stream._buffer = [content_bytes]
+                json_content = json.loads(content_bytes.decode('utf-8'))
+                pretty_json_content = json.dumps(json_content, indent=2, ensure_ascii=False)
+                self.logger.info(f"  Body (JSON):\n{pretty_json_content}")
+            except Exception:
+                 self.logger.info(f"  Body: (Contenu non-JSON)")
+        
+        response = await self._wrapped_transport.handle_async_request(request)
+
+        self.logger.info(f"--- RAW HTTP RESPONSE (LLM Service) ---")
+        self.logger.info(f"  Status Code: {response.status_code}")
+        response_content_bytes = await response.aread()
+        response.stream._buffer = [response_content_bytes]
+        try:
+            json_response_content = json.loads(response_content_bytes.decode('utf-8'))
+            pretty_json_response_content = json.dumps(json_response_content, indent=2, ensure_ascii=False)
+            self.logger.info(f"  Body (JSON):\n{pretty_json_response_content}")
+        except Exception:
+            self.logger.info(f"  Body: (Contenu non-JSON)")
+        return response
+
+    async def aclose(self) -> None:
+        await self._wrapped_transport.aclose()
+
+
+class ResilientAsyncTransport(httpx.AsyncBaseTransport):
+    """
+    Transport httpx qui intègre Tenacity et PyBreaker pour la résilience.
+    """
+    def __init__(self, transport: httpx.AsyncBaseTransport):
+        self.transport = transport
+
+    @retry_on_network_error
+    @network_breaker
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        logger.debug(f"Via Resilient Transport: {request.method} {request.url}")
+        try:
+            return await self.transport.handle_async_request(request)
+        except CircuitBreakerError:
+            logger.critical(f"Disjoncteur OUVERT pour {request.url}.")
+            return httpx.Response(503, text="Circuit Breaker is open")
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code in {429, 502, 503, 504}:
+                raise
+            raise
+        except httpx.RequestError:
+            raise
+
+def get_resilient_async_client() -> httpx.AsyncClient:
+    """
+    Retourne un client httpx.AsyncClient configuré avec un transport résilient
+    et un logging détaillé.
+    """
+    base_transport = httpx.AsyncHTTPTransport()
+    resilient_transport = ResilientAsyncTransport(base_transport)
+    # Le logger utilisé ici est celui du module network_utils
+    final_transport = LoggingHttpTransport(logger, wrapped_transport=resilient_transport)
+
+    return httpx.AsyncClient(transport=final_transport, timeout=settings.network.default_timeout)
 
 if __name__ == '__main__':
     # Section de test simple pour la fonction download_file

@@ -2,7 +2,6 @@
 import logging
 import os
 from pathlib import Path
-from dotenv import load_dotenv
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
 from typing import Union # Pour type hint
 import httpx # Ajout pour le client HTTP personnalisé
@@ -12,6 +11,8 @@ import asyncio
 from semantic_kernel.contents.chat_history import ChatHistory
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
+from argumentation_analysis.core.utils.network_utils import get_resilient_async_client
+from argumentation_analysis.config.settings import settings
 
 # Logger pour ce module
 logger = logging.getLogger("Orchestration.LLM")
@@ -96,19 +97,13 @@ def create_llm_service(service_id: str = "global_llm_service", force_mock: bool 
         logger.warning("Création d'un service LLM mocké (MockChatCompletion).")
         return MockChatCompletion(service_id=service_id)
 
-    project_root = Path(__file__).resolve().parent.parent.parent
-    dotenv_path = project_root / '.env'
-    logger.info(f"Project root determined from __file__: {project_root}")
-    logger.info(f"Attempting to load .env from absolute path: {dotenv_path}")
-    
-    success = load_dotenv(dotenv_path=dotenv_path, override=True, verbose=True)
-    logger.info(f"load_dotenv success with absolute path '{dotenv_path}': {success}")
-
-    api_key = os.getenv("OPENAI_API_KEY")
-    model_id = os.getenv("OPENAI_CHAT_MODEL_ID")
-    endpoint = os.getenv("OPENAI_ENDPOINT")
-    base_url = os.getenv("OPENAI_BASE_URL")
-    org_id = os.getenv("OPENAI_ORG_ID")
+    api_key = settings.openai.api_key.get_secret_value() if settings.openai.api_key else None
+    model_id = settings.openai.chat_model_id
+    # Pour la compatibilité avec Azure, on vérifie si base_url est une instance Azure
+    # Pydantic HttpUrl ne peut pas être None, on vérifie la valeur de l'url
+    endpoint = str(settings.openai.base_url) if settings.openai.base_url and "azure" in str(settings.openai.base_url) else None
+    base_url = str(settings.openai.base_url) if settings.openai.base_url and not endpoint else None
+    org_id = None # org_id n'est pas dans notre modèle de settings pour l'instant
 
     logger.info(f"Configuration détectée - base_url: {base_url}, endpoint: {endpoint}")
     use_azure_openai = bool(endpoint)
@@ -132,10 +127,9 @@ def create_llm_service(service_id: str = "global_llm_service", force_mock: bool 
             if not all([api_key, model_id]):
                 raise ValueError("Configuration OpenAI standard incomplète (.env).")
 
-            logging_http_transport = LoggingHttpTransport(logger=logger)
-            custom_httpx_client = httpx.AsyncClient(transport=logging_http_transport)
+            resilient_client = get_resilient_async_client()
             
-            client_kwargs = {"api_key": api_key, "http_client": custom_httpx_client}
+            client_kwargs = {"api_key": api_key, "http_client": resilient_client}
             if base_url:
                 client_kwargs["base_url"] = base_url
             if org_id and "your_openai_org_id_here" not in org_id:
@@ -162,103 +156,7 @@ def create_llm_service(service_id: str = "global_llm_service", force_mock: bool 
 
     return llm_instance
 
-# Classe pour le transport HTTP personnalisé avec logging
-class LoggingHttpTransport(httpx.AsyncBaseTransport):
-    """
-    Transport HTTP asynchrone personnalisé pour `httpx` qui logge les détails
-    des requêtes et des réponses.
-
-    S'intercale dans la pile réseau de `httpx` pour intercepter et logger le contenu
-    des communications avec les services externes, ce qui est très utile pour le débogage
-    des appels aux API LLM.
-
-    Attributs:
-        logger (logging.Logger): L'instance du logger à utiliser.
-        _wrapped_transport (httpx.AsyncBaseTransport): Le transport `httpx` original
-                                                      qui exécute réellement la requête.
-    """
-    def __init__(self, logger: logging.Logger, wrapped_transport: httpx.AsyncBaseTransport = None):
-        """
-        Initialise le transport de logging.
-
-        Args:
-            logger (logging.Logger): Le logger à utiliser pour afficher les informations.
-            wrapped_transport (httpx.AsyncBaseTransport, optional):
-                Le transport sous-jacent à utiliser. Si None, un `httpx.AsyncHTTPTransport`
-                par défaut est créé.
-        """
-        self.logger = logger
-        self._wrapped_transport = wrapped_transport or httpx.AsyncHTTPTransport()
-
-    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        """
-        Intercepte, logge et transmet une requête HTTP asynchrone.
-
-        Cette méthode logge les détails de la requête, la transmet au transport
-        sous-jacent, puis logge les détails de la réponse avant de la retourner.
-        Elle prend soin de ne pas consommer le corps de la requête ou de la réponse,
-        afin qu'ils restent lisibles par le client `httpx`.
-
-        Args:
-            request (httpx.Request): L'objet requête `httpx` à traiter.
-
-        Returns:
-            httpx.Response: L'objet réponse `httpx` reçu du serveur.
-        """
-        self.logger.info(f"--- RAW HTTP REQUEST (LLM Service) ---")
-        self.logger.info(f"  Method: {request.method}")
-        self.logger.info(f"  URL: {request.url}")
-        # Log des headers (attention aux informations sensibles comme les clés API si elles sont dans les headers)
-        # self.logger.info(f"  Headers: {request.headers}")
-        if request.content:
-            try:
-                # Tenter de décoder et logger le contenu si c'est du JSON
-                content_bytes = await request.aread() # Lire le contenu asynchrone du corps
-                request.stream._buffer = [content_bytes] # Remettre le contenu dans le buffer pour la requête réelle
-                
-                json_content = json.loads(content_bytes.decode('utf-8'))
-                pretty_json_content = json.dumps(json_content, indent=2, ensure_ascii=False)
-                self.logger.info(f"  Body (JSON):\n{pretty_json_content}")
-            except (json.JSONDecodeError, UnicodeDecodeError):
-                # Si ce n'est pas du JSON ou si l'encodage échoue, logger en brut (tronqué)
-                # Il faut être prudent avec le logging du contenu brut, surtout pour les grosses requêtes
-                # content_preview = content_bytes[:500].decode('utf-8', errors='replace') + ('...' if len(content_bytes) > 500 else '')
-                # self.logger.info(f"  Body (Raw Preview): {content_preview}")
-                self.logger.info(f"  Body: (Contenu binaire ou non-JSON, taille: {len(content_bytes)} bytes)")
-            except Exception as e_req:
-                 self.logger.error(f"  Erreur lors du logging du corps de la requête: {e_req}")
-        else:
-            self.logger.info("  Body: (Vide)")
-        self.logger.info(f"--- END RAW HTTP REQUEST (LLM Service) ---")
-
-        response = await self._wrapped_transport.handle_async_request(request)
-
-        self.logger.info(f"--- RAW HTTP RESPONSE (LLM Service) ---")
-        self.logger.info(f"  Status Code: {response.status_code}")
-        # self.logger.info(f"  Headers: {response.headers}")
-        
-        # Lire le contenu de la réponse pour le logging
-        # IMPORTANT: lire le contenu ici le consomme. Il faut le remettre dans le stream
-        # pour que Semantic Kernel puisse le lire ensuite.
-        response_content_bytes = await response.aread()
-        response.stream._buffer = [response_content_bytes] # Remettre le contenu dans le buffer
-
-        try:
-            json_response_content = json.loads(response_content_bytes.decode('utf-8'))
-            pretty_json_response_content = json.dumps(json_response_content, indent=2, ensure_ascii=False)
-            self.logger.info(f"  Body (JSON):\n{pretty_json_response_content}")
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            # response_content_preview = response_content_bytes[:1500].decode('utf-8', errors='replace') + ('...' if len(response_content_bytes) > 1500 else '')
-            # self.logger.info(f"  Body (Raw Preview): {response_content_preview}")
-            self.logger.info(f"  Body: (Contenu binaire ou non-JSON, taille: {len(response_content_bytes)} bytes)")
-        except Exception as e_resp:
-            self.logger.error(f"  Erreur lors du logging du corps de la réponse: {e_resp}")
-        self.logger.info(f"--- END RAW HTTP RESPONSE (LLM Service) ---")
-        
-        return response
-
-    async def aclose(self) -> None:
-        await self._wrapped_transport.aclose()
+# La classe LoggingHttpTransport a été déplacée dans core/utils/network_utils.py
 
 # Optionnel : Log de chargement
 module_logger = logging.getLogger(__name__)

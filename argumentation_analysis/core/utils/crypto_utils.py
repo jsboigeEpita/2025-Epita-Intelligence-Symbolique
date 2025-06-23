@@ -9,6 +9,8 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.fernet import Fernet, InvalidToken # NOUVEAU: Pour encrypt/decrypt_data
 from cryptography.exceptions import InvalidSignature # NOUVEAU: Pour decrypt_data
 
+from argumentation_analysis.config.settings import settings
+
 # Configuration du logging pour ce module
 logger = logging.getLogger(__name__)
 if not logger.handlers:
@@ -54,48 +56,42 @@ def derive_encryption_key(passphrase: str) -> Optional[bytes]:
         logger.error(f"Erreur lors de la dérivation de la clé: {e}", exc_info=True)
         return None
 
-def load_encryption_key(passphrase_arg: Optional[str] = None, env_var_name: str = "TEXT_CONFIG_PASSPHRASE") -> Optional[bytes]:
+def load_encryption_key(passphrase_arg: Optional[str] = None) -> Optional[bytes]:
     """
-    Charge la clé de chiffrement en essayant d'abord la phrase secrète fournie,
-    puis une variable d'environnement.
+    Charge la clé de chiffrement.
+    La source de la passphrase est résolue dans l'ordre de priorité suivant :
+    1. L'argument `passphrase_arg` fourni directement à la fonction.
+    2. La configuration centrale `settings.passphrase`.
 
     Args:
-        passphrase_arg: La phrase secrète fournie en argument (optionnelle).
-        env_var_name: Le nom de la variable d'environnement à vérifier pour la phrase secrète.
+        passphrase_arg: La phrase secrète fournie en argument (optionnelle, prioritaire).
 
     Returns:
-        Optional[bytes]: La clé de chiffrement dérivée et encodée en base64url (bytes), ou None si non disponible ou en cas d'erreur.
+        Optional[bytes]: La clé de chiffrement dérivée, ou None si aucune source de passphrase n'est disponible.
     """
-    # Essayer avec la phrase secrète fournie en argument
-    if passphrase_arg:
-        logger.info("Utilisation de la phrase secrète fournie en argument pour dériver la clé...")
-        encryption_key = derive_encryption_key(passphrase_arg)
-        if encryption_key:
-            logger.info("(OK) Clé de chiffrement dérivée avec succès à partir de l'argument.")
-            return encryption_key
-        else:
-            # L'erreur est déjà loggée par derive_encryption_key
-            logger.warning("Échec de la dérivation de la clé à partir de l'argument passphrase.")
-            # On continue pour essayer la variable d'environnement au cas où l'argument était invalide mais la variable existe.
-    
-    # Essayer de charger depuis la variable d'environnement
-    env_passphrase = os.getenv(env_var_name)
-    if env_passphrase:
-        logger.info(f"Phrase secrète trouvée dans la variable d'environnement '{env_var_name}'.")
-        encryption_key = derive_encryption_key(env_passphrase)
-        if encryption_key:
-            logger.info("(OK) Clé de chiffrement dérivée avec succès à partir de la variable d'environnement.")
-            return encryption_key
-        else:
-            # L'erreur est déjà loggée par derive_encryption_key
-            logger.error(f"Échec de la dérivation de la clé à partir de la variable d'environnement '{env_var_name}'.")
-            return None # Échec définitif si la variable d'env a été trouvée mais la dérivation a échoué
-            
-    if not passphrase_arg and not env_passphrase:
-        logger.warning("Aucune phrase secrète fournie (ni argument, ni variable d'environnement).")
-        logger.warning(f"Assurez-vous que la variable d'environnement '{env_var_name}' est définie ou fournissez une phrase secrète.")
+    passphrase_to_use = None
 
-    return None # Retourne None si aucune source de passphrase n'a abouti à une clé
+    # Priorité 1: L'argument direct
+    if passphrase_arg:
+        logger.info("Utilisation de la phrase secrète fournie en argument pour dériver la clé.")
+        passphrase_to_use = passphrase_arg
+    
+    # Priorité 2: La configuration centrale
+    elif settings.passphrase:
+        logger.info("Utilisation de la phrase secrète depuis la configuration centrale `settings`.")
+        passphrase_to_use = settings.passphrase.get_secret_value()
+
+    if passphrase_to_use:
+        encryption_key = derive_encryption_key(passphrase_to_use)
+        if encryption_key:
+            logger.info("(OK) Clé de chiffrement dérivée avec succès.")
+            return encryption_key
+        else:
+            logger.error("Échec de la dérivation de la clé à partir de la phrase secrète obtenue.")
+            return None
+            
+    logger.warning("Aucune phrase secrète disponible (ni en argument, ni dans la configuration centrale).")
+    return None
 
 # --- Fonctions de chiffrement/déchiffrement Fernet ---
 

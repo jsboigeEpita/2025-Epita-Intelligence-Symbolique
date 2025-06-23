@@ -15,37 +15,13 @@ from pathlib import Path
 from typing import Optional, List, Dict
 from tqdm.auto import tqdm
 import stat
-from dotenv import load_dotenv
+
+from argumentation_analysis.config.settings import settings
 
 # Configuration du logger pour ce module
 logger = logging.getLogger("Orchestration.JPype")
 
 # --- Fonctions de téléchargement et de provisioning (issues du stash de HEAD) ---
-
-def find_and_load_dotenv():
-    """
-    Recherche et charge le fichier .env en remontant depuis le CWD, puis depuis le fichier.
-    Ceci assure que les configurations sont chargées même si le script est dans site-packages.
-    """
-    # Stratégie 1: Partir du répertoire de travail actuel
-    start_path = Path.cwd()
-    for path in [start_path] + list(start_path.parents):
-        dotenv_path = path / ".env"
-        if dotenv_path.exists():
-            logger.info(f"Fichier .env trouvé via CWD à : {dotenv_path}")
-            load_dotenv(dotenv_path=dotenv_path, override=True)
-            return
-
-    # Stratégie 2: Partir du chemin du fichier (fallback)
-    start_path = Path(__file__).resolve()
-    for path in start_path.parents:
-        dotenv_path = path / ".env"
-        if dotenv_path.exists():
-            logger.info(f"Fichier .env trouvé via chemin du script à : {dotenv_path}")
-            load_dotenv(dotenv_path=dotenv_path, override=True)
-            return
-            
-    logger.info("Aucun fichier .env trouvé dans les chemins parents. Utilisation des variables d'environnement existantes.")
 
 def get_project_root_robust() -> Path:
     """
@@ -64,34 +40,20 @@ def get_project_root_robust() -> Path:
 
 # --- Constantes de Configuration ---
 # Répertoires (utilisant pathlib pour la robustesse multi-plateforme)
-find_and_load_dotenv()
 PROJ_ROOT = get_project_root_robust()
 
+# Les constantes sont maintenant lues depuis l'objet de configuration centralisé 'settings'
+LIBS_DIR = PROJ_ROOT / settings.jvm.tweety_libs_dir
+TWEETY_VERSION = settings.jvm.tweety_version
 
-LIBS_DIR = PROJ_ROOT / "libs" / "tweety" # JARs Tweety dans un sous-répertoire dédié
-TWEETY_VERSION = "1.28" # Mettre à jour au besoin
-# TODO: Lire depuis un fichier de config centralisé (par ex. pyproject.toml ou un .conf)
-# Au lieu de TWEETY_VERSION = "1.24", on pourrait avoir get_config("tweety.version")
+# La configuration des dépendances n'est plus nécessaire ici
+# car nous utilisons le JAR "full-with-dependencies"
 
-# Configuration des URLs des dépendances
-# TWEETY_BASE_URL = "https://repo.maven.apache.org/maven2" # Plus utilisé directement pour le JAR principal
-# TWEETY_ARTIFACTS n'est plus utilisé dans sa forme précédente pour le JAR principal
-# TWEETY_ARTIFACTS: Dict[str, Dict[str, str]] = {
-#     # Core
-#     "tweety-arg": {"group": "net.sf.tweety", "version": TWEETY_VERSION},
-#     # Modules principaux (à adapter selon les besoins du projet)
-#     "tweety-lp": {"group": "net.sf.tweety.lp", "version": TWEETY_VERSION},
-#     "tweety-log": {"group": "net.sf.tweety.log", "version": TWEETY_VERSION},
-#     "tweety-math": {"group": "net.sf.tweety.math", "version": TWEETY_VERSION},
-#     # Natives (exemple ; peuvent ne pas exister pour toutes les versions)
-#     "tweety-native-maxsat": {"group": "net.sf.tweety.native", "version": TWEETY_VERSION, "classifier": f"maxsat-{platform.system().lower()}"}
-# }
-
-# Configuration JDK portable
-MIN_JAVA_VERSION = 11
-JDK_VERSION = "17.0.2" # Exemple, choisir une version LTS stable
-JDK_BUILD = "8"
-JDK_URL_TEMPLATE = "https://github.com/adoptium/temurin{maj_v}-binaries/releases/download/jdk-{v}%2B{b}/OpenJDK{maj_v}U-jdk_{arch}_{os}_hotspot_{v}_{b_flat}.zip"
+# Configuration JDK portable lue depuis les settings
+MIN_JAVA_VERSION = settings.jvm.min_java_version
+JDK_VERSION = settings.jvm.jdk_version
+JDK_BUILD = settings.jvm.jdk_build
+JDK_URL_TEMPLATE = settings.jvm.jdk_url_template
 # Windows: x64_windows, aarch64_windows | Linux: x64_linux, aarch64_linux | macOS: x64_mac, aarch64_mac
 
 # --- Fonctions Utilitaires ---

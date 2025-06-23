@@ -14,7 +14,6 @@ Ce module centralise et unifie l'accès à toutes les sources de données du sys
 Intégration harmonieuse avec l'écosystème core existant et les composants refactorisés.
 """
 
-import os
 import sys
 import json
 import gzip
@@ -28,6 +27,7 @@ from dataclasses import dataclass, field
 from contextlib import contextmanager
 
 # Imports core existants
+from argumentation_analysis.config.settings import settings
 from argumentation_analysis.core.source_manager import SourceManager, SourceConfig, SourceType as LegacySourceType
 from argumentation_analysis.core.utils.crypto_utils import derive_encryption_key, load_encryption_key
 from argumentation_analysis.core.io_manager import load_extract_definitions
@@ -137,13 +137,12 @@ class UnifiedSourceManager:
             return self.config.passphrase
             
         if self.config.auto_passphrase:
-            env_passphrase = os.getenv("TEXT_CONFIG_PASSPHRASE")
-            if env_passphrase:
-                self.logger.info("Phrase secrète récupérée depuis l'environnement.")
-                return env_passphrase
-        
+            if settings.passphrase:
+                return settings.passphrase.get_secret_value()
+
         if not self.config.interactive_mode:
-            raise ValueError("Aucune phrase secrète fournie et mode non-interactif activé")
+            # Si aucune passphrase n'a été fournie via la config ou les settings, et que le mode n'est pas interactif, c'est une erreur.
+            raise ValueError("Aucune phrase secrète disponible dans la configuration (config/settings) et le mode non-interactif est activé.")
         
         try:
             passphrase = getpass.getpass("Veuillez entrer la phrase secrète pour déchiffrer les sources : ")
@@ -359,7 +358,8 @@ class UnifiedSourceManager:
         
         # Sources complexes (nécessite authentification)
         try:
-            passphrase = self.config.passphrase or os.getenv("TEXT_CONFIG_PASSPHRASE")
+            # La passphrase doit être fournie via la config de la méthode, ou via les settings globaux.
+            passphrase = self.config.passphrase or (settings.passphrase.get_secret_value() if settings.passphrase else None)
             if passphrase:
                 config = UnifiedSourceConfig(
                     source_type=UnifiedSourceType.COMPLEX,

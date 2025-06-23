@@ -40,6 +40,7 @@ import logging
 import argparse
 import json
 import time
+import warnings # Ajout de warnings
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple, Union
@@ -52,21 +53,18 @@ project_root = Path(__file__).resolve().parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-# Import et activation de l'environnement
-# Ceci doit être fait avant toute autre importation ou configuration qui dépend des variables d'environnement
-try:
-    from project_core.core_from_scripts.environment_manager import auto_activate_env
-    # On active en mode non-silencieux pour voir les logs d'activation.
-    if not auto_activate_env(silent=False):
-        print("CRITICAL: Failed to activate project environment. Aborting.", file=sys.stderr)
-        sys.exit(1)
-except ImportError as e:
-    print(f"CRITICAL: Could not import or run environment manager. Ensure you are running from the project root.", file=sys.stderr)
-    print(f"Error: {e}", file=sys.stderr)
-    if "pytest" not in sys.modules:
-        sys.exit(1)
-    else:
-       pass # Ne pas quitter si on est dans un contexte de test
+# --- GESTION DE LA DÉPRÉCIATION ---
+# Ce script est maintenant considéré comme obsolète et son importation ne doit pas
+# provoquer d'effets de bord comme l'activation d'environnement ou un sys.exit().
+# L'activation est gérée par des scripts de plus haut niveau comme activate_project_env.ps1.
+warnings.warn(
+    "Le script 'unified_production_analyzer.py' est obsolète. "
+    "Son importation est une opération sans effet (no-op) pour maintenir la compatibilité des tests. "
+    "L'activation de l'environnement est maintenant gérée en amont.",
+    DeprecationWarning,
+    stacklevel=2
+)
+# Le bloc d'activation d'environnement précédent a été supprimé pour éviter les sys.exit().
 # Configuration avancée du logging (déplacée ici AVANT l'activation de l'env)
 logging.basicConfig(
     level=logging.INFO,

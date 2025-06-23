@@ -447,9 +447,7 @@ async def run_performance_test(extrait: Dict[str, Any]) -> Optional[Dict[str, An
     """
     logger.info(f"=== Test de performance sur l'extrait '{extrait['id']}' ===")
     
-    # Initialiser l'environnement
-    from dotenv import load_dotenv
-    load_dotenv(override=True)
+    # Initialiser l'environnement (le chargement de .env est maintenant implicite via settings)
     
     # Création du Service LLM
     from argumentation_analysis.core.llm_service import create_llm_service

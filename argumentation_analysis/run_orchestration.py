@@ -60,10 +60,10 @@ async def setup_environment() -> Any:
     :return: L'instance du service LLM si la création est réussie, sinon None.
     :rtype: Any
     """
-    # 1. Chargement de l'environnement (.env)
-    from dotenv import load_dotenv, find_dotenv
-    loaded = load_dotenv(find_dotenv(), override=True)
-    logging.info(f".env chargé: {loaded}")
+    # 1. Chargement de l'environnement (.env) est maintenant géré automatiquement
+    # par l'import du module `settings`. L'import de `jvm_setup` ou `llm_service`
+    # déclenchera le chargement de la configuration.
+    logging.info("Initialisation de l'environnement (chargement des settings implicite)...")
 
     # 2. Initialisation de la JVM
     from argumentation_analysis.core.jvm_setup import initialize_jvm

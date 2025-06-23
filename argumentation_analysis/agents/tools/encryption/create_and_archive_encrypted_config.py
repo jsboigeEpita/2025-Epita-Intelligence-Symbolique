@@ -10,7 +10,6 @@ import sys
 import time
 import shutil
 from pathlib import Path
-from dotenv import load_dotenv
 
 # Ajouter le répertoire parent au chemin de recherche des modules
 current_dir = Path(__file__).parent
@@ -18,10 +17,9 @@ parent_dir = current_dir.parent
 if str(parent_dir) not in sys.path:
     sys.path.append(str(parent_dir))
 
-# Charger les variables d'environnement
-load_dotenv(override=True)
-
 # Importer les modules nécessaires
+# L'import de settings gère le .env
+from argumentation_analysis.config.settings import settings
 from argumentation_analysis.ui.config import CONFIG_FILE_ENC
 from argumentation_analysis.paths import DATA_DIR
 
@@ -36,9 +34,9 @@ def main():
     """Fonction principale."""
     print("\n=== Création, vérification et archivage du fichier encrypté complet ===\n")
     
-    # Vérifier si la variable d'environnement TEXT_CONFIG_PASSPHRASE est définie
-    if not os.getenv("TEXT_CONFIG_PASSPHRASE"):
-        print(f"⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie.")
+    # Vérifier si la passphrase est définie dans la configuration
+    if not settings.passphrase:
+        print(f"⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie dans votre .env ou configuration.")
         print(f"   Veuillez la définir avant d'exécuter ce script.")
         sys.exit(1)
     

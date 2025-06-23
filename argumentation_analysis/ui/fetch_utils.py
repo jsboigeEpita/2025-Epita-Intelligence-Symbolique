@@ -6,13 +6,11 @@ import hashlib
 import logging
 from pathlib import Path
 from typing import Optional, List, Dict, Any, Union
+from pybreaker import CircuitBreakerError
 
-# Importation de la configuration UI et des utilitaires de cache et d'URL
-from . import config as ui_config
+from argumentation_analysis.config.settings import settings
+from argumentation_analysis.core.utils.network_utils import retry_on_network_error, network_breaker
 from .cache_utils import load_from_cache, save_to_cache
-# reconstruct_url sera importé depuis le utils.py principal ou un common_utils
-# from .utils import reconstruct_url # Cet import sera ajusté plus tard
-# L'import correct, maintenant que utils.py est l'index et contient reconstruct_url
 from .utils import reconstruct_url
 
 fetch_logger = logging.getLogger("App.UI.FetchUtils")
@@ -25,8 +23,10 @@ if not fetch_logger.handlers and not fetch_logger.propagate:
 
 # La fonction reconstruct_url est maintenant importée depuis .utils
 
-def fetch_direct_text(source_url: str, timeout: int = 60) -> Optional[str]:
-    """Récupère le contenu texte brut d'une URL par téléchargement direct."""
+@retry_on_network_error
+@network_breaker
+def fetch_direct_text(source_url: str, timeout: int = 15) -> Optional[str]:
+    """Récupère le contenu texte brut d'une URL par téléchargement direct de manière robuste."""
     cached_text = load_from_cache(source_url)
     if cached_text is not None: return cached_text
     fetch_logger.info(f"-> Téléchargement direct depuis : {source_url}...")
@@ -38,30 +38,43 @@ def fetch_direct_text(source_url: str, timeout: int = 60) -> Optional[str]:
         fetch_logger.info(f"   -> Contenu direct récupéré (longueur {len(texte_brut)}).")
         save_to_cache(source_url, texte_brut)
         return texte_brut
+    except CircuitBreakerError:
+        fetch_logger.error(f"Disjoncteur ouvert pour fetch_direct_text sur {source_url}.")
+        raise ConnectionError(f"Le service est temporairement indisponible (disjoncteur ouvert) pour {source_url}.")
     except requests.exceptions.RequestException as e:
-        fetch_logger.error(f"Erreur téléchargement direct ({source_url}): {e}")
-        raise ConnectionError(f"Erreur téléchargement direct ({source_url}): {e}") from e
+        fetch_logger.error(f"Erreur persistante de téléchargement direct pour {source_url}: {e}")
+        raise ConnectionError(f"Erreur de téléchargement persistante pour {source_url}") from e
+
+@retry_on_network_error
+@network_breaker
+def _robust_fetch_jina(jina_url: str, timeout: int, headers: dict) -> requests.Response:
+    response = requests.get(jina_url, headers=headers, timeout=timeout)
+    response.raise_for_status()
+    return response
 
 def fetch_with_jina(
     source_url: str,
-    timeout: int = 90,
+    timeout: int = 45,
     jina_reader_prefix_override: Optional[str] = None
 ) -> Optional[str]:
-    """Récupère et extrait le contenu textuel d'une URL via le service Jina Reader."""
+    """Récupère et extrait le contenu textuel d'une URL via Jina de manière robuste."""
     cached_text = load_from_cache(source_url)
     if cached_text is not None: return cached_text
 
-    _jina_reader_prefix = jina_reader_prefix_override if jina_reader_prefix_override is not None else ui_config.JINA_READER_PREFIX
-    jina_url = f"{_jina_reader_prefix}{source_url}"
+    _jina_reader_prefix = jina_reader_prefix_override if jina_reader_prefix_override is not None else str(settings.jina.reader_prefix)
+    jina_url = f"{_jina_reader_prefix.rstrip('/')}/{source_url}"
 
     fetch_logger.info(f"-> Récupération via Jina : {jina_url}...")
     headers = {'Accept': 'text/markdown', 'User-Agent': 'ArgumentAnalysisApp/1.0'}
     try:
-        response = requests.get(jina_url, headers=headers, timeout=timeout)
-        response.raise_for_status()
+        response = _robust_fetch_jina(jina_url, timeout, headers)
+    except CircuitBreakerError:
+        fetch_logger.error(f"Disjoncteur ouvert pour Jina sur {jina_url}.")
+        raise ConnectionError(f"Le service Jina est temporairement indisponible (disjoncteur ouvert).")
     except requests.exceptions.RequestException as e:
-        fetch_logger.error(f"Erreur Jina ({jina_url}): {e}")
-        raise ConnectionError(f"Erreur Jina ({jina_url}): {e}") from e
+        fetch_logger.error(f"Erreur Jina persistante pour {jina_url}: {e}")
+        raise ConnectionError(f"Erreur Jina persistante pour {jina_url}") from e
+    
     content = response.text
     md_start_marker = "Markdown Content:"
     md_start_index = content.find(md_start_marker)
@@ -82,9 +95,9 @@ def fetch_with_tika(
     temp_download_dir_override: Optional[Path] = None
     ) -> Optional[str]:
     """Traite une source (URL ou contenu binaire) via un serveur Apache Tika. (Version MERGE_HEAD)"""
-    _tika_server_url = tika_server_url_override if tika_server_url_override is not None else ui_config.TIKA_SERVER_URL
-    _plaintext_extensions = plaintext_extensions_override if plaintext_extensions_override is not None else ui_config.PLAINTEXT_EXTENSIONS
-    _temp_download_dir = temp_download_dir_override if temp_download_dir_override is not None else ui_config.TEMP_DOWNLOAD_DIR
+    _tika_server_url = tika_server_url_override if tika_server_url_override is not None else str(settings.tika.server_endpoint)
+    _plaintext_extensions = plaintext_extensions_override if plaintext_extensions_override is not None else settings.ui.plaintext_extensions
+    _temp_download_dir = temp_download_dir_override if temp_download_dir_override is not None else settings.ui.temp_download_dir
 
     cache_key = source_url if source_url else f"file://{file_name}"
     cached_text = load_from_cache(cache_key)
@@ -138,9 +151,9 @@ def fetch_with_tika(
             if content_to_send is None:
                  fetch_logger.info(f"-> Téléchargement (pour Tika) depuis : {source_url}...")
                  try:
-                     response_dl = requests.get(source_url, stream=True, timeout=timeout_dl)
-                     response_dl.raise_for_status()
-                     content_to_send = response_dl.content
+                     response_dl_res = _robust_get_request(source_url, stream=True, timeout=timeout_dl)
+                     if response_dl_res is None: raise ConnectionError(f"Echec du téléchargement robuste de {source_url}")
+                     content_to_send = response_dl_res.content
                      fetch_logger.info(f"   -> Doc téléchargé ({len(content_to_send)} bytes).")
                      try:
                          effective_raw_cache_path.parent.mkdir(parents=True, exist_ok=True)
@@ -174,12 +187,12 @@ def fetch_with_tika(
     headers = { 'Accept': 'text/plain', 'Content-Type': 'application/octet-stream', 'X-Tika-OCRLanguage': 'fra+eng' }
     texte_brut_tika = ""
     try:
-        response_tika = requests.put(_tika_server_url, data=content_to_send, headers=headers, timeout=timeout_tika)
-        fetch_logger.info(f"  [Tika Log] Réponse de Tika reçue. Statut: {response_tika.status_code}")
-        response_tika.raise_for_status()
-        texte_brut_tika = response_tika.text
+        response_tika_res = _robust_put_request(str(_tika_server_url), data=content_to_send, headers=headers, timeout=timeout_tika)
+        if response_tika_res is None: raise ConnectionError(f"Echec de l'envoi robuste à Tika")
+        fetch_logger.info(f"  [Tika Log] Réponse de Tika reçue. Statut: {response_tika_res.status_code}")
+        texte_brut_tika = response_tika_res.text
         if not texte_brut_tika:
-            fetch_logger.warning(f"  [Tika Log] Tika a retourné un statut {response_tika.status_code} mais le texte est vide.")
+            fetch_logger.warning(f"  [Tika Log] Tika a retourné un statut {response_tika_res.status_code} mais le texte est vide.")
         else:
             fetch_logger.info(f"  [Tika Log] Texte extrait par Tika. Longueur: {len(texte_brut_tika)}.")
             fetch_logger.debug(f"  [Tika Log] Extrait Tika (premiers 200 chars): {texte_brut_tika[:200]}")
@@ -201,7 +214,7 @@ def fetch_with_tika(
         save_to_cache(cache_key, "")
         raise ConnectionError(f"Erreur inattendue Tika: {e_generic}") from e_generic
 
-def get_full_text_for_source(source_info: Dict[str, Any], app_config: Optional[Dict[str, Any]] = None) -> Optional[str]:
+def get_full_text_for_source(source_info: Dict[str, Any]) -> Optional[str]:
     """Récupère le texte complet pour une source donnée. (Version fusionnée)"""
     source_name_for_log = source_info.get('source_name', source_info.get('id', 'Source inconnue'))
     fetch_logger.debug(f"get_full_text_for_source appelée pour: {source_name_for_log}")
@@ -217,11 +230,11 @@ def get_full_text_for_source(source_info: Dict[str, Any], app_config: Optional[D
         
         absolute_file_path = Path(file_path_str)
         if not absolute_file_path.is_absolute():
-             # Essayer de résoudre par rapport à PROJECT_ROOT si disponible, sinon CWD
-            if hasattr(ui_config, 'PROJECT_ROOT') and isinstance(ui_config.PROJECT_ROOT, Path):
-                absolute_file_path = (ui_config.PROJECT_ROOT / file_path_str).resolve()
-            else: # Fallback
-                absolute_file_path = Path.cwd() / file_path_str.resolve()
+             # Essayer de résoudre par rapport à la racine du projet, sinon CWD
+            project_root = Path(os.getcwd()) # Fallback
+            if 'PROJECT_ROOT' in os.environ:
+                project_root = Path(os.environ['PROJECT_ROOT'])
+            absolute_file_path = (project_root / file_path_str).resolve()
         
         fetch_logger.info(f"Tentative de lecture du fichier local: {absolute_file_path}")
         if absolute_file_path.exists() and absolute_file_path.is_file():
@@ -267,18 +280,11 @@ def get_full_text_for_source(source_info: Dict[str, Any], app_config: Optional[D
     source_type_original = source_info.get("source_type") # Peut différer de fetch_method
     texte_brut_source: Optional[str] = None
 
-    jina_prefix_val = ui_config.JINA_READER_PREFIX
-    tika_server_url_val = ui_config.TIKA_SERVER_URL
-    plaintext_extensions_val = ui_config.PLAINTEXT_EXTENSIONS
-    temp_download_dir_val = ui_config.TEMP_DOWNLOAD_DIR
-
-    if app_config:
-        jina_prefix_val = app_config.get('JINA_READER_PREFIX', jina_prefix_val)
-        tika_server_url_val = app_config.get('TIKA_SERVER_URL', tika_server_url_val)
-        plaintext_extensions_val = app_config.get('PLAINTEXT_EXTENSIONS', plaintext_extensions_val)
-        temp_download_dir_str_or_path = app_config.get('TEMP_DOWNLOAD_DIR')
-        if temp_download_dir_str_or_path is not None:
-            temp_download_dir_val = Path(temp_download_dir_str_or_path)
+    # Les valeurs de configuration sont maintenant lues directement depuis l'objet `settings`
+    jina_prefix_val = str(settings.jina.reader_prefix)
+    tika_server_url_val = str(settings.tika.server_endpoint)
+    plaintext_extensions_val = settings.ui.plaintext_extensions
+    temp_download_dir_val = settings.ui.temp_download_dir
 
     fetch_logger.info(f"Cache texte absent pour '{target_url}' ({source_name_for_log}). Récupération (méthode: {fetch_method}, type original: {source_type_original})...")
     try:
@@ -335,3 +341,18 @@ def get_full_text_for_source(source_info: Dict[str, Any], app_config: Optional[D
         return None
 
 fetch_logger.info("Utilitaires de fetch UI définis.")
+
+# Fonctions robustes internes pour les requêtes
+@retry_on_network_error
+@network_breaker
+def _robust_get_request(url: str, **kwargs) -> Optional[requests.Response]:
+    response = requests.get(url, **kwargs)
+    response.raise_for_status()
+    return response
+
+@retry_on_network_error
+@network_breaker
+def _robust_put_request(url: str, **kwargs) -> Optional[requests.Response]:
+    response = requests.put(url, **kwargs)
+    response.raise_for_status()
+    return response

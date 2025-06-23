@@ -2,7 +2,6 @@
 import os
 import sys
 from pathlib import Path
-from dotenv import load_dotenv
 import logging
 from typing import Dict, List, Any # Ajout pour List et Dict dans l'adaptateur
 import threading
@@ -35,6 +34,12 @@ except NameError: # __file__ n'est pas défini si exécuté interactivement ou v
 
 
 # Imports des services et modules nécessaires (seront dans des try-except)
+try:
+    from argumentation_analysis.config.settings import settings
+except ImportError as e:
+    logger.error(f"CRITICAL: Failed to import settings from argumentation_analysis.config: {e}")
+    settings = None
+
 initialize_jvm_func = None
 CryptoService_class = None
 DefinitionService_class = None
@@ -237,19 +242,23 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
         # Ou si vous voulez le garder dans argumentation_analysis:
         # actual_env_path = current_project_root / "argumentation_analysis" / ".env"
 
-    if actual_env_path.exists():
-        load_dotenv(dotenv_path=actual_env_path, override=True)
-        logger.info(f"Variables d'environnement chargées depuis : {actual_env_path}")
-        context.config['OPENAI_API_KEY'] = os.getenv("OPENAI_API_KEY")
-        context.config['TEXT_CONFIG_PASSPHRASE'] = os.getenv("TEXT_CONFIG_PASSPHRASE")
-        context.config['ENCRYPTION_KEY_FROM_ENV'] = os.getenv("ENCRYPTION_KEY")
+    # La configuration est maintenant chargée via le module `settings` à l'import.
+    # On peuple `context.config` pour la compatibilité avec le reste du code.
+    if settings:
+        logger.info("Chargement de la configuration depuis l'objet `settings` centralisé.")
+        context.config['OPENAI_API_KEY'] = settings.openai.api_key.get_secret_value() if settings.openai.api_key else None
+        
+        # Récupération sécurisée des secrets depuis l'objet settings.
+        # Le dictionnaire context.config est conservé pour la compatibilité ascendante du reste du script.
+        context.config['TEXT_CONFIG_PASSPHRASE'] = settings.passphrase.get_secret_value() if settings.passphrase else None
+        context.config['ENCRYPTION_KEY_FROM_ENV'] = settings.encryption_key.get_secret_value() if settings.encryption_key else None
 
-        if not context.config['OPENAI_API_KEY']:
-            logger.warning("OPENAI_API_KEY non trouvée dans le .env ou l'environnement.")
-        if not context.config['TEXT_CONFIG_PASSPHRASE']:
-            logger.warning("TEXT_CONFIG_PASSPHRASE non trouvée dans le .env ou l'environnement.")
+        if not context.config.get('OPENAI_API_KEY'):
+            logger.warning("OPENAI_API_KEY non configurée dans `settings`.")
+        if not context.config.get('TEXT_CONFIG_PASSPHRASE'):
+            logger.warning("TEXT_CONFIG_PASSPHRASE non configurée dans `settings`.")
     else:
-        logger.warning(f"Fichier .env non trouvé à {actual_env_path}. Les services dépendant de variables d'environnement pourraient ne pas fonctionner.")
+        logger.error("Le module `settings` n'a pas pu être importé. La configuration est indisponible.")
 
     # Utiliser un attribut sur le module `sys` pour un état vraiment global
     # qui survit au rechargement de module par Uvicorn.

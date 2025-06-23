@@ -49,4 +49,11 @@ module.exports = defineConfig({
   /* Emplacement pour les rapports de test, screenshots, etc. */
   outputDir: 'test-results/',
 
+  // Lancement du serveur web avant les tests
+  webServer: {
+    command: 'powershell -c "conda activate ./.venv && python -m uvicorn argumentation_analysis.services.web_api.app:app --port 5003"',
+    url: 'http://127.0.0.1:5003',
+    timeout: 120 * 1000,
+    reuseExistingServer: !process.env.CI,
+  },
 });

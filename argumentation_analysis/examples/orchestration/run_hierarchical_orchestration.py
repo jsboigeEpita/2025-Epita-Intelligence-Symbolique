@@ -13,7 +13,9 @@ import argparse
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 import semantic_kernel as sk # Ajout de l'import pour le Kernel
-from dotenv import load_dotenv # Ajout pour charger .env
+
+# L'import de dotenv n'est plus nécessaire, les modules applicatifs
+# (comme llm_service) chargeront la configuration via settings.
 
 # Ajouter le répertoire parent au path pour pouvoir importer les modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -52,7 +54,7 @@ class HierarchicalOrchestrator:
     
     def __init__(self):
         """Initialise l'orchestrateur hiérarchique."""
-        load_dotenv() # Charger les variables d'environnement
+        # load_dotenv() est maintenant redondant car géré par le module settings.
         # Configurer le logging
         logging.basicConfig(
             level=logging.INFO,

@@ -11,6 +11,7 @@ import random
 import logging
 from datetime import datetime
 from typing import Dict, List, Any, Optional
+from collections import deque
 
 from .enquete_states import EnqueteCluedoState
 from ..agents.core.oracle.cluedo_dataset import CluedoDataset
@@ -157,18 +158,18 @@ class CluedoOracleState(EnqueteCluedoState):
         self.watson_agent_id = f"watson_agent_{self.workflow_id}"
         
         # Logs et tracking spécialisés Oracle
-        self.revelations_log: List[Dict[str, Any]] = []
-        self.oracle_queries_log: List[Dict[str, Any]] = []
+        self.revelations_log: deque[Dict[str, Any]] = deque(maxlen=100)
+        self.oracle_queries_log: deque[Dict[str, Any]] = deque(maxlen=100)
         
         # Tracking interactions 3-agents
-        self.interaction_pattern: List[str] = []  # ["Sherlock", "Watson", "Moriarty", ...]
+        self.interaction_pattern: deque[str] = deque(maxlen=100)  # ["Sherlock", "Watson", "Moriarty", ...]
         self.oracle_queries_count = 0
-        self.suggestions_validated_by_oracle: List[Dict[str, Any]] = []
+        self.suggestions_validated_by_oracle: deque[Dict[str, Any]] = deque(maxlen=100)
         
         # PHASE C: Mémoire contextuelle pour continuité narrative
-        self.conversation_history: List[Dict[str, Any]] = []  # Messages complets avec contexte
-        self.contextual_references: List[Dict[str, Any]] = []  # Références entre messages
-        self.emotional_reactions: List[Dict[str, Any]] = []  # Réactions émotionnelles enregistrées
+        self.conversation_history: deque[Dict[str, Any]] = deque(maxlen=100)  # Messages complets avec contexte
+        self.contextual_references: deque[Dict[str, Any]] = deque(maxlen=100)  # Références entre messages
+        self.emotional_reactions: deque[Dict[str, Any]] = deque(maxlen=100)  # Réactions émotionnelles enregistrées
         
         # Permissions par agent (configuration par défaut)
         self.agent_permissions = self._initialize_permissions()
@@ -190,7 +191,7 @@ class CluedoOracleState(EnqueteCluedoState):
         self.oracle_interactions = 0  # Compatibilité tests
         self.cards_revealed = 0  # Compteur de cartes révélées
         self.agent_turns = {}  # Tracking détaillé des tours d'agents
-        self.recent_revelations = []  # Liste des révélations récentes (max 10)
+        self.recent_revelations = deque(maxlen=10)  # Liste des révélations récentes (max 10)
         
         self._logger = logging.getLogger(f"{self.__class__.__name__}.{self.workflow_id}")
         self._logger.info(f"CluedoOracleState initialisé avec {len(self.get_moriarty_cards())} cartes Moriarty - Stratégie: {oracle_strategy}")
@@ -603,11 +604,7 @@ class CluedoOracleState(EnqueteCluedoState):
         }
         
         # Ajout en début de liste (plus récent en premier)
-        self.recent_revelations.insert(0, revelation_entry)
-        
-        # Limitation à 10 révélations récentes maximum
-        if len(self.recent_revelations) > 10:
-            self.recent_revelations = self.recent_revelations[:10]
+        self.recent_revelations.appendleft(revelation_entry)
         
         # Mise à jour des compteurs
         self.cards_revealed += 1
@@ -659,7 +656,7 @@ class CluedoOracleState(EnqueteCluedoState):
         if agent_name not in self.agent_turns:
             self.agent_turns[agent_name] = {
                 "total_turns": 0,
-                "recent_actions": []
+                "recent_actions": deque(maxlen=10)
             }
         
         # Mise à jour des statistiques de l'agent
@@ -675,8 +672,7 @@ class CluedoOracleState(EnqueteCluedoState):
         self.agent_turns[agent_name]["recent_actions"].append(action_record)
         
         # Limitation à 10 actions récentes maximum
-        if len(self.agent_turns[agent_name]["recent_actions"]) > 10:
-            self.agent_turns[agent_name]["recent_actions"] = self.agent_turns[agent_name]["recent_actions"][-10:]
+        # La deque s'occupe de la limitation de taille
         
         # Log de l'action
         self.add_log_message(
