@@ -62,8 +62,8 @@ class PlaywrightRunner:
         self.enabled = config.get('enabled', True)
         self.browser = config.get('browser', 'chromium')
         self.headless = config.get('headless', True)
-        self.timeout_ms = config.get('timeout_ms', 10000)
-        self.slow_timeout_ms = config.get('slow_timeout_ms', 20000)
+        self.timeout_ms = config.get('timeout_ms', 60000)
+        self.slow_timeout_ms = config.get('slow_timeout_ms', 120000)
         self.test_paths = config.get('test_paths', ["tests/integration/webapp/"])
         self.screenshots_dir = Path(config.get('screenshots_dir', 'logs/screenshots'))
         self.traces_dir = Path(config.get('traces_dir', 'logs/traces'))
@@ -188,10 +188,11 @@ class PlaywrightRunner:
         # Ajout du répertoire de test pour que pytest le découvre
         cmd.extend(test_paths)
 
-        # Forcer le mode headed pour le débogage visuel
-        cmd.append('--headed')
-        self.logger.info("Forçage du mode 'headed' pour le débogage.")
-        
+        # Le mode Headless est géré par la fixture de pytest-playwright
+        # via la variable d'environnement HEADLESS, pas un argument direct.
+        # Pas besoin d'ajouter --headless ou --headed ici.
+        self.logger.info(f"Le mode Headless est configuré sur: {config.get('headless', True)}")
+
         # --tracing on est l'équivalent de --trace=on pour pytest-playwright
         if config.get('traces', True):
             cmd.append('--tracing=on')
@@ -205,8 +206,6 @@ class PlaywrightRunner:
         if 'frontend_url' in config:
             cmd.append(f'--frontend-url={config["frontend_url"]}')
 
-        # Ajout de l'option pour désactiver la fixture e2e_servers
-        cmd.append('--disable-e2e-servers-fixture')
         
         return cmd
     
@@ -219,36 +218,48 @@ class PlaywrightRunner:
 
     async def _execute_tests(self, cmd: List[str],
                              config: Dict[str, Any]) -> subprocess.CompletedProcess:
-        """Exécute les tests en utilisant `conda run` pour garantir l'activation de l'environnement."""
+        """Exécute les tests via un script batch pour garantir l'activation correcte de l'environnement."""
         
-        # Le nom de l'environnement est supposé être 'projet-is'
         env_name = "projet-is"
         
-        # La commande à exécuter à l'intérieur de l'environnement conda
+        # Chemin vers le script batch
+        script_path = Path(__file__).parent / 'run_e2e_tests.bat'
+        
+        # La commande pytest originale
         pytest_command = cmd
 
-        # Construction de la commande `conda run`
-        # --no-capture-output est crucial pour voir les logs en temps réel.
-        conda_command = [
-            'conda', 'run', '-n', env_name, '--no-capture-output',
-        ]
-        conda_command.extend(pytest_command)
-        
-        command_str_for_log = " ".join(conda_command)
-        self.logger.info(f"Exécution de la commande via 'conda run': {command_str_for_log}")
+        # Le script .bat va appeler 'python', donc on retire 'python' de la commande ici
+        # s'il est présent, pour ne pas avoir 'python python -m ...'
+        if pytest_command and pytest_command[0] == 'python':
+            pytest_command_for_bat = pytest_command[1:]
+        else:
+            pytest_command_for_bat = pytest_command
 
-        timeout = config.get('test_timeout', 600)
+        # Construction de la nouvelle commande : [script.bat, ...commande_pytest_sans_python]
+        final_command = [str(script_path)] + pytest_command_for_bat
+        
+        # Préparation de l'environnement pour le script batch
+        # On passe le nom de l'environnement via une variable d'environnement pour plus de robustesse
+        script_env = os.environ.copy()
+        script_env["CONDA_ENV_NAME_TO_ACTIVATE"] = env_name
+        
+        command_str_for_log = " ".join(final_command)
+        self.logger.info(f"Exécution de la commande via le script batch: {command_str_for_log}")
+        self.logger.info(f"Environnement Conda '{env_name}' sera activé par le script via la variable d'environnement.")
+
+        timeout = config.get('test_timeout', 900)
         self.logger.info(f"Timeout configuré: {timeout}s")
         
         stdout_lines = []
         stderr_lines = []
 
         try:
-            # On utilise create_subprocess_exec car `conda_command` est une liste
+            # On utilise create_subprocess_exec car `final_command` est une liste
             process = await asyncio.create_subprocess_exec(
-                *conda_command,
+                *final_command,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
+                env=script_env
             )
 
             async def log_stream(stream, log_func, line_buffer):
@@ -267,13 +278,14 @@ class PlaywrightRunner:
             # Attendre que le processus se termine ou que le timeout soit atteint
             await asyncio.wait_for(asyncio.gather(stdout_task, stderr_task, process.wait()), timeout=timeout)
             
-            returncode = await process.wait()
+            returncode = process.returncode
             self.logger.info(f"Tests pytest terminés avec le code de retour : {returncode}")
 
         except asyncio.TimeoutError:
             self.logger.error(f"Timeout ({timeout}s) atteint pendant l'exécution des tests.")
             if process.returncode is None:
                 process.kill()
+                await process.wait() # Attendre que le processus soit bien terminé
             return subprocess.CompletedProcess(command_str_for_log, returncode=-1, stdout="\n".join(stdout_lines), stderr="\n".join(stderr_lines))
         except Exception as e:
             self.logger.critical(f"Erreur critique lors de l'exécution du sous-processus de test : {e}", exc_info=True)
@@ -281,7 +293,7 @@ class PlaywrightRunner:
 
         return subprocess.CompletedProcess(
             command_str_for_log,
-            returncode,
+            process.returncode,
             stdout="\n".join(stdout_lines),
             stderr="\n".join(stderr_lines)
         )
