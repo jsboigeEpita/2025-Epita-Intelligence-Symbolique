@@ -82,6 +82,11 @@ class CryptoWorkflowManager:
             processing_time=0.0
         )
         
+        if not corpus_files:
+            self.logger.info("La liste des fichiers de corpus est vide, aucune action requise.")
+            result.processing_time = time.time() - start_time
+            return result
+
         try:
             encryption_key = self.derive_encryption_key()
             self.logger.info(f"🔓 Déchiffrement de {len(corpus_files)} fichiers de corpus")
