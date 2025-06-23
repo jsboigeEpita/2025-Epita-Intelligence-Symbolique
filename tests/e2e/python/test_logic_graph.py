@@ -10,7 +10,7 @@ async def test_successful_graph_visualization(page: Page, webapp_service: dict):
     """
     Scenario 4.1: Successful visualization of a logic graph (Happy Path)
     """
-    await page.goto(webapp_service["frontend_url"])
+    await page.goto(webapp_service.frontend_url)
     
     # Attendre que l'API soit connectée
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
@@ -41,7 +41,7 @@ async def test_logic_graph_api_error(page: Page, webapp_service: dict):
     """
     Scenario 4.2: API error during graph generation
     """
-    await page.goto(webapp_service["frontend_url"])
+    await page.goto(webapp_service.frontend_url)
     
     # Attendre que l'API soit connectée
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
@@ -77,7 +77,7 @@ async def test_logic_graph_reset_button(page: Page, webapp_service: dict):
     """
     Scenario 4.3: Reset button clears input and graph
     """
-    await page.goto(webapp_service["frontend_url"])
+    await page.goto(webapp_service.frontend_url)
     
     # Attendre que l'API soit connectée
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)

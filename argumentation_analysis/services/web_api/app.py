@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 # --- Imports des Blueprints et des modèles de données ---
 from argumentation_analysis.services.web_api.routes.main_routes import main_bp
 from argumentation_analysis.services.web_api.routes.logic_routes import logic_bp
+from argumentation_analysis.services.web_api.routes.health_routes import health_bp
 from argumentation_analysis.services.web_api.models.response_models import ErrorResponse
 # Import des classes de service
 from argumentation_analysis.services.web_api.services.analysis_service import AnalysisService
@@ -100,6 +101,7 @@ def create_app():
     flask_app_instance.services = AppServices()
 
     # Enregistrement des Blueprints
+    flask_app_instance.register_blueprint(health_bp, url_prefix='/api')
     flask_app_instance.register_blueprint(main_bp, url_prefix='/api')
     flask_app_instance.register_blueprint(logic_bp, url_prefix='/api/logic')
     logger.info("Blueprints registered.")

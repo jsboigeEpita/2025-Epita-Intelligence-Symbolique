@@ -64,7 +64,7 @@ class FrontendManager:
             self.logger.info(f"Utilisation du chemin frontend configuré : {configured_path}")
             return Path(configured_path)
 
-        project_root = Path.cwd()
+        project_root = Path(__file__).resolve().parents[3]
         candidate_paths = [
             project_root / "interface_web",
             project_root / "frontend",

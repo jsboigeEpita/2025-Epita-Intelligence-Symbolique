@@ -15,7 +15,7 @@ async def test_app_loads_successfully(page: Page, webapp_service: dict):
     try:
         # Navigation vers l'application
         print(f"[START] Navigation vers {webapp_service['frontend_url']}")
-        await page.goto(webapp_service["frontend_url"], timeout=10000)
+        await page.goto(webapp_service.frontend_url, timeout=10000)
         
         # Attendre que la page soit chargée
         page.wait_for_load_state('networkidle', timeout=10000)
@@ -70,7 +70,7 @@ async def test_api_connectivity(page: Page, webapp_service: dict):
         print("[API] Test connectivite API")
         
         # Navigation
-        await page.goto(webapp_service["frontend_url"], timeout=10000)
+        await page.goto(webapp_service.frontend_url, timeout=10000)
         page.wait_for_load_state('networkidle', timeout=5000)
         
         # Attendre indicateur de statut API
@@ -115,7 +115,7 @@ async def test_navigation_tabs(page: Page, webapp_service: dict):
     try:
         print("[NAV] Test navigation onglets")
         
-        await page.goto(webapp_service["frontend_url"], timeout=10000)
+        await page.goto(webapp_service.frontend_url, timeout=10000)
         page.wait_for_load_state('networkidle', timeout=5000)
         
         # Chercher des éléments cliquables qui ressemblent à des onglets

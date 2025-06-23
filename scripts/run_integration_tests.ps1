@@ -15,10 +15,10 @@ $WebAppOrchestratorScript = "scripts/apps/webapp/unified_web_orchestrator.py"
 # --integration est la valeur par défaut mais on l'explicite pour la clarté.
 # --frontend est requis pour les tests e2e
 # --visible peut être utile pour le débogage. Retirer pour exécution en headless.
-$OrchestratorArgs = "--integration --frontend" # Ajoutez --visible ici si nécessaire
+$OrchestratorArgs = "--integration --frontend --visible" # Ajoutez --visible ici si nécessaire
 
 # Commande complète à passer au script d'activation
-$CommandToExecute = "python '$WebAppOrchestratorScript' $OrchestratorArgs"
+$CommandToExecute = "python $WebAppOrchestratorScript $OrchestratorArgs"
 
 Write-Host "Activation de l'environnement et exécution du test d'intégration..."
 Write-Host "Commande: $CommandToExecute"

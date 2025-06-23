@@ -115,33 +115,48 @@ $CommandToRun = "python $($runnerArgs -join ' ')"
 Write-Host "[INFO] Commande à exécuter : $CommandToRun" -ForegroundColor Cyan
 Write-Host "[INFO] Lancement des tests via $ActivationScript..." -ForegroundColor Cyan
 
-# Préparer les arguments pour le script d'activation
-$TempFile = [System.IO.Path]::GetTempFileName()
+# --- Exécution via le gestionnaire d'environnement ---
+# Créer un fichier temporaire pour la sortie de la commande
+$outputFile = [System.IO.Path]::GetTempFileName()
+
+# Préparer les arguments pour le script d'activation en utilisant le "splatting"
 $activationArgs = @{
-    CommandToRun = $CommandToRun
-    CommandOutputFile = $TempFile
+    CommandToRun      = $CommandToRun
+    CommandOutputFile = $outputFile
 }
-if ($DebugMode) { $activationArgs['DebugMode'] = $true }
-
-# Le script d'activation génère la commande complète dans un fichier temporaire
-& $ActivationScript @activationArgs
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "[ERREUR] Le script d'activation a échoué." -ForegroundColor Red
-    Remove-Item $TempFile -ErrorAction SilentlyContinue
-    exit 1
+if ($DebugMode) {
+    $activationArgs['DebugMode'] = $true
+    Write-Host "[INFO] Mode Débogage activé." -ForegroundColor Yellow
 }
 
-$FinalCommand = Get-Content $TempFile
-Remove-Item $TempFile -ErrorAction SilentlyContinue
+try {
+    # Appeler le script d'activation pour qu'il écrive la commande finale dans le fichier
+    # Note: On redirige la sortie d'erreur (logs de activate_project_env) vers la console
+    & $ActivationScript @activationArgs 2>&1
 
-if (-not $FinalCommand) {
-    Write-Host "[ERREUR] Le script d'activation n'a pas généré de commande." -ForegroundColor Red
-    exit 1
+    if ($LASTEXITCODE -ne 0) {
+        throw "Le script d'activation a échoué. Voir les logs ci-dessus."
+    }
+
+    # Lire la commande finale depuis le fichier
+    $finalCommand = Get-Content $outputFile
+    if ([string]::IsNullOrWhiteSpace($finalCommand)) {
+        throw "La commande générée par le script d'activation est vide."
+    }
+
+    Write-Host "[INFO] Commande finale à exécuter: $finalCommand" -ForegroundColor Green
+
+    # Exécuter la commande finale
+    Invoke-Expression $finalCommand
+    $exitCode = $LASTEXITCODE
+
+    Write-Host "[INFO] Exécution terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan
+    exit $exitCode
+
 }
-
-Write-Host "[INFO] Exécution de la commande finale : $FinalCommand" -ForegroundColor Green
-Invoke-Expression -Command $FinalCommand
-
-$exitCode = $LASTEXITCODE
-Write-Host "[INFO] Exécution terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan
-exit $exitCode
+finally {
+    # Nettoyer le fichier temporaire
+    if (Test-Path $outputFile) {
+        Remove-Item $outputFile -Force
+    }
+}

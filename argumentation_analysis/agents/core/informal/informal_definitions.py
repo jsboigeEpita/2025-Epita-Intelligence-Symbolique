@@ -42,6 +42,7 @@ from semantic_kernel.functions.kernel_parameter_metadata import KernelParameterM
 
 # Importer load_csv_file depuis project_core
 from argumentation_analysis.core.utils.file_loaders import load_csv_file
+from argumentation_analysis.utils.taxonomy_loader import get_taxonomy_path
 from argumentation_analysis.paths import DATA_DIR # Assurer que DATA_DIR est importé si nécessaire ailleurs
 
 # Configuration du logging
@@ -103,8 +104,9 @@ class InformalAnalysisPlugin:
             self._current_taxonomy_path = Path(taxonomy_file_path)
             self._logger.info(f"Utilisation du chemin de taxonomie personnalisé: {self._current_taxonomy_path}")
         else:
-            self._current_taxonomy_path = self.DEFAULT_TAXONOMY_PATH
-            self._logger.info(f"Utilisation du chemin de taxonomie par défaut: {self._current_taxonomy_path}")
+            # Utiliser le loader pour obtenir le chemin (gère le mock ou le téléchargement)
+            self._current_taxonomy_path = get_taxonomy_path()
+            self._logger.info(f"Utilisation du chemin de taxonomie fourni par le loader: {self._current_taxonomy_path}")
             
         # Cache pour le DataFrame de taxonomie
         self._taxonomy_df_cache = None
