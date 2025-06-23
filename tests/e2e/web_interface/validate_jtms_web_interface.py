@@ -68,9 +68,7 @@ class JTMSWebValidator:
         self.logger.info("=" * 60)
         
         # Configuration de l'orchestrateur
-        project_root = Path(__file__).resolve().parent.parent.parent.parent
-        config_path = project_root / 'scripts' / 'webapp' / 'config' / 'webapp_config.yml'
-        self.orchestrator = UnifiedWebOrchestrator(str(config_path))
+        self.orchestrator = UnifiedWebOrchestrator()
         self.orchestrator.headless = self.headless
         
         try:
