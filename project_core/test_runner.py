@@ -144,6 +144,7 @@ class TestRunner:
         self.test_path = test_path
         self.browser = browser
         self.pytest_extra_args = pytest_extra_args if pytest_extra_args is not None else []
+        self.service_manager = ServiceManager()
 
     def run(self):
         """Exécute le cycle de vie complet des tests."""
