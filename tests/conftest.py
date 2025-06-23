@@ -31,20 +31,7 @@ except ImportError:
     # ne l'inclut pas. Les tests dépendant de la JVM risquent de planter plus tard.
     pass
 
-import pytest
-from unittest.mock import patch
-
-@pytest.fixture(scope='session', autouse=True)
-def mock_openai_api_key():
-    """Ensure OpenAI API key is mocked for all test sessions."""
-    with patch.dict('os.environ', {'OPENAI_API_KEY': 'mock_api_key_for_testing'}):
-        yield
-import pytest
 import os
-import sys
-import sys
-import os
-from pathlib import Path
 
 # Ajoute la racine du projet au sys.path pour résoudre les problèmes d'import
 # causés par le `rootdir` de pytest qui interfère avec la résolution des modules.
