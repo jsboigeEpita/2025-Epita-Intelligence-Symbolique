@@ -13,11 +13,7 @@
 version: 1
 metadata:
   content_hash:
-<<<<<<< HEAD
-    win-64: 3f0f2c46827343815094fdd3e3b01c663af5fffa6cf62715e91d0e95be8d8414
-=======
-    win-64: 01673858a5cdd9b13f37788485fd3585cd5ccb929b3117cf43b660ae0def7d2d
->>>>>>> 58dcca0d (fix(ci): Repair and stabilize test environment)
+    win-64: b23bf4ebb812b8448efdbafe8bfe83322782bcd8285cd55d326e62864fb4dbd9
   channels:
   - url: conda-forge
     used_env_vars: []
@@ -200,14 +196,14 @@ package:
   manager: conda
   platform: win-64
   dependencies:
-    vc: '>=14.3,<15'
-    vc14_runtime: '>=14.42.34438'
-    ucrt: '>=10.0.20348.0'
-    aws-c-io: '>=0.20.1,<0.20.2.0a0'
+    aws-c-cal: '>=0.9.2,<0.9.3.0a0'
     aws-c-common: '>=0.12.3,<0.12.4.0a0'
     aws-c-http: '>=0.10.2,<0.10.3.0a0'
-    aws-c-cal: '>=0.9.2,<0.9.3.0a0'
+    aws-c-io: '>=0.20.1,<0.20.2.0a0'
     aws-c-sdkutils: '>=0.2.4,<0.2.5.0a0'
+    ucrt: '>=10.0.20348.0'
+    vc: '>=14.3,<15'
+    vc14_runtime: '>=14.42.34438'
   url: https://conda.anaconda.org/conda-forge/win-64/aws-c-auth-0.9.0-hd490b63_15.conda
   hash:
     md5: 41c6aba02d07f6419a01210b5c7398bc
@@ -248,10 +244,10 @@ package:
   manager: conda
   platform: win-64
   dependencies:
+    aws-c-common: '>=0.12.3,<0.12.4.0a0'
+    ucrt: '>=10.0.20348.0'
     vc: '>=14.2,<15'
     vc14_runtime: '>=14.29.30139'
-    ucrt: '>=10.0.20348.0'
-    aws-c-common: '>=0.12.3,<0.12.4.0a0'
   url: https://conda.anaconda.org/conda-forge/win-64/aws-c-compression-0.3.1-h5d0e663_5.conda
   hash:
     md5: fef493108acbe504dcc49bbf9759ccea
@@ -263,12 +259,12 @@ package:
   manager: conda
   platform: win-64
   dependencies:
-    vc: '>=14.3,<15'
-    vc14_runtime: '>=14.42.34438'
-    ucrt: '>=10.0.20348.0'
+    aws-c-common: '>=0.12.3,<0.12.4.0a0'
     aws-c-io: '>=0.20.1,<0.20.2.0a0'
     aws-checksums: '>=0.2.7,<0.2.8.0a0'
-    aws-c-common: '>=0.12.3,<0.12.4.0a0'
+    ucrt: '>=10.0.20348.0'
+    vc: '>=14.3,<15'
+    vc14_runtime: '>=14.42.34438'
   url: https://conda.anaconda.org/conda-forge/win-64/aws-c-event-stream-0.5.4-ha416645_12.conda
   hash:
     md5: 51269fa3c4b226f6b40aacb72dedb195
@@ -280,13 +276,13 @@ package:
   manager: conda
   platform: win-64
   dependencies:
+    aws-c-cal: '>=0.9.2,<0.9.3.0a0'
+    aws-c-common: '>=0.12.3,<0.12.4.0a0'
+    aws-c-compression: '>=0.3.1,<0.3.2.0a0'
+    aws-c-io: '>=0.20.1,<0.20.2.0a0'
+    ucrt: '>=10.0.20348.0'
     vc: '>=14.3,<15'
     vc14_runtime: '>=14.42.34438'
-    ucrt: '>=10.0.20348.0'
-    aws-c-io: '>=0.20.1,<0.20.2.0a0'
-    aws-c-compression: '>=0.3.1,<0.3.2.0a0'
-    aws-c-common: '>=0.12.3,<0.12.4.0a0'
-    aws-c-cal: '>=0.9.2,<0.9.3.0a0'
   url: https://conda.anaconda.org/conda-forge/win-64/aws-c-http-0.10.2-h81282ae_2.conda
   hash:
     md5: 2fa3bbfd5a7e0ac1ec8571c71ca495e2
@@ -298,11 +294,11 @@ package:
   manager: conda
   platform: win-64
   dependencies:
+    aws-c-cal: '>=0.9.2,<0.9.3.0a0'
+    aws-c-common: '>=0.12.3,<0.12.4.0a0'
+    ucrt: '>=10.0.20348.0'
     vc: '>=14.2,<15'
     vc14_runtime: '>=14.29.30139'
-    ucrt: '>=10.0.20348.0'
-    aws-c-common: '>=0.12.3,<0.12.4.0a0'
-    aws-c-cal: '>=0.9.2,<0.9.3.0a0'
   url: https://conda.anaconda.org/conda-forge/win-64/aws-c-io-0.20.1-hddf4d6c_0.conda
   hash:
     md5: 43b20ab02a0ad5a0f2069868579f8f3c
@@ -314,12 +310,12 @@ package:
   manager: conda
   platform: win-64
   dependencies:
+    aws-c-common: '>=0.12.3,<0.12.4.0a0'
+    aws-c-http: '>=0.10.2,<0.10.3.0a0'
+    aws-c-io: '>=0.20.1,<0.20.2.0a0'
+    ucrt: '>=10.0.20348.0'
     vc: '>=14.3,<15'
     vc14_runtime: '>=14.42.34438'
-    ucrt: '>=10.0.20348.0'
-    aws-c-io: '>=0.20.1,<0.20.2.0a0'
-    aws-c-http: '>=0.10.2,<0.10.3.0a0'
-    aws-c-common: '>=0.12.3,<0.12.4.0a0'
   url: https://conda.anaconda.org/conda-forge/win-64/aws-c-mqtt-0.13.1-h5c1ae27_3.conda
   hash:
     md5: b45b5124b91147887f4670e2e9b017b8
@@ -331,15 +327,15 @@ package:
   manager: conda
   platform: win-64
   dependencies:
-    vc: '>=14.3,<15'
-    vc14_runtime: '>=14.42.34438'
-    ucrt: '>=10.0.20348.0'
     aws-c-auth: '>=0.9.0,<0.9.1.0a0'
-    aws-checksums: '>=0.2.7,<0.2.8.0a0'
-    aws-c-io: '>=0.20.1,<0.20.2.0a0'
+    aws-c-cal: '>=0.9.2,<0.9.3.0a0'
     aws-c-common: '>=0.12.3,<0.12.4.0a0'
     aws-c-http: '>=0.10.2,<0.10.3.0a0'
-    aws-c-cal: '>=0.9.2,<0.9.3.0a0'
+    aws-c-io: '>=0.20.1,<0.20.2.0a0'
+    aws-checksums: '>=0.2.7,<0.2.8.0a0'
+    ucrt: '>=10.0.20348.0'
+    vc: '>=14.3,<15'
+    vc14_runtime: '>=14.42.34438'
   url: https://conda.anaconda.org/conda-forge/win-64/aws-c-s3-0.8.1-h1e843c7_3.conda
   hash:
     md5: e9fadc928f46590181089c114f8cf9c1
@@ -351,10 +347,10 @@ package:
   manager: conda
   platform: win-64
   dependencies:
+    aws-c-common: '>=0.12.3,<0.12.4.0a0'
+    ucrt: '>=10.0.20348.0'
     vc: '>=14.2,<15'
     vc14_runtime: '>=14.29.30139'
-    ucrt: '>=10.0.20348.0'
-    aws-c-common: '>=0.12.3,<0.12.4.0a0'
   url: https://conda.anaconda.org/conda-forge/win-64/aws-c-sdkutils-0.2.4-h5d0e663_0.conda
   hash:
     md5: 9c6103d829b015925b2eb2ef148b4519
@@ -366,10 +362,10 @@ package:
   manager: conda
   platform: win-64
   dependencies:
+    aws-c-common: '>=0.12.3,<0.12.4.0a0'
+    ucrt: '>=10.0.20348.0'
     vc: '>=14.2,<15'
     vc14_runtime: '>=14.29.30139'
-    ucrt: '>=10.0.20348.0'
-    aws-c-common: '>=0.12.3,<0.12.4.0a0'
   url: https://conda.anaconda.org/conda-forge/win-64/aws-checksums-0.2.7-h5d0e663_1.conda
   hash:
     md5: 10a0ef46b1cd76a01638b3cd72967d16
@@ -381,18 +377,18 @@ package:
   manager: conda
   platform: win-64
   dependencies:
+    aws-c-auth: '>=0.9.0,<0.9.1.0a0'
+    aws-c-cal: '>=0.9.2,<0.9.3.0a0'
+    aws-c-common: '>=0.12.3,<0.12.4.0a0'
+    aws-c-event-stream: '>=0.5.4,<0.5.5.0a0'
+    aws-c-http: '>=0.10.2,<0.10.3.0a0'
+    aws-c-io: '>=0.20.1,<0.20.2.0a0'
+    aws-c-mqtt: '>=0.13.1,<0.13.2.0a0'
+    aws-c-s3: '>=0.8.1,<0.8.2.0a0'
+    aws-c-sdkutils: '>=0.2.4,<0.2.5.0a0'
+    ucrt: '>=10.0.20348.0'
     vc: '>=14.3,<15'
     vc14_runtime: '>=14.42.34438'
-    ucrt: '>=10.0.20348.0'
-    aws-c-http: '>=0.10.2,<0.10.3.0a0'
-    aws-c-common: '>=0.12.3,<0.12.4.0a0'
-    aws-c-mqtt: '>=0.13.1,<0.13.2.0a0'
-    aws-c-auth: '>=0.9.0,<0.9.1.0a0'
-    aws-c-sdkutils: '>=0.2.4,<0.2.5.0a0'
-    aws-c-io: '>=0.20.1,<0.20.2.0a0'
-    aws-c-event-stream: '>=0.5.4,<0.5.5.0a0'
-    aws-c-s3: '>=0.8.1,<0.8.2.0a0'
-    aws-c-cal: '>=0.9.2,<0.9.3.0a0'
   url: https://conda.anaconda.org/conda-forge/win-64/aws-crt-cpp-0.32.8-h5d81255_6.conda
   hash:
     md5: 3a86c4830e8997f84ea0c40fcdcc252a
@@ -404,13 +400,13 @@ package:
   manager: conda
   platform: win-64
   dependencies:
-    vc: '>=14.2,<15'
-    vc14_runtime: '>=14.29.30139'
-    ucrt: '>=10.0.20348.0'
     aws-c-common: '>=0.12.3,<0.12.4.0a0'
     aws-c-event-stream: '>=0.5.4,<0.5.5.0a0'
     aws-crt-cpp: '>=0.32.8,<0.32.9.0a0'
     libzlib: '>=1.3.1,<2.0a0'
+    ucrt: '>=10.0.20348.0'
+    vc: '>=14.2,<15'
+    vc14_runtime: '>=14.29.30139'
   url: https://conda.anaconda.org/conda-forge/win-64/aws-sdk-cpp-1.11.510-h7deb975_10.conda
   hash:
     md5: 89c6fd396eba3b89a776a35c11e7d1b9
@@ -759,42 +755,42 @@ package:
   platform: win-64
   dependencies:
     __win: ''
-    python: ''
+    boltons: '>=23.0.0'
+    cachecontrol: '>=0.14.0,<0.15.0'
+    cachecontrol-with-filecache: ''
+    charset-normalizer: ''
     click: '>=8.0'
     click-default-group: ''
+    crashtest: '>=0.4.1,<0.5.0'
+    dulwich: '>=0.22.6,<0.23.0'
     ensureconda: '>=1.4.7'
     filelock: ''
     gitpython: '>=3.1.30'
+    importlib-metadata: '>=4.4'
     jinja2: ''
+    keyring: '>=25.1.0,<26.0.0'
     packaging: '>=24.0'
+    pkginfo: '>=1.12,<2.0'
     platformdirs: '>=3.10.0,<5.0.0'
     pydantic: '>=2'
+    pyproject_hooks: '>=1.0.0,<2.0.0'
+    python: ''
+    python-build: '>=1.2.1,<2.0.0'
+    python-fastjsonschema: '>=2.18.0,<3.0.0'
+    python-installer: '>=0.7.0,<0.8.0'
     pyyaml: '>=5.1'
     requests: '>=2.26,<3.0'
+    requests-toolbelt: '>=1.0.0,<2.0.0'
     ruamel.yaml: ''
     semver: '>=3,<4'
     setuptools: ''
+    shellingham: '>=1.5,<2.0'
     tomli: '>=2.0.1,<3.0.0'
     tomlkit: '>=0.11.4,<1.0.0'
-    typing_extensions: '>=4.6.1'
-    boltons: '>=23.0.0'
-    charset-normalizer: ''
-    zstandard: '>=0.15'
-    python-build: '>=1.2.1,<2.0.0'
-    cachecontrol: '>=0.14.0,<0.15.0'
-    cachecontrol-with-filecache: ''
-    crashtest: '>=0.4.1,<0.5.0'
-    dulwich: '>=0.22.6,<0.23.0'
-    python-fastjsonschema: '>=2.18.0,<3.0.0'
-    importlib-metadata: '>=4.4'
-    python-installer: '>=0.7.0,<0.8.0'
-    keyring: '>=25.1.0,<26.0.0'
-    pkginfo: '>=1.12,<2.0'
-    pyproject_hooks: '>=1.0.0,<2.0.0'
-    requests-toolbelt: '>=1.0.0,<2.0.0'
-    shellingham: '>=1.5,<2.0'
     trove-classifiers: '>=2022.5.19'
+    typing_extensions: '>=4.6.1'
     virtualenv: '>=20.26.6,<21.0.0'
+    zstandard: '>=0.15'
   url: https://conda.anaconda.org/conda-forge/noarch/conda-lock-3.0.3-pyha6a9232_1.conda
   hash:
     md5: 2000fb05b8a0d7cbdaf7d10c6472e8c9
@@ -1075,11 +1071,11 @@ package:
   manager: conda
   platform: win-64
   dependencies:
-    python: ''
     appdirs: ''
     click: '>=5.1'
     filelock: ''
     packaging: ''
+    python: ''
     requests: '>=2'
   url: https://conda.anaconda.org/conda-forge/noarch/ensureconda-1.4.7-pyh29332c3_0.conda
   hash:
@@ -1117,15 +1113,15 @@ package:
   manager: conda
   platform: win-64
   dependencies:
-    python: ''
-    starlette: '>=0.40.0,<0.47.0'
-    typing_extensions: '>=4.8.0'
-    pydantic: '>=1.7.4,!=1.8,!=1.8.1,!=2.0.0,!=2.0.1,!=2.1.0,<3.0.0'
     email_validator: '>=2.0.0'
     fastapi-cli: '>=0.0.5'
     httpx: '>=0.23.0'
     jinja2: '>=3.1.5'
+    pydantic: '>=1.7.4,!=1.8,!=1.8.1,!=2.0.0,!=2.0.1,!=2.1.0,<3.0.0'
+    python: ''
     python-multipart: '>=0.0.18'
+    starlette: '>=0.40.0,<0.47.0'
+    typing_extensions: '>=4.8.0'
     uvicorn-standard: '>=0.12.0'
   url: https://conda.anaconda.org/conda-forge/noarch/fastapi-0.115.13-pyhe01879c_0.conda
   hash:
@@ -1438,13 +1434,13 @@ package:
   manager: conda
   platform: win-64
   dependencies:
-    python: ''
-    vc: '>=14.3,<15'
-    vc14_runtime: '>=14.44.35208'
-    ucrt: '>=10.0.20348.0'
-    openssl: '>=3.5.0,<4.0a0'
     _python_abi3_support: 1.*
     cpython: '>=3.9'
+    openssl: '>=3.5.0,<4.0a0'
+    python: ''
+    ucrt: '>=10.0.20348.0'
+    vc: '>=14.3,<15'
+    vc14_runtime: '>=14.44.35208'
   url: https://conda.anaconda.org/conda-forge/win-64/hf-xet-1.1.5-py39h17685eb_3.conda
   hash:
     md5: 20950324bae25480c2f8001190a6c91d
@@ -1468,12 +1464,12 @@ package:
   manager: conda
   platform: win-64
   dependencies:
-    python: ''
-    h11: '>=0.16'
-    h2: '>=3,<5'
-    sniffio: 1.*
     anyio: '>=4.0,<5.0'
     certifi: ''
+    h11: '>=0.16'
+    h2: '>=3,<5'
+    python: ''
+    sniffio: 1.*
   url: https://conda.anaconda.org/conda-forge/noarch/httpcore-1.0.9-pyh29332c3_0.conda
   hash:
     md5: 4f14640d58e2cc0aa0819d9d8ba125bb
@@ -3328,15 +3324,30 @@ package:
   platform: win-64
   dependencies:
     python: ''
+    python_abi: 3.10.*
     typing-extensions: '>=4.6.0,!=4.7.0'
+    ucrt: '>=10.0.20348.0'
     vc: '>=14.2,<15'
     vc14_runtime: '>=14.29.30139'
-    ucrt: '>=10.0.20348.0'
-    python_abi: 3.10.*
   url: https://conda.anaconda.org/conda-forge/win-64/pydantic-core-2.33.2-py310hed05c55_0.conda
   hash:
     md5: 59065d98ab806083a5432d92073f1c75
     sha256: 657b2097148533aa9665678b85c94bb3cf4df015605f233f374243d4697ccd03
+  category: main
+  optional: false
+- name: pydantic-settings
+  version: 2.10.0
+  manager: conda
+  platform: win-64
+  dependencies:
+    pydantic: '>=2.7.0'
+    python: '>=3.9'
+    python-dotenv: '>=0.21.0'
+    typing-inspection: '>=0.4.0'
+  url: https://conda.anaconda.org/conda-forge/noarch/pydantic-settings-2.10.0-pyh3cfb1c2_0.conda
+  hash:
+    md5: 673eaa771e633dc773f746f0a3724025
+    sha256: 72f206d1dcb5c845f47dd827c4223166b72388ae50619d245399aefbbe33724b
   category: main
   optional: false
 - name: pygments
@@ -3483,12 +3494,12 @@ package:
     libsqlite: '>=3.50.0,<4.0a0'
     libzlib: '>=1.3.1,<2.0a0'
     openssl: '>=3.5.0,<4.0a0'
+    pip: ''
     tk: '>=8.6.13,<8.7.0a0'
     tzdata: ''
     ucrt: '>=10.0.20348.0'
     vc: '>=14.2,<15'
     vc14_runtime: '>=14.29.30139'
-    pip: ''
   url: https://conda.anaconda.org/conda-forge/win-64/python-3.10.18-h8c5b53a_0_cpython.conda
   hash:
     md5: f1775dab55c8a073ebd024bfb2f689c1
@@ -3838,9 +3849,9 @@ package:
   manager: conda
   platform: win-64
   dependencies:
+    click: '>=8.1.7'
     python: ''
     rich: '>=13.7.1'
-    click: '>=8.1.7'
     typing_extensions: '>=4.12.2'
   url: https://conda.anaconda.org/conda-forge/noarch/rich-toolkit-0.11.3-pyh29332c3_0.conda
   hash:
@@ -4420,8 +4431,8 @@ package:
   manager: conda
   platform: win-64
   dependencies:
-    typer-slim-standard: ==0.16.0
     python: ''
+    typer-slim-standard: ==0.16.0
   url: https://conda.anaconda.org/conda-forge/noarch/typer-0.16.0-pyh167b9f4_0.conda
   hash:
     md5: 985cc086b73bda52b2f8d66dcda460a1
@@ -4433,8 +4444,8 @@ package:
   manager: conda
   platform: win-64
   dependencies:
-    python: ''
     click: '>=8.0.0'
+    python: ''
     typing_extensions: '>=3.7.4.3'
   url: https://conda.anaconda.org/conda-forge/noarch/typer-slim-0.16.0-pyhe01879c_0.conda
   hash:
@@ -4447,9 +4458,9 @@ package:
   manager: conda
   platform: win-64
   dependencies:
-    typer-slim: ==0.16.0
     rich: ''
     shellingham: ''
+    typer-slim: ==0.16.0
   url: https://conda.anaconda.org/conda-forge/noarch/typer-slim-standard-0.16.0-hf964461_0.conda
   hash:
     md5: c8fb6ddb4f5eb567d049f85b3f0c8019
@@ -4976,8 +4987,8 @@ package:
   manager: pip
   platform: win-64
   dependencies:
-    isodate: '>=0.6.1'
     azure-core: '>=1.30.0'
+    isodate: '>=0.6.1'
     typing-extensions: '>=4.6.0'
   url: https://files.pythonhosted.org/packages/2c/34/3f47d9cb320b672c8482b15b0431fc546aea5b00104e405042e75d2f1397/azure_ai_agents-1.1.0b2-py3-none-any.whl
   hash:
@@ -4989,11 +5000,11 @@ package:
   manager: pip
   platform: win-64
   dependencies:
-    isodate: '>=0.6.1'
-    azure-core: '>=1.30.0'
-    typing-extensions: '>=4.12.2'
-    azure-storage-blob: '>=12.15.0'
     azure-ai-agents: '>=1.0.0b1'
+    azure-core: '>=1.30.0'
+    azure-storage-blob: '>=12.15.0'
+    isodate: '>=0.6.1'
+    typing-extensions: '>=4.12.2'
   url: https://files.pythonhosted.org/packages/3e/2d/5502377ecc07677365a1e86be64d8cb9959eb6e9b605fcc28f1f68d3777a/azure_ai_projects-1.0.0b11-py3-none-any.whl
   hash:
     sha256: 3572f2989627e896ecfebe2fa7326d5b940f920cc581e98809b244af7a38cbf0
@@ -5034,8 +5045,8 @@ package:
   dependencies:
     azure-core: '>=1.30.0'
     cryptography: '>=2.1.4'
-    typing-extensions: '>=4.6.0'
     isodate: '>=0.6.1'
+    typing-extensions: '>=4.6.0'
   url: https://files.pythonhosted.org/packages/57/33/085d9352d416e617993821b9d9488222fbb559bc15c3641d6cbd6d16d236/azure_storage_blob-12.25.1-py3-none-any.whl
   hash:
     sha256: 1f337aab12e918ec3f1b638baada97550673911c4ceed892acc8e4e891b74167
@@ -5217,8 +5228,8 @@ package:
   manager: pip
   platform: win-64
   dependencies:
-    pyyaml: '>=5.1'
     pathable: '>=0.4.1,<0.5.0'
+    pyyaml: '>=5.1'
     referencing: <0.37.0
     requests: '>=2.31.0,<3.0.0'
   url: https://files.pythonhosted.org/packages/cb/58/3485da8cb93d2f393bce453adeef16896751f14ba3e2024bc21dc9597646/jsonschema_path-0.3.4-py3-none-any.whl
@@ -5253,10 +5264,10 @@ package:
   platform: win-64
   dependencies:
     anyio: '>=4.5'
-    httpx-sse: '>=0.4'
     httpx: '>=0.27'
-    pydantic-settings: '>=2.5.2'
+    httpx-sse: '>=0.4'
     pydantic: '>=2.7.2,<3.0.0'
+    pydantic-settings: '>=2.5.2'
     python-multipart: '>=0.0.9'
     sse-starlette: '>=1.6.1'
     starlette: '>=0.27'
@@ -5271,9 +5282,9 @@ package:
   manager: pip
   platform: win-64
   dependencies:
-    requests: '>=2.0.0,<3'
-    pyjwt: '>=1.0.0,<3'
     cryptography: '>=2.5,<47'
+    pyjwt: '>=1.0.0,<3'
+    requests: '>=2.0.0,<3'
   url: https://files.pythonhosted.org/packages/04/bf/81516b9aac7fd867709984d08eb4db1d2e3fe1df795c8e442cde9b568962/msal-1.32.3-py3-none-any.whl
   hash:
     sha256: b2798db57760b1961b142f027ffb7c8169536bf77316e99a0df5c4aaebb11569
@@ -5301,7 +5312,7 @@ package:
   category: main
   optional: false
 - name: openai
-  version: 1.90.0
+  version: 1.91.0
   manager: pip
   platform: win-64
   dependencies:
@@ -5313,9 +5324,9 @@ package:
     sniffio: '*'
     tqdm: '>4'
     typing-extensions: '>=4.11,<5'
-  url: https://files.pythonhosted.org/packages/bd/e3/0d7a2ee7ae7293e794e7945ffeda942ff5e3a94de24be27cc3eb5ba6c188/openai-1.90.0-py3-none-any.whl
+  url: https://files.pythonhosted.org/packages/7a/d2/f99bdd6fc737d6b3cf0df895508d621fc9a386b375a1230ee81d46c5436e/openai-1.91.0-py3-none-any.whl
   hash:
-    sha256: e5dcb5498ea6b42fec47546d10f1bcc05fb854219a7d953a5ba766718b212a02
+    sha256: 207f87aa3bc49365e014fac2f7e291b99929f4fe126c4654143440e0ad446a5f
   category: main
   optional: false
 - name: openapi-core
@@ -5426,8 +5437,8 @@ package:
   manager: pip
   platform: win-64
   dependencies:
-    pyee: '>=13,<14'
     greenlet: '>=3.1.1,<4.0.0'
+    pyee: '>=13,<14'
   url: https://files.pythonhosted.org/packages/51/f3/cca2aa84eb28ea7d5b85d16caa92d62d18b6e83636e3d67957daca1ee4c7/playwright-1.52.0-py3-none-win_amd64.whl
   hash:
     sha256: dcbf75101eba3066b7521c6519de58721ea44379eb17a0dafa94f9f1b17f59e4
@@ -5439,9 +5450,9 @@ package:
   platform: win-64
   dependencies:
     chardet: '>=5.2'
-    ruamel.yaml: '>=0.18.10'
-    requests: '>=2.32.3'
     packaging: '>=24.2'
+    requests: '>=2.32.3'
+    ruamel-yaml: '>=0.18.10'
   url: https://files.pythonhosted.org/packages/a9/a8/fc509e514c708f43102542cdcbc2f42dc49f7a159f90f56d072371629731/prance-25.4.8.0-py3-none-any.whl
   hash:
     sha256: d3c362036d625b12aeee495621cb1555fd50b2af3632af3d825176bfb50e073b
@@ -5506,19 +5517,6 @@ package:
   url: https://files.pythonhosted.org/packages/9f/17/316816624bb6ac692c035dd7c8ec98398b3e175d365195a730ad657cff22/pybreaker-1.3.0-py3-none-any.whl
   hash:
     sha256: ebebdf8a1c0de677c5a4e1adf29045747dbd1d6bf13b860be453d38337d66ad6
-  category: main
-  optional: false
-- name: pydantic-settings
-  version: 2.10.0
-  manager: pip
-  platform: win-64
-  dependencies:
-    pydantic: '>=2.7.0'
-    python-dotenv: '>=0.21.0'
-    typing-inspection: '>=0.4.0'
-  url: https://files.pythonhosted.org/packages/7d/9e/fce9331fecf1d2761ff0516c5dceab8a5fd415e82943e727dc4c5fa84a90/pydantic_settings-2.10.0-py3-none-any.whl
-  hash:
-    sha256: 33781dfa1c7405d5ed2b6f150830a93bb58462a847357bd8f162f8bacb77c027
   category: main
   optional: false
 - name: pyee
@@ -5586,6 +5584,18 @@ package:
   url: https://files.pythonhosted.org/packages/98/1c/b00940ab9eb8ede7897443b771987f2f4a76f06be02f1b3f01eb7567e24a/pytest_base_url-2.1.0-py3-none-any.whl
   hash:
     sha256: 3ad15611778764d451927b2a53240c1a7a591b521ea44cebfe45849d2d2812e6
+  category: main
+  optional: false
+- name: pytest-dotenv
+  version: 0.5.2
+  manager: pip
+  platform: win-64
+  dependencies:
+    pytest: '>=5.0.0'
+    python-dotenv: '>=0.9.1'
+  url: https://files.pythonhosted.org/packages/d0/da/9da67c67b3d0963160e3d2cbc7c38b6fae342670cc8e6d5936644b2cf944/pytest_dotenv-0.5.2-py3-none-any.whl
+  hash:
+    sha256: 40a2cece120a213898afaa5407673f6bd924b1fa7eafce6bda0e8abffe2f710f
   category: main
   optional: false
 - name: pytest-playwright
@@ -5680,55 +5690,34 @@ package:
     sha256: 3ebd879ab996537fc510a2be58c59915b5dd63bccb06d1ef514fee787e05984a
   category: main
   optional: false
-- name: ruamel.yaml
-  version: 0.18.14
-  manager: pip
-  platform: win-64
-  dependencies:
-    ruamel.yaml.clib: '>=0.2.7'
-  url: https://files.pythonhosted.org/packages/af/6d/6fe4805235e193aad4aaf979160dd1f3c487c57d48b810c816e6e842171b/ruamel.yaml-0.18.14-py3-none-any.whl
-  hash:
-    sha256: 710ff198bb53da66718c7db27eec4fbcc9aa6ca7204e4c1df2f282b6fe5eb6b2
-  category: main
-  optional: false
-- name: ruamel.yaml.clib
-  version: 0.2.12
-  manager: pip
-  platform: win-64
-  dependencies: {}
-  url: https://files.pythonhosted.org/packages/3a/65/fa39d74db4e2d0cd252355732d966a460a41cd01c6353b820a0952432839/ruamel.yaml.clib-0.2.12-cp310-cp310-win_amd64.whl
-  hash:
-    sha256: ab007f2f5a87bd08ab1499bdf96f3d5c6ad4dcfa364884cb4549aa0154b13a28
-  category: main
-  optional: false
 - name: semantic-kernel
   version: 1.33.0
   manager: pip
   platform: win-64
   dependencies:
-    azure-ai-projects: '>=1.0.0b11'
-    azure-ai-agents: '>=1.1.0b1'
     aiohttp: '>=3.8,<4.0'
-    cloudevents: '>=1.0,<2.0'
-    pydantic: '>=2.0,<2.10.0 || >2.10.0,<2.10.1 || >2.10.1,<2.10.2 || >2.10.2,<2.10.3
-      || >2.10.3,<2.12'
-    pydantic-settings: '>=2.0,<3.0'
-    defusedxml: '>=0.7,<1.0'
+    aiortc: '>=1.9.0'
+    azure-ai-agents: '>=1.1.0b1'
+    azure-ai-projects: '>=1.0.0b11'
     azure-identity: '>=1.13'
+    cloudevents: '>=1.0,<2.0'
+    defusedxml: '>=0.7,<1.0'
+    jinja2: '>=3.1,<4.0'
+    nest-asyncio: '>=1.6,<2.0'
     numpy: '>=1.25.0'
     openai: '>=1.67'
     openapi-core: '>=0.18,<0.20'
-    websockets: '>=13,<16'
-    aiortc: '>=1.9.0'
     opentelemetry-api: '>=1.24,<2.0'
     opentelemetry-sdk: '>=1.24,<2.0'
     prance: '>=23.6.21,<25.4.9'
-    pybars4: '>=0.9,<1.0'
-    jinja2: '>=3.1,<4.0'
-    nest-asyncio: '>=1.6,<2.0'
-    scipy: '>=1.15.1'
     protobuf: '*'
+    pybars4: '>=0.9,<1.0'
+    pydantic: '>=2.0,<2.10.0 || >2.10.0,<2.10.1 || >2.10.1,<2.10.2 || >2.10.2,<2.10.3
+      || >2.10.3,<2.12'
+    pydantic-settings: '>=2.0,<3.0'
+    scipy: '>=1.15.1'
     typing-extensions: '>=4.13'
+    websockets: '>=13,<16'
   url: https://files.pythonhosted.org/packages/4e/48/17bfa8a019a9a9cc060a480ff903434b2efac3590877a71a24ec61d2b53e/semantic_kernel-1.33.0-py3-none-any.whl
   hash:
     sha256: 7adcc980240a7c78bf4295c7d22d41bec790ffa77a747e5d77b1dc1e63ed3046
