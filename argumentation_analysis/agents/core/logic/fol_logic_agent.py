@@ -204,12 +204,12 @@ RÉPONDS EN FORMAT JSON :
 
     async def _register_fol_semantic_functions(self):
         """Enregistre les fonctions sémantiques spécifiques FOL."""
-        if not self.sk_kernel:
+        if not self._kernel:
             logger.warning("⚠️ Pas de kernel - fonctions sémantiques non enregistrées")
             return
         
         # Fonction de conversion texte → FOL
-        conversion_function = self.sk_kernel.create_function_from_prompt(
+        conversion_function = self._kernel.create_function_from_prompt(
             function_name="convert_to_fol",
             plugin_name="fol_logic",
             prompt=self.conversion_prompt,
@@ -217,7 +217,7 @@ RÉPONDS EN FORMAT JSON :
         )
         
         # Fonction d'analyse FOL
-        analysis_function = self.sk_kernel.create_function_from_prompt(
+        analysis_function = self._kernel.create_function_from_prompt(
             function_name="analyze_fol",
             plugin_name="fol_logic", 
             prompt=self.analysis_prompt,
@@ -283,14 +283,14 @@ RÉPONDS EN FORMAT JSON :
             List[str]: Liste des formules FOL
         """
         try:
-            if self.sk_kernel and self.sk_kernel.services:
+            if self._kernel and self._kernel.services:
                 # Utilisation du LLM pour conversion intelligente
                 conversion_args = {
                     "text": text,
                     "context": str(context) if context else "Aucun contexte"
                 }
                 
-                result = await self.sk_kernel.invoke(
+                result = await self._kernel.invoke(
                     function_name="convert_to_fol",
                     plugin_name="fol_logic",
                     arguments=conversion_args
@@ -428,7 +428,7 @@ RÉPONDS EN FORMAT JSON :
                 result.confidence_score = max(0.1, result.confidence_score - 0.2)
             
             # Analyse LLM complémentaire si disponible
-            if self.sk_kernel and self.sk_kernel.services:
+            if self._kernel and self._kernel.services:
                 enhanced_analysis = await self._llm_enhanced_analysis(result, original_text)
                 if enhanced_analysis:
                     result = enhanced_analysis
@@ -456,7 +456,7 @@ RÉPONDS EN FORMAT JSON :
                 "context": original_text
             }
             
-            llm_result = await self.sk_kernel.invoke(
+            llm_result = await self._kernel.invoke(
                 function_name="analyze_fol",
                 plugin_name="fol_logic",
                 arguments=analysis_args
@@ -649,9 +649,44 @@ RÉPONDS EN FORMAT JSON :
         except Exception as e:
             return f"Erreur analyse FOL: {str(e)}"
     
-    async def invoke(self, text: str, context: Optional[Dict[str, Any]] = None) -> FOLAnalysisResult:
-        """Invoque l'agent FOL."""
+    async def invoke_single(self, text: str, context: Optional[Dict[str, Any]] = None, **kwargs) -> FOLAnalysisResult:
+        """
+        Exécute la logique principale de l'agent (analyse FOL) et retourne une réponse unique.
+        Implémentation de la méthode abstraite de BaseAgent.
+        """
         return await self.analyze(text, context)
+
+    async def validate_argument(self, premises: List[str], conclusion: str, **kwargs) -> bool:
+        """
+        Valide si une conclusion découle logiquement d'un ensemble de prémisses.
+        Implémentation de la méthode abstraite de BaseLogicAgent.
+
+        Args:
+            premises (List[str]): La liste des prémisses en format FOL.
+            conclusion (str): La conclusion en format FOL.
+
+        Returns:
+            bool: True si l'argument est valide, False sinon.
+        """
+        if not self._tweety_bridge:
+            logger.warning("TweetyBridge non disponible. Impossible de valider l'argument.")
+            return False
+
+        # Un argument est valide si l'ensemble {prémisses} U {¬conclusion} est incohérent.
+        # Nous devons formater la négation de la conclusion. Pour l'instant, une negation simple.
+        negated_conclusion = f"not ({conclusion})"
+        
+        formulas_to_check = premises + [negated_conclusion]
+        
+        try:
+            # check_consistency retourne True si c'est cohérent, False si c'est incohérent.
+            is_consistent = await self._tweety_bridge.check_consistency(formulas_to_check)
+            
+            # L'argument est valide si l'ensemble est INCOHÉRENT.
+            return not is_consistent
+        except Exception as e:
+            logger.error(f"Erreur lors de la validation de l'argument via Tweety: {e}")
+            return False
 
     def get_analysis_summary(self) -> Dict[str, Any]:
         """

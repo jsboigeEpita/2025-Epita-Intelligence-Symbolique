@@ -602,22 +602,20 @@ class SynthesisAgent(BaseAgent):
         la spécificité de chaque type d'analyse tout en créant une vue d'ensemble cohérente."""
     
     # Méthodes abstraites de BaseAgent
+    async def invoke_single(self, text: str, **kwargs) -> UnifiedReport:
+        """
+        Exécute la logique principale de l'agent (synthèse) et retourne une réponse unique.
+        Implémentation de la méthode abstraite de BaseAgent.
+        """
+        self._logger.debug(f"invoking SynthesisAgent with text: {text[:80]}...")
+        return await self.synthesize_analysis(text)
+
     async def get_response(self, *args, **kwargs):
         """Implémentation de la méthode abstraite get_response."""
         if args and isinstance(args[0], str):
-            report = await self.synthesize_analysis(args[0])
+            report = await self.invoke_single(args[0])
             return await self.generate_report(report)
         return "Usage: fournir un texte à analyser"
-    
-    async def invoke(self, *args, **kwargs):
-        """Implémentation de la méthode abstraite invoke."""
-        return await self.get_response(*args, **kwargs)
-    
-    async def invoke_stream(self, *args, **kwargs):
-        """Implémentation de la méthode abstraite invoke_stream."""
-        result = await self.invoke(*args, **kwargs)
-        # Simulation d'un stream pour la compatibilité
-        yield result
 # =====================================
 # MOCKS ÉLIMINÉS PHASE 3 - ZÉRO TOLÉRANCE
 # =====================================

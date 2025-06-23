@@ -397,13 +397,14 @@ class BaseLogicAgent(BaseAgent, ABC):
         """
         pass
     @abstractmethod
-    def validate_argument(self, premises: List[str], conclusion: str) -> bool:
+    async def validate_argument(self, premises: List[str], conclusion: str, **kwargs) -> bool:
         """
         Valide un argument structuré (prémisses, conclusion).
 
         Args:
             premises (List[str]): La liste des prémisses en langage naturel ou formel.
             conclusion (str): La conclusion en langage naturel ou formel.
+            **kwargs: Arguments supplémentaires potentiellement requis par l'implémentation.
 
         Returns:
             bool: True si la conclusion découle logiquement des prémisses, False sinon.

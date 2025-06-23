@@ -58,7 +58,8 @@ class OperationalManager:
                  operational_state: Optional[OperationalState] = None,
                  tactical_operational_interface: Optional['TacticalOperationalInterface'] = None,
                  middleware: Optional[MessageMiddleware] = None,
-                 project_context: Optional[ProjectContext] = None):
+                 project_context: Optional[ProjectContext] = None,
+                 kernel: Optional[sk.Kernel] = None):
         """
         Initialise le `OperationalManager`.
 
@@ -67,14 +68,20 @@ class OperationalManager:
             tactical_operational_interface: L'interface de communication.
             middleware: Le middleware de communication.
             project_context: Le contexte global du projet.
+            kernel: Le kernel Semantic Kernel (pour tests et injection de dépendances).
         """
         self.operational_state = operational_state or OperationalState()
         self.tactical_operational_interface = tactical_operational_interface
         self.project_context = project_context
+        
+        # Le kernel peut être passé directement (tests) ou via le project_context (prod)
+        kernel_to_use = kernel or (project_context.kernel if project_context else None)
+        llm_service_id_to_use = project_context.llm_service_id if project_context else None
+
         self.agent_registry = OperationalAgentRegistry(
             operational_state=self.operational_state,
-            kernel=project_context.kernel if project_context else None,
-            llm_service_id=project_context.llm_service_id if project_context else None,
+            kernel=kernel_to_use,
+            llm_service_id=llm_service_id_to_use,
             project_context=project_context
         )
         self.logger = logging.getLogger(__name__)

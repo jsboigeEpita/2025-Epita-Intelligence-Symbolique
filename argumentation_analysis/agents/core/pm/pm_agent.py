@@ -5,7 +5,7 @@ from typing import Dict, Any, Optional
 from semantic_kernel import Kernel # type: ignore
 from semantic_kernel.functions.kernel_arguments import KernelArguments # type: ignore
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
-from semantic_kernel.contents.chat_role import ChatRole
+from semantic_kernel.contents.utils.author_role import AuthorRole
 
 
 from ..abc.agent_bases import BaseAgent
@@ -217,7 +217,7 @@ class ProjectManagerAgent(BaseAgent):
 
         if not raw_text:
             self.logger.warning("Aucun texte brut (message utilisateur initial) trouvé dans l'historique.")
-            return ChatMessageContent(role=Role.ASSISTANT, content='{"error": "Initial text (user message) not found in history."}', name=self.name)
+            return ChatMessageContent(role=AuthorRole.ASSISTANT, content='{"error": "Initial text (user message) not found in history."}', name=self.name)
 
         # La logique de décision est maintenant entièrement déléguée à la fonction sémantique
         # `DefineTasksAndDelegate` qui utilise `prompt_define_tasks_v11`.
@@ -227,12 +227,12 @@ class ProjectManagerAgent(BaseAgent):
 
         try:
             result_str = await self.define_tasks_and_delegate(analysis_state_snapshot, raw_text)
-            return ChatMessageContent(role=ChatRole.ASSISTANT, content=result_str, name=self.name)
+            return ChatMessageContent(role=AuthorRole.ASSISTANT, content=result_str, name=self.name)
 
         except Exception as e:
             self.logger.error(f"Erreur durant l'invocation du PM Agent: {e}", exc_info=True)
             error_msg = f'{{"error": "An unexpected error occurred in ProjectManagerAgent: {e}"}}'
-            return ChatMessageContent(role=ChatRole.ASSISTANT, content=error_msg, name=self.name)
+            return ChatMessageContent(role=AuthorRole.ASSISTANT, content=error_msg, name=self.name)
 
     # D'autres méthodes métiers pourraient être ajoutées ici si nécessaire,
     # par exemple, une méthode qui encapsule la logique de décision principale du PM
@@ -263,6 +263,8 @@ if __name__ == '__main__':
     import asyncio
     import os
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
+    from argumentation_analysis.config.settings import settings
     
     # Configuration du logging
     logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s')
@@ -293,9 +295,9 @@ if __name__ == '__main__':
                 kernel_instance = Kernel()
                 
                 # Configuration du service LLM OpenAI
-                api_key = os.getenv('OPENAI_API_KEY', '').strip('"')
+                api_key = settings.openai.api_key.get_secret_value() if settings.openai.api_key else None
                 if not api_key:
-                    raise ValueError("OPENAI_API_KEY non configurée")
+                    raise ValueError("OPENAI_API_KEY non configurée dans les settings")
                 
                 llm_service = OpenAIChatCompletion(
                     service_id="openai_service",

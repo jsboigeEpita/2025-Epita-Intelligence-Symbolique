@@ -439,6 +439,7 @@ Vous êtes un gardien impartial mais stratégique des données."""
         self.kernel = kernel
         
         # Initialisation des attributs spécifiques à Oracle
+        self.dataset_manager = dataset_manager
         self.access_log = []
         self.revealed_information = set()
         self.access_level = access_level or "standard"
@@ -601,9 +602,9 @@ Vous êtes un gardien impartial mais stratégique des données."""
         # Réponse basique - peut être améliorée selon les besoins
         return f"Oracle '{self.name}' a reçu votre message. Utilisez les outils Oracle pour des requêtes spécifiques."
     
-    async def invoke(self, message: str = None, **kwargs) -> str:
+    async def invoke_single(self, message: str = None, **kwargs) -> str:
         """
-        Implémentation de la méthode invoke requise par BaseAgent.
+        Implémentation de la méthode invoke_single requise par BaseAgent.
         
         Args:
             message: Message à traiter par l'agent Oracle
@@ -615,14 +616,14 @@ Vous êtes un gardien impartial mais stratégique des données."""
         if message is None:
             message = kwargs.get('input', kwargs.get('query', ''))
         
-        self._logger.info(f"Oracle '{self.name}' invoke appelé avec: {message[:100] if message else 'message vide'}...")
+        self._logger.info(f"Oracle '{self.name}' invoke_single appelé avec: {message[:100] if message else 'message vide'}...")
         
         # Pour un agent Oracle, on délègue vers get_response
         try:
             response = await self.get_response(message, **kwargs)
             return response
         except Exception as e:
-            self._logger.error(f"Erreur lors de invoke: {e}")
+            self._logger.error(f"Erreur lors de invoke_single: {e}")
             return f"Erreur Oracle: {str(e)}"
     
     # Properties héritées de BaseAgent : name, instructions, etc.

@@ -700,40 +700,58 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
         content = belief_set_data.get("content", "")
         return ModalBeliefSet(content)
 
-    async def get_response(
-        self,
-        chat_history: ChatHistory,
-        settings: Optional[Any] = None,
-    ) -> AsyncGenerator[list[ChatMessageContent], None]:
+    async def invoke_single(self, text: str, **kwargs) -> str:
         """
-        Méthode abstraite de `Agent` pour obtenir une réponse.
-        Non implémentée car cet agent utilise des méthodes spécifiques.
+        Exécute la logique principale de l'agent.
+        Implémentation de la méthode abstraite de BaseAgent.
+        NOTE: L'agent modal a un workflow complexe. Cette méthode est un placeholder.
         """
-        logger.warning("La méthode 'get_response' n'est pas implémentée pour ModalLogicAgentFixed et ne devrait pas être appelée directement.")
-        yield []
-        return
+        self.logger.warning("invoke_single n'a pas d'implémentation de haut niveau pour ModalLogicAgent. Utilisez les méthodes spécifiques (text_to_belief_set, etc).")
+        # Création d'un belief set pour au moins avoir une base
+        belief_set, status = await self.text_to_belief_set(text)
+        if belief_set:
+            return f"Analyse modale initiée. Statut: {status}"
+        return f"Erreur lors de l'initiation de l'analyse modale: {status}"
 
-    async def invoke(
-        self,
-        chat_history: ChatHistory,
-        settings: Optional[Any] = None,
-    ) -> list[ChatMessageContent]:
+    async def get_response(self, text: str, **kwargs) -> str:
         """
-        Méthode abstraite de `Agent` pour invoquer l'agent.
-        Non implémentée car cet agent utilise des méthodes spécifiques.
+        Implémentation de la méthode abstraite de BaseAgent.
         """
-        logger.warning("La méthode 'invoke' n'est pas implémentée pour ModalLogicAgentFixed et ne devrait pas être appelée directement.")
-        return []
+        # Pour ModalLogicAgent, une "réponse" simple est d'initier l'analyse.
+        # Le résultat complet est un processus plus complexe.
+        return await self.invoke_single(text, **kwargs)
 
-    async def invoke_stream(
-        self,
-        chat_history: ChatHistory,
-        settings: Optional[Any] = None,
-    ) -> AsyncGenerator[list[ChatMessageContent], None]:
+    async def validate_argument(self, premises: List[str], conclusion: str, **kwargs) -> bool:
         """
-        Méthode abstraite de `Agent` pour invoquer l'agent en streaming.
-        Non implémentée car cet agent utilise des méthodes spécifiques.
+        Valide si une conclusion découle logiquement d'un ensemble de prémisses modales.
+        Implémentation de la méthode abstraite de BaseLogicAgent.
         """
-        logger.warning("La méthode 'invoke_stream' n'est pas implémentée pour ModalLogicAgentFixed et ne devrait pas être appelée directement.")
-        yield []
-        return
+        if not self._tweety_bridge:
+            self.logger.warning("TweetyBridge non disponible. Impossible de valider l'argument modal.")
+            return False
+
+        # L'argument est valide si l'ensemble {prémisses} U {¬conclusion} est incohérent.
+        negated_conclusion = f"!({conclusion})" # Négation en logique modale Tweety
+        
+        # Le belief set doit contenir les déclarations de constantes/propositions
+        # et les formules. On va construire un belief set temporaire.
+        all_formulas = premises + [negated_conclusion]
+        
+        # Extraction des constantes pour les déclarer
+        all_constants = set()
+        for formula in all_formulas:
+            constants_in_formula = re.findall(r'\b[a-z_][a-z0-9_]*\b', formula)
+            all_constants.update(constants_in_formula)
+            
+        kb_parts = [f"constant {c}" for c in sorted(all_constants)]
+        kb_parts.append("")
+        kb_parts.extend(all_formulas)
+        belief_set_content = "\n".join(kb_parts)
+
+        try:
+            is_consistent, _ = self.tweety_bridge.is_modal_kb_consistent(belief_set_content)
+            # L'argument est valide si l'ensemble est INCOHÉRENT.
+            return not is_consistent
+        except Exception as e:
+            self.logger.error(f"Erreur lors de la validation de l'argument modal via Tweety: {e}")
+            return False

@@ -194,7 +194,7 @@ class MainOrchestrator:
             if self.strategic_manager:
                 logger.info("[STRATEGIC] Initialisation de l'analyse stratégique...")
                 try:
-                    strategic_results = self.strategic_manager.initialize_analysis(text_input)
+                    strategic_results = await self.strategic_manager.initialize_analysis(text_input)
                     results["strategic_analysis"] = strategic_results
                     objectives = strategic_results.get("objectives", [])
                 except Exception as e:
