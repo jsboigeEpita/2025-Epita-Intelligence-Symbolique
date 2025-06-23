@@ -19,38 +19,40 @@ async def test_dummy_health_check_to_isolate_playwright():
 
 @pytest.mark.playwright
 @pytest.mark.asyncio
-async def test_page_title(page: Page, frontend_url: str):
+async def test_health_check_endpoint(page: Page, backend_url: str):
     """
-    A very simple test to check if the page loads and has the correct title.
-    This helps isolate initialization issues from application logic issues.
+    Test a lightweight, dependency-free /api/health endpoint.
+    This helps determine if the server is responsive at a basic level,
+    bypassing heavy initializations (like the JVM).
+    If this test hangs, the problem lies within the web server (Uvicorn/Flask)
+    or process management, not the application logic.
     """
-    logger.info("--- DEBUT test_page_title ---")
-    logger.info(f"Tentative de navigation vers: {frontend_url}")
-    
-    try:
-        # Augmenter le timeout ici est crucial pour les environnements de CI lents.
-        await page.goto(frontend_url, timeout=60000, wait_until='domcontentloaded')
-        logger.info("SUCCES: page.goto() a terminé sans erreur.")
+    logger.info("--- DEBUT test_health_check_endpoint ---")
+    health_check_url = f"{backend_url}/api/health"
+    logger.info(f"Tentative de navigation vers l'endpoint de health check: {health_check_url}")
 
-        logger.info("Attente de l'élément #root...")
-        # Attendre explicitement un élément clé de l'application React, comme le div racine,
-        # pour s'assurer que le rendu a commencé. Timeout généreux.
-        await page.locator('#root').wait_for(timeout=60000)
-        logger.info("SUCCES: Élément #root trouvé.")
-        
-        logger.info("Vérification du titre de la page...")
-        # Maintenant que nous sommes plus confiants que la page est interactive, vérifier le titre.
-        await expect(page).to_have_title(re.compile("Analyse d'Arguments"), timeout=10000)
-        logger.info("SUCCES: Le titre de la page est correct.")
+    try:
+        # await page.goto(health_check_url, timeout=20000, wait_until='domcontentloaded')
+        response = await page.request.get(health_check_url, timeout=20000)
+        logger.info(f"SUCCES: La requête vers {health_check_url} a abouti avec le statut {response.status}.")
+
+        # Vérifier que la réponse est bien 200 OK
+        assert response.status == 200, f"Le statut de la réponse attendu était 200, mais j'ai obtenu {response.status}"
+        logger.info("SUCCES: Le statut de la réponse est correct (200).")
+
+        # Vérifier le contenu de la réponse JSON
+        json_response = await response.json()
+        assert json_response.get("status") == "ok", f"La réponse JSON ne contient pas 'status: ok'. Reçu: {json_response}"
+        logger.info("SUCCES: La réponse JSON contient bien 'status: ok'.")
 
     except PlaywrightTimeoutError as e:
-        logger.error(f"ERREUR FATALE: Timeout Playwright dans test_page_title. Détails: {e}")
-        pytest.fail(f"Timeout Playwright: {e}")
+        logger.error(f"ERREUR FATALE: Timeout Playwright en essayant d'atteindre {health_check_url}. Détails: {e}")
+        pytest.fail(f"Timeout Playwright: Le serveur n'a pas répondu à temps sur l'endpoint de health check. Il est probablement bloqué. Détails: {e}")
     except Exception as e:
-        logger.error(f"ERREUR INATTENDUE: Une exception s'est produite dans test_page_title. Détails: {e}")
-        pytest.fail(f"Exception inattendu: {e}")
-    
-    logger.info("--- FIN test_page_title ---")
+        logger.error(f"ERREUR INATTENDUE: Une exception s'est produite dans test_health_check_endpoint. Détails: {e}", exc_info=True)
+        pytest.fail(f"Exception inattendue: {e}")
+
+    logger.info("--- FIN test_health_check_endpoint ---")
 
 # @pytest.mark.playwright
 # @pytest.mark.asyncio

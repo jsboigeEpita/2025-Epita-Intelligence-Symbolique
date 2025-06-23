@@ -85,47 +85,48 @@ if ($Type -eq "validation") {
 Write-Host "[INFO] Commande à exécuter : $CommandToRun" -ForegroundColor Cyan
 Write-Host "[INFO] Lancement des tests via $ActivationScript..." -ForegroundColor Cyan
 
+# --- Exécution via le gestionnaire d'environnement ---
+# Créer un fichier temporaire pour la sortie de la commande
+$outputFile = [System.IO.Path]::GetTempFileName()
+
 # Préparer les arguments pour le script d'activation en utilisant le "splatting"
 $activationArgs = @{
-   CommandToRun = $CommandToRun
+    CommandToRun      = $CommandToRun
+    CommandOutputFile = $outputFile
 }
 if ($DebugMode) {
-   $activationArgs['DebugMode'] = $true
-   Write-Host "[INFO] Mode Débogage activé." -ForegroundColor Yellow
+    $activationArgs['DebugMode'] = $true
+    Write-Host "[INFO] Mode Débogage activé." -ForegroundColor Yellow
 }
 
-# Le script d'activation génère maintenant la commande finale sur sa sortie standard.
-# Les logs sont sur stderr, donc on peut capturer stdout sans être pollué.
-Write-Host "[INFO] Génération de la commande d'exécution via le script d'activation..."
-$FinalCommand = & $ActivationScript @activationArgs
-$exitCode = $LASTEXITCODE
+try {
+    # Appeler le script d'activation pour qu'il écrive la commande finale dans le fichier
+    # Note: On redirige la sortie d'erreur (logs de activate_project_env) vers la console
+    & $ActivationScript @activationArgs 2>&1
 
-if ($exitCode -ne 0) {
-   Write-Host "[ERREUR] Le script d'activation a échoué. Voir les logs ci-dessus." -ForegroundColor Red
-   exit $exitCode
+    if ($LASTEXITCODE -ne 0) {
+        throw "Le script d'activation a échoué. Voir les logs ci-dessus."
+    }
+
+    # Lire la commande finale depuis le fichier
+    $finalCommand = Get-Content $outputFile
+    if ([string]::IsNullOrWhiteSpace($finalCommand)) {
+        throw "La commande générée par le script d'activation est vide."
+    }
+
+    Write-Host "[INFO] Commande finale à exécuter: $finalCommand" -ForegroundColor Green
+
+    # Exécuter la commande finale
+    Invoke-Expression $finalCommand
+    $exitCode = $LASTEXITCODE
+
+    Write-Host "[INFO] Exécution terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan
+    exit $exitCode
+
 }
-
-if (-not $FinalCommand) {
-   Write-Host "[ERREUR] Le script d'activation n'a pas retourné de commande à exécuter." -ForegroundColor Red
-   exit 1
+finally {
+    # Nettoyer le fichier temporaire
+    if (Test-Path $outputFile) {
+        Remove-Item $outputFile -Force
+    }
 }
-
-Write-Host "[INFO] Commande finale à exécuter :" -ForegroundColor Green
-Write-Host $FinalCommand -ForegroundColor Green
-
-# Exécution de la commande générée. Invoke-Expression est nécessaire pour
-# interpréter correctement la chaîne de commande complexe retournée.
-# À ce stade, $FinalCommand peut contenir plusieurs lignes de sortie.
-# On ne garde que la ligne qui contient la commande python.exe
-$CommandString = $FinalCommand | Where-Object { $_ -like '*python.exe*' } | ForEach-Object { $_.Trim() }
-
-if (-not $CommandString) {
-   Write-Host "[ERREUR] Impossible d'isoler la commande d'exécution finale depuis la sortie du script d'activation." -ForegroundColor Red
-   exit 1
-}
-
-Invoke-Expression -Command $CommandString
-
-$exitCode = $LASTEXITCODE
-Write-Host "[INFO] Exécution terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan
-exit $exitCode

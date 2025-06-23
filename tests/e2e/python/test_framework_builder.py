@@ -10,7 +10,7 @@ from playwright.sync_api import Page, expect, TimeoutError
 @pytest.fixture(scope="function")
 async def framework_page(page: Page, webapp_service: dict) -> Page:
     """Fixture qui prépare la page et navigue vers l'onglet Framework."""
-    await page.goto(webapp_service["frontend_url"])
+    await page.goto(webapp_service.frontend_url)
     # L'attente de l'état de connexion de l'API est maintenant dans chaque test
     # pour une meilleure isolation et un débogage plus facile.
     
