@@ -96,7 +96,7 @@ def test_api_startup_and_basic_functionality():
         
         # Test examples endpoint  
         print("\nTest endpoint /examples...")
-        response = requests.get(f"{api_url}/examples", timeout=10)
+        response = requests.get(f"{api_url}/api/examples", timeout=10)
         assert response.status_code == 200
         data = response.json()
         assert "examples" in data
@@ -108,7 +108,7 @@ def test_api_startup_and_basic_functionality():
         
         start_time = time.time()
         response = requests.post(
-            f"{api_url}/analyze",
+            f"{api_url}/api/analyze",
             json={"text": test_text},
             timeout=60
         )
@@ -119,17 +119,18 @@ def test_api_startup_and_basic_functionality():
         
         # Verifications
         assert "analysis_id" in data
-        assert "analysis" in data
-        assert "service_used" in data
+        assert "summary" in data
+        assert "metadata" in data
         
-        analysis = data["analysis"]
-        service = data["service_used"]
+        analysis = data["summary"]
+        metadata = data["metadata"]
+        service = metadata.get("gpt_model")
         
         print(f"[OK] Analyse recue ({len(analysis)} chars) en {processing_time:.2f}s")
         print(f"[OK] Service utilise: {service}")
         
         # Verifier authenticite
-        assert service == "openai_gpt4o_mini", f"Service incorrect: {service}"
+        assert "gpt-4o-mini" in service, f"Service incorrect: {service}"
         assert len(analysis) > 20, f"Analyse trop courte: {len(analysis)} chars"
         assert processing_time > 1.0, f"Temps trop rapide ({processing_time:.2f}s), possible mock"
         
@@ -143,14 +144,14 @@ def test_api_startup_and_basic_functionality():
         sophisme_text = "Cette theorie est fausse car son auteur est un idiot."
         
         response = requests.post(
-            f"{api_url}/analyze",
+            f"{api_url}/api/analyze",
             json={"text": sophisme_text},
             timeout=60
         )
         
         assert response.status_code == 200
         data = response.json()
-        analysis = data["analysis"].lower()
+        analysis = data["summary"].lower()
         
         # Chercher des indicateurs de detection logique
         indicators = ["sophisme", "fallacy", "ad hominem", "argument", "logique", "erreur"]

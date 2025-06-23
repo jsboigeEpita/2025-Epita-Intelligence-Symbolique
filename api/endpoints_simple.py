@@ -120,18 +120,3 @@ async def get_examples_endpoint():
     
     examples = [Example(**ex) for ex in examples_data]
     return ExampleResponse(examples=examples)
-
-@router.get("/health")
-async def api_health():
-    """Health check spécifique API"""
-    return {
-        "status": "healthy",
-        "message": "API endpoints fonctionnels",
-        "version": "1.0.0",
-        "endpoints": {
-            "analyze": True,
-            "status": True,
-            "examples": True,
-            "health": True
-        }
-    }
