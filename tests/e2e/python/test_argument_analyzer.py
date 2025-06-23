@@ -2,6 +2,14 @@ import re
 from playwright.sync_api import Page, expect
 import pytest
 
+@pytest.mark.asyncio
+async def test_dummy_health_check_to_isolate_playwright():
+    """
+    A simple, dependency-free test to ensure the pytest runner itself is working.
+    If this test runs and the next one hangs, the problem is with Playwright/fixture initialization.
+    """
+    assert True
+
 @pytest.mark.playwright
 @pytest.mark.asyncio
 async def test_successful_simple_argument_analysis(page: Page, frontend_url: str):

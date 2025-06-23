@@ -65,15 +65,33 @@ def integration_jvm(request):
     """
     logger.info("--- DEBUT FIXTURE 'integration_jvm' ---")
 
+    # Condition 0: Test E2E avec serveur externe.
+    # Si BACKEND_URL est défini, cela signifie que l'orchestrateur a déjà démarré
+    # le backend, et donc potentiellement la JVM. La fixture ne doit RIEN faire
+    # et simplement passer le contrôle, en supposant que l'environnement est correct.
+    if os.environ.get("BACKEND_URL"):
+        logger.info("Variable d'environnement BACKEND_URL détectée. Fixture 'integration_jvm' saute l'initialisation.")
+        logger.info("Hypothèse: la JVM est gérée par le processus serveur externe.")
+        # On vérifie quand même si la JVM est active dans CE processus. Si ce n'est pas le cas,
+        # le bootstrap du module testé devrait l'initialiser.
+        if not jpype.isJVMStarted():
+            logger.warning("La JVM n'est PAS démarrée dans le processus de test, même en mode E2E. Initialisation en cours...")
+            # On continue vers le bloc d'initialisation normal.
+        else:
+            logger.info("La JVM est déjà démarrée dans le processus de test. On la réutilise.")
+            yield jpype
+            logger.info("--- FIN FIXTURE 'integration_jvm' (E2E, instance réutilisée) ---")
+            return
+
+
     # Condition 1: Le vrai module JPype n'est pas disponible.
     if not hasattr(jpype, 'isJVMStarted') or isinstance(jpype, MagicMock):
         logger.warning("Le vrai module JPype n'est pas disponible. SKIP.")
         pytest.skip("Le vrai module JPype n'est pas disponible.")
 
-    # Condition 2: La JVM est DÉJÀ démarrée par un autre composant.
-    # On l'utilise telle quelle et on ne la gère pas (ni démarrage, ni arrêt).
+    # Condition 2: La JVM est DÉJÀ démarrée par un autre composant (contexte non-E2E).
     if jpype.isJVMStarted():
-        logger.info("La JVM est déjà démarrée. Réutilisation de l'instance existante pour cette session.")
+        logger.info("La JVM est déjà démarrée (contexte non-E2E). Réutilisation de l'instance existante.")
         yield jpype
         logger.info("--- FIN FIXTURE 'integration_jvm' (instance réutilisée) ---")
         return
@@ -103,9 +121,10 @@ def integration_jvm(request):
     try:
         # *** BLOC CRITIQUE ***
         # L'appel est maintenant corrigé pour passer le classpath construit explicitement.
-        logger.info("APPEL imminent à initialize_jvm avec classpath explicite...")
+        logger.info("FIXTURE: APPEL IMMINENT à initialize_jvm...")
+        logger.info(f"FIXTURE: Classpath passé: {classpath_str[:200]}...") # Log tronqué pour la lisibilité
         success = initialize_jvm(classpath=classpath_str)
-        logger.info("RETOUR de initialize_jvm. Si le crash n'a pas eu lieu, le classpath a été accepté.")
+        logger.info("FIXTURE: RETOUR de initialize_jvm. Le blocage n'a pas eu lieu dans la fixture.")
         if not success:
             pytest.fail("La fonction initialize_jvm() a renvoyé False, échec du démarrage de la JVM.")
     except Exception as e:
@@ -431,6 +450,9 @@ def e2e_servers(request):
     pour les tests End-to-End.
     """
     logger.info("--- DEBUT FIXTURE 'e2e_servers' (démarrage des serveurs E2E) ---")
+
+    if request.config.getoption("--disable-e2e-servers-fixture"):
+        pytest.skip("Fixture e2e_servers désactivée via la ligne de commande.")
 
     # Crée un Namespace d'arguments simple pour l'orchestrateur
     # On force les valeurs nécessaires pour un scénario de test E2E.

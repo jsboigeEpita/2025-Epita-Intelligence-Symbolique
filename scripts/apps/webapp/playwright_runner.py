@@ -172,23 +172,25 @@ class PlaywrightRunner:
                                  config: Dict[str, Any]) -> List[str]:
         """Construit la commande pour exécuter les tests via Pytest."""
 
-        # On passe à Pytest qui est plus standard pour l'écosystème Python
-        # et gère mieux l'intégration.
-        self.logger.info(f"Utilisation de Pytest avec l'interpréteur : {sys.executable}")
-        
+        self.logger.info(f"Préparation de la commande Pytest pour l'environnement Conda 'projet-is'.")
+
         cmd = [
-            sys.executable, '-m', 'pytest',
-            '-v',                 # Augmente la verbosité
-            '--capture=no',       # Affiche stdout/stderr en temps réel
-            '--slowmo=50'         # Ralentit les opérations pour l'observation
+            'python', '-m', 'pytest',
+            '-v',
+            '--capture=no',
+            '--slowmo=100',  # Ralentir un peu plus pour l'observation
+            '--log-cli-level=DEBUG', # Augmenter la verbosité
+            '--log-file=logs/pytest.log',
+            # Le timeout est maintenant géré par l'orchestrateur principal
+            # '--timeout', '300'
         ]
 
         # Ajout du répertoire de test pour que pytest le découvre
         cmd.extend(test_paths)
 
-        # Les options sont maintenant celles de pytest-playwright
-        if not config['headless']:
-            cmd.append('--headed')
+        # Forcer le mode headed pour le débogage visuel
+        cmd.append('--headed')
+        self.logger.info("Forçage du mode 'headed' pour le débogage.")
         
         # --tracing on est l'équivalent de --trace=on pour pytest-playwright
         if config.get('traces', True):
@@ -202,6 +204,9 @@ class PlaywrightRunner:
             cmd.append(f'--backend-url={config["backend_url"]}')
         if 'frontend_url' in config:
             cmd.append(f'--frontend-url={config["frontend_url"]}')
+
+        # Ajout de l'option pour désactiver la fixture e2e_servers
+        cmd.append('--disable-e2e-servers-fixture')
         
         return cmd
     
@@ -214,64 +219,72 @@ class PlaywrightRunner:
 
     async def _execute_tests(self, cmd: List[str],
                              config: Dict[str, Any]) -> subprocess.CompletedProcess:
-        """Exécute les tests en utilisant EnvironmentManager.run_in_conda_env pour une activation robuste."""
+        """Exécute les tests en utilisant `conda run` pour garantir l'activation de l'environnement."""
         
-        self.logger.info("Utilisation de EnvironmentManager pour l'exécution des tests.")
+        # Le nom de l'environnement est supposé être 'projet-is'
+        env_name = "projet-is"
         
-        # Le EnvironmentManager.run_in_conda_env est synchrone.
-        # Nous devons l'appeler dans un thread séparé pour ne pas bloquer la boucle asyncio.
+        # La commande à exécuter à l'intérieur de l'environnement conda
+        pytest_command = cmd
+
+        # Construction de la commande `conda run`
+        # --no-capture-output est crucial pour voir les logs en temps réel.
+        conda_command = [
+            'conda', 'run', '-n', env_name, '--no-capture-output',
+        ]
+        conda_command.extend(pytest_command)
         
-        def blocking_test_execution():
-            """Wrapper synchrone pour l'exécution des tests."""
-            try:
-                manager = EnvironmentManager(self.logger)
-                # La commande `cmd` est déjà correctement formatée (ex: ['python', '-m', 'pytest', ...])
-                # run_in_conda_env s'occupera de l'exécuter via `conda run` ou via chemin direct.
-                self.logger.info(f"Commande à exécuter dans l'environnement conda: {' '.join(cmd)}")
-                
-                # On utilise capture_output=True pour récupérer stdout/stderr
-                result = manager.run_in_conda_env(
-                    cmd,
-                    capture_output=True,
-                    # Le manager utilisera l'env par défaut (`projet-is`)
-                )
-                
-                # Logger la sortie directement depuis le résultat
-                if result.stdout:
-                    for line in result.stdout.splitlines():
-                        self.logger.info(f"[PYTEST_STDOUT] {line}")
-                if result.stderr:
-                    for line in result.stderr.splitlines():
-                        self.logger.warning(f"[PYTEST_STDERR] {line}")
-                        
-                return result
-            except Exception as e:
-                self.logger.critical(f"Erreur fatale dans le thread d'exécution des tests: {e}", exc_info=True)
-                return subprocess.CompletedProcess(
-                    ' '.join(cmd),
-                    returncode=1,
-                    stdout="",
-                    stderr=str(e)
-                )
+        command_str_for_log = " ".join(conda_command)
+        self.logger.info(f"Exécution de la commande via 'conda run': {command_str_for_log}")
 
         timeout = config.get('test_timeout', 600)
         self.logger.info(f"Timeout configuré: {timeout}s")
         
+        stdout_lines = []
+        stderr_lines = []
+
         try:
-            # Exécuter la fonction bloquante dans un thread et attendre le résultat
-            completed_process = await asyncio.wait_for(
-                asyncio.to_thread(blocking_test_execution),
-                timeout=timeout
+            # On utilise create_subprocess_exec car `conda_command` est une liste
+            process = await asyncio.create_subprocess_exec(
+                *conda_command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
             )
-            self.logger.info(f"Exécution des tests via EnvironmentManager terminée avec le code: {completed_process.returncode}")
-            return completed_process
+
+            async def log_stream(stream, log_func, line_buffer):
+                while True:
+                    line = await stream.readline()
+                    if not line:
+                        break
+                    decoded_line = line.decode('utf-8', errors='replace').rstrip()
+                    log_func(decoded_line)
+                    line_buffer.append(decoded_line)
+
+            # Lancer les coroutines de logging en parallèle
+            stdout_task = asyncio.create_task(log_stream(process.stdout, self.logger.info, stdout_lines))
+            stderr_task = asyncio.create_task(log_stream(process.stderr, self.logger.warning, stderr_lines))
+
+            # Attendre que le processus se termine ou que le timeout soit atteint
+            await asyncio.wait_for(asyncio.gather(stdout_task, stderr_task, process.wait()), timeout=timeout)
             
+            returncode = await process.wait()
+            self.logger.info(f"Tests pytest terminés avec le code de retour : {returncode}")
+
         except asyncio.TimeoutError:
-            self.logger.error(f"Timeout ({timeout}s) atteint lors de l'exécution des tests.")
-            return subprocess.CompletedProcess( ' '.join(cmd), returncode=-1, stdout="", stderr="Timeout expired")
+            self.logger.error(f"Timeout ({timeout}s) atteint pendant l'exécution des tests.")
+            if process.returncode is None:
+                process.kill()
+            return subprocess.CompletedProcess(command_str_for_log, returncode=-1, stdout="\n".join(stdout_lines), stderr="\n".join(stderr_lines))
         except Exception as e:
-            self.logger.critical(f"Erreur critique non gérée lors de l'attente du thread de test: {e}", exc_info=True)
-            return subprocess.CompletedProcess(' '.join(cmd), returncode=-2, stdout="", stderr=f"Unhandled exception: {e}")
+            self.logger.critical(f"Erreur critique lors de l'exécution du sous-processus de test : {e}", exc_info=True)
+            return subprocess.CompletedProcess(command_str_for_log, returncode=-2, stdout="\n".join(stdout_lines), stderr=str(e))
+
+        return subprocess.CompletedProcess(
+            command_str_for_log,
+            returncode,
+            stdout="\n".join(stdout_lines),
+            stderr="\n".join(stderr_lines)
+        )
     
     async def _analyze_results(self, result: subprocess.CompletedProcess) -> bool:
         """Analyse les résultats de test et génère un rapport."""
