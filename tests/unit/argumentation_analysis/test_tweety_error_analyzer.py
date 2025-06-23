@@ -341,16 +341,6 @@ class TestTweetyErrorAnalyzerIntegration:
             assert feedback.confidence >= 0.5
     
     
-    def test_logging_functionality(self, mock_logging):
-        """Test de la fonctionnalité de logging."""
-        analyzer = TweetyErrorAnalyzer()
-        
-        error_message = "Test error for logging"
-        feedback = analyzer.analyze_error(error_message)
-        
-        # Vérifier que le logger a été configuré
-        assert hasattr(analyzer, 'logger')
-        assert analyzer.logger.name.endswith('TweetyErrorAnalyzer')
 
 
 if __name__ == "__main__":

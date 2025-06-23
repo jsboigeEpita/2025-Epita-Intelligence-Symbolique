@@ -23,46 +23,92 @@ class ModalHandler:
             logger.error("Modal Logic Parser not initialized. Ensure TweetyBridge calls TweetyInitializer first.")
             raise RuntimeError("ModalHandler initialized before TweetyInitializer completed Modal Logic setup.")
 
-    def parse_modal_formula(self, formula_str: str, modal_logic_str: str = "S4", signature_declarations_str: str = None):
+    import re
+    
+    def parse_modal_belief_set(self, belief_set_str: str, modal_logic_str: str = "S4"):
         """
-        Parses a Modal Logic formula string into a TweetyProject MlFormula object.
-        Requires specifying the modal logic type (e.g., "K", "S4", "S5").
-        Optionally accepts signature declarations for propositions (e.g., "prop1/0").
+        Parses a complete Modal Logic belief set from a string by building it programmatically.
+        This avoids complex string parsing issues by handling constants and formulas separately.
+        """
+        if not self._initializer_instance.is_jvm_started():
+            logger.error("JVM not started. Cannot parse modal belief set.")
+            raise RuntimeError("JVM must be started by TweetyInitializer.")
+        
+        logger.debug(f"Programmatically building Modal Logic belief set (Logic: {modal_logic_str})...")
+        
+        try:
+            Signature = jpype.JClass("org.tweetyproject.logics.commons.syntax.Signature")
+            MlBeliefSet = jpype.JClass("org.tweetyproject.logics.ml.syntax.MlBeliefSet")
+            
+            signature = Signature()
+            belief_set = MlBeliefSet()
+    
+            # 1. Extraire et déclarer les constantes
+            # Le format est 'constant my_constant'
+            constants = re.findall(r'^\s*constant\s+([a-zA-Z0-9_]+)', belief_set_str, re.MULTILINE)
+            for const_name in constants:
+                signature.add(jpype.JClass("org.tweetyproject.logics.commons.syntax.Constant")(const_name))
+            logger.debug(f"Added constants to signature: {constants}")
+            
+            # 2. Extraire et parser les formules
+            # Ignorer les lignes de constantes et les lignes vides
+            formulas = [
+                line.strip() for line in belief_set_str.splitlines()
+                if line.strip() and not line.strip().startswith('constant')
+            ]
+            
+            for f_str in formulas:
+                # Pour chaque formule, la parser avec la signature contenant les constantes
+                java_formula_str = jpype.JClass("java.lang.String")(f_str)
+                parsed_formula = self._modal_parser.parseFormula(java_formula_str, signature)
+                belief_set.add(parsed_formula)
+            
+            logger.info(f"Successfully built Modal Logic belief set with {belief_set.size()} formulas.")
+            return belief_set
+    
+        except jpype.JException as e:
+            error_message = e.getMessage()
+            logger.error(f"JPype JException building Modal Logic belief set for logic '{modal_logic_str}': {error_message}", exc_info=True)
+            raise ValueError(f"Error building Modal Logic belief set for logic '{modal_logic_str}': {error_message}") from e
+        except Exception as e:
+            logger.error(f"Unexpected error building Modal Logic belief set for logic '{modal_logic_str}': {e}", exc_info=True)
+            raise
+    
+    def parse_modal_formula(self, formula_str: str, modal_logic_str: str = "S4"):
+        """
+        Parses a single Modal Logic formula string.
+        Note: This does not handle context like constant declarations. For belief sets, use parse_modal_belief_set.
         """
         if not self._initializer_instance.is_jvm_started():
             logger.error("JVM not started. Cannot parse modal formula.")
             raise RuntimeError("JVM must be started by TweetyInitializer before parsing modal formulas.")
-
+    
         if not isinstance(formula_str, str):
             raise TypeError("Input formula must be a string.")
-        logger.debug(f"Attempting to parse Modal Logic formula: {formula_str} (Logic: {modal_logic_str}), Signature: {signature_declarations_str}")
+        
+        # Les déclarations de constantes ne sont pas des formules valides en elles-mêmes.
+        if formula_str.strip().startswith("constant"):
+            raise ValueError("Constant declarations are not valid formulas to be parsed in isolation.")
+    
+        logger.debug(f"Attempting to parse single Modal Logic formula: {formula_str} (Logic: {modal_logic_str})")
         
         try:
             java_formula_str = jpype.JClass("java.lang.String")(formula_str)
+            # Créer une signature vide car parseFormula requiert une signature.
+            Signature = jpype.JClass("org.tweetyproject.logics.commons.syntax.Signature")
+            signature = Signature()
+            modal_formula = self._modal_parser.parseFormula(java_formula_str, signature)
             
-            # Revenir à l'appel simple, car parseFormula(String, Signature) n'existe pas pour MlParser.
-            # La gestion de la signature pour les propositions en logique modale doit se faire autrement
-            # (potentiellement via un BeliefSet configuré avec une signature, ou si le parser
-            # est instancié/configuré pour une logique qui gère les propositions différemment).
-            # Si signature_declarations_str est fourni mais non utilisé ici, cela peut mener à des erreurs
-            # si le parser par défaut est strict.
-            if signature_declarations_str:
-                logger.warning(f"ModalHandler.parse_modal_formula received signature_declarations_str='{signature_declarations_str}' but the current MlParser does not use it directly for single formula parsing.")
-
-            modal_formula = self._modal_parser.parseFormula(java_formula_str)
-            
-            logger.info(f"Successfully parsed Modal Logic formula: {formula_str} (Logic: {modal_logic_str}, using default or pre-configured parser) -> {modal_formula}")
+            logger.info(f"Successfully parsed single Modal Logic formula: {formula_str} -> {modal_formula}")
             return modal_formula
         except jpype.JException as e:
             error_message = e.getMessage()
-            logger.error(f"JPype JException parsing Modal Logic formula '{formula_str}' for logic '{modal_logic_str}': {error_message}", exc_info=True)
-            if "Modal operator expected!" in error_message or "Proposition expected!" in error_message:
-                 raise ValueError(f"Syntax error in Modal Logic formula '{formula_str}' for logic '{modal_logic_str}': {error_message}") from e
-            raise ValueError(f"Error parsing Modal Logic formula '{formula_str}' for logic '{modal_logic_str}': {error_message}") from e
+            logger.error(f"JPype JException parsing single Modal Logic formula '{formula_str}' for logic '{modal_logic_str}': {error_message}", exc_info=True)
+            raise ValueError(f"Error parsing Modal Logic formula '{formula_str}': {error_message}") from e
         except Exception as e:
-            logger.error(f"Unexpected error parsing Modal Logic formula '{formula_str}' for logic '{modal_logic_str}': {e}", exc_info=True)
+            logger.error(f"Unexpected error parsing single Modal Logic formula '{formula_str}': {e}", exc_info=True)
             raise
-
+    
     def modal_check_consistency(self, knowledge_base_str: str, modal_logic_str: str = "S4", signature_declarations_str: str = None) -> bool:
         """
         Checks if a Modal Logic knowledge base is consistent for a given modal logic (e.g., S4).

@@ -31,9 +31,9 @@
     .\run_tests.ps1 -Type unit
 #>
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory=$false)]
     [ValidateSet("unit", "functional", "e2e", "e2e-python", "all", "validation")]
-    [string]$Type,
+    [string]$Type = "all",
 
     [string]$Path,
 
