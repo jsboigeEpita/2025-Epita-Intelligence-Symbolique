@@ -62,14 +62,17 @@ class BackendManager:
         self.pid: Optional[int] = None
         self.log_threads: List[threading.Thread] = []
         
-    async def start_with_failover(self) -> Dict[str, Any]:
+    async def start_with_failover(self, port_override: Optional[int] = None) -> Dict[str, Any]:
         """
         Démarre le backend avec failover automatique sur plusieurs ports
         
         Returns:
             Dict contenant success, url, port, pid, error
         """
-        ports_to_try = [self.start_port] + self.fallback_ports
+        if port_override:
+            ports_to_try = [port_override]
+        else:
+            ports_to_try = [self.start_port] + self.fallback_ports
         
         for attempt in range(1, self.max_attempts + 1):
             port = ports_to_try[(attempt - 1) % len(ports_to_try)]
