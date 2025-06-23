@@ -150,12 +150,14 @@ class TestRunner:
         """Exécute le cycle de vie complet des tests."""
         needs_services = self.test_type in ["functional", "e2e", "all"]
 
-        if needs_services:
-            self.service_manager.start_services()
-
         try:
+            if needs_services:
+                self.service_manager.start_services()
+            
+            # Si les services ne sont pas nécessaires, ou s'ils ont démarré, on lance les tests.
             self._run_pytest()
         finally:
+            # Assure l'affichage des logs et l'arrêt des services même si start_services échoue.
             if needs_services:
                 self._show_service_logs()
                 self.service_manager.stop_services()

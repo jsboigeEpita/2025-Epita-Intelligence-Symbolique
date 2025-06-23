@@ -345,7 +345,7 @@ class TestFOLAnalysisPipeline:
         # Assurer que le mock_kernel a une méthode invoke qui est aussi un AsyncMock
         # pour pouvoir y attacher side_effect plus tard dans le test.
         # AsyncMock crée automatiquement des attributs mockés lorsqu'on y accède.
-        # Donc, agent.sk_kernel.invoke sera un AsyncMock par défaut.
+        # Donc, agent._kernel.invoke sera un AsyncMock par défaut.
 
         agent = create_fol_agent(kernel=mock_kernel_for_agent)
         
@@ -424,11 +424,11 @@ class TestFOLAnalysisPipeline:
             description="Mock report generation function",
             is_prompt=True
         )
-        # L'agent utilise self.sk_kernel (hérité de BaseLogicAgent)
+        # L'agent utilise self._kernel (hérité de BaseLogicAgent)
         # La fixture fol_agent_full initialise l'agent avec un mock_kernel_for_agent (AsyncMock(spec=Kernel))
-        # qui est accessible via agent.sk_kernel.
+        # qui est accessible via agent._kernel.
         # Donc, nous mockons la méthode invoke de cet AsyncMock.
-        fol_agent_full.sk_kernel.invoke = AsyncMock(return_value=FunctionResult(
+        fol_agent_full._kernel.invoke = AsyncMock(return_value=FunctionResult(
             function=mock_metadata_report,
             value=json.dumps({
                 "formulas": ["∀x(P(x) → Q(x))"],
@@ -448,7 +448,7 @@ class TestFOLAnalysisPipeline:
     async def test_tweety_error_analyzer_integration(self, fol_agent_full):
         """Test intégration avec TweetyErrorAnalyzer."""
         
-        # Mocker sk_kernel.invoke pour la phase de conversion et d'analyse LLM
+        # Mocker _kernel.invoke pour la phase de conversion et d'analyse LLM
         mock_meta_conv = KernelFunctionMetadata(name="mc", plugin_name="mp", description="d", is_prompt=True)
         mock_meta_llm_analysis = KernelFunctionMetadata(name="mla", plugin_name="mp", description="d", is_prompt=True)
 
@@ -461,7 +461,7 @@ class TestFOLAnalysisPipeline:
             function=mock_meta_llm_analysis,
             value=json.dumps({"consistency": True, "inferences": [], "errors": []}) # Contenu minimal valide
         )
-        fol_agent_full.sk_kernel.invoke.side_effect = [conversion_response, llm_analysis_response]
+        fol_agent_full._kernel.invoke.side_effect = [conversion_response, llm_analysis_response]
 
         # Configuration erreur Tweety pour check_consistency
         fol_agent_full._tweety_bridge.check_consistency.side_effect = Exception("Predicate 'Unknown' has not been declared")

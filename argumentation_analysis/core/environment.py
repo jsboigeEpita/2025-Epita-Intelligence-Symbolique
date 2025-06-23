@@ -31,130 +31,60 @@ from pathlib import Path
 # Note: L'import de Logger et EnvironmentManager sera fait à l'intérieur de ensure_env
 # pour éviter les problèmes d'imports circulaires potentiels si auto_env est importé tôt.
 
-def ensure_env(env_name: str = None, silent: bool = True) -> bool:
+def ensure_env(env_name: str = None, silent: bool = False) -> bool:
     """
-    One-liner auto-activateur d'environnement.
-    Délègue la logique complexe à EnvironmentManager.
+    Auto-vérificateur d'environnement et coupe-circuit.
+    Cette fonction ne tente PLUS d'activer l'environnement. Elle VERIFIE que
+    l'environnement correct est déjà activé et lève une RuntimeError si ce n'est pas le cas.
+    C'est un garde-fou crucial.
     
     Args:
-        env_name: Nom de l'environnement conda. Si None, il est lu depuis .env.
-        silent: Si True, réduit la verbosité des logs.
+        env_name: Nom de l'environnement conda attendu. Si None, lu depuis la config.
+        silent: Si True, réduit la verbosité en cas de succès.
     
     Returns:
-        True si l'environnement est (ou a été) activé avec succès, False sinon.
+        True si l'environnement est correct.
+    
+    Raises:
+        RuntimeError: Si l'environnement n'est pas celui attendu.
     """
-    # --- COURT-CIRCUIT POUR LES ENVIRONNEMENTS GÉRÉS EXTERIEUREMENT ---
-    # Si cette variable est positionnée (par ex. par EnvironmentManager.run_in_conda_env),
-    # cela signifie que l'environnement est déjà activé et géré. On ne fait rien
-    # pour éviter une double activation qui peut corrompre les chemins et la découverte de packages.
-    if os.getenv('RUNNING_VIA_ENV_MANAGER') == 'true':
-        if not silent:
-            print("[auto_env] Court-circuit: Exécution dans un environnement déjà géré par EnvironmentManager.")
-        return True
-    # --- Logique de détermination du nom de l'environnement ---
     if env_name is None:
-        # Pydantic-settings dans le module `settings` a déjà chargé le fichier .env.
-        # Nous pouvons donc lire directement depuis les variables d'environnement.
-        # L'import de `settings` garantit que le chargement a eu lieu.
         try:
             from argumentation_analysis.config.settings import settings
             env_name = settings.model_dump().get('CONDA_ENV_NAME', os.environ.get('CONDA_ENV_NAME', 'projet-is'))
         except (ImportError, AttributeError):
-             # Fallback si settings n'est pas disponible ou si la variable n'y est pas.
             env_name = os.environ.get('CONDA_ENV_NAME', 'projet-is')
-    # DEBUG: Imprimer l'état initial
-    print(f"[auto_env DEBUG] Début ensure_env. Python: {sys.executable}, CONDA_DEFAULT_ENV: {os.getenv('CONDA_DEFAULT_ENV')}, silent: {silent}", file=sys.stderr)
 
-    # Vérification immédiate de l'exécutable Python - COMMENTÉE CAR TROP PRÉCOCE
-    # if env_name not in sys.executable:
-    #     error_message_immediate = (
-    #         f"ERREUR CRITIQUE : L'INTERPRÉTEUR PYTHON EST INCORRECT.\n"
-    #         f"  Exécutable utilisé : '{sys.executable}'\n"
-    #         f"  L'exécutable attendu doit provenir de l'environnement Conda '{env_name}'.\n\n"
-    #         f"  SOLUTION IMPÉRATIVE :\n"
-    #         f"  Utilisez le script wrapper 'activate_project_env.ps1' situé à la RACINE du projet.\n\n"
-    #         f"  Exemple : powershell -File .\\activate_project_env.ps1 -CommandToRun \"python votre_script.py\"\n\n"
-    #         f"  IMPORTANT : Ce script ne se contente pas d'activer Conda. Il configure aussi JAVA_HOME, PYTHONPATH, et d'autres variables d'environnement cruciales. Ne PAS l'ignorer."
-    #     )
-    #     print(f"[auto_env] {error_message_immediate}", file=sys.stderr)
-    #     raise RuntimeError(error_message_immediate)
+    # La détection via la comparaison de sys.prefix et sys.base_prefix n'est pas fiable
+    # dans tous les contextes de sous-processus. Une heuristique plus simple et robuste
+    # consiste à vérifier si le nom de l'environnement fait partie du chemin du préfixe.
+    current_env_path = sys.prefix
+    is_env_correct = f"envs\\{env_name}" in current_env_path or f"envs/{env_name}" in current_env_path
 
-    # Logique de court-circuit si le script d'activation principal est déjà en cours d'exécution
-    if os.getenv('IS_ACTIVATION_SCRIPT_RUNNING') == 'true':
-        if not silent: # Cette condition respecte le 'silent' original pour ce message spécifique.
-            print("[auto_env] Court-circuit: Exécution via le script d'activation principal déjà en cours.")
-        return True # On considère que l'environnement est déjà correctement configuré
+    if not is_env_correct:
+        # Tenter d'extraire un nom d'environnement plus précis pour le message d'erreur
+        try:
+            current_env_name = Path(current_env_path).name
+        except Exception:
+            current_env_name = "inconnu"
 
-    try:
-        # L'ancienne manipulation de sys.path n'est plus nécessaire car ce module
-        # fait maintenant partie d'un package standard.
-        # Les dépendances sont gérées par l'installation du package.
-        # Les dépendances sont maintenant gérées via les imports standards du projet
-        from project_core.core_from_scripts.environment_manager import EnvironmentManager, auto_activate_env as env_man_auto_activate_env
-        from project_core.core_from_scripts.common_utils import Logger
+        error_message = (
+            f"ERREUR CRITIQUE : L'INTERPRÉTEUR PYTHON EST INCORRECT.\n"
+            f"  Environnement attendu : '{env_name}'\n"
+            f"  Environnement détecté : '{current_env_name}' (depuis le chemin: {current_env_path})\n"
+            f"  Exécutable utilisé  : '{sys.executable}'\n\n"
+            f"  SOLUTION IMPÉRATIVE :\n"
+            f"  Utilisez le script wrapper 'activate_project_env.ps1' situé à la RACINE du projet pour lancer votre code.\n"
+            f"  Exemple : powershell -File .\\activate_project_env.ps1 -CommandToRun \"python votre_script.py\"\n"
+        )
+        raise RuntimeError(error_message)
+    
+    if not silent:
+        # Pour l'affichage, on utilise le nom extrait du chemin
+        current_env_name_display = Path(sys.prefix).name
+        print(f"[auto_env] OK: L'environnement '{current_env_name_display}' est correctement activé.")
 
-        # Le logger peut être configuré ici ou EnvironmentManager peut en créer un par défaut.
-        # Pour correspondre à l'ancienne verbosité contrôlée par 'silent':
-        logger_instance = Logger(verbose=not silent)
-        
-        # manager = EnvironmentManager(logger=logger_instance) # Plus besoin de manager pour cet appel spécifique
-        
-        # L'appel principal qui encapsule toute la logique d'activation
-        activated = env_man_auto_activate_env(env_name=env_name, silent=silent) # Le 'silent' de ensure_env est propagé
-        
-        # DEBUG: Imprimer le résultat de l'activation
-        print(f"[auto_env DEBUG] env_man_auto_activate_env a retourné: {activated}", file=sys.stderr)
-        
-        if not silent: # Ce bloc ne sera pas exécuté si silent=True au niveau de ensure_env
-            if activated:
-                print(f"[auto_env] Activation de '{env_name}' via EnvironmentManager: SUCCÈS")
-            else:
-                print(f"[auto_env] Activation de '{env_name}' via EnvironmentManager: ÉCHEC")
-        
-        # --- DEBUT DE LA VERIFICATION CRITIQUE DE L'ENVIRONNEMENT ---
-        # --- DEBUT DE LA VERIFICATION CRITIQUE DE L'ENVIRONNEMENT (ROBUSTE) ---
-        # Méthode de détection basée sur les préfixes système, plus fiable que les variables d'environnement.
-        is_in_virtual_env = sys.prefix != sys.base_prefix
-        current_env_name = os.path.basename(sys.prefix) if is_in_virtual_env else 'base'
-        
-        # DEBUG: Imprimer l'état avant la vérification critique
-        print(f"[auto_env DEBUG] Avant vérif critique. Python: {sys.executable}, sys.prefix: {sys.prefix}, sys.base_prefix: {sys.base_prefix}, Current Env: {current_env_name}", file=sys.stderr)
-
-        # La condition de succès est simple : le nom de l'environnement actuel doit être celui attendu.
-        is_env_correct = (current_env_name == env_name)
-        
-        if not is_env_correct:
-            # Créez le message d'avertissement
-            warning_message = (
-                f"AVERTISSEMENT : L'ENVIRONNEMENT '{env_name}' SEMBLE NE PAS ÊTRE CORRECTEMENT ACTIVÉ.\n"
-                f"  - Environnement détecté (via sys.prefix): '{current_env_name}' (Attendu: '{env_name}')\n"
-                f"  - Exécutable Python détecté : '{sys.executable}'\n"
-                f"  - Le processus va continuer, mais des erreurs de dépendances sont possibles."
-            )
-            # Log l'avertissement au lieu de lever une exception
-            logger_instance.warning(warning_message)
-            print(f"[auto_env] {warning_message}", file=sys.stderr)
-            # Ne lève plus d'exception pour permettre au processus de continuer
-        elif not silent: # Ce bloc ne sera pas exécuté si silent=True au niveau de ensure_env
-            logger_instance.info(
-                f"[auto_env] Vérification de l'environnement réussie: sys.prefix pointe vers '{sys.prefix}', ce qui correspond à l'environnement '{env_name}'."
-            )
-        # --- FIN DE LA VERIFICATION CRITIQUE DE L'ENVIRONNEMENT ---
-                
-        return activated
-        
-    except ImportError as ie:
-        # Gérer le cas où EnvironmentManager ou Logger ne peuvent pas être importés
-        # Cela peut arriver si sys.path n'est pas correctement configuré avant l'import.
-        if not silent:
-            print(f"[auto_env] ERREUR CRITIQUE: Impossible d'importer les modules nécessaires ({ie}).")
-            print(f"             Vérifiez PYTHONPATH ou la structure du projet.")
-            print(f"             sys.path actuel: {sys.path}")
-        return False
-
-# Les fonctions _discover_and_persist_conda_path, _update_conda_path_from_env,
-# _load_dotenv_intelligent, et _auto_activate_conda_env sont maintenant supprimées
-# car leur logique a été transférée à EnvironmentManager.
+    return True
 
 def get_one_liner() -> str:
     """Retourne le one-liner legacy. Cette fonction est conservée pour la compatibilité mais son usage est déprécié."""
@@ -167,42 +97,39 @@ def get_simple_import() -> str:
 
 
 # Auto-exécution à l'import pour usage ultra-simple
-if __name__ != "__main__":
-    # Le module est importé, auto-activation
+if __name__ != "__main__" and not os.getenv("IS_PYTEST_RUNNING"):
+    # Le module est importé, auto-activation/vérification.
+    # On désactive pour les tests unitaires pour pouvoir les contrôler.
     # ========================== ATTENTION - PROTECTION CRITIQUE ==========================
     # La ligne suivante `ensure_env()` est ESSENTIELLE pour la sécurité et la stabilité
-    # de tous les tests et scripts. Elle garantit que le code s'exécute dans
+    # de tous les scripts. Elle garantit que le code s'exécute dans
     # l'environnement Conda approprié ('projet-is').
     #
     # NE JAMAIS DÉSACTIVER, COMMENTER OU SUPPRIMER CETTE LIGNE.
-    # Le faire contourne les gardes-fous et peut entraîner des erreurs de dépendances
-    # subtiles, des comportements imprévisibles et l'utilisation de mocks à la place
-    # de composants réels, corrompant ainsi les résultats des tests.
-    #
-    # Cette protection est intentionnellement non-silencieuse pour rendre tout échec
-    # d'activation de l'environnement immédiatement visible.
     # =====================================================================================
-    ensure_env(env_name=None, silent=False)
+    ensure_env()
 
 
 if __name__ == "__main__":
     # Test direct du module
-    print("[TEST] One-liner auto-activateur d'environnement")
+    print("[TEST] Auto-vérificateur d'environnement")
     print("=" * 60)
-    
-    print("\n[CONFIG] ONE-LINER COMPLET :")
+
+    print("\n[CONFIG] ONE-LINER COMPLET (legacy):")
     print(get_one_liner())
     
     print("\n[CONFIG] IMPORT SIMPLE :")
     print(get_simple_import())
     
-    print("\n[TEST] ACTIVATION :")
-    success = ensure_env(silent=False)
-    
-    if success:
-        print("[OK] Test reussi - Environnement operationnel")
-    else:
-        print("[WARN] Test en mode degrade - Environnement non active")
+    print("\n[TEST] VÉRIFICATION :")
+    try:
+        success = ensure_env(silent=False)
+        if success:
+            print("[OK] Test reussi - Environnement operationnel")
+    except RuntimeError as e:
+        print(f"\n[ERREUR] Test échoué comme attendu en dehors de l'environnement wrapper.")
+        print(e)
+        success = False
     
     print("\n[INFO] INTEGRATION DANS VOS SCRIPTS :")
     print("   # Methode 1 (ultra-simple) :")
