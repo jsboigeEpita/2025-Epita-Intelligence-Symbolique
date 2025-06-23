@@ -79,6 +79,37 @@ function Get-PythonExecutable {
 $portManagerScript = Join-Path $PSScriptRoot "project_core/config/port_manager.py"
 $WebAppLauncherScript = Join-Path $PSScriptRoot "scripts/apps/webapp/launch_webapp_background.py"
 
+# Fonction pour récupérer le chemin Python de l'environnement Conda
+function Get-CondaEnvPythonPath {
+    param(
+        [string]$PythonExecutable,
+        [string]$ManagerScriptPath
+    )
+    try {
+        $condaPythonPath = & $PythonExecutable $ManagerScriptPath --get-python-path
+        # Le script Python renvoie le chemin sur stdout. On nettoie les espaces
+        $condaPythonPath = $condaPythonPath.Trim()
+
+        if ($LASTEXITCODE -ne 0 -or -not $condaPythonPath) {
+            Write-Log "Impossible de récupérer le chemin Python de l'environnement Conda." "WARNING"
+            return $null
+        }
+        
+        if (-not (Test-Path $condaPythonPath)) {
+            Write-Log "Le chemin Python retourné par le manager est invalide: $condaPythonPath" "WARNING"
+            return $null
+        }
+
+        Write-Log "Chemin Python de l'environnement Conda obtenu: $condaPythonPath" "DEBUG"
+        return $condaPythonPath
+    }
+    catch {
+        Write-Log "Erreur lors de l'appel à --get-python-path: $($_.Exception.Message)" "WARNING"
+        return $null
+    }
+}
+
+
 try {
     # === 1. Configuration et Validation des chemins ===
     Write-Log "Initialisation du script d'environnement."
@@ -132,6 +163,20 @@ try {
         # On met la commande entre guillemets pour gérer les espaces dans les chemins
         $FinalCommandToRun = "$PythonExecutable `"$FullScriptPath`""
         Write-Log "Commande à exécuter définie via -PythonScriptPath: $FinalCommandToRun"
+    }
+
+    # [NOUVEAU] Traitement spécial pour Pytest
+    if ($FinalCommandToRun -and $FinalCommandToRun.TrimStart().StartsWith("pytest")) {
+        Write-Log "Détection de 'pytest'. Tentative de résolution de l'exécutable de l'environnement Conda." "INFO"
+        $condaPython = Get-CondaEnvPythonPath -PythonExecutable $PythonExecutable -ManagerScriptPath $PythonManagerScriptPath
+        if ($condaPython) {
+            # Remplace "pytest" par le chemin complet vers l'exécutable python en mode module
+            $arguments = $FinalCommandToRun.Substring("pytest".Length).Trim()
+            $FinalCommandToRun = "& '$condaPython' -m pytest $arguments" # Utilisation de l'opérateur d'appel & pour les chemins avec espaces
+            Write-Log "Commande 'pytest' transformée: $FinalCommandToRun" "INFO"
+        } else {
+            Write-Log "Impossible de résoudre le chemin de Python pour l'environnement Conda. 'pytest' sera exécuté avec la résolution par défaut du PATH, ce qui peut causer des erreurs." "WARNING"
+        }
     }
     
     # === 4. Préparation des arguments pour le script Python manager ===
