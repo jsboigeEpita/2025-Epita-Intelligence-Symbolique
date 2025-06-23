@@ -43,8 +43,8 @@ class TweetyInitializer:
             TweetyInitializer._jvm_started = False
             return
 
-        # It's crucial to ensure the classpath is correct BEFORE any JVM interaction.
-        self._ensure_classpath()
+        # Le classpath est maintenant géré directement dans _start_jvm pour plus de fiabilité.
+        # self._ensure_classpath()
 
         if not jpype.isJVMStarted():
             logger.info("JVM not detected as started. TweetyInitializer will now attempt to start it.")
@@ -110,11 +110,16 @@ class TweetyInitializer:
                 logger.info(f"JAVA_HOME environment variable: {java_home_env}")
                 # --- END DEBUGGING ---
 
-                # The classpath is now managed by _ensure_classpath and addClassPath.
-                # startJVM will pick up the modified classpath.
+                # MODIFICATION POUR FIABILITÉ : Passer le classpath directement à startJVM.
+                # C'est souvent plus stable que d'utiliser addClassPath avant de démarrer.
+                from argumentation_analysis.utils.system_utils import get_project_root
+                project_root = get_project_root()
+                jar_path = project_root / "libs" / "tweety" / "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
+                
                 jpype.startJVM(
-                    default_jvm_path, # Use the path we just logged
+                    default_jvm_path,
                     "-ea",
+                    classpath=[str(jar_path)],  # Passer explicitement le chemin du JAR
                     convertStrings=False
                 )
                 TweetyInitializer._jvm_started = True
@@ -150,6 +155,11 @@ class TweetyInitializer:
             _ = jpype.JClass("org.tweetyproject.logics.ml.parser.MlParser")
             _ = jpype.JClass("org.tweetyproject.commons.ParserException")
             _ = jpype.JClass("org.tweetyproject.logics.commons.syntax.Sort")
+            # --- AJOUT CRUCIAL POUR LE PARSING PROGRAMMATIQUE ---
+            # Ces classes sont nécessaires pour construire les belief sets modal/fol manuellement.
+            _ = jpype.JClass("org.tweetyproject.logics.commons.syntax.Signature")
+            _ = jpype.JClass("org.tweetyproject.logics.commons.syntax.Constant")
+            # --- FIN DE L'AJOUT ---
             logger.info("Successfully imported TweetyProject Java classes.")
             
 

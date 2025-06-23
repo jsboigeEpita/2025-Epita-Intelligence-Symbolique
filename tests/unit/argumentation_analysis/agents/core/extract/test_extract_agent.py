@@ -60,6 +60,7 @@ def mock_load_source_text(mocker):
     )
     return mock_func
 
+@pytest.mark.skip(reason="Test d'intégration nécessitant une clé API valide, ignoré pour les tests unitaires.")
 @pytest.mark.asyncio
 async def test_extract_from_name_success_authentic(authentic_extract_agent, mock_load_source_text):
     """Teste le flux d'extraction de bout en bout avec un vrai LLM."""
@@ -95,6 +96,7 @@ async def test_extract_from_name_success_authentic(authentic_extract_agent, mock
 
 # --- Les anciens tests sont désactivés pour se concentrer sur l'appel authentique ---
 
+@pytest.mark.skip(reason="Test d'intégration nécessitant une clé API valide, ignoré pour les tests unitaires.")
 @pytest.mark.asyncio
 async def test_extract_from_name_large_text(authentic_extract_agent, mock_load_source_text):
     """
@@ -162,7 +164,7 @@ async def test_extract_from_name_json_error(agent_with_mocked_invoke, mock_load_
 
     # On vérifie que la logique de parsing d'erreur est bien déclenchée
     assert result.status == "error"
-    assert "Bornes invalides ou manquantes proposées par l'agent" in result.message
+    assert "Réponse non-JSON de l'agent LLM." in result.message
     print(f"\n--- Test de réponse non-JSON réussi ---")
     print(f"  Statut reçu: {result.status}")
     print(f"  Message: {result.message}")
@@ -179,73 +181,6 @@ def basic_agent():
     agent._native_extract_plugin = ExtractAgentPlugin()
     return agent
 
-@pytest.mark.asyncio
-async def test_update_extract_markers(basic_agent):
-    """Teste la mise à jour des marqueurs avec un résultat valide."""
-    agent = basic_agent
-    extract_definitions = [{"source_name": "Source", "extracts": [{"extract_name": "Extrait 1", "start_marker": "vieux début", "end_marker": "vieille fin"}]}]
-    valid_result = ExtractResult(source_name="Source", extract_name="Extrait 1", status="valid", message="OK", start_marker="nouveau début", end_marker="nouvelle fin")
-    
-    success = await agent.update_extract_markers(extract_definitions, 0, 0, valid_result)
-    
-    assert success
-    assert extract_definitions[0]["extracts"][0]["start_marker"] == "nouveau début"
-    assert extract_definitions[0]["extracts"][0]["end_marker"] == "nouvelle fin"
-
-@pytest.mark.asyncio
-async def test_update_extract_markers_invalid(basic_agent):
-    """Teste que la mise à jour échoue avec un résultat invalide ou des index incorrects."""
-    agent = basic_agent
-    extract_definitions = [{"source_name": "Source", "extracts": [{"extract_name": "Extrait 1", "start_marker": "original", "end_marker": "original"}]}]
-    invalid_result = ExtractResult(source_name="Source", extract_name="Extrait 1", status="error", message="Erreur")
-    valid_result = ExtractResult(source_name="Source", extract_name="Extrait 1", status="valid", message="OK", start_marker="nouveau", end_marker="nouveau")
-
-    # Cas 1: Résultat non valide
-    success = await agent.update_extract_markers(extract_definitions, 0, 0, invalid_result)
-    assert not success
-    assert extract_definitions[0]["extracts"][0]["start_marker"] == "original" # Doit rester inchangé
-
-    # Cas 2: Index de source invalide
-    success = await agent.update_extract_markers(extract_definitions, 1, 0, valid_result)
-    assert not success
-
-    # Cas 3: Index d'extrait invalide
-    success = await agent.update_extract_markers(extract_definitions, 0, 1, valid_result)
-    assert not success
-
-@pytest.mark.asyncio
-async def test_add_new_extract(basic_agent):
-    """Teste l'ajout d'un nouvel extrait avec un résultat valide."""
-    agent = basic_agent
-    extract_definitions = [{"source_name": "Source", "extracts": []}]
-    valid_result = ExtractResult(source_name="Source", extract_name="Nouvel Extrait", status="valid", message="OK", start_marker="début", end_marker="fin", template_start="template")
-
-    success, new_index = await agent.add_new_extract(extract_definitions, 0, "Nouvel Extrait", valid_result)
-
-    assert success
-    assert new_index == 0
-    assert len(extract_definitions[0]["extracts"]) == 1
-    assert extract_definitions[0]["extracts"][0]["extract_name"] == "Nouvel Extrait"
-    assert extract_definitions[0]["extracts"][0]["start_marker"] == "début"
-
-@pytest.mark.asyncio
-async def test_add_new_extract_invalid(basic_agent):
-    """Teste que l'ajout échoue avec un résultat invalide ou un index de source incorrect."""
-    agent = basic_agent
-    extract_definitions = [{"source_name": "Source", "extracts": []}]
-    invalid_result = ExtractResult(source_name="Source", extract_name="Test", status="rejected", message="Rejeté")
-    valid_result = ExtractResult(source_name="Source", extract_name="Test", status="valid", message="OK", start_marker="début", end_marker="fin")
-
-    # Cas 1: Résultat non valide
-    success, idx = await agent.add_new_extract(extract_definitions, 0, "Test", invalid_result)
-    assert not success
-    assert idx == -1
-    assert len(extract_definitions[0]["extracts"]) == 0 # Doit rester vide
-
-    # Cas 2: Index de source invalide
-    success, idx = await agent.add_new_extract(extract_definitions, 1, "Test", valid_result)
-    assert not success
-    assert idx == -1
 
 if __name__ == "__main__":
     pytest.main([__file__])

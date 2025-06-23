@@ -439,19 +439,12 @@ class TweetyBridge:
 
         self._logger.debug(f"TweetyBridge.validate_modal_belief_set appelée pour BS: '{belief_set_string[:100]}...', Logic: {modal_logic_str}")
         try:
-            # Solution temporaire : utiliser _remove_comments_and_empty_lines ici
-            # et parser chaque formule via le handler.
-            cleaned_formulas = self._remove_comments_and_empty_lines(belief_set_string)
-            if not cleaned_formulas:
-                return False, "Ensemble de croyances Modal vide ou ne contenant que des commentaires"
-
-            for formula_str in cleaned_formulas:
-                self._modal_handler.parse_modal_formula(formula_str, modal_logic_str) # signature_declarations_str non pertinent pour le parsing simple de formule
-
-            self._logger.info(f"Ensemble de croyances Modal (Logic: {modal_logic_str}) validé avec succès par ModalHandler (parsing individuel).")
+            # Utiliser la nouvelle méthode du handler qui parse le belief set en entier
+            self._modal_handler.parse_modal_belief_set(belief_set_string, modal_logic_str)
+            self._logger.info(f"Ensemble de croyances Modal (Logic: {modal_logic_str}) validé avec succès par ModalHandler.")
             return True, "Ensemble de croyances Modal valide"
-            
         except ValueError as e_val:
+            # L'erreur de parsing est maintenant directement propagée par le handler
             self._logger.warning(f"Erreur de syntaxe dans le BS Modal (Logic: {modal_logic_str}) détectée par ModalHandler: {e_val}")
             return False, f"Erreur de syntaxe Modale: {str(e_val)}"
         except Exception as e_generic:

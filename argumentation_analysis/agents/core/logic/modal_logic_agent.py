@@ -60,7 +60,8 @@ PROMPT_TEXT_TO_MODAL_BELIEF_SET = """Expert Modal : Convertissez le texte en ens
 ATTENTION - Syntaxe TweetyProject stricte requise :
 - Toutes les constantes/propositions DOIVENT être déclarées avec "constant nom"
 - Utilisez UNIQUEMENT des identifiants en minuscules avec underscores
-- Format JSON : {"propositions": ["prop1", "prop2"], "modal_formulas": ["[]prop1", "<>prop2"]}
+- Format JSON : {"propositions": ["prop1", "prop2"], "modal_formulas": ["[](prop1)", "<>(prop2)"]}
+- TOUJOURS entourer la proposition avec des parenthèses après un opérateur modal: [](prop), <>(prop)
 
 Si vous avez reçu une erreur de syntaxe précédemment, corrigez-la en utilisant la BNF TweetyProject :
 - Opérateurs : [] (nécessité), <> (possibilité)
@@ -76,7 +77,8 @@ PROMPT_GEN_MODAL_QUERIES_IDEAS = """Expert Modal : Générez des requêtes modal
 IMPORTANT - Syntaxe TweetyProject :
 - Utilisez UNIQUEMENT les propositions du belief set fourni
 - Respectez la syntaxe : [] pour nécessité, <> pour possibilité
-- Format JSON strict : {"query_ideas": [{"formula": "[]prop1"}, {"formula": "<>prop2"}]}
+- Format JSON strict : {"query_ideas": [{"formula": "[](prop1)"}, {"formula": "<>(prop2)"}]}
+- TOUJOURS entourer la proposition avec des parenthèses après un opérateur modal: [](prop), <>(prop)
 
 Si erreur de syntaxe précédente, corrigez avec :
 - Noms de propositions exacts du belief set
@@ -107,8 +109,8 @@ constant_declaration ::= "constant" IDENTIFIER
 modal_formula ::= atomic_formula | composite_formula
 atomic_formula ::= IDENTIFIER
 composite_formula ::= "!" formula | 
-                     "[]" formula | 
-                     "<>" formula | 
+                     "[](" formula ")" |
+                     "<>(" formula ")" |
                      "(" formula ")" |
                      formula "&&" formula |
                      formula "||" formula |
@@ -193,7 +195,7 @@ class ModalLogicAgent(BaseLogicAgent):
         default_settings = None
         if self._llm_service_id: 
             try:
-                default_settings = self.sk_kernel.get_prompt_execution_settings_from_service_id(
+                default_settings = self._kernel.get_prompt_execution_settings_from_service_id(
                     self._llm_service_id
                 )
                 self.logger.debug(f"Settings LLM récupérés pour {self.name}.")
@@ -221,7 +223,7 @@ class ModalLogicAgent(BaseLogicAgent):
                 self.logger.info(f"Ajout fonction {self.name}.{func_name} avec retry automatique activé")
                 
                 # Configuration avec retry automatique
-                self.sk_kernel.add_function(
+                self._kernel.add_function(
                     prompt=prompt,
                     plugin_name=self.name, 
                     function_name=func_name,
@@ -231,7 +233,7 @@ class ModalLogicAgent(BaseLogicAgent):
                 
                 self.logger.debug(f"Fonction sémantique {self.name}.{func_name} ajoutée avec max_auto_invoke_attempts=3.")
                 
-                if self.name in self.sk_kernel.plugins and func_name in self.sk_kernel.plugins[self.name]:
+                if self.name in self._kernel.plugins and func_name in self._kernel.plugins[self.name]:
                     self.logger.info(f"(OK) Fonction {self.name}.{func_name} correctement enregistrée avec retry automatique.")
                 else:
                     self.logger.error(f"(CRITICAL ERROR) Fonction {self.name}.{func_name} non trouvée après ajout!")
@@ -421,12 +423,13 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
             # Plus de boucle de retry manuelle - SK s'en charge avec max_auto_invoke_attempts
             
             # Appel de la fonction sémantique pour générer l'ensemble de croyances modales
-            result = await self.sk_kernel.plugins[self.name]["TextToModalBeliefSet"].invoke(
-                self.sk_kernel, input=text
+            result = await self._kernel.plugins[self.name]["TextToModalBeliefSet"].invoke(
+                self._kernel, input=text
             )
             
             # Extraire et parser le JSON
-            json_str = self._extract_json_block(str(result))
+            response_content = result.value if hasattr(result, 'value') else str(result)
+            json_str = self._extract_json_block(response_content)
             kb_json = json.loads(json_str)
             
             # Valider la cohérence du JSON
@@ -529,10 +532,10 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
                 "belief_set": belief_set.content
             }
             
-            result = await self.sk_kernel.plugins[self.name]["GenerateModalQueryIdeas"].invoke(
-                self.sk_kernel, **args
+            result = await self._kernel.plugins[self.name]["GenerateModalQueryIdeas"].invoke(
+                self._kernel, **args
             )
-            response_text = str(result)
+            response_text = result.value if hasattr(result, 'value') else str(result)
             
             # Extraire le bloc JSON de la réponse
             json_block = self._extract_json_block(response_text)
@@ -641,15 +644,15 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
             results_text_list = [res_tuple[1] if res_tuple else "Error: No result" for res_tuple in results]
             results_str = "\n".join(results_text_list)
             
-            result = await self.sk_kernel.plugins[self.name]["InterpretModalResult"].invoke(
-                self.sk_kernel,
+            result = await self._kernel.plugins[self.name]["InterpretModalResult"].invoke(
+                self._kernel,
                 input=text,
                 belief_set=belief_set.content,
                 queries=queries_str,
                 tweety_result=results_str
             )
             
-            interpretation = str(result)
+            interpretation = result.value if hasattr(result, 'value') else str(result)
             self.logger.info("Interprétation terminée")
             return interpretation
         
