@@ -19,7 +19,7 @@ async def test_dummy_health_check_to_isolate_playwright():
 
 @pytest.mark.playwright
 @pytest.mark.asyncio
-async def test_page_title(page: Page, backend_url: str):
+async def test_health_check_endpoint(page: Page, backend_url: str):
     """
     Test a lightweight, dependency-free /api/health endpoint.
     This helps determine if the server is responsive at a basic level,

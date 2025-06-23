@@ -26,8 +26,7 @@ param(
     [int]$CondaVerboseLevel = 0,
     [switch]$LaunchWebApp = $false,
     [switch]$DebugMode = $false,
-    [Parameter(Mandatory=$true)]
-    [string]$CommandOutputFile
+    [string]$CommandOutputFile = $null
 )
 
 # Fonction de logging simple
@@ -112,8 +111,19 @@ function Get-CondaEnvPythonPath {
     }
 }
 
+$cleanupTempFile = $false
 
 try {
+    # Gestion du fichier de sortie temporaire
+    if (-not $CommandOutputFile) {
+        $tempDir = Join-Path $PSScriptRoot ".temp"
+        if (-not (Test-Path $tempDir)) {
+            New-Item -ItemType Directory -Path $tempDir | Out-Null
+        }
+        $CommandOutputFile = Join-Path $tempDir "command_$([System.IO.Path]::GetRandomFileName()).tmp"
+        $cleanupTempFile = $true
+        Write-Log "Fichier de sortie auto-généré: $CommandOutputFile" "DEBUG"
+    }
     # === 1. Configuration et Validation des chemins ===
     Write-Log "Initialisation du script d'environnement."
 
@@ -272,6 +282,16 @@ try {
     exit 1
 }
 finally {
+    # Nettoyage du fichier de commande temporaire si auto-généré
+    if ($cleanupTempFile -and (Test-Path $CommandOutputFile)) {
+        try {
+            Remove-Item $CommandOutputFile -Force
+            Write-Log "Fichier de commande temporaire '$CommandOutputFile' supprimé." "DEBUG"
+        } catch {
+            Write-Log "Avertissement: Échec de la suppression du fichier temporaire '$CommandOutputFile'." "WARNING"
+        }
+    }
+
     # Assurer le déverrouillage systématique du port
     Write-Log "Nettoyage du verrouillage de port (finally)..." "INFO"
     try {

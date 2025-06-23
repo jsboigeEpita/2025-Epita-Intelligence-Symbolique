@@ -188,9 +188,10 @@ class PlaywrightRunner:
         # Ajout du répertoire de test pour que pytest le découvre
         cmd.extend(test_paths)
 
-        # Le mode Headless est géré par la fixture de pytest-playwright
-        # via la variable d'environnement HEADLESS, pas un argument direct.
-        # Pas besoin d'ajouter --headless ou --headed ici.
+        # Le mode Headless est géré par l'argument --headed.
+        # On l'ajoute si la configuration le demande explicitement.
+        if not config.get('headless', True):
+            cmd.append('--headed')
         self.logger.info(f"Le mode Headless est configuré sur: {config.get('headless', True)}")
 
         # --tracing on est l'équivalent de --trace=on pour pytest-playwright
