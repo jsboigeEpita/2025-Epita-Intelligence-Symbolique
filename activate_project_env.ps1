@@ -165,7 +165,7 @@ function Invoke-PythonManager {
 
     $managerArgs = @(
         "--command", $Command,
-        "--conda-env-name", $Config["CONDA_ENV_NAME"],
+        "--env-name", $Config["CONDA_ENV_NAME"],
         "--verbose" # Simplifié pour toujours être verbeux
     )
 

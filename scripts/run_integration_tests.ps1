@@ -18,7 +18,7 @@ $WebAppOrchestratorScript = "scripts/apps/webapp/unified_web_orchestrator.py"
 $OrchestratorArgs = "--integration --frontend --visible" # Ajoutez --visible ici si nécessaire
 
 # Commande complète à passer au script d'activation
-$CommandToExecute = "python '$WebAppOrchestratorScript' $OrchestratorArgs"
+$CommandToExecute = "python $WebAppOrchestratorScript $OrchestratorArgs"
 
 Write-Host "Activation de l'environnement et exécution du test d'intégration..."
 Write-Host "Commande: $CommandToExecute"

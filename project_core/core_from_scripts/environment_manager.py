@@ -415,10 +415,15 @@ class EnvironmentManager:
 
         # Préparation de l'environnement
         env_path = self._get_conda_env_path(env_name)
+        if not env_path:
+             raise RuntimeError(f"Chemin pour l'environnement conda '{env_name}' introuvable dans run_in_conda_env.")
+
         sub_process_env = os.environ.copy()
         sub_process_env['CONDA_DEFAULT_ENV'] = env_name
         sub_process_env['CONDA_PREFIX'] = env_path
-        # S'assurer que le PATH de l'environnement cible est prioritaire
+        
+        # Définir le chemin vers les scripts de l'environnement et l'ajouter au PATH
+        env_scripts_dir = Path(env_path) / ('Scripts' if platform.system() == "Windows" else 'bin')
         sub_process_env['PATH'] = f"{env_scripts_dir}{os.pathsep}{os.environ.get('PATH', '')}"
         
         # --- CORRECTIF : Propagation du PYTHONPATH ---
@@ -960,77 +965,61 @@ def activate_project_env(command: str = None, env_name: str = None, logger: Logg
 
 
 
-def reinstall_conda_environment(manager: 'EnvironmentManager', env_name: str, verbose_level: int = 0):
-    """Supprime et recrée intégralement l'environnement conda à partir de environment.yml."""
+def update_or_create_conda_environment(manager: 'EnvironmentManager', env_name: str, verbose_level: int = 0):
+    """Met à jour un environnement conda existant ou le crée s'il n'existe pas."""
     logger = manager.logger
-    ColoredOutput.print_section(f"Réinstallation complète de l'environnement '{env_name}' à partir de environment.yml")
-
-    # --- Stratégie d'utilisation de Mamba ---
-    # 1. Tenter de trouver mamba. C'est le choix préféré pour sa vitesse.
-    # 2. Si mamba n'est pas trouvé, se rabattre sur conda.
-    installer_exe = shutil.which("mamba.exe") or shutil.which("mamba")
-    installer_name = "mamba"
-
-    if installer_exe:
-        logger.info(f"🚀 Utilisation de Mamba pour une installation rapide : {installer_exe}")
-    else:
-        logger.info("Mamba non trouvé. Utilisation de l'exécutable Conda standard.")
-        installer_exe = manager._find_conda_executable()
-        installer_name = "conda"
-
-    if not installer_exe:
-        logger.critical(f"Impossible de trouver un exécutable ({installer_name} ou conda). La réinstallation ne peut pas continuer.")
-        safe_exit(1, logger)
-
     env_file_path = manager.project_root / 'environment.yml'
     if not env_file_path.exists():
         logger.critical(f"Fichier d'environnement non trouvé : {env_file_path}")
         safe_exit(1, logger)
 
-    logger.info(f"Lancement de la réinstallation depuis {env_file_path} avec {installer_name}...")
-    
-    # La commande est la même pour `conda env create` et `mamba env create`
-    create_command = [
-        installer_exe, 'env', 'create',
-        '--file', str(env_file_path),
-        '--name', env_name,
-        '--yes' # Accepter automatiquement toutes les confirmations
-    ]
+    installer_exe = shutil.which("mamba.exe") or shutil.which("mamba") or manager._find_conda_executable()
+    installer_name = "mamba" if "mamba" in str(installer_exe) else "conda"
+    logger.info(f"Utilisation de '{installer_name}' pour la gestion de l'environnement.")
 
-    if installer_name == 'conda':
-        create_command.append('--force')
+    if not installer_exe:
+        logger.critical("Ni mamba ni conda n'ont été trouvés. Impossible de continuer.")
+        safe_exit(1, logger)
 
-    if verbose_level > 0 and installer_name == 'conda': # Mamba gère différemment la verbosité
-        create_command.append(f"-{'v' * verbose_level}")
-        logger.info(f"Niveau de verbosité Conda activé : {verbose_level}")
+    env_exists = manager.check_conda_env_exists(env_name)
+
+    if env_exists:
+        ColoredOutput.print_section(f"Mise à jour de l'environnement '{env_name}' à partir de {env_file_path}")
+        command = [
+            installer_exe, 'env', 'update',
+            '--name', env_name,
+            '--file', str(env_file_path),
+            '--prune' # Supprime les paquets qui ne sont plus dans le yml
+        ]
+    else:
+        ColoredOutput.print_section(f"Création de l'environnement '{env_name}' à partir de {env_file_path}")
+        command = [
+            installer_exe, 'env', 'create',
+            '--name', env_name,
+            '--file', str(env_file_path)
+        ]
+
+    if verbose_level > 0 and installer_name == 'conda':
+        command.append(f"-{'v' * verbose_level}")
 
     try:
-        # La sortie est directement affichée sur la console pour un retour en temps réel.
         result = subprocess.run(
-            create_command,
-            text=True,
-            encoding='utf-8',
-            errors='replace',
-            check=False  # On gère le code de retour nous-mêmes
+            command, text=True, encoding='utf-8', errors='replace', check=False
         )
-        
         if result.returncode != 0:
-            logger.error(f"Échec de la création de l'environnement avec {installer_name}. Le log ci-dessus devrait contenir les détails.")
-            if installer_name == "conda":
-                logger.warning("Conda peut être très lent. L'installation de 'mamba' (`conda install mamba -n base -c conda-forge`) est fortement recommandée.")
+            logger.error(f"Échec de l'opération '{'update' if env_exists else 'create'}' avec {installer_name}.")
             safe_exit(1, logger)
-
     except (subprocess.SubprocessError, FileNotFoundError) as e:
-        logger.critical(f"Une erreur majeure est survenue lors de l'exécution de la commande {installer_name} : {e}")
+        logger.critical(f"Erreur majeure lors de l'exécution de {installer_name}: {e}")
         safe_exit(1, logger)
-    
-    logger.success(f"Environnement '{env_name}' recréé avec succès depuis {env_file_path} en utilisant {installer_name}.")
 
-    # S'assurer que les JARs de Tweety sont présents après la réinstallation
+    logger.success(f"Environnement '{env_name}' {'mis à jour' if env_exists else 'créé'} avec succès.")
+
+    # Validation post-op
     tweety_libs_dir = manager.project_root / "libs" / "tweety"
     logger.info(f"Vérification des JARs Tweety dans : {tweety_libs_dir}")
     if not download_tweety_jars(target_dir=str(tweety_libs_dir)):
-        logger.warning("Échec du téléchargement ou de la vérification des JARs Tweety. JPype pourrait échouer.")
+        logger.warning("Échec du téléchargement/vérification des JARs Tweety.")
     else:
         logger.success("Les JARs de Tweety sont présents ou ont été téléchargés.")
 
@@ -1260,13 +1249,30 @@ def main():
     # 3. Exécuter la commande (ou juste activer si aucune commande n'est fournie).
     command_to_run_final = args.command
         
-    # --- AJOUT: TENTATIVE DE CRÉATION AUTOMATIQUE SI MANQUANT ---
-    env_name_for_check = args.env_name or manager.default_conda_env
-    if not manager.check_conda_env_exists(env_name_for_check):
-        logger.warning(f"L'environnement '{env_name_for_check}' n'existe pas. Tentative de création automatique...")
-        reinstall_conda_environment(manager, env_name_for_check, verbose_level=args.conda_verbose_level)
-        logger.info("La création est terminée (succès ou échec). Le script va maintenant procéder à l'activation.")
-    # --- FIN DE L'AJOUT ---
+    # --- LOGIQUE DE MISE À JOUR OU CRÉATION D'ENVIRONNEMENT ---
+    # Priorité : 1. Nom en CLI, 2. 'projet-is' s'il existe, 3. 'epita_env' (valeur par défaut pour création)
+    env_name_cli = args.env_name
+    env_name_projet_is = "projet-is"
+    env_name_epita = "epita_env"
+
+    final_env_to_use = None
+    if env_name_cli:
+        final_env_to_use = env_name_cli
+        if not manager.check_conda_env_exists(final_env_to_use):
+             logger.warning(f"L'environnement '{final_env_to_use}' spécifié en CLI n'existe pas. Tentative de mise à jour/création...")
+             update_or_create_conda_environment(manager, final_env_to_use, verbose_level=args.conda_verbose_level)
+    elif manager.check_conda_env_exists(env_name_projet_is):
+        final_env_to_use = env_name_projet_is
+        logger.info(f"L'environnement existant '{final_env_to_use}' sera utilisé. Lancement de la mise à jour...")
+        update_or_create_conda_environment(manager, final_env_to_use, verbose_level=args.conda_verbose_level)
+    else:
+        final_env_to_use = env_name_epita
+        logger.warning(f"L'environnement '{env_name_projet_is}' n'a pas été trouvé. L'environnement '{final_env_to_use}' va être créé.")
+        update_or_create_conda_environment(manager, final_env_to_use, verbose_level=args.conda_verbose_level)
+    
+    logger.success(f"L'environnement '{final_env_to_use}' est prêt à être utilisé.")
+    env_name_for_check = final_env_to_use # S'assurer que le reste du script utilise le bon nom
+    # --- FIN DE LA LOGIQUE ---
 
     # 4. Gérer --get-command-only si présent
     if args.get_command_only:
@@ -1303,7 +1309,7 @@ def main():
     logger.info("Phase d'activation/exécution de commande...")
     exit_code = manager.activate_project_environment(
         command_to_run=command_to_run_final,
-        env_name=args.env_name or manager.default_conda_env # Utiliser le nom CLI ou fallback sur .env
+        env_name=env_name_for_check # Utiliser le nom d'environnement déterminé par la logique ci-dessus
     )
     
     if command_to_run_final:
