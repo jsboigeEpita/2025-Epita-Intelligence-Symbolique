@@ -226,4 +226,3 @@ class TestWatsonJTMSAgentRefactored:
         
         watson_agent.validator.get_validation_summary.assert_called_once()
         assert result == {"summary": "ok"}
->>>>>>> 773bd04cf82946a958824234bbc2c4194e35b587
