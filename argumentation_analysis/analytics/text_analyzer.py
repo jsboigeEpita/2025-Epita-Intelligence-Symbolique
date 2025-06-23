@@ -77,12 +77,14 @@ async def perform_text_analysis(text: str, services: Dict[str, Any], analysis_ty
 
     try:
         logger.info(f"Lancement de l'analyse principale (type: {analysis_type}) via run_analysis_conversation...")
-        result = await run_analysis_conversation(
+        await run_analysis_conversation(
             texte_a_analyser=text,
             llm_service=llm_service
         )
         logger.info(f"Analyse principale (type: '{analysis_type}') terminee avec succes (via run_analysis_conversation).")
-        return result
+        # Conformément à la docstring, la fonction ne retourne rien explicitement,
+        # les résultats étant gérés par logging ou d'autres mécanismes.
+        return None
 
     except Exception as e:
         logger.error(f" Erreur lors de l'analyse du texte (type: {analysis_type}): {e}", exc_info=True)

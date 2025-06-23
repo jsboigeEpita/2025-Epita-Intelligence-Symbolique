@@ -68,9 +68,9 @@ class EnvironmentManager:
         self.logger.info("  - KMP_DUPLICATE_LIB_OK='TRUE'")
         
         # 3. Clé API factice pour les tests
-        # 3. Clé API factice pour les tests
-        os.environ['OPENAI_API_KEY'] = 'dummy_key_for_testing_purposes'
-        self.logger.info("  - OPENAI_API_KEY='dummy_key_for_testing_purposes'")
+        # 3. Clé API factice pour les tests (maintenant gérée par la config pydantic)
+        # os.environ['OPENAI_API_KEY'] = 'dummy_key_for_testing_purposes'
+        # self.logger.info("  - OPENAI_API_KEY='dummy_key_for_testing_purposes'")
 
         self.logger.success("Variables d'environnement configurées.")
 

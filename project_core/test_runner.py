@@ -148,7 +148,7 @@ class TestRunner:
 
     def run(self):
         """Exécute le cycle de vie complet des tests."""
-        needs_services = self.test_type in ["functional", "e2e", "all"]
+        needs_services = self.test_type in ["functional", "e2e"]
 
         try:
             if needs_services:
