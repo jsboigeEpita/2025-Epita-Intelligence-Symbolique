@@ -29,290 +29,213 @@ param(
     [string]$CommandOutputFile = $null
 )
 
+#--------------------------------------------------------------------------------
+# Fonctions de base et utilitaires
+#--------------------------------------------------------------------------------
+
 # Fonction de logging simple
 function Write-Log {
     param(
         [string]$Message,
-        [string]$Level = "INFO"
+        [string]$Level = "INFO",
+        [System.Exception]$Exception = $null
     )
-    # On écrit tout sur le flux d'erreur (stderr) pour ne pas polluer le stdout
-    # qui est utilisé pour récupérer le résultat JSON des scripts Python.
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $logLine = "[$timestamp] [$Level] $Message"
+    if ($Exception) {
+        $logLine += " | Exception: $($Exception.Message)"
+    }
+    # Écrire sur le flux d'erreur pour ne pas interférer avec la sortie de commande
     $Host.UI.WriteErrorLine($logLine)
 }
 
-# Fonction pour trouver un exécutable Python robuste
-function Get-PythonExecutable {
-    $candidates = @("py", "python3", "python")
-    $StoreAppPath = [System.IO.Path]::Combine($env:LOCALAPPDATA, "Microsoft", "WindowsApps")
-
-    foreach ($candidate in $candidates) {
-        $executables = Get-Command $candidate -All -ErrorAction SilentlyContinue
-        if (-not $executables) {
-            continue
+# Fonction pour charger la configuration depuis le fichier .env
+function Get-ProjectConfiguration {
+    param([string]$EnvPath)
+    $config = @{}
+    if (-not (Test-Path $EnvPath)) {
+        throw "Fichier de configuration .env introuvable à l'adresse '$EnvPath'."
+    }
+    Get-Content $EnvPath | ForEach-Object {
+        if ($_ -match "^\s*#") { return } # Ignorer les commentaires
+        if ($_ -match "^(.+?)=(.+)") {
+            $key = $matches[1].Trim()
+            $value = $matches[2].Trim().Trim('"')
+            $config[$key] = $value
         }
+    }
+    Write-Log "Configuration chargée depuis '$EnvPath'." "DEBUG"
+    return $config
+}
 
-        # Itérer sur tous les exécutables trouvés pour ce candidat
-        foreach ($exec in $executables) {
-            try {
-                $path = $exec.Source
-                $resolvedPath = [System.IO.Path]::GetFullPath($path)
-                
-                # Vérifier si le chemin résolu n'est pas dans le dossier des applications du store
-                if ($IsWindows -and $resolvedPath.StartsWith($StoreAppPath, [System.StringComparison]::OrdinalIgnoreCase)) {
-                    Write-Log "Ignoré: Exécutable Python '$path' semble être un stub du Microsoft Store." "DEBUG"
-                    continue
-                }
+# Fonction pour trouver l'exécutable Python (simplifiée)
+function Get-PythonExecutable {
+    $executable = Get-Command -Name "python" -ErrorAction SilentlyContinue
+    if ($executable) {
+        $path = $executable.Source
+        Write-Log "Exécutable Python trouvé: $path"
+        return $path
+    }
+    throw "Aucun exécutable 'python' trouvé dans le PATH. Veuillez l'installer."
+}
 
-                Write-Log "Exécutable Python valide trouvé: $path"
-                return $path
-            } catch {
-                Write-Log "Erreur lors de la résolution du chemin pour '$($exec.Source)': $($_.Exception.Message)" "WARNING"
+#--------------------------------------------------------------------------------
+# Fonctions modulaires principales
+#--------------------------------------------------------------------------------
+
+# Valide les prérequis (Python, scripts essentiels)
+function Test-Prerequisites {
+    param(
+        [hashtable]$Config,
+        [string]$ProjectRoot
+    )
+    $Global:PythonExecutable = Get-PythonExecutable
+    $Config.Keys | ForEach-Object {
+        if ($_ -like "*_SCRIPT") {
+            $scriptPath = Join-Path $ProjectRoot $Config[$_]
+            if (-not (Test-Path $scriptPath)) {
+                throw "Script prérequis introuvable: $scriptPath"
             }
         }
     }
-
-    Write-Log "Aucun exécutable Python valide (non-stub) n'a été trouvé dans le PATH." "ERROR"
-    return $null
+    Write-Log "Prérequis validés." "SUCCESS"
 }
 
-# --- Début du Script ---
-$portManagerScript = Join-Path $PSScriptRoot "project_core/config/port_manager.py"
-$WebAppLauncherScript = Join-Path $PSScriptRoot "scripts/apps/webapp/launch_webapp_background.py"
-
-# Fonction pour récupérer le chemin Python de l'environnement Conda
-function Get-CondaEnvPythonPath {
+# Initialise l'environnement (variables, etc.)
+function Initialize-ProjectEnvironment {
     param(
         [string]$PythonExecutable,
-        [string]$ManagerScriptPath
+        [string]$PortManagerScript,
+        [string]$ProjectRoot
     )
+    Write-Log "Injection des variables d'environnement des ports..."
+    $portManagerFullPath = Join-Path $ProjectRoot $PortManagerScript
     try {
-        $condaPythonPath = & $PythonExecutable $ManagerScriptPath --get-python-path
-        # Le script Python renvoie le chemin sur stdout. On nettoie les espaces
-        $condaPythonPath = $condaPythonPath.Trim()
-
-        if ($LASTEXITCODE -ne 0 -or -not $condaPythonPath) {
-            Write-Log "Impossible de récupérer le chemin Python de l'environnement Conda." "WARNING"
-            return $null
-        }
-        
-        if (-not (Test-Path $condaPythonPath)) {
-            Write-Log "Le chemin Python retourné par le manager est invalide: $condaPythonPath" "WARNING"
-            return $null
-        }
-
-        Write-Log "Chemin Python de l'environnement Conda obtenu: $condaPythonPath" "DEBUG"
-        return $condaPythonPath
-    }
-    catch {
-        Write-Log "Erreur lors de l'appel à --get-python-path: $($_.Exception.Message)" "WARNING"
-        return $null
-    }
-}
-
-$cleanupTempFile = $false
-
-try {
-    # Gestion du fichier de sortie temporaire
-    if (-not $CommandOutputFile) {
-        $tempDir = Join-Path $PSScriptRoot ".temp"
-        if (-not (Test-Path $tempDir)) {
-            New-Item -ItemType Directory -Path $tempDir | Out-Null
-        }
-        $CommandOutputFile = Join-Path $tempDir "command_$([System.IO.Path]::GetRandomFileName()).tmp"
-        $cleanupTempFile = $true
-        Write-Log "Fichier de sortie auto-généré: $CommandOutputFile" "DEBUG"
-    }
-    # === 1. Configuration et Validation des chemins ===
-    Write-Log "Initialisation du script d'environnement."
-
-    $ProjectRoot = $PSScriptRoot
-    
-    # Sélection du script de gestion en fonction du mode de débogage
-    if ($DebugMode) {
-        Write-Log "Mode de débogage activé. Utilisation du gestionnaire d'environnement de débogage." "WARNING"
-        $PythonManagerModule = "project_core/core_from_scripts/environment_manager.debug.py"
-    } else {
-        $PythonManagerModule = "project_core/core_from_scripts/environment_manager.py"
-    }
-    
-    $PythonManagerScriptPath = Join-Path $ProjectRoot $PythonManagerModule
-
-    if (-not (Test-Path $PythonManagerScriptPath)) {
-        throw "Le script de gestion d'environnement Python est introuvable: $PythonManagerScriptPath"
-    }
-
-    # === 2. Détection de l'interpréteur Python ===
-    $PythonExecutable = Get-PythonExecutable
-    if (-not $PythonExecutable) {
-        throw "Python n'est pas installé ou non accessible. Veuillez l'installer et l'ajouter à votre PATH."
-    }
-    Write-Log "Utilisation de l'interpréteur: $PythonExecutable"
-
-    # === INJECTION DES VARIABLES D'ENV DES PORTS ===
-    Write-Log "Injection des variables d'environnement des ports..." "INFO"
-    if (-not (Test-Path $portManagerScript)) {
-        Write-Log "Script port_manager.py introuvable à: $portManagerScript" "ERROR"
-        exit 1
-    }
-    try {
-        $envVars = & $PythonExecutable $portManagerScript --export-env
+        $envVars = & $PythonExecutable $portManagerFullPath --export-env
         foreach ($line in $envVars) {
             if ($line -match "^(.+?)=(.+)$") {
                 $key = $matches[1]
                 $value = $matches[2]
                 Set-Item -Path "env:$key" -Value $value
-                Write-Log "Variable d'environnement injectée: $key=$value" "DEBUG"
+                Write-Log "Variable injectée: $key" "DEBUG"
             }
         }
-        Write-Log "Variables d'environnement des ports injectées avec succès." "SUCCESS"
-    } catch {
-        Write-Log "Échec de l'injection des variables d'environnement des ports : $($_.Exception.Message)" "ERROR"
-        exit 1
+        Write-Log "Variables d'environnement des ports injectées." "SUCCESS"
     }
+    catch {
+        throw "Échec de l'injection des variables d'environnement des ports."
+    }
+}
 
-    # === 3. Construction de la commande à exécuter ===
-    $FinalCommandToRun = $CommandToRun
-    
-    # Raccourci pour exécuter un script python directement
+# Construit la commande à exécuter
+function Build-Command {
+    param(
+        [string]$CommandToRun,
+        [string]$PythonScriptPath,
+        [string]$ProjectRoot
+    )
     if ($PythonScriptPath) {
-        $FullScriptPath = Join-Path $ProjectRoot $PythonScriptPath
-        if (-not (Test-Path $FullScriptPath)) {
-            throw "Le fichier Python spécifié via -PythonScriptPath est introuvable: $FullScriptPath"
+        $fullPath = Join-Path $ProjectRoot $PythonScriptPath
+        if (-not (Test-Path $fullPath)) {
+            throw "Le fichier Python spécifié via -PythonScriptPath est introuvable: $fullPath"
         }
-        # On met la commande entre guillemets pour gérer les espaces dans les chemins
-        $FinalCommandToRun = "$PythonExecutable `"$FullScriptPath`""
-        Write-Log "Commande à exécuter définie via -PythonScriptPath: $FinalCommandToRun"
+        return "$($Global:PythonExecutable) `"$fullPath`""
+    }
+    return $CommandToRun
+}
+
+# Invoque le gestionnaire Python pour activer l'environnement et exécuter la commande
+function Invoke-PythonManager {
+    param(
+        [hashtable]$Config,
+        [string]$Command,
+        [bool]$DebugMode,
+        [string]$ProjectRoot
+    )
+    if (-not $Command) {
+        Write-Log "Activation simple terminée. Aucune commande à exécuter." "SUCCESS"
+        return
     }
 
-    # [NOUVEAU] Traitement spécial pour Pytest
-    if ($FinalCommandToRun -and $FinalCommandToRun.TrimStart().StartsWith("pytest")) {
-        Write-Log "Détection de 'pytest'. Tentative de résolution de l'exécutable de l'environnement Conda." "INFO"
-        $condaPython = Get-CondaEnvPythonPath -PythonExecutable $PythonExecutable -ManagerScriptPath $PythonManagerScriptPath
-        if ($condaPython) {
-            # Remplace "pytest" par le chemin complet vers l'exécutable python en mode module
-            $arguments = $FinalCommandToRun.Substring("pytest".Length).Trim()
-            $FinalCommandToRun = "& '$condaPython' -m pytest $arguments" # Utilisation de l'opérateur d'appel & pour les chemins avec espaces
-            Write-Log "Commande 'pytest' transformée: $FinalCommandToRun" "INFO"
-        } else {
-            Write-Log "Impossible de résoudre le chemin de Python pour l'environnement Conda. 'pytest' sera exécuté avec la résolution par défaut du PATH, ce qui peut causer des erreurs." "WARNING"
+    $managerModule = if ($DebugMode) { $Config["DEBUG_MANAGER_MODULE"] } else { $Config["MANAGER_MODULE"] }
+    $managerPath = Join-Path $ProjectRoot $managerModule
+    if (-not (Test-Path $managerPath)) {
+        throw "Le script de gestion Python '$managerPath' est introuvable."
+    }
+
+    $managerArgs = @(
+        "--command", $Command,
+        "--conda-env-name", $Config["CONDA_ENV_NAME"],
+        "--verbose" # Simplifié pour toujours être verbeux
+    )
+
+    Write-Log "Invocation du gestionnaire Python: $managerPath"
+    try {
+        # Le script Python va maintenant gérer l'activation et l'exécution
+        & $Global:PythonExecutable $managerPath $managerArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "Le gestionnaire Python a échoué. Voir les logs ci-dessus."
+        }
+        Write-Log "Le gestionnaire Python a terminé avec succès." "SUCCESS"
+    }
+    catch {
+        throw "Erreur lors de l'invocation du gestionnaire Python."
+    }
+}
+
+# Nettoie les ressources (ports, etc.)
+function Clear-Resources {
+    param(
+        [string]$PortManagerScript,
+        [string]$ProjectRoot
+    )
+    if (-not $Global:PythonExecutable) {
+        Write-Log "Python non disponible, impossible de nettoyer les ressources." "WARNING"
+        return
+    }
+    $portManagerFullPath = Join-Path $ProjectRoot $PortManagerScript
+    if (Test-Path $portManagerFullPath) {
+        Write-Log "Nettoyage du verrouillage de port..."
+        & $Global:PythonExecutable $portManagerFullPath --unlock *>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Log "Verrouillage de port nettoyé." "SUCCESS"
+        }
+        else {
+            Write-Log "Échec du nettoyage du verrouillage de port." "WARNING"
         }
     }
-    
-    # === 4. Préparation des arguments pour le script Python manager ===
-    $ManagerArgs = @($PythonManagerScriptPath)
-    
-    if ($FinalCommandToRun) {
-        # Le script Python gère maintenant la décomposition des commandes si nécessaire
-        $ManagerArgs += "--command", $FinalCommandToRun
-        # On ajoute le nouvel argument pour seulement construire la commande
-        $ManagerArgs += "--get-command-only"
-    } else {
-         # Si pas de commande, on ne peut pas utiliser get-command-only.
-         # Le script s'arrête après l'activation simple.
-         Write-Log "Aucune commande à exécuter. Activation simple de l'environnement." "INFO"
-    }
+}
 
-    if ($EnableVerboseLogging) {
-        $ManagerArgs += "--verbose"
-    }
-    
-    if ($ForceReinstall) {
-        Write-Log "Option -ForceReinstall détectée. L'environnement Conda sera forcé à la réinstallation." "INFO"
-        $ManagerArgs += "--reinstall", "conda"
-    }
+#--------------------------------------------------------------------------------
+# Exécution principale
+#--------------------------------------------------------------------------------
 
-    if ($CondaVerboseLevel -gt 0) {
-        Write-Log "Niveau de verbosité Conda: $CondaVerboseLevel" "INFO"
-        $ManagerArgs += "--conda-verbose-level", $CondaVerboseLevel
-    }
-    
-    Write-Log "Arguments passés au manager Python: $($ManagerArgs -join ' ')" "DEBUG"
+$ProjectRoot = $PSScriptRoot
+$ErrorActionPreference = "Stop"
 
-   # === 5. Construction de la commande finale ===
-   # Le script n'exécute plus rien, il génère la commande pour le script appelant.
+try {
+    # Phase 1: Configuration
+    $envFilePath = Join-Path $ProjectRoot ".env"
+    $config = Get-ProjectConfiguration -EnvPath $envFilePath
 
-   # Si pas de commande spécifiée, le travail est déjà fait (variables d'env injectées)
-   if (-not $FinalCommandToRun) {
-       Write-Log "Activation simple terminée. Aucune commande à générer." "SUCCESS"
-       exit 0
-   }
-   
-   Write-Log "Génération de la commande d'exécution finale via le manager Python..."
+    # Phase 2: Prérequis
+    Test-Prerequisites -Config $config -ProjectRoot $ProjectRoot
 
-   # Appel du script Python, qui va maintenant écrire la commande finale sur stdout
-   # Le chemin du fichier de sortie est maintenant fourni par le paramètre -CommandOutputFile
-   $ManagerArgs += "--output-command-file", $CommandOutputFile
-   
-   # Exécuter le script Python. Les erreurs critiques iront sur stderr.
-   & $PythonExecutable $ManagerArgs
-   $exitCode = $LASTEXITCODE
+    # Phase 3: Initialisation
+    Initialize-ProjectEnvironment -PythonExecutable $Global:PythonExecutable -PortManagerScript $config["PORT_MANAGER_SCRIPT"] -ProjectRoot $ProjectRoot
 
-   if ($exitCode -ne 0) {
-       throw "Le script de génération de commande a échoué avec le code: $exitCode. Voir les logs d'erreur ci-dessus."
-   }
-   
-   if (-not (Test-Path $CommandOutputFile)) {
-       throw "Le fichier de sortie de commande '$CommandOutputFile' n'a pas été créé."
-   }
+    # Phase 4: Exécution
+    $command = Build-Command -CommandToRun $CommandToRun -PythonScriptPath $PythonScriptPath -ProjectRoot $ProjectRoot
+    Invoke-PythonManager -Config $config -Command $command -DebugMode $DebugMode -ProjectRoot $ProjectRoot
 
-   $FinalExecutableCommand = Get-Content $CommandOutputFile
-   if (-not $FinalExecutableCommand) {
-       throw "Le fichier de sortie de commande '$CommandOutputFile' est vide."
-   }
-   
-   # Écrire la commande finale sur la sortie standard pour que le script appelant la récupère
-   Write-Output $FinalExecutableCommand
-
-   # La gestion (création/suppression) du fichier est de la responsabilité de l'appelant.
-   
-   # Le script se termine ici. Le code de sortie de la commande sera géré par l'appelant.
-
-} catch {
-    # Capture toutes les erreurs (PowerShell ou `throw`)
-    Write-Log "Erreur critique dans le script $($MyInvocation.MyCommand.Name):" "ERROR"
-    Write-Log "Message: $($_.Exception.Message)" "ERROR"
-    # Endroit où l'erreur a eu lieu
-    $errorRecord = $_
-    $line = $errorRecord.InvocationInfo.ScriptLineNumber
-    $pos = $errorRecord.InvocationInfo.OffsetInLine
-    $scriptName = $errorRecord.InvocationInfo.ScriptName
-    Write-Log "Erreur à: $scriptName (Ligne: $line, Colonne: $pos)" "ERROR"
+}
+catch {
+    Write-Log "Une erreur critique est survenue." -Level "ERROR" -Exception $_.Exception
+    # Le bloc finally s'exécutera quand même
     exit 1
 }
 finally {
-    # Nettoyage du fichier de commande temporaire si auto-généré
-    if ($cleanupTempFile -and (Test-Path $CommandOutputFile)) {
-        try {
-            Remove-Item $CommandOutputFile -Force
-            Write-Log "Fichier de commande temporaire '$CommandOutputFile' supprimé." "DEBUG"
-        } catch {
-            Write-Log "Avertissement: Échec de la suppression du fichier temporaire '$CommandOutputFile'." "WARNING"
-        }
-    }
-
-    # Assurer le déverrouillage systématique du port
-    Write-Log "Nettoyage du verrouillage de port (finally)..." "INFO"
-    try {
-        & $PythonExecutable $portManagerScript --unlock *> $null
-        Write-Log "Verrouillage de port nettoyé." "SUCCESS"
-    } catch {
-        Write-Log "Avertissement: Échec du nettoyage du verrouillage de port. Un nettoyage manuel peut être requis." "WARNING"
-    }
-
-    # Et on s'assure que le serveur web est bien terminé
-    if ($LaunchWebApp) {
-        Write-Log "Arrêt du serveur web en arrière-plan (finally)..." "INFO"
-        try {
-            $killArgs = $ManagerArgs.Clone()
-            $killArgs += "--command", "$PythonExecutable `"$WebAppLauncherScript`" kill"
-            & $PythonExecutable $killArgs
-            Write-Log "Commande d'arrêt du serveur envoyée." "SUCCESS"
-        } catch {
-            Write-Log "Avertissement: Échec de l'envoi de la commande d'arrêt du serveur." "WARNING"
-        }
-    }
+    # Phase 5: Nettoyage
+    Clear-Resources -PortManagerScript $config["PORT_MANAGER_SCRIPT"] -ProjectRoot $ProjectRoot
+    Write-Log "Fin du script d'environnement." "DEBUG"
 }
-
-Write-Log "Fin du script d'environnement." "DEBUG"
