@@ -31,9 +31,9 @@
     .\run_tests.ps1 -Type unit
 #>
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory=$false)]
     [ValidateSet("unit", "functional", "e2e", "e2e-python", "all", "validation")]
-    [string]$Type,
+    [string]$Type = "all",
 
     [string]$Path,
 
@@ -162,7 +162,7 @@ else {
     }
 
     # Construire la liste d'arguments pour le test_runner.py
-    $runnerArgs = @( "python", $TestRunnerScript, "--type", $Type )
+    $runnerArgs = @( "python", "`"$TestRunnerScript`"", "--type", $Type )
     if ($PSBoundParameters.ContainsKey('Path') -and -not [string]::IsNullOrEmpty($Path)) {
         $runnerArgs += "--path", $Path
     }

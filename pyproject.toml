@@ -1,3 +1,7 @@
 [build-system]
 requires = ["setuptools>=61.0", "PyYAML", "psutil", "requests", "pydantic-settings"]
 build-backend = "setuptools.build_meta"
+[tool.pytest.ini_options]
+dotenv_files = [
+    ".env"
+]
