@@ -94,35 +94,40 @@ if ($DebugMode) {
    Write-Host "[INFO] Mode Débogage activé." -ForegroundColor Yellow
 }
 
-# Le script d'activation génère maintenant la commande finale sur sa sortie standard.
-# Les logs sont sur stderr, donc on peut capturer stdout sans être pollué.
-Write-Host "[INFO] Génération de la commande d'exécution via le script d'activation..."
-$FinalCommand = & $ActivationScript @activationArgs
+# Le script d'activation écrit la commande finale dans un fichier.
+# Créer le répertoire temporaire si nécessaire
+$TempDir = Join-Path $ProjectRoot ".temp"
+if (-not (Test-Path -Path $TempDir)) {
+    New-Item -ItemType Directory -Path $TempDir
+}
+$OutputFile = Join-Path $TempDir "final_command.txt"
+$activationArgs['CommandOutputFile'] = $OutputFile
+
+Write-Host "[INFO] Génération de la commande d'exécution via le script d'activation vers '$OutputFile'..."
+& $ActivationScript @activationArgs
 $exitCode = $LASTEXITCODE
 
 if ($exitCode -ne 0) {
    Write-Host "[ERREUR] Le script d'activation a échoué. Voir les logs ci-dessus." -ForegroundColor Red
+   if (Test-Path $OutputFile) { Remove-Item $OutputFile }
    exit $exitCode
 }
 
-if (-not $FinalCommand) {
-   Write-Host "[ERREUR] Le script d'activation n'a pas retourné de commande à exécuter." -ForegroundColor Red
+if (-not (Test-Path $OutputFile)) {
+    Write-Host "[ERREUR] Le script d'activation n'a pas généré le fichier de commande '$OutputFile'." -ForegroundColor Red
+    exit 1
+}
+
+$CommandString = Get-Content $OutputFile
+Remove-Item $OutputFile # Nettoyage
+
+if ([string]::IsNullOrWhiteSpace($CommandString)) {
+   Write-Host "[ERREUR] Le fichier de commande généré est vide." -ForegroundColor Red
    exit 1
 }
 
 Write-Host "[INFO] Commande finale à exécuter :" -ForegroundColor Green
-Write-Host $FinalCommand -ForegroundColor Green
-
-# Exécution de la commande générée. Invoke-Expression est nécessaire pour
-# interpréter correctement la chaîne de commande complexe retournée.
-# À ce stade, $FinalCommand peut contenir plusieurs lignes de sortie.
-# On ne garde que la ligne qui contient la commande python.exe
-$CommandString = $FinalCommand | Where-Object { $_ -like '*python.exe*' } | ForEach-Object { $_.Trim() }
-
-if (-not $CommandString) {
-   Write-Host "[ERREUR] Impossible d'isoler la commande d'exécution finale depuis la sortie du script d'activation." -ForegroundColor Red
-   exit 1
-}
+Write-Host $CommandString -ForegroundColor Green
 
 Invoke-Expression -Command $CommandString
 
