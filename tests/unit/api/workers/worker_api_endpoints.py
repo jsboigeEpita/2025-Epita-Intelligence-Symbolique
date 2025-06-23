@@ -4,26 +4,18 @@ from fastapi.testclient import TestClient
 from api.endpoints import framework_router, router as default_router
 from api.services import DungAnalysisService
 from unittest.mock import MagicMock
-import jpype
 from api.dependencies import get_dung_analysis_service
+from argumentation_analysis.core.jvm_setup import initialize_jvm
 
 def main():
     """
     Fonction principale du worker pour exécuter les tests d'API dans un processus isolé.
     """
-    # Démarrage de la JVM, comme le ferait l'ancienne fixture `integration_jvm`
-    # Note : Cela peut être simplifié ou ajusté si la fixture `run_in_jvm_subprocess`
-    # gère déjà le démarrage de manière adéquate.
-    try:
-        if not jpype.isJVMStarted():
-            # Le démarrage de la JVM est nécessaire pour simuler l'environnement du test original
-            jpype.startJVM(convertStrings=False)
-    except Exception as e:
-        print(f"Erreur lors du démarrage de la JVM: {e}")
-        # Selon la politique, on peut soit échouer soit continuer
-        # si le test ne dépend pas réellement de la logique Java (ce qui est le cas ici avec le mock)
-        pass
-
+    # Ce worker s'exécute dans un sous-processus et doit initialiser la JVM lui-même.
+    # Il utilise la fonction centralisée `initialize_jvm` pour garantir la cohérence.
+    if not initialize_jvm():
+        print("ERREUR CRITIQUE: Échec de l'initialisation de la JVM dans le worker.")
+        exit(1)
 
     test_app = FastAPI(title="Worker Test API")
 
@@ -38,7 +30,7 @@ def main():
     with TestClient(test_app) as client:
         # --- Test 1: Succès de l'analyse ---
         mock_response_success = {
-            "semantics": {
+            "extensions": {
                 "grounded": ["a", "c"], "preferred": [["a", "c"]], "stable": [["a", "c"]],
                 "complete": [["a", "c"]], "admissible": [["a", "c"], []], "ideal": ["a"],
                 "semi_stable": [["a", "c"]]
@@ -54,7 +46,8 @@ def main():
         request_data_success = {"arguments": ["a", "b", "c"], "attacks": [["a", "b"], ["b", "c"]]}
         response_success = client.post("/api/v1/framework/analyze", json=request_data_success)
         assert response_success.status_code == 200
-        assert response_success.json() == mock_response_success
+        # La réponse de l'API est imbriquée sous la clé "analysis"
+        assert response_success.json() == {"analysis": mock_response_success}
         print("Test 1 (Success) : OK")
 
         # --- Test 2: Entrée invalide ---
@@ -67,7 +60,7 @@ def main():
         # --- Test 3: Entrée vide ---
         mock_service.reset_mock()
         mock_response_empty = {
-            "semantics": {
+            "extensions": {
                 "grounded": [], "preferred": [[]], "stable": [[]], "complete": [[]],
                 "admissible": [[]], "ideal": [], "semi_stable": [[]]
             },
@@ -78,7 +71,7 @@ def main():
         request_data_empty = {"arguments": [], "attacks": []}
         response_empty = client.post("/api/v1/framework/analyze", json=request_data_empty)
         assert response_empty.status_code == 200
-        assert response_empty.json() == mock_response_empty
+        assert response_empty.json() == {"analysis": mock_response_empty}
         print("Test 3 (Empty Input) : OK")
 
 if __name__ == "__main__":
