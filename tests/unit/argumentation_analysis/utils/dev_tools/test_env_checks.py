@@ -425,47 +425,34 @@ def mock_file_operations_deps_fixture(unique_id_gen):
         # logging.debug(f"mock_file_operations_deps_fixture teardown (ID: {unique_id})")
 
 @pytest.fixture
-def mock_pkg_resources_deps_fixture(): # Renamed
-    pkg_resources_mock = mock.MagicMock(name="pkg_resources_module")
-    
-    # Store the original parse method to call it for non-custom cases
-    # This requires pkg_resources to be actually available in the test environment
-    # or a more sophisticated mock for Requirement.parse.
-    # For simplicity, we'll make a flexible mock here.
-    def mock_requirement_parse_impl(req_string):
-        mock_req = mock.MagicMock()
-        # Basic parsing for project_name
-        project_name_part = req_string.split("==")[0].split(">=")[0].split("<=")[0].split("!=")[0].split("~=")[0].split(";")[0].split("#")[0].strip()
-        mock_req.project_name = project_name_part
-        
-        specs = []
-        # Simplified specifier parsing
-        if "==" in req_string: specs.append(("==", req_string.split("==")[1].split(";")[0].split("#")[0].strip()))
-        elif ">=" in req_string: specs.append((">=", req_string.split(">=")[1].split(";")[0].split("#")[0].strip()))
-        # Add other operators as needed for more complex tests
-        mock_req.specs = specs
-        
-        from packaging.specifiers import SpecifierSet # Use a real SpecifierSet for robust testing
-        if specs:
+def mock_packaging_libs_fixture():
+    """Mocks the packaging library functions used in env_checks."""
+    # Since the real implementation is now used, we just need to ensure the module is available
+    # and mock its behavior for specific test cases if necessary.
+    # For most tests, using the real `packaging` library is fine.
+    # This fixture is a placeholder in case we need to mock it for specific error conditions.
+    with mock.patch('argumentation_analysis.utils.dev_tools.env_checks._parse_requirement') as mock_parse_req, \
+         mock.patch('argumentation_analysis.utils.dev_tools.env_checks._parse_version') as mock_parse_ver:
+        # Let's use the real Requirement class for robust testing, but mock for specific failures
+        from packaging.requirements import Requirement
+        from packaging.version import parse as parse_version
+
+        def _parse_req_side_effect(req_string):
+            # For most cases, use the real thing.
+            # Can be overridden in tests for specific failure cases.
             try:
-                # Attempt to create a valid specifier string
-                spec_str = ",".join(op + ver for op, ver in specs)
-                mock_req.specifier = SpecifierSet(spec_str)
-            except Exception: # Fallback for complex/invalid specifiers in this simplified mock
-                mock_req.specifier = SpecifierSet("") # Treat as no specifier if parsing fails
-        else:
-            mock_req.specifier = SpecifierSet("")
+                return Requirement(req_string)
+            except Exception as e:
+                # This allows tests for parsing failures to work as expected.
+                raise ValueError(f"Mocked parsing failure for '{req_string}'") from e
 
-        return mock_req
+        def _parse_ver_side_effect(ver_string):
+            return parse_version(ver_string)
 
-    pkg_resources_mock.Requirement.parse = mock.MagicMock(side_effect=mock_requirement_parse_impl)
-    
-    from packaging.version import parse as packaging_parse_version
-    pkg_resources_mock.parse_version = packaging_parse_version
-
-    with mock.patch('argumentation_analysis.utils.dev_tools.env_checks.pkg_resources', pkg_resources_mock) as patched_pkg_res:
-        # patched_pkg_res._original_parse_method = mock_requirement_parse_impl # Not needed if side_effect is robust
-        yield patched_pkg_res
+        mock_parse_req.side_effect = _parse_req_side_effect
+        mock_parse_ver.side_effect = _parse_ver_side_effect
+        
+        yield mock_parse_req, mock_parse_ver
 
 
 @pytest.fixture
@@ -483,16 +470,7 @@ def test_check_python_dependencies_file_not_found(mock_file_operations_deps_fixt
     assert check_python_dependencies(req_file_path_str) is False
     assert f"Le fichier de dépendances {req_file_path_str} n'a pas été trouvé." in caplog.text
 
-def test_check_python_dependencies_pkg_resources_unavailable(mock_file_operations_deps_fixture, caplog):
-    setup_mock_files, _, _ = mock_file_operations_deps_fixture
-    req_file_path_str = "dummy_reqs.txt"
-    setup_mock_files({req_file_path_str: {"exists": True, "is_file": True, "content": "requests==2.25.1"}})
-    
-    with mock.patch('argumentation_analysis.utils.dev_tools.env_checks.pkg_resources', None):
-        assert check_python_dependencies(req_file_path_str) is False
-        assert "pkg_resources n'est pas disponible. Impossible de parser le fichier de dépendances." in caplog.text
-
-def test_check_python_dependencies_empty_or_commented_file(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, caplog):
+def test_check_python_dependencies_empty_or_commented_file(mock_file_operations_deps_fixture, mock_packaging_libs_fixture, caplog):
     setup_mock_files, _, _ = mock_file_operations_deps_fixture
     req_file_path_str = "empty_reqs.txt"
     setup_mock_files({req_file_path_str: {"exists": True, "is_file": True, "content": "# A comment\n\n   \n"}})
@@ -500,7 +478,7 @@ def test_check_python_dependencies_empty_or_commented_file(mock_file_operations_
     assert check_python_dependencies(req_file_path_str) is True
     assert f"Le fichier de dépendances {req_file_path_str} est vide ou ne contient que des commentaires." in caplog.text
 
-def test_check_python_dependencies_all_ok(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, mock_importlib_metadata_deps_fixture, caplog):
+def test_check_python_dependencies_all_ok(mock_file_operations_deps_fixture, mock_packaging_libs_fixture, mock_importlib_metadata_deps_fixture, caplog):
     setup_mock_files, _, _ = mock_file_operations_deps_fixture
     req_file_path_str = "reqs.txt"
     requirements_content = "requests==2.25.1\nnumpy>=1.20.0\nflask # no version spec"
@@ -514,12 +492,12 @@ def test_check_python_dependencies_all_ok(mock_file_operations_deps_fixture, moc
     mock_importlib_metadata_deps_fixture.side_effect = version_side_effect
 
     assert check_python_dependencies(req_file_path_str) is True
-    assert "✅ requests: Version 2.25.1 installée satisfait ==2.25.1" in caplog.text
-    assert "✅ numpy: Version 1.21.0 installée satisfait >=1.20.0" in caplog.text
-    assert "✅ flask: Version 2.0.0 installée (aucune version spécifique requise)." in caplog.text
-    assert "✅ Toutes les dépendances Python du fichier sont satisfaites." in caplog.text
+    assert "[OK] requests: Version 2.25.1 installée satisfait ==2.25.1" in caplog.text
+    assert "[OK] numpy: Version 1.21.0 installée satisfait >=1.20.0" in caplog.text
+    assert "[OK] flask: Version 2.0.0 installée (aucune version spécifique requise)." in caplog.text
+    assert "[OK] Toutes les dépendances Python du fichier sont satisfaites." in caplog.text
 
-def test_check_python_dependencies_one_missing(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, mock_importlib_metadata_deps_fixture, caplog):
+def test_check_python_dependencies_one_missing(mock_file_operations_deps_fixture, mock_packaging_libs_fixture, mock_importlib_metadata_deps_fixture, caplog):
     setup_mock_files, _, _ = mock_file_operations_deps_fixture
     req_file_path_str = "reqs_missing.txt"
     requirements_content = "requests==2.25.1\nmissing_pkg==1.0.0"
@@ -532,11 +510,11 @@ def test_check_python_dependencies_one_missing(mock_file_operations_deps_fixture
     mock_importlib_metadata_deps_fixture.side_effect = version_side_effect
 
     assert check_python_dependencies(req_file_path_str) is False
-    assert "✅ requests: Version 2.25.1 installée satisfait ==2.25.1" in caplog.text
+    assert "[OK] requests: Version 2.25.1 installée satisfait ==2.25.1" in caplog.text
     assert "❌ missing_pkg: Non installé (requis: ==1.0.0)" in caplog.text
     assert "⚠️  Certaines dépendances Python du fichier ne sont pas satisfaites ou sont manquantes." in caplog.text
 
-def test_check_python_dependencies_version_mismatch(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, mock_importlib_metadata_deps_fixture, caplog):
+def test_check_python_dependencies_version_mismatch(mock_file_operations_deps_fixture, mock_packaging_libs_fixture, mock_importlib_metadata_deps_fixture, caplog):
     setup_mock_files, _, _ = mock_file_operations_deps_fixture
     req_file_path_str = "reqs_mismatch.txt"
     requirements_content = "numpy>=1.22.0"
@@ -548,81 +526,66 @@ def test_check_python_dependencies_version_mismatch(mock_file_operations_deps_fi
     assert "❌ numpy: Version 1.21.5 installée ne satisfait PAS >=1.22.0" in caplog.text
     assert "⚠️  Certaines dépendances Python du fichier ne sont pas satisfaites ou sont manquantes." in caplog.text
 
-def test_check_python_dependencies_parsing_error_heuristic_recovery(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, mock_importlib_metadata_deps_fixture, caplog):
+def test_check_python_dependencies_parsing_error_heuristic_recovery(mock_file_operations_deps_fixture, mock_packaging_libs_fixture, mock_importlib_metadata_deps_fixture, caplog):
     setup_mock_files, _, _ = mock_file_operations_deps_fixture
     req_file_path_str = "reqs_parse_error.txt"
-    requirements_content = "good_pkg==1.0\ncomplex_pkg [extra];python_version<'3.8' --hash=...\nanother_good==3.0"
+    requirements_content = "good_pkg==1.0\ncomplex_pkg [extra];python_version<'3.8'\nanother_good==3.0"
     setup_mock_files({req_file_path_str: {"exists": True, "is_file": True, "content": requirements_content}})
-    
-    original_parse_method_side_effect = mock_pkg_resources_deps_fixture.Requirement.parse.side_effect
 
-    complex_pkg_full_line = "complex_pkg [extra];python_version<'3.8' --hash=..."
-    complex_pkg_name_only = "complex_pkg"
-    
-    # Compteur pour suivre les appels à custom_parse_side_effect pour complex_pkg
-    # On le met dans un dictionnaire pour pouvoir le modifier dans la portée de la fonction interne
-    call_counts = {'complex_pkg_initial_parse_attempted': False}
-
-    first_parse_attempt_str_for_complex_pkg = "complex_pkg [extra]" # Ce que line_parts devient
+    mock_parse_req, _ = mock_packaging_libs_fixture
+    from packaging.requirements import Requirement, InvalidRequirement
 
     def custom_parse_side_effect(req_string):
-        print(f"DEBUG_TEST custom_parse_side_effect: Received req_string='{req_string}', first_attempt_str='{first_parse_attempt_str_for_complex_pkg}', initial_failed={call_counts['complex_pkg_initial_parse_attempted']}")
-        # Si c'est la première tentative de parser "complex_pkg [extra]"
-        if req_string.strip() == first_parse_attempt_str_for_complex_pkg and not call_counts['complex_pkg_initial_parse_attempted']:
-            call_counts['complex_pkg_initial_parse_attempted'] = True
-            print(f"DEBUG_TEST custom_parse_side_effect: Raising ValueError for '{req_string}' (initial attempt for complex_pkg [extra])")
-            # Correction du message d'erreur pour correspondre à l'assertion
-            raise ValueError("Mocked parsing error for complex_pkg line (initial attempt)")
-        
-        # Pour la tentative heuristique (nom seul) ou autres lignes, déléguer
-        print(f"DEBUG_TEST custom_parse_side_effect: Delegating '{req_string}' to original_parse_method_side_effect")
-        return original_parse_method_side_effect(req_string)
-
-    mock_pkg_resources_deps_fixture.Requirement.parse.side_effect = custom_parse_side_effect
+        if "complex_pkg" in req_string and "extra" in req_string:
+            raise InvalidRequirement("Mocked parsing error for complex extras")
+        return Requirement(req_string)
+    mock_parse_req.side_effect = custom_parse_side_effect
     
     def version_side_effect(package_name):
-        print(f"DEBUG_TEST version_side_effect: Called with package_name='{package_name}'")
         if package_name == "good_pkg": return "1.0"
-        if package_name == "complex_pkg": return "2.5" # Heuristic should find this
+        if package_name == "complex_pkg": return "2.5" # Found via heuristic
         if package_name == "another_good": return "3.0"
-        print(f"DEBUG_TEST version_side_effect: Raising PackageNotFoundError for '{package_name}'")
         raise importlib.metadata.PackageNotFoundError
     mock_importlib_metadata_deps_fixture.side_effect = version_side_effect
 
-    print("DEBUG_TEST: About to call check_python_dependencies")
-    result = check_python_dependencies(req_file_path_str)
-    print(f"DEBUG_TEST: check_python_dependencies returned: {result}")
-    print(f"DEBUG_TEST: caplog.text:\n{caplog.text}")
-
-    assert result is True
-    assert "Impossible de parser complètement la ligne 'complex_pkg [extra];python_version<'3.8' --hash=...' avec pkg_resources: Mocked parsing error for complex_pkg line (initial attempt). Tentative avec nom 'complex_pkg'." in caplog.text
-    # L'erreur "Impossible de parser ... même après heuristique" ne doit PAS apparaître
-    assert "Impossible de parser la ligne de dépendance 'complex_pkg [extra];python_version<'3.8' --hash=...' même après heuristique" not in caplog.text
-    assert "✅ complex_pkg: Version 2.5 installée (aucune version spécifique requise)." in caplog.text
-    assert "✅ Toutes les dépendances Python du fichier sont satisfaites." in caplog.text
+    # The overall check should be False because a version spec was lost
+    assert check_python_dependencies(req_file_path_str) is False
     
-    mock_pkg_resources_deps_fixture.Requirement.parse.side_effect = original_parse_method_side_effect # Restore
+    assert "Impossible de parser complètement la ligne 'complex_pkg [extra];python_version<'3.8'':" in caplog.text
+    assert "Tentative avec le nom 'complex_pkg'." in caplog.text
+    
+    # Check that it found the package heuristically but noted no specific version was checked.
+    assert "[OK] complex_pkg: Version 2.5 installée (aucune version spécifique requise)." in caplog.text
+    assert "[OK] good_pkg: Version 1.0 installée satisfait ==1.0" in caplog.text
+    assert "[OK] another_good: Version 3.0 installée satisfait ==3.0" in caplog.text
+    
+    # But the overall result is a warning because of the parsing issue.
+    assert "⚠️  Certaines dépendances Python du fichier ne sont pas satisfaites ou sont manquantes." in caplog.text
 
-def test_check_python_dependencies_parsing_error_unrecoverable(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, caplog):
+def test_check_python_dependencies_parsing_error_unrecoverable(mock_file_operations_deps_fixture, mock_packaging_libs_fixture, caplog):
     setup_mock_files, _, _ = mock_file_operations_deps_fixture
     req_file_path_str = "reqs_parse_error_hard.txt"
-    requirements_content = "good_pkg==1.0\n[] --invalid # This should fail parsing hard\nanother_good==3.0"
+    requirements_content = "good_pkg==1.0\n[] --invalid\nanother_good==3.0"
     setup_mock_files({req_file_path_str: {"exists": True, "is_file": True, "content": requirements_content}})
 
-    original_parse_method_side_effect = mock_pkg_resources_deps_fixture.Requirement.parse.side_effect
+    mock_parse_req, _ = mock_packaging_libs_fixture
+    from packaging.requirements import Requirement, InvalidRequirement
+
     def custom_parse_side_effect(req_string):
         if "[] --invalid" in req_string:
-            raise ValueError("Mocked parsing error for unrecoverable line")
-        return original_parse_method_side_effect(req_string)
-    mock_pkg_resources_deps_fixture.Requirement.parse.side_effect = custom_parse_side_effect
+            raise InvalidRequirement("Unrecoverable line")
+        # To test recovery failure, make the heuristic fail too
+        if req_string == "": # Heuristic might produce an empty string
+             raise InvalidRequirement("Cannot parse empty string")
+        return Requirement(req_string)
+    mock_parse_req.side_effect = custom_parse_side_effect
     
     assert check_python_dependencies(req_file_path_str) is False
-    assert "Impossible de parser la ligne de dépendance '[] --invalid'" in caplog.text
-    # assert "⚠️  Certaines dépendances Python du fichier ne sont pas satisfaites ou sont manquantes." in caplog.text # MODIFIÉ: Commenté
-    mock_pkg_resources_deps_fixture.Requirement.parse.side_effect = original_parse_method_side_effect # Restore
+    assert "Échec critique du parsing de la ligne '[] --invalid' même après heuristique" in caplog.text
+    assert "⚠️  Certaines dépendances Python du fichier ne sont pas satisfaites ou sont manquantes." in caplog.text
 
 
-def test_check_python_dependencies_ignored_lines(mock_file_operations_deps_fixture, mock_pkg_resources_deps_fixture, mock_importlib_metadata_deps_fixture, caplog):
+def test_check_python_dependencies_ignored_lines(mock_file_operations_deps_fixture, mock_packaging_libs_fixture, mock_importlib_metadata_deps_fixture, caplog):
     setup_mock_files, _, _ = mock_file_operations_deps_fixture
     req_file_path_str = "reqs_ignored.txt"
     requirements_content = (
@@ -639,9 +602,9 @@ def test_check_python_dependencies_ignored_lines(mock_file_operations_deps_fixtu
 
     assert check_python_dependencies(req_file_path_str) is True
     assert "Ligne ignorée (dépendance éditable/VCS) : -e git+https://github.com/user/repo.git#egg=editable_pkg" in caplog.text
-    assert "Ligne ignorée (inclusion d'un autre fichier) : -r another_file.txt # Comment after space" in caplog.text # MODIFIÉ
-    assert "✅ requests: Version 2.25.1 installée satisfait ==2.25.1" in caplog.text
-    assert "✅ Toutes les dépendances Python du fichier sont satisfaites." in caplog.text
+    assert "Ligne ignorée (inclusion d'un autre fichier) : -r another_file.txt" in caplog.text
+    assert "[OK] requests: Version 2.25.1 installée satisfait ==2.25.1" in caplog.text
+    assert "[OK] Toutes les dépendances Python du fichier sont satisfaites." in caplog.text
 
 # Need to import builtins for mocking __import__
 import builtins # This was missing, ensure it's at the top or correctly scoped if used in tests.
