@@ -58,6 +58,33 @@ def mock_dataset_manager(mock_cluedo_dataset: CluedoDataset) -> DatasetAccessMan
     return manager
 
 
+@pytest.fixture
+def mock_cluedo_dataset_manager(mock_cluedo_dataset: CluedoDataset) -> CluedoDatasetManager:
+    """Fournit un CluedoDatasetManager mocké."""
+    manager = Mock(spec=CluedoDatasetManager)
+    manager.dataset = mock_cluedo_dataset
+    # Mock des méthodes spécifiques si nécessaire, pour l'instant un mock de base suffit.
+    manager.validate_cluedo_suggestion = AsyncMock(return_value=OracleResponse(authorized=True, can_refute=True))
+    return manager
+
+
+@pytest.fixture
+def mock_cluedo_dataset_manager(mock_cluedo_dataset: CluedoDataset) -> CluedoDatasetManager:
+    """Fournit un CluedoDatasetManager mocké."""
+    manager = Mock(spec=CluedoDatasetManager)
+    manager.dataset = mock_cluedo_dataset
+    
+    # Préparer une réponse correcte pour les mocks
+    validation_res = ValidationResult(can_refute=True, suggestion_valid=True, authorized=True)
+    response = OracleResponse(authorized=True, data=validation_res)
+    
+    manager.validate_cluedo_suggestion = AsyncMock(return_value=response)
+    manager.execute_oracle_query = AsyncMock(return_value=response) # Assurer la cohérence
+    manager.check_permission = AsyncMock(return_value=True)
+    
+    return manager
+
+
 # --- Tests consolidés pour OracleBaseAgent ---
 
 class TestConsolidatedOracleAgentBehavior:
@@ -120,10 +147,14 @@ class TestConsolidatedOracleAgentBehavior:
 class TestConsolidatedMoriartyAgentBehavior:
 
     @pytest.fixture
-    def moriarty_agent(self, mock_kernel: Kernel, mock_cluedo_dataset: CluedoDataset) -> MoriartyInterrogatorAgent:
+    def moriarty_agent(self, mock_kernel: Kernel, mock_cluedo_dataset_manager: CluedoDatasetManager) -> MoriartyInterrogatorAgent:
         """Fournit une instance de MoriartyInterrogatorAgent."""
-        with patch('argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent.CluedoDatasetManager'):
-            return MoriartyInterrogatorAgent(kernel=mock_kernel, cluedo_dataset=mock_cluedo_dataset, game_strategy="balanced", agent_name="TestMoriarty")
+        return MoriartyInterrogatorAgent(
+            kernel=mock_kernel,
+            dataset_manager=mock_cluedo_dataset_manager,
+            game_strategy="balanced",
+            agent_name="TestMoriarty"
+        )
 
     def test_moriarty_initialization(self, moriarty_agent: MoriartyInterrogatorAgent):
         """Teste l'initialisation de l'agent Moriarty."""
@@ -136,14 +167,13 @@ class TestConsolidatedMoriartyAgentBehavior:
         # La présence d'un `dataset_manager` initialisé est un bon indicateur.
         assert hasattr(moriarty_agent, 'dataset_manager') and moriarty_agent.dataset_manager is not None
 
-    def test_strategy_adaptation(self, mock_kernel, mock_cluedo_dataset):
+    def test_strategy_adaptation(self, mock_kernel, mock_cluedo_dataset_manager):
         """Teste l'adaptation du comportement selon la stratégie de jeu."""
-        with patch('argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent.CluedoDatasetManager'):
-            coop_agent = MoriartyInterrogatorAgent(mock_kernel, mock_cluedo_dataset, "cooperative", "CoopMoriarty")
-            comp_agent = MoriartyInterrogatorAgent(mock_kernel, mock_cluedo_dataset, "competitive", "CompMoriarty")
+        coop_agent = MoriartyInterrogatorAgent(mock_kernel, mock_cluedo_dataset_manager, "cooperative", "CoopMoriarty")
+        comp_agent = MoriartyInterrogatorAgent(mock_kernel, mock_cluedo_dataset_manager, "competitive", "CompMoriarty")
 
-            assert coop_agent.game_strategy == "cooperative"
-            assert comp_agent.game_strategy == "competitive"
+        assert coop_agent.game_strategy == "cooperative"
+        assert comp_agent.game_strategy == "competitive"
 
 
 # --- Tests basés sur les scénarios de dialogue (depuis test_oracle_behavior_simple.py) ---

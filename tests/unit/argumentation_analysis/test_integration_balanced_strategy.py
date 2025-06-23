@@ -15,7 +15,8 @@ import logging
 
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.contents.utils.author_role import AuthorRole
+# Correction de l'importation de AuthorRole suite à la refactorisation de semantic-kernel
+from semantic_kernel.contents import ChatMessageContent, AuthorRole
 from semantic_kernel.agents import Agent, AgentGroupChat
 
 # Utiliser la fonction setup_import_paths pour résoudre les problèmes d'imports relatifs

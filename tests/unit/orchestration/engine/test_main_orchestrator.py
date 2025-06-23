@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, patch, ANY, call
+from unittest.mock import MagicMock, patch, ANY, call, AsyncMock
 from argumentation_analysis.orchestration.engine.main_orchestrator import MainOrchestrator
 from argumentation_analysis.orchestration.engine.config import OrchestrationConfig
 from argumentation_analysis.orchestration.engine.strategy import OrchestrationStrategy
@@ -29,7 +29,7 @@ async def test_run_analysis_selects_and_executes_correct_strategy(mock_select_st
     mock_select_strategy.return_value = test_strategy
     
     # On mock la méthode d'exécution spécifique qui devrait être appelée
-    with patch.object(orchestrator, '_execute_hierarchical_full', new_callable=MagicMock) as mock_execute:
+    with patch.object(orchestrator, '_execute_hierarchical_full', new_callable=AsyncMock) as mock_execute:
         mock_execute.return_value = {"status": "success", "strategy_used": test_strategy.value}
         
         # Appel de la méthode à tester
@@ -71,7 +71,7 @@ async def test_run_analysis_routes_to_all_strategies(mock_select_strategy, strat
     mock_select_strategy.return_value = strategy
     
     # On mock la méthode d'exécution qui devrait être appelée pour la stratégie en cours
-    with patch.object(orchestrator, method_name, new_callable=MagicMock) as mock_execute_method:
+    with patch.object(orchestrator, method_name, new_callable=AsyncMock) as mock_execute_method:
         mock_execute_method.return_value = {"status": "success", "strategy_used": strategy.value}
         
         text_input = f"Input for {strategy.name}"

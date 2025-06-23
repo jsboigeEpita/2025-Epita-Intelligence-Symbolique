@@ -16,7 +16,8 @@ from unittest.mock import MagicMock, AsyncMock, patch
 
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.contents.utils.author_role import AuthorRole
+# Correction de l'importation de AuthorRole suite à la refactorisation de semantic-kernel
+from semantic_kernel.contents import ChatMessageContent, AuthorRole
 from semantic_kernel.agents import Agent, AgentGroupChat
 
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
