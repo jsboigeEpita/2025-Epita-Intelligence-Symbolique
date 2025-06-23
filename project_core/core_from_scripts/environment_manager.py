@@ -76,24 +76,62 @@ class EnvironmentManager:
 
     def run_command(self, command: List[str]) -> int:
         """
-        Exécute une commande en tant que sous-processus.
+        Exécute une commande en tant que sous-processus et redirige la sortie vers des fichiers logs
+        pour analyse post-exécution, afin de contourner les problèmes de blocage du streaming.
         """
         if not command:
             self.logger.error("Aucune commande à exécuter.")
             return 1
+
+        command_str = ' '.join(command)
+        self.logger.info(f"Exécution de la commande: {command_str}")
         
-        self.logger.info(f"Exécution de la commande: {' '.join(command)}")
+        env = os.environ.copy()
+        env['CONDA_VERBOSITY'] = '3'
+        env['PYTHONUNBUFFERED'] = '1'
+
+        stdout_log_path = self.project_root / "conda_stdout.log"
+        stderr_log_path = self.project_root / "conda_stderr.log"
+
         try:
-            # `shell=False` est plus sûr. Les arguments sont passés en liste.
-            result = subprocess.run(command, check=False)
-            self.logger.info(f"La commande s'est terminée avec le code de sortie: {result.returncode}")
-            return result.returncode
+            with open(stdout_log_path, 'w', encoding='utf-8') as f_stdout, \
+                 open(stderr_log_path, 'w', encoding='utf-8') as f_stderr:
+
+                # Utilisation de subprocess.run avec un timeout pour éviter le blocage infini.
+                # shell=True est nécessaire pour l'environnement conda sur Windows.
+                process_result = subprocess.run(
+                    command_str,
+                    stdout=f_stdout,
+                    stderr=f_stderr,
+                    env=env,
+                    shell=True,
+                    timeout=300  # Timeout de 5 minutes
+                )
+                returncode = process_result.returncode
+                self.logger.info(f"Commande terminée avec le code de sortie: {returncode}")
+
+        except subprocess.TimeoutExpired:
+            self.logger.error("La commande a expiré (timeout de 5 minutes).")
+            returncode = -1 # Code de sortie spécifique pour le timeout
         except FileNotFoundError:
             self.logger.error(f"Commande non trouvée: '{command[0]}'. Vérifiez que l'exécutable est dans le PATH.")
             return 1
         except Exception as e:
             self.logger.error(f"Une erreur est survenue lors de l'exécution de la commande: {e}")
             return 1
+        finally:
+            # Toujours afficher le contenu des logs, même en cas de timeout ou d'erreur
+            self.logger.info("--- Contenu du log de sortie (stdout) ---")
+            if stdout_log_path.exists():
+                with open(stdout_log_path, 'r', encoding='utf-8') as f:
+                    self.logger.info(f.read())
+            
+            self.logger.info("--- Contenu du log d'erreur (stderr) ---")
+            if stderr_log_path.exists():
+                 with open(stderr_log_path, 'r', encoding='utf-8') as f:
+                    self.logger.error(f.read())
+        
+        return returncode
 
     def _warn_obsolete(self, method_name: str):
         """Avertit qu'une méthode appelée est obsolète."""
