@@ -13,6 +13,7 @@ Utilisation :
 """
 
 import argparse
+import os
 import subprocess
 import socket
 import sys
@@ -207,11 +208,18 @@ class TestRunner:
         _log(f"Lancement de pytest avec la commande: {' '.join(command)}")
         _log(f"Répertoire de travail: {ROOT_DIR}")
 
+        # Définir l'environnement pour le sous-processus
+        env = os.environ.copy()
+        if self.test_type == "unit" or self.test_type == "all":
+            _log("Activation du contournement de la JVM via la variable d'environnement SKIP_JVM_TESTS.")
+            env["SKIP_JVM_TESTS"] = "1"
+
         process = subprocess.run(
             command,
             cwd=ROOT_DIR,
             text=True,
-            encoding='utf-8'
+            encoding='utf-8',
+            env=env
         )
 
         if process.returncode != 0:

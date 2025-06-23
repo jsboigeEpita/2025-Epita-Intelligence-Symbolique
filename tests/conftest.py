@@ -271,3 +271,31 @@ def jvm_session():
     if jpype.isJVMStarted():
         print("\n[JVM Fixture] Arrêt de la JVM à la fin de la session.")
         jpype.shutdownJVM()
+@pytest.fixture(autouse=True)
+def skip_jvm_tests(monkeypatch):
+    """
+    Patche automatiquement les composants dépendant de la JVM si la variable
+    d'environnement SKIP_JVM_TESTS est définie.
+    """
+    if os.getenv("SKIP_JVM_TESTS"):
+        # Remplacer les classes qui déclenchent le démarrage de la JVM par des Mocks
+        # Patch dans le module où la classe est définie
+        monkeypatch.setattr(
+            "argumentation_analysis.agents.core.logic.watson_logic_assistant.WatsonLogicAssistant",
+            MagicMock()
+        )
+        monkeypatch.setattr(
+            "argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent.MoriartyInterrogatorAgent",
+            MagicMock()
+        )
+        # Patch dans les modules où la classe est importée et utilisée
+        monkeypatch.setattr(
+            "argumentation_analysis.orchestration.cluedo_extended_orchestrator.WatsonLogicAssistant",
+            MagicMock(),
+            raising=False # Ne pas lever d'erreur si l'attribut n'existe pas
+        )
+        monkeypatch.setattr(
+            "argumentation_analysis.orchestration.cluedo_extended_orchestrator.MoriartyInterrogatorAgent",
+            MagicMock(),
+            raising=False # Ne pas lever d'erreur si l'attribut n'existe pas
+        )

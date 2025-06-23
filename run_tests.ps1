@@ -179,6 +179,7 @@ else {
     Write-Host "[INFO] Commande à exécuter : $CommandToRun" -ForegroundColor Cyan
     
     # Exécuter la commande via le script d'activation
+    # Exécuter la commande via le script d'activation
     & $ActivationScript -CommandToRun $CommandToRun
     $exitCode = $LASTEXITCODE
     
