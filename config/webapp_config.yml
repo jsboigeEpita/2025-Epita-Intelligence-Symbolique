@@ -49,7 +49,8 @@ frontend:
   
   # Chemin et configuration
   path: "services/web_api/interface-web-argumentative"
-  port: 3000
+  start_port: 3000
+  fallback_ports: [3001, 3002]
   start_command: "npm start"
   timeout_seconds: 90
   

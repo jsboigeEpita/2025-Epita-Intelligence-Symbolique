@@ -274,7 +274,7 @@ class UnifiedWebOrchestrator:
             # 3. Démarrage frontend (optionnel)
             frontend_enabled = frontend_enabled if frontend_enabled is not None else self.config['frontend']['enabled']
             if frontend_enabled:
-                await self._start_frontend()
+                await self._start_frontend(frontend_enabled)
             
             # 4. Validation des services
             if not await self._validate_services():
@@ -456,9 +456,12 @@ class UnifiedWebOrchestrator:
             self.add_trace("[ERROR] ECHEC BACKEND", result['error'], "", status="error")
             return False
     
-    async def _start_frontend(self) -> bool:
+    async def _start_frontend(self, force_start: bool = False) -> bool:
         """Démarre le frontend React"""
-        if not self.config['frontend']['enabled']:
+        # La condition de démarrage prend en compte la configuration ET le flag de forçage
+        should_start = self.config['frontend'].get('enabled', False) or force_start
+        if not should_start:
+            self.add_trace("[FRONTEND] DEMARRAGE IGNORE", "Frontend désactivé dans la configuration et non forcé.", status="success")
             return True
             
         self.add_trace("[FRONTEND] DEMARRAGE FRONTEND", "Lancement interface React")

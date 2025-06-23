@@ -209,4 +209,4 @@ class InformalAgent:
 
 
 # Alias pour compatibilité
-InformalAnalysisAgent = InformalAgent
+# InformalAnalysisAgent = InformalAgent

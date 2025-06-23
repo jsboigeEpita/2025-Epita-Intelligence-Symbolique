@@ -233,20 +233,38 @@ class SherlockEnqueteAgent(BaseAgent):
         self._llm_service_id = llm_service_id
 
     async def get_response(self, user_input: str, chat_history: Optional[ChatHistory] = None) -> AsyncGenerator[str, None]:
-        """Génère une réponse pour une entrée donnée."""
+        """Génère une réponse pour une entrée donnée en utilisant une fonction de chat à la volée."""
         self.logger.info(f"[{self.name}] Récupération de la réponse pour l'entrée: {user_input}")
-        
+
         history = chat_history or ChatHistory()
         history.add_user_message(user_input)
-        
+
         try:
-            execution_settings = OpenAIPromptExecutionSettings(service_id=self._service_id, tool_choice="auto")
-            
-            async for message in self._kernel.invoke_stream(
-                plugin_name="SherlockAgentPlugin",
+            # Création de la fonction de chat ad-hoc, comme dans `invoke_single`
+            prompt_config = PromptTemplateConfig(
+                template="{{$chat_history}}",
+                name="chat",
+                template_format="semantic-kernel",
+                execution_settings={
+                    self._service_id: OpenAIPromptExecutionSettings(
+                        service_id=self._service_id,
+                        ai_model_id=self._kernel.get_service(self._service_id).ai_model_id,
+                        max_tokens=2000,
+                        temperature=0.7,
+                        top_p=0.8,
+                        tool_choice="auto"
+                    )
+                }
+            )
+            chat_function = self._kernel.create_function_from_prompt(
                 function_name="chat",
-                arguments=KernelArguments(chat_history=history, execution_settings=execution_settings)
-            ):
+                plugin_name="SherlockAgentPluginTemp", # Utilise un nom de plugin temporaire pour éviter les conflits
+                prompt_template_config=prompt_config
+            )
+
+            # Invocation du stream sur la fonction nouvellement créée
+            arguments = KernelArguments(chat_history=history)
+            async for message in self._kernel.invoke_stream(chat_function, arguments=arguments):
                 yield str(message[0])
 
         except Exception as e:

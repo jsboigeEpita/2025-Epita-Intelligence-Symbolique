@@ -16,6 +16,7 @@ import sys
 import time
 import logging
 import psutil
+import socket
 from typing import List, Dict, Set, Any
 from pathlib import Path
 
@@ -218,15 +219,25 @@ class ProcessCleaner:
             self.logger.info("Tous les ports libérés")
     
     def _is_port_occupied(self, port: int) -> bool:
-        """Vérifie si un port est occupé"""
+        """Vérifie si un port est occupé en mode LISTEN."""
+        # Logique Windows spécifique utilisant netstat pour la robustesse
+        if sys.platform == "win32":
+            try:
+                cmd = f'netstat -aon | findstr ":{port}" | findstr "LISTENING"'
+                result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=False)
+                return bool(result.stdout.strip())
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                # Fallback sur psutil si netstat échoue
+                pass
+        
+        # Logique pour Unix et fallback pour Windows
         try:
-            for conn in psutil.net_connections():
-                if (hasattr(conn, 'laddr') and conn.laddr and 
-                    conn.laddr.port == port and 
-                    conn.status == psutil.CONN_LISTEN):
+            for conn in psutil.net_connections(kind='inet'):
+                if conn.laddr and conn.laddr.port == port and conn.status == psutil.CONN_LISTEN:
                     return True
-        except (psutil.AccessDenied, AttributeError):
+        except (psutil.AccessDenied, psutil.NoSuchProcess):
             pass
+            
         return False
     
     async def _cleanup_temp_files(self):
@@ -298,18 +309,60 @@ class ProcessCleaner:
             # Approche 2: Commande système (plus lente mais plus fiable)
             if sys.platform == "win32":
                 try:
-                    result = subprocess.run(['netstat', '-aon'], capture_output=True, text=True, check=False, encoding='utf-8', errors='ignore')
-                    lines = result.stdout.splitlines() if result.stdout else []
-                    for line in lines:
-                        if 'LISTENING' in line:
-                            for port in ports:
-                                if f":{port}" in line.split()[1]:
-                                    try:
-                                        pid = int(line.split()[-1])
-                                        if pid > 0: pids_to_kill.add(pid)
-                                    except (ValueError, IndexError):
-                                        pass # Ignorer les lignes mal formées
-                                    break
+                    try:
+                        netstat_cmd = ['netstat', '-aon']
+                        result = subprocess.run(netstat_cmd, capture_output=True, text=True, check=True, encoding='utf-8', errors='ignore')
+                        lines = result.stdout.splitlines()
+                        for line in lines:
+                            if 'LISTENING' in line:
+                                for port in ports:
+                                    # La comparaison est rendue plus stricte pour éviter les correspondances partielles (ex: 3000 vs 13000)
+                                    if line.strip().startswith('TCP') and f":{port}" in line.split()[1]:
+                                        try:
+                                            pid = int(line.split()[-1])
+                                            if pid > 0:
+                                                pids_to_kill.add(pid)
+                                        except (ValueError, IndexError):
+                                            continue
+                    except (subprocess.CalledProcessError, FileNotFoundError, IndexError) as e:
+                        self.logger.error(f"[Erreur Netstat] Impossible d'exécuter netstat : {e}")
+
+                    # Ajout d'une méthode de terminaison plus agressive pour Windows,
+                    # directement après avoir collecté les PIDs.
+                    if pids_to_kill:
+                        self.logger.info(f"[Windows Kill] Tentative de terminaison forcée pour les PIDs: {list(pids_to_kill)}")
+                        for pid in list(pids_to_kill):
+                            try:
+                                # Tenter de tuer l'arbre de processus complet (/T) et de forcer la terminaison (/F)
+                                kill_cmd = ['taskkill', '/F', '/T', '/PID', str(pid)]
+                                self.logger.info(f"  > Exécution de: {' '.join(kill_cmd)}")
+                                
+                                kill_result = subprocess.run(
+                                    kill_cmd,
+                                    capture_output=True,
+                                    text=True,
+                                    check=False,
+                                    encoding='utf-8',
+                                    errors='ignore'
+                                )
+                                
+                                # Log systématique pour le diagnostic
+                                if kill_result.stdout:
+                                    self.logger.info(f"    - STDOUT: {kill_result.stdout.strip()}")
+                                if kill_result.stderr:
+                                    # Éviter de logger les erreurs "process not found" comme des échecs critiques
+                                    if "process with pid" in kill_result.stderr.lower() and "not found" in kill_result.stderr.lower():
+                                        self.logger.info(f"    - STDERR (Not found, normal): {kill_result.stderr.strip()}")
+                                    else:
+                                        self.logger.warning(f"    - STDERR: {kill_result.stderr.strip()}")
+
+                                if kill_result.returncode == 0:
+                                    self.logger.info(f"  > Succès: Commande taskkill terminée pour PID {pid}.")
+                                else:
+                                    self.logger.warning(f"  > Avertissement: taskkill pour PID {pid} a retourné le code {kill_result.returncode}.")
+
+                            except Exception as e:
+                                self.logger.error(f"  > Erreur: Exception majeure lors de l'exécution de taskkill pour PID {pid}: {e}")
                 except (subprocess.CalledProcessError, FileNotFoundError) as e:
                     self.logger.error(f"[Tentative {attempt+1}] Erreur netstat: {e}")
             else:  # Pour Linux/macOS
@@ -333,9 +386,35 @@ class ProcessCleaner:
                 else:
                      self.logger.warning(f"[Tentative {attempt+1}] Ports {still_occupied} occupés mais PIDs non identifiables. Nouvelle tentative...")
             
-            if pids_to_kill:
+            # La logique de cleanup_by_pid est maintenant remplacée par l'appel direct à taskkill
+            # juste au-dessus. Nous laissons le reste de la boucle pour la vérification.
+            if pids_to_kill and sys.platform != "win32": # Ne s'applique plus à Windows
                 self.logger.info(f"[Tentative {attempt+1}] PIDs à tuer: {list(pids_to_kill)}")
                 self.cleanup_by_pid(list(pids_to_kill))
+
+            # --- NOUVELLE STRATÉGIE: VERROUILLAGE PAR SOCKET ---
+            # Tenter de verrouiller les ports qui semblent libres pour contrer les redémarrages fantômes.
+            ports_to_check = list(ports) # On travaille sur une copie
+            for port in ports_to_check:
+                if not self._is_port_occupied(port):
+                    try:
+                        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                            s.bind(('127.0.0.1', port))
+                            self.logger.info(f"  > [Socket Lock] Succès: Port {port} verrouillé temporairement.")
+                            # On a réussi, le port est considéré comme propre.
+                            # On retire le port de la liste de ceux à nettoyer.
+                            if port in ports:
+                                ports.remove(port)
+                    except OSError as e:
+                        # Si le bind échoue, c'est que la race condition a eu lieu.
+                        self.logger.warning(f"  > [Socket Lock] ÉCHEC: Port {port} repris avant verrouillage. Erreur: {e}")
+                    except Exception as e:
+                        self.logger.error(f"  > [Socket Lock] Erreur inattendue au verrouillage du port {port}: {e}")
+
+            if not ports: # Si on a réussi à nettoyer tous les ports
+                 self.logger.info(f"Succès. Tous les ports ciblés sont libres après {attempt + 1} tentative(s).")
+                 return
 
             # Attendre avant la prochaine vérification
             self.logger.info(f"Attente de {delay}s avant la prochaine vérification...")

@@ -177,14 +177,48 @@ class FrontendManager:
                 self.logger.error(f"Erreur npm install: {e}")
     
     def _get_frontend_env(self, port: int) -> Dict[str, str]:
-        """Prépare l'environnement pour le frontend avec un port dynamique."""
+        """
+        Prépare un environnement isolé pour le frontend.
+        Ceci est CRUCIAL pour éviter les conflits avec les installations globales de Node.js.
+        Nous construisons un PATH qui priorise notre environnement portable.
+        """
         env = os.environ.copy()
+
+        # 1. Obtenir la racine du projet pour construire les chemins relatifs
+        project_root = Path(__file__).resolve().parents[3]
+        
+        # 2. Définir les chemins vers les outils portables (Node.js, etc.)
+        # Ces chemins pourraient être lus depuis une configuration plus globale à l'avenir.
+        # Corrigé: les outils portables sont dans 'libs', pas 'env'
+        portable_node_path = project_root / "libs" / "node-v20.14.0-win-x64"
+        
+        # 3. Construire la variable PATH
+        # On met le chemin de Node portable en PREMIER pour qu'il soit utilisé en priorité.
+        original_path = env.get("PATH", "")
+        
+        if sys.platform == "win32":
+            # Sur Windows, les chemins sont séparés par des points-virgules
+            new_path = f"{str(portable_node_path)};{original_path}"
+        else:
+            # Sur Linux/macOS, les chemins sont séparés par des deux-points
+            new_path = f"{str(portable_node_path)}:{original_path}"
+
+        self.logger.info(f"Création d'un PATH isolé pour le frontend: {new_path[:200]}...") # Affiche le début pour le debug
+
+        # 4. Mettre à jour l'environnement
         env.update({
             'BROWSER': 'none',
             'PORT': str(port),
             'GENERATE_SOURCEMAP': 'false',
-            'SKIP_PREFLIGHT_CHECK': 'true'
+            'SKIP_PREFLIGHT_CHECK': 'true',
+            'PATH': new_path
         })
+        
+        # Log des variables clés pour le débogage
+        self.logger.debug(f"Variables d'environnement pour le frontend: \n"
+                         f"  - PORT: {env.get('PORT')}\n"
+                         f"  - PATH: {env.get('PATH')}")
+
         return env
 
     async def _wait_for_frontend(self, initial_port: int) -> Tuple[bool, Optional[int], Optional[str]]:

@@ -15,6 +15,7 @@ import sys
 import asyncio
 import logging
 import subprocess
+import argparse
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 import json
@@ -381,26 +382,38 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(name)s - %(message)s')
     logger = logging.getLogger("PlaywrightRunnerCLI")
 
+    parser = argparse.ArgumentParser(description="Exécute les tests Playwright.")
+    parser.add_argument(
+        '--test-file',
+        type=str,
+        help="Chemin spécifique vers un fichier de test à exécuter."
+    )
+    args = parser.parse_args()
+    
     # Configuration par défaut pour le lancement direct
     default_config = {
         'enabled': True,
         'browser': 'chromium',
         'headless': True,
-        'test_paths': ['integration/webapp/'],
         'backend_url': os.getenv('BACKEND_URL', 'http://127.0.0.1:5003'),
         'frontend_url': os.getenv('FRONTEND_URL', 'http://127.0.0.1:3000'),
     }
+
+    # Définir les chemins de test par défaut si aucun n'est spécifié
+    test_paths_to_run = ['tests/e2e/python/']
+    if args.test_file:
+        test_paths_to_run = [args.test_file]
 
     runner = PlaywrightRunner(config=default_config, logger=logger)
     
     # Exécution des tests
     async def main():
-        success = await runner.run_tests()
+        success = await runner.run_tests(test_paths=test_paths_to_run)
         
         # Affichage des résultats
         results = runner.get_last_results()
         if results:
-            logger.info(f"Résultats finaux: {json.dumps(results['stats'], indent=2)}")
+            logger.info(f"Résultats finaux: {json.dumps(results, indent=2)}")
         
         # Propagation du code de sortie pour l'intégration CI/CD
         if not success:
