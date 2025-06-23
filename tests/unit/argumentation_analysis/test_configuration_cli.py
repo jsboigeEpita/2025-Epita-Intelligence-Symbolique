@@ -19,6 +19,7 @@ import os
 from pathlib import Path
 
 from typing import Dict, Any, List
+from unittest.mock import patch
 
 # Ajout du chemin pour les imports
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent

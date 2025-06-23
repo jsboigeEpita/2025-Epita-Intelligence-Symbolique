@@ -504,7 +504,7 @@ class TestFOLAnalysisPipeline:
             description="Mock performance analysis function",
             is_prompt=True
         )
-        fol_agent_full.sk_kernel.invoke = AsyncMock(return_value=FunctionResult(
+        fol_agent_full._kernel.invoke = AsyncMock(return_value=FunctionResult(
             function=mock_metadata_perf,
             value=json.dumps({
                 "formulas": ["∀x(Fast(x))"],
@@ -538,7 +538,7 @@ class TestFOLAgentFactory:
         
         assert isinstance(agent, FOLLogicAgent)
         assert agent.name == "FactoryAgent"
-        assert agent.sk_kernel is basic_kernel # Vérifie que le kernel fourni est utilisé
+        assert agent._kernel is basic_kernel # Vérifie que le kernel fourni est utilisé
         assert agent.logic_type == "first_order" # Conserver cette assertion
 
         # Test création avec kernel existant
@@ -546,7 +546,7 @@ class TestFOLAgentFactory:
         agent_with_kernel = ConcreteFOLLogicAgent(kernel=custom_kernel_2, agent_name="KernelAgent")
         assert isinstance(agent_with_kernel, FOLLogicAgent)
         assert agent_with_kernel.name == "KernelAgent"
-        assert agent_with_kernel.sk_kernel is custom_kernel_2
+        assert agent_with_kernel._kernel is custom_kernel_2
         assert agent_with_kernel.logic_type == "first_order"
         
     def test_fol_agent_summary_statistics(self):
