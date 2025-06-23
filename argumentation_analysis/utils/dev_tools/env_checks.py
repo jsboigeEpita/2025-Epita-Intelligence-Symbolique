@@ -275,7 +275,7 @@ def check_python_dependencies(requirements_file_path: typing.Union[str, _PathInt
     sont présentes et satisfont aux contraintes de version.
 
     Utilise `importlib.metadata` pour obtenir les versions installées et
-    `pkg_resources` (si disponible) pour parser les spécificateurs de version
+    la bibliothèque `packaging` pour parser les spécificateurs de version
     du fichier de requirements.
 
     :param requirements_file_path: Chemin vers le fichier de dépendances (ex: requirements.txt).
@@ -351,6 +351,9 @@ def check_python_dependencies(requirements_file_path: typing.Union[str, _PathInt
                     overall_all_ok = False
 
         for req in parsed_requirements:
+            if req is None:
+                overall_all_ok = False
+                continue
             req_name = req.name
             try:
                 installed_version_str = importlib.metadata.version(req_name)
