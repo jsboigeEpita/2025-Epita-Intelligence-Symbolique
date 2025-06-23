@@ -54,6 +54,8 @@ coverage.json
 pytest_results.log
 htmlcov_demonstration/
 tests/reports/
+test-report.xml
+pytest/
 
 # Traductions
 *.mo
