@@ -1,7 +1,7 @@
 name: projet-is
 channels:
-  - pytorch
   - conda-forge
+  - pytorch
   - defaults
 dependencies:
   # Python
@@ -63,6 +63,7 @@ dependencies:
   - pytest-asyncio
   - coverage
   - unidecode
+  - conda-lock
 
   # La section pip est pour les paquets non disponibles ou problématiques sur Conda
   - pip:
@@ -72,6 +73,7 @@ dependencies:
     - pytest-playwright
     - psutil
     - pyautogen>=0.2.0
+    - tenacity
     - pybreaker
     - pytest-dotenv
-    - tenacity
+    - mcp
