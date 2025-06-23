@@ -37,12 +37,12 @@ class ServiceManager:
     def __init__(self):
         self.processes = []
         self.log_files = {}
-        self.api_port = 5003
+        self.api_port = self._find_free_port()
         self.frontend_port = 3000
 
     def start_services(self):
-        """Démarre l'API backend et le frontend en arrière-plan."""
-        _log("Démarrage des services pour les tests E2E...")
+        """Démarre l'API backend qui sert également le frontend."""
+        _log("Démarrage du service API pour les tests E2E...")
 
         # Démarrer le backend API
         _log(f"Démarrage du service API sur le port {self.api_port} (CWD: {API_DIR})")
@@ -53,7 +53,6 @@ class ServiceManager:
         
         _log(f"Démarrage du service API sur le port {self.api_port} (CWD: {API_DIR}) avec log level DEBUG")
         api_process = subprocess.Popen(
-            # FUSION: Combinaison du port dynamique et du log-level de débogage
             [sys.executable, "-m", "uvicorn", "argumentation_analysis.services.web_api.app:app", "--port", str(self.api_port), "--log-level", "debug"],
             cwd=API_DIR,
             stdout=api_log_out,
@@ -62,35 +61,7 @@ class ServiceManager:
         self.processes.append(api_process)
         _log(f"Service API démarré avec le PID: {api_process.pid}")
 
-        # FUSION : Conservation de la logique de débogage (frontend désactivé) pour le moment.
-        _log("--- DÉBOGAGE: Le démarrage du service Frontend est temporairement désactivé. ---")
-        
-        # Laisser le temps aux serveurs de démarrer
-        _log("Attente du démarrage des services (15 secondes)...")
-        time.sleep(15)
-
-        # Vérification des logs d'erreurs
-        _log("Vérification des logs d'erreurs des services...")
-        error_log_path = ROOT_DIR / "api_server.error.log"
-        if error_log_path.exists():
-            try:
-                with open(error_log_path, "r", encoding="utf-8") as f:
-                    error_content = f.read()
-                    if error_content.strip():
-                        _log(f"--- Contenu du log d'erreur pour API ({error_log_path}) ---")
-                        print(error_content)
-                        _log(f"--- Fin du log d'erreur pour API ---")
-                        if "[Errno 10048]" in error_content:
-                             _log("ERREUR CRITIQUE: Conflit de port détecté. Arrêt.")
-                    else:
-                        _log("Le fichier de log d'erreur de l'API est vide.")
-            except Exception as e:
-                _log(f"Impossible de lire le fichier de log {error_log_path}: {e}")
-        else:
-            _log(f"Le fichier de log d'erreur {error_log_path} n'a pas été trouvé.")
-
-        _log("Vérification des services terminée.")
-        
+        # Le frontend est servi par le backend, pas de service séparé à démarrer.
         _log("Attente de la disponibilité du service API...")
         self._wait_for_services(ports=[self.api_port])
 
@@ -160,6 +131,12 @@ class ServiceManager:
             except (socket.timeout, ConnectionRefusedError):
                 return False
 
+    def _find_free_port(self):
+        """Trouve et retourne un port TCP libre sur la machine."""
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(('127.0.0.1', 0))
+            return s.getsockname()[1]
+
 
 class TestRunner:
     """Orchestre l'exécution des tests."""
@@ -182,6 +159,7 @@ class TestRunner:
             self._run_pytest()
         finally:
             if needs_services:
+                self._show_service_logs()
                 self.service_manager.stop_services()
 
     def _get_test_paths(self):
@@ -211,6 +189,13 @@ class TestRunner:
 
         command = [sys.executable, "-m", "pytest", "-s", "-vv"] + test_paths
         
+        # Passer les URLs aux tests via les options pytest
+        backend_url = f"http://127.0.0.1:{self.service_manager.api_port}"
+        # L'URL du frontend est la même que celle du backend car il sert les fichiers statiques
+        frontend_url = backend_url
+        command.extend(["--backend-url", backend_url])
+        command.extend(["--frontend-url", frontend_url])
+
         if self.browser:
             command.extend(["--browser", self.browser])
 
@@ -232,6 +217,25 @@ class TestRunner:
             sys.exit(process.returncode)
         else:
             _log("Pytest a terminé avec succès.")
+
+    def _show_service_logs(self):
+        """Affiche le contenu des fichiers de log des services."""
+        _log("Affichage des logs des services...")
+        for log_name, log_path in [("API_OUT", "api_server.log"), ("API_ERR", "api_server.error.log")]:
+            full_path = ROOT_DIR / log_path
+            if full_path.exists():
+                try:
+                    content = full_path.read_text(encoding="utf-8").strip()
+                    if content:
+                        _log(f"--- Contenu du log: {log_name} ({full_path}) ---")
+                        print(content)
+                        _log(f"--- Fin du log: {log_name} ---")
+                    else:
+                        _log(f"Le fichier de log {full_path} est vide.")
+                except Exception as e:
+                    _log(f"Impossible de lire le fichier de log {full_path}: {e}")
+            else:
+                _log(f"Le fichier de log {full_path} n'a pas été trouvé.")
 
 
 def main():

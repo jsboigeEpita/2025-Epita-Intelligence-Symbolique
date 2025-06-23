@@ -22,7 +22,7 @@ async def app_page(page: Page, webapp_service: dict) -> Page:
     Fixture de base pour les tests d'intégration.
     Navigue vers la racine et attend que l'API soit connectée.
     """
-    await page.goto(webapp_service["frontend_url"])
+    await page.goto(webapp_service.frontend_url)
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=WORKFLOW_TIMEOUT)
     return page
 
