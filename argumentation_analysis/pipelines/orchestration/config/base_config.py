@@ -30,7 +30,7 @@ class ExtendedOrchestrationConfig(UnifiedAnalysisConfig):
                  specialized_orchestrator_priority: List[str] = None,
                  save_orchestration_trace: bool = True,
                  middleware_config: Dict[str, Any] = None,
-                 use_new_orchestrator: bool = False):
+                 use_new_orchestrator: bool = True):
        """
        Initialise la configuration étendue.
        
