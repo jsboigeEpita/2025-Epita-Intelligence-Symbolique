@@ -225,3 +225,37 @@ def webapp_config():
 def test_config_path(tmp_path):
     """Provides a temporary path for a config file."""
     return tmp_path / "test_config.yml"
+
+@pytest.fixture(scope="session")
+def jvm_session():
+    """
+    Fixture de session pour démarrer et arrêter la JVM une seule fois pour tous les tests.
+    """
+    import jpype
+    import jpype.imports
+    
+    # Construire le chemin relatif vers le JDK
+    project_root = Path(__file__).parent.parent.resolve()
+    jdk_base_path = os.path.join(project_root, "libs", "portable_jdk", "jdk-17.0.11+9")
+    jvm_dll_path = os.path.join(jdk_base_path, "bin", "server", "jvm.dll")
+
+    if not os.path.exists(jvm_dll_path):
+        pytest.fail(f"jvm.dll non trouvé à {jvm_dll_path}. Assurez-vous que le JDK portable est en place.")
+
+    if not jpype.isJVMStarted():
+        try:
+            print("\n[JVM Fixture] Démarrage de la JVM pour la session de test...")
+            jpype.startJVM(
+                jvmpath=jvm_dll_path,
+                classpath=[],
+                convertStrings=False
+            )
+            print("[JVM Fixture] JVM démarrée avec succès.")
+        except Exception as e:
+            pytest.fail(f"Échec du démarrage de la JVM : {e}")
+
+    yield
+
+    if jpype.isJVMStarted():
+        print("\n[JVM Fixture] Arrêt de la JVM à la fin de la session.")
+        jpype.shutdownJVM()

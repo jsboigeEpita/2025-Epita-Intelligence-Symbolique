@@ -292,3 +292,6 @@ argumentation_analysis/config/uvicorn_logging.json
 # Fichiers de débogage
 *.debug.py
 tmp/
+
+# Temporary directory for test dependencies
+temp_libs/

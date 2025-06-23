@@ -1,3 +1,40 @@
 [build-system]
 requires = ["setuptools>=61.0", "PyYAML", "psutil", "requests", "pydantic-settings"]
 build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = [
+    "tests",
+    "argumentation_analysis",
+]
+markers = [
+    "authentic",
+    "phase5",
+    "no_mocks",
+    "informal",
+    "requires_llm",
+    "integration",
+    "performance",
+    "comparison",
+    "user_experience",
+    "config",
+    "api_integration",
+    "e2e_test",
+    "slow",
+    "use_real_numpy",
+    "real_jpype",
+    "validation",
+    "debuglog",
+    "use_mock_numpy",
+    "requires_api_key",
+    "requires_tweety_jar",
+    "requires_all_authentic",
+    "belief_set",
+    "propositional",
+    "first_order",
+    "modal",
+    "robustness",
+    "playwright",
+    "real_gpt",
+]

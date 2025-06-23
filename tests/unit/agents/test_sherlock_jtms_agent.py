@@ -30,7 +30,15 @@ def sherlock_agent(mock_kernel):
     """Agent Sherlock de test"""
     agent = SherlockJTMSAgent(mock_kernel, "sherlock_test")
     # Mock de la réponse de l'agent de base pour contrôler les descriptions
-    agent._base_sherlock.process_message = AsyncMock(return_value="Le suspect est un homme grand avec un chapeau.")
+    async def side_effect(*args, **kwargs):
+        if "Contexte initial" in args[0]:
+            return "Hypothèse: Le suspect est un homme grand."
+        if "Témoin a vu" in args[0]:
+            return "Évidence: Un homme grand a été vu."
+        return "Réponse par défaut du mock."
+    
+    agent.validate_hypothesis_against_evidence = AsyncMock(return_value={"validation_result": "supports", "updated_strength": {"strength_score": 0.9}})
+    agent._base_sherlock.process_message = AsyncMock(side_effect=side_effect)
     return agent
 
 class TestSherlockJTMSAgent:
