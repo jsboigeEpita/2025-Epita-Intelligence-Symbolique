@@ -292,13 +292,10 @@ class TestFetchService:
         """Test de récupération de texte avec une exception."""
         # Simuler une exception
         mock_get.side_effect = Exception("Erreur de récupération")
-        
-        # Récupérer le texte
-        text, message = fetch_service.fetch_text(sample_source_info)
-        
-        # Vérifier que la récupération a échoué
-        assert text is None
-        assert "Erreur" in message
+
+        # Vérifier que l'exception est levée
+        with pytest.raises(Exception, match="Erreur de récupération"):
+            fetch_service.fetch_text(sample_source_info)
 
     
     def test_fetch_direct_text(self, mock_get, fetch_service, sample_url, sample_text):
@@ -329,11 +326,9 @@ class TestFetchService:
         # Simuler une erreur HTTP
         mock_get.side_effect = requests.exceptions.RequestException("Erreur HTTP")
         
-        # Récupérer le texte
-        text = fetch_service.fetch_direct_text(sample_url)
-        
-        # Vérifier que la récupération a échoué
-        assert text is None
+        # Vérifier que l'exception est levée après les tentatives
+        with pytest.raises(requests.exceptions.RequestException, match="Erreur HTTP"):
+            fetch_service.fetch_direct_text(sample_url)
 
     
     def test_fetch_with_jina(self, mock_get, fetch_service, sample_url, sample_text):
@@ -377,11 +372,9 @@ class TestFetchService:
         # Simuler une erreur HTTP
         mock_get.side_effect = requests.exceptions.RequestException("Erreur HTTP")
         
-        # Récupérer le texte
-        text = fetch_service.fetch_with_jina(sample_url)
-        
-        # Vérifier que la récupération a échoué
-        assert text is None
+        # Vérifier que l'exception est levée après les tentatives
+        with pytest.raises(requests.exceptions.RequestException, match="Erreur HTTP"):
+            fetch_service.fetch_with_jina(sample_url)
 
     
     
