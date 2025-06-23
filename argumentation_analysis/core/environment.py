@@ -61,6 +61,10 @@ def ensure_env(env_name: str = None, silent: bool = False) -> bool:
     current_env_path = sys.prefix
     is_env_correct = f"envs\\{env_name}" in current_env_path or f"envs/{env_name}" in current_env_path
 
+    # Flexibilité pour CI/CD: accepter `projet-is` même si `projet-is-roo` est attendu.
+    if not is_env_correct and env_name == 'projet-is-roo':
+        is_env_correct = "envs\\projet-is" in current_env_path or "envs/projet-is" in current_env_path
+
     if not is_env_correct:
         # Tenter d'extraire un nom d'environnement plus précis pour le message d'erreur
         try:

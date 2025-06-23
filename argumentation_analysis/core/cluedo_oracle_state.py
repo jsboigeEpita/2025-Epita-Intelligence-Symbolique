@@ -622,7 +622,7 @@ class CluedoOracleState(EnqueteCluedoState):
             "workflow_metrics": self.workflow_metrics.copy(),
             "agent_interactions": {
                 "total_turns": len(self.interaction_pattern),
-                "interaction_pattern": self.interaction_pattern[-10:],  # 10 dernières interactions
+                "interaction_pattern": list(self.interaction_pattern)[-10:],  # 10 dernières interactions
                 "oracle_queries": self.oracle_queries_count,
                 "suggestions_validated": len(self.suggestions_validated_by_oracle),
                 "agents_active": list(set(self.interaction_pattern))
@@ -633,7 +633,7 @@ class CluedoOracleState(EnqueteCluedoState):
                 "total_revealed": len(self.revelations_log)
             },
             "dataset_statistics": dataset_stats,
-            "recent_revelations": self.recent_revelations[-5:] if self.recent_revelations else []
+            "recent_revelations": list(self.recent_revelations)[-5:] if self.recent_revelations else []
         }
         
         return stats
