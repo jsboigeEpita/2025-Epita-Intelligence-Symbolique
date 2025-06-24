@@ -224,7 +224,7 @@ class InformalAnalysisPlugin:
             "path": current_path,
             "depth": int(current_row['depth']) if pd.notna(current_row.get('depth')) else 0,
             "Name": current_row.get('Name', ''), # Utiliser la colonne 'Name' du CSV
-            "nom_vulgarisé": current_row.get('nom_vulgarisé', ''), # nom_vulgarisé (peut être redondant ou un alias)
+            "nom_vulgarise": current_row.get('nom_vulgarise', ''), # nom_vulgarise (peut être redondant ou un alias)
             "famille": current_row.get('Famille', ''),             # Famille
             "description_courte": current_row.get('text_fr', '')   # text_fr comme description courte
         }
@@ -289,7 +289,7 @@ class InformalAnalysisPlugin:
                 # Pour l'instant, on met False, car le but est de lister les enfants directs.
                 child_info = {
                     "pk": int(child_row.name), # .name est l'index (PK)
-                    "nom_vulgarisé": child_row.get('nom_vulgarisé', ''), # nom_vulgarisé
+                    "nom_vulgarise": child_row.get('nom_vulgarise', ''), # nom_vulgarise
                     "description_courte": child_row.get('text_fr', ''),   # text_fr
                     "famille": child_row.get('Famille', ''),             # Famille
                     "has_children": False # Simplifié. Pourrait être calculé si besoin.
@@ -378,7 +378,7 @@ class InformalAnalysisPlugin:
             parent_row = parent_df.iloc[0]
             result["parent"] = {
                 "pk": int(parent_row.name), # .name est l'index (PK)
-                "nom_vulgarisé": parent_row.get('nom_vulgarisé', ''), # nom_vulgarisé
+                "nom_vulgarise": parent_row.get('nom_vulgarise', ''), # nom_vulgarise
                 "description_courte": parent_row.get('text_fr', ''),   # text_fr
                 "famille": parent_row.get('Famille', '')              # Famille
             }
@@ -411,7 +411,7 @@ class InformalAnalysisPlugin:
             for _, child_row_detail in child_nodes_for_details.iterrows():
                 child_info_detail = {
                     "pk": int(child_row_detail.name),
-                    "nom_vulgarisé": child_row_detail.get('nom_vulgarisé', ''), # nom_vulgarisé
+                    "nom_vulgarise": child_row_detail.get('nom_vulgarise', ''), # nom_vulgarise
                     "description_courte": child_row_detail.get('text_fr', ''),   # text_fr
                     "famille": child_row_detail.get('Famille', '')              # Famille
                 }
@@ -639,7 +639,7 @@ class InformalAnalysisPlugin:
                 name_val = row.get('nom_vulgarisé', row.get('text_fr', 'Nom non disponible'))
                 result_list.append({
                     "pk": int(pk_val), # Assurer que PK est un entier
-                    "nom_vulgarisé": name_val # Utiliser la clé "nom_vulgarisé" pour la cohérence
+                    "nom_vulgarise": name_val # Utiliser la clé "nom_vulgarise" pour la cohérence
                 })
             self._logger.info(f"{len(result_list)} sophismes trouvés dans la catégorie '{category_name}'.")
             return json.dumps({"category": category_name, "fallacies": result_list}, default=str)
