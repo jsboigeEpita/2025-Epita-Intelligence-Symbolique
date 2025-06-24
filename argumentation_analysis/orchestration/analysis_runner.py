@@ -254,14 +254,26 @@ async def _run_analysis_conversation(
                 run_logger.debug(f"[{author_info}]:\n{message.content}")
             run_logger.debug("======================================")
 
-        final_analysis = json.loads(local_state.to_json())
+        final_analysis = {}
+        try:
+            json_str = local_state.to_json()
+            if isinstance(json_str, str):
+                final_analysis = json.loads(json_str)
+            else:
+                run_logger.error(f"local_state.to_json() a retourné un type inattendu: {type(json_str)}. Repr: {repr(local_state)}")
+                # Tenter d'obtenir une représentation textuelle sûre
+                final_analysis = {"error": "Invalid type from to_json()", "type": str(type(json_str))}
+
+        except Exception as e_json:
+            run_logger.error(f"Erreur lors de la sérialisation de l'état final: {e_json}", exc_info=True)
+            final_analysis = {"error": "Failed to serialize final state", "details": str(e_json)}
 
         history_list = []
         if full_history:
             for message in full_history:
                 history_list.append({
                     "role": str(message.role),
-                    "author_name": getattr(message, 'author_name', None), # Remplacé `name` par `author_name`
+                    "author_name": getattr(message, 'author_name', None),
                     "content": str(message.content)
                 })
 
