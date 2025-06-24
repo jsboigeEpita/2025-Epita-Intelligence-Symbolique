@@ -285,7 +285,9 @@ class CluedoExtendedOrchestrator:
     - Métriques de performance 3-agents
     """
     
-    def __init__(self, 
+    MAX_HISTORY_MESSAGES: int = 10
+
+    def __init__(self,
                  kernel: Kernel,
                  max_turns: int = 15,
                  max_cycles: int = 5,
@@ -446,8 +448,16 @@ class CluedoExtendedOrchestrator:
                 
                 # Le message au prochain agent est le contenu du dernier message
                 # La méthode `invoke` est le point d'entrée standard pour les agents SK.
-                # MODIFICATION : Passer l'historique complet
-                agent_response_raw = await next_agent.invoke(input=history, arguments=KernelArguments())
+                # Gestion de la taille de l'historique pour éviter le dépassement de contexte
+                if len(history) > self.MAX_HISTORY_MESSAGES:
+                    self._logger.warning(f"L'historique dépasse {self.MAX_HISTORY_MESSAGES} messages. Troncation...")
+                    # Conserve le premier message (système) et les N-1 derniers messages
+                    history_to_send = [history[0]] + history[-(self.MAX_HISTORY_MESSAGES - 1):]
+                else:
+                    history_to_send = history
+
+                # MODIFICATION : Passer l'historique potentiellement tronqué
+                agent_response_raw = await next_agent.invoke(input=history_to_send, arguments=KernelArguments())
                 
                 # Le résultat de invoke peut être un ChatMessageContent, une liste, ou un objet résultat
                 if isinstance(agent_response_raw, list) and len(agent_response_raw) > 0:
