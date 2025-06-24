@@ -13,6 +13,7 @@ N'utilisez plus ce module pour de nouveaux développements.
 import os
 import sys
 import warnings
+import json
 import logging
 import subprocess
 import argparse
@@ -20,17 +21,9 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 # Configuration de base du logger pour ce module
-logging.basicConfig(level=logging.INFO, format='[%(asctime)s] [%(levelname)s] %(message)s')
+logging.basicConfig(level=logging.INFO, format='[ENV_MGR] [%(asctime)s] - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Le module reste globalement obsolète, mais certaines de ses fonctions
-# sont réactivées pour servir de base OS-indépendante aux scripts d'activation.
-warnings.warn(
-    "Le module 'environment_manager.py' est majoritairement obsolète. "
-    "Seules les fonctions nécessaires à l'activation d'environnement via CLI sont actives.",
-    DeprecationWarning,
-    stacklevel=2
-)
 
 class PrintLogger:
     """Fallback Logger pour la compatibilité de l'API et l'usage simple en script."""
@@ -47,37 +40,47 @@ class EnvironmentManager:
     """
     def __init__(self, logger_instance: PrintLogger = None):
         self.logger = logger_instance or PrintLogger()
-        # La racine du projet est 3 niveaux au-dessus de ce fichier
-        # d:/2025-Epita-Intelligence-Symbolique/project_core/core_from_scripts/environment_manager.py
         self.project_root = Path(__file__).resolve().parent.parent.parent
+        self._conda_env_path_cache: Optional[Path] = None
 
-    def setup_environment_variables(self):
-        """
-        Configure les variables d'environnement essentielles.
-        C'est la destination correcte et OS-indépendante pour cette logique.
-        """
-        self.logger.info("Configuration des variables d'environnement...")
+    def _get_conda_env_path(self, env_name: str) -> Optional[Path]:
+        """Trouve le chemin d'un environnement Conda via 'conda info'."""
+        if self._conda_env_path_cache:
+            return self._conda_env_path_cache
+        try:
+            result = subprocess.run(
+                ["conda", "info", "--envs", "--json"],
+                capture_output=True, text=True, check=True
+            )
+            data = json.loads(result.stdout)
+            for env_path_str in data.get("envs", []):
+                env_path = Path(env_path_str)
+                if env_path.name == env_name:
+                    self.logger.info(f"Chemin trouvé pour l'environnement '{env_name}': {env_path}")
+                    self._conda_env_path_cache = env_path
+                    return env_path
+            self.logger.error(f"Environnement Conda '{env_name}' non trouvé.")
+            return None
+        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
+            self.logger.error(f"Erreur lors de la recherche de l'environnement Conda: {e}")
+            return None
 
-        # 1. Configurer PYTHONPATH
-        python_path = str(self.project_root)
-        os.environ['PYTHONPATH'] = python_path
-        self.logger.info(f"  - PYTHONPATH='{python_path}'")
-
-        # 2. Contournement pour le conflit OpenMP
-        os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
-        self.logger.info("  - KMP_DUPLICATE_LIB_OK='TRUE'")
+    def get_python_executable(self, env_name: str = 'projet-is') -> Optional[str]:
+        """Retourne le chemin absolu de l'exécutable Python pour un environnement Conda."""
+        env_path = self._get_conda_env_path(env_name)
+        if not env_path:
+            return None
         
-        # 3. Clé API factice pour les tests
-        # 3. Clé API factice pour les tests (maintenant gérée par la config pydantic)
-        # os.environ['OPENAI_API_KEY'] = 'dummy_key_for_testing_purposes'
-        # self.logger.info("  - OPENAI_API_KEY='dummy_key_for_testing_purposes'")
-
-        self.logger.success("Variables d'environnement configurées.")
+        python_executable = env_path / ('python.exe' if sys.platform == "win32" else 'bin/python')
+        if not python_executable.is_file():
+            self.logger.error(f"Exécutable Python non trouvé à: {python_executable}")
+            return None
+            
+        return str(python_executable)
 
     def run_command(self, command: List[str]) -> int:
-        """
-        Exécute une commande en tant que sous-processus.
-        """
+        """Exécute une commande en tant que sous-processus."""
+        # ... (le reste de la méthode est inchangé) ...
         if not command:
             self.logger.error("Aucune commande à exécuter.")
             return 1
@@ -90,23 +93,9 @@ class EnvironmentManager:
         env['PYTHONUNBUFFERED'] = '1'
 
         try:
-            # Utilisation de subprocess.run avec un timeout pour éviter le blocage infini.
-            # shell=True est nécessaire pour l'environnement conda sur Windows.
-            # Ne pas capturer stdout/stderr permet de les voir en temps réel dans la console.
-            process_result = subprocess.run(
-                command_str,
-                text=True,
-                encoding='utf-8',
-                env=env,
-                shell=True,
-                timeout=1200  # Timeout de 20 minutes
-            )
-            returncode = process_result.returncode
-            self.logger.info(f"Commande terminée avec le code de sortie: {returncode}")
-
-        except subprocess.TimeoutExpired:
-            self.logger.error("La commande a expiré (timeout de 20 minutes).")
-            returncode = -1 # Code de sortie spécifique pour le timeout
+            result = subprocess.run(command, check=False)
+            self.logger.info(f"La commande s'est terminée avec le code de sortie: {result.returncode}")
+            return result.returncode
         except FileNotFoundError:
             self.logger.error(f"Commande non trouvée: '{command[0]}'. Vérifiez que l'exécutable est dans le PATH.")
             return 1
@@ -116,58 +105,52 @@ class EnvironmentManager:
         
         return returncode
 
-    def _warn_obsolete(self, method_name: str):
-        """Avertit qu'une méthode appelée est obsolète."""
-        warnings.warn(
-            f"EnvironmentManager.{method_name}() est obsolète et ne doit plus être utilisé.",
-            DeprecationWarning,
-            stacklevel=3
-        )
-
-    # Le reste des méthodes reste obsolète pour ne pas casser l'API existante
-    # si d'autres vieux scripts l'utilisaient.
 
 def main():
-    """
-    Point d'entrée CLI pour la gestion de l'environnement.
-    Permet aux scripts shell (PowerShell, Bash) de déléguer la logique
-    OS-indépendante à Python.
-    """
-    parser = argparse.ArgumentParser(
-        description="Outil de configuration d'environnement et d'exécution de commandes."
-    )
-    parser.add_argument(
-        '--setup-vars',
-        action='store_true',
-        help="Configure les variables d'environnement nécessaires (PYTHONPATH, etc.)."
-    )
-    parser.add_argument(
-        '--run-command',
-        nargs=argparse.REMAINDER,
-        metavar='COMMAND',
-        help="Exécute la commande spécifiée après le flag. Doit être le dernier argument."
-    )
+    """Point d'entrée CLI pour la gestion de l'environnement."""
+    parser = argparse.ArgumentParser(description="Outil de gestion d'environnement.")
+    parser.add_argument('--get-python-path', action='store_true', help="Affiche le chemin de l'exécutable Python de l'environnement.")
+    parser.add_argument('--env-name', type=str, default='projet-is', help="Nom de l'environnement Conda à utiliser.")
     
     args = parser.parse_args()
     
     manager = EnvironmentManager()
     
-    if args.setup_vars:
-        manager.setup_environment_variables()
-        # On ne quitte pas pour permettre de chaîner avec --run-command si on le souhaite plus tard
-        
-    if args.run_command:
-        # Si la commande est `python -m pytest`, on le loggue spécifiquement
-        if args.run_command[:3] == ['python', '-m', 'pytest']:
-             manager.logger.info("Détection d'une exécution de pytest.")
-        
-        exit_code = manager.run_command(args.run_command)
-        sys.exit(exit_code)
-
-    # Si aucun argument n'est fourni, ou seulement --setup-vars, on quitte avec succès.
-    if not args.run_command:
-        parser.print_help()
-        sys.exit(0)
+    if args.get_python_path:
+        python_path = manager.get_python_executable(args.env_name)
+        if python_path:
+            print(python_path)
+            sys.exit(0)
+        else:
+            sys.exit(1)
+    
+    parser.print_help()
 
 if __name__ == "__main__":
-    main()
+    # --- BOOTSTRAP MINIMAL ---
+    # Cette section est critique pour que l'orchestrateur puisse
+    # obtenir le chemin python de l'environnement sans l'activer entièrement
+    if any(arg == '--get-python-path' for arg in sys.argv):
+         main()
+         sys.exit(0) # Quitter après avoir récupéré le chemin
+
+    # --- PARTIE OBSOLETE (Conservée pour compatibilité) ---
+    warnings.warn(
+        "L'utilisation de environment_manager.py comme script principal est obsolète.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+
+    # L'ancien code de 'main' est ici pour la compatibilité, mais ne devrait plus être appelé directement.
+    if os.getenv("RUNNING_VIA_ENV_MANAGER") == "true":
+        logger.info("Détecté --RUNNING_VIA_ENV_MANAGER--, validation de l'environnement court-circuitée.")
+        sys.exit(0)
+    
+    try:
+        from argumentation_analysis.core.bootstrap import initialize_project_environment
+        # La nouvelle fonction n'a pas besoin des anciens arguments.
+        initialize_project_environment()
+        logger.info("--- environment_manager.py a initialisé l'environnement via bootstrap.initialize_project_environment ---")
+    except ImportError as e:
+        logger.error(f"Erreur de bootstrap : {e}. Impossible d'importer 'initialize_project_environment'. Assurez-vous que PYTHONPATH est correct.")
+        sys.exit(1)

@@ -62,28 +62,30 @@ class MinimalProcessCleaner:
         self.logger.info("[CLEANER] Démarrage du nettoyage robuste des instances webapp.")
         ports_to_check = ports_to_check or []
         
-        # --- Nettoyage radical basé sur le nom du processus ---
-        current_pid = os.getpid()
-        self.logger.info(f"Recherche de tous les processus 'python' et 'node' à terminer (sauf le PID actuel: {current_pid})...")
-        killed_pids = []
-        # On recherche les processus qui contiennent les mots clés de nos applications
-        process_filters = self.config.get('cleanup', {}).get('process_filters', ['app.py', 'web_api', 'serve', 'uvicorn'])
+        # --- Nettoyage radical basé sur le nom du processus (DÉSACTIVÉ) ---
+        # Cette méthode peut causer des blocages (deadlocks) sur certaines plateformes (ex: Windows)
+        # et n'est pas fiable. Le nettoyage par port est privilégié.
+        self.logger.info("[CLEANER] Le nettoyage par nom de processus est désactivé. Passage au nettoyage par port.")
         
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-            try:
-                cmdline = ' '.join(proc.info['cmdline'] or [])
-                # Si un de nos filtres est dans la ligne de commande, et que ce n'est pas nous-même
-                if any(f in cmdline for f in process_filters) and proc.info['pid'] != current_pid:
-                    p = psutil.Process(proc.info['pid'])
-                    p.kill()
-                    killed_pids.append(proc.info['pid'])
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                pass
-        
-        if killed_pids:
-            self.logger.warning(f"[CLEANER] Processus terminés de force par filtre de commande: {killed_pids}")
-        else:
-            self.logger.info("[CLEANER] Aucun processus correspondant aux filtres de commande trouvé.")
+        # current_pid = os.getpid()
+        # self.logger.info(f"Recherche de tous les processus 'python' et 'node' à terminer (sauf le PID actuel: {current_pid})...")
+        # killed_pids = []
+        # process_filters = self.config.get('cleanup', {}).get('process_filters', ['app.py', 'web_api', 'serve', 'uvicorn'])
+        #
+        # for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+        #     try:
+        #         cmdline = ' '.join(proc.info['cmdline'] or [])
+        #         if any(f in cmdline for f in process_filters) and proc.info['pid'] != current_pid:
+        #             p = psutil.Process(proc.info['pid'])
+        #             p.kill()
+        #             killed_pids.append(proc.info['pid'])
+        #     except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+        #         pass
+        #
+        # if killed_pids:
+        #     self.logger.warning(f"[CLEANER] Processus terminés de force par filtre de commande: {killed_pids}")
+        # else:
+        #     self.logger.info("[CLEANER] Aucun processus correspondant aux filtres de commande trouvé.")
 
         # --- Nettoyage basé sur les ports ---
         if not ports_to_check:
@@ -130,6 +132,31 @@ class MinimalBackendManager:
         self.logger = logger
         self.process: Optional[asyncio.subprocess.Process] = None
         self.port = 0
+        self._log_tasks: List[asyncio.Task] = []
+
+    async def _log_stream_continuously(self, stream: asyncio.StreamReader, stream_name: str, startup_event: asyncio.Event):
+        """Lit et logue un flux en continu et signale un événement au démarrage."""
+        while not stream.at_eof():
+            try:
+                line_bytes = await stream.readline()
+                if not line_bytes:
+                    break # Stream est fermé
+                
+                line = line_bytes.decode('utf-8', errors='ignore').strip()
+                self.logger.info(f"[{stream_name}] {line}")
+                
+                # Vérifier si le message de démarrage est présent et si l'événement n'a pas déjà été défini
+                if "Application startup complete" in line and not startup_event.is_set():
+                    startup_event.set()
+            except asyncio.CancelledError:
+                self.logger.info(f"Tâche de logging pour {stream_name} annulée.")
+                break
+            except Exception as e:
+                self.logger.error(f"[{stream_name}] Erreur lors de la lecture du flux: {e}")
+                # Si une erreur se produit, on signale aussi l'événement pour ne pas bloquer indéfiniment.
+                if not startup_event.is_set():
+                    startup_event.set()
+                break
 
     def _find_free_port(self) -> int:
         """Trouve un port TCP libre et le retourne."""
@@ -144,25 +171,17 @@ class MinimalBackendManager:
 
         module_spec = self.config.get('module', 'api.main:app')
         
-        # On utilise directement le nom correct de l'environnement.
-        # Idéalement, cela viendrait d'une source de configuration plus fiable.
         env_name = self.config.get('backend', {}).get('conda_env', 'projet-is')
         self.logger.info(f"[BACKEND] Utilisation du nom d'environnement Conda: '{env_name}'")
         
-        # PRIVILÉGIER command_list si elle existe pour une commande plus robuste
-        # NOUVELLE STRATÉGIE : Utilisation du chemin absolu de Python
         env_manager = EnvironmentManager(self.logger)
-        env_path = env_manager._get_conda_env_path(env_name)
-        
-        if not env_path:
-            self.logger.error(f"[BACKEND] Impossible de localiser l'environnement Conda '{env_name}'.")
-            return {'success': False, 'error': f"Conda env '{env_name}' not found."}
+        # NOUVELLE LOGIQUE: Obtenir le chemin python de manière robuste
+        python_executable_str = env_manager.get_python_executable()
+        if not python_executable_str:
+            self.logger.error(f"[BACKEND] Impossible de localiser l'exécutable Python pour l'environnement Conda '{env_name}'.")
+            return {'success': False, 'error': f"Python executable for Conda env '{env_name}' not found."}
 
-        python_executable = Path(env_path) / ('python.exe' if sys.platform == "win32" else 'bin/python')
-        if not python_executable.is_file():
-            self.logger.error(f"[BACKEND] Exécutable Python non trouvé dans : {python_executable}")
-            return {'success': False, 'error': f"Python executable not found in env '{env_name}'"}
-
+        python_executable = Path(python_executable_str)
         self.logger.info(f"[BACKEND] Utilisation du chemin Python absolu : {python_executable}")
 
         command = [
@@ -175,7 +194,6 @@ class MinimalBackendManager:
         self.logger.info(f"[BACKEND] Commande de lancement: {' '.join(command)}")
 
         try:
-            # Préparation de l'environnement pour le sous-processus
             project_root = str(Path(__file__).parent.parent.parent.resolve())
             env = os.environ.copy()
             python_path = env.get('PYTHONPATH', '')
@@ -183,13 +201,13 @@ class MinimalBackendManager:
                 env['PYTHONPATH'] = f"{project_root}{os.pathsep}{python_path}"
             self.logger.info(f"[BACKEND] PYTHONPATH for subprocess: {env.get('PYTHONPATH')}")
 
-            # --- CORRECTIF FINAL : Court-circuiter la validation d'environnement interne ---
-            # Cette variable d'environnement indique au environment_manager.py dans le sous-processus
-            # de ne PAS effectuer sa propre validation, qui échoue dans ce contexte.
             env['RUNNING_VIA_ENV_MANAGER'] = 'true'
             self.logger.info("[BACKEND] Injection de RUNNING_VIA_ENV_MANAGER=true pour éviter la double validation de l'environnement.")
 
-            # Lancement du processus en redirigeant stdout et stderr
+            # Correction pour l'erreur "OMP: Error #15" sur Windows avec certaines librairies (numpy, torch)
+            env['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+            self.logger.info("[BACKEND] Injection de KMP_DUPLICATE_LIB_OK=TRUE pour corriger le conflit OpenMP.")
+
             self.process = await asyncio.create_subprocess_exec(
                 *command,
                 stdout=asyncio.subprocess.PIPE,
@@ -198,52 +216,27 @@ class MinimalBackendManager:
             )
             self.logger.info(f"[BACKEND] Processus backend (PID: {self.process.pid}) lancé.")
 
-            # Attendre que le serveur soit prêt en lisant sa sortie
+            startup_event = asyncio.Event()
+
+            # Lancer immédiatement les tâches de logging en arrière-plan
+            self.log_tasks = [
+                asyncio.create_task(self._log_stream_continuously(self.process.stdout, "SERVER STDOUT", startup_event)),
+                asyncio.create_task(self._log_stream_continuously(self.process.stderr, "SERVER STDERR", startup_event))
+            ]
+
             timeout_seconds = self.config.get('timeout_seconds', 30)
             
             try:
-                # On lit les deux flux (stdout, stderr) jusqu'à ce qu'on trouve le message de succès ou que le timeout soit atteint.
-                ready = False
-                output_lines = []
-
-                async def read_stream(stream, stream_name):
-                    """Lit une ligne d'un stream et la traite."""
-                    nonlocal ready
-                    line = await stream.readline()
-                    if line:
-                        line_str = line.decode('utf-8', errors='ignore').strip()
-                        output_lines.append(f"[{stream_name}] {line_str}")
-                        self.logger.info(f"[BACKEND_LOGS] {line_str}")
-                        if "Application startup complete" in line_str:
-                            ready = True
-                    return line
-                
-                end_time = asyncio.get_event_loop().time() + timeout_seconds
-                while not ready and asyncio.get_event_loop().time() < end_time:
-                    # Création des tâches pour lire une ligne de chaque flux
-                    tasks = [
-                        asyncio.create_task(read_stream(self.process.stdout, "STDOUT")),
-                        asyncio.create_task(read_stream(self.process.stderr, "STDERR"))
-                    ]
-                    # Attente que l'une des tâches se termine
-                    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-                    
-                    for task in pending:
-                        task.cancel() # On annule la tâche qui n'a pas fini
-                    
-                    if not any(task.result() for task in done): # Si les deux streams sont fermés
-                        break
-                
-                if not ready:
-                     raise asyncio.TimeoutError("Le message 'Application startup complete' n'a pas été trouvé dans les logs.")
-
-
+                # Attendre que l'événement de démarrage soit signalé par une des tâches de logging
+                await asyncio.wait_for(startup_event.wait(), timeout=timeout_seconds)
             except asyncio.TimeoutError:
-                log_output = "\n".join(output_lines)
-                self.logger.error(f"[BACKEND] Timeout de {timeout_seconds}s atteint. Le serveur backend n'a pas démarré correctement. Logs:\n{log_output}")
+                self.logger.error(f"[BACKEND] Timeout de {timeout_seconds}s atteint. Le serveur backend n'a pas signalé 'Application startup complete'.")
                 await self.stop()
                 return {'success': False, 'error': 'Timeout lors du démarrage du backend.'}
 
+            # À ce stade, le serveur a signalé qu'il était prêt.
+            self.logger.info("[BACKEND] Message de démarrage détecté. Le serveur est prêt.")
+            
             url = f"http://localhost:{self.port}"
             self.logger.info(f"[BACKEND] Backend démarré et prêt sur {url}")
             return {
@@ -255,19 +248,31 @@ class MinimalBackendManager:
 
         except Exception as e:
             self.logger.error(f"[BACKEND] Erreur critique lors du lancement du processus backend: {e}", exc_info=True)
+            await self.stop() # Assurer le nettoyage en cas d'erreur
             return {'success': False, 'error': str(e)}
 
     async def stop(self):
         if self.process and self.process.returncode is None:
             self.logger.info(f"[BACKEND] Arrêt du processus backend (PID: {self.process.pid})...")
+            
+            # Annuler les tâches de logging
+            for task in self._log_tasks:
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(*self._log_tasks, return_exceptions=True)
+            self._log_tasks = []
+
             try:
-                self.process.terminate()
-                await asyncio.wait_for(self.process.wait(), timeout=5.0)
+                # Terminer le processus principal
+                if self.process.returncode is None:
+                    self.process.terminate()
+                    await asyncio.wait_for(self.process.wait(), timeout=5.0)
                 self.logger.info(f"[BACKEND] Processus backend (PID: {self.process.pid}) arrêté.")
             except asyncio.TimeoutError:
                 self.logger.warning(f"[BACKEND] Le processus backend (PID: {self.process.pid}) n'a pas répondu à terminate. Utilisation de kill.")
-                self.process.kill()
-                await self.process.wait()
+                if self.process.returncode is None:
+                    self.process.kill()
+                    await self.process.wait()
         self.process = None
 
 
@@ -809,28 +814,19 @@ class UnifiedWebOrchestrator:
         import shlex
         conda_env_name = os.environ.get('CONDA_ENV_NAME', self.config.get('backend', {}).get('conda_env', 'projet-is'))
         
-        self.logger.warning(f"Construction de la commande de test via 'powershell.exe' pour garantir l'activation de l'environnement Conda '{conda_env_name}'.")
-        
-        # La commande interne est maintenant "python -m pytest ..."
-        inner_cmd_list = ["python", "-m", "pytest"]
-        if test_paths:
-            inner_cmd_list.extend(test_paths)
-        
-        inner_cmd_str = " ".join(shlex.quote(arg) for arg in inner_cmd_list)
-        
-        # La commande complète pour PowerShell inclut l'activation via le script dédié
-        project_root_path = Path(__file__).resolve().parent.parent.parent
-        activation_script_path = project_root_path / "activate_project_env.ps1"
-        
-        # S'assurer que le chemin est correctement formaté pour PowerShell
-        # La commande complète exécute le script d'activation puis la commande interne
-        full_command_str = f". '{activation_script_path}'; {inner_cmd_str}"
-        
+        self.logger.info(f"Construction de la commande de test directe pour l'environnement '{conda_env_name}'.")
+
+        # On utilise directement l'exécutable python courant,
+        # car ce script est déjà lancé dans le bon environnement Conda.
+        python_executable = sys.executable
+        self.logger.info(f"Utilisation de l'exécutable Python de l'environnement courant : {python_executable}")
+
         command = [
-            "powershell.exe",
-            "-Command",
-            full_command_str
+            python_executable,
+            "-m", "pytest"
         ]
+        if test_paths:
+            command.extend(test_paths)
 
         self.add_trace("[TEST] COMMANDE", " ".join(command))
         
