@@ -68,5 +68,5 @@ L'objectif est de fournir une base de travail claire et exhaustive pour valider 
 
 | Élément | Description | Fichiers Clés |
 | --- | --- | --- |
-| **Documentation de Conception** | Document principal reflétant la nouvelle architecture. | `docs/DOC_CONCEPTION_SHERLOCK_WATSON.md` |
+| **Documentation de Conception** | Document principal reflétant la nouvelle architecture. | `docs/sherlock_watson/guide_unifie_sherlock_watson.md` |
 | **Rapports d'Analyse et de Validation** | Justification et planification des changements effectués. | `docs/commit_analysis_reports/`, `docs/validation/` |

@@ -64,7 +64,7 @@ docs/
 └── sherlock_watson/
     ├── README.md                              # 🆕 Index navigation complet
     ├── GUIDE_UTILISATEUR_COMPLET.md           # ✅ Mis à jour nouveaux modules
-    ├── DOCUMENTATION_COMPLETE_SHERLOCK_WATSON.md # ✅ Refactorisation ajoutée
+    ├── guide_unifie_sherlock_watson.md # ✅ Refactorisation ajoutée
     ├── ARCHITECTURE_ORACLE_ENHANCED.md       # ✅ Architecture v2.1.0
     ├── ARCHITECTURE_TECHNIQUE_DETAILLEE.md   # Détails techniques
     ├── GUIDE_DEVELOPPEUR_ORACLE.md           # 🆕 Guide développement

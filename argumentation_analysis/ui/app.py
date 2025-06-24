@@ -22,6 +22,11 @@ from typing import List, Optional, Dict, Any, Union
 from . import config as ui_config
 from .. import utils as ui_utils
 
+# Importations des services de base
+from ..config.settings import settings
+from ..services.cache_service import CacheService
+from ..services.fetch_service import FetchService
+
 # Importer spécifiquement les fonctions/classes nécessaires des utils
 from .file_operations import (
     load_extract_definitions, save_extract_definitions
@@ -29,9 +34,8 @@ from .file_operations import (
 from .verification_utils import (
     verify_extract_definitions
 )
-from .fetch_utils import (
-    fetch_with_jina, fetch_with_tika, fetch_direct_text, reconstruct_url, load_from_cache
-)
+from .utils import reconstruct_url
+from .cache_utils import load_from_cache
 # Importer les constantes nécessaires depuis config
 from .config import ENCRYPTION_KEY, CONFIG_FILE, EXTRACT_SOURCES, DEFAULT_EXTRACT_SOURCES, TEMP_DOWNLOAD_DIR
 
@@ -53,6 +57,12 @@ def configure_analysis_task() -> Optional[str]:
     app_logger.info("Lancement de configure_analysis_task...")
     texte_analyse_prepare_local = ""
     analyse_ready_to_run_local = False
+
+    # --- Initialisation des Services ---
+    app_logger.info("Initialisation des services (Cache, Fetch)...")
+    cache_service = CacheService(settings)
+    fetch_service = FetchService(cache_service, settings)
+    app_logger.info("Services initialisés.")
 
     # Utiliser les variables importées depuis ui.config
     local_current_extract_definitions = load_extract_definitions(CONFIG_FILE, ENCRYPTION_KEY)
@@ -280,11 +290,11 @@ def configure_analysis_task() -> Optional[str]:
                         else:
                             source_type = source_info.get("source_type"); original_path_str = source_info.get("path", ""); is_plaintext_url = any(original_path_str.lower().endswith(ext) for ext in ui_config.PLAINTEXT_EXTENSIONS)
                             app_logger.info(f"   -> Cache vide. Récupération (Type: {source_type}, URL: ...)...")
-                            if source_type == "jina": texte_brut_source = fetch_with_jina(reconstructed_url)
-                            elif source_type == "direct_download": texte_brut_source = fetch_direct_text(reconstructed_url)
+                            if source_type == "jina": texte_brut_source = fetch_service.fetch_website_content(reconstructed_url)
+                            elif source_type == "direct_download": texte_brut_source = fetch_service.fetch_direct_text(reconstructed_url)
                             elif source_type == "tika":
-                                if is_plaintext_url: app_logger.info("    (URL type texte, fetch direct)"); texte_brut_source = fetch_direct_text(reconstructed_url)
-                                else: url_hash = hashlib.sha256(reconstructed_url.encode()).hexdigest(); temp_save_path = ui_config.TEMP_DOWNLOAD_DIR / f"{url_hash}.download_debug"; texte_brut_source = fetch_with_tika(source_url=reconstructed_url, raw_file_cache_path=temp_save_path)
+                                # Le FetchService gère la distinction plaintext/binaire pour Tika
+                                texte_brut_source = fetch_service.fetch_document_content(source_url=reconstructed_url)
                             else: raise ValueError(f"Type source inconnu '{source_type}'.")
                     
                         # Si le texte a été fetché (et non chargé depuis full_text initial), le stocker dans source_info
@@ -304,11 +314,10 @@ def configure_analysis_task() -> Optional[str]:
                         source_description = f"URL ({processing_type.upper()}): {url}"; cached_text = load_from_cache(url)
                         if cached_text is not None: texte_brut_source = cached_text
                         else:
-                            is_plaintext_url = any(url.lower().endswith(ext) for ext in ui_config.PLAINTEXT_EXTENSIONS)
-                            if processing_type == "jina": texte_brut_source = fetch_with_jina(url)
+                            if processing_type == "jina": texte_brut_source = fetch_service.fetch_website_content(url)
                             elif processing_type == "tika":
-                                if is_plaintext_url: app_logger.info("   -> URL type texte, fetch direct."); texte_brut_source = fetch_direct_text(url)
-                                else: texte_brut_source = fetch_with_tika(source_url=url)
+                                # Le FetchService gère la distinction plaintext/binaire
+                                texte_brut_source = fetch_service.fetch_document_content(source_url=url)
                             else: raise ValueError(f"Type traitement inconnu: {processing_type}")
                     elif selected_tab_index == 2: # Fichier
                         if not file_uploader.value: raise ValueError("Veuillez téléverser un fichier.")
@@ -317,11 +326,8 @@ def configure_analysis_task() -> Optional[str]:
                         else:
                             is_plaintext_file = any(file_name.lower().endswith(ext) for ext in ui_config.PLAINTEXT_EXTENSIONS)
                             file_content_bytes = uploaded_file_info['content']
-                            if is_plaintext_file:
-                                app_logger.info(f"-> Traitement fichier texte local : '{file_name}'");
-                                try: texte_brut_source = file_content_bytes.decode('utf-8', errors='ignore'); app_logger.info(f"    -> Contenu lu direct."); save_to_cache(cache_key, texte_brut_source); source_description = f"Fichier Texte: {file_name}"
-                                except Exception as e_decode: app_logger.warning(f"    -> ⚠️ Erreur décodage, tentative Tika: {e_decode}"); texte_brut_source = fetch_with_tika(file_content=file_content_bytes, file_name=file_name); source_description = f"Fichier (via Tika post-err): {file_name}"
-                            else: app_logger.info(f"-> Traitement fichier '{file_name}' via Tika..."); source_description = f"Fichier (via Tika): {file_name}"; texte_brut_source = fetch_with_tika(file_content=file_content_bytes, file_name=file_name)
+                            source_description = f"Fichier: {file_name}"
+                            texte_brut_source = fetch_service.fetch_document_content(file_content=file_content_bytes, file_name=file_name)
                         try: file_uploader.value = {}; file_uploader._counter = 0
                         except Exception: pass
                     elif selected_tab_index == 3: # Texte Direct
@@ -524,19 +530,11 @@ def initialize_text_cache():
                  source_type = source_info.get("source_type")
                  app_logger.info(f"   -> Cache texte absent pour '{source_name}'. Récupération (type: {source_type})...")
                  try:
-                     if source_type == "jina": fetch_with_jina(reconstructed_url)
-                     elif source_type == "direct_download": fetch_direct_text(reconstructed_url)
+                     if source_type == "jina": fetch_service.fetch_website_content(reconstructed_url)
+                     elif source_type == "direct_download": fetch_service.fetch_direct_text(reconstructed_url)
                      elif source_type == "tika":
-                         original_path_str = source_info.get("path", "")
-                         is_plaintext_url = any(original_path_str.lower().endswith(ext) for ext in ui_config.PLAINTEXT_EXTENSIONS)
-                         if is_plaintext_url:
-                             app_logger.info("      (URL type texte détectée, utilisation fetch direct)")
-                             fetch_direct_text(reconstructed_url)
-                         else:
-                             url_hash = hashlib.sha256(reconstructed_url.encode()).hexdigest()
-                             file_extension = Path(original_path_str).suffix if Path(original_path_str).suffix else ".download"
-                             temp_save_path = ui_config.TEMP_DOWNLOAD_DIR / f"{url_hash}{file_extension}"
-                             fetch_with_tika(source_url=reconstructed_url, raw_file_cache_path=temp_save_path)
+                        # Le FetchService s'occupe de la logique interne, incluant le cache du fichier brut
+                        fetch_service.fetch_document_content(source_url=reconstructed_url)
                      else:
                          app_logger.warning(f"   -> ⚠️ Type source inconnu '{source_type}' lors de l'init cache.")
                          initialisation_errors += 1

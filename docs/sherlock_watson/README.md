@@ -4,7 +4,7 @@
 
 ### Guides Principaux
 - **[README Principal](../README.md)** - Vue d'ensemble du projet
-- **[Guide Utilisateur Complet](GUIDE_UTILISATEUR_COMPLET.md)** - Guide complet d'utilisation
+- **[Guide Utilisateur Complet](guide_unifie_sherlock_watson.md)** - Guide complet d'utilisation
 - **[Guide Installation Étudiants](../GUIDE_INSTALLATION_ETUDIANTS.md)** - Installation et configuration
 
 ### Démos et Exemples
@@ -16,8 +16,8 @@
 
 ### Architecture et Conception
 - **[Architecture Oracle Enhanced](ARCHITECTURE_ORACLE_ENHANCED.md)** - 🆕 Architecture détaillée v2.1.0
-- **[Documentation Complète](DOCUMENTATION_COMPLETE_SHERLOCK_WATSON.md)** - Spécifications techniques
-- **[Architecture Technique Détaillée](ARCHITECTURE_TECHNIQUE_DETAILLEE.md)** - Détails implémentation
+- **[Documentation Complète](guide_unifie_sherlock_watson.md)** - Spécifications techniques
+- **[Architecture Technique Détaillée](guide_unifie_sherlock_watson.md)** - Détails implémentation
 
 ### Développement
 - **[Guide Développeur Oracle](GUIDE_DEVELOPPEUR_ORACLE.md)** - 🆕 Guide développement complet
@@ -64,7 +64,7 @@
 ### 👨‍🎓 Étudiants
 1. **[Guide Installation](../GUIDE_INSTALLATION_ETUDIANTS.md)** - Premier démarrage
 2. **[Démo Cluedo](../scripts/sherlock_watson/run_cluedo_oracle_enhanced.py)** - Découverte système
-3. **[Guide Utilisateur](GUIDE_UTILISATEUR_COMPLET.md)** - Utilisation complète
+3. **[Guide Utilisateur](guide_unifie_sherlock_watson.md)** - Utilisation complète
 
 ### 👨‍💻 Développeurs
 1. **[Guide Développeur](GUIDE_DEVELOPPEUR_ORACLE.md)** - Environnement développement
@@ -72,8 +72,8 @@
 3. **[Documentation Tests](DOCUMENTATION_TESTS.md)** - Développement piloté tests
 
 ### 🏗️ Architectes
-1. **[Architecture Technique](ARCHITECTURE_TECHNIQUE_DETAILLEE.md)** - Vision système
-2. **[Documentation Complète](DOCUMENTATION_COMPLETE_SHERLOCK_WATSON.md)** - Spécifications
+1. **[Architecture Technique](guide_unifie_sherlock_watson.md)** - Vision système
+2. **[Documentation Complète](guide_unifie_sherlock_watson.md)** - Spécifications
 3. **[Rapports Refactorisation](../docs/rapports/)** - Évolution architecture
 
 ### 🚀 DevOps

@@ -199,7 +199,7 @@ strategy = "aggressive"
 - `docs/sherlock_watson/documentation_phase_*.md` - Documentation par phases
 
 ### Fichiers de Référence
-- `docs/DOC_CONCEPTION_SHERLOCK_WATSON.md` - Conception originale
+- `docs/sherlock_watson/guide_unifie_sherlock_watson.md` - Conception originale
 - `docs/analyse_orchestrations_sherlock_watson.md` - Analyse technique
 
 ### Logs et Debug
