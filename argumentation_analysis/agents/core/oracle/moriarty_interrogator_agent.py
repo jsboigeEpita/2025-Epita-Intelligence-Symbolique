@@ -12,7 +12,7 @@ carte) en tant que fonctions natives pour le kernel sémantique.
 """
 
 import logging
-from typing import Dict, List, Any, Optional, ClassVar
+from typing import Dict, List, Any, Optional, ClassVar, Union
 from datetime import datetime
 import random
 import uuid
@@ -482,17 +482,29 @@ Votre mission : Fasciner par votre mystère élégant."""
         self.suggestion_history.clear()
         self._logger.info(f"État de jeu Moriarty remis à zéro")
 
-    async def invoke(self, input: str, **kwargs) -> str:
+    async def invoke(self, input: Union[str, List[ChatMessageContent]], **kwargs) -> List[ChatMessageContent]:
         """
         Point d'entrée pour l'invocation de l'agent par l'orchestrateur.
+        Gère à la fois une chaîne simple et un historique de conversation pour la compatibilité.
         """
-        self._logger.info(f"[{self.name}] Invoke called with input: {input}")
-        # Moriarty ne génère pas de texte, il réagit. On peut simuler cela
-        # en utilisant son TchatHistory personnel.
+        self._logger.info(f"[{self.name}] Invoke called with input type: {type(input)}")
+
         history = ChatHistory()
-        history.add_user_message(input)
+        if isinstance(input, str):
+            history.add_user_message(input)
+        elif isinstance(input, list):
+            for message in input:
+                # La validation Pydantic a échoué car le content_type est 'message'
+                # et non pas 'text'. Nous devons extraire le contenu textuel.
+                if isinstance(message, ChatMessageContent) and message.content:
+                     # On ne prend pas le risque de parser le content s'il est complexe.
+                     # On le convertit simplement en string et l'ajoute à un nouveau message plus simple.
+                    history.add_message(message)
+                else:
+                    self._logger.warning(f"Message non-conforme ou vide dans l'historique: {type(message)}. Ignoré.")
+
         response_message = await self.invoke_single(history=history)
-        return response_message.content
+        return [response_message]
 
     async def invoke_single(self, *args, **kwargs) -> ChatMessageContent:
         """
