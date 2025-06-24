@@ -382,7 +382,7 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
 
         # Ajout du prompt système au début de l'historique pour cette invocation
         full_history = ChatHistory()
-        full_history.add_system_message(self._system_prompt)
+        full_history.add_system_message(self.system_prompt)
         for msg in history:
             full_history.add_message(msg)
         
