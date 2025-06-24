@@ -14,6 +14,7 @@ class FOLHandler:
     """
 
     def __init__(self, initializer_instance: TweetyInitializer):
+        self.logger = logging.getLogger(__name__)
         self._initializer_instance = initializer_instance
         self._fol_parser = self._initializer_instance.get_fol_parser()
         # self._fol_reasoner = TweetyInitializer.get_fol_reasoner() # If a general one is set up
@@ -46,26 +47,35 @@ class FOLHandler:
             logger.error(f"Unexpected error parsing FOL formula '{formula_str}': {e}", exc_info=True)
             raise
 
-    def parse_fol_belief_set(self, belief_set_str: str):
+    def create_belief_set_from_string(self, tweety_syntax: str):
         """
-        This method is deprecated. Use `create_programmatic_fol_signature` and
-        `create_belief_set_from_formulas` for robust, programmatic creation.
-        """
-        logger.warning("`parse_fol_belief_set` is deprecated. Use programmatic creation methods instead.")
-        # Keeping original implementation for reference, but it should not be used.
-        FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
-        parser = FolParser()
-        java_belief_set_str = jpype.JClass("java.lang.String")(belief_set_str)
-        try:
-            belief_set_obj = parser.parseBeliefBase(java_belief_set_str)
-            signature_obj = belief_set_obj.getSignature()
-            new_configured_parser = FolParser()
-            new_configured_parser.setSignature(signature_obj)
-            return belief_set_obj, signature_obj, new_configured_parser
-        except jpype.JException as e:
-            raise ValueError(f"JPype Error: {e.getMessage()}") from e
+        Crée un FolBeliefSet directement à partir d'une chaîne de caractères
+        utilisant la syntaxe native de Tweety.
+        C'est la nouvelle approche privilégiée.
 
-    def create_programmatic_fol_signature(self, normalized_structure: dict):
+        :param tweety_syntax: Une chaîne contenant la base de connaissances complète.
+        :return: Un objet FolBeliefSet de jpype.
+        """
+        logger.info("Parsing de la base de connaissances FOL à partir de la syntaxe native.")
+        StringReader = jpype.JClass("java.io.StringReader")
+        FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
+
+        try:
+            # CRUCIAL : Créer une instance de parser locale et isolée pour chaque appel.
+            # Cela empêche la contamination de la signature entre les tests ou les appels.
+            # L'instance partagée self._fol_parser conserve son état, ce qui cause des erreurs
+            # de "redéclaration" lors d'appels successifs avec des données similaires.
+            local_parser = FolParser()
+            reader = StringReader(tweety_syntax)
+            belief_set = local_parser.parseBeliefBase(reader)
+            logger.info(f"Parsing réussi avec un parser local. {belief_set.size()} formules chargées.")
+            return belief_set
+        except jpype.JException as e:
+            # Il est crucial de remonter l'exception de parsing pour le feedback au LLM.
+            self.logger.error(f"Erreur de parsing dans Tweety: {e.getMessage()}", exc_info=True)
+            raise ValueError(f"Erreur de parsing Tweety: {e.getMessage()}") from e
+
+    def create_programmatic_fol_signature(self, normalized_structure: dict): # DEPRECATED
         """
         Creates an FolSignature object programmatically from a normalized structure.
         This includes sorts, constants, predicates, and the sort hierarchy.
@@ -163,7 +173,7 @@ class FOLHandler:
         logger.info(f"Final signature object state (Java toString): {signature}")
         return signature
  
-    def create_belief_set_from_formulas(self, signature, formulas: list[str]):
+    def create_belief_set_from_formulas(self, signature, formulas: list[str]): # DEPRECATED
         """
         Creates a FolBeliefSet by parsing formulas against a pre-built signature.
 
@@ -193,6 +203,40 @@ class FOLHandler:
                 raise e # Re-raising to let the caller know validation failed.
         
         return belief_set
+
+    def create_and_serialize_belief_set(self, signature, formulas: list[str]) -> str: # DEPRECATED
+        """
+        Creates a FolBeliefSet, then serializes its essential data to a JSON string.
+        This avoids returning a complex Java object to Python.
+
+        :param signature: A pre-built FolSignature Java object.
+        :param formulas: A list of FOL formula strings.
+        :return: A JSON string representing the belief set, e.g., '{"formulas": ["f1", "f2"]}'.
+        """
+        import json
+        logger.info("Creating and serializing belief set to JSON...")
+        
+        try:
+            # Step 1: Create the actual Java BeliefSet object
+            belief_set_obj = self.create_belief_set_from_formulas(signature, formulas)
+            
+            # Step 2: Extract data from the Java object
+            # The FolBeliefSet is iterable, yielding FolFormula objects.
+            # The FolBeliefSet is iterable, yielding FolFormula objects directly.
+            string_formulas = [str(f.toString()) for f in belief_set_obj]
+            
+            # Step 3: Serialize the data to a JSON string
+            serialized_data = json.dumps({"formulas": string_formulas})
+            
+            logger.info(f"Successfully serialized belief set with {len(string_formulas)} formulas.")
+            return serialized_data
+
+        except jpype.JException as e:
+            logger.error(f"A Java error occurred during belief set serialization: {e.getMessage()}", exc_info=True)
+            raise RuntimeError("Failed to serialize belief set due to Java exception.") from e
+        except Exception as e:
+            logger.error(f"An unexpected Python error occurred during belief set serialization: {e}", exc_info=True)
+            raise
 
     def fol_check_consistency(self, belief_set):
         """
@@ -239,32 +283,30 @@ class FOLHandler:
 
     def validate_formula_with_signature(self, signature, formula_str: str) -> tuple[bool, str]:
         """
-        Validates a FOL formula string by safely modifying the main parser's state.
-        This approach avoids creating new parser objects, which has proven unreliable.
+        Validates a FOL formula string by creating a dedicated, temporary parser
+        configured with the provided signature. This approach is thread-safe and
+        avoids state-related issues with a shared parser.
         """
-        logger.debug(f"Début de la validation de la formule '{formula_str}' avec une signature personnalisée.")
-        original_signature = None
-        try:
-            # --- Thread-safe temporary signature modification on the main parser ---
-            # 1. Get the original signature to restore it later
-            original_signature = self._fol_parser.getSignature()
-            
-            # 2. Set the temporary signature for validation
-            self._fol_parser.setSignature(signature)
-            self.logger.debug(f"Signature temporaire (Hash: {signature.hashCode()}) appliquée au parser principal.")
+        FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
+        
+        logger.debug(f"Validation de la formule '{formula_str}' avec une nouvelle instance de parser.")
 
-            # 3. Perform the parsing, which acts as validation
-            self.parse_fol_formula(formula_str) # Use the main parser
+        try:
+            # 1. Create a new, isolated parser instance for this validation task.
+            validation_parser = FolParser()
+            
+            # 2. Set the provided signature on this isolated parser.
+            validation_parser.setSignature(signature)
+            self.logger.debug(f"Signature (Hash: {signature.hashCode()}) appliquée au parser de validation.")
+
+            # 3. Perform the parsing using the dedicated parser. If it succeeds, the formula is valid.
+            self.parse_fol_formula(formula_str, custom_parser=validation_parser)
             self.logger.info(f"La formule FOL '{formula_str}' est valide avec la signature fournie.")
             return True, "Formule valide."
         
         except (jpype.JException, ValueError) as e:
-            error_message = f"Échec de la validation de la formule '{formula_str}' avec la signature. Raison: {e}"
-            self.logger.error(error_message)
+            # If parse_fol_formula throws an exception, it means the formula is invalid
+            # with respect to the given signature.
+            error_message = f"Error parsing FOL formula '{formula_str}': {e}"
+            self.logger.warning(error_message)
             return False, str(e)
-            
-        finally:
-            # 4. Restore the original signature, regardless of success or failure
-            if original_signature is not None:
-                self._fol_parser.setSignature(original_signature)
-                self.logger.debug(f"Signature originale (Hash: {original_signature.hashCode()}) restaurée sur le parser principal.")

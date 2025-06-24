@@ -456,21 +456,27 @@ _JVM_WAS_SHUTDOWN = False
 _SESSION_FIXTURE_OWNS_JVM = False
 
 def get_jvm_options() -> List[str]:
+    """
+    Retourne une liste minimale d'options JVM pour maximiser la stabilité.
+    Les options de diagnostic sont temporairement désactivées pour éliminer
+    toute source potentielle d'interférence.
+    """
     options = [
-        "-Xms64m",
-        "-Xmx512m",
+        "-Xms128m",  # Augmentation légère de la mémoire initiale
+        "-Xmx1024m", # Augmentation de la mémoire maximale
         "-Dfile.encoding=UTF-8",
         "-Djava.awt.headless=true",
+        # Le flag -Xcheck:jni est retiré temporairement pour simplifier
     ]
     
+    # On garde les options spécifiques à Windows qui sont généralement bénéfiques
     if os.name == 'nt':
        options.extend([
            "-XX:+UseG1GC",
-           "-XX:+DisableExplicitGC",
-           "-XX:-UsePerfData",
+           "-Xrs",  # Ajouté pour améliorer la stabilité sur Windows
        ])
     
-    logger.info(f"Options JVM de base définies : {options}")
+    logger.info(f"Options JVM simplifiées pour la stabilité : {options}")
     return options
 
 def initialize_jvm(force_redownload_jars=False, session_fixture_owns_jvm=False) -> bool:
@@ -518,10 +524,32 @@ def initialize_jvm(force_redownload_jars=False, session_fixture_owns_jvm=False) 
     
     try:
         logger.info("Tentative de démarrage de la JVM...")
+        # Vérification explicite de l'existence et des permissions des JARs
+        all_jars_paths = [p.resolve() for p in LIBS_DIR.glob("*.jar")]
+        if not all_jars_paths:
+            logger.critical(f"Aucun fichier .jar trouvé dans {LIBS_DIR}.")
+            return False
+
+        classpath_list = []
+        for jar_path in all_jars_paths:
+            if not jar_path.exists():
+                logger.error(f"Erreur Classpath: Le fichier JAR '{jar_path}' n'existe pas.")
+                return False
+            try:
+                # Vérifier si on peut au moins lire le fichier
+                with open(jar_path, 'rb') as f:
+                    f.read(1)
+                classpath_list.append(str(jar_path))
+            except IOError as e:
+                logger.error(f"Erreur Classpath: Impossible de lire le fichier JAR '{jar_path}'. Erreur: {e}")
+                return False
+        
+        logger.info(f"Classpath final validé: {classpath_list}")
+        
         jpype.startJVM(
             jvm_path,
             *jvm_options,
-            classpath=all_jars,
+            classpath=classpath_list, # Utiliser la liste de strings validée
             ignoreUnrecognized=True,
             convertStrings=False
         )
