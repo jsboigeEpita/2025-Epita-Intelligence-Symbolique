@@ -65,16 +65,17 @@ class FOLHandler:
         except jpype.JException as e:
             raise ValueError(f"JPype Error: {e.getMessage()}") from e
 
-    def create_programmatic_fol_signature(self, signature_json: dict):
+    def create_programmatic_fol_signature(self, normalized_structure: dict):
         """
-        Creates an FolSignature object programmatically from the new, structured JSON format.
+        Creates an FolSignature object programmatically from a normalized structure.
+        This includes sorts, constants, predicates, and the sort hierarchy.
         
-        :param signature_json: A dictionary containing 'sorts', 'constants', and 'predicates'.
-                               e.g., {
-                                   "sorts": ["person", "city"],
-                                   "constants": {"socrates": "person", "athens": "city"},
-                                   "predicates": [{"name": "LivesIn", "args": ["person", "city"]}]
-                               }
+        :param normalized_structure: A dictionary like {
+                                       "sorts": ["person", "city"],
+                                       "constants": {"socrates": "person", "athens": "city"},
+                                       "predicates": [{"name": "LivesIn", "args": ["person", "city"]}],
+                                       "sort_hierarchy": {"philosopher": "person"}
+                                   }
         :return: A jpype._jclass.org.tweetyproject.logics.fol.syntax.FolSignature object or None on failure.
         """
         FolSignature = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolSignature")
@@ -88,7 +89,7 @@ class FOLHandler:
         sorts_map = {}  # Python-side mapping from name to Java Sort object
 
         # 1. Create and add Sorts
-        sort_names = signature_json.get("sorts", [])
+        sort_names = normalized_structure.get("sorts", [])
         for sort_name in sort_names:
             try:
                 java_sort = Sort(String(sort_name))
@@ -98,9 +99,28 @@ class FOLHandler:
             except jpype.JException as e:
                 logger.error(f"Failed to add sort '{sort_name}': {e.getMessage()}")
                 return None
+        
+        # 2. Add Sort Hierarchy (sub-sort relationships)
+        sort_hierarchy = normalized_structure.get("sort_hierarchy", {})
+        logger.debug(f"Processing sort hierarchy: {sort_hierarchy}")
+        for sub_sort_name, super_sort_name in sort_hierarchy.items():
+            if sub_sort_name in sorts_map and super_sort_name in sorts_map:
+                sub_sort_obj = sorts_map[sub_sort_name]
+                super_sort_obj = sorts_map[super_sort_name]
+                try:
+                    # FolSignature uses add(sub, super) to define hierarchy
+                    signature.add(sub_sort_obj, super_sort_obj)
+                    logger.info(f"Programmatically added hierarchy: {sub_sort_name} is a sub-sort of {super_sort_name}")
+                except jpype.JException as e:
+                    logger.error(f"Failed to add hierarchy '{sub_sort_name}' -> '{super_sort_name}': {e.getMessage()}")
+                    return None
+            else:
+                logger.error(f"Cannot create hierarchy: Sort '{sub_sort_name}' or '{super_sort_name}' not found.")
+                return None
 
-        # 2. Create and add Constants, linking them to their Sorts
-        constants_data = signature_json.get("constants", {})
+
+        # 3. Create and add Constants, linking them to their Sorts
+        constants_data = normalized_structure.get("constants", {})
         for const_name, sort_name in constants_data.items():
             if sort_name in sorts_map:
                 parent_sort = sorts_map[sort_name]
@@ -115,8 +135,8 @@ class FOLHandler:
                 logger.error(f"Cannot create constant '{const_name}': Its sort '{sort_name}' has not been declared.")
                 return None
 
-        # 3. Create and add Predicates
-        predicates_data = signature_json.get("predicates", [])
+        # 4. Create and add Predicates
+        predicates_data = normalized_structure.get("predicates", [])
         for pred_data in predicates_data:
             pred_name = pred_data.get("name")
             arg_sort_names = pred_data.get("args", [])

@@ -41,179 +41,122 @@ l'exécution de ces requêtes sur un ensemble de croyances FOL, et l'interpréta
 """
 
 # Prompts pour la logique du premier ordre (optimisés)
-PROMPT_TEXT_TO_FOL_DEFS = """Expert en Logique du Premier Ordre (FOL), votre tâche est d'analyser un texte et d'en extraire la structure logique (sorts, constantes, prédicats) dans un format JSON strict.
 
-**Instructions fondamentales :**
+PROMPT_TEXT_TO_UNIFIED_FOL = """Expert en Logique du Premier Ordre (FOL), votre tâche est d'analyser un texte et de le convertir en une structure logique complète, incluant définitions et formules, dans un format JSON strict.
 
-1.  **Sorts vs. Prédicats :**
-    *   Un **`sort`** est une **catégorie** ou un **type** d'entité (ex: `homme`, `animal`, `ville`). C'est un nom commun général.
-    *   Un **`prédicat`** est une **propriété** (ex: `EstMortel`, `EstBleu`) ou une **relation** entre entités (ex: `Aime`, `EstPlusGrandQue`).
-    *   **Règle cruciale :** Ne créez PAS un `sort` pour une simple propriété. `"mortel"` est une propriété, donc `EstMortel` est un prédicat. Le `sort` est l'entité qui *peut être* mortelle (ex: `homme`).
+**Instructions Fondamentales :**
+
+1.  **Analyse Complète :** Vous devez extraire les `sorts`, `constants`, `predicates` ET les `formulas` logiques qui traduisent les affirmations du texte.
 
 2.  **Nomenclature :**
-    *   `sorts` et `constants` : Toujours en `snake_case` minuscule et **au singulier** (ex: `homme`, `etudiant`).
-    *   `predicates` : Toujours en `PascalCase` et **au singulier** (ex: `EstMortel`, `EstIntelligent`).
-    *   **Règle cruciale :** Ne générez jamais de noms au pluriel comme "EstHommes". Le prédicat doit s'appliquer à un *individu* du sort.
+    *   `sorts`, `constants` : `snake_case` minuscule, singulier (ex: `etudiant`, `livre`).
+    *   `predicates` : `PascalCase` (ex: `EstMortel`, `InfluenceCulture`).
+    *   Ne jamais utiliser de pluriel pour les noms de prédicats.
 
-3.  **Format de sortie (JSON Strict) :**
+3.  **Sorts vs. Prédicats :**
+    *   Un `sort` est une catégorie (`homme`).
+    *   Un `prédicat` est une propriété (`EstMortel`) ou une relation (`Aime`).
+    *   Ne créez pas un `sort` pour une simple propriété.
+
+4.  **Génération de Formules (RÈGLES IMPÉRATIVES) :**
+    *   **RÈGLE D'OR - COHÉRENCE DES TYPES :** C'est la règle la plus importante. Le `sort` d'une variable ou d'une constante utilisée comme argument dans une formule DOIT correspondre EXACTEMENT au `sort` défini pour ce prédicat. Toute incohérence rend la sortie invalide.
+        *   **Exemple de VIOLATION DE TYPE :**
+            *   Définition: `{"name": "Mange", "args": ["animal", "nourriture"]}`
+            *   Formule INCORRECTE: `forall X:chat (exists Y:plante (Mange(X, Y)))`
+            *   **Analyse de l'erreur :** La formule est invalide car le prédicat `Mange` attend un `animal` et une `nourriture`, mais reçoit un `chat` et une `plante`. Même si conceptuellement un chat est un animal, vous devez utiliser les types exacts de la définition pour la validité logique.
+    *   **Utilisation des définitions :** Utilisez **UNIQUEMENT** les `sorts`, `constants` et `predicates` que vous avez définis dans ce même JSON.
+    *   **Syntaxe de quantification :** `forall X:sort (...)` ou `exists Y:sort (...)`.
+    *   **ERREUR À ÉVITER (Sorts vs Constantes) :** N'utilisez **JAMAIS** un nom de `sort` (ex: `culture`) comme argument direct d'un prédicat.
+        *   **Contexte :** `influence(ecrivain, culture)` est un prédicat et `culture` est un `sort`.
+        *   **INCORRECT :** `influence(auteur_constant, culture)` <-- `culture` est un type, pas un individu.
+        *   **CORRECT :** `exists X:culture (influence(auteur_constant, X))` <-- On quantifie sur une variable de type `culture`.
+
+5.  **Format de sortie (JSON Strict IMPÉRATIF) :**
     ```json
     {
-      "sorts": ["<type_1>", "<type_2>"],
-      "constants": {
-        "<const_1>": "<type_1>",
-        "<const_2>": "<type_2>"
-      },
-      "predicates": [
-        {"name": "NomPredicat1", "args": ["<type_1>"]},
-        {"name": "NomPredicat2", "args": ["<type_1>", "<type_2>"]}
+      "sorts": ["<type_1>", ...],
+      "constants": {"<const_1>": "<type_1>", ...},
+      "predicates": [{"name": "NomPredicat", "args": ["<type_1>", ...]}, ...],
+      "formulas": ["<formule_1>", "<formule_2>", ...]
+    }
+    ```
+
+**Exemple Complet :**
+
+*   **Texte :** "Socrate est un homme. Tous les hommes sont mortels."
+*   **JSON Attendu :**
+    ```json
+    {
+      "sorts": ["homme"],
+      "constants": {"socrate": "homme"},
+      "predicates": [{"name": "EstMortel", "args": ["homme"]}],
+      "formulas": [
+        "EstMortel(socrate)",
+        "forall X:homme (EstMortel(X))"
       ]
     }
     ```
-    *   Chaque `constant` doit être associée à un `sort` existant.
-    *   Les `args` d'un `predicate` doivent correspondre à des `sorts` déclarés.
 
-**Exemples révisés pour clarifier :**
-
-*   **Exemple 1 :** "Socrate est un homme. Tous les hommes sont mortels."
-    *   **Analyse :** `homme` est la catégorie (sort). `socrate` est une instance (constante). `mortel` est une propriété (prédicat).
-    *   **JSON correct :**
-        ```json
-        {
-          "sorts": ["homme"],
-          "constants": {"socrate": "homme"},
-          "predicates": [
-            {"name": "EstMortel", "args": ["homme"]}
-          ]
-        }
-        ```
-
-*   **Exemple 2 :** "Tous les chats siamois sont des animaux."
-    *   **Analyse :** `animal` est le sort principal. `chat_siamois` pourrait être un sous-sort, mais pour simplifier, nous le traitons comme une propriété. Donc nous avons un sort `chat` et un prédicat `EstSiamois`.
-    *   **JSON correct (approche simple) :**
-        ```json
-        {
-            "sorts": ["chat"],
-            "constants": {},
-            "predicates": [
-                {"name": "EstSiamois", "args": ["chat"]},
-                {"name": "EstAnimal", "args": ["chat"]}
-            ]
-        }
-        ```
+**Votre Tâche :**
 
 Texte à analyser : {{$input}}
+
+Produisez le JSON final complet.
 """
 
-PROMPT_TEXT_TO_FOL_FORMULAS = """Expert FOL : Traduisez le texte en formules de logique du premier ordre (FOL) en utilisant un format JSON strict.
+PROMPT_GEN_FOL_QUERIES = """Expert FOL : À partir du texte et de l'ensemble de croyances (belief set), générez des requêtes FOL pertinentes et syntaxiquement valides au format JSON.
 
-**Instructions fondamentales :**
-1.  **Format de sortie :** La sortie DOIT être un JSON avec une seule clé "formulas", qui est une liste de chaînes de caractères.
-    *   `{"formulas": ["formule_1", "formule_2", ...]}`
-2.  **Prédicats et constantes :** Utilisez **UNIQUEMENT** les prédicats et les constantes définis dans l'objet `Définitions` fourni. N'inventez rien.
-3.  **Quantification sur les sorts :** Pour la quantification universelle (`forall`), la syntaxe correcte qui lie une variable à un `sort` est `forall X:sort (...)`. **N'utilisez JAMAIS le nom d'un sort comme un prédicat.**
-    *   **INCORRECT :** `forall X: (etudiant(X) => EstIntelligent(X))`
-    *   **CORRECT :** `forall X:etudiant (EstIntelligent(X))`
-    *   **INCORRECT :** `forall X: (EstFrancais(X) => etudiant(X))`
-    *   **CORRECT :** `forall X:etudiant (EstFrancais(X) => /* autre prédicat */)`
-4.  **Arguments des Prédicats :** Les arguments passés à un prédicat DOIVENT être des **variables** (ex: `X`, `Y`) ou des **constantes** définies (ex: `socrate`). Un nom de `sort` (ex: `etudiant`, `culture`) ne peut **JAMAIS** être utilisé directement comme argument d'un prédicat.
-
-**Exemple de transformation :**
-
-*   **Texte :** "Tous les étudiants français sont intelligents."
-*   **Définitions :**
+Règles impératives :
+1.  **Format de sortie :** Produire un JSON unique contenant une clé "queries" avec une liste de chaînes de caractères.
     ```json
     {
-      "sorts": ["etudiant"],
-      "constants": {},
-      "predicates": [
-        {"name": "estfrancais", "args": ["etudiant"]},
-        {"name": "estintelligent", "args": ["etudiant"]}
+      "queries": [
+        "NomPredicat(constante1)",
+        "exists X:sort (AutrePredicat(X))",
+        "forall Y:autre_sort (Implique(Y, Z))"
       ]
     }
     ```
-*   **Résultat JSON attendu :**
-    ```json
-    {
-      "formulas": [
-        "forall X:etudiant (estfrancais(X) => estintelligent(X))"
-      ]
-    }
-    ```
+2.  **Validation :** Chaque requête DOIT être syntaxiquement correcte et utiliser UNIQUEMENT les sorts, constantes et prédicats définis dans le `belief_set`.
+3.  **Pertinence :** Les requêtes doivent être en lien direct avec le texte fourni et chercher à vérifier ou inférer des informations.
+4.  **Simplicité :** Préférez des requêtes simples et atomiques (une seule proposition).
 
-*   **Exemple sur l'erreur à éviter :**
-*   **Contexte :** Prédicat `influence(ecrivain, culture)` dans les Définitions, où `culture` est un `sort`.
-*   **INCORRECT :** `influence(un_ecrivain, culture)` <-- ERREUR : `culture` est un `sort`, pas une `constante`. Un nom de `sort` ne peut pas être un argument.
-*   **CORRECT :** `exists X:culture (influence(un_ecrivain, X))` <-- On doit utiliser une variable quantifiée.
+**Contexte :**
 
-**Votre tâche :**
+*   **Texte :** {{$input}}
+*   **Belief Set (signature et formules existantes) :** {{$belief_set}}
 
-Texte : {{$input}}
-Définitions : {{$definitions}}
-
-Produisez le JSON final.
+Générez le JSON contenant les requêtes.
 """
 
-PROMPT_GEN_FOL_QUERIES_IDEAS = """Expert FOL : Générez des requêtes pertinentes en JSON strict.
-
-Format : {"query_ideas": [{"predicate_name": "PredName", "constants": ["const1"]}]}
-
-Règles : Utilisez UNIQUEMENT les prédicats/constantes du belief set. Priorité aux requêtes vérifiables.
-
-Texte : {{$input}}
-Belief Set : {{$belief_set}}
-"""
 
 PROMPT_INTERPRET_FOL = """Expert FOL : Interprétez les résultats de requêtes FOL en langage accessible.
 
-Texte : {{$input}}
-Belief Set : {{$belief_set}}
-Requêtes : {{$queries}}
-Résultats : {{$tweety_result}}
+**Contexte :**
+*   **Texte original :** {{$input}}
+*   **Ensemble de croyances (Belief Set) :** {{$belief_set}}
+*   **Requêtes exécutées :** {{$queries}}
+*   **Résultats bruts de Tweety :** {{$tweety_result}}
 
-Pour chaque requête : objectif, statut (ACCEPTED/REJECTED), signification, implications.
-Conclusion générale concise.
+**Votre Tâche :**
+Pour chaque requête, fournissez :
+1.  **L'objectif de la requête :** Que cherchait-on à savoir ? (par exemple, "Vérifier si Socrate est mortel").
+2.  **Le résultat :** `ACCEPTED` (prouvé) ou `REJECTED` (non prouvé).
+3.  **L'interprétation :** Expliquez ce que le résultat signifie en langage simple, en vous basant sur le contexte.
+4.  **Les implications :** Quelles conclusions peut-on tirer de ce résultat ?
+
+Terminez par une **conclusion générale concise** qui résume les apprentissages clés de l'analyse.
 """
 
 class FirstOrderLogicAgent(BaseLogicAgent):
     """
     Agent spécialiste de l'analyse en logique du premier ordre (FOL).
-
-    Cet agent étend `BaseLogicAgent` pour le traitement spécifique à la FOL.
-    Il combine des fonctions sémantiques (via LLM) pour l'interprétation du
-    langage naturel et `TweetyBridge` pour la rigueur logique.
-
-    Le workflow principal est similaire à celui des autres agents logiques :
-    1.  `text_to_belief_set` : Convertit le texte en `FirstOrderBeliefSet`.
-    2.  `generate_queries` : Suggère des requêtes FOL pertinentes.
-    3.  `execute_query` : Exécute une requête sur le `FirstOrderBeliefSet`.
-    4.  `interpret_results` : Traduit le résultat logique en explication naturelle.
-
-    La complexité de la FOL impose une gestion plus fine de la signature (sorts,
-    constantes, prédicats), qui est gérée en interne par cet agent.
-
-    Attributes:
-        _tweety_bridge (TweetyBridge): Pont vers la bibliothèque logique Java Tweety.
-            Cette instance est créée dynamiquement lors du `setup_agent_components`.
     """
     
-    # Attributs requis par Pydantic V2 pour la nouvelle classe de base Agent
-    # Ces attributs ne sont pas utilisés activement par cette classe, mais doivent être déclarés.
-    # Ils sont normalement gérés par la classe de base `Agent` mais Pydantic exige leur présence.
-    # Utilisation de `Field(default=..., exclude=True)` pour éviter qu'ils soient inclus
-    # dans la sérialisation ou la validation standard du modèle.
     service: Optional[ChatCompletionClientBase] = Field(default=None, exclude=True)
-    settings: Optional[Any] = Field(default=None, exclude=True) # Remplace PromptExecutionSettings
+    settings: Optional[Any] = Field(default=None, exclude=True)
 
     def __init__(self, kernel: Kernel, agent_name: str = "FirstOrderLogicAgent", service_id: Optional[str] = None):
-        """
-        Initialise l'agent de logique du premier ordre.
-
-        Args:
-            kernel (Kernel): L'instance du kernel Semantic Kernel.
-            agent_name (str, optional): Nom de l'agent.
-            service_id (Optional[str], optional): ID du service LLM à utiliser
-                pour les fonctions sémantiques.
-        """
         super().__init__(
             kernel=kernel,
             agent_name=agent_name,
@@ -226,28 +169,20 @@ class FirstOrderLogicAgent(BaseLogicAgent):
                 self.service = kernel.get_service(service_id, type=ChatCompletionClientBase)
             except Exception as e:
                 self.logger.warning(f"Could not retrieve service '{service_id}': {e}")
-
+        
+        self._tweety_bridge = None
         self.logger.info(f"Agent {self.name} initialisé avec le type de logique {self.logic_type}.")
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
-        """
-        Retourne un dictionnaire décrivant les capacités de l'agent.
-
-        Returns:
-            Dict[str, Any]: Un dictionnaire détaillant le nom, le type de logique,
-            la description et les méthodes principales de l'agent.
-        """
         return {
             "name": self.name,
             "logic_type": self.logic_type,
-            "description": "Agent capable d'analyser du texte en utilisant la logique du premier ordre (FOL). "
-                           "Peut convertir du texte en un ensemble de croyances FOL, générer des requêtes FOL, "
-                           "exécuter ces requêtes, et interpréter les résultats.",
+            "description": "Agent capable d'analyser du texte en utilisant la logique du premier ordre (FOL).",
             "methods": {
                 "text_to_belief_set": "Convertit un texte en un ensemble de croyances FOL.",
-                "generate_queries": "Génère des requêtes FOL pertinentes à partir d'un texte et d'un ensemble de croyances.",
+                "generate_queries": "Génère des requêtes FOL pertinentes.",
                 "execute_query": "Exécute une requête FOL sur un ensemble de croyances.",
-                "interpret_results": "Interprète les résultats d'une ou plusieurs requêtes FOL.",
+                "interpret_results": "Interprète les résultats de requêtes FOL.",
                 "validate_formula": "Valide la syntaxe d'une formule FOL."
             }
         }
@@ -255,71 +190,40 @@ class FirstOrderLogicAgent(BaseLogicAgent):
     def setup_agent_components(self, llm_service_id: str) -> None:
         """
         Configure les composants de l'agent, notamment le pont logique et les fonctions sémantiques.
-
-        Cette méthode initialise `TweetyBridge` et enregistre tous les prompts
-        spécifiques à la FOL en tant que fonctions dans le kernel.
-
-        Args:
-            llm_service_id (str): L'ID du service LLM à utiliser pour les
-                fonctions sémantiques enregistrées.
         """
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants pour {self.name}...")
-
         self._tweety_bridge = TweetyBridge()
 
         if not self.tweety_bridge.is_jvm_ready():
             self.logger.error("Tentative de setup FOL Kernel alors que la JVM n'est PAS démarrée.")
             return
+
+        default_settings = self._kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         
-        default_settings = None
-        if self._llm_service_id: 
-            try:
-                default_settings = self._kernel.get_prompt_execution_settings_from_service_id(
-                    self._llm_service_id
-                )
-                self.logger.debug(f"Settings LLM récupérés pour {self.name}.")
-            except Exception as e:
-                self.logger.warning(f"Impossible de récupérer settings LLM pour {self.name}: {e}")
-
-        semantic_functions = [
-            ("TextToFOLDefs", PROMPT_TEXT_TO_FOL_DEFS,
-             "Extrait les sorts et prédicats FOL d'un texte."),
-            ("TextToFOLFormulas", PROMPT_TEXT_TO_FOL_FORMULAS,
-             "Génère les formules FOL à partir d'un texte et de définitions."),
-            ("GenerateFOLQueryIdeas", PROMPT_GEN_FOL_QUERIES_IDEAS,
-             "Génère des idées de requêtes FOL au format JSON."),
-            ("InterpretFOLResult", PROMPT_INTERPRET_FOL,
-             "Interprète résultat requête FOL Tweety formaté.")
-        ]
-
-        for func_name, prompt, description in semantic_functions:
-            try:
-                if not prompt or not isinstance(prompt, str):
-                    self.logger.error(f"ERREUR: Prompt invalide pour {self.name}.{func_name}")
-                    continue
-                
-                self.logger.info(f"Ajout fonction {self.name}.{func_name} avec prompt de {len(prompt)} caractères")
-                self._kernel.add_function(
-                    prompt=prompt,
-                    plugin_name=self.name,
-                    function_name=func_name,
-                    description=description,
-                    prompt_execution_settings=default_settings
-                )
-                self.logger.debug(f"Fonction sémantique {self.name}.{func_name} ajoutée/mise à jour.")
-                
-                if self.name in self._kernel.plugins and func_name in self._kernel.plugins[self.name]:
-                    self.logger.info(f"(OK) Fonction {self.name}.{func_name} correctement enregistrée.")
-                else:
-                    self.logger.error(f"(CRITICAL ERROR) Fonction {self.name}.{func_name} non trouvée après ajout!")
-            except ValueError as ve:
-                self.logger.warning(f"Problème ajout/MàJ {self.name}.{func_name}: {ve}")
-            except Exception as e:
-                self.logger.error(f"Exception inattendue lors de l'ajout de {self.name}.{func_name}: {e}", exc_info=True)
+        # Ajout de la fonction unifiée pour la conversion texte -> FOL
+        self._kernel.add_function(
+            prompt=PROMPT_TEXT_TO_UNIFIED_FOL,
+            plugin_name=self.name,
+            function_name="TextToFOL",
+            description="Convertit un texte en définitions et formules FOL en une seule étape.",
+            prompt_execution_settings=default_settings
+        )
         
-        self.logger.info(f"Composants de {self.name} configurés.")
-
+        # Ajout des autres fonctions sémantiques nécessaires
+        prompts = {
+            "GenerateFOLQueries": PROMPT_GEN_FOL_QUERIES,
+            "InterpretFOLResult": PROMPT_INTERPRET_FOL
+        }
+        for name, prompt in prompts.items():
+            self._kernel.add_function(
+                prompt=prompt,
+                plugin_name=self.name,
+                function_name=name,
+                prompt_execution_settings=default_settings
+            )
+        self.logger.info(f"Fonctions sémantiques pour {self.name} ajoutées au kernel.")
+            
     def _normalize_identifier(self, text: str) -> str:
         """Normalise un identifiant en snake_case sans accents."""
         import unidecode
@@ -330,92 +234,61 @@ class FirstOrderLogicAgent(BaseLogicAgent):
 
     async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
         """
-        Convertit un texte en langage naturel en un `FirstOrderBeliefSet` validé.
-
-        Ce processus multi-étapes utilise le LLM pour la génération de la signature
-        (sorts, prédicats) et des formules, puis s'appuie sur `TweetyBridge` pour
-        la validation rigoureuse de chaque formule par rapport à la signature.
-
-        Args:
-            text (str): Le texte en langage naturel à convertir.
-            context (Optional[Dict[str, Any]]): Contexte additionnel (non utilisé).
-
-        Returns:
-            Tuple[Optional[BeliefSet], str]: Un tuple contenant le `FirstOrderBeliefSet`
-            créé (qui inclut l'objet Java pour les opérations futures) ou `None`
-            en cas d'échec, et un message de statut.
+        Convertit un texte en `FirstOrderBeliefSet` en utilisant un seul prompt unifié.
         """
-        self.logger.info(f"Converting text to FOL belief set for {self.name} (programmatic approach)...")
-        
+        self.logger.info(f"Début de la conversion texte vers FOL pour {self.name}...")
         try:
-            # Step 1: Generate the logical structure (sorts, constants, predicates) from text
-            self.logger.info("Step 1: Generating logical structure (sorts, constants, predicates)...")
-            defs_result = await self._kernel.plugins[self.name]["TextToFOLDefs"].invoke(self._kernel, input=text)
-            raw_defs_json = json.loads(self._extract_json_block(str(defs_result)))
-            self.logger.debug(f"Received raw logical structure from LLM: {json.dumps(raw_defs_json, indent=2)}")
+            # Étape 1 : Appel unique au LLM pour tout générer
+            self.logger.info("Étape 1: Génération de la structure logique complète...")
+            unified_result = await self._kernel.plugins[self.name]["TextToFOL"].invoke(self._kernel, input=text)
+            raw_unified_json = json.loads(self._extract_json_block(str(unified_result)))
+            self.logger.debug(f"Structure brute reçue du LLM: {json.dumps(raw_unified_json, indent=2)}")
 
-            # Step 1.5: Normalize all identifiers to prevent LLM inconsistencies
-            defs_json = self._normalize_definitions(raw_defs_json)
-            self.logger.debug(f"Normalized logical structure: {json.dumps(defs_json, indent=2)}")
-
-            # Check if the extracted definitions are empty
-            if not defs_json.get("sorts") and not defs_json.get("constants") and not defs_json.get("predicates"):
-                self.logger.warning("No logical structure could be extracted from the text.")
-                return None, "No logical structure could be extracted from the text."
-
-            # Step 2: Generate formulas based on the extracted and NOW NORMALIZED structure
-            self.logger.info("Step 2: Generating formulas...")
-            definitions_for_prompt = json.dumps(defs_json, indent=2)
-            formulas_result = await self._kernel.plugins[self.name]["TextToFOLFormulas"].invoke(
-                self._kernel, input=text, definitions=definitions_for_prompt
-            )
-            formulas_json = json.loads(self._extract_json_block(str(formulas_result)))
-            self.logger.debug(f"Received formulas from LLM: {json.dumps(formulas_json, indent=2)}")
-
-            # Step 3: Create the signature object in Tweety
-            self.logger.info("Step 3: Creating Tweety signature object...")
-            signature_obj = self.tweety_bridge._fol_handler.create_programmatic_fol_signature(defs_json)
-            if not signature_obj:
-                return None, "Failed to create a valid Tweety signature object from the definitions."
+            # Étape 2 : Normalisation et inférence de la hiérarchie des sorts
+            self.logger.info("Étape 2: Normalisation de la structure et inférence de la hiérarchie...")
+            normalized_structure = self._normalize_logical_structure(raw_unified_json)
+            self.logger.debug(f"Structure logique normalisée: {json.dumps(normalized_structure, indent=2)}")
             
-            # Step 4: Validate each formula against the signature
-            self.logger.info("Step 4: Validating generated formulas against the signature...")
+            if not any(normalized_structure.get(k) for k in ["sorts", "constants", "predicates"]):
+                return None, "Aucune structure logique (sorts, constantes, prédicats) n'a pu être extraite."
+
+
+            # Étape 3 : Création de la signature Tweety
+            self.logger.info("Étape 3: Création de l'objet signature Tweety...")
+            signature_obj = self.tweety_bridge._fol_handler.create_programmatic_fol_signature(normalized_structure)
+            if not signature_obj:
+                return None, "Échec de la création d'un objet signature Tweety valide."
+
+            # Étape 4 : Validation des formules
+            self.logger.info("Étape 4: Validation des formules générées...")
             valid_formulas = []
-            for formula_str in formulas_json.get("formulas", []):
-                # Clean the formula from comments before validation
+            for formula_str in normalized_structure.get("formulas", []):
                 cleaned_formula_str = re.sub(r'/\*.*?\*/', '', formula_str).strip()
                 is_valid, msg = self.tweety_bridge._fol_handler.validate_formula_with_signature(signature_obj, cleaned_formula_str)
                 if is_valid:
-                    valid_formulas.append(formula_str)
-                    self.logger.info(f"Formula accepted: '{formula_str}'")
+                    valid_formulas.append(cleaned_formula_str)
+                    self.logger.info(f"Formule acceptée: '{cleaned_formula_str}'")
                 else:
-                    self.logger.warning(f"Formula rejected by Tweety: '{formula_str}'. Reason: {msg}")
+                    self.logger.warning(f"Formule rejetée: '{formula_str}'. Raison: {msg}")
+            
+            if not valid_formulas and normalized_structure.get("formulas"):
+                 return None, "Toutes les formules générées étaient invalides selon la signature."
 
-            if not valid_formulas and formulas_json.get("formulas"):
-                return None, "All generated formulas were invalid according to the signature."
-
-            # Step 5: Create the final belief set with valid formulas
-            self.logger.info("Step 5: Creating final belief set from valid formulas...")
+            # Étape 5 : Création du BeliefSet final
+            self.logger.info("Étape 5: Création de l'ensemble de croyances final...")
             belief_set_obj = self.tweety_bridge._fol_handler.create_belief_set_from_formulas(signature_obj, valid_formulas)
             
-            # Assemble the final JSON for storage, containing only valid components
-            final_kb_json = {
-                "sorts": defs_json.get("sorts", []),
-                "constants": defs_json.get("constants", {}),
-                "predicates": defs_json.get("predicates", []),
-                "formulas": valid_formulas
-            }
+            final_kb_json = {**normalized_structure, "formulas": valid_formulas}
             final_belief_set = FirstOrderBeliefSet(content=json.dumps(final_kb_json, indent=2), java_object=belief_set_obj)
-
-            # Final consistency check
+            
             is_consistent, _ = self.is_consistent(final_belief_set)
             if not is_consistent:
-                self.logger.warning("The final knowledge base is inconsistent.")
+                self.logger.warning("La base de connaissances finale est incohérente.")
 
-            return final_belief_set, "Conversion successful."
+            return final_belief_set, "Conversion unifiée réussie."
 
-        except (ValueError, jpype.JException, json.JSONDecodeError) as e:
-            error_msg = f"Failed during belief set creation: {e}"
+        except Exception as e:
+            error_msg = f"Échec lors de la création de l'ensemble de croyances : {e}"
             self.logger.error(error_msg, exc_info=True)
             return None, error_msg
 
@@ -433,171 +306,134 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         self.logger.warning("No JSON block found in the response.")
         return "{}"
 
-    def _normalize_definitions(self, defs_json: Dict[str, Any]) -> Dict[str, Any]:
+    def _normalize_logical_structure(self, structure_json: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Normalizes all identifiers (sorts, constants, predicates) in the definitions JSON
-        to ensure consistency before passing to Java or subsequent LLM calls.
+        Normalise les identifiants, infère la hiérarchie des sorts, et nettoie la structure logique.
         """
-        normalized_defs = {}
-        
-        # Normalize sorts
-        original_sorts = defs_json.get("sorts", [])
-        normalized_defs["sorts"] = [self._normalize_identifier(s) for s in original_sorts]
-        
-        # Create a mapping from original sort names to normalized ones
-        sort_map = {orig: norm for orig, norm in zip(original_sorts, normalized_defs["sorts"])}
+        import unidecode
+        identifier_map = {}
 
-        # Normalize constants
-        original_constants = defs_json.get("constants", {})
+        # 1. Normaliser sorts, constantes, prédicats et créer une map d'identifiants
+        original_sorts = structure_json.get("sorts", [])
+        normalized_sorts = sorted([self._normalize_identifier(s) for s in original_sorts])
+        for orig, norm in zip(original_sorts, normalized_sorts):
+             identifier_map[orig] = norm
+
+        original_constants = structure_json.get("constants", {})
         normalized_constants = {}
-        for const_name, sort_name in original_constants.items():
-            norm_const = self._normalize_identifier(const_name)
-            # Use the mapped normalized sort name
-            norm_sort = sort_map.get(sort_name, self._normalize_identifier(sort_name))
+        for const, sort in original_constants.items():
+            norm_const = self._normalize_identifier(const)
+            norm_sort = identifier_map.get(sort, self._normalize_identifier(sort))
             normalized_constants[norm_const] = norm_sort
-        normalized_defs["constants"] = normalized_constants
+            identifier_map[const] = norm_const
 
-        # Normalize predicates
-        original_predicates = defs_json.get("predicates", [])
+        original_predicates = structure_json.get("predicates", [])
         normalized_predicates = []
+        # Map pour accès rapide : nom_pred_normalisé -> [sort_arg_1, sort_arg_2, ...]
+        pred_sig_map = {}
         for pred in original_predicates:
-            norm_pred_name = self._normalize_identifier(pred.get("name", ""))
-            norm_args = [sort_map.get(arg, self._normalize_identifier(arg)) for arg in pred.get("args", [])]
+            pred_name = pred.get("name", "")
+            norm_pred_name = unidecode.unidecode(pred_name)
+            norm_args = [identifier_map.get(arg, self._normalize_identifier(arg)) for arg in pred.get("args", [])]
             normalized_predicates.append({"name": norm_pred_name, "args": norm_args})
-        normalized_defs["predicates"] = normalized_predicates
+            pred_sig_map[norm_pred_name] = norm_args
+            identifier_map[pred_name] = norm_pred_name
 
-        return normalized_defs
-
-    def _normalize_and_validate_json(self, kb_json: Dict[str, Any]) -> Dict[str, Any]:
-        """Normalises identifiers in the JSON knowledge base."""
-        normalized_kb = {"predicates": kb_json.get("predicates", [])}
-        constant_map = {}
-        normalized_sorts = {}
-        for sort_name, constants in kb_json.get("sorts", {}).items():
-            norm_sort_name = self._normalize_identifier(sort_name)
-            norm_constants = [self._normalize_identifier(c) for c in constants]
-            constant_map.update({c: nc for c, nc in zip(constants, norm_constants)})
-            normalized_sorts[norm_sort_name] = norm_constants
-        normalized_kb["sorts"] = normalized_sorts
-        
-        normalized_formulas = []
-        for formula in kb_json.get("formulas", []):
+        # 2. Normaliser les formules en substituant les identifiants
+        original_formulas = structure_json.get("formulas", [])
+        formulas_with_normalized_ids = []
+        sorted_identifiers = sorted(identifier_map.keys(), key=len, reverse=True)
+        for formula in original_formulas:
             norm_formula = formula
-            for orig, norm in constant_map.items():
-                norm_formula = re.sub(r'\b' + re.escape(orig) + r'\b', norm, norm_formula)
-            normalized_formulas.append(norm_formula)
-        normalized_kb["formulas"] = normalized_formulas
+            for orig_id in sorted_identifiers:
+                norm_id = identifier_map[orig_id]
+                norm_formula = re.sub(r'\b' + re.escape(orig_id) + r'\b', norm_id, norm_formula, flags=re.UNICODE)
+            formulas_with_normalized_ids.append(norm_formula)
+        
+        # 3. Inférence de la hiérarchie des sorts à partir des incohérences de type
+        sort_hierarchy = {}
+        # Regex pour trouver les variables quantifiées et leur sort, e.g., "forall X:philosophe"
+        quantified_vars_re = re.compile(r'(?:forall|exists)\s+([A-Z][a-zA-Z0-9]*):([a-z_]+)')
+        # Regex pour trouver les appels de prédicats, e.g., "EstMortel(X)" ou "Amis(X, Y)"
+        predicate_calls_re = re.compile(r'([A-Z][a-zA-Z0-9_]*)\(([^)]+)\)')
 
-        self.logger.info("JSON normalization complete.")
-        return normalized_kb
-
-    def _parse_belief_set_content(self, belief_set: FirstOrderBeliefSet) -> Dict[str, Any]:
-        """
-        Extracts sorts, constants, and predicates from the source JSON of a belief set.
-        Mise à jour pour gérer le nouveau format JSON où "sorts" est une liste et "constants" un dictionnaire.
-        """
-        if not belief_set or not belief_set.content:
-            return {"sorts": [], "constants": set(), "predicates": {}}
-        try:
-            kb_json = json.loads(belief_set.content)
-            # Le nouveau format a les constantes dans un dictionnaire {"const_name": "sort_name"}
-            all_constants = set(kb_json.get("constants", {}).keys())
-            predicates_map = {p["name"]: len(p.get("args", [])) for p in kb_json.get("predicates", [])}
+        for formula in formulas_with_normalized_ids:
+            # Créer une map locale variable -> sort pour cette formule
+            var_sort_map = {m.group(1): m.group(2) for m in quantified_vars_re.finditer(formula)}
             
-            signature_obj = None
-            if belief_set.java_belief_set:
-                try:
-                    # La méthode getSignature() peut ne pas exister sur tous les types d'objets java
-                    if hasattr(belief_set.java_belief_set, 'getSignature'):
-                         signature_obj = belief_set.java_belief_set.getSignature()
-                except Exception as e:
-                    self.logger.warning(f"Impossible d'obtenir la signature depuis l'objet Java: {e}")
-
-            return {
-                "constants": all_constants,
-                "predicates": predicates_map,
-                "signature_obj": signature_obj,
-            }
-        except (json.JSONDecodeError, AttributeError) as e:
-            self.logger.error(f"Could not parse belief set content for query generation: {e}", exc_info=True)
-            return {"constants": set(), "predicates": {}, "signature_obj": None}
-
-    async def generate_queries(self, text: str, belief_set: FirstOrderBeliefSet, context: Optional[Dict[str, Any]] = None) -> List[str]:
-        """
-        Génère une liste de requêtes FOL pertinentes et valides pour un `BeliefSet` donné.
-
-        Le processus :
-        1. Utilise le LLM pour suggérer des "idées" de requêtes.
-        2. Valide que chaque idée est conforme à la signature du `BeliefSet` (prédicats, constantes, arité).
-        3. Assemble les idées valides en chaînes de requêtes FOL.
-        4. Valide la syntaxe finale de chaque requête assemblée avec `TweetyBridge`.
-
-        Args:
-            text (str): Le texte original pour le contexte.
-            belief_set (FirstOrderBeliefSet): Le `BeliefSet` à interroger.
-            context (Optional[Dict[str, Any]]): Contexte additionnel (non utilisé).
-
-        Returns:
-            List[str]: Une liste de chaînes de requêtes FOL prêtes à être exécutées.
-        """
-        self.logger.info(f"Generating FOL queries for {self.name}...")
-        try:
-            kb_details = self._parse_belief_set_content(belief_set)
-            if not kb_details["predicates"]:
-                 return []
-            
-            args = {"input": text, "belief_set": belief_set.content}
-            result = await self._kernel.plugins[self.name]["GenerateFOLQueryIdeas"].invoke(self._kernel, **args)
-            query_ideas = json.loads(self._extract_json_block(str(result))).get("query_ideas", [])
-            self.logger.info(f"{len(query_ideas)} query ideas received from LLM.")
-
-            valid_queries = []
-            signature_obj = kb_details.get("signature_obj")
-            if not signature_obj:
-                return []
-
-            for idea in query_ideas:
-                p_name, constants = idea.get("predicate_name"), idea.get("constants", [])
-                if not (p_name in kb_details["predicates"] and
-                        all(c in kb_details["constants"] for c in constants) and
-                        kb_details["predicates"][p_name] == len(constants)):
-                    continue
+            for call in predicate_calls_re.finditer(formula):
+                pred_name = call.group(1)
+                args = [arg.strip() for arg in call.group(2).split(',')]
                 
-                query_str = f"{p_name}({', '.join(constants)})"
-                is_valid, _ = self.tweety_bridge._fol_handler.validate_formula_with_signature(signature_obj, query_str)
-                if is_valid:
-                    self.logger.info(f"Assembled and validated query: {query_str}")
-                    valid_queries.append(query_str)
+                if pred_name not in pred_sig_map:
+                    continue # Prédicat non défini, sera attrapé par la validation Tweety
+
+                expected_sorts = pred_sig_map[pred_name]
+                if len(args) != len(expected_sorts):
+                    continue # Arity mismatch, sera aussi attrapé plus tard
+
+                for i, arg_name in enumerate(args):
+                    actual_sort = None
+                    if arg_name in var_sort_map:
+                        actual_sort = var_sort_map[arg_name]
+                    elif arg_name in normalized_constants:
+                        actual_sort = normalized_constants[arg_name]
+
+                    expected_sort = expected_sorts[i]
+                    
+                    if actual_sort and actual_sort != expected_sort:
+                        self.logger.info(f"Inférence de hiérarchie: '{actual_sort}' est un sous-sort de '{expected_sort}' "
+                                         f"d'après l'usage dans {pred_name}(...{arg_name}...).")
+                        sort_hierarchy[actual_sort] = expected_sort
+
+        return {
+            "sorts": normalized_sorts,
+            "constants": normalized_constants,
+            "predicates": normalized_predicates,
+            "formulas": formulas_with_normalized_ids,
+            "sort_hierarchy": sort_hierarchy # Nouvelle information cruciale
+        }
+        
+    async def generate_queries(self, text: str, belief_set: FirstOrderBeliefSet, **kwargs) -> List[str]:
+        """
+        Génère une liste de requêtes FOL pertinentes en utilisant le LLM.
+        """
+        self.logger.info(f"Génération de requêtes FOL pour {self.name}...")
+        try:
+            if not belief_set or not belief_set.content:
+                return []
+                
+            args = {"input": text, "belief_set": belief_set.content}
+            result = await self._kernel.plugins[self.name]["GenerateFOLQueries"].invoke(self._kernel, **args)
+            queries = json.loads(self._extract_json_block(str(result))).get("queries", [])
+            self.logger.info(f"{len(queries)} requêtes potentielles reçues du LLM.")
+            
+            # Valider chaque requête générée
+            valid_queries = []
+            for q_str in queries:
+                if self.validate_formula(q_str, belief_set):
+                    valid_queries.append(q_str)
+                    self.logger.info(f"Requête validée: {q_str}")
+                else:
+                    self.logger.warning(f"Requête invalide rejetée: {q_str}")
             return valid_queries
         except Exception as e:
-            self.logger.error(f"Error during query generation: {e}", exc_info=True)
+            self.logger.error(f"Erreur durant la génération de requêtes: {e}", exc_info=True)
             return []
 
     def execute_query(self, belief_set: FirstOrderBeliefSet, query: str) -> Tuple[Optional[bool], str]:
         """
         Exécute une requête FOL sur un `FirstOrderBeliefSet` donné.
-
-        Cette méthode s'appuie sur l'objet Java `BeliefSet` stocké dans l'instance
-        `FirstOrderBeliefSet` pour effectuer l'interrogation via `TweetyBridge`.
-
-        Args:
-            belief_set (FirstOrderBeliefSet): L'ensemble de croyances contenant l'objet Java.
-            query (str): La requête FOL à exécuter.
-
-        Returns:
-            Tuple[Optional[bool], str]: Un tuple contenant le résultat (`True` si
-            prouvé, `False` sinon, `None` en cas d'erreur) et un statut textuel
-            ("ACCEPTED", "REJECTED", ou message d'erreur).
         """
-        self.logger.info(f"Executing query: {query} for agent {self.name}")
+        self.logger.info(f"Exécution de la requête: {query} pour l'agent {self.name}")
         if not belief_set.java_belief_set:
-            return None, "Java belief set object not found."
+            return None, "Objet Java 'belief set' non trouvé."
         try:
             entails = self.tweety_bridge._fol_handler.fol_query(belief_set.java_belief_set, query)
             result_str = "ACCEPTED" if entails else "REJECTED"
             return entails, result_str
         except Exception as e:
-            error_msg = f"Error executing query: {e}"
+            error_msg = f"Erreur lors de l'exécution de la requête: {e}"
             self.logger.error(error_msg, exc_info=True)
             return None, f"FUNC_ERROR: {error_msg}"
 
@@ -606,22 +442,8 @@ class FirstOrderLogicAgent(BaseLogicAgent):
                          context: Optional[Dict[str, Any]] = None) -> str:
         """
         Traduit les résultats bruts d'une ou plusieurs requêtes en une explication en langage naturel.
-
-        Utilise un prompt sémantique pour fournir au LLM le contexte complet
-        (texte original, ensemble de croyances, requêtes, résultats bruts) afin qu'il
-        génère une explication cohérente.
-
-        Args:
-            text (str): Le texte original.
-            belief_set (BeliefSet): L'ensemble de croyances utilisé.
-            queries (List[str]): La liste des requêtes qui ont été exécutées.
-            results (List[Tuple[Optional[bool], str]]): La liste des résultats correspondants.
-            context (Optional[Dict[str, Any]]): Contexte additionnel (non utilisé).
-
-        Returns:
-            str: L'explication générée par le LLM.
         """
-        self.logger.info(f"Interpreting results for agent {self.name}...")
+        self.logger.info(f"Interprétation des résultats pour l'agent {self.name}...")
         try:
             queries_str = "\n".join(queries)
             results_text_list = [res[1] if res else "Error: No result" for res in results]
@@ -636,15 +458,15 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             )
             return str(result)
         except Exception as e:
-            error_msg = f"Error during result interpretation: {e}"
+            error_msg = f"Erreur durant l'interprétation des résultats: {e}"
             self.logger.error(error_msg, exc_info=True)
-            return f"Interpretation Error: {error_msg}"
+            return f"Error: {error_msg}"
 
     def validate_formula(self, formula: str, belief_set: Optional[FirstOrderBeliefSet] = None) -> bool:
         """
         Validates the syntax of a FOL formula, optionally against a belief set's signature.
         """
-        self.logger.debug(f"Validating FOL formula: {formula}")
+        self.logger.debug(f"Validation de la formule FOL: {formula}")
         if belief_set and belief_set.java_belief_set:
             signature = belief_set.java_belief_set.getSignature()
             is_valid, _ = self.tweety_bridge._fol_handler.validate_formula_with_signature(signature, formula)
@@ -654,96 +476,76 @@ class FirstOrderLogicAgent(BaseLogicAgent):
 
     def is_consistent(self, belief_set: FirstOrderBeliefSet) -> Tuple[bool, str]:
         """Checks if a FOL belief set is consistent using its Java object."""
-        self.logger.info(f"Checking consistency for {self.name}")
+        self.logger.info(f"Vérification de la consistance pour {self.name}")
         if not belief_set.java_belief_set:
-            return False, "Java BeliefSet object not created."
+            return False, "Objet Java BeliefSet non créé."
         try:
             return self.tweety_bridge._fol_handler.fol_check_consistency(belief_set.java_belief_set)
         except Exception as e:
-            self.logger.error(f"Unexpected error during consistency check: {e}", exc_info=True)
+            self.logger.error(f"Erreur inattendue durant la vérification de consistance: {e}", exc_info=True)
             return False, str(e)
 
     def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> BeliefSet:
         """Recreates a BeliefSet object from a dictionary."""
         content = belief_set_data.get("content", "")
         # This is a simplified recreation; the Java object is lost on serialization.
-        # A more robust implementation would re-parse the content JSON here.
         return FirstOrderBeliefSet(content)
 
     async def validate_argument(self, premises: List[str], conclusion: str, **kwargs) -> bool:
         """
         Valide un argument structuré (prémisses, conclusion) en FOL.
         """
-        self.logger.info(f"Validating FOL argument for {self.name}...")
-        
-        # Simplistic approach: combine premises into a text block and convert to a belief set
-        # A more robust solution would handle formulas directly if they are already in FOL syntax
-        
-        # Combine premises to form a context text
+        self.logger.info(f"Validation de l'argument FOL pour {self.name}...")
         context_text = " ".join(premises)
-
-        # Use text_to_belief_set to build the knowledge base from premises
         belief_set, status = await self.text_to_belief_set(context_text)
 
         if not belief_set:
-            self.logger.error(f"Could not create a belief set from premises. Status: {status}")
+            self.logger.error(f"Impossible de créer un belief set à partir des prémisses. Statut: {status}")
             return False
 
-        # Now, check if the conclusion is entailed by the belief set
-        # The conclusion also needs to be a valid formula in the context of the belief set
-        # We'll assume for now that the conclusion is a single formula string
-        
-        # First, validate the syntax of the conclusion
         if not self.validate_formula(conclusion, belief_set):
-            self.logger.warning(f"Conclusion '{conclusion}' has invalid syntax or is not aligned with the belief set's signature.")
-            return False
+            self.logger.warning(f"La conclusion '{conclusion}' a une syntaxe invalide ou n'est pas alignée avec la signature du belief set.")
             
-        # Then, execute the query
+            #Tentative de réparation de la conclusion
+            self.logger.info("Tentative de réparation de la conclusion en utilisant la normalisation...")
+            
+            # Crée une structure ad-hoc pour la normalisation
+            temp_structure = json.loads(belief_set.content)
+            temp_structure["formulas"] = [conclusion]
+            
+            repaired_structure = self._normalize_logical_structure(temp_structure)
+            repaired_conclusion = repaired_structure["formulas"][0]
+            self.logger.info(f"Conclusion réparée (tentative) : {repaired_conclusion}")
+
+            if not self.validate_formula(repaired_conclusion, belief_set):
+                 self.logger.error("La conclusion réparée est toujours invalide.")
+                 return False
+            conclusion = repaired_conclusion
+
         entails, query_status = self.execute_query(belief_set, conclusion)
 
         if entails is None:
-            self.logger.error(f"Error executing query for conclusion '{conclusion}': {query_status}")
+            self.logger.error(f"Erreur lors de l'exécution de la requête pour la conclusion '{conclusion}': {query_status}")
             return False
 
         return entails
 
-    async def get_response(
-        self,
-        chat_history: ChatHistory,
-        settings: Optional[Any] = None,
-    ) -> AsyncGenerator[list[ChatMessageContent], None]:
-        logger.warning(f"Method 'get_response' is not implemented for {self.name}.")
+    # Méthodes génériques de l'agent (interfaces requises)
+    async def get_response(self, chat_history: ChatHistory, **kwargs) -> AsyncGenerator[List[ChatMessageContent], None]:
+        logger.warning(f"La méthode 'get_response' n'est pas l'interaction standard pour {self.name}.")
         yield []
-        return
-
-    async def invoke(
-        self,
-        chat_history: ChatHistory,
-        settings: Optional[Any] = None,
-    ) -> list[ChatMessageContent]:
-        logger.warning(f"Method 'invoke' is not implemented for {self.name}.")
-        return []
-
-    async def invoke_stream(
-        self,
-        chat_history: ChatHistory,
-        settings: Optional[Any] = None,
-    ) -> AsyncGenerator[list[ChatMessageContent], None]:
-        logger.warning(f"Method 'invoke_stream' is not implemented for {self.name}.")
-        yield []
-        return
+    
+    async def invoke(self, chat_history: ChatHistory, **kwargs) -> List[ChatMessageContent]:
+        """Point d'entrée principal pour les interactions génériques."""
+        last_user_message = next((m.content for m in reversed(chat_history) if m.role == "user"), None)
+        if not last_user_message or not isinstance(last_user_message, str):
+             return [ChatMessageContent(role="assistant", content="Veuillez fournir une instruction en texte.", name=self.name)]
         
-    async def invoke_single(self, *args, **kwargs) -> list[ChatMessageContent]:
-        """Generic entry point. Not the primary way to use this agent."""
-        self.logger.info(f"Generic invocation of {self.name}. Analyzing arguments...")
-        if "text_to_belief_set_input" in kwargs:
-            text = kwargs["text_to_belief_set_input"]
-            belief_set_obj, message = await self.text_to_belief_set(text)
-            response_content = belief_set_obj.to_dict() if belief_set_obj else {"error": message}
-        elif "generate_queries_input" in kwargs and "belief_set" in kwargs:
-             text, belief_set = kwargs["generate_queries_input"], kwargs["belief_set"]
-             queries = await self.generate_queries(text, belief_set)
-             response_content = {"generated_queries": queries}
+        # Ce point d'entrée est un passe-plat vers la logique principale
+        belief_set, status = await self.text_to_belief_set(last_user_message)
+        if not belief_set:
+            response_content = {"error": status}
         else:
-            response_content = {"error": "Unrecognized task."}
+            response_content = belief_set.to_dict()
+
         return [ChatMessageContent(role="assistant", content=json.dumps(response_content), name=self.name)]
