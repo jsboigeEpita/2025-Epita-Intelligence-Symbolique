@@ -25,6 +25,7 @@ class AgentGroupChat:
         
 AGENTS_AVAILABLE = True
 from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.contents.streaming_chat_message_content import StreamingChatMessageContent
 
 # Import conditionnel pour les modules filters qui peuvent ne pas exister
 try:
@@ -435,67 +436,33 @@ class CluedoExtendedOrchestrator:
         self._logger.info("🔄 Début de la boucle d'orchestration 3-agents...")
         
         try:
-            # Nous devons passer l'agent'None' la première fois.
             fake_initial_agent = self.sherlock_agent
             while not await self.termination_strategy.should_terminate(agent=fake_initial_agent, history=history):
 
-                # 1. Sélectionner l'agent
                 next_agent = await self.selection_strategy.next(agents=list(self.orchestration.active_agents.values()), history=history)
-                fake_initial_agent = next_agent # L'agent sera utilisé pour le prochain tour
+                fake_initial_agent = next_agent
                 
-                # 2. Exécuter le tour de l'agent
                 self._logger.info(f"--- Tour de {next_agent.name} ---")
                 
-                # Le message au prochain agent est le contenu du dernier message
-                # La méthode `invoke` est le point d'entrée standard pour les agents SK.
-                # Gestion de la taille de l'historique pour éviter le dépassement de contexte
-                
-                # 1. Tronquer le nombre de messages
+                # 1. Tronquer et nettoyer l'historique avant de l'envoyer
                 if len(history) > self.MAX_HISTORY_MESSAGES:
                     self._logger.warning(f"L'historique dépasse {self.MAX_HISTORY_MESSAGES} messages. Troncation...")
-                    # Conserve le premier message (système) et les N-1 derniers messages
-                    temp_history = [history[0]] + history[-(self.MAX_HISTORY_MESSAGES - 1):]
+                    history_to_send = [history[0]] + history[-(self.MAX_HISTORY_MESSAGES - 1):]
                 else:
-                    temp_history = history
-                
-                # 2. Nettoyer et simplifier l'historique pour réduire la charge de tokens
-                history_to_send = []
-                for msg in temp_history:
-                    # Crée un message simple avec seulement le contenu essentiel
-                    clean_content = str(msg.content) if msg.content else ""
-                    history_to_send.append(
-                        ChatMessageContent(
-                            role=msg.role,
-                            content=clean_content,
-                            name=getattr(msg, 'name', None) or getattr(msg, 'author_name', None)
-                        )
-                    )
+                    history_to_send = history
 
-                # MODIFICATION : Passer l'historique nettoyé et tronqué
+                # 2. Exécuter l'agent avec l'historique préparé
                 agent_response_raw = await next_agent.invoke(input=history_to_send, arguments=KernelArguments())
                 
-                # Le résultat de invoke peut être un ChatMessageContent, une liste, ou un objet résultat
-                if isinstance(agent_response_raw, list) and len(agent_response_raw) > 0:
-                    response_content_obj = agent_response_raw[0]
-                elif isinstance(agent_response_raw, ChatMessageContent):
-                    response_content_obj = agent_response_raw
-                else:
-                    # Gestion du cas où le résultat est un objet `KernelContent` ou un `str`
-                    response_content_str = str(agent_response_raw)
-                    response_content_obj = ChatMessageContent(role="assistant", content=response_content_str, name=next_agent.name)
-
-                # 3. Mettre à jour l'historique avec une version NETTOYEE du message
-                # pour éviter d'accumuler des objets complexes et dépasser le contexte.
-                clean_content_for_history = str(response_content_obj.content) if response_content_obj.content else ""
-                clean_message = ChatMessageContent(
-                    role=response_content_obj.role,
-                    content=clean_content_for_history,
-                    name=getattr(response_content_obj, 'name', None) or getattr(response_content_obj, 'author_name', None) or next_agent.name
-                )
-                history.append(clean_message)
-                last_message_content = str(response_content_obj.content) # Gardé pour le log et l'état
+                # 3. Consolider et nettoyer la réponse de l'agent
+                # C'est une étape CRUCIALE pour éviter le context overflow avec les réponses en streaming.
+                clean_message = self.consolidate_agent_response(agent_response_raw, next_agent.name)
                 
-                # Log et mise à jour de l'état
+                # 4. Mettre à jour l'historique avec le message propre
+                history.append(clean_message)
+                last_message_content = str(clean_message.content)
+
+                # 5. Log et mise à jour de l'état
                 self._logger.info(f"Réponse de {next_agent.name}: {last_message_content[:150]}...")
                 self.oracle_state.add_conversation_message(
                     agent_name=next_agent.name,
@@ -517,12 +484,56 @@ class CluedoExtendedOrchestrator:
         finally:
             self.end_time = datetime.now()
         
-        # Collecte des métriques finales
         workflow_result = await self._collect_final_metrics(history)
         
         self._logger.info("[OK] Workflow 3-agents terminé")
         return workflow_result
     
+    def consolidate_agent_response(self, response_raw: Any, agent_name: str) -> ChatMessageContent:
+        """
+        Consolide la réponse brute d'un agent en un ChatMessageContent propre et simple.
+        Gère les réponses en streaming pour éviter l'explosion du contexte.
+        """
+        full_content = ""
+        role = "assistant"
+        
+        if isinstance(response_raw, list):
+            # Gère les réponses en streaming (liste de StreamingChatMessageContent)
+            # ou les listes d'objets (comme pour Watson)
+            if all(isinstance(item, StreamingChatMessageContent) for item in response_raw):
+                for chunk in response_raw:
+                    if chunk.content:
+                        full_content += str(chunk.content)
+            elif len(response_raw) > 0 and isinstance(response_raw[0], ChatMessageContent):
+                # Cas d'une liste avec un seul message (Moriarty)
+                response_obj = response_raw[0]
+                full_content = str(response_obj.content) if response_obj.content else ""
+                role = response_obj.role
+            else:
+                full_content = str(response_raw) # Fallback
+
+        elif isinstance(response_raw, StreamingChatMessageContent):
+            # Gère un seul objet de streaming
+             if response_raw.content:
+                full_content += str(response_raw.content)
+
+        elif isinstance(response_raw, ChatMessageContent):
+            # Gère un objet ChatMessageContent simple
+            full_content = str(response_raw.content) if response_raw.content else ""
+            role = response_raw.role
+
+        else:
+            # Fallback pour les réponses simples (str)
+            full_content = str(response_raw)
+
+        # Création d'un message final nettoyé
+        return ChatMessageContent(
+            role=role,
+            content=full_content,
+            name=agent_name
+        )
+
+
     async def _collect_final_metrics(self, history: List[ChatMessageContent]) -> Dict[str, Any]:
         """Collecte les métriques finales du workflow."""
         execution_time = (self.end_time - self.start_time).total_seconds() if self.start_time and self.end_time else 0
