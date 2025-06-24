@@ -451,6 +451,10 @@ class CluedoExtendedOrchestrator:
                 else:
                     history_to_send = history
 
+                # DEBUG: Logguer l'historique avant envoi
+                for i, msg in enumerate(history_to_send):
+                    self._logger.debug(f"  [HISTORY TO SEND #{i}] Role: {msg.role}, Name: {msg.name}, Type: {type(msg.content)}, Content: {str(msg.content)[:120]}...")
+
                 # 2. Exécuter l'agent avec l'historique préparé
                 agent_response_raw = await next_agent.invoke(input=history_to_send, arguments=KernelArguments())
                 
