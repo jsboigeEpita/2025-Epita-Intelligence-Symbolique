@@ -1,11 +1,33 @@
 # -*- coding: utf-8 -*-
 import sys
+import os
+
+# =============================================================================
+# PATCH DE DÉCHARGEMENT FORCÉ DE TORCH (TENTATIVE DÉSESPÉRÉE)
+# Objectif : Supprimer torch et les librairies associées de la mémoire AVANT
+# que pytest ne charge quoi que ce soit d'autre, pour éviter le conflit
+# avec la JVM de JPype.
+# =============================================================================
+print("--- PATCH DE DÉCHARGEMENT FORCÉ DE TORCH ACTIVÉ ---")
+modules_to_remove = ['torch', 'transformers', 'sentence_transformers']
+modules_to_delete = [name for name in sys.modules if any(name.startswith(prefix) for prefix in modules_to_remove)]
+if modules_to_delete:
+    print(f"Modules à décharger: {modules_to_delete}")
+    for name in modules_to_delete:
+        try:
+            del sys.modules[name]
+        except KeyError:
+            pass
+    print(f"--- {len(modules_to_delete)} modules relatifs à torch déchargés ---")
+else:
+    print("--- Aucun module relatif à torch n'était chargé. ---")
+# -*- coding: utf-8 -*-
+import sys
 from pathlib import Path
 
 # A list of files or directories to be ignored during test collection.
 collect_ignore = [
     "tests/integration/services/test_mcp_server_integration.py",
-    "tests/agents/core/logic",
 ]
 
 # Ajoute la racine du projet au sys.path pour résoudre les problèmes d'import
