@@ -965,7 +965,21 @@ async def run_cluedo_oracle_game(
 async def main():
     """Point d'entrée pour exécuter le workflow 3-agents de manière autonome."""
     kernel = Kernel()
-    # NOTE: Configurez ici votre service LLM
+    
+    # --- DEBUT BLOC DE CORRECTION ---
+    # Ajout de la configuration du service LLM, comme dans cluedo_orchestrator.py
+    from argumentation_analysis.config.settings import settings
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
+    if not settings.use_mock_llm and settings.openai.api_key:
+        kernel.add_service(
+            OpenAIChatCompletion(
+                service_id=settings.openai.chat_model_id,
+                ai_model_id=settings.openai.chat_model_id,
+                api_key=settings.openai.api_key.get_secret_value(),
+            )
+        )
+    # --- FIN BLOC DE CORRECTION ---
     
     try:
         result = await run_cluedo_oracle_game(
@@ -988,7 +1002,7 @@ async def main():
             print(f"[OK] Solution: {result['final_state']['final_solution']}")
         else:
             print(f"❌ Solution proposée: {result['final_state']['final_solution']}")
-            print(f"🎯 Solution correcte: {result['final_state']['correct_solution']}")
+            print(f"🎯 Solution correcte: {result['final_state']['secret_solution']}")
         
         print("\n" + "="*60)
         
