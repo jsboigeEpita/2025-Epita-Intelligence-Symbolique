@@ -142,16 +142,17 @@ class InformalAnalysisPlugin:
                         self._logger.warning(f"Impossible de convertir la colonne '{col}' en 'Int64': {e}. La colonne sera ignorée pour les opérations de typage.")
 
             # Définir l'index après avoir nettoyé la colonne PK
-            if 'PK' in df.columns and pd.api.types.is_numeric_dtype(df['PK']):
+            if 'PK' in df.columns:
                 try:
+                    # On tente de définir l'index directement. La conversion précédente devrait garantir que c'est possible.
                     df.set_index('PK', inplace=True)
-                    self._logger.info(f"Index 'PK' défini avec succès. Type: {df.index.dtype}.")
+                    self._logger.info(f"Index 'PK' défini avec succès. Type de l'index: {df.index.dtype}.")
+                except TypeError as e:
+                     self._logger.warning(f"Impossible de définir 'PK' comme index car elle n'est pas de type numérique ou compatible (type: {df['PK'].dtype}). Erreur: {e}")
                 except Exception as e:
                     self._logger.error(f"Erreur critique lors de la définition de 'PK' comme index: {e}")
-            elif 'PK' not in df.columns:
-                 self._logger.warning("Colonne 'PK' non trouvée. L'index ne peut être défini.")
             else:
-                 self._logger.warning(f"La colonne 'PK' n'a pas pu être convertie en entier (type actuel: {df['PK'].dtype}), impossible de la définir comme index.")
+                 self._logger.warning("Colonne 'PK' non trouvée. L'index ne peut être défini.")
 
             return df
         except Exception as e:
@@ -208,7 +209,7 @@ class InformalAnalysisPlugin:
             df['depth'] = pd.to_numeric(df['depth'], errors='coerce')
         
         # Trouver le nœud courant
-        current_node_df = df[df.index == current_pk] if current_pk in df.index else pd.DataFrame()
+        current_node_df = df.loc[df.index == current_pk] if current_pk in df.index else pd.DataFrame()
         if len(current_node_df) == 0:
             result["error"] = f"PK {current_pk} non trouvée dans la taxonomie."
             return result
@@ -223,7 +224,7 @@ class InformalAnalysisPlugin:
             "path": current_path,
             "depth": int(current_row['depth']) if pd.notna(current_row.get('depth')) else 0,
             "Name": current_row.get('Name', ''), # Utiliser la colonne 'Name' du CSV
-            "nom_vulgarisé": current_row.get('nom_vulgarisé', ''), # nom_vulgarisé (peut être redondant ou un alias)
+            "nom_vulgarise": current_row.get('nom_vulgarise', ''), # nom_vulgarise (peut être redondant ou un alias)
             "famille": current_row.get('Famille', ''),             # Famille
             "description_courte": current_row.get('text_fr', '')   # text_fr comme description courte
         }
@@ -288,7 +289,7 @@ class InformalAnalysisPlugin:
                 # Pour l'instant, on met False, car le but est de lister les enfants directs.
                 child_info = {
                     "pk": int(child_row.name), # .name est l'index (PK)
-                    "nom_vulgarisé": child_row.get('nom_vulgarisé', ''), # nom_vulgarisé
+                    "nom_vulgarise": child_row.get('nom_vulgarise', ''), # nom_vulgarise
                     "description_courte": child_row.get('text_fr', ''),   # text_fr
                     "famille": child_row.get('Famille', ''),             # Famille
                     "has_children": False # Simplifié. Pourrait être calculé si besoin.
@@ -336,7 +337,7 @@ class InformalAnalysisPlugin:
         # Trouver le nœud
         # Correction pour la compatibilité pandas 2.x
         # Remplacer df.loc[[pk]] par un filtrage sur l'index, plus robuste
-        node_df = df[df.index == pk]
+        node_df = df.loc[df.index == pk]
         if len(node_df) == 0:
             result["error"] = f"PK {pk} non trouvée dans la taxonomie."
             return result
@@ -362,7 +363,7 @@ class InformalAnalysisPlugin:
         if parent_pk_val is not None:
             try:
                 parent_pk_int = int(parent_pk_val)
-                parent_df = df[df.index == parent_pk_int]
+                parent_df = df.loc[df.index == parent_pk_int]
             except ValueError:
                 self._logger.warning(f"Valeur FK_Parent/parent_pk non entière pour le nœud {pk}: {parent_pk_val}")
 
@@ -377,7 +378,7 @@ class InformalAnalysisPlugin:
             parent_row = parent_df.iloc[0]
             result["parent"] = {
                 "pk": int(parent_row.name), # .name est l'index (PK)
-                "nom_vulgarisé": parent_row.get('nom_vulgarisé', ''), # nom_vulgarisé
+                "nom_vulgarise": parent_row.get('nom_vulgarise', ''), # nom_vulgarise
                 "description_courte": parent_row.get('text_fr', ''),   # text_fr
                 "famille": parent_row.get('Famille', '')              # Famille
             }
@@ -410,7 +411,7 @@ class InformalAnalysisPlugin:
             for _, child_row_detail in child_nodes_for_details.iterrows():
                 child_info_detail = {
                     "pk": int(child_row_detail.name),
-                    "nom_vulgarisé": child_row_detail.get('nom_vulgarisé', ''), # nom_vulgarisé
+                    "nom_vulgarise": child_row_detail.get('nom_vulgarise', ''), # nom_vulgarise
                     "description_courte": child_row_detail.get('text_fr', ''),   # text_fr
                     "famille": child_row_detail.get('Famille', '')              # Famille
                 }
@@ -638,7 +639,7 @@ class InformalAnalysisPlugin:
                 name_val = row.get('nom_vulgarisé', row.get('text_fr', 'Nom non disponible'))
                 result_list.append({
                     "pk": int(pk_val), # Assurer que PK est un entier
-                    "nom_vulgarisé": name_val # Utiliser la clé "nom_vulgarisé" pour la cohérence
+                    "nom_vulgarise": name_val # Utiliser la clé "nom_vulgarise" pour la cohérence
                 })
             self._logger.info(f"{len(result_list)} sophismes trouvés dans la catégorie '{category_name}'.")
             return json.dumps({"category": category_name, "fallacies": result_list}, default=str)
@@ -718,6 +719,9 @@ def setup_informal_kernel(kernel: sk.Kernel, llm_service: Any, taxonomy_file_pat
     """
     plugin_name = "InformalAnalyzer"
     logger.info(f"Configuration Kernel pour {plugin_name} (V13 - Plugin autonome avec nouvelles fonctions)...")
+
+    if not llm_service:
+        raise ValueError("Le service LLM (llm_service) est requis")
 
     informal_plugin_instance = InformalAnalysisPlugin(taxonomy_file_path=taxonomy_file_path)
 
