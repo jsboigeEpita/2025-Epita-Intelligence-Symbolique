@@ -62,10 +62,14 @@ class BackendManager:
         self.pid: Optional[int] = None
         self.log_threads: List[threading.Thread] = []
         
-    async def start_with_failover(self, port_override: Optional[int] = None) -> Dict[str, Any]:
+    async def start_with_failover(self, app_module: Optional[str] = None, port_override: Optional[int] = None) -> Dict[str, Any]:
         """
         Démarre le backend avec failover automatique sur plusieurs ports
         
+        Args:
+            app_module: Module applicatif à lancer (ex: 'api.main:app')
+            port_override: Force l'utilisation d'un port spécifique
+            
         Returns:
             Dict contenant success, url, port, pid, error
         """
@@ -74,16 +78,19 @@ class BackendManager:
         else:
             ports_to_try = [self.start_port] + self.fallback_ports
         
+        # Le module applicatif peut être surchargé, sinon on utilise celui de la config
+        target_module = app_module or self.module
+        
         for attempt in range(1, self.max_attempts + 1):
             port = ports_to_try[(attempt - 1) % len(ports_to_try)]
-            self.logger.info(f"Tentative {attempt}/{self.max_attempts} - Port {port}")
+            self.logger.info(f"Tentative {attempt}/{self.max_attempts} - Lancement de '{target_module}' sur le port {port}")
 
             if await self._is_port_occupied(port):
                 self.logger.warning(f"Port {port} occupé, nouvelle tentative dans 2s...")
                 await asyncio.sleep(2)
                 continue
 
-            result = await self._start_on_port(port)
+            result = await self._start_on_port(port, target_module)
             if result['success']:
                 self.current_port = port
                 self.current_url = result['url']
@@ -113,8 +120,13 @@ class BackendManager:
         except Exception as e:
             self.logger.error(f"Erreur dans le thread de logging: {e}")
 
-    async def _start_on_port(self, port: int) -> Dict[str, Any]:
-        """Démarre le backend sur un port spécifique"""
+    async def _start_on_port(self, port: int, app_module: str) -> Dict[str, Any]:
+        """
+        Démarre une application backend sur un port spécifique.
+        Args:
+            port: Le port sur lequel démarrer.
+            app_module: Le module applicatif à lancer (ex: 'api.main:app').
+        """
         try:
             server_type = self.config.get('server_type', 'uvicorn')
             
@@ -123,7 +135,6 @@ class BackendManager:
 
             # Construction de la commande interne (Python + uvicorn/flask)
             if server_type == 'uvicorn':
-                asgi_module = 'argumentation_analysis.services.web_api.asgi:app'
                 log_config_path = project_root.joinpath('argumentation_analysis', 'config', 'uvicorn_logging.json')
                 
                 # Correction robuste: Utiliser le chemin absolu vers python.exe et construire une liste d'arguments
@@ -133,7 +144,7 @@ class BackendManager:
 
                 cmd = [
                     python_executable,
-                    '-m', 'uvicorn', asgi_module,
+                    '-m', 'uvicorn', app_module,
                     '--port', str(port),
                     '--host', '127.0.0.1',
                     '--log-config', str(log_config_path)
@@ -183,9 +194,15 @@ class BackendManager:
             self.logger.error(f"Erreur Démarrage Backend (port {port}): {e}", exc_info=True)
             return {'success': False, 'error': str(e), 'url': None, 'port': None, 'pid': None}
     
-    async def _wait_for_backend(self, port: int) -> bool:
+    async def _wait_for_backend(self, port: int, app_module: Optional[str] = None) -> bool:
         """Attend que le backend soit accessible via health check avec une patience accrue."""
-        url = f"http://127.0.0.1:{port}{self.health_endpoint}"
+        # Sélectionne l'endpoint de santé approprié
+        if app_module and 'api.main' in app_module:
+            health_endpoint = '/health'
+        else:
+            health_endpoint = self.health_endpoint
+
+        url = f"http://127.0.0.1:{port}{health_endpoint}"
         start_time = time.time()
         self.logger.info(f"Attente backend sur {url} (timeout: {self.timeout_seconds}s)")
 
