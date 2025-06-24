@@ -110,11 +110,40 @@ class TweetyInitializer:
                 logger.info(f"JAVA_HOME environment variable: {java_home_env}")
                 # --- END DEBUGGING ---
 
-                # MODIFICATION POUR FIABILITÉ : Passer le classpath directement à startJVM.
-                # C'est souvent plus stable que d'utiliser addClassPath avant de démarrer.
+                # --- CHOIX STRATÉGIQUE DE LA JVM ---
+                # NOTE DE FIABILITÉ : L'environnement d'exécution (via activate_project_env.ps1)
+                # ne propage pas correctement la variable d'environnement JAVA_HOME, et JPype
+                # sélectionne par défaut une ancienne JRE système (Java 8), ce qui cause une
+                # incompatibilité avec les JARs Tweety.
+                # Pour contourner ce problème, nous forçons l'utilisation du JDK portable
+                # inclus dans le projet. C'est moins flexible mais garantit la stabilité.
                 from argumentation_analysis.utils.system_utils import get_project_root
                 project_root = get_project_root()
-                # On charge maintenant le JAR 'full' ET le JAR 'commons' pour s'assurer que toutes les dépendances sont présentes.
+                # Correction du chemin suite au débogage : le dossier est 'portable_jdk' et la version est 17.
+                hardcoded_jdk_path = project_root / "portable_jdk" / "jdk-17.0.2+8"
+                jvm_path_to_use = default_jvm_path
+                
+                logger.info(f"Attempting to use hardcoded JDK path: {hardcoded_jdk_path}")
+
+                if os.path.isdir(hardcoded_jdk_path):
+                    logger.info(f"Hardcoded JDK path found. Searching for JVM library...")
+                    if sys.platform == "win32":
+                        lib_name = "jvm.dll"
+                        potential_jvm_path = hardcoded_jdk_path / "bin" / "server" / lib_name
+                    else:
+                        lib_name = "libjvm.so"
+                        potential_jvm_path = hardcoded_jdk_path / "lib" / "server" / lib_name
+
+                    if potential_jvm_path.exists():
+                        jvm_path_to_use = str(potential_jvm_path)
+                        logger.info(f"SUCCESS: Using hardcoded JVM path: {jvm_path_to_use}")
+                    else:
+                        logger.warning(f"Could not find JVM file at '{potential_jvm_path}'. Falling back to JPype default.")
+                else:
+                    logger.warning(f"Hardcoded JDK path '{hardcoded_jdk_path}' not found. Falling back to JPype default.")
+                # --- FIN DU CHOIX ---
+
+                # MODIFICATION POUR FIABILITÉ : Passer le classpath directement à startJVM.
                 tweety_libs_path = project_root / "libs" / "tweety"
                 full_jar_path = tweety_libs_path / "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
                 commons_jar_path = tweety_libs_path / "org.tweetyproject.logics.commons-1.28-with-dependencies.jar"
@@ -123,9 +152,9 @@ class TweetyInitializer:
                 logger.info(f"Using classpath: {classpath}")
 
                 jpype.startJVM(
-                    default_jvm_path,
+                    jvm_path_to_use, # Utiliser le chemin de la JVM sélectionné
                     "-ea",
-                    classpath=classpath,  # Passer explicitement les chemins des JARs
+                    classpath=classpath,
                     convertStrings=False
                 )
                 TweetyInitializer._jvm_started = True

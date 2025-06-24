@@ -9,10 +9,11 @@ import uuid
 
 from argumentation_analysis.orchestration.hierarchical.tactical.state import TacticalState
 from argumentation_analysis.paths import RESULTS_DIR
-from argumentation_analysis.core.communication import (
-    MessageMiddleware, TacticalAdapter, OperationalAdapter,
-    ChannelType, MessagePriority, Message, MessageType, AgentLevel
-)
+from argumentation_analysis.core.communication.middleware import MessageMiddleware
+from argumentation_analysis.core.communication.tactical_adapter import TacticalAdapter
+from argumentation_analysis.core.communication.operational_adapter import OperationalAdapter
+from argumentation_analysis.core.communication.message import Message, MessageType, MessagePriority, AgentLevel
+from argumentation_analysis.core.communication.channel_interface import ChannelType
 
 
 class TaskCoordinator:
@@ -212,7 +213,8 @@ class TaskCoordinator:
             elif directive_type == "strategic_adjustment":
                 self._apply_strategic_adjustments(message.content)
         
-        self.adapter.subscribe_to_directives(handle_directive)
+        # self.adapter.subscribe_to_directives(handle_directive)
+        self.logger.warning("Subscription to directives is currently disabled due to API changes.")
         self.logger.info("Abonné aux directives stratégiques.")
 
     def _determine_appropriate_agent(self, required_capabilities: List[str]) -> Optional[str]:

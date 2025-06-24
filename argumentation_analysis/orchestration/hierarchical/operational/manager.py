@@ -20,10 +20,10 @@ from argumentation_analysis.paths import RESULTS_DIR
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from argumentation_analysis.orchestration.hierarchical.interfaces.tactical_operational import TacticalOperationalInterface
-from argumentation_analysis.core.communication import (
-    MessageMiddleware, OperationalAdapter, Message,
-    ChannelType, MessagePriority, MessageType, AgentLevel
-)
+from argumentation_analysis.core.communication.middleware import MessageMiddleware
+from argumentation_analysis.core.communication.operational_adapter import OperationalAdapter
+from argumentation_analysis.core.communication.message import Message, MessageType, MessagePriority, AgentLevel
+from argumentation_analysis.core.communication.channel_interface import ChannelType
 
 
 class OperationalManager:
@@ -204,7 +204,8 @@ class OperationalManager:
             self.logger.info(f"Tâche reçue via message: {task_data.get('id')}")
             await self.task_queue.put(task_data)
 
-        self.adapter.subscribe_to_tasks(handle_task_message)
+        # self.adapter.subscribe_to_tasks(handle_task_message)
+        self.logger.warning("Subscription to tasks is currently disabled due to API changes.")
         self.logger.info("Abonné aux tâches opérationnelles.")
 
     def _map_priority_to_enum(self, priority: str) -> MessagePriority:

@@ -223,6 +223,27 @@ class SherlockEnqueteAgent(BaseAgent):
         self._tools = SherlockTools(kernel=kernel)
         self._kernel.add_plugin(self._tools, plugin_name="SherlockAgentPlugin")
 
+        # Création de la fonction agent principale
+        execution_settings = OpenAIPromptExecutionSettings(
+            service_id=self._service_id,
+            max_tokens=2000,
+            temperature=0.7,
+            top_p=0.8
+        )
+        
+        prompt_template_config = PromptTemplateConfig(
+            template="{{$chat_history}}",
+            description="Chat with Sherlock, the master detective.",
+            template_format="semantic-kernel",
+            execution_settings={self._service_id: execution_settings},
+        )
+
+        self._agent = self._kernel.add_function(
+            function_name="chat",
+            plugin_name="SherlockAgentCore",
+            prompt_template_config=prompt_template_config,
+        )
+
     def get_agent_capabilities(self) -> Dict[str, Any]:
         return {
             "get_current_case_description": "Récupère la description de l'affaire en cours.",
@@ -239,11 +260,10 @@ class SherlockEnqueteAgent(BaseAgent):
         history = self._get_history(user_input)
 
         # Exécution de l'agent
+        arguments = KernelArguments(chat_history=history)
         response_stream = self._kernel.invoke_stream(
             self._agent,
-            **history,
-            # spécifie au besoin le nom du premier plugin à exécuter.
-            # filter={"name": "_говой_plugin"},
+            arguments=arguments,
         )
         
         # Vérification si la réponse est un générateur asynchrone (cas de production)
@@ -271,8 +291,12 @@ class SherlockEnqueteAgent(BaseAgent):
         self.logger.info(f"[{self.name}] Invoke called with input: {input}")
         # Simplifié pour retourner une réponse directe pour le moment.
         final_answer = ""
-        async for chunk in self.get_response(input):
-            final_answer += chunk
+        response_generator = await self.get_response(input)
+        async for chunk in response_generator:
+            if chunk:
+                # Based on SK source, chunk can be a 'StreamingContent' object.
+                # Converting to string handles this.
+                final_answer += str(chunk)
         return final_answer
 
     async def get_current_case_description(self) -> str:

@@ -14,28 +14,24 @@ Modules et classes clés :
 """
 
 try:
-    from .informal_agent import InformalAnalysisAgent as InformalAgent
-    # from .informal_definitions import (
-    #     # FallacyDefinition, # Commenté car non défini dans informal_definitions.py
-    #     # RhetoricalStrategy, # Commenté car non défini dans informal_definitions.py
-    #     # InformalArgument, # Commenté car non défini dans informal_definitions.py
-    #     # AnalysisResult, # Commenté car non défini dans informal_definitions.py
-    #     # FALLACY_TAXONOMY_SYSTEM_PROMPT, # Commenté car non défini dans informal_definitions.py (ni prompts.py)
-    #     # FALLACY_ANALYSIS_PROMPT_TEMPLATE, # Commenté car non défini dans informal_definitions.py (ni prompts.py)
-    #     # RHETORICAL_STRATEGY_PROMPT_TEMPLATE # Commenté car non défini dans informal_definitions.py (ni prompts.py)
-    # )
-    # Les prompts spécifiques sont souvent dans leur propre module,
-    # mais s'ils sont définis ici ou dans informal_definitions, ils seraient listés.
+    from .informal_agent import InformalAnalysisAgent
+    from .informal_definitions import (
+        InformalAnalysisPlugin,
+        INFORMAL_AGENT_INSTRUCTIONS
+    )
+    from .prompts import (
+        prompt_identify_args_v8,
+        prompt_analyze_fallacies_v1,
+        prompt_justify_fallacy_attribution_v1
+    )
 
     __all__ = [
-        "InformalAgent",
-        # "FallacyDefinition", # Commenté car non défini dans informal_definitions.py
-        # "RhetoricalStrategy", # Commenté car non défini dans informal_definitions.py
-        # "InformalArgument", # Commenté car non défini dans informal_definitions.py
-        # "AnalysisResult", # Commenté car non défini dans informal_definitions.py
-        # "FALLACY_TAXONOMY_SYSTEM_PROMPT", # Commenté
-        # "FALLACY_ANALYSIS_PROMPT_TEMPLATE", # Commenté
-        # "RHETORICAL_STRATEGY_PROMPT_TEMPLATE" # Commenté
+        "InformalAnalysisAgent",
+        "InformalAnalysisPlugin",
+        "INFORMAL_AGENT_INSTRUCTIONS",
+        "prompt_identify_args_v8",
+        "prompt_analyze_fallacies_v1",
+        "prompt_justify_fallacy_attribution_v1",
     ]
 except ImportError as e:
     import logging
