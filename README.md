@@ -61,7 +61,7 @@ Ce projet est riche et comporte de nombreuses facettes. Pour vous aider à vous 
 | Point d'Entrée             | Idéal Pour                                  | Description Brève                                                                                                | Documentation Détaillée                                                                 |
 | :------------------------- | :------------------------------------------ | :--------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------- |
 | **1. Démo Pédagogique EPITA** | Étudiants (première découverte)             | Un menu interactif et guidé pour explorer les concepts clés et les fonctionnalités du projet de manière ludique. | [`examples/scripts_demonstration/README.md`](examples/scripts_demonstration/README.md) |
-| **2. Système Sherlock & Co.** | Passionnés d'IA, logique, multi-agents    | Lancez des investigations complexes (Cluedo, Einstein) avec les agents Sherlock, Watson et Moriarty.             | [`scripts/sherlock_watson/README.md`](scripts/sherlock_watson/README.md)                 |
+| **2. Démos de Raisonnement Logique** | Passionnés d'IA, logique, multi-agents    | Lancez des scénarios d'investigation complexes (Cluedo, Einstein) avec le système d'agents logiques unifié. | [`examples/Sherlock_Watson/README.md`](examples/Sherlock_Watson/README.md) |
 | **3. Analyse Rhétorique**   | Développeurs IA, linguistes computationnels | Accédez au cœur du système d'analyse d'arguments, de détection de sophismes et de raisonnement formel.        | **[Cartographie du Système](docs/mapping/rhetorical_analysis_map.md)** <br> **[Rapports de Test](docs/reports/rhetorical_analysis/)** <br> **[README Technique](argumentation_analysis/README.md)** |
 | **4. Application Web**      | Développeurs Web, testeurs UI               | Démarrez et interagir avec l'écosystème de microservices web (API, frontend, outils JTMS).                   | [`docs/mapping/web_apps_map.md`](docs/mapping/web_apps_map.md:0) |
 | **5. Suite de Tests**       | Développeurs, Assurance Qualité             | Exécutez les tests unitaires, d'intégration et end-to-end (Pytest & Playwright) pour valider le projet.        | [`tests/README.md`](tests/README.md:0)                                                   |
@@ -76,13 +76,17 @@ Conçue pour une introduction en douceur, cette démo vous guide à travers les 
     ```
 *   Pour plus de détails : **[Consultez le README de la Démo Epita](examples/scripts_demonstration/README.md)**.
 
-#### **2. 🕵️ Système Sherlock, Watson & Moriarty**
-Plongez au cœur du raisonnement multi-agents avec des scénarios d'investigation.
-*   **Lancement d'une investigation (exemple Cluedo) :**
+#### **2. 🕵️ Démos de Raisonnement Logique (Cluedo, Einstein, etc.)**
+Plongez au cœur du raisonnement multi-agents avec des scénarios d'investigation pilotés par le script de production.
+*   **Lancement du scénario Cluedo :**
     ```bash
-    python -m scripts.sherlock_watson.run_cluedo_oracle_enhanced
+    python examples/Sherlock_Watson/agents_logiques_production.py --scenario examples/Sherlock_Watson/cluedo_scenario.json
     ```
-*   Pour découvrir les autres workflows : **[Consultez le README du Système Sherlock](scripts/sherlock_watson/README.md)**
+*   **Lancement du scénario du Puzzle d'Einstein :**
+    ```bash
+    python examples/Sherlock_Watson/agents_logiques_production.py --scenario examples/Sherlock_Watson/einstein_scenario.json
+    ```
+*   Pour plus de détails : **[Consultez le README des démos logiques](examples/Sherlock_Watson/README.md)**.
 
 #### **3. 🗣️ Analyse Rhétorique Approfondie**
 Accédez directement aux capacités d'analyse d'arguments du projet.
