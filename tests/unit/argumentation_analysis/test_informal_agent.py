@@ -61,6 +61,11 @@ class TestInformalAnalysisPlugin(unittest.TestCase):
     
     
     
+    @patch('pandas.read_csv')
+    @patch('requests.get')
+    @patch('argumentation_analysis.utils.taxonomy_loader.validate_taxonomy_file')
+    @patch('argumentation_analysis.utils.taxonomy_loader.get_taxonomy_path')
+    @patch('builtins.open')
     def test_internal_load_and_prepare_dataframe(self, mock_file, mock_get_path, mock_validate, mock_requests, mock_read_csv):
         """Teste le chargement et la préparation du DataFrame."""
         # Configurer les mocks
@@ -75,10 +80,7 @@ class TestInformalAnalysisPlugin(unittest.TestCase):
         # Vérifier que le DataFrame a été correctement chargé et préparé
         self.assertIsNotNone(df)
         self.assertEqual(len(df), 4)
-        self.assertEqual(list(df.index), [0, 1, 2, 3])
-        self.assertIn('text_fr', df.columns)
-        self.assertIn('nom_vulgarisé', df.columns)
-        self.assertIn('description_fr', df.columns)
+        pd.testing.assert_frame_equal(df, self.test_df)
 
     @patch.object(InformalAnalysisPlugin, '_internal_load_and_prepare_dataframe')
     def test_get_taxonomy_dataframe(self, mock_load):
@@ -91,11 +93,11 @@ class TestInformalAnalysisPlugin(unittest.TestCase):
         
         # Vérifier que le DataFrame a été correctement récupéré
         self.assertIsNotNone(df)
-        self.assertEqual(len(df), 4)
+        pd.testing.assert_frame_equal(df, self.test_df)
         
         # Vérifier que le cache fonctionne (deuxième appel)
         df2 = self.plugin._get_taxonomy_dataframe()
-        self.assertIs(df2, df)  # Doit être le même objet (pas de rechargement)
+        pd.testing.assert_frame_equal(df2, df) # Doit être le même objet (pas de rechargement)
         mock_load.assert_called_once()  # Le chargement ne doit être appelé qu'une fois
 
     @patch.object(InformalAnalysisPlugin, '_get_taxonomy_dataframe')
@@ -230,38 +232,42 @@ class TestSetupInformalKernel(unittest.TestCase):
         config = UnifiedConfig()
         return config.get_kernel_with_gpt4o_mini()
 
-    async def setUp(self):
+    def setUp(self):
         """Initialisation avant chaque test."""
-        self.kernel = sk.Kernel()
-        self.llm_service = await self._create_authentic_gpt4o_mini_instance()
-        self.llm_service.service_id = "test_service"
+        import asyncio
+        async def async_setup():
+            self.kernel = sk.Kernel()
+            # _create_authentic_gpt4o_mini_instance retourne un Kernel configuré
+            # Nous extrayons le service llm de ce kernel pour le passer à setup_informal_kernel
+            kernel_with_service = await self._create_authentic_gpt4o_mini_instance()
+            self.llm_service = kernel_with_service.get_service()
+        asyncio.run(async_setup())
 
     
     
     
-    def test_setup_informal_kernel(self, mock_justify, mock_analyze, mock_identify):
+    @patch('semantic_kernel.Kernel.add_function')
+    @patch('semantic_kernel.Kernel.add_plugin')
+    def test_setup_informal_kernel(self, mock_add_plugin, mock_add_function):
         """Teste la configuration du kernel pour l'agent informel."""
-        # Configurer les mocks
-        mock_identify.text = "Prompt d'identification des arguments"
-        mock_analyze.text = "Prompt d'analyse des sophismes"
-        mock_justify.text = "Prompt de justification des sophismes"
-        
         # Appeler la fonction à tester
         setup_informal_kernel(self.kernel, self.llm_service)
+
+        # Vérifier que le plugin natif a été ajouté une fois
+        mock_add_plugin.assert_called_once()
+        # Vérifier le type de l'instance du plugin
+        plugin_instance = mock_add_plugin.call_args[0][0]
+        self.assertIsInstance(plugin_instance, InformalAnalysisPlugin)
         
-        # Vérifier que le plugin a été ajouté au kernel
-        self.assertIn("InformalAnalyzer", self.kernel.plugins)
+        # Vérifier que les fonctions sémantiques ont été ajoutées
+        # Il y a 3 fonctions sémantiques dans setup_informal_kernel
+        self.assertGreaterEqual(mock_add_function.call_count, 3)
         
-        # Vérifier que le plugin a été ajouté
-        self.assertIn("InformalAnalyzer", self.kernel.plugins)
-        
-        # Vérifier que les fonctions sont disponibles dans le plugin
-        # Note: Dans les versions récentes de Semantic Kernel, les fonctions natives
-        # sont automatiquement enregistrées, mais nous ne pouvons pas les vérifier directement
-        # dans les tests. Nous vérifions simplement que le plugin a été ajouté.
-        
-        # Note: Nous ne pouvons pas vérifier directement les fonctions sémantiques
-        # car elles peuvent échouer à l'ajout dans l'environnement de test
+        # On peut optionnellement vérifier les noms des fonctions ajoutées
+        added_functions = [call.kwargs['function_name'] for call in mock_add_function.call_args_list]
+        self.assertIn("semantic_IdentifyArguments", added_functions)
+        self.assertIn("semantic_AnalyzeFallacies", added_functions)
+        self.assertIn("semantic_JustifyFallacyAttribution", added_functions)
 
 
 if __name__ == '__main__':

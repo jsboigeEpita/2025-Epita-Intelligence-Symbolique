@@ -1,17 +1,11 @@
 
-# Authentic gpt-4o-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 # -*- coding: utf-8 -*-
 """
 Tests unitaires pour le module EnhancedContextualFallacyAnalyzer.
 """
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import json
 import os
@@ -20,39 +14,43 @@ from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_an
 
 
 class TestEnhancedContextualFallacyAnalyzer(unittest.TestCase):
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-        
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
     """Tests pour la classe EnhancedContextualFallacyAnalyzer."""
 
+    @classmethod
+    def setUpClass(cls):
+        """Initialisation unique pour toute la classe de test."""
+        # Patcher les dépendances externes avant même l'instanciation
+        cls.patcher_transformers = patch('argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer.HAS_TRANSFORMERS', True)
+        cls.mock_has_transformers = cls.patcher_transformers.start()
+
+        # Mocker les modèles NLP pour éviter les téléchargements et les chargements longs et coûteux
+        cls.patcher_pipeline = patch('argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer.pipeline', return_value=MagicMock())
+        cls.mock_pipeline = cls.patcher_pipeline.start()
+        
+        # Créer une instance unique de l'analyseur pour tous les tests
+        cls.analyzer = EnhancedContextualFallacyAnalyzer()
+
+    @classmethod
+    def tearDownClass(cls):
+        """Nettoyage unique après tous les tests de la classe."""
+        cls.patcher_transformers.stop()
+        cls.patcher_pipeline.stop()
+
     def setUp(self):
-        """Initialisation avant chaque test."""
-        # Patcher les dépendances externes
-        self.patcher_transformers = patch('argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer.HAS_TRANSFORMERS', False)
-        self.mock_transformers = self.patcher_transformers.start()
-        
-        # Créer une instance de l'analyseur
-        self.analyzer = EnhancedContextualFallacyAnalyzer()
-        
+        """Réinitialisation avant chaque test."""
+        # Réinitialiser l'état de l'analyseur partagé
+        self.analyzer.feedback_history = []
+        self.analyzer.context_embeddings_cache = {}
+        self.analyzer.last_analysis_fallacies = {}
+        self.analyzer.learning_data = self.analyzer._load_learning_data() # Recharger les données vierges
+
         # Données de test
         self.test_text = "Les experts sont unanimes : ce produit est sûr et efficace. Des millions de personnes l'utilisent déjà."
         self.test_context = "commercial"
 
     def tearDown(self):
-        """Nettoyage après chaque test."""
-        self.patcher_transformers.stop()
+        """Pas de nettoyage individuel nécessaire car géré par setUp."""
+        pass
 
     def test_init(self):
         """Teste l'initialisation de l'analyseur."""
@@ -80,8 +78,19 @@ class TestEnhancedContextualFallacyAnalyzer(unittest.TestCase):
     
     
     def test_analyze_context(self):
-        """Teste l'analyse du contexte."""
-        self.skipTest("Test désactivé car la refonte des mocks a cassé la syntaxe.")
+        """Teste l'analyse du contexte avec l'instance partagée."""
+        # Simuler un retour des modèles NLP mockés
+        self.analyzer.nlp_models = {
+            'sentiment': MagicMock(return_value=[{'label': 'POSITIVE', 'score': 0.9}]),
+            'ner': MagicMock(return_value=[])
+        }
+
+        result = self.analyzer.analyze_context(self.test_text, self.test_context)
+        
+        self.assertIn("context_analysis", result)
+        self.assertIn("contextual_fallacies", result)
+        self.assertEqual(result['context_analysis']['context_type'], 'commercial')
+        self.assertIsInstance(result['contextual_fallacies'], list)
 
     def test_analyze_context_deeply(self):
         """Teste l'analyse approfondie du contexte."""

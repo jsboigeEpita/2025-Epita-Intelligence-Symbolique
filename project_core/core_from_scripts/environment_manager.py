@@ -82,19 +82,39 @@ class EnvironmentManager:
             self.logger.error("Aucune commande à exécuter.")
             return 1
 
-        self.logger.info(f"Exécution de la commande: {' '.join(command)}")
+        command_str = ' '.join(command)
+        self.logger.info(f"Exécution de la commande: {command_str}")
+        
+        env = os.environ.copy()
+        env['CONDA_VERBOSITY'] = '3'
+        env['PYTHONUNBUFFERED'] = '1'
+
         try:
-            # `shell=False` est plus sûr. Les arguments sont passés en liste.
-            # Le comportement par défaut est de streamer stdout/stderr, ce qui est souhaité.
-            result = subprocess.run(command, check=False)
-            self.logger.info(f"La commande s'est terminée avec le code de sortie: {result.returncode}")
-            return result.returncode
+            # Utilisation de subprocess.run avec un timeout pour éviter le blocage infini.
+            # shell=True est nécessaire pour l'environnement conda sur Windows.
+            # Ne pas capturer stdout/stderr permet de les voir en temps réel dans la console.
+            process_result = subprocess.run(
+                command_str,
+                text=True,
+                encoding='utf-8',
+                env=env,
+                shell=True,
+                timeout=1200  # Timeout de 20 minutes
+            )
+            returncode = process_result.returncode
+            self.logger.info(f"Commande terminée avec le code de sortie: {returncode}")
+
+        except subprocess.TimeoutExpired:
+            self.logger.error("La commande a expiré (timeout de 20 minutes).")
+            returncode = -1 # Code de sortie spécifique pour le timeout
         except FileNotFoundError:
             self.logger.error(f"Commande non trouvée: '{command[0]}'. Vérifiez que l'exécutable est dans le PATH.")
             return 1
         except Exception as e:
             self.logger.error(f"Une erreur est survenue lors de l'exécution de la commande: {e}")
             return 1
+        
+        return returncode
 
     def _warn_obsolete(self, method_name: str):
         """Avertit qu'une méthode appelée est obsolète."""
