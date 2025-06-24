@@ -497,36 +497,39 @@ class CluedoExtendedOrchestrator:
         full_content = ""
         role = "assistant"
         
+        # Cas 1: La réponse est une liste (typiquement de chunks de streaming)
         if isinstance(response_raw, list):
-            # Gère les réponses en streaming (liste de StreamingChatMessageContent)
-            # ou les listes d'objets (comme pour Watson)
-            if all(isinstance(item, StreamingChatMessageContent) for item in response_raw):
-                for chunk in response_raw:
-                    if chunk.content:
-                        full_content += str(chunk.content)
-            elif len(response_raw) > 0 and isinstance(response_raw[0], ChatMessageContent):
-                # Cas d'une liste avec un seul message (Moriarty)
-                response_obj = response_raw[0]
-                full_content = str(response_obj.content) if response_obj.content else ""
-                role = response_obj.role
-            else:
-                full_content = str(response_raw) # Fallback
+            for item in response_raw:
+                # Si l'item est un chunk de streaming...
+                if isinstance(item, StreamingChatMessageContent):
+                    # ...itérer sur ses 'items' (le contenu textuel réel)
+                    for content_part in item.items:
+                         if hasattr(content_part, 'text'):
+                            full_content += content_part.text
+                # Si l'item est déjà un message simple
+                elif isinstance(item, ChatMessageContent):
+                    full_content += str(item.content) if item.content else ""
+                    role = item.role
+                else:
+                    # Fallback au cas où la liste contiendrait autre chose
+                    full_content += str(item)
 
+        # Cas 2: La réponse est un seul objet de streaming
         elif isinstance(response_raw, StreamingChatMessageContent):
-            # Gère un seul objet de streaming
-             if response_raw.content:
-                full_content += str(response_raw.content)
+            for content_part in response_raw.items:
+                 if hasattr(content_part, 'text'):
+                    full_content += content_part.text
 
+        # Cas 3: La réponse est un simple ChatMessageContent
         elif isinstance(response_raw, ChatMessageContent):
-            # Gère un objet ChatMessageContent simple
             full_content = str(response_raw.content) if response_raw.content else ""
             role = response_raw.role
 
+        # Cas 4: Fallback pour tout autre type (ex: string)
         else:
-            # Fallback pour les réponses simples (str)
             full_content = str(response_raw)
 
-        # Création d'un message final nettoyé
+        # Création d'un message final nettoyé et léger
         return ChatMessageContent(
             role=role,
             content=full_content,
