@@ -1,11 +1,12 @@
 """
 Gestionnaire d'environnements Python/conda
 
-Ce module sert de point d'entrée pour les scripts shell (pwsh, bash) afin
-de garantir une logique d'activation et d'exécution de commandes cohérente
-quel que soit l'OS.
+Ce module fournit une logique de base pour la gestion de l'environnement Conda
+et l'exécution de commandes. Il est utilisé par les scripts de premier niveau
+pour assurer une abstraction indépendante de l'OS.
 
-Il est appelé par des wrappers comme `activate_project_env.ps1`.
+Bien que la configuration applicative se déplace vers `argumentation_analysis.config.settings`,
+ce module reste essentiel pour le bootstrapping de l'environnement.
 """
 
 import os
@@ -77,46 +78,71 @@ class EnvironmentManager:
         return str(python_executable)
 
     def run_command(self, command: List[str]) -> int:
-        """Exécute une commande en tant que sous-processus."""
+        """Exécute une commande, avec un traitement spécial pour pytest."""
         if not command:
             self.logger.error("Aucune commande à exécuter.")
             return 1
 
-        command_str = ' '.join(command)
-        self.logger.info(f"Exécution de la commande: {command_str}")
-        
-        # Copie de l'environnement actuel
-        env = os.environ.copy()
-        env['PYTHONUNBUFFERED'] = '1'
+        # Traitement spécial pour pytest pour éviter les problèmes de sous-processus avec la JVM
+        is_pytest_command = (len(command) > 2 and 
+                             command[0].endswith("python") and 
+                             "pytest" in command[2])
 
+        if is_pytest_command:
+            pytest_args = command[3:]
+            self.logger.info(f"Détection de pytest. Exécution par programmation avec les arguments: {pytest_args}")
+            try:
+                # Importation de pytest ici pour ne le faire que si nécessaire
+                import pytest
+                exit_code = pytest.main(pytest_args)
+                self.logger.info(f"Pytest s'est terminé avec le code de sortie: {exit_code}")
+                return exit_code
+            except Exception as e:
+                self.logger.error(f"Erreur CRITIQUE lors de l'exécution de pytest.main: {e}", exc_info=True)
+                return 1 # Retourne un code d'erreur générique
+        
+        # Fallback pour les autres commandes
+        command_str = ' '.join(command)
+        self.logger.info(f"Exécution de la commande via un sous-processus: {command_str}")
+        
         try:
-            # Redirection explicite de la sortie pour la capturer si nécessaire.
-            # Pour le cas de pytest, la redirection est gérée par le script appelant,
-            # mais cette implémentation est plus robuste pour une utilisation générale.
-            result = subprocess.run(
-                command,
-                check=False,
-                stdout=sys.stdout,
-                stderr=sys.stderr,
-                text=True,
-                encoding='utf-8'
-            )
+            result = subprocess.run(command, check=False, capture_output=True, text=True, encoding='utf-8')
+            if result.stdout: self.logger.info(f"--- STDOUT ---\n{result.stdout}")
+            if result.stderr: self.logger.error(f"--- STDERR ---\n{result.stderr}")
             self.logger.info(f"La commande s'est terminée avec le code de sortie: {result.returncode}")
             return result.returncode
-        except FileNotFoundError:
-            self.logger.error(f"Commande non trouvée: '{command[0]}'. Vérifiez que l'exécutable est dans le PATH.")
-            return 1
         except Exception as e:
-            self.logger.error(f"Une erreur est survenue lors de l'exécution de la commande: {e}")
+            self.logger.error(f"Erreur lors de l'exécution de la commande: {e}", exc_info=True)
             return 1
 
+
 def main():
-    """Point d'entrée CLI pour la gestion de l'environnement et l'exécution de commandes."""
-    parser = argparse.ArgumentParser(description="Outil de gestion d'environnement et d'exécution de commandes.")
-    parser.add_argument('--get-python-path', action='store_true', help="Affiche le chemin de l'exécutable Python de l'environnement.")
-    parser.add_argument('--setup-vars', action='store_true', help="Configure les variables d'environnement du projet.")
-    parser.add_argument('--run-command', nargs=argparse.REMAINDER, help="Commande à exécuter après configuration.")
-    parser.add_argument('--env-name', type=str, default='projet-is', help="Nom de l'environnement Conda à utiliser.")
+    """Point d'entrée CLI pour la gestion de l'environnement."""
+    parser = argparse.ArgumentParser(
+        description="Outil de gestion d'environnement (avec compatibilité ascendante).",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        '--get-python-path', 
+        action='store_true', 
+        help="Affiche le chemin de l'exécutable Python de l'environnement."
+    )
+    parser.add_argument(
+        '--env-name', 
+        type=str, 
+        default='projet-is', 
+        help="Nom de l'environnement Conda à utiliser."
+    )
+    parser.add_argument(
+        '--setup-vars', 
+        action='store_true', 
+        help="[OBSOLETE] Inclus pour compatibilité."
+    )
+    parser.add_argument(
+        '--run-command',
+        nargs=argparse.REMAINDER,
+        help="Exécute la commande fournie et quitte. Doit être le dernier argument."
+    )
 
     args = parser.parse_args()
     manager = EnvironmentManager()
@@ -128,20 +154,21 @@ def main():
         else:
             sys.exit(1)
             
-    if args.setup_vars:
-        logger.info("Initialisation de l'environnement projet via 'initialize_project_environment'...")
-        try:
-            from argumentation_analysis.core.bootstrap import initialize_project_environment
-            initialize_project_environment()
-            logger.info("Environnement initialisé avec succès.")
-        except ImportError as e:
-            logger.error(f"Erreur de bootstrap : {e}. Impossible d'importer 'initialize_project_environment'.")
-            sys.exit(1)
+    elif args.run_command:
+        if args.setup_vars:
+            logger.info("Argument --setup-vars ignoré (obsolète mais conservé pour compatibilité).")
+        
+        # NE PAS initialiser l'environnement applicatif complet pour les tests.
+        # C'est la cause du conflit avec pytest.
+        logger.info("Bootstrap de l'application intentionnellement ignoré pour l'exécution d'une commande (mode test).")
 
-    if args.run_command:
-        logger.info(f"Exécution de la commande déléguée : {' '.join(args.run_command)}")
-        exit_code = manager.run_command(args.run_command)
-        sys.exit(exit_code)
+        return_code = manager.run_command(args.run_command)
+        sys.exit(return_code)
+    
+    else:
+        logger.warning("Aucune action spécifiée (ex: --get-python-path ou --run-command). Affichage de l'aide.")
+        parser.print_help()
+
 
 if __name__ == "__main__":
     main()

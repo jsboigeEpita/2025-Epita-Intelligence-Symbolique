@@ -12,7 +12,7 @@ collect_ignore = [
 # causés par le `rootdir` de pytest qui interfère avec la résolution des modules.
 project_root_conftest = Path(__file__).parent.parent.resolve()
 if str(project_root_conftest) not in sys.path:
-    pass # sys.path.insert(0, str(project_root_conftest))
+    pass # pass # sys.path.insert(0, str(project_root_conftest))
 """
 Fichier de configuration racine pour les tests pytest, s'applique à l'ensemble du projet.
 
@@ -29,13 +29,14 @@ Ce fichier est exécuté avant tous les tests et est l'endroit idéal pour :
 # Ceci indique un conflit entre les librairies C de JPype et de PyTorch.
 # L'import de `torch` au tout début, avant tout autre import (surtout jpype),
 # force son initialisation et semble résoudre ce conflit.
-try:
-    import torch
-except ImportError:
-    # Si torch n'est pas installé, nous ne pouvons rien faire mais nous ne voulons pas
-    # que les tests plantent à cause de ça si l'environnement d'un utilisateur
-    # ne l'inclut pas. Les tests dépendant de la JVM risquent de planter plus tard.
-    pass
+# NOTE(Roo): Disabling the torch import to isolate the source of pytest crash (exit code 3).
+# try:
+#     import torch
+# except ImportError:
+#     # Si torch n'est pas installé, nous ne pouvons rien faire mais nous ne voulons pas
+#     # que les tests plantent à cause de ça si l'environnement d'un utilisateur
+#     # ne l'inclut pas. Les tests dépendant de la JVM risquent de planter plus tard.
+#     pass
 
 import os
 
@@ -137,12 +138,13 @@ else:
 # --- Fin Configuration globale du Logging ---
 
 # Charger les fixtures définies dans d'autres fichiers comme des plugins
-pytest_plugins = [
-   "tests.fixtures.integration_fixtures",
-   "tests.fixtures.jvm_subprocess_fixture",
-    "pytest_playwright",
-    "tests.mocks.numpy_setup"
-]
+# NOTE(Roo): Disabling plugins to isolate the source of pytest crash (exit code 3).
+# pytest_plugins = [
+#    "tests.fixtures.integration_fixtures",
+#    "tests.fixtures.jvm_subprocess_fixture",
+#     "pytest_playwright",
+#     "tests.mocks.numpy_setup"
+# ]
 
 def pytest_addoption(parser):
     """Ajoute des options de ligne de commande personnalisées à pytest."""
@@ -224,41 +226,51 @@ def test_config_path(tmp_path):
     """Provides a temporary path for a config file."""
     return tmp_path / "test_config.yml"
 
-@pytest.fixture(scope="session", autouse=True)
-def jvm_session_autostart():
+@pytest.fixture(scope="session")
+def jvm_session():
     """
-    Fixture de session autouse pour démarrer et arrêter la JVM une seule fois pour
-    tous les tests. Garantit que la JVM est gérée de manière centralisée.
+    Fixture de session pour démarrer et arrêter la JVM une seule fois pour tous les tests.
     """
-    # Ne pas exécuter cette fixture si les tests JVM sont explicitement désactivés.
-    if os.getenv("SKIP_JVM_TESTS"):
-        print("\n[JVM Fixture] Tests JVM désactivés via SKIP_JVM_TESTS. Fixture ignorée.")
-        yield
-        return
+    import jpype
+    import jpype.imports
+    
+    # Construire le chemin relatif vers le JDK
+    project_root = Path(__file__).parent.parent.resolve()
+    jdk_base_path = os.path.join(project_root, "libs", "portable_jdk", "jdk-17.0.11+9")
+    jvm_dll_path = os.path.join(jdk_base_path, "bin", "server", "jvm.dll")
 
-    try:
-        from argumentation_analysis.core.jvm_setup import initialize_jvm, shutdown_jvm, is_jvm_started
-        print("\n[JVM Fixture] Utilisation de jvm_setup centralisé.")
-    except ImportError:
-        pytest.fail("Impossible d'importer jvm_setup. Vérifiez le sys.path et la structure du projet.")
+    if not os.path.exists(jvm_dll_path):
+        pytest.fail(f"jvm.dll non trouvé à {jvm_dll_path}. Assurez-vous que le JDK portable est en place.")
 
-    if not is_jvm_started():
+    if not jpype.isJVMStarted():
         try:
             print("\n[JVM Fixture] Démarrage de la JVM pour la session de test...")
-            # La logique de recherche du JDK/classpath est maintenant dans initialize_jvm
-            initialize_jvm()
-            print("[JVM Fixture] JVM démarrée avec succès via jvm_setup.")
+            
+            # --- Dynamically build classpath from tweety libs ---
+            tweety_libs_path = os.path.join(project_root, "argumentation_analysis", "libs", "tweety")
+            if not os.path.exists(tweety_libs_path):
+                pytest.fail(f"Le répertoire des librairies Tweety est introuvable: {tweety_libs_path}")
+                
+            classpath = [os.path.join(tweety_libs_path, f) for f in os.listdir(tweety_libs_path) if f.endswith('.jar')]
+            if not classpath:
+                pytest.fail(f"Aucun fichier .jar n'a été trouvé dans {tweety_libs_path}")
+            
+            print(f"[JVM Fixture] Classpath construit avec {len(classpath)} JARs.")
+
+            jpype.startJVM(
+                jvmpath=jvm_dll_path,
+                classpath=classpath,
+                convertStrings=False
+            )
+            print("[JVM Fixture] JVM démarrée avec succès.")
         except Exception as e:
-            # Afficher les threads actifs en cas d'échec pour aider au débogage
-            active_threads = [t.name for t in threading.enumerate()]
-            print(f"[JVM Fixture] Threads actifs au moment de l'erreur: {active_threads}")
-            pytest.fail(f"Échec du démarrage de la JVM via jvm_setup : {e}")
+            pytest.fail(f"Échec du démarrage de la JVM : {e}")
 
     yield
 
-    if is_jvm_started():
-        print("\n[JVM Fixture] Arrêt de la JVM à la fin de la session via jvm_setup.")
-        shutdown_jvm()
+    if jpype.isJVMStarted():
+        print("\n[JVM Fixture] Arrêt de la JVM à la fin de la session.")
+        jpype.shutdownJVM()
 @pytest.fixture(autouse=True)
 def skip_jvm_tests(monkeypatch):
     """

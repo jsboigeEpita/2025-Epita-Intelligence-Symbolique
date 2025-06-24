@@ -240,41 +240,40 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         try:
             # Étape 1 : Appel unique au LLM pour tout générer
             self.logger.info("Étape 1: Génération de la structure logique complète...")
+            # Note: Le code de débug codé en dur pour Socrate n'est pas inclus ici car il n'est pas pertinent pour la logique de production.
             unified_result = await self._kernel.plugins[self.name]["TextToFOL"].invoke(self._kernel, input=text)
             raw_unified_json = json.loads(self._extract_json_block(str(unified_result)))
             self.logger.debug(f"Structure brute reçue du LLM: {json.dumps(raw_unified_json, indent=2)}")
 
-            # Étape 2 : Normalisation et inférence de la hiérarchie des sorts
-            self.logger.info("Étape 2: Normalisation de la structure et inférence de la hiérarchie...")
+            # Étape 2 : Normalisation
+            self.logger.info("Étape 2: Normalisation de la structure...")
             normalized_structure = self._normalize_logical_structure(raw_unified_json)
             self.logger.debug(f"Structure logique normalisée: {json.dumps(normalized_structure, indent=2)}")
             
             if not any(normalized_structure.get(k) for k in ["sorts", "constants", "predicates"]):
                 return None, "Aucune structure logique (sorts, constantes, prédicats) n'a pu être extraite."
 
-
-            # Étape 3 : Création de la signature Tweety
+            # Étape 3 : Création de la signature Tweety via l'approche programmatique
             self.logger.info("Étape 3: Création de l'objet signature Tweety...")
             signature_obj = self.tweety_bridge._fol_handler.create_programmatic_fol_signature(normalized_structure)
             if not signature_obj:
                 return None, "Échec de la création d'un objet signature Tweety valide."
 
-            # Étape 4 : Validation des formules
+            # Étape 4 : Validation des formules une par une contre la signature
             self.logger.info("Étape 4: Validation des formules générées...")
             valid_formulas = []
             for formula_str in normalized_structure.get("formulas", []):
-                cleaned_formula_str = re.sub(r'/\*.*?\*/', '', formula_str).strip()
-                is_valid, msg = self.tweety_bridge._fol_handler.validate_formula_with_signature(signature_obj, cleaned_formula_str)
+                is_valid, msg = self.tweety_bridge._fol_handler.validate_formula_with_signature(signature_obj, formula_str)
                 if is_valid:
-                    valid_formulas.append(cleaned_formula_str)
-                    self.logger.info(f"Formule acceptée: '{cleaned_formula_str}'")
+                    valid_formulas.append(formula_str)
+                    self.logger.info(f"Formule acceptée: '{formula_str}'")
                 else:
                     self.logger.warning(f"Formule rejetée: '{formula_str}'. Raison: {msg}")
             
             if not valid_formulas and normalized_structure.get("formulas"):
                  return None, "Toutes les formules générées étaient invalides selon la signature."
 
-            # Étape 5 : Création du BeliefSet final
+            # Étape 5 : Création du BeliefSet final à partir de la signature et des formules valides
             self.logger.info("Étape 5: Création de l'ensemble de croyances final...")
             belief_set_obj = self.tweety_bridge._fol_handler.create_belief_set_from_formulas(signature_obj, valid_formulas)
             
@@ -308,7 +307,8 @@ class FirstOrderLogicAgent(BaseLogicAgent):
 
     def _normalize_logical_structure(self, structure_json: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Normalise les identifiants, infère la hiérarchie des sorts, et nettoie la structure logique.
+        Normalise les identifiants, et nettoie la structure logique.
+        La responsabilité de la hiérarchie des sorts est maintenant déléguée au LLM.
         """
         import unidecode
         identifier_map = {}
@@ -324,19 +324,18 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         for const, sort in original_constants.items():
             norm_const = self._normalize_identifier(const)
             norm_sort = identifier_map.get(sort, self._normalize_identifier(sort))
+            if not norm_sort in normalized_sorts:
+                 normalized_sorts.append(norm_sort)
             normalized_constants[norm_const] = norm_sort
             identifier_map[const] = norm_const
 
         original_predicates = structure_json.get("predicates", [])
         normalized_predicates = []
-        # Map pour accès rapide : nom_pred_normalisé -> [sort_arg_1, sort_arg_2, ...]
-        pred_sig_map = {}
         for pred in original_predicates:
             pred_name = pred.get("name", "")
             norm_pred_name = unidecode.unidecode(pred_name)
             norm_args = [identifier_map.get(arg, self._normalize_identifier(arg)) for arg in pred.get("args", [])]
             normalized_predicates.append({"name": norm_pred_name, "args": norm_args})
-            pred_sig_map[norm_pred_name] = norm_args
             identifier_map[pred_name] = norm_pred_name
 
         # 2. Normaliser les formules en substituant les identifiants
@@ -348,51 +347,26 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             for orig_id in sorted_identifiers:
                 norm_id = identifier_map[orig_id]
                 norm_formula = re.sub(r'\b' + re.escape(orig_id) + r'\b', norm_id, norm_formula, flags=re.UNICODE)
-            formulas_with_normalized_ids.append(norm_formula)
-        
-        # 3. Inférence de la hiérarchie des sorts à partir des incohérences de type
-        sort_hierarchy = {}
-        # Regex pour trouver les variables quantifiées et leur sort, e.g., "forall X:philosophe"
-        quantified_vars_re = re.compile(r'(?:forall|exists)\s+([A-Z][a-zA-Z0-9]*):([a-z_]+)')
-        # Regex pour trouver les appels de prédicats, e.g., "EstMortel(X)" ou "Amis(X, Y)"
-        predicate_calls_re = re.compile(r'([A-Z][a-zA-Z0-9_]*)\(([^)]+)\)')
-
-        for formula in formulas_with_normalized_ids:
-            # Créer une map locale variable -> sort pour cette formule
-            var_sort_map = {m.group(1): m.group(2) for m in quantified_vars_re.finditer(formula)}
             
-            for call in predicate_calls_re.finditer(formula):
-                pred_name = call.group(1)
-                args = [arg.strip() for arg in call.group(2).split(',')]
-                
-                if pred_name not in pred_sig_map:
-                    continue # Prédicat non défini, sera attrapé par la validation Tweety
+            # Correction de la syntaxe de négation invalide potentiellement générée par le LLM
+            norm_formula = norm_formula.replace("== false", "").replace("== true", "")
+            if " not " in norm_formula.lower():
+                 norm_formula = re.sub(r'not\s*([A-Z][a-zA-Z0-9_]*\([^)]+\))', r'!\1', norm_formula, flags=re.IGNORECASE)
 
-                expected_sorts = pred_sig_map[pred_name]
-                if len(args) != len(expected_sorts):
-                    continue # Arity mismatch, sera aussi attrapé plus tard
+            formulas_with_normalized_ids.append(norm_formula.strip())
 
-                for i, arg_name in enumerate(args):
-                    actual_sort = None
-                    if arg_name in var_sort_map:
-                        actual_sort = var_sort_map[arg_name]
-                    elif arg_name in normalized_constants:
-                        actual_sort = normalized_constants[arg_name]
-
-                    expected_sort = expected_sorts[i]
-                    
-                    if actual_sort and actual_sort != expected_sort:
-                        self.logger.info(f"Inférence de hiérarchie: '{actual_sort}' est un sous-sort de '{expected_sort}' "
-                                         f"d'après l'usage dans {pred_name}(...{arg_name}...).")
-                        sort_hierarchy[actual_sort] = expected_sort
+        # 3. Transformer la structure de la hiérarchie des sorts pour `create_programmatic_fol_signature`
+        subsorts_list = structure_json.get("subsorts", [])
+        sort_hierarchy = {item['sub']: item['parent'] for item in subsorts_list}
 
         return {
             "sorts": normalized_sorts,
             "constants": normalized_constants,
             "predicates": normalized_predicates,
             "formulas": formulas_with_normalized_ids,
-            "sort_hierarchy": sort_hierarchy # Nouvelle information cruciale
+            "sort_hierarchy": sort_hierarchy
         }
+        
         
     async def generate_queries(self, text: str, belief_set: FirstOrderBeliefSet, **kwargs) -> List[str]:
         """
