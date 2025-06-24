@@ -978,7 +978,7 @@ cat logs/sherlock_watson_conversation_*.json | jq .
 python examples/Sherlock_Watson/agents_logiques_production.py --logic-type pl
 
 # 2. Formulation contraintes Einstein
-python examples/logique_complexe_demo/demo_einstein_workflow.py
+python examples/Sherlock_Watson/agents_logiques_production.py --scenario examples/Sherlock_Watson/einstein_scenario.json
 
 # 3. Exercices progressifs:
 # - Formuler "Si A alors B" en logique formelle

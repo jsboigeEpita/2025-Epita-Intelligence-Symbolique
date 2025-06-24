@@ -104,7 +104,7 @@ python examples/Sherlock_Watson/orchestration_finale_reelle.py
 
 ```bash
 # Énigme complexe avec logique formelle requise
-python examples/logique_complexe_demo/demo_einstein_workflow.py
+python examples/Sherlock_Watson/agents_logiques_production.py --scenario examples/Sherlock_Watson/einstein_scenario.json
 
 # Caractéristiques:
 - 10+ clauses logiques formulées obligatoires
@@ -305,7 +305,7 @@ python examples/Sherlock_Watson/sherlock_watson_authentic_demo.py
 python examples/Sherlock_Watson/agents_logiques_production.py
 
 # 2. Exploration logique formelle 
-python examples/logique_complexe_demo/demo_einstein_workflow.py
+python examples/Sherlock_Watson/agents_logiques_production.py --scenario examples/Sherlock_Watson/einstein_scenario.json
 
 # 3. Validation système complet
 python examples/Sherlock_Watson/orchestration_finale_reelle.py

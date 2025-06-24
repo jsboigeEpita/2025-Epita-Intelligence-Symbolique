@@ -110,7 +110,7 @@ Adjacent(x,y)      - maisons x et y sont adjacentes
 
 ```bash
 # Depuis la racine du projet
-python examples/logique_complexe_demo/demo_einstein_workflow.py
+python examples/Sherlock_Watson/agents_logiques_production.py --scenario examples/Sherlock_Watson/einstein_scenario.json
 ```
 
 ### Prérequis

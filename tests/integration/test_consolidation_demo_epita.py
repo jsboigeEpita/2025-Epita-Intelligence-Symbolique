@@ -335,7 +335,6 @@ class EpitaDemoConsolidator:
         if modules_path.exists():
             modules_attendus = [
                 "demo_tests_validation.py",
-                "demo_agents_logiques.py", 
                 "demo_services_core.py",
                 "demo_integrations.py",
                 "demo_cas_usage.py",

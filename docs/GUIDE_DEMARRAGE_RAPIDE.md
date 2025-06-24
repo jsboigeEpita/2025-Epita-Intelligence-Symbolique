@@ -122,7 +122,7 @@ argumentation_analysis/
 python examples/cluedo_demo/demo_cluedo_workflow.py
 
 # Démo Einstein
-python examples/logique_complexe_demo/demo_einstein_workflow.py
+python examples/Sherlock_Watson/agents_logiques_production.py --scenario examples/Sherlock_Watson/einstein_scenario.json
 
 # Agents authentiques Sherlock/Watson
 python examples/Sherlock_Watson/sherlock_watson_authentic_demo.py
@@ -138,7 +138,7 @@ python examples/Sherlock_Watson/orchestration_finale_reelle.py
 ```
 examples/
 ├── cluedo_demo/demo_cluedo_workflow.py         # ⭐ Cluedo
-├── logique_complexe_demo/demo_einstein_workflow.py # ⭐ Einstein
+# (Le workflow Einstein est maintenant géré par le script de production)
 └── Sherlock_Watson/                            # ⭐ Agents authentiques
     ├── sherlock_watson_authentic_demo.py
     ├── cluedo_oracle_complete.py
