@@ -42,10 +42,15 @@ def run_in_jvm_subprocess():
         # variables en mémoire (potentiellement périmées) sont écrasées.
         load_dotenv(find_dotenv(), override=True)
         
-        # La configuration du PYTHONPATH est maintenant gérée de manière centralisée
-        # dans tests/conftest.py, qui s'applique à l'ensemble du processus pytest et
-        # à ses processus enfants. Il n'est plus nécessaire de le définir ici.
+        # La configuration du PYTHONPATH est essentielle pour les sous-processus.
+        # Contrairement à ce que le commentaire précédent indiquait, le PYTHONPATH
+        # n'est PAS hérité. Nous devons l'ajouter manuellement à l'environnement
+        # du sous-processus pour garantir que les imports locaux fonctionnent.
+        project_root = Path(__file__).parent.parent.parent.resolve()
         env = os.environ.copy()
+        python_path = env.get("PYTHONPATH", "")
+        if str(project_root) not in python_path.split(os.pathsep):
+            env["PYTHONPATH"] = f"{str(project_root)}{os.pathsep}{python_path}"
 
         result = subprocess.run(
             command_to_run,

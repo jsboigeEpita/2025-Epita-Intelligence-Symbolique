@@ -78,7 +78,6 @@ class EnvironmentManager:
 
     def run_command(self, command: List[str]) -> int:
         """Exécute une commande en tant que sous-processus."""
-        # ... (le reste de la méthode est inchangé) ...
         if not command:
             self.logger.error("Aucune commande à exécuter.")
             return 1
@@ -86,12 +85,22 @@ class EnvironmentManager:
         command_str = ' '.join(command)
         self.logger.info(f"Exécution de la commande: {command_str}")
         
+        # Copie de l'environnement actuel
         env = os.environ.copy()
-        env['CONDA_VERBOSITY'] = '3'
         env['PYTHONUNBUFFERED'] = '1'
 
         try:
-            result = subprocess.run(command, check=False)
+            # Redirection explicite de la sortie pour la capturer si nécessaire.
+            # Pour le cas de pytest, la redirection est gérée par le script appelant,
+            # mais cette implémentation est plus robuste pour une utilisation générale.
+            result = subprocess.run(
+                command,
+                check=False,
+                stdout=sys.stdout,
+                stderr=sys.stderr,
+                text=True,
+                encoding='utf-8'
+            )
             self.logger.info(f"La commande s'est terminée avec le code de sortie: {result.returncode}")
             return result.returncode
         except FileNotFoundError:
@@ -100,17 +109,14 @@ class EnvironmentManager:
         except Exception as e:
             self.logger.error(f"Une erreur est survenue lors de l'exécution de la commande: {e}")
             return 1
-        
-        return returncode
-
 
 def main():
-    """Point d'entrée CLI pour la gestion de l'environnement."""
-    parser = argparse.ArgumentParser(description="Outil de gestion d'environnement.")
+    """Point d'entrée CLI pour la gestion de l'environnement et l'exécution de commandes."""
+    parser = argparse.ArgumentParser(description="Outil de gestion d'environnement et d'exécution de commandes.")
     parser.add_argument('--get-python-path', action='store_true', help="Affiche le chemin de l'exécutable Python de l'environnement.")
+    parser.add_argument('--setup-vars', action='store_true', help="Configure les variables d'environnement du projet.")
+    parser.add_argument('--run-command', nargs=argparse.REMAINDER, help="Commande à exécuter après configuration.")
     parser.add_argument('--env-name', type=str, default='projet-is', help="Nom de l'environnement Conda à utiliser.")
-    parser.add_argument('--setup-vars', action='store_true', help="Charge les variables d'environnement du projet.")
-    parser.add_argument('--run-command', nargs=argparse.REMAINDER, help="Commande à exécuter après le setup.")
 
     args = parser.parse_args()
     manager = EnvironmentManager()
@@ -121,23 +127,21 @@ def main():
             print(python_path)
         else:
             sys.exit(1)
-        # On peut vouloir récupérer le chemin ET faire d'autres actions, donc on ne quitte pas ici.
-
+            
     if args.setup_vars:
+        logger.info("Initialisation de l'environnement projet via 'initialize_project_environment'...")
         try:
             from argumentation_analysis.core.bootstrap import initialize_project_environment
             initialize_project_environment()
-            logger.info("Variables d'environnement initialisées via bootstrap.")
+            logger.info("Environnement initialisé avec succès.")
         except ImportError as e:
             logger.error(f"Erreur de bootstrap : {e}. Impossible d'importer 'initialize_project_environment'.")
             sys.exit(1)
 
     if args.run_command:
-        return_code = manager.run_command(args.run_command)
-        sys.exit(return_code)
-        
-    # Si aucune action principale n'est demandée, on ne fait rien (ou on pourrait afficher l'aide).
-    # parser.print_help()
+        logger.info(f"Exécution de la commande déléguée : {' '.join(args.run_command)}")
+        exit_code = manager.run_command(args.run_command)
+        sys.exit(exit_code)
 
 if __name__ == "__main__":
     main()

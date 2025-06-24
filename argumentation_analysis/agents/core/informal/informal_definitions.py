@@ -47,7 +47,7 @@ from argumentation_analysis.paths import DATA_DIR # Assurer que DATA_DIR est imp
 
 # Configuration du logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
     datefmt='%H:%M:%S'
 )
@@ -114,96 +114,48 @@ class InformalAnalysisPlugin:
     def _internal_load_and_prepare_dataframe(self) -> pd.DataFrame:
         """
         Charge et prépare le DataFrame de la taxonomie.
-
-        Cette méthode interne gère le chargement du fichier CSV et sa
-        préparation pour l'utilisation :
-        - Définit la colonne 'PK' comme index du DataFrame.
-        - Assure la conversion et la validation des types de données de l'index.
-
-        Returns:
-            pd.DataFrame: Le DataFrame pandas prêt à l'emploi.
-
-        Raises:
-            Exception: Si le fichier de taxonomie ne peut être chargé ou si
-                la colonne 'PK' est absente ou invalide.
+        - Charge le CSV.
+        - Standardise les types des colonnes de clés (PK, FK_Parent, parent_pk) en entiers nullables (Int64).
+        - Définit 'PK' comme index.
         """
         self._logger.info(f"Chargement et préparation du DataFrame de taxonomie depuis: {self._current_taxonomy_path}...")
         
         try:
-            # Charger le fichier CSV en utilisant load_csv_file de project_core
             df = load_csv_file(self._current_taxonomy_path)
-            
             if df is None:
-                self._logger.error(f"Échec du chargement du fichier CSV depuis {self._current_taxonomy_path}. load_csv_file a retourné None.")
                 raise Exception(f"Impossible de charger la taxonomie depuis {self._current_taxonomy_path}")
             
-            self._logger.info(f"Taxonomie chargée avec succès depuis {self._current_taxonomy_path}: {len(df)} entrées.")
+            self._logger.info(f"Taxonomie chargée : {len(df)} entrées. Standardisation des types de clés...")
+
+            # Clés primaires et étrangères à traiter
+            key_columns = ['PK', 'FK_Parent', 'parent_pk']
             
-            # Préparation du DataFrame
-            if 'PK' in df.columns:
-                self._logger.info("Colonne 'PK' trouvée. Tentative de la définir comme index.")
-                # Assurer que la colonne PK est numérique avant de la définir comme index
-                try:
-                    if not pd.api.types.is_string_dtype(df['PK']) and pd.api.types.is_object_dtype(df['PK']):
-                        df['PK'] = df['PK'].astype(str)
-                        self._logger.debug("Colonne 'PK' convertie en str pour la normalisation.")
-                    
-                    df['PK'] = pd.to_numeric(df['PK'], errors='coerce')
-                    df['PK'] = df['PK'].fillna(0) # Remplir NaN avant conversion en int
-                    # Tenter la conversion en int64, si échec, logguer et potentiellement laisser en float pour set_index
+            for col in key_columns:
+                if col in df.columns:
                     try:
-                        df['PK'] = df['PK'].astype("int64")
-                        self._logger.info(f"Colonne 'PK' convertie en type {df['PK'].dtype}. Valeurs: {df['PK'].to_list()}")
-                    except Exception as e_astype_int:
-                        self._logger.warning(f"Échec de la conversion de 'PK' en int64 ({e_astype_int}), conservée en {df['PK'].dtype}. Valeurs: {df['PK'].to_list()}")
+                        # Convertit en numérique, les erreurs deviendront NaT (Not a Time) qui est géré par Int64
+                        df[col] = pd.to_numeric(df[col], errors='coerce')
+                        # Convertit en type entier nullable. Gère les NaN sans forcer la colonne en float.
+                        df[col] = df[col].astype('Int64')
+                        self._logger.info(f"Colonne '{col}' convertie avec succès en type 'Int64'.")
+                    except Exception as e:
+                        self._logger.warning(f"Impossible de convertir la colonne '{col}' en 'Int64': {e}. La colonne sera ignorée pour les opérations de typage.")
 
-                except Exception as e_convert:
-                    self._logger.error(f"Erreur majeure lors de la préparation de la colonne 'PK': {e_convert}")
-                    self._logger.error(f"Erreur majeure lors de la préparation de la colonne 'PK': {e_convert}")
-                    self._logger.info(f"État de la colonne 'PK' avant l'échec: {df['PK'].to_dict() if 'PK' in df else 'Non présente'}")
-
-                self._logger.debug(f"Valeurs de la colonne 'PK' avant set_index: {df['PK'].to_list()}, dtype: {df['PK'].dtype}")
-                
-                # Inspection de toutes les colonnes avant set_index
-                self._logger.debug("Inspection du DataFrame avant set_index:")
-                for col in df.columns:
-                    self._logger.debug(f"  Colonne '{col}', dtype: {df[col].dtype}")
-                    try:
-                        # Tenter de détecter des valeurs inhabituelles comme _NoValueType
-                        # Ceci est une heuristique car _NoValueType n'est pas directement comparable facilement
-                        problematic_values = df[col][df[col].apply(lambda x: hasattr(x, '__class__') and x.__class__.__name__ == '_NoValueType')]
-                        if not problematic_values.empty:
-                            self._logger.warning(f"    Colonne '{col}' contient des valeurs potentiellement problématiques (_NoValueType): {problematic_values.to_dict()}")
-                    except Exception as e_inspect:
-                        self._logger.debug(f"    Impossible d'inspecter finement la colonne '{col}': {e_inspect}")
-                
+            # Définir l'index après avoir nettoyé la colonne PK
+            if 'PK' in df.columns and pd.api.types.is_numeric_dtype(df['PK']):
                 try:
                     df.set_index('PK', inplace=True)
-                    self._logger.info(f"Colonne 'PK' définie comme index. Type de l'index: {df.index.dtype}, Valeurs de l'index: {df.index.to_list()}")
-                    
-                    # Assurer que l'index est de type entier après set_index
-                    if not pd.api.types.is_integer_dtype(df.index):
-                        self._logger.warning(f"L'index PK n'est pas de type entier après set_index (actuel: {df.index.dtype}). Tentative de reconversion explicite.")
-                        try:
-                            df.index = df.index.astype("int64")
-                            self._logger.info(f"Index PK reconverti en type {df.index.dtype}. Valeurs: {df.index.to_list()}")
-                        except Exception as e_reconvert_index:
-                            self._logger.error(f"Erreur lors de la reconversion de l'index PK en int64: {e_reconvert_index}")
-                    else:
-                        self._logger.info(f"L'index PK est déjà de type entier ({df.index.dtype}).")
-
-                except Exception as e_set_index:
-                    self._logger.error(f"Erreur lors de la définition de 'PK' comme index: {e_set_index}")
-                    if 'PK' in df.columns:
-                         self._logger.info(f"État de la colonne 'PK' avant l'échec de set_index: {df['PK'].to_dict()}, dtype: {df['PK'].dtype}")
-                    else:
-                         self._logger.info("Colonne 'PK' non présente dans df.columns avant l'échec de set_index.")
+                    self._logger.info(f"Index 'PK' défini avec succès. Type: {df.index.dtype}.")
+                except Exception as e:
+                    self._logger.error(f"Erreur critique lors de la définition de 'PK' comme index: {e}")
+            elif 'PK' not in df.columns:
+                 self._logger.warning("Colonne 'PK' non trouvée. L'index ne peut être défini.")
             else:
-                self._logger.warning("Colonne 'PK' non trouvée dans le fichier de taxonomie. L'index ne sera pas défini.")
-            
+                 self._logger.warning(f"La colonne 'PK' n'a pas pu être convertie en entier (type actuel: {df['PK'].dtype}), impossible de la définir comme index.")
+
             return df
         except Exception as e:
-            self._logger.error(f"Erreur lors du chargement ou de la préparation de la taxonomie depuis {self._current_taxonomy_path}: {e}")
+            self._logger.error(f"Erreur majeure lors du chargement/préparation de la taxonomie: {e}")
             raise
     
     def _get_taxonomy_dataframe(self) -> pd.DataFrame:
@@ -239,6 +191,7 @@ class InformalAnalysisPlugin:
             Dict[str, Any]: Un dictionnaire décrivant le nœud courant et la
             liste de ses enfants. Contient une clé 'error' en cas de problème.
         """
+        self._logger.debug(f"DEBUG: Entering _internal_explore_hierarchy with pk={current_pk}")
         result = {
             "current_node": None,
             "children": [],
@@ -247,14 +200,15 @@ class InformalAnalysisPlugin:
         
         if df is None:
             result["error"] = "Taxonomie sophismes non disponible."
+            self._logger.debug("DEBUG: Exiting _internal_explore_hierarchy (df is None)")
             return result
         
         # Convertir les colonnes numériques
-        if 'depth' in df.columns:
+        if 'depth' in df.columns and not pd.api.types.is_numeric_dtype(df['depth']):
             df['depth'] = pd.to_numeric(df['depth'], errors='coerce')
         
         # Trouver le nœud courant
-        current_node_df = df[df.index == current_pk]
+        current_node_df = df[df.index == current_pk] if current_pk in df.index else pd.DataFrame()
         if len(current_node_df) == 0:
             result["error"] = f"PK {current_pk} non trouvée dans la taxonomie."
             return result
@@ -341,64 +295,11 @@ class InformalAnalysisPlugin:
                 }
                 result["children"].append(child_info)
         
+        self._logger.debug(f"DEBUG: Exiting _internal_explore_hierarchy with pk={current_pk}")
         return result
     
-    # La méthode _internal_get_children_details n'est plus explicitement appelée,
-    # sa logique est intégrée dans _internal_get_node_details et _internal_explore_hierarchy.
-    # Si elle devait être réactivée, elle nécessiterait une mise à jour similaire des noms de colonnes.
-    # Pour l'instant, nous la laissons telle quelle ou la commentons si elle n'est plus du tout utilisée.
-    # Par souci de propreté, si elle n'est pas utilisée, il vaut mieux la supprimer ou la commenter clairement.
-    # Pour cette passe, je vais la laisser mais noter qu'elle n'est pas au centre des modifications actuelles.
-    def _internal_get_children_details(self, pk: int, df: pd.DataFrame, max_children: int = 10) -> List[Dict[str, Any]]:
-        """
-        Logique interne pour obtenir les détails des enfants d'un nœud (méthode de support).
-
-        Args:
-            pk (int): La clé primaire du nœud parent.
-            df (pd.DataFrame): Le DataFrame de la taxonomie.
-            max_children (int): Le nombre maximum d'enfants à retourner.
-
-        Returns:
-            List[Dict[str, Any]]: Une liste de dictionnaires, chacun
-            représentant un enfant avec ses informations détaillées.
-        """
-        children_details_list = [] # Renommé pour éviter conflit avec variable 'children'
-        
-        if df is None:
-            return children_details_list
-        
-        # Convertir les colonnes numériques si elles existent et ne sont pas déjà numériques
-        if 'PK' in df.columns and not pd.api.types.is_numeric_dtype(df['PK']):
-            df['PK'] = pd.to_numeric(df['PK'], errors='coerce')
-        if 'FK_Parent' in df.columns and not pd.api.types.is_numeric_dtype(df['FK_Parent']):
-            df['FK_Parent'] = pd.to_numeric(df['FK_Parent'], errors='coerce')
-        
-        # Trouver les enfants (nœuds dont le parent est le nœud courant)
-        child_nodes_df = pd.DataFrame() # Initialiser
-        if 'FK_Parent' in df.columns:
-            child_nodes_df = df[df['FK_Parent'] == pk]
-        elif 'parent_pk' in df.columns: # Fallback si FK_Parent n'existe pas
-            child_nodes_df = df[df['parent_pk'] == pk]
-        # Ajouter une logique basée sur 'path' et 'depth' si nécessaire, comme dans _internal_explore_hierarchy
-        
-        # Limiter le nombre d'enfants si nécessaire
-        if max_children > 0 and len(child_nodes_df) > max_children:
-            child_nodes_df = child_nodes_df.head(max_children)
-        
-        # Extraire les informations des enfants
-        for _, child_row in child_nodes_df.iterrows():
-            child_info = {
-                "pk": int(child_row.name), # .name est l'index (PK)
-                "nom_vulgarisé": child_row.get('nom_vulgarisé', ''), # nom_vulgarisé
-                "description_courte": child_row.get('text_fr', ''),   # text_fr
-                "description_longue": child_row.get('desc_fr', ''), # desc_fr
-                "exemple": child_row.get('example_fr', ''), # example_fr
-                "famille": child_row.get('Famille', ''),         # Famille
-                "error": None
-            }
-            children_details_list.append(child_info)
-        
-        return children_details_list
+    # La méthode _internal_get_children_details est obsolète et a été supprimée.
+    # Sa logique a été intégrée dans _internal_get_node_details et _internal_explore_hierarchy.
     
     def _internal_get_node_details(self, pk: int, df: pd.DataFrame) -> Dict[str, Any]:
         """
@@ -415,6 +316,7 @@ class InformalAnalysisPlugin:
             Dict[str, Any]: Un dictionnaire complet des attributs du nœud,
             incluant des informations contextuelles (parent, enfants).
         """
+        self._logger.debug(f"DEBUG: Entering _internal_get_node_details with pk={pk}")
         result = {
             "pk": pk,
             "error": None
@@ -422,6 +324,7 @@ class InformalAnalysisPlugin:
         
         if df is None:
             result["error"] = "Taxonomie sophismes non disponible."
+            self._logger.debug(f"DEBUG: Exiting _internal_get_node_details (df is None) for pk={pk}")
             return result
         
         # Convertir les colonnes numériques si elles existent et ne sont pas déjà numériques
@@ -431,6 +334,8 @@ class InformalAnalysisPlugin:
             df['depth'] = pd.to_numeric(df['depth'], errors='coerce')
         
         # Trouver le nœud
+        # Correction pour la compatibilité pandas 2.x
+        # Remplacer df.loc[[pk]] par un filtrage sur l'index, plus robuste
         node_df = df[df.index == pk]
         if len(node_df) == 0:
             result["error"] = f"PK {pk} non trouvée dans la taxonomie."
@@ -511,6 +416,7 @@ class InformalAnalysisPlugin:
                 }
                 result["children"].append(child_info_detail)
         
+        self._logger.debug(f"DEBUG: Exiting _internal_get_node_details for pk={pk}")
         return result
     
     @kernel_function(

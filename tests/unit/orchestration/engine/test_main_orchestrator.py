@@ -3,18 +3,23 @@ from unittest.mock import MagicMock, patch, ANY, call, AsyncMock
 from argumentation_analysis.orchestration.engine.main_orchestrator import MainOrchestrator
 from argumentation_analysis.orchestration.engine.config import OrchestrationConfig
 from argumentation_analysis.orchestration.engine.strategy import OrchestrationStrategy
+import semantic_kernel as sk
+from semantic_kernel import Kernel
+
+
+@pytest.fixture
+def mock_kernel() -> Kernel:
+    """Crée un mock pour le Kernel de Semantic Kernel."""
+    kernel = MagicMock(spec=Kernel)
+    # Configure le mock pour retourner un dictionnaire vide afin de satisfaire Pydantic
+    kernel.get_prompt_execution_settings_from_service_id.return_value = {}
+    return kernel
 
 
 @pytest.fixture
 def mock_config():
     """Fixture pour une OrchestrationConfig mockée."""
     return MagicMock(spec=OrchestrationConfig)
-
-
-@pytest.fixture
-def mock_kernel():
-    """Fixture pour un Kernel Semantic Kernel mocké."""
-    return MagicMock(spec="semantic_kernel.Kernel")
 
 
 @pytest.fixture

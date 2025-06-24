@@ -12,8 +12,8 @@ dependencies:
   - intel-openmp # Force une version unifiée d'OpenMP
   - mkl # Force l'utilisation des librairies Intel MKL
   - tbb # Threading Building Blocks, souvent lié à MKL
-  - numpy
-  - pandas
+  - numpy==1.25.0
+  - pandas==2.0.3
   - scipy
   - scikit-learn
   - nltk
@@ -78,3 +78,4 @@ dependencies:
     - pybreaker
     - pytest-dotenv
     - mcp
+    - blis

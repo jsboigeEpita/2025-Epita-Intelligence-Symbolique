@@ -36,8 +36,11 @@ def sample_taxonomy_data():
 def mock_taxonomy_df(sample_taxonomy_data):
     """Fixture to create a mocked DataFrame from sample data, indexed by 'pk'."""
     df = pd.DataFrame(sample_taxonomy_data)
+    # Ensure pk is of a nullable integer type before setting it as index
+    df['pk'] = df['pk'].astype('Int64')
     df = df.set_index('pk')
-    df['parent_pk'] = pd.to_numeric(df['parent_pk'], errors='coerce')
+    # Explicitly convert parent_pk to nullable integer to handle None/NaN values
+    df['parent_pk'] = pd.to_numeric(df['parent_pk'], errors='coerce').astype('Int64')
     df['depth'] = pd.to_numeric(df['depth'], errors='coerce').astype('Int64')
     return df
 
@@ -89,21 +92,7 @@ def test_internal_get_node_details(informal_plugin_mocked, mock_taxonomy_df):
     assert "error" in details_pk_invalid
     assert "PK 99 non trouvée" in details_pk_invalid["error"]
 
-def test_internal_get_children_details(informal_plugin_mocked, mock_taxonomy_df):
-    """Test retrieving details of child nodes."""
-    # This method seems to have a different column expectation ('nom_vulgarisé')
-    # Let's adjust the test to what the method actually does or what data it has
-    children_pk0 = informal_plugin_mocked._internal_get_children_details(0, mock_taxonomy_df, max_children=5)
-    assert len(children_pk0) == 2
-    assert any(c['nom_vulgarisé'] == 'Pertinence' for c in children_pk0)
-    assert any(c['nom_vulgarisé'] == 'Ambiguïté' for c in children_pk0)
-
-    children_pk1 = informal_plugin_mocked._internal_get_children_details(1, mock_taxonomy_df, max_children=5)
-    assert len(children_pk1) == 1
-    assert children_pk1[0]['nom_vulgarisé'] == 'Attaque personnelle'
-
-    children_pk2 = informal_plugin_mocked._internal_get_children_details(2, mock_taxonomy_df, max_children=5)
-    assert len(children_pk2) == 0
+# Test for _internal_get_children_details removed as the method is obsolete.
 
 def test_internal_explore_hierarchy(informal_plugin_mocked, mock_taxonomy_df):
     """Test exploring the hierarchy from a given node."""

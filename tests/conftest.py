@@ -224,51 +224,41 @@ def test_config_path(tmp_path):
     """Provides a temporary path for a config file."""
     return tmp_path / "test_config.yml"
 
-@pytest.fixture(scope="session")
-def jvm_session():
+@pytest.fixture(scope="session", autouse=True)
+def jvm_session_autostart():
     """
-    Fixture de session pour démarrer et arrêter la JVM une seule fois pour tous les tests.
+    Fixture de session autouse pour démarrer et arrêter la JVM une seule fois pour
+    tous les tests. Garantit que la JVM est gérée de manière centralisée.
     """
-    import jpype
-    import jpype.imports
-    
-    # Construire le chemin relatif vers le JDK
-    project_root = Path(__file__).parent.parent.resolve()
-    jdk_base_path = os.path.join(project_root, "libs", "portable_jdk", "jdk-17.0.11+9")
-    jvm_dll_path = os.path.join(jdk_base_path, "bin", "server", "jvm.dll")
+    # Ne pas exécuter cette fixture si les tests JVM sont explicitement désactivés.
+    if os.getenv("SKIP_JVM_TESTS"):
+        print("\n[JVM Fixture] Tests JVM désactivés via SKIP_JVM_TESTS. Fixture ignorée.")
+        yield
+        return
 
-    if not os.path.exists(jvm_dll_path):
-        pytest.fail(f"jvm.dll non trouvé à {jvm_dll_path}. Assurez-vous que le JDK portable est en place.")
+    try:
+        from argumentation_analysis.core.jvm_setup import initialize_jvm, shutdown_jvm, is_jvm_started
+        print("\n[JVM Fixture] Utilisation de jvm_setup centralisé.")
+    except ImportError:
+        pytest.fail("Impossible d'importer jvm_setup. Vérifiez le sys.path et la structure du projet.")
 
-    if not jpype.isJVMStarted():
+    if not is_jvm_started():
         try:
             print("\n[JVM Fixture] Démarrage de la JVM pour la session de test...")
-            
-            # --- Dynamically build classpath from tweety libs ---
-            tweety_libs_path = os.path.join(project_root, "argumentation_analysis", "libs", "tweety")
-            if not os.path.exists(tweety_libs_path):
-                pytest.fail(f"Le répertoire des librairies Tweety est introuvable: {tweety_libs_path}")
-                
-            classpath = [os.path.join(tweety_libs_path, f) for f in os.listdir(tweety_libs_path) if f.endswith('.jar')]
-            if not classpath:
-                pytest.fail(f"Aucun fichier .jar n'a été trouvé dans {tweety_libs_path}")
-            
-            print(f"[JVM Fixture] Classpath construit avec {len(classpath)} JARs.")
-
-            jpype.startJVM(
-                jvmpath=jvm_dll_path,
-                classpath=classpath,
-                convertStrings=False
-            )
-            print("[JVM Fixture] JVM démarrée avec succès.")
+            # La logique de recherche du JDK/classpath est maintenant dans initialize_jvm
+            initialize_jvm()
+            print("[JVM Fixture] JVM démarrée avec succès via jvm_setup.")
         except Exception as e:
-            pytest.fail(f"Échec du démarrage de la JVM : {e}")
+            # Afficher les threads actifs en cas d'échec pour aider au débogage
+            active_threads = [t.name for t in threading.enumerate()]
+            print(f"[JVM Fixture] Threads actifs au moment de l'erreur: {active_threads}")
+            pytest.fail(f"Échec du démarrage de la JVM via jvm_setup : {e}")
 
     yield
 
-    if jpype.isJVMStarted():
-        print("\n[JVM Fixture] Arrêt de la JVM à la fin de la session.")
-        jpype.shutdownJVM()
+    if is_jvm_started():
+        print("\n[JVM Fixture] Arrêt de la JVM à la fin de la session via jvm_setup.")
+        shutdown_jvm()
 @pytest.fixture(autouse=True)
 def skip_jvm_tests(monkeypatch):
     """

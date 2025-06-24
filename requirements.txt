@@ -1,6 +1,0 @@
-markdown
-PyYAML
-psutil
-requests
-python-dotenv
-pybreaker

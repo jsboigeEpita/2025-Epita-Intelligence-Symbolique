@@ -550,6 +550,22 @@ def shutdown_jvm():
     else:
         logger.debug("La JVM n'est pas en cours d'exécution, aucun arrêt nécessaire.")
 
+
+def is_jvm_started() -> bool:
+    """
+    Vérifie si la JVM est actuellement démarrée, en gérant l'import de jpype.
+    """
+    try:
+        import jpype
+        return jpype.isJVMStarted()
+    except ImportError:
+        # Si jpype n'est pas installé ou trouvable, la JVM ne peut pas être démarrée.
+        return False
+    except Exception as e:
+        logger.error(f"Erreur inattendue lors de la vérification du statut de la JVM: {e}")
+        return False
+
+
 def is_jvm_owned_by_session_fixture() -> bool:
     """Retourne True si la JVM est contrôlée par une fixture de session pytest."""
     # Cette fonction permet d'éviter l'import direct d'une variable privée
