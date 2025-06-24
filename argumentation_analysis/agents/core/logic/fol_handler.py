@@ -236,32 +236,32 @@ class FOLHandler:
 
     def validate_formula_with_signature(self, signature, formula_str: str) -> tuple[bool, str]:
         """
-        Validates a FOL formula string against a given programmatic signature.
-
-        :param signature: A pre-built FolSignature Java object.
-        :param formula_str: The formula string to validate.
-        :return: A tuple (bool, str) indicating success and a message.
+        Validates a FOL formula string by safely modifying the main parser's state.
+        This approach avoids creating new parser objects, which has proven unreliable.
         """
-        logger.debug(f"Validating formula '{formula_str}' against provided signature.")
+        logger.debug(f"Début de la validation de la formule '{formula_str}' avec une signature personnalisée.")
+        original_signature = None
         try:
-            FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
-            parser = FolParser()
-            logger.debug(f"Signature object provided to validator: {signature} (Hash: {signature.hashCode()})")
-            parser.setSignature(signature)
+            # --- Thread-safe temporary signature modification on the main parser ---
+            # 1. Get the original signature to restore it later
+            original_signature = self._fol_parser.getSignature()
             
-            # DEBUG: Check if the signature was actually set
-            retrieved_sig = parser.getSignature()
-            logger.debug(f"Signature retrieved from parser after set: {retrieved_sig} (Hash: {retrieved_sig.hashCode()})")
-            if not signature.equals(retrieved_sig):
-                logger.error("CRITICAL: Signature object in parser is NOT the one we set!")
+            # 2. Set the temporary signature for validation
+            self._fol_parser.setSignature(signature)
+            self.logger.debug(f"Signature temporaire (Hash: {signature.hashCode()}) appliquée au parser principal.")
 
-            # The actual parsing is the validation
-            self.parse_fol_formula(formula_str, custom_parser=parser)
-            
-            msg = f"Formula '{formula_str}' successfully validated against the signature."
-            logger.info(msg)
-            return True, msg
+            # 3. Perform the parsing, which acts as validation
+            self.parse_fol_formula(formula_str) # Use the main parser
+            self.logger.info(f"La formule FOL '{formula_str}' est valide avec la signature fournie.")
+            return True, "Formule valide."
+        
         except (jpype.JException, ValueError) as e:
-            error_msg = f"Validation failed for formula '{formula_str}': {e}"
-            logger.warning(error_msg)
+            error_message = f"Échec de la validation de la formule '{formula_str}' avec la signature. Raison: {e}"
+            self.logger.error(error_message)
             return False, str(e)
+            
+        finally:
+            # 4. Restore the original signature, regardless of success or failure
+            if original_signature is not None:
+                self._fol_parser.setSignature(original_signature)
+                self.logger.debug(f"Signature originale (Hash: {original_signature.hashCode()}) restaurée sur le parser principal.")

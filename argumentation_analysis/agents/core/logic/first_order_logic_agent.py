@@ -535,11 +535,11 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         logger.warning(f"La méthode 'get_response' n'est pas l'interaction standard pour {self.name}.")
         yield []
     
-    async def invoke(self, chat_history: ChatHistory, **kwargs) -> List[ChatMessageContent]:
+    async def invoke_single(self, chat_history: ChatHistory, **kwargs) -> ChatMessageContent:
         """Point d'entrée principal pour les interactions génériques."""
         last_user_message = next((m.content for m in reversed(chat_history) if m.role == "user"), None)
         if not last_user_message or not isinstance(last_user_message, str):
-             return [ChatMessageContent(role="assistant", content="Veuillez fournir une instruction en texte.", name=self.name)]
+             return ChatMessageContent(role="assistant", content="Veuillez fournir une instruction en texte.", name=self.name)
         
         # Ce point d'entrée est un passe-plat vers la logique principale
         belief_set, status = await self.text_to_belief_set(last_user_message)
@@ -548,4 +548,4 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         else:
             response_content = belief_set.to_dict()
 
-        return [ChatMessageContent(role="assistant", content=json.dumps(response_content), name=self.name)]
+        return ChatMessageContent(role="assistant", content=json.dumps(response_content), name=self.name)
