@@ -447,15 +447,18 @@ class CluedoExtendedOrchestrator:
                 # 1. Tronquer et nettoyer l'historique avant de l'envoyer
                 if len(history) > self.MAX_HISTORY_MESSAGES:
                     self._logger.warning(f"L'historique dépasse {self.MAX_HISTORY_MESSAGES} messages. Troncation...")
-                    history_to_send = [history[0]] + history[-(self.MAX_HISTORY_MESSAGES - 1):]
+                    history_to_process = [history[0]] + history[-(self.MAX_HISTORY_MESSAGES - 1):]
                 else:
-                    history_to_send = history
+                    history_to_process = history
 
-                # DEBUG: Logguer l'historique avant envoi
-                for i, msg in enumerate(history_to_send):
-                    self._logger.debug(f"  [HISTORY TO SEND #{i}] Role: {msg.role}, Name: {msg.name}, Type: {type(msg.content)}, Content: {str(msg.content)[:120]}...")
+                # Étape de nettoyage la plus critique:
+                # Reconstruire un historique entièrement neuf avec des objets simples.
+                history_to_send = [
+                    self.consolidate_agent_response(msg, getattr(msg, 'name', msg.role))
+                    for msg in history_to_process
+                ]
 
-                # 2. Exécuter l'agent avec l'historique préparé
+                # 2. Exécuter l'agent avec l'historique nettoyé
                 agent_response_raw = await next_agent.invoke(input=history_to_send, arguments=KernelArguments())
                 
                 # 3. Consolider et nettoyer la réponse de l'agent
@@ -495,50 +498,47 @@ class CluedoExtendedOrchestrator:
     
     def consolidate_agent_response(self, response_raw: Any, agent_name: str) -> ChatMessageContent:
         """
-        Consolide la réponse brute d'un agent en un ChatMessageContent propre et simple.
-        Gère les réponses en streaming pour éviter l'explosion du contexte.
+        Consolide la réponse brute d'un agent (qui peut être un string, un objet complexe,
+        un stream, etc.) en un unique ChatMessageContent simple (rôle, contenu texte, nom).
+        Ceci est LA fonction critique pour éviter le context_length_exceeded.
         """
         full_content = ""
         role = "assistant"
         
-        # Cas 1: La réponse est une liste (typiquement de chunks de streaming)
+        # Cas 1: La réponse est une liste de chunks de streaming
         if isinstance(response_raw, list):
-            for item in response_raw:
-                # Si l'item est un chunk de streaming...
-                if isinstance(item, StreamingChatMessageContent):
-                    # ...itérer sur ses 'items' (le contenu textuel réel)
-                    for content_part in item.items:
-                         if hasattr(content_part, 'text'):
-                            full_content += content_part.text
-                # Si l'item est déjà un message simple
-                elif isinstance(item, ChatMessageContent):
-                    full_content += str(item.content) if item.content else ""
-                    role = item.role
-                else:
-                    # Fallback au cas où la liste contiendrait autre chose
-                    full_content += str(item)
+            for chunk in response_raw:
+                if isinstance(chunk, StreamingChatMessageContent):
+                    for part in chunk.items:
+                        if hasattr(part, 'text'):
+                            full_content += part.text
+                # Gérer le cas où un ChatMessageContent se retrouve dans la liste
+                elif isinstance(chunk, ChatMessageContent):
+                     full_content += str(chunk.content or "")
 
-        # Cas 2: La réponse est un seul objet de streaming
+        # Cas 2: La réponse est un objet de streaming unique
         elif isinstance(response_raw, StreamingChatMessageContent):
-            for content_part in response_raw.items:
-                 if hasattr(content_part, 'text'):
-                    full_content += content_part.text
+            for part in response_raw.items:
+                if hasattr(part, 'text'):
+                    full_content += part.text
 
-        # Cas 3: La réponse est un simple ChatMessageContent
+        # Cas 3: C'est déjà un ChatMessageContent (potentiellement avec un contenu complexe)
         elif isinstance(response_raw, ChatMessageContent):
-            full_content = str(response_raw.content) if response_raw.content else ""
+            # Extraire le contenu texte, peu importe comment il est encapsulé
+            content_obj = response_raw.content
+            if hasattr(content_obj, 'text'):
+                full_content = content_obj.text
+            elif isinstance(content_obj, str):
+                full_content = content_obj
+            else:
+                full_content = str(content_obj or "")
             role = response_raw.role
 
-        # Cas 4: Fallback pour tout autre type (ex: string)
+        # Cas 4: C'est juste un string ou un autre type de base
         else:
-            full_content = str(response_raw)
+            full_content = str(response_raw or "")
 
-        # Création d'un message final nettoyé et léger
-        return ChatMessageContent(
-            role=role,
-            content=full_content,
-            name=agent_name
-        )
+        return ChatMessageContent(role=role, content=full_content, name=agent_name)
 
 
     async def _collect_final_metrics(self, history: List[ChatMessageContent]) -> Dict[str, Any]:
