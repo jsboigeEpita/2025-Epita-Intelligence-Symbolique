@@ -40,7 +40,6 @@ import psutil
 
 # Imports internes (sans activation d'environnement au niveau du module)
 # Le bootstrap se fera dans la fonction main()
-from project_core.core_from_scripts.environment_manager import EnvironmentManager
 from argumentation_analysis.core.jvm_setup import download_tweety_jars
 
 # Import du gestionnaire centralisé des ports
@@ -171,17 +170,9 @@ class MinimalBackendManager:
 
         module_spec = self.config.get('module', 'api.main:app')
         
-        env_name = self.config.get('backend', {}).get('conda_env', 'projet-is')
-        self.logger.info(f"[BACKEND] Utilisation du nom d'environnement Conda: '{env_name}'")
-        
-        env_manager = EnvironmentManager(self.logger)
-        # NOUVELLE LOGIQUE: Obtenir le chemin python de manière robuste
-        python_executable_str = env_manager.get_python_executable()
-        if not python_executable_str:
-            self.logger.error(f"[BACKEND] Impossible de localiser l'exécutable Python pour l'environnement Conda '{env_name}'.")
-            return {'success': False, 'error': f"Python executable for Conda env '{env_name}' not found."}
-
-        python_executable = Path(python_executable_str)
+        # L'environnement Conda est déjà activé par le script appelant (run_tests.ps1).
+        # Nous utilisons donc directement l'exécutable Python courant.
+        python_executable = Path(sys.executable)
         self.logger.info(f"[BACKEND] Utilisation du chemin Python absolu : {python_executable}")
 
         command = [

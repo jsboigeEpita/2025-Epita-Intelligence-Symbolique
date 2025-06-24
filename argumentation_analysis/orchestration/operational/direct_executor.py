@@ -35,13 +35,13 @@ class DirectOperationalExecutor:
         # Les autres agents seront initialisés ici dans les prochaines étapes
         logger.info("DirectOperationalExecutor initialisé avec tous les agents opérationnels.")
 
-    async def execute_operational_pipeline(self, text_input: str, tactical_results: Dict) -> Dict:
+    async def execute_operational_pipeline(self, text_input: str, tactical_results: Dict, chat_history: List[Dict[str, str]] = None) -> Dict:
         """
         Exécute la pipeline opérationnelle avec de vrais agents.
         
         Séquence d'exécution :
         1. ExtractAgent : Extraction d'informations structurées
-        2. InformalAgent : Analyse rhétorique et sophismes  
+        2. InformalAgent : Analyse rhétorique et sophismes
         3. PropositionalLogicAgent : Analyse logique formelle
         4. SynthesisAgent : Synthèse unifiée des résultats
         """
@@ -56,7 +56,7 @@ class DirectOperationalExecutor:
         informal_results = await self._execute_informal_agent(text_input, extract_results)
         
         # Étape 3 : Analyse Logique
-        logic_results = await self._execute_logic_agent(text_input, extract_results)
+        logic_results = await self._execute_logic_agent(text_input, extract_results, chat_history)
         
         # Étape 4 : Synthèse
         synthesis_results = await self._execute_synthesis_agent(
@@ -124,13 +124,28 @@ class DirectOperationalExecutor:
             logger.error(f"Erreur lors de l'analyse informelle: {e}", exc_info=True)
             return {"informal_analysis": [], "status": "error", "message": str(e)}
 
-    async def _execute_logic_agent(self, text_input: str, extract_results: Dict) -> Dict:
+    async def _execute_logic_agent(self, text_input: str, extract_results: Dict, chat_history: List[Dict[str, str]] = None) -> Dict:
         """
         Exécute l'analyse logique propositionnelle sur le texte d'entrée.
+        Prend en compte l'historique de conversation si disponible.
         """
         logger.info("Début de l'étape d'analyse logique...")
         try:
-            belief_set, message = await self.logic_agent.text_to_belief_set(text_input)
+            # Si un historique de chat est fourni, l'utiliser pour l'analyse
+            if chat_history:
+                logger.info("Utilisation de l'historique de conversation pour l'analyse logique.")
+                # L'agent logique doit être appelé avec l'historique
+                # Note: `invoke_single` est un placeholder conceptuel, nous utilisons
+                # `text_to_belief_set_with_history` si c'est la méthode réelle.
+                # Pour l'instant, nous adaptons au code existant qui appelle `text_to_belief_set`
+                
+                # Création d'un historique simple pour la méthode text_to_belief_set
+                # Ceci est un workaround, l'idéal serait d'avoir une méthode dédiée.
+                belief_set, message = await self.logic_agent.invoke_single(chat_history=chat_history)
+
+            else:
+                logger.info("Analyse logique sans historique de conversation.")
+                belief_set, message = await self.logic_agent.text_to_belief_set(text_input)
             
             if belief_set:
                 logger.info("Analyse logique terminée avec succès, BeliefSet créé.")

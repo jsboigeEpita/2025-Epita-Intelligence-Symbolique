@@ -122,7 +122,7 @@ class TweetyInitializer:
                 # Correction du chemin suite au débogage : le dossier est 'portable_jdk' et la version est 17.
                 hardcoded_jdk_path = project_root / "portable_jdk" / "jdk-17.0.2+8"
                 jvm_path_to_use = default_jvm_path
-                
+
                 logger.info(f"Attempting to use hardcoded JDK path: {hardcoded_jdk_path}")
 
                 if os.path.isdir(hardcoded_jdk_path):
@@ -147,12 +147,12 @@ class TweetyInitializer:
                 tweety_libs_path = project_root / "libs" / "tweety"
                 full_jar_path = tweety_libs_path / "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
                 commons_jar_path = tweety_libs_path / "org.tweetyproject.logics.commons-1.28-with-dependencies.jar"
-                
+
                 classpath = [str(full_jar_path), str(commons_jar_path)]
                 logger.info(f"Using classpath: {classpath}")
 
                 jpype.startJVM(
-                    jvm_path_to_use, # Utiliser le chemin de la JVM sélectionné
+                    jvm_path_to_use,  # Utiliser le chemin de la JVM sélectionné
                     "-ea",
                     classpath=classpath,
                     convertStrings=False
@@ -197,7 +197,7 @@ class TweetyInitializer:
             _ = jpype.JClass("org.tweetyproject.logics.commons.syntax.Constant")
             # --- FIN DE L'AJOUT ---
             logger.info("Successfully imported TweetyProject Java classes.")
-            
+
 
         except Exception as e:
             logger.error(f"Error importing Java classes: {e}", exc_info=True)
@@ -252,7 +252,7 @@ class TweetyInitializer:
     @staticmethod
     def get_fol_parser():
         return TweetyInitializer._fol_parser
-    
+
     @staticmethod
     def get_modal_parser():
         return TweetyInitializer._modal_parser
@@ -270,7 +270,7 @@ class TweetyInitializer:
                 TweetyInitializer._modal_logic = None
                 TweetyInitializer._modal_parser = None
                 TweetyInitializer._modal_reasoner = None
-                
+
                 logger.info("Shutting down JVM...")
                 jpype.shutdownJVM()
                 TweetyInitializer._jvm_started = False
