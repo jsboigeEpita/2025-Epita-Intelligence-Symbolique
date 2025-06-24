@@ -63,8 +63,8 @@ Ce projet est riche et comporte de nombreuses facettes. Pour vous aider à vous 
 | **1. Démo Pédagogique EPITA** | Étudiants (première découverte)             | Un menu interactif et guidé pour explorer les concepts clés et les fonctionnalités du projet de manière ludique. | [`examples/scripts_demonstration/README.md`](examples/scripts_demonstration/README.md) |
 | **2. Système Sherlock & Co.** | Passionnés d'IA, logique, multi-agents    | Lancez des investigations complexes (Cluedo, Einstein) avec les agents Sherlock, Watson et Moriarty.             | [`scripts/sherlock_watson/README.md`](scripts/sherlock_watson/README.md)                 |
 | **3. Analyse Rhétorique**   | Développeurs IA, linguistes computationnels | Accédez au cœur du système d'analyse d'arguments, de détection de sophismes et de raisonnement formel.        | **[Cartographie du Système](docs/mapping/rhetorical_analysis_map.md)** <br> **[Rapports de Test](docs/reports/rhetorical_analysis/)** <br> **[README Technique](argumentation_analysis/README.md)** |
-| **4. Application Web**      | Développeurs Web, testeurs UI               | Démarrez et interagir avec l'écosystème de microservices web (API, frontend, outils JTMS).                   | [`project_core/webapp_from_scripts/README.md`](project_core/webapp_from_scripts/README.md) |
-| **5. Suite de Tests**       | Développeurs, Assurance Qualité             | Exécutez les tests unitaires, d'intégration et end-to-end (Pytest & Playwright) pour valider le projet.        | [`tests/README.md`](tests/README.md)                                                   |
+| **4. Application Web**      | Développeurs Web, testeurs UI               | Démarrez et interagir avec l'écosystème de microservices web (API, frontend, outils JTMS).                   | [`docs/mapping/web_apps_map.md`](docs/mapping/web_apps_map.md:0) |
+| **5. Suite de Tests**       | Développeurs, Assurance Qualité             | Exécutez les tests unitaires, d'intégration et end-to-end (Pytest & Playwright) pour valider le projet.        | [`tests/README.md`](tests/README.md:0)                                                   |
 
 ### **Accès et Commandes Principales par Point d'Entrée :**
 
@@ -95,10 +95,11 @@ Accédez directement aux capacités d'analyse d'arguments du projet.
 #### **4. 🌐 Application et Services Web**
 Démarrez l'ensemble des microservices (API backend, frontend React, outils JTMS).
 *   **Lancement de l'orchestrateur web :**
-    ```bash
-    python start_webapp.py
+    ```powershell
+    # Depuis la racine du projet (PowerShell)
+    ./start_webapp.ps1
     ```
-*   Pour les détails : **[Consultez le README de l'Application Web](project_core/webapp_from_scripts/README.md)**
+*   Pour les détails : **[Consultez la cartographie de l'application web](docs/mapping/web_apps_map.md)**
 
 #### **5. 🧪 Suite de Tests Complète**
 Validez l'intégrité et le bon fonctionnement du projet avec plus de 400 tests.

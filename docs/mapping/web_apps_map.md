@@ -1,46 +1,46 @@
-# Cartographie des Applications Web et des Tests
+# Cartographie de l'Architecture des Applications Web
 
-Ce document décrit l'architecture des composants web, l'orchestration des services et l'interaction avec les suites de tests.
+Ce document détaille l'architecture des composants web et des suites de tests associées.
 
-## 1. Architecture de l'Application Web (`interface_web/`)
+## 1. Architecture des Services Web
 
-L'application principale est une application **Flask**, située dans le répertoire `interface_web/`.
+L'application web principale est construite avec Flask et est située dans le répertoire `interface_web/`.
 
-- **Point d'entrée** : [`app.py`](interface_web/app.py:0) initialise et lance l'application Flask.
-- **Routes** : Le sous-répertoire [`routes/`](interface_web/routes/) définit les points de terminaison de l'API et les vues web.
-- **Services** : Le sous-répertoire [`services/`](interface_web/services/) contient la logique métier, y compris l'intégration avec d'autres composants comme JTMS via WebSocket.
-- **Contenus Statiques** : Le répertoire [`static/`](interface_web/static/) héberge les fichiers CSS et JavaScript.
-- **Templates** : Le répertoire [`templates/`](interface_web/templates/) contient les modèles HTML (Jinja2) pour le rendu des pages.
+### 1.1. `interface_web/`
 
-## 2. Orchestration et Configuration (`scripts/webapp/`)
+*   **`app.py`**: C'est le point d'entrée principal de l'application Flask. Il initialise l'application, configure les routes et gère le cycle de vie de l'application.
 
-La gestion des services web pour le développement et les tests est centralisée par des scripts.
+*   **`api/`**: Ce répertoire contient la logique d'intégration avec les services externes et les API.
+    *   `jtms_integration.py`: Gère la communication avec le système JTMS.
 
-- **Orchestrateur** : `scripts/webapp/unified_web_orchestrator.py` est le script principal pour démarrer, arrêter et gérer l'ensemble des services web en mode normal ou test.
-- **Configuration** : Le fichier [`config/webapp_config.yml`](scripts/webapp/config/webapp_config.yml:0) contient les paramètres de configuration de l'application web, tels que les ports, les hôtes et les modes de fonctionnement.
+*   **`routes/`**: Définit les différentes routes (URLs) de l'application.
+    *   `jtms_routes.py`: Contient les routes spécifiques à l'interface JTMS.
 
-## 3. Suites de Tests
+*   **`services/`**: Implémente la logique métier et les services de l'application.
+    *   `jtms_websocket.py`: Gère la communication WebSocket pour les mises à jour en temps réel.
 
-Le projet utilise deux principales suites de tests pour valider les applications web.
+*   **`static/`**: Contient les fichiers statiques.
+    *   `css/`: Feuilles de style CSS.
+    *   `js/`: Fichiers JavaScript pour l'interactivité côté client.
 
-### 3.1. Tests `pytest` (`tests/unit/webapp/`)
+*   **`templates/`**: Modèles HTML utilisés pour rendre les pages web.
+    *   `jtms/`: Modèles spécifiques à l'interface JTMS.
+    *   `index.html`: Page d'accueil.
 
-Ces tests sont axés sur la validation unitaire et d'intégration des composants backend.
+## 2. Architecture des Tests
 
-- **Localisation** : Les tests se trouvent dans `tests/unit/webapp/`.
-- **Cible** : Ils valident la logique des services, des gestionnaires (`backend_manager`, `frontend_manager`), et la configuration de l'orchestrateur.
-- **Exécution** : Ils sont lancés avec la commande `pytest tests/unit/webapp/`.
+Les tests sont divisés en deux catégories principales : les tests backend (`pytest`) et les tests end-to-end (`playwright`).
 
-### 3.2. Tests `Playwright` (`tests_playwright/`)
+### 2.1. `tests/webapp/`
 
-Ces tests effectuent une validation fonctionnelle et de bout en bout (end-to-end) en simulant des interactions utilisateur dans un navigateur.
+Ce répertoire contient les tests unitaires et d'intégration pour l'application Flask.
 
-- **Localisation** : Les tests et leur configuration sont dans `tests_playwright/`.
-- **Cible** : Ils interagissent directement avec l'interface web rendue par le serveur Flask pour tester le flux utilisateur, l'affichage des éléments et les fonctionnalités JavaScript.
-- **Exécution** : Ils sont lancés via une commande `playwright test`.
+*   `__init__.py`: Fichier d'initialisation du module de test.
 
-## 4. Flux d'Interaction pour la Validation
+### 2.2. `tests_playwright/`
 
-1.  L'**orchestrateur unifié** (`unified_web_orchestrator.py`) est exécuté en mode test. Il démarre l'application Flask et tout autre service dépendant.
-2.  La suite de tests **`pytest`** est exécutée pour valider l'intégrité du backend.
-3.  La suite de tests **`Playwright`** est lancée, interagissant avec l'application web en direct pour valider le comportement du frontend et les parcours utilisateur.
+Ce répertoire contient les tests end-to-end qui simulent les interactions des utilisateurs avec l'interface web.
+
+*   `node_modules/`: Dépendances pour Playwright.
+*   `playwright-report/`: Rapports de test générés par Playwright.
+*   `test-results/`: Résultats bruts des exécutions de test.

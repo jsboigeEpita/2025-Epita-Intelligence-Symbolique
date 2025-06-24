@@ -63,8 +63,10 @@ Assurez-vous que votre environnement Conda est activé :
 ### a. Tests Python (Pytest)
 
 -   **Lancer tous les tests Pytest :**
-    ```bash
-    pytest
+    > **Important :** Tous les tests `pytest` doivent être exécutés via le script wrapper `activate_project_env.ps1` pour garantir que l'environnement et les dépendances sont correctement chargés.
+    ```powershell
+    # Depuis la racine du projet (PowerShell)
+    powershell -File .\activate_project_env.ps1 -CommandToRun "python -m pytest"
     ```
 
 -   **Lancer un répertoire spécifique (ex: tests unitaires) :**
