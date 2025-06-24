@@ -74,13 +74,13 @@ def test_internal_get_node_details(informal_plugin_mocked, mock_taxonomy_df):
     assert details_pk2['nom_vulgarise'] == 'Ad Hominem'
 
     details_non_existent = informal_plugin_mocked._internal_get_node_details(99, mock_taxonomy_df)
-    assert details_non_existent is None
+    assert 'error' in details_non_existent
 
 def test_internal_explore_hierarchy(informal_plugin_mocked, mock_taxonomy_df):
     """Test exploring the hierarchy from a given node."""
     # This method also expects 'nom_vulgarise' which is in the sample data
     hierarchy_pk0 = informal_plugin_mocked._internal_explore_hierarchy(0, mock_taxonomy_df)
-    assert hierarchy_pk0['current_node']['nom_vulgarisé'] == 'Root Fallacy'
+    assert hierarchy_pk0['current_node']['nom_vulgarise'] == 'Root Fallacy'
     assert len(hierarchy_pk0['children']) == 1
     assert hierarchy_pk0['children'][0]['nom_vulgarisé'] == 'Fallacy of Relevance'
     
@@ -99,7 +99,7 @@ def test_explore_fallacy_hierarchy_real(informal_plugin_real):
     """Test the public hierarchy exploration method with a real file."""
     result_json_pk1 = informal_plugin_real.explore_fallacy_hierarchy("1")
     result = json.loads(result_json_pk1)
-    assert result['current_node']['nom_vulgarisé'] == 'Fallacy of Relevance'
+    assert result['current_node']['nom_vulgarise'] == 'Fallacy of Relevance'
     assert len(result['children']) == 2
     assert result['children'][0]['pk'] == 2
 
