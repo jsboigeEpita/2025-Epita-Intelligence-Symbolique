@@ -244,25 +244,30 @@ def jvm_session():
 
     if not jpype.isJVMStarted():
         try:
-            print("\n[JVM Fixture] Démarrage de la JVM pour la session de test...")
-            
-            # --- Dynamically build classpath from tweety libs ---
-            tweety_libs_path = os.path.join(project_root, "argumentation_analysis", "libs", "tweety")
-            if not os.path.exists(tweety_libs_path):
-                pytest.fail(f"Le répertoire des librairies Tweety est introuvable: {tweety_libs_path}")
-                
-            classpath = [os.path.join(tweety_libs_path, f) for f in os.listdir(tweety_libs_path) if f.endswith('.jar')]
-            if not classpath:
-                pytest.fail(f"Aucun fichier .jar n'a été trouvé dans {tweety_libs_path}")
-            
-            print(f"[JVM Fixture] Classpath construit avec {len(classpath)} JARs.")
+            # --- PATCH ANTI-CRASH (torch vs jpype) ---
+            # Manipulation directe de sys.modules au lieu de monkeypatch pour
+            # éviter le ScopeMismatch, car cette fixture a une portée "session".
+            print("\n[JVM Fixture Pre-init] Application de l'isolation de torch...")
+            modules_to_remove = ['torch', 'transformers', 'sentence_transformers']
+            modules_to_delete = [name for name in sys.modules if any(name.startswith(prefix) for prefix in modules_to_remove)]
+            for name in modules_to_delete:
+                del sys.modules[name]
+            print(f"[JVM Fixture Pre-init] {len(modules_to_delete)} modules relatifs à torch ont été déchargés.")
+            # --- FIN PATCH ---
 
-            jpype.startJVM(
-                jvmpath=jvm_dll_path,
-                classpath=classpath,
-                convertStrings=False
-            )
-            print("[JVM Fixture] JVM démarrée avec succès.")
+            print("\n[JVM Fixture] Démarrage de la JVM pour la session de test...")
+            # La logique de recherche du JDK/classpath est maintenant centralisée dans jvm_setup.
+            # L'import est local à la fixture pour éviter les effets de bord.
+            from argumentation_analysis.core.jvm_setup import initialize_jvm
+            
+            initialize_jvm()
+
+            print("[JVM Fixture] JVM démarrée avec succès via jvm_setup.")
+        except SystemExit as se:
+            active_threads = [t.name for t in threading.enumerate()]
+            print(f"[JVM Fixture] ERREUR FATALE (SystemExit): Le processus Python se termine. Code: {se.code}")
+            print(f"[JVM Fixture] Threads actifs au moment du crash: {active_threads}")
+            pytest.fail(f"Crash JVM intercepté comme SystemExit ({se.code}).")
         except Exception as e:
             pytest.fail(f"Échec du démarrage de la JVM : {e}")
 

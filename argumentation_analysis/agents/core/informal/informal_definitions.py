@@ -142,16 +142,17 @@ class InformalAnalysisPlugin:
                         self._logger.warning(f"Impossible de convertir la colonne '{col}' en 'Int64': {e}. La colonne sera ignorée pour les opérations de typage.")
 
             # Définir l'index après avoir nettoyé la colonne PK
-            if 'PK' in df.columns and pd.api.types.is_numeric_dtype(df['PK']):
+            if 'PK' in df.columns:
                 try:
+                    # On tente de définir l'index directement. La conversion précédente devrait garantir que c'est possible.
                     df.set_index('PK', inplace=True)
-                    self._logger.info(f"Index 'PK' défini avec succès. Type: {df.index.dtype}.")
+                    self._logger.info(f"Index 'PK' défini avec succès. Type de l'index: {df.index.dtype}.")
+                except TypeError as e:
+                     self._logger.warning(f"Impossible de définir 'PK' comme index car elle n'est pas de type numérique ou compatible (type: {df['PK'].dtype}). Erreur: {e}")
                 except Exception as e:
                     self._logger.error(f"Erreur critique lors de la définition de 'PK' comme index: {e}")
-            elif 'PK' not in df.columns:
-                 self._logger.warning("Colonne 'PK' non trouvée. L'index ne peut être défini.")
             else:
-                 self._logger.warning(f"La colonne 'PK' n'a pas pu être convertie en entier (type actuel: {df['PK'].dtype}), impossible de la définir comme index.")
+                 self._logger.warning("Colonne 'PK' non trouvée. L'index ne peut être défini.")
 
             return df
         except Exception as e:
@@ -208,7 +209,7 @@ class InformalAnalysisPlugin:
             df['depth'] = pd.to_numeric(df['depth'], errors='coerce')
         
         # Trouver le nœud courant
-        current_node_df = df[df.index == current_pk] if current_pk in df.index else pd.DataFrame()
+        current_node_df = df.loc[df.index == current_pk] if current_pk in df.index else pd.DataFrame()
         if len(current_node_df) == 0:
             result["error"] = f"PK {current_pk} non trouvée dans la taxonomie."
             return result
@@ -336,7 +337,7 @@ class InformalAnalysisPlugin:
         # Trouver le nœud
         # Correction pour la compatibilité pandas 2.x
         # Remplacer df.loc[[pk]] par un filtrage sur l'index, plus robuste
-        node_df = df[df.index == pk]
+        node_df = df.loc[df.index == pk]
         if len(node_df) == 0:
             result["error"] = f"PK {pk} non trouvée dans la taxonomie."
             return result
@@ -362,7 +363,7 @@ class InformalAnalysisPlugin:
         if parent_pk_val is not None:
             try:
                 parent_pk_int = int(parent_pk_val)
-                parent_df = df[df.index == parent_pk_int]
+                parent_df = df.loc[df.index == parent_pk_int]
             except ValueError:
                 self._logger.warning(f"Valeur FK_Parent/parent_pk non entière pour le nœud {pk}: {parent_pk_val}")
 
@@ -718,6 +719,9 @@ def setup_informal_kernel(kernel: sk.Kernel, llm_service: Any, taxonomy_file_pat
     """
     plugin_name = "InformalAnalyzer"
     logger.info(f"Configuration Kernel pour {plugin_name} (V13 - Plugin autonome avec nouvelles fonctions)...")
+
+    if not llm_service:
+        raise ValueError("Le service LLM (llm_service) est requis")
 
     informal_plugin_instance = InformalAnalysisPlugin(taxonomy_file_path=taxonomy_file_path)
 
