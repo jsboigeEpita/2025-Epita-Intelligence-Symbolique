@@ -211,18 +211,16 @@ class MainOrchestrator:
                     results["strategic_analysis"] = strategic_results
                     objectives = strategic_results.get("objectives", [])
                 except Exception as e:
-                    logger.error(f"[DIAGNOSTIC] Erreur critique lors de l'appel à strategic_manager.initialize_analysis: {e}", exc_info=True)
+                    logger.error(f"Erreur critique lors de l'appel à strategic_manager.initialize_analysis: {e}", exc_info=True)
                     results["status"] = "error"
                     results["error_message"] = f"Erreur dans strategic_manager: {e}"
                     return results
-                logger.debug(f"[TRACE] strategic_analysis_completed: objectives_count={len(objectives)}, strategic_plan_phases={strategic_results.get('strategic_plan', {}).get('phases', [])}")
 
             # Niveau tactique
             if self.tactical_coordinator and self.strategic_manager:
                 logger.info("[TACTICAL] Coordination tactique...")
                 tactical_results = self.tactical_coordinator.process_strategic_objectives(objectives)
                 results["tactical_coordination"] = tactical_results
-                logger.debug(f"[TRACE] tactical_coordination_completed: tasks_created={tactical_results.get('tasks_created', 0)}")
 
             # Niveau opérationnel (exécution des tâches)
             if self.operational_manager:
@@ -236,7 +234,6 @@ class MainOrchestrator:
                 operational_results = await self._execute_operational_tasks(text_input, operational_tasks_input) # Adaptation: text -> text_input
                 results["operational_results"] = operational_results
                 
-                logger.debug(f"[TRACE] operational_execution_completed: tasks_executed={len(operational_results.get('task_results', []))}")
             
             # Synthèse hiérarchique
             results["hierarchical_coordination"] = await self._synthesize_hierarchical_results(results)
@@ -248,7 +245,7 @@ class MainOrchestrator:
             results["error_message"] = str(e)
             if "strategic_analysis" not in results: # S'assurer que la clé existe
                  results["strategic_analysis"] = {}
-            results["strategic_analysis"]["error"] = str(e) # Maintenir la compatibilité si nécessaire
+            results["strategic_analysis"]["error"] = str(e) # Maintenir la compatibilité si nécessaires
         
         return results
 
@@ -387,7 +384,6 @@ class MainOrchestrator:
                 # Vérifier si l'analyse a réussi (basé sur la structure typique de strategic_results)
                 if analysis_output and analysis_output.get("objectives") is not None: # ou autre indicateur de succès
                     results["status"] = "success"
-                    logger.debug(f"[TRACE] strategic_only_analysis_completed: objectives_count={len(analysis_output.get('objectives', []))}, strategic_plan_phases={analysis_output.get('strategic_plan', {}).get('phases', [])}")
                 else:
                     results["status"] = "partial_failure" # ou "error" si c'est plus approprié
                     results["strategic_analysis"]["error"] = analysis_output.get("error", "Strategic analysis did not produce expected output.")
@@ -448,7 +444,6 @@ class MainOrchestrator:
                 return results
                 
             objectives = strategic_analysis_output.get("objectives", [])
-            logger.debug(f"[TRACE][TACTICAL_COORDINATION] Analyse stratégique interne terminée: objectives_count={len(objectives)}")
 
             # Étape 2 - Coordination Tactique
             logger.info("[TACTICAL_COORDINATION] Étape 2: Coordination tactique basée sur les objectifs stratégiques...")
@@ -459,7 +454,6 @@ class MainOrchestrator:
             # Par exemple, si tactical_run_results est un dict et n'a pas de clé "error"
             if isinstance(tactical_run_results, dict) and "error" not in tactical_run_results:
                 results["status"] = "success"
-                logger.debug(f"[TRACE][TACTICAL_COORDINATION] Coordination tactique terminée: tasks_created={tactical_run_results.get('tasks_created', 0)}")
             else:
                 results["status"] = "partial_failure" # ou "error"
                 # Si tactical_run_results n'est pas un dict ou contient une erreur, le message d'erreur est déjà dans tactical_coordination_results
@@ -515,12 +509,10 @@ class MainOrchestrator:
             objectives = strategic_results.get("objectives", [])
             if not objectives:
                 logger.warning("[OPERATIONAL_DIRECT] L'analyse stratégique n'a pas produit d'objectifs. L'exécution opérationnelle pourrait être limitée.")
-            logger.debug(f"[TRACE][OPERATIONAL_DIRECT] Analyse stratégique interne terminée: objectives_count={len(objectives)}")
 
             # Étape 2 (Interne) - Coordination Tactique
             logger.info("[OPERATIONAL_DIRECT] Étape 2 (Interne): Coordination Tactique...")
             tactical_results = tactical_coordinator.process_strategic_objectives(objectives)
-            logger.debug(f"[TRACE][OPERATIONAL_DIRECT] Coordination tactique interne terminée: tasks_created={tactical_results.get('tasks_created', 'N/A')}, tasks_sample={str(tactical_results.get('tasks', [])[:2])[:100]}...")
 
             # Étape 3 - Exécution Opérationnelle
             logger.info("[OPERATIONAL_DIRECT] Étape 3: Exécution Opérationnelle...")
@@ -620,7 +612,6 @@ class MainOrchestrator:
                     "results": specialized_run_results
                 }
                 output_results["status"] = specialized_run_results.get("status", "unknown_specialized_status")
-                logger.debug(f"[TRACE] specialized_direct_orchestration_completed: orchestrator={orchestrator_name}, status={output_results['status']}")
             else:
                 logger.info("[SPECIALIZED_DIRECT] Aucun orchestrateur spécialisé n'a pu être sélectionné.")
                 output_results["specialized_orchestration"] = {
@@ -899,6 +890,8 @@ class MainOrchestrator:
 if __name__ == "__main__":
     import asyncio
     import os
+    import argparse
+    import json
     import semantic_kernel as sk
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
     from dotenv import load_dotenv
@@ -908,32 +901,23 @@ if __name__ == "__main__":
     from argumentation_analysis.orchestration.hierarchical.operational.manager import OperationalManager
     from argumentation_analysis.core.communication.middleware import MessageMiddleware
     from argumentation_analysis.core.communication.hierarchical_channel import HierarchicalChannel
-    
-    # Ce bloc est un exemple d'exécution.
-    # Dans une application réelle, MainOrchestrator serait instancié
-    # et utilisé par un autre composant (ex: un serveur API).
-    
-    logging.basicConfig(level=logging.INFO,
-                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    async def main():
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    async def main(text_to_analyze: str):
         """Point d'entrée pour l'exécution du script."""
         logger.info("Initialisation de l'orchestrateur principal en mode script exemple.")
         
         config = OrchestrationConfig()
         
-        # Charger les variables d'environnement depuis le fichier .env
         load_dotenv()
         kernel = sk.Kernel()
         api_key = os.getenv("OPENAI_API_KEY")
-        # Le modèle est fixé pour l'exemple, mais pourrait être configurable
         model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4")
+        
         if not api_key:
             raise ValueError("OPENAI_API_KEY doit être défini.")
 
-        # Le `model_id` est implicitement géré par la bibliothèque via les
-        # variables d'environnement (par exemple OPENAI_CHAT_MODEL_ID) dans cette
-        # version de semantic-kernel, et ne doit pas être passé en argument.
         kernel.add_service(
             OpenAIChatCompletion(service_id="chat_completion", api_key=api_key)
         )
@@ -952,16 +936,16 @@ if __name__ == "__main__":
             operational_manager=operational_manager
         )
         
-        # Exemple de texte à analyser
-        text_to_analyze = "Le corps a été retrouvé dans la bibliothèque. Le colonel Moutarde et Mlle Rose étaient les seuls présents dans la maison. Le chandelier, qui semble être l'arme du crime, a été retrouvé dans le salon."
-        
         results = await orchestrator.run_analysis(text_input=text_to_analyze)
         
-        import json
-        print(json.dumps(results, indent=2, ensure_ascii=False))
+        logger.info(f"Final results:\n{json.dumps(results, indent=2, ensure_ascii=False)}")
 
-    # Exécution de la fonction main asynchrone
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.info("Exécution interrompue par l'utilisateur.")
+    if __name__ == "__main__":
+        parser = argparse.ArgumentParser(description="Exécute l'orchestrateur d'analyse d'argumentation.")
+        parser.add_argument('--text', type=str, required=True, help='Le texte à analyser.')
+        args = parser.parse_args()
+
+        try:
+            asyncio.run(main(text_to_analyze=args.text))
+        except KeyboardInterrupt:
+            logger.info("Exécution interrompue par l'utilisateur.")

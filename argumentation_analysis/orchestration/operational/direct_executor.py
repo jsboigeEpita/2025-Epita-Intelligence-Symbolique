@@ -32,7 +32,6 @@ class DirectOperationalExecutor:
         self.synthesis_agent = SynthesisAgent(kernel)
         self.synthesis_agent.setup_agent_components(llm_service_id="default")
 
-        # Les autres agents seront initialisés ici dans les prochaines étapes
         logger.info("DirectOperationalExecutor initialisé avec tous les agents opérationnels.")
 
     async def execute_operational_pipeline(self, text_input: str, tactical_results: Dict, chat_history: List[Dict[str, str]] = None) -> Dict:
@@ -46,9 +45,6 @@ class DirectOperationalExecutor:
         4. SynthesisAgent : Synthèse unifiée des résultats
         """
         
-        # NOTE: Les implémentations réelles des appels aux agents seront ajoutées
-        # dans les prochaines étapes. Pour l'instant, ce sont des placeholders.
-
         # Étape 1 : Extraction
         extract_results = await self._execute_extract_agent(text_input, tactical_results)
         
@@ -84,8 +80,8 @@ class DirectOperationalExecutor:
                 continue
 
             logger.info(f"Exécution de l'extraction pour : '{extract_name}'")
-            source_info = {"source_name": "Input Text"} # Info source basique
-            
+            source_info = {"source_name": "Input Text"}  # Info source basique
+
             try:
                 extract_result: ExtractResult = await self.extract_agent.extract_from_name(
                     source_info=source_info,
@@ -93,7 +89,6 @@ class DirectOperationalExecutor:
                     source_text=text_input
                 )
                 results.append(extract_result.to_dict())
-                logger.info(f"Extraction pour '{extract_name}' terminée avec le statut : {extract_result.status}")
             except Exception as e:
                 logger.error(f"Erreur lors de l'extraction pour '{extract_name}': {e}", exc_info=True)
                 results.append({
@@ -113,11 +108,9 @@ class DirectOperationalExecutor:
         logger.info("Début de l'étape d'analyse informelle...")
         
         try:
-            # Pour cette première version, nous analysons le texte complet.
-            # Une version plus avancée pourrait itérer sur les extraits.
             informal_results = await self.informal_agent.analyze_fallacies(text_input)
             
-            logger.info(f"Analyse informelle terminée, {len(informal_results)} sophismes trouvés.")
+            logger.info("Analyse informelle terminée.")
             return {"informal_analysis": informal_results, "status": "completed"}
             
         except Exception as e:
@@ -134,13 +127,6 @@ class DirectOperationalExecutor:
             # Si un historique de chat est fourni, l'utiliser pour l'analyse
             if chat_history:
                 logger.info("Utilisation de l'historique de conversation pour l'analyse logique.")
-                # L'agent logique doit être appelé avec l'historique
-                # Note: `invoke_single` est un placeholder conceptuel, nous utilisons
-                # `text_to_belief_set_with_history` si c'est la méthode réelle.
-                # Pour l'instant, nous adaptons au code existant qui appelle `text_to_belief_set`
-                
-                # Création d'un historique simple pour la méthode text_to_belief_set
-                # Ceci est un workaround, l'idéal serait d'avoir une méthode dédiée.
                 belief_set, message = await self.logic_agent.invoke_single(chat_history=chat_history)
 
             else:
@@ -148,7 +134,7 @@ class DirectOperationalExecutor:
                 belief_set, message = await self.logic_agent.text_to_belief_set(text_input)
             
             if belief_set:
-                logger.info("Analyse logique terminée avec succès, BeliefSet créé.")
+                logger.info("Analyse logique terminée avec succès.")
                 return {
                     "logic_analysis": belief_set.to_dict(),
                     "status": "completed",
@@ -172,8 +158,6 @@ class DirectOperationalExecutor:
         """
         logger.info("Début de l'étape de synthèse...")
         try:
-            # Convertir les dictionnaires de résultats en objets Pydantic attendus par l'agent de synthèse
-            # Note: C'est une conversion basique. Une vraie implémentation pourrait nécessiter un mapping plus complexe.
             logic_analysis_result = LogicAnalysisResult(
                 propositional_result=logic_results.get("logic_analysis")
             )

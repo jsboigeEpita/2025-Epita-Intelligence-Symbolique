@@ -297,3 +297,6 @@ tmp/
 
 # Temporary directory for test dependencies
 temp_libs/
+
+# Execution traces
+execution_traces/

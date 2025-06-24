@@ -76,28 +76,32 @@ graph TD
 
 ## 3. Guide d'Utilisation Pratique
 
-Toutes les analyses sont lancées via le script `run_orchestration.py`.
+Le point d'entrée principal du système est désormais le module `argumentation_analysis.orchestration.engine.main_orchestrator`. Il est crucial de l'exécuter en tant que module (`python -m`) pour garantir que les importations relatives au sein du projet fonctionnent correctement.
 
 ### a. Configuration
-Assurez-vous d'avoir un fichier `.env` à la racine avec vos clés API (voir la section correspondante dans le README de Sherlock Watson).
-
-### b. Analyse Simple (texte en argument)
-Pour une analyse rapide sur une chaîne de caractères.
+Assurez-vous que votre environnement virtuel est activé et que les dépendances sont installées.
 ```bash
-python -m argumentation_analysis.run_orchestration --text "Si tous les hommes sont mortels et que Socrate est un homme, alors Socrate est mortel."
+# Activez l'environnement virtuel (par exemple)
+# .\activate_project_env.ps1
+```
+De plus, un fichier `.env` à la racine du projet est nécessaire pour les clés API.
+
+### b. Analyse de texte
+Pour lancer une analyse sur une chaîne de caractères, utilisez l'argument `--text`.
+
+**Exemple de base :**
+```bash
+# Exécutez le script en tant que module pour garantir que les chemins sont corrects
+python -m argumentation_analysis.orchestration.engine.main_orchestrator --text "Les voitures autonomes ne devraient jamais être autorisées sur les routes publiques car un algorithme ne pourra jamais prendre de décision morale en cas d'accident inévitable, contrairement à un conducteur humain."
 ```
 
-### c. Analyse depuis un Fichier
-Pour analyser le contenu d'un fichier texte.
-```bash
-python -m argumentation_analysis.run_orchestration --file "chemin/vers/mon_fichier.txt"
-```
+**Explication de la commande :**
+*   `python -m` : Indique à Python d'exécuter le fichier comme un module, ce qui résout les problèmes d'importation intra-package.
+*   `argumentation_analysis.orchestration.engine.main_orchestrator` : Le chemin complet vers le script principal.
+*   `--text "..."` : L'argument contenant la chaîne de texte à analyser.
 
-### d. Lancement avec des Agents Spécifiques
-Pour ne lancer qu'un sous-ensemble d'agents.
-```bash
-python -m argumentation_analysis.run_orchestration --file "chemin/vers/mon_fichier.txt" --agents informal pl
-```
+### c. Note sur l'Architecture d'Exécution
+L'architecture actuelle utilise un `DirectOperationalExecutor`. Ce composant est responsable de l'exécution directe des analyses spécialisées, telles que l'analyse des sophismes ou l'évaluation de la clarté, en faisant appel aux agents d'IA pertinents. Il simplifie le pipeline pour les tâches d'analyse directes sans passer par des couches de coordination hiérarchique complexes.
 
 ## 4. Interprétation des Résultats
 
