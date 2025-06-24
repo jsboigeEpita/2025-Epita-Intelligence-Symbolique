@@ -1,15 +1,18 @@
 import pytest
 import asyncio
 import logging
+import time
+import subprocess
+import aiohttp
 from unittest.mock import MagicMock, patch, AsyncMock
-from pathlib import Path
 
-# On s'assure que le chemin est correct pour importer le manager
+# Correction du chemin pour inclure la racine du projet, nécessaire pour les tests
 import sys
 sys.path.insert(0, '.')
 
 from scripts.apps.webapp.backend_manager import BackendManager
 
+# Fixtures existantes (non modifiées)
 @pytest.fixture
 def backend_config(webapp_config):
     """Provides a base backend config."""
@@ -23,6 +26,8 @@ def logger_mock():
 @pytest.fixture
 def manager(backend_config, logger_mock):
     """Initializes BackendManager with a default config."""
+    # Le chemin du script d'activation est maintenant forcé, on peut le mocker si nécessaire
+    # ou laisser la valeur par défaut du manager. Pour ce test, pas besoin de le mocker.
     return BackendManager(backend_config, logger_mock)
 
 def test_initialization(manager, backend_config):
@@ -30,122 +35,168 @@ def test_initialization(manager, backend_config):
     assert manager.config == backend_config
     assert manager.module == backend_config['module']
 
+# --- Tests de la logique de démarrage (`start_with_failover` et `_start_on_port`) ---
+
 @pytest.mark.asyncio
-@patch('argumentation_analysis.core.jvm_setup.download_tweety_jars', new_callable=AsyncMock)
 @patch('subprocess.Popen')
-async def test_start_success(mock_popen, mock_download_jars, manager):
-    """Tests a successful start call."""
-    # La nouvelle signature de _wait_for_backend retourne (bool, Optional[int])
-    manager._wait_for_backend = AsyncMock(return_value=(True, 5003))
+async def test_start_success(mock_popen, manager):
+    """Tests a successful start call, mocking the internal _wait_for_backend."""
+    # `_wait_for_backend` retourne maintenant un simple booléen.
+    manager._wait_for_backend = AsyncMock(return_value=True)
     manager._is_port_occupied = AsyncMock(return_value=False)
     manager._save_backend_info = AsyncMock()
-    mock_download_jars.return_value = True
 
-    mock_popen.return_value.pid = 1234
+    # Le PID vient de l'instance Popen mockée.
+    mock_process = MagicMock()
+    mock_process.pid = 1234
+    mock_popen.return_value = mock_process
     
-    # Le port est maintenant passé via start()
+    # Le port est passé ici pour simplifier le test.
     result = await manager.start_with_failover(port_override=5003)
 
     assert result['success'] is True
     assert result['port'] == 5003
     assert result['pid'] == 1234
+    assert result['url'] == "http://127.0.0.1:5003"
+    
     mock_popen.assert_called_once()
-    # On vérifie que la méthode est appelée, mais on ne se soucie pas des chemins de log exacts dans ce test.
-    manager._wait_for_backend.assert_called_once()
+    manager._wait_for_backend.assert_awaited_once_with(5003)
     manager._save_backend_info.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_start_port_occupied(manager):
-    """Tests that start fails if the port is already occupied."""
+async def test_start_all_ports_occupied(manager):
+    """Tests that start_with_failover fails if all attempted ports are occupied."""
     manager._is_port_occupied = AsyncMock(return_value=True)
     
     result = await manager.start_with_failover()
     
     assert result['success'] is False
-    assert "est déjà occupé" in result['error']
+    assert "Impossible de démarrer le backend après" in result['error']
+    # Vérifie que tous les ports ont été testés
+    assert manager._is_port_occupied.call_count == manager.max_attempts
 
 @pytest.mark.asyncio
 @patch('subprocess.Popen')
 async def test_start_fails_if_wait_fails(mock_popen, manager):
-    """Tests that start fails if _wait_for_backend returns False."""
-    # La nouvelle signature de _wait_for_backend retourne (bool, Optional[int])
-    manager._wait_for_backend = AsyncMock(return_value=(False, None))
+    """Tests that start fails if the internal _wait_for_backend returns False."""
+    manager._wait_for_backend = AsyncMock(return_value=False)
     manager._is_port_occupied = AsyncMock(return_value=False)
-    manager._cleanup_failed_process = AsyncMock()
+
+    # Note: _cleanup_failed_process n'existe plus, la logique est dans _wait_for_backend
+    mock_popen.return_value = MagicMock(pid=1235)
 
     result = await manager.start_with_failover()
 
     assert result['success'] is False
-    assert f"Le backend a échoué à démarrer sur le port {manager.start_port}" in result['error']
-    manager._cleanup_failed_process.assert_called_once()
+    # L'erreur est maintenant plus générique, venant de la boucle de failover.
+    assert "Impossible de démarrer le backend après" in result['error']
+
+# --- Tests de la logique d'attente (`_wait_for_backend`) ---
 
 @pytest.mark.asyncio
 async def test_wait_for_backend_process_dies(manager):
-    """Tests _wait_for_backend when the process terminates prematurely."""
+    """Tests _wait_for_backend returns False when the process terminates prematurely."""
     manager.process = MagicMock()
-    manager.process.poll.return_value = 1  # Simulate process ended with exit code 1
+    manager.process.poll.return_value = 1  # Simule la fin du processus
     manager.process.returncode = 1
     
-    # We need to mock the sleep to ensure the loop doesn't timeout before checking poll()
-    with patch('asyncio.sleep', new_callable=AsyncMock):
-        # On passe des Mocks pour les chemins de logs
-        result, port = await manager._wait_for_backend(port=manager.start_port)
+    result = await manager._wait_for_backend(port=manager.start_port)
     
     assert result is False
-    assert port is None
-    manager.logger.error.assert_called_with("Processus backend terminé prématurément (code: 1)")
+    manager.logger.error.assert_called_with(f"Processus backend terminé prématurément (code: {manager.process.returncode}). Voir logs pour détails.")
 
 @pytest.mark.asyncio
 @patch('aiohttp.ClientSession.get')
 async def test_wait_for_backend_health_check_ok(mock_get, manager):
-    """Tests _wait_for_backend with a successful health check."""
+    """Tests _wait_for_backend returns True with a successful health check."""
     manager.process = MagicMock()
-    manager.process.poll.return_value = None  # Simulate running process
+    manager.process.poll.return_value = None  # Processus en cours
 
+    # Simule une réponse HTTP 200 OK.
     mock_response = AsyncMock()
     mock_response.status = 200
+    # aenter pour le contexte `async with`
     mock_get.return_value.__aenter__.return_value = mock_response
 
-    # Mock asyncio.sleep to avoid actual waiting
-    with patch('asyncio.sleep', new_callable=AsyncMock):
-        with patch('pathlib.Path.exists', return_value=True): # Simuler que les fichiers de log existent
-            with patch('scripts.apps.webapp.backend_manager.asyncio.to_thread') as mock_read:
-                 # Simuler la lecture du log qui trouve le port
-                mock_read.return_value = "Uvicorn running on http://127.0.0.1:8000"
-                result, port = await manager._wait_for_backend(port=8000)
+    result = await manager._wait_for_backend(port=8000)
 
     assert result is True
-    assert port == 8000
+    mock_get.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_wait_for_backend_timeout(manager):
-    """Tests _wait_for_backend when it times out."""
+@patch('scripts.apps.webapp.backend_manager.time.time')
+async def test_wait_for_backend_global_timeout(mock_time, manager):
+    """Tests that _wait_for_backend returns False when the global timeout is reached."""
     manager.process = MagicMock()
-    manager.process.poll.return_value = None
+    manager.process.poll.return_value = None  # Processus en cours
+
+    # Simuler l'écoulement du temps pour dépasser le timeout global.
+    # time.time() sera appelé une fois pour start_time, puis à chaque itération de la boucle.
+    # Nous simulons l'écoulement du temps en fournissant une fonction comme side_effect pour
+    # rendre le mock robuste contre un nombre d'appels variable.
+    time_sequence = [
+        1000.0,  # 1. Appel pour initialiser start_time
+        1001.0,  # 2. Appel dans la boucle while (continue)
+        1000.0 + manager.timeout_seconds + 1.0  # 3. Appel qui termine la boucle
+    ]
+    def time_gen():
+        yield from time_sequence
+        while True: # Pour tous les appels suivants, retourner la dernière valeur
+            yield time_sequence[-1]
     
-    # Make health checks fail continuously
-    manager._is_port_occupied = AsyncMock(return_value=False) # Should not be called here but for safety
-    with patch('aiohttp.ClientSession.get', side_effect=asyncio.TimeoutError("Test Timeout")):
-        with patch('pathlib.Path.exists', return_value=True):
-            with patch('scripts.apps.webapp.backend_manager.asyncio.to_thread') as mock_read:
-                # Simuler la lecture du log qui trouve le port.
-                # On simule ici que le health check échoue après la découverte du port
-                mock_read.return_value = "Uvicorn running on http://127.0.0.1:8000"
-                result, port = await manager._wait_for_backend(port=8000)
+    time_iterator = time_gen()
+    mock_time.side_effect = lambda: next(time_iterator)
+    
+    # Faire échouer les health checks
+    with patch('aiohttp.ClientSession.get', side_effect=aiohttp.ClientConnectorError(None, MagicMock())):
+        with patch('asyncio.sleep', new_callable=AsyncMock): # Empêche l'attente réelle
+            result = await manager._wait_for_backend(port=8000)
 
     assert result is False
-    assert port is None # Le port a été trouvé mais le health check a échoué
-    manager.logger.error.assert_called_with("Timeout dépassé - Health check inaccessible sur http://127.0.0.1:8000/api/health")
+    manager.logger.error.assert_any_call(f"Timeout global atteint ({manager.timeout_seconds}s) - Backend non accessible sur http://127.0.0.1:8000/api/health")
+
+# --- Test de la logique d'arrêt (`stop`) ---
 
 @pytest.mark.asyncio
-@patch('scripts.apps.webapp.backend_manager.ProcessCleaner.terminate_process_by_pid', new_callable=AsyncMock)
-async def test_stop_process(mock_terminate, manager):
-    """Tests the stop method delegates to ProcessCleaner."""
+async def test_stop_process_terminates_gracefully(manager):
+    """Tests that stop() correctly tries to terminate and then waits for the process."""
+    mock_process = MagicMock()
+    manager.process = mock_process
     manager.pid = 1234
-    manager.process = MagicMock() # The stop method checks if process is not None before setting it to None
     
+    # Simuler que wait() réussit sans Timeout
+    mock_process.wait.return_value = 0
+
     await manager.stop()
     
-    mock_terminate.assert_awaited_once_with(1234, manager.logger, "backend")
+    mock_process.terminate.assert_called_once()
+    mock_process.wait.assert_called_once_with(timeout=5)
+    mock_process.kill.assert_not_called() # Ne doit pas être appelé si wait réussit
+    
+    assert manager.process is None
+    assert manager.pid is None
+
+@pytest.mark.asyncio
+async def test_stop_process_forces_kill_on_timeout(manager):
+    """Tests that stop() kills the process if terminate + wait fails."""
+    mock_process = MagicMock()
+    manager.process = mock_process
+    manager.pid = 1234
+    
+    # Simuler que wait() lève une exception de timeout
+    mock_process.wait.side_effect = subprocess.TimeoutExpired(cmd="test", timeout=5)
+
+    await manager.stop()
+    
+    mock_process.terminate.assert_called_once()
+    # Vérifier les deux appels à wait()
+    assert mock_process.wait.call_count == 2
+    # Le premier appel est avec un timeout
+    mock_process.wait.assert_any_call(timeout=5)
+    # Le second appel (après kill) est sans argument
+    mock_process.wait.assert_any_call()
+    
+    mock_process.kill.assert_called_once() # Doit être appelé après le timeout de wait
+    
     assert manager.process is None
     assert manager.pid is None

@@ -132,7 +132,11 @@ class TestEnvironmentManagerCLI(unittest.TestCase):
         return_code = manager.run_command(command)
         
         self.assertEqual(return_code, 0)
-        mock_subprocess_run.assert_called_once_with(command, check=False)
+        # La commande est jointe en une chaîne, et shell=True est utilisé.
+        mock_subprocess_run.assert_called_once()
+        args, kwargs = mock_subprocess_run.call_args
+        self.assertEqual(args[0], ' '.join(command))
+        self.assertTrue(kwargs.get('shell'))
 
     @patch('subprocess.run')
     def test_run_command_integration_failure(self, mock_subprocess_run):
@@ -146,7 +150,10 @@ class TestEnvironmentManagerCLI(unittest.TestCase):
         return_code = manager.run_command(command)
         
         self.assertEqual(return_code, 1)
-        mock_subprocess_run.assert_called_once_with(command, check=False)
+        mock_subprocess_run.assert_called_once()
+        args, kwargs = mock_subprocess_run.call_args
+        self.assertEqual(args[0], ' '.join(command))
+        self.assertTrue(kwargs.get('shell'))
 
     @patch('subprocess.run', side_effect=FileNotFoundError("Commande non trouvée"))
     def test_run_command_file_not_found(self, mock_subprocess_run):
@@ -157,7 +164,10 @@ class TestEnvironmentManagerCLI(unittest.TestCase):
         return_code = manager.run_command(command)
         
         self.assertEqual(return_code, 1)
-        mock_subprocess_run.assert_called_once_with(command, check=False)
+        mock_subprocess_run.assert_called_once()
+        args, kwargs = mock_subprocess_run.call_args
+        self.assertEqual(args[0], ' '.join(command))
+        self.assertTrue(kwargs.get('shell'))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
