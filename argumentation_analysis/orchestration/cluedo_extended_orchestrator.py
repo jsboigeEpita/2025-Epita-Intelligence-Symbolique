@@ -425,12 +425,12 @@ class CluedoExtendedOrchestrator:
         self._logger.info("🚀 Début du workflow 3-agents")
         
         # Historique des messages
-        history: List[ChatMessageContent] = []
+        history: List[ChatMessageContent] = [
+            ChatMessageContent(role="user", content=initial_question, name="System")
+        ]
         
         # Boucle principale d'orchestration
         self._logger.info("🔄 Début de la boucle d'orchestration 3-agents...")
-        
-        last_message_content = initial_question
         
         try:
             # Nous devons passer l'agent'None' la première fois.
@@ -446,7 +446,8 @@ class CluedoExtendedOrchestrator:
                 
                 # Le message au prochain agent est le contenu du dernier message
                 # La méthode `invoke` est le point d'entrée standard pour les agents SK.
-                agent_response_raw = await next_agent.invoke(input=last_message_content, arguments=KernelArguments())
+                # MODIFICATION : Passer l'historique complet
+                agent_response_raw = await next_agent.invoke(input=history, arguments=KernelArguments())
                 
                 # Le résultat de invoke peut être un ChatMessageContent, une liste, ou un objet résultat
                 if isinstance(agent_response_raw, list) and len(agent_response_raw) > 0:
@@ -458,9 +459,9 @@ class CluedoExtendedOrchestrator:
                     response_content_str = str(agent_response_raw)
                     response_content_obj = ChatMessageContent(role="assistant", content=response_content_str, name=next_agent.name)
 
-                # 3. Mettre à jour l'historique et préparer le prochain tour
+                # 3. Mettre à jour l'historique
                 history.append(response_content_obj)
-                last_message_content = str(response_content_obj.content)
+                last_message_content = str(response_content_obj.content) # Gardé pour le log et l'état
                 
                 # Log et mise à jour de l'état
                 self._logger.info(f"Réponse de {next_agent.name}: {last_message_content[:150]}...")
@@ -469,11 +470,11 @@ class CluedoExtendedOrchestrator:
                     content=last_message_content,
                     message_type=self._detect_message_type(last_message_content)
                 )
-                # Utiliser `initial_question` comme `input` pour le premier tour, puis `last_message_content`
-                turn_input = initial_question if len(history) == 1 else history[-2].content
+                
+                turn_input = history[-2].content if len(history) > 1 else initial_question
                 self.oracle_state.record_agent_turn(
                     agent_name=next_agent.name,
-                    action_type="invoke",
+                    action_type="invoke_with_history",
                     action_details={"input": str(turn_input)[:150], "output": last_message_content[:150]}
                 )
 
