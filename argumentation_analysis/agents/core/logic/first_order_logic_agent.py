@@ -187,7 +187,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             }
         }
 
-    def setup_agent_components(self, llm_service_id: str) -> None:
+    async def setup_agent_components(self, llm_service_id: str) -> None:
         """
         Configure les composants de l'agent, notamment le pont logique et les fonctions sémantiques.
         """
@@ -195,9 +195,14 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         self.logger.info(f"Configuration des composants pour {self.name}...")
         self._tweety_bridge = TweetyBridge()
 
+        # Attendre que le pont Tweety soit prêt si l'initialisation est asynchrone
+        if hasattr(self._tweety_bridge, 'wait_for_jvm') and asyncio.iscoroutinefunction(self._tweety_bridge.wait_for_jvm):
+            await self._tweety_bridge.wait_for_jvm()
+
         if not self.tweety_bridge.is_jvm_ready():
             self.logger.error("Tentative de setup FOL Kernel alors que la JVM n'est PAS démarrée.")
-            return
+            # Levee d'une exception pour interrompre le test
+            raise RuntimeError("TweetyBridge not initialized, JVM not ready.")
 
         default_settings = self._kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         
@@ -232,7 +237,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         text = re.sub(r'[^a-zA-Z0-9_]', '', text)
         return text.lower()
 
-    async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
+    def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[FirstOrderBeliefSet], str]:
         """
         Convertit un texte en `FirstOrderBeliefSet` en utilisant un seul prompt unifié.
         """
@@ -241,7 +246,8 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             # Étape 1 : Appel unique au LLM pour tout générer
             self.logger.info("Étape 1: Génération de la structure logique complète...")
             # Note: Le code de débug codé en dur pour Socrate n'est pas inclus ici car il n'est pas pertinent pour la logique de production.
-            unified_result = await self._kernel.plugins[self.name]["TextToFOL"].invoke(self._kernel, input=text)
+            # L'appel invoke est maintenant synchrone
+            unified_result = self._kernel.plugins[self.name]["TextToFOL"].invoke(self._kernel, input=text)
             raw_unified_json = json.loads(self._extract_json_block(str(unified_result)))
             self.logger.debug(f"Structure brute reçue du LLM: {json.dumps(raw_unified_json, indent=2)}")
 
@@ -289,7 +295,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         except Exception as e:
             error_msg = f"Échec lors de la création de l'ensemble de croyances : {e}"
             self.logger.error(error_msg, exc_info=True)
-            return None, error_msg
+            return None, f"Conversion error: {e}"
 
     def _extract_json_block(self, text: str) -> str:
         """Extracts the first valid JSON block from the LLM's response."""
@@ -368,7 +374,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         }
         
         
-    async def generate_queries(self, text: str, belief_set: FirstOrderBeliefSet, **kwargs) -> List[str]:
+    def generate_queries(self, text: str, belief_set: FirstOrderBeliefSet, **kwargs) -> List[str]:
         """
         Génère une liste de requêtes FOL pertinentes en utilisant le LLM.
         """
@@ -378,7 +384,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
                 return []
                 
             args = {"input": text, "belief_set": belief_set.content}
-            result = await self._kernel.plugins[self.name]["GenerateFOLQueries"].invoke(self._kernel, **args)
+            result = self._kernel.plugins[self.name]["GenerateFOLQueries"].invoke(self._kernel, **args)
             queries = json.loads(self._extract_json_block(str(result))).get("queries", [])
             self.logger.info(f"{len(queries)} requêtes potentielles reçues du LLM.")
             
@@ -411,7 +417,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             self.logger.error(error_msg, exc_info=True)
             return None, f"FUNC_ERROR: {error_msg}"
 
-    async def interpret_results(self, text: str, belief_set: BeliefSet,
+    def interpret_results(self, text: str, belief_set: BeliefSet,
                          queries: List[str], results: List[Tuple[Optional[bool], str]],
                          context: Optional[Dict[str, Any]] = None) -> str:
         """
@@ -423,7 +429,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             results_text_list = [res[1] if res else "Error: No result" for res in results]
             results_str = "\n".join(results_text_list)
             
-            result = await self._kernel.plugins[self.name]["InterpretFOLResult"].invoke(
+            result = self._kernel.plugins[self.name]["InterpretFOLResult"].invoke(
                 self._kernel,
                 input=text,
                 belief_set=belief_set.content,
@@ -459,19 +465,28 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             self.logger.error(f"Erreur inattendue durant la vérification de consistance: {e}", exc_info=True)
             return False, str(e)
 
-    def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> BeliefSet:
+    def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> Optional[FirstOrderBeliefSet]:
         """Recreates a BeliefSet object from a dictionary."""
         content = belief_set_data.get("content", "")
-        # This is a simplified recreation; the Java object is lost on serialization.
-        return FirstOrderBeliefSet(content)
+        if not content:
+            return None
+        
+        try:
+            belief_set_json = json.loads(content)
+            signature = self.tweety_bridge._fol_handler.create_programmatic_fol_signature(belief_set_json)
+            java_object = self.tweety_bridge._fol_handler.create_belief_set_from_formulas(signature, belief_set_json.get("formulas", []))
+            return FirstOrderBeliefSet(content=content, java_object=java_object)
+        except Exception as e:
+            self.logger.error(f"Failed to recreate BeliefSet from data: {e}")
+            return None
 
-    async def validate_argument(self, premises: List[str], conclusion: str, **kwargs) -> bool:
+    def validate_argument(self, premises: List[str], conclusion: str, **kwargs) -> bool:
         """
         Valide un argument structuré (prémisses, conclusion) en FOL.
         """
         self.logger.info(f"Validation de l'argument FOL pour {self.name}...")
         context_text = " ".join(premises)
-        belief_set, status = await self.text_to_belief_set(context_text)
+        belief_set, status = self.text_to_belief_set(context_text)
 
         if not belief_set:
             self.logger.error(f"Impossible de créer un belief set à partir des prémisses. Statut: {status}")
@@ -509,14 +524,14 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         logger.warning(f"La méthode 'get_response' n'est pas l'interaction standard pour {self.name}.")
         yield []
     
-    async def invoke_single(self, chat_history: ChatHistory, **kwargs) -> ChatMessageContent:
+    def invoke_single(self, chat_history: ChatHistory, **kwargs) -> ChatMessageContent:
         """Point d'entrée principal pour les interactions génériques."""
         last_user_message = next((m.content for m in reversed(chat_history) if m.role == "user"), None)
         if not last_user_message or not isinstance(last_user_message, str):
              return ChatMessageContent(role="assistant", content="Veuillez fournir une instruction en texte.", name=self.name)
         
         # Ce point d'entrée est un passe-plat vers la logique principale
-        belief_set, status = await self.text_to_belief_set(last_user_message)
+        belief_set, status = self.text_to_belief_set(last_user_message)
         if not belief_set:
             response_content = {"error": status}
         else:

@@ -182,8 +182,11 @@ class FOLHandler:
         for formula_str in formulas:
             try:
                 parsed_formula = self.parse_fol_formula(formula_str, custom_parser=parser)
-                belief_set.add(parsed_formula)
-                logger.debug(f"Successfully parsed and added to belief set: {formula_str}")
+                if parsed_formula:
+                    belief_set.add(parsed_formula)
+                    logger.debug(f"Successfully parsed and added to belief set: {formula_str}")
+                else:
+                    logger.warning(f"Parsed formula for '{formula_str}' is None, skipping addition to belief set.")
             except ValueError as e:
                 logger.warning(f"Skipping invalid formula '{formula_str}': {e}")
                 # Optionally re-raise or collect errors

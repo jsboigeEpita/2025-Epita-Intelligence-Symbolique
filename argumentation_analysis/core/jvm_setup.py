@@ -460,16 +460,15 @@ def get_jvm_options() -> List[str]:
         "-Xms64m",
         "-Xmx512m",
         "-Dfile.encoding=UTF-8",
-        "-Djava.awt.headless=true"
+        "-Djava.awt.headless=true",
     ]
     
     if os.name == 'nt':
-        options.extend([
-            "-XX:+UseG1GC",
-            "-XX:+DisableExplicitGC",
-            "-XX:-UsePerfData",
-        ])
-        # logger.warning("Options JVM Windows spécifiques temporairement désactivées pour débogage (Access Violation).")
+       options.extend([
+           "-XX:+UseG1GC",
+           "-XX:+DisableExplicitGC",
+           "-XX:-UsePerfData",
+       ])
     
     logger.info(f"Options JVM de base définies : {options}")
     return options

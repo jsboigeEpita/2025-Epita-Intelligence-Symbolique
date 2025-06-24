@@ -225,7 +225,7 @@ class TestRealTweetyFOLAnalysis:
         
         # Analyse complète
         start_time = time.time()
-        belief_set, msg = await fol_agent_real_tweety.text_to_belief_set(syllogism_text)
+        belief_set, msg = fol_agent_real_tweety.text_to_belief_set(syllogism_text)
         analysis_time = time.time() - start_time
         
         # Vérifications résultat
@@ -255,7 +255,7 @@ class TestRealTweetyFOLAnalysis:
         if hasattr(fol_agent_real_tweety.tweety_bridge, 'initialize_fol_reasoner'):
             await fol_agent_real_tweety.tweety_bridge.initialize_fol_reasoner()
         
-        belief_set, msg = await fol_agent_real_tweety.text_to_belief_set(inconsistent_text)
+        belief_set, msg = fol_agent_real_tweety.text_to_belief_set(inconsistent_text)
         assert belief_set is not None, f"La création du BeliefSet a échoué: {msg}"
 
         # Avec Tweety réel, l'incohérence devrait être détectée
@@ -282,11 +282,11 @@ class TestRealTweetyFOLAnalysis:
         if hasattr(fol_agent_real_tweety.tweety_bridge, 'initialize_fol_reasoner'):
             await fol_agent_real_tweety.tweety_bridge.initialize_fol_reasoner()
         
-        belief_set, msg = await fol_agent_real_tweety.text_to_belief_set(premises_text)
+        belief_set, msg = fol_agent_real_tweety.text_to_belief_set(premises_text)
         assert belief_set is not None, f"Message: {msg}"
 
         # Vérifications inférences
-        queries = await fol_agent_real_tweety.generate_queries(premises_text, belief_set)
+        queries = fol_agent_real_tweety.generate_queries(premises_text, belief_set)
         assert len(queries) > 0
 
         # Exécuter la première requête générée pour valider
@@ -320,7 +320,7 @@ class TestFOLErrorHandling:
         else:
             logger.warning("⚠️ Erreur non reconnue par l'analyseur")
     
-    @pytest.mark.asyncio 
+    @pytest.mark.asyncio
     async def test_fol_syntax_error_recovery(self, fol_agent_with_kernel):
         """Test récupération erreurs syntaxe FOL."""
         agent = fol_agent_with_kernel
@@ -328,14 +328,13 @@ class TestFOLErrorHandling:
         # Texte problématique
         problematic_text = "Ceci n'est pas une formule logique valide !!!"
         
-        belief_set, msg = await agent.text_to_belief_set(problematic_text)
+        belief_set, msg = agent.text_to_belief_set(problematic_text)
         
         # Agent doit gérer gracieusement
         assert belief_set is None
         assert "aucune structure logique" in msg.lower()
         
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Needs a way to mock async methods on the instance from fixture")
     async def test_fol_timeout_handling(self, fol_agent_with_kernel):
         """Test gestion timeouts analyse FOL."""
         agent = fol_agent_with_kernel
@@ -366,7 +365,7 @@ class TestFOLPerformanceVsModal:
         
         # Test FOL
         start_fol = time.time()
-        belief_set, _ = await fol_agent.text_to_belief_set(test_text)
+        belief_set, _ = fol_agent.text_to_belief_set(test_text)
         fol_time = time.time() - start_fol
         
         # Vérifications FOL
@@ -396,7 +395,7 @@ class TestFOLPerformanceVsModal:
         
         for text in test_texts:
             start = time.time()
-            belief_set, _ = await agent.text_to_belief_set(text)
+            belief_set, _ = agent.text_to_belief_set(text)
             elapsed = time.time() - start
             
             results.append(belief_set)
@@ -420,7 +419,7 @@ class TestFOLPerformanceVsModal:
         # Analyses répétées pour tester fuites mémoire
         for i in range(10):
             text = f"Test mémoire numéro {i}. Tous les tests sont importants."
-            _ = await agent.text_to_belief_set(text)
+            _ = agent.text_to_belief_set(text)
         
         # Le test de la mémoire est implicite dans le fait que cela ne crashe pas.
         # Les anciens attributs comme analysis_cache et get_analysis_summary n'existent plus.
@@ -442,7 +441,7 @@ class TestFOLRealWorldIntegration:
         """
         
         agent = fol_agent_with_kernel
-        belief_set, msg = await agent.text_to_belief_set(complex_text)
+        belief_set, msg = agent.text_to_belief_set(complex_text)
         
         # Analyse réussie
         assert belief_set is not None, f"Message: {msg}"
@@ -466,7 +465,7 @@ class TestFOLRealWorldIntegration:
         agent = fol_agent_with_kernel
         
         for lang, text in texts.items():
-            belief_set, msg = await agent.text_to_belief_set(text)
+            belief_set, msg = agent.text_to_belief_set(text)
             
             assert belief_set is not None, f"Message: {msg}"
             assert belief_set.content
@@ -524,19 +523,20 @@ def check_tweety_availability():
 async def fol_agent_with_kernel(integration_jvm):
     """Fixture pour créer un FOLLogicAgent avec un kernel authentique."""
     logger.info("--- DEBUT FIXTURE 'fol_agent_with_kernel' (scope=module) ---")
-    try:
-        if not integration_jvm:
-            pytest.skip("Skipping test: integration_jvm fixture failed to initialize.")
+    if not integration_jvm:
+        pytest.skip("Skipping test: integration_jvm fixture failed to initialize.")
 
-        config = UnifiedConfig()
-        kernel = config.get_kernel_with_gpt4o_mini()
-        agent = LogicAgentFactory.create_agent(logic_type="fol", kernel=kernel)
-        # L'ID 'default' correspond au service par défaut ajouté dans get_kernel_with_gpt4o_mini
-        # La dépendance à integration_jvm garantit que la JVM est déjà démarrée.
-        agent.setup_agent_components(llm_service_id="default")
-        yield agent
-    finally:
-        logger.info("--- FIN FIXTURE 'fol_agent_with_kernel' (teardown) ---")
+    config = UnifiedConfig()
+    kernel = config.get_kernel_with_gpt4o_mini()
+    agent = LogicAgentFactory.create_agent(logic_type="fol", kernel=kernel)
+    
+    # Injection manuelle de TweetyBridge et initialisation
+    agent._tweety_bridge = TweetyBridge()
+    await agent.setup_agent_components(llm_service_id="default")
+    
+    yield agent
+    
+    logger.info("--- FIN FIXTURE 'fol_agent_with_kernel' (teardown) ---")
 
 
 if __name__ == "__main__":

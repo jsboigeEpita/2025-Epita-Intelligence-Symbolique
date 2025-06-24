@@ -75,9 +75,9 @@ def integration_jvm(request):
     # La JVM est prête, les tests peuvent s'exécuter
     yield jpype
 
-    # Teardown : Code exécuté après la fin de tous les tests de la session
+    # Teardown : Le shutdown est désactivé pour éviter les crashs
     fixture_logger.info("--- FIN FIXTURE 'integration_jvm' (teardown) ---")
-    jvm_setup.shutdown_jvm()
+    # jvm_setup.shutdown_jvm()
 
 
 @pytest.fixture(scope="session")
