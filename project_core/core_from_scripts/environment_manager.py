@@ -1,13 +1,11 @@
 """
 Gestionnaire d'environnements Python/conda
 
-Ce module est OBSOLETE et conservé pour compatibilité ascendante.
-La configuration est maintenant gérée de manière centralisée via pydantic-settings
-dans `argumentation_analysis.config.settings`.
-L'activation de l'environnement et l'exécution de commandes doivent être gérées
-par des scripts de premier niveau (ex: `activate_project_env.ps1`).
+Ce module sert de point d'entrée pour les scripts shell (pwsh, bash) afin
+de garantir une logique d'activation et d'exécution de commandes cohérente
+quel que soit l'OS.
 
-N'utilisez plus ce module pour de nouveaux développements.
+Il est appelé par des wrappers comme `activate_project_env.ps1`.
 """
 
 import os
@@ -111,46 +109,35 @@ def main():
     parser = argparse.ArgumentParser(description="Outil de gestion d'environnement.")
     parser.add_argument('--get-python-path', action='store_true', help="Affiche le chemin de l'exécutable Python de l'environnement.")
     parser.add_argument('--env-name', type=str, default='projet-is', help="Nom de l'environnement Conda à utiliser.")
-    
+    parser.add_argument('--setup-vars', action='store_true', help="Charge les variables d'environnement du projet.")
+    parser.add_argument('--run-command', nargs=argparse.REMAINDER, help="Commande à exécuter après le setup.")
+
     args = parser.parse_args()
-    
     manager = EnvironmentManager()
-    
+
     if args.get_python_path:
         python_path = manager.get_python_executable(args.env_name)
         if python_path:
             print(python_path)
-            sys.exit(0)
         else:
             sys.exit(1)
-    
-    parser.print_help()
+        # On peut vouloir récupérer le chemin ET faire d'autres actions, donc on ne quitte pas ici.
+
+    if args.setup_vars:
+        try:
+            from argumentation_analysis.core.bootstrap import initialize_project_environment
+            initialize_project_environment()
+            logger.info("Variables d'environnement initialisées via bootstrap.")
+        except ImportError as e:
+            logger.error(f"Erreur de bootstrap : {e}. Impossible d'importer 'initialize_project_environment'.")
+            sys.exit(1)
+
+    if args.run_command:
+        return_code = manager.run_command(args.run_command)
+        sys.exit(return_code)
+        
+    # Si aucune action principale n'est demandée, on ne fait rien (ou on pourrait afficher l'aide).
+    # parser.print_help()
 
 if __name__ == "__main__":
-    # --- BOOTSTRAP MINIMAL ---
-    # Cette section est critique pour que l'orchestrateur puisse
-    # obtenir le chemin python de l'environnement sans l'activer entièrement
-    if any(arg == '--get-python-path' for arg in sys.argv):
-         main()
-         sys.exit(0) # Quitter après avoir récupéré le chemin
-
-    # --- PARTIE OBSOLETE (Conservée pour compatibilité) ---
-    warnings.warn(
-        "L'utilisation de environment_manager.py comme script principal est obsolète.",
-        DeprecationWarning,
-        stacklevel=2
-    )
-
-    # L'ancien code de 'main' est ici pour la compatibilité, mais ne devrait plus être appelé directement.
-    if os.getenv("RUNNING_VIA_ENV_MANAGER") == "true":
-        logger.info("Détecté --RUNNING_VIA_ENV_MANAGER--, validation de l'environnement court-circuitée.")
-        sys.exit(0)
-    
-    try:
-        from argumentation_analysis.core.bootstrap import initialize_project_environment
-        # La nouvelle fonction n'a pas besoin des anciens arguments.
-        initialize_project_environment()
-        logger.info("--- environment_manager.py a initialisé l'environnement via bootstrap.initialize_project_environment ---")
-    except ImportError as e:
-        logger.error(f"Erreur de bootstrap : {e}. Impossible d'importer 'initialize_project_environment'. Assurez-vous que PYTHONPATH est correct.")
-        sys.exit(1)
+    main()

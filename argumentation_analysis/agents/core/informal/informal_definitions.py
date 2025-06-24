@@ -254,7 +254,7 @@ class InformalAnalysisPlugin:
             df['depth'] = pd.to_numeric(df['depth'], errors='coerce')
         
         # Trouver le nœud courant
-        current_node_df = df.loc[[current_pk]] if current_pk in df.index else pd.DataFrame()
+        current_node_df = df[df.index == current_pk]
         if len(current_node_df) == 0:
             result["error"] = f"PK {current_pk} non trouvée dans la taxonomie."
             return result
@@ -431,7 +431,7 @@ class InformalAnalysisPlugin:
             df['depth'] = pd.to_numeric(df['depth'], errors='coerce')
         
         # Trouver le nœud
-        node_df = df.loc[[pk]] if pk in df.index else pd.DataFrame()
+        node_df = df[df.index == pk]
         if len(node_df) == 0:
             result["error"] = f"PK {pk} non trouvée dans la taxonomie."
             return result
@@ -457,7 +457,7 @@ class InformalAnalysisPlugin:
         if parent_pk_val is not None:
             try:
                 parent_pk_int = int(parent_pk_val)
-                parent_df = df.loc[[parent_pk_int]] if parent_pk_int in df.index else pd.DataFrame()
+                parent_df = df[df.index == parent_pk_int]
             except ValueError:
                 self._logger.warning(f"Valeur FK_Parent/parent_pk non entière pour le nœud {pk}: {parent_pk_val}")
 

@@ -133,10 +133,8 @@ class MainOrchestrator:
             logger.info(f"Custom config provided: {custom_config}")
 
         # Sélection dynamique de la stratégie
-        # FORCER LA STRATEGIE POUR LE TEST
-        strategy = OrchestrationStrategy.SPECIALIZED_DIRECT
-        self.config.analysis_type = AnalysisType.INVESTIGATIVE
-        logger.info(f"Stratégie sélectionnée : {strategy.value}")
+        strategy = await select_strategy(self.config, text_input, source_info, custom_config)
+        logger.info(f"Stratégie sélectionnée : {strategy.value if strategy else 'None'}")
 
 
         if strategy == OrchestrationStrategy.HIERARCHICAL_FULL:
