@@ -79,13 +79,16 @@ class TestOperationalAgentsIntegration:
         # Créer un kernel et un llm_service_id mockés
         mock_kernel = MagicMock(spec=sk.Kernel)
         mock_llm_service_id = "mock_service"
+        
+        # Créer un mock pour ProjectContext
+        mock_project_context = MagicMock()
 
         manager = OperationalManager(
             operational_state=operational_state,
             tactical_operational_interface=interface,
             middleware=middleware,
             kernel=mock_kernel,
-            llm_service_id=mock_llm_service_id
+            project_context=mock_project_context
         )
         await manager.start()
         
@@ -109,11 +112,16 @@ class TestOperationalAgentsIntegration:
     @pytest.mark.asyncio
     async def test_agent_registry_initialization(self, operational_components):
         """Teste l'initialisation du registre d'agents."""
-        _, operational_state, _, _, _ = operational_components
+        tactical_state, operational_state, _, _, _ = operational_components
+        
+        # Créer un mock pour ProjectContext
+        mock_project_context = MagicMock()
+        
         registry = OperationalAgentRegistry(
             operational_state,
             kernel=MagicMock(spec=sk.Kernel),
-            llm_service_id="mock_service"
+            llm_service_id="mock_service",
+            project_context=mock_project_context
         )
         
         # Vérifier les types d'agents disponibles

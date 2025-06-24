@@ -192,18 +192,21 @@ def test_run_advanced_rhetoric_pipeline_extract_analysis_error(
     """Teste la gestion d'erreur si l'analyse d'un extrait échoue."""
     # mock_create_mocks.return_value = {} # Remplacé par mock_advanced_tools
     
+    # Configurer le mock pour lever une exception
+    mock_analyze_single_extract.side_effect = Exception("Erreur d'analyse d'extrait!")
+
     with caplog.at_level(logging.ERROR):
         run_advanced_rhetoric_pipeline(sample_extract_definitions, [], temp_output_file)
 
     assert mock_analyze_single_extract.call_count == 3 # Tentative pour chaque extrait
-    assert "Erreur dans le pipeline pour l'extrait" in caplog.text
+    assert "Erreur dans le pipeline pour l'extrait 'Ext1.1': Erreur d'analyse d'extrait!" in caplog.text
     
     # Vérifier que les résultats contiennent une entrée d'erreur pour chaque extrait
     results_dumped = mock_json_dump.call_args[0][0]
     assert len(results_dumped) == 3
     for res in results_dumped:
         assert "error" in res
-        assert "Erreur de pipeline: Erreur d'analyse d'extrait!" in res["error"]
+        assert res["error"] == "Erreur de pipeline: Erreur d'analyse d'extrait!"
 
 
 
@@ -219,14 +222,18 @@ def test_run_advanced_rhetoric_pipeline_save_error(
     caplog
 ):
     """Teste la gestion d'erreur si la sauvegarde des résultats échoue."""
-    # On a besoin de mocker analyze_extract_advanced pour qu'il ne lève pas d'erreur
+    # Configurer le mock 'open' pour qu'il lève une IOError
+    mock_open.side_effect = IOError("Erreur de sauvegarde!")
+
+    # On a besoin de mocker analyze_extract_advanced pour qu'il ne lève pas d'erreur pendant la boucle
     with patch("argumentation_analysis.pipelines.advanced_rhetoric.analyze_extract_advanced", return_value={"ok": True}):
         with caplog.at_level(logging.ERROR):
             run_advanced_rhetoric_pipeline(sample_extract_definitions, [], temp_output_file)
 
+    # Vérifications
     mock_open.assert_called_once_with(temp_output_file, 'w', encoding='utf-8')
-    mock_json_dump.assert_not_called() # Ne devrait pas être appelé si open échoue
-    assert "Erreur lors de la sauvegarde des résultats du pipeline: Erreur de sauvegarde!" in caplog.text
+    mock_json_dump.assert_not_called()  # Correct, car open échoue avant
+    assert "❌ Erreur lors de la sauvegarde des résultats du pipeline: Erreur de sauvegarde!" in caplog.text
 
 
 def test_run_advanced_rhetoric_pipeline_empty_extract_definitions(

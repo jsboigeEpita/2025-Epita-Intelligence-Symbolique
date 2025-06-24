@@ -55,20 +55,18 @@ class TestLLMService:
         assert isinstance(service, OpenAIChatCompletion), "Le service devrait être une instance de OpenAIChatCompletion."
         assert service.ai_model_id == self.model_id, "Le modèle ID du service ne correspond pas."
 
-    @patch('argumentation_analysis.core.llm_service.load_dotenv', return_value=False)
-    def test_create_llm_service_missing_api_key(self, mock_load_dotenv):
-        """Teste que la création du service échoue sans clé API."""
-        saved_api_key = os.environ.pop("OPENAI_API_KEY", None)
+    @patch('argumentation_analysis.core.llm_service.settings')
+    def test_create_llm_service_missing_api_key(self, mock_settings):
+        """Teste que la création du service échoue sans clé API en utilisant un mock des settings."""
+        # Configurer le mock pour simuler l'absence de clé API
+        mock_settings.openai.api_key = None
+        mock_settings.openai.chat_model_id = "gpt-4o-mini" # Doit être défini pour passer `all()`
+        mock_settings.openai.base_url = None   # Assurer que le chemin Azure n'est pas pris
 
         with pytest.raises(ValueError) as excinfo:
             create_llm_service()
         
         assert "Configuration OpenAI standard incomplète" in str(excinfo.value)
-        
-        if saved_api_key:
-            os.environ["OPENAI_API_KEY"] = saved_api_key
-        
-        mock_load_dotenv.assert_called()
 
     def test_authentic_llm_call(self):
         """Teste un appel authentique à gpt-4o-mini pour valider la connectivité."""

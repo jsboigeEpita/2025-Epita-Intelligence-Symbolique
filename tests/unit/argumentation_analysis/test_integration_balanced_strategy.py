@@ -17,7 +17,9 @@ import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
 # Correction de l'importation de AuthorRole suite à la refactorisation de semantic-kernel
 from semantic_kernel.contents import ChatMessageContent, AuthorRole
-from semantic_kernel.agents import Agent, AgentGroupChat
+# from semantic_kernel.agents import Agent, AgentGroupChat
+
+from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 
 # Utiliser la fonction setup_import_paths pour résoudre les problèmes d'imports relatifs
 # from tests import setup_import_paths # Commenté pour investigation

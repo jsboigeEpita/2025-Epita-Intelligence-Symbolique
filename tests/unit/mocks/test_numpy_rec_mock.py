@@ -26,7 +26,6 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..
 
 # Appliquer les fixtures à toutes les fonctions de test de ce module
 pytestmark = [
-    pytest.mark.usefixtures("setup_numpy_for_tests_fixture"),
     pytest.mark.use_mock_numpy
 ]
 

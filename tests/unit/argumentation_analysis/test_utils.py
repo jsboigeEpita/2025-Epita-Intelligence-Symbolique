@@ -96,7 +96,7 @@ class TestExtractRepairUtils:
     """Tests pour les utilitaires de réparation d'extraits."""
     
     
-    def test_fix_missing_first_letter(self, mock_open):
+    def test_fix_missing_first_letter(self):
         """Teste la correction des marqueurs d'extraits manquant la première lettre."""
         # Note: Ce test est un exemple de ce que nous pourrions implémenter
         # pour tester la fonction fix_missing_first_letter.

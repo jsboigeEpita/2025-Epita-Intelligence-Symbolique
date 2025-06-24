@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
-from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent
+from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
 from argumentation_analysis.models.extract_result import ExtractResult
 from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
 
@@ -19,8 +19,14 @@ def mock_kernel():
 
 @pytest.fixture
 def fol_agent(mock_kernel):
-    """Provides an instance of FirstOrderLogicAgent with a mocked kernel."""
-    agent = FirstOrderLogicAgent(kernel=mock_kernel, service_id="test_service")
+    """Provides a concrete, testable instance of FOLLogicAgent."""
+
+    class ConcreteFOLAgent(FOLLogicAgent):
+        async def validate_argument(self, premises: list[str], conclusion: str, **kwargs) -> bool:
+            """Mocked implementation for abstract method."""
+            return True
+
+    agent = ConcreteFOLAgent(kernel=mock_kernel, service_id="test_service")
     # Mocking the bridge to avoid real Java calls
     agent._tweety_bridge = MagicMock()
     agent._tweety_bridge.validate_fol_belief_set.return_value = (True, "Valid")

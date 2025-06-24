@@ -489,7 +489,7 @@ class ConversationOrchestrator:
         else:
             self.agents = [
                 SimulatedAgent("InformalAnalysisAgent", "informal"),
-                SimulatedAgent("FirstOrderLogicAgent", "fol_logic"),
+                SimulatedAgent("FOLLogicAgent", "fol_logic"),
                 SimulatedAgent("SynthesisAgent", "synthesis")
             ]
         
