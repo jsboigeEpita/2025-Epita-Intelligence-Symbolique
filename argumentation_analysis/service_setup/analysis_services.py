@@ -24,23 +24,30 @@ from argumentation_analysis.config.settings import settings
 from argumentation_analysis.core.jvm_setup import initialize_jvm
 from argumentation_analysis.core.llm_service import create_llm_service
 
-def initialize_analysis_services() -> Dict[str, Any]:
+def initialize_analysis_services(config: Dict[str, Any] = None) -> Dict[str, Any]:
     """
-    Initialise et configure les services en se basant sur la configuration centrale.
+    Initialise et configure les services en se basant sur la configuration centrale et une config optionnelle.
     """
     load_dotenv(find_dotenv())
     services = {}
+    if config is None:
+        config = {}
+    
     logging.info(f"--- Initialisation des services (mock LLM: {settings.use_mock_llm}, JVM: {settings.enable_jvm}) ---")
 
     # 1. Initialisation de la JVM (contrôlée par la config)
     if settings.enable_jvm:
-        libs_dir_path = settings.libs_dir
+        # Priorité à la configuration passée, sinon fallback sur `settings`
+        libs_dir_path_str = config.get("LIBS_DIR_PATH")
+        libs_dir_path = Path(libs_dir_path_str) if libs_dir_path_str else settings.libs_dir
+        
         if libs_dir_path is None or not libs_dir_path.exists():
-            logging.error(f"enable_jvm=True mais settings.libs_dir n'est pas configuré ou n'existe pas: {libs_dir_path}")
+            logging.error(f"enable_jvm=True mais le répertoire des libs n'est pas configuré ou n'existe pas: {libs_dir_path}")
             services["jvm_ready"] = False
         else:
             logging.info(f"Initialisation de la JVM avec LIBS_DIR: {libs_dir_path}...")
-            jvm_ready_status = initialize_jvm(lib_dir_path=str(libs_dir_path))
+            # L'argument lib_dir_path n'est pas nécessaire, initialize_jvm utilise les settings
+            jvm_ready_status = initialize_jvm()
             services["jvm_ready"] = jvm_ready_status
             if not jvm_ready_status:
                 logging.warning("La JVM n'a pas pu être initialisée.")

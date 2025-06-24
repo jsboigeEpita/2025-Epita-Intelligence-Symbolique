@@ -232,7 +232,7 @@ def configure_analysis_task() -> Optional[str]:
         with main_output_area:
             clear_output(wait=True)
             app_logger.info("Lancement de la vérification (peut prendre du temps)...")
-            summary = verify_extract_definitions(local_current_extract_definitions)
+            summary = verify_extract_definitions(local_current_extract_definitions, fetch_service)
             clear_output(wait=True)
             display(widgets.HTML(summary))
             app_logger.info("Vérification terminée.")

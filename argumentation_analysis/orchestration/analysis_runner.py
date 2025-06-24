@@ -280,6 +280,7 @@ async def _run_analysis_conversation(
         run_logger.info(f"--- Fin Run_{run_id} ---")
 
         final_output = {"status": "success", "analysis": final_analysis, "history": history_list}
+        run_logger.debug(f"FINAL OUTPUT DANS analysis_runner: {final_output}")
         print(json.dumps(final_output, indent=2))
 
         return final_output
