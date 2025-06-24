@@ -82,50 +82,43 @@ if ($Type -eq "e2e") {
 }
 # Branche 2: Tests E2E avec Pytest (Python)
 elseif ($Type -eq "e2e-python") {
-    Write-Host "[INFO] Lancement du cycle de test E2E via l'orchestrateur unifié et 'conda run'..." -ForegroundColor Cyan
+    Write-Host "[INFO] Lancement du cycle de test E2E via le point d'entrée centralisé..." -ForegroundColor Cyan
     
-    $CondaEnvName = "projet-is"
+    $ActivationScriptPath = Join-Path $PSScriptRoot "activate_project_env.ps1"
 
-    # Construire la commande Python pour appeler l'orchestrateur
-    $OrchestratorArgs = @(
-        "python",
-        "-m", "argumentation_analysis.webapp.orchestrator",
-        "--integration",
-        "--log-level", "INFO"
-    )
+    # Construire la commande Python pour appeler l'orchestrateur en tant que chaîne de caractères
+    $OrchestratorCommand = "python -m argumentation_analysis.webapp.orchestrator --integration --log-level INFO"
     if (-not ([string]::IsNullOrEmpty($Path))) {
-        $OrchestratorArgs += "--tests", $Path
+        # Important: bien mettre les guillemets autour du chemin pour gérer les espaces
+        $OrchestratorCommand += " --tests `"$Path`""
     }
     if ($DebugMode) {
-        $OrchestratorArgs[-1] = "DEBUG"
+        $OrchestratorCommand = $OrchestratorCommand.Replace("INFO", "DEBUG")
     }
 
-    # Préparer la commande complète pour `conda run`
-    # --no-capture-output est essentiel pour voir les logs du serveur en temps réel
-    $CondaCommand = @(
-        "conda", "run", "-n", $CondaEnvName, "--no-capture-output"
-    ) + $OrchestratorArgs
-    
-    $commandString = $CondaCommand -join ' '
-    Write-Host "[INFO] Commande complète d'exécution construite :" -ForegroundColor Green
-    Write-Host $commandString -ForegroundColor Green
+    Write-Host "[INFO] Commande passée à l'activateur: $OrchestratorCommand" -ForegroundColor Green
 
+    # Appeler le script d'activation avec la commande à exécuter
+    # Le script d'activation gère lui-même l'appel à `conda run`
     try {
-        # Exécuter directement la commande `conda run`
-        & $CondaCommand[0] $CondaCommand[1..($CondaCommand.Length-1)]
+        & $ActivationScriptPath -CommandToRun $OrchestratorCommand
         $exitCode = $LASTEXITCODE
-        
+
         if ($exitCode -ne 0) {
-            # L'erreur est déjà affichée par le sous-processus grâce à --no-capture-output
-            throw "L'orchestrateur (via conda run) a terminé avec un code d'erreur: $exitCode"
+            # Le script d'activation devrait déjà afficher une erreur. Ceci est une confirmation.
+            throw "L'orchestration des tests via le script d'activation a échoué avec le code de sortie: $exitCode"
+        } else {
+            Write-Host "[INFO] La suite de tests s'est terminée avec succès." -ForegroundColor Green
         }
-        Write-Host "[INFO] L'orchestrateur (via conda run) a terminé avec succès." -ForegroundColor Green
     }
     catch {
-        Write-Host "[ERREUR] L'exécution via conda run a échoué. $_" -ForegroundColor Red
+        Write-Host "[ERREUR] Une erreur est survenue lors de l'appel au script d'activation. $_" -ForegroundColor Red
+        # Le code de sortie de l'échec est déjà $LASTEXITCODE, mais on utilise 1 pour signaler une erreur de ce script-ci.
         exit 1
     }
-    exit $LASTEXITCODE
+    
+    Write-Host "[INFO] Exécution E2E (Python) terminée avec le code de sortie: $exitCode" -ForegroundColor Cyan
+    exit $exitCode
 }
 # Branche 3: Tests Unit/Functional (Python) directs
 else {

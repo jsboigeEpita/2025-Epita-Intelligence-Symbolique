@@ -147,9 +147,10 @@ if __name__ == "__main__":
         sys.exit(0)
     
     try:
-        from argumentation_analysis.core.bootstrap import bootstrap_project
-        bootstrap_project(force_setup=False, verbose=True)
-        logger.info("--- environment_manager.py chargé et logger configuré ---")
+        from argumentation_analysis.core.bootstrap import initialize_project_environment
+        # La nouvelle fonction n'a pas besoin des anciens arguments.
+        initialize_project_environment()
+        logger.info("--- environment_manager.py a initialisé l'environnement via bootstrap.initialize_project_environment ---")
     except ImportError as e:
-        logger.error(f"Erreur de bootstrap : {e}. Assurez-vous que PYTHONPATH est correct.")
+        logger.error(f"Erreur de bootstrap : {e}. Impossible d'importer 'initialize_project_environment'. Assurez-vous que PYTHONPATH est correct.")
         sys.exit(1)
