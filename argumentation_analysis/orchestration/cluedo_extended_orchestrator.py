@@ -484,8 +484,15 @@ class CluedoExtendedOrchestrator:
                     response_content_str = str(agent_response_raw)
                     response_content_obj = ChatMessageContent(role="assistant", content=response_content_str, name=next_agent.name)
 
-                # 3. Mettre à jour l'historique
-                history.append(response_content_obj)
+                # 3. Mettre à jour l'historique avec une version NETTOYEE du message
+                # pour éviter d'accumuler des objets complexes et dépasser le contexte.
+                clean_content_for_history = str(response_content_obj.content) if response_content_obj.content else ""
+                clean_message = ChatMessageContent(
+                    role=response_content_obj.role,
+                    content=clean_content_for_history,
+                    name=getattr(response_content_obj, 'name', None) or getattr(response_content_obj, 'author_name', None) or next_agent.name
+                )
+                history.append(clean_message)
                 last_message_content = str(response_content_obj.content) # Gardé pour le log et l'état
                 
                 # Log et mise à jour de l'état
