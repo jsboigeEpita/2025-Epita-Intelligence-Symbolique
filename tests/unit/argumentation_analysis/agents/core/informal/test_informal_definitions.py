@@ -13,6 +13,10 @@ from semantic_kernel.functions import KernelPlugin
 from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin, setup_informal_kernel
 from config.unified_config import UnifiedConfig
 
+
+# Appliquer ce marqueur à tous les tests de ce fichier
+pytestmark = pytest.mark.use_real_numpy
+
 # Configure logging for tests
 logger = logging.getLogger(__name__)
 

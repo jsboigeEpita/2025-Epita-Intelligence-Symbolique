@@ -140,7 +140,8 @@ else:
 pytest_plugins = [
    "tests.fixtures.integration_fixtures",
    "tests.fixtures.jvm_subprocess_fixture",
-    "pytest_playwright"
+    "pytest_playwright",
+    "tests.mocks.numpy_setup"
 ]
 
 def pytest_addoption(parser):

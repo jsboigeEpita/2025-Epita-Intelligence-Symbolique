@@ -191,14 +191,13 @@ def test_save_embeddings_data_io_error(tmp_path, sample_embeddings_data, caplog)
     output_file = tmp_path / "embeddings_io_error.json"
     
     with patch(MKDIR_PATH), \
-         patch(OPEN_BUILTIN_PATH, mock_open()) as mock_file_open:
-        # Simuler une IOError lors de l'écriture
-        mock_file_open().side_effect = IOError("Test IOError")
+         patch(OPEN_BUILTIN_PATH, mock_open()), \
+         patch('json.dump', side_effect=IOError("Test IOError")):
         
         success = save_embeddings_data(sample_embeddings_data, output_file)
         
         assert success is False
-        assert "Erreur d'E/S lors de la sauvegarde" in caplog.text
+        assert "❌ Erreur d'E/S lors de la sauvegarde" in caplog.text
         assert "Test IOError" in caplog.text
 
 def test_save_embeddings_data_other_exception(tmp_path, sample_embeddings_data, caplog):
@@ -206,14 +205,13 @@ def test_save_embeddings_data_other_exception(tmp_path, sample_embeddings_data, 
     output_file = tmp_path / "embeddings_other_error.json"
     
     with patch(MKDIR_PATH), \
-         patch(OPEN_BUILTIN_PATH, mock_open()) as mock_file_open:
-        # Simuler une exception générique
-        mock_file_open().side_effect = Exception("Test Generic Exception")
+         patch(OPEN_BUILTIN_PATH, mock_open()), \
+         patch('json.dump', side_effect=Exception("Test Generic Exception")):
         
         success = save_embeddings_data(sample_embeddings_data, output_file)
         
         assert success is False
-        assert "Erreur inattendue lors de la sauvegarde" in caplog.text
+        assert "❌ Erreur inattendue lors de la sauvegarde" in caplog.text
         assert "Test Generic Exception" in caplog.text
 
 def test_save_embeddings_data_mkdir_fails(tmp_path, sample_embeddings_data, caplog):
@@ -228,5 +226,5 @@ def test_save_embeddings_data_mkdir_fails(tmp_path, sample_embeddings_data, capl
         assert success is False
         mock_mkdir.assert_called_once()
         # L'erreur est capturée par le `except Exception` générique dans save_embeddings_data
-        assert "Erreur d'E/S lors de la sauvegarde" in caplog.text
+        assert "❌ Erreur d'E/S lors de la sauvegarde" in caplog.text
         assert "Cannot create directory" in caplog.text

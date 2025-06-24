@@ -54,7 +54,7 @@ class TestHierarchicalFullStrategy(unittest.TestCase):
         self.assertEqual(directive_call_args[1]['priority'], MessagePriority.HIGH)
 
         # Verify the structure of the returned dictionary
-def test_process_tactical_feedback_with_issues(self):
+    def test_process_tactical_feedback_with_issues(self):
         """
         Tests the manager's ability to process feedback containing issues and
         make strategic adjustments.
@@ -86,7 +86,7 @@ def test_process_tactical_feedback_with_issues(self):
         
         # Verify the result structure
         self.assertIn("strategic_adjustments", result)
-def test_evaluate_final_results(self):
+    def test_evaluate_final_results(self):
         """
         Tests the manager's ability to evaluate final results and formulate a conclusion.
         """

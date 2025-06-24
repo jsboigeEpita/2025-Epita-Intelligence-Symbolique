@@ -19,8 +19,14 @@ def mock_kernel():
 
 @pytest.fixture
 def fol_agent(mock_kernel):
-    """Provides an instance of FirstOrderLogicAgent with a mocked kernel."""
-    agent = FirstOrderLogicAgent(kernel=mock_kernel, service_id="test_service")
+    """Provides a concrete, testable instance of FirstOrderLogicAgent."""
+
+    class ConcreteFOLAgent(FirstOrderLogicAgent):
+        async def validate_argument(self, premises: list[str], conclusion: str, **kwargs) -> bool:
+            """Mocked implementation for abstract method."""
+            return True
+
+    agent = ConcreteFOLAgent(kernel=mock_kernel, service_id="test_service")
     # Mocking the bridge to avoid real Java calls
     agent._tweety_bridge = MagicMock()
     agent._tweety_bridge.validate_fol_belief_set.return_value = (True, "Valid")

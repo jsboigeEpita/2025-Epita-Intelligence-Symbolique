@@ -20,8 +20,9 @@ import pandas as pd
 from pathlib import Path
 import semantic_kernel as sk
 from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin, setup_informal_kernel
+import pytest
 
-
+@pytest.mark.use_real_numpy
 class TestInformalAnalysisPlugin(unittest.TestCase):
     async def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""

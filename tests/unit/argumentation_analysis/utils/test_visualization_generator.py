@@ -59,19 +59,27 @@ def test_generate_performance_visualizations_libs_not_available(
 
 
 def test_generate_performance_visualizations_files_created(
-    mock_heatmap, mock_color_palette, mock_tight_layout, mock_legend, mock_xticks, mock_ylabel, mock_xlabel, mock_title, mock_text, mock_bar, mock_figure, mock_close, mock_df_to_csv, mock_plt_savefig,
+    mocker,
     sample_metrics_for_visualization: Dict[str, Dict[str, Any]],
-    tmp_path: Path,
-    setup_numpy_for_tests_fixture
+    tmp_path: Path
 ):
     """
     Teste que la fonction tente de créer les fichiers attendus lorsque les bibliothèques sont (supposément) disponibles.
     """
-    import pandas as pd
-    # Vérifie si pandas est un mock, ce qui indique que numpy l'est aussi.
-    # Si c'est le cas, on saute le test car pandas ne peut fonctionner sans un vrai numpy.
-    if "mock" in str(type(pd.DataFrame)).lower():
-        pytest.skip("Skipping test with mocked pandas as it's not compatible with this visualization logic.")
+    mocker.patch('argumentation_analysis.utils.visualization_generator.VISUALIZATION_LIBS_AVAILABLE', True)
+    mock_plt_savefig = mocker.patch('matplotlib.pyplot.savefig')
+    mock_df_to_csv = mocker.patch('pandas.DataFrame.to_csv')
+    mocker.patch('matplotlib.pyplot.close')
+    mocker.patch('matplotlib.pyplot.figure')
+    mocker.patch('seaborn.heatmap')
+    mocker.patch('matplotlib.pyplot.bar')
+    mocker.patch('matplotlib.pyplot.title')
+    mocker.patch('matplotlib.pyplot.xlabel')
+    mocker.patch('matplotlib.pyplot.ylabel')
+    mocker.patch('matplotlib.pyplot.xticks')
+    mocker.patch('matplotlib.pyplot.legend')
+    mocker.patch('matplotlib.pyplot.tight_layout')
+
 
     output_dir = tmp_path / "viz_output_libs_available"
     generated_files = generate_performance_visualizations(sample_metrics_for_visualization, output_dir)

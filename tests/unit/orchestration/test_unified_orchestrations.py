@@ -98,7 +98,8 @@ class TestUnifiedOrchestrations:
             mock_level='PARTIAL', # On utilise des mocks partiels maintenant
             orchestration_type='UNIFIED',
             require_real_gpt=False, # On n'exige plus le vrai GPT
-            require_real_tweety=False # Doit être False si le mock_level n'est pas 'NONE'
+            require_real_tweety=False, # Doit être False si le mock_level n'est pas 'NONE'
+            require_full_taxonomy=False # Doit aussi être False pour un mock partiel
         )
     
     def test_conversation_orchestrator_initialization(self):
