@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
-from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent
+from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
 from argumentation_analysis.models.extract_result import ExtractResult
 from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
 
@@ -19,9 +19,9 @@ def mock_kernel():
 
 @pytest.fixture
 def fol_agent(mock_kernel):
-    """Provides a concrete, testable instance of FirstOrderLogicAgent."""
+    """Provides a concrete, testable instance of FOLLogicAgent."""
 
-    class ConcreteFOLAgent(FirstOrderLogicAgent):
+    class ConcreteFOLAgent(FOLLogicAgent):
         async def validate_argument(self, premises: list[str], conclusion: str, **kwargs) -> bool:
             """Mocked implementation for abstract method."""
             return True

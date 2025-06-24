@@ -1,21 +1,21 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
-from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent
+from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import FirstOrderBeliefSet
 
 @pytest.mark.asyncio
-class TestFirstOrderLogicAgent:
+class TestFOLLogicAgent:
     """
-    Unit tests for the refactored FirstOrderLogicAgent.
+    Unit tests for the refactored FOLLogicAgent.
     These tests focus on the new BaseLogicAgent architecture.
     """
 
     async def test_agent_initialization(self, fol_agent):
         """Tests that the agent is initialized correctly."""
-        assert isinstance(fol_agent, FirstOrderLogicAgent)
+        assert isinstance(fol_agent, FOLLogicAgent)
         assert isinstance(fol_agent, BaseLogicAgent)
-        assert fol_agent.name == "FirstOrderLogicAgent"
+        assert fol_agent.name == "FOLLogicAgent"
         assert fol_agent.logic_type == "FOL"
 
     async def test_process_translation_task_success(self, fol_agent):

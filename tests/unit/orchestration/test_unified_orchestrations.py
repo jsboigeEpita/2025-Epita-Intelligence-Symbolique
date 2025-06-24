@@ -31,7 +31,7 @@ try:
     from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
     from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
     from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer, TweetyErrorFeedback
-    from argumentation_analysis.agents.core.logic.fol_logic_agent import FirstOrderLogicAgent
+    from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
     REAL_COMPONENTS_AVAILABLE = True
 except ImportError as e:
     print(f"Avertissement: Composants réels non disponibles: {e}")
@@ -82,9 +82,6 @@ except ImportError as e:
                 'confidence': 0.9
             })()
     
-    class FirstOrderLogicAgent:
-        def __init__(self, **kwargs):
-            self.agent_name = "MockFOLAgent"
 
 
 class TestUnifiedOrchestrations:
@@ -521,13 +518,13 @@ class TestAuthenticOrchestrationIntegration:
     """Tests d'intégration authentique (sans mocks)."""
     
     def test_fol_agent_integration(self):
-        """Test d'intégration avec FirstOrderLogicAgent réel."""
+        """Test d'intégration avec FOLLogicAgent réel."""
         config = UnifiedConfig(logic_type='FOL', mock_level='NONE')
         orchestrator = ConversationOrchestrator(config=config)
         
         # Vérifier que l'agent FOL est configuré
         if hasattr(orchestrator, 'agents'):
-            fol_agents = [a for a in orchestrator.agents if 'FOL' in str(type(a).__name__)]
+            fol_agents = [a for a in orchestrator.agents if 'FOLLogicAgent' in str(type(a).__name__)]
             if fol_agents:
                 assert len(fol_agents) > 0
     

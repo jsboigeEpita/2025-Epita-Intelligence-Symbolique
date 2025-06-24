@@ -12,7 +12,7 @@ pour gérer les ensembles de croyances et exécuter des requêtes logiques.
 """
 
 from .propositional_logic_agent import PropositionalLogicAgent
-from .first_order_logic_agent import FirstOrderLogicAgent
+from .fol_logic_agent import FOLLogicAgent
 from .modal_logic_agent import ModalLogicAgent
 from .logic_factory import LogicAgentFactory
 from .belief_set import BeliefSet, PropositionalBeliefSet, FirstOrderBeliefSet, ModalBeliefSet
@@ -20,7 +20,7 @@ from .query_executor import QueryExecutor
 
 __all__ = [
     'PropositionalLogicAgent',
-    'FirstOrderLogicAgent',
+    'FOLLogicAgent',
     'ModalLogicAgent',
     'LogicAgentFactory',
     'BeliefSet',

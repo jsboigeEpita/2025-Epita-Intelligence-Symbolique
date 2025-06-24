@@ -11,7 +11,7 @@ from semantic_kernel import Kernel
 
 from ..abc.agent_bases import BaseLogicAgent
 from .propositional_logic_agent import PropositionalLogicAgent
-from .first_order_logic_agent import FirstOrderLogicAgent
+from .fol_logic_agent import FOLLogicAgent
 from .modal_logic_agent import ModalLogicAgent
 
 # Configuration du logger
@@ -28,8 +28,8 @@ class LogicAgentFactory:
     # Mapping des types de logique vers les classes d'agents
     _agent_classes: Dict[str, Type[BaseLogicAgent]] = {
         "propositional": PropositionalLogicAgent,
-        "first_order": FirstOrderLogicAgent,
-        "fol": FirstOrderLogicAgent,
+        "first_order": FOLLogicAgent,
+        "fol": FOLLogicAgent,
         "modal": ModalLogicAgent
     }
     
