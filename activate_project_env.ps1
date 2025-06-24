@@ -39,41 +39,21 @@ function Write-Stderr {
 
 try {
     if ($CommandToRun) {
-        # La commande est construite pour que le module Python fasse deux choses:
-        # 1. --setup-vars: Charger les variables d'environnement.
-        # 2. --run-command: Exécuter la commande passée par PowerShell.
-        # `$CommandToRun` doit être la fin de la ligne de commande car `nargs=REMAINDER`
-        # dans le script Python consomme tout ce qui suit.
-        $PythonCommand = "python -m $PythonModule --setup-vars --run-command $CommandToRun"
-        
-        # Commande finale à exécuter dans l'environnement conda.
-        $CondaCommand = "conda run --no-capture-output -n projet-is $PythonCommand"
+        # Exécution directe: On ne passe plus par le wrapper python.
+        # conda run active l'environnement et exécute la commande.
+        $CondaCommand = "conda run --no-capture-output -n projet-is $CommandToRun"
 
-        if ($CommandOutputFile) {
-            Write-Stderr "Génération de la commande pour le fichier de sortie : $CommandOutputFile"
-            Set-Content -Path $CommandOutputFile -Value $CondaCommand
-            Write-Stderr "Commande générée avec succès."
-        } else {
-            Write-Stderr "Exécution de la commande via le wrapper Python : $PythonCommand"
-            Invoke-Expression -Command $CondaCommand
-            $exitCode = $LASTEXITCODE
-            if ($exitCode -ne 0) {
-                Write-Stderr "ERREUR: La commande a échoué avec le code de sortie: $exitCode"
-            }
-            exit $exitCode
-        }
-    } else {
-        # Si aucune commande n'est fournie, on exécute seulement le setup des variables.
-        $PythonCommand = "python -m $PythonModule --setup-vars"
-        $CondaCommand = "conda run --no-capture-output -n projet-is $PythonCommand"
-        
-        Write-Stderr "Activation de l'environnement (setup des variables via Python)..."
+        Write-Stderr "Exécution directe de la commande dans l'environnement 'projet-is': $CommandToRun"
         Invoke-Expression -Command $CondaCommand
         $exitCode = $LASTEXITCODE
         if ($exitCode -ne 0) {
-            Write-Stderr "ERREUR: Le setup de l'environnement a échoué avec le code de sortie: $exitCode"
+            Write-Stderr "ERREUR: La commande a échoué avec le code de sortie: $exitCode"
         }
         exit $exitCode
+    } else {
+        # Comportement par défaut: lancer un shell interactif
+        Write-Stderr "Aucune commande spécifiée. Lancement d'un shell interactif dans 'projet-is'."
+        conda activate projet-is
     }
 }
 catch {
