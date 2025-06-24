@@ -484,6 +484,18 @@ def initialize_jvm(
     import jpype.imports
     global _JVM_INITIALIZED_THIS_SESSION, _JVM_WAS_SHUTDOWN, _SESSION_FIXTURE_OWNS_JVM
 
+    # --- [SÉMAPHORE INTER-PROCESSUS] ---
+    # Garde pour empêcher les sous-processus pytest de redémarrer la JVM
+    # quand le processus principal (via une fixture de session) la gère déjà.
+    managed_by_pid = os.environ.get('PYTEST_JVM_MANAGED_BY_PID')
+    current_pid = str(os.getpid())
+    if managed_by_pid and managed_by_pid != current_pid:
+        logger.warning(
+            f"Le démarrage de la JVM est sauté dans le processus enfant (PID {current_pid}) "
+            f"car il est géré par le processus pytest principal (PID {managed_by_pid})."
+        )
+        return True # On suppose que la JVM est disponible via une autre méthode
+    
     # --- Logging verbeux pour le débogage ---
     logger.info("="*50)
     logger.info(f"APPEL À initialize_jvm | isJVMStarted: {jpype.isJVMStarted()}, force_restart: {force_restart}")

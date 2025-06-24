@@ -46,13 +46,13 @@ class ServiceManager:
         _log("Démarrage du service API pour les tests E2E...")
 
         # Démarrer le backend API
-        _log(f"Démarrage du service API sur le port {self.api_port} (CWD: {API_DIR})")
+        _log(f"[RUNNER_DEBUG] Démarrage du service API sur le port {self.api_port} (CWD: {API_DIR})")
         api_log_out = open("api_server.log", "w", encoding="utf-8")
         api_log_err = open("api_server.error.log", "w", encoding="utf-8")
         self.log_files["api_out"] = api_log_out
         self.log_files["api_err"] = api_log_err
         
-        _log(f"Démarrage du service API sur le port {self.api_port} (CWD: {API_DIR}) avec log level DEBUG")
+        _log(f"[RUNNER_DEBUG] Commande Popen Uvicorn: {[sys.executable, '-m', 'uvicorn', 'argumentation_analysis.services.web_api.app:app', '--port', str(self.api_port), '--log-level', 'debug']}")
         api_process = subprocess.Popen(
             [sys.executable, "-m", "uvicorn", "argumentation_analysis.services.web_api.app:app", "--port", str(self.api_port), "--log-level", "debug"],
             cwd=API_DIR,
@@ -60,11 +60,12 @@ class ServiceManager:
             stderr=api_log_err
         )
         self.processes.append(api_process)
-        _log(f"Service API démarré avec le PID: {api_process.pid}")
+        _log(f"[RUNNER_DEBUG] Service API démarré avec le PID: {api_process.pid}")
 
         # Le frontend est servi par le backend, pas de service séparé à démarrer.
-        _log("Attente de la disponibilité du service API...")
+        _log("[RUNNER_DEBUG] Début de l'attente de la disponibilité du service API...")
         self._wait_for_services(ports=[self.api_port])
+        _log("[RUNNER_DEBUG] Fin de l'attente de la disponibilité du service API.")
 
     def stop_services(self):
         """Arrête proprement tous les services démarrés."""
@@ -114,7 +115,7 @@ class ServiceManager:
                     break
             
             if all_ports_ready:
-                _log("Tous les services sont opérationnels. Démarrage des tests.")
+                _log("[RUNNER_DEBUG] Tous les services sont opérationnels. Démarrage des tests.")
                 return
 
             time.sleep(interval)
@@ -214,24 +215,28 @@ class TestRunner:
             _log("Activation du contournement de la JVM via la variable d'environnement SKIP_JVM_TESTS.")
             env["SKIP_JVM_TESTS"] = "1"
 
-        # Remplacer subprocess.run par subprocess.Popen pour un affichage en temps réel
+        # Utilisation de subprocess.Popen pour un affichage en temps réel
+        _log("[RUNNER_DEBUG] --- APPEL DE SUBPROCESS.POPEN POUR PYTEST ---")
         process = subprocess.Popen(
             command,
             cwd=ROOT_DIR,
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, # Redirige stderr vers stdout
+            stderr=subprocess.STDOUT,
             text=True,
             encoding='utf-8',
-            bufsize=1, # Mode ligne-buffer
+            bufsize=1, # Mode ligne-buffer pour la sortie texte
             env=env
         )
 
-        # Lire et afficher la sortie ligne par ligne en temps réel
-        for line in iter(process.stdout.readline, ''):
-            print(line, end='')
-
-        # Attendre la fin du processus et récupérer le code de sortie
+        # Lire et afficher la sortie en temps réel
+        # La boucle s'arrêtera quand le processus sera terminé et que stdout sera fermé
+        if process.stdout:
+            for line in iter(process.stdout.readline, ''):
+                print(line, end='')
+        
+        # Attendre que le processus se termine et obtenir le code de retour
         returncode = process.wait()
+        _log(f"[RUNNER_DEBUG] --- PROCESSUS PYTEST TERMINÉ (Code: {returncode}) ---")
 
         if returncode != 0:
             _log(f"Pytest a terminé avec le code d'erreur {returncode}.")

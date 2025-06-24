@@ -126,6 +126,12 @@ def integration_jvm(request):
         logger.info("FIXTURE: RETOUR de initialize_jvm. Le blocage n'a pas eu lieu dans la fixture.")
         if not success:
             pytest.fail("La fonction initialize_jvm() a renvoyé False, échec du démarrage de la JVM.")
+        
+        # --- SÉMAPHORE INTER-PROCESSUS ---
+        # Positionne une variable d'environnement pour que les sous-processus
+        # sachent que cette instance de pytest gère la JVM.
+        os.environ['PYTEST_JVM_MANAGED_BY_PID'] = str(os.getpid())
+        logger.info(f"Variable d'environnement de contrôle JVM positionnée : PYTEST_JVM_MANAGED_BY_PID={os.getpid()}")
     except Exception as e:
         logger.error(f"EXCEPTION CRITIQUE lors de l'appel à initialize_jvm : {e}", exc_info=True)
         pytest.fail(f"Exception critique lors de l'appel à initialize_jvm (startJVM) : {e}", pytrace=True)
