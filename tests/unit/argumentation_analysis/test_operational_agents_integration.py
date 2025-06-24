@@ -24,6 +24,7 @@ import sys
 from unittest.mock import MagicMock, patch
 from pathlib import Path
 import semantic_kernel as sk
+from semantic_kernel.connectors.ai.prompt_execution_settings import PromptExecutionSettings
 from argumentation_analysis.core.bootstrap import ProjectContext
 
 # Configuration pytest-asyncio
@@ -38,7 +39,8 @@ from argumentation_analysis.orchestration.hierarchical.operational.agent_registr
 from argumentation_analysis.orchestration.hierarchical.operational.manager import OperationalManager
 from argumentation_analysis.orchestration.hierarchical.interfaces.tactical_operational import TacticalOperationalInterface
 from argumentation_analysis.orchestration.hierarchical.tactical.state import TacticalState
-from argumentation_analysis.core.communication import MessageMiddleware, Channel, ChannelType
+from argumentation_analysis.core.communication import MessageMiddleware, ChannelType
+from argumentation_analysis.core.communication.hierarchical_channel import HierarchicalChannel
 
 from argumentation_analysis.paths import RESULTS_DIR
 
@@ -65,17 +67,26 @@ class TestOperationalAgentsIntegration:
     """Tests d'intégration pour les agents opérationnels."""
 
     @pytest_asyncio.fixture
-    async def operational_components(self):
-        """Initialise les objets nécessaires pour les tests."""
+    async def operational_components(self, jvm_session):
+        """
+        Initialise les objets nécessaires pour les tests.
+        
+        Cette fixture dépend de `jvm_session` pour s'assurer que la JVM est
+        initialisée une seule fois avant la création des composants qui pourraient
+        en dépendre indirectement (comme les agents logiques).
+        """
         tactical_state = TacticalState()
         operational_state = OperationalState()
-        interface = TacticalOperationalInterface(tactical_state, operational_state)
-        
         # Créer et configurer le middleware
         middleware = MessageMiddleware()
-        mock_channel = MagicMock(spec=Channel)
-        mock_channel.type = ChannelType.HIERARCHICAL
-        middleware.register_channel(mock_channel)
+        hierarchical_channel = HierarchicalChannel("hierarchical_test")
+        middleware.register_channel(hierarchical_channel)
+        
+        interface = TacticalOperationalInterface(
+            tactical_state=tactical_state,
+            operational_state=operational_state,
+            middleware=middleware
+        )
         
         # Créer un kernel et un llm_service_id mockés
         mock_kernel = MagicMock(spec=sk.Kernel)
@@ -91,12 +102,13 @@ class TestOperationalAgentsIntegration:
         mock_project_context.config.get_config.return_value = {"some_agent_specific_config": "value"}
         mock_project_context.kernel = mock_kernel
         mock_project_context.llm_service_id = mock_llm_service_id  # Attribut manquant
-        # Configure the kernel mock to return a valid dictionary for execution settings
-        mock_kernel.get_prompt_execution_settings_from_service_id.return_value = {
-            "service_id": mock_llm_service_id,
-            "model_id": "mock-model",
-            "temperature": 0.7,
-        }
+        # Configure the kernel mock to return a valid PromptExecutionSettings object
+        mock_execution_settings = PromptExecutionSettings(
+            service_id=mock_llm_service_id,
+            model_id="mock-model",
+            temperature=0.7,
+        )
+        mock_kernel.get_prompt_execution_settings_from_service_id.return_value = mock_execution_settings
 
         manager = OperationalManager(
             operational_state=operational_state,
@@ -197,7 +209,7 @@ class TestOperationalAgentsIntegration:
             tactical_state.add_task(tactical_task)
 
             # S'assurer que l'agent est bien mocké par le patch
-            agent = await manager.registry.get_agent_for_task(tactical_task)
+            agent = await manager.registry.select_agent_for_task(tactical_task)
             agent.process_task = mock_process_task # Attribuer le mock à l'instance
             
             result = await manager.process_tactical_task(tactical_task)
@@ -232,7 +244,7 @@ class TestOperationalAgentsIntegration:
             }
             tactical_state.add_task(tactical_task)
 
-            agent = await manager.registry.get_agent_for_task(tactical_task)
+            agent = await manager.registry.select_agent_for_task(tactical_task)
             agent.process_task = mock_process_task
 
             result = await manager.process_tactical_task(tactical_task)
@@ -268,7 +280,7 @@ class TestOperationalAgentsIntegration:
             }
             tactical_state.add_task(tactical_task)
 
-            agent = await manager.registry.get_agent_for_task(tactical_task)
+            agent = await manager.registry.select_agent_for_task(tactical_task)
             agent.process_task = mock_process_task
 
             result = await manager.process_tactical_task(tactical_task)

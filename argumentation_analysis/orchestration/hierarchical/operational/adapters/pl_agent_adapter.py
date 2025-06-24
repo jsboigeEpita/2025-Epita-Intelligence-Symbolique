@@ -76,9 +76,11 @@ class PLAgentAdapter(OperationalAgent):
         self.project_context = project_context
         
         try:
-            self.logger.info("Démarrage de la JVM pour l'agent PL...")
-            if not initialize_jvm():
-                raise RuntimeError("La JVM n'a pas pu être initialisée.")
+            self.logger.info("Démarrage de la JVM pour l'agent PL (géré par la fixture de test globale)...")
+            # L'initialisation de la JVM est maintenant gérée par une fixture pytest de portée session (`jvm_session`)
+            # pour éviter les démarrages multiples qui causent des crashs. L'appel direct est désactivé.
+            # if not initialize_jvm():
+            #     raise RuntimeError("La JVM n'a pas pu être initialisée.")
             
             self.logger.info("Initialisation de l'agent PL interne...")
             self.agent = PropositionalLogicAgent(kernel=self.kernel, agent_name=f"{self.name}_PLAgent")

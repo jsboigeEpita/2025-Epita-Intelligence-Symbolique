@@ -63,7 +63,10 @@ class TacticalOperationalInterface:
 
         self.middleware = middleware or MessageMiddleware()
         self.tactical_adapter = TacticalAdapter(agent_id="tactical_interface", middleware=self.middleware)
-        self.operational_adapter = OperationalAdapter(agent_id="operational_interface", middleware=self.middleware)
+        self.operational_adapter = OperationalAdapter(
+            agent_id="operational_interface",
+            middleware=self.middleware
+        )
     
     def translate_task_to_command(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -135,7 +138,7 @@ class TacticalOperationalInterface:
         tactical_task_id = result.get("tactical_task_id")
         
         tactical_report = {
-            "task_id": tactical_task_id,
+            "tactical_task_id": tactical_task_id,
             "completion_status": result.get("status", "completed"),
             "results": self._translate_outputs(result.get("outputs", {})),
             "results_path": str(RESULTS_DIR / f"{tactical_task_id}_results.json"),
@@ -143,9 +146,10 @@ class TacticalOperationalInterface:
             "issues": self._translate_issues(result.get("issues", []))
         }
         
-        self.operational_adapter.send_result_report(
-            report_type="task_completion_report",
-            content=tactical_report,
+        self.operational_adapter.send_result(
+            task_id=tactical_task_id,
+            result_type="task_completion_report",
+            result=tactical_report,
             recipient_id="tactical_coordinator",
             metadata={"original_task_id": tactical_task_id}
         )

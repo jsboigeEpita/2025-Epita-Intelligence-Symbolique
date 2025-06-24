@@ -382,3 +382,18 @@ class OperationalState:
         """
         self.__init__()
         self.logger.info("État opérationnel réinitialisé.")
+
+    def find_operational_task_by_tactical_id(self, tactical_task_id: str) -> Optional[str]:
+        """
+        Trouve l'ID d'une tâche opérationnelle à partir de l'ID de sa tâche tactique parente.
+
+        Args:
+            tactical_task_id: L'ID de la tâche tactique.
+
+        Returns:
+            L'ID de la tâche opérationnelle correspondante, ou None si non trouvée.
+        """
+        for task in self.assigned_tasks:
+            if task.get("tactical_task_id") == tactical_task_id:
+                return task.get("id")
+        return None
