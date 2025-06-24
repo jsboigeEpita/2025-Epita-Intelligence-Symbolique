@@ -82,7 +82,7 @@ def test_internal_explore_hierarchy(informal_plugin_mocked, mock_taxonomy_df):
     hierarchy_pk0 = informal_plugin_mocked._internal_explore_hierarchy(0, mock_taxonomy_df)
     assert hierarchy_pk0['current_node']['nom_vulgarise'] == 'Root Fallacy'
     assert len(hierarchy_pk0['children']) == 1
-    assert hierarchy_pk0['children'][0]['nom_vulgarisé'] == 'Fallacy of Relevance'
+    assert hierarchy_pk0['children'][0]['nom_vulgarise'] == 'Fallacy of Relevance'
     
     hierarchy_pk1 = informal_plugin_mocked._internal_explore_hierarchy(1, mock_taxonomy_df)
     assert hierarchy_pk1['current_node']['nom_vulgarisé'] == 'Fallacy of Relevance'
@@ -106,7 +106,7 @@ def test_explore_fallacy_hierarchy_real(informal_plugin_real):
     # Test case sensitivity and conversion for PK
     result_json_pk_str_2 = informal_plugin_real.explore_fallacy_hierarchy(current_pk_str="2")
     result_2 = json.loads(result_json_pk_str_2)
-    assert result_2['current_node']['nom_vulgarisé'] == 'Ad Hominem'
+    assert result_2['current_node']['nom_vulgarise'] == 'Ad Hominem'
     assert len(result_2['children']) == 0
     
 def test_get_fallacy_details_real(informal_plugin_real):
