@@ -91,7 +91,7 @@ class StrategicManager:
         # Délègue le plan initial à la couche tactique
         self.adapter.issue_directive(
             directive_type="new_strategic_plan",
-            content={"plan": self.state.strategic_plan, "objectives": self.state.global_objectives},
+            parameters={"plan": self.state.strategic_plan, "objectives": self.state.global_objectives},
             recipient_id="tactical_coordinator",
             priority=MessagePriority.HIGH
         )
@@ -262,7 +262,7 @@ class StrategicManager:
     def _send_strategic_adjustments(self, adjustments: Dict[str, Any]) -> None:
         self.adapter.issue_directive(
             directive_type="strategic_adjustment",
-            content=adjustments,
+            parameters=adjustments,
             recipient_id="tactical_coordinator",
             priority=MessagePriority.HIGH
         )

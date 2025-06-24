@@ -59,57 +59,38 @@ async def test_prepare_test_environment(runner):
         await runner._prepare_test_environment(config)
         assert mock_environ['BACKEND_URL'] == 'http://backend:1234'
         assert mock_environ['FRONTEND_URL'] == 'http://frontend:5678'
-        assert mock_environ['PLAYWRIGHT_BASE_URL'] == 'http://frontend:5678'
-        # HEADLESS et BROWSER sont passés en ligne de commande, pas en variable d'environnement
-        # On vérifie juste qu'elles ne sont PAS dans l'environnement
-        assert 'HEADLESS' not in mock_environ
-        assert 'BROWSER' not in mock_environ
+        # La variable PLAYWRIGHT_BASE_URL n'est plus utilisée, l'URL est passée
+        # directement à pytest via --frontend-url.
+        assert 'PLAYWRIGHT_BASE_URL' not in mock_environ
+        # On vérifie que les variables d'environnement sont bien positionnées.
+        assert mock_environ['HEADLESS'] == 'false'
+        assert mock_environ['BROWSER'] == 'firefox'
 
 def test_build_command_for_python(runner):
     """Tests the command building logic for Python tests."""
-    cmd = runner._build_command(
-        'python',
-        ['tests/my_test.py'],
-        {'browser': 'chromium', 'headless': True},
-        ['-k', 'my_keyword'],
-        None
+    cmd = runner._build_playwright_command(
+        test_paths=['tests/my_test.py'],
+        config={'browser': 'chromium', 'headless': True, 'backend_url': 'http://b', 'frontend_url': 'http://f'}
     )
     
-    assert sys.executable in cmd
+    assert 'python' in cmd
     assert '-m' in cmd
     assert 'pytest' in cmd
     assert 'tests/my_test.py' in cmd
     assert '--browser=chromium' in cmd
-    assert '--headed' not in cmd
-    assert '-k' in cmd
-    assert 'my_keyword' in cmd
+    assert '--headed' not in cmd # headless=True ne doit pas ajouter --headed
 
+@pytest.mark.skip(reason="La logique de build spécifique à JS a été supprimée en faveur de pytest.")
 @patch('sys.platform', 'win32')
 def test_build_command_for_js(runner):
-    """Tests the command building logic for JavaScript tests."""
-    with patch('os.getenv', return_value='C:/fake_node_home'):
-        cmd = runner._build_command(
-            'javascript',
-            ['tests/js/my_test.spec.js'],
-            {'browser': 'firefox', 'headless': False, 'timeout_ms': 5000},
-            [],
-            'my.config.js'
-        )
-        
-        assert str(cmd[0]).endswith('npx.cmd')
-        assert 'playwright' in cmd
-        assert 'test' in cmd
-        assert 'tests/js/my_test.spec.js' in cmd
-        assert '--config=my.config.js' in cmd
-        assert '--project=firefox' in cmd
-        assert '--headed' in cmd
-        assert '--timeout=5000' in cmd
+    """Tests the command building logic for JavaScript tests (maintenant obsolète)."""
+    pass
 
 @pytest.mark.asyncio
 async def test_run_tests_happy_path(runner):
     """Tests the main execution flow of run_tests on a successful run."""
     runner._prepare_test_environment = AsyncMock()
-    runner._build_command = MagicMock(return_value=['fake_command'])
+    runner._build_playwright_command = MagicMock(return_value=['fake_command'])
     runner._execute_tests = AsyncMock(return_value=MagicMock(returncode=0))
     runner._analyze_results = AsyncMock(return_value=True)
 
@@ -117,7 +98,7 @@ async def test_run_tests_happy_path(runner):
 
     assert success is True
     runner._prepare_test_environment.assert_called_once()
-    runner._build_command.assert_called_once()
+    runner._build_playwright_command.assert_called_once()
     runner._execute_tests.assert_called_once_with(['fake_command'], ANY)
     runner._analyze_results.assert_called_once()
 
@@ -125,7 +106,7 @@ async def test_run_tests_happy_path(runner):
 async def test_run_tests_execution_fails(runner):
     """Tests the main execution flow when the test subprocess fails."""
     runner._prepare_test_environment = AsyncMock()
-    runner._build_command = MagicMock(return_value=['fake_command'])
+    runner._build_playwright_command = MagicMock(return_value=['fake_command'])
     # Simulate a non-zero return code
     runner._execute_tests = AsyncMock(return_value=MagicMock(returncode=1))
     # _analyze_results should still be called to log the failure

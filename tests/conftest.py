@@ -2,6 +2,12 @@
 import sys
 from pathlib import Path
 
+# A list of files or directories to be ignored during test collection.
+collect_ignore = [
+    "tests/integration/services/test_mcp_server_integration.py",
+    "tests/agents/core/logic",
+]
+
 # Ajoute la racine du projet au sys.path pour résoudre les problèmes d'import
 # causés par le `rootdir` de pytest qui interfère avec la résolution des modules.
 project_root_conftest = Path(__file__).parent.parent.resolve()

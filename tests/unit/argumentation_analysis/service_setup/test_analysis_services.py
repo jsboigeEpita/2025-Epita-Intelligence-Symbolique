@@ -63,12 +63,13 @@ def mock_create_llm(mocker):
     return mocker.patch(CREATE_LLM_SERVICE_PATH, return_value=mock_llm_instance)
 
 
-def test_initialize_services_nominal_case(mock_settings, mock_load_dotenv, mock_find_dotenv, mock_init_jvm, mock_create_llm, caplog):
+def test_initialize_services_nominal_case(mock_settings, mock_load_dotenv, mock_find_dotenv, mock_init_jvm, mock_create_llm, caplog, mocker):
     """Teste le cas nominal d'initialisation des services."""
     caplog.set_level(logging.INFO)
     mock_settings.enable_jvm = True
     mock_settings.libs_dir = Path("/fake/libs/dir")
     mock_settings.use_mock_llm = True
+    mocker.patch('pathlib.Path.exists', return_value=True)
 
     mock_llm = mock_create_llm.return_value
 
@@ -83,7 +84,7 @@ def test_initialize_services_nominal_case(mock_settings, mock_load_dotenv, mock_
     mock_create_llm.assert_called_once_with(service_id="default_llm_service", force_mock=True)
     assert services.get("llm_service") == mock_llm
     
-    assert "Initialisation de la JVM avec LIBS_DIR: /fake/libs/dir" in caplog.text
+    assert "Initialisation de la JVM avec LIBS_DIR: \\fake\\libs\\dir" in caplog.text
     assert f"[OK] Service LLM créé" in caplog.text
 
 def test_initialize_services_dotenv_fails(mock_settings, mock_load_dotenv, mock_find_dotenv, caplog):
@@ -98,12 +99,13 @@ def test_initialize_services_dotenv_fails(mock_settings, mock_load_dotenv, mock_
         mock_load_dotenv.assert_called_once_with("/fake/.env")
 
 
-def test_initialize_services_jvm_fails(mock_settings, mock_init_jvm, mock_load_dotenv, mock_find_dotenv, caplog):
+def test_initialize_services_jvm_fails(mock_settings, mock_init_jvm, mock_load_dotenv, mock_find_dotenv, caplog, mocker):
     """Teste le cas où l'initialisation de la JVM échoue."""
     caplog.set_level(logging.WARNING)
     mock_settings.enable_jvm = True
     mock_settings.libs_dir = Path("/fake/libs/dir")
     mock_init_jvm.return_value = False
+    mocker.patch('pathlib.Path.exists', return_value=True)
 
     with patch(CREATE_LLM_SERVICE_PATH, return_value=MagicMock()):
         services = initialize_analysis_services()

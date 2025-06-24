@@ -88,6 +88,25 @@ class BaseAgent(ABC): # Suppression de l'héritage de sk.Agent (voir note ci-des
         self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{self.name}")
         self._llm_service_id = None  # Sera défini par setup_agent_components
 
+    def _get_history(self, user_input: str) -> "ChatHistory":
+        """
+        Crée un historique de conversation pour une nouvelle interaction.
+
+        Initialise un objet ChatHistory, y ajoute le prompt système de l'agent
+        (s'il existe), puis le dernier message de l'utilisateur.
+
+        Args:
+            user_input: Le dernier message de l'utilisateur à ajouter à l'historique.
+
+        Returns:
+            Un objet ChatHistory prêt pour être utilisé dans une invocation du kernel.
+        """
+        history = ChatHistory()
+        if self.instructions:
+            history.add_system_message(self.instructions)
+        history.add_user_message(user_input)
+        return history
+
     @property
     def logger(self) -> logging.Logger:
         """Retourne le logger de l'agent."""

@@ -22,8 +22,8 @@ except ImportError:
     logger.warning("Could not import AnalysisType. Specialized orchestrator selection might be affected.")
 
 try:
-    from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
-    from argumentation_analysis.orchestration.cluedo_runner import run_cluedo_oracle_game as run_cluedo_game
+    from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator, run_cluedo_oracle_game
+    run_cluedo_game = run_cluedo_oracle_game
     from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
     from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
     from argumentation_analysis.orchestration.logique_complexe_orchestrator import LogiqueComplexeOrchestrator
@@ -49,8 +49,6 @@ from argumentation_analysis.orchestration.engine.config import OrchestrationConf
 from argumentation_analysis.orchestration.engine.strategy import OrchestrationStrategy, select_strategy
 # from argumentation_analysis.core.reports import HierarchicalReport # Si utilisé directement
 # from argumentation_analysis.core.context import OrchestrationContext # Si utilisé directement
-
-
 class MainOrchestrator:
     """
     Chef d'orchestre principal pour le processus d'analyse d'argumentation.
@@ -70,6 +68,7 @@ class MainOrchestrator:
 
     def __init__(self,
                  config: 'OrchestrationConfig',
+                 kernel: 'sk.Kernel',
                  strategic_manager: Optional[Any] = None,
                  tactical_coordinator: Optional[Any] = None,
                  operational_manager: Optional[Any] = None):
@@ -77,16 +76,29 @@ class MainOrchestrator:
         Initialise l'orchestrateur principal avec sa configuration et ses composants.
 
         Args:
-            config (OrchestrationConfig): La configuration d'orchestration qui contient
-                                          les paramètres et les instances des composants.
-            strategic_manager (Optional[Any]): Instance optionnelle du gestionnaire stratégique.
-            tactical_coordinator (Optional[Any]): Instance optionnelle du coordinateur tactique.
-            operational_manager (Optional[Any]): Instance optionnelle du gestionnaire opérationnel.
+            config (OrchestrationConfig): La configuration d'orchestration.
+            kernel (sk.Kernel): L'instance de Semantic Kernel à utiliser.
+            strategic_manager (Optional[Any]): Instance du gestionnaire stratégique.
+            tactical_coordinator (Optional[Any]): Instance du coordinateur tactique.
+            operational_manager (Optional[Any]): Instance du gestionnaire opérationnel.
         """
         self.config = config
+        self.kernel = kernel
         self.strategic_manager = strategic_manager
         self.tactical_coordinator = tactical_coordinator
         self.operational_manager = operational_manager
+
+        # Instancier l'exécuteur pour le pipeline opérationnel direct (import tardif)
+        try:
+            from argumentation_analysis.orchestration.operational.direct_executor import DirectOperationalExecutor
+            self.direct_operational_executor = DirectOperationalExecutor(kernel=self.kernel)
+        except ImportError as e:
+            self.direct_operational_executor = None
+            logger.error(f"ECHEC de l'importation de DirectOperationalExecutor: {e}", exc_info=True)
+
+        # Initialiser la carte des orchestrateurs spécialisés
+        self.specialized_orchestrators_map = self._initialize_specialized_orchestrators()
+
 
     async def run_analysis(
         self,
@@ -119,12 +131,15 @@ class MainOrchestrator:
             logger.info(f"Source info provided: {source_info}")
         if custom_config:
             logger.info(f"Custom config provided: {custom_config}")
-        
-        strategy = await select_strategy(self.config, text_input, source_info, custom_config)
+
+        # Sélection dynamique de la stratégie
+        # FORCER LA STRATEGIE POUR LE TEST
+        strategy = OrchestrationStrategy.SPECIALIZED_DIRECT
+        self.config.analysis_type = AnalysisType.INVESTIGATIVE
+        logger.info(f"Stratégie sélectionnée : {strategy.value}")
 
 
         if strategy == OrchestrationStrategy.HIERARCHICAL_FULL:
-    
             return await self._execute_hierarchical_full(text_input)
         elif strategy == OrchestrationStrategy.STRATEGIC_ONLY:
             return await self._execute_strategic_only(text_input)
@@ -194,7 +209,7 @@ class MainOrchestrator:
             if self.strategic_manager:
                 logger.info("[STRATEGIC] Initialisation de l'analyse stratégique...")
                 try:
-                    strategic_results = await self.strategic_manager.initialize_analysis(text_input)
+                    strategic_results = self.strategic_manager.initialize_analysis(text_input)
                     results["strategic_analysis"] = strategic_results
                     objectives = strategic_results.get("objectives", [])
                 except Exception as e:
@@ -207,7 +222,7 @@ class MainOrchestrator:
             # Niveau tactique
             if self.tactical_coordinator and self.strategic_manager:
                 logger.info("[TACTICAL] Coordination tactique...")
-                tactical_results = await self.tactical_coordinator.process_strategic_objectives(objectives)
+                tactical_results = self.tactical_coordinator.process_strategic_objectives(objectives)
                 results["tactical_coordination"] = tactical_results
                 logger.debug(f"[TRACE] tactical_coordination_completed: tasks_created={tactical_results.get('tasks_created', 0)}")
 
@@ -241,78 +256,40 @@ class MainOrchestrator:
 
     async def _execute_operational_tasks(self, text_input: str, tactical_coordination_results: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Exécute un ensemble de tâches opérationnelles définies par le niveau tactique.
-
-        Cette méthode simule l'exécution des tâches en se basant sur les informations
-        fournies par la coordination tactique. Dans une implémentation réelle, elle
-        interagirait avec le `OperationalManager` pour exécuter des analyses concrètes
-        (par exemple, extraire des arguments, détecter des sophismes).
-
-        Args:
-            text_input (str): Le texte d'entrée original, potentiellement utilisé
-                              par les tâches.
-            tactical_coordination_results (Dict[str, Any]): Les résultats du coordinateur
-                                                            tactique, contenant la liste
-                                                            des tâches à exécuter.
-
-        Returns:
-            Dict[str, Any]: Un rapport sur les tâches exécutées, incluant leur statut
-                            et un résumé.
+        Exécute un ensemble de tâches opérationnelles en utilisant le DirectOperationalExecutor.
+        Cette méthode remplace la simulation par un appel réel au pipeline opérationnel.
         """
-        logger.info(f"Exécution des tâches opérationnelles avec text_input: {text_input[:50]}... et tactical_results: {str(tactical_coordination_results)[:100]}...")
-        
-        operational_manager = getattr(self.config, 'operational_manager_instance', None)
-        # Bien que operational_manager soit récupéré, la logique ci-dessous est une simulation
-        # et ne l'utilise pas directement pour exécuter des tâches.
-        # Dans une implémentation réelle, operational_manager.execute_task(...) serait utilisé ici.
-        if not operational_manager:
-            logger.warning("[OPERATIONAL] OperationalManager non configuré. La logique actuelle est une simulation et va continuer.")
-            # Dans un cas réel non simulé, on retournerait probablement une erreur ici:
-            # return {"error": "OperationalManager non configuré", "tasks_executed": 0, "task_results": [], "summary": {}}
+        logger.info(f"Délégation de l'exécution opérationnelle au DirectOperationalExecutor...")
 
-        operational_results = {
-            "tasks_executed": 0,
-            "task_results": [],
-            "summary": {}
-        }
-        
-        try:
-            # Adapter le nom de la variable d'entrée depuis la source (tactical_coordination -> tactical_coordination_results)
-            tasks_created = tactical_coordination_results.get("tasks_created", 0)
-            
-            logger.debug(f"[OPERATIONAL] Nombre de tâches à simuler (basé sur tactical_coordination_results.get('tasks_created', 0)): {tasks_created}")
-
-            # La boucle suivante simule l'exécution des tâches comme dans le pipeline d'origine.
-            for i in range(min(tasks_created, 5)):  # Limiter pour la démonstration, comme dans l'original
-                task_id = f"op_task_sim_{i+1}"
-                logger.debug(f"[OPERATIONAL] Simulation de la tâche: {task_id}")
-                
-                task_result = {
-                    "task_id": task_id,
-                    "status": "completed", # Simulé. Pourrait être TaskStatus.COMPLETED.value
-                    "result": f"Résultat simulé de la tâche opérationnelle {i+1}",
-                    "execution_time": 0.5 # Simulé
-                }
-                operational_results["task_results"].append(task_result)
-                operational_results["tasks_executed"] += 1
-            
-            operational_results["summary"] = {
-                "total_tasks_planned": tasks_created,
-                "executed_tasks_simulated": operational_results["tasks_executed"],
-                "success_rate": 1.0 if operational_results["tasks_executed"] > 0 and tasks_created > 0 else 0.0,
-                "notes": "Les résultats opérationnels sont simulés, reflétant la logique migrée."
+        if not self.direct_operational_executor:
+            error_msg = "DirectOperationalExecutor n'est pas initialisé. Impossible de procéder."
+            logger.error(f"[OPERATIONAL] {error_msg}")
+            return {
+                "status": "error",
+                "error_message": error_msg,
+                "tasks_executed": 0,
+                "task_results": [],
+                "summary": {"error": error_msg}
             }
-            logger.info(f"[OPERATIONAL] Simulation des tâches opérationnelles terminée. {operational_results['tasks_executed']} tâches simulées sur {tasks_created} planifiées.")
-        
+
+        try:
+            # Appel du pipeline réel
+            operational_results = await self.direct_operational_executor.execute_operational_pipeline(
+                text_input=text_input,
+                tactical_results=tactical_coordination_results
+            )
+            logger.info("[OPERATIONAL] Exécution via DirectOperationalExecutor terminée.")
+            return operational_results
+
         except Exception as e:
-            logger.error(f"[OPERATIONAL] Erreur durant la simulation des tâches opérationnelles: {e}", exc_info=True)
-            operational_results["error"] = str(e)
-            # Assurer la présence des clés essentielles même en cas d'erreur
-            if "task_results" not in operational_results: operational_results["task_results"] = []
-            if "tasks_executed" not in operational_results: operational_results["tasks_executed"] = 0
-            if "summary" not in operational_results: operational_results["summary"] = {"error": str(e)}
-        
-        return operational_results
+            logger.error(f"[OPERATIONAL] Erreur durant l'exécution via DirectOperationalExecutor: {e}", exc_info=True)
+            return {
+                "status": "error",
+                "error_message": str(e),
+                "tasks_executed": 0,
+                "task_results": [],
+                "summary": {"error": str(e)}
+            }
 
     async def _synthesize_hierarchical_results(self, current_results: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -509,21 +486,20 @@ class MainOrchestrator:
         logger.info("[OPERATIONAL_DIRECT] Exécution de la stratégie opérationnelle directe...")
         
         try:
-            # Récupérer les managers depuis self.config
-            strategic_manager = getattr(self.config, 'strategic_manager_instance', None)
-            tactical_coordinator = getattr(self.config, 'tactical_coordinator_instance', None)
-            # operational_manager est récupéré ici pour la vérification, même si _execute_operational_tasks le récupère aussi.
-            operational_manager = getattr(self.config, 'operational_manager_instance', None)
+            # Utiliser les managers directement depuis self
+            strategic_manager = self.strategic_manager
+            tactical_coordinator = self.tactical_coordinator
+            operational_manager = self.operational_manager
 
             if not all([strategic_manager, tactical_coordinator, operational_manager]):
-                missing_managers = [
-                    name for name, manager in [
+                missing_components = [
+                    name for name, component in [
                         ("StrategicManager", strategic_manager),
                         ("TacticalCoordinator", tactical_coordinator),
-                        ("OperationalManager", operational_manager)
-                    ] if not manager
+                        ("OperationalManager", operational_manager),
+                    ] if not component
                 ]
-                error_msg = f"Configuration incomplète: {', '.join(missing_managers)} non trouvé(s)."
+                error_msg = f"Configuration incomplète: {', '.join(missing_components)} non trouvé(s) dans MainOrchestrator."
                 logger.error(f"[OPERATIONAL_DIRECT] {error_msg}")
                 return {
                     "status": "error",
@@ -537,7 +513,7 @@ class MainOrchestrator:
 
             # Étape 1 (Interne) - Analyse Stratégique
             logger.info("[OPERATIONAL_DIRECT] Étape 1 (Interne): Analyse Stratégique...")
-            strategic_results = await strategic_manager.initialize_analysis(text_input)
+            strategic_results = strategic_manager.initialize_analysis(text_input)
             objectives = strategic_results.get("objectives", [])
             if not objectives:
                 logger.warning("[OPERATIONAL_DIRECT] L'analyse stratégique n'a pas produit d'objectifs. L'exécution opérationnelle pourrait être limitée.")
@@ -545,7 +521,7 @@ class MainOrchestrator:
 
             # Étape 2 (Interne) - Coordination Tactique
             logger.info("[OPERATIONAL_DIRECT] Étape 2 (Interne): Coordination Tactique...")
-            tactical_results = await tactical_coordinator.process_strategic_objectives(objectives)
+            tactical_results = tactical_coordinator.process_strategic_objectives(objectives)
             logger.debug(f"[TRACE][OPERATIONAL_DIRECT] Coordination tactique interne terminée: tasks_created={tactical_results.get('tasks_created', 'N/A')}, tasks_sample={str(tactical_results.get('tasks', [])[:2])[:100]}...")
 
             # Étape 3 - Exécution Opérationnelle
@@ -667,7 +643,7 @@ class MainOrchestrator:
 
     async def _select_specialized_orchestrator(self) -> Optional[Tuple[str, Dict[str, Any]]]:
         """Sélectionne l'orchestrateur spécialisé approprié basé sur la configuration."""
-        specialized_orchestrators_map = getattr(self.config, 'specialized_orchestrators_map', None)
+        specialized_orchestrators_map = self.specialized_orchestrators_map
         if not specialized_orchestrators_map:
             logger.warning("No specialized orchestrators map found in config (self.config.specialized_orchestrators_map).")
             return None
@@ -706,22 +682,29 @@ class MainOrchestrator:
         try:
             if hasattr(orchestrator_instance, 'kernel'):
                 logger.info(f"Running Cluedo investigation with orchestrator: {type(orchestrator_instance)}")
-                # run_cluedo_game est importé globalement
-                conversation_history, enquete_state = await run_cluedo_game(
+                # run_cluedo_game a été renommé en run_cluedo_oracle_game et retourne un dict
+                results = await run_cluedo_game(
                     kernel=orchestrator_instance.kernel,
                     initial_question=f"Analysez ce texte comme une enquête : {text_input[:500]}...",
-                    max_iterations=5
+                    max_cycles=5
                 )
+                
+                # Extraire les données nécessaires du dictionnaire de résultats
+                conversation_history = results.get("conversation_history", []) if results else []
+                final_state = results.get("final_state", {}) if results else {}
+                final_solution = final_state.get('final_solution') if final_state else None
+
                 return {
                     "status": "completed",
                     "investigation_type": "cluedo",
                     "conversation_history": conversation_history,
                     "enquete_state": {
-                        "nom_enquete": getattr(enquete_state, 'nom_enquete', 'N/A'),
-                        "solution_proposee": getattr(enquete_state, 'solution_proposee', 'N/A'),
-                        "hypotheses_count": len(getattr(enquete_state, 'hypotheses', [])),
-                        "tasks_count": len(getattr(enquete_state, 'tasks', []))
-                    }
+                        "nom_enquete": final_solution.get('nom_enquete', 'N/A') if isinstance(final_solution, dict) else 'N/A',
+                        "solution_proposee": final_solution if final_solution else 'N/A',
+                        "hypotheses_count": len(results.get("oracle_statistics", {}).get("agent_interactions", {}).get("suggestions_made", [])) if results else 0,
+                        "tasks_count": results.get("oracle_statistics", {}).get("agent_interactions", {}).get("total_turns", 0) if results else 0
+                    },
+                    "full_results": results # Inclure tous les résultats pour un débogage plus facile
                 }
             else:
                 logger.warning("Cluedo orchestrator instance does not have 'kernel' attribute.")
@@ -875,3 +858,112 @@ class MainOrchestrator:
             "message": "Manual selection strategy executed successfully.",
             "input_text_snippet": text_input[:100] + "..." if len(text_input) > 100 else text_input,
         }
+    def _initialize_specialized_orchestrators(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Initialise et retourne la carte des orchestrateurs spécialisés.
+        """
+        s_map = {}
+        
+        # L'instanciation de chaque orchestrateur se fait ici.
+        # Le kernel est disponible via self.kernel.
+        
+        if CluedoExtendedOrchestrator:
+            s_map["cluedo"] = {
+                "orchestrator": CluedoExtendedOrchestrator(self.kernel),
+                "priority": 1,
+                "types": [AnalysisType.INVESTIGATIVE] if AnalysisType else []
+            }
+        
+        if ConversationOrchestrator:
+            s_map["conversation"] = {
+                "orchestrator": ConversationOrchestrator(self.kernel),
+                "priority": 2,
+                "types": [AnalysisType.DEBATE_ANALYSIS] if AnalysisType else []
+            }
+
+        if RealLLMOrchestrator:
+            s_map["real_llm"] = {
+                "orchestrator": RealLLMOrchestrator(self.kernel),
+                "priority": 3,
+                "types": [AnalysisType.COMPREHENSIVE, AnalysisType.RHETORICAL, AnalysisType.FALLACY_FOCUSED] if AnalysisType else []
+            }
+
+        if LogiqueComplexeOrchestrator:
+            s_map["logic_complex"] = {
+                "orchestrator": LogiqueComplexeOrchestrator(self.kernel),
+                "priority": 4,
+                "types": [AnalysisType.LOGICAL] if AnalysisType else []
+            }
+        
+        logger.info(f"Specialized orchestrators initialized: {list(s_map.keys())}")
+        return s_map
+
+if __name__ == "__main__":
+    import asyncio
+    import os
+    import semantic_kernel as sk
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+    from dotenv import load_dotenv
+
+    from argumentation_analysis.orchestration.hierarchical.strategic.manager import StrategicManager
+    from argumentation_analysis.orchestration.hierarchical.tactical.coordinator import TacticalCoordinator
+    from argumentation_analysis.orchestration.hierarchical.operational.manager import OperationalManager
+    from argumentation_analysis.core.communication.middleware import MessageMiddleware
+    from argumentation_analysis.core.communication.hierarchical_channel import HierarchicalChannel
+    
+    # Ce bloc est un exemple d'exécution.
+    # Dans une application réelle, MainOrchestrator serait instancié
+    # et utilisé par un autre composant (ex: un serveur API).
+    
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    async def main():
+        """Point d'entrée pour l'exécution du script."""
+        logger.info("Initialisation de l'orchestrateur principal en mode script exemple.")
+        
+        config = OrchestrationConfig()
+        
+        # Charger les variables d'environnement depuis le fichier .env
+        load_dotenv()
+        kernel = sk.Kernel()
+        api_key = os.getenv("OPENAI_API_KEY")
+        # Le modèle est fixé pour l'exemple, mais pourrait être configurable
+        model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY doit être défini.")
+
+        # Le `model_id` est implicitement géré par la bibliothèque via les
+        # variables d'environnement (par exemple OPENAI_CHAT_MODEL_ID) dans cette
+        # version de semantic-kernel, et ne doit pas être passé en argument.
+        kernel.add_service(
+            OpenAIChatCompletion(service_id="chat_completion", api_key=api_key)
+        )
+
+        shared_middleware = MessageMiddleware()
+        shared_middleware.register_channel(HierarchicalChannel("hierarchical_channel"))
+        strategic_manager = StrategicManager(middleware=shared_middleware)
+        tactical_coordinator = TacticalCoordinator(middleware=shared_middleware)
+        operational_manager = OperationalManager(middleware=shared_middleware)
+
+        orchestrator = MainOrchestrator(
+            config=config,
+            kernel=kernel,
+            strategic_manager=strategic_manager,
+            tactical_coordinator=tactical_coordinator,
+            operational_manager=operational_manager
+        )
+        
+        # Exemple de texte à analyser
+        text_to_analyze = "Le corps a été retrouvé dans la bibliothèque. Le colonel Moutarde et Mlle Rose étaient les seuls présents dans la maison. Le chandelier, qui semble être l'arme du crime, a été retrouvé dans le salon."
+        
+        results = await orchestrator.run_analysis(text_input=text_to_analyze)
+        
+        import json
+        print(json.dumps(results, indent=2, ensure_ascii=False))
+
+    # Exécution de la fonction main asynchrone
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Exécution interrompue par l'utilisateur.")

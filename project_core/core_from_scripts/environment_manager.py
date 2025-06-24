@@ -85,7 +85,13 @@ class EnvironmentManager:
             self.logger.error("Aucune commande à exécuter.")
             return 1
 
-        self.logger.info(f"Exécution de la commande: {' '.join(command)}")
+        command_str = ' '.join(command)
+        self.logger.info(f"Exécution de la commande: {command_str}")
+        
+        env = os.environ.copy()
+        env['CONDA_VERBOSITY'] = '3'
+        env['PYTHONUNBUFFERED'] = '1'
+
         try:
             result = subprocess.run(command, check=False)
             self.logger.info(f"La commande s'est terminée avec le code de sortie: {result.returncode}")
@@ -96,6 +102,8 @@ class EnvironmentManager:
         except Exception as e:
             self.logger.error(f"Une erreur est survenue lors de l'exécution de la commande: {e}")
             return 1
+        
+        return returncode
 
 
 def main():

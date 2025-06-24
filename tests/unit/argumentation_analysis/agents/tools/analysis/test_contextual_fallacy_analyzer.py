@@ -44,56 +44,52 @@ class TestContextualFallacyAnalyzer(unittest.TestCase):
         # Patch pour éviter le chargement réel de la taxonomie
         self.taxonomy_path_patcher = patch('argumentation_analysis.utils.taxonomy_loader.get_taxonomy_path')
         self.mock_get_taxonomy_path = self.taxonomy_path_patcher.start()
-        self.mock_get_taxonomy_path# Mock eliminated - using authentic gpt-4o-mini "mock_taxonomy_path.csv"
+        self.mock_get_taxonomy_path.return_value = "mock_taxonomy_path.csv"
         
         self.validate_taxonomy_patcher = patch('argumentation_analysis.utils.taxonomy_loader.validate_taxonomy_file')
         self.mock_validate_taxonomy = self.validate_taxonomy_patcher.start()
-        self.mock_validate_taxonomy = MagicMock(return_value=True) # Mock eliminated - using authentic gpt-4o-mini True
+        self.mock_validate_taxonomy.return_value = True
         
         # Patch pour pandas.read_csv
         self.pandas_patcher = patch('pandas.read_csv')
         self.mock_read_csv = self.pandas_patcher.start()
         
         # Créer un mock pour le DataFrame
-        self.test_df = MagicMock() # Remplacé Magicawait self._create_authentic_gpt4o_mini_instance()
-        self.test_df.__len__ = MagicMock(return_value=4) # Mock eliminated - using authentic gpt-4o-mini 4
+        self.test_df = MagicMock()
+        self.test_df.__len__.return_value = 4
         self.test_df.index = [0, 1, 2, 3]
         self.test_df.columns = ['FK_Parent', 'depth', 'path', 'nom_vulgarisé', 'text_fr', 'description_fr', 'exemple_fr']
         
         # Configurer le comportement du DataFrame pour les accès aux données
         def mock_loc_getitem(key):
             if key == [0]:
-                row = MagicMock() # Remplacé Magicawait self._create_authentic_gpt4o_mini_instance()
+                row = MagicMock()
                 row.name = 0
-                # Mock eliminated - using authentic gpt-4o-mini lambda k, default=None:
-                row.get = lambda k, default=None: {
+                row.get.side_effect = lambda k, default=None: {
                     'path': '0', 'depth': 0, 'nom_vulgarisé': 'Racine',
                     'text_fr': 'Racine des sophismes', 'description_fr': 'Description racine'
                 }.get(k, default)
                 return [row]
             elif key == [1]:
-                row = MagicMock() # Remplacé Magicawait self._create_authentic_gpt4o_mini_instance()
+                row = MagicMock()
                 row.name = 1
-                # Mock eliminated - using authentic gpt-4o-mini lambda k, default=None:
-                row.get = lambda k, default=None: {
+                row.get.side_effect = lambda k, default=None: {
                     'path': '0.1', 'depth': 1, 'nom_vulgarisé': 'Appel à l\'autorité',
                     'text_fr': 'Description appel à l\'autorité', 'description_fr': 'Description détaillée 1'
                 }.get(k, default)
                 return [row]
             elif key == [2]:
-                row = MagicMock() # Remplacé Magicawait self._create_authentic_gpt4o_mini_instance()
+                row = MagicMock()
                 row.name = 2
-                # Mock eliminated - using authentic gpt-4o-mini lambda k, default=None:
-                row.get = lambda k, default=None: {
+                row.get.side_effect = lambda k, default=None: {
                     'path': '0.2', 'depth': 1, 'nom_vulgarisé': 'Appel à la popularité',
                     'text_fr': 'Description appel à la popularité', 'description_fr': 'Description détaillée 2'
                 }.get(k, default)
                 return [row]
             elif key == [3]:
-                row = MagicMock() # Remplacé Magicawait self._create_authentic_gpt4o_mini_instance()
+                row = MagicMock()
                 row.name = 3
-                # Mock eliminated - using authentic gpt-4o-mini lambda k, default=None:
-                row.get = lambda k, default=None: {
+                row.get.side_effect = lambda k, default=None: {
                     'path': '0.1.3', 'depth': 2, 'nom_vulgarisé': 'Appel à l\'émotion',
                     'text_fr': 'Description appel à l\'émotion', 'description_fr': 'Description détaillée 3'
                 }.get(k, default)
@@ -101,9 +97,9 @@ class TestContextualFallacyAnalyzer(unittest.TestCase):
             else:
                 return MagicMock(__len__=lambda: 0)
         
-        self.test_df.loc.__getitem__# Mock eliminated - using authentic gpt-4o-mini mock_loc_getitem
+        self.test_df.loc.__getitem__.side_effect = mock_loc_getitem
         
-        self.mock_read_csv# Mock eliminated - using authentic gpt-4o-mini self.test_df
+        self.mock_read_csv.return_value = self.test_df
         
         # Créer l'instance à tester
         self.analyzer = ContextualFallacyAnalyzer()

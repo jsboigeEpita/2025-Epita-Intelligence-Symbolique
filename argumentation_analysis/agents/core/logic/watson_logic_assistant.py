@@ -1,7 +1,7 @@
 # argumentation_analysis/agents/core/logic/watson_logic_assistant.py
 import logging
 import re
-from typing import Optional, List, AsyncGenerator, ClassVar
+from typing import Optional, List, AsyncGenerator, ClassVar, Union
 import json
 
 import semantic_kernel as sk
@@ -318,45 +318,27 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
         
         self.logger.info(f"WatsonLogicAssistant '{agent_name}' initialisé avec les outils logiques.")
         
-    async def process_message(self, message: str) -> str:
-        """Traite un message et retourne une réponse en utilisant le kernel."""
-        self._logger.info(f"[{self.name}] Processing: {message}")
-        
-        # Créer un prompt simple pour l'agent Watson
-        prompt = f"""Vous êtes Watson, l'assistant logique de Sherlock Holmes. Répondez à la question suivante en tant que logicien:
-        Question: {message}
-        Réponse:"""
-        
-        try:
-            # Utiliser le kernel pour générer une réponse via le service OpenAI
-            # Assurez-vous que le service "authentic_test" est bien ajouté au kernel
-            execution_settings = OpenAIPromptExecutionSettings(service_id="authentic_test")
-            arguments = KernelArguments(input=message, execution_settings=execution_settings)
-            
-            chat_function = KernelFunction.from_prompt(
-                function_name="chat_with_watson",
-                plugin_name="WatsonAgentPlugin",
-                prompt=prompt,
-            )
-
-            response = await self._kernel.invoke(chat_function, arguments=arguments)
-            
-            ai_response = str(response)
-            self._logger.info(f"[{self.name}] AI Response: {ai_response}")
-            return ai_response
-            
-        except Exception as e:
-            self._logger.error(f"[{self.name}] Erreur lors de l'invocation du prompt: {e}")
-            return f"[{self.name}] Erreur: {e}"
-
-    async def invoke(self, input: str, **kwargs) -> str:
+    async def invoke(self, input: Union[str, List[ChatMessageContent]], **kwargs) -> List[ChatMessageContent]:
         """
         Point d'entrée pour l'invocation de l'agent par l'orchestrateur.
-        Le nom du paramètre est 'input' pour la compatibilité avec l'API invoke de SK.
+        Gère à la fois une chaîne simple (pour compatibilité) et un historique de conversation complet.
         """
-        self._logger.info(f"DEBUGGING: Attributs de l'objet Watson: {dir(self)}")
-        self._logger.info(f"[{self.name}] Invoke called with input: {input}")
-        return await self.process_message(input)
+        history = ChatHistory()
+        if isinstance(input, str):
+            self.logger.info(f"[{self.name}] Invoke called with a string input: {input[:100]}...")
+            history.add_user_message(input)
+        elif isinstance(input, list):
+            self.logger.info(f"[{self.name}] Invoke called with a message history of {len(input)} messages.")
+            for message in input:
+                # Ajout de la vérification pour s'assurer que 'message' est bien un ChatMessageContent
+                if isinstance(message, ChatMessageContent):
+                    history.add_message(message)
+                else:
+                    self.logger.warning(f"Élément non-conforme dans l'historique: {type(message)}. Ignoré.")
+        
+        # Appelle la logique principale qui gère un historique
+        response_message = await self.invoke_custom(history)
+        return [response_message]
 
     async def get_agent_belief_set_content(self, belief_set_id: str) -> Optional[str]:
         """
@@ -400,7 +382,7 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
 
         # Ajout du prompt système au début de l'historique pour cette invocation
         full_history = ChatHistory()
-        full_history.add_system_message(self._system_prompt)
+        full_history.add_system_message(self.system_prompt)
         for msg in history:
             full_history.add_message(msg)
         

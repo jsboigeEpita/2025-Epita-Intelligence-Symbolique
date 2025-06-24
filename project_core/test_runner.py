@@ -214,17 +214,28 @@ class TestRunner:
             _log("Activation du contournement de la JVM via la variable d'environnement SKIP_JVM_TESTS.")
             env["SKIP_JVM_TESTS"] = "1"
 
-        process = subprocess.run(
+        # Remplacer subprocess.run par subprocess.Popen pour un affichage en temps réel
+        process = subprocess.Popen(
             command,
             cwd=ROOT_DIR,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT, # Redirige stderr vers stdout
             text=True,
             encoding='utf-8',
+            bufsize=1, # Mode ligne-buffer
             env=env
         )
 
-        if process.returncode != 0:
-            _log(f"Pytest a terminé avec le code d'erreur {process.returncode}.")
-            sys.exit(process.returncode)
+        # Lire et afficher la sortie ligne par ligne en temps réel
+        for line in iter(process.stdout.readline, ''):
+            print(line, end='')
+
+        # Attendre la fin du processus et récupérer le code de sortie
+        returncode = process.wait()
+
+        if returncode != 0:
+            _log(f"Pytest a terminé avec le code d'erreur {returncode}.")
+            sys.exit(returncode)
         else:
             _log("Pytest a terminé avec succès.")
 

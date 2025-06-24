@@ -223,6 +223,27 @@ class SherlockEnqueteAgent(BaseAgent):
         self._tools = SherlockTools(kernel=kernel)
         self._kernel.add_plugin(self._tools, plugin_name="SherlockAgentPlugin")
 
+        # Création de la fonction agent principale
+        execution_settings = OpenAIPromptExecutionSettings(
+            service_id=self._service_id,
+            max_tokens=2000,
+            temperature=0.7,
+            top_p=0.8
+        )
+        
+        prompt_template_config = PromptTemplateConfig(
+            template="{{$chat_history}}",
+            description="Chat with Sherlock, the master detective.",
+            template_format="semantic-kernel",
+            execution_settings={self._service_id: execution_settings},
+        )
+
+        self._agent = self._kernel.add_function(
+            function_name="chat",
+            plugin_name="SherlockAgentCore",
+            prompt_template_config=prompt_template_config,
+        )
+
     def get_agent_capabilities(self) -> Dict[str, Any]:
         return {
             "get_current_case_description": "Récupère la description de l'affaire en cours.",
@@ -239,11 +260,10 @@ class SherlockEnqueteAgent(BaseAgent):
         history = self._get_history(user_input)
 
         # Exécution de l'agent
+        arguments = KernelArguments(chat_history=history)
         response_stream = self._kernel.invoke_stream(
             self._agent,
-            **history,
-            # spécifie au besoin le nom du premier plugin à exécuter.
-            # filter={"name": "_говой_plugin"},
+            arguments=arguments,
         )
         
         # Vérification si la réponse est un générateur asynchrone (cas de production)
@@ -262,18 +282,47 @@ class SherlockEnqueteAgent(BaseAgent):
         
         # Si le type de réponse n'est pas géré, retourner une chaîne vide
         return ""
-    
-    async def invoke(self, input: str, **kwargs) -> str:
+
+    async def invoke(self, input: Union[str, List[ChatMessageContent]], **kwargs) -> List[ChatMessageContent]:
         """
         Point d'entrée pour l'invocation de l'agent par l'orchestrateur.
         Le nom du paramètre est 'input' pour la compatibilité avec l'API invoke de SK.
         """
-        self.logger.info(f"[{self.name}] Invoke called with input: {input}")
-        # Simplifié pour retourner une réponse directe pour le moment.
-        final_answer = ""
-        async for chunk in self.get_response(input):
-            final_answer += chunk
-        return final_answer
+        history = ChatHistory()
+        if self.instructions:
+            history.add_system_message(self.instructions)
+
+        if isinstance(input, str):
+            self.logger.info(f"[{self.name}] Invoke called with a string input.")
+            history.add_user_message(input)
+        elif isinstance(input, list):
+            self.logger.info(f"[{self.name}] Invoke called with a message history.")
+            for message in input:
+                history.add_message(message)
+        
+        # Ajoute un message utilisateur vide si le dernier message n'est pas de l'utilisateur
+        if history.messages and history.messages[-1].role != "user":
+            history.add_user_message("...")
+
+        response_stream = self._kernel.invoke_stream(
+            self._agent,
+            arguments=KernelArguments(chat_history=history)
+        )
+
+        # Agrégation de la réponse
+        full_response = ""
+        final_chunk = None
+        async for chunk in response_stream:
+            full_response += str(chunk)
+            final_chunk = chunk
+        
+        self.logger.info(f"[{self.name}] Final answer: {full_response}")
+        
+        if final_chunk:
+            # Reconstruire un ChatMessageContent depuis le dernier chunk, si possible,
+            # ou créer un nouveau.
+            return [ChatMessageContent(role="assistant", content=full_response, name=self.name)]
+        return [ChatMessageContent(role="assistant", content=full_response, name=self.name)]
 
     async def get_current_case_description(self) -> str:
         """

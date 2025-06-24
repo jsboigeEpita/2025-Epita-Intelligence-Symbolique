@@ -25,6 +25,7 @@ class AgentGroupChat:
         
 AGENTS_AVAILABLE = True
 from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.contents.streaming_chat_message_content import StreamingChatMessageContent
 
 # Import conditionnel pour les modules filters qui peuvent ne pas exister
 try:
@@ -285,7 +286,9 @@ class CluedoExtendedOrchestrator:
     - Métriques de performance 3-agents
     """
     
-    def __init__(self, 
+    MAX_HISTORY_MESSAGES: int = 10
+
+    def __init__(self,
                  kernel: Kernel,
                  max_turns: int = 15,
                  max_cycles: int = 5,
@@ -425,55 +428,59 @@ class CluedoExtendedOrchestrator:
         self._logger.info("🚀 Début du workflow 3-agents")
         
         # Historique des messages
-        history: List[ChatMessageContent] = []
+        history: List[ChatMessageContent] = [
+            ChatMessageContent(role="user", content=initial_question, name="System")
+        ]
         
         # Boucle principale d'orchestration
         self._logger.info("🔄 Début de la boucle d'orchestration 3-agents...")
         
-        last_message_content = initial_question
-        
         try:
-            # Nous devons passer l'agent'None' la première fois.
             fake_initial_agent = self.sherlock_agent
             while not await self.termination_strategy.should_terminate(agent=fake_initial_agent, history=history):
 
-                # 1. Sélectionner l'agent
                 next_agent = await self.selection_strategy.next(agents=list(self.orchestration.active_agents.values()), history=history)
-                fake_initial_agent = next_agent # L'agent sera utilisé pour le prochain tour
+                fake_initial_agent = next_agent
                 
-                # 2. Exécuter le tour de l'agent
                 self._logger.info(f"--- Tour de {next_agent.name} ---")
                 
-                # Le message au prochain agent est le contenu du dernier message
-                # La méthode `invoke` est le point d'entrée standard pour les agents SK.
-                agent_response_raw = await next_agent.invoke(input=last_message_content, arguments=KernelArguments())
-                
-                # Le résultat de invoke peut être un ChatMessageContent, une liste, ou un objet résultat
-                if isinstance(agent_response_raw, list) and len(agent_response_raw) > 0:
-                    response_content_obj = agent_response_raw[0]
-                elif isinstance(agent_response_raw, ChatMessageContent):
-                    response_content_obj = agent_response_raw
+                # 1. Tronquer et nettoyer l'historique avant de l'envoyer
+                if len(history) > self.MAX_HISTORY_MESSAGES:
+                    self._logger.warning(f"L'historique dépasse {self.MAX_HISTORY_MESSAGES} messages. Troncation...")
+                    history_to_process = [history[0]] + history[-(self.MAX_HISTORY_MESSAGES - 1):]
                 else:
-                    # Gestion du cas où le résultat est un objet `KernelContent` ou un `str`
-                    response_content_str = str(agent_response_raw)
-                    response_content_obj = ChatMessageContent(role="assistant", content=response_content_str, name=next_agent.name)
+                    history_to_process = history
 
-                # 3. Mettre à jour l'historique et préparer le prochain tour
-                history.append(response_content_obj)
-                last_message_content = str(response_content_obj.content)
+                # Étape de nettoyage la plus critique:
+                # Reconstruire un historique entièrement neuf avec des objets simples.
+                history_to_send = [
+                    self.consolidate_agent_response(msg, getattr(msg, 'name', msg.role))
+                    for msg in history_to_process
+                ]
+
+                # 2. Exécuter l'agent avec l'historique nettoyé
+                agent_response_raw = await next_agent.invoke(input=history_to_send, arguments=KernelArguments())
                 
-                # Log et mise à jour de l'état
+                # 3. Consolider et nettoyer la réponse de l'agent
+                # C'est une étape CRUCIALE pour éviter le context overflow avec les réponses en streaming.
+                clean_message = self.consolidate_agent_response(agent_response_raw, next_agent.name)
+                
+                # 4. Mettre à jour l'historique avec le message propre
+                history.append(clean_message)
+                last_message_content = str(clean_message.content)
+
+                # 5. Log et mise à jour de l'état
                 self._logger.info(f"Réponse de {next_agent.name}: {last_message_content[:150]}...")
                 self.oracle_state.add_conversation_message(
                     agent_name=next_agent.name,
                     content=last_message_content,
                     message_type=self._detect_message_type(last_message_content)
                 )
-                # Utiliser `initial_question` comme `input` pour le premier tour, puis `last_message_content`
-                turn_input = initial_question if len(history) == 1 else history[-2].content
+                
+                turn_input = history[-2].content if len(history) > 1 else initial_question
                 self.oracle_state.record_agent_turn(
                     agent_name=next_agent.name,
-                    action_type="invoke",
+                    action_type="invoke_with_history",
                     action_details={"input": str(turn_input)[:150], "output": last_message_content[:150]}
                 )
 
@@ -484,12 +491,56 @@ class CluedoExtendedOrchestrator:
         finally:
             self.end_time = datetime.now()
         
-        # Collecte des métriques finales
         workflow_result = await self._collect_final_metrics(history)
         
         self._logger.info("[OK] Workflow 3-agents terminé")
         return workflow_result
     
+    def consolidate_agent_response(self, response_raw: Any, agent_name: str) -> ChatMessageContent:
+        """
+        Consolide la réponse brute d'un agent (qui peut être un string, un objet complexe,
+        un stream, etc.) en un unique ChatMessageContent simple (rôle, contenu texte, nom).
+        Ceci est LA fonction critique pour éviter le context_length_exceeded.
+        """
+        full_content = ""
+        role = "assistant"
+        
+        # Cas 1: La réponse est une liste de chunks de streaming
+        if isinstance(response_raw, list):
+            for chunk in response_raw:
+                if isinstance(chunk, StreamingChatMessageContent):
+                    for part in chunk.items:
+                        if hasattr(part, 'text'):
+                            full_content += part.text
+                # Gérer le cas où un ChatMessageContent se retrouve dans la liste
+                elif isinstance(chunk, ChatMessageContent):
+                     full_content += str(chunk.content or "")
+
+        # Cas 2: La réponse est un objet de streaming unique
+        elif isinstance(response_raw, StreamingChatMessageContent):
+            for part in response_raw.items:
+                if hasattr(part, 'text'):
+                    full_content += part.text
+
+        # Cas 3: C'est déjà un ChatMessageContent (potentiellement avec un contenu complexe)
+        elif isinstance(response_raw, ChatMessageContent):
+            # Extraire le contenu texte, peu importe comment il est encapsulé
+            content_obj = response_raw.content
+            if hasattr(content_obj, 'text'):
+                full_content = content_obj.text
+            elif isinstance(content_obj, str):
+                full_content = content_obj
+            else:
+                full_content = str(content_obj or "")
+            role = response_raw.role
+
+        # Cas 4: C'est juste un string ou un autre type de base
+        else:
+            full_content = str(response_raw or "")
+
+        return ChatMessageContent(role=role, content=full_content, name=agent_name)
+
+
     async def _collect_final_metrics(self, history: List[ChatMessageContent]) -> Dict[str, Any]:
         """Collecte les métriques finales du workflow."""
         execution_time = (self.end_time - self.start_time).total_seconds() if self.start_time and self.end_time else 0

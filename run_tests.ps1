@@ -127,36 +127,58 @@ elseif ($Type -eq "e2e-python") {
     }
     exit $LASTEXITCODE
 }
-# Branche 3: Tests Unit/Functional (Python) via test_runner.py
+# Branche 3: Tests Unit/Functional (Python) directs
 else {
-    Write-Host "[INFO] Lancement des tests de type '$Type' via le test runner Python..." -ForegroundColor Cyan
-    $TestRunnerScript = Join-Path $ProjectRoot "project_core/test_runner.py"
-    if (-not (Test-Path $TestRunnerScript)) {
-        Write-Host "[ERREUR] L'orchestrateur de test '$TestRunnerScript' est introuvable." -ForegroundColor Red
-        exit 1
+    Write-Host "[INFO] Lancement des tests de type '$Type' via appel Pytest direct..." -ForegroundColor Cyan
+
+    $testPaths = @{
+        "unit"       = "tests/unit"
+        "functional" = "tests/functional"
+        "all"        = @("tests/unit", "tests/functional")
+        "validation" = "tests/validation"
     }
 
-    # Construire la liste d'arguments pour le test_runner.py
-    $runnerArgs = @( "python", "`"$TestRunnerScript`"", "--type", $Type )
-    if ($PSBoundParameters.ContainsKey('Path') -and -not [string]::IsNullOrEmpty($Path)) {
-        $runnerArgs += "--path", $Path
+    $selectedPaths = if ($PSBoundParameters.ContainsKey('Path') -and -not [string]::IsNullOrEmpty($Path)) {
+        $Path
+    } else {
+        $testPaths[$Type]
     }
-    if ($PSBoundParameters.ContainsKey('Browser')) {
-        $runnerArgs += "--browser", $Browser
+
+    if (-not $selectedPaths) {
+        Write-Host "[ERREUR] Type de test '$Type' non valide pour l'exécution directe de pytest." -ForegroundColor Red
+        exit 1
     }
+    
+    # Construire la commande pytest
+    $pytestCommandParts = @("python", "-m", "pytest", "-s", "-vv") + $selectedPaths
     if (-not [string]::IsNullOrEmpty($PytestArgs)) {
-        $pytestArgsArray = $PytestArgs.Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)
-        $runnerArgs += $pytestArgsArray
+        $pytestCommandParts += $PytestArgs.Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)
     }
+    $pytestFinalCommand = $pytestCommandParts -join " "
+
+    # Exécution avec redirection de fichiers pour la robustesse
+    $runnerLogFile = Join-Path $ProjectRoot '_temp/test_runner.log'
+    Write-Host "[INFO] Commande Pytest: $pytestFinalCommand" -ForegroundColor Green
+    Write-Host "[INFO] Les logs seront enregistrés dans '$runnerLogFile'" -ForegroundColor Yellow
+
+    # Utilisation de 'conda run' pour une exécution fiable dans l'environnement.
+    # C'est la méthode la plus robuste pour s'assurer que le bon interpréteur Python et les bonnes dépendances sont utilisés.
+    $FullCommand = "conda run -n projet-is $pytestFinalCommand > `"$runnerLogFile`" 2>&1"
     
-    $CommandToRun = $runnerArgs -join ' '
-    
-    Write-Host "[INFO] Commande à exécuter : $CommandToRun" -ForegroundColor Cyan
-    
-    # Exécuter la commande via le script d'activation
-    # Exécuter la commande via le script d'activation
-    & $ActivationScript -CommandToRun $CommandToRun
+    # On exécute la commande via un sous-shell pour que la redirection fonctionne.
+    powershell -Command "& { $FullCommand }"
     $exitCode = $LASTEXITCODE
+
+    # Afficher les logs après l'exécution
+    if (Test-Path $runnerLogFile) {
+        Write-Host "--- Début du log des tests ($runnerLogFile) ---" -ForegroundColor Yellow
+        Get-Content $runnerLogFile | Write-Host
+        Write-Host "--- Fin du log des tests ---" -ForegroundColor Yellow
+    }
+
+    if ($exitCode -ne 0) {
+        Write-Host "[ERREUR] Les tests Pytest ont échoué avec le code $exitCode. Consultez '$runnerLogFile' pour les détails." -ForegroundColor Red
+    }
     
     Write-Host "[INFO] Exécution terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan
     exit $exitCode
