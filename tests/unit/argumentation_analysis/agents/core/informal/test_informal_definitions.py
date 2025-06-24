@@ -87,10 +87,10 @@ def test_internal_explore_hierarchy(informal_plugin_mocked, mock_taxonomy_df):
     hierarchy_pk1 = informal_plugin_mocked._internal_explore_hierarchy(1, mock_taxonomy_df)
     assert hierarchy_pk1['current_node']['nom_vulgarise'] == 'Fallacy of Relevance'
     assert len(hierarchy_pk1['children']) == 2
-    assert hierarchy_pk1['children'][0]['nom_vulgarisé'] == 'Ad Hominem'
+    assert hierarchy_pk1['children'][0]['nom_vulgarise'] == 'Ad Hominem'
 
     hierarchy_leaf = informal_plugin_mocked._internal_explore_hierarchy(2, mock_taxonomy_df)
-    assert hierarchy_leaf['current_node']['nom_vulgarisé'] == 'Ad Hominem'
+    assert hierarchy_leaf['current_node']['nom_vulgarise'] == 'Ad Hominem'
     assert len(hierarchy_leaf['children']) == 0
 
 # --- Tests des méthodes publiques (l'instance du plugin gère le chargement) ---
