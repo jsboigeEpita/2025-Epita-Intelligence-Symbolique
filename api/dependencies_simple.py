@@ -154,6 +154,7 @@ class SimpleAnalysisService:
             'components_used': ['FallbackAnalyzer'],
             'summary': f"Analyse de fallback terminée. {len(fallacies)} sophismes détectés par mots-clés.",
             'authentic_gpt4o_used': False,
+            'gpt_model_used': 'fallback_mode',  # Clé ajoutée pour la cohérence
             'fallback_reason': error or 'OpenAI non disponible',
             'analysis_metadata': {
                 'text_length': len(text),

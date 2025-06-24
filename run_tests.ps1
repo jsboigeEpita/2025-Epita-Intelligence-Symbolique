@@ -122,7 +122,7 @@ elseif ($Type -eq "e2e-python") {
 }
 # Branche 3: Tests Unit/Functional (Python) directs
 else {
-    Write-Host "[INFO] Lancement des tests de type '$Type' via appel Pytest direct..." -ForegroundColor Cyan
+    Write-Host "[INFO] Lancement des tests de type '$Type' via le point d'entrée unifié..." -ForegroundColor Cyan
 
     $testPaths = @{
         "unit"       = "tests/unit"
@@ -132,16 +132,18 @@ else {
     }
 
     $selectedPaths = if ($PSBoundParameters.ContainsKey('Path') -and -not [string]::IsNullOrEmpty($Path)) {
-        $Path
+        # Important: bien mettre les guillemets autour du chemin pour gérer les espaces
+        @("`"$Path`"")
     } else {
+        # Les chemins multiples sont déjà un tableau
         $testPaths[$Type]
     }
 
     if (-not $selectedPaths) {
-        Write-Host "[ERREUR] Type de test '$Type' non valide pour l'exécution directe de pytest." -ForegroundColor Red
+        Write-Host "[ERREUR] Type de test '$Type' non valide." -ForegroundColor Red
         exit 1
     }
-    
+
     # Construire la commande pytest
     $pytestCommandParts = @("python", "-m", "pytest", "-s", "-vv") + $selectedPaths
     if (-not [string]::IsNullOrEmpty($PytestArgs)) {
@@ -149,28 +151,52 @@ else {
     }
     $pytestFinalCommand = $pytestCommandParts -join " "
 
-    # Exécution avec redirection de fichiers pour la robustesse
+    # Exécution via le script d'activation pour une meilleure robustesse
+    $ActivationScriptPath = Join-Path $PSScriptRoot "activate_project_env.ps1"
     $runnerLogFile = Join-Path $ProjectRoot '_temp/test_runner.log'
-    Write-Host "[INFO] Commande Pytest: $pytestFinalCommand" -ForegroundColor Green
+    
+    Write-Host "[INFO] Commande Pytest à exécuter: $pytestFinalCommand" -ForegroundColor Green
     Write-Host "[INFO] Les logs seront enregistrés dans '$runnerLogFile'" -ForegroundColor Yellow
 
-    # Utilisation de 'conda run' pour une exécution fiable dans l'environnement.
-    # C'est la méthode la plus robuste pour s'assurer que le bon interpréteur Python et les bonnes dépendances sont utilisés.
-    $FullCommand = "conda run -n projet-is $pytestFinalCommand > `"$runnerLogFile`" 2>&1"
-    
-    # On exécute la commande via un sous-shell pour que la redirection fonctionne.
-    powershell -Command "& { $FullCommand }"
-    $exitCode = $LASTEXITCODE
+    # On encapsule l'appel dans une commande qui sera exécutée par le script d'activation
+    # La redirection est gérée ici.
+    $CommandToRunInShell = "$pytestFinalCommand > `"$runnerLogFile`" 2>&1"
 
-    # Afficher les logs après l'exécution
+    try {
+        # Appeler le script d'activation avec la commande complète, y compris la redirection
+        # Note: ceci est une façon de faire. L'idéal serait que activate_project_env.ps1 gère lui-même les logs.
+        # Pour l'instant, on encapsule dans un powershell -Command pour s'assurer que la redirection se fait
+        # *après* l'activation de l'environnement par `conda run`.
+        $FullActivationCommand = "powershell -Command `"`& '$ActivationScriptPath' -CommandToRun '$CommandToRunInShell'`""
+        
+        # Pour le débogage, affichons la structure de l'appel
+        # Write-Host "[DEBUG] Commande d'activation complète: $FullActivationCommand" -ForegroundColor DarkGray
+
+        # Exécutons la commande
+        & $ActivationScriptPath -CommandToRun $pytestFinalCommand *>&1 | Tee-Object -FilePath $runnerLogFile
+
+        $exitCode = $LASTEXITCODE
+
+        if ($exitCode -ne 0) {
+            throw "L'exécution des tests via le script d'activation a échoué avec le code de sortie: $exitCode"
+        } else {
+            Write-Host "[INFO] La suite de tests s'est terminée avec succès." -ForegroundColor Green
+        }
+    }
+    catch {
+        Write-Host "[ERREUR] Une erreur est survenue lors de l'appel au script d'activation. Consultez '$runnerLogFile' pour plus de détails. $_" -ForegroundColor Red
+        exit 1
+    }
+
+    # Afficher un résumé du log
     if (Test-Path $runnerLogFile) {
-        Write-Host "--- Début du log des tests ($runnerLogFile) ---" -ForegroundColor Yellow
-        Get-Content $runnerLogFile | Write-Host
-        Write-Host "--- Fin du log des tests ---" -ForegroundColor Yellow
+        Write-Host "--- Début du résumé des logs ($runnerLogFile) ---" -ForegroundColor Yellow
+        Get-Content $runnerLogFile -Tail 50 | Write-Host
+        Write-Host "--- Fin du résumé des logs ---" -ForegroundColor Yellow
     }
 
     if ($exitCode -ne 0) {
-        Write-Host "[ERREUR] Les tests Pytest ont échoué avec le code $exitCode. Consultez '$runnerLogFile' pour les détails." -ForegroundColor Red
+        Write-Host "[ERREUR] Les tests Pytest ont échoué avec le code $exitCode. Consultez '$runnerLogFile' pour les détails complets." -ForegroundColor Red
     }
     
     Write-Host "[INFO] Exécution terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan

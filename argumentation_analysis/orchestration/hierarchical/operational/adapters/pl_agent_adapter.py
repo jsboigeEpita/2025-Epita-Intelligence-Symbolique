@@ -12,6 +12,8 @@ import time
 from typing import Dict, List, Any, Optional
 import semantic_kernel as sk
 
+from argumentation_analysis.core.bootstrap import ProjectContext
+from argumentation_analysis.core.communication import MessageMiddleware
 from argumentation_analysis.orchestration.hierarchical.operational.agent_interface import OperationalAgent
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
 from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
@@ -33,28 +35,35 @@ class PLAgentAdapter(OperationalAgent):
         par l'`OperationalManager`.
     """
 
-    def __init__(self, name: str = "PLAgent", operational_state: Optional[OperationalState] = None):
+    def __init__(self, name: str = "PLAgent",
+                 operational_state: Optional[OperationalState] = None,
+                 middleware: Optional[MessageMiddleware] = None,
+                 project_context: Optional[ProjectContext] = None):
         """
         Initialise l'adaptateur pour l'agent de logique propositionnelle.
 
         Args:
             name: Le nom de l'instance de l'agent.
             operational_state: L'état opérationnel partagé.
+            middleware: Le middleware de communication.
+            project_context: Le contexte du projet.
         """
-        super().__init__(name, operational_state)
+        super().__init__(name, operational_state, middleware=middleware)
         self.agent: Optional[PropositionalLogicAgent] = None
         self.kernel: Optional[sk.Kernel] = None
         self.llm_service_id: Optional[str] = None
+        self.project_context = project_context
         self.initialized = False
         self.logger = logging.getLogger(f"PLAgentAdapter.{name}")
 
-    async def initialize(self, kernel: sk.Kernel, llm_service_id: str) -> bool:
+    async def initialize(self, kernel: sk.Kernel, llm_service_id: str, project_context: ProjectContext) -> bool:
         """
         Initialise l'agent de logique propositionnelle sous-jacent.
 
         Args:
             kernel: Le kernel Semantic Kernel à utiliser.
             llm_service_id: L'ID du service LLM à utiliser.
+            project_context: Le contexte du projet.
 
         Returns:
             True si l'initialisation a réussi, False sinon.
@@ -64,6 +73,7 @@ class PLAgentAdapter(OperationalAgent):
         
         self.kernel = kernel
         self.llm_service_id = llm_service_id
+        self.project_context = project_context
         
         try:
             self.logger.info("Démarrage de la JVM pour l'agent PL...")

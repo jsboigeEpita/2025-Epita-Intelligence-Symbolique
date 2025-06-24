@@ -12,9 +12,24 @@ def mock_config():
 
 
 @pytest.fixture
-def orchestrator(mock_config):
-    """Fixture pour une instance de MainOrchestrator avec une config mockée."""
-    return MainOrchestrator(config=mock_config)
+def mock_kernel():
+    """Fixture pour un Kernel Semantic Kernel mocké."""
+    return MagicMock(spec="semantic_kernel.Kernel")
+
+
+@pytest.fixture
+def orchestrator(mock_config, mock_kernel):
+    """Fixture pour une instance de MainOrchestrator avec des mocks."""
+    # On patch les imports des sous-orchestrateurs pour éviter les erreurs d'import
+    # si les dépendances ne sont pas installées dans l'environnement de test.
+    with patch('argumentation_analysis.orchestration.engine.main_orchestrator.CluedoExtendedOrchestrator', new=MagicMock()), \
+         patch('argumentation_analysis.orchestration.engine.main_orchestrator.ConversationOrchestrator', new=MagicMock()), \
+         patch('argumentation_analysis.orchestration.engine.main_orchestrator.RealLLMOrchestrator', new=MagicMock()), \
+         patch('argumentation_analysis.orchestration.engine.main_orchestrator.LogiqueComplexeOrchestrator', new=MagicMock()), \
+         patch('argumentation_analysis.orchestration.operational.direct_executor.DirectOperationalExecutor', new=MagicMock()):
+        
+        # On passe maintenant le mock_kernel requis par le constructeur.
+        return MainOrchestrator(config=mock_config, kernel=mock_kernel)
 
 
 @pytest.mark.asyncio

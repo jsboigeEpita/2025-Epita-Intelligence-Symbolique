@@ -286,43 +286,29 @@ class SherlockEnqueteAgent(BaseAgent):
     async def invoke(self, input: Union[str, List[ChatMessageContent]], **kwargs) -> List[ChatMessageContent]:
         """
         Point d'entrée pour l'invocation de l'agent par l'orchestrateur.
-        Le nom du paramètre est 'input' pour la compatibilité avec l'API invoke de SK.
+        Gère à la fois une chaîne simple (pour compatibilité) et un historique de conversation complet.
+        Ce code est aligné sur l'implémentation de Watson pour plus de robustesse.
         """
         history = ChatHistory()
-        if self.instructions:
-            history.add_system_message(self.instructions)
+        # Le prompt système est maintenant géré par la méthode d'invocation sous-jacente.
 
         if isinstance(input, str):
-            self.logger.info(f"[{self.name}] Invoke called with a string input.")
+            self.logger.info(f"[{self.name}] Invoke called with a string input: {input[:100]}...")
             history.add_user_message(input)
         elif isinstance(input, list):
-            self.logger.info(f"[{self.name}] Invoke called with a message history.")
+            self.logger.info(f"[{self.name}] Invoke called with a message history of {len(input)} messages.")
             for message in input:
-                history.add_message(message)
+                if isinstance(message, ChatMessageContent):
+                    history.add_message(message)
+                else:
+                    self.logger.warning(f"Élément non-conforme dans l'historique: {type(message)}. Ignoré.")
         
-        # Ajoute un message utilisateur vide si le dernier message n'est pas de l'utilisateur
-        if history.messages and history.messages[-1].role != "user":
-            history.add_user_message("...")
-
-        response_stream = self._kernel.invoke_stream(
-            self._agent,
-            arguments=KernelArguments(chat_history=history)
-        )
-
-        # Agrégation de la réponse
-        full_response = ""
-        final_chunk = None
-        async for chunk in response_stream:
-            full_response += str(chunk)
-            final_chunk = chunk
+        # Appelle la logique principale qui gère un historique complet.
+        # La méthode 'invoke_single' est idéale car elle ne streame pas et retourne un objet unique.
+        response_message = await self.invoke_single(history)
         
-        self.logger.info(f"[{self.name}] Final answer: {full_response}")
-        
-        if final_chunk:
-            # Reconstruire un ChatMessageContent depuis le dernier chunk, si possible,
-            # ou créer un nouveau.
-            return [ChatMessageContent(role="assistant", content=full_response, name=self.name)]
-        return [ChatMessageContent(role="assistant", content=full_response, name=self.name)]
+        # Le contrat de l'orchestrateur attend une liste de messages.
+        return [response_message]
 
     async def get_current_case_description(self) -> str:
         """

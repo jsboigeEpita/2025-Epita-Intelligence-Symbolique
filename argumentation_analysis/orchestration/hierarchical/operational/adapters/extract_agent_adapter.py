@@ -12,6 +12,7 @@ import time
 import uuid
 from typing import Dict, List, Any, Optional
 
+from argumentation_analysis.core.bootstrap import ProjectContext
 from argumentation_analysis.orchestration.hierarchical.operational.agent_interface import OperationalAgent
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
 from argumentation_analysis.core.communication import MessageMiddleware
@@ -35,7 +36,8 @@ class ExtractAgentAdapter(OperationalAgent):
 
     def __init__(self, name: str = "ExtractAgent",
                  operational_state: Optional[OperationalState] = None,
-                 middleware: Optional[MessageMiddleware] = None):
+                 middleware: Optional[MessageMiddleware] = None,
+                 project_context: Optional[ProjectContext] = None):
         """
         Initialise l'adaptateur pour l'agent d'extraction.
 
@@ -43,21 +45,24 @@ class ExtractAgentAdapter(OperationalAgent):
             name: Le nom de l'instance de l'agent.
             operational_state: L'état opérationnel partagé.
             middleware: Le middleware de communication.
+            project_context: Le contexte du projet.
         """
         super().__init__(name, operational_state, middleware=middleware)
         self.agent: Optional[ExtractAgent] = None
         self.kernel: Optional[Any] = None
         self.llm_service_id: Optional[str] = None
+        self.project_context = project_context
         self.initialized = False
         self.logger = logging.getLogger(f"ExtractAgentAdapter.{name}")
 
-    async def initialize(self, kernel: Any, llm_service_id: str) -> bool:
+    async def initialize(self, kernel: Any, llm_service_id: str, project_context: ProjectContext) -> bool:
         """
         Initialise l'agent d'extraction sous-jacent avec son kernel.
 
         Args:
             kernel: Le kernel Semantic Kernel à utiliser.
             llm_service_id: L'ID du service LLM à utiliser.
+            project_context: Le contexte du projet.
 
         Returns:
             True si l'initialisation a réussi, False sinon.
@@ -67,6 +72,7 @@ class ExtractAgentAdapter(OperationalAgent):
         
         self.kernel = kernel
         self.llm_service_id = llm_service_id
+        self.project_context = project_context
 
         try:
             self.logger.info("Initialisation de l'agent d'extraction interne...")

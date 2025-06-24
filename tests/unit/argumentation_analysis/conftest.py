@@ -26,7 +26,7 @@ def fol_agent(mock_kernel):
             """Mocked implementation for abstract method."""
             return True
 
-    agent = ConcreteFOLAgent(kernel=mock_kernel, service_id="test_service")
+    agent = ConcreteFOLAgent(kernel=mock_kernel, agent_name="FOLLogicAgent")
     # Mocking the bridge to avoid real Java calls
     agent._tweety_bridge = MagicMock()
     agent._tweety_bridge.validate_fol_belief_set.return_value = (True, "Valid")
