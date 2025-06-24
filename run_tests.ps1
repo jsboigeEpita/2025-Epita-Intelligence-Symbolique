@@ -82,75 +82,50 @@ if ($Type -eq "e2e") {
 }
 # Branche 2: Tests E2E avec Pytest (Python)
 elseif ($Type -eq "e2e-python") {
-    Write-Host "[INFO] Lancement des tests E2E avec Pytest..." -ForegroundColor Cyan
-    $pidFile = Join-Path $ProjectRoot '_temp/backend.pid'
-    $backendLauncher = Join-Path $ProjectRoot "project_core/core_from_scripts/start_backend_for_test.py"
-    $pytestLogFile = Join-Path $ProjectRoot '_temp/pytest_e2e.log'
+    Write-Host "[INFO] Lancement du cycle de test E2E via l'orchestrateur unifié et 'conda run'..." -ForegroundColor Cyan
+    
+    $CondaEnvName = "projet-is"
 
-    if (-not (Test-Path $backendLauncher)) {
-        Write-Host "[ERREUR] Le script de lancement du backend '$backendLauncher' est introuvable." -ForegroundColor Red
-        exit 1
+    # Construire la commande Python pour appeler l'orchestrateur
+    $OrchestratorArgs = @(
+        "python",
+        "-m", "argumentation_analysis.webapp.orchestrator",
+        "--integration",
+        "--log-level", "INFO"
+    )
+    if (-not ([string]::IsNullOrEmpty($Path))) {
+        $OrchestratorArgs += "--tests", $Path
     }
+    if ($DebugMode) {
+        $OrchestratorArgs[-1] = "DEBUG"
+    }
+
+    # Préparer la commande complète pour `conda run`
+    # --no-capture-output est essentiel pour voir les logs du serveur en temps réel
+    $CondaCommand = @(
+        "conda", "run", "-n", $CondaEnvName, "--no-capture-output"
+    ) + $OrchestratorArgs
+    
+    $commandString = $CondaCommand -join ' '
+    Write-Host "[INFO] Commande complète d'exécution construite :" -ForegroundColor Green
+    Write-Host $commandString -ForegroundColor Green
 
     try {
-        # 1. Lancer le backend en arrière-plan
-        Write-Host "[INFO] Lancement du backend en arrière-plan..." -ForegroundColor Yellow
-        $commandToRun = "python `"$backendLauncher`""
-        & $ActivationScript -CommandToRun $commandToRun
-        if ($LASTEXITCODE -ne 0) {
-            throw "Le lancement du backend a échoué."
-        }
-        
-        Write-Host "[INFO] Attente de 10 secondes pour que le backend se stabilise..." -ForegroundColor Yellow
-        Start-Sleep -Seconds 10
-
-        if (-not (Test-Path $pidFile)) {
-            throw "Le backend n'a pas démarré correctement (fichier PID '$pidFile' introuvable)."
-        }
-        
-        # 2. Construire la commande pytest en utilisant `python -m pytest` pour robustesse
-        $pytestCommandParts = @("python", "-m", "pytest", "-v", "-s", "--backend-url", "http://localhost:8003")
-        if ($DebugMode) {
-             $pytestCommandParts += "--log-cli-level=DEBUG"
-        }
-        if (-not [string]::IsNullOrEmpty($Path)) {
-            $pytestCommandParts += $Path
-        } else {
-            # Si aucun chemin n'est fourni, on cible le répertoire des tests e2e python par défaut.
-            $pytestCommandParts += "tests/e2e/python/"
-        }
-        if (-not [string]::IsNullOrEmpty($PytestArgs)) {
-            $pytestCommandParts += $PytestArgs.Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)
-        }
-        
-        $pytestFinalCommand = $pytestCommandParts -join " "
-        
-        # 3. Exécuter les tests via le script d'activation
-        Write-Host "[INFO] Exécution de Pytest: $pytestFinalCommand" -ForegroundColor Green
-        
-        # Le pipe (redirection) doit être exécuté dans un sous-shell pour que le runner le comprenne.
-        # On passe directement la commande python, le sous-shell est implicite à cause du pipe.
-        $commandToRunPytest = "$pytestFinalCommand *>&1 | Tee-Object -FilePath `"$pytestLogFile`" -Append"
-        & $ActivationScript -CommandToRun $pytestFinalCommand *>&1 | Tee-Object -FilePath "$pytestLogFile" -Append
+        # Exécuter directement la commande `conda run`
+        & $CondaCommand[0] $CondaCommand[1..($CondaCommand.Length-1)]
         $exitCode = $LASTEXITCODE
-
+        
         if ($exitCode -ne 0) {
-            Write-Host "[ERREUR] Les tests Pytest ont échoué avec le code $exitCode. Consultez '$pytestLogFile' pour les détails." -ForegroundColor Red
-        } else {
-            Write-Host "[INFO] Tests Pytest réussis." -ForegroundColor Green
+            # L'erreur est déjà affichée par le sous-processus grâce à --no-capture-output
+            throw "L'orchestrateur (via conda run) a terminé avec un code d'erreur: $exitCode"
         }
-        exit $exitCode
-
+        Write-Host "[INFO] L'orchestrateur (via conda run) a terminé avec succès." -ForegroundColor Green
     }
-    finally {
-        # 4. Nettoyer et arrêter le backend
-        if (Test-Path $pidFile) {
-            $pidToKill = Get-Content $pidFile
-            Write-Host "[INFO] Arrêt du processus backend (PID: $pidToKill)..." -ForegroundColor Yellow
-            Stop-Process -Id $pidToKill -Force -ErrorAction SilentlyContinue
-            Remove-Item $pidFile -ErrorAction SilentlyContinue
-        }
+    catch {
+        Write-Host "[ERREUR] L'exécution via conda run a échoué. $_" -ForegroundColor Red
+        exit 1
     }
+    exit $LASTEXITCODE
 }
 # Branche 3: Tests Unit/Functional (Python) via test_runner.py
 else {
