@@ -85,7 +85,7 @@ def test_internal_explore_hierarchy(informal_plugin_mocked, mock_taxonomy_df):
     assert hierarchy_pk0['children'][0]['nom_vulgarise'] == 'Fallacy of Relevance'
     
     hierarchy_pk1 = informal_plugin_mocked._internal_explore_hierarchy(1, mock_taxonomy_df)
-    assert hierarchy_pk1['current_node']['nom_vulgarisé'] == 'Fallacy of Relevance'
+    assert hierarchy_pk1['current_node']['nom_vulgarise'] == 'Fallacy of Relevance'
     assert len(hierarchy_pk1['children']) == 2
     assert hierarchy_pk1['children'][0]['nom_vulgarisé'] == 'Ad Hominem'
 
