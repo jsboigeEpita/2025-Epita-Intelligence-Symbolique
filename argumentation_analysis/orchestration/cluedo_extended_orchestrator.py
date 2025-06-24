@@ -449,14 +449,29 @@ class CluedoExtendedOrchestrator:
                 # Le message au prochain agent est le contenu du dernier message
                 # La méthode `invoke` est le point d'entrée standard pour les agents SK.
                 # Gestion de la taille de l'historique pour éviter le dépassement de contexte
+                
+                # 1. Tronquer le nombre de messages
                 if len(history) > self.MAX_HISTORY_MESSAGES:
                     self._logger.warning(f"L'historique dépasse {self.MAX_HISTORY_MESSAGES} messages. Troncation...")
                     # Conserve le premier message (système) et les N-1 derniers messages
-                    history_to_send = [history[0]] + history[-(self.MAX_HISTORY_MESSAGES - 1):]
+                    temp_history = [history[0]] + history[-(self.MAX_HISTORY_MESSAGES - 1):]
                 else:
-                    history_to_send = history
+                    temp_history = history
+                
+                # 2. Nettoyer et simplifier l'historique pour réduire la charge de tokens
+                history_to_send = []
+                for msg in temp_history:
+                    # Crée un message simple avec seulement le contenu essentiel
+                    clean_content = str(msg.content) if msg.content else ""
+                    history_to_send.append(
+                        ChatMessageContent(
+                            role=msg.role,
+                            content=clean_content,
+                            name=getattr(msg, 'name', None) or getattr(msg, 'author_name', None)
+                        )
+                    )
 
-                # MODIFICATION : Passer l'historique potentiellement tronqué
+                # MODIFICATION : Passer l'historique nettoyé et tronqué
                 agent_response_raw = await next_agent.invoke(input=history_to_send, arguments=KernelArguments())
                 
                 # Le résultat de invoke peut être un ChatMessageContent, une liste, ou un objet résultat
