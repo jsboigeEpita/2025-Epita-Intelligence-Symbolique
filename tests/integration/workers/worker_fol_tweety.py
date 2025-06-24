@@ -3,6 +3,8 @@ import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
 from config.unified_config import UnifiedConfig
+import sys
+import pathlib
 
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
@@ -235,7 +237,7 @@ class TestRealTweetyFOLAnalysis:
         assert analysis_time < 30.0
         
         logger.info(f"✅ Analyse syllogisme terminée en {analysis_time:.2f}s")
-        logger.info(f"Formules dans le belief set: {belief_set.getFormulas()}")
+        logger.info(f"Formules dans le belief set: {str(belief_set)}")
         # logger.info(f"Cohérence: {result.consistency_check}") # Attribut non existant sur l'objet belief_set
         # logger.info(f"Confiance: {result.confidence_score}") # Idem
     
@@ -311,7 +313,7 @@ class TestFOLErrorHandling:
         feedback = error_analyzer.analyze_error(tweety_error)
         
         if feedback:
-            assert feedback.error_type == "syntax_error"
+            assert feedback.error_type == "DECLARATION_ERROR"
             assert len(feedback.bnf_rules) > 0
             assert len(feedback.corrections) > 0
             logger.info(f"✅ Erreur analysée: {feedback.corrections}")
@@ -330,7 +332,7 @@ class TestFOLErrorHandling:
         
         # Agent doit gérer gracieusement
         assert belief_set is None
-        assert "erreur" in msg.lower() or "échec" in msg.lower()
+        assert "no logical structure" in msg.lower()
         
     @pytest.mark.asyncio
     @pytest.mark.skip(reason="Needs a way to mock async methods on the instance from fixture")

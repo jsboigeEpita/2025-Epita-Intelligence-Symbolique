@@ -67,11 +67,15 @@ class FOLHandler:
 
     def create_programmatic_fol_signature(self, signature_json: dict):
         """
-        Creates an FolSignature object programmatically from a JSON definition.
+        Creates an FolSignature object programmatically from the new, structured JSON format.
         
-        :param signature_json: A dictionary containing 'sorts' and 'predicates'.
-                               e.g., {"sorts": {"person": ["socrates"]}, "predicates": [{"name": "Is", "args": ["person"]}]}
-        :return: A jpype._jclass.org.tweetyproject.logics.fol.syntax.FolSignature object.
+        :param signature_json: A dictionary containing 'sorts', 'constants', and 'predicates'.
+                               e.g., {
+                                   "sorts": ["person", "city"],
+                                   "constants": {"socrates": "person", "athens": "city"},
+                                   "predicates": [{"name": "LivesIn", "args": ["person", "city"]}]
+                               }
+        :return: A jpype._jclass.org.tweetyproject.logics.fol.syntax.FolSignature object or None on failure.
         """
         FolSignature = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolSignature")
         Sort = jpype.JClass("org.tweetyproject.logics.commons.syntax.Sort")
@@ -81,24 +85,35 @@ class FOLHandler:
         ArrayList = jpype.JClass("java.util.ArrayList")
 
         signature = FolSignature()
-        sorts_map = {} # Python-side mapping from name to Java Sort object
+        sorts_map = {}  # Python-side mapping from name to Java Sort object
 
         # 1. Create and add Sorts
-        sorts_data = signature_json.get("sorts", {})
-        for sort_name in sorts_data.keys():
-            java_sort = Sort(String(sort_name))
-            signature.add(java_sort)
-            sorts_map[sort_name] = java_sort
-            logger.debug(f"Programmatically added sort: {sort_name}")
+        sort_names = signature_json.get("sorts", [])
+        for sort_name in sort_names:
+            try:
+                java_sort = Sort(String(sort_name))
+                signature.add(java_sort)
+                sorts_map[sort_name] = java_sort
+                logger.debug(f"Programmatically added sort: {sort_name}")
+            except jpype.JException as e:
+                logger.error(f"Failed to add sort '{sort_name}': {e.getMessage()}")
+                return None
 
-        # 2. Create and add Constants associated with their Sorts
-        for sort_name, constants_list in sorts_data.items():
+        # 2. Create and add Constants, linking them to their Sorts
+        constants_data = signature_json.get("constants", {})
+        for const_name, sort_name in constants_data.items():
             if sort_name in sorts_map:
                 parent_sort = sorts_map[sort_name]
-                for const_name in constants_list:
+                try:
                     java_constant = Constant(String(const_name), parent_sort)
                     signature.add(java_constant)
                     logger.debug(f"Programmatically added constant: {const_name} of sort {sort_name}")
+                except jpype.JException as e:
+                    logger.error(f"Failed to add constant '{const_name}': {e.getMessage()}")
+                    return None
+            else:
+                logger.error(f"Cannot create constant '{const_name}': Its sort '{sort_name}' has not been declared.")
+                return None
 
         # 3. Create and add Predicates
         predicates_data = signature_json.get("predicates", [])
@@ -117,12 +132,17 @@ class FOLHandler:
                     break
             
             if valid_predicate:
-                java_predicate = Predicate(String(pred_name), java_arg_sorts)
-                signature.add(java_predicate)
-                logger.debug(f"Programmatically added predicate: {pred_name} with args {arg_sort_names}")
+                try:
+                    java_predicate = Predicate(String(pred_name), java_arg_sorts)
+                    signature.add(java_predicate)
+                    logger.debug(f"Programmatically added predicate: {pred_name} with args {arg_sort_names}")
+                except jpype.JException as e:
+                    logger.error(f"Failed to add predicate '{pred_name}': {e.getMessage()}")
+                    return None
         
+        logger.info(f"Final signature object state (Java toString): {signature}")
         return signature
-
+ 
     def create_belief_set_from_formulas(self, signature, formulas: list[str]):
         """
         Creates a FolBeliefSet by parsing formulas against a pre-built signature.
@@ -206,8 +226,15 @@ class FOLHandler:
         try:
             FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
             parser = FolParser()
+            logger.debug(f"Signature object provided to validator: {signature} (Hash: {signature.hashCode()})")
             parser.setSignature(signature)
             
+            # DEBUG: Check if the signature was actually set
+            retrieved_sig = parser.getSignature()
+            logger.debug(f"Signature retrieved from parser after set: {retrieved_sig} (Hash: {retrieved_sig.hashCode()})")
+            if not signature.equals(retrieved_sig):
+                logger.error("CRITICAL: Signature object in parser is NOT the one we set!")
+
             # The actual parsing is the validation
             self.parse_fol_formula(formula_str, custom_parser=parser)
             
