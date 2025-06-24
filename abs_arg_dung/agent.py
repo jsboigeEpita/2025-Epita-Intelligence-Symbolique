@@ -57,6 +57,16 @@ class DungAgent:
         
         self.af = self.DungTheory()
         self._arguments = {}
+        
+        # Initialiser les reasoners une seule fois
+        self.grounded_reasoner = self.SimpleGroundedReasoner()
+        self.preferred_reasoner = self.SimplePreferredReasoner()
+        self.stable_reasoner = self.SimpleStableReasoner()
+        self.complete_reasoner = self.SimpleCompleteReasoner()
+        self.admissible_reasoner = self.SimpleAdmissibleReasoner()
+        self.ideal_reasoner = self.SimpleIdealReasoner()
+        self.semi_stable_reasoner = self.SimpleSemiStableReasoner()
+
         # Attributs pour le cache des extensions
         self._cached_extensions = {}
         self._cache_valid = False
@@ -87,13 +97,13 @@ class DungAgent:
         if not self._cache_valid:
             print("(Calcul des extensions en cours...)")
             self._cached_extensions = {
-                'grounded': sorted([str(arg.getName()) for arg in self.SimpleGroundedReasoner().getModel(self.af)]),
-                'preferred': self._format_extensions(self.SimplePreferredReasoner().getModels(self.af)),
-                'stable': self._format_extensions(self.SimpleStableReasoner().getModels(self.af)),
-                'complete': self._format_extensions(self.SimpleCompleteReasoner().getModels(self.af)),
-                'admissible': self._format_extensions(self.SimpleAdmissibleReasoner().getModels(self.af)),
-                'ideal': sorted([str(arg.getName()) for arg in self.SimpleIdealReasoner().getModel(self.af)]),
-                'semi_stable': self._format_extensions(self.SimpleSemiStableReasoner().getModels(self.af))
+                'grounded': sorted([str(arg.getName()) for arg in self.grounded_reasoner.getModel(self.af)]),
+                'preferred': self._format_extensions(self.preferred_reasoner.getModels(self.af)),
+                'stable': self._format_extensions(self.stable_reasoner.getModels(self.af)),
+                'complete': self._format_extensions(self.complete_reasoner.getModels(self.af)),
+                'admissible': self._format_extensions(self.admissible_reasoner.getModels(self.af)),
+                'ideal': sorted([str(arg.getName()) for arg in self.ideal_reasoner.getModel(self.af)]),
+                'semi_stable': self._format_extensions(self.semi_stable_reasoner.getModels(self.af))
             }
             self._cache_valid = True
 

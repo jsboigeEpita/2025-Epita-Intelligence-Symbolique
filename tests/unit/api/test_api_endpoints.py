@@ -1,3 +1,4 @@
+from tests.fixtures.jvm_subprocess_fixture import run_in_jvm_subprocess
 import pytest
 import os
 

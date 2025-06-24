@@ -39,11 +39,17 @@ function Write-Stderr {
 
 try {
     if ($CommandToRun) {
-        # Exécution directe: On ne passe plus par le wrapper python.
-        # conda run active l'environnement et exécute la commande.
+        # Définir le PYTHONPATH pour inclure la racine du projet.
+        # C'est essentiel pour que `conda run` trouve les modules locaux.
+        $ProjectRoot = Resolve-Path $PSScriptRoot
+        Write-Stderr "Ajout de la racine du projet au PYTHONPATH : $ProjectRoot"
+        $env:PYTHONPATH = "$ProjectRoot" + [IO.Path]::PathSeparator + $env:PYTHONPATH
+
+        # La commande pour conda run, en s'assurant que le PYTHONPATH est propagé.
+        # `--no-capture-output` est important pour voir les logs en temps réel.
         $CondaCommand = "conda run --no-capture-output -n projet-is $CommandToRun"
 
-        Write-Stderr "Exécution directe de la commande dans l'environnement 'projet-is': $CommandToRun"
+        Write-Stderr "Exécution de la commande dans l'environnement 'projet-is' avec le PYTHONPATH mis à jour: $CommandToRun"
         Invoke-Expression -Command $CondaCommand
         $exitCode = $LASTEXITCODE
         if ($exitCode -ne 0) {

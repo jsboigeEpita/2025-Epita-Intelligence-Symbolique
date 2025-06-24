@@ -5,6 +5,7 @@ from .models import AnalysisResponse, Fallacy
 
 import jpype
 import jpype.imports
+from jpype import JClass
 import time
 from typing import Dict
 
@@ -114,8 +115,14 @@ class DungAnalysisService:
                 "Veuillez l'initialiser au point d'entrée de l'application."
             )
         # Importer l'agent ici pour s'assurer que la JVM est prête
-        from enhanced_agent import EnhancedDungAgent
+        from abs_arg_dung.enhanced_agent import EnhancedDungAgent
         self.agent_class = EnhancedDungAgent
+        
+        # Exposer les classes Java nécessaires pour que le test worker puisse passer
+        self.DungTheory = JClass('org.tweetyproject.arg.dung.syntax.DungTheory')
+        self.Argument = JClass('org.tweetyproject.arg.dung.syntax.Argument')
+        self.Attack = JClass('org.tweetyproject.arg.dung.syntax.Attack')
+        
         print("Service d'analyse Dung initialisé, utilisant EnhancedDungAgent.")
 
 

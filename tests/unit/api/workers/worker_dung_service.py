@@ -25,29 +25,29 @@ def main():
         # Scénario 1: Framework simple
         arguments = ["a", "b", "c"]
         attacks = [("a", "b"), ("b", "c")]
-        result = dung_service.analyze_framework(arguments, attacks)
-        assert result['semantics']['grounded'] == ["a", "c"]
-        assert result['semantics']['preferred'] == [["a", "c"]]
+        result = dung_service.analyze_framework(arguments, attacks, options={'compute_extensions': True})
+        assert result['extensions']['grounded'] == ["a", "c"]
+        assert result['extensions']['preferred'] == [["a", "c"]]
 
         # Scénario 2: Framework cyclique
         arguments = ["a", "b"]
         attacks = [("a", "b"), ("b", "a")]
-        result = dung_service.analyze_framework(arguments, attacks)
-        assert result['semantics']['grounded'] == []
-        assert result['semantics']['preferred'] == [["a"], ["b"]]
+        result = dung_service.analyze_framework(arguments, attacks, options={'compute_extensions': True})
+        assert result['extensions']['grounded'] == []
+        assert result['extensions']['preferred'] == [["a"], ["b"]]
 
         # Scénario 3: Framework vide
         arguments = []
         attacks = []
-        result = dung_service.analyze_framework(arguments, attacks)
-        assert result['semantics']['grounded'] == []
-        assert result['semantics']['preferred'] == [[]]
+        result = dung_service.analyze_framework(arguments, attacks, options={'compute_extensions': True})
+        assert result['extensions']['grounded'] == []
+        assert result['extensions']['preferred'] == [[]]
 
         # Scénario 4: Argument auto-attaquant
         arguments = ["a", "b"]
         attacks = [("a", "a"), ("a", "b")]
-        result = dung_service.analyze_framework(arguments, attacks)
-        assert result['semantics']['grounded'] == []
+        result = dung_service.analyze_framework(arguments, attacks, options={'compute_extensions': True})
+        assert result['extensions']['grounded'] == []
         assert result['argument_status']['a']['credulously_accepted'] is False
         assert result['graph_properties']['self_attacking_nodes'] == ["a"]
 

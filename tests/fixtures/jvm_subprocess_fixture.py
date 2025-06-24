@@ -21,44 +21,39 @@ def run_in_jvm_subprocess():
         if not script_path.exists():
             raise FileNotFoundError(f"Le script de test à exécuter n'a pas été trouvé : {script_path}")
 
-        # Construit la commande à passer au script d'activation.
-        command_to_run = [
-            sys.executable,
-            str(script_path.resolve()),
-            *args
-        ]
-
-        print(f"Exécution du sous-processus JVM direct : {' '.join(command_to_run)}")
-        
-        # On exécute le processus. `check=True` lèvera une exception si le
-        # sous-processus retourne un code d'erreur.
-        # Cloner l'environnement actuel et ajouter la racine du projet au PYTHONPATH.
-        # C'est crucial pour que les imports comme `from tests.fixtures...` fonctionnent
-        # dans le sous-processus.
-        # Forcer le rechargement du .env pour s'assurer que les dernières
-        # modifications sont prises en compte dans le sous-processus.
-        # C'est CRUCIAL car le processus pytest principal ne relit pas le .env
-        # après son démarrage initial. override=True garantit que les
-        # variables en mémoire (potentiellement périmées) sont écrasées.
-        load_dotenv(find_dotenv(), override=True)
-        
-        # La configuration du PYTHONPATH est essentielle pour les sous-processus.
-        # Contrairement à ce que le commentaire précédent indiquait, le PYTHONPATH
-        # n'est PAS hérité. Nous devons l'ajouter manuellement à l'environnement
-        # du sous-processus pour garantir que les imports locaux fonctionnent.
+        # Nouvelle approche: l'injection de PYTHONPATH via un script Python est plus fiable
         project_root = Path(__file__).parent.parent.parent.resolve()
-        env = os.environ.copy()
-        python_path = env.get("PYTHONPATH", "")
-        if str(project_root) not in python_path.split(os.pathsep):
-            env["PYTHONPATH"] = f"{str(project_root)}{os.pathsep}{python_path}"
+        
+        # Convertir le chemin du script en un nom de module importable
+        # Ex: D:\path\to\project\tests\unit\worker.py -> tests.unit.worker
+        try:
+            module_name = str(script_path.resolve().relative_to(project_root)).replace('\\', '.').replace('/', '.')[:-3]
+        except ValueError:
+            raise ValueError(f"Le script {script_path} ne semble pas être dans la racine du projet {project_root}")
+
+        # La commande Python qui va tout gérer
+        python_command = (
+            f'import sys; '
+            f'import importlib; '
+            f'sys.path.insert(0, r"{str(project_root)}"); '
+            f'print(f"PYTHONPATH injecté: {{sys.path[0]}}"); '
+            f'print(f"Importation et exécution du module: {module_name}"); '
+            f'worker_module = importlib.import_module("{module_name}"); '
+            f'worker_module.main()'
+        )
+
+        # La commande complète pour le sous-processus
+        command_for_subprocess = [sys.executable, "-c", python_command]
+
+        print(f"Exécution du worker via injection de sys.path: {' '.join(command_for_subprocess)}")
 
         result = subprocess.run(
-            command_to_run,
+            command_for_subprocess,
             capture_output=True,
             text=True,
             encoding='utf-8',
-            check=False, # On met à False pour pouvoir afficher les logs même si ça plante
-            env=env
+            check=False,
+            cwd=project_root
         )
         
         # Afficher la sortie pour le débogage, surtout en cas d'échec

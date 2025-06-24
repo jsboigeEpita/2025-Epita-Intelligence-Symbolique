@@ -1,4 +1,4 @@
-from agent import DungAgent
+from abs_arg_dung.agent import DungAgent
 import networkx as nx
 
 class EnhancedDungAgent(DungAgent):

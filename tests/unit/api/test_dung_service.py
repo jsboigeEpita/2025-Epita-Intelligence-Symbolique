@@ -1,3 +1,4 @@
+from tests.fixtures.jvm_subprocess_fixture import run_in_jvm_subprocess
 import pytest
 import os
 
@@ -5,7 +6,7 @@ import os
 # Ce chemin est relatif au répertoire racine du projet.
 WORKER_SCRIPT_PATH = "tests/unit/api/workers/worker_dung_service.py"
 
-# @pytest.mark.skip(reason="Désactivé temporairement pour investiguer d'autres échecs.")
+@pytest.mark.skip(reason="Ce test cause un crash non déterministe de la JVM dans le sous-processus. À réactiver après enquête sur l'environnement.")
 def test_dung_service_via_worker(run_in_jvm_subprocess):
     """
     Exécute les tests du service Dung dans un sous-processus isolé.
@@ -20,7 +21,7 @@ def test_dung_service_via_worker(run_in_jvm_subprocess):
     appels de méthodes, assertions). Ce test principal ne fait que valider
     que le worker s'est exécuté sans erreur et a renvoyé un signal de succès.
     """
-    pytest.skip("Test désactivé car il bloque l'exécution de la suite de tests.")
+    # pytest.skip("Test désactivé car il bloque l'exécution de la suite de tests.")
     # Vérifie que le script worker existe avant de tenter de l'exécuter.
     # Le chemin est construit à partir de la racine du projet.
     assert os.path.exists(WORKER_SCRIPT_PATH), f"Le script worker est introuvable: {WORKER_SCRIPT_PATH}"

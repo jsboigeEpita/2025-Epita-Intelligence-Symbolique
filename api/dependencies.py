@@ -137,7 +137,7 @@ def get_dung_analysis_service() -> DungAnalysisService:
         logging.info("[API] Initialisation du DungAnalysisService...")
         import jpype
         import jpype.imports
-        from argumentation_analysis.core.orchestration.jpype_manager import JPypeManager
+        from argumentation_analysis.orchestration.jpype_manager import JPypeManager
         
         if not jpype.isJVMStarted():
             # Instance du manager pour la configuration centralisée

@@ -35,10 +35,12 @@ def sample_metrics_for_visualization() -> Dict[str, Dict[str, Any]]:
 
 
 def test_generate_performance_visualizations_libs_not_available(
+    mocker,
     sample_metrics_for_visualization: Dict[str, Dict[str, Any]],
     tmp_path: Path
 ):
     """Teste que la fonction ne fait rien si les bibliothèques ne sont pas disponibles."""
+    mocker.patch('argumentation_analysis.utils.visualization_generator.VISUALIZATION_LIBS_AVAILABLE', False)
     output_dir = tmp_path / "viz_output_no_libs"
     generated_files = generate_performance_visualizations(sample_metrics_for_visualization, output_dir)
     assert generated_files == []
@@ -109,7 +111,7 @@ def test_generate_performance_visualizations_files_created(
     assert str(output_dir / expected_csv) in generated_files
 
 
-def test_generate_performance_visualizations_empty_metrics(mocker, setup_numpy_for_tests_fixture, tmp_path: Path):
+def test_generate_performance_visualizations_empty_metrics(mocker, tmp_path: Path):
     """Teste avec un dictionnaire de métriques vide."""
     mocker.patch('argumentation_analysis.utils.visualization_generator.VISUALIZATION_LIBS_AVAILABLE', True)
     mock_savefig = mocker.patch('matplotlib.pyplot.savefig')
