@@ -14,6 +14,7 @@ class FOLHandler:
     """
 
     def __init__(self, initializer_instance: TweetyInitializer):
+        self.logger = logging.getLogger(__name__)
         self._initializer_instance = initializer_instance
         self._fol_parser = self._initializer_instance.get_fol_parser()
         # self._fol_reasoner = TweetyInitializer.get_fol_reasoner() # If a general one is set up
