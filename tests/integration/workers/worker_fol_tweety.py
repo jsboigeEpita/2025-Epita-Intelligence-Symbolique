@@ -328,11 +328,11 @@ class TestFOLErrorHandling:
         # Texte problématique
         problematic_text = "Ceci n'est pas une formule logique valide !!!"
         
-        belief_set, msg = await agent.text_to_belief_set_unified(problematic_text)
+        belief_set, msg = await agent.text_to_belief_set(problematic_text)
         
         # Agent doit gérer gracieusement
         assert belief_set is None
-        assert "no logical structure" in msg.lower()
+        assert "aucune structure logique" in msg.lower()
         
     @pytest.mark.asyncio
     @pytest.mark.skip(reason="Needs a way to mock async methods on the instance from fixture")
@@ -366,7 +366,7 @@ class TestFOLPerformanceVsModal:
         
         # Test FOL
         start_fol = time.time()
-        belief_set, _ = await fol_agent.text_to_belief_set_unified(test_text)
+        belief_set, _ = await fol_agent.text_to_belief_set(test_text)
         fol_time = time.time() - start_fol
         
         # Vérifications FOL
@@ -396,7 +396,7 @@ class TestFOLPerformanceVsModal:
         
         for text in test_texts:
             start = time.time()
-            belief_set, _ = await agent.text_to_belief_set_unified(text)
+            belief_set, _ = await agent.text_to_belief_set(text)
             elapsed = time.time() - start
             
             results.append(belief_set)
@@ -420,7 +420,7 @@ class TestFOLPerformanceVsModal:
         # Analyses répétées pour tester fuites mémoire
         for i in range(10):
             text = f"Test mémoire numéro {i}. Tous les tests sont importants."
-            _ = await agent.text_to_belief_set_unified(text)
+            _ = await agent.text_to_belief_set(text)
         
         # Le test de la mémoire est implicite dans le fait que cela ne crashe pas.
         # Les anciens attributs comme analysis_cache et get_analysis_summary n'existent plus.
@@ -442,7 +442,7 @@ class TestFOLRealWorldIntegration:
         """
         
         agent = fol_agent_with_kernel
-        belief_set, msg = await agent.text_to_belief_set_unified(complex_text)
+        belief_set, msg = await agent.text_to_belief_set(complex_text)
         
         # Analyse réussie
         assert belief_set is not None, f"Message: {msg}"
@@ -466,7 +466,7 @@ class TestFOLRealWorldIntegration:
         agent = fol_agent_with_kernel
         
         for lang, text in texts.items():
-            belief_set, msg = await agent.text_to_belief_set_unified(text)
+            belief_set, msg = await agent.text_to_belief_set(text)
             
             assert belief_set is not None, f"Message: {msg}"
             assert belief_set.content
