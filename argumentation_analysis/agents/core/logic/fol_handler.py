@@ -140,6 +140,7 @@ class FOLHandler:
                     logger.error(f"Failed to add predicate '{pred_name}': {e.getMessage()}")
                     return None
         
+        logger.info(f"Final signature object state (Java toString): {signature}")
         return signature
  
     def create_belief_set_from_formulas(self, signature, formulas: list[str]):
@@ -225,8 +226,15 @@ class FOLHandler:
         try:
             FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
             parser = FolParser()
+            logger.debug(f"Signature object provided to validator: {signature} (Hash: {signature.hashCode()})")
             parser.setSignature(signature)
             
+            # DEBUG: Check if the signature was actually set
+            retrieved_sig = parser.getSignature()
+            logger.debug(f"Signature retrieved from parser after set: {retrieved_sig} (Hash: {retrieved_sig.hashCode()})")
+            if not signature.equals(retrieved_sig):
+                logger.error("CRITICAL: Signature object in parser is NOT the one we set!")
+
             # The actual parsing is the validation
             self.parse_fol_formula(formula_str, custom_parser=parser)
             

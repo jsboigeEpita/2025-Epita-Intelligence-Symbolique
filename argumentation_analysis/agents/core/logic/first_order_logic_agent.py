@@ -41,55 +41,65 @@ l'exécution de ces requêtes sur un ensemble de croyances FOL, et l'interpréta
 """
 
 # Prompts pour la logique du premier ordre (optimisés)
-PROMPT_TEXT_TO_FOL_DEFS = """Expert FOL : Analysez le texte pour extraire sa structure logique en JSON strict.
+PROMPT_TEXT_TO_FOL_DEFS = """Expert en Logique du Premier Ordre (FOL), votre tâche est d'analyser un texte et d'en extraire la structure logique (sorts, constantes, prédicats) dans un format JSON strict.
 
-Tâches:
-1. Identifier les `sorts` (catégories générales, ex: "personne", "ville").
-2. Identifier les `constants` (individus spécifiques, ex: "jean", "paris").
-3. Identifier les `predicates` (propriétés ou relations, ex: "EstMortel", "Aime").
+**Instructions fondamentales :**
 
-Format JSON de sortie :
-{
-  "sorts": ["personne", "ville"],
-  "constants": {
-    "jean": "personne",
-    "marie": "personne",
-    "paris": "ville"
-  },
-  "predicates": [
-    {"name": "EstMortel", "args": ["personne"]},
-    {"name": "Aime", "args": ["personne", "personne"]}
-  ]
-}
+1.  **Sorts vs. Prédicats :**
+    *   Un **`sort`** est une **catégorie** ou un **type** d'entité (ex: `homme`, `animal`, `ville`). C'est un nom commun général.
+    *   Un **`prédicat`** est une **propriété** (ex: `EstMortel`, `EstBleu`) ou une **relation** entre entités (ex: `Aime`, `EstPlusGrandQue`).
+    *   **Règle cruciale :** Ne créez PAS un `sort` pour une simple propriété. `"mortel"` est une propriété, donc `EstMortel` est un prédicat. Le `sort` est l'entité qui *peut être* mortelle (ex: `homme`).
 
-Règles strictes :
-- Noms de sorts et constantes en `snake_case`.
-- Noms de prédicats en `PascalCase`.
-- Chaque constante DOIT être associée à un sort existant.
-- Les arguments (`args`) des prédicats DOIVENT être des noms de `sorts` valides.
+2.  **Nomenclature :**
+    *   `sorts` et `constants` : Toujours en `snake_case` minuscule et **au singulier** (ex: `homme`, `etudiant`).
+    *   `predicates` : Toujours en `PascalCase` et **au singulier** (ex: `EstMortel`, `EstIntelligent`).
+    *   **Règle cruciale :** Ne générez jamais de noms au pluriel comme "EstHommes". Le prédicat doit s'appliquer à un *individu* du sort.
 
-Exemple 1: "Socrate est un homme. Tous les hommes sont mortels."
-→
-{
-  "sorts": ["homme"],
-  "constants": {"socrate": "homme"},
-  "predicates": [
-    {"name": "EstHomme", "args": ["homme"]},
-    {"name": "EstMortel", "args": ["homme"]}
-  ]
-}
+3.  **Format de sortie (JSON Strict) :**
+    ```json
+    {
+      "sorts": ["<type_1>", "<type_2>"],
+      "constants": {
+        "<const_1>": "<type_1>",
+        "<const_2>": "<type_2>"
+      },
+      "predicates": [
+        {"name": "NomPredicat1", "args": ["<type_1>"]},
+        {"name": "NomPredicat2", "args": ["<type_1>", "<type_2>"]}
+      ]
+    }
+    ```
+    *   Chaque `constant` doit être associée à un `sort` existant.
+    *   Les `args` d'un `predicate` doivent correspondre à des `sorts` déclarés.
 
-Exemple 2: "Tous les étudiants français sont intelligents."
-→
-{
-    "sorts": ["etudiant"],
-    "constants": {},
-    "predicates": [
-        {"name": "EstFrancais", "args": ["etudiant"]},
-        {"name": "EstIntelligent", "args": ["etudiant"]}
-    ]
-}
+**Exemples révisés pour clarifier :**
 
+*   **Exemple 1 :** "Socrate est un homme. Tous les hommes sont mortels."
+    *   **Analyse :** `homme` est la catégorie (sort). `socrate` est une instance (constante). `mortel` est une propriété (prédicat).
+    *   **JSON correct :**
+        ```json
+        {
+          "sorts": ["homme"],
+          "constants": {"socrate": "homme"},
+          "predicates": [
+            {"name": "EstMortel", "args": ["homme"]}
+          ]
+        }
+        ```
+
+*   **Exemple 2 :** "Tous les chats siamois sont des animaux."
+    *   **Analyse :** `animal` est le sort principal. `chat_siamois` pourrait être un sous-sort, mais pour simplifier, nous le traitons comme une propriété. Donc nous avons un sort `chat` et un prédicat `EstSiamois`.
+    *   **JSON correct (approche simple) :**
+        ```json
+        {
+            "sorts": ["chat"],
+            "constants": {},
+            "predicates": [
+                {"name": "EstSiamois", "args": ["chat"]},
+                {"name": "EstAnimal", "args": ["chat"]}
+            ]
+        }
+        ```
 
 Texte à analyser : {{$input}}
 """
@@ -105,6 +115,7 @@ PROMPT_TEXT_TO_FOL_FORMULAS = """Expert FOL : Traduisez le texte en formules de 
     *   **CORRECT :** `forall X:etudiant (EstIntelligent(X))`
     *   **INCORRECT :** `forall X: (EstFrancais(X) => etudiant(X))`
     *   **CORRECT :** `forall X:etudiant (EstFrancais(X) => /* autre prédicat */)`
+4.  **Arguments des Prédicats :** Les arguments passés à un prédicat DOIVENT être des **variables** (ex: `X`, `Y`) ou des **constantes** définies (ex: `socrate`). Un nom de `sort` (ex: `etudiant`, `culture`) ne peut **JAMAIS** être utilisé directement comme argument d'un prédicat.
 
 **Exemple de transformation :**
 
@@ -115,8 +126,8 @@ PROMPT_TEXT_TO_FOL_FORMULAS = """Expert FOL : Traduisez le texte en formules de 
       "sorts": ["etudiant"],
       "constants": {},
       "predicates": [
-        {"name": "EstFrancais", "args": ["etudiant"]},
-        {"name": "EstIntelligent", "args": ["etudiant"]}
+        {"name": "estfrancais", "args": ["etudiant"]},
+        {"name": "estintelligent", "args": ["etudiant"]}
       ]
     }
     ```
@@ -124,10 +135,15 @@ PROMPT_TEXT_TO_FOL_FORMULAS = """Expert FOL : Traduisez le texte en formules de 
     ```json
     {
       "formulas": [
-        "forall X:etudiant (EstFrancais(X) => EstIntelligent(X))"
+        "forall X:etudiant (estfrancais(X) => estintelligent(X))"
       ]
     }
     ```
+
+*   **Exemple sur l'erreur à éviter :**
+*   **Contexte :** Prédicat `influence(ecrivain, culture)` dans les Définitions, où `culture` est un `sort`.
+*   **INCORRECT :** `influence(un_ecrivain, culture)` <-- ERREUR : `culture` est un `sort`, pas une `constante`. Un nom de `sort` ne peut pas être un argument.
+*   **CORRECT :** `exists X:culture (influence(un_ecrivain, X))` <-- On doit utiliser une variable quantifiée.
 
 **Votre tâche :**
 
@@ -335,10 +351,19 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             # Step 1: Generate the logical structure (sorts, constants, predicates) from text
             self.logger.info("Step 1: Generating logical structure (sorts, constants, predicates)...")
             defs_result = await self._kernel.plugins[self.name]["TextToFOLDefs"].invoke(self._kernel, input=text)
-            defs_json = json.loads(self._extract_json_block(str(defs_result)))
-            self.logger.debug(f"Received logical structure from LLM: {json.dumps(defs_json, indent=2)}")
+            raw_defs_json = json.loads(self._extract_json_block(str(defs_result)))
+            self.logger.debug(f"Received raw logical structure from LLM: {json.dumps(raw_defs_json, indent=2)}")
 
-            # Step 2: Generate formulas based on the extracted structure
+            # Step 1.5: Normalize all identifiers to prevent LLM inconsistencies
+            defs_json = self._normalize_definitions(raw_defs_json)
+            self.logger.debug(f"Normalized logical structure: {json.dumps(defs_json, indent=2)}")
+
+            # Check if the extracted definitions are empty
+            if not defs_json.get("sorts") and not defs_json.get("constants") and not defs_json.get("predicates"):
+                self.logger.warning("No logical structure could be extracted from the text.")
+                return None, "No logical structure could be extracted from the text."
+
+            # Step 2: Generate formulas based on the extracted and NOW NORMALIZED structure
             self.logger.info("Step 2: Generating formulas...")
             definitions_for_prompt = json.dumps(defs_json, indent=2)
             formulas_result = await self._kernel.plugins[self.name]["TextToFOLFormulas"].invoke(
@@ -357,7 +382,9 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             self.logger.info("Step 4: Validating generated formulas against the signature...")
             valid_formulas = []
             for formula_str in formulas_json.get("formulas", []):
-                is_valid, msg = self.tweety_bridge._fol_handler.validate_formula_with_signature(signature_obj, formula_str)
+                # Clean the formula from comments before validation
+                cleaned_formula_str = re.sub(r'/\*.*?\*/', '', formula_str).strip()
+                is_valid, msg = self.tweety_bridge._fol_handler.validate_formula_with_signature(signature_obj, cleaned_formula_str)
                 if is_valid:
                     valid_formulas.append(formula_str)
                     self.logger.info(f"Formula accepted: '{formula_str}'")
@@ -406,6 +433,41 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         self.logger.warning("No JSON block found in the response.")
         return "{}"
 
+    def _normalize_definitions(self, defs_json: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Normalizes all identifiers (sorts, constants, predicates) in the definitions JSON
+        to ensure consistency before passing to Java or subsequent LLM calls.
+        """
+        normalized_defs = {}
+        
+        # Normalize sorts
+        original_sorts = defs_json.get("sorts", [])
+        normalized_defs["sorts"] = [self._normalize_identifier(s) for s in original_sorts]
+        
+        # Create a mapping from original sort names to normalized ones
+        sort_map = {orig: norm for orig, norm in zip(original_sorts, normalized_defs["sorts"])}
+
+        # Normalize constants
+        original_constants = defs_json.get("constants", {})
+        normalized_constants = {}
+        for const_name, sort_name in original_constants.items():
+            norm_const = self._normalize_identifier(const_name)
+            # Use the mapped normalized sort name
+            norm_sort = sort_map.get(sort_name, self._normalize_identifier(sort_name))
+            normalized_constants[norm_const] = norm_sort
+        normalized_defs["constants"] = normalized_constants
+
+        # Normalize predicates
+        original_predicates = defs_json.get("predicates", [])
+        normalized_predicates = []
+        for pred in original_predicates:
+            norm_pred_name = self._normalize_identifier(pred.get("name", ""))
+            norm_args = [sort_map.get(arg, self._normalize_identifier(arg)) for arg in pred.get("args", [])]
+            normalized_predicates.append({"name": norm_pred_name, "args": norm_args})
+        normalized_defs["predicates"] = normalized_predicates
+
+        return normalized_defs
+
     def _normalize_and_validate_json(self, kb_json: Dict[str, Any]) -> Dict[str, Any]:
         """Normalises identifiers in the JSON knowledge base."""
         normalized_kb = {"predicates": kb_json.get("predicates", [])}
@@ -430,21 +492,35 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         return normalized_kb
 
     def _parse_belief_set_content(self, belief_set: FirstOrderBeliefSet) -> Dict[str, Any]:
-        """Extracts sorts, constants, and predicates from the source JSON of a belief set."""
+        """
+        Extracts sorts, constants, and predicates from the source JSON of a belief set.
+        Mise à jour pour gérer le nouveau format JSON où "sorts" est une liste et "constants" un dictionnaire.
+        """
         if not belief_set or not belief_set.content:
-            return {"sorts": {}, "constants": set(), "predicates": {}}
+            return {"sorts": [], "constants": set(), "predicates": {}}
         try:
             kb_json = json.loads(belief_set.content)
-            all_constants = {c for consts in kb_json.get("sorts", {}).values() for c in consts}
+            # Le nouveau format a les constantes dans un dictionnaire {"const_name": "sort_name"}
+            all_constants = set(kb_json.get("constants", {}).keys())
             predicates_map = {p["name"]: len(p.get("args", [])) for p in kb_json.get("predicates", [])}
+            
+            signature_obj = None
+            if belief_set.java_belief_set:
+                try:
+                    # La méthode getSignature() peut ne pas exister sur tous les types d'objets java
+                    if hasattr(belief_set.java_belief_set, 'getSignature'):
+                         signature_obj = belief_set.java_belief_set.getSignature()
+                except Exception as e:
+                    self.logger.warning(f"Impossible d'obtenir la signature depuis l'objet Java: {e}")
+
             return {
                 "constants": all_constants,
                 "predicates": predicates_map,
-                "signature_obj": belief_set.java_belief_set.getSignature() if belief_set.java_belief_set else None,
+                "signature_obj": signature_obj,
             }
         except (json.JSONDecodeError, AttributeError) as e:
-            self.logger.error(f"Could not parse belief set content for query generation: {e}")
-            return {"constants": set(), "predicates": {}}
+            self.logger.error(f"Could not parse belief set content for query generation: {e}", exc_info=True)
+            return {"constants": set(), "predicates": {}, "signature_obj": None}
 
     async def generate_queries(self, text: str, belief_set: FirstOrderBeliefSet, context: Optional[Dict[str, Any]] = None) -> List[str]:
         """

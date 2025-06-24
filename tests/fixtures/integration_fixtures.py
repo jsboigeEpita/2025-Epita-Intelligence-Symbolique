@@ -55,104 +55,29 @@ _integration_jvm_started_session_scope = False
 @pytest.fixture(scope="session")
 def integration_jvm(request):
     """
-    Fixture à portée "session" pour la VRAIE JVM.
-    Version simplifiée pour résoudre les crashs `access violation`.
-    - Supprime la manipulation de sys.modules et l'état global.
-    - Simplifie la vérification de l'état : si la JVM tourne, on l'utilise.
-    - Si la JVM ne tourne pas, on la démarre et on la ferme à la fin.
-    - Le classpath est passé directement au démarrage.
+    Fixture pour les tests d'intégration nécessitant la JVM.
+    Assure que la JVM est démarrée une seule fois par session de test.
     """
-    logger.info("--- DEBUT FIXTURE 'integration_jvm' ---")
+    fixture_logger = logging.getLogger("tests.fixtures.integration_fixtures_fixture")
+    fixture_logger.info("--- DÉBUT FIXTURE 'integration_jvm' (scope='session') ---")
 
-    # Condition 0: Test E2E avec serveur externe.
-    # Si BACKEND_URL est défini, cela signifie que l'orchestrateur a déjà démarré
-    # le backend, et donc potentiellement la JVM. La fixture ne doit RIEN faire
-    # et simplement passer le contrôle, en supposant que l'environnement est correct.
-    if os.environ.get("BACKEND_URL"):
-        logger.info("Variable d'environnement BACKEND_URL détectée. Fixture 'integration_jvm' saute l'initialisation.")
-        logger.info("Hypothèse: la JVM est gérée par le processus serveur externe.")
-        # On vérifie quand même si la JVM est active dans CE processus. Si ce n'est pas le cas,
-        # le bootstrap du module testé devrait l'initialiser.
-        if not jpype.isJVMStarted():
-            logger.warning("La JVM n'est PAS démarrée dans le processus de test, même en mode E2E. Initialisation en cours...")
-            # On continue vers le bloc d'initialisation normal.
-        else:
-            logger.info("La JVM est déjà démarrée dans le processus de test. On la réutilise.")
-            yield jpype
-            logger.info("--- FIN FIXTURE 'integration_jvm' (E2E, instance réutilisée) ---")
-            return
+    # Utiliser jvm_setup pour gérer le cycle de vie de la JVM
+    import argumentation_analysis.core.jvm_setup as jvm_setup
+    
+    if not jpype.isJVMStarted():
+        fixture_logger.info("La JVM n'est pas encore démarrée. Tentative d'initialisation...")
+        initialized = jvm_setup.initialize_jvm(session_fixture_owns_jvm=True)
+        if not initialized:
+            pytest.fail("L'initialisation de la JVM a échoué. Arrêt des tests.", pytrace=False)
+    else:
+        fixture_logger.info("La JVM était déjà démarrée. La fixture de session en prend le contrôle.")
 
-
-    # Condition 1: Le vrai module JPype n'est pas disponible.
-    if not hasattr(jpype, 'isJVMStarted') or isinstance(jpype, MagicMock):
-        logger.warning("Le vrai module JPype n'est pas disponible. SKIP.")
-        pytest.skip("Le vrai module JPype n'est pas disponible.")
-
-    # Condition 2: La JVM est DÉJÀ démarrée par un autre composant (contexte non-E2E).
-    if jpype.isJVMStarted():
-        logger.info("La JVM est déjà démarrée (contexte non-E2E). Réutilisation de l'instance existante.")
-        yield jpype
-        logger.info("--- FIN FIXTURE 'integration_jvm' (instance réutilisée) ---")
-        return
-
-    # --- Point de non-retour : la JVM n'est pas démarrée, cette fixture va la gérer ---
-    logger.info("La JVM n'est pas démarrée. Cette fixture va prendre en charge son cycle de vie pour la session.")
-
-    # Vérification des dépendances pour le démarrage
-    if not all([initialize_jvm, LIBS_DIR, TWEETY_VERSION]):
-         pytest.skip("Dépendances (initialize_jvm, LIBS_DIR, TWEETY_VERSION) manquantes.")
-
-    # Construction explicite et robuste du classpath pour la JVM
-    logger.info(f"Construction du classpath à partir du répertoire configuré : {LIBS_DIR.resolve()}")
-    if not LIBS_DIR or not LIBS_DIR.is_dir():
-        pytest.fail(f"Le répertoire des bibliothèques ({LIBS_DIR}) est manquant ou invalide.", pytrace=False)
-
-    all_jars = [str(p.resolve()) for p in LIBS_DIR.glob("*.jar")]
-    if not all_jars:
-        # Échec si aucun JAR n'est trouvé, car le classpath sera vide.
-        pytest.fail(f"Aucun fichier .jar trouvé dans {LIBS_DIR}. Le test ne peut pas continuer.", pytrace=False)
-
-    classpath_str = os.pathsep.join(all_jars)
-    logger.info(f"Classpath construit avec {len(all_jars)} JARs. Longueur: {len(classpath_str)} caractères.")
-    logger.debug(f"Classpath final: {classpath_str}")
-
-    # Démarrage de la JVM. `initialize_jvm` gère l'appel à jpype.startJVM.
-    try:
-        # *** BLOC CRITIQUE ***
-        # L'appel est maintenant corrigé pour passer le classpath construit explicitement.
-        logger.info("FIXTURE: APPEL IMMINENT à initialize_jvm...")
-        logger.info(f"FIXTURE: Classpath passé: {classpath_str[:200]}...") # Log tronqué pour la lisibilité
-        success = initialize_jvm(classpath=classpath_str)
-        logger.info("FIXTURE: RETOUR de initialize_jvm. Le blocage n'a pas eu lieu dans la fixture.")
-        if not success:
-            pytest.fail("La fonction initialize_jvm() a renvoyé False, échec du démarrage de la JVM.")
-        
-        # --- SÉMAPHORE INTER-PROCESSUS ---
-        # Positionne une variable d'environnement pour que les sous-processus
-        # sachent que cette instance de pytest gère la JVM.
-        os.environ['PYTEST_JVM_MANAGED_BY_PID'] = str(os.getpid())
-        logger.info(f"Variable d'environnement de contrôle JVM positionnée : PYTEST_JVM_MANAGED_BY_PID={os.getpid()}")
-    except Exception as e:
-        logger.error(f"EXCEPTION CRITIQUE lors de l'appel à initialize_jvm : {e}", exc_info=True)
-        pytest.fail(f"Exception critique lors de l'appel à initialize_jvm (startJVM) : {e}", pytrace=True)
-
-    # Si on arrive ici, on a démarré la JVM. On doit donc la fermer à la fin.
-    # On enregistre une fonction de finalisation pour garantir l'arrêt.
-    def finalizer():
-        logger.info("--- DEBUT FINALIZER pour 'integration_jvm' (portée session) ---")
-        if jpype.isJVMStarted():
-            logger.info("Le finalizer va appeler jpype.shutdownJVM().")
-            jpype.shutdownJVM()
-            logger.info("Le finalizer a appelé jpype.shutdownJVM() avec succès.")
-        else:
-            logger.warning("Le finalizer a été appelé, mais la JVM n'était plus démarrée.")
-        logger.info("--- FIN FINALIZER pour 'integration_jvm' ---")
-
-    request.addfinalizer(finalizer)
-
-    logger.info("JVM initialisée avec succès par la fixture. Le test peut s'exécuter.")
+    # La JVM est prête, les tests peuvent s'exécuter
     yield jpype
-    logger.info("--- FIN FIXTURE 'integration_jvm' (yield terminé) ---")
+
+    # Teardown : Code exécuté après la fin de tous les tests de la session
+    fixture_logger.info("--- FIN FIXTURE 'integration_jvm' (teardown) ---")
+    jvm_setup.shutdown_jvm()
 
 
 @pytest.fixture(scope="session")

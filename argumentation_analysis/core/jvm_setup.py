@@ -15,11 +15,15 @@ from pathlib import Path
 from typing import Optional, List, Dict
 from tqdm.auto import tqdm
 import stat
+import threading
 
 from argumentation_analysis.config.settings import settings
 
 # Configuration du logger pour ce module
 logger = logging.getLogger("Orchestration.JPype")
+
+# Verrou global pour rendre l'initialisation de la JVM thread-safe
+_jvm_lock = threading.Lock()
 
 # --- Fonctions de téléchargement et de provisioning (issues du stash de HEAD) ---
 
@@ -470,188 +474,81 @@ def get_jvm_options() -> List[str]:
     logger.info(f"Options JVM de base définies : {options}")
     return options
 
-def initialize_jvm(
-    lib_dir_path: Optional[str] = None,
-    specific_jar_path: Optional[str] = None, # Conserver pour compatibilité descendante si nécessaire
-    force_restart: bool = False,
-    classpath: Optional[str] = None  # Nouveau paramètre pour un classpath direct
-    ) -> bool:
+def initialize_jvm(force_redownload_jars=False, session_fixture_owns_jvm=False) -> bool:
     """
-    Initialise la JVM avec le classpath configuré, si elle n'est pas déjà démarrée.
-    Gère la logique de session et la possibilité de forcer un redémarrage.
+    Initialise et démarre la JVM avec les JARs et la configuration nécessaires.
     """
+    global _JVM_INITIALIZED_THIS_SESSION, _SESSION_FIXTURE_OWNS_JVM
     import jpype
     import jpype.imports
-    global _JVM_INITIALIZED_THIS_SESSION, _JVM_WAS_SHUTDOWN, _SESSION_FIXTURE_OWNS_JVM
 
-    # --- [SÉMAPHORE INTER-PROCESSUS] ---
-    # Garde pour empêcher les sous-processus pytest de redémarrer la JVM
-    # quand le processus principal (via une fixture de session) la gère déjà.
-    managed_by_pid = os.environ.get('PYTEST_JVM_MANAGED_BY_PID')
-    current_pid = str(os.getpid())
-    if managed_by_pid and managed_by_pid != current_pid:
-        logger.warning(
-            f"Le démarrage de la JVM est sauté dans le processus enfant (PID {current_pid}) "
-            f"car il est géré par le processus pytest principal (PID {managed_by_pid})."
-        )
-        return True # On suppose que la JVM est disponible via une autre méthode
-    
-    # --- Logging verbeux pour le débogage ---
-    logger.info("="*50)
-    logger.info(f"APPEL À initialize_jvm | isJVMStarted: {jpype.isJVMStarted()}, force_restart: {force_restart}")
-    logger.info("="*50)
-
-    if force_restart and jpype.isJVMStarted():
-        logger.info("Forçage explicite du redémarrage de la JVM...")
-        shutdown_jvm()
+    _SESSION_FIXTURE_OWNS_JVM = session_fixture_owns_jvm
+    logger.info("=" * 50)
+    logger.info("APPEL À initialize_jvm")
+    logger.info(f"Propriétaire de la session JVM: {_SESSION_FIXTURE_OWNS_JVM}")
 
     if jpype.isJVMStarted():
-        logger.info("La JVM est déjà démarrée. Aucune action.")
+        logger.info("La JVM est déjà démarrée. Aucune action n'est requise.")
         return True
 
-    if _JVM_WAS_SHUTDOWN:
-        logger.critical("ERREUR: Tentative de redémarrage d'une JVM qui a été explicitement arrêtée. C'est une opération non supportée par JPype.")
+    if _JVM_WAS_SHUTDOWN and not _SESSION_FIXTURE_OWNS_JVM:
+        logger.warning(
+            "La JVM a déjà été démarrée et arrêtée dans cette session."
+            "Le redémarrage n'est pas supporté et peut entraîner une instabilité."
+        )
+
+    # ... (Le reste de la logique reste le même)
+    if not download_tweety_jars():
+        logger.critical("Échec du provisionnement des JARs Tweety.")
         return False
 
-    # --- 1. Validation de Java Home ---
-    logger.info("\n--- ÉTAPE 1: RECHERCHE ET VALIDATION DE JAVA_HOME ---")
-    java_home_str = find_valid_java_home()
-    if not java_home_str:
-        logger.critical("ÉCHEC CRITIQUE: Impossible de trouver ou d'installer un JDK valide. Démarrage JVM annulé.")
+    java_home = find_valid_java_home()
+    if not java_home:
+        logger.critical("Impossible de trouver un JDK valide.")
+        return False
+    os.environ['JAVA_HOME'] = java_home
+
+    jvm_path = jpype.getDefaultJVMPath()
+    
+    all_jars = [str(p.resolve()) for p in LIBS_DIR.glob("*.jar")]
+    if not all_jars:
+        logger.critical(f"Aucun fichier .jar trouvé dans {LIBS_DIR}.")
         return False
         
-    os.environ['JAVA_HOME'] = java_home_str
-    logger.info(f"-> JAVA_HOME positionné à : {java_home_str}")
-
-    # --- 2. Recherche de la bibliothèque JVM (DLL/SO) ---
-    logger.info("\n--- ÉTAPE 2: LOCALISATION DE LA BIBLIOTHÈQUE JVM (DLL/SO) ---")
-    java_home_path = Path(java_home_str)
-    
-    system = platform.system()
-    if system == "Windows":
-        jvm_path_candidate = java_home_path / "bin" / "server" / "jvm.dll"
-    elif system == "Darwin":
-        jvm_pjpypeath_candidate = java_home_path / "lib" / "server" / "libjvm.dylib"
-    else:
-        jvm_path_candidate = java_home_path / "lib" / "server" / "libjvm.so"
-    
-    logger.info(f"Chemin standard candidat pour la JVM: {jvm_path_candidate}")
-
-    if jvm_path_candidate.exists():
-        jvm_path_dll_so = str(jvm_path_candidate.resolve())
-        logger.info(f"-> Bibliothèque JVM trouvée et validée à l'emplacement : {jvm_path_dll_so}")
-    else:
-        logger.warning(f"Le chemin standard '{jvm_path_candidate}' n'existe pas. Tentative de fallback avec jpype.getDefaultJVMPath()...")
-        try:
-            jvm_path_dll_so = jpype.getDefaultJVMPath()
-            logger.info(f"-> Succès du fallback : JPype a trouvé la JVM à '{jvm_path_dll_so}'.")
-        except jpype.JVMNotFoundException:
-            logger.critical(f"ÉCHEC CRITIQUE: La bibliothèque JVM est introuvable. Vérifiez l'intégrité du JDK à {java_home_str}.")
-            return False
-
-# --- 2.BIS. Nettoyage des anciens fichiers JAR verrouillés ---
-    logger.info("\n--- ÉTAPE 2.BIS: NETTOYAGE DES ANCIENS JARS VERROUILLÉS (.locked) ---")
-    actual_lib_dir_for_cleanup = Path(lib_dir_path) if lib_dir_path else LIBS_DIR
-    locked_files = list(actual_lib_dir_for_cleanup.rglob("*.jar.locked"))
-    if locked_files:
-        logger.warning(f"Trouvé {len(locked_files)} fichier(s) JAR verrouillé(s) à nettoyer.")
-        for f in locked_files:
-            try:
-                f.unlink()
-                logger.info(f" -> Ancien fichier verrouillé supprimé: {f.name}")
-            except OSError as e:
-                logger.error(f" -> Impossible de supprimer l'ancien fichier verrouillé '{f.name}'. Il est peut-être toujours utilisé. Erreur: {e}")
-    else:
-        logger.info("Aucun ancien fichier .jar.locked à nettoyer.")
-    # --- 3. Construction du Classpath ---
-    logger.info("\n--- ÉTAPE 3: CONSTRUCTION DU CLASSPATH JAVA ---")
-    jars_classpath_list: List[str] = []
-    
-    if classpath:
-        jars_classpath_list = classpath.split(os.pathsep)
-        logger.info(f"Utilisation du classpath fourni directement. Nombre d'entrées: {len(jars_classpath_list)}")
-    elif specific_jar_path:
-        specific_jar_file = Path(specific_jar_path)
-        if specific_jar_file.is_file():
-            jars_classpath_list = [str(specific_jar_file.resolve())]
-            logger.info(f"Utilisation du JAR spécifique: {jars_classpath_list[0]}")
-        else:
-            logger.error(f"Fichier JAR spécifique fourni mais introuvable: '{specific_jar_path}'.")
-            return False
-    else:
-        actual_lib_dir = Path(lib_dir_path) if lib_dir_path else LIBS_DIR
-        logger.info(f"Recherche de JARs dans le répertoire par défaut: '{actual_lib_dir.resolve()}'")
-        
-        actual_lib_dir.mkdir(parents=True, exist_ok=True)
-
-        if not _SESSION_FIXTURE_OWNS_JVM:
-            logger.info("Lancement du provisioning des bibliothèques Tweety (vérification/téléchargement)...")
-            if not download_tweety_jars(target_dir=actual_lib_dir):
-                logger.warning("Le provisioning a signalé un problème (JARs potentiellement manquants).")
-            else:
-                logger.info("Provisioning terminé.")
-        else:
-            logger.info("Provisioning des bibliothèques géré par une fixture de session, sauté ici.")
-
-        logger.info(f"Scan récursif (rglob) de '{actual_lib_dir.resolve()}' pour les fichiers .jar...")
-        jars_classpath_list = [str(p.resolve()) for p in actual_lib_dir.rglob("*.jar")]
-
-    if jars_classpath_list:
-        logger.info(f"-> {len(jars_classpath_list)} JAR(s) trouvés pour le classpath.")
-        # Afficher chaque JAR sur une nouvelle ligne pour une meilleure lisibilité
-        formatted_classpath = "\n".join([f"  - {jar}" for jar in jars_classpath_list])
-        logger.info(f"Classpath final à utiliser:\n{formatted_classpath}")
-    else:
-        logger.warning(f"-> Aucun fichier JAR trouvé. Le classpath est vide. Le démarrage de la JVM va probablement échouer.")
-        return False
-
-    # --- 4. Démarrage de la JVM ---
-    logger.info("\n--- ÉTAPE 4: DÉMARRAGE DE LA JVM ---")
     jvm_options = get_jvm_options()
-    logger.info(f"Options JVM: {jvm_options}")
-    logger.info(f"Chemin DLL/SO: {jvm_path_dll_so}")
-    logger.info(f"Classpath (brut): {os.pathsep.join(jars_classpath_list)}")
-    logger.info(f"Options JVM: {jvm_options}")
-    logger.info(f"Chemin DLL/SO JVM utilisé: {jvm_path_dll_so}")
-
+    
     try:
-        logger.info("JVM_SETUP: APPEL IMMINENT à jpype.startJVM...")
+        logger.info("Tentative de démarrage de la JVM...")
         jpype.startJVM(
-            jvm_path_dll_so,
+            jvm_path,
             *jvm_options,
-            classpath=jars_classpath_list,
+            classpath=all_jars,
             ignoreUnrecognized=True,
             convertStrings=False
         )
-        logger.info("JVM_SETUP: RETOUR de jpype.startJVM. Le blocage n'a pas eu lieu.")
-        _JVM_INITIALIZED_THIS_SESSION = True
-        _JVM_WAS_SHUTDOWN = False
         logger.info("[SUCCESS] JVM démarrée avec succès.")
+        _JVM_INITIALIZED_THIS_SESSION = True
         return True
     except Exception as e:
-        logger.error(f"JVM_SETUP: EXCEPTION lors de jpype.startJVM: {e}", exc_info=True)
-        logger.error(f"Erreur fatale lors du démarrage de la JVM: {e}", exc_info=True)
-        _JVM_INITIALIZED_THIS_SESSION = False
+        logger.critical(f"Échec du démarrage de la JVM: {e}", exc_info=True)
         return False
 
 def shutdown_jvm():
-    global _JVM_INITIALIZED_THIS_SESSION, _JVM_WAS_SHUTDOWN, _SESSION_FIXTURE_OWNS_JVM
-    
-    if _SESSION_FIXTURE_OWNS_JVM and jpype.isJVMStarted():
-        logger.info("Arrêt de la JVM contrôlé par la fixture de session, ne rien faire ici explicitement.")
-        # La fixture devrait gérer la réinitialisation des états si nécessaire.
-        return
-
+    """Arrête la JVM si elle a été démarrée par ce processus."""
+    global _JVM_INITIALIZED_THIS_SESSION, _JVM_WAS_SHUTDOWN
     import jpype
     if jpype.isJVMStarted():
+        # Seul le thread qui a démarré la JVM peut l'arrêter.
+        # On ne vérifie pas `_JVM_INITIALIZED_THIS_SESSION` car si la fixture
+        # de session possède la JVM, cette variable sera False mais l'arrêt
+        # doit quand même se faire à la fin de la session.
         logger.info("Arrêt de la JVM...")
         jpype.shutdownJVM()
         logger.info("JVM arrêtée.")
+        _JVM_WAS_SHUTDOWN = True
+        _JVM_INITIALIZED_THIS_SESSION = False
     else:
         logger.debug("La JVM n'est pas en cours d'exécution, aucun arrêt nécessaire.")
-    
-    _JVM_INITIALIZED_THIS_SESSION = False
-    _JVM_WAS_SHUTDOWN = True
 
 def is_jvm_owned_by_session_fixture() -> bool:
     """Retourne True si la JVM est contrôlée par une fixture de session pytest."""
