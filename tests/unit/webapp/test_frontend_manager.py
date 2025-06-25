@@ -1,6 +1,7 @@
 import pytest
 import os
 import logging
+import asyncio
 import subprocess
 from unittest.mock import MagicMock, patch, AsyncMock
 from pathlib import Path

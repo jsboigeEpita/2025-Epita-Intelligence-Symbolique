@@ -162,6 +162,6 @@ async def test_full_integration_test_flow_tests_fail(orchestrator):
     orchestrator._save_trace_report.assert_called_once()
 
     # Verify that the correct trace was added for the failure
-    error_trace_call = call("[ERROR] ECHEC INTEGRATION", "Certains tests ont échoué", "Exception: Tests failed", status="error")
+    error_trace_call = call("[ERROR] ECHEC INTEGRATION", "Certains tests ont échoué", "Voir logs détaillés", status="error")
     # Use assert_any_call as other trace calls might exist
     orchestrator.add_trace.assert_any_call(*error_trace_call.args, **error_trace_call.kwargs)

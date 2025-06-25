@@ -82,43 +82,75 @@ if ($Type -eq "e2e") {
 }
 # Branche 2: Tests E2E avec Pytest (Python)
 elseif ($Type -eq "e2e-python") {
-    Write-Host "[INFO] Lancement du cycle de test E2E via le point d'entrée centralisé..." -ForegroundColor Cyan
-    
+    Write-Host "[INFO] Lancement du cycle de test E2E en trois étapes pour éviter les conflits asyncio et passer les URLs." -ForegroundColor Cyan
     $ActivationScriptPath = Join-Path $PSScriptRoot "activate_project_env.ps1"
+    $globalExitCode = 0
+    $output = ""
 
-    # Construire la commande Python pour appeler l'orchestrateur en tant que chaîne de caractères
-    $OrchestratorCommand = "python -m argumentation_analysis.webapp.orchestrator --integration --log-level INFO"
-    if (-not ([string]::IsNullOrEmpty($Path))) {
-        # Important: bien mettre les guillemets autour du chemin pour gérer les espaces
-        $OrchestratorCommand += " --tests `"$Path`""
-    }
-    if ($DebugMode) {
-        $OrchestratorCommand = $OrchestratorCommand.Replace("INFO", "DEBUG")
-    }
-
-    Write-Host "[INFO] Commande passée à l'activateur: $OrchestratorCommand" -ForegroundColor Green
-
-    # Appeler le script d'activation avec la commande à exécuter
-    # Le script d'activation gère lui-même l'appel à `conda run`
     try {
-        & $ActivationScriptPath -CommandToRun $OrchestratorCommand
-        $exitCode = $LASTEXITCODE
+        # --- ÉTAPE 1: Démarrer les serveurs et capturer l'output ---
+        Write-Host "[INFO] Étape 1: Démarrage des services et capture des URLs..." -ForegroundColor Yellow
+        $startCommand = "python -m argumentation_analysis.webapp.orchestrator --exit-after-start --log-level INFO --frontend"
+        
+        # Exécute la commande et stocke la sortie dans $output. Tee-Object permet de voir la sortie en temps réel.
+        $output = & $ActivationScriptPath -CommandToRun $startCommand 2>&1 | Tee-Object -Variable pso | Out-String
 
-        if ($exitCode -ne 0) {
-            # Le script d'activation devrait déjà afficher une erreur. Ceci est une confirmation.
-            throw "L'orchestration des tests via le script d'activation a échoué avec le code de sortie: $exitCode"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host $output
+            throw "L'orchestrateur n'a pas réussi à démarrer les services."
+        }
+        
+        # Extraire les URLs depuis la sortie de l'orchestrateur
+        $backendUrl = $output | Select-String -Pattern "BACKEND OPERATIONNEL.*URL: (http://[^\s]+)" | ForEach-Object { $_.Matches[0].Groups[1].Value }
+        $frontendUrl = $output | Select-String -Pattern "FRONTEND_URL_READY=(http://[^\s]+)" | ForEach-Object { $_.Matches[0].Groups[1].Value }
+
+        if (-not $backendUrl) {
+            Write-Host $output
+            throw "Impossible de trouver l'URL du backend dans la sortie de l'orchestrateur."
+        }
+        
+        Write-Host "[INFO] URL Backend capturée: $backendUrl" -ForegroundColor Green
+        if ($frontendUrl) {
+            Write-Host "[INFO] URL Frontend capturée: $frontendUrl" -ForegroundColor Green
+        }
+        
+        # Définir les variables d'environnement pour Pytest
+        $env:BACKEND_URL = $backendUrl
+        $env:FRONTEND_URL = $frontendUrl
+        
+        # --- ÉTAPE 2: Lancer Pytest, qui va maintenant trouver les variables d'environnement ---
+        Write-Host "[INFO] Étape 2: Lancement de Pytest..." -ForegroundColor Yellow
+        $pytestCommand = "python -m pytest -s -vv"
+        $testPathToRun = if (-not ([string]::IsNullOrEmpty($Path))) { $Path } else { "tests/e2e/python" }
+        $pytestCommand += " `"$testPathToRun`""
+        
+        & $ActivationScriptPath -CommandToRun $pytestCommand
+        $globalExitCode = $LASTEXITCODE
+        if ($globalExitCode -ne 0) {
+            Write-Host "[AVERTISSEMENT] Pytest a échoué avec le code de sortie: $globalExitCode" -ForegroundColor Yellow
         } else {
-            Write-Host "[INFO] La suite de tests s'est terminée avec succès." -ForegroundColor Green
+            Write-Host "[INFO] Pytest s'est terminé avec succès." -ForegroundColor Green
         }
     }
     catch {
-        Write-Host "[ERREUR] Une erreur est survenue lors de l'appel au script d'activation. $_" -ForegroundColor Red
-        # Le code de sortie de l'échec est déjà $LASTEXITCODE, mais on utilise 1 pour signaler une erreur de ce script-ci.
-        exit 1
+        Write-Host "[ERREUR FATALE] Une erreur critique est survenue dans le script run_tests.ps1: $_" -ForegroundColor Red
+        $globalExitCode = 1
+    }
+    finally {
+        # --- ÉTAPE 3: Arrêter les serveurs ---
+        Write-Host "[INFO] Étape 3: Arrêt des services via l'orchestrateur..." -ForegroundColor Yellow
+        $stopCommand = "python -m argumentation_analysis.webapp.orchestrator --stop"
+        & $ActivationScriptPath -CommandToRun $stopCommand
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[AVERTISSEMENT] L'orchestrateur a rencontré un problème lors de l'arrêt des services." -ForegroundColor Yellow
+            if ($globalExitCode -eq 0) { $globalExitCode = 1 }
+        } else {
+            Write-Host "[INFO] Services arrêtés proprement." -ForegroundColor Green
+        }
     }
     
-    Write-Host "[INFO] Exécution E2E (Python) terminée avec le code de sortie: $exitCode" -ForegroundColor Cyan
-    exit $exitCode
+    Write-Host "[INFO] Exécution E2E (Python) terminée avec le code de sortie final: $globalExitCode" -ForegroundColor Cyan
+    exit $globalExitCode
 }
 # Branche 3: Tests Unit/Functional (Python) directs
 else {
@@ -146,7 +178,7 @@ else {
 
     # Construire la commande pytest
     $pytestCommandParts = @("python", "-m", "pytest", "-s", "-vv") + $selectedPaths
-    if (-not [string]::IsNullOrEmpty($PytestArgs)) {
+    if (-not ([string]::IsNullOrEmpty($PytestArgs))) {
         $pytestCommandParts += $PytestArgs.Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)
     }
     $pytestFinalCommand = $pytestCommandParts -join " "

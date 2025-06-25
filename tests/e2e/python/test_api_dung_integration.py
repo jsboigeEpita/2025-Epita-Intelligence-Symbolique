@@ -10,7 +10,6 @@ pytestmark = [
     pytest.mark.e2e_test
 ]
 
-@pytest.mark.skip(reason="La méthode 'analyze_dung_framework' n'est pas implémentée dans le ServiceManager actuel.")
 @pytest.mark.playwright
 def test_dung_framework_analysis_api(playwright: Playwright):
     """
