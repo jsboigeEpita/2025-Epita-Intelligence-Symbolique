@@ -515,41 +515,25 @@ def initialize_jvm(force_redownload_jars=False, session_fixture_owns_jvm=False) 
 
     jvm_path = jpype.getDefaultJVMPath()
     
-    all_jars = [str(p.resolve()) for p in LIBS_DIR.glob("*.jar")]
-    if not all_jars:
-        logger.critical(f"Aucun fichier .jar trouvé dans {LIBS_DIR}.")
+    # Remplacement du glob par un chemin explicite pour éliminer toute ambiguïté.
+    jar_path = LIBS_DIR / f"org.tweetyproject.tweety-full-{TWEETY_VERSION}-with-dependencies.jar"
+    if not jar_path.exists():
+        logger.critical(f"Le JAR Tweety principal est introuvable à l'emplacement attendu: {jar_path}")
         return False
+    
+    # Le classpath est maintenant une chaîne unique pointant vers le bon JAR.
+    explicit_classpath_str = str(jar_path.resolve())
         
     jvm_options = get_jvm_options()
     
     try:
         logger.info("Tentative de démarrage de la JVM...")
-        # Vérification explicite de l'existence et des permissions des JARs
-        all_jars_paths = [p.resolve() for p in LIBS_DIR.glob("*.jar")]
-        if not all_jars_paths:
-            logger.critical(f"Aucun fichier .jar trouvé dans {LIBS_DIR}.")
-            return False
-
-        classpath_list = []
-        for jar_path in all_jars_paths:
-            if not jar_path.exists():
-                logger.error(f"Erreur Classpath: Le fichier JAR '{jar_path}' n'existe pas.")
-                return False
-            try:
-                # Vérifier si on peut au moins lire le fichier
-                with open(jar_path, 'rb') as f:
-                    f.read(1)
-                classpath_list.append(str(jar_path))
-            except IOError as e:
-                logger.error(f"Erreur Classpath: Impossible de lire le fichier JAR '{jar_path}'. Erreur: {e}")
-                return False
-        
-        logger.info(f"Classpath final validé: {classpath_list}")
+        logger.info(f"Classpath final validé: [{explicit_classpath_str}]")
         
         jpype.startJVM(
             jvm_path,
             *jvm_options,
-            classpath=classpath_list, # Utiliser la liste de strings validée
+            classpath=explicit_classpath_str,
             ignoreUnrecognized=True,
             convertStrings=False
         )

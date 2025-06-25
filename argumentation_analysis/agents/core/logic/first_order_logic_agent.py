@@ -25,7 +25,10 @@ from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
 from semantic_kernel.contents import ChatMessageContent, AuthorRole
 from semantic_kernel.contents.chat_history import ChatHistory
-from semantic_kernel.functions.kernel_function_decorator import kernel_function
+# Imports are updated based on recent semantic-kernel changes
+from semantic_kernel.agents.chat_completion.chat_completion_agent import FunctionChoiceBehavior
+# The decorator has been moved to the top-level package for easier access.
+from semantic_kernel.functions import kernel_function
 from pydantic import Field, field_validator
  
 from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
@@ -123,21 +126,60 @@ class BeliefSetBuilderPlugin:
         name="add_formula",
     )
     def add_formula(self, formula: str):
-        """Ajoute une formule."""
-        # La formule elle-même n'est pas normalisée, car elle contient de la syntaxe.
-        self._formulas.append(formula)
-        return f"Formule '{formula}' ajoutée."
+        """Ajoute une formule, en normalisant la syntaxe des quantificateurs."""
+        
+        # Normalisation des symboles de quantificateurs
+        normalized_formula = formula.replace("∀", "forall ").replace("∃", "exists ")
+        # Remplacement des opérateurs logiques communs par la syntaxe attendue par Tweety
+        normalized_formula = normalized_formula.replace("→", "=>").replace("∧", "&&").replace("∨", "||").replace("¬", "!").replace("↔", "<=>")
+
+        # Normalisation de la syntaxe du quantificateur (ex: "forall x(...)" -> "forall X:(...)")
+        # Cette regex recherche "forall" ou "exists", suivi d'un espace, d'un nom de variable,
+        # d'un espace optionnel, et d'une parenthèse ouvrante.
+        # Elle remplace cela par "forall/exists", la variable en MAJUSCULE, deux-points, et la parenthèse.
+        def replacer(match):
+            keyword = match.group(1)
+            variable_lower = match.group(2)
+            variable_upper = variable_lower.upper()
+            inner_formula = match.group(3)
+            
+            # Remplace toutes les occurrences de la variable (insensible à la casse) par sa version majuscule
+            # à l'intérieur de l'expression. \b est une ancre de mot pour éviter de remplacer
+            # des parties de noms plus longs.
+            inner_formula_replaced = re.sub(r'\b' + re.escape(variable_lower) + r'\b', variable_upper, inner_formula, flags=re.IGNORECASE)
+
+            # Nouvelle stratégie : les variables sont toujours quantifiées sur un sort générique "thing".
+            # La propriété (ex: "être un homme") est gérée par un prédicat unaire (homme(X)).
+            # Le prompt système guide maintenant le LLM vers cette approche.
+            sort_name = "thing"
+
+            # La syntaxe est `forall X:thing ( inner_formula )`
+            return f"{keyword} {variable_upper}:{sort_name} ({inner_formula_replaced})"
+
+        # La regex capture maintenant le contenu entre les parenthèses pour le traitement
+        # Exemple: forall x (P(x) -> Q(x))
+        # group(1): forall
+        # group(2): x
+        # group(3): P(x) -> Q(x)
+        # Note: on enlève la parenthèse fermante de la capture globale
+        normalized_formula = re.sub(r'(forall|exists)\s+([a-zA-Z][a-zA-Z0-9]*)\s*\((.*)\)', replacer, normalized_formula, flags=re.DOTALL)
+
+        self._formulas.append(normalized_formula)
+        # self.logger.debug(f"Formule ajoutée après normalisation: '{normalized_formula}' (Original: '{formula}')")
+        return f"Formule '{normalized_formula}' ajoutée."
 
     def build_fologic_string(self) -> str:
         """Construit la chaîne .fologic finale à partir de l'état accumulé."""
         lines = []
-        # 1. Construire les déclarations de sorts
+        # 1. Déclarer TOUS les sorts, qu'ils aient des constantes ou non.
+        # La syntaxe pour un sort sans constante est 'sort_name = {}'.
         for sort, constants in self._sorts.items():
-            if constants: # Ne générer que si non vide
-                lines.append(f"{sort} = {{{', '.join(constants)}}}")
+            lines.append(f"{sort} = {{{', '.join(constants)}}}")
+
         # 2. Construire les déclarations de types de prédicats
         for pred, args in self._predicates.items():
             lines.append(f"type({pred}({', '.join(args)}))")
+            
         # 3. Ajouter les formules
         lines.extend(self._formulas)
         return "\n".join(lines)
@@ -145,14 +187,25 @@ class BeliefSetBuilderPlugin:
 
 # Prompt Système pour l'agent FOL
 SYSTEM_PROMPT_FOL = """Vous êtes un assistant d'analyse logique. Votre tâche est de décomposer un texte en ses composants logiques fondamentaux en utilisant les outils fournis.
-Pour chaque phrase ou idée dans le texte de l'utilisateur, appelez les outils `add_sort`, `add_constant`, `add_predicate` et `add_formula` de manière séquentielle et logique.
+
+**Philosophie Clé : Prédicats Unaires au lieu de Sorts Complexes**
+Pour représenter une propriété (comme "être un homme"), utilisez un PRÉDICAT UNAIRE (ex: `homme(X)`), pas un sort. N'utilisez les sorts que pour les catégories fondamentales et distinctes (ex: `personne`, `objet`, `lieu`). Par défaut, un sort universel `thing` existe.
+
+**Exemple d'Analyse Correcte pour "Tous les hommes sont mortels. Socrate est un homme."**
+1.  `add_sort("thing")` (ou un autre sort de base comme "personne")
+2.  `add_constant("Socrate", "thing")`
+3.  `add_predicate("homme", ["thing"])` <-- 'homme' est un prédicat
+4.  `add_predicate("EstMortel", ["thing"])`
+5.  `add_formula("forall X (homme(X) => EstMortel(X))")`
+6.  `add_formula("homme(Socrate)")`
 
 **Règles d'Appel des Outils :**
-1.  **D'abord, les concepts :** Identifiez et déclarez tous les sorts (catégories) et constantes (objets spécifiques) en premier.
-2.  **Ensuite, les relations :** Déclarez les types de tous les prédicats (propriétés/relations) avant de les utiliser.
-3.  **Enfin, les affirmations :** Ajoutez les formules (faits et règles) en dernier, en vous assurant que tous les sorts, constantes et prédicats qu'elles utilisent ont déjà été déclarés.
-4.  **Soyez exhaustif :** Assurez-vous que chaque information du texte est représentée par un ou plusieurs appels d'outils.
-5.  **Ne répondez rien d'autre.** Votre seule sortie doit être les appels aux outils.
+1.  **Déclarez les sorts fondamentaux** (comme `thing`) s'ils ne sont pas implicites.
+2.  **Déclarez les constantes** en les associant à un sort.
+3.  **Déclarez TOUS les prédicats** avant de les utiliser, y compris ceux utilisés pour les propriétés comme `homme`.
+4.  **Ajoutez les formules** en dernier. Assurez-vous que chaque prédicat est déclaré.
+5.  **Soyez exhaustif.**
+6.  **Ne répondez rien d'autre.** Votre seule sortie doit être les appels aux outils.
 """
 
 # Anciens prompts conservés pour les autres fonctions de l'agent
@@ -300,18 +353,16 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         chat.add_user_message(text)
         
         # Paramètres d'exécution pour forcer l'appel d'outils
-        execution_settings = self._kernel.get_prompt_execution_settings_from_service_id(self._llm_service_id)
-        execution_settings.tool_choice = "auto" # Laisse le LLM décider quand appeler les outils
+        # Conformément à la documentation de semantic-kernel v1+, nous devons obtenir
+        # la classe des settings directement depuis le service pour garantir le bon type,
+        # puis configurer le comportement de choix de fonction.
+        settings_class = self.service.get_prompt_execution_settings_class()
+        execution_settings = settings_class(service_id=self._llm_service_id)
+        execution_settings.function_choice_behavior = FunctionChoiceBehavior.Auto()
 
         try:
-            # Invocation directe du service de chat, qui gérera la boucle d'appels d'outils
-            # Il est crucial de lier les outils du kernel aux settings pour qu'ils soient envoyés à l'API.
-            # L'API attend une liste de dictionnaires, pas une liste d'objets KernelPlugin.
-            # Nous devons convertir chaque plugin en son format dictionnaire.
-            # NOTE: Cette ligne est une supposition éclairée. Si 'to_dict' n'est pas
-            # la bonne méthode, la prochaine erreur nous le dira.
-            execution_settings.tools = [plugin.to_dict() for plugin in self._kernel.plugins.values()]
-
+            # La liaison des outils se fait maintenant implicitement en passant l'objet `kernel`
+            # à la méthode ci-dessous. Aucune manipulation manuelle des `tools` n'est requise.
             result = await self.service.get_chat_message_content(
                 chat,
                 settings=execution_settings,
@@ -320,22 +371,26 @@ class FirstOrderLogicAgent(BaseLogicAgent):
 
             self.logger.info("Le LLM a terminé d'appeler les outils.")
             
-            # Construire la chaîne fologic à partir de l'état accumulé dans le plugin
-            tweety_syntax_str = self._builder_plugin.build_fologic_string()
-            
-            if not tweety_syntax_str:
-                return None, "L'analyse n'a produit aucune structure logique."
+            # NOUVELLE STRATÉGIE : Construction programmatique de l'objet BeliefSet
+            # On contourne complètement le parsing de la chaîne .fologic
+            self.logger.info("Construction programmatique du BeliefSet à partir des données du plugin...")
+            belief_set_obj = self.tweety_bridge.create_belief_set_programmatically(self._builder_plugin.__dict__)
 
-            self.logger.debug(f"Syntaxe Tweety générée par le BeliefBuilderPlugin:\n{tweety_syntax_str}")
+            if not belief_set_obj:
+                return None, "La création programmatique du BeliefSet a échoué."
 
-            # Parser la chaîne générée de manière déterministe
-            belief_set_obj = self.tweety_bridge.create_belief_set_from_string(tweety_syntax_str)
-            
+            # Pour la sérialisation et le logging, nous avons toujours besoin d'une représentation textuelle.
+            # On utilise la méthode toString() de l'objet Java, qui est fiable.
+            belief_set_content_str = str(belief_set_obj.toString())
+            self.logger.debug(f"Représentation textuelle du BeliefSet construit:\n{belief_set_content_str}")
+
             # Créer l'objet BeliefSet final
             if self._use_serialization:
-                final_belief_set = FirstOrderBeliefSet(content=tweety_syntax_str, java_object=None)
+                # On stocke la représentation textuelle fiable pour la recréation JIT.
+                final_belief_set = FirstOrderBeliefSet(content=belief_set_content_str, java_object=None)
             else:
-                final_belief_set = FirstOrderBeliefSet(content=tweety_syntax_str, java_object=belief_set_obj)
+                # On stocke à la fois la représentation textuelle et l'objet Java.
+                final_belief_set = FirstOrderBeliefSet(content=belief_set_content_str, java_object=belief_set_obj)
 
             self.logger.info("Conversion via la stratégie d'appel d'outils réussie.")
             return final_belief_set, "Conversion réussie."
