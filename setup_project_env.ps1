@@ -1,165 +1,67 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Wrapper pour l'activation et la gestion de l'environnement projet.
+    Crée ou recrée complètement l'environnement Conda du projet.
 .DESCRIPTION
-    Ce script délègue toutes les opérations au script d'activation principal 'activate_project_env.ps1',
-    en traduisant les anciens paramètres (-Setup, -Status) en commandes modernes.
-.PARAMETER CommandToRun
-    Commande à exécuter après activation (passée à activate_project_env.ps1).
-.PARAMETER Setup
-    Raccourci pour configurer l'environnement. Équivaut à -CommandToRun 'python project_core/core_from_scripts/environment_manager.py setup'
-.PARAMETER Status
-    Raccourci pour vérifier le statut de l'environnement. Équivaut à -CommandToRun 'python project_core/core_from_scripts/environment_manager.py --check-only'
-.EXAMPLE
-    .\setup_project_env.ps1 -Setup
-    .\setup_project_env.ps1 -Status
-    .\setup_project_env.ps1 -CommandToRun "pytest ./tests"
+    Ce script assure une installation propre de l'environnement 'projet-is-v2'
+    en utilisant le fichier 'environment.yml' comme seule source de vérité.
+    Il supprime d'abord tout environnement existant du même nom pour éviter
+    les conflits.
+.NOTES
+    Auteur: Roo
+    Date: 25/06/2025
+    Raison: Stratégie de dépendances unifiée pour garantir la stabilité.
 #>
 
-param (
-    [string]$CommandToRun,
-    [switch]$Setup,
-    [switch]$Status,
-    [switch]$Clean,
-    [switch]$Help # Gardé pour la compatibilité
-)
+# --- Configuration ---
+$EnvName = "projet-is-v2"
+$EnvironmentFile = "environment.yml"
 
 # --- Bannière ---
-Write-Host "=================================================================" -ForegroundColor Green
-Write-Host "ORACLE ENHANCED v2.1.0 - Wrapper d'Environnement" -ForegroundColor Green
-Write-Host "=================================================================" -ForegroundColor Green
+Write-Host "--- Configuration de l'environnement Conda '$EnvName' ---" -ForegroundColor Green
 
-if ($Help) {
-    Get-Help $MyInvocation.MyCommand.Path -Full
-    exit 0
-}
-
-if ($Clean) {
-    Write-Host "[INFO] Mode CLEAN activé. Tentative de suppression de l'environnement 'projet-is'." -ForegroundColor Yellow
-    conda env remove -n projet-is --yes
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[AVERTISSEMENT] La suppression de l'environnement a échoué. Il se peut qu'il n'ait pas existé, ou qu'un problème soit survenu. Le script va continuer." -ForegroundColor Yellow
-    } else {
-        Write-Host "[INFO] Environnement 'projet-is' supprimé avec succès." -ForegroundColor Green
-    }
-    # On force le mode Setup après un clean
-    $Setup = $true
-}
-
-# --- Conversion des anciens paramètres en CommandToRun ---
-$FinalCommand = $CommandToRun
-
-if ($Setup) {
-    Write-Host "[INFO] Mode SETUP activé. Forçage d'une réinstallation propre pour la stabilité." -ForegroundColor Cyan
-    $Clean = $true # Forcer le nettoyage
-}
-
-if ($Clean) {
-    Write-Host "[INFO] Mode CLEAN activé. Tentative de suppression de l'environnement 'projet-is'." -ForegroundColor Yellow
-    # Arrêter les processus bloquants d'abord
-    Get-Process | Where-Object { $_.ProcessName -like "*conda*" -or $_.ProcessName -like "*mamba*" } | Stop-Process -Force -ErrorAction SilentlyContinue
-    conda env remove -n projet-is --yes
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[AVERTISSEMENT] La suppression de l'environnement a échoué. Il se peut qu'il n'ait pas existé, ou qu'un problème soit survenu. Le script va continuer." -ForegroundColor Yellow
-    } else {
-        Write-Host "[INFO] Environnement 'projet-is' supprimé avec succès." -ForegroundColor Green
-    }
-}
-
-# --- Conversion des anciens paramètres en CommandToRun ---
-$FinalCommand = $CommandToRun
-
-if ($Setup) {
-    # La seule stratégie fiable est de créer à partir de zéro
-    $PackageManager = "conda"
-    if (Get-Command mamba -ErrorAction SilentlyContinue) {
-        $PackageManager = "mamba"
-    }
-    
-    $SetupCommands = @(
-        "$PackageManager env create --file environment.yml --yes -v",
-        "$PackageManager install scipy=1.13.1 --force-reinstall --yes",
-        "pip install -e .",
-        "playwright install"
-    )
-    # On assigne une valeur factice pour passer la validation
-    $FinalCommand = "setup"
-}
-
-if ($Status) {
-    Write-Host "[INFO] Mode STATUS activé." -ForegroundColor Cyan
-    $FinalCommand = "python project_core/core_from_scripts/environment_manager.py --check-only"
-}
-
-# --- Validation ---
-if (-not $FinalCommand) {
-    Write-Host "[ERREUR] Aucune action spécifiée. Utilisez -Setup, -Status, -CommandToRun ou -Help." -ForegroundColor Red
-    exit 1
-}
-
-# Information sur l'environnement requis
-Write-Host "[INFO] Environnement cible: conda 'projet-is'" -ForegroundColor Cyan
-Write-Host "[INFO] [COMMANDE] $CommandToRun" -ForegroundColor Cyan
-
-# --- DÉLÉGATION AU SCRIPT D'ACTIVATION MODERNE ---
-# Ce script est maintenant un simple alias pour activate_project_env.ps1
-# qui contient la logique d'activation et d'exécution à jour.
-
-Write-Host "[INFO] Délégation de l'exécution au script moderne 'activate_project_env.ps1'" -ForegroundColor Cyan
-
-$ActivationScriptPath = Join-Path $PSScriptRoot "activate_project_env.ps1"
-
-if (-not (Test-Path $ActivationScriptPath)) {
-    Write-Host "[ERREUR] Le script d'activation principal 'activate_project_env.ps1' est introuvable." -ForegroundColor Red
-    Write-Host "[INFO] Assurez-vous que le projet est complet." -ForegroundColor Yellow
-    exit 1
-}
-
-# Construire les arguments pour le script d'activation
-$ActivationArgs = @{
-    CommandToRun = $FinalCommand
-}
-
-# Exécuter le script d'activation moderne en passant les arguments
-if ($Setup) {
-    # La première commande est create ou update, elle doit être exécutée directement
-    $EnvManagementCommand = $SetupCommands[0]
-    Write-Host "=================================================================" -ForegroundColor Green
-    Write-Host "Exécution de la commande de gestion d'environnement: $EnvManagementCommand" -ForegroundColor Yellow
-    Invoke-Expression -Command $EnvManagementCommand
-    $exitCode = $LASTEXITCODE
-    if ($exitCode -ne 0) {
-        Write-Host "La commande de gestion d'environnement a échoué avec le code $exitCode. Arrêt du setup." -ForegroundColor Red
-        exit $exitCode
-    }
-
-    # Les commandes suivantes sont exécutées via le script d'activation
-    for ($i = 1; $i -lt $SetupCommands.Length; $i++) {
-        $cmd = $SetupCommands[$i]
-        Write-Host "=================================================================" -ForegroundColor Green
-        Write-Host "Exécution de la sous-commande SETUP: $cmd" -ForegroundColor Yellow
-        $ActivationArgs = @{ CommandToRun = $cmd }
-        & $ActivationScriptPath @ActivationArgs
-        $exitCode = $LASTEXITCODE
-        if ($exitCode -ne 0) {
-            Write-Host "La sous-commande '$cmd' a échoué avec le code $exitCode. Arrêt du setup." -ForegroundColor Red
-            exit $exitCode
+# 1. Tenter de supprimer l'environnement s'il existe pour garantir une installation propre.
+Write-Host "[INFO] Vérification et suppression de l'ancien environnement '$EnvName' si présent..." -ForegroundColor Yellow
+try {
+    # Obtenir la liste des environnements et vérifier si le nôtre existe
+    $envList = conda env list | Out-String
+    if ($envList -match "\s$EnvName\s") {
+        Write-Host "Environnement '$EnvName' trouvé. Tentative de suppression..."
+        conda env remove -n $EnvName --yes
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[AVERTISSEMENT] La suppression de l'environnement a échoué. Il est possible qu'un processus l'utilise encore." -ForegroundColor Red
+        } else {
+            Write-Host "[INFO] Ancien environnement '$EnvName' supprimé." -ForegroundColor Green
         }
+    } else {
+        Write-Host "[INFO] Pas d'environnement existant '$EnvName' trouvé." -ForegroundColor Gray
     }
-} else {
-    # Exécution normale pour les autres commandes
-    & $ActivationScriptPath @ActivationArgs
-    $exitCode = $LASTEXITCODE
+}
+catch {
+    Write-Host "[AVERTISSEMENT] Une erreur est survenue lors de la tentative de suppression de l'environnement. Le script va continuer." -ForegroundColor Yellow
 }
 
-# --- Résultat ---
-Write-Host "=================================================================" -ForegroundColor Green
-if ($exitCode -eq 0) {
-    Write-Host "Opération terminée avec SUCCES (Code: $exitCode)" -ForegroundColor Green
-} else {
-    Write-Host "Opération terminée en ECHEC (Code: $exitCode)" -ForegroundColor Red
+# 2. Création de l'environnement à partir du fichier YAML
+Write-Host "[INFO] Création du nouvel environnement '$EnvName' à partir de '$EnvironmentFile'." -ForegroundColor Green
+try {
+    # Utiliser mamba si disponible, sinon conda
+    $PackageManager = if (Get-Command mamba -ErrorAction SilentlyContinue) { "mamba" } else { "conda" }
+    Write-Host "[INFO] Utilisation de '$PackageManager' pour la création de l'environnement."
+    
+    & $PackageManager env create --file $EnvironmentFile --name $EnvName
+    
+    if ($LASTEXITCODE -ne 0) {
+        throw "La création de l'environnement avec $PackageManager a échoué."
+    }
+    Write-Host "[SUCCÈS] L'environnement Conda '$EnvName' a été créé." -ForegroundColor Green
 }
-Write-Host "=================================================================" -ForegroundColor Green
+catch {
+    Write-Host "[ERREUR] Une erreur critique est survenue lors de la création de l'environnement." -ForegroundColor Red
+    Write-Host "Message: $($_.Exception.Message)"
+    exit 1
+}
 
-exit $exitCode
+# 3. Instructions finales
+Write-Host -f Green "--- Installation terminée ---"
+Write-Host "Pour activer l'environnement, utilisez la commande suivante dans votre terminal:"
+Write-Host -f Cyan "conda activate $EnvName"
