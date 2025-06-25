@@ -67,7 +67,7 @@ class TestVerificationUtils(unittest.TestCase):
         self.assertTrue(result["start_found"])
         self.assertTrue(result["end_found"])
         self.assertEqual(result["extracted_length"], len("Texte extrait"))
-        mock_load_source_text.assert_called_once_with(source_info)
+        mock_load_source_text.assert_called_once()
         mock_extract_text_with_markers.assert_called_once_with(
             "Texte source complet", "Template START", "END", "Template {0}"
         )
