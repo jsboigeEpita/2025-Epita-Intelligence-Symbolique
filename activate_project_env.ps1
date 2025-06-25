@@ -39,69 +39,71 @@ function Write-Stderr {
 
 try {
     if ($CommandToRun) {
+        # --- Logique de `main` ---
         # Définir le PYTHONPATH pour inclure la racine du projet.
-        # C'est essentiel pour que `conda run` trouve les modules locaux.
         $ProjectRoot = Resolve-Path $PSScriptRoot
         Write-Stderr "Ajout de la racine du projet au PYTHONPATH : $ProjectRoot"
         $env:PYTHONPATH = "$ProjectRoot" + [IO.Path]::PathSeparator + $env:PYTHONPATH
-
-        # Approche alternative pour éviter `conda run` qui cause des crashs de JVM
-        Write-Stderr "Tentative d'exécution de la commande en trouvant directement le python.exe de l'environnement."
-
-        try {
-            $env_name = "projet-is"
-            # Trouve le chemin de l'environnement conda
-            $conda_envs_output = conda info --envs
-            # Recherche la ligne exacte de l'environnement pour éviter les correspondances partielles
-            $env_line = $conda_envs_output | Where-Object { ($_.Split(' ',[System.StringSplitOptions]::RemoveEmptyEntries)[0]) -eq $env_name }
-
-            if (-not $env_line) {
-                throw "L'environnement Conda '$env_name' n'a pas été trouvé."
+        
+        # Détermine le nom de l'environnement Conda dynamiquement
+        $env_name = "projet-is" # Fallback par défaut
+        $config_file = Join-Path $PSScriptRoot "argumentation_analysis" "config" "environment_config.py"
+        if(Test-Path $config_file) {
+            $config_content = Get-Content $config_file
+            $env_name_line = $config_content | Select-String -Pattern 'CONDA_ENV_NAME\s*=\s*"([^"]+)"'
+            if($env_name_line) {
+                $env_name = $env_name_line.Matches[0].Groups[1].Value
             }
-            # Si plusieurs lignes correspondent, prendre la première
-            if ($env_line.Count -gt 1) {
-                $env_line = $env_line[0]
-            }
-
-            $env_path = ($env_line.Split(' ',[System.StringSplitOptions]::RemoveEmptyEntries)[-1])
-            $python_exe = Join-Path $env_path "python.exe"
-
-            if (-not (Test-Path $python_exe)) {
-                throw "python.exe non trouvé dans l'environnement '$env_name' au chemin '$python_exe'."
-            }
-
-            Write-Stderr "Utilisation de l'interpréteur Python: $python_exe"
-            
-            # La commande est passée dans $CommandToRun. Ex: "python argumentation_analysis/ui/app.py"
-            # On doit la séparer en l'exécutable ("python") et ses arguments.
-            $command_parts = $CommandToRun.Split(' ')
-            $program_to_run = $command_parts[0]
-            $argument_list = $command_parts[1..($command_parts.Length - 1)]
-
-            # Si le programme est "python", on utilise le chemin complet de l'interpréteur de l'environnement
-            if ($program_to_run -eq "python") {
-                $program_to_run = $python_exe
-            }
-            
-            # Exécute la commande demandée avec ses arguments
-            & $program_to_run $argument_list
         }
-        catch {
-            Write-Stderr "L'approche alternative a échoué. Tentative avec l'ancienne méthode 'conda run'."
-            Write-Stderr "Erreur de l'approche alternative: $($_.Exception.Message)"
-            $CondaCommand = "conda run --no-capture-output -n projet-is $CommandToRun"
-            Write-Stderr "Exécution de la commande dans l'environnement 'projet-is' avec le PYTHONPATH mis à jour: $CommandToRun"
-            Invoke-Expression -Command $CondaCommand
+        Write-Stderr "Recherche de l'environnement Conda: $env_name"
+
+        # Trouve le chemin de l'environnement Conda de manière robuste
+        $env_line = conda info --envs | findstr.exe /R /C:"^..*\b$env_name\b.*"
+        
+        if (-not $env_line) {
+            throw "L'environnement Conda '$env_name' n'a pas été trouvé."
         }
+        if ($env_line.Count -gt 1) {
+            $env_line = $env_line[0] # Prend le premier si plusieurs lignes correspondent
+        }
+
+        $env_path = ($env_line.Split(' ',[System.StringSplitOptions]::RemoveEmptyEntries)[-1])
+        $python_exe = Join-Path $env_path "python.exe"
+
+        if (-not (Test-Path $python_exe)) {
+            throw "python.exe non trouvé dans l'environnement '$env_name' au chemin '$python_exe'."
+        }
+
+        Write-Stderr "Utilisation de l'interpréteur Python: $python_exe"
+        
+        # Sépare la commande et les arguments de manière sécurisée
+        $command_parts = $CommandToRun.Split(' ', 2)
+        $program_to_run = $command_parts[0]
+        $argument_list = if ($command_parts.Length -gt 1) { $command_parts[1] } else { $null }
+
+        # Gestion des exécutables de l'environnement (python, pytest, etc.)
+        $exe_in_env = Join-Path $env_path "Scripts" "$program_to_run.exe"
+        if (Test-Path $exe_in_env) {
+            $program_to_run = $exe_in_env
+        } elseif ($program_to_run -eq "python") {
+            $program_to_run = $python_exe
+        }
+        
+        # Exécute la commande et gère la sortie
+        Write-Stderr "Exécution: $program_to_run $argument_list"
+        & $program_to_run $argument_list
+        
         $exitCode = $LASTEXITCODE
         if ($exitCode -ne 0) {
             Write-Stderr "ERREUR: La commande a échoué avec le code de sortie: $exitCode"
         }
         exit $exitCode
+
     } else {
-        # Comportement par défaut: lancer un shell interactif
-        Write-Stderr "Aucune commande spécifiée. Lancement d'un shell interactif dans 'projet-is'."
-        conda activate projet-is
+        # Comportement par défaut : Lancer un shell interactif dans l'environnement
+        $env_name = "projet-is" # Assurez-vous que le nom de l'environnement est correct
+        Write-Stderr "Aucune commande spécifiée. Lancement d'un shell interactif dans '$env_name'."
+        conda activate $env_name
     }
 }
 catch {

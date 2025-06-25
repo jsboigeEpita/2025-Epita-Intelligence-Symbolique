@@ -457,26 +457,17 @@ _SESSION_FIXTURE_OWNS_JVM = False
 
 def get_jvm_options() -> List[str]:
     """
-    Retourne une liste minimale d'options JVM pour maximiser la stabilité.
-    Les options de diagnostic sont temporairement désactivées pour éliminer
-    toute source potentielle d'interférence.
+    Construit une liste d'options JVM standard pour la stabilité et la performance.
     """
     options = [
-        "-Xms128m",  # Augmentation légère de la mémoire initiale
-        "-Xmx1024m", # Augmentation de la mémoire maximale
-        "-Dfile.encoding=UTF-8",
-        "-Djava.awt.headless=true",
-        # Le flag -Xcheck:jni est retiré temporairement pour simplifier
+        "-Xmx4096m",              # Augmentation de la mémoire maximale à 4 Go
+        "-Xms512m",               # Mémoire initiale
+        "-XX:+UseG1GC",             # Utilisation du G1 Garbage Collector
+        "-XX:MaxGCPauseMillis=200", # Objectif de pause pour le GC
+        "-Dfile.encoding=UTF-8",    # Encodage des fichiers
+        "-Djava.awt.headless=true"  # Mode Headless pour les environnements sans UI
     ]
-    
-    # On garde les options spécifiques à Windows qui sont généralement bénéfiques
-    if os.name == 'nt':
-       options.extend([
-           "-XX:+UseG1GC",
-           "-Xrs",  # Ajouté pour améliorer la stabilité sur Windows
-       ])
-    
-    logger.info(f"Options JVM simplifiées pour la stabilité : {options}")
+    logger.info(f"Options JVM configurées: {options}")
     return options
 
 def initialize_jvm(force_redownload_jars=False, session_fixture_owns_jvm=False) -> bool:
@@ -513,7 +504,24 @@ def initialize_jvm(force_redownload_jars=False, session_fixture_owns_jvm=False) 
         return False
     os.environ['JAVA_HOME'] = java_home
 
-    jvm_path = jpype.getDefaultJVMPath()
+    # Déterminer le chemin de la JVM de manière déterministe au lieu de se fier à la magie.
+    # C'est la correction la plus critique pour éviter les "access violation".
+    system = platform.system()
+    if system == "Windows":
+        jvm_path = Path(java_home) / "bin" / "server" / "jvm.dll"
+    elif system == "Linux":
+        jvm_path = Path(java_home) / "lib" / "server" / "libjvm.so"
+    elif system == "Darwin": # macOS
+        jvm_path = Path(java_home) / "lib" / "server" / "libjvm.dylib"
+    else:
+        logger.critical(f"Système d'exploitation non supporté pour la construction du chemin JVM: {system}")
+        return False
+
+    if not jvm_path.exists():
+        logger.critical(f"Le chemin de la librairie JVM construit n'existe pas : {jvm_path}")
+        return False
+        
+    logger.info(f"Utilisation du chemin de la librairie JVM explicite : {jvm_path}")
     
     all_jars = [str(p.resolve()) for p in LIBS_DIR.glob("*.jar")]
     if not all_jars:
@@ -547,7 +555,7 @@ def initialize_jvm(force_redownload_jars=False, session_fixture_owns_jvm=False) 
         logger.info(f"Classpath final validé: {classpath_list}")
         
         jpype.startJVM(
-            jvm_path,
+            str(jvm_path), # Conversion explicite en string pour compatibilité maximale
             *jvm_options,
             classpath=classpath_list, # Utiliser la liste de strings validée
             ignoreUnrecognized=True,
