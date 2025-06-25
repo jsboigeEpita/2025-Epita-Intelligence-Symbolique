@@ -581,7 +581,7 @@ def test_check_python_dependencies_parsing_error_unrecoverable(mock_file_operati
     mock_parse_req.side_effect = custom_parse_side_effect
     
     assert check_python_dependencies(req_file_path_str) is False
-    assert "Échec critique du parsing de la ligne '[] --invalid' même après heuristique" in caplog.text
+    assert "Impossible de parser la ligne de dépendance et d'extraire un nom de package: '[] --invalid'" in caplog.text
     assert "⚠️  Certaines dépendances Python du fichier ne sont pas satisfaites ou sont manquantes." in caplog.text
 
 

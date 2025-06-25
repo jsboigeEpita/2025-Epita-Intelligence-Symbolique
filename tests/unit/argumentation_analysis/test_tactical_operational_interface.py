@@ -57,7 +57,7 @@ class TestTacticalOperationalInterface(unittest.TestCase):
         
         # Ajouter les attributs manquants aux mocks
         self.mock_tactical_adapter.request_operational_info = MagicMock()
-        self.mock_operational_adapter.send_result_report = MagicMock()
+        self.mock_operational_adapter.send_result = MagicMock()
         
         # Configurer le mock du middleware pour retourner les adaptateurs mockés
         self.mock_middleware.get_adapter.side_effect = lambda agent_id, level: \
@@ -391,7 +391,7 @@ class TestTacticalOperationalInterface(unittest.TestCase):
         self.interface.process_operational_result(operational_result)
 
         # Vérifier que l'adaptateur opérationnel a été utilisé pour envoyer le rapport
-        self.mock_operational_adapter.send_result_report.assert_called_once()
+        self.mock_operational_adapter.send_result.assert_called_once()
         
         # Le rapport est maintenant envoyé via l'adaptateur, et la méthode ne retourne rien.
         # Pour ce test unitaire, vérifier que la méthode a été appelée est suffisant.

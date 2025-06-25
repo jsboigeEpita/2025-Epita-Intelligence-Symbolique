@@ -115,17 +115,12 @@ class TestOperationalAgentsIntegration:
             tactical_operational_interface=interface,
             middleware=middleware,
             kernel=mock_kernel,
-            project_context=mock_project_context
-        )
-        
-        # Instantiate and attach the agent registry to the manager
-        registry = OperationalAgentRegistry(
-            operational_state=operational_state,
-            kernel=mock_kernel,
             llm_service_id=mock_llm_service_id,
             project_context=mock_project_context
         )
-        manager.registry = registry
+        
+        # Le manager crée son propre registre, nous l'utilisons directement.
+        registry = manager.agent_registry
         
         await manager.start()
 
@@ -209,7 +204,7 @@ class TestOperationalAgentsIntegration:
             tactical_state.add_task(tactical_task)
 
             # S'assurer que l'agent est bien mocké par le patch
-            agent = await manager.registry.select_agent_for_task(tactical_task)
+            agent = await manager.agent_registry.select_agent_for_task(tactical_task)
             agent.process_task = mock_process_task # Attribuer le mock à l'instance
             
             result = await manager.process_tactical_task(tactical_task)
@@ -244,7 +239,7 @@ class TestOperationalAgentsIntegration:
             }
             tactical_state.add_task(tactical_task)
 
-            agent = await manager.registry.select_agent_for_task(tactical_task)
+            agent = await manager.agent_registry.select_agent_for_task(tactical_task)
             agent.process_task = mock_process_task
 
             result = await manager.process_tactical_task(tactical_task)
@@ -280,7 +275,7 @@ class TestOperationalAgentsIntegration:
             }
             tactical_state.add_task(tactical_task)
 
-            agent = await manager.registry.select_agent_for_task(tactical_task)
+            agent = await manager.agent_registry.select_agent_for_task(tactical_task)
             agent.process_task = mock_process_task
 
             result = await manager.process_tactical_task(tactical_task)
