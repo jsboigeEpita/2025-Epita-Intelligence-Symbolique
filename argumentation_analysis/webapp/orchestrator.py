@@ -172,11 +172,11 @@ class MinimalBackendManager:
         
         # L'environnement Conda est déjà activé par le script appelant (run_tests.ps1).
         # Nous utilisons donc directement l'exécutable Python courant.
-        python_executable = Path(sys.executable)
+        python_executable = sys.executable
         self.logger.info(f"[BACKEND] Utilisation du chemin Python absolu : {python_executable}")
 
         command = [
-            str(python_executable),
+            python_executable,
             '-m', 'uvicorn', module_spec,
             '--host', '127.0.0.1',
             '--port', str(self.port)
@@ -1109,26 +1109,29 @@ class UnifiedWebOrchestrator:
         )
 
         result = await self.frontend_manager.start()
-        if result['success']:
-            self.app_info.frontend_url = result['url']
-            self.app_info.frontend_port = result['port']
-            self.app_info.frontend_pid = result['pid']
+        if result and result.get('success'):
+            self.app_info.frontend_url = result.get('url')
+            self.app_info.frontend_port = result.get('port')
+            self.app_info.frontend_pid = result.get('pid')
             
-            self.add_trace("[OK] FRONTEND OPERATIONNEL",
-                          f"Port: {result['port']}", 
-                          f"URL: {result['url']}")
+            # Vérifier que les valeurs existent avant de les utiliser
+            if self.app_info.frontend_url and self.app_info.frontend_port:
+                self.add_trace("[OK] FRONTEND OPERATIONNEL",
+                              f"Port: {self.app_info.frontend_port}",
+                              f"URL: {self.app_info.frontend_url}")
 
-            # Sauvegarde l'URL du frontend pour que les tests puissent la lire
-            print("[DEBUG] unified_web_orchestrator.py: Saving frontend URL")
-            # La communication de l'URL se fait maintenant via les variables d'environnement
-            # et la sortie standard de l'orchestrateur. Le fichier n'est plus nécessaire.
-            self.add_trace("[INFO] URL FRONTEND DISPONIBLE", f"URL: {result['url']}", status="success")
-            # Afficher l-URL sur la sortie standard pour que les scripts externes puissent la capturer.
-            print(f"FRONTEND_URL_READY={result['url']}")
+                # Sauvegarde l'URL du frontend pour que les tests puissent la lire
+                print("[DEBUG] unified_web_orchestrator.py: Saving frontend URL")
+                # La communication de l'URL se fait maintenant via les variables d'environnement
+                # et la sortie standard de l'orchestrateur. Le fichier n'est plus nécessaire.
+                self.add_trace("[INFO] URL FRONTEND DISPONIBLE", f"URL: {self.app_info.frontend_url}", status="success")
+                # Afficher l-URL sur la sortie standard pour que les scripts externes puissent la capturer.
+                print(f"FRONTEND_URL_READY={self.app_info.frontend_url}")
             
             return True
         else:
-            self.add_trace("[WARNING] FRONTEND ECHEC", result['error'], "Continue sans frontend", status="error")
+            error_details = result.get('error', 'Erreur inconnue') if isinstance(result, dict) else 'Résultat inattendu'
+            self.add_trace("[WARNING] FRONTEND ECHEC", error_details, "Continue sans frontend", status="error")
             return True  # Non bloquant
     
     async def _validate_services(self) -> bool:

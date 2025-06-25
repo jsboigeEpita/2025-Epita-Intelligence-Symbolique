@@ -7,7 +7,7 @@ from pathlib import Path
 try:
     # Résoudre le chemin racine du projet par rapport à l'emplacement de ce script.
     current_script_path = Path(__file__).resolve()
-    project_root = current_script_path.parent.parent.parent
+    project_root = current_script_path.parent.parent.parent.parent
 except NameError:
     # Fallback si __file__ n'est pas défini (ex: REPL), en supposant que CWD est la racine.
     project_root = Path(os.getcwd())
@@ -20,6 +20,13 @@ if str(project_root) not in sys.path:
 from argumentation_analysis.core.bootstrap import initialize_project_environment
 import subprocess
 import logging
+from dotenv import load_dotenv
+import asyncio
+
+# Maintenant que le path est configuré, on peut importer les modules du projet.
+from argumentation_analysis.core.bootstrap import initialize_project_environment
+from types import SimpleNamespace
+from argumentation_analysis.webapp.orchestrator import UnifiedWebOrchestrator # Utiliser l'orchestrateur centralisé
 
 
 # Configuration du logging
@@ -114,9 +121,12 @@ def run_pytest_tests():
     test_dir = str(project_root / "tests" / "e2e")
     
     command = [
+        sys.executable,
+        "-m",
         "pytest",
         test_dir,
         "--verbose",
+        "--asyncio-mode=strict",  # Forcer le mode strict pour éviter les conflits de boucle d'événements
         "--headed"  # Lancer avec un navigateur visible pour le débogage
     ]
 
@@ -152,32 +162,88 @@ def run_pytest_tests():
     except Exception as e:
         logger.error(f"Une erreur est survenue lors de l'exécution de pytest : {e}", exc_info=True)
         return False
+        
+async def main_async():
+    """Point d'entrée asynchrone pour gérer le cycle de vie des services."""
+    logger.info("Démarrage du pipeline de tests E2E Web...")
+
+    # Charger les variables d'environnement pour les ports
+    dotenv_path = project_root / '.env'
+    load_dotenv(dotenv_path=dotenv_path)
+    backend_port = int(os.environ.get("BACKEND_PORT", 5003))
+    frontend_port = int(os.environ.get("FRONTEND_PORT", 3000))
+
+    # Configuration de l'orchestrateur centralisé
+    config_path = project_root / 'scripts' / 'webapp' / 'config' / 'webapp_config.yml'
+    # Créer un objet de configuration simulant argparse.Namespace pour l'orchestrateur
+    # pour instancier UnifiedWebOrchestrator en dehors de son contexte CLI.
+    orchestrator_args = SimpleNamespace(
+        config=str(config_path),
+        log_level='INFO',
+        headless=True,
+        visible=False,
+        timeout=15, # Timeout de 15 minutes pour le pipeline complet
+        no_trace=False,
+        frontend=True, # Forcer le démarrage du frontend pour les tests E2E
+        tests=None,
+        no_playwright=False,
+        exit_after_start=False,
+        start=False,
+        stop=False,
+        test=False,
+        integration=True
+    )
+    orchestrator = UnifiedWebOrchestrator(orchestrator_args)
+    orchestrator.headless = True # Toujours en headless pour les tests CI/CD
+
+    pipeline_status = 1  # 1 pour échec par défaut
+
+    try:
+        # --- Étape 1: Construire le frontend ---
+        logger.info("Étape 1: Démarrage du build de l'application frontend React...")
+        if not build_frontend():
+            logger.error("Le build du frontend a échoué. Arrêt du pipeline.")
+            return 1 # Échec
+
+        # --- Étape 2: Initialisation de l'environnement Python ---
+        logger.info("Étape 2: Initialisation de l'environnement du projet...")
+        if not initialize_project_environment():
+            logger.error("Échec de l'initialisation de l'environnement. Arrêt.")
+            return 1
+
+        # --- Étape 3: Démarrer les services web ---
+        logger.info(f"Étape 3: Démarrage des services (Backend: {backend_port}, Frontend: {frontend_port})...")
+        services_started = await orchestrator.start_webapp(
+            headless=orchestrator.headless,
+            frontend_enabled=True
+        )
+        if not services_started:
+            logger.error("Échec du démarrage des services web via UnifiedWebOrchestrator. Arrêt.")
+            return 1
+        
+        logger.info("Services web démarrés avec succès.")
+        
+        # --- Étape 4: Lancement des tests ---
+        logger.info("Étape 4: Lancement des tests pytest...")
+        tests_passed = run_pytest_tests()
+        
+        if tests_passed:
+            logger.info("Pipeline de tests E2E Web terminé avec SUCCÈS.")
+            pipeline_status = 0 # Succès
+        else:
+            logger.error("Pipeline de tests E2E Web terminé en ÉCHEC.")
+            pipeline_status = 1 # Échec
+
+    except Exception as e:
+        logger.error(f"Une erreur critique est survenue dans le pipeline : {e}", exc_info=True)
+    finally:
+        logger.info("Arrêt des services web...")
+        await orchestrator.stop_webapp()
+        logger.info("Services web arrêtés.")
+    
+    return pipeline_status
 
 
 if __name__ == "__main__":
-    logger.info("Démarrage du pipeline de tests E2E Web...")
-    
-    # --- Étape 1: Construire le frontend ---
-    logger.info("Étape 1: Démarrage du build de l'application frontend React...")
-    frontend_built = build_frontend()
-    if not frontend_built:
-        logger.error("Le build du frontend a échoué. Arrêt du pipeline.")
-        sys.exit(1)
-    
-    # --- Étape 2: Initialisation de l'environnement Python ---
-    logger.info("Étape 2: Initialisation de l'environnement du projet avant de lancer les tests...")
-    env_initialized = initialize_project_environment()
-    if not env_initialized:
-        logger.error("Échec de l'initialisation de l'environnement. Le pipeline est arrêté.")
-        sys.exit(1)
-    
-    # --- Étape 3: Lancement des tests ---
-    logger.info("Étape 3: Environnement initialisé. Lancement des tests pytest.")
-    success = run_pytest_tests()
-    
-    if success:
-        logger.info("Pipeline de tests E2E Web terminé avec SUCCÈS.")
-        sys.exit(0)
-    else:
-        logger.error("Pipeline de tests E2E Web terminé en ÉCHEC.")
-        sys.exit(1)
+    exit_code = asyncio.run(main_async())
+    sys.exit(exit_code)
