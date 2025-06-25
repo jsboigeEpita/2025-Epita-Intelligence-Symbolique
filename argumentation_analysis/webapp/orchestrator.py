@@ -767,6 +767,9 @@ class UnifiedWebOrchestrator:
                           f"Backend: {self.app_info.backend_url}",
                           "Tous les services démarrés")
             
+            # Sauvegarder les URLs pour les processus externes
+            self._save_urls_to_file()
+            
             return True
             
         except Exception as e:
@@ -1294,6 +1297,25 @@ class UnifiedWebOrchestrator:
         
         return content
 
+    def _save_urls_to_file(self):
+        """Sauvegarde les URLs des services dans un fichier temporaire pour les scripts externes."""
+        project_root = Path(__file__).parent.parent.parent.resolve()
+        temp_dir = project_root / "_temp"
+        temp_dir.mkdir(exist_ok=True)
+        urls_file = temp_dir / "service_urls.json"
+
+        urls_data = {
+            "backend_url": self.app_info.backend_url,
+            "frontend_url": self.app_info.frontend_url,
+        }
+        
+        try:
+            with open(urls_file, 'w', encoding='utf-8') as f:
+                json.dump(urls_data, f, indent=4)
+            self.logger.info(f"[INFO] URLs des services sauvegardées dans {urls_file}")
+        except Exception as e:
+            self.logger.error(f"[ERROR] Impossible de sauvegarder les URLs dans {urls_file}: {e}")
+
 def main():
     """Point d'entrée principal en ligne de commande"""
     print("[DEBUG] unified_web_orchestrator.py: main()")
@@ -1343,6 +1365,8 @@ def main():
                 success = await orchestrator.start_webapp(orchestrator.headless, args.frontend)
                 if success:
                     orchestrator.logger.info("Application démarrée avec succès. Arrêt immédiat comme demandé.")
+                    # On s'assure que les URLs sont écrites même avec --exit-after-start
+                    orchestrator._save_urls_to_file()
                 # Le `finally` se chargera de l'arrêt propre
                 return success
 

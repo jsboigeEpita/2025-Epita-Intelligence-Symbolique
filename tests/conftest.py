@@ -141,7 +141,7 @@ else:
 #     # Mock pour NumPy
 #     try:
 #         # Tenter d'importer le contenu spécifique du mock si disponible
-#         from tests.mocks.numpy_mock import array as numpy_array_mock # Importer un élément spécifique pour vérifier
+#         from tests.mocks.numpy_mock import array as numpy_array_mock # Importer un élément specific pour vérifier
 #         # Si l'import ci-dessus fonctionne, on peut supposer que le module mock est complet
 #         # et sera utilisé par les imports suivants dans le code testé.
 #         # Cependant, pour forcer l'utilisation du mock complet, on le met dans sys.modules.
@@ -174,12 +174,12 @@ else:
 
 # Charger les fixtures définies dans d'autres fichiers comme des plugins
 # NOTE(Roo): Disabling plugins to isolate the source of pytest crash (exit code 3).
-# pytest_plugins = [
-#    "tests.fixtures.integration_fixtures",
-#    "tests.fixtures.jvm_subprocess_fixture",
-#     "pytest_playwright",
-#     "tests.mocks.numpy_setup"
-# ]
+pytest_plugins = [
+   "tests.fixtures.integration_fixtures",
+   "tests.fixtures.jvm_subprocess_fixture",
+    "pytest_playwright",
+    "tests.mocks.numpy_setup"
+]
 
 def pytest_addoption(parser):
     """Ajoute des options de ligne de commande personnalisées à pytest."""

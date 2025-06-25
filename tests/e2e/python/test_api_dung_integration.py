@@ -37,7 +37,7 @@ def test_dung_framework_analysis_api(playwright: Playwright):
     # Appel direct de l'API
     response = api_request_context.post(
         "/api/v1/framework/analyze",
-        data=test_data
+        json=test_data
     )
 
     # Vérifications de base

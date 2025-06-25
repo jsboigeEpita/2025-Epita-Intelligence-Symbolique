@@ -88,25 +88,52 @@ elseif ($Type -eq "e2e-python") {
     $output = ""
 
     try {
-        # --- ÉTAPE 1: Démarrer les serveurs et capturer l'output ---
+        # --- ÉTAPE 1: Démarrer les serveurs et capturer l'output via un fichier temporaire ---
         Write-Host "[INFO] Étape 1: Démarrage des services et capture des URLs..." -ForegroundColor Yellow
         $startCommand = "python -m argumentation_analysis.webapp.orchestrator --exit-after-start --log-level INFO --frontend"
+        $urlsFile = Join-Path $ProjectRoot "_temp/service_urls.json"
         
-        # Exécute la commande et stocke la sortie dans $output. Tee-Object permet de voir la sortie en temps réel.
-        $output = & $ActivationScriptPath -CommandToRun $startCommand 2>&1 | Tee-Object -Variable pso | Out-String
+        # Créer le répertoire _temp s'il n'existe pas
+        $tempDir = Split-Path $urlsFile -Parent
+        if (-not (Test-Path $tempDir)) {
+            New-Item -ItemType Directory -Path $tempDir | Out-Null
+        }
 
+        # Supprimer l'ancien fichier d'URLs s'il existe pour éviter de lire des informations périmées
+        if (Test-Path $urlsFile) {
+            Remove-Item $urlsFile
+        }
+
+        # Exécuter l'orchestrateur. Il va maintenant écrire les URLs dans le fichier service_urls.json.
+        & $ActivationScriptPath -CommandToRun $startCommand
+        
         if ($LASTEXITCODE -ne 0) {
-            Write-Host $output
+            # L'orchestrateur gère déjà l'affichage de ses propres erreurs.
             throw "L'orchestrateur n'a pas réussi à démarrer les services."
         }
         
-        # Extraire les URLs depuis la sortie de l'orchestrateur
-        $backendUrl = $output | Select-String -Pattern "BACKEND OPERATIONNEL.*URL: (http://[^\s]+)" | ForEach-Object { $_.Matches[0].Groups[1].Value }
-        $frontendUrl = $output | Select-String -Pattern "FRONTEND_URL_READY=(http://[^\s]+)" | ForEach-Object { $_.Matches[0].Groups[1].Value }
+        # Attendre que le fichier d'URLs soit créé
+        $maxWaitSeconds = 30
+        $waitIntervalSeconds = 1
+        $waitedSeconds = 0
+        while (-not (Test-Path $urlsFile) -and $waitedSeconds -lt $maxWaitSeconds) {
+            Start-Sleep -Seconds $waitIntervalSeconds
+            $waitedSeconds += $waitIntervalSeconds
+        }
+
+        if (-not (Test-Path $urlsFile)) {
+            throw "Timeout: Le fichier d'URLs '$urlsFile' n'a pas été créé par l'orchestrateur."
+        }
+        
+        # Lire et parser les URLs depuis le fichier JSON
+        $urlsData = Get-Content $urlsFile | ConvertFrom-Json
+        $backendUrl = $urlsData.backend_url
+        $frontendUrl = $urlsData.frontend_url
 
         if (-not $backendUrl) {
-            Write-Host $output
-            throw "Impossible de trouver l'URL du backend dans la sortie de l'orchestrateur."
+            Write-Host "[ERREUR] Contenu de la sortie de l'orchestrateur:" -ForegroundColor Red
+            Write-Host $output -ForegroundColor Red
+            throw "Impossible de trouver l'URL du backend dans la sortie de l'orchestrateur après analyse."
         }
         
         Write-Host "[INFO] URL Backend capturée: $backendUrl" -ForegroundColor Green
@@ -146,6 +173,11 @@ elseif ($Type -eq "e2e-python") {
             if ($globalExitCode -eq 0) { $globalExitCode = 1 }
         } else {
             Write-Host "[INFO] Services arrêtés proprement." -ForegroundColor Green
+        }
+        
+        # Nettoyer le fichier d'URLs temporaire
+        if (Test-Path $urlsFile) {
+            Remove-Item $urlsFile
         }
     }
     
