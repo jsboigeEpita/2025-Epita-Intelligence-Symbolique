@@ -18,12 +18,13 @@ import re
 import json
 import jpype
 import asyncio
-from typing import Dict, List, Optional, Any, Tuple, AsyncGenerator
+from typing import Dict, List, Optional, Any, Tuple, AsyncGenerator, NamedTuple
 from abc import abstractmethod
+import os
 
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
-from semantic_kernel.contents import ChatMessageContent, AuthorRole
+from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.contents.chat_history import ChatHistory
 # Imports are updated based on recent semantic-kernel changes
 from semantic_kernel.agents.chat_completion.chat_completion_agent import FunctionChoiceBehavior
@@ -59,6 +60,20 @@ logger = logging.getLogger(__name__)
 # de chaque composant.
 # ==============================================================================
 
+# Structures de données pour stocker les éléments logiques sémantiquement
+class AtomicFact(NamedTuple):
+    predicate_name: str
+    arguments: List[str]
+
+class UniversalImplication(NamedTuple):
+    antecedent_predicate: str
+    consequent_predicate: str
+    sort_of_variable: str
+
+class ExistentialConjunction(NamedTuple):
+    predicate1: str
+    predicate2: str
+    sort_of_variable: str
 
 class BeliefSetBuilderPlugin:
     """
@@ -73,7 +88,19 @@ class BeliefSetBuilderPlugin:
         """Réinitialise l'état interne du constructeur."""
         self._sorts: Dict[str, List[str]] = {}  # {sort_name: [const1, const2]}
         self._predicates: Dict[str, List[str]] = {}  # {pred_name: [sort1, sort2]}
-        self._formulas: List[str] = []
+        self._atomic_facts: List[AtomicFact] = []
+        self._universal_implications: List[UniversalImplication] = []
+        self._existential_conjunctions: List[ExistentialConjunction] = []
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convertit l'état du builder en un dictionnaire sérialisable."""
+        return {
+            "_sorts": self._sorts,
+            "_predicates": self._predicates,
+            "_atomic_facts": [fact._asdict() for fact in self._atomic_facts],
+            "_universal_implications": [impl._asdict() for impl in self._universal_implications],
+            "_existential_conjunctions": [conj._asdict() for conj in self._existential_conjunctions],
+        }
 
     def _normalize(self, name: str) -> str:
         """Normalise un identifiant pour être compatible avec Tweety."""
@@ -95,12 +122,12 @@ class BeliefSetBuilderPlugin:
         if norm_sort not in self._sorts:
             self._sorts[norm_sort] = []
         return f"Sort '{norm_sort}' ajouté."
-
+    
     @kernel_function(
         description="Ajoute une constante (un objet spécifique, comme 'socrate') à un sort déclaré.",
-        name="add_constant",
+        name="add_constant_to_sort",
     )
-    def add_constant(self, constant_name: str, sort_name: str):
+    def add_constant_to_sort(self, constant_name: str, sort_name: str):
         """Ajoute une constante à un sort."""
         norm_const = self._normalize(constant_name)
         norm_sort = self._normalize(sort_name)
@@ -111,104 +138,174 @@ class BeliefSetBuilderPlugin:
         return f"Constante '{norm_const}' ajoutée au sort '{norm_sort}'."
 
     @kernel_function(
-        description="Déclare un nouveau prédicat (une propriété ou une relation, comme 'EstMortel').",
-        name="add_predicate",
+        description="Définit la 'signature' d'une relation ou propriété.",
+        name="add_predicate_schema",
     )
-    def add_predicate(self, predicate_name: str, argument_sorts: List[str]):
+    def add_predicate_schema(self, predicate_name: str, argument_sorts: List[str]):
         """Ajoute une déclaration de type de prédicat."""
         norm_pred = self._normalize(predicate_name)
-        norm_args = [self._normalize(s) for s in argument_sorts]
+        norm_args = []
+        for s in argument_sorts:
+            norm_s = self._normalize(s)
+            if norm_s not in self._sorts:
+                self.add_sort(norm_s) # Tolérance : on crée le sort s'il manque
+            norm_args.append(norm_s)
+        
         self._predicates[norm_pred] = norm_args
-        return f"Prédicat '{norm_pred}' déclaré avec les arguments {norm_args}."
+        return f"Schéma du prédicat '{norm_pred}' déclaré avec les arguments {norm_args}."
 
     @kernel_function(
-        description="Ajoute une formule logique (un fait ou une règle) à la base de connaissances.",
-        name="add_formula",
+        description="Ajoute un fait simple et atomique (ex: 'Socrate est un homme').",
+        name="add_atomic_fact",
     )
-    def add_formula(self, formula: str):
-        """Ajoute une formule, en normalisant la syntaxe des quantificateurs."""
-        
-        # Normalisation des symboles de quantificateurs
-        normalized_formula = formula.replace("∀", "forall ").replace("∃", "exists ")
-        # Remplacement des opérateurs logiques communs par la syntaxe attendue par Tweety
-        normalized_formula = normalized_formula.replace("→", "=>").replace("∧", "&&").replace("∨", "||").replace("¬", "!").replace("↔", "<=>")
+    def add_atomic_fact(self, predicate_name: str, arguments: List[str]):
+        """Stocke un fait atomique."""
+        norm_pred = self._normalize(predicate_name)
+        norm_args = [self._normalize(arg) for arg in arguments]
+        self._atomic_facts.append(AtomicFact(predicate_name=norm_pred, arguments=norm_args))
+        return f"Fait atomique '{norm_pred}({', '.join(norm_args)})' ajoute."
 
-        # Normalisation de la syntaxe du quantificateur (ex: "forall x(...)" -> "forall X:(...)")
-        # Cette regex recherche "forall" ou "exists", suivi d'un espace, d'un nom de variable,
-        # d'un espace optionnel, et d'une parenthèse ouvrante.
-        # Elle remplace cela par "forall/exists", la variable en MAJUSCULE, deux-points, et la parenthèse.
-        def replacer(match):
-            keyword = match.group(1)
-            variable_lower = match.group(2)
-            variable_upper = variable_lower.upper()
-            inner_formula = match.group(3)
+    @kernel_function(
+        description="Ajoute une règle universelle (ex: 'Tous les hommes sont mortels').",
+        name="add_universal_implication",
+    )
+    def add_universal_implication(self, antecedent_predicate: str, consequent_predicate: str, sort_of_variable: str):
+        """Stocke une implication universelle."""
+        norm_antecedent = self._normalize(antecedent_predicate)
+        norm_consequent = self._normalize(consequent_predicate)
+        norm_sort = self._normalize(sort_of_variable)
+
+        # Tolérance : si un prédicat n'a pas été déclaré, on le fait implicitement
+        # en supposant qu'il s'agit d'un prédicat unaire portant sur le sort de la variable.
+        if norm_antecedent not in self._predicates:
+            self.add_predicate_schema(norm_antecedent, [norm_sort])
+        if norm_consequent not in self._predicates:
+            self.add_predicate_schema(norm_consequent, [norm_sort])
             
-            # Remplace toutes les occurrences de la variable (insensible à la casse) par sa version majuscule
-            # à l'intérieur de l'expression. \b est une ancre de mot pour éviter de remplacer
-            # des parties de noms plus longs.
-            inner_formula_replaced = re.sub(r'\b' + re.escape(variable_lower) + r'\b', variable_upper, inner_formula, flags=re.IGNORECASE)
+        self._universal_implications.append(UniversalImplication(
+            antecedent_predicate=norm_antecedent,
+            consequent_predicate=norm_consequent,
+            sort_of_variable=norm_sort
+        ))
+        return f"Implication universelle 'forall X: {norm_antecedent}(X) => {norm_consequent}(X)' ajoutée pour le sort '{norm_sort}'."
 
-            # Nouvelle stratégie : les variables sont toujours quantifiées sur un sort générique "thing".
-            # La propriété (ex: "être un homme") est gérée par un prédicat unaire (homme(X)).
-            # Le prompt système guide maintenant le LLM vers cette approche.
-            sort_name = "thing"
+    @kernel_function(
+        description="Ajoute une affirmation d'existence (ex: 'Certains penseurs sont des écrivains').",
+        name="add_existential_conjunction",
+    )
+    def add_existential_conjunction(self, predicate1: str, predicate2: str, sort_of_variable: str):
+        """Stocke une conjonction existentielle."""
+        norm_pred1 = self._normalize(predicate1)
+        norm_pred2 = self._normalize(predicate2)
+        norm_sort = self._normalize(sort_of_variable)
+        self._existential_conjunctions.append(ExistentialConjunction(
+            predicate1=norm_pred1,
+            predicate2=norm_pred2,
+            sort_of_variable=norm_sort
+        ))
+        return f"Conjonction existentielle 'exists X: {norm_pred1}(X) && {norm_pred2}(X)' ajoutée pour le sort '{norm_sort}'."
 
-            # La syntaxe est `forall X:thing ( inner_formula )`
-            return f"{keyword} {variable_upper}:{sort_name} ({inner_formula_replaced})"
-
-        # La regex capture maintenant le contenu entre les parenthèses pour le traitement
-        # Exemple: forall x (P(x) -> Q(x))
-        # group(1): forall
-        # group(2): x
-        # group(3): P(x) -> Q(x)
-        # Note: on enlève la parenthèse fermante de la capture globale
-        normalized_formula = re.sub(r'(forall|exists)\s+([a-zA-Z][a-zA-Z0-9]*)\s*\((.*)\)', replacer, normalized_formula, flags=re.DOTALL)
-
-        self._formulas.append(normalized_formula)
-        # self.logger.debug(f"Formule ajoutée après normalisation: '{normalized_formula}' (Original: '{formula}')")
-        return f"Formule '{normalized_formula}' ajoutée."
 
     def build_fologic_string(self) -> str:
-        """Construit la chaîne .fologic finale à partir de l'état accumulé."""
-        lines = []
-        # 1. Déclarer TOUS les sorts, qu'ils aient des constantes ou non.
-        # La syntaxe pour un sort sans constante est 'sort_name = {}'.
-        for sort, constants in self._sorts.items():
-            lines.append(f"{sort} = {{{', '.join(constants)}}}")
+        """
+        Construit la chaîne .fologic finale de manière ordonnée et robuste pour garantir
+        la compatibilité avec le parseur Tweety.
+        """
+        declarations = []
+        formulas = []
 
-        # 2. Construire les déclarations de types de prédicats
-        for pred, args in self._predicates.items():
-            lines.append(f"type({pred}({', '.join(args)}))")
+        # Étape 1: Déclarations des sorts et constantes
+        # ===============================================
+        # D'après l'analyse du parseur Java de Tweety, la déclaration `sorts = ...` est invalide.
+        # La syntaxe correcte est de déclarer chaque sort sur sa propre ligne,
+        # au format `sortname = {const1, const2}`.
+        if self._sorts:
+            all_sort_names = sorted(list(self._sorts.keys())) # Tri pour la déterminisme
+            for sort_name in all_sort_names:
+                constants = sorted(self._sorts[sort_name]) # Tri pour la déterminisme
+                constant_str = ', '.join(constants)
+                # La BNF est `sort = {const1, ...}`. Pour un sort vide, cela devient `sort = {}`.
+                # Le parseur Java a un bug avec cette syntaxe, mais c'est la forme
+                # que nous devons viser pour être sémantiquement corrects.
+                declarations.append(f"{sort_name} = {{{constant_str}}}")
+
+        # Étape 2: Inférence de prédicats manquants (stabilisation)
+        # =========================================================
+        # Parcourir toutes les formules pour s'assurer que chaque prédicat utilisé
+        # est bien dans self._predicates avant de générer les 'type(...)'.
+
+        for fact in self._atomic_facts:
+            if fact.predicate_name not in self._predicates:
+                arg_sorts = []
+                for arg in fact.arguments:
+                    found_sort = 'thing' # Fallback
+                    for sort, constants in self._sorts.items():
+                        if arg in constants:
+                            found_sort = sort
+                            break
+                    arg_sorts.append(found_sort)
+                self._predicates[fact.predicate_name] = arg_sorts
+
+        for impl in self._universal_implications:
+            if impl.antecedent_predicate not in self._predicates:
+                self._predicates[impl.antecedent_predicate] = [impl.sort_of_variable]
+            if impl.consequent_predicate not in self._predicates:
+                self._predicates[impl.consequent_predicate] = [impl.sort_of_variable]
+        
+        for conj in self._existential_conjunctions:
+            if conj.predicate1 not in self._predicates:
+                self._predicates[conj.predicate1] = [conj.sort_of_variable]
+            if conj.predicate2 not in self._predicates:
+                self._predicates[conj.predicate2] = [conj.sort_of_variable]
+
+        # Étape 3: Déclarations de tous les types de prédicats
+        # ====================================================
+        if self._predicates:
+            sorted_preds = sorted(self._predicates.keys()) # Tri
+            for pred_name in sorted_preds:
+                args = self._predicates[pred_name]
+                declarations.append(f"type({pred_name}({', '.join(args)}))")
+
+        # Étape 4: Génération des formules
+        # ================================
+        
+        # Faits atomiques
+        for fact in self._atomic_facts:
+            formulas.append(f"{fact.predicate_name}({', '.join(fact.arguments)})")
+
+        # Implications universelles
+        for impl in self._universal_implications:
+            var_name = impl.sort_of_variable[0].upper()
+            formulas.append(f"forall {var_name}:{impl.sort_of_variable} ({impl.antecedent_predicate}({var_name}) => {impl.consequent_predicate}({var_name}))")
+
+        # Conjonctions existentielles
+        for conj in self._existential_conjunctions:
+            var_name = conj.sort_of_variable[0].upper()
+            formulas.append(f"exists {var_name}:{conj.sort_of_variable} ({conj.predicate1}({var_name}) && {conj.predicate2}({var_name}))")
+
+        # Assemblage final
+        # On s'assure de ne pas avoir de ligne vide entre les sections si l'une d'elles est vide.
+        final_lines = []
+        if declarations:
+            final_lines.extend(declarations)
+        if formulas:
+            final_lines.extend(formulas)
             
-        # 3. Ajouter les formules
-        lines.extend(self._formulas)
-        return "\n".join(lines)
+        return "\n".join(final_lines)
 
 
-# Prompt Système pour l'agent FOL
-SYSTEM_PROMPT_FOL = """Vous êtes un assistant d'analyse logique. Votre tâche est de décomposer un texte en ses composants logiques fondamentaux en utilisant les outils fournis.
-
-**Philosophie Clé : Prédicats Unaires au lieu de Sorts Complexes**
-Pour représenter une propriété (comme "être un homme"), utilisez un PRÉDICAT UNAIRE (ex: `homme(X)`), pas un sort. N'utilisez les sorts que pour les catégories fondamentales et distinctes (ex: `personne`, `objet`, `lieu`). Par défaut, un sort universel `thing` existe.
-
-**Exemple d'Analyse Correcte pour "Tous les hommes sont mortels. Socrate est un homme."**
-1.  `add_sort("thing")` (ou un autre sort de base comme "personne")
-2.  `add_constant("Socrate", "thing")`
-3.  `add_predicate("homme", ["thing"])` <-- 'homme' est un prédicat
-4.  `add_predicate("EstMortel", ["thing"])`
-5.  `add_formula("forall X (homme(X) => EstMortel(X))")`
-6.  `add_formula("homme(Socrate)")`
-
-**Règles d'Appel des Outils :**
-1.  **Déclarez les sorts fondamentaux** (comme `thing`) s'ils ne sont pas implicites.
-2.  **Déclarez les constantes** en les associant à un sort.
-3.  **Déclarez TOUS les prédicats** avant de les utiliser, y compris ceux utilisés pour les propriétés comme `homme`.
-4.  **Ajoutez les formules** en dernier. Assurez-vous que chaque prédicat est déclaré.
-5.  **Soyez exhaustif.**
-6.  **Ne répondez rien d'autre.** Votre seule sortie doit être les appels aux outils.
-"""
-
-# Anciens prompts conservés pour les autres fonctions de l'agent
+def _load_prompt_from_file(prompt_filename: str) -> str:
+    """Charge un prompt depuis un fichier dans le répertoire 'prompts'."""
+    script_dir = os.path.dirname(__file__)
+    # Remonter de deux niveaux (logic -> core -> agents) pour trouver le répertoire 'prompts'
+    agents_dir = os.path.dirname(os.path.dirname(script_dir))
+    prompt_path = os.path.join(agents_dir, 'prompts', prompt_filename)
+    try:
+        with open(prompt_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        logger.error(f"Fichier de prompt introuvable : {prompt_path}")
+        raise
 
 PROMPT_GEN_FOL_QUERIES = """Expert FOL : À partir du texte et de l'ensemble de croyances (belief set), générez des requêtes FOL pertinentes et syntaxiquement valides au format JSON.
 
@@ -262,15 +359,16 @@ class FirstOrderLogicAgent(BaseLogicAgent):
     service: Optional[ChatCompletionClientBase] = Field(default=None, exclude=True)
     settings: Optional[Any] = Field(default=None, exclude=True)
 
-    def __init__(self, kernel: Kernel, tweety_bridge: "TweetyBridge", agent_name: str = "FirstOrderLogicAgent", service_id: Optional[str] = None, use_serialization: bool = True):
+    def __init__(self, kernel: Kernel, tweety_bridge: "TweetyBridge", agent_name: str = "FirstOrderLogicAgent", service_id: Optional[str] = None):
+        system_prompt = _load_prompt_from_file("fol_system.prompt")
         super().__init__(
             kernel=kernel,
             agent_name=agent_name,
             logic_type_name="FOL",
-            system_prompt=SYSTEM_PROMPT_FOL
+            system_prompt=system_prompt
         )
         self._llm_service_id = service_id
-        self._use_serialization = use_serialization
+        self._use_serialization = True  # La sérialisation est maintenant la stratégie par défaut et obligatoire
         if kernel and service_id:
             try:
                 self.service = kernel.get_service(service_id, type=ChatCompletionClientBase)
@@ -280,7 +378,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         self._tweety_bridge = tweety_bridge
         # Le plugin qui contient nos outils. Il sera instancié ici.
         self._builder_plugin = BeliefSetBuilderPlugin()
-        self.logger.info(f"Agent {self.name} initialisé. Stratégie: Appel d'Outils. Sérialisation: {self._use_serialization}")
+        self.logger.info(f"Agent {self.name} initialisé. Stratégie: Appel d'Outils (Sérialisation JIT activée par défaut).")
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         return {
@@ -349,7 +447,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         self._builder_plugin.reset()
 
         # Configurer l'historique de chat pour l'invocation avec outils
-        chat = ChatHistory(system_message=SYSTEM_PROMPT_FOL)
+        chat = ChatHistory(system_message=self.system_prompt)
         chat.add_user_message(text)
         
         # Paramètres d'exécution pour forcer l'appel d'outils
@@ -371,44 +469,53 @@ class FirstOrderLogicAgent(BaseLogicAgent):
 
             self.logger.info("Le LLM a terminé d'appeler les outils.")
             
-            # NOUVELLE STRATÉGIE : Construction programmatique de l'objet BeliefSet
-            # On contourne complètement le parsing de la chaîne .fologic
-            self.logger.info("Construction programmatique du BeliefSet à partir des données du plugin...")
-            belief_set_obj = self.tweety_bridge.create_belief_set_programmatically(self._builder_plugin.__dict__)
+            # --- DEBUG: Inspecter les données collectées par le plugin ---
+            self.logger.critical(f"DONNÉES DU PLUGIN POUR LE HANDLER: {self._builder_plugin.__dict__}")
+            # --- FIN DEBUG ---
 
-            if not belief_set_obj:
-                return None, "La création programmatique du BeliefSet a échoué."
+            self.logger.info("Construction de la chaîne .fologic à partir des données du plugin.")
+            belief_set_content_str = self._builder_plugin.build_fologic_string()
+            self.logger.debug(f"Chaîne .fologic construite:\n{belief_set_content_str}")
 
-            # Pour la sérialisation et le logging, nous avons toujours besoin d'une représentation textuelle.
-            # On utilise la méthode toString() de l'objet Java, qui est fiable.
-            belief_set_content_str = str(belief_set_obj.toString())
-            self.logger.debug(f"Représentation textuelle du BeliefSet construit:\n{belief_set_content_str}")
+            if not belief_set_content_str.strip():
+                self.logger.warning("Le builder a produit une chaîne .fologic vide.")
+                return None, "Le LLM n'a extrait aucune structure logique du texte."
 
-            # Créer l'objet BeliefSet final
-            if self._use_serialization:
-                # On stocke la représentation textuelle fiable pour la recréation JIT.
-                final_belief_set = FirstOrderBeliefSet(content=belief_set_content_str, java_object=None)
-            else:
-                # On stocke à la fois la représentation textuelle et l'objet Java.
-                final_belief_set = FirstOrderBeliefSet(content=belief_set_content_str, java_object=belief_set_obj)
+            # La stratégie est maintenant 100% basée sur la sérialisation de la chaîne .fologic.
+            final_belief_set = FirstOrderBeliefSet(content=belief_set_content_str, java_object=None)
+
+            # Valider immédiatement la syntaxe pour un feedback rapide.
+            java_obj = await self._recreate_java_belief_set(final_belief_set)
+            if java_obj is None:
+                return None, "La chaîne .fologic générée est syntaxiquement invalide."
 
             self.logger.info("Conversion via la stratégie d'appel d'outils réussie.")
             return final_belief_set, "Conversion réussie."
 
         except Exception as e:
-            last_error = str(e)
-            self.logger.error(f"Une erreur est survenue durant le processus de conversion par outils: {last_error}", exc_info=True)
-            return None, f"Échec final. Erreur: {last_error}"
+            self.logger.error(f"Exception interceptée dans `text_to_belief_set`. Re-levée pour un débogage complet.", exc_info=True)
+            raise e
 
     # Les fonctions _extract_fologic_block et _sanitize_fologic_string ne sont plus nécessaires
     # car la génération de la chaîne est maintenant déterministe et contrôlée en interne.
     
     def _extract_json_block(self, text: str) -> str:
-        """Extracts a JSON block from a markdown-formatted string."""
-        match = re.search(r"```(json)?\s*(.*?)\s*```", text, re.DOTALL)
+        """
+        Extracts a JSON block from a string, handling both markdown-formatted
+        blocks and raw JSON possibly surrounded by other text.
+        """
+        # Priorité 1: Chercher un bloc ```json ... ```
+        match = re.search(r"```(json)?\s*({.*})\s*```", text, re.DOTALL)
         if match:
             return match.group(2).strip()
-        return text # Assume it's raw JSON if no block is found
+        
+        # Priorité 2: Chercher le JSON entre la première et la dernière accolade
+        # ce qui est plus robuste aux textes explicatifs du LLM.
+        match = re.search(r"({.*})", text, re.DOTALL)
+        if match:
+            return match.group(1).strip()
+            
+        return text # Fallback: retourne le texte original s'il n'y a pas d'accolades.
         
         
     async def generate_queries(self, text: str, belief_set: FirstOrderBeliefSet, **kwargs) -> List[str]:
@@ -526,17 +633,22 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             self.logger.debug("Utilisation de l'objet Java BeliefSet préexistant.")
             return belief_set.java_object
             
-        if not belief_set.content:
-            self.logger.error("Reconstruction JIT impossible: pas de contenu pour recréer l'objet BeliefSet.")
-            return None
+        if not belief_set.content or not belief_set.content.strip():
+            self.logger.warning("Reconstruction JIT ignorée: pas de contenu pour recréer l'objet BeliefSet.")
+            # Il est valide d'avoir un belief set vide. Ce n'est pas une erreur.
+            # On peut créer un BeliefSet vide pour la validation de formules sans contexte.
+            try:
+                return self.tweety_bridge.create_empty_belief_set()
+            except Exception as e:
+                self.logger.error(f"Impossible de créer même un BeliefSet vide: {e}", exc_info=True)
+                return None
 
         self.logger.info("Reconstruction JIT de l'objet BeliefSet Java à partir de la syntaxe native...")
         try:
-            # Le contenu est maintenant la chaîne de syntaxe native
             java_object = self.tweety_bridge.create_belief_set_from_string(belief_set.content)
             
             if not java_object:
-                 raise RuntimeError("La création du BeliefSet à partir de la chaîne a retourné None.")
+                 raise RuntimeError("La création du BeliefSet à partir de la chaîne a retourné None, ce qui ne devrait pas arriver.")
 
             self.logger.info("Reconstruction JIT à partir de la syntaxe native réussie.")
             return java_object
