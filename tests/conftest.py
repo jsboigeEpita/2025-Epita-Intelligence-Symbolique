@@ -271,7 +271,8 @@ def jvm_session():
     
     # Construire le chemin relatif vers le JDK
     project_root = Path(__file__).parent.parent.resolve()
-    jdk_base_path = os.path.join(project_root, "libs", "portable_jdk", "jdk-17.0.11+9")
+    # Path corrected to point to the root portable_jdk, not the one in libs
+    jdk_base_path = os.path.join(project_root, "portable_jdk", "jdk-17.0.2+8")
     jvm_dll_path = os.path.join(jdk_base_path, "bin", "server", "jvm.dll")
 
     if not os.path.exists(jvm_dll_path):

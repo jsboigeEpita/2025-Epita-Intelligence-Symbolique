@@ -21,6 +21,7 @@ param (
     [string]$CommandToRun,
     [switch]$Setup,
     [switch]$Status,
+    [switch]$Clean,
     [switch]$Help # Gardé pour la compatibilité
 )
 
@@ -34,15 +35,53 @@ if ($Help) {
     exit 0
 }
 
+if ($Clean) {
+    Write-Host "[INFO] Mode CLEAN activé. Tentative de suppression de l'environnement 'projet-is'." -ForegroundColor Yellow
+    conda env remove -n projet-is --yes
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[AVERTISSEMENT] La suppression de l'environnement a échoué. Il se peut qu'il n'ait pas existé, ou qu'un problème soit survenu. Le script va continuer." -ForegroundColor Yellow
+    } else {
+        Write-Host "[INFO] Environnement 'projet-is' supprimé avec succès." -ForegroundColor Green
+    }
+    # On force le mode Setup après un clean
+    $Setup = $true
+}
+
 # --- Conversion des anciens paramètres en CommandToRun ---
 $FinalCommand = $CommandToRun
 
 if ($Setup) {
-    Write-Host "[INFO] Mode SETUP activé." -ForegroundColor Cyan
-    # On crée une séquence de commandes à exécuter
+    Write-Host "[INFO] Mode SETUP activé. Forçage d'une réinstallation propre pour la stabilité." -ForegroundColor Cyan
+    $Clean = $true # Forcer le nettoyage
+}
+
+if ($Clean) {
+    Write-Host "[INFO] Mode CLEAN activé. Tentative de suppression de l'environnement 'projet-is'." -ForegroundColor Yellow
+    # Arrêter les processus bloquants d'abord
+    Get-Process | Where-Object { $_.ProcessName -like "*conda*" -or $_.ProcessName -like "*mamba*" } | Stop-Process -Force -ErrorAction SilentlyContinue
+    conda env remove -n projet-is --yes
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[AVERTISSEMENT] La suppression de l'environnement a échoué. Il se peut qu'il n'ait pas existé, ou qu'un problème soit survenu. Le script va continuer." -ForegroundColor Yellow
+    } else {
+        Write-Host "[INFO] Environnement 'projet-is' supprimé avec succès." -ForegroundColor Green
+    }
+}
+
+# --- Conversion des anciens paramètres en CommandToRun ---
+$FinalCommand = $CommandToRun
+
+if ($Setup) {
+    # La seule stratégie fiable est de créer à partir de zéro
+    $PackageManager = "conda"
+    if (Get-Command mamba -ErrorAction SilentlyContinue) {
+        $PackageManager = "mamba"
+    }
+    
     $SetupCommands = @(
-        "pip install -r requirements.txt",
-        "pip install -e ."
+        "$PackageManager env create --file environment.yml --yes -v",
+        "$PackageManager install scipy=1.13.1 --force-reinstall --yes",
+        "pip install -e .",
+        "playwright install"
     )
     # On assigne une valeur factice pour passer la validation
     $FinalCommand = "setup"
@@ -84,8 +123,20 @@ $ActivationArgs = @{
 
 # Exécuter le script d'activation moderne en passant les arguments
 if ($Setup) {
-    # Itérer sur chaque commande de setup
-    foreach ($cmd in $SetupCommands) {
+    # La première commande est create ou update, elle doit être exécutée directement
+    $EnvManagementCommand = $SetupCommands[0]
+    Write-Host "=================================================================" -ForegroundColor Green
+    Write-Host "Exécution de la commande de gestion d'environnement: $EnvManagementCommand" -ForegroundColor Yellow
+    Invoke-Expression -Command $EnvManagementCommand
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        Write-Host "La commande de gestion d'environnement a échoué avec le code $exitCode. Arrêt du setup." -ForegroundColor Red
+        exit $exitCode
+    }
+
+    # Les commandes suivantes sont exécutées via le script d'activation
+    for ($i = 1; $i -lt $SetupCommands.Length; $i++) {
+        $cmd = $SetupCommands[$i]
         Write-Host "=================================================================" -ForegroundColor Green
         Write-Host "Exécution de la sous-commande SETUP: $cmd" -ForegroundColor Yellow
         $ActivationArgs = @{ CommandToRun = $cmd }
