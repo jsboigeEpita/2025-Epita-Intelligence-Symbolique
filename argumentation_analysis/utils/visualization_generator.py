@@ -21,7 +21,7 @@ except ImportError:
     VISUALIZATION_LIBS_AVAILABLE = False
     # Initialiser les variables pour que le code ne plante pas si les libs sont absentes
     # mais les fonctions utilisant ces variables ne seront pas appelées grâce au flag.
-    plt = None 
+    plt = None
     np = None
     pd = None
     sns = None

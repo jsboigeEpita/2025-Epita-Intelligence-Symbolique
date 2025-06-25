@@ -36,6 +36,7 @@ from typing import Optional, Dict, Any
 # Imports des modules du projet
 from argumentation_analysis.core.utils.logging_utils import setup_logging
 from argumentation_analysis.service_setup.analysis_services import initialize_analysis_services
+from argumentation_analysis.core.jvm_setup import initialize_jvm
 from argumentation_analysis.analytics.text_analyzer import perform_text_analysis
 # Les imports pour LIBS_DIR et l'UI seront conditionnels ou gérés différemment
 # from argumentation_analysis.paths import LIBS_DIR # Sera nécessaire pour config_for_services
