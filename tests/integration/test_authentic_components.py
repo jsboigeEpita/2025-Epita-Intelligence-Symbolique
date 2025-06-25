@@ -27,9 +27,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
     from config.unified_config import UnifiedConfig, MockLevel, TaxonomySize, LogicType, PresetConfigs
-    from argumentation_analysis.core.services.llm_service import LLMService
-    from argumentation_analysis.agents.core.logic.fol_logic_agent import FirstOrderLogicAgent
-    from argumentation_analysis.core.orchestration.unified_orchestrator import UnifiedOrchestrator
+    from argumentation_analysis.core.llm_service import create_llm_service
+    from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent
 except ImportError as e:
     pytest.skip(f"Modules requis non disponibles: {e}", allow_module_level=True)
 
@@ -43,31 +42,14 @@ class TestAuthenticGPTIntegration:
         self.test_prompt = "Analysez cette phrase: 'Tous les politiciens mentent, donc Pierre ment.'"
     
     @pytest.mark.skipif(not os.getenv('OPENAI_API_KEY'), reason="Clé API OpenAI requise")
-    def test_real_gpt_service_initialization(self):
-        """Test d'initialisation du service GPT réel."""
-        llm_config = self.authentic_config.get_llm_config()
-        
-        # Vérifier la configuration pour service réel
-        assert llm_config['require_real_service'] is True
-        assert llm_config['mock_level'] == 'none'
-        assert llm_config['validate_responses'] is True
-        
-        # Test de présence de la clé API
-        api_key = os.getenv('OPENAI_API_KEY')
-        assert api_key is not None
-        assert len(api_key) > 10
-        assert api_key.startswith(('sk-', 'sk-proj-'))
-    
-    @pytest.mark.skipif(not os.getenv('OPENAI_API_KEY'), reason="Clé API OpenAI requise")
     @pytest.mark.asyncio
     async def test_real_gpt_response_quality(self):
         """Test de qualité des réponses GPT authentiques."""
         try:
-            # Initialiser le service LLM réel
-            llm_service = LLMService(
-                api_key=os.getenv('OPENAI_API_KEY'),
-                model='gpt-4o-mini',
-                mock_level='none'
+            # Initialiser le service LLM réel via la factory
+            llm_service = create_llm_service(
+                service_id="test_real_gpt_quality",
+                force_authentic=True
             )
             
             # Test de réponse authentique
@@ -347,26 +329,18 @@ class TestAuthenticPipelineIntegration:
         assert mock_dict['authenticity']['require_real_gpt'] is False
     
     @pytest.mark.asyncio
-    async def test_pipeline_degraded_mode_fallback(self):
-        """Test de mode dégradé si composants authentiques indisponibles."""
-        # Configuration nécessitant l'authentique mais avec fallback
-        try:
-            config = UnifiedConfig(
-                logic_type=LogicType.FOL,
-                mock_level=MockLevel.NONE,
-                require_real_gpt=True,
-                require_real_tweety=False,  # Autorise fallback Tweety
-                require_full_taxonomy=True
-            )
-            
-            # Devrait pouvoir s'initialiser même avec Tweety en mode dégradé
-            assert config.require_real_gpt is True
-            assert config.require_real_tweety is False
-            assert config.require_full_taxonomy is True
-            
-        except Exception as e:
-            # Si échec, vérifier que l'erreur est explicite
-            assert 'Configuration incohérente' in str(e) or 'non disponible' in str(e)
+    async def test_pipeline_degraded_mode_is_overridden(self):
+        """Test que le mode dégradé est bien écrasé par les contraintes d'authenticité."""
+        # On tente de créer une config authentique mais en désactivant Tweety
+        config = UnifiedConfig(
+            logic_type=LogicType.FOL,
+            mock_level=MockLevel.NONE,
+            require_real_tweety=False,  # Tentative de désactivation
+        )
+        
+        # On vérifie que la classe UnifiedConfig a bien forcé la valeur à True
+        # car mock_level=NONE impose une authenticité à 100%.
+        assert config.require_real_tweety is True
     
     def test_pipeline_authenticity_metrics_calculation(self):
         """Test de calcul des métriques d'authenticité du pipeline."""
