@@ -1,342 +1,40 @@
-# -*- coding: utf-8 -*-
-import sys
-import os
-
-# =============================================================================
-# PATCH DE DÉCHARGEMENT FORCÉ DE TORCH (TENTATIVE DÉSESPÉRÉE)
-# Objectif : Supprimer torch et les librairies associées de la mémoire AVANT
-# que pytest ne charge quoi que ce soit d'autre, pour éviter le conflit
-# avec la JVM de JPype.
-# =============================================================================
-print("--- PATCH DE DÉCHARGEMENT FORCÉ DE TORCH ACTIVÉ ---")
-modules_to_remove = ['torch', 'transformers', 'sentence_transformers']
-modules_to_delete = [name for name in sys.modules if any(name.startswith(prefix) for prefix in modules_to_remove)]
-if modules_to_delete:
-    print(f"Modules à décharger: {modules_to_delete}")
-    for name in modules_to_delete:
-        try:
-            del sys.modules[name]
-        except KeyError:
-            pass
-    print(f"--- {len(modules_to_delete)} modules relatifs à torch déchargés ---")
-else:
-    print("--- Aucun module relatif à torch n'était chargé. ---")
-# -*- coding: utf-8 -*-
-import sys
-from pathlib import Path
-
-# A list of files or directories to be ignored during test collection.
-collect_ignore = [
-    "tests/integration/services/test_mcp_server_integration.py",
-]
-
-# Ajoute la racine du projet au sys.path pour résoudre les problèmes d'import
-# causés par le `rootdir` de pytest qui interfère avec la résolution des modules.
-project_root_conftest = Path(__file__).parent.parent.resolve()
-if str(project_root_conftest) not in sys.path:
-    pass # pass # sys.path.insert(0, str(project_root_conftest))
-"""
-Fichier de configuration racine pour les tests pytest, s'applique à l'ensemble du projet.
-
-Ce fichier est exécuté avant tous les tests et est l'endroit idéal pour :
-1. Charger les fixtures globales (portée "session").
-2. Configurer l'environnement de test (ex: logging).
-3. Définir des hooks pytest personnalisés.
-4. Effectuer des imports critiques qui doivent avoir lieu avant tout autre code.
-"""
 import pytest
+import jpype
 import logging
-
-
-@pytest.fixture(scope="session", autouse=True)
-def unload_torch_before_jvm_start():
-    """
-    Fixture pour forcer le déchargement de PyTorch avant l'initialisation de la JVM.
-    Prévient le crash "fatal access violation" causé par un conflit entre PyTorch et JPype.
-    """
-    if "torch" in sys.modules:
-        logging.warning("Déchargement du module 'torch' pour éviter un conflit avec la JVM.")
-        del sys.modules["torch"]
-
-# --- Step 1: Résolution du Conflit de Librairies Natives (torch vs jpype) ---
-# Un crash "Fatal Python error: Aborted" ou "access violation" peut se produire
-# lors du démarrage de la JVM, avec une trace d'appel impliquant `torch_python.dll`.
-# Ceci indique un conflit entre les librairies C de JPype et de PyTorch.
-# L'import de `torch` au tout début, avant tout autre import (surtout jpype),
-# force son initialisation et semble résoudre ce conflit.
-# NOTE(Roo): Disabling the torch import to isolate the source of pytest crash (exit code 3).
-# try:
-#     import torch
-# except ImportError:
-#     # Si torch n'est pas installé, nous ne pouvons rien faire mais nous ne voulons pas
-#     # que les tests plantent à cause de ça si l'environnement d'un utilisateur
-#     # ne l'inclut pas. Les tests dépendant de la JVM risquent de planter plus tard.
-#     pass
-
 import os
+import threading
+import time
+from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
 
-# L'ajout de la racine du projet à sys.path est déjà effectué au début de ce fichier.
-# Cette section est redondante et a été supprimée pour la clarté.
-"""
-Configuration pour les tests pytest.
-
-Ce fichier est automatiquement chargé par pytest avant l'exécution des tests.
-Il configure les mocks nécessaires pour les tests et utilise les vraies bibliothèques
-lorsqu'elles sont disponibles. Pour Python 3.12 et supérieur, le mock JPype1 est
-automatiquement utilisé en raison de problèmes de compatibilité.
-"""
-# ========================== ATTENTION - PROTECTION CRITIQUE ==========================
-# L'import suivant active le module 'auto_env', qui est ESSENTIEL pour la sécurité
-# et la stabilité de tous les tests et scripts. Il garantit que le code s'exécute
-# dans l'environnement Conda approprié (par défaut 'projet-is').
-#
-# NE JAMAIS DÉSACTIVER, COMMENTER OU SUPPRIMER CET IMPORT.
-# Le faire contourne les gardes-fous de l'environnement et peut entraîner :
-#   - Des erreurs de dépendances subtiles et difficiles à diagnostiquer.
-#   - Des comportements imprévisibles des tests.
-#   - L'utilisation de mocks à la place de composants réels (ex: JPype).
-#   - Des résultats de tests corrompus ou non fiables.
-#
-# Ce mécanisme lève une RuntimeError si l'environnement n'est pas correctement activé,
-# empêchant l'exécution des tests dans une configuration incorrecte.
-# Voir project_core/core_from_scripts/auto_env.py pour plus de détails.
-# =====================================================================================
-# import argumentation_analysis.core.environment
-
-import sys
-import os
-import pytest
-from unittest.mock import patch, MagicMock
-import importlib.util
-import logging
-import threading # Ajout de l'import pour l'inspection des threads
-# --- Configuration globale du Logging pour les tests ---
-# Le logger global pour conftest est déjà défini plus bas,
-# mais nous avons besoin de configurer basicConfig tôt.
-# Nous allons utiliser un logger temporaire ici ou le logger racine.
-_conftest_setup_logger = logging.getLogger("conftest.setup")
-
-if not logging.getLogger().handlers: # Si le root logger n'a pas de handlers, basicConfig n'a probablement pas été appelé efficacement.
-    logging.basicConfig(
-        level=logging.INFO, # Ou un autre niveau pertinent pour les tests globaux
-        format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
-        datefmt='%H:%M:%S'
-    )
-    _conftest_setup_logger.info("Configuration globale du logging appliquée.")
-else:
-    _conftest_setup_logger.info("Configuration globale du logging déjà présente ou appliquée par un autre module.")
-# Le patching global de JPype est maintenant géré exclusivement par `jpype_setup.py`
-# et ses hooks `pytest_sessionstart`/`pytest_sessionfinish`, qui sont importés plus bas.
-# Cela centralise la logique, élimine les conflits de chargement potentiels et
-# garantit que le patching est appliqué de manière cohérente au bon moment.
-# # --- Gestion des imports conditionnels NumPy et Pandas ---
-# _conftest_setup_logger.info("Début de la gestion des imports conditionnels pour NumPy et Pandas.")
-# try:
-#     import numpy
-#     import pandas
-#     _conftest_setup_logger.info("NumPy et Pandas réels importés avec succès.")
-# except ImportError:
-#     _conftest_setup_logger.warning("Échec de l'import de NumPy et/ou Pandas. Tentative d'utilisation des mocks.")
-    
-#     # Mock pour NumPy
-#     try:
-#         # Tenter d'importer le contenu spécifique du mock si disponible
-#         from tests.mocks.numpy_mock import array as numpy_array_mock # Importer un élément specific pour vérifier
-#         # Si l'import ci-dessus fonctionne, on peut supposer que le module mock est complet
-#         # et sera utilisé par les imports suivants dans le code testé.
-#         # Cependant, pour forcer l'utilisation du mock complet, on le met dans sys.modules.
-#         import tests.mocks.numpy_mock as numpy_mock_content
-#         sys.modules['numpy'] = numpy_mock_content
-#         _conftest_setup_logger.info("Mock pour NumPy (tests.mocks.numpy_mock) activé via sys.modules.")
-#     except ImportError:
-#         _conftest_setup_logger.error("Mock spécifique tests.mocks.numpy_mock non trouvé. Utilisation de MagicMock pour NumPy.")
-#         sys.modules['numpy'] = MagicMock()
-#     except Exception as e_numpy_mock:
-#         _conftest_setup_logger.error(f"Erreur inattendue lors du chargement du mock NumPy: {e_numpy_mock}. Utilisation de MagicMock.")
-#         sys.modules['numpy'] = MagicMock()
-
-#     # Mock pour Pandas
-#     try:
-#         # Tenter d'importer le contenu spécifique du mock
-#         from tests.mocks.pandas_mock import DataFrame as pandas_dataframe_mock # Importer un élément spécifique
-#         import tests.mocks.pandas_mock as pandas_mock_content
-#         sys.modules['pandas'] = pandas_mock_content
-#         _conftest_setup_logger.info("Mock pour Pandas (tests.mocks.pandas_mock) activé via sys.modules.")
-#     except ImportError:
-#         _conftest_setup_logger.error("Mock spécifique tests.mocks.pandas_mock non trouvé. Utilisation de MagicMock pour Pandas.")
-#         sys.modules['pandas'] = MagicMock()
-#     except Exception as e_pandas_mock:
-#         _conftest_setup_logger.error(f"Erreur inattendue lors du chargement du mock Pandas: {e_pandas_mock}. Utilisation de MagicMock.")
-#         sys.modules['pandas'] = MagicMock()
-# _conftest_setup_logger.info("Fin de la gestion des imports conditionnels pour NumPy et Pandas.")
-# # --- Fin Gestion des imports conditionnels ---
-# --- Fin Configuration globale du Logging ---
-
-# Charger les fixtures définies dans d'autres fichiers comme des plugins
-# NOTE(Roo): Disabling plugins to isolate the source of pytest crash (exit code 3).
-pytest_plugins = [
-   "tests.fixtures.integration_fixtures",
-   "tests.fixtures.jvm_subprocess_fixture",
-    "pytest_playwright",
-    "tests.mocks.numpy_setup"
-]
-
-def pytest_addoption(parser):
-    """Ajoute des options de ligne de commande personnalisées à pytest."""
-    parser.addoption(
-        "--backend-url", action="store", default="http://localhost:5003",
-        help="URL du backend à tester"
-    )
-    parser.addoption(
-        "--frontend-url", action="store", default="http://localhost:3000",
-        help="URL du frontend à tester (si applicable)"
-    )
-    parser.addoption(
-        "--disable-e2e-servers-fixture", action="store_true", default=False,
-        help="Désactive la fixture e2e_servers pour éviter les conflits."
-    )
-
-@pytest.fixture(scope="session")
-def backend_url(request):
-    """Fixture pour récupérer l'URL du backend depuis les options pytest."""
-    return request.config.getoption("--backend-url")
-
-@pytest.fixture(scope="session")
-def frontend_url(request):
-    """Fixture pour récupérer l'URL du frontend depuis les options pytest."""
-    return request.config.getoption("--frontend-url")
-# --- Gestion du Path pour les Mocks (déplacé ici AVANT les imports des mocks) ---
-current_dir_for_mock = os.path.dirname(os.path.abspath(__file__))
-mocks_dir_for_mock = os.path.join(current_dir_for_mock, 'mocks')
-# if mocks_dir_for_mock not in sys.path:
-#     sys.path.insert(0, mocks_dir_for_mock)
-#     _conftest_setup_logger.info(f"Ajout de {mocks_dir_for_mock} à sys.path pour l'accès aux mocks locaux.")
-
-# L'initialisation des mocks jpype et numpy est maintenant gérée par le bootstrap
-# via l'option `addopts = -p tests.mocks.bootstrap` dans pytest.ini.
-# Les imports de jpype_setup et numpy_setup ne sont plus nécessaires ici.
-
-# --- Configuration du Logger (déplacé avant la sauvegarde JPype pour l'utiliser) ---
 logger = logging.getLogger(__name__)
 
-# _REAL_JPYPE_MODULE, _JPYPE_MODULE_MOCK_OBJ_GLOBAL, _MOCK_DOT_JPYPE_MODULE_GLOBAL sont maintenant importés de jpype_setup.py
-
-# Nécessaire pour la fixture integration_jvm
-# La variable _integration_jvm_started_session_scope et les imports de jvm_setup
-# ne sont plus nécessaires ici, gérés dans integration_fixtures.py
-
-# Les sections de code commentées pour le mocking global de Matplotlib, NetworkX,
-# l'installation immédiate de Pandas, et ExtractDefinitions ont été supprimées.
-# Ces mocks, s'ils sont nécessaires, devraient être gérés par des fixtures spécifiques
-# ou une configuration au niveau du module mock lui-même, similaire à NumPy/Pandas.
-
-# Ajout du répertoire racine du projet à sys.path pour assurer la découverte des modules du projet.
-# L'ajout de la racine du projet à sys.path est déjà effectué au début de ce fichier.
-# Cette section est redondante et a été supprimée pour la clarté.
-
-# Les fixtures et hooks sont importés depuis leurs modules dédiés.
-# Les commentaires résiduels concernant les déplacements de code et les refactorisations
-# antérieures ont été supprimés pour améliorer la lisibilité.
-
-# --- Fixtures déplacées depuis tests/integration/webapp/conftest.py ---
-
-@pytest.fixture
-def webapp_config():
-    """Provides a basic webapp configuration dictionary."""
-    return {
-        "backend": {
-            "start_port": 8008,
-            "fallback_ports": [8009, 8010]
-        },
-        "frontend": {
-            "port": 3008
-        },
-        "playwright": {
-            "enabled": True
-        }
-    }
-
-@pytest.fixture
-def test_config_path(tmp_path):
-    """Provides a temporary path for a config file."""
-    return tmp_path / "test_config.yml"
-
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def jvm_session():
     """
-    Fixture de session pour démarrer et arrêter la JVM une seule fois pour tous les tests.
+    Manages the JPype JVM lifecycle for the entire test session.
+    Starts the JVM before any tests run and shuts it down after all tests are complete.
     """
-    import jpype
-    import jpype.imports
-    
-    # Construire le chemin relatif vers le JDK
-    project_root = Path(__file__).parent.parent.resolve()
-    # Path corrected to point to the root portable_jdk, not the one in libs
-    jdk_base_path = os.path.join(project_root, "portable_jdk", "jdk-17.0.2+8")
-    jvm_dll_path = os.path.join(jdk_base_path, "bin", "server", "jvm.dll")
-
-    if not os.path.exists(jvm_dll_path):
-        pytest.fail(f"jvm.dll non trouvé à {jvm_dll_path}. Assurez-vous que le JDK portable est en place.")
-
-    if not jpype.isJVMStarted():
-        try:
-            # --- PATCH ANTI-CRASH (torch vs jpype) ---
-            # Manipulation directe de sys.modules au lieu de monkeypatch pour
-            # éviter le ScopeMismatch, car cette fixture a une portée "session".
-            print("\n[JVM Fixture Pre-init] Application de l'isolation de torch...")
-            modules_to_remove = ['torch', 'transformers', 'sentence_transformers']
-            modules_to_delete = [name for name in sys.modules if any(name.startswith(prefix) for prefix in modules_to_remove)]
-            for name in modules_to_delete:
-                del sys.modules[name]
-            print(f"[JVM Fixture Pre-init] {len(modules_to_delete)} modules relatifs à torch ont été déchargés.")
-            # --- FIN PATCH ---
-
-            print("\n[JVM Fixture] Démarrage de la JVM pour la session de test...")
-            # La logique de recherche du JDK/classpath est maintenant centralisée dans jvm_setup.
-            # L'import est local à la fixture pour éviter les effets de bord.
-            from argumentation_analysis.core.jvm_setup import initialize_jvm
-            
-            initialize_jvm()
-
-            print("[JVM Fixture] JVM démarrée avec succès via jvm_setup.")
-        except SystemExit as se:
-            active_threads = [t.name for t in threading.enumerate()]
-            print(f"[JVM Fixture] ERREUR FATALE (SystemExit): Le processus Python se termine. Code: {se.code}")
-            print(f"[JVM Fixture] Threads actifs au moment du crash: {active_threads}")
-            pytest.fail(f"Crash JVM intercepté comme SystemExit ({se.code}).")
-        except Exception as e:
-            pytest.fail(f"Échec du démarrage de la JVM : {e}")
+    logger.info("---------- Pytest session starting: Initializing JVM... ----------")
+    try:
+        if not jpype.isJVMStarted():
+            TweetyInitializer.initialize_jvm()
+            logger.info("JVM started successfully for the test session.")
+        else:
+            logger.info("JVM was already started.")
+    except Exception as e:
+        logger.error(f"Failed to start JVM: {e}", exc_info=True)
+        pytest.exit(f"JVM initialization failed: {e}", 1)
 
     yield
 
-    if jpype.isJVMStarted():
-        print("\n[JVM Fixture] Arrêt de la JVM à la fin de la session.")
-        jpype.shutdownJVM()
-@pytest.fixture(autouse=True)
-def skip_jvm_tests(monkeypatch):
-    """
-    Patche automatiquement les composants dépendant de la JVM si la variable
-    d'environnement SKIP_JVM_TESTS est définie.
-    """
-    if os.getenv("SKIP_JVM_TESTS"):
-        # Remplacer les classes qui déclenchent le démarrage de la JVM par des Mocks
-        # Patch dans le module où la classe est définie
-        monkeypatch.setattr(
-            "argumentation_analysis.agents.core.logic.watson_logic_assistant.WatsonLogicAssistant",
-            MagicMock()
-        )
-        monkeypatch.setattr(
-            "argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent.MoriartyInterrogatorAgent",
-            MagicMock()
-        )
-        # Patch dans les modules où la classe est importée et utilisée
-        monkeypatch.setattr(
-            "argumentation_analysis.orchestration.cluedo_extended_orchestrator.WatsonLogicAssistant",
-            MagicMock(),
-            raising=False # Ne pas lever d'erreur si l'attribut n'existe pas
-        )
-        monkeypatch.setattr(
-            "argumentation_analysis.orchestration.cluedo_extended_orchestrator.MoriartyInterrogatorAgent",
-            MagicMock(),
-            raising=False # Ne pas lever d'erreur si l'attribut n'existe pas
-        )
+    logger.info("---------- Pytest session finished: Shutting down JVM... ----------")
+    try:
+        if jpype.isJVMStarted():
+            logger.info("Preparing to shut down JVM. Waiting 1 second...")
+            time.sleep(1)
+            jpype.shutdownJVM()
+            logger.info("JVM shut down successfully.")
+        else:
+            logger.info("JVM was already shut down or never started.")
+    except Exception as e:
+        logger.error(f"Error shutting down JVM: {e}", exc_info=True)

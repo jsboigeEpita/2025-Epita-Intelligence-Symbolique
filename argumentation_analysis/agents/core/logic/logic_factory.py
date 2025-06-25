@@ -70,7 +70,15 @@ class LogicAgentFactory:
         try:
             # Créer l'instance de l'agent
             agent_class = cls._agent_classes[logic_type]
-            agent = agent_class(kernel=kernel, agent_name=f"{logic_type.capitalize()}Agent")
+
+            # FOLLogicAgent a une signature de constructeur différente et nécessite l'injection de TweetyBridge
+            # C'est une exception à la règle générale, donc on la gère spécifiquement ici.
+            if logic_type == "first_order":
+                from .tweety_bridge import TweetyBridge
+                tweety_bridge = TweetyBridge()
+                agent = agent_class(kernel=kernel, tweety_bridge=tweety_bridge, agent_name=f"{logic_type.capitalize()}Agent")
+            else:
+                agent = agent_class(kernel=kernel, agent_name=f"{logic_type.capitalize()}Agent")
             
             # Configurer le kernel de l'agent si un service LLM est fourni
             if llm_service:

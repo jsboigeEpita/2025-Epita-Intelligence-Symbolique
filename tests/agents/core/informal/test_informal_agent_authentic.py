@@ -56,7 +56,7 @@ class TestInformalAnalysisAgentAuthentic:
         
         # Vérifications de base authentiques
         assert agent.name == "authentic_informal_agent"
-        assert agent.sk_kernel is not None
+        assert agent._kernel is not None
         assert hasattr(agent, 'kernel_wrapper')
         
         # Test des capacités authentiques

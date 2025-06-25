@@ -9,22 +9,22 @@ import jpype
 import logging
 import platform
 import sys
+import threading
 from argumentation_analysis.core.utils.logging_utils import setup_logging
 # from argumentation_analysis.core.utils.path_operations import get_project_root # Différé
 from pathlib import Path
 import os # Ajout de l'import os
 
 # Initialisation du logger pour ce module.
-# setup_logging() est appelé pour configurer le logging global.
-# Il est important que setup_logging soit idempotent ou gère les appels multiples (ce qu'il fait avec force=True).
-setup_logging("INFO")  # Appel avec un niveau de log valide comme "INFO" ou selon la config souhaitée.
-logger = logging.getLogger(__name__) # Obtention correcte du logger pour ce module.
+setup_logging("INFO")
+logger = logging.getLogger(__name__)
 
 class TweetyInitializer:
     """
-    Handles the initialization of JVM components for TweetyProject.
+    Handles the initialization of JVM and components for TweetyProject.
+    The JVM lifecycle is now managed by pytest fixtures in conftest.py.
+    This class acts as a central point for initialization logic and component access.
     """
-
     _jvm_started = False
     _pl_reasoner = None
     _pl_parser = None
@@ -34,144 +34,106 @@ class TweetyInitializer:
     _modal_parser = None
     _modal_reasoner = None
     _tweety_bridge = None
+    _initialized_components = False
 
     def __init__(self, tweety_bridge_instance):
         self._tweety_bridge = tweety_bridge_instance
 
         if os.environ.get('DISABLE_JAVA_LOGIC') == '1':
-            logger.info("Java logic is disabled via environment variable 'DISABLE_JAVA_LOGIC'. Skipping JVM initialization.")
-            TweetyInitializer._jvm_started = False
+            logger.info("Java logic is disabled via 'DISABLE_JAVA_LOGIC'. Skipping JVM checks.")
+            self.__class__._jvm_started = False
             return
-
-        # Le classpath est maintenant géré directement dans _start_jvm pour plus de fiabilité.
-        # self._ensure_classpath()
 
         if not jpype.isJVMStarted():
-            logger.info("JVM not detected as started. TweetyInitializer will now attempt to start it.")
-            self._start_jvm()
-        else:
-            logger.info("TweetyInitializer confirmed that JVM is already started by another component.")
-            # Even if started, we must ensure our classes are available.
-            TweetyInitializer._jvm_started = True
+            logger.critical("FATAL: TweetyInitializer expects the JVM to be started by the test session setup (conftest.py).")
+            raise RuntimeError("JVM not started. Please run tests using pytest.")
+
+        self.__class__._jvm_started = True
+
+        if not self.__class__._initialized_components:
+            logger.info("JVM is running. Initializing Java class imports and components.")
             self._import_java_classes()
+            self.initialize_pl_components()
+            self.initialize_fol_components()
+            self.initialize_modal_components()
+            self.__class__._initialized_components = True
+        else:
+            logger.debug("Java components already initialized for this session.")
 
-    def _ensure_classpath(self):
-        """Ensures the Tweety JAR is in the JPype classpath."""
-        try:
-            from argumentation_analysis.utils.system_utils import get_project_root
-            project_root = get_project_root()
-            jar_path = project_root / "libs" / "tweety" / "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
-            jar_path_str = str(jar_path)
-
-            if not jar_path.exists():
-                logger.error(f"Tweety JAR not found at {jar_path_str}")
-                raise RuntimeError(f"Tweety JAR not found at {jar_path_str}")
-
-            # This check needs to happen before the JVM starts if possible,
-            # but jpype.getClassPath() works even on a running JVM.
-            current_classpath = jpype.getClassPath()
-            if jar_path_str not in current_classpath:
-                logger.info(f"Adding Tweety JAR to classpath: {jar_path_str}")
-                jpype.addClassPath(jar_path_str)
-                # Verification after adding
-                new_classpath = jpype.getClassPath()
-                if jar_path_str not in new_classpath:
-                     logger.warning(f"Failed to dynamically add {jar_path_str} to classpath. This might cause issues.")
-            else:
-                logger.debug(f"Tweety JAR already in classpath.")
-
-        except Exception as e:
-            logger.error(f"Failed to ensure Tweety classpath: {e}", exc_info=True)
-            raise RuntimeError(f"Classpath configuration failed: {e}") from e
-
-
-    def _start_jvm(self):
-        """Starts the JVM. The classpath should have been configured by _ensure_classpath."""
-        global logger
-        if logger is None:
-            setup_logging("INFO")
-            logger = logging.getLogger(__name__)
-            logger.error("CRITICAL: TweetyInitializer logger re-initialized in _start_jvm.")
-
-        if TweetyInitializer._jvm_started:
-            logger.info("JVM already started.")
+    @staticmethod
+    def initialize_jvm():
+        """
+        Main logic to start the JVM. Should only be called once per session,
+        typically from a pytest fixture.
+        """
+        if jpype.isJVMStarted():
+            logger.warning("initialize_jvm called but JVM is already running.")
             return
 
         try:
-            if not jpype.isJVMStarted():
-                logger.info("Starting JVM...")
+            logger.info("Starting JVM...")
+            from argumentation_analysis.utils.system_utils import get_project_root
+            project_root = get_project_root()
 
-                # --- DEBUGGING ARCHITECTURE AND PATHS ---
-                logger.info(f"Python Executable: {sys.executable}")
-                logger.info(f"Python Architecture: {platform.architecture()}")
-                default_jvm_path = jpype.getDefaultJVMPath()
-                logger.info(f"Default JVM Path (from JPype): {default_jvm_path}")
-                java_home_env = os.environ.get("JAVA_HOME")
-                logger.info(f"JAVA_HOME environment variable: {java_home_env}")
-                # --- END DEBUGGING ---
+            # --- STRATEGIC JVM SELECTION ---
+            default_jvm_path = jpype.getDefaultJVMPath()
+            jvm_path_to_use = default_jvm_path
+            logger.info(f"Default JVM Path (from JPype): {default_jvm_path}")
+            
+            # This logic is crucial because the default JVM (Java 8) is incompatible with the Tweety JARs (compiled with Java 15+).
+            # We must force the use of the portable JDK.
+            hardcoded_jdk_path = project_root / "portable_jdk" / "jdk-17.0.2+8"
+            logger.info(f"Checking for portable JDK at: {hardcoded_jdk_path}")
 
-                # --- CHOIX STRATÉGIQUE DE LA JVM ---
-                # NOTE DE FIABILITÉ : L'environnement d'exécution (via activate_project_env.ps1)
-                # ne propage pas correctement la variable d'environnement JAVA_HOME, et JPype
-                # sélectionne par défaut une ancienne JRE système (Java 8), ce qui cause une
-                # incompatibilité avec les JARs Tweety.
-                # Pour contourner ce problème, nous forçons l'utilisation du JDK portable
-                # inclus dans le projet. C'est moins flexible mais garantit la stabilité.
-                from argumentation_analysis.utils.system_utils import get_project_root
-                project_root = get_project_root()
-                # Correction du chemin suite au débogage : le dossier est 'portable_jdk' et la version est 17.
-                hardcoded_jdk_path = project_root / "portable_jdk" / "jdk-17.0.2+8"
-                jvm_path_to_use = default_jvm_path
-
-                logger.info(f"Attempting to use hardcoded JDK path: {hardcoded_jdk_path}")
-
-                if os.path.isdir(hardcoded_jdk_path):
-                    logger.info(f"Hardcoded JDK path found. Searching for JVM library...")
-                    if sys.platform == "win32":
-                        lib_name = "jvm.dll"
-                        potential_jvm_path = hardcoded_jdk_path / "bin" / "server" / lib_name
-                    else:
-                        lib_name = "libjvm.so"
-                        potential_jvm_path = hardcoded_jdk_path / "lib" / "server" / lib_name
-
-                    if potential_jvm_path.exists():
-                        jvm_path_to_use = str(potential_jvm_path)
-                        logger.info(f"SUCCESS: Using hardcoded JVM path: {jvm_path_to_use}")
-                    else:
-                        logger.warning(f"Could not find JVM file at '{potential_jvm_path}'. Falling back to JPype default.")
+            if os.path.isdir(hardcoded_jdk_path):
+                logger.info(f"Portable JDK directory found. Identifying JVM library for platform '{sys.platform}'...")
+                if sys.platform == "win32":
+                    lib_name = "jvm.dll"
+                    potential_jvm_path = hardcoded_jdk_path / "bin" / "server" / lib_name
                 else:
-                    logger.warning(f"Hardcoded JDK path '{hardcoded_jdk_path}' not found. Falling back to JPype default.")
-                # --- FIN DU CHOIX ---
+                    lib_name = "libjvm.so"
+                    potential_jvm_path = hardcoded_jdk_path / "lib" / "server" / lib_name
 
-                # MODIFICATION POUR FIABILITÉ : Passer le classpath directement à startJVM.
-                tweety_libs_path = project_root / "libs" / "tweety"
-                full_jar_path = tweety_libs_path / "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
-                commons_jar_path = tweety_libs_path / "org.tweetyproject.logics.commons-1.28-with-dependencies.jar"
-
-                classpath = [str(full_jar_path), str(commons_jar_path)]
-                logger.info(f"Using classpath: {classpath}")
-
-                jpype.startJVM(
-                    jvm_path_to_use,  # Utiliser le chemin de la JVM sélectionné
-                    "-ea",
-                    classpath=classpath,
-                    convertStrings=False
-                )
-                TweetyInitializer._jvm_started = True
-                logger.info("JVM started successfully.")
+                logger.info(f"Checking for JVM library at: {potential_jvm_path}")
+                if potential_jvm_path.is_file():
+                    jvm_path_to_use = str(potential_jvm_path)
+                    logger.info(f"SUCCESS: Portable JVM library found. Overriding default path. Will use: '{jvm_path_to_use}'")
+                else:
+                    logger.warning(f"Portable JVM library not found at '{potential_jvm_path}'. Falling back to default JVM. THIS WILL LIKELY FAIL.")
             else:
-                logger.info("JVM was already started by another component.")
-                TweetyInitializer._jvm_started = True
+                logger.warning(f"Portable JDK path '{hardcoded_jdk_path}' not found. Falling back to default JVM. THIS WILL LIKELY FAIL.")
+            
+            # --- PRE-STARTUP VALIDATION (G-FORCE LOGGING) ---
+            logger.info("--- G-FORCE JVM PRE-STARTUP VALIDATION ---")
+            logger.info(f"Final JVM path to be used: '{jvm_path_to_use}'")
+            logger.info(f"Does the path exist? {os.path.exists(jvm_path_to_use)}")
+            logger.info(f"Is it a file? {os.path.isfile(jvm_path_to_use)}")
+            logger.info(f"Python architecture: {platform.architecture()}")
+            logger.info("--- END VALIDATION ---")
+
+            # --- CLASSPATH CONFIGURATION ---
+            tweety_libs_path = project_root / "libs" / "tweety"
+            full_jar_path = tweety_libs_path / "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
+            classpath = [str(full_jar_path)]
+            logger.info(f"Using classpath: {classpath}")
+
+            jpype.startJVM(
+                jvm_path_to_use,
+                "-ea",
+                classpath=classpath,
+                convertStrings=False
+            )
+            TweetyInitializer._jvm_started = True
+            logger.info("JVM started successfully.")
 
             java_system = jpype.JClass("java.lang.System")
             actual_classpath = java_system.getProperty("java.class.path")
             logger.info(f"Actual Java Classpath from System.getProperty: {actual_classpath}")
 
-            self._import_java_classes()
-
         except Exception as e:
-            logger.error(f"Failed to start or connect to JVM: {e}", exc_info=True)
+            logger.error(f"Failed to start JVM: {e}", exc_info=True)
             raise RuntimeError(f"JVM Initialization failed: {e}") from e
+
 
     def _import_java_classes(self):
         logger.info("Attempting to import TweetyProject Java classes...")
@@ -190,53 +152,47 @@ class TweetyInitializer:
             _ = jpype.JClass("org.tweetyproject.logics.ml.parser.MlParser")
             _ = jpype.JClass("org.tweetyproject.commons.ParserException")
             _ = jpype.JClass("org.tweetyproject.logics.commons.syntax.Sort")
-            # --- AJOUT CRUCIAL POUR LE PARSING PROGRAMMATIQUE ---
-            # Ces classes sont nécessaires pour construire les belief sets modal/fol manuellement.
-            # Corrigé suite à l'analyse du JAR: la classe a été déplacée dans le package parent.
             _ = jpype.JClass("org.tweetyproject.commons.Signature")
             _ = jpype.JClass("org.tweetyproject.logics.commons.syntax.Constant")
-            # --- FIN DE L'AJOUT ---
             logger.info("Successfully imported TweetyProject Java classes.")
-
 
         except Exception as e:
             logger.error(f"Error importing Java classes: {e}", exc_info=True)
+            java_system = jpype.JClass("java.lang.System")
+            actual_classpath = java_system.getProperty("java.class.path")
+            logger.error(f"Classpath at time of error: {actual_classpath}")
             raise RuntimeError(f"Java class import failed: {e}") from e
 
-
     def initialize_pl_components(self):
-        if not TweetyInitializer._jvm_started:
-            self._start_jvm()
+        if self.__class__._pl_parser and self.__class__._pl_reasoner:
+            return
         try:
             logger.debug("Initializing PL components...")
-            TweetyInitializer._pl_reasoner = jpype.JClass("org.tweetyproject.logics.pl.reasoner.SimplePlReasoner")()
-            TweetyInitializer._pl_parser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")()
+            self.__class__._pl_reasoner = jpype.JClass("org.tweetyproject.logics.pl.reasoner.SimplePlReasoner")()
+            self.__class__._pl_parser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")()
             logger.info("PL components initialized.")
-            return TweetyInitializer._pl_parser, TweetyInitializer._pl_reasoner
         except Exception as e:
             logger.error(f"Error initializing PL components: {e}", exc_info=True)
             raise
 
     def initialize_fol_components(self):
-        if not TweetyInitializer._jvm_started:
-            self._start_jvm()
+        if self.__class__._fol_parser:
+            return
         try:
             logger.debug("Initializing FOL components...")
-            TweetyInitializer._fol_parser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")()
+            self.__class__._fol_parser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")()
             logger.info("FOL parser initialized.")
-            return TweetyInitializer._fol_parser
         except Exception as e:
             logger.error(f"Error initializing FOL components: {e}", exc_info=True)
             raise
 
     def initialize_modal_components(self):
-        if not TweetyInitializer._jvm_started:
-            self._start_jvm()
+        if self.__class__._modal_parser:
+            return
         try:
             logger.debug("Initializing Modal Logic components...")
-            TweetyInitializer._modal_parser = jpype.JClass("org.tweetyproject.logics.ml.parser.MlParser")()
+            self.__class__._modal_parser = jpype.JClass("org.tweetyproject.logics.ml.parser.MlParser")()
             logger.info("Modal Logic parser initialized.")
-            return TweetyInitializer._modal_parser
         except Exception as e:
             logger.error(f"Error initializing Modal Logic components: {e}", exc_info=True)
             raise
@@ -258,26 +214,4 @@ class TweetyInitializer:
         return TweetyInitializer._modal_parser
 
     def is_jvm_started(self):
-        return TweetyInitializer._jvm_started
-
-    def shutdown_jvm(self):
-        if TweetyInitializer._jvm_started and jpype.isJVMStarted():
-            try:
-                TweetyInitializer._pl_reasoner = None
-                TweetyInitializer._pl_parser = None
-                TweetyInitializer._fol_parser = None
-                TweetyInitializer._fol_reasoner = None
-                TweetyInitializer._modal_logic = None
-                TweetyInitializer._modal_parser = None
-                TweetyInitializer._modal_reasoner = None
-
-                logger.info("Shutting down JVM...")
-                jpype.shutdownJVM()
-                TweetyInitializer._jvm_started = False
-                logger.info("JVM shut down successfully.")
-            except Exception as e:
-                logger.error(f"Error during JVM shutdown: {e}", exc_info=True)
-        elif not TweetyInitializer._jvm_started:
-            logger.info("JVM was not started by this class or already shut down.")
-        else:
-            logger.info("JVM is started but perhaps not by this class, not shutting down.")
+        return self.__class__._jvm_started
