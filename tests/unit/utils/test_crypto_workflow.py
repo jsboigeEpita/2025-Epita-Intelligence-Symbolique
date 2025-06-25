@@ -111,6 +111,7 @@ class TestCryptoWorkflowManager:
             assert len(result.loaded_files) == 1
             assert result.loaded_files[0]["definitions_count"] == 2
             assert mock_load.call_count == 1
+            assert result.processing_time >= 0
         finally:
             tmp_path.unlink()
     

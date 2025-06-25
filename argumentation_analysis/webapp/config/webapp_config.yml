@@ -9,7 +9,7 @@ backend:
   max_attempts: 5
   module: api.main:app
   start_port: 5003
-  timeout_seconds: 30
+  timeout_seconds: 180
 cleanup:
   auto_cleanup: true
   kill_processes:
@@ -20,7 +20,7 @@ cleanup:
   - web_api
   - serve
 frontend:
-  enabled: false
+  enabled: true
   path: services/web_api/interface-web-argumentative
   port: 3000
   start_command: npm start

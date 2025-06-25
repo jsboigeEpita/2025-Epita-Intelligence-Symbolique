@@ -79,7 +79,7 @@ class TestLogicAgentFactory:
         with self.agent_classes_patch:
             agent = LogicAgentFactory.create_agent("first_order", self.kernel)
 
-            self.mock_first_order_agent_class.assert_called_once_with(kernel=self.kernel, agent_name='First_orderAgent')
+            self.mock_first_order_agent_class.assert_called_once_with(kernel=self.kernel, tweety_bridge=unittest.mock.ANY, agent_name='First_orderAgent')
             self.mock_first_order_agent.setup_agent_components.assert_not_called()
             
             assert agent == self.mock_first_order_agent

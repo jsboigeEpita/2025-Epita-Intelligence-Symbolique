@@ -10,7 +10,6 @@ pytestmark = [
     pytest.mark.e2e_test
 ]
 
-@pytest.mark.skip(reason="La méthode 'analyze_dung_framework' n'est pas implémentée dans le ServiceManager actuel.")
 @pytest.mark.playwright
 def test_dung_framework_analysis_api(playwright: Playwright):
     """
@@ -38,7 +37,7 @@ def test_dung_framework_analysis_api(playwright: Playwright):
     # Appel direct de l'API
     response = api_request_context.post(
         "/api/v1/framework/analyze",
-        data=test_data
+        json=test_data
     )
 
     # Vérifications de base

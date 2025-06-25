@@ -142,10 +142,9 @@ class ProcessCleanup:
                 if (process.info['name'] and 'python' in process.info['name'].lower() and
                     any(script in cmdline for script in target_scripts)):
                     
-                    proc = psutil.Process(process.info['pid'])
-                    proc_info = f"{proc.name()} (PID: {proc.pid}) - {cmdline[:100]}"
+                    proc_info = f"{process.info['name']} (PID: {process.info['pid']}) - {cmdline[:100]}"
                     
-                    proc.terminate()
+                    process.terminate()
                     stopped_count += 1
                     self.logger.info(f"Processus backend arrêté: {proc_info}")
                     
@@ -169,10 +168,9 @@ class ProcessCleanup:
                 if (process.info['name'] and 'node' in process.info['name'].lower() and
                     any(script in cmdline for script in target_scripts)):
                     
-                    proc = psutil.Process(process.info['pid'])
-                    proc_info = f"{proc.name()} (PID: {proc.pid}) - {cmdline[:100]}"
+                    proc_info = f"{process.info['name']} (PID: {process.info['pid']}) - {cmdline[:100]}"
                     
-                    proc.terminate()
+                    process.terminate()
                     stopped_count += 1
                     self.logger.info(f"Processus frontend arrêté: {proc_info}")
                     

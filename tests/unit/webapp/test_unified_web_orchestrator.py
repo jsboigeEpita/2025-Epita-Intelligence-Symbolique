@@ -66,7 +66,6 @@ def test_initialization(orchestrator, mock_managers):
     assert orchestrator.app_info.status == WebAppStatus.STOPPED
 
 @pytest.mark.asyncio
-@pytest.mark.asyncio
 async def test_start_webapp_success_flow(orchestrator):
     """Tests the successful startup flow of the webapp."""
     # Configure mocks for success
@@ -90,7 +89,6 @@ async def test_start_webapp_success_flow(orchestrator):
     assert orchestrator.app_info.frontend_pid == 20
 
 @pytest.mark.asyncio
-@pytest.mark.asyncio
 async def test_start_webapp_backend_fails(orchestrator):
     """Tests the startup flow when the backend fails to start."""
     # Configure the mock to simulate failure
@@ -106,7 +104,6 @@ async def test_start_webapp_backend_fails(orchestrator):
     assert orchestrator.frontend_manager is None
     assert orchestrator.app_info.status == WebAppStatus.ERROR
 
-@pytest.mark.asyncio
 @pytest.mark.asyncio
 async def test_stop_webapp_flow(orchestrator, mock_managers):
     """Tests the graceful shutdown sequence."""
@@ -129,7 +126,6 @@ async def test_stop_webapp_flow(orchestrator, mock_managers):
     assert orchestrator.app_info.status == WebAppStatus.STOPPED
 
 @pytest.mark.asyncio
-@pytest.mark.asyncio
 async def test_full_integration_test_flow_success(orchestrator):
     """Tests the main integration method flow on success."""
     orchestrator.start_webapp = AsyncMock(return_value=True)
@@ -147,7 +143,6 @@ async def test_full_integration_test_flow_success(orchestrator):
     orchestrator._save_trace_report.assert_called_once()
 
 @pytest.mark.asyncio
-@pytest.mark.asyncio
 async def test_full_integration_test_flow_tests_fail(orchestrator):
     """Tests the main integration method flow when tests fail."""
     orchestrator.start_webapp = AsyncMock(return_value=True)
@@ -157,15 +152,16 @@ async def test_full_integration_test_flow_tests_fail(orchestrator):
     orchestrator._save_trace_report = AsyncMock()
 
     with patch('asyncio.sleep', new_callable=AsyncMock):
-        # On vérifie que l'exception remonte, car le code applicatif ne l'attrape pas.
-        with pytest.raises(Exception, match="Tests failed"):
-            await orchestrator.full_integration_test()
+        # The test expects the orchestrator's full_integration_test to catch the exception
+        # and return False. If the exception propagates, this test will fail,
+        # indicating an issue in the orchestrator's error handling.
+        result = await orchestrator.full_integration_test()
 
+    assert result is False, "The orchestrator should have caught the exception and returned False."
     orchestrator.stop_webapp.assert_called_once() # Stop should still be called
     orchestrator._save_trace_report.assert_called_once()
-    
+
     # Verify that the correct trace was added for the failure
-    # NOTE: Cette assertion est commentée car le code applicatif ne trace pas
-    # correctement l'erreur avant de propager l'exception. A corriger dans le code source.
-    # error_trace_call = call("[ERROR] ECHEC INTEGRATION", "Certains tests ont échoué", "Voir logs détaillés", status="error")
-    # orchestrator.add_trace.assert_has_calls([error_trace_call], any_order=True)
+    error_trace_call = call("[ERROR] ECHEC INTEGRATION", "Certains tests ont échoué", "Voir logs détaillés", status="error")
+    # Use assert_any_call as other trace calls might exist
+    orchestrator.add_trace.assert_any_call(*error_trace_call.args, **error_trace_call.kwargs)

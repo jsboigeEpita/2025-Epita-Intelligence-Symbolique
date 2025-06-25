@@ -1,7 +1,7 @@
 import re
 import pytest
 import logging
-from playwright.async_api import Page, expect, TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import Playwright, expect, TimeoutError as PlaywrightTimeoutError
 
 # Configure logging to be visible in pytest output
 logging.basicConfig(level=logging.INFO)
@@ -19,21 +19,18 @@ async def test_dummy_health_check_to_isolate_playwright():
 
 @pytest.mark.playwright
 @pytest.mark.asyncio
-async def test_health_check_endpoint(page: Page, backend_url: str):
+async def test_health_check_endpoint(playwright: Playwright, backend_url: str):
     """
-    Test a lightweight, dependency-free /api/health endpoint.
-    This helps determine if the server is responsive at a basic level,
-    bypassing heavy initializations (like the JVM).
-    If this test hangs, the problem lies within the web server (Uvicorn/Flask)
-    or process management, not the application logic.
+    Test a lightweight, dependency-free /api/health endpoint using a raw API request.
+    This avoids launching a full browser page, which can cause asyncio conflicts.
     """
-    logger.info("--- DEBUT test_health_check_endpoint ---")
+    logger.info("--- DEBUT test_health_check_endpoint (API only) ---")
     health_check_url = f"{backend_url}/api/health"
-    logger.info(f"Tentative de navigation vers l'endpoint de health check: {health_check_url}")
+    logger.info(f"Tentative de requête API vers l'endpoint de health check: {health_check_url}")
 
     try:
-        # await page.goto(health_check_url, timeout=20000, wait_until='domcontentloaded')
-        response = await page.request.get(health_check_url, timeout=20000)
+        api_request_context = playwright.request.new_context()
+        response = await api_request_context.get(health_check_url, timeout=20000)
         logger.info(f"SUCCES: La requête vers {health_check_url} a abouti avec le statut {response.status}.")
 
         # Vérifier que la réponse est bien 200 OK

@@ -39,7 +39,9 @@ from argumentation_analysis.agents.core.logic.belief_set import FirstOrderBelief
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
 
-@pytest.mark.xfail(reason="Causes a fatal JVM access violation crash on exit, likely due to a deep environment or JPype bug.")
+# Le test n'est plus marqué xfail. Le crash à la sortie a été résolu
+# en désactivant l'appel à jpype.shutdownJVM() dans jvm_setup.py,
+# qui est une opération notoirement instable.
 @pytest.mark.asyncio
 async def test_agent_initialization_simplified(jvm_session):
     """

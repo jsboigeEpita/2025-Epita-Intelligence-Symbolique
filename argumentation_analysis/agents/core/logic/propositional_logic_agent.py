@@ -31,17 +31,15 @@ from pydantic import Field
 from ..abc.agent_bases import BaseLogicAgent
 from .belief_set import BeliefSet, PropositionalBeliefSet
 from .tweety_bridge import TweetyBridge
+from ..pl.pl_definitions import PL_AGENT_INSTRUCTIONS # Importation de la définition centralisée depuis le répertoire parent
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
 
 # --- Prompts pour la Logique Propositionnelle (PL) ---
 
-SYSTEM_PROMPT_PL = """Vous êtes un agent spécialisé dans l'analyse et le raisonnement en logique propositionnelle (PL).
-Vous utilisez la syntaxe de TweetyProject pour représenter les formules PL.
-Vos tâches principales incluent la traduction de texte en formules PL, la génération de requêtes PL pertinentes,
-l'exécution de ces requêtes sur un ensemble de croyances PL, et l'interprétation des résultats obtenus.
-"""
+# Retrait de l'ancienne définition locale
+# SYSTEM_PROMPT_PL = "..."
 
 PROMPT_TEXT_TO_PL_DEFS = """
 Vous êtes un expert en logique propositionnelle (PL). Votre tâche est d'identifier les propositions atomiques (faits de base) dans un texte donné.
@@ -232,7 +230,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
             service_id (Optional[str], optional): ID du service LLM à utiliser
                 pour les fonctions sémantiques.
         """
-        actual_system_prompt = system_prompt or SYSTEM_PROMPT_PL
+        actual_system_prompt = system_prompt or PL_AGENT_INSTRUCTIONS
         super().__init__(kernel, agent_name=agent_name, logic_type_name="PL", system_prompt=actual_system_prompt)
         self._llm_service_id = service_id
         self._tweety_bridge = TweetyBridge()
