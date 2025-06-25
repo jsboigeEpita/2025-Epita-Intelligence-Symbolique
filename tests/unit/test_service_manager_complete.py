@@ -166,9 +166,16 @@ class TestProcessCleanup(unittest.TestCase):
         """Test arrêt processus backend"""
         # Mock process Python
         mock_process = MagicMock(spec=psutil.Process)
+        mock_process.info = {
+            'name': 'python.exe',
+            'pid': 12345,
+            'cmdline': ['python', 'app.py', '--port', '5000']
+        }
+        # Configure name() and cmdline() as callable methods
         mock_process.name = MagicMock(return_value='python.exe')
-        mock_process.pid = 12345
         mock_process.cmdline = MagicMock(return_value=['python', 'app.py', '--port', '5000'])
+        mock_process.pid = 12345
+        mock_process.terminate = MagicMock()
         
         # Le code ré-instancie un objet Process, on doit s'assurer qu'il retourne le bon mock
         mock_process_class.return_value = mock_process
@@ -186,9 +193,16 @@ class TestProcessCleanup(unittest.TestCase):
         """Test arrêt processus frontend"""
         # Mock process Node.js
         mock_process = MagicMock(spec=psutil.Process)
+        mock_process.info = {
+            'name': 'node.exe',
+            'pid': 12345,
+            'cmdline': ['node', 'server.js', 'serve']
+        }
+        # Configure name() and cmdline() as callable methods
         mock_process.name = MagicMock(return_value='node.exe')
-        mock_process.pid = 12345
         mock_process.cmdline = MagicMock(return_value=['node', 'server.js', 'serve'])
+        mock_process.pid = 12345
+        mock_process.terminate = MagicMock()
 
         # Le code ré-instancie un objet Process, on doit s'assurer qu'il retourne le bon mock
         mock_process_class.return_value = mock_process

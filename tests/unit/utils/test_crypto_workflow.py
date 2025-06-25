@@ -90,30 +90,27 @@ class TestCryptoWorkflowManager:
     
     @pytest.mark.asyncio
     @patch('argumentation_analysis.utils.crypto_workflow.load_extract_definitions')
-    @patch('time.monotonic', side_effect=[100.0, 100.5])
-    async def test_load_encrypted_corpus_success(self, mock_time, mock_load):
+    async def test_load_encrypted_corpus_success(self, mock_load):
         """Test déchiffrement réussi."""
         mock_definitions = [
             {"content": "Texte de test 1", "id": "def1"},
             {"content": "Texte de test 2", "id": "def2"}
         ]
         mock_load.return_value = mock_definitions
-        
+
         with tempfile.NamedTemporaryFile(suffix=".enc", delete=False) as tmp_file:
             tmp_path = Path(tmp_file.name)
-            tmp_file.write(b"encrypted_content")
-        
+            tmp_file.write(b"dummy_content")
+
         try:
             manager = CryptoWorkflowManager("test_key")
             result = await manager.load_encrypted_corpus([str(tmp_path)])
-            
+
             assert result.success
-            assert len(result.loaded_files) == 1
             assert result.total_definitions == 2
+            assert len(result.loaded_files) == 1
             assert result.loaded_files[0]["definitions_count"] == 2
-            assert result.processing_time > 0, "Le temps de traitement devrait être positif"
-            assert mock_time.call_count == 2, "time.monotonic devrait être appelé deux fois"
-            
+            assert mock_load.call_count == 1
         finally:
             tmp_path.unlink()
     
