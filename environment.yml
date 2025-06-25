@@ -21,7 +21,7 @@ dependencies:
   - pytorch
   - transformers
   - sympy=1.13.1
-  - thinc=8.3.4 # Figé pour compatibilité avec spacy
+  - thinc=8.3.2 # Figé pour compatibilité avec spacy (8.3.4 non trouvé sur conda)
 
   # Web & API
   - flask
