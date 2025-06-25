@@ -1,116 +1,33 @@
-#!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-Script d'activation de l'environnement projet (refactorisé avec Python)
+Wrapper pour exécuter une commande dans l'environnement du projet.
 
 .DESCRIPTION
-Active l'environnement conda du projet et exécute optionnellement une commande.
-Utilise les modules Python mutualisés pour la gestion d'environnement.
-
-.PARAMETER CommandToRun
-Commande à exécuter après activation de l'environnement
+Ce script est un simple "wrapper" qui délègue toute la logique de
+démarrage et d'exécution au script Python multiplateforme `scripts/run_in_env.py`.
 
 .EXAMPLE
-.\activate_project_env.ps1
-.\activate_project_env.ps1 -CommandToRun "python --version"
+# Exécute pytest
+.\activate_project_env.ps1 python -m pytest
 
-.NOTES
-Refactorisé - Utilise scripts/core/environment_manager.py
+# Affiche la version de python de l'environnement
+.\activate_project_env.ps1 python --version
 #>
-
-param(
-    [string]$CommandToRun = $null,
-    [string]$CommandOutputFile = $null
-)
-
-# Ce script est maintenant un "wrapper mince". Toute la logique de configuration
-# est déléguée au module Python pour garantir qu'elle soit indépendante de l'OS.
 
 $ErrorActionPreference = "Stop"
 
-# Nom du module Python qui sert de point d'entrée central
-$PythonModule = "project_core.core_from_scripts.environment_manager"
+# Détermine le chemin vers le script Python à exécuter
+# Syntaxe alternative pour Join-Path pour essayer de contourner un problème de parsing.
+$childPath = "scripts\run_in_env.py"
+$pythonRunner = Join-Path -Path $PSScriptRoot -ChildPath $childPath
 
-# Fonction pour écrire les messages sur la sortie d'erreur, pour ne pas polluer stdout
-function Write-Stderr {
-    param([string]$Message)
-    $Host.UI.WriteErrorLine($Message)
-}
+# Affiche la commande qui va être exécutée pour le débogage
+# Write-Host "[DEBUG] Calling: python $pythonRunner $args" -ForegroundColor Gray
 
-try {
-    if ($CommandToRun) {
-        # --- Logique de `main` ---
-        # Définir le PYTHONPATH pour inclure la racine du projet.
-        $ProjectRoot = Resolve-Path $PSScriptRoot
-        Write-Stderr "Ajout de la racine du projet au PYTHONPATH : $ProjectRoot"
-        $env:PYTHONPATH = "$ProjectRoot" + [IO.Path]::PathSeparator + $env:PYTHONPATH
-        
-        # Détermine le nom de l'environnement Conda dynamiquement
-        $env_name = "projet-is" # Fallback par défaut
-        $config_file = Join-Path $PSScriptRoot "argumentation_analysis" "config" "environment_config.py"
-        if(Test-Path $config_file) {
-            $config_content = Get-Content $config_file
-            $env_name_line = $config_content | Select-String -Pattern 'CONDA_ENV_NAME\s*=\s*"([^"]+)"'
-            if($env_name_line) {
-                $env_name = $env_name_line.Matches[0].Groups[1].Value
-            }
-        }
-        Write-Stderr "Recherche de l'environnement Conda: $env_name"
+# Appelle le script Python en lui passant tous les arguments
+# reçus par ce script wrapper.
+python.exe $pythonRunner $args
 
-        # Trouve le chemin de l'environnement Conda de manière robuste
-        $env_line = conda info --envs | findstr.exe /R /C:"^..*\b$env_name\b.*"
-        
-        if (-not $env_line) {
-            throw "L'environnement Conda '$env_name' n'a pas été trouvé."
-        }
-        if ($env_line.Count -gt 1) {
-            $env_line = $env_line[0] # Prend le premier si plusieurs lignes correspondent
-        }
-
-        $env_path = ($env_line.Split(' ',[System.StringSplitOptions]::RemoveEmptyEntries)[-1])
-        $python_exe = Join-Path $env_path "python.exe"
-
-        if (-not (Test-Path $python_exe)) {
-            throw "python.exe non trouvé dans l'environnement '$env_name' au chemin '$python_exe'."
-        }
-
-        Write-Stderr "Utilisation de l'interpréteur Python: $python_exe"
-        
-        # Sépare la commande et les arguments de manière sécurisée
-        $command_parts = $CommandToRun.Split(' ', 2)
-        $program_to_run = $command_parts[0]
-        $argument_list = if ($command_parts.Length -gt 1) { $command_parts[1] } else { $null }
-
-        # Gestion des exécutables de l'environnement (python, pytest, etc.)
-        $exe_in_env = Join-Path $env_path "Scripts" "$program_to_run.exe"
-        if (Test-Path $exe_in_env) {
-            $program_to_run = $exe_in_env
-        } elseif ($program_to_run -eq "python") {
-            $program_to_run = $python_exe
-        }
-        
-        # Exécute la commande et gère la sortie
-        Write-Stderr "Exécution: $program_to_run $argument_list"
-        & $program_to_run $argument_list
-        
-        $exitCode = $LASTEXITCODE
-        if ($exitCode -ne 0) {
-            Write-Stderr "ERREUR: La commande a échoué avec le code de sortie: $exitCode"
-        }
-        exit $exitCode
-
-    } else {
-        # Comportement par défaut : Lancer un shell interactif dans l'environnement
-        $env_name = "projet-is" # Assurez-vous que le nom de l'environnement est correct
-        Write-Stderr "Aucune commande spécifiée. Lancement d'un shell interactif dans '$env_name'."
-        conda activate $env_name
-    }
-}
-catch {
-    Write-Stderr "--- ERREUR CRITIQUE DANS activate_project_env.ps1 ---"
-    $errorRecord = $_
-    $line = $errorRecord.InvocationInfo.ScriptLineNumber
-    $scriptName = $errorRecord.InvocationInfo.ScriptName
-    Write-Stderr "Message: $($_.Exception.Message) à $scriptName (Ligne: $line)"
-    exit 1
-}
+# Propage le code de sortie du script python
+$exitCode = $LASTEXITCODE
+exit $exitCode
