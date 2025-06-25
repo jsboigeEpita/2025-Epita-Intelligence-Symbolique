@@ -16,6 +16,7 @@ import json
 import os
 import tempfile
 import pandas as pd
+import numpy as np
 
 from pathlib import Path
 import semantic_kernel as sk
@@ -47,8 +48,8 @@ class TestInformalAnalysisPlugin(unittest.TestCase):
         
         # Créer un DataFrame de test pour la taxonomie
         self.test_df = pd.DataFrame({
-            'PK': pd.array([0, 1, 2, 3], dtype='Int64'),
-            'FK_Parent': pd.array([pd.NA, 0, 0, 1], dtype='Int64'),
+            'PK': [0, 1, 2, 3],
+            'FK_Parent': [np.nan, 0, 0, 1],
             'text_fr': ['Racine', 'Catégorie 1', 'Catégorie 2', 'Sous-catégorie 1.1'],
             'nom_vulgarisé': ['Sophismes', 'Ad Hominem', 'Faux Dilemme', 'Attaque Personnelle'],
             'description_fr': ['Description racine', 'Description cat 1', 'Description cat 2', 'Description sous-cat 1.1'],

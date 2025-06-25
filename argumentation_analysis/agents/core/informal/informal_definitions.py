@@ -133,26 +133,40 @@ class InformalAnalysisPlugin:
             for col in key_columns:
                 if col in df.columns:
                     try:
-                        # Convertit en numérique, les erreurs deviendront NaT (Not a Time) qui est géré par Int64
+                        # Convertit en numérique, les erreurs de conversion deviennent NaN
                         df[col] = pd.to_numeric(df[col], errors='coerce')
-                        # Convertit en type entier nullable. Gère les NaN sans forcer la colonne en float.
-                        df[col] = df[col].astype('Int64')
-                        self._logger.info(f"Colonne '{col}' convertie avec succès en type 'Int64'.")
+                        
+                        # Pour la clé primaire, on ne veut pas de NaN. Si c'est le cas, on logue une erreur.
+                        # Sinon, on la convertit en entier standard pour l'indexation.
+                        if col == 'PK':
+                            if df[col].isnull().any():
+                                self._logger.error("La colonne clé primaire 'PK' contient des valeurs nulles après conversion. Problème de données.")
+                                # On la laisse en type nullable pour l'instant pour éviter un crash
+                                df[col] = df[col].astype('Int64')
+                            else:
+                                df[col] = df[col].astype(int)
+                            self._logger.info(f"Colonne '{col}' traitée, type final: {df[col].dtype}.")
+                        else:
+                            # Pour les clés étrangères, si elles n'ont pas de NaN, on les convertit en entier.
+                            # Sinon, on les laisse en float, ce qui est le comportement par défaut de to_numeric
+                            # et ce qui est sûr pour les comparaisons.
+                            if not df[col].isnull().any():
+                                df[col] = df[col].astype(int)
+                            self._logger.info(f"Colonne '{col}' (clé étrangère) traitée, type final: {df[col].dtype}.")
+
                     except Exception as e:
-                        self._logger.warning(f"Impossible de convertir la colonne '{col}' en 'Int64': {e}. La colonne sera ignorée pour les opérations de typage.")
+                        self._logger.warning(f"Impossible de convertir la colonne '{col}': {e}. La colonne sera laissée en l'état.")
 
             # Définir l'index après avoir nettoyé la colonne PK
-            if 'PK' in df.columns:
+            if 'PK' in df.columns and pd.api.types.is_integer_dtype(df['PK'].dtype):
                 try:
-                    # On tente de définir l'index directement. La conversion précédente devrait garantir que c'est possible.
                     df.set_index('PK', inplace=True)
                     self._logger.info(f"Index 'PK' défini avec succès. Type de l'index: {df.index.dtype}.")
-                except TypeError as e:
-                     self._logger.warning(f"Impossible de définir 'PK' comme index car elle n'est pas de type numérique ou compatible (type: {df['PK'].dtype}). Erreur: {e}")
                 except Exception as e:
                     self._logger.error(f"Erreur critique lors de la définition de 'PK' comme index: {e}")
             else:
-                 self._logger.warning("Colonne 'PK' non trouvée. L'index ne peut être défini.")
+                pk_dtype = df['PK'].dtype if 'PK' in df.columns else 'N/A'
+                self._logger.warning(f"Colonne 'PK' non trouvée ou de type incorrect ({pk_dtype}). L'index ne peut être défini.")
 
             return df
         except Exception as e:
