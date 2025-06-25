@@ -8,9 +8,6 @@ Configuration pytest locale pour les tests d'orchestration.
 
 import argumentation_analysis.core.environment
 
-import jpype
-import jpype.imports
-
 import pytest
 import sys
 import os

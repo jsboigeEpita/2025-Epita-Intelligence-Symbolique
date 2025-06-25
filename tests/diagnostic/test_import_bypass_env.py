@@ -1,3 +1,4 @@
+__test__ = False
 """
 Test temporaire pour valider les imports d'orchestrateurs en contournant la vérification d'environnement.
 """

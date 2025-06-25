@@ -1,4 +1,4 @@
-name: projet-is
+name: projet-is-v2
 channels:
   - conda-forge
   - pytorch
@@ -12,16 +12,16 @@ dependencies:
   - intel-openmp # Force une version unifiée d'OpenMP
   - mkl # Force l'utilisation des librairies Intel MKL
   - tbb # Threading Building Blocks, souvent lié à MKL
-  - numpy==1.25.0
-  - pandas==2.0.3
+  - numpy=1.25.0 # Version figée pour la stabilité binaire
+  - pandas=2.0.3
   - scipy
   - scikit-learn
   - nltk
-  - spacy # Laisser conda choisir
+  - spacy # Laisser conda choisir la version
   - pytorch
   - transformers
   - sympy=1.13.1
-  - thinc # Laisser conda choisir en fonction de spacy
+  - thinc=8.3.2 # Figé pour compatibilité avec spacy (8.3.4 non trouvé sur conda)
 
   # Web & API
   - flask
@@ -43,17 +43,15 @@ dependencies:
   - pyyaml
   - regex
   - markdown
-
+  - psutil
+ 
   # Plotting & Graphing
   - matplotlib
   - seaborn
   - statsmodels
   - networkx
   - pyvis
-
-  # Java Bridge
-  - jpype1
-
+ 
   # Logic & Reasoning
   - clingo
 

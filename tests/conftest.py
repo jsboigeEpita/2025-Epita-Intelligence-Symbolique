@@ -4,9 +4,21 @@ import logging
 import os
 import threading
 import time
+import nest_asyncio
 from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
 
 logger = logging.getLogger(__name__)
+
+@pytest.fixture(scope="session", autouse=True)
+def apply_nest_asyncio():
+    """
+    Applies nest_asyncio to allow nested event loops.
+    This is necessary for running asyncio tests in some environments.
+    """
+    logger.info("Applying nest_asyncio to the event loop.")
+    nest_asyncio.apply()
+    yield
+    logger.info("nest_asyncio teardown.")
 
 @pytest.fixture(scope="session", autouse=True)
 def jvm_session():
