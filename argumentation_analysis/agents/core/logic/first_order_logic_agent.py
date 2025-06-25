@@ -302,13 +302,21 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         
         # Paramètres d'exécution pour forcer l'appel d'outils
         execution_settings = self._kernel.get_prompt_execution_settings_from_service_id(self._llm_service_id)
-        execution_settings.tool_choice_behavior = "auto" # Laisse le LLM décider quand appeler les outils
+        execution_settings.tool_choice = "auto" # Laisse le LLM décider quand appeler les outils
 
         try:
-            # Invocation du kernel, qui gérera la boucle d'appels d'outils
-            result = await self._kernel.invoke(
+            # Invocation directe du service de chat, qui gérera la boucle d'appels d'outils
+            # Il est crucial de lier les outils du kernel aux settings pour qu'ils soient envoyés à l'API.
+            # L'API attend une liste de dictionnaires, pas une liste d'objets KernelPlugin.
+            # Nous devons convertir chaque plugin en son format dictionnaire.
+            # NOTE: Cette ligne est une supposition éclairée. Si 'to_dict' n'est pas
+            # la bonne méthode, la prochaine erreur nous le dira.
+            execution_settings.tools = [plugin.to_dict() for plugin in self._kernel.plugins.values()]
+
+            result = await self.service.get_chat_message_content(
                 chat,
-                arguments={"settings": execution_settings}
+                settings=execution_settings,
+                kernel=self._kernel
             )
 
             self.logger.info("Le LLM a terminé d'appeler les outils.")
@@ -359,7 +367,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
                 return []
                 
             args = {"input": text, "belief_set": belief_set.content}
-            result = await self._kernel.plugins[self.name]["GenerateFOLQueries"].invoke(self._kernel, **args)
+            result = await self._kernel.functions[self.name]["GenerateFOLQueries"].invoke(self._kernel, **args)
             queries = json.loads(self._extract_json_block(str(result))).get("queries", [])
             self.logger.info(f"{len(queries)} requêtes potentielles reçues du LLM.")
             
@@ -408,7 +416,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             results_text_list = [res[1] if res else "Error: No result" for res in results]
             results_str = "\n".join(results_text_list)
             
-            result = await self._kernel.plugins[self.name]["InterpretFOLResult"].invoke(
+            result = await self._kernel.functions[self.name]["InterpretFOLResult"].invoke(
                 self._kernel,
                 input=text,
                 belief_set=belief_set.content,

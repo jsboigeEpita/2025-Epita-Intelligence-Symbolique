@@ -511,6 +511,7 @@ def validate_fol_syntax(formula: str) -> bool:
 
 # ==================== CONFIGURATION PYTEST ====================
 
+
 @pytest.fixture(scope="session", autouse=True)
 def setup_logging():
     """Configuration logging pour session de tests."""
