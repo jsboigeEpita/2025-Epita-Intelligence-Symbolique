@@ -38,7 +38,7 @@ from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
 
 # Import BeliefSet avec fallback
 try:
-    from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
+    from argumentation_analysis.agents.core.logic.belief_set import BeliefSet, FirstOrderBeliefSet
 except ImportError:
     # Fallback pour BeliefSet si non disponible
     class BeliefSet:
@@ -526,14 +526,16 @@ RÉPONDS EN FORMAT JSON :
     def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
         """Convertit texte en ensemble de croyances FOL."""
         try:
-            # Conversion vers formules FOL
+            # Conversion vers formules FOL en utilisant la méthode existante
             formulas = self._basic_fol_conversion(text)
             
-            # Création BeliefSet
-            from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
-            belief_set = BeliefSet()
-            for formula in formulas:
-                belief_set.add_belief(formula)
+            # Si la conversion ne produit aucune formule, on peut considérer cela comme une erreur
+            if not formulas:
+                return None, "Conversion resulted in no formulas, likely invalid input."
+
+            # Le contenu du BeliefSet est la représentation textuelle des formules
+            content_str = "\n".join(formulas)
+            belief_set = FirstOrderBeliefSet(content=content_str)
             
             return belief_set, f"Converted to {len(formulas)} FOL formulas"
             
@@ -719,12 +721,13 @@ RÉPONDS EN FORMAT JSON :
         """
         Implémentation de la méthode abstraite. Crée un BeliefSet à partir de données.
         Pour FOLLogicAgent, les "données" sont supposées être une liste de formules.
+        Le contenu sera une représentation textuelle de ces formules.
         """
-        belief_set = BeliefSet()
+        content = ""
         if isinstance(data, list):
-            for formula in data:
-                if isinstance(formula, str):
-                    belief_set.add_belief(formula)
+            content = "\n".join(map(str, data))
+
+        belief_set = FirstOrderBeliefSet(content=content)
         return belief_set
 
 

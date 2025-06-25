@@ -44,6 +44,19 @@ Ce fichier est exécuté avant tous les tests et est l'endroit idéal pour :
 3. Définir des hooks pytest personnalisés.
 4. Effectuer des imports critiques qui doivent avoir lieu avant tout autre code.
 """
+import pytest
+import logging
+
+
+@pytest.fixture(scope="session", autouse=True)
+def unload_torch_before_jvm_start():
+    """
+    Fixture pour forcer le déchargement de PyTorch avant l'initialisation de la JVM.
+    Prévient le crash "fatal access violation" causé par un conflit entre PyTorch et JPype.
+    """
+    if "torch" in sys.modules:
+        logging.warning("Déchargement du module 'torch' pour éviter un conflit avec la JVM.")
+        del sys.modules["torch"]
 
 # --- Step 1: Résolution du Conflit de Librairies Natives (torch vs jpype) ---
 # Un crash "Fatal Python error: Aborted" ou "access violation" peut se produire

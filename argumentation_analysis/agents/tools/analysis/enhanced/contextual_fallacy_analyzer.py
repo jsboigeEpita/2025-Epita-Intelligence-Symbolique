@@ -43,39 +43,28 @@ from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer im
 # Importations pour les modèles de langage avancés
 from argumentation_analysis.paths import DATA_DIR
 
-# Définir HAS_TRANSFORMERS comme variable globale
-HAS_TRANSFORMERS = False
-
-# Fonction d'importation paresseuse pour éviter les importations circulaires
-def _lazy_imports():
-    """Importe les modules de manière paresseuse pour éviter les importations circulaires."""
-    global torch, transformers, AutoTokenizer, AutoModelForSequenceClassification, pipeline, cosine_similarity
-    global HAS_TRANSFORMERS
+# Importations pour les modèles de langage avancés, avec fallback
+try:
+    import torch
+    import transformers
+    from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
+    from sklearn.metrics.pairwise import cosine_similarity
+    HAS_TRANSFORMERS = True
+except (ImportError, OSError):
+    pipeline = None  # Assurer que 'pipeline' existe toujours pour le patching
+    HAS_TRANSFORMERS = False
     
-    try:
-        import torch
-        import transformers
-        from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
-        from sklearn.metrics.pairwise import cosine_similarity
-        HAS_TRANSFORMERS = True
-    except (ImportError, OSError) as e:
-        # Essayer d'utiliser le mock en cas d'erreur de chargement
-        try:
-            
-            mock_torch()
-            import torch
-            import transformers
-            from sklearn.metrics.pairwise import cosine_similarity
-            # Mock des classes transformers
-            AutoTokenizer = transformers.AutoTokenizer
-            AutoModelForSequenceClassification = transformers.AutoModel
-            pipeline = transformers.pipeline
-            HAS_TRANSFORMERS = True
-            logging.info("Utilisation du mock PyTorch pour les tests")
-        except Exception:
-            HAS_TRANSFORMERS = False
-            logging.warning("Les bibliothèques transformers et/ou torch ne sont pas installées. "
-                       "L'analyseur utilisera des méthodes alternatives.")
+# Fonction d'importation paresseuse (simplifiée)
+def _lazy_imports():
+    """
+    Vérifie et logue la disponibilité des dépendances NLP.
+    Les importations principales sont maintenant globales au module.
+    """
+    if not HAS_TRANSFORMERS:
+        logging.warning("Les bibliothèques transformers et/ou torch ne sont pas installées. "
+                        "L'analyseur fonctionnera en mode dégradé.")
+    else:
+        logging.info("Les bibliothèques transformers et torch sont disponibles.")
 
 # Configuration du logging
 logging.basicConfig(
