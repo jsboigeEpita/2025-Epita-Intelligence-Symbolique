@@ -41,9 +41,9 @@ def mock_logger():
     patchers = [
         patch('argumentation_analysis.ui.utils.utils_logger', shared_mock_log),
         patch('argumentation_analysis.ui.file_operations.file_ops_logger', shared_mock_log),
-        patch('argumentation_analysis.utils.core_utils.crypto_utils.logger', shared_mock_log), # anciennement crypto_logger
-        patch('argumentation_analysis.ui.fetch_utils.fetch_logger', shared_mock_log), # Nouveau
-        patch('argumentation_analysis.ui.cache_utils.cache_logger', shared_mock_log)  # Nouveau
+        patch('argumentation_analysis.core.utils.crypto_utils.logger', shared_mock_log),
+        patch('argumentation_analysis.core.io_manager.io_logger', shared_mock_log),
+        patch('argumentation_analysis.ui.cache_utils.cache_logger', shared_mock_log)
     ]
 
     # Démarrer tous les patchers
@@ -139,10 +139,10 @@ def app_config_override():
 # --- Tests pour get_full_text_for_source ---
 
 
-@patch('argumentation_analysis.ui.fetch_utils.fetch_direct_text')
-@patch('argumentation_analysis.ui.cache_utils.load_from_cache')
-@patch('argumentation_analysis.ui.cache_utils.save_to_cache') # Corrigé: doit cibler fetch_utils où get_full_text_for_source l'appelle
-def test_get_full_text_direct_download_no_cache( # Corrigé: doit cibler fetch_utils
+@patch('argumentation_analysis.ui.utils.fetch_direct_text')
+@patch('argumentation_analysis.ui.utils.load_from_cache')
+@patch('argumentation_analysis.ui.utils.save_to_cache')
+def test_get_full_text_direct_download_no_cache(
     mock_save_cache, mock_load_cache, mock_fetch_direct,
     sample_source_info_direct, mock_logger, temp_cache_dir
 ):
@@ -163,7 +163,7 @@ def test_get_full_text_direct_download_no_cache( # Corrigé: doit cibler fetch_u
     mock_logger.info.assert_any_call(f"Texte récupéré pour '{url}' ({sample_source_info_direct['source_name']}), sauvegarde dans le cache...")
 
 
-@patch('argumentation_analysis.ui.cache_utils.load_from_cache')
+@patch('argumentation_analysis.ui.utils.load_from_cache')
 def test_get_full_text_from_cache(
     mock_load_cache, sample_source_info_direct, mock_logger, temp_cache_dir
 ):
@@ -183,9 +183,9 @@ def test_get_full_text_from_cache(
 
 
 
-@patch('argumentation_analysis.ui.fetch_utils.fetch_with_jina')
-@patch('argumentation_analysis.ui.cache_utils.load_from_cache', return_value=None)
-@patch('argumentation_analysis.ui.cache_utils.save_to_cache')
+@patch('argumentation_analysis.ui.utils.fetch_with_jina')
+@patch('argumentation_analysis.ui.utils.load_from_cache', return_value=None)
+@patch('argumentation_analysis.ui.utils.save_to_cache')
 def test_get_full_text_jina(
     mock_save_cache, mock_load_cache, mock_fetch_jina,
     sample_source_info_jina, mock_logger, temp_cache_dir, app_config_override, temp_download_dir
@@ -210,9 +210,9 @@ def test_get_full_text_jina(
 
 
 
-@patch('argumentation_analysis.ui.fetch_utils.fetch_with_tika')
-@patch('argumentation_analysis.ui.cache_utils.load_from_cache', return_value=None)
-@patch('argumentation_analysis.ui.cache_utils.save_to_cache')
+@patch('argumentation_analysis.ui.utils.fetch_with_tika')
+@patch('argumentation_analysis.ui.utils.load_from_cache', return_value=None)
+@patch('argumentation_analysis.ui.utils.save_to_cache')
 def test_get_full_text_tika_pdf(
     mock_save_cache, mock_load_cache, mock_fetch_tika,
     sample_source_info_tika_pdf, mock_logger, temp_cache_dir, app_config_override, temp_download_dir
@@ -237,9 +237,9 @@ def test_get_full_text_tika_pdf(
     mock_save_cache.assert_called_once_with(url, "Tika PDF content")
 
 
-@patch('argumentation_analysis.ui.fetch_utils.fetch_direct_text', side_effect=ConnectionError("Fetch failed"))
-@patch('argumentation_analysis.ui.cache_utils.load_from_cache', return_value=None)
-@patch('argumentation_analysis.ui.cache_utils.save_to_cache') # Ne devrait pas être appelé, mais le patch doit être correct
+@patch('argumentation_analysis.ui.utils.fetch_direct_text', side_effect=ConnectionError("Fetch failed"))
+@patch('argumentation_analysis.ui.utils.load_from_cache', return_value=None)
+@patch('argumentation_analysis.ui.utils.save_to_cache')
 def test_get_full_text_fetch_error(
     mock_save_cache, mock_load_cache, mock_fetch_direct,
     sample_source_info_direct, mock_logger, temp_cache_dir
@@ -265,15 +265,14 @@ def test_get_full_text_invalid_url(mock_logger):
     source_info_invalid_url = {"source_name": "Invalid", "source_type": "direct_download", "fetch_method": "direct_download"} # Manque schema, host_parts, path
     result = aa_utils.get_full_text_for_source(source_info_invalid_url)
     assert result is None
-    # Le message de log réel est "URL non disponible ou invalide pour source: {source_name} (fetch_method: {fetch_method}) après vérification 'url' et reconstruction."
-    expected_log_message = f"URL non disponible ou invalide pour source: {source_info_invalid_url['source_name']} (fetch_method: {source_info_invalid_url.get('fetch_method', source_info_invalid_url['source_type'])}) après vérification 'url' et reconstruction."
+    expected_log_message = f"URL invalide pour source: {source_info_invalid_url['source_name']}"
     mock_logger.error.assert_any_call(expected_log_message)
 
 def test_get_full_text_unknown_source_type(sample_source_info_direct, mock_logger, temp_cache_dir):
     source_info_unknown = sample_source_info_direct.copy()
     source_info_unknown["source_type"] = "unknown_type"
     source_info_unknown["fetch_method"] = "unknown_type" # Assumons que fetch_method est aussi mis à jour
-    with patch('argumentation_analysis.ui.cache_utils.load_from_cache', return_value=None):
+    with patch('argumentation_analysis.ui.utils.load_from_cache', return_value=None):
         result = aa_utils.get_full_text_for_source(source_info_unknown)
     assert result is None
     url = aa_utils.reconstruct_url(
@@ -281,8 +280,7 @@ def test_get_full_text_unknown_source_type(sample_source_info_direct, mock_logge
         source_info_unknown["host_parts"],
         source_info_unknown["path"]
     )
-    # Le message de log réel est "Méthode de fetch/type de source inconnu ou non géré: '{fetch_method}' pour '{url}' ({source_name}). Impossible de récupérer le texte."
-    expected_log_message = f"Méthode de fetch/type de source inconnu ou non géré: '{source_info_unknown['fetch_method']}' pour '{url}' ({source_info_unknown['source_name']}). Impossible de récupérer le texte."
+    expected_log_message = f"Type de source inconnu '{source_info_unknown['source_type']}' pour '{url}' ({source_info_unknown['source_name']}). Impossible de récupérer le texte."
     mock_logger.warning.assert_any_call(expected_log_message)
 
 
@@ -300,274 +298,199 @@ def config_file_path(tmp_path):
     return tmp_path / "test_config.json.gz.enc"
 
 
-@patch('argumentation_analysis.ui.file_operations.get_full_text_for_source')
-def test_save_extract_definitions_embed_true_fetch_needed(
-    mock_get_full_text, sample_definitions, config_file_path, test_key, mock_logger, temp_cache_dir, temp_download_dir
-):
-    mock_get_full_text.return_value = "Fetched text for Source 2"
-    definitions_to_save = [dict(d) for d in sample_definitions] # Copie pour modification
-
-    # Simuler un app_config minimal pour la fonction save_extract_definitions
-    mock_app_config_for_save = {
-        'JINA_READER_PREFIX': ui_config_module.JINA_READER_PREFIX,
-        'TIKA_SERVER_URL': ui_config_module.TIKA_SERVER_URL,
-        'PLAINTEXT_EXTENSIONS': ui_config_module.PLAINTEXT_EXTENSIONS,
-        'TEMP_DOWNLOAD_DIR': temp_download_dir
-    }
-
-    # Utiliser la fonction importée directement depuis file_operations
-    success = save_extract_definitions(
-        definitions_to_save, config_file_path, test_key, embed_full_text=True, config=mock_app_config_for_save
-    )
-
-    assert success is True
-    assert config_file_path.exists()
-
-    # Vérifier que mock_get_full_text a été appelé une fois avec la bonne config
-    mock_get_full_text.assert_called_once_with(ANY, app_config=mock_app_config_for_save)
-
-    # Vérifier manuellement le contenu de l'argument dictionnaire passé au mock
-    # car il est modifié en place, ce qui rend la comparaison directe avec assert_called_once_with difficile.
-    actual_call_arg_dict = mock_get_full_text.call_args[0][0]
-
-    # L'appel au mock se fait avec l'objet AVANT l'ajout de "full_text" par save_extract_definitions.
-    # Cependant, call_args stocke une référence, donc actual_call_arg_dict reflète l'état APRÈS modification.
-    expected_dict_state_after_modification = sample_definitions[1].copy()
-    expected_dict_state_after_modification["full_text"] = "Fetched text for Source 2"
-    assert actual_call_arg_dict == expected_dict_state_after_modification
-
-    assert definitions_to_save[0]["full_text"] == "Texte original 1"
-    # Commenting out this assertion as definitions_to_save might not be modified in-place as expected,
-    # or 'full_text' is not reliably added if save_extract_definitions works on internal copies.
-    # The check on loaded_defs later should confirm the persisted state.
-    # assert definitions_to_save[1]["full_text"] == "Fetched text for Source 2"
-
-    # Vérifier le contenu déchiffré
-    # Utiliser la fonction importée directement depuis file_operations
-    loaded_defs = load_extract_definitions(config_file_path, test_key)
-    assert len(loaded_defs) == 2
-    assert loaded_defs[0]["full_text"] == "Texte original 1"
-    assert loaded_defs[1]["full_text"] == "Fetched text for Source 2"
-    mock_logger.info.assert_any_call("Texte complet récupéré et ajouté pour 'Source 2'.")
-
-
-@patch('argumentation_analysis.ui.file_operations.get_full_text_for_source') # Ne devrait pas être appelé
-def test_save_extract_definitions_embed_false_removes_text(
-    mock_get_full_text, sample_definitions, config_file_path, test_key, mock_logger, temp_cache_dir, temp_download_dir
-):
+def test_save_extract_definitions_embed_true_fetch_needed(sample_definitions, config_file_path, test_key, mock_logger):
+    """Vérifie que le text_retriever est appelé si full_text est manquant."""
+    mock_retriever = MagicMock(return_value="Fetched Content")
+    definitions_without_text = [d for d in sample_definitions if "full_text" not in d]
+    
+    # Create a copy to avoid modifying the original fixture
     definitions_to_save = [dict(d) for d in sample_definitions]
-    # S'assurer que Source 2 a un full_text pour tester son retrait
-    definitions_to_save[1]["full_text"] = "Temporary text for Source 2"
 
-    mock_app_config_for_save = {
-        'TEMP_DOWNLOAD_DIR': temp_download_dir
-    }
-
-    # Utiliser la fonction importée directement depuis file_operations
     success = save_extract_definitions(
-        definitions_to_save, config_file_path, test_key, embed_full_text=False, config=mock_app_config_for_save
+        definitions_to_save,
+        config_file_path,
+        test_key,
+        embed_full_text=True,
+        text_retriever=mock_retriever
     )
 
     assert success is True
-    mock_get_full_text.assert_not_called()
-    # Vérifier que full_text a été retiré des données avant sérialisation.
-    # L'assertion `assert "full_text" not in definitions_to_save[1]` était incorrecte
-    # car `definitions_to_save` est la liste originale passée à la fonction,
-    # et `save_extract_definitions` travaille sur une copie.
-    # La vérification correcte est faite plus bas avec `loaded_defs`.
-    expected_log_message = "Option embed_full_text désactivée. Suppression des textes complets des définitions..."
-    called_logs = [call[0][0] for call in mock_logger.info.call_args_list]
-    assert any(expected_log_message == log for log in called_logs), \
-        f"Log attendu non trouvé: '{expected_log_message}'. Logs trouvés: {called_logs}"
-
-    # Vérifier le contenu déchiffré
-    # Utiliser la fonction importée directement depuis file_operations
+    assert mock_retriever.call_count == len(definitions_without_text)
+    
     loaded_defs = load_extract_definitions(config_file_path, test_key)
-    assert len(loaded_defs) == 2
-    assert "full_text" not in loaded_defs[0]
-    assert "full_text" not in loaded_defs[1]
+    saved_def_with_fetched_text = next(d for d in loaded_defs if d['source_name'] == 'Source 2')
+    assert saved_def_with_fetched_text['full_text'] == "Fetched Content"
+
+
+def test_save_extract_definitions_embed_false_removes_text(sample_definitions, config_file_path, test_key, mock_logger):
+    """Vérifie que le champ full_text est retiré si embed_full_text est False."""
+    with patch('argumentation_analysis.core.io_manager.json.dumps', side_effect=json.dumps) as mock_json_dumps:
+        success = save_extract_definitions(
+            sample_definitions,
+            config_file_path,
+            test_key,
+            embed_full_text=False
+        )
+
+    assert success is True
+    # Vérifier que le json.dumps a été appelé avec des données où "full_text" a été retiré.
+    defs_passed_to_dumps = mock_json_dumps.call_args[0][0]
+    for d in defs_passed_to_dumps:
+        assert 'full_text' not in d
 
 def test_save_extract_definitions_no_encryption_key(sample_definitions, config_file_path, mock_logger):
     # Utiliser la fonction importée directement depuis file_operations
-    success = save_extract_definitions(sample_definitions, config_file_path, None, embed_full_text=True) # Key est None, donc b64_derived_key sera None
+    success = save_extract_definitions(sample_definitions, config_file_path, None, embed_full_text=True)
     assert success is False
-    # Le logger utilisé par save_extract_definitions est file_ops_logger (alias de utils_logger)
     mock_logger.error.assert_called_with("Clé chiffrement (b64_derived_key) absente ou vide. Sauvegarde annulée.")
 
-@patch('argumentation_analysis.ui.file_operations.encrypt_data_with_fernet', return_value=None) # Cible corrigée
-def test_save_extract_definitions_encryption_fails(
-    mock_encrypt_data_with_fernet_in_file_ops, sample_definitions, config_file_path, test_key, mock_logger, temp_download_dir
-):
-    mock_app_config_for_save = { 'TEMP_DOWNLOAD_DIR': temp_download_dir }
-    # Utiliser la fonction importée directement depuis file_operations
+@patch('argumentation_analysis.core.io_manager.encrypt_data_with_fernet', side_effect=Exception("Crypto Error"))
+def test_save_extract_definitions_encryption_fails(mock_encrypt, sample_definitions, config_file_path, test_key, mock_logger):
+    """Vérifie que la sauvegarde échoue si le chiffrement échoue."""
     success = save_extract_definitions(
-        sample_definitions, config_file_path, test_key, embed_full_text=True, config=mock_app_config_for_save
+        sample_definitions,
+        config_file_path,
+        test_key,
+        embed_full_text=False # Désactivé pour ne pas dépendre du fetch
     )
-    mock_encrypt_data_with_fernet_in_file_ops.assert_called_once()
     assert success is False
-    expected_error_message_part = f"❌ Erreur lors de la sauvegarde chiffrée vers '{config_file_path}': Échec du chiffrement des données (encrypt_data_with_fernet a retourné None)."
-
-    error_call_found = False
-    for call_args_tuple in mock_logger.error.call_args_list:
-        args = call_args_tuple[0] # Les arguments positionnels
-        kwargs = call_args_tuple[1] # Les arguments nommés
-        if args and isinstance(args[0], str) and expected_error_message_part in args[0] and kwargs.get('exc_info') is True:
-            error_call_found = True
-            break
-    assert error_call_found, f"Le message d'erreur de sauvegarde attendu contenant '{expected_error_message_part}' avec exc_info=True n'a pas été loggué. Logs: {mock_logger.error.call_args_list}"
-
-
-@patch('argumentation_analysis.ui.file_operations.get_full_text_for_source', side_effect=ConnectionError("API down"))
-def test_save_extract_definitions_embed_true_fetch_fails(
-    mock_get_full_text, sample_definitions, config_file_path, test_key, mock_logger, temp_cache_dir, temp_download_dir
-):
-    definitions_to_save = [dict(d) for d in sample_definitions] # Copie pour modification
-    if "full_text" in definitions_to_save[1]:
-        del definitions_to_save[1]["full_text"]
-
-    mock_app_config_for_save = { 'TEMP_DOWNLOAD_DIR': temp_download_dir }
-
-    success = save_extract_definitions(
-        definitions_to_save, config_file_path, test_key, embed_full_text=True, config=mock_app_config_for_save
+    mock_logger.error.assert_any_call(
+        f"[FAIL] Erreur lors de la sauvegarde chiffrée vers '{config_file_path}': Crypto Error",
+        exc_info=True
     )
+
+
+def test_save_extract_definitions_embed_true_fetch_fails(sample_definitions, config_file_path, test_key, mock_logger):
+    """Vérifie que la sauvegarde continue mais loggue un warning si le fetch du texte échoue."""
+    mock_retriever = MagicMock(side_effect=ConnectionError("API down"))
+    definitions_to_save = [dict(d) for d in sample_definitions]
+    
+    success = save_extract_definitions(
+        definitions_to_save,
+        config_file_path,
+        test_key,
+        embed_full_text=True,
+        text_retriever=mock_retriever
+    )
+    
     assert success is True
-
-    mock_get_full_text.assert_called_once_with(ANY, app_config=mock_app_config_for_save)
-    actual_call_arg_dict = mock_get_full_text.call_args[0][0]
-
-    expected_dict_after_failed_fetch = definitions_to_save[1].copy()
-    expected_dict_after_failed_fetch["full_text"] = None
-
-    assert actual_call_arg_dict == expected_dict_after_failed_fetch
-
-    # Vérifier que le logger a été appelé avec le message d'erreur de connexion
     mock_logger.warning.assert_any_call(
         "Erreur de connexion lors de la récupération du texte pour 'Source 2': API down. Champ 'full_text' non peuplé."
     )
-    assert definitions_to_save[1].get("full_text") is None
-
+    
+    # Vérifier que le fichier sauvegardé ne contient pas de full_text pour la source 2
     loaded_defs = load_extract_definitions(config_file_path, test_key)
-    assert loaded_defs[0]["full_text"] == "Texte original 1"
-    assert loaded_defs[1].get("full_text") is None
+    source_2_loaded = next(d for d in loaded_defs if d['source_name'] == 'Source 2')
+    assert source_2_loaded.get('full_text') is None
 
 
 # --- Tests pour load_extract_definitions ---
 
 def test_load_extract_definitions_file_not_found(tmp_path, test_key, mock_logger):
+    """Vérifie que les définitions de secours sont retournées si le fichier n'existe pas."""
     non_existent_file = tmp_path / "non_existent.enc"
-    with patch('argumentation_analysis.ui.file_operations.ui_config_module.EXTRACT_SOURCES', None), \
-         patch('argumentation_analysis.ui.file_operations.ui_config_module.DEFAULT_EXTRACT_SOURCES', [{"default": True}]):
-        definitions = load_extract_definitions(non_existent_file, test_key)
-    assert definitions == [{"default": True}]
+    fallback_defs = [{"default": True}]
+    
+    definitions = load_extract_definitions(
+        non_existent_file,
+        test_key,
+        fallback_definitions=fallback_defs
+    )
+    
+    assert definitions == fallback_defs
     mock_logger.info.assert_called_with(f"Fichier config '{non_existent_file}' non trouvé. Utilisation définitions par défaut.")
 
 def test_load_extract_definitions_no_key(config_file_path, mock_logger):
-    with patch('argumentation_analysis.ui.file_operations.ui_config_module.EXTRACT_SOURCES', None), \
-         patch('argumentation_analysis.ui.file_operations.ui_config_module.DEFAULT_EXTRACT_SOURCES', [{"default": True}]):
-        if config_file_path.exists():
-            config_file_path.unlink()
+    """Vérifie que le fichier est lu comme du JSON simple si aucune clé n'est fournie."""
+    # Définir des données valides pour la structure attendue
+    definitions = [
+        {"source_name": "simple", "source_type": "direct", "schema": "http", "host_parts": ["example"], "path": "/", "extracts": []}
+    ]
+    config_file_path.write_text(json.dumps(definitions))
 
-        definitions_no_file = load_extract_definitions(config_file_path, None)
-    assert definitions_no_file == [{"default": True}]
-    mock_logger.info.assert_any_call(f"Fichier config '{config_file_path}' non trouvé. Utilisation définitions par défaut.")
+    result = load_extract_definitions(config_file_path, b64_derived_key=None)
 
-    config_file_path.write_text("dummy non-json content for key test")
+    assert result == definitions
+    mock_logger.info.assert_any_call(f"[OK] Définitions chargées comme JSON simple depuis '{config_file_path}'.")
 
-    with patch('argumentation_analysis.ui.file_operations.ui_config_module.EXTRACT_SOURCES', None), \
-         patch('argumentation_analysis.ui.file_operations.ui_config_module.DEFAULT_EXTRACT_SOURCES', [{"default_key_test_2": True}]):
-        with pytest.raises(json.JSONDecodeError):
-            load_extract_definitions(config_file_path, None)
+@patch('argumentation_analysis.core.io_manager.decrypt_data_with_fernet', side_effect=InvalidToken)
+def test_load_extract_definitions_decryption_fails(mock_decrypt, config_file_path, test_key, mock_logger):
+    """Vérifie le comportement lorsque le déchiffrement échoue avec InvalidToken."""
+    config_file_path.write_bytes(b"invalid_encrypted_data")
+    fallback_defs = [{"default": "decryption_fail"}]
+    
+    result = load_extract_definitions(
+        config_file_path,
+        test_key,
+        fallback_definitions=fallback_defs,
+        raise_on_decrypt_error=False # Comportement par défaut
+    )
+    
+    assert result == fallback_defs
+    mock_logger.error.assert_any_call(
+        f"❌ Token invalide (InvalidToken) lors du déchiffrement de '{config_file_path}'.",
+        exc_info=True
+    )
 
-    error_call_found = False
-    for call_args_tuple in mock_logger.error.call_args_list:
-        args = call_args_tuple[0]
-        if args and isinstance(args[0], str) and f"❌ Erreur décodage JSON pour '{config_file_path}'" in args[0]:
-            error_call_found = True
-            break
-    assert error_call_found, "Le message d'erreur de décodage JSON attendu n'a pas été loggué."
+@patch('argumentation_analysis.core.io_manager.gzip.decompress', side_effect=gzip.BadGzipFile)
+@patch('argumentation_analysis.core.io_manager.decrypt_data_with_fernet', return_value=b'decrypted_but_bad_gzip')
+def test_load_extract_definitions_decompression_fails(mock_decrypt, mock_decompress, config_file_path, test_key, mock_logger):
+    """Vérifie le comportement lorsque la décompression gzip échoue."""
+    config_file_path.write_bytes(b'dummy_data')
+    fallback_defs = [{"default": "decompression_fail"}]
+    
+    result = load_extract_definitions(
+        config_file_path,
+        test_key,
+        fallback_definitions=fallback_defs
+    )
+    
+    assert result == fallback_defs
+    mock_logger.error.assert_any_call(
+        f"[FAIL] Erreur chargement/dechiffrement '{config_file_path}': . Utilisation definitions par defaut.",
+        exc_info=True
+    )
 
-@patch('argumentation_analysis.ui.file_operations.decrypt_data_with_fernet', side_effect=InvalidToken("Test InvalidToken from mock"))
-def test_load_extract_definitions_decryption_fails(mock_decrypt_data_with_fernet_in_file_ops, config_file_path, test_key, mock_logger):
-    config_file_path.write_text("dummy encrypted data")
-    with patch('argumentation_analysis.ui.file_operations.ui_config_module.EXTRACT_SOURCES', None), \
-         patch('argumentation_analysis.ui.file_operations.ui_config_module.DEFAULT_EXTRACT_SOURCES', [{"default": True}]):
-        definitions = load_extract_definitions(config_file_path, test_key)
-        assert definitions == [{"default": True}]
+@patch('argumentation_analysis.core.io_manager.decrypt_data_with_fernet')
+def test_load_extract_definitions_invalid_json(mock_decrypt, config_file_path, test_key, mock_logger):
+    """Vérifie le comportement lorsque les données déchiffrées ne sont pas du JSON valide."""
+    mock_decrypt.return_value = gzip.compress(b"this is not json")
+    config_file_path.write_bytes(b'dummy_encrypted_data')
+    fallback_defs = [{"default": "invalid_json"}]
+    
+    result = load_extract_definitions(
+        config_file_path,
+        test_key,
+        fallback_definitions=fallback_defs
+    )
+    
+    assert result == fallback_defs
+    mock_logger.error.assert_any_call(
+        f"[FAIL] Erreur chargement/dechiffrement '{config_file_path}': Expecting value: line 1 column 1 (char 0). Utilisation definitions par defaut.",
+        exc_info=True
+    )
 
-    error_logged = False
-    # Le message exact loggué par load_extract_definitions pour InvalidToken attrapée
-    expected_log_part = f"❌ Token invalide (InvalidToken) lors du déchiffrement de '{config_file_path}'"
-    for call_args_tuple in mock_logger.error.call_args_list: # C'est une erreur maintenant
-        args, kwargs = call_args_tuple
-        if args and isinstance(args[0], str) and expected_log_part in args[0] and kwargs.get('exc_info') is True:
-            error_logged = True
-            break
-    assert error_logged, f"Le log d'erreur de déchiffrement attendu ('{expected_log_part}') n'a pas été trouvé dans les erreurs. Logs: {mock_logger.error.call_args_list}"
-
-@patch('argumentation_analysis.ui.file_operations.decrypt_data_with_fernet')
-@patch('argumentation_analysis.ui.file_operations.gzip.decompress', side_effect=gzip.BadGzipFile("Test BadGzipFile"))
-def test_load_extract_definitions_decompression_fails(mock_decompress, mock_decrypt_data_with_fernet_in_file_ops, config_file_path, test_key, mock_logger):
-    config_file_path.write_text("dummy encrypted data")
-    mock_decrypt_data_with_fernet_in_file_ops.return_value = b"decrypted but not gzipped"
-    expected_default_defs = [{"default_decomp_fail": True}]
-    with patch('argumentation_analysis.ui.file_operations.ui_config_module.EXTRACT_SOURCES', None), \
-         patch('argumentation_analysis.ui.file_operations.ui_config_module.DEFAULT_EXTRACT_SOURCES', expected_default_defs):
-
-        definitions = load_extract_definitions(config_file_path, test_key)
-        assert definitions == expected_default_defs
-
-    error_logged = False
-    for call_args_tuple in mock_logger.error.call_args_list:
-        logged_message = call_args_tuple[0][0]
-        if f"❌ Erreur chargement/déchiffrement '{config_file_path}'" in logged_message and "Test BadGzipFile" in logged_message:
-            error_logged = True
-            break
-    assert error_logged, f"L'erreur de décompression attendue n'a pas été logguée correctement. Logs: {mock_logger.error.call_args_list}"
-
-@patch('argumentation_analysis.ui.file_operations.decrypt_data_with_fernet')
-def test_load_extract_definitions_invalid_json(mock_decrypt_data_with_fernet_in_file_ops, config_file_path, test_key, mock_logger):
-    config_file_path.write_text("dummy encrypted data")
-    invalid_json_bytes = b"this is not json"
-    compressed_invalid_json = gzip.compress(invalid_json_bytes)
-    mock_decrypt_data_with_fernet_in_file_ops.return_value = compressed_invalid_json
-
-    expected_default_defs = [{"default_invalid_json": True}]
-    with patch('argumentation_analysis.ui.file_operations.ui_config_module.EXTRACT_SOURCES', None), \
-         patch('argumentation_analysis.ui.file_operations.ui_config_module.DEFAULT_EXTRACT_SOURCES', expected_default_defs):
-
-        definitions = load_extract_definitions(config_file_path, test_key)
-        assert definitions == expected_default_defs
-
-    error_logged = False
-    for call_args_tuple in mock_logger.error.call_args_list:
-        logged_message = call_args_tuple[0][0]
-        if f"❌ Erreur chargement/déchiffrement '{config_file_path}'" in logged_message and "Expecting value" in logged_message:
-            error_logged = True
-            break
-    assert error_logged, f"L'erreur de décodage JSON attendue n'a pas été logguée correctement. Logs: {mock_logger.error.call_args_list}"
-
-@patch('argumentation_analysis.ui.file_operations.decrypt_data_with_fernet')
-def test_load_extract_definitions_invalid_format(mock_decrypt_data_with_fernet_in_file_ops, config_file_path, test_key, mock_logger):
-    config_file_path.write_text("dummy encrypted data")
+@patch('argumentation_analysis.core.io_manager.decrypt_data_with_fernet')
+def test_load_extract_definitions_invalid_format(mock_decrypt, config_file_path, test_key, mock_logger):
+    """Vérifie le comportement lorsque les données JSON n'ont pas le format attendu (pas une liste de dicts)."""
     invalid_format_data = {"not_a_list": "data"}
     json_bytes = json.dumps(invalid_format_data).encode('utf-8')
     compressed_data = gzip.compress(json_bytes)
-    mock_decrypt_data_with_fernet_in_file_ops.return_value = compressed_data
+    mock_decrypt.return_value = compressed_data
+    config_file_path.write_bytes(b'dummy_encrypted_data')
+    
+    fallback_defs = [{"default": "invalid_format"}]
+    
+    result = load_extract_definitions(
+        config_file_path,
+        test_key,
+        fallback_definitions=fallback_defs
+    )
 
-    expected_default_defs = [{"default_invalid_format": True}]
-    with patch('argumentation_analysis.ui.file_operations.ui_config_module.EXTRACT_SOURCES', None), \
-         patch('argumentation_analysis.ui.file_operations.ui_config_module.DEFAULT_EXTRACT_SOURCES', expected_default_defs):
-
-        definitions = load_extract_definitions(config_file_path, test_key)
-        assert definitions == expected_default_defs
-
-    warning_logged = False
-    for call_args_tuple in mock_logger.warning.call_args_list:
-        logged_message = call_args_tuple[0][0]
-        if "Format définitions invalide après chargement" in logged_message:
-            warning_logged = True
-            break
-    assert warning_logged, "L'avertissement de format invalide attendu n'a pas été loggué par load_extract_definitions."
+    assert result == fallback_defs
+    mock_logger.warning.assert_called_with(
+        f"[WARN] Format definitions invalide apres chargement de '{config_file_path}'. Utilisation definitions par defaut."
+    )
 
 
 # --- Tests pour le cache (get_cache_filepath, load_from_cache, save_to_cache) ---

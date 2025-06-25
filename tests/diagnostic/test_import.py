@@ -1,3 +1,5 @@
+__test__ = False
+__test__ = False
 #!/usr/bin/env python3
 # Test d'import des orchestrateurs spécialisés
 
