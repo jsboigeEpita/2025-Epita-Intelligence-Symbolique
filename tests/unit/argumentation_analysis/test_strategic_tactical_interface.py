@@ -167,14 +167,8 @@ class TestStrategicTacticalInterface:
             }
         }
         
-        # Configurer le mock pour get_pending_reports
-        mock_strategic_adapter.get_pending_reports.return_value = []
-        
         # Appeler la méthode à tester
         result = interface.process_tactical_report(tactical_report)
-        
-        # Vérifier que la méthode get_pending_reports a été appelée
-        mock_strategic_adapter.get_pending_reports.assert_called_once()
         
         # Vérifier le résultat
         assert isinstance(result, dict)

@@ -66,37 +66,41 @@ async def authentic_kernel():
     return kernel
 
 @pytest.fixture
-def sherlock_agent(authentic_kernel):
-    """Fixture synchrone pour créer un agent Sherlock authentique et concret."""
-    # On exécute la coroutine de la fixture `authentic_kernel` pour obtenir la valeur
-    kernel = asyncio.run(authentic_kernel)
+async def sherlock_agent(authentic_kernel):
+    """Fixture asynchrone pour créer un agent Sherlock authentique et concret."""
+    # The authentic_kernel is already a coroutine, so we just await it
+    kernel = await authentic_kernel
     return ConcreteSherlockEnqueteAgent(kernel=kernel, agent_name=TEST_AGENT_NAME)
 
+@pytest.mark.asyncio
 class TestSherlockEnqueteAgentAuthentic:
     """Tests authentiques pour SherlockEnqueteAgent."""
 
-    def test_agent_instantiation(self, sherlock_agent):
+    async def test_agent_instantiation(self, sherlock_agent):
         """Test l'instanciation basique de l'agent."""
-        assert isinstance(sherlock_agent, SherlockEnqueteAgent)
-        assert sherlock_agent.name == TEST_AGENT_NAME
-        assert hasattr(sherlock_agent, 'sk_kernel')
-        assert sherlock_agent.sk_kernel is not None
-        assert isinstance(sherlock_agent.sk_kernel, Kernel)
+        agent = await sherlock_agent
+        assert isinstance(agent, SherlockEnqueteAgent)
+        assert agent.name == TEST_AGENT_NAME
+        assert hasattr(agent, '_kernel')
+        assert agent._kernel is not None
+        assert isinstance(agent._kernel, Kernel)
 
-    def test_agent_inheritance(self, sherlock_agent):
+    async def test_agent_inheritance(self, sherlock_agent):
         """Test que l'agent hérite correctement."""
-        assert isinstance(sherlock_agent, SherlockEnqueteAgent)
-        assert isinstance(sherlock_agent, BaseAgent)
-        assert hasattr(sherlock_agent, 'logger')
-        assert hasattr(sherlock_agent, 'name')
-        assert len(sherlock_agent.name) > 0
+        agent = await sherlock_agent
+        assert isinstance(agent, SherlockEnqueteAgent)
+        assert isinstance(agent, BaseAgent)
+        assert hasattr(agent, 'logger')
+        assert hasattr(agent, 'name')
+        assert len(agent.name) > 0
 
-    def test_default_system_prompt(self, sherlock_agent):
+    async def test_default_system_prompt(self, sherlock_agent):
         """Test que l'agent utilise le prompt système par défaut."""
-        assert hasattr(sherlock_agent, 'system_prompt')
-        assert "Sherlock Holmes" in sherlock_agent.system_prompt
+        agent = await sherlock_agent
+        assert hasattr(agent, 'system_prompt')
+        assert "Sherlock Holmes" in agent.system_prompt
         # Le nom est maintenant personnalisé par la fixture
-        assert sherlock_agent.name == TEST_AGENT_NAME
+        assert agent.name == TEST_AGENT_NAME
 
     def test_custom_system_prompt(self):
         """Test la configuration avec un prompt système personnalisé."""
@@ -110,10 +114,11 @@ class TestSherlockEnqueteAgentAuthentic:
         assert agent.name == TEST_AGENT_NAME
         assert agent.system_prompt == custom_prompt
 
-    def test_get_current_case_description_real(self, sherlock_agent):
+    async def test_get_current_case_description_real(self, sherlock_agent):
         """Test authentique de récupération de description d'affaire."""
+        agent = await sherlock_agent
         try:
-            description = asyncio.run(sherlock_agent.get_current_case_description())
+            description = await agent.get_current_case_description()
             
             if description is not None:
                 assert isinstance(description, str)
@@ -124,13 +129,14 @@ class TestSherlockEnqueteAgentAuthentic:
             assert "Erreur:" in str(e) or "Plugin" in str(e)
             print(f"Exception attendue sans plugin: {e}")
 
-    def test_add_new_hypothesis_real(self, sherlock_agent):
+    async def test_add_new_hypothesis_real(self, sherlock_agent):
         """Test authentique d'ajout d'hypothèse."""
+        agent = await sherlock_agent
         hypothesis_text = "Le coupable est le Colonel Moutarde."
         confidence_score = 0.75
         
         try:
-            result = asyncio.run(sherlock_agent.add_new_hypothesis(hypothesis_text, confidence_score))
+            result = await agent.add_new_hypothesis(hypothesis_text, confidence_score)
             
             if result is not None:
                 assert isinstance(result, (dict, str))
@@ -141,27 +147,29 @@ class TestSherlockEnqueteAgentAuthentic:
             assert "Erreur:" in str(e) or "Plugin" in str(e)
             print(f"Exception attendue sans plugin: {e}")
 
-    def test_agent_error_handling(self, sherlock_agent):
+    async def test_agent_error_handling(self, sherlock_agent):
         """Test la gestion d'erreur authentique de l'agent."""
+        agent = await sherlock_agent
         try:
-            result = asyncio.run(sherlock_agent.add_new_hypothesis("", -1.0))
+            result = await agent.add_new_hypothesis("", -1.0)
             assert result is None or "erreur" in str(result).lower()
         except Exception as e:
             assert len(str(e)) > 0
             print(f"Gestion d'erreur correcte: {e}")
 
-    def test_agent_configuration_validation(self, sherlock_agent):
+    async def test_agent_configuration_validation(self, sherlock_agent):
         """Test la validation de la configuration de l'agent."""
-        assert hasattr(sherlock_agent, 'sk_kernel')
-        assert hasattr(sherlock_agent, 'name')
-        assert hasattr(sherlock_agent, 'system_prompt')
-        assert hasattr(sherlock_agent, 'logger')
+        agent = await sherlock_agent
+        assert hasattr(agent, '_kernel')
+        assert hasattr(agent, 'name')
+        assert hasattr(agent, 'system_prompt')
+        assert hasattr(agent, 'logger')
         
-        assert isinstance(sherlock_agent.name, str)
-        assert len(sherlock_agent.name) > 0
+        assert isinstance(agent.name, str)
+        assert len(agent.name) > 0
         
-        assert sherlock_agent.sk_kernel is not None
-        assert sherlock_agent.logger is not None
+        assert agent._kernel is not None
+        assert agent.logger is not None
 
 def test_sherlock_agent_integration_real():
     """Test d'intégration complet avec vraies APIs."""

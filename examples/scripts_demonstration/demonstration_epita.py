@@ -301,6 +301,8 @@ def mode_menu_interactif(config: Dict[str, Any]) -> None:
                 if cat_selectionnee:
                     cat_id, cat_info = cat_selectionnee
                     nom_module = cat_info.get('module', '')
+                    if cat_id == 'agents_logiques':
+                        nom_module = 'demo_analyse_argumentation'
                     nom_cat = cat_info.get('nom', cat_id)
                     
                     logger.header(f"{Symbols.ROCKET} Lancement de : {nom_cat}")
@@ -433,6 +435,8 @@ def execute_all_categories_non_interactive(config: Dict[str, Any]) -> None:
     
     for i, (cat_id, cat_info) in enumerate(categories_triees, 1):
         nom_module = cat_info.get('module', '')
+        if cat_id == 'agents_logiques':
+            nom_module = 'demo_analyse_argumentation'
         nom_cat = cat_info.get('nom', cat_id)
         icon = cat_info.get('icon', '•')
         description = cat_info.get('description', '')

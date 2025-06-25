@@ -72,14 +72,19 @@ try {
 
             Write-Stderr "Utilisation de l'interpréteur Python: $python_exe"
             
-            # La commande est "python -m pytest ...". On extrait ce qui suit "python ".
-            $arguments_string = $CommandToRun.Substring($CommandToRun.IndexOf(" ") + 1)
-            
-            # On reconstruit une liste d'arguments pour l'opérateur d'appel `&`
-            $argument_list = "-m", "pytest", "tests/integration/workers/test_worker_fol_tweety.py"
+            # La commande est passée dans $CommandToRun. Ex: "python argumentation_analysis/ui/app.py"
+            # On doit la séparer en l'exécutable ("python") et ses arguments.
+            $command_parts = $CommandToRun.Split(' ')
+            $program_to_run = $command_parts[0]
+            $argument_list = $command_parts[1..($command_parts.Length - 1)]
 
-            # Exécute la commande directement avec l'interpréteur de l'environnement et une liste d'arguments propre
-            & $python_exe $argument_list
+            # Si le programme est "python", on utilise le chemin complet de l'interpréteur de l'environnement
+            if ($program_to_run -eq "python") {
+                $program_to_run = $python_exe
+            }
+            
+            # Exécute la commande demandée avec ses arguments
+            & $program_to_run $argument_list
         }
         catch {
             Write-Stderr "L'approche alternative a échoué. Tentative avec l'ancienne méthode 'conda run'."

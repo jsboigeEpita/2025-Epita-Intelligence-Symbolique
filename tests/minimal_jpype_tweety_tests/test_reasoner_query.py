@@ -26,20 +26,16 @@ for jar_path_check in TWEETY_JARS:
     if not os.path.exists(jar_path_check):
         raise FileNotFoundError(f"JAR file {jar_path_check} not found. Please run download_test_jars.py or ensure correct paths.")
 
-def start_jvm_if_not_started(): # Conservé pour référence ou exécution hors pytest
-    if not jpype.isJVMStarted():
-        print("JVM non démarrée. Tentative de démarrage avec le classpath complet...")
-        classpath = os.pathsep.join(TWEETY_JARS)
-        jpype.startJVM(classpath=[classpath], convertStrings=False)
-        print(f"JVM démarrée avec classpath: {classpath}")
-    else:
-        print("JVM déjà démarrée.")
-
-def test_reasoner_query(integration_jvm): # Ajout de la fixture integration_jvm
+def test_reasoner_query(jvm_session):
+    """
+    Teste un raisonneur PL simple et une requête, en utilisant une fixture
+    de session pour gérer la JVM.
+    """
     try:
         print("Démarrage du test du raisonneur et de requête simple...")
 
-        start_jvm_if_not_started() # Assure que la JVM est démarrée avec le classpath
+        # La fixture jvm_session assure que la JVM est démarrée.
+        assert jpype.isJVMStarted(), "La JVM devrait être démarrée par la fixture jvm_session"
 
         PlBeliefSet = jpype.JClass("net.sf.tweety.logics.pl.syntax.PlBeliefSet")
         PlParser = jpype.JClass("net.sf.tweety.logics.pl.parser.PlParser")
@@ -170,10 +166,5 @@ def test_reasoner_query(integration_jvm): # Ajout de la fixture integration_jvm
         print(f"Test du raisonneur et de requête simple ÉCHOUÉ : {e}")
         import traceback
         traceback.print_exc()
+        # L'exception sera automatiquement propagée par pytest
         raise
-
-    # finally: # Commenté pour permettre à pytest de gérer la JVM via conftest
-        # if jpype.isJVMStarted():
-        #     jpype.shutdownJVM()
-        #     print("JVM arrêtée.")
-        pass

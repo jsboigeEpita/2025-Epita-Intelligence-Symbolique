@@ -242,13 +242,14 @@ class UnifiedWebOrchestrator:
         if result:
             self.logger.info(f"   Résultat: {result}")
     
-    async def start_webapp(self, headless: bool = True, frontend_enabled: bool = None) -> bool:
+    async def start_webapp(self, headless: bool = True, frontend_enabled: bool = None, app_module: Optional[str] = None) -> bool:
         """
         Démarre l'application web complète
         
         Args:
             headless: Mode headless pour Playwright
             frontend_enabled: Force activation/désactivation frontend
+            app_module: Module applicatif à lancer
             
         Returns:
             bool: True si démarrage réussi
@@ -256,16 +257,17 @@ class UnifiedWebOrchestrator:
         self.headless = headless
         self.app_info.start_time = datetime.now()
         
+        target_app = app_module or self.config['backend'].get('module', 'application par défaut')
         self.add_trace("[START] DEMARRAGE APPLICATION WEB",
-                      f"Mode: {'Headless' if headless else 'Visible'}", 
+                      f"Application: {target_app} | Mode: {'Headless' if headless else 'Visible'}",
                       "Initialisation orchestrateur")
         
         try:
             # 1. Démarrage backend (obligatoire)
-            if not await self._start_backend():
+            if not await self._start_backend(app_module=app_module):
                 return False
             
-            # 3. Démarrage frontend (optionnel)
+            # 2. Démarrage frontend (optionnel)
             frontend_enabled = frontend_enabled if frontend_enabled is not None else self.config['frontend']['enabled']
             if frontend_enabled:
                 await self._start_frontend(frontend_enabled)
@@ -400,11 +402,12 @@ class UnifiedWebOrchestrator:
     # MÉTHODES PRIVÉES
     # ========================================================================
     
-    async def _start_backend(self) -> bool:
+    async def _start_backend(self, app_module: Optional[str] = None) -> bool:
         """Démarre le backend avec failover de ports"""
-        self.add_trace("[BACKEND] DEMARRAGE BACKEND", "Lancement avec failover de ports")
+        target_module = app_module or self.config['backend'].get('module')
+        self.add_trace("[BACKEND] DEMARRAGE BACKEND", f"Application: {target_module}")
         
-        result = await self.backend_manager.start_with_failover()
+        result = await self.backend_manager.start_with_failover(app_module=target_module)
         if result['success']:
             self.app_info.backend_url = result['url']
             self.app_info.backend_port = result['port']
@@ -568,6 +571,8 @@ def main():
                        help='Mode visible (override headless)')
     parser.add_argument('--frontend', action='store_true',
                        help='Force activation frontend')
+    parser.add_argument('--app-module', type=str,
+                        help='Spécifie le module applicatif à lancer (ex: api.main:app)')
     parser.add_argument('--tests', nargs='*',
                        help='Chemins spécifiques des tests à exécuter')
     parser.add_argument('--timeout', type=int, default=10,
@@ -600,9 +605,8 @@ def main():
                 return True
             elif args.start:
                 # Démarrage simple, mais on maintient le processus en vie
-                if await orchestrator.start_webapp(headless, args.frontend):
-                    print(f"Backend démarré en arrière-plan. PID de l'orchestrateur : {os.getpid()}. PID du backend : {orchestrator.app_info.backend_pid}")
-                    # La boucle de maintien est supprimée pour un comportement non bloquant.
+                if await orchestrator.start_webapp(headless, args.frontend, args.app_module):
+                    print(f"Backend '{args.app_module or orchestrator.config['backend']['module']}' démarré. PID: {orchestrator.app_info.backend_pid}")
                     # Le processus se terminera, mais le serveur backend (uvicorn) continuera de tourner.
                     return True # Renvoyer True pour indiquer le succès
                 else:

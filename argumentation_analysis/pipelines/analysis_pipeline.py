@@ -191,6 +191,7 @@ async def run_text_analysis_pipeline(
             logging.error("L'initialisation des services a échoué ou n'a retourné aucun service valide.")
             return None
         logging.info("Services d'analyse initialisés avec succès.")
+        logging.debug(f"SERVICES INITIALISÉS: {initialized_services}")
     except Exception as e:
         logging.error(f"Erreur critique lors de l'initialisation des services d'analyse: {e}", exc_info=True)
         # Conforme à la docstring : :raises Exception (géré en interne)
@@ -207,6 +208,8 @@ async def run_text_analysis_pipeline(
             services=initialized_services,
             analysis_type=analysis_type
         )
+        
+        logging.debug(f"RESULTAT BRUT DE perform_text_analysis: {analysis_results}")
 
         if analysis_results is None:
             logging.warning("L'analyse textuelle (perform_text_analysis) n'a retourné aucun résultat (None). "
