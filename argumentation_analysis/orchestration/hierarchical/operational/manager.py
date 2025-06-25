@@ -59,7 +59,8 @@ class OperationalManager:
                  tactical_operational_interface: Optional['TacticalOperationalInterface'] = None,
                  middleware: Optional[MessageMiddleware] = None,
                  project_context: Optional[ProjectContext] = None,
-                 kernel: Optional[sk.Kernel] = None):
+                 kernel: Optional[sk.Kernel] = None,
+                 llm_service_id: Optional[str] = None):
         """
         Initialise le `OperationalManager`.
 
@@ -76,7 +77,7 @@ class OperationalManager:
         
         # Le kernel peut être passé directement (tests) ou via le project_context (prod)
         kernel_to_use = kernel or (project_context.kernel if project_context else None)
-        llm_service_id_to_use = project_context.llm_service_id if project_context else None
+        llm_service_id_to_use = llm_service_id
 
         self.agent_registry = OperationalAgentRegistry(
             operational_state=self.operational_state,

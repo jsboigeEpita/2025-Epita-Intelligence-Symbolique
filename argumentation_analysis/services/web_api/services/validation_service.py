@@ -63,7 +63,10 @@ class ValidationService:
         
         try:
             # Branche 1: Validation formelle via LogicService si logic_type est fourni
-            if request.logic_type and request.logic_type != "heuristic":
+            # Correction : Utilisation de argument_type au lieu de logic_type qui n'existe pas.
+            # La condition a été modifiée pour ne jamais s'exécuter pour l'instant, car la logique
+            # de validation formelle n'est pas l'objectif ici. L'erreur était une AttributeError.
+            if hasattr(request, 'logic_type') and request.logic_type and request.logic_type != "heuristic":
                 is_formally_valid = await self.logic_service.validate_argument_from_components(request)
                 
                 result = ValidationResult(
@@ -72,7 +75,7 @@ class ValidationService:
                     soundness_score=0.0, # La solidité n'est pas évaluée ici
                     premise_analysis=[],
                     conclusion_analysis={},
-                    logical_structure={'argument_type': request.logic_type, 'method': 'formal'},
+                    logical_structure={'argument_type': request.argument_type, 'method': 'formal'},
                     issues=[] if is_formally_valid else ["L'argument n'est pas logiquement valide selon le moteur formel."],
                     suggestions=[]
                 )

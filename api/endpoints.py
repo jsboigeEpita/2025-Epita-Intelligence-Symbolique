@@ -83,38 +83,32 @@ async def analyze_text_endpoint(
         service_result = {
             "summary": "Erreur serveur: La JVM n'est pas disponible.",
         }
-    elif 'ArgumentParser' not in project_context.tweety_classes:
-        logger.error(f"[{analysis_id}] Erreur: La classe 'ArgumentParser' n'a pas été chargée dans le contexte.")
+    elif 'AspicParser' not in project_context.tweety_classes:
+        logger.error(f"[{analysis_id}] Erreur: La classe 'AspicParser' n'a pas été chargée dans le contexte.")
         service_result = {
-            "summary": "Erreur serveur: Le service d'analyse d'arguments n'est pas configuré.",
+            "summary": "Erreur serveur: Le service d'analyse d'arguments (AspicParser) n'est pas configuré.",
         }
     else:
         try:
-            # Utiliser la classe pré-chargée depuis le contexte
-            ArgumentParser = project_context.tweety_classes['ArgumentParser']
+            # Utiliser l'instance pré-chargée depuis le contexte
+            # AspicParser est déjà instancié dans bootstrap
+            parser = project_context.tweety_classes['AspicParser']
             
-            parser = ArgumentParser()
-            kb = parser.parse(analysis_req.text)
-            formulas = kb.getFormulas()
+            kb = parser.parseBeliefBase(analysis_req.text)
+            arguments = kb.getArguments()
+            # Convertir les arguments Java en une représentation Python simple (par exemple, des chaînes de caractères)
+            arguments_list = [str(arg) for arg in arguments]
             
-            premises = []
-            conclusion = None
-
-            if formulas:
-                if len(formulas) > 1:
-                    for i in range(len(formulas) - 1):
-                        premises.append(str(formulas.get(i)))
-                conclusion = str(formulas.get(len(formulas) - 1))
-
+            # TODO: Améliorer l'extraction des prémisses et conclusions depuis la liste d'arguments.
+            # Pour l'instant, on retourne la liste brute pour valider le endpoint.
             argument_structure = {
-                "premises": [{"id": f"p{i+1}", "text": premise} for i, premise in enumerate(premises)],
-                "conclusion": {"id": "c1", "text": conclusion} if conclusion else None
+                "arguments": arguments_list
             }
-            summary = "La reconstruction de l'argument a été effectuée avec succès."
+            summary = f"{len(arguments_list)} arguments extraits avec succès."
             service_result = {
                 "argument_structure": argument_structure,
                 "fallacies": [],
-                "suggestions": ["Vérifiez la validité logique de la structure."],
+                "suggestions": ["Analyser chaque argument individuellement."],
                 "summary": summary
             }
             logger.info(f"[{analysis_id}] Reconstruction réussie.")
