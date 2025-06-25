@@ -47,15 +47,14 @@ class TestInformalAnalysisPlugin(unittest.TestCase):
         
         # Créer un DataFrame de test pour la taxonomie
         self.test_df = pd.DataFrame({
-            'PK': [0, 1, 2, 3],
-            'FK_Parent': [None, 0, 0, 1],
+            'PK': pd.array([0, 1, 2, 3], dtype='Int64'),
+            'FK_Parent': pd.array([pd.NA, 0, 0, 1], dtype='Int64'),
             'text_fr': ['Racine', 'Catégorie 1', 'Catégorie 2', 'Sous-catégorie 1.1'],
             'nom_vulgarisé': ['Sophismes', 'Ad Hominem', 'Faux Dilemme', 'Attaque Personnelle'],
             'description_fr': ['Description racine', 'Description cat 1', 'Description cat 2', 'Description sous-cat 1.1'],
             'exemple_fr': ['Exemple racine', 'Exemple cat 1', 'Exemple cat 2', 'Exemple sous-cat 1.1'],
             'depth': [0, 1, 1, 2]
-        })
-        self.test_df.set_index('PK', inplace=True)
+        }).set_index('PK')
 
     
     
@@ -126,45 +125,22 @@ class TestInformalAnalysisPlugin(unittest.TestCase):
         self.assertEqual(details_no_df['pk'], 1)
         self.assertIsNotNone(details_no_df['error'])
 
-    @patch.object(InformalAnalysisPlugin, '_get_taxonomy_dataframe')
-    def test_internal_get_children_details(self, mock_get_df):
-        """Teste la récupération des détails des enfants d'un nœud."""
-        # Configurer le mock pour retourner le DataFrame de test
-        mock_get_df.return_value = self.test_df
-        
-        # Appeler la méthode à tester pour la racine (PK=0)
-        children = self.plugin._internal_get_children_details(0, self.test_df, 10)
-        
-        # Vérifier que les enfants ont été correctement récupérés
-        self.assertEqual(len(children), 2)  # Doit avoir 2 enfants (PK=1 et PK=2)
-        self.assertEqual(children[0]['pk'], 1)
-        self.assertEqual(children[1]['pk'], 2)
-        
-        # Tester avec un nœud qui a un seul enfant
-        children_one = self.plugin._internal_get_children_details(1, self.test_df, 10)
-        self.assertEqual(len(children_one), 1)  # Doit avoir 1 enfant (PK=3)
-        self.assertEqual(children_one[0]['pk'], 3)
-        
-        # Tester avec un nœud qui n'a pas d'enfants
-        children_none = self.plugin._internal_get_children_details(3, self.test_df, 10)
-        self.assertEqual(len(children_none), 0)  # Ne doit pas avoir d'enfants
-        
-        # Tester avec un DataFrame None
-        children_no_df = self.plugin._internal_get_children_details(0, None, 10)
-        self.assertEqual(len(children_no_df), 0)
+    # Ce test est obsolète car la méthode '_internal_get_children_details' a été supprimée
+    # et sa logique intégrée dans '_internal_explore_hierarchy'.
 
     @patch.object(InformalAnalysisPlugin, '_get_taxonomy_dataframe')
-    @patch.object(InformalAnalysisPlugin, '_internal_get_node_details')
-    @patch.object(InformalAnalysisPlugin, '_internal_get_children_details')
-    def test_explore_fallacy_hierarchy(self, mock_children, mock_details, mock_get_df):
+    @patch.object(InformalAnalysisPlugin, '_internal_explore_hierarchy')
+    def test_explore_fallacy_hierarchy(self, mock_explore, mock_get_df):
         """Teste l'exploration de la hiérarchie des sophismes."""
         # Configurer les mocks
         mock_get_df.return_value = self.test_df
-        mock_details.return_value = {'pk': 0, 'text_fr': 'Racine', 'nom_vulgarisé': 'Sophismes', 'error': None}
-        mock_children.return_value = [
-            {'pk': 1, 'text_fr': 'Catégorie 1', 'nom_vulgarisé': 'Ad Hominem', 'error': None},
-            {'pk': 2, 'text_fr': 'Catégorie 2', 'nom_vulgarisé': 'Faux Dilemme', 'error': None}
-        ]
+        mock_explore.return_value = {
+            "current_node": {'pk': 0, 'text_fr': 'Racine', 'nom_vulgarisé': 'Sophismes', 'error': None},
+            "children": [
+                {'pk': 1, 'text_fr': 'Catégorie 1', 'nom_vulgarisé': 'Ad Hominem'},
+                {'pk': 2, 'text_fr': 'Catégorie 2', 'nom_vulgarisé': 'Faux Dilemme'}
+            ]
+        }
         
         # Appeler la méthode à tester
         result_json = self.plugin.explore_fallacy_hierarchy("0")

@@ -236,7 +236,8 @@ def jvm_session():
     
     # Construire le chemin relatif vers le JDK
     project_root = Path(__file__).parent.parent.resolve()
-    jdk_base_path = os.path.join(project_root, "libs", "portable_jdk", "jdk-17.0.11+9")
+    # Path corrected to point to the root portable_jdk, not the one in libs
+    jdk_base_path = os.path.join(project_root, "portable_jdk", "jdk-17.0.2+8")
     jvm_dll_path = os.path.join(jdk_base_path, "bin", "server", "jvm.dll")
 
     if not os.path.exists(jvm_dll_path):
@@ -247,7 +248,8 @@ def jvm_session():
             print("\n[JVM Fixture] Démarrage de la JVM pour la session de test...")
             
             # --- Dynamically build classpath from tweety libs ---
-            tweety_libs_path = os.path.join(project_root, "argumentation_analysis", "libs", "tweety")
+            # Corrected path to tweety libs at the root
+            tweety_libs_path = os.path.join(project_root, "libs", "tweety")
             if not os.path.exists(tweety_libs_path):
                 pytest.fail(f"Le répertoire des librairies Tweety est introuvable: {tweety_libs_path}")
                 

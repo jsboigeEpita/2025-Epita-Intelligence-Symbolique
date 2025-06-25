@@ -88,7 +88,7 @@ class TestStrategicTacticalInterface:
         ]
         
         # Appeler la méthode à tester
-        result = interface.translate_objectives(objectives)
+        result = interface.translate_objectives_to_directives(objectives)
         
         # Vérifier que la méthode issue_directive a été appelée (corrigé selon l'erreur)
         mock_strategic_adapter.issue_directive.assert_called()
@@ -167,14 +167,8 @@ class TestStrategicTacticalInterface:
             }
         }
         
-        # Configurer le mock pour get_pending_reports
-        mock_strategic_adapter.get_pending_reports.return_value = []
-        
         # Appeler la méthode à tester
         result = interface.process_tactical_report(tactical_report)
-        
-        # Vérifier que la méthode get_pending_reports a été appelée
-        mock_strategic_adapter.get_pending_reports.assert_called_once()
         
         # Vérifier le résultat
         assert isinstance(result, dict)

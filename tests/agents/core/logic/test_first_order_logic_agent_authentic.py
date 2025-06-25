@@ -42,8 +42,12 @@ from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 class TestFirstOrderLogicAgentAuthentic:
     """Tests authentiques pour la classe FirstOrderLogicAgent - SANS MOCKS."""
 
-    def setup_method(self):
-        """Initialisation authentique avant chaque test."""
+    @pytest.fixture(scope="class", autouse=True)
+    def setup_class(self, jvm_session):
+        """
+        Initialisation authentique pour toute la classe de test.
+        Utilise la fixture jvm_session pour garantir que la JVM est prête.
+        """
         # Configuration du vrai Kernel Semantic Kernel
         self.kernel = Kernel()
         
@@ -87,17 +91,17 @@ class TestFirstOrderLogicAgentAuthentic:
             self.llm_available = False
             print(f"⚠️ Erreur configuration LLM: {e}")
 
-        # Initialisation du vrai TweetyBridge
+        # Initialisation du vrai TweetyBridge, en s'appuyant sur la fixture jvm_session
         try:
             self.tweety_bridge = TweetyBridge()
             self.tweety_available = self.tweety_bridge.is_jvm_ready()
             if self.tweety_available:
-                print("✅ TweetyBridge JVM authentique prête")
+                print("✅ TweetyBridge JVM authentique prête (gérée par la fixture de session)")
             else:
-                print("⚠️ TweetyBridge JVM non disponible")
+                pytest.fail("La fixture jvm_session n'a pas réussi à préparer TweetyBridge.")
         except Exception as e:
             self.tweety_available = False
-            print(f"⚠️ Erreur TweetyBridge: {e}")
+            pytest.fail(f"Erreur TweetyBridge lors de l'initialisation de la classe de test: {e}")
 
         # Initialisation de l'agent authentique
         self.agent_name = "FirstOrderLogicAgent"
@@ -111,11 +115,11 @@ class TestFirstOrderLogicAgentAuthentic:
             except Exception as e:
                 print(f"⚠️ Erreur configuration agent: {e}")
 
-    def test_initialization_and_setup_authentic(self):
+    def test_initialization_and_setup_authentic(self, jvm_session):
         """Test authentique de l'initialisation et de la configuration de l'agent."""
         # Tests d'initialisation de base
         assert self.agent.name == self.agent_name
-        assert self.agent.sk_kernel == self.kernel
+        assert self.agent._kernel == self.kernel
         assert self.agent.logic_type == "FOL"
         assert self.agent.system_prompt == SYSTEM_PROMPT_FOL
         
@@ -134,7 +138,7 @@ class TestFirstOrderLogicAgentAuthentic:
 
     @pytest.mark.asyncio
     @pytest.mark.requires_llm
-    async def test_text_to_belief_set_authentic_simple(self):
+    async def test_text_to_belief_set_authentic_simple(self, jvm_session):
         """Test authentique de conversion texte -> belief set avec vrai LLM."""
         if not (self.llm_available and self.tweety_available):
             pytest.skip("LLM ou TweetyBridge non disponible")
@@ -166,7 +170,7 @@ class TestFirstOrderLogicAgentAuthentic:
 
     @pytest.mark.asyncio 
     @pytest.mark.requires_llm
-    async def test_generate_queries_authentic(self):
+    async def test_generate_queries_authentic(self, jvm_session):
         """Test authentique de génération de requêtes avec vrai LLM."""
         if not (self.llm_available and self.tweety_available):
             pytest.skip("LLM ou TweetyBridge non disponible")
@@ -202,7 +206,7 @@ class TestFirstOrderLogicAgentAuthentic:
             print(f"⚠️ Erreur génération requêtes authentique: {e}")
             pytest.skip(f"Test authentique échoué: {e}")
 
-    def test_execute_query_authentic(self):
+    def test_execute_query_authentic(self, jvm_session):
         """Test authentique d'exécution de requête avec TweetyBridge."""
         if not self.tweety_available:
             pytest.skip("TweetyBridge non disponible")
@@ -228,7 +232,7 @@ class TestFirstOrderLogicAgentAuthentic:
             print(f"⚠️ Erreur exécution requête authentique: {e}")
             pytest.skip(f"Test authentique échoué: {e}")
 
-    def test_tweety_bridge_integration_authentic(self):
+    def test_tweety_bridge_integration_authentic(self, jvm_session):
         """Test d'intégration authentique avec TweetyBridge."""
         if not self.tweety_available:
             pytest.skip("TweetyBridge non disponible")
@@ -251,7 +255,7 @@ class TestFirstOrderLogicAgentAuthentic:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_full_workflow_authentic(self):
+    async def test_full_workflow_authentic(self, jvm_session):
         """Test d'intégration complète authentique - workflow complet sans mocks."""
         if not (self.llm_available and self.tweety_available):
             pytest.skip("LLM ou TweetyBridge non disponible")
@@ -286,7 +290,7 @@ class TestFirstOrderLogicAgentAuthentic:
             print(f"⚠️ Erreur workflow authentique: {e}")
             pytest.skip(f"Workflow authentique échoué: {e}")
 
-    def test_belief_set_construction_authentic(self):
+    def test_belief_set_construction_authentic(self, jvm_session):
         """Test authentique de construction de belief set."""
         # Test des méthodes internes de construction
         json_data = {
@@ -305,7 +309,7 @@ class TestFirstOrderLogicAgentAuthentic:
         assert "socrates" in constructed_kb
 
     @pytest.mark.performance 
-    def test_performance_authentic(self):
+    def test_performance_authentic(self, jvm_session):
         """Test de performance authentique."""
         import time
         

@@ -600,28 +600,47 @@ class TestSynthesisAgent:
     
     @pytest.mark.asyncio
     async def test_invoke(self, mocker, synthesis_agent):
-        """Test invoke (doit appeler get_response)."""
+        """Test invoke (doit appeler invoke_single et retourner un générateur)."""
         test_text = "Test invoke"
+        expected_report = UnifiedReport(
+            original_text=test_text,
+            logic_analysis=LogicAnalysisResult(),
+            informal_analysis=InformalAnalysisResult()
+        )
 
-        mock_get_response = mocker.patch.object(synthesis_agent, 'get_response', new_callable=AsyncMock)
-        mock_get_response.return_value = "Réponse invoke"
+        # On mock invoke_single, qui est la méthode réellement appelée par invoke
+        mock_invoke_single = mocker.patch.object(synthesis_agent, 'invoke_single', new_callable=AsyncMock)
+        mock_invoke_single.return_value = expected_report
 
-        response = await synthesis_agent.invoke(test_text)
+        # invoke retourne un générateur, on doit itérer dessus
+        results = []
+        async for result in synthesis_agent.invoke(test_text):
+            results.append(result)
 
-        assert response == "Réponse invoke"
-        mock_get_response.assert_called_once_with(test_text)
+        # On vérifie que le générateur a produit un seul résultat, qui est celui de invoke_single
+        assert len(results) == 1
+        assert results[0] == expected_report
+        mock_invoke_single.assert_called_once_with(test_text)
     
     @pytest.mark.asyncio
     async def test_invoke_stream(self, mocker, synthesis_agent):
-        """Test invoke_stream."""
+        """Test invoke_stream qui doit retourner un flux d'éléments."""
         test_text = "Test stream"
-        
-        mock_invoke = mocker.patch.object(synthesis_agent, 'invoke', new_callable=AsyncMock)
-        mock_invoke.return_value = "Résultat stream"
+        expected_result = "Résultat stream partiel"
 
+        # On doit mocker `invoke` pour qu'il retourne un async generator
+        async def mock_async_generator(*args, **kwargs):
+            yield expected_result
+
+        mocker.patch.object(synthesis_agent, 'invoke', side_effect=mock_async_generator)
+        
+        # On itère sur le stream
+        results = []
         async for result in synthesis_agent.invoke_stream(test_text):
-            assert result == "Résultat stream"
-            break
+            results.append(result)
+
+        assert len(results) == 1
+        assert results[0] == expected_result
 
 
 class TestMockAgents:
