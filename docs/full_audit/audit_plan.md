@@ -64,5 +64,5 @@ L'objectif est d'exécuter systématiquement ces vérifications pour garantir la
 
 | Élément | Action(s) de Validation | Commande(s) / Méthode |
 | --- | --- | --- |
-| **Documentation de Conception** | 1. Lire `docs/DOC_CONCEPTION_SHERLOCK_WATSON.md`. <br> 2. Confronter chaque section avec les éléments du périmètre d'audit (`audit_scope.md`). <br> 3. S'assurer que l'architecture décrite est à jour. | Relecture croisée manuelle. |
+| **Documentation de Conception** | 1. Lire `docs/sherlock_watson/guide_unifie_sherlock_watson.md`. <br> 2. Confronter chaque section avec les éléments du périmètre d'audit (`audit_scope.md`). <br> 3. S'assurer que l'architecture décrite est à jour. | Relecture croisée manuelle. |
 | **Rapports d'Analyse** | 1. Vérifier l'existence de tous les rapports listés dans `audit_scope.md`. <br> 2. S'assurer que les conclusions des rapports justifient bien les changements effectués. | `Get-ChildItem -Path docs/commit_analysis_reports/`, `docs/validation/` |

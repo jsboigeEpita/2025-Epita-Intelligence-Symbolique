@@ -112,7 +112,7 @@ d:/2025-Epita-Intelligence-Symbolique/
 ├── 📁 docs/ 📚 DOCUMENTATION COMPLÈTE
 │   ├── GUIDE_MAINTENANCE_ORACLE_ENHANCED.md ✨ NOUVEAU
 │   ├── PROJECT_STRUCTURE_POST_CLEANUP.md ✨ NOUVEAU (ce fichier)
-│   ├── DOC_CONCEPTION_SHERLOCK_WATSON.md
+│   ├── sherlock_watson/guide_unifie_sherlock_watson.md
 │   ├── DOC_CONCEPTION_SHERLOCK_WATSON_MISE_A_JOUR.md
 │   └── analyse_orchestrations_sherlock_watson.md
 │
