@@ -45,13 +45,17 @@ def test_asp_reasoner_consistency_logic():
     classpath = str(full_jar_path.resolve())
     print(f"Classpath construit avec un seul JAR : {classpath}")
 
-    # Démarrer la JVM
-    try:
-        jpype.startJVM(jpype.getDefaultJVMPath(), "-ea", classpath=classpath, convertStrings=False)
-        print("--- JVM démarrée avec succès dans le worker ---")
-    except Exception as e:
-        print(f"ERREUR: Échec du démarrage de la JVM : {e}", file=sys.stderr)
-        raise
+    # Démarrer la JVM uniquement si elle n'est pas déjà démarrée (pour la compatibilité avec pytest)
+    if not jpype.isJVMStarted():
+        try:
+            print("--- La JVM n'est pas démarrée. Tentative de démarrage par le worker... ---")
+            jpype.startJVM(jpype.getDefaultJVMPath(), "-ea", classpath=classpath, convertStrings=False)
+            print("--- JVM démarrée avec succès par le worker ---")
+        except Exception as e:
+            print(f"ERREUR: Échec du démarrage de la JVM par le worker : {e}", file=sys.stderr)
+            raise
+    else:
+        print("--- La JVM est déjà démarrée (probablement par pytest). Le worker l'utilise. ---")
 
     # Effectuer les importations nécessaires pour le test
     try:
@@ -89,9 +93,9 @@ def test_asp_reasoner_consistency_logic():
     
     print("--- Assertions du worker réussies ---")
 
-    # Arrêt propre de la JVM
-    jpype.shutdownJVM()
-    print("--- JVM arrêtée avec succès dans le worker ---")
+    # Ne pas arrêter la JVM ici. La fixture pytest s'en chargera.
+    # jpype.shutdownJVM()
+    print("--- Le worker a terminé sa tâche. La gestion de l'arrêt de la JVM est laissée au processus principal. ---")
 
 
 if __name__ == "__main__":

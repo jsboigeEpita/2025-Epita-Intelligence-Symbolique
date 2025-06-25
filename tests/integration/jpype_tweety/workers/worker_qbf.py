@@ -16,8 +16,9 @@ def get_project_root_from_env() -> Path:
     return Path(project_root_str)
 
 def setup_jvm():
-    """Démarre la JVM avec le classpath nécessaire."""
+    """Démarre la JVM avec le classpath nécessaire, si elle n'est pas déjà démarrée."""
     if jpype.isJVMStarted():
+        logger.info("--- La JVM est déjà démarrée (probablement par pytest). Le worker l'utilise. ---")
         return
 
     project_root = get_project_root_from_env()
@@ -29,10 +30,11 @@ def setup_jvm():
     classpath = str(full_jar_path.resolve())
     logger.info(f"Démarrage de la JVM avec le classpath: {classpath}")
     try:
+        logger.info("--- La JVM n'est pas démarrée. Tentative de démarrage par le worker... ---")
         jpype.startJVM(jpype.getDefaultJVMPath(), "-ea", classpath=classpath, convertStrings=False)
-        logger.info("--- JVM démarrée avec succès dans le worker ---")
+        logger.info("--- JVM démarrée avec succès par le worker ---")
     except Exception as e:
-        logger.error(f"ERREUR: Échec du démarrage de la JVM : {e}", exc_info=True)
+        logger.error(f"ERREUR: Échec du démarrage de la JVM par le worker : {e}", exc_info=True)
         raise
 
 def _test_qbf_parser_simple_formula(qbf_classes):
@@ -90,9 +92,11 @@ def test_qbf_logic():
         logger.error(f"Erreur dans le worker QBF: {e}", exc_info=True)
         raise
     finally:
-        if jpype.isJVMStarted():
-            jpype.shutdownJVM()
-            print("--- JVM arrêtée avec succès dans le worker ---")
+        # Ne pas arrêter la JVM ici. La fixture pytest s'en chargera.
+        # if jpype.isJVMStarted():
+        #     jpype.shutdownJVM()
+        #     print("--- JVM arrêtée avec succès dans le worker ---")
+        logger.info("--- Le worker a terminé sa tâche. La gestion de l'arrêt de la JVM est laissée au processus principal. ---")
 
 if __name__ == "__main__":
     try:

@@ -41,12 +41,16 @@ def test_jvm_stability_logic():
     print(f"Classpath construit : {classpath}")
 
     # Démarrage de la JVM
-    try:
-        jpype.startJVM(jpype.getDefaultJVMPath(), "-ea", classpath=classpath, convertStrings=False)
-        print("--- JVM démarrée avec succès dans le worker ---")
-    except Exception as e:
-        print(f"ERREUR: Échec du démarrage de la JVM : {e}", file=sys.stderr)
-        raise
+    if not jpype.isJVMStarted():
+        try:
+            print("--- La JVM n'est pas démarrée. Tentative de démarrage par le worker... ---")
+            jpype.startJVM(jpype.getDefaultJVMPath(), "-ea", classpath=classpath, convertStrings=False)
+            print("--- JVM démarrée avec succès par le worker ---")
+        except Exception as e:
+            print(f"ERREUR: Échec du démarrage de la JVM par le worker : {e}", file=sys.stderr)
+            raise
+    else:
+        print("--- La JVM est déjà démarrée (probablement par pytest). Le worker l'utilise. ---")
 
     # Logique de test issue de TestJvmStability
     try:
@@ -71,10 +75,11 @@ def test_jvm_stability_logic():
         # et propage l'erreur au test principal.
         raise
     finally:
-        # Assurer l'arrêt de la JVM
-        if jpype.isJVMStarted():
-            jpype.shutdownJVM()
-            print("--- JVM arrêtée avec succès dans le worker ---")
+        # Ne pas arrêter la JVM ici. La fixture pytest s'en chargera.
+        # if jpype.isJVMStarted():
+        #     jpype.shutdownJVM()
+        #     print("--- JVM arrêtée avec succès dans le worker ---")
+        print("--- Le worker a terminé sa tâche. La gestion de l'arrêt de la JVM est laissée au processus principal. ---")
 
     print("--- Assertions du worker réussies ---")
 

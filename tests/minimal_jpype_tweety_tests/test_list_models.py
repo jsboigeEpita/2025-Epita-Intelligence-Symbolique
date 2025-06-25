@@ -29,27 +29,16 @@ for jar_path_check in TWEETY_JARS:
 
 # Cette fonction de démarrage JVM est maintenant potentiellement redondante si conftest.py gère tout.
 # Elle est conservée ici pour référence ou si les tests sont exécutés en dehors de pytest.
-def start_jvm_if_not_started():
-    if not jpype.isJVMStarted():
-        print("JVM non démarrée. Tentative de démarrage avec le classpath complet...")
-        classpath = os.pathsep.join(TWEETY_JARS)
-        jpype.startJVM(
-            # jpype.getDefaultJVMPath(), # Utilise le JVM par défaut trouvé par JPype
-            # "-ea", # Enable assertions
-            # "-Xmx2048m", # Augmenter la mémoire si nécessaire
-            classpath=[classpath],
-            convertStrings=False # Recommandé pour éviter les conversions automatiques potentiellement problématiques
-        )
-        print(f"JVM démarrée avec classpath: {classpath}")
-    else:
-        print("JVM déjà démarrée.")
-
-
-def test_list_models(integration_jvm): # Ajout de la fixture integration_jvm
+def test_list_models(jvm_session):
+    """
+    Teste le listage des modèles d'une théorie propositionnelle, en utilisant
+    une fixture de session pour gérer la JVM.
+    """
     try:
         print("Démarrage du test de listage des modèles...")
 
-        start_jvm_if_not_started() # Assure que la JVM est démarrée avec le classpath
+        # La fixture jvm_session assure que la JVM est démarrée.
+        assert jpype.isJVMStarted(), "La JVM devrait être démarrée par la fixture jvm_session"
 
         PlBeliefSet = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
         PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
@@ -238,10 +227,5 @@ def test_list_models(integration_jvm): # Ajout de la fixture integration_jvm
         print(f"Test de listage des modèles ÉCHOUÉ : {e}")
         import traceback
         traceback.print_exc()
+        # L'exception sera automatiquement propagée par pytest
         raise
-
-    # finally: # Commenté pour permettre à pytest de gérer la JVM via conftest
-        # if jpype.isJVMStarted():
-        #     jpype.shutdownJVM()
-        #     print("JVM arrêtée.")
-        pass
