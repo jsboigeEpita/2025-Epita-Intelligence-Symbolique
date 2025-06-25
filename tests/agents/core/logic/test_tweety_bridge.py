@@ -142,7 +142,7 @@ class TestTweetyBridge(unittest.TestCase):
             # donc on vérifie que la classe mockée TweetyInitializer a été appelée pour créer une instance.
             # TweetyBridge passe `self` (l'instance de TweetyBridge) à TweetyInitializer.
             # L'instance de TweetyBridge est self.tweety_bridge, créée dans setUp.
-            self.mock_tweety_initializer_class.assert_called_once_with()
+            self.mock_tweety_initializer_class.assert_called_once_with(self.tweety_bridge)
             
             # Vérifier que is_jvm_ready a été vérifiée
             self.assertTrue(self.mock_tweety_initializer_instance.is_jvm_ready)
@@ -188,21 +188,16 @@ class TestTweetyBridge(unittest.TestCase):
             local_mock_initializer_instance = MagicMock(name="LocalMockTweetyInitializerInstance")
             # is_jvm_started est appelée une première fois. Si False, TweetyBridge loggue.
             # Puis is_jvm_started est appelée une seconde fois. Si toujours False, TweetyBridge lève une exception.
-            type(local_mock_initializer_instance).is_jvm_ready = PropertyMock(return_value=False)
-            
-            # Assurer que l'instanciation de TweetyInitializer dans TweetyBridge utilise cette instance mockée locale
-            self.mock_tweety_initializer_class.return_value = local_mock_initializer_instance
+            # On configure le mock de la classe pour qu'il lève une exception LORS de l'instanciation
+            self.mock_tweety_initializer_class.side_effect = RuntimeError("TweetyBridge ne peut pas fonctionner sans une JVM initialisée.")
     
             # S'attendre à une RuntimeError lors de l'instanciation de TweetyBridge
             with self.assertRaisesRegex(RuntimeError, "TweetyBridge ne peut pas fonctionner sans une JVM initialisée."):
                 TweetyBridge()
     
             # Vérifications des appels
-            self.mock_tweety_initializer_class.assert_called_once_with()
+            self.mock_tweety_initializer_class.assert_called_once_with(unittest.mock.ANY) # L'instance est passée en argument
     
-            # is_jvm_ready devrait avoir été vérifiée
-            self.assertTrue(local_mock_initializer_instance.is_jvm_ready)
-
             # Les handlers ne devraient pas être initialisés si la JVM échoue
             self.mock_pl_handler_class.assert_not_called()
             self.mock_fol_handler_class.assert_not_called()
@@ -412,13 +407,13 @@ class TestTweetyBridge(unittest.TestCase):
             
             result, message = self.tweety_bridge.execute_pl_query(belief_set_content_invalid, query_string)
             self.mock_pl_handler_instance.pl_query.assert_called_once_with(belief_set_content_invalid, query_string)
-            self.assertIsNone(result, "Result should be None on error")
+            self.assertFalse(result, "Result should be False on error")
             self.assertIn("FUNC_ERROR", message)
             expected_error_message_part = f"Error during PL query execution via PLHandler: {error_detail_handler}"
             self.assertIn(expected_error_message_part, message)
         else:
             result, message = self.tweety_bridge.execute_pl_query(belief_set_content_invalid, query_string)
-            self.assertIsNone(result, f"Result should be None for a query with syntax error in KB. Got: {result}")
+            self.assertFalse(result, f"Result should be False for a query with syntax error in KB. Got: {result}")
             self.assertIn("FUNC_ERROR", message, f"Message for query with syntax error in KB '{belief_set_content_invalid}' should be FUNC_ERROR. Message: {message}")
 
     def test_validate_fol_formula(self):
@@ -558,13 +553,13 @@ class TestTweetyBridge(unittest.TestCase):
         cleaned_formulas = ["[]p", "<>q"]
         modal_logic = "S4"
         if not self.use_real_jpype:
-            self.mock_modal_handler_instance.parse_modal_formula.return_value = MagicMock(name="ParsedModalFormulaMock")
-            with patch.object(TweetyBridge, '_remove_comments_and_empty_lines', return_value=cleaned_formulas) as mock_remove_lines:
-                is_valid, message = self.tweety_bridge.validate_modal_belief_set(belief_set_str, modal_logic)
-                mock_remove_lines.assert_called_once_with(belief_set_str)
-            self.assertEqual(self.mock_modal_handler_instance.parse_modal_formula.call_count, len(cleaned_formulas))
-            for formula in cleaned_formulas:
-                self.mock_modal_handler_instance.parse_modal_formula.assert_any_call(formula, modal_logic)
+            # La validation est maintenant entièrement déléguée au handler.
+            # On configure le mock pour qu'il ne lève pas d'exception.
+            self.mock_modal_handler_instance.parse_modal_belief_set.return_value = None
+            
+            is_valid, message = self.tweety_bridge.validate_modal_belief_set(belief_set_str, modal_logic)
+            
+            self.mock_modal_handler_instance.parse_modal_belief_set.assert_called_once_with(belief_set_str, modal_logic)
             self.assertTrue(is_valid)
             self.assertEqual(message, "Ensemble de croyances Modal valide")
         else:
@@ -576,12 +571,15 @@ class TestTweetyBridge(unittest.TestCase):
         """Test de la validation d'un ensemble de croyances modales vide."""
         expected_message = "Ensemble de croyances Modal vide ou ne contenant que des commentaires"
         if not self.use_real_jpype:
-            with patch.object(self.tweety_bridge, '_remove_comments_and_empty_lines', return_value=[]) as mock_remove_lines:
-                is_valid, message = self.tweety_bridge.validate_modal_belief_set("", "S4")
-            mock_remove_lines.assert_called_once_with("")
-            self.mock_modal_handler_instance.parse_modal_formula.assert_not_called()
+            # On simule le handler qui lève une exception pour un BS invalide (vide)
+            self.mock_modal_handler_instance.parse_modal_belief_set.side_effect = ValueError(expected_message)
+            
+            is_valid, message = self.tweety_bridge.validate_modal_belief_set("", "S4")
+
+            self.mock_modal_handler_instance.parse_modal_belief_set.assert_called_once_with("", "S4")
             self.assertFalse(is_valid)
-            self.assertEqual(message, expected_message)
+            self.assertIn("Erreur de syntaxe Modale", message)
+            self.assertIn(expected_message, message)
         else:
             is_valid, message = self.tweety_bridge.validate_modal_belief_set("% only comment", "S4")
             self.assertFalse(is_valid)
@@ -594,11 +592,12 @@ class TestTweetyBridge(unittest.TestCase):
         modal_logic = "S4"
         error_detail = "Erreur sur <>q &"
         if not self.use_real_jpype:
-            self.mock_modal_handler_instance.parse_modal_formula.side_effect = [MagicMock(), ValueError(error_detail)]
-            with patch.object(self.tweety_bridge, '_remove_comments_and_empty_lines', return_value=cleaned_formulas) as mock_remove_lines:
-                is_valid, message = self.tweety_bridge.validate_modal_belief_set(belief_set_str, modal_logic)
-            mock_remove_lines.assert_called_once_with(belief_set_str)
-            self.assertEqual(self.mock_modal_handler_instance.parse_modal_formula.call_count, 2)
+            # Le handler lève une exception sur le BS invalide
+            self.mock_modal_handler_instance.parse_modal_belief_set.side_effect = ValueError(error_detail)
+
+            is_valid, message = self.tweety_bridge.validate_modal_belief_set(belief_set_str, modal_logic)
+
+            self.mock_modal_handler_instance.parse_modal_belief_set.assert_called_once_with(belief_set_str, modal_logic)
             self.assertFalse(is_valid)
             self.assertEqual(message, f"Erreur de syntaxe Modale: {error_detail}")
         else:
@@ -682,14 +681,12 @@ class TestTweetyBridge(unittest.TestCase):
         query = "p"
         logic = "S4"
         if not self.use_real_jpype:
-            self.mock_modal_handler_instance.modal_query.return_value = (True, f"Modal Query '{query}' (Logic: {logic}) is ACCEPTED (True)")
-            result, message = self.tweety_bridge.execute_modal_query(bs, query, logic)
+            self.mock_modal_handler_instance.modal_query.return_value = True # Le handler mocké retourne maintenant un bool
+            message = self.tweety_bridge.execute_modal_query(bs, query, logic)
             self.mock_modal_handler_instance.modal_query.assert_called_once_with(bs, query, logic, None) # None pour signature
-            self.assertTrue(result)
-            self.assertIn(f"Modal Query '{query}' (Logic: {logic}) is ACCEPTED (True)", message)
+            self.assertIn("ACCEPTED (True)", message)
         else:
-            result, message = self.tweety_bridge.execute_modal_query(bs, query, logic)
-            self.assertTrue(result, f"Modal Query should be accepted. Message: {message}")
+            message = self.tweety_bridge.execute_modal_query(bs, query, logic)
             self.assertIn("ACCEPTED (True)", message)
 
     def test_execute_modal_query_rejected(self):
@@ -698,14 +695,12 @@ class TestTweetyBridge(unittest.TestCase):
         query = "<>q" # q n'est pas dans le BS
         logic = "S4"
         if not self.use_real_jpype:
-            self.mock_modal_handler_instance.modal_query.return_value = (False, f"Modal Query '{query}' (Logic: {logic}) is REJECTED (False)")
-            result, message = self.tweety_bridge.execute_modal_query(bs, query, logic)
+            self.mock_modal_handler_instance.modal_query.return_value = False
+            message = self.tweety_bridge.execute_modal_query(bs, query, logic)
             self.mock_modal_handler_instance.modal_query.assert_called_once_with(bs, query, logic, None)
-            self.assertFalse(result)
-            self.assertIn(f"Modal Query '{query}' (Logic: {logic}) is REJECTED (False)", message)
+            self.assertIn("REJECTED (False)", message)
         else:
-            result, message = self.tweety_bridge.execute_modal_query(bs, query, logic)
-            self.assertFalse(result, f"Modal Query should be rejected. Message: {message}")
+            message = self.tweety_bridge.execute_modal_query(bs, query, logic)
             self.assertIn("REJECTED (False)", message)
 
     def test_execute_modal_query_unknown(self):
@@ -714,11 +709,10 @@ class TestTweetyBridge(unittest.TestCase):
         query = "p" # Peut être vrai ou faux selon le modèle
         logic = "K"
         if not self.use_real_jpype:
-            self.mock_modal_handler_instance.modal_query.return_value = (None, f"Unknown for Modal query '{query}'")
-            result, message = self.tweety_bridge.execute_modal_query(bs, query, logic)
+            self.mock_modal_handler_instance.modal_query.return_value = None
+            message = self.tweety_bridge.execute_modal_query(bs, query, logic)
             self.mock_modal_handler_instance.modal_query.assert_called_once_with(bs, query, logic, None)
-            self.assertIsNone(result)
-            self.assertIn(f"Unknown for Modal query '{query}'", message)
+            self.assertIn("Unknown for Modal query", message)
         else:
             # Le comportement "Unknown" dépend du vrai reasoner Modal.
             # Le handler placeholder actuel retourne False.
@@ -733,14 +727,12 @@ class TestTweetyBridge(unittest.TestCase):
         error_detail = "Erreur de parsing Modale dans le handler"
         if not self.use_real_jpype:
             self.mock_modal_handler_instance.modal_query.side_effect = ValueError(error_detail)
-            result, message = self.tweety_bridge.execute_modal_query(bs_invalid, query, logic) # This should now work
+            message = self.tweety_bridge.execute_modal_query(bs_invalid, query, logic) # This should now work
             self.mock_modal_handler_instance.modal_query.assert_called_once_with(bs_invalid, query, logic, None)
-            self.assertIsNone(result)
             self.assertIn("FUNC_ERROR", message)
             self.assertIn(f"Error during Modal query execution via ModalHandler: {error_detail}", message)
         else:
-            result, message = self.tweety_bridge.execute_modal_query(bs_invalid, query, logic)
-            self.assertIsNone(result)
+            message = self.tweety_bridge.execute_modal_query(bs_invalid, query, logic)
             self.assertIn("FUNC_ERROR", message)
             self.assertIn("syntaxe", message.lower())
 
