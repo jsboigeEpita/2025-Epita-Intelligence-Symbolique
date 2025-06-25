@@ -10,6 +10,9 @@ class TestHierarchicalFullStrategy(unittest.TestCase):
         """Set up the test environment before each test."""
         # Mock the dependencies
         self.mock_strategic_state = MagicMock(spec=StrategicState)
+        self.mock_strategic_state.strategic_plan = {}
+        self.mock_strategic_state.global_metrics = {}
+        self.mock_strategic_state.global_objectives = []
         self.mock_middleware = MagicMock(spec=MessageMiddleware)
 
         # Instantiate the StrategicManager with mocked dependencies
@@ -127,9 +130,7 @@ class TestHierarchicalFullStrategy(unittest.TestCase):
         self.assertIn("evaluation", result)
         self.assertTrue(result["evaluation"]["overall_success_rate"] > 0.8)
         self.assertIn("Analyse réussie", result["conclusion"])
-        self.assertIn("updated_metrics", result)
-        self.assertIn("objectives", result)
-        self.assertIn("strategic_plan", result)
+        self.assertIn("final_state", result)
 
 if __name__ == '__main__':
     unittest.main()
