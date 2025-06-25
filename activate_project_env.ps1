@@ -38,7 +38,6 @@ function Write-Stderr {
 }
 
 try {
-Write-Host "DEBUG: CommandToRun = $CommandToRun"
     if ($CommandToRun) {
         # --- Logique de `main` ---
         # Définir le PYTHONPATH pour inclure la racine du projet.
@@ -77,12 +76,22 @@ Write-Host "DEBUG: CommandToRun = $CommandToRun"
 
         Write-Stderr "Utilisation de l'interpréteur Python: $python_exe"
         
-        # Encapsule la commande pour une exécution robuste avec Invoke-Expression
-        $command_to_execute = "$python_exe -m $CommandToRun"
+        # Sépare la commande et les arguments de manière sécurisée
+        $command_parts = $CommandToRun.Split(' ', 2)
+        $program_to_run = $command_parts[0]
+        $argument_list = if ($command_parts.Length -gt 1) { $command_parts[1] } else { $null }
 
+        # Gestion des exécutables de l'environnement (python, pytest, etc.)
+        $exe_in_env = Join-Path $env_path "Scripts" "$program_to_run.exe"
+        if (Test-Path $exe_in_env) {
+            $program_to_run = $exe_in_env
+        } elseif ($program_to_run -eq "python") {
+            $program_to_run = $python_exe
+        }
+        
         # Exécute la commande et gère la sortie
-        Write-Stderr "Exécution: $command_to_execute"
-        Invoke-Expression -Command $command_to_execute
+        Write-Stderr "Exécution: $program_to_run $argument_list"
+        & $program_to_run $argument_list
         
         $exitCode = $LASTEXITCODE
         if ($exitCode -ne 0) {
