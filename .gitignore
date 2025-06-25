@@ -302,3 +302,6 @@ temp_libs/
 execution_traces/
 # Test reports
 *.xml
+
+# JDK local lock file
+portable_jdk_locked/
