@@ -949,10 +949,15 @@ class UnifiedWebOrchestrator:
                 test_timeout_s = self.timeout_minutes * 60
                 self.add_trace("[TEST] Lancement avec timeout global", f"{test_timeout_s}s")
                 
-                success = await asyncio.wait_for(
-                    self.run_tests(test_paths=test_paths, **kwargs),
-                    timeout=None
-                )
+                try:
+                    success = await asyncio.wait_for(
+                        self.run_tests(test_paths=test_paths, **kwargs),
+                        timeout=test_timeout_s # Utiliser le timeout défini
+                    )
+                except (subprocess.CalledProcessError, Exception) as e:
+                    # Gère les échecs de tests (qui lèvent une exception) et autres erreurs
+                    self.add_trace("[ERROR] ECHEC TESTS", f"Les tests ont échoué: {e}", status="error")
+                    success = False
             except asyncio.TimeoutError:
                 self.add_trace("[ERROR] TIMEOUT GLOBAL",
                               f"L'étape de test a dépassé le timeout de {self.timeout_minutes} minutes.",

@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """
 Tests unitaires pour le module `environment` et sa fonction coupe-circuit `ensure_env`.
@@ -81,6 +80,7 @@ class TestEnsureEnvAsGuard(unittest.TestCase):
         exception_message = str(cm.exception)
         self.assertIn("ERREUR CRITIQUE", exception_message)
         self.assertIn("L'INTERPRÉTEUR PYTHON EST INCORRECT", exception_message)
+        self.assertIn("Environnement attendu : 'projet-is'", exception_message)
         self.assertIn("Environnement détecté : 'miniconda3'", exception_message)
 
     @patch('sys.prefix', 'C:\\Users\\Test\\miniconda3\\envs\\projet-is')

@@ -20,6 +20,8 @@ class TestHierarchicalFullStrategy(unittest.TestCase):
             strategic_state=self.mock_strategic_state,
             middleware=self.mock_middleware
         )
+        # Mock the adapter directly on the instance
+        self.strategic_manager.adapter = MagicMock()
 
     def test_initialize_analysis_happy_path(self):
         """
@@ -30,7 +32,6 @@ class TestHierarchicalFullStrategy(unittest.TestCase):
         3. A directive is issued to the tactical coordinator with the correct plan.
         """
         # Arrange
-        self.strategic_manager.adapter = MagicMock()
         test_text = "This is a test text for analysis."
         
         # Act
@@ -42,11 +43,11 @@ class TestHierarchicalFullStrategy(unittest.TestCase):
         self.mock_strategic_state.add_global_objective.assert_called()
         self.mock_strategic_state.update_strategic_plan.assert_called_once()
         self.mock_strategic_state.update_resource_allocation.assert_called_once()
-        # The decision is now logged inside the manager's methods
         self.mock_strategic_state.log_strategic_decision.assert_called()
 
         # Verify that the directive was issued to the tactical coordinator
         self.strategic_manager.adapter.issue_directive.assert_called_once()
+        # call_args[1] holds the keyword arguments dictionary
         directive_call_args = self.strategic_manager.adapter.issue_directive.call_args[1]
 
         # Check the arguments of the issue_directive call
@@ -56,7 +57,8 @@ class TestHierarchicalFullStrategy(unittest.TestCase):
         self.assertEqual(directive_call_args['recipient_id'], "tactical_coordinator")
         self.assertEqual(directive_call_args['priority'], MessagePriority.HIGH)
 
-        # Verify the structure of the returned dictionary
+        self.assertIsNotNone(result)
+
     def test_process_tactical_feedback_with_issues(self):
         """
         Tests the manager's ability to process feedback containing issues and
@@ -68,9 +70,6 @@ class TestHierarchicalFullStrategy(unittest.TestCase):
             "issues": [{"type": "resource_shortage", "resource": "informal_analyzer"}]
         }
         
-        # Mock the adapter to avoid real communication
-        self.strategic_manager.adapter = MagicMock()
-
         # Act
         result = self.strategic_manager.process_tactical_feedback(feedback_with_issues)
 
@@ -89,6 +88,7 @@ class TestHierarchicalFullStrategy(unittest.TestCase):
         
         # Verify the result structure
         self.assertIn("strategic_adjustments", result)
+
     def test_evaluate_final_results(self):
         """
         Tests the manager's ability to evaluate final results and formulate a conclusion.
@@ -97,21 +97,14 @@ class TestHierarchicalFullStrategy(unittest.TestCase):
         final_results = {
             "obj-1": {"success_rate": 0.9},
             "obj-2": {"success_rate": 0.8},
-            "obj-3": {"success_rate": 0.7},
-            "obj-4": {"success_rate": 0.85},
         }
         
         # Configure the mock state to return predefined objectives
         self.mock_strategic_state.global_objectives = [
-            {"id": "obj-1", "description": "Identifier les arguments principaux"},
-            {"id": "obj-2", "description": "Détecter les sophismes"},
-            {"id": "obj-3", "description": "Analyser la structure logique"},
-            {"id": "obj-4", "description": "Évaluer la cohérence globale"},
+            {"id": "obj-1", "description": "Identify main arguments"},
+            {"id": "obj-2", "description": "Detect fallacies"},
         ]
         
-        # Mock the adapter
-        self.strategic_manager.adapter = MagicMock()
-
         # Act
         result = self.strategic_manager.evaluate_final_results(final_results)
 
@@ -128,7 +121,7 @@ class TestHierarchicalFullStrategy(unittest.TestCase):
         # Check the result structure
         self.assertIn("conclusion", result)
         self.assertIn("evaluation", result)
-        self.assertTrue(result["evaluation"]["overall_success_rate"] > 0.8)
+        self.assertAlmostEqual(result["evaluation"]["overall_success_rate"], 0.85)
         self.assertIn("Analyse réussie", result["conclusion"])
         self.assertIn("final_state", result)
 

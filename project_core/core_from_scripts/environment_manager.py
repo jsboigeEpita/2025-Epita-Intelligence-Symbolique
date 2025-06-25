@@ -98,7 +98,7 @@ class EnvironmentManager:
                 self.logger.info(f"Pytest s'est terminé avec le code de sortie: {exit_code}")
                 return exit_code
             except Exception as e:
-                self.logger.error(f"Erreur CRITIQUE lors de l'exécution de pytest.main: {e}", exc_info=True)
+                self.logger.error(f"Erreur CRITIQUE lors de l'exécution de pytest.main: {e}")
                 return 1 # Retourne un code d'erreur générique
         
         # Fallback pour les autres commandes
@@ -112,7 +112,7 @@ class EnvironmentManager:
             self.logger.info(f"La commande s'est terminée avec le code de sortie: {result.returncode}")
             return result.returncode
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'exécution de la commande: {e}", exc_info=True)
+            self.logger.error(f"Erreur lors de l'exécution de la commande: {e}")
             return 1
 
 

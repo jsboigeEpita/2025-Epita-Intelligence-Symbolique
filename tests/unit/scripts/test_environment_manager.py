@@ -1,5 +1,3 @@
-
-# Authentic gpt-4o-mini imports (replacing mocks)
 #!/usr/bin/env python3
 """
 Tests unitaires pour le module environment_manager en mode CLI.
@@ -52,10 +50,12 @@ class TestEnvironmentManagerCLI(unittest.TestCase):
         
         mock_instance = MockEnvironmentManager.return_value
         
-        # Le script appelle sys.exit(), il faut l'intercepter
-        # Le script n'appelle plus sys.exit() dans ce cas, il affiche l'aide.
+        # Le comportement a changé: le script n'appelle plus sys.exit()
+        # On vérifie simplement que la bonne méthode est (ou n'est pas) appelée.
         environment_manager.main()
+        
         # La fonctionnalité est obsolète, on vérifie juste que ça ne crashe pas
+        # et que run_command n'est pas appelé
         mock_instance.run_command.assert_not_called()
 
     @unittest.skip("La fonctionnalité setup_environment_variables a été rendue obsolète.")
@@ -113,9 +113,8 @@ class TestEnvironmentManagerCLI(unittest.TestCase):
         """Vérifie que l'aide est affichée si aucun argument n'est fourni."""
         sys.argv = ['__main__']
         
-        # Le script n'appelle plus sys.exit(), il affiche juste l'aide.
+        # Le comportement a changé: le script n'appelle plus sys.exit()
         environment_manager.main()
-        # On vérifie que la fonction d'aide a bien été appelée.
         mock_print_help.assert_called_once()
 
     @patch('subprocess.run')
@@ -130,11 +129,7 @@ class TestEnvironmentManagerCLI(unittest.TestCase):
         return_code = manager.run_command(command)
         
         self.assertEqual(return_code, 0)
-        # La commande est jointe en une chaîne, et shell=True est utilisé.
-        mock_subprocess_run.assert_called_once()
-        args, kwargs = mock_subprocess_run.call_args
-        self.assertEqual(args[0], command)
-        self.assertFalse(kwargs.get('shell')) # shell=False est maintenant implicite
+        mock_subprocess_run.assert_called_once_with(command, check=False, capture_output=True, text=True, encoding='utf-8')
 
     @patch('subprocess.run')
     def test_run_command_integration_failure(self, mock_subprocess_run):
@@ -148,10 +143,7 @@ class TestEnvironmentManagerCLI(unittest.TestCase):
         return_code = manager.run_command(command)
         
         self.assertEqual(return_code, 1)
-        mock_subprocess_run.assert_called_once()
-        args, kwargs = mock_subprocess_run.call_args
-        self.assertEqual(args[0], command)
-        self.assertFalse(kwargs.get('shell'))
+        mock_subprocess_run.assert_called_once_with(command, check=False, capture_output=True, text=True, encoding='utf-8')
 
     @patch('subprocess.run', side_effect=FileNotFoundError("Commande non trouvée"))
     def test_run_command_file_not_found(self, mock_subprocess_run):
@@ -162,10 +154,7 @@ class TestEnvironmentManagerCLI(unittest.TestCase):
         return_code = manager.run_command(command)
         
         self.assertEqual(return_code, 1)
-        mock_subprocess_run.assert_called_once()
-        args, kwargs = mock_subprocess_run.call_args
-        self.assertEqual(args[0], command)
-        self.assertFalse(kwargs.get('shell'))
+        mock_subprocess_run.assert_called_once_with(command, check=False, capture_output=True, text=True, encoding='utf-8')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

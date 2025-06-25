@@ -9,7 +9,8 @@ from pathlib import Path
 import sys
 sys.path.insert(0, '.')
 
-from scripts.apps.webapp.frontend_manager import FrontendManager
+# Note: Le chemin d'import a changé vers la classe minimale dans l'orchestrateur
+from argumentation_analysis.webapp.orchestrator import MinimalFrontendManager as FrontendManager
 
 @pytest.fixture
 def frontend_config(webapp_config):
@@ -31,101 +32,106 @@ def manager(frontend_config, logger_mock):
 def test_initialization(manager, frontend_config):
     """Tests that the manager initializes correctly."""
     assert manager.config == frontend_config
-    assert manager.enabled is True
-    # Vérifier la valeur par défaut si la clé n'est pas dans la config de test
-    assert manager.start_port == frontend_config.get('start_port', 3000)
     assert manager.process is None
+    # La logique de l'orchestrateur utilise 'port'
+    assert manager.config['port'] == frontend_config['port']
 
 @pytest.mark.asyncio
 async def test_start_when_disabled(logger_mock):
     """Tests that start() returns immediately if not enabled."""
     config = {'enabled': False}
     manager = FrontendManager(config, logger_mock)
-    result = await manager.start_with_failover()
+    result = await manager.start()
     assert result['success'] is True
-    assert result['error'] == 'Frontend désactivé'
+    assert 'Frontend disabled' in result['error']
 
 @pytest.mark.asyncio
-async def test_start_fails_if_path_not_found(manager, tmp_path):
+async def test_start_fails_if_path_not_found(manager, logger_mock):
     """Tests that start() fails if the frontend path does not exist."""
-    manager.frontend_path = None
-    result = await manager.start_with_failover()
+    invalid_config = {
+        'enabled': True,
+        'path': '/non/existent/path'
+    }
+    manager_invalid = FrontendManager(invalid_config, logger_mock)
+    result = await manager_invalid.start()
     assert result['success'] is False
-    assert "non trouvé" in result['error']
+    assert "non valide ou non trouvé" in manager_invalid.logger.error.call_args[0][0]
 
 @pytest.mark.asyncio
-async def test_start_fails_if_package_json_missing(manager, tmp_path):
-    """Tests that start() fails if package.json is missing."""
-    manager.frontend_path = tmp_path
-    # La nouvelle logique vérifie les dépendances, on simule l'échec de _ensure_dependencies
-    manager._ensure_dependencies = AsyncMock(return_value=False)
-    result = await manager.start_with_failover()
-    assert result['success'] is False
-    assert "Échec de l'installation des dépendances" in result['error']
+@patch('asyncio.create_subprocess_exec')
+async def test_start_success(mock_subprocess, manager, logger_mock, tmp_path):
+    """Tests the full successful start sequence."""
+    # Setup a valid fake frontend path
+    manager.config['path'] = str(tmp_path)
+    # Mock the subprocess
+    mock_proc = AsyncMock()
+    mock_proc.pid = 1234
+    
+    # Mock stdout pour simuler la compilation réussie
+    mock_stdout = AsyncMock()
+    mock_stdout.readline.side_effect = [
+        b'Starting the development server...\n',
+        b'Compiled successfully!\n',
+        b'' # End of stream
+    ]
+    mock_proc.stdout = mock_stdout
+    mock_proc.stderr = AsyncMock()
+    mock_proc.stderr.readline.return_value = b'' # No errors
 
-@pytest.mark.asyncio
-@patch('subprocess.Popen')
-async def test_ensure_dependencies_installs_if_needed(mock_popen, manager, tmp_path):
-    """Vérifie que 'npm install' est exécuté si node_modules est manquant."""
-    manager.frontend_path = tmp_path
-    # Assurez-vous que node_modules n'existe pas
-    # (tmp_path est vide par défaut)
+    mock_subprocess.return_value = mock_proc
 
-    mock_process = MagicMock()
-    mock_process.communicate.return_value = ('success', '')
-    mock_process.returncode = 0
-    mock_popen.return_value = mock_process
-
-    result = await manager._ensure_dependencies()
-
-    assert result is True
-    mock_popen.assert_called_once()
-    manager.logger.info.assert_any_call(f"Le dossier 'node_modules' est manquant. Lancement de 'npm install' dans {manager.frontend_path}...")
-
-
-@pytest.mark.asyncio
-async def test_start_success(manager):
-    """Tests the full successful start sequence with the new failover logic."""
-    # Mock des dépendances et des appels système
-    manager._ensure_dependencies = AsyncMock(return_value=True)
-    manager._is_port_occupied = AsyncMock(return_value=False)
-    manager._start_on_port = AsyncMock(return_value={
-        'success' : True,
-        'url': f'http://localhost:{manager.start_port}',
-        'port': manager.start_port,
-        'pid': 1234
-    })
-
-    result = await manager.start_with_failover()
+    result = await manager.start()
 
     assert result['success'] is True
-    assert result['port'] == manager.start_port
+    assert result['port'] == manager.config['port']
     assert result['pid'] == 1234
-    manager._ensure_dependencies.assert_awaited_once()
-    manager._is_port_occupied.assert_awaited_once_with(manager.start_port)
-    manager._start_on_port.assert_awaited_once_with(manager.start_port)
+    mock_subprocess.assert_awaited_once()
+    logger_mock.info.assert_any_call(f"[FRONTEND] Frontend démarré et prêt sur {result['url']}")
 
 
 @pytest.mark.asyncio
 async def test_stop_process(manager):
-    """Tests that stop correctly terminates the process."""
-    mock_process = MagicMock(spec=subprocess.Popen)
-    mock_process.pid = 1234
-    manager.process = mock_process
-    
-    # Simuler que les fichiers de log sont ouverts pour tester leur fermeture
-    manager.frontend_stdout_log_file = MagicMock()
-    manager.frontend_stderr_log_file = MagicMock()
+    """Tests that stop correctly terminates the process using psutil."""
+    # On simule la présence d'un processus à arrêter
+    manager.process = AsyncMock(spec=asyncio.subprocess.Process)
+    manager.process.pid = 1234
+    manager.process.returncode = None # Simule un processus en cours
 
-    # Sauvegarder les mocks des fichiers log avant qu'ils ne soient fermés et mis à None
-    mock_stdout_log = manager.frontend_stdout_log_file
-    mock_stderr_log = manager.frontend_stderr_log_file
+    # On mock psutil.Process pour intercepter l'appel de terminaison
+    with patch('psutil.Process') as mock_psutil_process:
+        mock_parent = MagicMock()
+        mock_parent.children.return_value = [] # Pas d'enfants pour ce test simple
+        mock_psutil_process.return_value = mock_parent
 
-    await manager.stop()
+        await manager.stop()
 
-    # L'assertion doit être sur le mock local, car manager.process est remis à None
-    mock_process.terminate.assert_called_once()
+        # On vérifie que `psutil.Process` a été appelé avec le bon PID
+        mock_psutil_process.assert_called_with(1234)
+        # On vérifie que la méthode `kill` a été appelée sur le processus parent
+        mock_parent.kill.assert_called_once()
+        # On vérifie que le manager a bien attendu la fin du processus asyncio
+        manager.process.wait.assert_awaited_once()
 
-    # Vérifier que les fichiers de log ont été fermés
-    mock_stdout_log.close.assert_called_once()
-    mock_stderr_log.close.assert_called_once()
+@pytest.mark.asyncio
+async def test_health_check_success(manager):
+    """Tests a successful health check."""
+    with patch('aiohttp.ClientSession.get') as mock_get:
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_get.return_value.__aenter__.return_value = mock_response
+        
+        result = await manager.health_check()
+        
+        assert result is True
+
+@pytest.mark.asyncio
+async def test_health_check_failure(manager):
+    """Tests a failed health check."""
+    with patch('aiohttp.ClientSession.get') as mock_get:
+        mock_response = AsyncMock()
+        mock_response.status = 500
+        mock_get.return_value.__aenter__.return_value = mock_response
+        
+        result = await manager.health_check()
+        
+        assert result is False
