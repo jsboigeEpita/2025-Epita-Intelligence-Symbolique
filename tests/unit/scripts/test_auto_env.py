@@ -79,7 +79,9 @@ class TestEnsureEnvAsGuard(unittest.TestCase):
             ensure_env(env_name="projet-is", silent=True)
             
         exception_message = str(cm.exception)
-        self.assertIn("Environnement détecté : 'base'", exception_message)
+        self.assertIn("ERREUR CRITIQUE", exception_message)
+        self.assertIn("L'INTERPRÉTEUR PYTHON EST INCORRECT", exception_message)
+        self.assertIn("Environnement détecté : 'miniconda3'", exception_message)
 
     @patch('sys.prefix', 'C:\\Users\\Test\\miniconda3\\envs\\projet-is')
     @patch('sys.base_prefix', 'C:\\Users\\Test\\miniconda3')

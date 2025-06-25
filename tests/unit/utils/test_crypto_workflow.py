@@ -15,6 +15,7 @@ import pytest
 import asyncio
 import tempfile
 import json
+import time
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 
@@ -89,16 +90,15 @@ class TestCryptoWorkflowManager:
     
     @pytest.mark.asyncio
     @patch('argumentation_analysis.utils.crypto_workflow.load_extract_definitions')
-    async def test_load_encrypted_corpus_success(self, mock_load):
+    @patch('time.monotonic', side_effect=[100.0, 100.5])
+    async def test_load_encrypted_corpus_success(self, mock_time, mock_load):
         """Test déchiffrement réussi."""
-        # Mock du déchiffrement
         mock_definitions = [
             {"content": "Texte de test 1", "id": "def1"},
             {"content": "Texte de test 2", "id": "def2"}
         ]
         mock_load.return_value = mock_definitions
         
-        # Création d'un fichier temporaire
         with tempfile.NamedTemporaryFile(suffix=".enc", delete=False) as tmp_file:
             tmp_path = Path(tmp_file.name)
             tmp_file.write(b"encrypted_content")
@@ -111,10 +111,11 @@ class TestCryptoWorkflowManager:
             assert len(result.loaded_files) == 1
             assert result.total_definitions == 2
             assert result.loaded_files[0]["definitions_count"] == 2
-            assert result.processing_time > 0
+            assert result.processing_time > 0, "Le temps de traitement devrait être positif"
+            assert mock_time.call_count == 2, "time.monotonic devrait être appelé deux fois"
             
         finally:
-            tmp_path.unlink()  # Nettoyage
+            tmp_path.unlink()
     
     @pytest.mark.asyncio
     @patch('argumentation_analysis.utils.crypto_workflow.load_extract_definitions')

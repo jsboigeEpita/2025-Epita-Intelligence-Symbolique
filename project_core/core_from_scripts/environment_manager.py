@@ -29,7 +29,7 @@ class PrintLogger:
     def debug(self, msg): logger.debug(msg)
     def info(self, msg): logger.info(msg)
     def warning(self, msg): logger.warning(msg)
-    def error(self, msg): logger.error(msg)
+    def error(self, msg, *args, **kwargs): logger.error(msg, *args, **kwargs)
     def success(self, msg): logger.info(f"✅ SUCCESS: {msg}")
 
 class EnvironmentManager:

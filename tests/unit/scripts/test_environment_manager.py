@@ -53,10 +53,8 @@ class TestEnvironmentManagerCLI(unittest.TestCase):
         mock_instance = MockEnvironmentManager.return_value
         
         # Le script appelle sys.exit(), il faut l'intercepter
-        with self.assertRaises(SystemExit) as cm:
-            environment_manager.main()
-        
-        self.assertEqual(cm.exception.code, 0) # Doit quitter avec succès
+        # Le script n'appelle plus sys.exit() dans ce cas, il affiche l'aide.
+        environment_manager.main()
         # La fonctionnalité est obsolète, on vérifie juste que ça ne crashe pas
         mock_instance.run_command.assert_not_called()
 
@@ -115,10 +113,9 @@ class TestEnvironmentManagerCLI(unittest.TestCase):
         """Vérifie que l'aide est affichée si aucun argument n'est fourni."""
         sys.argv = ['__main__']
         
-        with self.assertRaises(SystemExit) as cm:
-            environment_manager.main()
-            
-        self.assertEqual(cm.exception.code, 0)
+        # Le script n'appelle plus sys.exit(), il affiche juste l'aide.
+        environment_manager.main()
+        # On vérifie que la fonction d'aide a bien été appelée.
         mock_print_help.assert_called_once()
 
     @patch('subprocess.run')
@@ -136,8 +133,8 @@ class TestEnvironmentManagerCLI(unittest.TestCase):
         # La commande est jointe en une chaîne, et shell=True est utilisé.
         mock_subprocess_run.assert_called_once()
         args, kwargs = mock_subprocess_run.call_args
-        self.assertEqual(args[0], ' '.join(command))
-        self.assertTrue(kwargs.get('shell'))
+        self.assertEqual(args[0], command)
+        self.assertFalse(kwargs.get('shell')) # shell=False est maintenant implicite
 
     @patch('subprocess.run')
     def test_run_command_integration_failure(self, mock_subprocess_run):
@@ -153,8 +150,8 @@ class TestEnvironmentManagerCLI(unittest.TestCase):
         self.assertEqual(return_code, 1)
         mock_subprocess_run.assert_called_once()
         args, kwargs = mock_subprocess_run.call_args
-        self.assertEqual(args[0], ' '.join(command))
-        self.assertTrue(kwargs.get('shell'))
+        self.assertEqual(args[0], command)
+        self.assertFalse(kwargs.get('shell'))
 
     @patch('subprocess.run', side_effect=FileNotFoundError("Commande non trouvée"))
     def test_run_command_file_not_found(self, mock_subprocess_run):
@@ -167,8 +164,8 @@ class TestEnvironmentManagerCLI(unittest.TestCase):
         self.assertEqual(return_code, 1)
         mock_subprocess_run.assert_called_once()
         args, kwargs = mock_subprocess_run.call_args
-        self.assertEqual(args[0], ' '.join(command))
-        self.assertTrue(kwargs.get('shell'))
+        self.assertEqual(args[0], command)
+        self.assertFalse(kwargs.get('shell'))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

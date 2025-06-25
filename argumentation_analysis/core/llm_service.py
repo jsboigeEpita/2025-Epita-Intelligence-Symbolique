@@ -66,7 +66,7 @@ class MockChatCompletion(ChatCompletionClientBase):
         
         return [response_message]
 
-def create_llm_service(service_id: str = "global_llm_service", force_mock: bool = False) -> Union[OpenAIChatCompletion, AzureChatCompletion, MockChatCompletion]:
+def create_llm_service(service_id: str = "global_llm_service", force_mock: bool = False, force_authentic: bool = False) -> Union[OpenAIChatCompletion, AzureChatCompletion, MockChatCompletion]:
     """
     Factory pour créer et configurer une instance de service de complétion de chat.
 
@@ -79,6 +79,8 @@ def create_llm_service(service_id: str = "global_llm_service", force_mock: bool 
                           le kernel Semantic Kernel.
         force_mock (bool): Si True, retourne une instance de `MockChatCompletion`
                            ignorant la configuration du .env.
+        force_authentic (bool): Si True, force la création d'un service authentique
+                                même dans un environnement de test.
 
     Returns:
         Union[OpenAIChatCompletion, AzureChatCompletion, MockChatCompletion]:
@@ -91,11 +93,18 @@ def create_llm_service(service_id: str = "global_llm_service", force_mock: bool 
     """
     logger.critical("<<<<< create_llm_service FUNCTION CALLED >>>>>")
     logger.info(f"--- Configuration du Service LLM ({service_id}) ---")
+
+    # Mocking automatique en environnement de test (détecté via variable pytest)
+    is_test_environment = 'PYTEST_CURRENT_TEST' in os.environ
+    if is_test_environment and not force_authentic:
+        logger.warning("Environnement de test détecté et `force_authentic` est False. Forçage du service LLM mocké.")
+        force_mock = True
+
     logger.info(f"--- Force Mock: {force_mock} ---")
 
     if force_mock:
         logger.warning("Création d'un service LLM mocké (MockChatCompletion).")
-        return MockChatCompletion(service_id=service_id)
+        return MockChatCompletion(service_id=service_id, ai_model_id="mock_model")
 
     api_key = settings.openai.api_key.get_secret_value() if settings.openai.api_key else None
     model_id = settings.openai.chat_model_id

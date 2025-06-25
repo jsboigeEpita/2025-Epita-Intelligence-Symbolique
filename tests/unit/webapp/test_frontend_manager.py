@@ -32,7 +32,8 @@ def test_initialization(manager, frontend_config):
     """Tests that the manager initializes correctly."""
     assert manager.config == frontend_config
     assert manager.enabled is True
-    assert manager.start_port == frontend_config['start_port']
+    # Vérifier la valeur par défaut si la clé n'est pas dans la config de test
+    assert manager.start_port == frontend_config.get('start_port', 3000)
     assert manager.process is None
 
 @pytest.mark.asyncio
@@ -108,9 +109,23 @@ async def test_start_success(manager):
 @pytest.mark.asyncio
 async def test_stop_process(manager):
     """Tests that stop correctly terminates the process."""
-    manager.process = MagicMock(spec=subprocess.Popen)
-    manager.process.pid = 1234
+    mock_process = MagicMock(spec=subprocess.Popen)
+    mock_process.pid = 1234
+    manager.process = mock_process
     
+    # Simuler que les fichiers de log sont ouverts pour tester leur fermeture
+    manager.frontend_stdout_log_file = MagicMock()
+    manager.frontend_stderr_log_file = MagicMock()
+
+    # Sauvegarder les mocks des fichiers log avant qu'ils ne soient fermés et mis à None
+    mock_stdout_log = manager.frontend_stdout_log_file
+    mock_stderr_log = manager.frontend_stderr_log_file
+
     await manager.stop()
 
-    manager.process.terminate.assert_called_once()
+    # L'assertion doit être sur le mock local, car manager.process est remis à None
+    mock_process.terminate.assert_called_once()
+
+    # Vérifier que les fichiers de log ont été fermés
+    mock_stdout_log.close.assert_called_once()
+    mock_stderr_log.close.assert_called_once()

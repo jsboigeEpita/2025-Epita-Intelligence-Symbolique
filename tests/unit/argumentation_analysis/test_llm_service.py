@@ -49,7 +49,7 @@ class TestLLMService:
         if not self.api_key:
             pytest.skip("La variable d'environnement OPENAI_API_KEY est requise pour ce test.")
 
-        service = create_llm_service()
+        service = create_llm_service(force_authentic=True)
         
         assert service is not None, "Le service LLM ne devrait pas être None."
         assert isinstance(service, OpenAIChatCompletion), "Le service devrait être une instance de OpenAIChatCompletion."
@@ -64,7 +64,7 @@ class TestLLMService:
         mock_settings.openai.base_url = None   # Assurer que le chemin Azure n'est pas pris
 
         with pytest.raises(ValueError) as excinfo:
-            create_llm_service()
+            create_llm_service(force_authentic=True)
         
         assert "Configuration OpenAI standard incomplète" in str(excinfo.value)
 

@@ -64,7 +64,8 @@ async def status_endpoint(
     Statut du service d'analyse
     """
     try:
-        service_available = analysis_service.is_available()
+        # Assure l'initialisation et récupère le statut de disponibilité
+        service_available = await analysis_service.ensure_initialized_and_available()
         status_details = analysis_service.get_status_details()
         
         if service_available:
@@ -75,7 +76,7 @@ async def status_endpoint(
         else:
             return StatusResponse(
                 status="degraded",
-                service_status={**status_details, "details": "GPT-4o-mini non disponible, mode fallback"}
+                service_status={**status_details, "details": "GPT-4o-mini non disponible ou erreur d'initialisation"}
             )
             
     except Exception as e:

@@ -215,7 +215,7 @@ class SherlockJTMSAgent(JTMSAgentBase):
             
             # Créer hypothèse dans le tracker JTMS
             hypothesis_id = self._hypothesis_tracker.create_hypothesis(
-                description=base_hypothesis,
+                description=str(base_hypothesis),
                 context={"source_context": context},
                 confidence=0.7,  # Confiance initiale de Sherlock
                 agent_source=self.agent_name

@@ -21,6 +21,7 @@ import tempfile
 import logging
 from pathlib import Path
 from unittest.mock import patch, MagicMock
+import psutil
 
 
 # Ajouter project_core au path
@@ -159,18 +160,18 @@ class TestProcessCleanup(unittest.TestCase):
         # Mock assertion eliminated - authentic validation
     
     
+    @patch('psutil.Process')
     @patch('psutil.process_iter')
-    def test_stop_backend_processes(self, mock_process_iter):
+    def test_stop_backend_processes(self, mock_process_iter, mock_process_class):
         """Test arrêt processus backend"""
         # Mock process Python
-        mock_process = MagicMock()
-        mock_process.info = {
-            'pid': 12345,
-            'name': 'python.exe',
-            'cmdline': ['python', 'app.py', '--port', '5000']
-        }
-        mock_process.terminate = MagicMock()
+        mock_process = MagicMock(spec=psutil.Process)
+        mock_process.name = MagicMock(return_value='python.exe')
+        mock_process.pid = 12345
+        mock_process.cmdline = MagicMock(return_value=['python', 'app.py', '--port', '5000'])
         
+        # Le code ré-instancie un objet Process, on doit s'assurer qu'il retourne le bon mock
+        mock_process_class.return_value = mock_process
         mock_process_iter.return_value = [mock_process]
         
         count = self.cleanup.stop_backend_processes()
@@ -179,18 +180,18 @@ class TestProcessCleanup(unittest.TestCase):
         mock_process.terminate.assert_called_once()
     
     
+    @patch('psutil.Process')
     @patch('psutil.process_iter')
-    def test_stop_frontend_processes(self, mock_process_iter):
+    def test_stop_frontend_processes(self, mock_process_iter, mock_process_class):
         """Test arrêt processus frontend"""
         # Mock process Node.js
-        mock_process = MagicMock()
-        mock_process.info = {
-            'pid': 12345,
-            'name': 'node.exe',
-            'cmdline': ['node', 'server.js', 'serve']
-        }
-        mock_process.terminate = MagicMock()
-        
+        mock_process = MagicMock(spec=psutil.Process)
+        mock_process.name = MagicMock(return_value='node.exe')
+        mock_process.pid = 12345
+        mock_process.cmdline = MagicMock(return_value=['node', 'server.js', 'serve'])
+
+        # Le code ré-instancie un objet Process, on doit s'assurer qu'il retourne le bon mock
+        mock_process_class.return_value = mock_process
         mock_process_iter.return_value = [mock_process]
         
         count = self.cleanup.stop_frontend_processes()

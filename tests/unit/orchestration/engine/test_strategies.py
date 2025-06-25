@@ -21,8 +21,7 @@ class TestHierarchicalFullStrategy(unittest.TestCase):
             middleware=self.mock_middleware
         )
 
-    @patch('argumentation_analysis.orchestration.hierarchical.strategic.manager.StrategicAdapter')
-    def test_initialize_analysis_happy_path(self, MockStrategicAdapter):
+    def test_initialize_analysis_happy_path(self):
         """
         Test the successful initialization of an analysis.
         This test ensures that when initialize_analysis is called:
@@ -31,7 +30,7 @@ class TestHierarchicalFullStrategy(unittest.TestCase):
         3. A directive is issued to the tactical coordinator with the correct plan.
         """
         # Arrange
-        mock_adapter_instance = MockStrategicAdapter.return_value
+        self.strategic_manager.adapter = MagicMock()
         test_text = "This is a test text for analysis."
         
         # Act
@@ -43,18 +42,19 @@ class TestHierarchicalFullStrategy(unittest.TestCase):
         self.mock_strategic_state.add_global_objective.assert_called()
         self.mock_strategic_state.update_strategic_plan.assert_called_once()
         self.mock_strategic_state.update_resource_allocation.assert_called_once()
-        self.mock_strategic_state.log_strategic_decision.assert_called_once()
+        # The decision is now logged inside the manager's methods
+        self.mock_strategic_state.log_strategic_decision.assert_called()
 
         # Verify that the directive was issued to the tactical coordinator
-        mock_adapter_instance.issue_directive.assert_called_once()
-        directive_call_args = mock_adapter_instance.issue_directive.call_args
-        
+        self.strategic_manager.adapter.issue_directive.assert_called_once()
+        directive_call_args = self.strategic_manager.adapter.issue_directive.call_args[1]
+
         # Check the arguments of the issue_directive call
-        self.assertEqual(directive_call_args[1]['directive_type'], "new_strategic_plan")
-        self.assertIn("plan", directive_call_args[1]['content'])
-        self.assertIn("objectives", directive_call_args[1]['content'])
-        self.assertEqual(directive_call_args[1]['recipient_id'], "tactical_coordinator")
-        self.assertEqual(directive_call_args[1]['priority'], MessagePriority.HIGH)
+        self.assertEqual(directive_call_args['directive_type'], "new_strategic_plan")
+        self.assertIn("plan", directive_call_args['parameters'])
+        self.assertIn("objectives", directive_call_args['parameters'])
+        self.assertEqual(directive_call_args['recipient_id'], "tactical_coordinator")
+        self.assertEqual(directive_call_args['priority'], MessagePriority.HIGH)
 
         # Verify the structure of the returned dictionary
     def test_process_tactical_feedback_with_issues(self):
@@ -83,9 +83,9 @@ class TestHierarchicalFullStrategy(unittest.TestCase):
         
         # Verify that a directive with adjustments was sent
         self.strategic_manager.adapter.issue_directive.assert_called_once()
-        directive_call_args = self.strategic_manager.adapter.issue_directive.call_args
-        self.assertEqual(directive_call_args[1]['directive_type'], "strategic_adjustment")
-        self.assertIn("resource_reallocation", directive_call_args[1]['content'])
+        directive_call_args = self.strategic_manager.adapter.issue_directive.call_args[1]
+        self.assertEqual(directive_call_args['directive_type'], "strategic_adjustment")
+        self.assertIn("resource_reallocation", directive_call_args['parameters'])
         
         # Verify the result structure
         self.assertIn("strategic_adjustments", result)

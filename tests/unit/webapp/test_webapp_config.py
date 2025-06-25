@@ -121,4 +121,7 @@ def test_handle_invalid_yaml_config(tmp_path, capsys):
 
     captured = capsys.readouterr()
     # In some CI environments, stderr might be captured instead of stdout
-    assert f"Erreur chargement config {config_path}" in captured.out or f"Erreur chargement config {config_path}" in captured.err
+    log_output = captured.out + captured.err
+    # Rendre l'assertion plus souple en cherchant les parties clés du message
+    assert "Erreur lors du chargement de la configuration" in log_output
+    assert str(config_path) in log_output

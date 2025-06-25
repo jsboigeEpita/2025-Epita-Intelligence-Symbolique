@@ -27,31 +27,38 @@ class SimpleAnalysisService:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.client = None
-        self._initialize_openai()
-        
-    def _initialize_openai(self):
-        """Initialise le client OpenAI pour GPT-4o-mini"""
-        if not OPENAI_AVAILABLE:
-            self.logger.warning("OpenAI non disponible, mode dégradé")
+        self.initialized = False
+
+    async def _initialize_openai(self):
+        """Initialise le client OpenAI pour GPT-4o-mini de manière asynchrone."""
+        if self.initialized:
             return
             
-        # Récupérer la clé API depuis les variables d'environnement
+        self.logger.info("Initialisation asynchrone du client OpenAI...")
+        if not OPENAI_AVAILABLE:
+            self.logger.warning("OpenAI non disponible, mode dégradé")
+            self.initialized = True
+            return
+
         api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
             self.logger.warning("OPENAI_API_KEY non définie")
+            self.initialized = True
             return
-            
+
         try:
             self.client = OpenAI(api_key=api_key)
-            # Test a simple call to validate the key
-            self.client.models.list()
+            # Valide la clé de manière asynchrone pour ne pas bloquer
+            await asyncio.to_thread(self.client.models.list)
             self.logger.info("✅ Client OpenAI GPT-4o-mini initialisé et clé validée.")
         except openai.AuthenticationError as e:
-            self.logger.error(f"❌ Erreur d'authentification OpenAI: La clé API est probablement invalide. Détails: {e}")
+            self.logger.error(f"❌ Erreur d'authentification OpenAI: {e}")
             self.client = None
         except Exception as e:
-            self.logger.error(f"❌ Erreur inattendue lors de l'initialisation d'OpenAI: {e}")
+            self.logger.error(f"❌ Erreur inattendue pendant l'initialisation d'OpenAI: {e}")
             self.client = None
+        
+        self.initialized = True
     
     async def analyze_text(self, text: str) -> dict:
         """
@@ -60,9 +67,13 @@ class SimpleAnalysisService:
         start_time = time.time()
         self.logger.info(f"[API-SIMPLE] Analyse GPT-4o-mini : {text[:100]}...")
         
+        # Initialisation paresseuse et asynchrone
+        if not self.initialized:
+            await self._initialize_openai()
+
         if not self.client:
             return self._fallback_analysis(text, start_time)
-        
+
         try:
             # Appel authentique à GPT-4o-mini
             response = await asyncio.to_thread(
@@ -163,18 +174,22 @@ class SimpleAnalysisService:
             }
         }
     
-    def is_available(self) -> bool:
-        """Vérifie si le service est disponible"""
+    async def ensure_initialized_and_available(self) -> bool:
+        """
+        S'assure que le client est initialisé et vérifie sa disponibilité.
+        """
+        if not self.initialized:
+            await self._initialize_openai()
         return self.client is not None
-    
+
     def get_status_details(self) -> dict:
-        """Retourne les détails du statut"""
+        """Retourne les détails du statut actuels."""
         return {
             "service_type": "SimpleAnalysisService",
             "gpt4o_mini_enabled": self.client is not None,
             "openai_available": OPENAI_AVAILABLE,
             "mock_disabled": True,
-            "service_initialized": True
+            "service_initialized": self.initialized
         }
 
 # Service global simplifié
