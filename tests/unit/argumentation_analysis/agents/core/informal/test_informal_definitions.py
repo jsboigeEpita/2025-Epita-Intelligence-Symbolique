@@ -39,8 +39,8 @@ def sample_taxonomy_data():
 def mock_taxonomy_df(sample_taxonomy_data):
     """Fixture pour un DataFrame de taxonomie mocké."""
     df = pd.DataFrame(sample_taxonomy_data)
-    df['PK'] = df['PK'].astype('Int64')
-    df['parent_pk'] = pd.to_numeric(df['parent_pk'], errors='coerce').astype('Int64')
+    df['PK'] = df['PK'].astype('int64')
+    df['parent_pk'] = pd.to_numeric(df['parent_pk'], errors='coerce').astype(float)
     df.set_index('PK', inplace=True)
     return df
 
