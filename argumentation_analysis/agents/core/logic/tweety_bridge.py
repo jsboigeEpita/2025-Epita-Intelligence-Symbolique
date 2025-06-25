@@ -337,48 +337,16 @@ class TweetyBridge:
         description="Exécute une requête en Logique du Premier Ordre sur un Belief Set fourni. Peut inclure des déclarations de signature.",
         name="execute_fol_query"
     )
-    def execute_fol_query(self, belief_set_content: str, query_string: str, signature_declarations_str: Optional[str] = None) -> Tuple[Optional[bool], str]:
-        """
-        Exécute une requête en logique du premier ordre (FOL) sur un ensemble de croyances.
-
-        Délègue l'exécution au `FOLHandler`.
-
-        Args:
-            belief_set_content (str): L'ensemble de croyances.
-            query_string (str): La requête à exécuter.
-            signature_declarations_str (Optional[str]): Déclarations de signature
-                optionnelles.
-
-        Returns:
-            Tuple[Optional[bool], str]: Un tuple (résultat booléen ou None, message).
-        """
-        self._logger.info(f"TweetyBridge.execute_fol_query: Query='{query_string}' sur BS: ('{belief_set_content[:60]}...'), Signature: '{str(signature_declarations_str)[:60]}...'")
-        
-        if not self.is_jvm_ready() or not hasattr(self, '_fol_handler'):
-            self._logger.error("TweetyBridge.execute_fol_query: TweetyBridge ou FOLHandler non prêt.")
-            return None, "FUNC_ERROR: TweetyBridge ou FOLHandler non prêt."
+    def execute_fol_query(self, belief_set: Any, query: str) -> Tuple[Optional[bool], str]:
+        """Exécute une requête FOL sur un objet BeliefSet Java."""
+        if not self.is_jvm_ready() or not self._fol_handler:
+            return None, "FOLHandler non prêt."
         
         try:
-            result_bool = self._fol_handler.fol_query(belief_set_content, query_string, signature_declarations_str)
-            
-            if result_bool is None:
-                result_str = f"Tweety Result: Unknown for FOL query '{query_string}'."
-                self._logger.warning(f"FOL query '{query_string}' -> UNKNOWN (None) from handler.")
-            else:
-                result_label = "ACCEPTED (True)" if result_bool else "REJECTED (False)"
-                result_str = f"Tweety Result: FOL Query '{query_string}' is {result_label}."
-                self._logger.info(f"Formatted FOL query result for '{query_string}': {result_label}")
-            
-            return result_bool, result_str
-            
-        except ValueError as e_val:
-            error_msg = f"Error during FOL query execution via FOLHandler: {e_val}"
-            self._logger.error(error_msg, exc_info=True)
-            return None, f"FUNC_ERROR: {error_msg}"
-        except Exception as e_generic:
-            error_msg = f"Unexpected error during FOL query: {e_generic}"
-            self._logger.error(error_msg, exc_info=True)
-            return None, f"FUNC_ERROR: {error_msg}"
+            result = self._fol_handler.fol_query(belief_set, query)
+            return result, "Query executed."
+        except Exception as e:
+            return None, str(e)
 
     def create_belief_set_from_string(self, tweety_syntax: str) -> Optional[Any]:
         """
@@ -401,25 +369,36 @@ class TweetyBridge:
             # On la propage.
             raise e
 
-    def create_belief_set_programmatically(self, builder_plugin_data: dict) -> Optional[Any]:
-        """
-        Crée un objet FolBeliefSet Java programmatiquement.
-        Délègue l'opération au `FOLHandler`.
-        
-        :param builder_plugin_data: Le dictionnaire __dict__ du BeliefSetBuilderPlugin.
-        :return: Un objet Java FolBeliefSet ou None en cas d'erreur.
-        """
-        if not self.is_jvm_ready() or not hasattr(self, '_fol_handler'):
-            self._logger.error("TweetyBridge ou FOLHandler non prêt pour create_belief_set_programmatically.")
-            return None
-        
-        try:
-            # Note: le handler retourne un tuple (belief_set, signature)
-            belief_set_obj, _ = self._fol_handler.create_belief_set_programmatically(builder_plugin_data)
-            return belief_set_obj
-        except (ValueError, jpype.JException) as e:
-            self._logger.error(f"Erreur lors de la création programmatique du BeliefSet: {e}", exc_info=True)
-            raise e
+    def create_belief_set_from_signature_and_formulas(self, signature: Any, formulas: List[str]) -> Optional[Any]:
+       """
+       Crée un objet FolBeliefSet Java à partir d'une signature et d'une liste de formules.
+       Délègue la tâche au FOLHandler.
+
+       :param signature: L'objet FolSignature Java.
+       :param formulas: Une liste de chaînes de formules FOL.
+       :return: Un objet Java FolBeliefSet ou None en cas d'erreur.
+       """
+       if not self.is_jvm_ready() or not hasattr(self, '_fol_handler'):
+           self._logger.error("TweetyBridge ou FOLHandler non prêt pour create_belief_set_from_signature_and_formulas.")
+           return None
+       
+       try:
+           # Le handler doit maintenant avoir une méthode qui accepte la signature et les formules
+           return self._fol_handler.create_belief_set_from_signature_and_formulas(signature, formulas)
+       except Exception as e:
+           self._logger.error(f"Erreur lors de la création du BeliefSet à partir de la signature et des formules: {e}", exc_info=True)
+           raise e
+
+    def check_consistency(self, belief_set: Any) -> Tuple[bool, str]:
+       """Vérifie la consistance d'un objet FolBeliefSet Java."""
+       if not self.is_jvm_ready() or not self._fol_handler:
+           return False, "FOLHandler non prêt."
+       try:
+           return self._fol_handler.fol_check_consistency(belief_set)
+       except Exception as e:
+           self._logger.error(f"Erreur inattendue durant la vérification de consistance via le Bridge: {e}", exc_info=True)
+           return False, str(e)
+
 
     # Les méthodes _parse_fol_formula, _parse_fol_belief_set, _execute_fol_query_internal
     # sont maintenant encapsulées dans FOLHandler et peuvent être supprimées ici.

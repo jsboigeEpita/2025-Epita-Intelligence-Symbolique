@@ -12,6 +12,41 @@ import subprocess
 import sys
 from pathlib import Path
 
+def load_dotenv(project_root: Path):
+    """
+    Charge les variables d'environnement depuis le fichier .env à la racine du projet.
+    """
+    dotenv_path = project_root / ".env"
+    if not dotenv_path.is_file():
+        print("Fichier .env non trouvé.", file=sys.stderr)
+        return
+
+    print(f"Chargement des variables depuis : {dotenv_path}", file=sys.stderr)
+    try:
+        with dotenv_path.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+
+                key, value = line.split("=", 1)
+                key = key.strip()
+                # Nettoyer les guillemets optionnels
+                if value.startswith('"') and value.endswith('"'):
+                    value = value[1:-1]
+                elif value.startswith("'") and value.endswith("'"):
+                    value = value[1:-1]
+                else:
+                    value = value.strip()
+                
+                # Ne pas écraser les variables existantes
+                if key not in os.environ:
+                    os.environ[key] = value
+
+    except Exception as e:
+        print(f"Erreur lors du chargement du fichier .env: {e}", file=sys.stderr)
+
+
 def get_conda_env_name(project_root: Path) -> str:
     """
     Détecte le nom de l'environnement Conda à partir du fichier de configuration.
@@ -133,19 +168,22 @@ def main():
     project_root = Path(__file__).parent.parent.resolve()
     
     try:
-        # 1. Obtenir le nom de l'environnement Conda
+        # 1. Charger les variables d'environnement depuis le .env
+        load_dotenv(project_root)
+
+        # 2. Obtenir le nom de l'environnement Conda
         conda_env_name = get_conda_env_name(project_root)
 
-        # 2. Trouver le chemin de l'environnement
+        # 3. Trouver le chemin de l'environnement
         conda_env_path = find_conda_env_path(conda_env_name)
 
-        # 3. Préparer l'environnement (PYTHONPATH)
+        # 4. Préparer l'environnement (PYTHONPATH)
         # Ajoute la racine du projet au début du PYTHONPATH
         python_path = os.environ.get("PYTHONPATH", "")
         os.environ["PYTHONPATH"] = f"{project_root}{os.pathsep}{python_path}"
         print(f"PYTHONPATH mis à jour : {os.environ['PYTHONPATH']}", file=sys.stderr)
 
-        # 4. Trouver le chemin de l'exécutable
+        # 5. Trouver le chemin de l'exécutable
         executable_name = args.command_args[0]
         executable_path = find_executable_in_env(conda_env_path, executable_name)
         
@@ -157,7 +195,7 @@ def main():
             command_to_run = [str(executable_path)] + args.command_args[1:]
 
 
-        # 5. Exécuter la commande
+        # 6. Exécuter la commande
         print(f"Exécution de la commande : {' '.join(command_to_run)}", file=sys.stderr)
         
         #subprocess.run exécute la commande et attend qu'elle se termine.
