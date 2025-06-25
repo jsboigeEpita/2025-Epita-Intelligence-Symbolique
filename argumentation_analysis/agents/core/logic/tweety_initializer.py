@@ -1,10 +1,9 @@
-# ===== AUTO-ACTIVATION ENVIRONNEMENT =====
-try:
-    import argumentation_analysis.core.environment  # Auto-activation environnement intelligent
-except ImportError:
-    # Dans le contexte des tests, auto_env peut déjà être activé
-    pass
-# =========================================
+# argumentation_analysis/agents/core/logic/tweety_initializer.py
+"""
+Gestionnaire d'initialisation pour les composants Tweety.
+Ce module suppose que la JVM a déjà été démarrée et configurée par un
+gestionnaire externe (ex: une fixture pytest de session).
+"""
 import jpype
 import logging
 import platform
@@ -13,7 +12,7 @@ import threading
 from argumentation_analysis.core.utils.logging_utils import setup_logging
 # from argumentation_analysis.core.utils.path_operations import get_project_root # Différé
 from pathlib import Path
-import os # Ajout de l'import os
+import os
 
 # Initialisation du logger pour ce module.
 setup_logging("INFO")
@@ -26,11 +25,9 @@ class TweetyInitializer:
     This class acts as a central point for initialization logic and component access.
     """
     _jvm_started = False
-    _pl_reasoner = None
+    _classes_loaded = False
     _pl_parser = None
     _fol_parser = None
-    _fol_reasoner = None
-    _modal_logic = None
     _modal_parser = None
     _modal_reasoner = None
     _tweety_bridge = None
@@ -134,9 +131,13 @@ class TweetyInitializer:
             logger.error(f"Failed to start JVM: {e}", exc_info=True)
             raise RuntimeError(f"JVM Initialization failed: {e}") from e
 
-
     def _import_java_classes(self):
-        logger.info("Attempting to import TweetyProject Java classes...")
+        """
+        Importe les classes Java requises et les met en cache.
+        Lève une RuntimeError si une classe n'est pas trouvée, indiquant un
+        problème de classpath.
+        """
+        logger.info("Importation des classes Java de TweetyProject...")
         try:
             _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlSignature")
             _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.Proposition")
@@ -199,18 +200,20 @@ class TweetyInitializer:
 
     @staticmethod
     def get_pl_parser():
+        if not TweetyInitializer._pl_parser:
+            raise RuntimeError("PL Parser not initialized.")
         return TweetyInitializer._pl_parser
 
     @staticmethod
-    def get_pl_reasoner():
-        return TweetyInitializer._pl_reasoner
-
-    @staticmethod
     def get_fol_parser():
+        if not TweetyInitializer._fol_parser:
+            raise RuntimeError("FOL Parser not initialized.")
         return TweetyInitializer._fol_parser
 
     @staticmethod
     def get_modal_parser():
+        if not TweetyInitializer._modal_parser:
+            raise RuntimeError("Modal Parser not initialized.")
         return TweetyInitializer._modal_parser
 
     def is_jvm_started(self):

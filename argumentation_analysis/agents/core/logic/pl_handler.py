@@ -20,7 +20,10 @@ class PLHandler:
     def __init__(self, initializer_instance: TweetyInitializer):
         self._initializer_instance = initializer_instance
         self._pl_parser = self._initializer_instance.get_pl_parser()
-        self._pl_reasoner = self._initializer_instance.get_pl_reasoner()
+        # Dans la nouvelle architecture, le handler est responsable de créer son propre reasoner.
+        # Le nom correct, trouvé dans les sources, est SimplePlReasoner.
+        SimplePlReasoner = jpype.JClass("org.tweetyproject.logics.pl.reasoner.SimplePlReasoner")
+        self._pl_reasoner = SimplePlReasoner()
 
         if self._pl_parser is None or self._pl_reasoner is None:
             logger.error("PL components not initialized. Ensure TweetyBridge calls TweetyInitializer first.")

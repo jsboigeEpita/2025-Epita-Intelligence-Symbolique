@@ -50,3 +50,36 @@ def jvm_session():
             logger.info("JVM was already shut down or never started.")
     except Exception as e:
         logger.error(f"Error shutting down JVM: {e}", exc_info=True)
+
+# Charger les fixtures définies dans d'autres fichiers comme des plugins
+pytest_plugins = [
+   "tests.fixtures.integration_fixtures",
+   "tests.fixtures.jvm_subprocess_fixture",
+    "pytest_playwright",
+    "tests.mocks.numpy_setup"
+]
+
+def pytest_addoption(parser):
+    """Ajoute des options de ligne de commande personnalisées à pytest."""
+    parser.addoption(
+        "--backend-url", action="store", default="http://localhost:5003",
+        help="URL du backend à tester"
+    )
+    parser.addoption(
+        "--frontend-url", action="store", default="http://localhost:3000",
+        help="URL du frontend à tester (si applicable)"
+    )
+    parser.addoption(
+        "--disable-e2e-servers-fixture", action="store_true", default=False,
+        help="Désactive la fixture e2e_servers pour éviter les conflits."
+    )
+
+@pytest.fixture(scope="session")
+def backend_url(request):
+    """Fixture pour récupérer l'URL du backend depuis les options pytest."""
+    return request.config.getoption("--backend-url")
+
+@pytest.fixture(scope="session")
+def frontend_url(request):
+    """Fixture pour récupérer l'URL du frontend depuis les options pytest."""
+    return request.config.getoption("--frontend-url")

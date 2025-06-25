@@ -401,6 +401,26 @@ class TweetyBridge:
             # On la propage.
             raise e
 
+    def create_belief_set_programmatically(self, builder_plugin_data: dict) -> Optional[Any]:
+        """
+        Crée un objet FolBeliefSet Java programmatiquement.
+        Délègue l'opération au `FOLHandler`.
+        
+        :param builder_plugin_data: Le dictionnaire __dict__ du BeliefSetBuilderPlugin.
+        :return: Un objet Java FolBeliefSet ou None en cas d'erreur.
+        """
+        if not self.is_jvm_ready() or not hasattr(self, '_fol_handler'):
+            self._logger.error("TweetyBridge ou FOLHandler non prêt pour create_belief_set_programmatically.")
+            return None
+        
+        try:
+            # Note: le handler retourne un tuple (belief_set, signature)
+            belief_set_obj, _ = self._fol_handler.create_belief_set_programmatically(builder_plugin_data)
+            return belief_set_obj
+        except (ValueError, jpype.JException) as e:
+            self._logger.error(f"Erreur lors de la création programmatique du BeliefSet: {e}", exc_info=True)
+            raise e
+
     # Les méthodes _parse_fol_formula, _parse_fol_belief_set, _execute_fol_query_internal
     # sont maintenant encapsulées dans FOLHandler et peuvent être supprimées ici.
     

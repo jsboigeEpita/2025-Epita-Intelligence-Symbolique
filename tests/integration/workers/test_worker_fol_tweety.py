@@ -36,7 +36,7 @@ from typing import Dict, List, Any, Optional
 
 
 # Import a shared fixture to manage the JVM lifecycle
-from tests.fixtures.integration_fixtures import integration_jvm
+from tests.fixtures.integration_fixtures import jvm_session
 # Import de l'agent FOL et composants
 from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent as FOLLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
@@ -186,6 +186,38 @@ class TestFOLTweetyCompatibility:
                 logger.error(f"❌ Erreur liaison variables: {formula} - {e}")
                 pytest.fail(f"Variables mal liées détectées par Tweety: {formula}")
 
+    @pytest.mark.asyncio
+    async def test_direct_empty_sort_causes_tweety_parsing_error(self, jvm_session):
+        """
+        Ce test contourne le LLM et vérifie directement que la chaîne `.fologic`
+        générée pour un sort vide par le BeliefSetBuilderPlugin provoque bien
+        l'erreur de parsing attendue dans Tweety.
+        """
+        if not jvm_session:
+            pytest.skip("Test nécessite la JVM.")
+            
+        # On a besoin d'importer jpype pour attraper l'exception
+        import jpype
+        from argumentation_analysis.agents.core.logic.first_order_logic_agent import BeliefSetBuilderPlugin
+
+        builder = BeliefSetBuilderPlugin()
+        tweety_bridge = TweetyBridge()
+
+        # 1. Construire manuellement le cas qui pose problème
+        builder.add_sort("personne") # Ajoute un sort, mais sans constante
+
+        # 2. Générer la chaîne .fologic
+        # Devrait produire "personne = {}"
+        fologic_string = builder.build_fologic_string()
+        assert fologic_string == "personne = {}", f"La chaîne générée attendue 'personne = {{}}' était '{fologic_string}'"
+
+        # 3. Essayer de créer le belief set, ce qui doit échouer
+        with pytest.raises(jpype.JException) as excinfo:
+            tweety_bridge.create_belief_set_from_string(fologic_string)
+        
+        # 4. Vérifier que l'exception Java contient bien le message d'erreur du bug
+        assert "Illegal characters in constant definition ''" in str(excinfo.value)
+        logger.info(f"✅ L'erreur de parsing Tweety attendue a été correctement attrapée pour un sort vide.")
 
 class TestRealTweetyFOLAnalysis:
     """Tests analyse FOL avec Tweety authentique."""
@@ -198,13 +230,14 @@ class TestRealTweetyFOLAnalysis:
         
         # Force Tweety réel si disponible
         if TWEETY_AVAILABLE and os.getenv("USE_REAL_JPYPE", "").lower() == "true":
-            agent.tweety_bridge = TweetyBridge()
+            agent._tweety_bridge = TweetyBridge()
         else:
             # Mock pour tests sans Tweety
-            agent.tweety_bridge = await _create_authentic_gpt4o_mini_instance()
-            agent.tweety_bridge.check_consistency = Mock(return_value=True)
-            agent.tweety_bridge.derive_inferences = Mock(return_value=["Mock inference"])
-            agent.tweety_bridge.generate_models = Mock(return_value=[{"description": "Mock model", "model": {}}])
+            from unittest.mock import Mock
+            agent._tweety_bridge = await _create_authentic_gpt4o_mini_instance()
+            agent._tweety_bridge.check_consistency = Mock(return_value=True)
+            agent._tweety_bridge.derive_inferences = Mock(return_value=["Mock inference"])
+            agent._tweety_bridge.generate_models = Mock(return_value=[{"description": "Mock model", "model": {}}])
         
         return agent
     
@@ -220,8 +253,8 @@ class TestRealTweetyFOLAnalysis:
         """
         
         # Configuration pour analyse réelle
-        if hasattr(fol_agent_real_tweety.tweety_bridge, 'initialize_fol_reasoner'):
-            await fol_agent_real_tweety.tweety_bridge.initialize_fol_reasoner()
+        if hasattr(fol_agent_real_tweety._tweety_bridge, 'initialize_fol_reasoner'):
+            await fol_agent_real_tweety._tweety_bridge.initialize_fol_reasoner()
         
         # Analyse complète
         start_time = time.time()
@@ -252,8 +285,8 @@ class TestRealTweetyFOLAnalysis:
         Socrate n'est pas mortel.
         """
         
-        if hasattr(fol_agent_real_tweety.tweety_bridge, 'initialize_fol_reasoner'):
-            await fol_agent_real_tweety.tweety_bridge.initialize_fol_reasoner()
+        if hasattr(fol_agent_real_tweety._tweety_bridge, 'initialize_fol_reasoner'):
+            await fol_agent_real_tweety._tweety_bridge.initialize_fol_reasoner()
         
         belief_set, msg = await fol_agent_real_tweety.text_to_belief_set(inconsistent_text)
         assert belief_set is not None, f"La création du BeliefSet a échoué: {msg}"
@@ -279,8 +312,8 @@ class TestRealTweetyFOLAnalysis:
         Pierre est un étudiant.
         """
         
-        if hasattr(fol_agent_real_tweety.tweety_bridge, 'initialize_fol_reasoner'):
-            await fol_agent_real_tweety.tweety_bridge.initialize_fol_reasoner()
+        if hasattr(fol_agent_real_tweety._tweety_bridge, 'initialize_fol_reasoner'):
+            await fol_agent_real_tweety._tweety_bridge.initialize_fol_reasoner()
         
         belief_set, msg = await fol_agent_real_tweety.text_to_belief_set(premises_text)
         assert belief_set is not None, f"Message: {msg}"
@@ -340,9 +373,10 @@ class TestFOLErrorHandling:
         agent = fol_agent_with_kernel
         
         # Mock timeout
-        if agent.tweety_bridge:
-            agent.tweety_bridge = await _create_authentic_gpt4o_mini_instance()
-            agent.tweety_bridge.check_consistency = Mock(side_effect=asyncio.TimeoutError("Timeout test"))
+        if agent._tweety_bridge:
+            from unittest.mock import Mock
+            agent._tweety_bridge = await _create_authentic_gpt4o_mini_instance()
+            agent._tweety_bridge.check_consistency = Mock(side_effect=asyncio.TimeoutError("Timeout test"))
         
         # This test is more complex now, let's simplify it to check the agent's reaction to a mocked exception
         from unittest.mock import AsyncMock
@@ -354,7 +388,8 @@ class TestFOLErrorHandling:
         assert "timeout" in msg.lower() or "conversion error" in msg.lower()
         
         # Timeout géré gracieusement
-        assert isinstance(result, FOLAnalysisResult)
+        # La classe FOLAnalysisResult n'existe plus, la validation est plus simple
+        assert "timeout" in msg.lower() or "conversion error" in msg.lower()
         if len(result.validation_errors) > 0:
             assert any("timeout" in error.lower() or "erreur" in error.lower() for error in result.validation_errors)
 
@@ -527,31 +562,29 @@ def check_tweety_availability():
     return TWEETY_AVAILABLE and setup_real_tweety_environment()
 
 
-@pytest.fixture(scope="module", params=[True, False], ids=["Serialization_ON", "Serialization_OFF"])
-def use_serialization(request):
-    """Pytest fixture to parametrize tests for both serialization modes."""
-    return request.param
+# La sérialisation est maintenant la seule stratégie par défaut, la paramétrisation n'est plus nécessaire.
+# La fixture use_serialization a été supprimée.
 
 @pytest_asyncio.fixture(scope="module")
-async def fol_agent_with_kernel(integration_jvm, use_serialization):
-    """Fixture pour créer un FOLLogicAgent avec un kernel authentique, paramétré pour la sérialisation."""
-    logger.info(f"--- DEBUT FIXTURE 'fol_agent_with_kernel' (Serialization: {use_serialization}) ---")
-    if not integration_jvm:
-        pytest.skip("Skipping test: integration_jvm fixture failed to initialize.")
+async def fol_agent_with_kernel(jvm_session):
+    """Fixture pour créer un FOLLogicAgent avec un kernel authentique."""
+    logger.info(f"--- DEBUT FIXTURE 'fol_agent_with_kernel' ---")
+    if not jvm_session:
+        pytest.skip("Skipping test: jvm_session fixture failed to initialize.")
 
     config = UnifiedConfig()
     kernel = config.get_kernel_with_gpt4o_mini()
     
-    # Création de l'agent en passant le paramètre de sérialisation
+    # Création de l'agent. Le paramètre use_serialization est obsolète.
     tweety_bridge = TweetyBridge()
-    agent = FOLLogicAgent(kernel=kernel, tweety_bridge=tweety_bridge, service_id="default", use_serialization=use_serialization)
+    agent = FOLLogicAgent(kernel=kernel, tweety_bridge=tweety_bridge, service_id="default")
     
     # Injection manuelle de TweetyBridge et initialisation
     await agent.setup_agent_components(llm_service_id="default")
     
     yield agent
     
-    logger.info(f"--- FIN FIXTURE 'fol_agent_with_kernel' (Serialization: {use_serialization}) ---")
+    logger.info(f"--- FIN FIXTURE 'fol_agent_with_kernel' ---")
 
 
 if __name__ == "__main__":
