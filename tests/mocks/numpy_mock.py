@@ -63,21 +63,24 @@ def create_numpy_mock():
 
     class MockRecarray(ndarray):
         def __init__(self, shape=(0,), formats=None, names=None, dtype=None, *args, **kwargs):
-            # Le constructeur de recarray peut prendre un simple entier pour la shape
             if isinstance(shape, int):
                 shape = (shape,)
-            
-            # Pour un recarray, `formats` ou `dtype` définit la structure.
-            # `formats` est juste une autre façon de spécifier `dtype`.
-            dtype_arg = formats or dtype
-            
+
+            # Construire le dtype correctement en combinant names et formats
+            if formats and names:
+                dtype_arg = list(zip(names, formats))
+            elif formats:
+                # Si seulement formats est donné, créer des noms par défaut
+                names = [f'f{i}' for i in range(len(formats))]
+                dtype_arg = list(zip(names, formats))
+            else:
+                dtype_arg = dtype
+
             super().__init__(shape=shape, dtype=dtype_arg, *args, **kwargs)
             
-            # `names` peut être passé séparément et devrait surcharger ceux du dtype.
             if names:
-                self.dtype.names = tuple(names) if names else self.dtype.names
+                self.dtype.names = tuple(names)
             
-            # Assigner `formats` pour la compatibilité
             self.formats = formats
 
     class generic: pass
