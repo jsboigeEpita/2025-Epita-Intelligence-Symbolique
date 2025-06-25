@@ -75,109 +75,21 @@ class FOLHandler:
             self.logger.error(f"Erreur de parsing dans Tweety: {e.getMessage()}", exc_info=True)
             raise ValueError(f"Erreur de parsing Tweety: {e.getMessage()}") from e
 
-    def create_belief_set_programmatically(self, builder_plugin_data: dict):
+    def create_belief_set_from_signature_and_formulas(self, signature, formulas):
         """
-        Crée un FolBeliefSet Java en mémoire à partir des données accumulées
-        par le BeliefSetBuilderPlugin.
-        C'est la nouvelle approche robuste qui contourne les bizarreries du
-        parseur de fichier .fologic.
-        """
-        from argumentation_analysis.agents.core.logic.first_order_logic_agent import BeliefSetBuilderPlugin
-        
-        sorts_data = builder_plugin_data.get("_sorts", {})
-        predicates_data = builder_plugin_data.get("_predicates", {})
-        formulas = builder_plugin_data.get("_formulas", [])
+        Crée un FolBeliefSet Java en mémoire à partir d'une signature et de formules.
 
-        FolSignature = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolSignature")
+        :param signature: L'objet FolSignature Java déjà construit.
+        :param formulas: Une liste de chaînes de formules FOL.
+        :return: Un objet FolBeliefSet de jpype.
+        """
         FolBeliefSet = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolBeliefSet")
-        Sort = jpype.JClass("org.tweetyproject.logics.commons.syntax.Sort")
-        Constant = jpype.JClass("org.tweetyproject.logics.commons.syntax.Constant")
-        Predicate = jpype.JClass("org.tweetyproject.logics.commons.syntax.Predicate")
-        String = jpype.JClass("java.lang.String")
-        ArrayList = jpype.JClass("java.util.ArrayList")
-
-        import re
+        FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
         
-        signature = FolSignature()
-        sorts_map = {}  # Python-side mapping from name to Java Sort object
-
-        # Étape 1: Collecter tous les sorts, constantes, et prédicats (déclarés et défensifs) en Python d'abord.
-        
-        # 1a. Collecter les prédicats déclarés par le LLM.
-        # On fait une copie pour pouvoir la modifier sans affecter l'original.
-        final_predicates_data = dict(predicates_data)
-
-        # 1b. Scan défensif pour trouver les prédicats utilisés mais non déclarés.
-        for formula_str in formulas:
-            potential_preds = re.findall(r'([a-zA-Z][a-zA-Z0-9_]*)\(', formula_str)
-            for pred_name in potential_preds:
-                if pred_name not in final_predicates_data:
-                    self.logger.warning(f"Prédicat '{pred_name}' utilisé mais non déclaré. Ajout défensif.")
-                    # Estimation de l'arité
-                    try:
-                        inner_content_match = re.search(re.escape(pred_name) + r'\((.*?)\)', formula_str)
-                        if inner_content_match:
-                            inner_content = inner_content_match.group(1)
-                            arity = inner_content.count(',') + 1 if inner_content else 0
-                        else:
-                            arity = 0 # Cas comme 'pred()'.
-                    except Exception:
-                        arity = 1 # Fallback sûr.
-                    
-                    # Stratégie : tout prédicat non déclaré est de type (thing, thing, ...)
-                    thing_sort_name = "thing"
-                    final_predicates_data[pred_name] = [thing_sort_name] * arity
-                    
-                    # S'assurer que 'thing' est bien dans la liste des sorts à créer.
-                    if thing_sort_name not in sorts_data:
-                        sorts_data[thing_sort_name] = []
-
-
-        # Étape 2: Construire la signature Java complète en une seule passe.
-
-        # 2a. Créer et ajouter tous les sorts.
-        for sort_name in sorts_data.keys():
-            try:
-                java_sort = Sort(String(sort_name))
-                signature.add(java_sort)
-                sorts_map[sort_name] = java_sort
-                self.logger.debug(f"Sort ajouté par programmation : {sort_name}")
-            except jpype.JException as e:
-                raise ValueError(f"Échec de la création du sort Java '{sort_name}': {e.getMessage()}") from e
-
-        # 2b. Créer et ajouter les constantes.
-        for sort_name, constants_list in sorts_data.items():
-            parent_sort = sorts_map.get(sort_name)
-            if parent_sort:
-                for const_name in constants_list:
-                    try:
-                        java_constant = Constant(String(const_name), parent_sort)
-                        signature.add(java_constant)
-                        self.logger.debug(f"Constante ajoutée: {const_name} de type {sort_name}")
-                    except jpype.JException as e:
-                        raise ValueError(f"Échec de la création de la constante '{const_name}': {e.getMessage()}") from e
-
-        # 2c. Créer et ajouter la liste COMPLÈTE des prédicats.
-        for pred_name, arg_sort_names in final_predicates_data.items():
-            java_arg_sorts = ArrayList()
-            for arg_sort_name in arg_sort_names:
-                java_sort = sorts_map.get(arg_sort_name)
-                if not java_sort:
-                    raise ValueError(f"Incohérence: Le sort '{arg_sort_name}' du prédicat '{pred_name}' n'a pas été trouvé.")
-                java_arg_sorts.add(java_sort)
-            
-            try:
-                java_predicate = Predicate(String(pred_name), java_arg_sorts)
-                signature.add(java_predicate)
-                self.logger.debug(f"Prédicat ajouté: {pred_name} avec args {arg_sort_names}")
-            except jpype.JException as e:
-                raise ValueError(f"Échec de la création du prédicat '{pred_name}': {e.getMessage()}") from e
-
-        # Étape 3: Créer le parser avec la signature finale et l'utiliser pour parser les formules.
+        # Étape 1: Créer le parser avec la signature finale et l'utiliser pour parser les formules.
         belief_set = FolBeliefSet()
         belief_set.setSignature(signature)
         
-        FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
         parser = FolParser()
         parser.setSignature(signature)
 
@@ -186,15 +98,16 @@ class FOLHandler:
                 parsed_formula = self.parse_fol_formula(formula_str, custom_parser=parser)
                 if parsed_formula:
                     belief_set.add(parsed_formula)
-                    self.logger.debug(f"Formule ajoutée: {formula_str}")
+                    self.logger.debug(f"Formule ajoutée par programmation: {formula_str}")
                 else:
-                    self.logger.warning(f"Le parsing de '{formula_str}' a retourné None.")
+                    self.logger.warning(f"Le parsing de '{formula_str}' avec la signature a retourné None.")
             except ValueError as e:
-                self.logger.error(f"Échec final du parsing de '{formula_str}' avec la signature construite : {e}")
+                self.logger.error(f"Échec final du parsing de la formule '{formula_str}' avec la signature construite : {e}")
+                # Nous remontons l'exception pour que l'appelant sache que la construction a échoué.
                 raise e
         
         self.logger.info(f"Base de connaissances FOL créée par programmation avec {belief_set.size()} formules.")
-        return belief_set, signature
+        return belief_set
 
     def fol_check_consistency(self, belief_set):
         """
@@ -241,30 +154,22 @@ class FOLHandler:
 
     def validate_formula_with_signature(self, signature, formula_str: str) -> tuple[bool, str]:
         """
-        Validates a FOL formula string by creating a dedicated, temporary parser
-        configured with the provided signature. This approach is thread-safe and
-        avoids state-related issues with a shared parser.
+        Valide une formule FOL contre une signature donnée.
         """
+        if signature is None:
+            # Validation de syntaxe pure si aucune signature n'est fournie.
+            try:
+                self.parse_fol_formula(formula_str)
+                return True, "Syntaxe valide (sans signature)."
+            except ValueError as e:
+                return False, str(e)
+
         FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
+        parser = FolParser()
+        parser.setSignature(signature)
         
-        logger.debug(f"Validation de la formule '{formula_str}' avec une nouvelle instance de parser.")
-
         try:
-            # 1. Create a new, isolated parser instance for this validation task.
-            validation_parser = FolParser()
-            
-            # 2. Set the provided signature on this isolated parser.
-            validation_parser.setSignature(signature)
-            self.logger.debug(f"Signature (Hash: {signature.hashCode()}) appliquée au parser de validation.")
-
-            # 3. Perform the parsing using the dedicated parser. If it succeeds, the formula is valid.
-            self.parse_fol_formula(formula_str, custom_parser=validation_parser)
-            self.logger.info(f"La formule FOL '{formula_str}' est valide avec la signature fournie.")
+            self.parse_fol_formula(formula_str, custom_parser=parser)
             return True, "Formule valide."
-        
-        except (jpype.JException, ValueError) as e:
-            # If parse_fol_formula throws an exception, it means the formula is invalid
-            # with respect to the given signature.
-            error_message = f"Error parsing FOL formula '{formula_str}': {e}"
-            self.logger.warning(error_message)
+        except ValueError as e:
             return False, str(e)

@@ -276,7 +276,8 @@ class UnifiedConfig:
         
         llm_service = create_llm_service(
             service_id="gpt-4o-mini-authentic",
-            force_mock=False
+            force_mock=False,
+            force_authentic=True  # Force l'utilisation du service réel même en mode test
         )
         
         kernel.add_service(llm_service)
