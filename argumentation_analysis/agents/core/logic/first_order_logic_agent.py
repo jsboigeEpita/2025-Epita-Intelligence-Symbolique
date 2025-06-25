@@ -209,7 +209,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
     service: Optional[ChatCompletionClientBase] = Field(default=None, exclude=True)
     settings: Optional[Any] = Field(default=None, exclude=True)
 
-    def __init__(self, kernel: Kernel, agent_name: str = "FirstOrderLogicAgent", service_id: Optional[str] = None, use_serialization: bool = True):
+    def __init__(self, kernel: Kernel, tweety_bridge: "TweetyBridge", agent_name: str = "FirstOrderLogicAgent", service_id: Optional[str] = None, use_serialization: bool = True):
         super().__init__(
             kernel=kernel,
             agent_name=agent_name,
@@ -224,7 +224,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             except Exception as e:
                 self.logger.warning(f"Could not retrieve service '{service_id}': {e}")
         
-        self._tweety_bridge = None
+        self._tweety_bridge = tweety_bridge
         # Le plugin qui contient nos outils. Il sera instancié ici.
         self._builder_plugin = BeliefSetBuilderPlugin()
         self.logger.info(f"Agent {self.name} initialisé. Stratégie: Appel d'Outils. Sérialisation: {self._use_serialization}")
@@ -249,7 +249,6 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         """
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants pour {self.name}...")
-        self._tweety_bridge = TweetyBridge()
 
         # Attendre que le pont Tweety soit prêt si l'initialisation est asynchrone
         if hasattr(self._tweety_bridge, 'wait_for_jvm') and asyncio.iscoroutinefunction(self._tweety_bridge.wait_for_jvm):

@@ -50,7 +50,7 @@ class ConcreteSherlockEnqueteAgent(SherlockEnqueteAgent):
 
 
 @pytest.fixture
-async def authentic_kernel():
+def authentic_kernel():
     """Fixture pour créer un vrai Kernel authentique."""
     kernel = Kernel()
     api_key = os.getenv("OPENAI_API_KEY")
@@ -66,10 +66,9 @@ async def authentic_kernel():
     return kernel
 
 @pytest.fixture
-async def sherlock_agent(authentic_kernel):
-    """Fixture asynchrone pour créer un agent Sherlock authentique et concret."""
-    # The authentic_kernel is already a coroutine, so we just await it
-    kernel = await authentic_kernel
+def sherlock_agent(authentic_kernel):
+    """Fixture pour créer un agent Sherlock authentique et concret."""
+    kernel = authentic_kernel
     return ConcreteSherlockEnqueteAgent(kernel=kernel, agent_name=TEST_AGENT_NAME)
 
 @pytest.mark.asyncio
@@ -78,7 +77,7 @@ class TestSherlockEnqueteAgentAuthentic:
 
     async def test_agent_instantiation(self, sherlock_agent):
         """Test l'instanciation basique de l'agent."""
-        agent = await sherlock_agent
+        agent = sherlock_agent
         assert isinstance(agent, SherlockEnqueteAgent)
         assert agent.name == TEST_AGENT_NAME
         assert hasattr(agent, '_kernel')
@@ -87,7 +86,7 @@ class TestSherlockEnqueteAgentAuthentic:
 
     async def test_agent_inheritance(self, sherlock_agent):
         """Test que l'agent hérite correctement."""
-        agent = await sherlock_agent
+        agent = sherlock_agent
         assert isinstance(agent, SherlockEnqueteAgent)
         assert isinstance(agent, BaseAgent)
         assert hasattr(agent, 'logger')
@@ -96,7 +95,7 @@ class TestSherlockEnqueteAgentAuthentic:
 
     async def test_default_system_prompt(self, sherlock_agent):
         """Test que l'agent utilise le prompt système par défaut."""
-        agent = await sherlock_agent
+        agent = sherlock_agent
         assert hasattr(agent, 'system_prompt')
         assert "Sherlock Holmes" in agent.system_prompt
         # Le nom est maintenant personnalisé par la fixture
@@ -116,7 +115,7 @@ class TestSherlockEnqueteAgentAuthentic:
 
     async def test_get_current_case_description_real(self, sherlock_agent):
         """Test authentique de récupération de description d'affaire."""
-        agent = await sherlock_agent
+        agent = sherlock_agent
         try:
             description = await agent.get_current_case_description()
             
@@ -131,7 +130,7 @@ class TestSherlockEnqueteAgentAuthentic:
 
     async def test_add_new_hypothesis_real(self, sherlock_agent):
         """Test authentique d'ajout d'hypothèse."""
-        agent = await sherlock_agent
+        agent = sherlock_agent
         hypothesis_text = "Le coupable est le Colonel Moutarde."
         confidence_score = 0.75
         
@@ -149,7 +148,7 @@ class TestSherlockEnqueteAgentAuthentic:
 
     async def test_agent_error_handling(self, sherlock_agent):
         """Test la gestion d'erreur authentique de l'agent."""
-        agent = await sherlock_agent
+        agent = sherlock_agent
         try:
             result = await agent.add_new_hypothesis("", -1.0)
             assert result is None or "erreur" in str(result).lower()
@@ -159,7 +158,7 @@ class TestSherlockEnqueteAgentAuthentic:
 
     async def test_agent_configuration_validation(self, sherlock_agent):
         """Test la validation de la configuration de l'agent."""
-        agent = await sherlock_agent
+        agent = sherlock_agent
         assert hasattr(agent, '_kernel')
         assert hasattr(agent, 'name')
         assert hasattr(agent, 'system_prompt')

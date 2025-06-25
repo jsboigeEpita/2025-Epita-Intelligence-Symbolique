@@ -543,10 +543,10 @@ async def fol_agent_with_kernel(integration_jvm, use_serialization):
     kernel = config.get_kernel_with_gpt4o_mini()
     
     # Création de l'agent en passant le paramètre de sérialisation
-    agent = FOLLogicAgent(kernel=kernel, service_id="default", use_serialization=use_serialization)
+    tweety_bridge = TweetyBridge()
+    agent = FOLLogicAgent(kernel=kernel, tweety_bridge=tweety_bridge, service_id="default", use_serialization=use_serialization)
     
     # Injection manuelle de TweetyBridge et initialisation
-    agent._tweety_bridge = TweetyBridge()
     await agent.setup_agent_components(llm_service_id="default")
     
     yield agent

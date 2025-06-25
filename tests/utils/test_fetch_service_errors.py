@@ -14,6 +14,7 @@ Tests pour la gestion des erreurs réseau du FetchService avec pytest.
 
 import pytest
 import requests
+from unittest.mock import patch, MagicMock
 
 
 # Définir une classe de service de récupération simplifiée pour les tests

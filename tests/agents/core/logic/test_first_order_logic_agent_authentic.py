@@ -39,93 +39,101 @@ from argumentation_analysis.agents.core.logic.belief_set import FirstOrderBelief
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
 
+@pytest.fixture(scope="class", autouse=True)
+@pytest.mark.asyncio
+async def setup_class_fixture(request, jvm_session):
+    """
+    Initialisation authentique pour toute la classe de test.
+    Utilise la fixture jvm_session pour garantir que la JVM est prête,
+    et inclut le patch anti-crash pour PyTorch.
+    Cette fixture est externe à la classe et utilise `request.cls` pour
+    configurer les attributs de la classe de test, ce qui est la
+    manière idiomatique de Pytest de gérer une configuration de classe
+    qui dépend d'autres fixtures.
+    """
+    cls = request.cls
+
+    # --- PATCH ANTI-CRASH (torch vs jpype) ---
+    print("\n[Setup Class Patch] Application de l'isolation de torch...")
+    import sys
+    modules_to_remove = ['torch', 'transformers', 'sentence_transformers']
+    modules_to_delete = [name for name in sys.modules if any(name.startswith(prefix) for prefix in modules_to_remove)]
+    for name in modules_to_delete:
+        del sys.modules[name]
+    if modules_to_delete:
+        print(f"[Setup Class Patch] {len(modules_to_delete)} modules relatifs à torch déchargés.")
+    # --- FIN PATCH ---
+
+    # Configuration du vrai Kernel Semantic Kernel
+    cls.kernel = Kernel()
+    
+    # Configuration authentique du service LLM
+    cls.llm_service_id = "authentic_fol_llm_service"
+    
+    # Essayer d'utiliser un vrai service LLM (OpenAI ou Azure)
+    cls.llm_available = False
+    
+    try:
+        # Priorité à Azure OpenAI si configuré et disponible
+        azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        azure_api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        azure_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o")
+        
+        if azure_endpoint and azure_api_key and AzureOpenAIChatCompletion:
+            chat_service = AzureOpenAIChatCompletion(
+                service_id=cls.llm_service_id,
+                deployment_name=azure_deployment,
+                endpoint=azure_endpoint,
+                api_key=azure_api_key
+            )
+            cls.kernel.add_service(chat_service)
+            cls.llm_available = True
+            print(f"✅ Service LLM Azure configuré: {azure_deployment}")
+        else:
+            # Fallback sur OpenAI
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+            if openai_api_key and OpenAIChatCompletion:
+                chat_service = OpenAIChatCompletion(
+                    service_id=cls.llm_service_id,
+                    ai_model_id="gpt-4o-mini",
+                    api_key=openai_api_key
+                )
+                cls.kernel.add_service(chat_service)
+                cls.llm_available = True
+                print("✅ Service LLM OpenAI configuré: gpt-4o-mini")
+            else:
+                print("⚠️ Connecteurs LLM non disponibles ou clés API manquantes")
+    except Exception as e:
+        cls.llm_available = False
+        print(f"⚠️ Erreur configuration LLM: {e}")
+
+    # Initialisation du vrai TweetyBridge, en s'appuyant sur la fixture jvm_session
+    try:
+        cls.tweety_bridge = TweetyBridge()
+        cls.tweety_available = cls.tweety_bridge.is_jvm_ready()
+        if cls.tweety_available:
+            print("✅ TweetyBridge JVM authentique prête (gérée par la fixture de session)")
+        else:
+            pytest.fail("La fixture jvm_session n'a pas réussi à préparer TweetyBridge.")
+    except Exception as e:
+        cls.tweety_available = False
+        pytest.fail(f"Erreur TweetyBridge lors de l'initialisation de la classe de test: {e}")
+
+    # Initialisation de l'agent authentique
+    cls.agent_name = "FirstOrderLogicAgent"
+    cls.agent = FirstOrderLogicAgent(cls.kernel, tweety_bridge=cls.tweety_bridge, service_id=cls.llm_service_id)
+    
+    # Configuration authentique de l'agent
+    if cls.llm_available:
+        try:
+            await cls.agent.setup_agent_components(cls.llm_service_id)
+            print("✅ Agent FOL authentique configuré")
+        except Exception as e:
+            print(f"⚠️ Erreur configuration agent: {e}")
+
+@pytest.mark.usefixtures("setup_class_fixture")
 class TestFirstOrderLogicAgentAuthentic:
     """Tests authentiques pour la classe FirstOrderLogicAgent - SANS MOCKS."""
-
-    @pytest.fixture(scope="class", autouse=True)
-    def setup_class(self, jvm_session):
-        """
-        Initialisation authentique pour toute la classe de test.
-        Utilise la fixture jvm_session pour garantir que la JVM est prête,
-        et inclut le patch anti-crash pour PyTorch.
-        """
-        # --- PATCH ANTI-CRASH (torch vs jpype) ---
-        print("\n[Setup Class Patch] Application de l'isolation de torch...")
-        import sys
-        modules_to_remove = ['torch', 'transformers', 'sentence_transformers']
-        modules_to_delete = [name for name in sys.modules if any(name.startswith(prefix) for prefix in modules_to_remove)]
-        for name in modules_to_delete:
-            del sys.modules[name]
-        if modules_to_delete:
-            print(f"[Setup Class Patch] {len(modules_to_delete)} modules relatifs à torch déchargés.")
-        # --- FIN PATCH ---
-
-        # Configuration du vrai Kernel Semantic Kernel
-        self.kernel = Kernel()
-        
-        # Configuration authentique du service LLM
-        self.llm_service_id = "authentic_fol_llm_service"
-        
-        # Essayer d'utiliser un vrai service LLM (OpenAI ou Azure)
-        self.llm_available = False
-        
-        try:
-            # Priorité à Azure OpenAI si configuré et disponible
-            azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-            azure_api_key = os.getenv("AZURE_OPENAI_API_KEY")
-            azure_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o")
-            
-            if azure_endpoint and azure_api_key and AzureOpenAIChatCompletion:
-                chat_service = AzureOpenAIChatCompletion(
-                    service_id=self.llm_service_id,
-                    deployment_name=azure_deployment,
-                    endpoint=azure_endpoint,
-                    api_key=azure_api_key
-                )
-                self.kernel.add_service(chat_service)
-                self.llm_available = True
-                print(f"✅ Service LLM Azure configuré: {azure_deployment}")
-            else:
-                # Fallback sur OpenAI
-                openai_api_key = os.getenv("OPENAI_API_KEY")
-                if openai_api_key and OpenAIChatCompletion:
-                    chat_service = OpenAIChatCompletion(
-                        service_id=self.llm_service_id,
-                        ai_model_id="gpt-4o-mini",
-                        api_key=openai_api_key
-                    )
-                    self.kernel.add_service(chat_service)
-                    self.llm_available = True
-                    print("✅ Service LLM OpenAI configuré: gpt-4o-mini")
-                else:
-                    print("⚠️ Connecteurs LLM non disponibles ou clés API manquantes")
-        except Exception as e:
-            self.llm_available = False
-            print(f"⚠️ Erreur configuration LLM: {e}")
-
-        # Initialisation du vrai TweetyBridge, en s'appuyant sur la fixture jvm_session
-        try:
-            self.tweety_bridge = TweetyBridge()
-            self.tweety_available = self.tweety_bridge.is_jvm_ready()
-            if self.tweety_available:
-                print("✅ TweetyBridge JVM authentique prête (gérée par la fixture de session)")
-            else:
-                pytest.fail("La fixture jvm_session n'a pas réussi à préparer TweetyBridge.")
-        except Exception as e:
-            self.tweety_available = False
-            pytest.fail(f"Erreur TweetyBridge lors de l'initialisation de la classe de test: {e}")
-
-        # Initialisation de l'agent authentique
-        self.agent_name = "FirstOrderLogicAgent"
-        self.agent = FirstOrderLogicAgent(self.kernel, service_id=self.llm_service_id)
-        
-        # Configuration authentique de l'agent
-        if self.llm_available:
-            try:
-                self.agent.setup_agent_components(self.llm_service_id)
-                print("✅ Agent FOL authentique configuré")
-            except Exception as e:
-                print(f"⚠️ Erreur configuration agent: {e}")
 
     def test_initialization_and_setup_authentic(self, jvm_session):
         """Test authentique de l'initialisation et de la configuration de l'agent."""
@@ -218,7 +226,8 @@ class TestFirstOrderLogicAgentAuthentic:
             print(f"⚠️ Erreur génération requêtes authentique: {e}")
             pytest.skip(f"Test authentique échoué: {e}")
 
-    def test_execute_query_authentic(self, jvm_session):
+    @pytest.mark.asyncio
+    async def test_execute_query_authentic(self, jvm_session):
         """Test authentique d'exécution de requête avec TweetyBridge."""
         if not self.tweety_available:
             pytest.skip("TweetyBridge non disponible")
@@ -231,7 +240,7 @@ class TestFirstOrderLogicAgentAuthentic:
         query = "mortal(socrates)"
         
         try:
-            result, message = self.agent.execute_query(belief_set, query)
+            result, message = await self.agent.execute_query(belief_set, query)
             
             print(f"✅ Exécution authentique requête: {result} - {message}")
             
@@ -289,7 +298,7 @@ class TestFirstOrderLogicAgentAuthentic:
                 # Étape 3: Exécution des requêtes (authentique) 
                 for i, query in enumerate(queries[:2]):  # Limiter pour les tests
                     if query:
-                        result, exec_message = self.agent.execute_query(belief_set, query)
+                        result, exec_message = await self.agent.execute_query(belief_set, query)
                         print(f"✅ Étape 3.{i+1} authentique - Requête '{query}': {result}")
                         assert isinstance(result, bool)
                         
