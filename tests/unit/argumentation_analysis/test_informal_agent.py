@@ -54,7 +54,8 @@ class TestInformalAnalysisPlugin(unittest.TestCase):
             'description_fr': ['Description racine', 'Description cat 1', 'Description cat 2', 'Description sous-cat 1.1'],
             'exemple_fr': ['Exemple racine', 'Exemple cat 1', 'Exemple cat 2', 'Exemple sous-cat 1.1'],
             'depth': [0, 1, 1, 2]
-        }).set_index('PK')
+        })
+        self.test_df.set_index('PK', inplace=True)
 
     
     

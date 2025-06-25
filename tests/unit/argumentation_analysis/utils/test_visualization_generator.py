@@ -69,10 +69,10 @@ def test_generate_performance_visualizations_files_created(
     Teste que la fonction tente de créer les fichiers attendus lorsque les bibliothèques sont (supposément) disponibles.
     """
     mocker.patch('argumentation_analysis.utils.visualization_generator.VISUALIZATION_LIBS_AVAILABLE', True)
-    mock_plt_savefig = mocker.patch('matplotlib.pyplot.savefig')
+    mock_plt = mocker.patch('matplotlib.pyplot')
+    mocker.patch.object(mock_plt, 'backend_version', '0.0')
+    mock_plt_savefig = mock_plt.savefig
     mock_df_to_csv = mocker.patch('pandas.DataFrame.to_csv')
-    mocker.patch('matplotlib.pyplot.close')
-    mocker.patch('matplotlib.pyplot.figure')
     mocker.patch('seaborn.heatmap')
     mocker.patch('matplotlib.pyplot.bar')
     mocker.patch('matplotlib.pyplot.title')
