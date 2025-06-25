@@ -59,7 +59,7 @@ class TweetyBridge:
 
         # Initialiser TweetyInitializer (qui gère la JVM et les composants Java)
         # TweetyInitializer est instancié ici.
-        self._initializer = TweetyInitializer(self) # TweetyInitializer prend l'instance de TweetyBridge
+        self._initializer = TweetyInitializer()
         if not self._initializer.is_jvm_started(): # Utiliser la méthode correcte de TweetyInitializer
             self._logger.info("TWEETY_BRIDGE: __init__ - JVM non prête, tentative d'initialisation via TweetyInitializer...")
             # TweetyInitializer._start_jvm() est appelé dans son __init__ si nécessaire.
@@ -73,11 +73,9 @@ class TweetyBridge:
         else:
             self._logger.info("TWEETY_BRIDGE: __init__ - JVM déjà prête ou initialisée par TweetyInitializer.")
 
-        # S'assurer que les composants spécifiques sont initialisés (PL, FOL, Modal)
-        # Ces appels sont idempotents dans TweetyInitializer s'ils ont déjà été faits.
-        self._initializer.initialize_pl_components()
-        self._initializer.initialize_fol_components()
-        self._initializer.initialize_modal_components()
+        # L'initialisation des composants (parsers) est désormais gérée
+        # automatiquement et de manière centralisée dans le constructeur de TweetyInitializer.
+        # Les appels explicites ne sont plus nécessaires.
 
         # Initialiser les handlers spécifiques
         try:
@@ -422,6 +420,26 @@ class TweetyBridge:
             self._logger.error(f"Erreur lors de la création du BeliefSet à partir de la chaîne: {e}", exc_info=True)
             # L'exception est levée dans le handler et sera attrapée par l'agent.
             # On la propage.
+            raise e
+
+    def create_belief_set_programmatically(self, builder_plugin_data: dict) -> Optional[Any]:
+        """
+        Crée un objet FolBeliefSet Java programmatiquement.
+        Délègue l'opération au `FOLHandler`.
+        
+        :param builder_plugin_data: Le dictionnaire __dict__ du BeliefSetBuilderPlugin.
+        :return: Un objet Java FolBeliefSet ou None en cas d'erreur.
+        """
+        if not self.is_jvm_ready() or not hasattr(self, '_fol_handler'):
+            self._logger.error("TweetyBridge ou FOLHandler non prêt pour create_belief_set_programmatically.")
+            return None
+        
+        try:
+            # Note: le handler retourne un tuple (belief_set, signature)
+            belief_set_obj, _ = self._fol_handler.create_belief_set_programmatically(builder_plugin_data)
+            return belief_set_obj
+        except (ValueError, jpype.JException) as e:
+            self._logger.error(f"Erreur lors de la création programmatique du BeliefSet: {e}", exc_info=True)
             raise e
 
     # Les méthodes _parse_fol_formula, _parse_fol_belief_set, _execute_fol_query_internal

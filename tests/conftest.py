@@ -207,7 +207,7 @@ def jvm_session():
     # Construire le chemin relatif vers le JDK
     project_root = Path(__file__).parent.parent.resolve()
     # Path corrected to point to the root portable_jdk, not the one in libs
-    jdk_base_path = os.path.join(project_root, "portable_jdk", "jdk-17.0.2+8")
+    jdk_base_path = os.path.join(project_root, "portable_jdk", "jdk-17.0.11+9")
     jvm_dll_path = os.path.join(jdk_base_path, "bin", "server", "jvm.dll")
 
     if not os.path.exists(jvm_dll_path):
@@ -226,12 +226,21 @@ def jvm_session():
             print(f"[JVM Fixture Pre-init] {len(modules_to_delete)} modules relatifs à torch ont été déchargés.")
             # --- FIN PATCH ---
 
+            # --- CORRECTIF CRASH JVM (Leçon de l'historique Git) ---
+            # On désactive la fermeture automatique par JPype pour éviter les conflits.
+            # L'arrêt sera géré manuellement à la fin de la session dans cette fixture.
+            if hasattr(jpype, 'config'):
+                print("[JVM Fixture] Définition de jpype.config.destroy_jvm = False")
+                jpype.config.destroy_jvm = False
+            # --- FIN CORRECTIF ---
+
             print("\n[JVM Fixture] Démarrage de la JVM pour la session de test...")
             # La logique de recherche du JDK/classpath est maintenant centralisée dans jvm_setup.
             # L'import est local à la fixture pour éviter les effets de bord.
             from argumentation_analysis.core.jvm_setup import initialize_jvm
             
-            initialize_jvm()
+            if not initialize_jvm():
+                pytest.fail("initialize_jvm() a retourné False. Échec critique du démarrage de la JVM.")
 
             print("[JVM Fixture] JVM démarrée avec succès via jvm_setup.")
         except SystemExit as se:
@@ -240,7 +249,9 @@ def jvm_session():
             print(f"[JVM Fixture] Threads actifs au moment du crash: {active_threads}")
             pytest.fail(f"Crash JVM intercepté comme SystemExit ({se.code}).")
         except Exception as e:
-            pytest.fail(f"Échec du démarrage de la JVM : {e}")
+            # Maintenant que initialize_jvm lève une exception, nous la propageons
+            # pour un rapport d'erreur clair et immédiat.
+            pytest.fail(f"Échec du démarrage de la JVM lors de l'appel à initialize_jvm : {e}", pytrace=True)
 
     yield
 
