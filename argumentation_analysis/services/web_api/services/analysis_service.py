@@ -6,6 +6,7 @@ Service d'analyse complète utilisant le moteur d'analyse argumentative.
 """
 import time
 import logging
+import asyncio
 from typing import Dict, List, Any, Optional
 import semantic_kernel as sk
 
@@ -319,7 +320,7 @@ class AnalysisService:
                             "description": "This is a mock response to test the application flow without a real LLM call.",
                             "severity": 0.5,
                             "confidence": 0.99,
-                            "location": "N/A",
+                            "location": {},
                             "context": text,
                             "explanation": "Mocked during integration test."
                         }

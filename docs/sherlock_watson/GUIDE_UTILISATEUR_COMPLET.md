@@ -11,10 +11,10 @@
 | 🎯 **Section** | ⏱️ **Temps** | 🔗 **Liens Associés** |
 |----------------|-------------|----------------------|
 | [⚡ Démarrage Express](#-démarrage-express) | 2 min | [📖 Index Principal](README.md) |
-| [🔧 Installation Complète](#-installation-complète) | 15 min | [🏗️ Architecture](DOCUMENTATION_COMPLETE_SHERLOCK_WATSON.md) |
+| [🔧 Installation Complète](#-installation-complète) | 15 min | [🏗️ Architecture](guide_unifie_sherlock_watson.md) |
 | [🎲 Démo Cluedo Oracle](#-démo-cluedo-oracle-enhanced) | 10 min | [📋 Rapport Oracle](RAPPORT_MISSION_ORACLE_ENHANCED.md) |
 | [🧩 Démo Einstein](#-démo-einstein-oracle) | 10 min | [📊 Analyse Orchestrations](../analyse_orchestrations_sherlock_watson.md) |
-| [🚨 Dépannage](#-dépannage) | 5 min | [🔧 Architecture Technique](ARCHITECTURE_TECHNIQUE_DETAILLEE.md) |
+| [🚨 Dépannage](#-dépannage) | 5 min | [🔧 Architecture Technique](guide_unifie_sherlock_watson.md) |
 | [🛡️ Sécurité et Règles](#️-sécurité-et-règles-du-jeu) | 5 min | [📊 Audit Intégrité](AUDIT_INTEGRITE_CLUEDO.md) |
 
 ---
@@ -679,8 +679,8 @@ python scripts\sherlock_watson\test_oracle_behavior_simple.py
 ## 🔗 **LIENS UTILES**
 
 ### 📚 **Documentation Complémentaire**
-- 🏗️ **[Architecture Complète](DOCUMENTATION_COMPLETE_SHERLOCK_WATSON.md)** - Système multi-agents détaillé
-- 🔧 **[Architecture Technique](ARCHITECTURE_TECHNIQUE_DETAILLEE.md)** - Intégrations techniques approfondies
+- 🏗️ **[Architecture Complète](guide_unifie_sherlock_watson.md)** - Système multi-agents détaillé
+- 🔧 **[Architecture Technique](guide_unifie_sherlock_watson.md)** - Intégrations techniques approfondies
 - 📖 **[Index Principal](README.md)** - Navigation centrale et accès rapide
 
 ### 📋 **Rapports et Analyses**

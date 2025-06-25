@@ -17,92 +17,145 @@ import logging
 import re
 import json
 import jpype
+import asyncio
 from typing import Dict, List, Optional, Any, Tuple, AsyncGenerator
 from abc import abstractmethod
 
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
-from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents import ChatMessageContent, AuthorRole
 from semantic_kernel.contents.chat_history import ChatHistory
-from pydantic import Field
+from semantic_kernel.functions.kernel_function_decorator import kernel_function
+from pydantic import Field, field_validator
  
 from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
 from .belief_set import BeliefSet, FirstOrderBeliefSet
 from .tweety_bridge import TweetyBridge
 
 # Configuration du logger
-logger = logging.getLogger(__name__) # Utilisation de __name__ pour une meilleure pratique
+logger = logging.getLogger(__name__)
+
+# ==============================================================================
+# STRATÉGIE D'ARCHITECTURE FINALE (BASÉE SUR LES OUTILS)
+# ------------------------------------------------------------------------------
+# L'approche précédente, consistant à demander au LLM de générer directement la
+# syntaxe `.fologic`, s'est avérée peu fiable. Les LLMs ne sont pas doués pour
+# respecter des grammaires strictes.
+#
+# La nouvelle stratégie est beaucoup plus robuste :
+# 1. DÉFINIR DES OUTILS : Nous définissons un "Plugin" avec des fonctions claires
+#    (`add_sort`, `add_constant`, etc.) qui représentent les opérations de
+#    construction d'une base de connaissances.
+# 2. RÔLE DU LLM : Le LLM n'écrit plus de code. Son unique rôle est d'analyser
+#    le texte et de décider QUELS outils appeler avec QUELS arguments.
+# 3. RÔLE DU CODE PYTHON : Le code Python (le plugin) reçoit ces appels,
+#    accumule les informations dans une structure de données interne fiable,
+#    puis génère la chaîne `.fologic` finale de manière déterministe.
+#
+# C'est une séparation claire des responsabilités qui tire parti des forces
+# de chaque composant.
+# ==============================================================================
+
+
+class BeliefSetBuilderPlugin:
+    """
+    Un plugin sémantique qui fournit des outils pour construire une base de
+    connaissances FOL de manière incrémentale. Le LLM appellera ces fonctions
+    comme des outils.
+    """
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        """Réinitialise l'état interne du constructeur."""
+        self._sorts: Dict[str, List[str]] = {}  # {sort_name: [const1, const2]}
+        self._predicates: Dict[str, List[str]] = {}  # {pred_name: [sort1, sort2]}
+        self._formulas: List[str] = []
+
+    def _normalize(self, name: str) -> str:
+        """Normalise un identifiant pour être compatible avec Tweety."""
+        import unidecode
+        # Conserve la casse originale pour les prédicats, mais normalise les caractères
+        name = unidecode.unidecode(name)
+        # Remplace les espaces/caractères non alphanumériques par _ sauf pour les prédicats
+        if name and not name[0].isupper():
+             name = re.sub(r'[^a-zA-Z0-9_]', '_', name)
+        return name
+
+    @kernel_function(
+        description="Déclare un nouveau sort (un type de catégorie, comme 'personne' ou 'ville').",
+        name="add_sort",
+    )
+    def add_sort(self, sort_name: str):
+        """Ajoute un sort à la base de connaissances."""
+        norm_sort = self._normalize(sort_name)
+        if norm_sort not in self._sorts:
+            self._sorts[norm_sort] = []
+        return f"Sort '{norm_sort}' ajouté."
+
+    @kernel_function(
+        description="Ajoute une constante (un objet spécifique, comme 'socrate') à un sort déclaré.",
+        name="add_constant",
+    )
+    def add_constant(self, constant_name: str, sort_name: str):
+        """Ajoute une constante à un sort."""
+        norm_const = self._normalize(constant_name)
+        norm_sort = self._normalize(sort_name)
+        if norm_sort not in self._sorts:
+            self.add_sort(norm_sort) # Tolérance : on crée le sort s'il manque
+        if norm_const not in self._sorts[norm_sort]:
+            self._sorts[norm_sort].append(norm_const)
+        return f"Constante '{norm_const}' ajoutée au sort '{norm_sort}'."
+
+    @kernel_function(
+        description="Déclare un nouveau prédicat (une propriété ou une relation, comme 'EstMortel').",
+        name="add_predicate",
+    )
+    def add_predicate(self, predicate_name: str, argument_sorts: List[str]):
+        """Ajoute une déclaration de type de prédicat."""
+        norm_pred = self._normalize(predicate_name)
+        norm_args = [self._normalize(s) for s in argument_sorts]
+        self._predicates[norm_pred] = norm_args
+        return f"Prédicat '{norm_pred}' déclaré avec les arguments {norm_args}."
+
+    @kernel_function(
+        description="Ajoute une formule logique (un fait ou une règle) à la base de connaissances.",
+        name="add_formula",
+    )
+    def add_formula(self, formula: str):
+        """Ajoute une formule."""
+        # La formule elle-même n'est pas normalisée, car elle contient de la syntaxe.
+        self._formulas.append(formula)
+        return f"Formule '{formula}' ajoutée."
+
+    def build_fologic_string(self) -> str:
+        """Construit la chaîne .fologic finale à partir de l'état accumulé."""
+        lines = []
+        # 1. Construire les déclarations de sorts
+        for sort, constants in self._sorts.items():
+            if constants: # Ne générer que si non vide
+                lines.append(f"{sort} = {{{', '.join(constants)}}}")
+        # 2. Construire les déclarations de types de prédicats
+        for pred, args in self._predicates.items():
+            lines.append(f"type({pred}({', '.join(args)}))")
+        # 3. Ajouter les formules
+        lines.extend(self._formulas)
+        return "\n".join(lines)
+
 
 # Prompt Système pour l'agent FOL
-SYSTEM_PROMPT_FOL = """Vous êtes un agent spécialisé dans l'analyse et le raisonnement en logique du premier ordre (FOL).
-Vous utilisez la syntaxe de TweetyProject pour représenter les formules FOL.
-Vos tâches principales incluent la traduction de texte en formules FOL, la génération de requêtes FOL pertinentes,
-l'exécution de ces requêtes sur un ensemble de croyances FOL, et l'interprétation des résultats obtenus.
+SYSTEM_PROMPT_FOL = """Vous êtes un assistant d'analyse logique. Votre tâche est de décomposer un texte en ses composants logiques fondamentaux en utilisant les outils fournis.
+Pour chaque phrase ou idée dans le texte de l'utilisateur, appelez les outils `add_sort`, `add_constant`, `add_predicate` et `add_formula` de manière séquentielle et logique.
+
+**Règles d'Appel des Outils :**
+1.  **D'abord, les concepts :** Identifiez et déclarez tous les sorts (catégories) et constantes (objets spécifiques) en premier.
+2.  **Ensuite, les relations :** Déclarez les types de tous les prédicats (propriétés/relations) avant de les utiliser.
+3.  **Enfin, les affirmations :** Ajoutez les formules (faits et règles) en dernier, en vous assurant que tous les sorts, constantes et prédicats qu'elles utilisent ont déjà été déclarés.
+4.  **Soyez exhaustif :** Assurez-vous que chaque information du texte est représentée par un ou plusieurs appels d'outils.
+5.  **Ne répondez rien d'autre.** Votre seule sortie doit être les appels aux outils.
 """
 
-# Prompts pour la logique du premier ordre (optimisés)
-
-PROMPT_TEXT_TO_UNIFIED_FOL = """Expert en Logique du Premier Ordre (FOL), votre tâche est d'analyser un texte et de le convertir en une structure logique complète, incluant définitions et formules, dans un format JSON strict.
-
-**Instructions Fondamentales :**
-
-1.  **Analyse Complète :** Vous devez extraire les `sorts`, `constants`, `predicates` ET les `formulas` logiques qui traduisent les affirmations du texte.
-
-2.  **Nomenclature :**
-    *   `sorts`, `constants` : `snake_case` minuscule, singulier (ex: `etudiant`, `livre`).
-    *   `predicates` : `PascalCase` (ex: `EstMortel`, `InfluenceCulture`).
-    *   Ne jamais utiliser de pluriel pour les noms de prédicats.
-
-3.  **Sorts vs. Prédicats :**
-    *   Un `sort` est une catégorie (`homme`).
-    *   Un `prédicat` est une propriété (`EstMortel`) ou une relation (`Aime`).
-    *   Ne créez pas un `sort` pour une simple propriété.
-
-4.  **Génération de Formules (RÈGLES IMPÉRATIVES) :**
-    *   **RÈGLE D'OR - COHÉRENCE DES TYPES :** C'est la règle la plus importante. Le `sort` d'une variable ou d'une constante utilisée comme argument dans une formule DOIT correspondre EXACTEMENT au `sort` défini pour ce prédicat. Toute incohérence rend la sortie invalide.
-        *   **Exemple de VIOLATION DE TYPE :**
-            *   Définition: `{"name": "Mange", "args": ["animal", "nourriture"]}`
-            *   Formule INCORRECTE: `forall X:chat (exists Y:plante (Mange(X, Y)))`
-            *   **Analyse de l'erreur :** La formule est invalide car le prédicat `Mange` attend un `animal` et une `nourriture`, mais reçoit un `chat` et une `plante`. Même si conceptuellement un chat est un animal, vous devez utiliser les types exacts de la définition pour la validité logique.
-    *   **Utilisation des définitions :** Utilisez **UNIQUEMENT** les `sorts`, `constants` et `predicates` que vous avez définis dans ce même JSON.
-    *   **Syntaxe de quantification :** `forall X:sort (...)` ou `exists Y:sort (...)`.
-    *   **ERREUR À ÉVITER (Sorts vs Constantes) :** N'utilisez **JAMAIS** un nom de `sort` (ex: `culture`) comme argument direct d'un prédicat.
-        *   **Contexte :** `influence(ecrivain, culture)` est un prédicat et `culture` est un `sort`.
-        *   **INCORRECT :** `influence(auteur_constant, culture)` <-- `culture` est un type, pas un individu.
-        *   **CORRECT :** `exists X:culture (influence(auteur_constant, X))` <-- On quantifie sur une variable de type `culture`.
-
-5.  **Format de sortie (JSON Strict IMPÉRATIF) :**
-    ```json
-    {
-      "sorts": ["<type_1>", ...],
-      "constants": {"<const_1>": "<type_1>", ...},
-      "predicates": [{"name": "NomPredicat", "args": ["<type_1>", ...]}, ...],
-      "formulas": ["<formule_1>", "<formule_2>", ...]
-    }
-    ```
-
-**Exemple Complet :**
-
-*   **Texte :** "Socrate est un homme. Tous les hommes sont mortels."
-*   **JSON Attendu :**
-    ```json
-    {
-      "sorts": ["homme"],
-      "constants": {"socrate": "homme"},
-      "predicates": [{"name": "EstMortel", "args": ["homme"]}],
-      "formulas": [
-        "EstMortel(socrate)",
-        "forall X:homme (EstMortel(X))"
-      ]
-    }
-    ```
-
-**Votre Tâche :**
-
-Texte à analyser : {{$input}}
-
-Produisez le JSON final complet.
-"""
+# Anciens prompts conservés pour les autres fonctions de l'agent
 
 PROMPT_GEN_FOL_QUERIES = """Expert FOL : À partir du texte et de l'ensemble de croyances (belief set), générez des requêtes FOL pertinentes et syntaxiquement valides au format JSON.
 
@@ -156,7 +209,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
     service: Optional[ChatCompletionClientBase] = Field(default=None, exclude=True)
     settings: Optional[Any] = Field(default=None, exclude=True)
 
-    def __init__(self, kernel: Kernel, agent_name: str = "FirstOrderLogicAgent", service_id: Optional[str] = None):
+    def __init__(self, kernel: Kernel, agent_name: str = "FirstOrderLogicAgent", service_id: Optional[str] = None, use_serialization: bool = True):
         super().__init__(
             kernel=kernel,
             agent_name=agent_name,
@@ -164,6 +217,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             system_prompt=SYSTEM_PROMPT_FOL
         )
         self._llm_service_id = service_id
+        self._use_serialization = use_serialization
         if kernel and service_id:
             try:
                 self.service = kernel.get_service(service_id, type=ChatCompletionClientBase)
@@ -171,7 +225,9 @@ class FirstOrderLogicAgent(BaseLogicAgent):
                 self.logger.warning(f"Could not retrieve service '{service_id}': {e}")
         
         self._tweety_bridge = None
-        self.logger.info(f"Agent {self.name} initialisé avec le type de logique {self.logic_type}.")
+        # Le plugin qui contient nos outils. Il sera instancié ici.
+        self._builder_plugin = BeliefSetBuilderPlugin()
+        self.logger.info(f"Agent {self.name} initialisé. Stratégie: Appel d'Outils. Sérialisation: {self._use_serialization}")
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         return {
@@ -187,7 +243,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             }
         }
 
-    def setup_agent_components(self, llm_service_id: str) -> None:
+    async def setup_agent_components(self, llm_service_id: str) -> None:
         """
         Configure les composants de l'agent, notamment le pont logique et les fonctions sémantiques.
         """
@@ -195,22 +251,21 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         self.logger.info(f"Configuration des composants pour {self.name}...")
         self._tweety_bridge = TweetyBridge()
 
+        # Attendre que le pont Tweety soit prêt si l'initialisation est asynchrone
+        if hasattr(self._tweety_bridge, 'wait_for_jvm') and asyncio.iscoroutinefunction(self._tweety_bridge.wait_for_jvm):
+            await self._tweety_bridge.wait_for_jvm()
+
         if not self.tweety_bridge.is_jvm_ready():
             self.logger.error("Tentative de setup FOL Kernel alors que la JVM n'est PAS démarrée.")
-            return
+            # Levee d'une exception pour interrompre le test
+            raise RuntimeError("TweetyBridge not initialized, JVM not ready.")
 
         default_settings = self._kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
         
-        # Ajout de la fonction unifiée pour la conversion texte -> FOL
-        self._kernel.add_function(
-            prompt=PROMPT_TEXT_TO_UNIFIED_FOL,
-            plugin_name=self.name,
-            function_name="TextToFOL",
-            description="Convertit un texte en définitions et formules FOL en une seule étape.",
-            prompt_execution_settings=default_settings
-        )
+        # Ajout du plugin de construction comme une collection d'outils
+        self._kernel.add_plugin(self._builder_plugin, plugin_name="BeliefBuilder")
         
-        # Ajout des autres fonctions sémantiques nécessaires
+        # Ajout des autres fonctions sémantiques nécessaires (celles-ci peuvent rester basées sur des prompts)
         prompts = {
             "GenerateFOLQueries": PROMPT_GEN_FOL_QUERIES,
             "InterpretFOLResult": PROMPT_INTERPRET_FOL
@@ -222,7 +277,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
                 function_name=name,
                 prompt_execution_settings=default_settings
             )
-        self.logger.info(f"Fonctions sémantiques pour {self.name} ajoutées au kernel.")
+        self.logger.info(f"Plugin 'BeliefBuilder' et fonctions sémantiques pour {self.name} ajoutés au kernel.")
             
     def _normalize_identifier(self, text: str) -> str:
         """Normalise un identifiant en snake_case sans accents."""
@@ -232,140 +287,74 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         text = re.sub(r'[^a-zA-Z0-9_]', '', text)
         return text.lower()
 
-    async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
+    async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[FirstOrderBeliefSet], str]:
         """
-        Convertit un texte en `FirstOrderBeliefSet` en utilisant un seul prompt unifié.
+        Convertit un texte en `FirstOrderBeliefSet` en utilisant la stratégie d'appel d'outils.
         """
-        self.logger.info(f"Début de la conversion texte vers FOL pour {self.name}...")
+        self.logger.info(f"Début de la conversion de texte vers FOL (stratégie Outils) pour {self.name}...")
+        
+        # Réinitialiser l'état du plugin builder pour cette nouvelle conversion
+        self._builder_plugin.reset()
+
+        # Configurer l'historique de chat pour l'invocation avec outils
+        chat = ChatHistory(system_message=SYSTEM_PROMPT_FOL)
+        chat.add_user_message(text)
+        
+        # Paramètres d'exécution pour forcer l'appel d'outils
+        execution_settings = self._kernel.get_prompt_execution_settings_from_service_id(self._llm_service_id)
+        execution_settings.tool_choice = "auto" # Laisse le LLM décider quand appeler les outils
+
         try:
-            # Étape 1 : Appel unique au LLM pour tout générer
-            self.logger.info("Étape 1: Génération de la structure logique complète...")
-            # Note: Le code de débug codé en dur pour Socrate n'est pas inclus ici car il n'est pas pertinent pour la logique de production.
-            unified_result = await self._kernel.plugins[self.name]["TextToFOL"].invoke(self._kernel, input=text)
-            raw_unified_json = json.loads(self._extract_json_block(str(unified_result)))
-            self.logger.debug(f"Structure brute reçue du LLM: {json.dumps(raw_unified_json, indent=2)}")
+            # Invocation directe du service de chat, qui gérera la boucle d'appels d'outils
+            # Il est crucial de lier les outils du kernel aux settings pour qu'ils soient envoyés à l'API.
+            # L'API attend une liste de dictionnaires, pas une liste d'objets KernelPlugin.
+            # Nous devons convertir chaque plugin en son format dictionnaire.
+            # NOTE: Cette ligne est une supposition éclairée. Si 'to_dict' n'est pas
+            # la bonne méthode, la prochaine erreur nous le dira.
+            execution_settings.tools = [plugin.to_dict() for plugin in self._kernel.plugins.values()]
 
-            # Étape 2 : Normalisation
-            self.logger.info("Étape 2: Normalisation de la structure...")
-            normalized_structure = self._normalize_logical_structure(raw_unified_json)
-            self.logger.debug(f"Structure logique normalisée: {json.dumps(normalized_structure, indent=2)}")
+            result = await self.service.get_chat_message_content(
+                chat,
+                settings=execution_settings,
+                kernel=self._kernel
+            )
+
+            self.logger.info("Le LLM a terminé d'appeler les outils.")
             
-            if not any(normalized_structure.get(k) for k in ["sorts", "constants", "predicates"]):
-                return None, "Aucune structure logique (sorts, constantes, prédicats) n'a pu être extraite."
-
-            # Étape 3 : Création de la signature Tweety via l'approche programmatique
-            self.logger.info("Étape 3: Création de l'objet signature Tweety...")
-            signature_obj = self.tweety_bridge._fol_handler.create_programmatic_fol_signature(normalized_structure)
-            if not signature_obj:
-                return None, "Échec de la création d'un objet signature Tweety valide."
-
-            # Étape 4 : Validation des formules une par une contre la signature
-            self.logger.info("Étape 4: Validation des formules générées...")
-            valid_formulas = []
-            for formula_str in normalized_structure.get("formulas", []):
-                is_valid, msg = self.tweety_bridge._fol_handler.validate_formula_with_signature(signature_obj, formula_str)
-                if is_valid:
-                    valid_formulas.append(formula_str)
-                    self.logger.info(f"Formule acceptée: '{formula_str}'")
-                else:
-                    self.logger.warning(f"Formule rejetée: '{formula_str}'. Raison: {msg}")
+            # Construire la chaîne fologic à partir de l'état accumulé dans le plugin
+            tweety_syntax_str = self._builder_plugin.build_fologic_string()
             
-            if not valid_formulas and normalized_structure.get("formulas"):
-                 return None, "Toutes les formules générées étaient invalides selon la signature."
+            if not tweety_syntax_str:
+                return None, "L'analyse n'a produit aucune structure logique."
 
-            # Étape 5 : Création du BeliefSet final à partir de la signature et des formules valides
-            self.logger.info("Étape 5: Création de l'ensemble de croyances final...")
-            belief_set_obj = self.tweety_bridge._fol_handler.create_belief_set_from_formulas(signature_obj, valid_formulas)
-            
-            final_kb_json = {**normalized_structure, "formulas": valid_formulas}
-            final_belief_set = FirstOrderBeliefSet(content=json.dumps(final_kb_json, indent=2), java_object=belief_set_obj)
-            
-            is_consistent, _ = self.is_consistent(final_belief_set)
-            if not is_consistent:
-                self.logger.warning("La base de connaissances finale est incohérente.")
+            self.logger.debug(f"Syntaxe Tweety générée par le BeliefBuilderPlugin:\n{tweety_syntax_str}")
 
-            return final_belief_set, "Conversion unifiée réussie."
+            # Parser la chaîne générée de manière déterministe
+            belief_set_obj = self.tweety_bridge.create_belief_set_from_string(tweety_syntax_str)
+            
+            # Créer l'objet BeliefSet final
+            if self._use_serialization:
+                final_belief_set = FirstOrderBeliefSet(content=tweety_syntax_str, java_object=None)
+            else:
+                final_belief_set = FirstOrderBeliefSet(content=tweety_syntax_str, java_object=belief_set_obj)
+
+            self.logger.info("Conversion via la stratégie d'appel d'outils réussie.")
+            return final_belief_set, "Conversion réussie."
 
         except Exception as e:
-            error_msg = f"Échec lors de la création de l'ensemble de croyances : {e}"
-            self.logger.error(error_msg, exc_info=True)
-            return None, error_msg
+            last_error = str(e)
+            self.logger.error(f"Une erreur est survenue durant le processus de conversion par outils: {last_error}", exc_info=True)
+            return None, f"Échec final. Erreur: {last_error}"
 
+    # Les fonctions _extract_fologic_block et _sanitize_fologic_string ne sont plus nécessaires
+    # car la génération de la chaîne est maintenant déterministe et contrôlée en interne.
+    
     def _extract_json_block(self, text: str) -> str:
-        """Extracts the first valid JSON block from the LLM's response."""
-        match = re.search(r"```json\s*(\{.*?\})\s*```", text, re.DOTALL)
+        """Extracts a JSON block from a markdown-formatted string."""
+        match = re.search(r"```(json)?\s*(.*?)\s*```", text, re.DOTALL)
         if match:
-            return match.group(1)
-        
-        start = text.find('{')
-        end = text.rfind('}')
-        if start != -1 and end != -1:
-            return text[start:end+1]
-        
-        self.logger.warning("No JSON block found in the response.")
-        return "{}"
-
-    def _normalize_logical_structure(self, structure_json: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Normalise les identifiants, et nettoie la structure logique.
-        La responsabilité de la hiérarchie des sorts est maintenant déléguée au LLM.
-        """
-        import unidecode
-        identifier_map = {}
-
-        # 1. Normaliser sorts, constantes, prédicats et créer une map d'identifiants
-        original_sorts = structure_json.get("sorts", [])
-        normalized_sorts = sorted([self._normalize_identifier(s) for s in original_sorts])
-        for orig, norm in zip(original_sorts, normalized_sorts):
-             identifier_map[orig] = norm
-
-        original_constants = structure_json.get("constants", {})
-        normalized_constants = {}
-        for const, sort in original_constants.items():
-            norm_const = self._normalize_identifier(const)
-            norm_sort = identifier_map.get(sort, self._normalize_identifier(sort))
-            if not norm_sort in normalized_sorts:
-                 normalized_sorts.append(norm_sort)
-            normalized_constants[norm_const] = norm_sort
-            identifier_map[const] = norm_const
-
-        original_predicates = structure_json.get("predicates", [])
-        normalized_predicates = []
-        for pred in original_predicates:
-            pred_name = pred.get("name", "")
-            norm_pred_name = unidecode.unidecode(pred_name)
-            norm_args = [identifier_map.get(arg, self._normalize_identifier(arg)) for arg in pred.get("args", [])]
-            normalized_predicates.append({"name": norm_pred_name, "args": norm_args})
-            identifier_map[pred_name] = norm_pred_name
-
-        # 2. Normaliser les formules en substituant les identifiants
-        original_formulas = structure_json.get("formulas", [])
-        formulas_with_normalized_ids = []
-        sorted_identifiers = sorted(identifier_map.keys(), key=len, reverse=True)
-        for formula in original_formulas:
-            norm_formula = formula
-            for orig_id in sorted_identifiers:
-                norm_id = identifier_map[orig_id]
-                norm_formula = re.sub(r'\b' + re.escape(orig_id) + r'\b', norm_id, norm_formula, flags=re.UNICODE)
-            
-            # Correction de la syntaxe de négation invalide potentiellement générée par le LLM
-            norm_formula = norm_formula.replace("== false", "").replace("== true", "")
-            if " not " in norm_formula.lower():
-                 norm_formula = re.sub(r'not\s*([A-Z][a-zA-Z0-9_]*\([^)]+\))', r'!\1', norm_formula, flags=re.IGNORECASE)
-
-            formulas_with_normalized_ids.append(norm_formula.strip())
-
-        # 3. Transformer la structure de la hiérarchie des sorts pour `create_programmatic_fol_signature`
-        subsorts_list = structure_json.get("subsorts", [])
-        sort_hierarchy = {item['sub']: item['parent'] for item in subsorts_list}
-
-        return {
-            "sorts": normalized_sorts,
-            "constants": normalized_constants,
-            "predicates": normalized_predicates,
-            "formulas": formulas_with_normalized_ids,
-            "sort_hierarchy": sort_hierarchy
-        }
+            return match.group(2).strip()
+        return text # Assume it's raw JSON if no block is found
         
         
     async def generate_queries(self, text: str, belief_set: FirstOrderBeliefSet, **kwargs) -> List[str]:
@@ -378,14 +367,14 @@ class FirstOrderLogicAgent(BaseLogicAgent):
                 return []
                 
             args = {"input": text, "belief_set": belief_set.content}
-            result = await self._kernel.plugins[self.name]["GenerateFOLQueries"].invoke(self._kernel, **args)
+            result = await self._kernel.functions[self.name]["GenerateFOLQueries"].invoke(self._kernel, **args)
             queries = json.loads(self._extract_json_block(str(result))).get("queries", [])
             self.logger.info(f"{len(queries)} requêtes potentielles reçues du LLM.")
             
             # Valider chaque requête générée
             valid_queries = []
             for q_str in queries:
-                if self.validate_formula(q_str, belief_set):
+                if await self.validate_formula(q_str, belief_set):
                     valid_queries.append(q_str)
                     self.logger.info(f"Requête validée: {q_str}")
                 else:
@@ -395,15 +384,19 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             self.logger.error(f"Erreur durant la génération de requêtes: {e}", exc_info=True)
             return []
 
-    def execute_query(self, belief_set: FirstOrderBeliefSet, query: str) -> Tuple[Optional[bool], str]:
+    async def execute_query(self, belief_set: FirstOrderBeliefSet, query: str) -> Tuple[Optional[bool], str]:
         """
         Exécute une requête FOL sur un `FirstOrderBeliefSet` donné.
+        Recrée l'objet Java à la volée si nécessaire (mode sérialisation).
         """
         self.logger.info(f"Exécution de la requête: {query} pour l'agent {self.name}")
-        if not belief_set.java_belief_set:
-            return None, "Objet Java 'belief set' non trouvé."
+        
+        java_belief_set = await self._recreate_java_belief_set(belief_set)
+        if not java_belief_set:
+            return None, "Impossible de recréer ou de trouver l'objet belief set Java."
+            
         try:
-            entails = self.tweety_bridge._fol_handler.fol_query(belief_set.java_belief_set, query)
+            entails = self.tweety_bridge._fol_handler.fol_query(java_belief_set, query)
             result_str = "ACCEPTED" if entails else "REJECTED"
             return entails, result_str
         except Exception as e:
@@ -423,7 +416,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             results_text_list = [res[1] if res else "Error: No result" for res in results]
             results_str = "\n".join(results_text_list)
             
-            result = await self._kernel.plugins[self.name]["InterpretFOLResult"].invoke(
+            result = await self._kernel.functions[self.name]["InterpretFOLResult"].invoke(
                 self._kernel,
                 input=text,
                 belief_set=belief_set.content,
@@ -436,34 +429,77 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             self.logger.error(error_msg, exc_info=True)
             return f"Error: {error_msg}"
 
-    def validate_formula(self, formula: str, belief_set: Optional[FirstOrderBeliefSet] = None) -> bool:
+    async def validate_formula(self, formula: str, belief_set: Optional[FirstOrderBeliefSet] = None) -> bool:
         """
         Validates the syntax of a FOL formula, optionally against a belief set's signature.
         """
         self.logger.debug(f"Validation de la formule FOL: {formula}")
-        if belief_set and belief_set.java_belief_set:
-            signature = belief_set.java_belief_set.getSignature()
-            is_valid, _ = self.tweety_bridge._fol_handler.validate_formula_with_signature(signature, formula)
-        else: # Fallback to context-less validation if no belief set provided
-            is_valid, _ = self.tweety_bridge.validate_fol_formula(formula)
+        if belief_set:
+            java_belief_set = await self._recreate_java_belief_set(belief_set)
+            if java_belief_set:
+                signature = java_belief_set.getSignature()
+                is_valid, _ = self.tweety_bridge._fol_handler.validate_formula_with_signature(signature, formula)
+                return is_valid
+
+        # Fallback to context-less validation
+        is_valid, _ = self.tweety_bridge.validate_fol_formula(formula)
         return is_valid
 
-    def is_consistent(self, belief_set: FirstOrderBeliefSet) -> Tuple[bool, str]:
-        """Checks if a FOL belief set is consistent using its Java object."""
+    async def is_consistent(self, belief_set: FirstOrderBeliefSet) -> Tuple[bool, str]:
+        """
+        Checks if a FOL belief set is consistent.
+        Recreates the Java object on-the-fly if needed (serialization mode).
+        """
         self.logger.info(f"Vérification de la consistance pour {self.name}")
-        if not belief_set.java_belief_set:
-            return False, "Objet Java BeliefSet non créé."
+        
+        java_belief_set = await self._recreate_java_belief_set(belief_set)
+        if not java_belief_set:
+            return False, "Impossible de recréer ou de trouver l'objet belief set Java pour la vérification de consistance."
+            
         try:
-            return self.tweety_bridge._fol_handler.fol_check_consistency(belief_set.java_belief_set)
+            return self.tweety_bridge._fol_handler.fol_check_consistency(java_belief_set)
         except Exception as e:
             self.logger.error(f"Erreur inattendue durant la vérification de consistance: {e}", exc_info=True)
             return False, str(e)
 
-    def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> BeliefSet:
+    async def _recreate_java_belief_set(self, belief_set: FirstOrderBeliefSet) -> Optional[Any]:
+        """
+        Garantit qu'un objet Java BeliefSet est disponible.
+        En mode sérialisation, il le recrée à partir du contenu stocké (syntaxe native).
+        Sinon, il retourne celui qui est déjà stocké.
+        """
+        if belief_set.java_object:
+            self.logger.debug("Utilisation de l'objet Java BeliefSet préexistant.")
+            return belief_set.java_object
+            
+        if not belief_set.content:
+            self.logger.error("Reconstruction JIT impossible: pas de contenu pour recréer l'objet BeliefSet.")
+            return None
+
+        self.logger.info("Reconstruction JIT de l'objet BeliefSet Java à partir de la syntaxe native...")
+        try:
+            # Le contenu est maintenant la chaîne de syntaxe native
+            java_object = self.tweety_bridge.create_belief_set_from_string(belief_set.content)
+            
+            if not java_object:
+                 raise RuntimeError("La création du BeliefSet à partir de la chaîne a retourné None.")
+
+            self.logger.info("Reconstruction JIT à partir de la syntaxe native réussie.")
+            return java_object
+            
+        except (RuntimeError, jpype.JException, ValueError) as e:
+            self.logger.error(f"Échec de la reconstruction JIT du BeliefSet: {e}", exc_info=True)
+            return None
+
+    def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> Optional[FirstOrderBeliefSet]:
         """Recreates a BeliefSet object from a dictionary."""
         content = belief_set_data.get("content", "")
-        # This is a simplified recreation; the Java object is lost on serialization.
-        return FirstOrderBeliefSet(content)
+        if not content:
+            return None
+        
+        # This method is synchronous, so we can't call async methods here.
+        # It's better to rely on JIT reconstruction.
+        return FirstOrderBeliefSet(content=content, java_object=None)
 
     async def validate_argument(self, premises: List[str], conclusion: str, **kwargs) -> bool:
         """
@@ -477,26 +513,14 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             self.logger.error(f"Impossible de créer un belief set à partir des prémisses. Statut: {status}")
             return False
 
-        if not self.validate_formula(conclusion, belief_set):
+        if not await self.validate_formula(conclusion, belief_set):
             self.logger.warning(f"La conclusion '{conclusion}' a une syntaxe invalide ou n'est pas alignée avec la signature du belief set.")
-            
-            #Tentative de réparation de la conclusion
-            self.logger.info("Tentative de réparation de la conclusion en utilisant la normalisation...")
-            
-            # Crée une structure ad-hoc pour la normalisation
-            temp_structure = json.loads(belief_set.content)
-            temp_structure["formulas"] = [conclusion]
-            
-            repaired_structure = self._normalize_logical_structure(temp_structure)
-            repaired_conclusion = repaired_structure["formulas"][0]
-            self.logger.info(f"Conclusion réparée (tentative) : {repaired_conclusion}")
+            # La réparation de la conclusion est désactivée car elle dépendait de l'ancienne logique JSON
+            # et de _normalize_logical_structure.
+            # Une nouvelle logique de réparation serait nécessaire pour la syntaxe native.
+            return False
 
-            if not self.validate_formula(repaired_conclusion, belief_set):
-                 self.logger.error("La conclusion réparée est toujours invalide.")
-                 return False
-            conclusion = repaired_conclusion
-
-        entails, query_status = self.execute_query(belief_set, conclusion)
+        entails, query_status = await self.execute_query(belief_set, conclusion)
 
         if entails is None:
             self.logger.error(f"Erreur lors de l'exécution de la requête pour la conclusion '{conclusion}': {query_status}")

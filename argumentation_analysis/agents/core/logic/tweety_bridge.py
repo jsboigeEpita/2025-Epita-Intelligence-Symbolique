@@ -403,6 +403,27 @@ class TweetyBridge:
             self._logger.error(error_msg, exc_info=True)
             return f"FUNC_ERROR: {error_msg}"
 
+    def create_belief_set_from_string(self, tweety_syntax: str) -> Optional[Any]:
+        """
+        Crée un objet FolBeliefSet Java directement à partir d'une chaîne de
+        syntaxe native Tweety.
+        Délègue l'opération au `FOLHandler`.
+        
+        :param tweety_syntax: La chaîne de caractères de la base de connaissances.
+        :return: Un objet Java FolBeliefSet ou None en cas d'erreur.
+        """
+        if not self.is_jvm_ready() or not hasattr(self, '_fol_handler'):
+            self._logger.error("TweetyBridge ou FOLHandler non prêt pour create_belief_set_from_string.")
+            return None
+        
+        try:
+            return self._fol_handler.create_belief_set_from_string(tweety_syntax)
+        except (ValueError, jpype.JException) as e:
+            self._logger.error(f"Erreur lors de la création du BeliefSet à partir de la chaîne: {e}", exc_info=True)
+            # L'exception est levée dans le handler et sera attrapée par l'agent.
+            # On la propage.
+            raise e
+
     # Les méthodes _parse_fol_formula, _parse_fol_belief_set, _execute_fol_query_internal
     # sont maintenant encapsulées dans FOLHandler et peuvent être supprimées ici.
     

@@ -24,6 +24,7 @@ class TestEnhancedContextualFallacyAnalyzer(unittest.TestCase):
         cls.mock_has_transformers = cls.patcher_transformers.start()
 
         # Mocker les modèles NLP pour éviter les téléchargements et les chargements longs et coûteux
+        # Mocker les modèles NLP pour éviter les téléchargements et les chargements longs et coûteux
         cls.patcher_pipeline = patch('argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer.pipeline', return_value=MagicMock())
         cls.mock_pipeline = cls.patcher_pipeline.start()
         

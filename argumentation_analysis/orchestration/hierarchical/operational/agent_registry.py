@@ -81,10 +81,10 @@ class OperationalAgentRegistry:
         # Créer une nouvelle instance de l'agent
         try:
             agent_class = self.agent_classes[agent_type]
+            # Création de l'agent sans le project_context qui sera passé à initialize
             agent = agent_class(
                 name=f"{agent_type.capitalize()}Agent",
-                operational_state=self.operational_state,
-                project_context=self.project_context
+                operational_state=self.operational_state
             )
             
             # Initialiser l'agent avec kernel et llm_service_id

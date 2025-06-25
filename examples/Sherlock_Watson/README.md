@@ -425,9 +425,9 @@ except ImportError:
 ## 📚 **RÉFÉRENCES ET DOCUMENTATION COMPLÉMENTAIRE**
 
 ### 🔗 **Liens Documentation Technique**
-- **Architecture Complète** : [`docs/sherlock_watson/DOCUMENTATION_COMPLETE_SHERLOCK_WATSON.md`](../../docs/sherlock_watson/DOCUMENTATION_COMPLETE_SHERLOCK_WATSON.md)
-- **Guide Sécurité Oracle** : [`docs/sherlock_watson/AUDIT_INTEGRITE_CLUEDO.md`](../../docs/sherlock_watson/AUDIT_INTEGRITE_CLUEDO.md)
-- **Rapport Mission Complète** : [`docs/sherlock_watson/MISSION_SHERLOCK_WATSON_COMPLETE.md`](../../docs/sherlock_watson/MISSION_SHERLOCK_WATSON_COMPLETE.md)
+- **Architecture Complète** : [`docs/sherlock_watson/../../docs/sherlock_watson/guide_unifie_sherlock_watson.md`](../../docs/sherlock_watson/../../docs/sherlock_watson/guide_unifie_sherlock_watson.md)
+- **Guide Sécurité Oracle** : [`docs/sherlock_watson/../../docs/sherlock_watson/guide_unifie_sherlock_watson.md`](../../docs/sherlock_watson/../../docs/sherlock_watson/guide_unifie_sherlock_watson.md)
+- **Rapport Mission Complète** : [`docs/sherlock_watson/../../docs/sherlock_watson/guide_unifie_sherlock_watson.md`](../../docs/sherlock_watson/../../docs/sherlock_watson/guide_unifie_sherlock_watson.md)
 
 ### 📖 **Documentation Externe**
 - **Semantic Kernel** : [Documentation Officielle Microsoft](https://learn.microsoft.com/en-us/semantic-kernel/)

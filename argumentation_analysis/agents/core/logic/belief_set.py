@@ -129,7 +129,7 @@ class FirstOrderBeliefSet(BeliefSet):
         :param java_object: L'objet org.tweetyproject.logics.fol.syntax.FolBeliefSet correspondant.
         """
         super().__init__(content)
-        self.java_belief_set = java_object
+        self.java_object = java_object
 
     @property
     def logic_type(self) -> str:

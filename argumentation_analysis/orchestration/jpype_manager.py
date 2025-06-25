@@ -14,8 +14,8 @@ class JPypeManager:
         self.logger = logging.getLogger(__name__)
         self.jars_path = None
         self.jvm_options = [
-            '-Xms64m', 
-            '-Xmx512m', 
+            '-Xms64m',
+            '-Xmx512m',
             '-Dfile.encoding=UTF-8',
             '-Djava.awt.headless=true'
         ]

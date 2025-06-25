@@ -70,7 +70,7 @@ class TestStrategicTacticalInterface:
         
         return interface, mock_strategic_state, mock_tactical_state, mock_middleware, mock_strategic_adapter, mock_tactical_adapter
 
-    def test_translate_objectives(self, interface_components):
+    def test_translate_objectives_to_directives(self, interface_components):
         """Teste la traduction des objectifs stratégiques en directives tactiques."""
         (interface, _, _, _, mock_strategic_adapter, _) = interface_components
         # Définir les objectifs à traduire
@@ -90,7 +90,7 @@ class TestStrategicTacticalInterface:
         # Appeler la méthode à tester
         result = interface.translate_objectives_to_directives(objectives)
         
-        # Vérifier que la méthode issue_directive a été appelée (corrigé selon l'erreur)
+        # Vérifier que la méthode issue_directive a été appelée
         mock_strategic_adapter.issue_directive.assert_called()
         
         # Vérifier le résultat

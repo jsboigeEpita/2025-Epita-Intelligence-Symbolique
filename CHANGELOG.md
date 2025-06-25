@@ -27,14 +27,14 @@ et ce projet adhère au [Versioning Sémantique](https://semver.org/lang/fr/).
   - 🛠️ Troubleshooting complet avec solutions
   - 📊 Métriques de performance validées
 
-- **docs/sherlock_watson/ARCHITECTURE_MULTI_AGENTS_TECHNIQUE.md** : Spécifications techniques
+- **docs/sherlock_watson/guide_unifie_sherlock_watson.md** : Spécifications techniques
   - 🤖 Spécifications détaillées des 3 agents avec configurations
   - 🔧 Intégration Semantic Kernel 1.29.0 complète
   - ⚙️ Bridge TweetyProject avec 35+ JARs documentés
   - 🔄 Patterns d'orchestration avancés avec code
   - 🛡️ Système de sécurité multi-niveaux détaillé
 
-- **docs/sherlock_watson/GUIDE_UTILISATEUR_SHERLOCK_WATSON_COMPLET.md** : Manuel utilisateur (600 lignes)
+- **docs/sherlock_watson/guide_unifie_sherlock_watson.md** : Manuel utilisateur (600 lignes)
   - 🚀 Guide démarrage rapide (5 minutes)
   - 🎯 Configuration détaillée (Python, Java, APIs)
   - 🎭 Utilisation démonstrations avec paramètres

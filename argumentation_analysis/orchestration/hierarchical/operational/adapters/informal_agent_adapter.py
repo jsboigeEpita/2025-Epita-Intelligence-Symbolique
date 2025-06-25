@@ -32,18 +32,20 @@ class InformalAgentAdapter(OperationalAgent):
         par l'`OperationalManager`.
     """
 
-    def __init__(self, name: str = "InformalAgent", operational_state: Optional[OperationalState] = None):
+    def __init__(self, name: str = "InformalAgent", operational_state: Optional[OperationalState] = None, project_context: Optional[ProjectContext] = None):
         """
         Initialise l'adaptateur pour l'agent d'analyse informelle.
 
         Args:
             name: Le nom de l'instance de l'agent.
             operational_state: L'état opérationnel partagé.
+            project_context: Le contexte du projet.
         """
         super().__init__(name, operational_state)
         self.agent: Optional[InformalAnalysisAgent] = None
         self.kernel: Optional[sk.Kernel] = None
         self.llm_service_id: Optional[str] = None
+        self.project_context = project_context
         self.initialized = False
         self.logger = logging.getLogger(f"InformalAgentAdapter.{name}")
 
