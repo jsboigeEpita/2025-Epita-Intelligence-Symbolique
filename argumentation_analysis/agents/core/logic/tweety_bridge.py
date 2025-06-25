@@ -47,52 +47,31 @@ class TweetyBridge:
     def __init__(self):
         """
         Initialise le pont TweetyBridge et ses gestionnaires.
-
-        Ce constructeur orchestre la séquence d'initialisation :
-        1. Création de `TweetyInitializer` qui démarre la JVM si nécessaire.
-        2. Initialisation des composants Java pour chaque logique (PL, FOL, Modale).
-        3. Instanciation des gestionnaires Python qui s'interfacent avec ces composants.
+        La JVM doit être démarrée au préalable (géré par conftest.py).
         """
         self._logger = logger
-        self._logger.info("TWEETY_BRIDGE: __init__ - Début (Refactored)")
-        self._jvm_ok = False # Sera mis à True si tous les handlers s'initialisent correctement
+        self._logger.info("TWEETY_BRIDGE: __init__ - Initializing...")
+        self._jvm_ok = False
 
-        # Initialiser TweetyInitializer (qui gère la JVM et les composants Java)
-        # TweetyInitializer est instancié ici.
-        self._initializer = TweetyInitializer(self) # TweetyInitializer prend l'instance de TweetyBridge
-        if not self._initializer.is_jvm_started(): # Utiliser la méthode correcte de TweetyInitializer
-            self._logger.info("TWEETY_BRIDGE: __init__ - JVM non prête, tentative d'initialisation via TweetyInitializer...")
-            # TweetyInitializer._start_jvm() est appelé dans son __init__ si nécessaire.
-            # Il faut s'assurer que les composants spécifiques sont prêts.
-            # self._initializer.start_jvm_and_initialize() # Cette méthode n'existe pas sur TweetyInitializer
-            # L'appel à _start_jvm est fait dans __init__ de TweetyInitializer.
-            # Il faut ensuite s'assurer que les composants sont initialisés.
-            if not self._initializer.is_jvm_started(): # Vérifier à nouveau après l'init de TweetyInitializer
-                self._logger.error("TWEETY_BRIDGE: __init__ - Échec critique de l'initialisation de la JVM via TweetyInitializer.")
-                raise RuntimeError("TweetyBridge ne peut pas fonctionner sans une JVM initialisée.")
-        else:
-            self._logger.info("TWEETY_BRIDGE: __init__ - JVM déjà prête ou initialisée par TweetyInitializer.")
-
-        # S'assurer que les composants spécifiques sont initialisés (PL, FOL, Modal)
-        # Ces appels sont idempotents dans TweetyInitializer s'ils ont déjà été faits.
-        self._initializer.initialize_pl_components()
-        self._initializer.initialize_fol_components()
-        self._initializer.initialize_modal_components()
-
-        # Initialiser les handlers spécifiques
         try:
+            # 1. Instancier l'initialiseur. Il vérifiera si la JVM est prête.
+            self._initializer = TweetyInitializer(self)
+
+            # 2. Instancier les handlers. L'initialiseur a déjà chargé les classes Java.
             self._pl_handler = PLHandler(self._initializer)
             self._fol_handler = FOLHandler(self._initializer)
             self._modal_handler = ModalHandler(self._initializer)
-            self._jvm_ok = True # Indique que les handlers Python sont prêts
-            self._logger.info("TWEETY_BRIDGE: __init__ - Handlers PL, FOL, Modal initialisés avec succès.")
-        except RuntimeError as e:
-            self._logger.error(f"TWEETY_BRIDGE: __init__ - Erreur lors de l'initialisation des handlers: {e}", exc_info=True)
-            self._jvm_ok = False # Marquer comme non prêt si un handler échoue
-            # Il est important de lever l'exception ici pour signaler que TweetyBridge n'est pas fonctionnel.
-            raise RuntimeError(f"Échec de l'initialisation d'un handler dans TweetyBridge: {e}") from e
+            
+            self._jvm_ok = True
+            self._logger.info("TWEETY_BRIDGE: __init__ - Bridge and handlers initialized successfully.")
         
-        self._logger.info(f"TWEETY_BRIDGE: __init__ - Fin (Refactored). _jvm_ok: {self._jvm_ok}")
+        except RuntimeError as e:
+            self._logger.error(f"TWEETY_BRIDGE: __init__ - Critical failure during initialization: {e}", exc_info=True)
+            self._jvm_ok = False
+            # Propager l'erreur pour que l'application sache que le pont n'est pas fonctionnel.
+            raise
+        
+        self._logger.info(f"TWEETY_BRIDGE: __init__ - Finished. JVM Ready: {self.is_jvm_ready()}")
     
     def is_jvm_ready(self) -> bool:
         """
@@ -252,32 +231,30 @@ class TweetyBridge:
         
         if not self.is_jvm_ready() or not hasattr(self, '_pl_handler'):
             self._logger.error("TweetyBridge.execute_pl_query: TweetyBridge ou PLHandler non prêt.")
-            return "FUNC_ERROR: TweetyBridge ou PLHandler non prêt."
+            return False, "FUNC_ERROR: TweetyBridge ou PLHandler non prêt."
         
         try:
-            # PLHandler.pl_query gère le parsing du BS et de la requête, et l'exécution.
-            # Il devrait retourner True, False, ou lever une exception.
             result_bool = self._pl_handler.pl_query(belief_set_content, query_string)
             
-            # Formater le résultat comme attendu par l'ancienne interface
-            if result_bool is None: # Cas où le handler pourrait retourner None (même si non prévu actuellement)
+            if result_bool is None:
                 result_str = f"Tweety Result: Unknown for query '{query_string}'."
-                self._logger.warning(f"Requête PL '{query_string}' -> indéterminé (None) via PLHandler.")
+                self._logger.warning(f"PL query '{query_string}' -> UNKNOWN (None) from handler.")
+                return False, result_str # Retourne False pour un résultat inconnu
             else:
                 result_label = "ACCEPTED (True)" if result_bool else "REJECTED (False)"
                 result_str = f"Tweety Result: Query '{query_string}' is {result_label}."
-                self._logger.info(f"Résultat formaté requête PL '{query_string}' via PLHandler: {result_label}")
+                self._logger.info(f"Formatted PL query result for '{query_string}': {result_label}")
             
-            return result_str
+            return result_bool, result_str
         
-        except ValueError as e_val: # Erreurs de parsing ou autres erreurs logiques du handler
-            error_msg = f"Erreur lors de l'exécution de la requête PL via PLHandler: {str(e_val)}"
+        except ValueError as e_val:
+            error_msg = f"Error during PL query execution via PLHandler: {e_val}"
             self._logger.error(error_msg, exc_info=True)
-            return f"FUNC_ERROR: {error_msg}"
-        except Exception as e_generic: # Autres erreurs inattendues
-            error_msg = f"Erreur inattendue lors de l'exécution de la requête PL: {str(e_generic)}"
+            return False, f"FUNC_ERROR: {error_msg}"
+        except Exception as e_generic:
+            error_msg = f"Unexpected error during PL query: {e_generic}"
             self._logger.error(error_msg, exc_info=True)
-            return f"FUNC_ERROR: {error_msg}"
+            return False, f"FUNC_ERROR: {error_msg}"
     # Les méthodes _parse_pl_formula, _parse_pl_belief_set, _execute_pl_query_internal
     # sont maintenant encapsulées dans PLHandler et peuvent être supprimées ici.
             
@@ -379,29 +356,29 @@ class TweetyBridge:
         
         if not self.is_jvm_ready() or not hasattr(self, '_fol_handler'):
             self._logger.error("TweetyBridge.execute_fol_query: TweetyBridge ou FOLHandler non prêt.")
-            return "FUNC_ERROR: TweetyBridge ou FOLHandler non prêt."
+            return None, "FUNC_ERROR: TweetyBridge ou FOLHandler non prêt."
         
         try:
             result_bool = self._fol_handler.fol_query(belief_set_content, query_string, signature_declarations_str)
             
-            if result_bool is None: # FOLHandler.fol_query peut retourner None si le raisonneur ne peut pas conclure
+            if result_bool is None:
                 result_str = f"Tweety Result: Unknown for FOL query '{query_string}'."
-                self._logger.warning(f"Requête FOL '{query_string}' -> indéterminé (None) via FOLHandler.")
+                self._logger.warning(f"FOL query '{query_string}' -> UNKNOWN (None) from handler.")
             else:
                 result_label = "ACCEPTED (True)" if result_bool else "REJECTED (False)"
                 result_str = f"Tweety Result: FOL Query '{query_string}' is {result_label}."
-                self._logger.info(f"Résultat formaté requête FOL '{query_string}' via FOLHandler: {result_label}")
+                self._logger.info(f"Formatted FOL query result for '{query_string}': {result_label}")
             
-            return result_str
+            return result_bool, result_str
             
-        except ValueError as e_val: # Erreurs de parsing ou autres du handler
-            error_msg = f"Erreur lors de l'exécution de la requête FOL via FOLHandler: {str(e_val)}"
+        except ValueError as e_val:
+            error_msg = f"Error during FOL query execution via FOLHandler: {e_val}"
             self._logger.error(error_msg, exc_info=True)
-            return f"FUNC_ERROR: {error_msg}"
-        except Exception as e_generic: # Erreurs inattendues
-            error_msg = f"Erreur inattendue lors de l'exécution de la requête FOL: {str(e_generic)}"
+            return None, f"FUNC_ERROR: {error_msg}"
+        except Exception as e_generic:
+            error_msg = f"Unexpected error during FOL query: {e_generic}"
             self._logger.error(error_msg, exc_info=True)
-            return f"FUNC_ERROR: {error_msg}"
+            return None, f"FUNC_ERROR: {error_msg}"
 
     def create_belief_set_from_string(self, tweety_syntax: str) -> Optional[Any]:
         """
@@ -422,6 +399,26 @@ class TweetyBridge:
             self._logger.error(f"Erreur lors de la création du BeliefSet à partir de la chaîne: {e}", exc_info=True)
             # L'exception est levée dans le handler et sera attrapée par l'agent.
             # On la propage.
+            raise e
+
+    def create_belief_set_programmatically(self, builder_plugin_data: dict) -> Optional[Any]:
+        """
+        Crée un objet FolBeliefSet Java programmatiquement.
+        Délègue l'opération au `FOLHandler`.
+        
+        :param builder_plugin_data: Le dictionnaire __dict__ du BeliefSetBuilderPlugin.
+        :return: Un objet Java FolBeliefSet ou None en cas d'erreur.
+        """
+        if not self.is_jvm_ready() or not hasattr(self, '_fol_handler'):
+            self._logger.error("TweetyBridge ou FOLHandler non prêt pour create_belief_set_programmatically.")
+            return None
+        
+        try:
+            # Note: le handler retourne un tuple (belief_set, signature)
+            belief_set_obj, _ = self._fol_handler.create_belief_set_programmatically(builder_plugin_data)
+            return belief_set_obj
+        except (ValueError, jpype.JException) as e:
+            self._logger.error(f"Erreur lors de la création programmatique du BeliefSet: {e}", exc_info=True)
             raise e
 
     # Les méthodes _parse_fol_formula, _parse_fol_belief_set, _execute_fol_query_internal
@@ -490,22 +487,24 @@ class TweetyBridge:
         try:
             result_bool = self._modal_handler.modal_query(belief_set_content, query_string, modal_logic_str, signature_declarations_str)
             
-            if result_bool is None: # ModalHandler.modal_query peut retourner None
+            if result_bool is None:
                 result_str = f"Tweety Result: Unknown for Modal query '{query_string}' (Logic: {modal_logic_str})."
-                self._logger.warning(f"Requête Modale '{query_string}' (Logic: {modal_logic_str}) -> indéterminé (None) via ModalHandler.")
+                self._logger.warning(f"Modal query '{query_string}' (Logic: {modal_logic_str}) -> UNKNOWN (None) from handler.")
             else:
                 result_label = "ACCEPTED (True)" if result_bool else "REJECTED (False)"
                 result_str = f"Tweety Result: Modal Query '{query_string}' (Logic: {modal_logic_str}) is {result_label}."
-                self._logger.info(f"Résultat formaté requête Modale '{query_string}' (Logic: {modal_logic_str}) via ModalHandler: {result_label}")
+                self._logger.info(f"Formatted Modal query result for '{query_string}' (Logic: {modal_logic_str}): {result_label}")
             
+            # The original function was type-hinted to return a single string, let's stick to that for now
+            # to minimize required changes in calling code, even if it's less informative.
             return result_str
             
         except ValueError as e_val:
-            error_msg = f"Erreur lors de l'exécution de la requête Modale via ModalHandler: {str(e_val)}"
+            error_msg = f"Error during Modal query execution via ModalHandler: {e_val}"
             self._logger.error(error_msg, exc_info=True)
             return f"FUNC_ERROR: {error_msg}"
         except Exception as e_generic:
-            error_msg = f"Erreur inattendue lors de l'exécution de la requête Modale: {str(e_generic)}"
+            error_msg = f"Unexpected error during Modal query: {e_generic}"
             self._logger.error(error_msg, exc_info=True)
             return f"FUNC_ERROR: {error_msg}"
 

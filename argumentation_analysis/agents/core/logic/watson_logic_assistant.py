@@ -359,7 +359,7 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
             # Pour l'instant, on suppose que les arguments sont passés en tant que kwargs à invoke.
             # kernel_arguments = {"belief_set_id": belief_set_id} # Alternative si invoke prend des KernelArguments
             
-            result = await self.sk_kernel.invoke(
+            result = await self._kernel.invoke(
                 plugin_name="EnqueteStatePlugin",
                 function_name="get_belief_set_content",
                 arguments=KernelArguments(belief_set_id=belief_set_id)

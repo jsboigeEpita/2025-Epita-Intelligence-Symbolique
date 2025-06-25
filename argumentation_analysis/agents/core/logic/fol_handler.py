@@ -75,168 +75,126 @@ class FOLHandler:
             self.logger.error(f"Erreur de parsing dans Tweety: {e.getMessage()}", exc_info=True)
             raise ValueError(f"Erreur de parsing Tweety: {e.getMessage()}") from e
 
-    def create_programmatic_fol_signature(self, normalized_structure: dict): # DEPRECATED
+    def create_belief_set_programmatically(self, builder_plugin_data: dict):
         """
-        Creates an FolSignature object programmatically from a normalized structure.
-        This includes sorts, constants, predicates, and the sort hierarchy.
+        Crée un FolBeliefSet Java en mémoire à partir des données accumulées
+        par le BeliefSetBuilderPlugin.
+        C'est la nouvelle approche robuste qui contourne les bizarreries du
+        parseur de fichier .fologic.
+        """
+        from argumentation_analysis.agents.core.logic.first_order_logic_agent import BeliefSetBuilderPlugin
         
-        :param normalized_structure: A dictionary like {
-                                       "sorts": ["person", "city"],
-                                       "constants": {"socrates": "person", "athens": "city"},
-                                       "predicates": [{"name": "LivesIn", "args": ["person", "city"]}],
-                                       "sort_hierarchy": {"philosopher": "person"}
-                                   }
-        :return: A jpype._jclass.org.tweetyproject.logics.fol.syntax.FolSignature object or None on failure.
-        """
+        sorts_data = builder_plugin_data.get("_sorts", {})
+        predicates_data = builder_plugin_data.get("_predicates", {})
+        formulas = builder_plugin_data.get("_formulas", [])
+
         FolSignature = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolSignature")
+        FolBeliefSet = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolBeliefSet")
         Sort = jpype.JClass("org.tweetyproject.logics.commons.syntax.Sort")
         Constant = jpype.JClass("org.tweetyproject.logics.commons.syntax.Constant")
         Predicate = jpype.JClass("org.tweetyproject.logics.commons.syntax.Predicate")
         String = jpype.JClass("java.lang.String")
         ArrayList = jpype.JClass("java.util.ArrayList")
 
+        import re
+        
         signature = FolSignature()
         sorts_map = {}  # Python-side mapping from name to Java Sort object
 
-        # 1. Create and add Sorts
-        sort_names = normalized_structure.get("sorts", [])
-        for sort_name in sort_names:
+        # Étape 1: Collecter tous les sorts, constantes, et prédicats (déclarés et défensifs) en Python d'abord.
+        
+        # 1a. Collecter les prédicats déclarés par le LLM.
+        # On fait une copie pour pouvoir la modifier sans affecter l'original.
+        final_predicates_data = dict(predicates_data)
+
+        # 1b. Scan défensif pour trouver les prédicats utilisés mais non déclarés.
+        for formula_str in formulas:
+            potential_preds = re.findall(r'([a-zA-Z][a-zA-Z0-9_]*)\(', formula_str)
+            for pred_name in potential_preds:
+                if pred_name not in final_predicates_data:
+                    self.logger.warning(f"Prédicat '{pred_name}' utilisé mais non déclaré. Ajout défensif.")
+                    # Estimation de l'arité
+                    try:
+                        inner_content_match = re.search(re.escape(pred_name) + r'\((.*?)\)', formula_str)
+                        if inner_content_match:
+                            inner_content = inner_content_match.group(1)
+                            arity = inner_content.count(',') + 1 if inner_content else 0
+                        else:
+                            arity = 0 # Cas comme 'pred()'.
+                    except Exception:
+                        arity = 1 # Fallback sûr.
+                    
+                    # Stratégie : tout prédicat non déclaré est de type (thing, thing, ...)
+                    thing_sort_name = "thing"
+                    final_predicates_data[pred_name] = [thing_sort_name] * arity
+                    
+                    # S'assurer que 'thing' est bien dans la liste des sorts à créer.
+                    if thing_sort_name not in sorts_data:
+                        sorts_data[thing_sort_name] = []
+
+
+        # Étape 2: Construire la signature Java complète en une seule passe.
+
+        # 2a. Créer et ajouter tous les sorts.
+        for sort_name in sorts_data.keys():
             try:
                 java_sort = Sort(String(sort_name))
                 signature.add(java_sort)
                 sorts_map[sort_name] = java_sort
-                logger.debug(f"Programmatically added sort: {sort_name}")
+                self.logger.debug(f"Sort ajouté par programmation : {sort_name}")
             except jpype.JException as e:
-                logger.error(f"Failed to add sort '{sort_name}': {e.getMessage()}")
-                return None
-        
-        # 2. Add Sort Hierarchy (sub-sort relationships)
-        sort_hierarchy = normalized_structure.get("sort_hierarchy", {})
-        logger.debug(f"Processing sort hierarchy: {sort_hierarchy}")
-        for sub_sort_name, super_sort_name in sort_hierarchy.items():
-            if sub_sort_name in sorts_map and super_sort_name in sorts_map:
-                sub_sort_obj = sorts_map[sub_sort_name]
-                super_sort_obj = sorts_map[super_sort_name]
-                try:
-                    # FolSignature uses add(sub, super) to define hierarchy
-                    signature.add(sub_sort_obj, super_sort_obj)
-                    logger.info(f"Programmatically added hierarchy: {sub_sort_name} is a sub-sort of {super_sort_name}")
-                except jpype.JException as e:
-                    logger.error(f"Failed to add hierarchy '{sub_sort_name}' -> '{super_sort_name}': {e.getMessage()}")
-                    return None
-            else:
-                logger.error(f"Cannot create hierarchy: Sort '{sub_sort_name}' or '{super_sort_name}' not found.")
-                return None
+                raise ValueError(f"Échec de la création du sort Java '{sort_name}': {e.getMessage()}") from e
 
+        # 2b. Créer et ajouter les constantes.
+        for sort_name, constants_list in sorts_data.items():
+            parent_sort = sorts_map.get(sort_name)
+            if parent_sort:
+                for const_name in constants_list:
+                    try:
+                        java_constant = Constant(String(const_name), parent_sort)
+                        signature.add(java_constant)
+                        self.logger.debug(f"Constante ajoutée: {const_name} de type {sort_name}")
+                    except jpype.JException as e:
+                        raise ValueError(f"Échec de la création de la constante '{const_name}': {e.getMessage()}") from e
 
-        # 3. Create and add Constants, linking them to their Sorts
-        constants_data = normalized_structure.get("constants", {})
-        for const_name, sort_name in constants_data.items():
-            if sort_name in sorts_map:
-                parent_sort = sorts_map[sort_name]
-                try:
-                    java_constant = Constant(String(const_name), parent_sort)
-                    signature.add(java_constant)
-                    logger.debug(f"Programmatically added constant: {const_name} of sort {sort_name}")
-                except jpype.JException as e:
-                    logger.error(f"Failed to add constant '{const_name}': {e.getMessage()}")
-                    return None
-            else:
-                logger.error(f"Cannot create constant '{const_name}': Its sort '{sort_name}' has not been declared.")
-                return None
-
-        # 4. Create and add Predicates
-        predicates_data = normalized_structure.get("predicates", [])
-        for pred_data in predicates_data:
-            pred_name = pred_data.get("name")
-            arg_sort_names = pred_data.get("args", [])
-            
+        # 2c. Créer et ajouter la liste COMPLÈTE des prédicats.
+        for pred_name, arg_sort_names in final_predicates_data.items():
             java_arg_sorts = ArrayList()
-            valid_predicate = True
             for arg_sort_name in arg_sort_names:
-                if arg_sort_name in sorts_map:
-                    java_arg_sorts.add(sorts_map[arg_sort_name])
-                else:
-                    logger.error(f"Cannot create predicate '{pred_name}': Argument sort '{arg_sort_name}' not found in declared sorts.")
-                    valid_predicate = False
-                    break
+                java_sort = sorts_map.get(arg_sort_name)
+                if not java_sort:
+                    raise ValueError(f"Incohérence: Le sort '{arg_sort_name}' du prédicat '{pred_name}' n'a pas été trouvé.")
+                java_arg_sorts.add(java_sort)
             
-            if valid_predicate:
-                try:
-                    java_predicate = Predicate(String(pred_name), java_arg_sorts)
-                    signature.add(java_predicate)
-                    logger.debug(f"Programmatically added predicate: {pred_name} with args {arg_sort_names}")
-                except jpype.JException as e:
-                    logger.error(f"Failed to add predicate '{pred_name}': {e.getMessage()}")
-                    return None
-        
-        logger.info(f"Final signature object state (Java toString): {signature}")
-        return signature
- 
-    def create_belief_set_from_formulas(self, signature, formulas: list[str]): # DEPRECATED
-        """
-        Creates a FolBeliefSet by parsing formulas against a pre-built signature.
+            try:
+                java_predicate = Predicate(String(pred_name), java_arg_sorts)
+                signature.add(java_predicate)
+                self.logger.debug(f"Prédicat ajouté: {pred_name} avec args {arg_sort_names}")
+            except jpype.JException as e:
+                raise ValueError(f"Échec de la création du prédicat '{pred_name}': {e.getMessage()}") from e
 
-        :param signature: A pre-built FolSignature Java object.
-        :param formulas: A list of FOL formula strings.
-        :return: A jpype._jclass.org.tweetyproject.logics.fol.syntax.FolBeliefSet object.
-        """
+        # Étape 3: Créer le parser avec la signature finale et l'utiliser pour parser les formules.
+        belief_set = FolBeliefSet()
+        belief_set.setSignature(signature)
+        
         FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
-        FolBeliefSet = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolBeliefSet")
-        
         parser = FolParser()
-        parser.setSignature(signature) # Use the programmatically built signature
-        
-        belief_set = FolBeliefSet() # Initialize with the empty constructor
-        
+        parser.setSignature(signature)
+
         for formula_str in formulas:
             try:
                 parsed_formula = self.parse_fol_formula(formula_str, custom_parser=parser)
                 if parsed_formula:
                     belief_set.add(parsed_formula)
-                    logger.debug(f"Successfully parsed and added to belief set: {formula_str}")
+                    self.logger.debug(f"Formule ajoutée: {formula_str}")
                 else:
-                    logger.warning(f"Parsed formula for '{formula_str}' is None, skipping addition to belief set.")
+                    self.logger.warning(f"Le parsing de '{formula_str}' a retourné None.")
             except ValueError as e:
-                logger.warning(f"Skipping invalid formula '{formula_str}': {e}")
-                # Optionally re-raise or collect errors
-                raise e # Re-raising to let the caller know validation failed.
+                self.logger.error(f"Échec final du parsing de '{formula_str}' avec la signature construite : {e}")
+                raise e
         
-        return belief_set
-
-    def create_and_serialize_belief_set(self, signature, formulas: list[str]) -> str: # DEPRECATED
-        """
-        Creates a FolBeliefSet, then serializes its essential data to a JSON string.
-        This avoids returning a complex Java object to Python.
-
-        :param signature: A pre-built FolSignature Java object.
-        :param formulas: A list of FOL formula strings.
-        :return: A JSON string representing the belief set, e.g., '{"formulas": ["f1", "f2"]}'.
-        """
-        import json
-        logger.info("Creating and serializing belief set to JSON...")
-        
-        try:
-            # Step 1: Create the actual Java BeliefSet object
-            belief_set_obj = self.create_belief_set_from_formulas(signature, formulas)
-            
-            # Step 2: Extract data from the Java object
-            # The FolBeliefSet is iterable, yielding FolFormula objects.
-            # The FolBeliefSet is iterable, yielding FolFormula objects directly.
-            string_formulas = [str(f.toString()) for f in belief_set_obj]
-            
-            # Step 3: Serialize the data to a JSON string
-            serialized_data = json.dumps({"formulas": string_formulas})
-            
-            logger.info(f"Successfully serialized belief set with {len(string_formulas)} formulas.")
-            return serialized_data
-
-        except jpype.JException as e:
-            logger.error(f"A Java error occurred during belief set serialization: {e.getMessage()}", exc_info=True)
-            raise RuntimeError("Failed to serialize belief set due to Java exception.") from e
-        except Exception as e:
-            logger.error(f"An unexpected Python error occurred during belief set serialization: {e}", exc_info=True)
-            raise
+        self.logger.info(f"Base de connaissances FOL créée par programmation avec {belief_set.size()} formules.")
+        return belief_set, signature
 
     def fol_check_consistency(self, belief_set):
         """

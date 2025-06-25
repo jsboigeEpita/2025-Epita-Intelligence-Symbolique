@@ -36,7 +36,7 @@ from typing import Dict, List, Any, Optional
 
 
 # Import a shared fixture to manage the JVM lifecycle
-from tests.fixtures.integration_fixtures import integration_jvm
+from tests.fixtures.integration_fixtures import jvm_session
 # Import de l'agent FOL et composants
 from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent as FOLLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
@@ -533,11 +533,11 @@ def use_serialization(request):
     return request.param
 
 @pytest_asyncio.fixture(scope="module")
-async def fol_agent_with_kernel(integration_jvm, use_serialization):
+async def fol_agent_with_kernel(jvm_session, use_serialization):
     """Fixture pour créer un FOLLogicAgent avec un kernel authentique, paramétré pour la sérialisation."""
     logger.info(f"--- DEBUT FIXTURE 'fol_agent_with_kernel' (Serialization: {use_serialization}) ---")
-    if not integration_jvm:
-        pytest.skip("Skipping test: integration_jvm fixture failed to initialize.")
+    if not jvm_session:
+        pytest.skip("Skipping test: jvm_session fixture failed to initialize.")
 
     config = UnifiedConfig()
     kernel = config.get_kernel_with_gpt4o_mini()
