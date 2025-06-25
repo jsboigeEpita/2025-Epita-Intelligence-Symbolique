@@ -515,41 +515,34 @@ def initialize_jvm(force_redownload_jars=False, session_fixture_owns_jvm=False) 
 
     jvm_path = jpype.getDefaultJVMPath()
     
-    all_jars = [str(p.resolve()) for p in LIBS_DIR.glob("*.jar")]
-    if not all_jars:
-        logger.critical(f"Aucun fichier .jar trouvé dans {LIBS_DIR}.")
-        return False
-        
-    jvm_options = get_jvm_options()
-    
-    try:
-        logger.info("Tentative de démarrage de la JVM...")
-        # Vérification explicite de l'existence et des permissions des JARs
-        all_jars_paths = [p.resolve() for p in LIBS_DIR.glob("*.jar")]
-        if not all_jars_paths:
-            logger.critical(f"Aucun fichier .jar trouvé dans {LIBS_DIR}.")
+    # Modification pour n'utiliser que le JAR "full-with-dependencies"
+    full_jar_name = f"org.tweetyproject.tweety-full-{TWEETY_VERSION}-with-dependencies.jar"
+    full_jar_path = LIBS_DIR / full_jar_name
+
+    if not full_jar_path.exists():
+        logger.critical(f"Le JAR principal '{full_jar_path}' est introuvable.")
+        # Tentative de re-téléchargement au cas où.
+        if not download_tweety_jars():
+            logger.critical(f"Échec du téléchargement du JAR manquant.")
             return False
 
-        classpath_list = []
-        for jar_path in all_jars_paths:
-            if not jar_path.exists():
-                logger.error(f"Erreur Classpath: Le fichier JAR '{jar_path}' n'existe pas.")
-                return False
-            try:
-                # Vérifier si on peut au moins lire le fichier
-                with open(jar_path, 'rb') as f:
-                    f.read(1)
-                classpath_list.append(str(jar_path))
-            except IOError as e:
-                logger.error(f"Erreur Classpath: Impossible de lire le fichier JAR '{jar_path}'. Erreur: {e}")
-                return False
-        
-        logger.info(f"Classpath final validé: {classpath_list}")
-        
+    classpath_list = [str(full_jar_path.resolve())]
+    logger.info(f"Utilisation d'un classpath simplifié avec un seul JAR: {classpath_list}")
+
+    native_libs_path = LIBS_DIR / "native"
+    jvm_options = get_jvm_options()
+    jvm_options.append(f"-Djava.library.path={native_libs_path.resolve()}")
+    
+    try:
+        logger.info("Tentative de démarrage de la JVM avec classpath simplifié...")
+        logger.info(f"JVM Path: {jvm_path}")
+        logger.info(f"Options: {jvm_options}")
+        logger.info(f"Classpath: {classpath_list}")
+
         jpype.startJVM(
             jvm_path,
             *jvm_options,
-            classpath=classpath_list, # Utiliser la liste de strings validée
+            classpath=classpath_list,
             ignoreUnrecognized=True,
             convertStrings=False
         )
@@ -561,21 +554,36 @@ def initialize_jvm(force_redownload_jars=False, session_fixture_owns_jvm=False) 
         return False
 
 def shutdown_jvm():
-    """Arrête la JVM si elle a été démarrée par ce processus."""
-    global _JVM_INITIALIZED_THIS_SESSION, _JVM_WAS_SHUTDOWN
+    """
+    Arrête la JVM si elle a été démarrée par ce processus, en tenant compte du
+    contexte d'exécution (par ex. fixture de session pytest).
+    """
+    global _JVM_WAS_SHUTDOWN, _SESSION_FIXTURE_OWNS_JVM
     import jpype
+
+    # Ne pas arrêter la JVM si elle est gérée par une fixture de session
+    # et que ce n'est pas la fixture elle-même qui appelle shutdown.
+    if _SESSION_FIXTURE_OWNS_JVM:
+        # Idéalement, on vérifierait si l'appelant est bien le teardown de la fixture.
+        # Pour simplifier, on assume que si la fixture possède la JVM, seul son
+        # teardown doit l'arrêter. Les appels manuels sont ignorés.
+        logger.warning(
+            "Arrêt de la JVM demandé, mais elle est gérée par une fixture de session. "
+            "L'arrêt sera géré par la fixture à la fin de la session de test."
+        )
+        return
+
     if jpype.isJVMStarted():
-        # Seul le thread qui a démarré la JVM peut l'arrêter.
-        # On ne vérifie pas `_JVM_INITIALIZED_THIS_SESSION` car si la fixture
-        # de session possède la JVM, cette variable sera False mais l'arrêt
-        # doit quand même se faire à la fin de la session.
-        logger.info("Arrêt de la JVM...")
-        jpype.shutdownJVM()
-        logger.info("JVM arrêtée.")
-        _JVM_WAS_SHUTDOWN = True
-        _JVM_INITIALIZED_THIS_SESSION = False
-    else:
-        logger.debug("La JVM n'est pas en cours d'exécution, aucun arrêt nécessaire.")
+        logger.info("Tentative d'arrêt de la JVM...")
+        try:
+            jpype.shutdownJVM()
+            logger.info("[SUCCESS] JVM arrêtée avec succès.")
+            _JVM_WAS_SHUTDOWN = True
+        except Exception as e:
+            # Capturer l'erreur peut aider au débogage sans crasher le processus Python
+            logger.error(f"Erreur interceptée lors de l'appel à jpype.shutdownJVM(): {e}", exc_info=True)
+            # On note qu'une tentative a eu lieu, ce qui est un état instable.
+            _JVM_WAS_SHUTDOWN = True
 
 
 def is_jvm_started() -> bool:
