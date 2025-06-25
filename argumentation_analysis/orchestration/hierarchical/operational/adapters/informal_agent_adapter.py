@@ -50,13 +50,14 @@ class InformalAgentAdapter(OperationalAgent):
         self.initialized = False
         self.logger = logging.getLogger(f"InformalAgentAdapter.{name}")
 
-    async def initialize(self, kernel: sk.Kernel, llm_service_id: str) -> bool:
+    async def initialize(self, kernel: sk.Kernel, llm_service_id: str, project_context: ProjectContext) -> bool:
         """
         Initialise l'agent d'analyse informelle sous-jacent.
 
         Args:
             kernel: Le kernel Semantic Kernel à utiliser.
             llm_service_id: L'ID du service LLM à utiliser.
+            project_context: Le contexte du projet (reçu du registre).
 
         Returns:
             True si l'initialisation a réussi, False sinon.

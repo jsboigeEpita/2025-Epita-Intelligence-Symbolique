@@ -43,6 +43,7 @@ async def test_perform_text_analysis_nominal_case(sample_services, mock_llm_serv
 
     with patch("argumentation_analysis.analytics.text_analyzer.logger") as mock_logger:
         with patch(RUN_ANALYSIS_CONVERSATION_PATH, new_callable=AsyncMock) as mock_run_analysis:
+            mock_run_analysis.return_value = None  # S'assurer que le mock retourne ce que le test attend
             result = await perform_text_analysis(text_to_analyze, sample_services, analysis_type)
 
             mock_run_analysis.assert_awaited_once_with(
