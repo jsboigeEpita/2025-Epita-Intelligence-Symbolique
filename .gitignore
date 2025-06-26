@@ -310,3 +310,8 @@ portable_jdk_locked/
 # Ignorer explicitement le dossier de résultats du service manager
 results_service_manager/
 _temp/service_manager_results/
+
+
+# Ignorer les répertoires de cache Python et les fichiers de log
+**/__pycache__/
+*.log
