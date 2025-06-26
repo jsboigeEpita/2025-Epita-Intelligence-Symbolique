@@ -48,7 +48,7 @@ param(
 # --- Script Body ---
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = $PSScriptRoot
-$ActivationScript = Join-Path $ProjectRoot "scripts/env/activate_project_env.ps1"
+$ActivationScript = Join-Path $ProjectRoot "scripts/utils/activate_conda_env.ps1"
 
 # Valider l'existence du script d'activation en amont
 if (-not (Test-Path $ActivationScript)) {
@@ -83,7 +83,7 @@ if ($Type -eq "e2e") {
 # Branche 2: Tests E2E avec Pytest (Python)
 elseif ($Type -eq "e2e-python") {
     Write-Host "[INFO] Lancement du cycle de test E2E en trois étapes pour éviter les conflits asyncio et passer les URLs." -ForegroundColor Cyan
-    $ActivationScriptPath = Join-Path $PSScriptRoot "scripts/env/activate_project_env.ps1"
+    $ActivationScriptPath = Join-Path $PSScriptRoot "scripts/utils/activate_conda_env.ps1"
     $globalExitCode = 0
     $output = ""
 
@@ -214,7 +214,7 @@ else {
     $pytestFinalCommand = $pytestCommandParts -join " "
 
     # Exécution via le script d'activation pour une meilleure robustesse
-    $ActivationScriptPath = Join-Path $PSScriptRoot "scripts/env/activate_project_env.ps1"
+    $ActivationScriptPath = Join-Path $PSScriptRoot "scripts/utils/activate_conda_env.ps1"
     $runnerLogFile = Join-Path $ProjectRoot '_temp/test_runner.log'
     
     Write-Host "[INFO] Commande Pytest à exécuter: $pytestFinalCommand" -ForegroundColor Green
