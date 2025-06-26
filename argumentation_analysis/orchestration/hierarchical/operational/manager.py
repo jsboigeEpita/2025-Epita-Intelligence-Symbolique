@@ -112,14 +112,22 @@ class OperationalManager:
         if not self.running:
             self.logger.warning("Le gestionnaire opérationnel n'est pas en cours.")
             return
-        
+
         self.running = False
         if self.worker_task:
+            self.logger.info("Tentative d'arrêt du worker opérationnel...")
             self.worker_task.cancel()
             try:
-                await self.worker_task
+                # Utiliser un timeout pour éviter un blocage infini
+                await asyncio.wait_for(self.worker_task, timeout=5.0)
             except asyncio.CancelledError:
-                pass
+                self.logger.info("Tâche worker annulée avec succès.")
+            except asyncio.TimeoutError:
+                self.logger.error("Timeout lors de l'attente de l'arrêt du worker. La tâche pourrait ne pas s'être terminée correctement.")
+            except Exception as e:
+                self.logger.error(f"Exception inattendue lors de l'arrêt du worker: {e}", exc_info=True)
+            finally:
+                self.worker_task = None
         self.logger.info("Gestionnaire opérationnel arrêté.")
 
     async def process_tactical_task(self, tactical_task: Dict[str, Any]) -> Dict[str, Any]:

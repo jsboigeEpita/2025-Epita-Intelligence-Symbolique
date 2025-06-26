@@ -555,8 +555,8 @@ class InformalAnalysisPlugin:
         # 'fallacy_type' n'est pas une colonne standard de la taxonomie réelle pour le nom principal.
         
         condition_nom_vulgarise = pd.Series(False, index=df.index)
-        if 'nom_vulgarisé' in df.columns:
-            condition_nom_vulgarise = df['nom_vulgarisé'].fillna('').astype(str).str.contains(fallacy_name, case=False, na=False)
+        if 'nom_vulgarise' in df.columns:
+            condition_nom_vulgarise = df['nom_vulgarise'].fillna('').astype(str).str.contains(fallacy_name, case=False, na=False)
         
         condition_text_fr = pd.Series(False, index=df.index)
         if 'text_fr' in df.columns: # text_fr peut aussi contenir des noms/labels
@@ -577,7 +577,7 @@ class InformalAnalysisPlugin:
             # Gérer l'absence de 'PK' comme index
             pk_found = found_fallacy.iloc[0].name if df.index.name == 'PK' else found_fallacy.index[0]
             # Le nom trouvé est prioritairement 'nom_vulgarisé', sinon 'text_fr', sinon le nom cherché
-            name_found = found_fallacy.iloc[0].get('nom_vulgarisé', found_fallacy.iloc[0].get('text_fr', fallacy_name))
+            name_found = found_fallacy.iloc[0].get('nom_vulgarise', found_fallacy.iloc[0].get('text_fr', fallacy_name))
 
             self._logger.info(f"Définition trouvée pour '{name_found}' (PK: {pk_found}).")
             return json.dumps({"fallacy_name": name_found, "pk": int(pk_found), "definition": definition}, default=str)
@@ -684,8 +684,8 @@ class InformalAnalysisPlugin:
 
         # Recherche cas insensible dans 'nom_vulgarisé' et 'text_fr' (pour la taxonomie réelle)
         condition_nom_vulgarise = pd.Series(False, index=df.index)
-        if 'nom_vulgarisé' in df.columns:
-            condition_nom_vulgarise = df['nom_vulgarisé'].fillna('').astype(str).str.contains(fallacy_name, case=False, na=False)
+        if 'nom_vulgarise' in df.columns:
+            condition_nom_vulgarise = df['nom_vulgarise'].fillna('').astype(str).str.contains(fallacy_name, case=False, na=False)
         
         condition_text_fr = pd.Series(False, index=df.index)
         if 'text_fr' in df.columns:
@@ -701,7 +701,7 @@ class InformalAnalysisPlugin:
             # Utiliser 'example_fr' pour l'exemple
             example = found_fallacy.iloc[0].get('example_fr', "Exemple non disponible.")
             pk_found = found_fallacy.iloc[0].name if df.index.name == 'PK' else found_fallacy.index[0]
-            name_found = found_fallacy.iloc[0].get('nom_vulgarisé', found_fallacy.iloc[0].get('text_fr', fallacy_name))
+            name_found = found_fallacy.iloc[0].get('nom_vulgarise', found_fallacy.iloc[0].get('text_fr', fallacy_name))
 
             self._logger.info(f"Exemple trouvé pour '{name_found}' (PK: {pk_found}).")
             return json.dumps({"fallacy_name": name_found, "pk": int(pk_found), "example": example}, default=str)
