@@ -80,16 +80,29 @@ def find_conda_env_path(env_name: str) -> Path:
     Lève une FileNotFoundError si l'environnement n'est pas trouvé.
     """
     try:
+        # Capture stdout et stderr pour un meilleur diagnostic
         result = subprocess.run(
             ["conda", "info", "--envs"],
             capture_output=True,
             text=True,
-            check=True,
+            check=False,  # On ne veut pas que ça lève une exception ici, on la gère nous-mêmes
             encoding='utf-8'
         )
-    except (subprocess.CalledProcessError, FileNotFoundError) as e:
-        print(f"Erreur lors de l'exécution de 'conda info --envs'. Conda est-il installé et dans le PATH?", file=sys.stderr)
-        raise e
+        
+        # Gestion manuelle de l'erreur pour un message plus clair
+        if result.returncode != 0:
+            print("--- ERREUR SUBPROCESS ---", file=sys.stderr)
+            print(f"La commande 'conda info --envs' a échoué avec le code {result.returncode}.", file=sys.stderr)
+            print("STDOUT:", file=sys.stderr)
+            print(result.stdout, file=sys.stderr)
+            print("STDERR:", file=sys.stderr)
+            print(result.stderr, file=sys.stderr)
+            print("-------------------------", file=sys.stderr)
+            raise FileNotFoundError("Impossible d'exécuter 'conda info --envs'. Assurez-vous que Conda est installé et accessible dans le PATH.")
+
+    except FileNotFoundError:
+        print("ERREUR CRITIQUE: La commande 'conda' n'est pas trouvée. Assurez-vous que Conda est installé et que son chemin est dans le PATH de l'environnement qui exécute ce script.", file=sys.stderr)
+        raise
 
     for line in result.stdout.splitlines():
         if line.startswith("#"):
@@ -188,17 +201,16 @@ def main():
         executable_path = find_executable_in_env(conda_env_path, executable_name)
         
         # Cas spécial: si la commande est 'python', on s'assure d'utiliser le python de l'env
-        if executable_name.lower() == 'python':
-            command_to_run = [str(executable_path)] + args.command_args[1:]
-        else:
-            # Pour les autres commandes (pytest, etc.), on utilise leur chemin direct
-            command_to_run = [str(executable_path)] + args.command_args[1:]
-
+        # La logique de construction est la même dans les deux cas.
+        command_to_run = [str(executable_path)] + args.command_args[1:]
 
         # 6. Exécuter la commande
-        print(f"Exécution de la commande : {' '.join(command_to_run)}", file=sys.stderr)
+        print(f"Exécution de la commande : {' '.join(map(str, command_to_run))}", file=sys.stderr)
         
-        #subprocess.run exécute la commande et attend qu'elle se termine.
+        if not command_to_run:
+            print("Erreur: La commande à exécuter est vide.", file=sys.stderr)
+            sys.exit(1)
+
         result = subprocess.run(command_to_run, check=False)
 
         # Propager le code de sortie

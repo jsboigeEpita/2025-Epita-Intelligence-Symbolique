@@ -22,7 +22,11 @@ $childPath = "scripts\run_in_env.py"
 $pythonRunner = Join-Path -Path $PSScriptRoot -ChildPath $childPath
 
 # Affiche la commande qui va être exécutée pour le débogage
-# Write-Host "[DEBUG] Calling: python $pythonRunner $args" -ForegroundColor Gray
+Write-Host "[DEBUG][activate_project_env] Python runner script: $pythonRunner" -ForegroundColor Magenta
+Write-Host "[DEBUG][activate_project_env] Arguments passés: $args" -ForegroundColor Magenta
+
+# Vérifions quelle version de python est utilisée
+Write-Host "[DEBUG][activate_project_env] Utilisation de python.exe trouvé à: $((Get-Command python.exe).Source)" -ForegroundColor Magenta
 
 # Appelle le script Python en lui passant tous les arguments
 # reçus par ce script wrapper.

@@ -237,7 +237,8 @@ else {
         # Write-Host "[DEBUG] Commande d'activation complète: $FullActivationCommand" -ForegroundColor DarkGray
 
         # Exécutons la commande
-        (& $ActivationScriptPath $pytestCommandParts) 2>&1 | Tee-Object -FilePath $runnerLogFile
+        # Correction: Utilisation de l'opérateur de splatting '@' pour passer les arguments correctement
+        & $ActivationScriptPath @pytestCommandParts 2>&1 | Tee-Object -FilePath $runnerLogFile
 
         $exitCode = $LASTEXITCODE
 
