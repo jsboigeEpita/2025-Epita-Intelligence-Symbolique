@@ -128,7 +128,7 @@ class TweetyInitializer:
             _ = jpype.JClass("org.tweetyproject.commons.Signature")
 
             # Reasoner (using EProver, not Prover9)
-            jpype.JClass("org.tweetyproject.logics.fol.reasoner.EProver")
+            jpype.JClass("org.tweetyproject.logics.fol.reasoner.SimpleFolReasoner")
             
             logger.info("Successfully imported and cached TweetyProject Java classes.")
             TweetyInitializer._classes_loaded = True

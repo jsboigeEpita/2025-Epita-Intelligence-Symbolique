@@ -1,5 +1,6 @@
 import jpype
 import logging
+import asyncio
 # La configuration du logging (appel à setup_logging()) est supposée être faite globalement.
 from argumentation_analysis.core.utils.logging_utils import setup_logging
 from .tweety_initializer import TweetyInitializer # To access FOL parser
@@ -196,21 +197,21 @@ class FOLHandler:
         self.logger.info(f"Base de connaissances FOL créée par programmation avec {belief_set.size()} formules.")
         return belief_set, signature
 
-    def fol_check_consistency(self, belief_set):
+    async def fol_check_consistency(self, belief_set):
         """
         Checks if an FOL knowledge base (as a Java object) is consistent.
         """
         logger.debug(f"Checking FOL consistency for belief set of size {belief_set.size()}")
         try:
             Contradiction = jpype.JClass("org.tweetyproject.logics.fol.syntax.Contradiction")()
-            # This requires a real reasoner, which should be initialized in TweetyInitializer
-            # For now, let's assume one is available.
             if not hasattr(self, '_fol_reasoner') or self._fol_reasoner is None:
-                 # Fallback to a default prover if not initialized
-                 Prover = jpype.JClass("org.tweetyproject.logics.fol.reasoner.EProver")
+                 Prover = jpype.JClass("org.tweetyproject.logics.fol.reasoner.SimpleFolReasoner")
                  self._fol_reasoner = Prover()
 
-            is_consistent = not self._fol_reasoner.query(belief_set, Contradiction)
+            is_consistent_result = await asyncio.to_thread(
+                self._fol_reasoner.query, belief_set, Contradiction
+            )
+            is_consistent = not is_consistent_result
             msg = f"Consistency check result: {is_consistent}"
             logger.info(msg)
             return is_consistent, msg
