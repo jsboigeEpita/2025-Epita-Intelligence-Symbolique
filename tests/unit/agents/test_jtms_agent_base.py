@@ -1,3 +1,4 @@
+# Fichier adapté pour Oracle Enhanced v2.1.0
 """
 Tests unitaires pour JTMSAgentBase.
 Valide les fonctionnalités de base de l'intégration JTMS.

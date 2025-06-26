@@ -1,3 +1,4 @@
+# Fichier adapté pour Oracle Enhanced v2.1.0
 
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai

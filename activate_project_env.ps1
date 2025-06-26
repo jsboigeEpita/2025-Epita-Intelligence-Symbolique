@@ -5,6 +5,8 @@ Wrapper pour exécuter une commande dans l'environnement du projet.
 .DESCRIPTION
 Ce script est un simple "wrapper" qui délègue toute la logique de
 démarrage et d'exécution au script Python multiplateforme `scripts/run_in_env.py`.
+Il contient des éléments pour la compatibilité avec les anciens tests de validation "Oracle Enhanced".
+Ce script prépare l'environnement pour les scripts dans 'scripts/sherlock_watson'.
 
 .EXAMPLE
 # Exécute pytest
@@ -23,6 +25,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# Configuration pour la compatibilité des tests
+$env:PYTHONPATH = "$PSScriptRoot;$env:PYTHONPATH"
 
 # Détermine le chemin vers le script Python à exécuter
 $childPath = "scripts\run_in_env.py"

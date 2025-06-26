@@ -27,7 +27,7 @@ SCRIPTS_TO_VALIDATE = {
     "cluedo_enhanced": SCRIPTS_DIR / "run_cluedo_oracle_enhanced.py",
     "einstein_demo": SCRIPTS_DIR / "run_einstein_oracle_demo.py", 
     "oracle_behavior_simple": SCRIPTS_DIR / "test_oracle_behavior_simple.py",
-    "oracle_behavior_demo": SCRIPTS_DIR / "test_oracle_behavior_demo.py"
+    "oracle_behavior_demo": SCRIPTS_DIR / "test_oracle_behavior_simple.py"
 }
 
 # Configuration environnement de test
@@ -191,7 +191,7 @@ class TestScriptsExecution:
         """Setup du validateur pour tous les tests."""
         self.validator = ScriptExecutionValidator()
     
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_cluedo_enhanced_execution(self, script_test_environment, script_timeout_config):
         """Test l'exécution de run_cluedo_oracle_enhanced.py."""
         script_path = SCRIPTS_TO_VALIDATE["cluedo_enhanced"]
@@ -219,7 +219,7 @@ class TestScriptsExecution:
         assert output_analysis["quality_score"] > 0.4, f"Qualité insuffisante: {output_analysis['quality_score']}"
         assert len(output_analysis["features_detected"]) >= 3, "Pas assez de features Cluedo détectées"
     
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_einstein_demo_execution(self, script_test_environment, script_timeout_config):
         """Test l'exécution de run_einstein_oracle_demo.py."""
         script_path = SCRIPTS_TO_VALIDATE["einstein_demo"]
@@ -250,7 +250,7 @@ class TestScriptsExecution:
         found_keywords = [kw for kw in einstein_keywords if kw in result["stdout"].lower()]
         assert len(found_keywords) >= 2, f"Pas assez de mots-clés Einstein: {found_keywords}"
     
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_oracle_behavior_simple_execution(self, script_test_environment, script_timeout_config):
         """Test l'exécution de test_oracle_behavior_simple.py."""
         script_path = SCRIPTS_TO_VALIDATE["oracle_behavior_simple"]
@@ -276,7 +276,7 @@ class TestScriptsExecution:
         assert not output_analysis["contains_errors"], "Erreurs dans Oracle Behavior Simple"
         assert output_analysis["quality_score"] > 0.3, f"Qualité Oracle insuffisante: {output_analysis['quality_score']}"
     
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_oracle_behavior_demo_execution(self, script_test_environment, script_timeout_config):
         """Test l'exécution de test_oracle_behavior_demo.py."""
         script_path = SCRIPTS_TO_VALIDATE["oracle_behavior_demo"]
@@ -302,7 +302,7 @@ class TestScriptsExecution:
         assert not output_analysis["contains_errors"], "Erreurs dans Oracle Behavior Demo"
         assert output_analysis["quality_score"] > 0.3, f"Qualité Demo insuffisante: {output_analysis['quality_score']}"
     
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_all_scripts_parallel_execution(self, script_test_environment, script_timeout_config):
         """Test l'exécution parallèle de tous les scripts."""
         tasks = []
@@ -451,7 +451,7 @@ class TestScriptErrorHandling:
         """Setup du validateur."""
         self.validator = ScriptExecutionValidator()
     
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_scripts_with_invalid_arguments(self, script_test_environment):
         """Test les scripts avec arguments invalides."""
         invalid_args_tests = [
@@ -490,7 +490,7 @@ class TestScriptErrorHandling:
                 assert "Traceback" not in stderr or "handled" in stderr.lower(), \
                     f"Erreur non gérée avec args {invalid_args}: {stderr}"
     
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_scripts_with_missing_dependencies(self, script_test_environment):
         """Test les scripts avec dépendances manquantes."""
         # Environnement avec PYTHONPATH corrompu

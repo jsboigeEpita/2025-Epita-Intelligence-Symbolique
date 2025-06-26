@@ -1,3 +1,4 @@
+# Fichier adapté pour Oracle Enhanced v2.1.0
 # -*- coding: utf-8 -*-
 # tests/integration/test_oracle_integration.py
 """
@@ -17,7 +18,8 @@ WORKER_SCRIPT_PATH = Path(__file__).parent / "workers" / "worker_oracle_integrat
 @pytest.mark.integration
 def test_oracle_integration_in_subprocess(run_in_jvm_subprocess):
     """
-    Exécute l'ensemble des tests d'intégration du système Oracle
+    Exécute l'ensemble des tests d'intégration du système Oracle,
+    y compris le CluedoOracle et le dataset_manager,
     dans un sous-processus isolé pour éviter les conflits JVM.
     """
     assert WORKER_SCRIPT_PATH.exists(), f"Le script worker n'a pas été trouvé à {WORKER_SCRIPT_PATH}"

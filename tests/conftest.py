@@ -9,16 +9,25 @@ from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyIn
 
 logger = logging.getLogger(__name__)
 
+@pytest.fixture(scope="session")
+def anyio_backend(request):
+    return request.config.getoption("anyio_backend", "asyncio")
+
 @pytest.fixture(scope="session", autouse=True)
-def apply_nest_asyncio():
+def apply_nest_asyncio(anyio_backend):
     """
     Applies nest_asyncio to allow nested event loops.
     This is necessary for running asyncio tests in some environments.
+    Only applied for the 'asyncio' backend.
     """
-    logger.info("Applying nest_asyncio to the event loop.")
-    nest_asyncio.apply()
-    yield
-    logger.info("nest_asyncio teardown.")
+    if anyio_backend == "asyncio":
+        logger.info(f"Applying nest_asyncio for '{anyio_backend}' backend.")
+        nest_asyncio.apply()
+        yield
+        logger.info("nest_asyncio teardown for 'asyncio' backend.")
+    else:
+        logger.info(f"Skipping nest_asyncio for '{anyio_backend}' backend.")
+        yield
 
 @pytest.fixture(scope="session", autouse=True)
 def jvm_session():

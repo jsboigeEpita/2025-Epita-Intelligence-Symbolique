@@ -47,7 +47,7 @@ jpype1
 clingo
 
 # Pip dependencies
-semantic-kernel>=1.33.0
+# semantic-kernel>=1.33.0
 flask_socketio>=5.3.6
 playwright
 psutil
@@ -55,3 +55,7 @@ pyautogen>=0.2.0
 tenacity
 pybreaker
 # mcp
+# Testing
+pytest-asyncio
+pytest-trio
+trio
