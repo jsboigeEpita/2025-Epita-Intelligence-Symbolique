@@ -92,7 +92,15 @@ def create_app():
         app_static_folder = str(react_build_dir)
 
     flask_app_instance = Flask(__name__, static_folder=app_static_folder)
-    CORS(flask_app_instance, resources={r"/api/*": {"origins": "*"}})
+    # Configuration CORS plus flexible pour le développement et les tests E2E
+    # autorisant localhost et 127.0.0.1 sur n'importe quel port.
+    cors_origins = [
+        r"http://localhost:.*",
+        r"http://127.0.0.1:.*"
+    ]
+    CORS(flask_app_instance,
+         resources={r"/api/*": {"origins": cors_origins}},
+         supports_credentials=True)
     
     flask_app_instance.config['JSON_AS_ASCII'] = False
     flask_app_instance.config['JSONIFY_PRETTYPRINT_REGULAR'] = True

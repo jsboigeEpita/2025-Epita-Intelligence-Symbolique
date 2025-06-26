@@ -146,7 +146,7 @@ class PlaywrightRunner:
             'SCREENSHOTS_DIR': str(self.screenshots_dir),
             'TRACES_DIR': str(self.traces_dir),
             'KMP_DUPLICATE_LIB_OK': 'TRUE', # Contournement pour le conflit OpenMP
-            'DEBUG': 'pw:api' # Ajout du logging de debug pour Playwright
+            'PWDEBUG': '1' # Utiliser PWDEBUG pour le logging de Playwright pour éviter les conflits
         }
         
         for key, value in env_vars.items():
@@ -186,6 +186,10 @@ class PlaywrightRunner:
         ]
 
         # Ajout du répertoire de test pour que pytest le découvre
+        # Forçage pour le débogage du test qui timeout
+        # debug_test_path = ["tests/e2e/python/test_argument_reconstructor.py"]
+        # self.logger.warning(f"ATTENTION: Exécution forcée d'un seul fichier de test pour débogage : {debug_test_path}")
+        # cmd.extend(debug_test_path)
         cmd.extend(test_paths)
 
         # Le mode Headless est géré par l'argument --headed.
@@ -217,36 +221,63 @@ class PlaywrightRunner:
             if line:
                 log_method(line.decode(encoding='utf-8', errors='replace').rstrip())
 
+    def _get_conda_env_python_executable(self, env_name: str) -> Optional[str]:
+        """Trouve le chemin de l'exécutable Python pour un environnement Conda donné."""
+        try:
+            self.logger.info(f"Recherche de l'environnement Conda nommé: '{env_name}'")
+            # Exécute `conda info` pour obtenir la liste des environnements. Utilisation de `shell=True` pour Windows.
+            result = subprocess.run(['conda', 'info', '--envs', '--json'], capture_output=True, text=True, check=True, shell=True)
+            envs_data = json.loads(result.stdout)
+            
+            # Cherche le chemin de l'environnement cible
+            env_path_str = None
+            for env in envs_data.get('envs', []):
+                if Path(env).name == env_name:
+                    env_path_str = env
+                    self.logger.info(f"Chemin trouvé pour l'environnement '{env_name}': {env_path_str}")
+                    break
+            
+            if not env_path_str:
+                self.logger.error(f"Environnement Conda '{env_name}' non trouvé dans la liste des environnements.")
+                return None
+
+            # Construit le chemin de l'exécutable Python
+            python_executable = Path(env_path_str) / 'python.exe'
+            if python_executable.exists():
+                self.logger.info(f"Exécutable Python validé pour l'environnement '{env_name}': {python_executable}")
+                return str(python_executable)
+            else:
+                self.logger.error(f"python.exe non trouvé dans l'environnement '{env_name}' au chemin: {python_executable}")
+                return None
+
+        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
+            self.logger.error(f"Erreur critique lors de la recherche de l'environnement Conda via 'conda info': {e}")
+            return None
+
     async def _execute_tests(self, cmd: List[str],
                              config: Dict[str, Any]) -> subprocess.CompletedProcess:
-        """Exécute les tests via un script batch pour garantir l'activation correcte de l'environnement."""
+        """Exécute les tests directement avec l'exécutable python de l'environnement Conda cible."""
         
         env_name = "projet-is"
-        
-        # Chemin vers le script batch
-        script_path = Path(__file__).parent / 'run_e2e_tests.bat'
-        
-        # La commande pytest originale
-        pytest_command = cmd
+        python_executable = self._get_conda_env_python_executable(env_name)
 
-        # Le script .bat va appeler 'python', donc on retire 'python' de la commande ici
-        # s'il est présent, pour ne pas avoir 'python python -m ...'
-        if pytest_command and pytest_command[0] == 'python':
-            pytest_command_for_bat = pytest_command[1:]
+        if not python_executable:
+            error_msg = f"Impossible de trouver l'exécutable Python pour l'environnement Conda '{env_name}'."
+            self.logger.error(error_msg)
+            return subprocess.CompletedProcess(cmd, returncode=-1, stderr=error_msg)
+
+        # Remplacer 'python' par le chemin complet de l'exécutable de l'environnement
+        if cmd and cmd[0] == 'python':
+            cmd[0] = python_executable
         else:
-            pytest_command_for_bat = pytest_command
+            self.logger.warning("La commande de test ne commence pas par 'python'. Le remplacement de l'interpréteur a peut-être échoué.")
+            cmd.insert(0, python_executable)
 
-        # Construction de la nouvelle commande : [script.bat, ...commande_pytest_sans_python]
-        final_command = [str(script_path)] + pytest_command_for_bat
-        
-        # Préparation de l'environnement pour le script batch
-        # On passe le nom de l'environnement via une variable d'environnement pour plus de robustesse
+        # Préparation de l'environnement pour le sous-processus
         script_env = os.environ.copy()
-        script_env["CONDA_ENV_NAME_TO_ACTIVATE"] = env_name
         
-        command_str_for_log = " ".join(final_command)
-        self.logger.info(f"Exécution de la commande via le script batch: {command_str_for_log}")
-        self.logger.info(f"Environnement Conda '{env_name}' sera activé par le script via la variable d'environnement.")
+        command_str_for_log = " ".join(cmd)
+        self.logger.info(f"Exécution de la commande de test directe: {command_str_for_log}")
 
         timeout = config.get('test_timeout', 900)
         self.logger.info(f"Timeout configuré: {timeout}s")
@@ -255,9 +286,8 @@ class PlaywrightRunner:
         stderr_lines = []
 
         try:
-            # On utilise create_subprocess_exec car `final_command` est une liste
             process = await asyncio.create_subprocess_exec(
-                *final_command,
+                *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 env=script_env
@@ -272,11 +302,9 @@ class PlaywrightRunner:
                     log_func(decoded_line)
                     line_buffer.append(decoded_line)
 
-            # Lancer les coroutines de logging en parallèle
             stdout_task = asyncio.create_task(log_stream(process.stdout, self.logger.info, stdout_lines))
             stderr_task = asyncio.create_task(log_stream(process.stderr, self.logger.warning, stderr_lines))
 
-            # Attendre que le processus se termine ou que le timeout soit atteint
             await asyncio.wait_for(asyncio.gather(stdout_task, stderr_task, process.wait()), timeout=timeout)
             
             returncode = process.returncode
@@ -284,9 +312,9 @@ class PlaywrightRunner:
 
         except asyncio.TimeoutError:
             self.logger.error(f"Timeout ({timeout}s) atteint pendant l'exécution des tests.")
-            if process.returncode is None:
+            if 'process' in locals() and process.returncode is None:
                 process.kill()
-                await process.wait() # Attendre que le processus soit bien terminé
+                await process.wait()
             return subprocess.CompletedProcess(command_str_for_log, returncode=-1, stdout="\n".join(stdout_lines), stderr="\n".join(stderr_lines))
         except Exception as e:
             self.logger.critical(f"Erreur critique lors de l'exécution du sous-processus de test : {e}", exc_info=True)

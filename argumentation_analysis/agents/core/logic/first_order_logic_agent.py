@@ -307,6 +307,7 @@ def _load_prompt_from_file(prompt_filename: str) -> str:
         logger.error(f"Fichier de prompt introuvable : {prompt_path}")
         raise
 
+SYSTEM_PROMPT_FOL = _load_prompt_from_file("fol_system.prompt")
 PROMPT_GEN_FOL_QUERIES = """Expert FOL : À partir du texte et de l'ensemble de croyances (belief set), générez des requêtes FOL pertinentes et syntaxiquement valides au format JSON.
 
 Règles impératives :

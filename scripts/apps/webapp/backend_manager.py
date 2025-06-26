@@ -120,6 +120,39 @@ class BackendManager:
         except Exception as e:
             self.logger.error(f"Erreur dans le thread de logging: {e}")
 
+    def _get_conda_env_python_executable(self, env_name: str) -> Optional[str]:
+        """Trouve le chemin de l'exécutable Python pour un environnement Conda donné."""
+        try:
+            self.logger.info(f"Recherche de l'environnement Conda nommé: '{env_name}'")
+            # Exécute `conda info` pour obtenir la liste des environnements
+            result = subprocess.run(['conda', 'info', '--envs', '--json'], capture_output=True, text=True, check=True, shell=True)
+            envs_data = json.loads(result.stdout)
+            
+            # Cherche le chemin de l'environnement cible
+            env_path_str = None
+            for env in envs_data.get('envs', []):
+                if Path(env).name == env_name:
+                    env_path_str = env
+                    self.logger.info(f"Chemin trouvé pour l'environnement '{env_name}': {env_path_str}")
+                    break
+            
+            if not env_path_str:
+                self.logger.error(f"Environnement Conda '{env_name}' non trouvé dans la liste des environnements.")
+                return None
+
+            # Construit le chemin de l'exécutable Python
+            python_executable = Path(env_path_str) / 'python.exe'
+            if python_executable.exists():
+                self.logger.info(f"Exécutable Python validé pour l'environnement '{env_name}': {python_executable}")
+                return str(python_executable)
+            else:
+                self.logger.error(f"python.exe non trouvé dans l'environnement '{env_name}' au chemin: {python_executable}")
+                return None
+
+        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
+            self.logger.error(f"Erreur critique lors de la recherche de l'environnement Conda via 'conda info': {e}")
+            return None
+
     async def _start_on_port(self, port: int, app_module: str) -> Dict[str, Any]:
         """
         Démarre une application backend sur un port spécifique.
@@ -130,18 +163,18 @@ class BackendManager:
         try:
             server_type = self.config.get('server_type', 'uvicorn')
             
-            # Définition de l'environnement Conda cible
-            conda_env_name = os.getenv("CONDA_DEFAULT_ENV", "projet-is-roo")
+            # Stratégie robuste : trouver l'exécutable Python de l'environnement Conda cible.
+            # On hardcode le nom car l'environnement d'exécution du script est instable.
+            conda_env_name = "projet-is"
+            python_executable = self._get_conda_env_python_executable(conda_env_name)
+            
+            if not python_executable:
+                error_msg = f"Impossible de trouver l'exécutable Python pour l'environnement Conda '{conda_env_name}'. Vérifiez que 'conda' est dans le PATH et que l'environnement existe."
+                self.logger.error(error_msg)
+                return {'success': False, 'error': error_msg}
 
-            # Construction de la commande interne (Python + uvicorn/flask)
             if server_type == 'uvicorn':
                 log_config_path = project_root.joinpath('argumentation_analysis', 'config', 'uvicorn_logging.json')
-                
-                # Correction robuste: Utiliser le chemin absolu vers python.exe et construire une liste d'arguments
-                # pour subprocess.Popen, ce qui est plus sûr que de construire une chaîne de commande.
-                python_executable = sys.executable # Correction pour utiliser l'interpréteur courant
-                self.logger.info(f"Utilisation de l'interpréteur Python dynamique : {python_executable}")
-
                 cmd = [
                     python_executable,
                     '-m', 'uvicorn', app_module,
@@ -150,22 +183,19 @@ class BackendManager:
                     '--log-config', str(log_config_path)
                 ]
             else:
-                # Fallback pour d'autres types de serveurs, bien que non utilisé actuellement
-                python_executable = sys.executable # Correction pour utiliser l'interpréteur courant
                 cmd = [python_executable, '-m', self.module, '--port', str(port), '--host', '127.0.0.1']
             
-            self.logger.info(f"Exécution de la commande: {' '.join(cmd)}")
+            self.logger.info(f"Exécution de la commande directe: {' '.join(cmd)}")
             
             env = os.environ.copy()
-            # Ajout de la variable d'environnement pour contourner le conflit de DLL OpenMP
             env['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
-            env['PYTHONPATH'] = str(Path.cwd())
+            env['PYTHONPATH'] = str(project_root)
             
             self.process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                cwd=Path.cwd(),
+                cwd=project_root,
                 env=env,
                 text=True,
                 encoding='utf-8',
