@@ -314,3 +314,11 @@ _temp/service_manager_results/
 # Ignorer les répertoires de cache Python et les fichiers de log
 **/__pycache__/
 *.log
+
+# Ignorer les dépendances téléchargées manuellement
+libs/prover9/
+tweety/
+
+# Roo added untracked files
+_temp_downloads/
+node-v*/

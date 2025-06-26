@@ -112,16 +112,50 @@ class BeliefSetBuilderPlugin:
         return root
 
     def _unify_sorts(self, pred1: str, pred2: str):
-        """Unifies the sort groups of two predicates. Ensures both predicates are initialized."""
+        """
+        Unifies the sort groups of two predicates and, crucially, updates the schemas
+        of all affected predicates to use the new canonical sort.
+        """
         try:
             root1 = self._find_sort_representative(pred1)
             root2 = self._find_sort_representative(pred2)
-            if root1 != root2:
-                # The sort of the first predicate becomes the cannonical sort
-                self._sort_parent[root2] = root1
-                logger.debug(f"Unifying sorts: '{pred2}' (root '{root2}') -> '{pred1}' (root '{root1}').")
+
+            if root1 == root2:
+                return # Already unified
+
+            # The sort of the first predicate's group becomes the canonical one.
+            self._sort_parent[root2] = root1
+            canonical_root = root1
+            absorbed_root = root2
+            
+            # Get the canonical sort name from the representative predicate.
+            canonical_sort_name = self._predicate_to_sort[canonical_root]
+            logger.debug(f"Unifying sorts: '{absorbed_root}' -> '{canonical_root}'. New canonical sort: '{canonical_sort_name}'.")
+
+            # --- CRITICAL STEP: Update schemas of all predicates in the absorbed group ---
+            # We need to find all predicates that were part of the old group (now absorbed).
+            # We can't just iterate `self._sort_parent` as some paths might not be compressed yet.
+            # So, we iterate through all known predicates.
+            all_known_predicates = list(self._sort_parent.keys())
+            for pred_name in all_known_predicates:
+                # Find the current representative for each predicate to see if it belongs to the unified group.
+                current_root = self._find_sort_representative(pred_name)
+                if current_root == canonical_root:
+                    # This predicate is now in the unified group. Update its schema.
+                    old_schema = self._predicates.get(pred_name)
+                    if not old_schema:
+                        logger.warning(f"Predicate '{pred_name}' is in the unification tree but has no schema. Skipping update.")
+                        continue
+                    
+                    # Update all its argument sorts to the new canonical sort.
+                    old_sorts = self._predicates[pred_name]
+                    new_sorts = [canonical_sort_name] * len(old_sorts)
+                    self._predicates[pred_name] = new_sorts
+                    if old_sorts != new_sorts:
+                        logger.debug(f"Updated schema for '{pred_name}': {old_sorts} -> {new_sorts}")
+
         except KeyError as e:
-             logger.error(f"Cannot unify sorts. {e}")
+            logger.error(f"Cannot unify sorts. Predicate not initialized in the unification system. {e}")
 
     def to_dict(self) -> Dict[str, Any]:
         """Convertit l'état du builder en un dictionnaire sérialisable."""
@@ -354,15 +388,13 @@ class BeliefSetBuilderPlugin:
                     if s_name in java_sorts:
                         j_arg_sorts.add(java_sorts[s_name])
                     else:
-                        logger.error(f"Sort '{s_name}' not found for predicate '{pred_name}'. Skipping predicate.")
-                        valid_sorts = False
-                        break
-                if valid_sorts:
-                    j_pred = Predicate(pred_name, j_arg_sorts)
-                    signature.add(j_pred)
-                    java_predicates[pred_name] = j_pred
-            
-            belief_set = FolBeliefSet(signature)
+                        logger.warning(f"Sort '{s_name}' for predicate '{pred_name}' not found. Skipping.")
+                jpred = Predicate(pred_name, j_arg_sorts)
+                signature.add(jpred)
+                java_predicates[pred_name] = jpred
+
+            belief_set = FolBeliefSet()
+            belief_set.setSignature(signature) # CRITICAL FIX: Attach the signature to the belief set
 
             # 3. Add formulas
             # Add atomic facts
