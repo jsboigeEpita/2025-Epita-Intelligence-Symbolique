@@ -68,24 +68,31 @@ def test_initialize_services_nominal_case(mock_settings, mock_load_dotenv, mock_
     caplog.set_level(logging.INFO)
     mock_settings.enable_jvm = True
     mock_settings.libs_dir = Path("/fake/libs/dir")
+    # Forcer l'utilisation du mock LLM via les settings, ce qui est la méthode standard testée ici
     mock_settings.use_mock_llm = True
     mocker.patch('pathlib.Path.exists', return_value=True)
 
-    mock_llm = mock_create_llm.return_value
-
+    # La fixture mock_create_llm retourne déjà un MagicMock avec service_id='mock-llm'
+    # Il n'est pas nécessaire de le reconfigurer ici.
+    
     services = initialize_analysis_services()
 
     mock_find_dotenv.assert_called_once()
-    mock_load_dotenv.assert_called_once() # just check it's called
+    mock_load_dotenv.assert_called_once()
     
     mock_init_jvm.assert_called_once_with()
     assert services.get("jvm_ready") is True
     
+    # create_llm_service est appelé avec force_mock=True car mock_settings.use_mock_llm = True
     mock_create_llm.assert_called_once_with(service_id="default_llm_service", force_mock=True)
-    assert services.get("llm_service") == mock_llm
+    # L'objet retourné doit être celui de la fixture mock_create_llm
+    assert services.get("llm_service") == mock_create_llm.return_value
     
-    assert "Initialisation de la JVM avec LIBS_DIR: /fake/libs/dir" in caplog.text
-    assert f"[OK] Service LLM créé" in caplog.text
+    # Rendre l'assertion robuste à l'OS en reconstruisant le chemin attendu
+    expected_path_str = str(Path('/fake/libs/dir'))
+    assert f"Initialisation de la JVM avec LIBS_DIR: {expected_path_str}..." in caplog.text
+    # L'assertion doit correspondre au service_id du mock de la fixture, soit 'mock-llm'
+    assert "[OK] Service LLM créé (Type: MagicMock, ID: mock-llm)." in caplog.text
 
 def test_initialize_services_dotenv_fails(mock_settings, mock_load_dotenv, mock_find_dotenv, caplog):
     """Teste le cas où le chargement de .env échoue, mais sans impacter le reste."""
