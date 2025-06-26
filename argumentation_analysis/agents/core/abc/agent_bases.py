@@ -88,25 +88,6 @@ class BaseAgent(ABC): # Suppression de l'héritage de sk.Agent (voir note ci-des
         self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{self.name}")
         self._llm_service_id = None  # Sera défini par setup_agent_components
 
-    def _get_history(self, user_input: str) -> "ChatHistory":
-        """
-        Crée un historique de conversation pour une nouvelle interaction.
-
-        Initialise un objet ChatHistory, y ajoute le prompt système de l'agent
-        (s'il existe), puis le dernier message de l'utilisateur.
-
-        Args:
-            user_input: Le dernier message de l'utilisateur à ajouter à l'historique.
-
-        Returns:
-            Un objet ChatHistory prêt pour être utilisé dans une invocation du kernel.
-        """
-        history = ChatHistory()
-        if self.instructions:
-            history.add_system_message(self.instructions)
-        history.add_user_message(user_input)
-        return history
-
     @property
     def logger(self) -> logging.Logger:
         """Retourne le logger de l'agent."""
@@ -314,7 +295,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         return self._tweety_bridge
 
     @abstractmethod
-    async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional["BeliefSet"], str]:
+    def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional["BeliefSet"], str]:
         """
         Convertit un texte en langage naturel en un ensemble de croyances formelles.
 
@@ -330,7 +311,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         pass
 
     @abstractmethod
-    async def generate_queries(self, text: str, belief_set: "BeliefSet", context: Optional[Dict[str, Any]] = None) -> List[str]:
+    def generate_queries(self, text: str, belief_set: "BeliefSet", context: Optional[Dict[str, Any]] = None) -> List[str]:
         """
         Génère des requêtes logiques pertinentes à partir d'un texte et/ou d'un ensemble de croyances.
 
@@ -364,7 +345,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         pass
 
     @abstractmethod
-    async def interpret_results(self, text: str, belief_set: "BeliefSet", queries: List[str], results: List[Tuple[Optional[bool], str]], context: Optional[Dict[str, Any]] = None) -> str:
+    def interpret_results(self, text: str, belief_set: "BeliefSet", queries: List[str], results: List[Tuple[Optional[bool], str]], context: Optional[Dict[str, Any]] = None) -> str:
         """
         Interprète les résultats des requêtes logiques en langage naturel.
 
@@ -415,22 +396,8 @@ class BaseLogicAgent(BaseAgent, ABC):
             et un message de statut du solveur.
         """
         pass
-    @abstractmethod
-    async def validate_argument(self, premises: List[str], conclusion: str, **kwargs) -> bool:
-        """
-        Valide un argument structuré (prémisses, conclusion).
 
-        Args:
-            premises (List[str]): La liste des prémisses en langage naturel ou formel.
-            conclusion (str): La conclusion en langage naturel ou formel.
-            **kwargs: Arguments supplémentaires potentiellement requis par l'implémentation.
-
-        Returns:
-            bool: True si la conclusion découle logiquement des prémisses, False sinon.
-        """
-        pass
-
-    async def process_task(self, task_id: str, task_description: str, state_manager: Any) -> Dict[str, Any]:
+    def process_task(self, task_id: str, task_description: str, state_manager: Any) -> Dict[str, Any]:
         """
         Traite une tâche assignée à l'agent logique.
         Migré depuis AbstractLogicAgent pour unifier l'architecture.
@@ -438,16 +405,16 @@ class BaseLogicAgent(BaseAgent, ABC):
         self.logger.info(f"Traitement de la tâche {task_id}: {task_description}")
         state = state_manager.get_current_state_snapshot(summarize=False)
         if "Traduire" in task_description and "Belief Set" in task_description:
-            return await self._handle_translation_task(task_id, task_description, state, state_manager)
+            return self._handle_translation_task(task_id, task_description, state, state_manager)
         elif "Exécuter" in task_description and "Requêtes" in task_description:
-            return await self._handle_query_task(task_id, task_description, state, state_manager)
+            return self._handle_query_task(task_id, task_description, state, state_manager)
         else:
             error_msg = f"Type de tâche non reconnu: {task_description}"
             self.logger.error(error_msg)
             state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
             return {"status": "error", "message": error_msg}
 
-    async def _handle_translation_task(self, task_id: str, task_description: str, state: Dict[str, Any], state_manager: Any) -> Dict[str, Any]:
+    def _handle_translation_task(self, task_id: str, task_description: str, state: Dict[str, Any], state_manager: Any) -> Dict[str, Any]:
         """
         Gère une tâche spécifique de conversion de texte en un ensemble de croyances logiques.
         """
@@ -458,7 +425,7 @@ class BaseLogicAgent(BaseAgent, ABC):
             state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
             return {"status": "error", "message": error_msg}
         
-        belief_set, status_msg = await self.text_to_belief_set(raw_text)
+        belief_set, status_msg = self.text_to_belief_set(raw_text)
         if not belief_set:
             error_msg = f"Échec de la conversion en ensemble de croyances: {status_msg}"
             self.logger.error(error_msg)
@@ -470,7 +437,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=answer_text, source_ids=[bs_id])
         return {"status": "success", "message": answer_text, "belief_set_id": bs_id}
 
-    async def _handle_query_task(self, task_id: str, task_description: str, state: Dict[str, Any], state_manager: Any) -> Dict[str, Any]:
+    def _handle_query_task(self, task_id: str, task_description: str, state: Dict[str, Any], state_manager: Any) -> Dict[str, Any]:
         """
         Gère une tâche d'exécution de requêtes logiques sur un ensemble de croyances existant.
         """
@@ -491,7 +458,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         belief_set_data = belief_sets[belief_set_id]
         belief_set = self._create_belief_set_from_data(belief_set_data)
         raw_text = self._extract_source_text(task_description, state)
-        queries = await self.generate_queries(raw_text, belief_set)
+        queries = self.generate_queries(raw_text, belief_set)
         if not queries:
             error_msg = "Aucune requête n'a pu être générée"
             self.logger.error(error_msg)
@@ -508,7 +475,7 @@ class BaseLogicAgent(BaseAgent, ABC):
             log_id = state_manager.log_query_result(belief_set_id=belief_set_id, query=query, raw_result=result_str)
             log_ids.append(log_id)
 
-        interpretation = await self.interpret_results(raw_text, belief_set, queries, raw_results)
+        interpretation = self.interpret_results(raw_text, belief_set, queries, raw_results)
         state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=interpretation, source_ids=[belief_set_id] + log_ids)
         return {"status": "success", "message": interpretation, "queries": queries, "results": formatted_results, "log_ids": log_ids}
 

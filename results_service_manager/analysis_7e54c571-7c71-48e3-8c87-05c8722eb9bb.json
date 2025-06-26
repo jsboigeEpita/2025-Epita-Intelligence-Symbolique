@@ -1,0 +1,25 @@
+{
+  "analysis_id": "7e54c571-7c71-48e3-8c87-05c8722eb9bb",
+  "text": "Si P alors Q. P est vrai. Donc Q est vrai.",
+  "analysis_type": "logical",
+  "start_time": "2025-06-26T11:30:04.941552",
+  "options": {},
+  "results": {
+    "specialized": {
+      "method": "real_llm",
+      "request_id": "req_1750930205060379",
+      "analysis_type": "logical",
+      "result": {
+        "success": false,
+        "error": "L'analyseur logique réel n'est pas initialisé."
+      },
+      "confidence": 0.8,
+      "processing_time": 0.0,
+      "timestamp": "2025-06-26T11:30:05.060379",
+      "orchestrator": "RealLLMOrchestrator"
+    }
+  },
+  "status": "completed",
+  "end_time": "2025-06-26T11:30:05.060379",
+  "duration": 0.118827
+}

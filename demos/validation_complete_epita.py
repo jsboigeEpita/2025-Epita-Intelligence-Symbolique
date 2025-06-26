@@ -515,68 +515,70 @@ class ValidationEpitaComplete:
 
         async def run_integration_test():
             manager = None
+            exec_time = 0.0
+            start_time = time.time()
             try:
-                start_time = time.time()
-                
                 # 1. Initialisation
                 manager = OrchestrationServiceManager()
                 init_success = await manager.initialize()
                 if not init_success:
-                    self.log_test("Intégration Complète", "initialization", "FAILED", "Échec de l'initialisation du ServiceManager", 0.0, 0.0)
+                    self.log_test("Intégration Complète", "initialization", "FAILED", "Échec de l'initialisation du ServiceManager", time.time() - start_time, 0.0)
                     return False
                 
-                # 2. Test d'analyse
+                # 2. Test d'analyse de validité logique
                 test_text = "Si P alors Q. P est vrai. Donc Q est vrai."
-                analysis_result = await manager.analyze_text(test_text, analysis_type="logical")
-                
+                analysis_result_obj = await manager.analyze_text(test_text, analysis_type="logical")
                 exec_time = time.time() - start_time
                 
-                # 3. Validation du résultat
-                if analysis_result and analysis_result.get('status') == 'completed':
-                    try:
-                        # Analyse plus profonde de la "sincérité"
-                        specialized_result = analysis_result['results']['specialized']['result']['result']
-                        
-                        is_structure_present = specialized_result.get('logical_structure') == 'present'
-                        is_argument_valid = specialized_result.get('validity') == 'valid' # test qui va échouer
-                        
-                        details = f"Structure logique détectée: {is_structure_present}. "
-                        details += f"Validité de l'argument reconnue: {is_argument_valid}."
+                # 3. Validation stricte du résultat
+                # Robustesse : s'assurer que l'objet et sa structure de base existent
+                if not analysis_result_obj or not hasattr(analysis_result_obj, 'result') or not isinstance(analysis_result_obj.result, dict):
+                    error_details = "Réponse invalide ou mal formée de l'orchestrateur."
+                    self.log_test("Intégration Complète", "response_validation", "FAILED", error_details, exec_time, 0.0)
+                    return False
+                
+                # Vérification du succès du pipeline
+                if not analysis_result_obj.result.get('success'):
+                    error_details = analysis_result_obj.result.get('result', {}).get('details', 'Analyse échouée sans détails explicites.')
+                    self.log_test("Intégration Complète", "execution_test", "FAILED", f"Le pipeline d'analyse logique a échoué: {error_details}", exec_time, 0.0)
+                    return False
+                
+                # Extraction et validation des résultats
+                validity_result = analysis_result_obj.result.get('result', {})
+                is_valid = validity_result.get("is_valid")
+                scheme = validity_result.get("reasoning_scheme", "N/A")
+                details = validity_result.get("details", "")
 
-                        if is_structure_present:
-                            # Le test de base réussit, mais on note la faiblesse de l'analyse
-                            self.log_test("Intégration Complète", "integration_test", "SUCCESS", f"Analyse de surface réussie. {details}", exec_time, 0.8)
-                            if not is_argument_valid:
-                                self.log_test("Intégration Complète", "sincerity_check", "WARNING", "L'analyse ne vérifie pas la validité logique de l'argument (modus ponens non identifié). Manque de profondeur.", 0.0, 0.2)
-                            return True
-                        else:
-                            self.log_test("Intégration Complète", "integration_test", "FAILED", f"La structure logique de base n'a pas été détectée. {details}", exec_time, 0.1)
-                            return False
-
-                    except KeyError as e:
-                        self.log_test("Intégration Complète", "result_parsing", "FAILED", f"La structure du résultat d'analyse a changé, impossible de valider. Clé manquante: {e}", exec_time, 0.0)
-                        return False
-
+                if is_valid and scheme != "N/A" and "Modus Ponens" in scheme:
+                    self.log_test("Intégration Complète", "validity_and_scheme_check", "SUCCESS", f"Argument reconnu comme valide. Schéma: {scheme}. {details}", exec_time, 1.0)
+                    return True
+                elif is_valid:
+                    self.log_test("Intégration Complète", "scheme_check", "FAILED", f"L'argument est valide mais le schéma de raisonnement '{scheme}' est incorrect ou non identifié.", exec_time, 0.5)
+                    return False
                 else:
-                    error_details = analysis_result.get('error', 'Aucun détail') if analysis_result else 'Résultat nul'
-                    self.log_test("Intégration Complète", "integration_test", "FAILED", f"Le pipeline a échoué: {error_details}", exec_time, 0.0)
+                    self.log_test("Intégration Complète", "validity_check", "FAILED", f"L'argument a été incorrectement évalué comme invalide. Détails: {details}", exec_time, 0.1)
                     return False
 
-            except Exception as e:
-                exec_time = time.time() - start_time if 'start_time' in locals() else 0.0
+            except (KeyError, AttributeError, TypeError) as e:
                 import traceback
-                error_details = f"{str(e)}\n{traceback.format_exc()}"
-                self.log_test("Intégration Complète", "integration_test", "FAILED", f"Exception pendant le test: {error_details}", exec_time, 0.0)
+                error_details = f"La structure du résultat d'analyse a changé, impossible de valider. Erreur: {e}\n{traceback.format_exc()}"
+                self.log_test("Intégration Complète", "result_parsing", "FAILED", error_details, exec_time, 0.0)
+                return False
+            except Exception as e:
+                import traceback
+                error_details = f"Exception inattendue pendant le test: {str(e)}\n{traceback.format_exc()}"
+                self.log_test("Intégration Complète", "integration_test", "FAILED", error_details, time.time() - start_time, 0.0)
                 return False
             finally:
                 if manager and manager.is_available():
                     await manager.shutdown()
 
         try:
-            # On exécute le test asynchrone dans la boucle d'événements existante
             return await run_integration_test()
         except Exception as e:
-            self.log_test("Intégration Complète", "runner_exception", "FAILED", f"Erreur fatale du lanceur de test: {str(e)}", 0.0, 0.0)
+            import traceback
+            error_details = f"Erreur fatale du lanceur de test: {str(e)}\n{traceback.format_exc()}"
+            self.log_test("Intégration Complète", "runner_exception", "FAILED", error_details, 0.0, 0.0)
             return False
 
     def generate_final_report(self) -> Dict[str, Any]:
