@@ -13,6 +13,8 @@ if str(project_root) not in sys.path:
 
 from argumentation_analysis.pipelines.analysis_pipeline import run_text_analysis_pipeline
 from argumentation_analysis.core.utils.logging_utils import setup_logging
+import argumentation_analysis.service_setup.analysis_services as analysis_services_module
+print(f"CHEMIN DU MODULE ANALYSIS_SERVICES: {analysis_services_module.__file__}")
 
 # Define a list of sample texts for the default demonstration mode
 sample_texts = [

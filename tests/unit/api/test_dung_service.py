@@ -6,7 +6,6 @@ import os
 # Ce chemin est relatif au répertoire racine du projet.
 WORKER_SCRIPT_PATH = "tests/unit/api/workers/worker_dung_service.py"
 
-@pytest.mark.skip(reason="Ce test cause un crash non déterministe de la JVM dans le sous-processus. À réactiver après enquête sur l'environnement.")
 def test_dung_service_via_worker(run_in_jvm_subprocess):
     """
     Exécute les tests du service Dung dans un sous-processus isolé.

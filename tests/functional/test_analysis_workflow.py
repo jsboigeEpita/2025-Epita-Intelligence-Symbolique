@@ -1,6 +1,7 @@
 import pytest
 from argumentation_analysis.utils.unified_pipeline import UnifiedAnalysisPipeline, AnalysisConfig, AnalysisMode
 
+@pytest.mark.use_real_numpy
 async def test_full_analysis_workflow_simple_text():
     """
     Tests the full analysis pipeline with a simple, non-controversial text.

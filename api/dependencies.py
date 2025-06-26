@@ -144,7 +144,7 @@ def get_dung_analysis_service() -> DungAnalysisService:
             jpype_manager = JPypeManager()
             
             # Définir le chemin vers les fichiers JAR
-            jpype_manager.set_jars_path('libs/java')
+            jpype_manager.set_jars_path('libs/tweety')
             
             # Lancer la JVM avec la configuration du manager
             jpype_manager.start_jvm()

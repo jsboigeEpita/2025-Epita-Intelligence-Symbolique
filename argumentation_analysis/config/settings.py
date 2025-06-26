@@ -5,10 +5,15 @@ from typing import Optional, List
 from pathlib import Path
 
 class OpenAISettings(BaseSettings):
-    api_key: SecretStr = "YOUR_DEFAULT_API_KEY"
+    api_key: Optional[SecretStr] = None
     chat_model_id: str = 'gpt-4o-mini'
     base_url: Optional[HttpUrl] = None
-    model_config = SettingsConfigDict(env_prefix='OPENAI_')
+    model_config = SettingsConfigDict(
+        env_prefix='OPENAI_',
+        env_file='.env',
+        env_file_encoding='utf-8',
+        extra='ignore'
+    )
 
 class TikaSettings(BaseSettings):
     server_endpoint: HttpUrl = "https://tika.open-webui.myia.io/tika"

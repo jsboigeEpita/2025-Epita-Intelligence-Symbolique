@@ -14,30 +14,22 @@ from pathlib import Path
 
 def get_conda_env_name(project_root: Path) -> str:
     """
-    Détecte le nom de l'environnement Conda à partir du fichier de configuration.
+    Détecte le nom de l'environnement Conda à partir du fichier .env.
 
     Retourne le nom de l'environnement ou une valeur par défaut.
     """
-    import re
-
-    config_path = project_root / "argumentation_analysis" / "config" / "environment_config.py"
-    default_env_name = "projet-is"
-
-    if not config_path.is_file():
-        print(f"Fichier de configuration non trouvé : {config_path}", file=sys.stderr)
-        return default_env_name
-
     try:
-        content = config_path.read_text(encoding="utf-8")
-        match = re.search(r"""^CONDA_ENV_NAME\s*=\s*["']([^"']+)["']""", content, re.MULTILINE)
-        if match:
-            env_name = match.group(1)
-            print(f"Nom de l'environnement trouvé dans la config : {env_name}", file=sys.stderr)
-            return env_name
-    except Exception as e:
-        print(f"Erreur en lisant le fichier de configuration : {e}", file=sys.stderr)
+        from dotenv import load_dotenv
+        dotenv_path = project_root / '.env'
+        load_dotenv(dotenv_path=dotenv_path)
+    except ImportError:
+        print("Warning: python-dotenv not found. Install it with 'pip install python-dotenv' for .env file support.", file=sys.stderr)
+    
+    default_env_name = "projet-is"
+    env_name = os.environ.get("CONDA_ENV_NAME", default_env_name)
 
-    return default_env_name
+    print(f"Nom de l'environnement utilisé : {env_name}", file=sys.stderr)
+    return env_name
 
 def find_conda_env_path(env_name: str) -> Path:
     """

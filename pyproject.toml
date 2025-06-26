@@ -4,13 +4,22 @@ build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -q"
+addopts = "-ra -q -p no:faulthandler"
+asyncio_mode = "auto"
+norecursedirs = [
+    ".git",
+    "venv",
+    "archived_scripts",
+    "libs",
+    "abs_arg_dung",
+    "examples",
+    "argumentation_analysis/services/web_api/tests",
+]
 pythonpath = [
     "."
 ]
 testpaths = [
-    "tests",
-    "argumentation_analysis",
+    "tests"
 ]
 dotenv_files = [
     ".env"

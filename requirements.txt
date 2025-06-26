@@ -23,8 +23,8 @@ a2wsgi
 asgiref
 
 # Utilities
-pydantic
-pydantic-settings
+pydantic==2.9.2
+pydantic-settings>=2.0
 python-dotenv
 cryptography
 tqdm
@@ -54,4 +54,4 @@ psutil
 pyautogen>=0.2.0
 tenacity
 pybreaker
-mcp
+# mcp
