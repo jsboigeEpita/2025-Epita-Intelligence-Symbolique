@@ -1,0 +1,129 @@
+{
+  "performance_by_personality": {
+    "The Scholar": {
+      "logical_coherence": 0.89,
+      "evidence_quality": 0.875,
+      "persuasiveness": 0.74,
+      "readability": 0.874,
+      "emotional_appeal": 0.425,
+      "win_rate": 0.44
+    },
+    "The Pragmatist": {
+      "logical_coherence": 0.859,
+      "evidence_quality": 0.822,
+      "persuasiveness": 0.645,
+      "readability": 0.864,
+      "emotional_appeal": 0.59,
+      "win_rate": 0.639
+    },
+    "The Idealist": {
+      "logical_coherence": 0.666,
+      "evidence_quality": 0.612,
+      "persuasiveness": 0.851,
+      "readability": 0.798,
+      "emotional_appeal": 0.748,
+      "win_rate": 0.532
+    },
+    "The Skeptic": {
+      "logical_coherence": 0.892,
+      "evidence_quality": 0.834,
+      "persuasiveness": 0.695,
+      "readability": 0.763,
+      "emotional_appeal": 0.398,
+      "win_rate": 0.473
+    },
+    "The Populist": {
+      "logical_coherence": 0.785,
+      "evidence_quality": 0.726,
+      "persuasiveness": 0.749,
+      "readability": 0.709,
+      "emotional_appeal": 0.616,
+      "win_rate": 0.532
+    },
+    "The Economist": {
+      "logical_coherence": 0.702,
+      "evidence_quality": 0.708,
+      "persuasiveness": 0.682,
+      "readability": 0.725,
+      "emotional_appeal": 0.603,
+      "win_rate": 0.493
+    },
+    "The Philosopher": {
+      "logical_coherence": 0.812,
+      "evidence_quality": 0.799,
+      "persuasiveness": 0.704,
+      "readability": 0.708,
+      "emotional_appeal": 0.705,
+      "win_rate": 0.439
+    }
+  },
+  "results_by_topic": {
+    "Intelligence artificielle et emploi": {
+      "total_arguments": 49,
+      "avg_quality_score": 0.708,
+      "audience_engagement": 0.869,
+      "winner_margin": 0.101,
+      "debate_duration_turns": 18
+    },
+    "\u00c9nergie nucl\u00e9aire vs renouvelables": {
+      "total_arguments": 56,
+      "avg_quality_score": 0.707,
+      "audience_engagement": 0.896,
+      "winner_margin": 0.174,
+      "debate_duration_turns": 12
+    },
+    "T\u00e9l\u00e9travail obligatoire": {
+      "total_arguments": 65,
+      "avg_quality_score": 0.811,
+      "audience_engagement": 0.888,
+      "winner_margin": 0.163,
+      "debate_duration_turns": 16
+    },
+    "R\u00e9seaux sociaux pour mineurs": {
+      "total_arguments": 58,
+      "avg_quality_score": 0.722,
+      "audience_engagement": 0.802,
+      "winner_margin": 0.182,
+      "debate_duration_turns": 16
+    },
+    "Voiture autonome": {
+      "total_arguments": 63,
+      "avg_quality_score": 0.71,
+      "audience_engagement": 0.894,
+      "winner_margin": 0.086,
+      "debate_duration_turns": 14
+    }
+  },
+  "phase_performance": {
+    "Opening": {
+      "avg_score": 0.72,
+      "std_dev": 0.12
+    },
+    "Main Arguments": {
+      "avg_score": 0.76,
+      "std_dev": 0.14
+    },
+    "Rebuttals": {
+      "avg_score": 0.81,
+      "std_dev": 0.16
+    },
+    "Closing": {
+      "avg_score": 0.79,
+      "std_dev": 0.11
+    }
+  },
+  "gpt_comparison": {
+    "Avec base de donn\u00e9es locale": {
+      "coverage_topics": 0.42,
+      "argument_quality": 0.58,
+      "response_time": 3.2,
+      "factual_accuracy": 0.61
+    },
+    "Avec int\u00e9gration GPT": {
+      "coverage_topics": 0.89,
+      "argument_quality": 0.78,
+      "response_time": 4.1,
+      "factual_accuracy": 0.84
+    }
+  }
+}
