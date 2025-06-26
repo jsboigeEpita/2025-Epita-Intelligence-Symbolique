@@ -38,6 +38,12 @@ from playwright.async_api import async_playwright, Playwright, Browser
 import aiohttp
 import psutil
 
+# Définir le chemin racine du projet pour les imports
+# On suppose que ce script est dans un sous-répertoire de la racine.
+# C'est une correction clé pour résoudre les ModuleNotFoundError.
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 # Imports internes (sans activation d'environnement au niveau du module)
 # Le bootstrap se fera dans la fonction main()
 from argumentation_analysis.core.jvm_setup import download_tweety_jars
@@ -176,7 +182,8 @@ class MinimalBackendManager:
         self.logger.info(f"[BACKEND] Utilisation du chemin Python absolu : {python_executable}")
 
         command = [
-            python_executable,
+            'conda', 'run', '-n', 'projet-is', '--no-capture-output',
+            'python',
             '-m', 'uvicorn', module_spec,
             '--host', '127.0.0.1',
             '--port', str(self.port)
