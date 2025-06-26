@@ -47,8 +47,8 @@ class ServiceManagerSettings(BaseSettings):
     analysis_timeout: int = 300  # 5 minutes
     auto_cleanup: bool = True
     save_results: bool = True
-    results_dir: Path = Path("results_service_manager")
-    data_dir: Path = Path("data")
+    results_dir: Path = Path("output/results_service_manager")
+    data_dir: Path = Path("output/data")
     default_llm_service_id: str = "gpt-4o-mini"
     hierarchical_channel_id: str = "hierarchical_main"
     model_config = SettingsConfigDict(env_prefix='SERVICE_MANAGER_')

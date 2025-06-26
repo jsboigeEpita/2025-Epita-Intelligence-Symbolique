@@ -137,6 +137,7 @@ pr1_diff.txt
 logs/
 reports/
 
+output/
 # Logs spécifiques au projet
 extract_agent.log
 repair_extract_markers.log
