@@ -86,7 +86,6 @@ class TestFOLTweetyCompatibility:
             "JVM_MEMORY": os.getenv("JVM_MEMORY", "512m")
         }
     
-    @pytest.mark.skipif(not TWEETY_AVAILABLE, reason="TweetyBridge non disponible")
     @pytest.mark.asyncio
     async def test_fol_formula_tweety_compatibility(self, real_tweety_config):
         """Test compatibilité formules FOL avec Tweety réel."""
@@ -127,7 +126,6 @@ class TestFOLTweetyCompatibility:
                 # Échec = syntaxe incompatible
                 pytest.fail(f"Syntaxe FOL incompatible avec Tweety: {formula} - {e}")
     
-    @pytest.mark.skipif(not TWEETY_AVAILABLE, reason="TweetyBridge non disponible")
     @pytest.mark.asyncio
     async def test_fol_predicate_declaration_validation(self, real_tweety_config):
         """Test validation déclaration prédicats FOL avec Tweety."""
@@ -160,8 +158,7 @@ class TestFOLTweetyCompatibility:
             else:
                 pytest.fail(f"Erreur Tweety inattendue: {e}")
     
-    @pytest.mark.skipif(not TWEETY_AVAILABLE, reason="TweetyBridge non disponible")
-    @pytest.mark.asyncio 
+    @pytest.mark.asyncio
     async def test_fol_quantifier_binding_validation(self, real_tweety_config):
         """Test validation liaison quantificateurs avec Tweety."""
         if not real_tweety_config["USE_REAL_JPYPE"]:
@@ -292,7 +289,6 @@ class TestRealTweetyFOLAnalysis:
         
         logger.info("✅ Incohérence détectée par Tweety réel.")
     
-    @pytest.mark.xfail(reason="La fonction generate_queries n'est pas implémentée dans cette version.")
     @pytest.mark.asyncio
     async def test_real_tweety_fol_inference_generation(self, fol_agent_with_kernel):
         fol_agent_real_tweety = fol_agent_with_kernel

@@ -34,7 +34,7 @@ except ImportError:
         AzureOpenAIChatCompletion = None
 
 # Imports du projet
-from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent, SYSTEM_PROMPT_FOL
+from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import FirstOrderBeliefSet, BeliefSet
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 

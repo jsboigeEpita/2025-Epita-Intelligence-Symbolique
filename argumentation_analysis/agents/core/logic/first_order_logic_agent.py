@@ -58,16 +58,6 @@ class BeliefSetBuilderPlugin:
             self._sorts[norm_sort] = []
         return f"Sort '{norm_sort}' added."
 
-    @kernel_function(description="Add a constant to a sort.", name="add_constant_to_sort")
-    def add_constant_to_sort(self, constant_name: str, sort_name: str):
-        norm_const = self._normalize(constant_name)
-        norm_sort = self._normalize(sort_name)
-        if norm_sort not in self._sorts:
-            self.add_sort(norm_sort)
-        if norm_const not in self._sorts[norm_sort]:
-            self._sorts[norm_sort].append(norm_const)
-        return f"Constant '{norm_const}' added to sort '{norm_sort}'."
-
     @kernel_function(description="Define a predicate schema.", name="add_predicate_schema")
     def add_predicate_schema(self, predicate_name: str, argument_sorts: List[str]):
         norm_pred = self._normalize(predicate_name)
@@ -80,25 +70,35 @@ class BeliefSetBuilderPlugin:
         self._predicates[norm_pred] = norm_args
         return f"Predicate schema '{norm_pred}' declared."
 
-    @kernel_function(description="Add an atomic fact.", name="add_atomic_fact")
+    @kernel_function(description="Add an atomic fact, e.g., 'Socrates is a man'.", name="add_atomic_fact")
     def add_atomic_fact(self, fact_predicate_name: str, fact_arguments: List[str]):
         p_name = self._normalize(fact_predicate_name)
         arg_list = [self._normalize(arg) for arg in fact_arguments]
 
-        # Robustness: If a constant is used in a fact, ensure it and its sort exist.
-        if p_name in self._predicates:
-            expected_sorts = self._predicates[p_name]
-            for i, arg_name in enumerate(arg_list):
-                if i < len(expected_sorts):
-                    sort_name = expected_sorts[i]
-                    # Check if the constant is declared in ANY sort, and if not, add it
-                    # to the expected sort for this predicate.
-                    is_declared = any(arg_name in v for v in self._sorts.values())
-                    if not is_declared:
-                        self.add_constant_to_sort(arg_name, sort_name)
+        # --- Enhanced Robustness ---
+        # If the predicate schema is not defined, create it dynamically.
+        # This assumes a simple 1-to-1 mapping from predicate to a sort of the same name.
+        if p_name not in self._predicates:
+            # We derive the sort name from the predicate name, as is common.
+            # e.g., predicate 'Etudiant' implies sort 'Etudiant'.
+            # This is a heuristic that works well for many simple cases.
+            sort_name_for_predicate = p_name
+            self.add_predicate_schema(p_name, [sort_name_for_predicate])
+
+        # Ensure all constants and their respective sorts exist.
+        expected_sorts = self._predicates[p_name]
+        for i, arg_name in enumerate(arg_list):
+            if i < len(expected_sorts):
+                sort_name = expected_sorts[i]
+                # Ensure the sort exists.
+                if sort_name not in self._sorts:
+                    self.add_sort(sort_name)
+                # Ensure the constant is in the sort.
+                if arg_name not in self._sorts[sort_name]:
+                    self._sorts[sort_name].append(arg_name)
 
         self._atomic_facts.append(AtomicFact(p_name, arg_list))
-        return "Atomic fact added."
+        return f"Atomic fact '{p_name}({', '.join(arg_list)})' added."
 
     @kernel_function(description="Add a universal implication.", name="add_universal_implication")
     def add_universal_implication(self, impl_antecedent_predicate: str, impl_consequent_predicate: str, impl_sort_of_variable: str):
@@ -337,8 +337,74 @@ class FirstOrderLogicAgent(BaseLogicAgent):
     def _create_belief_set_from_data(self, data, context: Optional[Dict[str, Any]] = None):
         raise NotImplementedError
 
-    def generate_queries(self, belief_set, num_queries: int = 3):
-        raise NotImplementedError
+    async def generate_queries(self, text: str, belief_set: "FirstOrderBeliefSet", num_queries: int = 3) -> List[str]:
+        """
+        Génère des requêtes logiques pertinentes en utilisant le LLM.
+        """
+        logger.info("Génération de requêtes FOL...")
+
+        prompt = f"""
+        Vous êtes un expert en logique du premier ordre. Votre tâche est de générer des requêtes pertinentes en
+        logique du premier ordre pour interroger un ensemble de croyances (belief set) donné.
+
+        Voici le texte source:
+        {text}
+
+        Voici l'ensemble de croyances en logique du premier ordre:
+        {belief_set.content}
+
+        Générez {num_queries} requêtes pertinentes en logique du premier ordre qui permettraient de vérifier des implications
+        importantes ou des conclusions intéressantes à partir de cet ensemble de croyances. Utilisez la syntaxe de TweetyProject.
+
+        Règles importantes:
+        1. Les requêtes doivent être des formules bien formées en logique du premier ordre.
+        2. Utilisez un vocabulaire (prédicats, constantes) cohérent avec l'ensemble de croyances.
+        3. Chaque requête doit être sur une ligne séparée.
+        4. N'incluez AUCUN commentaire ou texte superflu, seulement les requêtes.
+
+        Répondez uniquement avec les requêtes.
+        """
+
+        try:
+            # Création d'un historique de chat simple pour l'appel
+            chat_history = ChatHistory()
+            chat_history.add_user_message(prompt)
+
+            # Création des settings pour l'appel
+            settings_class = self.service.get_prompt_execution_settings_class()
+            execution_settings = settings_class(
+                service_id=self._llm_service_id
+            )
+
+            # Appel direct au service LLM
+            result = await self.service.get_chat_message_content(
+                chat_history=chat_history,
+                settings=execution_settings,
+                kernel=self._kernel
+            )
+
+            # Le résultat est un ChatMessageContent, on prend son contenu.
+            queries_text = str(result)
+            
+            if not queries_text:
+                logger.warning("Le LLM n'a retourné aucune requête.")
+                return []
+
+            # Extraire les requêtes individuelles, ignorer les lignes vides et nettoyer chaque requête.
+            raw_queries = [q.strip() for q in queries_text.split('\n') if q.strip()]
+            
+            # Nettoyer les-préfixes numériques (ex: "1. ", "2. ") et les blocs de code markdown.
+            temp_queries = [re.sub(r'^\s*\d+\.\s*', '', q) for q in raw_queries]
+            # Supprimer les ``` au début et à la fin
+            cleaned_queries = [q.replace('```', '').strip() for q in temp_queries if q.strip() and q.strip() != '```']
+
+            logger.info(f"Génération de {len(cleaned_queries)} requêtes candidates après nettoyage.")
+            queries = cleaned_queries
+            return queries
+
+        except Exception as e:
+            logger.error(f"Erreur lors de la génération des requêtes FOL: {e}", exc_info=True)
+            return []
 
     def get_agent_capabilities(self):
         raise NotImplementedError

@@ -28,6 +28,7 @@ class TweetyInitializer:
     _classes_loaded = False
     _pl_parser = None
     _fol_parser = None
+    _fol_reasoner = None
     _modal_parser = None
     _modal_reasoner = None
     _tweety_bridge = None
@@ -185,6 +186,9 @@ class TweetyInitializer:
             TweetyInitializer.Conjunction = jpype.JClass("org.tweetyproject.logics.fol.syntax.Conjunction")
             jpype.JClass("org.tweetyproject.commons.ParserException")
 
+            # Reasoner
+            jpype.JClass("org.tweetyproject.logics.fol.reasoner.ResolutionProver")
+
             logger.info("Successfully imported and cached TweetyProject Java classes.")
             TweetyInitializer._classes_loaded = True
 
@@ -208,12 +212,16 @@ class TweetyInitializer:
             raise
 
     def initialize_fol_components(self):
-        if self.__class__._fol_parser:
+        if self.__class__._fol_parser and self.__class__._fol_reasoner:
             return
         try:
             logger.debug("Initializing FOL components...")
-            self.__class__._fol_parser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")()
-            logger.info("FOL parser initialized.")
+            if not self.__class__._fol_parser:
+                self.__class__._fol_parser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")()
+                logger.info("FOL parser initialized.")
+            if not self.__class__._fol_reasoner:
+                self.__class__._fol_reasoner = jpype.JClass("org.tweetyproject.logics.fol.reasoner.ResolutionProver")()
+                logger.info("FOL reasoner (ResolutionProver) initialized.")
         except Exception as e:
             logger.error(f"Error initializing FOL components: {e}", exc_info=True)
             raise
@@ -246,6 +254,12 @@ class TweetyInitializer:
         if not TweetyInitializer._modal_parser:
             raise RuntimeError("Modal Parser not initialized.")
         return TweetyInitializer._modal_parser
+
+    @staticmethod
+    def get_fol_reasoner():
+        if not TweetyInitializer._fol_reasoner:
+            raise RuntimeError("FOL Reasoner not initialized.")
+        return TweetyInitializer._fol_reasoner
 
     def is_jvm_started(self):
         return self.__class__._jvm_started

@@ -17,9 +17,9 @@ class FOLHandler:
         self.logger = logging.getLogger(__name__)
         self._initializer_instance = initializer_instance
         self._fol_parser = self._initializer_instance.get_fol_parser()
-        # self._fol_reasoner = TweetyInitializer.get_fol_reasoner() # If a general one is set up
+        self._fol_reasoner = self._initializer_instance.get_fol_reasoner()
 
-        if self._fol_parser is None:
+        if self._fol_parser is None or self._fol_reasoner is None:
             logger.error("FOL Parser not initialized. Ensure TweetyBridge calls TweetyInitializer first.")
             raise RuntimeError("FOLHandler initialized before TweetyInitializer completed FOL setup.")
 
@@ -115,13 +115,11 @@ class FOLHandler:
         """
         logger.debug(f"Checking FOL consistency for belief set of size {belief_set.size()}")
         try:
-            # A real implementation would use a prover
-            # Prover = jpype.JClass("org.tweetyproject.logics.fol.reasoner.ResolutionProver")()
-            # Contradiction = jpype.JClass("org.tweetyproject.logics.fol.syntax.Contradiction").getInstance()
-            # is_consistent = not Prover.query(belief_set, Contradiction)
-            # return is_consistent, f"Consistency check result: {is_consistent}"
-            logger.warning("FOL consistency check is a placeholder and assumes consistency.")
-            return True, "Consistency check is a placeholder and currently assumes success."
+            Contradiction = jpype.JClass("org.tweetyproject.logics.fol.syntax.Contradiction").getInstance()
+            is_consistent = not self._fol_reasoner.query(belief_set, Contradiction)
+            msg = f"Consistency check result: {is_consistent}"
+            logger.info(msg)
+            return is_consistent, msg
         except jpype.JException as e:
             logger.error(f"JPype JException during FOL consistency check: {e.getMessage()}", exc_info=True)
             raise RuntimeError(f"FOL consistency check failed: {e.getMessage()}") from e
@@ -139,15 +137,10 @@ class FOLHandler:
             parser.setSignature(signature)
             
             query_formula = self.parse_fol_formula(query_formula_str, custom_parser=parser)
+
+            entails = self._fol_reasoner.query(belief_set, query_formula)
             
-            # Real implementation needed here
-            # Prover = jpype.JClass("org.tweetyproject.logics.fol.reasoner.ResolutionProver")()
-            # entails = Prover.query(belief_set, query_formula)
-            entails = True # PLACEHOLDER
-            
-            logger.warning("FOL query is a placeholder.")
-            logger.info(f"FOL Query: KB entails '{query_formula_str}'? {entails} (Placeholder result)")
-            query_msg = f"FOL Query: KB entails '{query_formula_str}'? {entails} (Placeholder result)"
+            query_msg = f"FOL Query: KB entails '{query_formula_str}'? {entails}"
             logger.info(query_msg)
             return bool(entails), query_msg
         except (ValueError, jpype.JException) as e:
