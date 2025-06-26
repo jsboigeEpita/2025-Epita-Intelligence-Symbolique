@@ -46,6 +46,7 @@ class OperationalAgentRegistry:
         self.llm_service_id = llm_service_id
         self.project_context = project_context
         self.agents: Dict[str, OperationalAgent] = {}
+        self.initialization_complete = asyncio.Event()
         self.agent_classes: Dict[str, Type[OperationalAgent]] = {
             "extract": ExtractAgentAdapter,
             "informal": InformalAgentAdapter,
@@ -59,6 +60,14 @@ class OperationalAgentRegistry:
         if not self.project_context:
             self.logger.warning("ProjectContext non fourni à OperationalAgentRegistry. L'initialisation des agents risque d'échouer.")
     
+    async def initialize_all_agents(self) -> None:
+        """Initialise tous les agents connus et définit l'événement de complétion."""
+        self.logger.info("Démarrage de l'initialisation de tous les agents...")
+        for agent_type in self.agent_classes.keys():
+            await self.get_agent(agent_type)
+        self.initialization_complete.set()
+        self.logger.info("Tous les agents ont été initialisés.")
+
     async def get_agent(self, agent_type: str) -> Optional[OperationalAgent]:
         """
         Récupère un agent opérationnel par son type.
