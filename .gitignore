@@ -305,3 +305,7 @@ execution_traces/
 
 # JDK local lock file
 portable_jdk_locked/
+
+# Ignorer explicitement le dossier de résultats du service manager
+results_service_manager/
+_temp/service_manager_results/

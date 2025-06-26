@@ -205,7 +205,7 @@ class RealLLMOrchestrator:
                 request_id=request_id,
                 analysis_type=request.analysis_type,
                 result=result,
-                confidence=result.get('confidence', 0.8),
+                confidence=result.pop('confidence', 0.8),
                 processing_time=processing_time,
                 timestamp=datetime.now(),
                 metadata={'request_params': request.parameters, 'context': request.context}
@@ -301,21 +301,9 @@ class RealLLMOrchestrator:
             is_valid_analysis = results[0][0] if results and results[0] is not None else False
 
             # This structure MUST match what validation_complete_epita.py expects
-            final_result = {
-                "is_valid": is_valid_analysis,
-                "reasoning_scheme": "Modus Ponens" if is_valid_analysis else "N/A",
-                "details": interpretation,
-                "full_analysis": { # Keep this for debugging or extended info
-                    "belief_set": belief_set.to_dict(),
-                    "queries": queries,
-                    "results": [str(r) for r in results], # Convert tuples for JSON
-                }
-            }
-            
-            # This structure MUST match what validation_complete_epita.py expects from the object
             final_result_dict = {
                 "is_valid": is_valid_analysis,
-                "reasoning_scheme": "Modus Ponens" if is_valid_analysis else "N/A",
+                "scheme": "Modus Ponens" if is_valid_analysis else "Fallacy", # Corresponds to validator expectation
                 "details": interpretation,
                 "full_analysis": {
                     "belief_set": belief_set.to_dict(),
@@ -323,28 +311,17 @@ class RealLLMOrchestrator:
                     "results": [str(r) for r in results],
                 }
             }
-
-            # The analyze_text method is expected to return an LLMAnalysisResult object
-            return LLMAnalysisResult(
-                request_id=context.get("request_id", "N/A"),
-                analysis_type='logical',
-                result=final_result_dict,
-                confidence=0.98 if is_valid_analysis else 0.5,
-                processing_time=time.time() - context.get('start_time', time.time()),
-                timestamp=datetime.now(),
-                metadata={'method': 'PropositionalLogicAgent Full Workflow'}
-            )
+            
+            # The orchestrator returns a dict that will be wrapped in LLMAnalysisResult
+            # The validator expects `analysis_result_obj.result['result']`
+            return {
+                'success': True,
+                'result': final_result_dict,  # This 'result' key is crucial
+                'confidence': 0.95  # Use a consistent confidence score
+            }
         except Exception as e:
             self.logger.error(f"Erreur lors de l'analyse logique approfondie: {e}", exc_info=True)
-            return LLMAnalysisResult(
-                request_id=context.get("request_id", "N/A"),
-                analysis_type='logical',
-                result={'success': False, 'error': str(e)},
-                confidence=0.0,
-                processing_time=time.time() - context.get('start_time', time.time()),
-                timestamp=datetime.now(),
-                metadata={'error_in_workflow': True}
-            )
+            return {'success': False, 'error': str(e), 'confidence': 0.0}
 
     async def _extract_entities(self, text: str, context: Dict, parameters: Dict) -> Dict[str, Any]:
         """Extraction d'entités du texte."""

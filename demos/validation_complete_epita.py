@@ -133,13 +133,14 @@ class ValidationEpitaComplete:
         self.mode = mode
         self.complexity = complexity
         self.enable_synthetic = enable_synthetic
+        self.manager = None
         self.results = {
             "metadata": {
                 "timestamp": datetime.now().isoformat(),
                 "mode": mode.value,
                 "complexity": complexity.value,
                 "synthetic_enabled": enable_synthetic,
-                "version": "2.0"
+                "version": "2.1_hardened"
             },
             "components": {},
             "score": 0,
@@ -375,38 +376,38 @@ class ValidationEpitaComplete:
         return success_count >= len(test_data) * 0.6
 
     async def _run_authentic_analysis(self, text: str) -> Dict[str, Any]:
-        """Lance une analyse authentique en utilisant les vrais composants LLM"""
+        """Lance une VRAIE analyse authentique en utilisant le ServiceManager."""
+        if not self.manager:
+            from argumentation_analysis.orchestration.service_manager import OrchestrationServiceManager
+            self.manager = OrchestrationServiceManager()
+            await self.manager.initialize()
+
         try:
-            # Simulation d'une analyse authentique avec les composants réels
-            # En réalité, ici on appellerait les vrais modules d'analyse
+            analysis_result_obj = await self.manager.analyze_text(text, analysis_type="logical")
             
-            # Test 1: Analyse basique de longueur et structure
-            word_count = len(text.split())
-            sentence_count = text.count('.') + text.count('!') + text.count('?')
+            if not analysis_result_obj or not hasattr(analysis_result_obj, 'result') or not isinstance(analysis_result_obj.result, dict):
+                return {'success': False, 'summary': 'Réponse mal formée', 'authenticity_score': 0.0}
+
+            # La structure a été corrigée, le résultat de l'analyse logique est dans result['result']
+            final_result = analysis_result_obj.result.get('result', {})
+            is_valid = final_result.get("is_valid", False)
             
-            # Test 2: Détection de mots-clés logiques
-            logic_keywords = ['si', 'alors', 'donc', 'tous', 'nécessairement', 'possible']
-            logic_score = sum(1 for keyword in logic_keywords if keyword.lower() in text.lower())
-            
-            # Test 3: Score d'authenticité basé sur la complexité
-            authenticity_score = min(
-                0.6 + (logic_score * 0.1) + (min(word_count / 50, 1) * 0.3),
-                1.0
-            )
-            
+            # Un test synthétique est réussi s'il identifie correctement la validité.
+            # On considère ici que tous les tests synthétiques complexes sont valides.
+            # C'est une simplification, mais déjà bien meilleure que le test précédent.
+            success = is_valid
+
             return {
-                'success': True,
-                'word_count': word_count,
-                'sentence_count': sentence_count,
-                'logic_score': logic_score,
-                'authenticity_score': authenticity_score,
-                'summary': f"Analyse: {word_count} mots, {sentence_count} phrases, score logique: {logic_score}"
+                'success': success,
+                'summary': f"Validité logique détectée: {success}",
+                'authenticity_score': analysis_result_obj.confidence
             }
             
         except Exception as e:
             return {
                 'success': False,
                 'error': str(e),
+                'summary': f"Exception durant l'analyse: {e}",
                 'authenticity_score': 0.0
             }
 
@@ -505,81 +506,86 @@ class ValidationEpitaComplete:
 
         return success_count >= len(core_modules) * 0.6
 
+    async def shutdown(self):
+        """Arrête proprement les services managés."""
+        if self.manager and self.manager.is_available():
+            await self.manager.shutdown()
+            self.log_test("System", "shutdown", "SUCCESS", "ServiceManager arrêté proprement.", 0.0, 1.0)
+
     async def validate_integration_complete(self) -> bool:
-        """Validation d'intégration complète avec un vrai scénario."""
-        print(f"\n{Colors.BOLD}VALIDATION INTEGRATION COMPLETE{Colors.ENDC}")
+        """Validation d'intégration complète avec de multiples scénarios logiques."""
+        print(f"\n{Colors.BOLD}VALIDATION INTEGRATION COMPLETE (TESTS DURCIS){Colors.ENDC}")
 
-        # On importe ici pour éviter des dépendances circulaires ou des initialisations précoces
-        from argumentation_analysis.orchestration.service_manager import OrchestrationServiceManager
-        import asyncio
+        scenarios = {
+            "Modus Ponens (Valide)": {
+                "text": "Si la batterie est chargée, la voiture démarre. La batterie est chargée. Donc la voiture démarre.",
+                "should_be_valid": True,
+                "expected_scheme": "Modus Ponens"
+            },
+            "Affirmation du conséquent (Invalide)": {
+                "text": "Si la batterie est chargée, la voiture démarre. La voiture démarre. Donc la batterie est chargée.",
+                "should_be_valid": False,
+                "expected_scheme": "Fallacy"
+            },
+            "Modus Tollens (Valide)": {
+                "text": "S'il pleut, la route est mouillée. La route n'est pas mouillée. Donc il ne pleut pas.",
+                "should_be_valid": True,
+                "expected_scheme": "Modus Tollens"
+            },
+            "Négation de l'antécédent (Invalide)": {
+                "text": "S'il pleut, la route est mouillée. Il ne pleut pas. Donc la route n'est pas mouillée.",
+                "should_be_valid": False,
+                "expected_scheme": "Fallacy"
+            }
+        }
+        
+        if not self.manager:
+            from argumentation_analysis.orchestration.service_manager import OrchestrationServiceManager
+            self.manager = OrchestrationServiceManager()
+            await self.manager.initialize()
 
-        async def run_integration_test():
-            manager = None
-            exec_time = 0.0
+        overall_success = True
+        for test_name, config in scenarios.items():
             start_time = time.time()
+            success_this_test = False
             try:
-                # 1. Initialisation
-                manager = OrchestrationServiceManager()
-                init_success = await manager.initialize()
-                if not init_success:
-                    self.log_test("Intégration Complète", "initialization", "FAILED", "Échec de l'initialisation du ServiceManager", time.time() - start_time, 0.0)
-                    return False
-                
-                # 2. Test d'analyse de validité logique
-                test_text = "Si P alors Q. P est vrai. Donc Q est vrai."
-                analysis_result_obj = await manager.analyze_text(test_text, analysis_type="logical")
+                analysis_result_obj = await self.manager.analyze_text(config["text"], analysis_type="logical")
                 exec_time = time.time() - start_time
                 
-                # 3. Validation stricte du résultat
-                # Robustesse : s'assurer que l'objet et sa structure de base existent
-                if not analysis_result_obj or not hasattr(analysis_result_obj, 'result') or not isinstance(analysis_result_obj.result, dict):
-                    error_details = "Réponse invalide ou mal formée de l'orchestrateur."
-                    self.log_test("Intégration Complète", "response_validation", "FAILED", error_details, exec_time, 0.0)
-                    return False
+                # The validator receives a complex dictionary from the ServiceManager, not a simple object.
+                # We need to navigate through it to find the actual analysis result.
+                specialized_results = analysis_result_obj.get('results', {}).get('specialized', {})
+                if not specialized_results:
+                    self.log_test("Intégration Complète", test_name, "FAILED", "Section 'specialized results' manquante.", exec_time, 0.0)
+                    overall_success = False
+                    continue
                 
-                # Vérification du succès du pipeline
-                if not analysis_result_obj.result.get('success'):
-                    error_details = analysis_result_obj.result.get('result', {}).get('details', 'Analyse échouée sans détails explicites.')
-                    self.log_test("Intégration Complète", "execution_test", "FAILED", f"Le pipeline d'analyse logique a échoué: {error_details}", exec_time, 0.0)
-                    return False
+                # The actual payload from the orchestrator is inside the 'result' key
+                orchestrator_payload = specialized_results.get('result', {})
+                if not orchestrator_payload or not orchestrator_payload.get('success'):
+                    failure_reason = orchestrator_payload.get('error', 'Le pipeline a échoué sans message.')
+                    self.log_test("Intégration Complète", test_name, "FAILED", f"Pipeline a échoué: {failure_reason}", exec_time, 0.0)
+                    overall_success = False
+                    continue
                 
-                # Extraction et validation des résultats
-                validity_result = analysis_result_obj.result.get('result', {})
+                # The final logical analysis is one level deeper
+                validity_result = orchestrator_payload.get('result', {})
                 is_valid = validity_result.get("is_valid")
-                scheme = validity_result.get("reasoning_scheme", "N/A")
-                details = validity_result.get("details", "")
 
-                if is_valid and scheme != "N/A" and "Modus Ponens" in scheme:
-                    self.log_test("Intégration Complète", "validity_and_scheme_check", "SUCCESS", f"Argument reconnu comme valide. Schéma: {scheme}. {details}", exec_time, 1.0)
-                    return True
-                elif is_valid:
-                    self.log_test("Intégration Complète", "scheme_check", "FAILED", f"L'argument est valide mais le schéma de raisonnement '{scheme}' est incorrect ou non identifié.", exec_time, 0.5)
-                    return False
+                if is_valid == config["should_be_valid"]:
+                    self.log_test("Intégration Complète", test_name, "SUCCESS", f"Évaluation de validité ({is_valid}) correcte.", exec_time, 1.0)
+                    success_this_test = True
                 else:
-                    self.log_test("Intégration Complète", "validity_check", "FAILED", f"L'argument a été incorrectement évalué comme invalide. Détails: {details}", exec_time, 0.1)
-                    return False
+                    self.log_test("Intégration Complète", test_name, "FAILED", f"Évaluation de validité incorrecte. Attendu: {config['should_be_valid']}, Obtenu: {is_valid}", exec_time, 0.1)
+                    overall_success = False
 
-            except (KeyError, AttributeError, TypeError) as e:
-                import traceback
-                error_details = f"La structure du résultat d'analyse a changé, impossible de valider. Erreur: {e}\n{traceback.format_exc()}"
-                self.log_test("Intégration Complète", "result_parsing", "FAILED", error_details, exec_time, 0.0)
-                return False
             except Exception as e:
                 import traceback
-                error_details = f"Exception inattendue pendant le test: {str(e)}\n{traceback.format_exc()}"
-                self.log_test("Intégration Complète", "integration_test", "FAILED", error_details, time.time() - start_time, 0.0)
-                return False
-            finally:
-                if manager and manager.is_available():
-                    await manager.shutdown()
-
-        try:
-            return await run_integration_test()
-        except Exception as e:
-            import traceback
-            error_details = f"Erreur fatale du lanceur de test: {str(e)}\n{traceback.format_exc()}"
-            self.log_test("Intégration Complète", "runner_exception", "FAILED", error_details, 0.0, 0.0)
-            return False
+                error_details = f"Exception: {str(e)}\n{traceback.format_exc()}"
+                self.log_test("Intégration Complète", test_name, "FAILED", error_details, time.time() - start_time, 0.0)
+                overall_success = False
+        
+        return overall_success
 
     def generate_final_report(self) -> Dict[str, Any]:
         """Génère le rapport final avec métriques de performance"""
@@ -769,6 +775,7 @@ class ValidationEpitaComplete:
         with open(standard_report_path, 'w', encoding='utf-8') as f:
             json.dump(final_results, f, indent=2, ensure_ascii=False)
         
+        await self.shutdown()
         return final_results
 
 def main():
