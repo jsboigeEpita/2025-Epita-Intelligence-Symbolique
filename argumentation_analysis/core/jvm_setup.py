@@ -408,16 +408,21 @@ def find_valid_java_home() -> Optional[str]:
 
     logger.info(f"Décompression du JDK portable {jdk_zip_target_path} vers {portable_jdk_install_dir}...")
     try:
-        # Nettoyer le répertoire d'installation avant de décompresser pour éviter les conflits
-        if portable_jdk_install_dir.exists():
-            for item in portable_jdk_install_dir.iterdir():
-                # Ne pas supprimer le zip lui-même s'il a été téléchargé ici par erreur
-                if item.resolve() == jdk_zip_target_path.resolve(): continue
-                if item.is_dir():
-                    shutil.rmtree(item)
-                else:
-                    item.unlink()
-        portable_jdk_install_dir.mkdir(parents=True, exist_ok=True) # S'assurer qu'il existe après nettoyage
+        # # Nettoyer le répertoire d'installation avant de décompresser pour éviter les conflits
+        # # NOTE : Ce bloc est commenté pour éviter les erreurs [WinError 32] dues à des fichiers verrouillés.
+        # # La fonction unzip_file extraira par-dessus les fichiers existants.
+        # if portable_jdk_install_dir.exists():
+        #     for item in portable_jdk_install_dir.iterdir():
+        #         # Ne pas supprimer le zip lui-même s'il a été téléchargé ici par erreur
+        #         if item.resolve() == jdk_zip_target_path.resolve(): continue
+        #         if item.is_dir():
+        #             shutil.rmtree(item, ignore_errors=True) # ignore_errors pour plus de robustesse
+        #         else:
+        #             try:
+        #                 item.unlink()
+        #             except PermissionError:
+        #                 logger.warning(f"Impossible de supprimer le fichier verrouillé : {item}")
+        # portable_jdk_install_dir.mkdir(parents=True, exist_ok=True) # S'assurer qu'il existe après nettoyage
 
         unzip_file(jdk_zip_target_path, portable_jdk_install_dir) # unzip_file supprime le zip après succès
 

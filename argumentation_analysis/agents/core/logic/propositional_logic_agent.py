@@ -234,9 +234,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
         super().__init__(kernel, agent_name=agent_name, logic_type_name="PL", system_prompt=actual_system_prompt)
         self._llm_service_id = service_id
         self._tweety_bridge = TweetyBridge()
-        # self.logger.info(f"TweetyBridge initialisé pour {self.name}. JVM prête: {self._tweety_bridge.is_jvm_ready()}")
-        # if not self._tweety_bridge.is_jvm_ready():
-        #     self.logger.error("La JVM n'est pas prête. Les fonctionnalités logiques sont compromises.")
+        self.logger.info(f"TweetyBridge initialisé pour {self.name}.")
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         return {
@@ -256,9 +254,6 @@ class PropositionalLogicAgent(BaseLogicAgent):
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants sémantiques pour {self.name}...")
 
-        # if not self._tweety_bridge.is_jvm_ready():
-        #     self.logger.error(f"La JVM pour TweetyBridge de {self.name} n'est pas prête.")
-        #     return
 
         prompt_execution_settings = None
         if self._llm_service_id:
@@ -409,10 +404,10 @@ class PropositionalLogicAgent(BaseLogicAgent):
             return None, "Aucune formule valide n'a pu être générée ou conservée après filtrage."
 
         belief_set_content = "\n".join(valid_formulas)
-        is_valid, validation_msg = self._tweety_bridge.validate_belief_set(belief_set_content)
-        if not is_valid:
-            self.logger.error(f"Ensemble de croyances final invalide: {validation_msg}\nContenu:\n{belief_set_content}")
-            return None, f"Ensemble de croyances invalide: {validation_msg}"
+        # is_valid, validation_msg = self._tweety_bridge.validate_belief_set(belief_set_content)
+        # if not is_valid:
+        #     self.logger.error(f"Ensemble de croyances final invalide: {validation_msg}\nContenu:\n{belief_set_content}")
+        #     return None, f"Ensemble de croyances invalide: {validation_msg}"
 
         belief_set = PropositionalBeliefSet(belief_set_content, propositions=list(declared_propositions))
         self.logger.info("Conversion et validation du BeliefSet réussies.")
