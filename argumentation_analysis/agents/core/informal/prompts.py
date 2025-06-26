@@ -56,7 +56,7 @@ prompt_analyze_fallacies_v1 = """
 [Instructions]
 Analysez l'argument fourni ($input) et identifiez les sophismes potentiels qu'il contient.
 Votre réponse doit être un objet JSON valide contenant une seule clé "sophismes", qui est une liste d'objets.
-Chaque objet doit représenter un sophisme identifié et contenir les clés suivantes : "nom", "explication", "citation", "reformulation".
+Chaque objet doit représenter un sophisme identifié et contenir les clés suivantes : "fallacy_type", "explication", "citation", "reformulation".
 Si aucun sophisme n'est identifié, retournez un objet JSON avec une liste vide : {"sophismes": []}.
 Ne retournez aucun texte ou explication en dehors de l'objet JSON.
 
