@@ -147,7 +147,9 @@ class FOLHandler:
             
             logger.warning("FOL query is a placeholder.")
             logger.info(f"FOL Query: KB entails '{query_formula_str}'? {entails} (Placeholder result)")
-            return bool(entails)
+            query_msg = f"FOL Query: KB entails '{query_formula_str}'? {entails} (Placeholder result)"
+            logger.info(query_msg)
+            return bool(entails), query_msg
         except (ValueError, jpype.JException) as e:
             logger.error(f"Error during FOL query: {e}", exc_info=True)
             raise

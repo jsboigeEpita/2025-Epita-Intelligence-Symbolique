@@ -4,10 +4,11 @@ import re
 import json
 from typing import Dict, List, Optional, Any, Tuple, NamedTuple
 
+import jpype
 from semantic_kernel import Kernel
 from semantic_kernel.contents import ChatHistory, ChatMessageContent
 from semantic_kernel.functions import kernel_function
-# This import path is for modern semantic-kernel versions. 
+# This import path is for modern semantic-kernel versions.
 # The environment seems to be stuck on an old version, but I'm writing the code
 # for a modern one, as this is the only path forward.
 from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
@@ -43,8 +44,11 @@ class BeliefSetBuilderPlugin:
         self._existential_conjunctions: List[ExistentialConjunction] = []
 
     def _normalize(self, name: str) -> str:
-        # Simple normalization for the sake of reconstruction
-        return name.lower().replace(" ", "_")
+        # Normalize by removing spaces and also stripping any trailing parenthesized expressions,
+        # which the LLM sometimes mistakenly includes.
+        # e.g., "EtudiantFrançais(x)" becomes "EtudiantFrancais"
+        base_name = re.sub(r'\(.*\)', '', name).strip()
+        return base_name.replace(" ", "_")
 
     @kernel_function(description="Declare a new sort.", name="add_sort")
     def add_sort(self, sort_name: str):
@@ -67,6 +71,11 @@ class BeliefSetBuilderPlugin:
     def add_predicate_schema(self, predicate_name: str, argument_sorts: List[str]):
         norm_pred = self._normalize(predicate_name)
         norm_args = [self._normalize(s) for s in argument_sorts]
+        # Auto-create sorts if they don't exist, to make the agent more robust
+        # to LLM failures to follow the strict declaration order.
+        for sort_name in norm_args:
+            if sort_name not in self._sorts:
+                self.add_sort(sort_name)
         self._predicates[norm_pred] = norm_args
         return f"Predicate schema '{norm_pred}' declared."
 
@@ -74,73 +83,169 @@ class BeliefSetBuilderPlugin:
     def add_atomic_fact(self, fact_predicate_name: str, fact_arguments: List[str]):
         p_name = self._normalize(fact_predicate_name)
         arg_list = [self._normalize(arg) for arg in fact_arguments]
+
+        # Robustness: If a constant is used in a fact, ensure it and its sort exist.
+        if p_name in self._predicates:
+            expected_sorts = self._predicates[p_name]
+            for i, arg_name in enumerate(arg_list):
+                if i < len(expected_sorts):
+                    sort_name = expected_sorts[i]
+                    # Check if the constant is declared in ANY sort, and if not, add it
+                    # to the expected sort for this predicate.
+                    is_declared = any(arg_name in v for v in self._sorts.values())
+                    if not is_declared:
+                        self.add_constant_to_sort(arg_name, sort_name)
+
         self._atomic_facts.append(AtomicFact(p_name, arg_list))
         return "Atomic fact added."
 
     @kernel_function(description="Add a universal implication.", name="add_universal_implication")
     def add_universal_implication(self, impl_antecedent_predicate: str, impl_consequent_predicate: str, impl_sort_of_variable: str):
+        norm_sort = self._normalize(impl_sort_of_variable)
+        norm_antecedent = self._normalize(impl_antecedent_predicate)
+        norm_consequent = self._normalize(impl_consequent_predicate)
+
+        # Auto-create sort if it does not exist
+        if norm_sort not in self._sorts:
+            self.add_sort(norm_sort)
+
+        # Auto-create predicate schemas if they don't exist, using the variable's sort as a default.
+        if norm_antecedent not in self._predicates:
+            self.add_predicate_schema(norm_antecedent, [norm_sort])
+        if norm_consequent not in self._predicates:
+            self.add_predicate_schema(norm_consequent, [norm_sort])
+
         self._universal_implications.append(UniversalImplication(
-            self._normalize(impl_antecedent_predicate),
-            self._normalize(impl_consequent_predicate),
-            self._normalize(impl_sort_of_variable)
+            norm_antecedent,
+            norm_consequent,
+            norm_sort
         ))
         return "Universal implication added."
         
-    def _build_fologic_string(self) -> Optional[str]:
-        if not any([self._sorts, self._predicates, self._atomic_facts, self._universal_implications]):
-            return None
-
-        lines = []
-        # Sorts and constants
-        for sort_name, constants in self._sorts.items():
-            if constants:
-                constant_str = ", ".join(constants)
-                lines.append(f"{sort_name} = {{{constant_str}}}")
-        if self._sorts:
-            lines.append("")
-
-        # Predicates
-        if self._predicates:
-            for pred_name, arg_sorts in self._predicates.items():
-                arg_str = ", ".join(arg_sorts)
-                lines.append(f"type({pred_name}({arg_str}))")
-            lines.append("")
-
-        # Formulas
-        for fact in self._atomic_facts:
-            args_str = ", ".join(fact.arguments)
-            lines.append(f"{fact.predicate_name}({args_str}).")
-        
-        for impl in self._universal_implications:
-            var_name = impl.sort_of_variable[0].upper()
-            lines.append(f"forall {var_name}: ({impl.sort_of_variable}) (!{impl.antecedent_predicate}({var_name}) || {impl.consequent_predicate}({var_name}))")
-
-        return "\\n".join(lines)
-
     def build_tweety_belief_set(self, tweety_bridge: "TweetyBridge") -> Optional[Any]:
-        fologic_string = self._build_fologic_string()
-        if not fologic_string:
-            return None
-        logger.info(f"Generated .fologic string:\\n{fologic_string}")
+        """
+        Builds a FolBeliefSet programmatically by directly instantiating Java objects,
+        bypassing the string parser.
+        """
         try:
-            belief_set_obj = tweety_bridge.create_belief_set_from_string(fologic_string)
-            if belief_set_obj is None:
-                logger.error("Tweety parser returned None.")
+            if not jpype or not jpype.isJVMStarted():
+                logger.error("JVM not started. Cannot build belief set.")
                 return None
-            return belief_set_obj
+
+            # Retrieve cached Java classes from the initializer
+            initializer = tweety_bridge._initializer
+            FolBeliefSet = initializer.FolBeliefSet
+            FolSignature = initializer.FolSignature
+            Sort = initializer.Sort
+            Constant = initializer.Constant
+            Predicate = initializer.Predicate
+            FolAtom = initializer.FolAtom
+            Variable = initializer.Variable
+            ForallQuantifiedFormula = initializer.ForallQuantifiedFormula
+            Implication = initializer.Implication
+            ArrayList = jpype.JClass("java.util.ArrayList")
+
+            # 1. Create signature
+            signature = FolSignature()
+            
+            # Add sorts and constants
+            java_sorts = {}
+            java_constants = {}
+            for sort_name, constants in self._sorts.items():
+                jsort = Sort(sort_name)
+                signature.add(jsort)
+                java_sorts[sort_name] = jsort
+                for const_name in constants:
+                    # Create the constant directly with its sort
+                    jconst = Constant(const_name, jsort)
+                    # The signature add method for a constant might just take the constant,
+                    # as the sort is now part of the constant object itself.
+                    signature.add(jconst)
+                    java_constants[const_name] = jconst
+
+            # Add predicates
+            java_predicates = {}
+            for pred_name, arg_sort_names in self._predicates.items():
+                j_arg_sorts = ArrayList()
+                for s_name in arg_sort_names:
+                    if s_name in java_sorts:
+                        j_arg_sorts.add(java_sorts[s_name])
+                    else:
+                        logger.warning(f"Sort '{s_name}' for predicate '{pred_name}' not found. Skipping.")
+                jpred = Predicate(pred_name, j_arg_sorts)
+                signature.add(jpred)
+                java_predicates[pred_name] = jpred
+
+            # 2. Create belief set with the signature
+            # The constructor FolBeliefSet(signature) does not exist.
+            # We create an empty belief set and add formulas to it. The signature is managed internally.
+            belief_set = FolBeliefSet()
+            # The signature is implicitly part of the formulas added below.
+            # However, we must explicitly add all signature elements (sorts, constants, predicates)
+            # to the signature object that will passed to the parser later if needed.
+            # For programmatic creation, the signature object is built first, and then the belief set.
+            # Let's add all signature elements to the belief set an other way.
+            # It seems that signature.add() returns void, so it modifies the signature in place.
+            # The belief set might be taking formulas, and that's all.
+
+            # 3. Add formulas
+            # Add atomic facts
+            for fact in self._atomic_facts:
+                if fact.predicate_name in java_predicates:
+                    j_pred = java_predicates[fact.predicate_name]
+                    j_args = ArrayList()
+                    for arg_name in fact.arguments:
+                        if arg_name in java_constants:
+                            j_args.add(java_constants[arg_name])
+                        else:
+                            # It might be a variable if we extend this later
+                            logger.warning(f"Constant '{arg_name}' not found for fact '{fact.predicate_name}'. Skipping argument.")
+                    
+                    if j_args.size() == len(fact.arguments):
+                         belief_set.add(FolAtom(j_pred, j_args))
+
+            # Add universal implications
+            for impl in self._universal_implications:
+                var_name = impl.sort_of_variable[0].upper()
+                
+                # Retrieve the corresponding Sort object
+                j_sort = java_sorts.get(impl.sort_of_variable)
+                if not j_sort:
+                    logger.error(f"Sort '{impl.sort_of_variable}' not found for universal implication. Cannot create typed variable.")
+                    continue # Skip this implication
+                
+                j_var = Variable(var_name, j_sort)
+                
+                # Antecedent
+                ante_pred = java_predicates.get(impl.antecedent_predicate)
+                ante_args = ArrayList()
+                ante_args.add(j_var)
+                antecedent = FolAtom(ante_pred, ante_args)
+                
+                # Consequent
+                cons_pred = java_predicates.get(impl.consequent_predicate)
+                cons_args = ArrayList()
+                cons_args.add(j_var)
+                consequent = FolAtom(cons_pred, cons_args)
+
+                implication = Implication(antecedent, consequent)
+                
+                quantified_formula = ForallQuantifiedFormula(implication, j_var)
+                belief_set.add(quantified_formula)
+
+            logger.info(f"Programmatically built belief set: {belief_set.toString()}")
+            return belief_set
+
         except Exception as e:
-            logger.error(f"Error parsing .fologic string: {e}", exc_info=True)
+            logger.error(f"Error programmatically building belief set: {e}", exc_info=True)
             raise
 
 class FirstOrderLogicAgent(BaseLogicAgent):
-    def __init__(self, kernel: Kernel, tweety_bridge: "TweetyBridge", service_id: str):
+    def __init__(self, kernel: Kernel, tweety_bridge: "TweetyBridge"):
         super().__init__(kernel, "FirstOrderLogicAgent", "FOL", "SYSTEM PROMPT")
-        self.tweety_bridge = tweety_bridge
+        self._tweety_bridge = tweety_bridge
         self._builder_plugin = BeliefSetBuilderPlugin()
-        self.service = kernel.get_service(service_id)
-        self._llm_service_id = service_id
-        if self.service:
-            self._kernel.add_plugin(self._builder_plugin, "BeliefBuilder")
+        self.service = None  # Will be set in setup_agent_components
         
     async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None):
         self._builder_plugin.reset()
@@ -164,7 +269,13 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             java_belief_set = self._builder_plugin.build_tweety_belief_set(self.tweety_bridge)
             
             if java_belief_set is None:
-                return None, "Failed to build belief set."
+                return None, "Failed to build belief set during Java object construction."
+            
+            # If no formulas were added (e.g., LLM returned no tool calls), it's not an error,
+            # but the resulting belief set is empty and should be treated as a failure to extract.
+            if java_belief_set.size() == 0:
+                logger.warning("Belief set construction resulted in an empty set. Likely no logical structure was found in the text.")
+                return None, "Could not extract any logical structure from the input text."
 
             belief_set_content = java_belief_set.toString()
             from .belief_set import FirstOrderBeliefSet
@@ -192,8 +303,15 @@ class FirstOrderLogicAgent(BaseLogicAgent):
     def invoke_single(self, argument, context):
         raise NotImplementedError
 
-    def setup_agent_components(self):
-        raise NotImplementedError
+    def setup_agent_components(self, llm_service_id: str):
+        """
+        Configure les composants de l'agent, y compris le service LLM et les plugins.
+        """
+        super().setup_agent_components(llm_service_id)
+        self.service = self._kernel.get_service(llm_service_id)
+        if not self.service:
+            raise ValueError(f"LLM Service '{llm_service_id}' not found in kernel.")
+        self._kernel.add_plugin(self._builder_plugin, "BeliefBuilder")
 
     def validate_argument(self, argument, context: Optional[Dict[str, Any]] = None):
         raise NotImplementedError

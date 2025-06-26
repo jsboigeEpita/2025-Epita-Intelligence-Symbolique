@@ -33,6 +33,19 @@ class TweetyInitializer:
     _tweety_bridge = None
     _initialized_components = False
 
+    # FOL classes
+    FolBeliefSet = None
+    FolSignature = None
+    Sort = None
+    Constant = None
+    Predicate = None
+    FolFormula = None
+    FolAtom = None
+    Universal = None # Déprécié, remplacé par ForallQuantifiedFormula
+    ForallQuantifiedFormula = None
+    Variable = None
+    Implication = None
+
     def __init__(self, tweety_bridge_instance):
         self._tweety_bridge = tweety_bridge_instance
 
@@ -137,25 +150,39 @@ class TweetyInitializer:
         Lève une RuntimeError si une classe n'est pas trouvée, indiquant un
         problème de classpath.
         """
-        logger.info("Importation des classes Java de TweetyProject...")
+        if TweetyInitializer._classes_loaded:
+            return
+
+        logger.info("Importing and caching TweetyProject Java classes...")
         try:
-            _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlSignature")
-            _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.Proposition")
-            _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
-            _ = jpype.JClass("org.tweetyproject.logics.pl.reasoner.SatReasoner")
-            _ = jpype.JClass("org.tweetyproject.logics.pl.sat.Sat4jSolver")
-            _ = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolSignature")
-            _ = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolBeliefSet")
-            _ = jpype.JClass("org.tweetyproject.logics.fol.reasoner.SimpleFolReasoner")
-            _ = jpype.JClass("org.tweetyproject.logics.ml.syntax.MlFormula")
-            _ = jpype.JClass("org.tweetyproject.logics.ml.syntax.MlBeliefSet")
-            _ = jpype.JClass("org.tweetyproject.logics.ml.reasoner.SimpleMlReasoner")
-            _ = jpype.JClass("org.tweetyproject.logics.ml.parser.MlParser")
-            _ = jpype.JClass("org.tweetyproject.commons.ParserException")
-            _ = jpype.JClass("org.tweetyproject.logics.commons.syntax.Sort")
-            _ = jpype.JClass("org.tweetyproject.commons.Signature")
-            _ = jpype.JClass("org.tweetyproject.logics.commons.syntax.Constant")
-            logger.info("Successfully imported TweetyProject Java classes.")
+            # PL Classes
+            jpype.JClass("org.tweetyproject.logics.pl.syntax.PlSignature")
+            jpype.JClass("org.tweetyproject.logics.pl.syntax.Proposition")
+            jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
+            jpype.JClass("org.tweetyproject.logics.pl.reasoner.SatReasoner")
+            jpype.JClass("org.tweetyproject.logics.pl.sat.Sat4jSolver")
+
+            # FOL Classes
+            TweetyInitializer.FolBeliefSet = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolBeliefSet")
+            TweetyInitializer.FolSignature = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolSignature")
+            TweetyInitializer.FolFormula = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolFormula")
+            TweetyInitializer.FolAtom = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolAtom")
+            
+            # These are quantifiers, often in commons
+            # Remplacé par la classe plus spécifique ci-dessous
+            # TweetyInitializer.Universal = jpype.JClass("org.tweetyproject.logics.commons.syntax.Universal")
+            TweetyInitializer.ForallQuantifiedFormula = jpype.JClass("org.tweetyproject.logics.fol.syntax.ForallQuantifiedFormula")
+            TweetyInitializer.Variable = jpype.JClass("org.tweetyproject.logics.commons.syntax.Variable")
+            TweetyInitializer.Predicate = jpype.JClass("org.tweetyproject.logics.commons.syntax.Predicate")
+
+            # Common Classes
+            TweetyInitializer.Sort = jpype.JClass("org.tweetyproject.logics.commons.syntax.Sort")
+            TweetyInitializer.Constant = jpype.JClass("org.tweetyproject.logics.commons.syntax.Constant")
+            TweetyInitializer.Implication = jpype.JClass("org.tweetyproject.logics.fol.syntax.Implication")
+            jpype.JClass("org.tweetyproject.commons.ParserException")
+
+            logger.info("Successfully imported and cached TweetyProject Java classes.")
+            TweetyInitializer._classes_loaded = True
 
         except Exception as e:
             logger.error(f"Error importing Java classes: {e}", exc_info=True)

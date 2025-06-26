@@ -200,15 +200,15 @@ class TestFOLTweetyCompatibility:
         builder.reset() # S'assurer qu'il est propre avant de commencer
 
         # 1. Simuler les appels d'outils du LLM pour un syllogisme simple.
-        builder.add_sort("homme")
-        builder.add_constant_to_sort("socrate", "homme")
+        builder.add_sort("Homme")
+        builder.add_constant_to_sort("socrate", "Homme")
         # Le prédicat doit être différent du sort pour éviter les ambiguïtés
-        builder.add_predicate_schema("EstUnHomme", ["homme"])
-        builder.add_predicate_schema("EstMortel", ["homme"])
+        builder.add_predicate_schema("EstUnHomme", ["Homme"])
+        builder.add_predicate_schema("EstMortel", ["Homme"])
         builder.add_atomic_fact("EstUnHomme", ["socrate"])
         # Pour l'implication universelle, il faut s'assurer que les prédicats
         # sont bien déclarés, ce qui est fait ci-dessus.
-        builder.add_universal_implication("EstUnHomme", "EstMortel", "homme")
+        builder.add_universal_implication("EstUnHomme", "EstMortel", "Homme")
 
         # 2. Déclencher DIRECTEMENT la construction programmatique.
         #    On contourne l'appel LLM de `text_to_belief_set`.
@@ -357,7 +357,8 @@ class TestFOLErrorHandling:
         
         # Agent doit gérer gracieusement
         assert belief_set is None
-        assert "aucune structure logique" in msg.lower() or "syntaxiquement invalide" in msg.lower()
+        # Accepter le message d'erreur en anglais ou en français
+        assert "could not extract any logical structure" in msg.lower() or "aucune structure logique" in msg.lower() or "syntaxiquement invalide" in msg.lower()
         
     @pytest.mark.asyncio
     @pytest.mark.asyncio
@@ -564,10 +565,10 @@ async def fol_agent_with_kernel(jvm_session):
     
     # Création de l'agent. Le paramètre use_serialization est obsolète.
     tweety_bridge = TweetyBridge()
-    agent = FOLLogicAgent(kernel=kernel, tweety_bridge=tweety_bridge, service_id="default")
+    agent = FOLLogicAgent(kernel=kernel, tweety_bridge=tweety_bridge)
     
     # Injection manuelle de TweetyBridge et initialisation
-    await agent.setup_agent_components(llm_service_id="default")
+    agent.setup_agent_components(llm_service_id="default")
     
     yield agent
     
