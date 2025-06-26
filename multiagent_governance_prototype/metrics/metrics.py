@@ -35,13 +35,17 @@ def fairness_index(results):
         return 0.0
     return 1 - gini(np.array(results['satisfaction']))
 
-def efficiency(results):
+def efficiency(results, max_rounds=3):
     """
-    Number of steps/rounds to reach decision. Here always 1 (single-round methods).
+    Efficiency normalized: 1 - (rounds-1)/(max_rounds-1), always in [0, 1].
     """
     if not results:
         return 0
-    return results.get('rounds', 1)
+    rounds = results.get('rounds', 1)
+    if max_rounds <= 1:
+        return 1.0
+    value = 1 - (rounds - 1) / (max_rounds - 1)
+    return max(0.0, min(1.0, value))
 
 def satisfaction(results):
     """

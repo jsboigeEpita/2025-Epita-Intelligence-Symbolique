@@ -133,3 +133,24 @@ Each scenario is a JSON file with the following structure:
 
 ## License
 MIT 
+
+## New Agent Types
+- **BDI Agent:** Implements Belief-Desire-Intention logic. Maintains beliefs, desires, intentions, and can update them. Supports protocol stubs for message passing.
+- **Reactive Agent:** Implements rule-based responses to context. Supports protocol stubs for message passing.
+
+## Protocol Layer
+- Agents (including BDI and Reactive) have stubs for FIPA-ACL-like message passing (send_message, receive_message).
+
+## Conflict Resolution System
+- Integrated collaborative, competitive, and compromise mediation strategies. Conflicts are detected and resolved during simulation, and results are logged.
+
+## Feature Mapping to Subject
+| Subject Requirement | Implementation |
+|---------------------|----------------|
+| BDI/Reactive Agents | `BDIAgent`, `ReactiveAgent` classes, selectable in scenarios |
+| Protocol Layer      | `send_message`, `receive_message` stubs in all agent types |
+| Conflict Resolution | `conflict_resolution.py` with mediation strategies, integrated in simulation |
+| End-to-End Pipeline | CLI and simulation pipeline: agent creation, scenario, conflict detection/resolution, consensus, metrics |
+| Metrics             | `metrics/metrics.py` and CLI reporting |
+| Scenario Diversity  | Rich scenarios in `scenarios/` |
+| Extensibility       | Modular design, easy to add new methods, agents, metrics | 

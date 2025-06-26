@@ -41,7 +41,7 @@ This directory contains example scenarios for benchmarking and comparing governa
 
 | File | Description | Network | Coalition | Manipulability/Noise | Custom Context |
 |------|-------------|---------|-----------|----------------------|---------------|
-| `example_scenario.json` | 5 agents, 3 options, mixed personalities. Resource allocation. |   |   |   |   |
+| `example_scenario.json` | 5 agents, 3 options, mixed personalities. Resource allocation. Now includes BDI and Reactive agent types. |   |   |   |   |
 | `polarized_two_groups.json` | 8 agents, 2 polarized groups, 2 options. Simulates a political vote. |   |   |   |   |
 | `all_stubborn.json` | 6 agents, all stubborn, 3 options. Deadlock likely. |   |   |   |   |
 | `all_flexible.json` | 6 agents, all flexible, 3 options. Rapid consensus. |   |   |   |   |

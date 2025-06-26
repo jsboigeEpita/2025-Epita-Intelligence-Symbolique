@@ -1,0 +1,11 @@
+{
+  "agents": [
+    {"name": "C1", "personality": "stubborn", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"]},
+    {"name": "C2", "personality": "stubborn", "preferences": ["B", "C", "A"], "options": ["A", "B", "C"]},
+    {"name": "C3", "personality": "stubborn", "preferences": ["C", "A", "B"], "options": ["A", "B", "C"]},
+    {"name": "C4", "personality": "flexible", "preferences": ["B", "A", "C"], "options": ["A", "B", "C"]},
+    {"name": "C5", "personality": "flexible", "preferences": ["C", "B", "A"], "options": ["A", "B", "C"]}
+  ],
+  "options": ["A", "B", "C"],
+  "context": {"description": "Cyclic majority: 5 agents, 3 options, majority cycles. Tests Condorcet and Borda differences."}
+} 

@@ -2,6 +2,7 @@ from .methods import GOVERNANCE_METHODS
 import numpy as np
 from collections import defaultdict
 import math
+from governance import conflict_resolution
 
 def shapley_value(coalition, all_agents, payoff_func):
     """
@@ -76,7 +77,9 @@ def simulate_governance(agents, scenario_data, method):
             'networked': True,
             'adjacency': adjacency,
             'rounds': 5,
-            'history': []
+            'history': [],
+            'conflicts': [],
+            'resolved_conflicts': []
         }
         return result
     max_rounds = 3 if method in ('condorcet', 'raft') else 1
@@ -119,6 +122,15 @@ def simulate_governance(agents, scenario_data, method):
     satisfaction = [1.0 - a.preferences.index(winner)/max(1, len(a.preferences)-1) if winner in a.preferences else 0 for a in agents]
     for a, v, s in zip(agents, votes, satisfaction):
         a.update_memory(v, winner, context)
+    # 1. Collect agent positions
+    positions = {a.name: a.decide(options, context) for a in agents}
+    # 2. Detect conflicts
+    conflicts = conflict_resolution.detect_conflicts(positions)
+    resolved_conflicts = []
+    if conflicts:
+        for conflict in conflicts:
+            resolution = conflict_resolution.resolve_conflict(conflict, strategy=context.get('mediation_strategy', 'collaborative'))
+            resolved_conflicts.append(resolution)
     result = {
         'votes': votes,
         'winner': winner,
@@ -128,7 +140,9 @@ def simulate_governance(agents, scenario_data, method):
         'coalitions': [[a.name for a in c] for c in coalitions],
         'coalition_payoffs': coalition_payoffs,
         'rounds': 1,
-        'history': []
+        'history': [],
+        'conflicts': conflicts,
+        'resolved_conflicts': resolved_conflicts
     }
     return result
 

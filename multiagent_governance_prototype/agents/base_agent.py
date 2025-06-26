@@ -133,4 +133,63 @@ class Agent:
         """
         Counter an argument with a new reason.
         """
-        return self.propose_argument(option, reason) 
+        return self.propose_argument(option, reason)
+
+class BDIAgent(Agent):
+    """
+    Belief-Desire-Intention (BDI) agent for governance. Maintains beliefs, desires, intentions, and updates them based on context.
+    """
+    def __init__(self, name, personality, preferences, strategy=None, n_agents=None):
+        super().__init__(name, personality, preferences, strategy, n_agents)
+        self.beliefs = set()
+        self.desires = set()
+        self.intentions = set()
+
+    def decide(self, options, context=None):
+        # Example: prioritize intention if set, else fallback to top preference
+        if self.intentions:
+            for intent in self.intentions:
+                if intent in options:
+                    return intent
+        return super().decide(options, context)
+
+    def update_beliefs(self, new_belief):
+        self.beliefs.add(new_belief)
+
+    def add_desire(self, desire):
+        self.desires.add(desire)
+
+    def form_intention(self, intention):
+        self.intentions.add(intention)
+
+    # Protocol stub
+    def send_message(self, receiver, content, performative="inform"):
+        # In a real system, this would send a message to another agent
+        pass
+    def receive_message(self, message):
+        # Process incoming message
+        pass
+
+class ReactiveAgent(Agent):
+    """
+    Reactive agent for governance. Responds to events using rule-based logic.
+    """
+    def __init__(self, name, personality, preferences, strategy=None, n_agents=None):
+        super().__init__(name, personality, preferences, strategy, n_agents)
+        self.rules = []  # List of (condition, action)
+
+    def add_rule(self, condition, action):
+        self.rules.append((condition, action))
+
+    def decide(self, options, context=None):
+        # Check rules first
+        for condition, action in self.rules:
+            if condition(context):
+                return action(options, context)
+        return super().decide(options, context)
+
+    # Protocol stub
+    def send_message(self, receiver, content, performative="inform"):
+        pass
+    def receive_message(self, message):
+        pass 

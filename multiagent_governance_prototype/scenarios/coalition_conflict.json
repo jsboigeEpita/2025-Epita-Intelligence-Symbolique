@@ -1,0 +1,14 @@
+{
+  "agents": [
+    {"name": "A1", "personality": "stubborn", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"], "coalition": "Alpha"},
+    {"name": "A2", "personality": "flexible", "preferences": ["A", "C", "B"], "options": ["A", "B", "C"], "coalition": "Alpha"},
+    {"name": "A3", "personality": "strategic", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"], "coalition": "Alpha"},
+    {"name": "A4", "personality": "random", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"], "coalition": "Alpha"},
+    {"name": "B1", "personality": "stubborn", "preferences": ["C", "B", "A"], "options": ["A", "B", "C"], "coalition": "Beta"},
+    {"name": "B2", "personality": "flexible", "preferences": ["C", "A", "B"], "options": ["A", "B", "C"], "coalition": "Beta"},
+    {"name": "B3", "personality": "strategic", "preferences": ["C", "B", "A"], "options": ["A", "B", "C"], "coalition": "Beta"},
+    {"name": "B4", "personality": "random", "preferences": ["C", "B", "A"], "options": ["A", "B", "C"], "coalition": "Beta"}
+  ],
+  "options": ["A", "B", "C"],
+  "context": {"description": "Coalition conflict: 2 explicit coalitions with conflicting preferences. Tests coalition logic and method sensitivity."}
+} 
