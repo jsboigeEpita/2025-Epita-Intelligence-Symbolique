@@ -35,6 +35,7 @@ Il utilisera le [protocole](https://modelcontextprotocol.io/) MCP créé par Ant
         }
       }
     }
+    ```
 
 
 ## Comment utiliser le serveur MCP en mode "remote"
