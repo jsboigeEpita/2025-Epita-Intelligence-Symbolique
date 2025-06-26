@@ -196,10 +196,8 @@ else {
     }
 
     $selectedPaths = if ($PSBoundParameters.ContainsKey('Path') -and -not [string]::IsNullOrEmpty($Path)) {
-        # Important: bien mettre les guillemets autour du chemin pour gérer les espaces
-        @("`"$Path`"")
+        @($Path)
     } else {
-        # Les chemins multiples sont déjà un tableau
         $testPaths[$Type]
     }
 
@@ -222,21 +220,8 @@ else {
     Write-Host "[INFO] Commande Pytest à exécuter: $pytestFinalCommand" -ForegroundColor Green
     Write-Host "[INFO] Les logs seront enregistrés dans '$runnerLogFile'" -ForegroundColor Yellow
 
-    # On encapsule l'appel dans une commande qui sera exécutée par le script d'activation
-    # La redirection est gérée ici.
-    $CommandToRunInShell = "$pytestFinalCommand > `"$runnerLogFile`" 2>&1"
-
     try {
-        # Appeler le script d'activation avec la commande complète, y compris la redirection
-        # Note: ceci est une façon de faire. L'idéal serait que activate_project_env.ps1 gère lui-même les logs.
-        # Pour l'instant, on encapsule dans un powershell -Command pour s'assurer que la redirection se fait
-        # *après* l'activation de l'environnement par `conda run`.
-        $FullActivationCommand = "powershell -Command `"`& '$ActivationScriptPath' -CommandToRun '$CommandToRunInShell'`""
-        
-        # Pour le débogage, affichons la structure de l'appel
-        # Write-Host "[DEBUG] Commande d'activation complète: $FullActivationCommand" -ForegroundColor DarkGray
-
-        # Exécutons la commande
+        # Appeler le script d'activation avec la commande complète.
         try {
             & $ActivationScriptPath -CommandToRun $pytestFinalCommand
             $exitCode = $LASTEXITCODE
@@ -247,17 +232,13 @@ else {
              Write-Host "[ERREUR] L'exécution de Pytest a échoué: $_" -ForegroundColor Red
              exit 1
         }
-
         $exitCode = $LASTEXITCODE
-
         if ($exitCode -ne 0) {
             throw "L'exécution des tests via le script d'activation a échoué avec le code de sortie: $exitCode"
-        } else {
-            Write-Host "[INFO] La suite de tests s'est terminée avec succès." -ForegroundColor Green
         }
     }
     catch {
-        Write-Host "[ERREUR] Une erreur est survenue lors de l'appel au script d'activation. Consultez '$runnerLogFile' pour plus de détails. $_" -ForegroundColor Red
+        Write-Host "[ERREUR] Une erreur est survenue lors de l'appel au script d'activation. $_" -ForegroundColor Red
         exit 1
     }
 

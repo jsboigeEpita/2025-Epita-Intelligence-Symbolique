@@ -55,6 +55,9 @@ class ServiceManagerSettings(BaseSettings):
 
 class JVMSettings(BaseSettings):
     min_java_version: int = 11
+    min_heap_size: str = "256m"
+    max_heap_size: str = "2048m"
+
     # Configuration JDK portable
     jdk_version: str = "17.0.2"
     jdk_build: str = "8"
@@ -62,6 +65,7 @@ class JVMSettings(BaseSettings):
     # Configuration des librairies Java (Tweety)
     tweety_version: str = "1.28"
     tweety_libs_dir: Path = Path("libs/tweety")
+    native_libs_dir: Path = Path("libs/native")
 
     model_config = SettingsConfigDict(env_prefix='JVM_')
 

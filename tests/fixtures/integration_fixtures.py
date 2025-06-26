@@ -26,15 +26,13 @@ if not logger.handlers: # Vérifier si des handlers existent déjà pour éviter
 # Importation de la fonction d'initialisation centralisée et des constantes nécessaires
 # Placé APRÈS la configuration du logger, au cas où ces imports déclencheraient des logs.
 try:
-    from argumentation_analysis.core.jvm_setup import initialize_jvm, LIBS_DIR, TWEETY_VERSION
-    logger.info("initialize_jvm, LIBS_DIR, TWEETY_VERSION importés avec succès.")
+    from argumentation_analysis.core.jvm_setup import initialize_jvm
+    logger.info("initialize_jvm importé avec succès.")
 except ImportError as e:
-    logger.error(f"ERREUR CRITIQUE - Impossible d'importer depuis core.jvm_setup: {e}")
+    logger.error(f"ERREUR CRITIQUE - Impossible d'importer 'initialize_jvm' depuis core.jvm_setup: {e}")
     # Définir des placeholders pour que le reste du fichier ne plante pas à l'import,
     # mais les tests utilisant la JVM seront skippés.
     initialize_jvm = None
-    LIBS_DIR = None
-    TWEETY_VERSION = None
 
 
 # Importer _REAL_JPYPE_MODULE depuis jpype_setup
