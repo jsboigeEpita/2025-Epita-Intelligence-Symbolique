@@ -30,12 +30,15 @@ from semantic_kernel.contents.chat_history import ChatHistory
 # Imports are updated based on recent semantic-kernel changes
 from semantic_kernel.agents.chat_completion.chat_completion_agent import FunctionChoiceBehavior
 # The decorator has been moved to the top-level package for easier access.
-from semantic_kernel.functions import kernel_function
+from semantic_kernel.functions import kernel_function, KernelFunctionFromPrompt, KernelPlugin, KernelArguments
+from semantic_kernel.prompt_template.prompt_template_config import PromptTemplateConfig
+from semantic_kernel.connectors.ai.open_ai import OpenAIPromptExecutionSettings
 from pydantic import Field, field_validator
  
 from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
 from .belief_set import BeliefSet, FirstOrderBeliefSet
 from .tweety_bridge import TweetyBridge
+from .tweety_initializer import TweetyInitializer
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -350,7 +353,7 @@ class BeliefSetBuilderPlugin:
                 return None
 
             # Retrieve cached Java classes from the initializer
-            initializer = tweety_bridge._initializer
+            initializer = tweety_bridge.initializer
             FolBeliefSet = initializer.FolBeliefSet
             FolSignature = initializer.FolSignature
             Sort = initializer.Sort
@@ -613,29 +616,35 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         if hasattr(self._tweety_bridge, 'wait_for_jvm') and asyncio.iscoroutinefunction(self._tweety_bridge.wait_for_jvm):
             await self._tweety_bridge.wait_for_jvm()
 
-        if not self.tweety_bridge.is_jvm_ready():
+        if not TweetyInitializer.is_jvm_ready():
             self.logger.error("Tentative de setup FOL Kernel alors que la JVM n'est PAS démarrée.")
-            # Levee d'une exception pour interrompre le test
             raise RuntimeError("TweetyBridge not initialized, JVM not ready.")
 
-        default_settings = self._kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
-        
         # Ajout du plugin de construction comme une collection d'outils
         self._kernel.add_plugin(self._builder_plugin, plugin_name="BeliefBuilder")
+
+        # Manually create KernelFunctions from prompts
+        gen_queries_func = KernelFunctionFromPrompt(
+            function_name="GenerateFOLQueries",
+            plugin_name="fol_reasoning",
+            prompt=PROMPT_GEN_FOL_QUERIES
+        )
+        interpret_func = KernelFunctionFromPrompt(
+            function_name="InterpretFOLResult",
+            plugin_name="fol_reasoning",
+            prompt=PROMPT_INTERPRET_FOL
+        )
+
+        # Create a plugin from these functions
+        prompt_plugin = KernelPlugin(
+            name="fol_reasoning",
+            functions=[gen_queries_func, interpret_func]
+        )
         
-        # Ajout des autres fonctions sémantiques nécessaires (celles-ci peuvent rester basées sur des prompts)
-        prompts = {
-            "GenerateFOLQueries": PROMPT_GEN_FOL_QUERIES,
-            "InterpretFOLResult": PROMPT_INTERPRET_FOL
-        }
-        for name, prompt in prompts.items():
-            self._kernel.add_function(
-                prompt=prompt,
-                plugin_name=self.name,
-                function_name=name,
-                prompt_execution_settings=default_settings
-            )
-        self.logger.info(f"Plugin 'BeliefBuilder' et fonctions sémantiques pour {self.name} ajoutés au kernel.")
+        # Add the plugin to the kernel
+        self._kernel.add_plugin(prompt_plugin)
+
+        self.logger.info(f"Plugin 'BeliefBuilder' and prompt-based plugin 'fol_reasoning' added to the kernel.")
             
     def _normalize_identifier(self, text: str) -> str:
         """Normalise un identifiant en snake_case sans accents."""
@@ -658,15 +667,28 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         chat = ChatHistory(system_message=self.system_prompt)
         chat.add_user_message(text)
         
-        settings_class = self.service.get_prompt_execution_settings_class()
-        execution_settings = settings_class(service_id=self._llm_service_id)
-        execution_settings.function_choice_behavior = FunctionChoiceBehavior.Auto()
+        execution_settings = OpenAIPromptExecutionSettings(
+            service_id=self._llm_service_id,
+            tool_choice="auto"
+        )
+        # To invoke a chat-like interaction especially for tool calling,
+        # we now need to wrap the interaction in a KernelFunction.
+        prompt_template_config = PromptTemplateConfig(
+            template_format="semantic-kernel",
+            template="""{{$chat_history}}""",
+            execution_settings={"default": execution_settings},
+        )
+        chat_function = KernelFunctionFromPrompt(
+            function_name="ChatWithTools", # A name is needed for the function
+            prompt_template_config=prompt_template_config
+        )
 
+        arguments = KernelArguments(chat_history=chat)
+        
         try:
-            result = await self.service.get_chat_message_content(
-                chat,
-                settings=execution_settings,
-                kernel=self._kernel
+            result = await self._kernel.invoke(
+                chat_function,
+                arguments=arguments
             )
 
             self.logger.info("Le LLM a terminé d'appeler les outils.")
@@ -679,6 +701,11 @@ class FirstOrderLogicAgent(BaseLogicAgent):
 
             belief_set_content = str(java_belief_set.toString()) # Pour l'affichage et la journalisation
             final_belief_set = FirstOrderBeliefSet(content=belief_set_content, java_object=java_belief_set)
+
+            # Si le belief set est vide, cela signifie qu'aucune structure logique n'a été extraite.
+            if final_belief_set.is_empty():
+                self.logger.warning("Le LLM n'a extrait aucune structure logique. Retour d'un belief set vide.")
+                return final_belief_set, "Aucune structure logique pertinente n'a été trouvée dans le texte fourni."
 
             self.logger.info("Conversion via la stratégie de construction programmatique réussie.")
             return final_belief_set, "Conversion réussie."
@@ -716,7 +743,9 @@ class FirstOrderLogicAgent(BaseLogicAgent):
                 return []
                 
             args = {"input": text, "belief_set": belief_set.content}
-            result = await self._kernel.functions[self.name]["GenerateFOLQueries"].invoke(self._kernel, **args)
+            result = await self._kernel.invoke(
+                self._kernel.plugins["fol_reasoning"]["GenerateFOLQueries"], **args
+            )
             queries = json.loads(self._extract_json_block(str(result))).get("queries", [])
             self.logger.info(f"{len(queries)} requêtes potentielles reçues du LLM.")
             
@@ -764,8 +793,8 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             results_text_list = [res[1] if res else "Error: No result" for res in results]
             results_str = "\n".join(results_text_list)
             
-            result = await self._kernel.functions[self.name]["InterpretFOLResult"].invoke(
-                self._kernel,
+            result = await self._kernel.invoke(
+                self._kernel.plugins["fol_reasoning"]["InterpretFOLResult"],
                 input=text,
                 belief_set=belief_set.content,
                 queries=queries_str,
@@ -804,7 +833,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             return False, "Impossible de recréer ou de trouver l'objet belief set Java pour la vérification de consistance."
             
         try:
-            return self.tweety_bridge._fol_handler.fol_check_consistency(java_belief_set)
+            return await self.tweety_bridge._fol_handler.fol_check_consistency(java_belief_set)
         except Exception as e:
             self.logger.error(f"Erreur inattendue durant la vérification de consistance: {e}", exc_info=True)
             return False, str(e)

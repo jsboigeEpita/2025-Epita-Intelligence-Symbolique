@@ -56,6 +56,18 @@ class BeliefSet(ABC):
             "logic_type": self.logic_type,
             "content": self.content
         }
+
+    def is_empty(self) -> bool:
+        """
+        Vérifie si l'ensemble de croyances est sémantiquement vide.
+        """
+        if self._content is None:
+            return True
+        
+        # Supprimer les espaces et les accolades pour vérifier si le contenu est vide
+        #
+        # Exemples de contenu vide : "", "{}", "{ }", " { } "
+        return self._content.strip().replace("{", "").replace("}", "").strip() == ""
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> Optional['BeliefSet']:
