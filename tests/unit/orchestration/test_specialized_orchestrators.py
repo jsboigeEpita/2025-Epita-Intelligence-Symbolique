@@ -35,10 +35,10 @@ logging.basicConfig(level=logging.WARNING)
 
 # Imports à tester
 try:
-    from argumentation_analysis.orchestrators.cluedo_orchestrator import CluedoOrchestrator
-    from argumentation_analysis.orchestrators.conversation_orchestrator import ConversationOrchestrator
-    from argumentation_analysis.orchestrators.real_llm_orchestrator import RealLLMOrchestrator
-    from argumentation_analysis.orchestrators.logique_complexe_orchestrator import LogiqueComplexeOrchestrator
+    from argumentation_analysis.orchestration.cluedo_orchestrator import CluedoOrchestrator
+    from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
+    from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
+    from argumentation_analysis.orchestration.logique_complexe_orchestrator import LogiqueComplexeOrchestrator
     SPECIALIZED_AVAILABLE = True
 except ImportError as e:
     SPECIALIZED_AVAILABLE = False
