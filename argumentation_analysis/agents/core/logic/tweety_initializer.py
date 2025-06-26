@@ -41,7 +41,8 @@ class TweetyInitializer:
     Variable = None
     Implication = None
     Conjunction = None
-
+    Negation = None
+ 
     def __init__(self, tweety_bridge_instance=None):
         if tweety_bridge_instance:
             self._tweety_bridge = tweety_bridge_instance
@@ -118,6 +119,7 @@ class TweetyInitializer:
             TweetyInitializer.Constant = jpype.JClass("org.tweetyproject.logics.commons.syntax.Constant")
             TweetyInitializer.Implication = jpype.JClass("org.tweetyproject.logics.fol.syntax.Implication")
             TweetyInitializer.Conjunction = jpype.JClass("org.tweetyproject.logics.fol.syntax.Conjunction")
+            TweetyInitializer.Negation = jpype.JClass("org.tweetyproject.logics.fol.syntax.Negation")
             jpype.JClass("org.tweetyproject.commons.ParserException")
             
             # Modal classes

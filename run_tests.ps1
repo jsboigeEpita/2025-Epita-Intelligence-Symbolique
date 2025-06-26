@@ -32,7 +32,7 @@
 #>
 param(
     [Parameter(Mandatory=$false)]
-    [ValidateSet("unit", "functional", "e2e", "e2e-python", "all", "validation")]
+    [ValidateSet("unit", "functional", "e2e", "e2e-python", "all", "validation", "integration")]
     [string]$Type = "all",
 
     [string]$Path,
@@ -193,6 +193,7 @@ else {
         "functional" = "tests/functional"
         "all"        = @("tests/unit", "tests/functional")
         "validation" = "tests/validation"
+        "integration" = "tests/integration"
     }
 
     $selectedPaths = if ($PSBoundParameters.ContainsKey('Path') -and -not [string]::IsNullOrEmpty($Path)) {
@@ -204,6 +205,16 @@ else {
     if (-not $selectedPaths) {
         Write-Host "[ERREUR] Type de test '$Type' non valide." -ForegroundColor Red
         exit 1
+    }
+
+    # Configuration spécifique pour les tests d'intégration
+    if ($Type -eq "integration") {
+        Write-Host "[INFO] Configuration de l'environnement pour les tests d'intégration Tweety..." -ForegroundColor Yellow
+        $env:USE_REAL_JPYPE = "true"
+        $env:TWEETY_JAR_PATH = "argumentation_analysis/libs/tweety/org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
+        $env:JVM_MEMORY = "1024m"
+        Write-Host "[INFO] USE_REAL_JPYPE = $($env:USE_REAL_JPYPE)"
+        Write-Host "[INFO] TWEETY_JAR_PATH = $($env:TWEETY_JAR_PATH)"
     }
 
     # Construire la commande pytest

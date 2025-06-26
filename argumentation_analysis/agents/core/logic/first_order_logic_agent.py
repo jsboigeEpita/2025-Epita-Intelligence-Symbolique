@@ -69,6 +69,10 @@ class AtomicFact(NamedTuple):
     predicate_name: str
     arguments: List[str]
 
+class NegatedAtomicFact(NamedTuple):
+    predicate_name: str
+    arguments: List[str]
+
 class UniversalImplication(NamedTuple):
     antecedent_predicate: str
     consequent_predicate: str
@@ -93,6 +97,7 @@ class BeliefSetBuilderPlugin:
         self._sorts: Dict[str, List[str]] = {}  # {sort_name: [const1, const2]}
         self._predicates: Dict[str, List[str]] = {}  # {pred_name: [sort1, sort2]}
         self._atomic_facts: List[AtomicFact] = []
+        self._negated_atomic_facts: List[NegatedAtomicFact] = []
         self._universal_implications: List[UniversalImplication] = []
         self._existential_conjunctions: List[ExistentialConjunction] = []
         # --- Union-Find structure for sort unification ---
@@ -166,6 +171,7 @@ class BeliefSetBuilderPlugin:
             "_sorts": self._sorts,
             "_predicates": self._predicates,
             "_atomic_facts": [fact._asdict() for fact in self._atomic_facts],
+            "_negated_atomic_facts": [fact._asdict() for fact in self._negated_atomic_facts],
             "_universal_implications": [impl._asdict() for impl in self._universal_implications],
             "_existential_conjunctions": [conj._asdict() for conj in self._existential_conjunctions],
         }
@@ -282,6 +288,27 @@ class BeliefSetBuilderPlugin:
         self._atomic_facts.append(AtomicFact(p_name, arg_list))
         return f"Atomic fact '{p_name}({', '.join(arg_list)})' added."
 
+    @kernel_function(description="Add a negated atomic fact, e.g., 'Socrates is NOT a god'.", name="add_negated_atomic_fact")
+    def add_negated_atomic_fact(self, fact_predicate_name: str, fact_arguments: List[str]):
+        p_name = self._normalize(fact_predicate_name)
+        arg_list = [self._normalize(arg) for arg in fact_arguments]
+
+        if p_name not in self._predicates:
+            sort_name_for_predicate = p_name
+            self.add_predicate_schema(p_name, [sort_name_for_predicate])
+
+        expected_sorts = self._predicates[p_name]
+        for i, arg_name in enumerate(arg_list):
+            if i < len(expected_sorts):
+                sort_name = expected_sorts[i]
+                if sort_name not in self._sorts:
+                    self.add_sort(sort_name)
+                if arg_name not in self._sorts[sort_name]:
+                    self._sorts[sort_name].append(arg_name)
+
+        self._negated_atomic_facts.append(NegatedAtomicFact(p_name, arg_list))
+        return f"Negated atomic fact 'not {p_name}({', '.join(arg_list)})' added."
+
     @kernel_function(description="Add a universal implication.", name="add_universal_implication")
     def add_universal_implication(self, impl_antecedent_predicate: str, impl_consequent_predicate: str, impl_sort_of_variable: str):
         # Ensure predicates exist with a default arity of 1 before proceeding.
@@ -365,6 +392,7 @@ class BeliefSetBuilderPlugin:
             ExistsQuantifiedFormula = initializer.ExistsQuantifiedFormula
             Implication = initializer.Implication
             Conjunction = initializer.Conjunction
+            Negation = initializer.Negation
             ArrayList = jpype.JClass("java.util.ArrayList")
 
             # 1. Create signature
@@ -414,6 +442,22 @@ class BeliefSetBuilderPlugin:
                     atom = self._create_safe_fol_atom(FolAtom, j_pred, j_args)
                     if atom:
                         belief_set.add(atom)
+
+            # Add negated atomic facts
+            for fact in self._negated_atomic_facts:
+                if fact.predicate_name in java_predicates:
+                    j_pred = java_predicates[fact.predicate_name]
+                    j_args = ArrayList()
+                    for arg_name in fact.arguments:
+                        if arg_name in java_constants:
+                            j_args.add(java_constants[arg_name])
+                        else:
+                            logger.warning(f"Constant '{arg_name}' not found for negated fact '{fact.predicate_name}'. Skipping argument.")
+                    
+                    atom = self._create_safe_fol_atom(FolAtom, j_pred, j_args)
+                    if atom:
+                        negated_formula = Negation(atom)
+                        belief_set.add(negated_formula)
 
             # Add universal implications
             for impl in self._universal_implications:
@@ -833,7 +877,11 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             return False, "Impossible de recréer ou de trouver l'objet belief set Java pour la vérification de consistance."
             
         try:
-            return await self.tweety_bridge._fol_handler.fol_check_consistency(java_belief_set)
+            is_cons, _ = await self.tweety_bridge._fol_handler.fol_check_consistency(java_belief_set)
+            if not is_cons:
+                return False, "Le belief set est incohérent (inconsistent)."
+            
+            return True, "Le belief set est cohérent (consistent)."
         except Exception as e:
             self.logger.error(f"Erreur inattendue durant la vérification de consistance: {e}", exc_info=True)
             return False, str(e)
