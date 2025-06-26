@@ -46,8 +46,6 @@ sys.path.insert(0, str(project_root))
 
 # Imports internes (sans activation d'environnement au niveau du module)
 # Le bootstrap se fera dans la fonction main()
-from argumentation_analysis.core.jvm_setup import download_tweety_jars
-
 # Import du gestionnaire centralisé des ports
 try:
     from project_core.config.port_manager import get_port_manager, set_environment_variables
@@ -1074,14 +1072,8 @@ class UnifiedWebOrchestrator:
         print("[DEBUG] unified_web_orchestrator.py: _start_backend()")
         self.add_trace("[BACKEND] DEMARRAGE BACKEND", "Lancement avec failover de ports")
 
-        # --- Etape 1: Assurer la présence des bibliothèques Java ---
-        self.add_trace("[SETUP] VERIFICATION LIBS JAVA", "Vérification des JARs Tweety...")
-        libs_java_path = Path("libs/java")
-        libs_java_path.mkdir(exist_ok=True)
-        if not download_tweety_jars(target_dir=str(libs_java_path)):
-            self.add_trace("[ERROR] ECHEC TELECHARGEMENT LIBS", "Les JARs Tweety n'ont pas pu être téléchargés.", status="error")
-            return False
-        self.add_trace("[OK] LIBS JAVA PRESENTES", "Les JARs Tweety sont prêts.")
+        # --- Etape 1: Lancement du backend ---
+        self.add_trace("[BACKEND] Démarrage...", "Le setup des libs Java est maintenant géré en amont.")
         
         # Forcer le port dynamique pour éviter les conflits
         backend_config = self.config.get('backend', {})
