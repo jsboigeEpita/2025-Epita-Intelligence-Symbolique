@@ -78,7 +78,7 @@ def test_initialize_services_nominal_case(mock_settings, mock_load_dotenv, mock_
     mock_find_dotenv.assert_called_once()
     mock_load_dotenv.assert_called_once() # just check it's called
     
-    mock_init_jvm.assert_called_once_with(lib_dir_path=str(Path("/fake/libs/dir")))
+    mock_init_jvm.assert_called_once_with()
     assert services.get("jvm_ready") is True
     
     mock_create_llm.assert_called_once_with(service_id="default_llm_service", force_mock=True)
@@ -110,7 +110,7 @@ def test_initialize_services_jvm_fails(mock_settings, mock_init_jvm, mock_load_d
     with patch(CREATE_LLM_SERVICE_PATH, return_value=MagicMock()):
         services = initialize_analysis_services()
     
-    mock_init_jvm.assert_called_once_with(lib_dir_path=str(Path("/fake/libs/dir")))
+    mock_init_jvm.assert_called_once_with()
     assert services.get("jvm_ready") is False
     assert "La JVM n'a pas pu être initialisée." in caplog.text
 
