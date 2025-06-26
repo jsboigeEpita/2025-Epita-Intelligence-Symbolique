@@ -202,13 +202,18 @@ class FOLHandler:
         """
         logger.debug(f"Checking FOL consistency for belief set of size {belief_set.size()}")
         try:
-            # A real implementation would use a prover
-            # Prover = jpype.JClass("org.tweetyproject.logics.fol.reasoner.ResolutionProver")()
-            # Contradiction = jpype.JClass("org.tweetyproject.logics.fol.syntax.Contradiction").getInstance()
-            # is_consistent = not Prover.query(belief_set, Contradiction)
-            # return is_consistent, f"Consistency check result: {is_consistent}"
-            logger.warning("FOL consistency check is a placeholder and assumes consistency.")
-            return True, "Consistency check is a placeholder and currently assumes success."
+            Contradiction = jpype.JClass("org.tweetyproject.logics.fol.syntax.Contradiction")()
+            # This requires a real reasoner, which should be initialized in TweetyInitializer
+            # For now, let's assume one is available.
+            if not hasattr(self, '_fol_reasoner') or self._fol_reasoner is None:
+                 # Fallback to a default prover if not initialized
+                 Prover = jpype.JClass("org.tweetyproject.logics.fol.reasoner.EProver")
+                 self._fol_reasoner = Prover()
+
+            is_consistent = not self._fol_reasoner.query(belief_set, Contradiction)
+            msg = f"Consistency check result: {is_consistent}"
+            logger.info(msg)
+            return is_consistent, msg
         except jpype.JException as e:
             logger.error(f"JPype JException during FOL consistency check: {e.getMessage()}", exc_info=True)
             raise RuntimeError(f"FOL consistency check failed: {e.getMessage()}") from e

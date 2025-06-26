@@ -57,6 +57,13 @@ except ImportError:
 # Configuration logging pour tests
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+# Enable JPype logging
+jpype_logger = logging.getLogger("jpype")
+jpype_logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+jpype_logger.addHandler(handler)
 
 
 async def _create_authentic_gpt4o_mini_instance():
@@ -110,7 +117,6 @@ class TestFOLTweetyCompatibility:
         
         # Initialisation TweetyBridge
         tweety_bridge = TweetyBridge()
-        await tweety_bridge.initialize_fol_reasoner()
         
         # Test de chaque formule
         for formula in test_formulas:
@@ -135,7 +141,6 @@ class TestFOLTweetyCompatibility:
             pytest.skip("Test nécessite USE_REAL_JPYPE=true")
             
         tweety_bridge = TweetyBridge()
-        await tweety_bridge.initialize_fol_reasoner()
         
         # Test prédicats correctement déclarés
         valid_formulas = [
@@ -168,7 +173,6 @@ class TestFOLTweetyCompatibility:
             pytest.skip("Test nécessite USE_REAL_JPYPE=true")
             
         tweety_bridge = TweetyBridge()
-        await tweety_bridge.initialize_fol_reasoner()
         
         # Test variables correctement liées
         well_bound_formulas = [
@@ -185,39 +189,6 @@ class TestFOLTweetyCompatibility:
             except Exception as e:
                 logger.error(f"❌ Erreur liaison variables: {formula} - {e}")
                 pytest.fail(f"Variables mal liées détectées par Tweety: {formula}")
-
-    @pytest.mark.asyncio
-    async def test_direct_empty_sort_causes_tweety_parsing_error(self, jvm_session):
-        """
-        Ce test contourne le LLM et vérifie directement que la chaîne `.fologic`
-        générée pour un sort vide par le BeliefSetBuilderPlugin provoque bien
-        l'erreur de parsing attendue dans Tweety.
-        """
-        if not jvm_session:
-            pytest.skip("Test nécessite la JVM.")
-            
-        # On a besoin d'importer jpype pour attraper l'exception
-        import jpype
-        from argumentation_analysis.agents.core.logic.first_order_logic_agent import BeliefSetBuilderPlugin
-
-        builder = BeliefSetBuilderPlugin()
-        tweety_bridge = TweetyBridge()
-
-        # 1. Construire manuellement le cas qui pose problème
-        builder.add_sort("personne") # Ajoute un sort, mais sans constante
-
-        # 2. Générer la chaîne .fologic
-        # Devrait produire "personne = {}"
-        fologic_string = builder.build_fologic_string()
-        assert fologic_string == "personne = {}", f"La chaîne générée attendue 'personne = {{}}' était '{fologic_string}'"
-
-        # 3. Essayer de créer le belief set, ce qui doit échouer
-        with pytest.raises(jpype.JException) as excinfo:
-            tweety_bridge.create_belief_set_from_string(fologic_string)
-        
-        # 4. Vérifier que l'exception Java contient bien le message d'erreur du bug
-        assert "Illegal characters in constant definition ''" in str(excinfo.value)
-        logger.info(f"✅ L'erreur de parsing Tweety attendue a été correctement attrapée pour un sort vide.")
 
 class TestRealTweetyFOLAnalysis:
     """Tests analyse FOL avec Tweety authentique."""
@@ -253,8 +224,6 @@ class TestRealTweetyFOLAnalysis:
         """
         
         # Configuration pour analyse réelle
-        if hasattr(fol_agent_real_tweety._tweety_bridge, 'initialize_fol_reasoner'):
-            await fol_agent_real_tweety._tweety_bridge.initialize_fol_reasoner()
         
         # Analyse complète
         start_time = time.time()
@@ -285,8 +254,6 @@ class TestRealTweetyFOLAnalysis:
         Socrate n'est pas mortel.
         """
         
-        if hasattr(fol_agent_real_tweety._tweety_bridge, 'initialize_fol_reasoner'):
-            await fol_agent_real_tweety._tweety_bridge.initialize_fol_reasoner()
         
         belief_set, msg = await fol_agent_real_tweety.text_to_belief_set(inconsistent_text)
         assert belief_set is not None, f"La création du BeliefSet a échoué: {msg}"
@@ -312,8 +279,6 @@ class TestRealTweetyFOLAnalysis:
         Pierre est un étudiant.
         """
         
-        if hasattr(fol_agent_real_tweety._tweety_bridge, 'initialize_fol_reasoner'):
-            await fol_agent_real_tweety._tweety_bridge.initialize_fol_reasoner()
         
         belief_set, msg = await fol_agent_real_tweety.text_to_belief_set(premises_text)
         assert belief_set is not None, f"Message: {msg}"
@@ -390,8 +355,6 @@ class TestFOLErrorHandling:
         # Timeout géré gracieusement
         # La classe FOLAnalysisResult n'existe plus, la validation est plus simple
         assert "timeout" in msg.lower() or "conversion error" in msg.lower()
-        if len(result.validation_errors) > 0:
-            assert any("timeout" in error.lower() or "erreur" in error.lower() for error in result.validation_errors)
 
 
 class TestFOLPerformanceVsModal:

@@ -12,8 +12,6 @@ from argumentation_analysis.core.utils.logging_utils import setup_logging
 from argumentation_analysis.core.jvm_setup import initialize_jvm as initialize_jvm_robustly
 from argumentation_analysis.core.jvm_setup import shutdown_jvm, is_jvm_started
 
-# Initialisation du logger pour ce module.
-setup_logging("INFO")
 logger = logging.getLogger(__name__)
 
 class TweetyInitializer:
@@ -22,21 +20,34 @@ class TweetyInitializer:
     The JVM lifecycle is now managed by the central jvm_setup.py module.
     This class acts as a central point for initialization logic and component access.
     """
-    _jvm_started = False
     _classes_loaded = False
     _pl_parser = None
     _fol_parser = None
     _modal_parser = None
     _modal_reasoner = None
-    _tweety_bridge = None
     _initialized_components = False
+    _jvm_started = False
 
-    def __init__(self, tweety_bridge_instance):
-        self._tweety_bridge = tweety_bridge_instance
+    # FOL classes (will be populated by _import_java_classes)
+    FolBeliefSet = None
+    FolSignature = None
+    Sort = None
+    Constant = None
+    Predicate = None
+    FolFormula = None
+    FolAtom = None
+    ForallQuantifiedFormula = None
+    ExistsQuantifiedFormula = None
+    Variable = None
+    Implication = None
+    Conjunction = None
+
+    def __init__(self, tweety_bridge_instance=None):
+        if tweety_bridge_instance:
+            self._tweety_bridge = tweety_bridge_instance
 
         if os.environ.get('DISABLE_JAVA_LOGIC') == '1':
             logger.info("Java logic is disabled via 'DISABLE_JAVA_LOGIC'. Skipping JVM checks.")
-            self.__class__._jvm_started = False
             return
 
         # L'initialisation se fait maintenant à la demande, ici.
@@ -49,7 +60,7 @@ class TweetyInitializer:
         self.__class__._jvm_started = True
 
         if not self.__class__._initialized_components:
-            logger.info("JVM is running. Initializing Java class imports and components.")
+            logger.info("JVM is running. Initializing Java class imports and components for the first time.")
             self._import_java_classes()
             self.initialize_pl_components()
             self.initialize_fol_components()
@@ -80,45 +91,66 @@ class TweetyInitializer:
 
     def _import_java_classes(self):
         """
-        Importe les classes Java requises et les met en cache.
-        Lève une RuntimeError si une classe n'est pas trouvée, indiquant un
-        problème de classpath.
+        Imports and caches required Java classes.
+        Raises RuntimeError if a class is not found, indicating a classpath issue.
         """
         logger.info("Importation des classes Java de TweetyProject...")
         try:
-            _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlSignature")
-            _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.Proposition")
-            _ = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
-            _ = jpype.JClass("org.tweetyproject.logics.pl.reasoner.SatReasoner")
-            _ = jpype.JClass("org.tweetyproject.logics.pl.sat.Sat4jSolver")
-            _ = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolSignature")
-            _ = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolBeliefSet")
-            _ = jpype.JClass("org.tweetyproject.logics.fol.reasoner.SimpleFolReasoner")
+            # PL Classes
+            jpype.JClass("org.tweetyproject.logics.pl.syntax.PlSignature")
+            jpype.JClass("org.tweetyproject.logics.pl.syntax.Proposition")
+            jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
+            jpype.JClass("org.tweetyproject.logics.pl.reasoner.SatReasoner")
+            jpype.JClass("org.tweetyproject.logics.pl.sat.Sat4jSolver")
+
+            # FOL Classes
+            TweetyInitializer.FolBeliefSet = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolBeliefSet")
+            TweetyInitializer.FolSignature = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolSignature")
+            TweetyInitializer.FolFormula = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolFormula")
+            TweetyInitializer.FolAtom = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolAtom")
+            TweetyInitializer.ForallQuantifiedFormula = jpype.JClass("org.tweetyproject.logics.fol.syntax.ForallQuantifiedFormula")
+            TweetyInitializer.ExistsQuantifiedFormula = jpype.JClass("org.tweetyproject.logics.fol.syntax.ExistsQuantifiedFormula")
+            TweetyInitializer.Variable = jpype.JClass("org.tweetyproject.logics.commons.syntax.Variable")
+            TweetyInitializer.Predicate = jpype.JClass("org.tweetyproject.logics.commons.syntax.Predicate")
+
+            # Common Classes
+            TweetyInitializer.Sort = jpype.JClass("org.tweetyproject.logics.commons.syntax.Sort")
+            TweetyInitializer.Constant = jpype.JClass("org.tweetyproject.logics.commons.syntax.Constant")
+            TweetyInitializer.Implication = jpype.JClass("org.tweetyproject.logics.fol.syntax.Implication")
+            TweetyInitializer.Conjunction = jpype.JClass("org.tweetyproject.logics.fol.syntax.Conjunction")
+            jpype.JClass("org.tweetyproject.commons.ParserException")
+            
+            # Modal classes
             _ = jpype.JClass("org.tweetyproject.logics.ml.syntax.MlFormula")
             _ = jpype.JClass("org.tweetyproject.logics.ml.syntax.MlBeliefSet")
             _ = jpype.JClass("org.tweetyproject.logics.ml.reasoner.SimpleMlReasoner")
             _ = jpype.JClass("org.tweetyproject.logics.ml.parser.MlParser")
-            _ = jpype.JClass("org.tweetyproject.commons.ParserException")
-            _ = jpype.JClass("org.tweetyproject.logics.commons.syntax.Sort")
             _ = jpype.JClass("org.tweetyproject.commons.Signature")
-            _ = jpype.JClass("org.tweetyproject.logics.commons.syntax.Constant")
-            logger.info("Successfully imported TweetyProject Java classes.")
 
-        except Exception as e:
-            logger.error(f"Error importing Java classes: {e}", exc_info=True)
+            # Reasoner (using EProver, not Prover9)
+            jpype.JClass("org.tweetyproject.logics.fol.reasoner.EProver")
+            
+            logger.info("Successfully imported and cached TweetyProject Java classes.")
+            TweetyInitializer._classes_loaded = True
+
+        except jpype.JException as e:
+            logger.error(f"A Java exception occurred during class import: {e.stacktrace()}", exc_info=True)
             java_system = jpype.JClass("java.lang.System")
             actual_classpath = java_system.getProperty("java.class.path")
             logger.error(f"Classpath at time of error: {actual_classpath}")
             raise RuntimeError(f"Java class import failed: {e}") from e
+        except Exception as e:
+             logger.error(f"A Python exception occurred during class import: {e}", exc_info=True)
+             raise RuntimeError(f"A non-Java exception occurred during class import: {e}") from e
+
 
     def initialize_pl_components(self):
-        if self.__class__._pl_parser and self.__class__._pl_reasoner:
+        if self.__class__._pl_parser:
             return
         try:
             logger.debug("Initializing PL components...")
-            self.__class__._pl_reasoner = jpype.JClass("org.tweetyproject.logics.pl.reasoner.SimplePlReasoner")()
             self.__class__._pl_parser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")()
-            logger.info("PL components initialized.")
+            logger.info("PL parser initialized.")
         except Exception as e:
             logger.error(f"Error initializing PL components: {e}", exc_info=True)
             raise
@@ -163,5 +195,10 @@ class TweetyInitializer:
             raise RuntimeError("Modal Parser not initialized.")
         return TweetyInitializer._modal_parser
 
+    @staticmethod
+    def is_jvm_ready() -> bool:
+        """Checks if the JVM is started and classes are loaded."""
+        return is_jvm_started() and TweetyInitializer._classes_loaded
+
     def is_jvm_started(self):
-        return self.__class__._jvm_started
+         return self.__class__._jvm_started

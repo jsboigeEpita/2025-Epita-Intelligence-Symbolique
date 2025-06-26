@@ -106,7 +106,7 @@ class TweetyBridge:
         # et que les handlers Python ont été instanciés (indiqué par self._jvm_ok dans __init__).
         return (
             self._initializer is not None and
-            self._initializer.is_jvm_started() and # Utiliser la méthode correcte de TweetyInitializer
+            self._initializer.is_jvm_ready() and # Utiliser la méthode correcte de TweetyInitializer
             hasattr(self, '_pl_handler') and self._pl_handler is not None and
             hasattr(self, '_fol_handler') and self._fol_handler is not None and
             hasattr(self, '_modal_handler') and self._modal_handler is not None and
