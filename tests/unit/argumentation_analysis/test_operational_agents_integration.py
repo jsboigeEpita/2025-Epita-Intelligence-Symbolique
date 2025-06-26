@@ -66,7 +66,7 @@ class TestOperationalAgentsIntegration:
 
     """Tests d'intégration pour les agents opérationnels."""
 
-    @pytest_asyncio.fixture
+    @pytest_asyncio.fixture(scope="module")
     async def operational_components(self, jvm_session):
         """
         Initialise les objets nécessaires pour les tests.

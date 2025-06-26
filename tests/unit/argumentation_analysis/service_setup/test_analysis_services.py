@@ -84,7 +84,7 @@ def test_initialize_services_nominal_case(mock_settings, mock_load_dotenv, mock_
     mock_create_llm.assert_called_once_with(service_id="default_llm_service", force_mock=True)
     assert services.get("llm_service") == mock_llm
     
-    assert "Initialisation de la JVM avec LIBS_DIR: \\fake\\libs\\dir" in caplog.text
+    assert "Initialisation de la JVM avec LIBS_DIR: /fake/libs/dir" in caplog.text
     assert f"[OK] Service LLM créé" in caplog.text
 
 def test_initialize_services_dotenv_fails(mock_settings, mock_load_dotenv, mock_find_dotenv, caplog):

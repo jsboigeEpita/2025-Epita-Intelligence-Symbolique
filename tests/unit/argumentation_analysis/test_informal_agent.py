@@ -22,185 +22,185 @@ from pathlib import Path
 import semantic_kernel as sk
 from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin, setup_informal_kernel
 import pytest
+import logging
 
-@pytest.mark.use_real_numpy
-class TestInformalAnalysisPlugin(unittest.TestCase):
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-        
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
+# Configuration du logging pour les tests
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-    """Tests pour la classe InformalAnalysisPlugin."""
+@pytest.fixture(scope="function")
+def informal_plugin_with_test_df():
+    """
+    Fixture Pytest pour fournir une instance de InformalAnalysisPlugin
+    avec un DataFrame de taxonomie de test pré-configuré.
+    La portée "function" garantit une nouvelle instance pour chaque test.
+    """
+    plugin = InformalAnalysisPlugin()
+    
+    # Créer et assigner le DataFrame de test directement
+    test_df = pd.DataFrame({
+        'PK': [0, 1, 2, 3],
+        'FK_Parent': [pd.NA, 0, 0, 1],
+        'text_fr': ['Racine', 'Catégorie 1', 'Catégorie 2', 'Sous-catégorie 1.1'],
+        'nom_vulgarise': ['Sophismes', 'Ad Hominem', 'Faux Dilemme', 'Attaque Personnelle'],
+        'description_fr': ['Description racine', 'Description cat 1', 'Description cat 2', 'Description sous-cat 1.1'],
+        'exemple_fr': ['Exemple racine', 'Exemple cat 1', 'Exemple cat 2', 'Exemple sous-cat 1.1'],
+        'depth': [0, 1, 1, 2]
+    }).astype({
+        'PK': int,
+        'FK_Parent': 'Int64', # Utiliser 'Int64' pour entiers avec potentiels NA
+        'depth': int
+    })
+    test_df.set_index('PK', inplace=True)
+    
+    # Remplacer la méthode de chargement par un mock qui retourne le DataFrame de test
+    with patch.object(plugin, '_internal_load_and_prepare_dataframe', return_value=test_df):
+        yield plugin, test_df
 
-    def setUp(self):
-        """Initialisation avant chaque test."""
-        self.plugin = InformalAnalysisPlugin()
-        
-        # Créer un DataFrame de test pour la taxonomie
-        self.test_df = pd.DataFrame({
-            'PK': [0, 1, 2, 3],
-            'FK_Parent': [np.nan, 0, 0, 1],
-            'text_fr': ['Racine', 'Catégorie 1', 'Catégorie 2', 'Sous-catégorie 1.1'],
-            'nom_vulgarisé': ['Sophismes', 'Ad Hominem', 'Faux Dilemme', 'Attaque Personnelle'],
-            'description_fr': ['Description racine', 'Description cat 1', 'Description cat 2', 'Description sous-cat 1.1'],
-            'exemple_fr': ['Exemple racine', 'Exemple cat 1', 'Exemple cat 2', 'Exemple sous-cat 1.1'],
-            'depth': [0, 1, 1, 2]
-        })
-        self.test_df.set_index('PK', inplace=True)
+@pytest.mark.usefixtures("informal_plugin_with_test_df")
+class TestInformalAnalysisPlugin:
+    """
+    Classe de tests pour InformalAnalysisPlugin, utilisant des fixtures pytest
+    pour garantir l'isolation complète des tests.
+    """
 
-    
-    
-    
-    
-    
     @patch('pandas.read_csv')
     @patch('requests.get')
     @patch('argumentation_analysis.utils.taxonomy_loader.validate_taxonomy_file')
     @patch('argumentation_analysis.utils.taxonomy_loader.get_taxonomy_path')
     @patch('builtins.open')
-    def test_internal_load_and_prepare_dataframe(self, mock_file, mock_get_path, mock_validate, mock_requests, mock_read_csv):
+    def test_internal_load_and_prepare_dataframe(self, mock_open, mock_get_path, mock_validate, mock_requests, mock_read_csv, informal_plugin_with_test_df):
         """Teste le chargement et la préparation du DataFrame."""
+        plugin, test_df = informal_plugin_with_test_df
+        
         # Configurer les mocks
-        mock_read_csv.return_value = self.test_df.reset_index()
+        mock_read_csv.return_value = test_df.reset_index()
         mock_requests.return_value.status_code = 200
-        mock_validate.return_value = True  # Simuler que le fichier de taxonomie est valide
-        mock_get_path.return_value = Path("mock_taxonomy_path.csv")  # Simuler un chemin de fichier valide
+        mock_validate.return_value = True
+        mock_get_path.return_value = Path("mock_taxonomy_path.csv")
         
         # Appeler la méthode à tester
-        df = self.plugin._internal_load_and_prepare_dataframe()
+        # Note: on teste la méthode interne, pas celle qui utilise le cache
+        df = plugin._internal_load_and_prepare_dataframe()
         
-        # Vérifier que le DataFrame a été correctement chargé et préparé
-        self.assertIsNotNone(df)
-        self.assertEqual(len(df), 4)
-        pd.testing.assert_frame_equal(df, self.test_df)
+        # Vérifications
+        assert df is not None
+        assert len(df) == 4
+        pd.testing.assert_frame_equal(df, test_df)
 
-    @patch.object(InformalAnalysisPlugin, '_internal_load_and_prepare_dataframe')
-    def test_get_taxonomy_dataframe(self, mock_load):
-        """Teste la récupération du DataFrame de taxonomie."""
-        # Configurer le mock pour retourner le DataFrame de test
-        mock_load.return_value = self.test_df
-        
-        # Appeler la méthode à tester
-        df = self.plugin._get_taxonomy_dataframe()
-        
-        # Vérifier que le DataFrame a été correctement récupéré
-        self.assertIsNotNone(df)
-        pd.testing.assert_frame_equal(df, self.test_df)
-        
-        # Vérifier que le cache fonctionne (deuxième appel)
-        df2 = self.plugin._get_taxonomy_dataframe()
-        pd.testing.assert_frame_equal(df2, df) # Doit être le même objet (pas de rechargement)
-        mock_load.assert_called_once()  # Le chargement ne doit être appelé qu'une fois
+    def test_get_taxonomy_dataframe(self, informal_plugin_with_test_df):
+        """Teste la récupération du DataFrame de taxonomie et la mise en cache."""
+        plugin, test_df = informal_plugin_with_test_df
 
-    @patch.object(InformalAnalysisPlugin, '_get_taxonomy_dataframe')
-    def test_internal_get_node_details(self, mock_get_df):
+        # Appeler la méthode une première fois
+        df = plugin._get_taxonomy_dataframe()
+        
+        # Vérifier que le DataFrame est correct
+        assert df is not None
+        pd.testing.assert_frame_equal(df, test_df)
+        
+        # Appeler une seconde fois pour vérifier l'utilisation du cache
+        df2 = plugin._get_taxonomy_dataframe()
+        pd.testing.assert_frame_equal(df2, df)
+        
+        # Vérifier que la méthode de chargement n'a été appelée qu'une fois
+        # Le mock est déjà configuré dans la fixture
+        plugin._internal_load_and_prepare_dataframe.assert_called_once()
+
+    def test_internal_get_node_details(self, informal_plugin_with_test_df):
         """Teste la récupération des détails d'un nœud."""
-        # Configurer le mock pour retourner le DataFrame de test
-        mock_get_df.return_value = self.test_df
+        plugin, test_df = informal_plugin_with_test_df
         
-        # Appeler la méthode à tester pour un nœud existant
-        details = self.plugin._internal_get_node_details(1, self.test_df)
+        # === Cas 1: Nœud existant ===
+        details = plugin._internal_get_node_details(1, test_df)
+        assert details['pk'] == 1
+        assert details['text_fr'] == 'Catégorie 1'
+        assert details['nom_vulgarise'] == 'Ad Hominem'
+        assert details['error'] is None
         
-        # Vérifier que les détails ont été correctement récupérés
-        self.assertEqual(details['pk'], 1)
-        self.assertEqual(details['text_fr'], 'Catégorie 1')
-        self.assertEqual(details['nom_vulgarisé'], 'Ad Hominem')
-        self.assertIsNone(details['error'])
+        # === Cas 2: PK Inexistante ===
+        details_invalid = plugin._internal_get_node_details(999, test_df)
+        assert details_invalid['pk'] == 999
+        assert details_invalid['error'] is not None
         
-        # Tester avec un PK inexistant
-        details_invalid = self.plugin._internal_get_node_details(999, self.test_df)
-        self.assertEqual(details_invalid['pk'], 999)
-        self.assertIsNotNone(details_invalid['error'])
-        
-        # Tester avec un DataFrame None
-        details_no_df = self.plugin._internal_get_node_details(1, None)
-        self.assertEqual(details_no_df['pk'], 1)
-        self.assertIsNotNone(details_no_df['error'])
+        # === Cas 3: DataFrame None ===
+        details_no_df = plugin._internal_get_node_details(1, None)
+        assert details_no_df['pk'] == 1
+        assert details_no_df['error'] is not None
 
     # Ce test est obsolète car la méthode '_internal_get_children_details' a été supprimée
     # et sa logique intégrée dans '_internal_explore_hierarchy'.
 
     @patch.object(InformalAnalysisPlugin, '_get_taxonomy_dataframe')
-    @patch.object(InformalAnalysisPlugin, '_internal_explore_hierarchy')
-    def test_explore_fallacy_hierarchy(self, mock_explore, mock_get_df):
+    @patch.object(InformalAnalysisPlugin, '_internal_explore_hierarchy', autospec=True)
+    def test_explore_fallacy_hierarchy(self, mock_explore, informal_plugin_with_test_df):
         """Teste l'exploration de la hiérarchie des sophismes."""
-        # Configurer les mocks
-        mock_get_df.return_value = self.test_df
+        plugin, test_df = informal_plugin_with_test_df
+        
+        # === Cas 1: Appel Nominal ===
         mock_explore.return_value = {
-            "current_node": {'pk': 0, 'text_fr': 'Racine', 'nom_vulgarisé': 'Sophismes', 'error': None},
+            "current_node": {'pk': 0, 'text_fr': 'Racine', 'nom_vulgarise': 'Sophismes', 'error': None},
             "children": [
-                {'pk': 1, 'text_fr': 'Catégorie 1', 'nom_vulgarisé': 'Ad Hominem'},
-                {'pk': 2, 'text_fr': 'Catégorie 2', 'nom_vulgarisé': 'Faux Dilemme'}
+                {'pk': 1, 'text_fr': 'Catégorie 1', 'nom_vulgarise': 'Ad Hominem'},
+                {'pk': 2, 'text_fr': 'Catégorie 2', 'nom_vulgarise': 'Faux Dilemme'}
             ]
         }
         
-        # Appeler la méthode à tester
-        result_json = self.plugin.explore_fallacy_hierarchy("0")
+        result_json = plugin.explore_fallacy_hierarchy("0")
         result = json.loads(result_json)
         
-        # Vérifier que le résultat est correct
-        self.assertIn('current_node', result)
-        self.assertIn('children', result)
-        self.assertEqual(result['current_node']['pk'], 0)
-        self.assertEqual(len(result['children']), 2)
+        assert 'current_node' in result
+        assert 'children' in result
+        assert result['current_node']['pk'] == 0
+        assert len(result['children']) == 2
+        mock_explore.assert_called_once_with(plugin, 0, test_df, 15)
         
-        # Tester avec un PK invalide
-        mock_get_df.return_value = self.test_df
-        result_invalid_json = self.plugin.explore_fallacy_hierarchy("invalid")
+        # === Cas 2: PK Invalide ===
+        result_invalid_json = plugin.explore_fallacy_hierarchy("invalid")
         result_invalid = json.loads(result_invalid_json)
-        self.assertIn('error', result_invalid)
-        
-        # Tester avec un DataFrame None
-        mock_get_df.return_value = None
-        result_no_df_json = self.plugin.explore_fallacy_hierarchy("0")
-        result_no_df = json.loads(result_no_df_json)
-        self.assertIn('error', result_no_df)
+        assert 'error' in result_invalid
+
+        # === Cas 3: DataFrame non disponible (simulé en patchant _get_taxonomy_dataframe) ===
+        with patch.object(plugin, '_get_taxonomy_dataframe', return_value=None):
+            result_no_df_json = plugin.explore_fallacy_hierarchy("0")
+            result_no_df = json.loads(result_no_df_json)
+            assert 'error' in result_no_df
 
     @patch.object(InformalAnalysisPlugin, '_get_taxonomy_dataframe')
-    @patch.object(InformalAnalysisPlugin, '_internal_get_node_details')
-    def test_get_fallacy_details(self, mock_details, mock_get_df):
+    @patch.object(InformalAnalysisPlugin, '_internal_get_node_details', autospec=True)
+    def test_get_fallacy_details(self, mock_details, informal_plugin_with_test_df):
         """Teste la récupération des détails d'un sophisme."""
-        # Configurer les mocks
-        mock_get_df.return_value = self.test_df
+        plugin, test_df = informal_plugin_with_test_df
+        
+        # === Cas 1: Appel Nominal ===
         mock_details.return_value = {
             'pk': 1,
             'text_fr': 'Catégorie 1',
-            'nom_vulgarisé': 'Ad Hominem',
+            'nom_vulgarise': 'Ad Hominem',
             'description_fr': 'Description cat 1',
             'exemple_fr': 'Exemple cat 1',
             'error': None
         }
         
-        # Appeler la méthode à tester
-        result_json = self.plugin.get_fallacy_details("1")
+        result_json = plugin.get_fallacy_details("1")
         result = json.loads(result_json)
-        
-        # Vérifier que le résultat est correct
-        self.assertEqual(result['pk'], 1)
-        self.assertEqual(result['text_fr'], 'Catégorie 1')
-        self.assertEqual(result['nom_vulgarisé'], 'Ad Hominem')
-        self.assertIsNone(result.get('error'))
-        
-        # Tester avec un PK invalide
-        result_invalid_json = self.plugin.get_fallacy_details("invalid")
+
+        assert result['pk'] == 1
+        assert result['text_fr'] == 'Catégorie 1'
+        assert result['nom_vulgarise'] == 'Ad Hominem'
+        assert 'error' not in result or result['error'] is None
+        mock_details.assert_called_once_with(plugin, 1, test_df)
+
+        # === Cas 2: PK Invalide ===
+        result_invalid_json = plugin.get_fallacy_details("invalid")
         result_invalid = json.loads(result_invalid_json)
-        self.assertIn('error', result_invalid)
-        
-        # Tester avec un DataFrame None
-        mock_get_df.return_value = None
-        result_no_df_json = self.plugin.get_fallacy_details("1")
-        result_no_df = json.loads(result_no_df_json)
-        self.assertIn('error', result_no_df)
+        assert 'error' in result_invalid
+
+        # === Cas 3: DataFrame non disponible (simulé) ===
+        with patch.object(plugin, '_get_taxonomy_dataframe', return_value=None):
+            result_no_df_json = plugin.get_fallacy_details("1")
+            result_no_df = json.loads(result_no_df_json)
+            assert 'error' in result_no_df
 
 
 class TestSetupInformalKernel(unittest.TestCase):
