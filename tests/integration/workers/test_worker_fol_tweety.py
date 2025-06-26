@@ -272,7 +272,10 @@ class TestRealTweetyFOLAnalysis:
     
     @pytest.mark.asyncio
     async def test_real_tweety_fol_inconsistency_detection(self, fol_agent_with_kernel, jvm_session):
-        """Test détection incohérence avec Tweety réel (via construction programmatique)."""
+        """
+        Test détection incohérence avec Tweety réel en utilisant la nouvelle
+        fonction de négation du BeliefSetBuilderPlugin.
+        """
         if not jvm_session:
             pytest.skip("Test nécessite la JVM.")
         
@@ -280,74 +283,31 @@ class TestRealTweetyFOLAnalysis:
         builder = agent._builder_plugin
         builder.reset()
 
-        # Construction d'un ensemble de croyances incohérent
-        builder.add_sort("type")
-        builder.add_predicate_schema("est_a", ["type"])
-        builder.add_predicate_schema("nest_pas_a", ["type"])
-        builder.add_constant_to_sort("x", "type")
-        builder.add_atomic_fact("est_a", ["x"])
-        builder.add_universal_implication("est_a", "nest_pas_a", "type") # forall y (est_a(y) -> nest_pas_a(y))
-        
-        # Pour rendre l'incohérence plus directe : forall z (est_a(z) -> not(est_a(z)))
-        # Ce n'est pas directement possible avec les outils actuels, mais ce qui précède est suffisant.
-        # Une autre façon : ajouter "est_a(x)" et "not est_a(x)". "not" n'est pas un outil direct.
-        # Le BeliefSet actuel sera { est_a(x), forall y(est_a(y) => nest_pas_a(y)) }
-        # ce qui n'est pas incohérent en soi. Modifions le test.
-        # Construction programmatique d'un ensemble incohérent.
-        # Au lieu de "P et non P", on utilise une chaîne d'implications contradictoires
-        # que le builder peut gérer.
-        # e.g., A(x), forall y (A(y) -> B(y)), forall z (B(z) -> not A(z))
-        builder.reset()
-        builder.add_sort("creature")
-        builder.add_predicate_schema("est_un_pingouin", ["creature"])
-        builder.add_predicate_schema("est_un_oiseau", ["creature"])
-        builder.add_predicate_schema("vole", ["creature"])
-        
-        builder.add_constant_to_sort("tux", "creature")
-        
-        # 1. Tux est un pingouin.
-        builder.add_atomic_fact("est_un_pingouin", ["tux"])
-        # 2. Tous les pingouins sont des oiseaux.
-        builder.add_universal_implication("est_un_pingouin", "est_un_oiseau", "creature")
-        # 3. Aucun oiseau ne peut être un pingouin (contradiction avec 2).
-        # Pour cela on a besoin de la négation, ce que le builder ne fait pas.
-        # Essayons une autre approche:
-        # P(a), forall x (P(x) -> Q(x)), forall x (P(x) -> not Q(x))
-        builder.reset()
-        builder.add_sort("animal")
-        builder.add_predicate_schema("est_un_oiseau", ["animal"])
-        builder.add_predicate_schema("peut_voler", ["animal"])
-        builder.add_predicate_schema("ne_peut_pas_voler", ["animal"])
-        builder.add_constant_to_sort("penny", "animal")
+        # 1. Définir le schéma de base: un prédicat P avec un argument.
+        builder.add_sort("concept")
+        builder.add_predicate_schema("est_vrai", ["concept"])
+        builder.add_constant_to_sort("a", "concept")
 
-        # Penny est un oiseau
-        builder.add_atomic_fact("est_un_oiseau", ["penny"])
-        # Tous les oiseaux peuvent voler
-        builder.add_universal_implication("est_un_oiseau", "peut_voler", "animal")
-        # Tous les oiseaux ne peuvent pas voler (contradictoire)
-        builder.add_universal_implication("est_un_oiseau", "ne_peut_pas_voler", "animal")
-        # Ajoutons que pouvoir voler et ne pas pouvoir voler est mutuellement exclusif
-        # Cela nécessite une formule plus complexe que le builder ne supporte pas.
-
-        # La création d'un BeliefSet à partir d'une chaîne est fragile.
-        # Nous utilisons une approche propositionnelle simple pour tester la détection d'incohérence,
-        # car le builder actuel ne peut pas créer de négations arbitraires.
-        inconsistent_formulas = "predicates: P, Q. formulas: { P, (P => Q), (P => not Q) }."
-        belief_set = FirstOrderBeliefSet(content=inconsistent_formulas)
+        # 2. Ajouter un fait atomique P(a).
+        builder.add_atomic_fact("est_vrai", ["a"])
         
+        # 3. Ajouter sa négation ¬P(a) en utilisant la nouvelle fonctionnalité.
+        builder.add_negated_atomic_fact("est_vrai", ["a"])
+
+        # 4. Construire le BeliefSet à partir des faits.
+        java_belief_set_obj = builder.build_tweety_belief_set(agent.tweety_bridge)
+        assert java_belief_set_obj is not None, "La création du BeliefSet n'a pas réussi."
+        belief_set = FirstOrderBeliefSet(content=java_belief_set_obj.toString(), java_object=java_belief_set_obj)
+
+        # 5. Vérifier que le BeliefSet {P(a), ¬P(a)} est bien détecté comme incohérent.
         is_consistent, consistency_msg = await agent.is_consistent(belief_set)
 
-        # L'assertion originale était 'is_consistent is False'.
-        # On vérifie que le résultat est bien False et que le message d'erreur
-        # ne provient pas d'une erreur de parsing.
-        assert not is_consistent, f"Le BeliefSet devrait être incohérent, mais il est consistant. Message: {consistency_msg}"
+        assert not is_consistent, f"Le BeliefSet devrait être incohérent, mais il est considéré comme consistant. Message: {consistency_msg}"
         
-        # Un message de succès de la part de l'agent indique que l'incohérence a été trouvée
-        # et non qu'une erreur de parsing a eu lieu.
         assert "inconsistent" in consistency_msg.lower() or "incohérent" in consistency_msg.lower(), \
-               f"Le message de retour '{consistency_msg}' n'indique pas une incohérence."
+               f"Le message de retour '{consistency_msg}' n'indique pas une incohérence comme attendu."
 
-        logger.info(f"✅ Incohérence correctement détectée avec le message : {consistency_msg}")
+        logger.info(f"✅ Incohérence programmatique (P ∧ ¬P) correctement détectée. Message: {consistency_msg}")
     
     @pytest.mark.asyncio
     async def test_real_tweety_fol_inference_generation(self, fol_agent_with_kernel, jvm_session):
