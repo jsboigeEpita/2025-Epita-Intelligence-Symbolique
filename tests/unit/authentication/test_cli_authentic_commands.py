@@ -96,7 +96,8 @@ class TestValidateAuthenticSystemCLI:
                 capture_output=True,
                 text=True,
                 timeout=30,
-                check=False 
+                check=False,
+                encoding='utf-8'
             )
             
             assert result.returncode == 0, f"Help command failed: {result.stderr}"
@@ -119,7 +120,8 @@ class TestValidateAuthenticSystemCLI:
                 capture_output=True,
                 text=True,
                 timeout=60,
-                check=False
+                check=False,
+                encoding='utf-8'
             )
             
             assert result.returncode in [0, 1, 2], f"Script exit code {result.returncode} not in [0,1,2]. stderr: {result.stderr}"
@@ -147,7 +149,8 @@ class TestValidateAuthenticSystemCLI:
                 capture_output=True,
                 text=True,
                 timeout=60,
-                check=False
+                check=False,
+                encoding='utf-8'
             )
             
             json_data_found = False
@@ -195,7 +198,8 @@ class TestValidateAuthenticSystemCLI:
                 capture_output=True,
                 text=True,
                 timeout=60,
-                check=False
+                check=False,
+                encoding='utf-8'
             )
             
             assert result.returncode in [0, 1], f"Exit code {result.returncode} not in [0,1]. stderr: {result.stderr}"
@@ -238,7 +242,8 @@ class TestAnalyzeTextAuthenticCLI:
                 capture_output=True,
                 text=True,
                 timeout=30,
-                check=False
+                check=False,
+                encoding='utf-8'
             )
             
             assert result.returncode == 0, f"Help command failed: {result.stderr}"
@@ -268,7 +273,7 @@ class TestAnalyzeTextAuthenticCLI:
                     "--skip-authenticity-validation", 
                     "--output", str(output_file_path),
                     "--quiet"
-                ], capture_output=True, text=True, timeout=120, check=False)
+                ], capture_output=True, text=True, timeout=120, check=False, encoding='utf-8')
                 
                 valid_exit_codes = [0, 1, 2]
                 assert result.returncode in valid_exit_codes, f"Script exit code {result.returncode} not in {valid_exit_codes}. stderr: {result.stderr}"
@@ -301,7 +306,7 @@ class TestAnalyzeTextAuthenticCLI:
                 "--force-authentic",
                 "--skip-authenticity-validation", 
                 "--quiet"
-            ], capture_output=True, text=True, timeout=120, check=False)
+            ], capture_output=True, text=True, timeout=120, check=False, encoding='utf-8')
             
             valid_exit_codes = [0, 1, 2]
             assert result.returncode in valid_exit_codes, f"Script exit code {result.returncode} not in {valid_exit_codes}. stderr: {result.stderr}"
@@ -336,7 +341,7 @@ class TestAnalyzeTextAuthenticCLI:
                     option, value,
                     "--skip-authenticity-validation",
                     "--quiet"
-                ], capture_output=True, text=True, timeout=60, check=False)
+                ], capture_output=True, text=True, timeout=60, check=False, encoding='utf-8')
                 
                 assert result.returncode in [0, 1, 2], f"Script failed for {option}={value}. stderr: {result.stderr}"
                 assert "unrecognized arguments" not in result.stderr.lower()
@@ -362,7 +367,7 @@ class TestAnalyzeTextAuthenticCLI:
                     "--preset", "testing",
                     "--skip-authenticity-validation",
                     "--quiet"
-                ], capture_output=True, text=True, timeout=60, check=False)
+                ], capture_output=True, text=True, timeout=60, check=False, encoding='utf-8')
                 
                 valid_exit_codes = [0, 1, 2]
                 assert result.returncode in valid_exit_codes, f"Script failed for file input. stderr: {result.stderr}"
@@ -396,7 +401,7 @@ class TestCLIIntegrationAuthenticity:
                 sys.executable, str(self.validate_script),
                 "--config", "testing",
                 "--output", "json"
-            ], capture_output=True, text=True, timeout=60, check=False)
+            ], capture_output=True, text=True, timeout=60, check=False, encoding='utf-8')
             
             if validate_result.returncode == 0:
                 analyze_result = subprocess.run([
@@ -406,7 +411,7 @@ class TestCLIIntegrationAuthenticity:
                     # "--validate-before-analysis", # This option might require specific setup or real components
                     "--skip-authenticity-validation", # More robust for unit/integration tests
                     "--quiet"
-                ], capture_output=True, text=True, timeout=120, check=False)
+                ], capture_output=True, text=True, timeout=120, check=False, encoding='utf-8')
                 assert analyze_result.returncode in [0, 1, 2], f"Analyze script failed after validation. stderr: {analyze_result.stderr}"
             else:
                 assert validate_result.returncode in [1, 2], f"Validation script failed unexpectedly. stderr: {validate_result.stderr}"
@@ -426,7 +431,7 @@ class TestCLIIntegrationAuthenticity:
         for options in config_options_list:
             try:
                 validate_cmd = [sys.executable, str(self.validate_script)] + options + ["--output", "json"]
-                validate_result = subprocess.run(validate_cmd, capture_output=True, text=True, timeout=60, check=False)
+                validate_result = subprocess.run(validate_cmd, capture_output=True, text=True, timeout=60, check=False, encoding='utf-8')
                 
                 preset_value = options[1] if len(options) > 1 and options[0] == "--config" else "testing"
                 analyze_cmd = [
@@ -436,7 +441,7 @@ class TestCLIIntegrationAuthenticity:
                     "--skip-authenticity-validation",
                     "--quiet"
                 ]
-                analyze_result = subprocess.run(analyze_cmd, capture_output=True, text=True, timeout=60, check=False)
+                analyze_result = subprocess.run(analyze_cmd, capture_output=True, text=True, timeout=60, check=False, encoding='utf-8')
                 
                 assert validate_result.returncode in [0, 1, 2], f"Validate script failed for {options}. stderr: {validate_result.stderr}"
                 assert analyze_result.returncode in [0, 1, 2], f"Analyze script failed for {options}. stderr: {analyze_result.stderr}"
@@ -461,7 +466,7 @@ class TestCLIIntegrationAuthenticity:
         for invalid_args_item, expect_validate_fail, expect_analyze_fail in invalid_tests_args_list:
             try:
                 validate_cmd = [sys.executable, str(self.validate_script)] + invalid_args_item
-                validate_result = subprocess.run(validate_cmd, capture_output=True, text=True, timeout=30, check=False)
+                validate_result = subprocess.run(validate_cmd, capture_output=True, text=True, timeout=30, check=False, encoding='utf-8')
                 if expect_validate_fail: 
                     assert validate_result.returncode != 0, f"Validate script should fail for {invalid_args_item}. stderr: {validate_result.stderr}"
                 
@@ -475,7 +480,7 @@ class TestCLIIntegrationAuthenticity:
                     current_analyze_cmd.extend(["--text", "dummy_text_for_error_test"])
 
 
-                analyze_result = subprocess.run(current_analyze_cmd, capture_output=True, text=True, timeout=30, check=False)
+                analyze_result = subprocess.run(current_analyze_cmd, capture_output=True, text=True, timeout=30, check=False, encoding='utf-8')
                 if expect_analyze_fail:
                     assert analyze_result.returncode != 0, f"Analyze script should fail for {invalid_args_item}. stderr: {analyze_result.stderr}"
                 
