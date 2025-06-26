@@ -51,6 +51,15 @@ NODE_CONFIG = {
    "home_env_var": "NODE_HOME"
 }
 
+# TWEETY_CONFIG a été supprimé car les bibliothèques sont maintenant gérées manuellement dans le projet.
+# TWEETY_CONFIG = {
+#    "name": "Tweety",
+#    "version": "1.28",
+#    "full_jar_url": "https://tweetyproject.org/builds/1.28/org.tweetyproject.tweety-full-1.28-with-dependencies.jar",
+#    "dir_name_pattern": r"tweety",
+#    "is_multi_file_download": True
+# }
+
 TOOLS_TO_MANAGE = [JDK_CONFIG, OCTAVE_CONFIG, NODE_CONFIG]
 
 # --- Fonctions Utilitaires ---
@@ -158,18 +167,55 @@ def _is_tool_installed(env_var_name, expected_home_path=None, logger_instance=No
         
     return None
 
+def _setup_multi_file_tool(tool_config, tools_base_dir, logger, force_reinstall):
+    """Gère le téléchargement d'un outil composé d'un seul JAR 'tout-en-un' (Tweety)."""
+    tool_name = tool_config["name"]
+    version = tool_config["version"]
+    jar_url = tool_config["full_jar_url"]
+    jar_filename = os.path.basename(jar_url)
+    
+    # Le "home" pour Tweety est le répertoire contenant le JAR.
+    # Le nom est dérivé du dir_name_pattern
+    lib_dir_name = "tweety" # Simplifié, car il y a un seul dir
+    tweety_lib_dir = Path(tools_base_dir) / lib_dir_name
+    tweety_lib_dir.mkdir(exist_ok=True)
+
+    logger.info(f"Vérification du JAR pour {tool_name} v{version} dans {tweety_lib_dir}")
+
+    if force_reinstall and tweety_lib_dir.exists():
+        logger.warning(f"Réinstallation forcée de {tool_name}, suppression de {tweety_lib_dir}...")
+        try:
+            shutil.rmtree(tweety_lib_dir)
+            tweety_lib_dir.mkdir(exist_ok=True)
+            logger.info("Ancien répertoire de bibliothèques Tweety supprimé.")
+        except Exception as e:
+            logger.error(f"Impossible de supprimer l'ancien répertoire : {e}")
+            return None
+
+    # Pas de dossier de téléchargement temporaire, on met directement au bon endroit.
+    if _download_file(jar_url, tweety_lib_dir, jar_filename, logger, force_download=force_reinstall):
+        logger.info(f"{tool_name} a été configuré avec succès dans : {tweety_lib_dir}")
+        return str(tweety_lib_dir)
+    else:
+        logger.error(f"Échec du téléchargement du JAR '{jar_filename}'.")
+        return None
+
 def setup_single_tool(tool_config, tools_base_dir, temp_download_dir, logger_instance=None, force_reinstall=False, interactive=False):
     """Met en place un seul outil portable (téléchargement, extraction, configuration)."""
     logger = _get_logger_tools(logger_instance)
     
     tool_name = tool_config["name"]
-    url = tool_config.get(f"url_{platform.system().lower()}")
-    file_name = os.path.basename(url) if url else None
-    dir_pattern = tool_config["dir_name_pattern"]
-    env_var = tool_config["home_env_var"]
     
     logger.info(f"--- Configuration de {tool_name} ---")
 
+    if tool_config.get("is_multi_file_download"):
+        return _setup_multi_file_tool(tool_config, tools_base_dir, logger, force_reinstall)
+
+    url = tool_config.get(f"url_{platform.system().lower()}")
+    file_name = os.path.basename(url) if url else None
+    dir_pattern = tool_config["dir_name_pattern"]
+    env_var = tool_config.get("home_env_var")
+        
     if not url or not file_name:
         logger.warning(f"URL de téléchargement non définie pour {tool_name} sur {platform.system().lower()}. Installation sautée.")
         return None
@@ -211,44 +257,41 @@ def setup_single_tool(tool_config, tools_base_dir, temp_download_dir, logger_ins
         logger.error(f"Impossible de trouver le répertoire de {tool_name} après extraction.")
         return None
     
-    logger.success(f"{tool_name} a été installé avec succès dans : {expected_tool_path}")
+    logger.info(f"{tool_name} a été installé avec succès dans : {expected_tool_path}")
     return expected_tool_path
 
-def setup_tools(tools_dir_base_path, logger_instance=None, force_reinstall=False, interactive=False, skip_jdk=False, skip_octave=False, skip_node=False):
-    """Configure les outils portables (JDK, Octave, Node.js)."""
-    logger = _get_logger_tools(logger_instance)
-    logger.debug(f"setup_tools called with: tools_dir_base_path={tools_dir_base_path}, force_reinstall={force_reinstall}, interactive={interactive}, skip_jdk={skip_jdk}, skip_octave={skip_octave}, skip_node={skip_node}")
-    os.makedirs(tools_dir_base_path, exist_ok=True)
-    temp_download_dir = os.path.join(tools_dir_base_path, "_temp_downloads")
+def setup_tools(tools_dir_base_path, logger_instance=None, force_reinstall=False, interactive=False, skip_jdk=False, skip_octave=False, skip_node=False, skip_tweety=False):
+   """Configure les outils portables (JDK, Octave, Node.js, Tweety)."""
+   logger = _get_logger_tools(logger_instance)
+   logger.debug(f"setup_tools called with: tools_dir_base_path={tools_dir_base_path}, force_reinstall={force_reinstall}, interactive={interactive}, skip_jdk={skip_jdk}, skip_octave={skip_octave}, skip_node={skip_node}, skip_tweety={skip_tweety}")
+   os.makedirs(tools_dir_base_path, exist_ok=True)
+   temp_download_dir = os.path.join(tools_dir_base_path, "_temp_downloads")
 
-    installed_tool_paths = {}
+   installed_tool_paths = {}
 
-    if not skip_jdk:
-        jdk_home = setup_single_tool(JDK_CONFIG, tools_dir_base_path, temp_download_dir, logger_instance=logger, force_reinstall=force_reinstall, interactive=interactive)
-        if jdk_home:
-            installed_tool_paths[JDK_CONFIG["home_env_var"]] = jdk_home
-    else:
-        logger.info("Skipping JDK setup as per request.")
+   tools_to_process = []
+   if not skip_jdk: tools_to_process.append(JDK_CONFIG)
+   if not skip_octave: tools_to_process.append(OCTAVE_CONFIG)
+   if not skip_node: tools_to_process.append(NODE_CONFIG)
+   if not skip_tweety:
+       logger.warning("La gestion de Tweety via ce script est obsolète. Les JARs doivent être placés manuellement.")
+   else:
+       logger.info("Skipping Tweety setup as per request (obsolete).")
 
-    if not skip_octave:
-        octave_home = setup_single_tool(OCTAVE_CONFIG, tools_dir_base_path, temp_download_dir, logger_instance=logger, force_reinstall=force_reinstall, interactive=interactive)
-        if octave_home:
-            installed_tool_paths[OCTAVE_CONFIG["home_env_var"]] = octave_home
-    else:
-        logger.info("Skipping Octave setup as per request.")
+   for config in tools_to_process:
+       tool_home = setup_single_tool(config, tools_dir_base_path, temp_download_dir, logger_instance=logger, force_reinstall=force_reinstall, interactive=interactive)
+       if tool_home:
+           # Pour Tweety, il n'y a pas de variable d'environnement standard "HOME", on utilise le nom.
+           if "home_env_var" in config:
+               installed_tool_paths[config["home_env_var"]] = tool_home
+           else:
+               installed_tool_paths[config["name"]] = tool_home
 
-    if not skip_node:
-        node_home = setup_single_tool(NODE_CONFIG, tools_dir_base_path, temp_download_dir, logger_instance=logger, force_reinstall=force_reinstall, interactive=interactive)
-        if node_home:
-            installed_tool_paths[NODE_CONFIG["home_env_var"]] = node_home
-    else:
-        logger.info("Skipping Node.js setup as per request.")
-        
-    if os.path.isdir(temp_download_dir):
-        logger.info(f"Temporary download directory {temp_download_dir} can be cleaned up manually for now.")
-    
-    logger.info("Configuration des outils portables terminée.")
-    return installed_tool_paths
+   if os.path.isdir(temp_download_dir):
+       logger.info(f"Temporary download directory {temp_download_dir} can be cleaned up manually for now.")
+   
+   logger.info("Configuration des outils portables terminée.")
+   return installed_tool_paths
 
 if __name__ == "__main__":
     # --- Point d'entrée pour exécution directe ---
@@ -259,10 +302,22 @@ if __name__ == "__main__":
     parser.add_argument("--skip-jdk", action="store_true", help="Saute l'installation du JDK.")
     parser.add_argument("--skip-octave", action="store_true", help="Saute l'installation d'Octave.")
     parser.add_argument("--skip-node", action="store_true", help="Saute l'installation de Node.js.")
-    
+    parser.add_argument("--skip-tweety", action="store_true", help="Option obsolète. L'installation de Tweety est toujours sautée.")
+    parser.add_argument("--install-prover9", action="store_true", help="Installe Prover9.")
+
     args = parser.parse_args()
     
     main_logger = _get_logger_tools()
+
+    if args.install_prover9:
+        main_logger.info("--- Installation de Prover9 demandée ---")
+        from argumentation_analysis.core.setup.prover9_manager import Prover9Manager
+        prover9_path = Prover9Manager.get_instance(main_logger).get_prover9_executable_path(force_reinstall=args.force_reinstall)
+        if prover9_path:
+            main_logger.info(f"Prover9 installé avec succès. Exécutable : {prover9_path}")
+        else:
+            main_logger.error("Échec de l'installation de Prover9.")
+
     main_logger.info("--- DÉBUT de la configuration des outils portables via le script principal ---")
     
     installed_paths = setup_tools(
@@ -271,7 +326,8 @@ if __name__ == "__main__":
         force_reinstall=args.force_reinstall,
         skip_jdk=args.skip_jdk,
         skip_octave=args.skip_octave,
-        skip_node=args.skip_node
+        skip_node=args.skip_node,
+        skip_tweety=args.skip_tweety
     )
     
     main_logger.info("--- FIN de la configuration ---")

@@ -5,9 +5,11 @@ import pytest
 import jpype
 import logging
 import os
-import threading
 import time
 import nest_asyncio
+from pathlib import Path
+from argumentation_analysis.core.setup.manage_portable_tools import setup_tools
+from argumentation_analysis.core.jvm_setup import initialize_jvm, shutdown_jvm, is_jvm_started
 from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
 
 logger = logging.getLogger(__name__)
@@ -36,32 +38,46 @@ def apply_nest_asyncio(anyio_backend):
 def jvm_session():
     """
     Manages the JPype JVM lifecycle for the entire test session.
-    Starts the JVM before any tests run and shuts it down after all tests are complete.
+    1. Ensures all portable dependencies (JDK, Tweety JARs) are provisioned.
+    2. Starts the JVM using the centralized jvm_setup module.
+    3. Shuts down the JVM after all tests are complete.
     """
-    logger.info("---------- Pytest session starting: Initializing JVM... ----------")
+    logger.info("---------- Pytest session starting: Provisioning dependencies and Initializing JVM... ----------")
     try:
-        if not jpype.isJVMStarted():
-            TweetyInitializer.initialize_jvm()
-            logger.info("JVM started successfully for the test session.")
+        # Étape 1: Provisioning des outils (JDK et Tweety)
+        # La racine du projet est un niveau au-dessus du dossier 'tests'
+        project_root = Path(__file__).parent.parent.resolve()
+        logger.info(f"Running dependency provisioning via setup_tools... Project root determined as {project_root}")
+        setup_tools(tools_dir_base_path=project_root, force_reinstall=False)
+        
+        # Le script de setup doit définir JAVA_HOME
+        if not os.environ.get('JAVA_HOME'):
+            pytest.fail("setup_tools() did not set the JAVA_HOME environment variable.", pytrace=False)
+        
+        logger.info(f"JAVA_HOME is set to: {os.environ.get('JAVA_HOME')}")
+
+        # Étape 2: Démarrage de la JVM
+        if not is_jvm_started():
+            logger.info("Attempting to initialize JVM via core.jvm_setup.initialize_jvm...")
+            # La fixture de session est propriétaire de la JVM
+            success = initialize_jvm(session_fixture_owns_jvm=True)
+            if success:
+                logger.info("JVM started successfully for the test session.")
+            else:
+                 pytest.fail("JVM initialization failed via core.jvm_setup.initialize_jvm.", pytrace=False)
         else:
             logger.info("JVM was already started.")
+            
     except Exception as e:
-        logger.error(f"Failed to start JVM: {e}", exc_info=True)
-        pytest.exit(f"JVM initialization failed: {e}", 1)
+        logger.error(f"A critical error occurred during test session setup: {e}", exc_info=True)
+        pytest.exit(f"Test session setup failed: {e}", 1)
 
     yield
 
     logger.info("---------- Pytest session finished: Shutting down JVM... ----------")
-    try:
-        if jpype.isJVMStarted():
-            logger.info("Preparing to shut down JVM. Waiting 1 second...")
-            time.sleep(1)
-            jpype.shutdownJVM()
-            logger.info("JVM shut down successfully.")
-        else:
-            logger.info("JVM was already shut down or never started.")
-    except Exception as e:
-        logger.error(f"Error shutting down JVM: {e}", exc_info=True)
+    # L'arrêt est géré par la fixture elle-même, donc on passe True
+    shutdown_jvm(called_by_session_fixture=True)
+
 
 # Charger les fixtures définies dans d'autres fichiers comme des plugins
 pytest_plugins = [
