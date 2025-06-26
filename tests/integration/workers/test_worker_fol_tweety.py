@@ -190,6 +190,53 @@ class TestFOLTweetyCompatibility:
                 logger.error(f"❌ Erreur liaison variables: {formula} - {e}")
                 pytest.fail(f"Variables mal liées détectées par Tweety: {formula}")
 
+    @pytest.mark.asyncio
+    async def test_programmatic_belief_set_creation_and_consistency(self, fol_agent_with_kernel, jvm_session):
+        """
+        Valide le nouveau flux de construction programmatique du BeliefSet,
+        en isolant la logique de construction de l'appel LLM.
+        """
+        if not jvm_session:
+            pytest.skip("Test nécessite la JVM.")
+        
+        agent = fol_agent_with_kernel
+        builder = agent._builder_plugin
+        builder.reset() # S'assurer qu'il est propre avant de commencer
+
+        # 1. Simuler les appels d'outils du LLM pour un syllogisme simple.
+        builder.add_sort("Homme")
+        builder.add_constant_to_sort("socrate", "Homme")
+        # Le prédicat doit être différent du sort pour éviter les ambiguïtés
+        builder.add_predicate_schema("estunhomme", ["Homme"])
+        builder.add_predicate_schema("estmortel", ["Homme"])
+        builder.add_atomic_fact("estunhomme", ["socrate"])
+        # Pour l'implication universelle, il faut s'assurer que les prédicats
+        # sont bien déclarés, ce qui est fait ci-dessus.
+        builder.add_universal_implication("estunhomme", "estmortel", "Homme")
+
+        # 2. Déclencher DIRECTEMENT la construction programmatique.
+        #    On contourne l'appel LLM de `text_to_belief_set`.
+        java_belief_set_obj = builder.build_tweety_belief_set(agent.tweety_bridge)
+        
+        # 3. Valider le résultat
+        assert java_belief_set_obj is not None, "La création du BeliefSet programmatique a retourné None."
+        
+        # Créer un objet BeliefSet de haut niveau pour les étapes suivantes
+        from argumentation_analysis.agents.core.logic.belief_set import FirstOrderBeliefSet
+        belief_set = FirstOrderBeliefSet(content=java_belief_set_obj.toString(), java_object=java_belief_set_obj)
+        
+        # Vérifier que le type est correct
+        assert "FolBeliefSet" in str(type(belief_set.java_object)), f"L'objet retourné n'est pas un FolBeliefSet mais un {type(belief_set.java_object)}"
+
+        # 4. Vérifier la cohérence du BeliefSet créé
+        is_consistent, consistency_msg = await agent.is_consistent(belief_set)
+        assert is_consistent, f"Le BeliefSet créé par programmation est incohérent: {consistency_msg}"
+
+        # 5. Tenter une requête simple
+        entails, query_msg = await agent.execute_query(belief_set, "estmortel(socrate)")
+        assert entails, f"L'inférence 'estmortel(socrate)' a échoué: {query_msg}"
+
+        logger.info("✅ Le flux de création programmatique du BeliefSet est validé avec succès (sans LLM).")
 class TestRealTweetyFOLAnalysis:
     """Tests analyse FOL avec Tweety authentique."""
     
