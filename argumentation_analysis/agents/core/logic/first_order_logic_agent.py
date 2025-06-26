@@ -154,6 +154,22 @@ class BeliefSetBuilderPlugin:
         
         return final_name
 
+    def _ensure_predicate_exists(self, predicate_name: str, arity: int = 1):
+        """
+        Ensures a predicate schema exists. If not, creates a default one.
+        This prevents errors when LLMs use predicates before declaring them.
+        """
+        norm_pred = self._normalize(predicate_name)
+        if norm_pred not in self._predicates:
+            # Create a default schema with arity 1 and a sort named after the predicate.
+            default_sort_name = norm_pred
+            logger.debug(f"Predicate '{norm_pred}' not found. Creating default schema with arity {arity} and sort '{default_sort_name}'.")
+            
+            # The schema will have `arity` arguments, all of the same default sort.
+            default_arg_sorts = [default_sort_name] * arity
+            self.add_predicate_schema(norm_pred, default_arg_sorts)
+        return norm_pred
+
     @kernel_function(
         description="Déclare un nouveau sort (un type de catégorie, comme 'personne' ou 'ville').",
         name="add_sort",
@@ -231,17 +247,13 @@ class BeliefSetBuilderPlugin:
 
     @kernel_function(description="Add a universal implication.", name="add_universal_implication")
     def add_universal_implication(self, impl_antecedent_predicate: str, impl_consequent_predicate: str, impl_sort_of_variable: str):
-        norm_antecedent = self._normalize(impl_antecedent_predicate)
-        norm_consequent = self._normalize(impl_consequent_predicate)
+        # Ensure predicates exist with a default arity of 1 before proceeding.
+        norm_antecedent = self._ensure_predicate_exists(impl_antecedent_predicate, arity=1)
+        norm_consequent = self._ensure_predicate_exists(impl_consequent_predicate, arity=1)
 
+        # Now that they are guaranteed to exist, unify their sorts.
         self._unify_sorts(norm_antecedent, norm_consequent)
         unified_sort = self._predicate_to_sort[self._find_sort_representative(norm_antecedent)]
-
-        # Ensure the schemas are stored if they were just created by the unification
-        if norm_antecedent not in self._predicates:
-             self._predicates[norm_antecedent] = [unified_sort]
-        if norm_consequent not in self._predicates:
-             self._predicates[norm_consequent] = [unified_sort]
 
         self._universal_implications.append(UniversalImplication(
             norm_antecedent,
@@ -252,17 +264,12 @@ class BeliefSetBuilderPlugin:
         
     @kernel_function(description="Add an existential conjunction, e.g., 'Some A are B'.", name="add_existential_conjunction")
     def add_existential_conjunction(self, predicate1: str, predicate2: str, sort_of_variable: str):
-        norm_p1 = self._normalize(predicate1)
-        norm_p2 = self._normalize(predicate2)
+        # Ensure predicates exist with a default arity of 1 before proceeding.
+        norm_p1 = self._ensure_predicate_exists(predicate1, arity=1)
+        norm_p2 = self._ensure_predicate_exists(predicate2, arity=1)
 
         self._unify_sorts(norm_p1, norm_p2)
         unified_sort = self._predicate_to_sort[self._find_sort_representative(norm_p1)]
-
-        # Ensure the schemas are stored if they were just created by the unification
-        if norm_p1 not in self._predicates:
-             self._predicates[norm_p1] = [unified_sort]
-        if norm_p2 not in self._predicates:
-             self._predicates[norm_p2] = [unified_sort]
 
         self._existential_conjunctions.append(ExistentialConjunction(norm_p1, norm_p2, unified_sort))
         return "Existential conjunction added."
