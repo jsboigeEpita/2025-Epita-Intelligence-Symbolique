@@ -43,8 +43,10 @@ class TweetyInitializer:
     FolAtom = None
     Universal = None # Déprécié, remplacé par ForallQuantifiedFormula
     ForallQuantifiedFormula = None
+    ExistsQuantifiedFormula = None
     Variable = None
     Implication = None
+    Conjunction = None
 
     def __init__(self, tweety_bridge_instance):
         self._tweety_bridge = tweety_bridge_instance
@@ -172,6 +174,7 @@ class TweetyInitializer:
             # Remplacé par la classe plus spécifique ci-dessous
             # TweetyInitializer.Universal = jpype.JClass("org.tweetyproject.logics.commons.syntax.Universal")
             TweetyInitializer.ForallQuantifiedFormula = jpype.JClass("org.tweetyproject.logics.fol.syntax.ForallQuantifiedFormula")
+            TweetyInitializer.ExistsQuantifiedFormula = jpype.JClass("org.tweetyproject.logics.fol.syntax.ExistsQuantifiedFormula")
             TweetyInitializer.Variable = jpype.JClass("org.tweetyproject.logics.commons.syntax.Variable")
             TweetyInitializer.Predicate = jpype.JClass("org.tweetyproject.logics.commons.syntax.Predicate")
 
@@ -179,6 +182,7 @@ class TweetyInitializer:
             TweetyInitializer.Sort = jpype.JClass("org.tweetyproject.logics.commons.syntax.Sort")
             TweetyInitializer.Constant = jpype.JClass("org.tweetyproject.logics.commons.syntax.Constant")
             TweetyInitializer.Implication = jpype.JClass("org.tweetyproject.logics.fol.syntax.Implication")
+            TweetyInitializer.Conjunction = jpype.JClass("org.tweetyproject.logics.fol.syntax.Conjunction")
             jpype.JClass("org.tweetyproject.commons.ParserException")
 
             logger.info("Successfully imported and cached TweetyProject Java classes.")

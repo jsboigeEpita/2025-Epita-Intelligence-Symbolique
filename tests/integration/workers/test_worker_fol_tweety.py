@@ -292,7 +292,7 @@ class TestRealTweetyFOLAnalysis:
         
         logger.info("✅ Incohérence détectée par Tweety réel.")
     
-    @pytest.mark.xfail(reason="Le LLM (gpt-4o-mini) est actuellement incapable de déduire et de déclarer correctement les prédicats à partir de descriptions, ce qui entraîne des erreurs de foncteur non déclaré.")
+    @pytest.mark.xfail(reason="La fonction generate_queries n'est pas implémentée dans cette version.")
     @pytest.mark.asyncio
     async def test_real_tweety_fol_inference_generation(self, fol_agent_with_kernel):
         fol_agent_real_tweety = fol_agent_with_kernel
@@ -381,7 +381,6 @@ class TestFOLErrorHandling:
 class TestFOLPerformanceVsModal:
     """Tests performance FOL vs Modal Logic."""
     
-    @pytest.mark.xfail(reason="Le LLM (gpt-4o-mini) échoue à analyser des phrases simples, retournant None et faisant échouer le test.")
     @pytest.mark.asyncio
     async def test_fol_vs_modal_performance_comparison(self, fol_agent_with_kernel):
         """Test comparaison performance FOL vs Modal Logic."""
@@ -404,7 +403,6 @@ class TestFOLPerformanceVsModal:
         # Note: Comparaison avec Modal Logic nécessiterait import Modal Agent
         # Pour l'instant on valide juste que FOL performe correctement
     
-    @pytest.mark.xfail(reason="Le LLM (gpt-4o-mini) échoue sur certaines analyses, retournant None et faisant échouer la boucle.")
     @pytest.mark.asyncio
     async def test_fol_stability_multiple_analyses(self, fol_agent_with_kernel):
         """Test stabilité FOL sur analyses multiples."""
@@ -457,7 +455,6 @@ class TestFOLPerformanceVsModal:
 class TestFOLRealWorldIntegration:
     """Tests intégration monde réel pour FOL."""
     
-    @pytest.mark.xfail(reason="Le LLM (gpt-4o-mini) est incapable de gérer des structures logiques complexes et de les traduire en appels d'outils corrects.")
     @pytest.mark.asyncio
     async def test_fol_complex_argumentation_analysis(self, fol_agent_with_kernel):
         """Test analyse argumentation complexe avec FOL."""
@@ -483,7 +480,6 @@ class TestFOLRealWorldIntegration:
         logger.info(f"✅ Analyse complexe terminée")
         logger.info(f"Taille du BeliefSet généré: {len(formulas_text)}")
     
-    @pytest.mark.xfail(reason="Le LLM (gpt-4o-mini) interprète mal 'français' comme un sort au lieu d'un prédicat, causant un 'functor not declared error'.")
     @pytest.mark.asyncio
     async def test_fol_multilingual_support(self, fol_agent_with_kernel):
         """Test support multilingue FOL (français/anglais)."""

@@ -2,6 +2,7 @@
 import logging
 import re
 import json
+import unicodedata
 from typing import Dict, List, Optional, Any, Tuple, NamedTuple
 
 import jpype
@@ -121,6 +122,22 @@ class BeliefSetBuilderPlugin:
             norm_sort
         ))
         return "Universal implication added."
+
+    @kernel_function(description="Add an existential conjunction, e.g., 'Some A are B'.", name="add_existential_conjunction")
+    def add_existential_conjunction(self, predicate1: str, predicate2: str, sort_of_variable: str):
+        norm_sort = self._normalize(sort_of_variable)
+        norm_p1 = self._normalize(predicate1)
+        norm_p2 = self._normalize(predicate2)
+
+        if norm_sort not in self._sorts:
+            self.add_sort(norm_sort)
+        if norm_p1 not in self._predicates:
+            self.add_predicate_schema(norm_p1, [norm_sort])
+        if norm_p2 not in self._predicates:
+            self.add_predicate_schema(norm_p2, [norm_sort])
+
+        self._existential_conjunctions.append(ExistentialConjunction(norm_p1, norm_p2, norm_sort))
+        return "Existential conjunction added."
         
     def build_tweety_belief_set(self, tweety_bridge: "TweetyBridge") -> Optional[Any]:
         """
@@ -142,7 +159,9 @@ class BeliefSetBuilderPlugin:
             FolAtom = initializer.FolAtom
             Variable = initializer.Variable
             ForallQuantifiedFormula = initializer.ForallQuantifiedFormula
+            ExistsQuantifiedFormula = initializer.ExistsQuantifiedFormula
             Implication = initializer.Implication
+            Conjunction = initializer.Conjunction
             ArrayList = jpype.JClass("java.util.ArrayList")
 
             # 1. Create signature
@@ -206,8 +225,11 @@ class BeliefSetBuilderPlugin:
 
             # Add universal implications
             for impl in self._universal_implications:
-                var_name = impl.sort_of_variable[0].upper()
-                
+                # Normalize the variable name to be an ASCII upper-case character
+                base_char = impl.sort_of_variable[0]
+                normalized_char = unicodedata.normalize('NFKD', base_char).encode('ascii', 'ignore').decode('ascii')
+                var_name = normalized_char.upper() if normalized_char else 'X' # Default to X if char is exotic
+
                 # Retrieve the corresponding Sort object
                 j_sort = java_sorts.get(impl.sort_of_variable)
                 if not j_sort:
@@ -231,6 +253,33 @@ class BeliefSetBuilderPlugin:
                 implication = Implication(antecedent, consequent)
                 
                 quantified_formula = ForallQuantifiedFormula(implication, j_var)
+                belief_set.add(quantified_formula)
+
+            # Add existential conjunctions
+            for ex in self._existential_conjunctions:
+                base_char = ex.sort_of_variable[0]
+                normalized_char = unicodedata.normalize('NFKD', base_char).encode('ascii', 'ignore').decode('ascii')
+                var_name = normalized_char.upper() if normalized_char else 'X'
+
+                j_sort = java_sorts.get(ex.sort_of_variable)
+                if not j_sort:
+                    logger.error(f"Sort '{ex.sort_of_variable}' not found for existential conjunction.")
+                    continue
+                
+                j_var = Variable(var_name, j_sort)
+
+                p1 = java_predicates.get(ex.predicate1)
+                p1_args = ArrayList()
+                p1_args.add(j_var)
+                atom1 = FolAtom(p1, p1_args)
+                
+                p2 = java_predicates.get(ex.predicate2)
+                p2_args = ArrayList()
+                p2_args.add(j_var)
+                atom2 = FolAtom(p2, p2_args)
+
+                conjunction = Conjunction(atom1, atom2)
+                quantified_formula = ExistsQuantifiedFormula(conjunction, j_var)
                 belief_set.add(quantified_formula)
 
             logger.info(f"Programmatically built belief set: {belief_set.toString()}")
