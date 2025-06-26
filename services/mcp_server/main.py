@@ -1,6 +1,8 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Literal, Optional
+print("Importation des modules...")
 # L'import de httpx n'est plus nécessaire car nous n'utilisons plus de requêtes HTTP
 # import httpx
+from fastapi import Response
 from mcp.server.fastmcp import FastMCP
 
 # TODO: Importer les véritables modules d'analyse une fois identifiés.
@@ -8,6 +10,11 @@ from mcp.server.fastmcp import FastMCP
 # from argumentation_analysis.validator import ArgumentValidator
 # from argumentation_analysis.fallacy_detector import FallacyDetector
 # from argumentation_analysis.dung_framework_builder import DungFrameworkBuilder
+# from argumentation_analysis.
+
+from argumentation_analysis.orchestration.service_manager import ServiceManager
+
+
 
 
 class MCPService:
@@ -20,48 +27,43 @@ class MCPService:
         """
         Initialise le service MCP et enregistre les outils.
         """
-        self.mcp = FastMCP(service_name)
-        # self.analyzer = MainAnalyzer() # A activer quand l'import sera correct
-        # self.validator = ArgumentValidator() # A activer
-        # self.fallacy_detector = FallacyDetector() # A activer
-        # self.framework_builder = DungFrameworkBuilder() # A activer
+        self.mcp = FastMCP(service_name, host="0.0.0.0", port=8000)
+
+        self.service_manager = ServiceManager()
         self._register_tools()
 
     def _register_tools(self):
         """Enregistre tous les outils MCP."""
         self.mcp.tool()(self.analyze)
-        self.mcp.tool()(self.validate_argument)
+        # self.mcp.tool()(self.validate_argument)
         self.mcp.tool()(self.detect_fallacies)
-        self.mcp.tool()(self.build_framework)
+        # self.mcp.tool()(self.build_framework)
 
-    async def analyze(self, text: str, options: dict = None) -> str:
+    async def raw_tool(self, text: str, analysis_type: Literal["comprehensive", "logical", "rhetorical"] = "comprehensive", options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        return await self.service_manager.analyze_text(text=text, analysis_type=analysis_type, options=options)
+
+    async def analyze(self, text: str) -> str:
         """Analyse complète d'un texte argumentatif."""
-        # return self.analyzer.analyze(text=text, options=options)
-        return {"status": "success", "message": "Analyse en attente d'implémentation."}
+        return self.service_manager.analyze_text(text=text, analysis_type="comprehensive")
 
-    async def validate_argument(
-        self, premises: list[str], conclusion: str, argument_type: str = None
-    ) -> dict:
-        """Validation logique d'un argument."""
-        # return self.validator.validate(premises, conclusion, argument_type)
-        return {"status": "success", "message": "Validation en attente d'implémentation."}
-
-    async def detect_fallacies(self, text: str, options: dict = None) -> dict:
+    async def detect_fallacies(self, text: str) -> dict:
         """Détection de sophismes dans un texte."""
-        # return self.fallacy_detector.detect(text, options)
-        return {"status": "success", "message": "Détection de sophismes en attente d'implémentation."}
+        return self.service_manager.analyze_text(
+            text=text,
+            analysis_type="comprehensive",
+            options={'detect_fallacies': True}
+        )
 
-    async def build_framework(self, arguments: list, options: dict = None) -> dict:
-        """Construction d'un framework de Dung."""
-        # return self.framework_builder.build(arguments, options)
-        return {"status": "success", "message": "Construction du framework en attente d'implémentation."}
-
-    def run(self, transport: str = 'stdio'):
+    def run(self, transport: str = 'streamable-http'):
         """Lance le serveur MCP."""
         self.mcp.run(transport=transport)
 
 
-if __name__ == "__main__":
-    # Initialise et lance le service
-    mcp_service = MCPService()
-    mcp_service.run()
+
+
+# if __name__ == "__main__":
+#     # Initialise et lance le service
+print("Lancement du serveur MCP...")
+mcp_service = MCPService()
+print("Serveur MCP initialisé")
+mcp_service.run("stdio")

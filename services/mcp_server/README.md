@@ -5,42 +5,28 @@ Il utilisera le [protocole](https://modelcontextprotocol.io/) MCP créé par Ant
 
 ## Comment utiliser le serveur MCP localement
 
-1. Lancez l'API principale du projet, vous pouvez consulter la [documentation](../argumentation_analysis/README.md)
-2. Installez les packages nécessaires au fonctionnement du MCP
+### Par Docker
+
+1. Lancez le serveur MCP avec la commande suivante :
 
     ```bash
-    cd mcp
-    pip install -r requirements.txt
+    docker build -t argumentation_analysis_mcp .
+    docker run -p 8000:8000 argumentation_analysis_mcp
     ```
 
-3. Consultez la documentation du client dans lequel vous souhaitez utiliser le MCP
-    - [Roo](#comment-utiliser-dans-roo)
-    - [Cursor](#comment-utiliser-dans-cursor--claude-desktop)
-    - [Claude Desktop](#comment-utiliser-dans-cursor--claude-desktop)
+2. Vous pouvez ensuite utiliser ce MCP dans votre client MCP préféré, voici une liste non exhaustive de clients MCP :
+    - [Roo](https://github.com/RooCodeInc/Roo-Code)
+    - [Cursor](https://www.cursor.com/)
+    - [Claude Desktop](https://www.anthropic.com/products/claude-desktop)
 
-### Comment utiliser dans Roo
+   Vous pouvez insérer ce fichier de configuration suivant dans votre client MCP préféré pour utiliser le MCP :
 
-Vous pouvez simplement ouvrir Roo lorsque votre éditeur est démarré à la racine du dépôt, il se lancera automatiquement via le [fichier de configuration](../.roo/mcp.json) du projet Roo.
-Vous pouvez adapter la configuration pour pouvoir l'utiliser lorsque votre éditeur est ouvert dans un autre dossier.
-
-### Comment utiliser dans Cursor / Claude Desktop
-
-Vous pouvez utiliser la configuration suivante et remplacer `PATH` par le path du répertoire mcp à l'intérieur de ce dépôt.
-
-Un exemple pourrait être :
-`PATH` = `/Users/username/2025-Epita-Intelligence-Symbolique/mcp`
-
-```json
-{
-  "mcpServers": {
-    "argumentation_analysis": {
-      "command": "uv",
-      "args": [
-        "--directory",
-        "PATH",
-        "run",
-        "main.py"
-      ]
+    ```json
+    {
+      "mcpServers": {
+        "argumentation_analysis_mcp": {
+          "type": "streamable-http",
+          "url": "http://127.0.0.1:8000/mcp"
+        }
+      }
     }
-  }
-}
