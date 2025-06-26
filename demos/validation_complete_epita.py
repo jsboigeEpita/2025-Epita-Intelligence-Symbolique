@@ -533,13 +533,30 @@ class ValidationEpitaComplete:
                 
                 # 3. Validation du résultat
                 if analysis_result and analysis_result.get('status') == 'completed':
-                    # Points bonus si une analyse réelle a eu lieu
-                    real_analysis_score = 0
-                    if 'specialized' in analysis_result.get('results', {}) or 'hierarchical' in analysis_result.get('results', {}):
-                        real_analysis_score = 0.4 # Bonus pour analyse réelle
-                    
-                    self.log_test("Intégration Complète", "integration_test", "SUCCESS", "Pipeline d'analyse exécuté sans erreur.", exec_time, 0.6 + real_analysis_score)
-                    return True
+                    try:
+                        # Analyse plus profonde de la "sincérité"
+                        specialized_result = analysis_result['results']['specialized']['result']['result']
+                        
+                        is_structure_present = specialized_result.get('logical_structure') == 'present'
+                        is_argument_valid = specialized_result.get('validity') == 'valid' # test qui va échouer
+                        
+                        details = f"Structure logique détectée: {is_structure_present}. "
+                        details += f"Validité de l'argument reconnue: {is_argument_valid}."
+
+                        if is_structure_present:
+                            # Le test de base réussit, mais on note la faiblesse de l'analyse
+                            self.log_test("Intégration Complète", "integration_test", "SUCCESS", f"Analyse de surface réussie. {details}", exec_time, 0.8)
+                            if not is_argument_valid:
+                                self.log_test("Intégration Complète", "sincerity_check", "WARNING", "L'analyse ne vérifie pas la validité logique de l'argument (modus ponens non identifié). Manque de profondeur.", 0.0, 0.2)
+                            return True
+                        else:
+                            self.log_test("Intégration Complète", "integration_test", "FAILED", f"La structure logique de base n'a pas été détectée. {details}", exec_time, 0.1)
+                            return False
+
+                    except KeyError as e:
+                        self.log_test("Intégration Complète", "result_parsing", "FAILED", f"La structure du résultat d'analyse a changé, impossible de valider. Clé manquante: {e}", exec_time, 0.0)
+                        return False
+
                 else:
                     error_details = analysis_result.get('error', 'Aucun détail') if analysis_result else 'Résultat nul'
                     self.log_test("Intégration Complète", "integration_test", "FAILED", f"Le pipeline a échoué: {error_details}", exec_time, 0.0)
