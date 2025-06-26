@@ -99,6 +99,9 @@ class OperationalManager:
         if self.running:
             self.logger.warning("Le gestionnaire opérationnel est déjà en cours.")
             return
+
+        # Initialiser les agents d'abord
+        await self.agent_registry.initialize_all_agents()
         
         self.running = True
         self.worker_task = asyncio.create_task(self._worker())
@@ -143,8 +146,9 @@ class OperationalManager:
             result_future = asyncio.Future()
             self.operational_state.add_result_future(operational_task["id"], result_future)
             await self.task_queue.put(operational_task)
-            operational_result = await result_future
-            return self.tactical_operational_interface.process_operational_result(operational_result)
+            await asyncio.sleep(0)  # Céder le contrôle pour permettre au worker de s'exécuter
+            original_task, operational_result = await result_future
+            return self.tactical_operational_interface.process_operational_result(original_task, operational_result)
         
         except Exception as e:
             self.logger.error(f"Erreur lors du traitement de la tâche tactique {tactical_task.get('id')}: {e}")
@@ -168,7 +172,7 @@ class OperationalManager:
                 
                 result_future = self.operational_state.get_result_future(task["id"])
                 if result_future and not result_future.done():
-                    result_future.set_result(result)
+                    result_future.set_result((task, result))
                 
                 await self.result_queue.put(result)
                 self.task_queue.task_done()

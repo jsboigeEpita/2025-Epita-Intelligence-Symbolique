@@ -15,6 +15,8 @@ Fonctions principales :
 from typing import Dict, List, Any, Optional, Callable
 import logging
 import uuid
+import json
+from pathlib import Path
 
 from argumentation_analysis.orchestration.hierarchical.tactical.state import TacticalState
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
@@ -118,7 +120,7 @@ class TacticalOperationalInterface:
         
         return operational_command
     
-    def process_operational_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
+    def process_operational_result(self, original_task: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
         """
         Traite un résultat brut d'un agent et le consolide pour la couche tactique.
 
@@ -128,19 +130,19 @@ class TacticalOperationalInterface:
         son plan.
 
         Args:
+            original_task: La tâche opérationnelle originale qui a produit le résultat.
             result: Le dictionnaire de résultat brut de l'agent.
 
         Returns:
             Le résultat consolidé et structuré pour la couche tactique.
         """
-        self.logger.info(f"Traitement du résultat opérationnel pour la tâche {result.get('tactical_task_id', 'unknown')}")
-        
-        tactical_task_id = result.get("tactical_task_id")
+        tactical_task_id = original_task.get("tactical_task_id")
+        self.logger.info(f"Traitement du résultat opérationnel pour la tâche {tactical_task_id}")
         
         tactical_report = {
             "tactical_task_id": tactical_task_id,
             "completion_status": result.get("status", "completed"),
-            "results": self._translate_outputs(result.get("outputs", {})),
+            "outputs": self._translate_outputs(result.get("outputs", {})),
             "results_path": str(RESULTS_DIR / f"{tactical_task_id}_results.json"),
             "execution_metrics": self._translate_metrics(result.get("metrics", {})),
             "issues": self._translate_issues(result.get("issues", []))
@@ -154,7 +156,29 @@ class TacticalOperationalInterface:
             metadata={"original_task_id": tactical_task_id}
         )
         
+        self._save_result_to_file(tactical_report)
+        
         return tactical_report
+
+    def _save_result_to_file(self, report: Dict[str, Any]):
+        """Sauvegarde un rapport de résultat dans un fichier JSON."""
+        results_path_str = report.get("results_path")
+        if not results_path_str:
+            self.logger.warning("Aucun chemin de résultats spécifié, la sauvegarde est annulée.")
+            return
+
+        try:
+            results_path = Path(results_path_str)
+            # S'assurer que le répertoire parent existe
+            results_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(results_path, 'w', encoding='utf-8') as f:
+                json.dump(report, f, indent=4, ensure_ascii=False)
+            
+            self.logger.info(f"Rapport de résultat sauvegardé avec succès dans : {results_path}")
+
+        except (IOError, TypeError) as e:
+            self.logger.error(f"Échec de la sauvegarde du rapport de résultat dans {results_path_str}: {e}")
 
     def subscribe_to_operational_updates(self, update_types: List[str], callback: Callable) -> str:
         """
