@@ -1,129 +1,63 @@
-# Guide Complet des Tests du Projet
+# Documentation des Tests de l'Application Web
 
-Ce document est le guide de référence pour l'ensemble des tests du projet. Il couvre à la fois les tests backend/logique avec **Pytest** et les tests frontend/E2E avec **Playwright**.
+Ce document décrit comment exécuter les différentes suites de tests pour l'application web.
 
-## 1. Philosophie et Architecture des Tests
+## Prérequis
 
-### a. Philosophie
-Nous suivons l'approche de la pyramide des tests : une large base de **tests unitaires** rapides, complétée par des **tests d'intégration** ciblés, et des **tests fonctionnels de bout en bout** pour valider les scénarios utilisateurs clés sur l'interface web.
+- Assurez-vous que l'environnement virtuel Python est activé.
+- Installez les dépendances de test : `pip install -r requirements.txt` (si applicable) et `pip install pytest playwright`
+- Installez les navigateurs pour Playwright : `playwright install`
 
-### b. Architecture Générale
+## Suites de Tests
 
-Le système de test est divisé en deux piliers principaux :
+Il existe deux suites de tests principales :
 
-```mermaid
-graph TD
-    subgraph "Écosystème de Test"
-        direction LR
-        subgraph "Tests Backend & Logique (Python)"
-            Pytest["Pytest"]
-            Pytest --> CodePython["Code Source Python<br>(argumentation_analysis, scripts, etc.)"]
-            CodePython --> JVM["JVM / TweetyProject"]
-        end
+1.  **Tests d'API (Pytest)**: Ces tests valident le comportement de l'API backend.
+2.  **Tests End-to-End (Playwright)**: Ces tests simulent des interactions utilisateur complètes dans un navigateur.
 
-        subgraph "Tests Frontend & E2E (Node.js)"
-            Playwright["Playwright"]
-            Playwright --> WebApp["Application Web<br>(localhost:3000)"]
-        end
-    end
+## Exécution des Tests
 
-    style Pytest fill:#cce5cc,stroke:#006400,stroke-width:2px
-    style Playwright fill:#bde0fe,stroke:#4a8aec,stroke-width:2px
+Le moyen le plus simple d'exécuter tous les tests est d'utiliser le script d'orchestration.
+
+### Méthode 1 : Exécution via l'Orchestrateur (Recommandé)
+
+L'orchestrateur `unified_web_orchestrator.py` gère automatiquement le démarrage des serveurs, l'exécution des tests et l'arrêt.
+
+```bash
+# Activer l'environnement virtuel si nécessaire
+# .venv/Scripts/activate
+
+# Lancer la suite de tests complète (API + E2E)
+python scripts/apps/webapp/unified_web_orchestrator.py
 ```
 
-## 2. Configuration Initiale Requise
+Le script va :
+1. Démarrer le serveur backend Flask.
+2. Démarrer le serveur frontend Node.js.
+3. Exécuter les tests `pytest` situés dans `tests/functional/webapp`.
+4. Exécuter les tests `Playwright` situés dans `tests/e2e/webapp`.
+5. Arrêter les serveurs.
 
-Avant de lancer les tests, vous devez configurer les deux environnements.
+### Méthode 2 : Exécution Manuelle
 
-### a. Environnement Python (pour Pytest)
-Assurez-vous que votre environnement Conda est activé :
-```powershell
-# Activer l'environnement (à exécuter depuis la racine du projet)
-. .\activate_project_env.ps1
+#### 1. Tests d'API (Pytest)
+
+Ces tests ne nécessitent que le démarrage du backend.
+
+```bash
+# 1. Démarrer le backend (dans un terminal)
+python -m uvicorn argumentation_analysis.services.web_api.app:app --host 0.0.0.0 --port 5010
+
+# 2. Lancer les tests pytest (dans un autre terminal)
+pytest tests/functional/webapp/
 ```
 
-### b. Environnement Node.js (pour Playwright)
-1.  **Installez les dépendances Node.js :**
-    Naviguez dans le répertoire `tests_playwright` et exécutez :
-    ```bash
-    # Depuis la racine:
-    cd tests_playwright
-    npm install
-    cd ..
-    ```
+#### 2. Tests End-to-End (Playwright)
 
-2.  **Installez les navigateurs Playwright :**
-    Cette commande télécharge les navigateurs (Chromium, Firefox, WebKit) nécessaires.
-    ```bash
-    npx playwright install
-    ```
+Ces tests nécessitent que les **deux** serveurs (backend et frontend) soient en cours d'exécution.
 
-## 3. Exécution des Tests
+```bash
+# 1. S'assurer que le backend ET le frontend sont démarrés
 
-### a. Tests Python (Pytest)
-
--   **Lancer tous les tests Pytest :**
-    > **Important :** Tous les tests `pytest` doivent être exécutés via le script wrapper `activate_project_env.ps1` pour garantir que l'environnement et les dépendances sont correctement chargés.
-    ```powershell
-    # Depuis la racine du projet (PowerShell)
-    powershell -File .\activate_project_env.ps1 -CommandToRun "python -m pytest"
-    ```
-
--   **Lancer un répertoire spécifique (ex: tests unitaires) :**
-    ```bash
-    pytest tests/unit/
-    ```
-
--   **Utiliser des marqueurs (ex: exécuter les tests `slow`) :**
-    ```bash
-    pytest -m slow
-    ```
-    (Voir `tests/conftest.py` pour la liste des marqueurs).
-
--   **Générer un rapport de couverture de code :**
-    ```bash
-    pytest --cov=argumentation_analysis --cov-report=html
-    ```
-    (Le rapport sera dans `htmlcov/`).
-
-### b. Tests Web (Playwright)
-
--   **Lancer tous les tests Playwright (headless) :**
-    ```bash
-    npx playwright test
-    ```
-
--   **Lancer les tests en mode interactif (avec interface graphique) :**
-    ```bash
-    npx playwright test --ui
-    ```
-
--   **Lancer les tests sur un navigateur spécifique :**
-    ```bash
-    npx playwright test --project=chromium
-    ```
-
--   **Voir le rapport de test HTML :**
-    Après une exécution, ouvrez le dernier rapport généré.
-    ```bash
-    npx playwright show-report
-    ```
-
-## 4. Ajouter de Nouveaux Tests
-
-### a. Ajouter un test Pytest
-1.  Créez un nouveau fichier nommé `test_*.py`.
-2.  Placez-le dans le sous-répertoire de `tests/` qui correspond à la structure du code que vous testez (ex: un test pour `argumentation_analysis/core/utils.py` irait dans `tests/unit/core/test_utils.py`).
-3.  Écrivez vos fonctions de test en les préfixant par `test_`.
-
-### b. Ajouter un test Playwright
-1.  Créez un nouveau fichier nommé `*.spec.js` ou `*.spec.ts`.
-2.  Placez-le dans le répertoire `tests_playwright/tests/`.
-3.  Utilisez l'API de Playwright pour écrire vos scénarios de test.
-
-## 5. Structure des Répertoires de Tests (Pytest)
-
--   **`agents/`**: Tests pour les agents intelligents.
--   **`functional/`**: Tests fonctionnels validant des workflows complets.
--   **`integration/`**: Tests d'intégration entre les modules.
--   **`unit/`**: Tests unitaires qui vérifient de petites unités de code isolées. La structure de ce répertoire miroir celle du code source.
+# 2. Lancer les tests Playwright
+playwright test tests/e2e/webapp/
