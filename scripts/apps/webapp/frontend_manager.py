@@ -221,15 +221,20 @@ class FrontendManager:
         env.update({
             'BROWSER': 'none',
             'PORT': str(port),
+            'HOST': '127.0.0.1',
             'GENERATE_SOURCEMAP': 'false',
             'SKIP_PREFLIGHT_CHECK': 'true',
-            'PATH': new_path
+            'PATH': new_path,
+            # Augmenter la mémoire pour le processus Node (create-react-app est gourmand)
+            'NODE_OPTIONS': '--max-old-space-size=4096'
         })
         
         # Log des variables clés pour le débogage
         self.logger.debug(f"Variables d'environnement pour le frontend: \n"
                          f"  - PORT: {env.get('PORT')}\n"
-                         f"  - PATH: {env.get('PATH')}")
+                         f"  - HOST: {env.get('HOST')}\n"
+                         f"  - PATH: {env.get('PATH')}\n"
+                         f"  - NODE_OPTIONS: {env.get('NODE_OPTIONS')}")
 
         return env
 

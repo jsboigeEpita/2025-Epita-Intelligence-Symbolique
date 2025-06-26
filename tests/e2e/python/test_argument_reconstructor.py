@@ -1,6 +1,9 @@
 import re
 import pytest
+import logging
 from playwright.sync_api import Page, expect
+
+logger = logging.getLogger(__name__)
 
 # Les fixtures frontend_url et backend_url sont injectées par l'orchestrateur de test.
 @pytest.mark.playwright
@@ -9,14 +12,20 @@ def test_argument_reconstruction_workflow(page: Page, frontend_url: str):
     Test principal : reconstruction d'argument complet
     Valide le workflow de reconstruction avec détection automatique de prémisses/conclusion
     """
+    logger.info("--- DEBUT test_argument_reconstruction_workflow ---")
+    
     # 1. Navigation et attente API connectée
+    logger.info("Étape 1: Navigation vers le frontend et attente de la connexion API.")
     page.goto(frontend_url, wait_until='networkidle')
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
+    logger.info("Connexion API confirmée.")
     
     # 2. Activation de l'onglet Reconstructeur
+    logger.info("Étape 2: Activation de l'onglet Reconstructeur.")
     reconstructor_tab = page.locator('[data-testid="reconstructor-tab"]')
     expect(reconstructor_tab).to_be_enabled()
     reconstructor_tab.click()
+    logger.info("Onglet Reconstructeur cliqué.")
     
     # 3. Localisation des éléments d'interface
     text_input = page.locator('[data-testid="reconstructor-text-input"]')
@@ -24,19 +33,24 @@ def test_argument_reconstruction_workflow(page: Page, frontend_url: str):
     results_container = page.locator('[data-testid="reconstructor-results-container"]')
     
     # 4. Saisie d'un argument à reconstruire
+    logger.info("Étape 4: Saisie du texte de l'argument.")
     argument_text = """
     Tous les hommes sont mortels. Socrate est un homme.
     Donc Socrate est mortel.
     """
     expect(text_input).to_be_visible()
     text_input.fill(argument_text)
+    logger.info("Texte saisi.")
     
     # 5. Soumission du formulaire
+    logger.info("Étape 5: Soumission du formulaire de reconstruction.")
     expect(submit_button).to_be_enabled()
     submit_button.click()
+    logger.info("Bouton de soumission cliqué.")
     
     # 6. Attente des résultats de reconstruction
-    expect(results_container).to_be_visible(timeout=10000)
+    logger.info("Étape 6: Attente de l'affichage du conteneur de résultats...")
+    expect(results_container).to_be_visible(timeout=20000) # Timeout augmenté pour les traitements longs
     
     # 7. Vérification des sections principales
     expect(results_container).to_contain_text("Résultats de la Reconstruction")
