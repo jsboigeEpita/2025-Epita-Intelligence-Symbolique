@@ -1,0 +1,41 @@
+{
+  "analysis_id": "e6248c7b-d1c4-481f-97a5-19446b8afa33",
+  "text": "Si P alors Q. P est vrai. Donc Q est vrai.",
+  "analysis_type": "logical",
+  "start_time": "2025-06-26T11:11:17.342369",
+  "options": {},
+  "results": {
+    "specialized": {
+      "method": "real_llm",
+      "request_id": "req_1750929077502549",
+      "analysis_type": "logical",
+      "result": {
+        "success": true,
+        "analysis_type": "logical",
+        "result": {
+          "analysis_type": "validity_check",
+          "text": "Si P alors Q. P est vrai. Donc Q est vrai.",
+          "extracted_premises": [
+            "Si P alors Q.",
+            "P est vrai."
+          ],
+          "extracted_conclusion": "Q est vrai.",
+          "is_valid": false,
+          "reasoning_scheme": "N/A",
+          "details": "L'argument est logiquement invalide ou l'inférence n'a pas pu être prouvée."
+        },
+        "confidence": 0.7,
+        "metadata": {
+          "method": "PropositionalLogicAgent.analyze_logical_validity"
+        }
+      },
+      "confidence": 0.7,
+      "processing_time": 5.9211695194244385,
+      "timestamp": "2025-06-26T11:11:23.423718",
+      "orchestrator": "RealLLMOrchestrator"
+    }
+  },
+  "status": "completed",
+  "end_time": "2025-06-26T11:11:23.424720",
+  "duration": 6.082351
+}

@@ -31,15 +31,17 @@ from pydantic import Field
 from ..abc.agent_bases import BaseLogicAgent
 from .belief_set import BeliefSet, PropositionalBeliefSet
 from .tweety_bridge import TweetyBridge
-from ..pl.pl_definitions import PL_AGENT_INSTRUCTIONS # Importation de la définition centralisée depuis le répertoire parent
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
 
 # --- Prompts pour la Logique Propositionnelle (PL) ---
 
-# Retrait de l'ancienne définition locale
-# SYSTEM_PROMPT_PL = "..."
+SYSTEM_PROMPT_PL = """Vous êtes un agent spécialisé dans l'analyse et le raisonnement en logique propositionnelle (PL).
+Vous utilisez la syntaxe de TweetyProject pour représenter les formules PL.
+Vos tâches principales incluent la traduction de texte en formules PL, la génération de requêtes PL pertinentes,
+l'exécution de ces requêtes sur un ensemble de croyances PL, et l'interprétation des résultats obtenus.
+"""
 
 PROMPT_TEXT_TO_PL_DEFS = """
 Vous êtes un expert en logique propositionnelle (PL). Votre tâche est d'identifier les propositions atomiques (faits de base) dans un texte donné.
@@ -230,11 +232,13 @@ class PropositionalLogicAgent(BaseLogicAgent):
             service_id (Optional[str], optional): ID du service LLM à utiliser
                 pour les fonctions sémantiques.
         """
-        actual_system_prompt = system_prompt or PL_AGENT_INSTRUCTIONS
+        actual_system_prompt = system_prompt or SYSTEM_PROMPT_PL
         super().__init__(kernel, agent_name=agent_name, logic_type_name="PL", system_prompt=actual_system_prompt)
         self._llm_service_id = service_id
         self._tweety_bridge = TweetyBridge()
-        self.logger.info(f"TweetyBridge initialisé pour {self.name}.")
+        self.logger.info(f"TweetyBridge initialisé pour {self.name}. JVM prête: {self._tweety_bridge.is_jvm_ready()}")
+        if not self._tweety_bridge.is_jvm_ready():
+            self.logger.error("La JVM n'est pas prête. Les fonctionnalités logiques sont compromises.")
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         return {
@@ -254,6 +258,9 @@ class PropositionalLogicAgent(BaseLogicAgent):
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants sémantiques pour {self.name}...")
 
+        if not self._tweety_bridge.is_jvm_ready():
+            self.logger.error(f"La JVM pour TweetyBridge de {self.name} n'est pas prête.")
+            return
 
         prompt_execution_settings = None
         if self._llm_service_id:
@@ -404,10 +411,10 @@ class PropositionalLogicAgent(BaseLogicAgent):
             return None, "Aucune formule valide n'a pu être générée ou conservée après filtrage."
 
         belief_set_content = "\n".join(valid_formulas)
-        # is_valid, validation_msg = self._tweety_bridge.validate_belief_set(belief_set_content)
-        # if not is_valid:
-        #     self.logger.error(f"Ensemble de croyances final invalide: {validation_msg}\nContenu:\n{belief_set_content}")
-        #     return None, f"Ensemble de croyances invalide: {validation_msg}"
+        is_valid, validation_msg = self._tweety_bridge.validate_belief_set(belief_set_content)
+        if not is_valid:
+            self.logger.error(f"Ensemble de croyances final invalide: {validation_msg}\nContenu:\n{belief_set_content}")
+            return None, f"Ensemble de croyances invalide: {validation_msg}"
 
         belief_set = PropositionalBeliefSet(belief_set_content, propositions=list(declared_propositions))
         self.logger.info("Conversion et validation du BeliefSet réussies.")
@@ -709,72 +716,3 @@ class PropositionalLogicAgent(BaseLogicAgent):
             metadata={'task_name': task}
         )
         return [response_message]
-    def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> "BeliefSet":
-        """
-        Crée une instance de `BeliefSet` à partir d'un dictionnaire de données.
-        """
-        # Pour PropositionalLogicAgent, le 'content' est une chaîne, et 'propositions' est une liste
-        return PropositionalBeliefSet(
-            content=belief_set_data.get("content", ""),
-            propositions=belief_set_data.get("propositions", [])
-        )
-
-    async def validate_argument(self, premises: List[str], conclusion: str) -> bool:
-            """
-            Valide un argument structuré (prémisses, conclusion) en utilisant la logique propositionnelle.
-            """
-            self.logger.info("Validation d'un argument en logique propositionnelle...")
-            
-            # 1. Combiner prémisses et conclusion en un seul texte pour l'extraction de propositions
-            full_text = " ".join(premises) + " " + conclusion
-            
-            # 2. Extraire les propositions atomiques de l'ensemble du texte
-            defs_json, error_msg = await self._invoke_llm_for_json(
-                self._kernel, self.name, "TextToPLDefs", {"input": full_text},
-                ["propositions"], "arg-val-prop-gen", 3
-            )
-            if not defs_json:
-                self.logger.error(f"Impossible d'extraire les propositions pour l'argument: {error_msg}")
-                return False
-                
-            declared_propositions = set(defs_json.get("propositions", []))
-            
-            # 3. Traduire les prémisses en un ensemble de croyances
-            premises_text = " ".join(premises)
-            formulas_json, error_msg = await self._invoke_llm_for_json(
-                self._kernel, self.name, "TextToPLFormulas",
-                {"input": premises_text, "definitions": json.dumps(defs_json, indent=2)},
-                ["formulas"], "arg-val-premise-gen", 3
-            )
-            if not formulas_json:
-                self.logger.error(f"Impossible de traduire les prémisses en formules: {error_msg}")
-                return False
-
-            premise_formulas = self._filter_formulas(formulas_json.get("formulas", []), declared_propositions)
-            belief_set_content = "\n".join(premise_formulas)
-            belief_set = PropositionalBeliefSet(belief_set_content, propositions=list(declared_propositions))
-
-            # 4. Traduire la conclusion en une formule logique (la requête)
-            conclusion_formulas_json, error_msg = await self._invoke_llm_for_json(
-                self._kernel, self.name, "TextToPLFormulas",
-                {"input": conclusion, "definitions": json.dumps(defs_json, indent=2)},
-                ["formulas"], "arg-val-conclusion-gen", 3
-            )
-            if not conclusion_formulas_json or not conclusion_formulas_json.get("formulas"):
-                self.logger.error(f"Impossible de traduire la conclusion en formule: {error_msg}")
-                return False
-
-            # Assurez-vous qu'on a au moins une formule pour la conclusion
-            conclusion_formulas = self._filter_formulas(conclusion_formulas_json.get("formulas", []), declared_propositions)
-            if not conclusion_formulas:
-                self.logger.error("La traduction de la conclusion n'a produit aucune formule valide.")
-                return False
-            
-            # Concaténer toutes les formules de conclusion avec '&&'
-            # Cela rend la requête plus robuste si le LLM décompose la conclusion.
-            query_formula = " && ".join(f"({f})" for f in conclusion_formulas)
-
-            # 5. Exécuter la requête
-            is_entailed, _ = self.execute_query(belief_set, query_formula)
-
-            return is_entailed is True

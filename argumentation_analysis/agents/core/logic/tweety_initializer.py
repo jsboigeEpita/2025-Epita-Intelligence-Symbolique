@@ -6,13 +6,11 @@ gestionnaire externe (ex: une fixture pytest de session).
 """
 import jpype
 import logging
-import platform
-import sys
-import threading
-from argumentation_analysis.core.utils.logging_utils import setup_logging
-# from argumentation_analysis.core.utils.path_operations import get_project_root # Différé
-from pathlib import Path
 import os
+from argumentation_analysis.core.utils.logging_utils import setup_logging
+# On importe directement la fonction d'initialisation robuste
+from argumentation_analysis.core.jvm_setup import initialize_jvm as initialize_jvm_robustly
+from argumentation_analysis.core.jvm_setup import shutdown_jvm, is_jvm_started
 
 # Initialisation du logger pour ce module.
 setup_logging("INFO")
@@ -21,7 +19,7 @@ logger = logging.getLogger(__name__)
 class TweetyInitializer:
     """
     Handles the initialization of JVM and components for TweetyProject.
-    The JVM lifecycle is now managed by pytest fixtures in conftest.py.
+    The JVM lifecycle is now managed by the central jvm_setup.py module.
     This class acts as a central point for initialization logic and component access.
     """
     _jvm_started = False
@@ -41,9 +39,12 @@ class TweetyInitializer:
             self.__class__._jvm_started = False
             return
 
-        if not jpype.isJVMStarted():
-            logger.critical("FATAL: TweetyInitializer expects the JVM to be started by the test session setup (conftest.py).")
-            raise RuntimeError("JVM not started. Please run tests using pytest.")
+        # L'initialisation se fait maintenant à la demande, ici.
+        if not is_jvm_started():
+            logger.info("JVM not started. Calling the robust initializer from jvm_setup.")
+            if not self.initialize_jvm():
+                # Si l'initialisation échoue, on lève une exception claire.
+                raise RuntimeError("JVM could not be started by the robust initializer. Check logs.")
 
         self.__class__._jvm_started = True
 
@@ -60,76 +61,22 @@ class TweetyInitializer:
     @staticmethod
     def initialize_jvm():
         """
-        Main logic to start the JVM. Should only be called once per session,
-        typically from a pytest fixture.
+        Delegates JVM initialization to the robust, centralized jvm_setup.py script.
+        This script handles JDK provisioning (download, unzip) and proper JVM startup.
         """
-        if jpype.isJVMStarted():
-            logger.warning("initialize_jvm called but JVM is already running.")
-            return
-
+        logger.info("Delegating JVM initialization to core.jvm_setup.initialize_jvm...")
         try:
-            logger.info("Starting JVM...")
-            from argumentation_analysis.utils.system_utils import get_project_root
-            project_root = get_project_root()
-
-            # --- STRATEGIC JVM SELECTION ---
-            default_jvm_path = jpype.getDefaultJVMPath()
-            jvm_path_to_use = default_jvm_path
-            logger.info(f"Default JVM Path (from JPype): {default_jvm_path}")
-            
-            # This logic is crucial because the default JVM (Java 8) is incompatible with the Tweety JARs (compiled with Java 15+).
-            # We must force the use of the portable JDK.
-            hardcoded_jdk_path = project_root / "portable_jdk" / "jdk-17.0.2+8"
-            logger.info(f"Checking for portable JDK at: {hardcoded_jdk_path}")
-
-            if os.path.isdir(hardcoded_jdk_path):
-                logger.info(f"Portable JDK directory found. Identifying JVM library for platform '{sys.platform}'...")
-                if sys.platform == "win32":
-                    lib_name = "jvm.dll"
-                    potential_jvm_path = hardcoded_jdk_path / "bin" / "server" / lib_name
-                else:
-                    lib_name = "libjvm.so"
-                    potential_jvm_path = hardcoded_jdk_path / "lib" / "server" / lib_name
-
-                logger.info(f"Checking for JVM library at: {potential_jvm_path}")
-                if potential_jvm_path.is_file():
-                    jvm_path_to_use = str(potential_jvm_path)
-                    logger.info(f"SUCCESS: Portable JVM library found. Overriding default path. Will use: '{jvm_path_to_use}'")
-                else:
-                    logger.warning(f"Portable JVM library not found at '{potential_jvm_path}'. Falling back to default JVM. THIS WILL LIKELY FAIL.")
+            # On appelle la fonction renommée pour plus de clarté
+            if initialize_jvm_robustly():
+                logger.info("Robust JVM initialization successful.")
+                TweetyInitializer._jvm_started = True
+                return True
             else:
-                logger.warning(f"Portable JDK path '{hardcoded_jdk_path}' not found. Falling back to default JVM. THIS WILL LIKELY FAIL.")
-            
-            # --- PRE-STARTUP VALIDATION (G-FORCE LOGGING) ---
-            logger.info("--- G-FORCE JVM PRE-STARTUP VALIDATION ---")
-            logger.info(f"Final JVM path to be used: '{jvm_path_to_use}'")
-            logger.info(f"Does the path exist? {os.path.exists(jvm_path_to_use)}")
-            logger.info(f"Is it a file? {os.path.isfile(jvm_path_to_use)}")
-            logger.info(f"Python architecture: {platform.architecture()}")
-            logger.info("--- END VALIDATION ---")
-
-            # --- CLASSPATH CONFIGURATION ---
-            tweety_libs_path = project_root / "libs" / "tweety"
-            full_jar_path = tweety_libs_path / "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
-            classpath = [str(full_jar_path)]
-            logger.info(f"Using classpath: {classpath}")
-
-            jpype.startJVM(
-                jvm_path_to_use,
-                "-ea",
-                classpath=classpath,
-                convertStrings=False
-            )
-            TweetyInitializer._jvm_started = True
-            logger.info("JVM started successfully.")
-
-            java_system = jpype.JClass("java.lang.System")
-            actual_classpath = java_system.getProperty("java.class.path")
-            logger.info(f"Actual Java Classpath from System.getProperty: {actual_classpath}")
-
+                logger.error("Robust JVM initialization failed.")
+                return False
         except Exception as e:
-            logger.error(f"Failed to start JVM: {e}", exc_info=True)
-            raise RuntimeError(f"JVM Initialization failed: {e}") from e
+            logger.critical(f"An unhandled exception occurred during robust JVM initialization: {e}", exc_info=True)
+            return False
 
     def _import_java_classes(self):
         """
