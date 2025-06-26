@@ -321,16 +321,10 @@ class OrchestrationServiceManager:
                 self.logger.info("ConversationOrchestrator initialisé")
                 
             if RealLLMOrchestrator:
-                # RealLLMOrchestrator attend 'llm_service'. On peut lui passer le service du kernel.
-                llm_service_instance = None
-                if self.kernel and self.llm_service_id:
-                    try:
-                        llm_service_instance = self.kernel.get_service(self.llm_service_id)
-                    except Exception as e_get_service:
-                        self.logger.warning(f"Impossible de récupérer le service '{self.llm_service_id}' du kernel pour RealLLMOrchestrator: {e_get_service}")
-                
-                self.llm_orchestrator = RealLLMOrchestrator(llm_service=llm_service_instance)
-                self.logger.info(f"RealLLMOrchestrator initialisé {'avec' if llm_service_instance else 'sans'} service LLM du kernel.")
+                # CORRECTION: On passe le kernel complet au RealLLMOrchestrator, pas seulement un service.
+                # L'orchestrateur a besoin du kernel pour instancier ses propres agents.
+                self.llm_orchestrator = RealLLMOrchestrator(kernel=self.kernel)
+                self.logger.info(f"RealLLMOrchestrator initialisé avec le kernel principal.")
                 
         except Exception as e:
             self.logger.error(f"Erreur critique lors de l'initialisation des orchestrateurs spécialisés: {e}")

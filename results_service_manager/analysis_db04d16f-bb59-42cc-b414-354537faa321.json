@@ -1,0 +1,37 @@
+{
+  "analysis_id": "db04d16f-bb59-42cc-b414-354537faa321",
+  "text": "Si P alors Q. P est vrai. Donc Q est vrai.",
+  "analysis_type": "logical",
+  "start_time": "2025-06-26T10:44:05.272768",
+  "options": {},
+  "results": {
+    "specialized": {
+      "method": "real_llm",
+      "request_id": "req_1750927445406661",
+      "analysis_type": "logical",
+      "result": {
+        "success": true,
+        "analysis_type": "logical",
+        "result": {
+          "logical_structure": "present",
+          "connectors_found": [
+            "donc"
+          ],
+          "argumentation_strength": 0.8,
+          "confidence": 0.85
+        },
+        "confidence": 0.9,
+        "metadata": {
+          "method": "logical_analyzer"
+        }
+      },
+      "confidence": 0.9,
+      "processing_time": 0.0,
+      "timestamp": "2025-06-26T10:44:05.406661",
+      "orchestrator": "RealLLMOrchestrator"
+    }
+  },
+  "status": "completed",
+  "end_time": "2025-06-26T10:44:05.406661",
+  "duration": 0.133893
+}
