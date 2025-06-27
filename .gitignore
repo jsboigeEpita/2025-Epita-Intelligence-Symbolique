@@ -305,7 +305,7 @@ tmp/
 temp_libs/
 
 # Execution traces
-execution_traces/
+**/execution_traces/
 # Test reports
 *.xml
 
