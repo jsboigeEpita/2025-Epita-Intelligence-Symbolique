@@ -115,6 +115,15 @@ La logique d'orchestration de haut niveau sera intégrée dans les managers exis
     *   **`project_core/core_from_scripts/cleanup_manager.py`**: Pour le nettoyage de bas niveau (fichiers temporaires, logs).
     *   **`project_core/core_from_scripts/environment_manager.py`**: Pour la gestion des fichiers d'environnement `.env`. Il permet de basculer, créer et valider des configurations d'environnement.
 
+*   **`project_core/core_from_scripts/validation/validation_engine.py`** :
+    *   **Rôle** : Moteur de validation centralisé, conçu pour être extensible.
+    *   **Architecture** :
+        *   Le `ValidationEngine` ne contient plus de logique de validation en dur. Il est responsable de charger et d'exécuter une série de "règles".
+        *   Chaque règle est une classe qui hérite de `ValidationRule` et implémente une méthode `validate()`.
+        *   Les règles sont stockées dans le sous-répertoire `project_core/core_from_scripts/validation/rules/`.
+    *   **Exemple** : `ConfigValidationRule` est la première implémentation, vérifiant la présence des fichiers de configuration essentiels.
+    *   **Conclusion** : Cette conception permet d'ajouter de nouvelles validations (tests d'imports, vérification de la structure des répertoires, etc.) de manière modulaire sans modifier le moteur principal. C'est un service de diagnostic essentiel pour les autres managers et pour les workflows de CI/CD.
+
 ## 5. Phase 3 : Ventilation de la Logique
 
 Cette section mappe la logique des anciens scripts vers les modules cibles identifiés.

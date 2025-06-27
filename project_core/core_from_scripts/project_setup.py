@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Any
 
 from .common_utils import Logger, LogLevel
 from .environment_manager import EnvironmentManager
-from .validation_engine import ValidationEngine
+from .validation.validation_engine import ValidationEngine
 
 
 class ProjectSetup:
