@@ -1,0 +1,17 @@
+{
+  "agents": [
+    {"name": "U1", "personality": "flexible", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"]},
+    {"name": "U2", "personality": "strategic", "preferences": ["B", "C", "A"], "options": ["A", "B", "C"]},
+    {"name": "U3", "personality": "stubborn", "preferences": ["C", "A", "B"], "options": ["A", "B", "C"]},
+    {"name": "U4", "personality": "random", "preferences": ["A", "C", "B"], "options": ["A", "B", "C"]},
+    {"name": "U5", "personality": "flexible", "preferences": ["B", "A", "C"], "options": ["A", "B", "C"]},
+    {"name": "U6", "personality": "strategic", "preferences": ["C", "B", "A"], "options": ["A", "B", "C"]},
+    {"name": "U7", "personality": "stubborn", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"]}
+  ],
+  "options": ["A", "B", "C"],
+  "context": {
+    "description": "7 agents, 3 options, custom quadratic voting budget.",
+    "quadratic_budget": 15,
+    "tags": ["custom_context"]
+  }
+} 

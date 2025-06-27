@@ -1,0 +1,17 @@
+{
+  "agents": [
+    {"name": "C1", "personality": "stubborn", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"], "coalition": "Alpha"},
+    {"name": "C2", "personality": "flexible", "preferences": ["A", "C", "B"], "options": ["A", "B", "C"], "coalition": "Alpha"},
+    {"name": "C3", "personality": "strategic", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"], "coalition": "Alpha"},
+    {"name": "C4", "personality": "random", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"], "coalition": "Alpha"},
+    {"name": "D1", "personality": "stubborn", "preferences": ["B", "C", "A"], "options": ["A", "B", "C"], "coalition": "Beta"},
+    {"name": "D2", "personality": "flexible", "preferences": ["B", "A", "C"], "options": ["A", "B", "C"], "coalition": "Beta"},
+    {"name": "D3", "personality": "strategic", "preferences": ["B", "C", "A"], "options": ["A", "B", "C"], "coalition": "Beta"},
+    {"name": "D4", "personality": "random", "preferences": ["B", "A", "C"], "options": ["A", "B", "C"], "coalition": "Beta"}
+  ],
+  "options": ["A", "B", "C"],
+  "context": {
+    "description": "8 agents, 2 explicit coalitions (Alpha, Beta), mixed personalities, 3 options.",
+    "tags": ["coalition"]
+  }
+} 

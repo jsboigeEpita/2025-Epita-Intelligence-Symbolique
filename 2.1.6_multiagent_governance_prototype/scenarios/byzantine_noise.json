@@ -1,0 +1,13 @@
+{
+  "agents": [
+    {"name": "S1", "personality": "stubborn", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"]},
+    {"name": "S2", "personality": "stubborn", "preferences": ["B", "C", "A"], "options": ["A", "B", "C"]},
+    {"name": "S3", "personality": "stubborn", "preferences": ["C", "A", "B"], "options": ["A", "B", "C"]},
+    {"name": "F1", "personality": "flexible", "preferences": ["B", "A", "C"], "options": ["A", "B", "C"]},
+    {"name": "F2", "personality": "flexible", "preferences": ["C", "B", "A"], "options": ["A", "B", "C"]},
+    {"name": "B1", "personality": "random", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"]},
+    {"name": "B2", "personality": "random", "preferences": ["C", "B", "A"], "options": ["A", "B", "C"]}
+  ],
+  "options": ["A", "B", "C"],
+  "context": {"description": "Byzantine noise: 2 byzantine (random) agents, 3 stubborn, 2 flexible. Tests robustness to byzantine faults.", "byzantine_ratio": 0.285}
+} 
