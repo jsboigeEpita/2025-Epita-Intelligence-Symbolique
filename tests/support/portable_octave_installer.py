@@ -168,10 +168,8 @@ if __name__ == '__main__':
     
     logger.info(f"Racine du projet détectée: {project_root}")
     
-    # Créer les répertoires de test s'ils n'existent pas
-    (project_root / "portable_octave").mkdir(exist_ok=True)
-    (project_root / "_temp").mkdir(exist_ok=True)
-
+    # Le répertoire racine est passé, la fonction `ensure_portable_octave`
+    # gérera elle-même la création des sous-répertoires nécessaires dans `libs/`.
     octave_bin = ensure_portable_octave(project_root)
     if octave_bin:
         logger.info(f"Test réussi: Chemin binaire Octave: {octave_bin}")

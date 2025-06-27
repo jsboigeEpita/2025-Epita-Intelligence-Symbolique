@@ -1,63 +1,85 @@
-# Documentation des Tests de l'Application Web
+# Documentation des Tests du Projet
 
-Ce document décrit comment exécuter les différentes suites de tests pour l'application web.
+Ce document décrit comment exécuter les différentes suites de tests pour l'ensemble du projet.
 
 ## Prérequis
 
-- Assurez-vous que l'environnement virtuel Python est activé.
-- Installez les dépendances de test : `pip install -r requirements.txt` (si applicable) et `pip install pytest playwright`
-- Installez les navigateurs pour Playwright : `playwright install`
+- Assurez-vous que votre environnement Conda (`base`) est correctement configuré.
+- Installez les dépendances de test :
+  - Pour Python : `pip install -r requirements.txt` (si applicable), `pip install pytest`
+  - Pour les tests E2E (JavaScript) : `pip install playwright` suivi de `playwright install`
 
-## Suites de Tests
+## Point d'Entrée Unifié : `run_tests.ps1`
 
-Il existe deux suites de tests principales :
+Le moyen le plus simple et recommandé pour lancer les tests est d'utiliser le script unifié `run_tests.ps1` à la racine du projet. Ce script gère l'activation de l'environnement et l'exécution de la suite de tests appropriée.
 
-1.  **Tests d'API (Pytest)**: Ces tests valident le comportement de l'API backend.
-2.  **Tests End-to-End (Playwright)**: Ces tests simulent des interactions utilisateur complètes dans un navigateur.
+### Utilisation
 
-## Exécution des Tests
+Ouvrez un terminal PowerShell et utilisez la syntaxe suivante :
 
-Le moyen le plus simple d'exécuter tous les tests est d'utiliser le script d'orchestration.
-
-### Méthode 1 : Exécution via l'Orchestrateur (Recommandé)
-
-L'orchestrateur `unified_web_orchestrator.py` gère automatiquement le démarrage des serveurs, l'exécution des tests et l'arrêt.
-
-```bash
-# Activer l'environnement virtuel si nécessaire
-# .venv/Scripts/activate
-
-# Lancer la suite de tests complète (API + E2E)
-python scripts/apps/webapp/unified_web_orchestrator.py
+```powershell
+.\run_tests.ps1 -Type <type_de_test>
 ```
 
-Le script va :
-1. Démarrer le serveur backend Flask.
-2. Démarrer le serveur frontend Node.js.
-3. Exécuter les tests `pytest` situés dans `tests/functional/webapp`.
-4. Exécuter les tests `Playwright` situés dans `tests/e2e/webapp`.
-5. Arrêter les serveurs.
+Où `<type_de_test>` peut être :
+- `unit` : Lance les tests unitaires (rapides, sans I/O).
+- `functional` : Lance les tests fonctionnels.
+- `integration` : Lance les tests d'intégration.
+- `e2e` : Lance les tests End-to-End avec Playwright (JS/TS).
+- `e2e-python` : Lance les tests End-to-End avec Pytest (Python).
+- `validation` : Lance les tests de validation.
+- `all` : (Défaut) Lance les tests `unit` et `functional`.
 
-### Méthode 2 : Exécution Manuelle
+### Exemples Concrets
 
-#### 1. Tests d'API (Pytest)
+**1. Lancer la suite complète des tests unitaires (recommandé pour la validation rapide) :**
 
-Ces tests ne nécessitent que le démarrage du backend.
+```powershell
+.\run_tests.ps1 -Type unit
+```
+
+**2. Lancer un répertoire de tests unitaires spécifique :**
+
+```powershell
+.\run_tests.ps1 -Type unit -Path tests/unit/agents/
+```
+
+**3. Lancer les tests End-to-End avec Playwright :**
+Assurez-vous d'avoir exécuté `playwright install` au préalable.
+
+```powershell
+.\run_tests.ps1 -Type e2e -Browser chromium
+```
+
+---
+
+## Méthodes d'Exécution Alternatives (Manuelles)
+
+### Tests Pytest (unit, functional, etc.)
+
+Si vous ne souhaitez pas utiliser le script unifié, vous pouvez lancer `pytest` directement après avoir activé l'environnement Conda.
+
+```bash
+# Activer l'environnement Conda
+conda activate base
+
+# Lancer les tests unitaires
+python -m pytest tests/unit/
+
+# Lancer les tests fonctionnels
+python -m pytest tests/functional/
+```
+
+### Tests End-to-End (Playwright)
+
+Ces tests nécessitent que les **deux** serveurs (backend et frontend) soient démarrés manuellement au préalable.
 
 ```bash
 # 1. Démarrer le backend (dans un terminal)
-python -m uvicorn argumentation_analysis.services.web_api.app:app --host 0.0.0.0 --port 5010
+# ...
 
-# 2. Lancer les tests pytest (dans un autre terminal)
-pytest tests/functional/webapp/
-```
+# 2. Démarrer le frontend (dans un autre terminal)
+# ...
 
-#### 2. Tests End-to-End (Playwright)
-
-Ces tests nécessitent que les **deux** serveurs (backend et frontend) soient en cours d'exécution.
-
-```bash
-# 1. S'assurer que le backend ET le frontend sont démarrés
-
-# 2. Lancer les tests Playwright
+# 3. Lancer les tests Playwright (dans un troisième terminal)
 playwright test tests/e2e/webapp/

@@ -451,7 +451,9 @@ class ValidationEpitaComplete:
                 "fausse-dichotomie": "false-dilemma",
                 "faux-dilemme": "false-dilemma",
                 "homme-de-paille": "straw-man",
-                "attaque-personnelle": "ad-hominem"
+                "attaque-personnelle": "ad-hominem",
+                "appeal-to-hypocrisy": "appeal-to-hypocrisy",
+                "stolen-concept": "stolen-concept"
             }
 
             detected_ids = []
@@ -480,7 +482,9 @@ class ValidationEpitaComplete:
             "Attaque personnelle (Ad Hominem)": {"text": "Ne l'écoutez pas, c'est un idiot fini. Ses arguments ne peuvent pas être valables.", "expected_sophisms": ["ad-hominem"]},
             "Pente glissante (Slippery Slope)": {"text": "Si nous autorisons cette petite exception à la règle, bientôt plus personne ne respectera la loi et ce sera l'anarchie totale.", "expected_sophisms": ["slippery-slope"]},
             "Homme de paille (Straw Man)": {"text": "Mon adversaire veut réduire le budget de la défense. Il veut donc laisser notre pays sans défense face à nos ennemis.", "expected_sophisms": ["straw-man"]},
-            "Faux dilemme (False Dilemma)": {"text": "Soit vous êtes avec nous, soit vous êtes contre nous. Il n'y a pas de troisième voie.", "expected_sophisms": ["false-dilemma"]}
+            "Faux dilemme (False Dilemma)": {"text": "Soit vous êtes avec nous, soit vous êtes contre nous. Il n'y a pas de troisième voie.", "expected_sophisms": ["false-dilemma"]},
+            "Appel à l'hypocrisie (Appeal to Hypocrisy)": {"text": "My doctor told me I should lose weight, but I don't believe him because he's overweight himself.", "expected_sophisms": ["appeal-to-hypocrisy"]},
+            "Concept volé (Stolen Concept)": {"text": "You claim that logic is the only way to truth, but you can't prove that statement using logic alone, so your claim is invalid.", "expected_sophisms": ["stolen-concept"]}
         }
         if not self.manager:
             from argumentation_analysis.orchestration.service_manager import OrchestrationServiceManager
