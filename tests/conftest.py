@@ -6,6 +6,7 @@ import jpype
 import logging
 import os
 import time
+import shutil
 import nest_asyncio
 from pathlib import Path
 from argumentation_analysis.core.setup.manage_portable_tools import setup_tools
@@ -13,6 +14,39 @@ from argumentation_analysis.core.jvm_setup import initialize_jvm, shutdown_jvm, 
 from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
 
 logger = logging.getLogger(__name__)
+
+def _ensure_tweety_jars_are_correctly_placed():
+    """
+    Code défensif pour les tests. Vérifie si des JARs Tweety sont dans le
+    répertoire 'libs' au lieu de 'libs/tweety' et les déplace.
+    """
+    try:
+        project_root = Path(__file__).parent.parent.resolve()
+        libs_dir = project_root / "argumentation_analysis" / "libs"
+        tweety_dir = libs_dir / "tweety"
+        
+        if not libs_dir.is_dir():
+            logger.debug("Le répertoire 'libs' n'existe pas, rien à faire.")
+            return
+
+        tweety_dir.mkdir(exist_ok=True)
+        
+        jars_in_libs = [f for f in libs_dir.iterdir() if f.is_file() and f.suffix == '.jar']
+        
+        if not jars_in_libs:
+            logger.debug("Aucun fichier JAR trouvé directement dans 'libs'.")
+            return
+            
+        logger.warning(f"JARs trouvés directement dans '{libs_dir}'. Ils devraient être dans '{tweety_dir}'.")
+        for jar_path in jars_in_libs:
+            destination = tweety_dir / jar_path.name
+            logger.info(f"Déplacement de '{jar_path.name}' vers '{destination}'...")
+            shutil.move(str(jar_path), str(destination))
+        logger.info("Déplacement des JARs terminé.")
+
+    except Exception as e:
+        logger.error(f"Erreur lors du déplacement défensif des JARs Tweety: {e}", exc_info=True)
+
 
 @pytest.fixture(scope="session")
 def anyio_backend(request):
@@ -44,54 +78,28 @@ def jvm_session(request):
     """
     logger.info("---------- Pytest session starting: Provisioning dependencies and Initializing JVM... ----------")
     
-    # Lire l'option pour sauter Octave
-    skip_octave_flag = request.config.getoption("--skip-octave")
-    
-    # try:
-    #     # Étape 1: Provisioning des outils (JDK et Tweety)
-    #     # La racine du projet est un niveau au-dessus du dossier 'tests'
-    #     project_root = Path(__file__).parent.parent.resolve()
-    #     # Correction: Le répertoire des outils doit pointer vers 'argumentation_analysis/libs'
-    #     tools_dir = project_root / "argumentation_analysis" / "libs"
-    #     tools_dir.mkdir(exist_ok=True)
-    #     logger.info(f"Running dependency provisioning via setup_tools... Tools directory set to {tools_dir}")
-    #     # L'installation des outils portables est maintenant gérée par le script
-    #     # `setup_project_env.ps1`. Nous laissons cette section commentée comme
-    #     # référence mais nous n'exécutons plus le provisioning ici pour des raisons
-    #     # de performance et de stabilité des tests.
-    #     # setup_tools(
-    #     #     tools_dir_base_path=tools_dir,
-    #     #     force_reinstall=False,
-    #     #     skip_octave=skip_octave_flag
-    #     # )
+    try:
+        # Étape 1 (Défensive): S'assurer que les JARs sont au bon endroit
+        logger.info("Checking Tweety JARs location...")
+        _ensure_tweety_jars_are_correctly_placed()
 
-    #     # Il est attendu que le script `setup_project_env.ps1` ait déjà provisionné
-    #     # les outils et que l'environnement (y compris JAVA_HOME) soit pré-configuré
-    #     # avant de lancer les tests.
-        
-    #     # Le script de setup doit définir JAVA_HOME
-    #     if not os.environ.get('JAVA_HOME'):
-    #         pytest.fail("setup_tools() did not set the JAVA_HOME environment variable.", pytrace=False)
-        
-    #     logger.info(f"JAVA_HOME is set to: {os.environ.get('JAVA_HOME')}")
-
-    #     # Étape 2: Démarrage de la JVM
-    #     if not is_jvm_started():
-    #         logger.info("Attempting to initialize JVM via core.jvm_setup.initialize_jvm...")
-    #         # La fixture de session est propriétaire de la JVM
-    #         success = initialize_jvm(session_fixture_owns_jvm=True)
-    #         if success:
-    #             logger.info("JVM started successfully for the test session.")
-    #         else:
-    #              pytest.fail("JVM initialization failed via core.jvm_setup.initialize_jvm.", pytrace=False)
-    #     else:
-    #         logger.info("JVM was already started.")
+        # Étape 2: Démarrage de la JVM via le module centralisé
+        if not is_jvm_started():
+            logger.info("Attempting to initialize JVM via core.jvm_setup.initialize_jvm...")
+            # La fixture de session est propriétaire de la JVM
+            success = initialize_jvm(session_fixture_owns_jvm=True)
+            if success:
+                logger.info("JVM started successfully for the test session.")
+            else:
+                 pytest.fail("JVM initialization failed via core.jvm_setup.initialize_jvm.", pytrace=False)
+        else:
+            logger.info("JVM was already started.")
             
-    # except Exception as e:
-    #     logger.error(f"A critical error occurred during test session setup: {e}", exc_info=True)
-    #     pytest.exit(f"Test session setup failed: {e}", 1)
+    except Exception as e:
+        logger.error(f"A critical error occurred during test session setup: {e}", exc_info=True)
+        pytest.exit(f"Test session setup failed: {e}", 1)
 
-    yield
+    yield True
 
     logger.info("---------- Pytest session finished: Shutting down JVM... ----------")
     # L'arrêt est géré par la fixture elle-même, donc on passe True

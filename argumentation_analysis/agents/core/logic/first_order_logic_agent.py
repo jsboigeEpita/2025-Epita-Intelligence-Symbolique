@@ -356,6 +356,14 @@ class BeliefSetBuilderPlugin:
                 )
                 # On force la compatibilité en ajoutant une règle hiérarchique
                 self._sort_hierarchy.setdefault(actual_sort, set()).add(expected_sort)
+                
+                # NOUVELLE LOGIQUE : Forcer l'unification pour résoudre le problème en amont.
+                # L'unification mettra à jour les schémas de prédicats pour utiliser une sorte canonique.
+                # Il faut s'assurer que les prédicats correspondants existent pour l'unification.
+                self.logger.info(f"Déclenchement de l'unification des sortes pour la hiérarchie inférée : '{actual_sort}' et '{expected_sort}'")
+                self._ensure_predicate_exists(actual_sort)
+                self._ensure_predicate_exists(expected_sort)
+                self._unify_sorts(actual_sort, expected_sort)
 
         # Si toutes les validations passent, ajouter le fait.
         new_fact = AtomicFact(norm_pred_name, norm_args)
@@ -438,33 +446,40 @@ class BeliefSetBuilderPlugin:
 
     def _is_compatible(self, sub_sort_candidate: str, super_sort_target: str) -> bool:
         """
-        Checks if sub_sort_candidate is a sub-sort of super_sort_target in the hierarchy.
-        A sort is a sub-sort of another if they share the same representative.
-        This is the correct implementation using Union-Find.
+        Checks if sub_sort_candidate is a sub-sort of super_sort_target,
+        using the explicitly inferred sort hierarchy. This performs a traversal
+        of the sort graph.
         """
-        if sub_sort_candidate == super_sort_target:
+        norm_sub = self._normalize(sub_sort_candidate)
+        norm_super = self._normalize(super_sort_target)
+
+        if norm_sub == norm_super:
             return True
-            
-        try:
-            # We normalize the sort names to find their corresponding predicate representatives
-            # in the unification system.
-            pred_for_sub_sort = self._normalize(sub_sort_candidate)
-            pred_for_super_sort = self._normalize(super_sort_target)
 
-            # If either sort never had a predicate explicitly or implicitly associated with it,
-            # it won't be in the unification tree, thus they are not compatible.
-            if pred_for_sub_sort not in self._sort_parent or pred_for_super_sort not in self._sort_parent:
-                return False
+        # Parcours en profondeur (DFS) pour trouver un chemin dans la hiérarchie.
+        # `visited` prévient les cycles infinis dans le graphe des sortes.
+        visited = set()
+        # `stack` contient les sortes à explorer. On commence avec la sous-sorte candidate.
+        stack = [norm_sub]
 
-            # Find the root representative for both sorts
-            root_sub = self._find_sort_representative(pred_for_sub_sort)
-            root_super = self._find_sort_representative(pred_for_super_sort)
-            
-            # They are compatible if they belong to the same set (i.e., share a representative)
-            return root_sub == root_super
-        except KeyError:
-            # A key error implies a sort was not registered, so they cannot be compatible.
-            return False
+        while stack:
+            current_sort = stack.pop()
+            if current_sort in visited:
+                continue
+            visited.add(current_sort)
+
+            # Vérifier si la sorte courante a des super-sortes directes.
+            if current_sort in self._sort_hierarchy:
+                direct_super_sorts = self._sort_hierarchy[current_sort]
+                # Si la cible est une super-sorte directe, c'est compatible.
+                if norm_super in direct_super_sorts:
+                    return True
+                # Sinon, ajouter les super-sortes à la pile pour les explorer plus tard.
+                stack.extend(list(direct_super_sorts))
+        
+        # Si après avoir parcouru tout le graphe accessible depuis norm_sub,
+        # on n'a pas trouvé norm_super, alors ce n'est pas compatible.
+        return False
 
     def _create_safe_fol_atom(self, FolAtom, predicate, arguments):
         """

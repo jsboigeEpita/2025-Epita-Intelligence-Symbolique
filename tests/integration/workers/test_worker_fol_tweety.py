@@ -236,15 +236,16 @@ Man(socrate)
         logger.info("✅ Analyse du syllogisme par chaîne de caractères réussie.")
 
     @pytest.mark.asyncio
-    async def test_end_to_end_fol_syllogism_with_llm(self, fol_agent_with_kernel, jvm_session):
+    async def test_end_to_end_fol_syllogism_with_llm(self, fol_agent_with_kernel, jvm_session, caplog):
         """
         Test l'analyse de bout en bout d'un syllogisme, en utilisant le LLM
         pour la conversion texte -> belief set, puis Tweety pour le raisonnement.
-        C'est le test d'intégration ultime.
+        C'est le test d'intégration ultime. Ce test doit aussi s'assurer
+        qu'aucun log d'erreur n'est produit, même si le test réussit.
         """
         if not jvm_session:
             pytest.skip("Test nécessite la JVM.")
-        
+
         agent = fol_agent_with_kernel
         
         syllogism_text = "Tous les hommes sont mortels. Socrate est un homme."
@@ -262,12 +263,17 @@ Man(socrate)
         assert is_consistent is True, "Le belief set du syllogisme généré par le LLM devrait être consistant."
 
         # Assert: Vérifier l'inférence clé.
-        # Le prédicat peut être "Mortal" ou "mortel" selon le LLM. On vérifie la version lowercase.
-        # Le prédicat, une fois normalisé, sera `mortel`.
         entails, _ = await agent.execute_query(belief_set, "mortel(socrate)")
         assert entails is True, "L'inférence 'mortel(socrate)' devrait être acceptée."
         
-        logger.info("✅ Test d'intégration de bout en bout avec LLM et Tweety réussi.")
+        # Assert: Vérifier qu'il n'y a pas eu d'erreurs de logique latentes.
+        # C'est la nouvelle condition clé pour attraper les "silent bugs".
+        errors = [record for record in caplog.records if record.levelno >= logging.ERROR]
+        if errors:
+            error_messages = "\n".join([f"- {record.name}: {record.getMessage()}" for record in errors])
+            pytest.fail(f"Des erreurs ont été logguées pendant le test, même s'il a réussi:\n{error_messages}")
+            
+        logger.info("✅ Test d'intégration de bout en bout avec LLM et Tweety réussi, SANS ERREUR LATENTE.")
 
     @pytest.mark.asyncio
     async def test_real_tweety_fol_inconsistency_detection(self, fol_agent_with_kernel, jvm_session):
