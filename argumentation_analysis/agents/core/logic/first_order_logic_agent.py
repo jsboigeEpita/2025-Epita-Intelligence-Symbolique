@@ -37,6 +37,7 @@ from semantic_kernel.prompt_template.prompt_template_config import PromptTemplat
 from semantic_kernel.connectors.ai.open_ai import OpenAIPromptExecutionSettings
 from semantic_kernel.connectors.ai.function_calling_utils import kernel_function_metadata_to_function_call_format
 from pydantic import Field, field_validator
+from semantic_kernel.exceptions.kernel_exceptions import KernelException
  
 from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
 from .belief_set import BeliefSet, FirstOrderBeliefSet
@@ -277,24 +278,35 @@ class BeliefSetBuilderPlugin:
         # --- Enhanced Robustness ---
         # If the predicate schema is not defined, create it dynamically.
         # This assumes a simple 1-to-1 mapping from predicate to a sort of the same name.
+        # --- STRENGTHENED VALIDATION ---
+        # 1. The predicate MUST be declared before use. No more implicit creation.
         if p_name not in self._predicates:
-            # We derive the sort name from the predicate name, as is common.
-            # e.g., predicate 'Etudiant' implies sort 'Etudiant'.
-            # This is a heuristic that works well for many simple cases.
-            sort_name_for_predicate = p_name
-            self.add_predicate_schema(p_name, [sort_name_for_predicate])
+            raise ValueError(f"Validation Error: Attempted to use undeclared predicate '{p_name}'. "
+                             "All predicates must be declared with 'add_predicate_schema' first.")
 
-        # Ensure all constants and their respective sorts exist.
+        # 2. Arity Check: The number of arguments must match the predicate's declared arity.
+        expected_arity = len(self._predicates[p_name])
+        actual_arity = len(arg_list)
+        if actual_arity != expected_arity:
+            raise ValueError(f"Validation Error: Arity mismatch for predicate '{p_name}'. "
+                             f"Expected {expected_arity} arguments, but received {actual_arity}.")
+
+        # 3. Sort-Constant Compatibility Check
         expected_sorts = self._predicates[p_name]
         for i, arg_name in enumerate(arg_list):
-            if i < len(expected_sorts):
-                sort_name = expected_sorts[i]
-                # Ensure the sort exists.
-                if sort_name not in self._sorts:
-                    self.add_sort(sort_name)
-                # Ensure the constant is in the sort.
-                if arg_name not in self._sorts[sort_name]:
-                    self._sorts[sort_name].append(arg_name)
+            arg_sort_found = False
+            for sort_name, constants in self._sorts.items():
+                if arg_name in constants:
+                    # Check if the constant's sort matches the expected sort for this argument position.
+                    if sort_name != self._normalize(expected_sorts[i]):
+                        raise ValueError(f"Validation Error: Sort mismatch for argument '{arg_name}' of predicate '{p_name}'. "
+                                         f"Expected sort '{expected_sorts[i]}' but found '{sort_name}'.")
+                    arg_sort_found = True
+                    break
+            
+            if not arg_sort_found:
+                raise ValueError(f"Validation Error: Constant '{arg_name}' used in predicate '{p_name}' has not been declared "
+                                 "with 'add_constant_to_sort'.")
 
         self._atomic_facts.append(AtomicFact(p_name, arg_list))
         return f"Atomic fact '{p_name}({', '.join(arg_list)})' added."
@@ -744,96 +756,74 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         )
 
         try:
-            successful_tool_calls = 0  # Compteur pour les appels d'outils réussis
-            max_loops = 5  # To prevent infinite loops
+            successful_tool_calls = 0
+            max_loops = 5
+            result = None
+
             for i in range(max_loops):
                 self.logger.info(f"Début de la boucle d'appel d'outils, itération {i+1}/{max_loops}")
                 
-                # We need to invoke using the chat service directly, not through kernel.invoke
-                # as that can have different logic paths. We want the raw response.
                 result = await self.service.get_chat_message_content(
                     chat,
                     settings=execution_settings
                 )
-                
-                # Add the response to the history
                 chat.add_message(result)
                 
-                # Extract tool calls from the message content items
                 tool_calls_from_message = [item for item in result.items if isinstance(item, FunctionCallContent)]
                 
                 if not tool_calls_from_message:
                     self.logger.info("Fin de la boucle: le LLM n'a plus d'appels d'outils à effectuer.")
-                    break # Exit loop if no more tools are called
+                    break
 
                 self.logger.info(f"{len(tool_calls_from_message)} appel(s) d'outil(s) reçu(s) du LLM.")
 
-                # Manually invoke the tools
                 for tool_call in tool_calls_from_message:
                     self.logger.info(f"Invocation manuelle de l'outil: '{tool_call.function_name}' avec les arguments: {tool_call.arguments}")
                     
-                    # This helper function is designed for this exact purpose:
-                    # finding the function and invoking it with the given arguments.
-                    # Instead of using the black-box `invoke_function_call`, which might have
-                    # side effects on the chat history, we manually find and invoke the function.
-                    # This gives us full control over what is added to the history, preventing
-                    # duplicate tool_call_id entries.
-                    # The `plugins` attribute of the kernel is a dictionary-like object (KernelPluginCollection).
-                    # We access the specific function by indexing first by the plugin name and then
-                    # by the function name. This resolves the previous AttributeError.
                     function_to_call = self._kernel.plugins[tool_call.plugin_name][tool_call.function_name]
-                    # Invoke the function with the arguments from the tool call.
                     tool_result = await self._kernel.invoke(
                         function_to_call, **tool_call.to_kernel_arguments()
                     )
                     
-                    # Create the function result content
                     func_result_content = FunctionResultContent.from_function_call_content_and_result(
                         function_call_content=tool_call,
                         result=tool_result
                     )
                     
-                    successful_tool_calls += 1  # Incrémenter après un appel réussi
-
-                    # Add the tool's result back to the chat history for the next iteration
+                    successful_tool_calls += 1
                     chat.add_message(func_result_content.to_chat_message_content())
             else:
                  self.logger.warning("La boucle d'appel d'outils a atteint le nombre maximum d'itérations.")
 
             self.logger.info("Le LLM a terminé d'appeler les outils via la boucle manuelle.")
 
-            # Après la boucle, on vérifie la raison de l'arrêt du LLM.
-            # `result` contient le dernier message de l'assistant.
-            # Si le LLM s'est arrêté (`stop`) SANS AVOIR JAMAIS réussi à appeler un outil,
-            # c'est le signal que l'entrée était invalide ou inexploitable.
-            if result.finish_reason == "stop" and successful_tool_calls == 0:
-                self.logger.warning(
-                    f"LLM stopped with reason 'stop' and ZERO successful tool calls. "
-                    f"This indicates no logical structure could be extracted. "
-                    f"Final content generated: '{result.content}'. "
-                    "Returning an empty BeliefSet."
-                )
-                return FirstOrderBeliefSet(content="", java_object=None), "Aucune structure logique pertinente n'a été trouvée dans le texte fourni."
-            
-            java_belief_set = self._builder_plugin.build_tweety_belief_set(self._tweety_bridge)
+            if result and result.finish_reason == "stop" and successful_tool_calls == 0:
+                self.logger.warning(f"LLM stopped with ZERO successful tool calls. Returning an empty BeliefSet.")
+                return FirstOrderBeliefSet(content="", java_object=None), "Aucune structure logique pertinente n'a été trouvée."
 
+            java_belief_set = self._builder_plugin.build_tweety_belief_set(self._tweety_bridge)
             if java_belief_set is None:
-                self.logger.error("La construction programmatique du belief set a échoué.")
                 return None, "La construction programmatique du belief set a échoué."
 
-            belief_set_content = str(java_belief_set.toString()) # Pour l'affichage et la journalisation
-            final_belief_set = FirstOrderBeliefSet(content=belief_set_content, java_object=java_belief_set)
+            final_belief_set = FirstOrderBeliefSet(content=str(java_belief_set.toString()), java_object=java_belief_set)
 
-            # Si le belief set est vide, cela signifie qu'aucune structure logique n'a été extraite.
             if final_belief_set.is_empty():
-                self.logger.warning("Le LLM n'a extrait aucune structure logique. Retour d'un belief set vide.")
-                return final_belief_set, "Aucune structure logique pertinente n'a été trouvée dans le texte fourni."
+                 return final_belief_set, "Aucune structure logique pertinente n'a été trouvée."
 
-            self.logger.info("Conversion via la stratégie de construction programmatique réussie.")
             return final_belief_set, "Conversion réussie."
 
+        except KernelException as e:
+            # Check if the underlying cause is a validation error from our plugin
+            if e.__cause__ and isinstance(e.__cause__, ValueError):
+                msg = f"Erreur de validation: {e.__cause__}"
+                self.logger.warning(f"Validation error during tool call: '{msg}'. Returning empty belief set.")
+                return FirstOrderBeliefSet(content="", java_object=None), msg
+            
+            # Handle other kernel-related errors if necessary
+            self.logger.error(f"Erreur du noyau sémantique inattendue : {e}", exc_info=True)
+            raise e
         except Exception as e:
-            self.logger.error(f"Exception interceptée dans `text_to_belief_set`. Re-levée pour un débogage complet.", exc_info=True)
+            self.logger.error(f"Exception inattendue dans `text_to_belief_set`: {e}", exc_info=True)
             raise e
     
     def _extract_json_block(self, text: str) -> str:
