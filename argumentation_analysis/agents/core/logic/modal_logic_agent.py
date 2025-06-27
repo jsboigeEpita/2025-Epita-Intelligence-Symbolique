@@ -28,6 +28,7 @@ from pydantic import Field
 from ..abc.agent_bases import BaseLogicAgent
 from .belief_set import BeliefSet, ModalBeliefSet
 from .tweety_bridge import TweetyBridge
+from .tweety_initializer import TweetyInitializer
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -187,7 +188,7 @@ class ModalLogicAgent(BaseLogicAgent):
 
         self._tweety_bridge = TweetyBridge()
 
-        if not self.tweety_bridge.is_jvm_ready():
+        if not TweetyInitializer.is_jvm_ready():
             self.logger.error("Tentative de setup Modal Kernel alors que la JVM n'est PAS démarrée.")
             return
         

@@ -32,6 +32,18 @@ from argumentation_analysis.agents.core.logic.belief_set import ModalBeliefSet
 from semantic_kernel import Kernel
 
 
+@pytest.fixture
+def mock_tweety_bridge():
+   """Fixture pour un TweetyBridge mocké."""
+   bridge = MagicMock()
+   bridge.is_jvm_ready.return_value = True
+   bridge.validate_modal_belief_set.return_value = (True, "Valid")
+   bridge.validate_modal_formula.return_value = (True, "Valid formula")
+   bridge.validate_modal_query_with_context.return_value = (True, "Valid query")
+   bridge.execute_modal_query.return_value = "ACCEPTED: Query result"
+   bridge.is_modal_kb_consistent.return_value = (True, "Consistent")
+   return bridge
+
 class TestModalLogicAgent:
     """Classe de tests pour ModalLogicAgent."""
 
@@ -51,18 +63,6 @@ class TestModalLogicAgent:
 
         kernel.add_function = MagicMock(side_effect=mock_add_function)
         return kernel
-
-    @pytest.fixture
-    def mock_tweety_bridge(self):
-        """Fixture pour un TweetyBridge mocké."""
-        bridge = MagicMock()
-        bridge.is_jvm_ready.return_value = True
-        bridge.validate_modal_belief_set.return_value = (True, "Valid")
-        bridge.validate_modal_formula.return_value = (True, "Valid formula")
-        bridge.validate_modal_query_with_context.return_value = (True, "Valid query")
-        bridge.execute_modal_query.return_value = "ACCEPTED: Query result"
-        bridge.is_modal_kb_consistent.return_value = (True, "Consistent")
-        return bridge
 
     @pytest.fixture
     def modal_agent(self, mock_kernel):
@@ -95,8 +95,9 @@ class TestModalLogicAgent:
         assert "interpret_results" in methods
         assert "validate_formula" in methods
 
+    @patch('argumentation_analysis.agents.core.logic.modal_logic_agent.TweetyInitializer.is_jvm_ready', return_value=True)
     @patch('argumentation_analysis.agents.core.logic.modal_logic_agent.TweetyBridge')
-    def test_setup_agent_components(self, mock_tweety_class, modal_agent, mock_tweety_bridge):
+    def test_setup_agent_components(self, mock_tweety_class, mock_jvm_ready, modal_agent, mock_tweety_bridge):
         """Test la configuration des composants de l'agent."""
         mock_tweety_class.return_value = mock_tweety_bridge
         
@@ -207,7 +208,7 @@ class TestModalLogicAgent:
             # Si la réparation échoue, vérifier qu'on a au moins un JSON partiel
             assert "{" in extracted
 
-    @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
+    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
     @pytest.mark.asyncio
     async def test_text_to_belief_set_success(self, modal_agent, mock_tweety_bridge):
         """Test la conversion réussie de texte en belief set."""
@@ -231,7 +232,7 @@ class TestModalLogicAgent:
         assert "constant urgent" in belief_set.content
         assert "[](urgent)" in belief_set.content
 
-    @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
+    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
     @pytest.mark.asyncio
     async def test_text_to_belief_set_json_error(self, modal_agent, mock_tweety_bridge):
         """Test la gestion d'erreur JSON lors de la conversion."""
@@ -269,7 +270,7 @@ class TestModalLogicAgent:
         assert "[](urgent)" in parsed["modal_formulas"]
         assert "<>(urgent => action)" in parsed["modal_formulas"]
 
-    @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
+    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
     @pytest.mark.asyncio
     async def test_generate_queries_success(self, modal_agent, mock_tweety_bridge):
         """Test la génération réussie de requêtes modales."""
@@ -292,7 +293,7 @@ class TestModalLogicAgent:
         assert len(queries) >= 1
         assert any("urgent" in query for query in queries)
 
-    @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
+    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
     @pytest.mark.asyncio
     async def test_generate_queries_empty_response(self, modal_agent, mock_tweety_bridge):
         """Test la génération de requêtes avec réponse vide."""
@@ -352,7 +353,7 @@ class TestModalLogicAgent:
         assert result is None
         assert "FUNC_ERROR" in message
 
-    @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
+    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
     @pytest.mark.asyncio
     async def test_interpret_results_success(self, modal_agent):
         """Test l'interprétation réussie des résultats."""
@@ -374,7 +375,7 @@ class TestModalLogicAgent:
         assert "Interprétation" in interpretation
         assert "urgent" in interpretation
 
-    @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
+    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
     @pytest.mark.asyncio
     async def test_interpret_results_error(self, modal_agent):
         """Test la gestion d'erreur lors de l'interprétation."""
@@ -476,7 +477,7 @@ class TestModalLogicAgent:
         assert isinstance(belief_set, ModalBeliefSet)
         assert belief_set.content == ""
 
-    @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
+    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
     @pytest.mark.asyncio
     async def test_get_response(self, modal_agent, mock_tweety_bridge):
         """Test que get_response (via invoke_single) retourne un statut."""
@@ -492,7 +493,7 @@ class TestModalLogicAgent:
         result = await modal_agent.get_response("test text")
         assert "Analyse modale initiée" in result
 
-    @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
+    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
     @pytest.mark.asyncio
     async def test_invoke(self, modal_agent, mock_tweety_bridge):
         """Test que invoke retourne un générateur qui produit le statut de invoke_single."""
@@ -508,7 +509,7 @@ class TestModalLogicAgent:
         assert len(results) == 1
         assert "Analyse modale initiée" in results[0]
 
-    @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
+    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
     @pytest.mark.asyncio
     async def test_invoke_stream(self, modal_agent, mock_tweety_bridge):
         """Test que invoke_stream retourne un générateur qui produit le statut de invoke_single."""
@@ -529,19 +530,29 @@ class TestModalLogicAgentIntegration:
     """Tests d'intégration pour ModalLogicAgent."""
     
     @pytest.fixture
-    def integration_agent(self, mock_kernel, mock_tweety_bridge): # Utilise les fixtures existantes
-        """Agent configuré pour tests d'intégration."""
+    def integration_agent(self, mock_kernel):
+        """Agent de base pour tests d'intégration, sans setup complet."""
         agent = ModalLogicAgent(mock_kernel, "IntegrationAgent", "integration_service")
-        agent._tweety_bridge = mock_tweety_bridge
-        agent.setup_agent_components("integration_service")
+        # Le tweety_bridge sera injecté par les patchs dans les tests
         return agent
     
-    @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
+    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
     @pytest.mark.asyncio
-    async def test_full_analysis_workflow(self, integration_agent, mock_tweety_bridge):
+    @patch('argumentation_analysis.agents.core.logic.modal_logic_agent.TweetyInitializer.is_jvm_ready', return_value=True)
+    @patch('argumentation_analysis.agents.core.logic.modal_logic_agent.TweetyBridge')
+    @pytest.mark.asyncio
+    async def test_full_analysis_workflow(self, mock_tweety_class, mock_jvm_ready, integration_agent, mock_tweety_bridge):
         """Test du workflow complet d'analyse modale."""
-        # Configuration des mocks pour un workflow complet
         
+        # Configurer le mock pour retourner notre bridge pré-configuré
+        mock_tweety_class.return_value = mock_tweety_bridge
+        
+        # Maintenant, on peut appeler setup en toute sécurité
+        integration_agent.setup_agent_components("integration_service")
+        
+        # Le _tweety_bridge de l'agent doit être l'instance mockée
+        assert integration_agent._tweety_bridge == mock_tweety_bridge
+
         # 1. Mock pour text_to_belief_set
         mock_text_response = '{"propositions": ["urgent", "action"], "modal_formulas": ["[](urgent)", "<>(action)"]}'
     
@@ -551,29 +562,20 @@ class TestModalLogicAgentIntegration:
         # 3. Mock pour interpret_results
         mock_interpret_response = "L'analyse modale montre que l'urgence est nécessaire et l'action est possible."
     
-        # Configuration des plugins mockés
-        mock_plugins = {
-            "IntegrationAgent": {
-                "TextToModalBeliefSet": MagicMock(),
-                "GenerateModalQueryIdeas": MagicMock(),
-                "InterpretModalResult": MagicMock()
-            }
-        }
-    
-        # Les plugins sont déjà dans le kernel grâce à setup_agent_components et la fixture mock_kernel
-        mock_text_obj = MagicMock(); mock_text_obj.value = mock_text_response
-        mock_query_obj = MagicMock(); mock_query_obj.value = mock_query_response
-        mock_interpret_obj = MagicMock(); mock_interpret_obj.value = mock_interpret_response
+        # Configuration des réponses des plugins
+        # Isoler les mocks pour éviter les conflits
+        text_invoke_mock = AsyncMock(return_value=MagicMock(value=mock_text_response))
+        query_invoke_mock = AsyncMock(return_value=MagicMock(value=mock_query_response))
+        interpret_invoke_mock = AsyncMock(return_value=MagicMock(value=mock_interpret_response))
 
-        integration_agent._kernel.plugins["IntegrationAgent"]["TextToModalBeliefSet"].invoke = AsyncMock(return_value=mock_text_obj)
-        integration_agent._kernel.plugins["IntegrationAgent"]["GenerateModalQueryIdeas"].invoke = AsyncMock(return_value=mock_query_obj)
-        integration_agent._kernel.plugins["IntegrationAgent"]["InterpretModalResult"].invoke = AsyncMock(return_value=mock_interpret_obj)
+        integration_agent._kernel.plugins["IntegrationAgent"]["TextToModalBeliefSet"].invoke = text_invoke_mock
+        integration_agent._kernel.plugins["IntegrationAgent"]["GenerateModalQueryIdeas"].invoke = query_invoke_mock
+        integration_agent._kernel.plugins["IntegrationAgent"]["InterpretModalResult"].invoke = interpret_invoke_mock
         
-        # Configuration du TweetyBridge
-        # execute_query n'est pas async et retourne un tuple
+        # Configuration du side_effect pour execute_query sur le mock bridge
         mock_tweety_bridge.execute_modal_query.side_effect = [
-            "ACCEPTED: Urgency is necessary",
-            "ACCEPTED: Action is possible"
+            ("ACCEPTED", "Urgency is necessary"),
+            ("ACCEPTED", "Action is possible")
         ]
         
         # Exécution du workflow complet
