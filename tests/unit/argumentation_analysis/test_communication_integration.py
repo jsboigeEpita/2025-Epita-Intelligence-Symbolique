@@ -1,4 +1,3 @@
-
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
@@ -20,7 +19,7 @@ import time
 import uuid
 import logging
 from unittest.mock import MagicMock
-
+import random
 import pytest
 
 from argumentation_analysis.core.communication.message import (
@@ -793,7 +792,7 @@ async def async_test_environment():
     
     logger.info("Async test environment teardown complete")
     
-@pytest.mark.skip(reason="Ce test est instable et bloque l'exécution des autres tests.")
+@pytest.mark.skip(reason="Désactivation temporaire pour débloquer la suite de tests, fusion des raisons.")
 @pytest.mark.asyncio
 async def test_async_request_response(async_test_environment):
     """Test de la communication asynchrone par requête-réponse (version simplifiée)."""

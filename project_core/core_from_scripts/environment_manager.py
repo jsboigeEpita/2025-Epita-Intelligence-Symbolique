@@ -26,7 +26,6 @@ class EnvironmentManager:
         """
         self.project_root = project_root or Path(__file__).resolve().parent.parent.parent
         self.logger = logger_instance or logging.getLogger(__name__)
-
         self.env_files_dir = self.project_root / "config" / "environments"
         self.template_path = self.project_root / "config" / "templates" / ".env.tpl"
         self.target_env_file = self.project_root / ".env"
