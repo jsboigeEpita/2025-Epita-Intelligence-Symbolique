@@ -103,15 +103,13 @@ class TestFOLTweetyCompatibility:
         agent = fol_agent_with_kernel
         # Syntaxe correcte avec sauts de ligne explicites pour éviter les problèmes de formatage.
         formula_str = "thing = {a}\ntype(P(thing))\n\nforall X: (P(X))"
-        # La formule est syntaxiquement correcte, l'agent ne doit pas lever d'exception.
-        # Le test original vérifiait `is_consistent is True`, mais la simple absence
-        # d'exception suffit à valider la compatibilité de la syntaxe.
         try:
             belief_set = FirstOrderBeliefSet(content=formula_str)
-            await agent.is_consistent(belief_set)
-            logger.info(f"✅ La syntaxe de la formule a été acceptée par Tweety sans exception.")
+            is_consistent, msg = await agent.is_consistent(belief_set)
+            logger.info(f"✅ Formule syntaxiquement correcte acceptée par Tweety: {msg}")
+            assert is_consistent is True
         except Exception as e:
-            pytest.fail(f"Une syntaxe FOL valide ne devrait pas lever d'exception. Erreur: {e}")
+            pytest.fail(f"Une syntaxe FOL valide a été rejetée: {e}")
     
     @pytest.mark.skipif(not TWEETY_AVAILABLE, reason="TweetyBridge non disponible")
     @pytest.mark.asyncio
@@ -302,10 +300,8 @@ Man(socrates)
 
         assert not is_consistent, f"Le BeliefSet devrait être incohérent, mais il est considéré comme consistant. Message: {consistency_msg}"
         
-        # L'essentiel est que `is_consistent` soit False. Le message peut varier.
-        # On s'assure juste qu'il y a bien un message d'information.
-        assert consistency_msg, "Un message d'erreur expliquant l'incohérence était attendu."
-        logger.info(f"Message de retour pour l'incohérence: {consistency_msg}")
+        assert "inconsistent" in consistency_msg.lower() or "incohérent" in consistency_msg.lower(), \
+               f"Le message de retour '{consistency_msg}' n'indique pas une incohérence comme attendu."
 
         logger.info(f"✅ Incohérence programmatique (P ∧ ¬P) correctement détectée. Message: {consistency_msg}")
     
@@ -568,7 +564,7 @@ class TestFOLRealWorldIntegration:
             pytest.skip("Test nécessite la JVM.")
         
         agent = fol_agent_with_kernel
-        text = "Todos los humanos son mortales. Sócrates es un humano."
+        text = "Todos los humanos sont mortales. Sócrates es un humano."
         
         belief_set, msg = await agent.text_to_belief_set(text)
         

@@ -22,7 +22,7 @@ __author__ = "Intelligence Symbolique EPITA"
 from .common_utils import *
 from .environment_manager import *
 from .test_config_definition import *
-from .validation_engine import *
+from .validation.validation_engine import *
 from .project_setup import *
 
 __all__ = [

@@ -1,69 +1,66 @@
 """
-Gestionnaire d'environnements Python/conda
+Gestionnaire de fichiers d'environnement (.env)
 
-Ce module fournit une logique de base pour la gestion de l'environnement Conda
-et l'exécution de commandes. Il est utilisé par les scripts de premier niveau
-pour assurer une abstraction indépendante de l'OS.
-
-Bien que la configuration applicative se déplace vers `argumentation_analysis.config.settings`,
-ce module reste essentiel pour le bootstrapping de l'environnement.
+Ce module centralise la logique pour la gestion des fichiers de configuration
+d'environnement, permettant de basculer, créer et valider des configurations
+stockées dans des fichiers .env.
 """
-
 import os
 import sys
 import warnings
 from project_core.core_from_scripts import load_dotenv
 import json
 import logging
+from pathlib import Path
+from typing import Optional, List
 import subprocess
 import argparse
-from pathlib import Path
-from typing import Dict, List, Optional, Union
 
-# Configuration de base du logger pour ce module
-logging.basicConfig(level=logging.INFO, format='[ENV_MGR] [%(asctime)s] - %(name)s - %(levelname)s - %(message)s')
+# Assumant l'existence de cet utilitaire comme défini dans la roadmap
+from argumentation_analysis.core.utils.shell_utils import execute_command
+
+# Configuration du logger
+logging.basicConfig(level=logging.INFO, format='[ENV_MGR] [%(asctime)s] - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-
-class PrintLogger:
-    """Fallback Logger pour la compatibilité de l'API et l'usage simple en script."""
-    def debug(self, msg): logger.debug(msg)
-    def info(self, msg): logger.info(msg)
-    def warning(self, msg): logger.warning(msg)
-    def error(self, msg, *args, **kwargs): logger.error(msg, *args, **kwargs)
-    def success(self, msg): logger.info(f"✅ SUCCESS: {msg}")
-
 class EnvironmentManager:
-    """
-    Gestionnaire d'environnement partiel.
-    Fournit des fonctionnalités de base pour les scripts d'activation.
-    """
-    def __init__(self, logger_instance: PrintLogger = None):
-        self.logger = logger_instance or PrintLogger()
-        self.project_root = Path(__file__).resolve().parent.parent.parent
-        self._conda_env_path_cache: Optional[Path] = None
+    """Gère la création, la validation et le changement de fichiers .env."""
+
+    def __init__(self, project_root: Optional[Path] = None, logger: Optional[logging.Logger] = None):
+        """
+        Initialise le gestionnaire.
+        """
+        if project_root and isinstance(project_root, Path):
+            self.project_root = project_root
+        else:
+            self.project_root = Path(__file__).resolve().parent.parent.parent
+        
+        self.logger = logger or logging.getLogger(__name__)
 
     def _get_conda_env_path(self, env_name: str) -> Optional[Path]:
-        """Trouve le chemin d'un environnement Conda via 'conda info'."""
-        if self._conda_env_path_cache:
-            return self._conda_env_path_cache
+        """Tente de trouver le chemin d'un environnement Conda."""
+        # On essaie d'abord de deviner via les chemins standards
+        conda_base_command = shutil.which("conda")
+        if not conda_base_command:
+            self.logger.warning("Commande 'conda' non trouvée dans le PATH.")
+            return None
+        
         try:
-            result = subprocess.run(
-                ["conda", "info", "--envs", "--json"],
-                capture_output=True, text=True, check=True
-            )
-            data = json.loads(result.stdout)
-            for env_path_str in data.get("envs", []):
-                env_path = Path(env_path_str)
-                if env_path.name == env_name:
-                    self.logger.info(f"Chemin trouvé pour l'environnement '{env_name}': {env_path}")
-                    self._conda_env_path_cache = env_path
+            # Exécute `conda info --json` pour obtenir des infos sur l'installation
+            result = subprocess.run(['conda', 'info', '--json'], capture_output=True, text=True, check=True)
+            conda_info = json.loads(result.stdout)
+            env_dirs = conda_info.get('envs_dirs', [])
+            
+            for env_dir in env_dirs:
+                env_path = Path(env_dir) / env_name
+                if env_path.is_dir():
+                    self.logger.info(f"Environnement '{env_name}' trouvé à: {env_path}")
                     return env_path
-            self.logger.error(f"Environnement Conda '{env_name}' non trouvé.")
-            return None
         except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
-            self.logger.error(f"Erreur lors de la recherche de l'environnement Conda: {e}")
-            return None
+            self.logger.error(f"Erreur en cherchant l'environnement Conda: {e}")
+
+        self.logger.error(f"Environnement conda '{env_name}' non trouvé.")
+        return None
 
     def get_python_executable(self, env_name: str = 'projet-is') -> Optional[str]:
         """Retourne le chemin absolu de l'exécutable Python pour un environnement Conda."""
@@ -157,7 +154,6 @@ def main():
     else:
         logger.warning("Aucune action spécifiée (ex: --get-python-path ou --run-command). Affichage de l'aide.")
         parser.print_help()
-
 
 if __name__ == "__main__":
     main()

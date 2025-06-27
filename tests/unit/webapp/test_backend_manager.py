@@ -42,7 +42,6 @@ def test_initialization(manager, backend_config):
 async def test_start_success(mock_popen, manager):
     """Tests a successful start call, mocking the internal _wait_for_backend."""
     # `_wait_for_backend` retourne maintenant un simple booléen.
-    # Correction: La méthode mockée est synchrone, utilisation de MagicMock
     manager._get_conda_env_python_executable = MagicMock(return_value="/fake/python") # Isoler du système
     manager._wait_for_backend = AsyncMock(return_value=True)
     manager._is_port_occupied = AsyncMock(return_value=False)

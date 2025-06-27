@@ -953,7 +953,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             return None, "Impossible de recréer ou de trouver l'objet belief set Java."
             
         try:
-            entails = self.tweety_bridge._fol_handler.fol_query(java_belief_set, query)
+            entails = self._tweety_bridge.fol_query(java_belief_set, query)
             result_str = "ACCEPTED" if entails else "REJECTED"
             return entails, result_str
         except Exception as e:
@@ -1013,7 +1013,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             return False, "Impossible de recréer ou de trouver l'objet belief set Java pour la vérification de consistance."
             
         try:
-            is_cons, _ = await self.tweety_bridge._fol_handler.fol_check_consistency(java_belief_set)
+            is_cons, _ = await self._tweety_bridge.fol_check_consistency(java_belief_set)
             if not is_cons:
                 return False, "Le belief set est incohérent (inconsistent)."
             

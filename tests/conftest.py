@@ -1,3 +1,6 @@
+from unittest.mock import patch
+patch('dotenv.main.dotenv_values', return_value={}, override=True).start()
+
 import pytest
 import jpype
 import logging
@@ -95,6 +98,7 @@ pytest_plugins = [
     "tests.mocks.numpy_setup"
 ]
 
+    
 def pytest_addoption(parser):
     """Ajoute des options de ligne de commande personnalisées à pytest."""
     parser.addoption(
