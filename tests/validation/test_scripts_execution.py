@@ -27,7 +27,7 @@ SCRIPTS_TO_VALIDATE = {
     "cluedo_enhanced": SCRIPTS_DIR / "run_cluedo_oracle_enhanced.py",
     "einstein_demo": SCRIPTS_DIR / "run_einstein_oracle_demo.py", 
     "oracle_behavior_simple": SCRIPTS_DIR / "test_oracle_behavior_simple.py",
-    "oracle_behavior_demo": SCRIPTS_DIR / "test_oracle_behavior_simple.py"
+    "oracle_behavior_demo": SCRIPTS_DIR / "test_oracle_behavior_demo.py"
 }
 
 # Configuration environnement de test
