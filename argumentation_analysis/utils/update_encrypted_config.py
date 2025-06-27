@@ -5,14 +5,14 @@ Script pour mettre à jour le fichier chiffré extract_sources.json.gz.enc
 
 import json
 import sys
-import os
 from pathlib import Path
 
 # Ajouter le répertoire parent au chemin de recherche des modules
 sys.path.append(str(Path(__file__).parent.parent))
 
 # Importer les modules nécessaires
-from argumentation_analysis.ui.utils import save_extract_definitions
+from argumentation_analysis.config.settings import settings
+from argumentation_analysis.core.io_manager import save_extract_definitions
 from argumentation_analysis.ui import config as ui_config
 
 def update_encrypted_config():
@@ -38,14 +38,14 @@ def update_encrypted_config():
         with open(json_file_path, 'r', encoding='utf-8') as f:
             definitions = json.load(f)
         
-        print(f"✅ Fichier JSON corrigé '{json_file_path}' chargé avec succès.")
+        print(f"[OK] Fichier JSON corrigé '{json_file_path}' chargé avec succès.")
         print(f"   - {len(definitions)} sources trouvées.")
         
         # Sauvegarder les définitions dans le fichier chiffré
         success = save_extract_definitions(definitions, ui_config.CONFIG_FILE_ENC, ui_config.ENCRYPTION_KEY)
         
         if success:
-            print(f"✅ Fichier chiffré '{ui_config.CONFIG_FILE_ENC}' mis à jour avec succès.")
+            print(f"[OK] Fichier chiffré '{ui_config.CONFIG_FILE_ENC}' mis à jour avec succès.")
             return True
         else:
             print(f"❌ Erreur: Échec de la mise à jour du fichier chiffré '{ui_config.CONFIG_FILE_ENC}'.")
@@ -59,8 +59,10 @@ if __name__ == "__main__":
     print("\n=== Mise à jour du fichier chiffré extract_sources.json.gz.enc ===\n")
     
     # Vérifier si la variable d'environnement TEXT_CONFIG_PASSPHRASE est définie
-    if not os.getenv(ui_config.PASSPHRASE_VAR_NAME):
-        print(f"⚠️ La variable d'environnement '{ui_config.PASSPHRASE_VAR_NAME}' n'est pas définie.")
+    if not settings.passphrase:
+        # Tenter d'obtenir le nom de la variable depuis l'ancien ui_config pour le message d'erreur
+        passphrase_var_name = getattr(ui_config, 'PASSPHRASE_VAR_NAME', 'TEXT_CONFIG_PASSPHRASE')
+        print(f"⚠️ La variable d'environnement '{passphrase_var_name}' n'est pas définie dans votre .env ou configuration.")
         print(f"   Veuillez la définir avant d'exécuter ce script.")
         sys.exit(1)
     
@@ -73,9 +75,9 @@ if __name__ == "__main__":
         
         # Vérifier que le fichier chiffré existe
         if ui_config.CONFIG_FILE_ENC.exists():
-            print(f"✅ Le fichier chiffré '{ui_config.CONFIG_FILE_ENC}' existe.")
+            print(f"[OK] Le fichier chiffré '{ui_config.CONFIG_FILE_ENC}' existe.")
             print(f"   - Taille: {ui_config.CONFIG_FILE_ENC.stat().st_size} octets")
-            print("\n✅ Mise à jour réussie !")
+            print("\n[OK] Mise à jour réussie !")
         else:
             print(f"❌ Erreur: Le fichier chiffré '{ui_config.CONFIG_FILE_ENC}' n'existe pas.")
             print("\n❌ Échec de la mise à jour.")

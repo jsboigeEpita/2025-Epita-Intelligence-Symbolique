@@ -84,7 +84,7 @@ def create_marker_editor_ui():
         print(f"❌ {error_message}")
         extract_definitions = []
     else:
-        print(f"✅ {len(extract_definitions)} sources chargées.")
+        print(f"[OK] {len(extract_definitions)} sources chargées.")
 
     # Widgets pour la sélection de la source et de l'extrait
     source_dropdown = widgets.Dropdown(
@@ -485,7 +485,7 @@ def create_marker_editor_ui():
             )
             
             if count > 0:
-                print(f"✅ {count} résultat(s) trouvé(s):")
+                print(f"[OK] {count} résultat(s) trouvé(s):")
                 display(HTML(html_results))
             else:
                 print(f"❌ Aucun résultat trouvé pour '{search_term}'.")
@@ -596,7 +596,7 @@ def create_marker_editor_ui():
         with status_output:
             clear_output(wait=True)
             if success:
-                print("✅ Modifications sauvegardées avec succès.")
+                print("[OK] Modifications sauvegardées avec succès.")
             else:
                 print(f"❌ Erreur lors de la sauvegarde: {error_message}")
 
@@ -626,7 +626,7 @@ def create_marker_editor_ui():
             clear_output(wait=True)
             if success:
                 extract_definitions = result
-                print(f"✅ Définitions importées depuis {input_path}")
+                print(f"[OK] Définitions importées depuis {input_path}")
                 
                 # Mise à jour des dropdowns
                 source_dropdown.options = [(s.get("source_name", f"Source #{i}"), i) for i, s in enumerate(extract_definitions)]
@@ -711,7 +711,7 @@ def create_marker_editor_ui():
                 
                 with status_output:
                     clear_output(wait=True)
-                    print(f"✅ Extraction automatique réussie pour '{extract_name}'.")
+                    print(f"[OK] Extraction automatique réussie pour '{extract_name}'.")
                     print(f"Explication: {result.explanation}")
             else:
                 with status_output:

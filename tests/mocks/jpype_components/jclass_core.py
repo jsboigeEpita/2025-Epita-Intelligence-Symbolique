@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 import logging
 import sys
+import os # Ajout de l'import os globalement
 # from itertools import chain, combinations # Supprimé, plus utilisé directement ici
 # Imports de modules de configuration déplacés dans les méthodes pour éviter les cycles
 # from . import tweety_reasoners
@@ -48,9 +49,44 @@ class MockJClassCore:
         if self.class_name == "java.lang.ClassLoader":
             def mock_get_system_class_loader():
                 mock_logger.info(f"[MOCK] java.lang.ClassLoader.getSystemClassLoader() CALLED")
-                return MockJClassCore('java.lang.ClassLoader') # Simule un objet ClassLoader
+                # Retourne une nouvelle instance de MockJClassCore pour simuler un ClassLoader
+                # Si jclass_provider est disponible, l'utiliser serait mieux pour la cohérence.
+                if self._jclass_provider:
+                    return self._jclass_provider("java.lang.ClassLoader")
+                return MockJClassCore('java.lang.ClassLoader')
             self._static_attributes['getSystemClassLoader'] = mock_get_system_class_loader
             mock_logger.debug(f"Méthode statique 'getSystemClassLoader' configurée pour java.lang.ClassLoader.")
+        
+        # Logique pour java.lang.System.getProperty("java.class.path")
+        if self.class_name == "java.lang.System":
+            def mock_get_property(property_name):
+                mock_logger.info(f"[MOCK] java.lang.System.getProperty('{property_name}') CALLED")
+                if property_name == "java.class.path":
+                    # Retourne un classpath simulé. Peut être ajusté si nécessaire.
+                    return "mocked/path1.jar" + os.pathsep + "mocked/another/path2.jar"
+                elif property_name == "java.version":
+                    return "11.0.x (Mocked)" # Exemple, pour être robuste
+                # Retourner None ou lever une exception pour les propriétés non mockées ?
+                # Pour l'instant, None pour éviter des erreurs si d'autres propriétés sont demandées.
+                mock_logger.warning(f"Appel à System.getProperty pour une propriété non explicitement mockée: '{property_name}'. Retourne None.")
+                return None
+            self._static_attributes['getProperty'] = mock_get_property
+            mock_logger.debug(f"Méthode statique 'getProperty' configurée pour java.lang.System.")
+
+        # Logique pour org.tweetyproject.logics.ml.syntax.ModalLogic (K, S4, S5, etc.)
+        if self.class_name == "org.tweetyproject.logics.ml.syntax.ModalLogic":
+            # Ces attributs statiques représentent les différents systèmes de logique modale.
+            # Ils sont utilisés comme des énumérations ou des constantes.
+            # Retourner une MagicMock nommée pour chacun devrait suffire pour les tests.
+            logics = ["K", "D", "T", "S4", "S5", "S4F", "S4_2", "S4_3", "KB", "K5", "K45", "KD45", "KT45"] # Liste non exhaustive, à compléter si besoin
+            for logic_name in logics:
+                # L'objet réel est une instance de ModalLogic, mais pour le mock,
+                # une MagicMock distincte pour chaque constante est plus simple.
+                mock_logic_enum_instance = MagicMock(name=f"MockModalLogicEnum_{logic_name}")
+                mock_logic_enum_instance.name = lambda: logic_name # Simuler la méthode name() de l'enum Java
+                mock_logic_enum_instance.toString = lambda: logic_name # Simuler la méthode toString()
+                self._static_attributes[logic_name] = mock_logic_enum_instance
+            mock_logger.debug(f"Attributs statiques pour les logiques modales configurés pour {self.class_name}.")
 
     def __getattr__(self, attr_name):
         mock_logger.debug(f"MockJClassCore('{self.class_name}').__getattr__('{attr_name}')")

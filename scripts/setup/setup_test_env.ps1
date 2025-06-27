@@ -12,12 +12,12 @@ function Write-Step {
 }
 
 # Vérifier le répertoire courant
-$scriptDir = Get-Location
-$projectDir = (Get-Item $scriptDir).Parent.Parent.FullName
-Write-Step "Configuration de l'environnement de test dans $projectDir"
+# Le script est exécuté depuis la racine du projet
+$projectDir = Get-Location
+Write-Step "Configuration de l'environnement de test dans $($projectDir.Path)"
 
 # Vérifier si un environnement virtuel existe déjà
-$venvDir = Join-Path -Path $projectDir -ChildPath "venv_test"
+$venvDir = Join-Path -Path $projectDir.Path -ChildPath "venv_test"
 if (Test-Path $venvDir) {
     Write-Step "Suppression de l'ancien environnement virtuel"
     Remove-Item -Path $venvDir -Recurse -Force
@@ -34,8 +34,9 @@ if (-not $?) {
 # Activer l'environnement virtuel
 Write-Step "Activation de l'environnement virtuel"
 $activateScript = Join-Path -Path $venvDir -ChildPath "Scripts\Activate.ps1"
+Write-Host "DEBUG: Chemin du script d'activation : '$($activateScript)'"
 try {
-    & $activateScript
+    . $activateScript
 } catch {
     Write-Host "Échec de l'activation de l'environnement virtuel." -ForegroundColor Red
     Write-Host "Erreur: $_" -ForegroundColor Red
@@ -53,6 +54,13 @@ if (-not $?) {
 # Installer les dépendances de test
 Write-Step "Installation des dépendances de test"
 $requirementsFile = Join-Path -Path $projectDir -ChildPath "config\requirements-test.txt"
+Write-Host "================================================================================"
+Write-Host "  Validation des versions des dépendances critiques"
+Write-Host "================================================================================"
+pip list | findstr "spacy thinc blis"
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Certaines dépendances critiques (spacy, thinc, blis) n'ont pas pu être vérifiées."
+}
 python -m pip install -r $requirementsFile
 if (-not $?) {
     Write-Host "Échec de l'installation des dépendances de test." -ForegroundColor Red

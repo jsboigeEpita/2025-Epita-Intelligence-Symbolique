@@ -7,9 +7,8 @@ from typing import Optional, List, Dict, Any
 
 # Importation de la configuration UI et des utilitaires nécessaires
 from . import config as ui_config
-from .cache_utils import load_from_cache 
-# get_full_text_for_source est la fonction principale à utiliser ici
-from .fetch_utils import get_full_text_for_source 
+from ..services.fetch_service import FetchService
+from .utils import reconstruct_url
 
 verification_logger = logging.getLogger("App.UI.VerificationUtils")
 if not verification_logger.handlers and not verification_logger.propagate:
@@ -29,10 +28,10 @@ if not verification_logger.handlers and not verification_logger.propagate:
 # La version HEAD de verify_extract_definitions reconstruit l'URL pour le cache_key.
 
 # La fonction reconstruct_url est maintenant importée depuis .utils
-from .utils import reconstruct_url
+# from .utils import reconstruct_url # Commenté pour suspicion de circularité/inutilisé
 
-def verify_extract_definitions(definitions_list: List[Dict[str, Any]], app_config: Optional[Dict[str, Any]] = None) -> str:
-    """Vérifie la présence des marqueurs de début et de fin pour chaque extrait défini. (Version HEAD)"""
+def verify_extract_definitions(definitions_list: List[Dict[str, Any]], fetch_service: FetchService) -> str:
+    """Vérifie la présence des marqueurs de début et de fin pour chaque extrait défini."""
     verification_logger.info("\n🔬 Lancement de la vérification des marqueurs d'extraits...")
     results = []
     total_checks = 0
@@ -45,12 +44,23 @@ def verify_extract_definitions(definitions_list: List[Dict[str, Any]], app_confi
         source_name = source_info.get("source_name", f"Source Inconnue #{source_idx+1}")
         verification_logger.info(f"\n--- Vérification Source: '{source_name}' ---")
         
-        # Utiliser get_full_text_for_source pour obtenir le texte
-        # Elle gère le cache, la reconstruction d'URL, et les différentes méthodes de fetch.
-        texte_brut_source = get_full_text_for_source(source_info, app_config=app_config)
-        
-        # La logique de reconstruction d'URL pour le cache_key est maintenant dans get_full_text_for_source
-        # et la logique de fetch aussi.
+        texte_brut_source = None
+        try:
+            reconstructed_url = reconstruct_url(source_info.get("schema"), source_info.get("host_parts", []), source_info.get("path"))
+            if not reconstructed_url:
+                raise ValueError("URL source invalide.")
+
+            source_type = source_info.get("source_type")
+            if source_type == "jina":
+                texte_brut_source = fetch_service.fetch_website_content(reconstructed_url)
+            elif source_type == "direct_download":
+                texte_brut_source = fetch_service.fetch_direct_text(reconstructed_url)
+            elif source_type == "tika":
+                texte_brut_source = fetch_service.fetch_document_content(source_url=reconstructed_url)
+            else:
+                raise ValueError(f"Type source inconnu '{source_type}'.")
+        except Exception as e:
+            verification_logger.error(f"   -> ❌ Erreur fetch pendant la vérification pour '{source_name}': {e}")
 
         if texte_brut_source is not None:
             verification_logger.info(f"   -> Texte complet récupéré (longueur: {len(texte_brut_source)}). Vérification des extraits...")
@@ -160,7 +170,7 @@ def verify_extract_definitions(definitions_list: List[Dict[str, Any]], app_confi
                     results.append(f"<li>{source_name} -> {extract_name}: <strong style='color:red;'>{', '.join(marker_errors)}</strong></li>")
                     total_errors += 1
                 else:
-                    verification_logger.info(f"      -> ✅ OK: Extrait '{extract_name}'")
+                    verification_logger.info(f"      -> [OK] OK: Extrait '{extract_name}'")
         else:
             num_extracts = len(source_info.get("extracts",[]))
             # source_type n'est plus directement utilisé ici pour la condition is_plaintext

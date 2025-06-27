@@ -1,6 +1,14 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # tests/unit/argumentation_analysis/pipelines/test_analysis_pipeline.py
-import pytest
 from unittest.mock import patch, MagicMock
+import pytest
+
 
 from argumentation_analysis.pipelines.analysis_pipeline import run_text_analysis_pipeline
 
@@ -17,12 +25,7 @@ def mock_perform_analysis():
         yield mock
 
 @pytest.fixture
-def mock_save_json_file(): # Renommé pour refléter l'intention potentielle de sauvegarde
-    # Ce mock ne sera pas utilisé si la sauvegarde n'est pas appelée directement par le pipeline
-    # mais il est là au cas où. Si la sauvegarde est gérée par l'appelant, ce mock est inutile ici.
-    with patch("project_core.utils.file_utils.save_json_file", MagicMock()) as mock:
-        yield mock
-
+ 
 @pytest.mark.asyncio
 async def test_run_text_analysis_pipeline_success(
     mock_initialize_services, mock_perform_analysis

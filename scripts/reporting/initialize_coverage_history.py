@@ -1,3 +1,4 @@
+import argumentation_analysis.core.environment
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -14,7 +15,7 @@ import json
 import datetime
 # import xml.etree.ElementTree as ET # Déplacé
 from pathlib import Path
-from project_core.dev_utils.coverage_utils import parse_coverage_xml # Ajout de l'import
+from argumentation_analysis.utils.dev_tools.coverage_utils import parse_coverage_xml # Ajout de l'import
 
 # def parse_coverage_xml(xml_path): # Fonction déplacée
 #     """

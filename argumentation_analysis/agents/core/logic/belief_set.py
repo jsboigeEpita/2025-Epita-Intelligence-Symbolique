@@ -56,6 +56,18 @@ class BeliefSet(ABC):
             "logic_type": self.logic_type,
             "content": self.content
         }
+
+    def is_empty(self) -> bool:
+        """
+        Vérifie si l'ensemble de croyances est sémantiquement vide.
+        """
+        if self._content is None:
+            return True
+        
+        # Supprimer les espaces et les accolades pour vérifier si le contenu est vide
+        #
+        # Exemples de contenu vide : "", "{}", "{ }", " { } "
+        return self._content.strip().replace("{", "").replace("}", "").strip() == ""
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> Optional['BeliefSet']:
@@ -70,11 +82,15 @@ class BeliefSet(ABC):
                  ou `ModalBeliefSet`, ou None si `logic_type` n'est pas supporté.
         :rtype: Optional[BeliefSet]
         """
+        if data is None:
+            return None
+            
         logic_type = data.get("logic_type", "").lower()
         content = data.get("content", "")
         
         if logic_type == "propositional":
-            return PropositionalBeliefSet(content)
+            propositions = data.get("propositions")
+            return PropositionalBeliefSet(content, propositions=propositions)
         elif logic_type == "first_order":
             return FirstOrderBeliefSet(content)
         elif logic_type == "modal":
@@ -88,6 +104,10 @@ class PropositionalBeliefSet(BeliefSet):
     Classe pour représenter un ensemble de croyances en logique propositionnelle.
     """
     
+    def __init__(self, content: str, propositions: Optional[list[str]] = None):
+        super().__init__(content)
+        self.propositions = propositions if propositions is not None else []
+
     @property
     def logic_type(self) -> str:
         """
@@ -98,12 +118,31 @@ class PropositionalBeliefSet(BeliefSet):
         """
         return "propositional"
 
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convertit l'instance en dictionnaire, en incluant les propositions.
+        """
+        data = super().to_dict()
+        data["propositions"] = self.propositions
+        return data
+
 
 class FirstOrderBeliefSet(BeliefSet):
     """
     Classe pour représenter un ensemble de croyances en logique du premier ordre.
+    Peut également contenir une référence à l'objet Java FolBeliefSet de Tweety.
     """
     
+    def __init__(self, content: str, java_object: Optional[Any] = None):
+        """
+        Initialise l'ensemble de croyances FOL.
+
+        :param content: Le contenu textuel, typiquement le JSON source.
+        :param java_object: L'objet org.tweetyproject.logics.fol.syntax.FolBeliefSet correspondant.
+        """
+        super().__init__(content)
+        self.java_object = java_object
+
     @property
     def logic_type(self) -> str:
         """
@@ -113,6 +152,16 @@ class FirstOrderBeliefSet(BeliefSet):
         :rtype: str
         """
         return "first_order"
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convertit l'instance en dictionnaire. Exclut l'objet Java.
+        """
+        return {
+            "logic_type": self.logic_type,
+            "content": self.content
+            # Note: self.java_belief_set is not serialized
+        }
 
 
 class ModalBeliefSet(BeliefSet):

@@ -1,110 +1,75 @@
-# Architecture Hiérarchique d'Orchestration
+# Architecture d'Orchestration Hiérarchique
 
-Ce répertoire contient l'implémentation de l'architecture hiérarchique à trois niveaux pour l'orchestration du système d'analyse argumentative.
+Ce répertoire contient l'implémentation d'une architecture d'orchestration à trois niveaux, conçue pour gérer des tâches d'analyse complexes en décomposant le problème. Cette approche favorise la séparation des préoccupations, la modularité et la scalabilité.
 
-## Vue d'ensemble
+## Les Trois Couches
 
-L'architecture hiérarchique organise le système d'analyse argumentative en trois niveaux distincts :
+L'architecture est divisée en trois couches de responsabilité distinctes :
 
-1. **Niveau Stratégique** : Responsable de la planification globale, de l'allocation des ressources et des décisions de haut niveau.
-2. **Niveau Tactique** : Responsable de la coordination des tâches, de la résolution des conflits et de la supervision des agents opérationnels.
-3. **Niveau Opérationnel** : Responsable de l'exécution des tâches spécifiques et de l'interaction directe avec les données et les outils d'analyse.
+1.  **Stratégique (`strategic/`)**
+    *   **Rôle** : Planification à long terme et définition des objectifs de haut niveau. Le `StrategicManager` interprète la requête initiale, la décompose en grands objectifs (ex: "Analyser la structure logique", "Évaluer la crédibilité des sources") et définit les contraintes globales.
+    *   **Focalisation** : Le "Quoi" et le "Pourquoi".
 
-Cette architecture permet une séparation claire des responsabilités, une meilleure gestion de la complexité et une orchestration efficace du processus d'analyse argumentative.
+2.  **Tactique (`tactical/`)**
+    *   **Rôle** : Coordination à moyen terme. Le `TacticalCoordinator` reçoit les objectifs stratégiques et les traduit en une séquence de tâches concrètes et ordonnancées. Il gère les dépendances entre les tâches, alloue les groupes d'agents nécessaires et supervise la progression.
+    *   **Focalisation** : Le "Comment" et le "Quand".
 
-## Structure du répertoire
+3.  **Opérationnel (`operational/`)**
+    *   **Rôle** : Exécution à court terme. L'`OperationalManager` reçoit des tâches individuelles de la couche tactique et les exécute. Il gère la communication directe avec les agents via des **Adaptateurs** (`adapters/`), qui traduisent une commande générique (ex: "analyse informelle") en l'appel spécifique attendu par l'agent correspondant.
+    *   **Focalisation** : Le "Faire".
 
-- [`interfaces/`](./interfaces/README.md) : Composants responsables de la communication entre les différents niveaux de l'architecture
-- [`strategic/`](./strategic/README.md) : Composants du niveau stratégique (planification, allocation des ressources)
-- [`tactical/`](./tactical/README.md) : Composants du niveau tactique (coordination, résolution de conflits)
-- [`operational/`](./operational/README.md) : Composants du niveau opérationnel (exécution des tâches)
-  - [`adapters/`](./operational/adapters/README.md) : Adaptateurs pour les agents spécialistes existants
-- [`templates/`](./templates/README.md) : Templates pour la création de nouveaux composants
+## Flux de Contrôle et de Données
 
-## Flux de travail typique
+Le système fonctionne sur un double flux : un flux de contrôle descendant (délégation) et un flux de feedback ascendant (résultats).
 
-Le flux de travail typique dans l'architecture hiérarchique suit ce schéma :
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Couche Stratégique
+    participant Couche Tactique
+    participant Couche Opérationnelle
+    participant Agent(s)
 
-1. Le niveau stratégique définit des objectifs et des plans globaux
-2. Ces objectifs sont transmis au niveau tactique via la `StrategicTacticalInterface`
-3. Le niveau tactique décompose ces objectifs en tâches spécifiques
-4. Ces tâches sont transmises au niveau opérationnel via la `TacticalOperationalInterface`
-5. Les agents opérationnels exécutent les tâches et génèrent des résultats
-6. Les résultats sont remontés au niveau tactique via la `TacticalOperationalInterface`
-7. Le niveau tactique agrège et analyse ces résultats
-8. Les résultats agrégés sont remontés au niveau stratégique via la `StrategicTacticalInterface`
-9. Le niveau stratégique évalue les résultats et ajuste la stratégie si nécessaire
+    Client->>Couche Stratégique: Requête d'analyse
+    activate Couche Stratégique
+    Couche Stratégique-->>Couche Tactique: Plan (Objectifs)
+    deactivate Couche Stratégique
+    activate Couche Tactique
+    Couche Tactique-->>Couche Opérationnelle: Tâche 1
+    deactivate Couche Tactique
+    activate Couche Opérationnelle
+    Couche Opérationnelle-->>Agent(s): Exécution via Adaptateur
+    activate Agent(s)
+    Agent(s)-->>Couche Opérationnelle: Résultat Tâche 1
+    deactivate Agent(s)
+    Couche Opérationnelle-->>Couche Tactique: Résultat consolidé 1
+    deactivate Couche Opérationnelle
+    activate Couche Tactique
 
-## Intégration avec les outils d'analyse rhétorique
+    Couche Tactique-->>Couche Opérationnelle: Tâche 2
+    deactivate Couche Tactique
+    activate Couche Opérationnelle
+    Couche Opérationnelle-->>Agent(s): Exécution via Adaptateur
+    activate Agent(s)
+    Agent(s)-->>Couche Opérationnelle: Résultat Tâche 2
+    deactivate Agent(s)
+    Couche Opérationnelle-->>Couche Tactique: Résultat consolidé 2
+    deactivate Couche Opérationnelle
+    activate Couche Tactique
 
-L'architecture hiérarchique s'intègre avec les outils d'analyse rhétorique via les adaptateurs du niveau opérationnel. Ces adaptateurs permettent d'utiliser :
-
-- Les [outils d'analyse rhétorique de base](../../agents/tools/analysis/README.md)
-- Les [outils d'analyse rhétorique améliorés](../../agents/tools/analysis/enhanced/README.md)
-- Les [nouveaux outils d'analyse rhétorique](../../agents/tools/analysis/new/README.md)
-
-Cette intégration permet d'exploiter pleinement les capacités d'analyse rhétorique dans le cadre d'une orchestration structurée et efficace.
-
-## Utilisation
-
-Pour utiliser l'architecture hiérarchique dans votre projet :
-
-```python
-# Importation des composants nécessaires
-from argumentation_analysis.orchestration.hierarchical.strategic.manager import StrategicManager
-from argumentation_analysis.orchestration.hierarchical.strategic.state import StrategicState
-from argumentation_analysis.orchestration.hierarchical.tactical.coordinator import TaskCoordinator
-from argumentation_analysis.orchestration.hierarchical.tactical.state import TacticalState
-from argumentation_analysis.orchestration.hierarchical.operational.manager import OperationalManager
-from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
-from argumentation_analysis.orchestration.hierarchical.interfaces.strategic_tactical import StrategicTacticalInterface
-from argumentation_analysis.orchestration.hierarchical.interfaces.tactical_operational import TacticalOperationalInterface
-
-# Création des états
-strategic_state = StrategicState()
-tactical_state = TacticalState()
-operational_state = OperationalState()
-
-# Création des interfaces
-st_interface = StrategicTacticalInterface(strategic_state, tactical_state)
-to_interface = TacticalOperationalInterface(tactical_state, operational_state)
-
-# Création des composants principaux
-strategic_manager = StrategicManager(strategic_state, st_interface)
-tactical_coordinator = TaskCoordinator(tactical_state, st_interface, to_interface)
-operational_manager = OperationalManager(operational_state, to_interface)
-
-# Définition d'un objectif global
-objective = {
-    "type": "analyze_argumentation",
-    "text": "texte_à_analyser.txt",
-    "focus": "fallacies",
-    "depth": "comprehensive"
-}
-
-# Exécution du processus d'analyse
-strategic_manager.set_objective(objective)
-strategic_manager.execute()
-
-# Récupération des résultats
-results = strategic_manager.get_final_results()
+    Couche Tactique-->>Couche Stratégique: Rapport de progression / Fin
+    deactivate Couche Tactique
+    activate Couche Stratégique
+    Couche Stratégique-->>Client: Réponse finale
+    deactivate Couche Stratégique
 ```
 
-## Développement
+-   **Flux descendant (Top-Down)** : La requête du client est progressivement décomposée à chaque niveau. La couche stratégique définit la vision, la tactique crée le plan d'action, et l'opérationnelle exécute chaque étape.
+-   **Flux ascendant (Bottom-Up)** : Les résultats produits par les agents sont collectés par la couche opérationnelle, agrégés et synthétisés par la couche tactique, et finalement utilisés par la couche stratégique pour construire la réponse finale et, si nécessaire, ajuster le plan.
 
-Pour étendre l'architecture hiérarchique :
+## Interfaces (`interfaces/`)
 
-1. **Ajouter un nouvel agent opérationnel** : Créez un adaptateur dans le répertoire `operational/adapters/` qui implémente l'interface `OperationalAgent`.
-2. **Ajouter une nouvelle stratégie** : Créez une nouvelle classe dans le répertoire `strategic/` qui étend les fonctionnalités existantes.
-3. **Ajouter un nouveau mécanisme de coordination** : Étendez les fonctionnalités du `TaskCoordinator` dans le répertoire `tactical/`.
+Pour garantir un couplage faible entre les couches, des interfaces formelles sont définies dans ce répertoire. Elles agissent comme des contrats, spécifiant les données et les méthodes que chaque couche expose à ses voisines.
 
-## Tests
-
-Des tests unitaires et d'intégration sont disponibles dans le répertoire `tests/` pour valider le fonctionnement de l'architecture hiérarchique.
-
-## Voir aussi
-
-- [Documentation du système d'orchestration](../README.md)
-- [Documentation des agents spécialistes](../../agents/README.md)
-- [Documentation des outils d'analyse rhétorique](../../agents/tools/analysis/README.md)
-- [Documentation de l'architecture globale](../../../docs/architecture/architecture_hierarchique.md)
+-   [`strategic_tactical.py`](./interfaces/strategic_tactical.py:0) : Définit la structure de communication entre la stratégie et la tactique.
+-   [`tactical_operational.py`](./interfaces/tactical_operational.py:0) : Définit la structure de communication entre la tactique et l'opérationnel.

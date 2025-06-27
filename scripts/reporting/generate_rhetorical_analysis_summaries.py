@@ -1,3 +1,4 @@
+import argumentation_analysis.core.environment
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -33,7 +34,7 @@ from datetime import datetime # Conservé pour le timestamp dans main (si encore
 # from argumentation_analysis.utils.data_generation import generate_sample_text # Déplacé
 # from argumentation_analysis.mocks.analysis_simulation import generate_mock_fallacy_detection, generate_mock_coherence_evaluation, generate_mock_rhetorical_analysis # Déplacé
 from argumentation_analysis.reporting.summary_generator import run_summary_generation_pipeline
-from project_core.utils.cli_utils import parse_summary_generation_arguments
+from argumentation_analysis.utils.core_utils.cli_utils import parse_summary_generation_arguments
 
 # Ajout du répertoire racine du projet au chemin pour permettre l'import des modules
 # IMPORTANT: S'assurer que ce script est exécuté depuis un endroit où ce chemin relatif est valide

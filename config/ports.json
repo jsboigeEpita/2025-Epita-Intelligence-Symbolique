@@ -1,0 +1,32 @@
+{
+  "description": "Configuration centralisée des ports pour l'application d'analyse argumentative",
+  "version": "1.0.0",
+  "ports": {
+    "backend": {
+      "primary": 5003,
+      "fallback": [5004, 5005, 5006, 5007, 5008, 5009, 5010, 5011, 5012, 5013, 5014, 5015, 5016, 5017, 5018, 5019, 5020],
+      "description": "API Backend Flask"
+    },
+    "frontend": {
+      "primary": 3000,
+      "fallback": [3001, 3002, 3003],
+      "description": "Interface React"
+    },
+    "test": {
+      "backend": 5010,
+      "frontend": 3010,
+      "description": "Ports dédiés aux tests"
+    }
+  },
+  "urls": {
+    "backend_base": "http://localhost:{{backend.primary}}",
+    "frontend_base": "http://localhost:{{frontend.primary}}",
+    "api_base": "http://localhost:{{backend.primary}}/api"
+  },
+  "environment_variables": {
+    "BACKEND_PORT": "{{backend.primary}}",
+    "FRONTEND_PORT": "{{frontend.primary}}",
+    "API_BASE_URL": "http://localhost:{{backend.primary}}",
+    "REACT_APP_API_URL": "http://localhost:{{backend.primary}}"
+  }
+}

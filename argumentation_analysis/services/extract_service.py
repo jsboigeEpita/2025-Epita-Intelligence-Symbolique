@@ -16,13 +16,13 @@ import os
 from pathlib import Path
 
 # Ajouter le répertoire parent au chemin de recherche des modules
-current_dir = Path(__file__).parent
-parent_dir = current_dir.parent
-if str(parent_dir) not in sys.path:
-    sys.path.insert(0, str(parent_dir))
+# current_dir = Path(__file__).parent # Commenté car start_api.py devrait gérer sys.path
+# parent_dir = current_dir.parent
+# if str(parent_dir) not in sys.path:
+#     sys.path.insert(0, str(parent_dir))
 
-from models.extract_result import ExtractResult
-from models.extract_definition import Extract, SourceDefinition, ExtractDefinitions
+# Correction des imports pour pointer vers le bon emplacement des modèles
+from argumentation_analysis.models.extract_definition import ExtractResult, Extract, SourceDefinition, ExtractDefinitions
 
 # Configuration du logging
 logger = logging.getLogger("Services.ExtractService")
@@ -79,7 +79,7 @@ class ExtractService:
             try:
                 # Essayer d'abord avec le marqueur tel quel
                 found_start = text.index(start_marker)
-                start_index = found_start + len(start_marker)
+                start_index = found_start + len(start_marker) # Exclure le marqueur de début
                 start_found = True
             except ValueError:
                 # Si échec et template disponible, essayer avec le template
@@ -88,7 +88,7 @@ class ExtractService:
                         # Remplacer {0} dans le template par le marqueur original
                         complete_start_marker = template_start.replace("{0}", start_marker)
                         found_start = text.index(complete_start_marker)
-                        start_index = found_start + len(complete_start_marker)
+                        start_index = found_start + len(complete_start_marker) # Exclure le marqueur de début avec template
                         start_found = True
                     except ValueError:
                         pass
@@ -97,7 +97,7 @@ class ExtractService:
         if end_marker:
             try:
                 found_end = text.index(end_marker, start_index)
-                end_index = found_end
+                end_index = found_end # Exclure le marqueur de fin
                 end_found = True
             except ValueError:
                 pass

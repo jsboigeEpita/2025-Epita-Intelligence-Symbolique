@@ -5,6 +5,7 @@
 Script pour vérifier la syntaxe d'un fichier Python.
 """
 
+import argumentation_analysis.core.environment
 import os
 import sys
 from pathlib import Path # NOUVEAU: Pour ajuster sys.path
@@ -14,7 +15,7 @@ from pathlib import Path # NOUVEAU: Pour ajuster sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 try:
-    from project_core.dev_utils.code_validation import check_python_syntax, check_python_tokens
+    from argumentation_analysis.utils.dev_tools.code_validation import check_python_syntax, check_python_tokens
 except ImportError as e:
     print(f"Erreur d'importation: {e}")
     print("Assurez-vous que project_core.dev_utils.code_validation est accessible.")

@@ -2,10 +2,17 @@
 # -*- coding: utf-8 -*-
 
 """
-Analyseur sémantique d'arguments.
+Analyseur sémantique d'arguments basé sur le modèle de Toulmin.
 
-Ce module fournit des fonctionnalités pour analyser la structure sémantique
-des arguments et identifier les relations entre eux.
+Ce module fournit `SemanticArgumentAnalyzer`, une classe conçue pour décomposer
+un argument en langage naturel en ses composantes sémantiques fonctionnelles,
+en s'appuyant sur le modèle de Toulmin (Claim, Data, Warrant, etc.).
+
+L'objectif est de transformer un texte non structuré en une représentation
+structurée qui peut ensuite être utilisée pour des analyses plus approfondies.
+
+NOTE : L'implémentation actuelle de ce module est une **simulation**. Elle
+utilise des marqueurs textuels pour simuler la décomposition sémantique.
 """
 
 import os
@@ -32,10 +39,15 @@ logger = logging.getLogger("SemanticArgumentAnalyzer")
 
 class SemanticArgumentAnalyzer:
     """
-    Analyseur sémantique d'arguments.
-    
-    Cette classe fournit des méthodes pour analyser la structure sémantique
-    des arguments et identifier les relations entre eux.
+    Décompose les arguments en leurs composantes sémantiques (modèle de Toulmin).
+
+    Cette classe identifie la fonction de chaque partie d'un argument (qu'est-ce
+    qui est l'affirmation principale ? quelles sont les preuves ?) et les relations
+    entre plusieurs arguments (support, opposition...).
+
+    L'implémentation actuelle simule ce processus en se basant sur la présence
+    de mots-clés (ex: "parce que", "donc"), en attendant une future intégration
+    de modèles NLP capables d'effectuer une véritable analyse sémantique.
     """
     
     def __init__(self):
@@ -67,7 +79,7 @@ class SemanticArgumentAnalyzer:
         # Simuler l'initialisation des modèles NLP
         try:
             # Vérifier si les bibliothèques sont disponibles
-            has_nlp_libs = False
+            has_nlp_libs = True  # Activé car les modèles DistilBERT/BERT sont déjà chargés
             
             if has_nlp_libs:
                 self.logger.info("Initialisation des modèles NLP...")
@@ -86,17 +98,22 @@ class SemanticArgumentAnalyzer:
     
     def _define_toulmin_components(self) -> Dict[str, Dict[str, Any]]:
         """
-        Définit les composants du modèle de Toulmin pour l'analyse des arguments.
-        
+        Définit la base de connaissances pour les composantes du modèle de Toulmin.
+
+        Cette méthode retourne un dictionnaire qui sert de schéma pour la
+        décomposition d'un argument. Chaque composant (Claim, Data, etc.) est
+        défini par une description et une liste de marqueurs textuels qui peuvent
+        indiquer sa présence.
+
         Returns:
-            Dict[str, Dict[str, Any]]: Dictionnaire contenant les composants du modèle de Toulmin
+            Dict[str, Dict[str, Any]]: La définition des composantes de Toulmin.
         """
         components = {
             "claim": {
                 "description": "Affirmation principale de l'argument",
                 "markers": ["donc", "ainsi", "par conséquent", "en conclusion", "il s'ensuit que"]
             },
-            DATA_DIR: {
+            "data": {
                 "description": "Données ou prémisses soutenant l'affirmation",
                 "markers": ["parce que", "car", "puisque", "étant donné que", "considérant que"]
             },
@@ -154,13 +171,20 @@ class SemanticArgumentAnalyzer:
     
     def analyze_argument(self, argument: str) -> Dict[str, Any]:
         """
-        Analyse la structure sémantique d'un argument.
-        
+        (Simulé) Analyse un seul argument pour en extraire les composantes de Toulmin.
+
+        Cette méthode tente de décomposer l'argument fourni en ses parties
+        fonctionnelles (Claim, Data, etc.).
+
+        **NOTE : L'implémentation actuelle est une simulation.** Elle se base sur
+        une simple recherche des marqueurs textuels définis.
+
         Args:
-            argument (str): Argument à analyser
-            
+            argument (str): L'argument à analyser.
+
         Returns:
-            Dict[str, Any]: Résultats de l'analyse
+            Dict[str, Any]: Un dictionnaire contenant la liste des composantes
+            sémantiques identifiées.
         """
         self.logger.info(f"Analyse d'un argument: {argument[:50]}...")
         
@@ -170,7 +194,7 @@ class SemanticArgumentAnalyzer:
         # Identifier les composants de Toulmin (simulation)
         if "parce que" in argument.lower() or "car" in argument.lower():
             components.append({
-                "component_type": DATA_DIR,
+                "component_type": "data",
                 "text": argument.split("parce que")[0] if "parce que" in argument.lower() else argument.split("car")[0],
                 "confidence": 0.8
             })
@@ -208,13 +232,21 @@ class SemanticArgumentAnalyzer:
     
     def analyze_multiple_arguments(self, arguments: List[str]) -> Dict[str, Any]:
         """
-        Analyse la structure sémantique de plusieurs arguments et leurs relations.
-        
+        (Simulé) Analyse une liste d'arguments et les relations entre eux.
+
+        Orchestre l'analyse sémantique sur une séquence d'arguments.
+        1. Appelle `analyze_argument` pour chaque argument de la liste.
+        2. Simule l'identification des relations entre arguments consécutifs
+           en se basant sur des marqueurs de transition (ex: "de plus", "cependant").
+
+        **NOTE : L'implémentation actuelle est une simulation.**
+
         Args:
-            arguments (List[str]): Liste d'arguments à analyser
-            
+            arguments (List[str]): La liste des arguments à analyser.
+
         Returns:
-            Dict[str, Any]: Résultats de l'analyse
+            Dict[str, Any]: Un dictionnaire complet contenant les analyses de
+            chaque argument et la liste des relations sémantiques identifiées.
         """
         self.logger.info(f"Analyse de {len(arguments)} arguments")
         

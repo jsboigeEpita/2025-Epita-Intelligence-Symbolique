@@ -1,1 +1,1 @@
-"""Init file for project_core pipelines test subpackage."""
+"""Tests module"""

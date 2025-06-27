@@ -3,28 +3,43 @@ import jpype.imports
 from jpype.types import JString
 import os
 
-# Définir le chemin vers les JARs de Tweety (à adapter si nécessaire)
-# Cela suppose que les JARs sont dans un sous-répertoire 'libs' du répertoire parent du projet
-# ou que le CLASSPATH est déjà configuré.
-# Pour cet exemple, nous allons supposer que le CLASSPATH est configuré
-# ou que les JARs sont accessibles via les options JVM.
-def test_load_theory():
+# Définition des chemins en dehors de la fonction de test
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+LIBS_DIR = os.path.join(PROJECT_ROOT, "libs")
+NATIVE_LIBS_DIR = os.path.join(LIBS_DIR, "native")
+
+# Inclure tous les JARs du répertoire libs, sauf celui sans "with-dependencies" s'il existe
+all_jars_in_libs = [os.path.join(LIBS_DIR, f) for f in os.listdir(LIBS_DIR) if f.endswith(".jar")]
+TWEETY_JARS = [jar for jar in all_jars_in_libs if "tweety-full-1.28.jar" != os.path.basename(jar) or "with-dependencies" in os.path.basename(jar)]
+jar_simple = os.path.join(LIBS_DIR, "org.tweetyproject.tweety-full-1.28.jar")
+jar_with_deps = os.path.join(LIBS_DIR, "org.tweetyproject.tweety-full-1.28-with-dependencies.jar")
+
+if jar_simple in TWEETY_JARS and jar_with_deps in TWEETY_JARS:
+    TWEETY_JARS.remove(jar_simple)
+    print(f"Removed {jar_simple} to avoid conflict with {jar_with_deps}")
+
+print(f"Dynamically included JARS for test_load_theory: {TWEETY_JARS}")
+
+# Vérifier l'existence de ces JARs spécifiques
+for jar_path_check in TWEETY_JARS:
+    if not os.path.exists(jar_path_check):
+        raise FileNotFoundError(f"JAR file {jar_path_check} not found. Please run download_test_jars.py or ensure correct paths.")
+
+def test_load_theory(jvm_session):
+    """
+    Teste le chargement d'une théorie propositionnelle à partir d'un fichier,
+    en utilisant une fixture de session pour gérer la JVM.
+    """
     try:
         print("Démarrage du test de chargement de théorie...")
 
-        # Démarrer la JVM si ce n'est pas déjà fait
-        # L'initialisation de la JVM est maintenant gérée globalement par conftest.py
-        if not jpype.isJVMStarted():
-            # Cette condition ne devrait plus être vraie si conftest.py fonctionne correctement.
-            print("ERREUR CRITIQUE: La JVM n'a pas été démarrée par conftest.py comme attendu dans test_load_theory.")
-            # Lever une exception pour que le test échoue clairement si la JVM n'est pas prête.
-            raise RuntimeError("JVM non démarrée par conftest.py, test_load_theory ne peut pas continuer.")
-        # Importer les classes Java nécessaires de Tweety
-        # Assurez-vous que les noms de package sont corrects pour votre version de Tweety
-        from org.tweetyproject.logics.pl.syntax import PlBeliefSet
-        from org.tweetyproject.logics.pl.parser import PlParser
+        # La fixture jvm_session s'est déjà occupée de démarrer la JVM.
+        assert jpype.isJVMStarted(), "La JVM devrait être démarrée par la fixture jvm_session"
 
-        print("JVM démarrée et classes Tweety importées.")
+        PlBeliefSet = jpype.JClass("net.sf.tweety.logics.pl.syntax.PlBeliefSet")
+        PlParser = jpype.JClass("net.sf.tweety.logics.pl.parser.PlParser")
+
+        print("JVM démarrée et classes Tweety chargées via JClass (espérons-le).")
 
         # Chemin vers le fichier de théorie
         theory_file_path = os.path.join(os.path.dirname(__file__), "sample_theory.lp")
@@ -68,27 +83,9 @@ def test_load_theory():
 
         print("Test de chargement de théorie RÉUSSI.")
 
-    except Exception as e_main: # Renommé pour clarté
-        print(f"Test de chargement de théorie ÉCHOUÉ : {e_main}")
+    except Exception as e:
+        print(f"Test de chargement de théorie ÉCHOUÉ : {e}")
         import traceback
         traceback.print_exc()
-        # L'exception sera levée dans le finally si elle existe
-        
-    finally:
-        if jpype.isJVMStarted():
-            try:
-                System = jpype.JClass("java.lang.System")
-                actual_classpath = System.getProperty("java.class.path")
-                print(f"DEBUG_FINALLY_CLASSPATH (test_load_theory): {actual_classpath}")
-            except Exception as e_jvm_debug_finally:
-                print(f"DEBUG_FINALLY_CLASSPATH_ERROR (test_load_theory): {e_jvm_debug_finally}")
-        
-        # Optionnel: arrêter la JVM si ce script est le seul utilisateur
-        # if jpype.isJVMStarted():
-        #     jpype.shutdownJVM()
-        #     print("JVM arrêtée.")
-        
-        # Relancer l'exception originale si elle a eu lieu pour que le test échoue
-        if 'e_main' in locals() and isinstance(e_main, Exception):
-            raise e_main # s'assure que le test échoue si une exception a été attrapée
-        pass
+        #pytest se chargera de lever l'exception
+        raise e

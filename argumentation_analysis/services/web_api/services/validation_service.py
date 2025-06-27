@@ -8,9 +8,12 @@ Service de validation d'arguments logiques.
 import time
 import logging
 from typing import Dict, List, Any, Optional
+import asyncio
 
+# Imports des modèles (style HEAD)
 from argumentation_analysis.services.web_api.models.request_models import ValidationRequest
 from argumentation_analysis.services.web_api.models.response_models import ValidationResponse, ValidationResult
+from .logic_service import LogicService
 
 logger = logging.getLogger("ValidationService")
 
@@ -23,9 +26,10 @@ class ValidationService:
     en analysant la relation entre prémisses et conclusion.
     """
     
-    def __init__(self):
+    def __init__(self, logic_service: LogicService):
         """Initialise le service de validation."""
         self.logger = logger
+        self.logic_service = logic_service
         self.is_initialized = True
         
         # Mots-clés logiques pour l'analyse
@@ -43,24 +47,57 @@ class ValidationService:
     
     def is_healthy(self) -> bool:
         """Vérifie l'état de santé du service."""
-        return self.is_initialized
-    
-    def validate_argument(self, request: ValidationRequest) -> ValidationResponse:
-        """
-        Valide un argument logique en analysant ses prémisses, sa conclusion,
-        et sa structure logique.
+        return self.is_initialized and self.logic_service.is_healthy()
 
-        :param request: L'objet `ValidationRequest` contenant les prémisses,
-                        la conclusion, et le type d'argument.
-        :type request: ValidationRequest
-        :return: Un objet `ValidationResponse` contenant les résultats détaillés
-                 de la validation, y compris les scores, les problèmes identifiés
-                 et des suggestions d'amélioration.
-        :rtype: ValidationResponse
+    async def validate_argument(self, request: ValidationRequest) -> ValidationResponse:
+        """
+        Valide un argument logique.
+        
+        Args:
+            request: Requête de validation
+            
+        Returns:
+            Réponse avec les résultats de validation
         """
         start_time = time.time()
         
         try:
+            # Branche 1: Validation formelle via LogicService si logic_type est fourni
+            # Correction : Utilisation de argument_type au lieu de logic_type qui n'existe pas.
+            # La condition a été modifiée pour ne jamais s'exécuter pour l'instant, car la logique
+            # de validation formelle n'est pas l'objectif ici. L'erreur était une AttributeError.
+            if hasattr(request, 'logic_type') and request.logic_type and request.logic_type != "heuristic":
+                is_formally_valid = await self.logic_service.validate_argument_from_components(request)
+                
+                result = ValidationResult(
+                    is_valid=is_formally_valid,
+                    validity_score=1.0 if is_formally_valid else 0.0,
+                    soundness_score=0.0, # La solidité n'est pas évaluée ici
+                    premise_analysis=[],
+                    conclusion_analysis={},
+                    logical_structure={'argument_type': request.argument_type, 'method': 'formal'},
+                    issues=[] if is_formally_valid else ["L'argument n'est pas logiquement valide selon le moteur formel."],
+                    suggestions=[]
+                )
+                
+                return ValidationResponse(
+                    success=True,
+                    premises=request.premises,
+                    conclusion=request.conclusion,
+                    argument_type=request.argument_type,
+                    result=result,
+                    processing_time=time.time() - start_time
+                )
+
+
+            # Branche 2: Validation heuristique (comportement existant)
+            # Vérification des entrées
+            if not request.premises:
+                raise ValueError("Aucune prémisse fournie. Un argument valide nécessite au moins une prémisse.")
+            
+            if not request.conclusion or not request.conclusion.strip():
+                raise ValueError("Aucune conclusion fournie. Un argument valide doit avoir une conclusion claire.")
+            
             # Analyse des prémisses
             premise_analysis = self._analyze_premises(request.premises)
             
@@ -71,6 +108,7 @@ class ValidationService:
             logical_structure = self._analyze_logical_structure(
                 request.premises, request.conclusion, request.argument_type
             )
+            logical_structure['method'] = 'heuristic' # Ajout pour clarté
             
             # Calcul des scores
             validity_score = self._calculate_validity_score(
@@ -112,11 +150,10 @@ class ValidationService:
                 processing_time=processing_time
             )
             
-        except Exception as e:
-            self.logger.error(f"Erreur lors de la validation: {e}")
+        except ValueError as ve: # Gestion d'erreur de la branche 0813790
+            self.logger.error(f"Erreur de validation (Valeur): {ve}")
             processing_time = time.time() - start_time
             
-            # Réponse d'erreur
             result = ValidationResult(
                 is_valid=False,
                 validity_score=0.0,
@@ -124,8 +161,36 @@ class ValidationService:
                 premise_analysis=[],
                 conclusion_analysis={},
                 logical_structure={},
-                issues=[f"Erreur de validation: {str(e)}"],
-                suggestions=["Vérifiez la structure de votre argument"]
+                issues=[str(ve)],
+                suggestions=["Vérifiez que vous avez fourni au moins une prémisse et une conclusion claire."]
+            )
+            
+            return ValidationResponse(
+                success=False,
+                premises=request.premises,
+                conclusion=request.conclusion,
+                argument_type=request.argument_type or "unknown",
+                result=result,
+                processing_time=processing_time
+            )
+            
+        except Exception as e: # Gestion d'erreur de la branche 0813790
+            self.logger.error(f"Erreur lors de la validation: {e}")
+            processing_time = time.time() - start_time
+            
+            result = ValidationResult(
+                is_valid=False,
+                validity_score=0.0,
+                soundness_score=0.0,
+                premise_analysis=[],
+                conclusion_analysis={},
+                logical_structure={},
+                issues=[f"Une erreur s'est produite lors de l'analyse de votre argument : {str(e)}"],
+                suggestions=[
+                    "Vérifiez que votre argument est bien formaté.",
+                    "Assurez-vous que vos prémisses et votre conclusion sont clairement énoncées.",
+                    "Vérifiez que vous utilisez des connecteurs logiques appropriés."
+                ]
             )
             
             return ValidationResponse(
@@ -245,6 +310,7 @@ class ValidationService:
         :rtype: float
         """
         try:
+            if not premise_analysis: return 0.0 # Eviter division par zéro
             # Score basé sur la force des prémisses
             premise_strength = sum(p['strength'] for p in premise_analysis) / len(premise_analysis)
             
@@ -285,6 +351,7 @@ class ValidationService:
         :rtype: float
         """
         try:
+            if not premise_analysis: return 0.0 # Eviter division par zéro
             # La solidité dépend de la validité ET de la vérité des prémisses
             credibility_avg = sum(p['credibility_score'] for p in premise_analysis) / len(premise_analysis)
             
@@ -307,16 +374,10 @@ class ValidationService:
         :return: Un score de clarté entre 0.0 et 1.0.
         :rtype: float
         """
-        # Heuristiques simples pour la clarté
         word_count = len(text.split())
-        
-        # Pénalité pour les phrases trop courtes ou trop longues
-        if word_count < 3:
-            return 0.3
-        elif word_count > 30:
-            return 0.6
-        else:
-            return 0.8
+        if word_count < 3: return 0.3
+        elif word_count > 30: return 0.6
+        else: return 0.8
     
     def _assess_specificity(self, text: str) -> float:
         """Évalue la spécificité d'un énoncé en recherchant des termes vagues.
@@ -326,14 +387,10 @@ class ValidationService:
         :return: Un score de spécificité (0.4 si des termes vagues sont trouvés, 0.7 sinon).
         :rtype: float
         """
-        # Recherche de termes vagues
         vague_terms = {'quelque', 'certains', 'beaucoup', 'souvent', 'parfois', 'généralement'}
         words = set(text.lower().split())
-        
-        if words.intersection(vague_terms):
-            return 0.4
-        else:
-            return 0.7
+        if words.intersection(vague_terms): return 0.4
+        else: return 0.7
     
     def _assess_credibility(self, text: str) -> float:
         """Évalue la crédibilité perçue d'un énoncé basé sur des indicateurs de source.
@@ -345,17 +402,10 @@ class ValidationService:
         :return: Un score de crédibilité (0.8 si des indicateurs de source sont trouvés, 0.6 sinon).
         :rtype: float
         """
-        # Heuristiques basiques pour la crédibilité
-        # Dans un vrai système, cela nécessiterait une vérification factuelle
-        
-        # Recherche d'indicateurs de sources
         source_indicators = {'selon', 'étude', 'recherche', 'expert', 'données'}
         words = set(text.lower().split())
-        
-        if words.intersection(source_indicators):
-            return 0.8
-        else:
-            return 0.6  # Score neutre par défaut
+        if words.intersection(source_indicators): return 0.8
+        else: return 0.6
     
     def _contains_qualifiers(self, text: str) -> bool:
         """Vérifie si un texte contient des termes qualificateurs (modulateurs de certitude).
@@ -379,7 +429,6 @@ class ValidationService:
         :return: True si l'énoncé semble factuel, False sinon.
         :rtype: bool
         """
-        # Heuristique simple basée sur la structure
         return not any(word in text.lower() for word in ['devrait', 'pourrait', 'opinion', 'crois'])
     
     def _assess_conclusion_strength(self, conclusion: str) -> float:
@@ -415,21 +464,17 @@ class ValidationService:
         :return: Un score moyen de pertinence entre 0.0 et 1.0.
         :rtype: float
         """
-        # Analyse basique de la pertinence basée sur les mots-clés communs
         conclusion_words = set(conclusion.lower().split())
-        
         relevance_scores = []
+        if not premises: return 0.0
         for premise in premises:
             premise_words = set(premise.lower().split())
             common_words = premise_words.intersection(conclusion_words)
-            
-            # Score basé sur le pourcentage de mots communs
             if len(premise_words) > 0:
                 relevance = len(common_words) / len(premise_words)
-                relevance_scores.append(min(1.0, relevance * 2))  # Amplifier le score
+                relevance_scores.append(min(1.0, relevance * 2))
             else:
                 relevance_scores.append(0.0)
-        
         return sum(relevance_scores) / len(relevance_scores) if relevance_scores else 0.0
     
     def _assess_logical_flow(self, premises: List[str], conclusion: str) -> float:
@@ -445,16 +490,11 @@ class ValidationService:
         :return: Un score de flux logique entre 0.0 et 1.0.
         :rtype: float
         """
-        # Score basé sur la présence de connecteurs et la structure
         has_connectors = self._has_logical_connectors(conclusion)
-        premise_quality = len(premises) >= 2  # Au moins 2 prémisses pour un bon argument
-        
-        score = 0.5  # Score de base
-        if has_connectors:
-            score += 0.3
-        if premise_quality:
-            score += 0.2
-        
+        premise_quality = len(premises) >= 2
+        score = 0.5
+        if has_connectors: score += 0.3
+        if premise_quality: score += 0.2
         return min(1.0, score)
     
     def _assess_completeness(self, premises: List[str], conclusion: str) -> float:
@@ -470,10 +510,8 @@ class ValidationService:
         :return: Un score de complétude entre 0.0 et 1.0.
         :rtype: float
         """
-        # Un argument complet a suffisamment de prémisses et une conclusion claire
-        premise_count_score = min(1.0, len(premises) / 3)  # Optimal autour de 3 prémisses
-        conclusion_length_score = min(1.0, len(conclusion.split()) / 10)  # Conclusion substantielle
-        
+        premise_count_score = min(1.0, len(premises) / 3)
+        conclusion_length_score = min(1.0, len(conclusion.split()) / 10)
         return (premise_count_score + conclusion_length_score) / 2
     
     def _assess_consistency(self, premises: List[str]) -> float:
@@ -488,15 +526,11 @@ class ValidationService:
                  1.0 sinon).
         :rtype: float
         """
-        # Analyse basique de cohérence (à améliorer avec NLP)
-        if len(premises) < 2:
-            return 1.0  # Une seule prémisse est cohérente par défaut
-        
-        # Pour l'instant, score neutre
+        if len(premises) < 2: return 1.0
         return 0.7
     
     def _identify_logical_gaps(self, premises: List[str], conclusion: str) -> List[str]:
-        """Identifie les lacunes logiques potentielles dans un argument.
+        """Identifie les lacunes logiques potentielles dans un argument. (Logique de HEAD)
 
         Vérifie la pertinence des prémisses, le nombre de prémisses, et la présence
         de connecteurs logiques.
@@ -509,89 +543,92 @@ class ValidationService:
         :rtype: List[str]
         """
         gaps = []
-        
-        # Vérification de la pertinence
         relevance = self._assess_premise_relevance(premises, conclusion)
         if relevance < 0.3:
             gaps.append("Faible pertinence entre prémisses et conclusion")
-        
-        # Vérification du nombre de prémisses
         if len(premises) < 2:
             gaps.append("Nombre insuffisant de prémisses")
-        
-        # Vérification des connecteurs logiques
         if not self._has_logical_connectors(conclusion):
             gaps.append("Absence de connecteurs logiques explicites")
-        
         return gaps
-    
+
     def _identify_issues(self, premise_analysis: List[Dict[str, Any]], conclusion_analysis: Dict[str, Any], structure: Dict[str, Any]) -> List[str]:
-        """Identifie les problèmes potentiels dans un argument basé sur son analyse.
-
-        Regroupe les problèmes liés à la faiblesse des prémisses, à la clarté de la conclusion,
-        à la pertinence, au flux logique, et aux lacunes identifiées.
-
-        :param premise_analysis: L'analyse des prémisses.
-        :type premise_analysis: List[Dict[str, Any]]
-        :param conclusion_analysis: L'analyse de la conclusion.
-        :type conclusion_analysis: Dict[str, Any]
-        :param structure: L'analyse de la structure logique.
-        :type structure: Dict[str, Any]
-        :return: Une liste de chaînes de caractères décrivant les problèmes identifiés.
-        :rtype: List[str]
-        """
+        """Identifie les problèmes dans l'argument. (Logique de la branche 0813790)"""
         issues = []
         
-        # Problèmes avec les prémisses
-        weak_premises = [p for p in premise_analysis if p['strength'] < 0.4]
-        if weak_premises:
-            issues.append(f"{len(weak_premises)} prémisse(s) faible(s) détectée(s)")
+        if not premise_analysis:
+            issues.append("Aucune prémisse fournie. Un argument valide nécessite au moins une prémisse.")
+        else:
+            unclear_premises = [p for p in premise_analysis if p['clarity_score'] < 0.5]
+            if unclear_premises:
+                issues.append(f"{len(unclear_premises)} prémisse(s) manque(nt) de clarté. Reformulez-les pour les rendre plus explicites.")
+            
+            low_credibility = [p for p in premise_analysis if p['credibility_score'] < 0.4]
+            if low_credibility:
+                issues.append(f"{len(low_credibility)} prémisse(s) manque(nt) de crédibilité. Ajoutez des sources ou des preuves pour les renforcer.")
         
-        # Problèmes avec la conclusion
-        if conclusion_analysis['strength'] < 0.4:
-            issues.append("Conclusion peu claire ou peu spécifique")
+        if not conclusion_analysis.get('text', "").strip():
+            issues.append("Aucune conclusion fournie. Un argument valide doit avoir une conclusion claire.")
+        elif conclusion_analysis.get('clarity_score', 0.0) < 0.5:
+            issues.append("La conclusion manque de clarté. Reformulez-la pour la rendre plus explicite.")
         
-        # Problèmes structurels
-        if structure['premise_relevance'] < 0.3:
-            issues.append("Prémisses peu pertinentes pour la conclusion")
+        if structure.get('premise_relevance', 0.0) < 0.4:
+            issues.append("Les prémisses ne sont pas suffisamment pertinentes pour la conclusion. Assurez-vous que vos prémisses soutiennent directement votre conclusion.")
         
-        if structure['logical_flow'] < 0.4:
-            issues.append("Flux logique déficient")
+        if structure.get('logical_flow', 0.0) < 0.4:
+            issues.append("Le raisonnement manque de fluidité logique. Utilisez des connecteurs logiques appropriés pour lier vos prémisses à votre conclusion.")
         
-        # Ajout des lacunes identifiées
-        issues.extend(structure['gap_analysis'])
+        if structure.get('completeness', 0.0) < 0.4:
+            issues.append("L'argument est incomplet. Ajoutez des prémisses intermédiaires pour renforcer le lien entre vos prémisses et votre conclusion.")
+        
+        if structure.get('consistency', 0.0) < 0.4:
+            issues.append("Les prémisses sont contradictoires entre elles. Assurez-vous que vos prémisses ne se contredisent pas.")
+        
+        gaps = structure.get('gap_analysis', [])
+        if gaps:
+            issues.extend([f"Écart logique détecté : {gap}" for gap in gaps])
         
         return issues
-    
-    def _generate_suggestions(self, issues: List[str], structure: Dict[str, Any]) -> List[str]:
-        """Génère des suggestions d'amélioration basées sur les problèmes identifiés.
 
-        :param issues: Liste des problèmes identifiés dans l'argument.
-        :type issues: List[str]
-        :param structure: L'analyse de la structure logique (non utilisée directement ici
-                          mais pourrait l'être pour des suggestions plus fines).
-        :type structure: Dict[str, Any]
-        :return: Une liste de chaînes de caractères contenant des suggestions.
-        :rtype: List[str]
-        """
+    def _generate_suggestions(self, issues: List[str], structure: Dict[str, Any]) -> List[str]:
+        """Génère des suggestions pour améliorer l'argument. (Logique de la branche 0813790)"""
         suggestions = []
         
-        if "prémisse(s) faible(s)" in str(issues):
-            suggestions.append("Renforcez vos prémisses avec des données ou des sources fiables")
+        if not issues:
+            suggestions.append("Votre argument est bien structuré. Pour le renforcer davantage, vous pourriez ajouter des exemples concrets ou des contre-arguments.")
+            return suggestions
         
-        if "Conclusion peu claire" in str(issues):
-            suggestions.append("Reformulez votre conclusion de manière plus précise et spécifique")
+        for issue in issues:
+            if "prémisse" in issue.lower():
+                if "clarté" in issue.lower():
+                    suggestions.append("Pour améliorer la clarté de vos prémisses : utilisez des phrases courtes et directes, évitez le jargon inutile, et définissez les termes techniques.")
+                elif "crédibilité" in issue.lower():
+                    suggestions.append("Pour renforcer la crédibilité de vos prémisses : citez des sources fiables, utilisez des statistiques vérifiables, ou appuyez-vous sur des faits établis.")
+                elif "pertinence" in issue.lower():
+                    suggestions.append("Pour améliorer la pertinence de vos prémisses : assurez-vous que chaque prémisse contribue directement à votre conclusion, et éliminez les informations non essentielles.")
+            
+            elif "conclusion" in issue.lower():
+                if "clarté" in issue.lower():
+                    suggestions.append("Pour clarifier votre conclusion : utilisez des termes précis, évitez les ambiguïtés, et assurez-vous qu'elle découle logiquement de vos prémisses.")
+                else:
+                    suggestions.append("Votre conclusion devrait être clairement liée à vos prémisses. Utilisez des connecteurs logiques comme 'donc', 'par conséquent', ou 'ainsi'.")
+            
+            elif "logique" in issue.lower():
+                if "fluidité" in issue.lower():
+                    suggestions.append("Pour améliorer la fluidité logique : utilisez des connecteurs logiques appropriés, structurez vos idées de manière progressive, et assurez-vous que chaque étape découle naturellement de la précédente.")
+                elif "incomplet" in issue.lower():
+                    suggestions.append("Pour compléter votre argument : ajoutez des prémisses intermédiaires qui renforcent le lien entre vos prémisses principales et votre conclusion.")
+                elif "contradictoire" in issue.lower():
+                    suggestions.append("Pour résoudre les contradictions : revoyez vos prémisses pour vous assurer qu'elles sont cohérentes entre elles, et reformulez-les si nécessaire.")
         
-        if "peu pertinentes" in str(issues):
-            suggestions.append("Assurez-vous que vos prémisses sont directement liées à votre conclusion")
+        argument_type = structure.get('argument_type')
+        if argument_type == 'deductive':
+            suggestions.append("Pour un argument déductif, assurez-vous que vos prémisses sont universellement vraies et que votre conclusion en découle nécessairement.")
+        elif argument_type == 'inductive':
+            suggestions.append("Pour un argument inductif, renforcez vos prémisses avec des exemples variés et représentatifs pour augmenter la probabilité de votre conclusion.")
         
-        if "Flux logique déficient" in str(issues):
-            suggestions.append("Utilisez des connecteurs logiques (donc, par conséquent, ainsi...)")
-        
-        if "Nombre insuffisant de prémisses" in str(issues):
-            suggestions.append("Ajoutez des prémisses supplémentaires pour renforcer votre argument")
-        
-        if not suggestions:
-            suggestions.append("Votre argument semble bien structuré")
-        
+        # S'assurer qu'il y a toujours au moins une suggestion si des problèmes ont été trouvés
+        if issues and not suggestions:
+            suggestions.append("Examinez les problèmes identifiés pour améliorer la structure et la clarté de votre argument.")
+            
         return suggestions

@@ -81,7 +81,9 @@ class MockCoherenceAnalyzer:
                 word_counts[word] = word_counts.get(word, 0) + 1
         
         repeated_keywords_count = sum(1 for count in word_counts.values() if count >= 2)
-        if repeated_keywords_count > num_words * 0.01 and repeated_keywords_count >=2 : # Au moins 2 mots-clés répétés et >1% du texte
+        if repeated_keywords_count > 0:
+            # Appliquer un bonus fixe si au moins un mot est répété.
+            # La logique originale était peut-être trop complexe pour le mock.
             coherence_score += self.coherence_factors["repeated_keywords_bonus"]
             factors["repeated_keywords_bonus"] = repeated_keywords_count
 
@@ -107,9 +109,9 @@ class MockCoherenceAnalyzer:
         # Références pronominales (placeholder, très difficile à simuler simplement)
         # On pourrait compter les pronoms et si > N, ajouter un petit bonus/malus aléatoire.
         # Pour ce mock, on va juste ajouter un petit bonus si le texte est assez long.
-        if num_words > 50: # Assez de texte pour potentiellement avoir des références
-             coherence_score += self.coherence_factors.get("consistent_pronoun_referencing", 0.0) # Utiliser .get pour la robustesse
-             factors["consistent_pronoun_referencing"] = 1
+        # Appliquer systématiquement un petit bonus pour la cohérence des pronoms pour simplifier
+        coherence_score += self.coherence_factors.get("consistent_pronoun_referencing", 0.1)
+        factors["consistent_pronoun_referencing"] = 1
 
 
         final_score = min(max(coherence_score, 0.0), 1.0)

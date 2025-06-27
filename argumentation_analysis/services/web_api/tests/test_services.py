@@ -5,17 +5,11 @@
 Tests unitaires pour les services de l'API web.
 """
 
-import os
-import sys
-
-# Ajouter le répertoire racine du projet au PYTHONPATH
-# Cela permet aux tests d'importer les modules du projet correctement
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from libs.web_api.models.request_models import (
+
+# Utilisation des imports relatifs
+from ..models.request_models import (
     AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest,
     AnalysisOptions, FallacyOptions, FrameworkOptions, Argument
 )
@@ -34,13 +28,12 @@ class TestAnalysisService:
             'argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator': Mock(),
             'argumentation_analysis.orchestration.hierarchical.operational.manager': Mock(),
         }):
-            from argumentation_analysis.services.web_api.services.analysis_service import AnalysisService
+            from ..services.analysis_service import AnalysisService
             return AnalysisService()
     
     def test_service_initialization(self, analysis_service):
         """Test de l'initialisation du service."""
         assert analysis_service is not None
-        # Le service peut être initialisé même sans les modules d'analyse
         assert hasattr(analysis_service, 'is_initialized')
     
     def test_is_healthy(self, analysis_service):
@@ -87,7 +80,6 @@ class TestAnalysisService:
     
     def test_fallback_response(self, analysis_service):
         """Test de la réponse de fallback."""
-        # Simuler un service non sain
         analysis_service.is_initialized = False
         
         request = AnalysisRequest(text="Texte de test")
@@ -103,9 +95,22 @@ class TestValidationService:
     
     @pytest.fixture
     def validation_service(self):
-        """Instance du service de validation."""
-        from argumentation_analysis.services.web_api.services.validation_service import ValidationService
-        return ValidationService()
+        """Instance du service de validation avec un LogicService mocké."""
+        # Mock du LogicService pour éviter ses dépendances (Kernel, LLM, etc.)
+        mock_logic_service = Mock()
+        mock_logic_service.is_healthy.return_value = True
+
+        # Simuler une coroutine pour validate_argument_from_components
+        async def mock_validate_argument(request):
+            # Comportement simple pour le test : valide si la conclusion est "B"
+            if request.conclusion == "B":
+                return True
+            return False
+            
+        mock_logic_service.validate_argument_from_components = Mock(wraps=mock_validate_argument)
+        
+        from ..services.validation_service import ValidationService
+        return ValidationService(logic_service=mock_logic_service)
     
     def test_service_initialization(self, validation_service):
         """Test de l'initialisation du service."""
@@ -116,8 +121,43 @@ class TestValidationService:
         """Test de la vérification de santé."""
         health_status = validation_service.is_healthy()
         assert isinstance(health_status, bool)
+        assert health_status is True # Doit être True car le mock est configuré ainsi
+
+    @pytest.mark.asyncio
+    async def test_validate_formal_argument_valid(self, validation_service):
+        """Test de validation d'un argument formel valide via le LogicService mocké."""
+        request = ValidationRequest(
+            premises=["Si A alors B", "A"],
+            conclusion="B",
+            logic_type="propositional"
+        )
+        
+        response = await validation_service.validate_argument(request)
+        
+        assert response.success is True
+        assert response.result.is_valid is True
+        assert response.result.validity_score == 1.0
+        assert validation_service.logic_service.validate_argument_from_components.called
+
+    @pytest.mark.asyncio
+    async def test_validate_formal_argument_invalid(self, validation_service):
+        """Test de validation d'un argument formel invalide via le LogicService mocké."""
+        request = ValidationRequest(
+            premises=["Si A alors B", "B"],
+            conclusion="A", # Fallacy: Affirming the consequent
+            logic_type="propositional"
+        )
+        
+        response = await validation_service.validate_argument(request)
+        
+        assert response.success is True
+        assert response.result.is_valid is False
+        assert response.result.validity_score == 0.0
+        assert "L'argument n'est pas logiquement valide" in response.result.issues[0]
+        assert validation_service.logic_service.validate_argument_from_components.called
     
-    def test_validate_deductive_argument(self, validation_service):
+    @pytest.mark.asyncio
+    async def test_validate_deductive_argument(self, validation_service):
         """Test de validation d'un argument déductif."""
         request = ValidationRequest(
             premises=["Tous les hommes sont mortels", "Socrate est un homme"],
@@ -125,7 +165,7 @@ class TestValidationService:
             argument_type="deductive"
         )
         
-        response = validation_service.validate_argument(request)
+        response = await validation_service.validate_argument(request)
         
         assert response is not None
         assert hasattr(response, 'success')
@@ -134,7 +174,8 @@ class TestValidationService:
         assert response.conclusion == request.conclusion
         assert response.argument_type == request.argument_type
     
-    def test_validate_inductive_argument(self, validation_service):
+    @pytest.mark.asyncio
+    async def test_validate_inductive_argument(self, validation_service):
         """Test de validation d'un argument inductif."""
         request = ValidationRequest(
             premises=["Le soleil s'est levé tous les jours jusqu'à présent"],
@@ -142,28 +183,49 @@ class TestValidationService:
             argument_type="inductive"
         )
         
-        response = validation_service.validate_argument(request)
+        response = await validation_service.validate_argument(request)
         
         assert response is not None
         assert response.argument_type == "inductive"
     
     def test_validate_invalid_premises(self):
         """Test de validation avec prémisses invalides."""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError): 
             ValidationRequest(
-                premises=[],  # Liste vide
+                premises=[],
                 conclusion="Conclusion",
                 argument_type="deductive"
             )
     
     def test_validate_invalid_argument_type(self):
         """Test avec type d'argument invalide."""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError): 
             ValidationRequest(
                 premises=["Prémisse"],
                 conclusion="Conclusion",
                 argument_type="invalid_type"
             )
+
+    def test_validate_empty_conclusion(self):
+        """Test de validation avec conclusion vide."""
+        with pytest.raises(ValueError) as excinfo: 
+            ValidationRequest(
+                premises=["Une prémisse valide"],
+                conclusion="",
+                argument_type="deductive"
+            )
+        assert "conclusion" in str(excinfo.value).lower()
+
+
+    def test_validate_whitespace_conclusion(self):
+        """Test de validation avec conclusion contenant uniquement des espaces."""
+        with pytest.raises(ValueError) as excinfo: 
+            ValidationRequest(
+                premises=["Une prémisse valide"],
+                conclusion="   ",
+                argument_type="deductive"
+            )
+        assert "conclusion" in str(excinfo.value).lower()
 
 
 class TestFallacyService:
@@ -174,10 +236,10 @@ class TestFallacyService:
         """Instance du service de détection de sophismes."""
         with patch.dict('sys.modules', {
             'argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer': Mock(),
-            'argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer': Mock(),
-            'argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator': Mock(),
+            'argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer': Mock(),
+            'argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator': Mock(),
         }):
-            from argumentation_analysis.services.web_api.services.fallacy_service import FallacyService
+            from ..services.fallacy_service import FallacyService
             return FallacyService()
     
     def test_service_initialization(self, fallacy_service):
@@ -223,19 +285,17 @@ class TestFallacyService:
     
     def test_fallacy_options_validation(self):
         """Test de validation des options de détection."""
-        # Test avec seuil invalide
         with pytest.raises(ValueError):
-            FallacyOptions(severity_threshold=2.0)  # > 1.0
+            FallacyOptions(severity_threshold=2.0)
         
         with pytest.raises(ValueError):
-            FallacyOptions(severity_threshold=-0.5)  # < 0.0
-        
-        # Test avec nombre maximum invalide
-        with pytest.raises(ValueError):
-            FallacyOptions(max_fallacies=0)  # < 1
+            FallacyOptions(severity_threshold=-0.5)
         
         with pytest.raises(ValueError):
-            FallacyOptions(max_fallacies=100)  # > 50
+            FallacyOptions(max_fallacies=0)
+        
+        with pytest.raises(ValueError):
+            FallacyOptions(max_fallacies=100)
 
 
 class TestFrameworkService:
@@ -244,7 +304,7 @@ class TestFrameworkService:
     @pytest.fixture
     def framework_service(self):
         """Instance du service de framework."""
-        from argumentation_analysis.services.web_api.services.framework_service import FrameworkService
+        from ..services.framework_service import FrameworkService
         return FrameworkService()
     
     def test_service_initialization(self, framework_service):
@@ -291,15 +351,13 @@ class TestFrameworkService:
     
     def test_framework_argument_validation(self):
         """Test de validation des arguments du framework."""
-        # Test avec ID dupliqué
         with pytest.raises(ValueError):
             arguments = [
                 Argument(id="arg1", content="Argument 1"),
-                Argument(id="arg1", content="Argument 2")  # ID dupliqué
+                Argument(id="arg1", content="Argument 2")
             ]
             FrameworkRequest(arguments=arguments)
         
-        # Test avec référence d'attaque invalide
         with pytest.raises(ValueError):
             arguments = [
                 Argument(id="arg1", content="Argument 1", attacks=["nonexistent"])
@@ -308,16 +366,14 @@ class TestFrameworkService:
     
     def test_framework_options_validation(self):
         """Test de validation des options du framework."""
-        # Test avec sémantique invalide
         with pytest.raises(ValueError):
             FrameworkOptions(semantics="invalid_semantics")
         
-        # Test avec nombre maximum d'arguments invalide
         with pytest.raises(ValueError):
-            FrameworkOptions(max_arguments=0)  # < 1
+            FrameworkOptions(max_arguments=0)
         
         with pytest.raises(ValueError):
-            FrameworkOptions(max_arguments=2000)  # > 1000
+            FrameworkOptions(max_arguments=2000)
 
 
 class TestServiceIntegration:
@@ -331,23 +387,27 @@ class TestServiceIntegration:
             'argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer': Mock(),
             'argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator': Mock(),
             'argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer': Mock(),
-            'argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer': Mock(),
-            'argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator': Mock(),
         }):
-            from argumentation_analysis.services.web_api.services.analysis_service import AnalysisService
-            from argumentation_analysis.services.web_api.services.validation_service import ValidationService
-            from argumentation_analysis.services.web_api.services.fallacy_service import FallacyService
-            from argumentation_analysis.services.web_api.services.framework_service import FrameworkService
+            from ..services.analysis_service import AnalysisService
+            from ..services.validation_service import ValidationService
+            from ..services.fallacy_service import FallacyService
+            from ..services.framework_service import FrameworkService
+            from ..services.logic_service import LogicService
+
+            # Créer un mock pour LogicService qui sera partagé
+            mock_logic_service = Mock()
+            mock_logic_service.is_healthy.return_value = True
             
             services = [
                 AnalysisService(),
-                ValidationService(),
+                ValidationService(logic_service=mock_logic_service),
                 FallacyService(),
                 FrameworkService()
+                # On n'a pas besoin d'ajouter le LogicService lui-même ici
             ]
             
-            for service in services:
-                health_status = service.is_healthy()
+            for service_instance in services: # Renommé pour éviter conflit avec module 'service'
+                health_status = service_instance.is_healthy()
                 assert isinstance(health_status, bool)
     
     def test_service_error_handling(self):
@@ -355,16 +415,14 @@ class TestServiceIntegration:
         with patch.dict('sys.modules', {
             'argumentation_analysis.agents.core.informal.informal_agent': Mock(),
         }):
-            from argumentation_analysis.services.web_api.services.analysis_service import AnalysisService
+            from ..services.analysis_service import AnalysisService
             
-            service = AnalysisService()
+            service_instance = AnalysisService() # Renommé
             
-            # Simuler une erreur lors de l'analyse
-            with patch.object(service, '_detect_fallacies', side_effect=Exception("Erreur test")):
+            with patch.object(service_instance, '_detect_fallacies', side_effect=Exception("Erreur test")):
                 request = AnalysisRequest(text="Texte de test")
-                response = service.analyze_text(request)
+                response = service_instance.analyze_text(request)
                 
-                # Le service devrait gérer l'erreur gracieusement
                 assert response is not None
                 assert response.success is False
 
@@ -374,46 +432,37 @@ class TestModelValidation:
     
     def test_analysis_request_validation(self):
         """Test de validation des requêtes d'analyse."""
-        # Requête valide
         request = AnalysisRequest(text="Texte valide")
         assert request.text == "Texte valide"
         
-        # Texte vide
         with pytest.raises(ValueError):
             AnalysisRequest(text="")
         
-        # Texte avec espaces seulement
         with pytest.raises(ValueError):
             AnalysisRequest(text="   ")
     
     def test_validation_request_validation(self):
         """Test de validation des requêtes de validation."""
-        # Requête valide
         request = ValidationRequest(
             premises=["Prémisse 1", "Prémisse 2"],
             conclusion="Conclusion"
         )
         assert len(request.premises) == 2
         
-        # Prémisses vides
         with pytest.raises(ValueError):
             ValidationRequest(premises=[], conclusion="Conclusion")
         
-        # Conclusion vide
         with pytest.raises(ValueError):
             ValidationRequest(premises=["Prémisse"], conclusion="")
     
     def test_argument_validation(self):
         """Test de validation des arguments."""
-        # Argument valide
         arg = Argument(id="arg1", content="Contenu de l'argument")
         assert arg.id == "arg1"
         assert arg.content == "Contenu de l'argument"
         
-        # ID vide
         with pytest.raises(ValueError):
             Argument(id="", content="Contenu")
         
-        # Contenu vide
         with pytest.raises(ValueError):
             Argument(id="arg1", content="")

@@ -3,6 +3,7 @@ Script pour analyser l'utilisation des répertoires config/ et data/ dans le cod
 en utilisant l'utilitaire de project_core.
 """
 
+import argumentation_analysis.core.environment
 import sys
 import os
 import json
@@ -17,7 +18,7 @@ if project_root_dir not in sys.path:
     sys.path.insert(0, project_root_dir)
 
 try:
-    from project_core.dev_utils.code_validation import analyze_directory_references
+    from argumentation_analysis.utils.dev_tools.code_validation import analyze_directory_references
     # Configurer le logger du module importé si nécessaire, ou utiliser le logger local
     core_logger = logging.getLogger("project_core.dev_utils.code_validation")
     if not core_logger.handlers:

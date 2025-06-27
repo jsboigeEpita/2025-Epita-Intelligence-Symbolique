@@ -1,1 +1,1 @@
-# Initializer for the tests.project_core.utils module
+"""Tests module"""

@@ -1,22 +1,75 @@
-# -*- coding: utf-8 -*-
-"""
-Ce module initialise le package argumentation_analysis.utils.
+# Make submodules available to the parent package
 
-Il rend accessibles les utilitaires pour l'analyse d'argumentation,
-tels que le traitement de texte, le chargement de données spécifiques,
-la comparaison d'analyses, etc.
-"""
+from . import analysis_comparison
+from . import async_manager
+from . import cleanup_sensitive_files
+from . import config_utils
+from . import config_validation
+from . import correction_utils
+from . import crypto_workflow
+from . import data_generation
+from . import data_loader
+from . import data_processing_utils
+from . import debug_utils
+from . import error_estimation
+from . import metrics_aggregation
+from . import metrics_calculator
+from . import metrics_extraction
+from . import performance_monitoring
+from . import report_generator
+from . import reporting_utils
+from . import restore_config
+from . import run_extract_editor
+from . import run_extract_repair
+from . import run_verify_extracts_with_llm
+from . import run_verify_extracts
+from . import system_utils
+from . import taxonomy_loader
+from . import text_processing
+from . import tweety_error_analyzer
+from . import unified_pipeline
+from . import update_encrypted_config
+from . import version_validator
+from . import visualization_generator
 
-# Importations sélectives pour exposer les fonctionnalités clés
-# Exemple (à adapter lorsque les modules seront créés) :
-# from .text_processing import split_text_into_arguments
-# from .data_loaders import load_specific_format_data
-# from .analysis_comparison import compare_analyses
+from . import core_utils
+from . import dev_tools
+from . import extract_repair
 
-# Définir __all__ si vous voulez contrôler ce qui est importé avec 'from .utils import *'
-# __all__ = ['split_text_into_arguments', 'load_specific_format_data', 'compare_analyses']
 
-# Log d'initialisation du package (optionnel)
-import logging
-logger = logging.getLogger(__name__)
-logger.debug("Package 'argumentation_analysis.utils' initialisé.")
+__all__ = [
+    'analysis_comparison',
+    'async_manager',
+    'cleanup_sensitive_files',
+    'config_utils',
+    'config_validation',
+    'correction_utils',
+    'crypto_workflow',
+    'data_generation',
+    'data_loader',
+    'data_processing_utils',
+    'debug_utils',
+    'error_estimation',
+    'metrics_aggregation',
+    'metrics_calculator',
+    'metrics_extraction',
+    'performance_monitoring',
+    'report_generator',
+    'reporting_utils',
+    'restore_config',
+    'run_extract_editor',
+    'run_extract_repair',
+    'run_verify_extracts_with_llm',
+    'run_verify_extracts',
+    'system_utils',
+    'taxonomy_loader',
+    'text_processing',
+    'tweety_error_analyzer',
+    'unified_pipeline',
+    'update_encrypted_config',
+    'version_validator',
+    'visualization_generator',
+    'core_utils',
+    'dev_tools',
+    'extract_repair'
+]

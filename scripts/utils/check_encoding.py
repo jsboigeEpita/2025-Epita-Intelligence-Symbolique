@@ -6,6 +6,7 @@ Script pour vérifier l'encodage UTF-8 des fichiers Python du projet
 en utilisant l'utilitaire de project_core.
 """
 
+import argumentation_analysis.core.environment
 import sys
 import os
 
@@ -16,7 +17,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 try:
-    from project_core.dev_utils.encoding_utils import check_project_python_files_encoding, logger
+    from argumentation_analysis.utils.dev_tools.encoding_utils import check_project_python_files_encoding, logger
     import logging
     logger.setLevel(logging.INFO) # Assurer un output visible pour le script
 except ImportError as e:

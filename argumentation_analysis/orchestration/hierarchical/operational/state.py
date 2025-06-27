@@ -7,6 +7,7 @@ d'analyse et les métriques opérationnelles.
 """
 
 from typing import Dict, List, Any, Optional
+import asyncio
 import logging
 from datetime import datetime
 import uuid
@@ -58,6 +59,9 @@ class OperationalState:
         
         # Journal des actions opérationnelles
         self.operational_actions_log = []
+        
+        # Futures pour les résultats asynchrones
+        self.result_futures: Dict[str, asyncio.Future] = {}
         
         # Logger
         self.logger = logging.getLogger(__name__)
@@ -139,6 +143,29 @@ class OperationalState:
         
         return None
     
+    def add_result_future(self, task_id: str, future: asyncio.Future) -> None:
+        """
+        Stocke un objet Future pour un résultat de tâche.
+        
+        Args:
+            task_id: L'identifiant de la tâche.
+            future: L'objet Future à stocker.
+        """
+        self.result_futures[task_id] = future
+        self.logger.info(f"Future enregistré pour la tâche {task_id}")
+
+    def get_result_future(self, task_id: str) -> Optional[asyncio.Future]:
+        """
+        Récupère l'objet Future pour un résultat de tâche.
+        
+        Args:
+            task_id: L'identifiant de la tâche.
+            
+        Returns:
+            L'objet Future ou None s'il n'existe pas.
+        """
+        return self.result_futures.pop(task_id, None)
+
     def add_text_extract(self, extract_id: str, extract_data: Dict[str, Any]) -> bool:
         """
         Ajoute un extrait de texte à l'état opérationnel.
@@ -305,7 +332,11 @@ class OperationalState:
         # Parcourir toutes les catégories de métriques
         for metric_type, metric_dict in self.operational_metrics.items():
             if task_id in metric_dict:
-                metrics[metric_type] = metric_dict[task_id]
+                # Si le type est 'processing_times', utiliser 'execution_time' comme clé
+                if metric_type == "processing_times":
+                    metrics["execution_time"] = metric_dict[task_id]
+                else:
+                    metrics[metric_type] = metric_dict[task_id]
         
         return metrics
     
@@ -351,3 +382,18 @@ class OperationalState:
         """
         self.__init__()
         self.logger.info("État opérationnel réinitialisé.")
+
+    def find_operational_task_by_tactical_id(self, tactical_task_id: str) -> Optional[str]:
+        """
+        Trouve l'ID d'une tâche opérationnelle à partir de l'ID de sa tâche tactique parente.
+
+        Args:
+            tactical_task_id: L'ID de la tâche tactique.
+
+        Returns:
+            L'ID de la tâche opérationnelle correspondante, ou None si non trouvée.
+        """
+        for task in self.assigned_tasks:
+            if task.get("tactical_task_id") == tactical_task_id:
+                return task.get("id")
+        return None

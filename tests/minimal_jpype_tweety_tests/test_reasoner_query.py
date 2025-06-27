@@ -1,27 +1,51 @@
-import os # jpype et jpype.imports seront importés dans la fonction
+import os
+import jpype # Déplacé ici
+import jpype.imports # Idem
+from jpype.types import JString # Idem
 # from jpype.types import JString # Sera importé si nécessaire
 
-def test_reasoner_query(integration_jvm): # Ajout de la fixture integration_jvm
-    import jpype # Importation locale
-    import jpype.imports
-    from jpype.types import JString
+# Définition des chemins en dehors de la fonction de test
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+LIBS_DIR = os.path.join(PROJECT_ROOT, "libs")
+NATIVE_LIBS_DIR = os.path.join(LIBS_DIR, "native")
 
+# Inclure tous les JARs du répertoire libs, sauf celui sans "with-dependencies" s'il existe
+all_jars_in_libs = [os.path.join(LIBS_DIR, f) for f in os.listdir(LIBS_DIR) if f.endswith(".jar")]
+TWEETY_JARS = [jar for jar in all_jars_in_libs if "tweety-full-1.28.jar" != os.path.basename(jar) or "with-dependencies" in os.path.basename(jar)]
+jar_simple = os.path.join(LIBS_DIR, "org.tweetyproject.tweety-full-1.28.jar")
+jar_with_deps = os.path.join(LIBS_DIR, "org.tweetyproject.tweety-full-1.28-with-dependencies.jar")
+
+if jar_simple in TWEETY_JARS and jar_with_deps in TWEETY_JARS:
+    TWEETY_JARS.remove(jar_simple)
+    print(f"Removed {jar_simple} to avoid conflict with {jar_with_deps}")
+
+print(f"Dynamically included JARS for test_reasoner_query: {TWEETY_JARS}")
+
+# Vérifier l'existence de ces JARs spécifiques
+for jar_path_check in TWEETY_JARS:
+    if not os.path.exists(jar_path_check):
+        raise FileNotFoundError(f"JAR file {jar_path_check} not found. Please run download_test_jars.py or ensure correct paths.")
+
+def test_reasoner_query(jvm_session):
+    """
+    Teste un raisonneur PL simple et une requête, en utilisant une fixture
+    de session pour gérer la JVM.
+    """
     try:
         print("Démarrage du test du raisonneur et de requête simple...")
 
-        # L'initialisation de la JVM est maintenant gérée globalement par conftest.py
-        if not jpype.isJVMStarted():
-            # Cette condition ne devrait plus être vraie si conftest.py fonctionne correctement.
-            print("ERREUR CRITIQUE: La JVM n'a pas été démarrée par conftest.py comme attendu dans test_reasoner_query.")
-            # Lever une exception pour que le test échoue clairement si la JVM n'est pas prête.
-            raise RuntimeError("JVM non démarrée par conftest.py, test_reasoner_query ne peut pas continuer.")
-        from org.tweetyproject.logics.pl.syntax import PlBeliefSet
-        from org.tweetyproject.logics.pl.parser import PlParser
-        from org.tweetyproject.logics.pl.syntax import PlSignature, Proposition
-        from org.tweetyproject.logics.pl.reasoner import SimplePlReasoner
-        from org.tweetyproject.logics.commons.syntax import Predicate
+        # La fixture jvm_session assure que la JVM est démarrée.
+        assert jpype.isJVMStarted(), "La JVM devrait être démarrée par la fixture jvm_session"
 
-        print("JVM démarrée et classes Tweety importées.")
+        PlBeliefSet = jpype.JClass("net.sf.tweety.logics.pl.syntax.PlBeliefSet")
+        PlParser = jpype.JClass("net.sf.tweety.logics.pl.parser.PlParser")
+        # PropositionalSignature = jpype.JClass("net.sf.tweety.logics.pl.syntax.PropositionalSignature") # Remplacé par PlSignature
+        PlSignature = jpype.JClass("net.sf.tweety.logics.pl.syntax.PlSignature")
+        Proposition = jpype.JClass("net.sf.tweety.logics.pl.syntax.Proposition")
+        SimplePlReasoner = jpype.JClass("net.sf.tweety.logics.pl.reasoner.SimplePlReasoner")
+        Predicate = jpype.JClass("net.sf.tweety.logics.commons.syntax.Predicate")
+
+        print("JVM démarrée et classes Tweety chargées via JClass (espérons-le).")
 
         # theory_file_path = os.path.join(os.path.dirname(__file__), "sample_theory.lp")
         # print(f"Chemin du fichier de théorie : {theory_file_path}")
@@ -83,7 +107,7 @@ def test_reasoner_query(integration_jvm): # Ajout de la fixture integration_jvm
         print("Méthodes de belief_set:", dir(belief_set))
 
         # Instancier un raisonneur simple
-        reasoner = SimplePlReasoner()
+        reasoner = SimplePlReasoner() # Utiliser le nom de classe importé
             # Le belief_set sera pass  la mthode query
         print("SimpleReasoner instancié.")
         print("Méthodes de reasoner:", dir(reasoner))
@@ -142,10 +166,5 @@ def test_reasoner_query(integration_jvm): # Ajout de la fixture integration_jvm
         print(f"Test du raisonneur et de requête simple ÉCHOUÉ : {e}")
         import traceback
         traceback.print_exc()
+        # L'exception sera automatiquement propagée par pytest
         raise
-
-    # finally: # Commenté pour permettre à pytest de gérer la JVM via conftest
-        # if jpype.isJVMStarted():
-        #     jpype.shutdownJVM()
-        #     print("JVM arrêtée.")
-        pass

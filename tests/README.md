@@ -1,81 +1,85 @@
-# Tests du Projet d'Intelligence Symbolique
+# Documentation des Tests du Projet
 
-Ce répertoire contient les tests unitaires, d'intégration et fonctionnels du projet d'Intelligence Symbolique. L'objectif principal de ces tests est de garantir la robustesse, la fiabilité et la correction du code à travers différentes couches du système.
+Ce document décrit comment exécuter les différentes suites de tests pour l'ensemble du projet.
 
-## Structure des Tests
+## Prérequis
 
-Le répertoire des tests est organisé comme suit pour refléter les meilleures pratiques et faciliter la navigation et la maintenance :
+- Assurez-vous que votre environnement Conda (`base`) est correctement configuré.
+- Installez les dépendances de test :
+  - Pour Python : `pip install -r requirements.txt` (si applicable), `pip install pytest`
+  - Pour les tests E2E (JavaScript) : `pip install playwright` suivi de `playwright install`
 
--   **`tests/unit/`**: Contient les tests unitaires. Ces tests vérifient le comportement de petites unités de code isolées (fonctions, méthodes, classes). La structure de ce répertoire miroir celle du code source du projet (par exemple, `project_core`, `argumentation_analysis`, etc.) pour une correspondance claire entre le code et ses tests.
--   **`tests/integration/`**: Contient les tests d'intégration. Ces tests vérifient que différents modules ou composants du système interagissent correctement entre eux. Cela inclut notamment les tests d'intégration avec des composants externes comme JPype pour TweetyLib.
--   **`tests/functional/`**: Contient les tests fonctionnels. Ces tests valident des workflows complets ou des fonctionnalités spécifiques du point de vue de l'utilisateur, assurant que le système répond aux exigences fonctionnelles.
--   **`tests/fixtures/`**: Contient les fixtures Pytest partagées. Les fixtures sont utilisées pour initialiser des données ou des états nécessaires à l'exécution des tests, favorisant la réutilisabilité et la clarté.
--   **`tests/mocks/`**: Contient les mocks réutilisables. Les mocks simulent le comportement de dépendances externes ou de parties complexes du système, permettant d'isoler le code testé.
--   **`tests/support/`**: Contient les outils et scripts de support pour les tests. Par exemple, cela peut inclure des scripts pour installer des dépendances spécifiques nécessaires à certains tests (comme un installeur Octave).
--   **`tests/conftest.py`**: Ce fichier à la racine du répertoire `tests/` est utilisé par Pytest pour les configurations globales, les hooks et les fixtures qui sont disponibles pour tous les tests du projet. Il permet de centraliser la configuration des tests.
+## Point d'Entrée Unifié : `run_tests.ps1`
 
-## Exécution des Tests
+Le moyen le plus simple et recommandé pour lancer les tests est d'utiliser le script unifié `run_tests.ps1` à la racine du projet. Ce script gère l'activation de l'environnement et l'exécution de la suite de tests appropriée.
 
-Avant d'exécuter les tests, il est impératif d'activer l'environnement virtuel du projet. Utilisez le script suivant à la racine du projet :
+### Utilisation
+
+Ouvrez un terminal PowerShell et utilisez la syntaxe suivante :
 
 ```powershell
-. .\activate_project_env.ps1
+.\run_tests.ps1 -Type <type_de_test>
 ```
 
-Une fois l'environnement activé, vous pouvez utiliser Pytest pour lancer les tests.
+Où `<type_de_test>` peut être :
+- `unit` : Lance les tests unitaires (rapides, sans I/O).
+- `functional` : Lance les tests fonctionnels.
+- `integration` : Lance les tests d'intégration.
+- `e2e` : Lance les tests End-to-End avec Playwright (JS/TS).
+- `e2e-python` : Lance les tests End-to-End avec Pytest (Python).
+- `validation` : Lance les tests de validation.
+- `all` : (Défaut) Lance les tests `unit` et `functional`.
 
-### Commandes Pytest de base :
+### Exemples Concrets
 
--   **Exécuter tous les tests du projet :**
-    ```bash
-    pytest
-    ```
+**1. Lancer la suite complète des tests unitaires (recommandé pour la validation rapide) :**
 
--   **Exécuter tous les tests dans un répertoire spécifique (par exemple, les tests unitaires) :**
-    ```bash
-    pytest tests/unit/
-    ```
+```powershell
+.\run_tests.ps1 -Type unit
+```
 
--   **Exécuter tous les tests dans un fichier spécifique :**
-    ```bash
-    pytest tests/unit/mon_module/test_ma_fonction.py
-    ```
+**2. Lancer un répertoire de tests unitaires spécifique :**
 
--   **Exécuter un test spécifique (une fonction ou une méthode) dans un fichier :**
-    ```bash
-    pytest tests/unit/mon_module/test_ma_fonction.py::test_cas_particulier
-    ```
+```powershell
+.\run_tests.ps1 -Type unit -Path tests/unit/agents/
+```
 
-### Utilisation des Marqueurs Pytest :
+**3. Lancer les tests End-to-End avec Playwright :**
+Assurez-vous d'avoir exécuté `playwright install` au préalable.
 
-Pytest permet d'utiliser des marqueurs (`@pytest.mark.<nom_marqueur>`) pour catégoriser les tests. Vous pouvez ensuite exécuter sélectivement des tests basés sur ces marqueurs.
+```powershell
+.\run_tests.ps1 -Type e2e -Browser chromium
+```
 
--   **Exécuter les tests marqués comme `slow` :**
-    ```bash
-    pytest -m slow
-    ```
+---
 
--   **Exécuter les tests qui ne sont PAS marqués comme `slow` :**
-    ```bash
-    pytest -m "not slow"
-    ```
-    Consultez la documentation de Pytest et le fichier [`tests/conftest.py`](tests/conftest.py:1) pour voir les marqueurs personnalisés disponibles dans ce projet.
+## Méthodes d'Exécution Alternatives (Manuelles)
 
-### Tests avec Couverture de Code
+### Tests Pytest (unit, functional, etc.)
 
-Pour exécuter les tests et générer un rapport de couverture de code :
+Si vous ne souhaitez pas utiliser le script unifié, vous pouvez lancer `pytest` directement après avoir activé l'environnement Conda.
 
 ```bash
-pytest --cov=project_core --cov=argumentation_analysis --cov-report=html
+# Activer l'environnement Conda
+conda activate base
+
+# Lancer les tests unitaires
+python -m pytest tests/unit/
+
+# Lancer les tests fonctionnels
+python -m pytest tests/functional/
 ```
-(Adaptez les modules `--cov` en fonction des répertoires principaux de votre code source.)
-Le rapport HTML sera généré dans un répertoire `htmlcov/`.
 
-## Bonnes Pratiques de Test
+### Tests End-to-End (Playwright)
 
-Pour des directives détaillées sur l'écriture et la maintenance des tests, veuillez consulter le document [Bonnes Pratiques pour les Tests (`BEST_PRACTICES.md`)](BEST_PRACTICES.md:1). Ce document couvre les principes généraux, l'organisation, la gestion des dépendances, l'utilisation des fixtures, et des conseils spécifiques pour les tests d'intégration et fonctionnels.
+Ces tests nécessitent que les **deux** serveurs (backend et frontend) soient démarrés manuellement au préalable.
 
-## Documentation Associée
+```bash
+# 1. Démarrer le backend (dans un terminal)
+# ...
 
--   [Plan d'action pour l'amélioration des tests](../docs/tests/plan_action_tests.md)
--   [Rapport sur l'état du dépôt et la couverture des tests](../docs/reports/etat_depot_couverture_tests.md)
+# 2. Démarrer le frontend (dans un autre terminal)
+# ...
+
+# 3. Lancer les tests Playwright (dans un troisième terminal)
+playwright test tests/e2e/webapp/

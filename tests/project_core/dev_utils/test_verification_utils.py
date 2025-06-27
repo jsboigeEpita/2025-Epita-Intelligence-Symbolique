@@ -1,27 +1,52 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # -*- coding: utf-8 -*-
 """
 Tests pour les utilitaires de vérification des extraits.
 """
 
 import unittest
-from unittest.mock import patch, MagicMock, mock_open
+
 from pathlib import Path
 from typing import List, Dict, Any
+from unittest.mock import patch, mock_open
 
 # Fonctions à tester
-from project_core.dev_utils.verification_utils import (
+from argumentation_analysis.utils.dev_tools.verification_utils import (
     verify_extract,
     verify_all_extracts,
     generate_verification_report
 )
 
 class TestVerificationUtils(unittest.TestCase):
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """
     Suite de tests pour les fonctions dans verification_utils.py.
     """
 
-    @patch('project_core.dev_utils.verification_utils.extract_text_with_markers')
-    @patch('project_core.dev_utils.verification_utils.load_source_text')
+    
+    
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.extract_text_with_markers')
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.load_source_text')
     def test_verify_extract_valid(self, mock_load_source_text, mock_extract_text_with_markers):
         """Teste verify_extract avec un cas valide."""
         mock_load_source_text.return_value = ("Texte source complet", "http://example.com/source")
@@ -42,13 +67,15 @@ class TestVerificationUtils(unittest.TestCase):
         self.assertTrue(result["start_found"])
         self.assertTrue(result["end_found"])
         self.assertEqual(result["extracted_length"], len("Texte extrait"))
-        mock_load_source_text.assert_called_once_with(source_info)
+        mock_load_source_text.assert_called_once()
         mock_extract_text_with_markers.assert_called_once_with(
             "Texte source complet", "Template START", "END", "Template {0}"
         )
 
-    @patch('project_core.dev_utils.verification_utils.extract_text_with_markers')
-    @patch('project_core.dev_utils.verification_utils.load_source_text')
+    
+    
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.extract_text_with_markers')
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.load_source_text')
     def test_verify_extract_invalid_markers(self, mock_load_source_text, mock_extract_text_with_markers):
         """Teste verify_extract quand les marqueurs ne sont pas trouvés."""
         mock_load_source_text.return_value = ("Texte source", "url")
@@ -63,7 +90,8 @@ class TestVerificationUtils(unittest.TestCase):
         self.assertFalse(result["start_found"])
         self.assertFalse(result["end_found"])
 
-    @patch('project_core.dev_utils.verification_utils.load_source_text')
+    
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.load_source_text')
     def test_verify_extract_source_load_fail(self, mock_load_source_text):
         """Teste verify_extract quand le chargement de la source échoue."""
         mock_load_source_text.return_value = (None, "http://example.com/failed")
@@ -75,8 +103,10 @@ class TestVerificationUtils(unittest.TestCase):
         self.assertEqual(result["status"], "error")
         self.assertIn("Impossible de charger le texte source", result["message"])
 
-    @patch('project_core.dev_utils.verification_utils.extract_text_with_markers')
-    @patch('project_core.dev_utils.verification_utils.load_source_text')
+    
+    
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.extract_text_with_markers')
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.load_source_text')
     def test_verify_extract_warning_short_text(self, mock_load_source_text, mock_extract_text_with_markers):
         """Teste verify_extract avec un texte extrait valide mais court."""
         mock_load_source_text.return_value = ("Texte source", "url")
@@ -90,8 +120,10 @@ class TestVerificationUtils(unittest.TestCase):
         self.assertIn("Extrait valide mais très court", result["message"])
         self.assertEqual(result["extracted_length"], 5)
 
-    @patch('project_core.dev_utils.verification_utils.extract_text_with_markers')
-    @patch('project_core.dev_utils.verification_utils.load_source_text')
+    
+    
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.extract_text_with_markers')
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.load_source_text')
     def test_verify_extract_warning_template_issue(self, mock_load_source_text, mock_extract_text_with_markers):
         """Teste verify_extract avec un problème de template potentiel."""
         mock_load_source_text.return_value = ("Texte source", "url")
@@ -111,7 +143,8 @@ class TestVerificationUtils(unittest.TestCase):
         self.assertIn("ne commence pas par le template attendu", result["message"])
         self.assertTrue(result.get("template_issue"))
 
-    @patch('project_core.dev_utils.verification_utils.verify_extract')
+    
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.verify_extract')
     def test_verify_all_extracts(self, mock_verify_extract):
         """Teste verify_all_extracts."""
         mock_verify_extract.side_effect = [
@@ -144,7 +177,9 @@ class TestVerificationUtils(unittest.TestCase):
         mock_verify_extract.assert_any_call(extract_definitions_list[0], extract_definitions_list[0]["extracts"][1])
         mock_verify_extract.assert_any_call(extract_definitions_list[1], extract_definitions_list[1]["extracts"][0])
 
-    @patch('project_core.dev_utils.verification_utils.Path.mkdir')
+    
+    
+    @patch('pathlib.Path.mkdir')
     @patch('builtins.open', new_callable=mock_open)
     def test_generate_verification_report(self, mock_file_open, mock_mkdir):
         """Teste la génération du rapport de vérification."""

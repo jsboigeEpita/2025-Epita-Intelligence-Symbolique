@@ -5,6 +5,7 @@
 Script pour exécuter les tests du projet en utilisant le mock JPype1.
 """
 
+import argumentation_analysis.core.environment
 import os
 import sys
 import subprocess

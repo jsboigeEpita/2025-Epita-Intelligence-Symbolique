@@ -1,3 +1,4 @@
+import argumentation_analysis.core.environment
 """
 Script pour mettre à jour le rapport final des tests avec les informations de couverture des tests mockés.
 """

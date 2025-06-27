@@ -58,10 +58,13 @@ def test_group_results_nominal_case(sample_results_various_sources):
     assert any(r["id"] == 5 for r in grouped["Débats Lincoln-Douglas"])
     assert any(r["id"] == 7 for r in grouped["Débats Lincoln-Douglas"])
 
-    assert "Autres corpus" in grouped
-    assert len(grouped["Autres corpus"]) == 2
-    assert any(r["id"] == 3 for r in grouped["Autres corpus"])
-    assert any(r["id"] == 6 for r in grouped["Autres corpus"])
+    assert "Article de Blog X" in grouped
+    assert len(grouped["Article de Blog X"]) == 1
+    assert grouped["Article de Blog X"][0]["id"] == 3
+
+    assert "Document Y" in grouped
+    assert len(grouped["Document Y"]) == 1
+    assert grouped["Document Y"][0]["id"] == 6
 
 def test_group_results_empty_list():
     """Teste le regroupement avec une liste de résultats vide."""
@@ -76,10 +79,13 @@ def test_group_results_missing_source_name(results_with_missing_source_name):
     assert len(grouped["Discours d'Hitler"]) == 1
     assert grouped["Discours d'Hitler"][0]["id"] == 1
 
-    assert "Autres corpus" in grouped  # Le résultat sans source_name va ici par défaut
-    assert len(grouped["Autres corpus"]) == 2 # Un pour "Article de Blog X", un pour celui sans source_name (classé "Inconnu" puis "Autres corpus")
-    assert any(r["id"] == 3 for r in grouped["Autres corpus"])
-    assert any(r.get("source_name") == "Inconnu" for r in grouped["Autres corpus"])
+    assert "Corpus Inconnu" in grouped
+    assert len(grouped["Corpus Inconnu"]) == 1
+    assert grouped["Corpus Inconnu"][0]["id"] == 2 # Celui sans source_name
+
+    assert "Article de Blog X" in grouped # Celui avec source_name explicite
+    assert len(grouped["Article de Blog X"]) == 1
+    assert grouped["Article de Blog X"][0]["id"] == 3
 
 
 def test_group_results_with_non_dict_elements(results_with_non_dict_elements):
@@ -90,9 +96,9 @@ def test_group_results_with_non_dict_elements(results_with_non_dict_elements):
     assert len(grouped["Discours d'Hitler"]) == 1
     assert grouped["Discours d'Hitler"][0]["id"] == 1
 
-    assert "Autres corpus" in grouped
-    assert len(grouped["Autres corpus"]) == 1
-    assert grouped["Autres corpus"][0]["id"] == 3
+    assert "Article de Blog X" in grouped
+    assert len(grouped["Article de Blog X"]) == 1
+    assert grouped["Article de Blog X"][0]["id"] == 3
     
     # Vérifie que le nombre total d'éléments groupés est correct (ignore les non-dictionnaires)
     total_grouped_items = sum(len(items) for items in grouped.values())
@@ -116,8 +122,13 @@ def test_group_results_all_other_corpus():
         {"id": 2, "text": "Texte B", "source_name": "Source Inconnue 2"},
     ]
     grouped = group_results_by_corpus(results)
-    assert "Autres corpus" in grouped
-    assert len(grouped["Autres corpus"]) == 2
+    assert "Source Inconnue 1" in grouped
+    assert len(grouped["Source Inconnue 1"]) == 1
+    assert grouped["Source Inconnue 1"][0]["id"] == 1
+
+    assert "Source Inconnue 2" in grouped
+    assert len(grouped["Source Inconnue 2"]) == 1
+    assert grouped["Source Inconnue 2"][0]["id"] == 2
     assert "Discours d'Hitler" not in grouped
     assert "Débats Lincoln-Douglas" not in grouped
 

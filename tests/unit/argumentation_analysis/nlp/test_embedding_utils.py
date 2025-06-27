@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -8,11 +15,14 @@ Tests unitaires pour le module embedding_utils.py.
 import pytest
 import json
 from pathlib import Path
+
+import httpx # Ajout de l'import
 from unittest.mock import patch, MagicMock, mock_open
 
 # Chemins pour le patching
 OPENAI_CLIENT_PATH = "argumentation_analysis.nlp.embedding_utils.OpenAI"
 SENTENCE_TRANSFORMER_PATH = "argumentation_analysis.nlp.embedding_utils.SentenceTransformer"
+OPENAI_API_ERROR_PATH = "argumentation_analysis.nlp.embedding_utils.APIError" # Ajout pour APIError
 MKDIR_PATH = "pathlib.Path.mkdir" # Patching de la méthode mkdir de l'instance Path
 OPEN_BUILTIN_PATH = "builtins.open" # Pour mocker l'ouverture de fichier
 
@@ -86,41 +96,58 @@ def test_get_embeddings_sentence_transformer_import_error(sample_text_chunks):
         with pytest.raises(ImportError, match="La bibliothèque 'sentence-transformers' est requise"):
             get_embeddings_for_chunks(sample_text_chunks, "some-st-model")
 
-@patch(OPENAI_CLIENT_PATH) # Mock pour éviter l'erreur d'import si OpenAI n'est pas là
-def test_get_embeddings_openai_api_error(mock_openai_constructor, sample_text_chunks):
+def test_get_embeddings_openai_api_error(sample_text_chunks):
     """Teste la gestion d'une APIError d'OpenAI."""
-    # Simuler que openai.APIError est défini (même si on ne l'importe pas directement ici)
-    # Cela est nécessaire car la fonction testée y fait référence.
-    # On peut le faire en patchant la référence dans le module testé si besoin,
-    # ou en s'assurant que le mock d'OpenAI est suffisant.
-    # Pour ce test, on simule que client.embeddings.create lève l'erreur.
-    
-    # Mock de l'APIError d'OpenAI
-    # Normalement, on importerait APIError d'OpenAI, mais pour le test unitaire,
-    # on peut le simuler si on ne veut pas dépendre de l'installation d'OpenAI pour les tests.
-    # Cependant, la fonction testée fait `from openai import OpenAI, APIError`.
-    # Si OpenAI est None, APIError sera aussi None.
-    # Si OpenAI est mocké, il faut s'assurer que APIError est aussi gérable.
-    # Le plus simple est de supposer qu'OpenAI est importable et de mocker son comportement.
-    
-    mock_client_instance = MagicMock()
-    # Simuler que APIError est une classe d'exception
-    # Dans un environnement de test, si openai n'est pas installé, APIError sera None.
-    # La fonction get_embeddings_for_chunks a un `try...except APIError`.
-    # Si APIError est None, ce `except` ne fonctionnera pas comme prévu.
-    # Pour ce test, nous allons supposer que l'import d'OpenAI a réussi.
-    
-    # On importe APIError pour le test si disponible, sinon on crée une classe factice
-    try:
-        from openai import APIError as ActualAPIError
-    except ImportError:
-        class ActualAPIError(Exception): pass # Classe factice si openai n'est pas là
 
-    mock_client_instance.embeddings.create.side_effect = ActualAPIError("Test API Error")
+    # Définir la classe d'erreur à utiliser pour ce test.
+    # Elle doit avoir une signature __init__(self, message, request, body)
+    # pour être compatible avec la façon dont elle est instanciée pour side_effect.
+    ErrorToUseInTest = None
+    try:
+        from openai import APIError as RealOpenAIAPIError
+        # Vérifier si la vraie APIError peut être instanciée comme nous le souhaitons
+        # (cela suppose que httpx est disponible si openai est installé)
+        import httpx as check_httpx
+        dummy_request_for_check = check_httpx.Request(method="POST", url="https://api.openai.com/v1/embeddings")
+        RealOpenAIAPIError("check", request=dummy_request_for_check, body=None)
+        ErrorToUseInTest = RealOpenAIAPIError
+    except ImportError: # Si openai ou httpx ne sont pas là, ou si l'instanciation échoue
+        pass # ErrorToUseInTest reste None
+
+    if ErrorToUseInTest is None: # Fallback sur une classe factice
+        import httpx as fallback_httpx # Assurer que httpx est disponible pour dummy_request
+        class FakeAPIError(Exception):
+            def __init__(self, message, request=None, body=None):
+                super().__init__(message)
+                self.request = request
+                self.body = body
+                self.message = message # Pour le match de pytest.raises
+                # Attributs que openai.APIError pourrait avoir
+                self.status_code = 400
+                self.code = "test_error_code"
+        ErrorToUseInTest = FakeAPIError
+
+    mock_openai_constructor = MagicMock(name="MockOpenAIConstructor")
+    mock_client_instance = MagicMock(name="MockClientInstance")
+
+    # httpx est nécessaire pour créer dummy_request
+    # Si nous sommes ici, httpx a été importé soit par le try, soit par le fallback
+    # (ou il était déjà importé au niveau du module par une correction précédente)
+    # Pour être sûr, on peut l'importer ici s'il n'est pas déjà dans le scope global du test.
+    # Mais il a été ajouté à la ligne 12.
+
+    dummy_request = httpx.Request(method="POST", url="https://api.openai.com/v1/embeddings")
+    error_instance_to_raise = ErrorToUseInTest(
+        "Test API Error", request=dummy_request, body=None
+    )
+    mock_client_instance.embeddings.create.side_effect = error_instance_to_raise
     mock_openai_constructor.return_value = mock_client_instance
 
-    with pytest.raises(ActualAPIError, match="Test API Error"):
-        get_embeddings_for_chunks(sample_text_chunks, "text-embedding-3-small")
+    with patch(OPENAI_CLIENT_PATH, new=mock_openai_constructor), \
+         patch(OPENAI_API_ERROR_PATH, new=ErrorToUseInTest): # Assure que embedding_utils.APIError est notre ErrorToUseInTest
+        
+        with pytest.raises(ErrorToUseInTest, match="Test API Error"):
+            get_embeddings_for_chunks(sample_text_chunks, "text-embedding-3-small")
 
 
 # Tests pour save_embeddings_data
@@ -164,14 +191,13 @@ def test_save_embeddings_data_io_error(tmp_path, sample_embeddings_data, caplog)
     output_file = tmp_path / "embeddings_io_error.json"
     
     with patch(MKDIR_PATH), \
-         patch(OPEN_BUILTIN_PATH, mock_open()) as mock_file_open:
-        # Simuler une IOError lors de l'écriture
-        mock_file_open.side_effect = IOError("Test IOError")
+         patch(OPEN_BUILTIN_PATH, mock_open()), \
+         patch('json.dump', side_effect=IOError("Test IOError")):
         
         success = save_embeddings_data(sample_embeddings_data, output_file)
         
         assert success is False
-        assert "Erreur d'E/S lors de la sauvegarde" in caplog.text
+        assert "❌ Erreur d'E/S lors de la sauvegarde" in caplog.text
         assert "Test IOError" in caplog.text
 
 def test_save_embeddings_data_other_exception(tmp_path, sample_embeddings_data, caplog):
@@ -179,14 +205,13 @@ def test_save_embeddings_data_other_exception(tmp_path, sample_embeddings_data, 
     output_file = tmp_path / "embeddings_other_error.json"
     
     with patch(MKDIR_PATH), \
-         patch(OPEN_BUILTIN_PATH, mock_open()) as mock_file_open:
-        # Simuler une exception générique
-        mock_file_open.side_effect = Exception("Test Generic Exception")
+         patch(OPEN_BUILTIN_PATH, mock_open()), \
+         patch('json.dump', side_effect=Exception("Test Generic Exception")):
         
         success = save_embeddings_data(sample_embeddings_data, output_file)
         
         assert success is False
-        assert "Erreur inattendue lors de la sauvegarde" in caplog.text
+        assert "❌ Erreur inattendue lors de la sauvegarde" in caplog.text
         assert "Test Generic Exception" in caplog.text
 
 def test_save_embeddings_data_mkdir_fails(tmp_path, sample_embeddings_data, caplog):
@@ -201,5 +226,5 @@ def test_save_embeddings_data_mkdir_fails(tmp_path, sample_embeddings_data, capl
         assert success is False
         mock_mkdir.assert_called_once()
         # L'erreur est capturée par le `except Exception` générique dans save_embeddings_data
-        assert "Erreur inattendue lors de la sauvegarde" in caplog.text 
+        assert "❌ Erreur d'E/S lors de la sauvegarde" in caplog.text
         assert "Cannot create directory" in caplog.text

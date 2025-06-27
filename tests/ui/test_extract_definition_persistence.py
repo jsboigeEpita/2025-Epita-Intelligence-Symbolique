@@ -6,7 +6,7 @@ from cryptography.fernet import InvalidToken
 import gzip
 
 from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
-from argumentation_analysis.ui.file_operations import load_extract_definitions, save_extract_definitions
+from argumentation_analysis.core.io_manager import load_extract_definitions, save_extract_definitions
 from argumentation_analysis.services.crypto_service import CryptoService
 
 @pytest.fixture
@@ -108,20 +108,9 @@ def test_load_definitions_encrypted_wrong_key(test_env):
     with pytest.raises(InvalidToken):
         load_extract_definitions(
             config_file=test_env['encrypted_definitions_file'],
-            b64_derived_key=wrong_key.decode('utf-8')
+            b64_derived_key=wrong_key.decode('utf-8'),
+            raise_on_decrypt_error=True
         )
-
-@pytest.mark.skip("La fonction save_extract_definitions chiffre toujours ; ce test pour la sauvegarde non chiffrée est obsolète.")
-def test_save_definitions_unencrypted(test_env):
-    new_definitions_file = test_env['test_dir'] / "new_extract_definitions.json"
-    definitions_obj = ExtractDefinitions.model_validate(test_env['sample_data'])
-    
-    save_extract_definitions(definitions_obj.to_dict_list(), config_file=new_definitions_file, b64_derived_key=test_env['key'].decode('utf-8'))
-    assert new_definitions_file.exists()
-    
-    with open(new_definitions_file, 'r') as f:
-        pass 
-    # assert loaded_data["sources"][0]["source_name"] == "Test Source 1"
 
 def test_save_definitions_encrypted(test_env):
     new_encrypted_file = test_env['test_dir'] / "new_extract_definitions.json.enc"
@@ -167,4 +156,4 @@ def test_load_malformed_json(test_env):
         f.write(b"this is not encrypted data")
 
     with pytest.raises(InvalidToken):
-        load_extract_definitions(config_file=malformed_encrypted_file, b64_derived_key=test_env['key'].decode('utf-8'))
+        load_extract_definitions(config_file=malformed_encrypted_file, b64_derived_key=test_env['key'].decode('utf-8'), raise_on_decrypt_error=True)

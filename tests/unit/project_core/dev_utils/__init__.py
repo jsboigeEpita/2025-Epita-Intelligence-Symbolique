@@ -1,1 +1,1 @@
-"""Init file for dev_utils test subpackage."""
+"""Tests module"""

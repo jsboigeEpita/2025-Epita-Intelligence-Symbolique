@@ -1,191 +1,56 @@
-"""
-Mock de JPype1 pour la compatibilité avec Python 3.12+.
-Ce fichier sert de point d'entrée principal pour le mock JPype,
-important les composants spécifiques depuis le package jpype_components.
-"""
+from unittest.mock import MagicMock
 
-import sys
-import logging
-from unittest.mock import MagicMock # Gardé pour _MockInternalJpypeModule si besoin, ou autres mocks directs
+# --- Mock de base ---
+# Remplacer create_autospec par MagicMock pour permettre l'assignation dynamique d'attributs.
+# Pour que le mock soit considéré comme un package, il doit avoir un __path__
+jpype_mock = MagicMock(name='jpype_mock_package')
+jpype_mock.__path__ = ['/mock/path/jpype']
 
-# Importer les composants nécessaires depuis le package jpype_components
-from tests.mocks.jpype_components.jvm import ( # MODIFIÉ
-    isJVMStarted,
-    startJVM,
-    shutdownJVM,
-    getDefaultJVMPath,
-    getJVMPath,
-    getJVMVersion,
-    getClassPath,
-    _jvm_started, # Exposer pour _MockInternalJpypeModule
-    _jvm_path # Exposer si nécessaire globalement
-)
-from tests.mocks.jpype_components.config import config # MODIFIÉ
-from tests.mocks.jpype_components.imports import imports # MODIFIÉ
-from tests.mocks.jpype_components.types import ( # MODIFIÉ
-    JString,
-    JArray,
-    JObject,
-    JBoolean,
-    JInt,
-    JDouble,
-    JLong,
-    JFloat,
-    JShort,
-    JByte,
-    JChar
-)
-from tests.mocks.jpype_components.exceptions import JException, JVMNotFoundException # MODIFIÉ
-from tests.mocks.jpype_components.jclass_core import MockJClassCore # MODIFIÉ
-from tests.mocks.jpype_components import tweety_enums # MODIFIÉ
+# --- Partie 1 : Mocker les types pour isinstance() ---
+class MockJType:
+    def __init__(self, target_type, name):
+        self._target_type = target_type
+        self.__name__ = name # Pour un meilleur débogage
 
-# Configuration du logging pour le mock principal
-mock_logger = logging.getLogger(__name__)
-if not mock_logger.hasHandlers():
-    handler = logging.StreamHandler(sys.stdout)
-    formatter = logging.Formatter('[MOCK JPYPE MAIN LOG] %(asctime)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    mock_logger.addHandler(handler)
-mock_logger.setLevel(logging.DEBUG)
+    def __instancecheck__(self, instance):
+        if self._target_type == list:
+            return isinstance(instance, list)
+        return isinstance(instance, self._target_type)
 
-mock_logger.info("jpype_mock.py (principal) en cours de chargement.")
+    def __call__(self, value, *args, **kwargs):
+        if self._target_type == list:
+            if isinstance(value, list):
+                return value
+            else:
+                return lambda x: list(x)
+        return self._target_type(value)
 
-# Version du mock
-__version__ = "1.4.0-mock-refactored"
-
-# --- _MockInternalJpypeModule ---
-# Cette classe simule le module `_jpype` interne que `jpype.imports` pourrait utiliser.
-# Elle doit rester ici ou être accessible globalement car `sys.modules['jpype._jpype']` est patché.
-class _MockJpypeCoreModule: # Renommée pour clarifier son rôle
-    def isStarted(self):
-        # Utilise la variable _jvm_started importée depuis .jpype_components.jvm
-        mock_logger.debug(f"[MOCK jpype._core.isStarted()] Appelée. Retourne: {_jvm_started}")
-        return _jvm_started
-    
-    isJVMStarted = isStarted # Alias pour correspondre à l'API publique si nécessaire
-
-    def getVersion(self):
-        return f"Mocked jpype._core module (simulated in jpype_mock.py, JVM version: {getJVMVersion()})"
-
-    def isPackage(self, name):
-        # Simule la vérification de l'existence d'un package.
-        mock_logger.debug(f"[MOCK jpype._core.isPackage('{name}')] Appelée. _jvm_started: {_jvm_started}. Retourne: {_jvm_started}")
-        return _jvm_started
-
-_jpype_core_mock_instance = _MockJpypeCoreModule()
-sys.modules['jpype._jpype'] = _jpype_core_mock_instance # Historique, peut-être encore utilisé par d'anciens imports
-sys.modules['_jpype'] = _jpype_core_mock_instance      # Pour jpype.imports qui fait "from . import _jpype"
-sys.modules['jpype._core'] = _jpype_core_mock_instance # Pour s'assurer que si jpype._core est accédé, c'est notre mock
-mock_logger.info("Instance de _MockJpypeCoreModule injectée dans sys.modules['jpype._jpype'], sys.modules['_jpype'] et sys.modules['jpype._core'].")
+# Assigner les mocks de type
+jpype_mock.JInt = MockJType(int, "JInt")
+jpype_mock.JFloat = MockJType(float, "JFloat")
+jpype_mock.JBoolean = MockJType(bool, "JBoolean")
+jpype_mock.JString = MockJType(str, "JString")
+jpype_mock.JArray = MockJType(list, "JArray")
 
 
-# --- MockJavaNamespace ---
-# Simule jpype.java (pour accès comme jpype.java.lang.String)
-class MockJavaNamespace:
-    def __init__(self, path_prefix=""):
-        self._path_prefix = path_prefix
-        mock_logger.debug(f"MockJavaNamespace créé pour préfixe: '{path_prefix}'")
-
-    def __getattr__(self, name):
-        new_path = f"{self._path_prefix}.{name}" if self._path_prefix else name
-        final_segment = new_path.split('.')[-1]
-
-        # Heuristique: si le dernier segment commence par une majuscule, c'est une classe.
-        if final_segment and final_segment[0].isupper():
-            mock_logger.debug(f"Accès à jpype.java...{new_path}, interprété comme JClass('{new_path}')")
-            return JClass(new_path) # Utilise la fonction JClass définie ci-dessous
-        else:
-            mock_logger.debug(f"Accès à jpype.java...{new_path}, interprété comme sous-namespace")
-            return MockJavaNamespace(new_path)
-
-java = MockJavaNamespace("java") # Pour jpype.java.xxx
-# Potentiellement d'autres namespaces de haut niveau si nécessaire (org, net, etc.)
-# Exemple: org = MockJavaNamespace("org")
-
-# --- Fonction JClass principale ---
-# Cette fonction est le point d'entrée pour obtenir des classes Java mockées.
-# Elle utilisera MockJClassCore et appliquera des configurations spécifiques.
-_jclass_cache = {} # Cache simple pour les instances de MockJClassCore
-
-def JClass(name: str, *args, **kwargs): # Ajout de *args, **kwargs pour ignorer les arguments non supportés comme 'loader'
-    """
-    Simule jpype.JClass(). Retourne une instance de MockJClassCore configurée.
-    """
-    mock_logger.info(f"[MOCK JPYPE JClass] Appelée avec name='{name}', args={args}, kwargs={kwargs}") # Log ajouté
-    if name in _jclass_cache:
-        # mock_logger.debug(f"JClass('{name}') trouvé dans le cache.")
-        return _jclass_cache[name]
-
-    mock_logger.debug(f"JClass('{name}') demandé.")
-
-    # Vérifier si c'est une énumération Tweety connue
-    if name in tweety_enums.ENUM_MAPPINGS:
-        enum_class_mock = tweety_enums.ENUM_MAPPINGS[name]
-        # Assurer que les membres de l'enum sont initialisés si ce n'est pas déjà fait
-        # Normalement, la métaclasse s'en charge, mais une vérification ici peut être utile.
-        # hasattr(enum_class_mock, '_initialize_enum_members') and enum_class_mock._initialize_enum_members()
-        # La métaclasse devrait avoir déjà appelé _initialize_enum_members.
-        # On s'assure que la classe retournée a bien le jclass_provider si besoin (pas typique pour les enums statiques)
-        # et que son __name__ correspond bien au nom Java demandé.
-        # Les classes Enum mockées héritent de MockJClassCore, donc elles ont un __name__ et un class_name.
-        # Il faut s'assurer que le nom Java est bien celui attendu.
-        # Le MOCK_JAVA_CLASS_NAME est utilisé pour cela.
-        mock_logger.info(f"JClass('{name}') identifié comme une énumération Tweety. Retourne la classe mockée: {enum_class_mock}.")
-        _jclass_cache[name] = enum_class_mock
-        return enum_class_mock
-
-    mock_logger.debug(f"JClass('{name}'): Pas une énumération Tweety connue. Création d'une instance de MockJClassCore.")
-    # Passer la fonction JClass elle-même pour que MockJClassCore puisse la fournir aux configurateurs.
-    core_class_mock = MockJClassCore(name, jclass_provider_func=JClass)
-
-    # La configuration des reasoners et agents est maintenant gérée dans MockJClassCore.__call__
-    # via le module tweety_reasoners.
-    # Exemple:
-    # if name.startswith("org.tweetyproject.arg"):
-    #     from .jpype_components import tweety_syntax # ou autre module pertinent
-    #     tweety_syntax.configure_tweety_argument_class(core_class_mock)
-    # elif name.startswith("org.tweetyproject.logics"):
-    #     # ...
-    #     pass
-
-    _jclass_cache[name] = core_class_mock
-    return core_class_mock
+# --- Partie 2 : Mocker les attributs manquants ---
+jpype_mock.JException = type('JException', (Exception,), {})
+jpype_mock.java = MagicMock()
+jpype_mock.JPackage = MagicMock()
+# Ajout pour résoudre l'erreur dans les tests e2e
+jpype_mock.imports = MagicMock()
 
 
-# --- Patchs finaux et exports ---
+# --- Partie 3 : Mocker l'exception JVMNotStarted ---
+jpype_mock._core = MagicMock()
+jpype_mock._core.JVMNotStarted = type('JVMNotStarted', (Exception,), {})
 
-# Le patch pour jpype.imports._jpype.isStarted est maintenant géré par
-# le fait que _MockInternalJpypeModule utilise _jvm_started de jvm.py.
+# --- Fonctions de base ---
+# Maintenant, ces assignations devraient fonctionner car jpype_mock est un MagicMock standard.
+jpype_mock.isJVMStarted.return_value = False
+jpype_mock.startJVM.return_value = None
+jpype_mock.shutdownJVM.return_value = None
+jpype_mock.addClassPath.return_value = None
 
-# Le module `imports` (qui est `jpype_components.imports.imports_module`)
-# est déjà dans sys.modules['jpype.imports'] grâce à son propre code d'initialisation.
-# On s'assure juste qu'il est exposé par ce module principal si on fait `import jpype_mock; jpype_mock.imports`.
-# La variable `imports` importée de `.jpype_components.imports` est déjà le module correct.
-
-# Les variables globales _jvm_started et _jvm_path sont gérées dans jvm.py.
-# Les fonctions comme isJVMStarted, startJVM, etc., sont importées directement.
-# L'instance `config` est importée directement.
-# Les types JString, JArray, etc., sont importés directement.
-# Les exceptions JException, JVMNotFoundException sont importées directement.
-
-mock_logger.info("Mock JPype1 (jpype_mock.py principal) initialisé et refactorisé.")
-mock_logger.info("Les composants sont maintenant dans le package 'jpype_components'.")
-
-# Optionnel: Exposer explicitement ce qui fait partie de l'API publique du mock
-# __all__ = [
-#     "__version__",
-#     "isJVMStarted", "startJVM", "shutdownJVM",
-#     "getDefaultJVMPath", "getJVMPath", "getJVMVersion", "getClassPath",
-#     "config",
-#     "imports",
-#     "java", # Pour jpype.java.xxx
-#     "JClass", "JString", "JArray", "JObject",
-#     "JBoolean", "JInt", "JDouble", "JLong", "JFloat", "JShort", "JByte", "JChar",
-#     "JException", "JVMNotFoundException",
-#     # Les classes MockJClassCore, MockJavaCollection ne sont pas typiquement accédées directement
-#     # par l'utilisateur du mock, mais via JClass() ou des méthodes retournant des collections.
-# ]
-
-# Exposer l'instance du mock interne _jpype pour que conftest.py puisse l'importer
-_jpype = _jpype_core_mock_instance # Exposer l'instance mockée
-# La deuxième assignation était redondante
+# Exporter le mock principal pour qu'il soit utilisé par le bootstrap
+__all__ = ['jpype_mock']

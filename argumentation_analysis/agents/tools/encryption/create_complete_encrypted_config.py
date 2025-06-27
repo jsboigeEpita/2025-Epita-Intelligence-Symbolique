@@ -11,7 +11,6 @@ import json
 import gzip
 import hashlib
 from pathlib import Path
-from dotenv import load_dotenv
 from cryptography.fernet import Fernet
 
 # Ajouter le répertoire parent au chemin de recherche des modules
@@ -20,16 +19,16 @@ parent_dir = current_dir.parent
 if str(parent_dir) not in sys.path:
     sys.path.append(str(parent_dir))
 
-# Charger les variables d'environnement
-load_dotenv(override=True)
 
 # Importer les modules nécessaires
+# L'import de ui.config (même si obsolète) ou de settings charge la configuration
+from argumentation_analysis.config.settings import settings
 from argumentation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE_ENC
 from argumentation_analysis.ui.utils import reconstruct_url, get_cache_filepath
 
-# Définir les constantes
-EXTRACT_SOURCES_UPDATED_PATH = parent_dir / "utils" / "extract_repair" / "docs" / "extract_sources_updated.json"
-TEXT_CACHE_DIR = parent_dir / "text_cache"
+# Définir les constantes avec le chemin absolu correct
+EXTRACT_SOURCES_UPDATED_PATH = current_dir.parent.parent.parent / "utils" / "extract_repair" / "docs" / "extract_sources_updated.json"
+TEXT_CACHE_DIR = current_dir.parent.parent.parent / "text_cache"
 
 # Afficher les chemins pour le débogage
 print(f"Chemin du fichier de configuration: {EXTRACT_SOURCES_UPDATED_PATH}")
@@ -65,7 +64,7 @@ def create_complete_encrypted_config():
         with open(EXTRACT_SOURCES_UPDATED_PATH, 'r', encoding='utf-8') as f:
             extract_sources = json.load(f)
         
-        print(f"✅ Fichier de configuration '{EXTRACT_SOURCES_UPDATED_PATH}' chargé avec succès.")
+        print(f"[OK] Fichier de configuration '{EXTRACT_SOURCES_UPDATED_PATH}' chargé avec succès.")
         print(f"   - {len(extract_sources)} sources trouvées.")
         
         # Créer un dictionnaire pour stocker les sources et leur contenu
@@ -101,7 +100,7 @@ def create_complete_encrypted_config():
             # Lire le contenu du fichier de cache
             try:
                 cache_content = cache_filepath.read_text(encoding='utf-8')
-                print(f"✅ Fichier de cache '{cache_filepath.name}' chargé pour la source '{source_name}'.")
+                print(f"[OK] Fichier de cache '{cache_filepath.name}' chargé pour la source '{source_name}'.")
                 print(f"   - Longueur: {len(cache_content)} caractères.")
                 
                 # Ajouter le contenu du cache au dictionnaire
@@ -115,7 +114,7 @@ def create_complete_encrypted_config():
         
         # Compresser les données
         compressed_data = gzip.compress(json_data)
-        print(f"✅ Données compressées: {len(json_data)} -> {len(compressed_data)} octets.")
+        print(f"[OK] Données compressées: {len(json_data)} -> {len(compressed_data)} octets.")
         
         # Chiffrer les données
         encrypted_data = encrypt_data(compressed_data, ENCRYPTION_KEY)
@@ -128,7 +127,7 @@ def create_complete_encrypted_config():
         with open(CONFIG_FILE_ENC, 'wb') as f:
             f.write(encrypted_data)
         
-        print(f"✅ Fichier chiffré '{CONFIG_FILE_ENC}' créé avec succès.")
+        print(f"[OK] Fichier chiffré '{CONFIG_FILE_ENC}' créé avec succès.")
         print(f"   - Taille: {CONFIG_FILE_ENC.stat().st_size} octets.")
         
         return True
@@ -141,9 +140,9 @@ def main():
     """Fonction principale."""
     print("\n=== Création du fichier encrypté complet ===\n")
     
-    # Vérifier si la variable d'environnement TEXT_CONFIG_PASSPHRASE est définie
-    if not os.getenv("TEXT_CONFIG_PASSPHRASE"):
-        print(f"⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie.")
+    # Vérifier si la passphrase est définie dans la configuration
+    if not settings.passphrase:
+        print(f"⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie dans votre .env ou configuration.")
         print(f"   Veuillez la définir avant d'exécuter ce script.")
         sys.exit(1)
     
@@ -151,7 +150,7 @@ def main():
     success = create_complete_encrypted_config()
     
     if success:
-        print("\n✅ Création du fichier encrypté complet réussie !")
+        print("\n[OK] Création du fichier encrypté complet réussie !")
     else:
         print("\n❌ Échec de la création du fichier encrypté complet.")
     

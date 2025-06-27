@@ -8,7 +8,6 @@
    - [Conversion de texte en ensemble de croyances](#conversion-de-texte-en-ensemble-de-croyances)
    - [Exécution de requêtes](#exécution-de-requêtes)
    - [Génération de requêtes](#génération-de-requêtes)
-   - [Interprétation des résultats](#interprétation-des-résultats)
 4. [Exemples d'utilisation](#exemples-dutilisation)
    - [Exemple avec curl](#exemple-avec-curl)
    - [Exemple avec Python](#exemple-avec-python)
@@ -35,9 +34,8 @@ L'API Web est construite selon les principes REST et utilise le format JSON pour
 - **Belief Sets**: Ensembles de croyances logiques
 - **Queries**: Requêtes logiques à exécuter sur les ensembles de croyances
 - **Results**: Résultats des requêtes logiques
-- **Interpretations**: Interprétations textuelles des résultats
 
-L'authentification se fait via des tokens JWT, qui doivent être inclus dans l'en-tête `Authorization` de chaque requête.
+L'API est actuellement ouverte et ne met pas en œuvre de mécanismes d'authentification ou d'autorisation spécifiques. La protection de l'API, si nécessaire, est supposée être gérée par des mécanismes externes (par exemple, un pare-feu, un proxy inverse, une gateway API).
 
 ## Endpoints pour les agents logiques
 
@@ -63,19 +61,14 @@ L'authentification se fait via des tokens JWT, qui doivent être inclus dans l'e
 ```json
 {
   "success": true,
-  "conversion_timestamp": "2025-05-27T17:30:45.123Z",
   "belief_set": {
     "id": "bs-12345",
     "logic_type": "propositional",
     "content": "nuageux => pluie\nnuageux",
-    "source_text": "Si le ciel est nuageux, alors il va pleuvoir. Le ciel est nuageux.",
-    "creation_timestamp": "2025-05-27T17:30:45.123Z"
+    "source_text": "Si le ciel est nuageux, alors il va pleuvoir. Le ciel est nuageux."
   },
-  "processing_time": 0.45,
-  "conversion_options": {
-    "include_explanation": true,
-    "timeout": 10.0
-  }
+  "message": "Conversion réussie.",
+  "processing_time": 0.45
 }
 ```
 
@@ -102,7 +95,6 @@ L'authentification se fait via des tokens JWT, qui doivent être inclus dans l'e
 ```json
 {
   "success": true,
-  "query_timestamp": "2025-05-27T17:31:15.456Z",
   "belief_set_id": "bs-12345",
   "logic_type": "propositional",
   "result": {
@@ -111,11 +103,8 @@ L'authentification se fait via des tokens JWT, qui doivent être inclus dans l'e
     "formatted_result": "Tweety Result: Query 'pluie' is ACCEPTED (True).",
     "explanation": "La requête 'pluie' est acceptée car, selon l'ensemble de croyances, le ciel est nuageux et s'il est nuageux, alors il pleut. Par application du Modus Ponens, on peut conclure qu'il pleut."
   },
-  "processing_time": 0.12,
-  "query_options": {
-    "include_explanation": true,
-    "timeout": 5.0
-  }
+  "message": "Requête exécutée avec succès.",
+  "processing_time": 0.12
 }
 ```
 
@@ -142,7 +131,6 @@ L'authentification se fait via des tokens JWT, qui doivent être inclus dans l'e
 ```json
 {
   "success": true,
-  "generation_timestamp": "2025-05-27T17:32:30.789Z",
   "belief_set_id": "bs-12345",
   "logic_type": "propositional",
   "queries": [
@@ -152,82 +140,10 @@ L'authentification se fait via des tokens JWT, qui doivent être inclus dans l'e
     "!(nuageux && !pluie)",
     "!nuageux || pluie"
   ],
-  "processing_time": 0.35,
-  "generation_options": {
-    "max_queries": 5,
-    "timeout": 8.0
-  }
+  "message": "Requêtes générées avec succès.",
+  "processing_time": 0.35
 }
 ```
-
-### Interprétation des résultats
-
-**Endpoint**: `POST /api/logic/interpret`
-
-**Description**: Interprète les résultats de plusieurs requêtes logiques.
-
-**Requête**:
-```json
-{
-  "belief_set_id": "bs-12345",
-  "logic_type": "propositional",
-  "queries": ["pluie", "nuageux => pluie", "nuageux && pluie"],
-  "results": [
-    {
-      "query": "pluie",
-      "result": true,
-      "formatted_result": "Tweety Result: Query 'pluie' is ACCEPTED (True)."
-    },
-    {
-      "query": "nuageux => pluie",
-      "result": true,
-      "formatted_result": "Tweety Result: Query 'nuageux => pluie' is ACCEPTED (True)."
-    },
-    {
-      "query": "nuageux && pluie",
-      "result": true,
-      "formatted_result": "Tweety Result: Query 'nuageux && pluie' is ACCEPTED (True)."
-    }
-  ],
-  "options": {
-    "include_explanation": true
-  }
-}
-```
-
-**Réponse**:
-```json
-{
-  "success": true,
-  "interpretation_timestamp": "2025-05-27T17:33:45.012Z",
-  "belief_set_id": "bs-12345",
-  "logic_type": "propositional",
-  "queries": ["pluie", "nuageux => pluie", "nuageux && pluie"],
-  "results": [
-    {
-      "query": "pluie",
-      "result": true,
-      "formatted_result": "Tweety Result: Query 'pluie' is ACCEPTED (True)."
-    },
-    {
-      "query": "nuageux => pluie",
-      "result": true,
-      "formatted_result": "Tweety Result: Query 'nuageux => pluie' is ACCEPTED (True)."
-    },
-    {
-      "query": "nuageux && pluie",
-      "result": true,
-      "formatted_result": "Tweety Result: Query 'nuageux && pluie' is ACCEPTED (True)."
-    }
-  ],
-  "interpretation": "L'analyse logique confirme que, selon les prémisses données, il pleut effectivement. Cela découle directement de l'application du Modus Ponens: puisque le ciel est nuageux et que s'il est nuageux alors il pleut, on peut conclure qu'il pleut. Les requêtes confirment également que l'implication 'si nuageux alors pluie' est vraie, et que la conjonction 'nuageux et pluie' est également vraie.",
-  "processing_time": 0.28,
-  "interpretation_options": {
-    "include_explanation": true
-  }
-}
-```
-
 ## Exemples d'utilisation
 
 ### Exemple avec curl
@@ -235,13 +151,9 @@ L'authentification se fait via des tokens JWT, qui doivent être inclus dans l'e
 Voici comment utiliser l'API avec curl pour convertir un texte en ensemble de croyances et exécuter une requête:
 
 ```bash
-# Définir le token d'authentification
-TOKEN="votre_token_jwt"
-
 # Convertir un texte en ensemble de croyances
 BELIEF_SET_ID=$(curl -s -X POST \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
   -d '{
     "text": "Si le ciel est nuageux, alors il va pleuvoir. Le ciel est nuageux.",
     "logic_type": "propositional",
@@ -249,14 +161,13 @@ BELIEF_SET_ID=$(curl -s -X POST \
       "include_explanation": true
     }
   }' \
-  https://api.example.com/api/logic/belief-set | jq -r '.belief_set.id')
+  http://localhost:5000/api/logic/belief-set | jq -r '.belief_set.id')
 
 echo "Ensemble de croyances créé avec ID: $BELIEF_SET_ID"
 
 # Exécuter une requête sur l'ensemble de croyances
 curl -s -X POST \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
   -d "{
     \"belief_set_id\": \"$BELIEF_SET_ID\",
     \"query\": \"pluie\",
@@ -265,7 +176,7 @@ curl -s -X POST \
       \"include_explanation\": true
     }
   }" \
-  https://api.example.com/api/logic/query | jq
+  http://localhost:5000/api/logic/query | jq
 ```
 
 ### Exemple avec Python
@@ -277,11 +188,9 @@ import requests
 import json
 
 # Configuration
-API_BASE_URL = "https://api.example.com/api/logic"
-TOKEN = "votre_token_jwt"
+API_BASE_URL = "http://localhost:5000/api/logic"
 HEADERS = {
-    "Content-Type": "application/json",
-    "Authorization": f"Bearer {TOKEN}"
+    "Content-Type": "application/json"
 }
 
 # Fonction pour convertir un texte en ensemble de croyances
@@ -361,11 +270,9 @@ Voici comment utiliser l'API avec JavaScript (Node.js):
 const axios = require('axios');
 
 // Configuration
-const API_BASE_URL = 'https://api.example.com/api/logic';
-const TOKEN = 'votre_token_jwt';
+const API_BASE_URL = 'http://localhost:5000/api/logic';
 const HEADERS = {
-  'Content-Type': 'application/json',
-  'Authorization': `Bearer ${TOKEN}`
+  'Content-Type': 'application/json'
 };
 
 // Fonction pour convertir un texte en ensemble de croyances
@@ -445,13 +352,11 @@ main();
 
 L'API utilise les codes de statut HTTP standards pour indiquer le succès ou l'échec d'une requête:
 
-- **200 OK**: La requête a réussi
-- **400 Bad Request**: La requête est mal formée ou contient des paramètres invalides
-- **401 Unauthorized**: Authentification requise ou invalide
-- **403 Forbidden**: Accès refusé
-- **404 Not Found**: Ressource non trouvée
-- **422 Unprocessable Entity**: La requête est bien formée mais contient des erreurs sémantiques
-- **500 Internal Server Error**: Erreur interne du serveur
+- **200 OK**: La requête a réussi.
+- **400 Bad Request**: La requête est mal formée ou contient des paramètres invalides (par exemple, JSON malformé, champs manquants).
+- **404 Not Found**: La ressource demandée (par exemple, un endpoint spécifique) n'existe pas.
+- **422 Unprocessable Entity**: La requête est syntaxiquement correcte mais contient des erreurs sémantiques (par exemple, un type de logique non supporté, une requête logique invalide pour le type de logique donné).
+- **500 Internal Server Error**: Une erreur inattendue s'est produite côté serveur.
 
 En cas d'erreur, l'API renvoie un objet JSON avec les informations suivantes:
 
@@ -472,9 +377,7 @@ En cas d'erreur, l'API renvoie un objet JSON avec les informations suivantes:
 ## Bonnes pratiques
 
 1. **Gestion du token d'authentification**:
-   - Stockez le token de manière sécurisée
-   - Renouvelez le token régulièrement
-   - Ne partagez jamais le token dans du code public
+   - Si des mécanismes de protection externes sont en place (pare-feu, API Gateway), suivez leurs recommandations pour la gestion des accès.
 
 2. **Optimisation des performances**:
    - Réutilisez les ensembles de croyances pour plusieurs requêtes
@@ -515,7 +418,7 @@ En cas d'erreur, l'API renvoie un objet JSON avec les informations suivantes:
 
 ## Ressources supplémentaires
 
-- [Documentation complète de l'API](../api/logic_endpoints.md)
+- [Description technique de l'API Web](../composants/api_web.md)
 - [Guide d'utilisation des agents logiques](utilisation_agents_logiques.md)
 - [Exemples de logique propositionnelle](exemples_logique_propositionnelle.md)
 - [Exemples de logique du premier ordre](exemples_logique_premier_ordre.md)

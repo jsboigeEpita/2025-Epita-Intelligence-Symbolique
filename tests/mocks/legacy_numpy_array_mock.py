@@ -20,18 +20,7 @@ _real_numpy_inexact = None
 _real_numpy_flexible = None
 _real_numpy_character = None
 _real_numpy_ufunc = None
-try:
-    # Renommer l'import pour éviter les conflits si ce mock est lui-même importé comme 'numpy'
-    import numpy as actual_numpy_for_mock
-    _actual_numpy_module = actual_numpy_for_mock
-    _real_numpy_flatiter = _actual_numpy_module.flatiter
-    _real_numpy_broadcast = _actual_numpy_module.broadcast
-    _real_numpy_inexact = _actual_numpy_module.inexact
-    _real_numpy_flexible = _actual_numpy_module.flexible
-    _real_numpy_character = _actual_numpy_module.character
-    _real_numpy_ufunc = _actual_numpy_module.ufunc
-except ImportError:
-    pass # Le vrai numpy n'est pas disponible
+
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,
@@ -40,42 +29,90 @@ logging.basicConfig(
 )
 logger = logging.getLogger("NumpyMock")
 
+# Attempt to import the real numpy to use some of its components
+try:
+    # Renommer l'import pour éviter les conflits si ce mock est lui-même importé comme 'numpy'
+    import numpy as actual_numpy_for_mock
+    _actual_numpy_module = actual_numpy_for_mock
+    _real_numpy_flatiter = getattr(_actual_numpy_module, 'flatiter', None)
+    _real_numpy_broadcast = getattr(_actual_numpy_module, 'broadcast', None)
+    _real_numpy_inexact = getattr(_actual_numpy_module, 'inexact', None)
+    _real_numpy_flexible = getattr(_actual_numpy_module, 'flexible', None)
+    _real_numpy_character = getattr(_actual_numpy_module, 'character', None)
+    _real_numpy_ufunc = getattr(_actual_numpy_module, 'ufunc', None)
+    logger.info("NumpyMock: Successfully imported real numpy for some components.")
+except ImportError:
+    logger.warning("NumpyMock: Real numpy not found. Some mock components might be less accurate (e.g., flatiter).")
+    pass # Le vrai numpy n'est pas disponible
+
+# Adding typecodes definition
+typecodes = {
+    'Character': 'c',
+    'Integer': 'bhilqp',
+    'UnsignedInteger': 'BHILQP',
+    'Float': 'efdg',
+    'Complex': 'FDG',
+    'AllInteger': 'bBhHiIlLqQpP',
+    'AllFloat': 'efdgFDG',
+    'Datetime': 'M',
+    'Timedelta': 'm',
+    'Object': 'O',
+    'String': 'S',
+    'Unicode': 'U',
+    'Void': 'V',
+    'All': '?bhilqpBHILQPefdgFDGSUVOMm'
+}
+
 # Version
-__version__ = "1.24.3"
+if _actual_numpy_module and hasattr(_actual_numpy_module, '__version__'):
+    __version__ = _actual_numpy_module.__version__
+    logger.info(f"NumpyMock: Using real numpy version: {__version__}")
+else:
+    __version__ = "1.24.3.mock" # Ensure mock is in version if real numpy not found or has no version
+    logger.info(f"NumpyMock: Using mock numpy version: {__version__}")
+
 __spec__ = MagicMock(name='numpy.__spec__') # Ajout pour compatibilité import
 _CopyMode = MagicMock(name='numpy._CopyMode') # Ajout pour compatibilité scipy/sklearn
 
 # Classes de base
-class generic: # Classe de base pour les scalaires NumPy
-    def __init__(self, value):
-        self.value = value
-    def __repr__(self):
-        return f"numpy.{self.__class__.__name__}({self.value})"
-    # Ajouter d'autres méthodes communes si nécessaire (ex: itemsize, flags, etc.)
+if _actual_numpy_module and hasattr(_actual_numpy_module, 'generic'):
+    generic = _actual_numpy_module.generic
+else:
+    class generic_mock: # Classe de base pour les scalaires NumPy
+        def __init__(self, value):
+            self.value = value
+        def __repr__(self):
+            return f"numpy.{self.__class__.__name__}({self.value})"
+        # Ajouter d'autres méthodes communes si nécessaire (ex: itemsize, flags, etc.)
+    generic = generic_mock
 
 class dtype:
     """Mock pour numpy.dtype."""
     
     def __init__(self, type_spec):
-        # Si type_spec est une chaîne (ex: 'float64'), la stocker.
-        # Si c'est un type Python (ex: float), stocker cela.
-        # Si c'est une instance de nos classes de type (ex: float64), utiliser son nom.
-        if isinstance(type_spec, str):
+        self.names = None
+        self.descr = []
+        if isinstance(type_spec, list) and type_spec and isinstance(type_spec[0], tuple):
+            # Structured dtype, ex: [('x', 'i4'), ('y', 'f8')]
+            self.names = tuple([t[0] for t in type_spec])
+            self.descr = type_spec
+            # Pour un dtype structuré, 'name' est une représentation de la structure
+            self.name = str(type_spec)
+            self.type = 'void' # Souvent un type void pour les dtypes structurés
+        elif isinstance(type_spec, str):
             self.name = type_spec
-            self.type = type_spec # Garder une trace du type original si possible
+            self.type = type_spec
         elif isinstance(type_spec, type):
-             # Cas où on passe un type Python comme float, int
             if type_spec is float: self.name = 'float64'
             elif type_spec is int: self.name = 'int64'
             elif type_spec is bool: self.name = 'bool_'
             elif type_spec is complex: self.name = 'complex128'
             else: self.name = type_spec.__name__
             self.type = type_spec
-        else: # Supposer que c'est une de nos classes de type mockées
+        else:
             self.name = str(getattr(type_spec, '__name__', str(type_spec)))
             self.type = type_spec
 
-        # Attributs attendus par certaines bibliothèques
         self.char = self.name[0] if self.name else ''
         self.num = 0 # Placeholder
         self.itemsize = 8 # Placeholder, typiquement 8 pour float64/int64
@@ -571,7 +608,7 @@ def rint(x, out=None):
     if isinstance(x, ndarray):
         return ndarray(shape=x.shape, dtype=x.dtype)
     # Comportement simplifié pour les scalaires
-    return np.round(x) # Utilise notre mock np.round
+    return round(x) # Utilise notre mock round
 
 def sign(x, out=None):
     """Mock pour numpy.sign."""
@@ -586,25 +623,25 @@ def expm1(x, out=None):
     """Mock pour numpy.expm1 (exp(x) - 1)."""
     if isinstance(x, ndarray):
         return ndarray(shape=x.shape, dtype=x.dtype)
-    return np.exp(x) - 1 # Utilise notre mock np.exp
+    return exp(x) - 1 # Utilise notre mock exp
 
 def log1p(x, out=None):
     """Mock pour numpy.log1p (log(1 + x))."""
     if isinstance(x, ndarray):
         return ndarray(shape=x.shape, dtype=x.dtype)
-    return np.log(1 + x) # Utilise notre mock np.log
+    return log(1 + x) # Utilise notre mock log
 
 def deg2rad(x, out=None):
     """Mock pour numpy.deg2rad."""
     if isinstance(x, ndarray):
         return ndarray(shape=x.shape, dtype=x.dtype)
-    return x * (np.pi / 180) # Utilise notre mock np.pi
+    return x * (pi / 180) # Utilise notre mock pi
 
 def rad2deg(x, out=None):
     """Mock pour numpy.rad2deg."""
     if isinstance(x, ndarray):
         return ndarray(shape=x.shape, dtype=x.dtype)
-    return x * (180 / np.pi) # Utilise notre mock np.pi
+    return x * (180 / pi) # Utilise notre mock pi
 
 def trunc(x, out=None):
     """Mock pour numpy.trunc. Retourne la partie entière."""
@@ -859,39 +896,130 @@ class random:
             size = (size,)
         return ndarray(shape=size, dtype=float)
 
-# Module rec pour les record arrays
-class rec:
-    """Mock pour numpy.rec (record arrays)."""
-    
-    class recarray(ndarray):
+# Module rec pour les record arrays - Refonte pour un comportement de sous-module
+class _NumPy_Rec_Mock:
+    """Mock pour le module numpy.rec (record arrays)."""
+    def __init__(self):
+        self.__name__ = 'numpy.rec'
+        self.__package__ = 'numpy' # Indique qu'il appartient au package 'numpy'
+        self.__path__ = []       # Indique qu'il peut être traité comme un package (pour les imports)
+        # La classe recarray est définie comme une classe imbriquée ci-dessous
+        # et sera attachée comme un attribut à l'instance.
+        self.recarray = _NumPy_Rec_Mock._recarray_impl # Attacher la classe interne
+
+    class _recarray_impl(ndarray): # Renommée pour éviter confusion, ndarray est défini plus haut
         """Mock pour numpy.rec.recarray."""
-        
-        def __init__(self, shape=None, dtype=None, formats=None, names=None, **kwargs):
-            # Gérer les différents formats d'arguments pour recarray
-            if isinstance(shape, tuple):
-                super().__init__(shape=shape, dtype=dtype)
-            elif shape is not None:
-                super().__init__(shape=(shape,), dtype=dtype)
-            else:
-                super().__init__(shape=(0,), dtype=dtype)
+        def __init__(self, input_array=None, shape=None, dtype=None, buf=None, offset=0, strides=None, formats=None, names=None, titles=None, byteorder=None, aligned=False, order='C'):
+            # La signature de np.rec.array (qui crée un recarray) est complexe.
+            # np.rec.recarray peut aussi être appelé directement.
+            # Simplifions pour le mock.
             
-            self._names = names or []
-            self._formats = formats or []
-        
+            _shape_arg = shape
+            _dtype_arg = dtype
+            _names_arg = names
+            _formats_arg = formats
+
+            if input_array is not None:
+                # Si input_array est un tuple et que shape n'est pas explicitement fourni,
+                # il est probable que input_array SOIT la shape.
+                if isinstance(input_array, tuple) and all(isinstance(dim, int) for dim in input_array) and _shape_arg is None:
+                    _shape_arg = input_array
+                # Sinon, si input_array est un autre array-like, essayer d'en déduire la forme.
+                elif hasattr(input_array, 'shape'):
+                    _shape_arg = input_array.shape
+                
+                if hasattr(input_array, 'dtype') and _dtype_arg is None: # Ne pas écraser un dtype explicite
+                    _dtype_arg = input_array.dtype
+            
+            if _shape_arg is None: # Fallback si shape n'est toujours pas déductible ou fourni
+                # Si names est fourni, on peut supposer une shape 1D basée sur le nombre de noms
+                # Ceci est une heuristique et pourrait ne pas couvrir tous les cas d'usage de recarray.
+                _shape_arg = (0,) if _names_arg is None else (len(_names_arg) if isinstance(_names_arg, (list, tuple)) else 0,)
+
+
+            # Gestion du dtype pour les recarrays (très simplifié)
+            if _dtype_arg is None and _names_arg and _formats_arg:
+                # Essayer de construire un dtype structuré simple si names et formats sont là
+                # Ceci est un placeholder, la vraie construction de dtype structuré est complexe.
+                # Pour le mock, on peut juste utiliser un dtype objet ou le premier format.
+                try:
+                    # Utiliser le mock dtype global défini dans ce fichier
+                    _dtype_arg = globals()['dtype'](list(zip(_names_arg, _formats_arg)))
+                except Exception:
+                    _dtype_arg = globals()['dtype'](object) # Fallback
+            elif _dtype_arg is None:
+                _dtype_arg = globals()['dtype'](object) # Fallback général
+
+            super().__init__(shape=_shape_arg, dtype=_dtype_arg)
+            
+            self._names = _names_arg or []
+            self._formats = _formats_arg or []
+            # self.titles = titles # Non géré dans ce mock simple
+            # self.byteorder = byteorder # Non géré
+            # self.aligned = aligned # Non géré
+
         @property
         def names(self):
-            return self._names
+            return tuple(self._names) # Doit retourner un tuple
         
         @property
         def formats(self):
-            return self._formats
+            return self._formats # Peut rester une liste
         
+        @property
+        def fields(self):
+            # Simuler le dictionnaire fields
+            if self.dtype and hasattr(self.dtype, 'fields') and self.dtype.fields:
+                return self.dtype.fields
+            # Construire un mock fields si le dtype ne le fournit pas
+            field_dict = {}
+            if self._names and self._formats and len(self._names) == len(self._formats):
+                for i, name in enumerate(self._names):
+                    # Créer un mock de dtype pour chaque champ
+                    # Le tuple contient (dtype, offset[, title])
+                    field_dtype_mock = globals()['dtype'](self._formats[i])
+                    field_dict[name] = (field_dtype_mock, i * field_dtype_mock.itemsize) # Offset simplifié
+            return field_dict if field_dict else None
+
+
         def __getattr__(self, name):
             # Simule l'accès aux champs par nom
-            return ndarray(shape=(len(self),))
+            if name in self._names:
+                # Pour un mock, retourner un ndarray simple de la même longueur que la première dimension
+                field_shape = (self.shape[0],) if self.shape and len(self.shape) > 0 else (0,)
+                # Essayer de trouver le format pour ce champ
+                try:
+                    idx = self._names.index(name)
+                    field_format = self._formats[idx] if self._formats and idx < len(self._formats) else object
+                except ValueError:
+                    field_format = object
+                
+                return ndarray(shape=field_shape, dtype=globals()['dtype'](field_format))
+            
+            # Si l'attribut n'est pas un champ, essayer de le chercher sur la superclasse (ndarray)
+            try:
+                return super().__getattr__(name)
+            except AttributeError:
+                raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}' and it's not a field name")
 
-# Instance du module rec pour l'exposition
-rec.recarray = rec.recarray
+        def field(self, attr, val=None):
+            """Simule la méthode field pour accéder ou modifier les champs."""
+            if val is None: # Accès
+                return self.__getattr__(attr)
+            else: # Modification (simplifié, ne modifie pas vraiment les données)
+                if attr not in self._names:
+                    raise AttributeError(f"Unknown field name: {attr}")
+                # Pour un mock, on ne fait rien de plus.
+                pass
+
+
+# Instance du mock de module 'rec'
+_rec_module_mock_instance = _NumPy_Rec_Mock()
+
+# Exposer cette instance comme 'rec' au niveau de notre module mock 'numpy'
+# Ainsi, numpy.rec pointera vers _rec_module_mock_instance,
+# et numpy.rec.recarray pointera vers _rec_module_mock_instance.recarray (qui est _NumPy_Rec_Mock._recarray_impl)
+rec = _rec_module_mock_instance
 
 # Classes de types de données pour compatibilité PyTorch
 class dtype_base(type):
@@ -909,111 +1037,122 @@ class dtype_base(type):
     def __repr__(cls):
         return f"<class 'numpy.{cls.__name__}'>"
 
-class bool_(metaclass=dtype_base):
-    """Type booléen NumPy."""
-    __name__ = 'bool_'
-    __module__ = 'numpy'
-    
-    def __new__(cls, value=False):
-        return bool(value)
-
-class number(metaclass=dtype_base):
-    """Type numérique de base NumPy."""
-    __name__ = 'number'
-    __module__ = 'numpy'
-
-class object_(metaclass=dtype_base):
-    """Type objet NumPy."""
-    __name__ = 'object_'
-    __module__ = 'numpy'
-    
-    def __new__(cls, value=None):
-        return object() if value is None else value
-
-if _real_numpy_inexact:
-    inexact = _real_numpy_inexact
+if _actual_numpy_module and hasattr(_actual_numpy_module, 'bool_'):
+    bool_ = _actual_numpy_module.bool_
 else:
-    class inexact(number, metaclass=dtype_base): # Hérite de number
+    class bool__mock(metaclass=dtype_base): # Renommé pour éviter conflit
+        """Type booléen NumPy."""
+        __name__ = 'bool_'
+        __module__ = 'numpy'
+        def __new__(cls, value=False):
+            return bool(value)
+    bool_ = bool__mock
+
+if _actual_numpy_module and hasattr(_actual_numpy_module, 'number'):
+    number = _actual_numpy_module.number
+else:
+    class number_mock(metaclass=dtype_base): # Renommé
+        """Type numérique de base NumPy."""
+        __name__ = 'number'
+        __module__ = 'numpy'
+    number = number_mock
+
+if _actual_numpy_module and hasattr(_actual_numpy_module, 'object_'):
+    object_ = _actual_numpy_module.object_
+else:
+    class object__mock(metaclass=dtype_base): # Renommé
+        """Type objet NumPy."""
+        __name__ = 'object_'
+        __module__ = 'numpy'
+        def __new__(cls, value=None):
+            return object() if value is None else value
+    object_ = object__mock
+
+if _real_numpy_inexact: # Garder la logique existante si _real_numpy_inexact est déjà défini
+    inexact = _real_numpy_inexact
+elif _actual_numpy_module and hasattr(_actual_numpy_module, 'inexact'):
+    inexact = _actual_numpy_module.inexact
+else:
+    class inexact_mock(number, metaclass=dtype_base): # Hérite de number (qui pourrait être le vrai ou le mock)
         """Type de base pour les nombres inexacts (flottants, complexes) NumPy."""
         __name__ = 'inexact'
         __module__ = 'numpy'
-        # Pas besoin de __new__ spécifique si number n'en a pas ou si le comportement par défaut est OK
+    inexact = inexact_mock
 
-if _real_numpy_flexible:
+if _real_numpy_flexible: # Garder existant
     flexible = _real_numpy_flexible
+elif _actual_numpy_module and hasattr(_actual_numpy_module, 'flexible'):
+    flexible = _actual_numpy_module.flexible
 else:
-    class flexible(generic, metaclass=dtype_base): # Hérite de generic
+    class flexible_mock(generic, metaclass=dtype_base): # Hérite de generic (vrai ou mock)
         """Type de base pour les types de données flexibles (chaînes, bytes) NumPy."""
         __name__ = 'flexible'
         __module__ = 'numpy'
+    flexible = flexible_mock
 
-if _real_numpy_character:
+if _real_numpy_character: # Garder existant
     character = _real_numpy_character
+elif _actual_numpy_module and hasattr(_actual_numpy_module, 'character'):
+    character = _actual_numpy_module.character
 else:
-    class character(flexible, metaclass=dtype_base): # Hérite de flexible
+    class character_mock(flexible, metaclass=dtype_base): # Hérite de flexible (vrai ou mock)
         """Type de base pour les types de données caractères (chaînes, bytes) NumPy."""
         __name__ = 'character'
         __module__ = 'numpy'
+    character = character_mock
 
-if _real_numpy_ufunc:
+if _real_numpy_ufunc: # Garder existant
     ufunc = _real_numpy_ufunc
+elif _actual_numpy_module and hasattr(_actual_numpy_module, 'ufunc'):
+    ufunc = _actual_numpy_module.ufunc
 else:
-    class ufunc(MagicMock):
+    class ufunc_mock(MagicMock):
         """Mock pour numpy.ufunc."""
-        # Les ufuncs ont beaucoup de méthodes et d'attributs spécifiques.
-        # Un MagicMock simple est un point de départ.
-        # Si des erreurs spécifiques se produisent, des attributs/méthodes
-        # devront être ajoutés ici.
-        # Par exemple: nin, nout, nargs, types, identity, __call__, etc.
-        nin = 2 # Placeholder commun
-        nout = 1 # Placeholder commun
-        nargs = 2 # Placeholder commun
-        types = ['FF->F', 'dd->d', 'gg->g'] # Placeholder
-        identity = None # Placeholder
-        pass
+        nin = 2; nout = 1; nargs = 2
+        types = ['FF->F', 'dd->d', 'gg->g']; identity = None
+    ufunc = ufunc_mock
 
-# Types de données (classes, pas instances)
-class float64(metaclass=dtype_base):
-    __name__ = 'float64'
-    __module__ = 'numpy'
-float64 = float64 # Rendre l'instance accessible
+# Types de données (classes, pas instances) - Appliquer le pattern
+# Utiliser getattr pour plus de sécurité au cas où certains types ne seraient pas présents dans toutes les versions de numpy
+def _get_real_or_mock_type(type_name_str, base_classes=(), metaclass_type=dtype_base):
+    if _actual_numpy_module and hasattr(_actual_numpy_module, type_name_str):
+        return getattr(_actual_numpy_module, type_name_str)
+    else:
+        # Créer la classe mockée dynamiquement
+        mock_class_name = f"{type_name_str}_mock"
+        # S'assurer que les bases sont des types, pas des chaînes
+        actual_base_classes = []
+        for bc in base_classes:
+            if isinstance(bc, str): # Si on a passé un nom de type de base (ex: 'number')
+                # Essayer de le résoudre depuis le scope actuel (qui peut contenir le vrai type ou un mock)
+                resolved_bc = globals().get(bc, None)
+                if resolved_bc is None: # Fallback sur generic_mock si non résolu
+                    logger.warning(f"Type de base '{bc}' non résolu pour {type_name_str}, fallback sur generic.")
+                    actual_base_classes.append(generic) # generic est déjà défini (vrai ou mock)
+                else:
+                    actual_base_classes.append(resolved_bc)
+            else: # C'est déjà un type
+                actual_base_classes.append(bc)
+        
+        # Si aucune base n'est fournie et que ce n'est pas 'generic' lui-même, hériter de 'generic'
+        if not actual_base_classes and type_name_str != 'generic':
+             actual_base_classes = (generic,)
 
-class float32(metaclass=dtype_base):
-    __name__ = 'float32'
-    __module__ = 'numpy'
-float32 = float32
 
-class int64(metaclass=dtype_base):
-    __name__ = 'int64'
-    __module__ = 'numpy'
-int64 = int64
+        attrs = {'__name__': type_name_str, '__module__': 'numpy'}
+        new_type = metaclass_type(mock_class_name, tuple(actual_base_classes), attrs)
+        return new_type
 
-class int32(metaclass=dtype_base):
-    __name__ = 'int32'
-    __module__ = 'numpy'
-int32 = int32
-
-class uint64(metaclass=dtype_base):
-    __name__ = 'uint64'
-    __module__ = 'numpy'
-uint64 = uint64
-
-class uint32(metaclass=dtype_base):
-    __name__ = 'uint32'
-    __module__ = 'numpy'
-uint32 = uint32
-
-class int8(metaclass=dtype_base): pass
-int8 = int8
-
-class int16(metaclass=dtype_base): pass
-int16 = int16
-
-class uint8(metaclass=dtype_base): pass
-uint8 = uint8
-
-class uint16(metaclass=dtype_base): pass
-uint16 = uint16
+float64 = _get_real_or_mock_type('float64', (inexact,))
+float32 = _get_real_or_mock_type('float32', (inexact,))
+int64 = _get_real_or_mock_type('int64', (number,)) # number est déjà défini (vrai ou mock)
+int32 = _get_real_or_mock_type('int32', (number,))
+uint64 = _get_real_or_mock_type('uint64', (number,))
+uint32 = _get_real_or_mock_type('uint32', (number,))
+int8 = _get_real_or_mock_type('int8', (number,))
+int16 = _get_real_or_mock_type('int16', (number,))
+uint8 = _get_real_or_mock_type('uint8', (number,))
+uint16 = _get_real_or_mock_type('uint16', (number,))
 
 class byte(metaclass=dtype_base): pass # byte est np.int8
 byte = byte
@@ -1063,12 +1202,12 @@ float_ = float64  # Alias pour float64 (maintenant une instance de classe)
 str_ = "str"
 unicode_ = "unicode"
 
-# Types numériques supplémentaires (maintenant aliasés aux instances de classe)
-integer = int64  # Type entier générique
-floating = float64  # Type flottant générique
-complexfloating = complex128  # Type complexe
-signedinteger = int64  # Type entier signé
-unsignedinteger = uint64  # Type entier non signé
+# Types numériques supplémentaires (maintenant aliasés aux instances de classe ou aux vrais types)
+integer = _get_real_or_mock_type('integer', (number,))
+floating = _get_real_or_mock_type('floating', (inexact,))
+complexfloating = _get_real_or_mock_type('complexfloating', (inexact,))
+signedinteger = _get_real_or_mock_type('signedinteger', (integer,))
+unsignedinteger = _get_real_or_mock_type('unsignedinteger', (integer,))
 
 # Types de données complexes
 class complex64(metaclass=dtype_base):
@@ -1086,25 +1225,6 @@ class int8(metaclass=dtype_base):
     __name__ = 'int8'
     __module__ = 'numpy'
 
-class int16(metaclass=dtype_base):
-    __name__ = 'int16'
-    __module__ = 'numpy'
-
-class uint8(metaclass=dtype_base):
-    __name__ = 'uint8'
-    __module__ = 'numpy'
-
-class uint16(metaclass=dtype_base):
-    __name__ = 'uint16'
-    __module__ = 'numpy'
-
-# Alias pour compatibilité avec scipy (intc, intp)
-intc = int32
-intp = int64
-
-# Classes utilitaires pour pandas
-class busdaycalendar:
-    """Mock pour numpy.busdaycalendar."""
     
     def __init__(self, weekmask='1111100', holidays=None):
         self.weekmask = weekmask

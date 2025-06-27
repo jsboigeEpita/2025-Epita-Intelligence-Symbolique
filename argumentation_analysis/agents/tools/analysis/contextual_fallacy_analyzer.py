@@ -17,10 +17,10 @@ from typing import Dict, List, Any, Optional, Tuple
 from pathlib import Path
 
 # Ajouter le répertoire parent au chemin de recherche des modules
-current_dir = Path(__file__).parent
-parent_dir = current_dir.parent.parent.parent
-if str(parent_dir) not in sys.path:
-    sys.path.append(str(parent_dir))
+# current_dir = Path(__file__).parent # Commenté car start_api.py devrait gérer sys.path
+# parent_dir = current_dir.parent.parent.parent
+# if str(parent_dir) not in sys.path:
+#     sys.path.append(str(parent_dir))
 
 # Configuration du logging
 logging.basicConfig(
@@ -218,23 +218,30 @@ class ContextualFallacyAnalyzer:
             "général": []  # Pas de filtre spécifique pour le contexte général
         }
         
-        # Si le contexte est général, retourner tous les sophismes potentiels
+        # Si le contexte est général, retourner tous les sophismes potentiels sans modification de confiance
         if context_type == "général" or context_type not in context_fallacy_mapping:
-            return potential_fallacies
+            contextual_fallacies = []
+            for fallacy in potential_fallacies:
+                fallacy_copy = fallacy.copy()
+                fallacy_copy["contextual_relevance"] = "Générale"
+                contextual_fallacies.append(fallacy_copy)
+            return contextual_fallacies
         
         # Filtrer les sophismes en fonction du contexte
         contextual_fallacies = []
         for fallacy in potential_fallacies:
-            if fallacy["fallacy_type"] in context_fallacy_mapping[context_type]:
+            # Créer une copie pour éviter de modifier l'original
+            fallacy_copy = fallacy.copy()
+            if fallacy_copy["fallacy_type"] in context_fallacy_mapping[context_type]:
                 # Ajuster la confiance en fonction du contexte
-                fallacy["confidence"] = 0.8  # Confiance plus élevée pour les sophismes contextuels
-                fallacy["contextual_relevance"] = "Élevée"
-                contextual_fallacies.append(fallacy)
+                fallacy_copy["confidence"] = 0.8  # Confiance plus élevée pour les sophismes contextuels
+                fallacy_copy["contextual_relevance"] = "Élevée"
+                contextual_fallacies.append(fallacy_copy)
             else:
                 # Inclure les autres sophismes avec une confiance plus faible
-                fallacy["confidence"] = 0.3
-                fallacy["contextual_relevance"] = "Faible"
-                contextual_fallacies.append(fallacy)
+                fallacy_copy["confidence"] = 0.3
+                fallacy_copy["contextual_relevance"] = "Faible"
+                contextual_fallacies.append(fallacy_copy)
         
         return contextual_fallacies
     
@@ -326,8 +333,6 @@ if __name__ == "__main__":
     context = "Discours commercial pour un produit controversé"
     
     results = analyzer.analyze_context(text, context)
-    print(f"Résultats de l'analyse contextuelle: {json.dumps(results, indent=2, ensure_ascii=False)}")
     
     # Exemple d'identification de sophismes contextuels
     fallacies = analyzer.identify_contextual_fallacies(text, context)
-    print(f"Sophismes contextuels identifiés: {json.dumps(fallacies, indent=2, ensure_ascii=False)}")

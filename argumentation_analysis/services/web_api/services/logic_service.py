@@ -20,12 +20,13 @@ from datetime import datetime
 from semantic_kernel import Kernel # Déjà présent, pas de changement nécessaire
 
 from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
-from argumentation_analysis.agents.core.logic.abstract_logic_agent import AbstractLogicAgent
+from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
 from argumentation_analysis.agents.core.logic.query_executor import QueryExecutor
+from argumentation_analysis.core.llm_service import create_llm_service
 
 from ..models.request_models import (
-    LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest, LogicOptions
+    LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest, LogicOptions, ValidationRequest
 )
 from ..models.response_models import (
     LogicBeliefSet, LogicBeliefSetResponse, LogicQueryResult, LogicQueryResponse,
@@ -41,8 +42,14 @@ class LogicService:
         self.logger = logging.getLogger("WebAPI.LogicService")
         self.logger.info("Initialisation du service LogicService")
         
-        # Initialisation du kernel
+        # Initialisation du kernel et du service LLM
         self.kernel = Kernel()
+        try:
+            llm_service = create_llm_service(service_id="default_logic_llm")
+            self.kernel.add_service(llm_service)
+            self.logger.info("Service LLM 'default_logic_llm' créé et ajouté au kernel pour LogicService.")
+        except Exception as e:
+            self.logger.error(f"Erreur lors de la création du service LLM pour LogicService: {e}")
         
         # Initialisation de l'exécuteur de requêtes
         self.query_executor = QueryExecutor()
@@ -67,7 +74,7 @@ class LogicService:
             self.logger.error(f"Erreur lors du health check: {str(e)}")
             return False
     
-    def text_to_belief_set(self, request: LogicBeliefSetRequest) -> LogicBeliefSetResponse:
+    async def text_to_belief_set(self, request: LogicBeliefSetRequest) -> LogicBeliefSetResponse:
         """
         Convertit un texte en ensemble de croyances logiques.
         
@@ -86,8 +93,11 @@ class LogicService:
             if not agent:
                 raise ValueError(f"Impossible de créer un agent pour le type de logique '{request.logic_type}'")
             
+            # Configurer l'agent
+            agent.setup_agent_components(llm_service_id="default_logic_llm")
+            
             # Convertir le texte en ensemble de croyances
-            belief_set, message = agent.text_to_belief_set(request.text)
+            belief_set, message = await agent.text_to_belief_set(request.text)
             if not belief_set:
                 raise ValueError(f"Échec de la conversion: {message}")
             
@@ -114,20 +124,22 @@ class LogicService:
                     creation_timestamp=datetime.now()
                 ),
                 processing_time=time.time() - start_time,
-                conversion_options=request.options.dict() if request.options else {}
+                conversion_options=request.options if request.options else {}
             )
             
             return response
         
         except Exception as e:
             self.logger.error(f"Erreur lors de la conversion: {str(e)}", exc_info=True)
-            raise ValueError(f"Erreur lors de la conversion: {str(e)}")
+            import traceback
+            tb_str = traceback.format_exc()
+            raise ValueError(f"Erreur lors de la conversion: {str(e)}\nTRACEBACK:\n{tb_str}")
         
         finally:
             processing_time = time.time() - start_time
             self.logger.info(f"Conversion terminée en {processing_time:.2f} secondes")
     
-    def execute_query(self, request: LogicQueryRequest) -> LogicQueryResponse:
+    async def execute_query(self, request: LogicQueryRequest) -> LogicQueryResponse:
         """
         Exécute une requête logique sur un ensemble de croyances.
         
@@ -159,7 +171,7 @@ class LogicService:
             belief_set = self._create_belief_set_from_data(belief_set_data)
             
             # Exécuter la requête
-            result, formatted_result = agent.execute_query(belief_set, request.query)
+            result, formatted_result = await agent.execute_query(belief_set, request.query)
             
             # Créer la réponse
             response = LogicQueryResponse(
@@ -186,7 +198,7 @@ class LogicService:
             processing_time = time.time() - start_time
             self.logger.info(f"Exécution terminée en {processing_time:.2f} secondes")
     
-    def generate_queries(self, request: LogicGenerateQueriesRequest) -> LogicGenerateQueriesResponse:
+    async def generate_queries(self, request: LogicGenerateQueriesRequest) -> LogicGenerateQueriesResponse:
         """
         Génère des requêtes logiques pertinentes.
         
@@ -218,7 +230,7 @@ class LogicService:
             belief_set = self._create_belief_set_from_data(belief_set_data)
             
             # Générer les requêtes
-            queries = agent.generate_queries(request.text, belief_set)
+            queries = await agent.generate_queries(request.text, belief_set)
             
             # Limiter le nombre de requêtes si nécessaire
             max_queries = request.options.max_queries if request.options else 5
@@ -244,9 +256,9 @@ class LogicService:
             processing_time = time.time() - start_time
             self.logger.info(f"Génération terminée en {processing_time:.2f} secondes")
     
-    def interpret_results(self, belief_set_id: str, logic_type: str, text: str, 
-                         queries: List[str], results: List[LogicQueryResult], 
-                         options: Optional[LogicOptions] = None) -> LogicInterpretationResponse:
+    async def interpret_results(self, belief_set_id: str, logic_type: str, text: str,
+                                 queries: List[str], results: List[LogicQueryResult],
+                                 options: Optional[LogicOptions] = None) -> LogicInterpretationResponse:
         """
         Interprète les résultats de requêtes logiques.
         
@@ -286,7 +298,7 @@ class LogicService:
             formatted_results = [result.formatted_result for result in results]
             
             # Interpréter les résultats
-            interpretation = agent.interpret_results(text, belief_set, queries, formatted_results)
+            interpretation = await agent.interpret_results(text, belief_set, queries, formatted_results)
             
             # Créer la réponse
             response = LogicInterpretationResponse(
@@ -361,3 +373,21 @@ class LogicService:
             return f"La requête '{query}' est acceptée par l'ensemble de croyances. Cela signifie que la formule est une conséquence logique des axiomes définis dans l'ensemble de croyances."
         else:
             return f"La requête '{query}' est rejetée par l'ensemble de croyances. Cela signifie que la formule n'est pas une conséquence logique des axiomes définis dans l'ensemble de croyances."
+
+    async def validate_argument_from_components(self, request: ValidationRequest) -> bool:
+        """
+        Valide un argument logique à partir de ses composants (prémisses, conclusion).
+        """
+        self.logger.info(f"Validation d'argument de type '{request.logic_type}'")
+        try:
+            agent = LogicAgentFactory.create_agent(request.logic_type, self.kernel)
+            if not agent:
+                raise ValueError(f"Impossible de créer un agent pour le type de logique '{request.logic_type}'")
+            
+            # La méthode validate_argument est maintenant directement sur l'agent
+            is_valid = await agent.validate_argument(request.premises, request.conclusion)
+            return is_valid
+            
+        except Exception as e:
+            self.logger.error(f"Erreur lors de la validation de l'argument: {str(e)}", exc_info=True)
+            return False

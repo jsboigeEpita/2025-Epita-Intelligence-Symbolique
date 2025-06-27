@@ -8,6 +8,7 @@ Ce script utilise le pipeline de setup défini dans project_core.pipelines.setup
 pour orchestrer les différentes étapes de configuration, y compris:
 - Le diagnostic de l'environnement (implicitement via les autres pipelines).
 - Le téléchargement de dépendances (ex: JARs).
+import argumentation_analysis.core.environment
 - L'installation des paquets Python via un fichier requirements.
 - La configuration optionnelle d'un mock pour JPype.
 
@@ -40,7 +41,7 @@ try:
     project_root_path = current_script_path.parent.parent.parent 
     if str(project_root_path) not in sys.path:
         sys.path.insert(0, str(project_root_path))
-    from project_core.pipelines.setup_pipeline import run_test_environment_setup_pipeline
+    from argumentation_analysis.pipelines.setup_pipeline import run_test_environment_setup_pipeline
 except ImportError as e:
     print(f"Erreur d'import: {e}. Assurez-vous que le PYTHONPATH est correctement configuré ou que le script est exécuté depuis la racine du projet.")
     sys.exit(1)
@@ -117,7 +118,6 @@ def main():
 
 
     success = run_test_environment_setup_pipeline(
-        config_path=args.config_path,
         requirements_path=args.requirements_path,
         mock_jpype=args.mock_jpype,
         venv_path=args.venv_path,

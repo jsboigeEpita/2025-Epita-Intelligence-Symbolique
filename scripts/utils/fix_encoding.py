@@ -5,6 +5,7 @@
 Script pour corriger l'encodage d'un fichier.
 """
 
+import argumentation_analysis.core.environment
 import os
 import sys
 import argparse
@@ -15,7 +16,7 @@ project_root_path_setup = Path(__file__).resolve().parent.parent.parent
 if str(project_root_path_setup) not in sys.path:
     sys.path.insert(0, str(project_root_path_setup))
 
-from project_core.dev_utils.encoding_utils import fix_file_encoding, logger as encoding_logger
+from argumentation_analysis.utils.dev_tools.encoding_utils import fix_file_encoding, logger as encoding_logger
 import logging
 
 # Configurer le logger pour ce script afin qu'il affiche les logs de encoding_utils

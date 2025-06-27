@@ -181,11 +181,20 @@ class SuccessFailure(MockTweetyEnum):
         cls.SUCCESS = cls._add_member("SUCCESS", 0)
         cls.FAILURE = cls._add_member("FAILURE", 1)
 
+class Position(MockTweetyEnum):
+    MOCK_JAVA_CLASS_NAME = "org.tweetyproject.agents.dialogues.Position"
+
+    @classmethod
+    def _initialize_enum_members(cls):
+        cls.PRO = cls._add_member("PRO", 0)
+        cls.CONTRA = cls._add_member("CONTRA", 1)
+
 # Dictionnaire pour mapper les noms de classes Java aux classes mockées d'énumération
 ENUM_MAPPINGS = {
     TruthValue.MOCK_JAVA_CLASS_NAME: TruthValue,
     ComparisonMethod.MOCK_JAVA_CLASS_NAME: ComparisonMethod,
     SuccessFailure.MOCK_JAVA_CLASS_NAME: SuccessFailure,
+    Position.MOCK_JAVA_CLASS_NAME: Position,
 }
 
 logger.info("Module jpype_components.tweety_enums initialisé avec les mocks d'énumérations Tweety.")

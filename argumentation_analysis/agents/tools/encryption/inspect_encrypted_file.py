@@ -10,7 +10,6 @@ import sys
 import json
 import gzip
 from pathlib import Path
-from dotenv import load_dotenv
 from cryptography.fernet import Fernet
 
 # Ajouter le répertoire parent au chemin de recherche des modules
@@ -19,10 +18,9 @@ parent_dir = current_dir.parent
 if str(parent_dir) not in sys.path:
     sys.path.append(str(parent_dir))
 
-# Charger les variables d'environnement
-load_dotenv(override=True)
 
 # Importer les modules nécessaires
+from argumentation_analysis.config.settings import settings
 from argumentation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE_ENC
 
 def decrypt_data(encrypted_data, key):
@@ -54,7 +52,7 @@ def inspect_encrypted_file():
         with open(CONFIG_FILE_ENC, 'rb') as f:
             encrypted_data = f.read()
         
-        print(f"✅ Fichier encrypté '{CONFIG_FILE_ENC}' chargé avec succès.")
+        print(f"[OK] Fichier encrypté '{CONFIG_FILE_ENC}' chargé avec succès.")
         print(f"   - Taille: {len(encrypted_data)} octets.")
         
         # Déchiffrer les données
@@ -65,16 +63,16 @@ def inspect_encrypted_file():
         
         # Décompresser les données
         decompressed_data = gzip.decompress(decrypted_compressed_data)
-        print(f"✅ Données décompressées: {len(decrypted_compressed_data)} -> {len(decompressed_data)} octets.")
+        print(f"[OK] Données décompressées: {len(decrypted_compressed_data)} -> {len(decompressed_data)} octets.")
         
         # Charger le JSON
         data = json.loads(decompressed_data.decode('utf-8'))
         
         # Afficher le type et la structure des données
-        print(f"✅ Type de données: {type(data)}")
+        print(f"[OK] Type de données: {type(data)}")
         
         if isinstance(data, dict):
-            print(f"✅ Structure du dictionnaire:")
+            print(f"[OK] Structure du dictionnaire:")
             for key, value in data.items():
                 if isinstance(value, dict):
                     print(f"   - {key}: dictionnaire avec {len(value)} éléments")
@@ -83,7 +81,7 @@ def inspect_encrypted_file():
                 else:
                     print(f"   - {key}: {type(value)}")
         elif isinstance(data, list):
-            print(f"✅ Structure de la liste:")
+            print(f"[OK] Structure de la liste:")
             print(f"   - Liste avec {len(data)} éléments")
             if data:
                 print(f"   - Premier élément: {type(data[0])}")
@@ -91,7 +89,7 @@ def inspect_encrypted_file():
                     print(f"     - Clés: {', '.join(data[0].keys())}")
                     
                     # Afficher plus de détails sur les extraits
-                    print("\n✅ Détails des sources:")
+                    print("\n[OK] Détails des sources:")
                     for i, source in enumerate(data):
                         source_name = source.get("source_name", "Source inconnue")
                         extracts = source.get("extracts", [])
@@ -118,9 +116,9 @@ def main():
     """Fonction principale."""
     print("\n=== Inspection du fichier encrypté ===\n")
     
-    # Vérifier si la variable d'environnement TEXT_CONFIG_PASSPHRASE est définie
-    if not os.getenv("TEXT_CONFIG_PASSPHRASE"):
-        print(f"⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie.")
+    # Vérifier si la passphrase est définie dans la configuration
+    if not settings.passphrase:
+        print(f"⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie dans votre .env ou configuration.")
         print(f"   Veuillez la définir avant d'exécuter ce script.")
         sys.exit(1)
     
@@ -128,7 +126,7 @@ def main():
     success = inspect_encrypted_file()
     
     if success:
-        print("\n✅ Inspection du fichier encrypté réussie !")
+        print("\n[OK] Inspection du fichier encrypté réussie !")
     else:
         print("\n❌ Échec de l'inspection du fichier encrypté.")
     

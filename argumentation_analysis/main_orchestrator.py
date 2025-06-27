@@ -45,6 +45,10 @@ current_dir = Path(__file__).parent
 if str(current_dir) not in sys.path:
     sys.path.append(str(current_dir))
 
+# Activation automatique de l'environnement
+from argumentation_analysis.core.environment import ensure_env
+ensure_env()
+
 def setup_logging():
     """Configuration du logging global"""
     # Configuration de base - Les modules peuvent définir des loggers plus spécifiques
@@ -65,7 +69,7 @@ def setup_logging():
     
     # Garder INFO pour l'orchestration et les agents
     logging.getLogger("Orchestration").setLevel(logging.INFO)
-    logging.getLogger("semantic_kernel.agents").setLevel(logging.INFO)
+    # logging.getLogger("semantic_kernel.agents").setLevel(logging.INFO) # Module inexistant
     logging.getLogger("App.UI").setLevel(logging.INFO)  # Logger pour l'UI
 
     logging.info("Logging configuré.")
@@ -77,10 +81,12 @@ async def main():
     parser.add_argument("--text-file", type=str, help="Chemin vers un fichier texte à analyser (utilisé avec --skip-ui)")
     args = parser.parse_args()
 
-    # 1. Chargement de l'environnement (.env)
-    from dotenv import load_dotenv, find_dotenv
-    loaded = load_dotenv(find_dotenv(), override=True)
-    print(f".env chargé: {loaded}")
+    # Valider les arguments pour le mode non-interactif
+    if args.skip_ui and not args.text_file:
+        parser.error("--text-file est requis lorsque --skip-ui est utilisé.")
+
+    # 1. Environnement déjà configuré par auto_env
+    print("Environnement configuré via auto_env")
 
     # Vérification rapide de quelques variables clés (optionnel)
     print(f"LLM Model ID présent: {'OPENAI_CHAT_MODEL_ID' in os.environ}")
@@ -92,14 +98,15 @@ async def main():
 
     # 3. Initialisation de la JVM
     from argumentation_analysis.core.jvm_setup import initialize_jvm
+    from argumentation_analysis.paths import LIBS_DIR
     logging.info("Tentative d'initialisation de la JVM...")
     # La fonction initialize_jvm gère maintenant aussi le téléchargement des JARs
-    jvm_ready_status = initialize_jvm(lib_dir_path=LIBS_DIR)
+    jvm_ready_status = initialize_jvm()
 
     if jvm_ready_status:
-        logging.info("✅ JVM initialisée avec succès ou déjà active.")
+        logging.info("[OK] JVM initialisée avec succès ou déjà active.")
     else:
-        logging.warning("⚠️ JVM n'a pas pu être initialisée. L'agent PropositionalLogicAgent ne fonctionnera pas.")
+        logging.warning("JVM n'a pas pu être initialisée. L'agent PropositionalLogicAgent ne fonctionnera pas.")
 
     # 4. Création du Service LLM
     from argumentation_analysis.core.llm_service import create_llm_service
@@ -107,29 +114,27 @@ async def main():
     try:
         logging.info("Création du service LLM...")
         llm_service = create_llm_service()  # Utilise l'ID par défaut
-        logging.info(f"✅ Service LLM créé avec succès (ID: {llm_service.service_id}).")
+        logging.info(f"[OK] Service LLM créé avec succès (ID: {llm_service.service_id}).")
     except Exception as e:
-        logging.critical(f"❌ Échec critique de la création du service LLM: {e}", exc_info=True)
-        print(f"❌ ERREUR: Impossible de créer le service LLM. Vérifiez la configuration .env et les logs.")
+        logging.critical(f"Échec critique de la création du service LLM: {e}", exc_info=True)
+        print(f"ERREUR: Impossible de créer le service LLM. Vérifiez la configuration .env et les logs.")
         # raise  # Décommenter pour arrêter si LLM indispensable
 
     # 5. Configuration de la Tâche via l'Interface Utilisateur
     texte_pour_analyse = None  # Initialiser
 
     if args.skip_ui:
-        # Mode sans UI: utiliser un texte prédéfini ou depuis un fichier
-        if args.text_file:
-            try:
-                with open(args.text_file, 'r', encoding='utf-8') as f:
-                    texte_pour_analyse = f.read()
-                logging.info(f"✅ Texte chargé depuis le fichier: {args.text_file}")
-            except Exception as e:
-                logging.error(f"❌ Erreur lors de la lecture du fichier texte: {e}")
-                return
-        else:
-            # Texte d'exemple si aucun fichier n'est spécifié
-            texte_pour_analyse = "Ceci est un texte d'exemple pour l'analyse rhétorique."
-            logging.info("✅ Utilisation du texte d'exemple prédéfini.")
+        # Mode sans UI: le fichier texte est maintenant requis
+        try:
+            with open(args.text_file, 'r', encoding='utf-8') as f:
+                texte_pour_analyse = f.read()
+            logging.info(f"[OK] Texte chargé depuis le fichier: {args.text_file}")
+        except FileNotFoundError:
+            logging.error(f"❌ Fichier non trouvé: {args.text_file}")
+            return
+        except Exception as e:
+            logging.error(f"❌ Erreur lors de la lecture du fichier texte: {e}")
+            return
     else:
         # Mode normal avec UI
         try:
@@ -142,50 +147,50 @@ async def main():
             texte_pour_analyse = configure_analysis_task()  # Bloque jusqu'au clic sur "Lancer"
 
         except ImportError as e_import:
-            logging.critical(f"❌ ERREUR: Impossible d'importer l'UI: {e_import}")
-            print(f"❌ ERREUR d'importation de l'interface utilisateur: {e_import}. Vérifiez la structure du projet et les __init__.py.")
+            logging.critical(f"ERREUR: Impossible d'importer l'UI: {e_import}")
+            print(f"ERREUR d'importation de l'interface utilisateur: {e_import}. Vérifiez la structure du projet et les __init__.py.")
             return
         except Exception as e_ui:
-            logging.error(f"❌ Une erreur est survenue lors de l'exécution de l'interface utilisateur : {e_ui}", exc_info=True)
-            print(f"❌ Une erreur est survenue pendant l'exécution de l'UI : {e_ui}")
+            logging.error(f"Une erreur est survenue lors de l'exécution de l'interface utilisateur : {e_ui}", exc_info=True)
+            print(f"Une erreur est survenue pendant l'exécution de l'UI : {e_ui}")
             traceback.print_exc()
             return
 
     # Vérifier si on a bien reçu du texte après l'interaction UI
     if not texte_pour_analyse:
-        logging.warning("\n❌ Aucun texte préparé. L'analyse ne peut pas continuer.")
-        print("\n❌ Aucun texte préparé. L'analyse ne peut pas continuer.")
+        logging.warning("\nAucun texte préparé. L'analyse ne peut pas continuer.")
+        print("\nAucun texte préparé. L'analyse ne peut pas continuer.")
         return
     else:
-        logging.info(f"\n✅ Texte prêt pour l'analyse (longueur: {len(texte_pour_analyse)}).")
-        print(f"\n✅ Texte prêt pour l'analyse (longueur: {len(texte_pour_analyse)}). Passage à l'exécution.")
+        logging.info(f"\n[OK] Texte prêt pour l'analyse (longueur: {len(texte_pour_analyse)}).")
+        print(f"\n[OK] Texte prêt pour l'analyse (longueur: {len(texte_pour_analyse)}). Passage à l'exécution.")
         # print("--- Extrait Texte --- \n", texte_pour_analyse[:500] + "...") # Décommenter pour voir extrait
 
     # 6. Exécution de l'Analyse Collaborative
     # Lancer seulement si on a un texte ET un service LLM valide
     if texte_pour_analyse and llm_service:
-        logging.info("\n🚀 Tentative de lancement de l'exécution asynchrone de l'analyse...")
-        print("\n🚀 Lancement de l'analyse collaborative (peut prendre du temps)... ")
+        logging.info("\n[LAUNCH] Tentative de lancement de l'execution asynchrone de l'analyse...")
+        print("\n[LAUNCH] Lancement de l'analyse collaborative (peut prendre du temps)... ")
         # Importer les dépendances nécessaires
-        from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
-        from argumentation_analysis.paths import LIBS_DIR
+        from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner
         
         try:
             # Exécuter la fonction d'analyse en passant le texte et le service LLM
-            await run_analysis_conversation(
-                texte_a_analyser=texte_pour_analyse,
+            runner = AnalysisRunner()
+            await runner.run_analysis_async(
+                text_content=texte_pour_analyse,
                 llm_service=llm_service
             )
 
-            logging.info("\n🏁 Exécution terminée.")
-            print("\n🏁 Analyse terminée.")
+            logging.info("\n[FINISH] Execution terminee.")
+            print("\n[FINISH] Analyse terminee.")
 
         except ImportError as e_import_run:
-            logging.critical(f"❌ ERREUR: Impossible d'importer 'run_analysis_conversation': {e_import_run}")
-            print(f"❌ ERREUR d'importation de la fonction d'orchestration: {e_import_run}")
+            logging.critical(f"ERREUR: Impossible d'importer 'AnalysisRunner': {e_import_run}")
+            print(f"ERREUR d'importation de la fonction d'orchestration: {e_import_run}")
         except Exception as e_analysis:
-            logging.error(f"\n❌ Une erreur est survenue pendant l'exécution de l'analyse : {e_analysis}", exc_info=True)
-            print(f"\n❌ Une erreur est survenue pendant l'exécution de l'analyse : {e_analysis}")
+            logging.error(f"\nUne erreur est survenue pendant l'exécution de l'analyse : {e_analysis}", exc_info=True)
+            print(f"\nUne erreur est survenue pendant l'exécution de l'analyse : {e_analysis}")
             traceback.print_exc()
 
     elif not texte_pour_analyse:

@@ -1,79 +1,104 @@
-[CmdletBinding()]
-param (
-    [switch]$ForceReinstallAll,    # Pour forcer la réinstallation complète (outils et environnement)
-    [switch]$ForceReinstallTools,  # Pour forcer la réinstallation des outils portables (JDK, Octave, etc.)
-    [switch]$ForceReinstallEnv,    # Pour forcer la réinstallation de l'environnement Conda
-    [switch]$Interactive,          # Pour activer le mode interactif (poser des questions)
-    [switch]$SkipTools,            # Pour sauter l'installation/vérification des outils portables
-    [switch]$SkipEnv,              # Pour sauter la création/mise à jour de l'environnement Conda
-    [switch]$SkipCleanup,          # Pour sauter les étapes de nettoyage
-    [switch]$SkipPipInstall        # Pour sauter l'étape `pip install -e .`
-)
+#!/usr/bin/env pwsh
+<#
+.SYNOPSIS
+    Crée ou recrée complètement l'environnement Conda du projet.
+.DESCRIPTION
+    Ce script assure une installation propre de l'environnement 'projet-is-v2'
+    en utilisant le fichier 'environment.yml' comme seule source de vérité.
+    Il supprime d'abord tout environnement existant du même nom pour éviter
+    les conflits.
+.NOTES
+    Auteur: Roo
+    Date: 25/06/2025
+    Raison: Stratégie de dépendances unifiée pour garantir la stabilité.
+#>
 
-$ErrorActionPreference = "Stop"
-Push-Location $PSScriptRoot # S'assurer qu'on est à la racine du projet
+# --- Configuration ---
+$EnvName = "projet-is"
+$EnvironmentFile = "environment.yml"
 
+# --- Bannière ---
+Write-Host "--- Configuration de l'environnement Conda '$EnvName' ---" -ForegroundColor Green
+
+# 1. Tenter de supprimer l'environnement s'il existe pour garantir une installation propre.
+Write-Host "[INFO] Vérification et suppression de l'ancien environnement '$EnvName' si présent..." -ForegroundColor Yellow
 try {
-    $pythonScriptPath = Join-Path $PSScriptRoot "scripts/setup_core/main_setup.py"
-
-    if (-not (Test-Path $pythonScriptPath)) {
-        Write-Error "Le script d'orchestration Python '$pythonScriptPath' est introuvable."
-        exit 1
-    }
-
-    $pythonArgs = @()
-    if ($ForceReinstallAll) {
-        $pythonArgs += "--force-reinstall-tools"
-        $pythonArgs += "--force-reinstall-env"
+    # Obtenir la liste des environnements et vérifier si le nôtre existe
+    $envList = conda env list | Out-String
+    if ($envList -match "\s$EnvName\s") {
+        Write-Host "Environnement '$EnvName' trouvé. Tentative de suppression..."
+        conda env remove -n $EnvName --yes
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[AVERTISSEMENT] La suppression de l'environnement a échoué. Il est possible qu'un processus l'utilise encore." -ForegroundColor Red
+        } else {
+            Write-Host "[INFO] Ancien environnement '$EnvName' supprimé." -ForegroundColor Green
+        }
     } else {
-        if ($ForceReinstallTools) { $pythonArgs += "--force-reinstall-tools" }
-        if ($ForceReinstallEnv)   { $pythonArgs += "--force-reinstall-env" }
+        Write-Host "[INFO] Pas d'environnement existant '$EnvName' trouvé." -ForegroundColor Gray
     }
-
-    if ($Interactive)         { $pythonArgs += "--interactive" }
-    if ($SkipTools)           { $pythonArgs += "--skip-tools" }
-    if ($SkipEnv)             { $pythonArgs += "--skip-env" }
-    if ($SkipCleanup)         { $pythonArgs += "--skip-cleanup" }
-    if ($SkipPipInstall)      { $pythonArgs += "--skip-pip-install" }
-
-    Write-Host "Lancement du script d'installation Python : $pythonScriptPath"
-    if ($pythonArgs.Count -gt 0) {
-        Write-Host "Avec les arguments: $($pythonArgs -join ' ')"
-    } else {
-        Write-Host "Sans arguments spécifiques."
-    }
-
-    # Tenter de trouver python.exe ou python
-    $pythonExecutable = Get-Command python -ErrorAction SilentlyContinue
-    if (-not $pythonExecutable) {
-        # Essayer python3 si python n'est pas trouvé (courant sur certains systèmes Linux/Mac via Conda)
-        $pythonExecutable = Get-Command python3 -ErrorAction SilentlyContinue
-    }
-
-    if (-not $pythonExecutable) {
-        Write-Error "Python (python ou python3) n'est pas trouvé dans le PATH. Veuillez l'installer, l'ajouter au PATH, ou activer l'environnement Conda approprié."
-        exit 1
-    }
-    
-    Write-Host "Utilisation de l'exécutable Python : $($pythonExecutable.Source)"
-
-    # Exécuter le script Python
-    & $pythonExecutable.Source $pythonScriptPath $pythonArgs
-    $exitCode = $LASTEXITCODE
-    
-    if ($exitCode -ne 0) {
-        Write-Warning "Le script d'installation Python a terminé avec des erreurs (code: $exitCode)."
-    } else {
-        Write-Host "Le script d'installation Python a terminé avec succès."
-    }
-    exit $exitCode
-
 }
 catch {
-    Write-Error "Une erreur PowerShell est survenue lors de la tentative d'exécution du script Python : $($_.Exception.Message)"
-    # Tenter de retourner un code d'erreur générique si $LASTEXITCODE n'est pas pertinent ici
-    if ($LASTEXITCODE -eq 0) { exit 1 } else { exit $LASTEXITCODE }
+    Write-Host "[AVERTISSEMENT] Une erreur est survenue lors de la tentative de suppression de l'environnement. Le script va continuer." -ForegroundColor Yellow
 }
-finally {
-    Pop-Location
+
+# 2. Création de l'environnement à partir du fichier YAML
+Write-Host "[INFO] Création du nouvel environnement '$EnvName' à partir de '$EnvironmentFile'." -ForegroundColor Green
+try {
+    # Utiliser mamba si disponible, sinon conda
+    $PackageManager = "conda"
+    Write-Host "[INFO] Utilisation de '$PackageManager' pour la création de l'environnement."
+    
+    & $PackageManager env create --file $EnvironmentFile --name $EnvName
+    
+    if ($LASTEXITCODE -ne 0) {
+        throw "La création de l'environnement avec $PackageManager a échoué."
+    }
+    Write-Host "[SUCCÈS] L'environnement Conda '$EnvName' a été créé." -ForegroundColor Green
 }
+catch {
+    Write-Host "[ERREUR] Une erreur critique est survenue lors de la création de l'environnement." -ForegroundColor Red
+    Write-Host "Message: $($_.Exception.Message)"
+    exit 1
+}
+
+# 3. Écriture du fichier de configuration .env
+Write-Host "[INFO] Création du fichier de configuration .env..." -ForegroundColor Green
+$EnvFile = Join-Path $PSScriptRoot ".env"
+try {
+    # On met une petite pause pour s'assurer que les handle de fichier de conda/pip sont libérés
+    Start-Sleep -Seconds 2
+
+    # Supprimer le fichier .env existant pour éviter les problèmes de verrouillage
+    if (Test-Path $EnvFile) {
+        Remove-Item $EnvFile -Force
+    }
+    Set-Content -Path $EnvFile -Value "CONDA_ENV_NAME=$EnvName" -Encoding UTF8
+    Write-Host "[SUCCÈS] Le fichier '$EnvFile' a été créé/mis à jour." -ForegroundColor Green
+}
+catch {
+    Write-Host "[ERREUR] Impossible d'écrire dans le fichier '$EnvFile'." -ForegroundColor Red
+    exit 1
+}
+
+# 4. Provisioning des outils portables (JDK, etc.)
+Write-Host "[INFO] Lancement du provisioning des outils portables (JDK...)." -ForegroundColor Green
+Write-Host "[INFO] Cela peut prendre quelques minutes lors de la première exécution..." -ForegroundColor Yellow
+try {
+    # On exécute le script Python dans l'environnement fraîchement créé
+    conda run -n $EnvName python scripts/utils/provision_tools.py
+    
+    if ($LASTEXITCODE -ne 0) {
+        throw "Le provisioning des outils a échoué."
+    }
+    Write-Host "[SUCCÈS] Les outils portables ont été installés." -ForegroundColor Green
+}
+catch {
+    Write-Host "[ERREUR] Une erreur critique est survenue lors du provisioning des outils." -ForegroundColor Red
+    Write-Host "Message: $($_.Exception.Message)"
+    exit 1
+}
+
+# 5. Instructions finales
+Write-Host -f Green "--- Installation terminée ---"
+Write-Host "Pour activer l'environnement, sourcez le script d'activation :"
+Write-Host -f Cyan ". .\activate_project_env.ps1"

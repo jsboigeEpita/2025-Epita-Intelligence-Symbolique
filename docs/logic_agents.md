@@ -16,15 +16,15 @@ Le système prend en charge trois types de logiques :
 L'architecture des agents logiques est basée sur le principe de la programmation orientée objet avec une hiérarchie de classes :
 
 ```
-AbstractLogicAgent
+BaseLogicAgent (ABC)
 ├── PropositionalLogicAgent
 ├── FirstOrderLogicAgent
 └── ModalLogicAgent
 ```
 
-### Classe AbstractLogicAgent
+### Classe BaseLogicAgent
 
-Classe abstraite qui définit l'interface commune à tous les agents logiques :
+Classe de base abstraite **unifiée** qui définit l'interface commune pour tous les agents logiques. Elle combine les responsabilités de raisonnement formel et d'orchestration de tâches.
 
 - `text_to_belief_set(text)` : Convertit un texte en ensemble de croyances
 - `generate_queries(text, belief_set)` : Génère des requêtes logiques pertinentes

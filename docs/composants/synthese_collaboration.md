@@ -1,247 +1,118 @@
-# Synthèse et recommandations pour la collaboration entre agents d'analyse rhétorique
+# Synthèse et Recommandations pour la Collaboration entre Agents d'Analyse Rhétorique
 
 ## Résumé exécutif
 
-Cette synthèse analyse les mécanismes de collaboration entre agents d'analyse rhétorique, identifie les forces et faiblesses du système actuel, et propose des recommandations concrètes pour améliorer cette collaboration. L'analyse se base sur l'étude des mécanismes d'orchestration, des agents spécialistes, des tests d'intégration et des traces de conversation.
+Cette synthèse analyse les mécanismes de collaboration entre agents d'analyse rhétorique au sein du système. Elle identifie les approches d'orchestration actuelles, leurs forces et faiblesses respectives, et propose des recommandations pour consolider et documenter ces mécanismes. L'analyse se base sur l'étude du code source, notamment les modules d'orchestration et les définitions des agents spécialistes.
+
+## 1. Mécanismes de Collaboration Implémentés
+
+Le système utilise deux approches principales pour l'orchestration et la collaboration des agents :
+
+### 1.1 Orchestration Simple via `AgentGroupChat`
+
+Ce mécanisme, principalement implémenté dans [`argumentation_analysis/orchestration/analysis_runner.py`](../../argumentation_analysis/orchestration/analysis_runner.py), s'appuie sur la fonctionnalité `AgentGroupChat` de la bibliothèque Semantic Kernel.
+
+*   **Principes Clés** :
+    *   **État Partagé Centralisé** : Une instance de `RhetoricalAnalysisState` (définie dans [`argumentation_analysis/core/shared_state.py`](../../argumentation_analysis/core/shared_state.py)) stocke toutes les informations pertinentes à l'analyse (texte initial, tâches, arguments identifiés, sophismes, `next_agent_to_act`, conclusion finale, etc.).
+    *   **`StateManagerPlugin`** : Les agents interagissent avec `RhetoricalAnalysisState` via ce plugin (défini dans [`argumentation_analysis/core/state_manager_plugin.py`](../../argumentation_analysis/core/state_manager_plugin.py)), qui expose des fonctions natives appelables depuis les fonctions sémantiques des agents.
+    *   **Agents Spécialistes** : Les agents principaux ([`ProjectManagerAgent`](../../argumentation_analysis/agents/core/pm/pm_agent.py), [`InformalAnalysisAgent`](../../argumentation_analysis/agents/core/informal/informal_agent.py), [`PropositionalLogicAgent`](../../argumentation_analysis/agents/core/logic/propositional_logic_agent.py), [`ExtractAgent`](../../argumentation_analysis/agents/core/extract/extract_agent.py)) sont encapsulés en tant que `ChatCompletionAgent` de Semantic Kernel pour participer au `AgentGroupChat`.
+    *   **Stratégie de Sélection (`BalancedParticipationStrategy`)** : Gère la sélection du prochain agent. Elle donne la priorité à la désignation explicite (via `state.consume_next_agent_designation()`). Si aucune désignation n'est faite, elle sélectionne un agent pour équilibrer la participation en se basant sur des scores de priorité (voir [`argumentation_analysis/core/strategies.py`](../../argumentation_analysis/core/strategies.py)).
+    *   **Stratégie de Terminaison (`SimpleTerminationStrategy`)** : Met fin à la conversation si `state.final_conclusion` est définie ou si un nombre maximum de tours est atteint (voir [`argumentation_analysis/core/strategies.py`](../../argumentation_analysis/core/strategies.py)).
+
+*   **Flux Typique** :
+    1.  Initialisation du kernel, de l'état, du `StateManagerPlugin`, des agents et du `AgentGroupChat`.
+    2.  Le `ProjectManagerAgent` initie généralement l'analyse en définissant des tâches et en désignant le prochain agent via le `StateManagerPlugin`.
+    3.  Les agents exécutent leurs tâches, mettent à jour l'état partagé, et peuvent désigner le prochain agent.
+    4.  Le cycle continue jusqu'à ce que la stratégie de terminaison arrête la conversation.
+
+### 1.2 Architecture Hiérarchique d'Orchestration
+
+Une approche d'orchestration plus structurée et évoluée est implémentée dans le répertoire [`argumentation_analysis/orchestration/hierarchical/`](../../argumentation_analysis/orchestration/hierarchical/). Elle organise l'analyse en trois niveaux distincts :
+
+*   **Niveau Stratégique** :
+    *   **Rôle** : Planification globale, définition des objectifs à long terme, allocation des ressources principales, et supervision générale du processus d'analyse.
+    *   **Composants Clés** :
+        *   `StrategicManager` ([`.../strategic/manager.py`](../../argumentation_analysis/orchestration/hierarchical/strategic/manager.py)) : Agent principal de ce niveau.
+        *   `StrategicState` ([`.../strategic/state.py`](../../argumentation_analysis/orchestration/hierarchical/strategic/state.py)) : Stocke les objectifs globaux, le plan stratégique, l'allocation des ressources, et les métriques globales.
+
+*   **Niveau Tactique** :
+    *   **Rôle** : Coordination des tâches, décomposition des objectifs stratégiques en tâches concrètes, assignation de ces tâches, gestion des dépendances, résolution des conflits entre agents opérationnels, et agrégation des résultats.
+    *   **Composants Clés** :
+        *   `TaskCoordinator` (ou `TacticalCoordinator`) ([`.../tactical/coordinator.py`](../../argumentation_analysis/orchestration/hierarchical/tactical/coordinator.py)) : Agent principal de ce niveau.
+        *   `TacticalState` ([`.../tactical/state.py`](../../argumentation_analysis/orchestration/hierarchical/tactical/state.py)) : Gère les objectifs assignés, les tâches décomposées, leurs statuts, les dépendances, et les résultats intermédiaires.
+
+*   **Niveau Opérationnel** :
+    *   **Rôle** : Exécution effective des tâches d'analyse par les agents spécialistes.
+    *   **Composants Clés** :
+        *   `OperationalManager` ([`.../operational/manager.py`](../../argumentation_analysis/orchestration/hierarchical/operational/manager.py)) : Gère le cycle de vie et l'exécution des agents opérationnels.
+        *   `OperationalState` ([`.../operational/state.py`](../../argumentation_analysis/orchestration/hierarchical/operational/state.py)) : Contient les tâches assignées aux agents, les extraits de texte, les résultats d'analyse détaillés, et les métriques opérationnelles.
+        *   `OperationalAgent` Interface ([`.../operational/agent_interface.py`](../../argumentation_analysis/orchestration/hierarchical/operational/agent_interface.py)) : Contrat pour tous les agents spécialistes.
+        *   **Adaptateurs d'Agents** ([`.../operational/adapters/`](../../argumentation_analysis/orchestration/hierarchical/operational/adapters/)) : Permettent d'intégrer les agents existants (PM, Informal, PL, Extract) dans ce niveau.
+
+*   **Communication Inter-Niveaux** :
+    *   L'architecture hiérarchique utilise un `MessageMiddleware` (probablement défini dans [`argumentation_analysis/core/communication.py`](../../argumentation_analysis/core/communication.py)) pour faciliter une communication structurée entre les niveaux.
+    *   Des adaptateurs spécifiques (`StrategicAdapter`, `TacticalAdapter`, `OperationalAdapter`) gèrent l'envoi et la réception de messages (directives, rapports, requêtes de statut, résultats) entre les managers/coordinateurs de chaque niveau.
+    *   Des interfaces dédiées comme `StrategicTacticalInterface` et `TacticalOperationalInterface` (définies dans [`.../interfaces/`](../../argumentation_analysis/orchestration/hierarchical/interfaces/)) formalisent les interactions.
+
+### 1.3 Agents Spécialistes et leurs Interactions
+
+Les agents spécialistes ([`ProjectManagerAgent`](../../argumentation_analysis/agents/core/pm/pm_agent.py), [`InformalAnalysisAgent`](../../argumentation_analysis/agents/core/informal/informal_agent.py), [`PropositionalLogicAgent`](../../argumentation_analysis/agents/core/logic/propositional_logic_agent.py), [`ExtractAgent`](../../argumentation_analysis/agents/core/extract/extract_agent.py)) sont les exécutants principaux des tâches d'analyse.
+
+*   **Structure Commune** : Chaque agent hérite de `BaseAgent` ([`argumentation_analysis/agents/core/abc/agent_bases.py`](../../argumentation_analysis/agents/core/abc/agent_bases.py)), possède ses propres instructions système, des prompts sémantiques, et peut inclure des plugins natifs pour des fonctionnalités spécifiques (ex: `InformalAnalysisPlugin` pour la taxonomie des sophismes, `ExtractAgentPlugin` pour la manipulation de texte).
+*   **Interaction dans l'Orchestration Simple** : Les agents appellent des fonctions du `StateManagerPlugin` via leurs fonctions sémantiques pour lire/écrire dans `RhetoricalAnalysisState` et désigner le prochain agent.
+*   **Interaction dans l'Architecture Hiérarchique** : Les agents (ou leurs adaptateurs) au niveau opérationnel reçoivent des tâches du `OperationalManager`, les exécutent, et retournent des résultats structurés. La communication plus large (ex: demande de ressources, partage de résultats intermédiaires) passe par le `MessageMiddleware`.
+
+## 2. Analyse Comparative et Points d'Attention
+
+### 2.1 Orchestration Simple (`AgentGroupChat`)
+
+*   **Forces** :
+    *   Relativement simple à mettre en place pour des scénarios linéaires.
+    *   Bonne intégration avec Semantic Kernel.
+    *   L'état partagé `RhetoricalAnalysisState` est un point central clair pour les données.
+    *   La `BalancedParticipationStrategy` offre une certaine flexibilité dans la sélection des agents.
+*   **Faiblesses/Limitations** :
+    *   Peut devenir difficile à gérer pour des flux de travail complexes ou non linéaires.
+    *   Dépendance potentielle au `ProjectManagerAgent` pour diriger le flux.
+    *   Communication inter-agents principalement indirecte via l'état partagé.
+    *   Moins adapté pour la résolution de conflits sophistiquée ou la planification dynamique avancée.
+
+### 2.2 Architecture Hiérarchique
+
+*   **Forces** :
+    *   **Modularité et Séparation des Préoccupations** : Claire distinction entre planification stratégique, coordination tactique et exécution opérationnelle.
+    *   **Scalabilité** : Mieux adaptée à la gestion d'analyses complexes impliquant de nombreux agents ou étapes.
+    *   **Communication Structurée** : Le `MessageMiddleware` permet des interactions plus riches et directes que le simple état partagé.
+    *   **Gestion des Tâches Avancée** : Le niveau tactique peut gérer les dépendances, la décomposition des objectifs, et potentiellement la résolution de conflits (ex: via [`.../tactical/resolver.py`](../../argumentation_analysis/orchestration/hierarchical/tactical/resolver.py) - non lu mais existence suggérée).
+    *   **Flexibilité** : Permet différentes stratégies de planification et d'allocation des ressources au niveau stratégique.
+*   **Points d'Attention/Complexité** :
+    *   Plus complexe à initialiser et à configurer que l'orchestration simple.
+    *   Nécessite une définition claire des interfaces et des protocoles de message entre les niveaux.
+    *   La gestion de l'état est distribuée (un état par niveau), ce qui requiert une bonne synchronisation et propagation de l'information pertinente.
+
+## 3. Recommandations pour la Documentation et l'Évolution
+
+1.  **Clarifier le Rôle des Deux Systèmes d'Orchestration** :
+    *   La documentation doit clairement indiquer si l'architecture hiérarchique est l'évolution visée et remplace l'orchestration simple, ou si les deux systèmes coexistent pour des cas d'usage différents.
+    *   Si l'architecture hiérarchique est la principale, l'orchestration simple pourrait être présentée comme un composant de base ou un exemple plus simple.
+
+2.  **Mettre à Jour la Synthèse de Collaboration** :
+    *   **Intégrer l'Architecture Hiérarchique** : La section 1 doit décrire en détail l'architecture à trois niveaux, ses composants clés (`StrategicManager`, `TaskCoordinator`, `OperationalManager`, leurs états respectifs), et le système de communication par messages.
+    *   **Décrire les États Multiples** : Expliquer le rôle de `StrategicState`, `TacticalState`, et `OperationalState` en complément de (ou en remplacement de la description unique de) `RhetoricalAnalysisState`.
+    *   **Détailler la Communication Enrichie** : Expliquer l'utilisation du `MessageMiddleware`, des adaptateurs, et des types de messages (directrives, rapports, etc.) dans l'architecture hiérarchique.
+    *   **Réviser les Forces et Faiblesses** : Évaluer les forces et faiblesses en tenant compte des *deux* systèmes d'orchestration, ou principalement de l'architecture hiérarchique si elle est prioritaire.
+    *   **Actualiser les Recommandations** : De nombreuses recommandations des sections 3 et 4 du document actuel sont déjà adressées par l'architecture hiérarchique. Ces sections doivent être réécrites pour :
+        *   Reconnaître les fonctionnalités existantes.
+        *   Proposer des améliorations *spécifiques* à l'architecture hiérarchique (ex: stratégies de résolution de conflits plus avancées dans le `TaskCoordinator`, mécanismes d'apprentissage pour le `StrategicManager`, etc.).
+        *   Identifier les aspects de l'orchestration simple qui pourraient encore être améliorés si elle reste pertinente.
 
-## 1. Synthèse des analyses précédentes
+3.  **Références Croisées et Liens Markdown** :
+    *   Ajouter des liens Markdown précis vers les fichiers et répertoires clés pour chaque mécanisme décrit (ex: vers [`.../strategic/manager.py`](../../argumentation_analysis/orchestration/hierarchical/strategic/manager.py), [`.../tactical/coordinator.py`](../../argumentation_analysis/orchestration/hierarchical/tactical/coordinator.py), etc.).
+    *   Assurer la cohérence terminologique avec le code.
 
-### 1.1 Mécanismes d'orchestration
+4.  **Schéma Conceptuel Actualisé** :
+    *   Le schéma de la section 5 doit être mis à jour pour refléter l'architecture hiérarchique avec ses trois niveaux, le `MessageMiddleware`, et les différents états, s'il est décidé que c'est le modèle principal. Si les deux modèles coexistent, deux schémas ou un schéma combiné pourraient être nécessaires.
 
-Le système utilise plusieurs stratégies d'orchestration pour gérer la collaboration entre agents :
+## 4. Conclusion
 
-- **SimpleTerminationStrategy** : Détermine quand la conversation doit se terminer, soit lorsqu'une conclusion finale est trouvée dans l'état partagé, soit après un nombre maximum de tours (par défaut 15).
-
-- **DelegatingSelectionStrategy** : Sélectionne le prochain agent à parler en priorisant la désignation explicite via l'état partagé. Si aucune désignation n'est trouvée, retourne à l'agent par défaut (Project Manager).
-
-- **BalancedParticipationStrategy** : Équilibre la participation des agents tout en respectant les désignations explicites. Calcule des scores de priorité basés sur l'écart entre la participation actuelle et la cible, le temps écoulé depuis la dernière sélection, et un budget de déséquilibre accumulé.
-
-L'orchestration est gérée par le module `analysis_runner.py` qui crée des instances locales de l'état, du StateManagerPlugin, du Kernel, des agents et des stratégies, configure le kernel avec le service LLM et le StateManagerPlugin, exécute la conversation via AgentGroupChat, et suit et affiche les tours de conversation.
-
-### 1.2 Agents spécialistes
-
-Le système comprend quatre agents principaux :
-
-- **Agent Project Manager (PM)** : Orchestre l'analyse, définit les tâches, et fournit la conclusion finale.
-
-- **Agent d'Analyse Informelle** : Identifie les arguments et les sophismes dans le texte.
-
-- **Agent de Logique Propositionnelle (PL)** : Gère la formalisation et l'interrogation logique via Tweety.
-
-- **Agent d'Extraction** : Gère l'extraction et la réparation des extraits de texte.
-
-Chaque agent est structuré avec :
-- Un fichier de définitions avec les classes Plugin, la fonction setup et les instructions
-- Un fichier de prompts avec les prompts sémantiques
-- Un fichier d'agent avec la classe principale et ses méthodes
-- Un README avec la documentation
-
-### 1.3 Tests d'intégration
-
-Les tests d'intégration vérifient que les différents composants du système fonctionnent correctement ensemble. Ils utilisent des mocks et fixtures pour simuler les dépendances externes et fournir des données de test cohérentes.
-
-Les tests d'intégration end-to-end couvrent plusieurs scénarios :
-- Flux complet d'analyse argumentative
-- Gestion des erreurs et récupération
-- Performance du système
-- Intégration avec la stratégie d'équilibrage
-
-Ces tests montrent comment les agents collaborent, comment ils se désignent mutuellement, comment ils gèrent les erreurs, et comment la stratégie d'équilibrage assure une participation équilibrée.
-
-### 1.4 Traces de conversation
-
-Les traces de conversation sont conservées pour analyser le comportement des agents. L'état partagé (RhetoricalAnalysisState) joue un rôle central dans la collaboration entre agents en stockant :
-
-- Le texte brut à analyser
-- Les tâches d'analyse
-- Les arguments identifiés
-- Les sophismes identifiés
-- Les ensembles de croyances (belief sets) pour la logique formelle
-- Un journal des requêtes
-- Les réponses aux tâches
-- Les extraits de texte
-- Les erreurs
-- La conclusion finale
-- La désignation du prochain agent
-
-Le mécanisme de désignation du prochain agent est particulièrement important pour l'orchestration : un agent peut désigner explicitement quel agent doit parler ensuite, et cette désignation est consommée par la stratégie d'orchestration.
-
-## 2. Forces et faiblesses du système actuel
-
-### 2.1 Forces
-
-1. **Architecture modulaire** : Le système est bien structuré avec une séparation claire des responsabilités entre les différents agents et composants.
-
-2. **État partagé robuste** : L'état partagé (RhetoricalAnalysisState) fournit un mécanisme centralisé pour stocker et partager les informations entre les agents.
-
-3. **Mécanisme de désignation explicite** : Les agents peuvent désigner explicitement le prochain agent à parler, ce qui permet un contrôle fin du flux de conversation.
-
-4. **Stratégies d'orchestration flexibles** : Le système propose plusieurs stratégies d'orchestration qui peuvent être utilisées selon les besoins (délégation, équilibrage).
-
-5. **Gestion des erreurs** : Le système inclut des mécanismes pour gérer les erreurs et assurer la continuité de l'analyse.
-
-6. **Tests d'intégration complets** : Les tests d'intégration couvrent divers scénarios et vérifient le bon fonctionnement du système dans son ensemble.
-
-7. **Extensibilité** : Le système est conçu pour être facilement étendu avec de nouveaux agents et fonctionnalités.
-
-### 2.2 Faiblesses
-
-1. **Dépendance excessive au Project Manager** : Le système repose fortement sur l'agent PM pour l'orchestration, ce qui peut créer un goulot d'étranglement.
-
-2. **Rigidité du flux de conversation** : Le flux de conversation est relativement linéaire et prédéfini, limitant l'adaptabilité à des situations complexes.
-
-3. **Manque d'auto-organisation** : Les agents ont une capacité limitée à s'auto-organiser sans l'intervention du PM.
-
-4. **Communication limitée entre agents** : Les agents communiquent principalement via l'état partagé, sans mécanisme direct de communication.
-
-5. **Absence de mécanisme de résolution de conflits** : Il n'existe pas de mécanisme clair pour résoudre les conflits entre agents.
-
-6. **Manque de métriques d'évaluation** : Le système manque de métriques pour évaluer la qualité de la collaboration et des analyses produites.
-
-7. **Stratégie d'équilibrage perfectible** : La stratégie d'équilibrage actuelle peut conduire à des situations où un agent est sélectionné uniquement pour équilibrer la participation, même si son intervention n'est pas pertinente.
-
-8. **Gestion limitée des contextes complexes** : Le système peut avoir du mal à gérer des contextes d'analyse très complexes ou ambigus.
-
-## 3. Recommandations pour améliorer la collaboration
-
-### 3.1 Architecture et orchestration
-
-1. **Implémenter un modèle d'orchestration hiérarchique** : Introduire des niveaux d'orchestration pour permettre une délégation plus fine des tâches et réduire la dépendance au PM.
-
-2. **Développer une stratégie d'orchestration adaptative** : Créer une stratégie qui s'adapte dynamiquement au contexte de l'analyse et à la complexité du texte.
-
-3. **Introduire des mécanismes de vote et consensus** : Permettre aux agents de voter sur les décisions importantes et de parvenir à un consensus.
-
-4. **Implémenter un système de priorités dynamiques** : Attribuer des priorités dynamiques aux tâches et aux agents en fonction du contexte.
-
-5. **Créer un mécanisme de résolution de conflits** : Développer un protocole pour résoudre les conflits entre agents ayant des analyses contradictoires.
-
-### 3.2 Communication et collaboration
-
-1. **Enrichir les canaux de communication** : Permettre aux agents de communiquer directement entre eux, en plus de l'état partagé.
-
-2. **Implémenter un système de requêtes inter-agents** : Permettre aux agents de demander explicitement des informations ou des analyses à d'autres agents.
-
-3. **Développer un mécanisme de feedback** : Permettre aux agents d'évaluer la qualité des contributions des autres agents.
-
-4. **Introduire des sessions de brainstorming** : Permettre aux agents de collaborer librement sur des idées avant de structurer l'analyse.
-
-5. **Créer des équipes dynamiques** : Permettre la formation d'équipes temporaires d'agents pour traiter des aspects spécifiques de l'analyse.
-
-### 3.3 Agents et spécialisation
-
-1. **Introduire des agents méta-cognitifs** : Créer des agents qui analysent et optimisent le processus de collaboration lui-même.
-
-2. **Développer des agents hybrides** : Créer des agents qui combinent plusieurs spécialités pour des analyses plus intégrées.
-
-3. **Implémenter un système d'apprentissage continu** : Permettre aux agents d'améliorer leurs performances en apprenant des interactions passées.
-
-4. **Créer des agents de médiation** : Introduire des agents spécialisés dans la médiation et la résolution de conflits.
-
-5. **Développer des agents de synthèse** : Créer des agents spécialisés dans la synthèse des analyses produites par les autres agents.
-
-### 3.4 Évaluation et amélioration
-
-1. **Définir des métriques de collaboration** : Développer des métriques pour évaluer la qualité de la collaboration entre agents.
-
-2. **Implémenter un système d'auto-évaluation** : Permettre au système d'évaluer ses propres performances et d'identifier des axes d'amélioration.
-
-3. **Créer un tableau de bord de suivi** : Développer un outil visuel pour suivre et analyser les interactions entre agents.
-
-4. **Établir des benchmarks de performance** : Créer des benchmarks pour comparer différentes configurations d'agents et stratégies d'orchestration.
-
-5. **Mettre en place des revues post-analyse** : Analyser systématiquement les traces de conversation pour identifier des patterns et des opportunités d'amélioration.
-
-## 4. Propositions d'évolution pour le système d'orchestration
-
-### 4.1 Architecture d'orchestration avancée
-
-Nous proposons une évolution vers une architecture d'orchestration à trois niveaux :
-
-1. **Niveau stratégique** : Un agent orchestrateur de haut niveau qui définit les objectifs globaux de l'analyse et supervise le processus.
-
-2. **Niveau tactique** : Des agents coordinateurs qui gèrent des aspects spécifiques de l'analyse (arguments, sophismes, logique formelle, etc.).
-
-3. **Niveau opérationnel** : Les agents spécialistes qui effectuent les analyses détaillées.
-
-Cette architecture permettrait une meilleure répartition des responsabilités et une plus grande adaptabilité à différents types d'analyses.
-
-### 4.2 Mécanismes de communication enrichis
-
-Nous proposons d'enrichir les mécanismes de communication entre agents avec :
-
-1. **Canaux de communication dédiés** : Créer des canaux spécifiques pour différents types d'interactions (requêtes, feedback, coordination, etc.).
-
-2. **Protocoles de communication structurés** : Définir des protocoles pour standardiser les échanges entre agents.
-
-3. **Mécanismes de négociation** : Permettre aux agents de négocier des ressources, des priorités et des responsabilités.
-
-4. **Système de notification** : Alerter les agents pertinents lorsque des événements importants se produisent.
-
-### 4.3 Stratégies d'orchestration évoluées
-
-Nous proposons de développer des stratégies d'orchestration plus sophistiquées :
-
-1. **Orchestration basée sur les compétences** : Sélectionner les agents en fonction de leurs compétences spécifiques et de la nature de la tâche.
-
-2. **Orchestration adaptative** : Ajuster dynamiquement la stratégie d'orchestration en fonction des résultats intermédiaires et du contexte.
-
-3. **Orchestration multi-objectifs** : Optimiser simultanément plusieurs objectifs (qualité de l'analyse, temps d'exécution, participation équilibrée, etc.).
-
-4. **Orchestration par émergence** : Permettre l'émergence de patterns de collaboration sans contrôle centralisé.
-
-### 4.4 Système d'état partagé évolué
-
-Nous proposons d'enrichir l'état partagé avec :
-
-1. **Représentation sémantique** : Utiliser des graphes de connaissances ou des ontologies pour représenter l'état de manière plus sémantique.
-
-2. **Versionnement de l'état** : Permettre de suivre l'évolution de l'état au cours de l'analyse.
-
-3. **Vues personnalisées** : Fournir des vues personnalisées de l'état pour chaque agent en fonction de ses besoins.
-
-4. **Mécanismes de requête avancés** : Permettre aux agents d'interroger l'état de manière plus flexible et expressive.
-
-## 5. Schéma conceptuel de l'architecture améliorée
-
-```
-+-------------------------------------+
-|       Orchestrateur Stratégique     |
-|  (Définition des objectifs globaux) |
-+----------------+------------------+-+
-                 |                  |
-        +--------v-------+  +-------v--------+
-        | Coordinateur   |  | Coordinateur   |
-        | Arguments      |  | Logique        |
-        +--------+-------+  +-------+--------+
-                 |                  |
-    +------------+--+     +---------+----------+
-    |               |     |                    |
-+---v----+     +----v---+ +----v----+    +-----v---+
-| Agent  |     | Agent  | | Agent   |    | Agent   |
-| Arg.   |     | Soph.  | | PL      |    | FOL     |
-+--------+     +--------+ +---------+    +---------+
-
-+-------------------------------------+
-|          État Partagé Évolué        |
-| (Graphe de connaissances + Versions)|
-+-------------------------------------+
-
-+-------------------------------------+
-|      Système de Communication       |
-|  (Canaux dédiés + Négociation)     |
-+-------------------------------------+
-
-+-------------------------------------+
-|       Système d'Évaluation          |
-|    (Métriques + Auto-évaluation)    |
-+-------------------------------------+
-```
-
-## 6. Conclusion
-
-L'analyse du système actuel de collaboration entre agents d'analyse rhétorique révèle une architecture solide mais avec des opportunités d'amélioration significatives. Les recommandations proposées visent à enrichir les mécanismes de collaboration, à rendre l'orchestration plus flexible et adaptative, et à améliorer la qualité globale des analyses produites.
-
-L'évolution vers une architecture d'orchestration à trois niveaux, combinée à des mécanismes de communication enrichis et des stratégies d'orchestration évoluées, permettrait de créer un système plus robuste, plus adaptable et plus performant. L'introduction d'agents méta-cognitifs et d'un système d'évaluation continu assurerait une amélioration constante du système.
-
-Ces améliorations permettraient non seulement d'optimiser la collaboration entre agents existants, mais aussi de faciliter l'intégration de nouveaux agents spécialistes, ouvrant la voie à des analyses rhétoriques plus complètes et nuancées.
+Le système de collaboration des agents a évolué significativement avec l'introduction potentielle d'une architecture hiérarchique robuste en parallèle ou en remplacement d'une orchestration plus simple basée sur `AgentGroupChat`. La documentation actuelle, en particulier [`docs/composants/synthese_collaboration.md`](docs/composants/synthese_collaboration.md), nécessite une mise à jour majeure pour refléter fidèlement ces développements, en particulier l'architecture hiérarchique, ses composants, ses états distribués, et ses mécanismes de communication avancés. Cette actualisation permettra une meilleure compréhension du système et guidera plus efficacement les évolutions futures.
