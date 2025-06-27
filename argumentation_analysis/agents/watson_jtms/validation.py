@@ -9,8 +9,10 @@ class FormalValidator:
         
     async def prove_belief(self, belief_name: str) -> Dict:
         """Prouve formellement une croyance"""
-        if belief_name in self.validation_cache:
-            return self.validation_cache[belief_name]
+        # Convertir en chaîne pour la clé de cache, car l'objet peut être une liste non hachable
+        cache_key = str(belief_name)
+        if cache_key in self.validation_cache:
+            return self.validation_cache[cache_key]
         
         proof_result = {
             "belief_name": belief_name,
@@ -54,7 +56,7 @@ class FormalValidator:
                     belief_name, proof_result["validation_steps"]
                 )
             
-            self.validation_cache[belief_name] = proof_result
+            self.validation_cache[cache_key] = proof_result
             return proof_result
             
         except Exception as e:

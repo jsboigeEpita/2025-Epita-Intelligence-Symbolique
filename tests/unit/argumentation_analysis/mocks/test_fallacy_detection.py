@@ -2,7 +2,16 @@
 """Tests pour le MockFallacyDetector."""
 
 import pytest
+from unittest import mock
 from argumentation_analysis.mocks.fallacy_detection import MockFallacyDetector
+
+@pytest.fixture
+def mock_logger():
+    """Fixture to mock the logger in the fallacy_detection module."""
+    with mock.patch('logging.getLogger') as mock_get_logger:
+        mock_log = mock.MagicMock()
+        mock_get_logger.return_value = mock_log
+        yield mock_log
 
 @pytest.fixture
 def detector() -> MockFallacyDetector:
@@ -80,15 +89,15 @@ def test_detect_keywords_priority(detector: MockFallacyDetector):
     assert "Generic Mock Fallacy" not in fallacy_types
 
 
-def test_detect_non_string_input(detector: MockFallacyDetector, caplog):
+def test_detect_non_string_input(detector: MockFallacyDetector, mock_logger):
     """Teste le comportement avec une entrée non-string."""
     result = detector.detect(12345) # type: ignore
     assert result == []
-    assert "MockFallacyDetector.detect a reçu une entrée non textuelle." in caplog.text
+    mock_logger.warning.assert_any_call("MockFallacyDetector.detect a reçu une entrée non textuelle.")
 
     result_none = detector.detect(None) # type: ignore
     assert result_none == []
-    assert "MockFallacyDetector.detect a reçu une entrée non textuelle." in caplog.text
+    mock_logger.warning.assert_any_call("MockFallacyDetector.detect a reçu une entrée non textuelle.")
 
 
 def test_slicing_protection_in_ad_populum(detector: MockFallacyDetector):

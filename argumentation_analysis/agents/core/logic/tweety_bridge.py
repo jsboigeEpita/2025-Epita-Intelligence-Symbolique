@@ -207,9 +207,13 @@ class TweetyBridge:
         if not self._initializer.FolBeliefSet:
             logger.error("FolBeliefSet class not loaded.")
             return False, "FolBeliefSet class not loaded."
-        if not jpype.isinstance(belief_set, self._initializer.FolBeliefSet):
+        if not isinstance(belief_set, self._initializer.FolBeliefSet):
             return False, "L'objet fourni n'est pas une instance de FolBeliefSet."
         return self.fol_handler.fol_check_consistency(belief_set)
+
+    def fol_query(self, belief_set: Any, query_formula_str: str) -> bool:
+        """Exécute une requête en logique du premier ordre."""
+        return self.fol_handler.fol_query(belief_set, query_formula_str)
         
     def create_belief_set_from_string(self, formula_string: str) -> Optional[Any]:
         """Crée un objet FolBeliefSet à partir d'une chaîne de formules."""

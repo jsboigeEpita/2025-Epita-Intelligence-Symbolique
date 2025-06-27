@@ -8,6 +8,7 @@ sys.path.append(str(project_root))
 
 from project_core.core_from_scripts.environment_manager import EnvironmentManager
 from project_core.core_from_scripts.project_setup import ProjectSetup
+from project_core.core_from_scripts.validation_engine import ValidationEngine
 
 def main():
     """Point d'entrée principal pour la façade CLI de setup."""
@@ -35,34 +36,53 @@ def main():
         metavar='FILE_PATH',
         help="Chemin vers le fichier requirements.txt à utiliser pour l'installation."
     )
+    fix_deps_parser.add_argument(
+        "--strategy",
+        choices=['default', 'aggressive'],
+        default='default',
+        help="Stratégie de réparation à utiliser (default: simple réinstallation, aggressive: essaie plusieurs méthodes)."
+    )
 
     # --- Commande pour configurer le PYTHONPATH via un fichier .pth ---
     set_path_parser = subparsers.add_parser(
         "set-path",
         help="Configure le PYTHONPATH en créant un .pth dans site-packages."
     )
-    
+
+    # --- Commande pour valider les composants ---
+    validate_parser = subparsers.add_parser(
+        "validate",
+        help="Valide differents composants de l'environnement."
+    )
+    validate_parser.add_argument(
+        "--component",
+        choices=['jvm-bridge', 'build-tools'],
+        required=True,
+        help="Le composant a valider."
+    )
+
     args = parser.parse_args()
 
     env_manager = EnvironmentManager()
+    validation_engine = ValidationEngine()
     exit_code = 0
 
     if args.command == "fix-deps":
         if args.package:
-            print(f"Tentative de réparation des paquets : {', '.join(args.package)}")
-            if not env_manager.fix_dependencies(packages=args.package):
+            print(f"Tentative de réparation des paquets : {', '.join(args.package)} avec la stratégie '{args.strategy}'")
+            if not env_manager.fix_dependencies(packages=args.package, strategy=args.strategy):
                 print("La réparation des dépendances par paquet a échoué.", file=sys.stderr)
                 exit_code = 1
             else:
                 print("Réparation des dépendances par paquet terminée avec succès.")
         elif args.from_requirements:
             print(f"Tentative de réparation depuis le fichier : {args.from_requirements}")
-            if not env_manager.fix_dependencies(requirements_file=args.from_requirements):
+            if not env_manager.fix_dependencies(requirements_file=args.from_requirements, strategy=args.strategy):
                 print(f"La réparation depuis le fichier '{args.from_requirements}' a échoué.", file=sys.stderr)
                 exit_code = 1
             else:
                 print(f"Réparation depuis le fichier '{args.from_requirements}' terminée avec succès.")
-    
+
     elif args.command == "set-path":
         print("Tentative de configuration du fichier .pth pour le PYTHONPATH...")
         setup_manager = ProjectSetup()
@@ -72,6 +92,18 @@ def main():
         else:
             print("Configuration du fichier .pth terminée avec succès.")
 
+    elif args.command == "validate":
+        print(f"Validation du composant : {args.component}...")
+        if args.component == 'build-tools':
+            result = validation_engine.validate_build_tools()
+            print(result['message'])
+            if result['status'] == 'failure':
+                exit_code = 1
+        elif args.component == 'jvm-bridge':
+            result = validation_engine.validate_jvm_bridge()
+            print(result['message'])
+            if result['status'] == 'failure':
+                exit_code = 1
 
     sys.exit(exit_code)
 

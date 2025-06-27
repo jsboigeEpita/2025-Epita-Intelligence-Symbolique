@@ -59,3 +59,5 @@ pybreaker
 pytest-asyncio
 pytest-trio
 trio
+tenacity
+pybreaker
