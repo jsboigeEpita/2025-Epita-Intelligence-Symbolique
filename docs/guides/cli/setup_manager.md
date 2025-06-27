@@ -26,6 +26,16 @@ Répare les dépendances Python du projet.
  ```bash
  python scripts/setup_manager.py fix-deps --from-requirements abs_arg_dung/requirements.txt
  ```
+- **Stratégies de Réparation :**
+  Par défaut, `fix-deps` réinstalle simplement un paquet. Pour les cas difficiles (par exemple, avec `JPype1`), une stratégie "agressive" peut être utilisée.
+
+  ```bash
+  # Utiliser la stratégie agressive pour installer un paquet récalcitrant
+  python scripts/setup_manager.py fix-deps --package JPype1 --strategy aggressive
+  ```
+
+  Cette stratégie tentera une séquence de méthodes d'installation (standard, sans binaire, etc.) jusqu'à ce que l'une d'entre elles réussisse.
+
 
 ### `set-path`
 

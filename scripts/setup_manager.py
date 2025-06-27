@@ -36,6 +36,12 @@ def main():
         metavar='FILE_PATH',
         help="Chemin vers le fichier requirements.txt à utiliser pour l'installation."
     )
+    fix_deps_parser.add_argument(
+        "--strategy",
+        choices=['default', 'aggressive'],
+        default='default',
+        help="Stratégie de réparation à utiliser (default: simple réinstallation, aggressive: essaie plusieurs méthodes)."
+    )
 
     # --- Commande pour configurer le PYTHONPATH via un fichier .pth ---
     set_path_parser = subparsers.add_parser(
@@ -63,15 +69,15 @@ def main():
 
     if args.command == "fix-deps":
         if args.package:
-            print(f"Tentative de réparation des paquets : {', '.join(args.package)}")
-            if not env_manager.fix_dependencies(packages=args.package):
+            print(f"Tentative de réparation des paquets : {', '.join(args.package)} avec la stratégie '{args.strategy}'")
+            if not env_manager.fix_dependencies(packages=args.package, strategy=args.strategy):
                 print("La réparation des dépendances par paquet a échoué.", file=sys.stderr)
                 exit_code = 1
             else:
                 print("Réparation des dépendances par paquet terminée avec succès.")
         elif args.from_requirements:
             print(f"Tentative de réparation depuis le fichier : {args.from_requirements}")
-            if not env_manager.fix_dependencies(requirements_file=args.from_requirements):
+            if not env_manager.fix_dependencies(requirements_file=args.from_requirements, strategy=args.strategy):
                 print(f"La réparation depuis le fichier '{args.from_requirements}' a échoué.", file=sys.stderr)
                 exit_code = 1
             else:

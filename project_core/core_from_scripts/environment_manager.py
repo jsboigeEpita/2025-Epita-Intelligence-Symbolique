@@ -107,45 +107,103 @@ class EnvironmentManager:
             self.logger.error(f"Erreur lors de la copie du fichier d'environnement : {e}")
             return False
 
-    def fix_dependencies(self, packages: Optional[List[str]] = None, requirements_file: Optional[str] = None) -> bool:
+    def fix_dependencies(self, packages: Optional[List[str]] = None, requirements_file: Optional[str] = None, strategy: str = 'default') -> bool:
         """
         Répare les dépendances en les réinstallant.
-
-        Peut fonctionner à partir d'une liste de paquets ou d'un fichier requirements.
-        Les deux options sont mutuellement exclusives.
 
         Args:
             packages: Une liste de noms de paquets à réinstaller.
             requirements_file: Le chemin vers un fichier requirements.txt.
+            strategy: La stratégie à utiliser ('default' ou 'aggressive').
 
         Returns:
             True si l'opération a réussi, False sinon.
         """
         if packages and requirements_file:
-            self.logger.error("Les arguments 'packages' et 'requirements_file' sont mutuellement exclusifs.")
             raise ValueError("Les arguments 'packages' et 'requirements_file' sont mutuellement exclusifs.")
 
         if not packages and not requirements_file:
-            self.logger.warning("Aucun paquet ni fichier de requirements n'a été fourni. Aucune action effectuée.")
+            self.logger.warning("Aucun paquet ou fichier de requirements fourni.")
             return True
-
-        command_to_run = ""
-        if packages:
-            package_str = " ".join(packages)
-            command_to_run = f"pip install --force-reinstall --no-cache-dir {package_str}"
-        
-        elif requirements_file:
-            # Vérifier si le fichier existe
+            
+        if requirements_file:
             if not (self.project_root / requirements_file).is_file():
-                self.logger.error(f"Le fichier de requirements '{requirements_file}' est introuvable.")
+                self.logger.error(f"Fichier de requirements introuvable: {requirements_file}")
                 return False
-            command_to_run = f"pip install -r {requirements_file}"
+            command = f"pip install -r {requirements_file}"
+            self.logger.info(f"Exécution de la réparation depuis le fichier de requirements : {command}")
+            return self.run_command_in_conda_env(command) == 0
 
-        if command_to_run:
-            self.logger.info(f"Exécution de la commande de réparation de dépendances : {command_to_run}")
-            exit_code = self.run_command_in_conda_env(command_to_run)
-            return exit_code == 0
+        if packages:
+            if strategy == 'default':
+                package_str = " ".join(packages)
+                command = f"pip install --force-reinstall --no-cache-dir {package_str}"
+                self.logger.info(f"Exécution de la réparation (stratégie par défaut) : {command}")
+                return self.run_command_in_conda_env(command) == 0
+            elif strategy == 'aggressive':
+                self.logger.info(f"Lancement de la stratégie de réparation AGRESSIVE pour : {', '.join(packages)}")
+                for package in packages:
+                    if not self._aggressive_fix_for_package(package):
+                        self.logger.error(f"Échec de la stratégie agressive pour le paquet '{package}'.")
+                        return False
+                self.logger.info("Stratégie de réparation agressive terminée avec succès.")
+                return True
+
+        return False
+
+    def _find_vcvarsall(self) -> Optional[Path]:
+        """Trouve le script vcvarsall.bat dans les emplacements d'installation courants de Visual Studio."""
+        program_files = Path(os.environ.get("ProgramFiles(x86)", "C:/Program Files (x86)"))
+        vs_versions = ["2022", "2019", "2017"]
+        editions = ["Community", "Professional", "Enterprise", "BuildTools"]
         
+        for version in vs_versions:
+            for edition in editions:
+                vcvars_path = program_files / "Microsoft Visual Studio" / version / edition / "VC" / "Auxiliary" / "Build" / "vcvarsall.bat"
+                if vcvars_path.is_file():
+                    self.logger.info(f"vcvarsall.bat trouvé : {vcvars_path}")
+                    return vcvars_path
+        self.logger.warning("vcvarsall.bat introuvable.")
+        return None
+
+    def _aggressive_fix_for_package(self, package: str) -> bool:
+        """Applique une séquence de stratégies de réparation pour un seul paquet."""
+        
+        # Stratégie 1: Installation simple
+        self.logger.info(f"[{package}] Stratégie 1 : Tentative d'installation simple...")
+        command1 = f'pip install "{package}"'
+        if self.run_command_in_conda_env(command1) == 0:
+            self.logger.info(f"[{package}] Succès de l'installation simple.")
+            return True
+        self.logger.warning(f"[{package}] L'installation simple a échoué. Passage à la stratégie suivante.")
+
+        # Stratégie 2: Installation sans binaire
+        self.logger.info(f"[{package}] Stratégie 2 : Tentative d'installation sans binaire...")
+        command2 = f'pip install --no-binary :all: "{package}"'
+        if self.run_command_in_conda_env(command2) == 0:
+            self.logger.info(f"[{package}] Succès de l'installation sans binaire.")
+            return True
+        self.logger.warning(f"[{package}] L'installation sans binaire a échoué. Passage à la stratégie suivante.")
+
+        # Stratégie 3: Utilisation de vcvarsall.bat (Windows uniquement)
+        if sys.platform == 'win32':
+            self.logger.info(f"[{package}] Stratégie 3 : Tentative d'installation avec les outils de compilation MSVC...")
+            vcvars_path = self._find_vcvarsall()
+            if vcvars_path:
+                # La commande doit être exécutée dans un sous-shell qui a initialisé l'environnement de compilation.
+                # `conda run` ne peut pas facilement gérer `&&` ici, donc nous construisons une commande shell complète.
+                # Note: cette partie est complexe et dépend fortement de la configuration du shell.
+                # pour le moment, on se contente de logger une note car la commande est complexe à construire
+                self.logger.info(f"Pour une installation manuelle, utilisez une console développeur et lancez :")
+                self.logger.info(f'"{vcvars_path}" x64')
+                self.logger.info(f'conda activate {self.get_conda_env_name_from_dotenv()}')
+                self.logger.info(f'pip install "{package}"')
+                self.logger.warning(f"[{package}] La stratégie MSVC automatique n'est pas encore entièrement implémentée. Échec de cette étape.")
+
+            else:
+                self.logger.warning(f"[{package}] Outils de compilation MSVC (vcvarsall.bat) introuvables. Échec de cette étape.")
+
+        self.logger.error(f"[{package}] Toutes les stratégies de réparation ont échoué.")
         return False
 
 
