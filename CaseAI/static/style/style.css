@@ -1,0 +1,467 @@
+@font-face {
+    font-family: 'CustomFont';
+    src: url('../../static/fonts/BarberChop.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'CustomFont2';
+    src: url('../../static/fonts/JMH\ Typewriter.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'CustomFont3';
+    src: url('../../static/fonts/WaHandwriting-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+body {
+    background: linear-gradient(
+        to bottom,
+        rgb(40, 50, 70),
+        rgb(30, 40, 60),
+        rgb(20, 30, 45) 
+    );
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-size: cover;
+    overflow: hidden;
+}
+
+* {
+    transition: all 0.2s ease-in-out;
+}
+
+p {
+    color: white;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    font-family: 'CustomFont', sans-serif;
+    user-select: none;
+}
+
+#title {
+    font-size: 3.5em;
+    font-weight: bold;
+}
+
+#subtitle {
+    font-size: 1.5em;
+}
+
+#title_container {
+    display: flex;
+    flex-direction: column;
+    height: 10vh;
+    width: 100%;
+}
+
+#title_container:hover > #title {
+    font-size: 4em;
+}
+
+#page {
+    padding-top: 3vh;
+    padding-bottom: 3vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 95vw;
+    height: 95vh;
+    margin: auto;
+    gap: 2vh;
+}   
+
+#tribody {
+    display: flex;
+    flex-direction: row;
+    height: 85vh;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+}
+
+#rules, #settings {
+    display: flex;
+    flex-direction: column;
+    gap: 2vh;
+    width: 20vw;
+    height: 65vh;
+    background-color: rgb(40, 50, 70);
+    border-radius: 3em;
+    border: 5px solid rgb(30, 40, 60);
+    padding: 2vh;
+}
+
+#rules-text {
+    font-size: 1.5em;
+    color: rgb(200, 200, 200);
+}
+
+#rules-title, #settings-title {
+    font-size: 2em;
+    font-weight: bold;
+    margin-bottom: 20%;
+}
+
+#settings-title {
+    margin-bottom: 5%;
+}
+
+#rules:hover, #settings:hover {
+    transform: scale(105%);
+}
+
+#buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 20vw;
+    height: 70vh;
+    gap: 2vh;
+}
+
+#phaser_container {
+    overflow: hidden;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 60vw !important;
+    height: 70vh !important;
+    box-shadow: rgba(0, 0, 0, 0.25) 0px 54px 55px, rgba(0, 0, 0, 0.12) 0px -12px 30px, rgba(0, 0, 0, 0.12) 0px 4px 6px, rgba(0, 0, 0, 0.17) 0px 12px 13px, rgba(0, 0, 0, 0.09) 0px -3px 5px;
+    background-color: rgb(41, 49, 60);
+    border-radius: 20px;
+    transition: none;
+}
+
+canvas {
+    margin: 0 !important;
+    transition : none !important;
+}
+
+.big-button {
+    border-radius: 30px;
+    background-color: rgb(50, 60, 80);
+    border: 5px solid rgb(30, 40, 60);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.big-button > p {
+    color: rgb(200, 200, 200);
+    font-size: 2em;
+}
+
+.big-button:hover {
+    transform: scale(105%);
+    opacity: 0.9;
+}
+
+.big-button:active {
+    transform: scale(120%);
+}
+
+#play_button {
+    width: 15vw;
+    height: 8vh;
+}
+
+.floating {
+    position: fixed;
+    background-color: transparent;
+    top: 100px;
+    left: 50px;
+    transition: none;
+}
+
+.floating:active {
+    transform: scale(105%);
+}
+
+#newspaper, #testimony, .note {
+    background-image: url('../../static/images/newspaper.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+#newspaper {
+    width: 30vw;
+    aspect-ratio: 322 / 234;
+}
+
+#newspaper_whole {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+#newspaper_header {
+    width: 100%;
+    height: 25%;
+}
+
+#newspaper_body {
+    width: 100%;
+    height: 75%;
+    display: flex;
+    flex-direction: row;
+}
+
+#newspaper_body_left {
+    width: 50%;
+    height: 80%;
+    margin-top: 3%;
+}
+
+#newspaper_body_right {
+    width: 50%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+#newspaper_picture {
+    margin-top: 5%;
+    margin-left: 10%;
+    width: 80%;
+    height: 60%;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+#newspaper_sub_picture {
+    width: 80%;
+    margin-top: 2.5%;
+    margin-left: 10%;
+    height: 25%;
+}
+
+#newspaper_whole, #newspaper_body, #newspaper_body_left, #newspaper_body_right, #newspaper_picture, #newspaper_sub_picture {
+    overflow: hidden;
+}
+
+#newspaper_header > p, #newspaper_body_left > p, #newspaper_sub_picture > p {
+    color: black;
+    font-family: 'CustomFont2';
+}
+
+#newspaper_body_left > p, #newspaper_sub_picture > p{
+    text-align: left;
+}
+
+#newspaper_header > p {
+    margin-top: 6%;
+    font-size: 3vmin;
+}
+
+#newspaper_body_left {
+    margin-left: 8%;
+    font-size: 1.25vmin;
+}
+
+#newspaper_sub_picture > p {
+    font-size: 1vmin;
+}
+
+#testimony {
+    width: 15vw;
+    height: 40vh;
+    background-image: url('../../static/images/testimony.png');
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    top: 500px;
+}
+
+#newspaper_text, #testimony_header > p, #testimony_text, #testimony_input, .note-text, .note-title {
+    color: black;
+    font-family: 'CustomFont2';
+}
+
+#testimony_header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    height: 20%;
+    width: 80%;
+    flex-wrap: nowrap;
+    margin-top: 25%;
+}
+
+#testimony_header > p {
+    width: 65%;
+    height: fit-content;
+    margin: 0;
+    text-align: center;
+    font-size: 1.2em;
+    user-select: none;
+}
+
+#testimony_text {
+    width: 85%;
+    height: 40%;
+    font-size: 0.7em;
+    pointer-events: none;
+    user-select: none;
+}
+
+#testimony_input {
+    width: 70%;
+    border-radius: 10px;
+    border: 1px black solid;
+}
+
+#testimony_header > div {
+    width: 35%;
+    height: 100%;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.note {
+    display: flex;
+    flex-direction: column;
+    width: 20%;
+    height: 20%;
+    align-items: center;
+}
+
+.note-alibi {
+    background-image: url('../../static/images/note_alibi.png');
+}
+
+.note-observation {
+    background-image: url('../../static/images/note_observation.png');
+}
+
+.note-trash {
+    background-image: url('../../static/images/note_trash.png');
+}
+
+.note-watson {
+    background-image: url('../../static/images/note_watson.png');
+}
+
+.note-title, .note-text {
+    margin-top: 5%;
+}
+
+.note-title {
+    font-weight: bold;
+    font-family: 'CustomFont3';
+    font-size: 2vmin;
+}
+
+.note-text {
+    font-size: 2vmin;
+    width: 70%;
+    font-family: 'CustomFont3';
+}
+
+#view_container {
+    width: 100%;
+    height: 85vh;
+}
+
+.view {
+    width: 100%;
+    height: 100%;
+    animation: fade-in 0.3s ease-in;
+}
+
+.picture {
+    width: 8vw;
+    aspect-ratio: 886/1012;
+    background-image: url('../../static/images/frame.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    display: flex;
+    flex-direction: column;
+}
+
+.picture-image {
+    margin: auto auto;
+    margin-top: 10%;
+    width: 90%;
+    height: 75%;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.picture-text {
+    font-family: 'CustomFont2';
+    color: black;
+    margin: auto auto;
+    width: 90%;
+    height: 15%;
+    font-size: 1.2vmin;
+}
+
+#api_key_input {
+    height: 7%;
+    width: 90%;
+    border-radius: 30px;
+    outline: none;
+    border: 5px solid rgb(30, 40, 60);
+    font-family: 'CustomFont';
+    color: rgb(100, 100, 100);
+}
+
+#testimony_accuse_button {
+    background-color: rgb(255, 0, 0);
+    border-radius: 15px;
+    width: 70%;
+    height: 5%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-top: 5%;
+    border: 2px solid rgb(99, 0, 0);
+}
+
+#testimony_accuse_button:hover {
+    transform: scale(105%);
+    cursor: pointer;
+}
+
+#testimony_accuse_button > p {
+    color: rgb(250, 200, 200);
+    font-size: 1.3vmin;
+}
+
+#end_text {
+    font-size: 2.5vmin;
+    font-family: 'CustomFont2';
+}
+
+.hidden {
+    display: none !important;
+}
