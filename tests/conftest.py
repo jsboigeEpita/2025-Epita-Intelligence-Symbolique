@@ -178,3 +178,14 @@ def backend_url(request):
 def frontend_url(request):
     """Fixture pour récupérer l'URL du frontend depuis les options pytest."""
     return request.config.getoption("--frontend-url")
+
+@pytest.fixture(autouse=True)
+def mock_crypto_passphrase(monkeypatch):
+    """
+    Mocks the settings.passphrase for all tests to ensure crypto operations
+    have a valid default passphrase.
+    """
+    from unittest.mock import MagicMock
+    mock_passphrase = MagicMock()
+    mock_passphrase.get_secret_value.return_value = "test-passphrase-for-crypto"
+    monkeypatch.setattr("argumentation_analysis.core.utils.crypto_utils.settings.passphrase", mock_passphrase)
