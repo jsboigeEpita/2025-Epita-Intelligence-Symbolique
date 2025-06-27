@@ -575,7 +575,6 @@ if __name__ == "__main__":
     argument = "Les experts sont unanimes : ce produit est sûr et efficace. Des millions de personnes l'utilisent déjà, donc vous devriez l'essayer aussi."
     
     combined_fallacies = analyzer.identify_combined_fallacies(argument)
-    print(f"Combinaisons de sophismes identifiées: {json.dumps(combined_fallacies, indent=2, ensure_ascii=False)}")
     
     # Exemple d'analyse de sophismes structurels
     arguments = [
@@ -585,7 +584,6 @@ if __name__ == "__main__":
     ]
     
     structural_fallacies = analyzer.analyze_structural_fallacies(arguments)
-    print(f"Sophismes structurels identifiés: {json.dumps(structural_fallacies, indent=2, ensure_ascii=False)}")
     
     # Exemple d'identification de motifs de sophismes
     text = """
@@ -603,4 +601,3 @@ if __name__ == "__main__":
     """
     
     patterns = analyzer.identify_fallacy_patterns(text)
-    print(f"Motifs de sophismes identifiés: {json.dumps(patterns, indent=2, ensure_ascii=False)}")

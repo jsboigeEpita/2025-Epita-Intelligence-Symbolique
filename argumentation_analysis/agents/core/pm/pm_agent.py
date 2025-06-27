@@ -372,7 +372,7 @@ Le rapport doit être professionnel, technique et complet.
                         f.write(report_content)
                     logger_main.info(f"Rapport généré: {args.output}")
                 else:
-                    print(report_content)
+                    pass
                 
                 logger_main.info("Génération de rapport terminée avec succès")
                 
@@ -386,22 +386,6 @@ Le rapport doit être professionnel, technique et complet.
         logger_main.info("Exemple d'initialisation et d'utilisation (nécessite un kernel configuré):")
     # # pm_agent.setup_agent_components(llm_service_id="default")
     
-    # # print(pm_agent.get_agent_info())
-    
-    # # async def run_example():
-    # #     # Simuler un état et un texte
-    # #     dummy_state = '{"tasks_defined": [], "tasks_answered": [], "final_conclusion": null}'
-    # #     dummy_text = "Ceci est un texte d'exemple pour l'analyse."
-        
-    # #     print("\n--- Test define_tasks_and_delegate ---")
-    # #     delegation_result = await pm_agent.define_tasks_and_delegate(dummy_state, dummy_text)
-    # #     print(f"Résultat de la délégation:\n{delegation_result}")
-        
-    # #     # Simuler un état plus avancé pour la conclusion
-    # #     advanced_state = '{"tasks_defined": ["task_1"], "tasks_answered": {"task_1": "Extraction faite."}, "identified_arguments": ["Arg1"], "final_conclusion": null}'
-    # #     print("\n--- Test write_conclusion ---")
-    # #     conclusion_result = await pm_agent.write_conclusion(advanced_state, dummy_text)
-    # #     print(f"Résultat de la conclusion:\n{conclusion_result}")
 
     # # import asyncio
     # # asyncio.run(run_example())
