@@ -345,32 +345,11 @@ class SherlockEnqueteAgent(BaseAgent):
         # L'historique complet (avec le system prompt) est passé ici
         
         try:
-            # Création de la configuration du prompt et des settings d'exécution
-            prompt_config = PromptTemplateConfig(
-                template="{{$chat_history}}",
-                name="chat_with_agent",
-                template_format="semantic-kernel",
-            )
-            
-            execution_settings = OpenAIPromptExecutionSettings(
-                service_id=self._service_id,
-                max_tokens=150,
-                temperature=0.7,
-                top_p=0.8
-            )
-            prompt_config.add_execution_settings(execution_settings)
-            
-            # Création d'une fonction ad-hoc pour la conversation
-            chat_function = KernelFunction.from_prompt(
-                function_name="chat_with_agent",
-                plugin_name="SherlockAgentPlugin",
-                prompt_template_config=prompt_config,
-            )
-
-            # Invocation via le kernel
+            # Utilisation de la fonction agent principale (_agent) déjà configurée
+            # dans le constructeur, qui contient les bons settings.
             arguments = KernelArguments(chat_history=history)
             
-            response = await self._kernel.invoke(chat_function, arguments=arguments)
+            response = await self._kernel.invoke(self._agent, arguments=arguments)
             
             if response:
                 self.logger.info(f"[{self.name}] Réponse générée: {response}")

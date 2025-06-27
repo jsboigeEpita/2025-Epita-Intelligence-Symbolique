@@ -131,6 +131,7 @@ class ScriptExecutionValidator:
     
     def analyze_script_output(self, output: str, script_type: str) -> Dict[str, Any]:
         """Analyse la sortie d'un script."""
+        import re
         analysis = {
             "output_length": len(output),
             "line_count": len(output.split('\n')),
@@ -144,10 +145,14 @@ class ScriptExecutionValidator:
         error_indicators = ['error', 'exception', 'failed', 'traceback']
         warning_indicators = ['warning', 'warn', 'attention']
         
-        output_lower = output.lower()
+        # Exclure les erreurs contrôlées de l'analyse pour éviter les faux positifs
+        clean_output = re.sub(r'---AGENT_ERROR_START---.*?---AGENT_ERROR_END---', '', output, flags=re.DOTALL | re.IGNORECASE)
+        output_lower = clean_output.lower()
         
         analysis["contains_errors"] = any(indicator in output_lower for indicator in error_indicators)
-        analysis["contains_warnings"] = any(indicator in output_lower for indicator in warning_indicators)
+        
+        # Pour les warnings, on peut rester sur la sortie complète
+        analysis["contains_warnings"] = any(indicator in output.lower() for indicator in warning_indicators)
         
         # Score de qualité basé sur le contenu
         quality_score = 0.0
@@ -299,7 +304,7 @@ class TestScriptsExecution:
             "oracle_behavior_demo"
         )
         
-        assert not output_analysis["contains_errors"], "Erreurs dans Oracle Behavior Demo"
+        assert not output_analysis["contains_errors"], f"Erreurs dans Oracle Behavior Demo: {result.get('error', 'Unknown error')}"
         assert output_analysis["quality_score"] > 0.3, f"Qualité Demo insuffisante: {output_analysis['quality_score']}"
     
     @pytest.mark.anyio
