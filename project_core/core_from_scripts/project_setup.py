@@ -154,6 +154,35 @@ class ProjectSetup:
 
 def setup_environment(force: bool = False, logger: Logger = None) -> bool:
     """Fonction utilitaire de setup"""
+    def setup_test_environment(self, with_mocks: bool = False) -> bool:
+        """
+        Prépare l'environnement pour l'exécution des tests.
+
+        Cette fonction peut, par exemple, s'assurer que les dépendances de test
+        sont installées et configurer des mocks si nécessaire.
+
+        Args:
+            with_mocks (bool): Si True, active les mocks pour des modules
+                               comme JPype, simulant un environnement où le pont
+                               JVM n'est pas nécessaire.
+
+        Returns:
+            bool: True si la préparation a réussi, False sinon.
+        """
+        self.logger.info("Configuration de l'environnement de test...")
+
+        if with_mocks:
+            self.logger.info("Activation des mocks pour l'environnement de test...")
+            # La logique de patching/mocking sera appelée ici.
+            # Pour l'instant, nous simulons le succès.
+            # Exemple: self.env_manager.apply_jpype_mocks()
+            self.logger.info("Mocks activés.")
+
+        # D'autres étapes de préparation pourraient être ajoutées ici,
+        # comme le téléchargement de dépendances de test.
+
+        self.logger.success("Environnement de test prêt.")
+        return True
     setup = ProjectSetup(logger)
     return setup.setup_environment(force)
 

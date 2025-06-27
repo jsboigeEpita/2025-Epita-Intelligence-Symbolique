@@ -61,6 +61,29 @@ def main():
         help="Le composant a valider."
     )
 
+    # --- Commande pour installer le projet ---
+    install_parser = subparsers.add_parser(
+        "install-project",
+        help="Orchestre une installation complète et propre du projet."
+    )
+    install_parser.add_argument(
+        "--requirements",
+        default="requirements.txt",
+        metavar="FILE_PATH",
+        help="Chemin vers le fichier requirements.txt principal (défaut: requirements.txt)."
+    )
+
+    # --- Commande pour configurer l'environnement de test ---
+    setup_test_env_parser = subparsers.add_parser(
+        "setup-test-env",
+        help="Prépare l'environnement pour l'exécution des tests."
+    )
+    setup_test_env_parser.add_argument(
+        "--with-mocks",
+        action="store_true",
+        help="Active les mocks pour les dépendances comme JPype."
+    )
+
     args = parser.parse_args()
 
     env_manager = EnvironmentManager()
@@ -104,6 +127,24 @@ def main():
             print(result['message'])
             if result['status'] == 'failure':
                 exit_code = 1
+
+    elif args.command == "install-project":
+        print("Lancement de l'installation complète du projet...")
+        setup_manager = ProjectSetup()
+        if not setup_manager.install_project(requirements_file=args.requirements):
+            print("L'installation du projet a échoué.", file=sys.stderr)
+            exit_code = 1
+        else:
+            print("Installation du projet terminée avec succès.")
+
+    elif args.command == "setup-test-env":
+        print("Préparation de l'environnement de test...")
+        setup_manager = ProjectSetup()
+        if not setup_manager.setup_test_environment(with_mocks=args.with_mocks):
+            print("La préparation de l'environnement de test a échoué.", file=sys.stderr)
+            exit_code = 1
+        else:
+            print("Préparation de l'environnement de test terminée avec succès.")
 
     sys.exit(exit_code)
 

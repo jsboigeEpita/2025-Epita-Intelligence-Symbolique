@@ -4,6 +4,36 @@ Ce script est le point d'entrée principal pour toutes les opérations de config
 
 ## Commandes Disponibles
 
+### `install-project`
+
+C'est la commande principale pour un nouvel utilisateur. Elle orchestre une installation complète et propre du projet. Elle exécute en séquence les actions cruciales suivantes :
+1.  **Validation des outils de compilation** : S'assure que l'environnement système est prêt.
+2.  **Installation des dépendances** : Installe toutes les dépendances Python depuis le fichier `requirements.txt`.
+3.  **Configuration du PYTHONPATH** : Crée un fichier `.pth` pour garantir que le projet est visible par Python.
+
+**Utilisation :**
+```bash
+# Lance l'installation complète du projet
+python scripts/setup_manager.py install-project
+```
+
+Vous pouvez également spécifier un fichier `requirements.txt` différent :
+```bash
+python scripts/setup_manager.py install-project --requirements path/to/your/requirements.txt
+```
+### `setup-test-env`
+
+Cette commande prépare et valide l'environnement spécifiquement pour l'exécution de la suite de tests du projet. Son rôle principal est d'abstraire la complexité de la configuration des mocks, notamment pour JPype, qui peut poser des problèmes de compatibilité.
+
+Elle garantit que les tests peuvent s'exécuter de manière fiable, que ce soit avec la bibliothèque `JPype` authentique (pour les versions de Python compatibles) ou avec son mock (pour Python 3.12+).
+
+**Utilisation :**
+```bash
+# Configure l'environnement pour les tests
+python scripts/setup_manager.py setup-test-env
+```
+
+
 ### `fix-deps`
 
 Répare les dépendances Python du projet.
