@@ -12,6 +12,7 @@ ce module reste essentiel pour le bootstrapping de l'environnement.
 import os
 import sys
 import warnings
+from project_core.core_from_scripts import load_dotenv
 import json
 import logging
 import subprocess
@@ -77,36 +78,24 @@ class EnvironmentManager:
             
         return str(python_executable)
 
-    def run_command(self, command: List[str]) -> int:
-        """Exécute une commande, avec un traitement spécial pour pytest."""
+    def run_command(self, command: List[str], env_name: str) -> int:
+        """
+        Exécute TOUJOURS une commande dans un sous-processus à l'intérieur de l'environnement conda spécifié.
+        Ceci est la méthode la plus robuste pour éviter les conflits de path.
+        """
         if not command:
             self.logger.error("Aucune commande à exécuter.")
             return 1
 
-        # Traitement spécial pour pytest pour éviter les problèmes de sous-processus avec la JVM
-        is_pytest_command = (len(command) > 2 and 
-                             command[0].endswith("python") and 
-                             "pytest" in command[2])
-
-        if is_pytest_command:
-            pytest_args = command[3:]
-            self.logger.info(f"Détection de pytest. Exécution par programmation avec les arguments: {pytest_args}")
-            try:
-                # Importation de pytest ici pour ne le faire que si nécessaire
-                import pytest
-                exit_code = pytest.main(pytest_args)
-                self.logger.info(f"Pytest s'est terminé avec le code de sortie: {exit_code}")
-                return exit_code
-            except Exception as e:
-                self.logger.error(f"Erreur CRITIQUE lors de l'exécution de pytest.main: {e}")
-                return 1 # Retourne un code d'erreur générique
+        # Construire la commande finale avec 'conda run'
+        # C'est la manière la plus fiable de s'assurer que la commande s'exécute dans le bon environnement activé.
+        final_command = ["conda", "run", "-n", env_name, "--no-capture-output"] + command
         
-        # Fallback pour les autres commandes
-        command_str = ' '.join(command)
-        self.logger.info(f"Exécution de la commande via un sous-processus: {command_str}")
+        command_str_for_log = ' '.join(final_command)
+        self.logger.info(f"Exécution de la commande via 'conda run': {command_str_for_log}")
         
         try:
-            result = subprocess.run(command, check=False, capture_output=True, text=True, encoding='utf-8')
+            result = subprocess.run(final_command, check=False, capture_output=True, text=True, encoding='utf-8')
             if result.stdout: self.logger.info(f"--- STDOUT ---\n{result.stdout}")
             if result.stderr: self.logger.error(f"--- STDERR ---\n{result.stderr}")
             self.logger.info(f"La commande s'est terminée avec le code de sortie: {result.returncode}")
@@ -130,7 +119,7 @@ def main():
     parser.add_argument(
         '--env-name', 
         type=str, 
-        default='projet-is', 
+        default='projet-is-v2',
         help="Nom de l'environnement Conda à utiliser."
     )
     parser.add_argument(
@@ -145,6 +134,7 @@ def main():
     )
 
     args = parser.parse_args()
+    load_dotenv.ensure_dotenv_loaded(silent=False)
     manager = EnvironmentManager()
 
     if args.get_python_path:
@@ -155,14 +145,13 @@ def main():
             sys.exit(1)
             
     elif args.run_command:
+        # La logique de --setup-vars est maintenant obsolète et gérée par conda run.
         if args.setup_vars:
-            logger.info("Argument --setup-vars ignoré (obsolète mais conservé pour compatibilité).")
-        
-        # NE PAS initialiser l'environnement applicatif complet pour les tests.
-        # C'est la cause du conflit avec pytest.
-        logger.info("Bootstrap de l'application intentionnellement ignoré pour l'exécution d'une commande (mode test).")
+            logger.info("Argument --setup-vars ignoré.")
 
-        return_code = manager.run_command(args.run_command)
+        # Exécuter la commande en utilisant la nouvelle méthode robuste.
+        # Le nom de l'environnement est passé directement.
+        return_code = manager.run_command(args.run_command, args.env_name)
         sys.exit(return_code)
     
     else:
