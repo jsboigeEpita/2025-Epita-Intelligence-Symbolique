@@ -24,28 +24,14 @@ def run_in_jvm_subprocess():
         # Nouvelle approche: l'injection de PYTHONPATH via un script Python est plus fiable
         project_root = Path(__file__).parent.parent.parent.resolve()
         
-        # Convertir le chemin du script en un nom de module importable
-        # Ex: D:\path\to\project\tests\unit\worker.py -> tests.unit.worker
-        try:
-            module_name = str(script_path.resolve().relative_to(project_root)).replace('\\', '.').replace('/', '.')[:-3]
-        except ValueError:
-            raise ValueError(f"Le script {script_path} ne semble pas être dans la racine du projet {project_root}")
-
-        # La commande Python qui va tout gérer
-        python_command = (
-            f'import sys; '
-            f'import importlib; '
-            f'sys.path.insert(0, r"{str(project_root)}"); '
-            f'print(f"PYTHONPATH injecté: {{sys.path[0]}}"); '
-            f'print(f"Importation et exécution du module: {module_name}"); '
-            f'worker_module = importlib.import_module("{module_name}"); '
-            f'worker_module.main()'
-        )
-
         # La commande complète pour le sous-processus
-        command_for_subprocess = [sys.executable, "-c", python_command]
+        command_for_subprocess = [sys.executable, str(script_path)]
 
-        print(f"Exécution du worker via injection de sys.path: {' '.join(command_for_subprocess)}")
+        # Créer un environnement pour le sous-processus qui inclut la racine du projet dans PYTHONPATH
+        env = os.environ.copy()
+        env['PYTHONPATH'] = str(project_root) + os.pathsep + env.get('PYTHONPATH', '')
+        
+        print(f"Exécution du worker en sous-processus avec PYTHONPATH: {' '.join(command_for_subprocess)}")
 
         result = subprocess.run(
             command_for_subprocess,
@@ -53,7 +39,8 @@ def run_in_jvm_subprocess():
             text=True,
             encoding='utf-8',
             check=False,
-            cwd=project_root
+            cwd=project_root,
+            env=env
         )
         
         # Afficher la sortie pour le débogage, surtout en cas d'échec

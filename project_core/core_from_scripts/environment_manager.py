@@ -8,7 +8,6 @@ stockées dans des fichiers .env.
 
 import shutil
 import logging
-import sys
 from pathlib import Path
 from typing import Optional, List
 

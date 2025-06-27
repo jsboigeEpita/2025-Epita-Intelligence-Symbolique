@@ -1,4 +1,4 @@
-name: projet-is-v2
+name: projet-is
 channels:
   - conda-forge
   - pytorch
@@ -77,3 +77,4 @@ dependencies:
     - pytest-dotenv
     - mcp
     - blis
+    - JPype1>=1.5.0
