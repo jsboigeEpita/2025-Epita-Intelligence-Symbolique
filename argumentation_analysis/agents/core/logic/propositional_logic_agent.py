@@ -31,6 +31,7 @@ from pydantic import Field
 from ..abc.agent_bases import BaseLogicAgent
 from .belief_set import BeliefSet, PropositionalBeliefSet
 from .tweety_bridge import TweetyBridge
+from .tweety_initializer import TweetyInitializer
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -236,9 +237,9 @@ class PropositionalLogicAgent(BaseLogicAgent):
         super().__init__(kernel, agent_name=agent_name, logic_type_name="PL", system_prompt=actual_system_prompt)
         self._llm_service_id = service_id
         self._tweety_bridge = TweetyBridge()
-        self.logger.info(f"TweetyBridge initialisé pour {self.name}. JVM prête: {self._tweety_bridge.is_jvm_ready()}")
-        if not self._tweety_bridge.is_jvm_ready():
-            self.logger.error("La JVM n'est pas prête. Les fonctionnalités logiques sont compromises.")
+        self.logger.info(f"TweetyBridge initialisé pour {self.name}. Vérification de la JVM via TweetyInitializer...")
+        if not TweetyInitializer.is_jvm_ready():
+            self.logger.error("La JVM n'est pas prête selon TweetyInitializer. Les fonctionnalités logiques sont compromises.")
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         return {
@@ -258,7 +259,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants sémantiques pour {self.name}...")
 
-        if not self._tweety_bridge.is_jvm_ready():
+        if not TweetyInitializer.is_jvm_ready():
             self.logger.error(f"La JVM pour TweetyBridge de {self.name} n'est pas prête.")
             return
 

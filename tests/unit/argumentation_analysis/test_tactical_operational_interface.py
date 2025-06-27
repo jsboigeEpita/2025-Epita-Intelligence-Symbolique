@@ -388,7 +388,7 @@ class TestTacticalOperationalInterface(unittest.TestCase):
         }
         
         # Appeler la méthode à tester
-        self.interface.process_operational_result(operational_result)
+        self.interface.process_operational_result(operational_result, operational_result)
 
         # Vérifier que l'adaptateur opérationnel a été utilisé pour envoyer le rapport
         self.mock_operational_adapter.send_result.assert_called_once()
