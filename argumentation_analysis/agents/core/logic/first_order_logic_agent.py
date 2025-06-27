@@ -200,6 +200,43 @@ class BeliefSetBuilderPlugin:
         
         return final_name
 
+    def _find_sort_of_constant(self, constant_name: str) -> Optional[str]:
+        """Finds the most specific sort a constant belongs to."""
+        for sort, constants in self._sorts.items():
+            if constant_name in constants:
+                return sort
+        return None
+
+    def _is_subsort(self, sub_sort_candidate: str, super_sort_target: str) -> bool:
+        """
+        Checks if sub_sort_candidate is a sub-sort of super_sort_target in the hierarchy.
+        A sort is a sub-sort of another if they share the same representative.
+        """
+        if sub_sort_candidate == super_sort_target:
+            return True
+            
+        try:
+            pred_for_sub_sort = self._normalize(sub_sort_candidate)
+            pred_for_super_sort = self._normalize(super_sort_target)
+
+            if pred_for_sub_sort not in self._sort_parent or pred_for_super_sort not in self._sort_parent:
+                return False
+
+            root_sub = self._find_sort_representative(pred_for_sub_sort)
+            root_super = self._find_sort_representative(pred_for_super_sort)
+            
+            return root_sub == root_super
+        except KeyError:
+            return False
+
+    def _infer_sort_hierarchy(self):
+        """
+        This method is now a placeholder. The sort unification logic has been moved
+        directly into `add_universal_implication` to build the hierarchy incrementally.
+        """
+        logger.debug("Call to _infer_sort_hierarchy() noted. Unification is now incremental.")
+        pass
+
     def _ensure_predicate_exists(self, predicate_name: str, arity: int = 1):
         """
         Ensures a predicate schema exists. If not, creates a default one.
@@ -274,27 +311,34 @@ class BeliefSetBuilderPlugin:
         p_name = self._normalize(fact_predicate_name)
         arg_list = [self._normalize(arg) for arg in fact_arguments]
 
-        # --- Enhanced Robustness ---
-        # If the predicate schema is not defined, create it dynamically.
-        # This assumes a simple 1-to-1 mapping from predicate to a sort of the same name.
-        if p_name not in self._predicates:
-            # We derive the sort name from the predicate name, as is common.
-            # e.g., predicate 'Etudiant' implies sort 'Etudiant'.
-            # This is a heuristic that works well for many simple cases.
-            sort_name_for_predicate = p_name
-            self.add_predicate_schema(p_name, [sort_name_for_predicate])
+        self._ensure_predicate_exists(p_name, arity=len(arg_list))
 
-        # Ensure all constants and their respective sorts exist.
         expected_sorts = self._predicates[p_name]
+        
+        if len(arg_list) != len(expected_sorts):
+            logger.error(f"Arity mismatch for '{p_name}'. Expected {len(expected_sorts)}, got {len(arg_list)}.")
+            return f"Error: Arity mismatch for predicate '{p_name}'."
+
         for i, arg_name in enumerate(arg_list):
-            if i < len(expected_sorts):
-                sort_name = expected_sorts[i]
-                # Ensure the sort exists.
-                if sort_name not in self._sorts:
-                    self.add_sort(sort_name)
-                # Ensure the constant is in the sort.
-                if arg_name not in self._sorts[sort_name]:
-                    self._sorts[sort_name].append(arg_name)
+            expected_sort_name = self._normalize(expected_sorts[i])
+            
+            constant_sort = self._find_sort_of_constant(arg_name)
+            
+            # Case 1: The constant is completely new.
+            if constant_sort is None:
+                logger.debug(f"Constant '{arg_name}' is undeclared. Assigning to expected sort '{expected_sort_name}'.")
+                self.add_constant_to_sort(arg_name, expected_sort_name)
+            
+            # Case 2: The constant exists, but its sort is not compatible with the one expected by the predicate.
+            elif not self._is_subsort(constant_sort, expected_sort_name):
+                logger.warning((f"Constant '{arg_name}' has sort '{constant_sort}', which is not a sub-sort of the "
+                                f"expected '{expected_sort_name}'. "
+                                f"Adding constant to the expected sort '{expected_sort_name}' as a repair mechanism."))
+                self.add_constant_to_sort(arg_name, expected_sort_name)
+            
+            # Case 3: The constant exists and its sort is compatible. Do nothing.
+            else:
+                 logger.debug(f"Constant '{arg_name}' with sort '{constant_sort}' is compatible with expected sort '{expected_sort_name}'.")
 
         self._atomic_facts.append(AtomicFact(p_name, arg_list))
         return f"Atomic fact '{p_name}({', '.join(arg_list)})' added."
@@ -328,8 +372,8 @@ class BeliefSetBuilderPlugin:
         norm_consequent = self._ensure_predicate_exists(impl_consequent_predicate, arity=1)
 
         # Now that they are guaranteed to exist, unify their sorts.
-        self._unify_sorts(norm_antecedent, norm_consequent)
-        unified_sort = self._predicate_to_sort[self._find_sort_representative(norm_antecedent)]
+        self._unify_sorts(norm_consequent, norm_antecedent) # Consequent is the parent sort
+        unified_sort = self._predicate_to_sort[self._find_sort_representative(norm_consequent)]
 
         self._universal_implications.append(UniversalImplication(
             norm_antecedent,

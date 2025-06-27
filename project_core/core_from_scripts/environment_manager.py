@@ -7,6 +7,7 @@ stockées dans des fichiers .env.
 """
 
 import shutil
+import sys
 import logging
 from pathlib import Path
 from typing import Optional, List
