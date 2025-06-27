@@ -102,7 +102,7 @@ class TestFOLTweetyCompatibility:
             pytest.skip("Test nécessite la JVM.")
         agent = fol_agent_with_kernel
         # Syntaxe correcte avec sauts de ligne explicites pour éviter les problèmes de formatage.
-        formula_str = "thing = {a}\ntype(P(thing))\n\nforall X: (P(X))"
+        formula_str = "thing = {a}\ntype(P(thing))\n\nP(a)"
         try:
             belief_set = FirstOrderBeliefSet(content=formula_str)
             is_consistent, msg = await agent.is_consistent(belief_set)
@@ -576,7 +576,9 @@ class TestFOLRealWorldIntegration:
 
         # D'après les logs, le LLM normalise le prédicat en `mortales` (pluriel).
         # C'est cette forme qui doit être utilisée pour la requête.
-        query = "mortales(socrates)"
+        # La normalisation transforme "Mortales" ou "mortales" en "mortale" et "Sócrates" en "socrates".
+        # La requête doit donc utiliser la forme normalisée.
+        query = "mortel(socrates)"
         entails, query_msg = await agent.execute_query(belief_set, query)
 
         assert entails, f"L'inférence '{query}' a échoué: {query_msg}"

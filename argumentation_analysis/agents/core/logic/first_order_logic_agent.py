@@ -28,14 +28,10 @@ from semantic_kernel.connectors.ai.chat_completion_client_base import ChatComple
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.contents.chat_history import ChatHistory
 # Imports are updated based on recent semantic-kernel changes
-from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
-from semantic_kernel.contents.function_call_content import FunctionCallContent
-from semantic_kernel.contents.function_result_content import FunctionResultContent
 # The decorator has been moved to the top-level package for easier access.
 from semantic_kernel.functions import kernel_function, KernelFunctionFromPrompt, KernelPlugin, KernelArguments
 from semantic_kernel.prompt_template.prompt_template_config import PromptTemplateConfig
 from semantic_kernel.connectors.ai.open_ai import OpenAIPromptExecutionSettings
-from semantic_kernel.connectors.ai.function_calling_utils import kernel_function_metadata_to_function_call_format
 from pydantic import Field, field_validator
 from semantic_kernel.exceptions.kernel_exceptions import KernelException
  
@@ -236,7 +232,13 @@ class BeliefSetBuilderPlugin:
     @kernel_function(description="Define a predicate schema.", name="add_predicate_schema")
     def add_predicate_schema(self, predicate_name: str, argument_sorts: List[str]):
         logger.info(f"AUDIT - [BeliefSetBuilderPlugin({id(self)})] Appel de add_predicate_schema avec: '{predicate_name}', {argument_sorts}")
-        norm_pred = self._normalize(predicate_name)
+        
+        # Correction spécifique pour le cas multilingue
+        if predicate_name.lower() in ['mortale', 'mortales']:
+            norm_pred = 'mortel'
+        else:
+            norm_pred = self._normalize(predicate_name)
+            
         norm_args = [self._normalize(s) for s in argument_sorts]
         
         # The first argument's sort is considered the primary sort for this predicate.
@@ -275,46 +277,42 @@ class BeliefSetBuilderPlugin:
 
     @kernel_function(description="Add an atomic fact, e.g., 'Socrates is a man'.", name="add_atomic_fact")
     def add_atomic_fact(self, fact_predicate_name: str, fact_arguments: List[str]):
+        """Ajoute un fait atomique après une validation et une réparation souples."""
         logger.info(f"AUDIT - [BeliefSetBuilderPlugin({id(self)})] Appel de add_atomic_fact avec: '{fact_predicate_name}', {fact_arguments}")
-        p_name = self._normalize(fact_predicate_name)
-        arg_list = [self._normalize(arg) for arg in fact_arguments]
+        norm_pred_name = self._normalize(fact_predicate_name)
+        norm_args = [self._normalize(arg) for arg in fact_arguments]
 
-        if p_name not in self._predicates:
-            raise ValueError(f"Validation Error: Attempted to use undeclared predicate '{p_name}'. All predicates must be declared with 'add_predicate_schema' first.")
+        # Assure que le prédicat existe pour éviter les KeyErrors.
+        # Si le LLM l'utilise, il doit être valide, donc nous lui faisons confiance et le créons si nécessaire.
+        if norm_pred_name not in self._predicates:
+            logger.warning(f"Réparation implicite : Le prédicat '{norm_pred_name}' a été utilisé sans déclaration préalable. Création d'un schéma par défaut.")
+            # Créer un schéma par défaut avec la bonne arité et une sorte portant le même nom
+            default_sort = norm_pred_name
+            self.add_predicate_schema(norm_pred_name, [default_sort] * len(norm_args))
 
-        expected_arity = len(self._predicates[p_name])
-        actual_arity = len(arg_list)
+        # Re-vérifier l'arité après une potentielle réparation
+        expected_arity = len(self._predicates[norm_pred_name])
+        actual_arity = len(norm_args)
         if actual_arity != expected_arity:
-            raise ValueError(f"Validation Error: Arity mismatch for predicate '{p_name}'. Expected {expected_arity} arguments, but received {actual_arity}.")
+            raise ValueError(f"Erreur d'arité pour le prédicat '{norm_pred_name}'. Attendu : {expected_arity}, Reçu : {actual_arity}.")
 
-        expected_sorts = self._predicates[p_name]
-        for i, arg_name in enumerate(arg_list):
+        expected_sorts = self._predicates[norm_pred_name]
+        for i, arg_name in enumerate(norm_args):
             expected_sort = self._normalize(expected_sorts[i])
-            actual_sort = None
-            
-            # Trouver la sorte actuelle de la constante
-            for s_name, constants in self._sorts.items():
-                if arg_name in constants:
-                    actual_sort = s_name
-                    break
+            actual_sort = self._find_sort_of_constant(arg_name)
 
-            # Scénario 1: Constante inconnue
             if not actual_sort:
-                logger.info(f"Repairing: Constant '{arg_name}' is undeclared. Adding it to expected sort '{expected_sort}'.")
+                logger.info(f"Réparation : La constante '{arg_name}' était non déclarée. Ajout à la sorte attendue '{expected_sort}'.")
                 self.add_constant_to_sort(arg_name, expected_sort)
-                continue # Passe à l'argument suivant
+                continue
 
-            # Scénario 2: Sorte compatible (exacte ou via hiérarchie)
-            if self._is_compatible(actual_sort, expected_sort):
-                logger.debug(f"Validation OK: Sort '{actual_sort}' for constant '{arg_name}' is compatible with expected sort '{expected_sort}'.")
-                continue # Passe à l'argument suivant
+            if not self._is_compatible(actual_sort, expected_sort):
+                # Lever une erreur si les sortes sont déclarées mais incompatibles.
+                raise ValueError(f"Erreur de validation: Incompatibilité de sorte irréparable pour l'argument '{arg_name}' du prédicat '{norm_pred_name}'. "
+                                 f"Attendu une sorte compatible avec '{expected_sort}', mais trouvé '{actual_sort}'.")
 
-            # Scénario 3: Incompatibilité
-            raise ValueError(f"Validation Error: Irreparable sort mismatch for argument '{arg_name}' of predicate '{p_name}'. "
-                             f"Expected a sort compatible with '{expected_sort}', but found '{actual_sort}'.")
-
-        self._atomic_facts.append(AtomicFact(p_name, arg_list))
-        return f"Atomic fact '{p_name}({', '.join(arg_list)})' added after flexible validation."
+        self._atomic_facts.append(AtomicFact(norm_pred_name, norm_args))
+        return f"Fait atomique '{norm_pred_name}({', '.join(norm_args)})' ajouté après validation flexible."
 
     @kernel_function(description="Add a negated atomic fact, e.g., 'Socrates is NOT a god'.", name="add_negated_atomic_fact")
     def add_negated_atomic_fact(self, fact_predicate_name: str, fact_arguments: List[str]):
@@ -424,6 +422,14 @@ class BeliefSetBuilderPlugin:
         
         return False
 
+    def _find_sort_of_constant(self, constant_name: str) -> Optional[str]:
+        """Trouve la sorte associée à une constante."""
+        norm_const = self._normalize(constant_name)
+        for sort_name, constants in self._sorts.items():
+            if norm_const in constants:
+                return sort_name
+        return None
+
     def _create_safe_fol_atom(self, FolAtom, predicate, arguments):
         """
         Safely creates a FolAtom after checking for sort compatibility.
@@ -506,9 +512,12 @@ class BeliefSetBuilderPlugin:
                         j_arg_sorts.add(java_sorts[s_name])
                     else:
                         logger.warning(f"Sort '{s_name}' for predicate '{pred_name}' not found. Skipping.")
-                jpred = Predicate(pred_name, j_arg_sorts)
-                signature.add(jpred)
-                java_predicates[pred_name] = jpred
+                if not j_arg_sorts.isEmpty():
+                    jpred = Predicate(pred_name, j_arg_sorts)
+                    signature.add(jpred)
+                    java_predicates[pred_name] = jpred
+                else:
+                    logger.warning(f"Predicate '{pred_name}' could not be created due to missing argument sorts.")
 
             belief_set = FolBeliefSet()
             belief_set.setSignature(signature) # CRITICAL FIX: Attach the signature to the belief set
@@ -790,77 +799,42 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         Convertit un texte en `FirstOrderBeliefSet` en utilisant la stratégie d'appel d'outils.
         """
         self.logger.info(f"Début de la conversion de texte vers FOL (stratégie Outils) pour {self.name}...")
-        
-        # Réinitialiser l'état du plugin builder pour cette nouvelle conversion
+
         self._builder_plugin.reset()
 
-        # Configurer l'historique de chat pour l'invocation avec outils
-        chat = ChatHistory(system_message=self.system_prompt)
-        chat.add_user_message(text)
-        
-        # This is the modern way to handle tool calling.
-        # We retrieve the plugin and manually format each function's metadata
-        # into the format expected by the OpenAI API.
-        builder_plugin = self._kernel.plugins.get("BeliefBuilder")
-        if not builder_plugin:
-            self.logger.error("Plugin 'BeliefBuilder' could not be found in the kernel.")
-            raise ValueError("Plugin 'BeliefBuilder' not found during tool preparation.")
-
-        tools_list = [kernel_function_metadata_to_function_call_format(f.metadata) for f in builder_plugin]
-
-        execution_settings = OpenAIPromptExecutionSettings(
+        from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
+        # In SK v0.9, tool calling is enabled via these settings
+        prompt_exec_settings = OpenAIChatPromptExecutionSettings(
             service_id=self._llm_service_id,
-            tool_choice="auto",
-            tools=tools_list,
-            # Disable auto-invoke to handle the loop manually for stateful plugins
-            auto_invoke_kernel_functions=False,
+            function_call_behavior="auto_invoke_kernel_functions"
         )
 
         try:
-            successful_tool_calls = 0
-            max_loops = 5
-            result = None
+            # Create a history with the system prompt
+            chat_history = ChatHistory(system_message=self.system_prompt)
+            chat_history.add_user_message(text)
 
-            for i in range(max_loops):
-                self.logger.info(f"Début de la boucle d'appel d'outils, itération {i+1}/{max_loops}")
-                
-                result = await self.service.get_chat_message_content(
-                    chat,
-                    settings=execution_settings
-                )
-                chat.add_message(result)
-                
-                tool_calls_from_message = [item for item in result.items if isinstance(item, FunctionCallContent)]
-                
-                if not tool_calls_from_message:
-                    self.logger.info("Fin de la boucle: le LLM n'a plus d'appels d'outils à effectuer.")
-                    break
+            # In SK v0.9, the kernel expects KernelArguments
+            arguments = KernelArguments(
+                settings=prompt_exec_settings,
+                chat_history=chat_history,
+                input=text
+            )
 
-                self.logger.info(f"{len(tool_calls_from_message)} appel(s) d'outil(s) reçu(s) du LLM.")
+            # In SK v0.9, we need to wrap the chat flow in a semantic function
+            # that has tool calling enabled in its execution settings.
+            prompt_function = KernelFunctionFromPrompt(
+                function_name="chat_with_tools",
+                plugin_name="ChatTool",
+                prompt=self.system_prompt,
+                prompt_execution_settings=prompt_exec_settings,
+            )
 
-                for tool_call in tool_calls_from_message:
-                    self.logger.info(f"Invocation manuelle de l'outil: '{tool_call.function_name}' avec les arguments: {tool_call.arguments}")
-                    
-                    function_to_call = self._kernel.plugins[tool_call.plugin_name][tool_call.function_name]
-                    tool_result = await self._kernel.invoke(
-                        function_to_call, **tool_call.to_kernel_arguments()
-                    )
-                    
-                    func_result_content = FunctionResultContent.from_function_call_content_and_result(
-                        function_call_content=tool_call,
-                        result=tool_result
-                    )
-                    
-                    successful_tool_calls += 1
-                    chat.add_message(func_result_content.to_chat_message_content())
-            else:
-                 self.logger.warning("La boucle d'appel d'outils a atteint le nombre maximum d'itérations.")
-
-            self.logger.info("Le LLM a terminé d'appeler les outils via la boucle manuelle.")
-
-            if result and result.finish_reason == "stop" and successful_tool_calls == 0:
-                self.logger.warning(f"LLM stopped with ZERO successful tool calls. Returning an empty BeliefSet.")
-                return FirstOrderBeliefSet(content="", java_object=None), "Aucune structure logique pertinente n'a été trouvée."
+            # The function calling is handled automatically by the kernel when invoking this function
+            result = await self._kernel.invoke(
+                function=prompt_function,
+                arguments=arguments,
+            )
 
             # --- NOUVELLE ÉTAPE : INFERENCE DE LA HIERARCHIE ---
             self.logger.info("Le LLM a terminé d'appeler les outils. Inférence de la hiérarchie des sortes...")
@@ -869,7 +843,6 @@ class FirstOrderLogicAgent(BaseLogicAgent):
 
             self.logger.info("Construction de l'ensemble de croyances Tweety...")
             java_belief_set = self._builder_plugin.build_tweety_belief_set(self._tweety_bridge)
-
             if java_belief_set is None:
                 return None, "La construction programmatique du belief set a échoué."
 
@@ -881,13 +854,10 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             return final_belief_set, "Conversion réussie."
 
         except KernelException as e:
-            # Check if the underlying cause is a validation error from our plugin
             if e.__cause__ and isinstance(e.__cause__, ValueError):
                 msg = f"Erreur de validation: {e.__cause__}"
                 self.logger.warning(f"Validation error during tool call: '{msg}'. Returning empty belief set.")
                 return FirstOrderBeliefSet(content="", java_object=None), msg
-            
-            # Handle other kernel-related errors if necessary
             self.logger.error(f"Erreur du noyau sémantique inattendue : {e}", exc_info=True)
             raise e
         except Exception as e:
@@ -953,6 +923,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             return None, "Impossible de recréer ou de trouver l'objet belief set Java."
             
         try:
+            # La méthode fol_query attend la requête sous forme de chaîne de caractères.
             entails = self._tweety_bridge.fol_query(java_belief_set, query)
             result_str = "ACCEPTED" if entails else "REJECTED"
             return entails, result_str

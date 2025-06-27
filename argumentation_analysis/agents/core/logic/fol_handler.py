@@ -231,15 +231,18 @@ class FOLHandler:
             parser = FolParser()
             parser.setSignature(signature)
             
+            logger.debug(f"Signature for query parsing: {signature}")
             query_formula = self.parse_fol_formula(query_formula_str, custom_parser=parser)
             
-            # Real implementation needed here
-            # Prover = jpype.JClass("org.tweetyproject.logics.fol.reasoner.ResolutionProver")()
-            # entails = Prover.query(belief_set, query_formula)
-            entails = True # PLACEHOLDER
+            # Utiliser le même raisonneur que pour la vérification de cohérence pour la consistance.
+            if not hasattr(self, '_fol_reasoner') or self._fol_reasoner is None:
+                 Prover = jpype.JClass("org.tweetyproject.logics.fol.reasoner.SimpleFolReasoner")
+                 self._fol_reasoner = Prover()
             
-            logger.warning("FOL query is a placeholder.")
-            logger.info(f"FOL Query: KB entails '{query_formula_str}'? {entails} (Placeholder result)")
+            # La méthode query est synchrone, pas besoin d'asyncio ici.
+            entails = self._fol_reasoner.query(belief_set, query_formula)
+            
+            logger.info(f"FOL Query: KB entails '{query_formula_str}'? {entails}")
             return bool(entails)
         except (ValueError, jpype.JException) as e:
             logger.error(f"Error during FOL query: {e}", exc_info=True)
