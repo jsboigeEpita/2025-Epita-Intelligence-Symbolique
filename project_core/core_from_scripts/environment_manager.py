@@ -1,174 +1,126 @@
 """
-Gestionnaire d'environnements Python/conda
+Gestionnaire de fichiers d'environnement (.env)
 
-Ce module fournit une logique de base pour la gestion de l'environnement Conda
-et l'exécution de commandes. Il est utilisé par les scripts de premier niveau
-pour assurer une abstraction indépendante de l'OS.
-
-Bien que la configuration applicative se déplace vers `argumentation_analysis.config.settings`,
-ce module reste essentiel pour le bootstrapping de l'environnement.
+Ce module centralise la logique pour la gestion des fichiers de configuration
+d'environnement, permettant de basculer, créer et valider des configurations
+stockées dans des fichiers .env.
 """
 
-import os
-import sys
-import warnings
-import json
+import shutil
 import logging
-import subprocess
-import argparse
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Optional
 
-# Configuration de base du logger pour ce module
-logging.basicConfig(level=logging.INFO, format='[ENV_MGR] [%(asctime)s] - %(name)s - %(levelname)s - %(message)s')
+# Configuration du logger
+logging.basicConfig(level=logging.INFO, format='[ENV_MGR] [%(asctime)s] - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-
-class PrintLogger:
-    """Fallback Logger pour la compatibilité de l'API et l'usage simple en script."""
-    def debug(self, msg): logger.debug(msg)
-    def info(self, msg): logger.info(msg)
-    def warning(self, msg): logger.warning(msg)
-    def error(self, msg, *args, **kwargs): logger.error(msg, *args, **kwargs)
-    def success(self, msg): logger.info(f"✅ SUCCESS: {msg}")
-
 class EnvironmentManager:
-    """
-    Gestionnaire d'environnement partiel.
-    Fournit des fonctionnalités de base pour les scripts d'activation.
-    """
-    def __init__(self, logger_instance: PrintLogger = None):
-        self.logger = logger_instance or PrintLogger()
-        self.project_root = Path(__file__).resolve().parent.parent.parent
-        self._conda_env_path_cache: Optional[Path] = None
+    """Gère la création, la validation et le changement de fichiers .env."""
 
-    def _get_conda_env_path(self, env_name: str) -> Optional[Path]:
-        """Trouve le chemin d'un environnement Conda via 'conda info'."""
-        if self._conda_env_path_cache:
-            return self._conda_env_path_cache
-        try:
-            result = subprocess.run(
-                ["conda", "info", "--envs", "--json"],
-                capture_output=True, text=True, check=True
-            )
-            data = json.loads(result.stdout)
-            for env_path_str in data.get("envs", []):
-                env_path = Path(env_path_str)
-                if env_path.name == env_name:
-                    self.logger.info(f"Chemin trouvé pour l'environnement '{env_name}': {env_path}")
-                    self._conda_env_path_cache = env_path
-                    return env_path
-            self.logger.error(f"Environnement Conda '{env_name}' non trouvé.")
-            return None
-        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
-            self.logger.error(f"Erreur lors de la recherche de l'environnement Conda: {e}")
-            return None
+    def __init__(self, project_root: Optional[Path] = None):
+        """
+        Initialise le gestionnaire.
 
-    def get_python_executable(self, env_name: str = 'projet-is') -> Optional[str]:
-        """Retourne le chemin absolu de l'exécutable Python pour un environnement Conda."""
-        env_path = self._get_conda_env_path(env_name)
-        if not env_path:
-            return None
-        
-        python_executable = env_path / ('python.exe' if sys.platform == "win32" else 'bin/python')
-        if not python_executable.is_file():
-            self.logger.error(f"Exécutable Python non trouvé à: {python_executable}")
-            return None
-            
-        return str(python_executable)
-
-    def run_command(self, command: List[str]) -> int:
-        """Exécute une commande, avec un traitement spécial pour pytest."""
-        if not command:
-            self.logger.error("Aucune commande à exécuter.")
-            return 1
-
-        # Traitement spécial pour pytest pour éviter les problèmes de sous-processus avec la JVM
-        is_pytest_command = (len(command) > 2 and 
-                             command[0].endswith("python") and 
-                             "pytest" in command[2])
-
-        if is_pytest_command:
-            pytest_args = command[3:]
-            self.logger.info(f"Détection de pytest. Exécution par programmation avec les arguments: {pytest_args}")
-            try:
-                # Importation de pytest ici pour ne le faire que si nécessaire
-                import pytest
-                exit_code = pytest.main(pytest_args)
-                self.logger.info(f"Pytest s'est terminé avec le code de sortie: {exit_code}")
-                return exit_code
-            except Exception as e:
-                self.logger.error(f"Erreur CRITIQUE lors de l'exécution de pytest.main: {e}")
-                return 1 # Retourne un code d'erreur générique
-        
-        # Fallback pour les autres commandes
-        command_str = ' '.join(command)
-        self.logger.info(f"Exécution de la commande via un sous-processus: {command_str}")
-        
-        try:
-            result = subprocess.run(command, check=False, capture_output=True, text=True, encoding='utf-8')
-            if result.stdout: self.logger.info(f"--- STDOUT ---\n{result.stdout}")
-            if result.stderr: self.logger.error(f"--- STDERR ---\n{result.stderr}")
-            self.logger.info(f"La commande s'est terminée avec le code de sortie: {result.returncode}")
-            return result.returncode
-        except Exception as e:
-            self.logger.error(f"Erreur lors de l'exécution de la commande: {e}")
-            return 1
-
-
-def main():
-    """Point d'entrée CLI pour la gestion de l'environnement."""
-    parser = argparse.ArgumentParser(
-        description="Outil de gestion d'environnement (avec compatibilité ascendante).",
-        formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-    parser.add_argument(
-        '--get-python-path', 
-        action='store_true', 
-        help="Affiche le chemin de l'exécutable Python de l'environnement."
-    )
-    parser.add_argument(
-        '--env-name', 
-        type=str, 
-        default='projet-is', 
-        help="Nom de l'environnement Conda à utiliser."
-    )
-    parser.add_argument(
-        '--setup-vars', 
-        action='store_true', 
-        help="[OBSOLETE] Inclus pour compatibilité."
-    )
-    parser.add_argument(
-        '--run-command',
-        nargs=argparse.REMAINDER,
-        help="Exécute la commande fournie et quitte. Doit être le dernier argument."
-    )
-
-    args = parser.parse_args()
-    manager = EnvironmentManager()
-
-    if args.get_python_path:
-        python_path = manager.get_python_executable(args.env_name)
-        if python_path:
-            print(python_path)
+        Args:
+            project_root: Le chemin racine du projet. S'il n'est pas fourni,
+                          il est déduit de l'emplacement de ce fichier.
+        """
+        if project_root:
+            self.project_root = project_root
         else:
-            sys.exit(1)
+            self.project_root = Path(__file__).resolve().parent.parent.parent
+
+        self.env_files_dir = self.project_root / "config" / "environments"
+        self.template_path = self.project_root / "config" / "templates" / ".env.tpl"
+        self.target_env_file = self.project_root / ".env"
+
+    def switch_environment(self, target_name: str) -> bool:
+        """
+        Bascule l'environnement en copiant un fichier .env de configuration
+        vers la racine du projet.
+
+        Args:
+            target_name: Le nom de l'environnement à activer (ex: 'dev', 'prod').
+
+        Returns:
+            True si le basculement a réussi, False sinon.
+        """
+        source_path = self.env_files_dir / f"{target_name}.env"
+        if not source_path.is_file():
+            logger.error(f"Le fichier d'environnement source n'existe pas : {source_path}")
+            return False
+
+        try:
+            shutil.copy(source_path, self.target_env_file)
+            logger.info(f"L'environnement a été basculé vers '{target_name}'.")
+            return True
+        except IOError as e:
+            logger.error(f"Erreur lors de la copie du fichier d'environnement : {e}")
+            return False
+
+    def create_environment(self, new_name: str) -> bool:
+        """
+        Crée un nouveau fichier d'environnement à partir du template.
+
+        Args:
+            new_name: Le nom du nouvel environnement.
+
+        Returns:
+            True si la création a réussi, False sinon.
+        """
+        if not self.template_path.is_file():
+            logger.error(f"Le template d'environnement n'existe pas : {self.template_path}")
+            return False
+
+        new_env_path = self.env_files_dir / f"{new_name}.env"
+        if new_env_path.exists():
+            logger.warning(f"Le fichier d'environnement '{new_name}' existe déjà. Aucune action n'a été effectuée.")
+            return False
+
+        try:
+            shutil.copy(self.template_path, new_env_path)
+            logger.info(f"Le nouveau fichier d'environnement '{new_name}.env' a été créé.")
+            return True
+        except IOError as e:
+            logger.error(f"Erreur lors de la création du fichier d'environnement : {e}")
+            return False
+
+    def validate_environment(self, target_name: str) -> bool:
+        """
+        Valide qu'un fichier d'environnement contient toutes les clés
+        requises par le template.
+
+        Args:
+            target_name: Le nom de l'environnement à valider.
+
+        Returns:
+            True si l'environnement est valide, False sinon.
+        """
+        if not self.template_path.is_file():
+            logger.error(f"Le template d'environnement n'existe pas : {self.template_path}")
+            return False
+
+        target_path = self.env_files_dir / f"{target_name}.env"
+        if not target_path.is_file():
+            logger.error(f"Le fichier d'environnement à valider n'existe pas : {target_path}")
+            return False
+
+        try:
+            with open(self.template_path, 'r') as f:
+                template_keys = {line.split('=')[0].strip() for line in f if '=' in line and not line.strip().startswith('#')}
             
-    elif args.run_command:
-        if args.setup_vars:
-            logger.info("Argument --setup-vars ignoré (obsolète mais conservé pour compatibilité).")
-        
-        # NE PAS initialiser l'environnement applicatif complet pour les tests.
-        # C'est la cause du conflit avec pytest.
-        logger.info("Bootstrap de l'application intentionnellement ignoré pour l'exécution d'une commande (mode test).")
+            with open(target_path, 'r') as f:
+                target_keys = {line.split('=')[0].strip() for line in f if '=' in line and not line.strip().startswith('#')}
 
-        return_code = manager.run_command(args.run_command)
-        sys.exit(return_code)
-    
-    else:
-        logger.warning("Aucune action spécifiée (ex: --get-python-path ou --run-command). Affichage de l'aide.")
-        parser.print_help()
+            missing_keys = template_keys - target_keys
+            if missing_keys:
+                logger.error(f"Validation échouée. Clés manquantes dans '{target_name}.env': {', '.join(missing_keys)}")
+                return False
+            
+            logger.info(f"Le fichier d'environnement '{target_name}.env' est valide.")
+            return True
 
-
-if __name__ == "__main__":
-    main()
+        except IOError as e:
+            logger.error(f"Erreur de lecture lors de la validation : {e}")
+            return False

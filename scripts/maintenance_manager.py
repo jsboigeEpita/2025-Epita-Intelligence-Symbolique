@@ -12,6 +12,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from project_core.managers.repository_manager import RepositoryManager
 from project_core.core_from_scripts.cleanup_manager import CleanupManager
+from project_core.core_from_scripts.environment_manager import EnvironmentManager
 
 def handle_repo_commands(args):
     """
@@ -42,6 +43,26 @@ def handle_project_commands(args):
             print(f"    - {f}")
         print("Nettoyage terminé.")
 
+def handle_env_commands(args):
+    """
+    Handles commands related to environment .env files.
+    """
+    manager = EnvironmentManager()
+    if args.switch_to:
+        if manager.switch_environment(args.switch_to):
+            print(f"Successfully switched to environment: {args.switch_to}")
+        else:
+            print(f"Failed to switch to environment: {args.switch_to}")
+    elif args.create:
+        if manager.create_environment(args.create):
+            print(f"Successfully created environment: {args.create}")
+        else:
+            print(f"Failed to create environment: {args.create}")
+    elif args.validate:
+        if manager.validate_environment(args.validate):
+            print(f"Environment '{args.validate}' is valid.")
+        else:
+            print(f"Environment '{args.validate}' is invalid.")
 
 def main():
     """
@@ -60,6 +81,13 @@ def main():
     project_subparsers = project_parser.add_subparsers(dest='project_command', help='Action to perform on the project')
     project_subparsers.add_parser('cleanup-cache', help='Find and remove all __pycache__ directories and .pyc files')
 
+    # 'env' command
+    env_parser = subparsers.add_parser('env', help='Manage .env environment files')
+    env_group = env_parser.add_mutually_exclusive_group(required=True)
+    env_group.add_argument('--switch-to', metavar='NAME', help='Switch the main .env file to the specified environment')
+    env_group.add_argument('--create', metavar='NAME', help='Create a new environment file from the template')
+    env_group.add_argument('--validate', metavar='NAME', help='Validate an environment file against the template')
+    
     args = parser.parse_args()
 
     if args.command == 'repo':
@@ -72,6 +100,8 @@ def main():
             handle_project_commands(args)
         else:
             project_parser.print_help()
+    elif args.command == 'env':
+        handle_env_commands(args)
     else:
         parser.print_help()
 

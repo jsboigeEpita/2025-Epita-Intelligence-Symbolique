@@ -113,6 +113,7 @@ La logique d'orchestration de haut niveau sera intégrée dans les managers exis
     *   **`project_core/core_from_scripts/refactoring_manager.py`**: Pour les transformations de code (`standardize_imports`).
     *   **`project_core/core_from_scripts/organization_manager.py`**: Pour les opérations de restructuration de fichiers (réorganisation de `results/`, nettoyage de la racine).
     *   **`project_core/core_from_scripts/cleanup_manager.py`**: Pour le nettoyage de bas niveau (fichiers temporaires, logs).
+    *   **`project_core/core_from_scripts/environment_manager.py`**: Pour la gestion des fichiers d'environnement `.env`. Il permet de basculer, créer et valider des configurations d'environnement.
 
 ## 5. Phase 3 : Ventilation de la Logique
 
