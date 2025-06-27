@@ -1,6 +1,7 @@
 import os
 import unittest
 import shutil
+import json
 from unittest.mock import patch, MagicMock
 
 from project_core.core_from_scripts.organization_manager import OrganizationManager
@@ -24,6 +25,16 @@ class TestOrganizationManager(unittest.TestCase):
             f.write("dummy png")
         with open(os.path.join(self.results_dir, "test_log.txt"), "w") as f:
             f.write("dummy log")
+
+        # For apply_organization_plan test
+        self.file_to_delete = os.path.join(self.test_root, "to_delete.log")
+        self.file_to_move = os.path.join(self.test_root, "to_move.txt")
+        self.move_dest_dir = os.path.join(self.test_root, "destination_dir")
+        os.makedirs(self.move_dest_dir)
+        with open(self.file_to_delete, "w") as f:
+            f.write("delete me")
+        with open(self.file_to_move, "w") as f:
+            f.write("move me")
         
         self.manager = OrganizationManager(project_root=self.test_root)
         # We need to explicitly set the archive dir for the test instance
@@ -67,6 +78,47 @@ class TestOrganizationManager(unittest.TestCase):
         # The log file should be in the archive, but not the moved png
         self.assertTrue(os.path.exists(os.path.join(archived_results, "test_log.txt")))
         self.assertFalse(os.path.exists(os.path.join(archived_results, "test_image1.png")))
+
+    def test_apply_organization_plan(self):
+        """Test applying a valid organization plan."""
+        plan = {
+            "actions": [
+                {"action": "delete", "path": "to_delete.log"},
+                {"action": "move", "source": "to_move.txt", "destination": "destination_dir/moved.txt"}
+            ]
+        }
+        plan_path = os.path.join(self.test_root, "plan.json")
+        with open(plan_path, "w") as f:
+            json.dump(plan, f)
+
+        report = self.manager.apply_organization_plan(plan_path)
+
+        self.assertEqual(report["operations_success"], 2)
+        self.assertEqual(report["operations_failed"], 0)
+        self.assertEqual(len(report["errors"]), 0)
+        self.assertFalse(os.path.exists(self.file_to_delete))
+        self.assertFalse(os.path.exists(self.file_to_move))
+        self.assertTrue(os.path.exists(os.path.join(self.move_dest_dir, "moved.txt")))
+
+    def test_apply_organization_plan_with_errors(self):
+        """Test applying a plan with invalid actions and files."""
+        plan = {
+            "actions": [
+                {"action": "delete", "path": "non_existent_file.log"},
+                {"action": "unknown_action", "path": "some_file.txt"}
+            ]
+        }
+        plan_path = os.path.join(self.test_root, "plan_error.json")
+        with open(plan_path, "w") as f:
+            json.dump(plan, f)
+        
+        report = self.manager.apply_organization_plan(plan_path)
+
+        self.assertEqual(report["operations_success"], 0)
+        self.assertEqual(report["operations_failed"], 2)
+        self.assertEqual(len(report["errors"]), 2)
+        self.assertIn("File to delete not found", report["errors"][0])
+        self.assertIn("Unknown action in plan", report["errors"][1])
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,6 +1,7 @@
 import os
 import shutil
 import datetime
+import json
 from argumentation_analysis.core.utils import filesystem_utils
 
 class OrganizationManager:
@@ -81,5 +82,60 @@ The original content was archived to: {archive_path}
 
         except Exception as e:
             report["errors"].append(str(e))
+
+        return report
+
+    def apply_organization_plan(self, plan_path: str) -> dict:
+        """
+        Applies file organization actions from a JSON plan file.
+
+        The plan can define actions like 'delete' or 'move'.
+
+        Args:
+            plan_path: The path to the JSON file containing the organization plan.
+
+        Returns:
+            A dictionary reporting on the operations performed.
+        """
+        report = {
+            "plan_applied": plan_path,
+            "operations_success": 0,
+            "operations_failed": 0,
+            "errors": []
+        }
+
+        try:
+            with open(plan_path, "r", encoding="utf-8") as f:
+                plan = json.load(f)
+        except FileNotFoundError:
+            report["errors"].append(f"Plan file not found: {plan_path}")
+            return report
+        except json.JSONDecodeError:
+            report["errors"].append(f"Invalid JSON in plan file: {plan_path}")
+            return report
+        except Exception as e:
+            report["errors"].append(f"Error reading plan file: {e}")
+            return report
+
+        for item in plan.get("actions", []):
+            action = item.get("action")
+            try:
+                if action == "delete":
+                    target_path = os.path.join(self.project_root, item["path"])
+                    if os.path.exists(target_path):
+                        os.remove(target_path)
+                        report["operations_success"] += 1
+                    else:
+                        raise FileNotFoundError(f"File to delete not found: {target_path}")
+                elif action == "move":
+                    source_path = os.path.join(self.project_root, item["source"])
+                    dest_path = os.path.join(self.project_root, item["destination"])
+                    shutil.move(source_path, dest_path)
+                    report["operations_success"] += 1
+                else:
+                    raise ValueError(f"Unknown action in plan: {action}")
+            except Exception as e:
+                report["operations_failed"] += 1
+                report["errors"].append(str(e))
 
         return report

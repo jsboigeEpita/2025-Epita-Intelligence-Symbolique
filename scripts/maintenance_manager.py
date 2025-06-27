@@ -84,6 +84,16 @@ def handle_organize_commands(args):
             print(f"  - Archived: {report['archived']}")
             print(f"  - Files moved: {len(report['files_moved'])}")
             print(f"  - README generated: {report['readme_generated']}")
+    elif args.apply_plan:
+        print(f"Applying organization plan from: {args.apply_plan}...")
+        report = manager.apply_organization_plan(args.apply_plan)
+        if report["errors"]:
+            print("Errors occurred during plan application:")
+            for error in report["errors"]:
+                print(f"- {error}")
+        print(f"Plan application summary:")
+        print(f"  - Successful operations: {report['operations_success']}")
+        print(f"  - Failed operations: {report['operations_failed']}")
     else:
         print(f"Unknown target for organization: {args.target}")
 
@@ -112,8 +122,11 @@ def main():
     env_group.add_argument('--validate', metavar='NAME', help='Validate an environment file against the template')
 
     # 'organize' command
+    # 'organize' command
     organize_parser = subparsers.add_parser('organize', help='Organize project directories')
-    organize_parser.add_argument('--target', required=True, choices=['results'], help='The target directory to organize')
+    organize_group = organize_parser.add_mutually_exclusive_group(required=True)
+    organize_group.add_argument('--target', choices=['results'], help='The target directory to organize')
+    organize_group.add_argument('--apply-plan', metavar='PLAN_FILE', help='Apply an organization plan from a JSON file')
     
     args = parser.parse_args()
 
@@ -130,7 +143,10 @@ def main():
     elif args.command == 'env':
         handle_env_commands(args)
     elif args.command == 'organize':
-        handle_organize_commands(args)
+        if args.target or args.apply_plan:
+             handle_organize_commands(args)
+        else:
+             organize_parser.print_help()
     else:
         parser.print_help()
 
