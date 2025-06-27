@@ -76,33 +76,51 @@ class PortManager:
     def free_port(self, port: int, force: bool = False) -> bool:
         """Libère un port occupé - adaptation du pattern PowerShell Free-Port"""
         try:
-            processes_killed = []
-            
+            processes_found_on_port = []
+
             # Recherche des connexions sur le port
-            for conn in psutil.net_connections():
-                if conn.laddr.port == port:
-                    try:
-                        process = psutil.Process(conn.pid)
-                        proc_info = f"{process.name()} (PID: {process.pid})"
-                        
-                        if force:
-                            process.terminate()
-                            processes_killed.append(proc_info)
-                            self.logger.info(f"Processus terminé sur port {port}: {proc_info}")
-                        else:
-                            self.logger.warning(f"Port {port} occupé par: {proc_info}")
-                            return False
-                            
-                    except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
-                        self.logger.warning(f"Impossible d'accéder au processus PID {conn.pid}: {e}")
-            
+            # Le `list()` est important pour éviter les erreurs d'itération si la liste change.
+            connections = list(psutil.net_connections())
+
+            for conn in connections:
+                # La vérification `conn.laddr` est cruciale pour éviter les AttributeError
+                if conn.laddr and conn.laddr.port == port:
+                    processes_found_on_port.append(conn)
+
+            # Cas 1: Le port est déjà libre, aucune action nécessaire.
+            if not processes_found_on_port:
+                self.logger.debug(f"Aucun processus trouvé sur le port {port}. Il est considéré comme libre.")
+                return True
+
+            # Cas 2: Le port est occupé, mais on ne doit pas forcer l'arrêt.
+            if not force:
+                pids = [str(conn.pid) for conn in processes_found_on_port]
+                self.logger.warning(f"Port {port} occupé par les PIDs: {', '.join(pids)}. 'force=False', aucune action prise.")
+                return False
+
+            # Cas 3: Le port est occupé et on doit forcer l'arrêt.
+            self.logger.info(f"Tentative de libération forcée du port {port}...")
+            processes_killed = []
+            for conn in processes_found_on_port:
+                try:
+                    process = psutil.Process(conn.pid)
+                    proc_info = f"{process.name()} (PID: {process.pid})"
+                    process.terminate()
+                    processes_killed.append(proc_info)
+                    self.logger.info(f"Processus terminé: {proc_info}")
+                except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+                    self.logger.warning(f"Impossible de terminer le processus PID {conn.pid}: {e}")
+
+            # Si on a tué des processus, attendre un peu et vérifier.
             if processes_killed:
-                time.sleep(2)  # Délai de grâce pour arrêt propre
-                
-            return self.is_port_free(port)
-            
+                time.sleep(1) # Un court délai pour que l'OS libère le port
+                return self.is_port_free(port)
+
+            # Si aucun processus n'a pu être tué (e.g. AccessDenied sur tous)
+            return False
+
         except Exception as e:
-            self.logger.error(f"Erreur libération port {port}: {e}")
+            self.logger.error(f"Erreur inattendue en libérant le port {port}: {e}", exc_info=True)
             return False
 
 

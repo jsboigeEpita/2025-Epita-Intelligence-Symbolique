@@ -42,7 +42,9 @@ param(
 
     [switch]$DebugMode,
 
-    [string]$PytestArgs
+    [string]$PytestArgs,
+
+    [switch]$SkipOctave
 )
 
 # --- Script Body ---
@@ -219,6 +221,13 @@ else {
 
     # Construire la commande pytest
     $pytestCommandParts = @("python", "-m", "pytest", "-s", "-vv") + $selectedPaths
+    
+    # Ajouter le flag pour sauter Octave si demandé
+    if ($SkipOctave) {
+        Write-Host "[INFO] Le flag -SkipOctave a été détecté. Le téléchargement d'Octave sera sauté." -ForegroundColor Yellow
+        $pytestCommandParts += "--skip-octave"
+    }
+
     if (-not ([string]::IsNullOrEmpty($PytestArgs))) {
         $pytestCommandParts += $PytestArgs.Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)
     }

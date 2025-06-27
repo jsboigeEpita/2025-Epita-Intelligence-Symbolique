@@ -35,7 +35,7 @@ def apply_nest_asyncio(anyio_backend):
         yield
 
 @pytest.fixture(scope="session", autouse=True)
-def jvm_session():
+def jvm_session(request):
     """
     Manages the JPype JVM lifecycle for the entire test session.
     1. Ensures all portable dependencies (JDK, Tweety JARs) are provisioned.
@@ -43,6 +43,10 @@ def jvm_session():
     3. Shuts down the JVM after all tests are complete.
     """
     logger.info("---------- Pytest session starting: Provisioning dependencies and Initializing JVM... ----------")
+    
+    # Lire l'option pour sauter Octave
+    skip_octave_flag = request.config.getoption("--skip-octave")
+    
     try:
         # Étape 1: Provisioning des outils (JDK et Tweety)
         # La racine du projet est un niveau au-dessus du dossier 'tests'
@@ -51,7 +55,11 @@ def jvm_session():
         tools_dir = project_root / "argumentation_analysis" / "libs"
         tools_dir.mkdir(exist_ok=True)
         logger.info(f"Running dependency provisioning via setup_tools... Tools directory set to {tools_dir}")
-        setup_tools(tools_dir_base_path=tools_dir, force_reinstall=False)
+        setup_tools(
+            tools_dir_base_path=tools_dir,
+            force_reinstall=False,
+            skip_octave=skip_octave_flag
+        )
         
         # Le script de setup doit définir JAVA_HOME
         if not os.environ.get('JAVA_HOME'):
@@ -104,6 +112,10 @@ def pytest_addoption(parser):
     parser.addoption(
         "--disable-e2e-servers-fixture", action="store_true", default=False,
         help="Désactive la fixture e2e_servers pour éviter les conflits."
+    )
+    parser.addoption(
+        "--skip-octave", action="store_true", default=False,
+        help="Saute le téléchargement et la configuration d'Octave."
     )
 
 @pytest.fixture(scope="session")
