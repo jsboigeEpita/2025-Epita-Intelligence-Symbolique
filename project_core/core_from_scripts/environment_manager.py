@@ -26,11 +26,30 @@ class EnvironmentManager:
             project_root: Le chemin racine du projet.
             logger_instance: Le logger à utiliser.
         """
-        self.project_root = project_root or Path(__file__).resolve().parent.parent.parent
+        self._project_root = project_root
         self.logger = logger_instance or logging.getLogger(__name__)
-        self.env_files_dir = self.project_root / "config" / "environments"
-        self.template_path = self.project_root / "config" / "templates" / ".env.tpl"
-        self.target_env_file = self.project_root / ".env"
+
+    @property
+    def project_root(self) -> Path:
+        """Retourne la racine du projet, la calculant si nécessaire."""
+        if self._project_root is None:
+            self._project_root = Path(__file__).resolve().parent.parent.parent
+        return self._project_root
+
+    @property
+    def env_files_dir(self) -> Path:
+        """Retourne le chemin vers le répertoire des fichiers d'environnement."""
+        return self.project_root / "config" / "environments"
+
+    @property
+    def template_path(self) -> Path:
+        """Retourne le chemin vers le template .env."""
+        return self.project_root / "config" / "templates" / ".env.tpl"
+
+    @property
+    def target_env_file(self) -> Path:
+        """Retourne le chemin vers le fichier .env cible à la racine du projet."""
+        return self.project_root / ".env"
 
     def get_conda_env_name_from_dotenv(self) -> Optional[str]:
         """Lit le nom de l'environnement Conda depuis le fichier .env à la racine."""
