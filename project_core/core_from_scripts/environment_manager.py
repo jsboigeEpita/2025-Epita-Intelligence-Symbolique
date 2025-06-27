@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Optional, List
 
 # Assumant l'existence de cet utilitaire comme défini dans la roadmap
-from argumentation_analysis.core.utils.shell_utils import execute_command
+from argumentation_analysis.core.utils.shell_utils import run_shell_command as execute_command
 
 # Configuration du logger
 logging.basicConfig(level=logging.INFO, format='[ENV_MGR] [%(asctime)s] - %(levelname)s - %(message)s')
