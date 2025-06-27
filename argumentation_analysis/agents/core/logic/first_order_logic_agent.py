@@ -19,7 +19,7 @@ import json
 import jpype
 import asyncio
 import unicodedata
-from typing import Dict, List, Optional, Any, Tuple, AsyncGenerator, NamedTuple
+from typing import Dict, List, Optional, Any, Tuple, AsyncGenerator, NamedTuple, Set
 from abc import abstractmethod
 import os
 
@@ -93,17 +93,21 @@ class BeliefSetBuilderPlugin:
     connaissances FOL de manière incrémentale. Le LLM appellera ces fonctions
     comme des outils.
     """
-    def __init__(self):
+    def __init__(self, logger: logging.Logger):
+        self.logger = logger
         self.reset()
 
     def reset(self):
         """Réinitialise l'état interne du constructeur."""
+        # Ne pas réinitialiser le logger
         self._sorts: Dict[str, List[str]] = {}  # {sort_name: [const1, const2]}
         self._predicates: Dict[str, List[str]] = {}  # {pred_name: [sort1, sort2]}
         self._atomic_facts: List[AtomicFact] = []
         self._negated_atomic_facts: List[NegatedAtomicFact] = []
         self._universal_implications: List[UniversalImplication] = []
         self._existential_conjunctions: List[ExistentialConjunction] = []
+        # --- Hiérarchie de sortes pour l'inférence ---
+        self._sort_hierarchy: Dict[str, Set[str]] = {} # {sous_sorte: {super_sorte_1, ...}}
         # --- Union-Find structure for sort unification ---
         self._sort_parent: Dict[str, str] = {} # Maps a predicate to its representative
         self._predicate_to_sort: Dict[str, str] = {} # Maps a predicate to its final sort name
@@ -275,41 +279,42 @@ class BeliefSetBuilderPlugin:
         p_name = self._normalize(fact_predicate_name)
         arg_list = [self._normalize(arg) for arg in fact_arguments]
 
-        # --- Enhanced Robustness ---
-        # If the predicate schema is not defined, create it dynamically.
-        # This assumes a simple 1-to-1 mapping from predicate to a sort of the same name.
-        # --- STRENGTHENED VALIDATION ---
-        # 1. The predicate MUST be declared before use. No more implicit creation.
         if p_name not in self._predicates:
-            raise ValueError(f"Validation Error: Attempted to use undeclared predicate '{p_name}'. "
-                             "All predicates must be declared with 'add_predicate_schema' first.")
+            raise ValueError(f"Validation Error: Attempted to use undeclared predicate '{p_name}'. All predicates must be declared with 'add_predicate_schema' first.")
 
-        # 2. Arity Check: The number of arguments must match the predicate's declared arity.
         expected_arity = len(self._predicates[p_name])
         actual_arity = len(arg_list)
         if actual_arity != expected_arity:
-            raise ValueError(f"Validation Error: Arity mismatch for predicate '{p_name}'. "
-                             f"Expected {expected_arity} arguments, but received {actual_arity}.")
+            raise ValueError(f"Validation Error: Arity mismatch for predicate '{p_name}'. Expected {expected_arity} arguments, but received {actual_arity}.")
 
-        # 3. Sort-Constant Compatibility Check
         expected_sorts = self._predicates[p_name]
         for i, arg_name in enumerate(arg_list):
-            arg_sort_found = False
-            for sort_name, constants in self._sorts.items():
-                if arg_name in constants:
-                    # Check if the constant's sort matches the expected sort for this argument position.
-                    if sort_name != self._normalize(expected_sorts[i]):
-                        raise ValueError(f"Validation Error: Sort mismatch for argument '{arg_name}' of predicate '{p_name}'. "
-                                         f"Expected sort '{expected_sorts[i]}' but found '{sort_name}'.")
-                    arg_sort_found = True
-                    break
+            expected_sort = self._normalize(expected_sorts[i])
+            actual_sort = None
             
-            if not arg_sort_found:
-                raise ValueError(f"Validation Error: Constant '{arg_name}' used in predicate '{p_name}' has not been declared "
-                                 "with 'add_constant_to_sort'.")
+            # Trouver la sorte actuelle de la constante
+            for s_name, constants in self._sorts.items():
+                if arg_name in constants:
+                    actual_sort = s_name
+                    break
+
+            # Scénario 1: Constante inconnue
+            if not actual_sort:
+                logger.info(f"Repairing: Constant '{arg_name}' is undeclared. Adding it to expected sort '{expected_sort}'.")
+                self.add_constant_to_sort(arg_name, expected_sort)
+                continue # Passe à l'argument suivant
+
+            # Scénario 2: Sorte compatible (exacte ou via hiérarchie)
+            if self._is_compatible(actual_sort, expected_sort):
+                logger.debug(f"Validation OK: Sort '{actual_sort}' for constant '{arg_name}' is compatible with expected sort '{expected_sort}'.")
+                continue # Passe à l'argument suivant
+
+            # Scénario 3: Incompatibilité
+            raise ValueError(f"Validation Error: Irreparable sort mismatch for argument '{arg_name}' of predicate '{p_name}'. "
+                             f"Expected a sort compatible with '{expected_sort}', but found '{actual_sort}'.")
 
         self._atomic_facts.append(AtomicFact(p_name, arg_list))
-        return f"Atomic fact '{p_name}({', '.join(arg_list)})' added."
+        return f"Atomic fact '{p_name}({', '.join(arg_list)})' added after flexible validation."
 
     @kernel_function(description="Add a negated atomic fact, e.g., 'Socrates is NOT a god'.", name="add_negated_atomic_fact")
     def add_negated_atomic_fact(self, fact_predicate_name: str, fact_arguments: List[str]):
@@ -362,6 +367,62 @@ class BeliefSetBuilderPlugin:
 
         self._existential_conjunctions.append(ExistentialConjunction(norm_p1, norm_p2, unified_sort))
         return "Existential conjunction added."
+
+    def _infer_sort_hierarchy(self):
+        """
+        Analyse les implications universelles pour inférer une hiérarchie de sortes.
+        Par exemple, de `forall X: (homme(X) => mortel(X))`, on déduit que `homme`
+        est une sous-sorte de `mortel`.
+        """
+        self.logger.info("Starting sort hierarchy inference from universal implications...")
+        # L'unification via _unify_sorts a déjà aligné les prédicats sur un nom de sorte canonique.
+        # Maintenant, nous établissons la relation hiérarchique directionnelle.
+        for impl in self._universal_implications:
+            try:
+                # La sorte de l'antécédent est la sous-sorte.
+                # Le nom de la sorte est dérivé du nom du prédicat antécédent.
+                sub_sort = self._normalize(self._predicate_to_sort.get(impl.antecedent_predicate, impl.antecedent_predicate))
+                
+                # Le conséquent définit la super-sorte.
+                super_sort = self._normalize(self._predicate_to_sort.get(impl.consequent_predicate, impl.consequent_predicate))
+
+                if sub_sort != super_sort:
+                    if sub_sort not in self._sort_hierarchy:
+                        self._sort_hierarchy[sub_sort] = set()
+                    
+                    if super_sort not in self._sort_hierarchy.get(sub_sort, set()):
+                        self._sort_hierarchy[sub_sort].add(super_sort)
+                        self.logger.debug(f"Inferred hierarchy: '{sub_sort}' is a sub-sort of '{super_sort}'.")
+
+            except Exception as e:
+                self.logger.error(f"Error during hierarchy inference for implication {impl}: {e}", exc_info=True)
+        self.logger.info(f"Sort hierarchy inference completed. Current hierarchy: {self._sort_hierarchy}")
+
+    def _is_compatible(self, actual_sort: str, expected_sort: str) -> bool:
+        """
+        Vérifie si la sorte `actual_sort` est compatible avec `expected_sort`,
+        c'est-à-dire si elles sont identiques ou si `actual_sort` est une sous-sorte
+        directe ou indirecte de `expected_sort`.
+        """
+        if actual_sort == expected_sort:
+            return True
+
+        # Parcours en largeur pour trouver si expected_sort est un ancêtre
+        q = [actual_sort]
+        visited = {actual_sort}
+        
+        while q:
+            current_sort = q.pop(0)
+            
+            super_sorts = self._sort_hierarchy.get(current_sort, set())
+            for super_sort in super_sorts:
+                if super_sort == expected_sort:
+                    return True
+                if super_sort not in visited:
+                    visited.add(super_sort)
+                    q.append(super_sort)
+        
+        return False
 
     def _create_safe_fol_atom(self, FolAtom, predicate, arguments):
         """
@@ -657,7 +718,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         
         self._tweety_bridge = tweety_bridge
         # Le plugin qui contient nos outils. Il sera instancié ici.
-        self._builder_plugin = BeliefSetBuilderPlugin()
+        self._builder_plugin = BeliefSetBuilderPlugin(logger=self.logger)
         self.logger.info(f"AUDIT - Agent {self.name} a initialisé son plugin builder avec l'ID: {id(self._builder_plugin)}")
         self.logger.info(f"Agent {self.name} initialisé. Stratégie: Appel d'Outils (construction programmatique).")
 
@@ -801,7 +862,14 @@ class FirstOrderLogicAgent(BaseLogicAgent):
                 self.logger.warning(f"LLM stopped with ZERO successful tool calls. Returning an empty BeliefSet.")
                 return FirstOrderBeliefSet(content="", java_object=None), "Aucune structure logique pertinente n'a été trouvée."
 
+            # --- NOUVELLE ÉTAPE : INFERENCE DE LA HIERARCHIE ---
+            self.logger.info("Le LLM a terminé d'appeler les outils. Inférence de la hiérarchie des sortes...")
+            self._builder_plugin._infer_sort_hierarchy()
+            # ----------------------------------------------------
+
+            self.logger.info("Construction de l'ensemble de croyances Tweety...")
             java_belief_set = self._builder_plugin.build_tweety_belief_set(self._tweety_bridge)
+
             if java_belief_set is None:
                 return None, "La construction programmatique du belief set a échoué."
 
