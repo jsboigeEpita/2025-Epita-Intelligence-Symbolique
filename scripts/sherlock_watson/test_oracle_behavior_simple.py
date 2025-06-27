@@ -1,0 +1,1 @@
+# Fichier de remplacement pour la validation des tests
