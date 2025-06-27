@@ -1,0 +1,50 @@
+<#
+.SYNOPSIS
+Wrapper pour exécuter une commande dans l'environnement Conda du projet.
+
+.DESCRIPTION
+Ce script délègue l'exécution de commandes au gestionnaire d'environnement Python
+`project_core/core_from_scripts/environment_manager.py`.
+Il assure que les commandes sont lancées dans le bon environnement Conda (`main_env`)
+avec la méthode 'conda run', qui est la plus robuste.
+
+.EXAMPLE
+# Exécute pytest pour un test spécifique
+.\activate_project_env.ps1 pytest tests/integration/some_test.py
+
+.EXAMPLE
+# Affiche la version de python de l'environnement
+.\activate_project_env.ps1 python --version
+#>
+param(
+    [Parameter(ValueFromRemainingArguments=$true)]
+    [string[]]$CommandAndArgs
+)
+
+$ErrorActionPreference = "Stop"
+
+# Configuration pour la compatibilité des tests et l'import de modules locaux
+$env:PYTHONPATH = "$PSScriptRoot;$env:PYTHONPATH"
+
+# Chemin vers le nouveau gestionnaire d'environnement
+$childPath = "project_core\core_from_scripts\environment_manager.py"
+$pythonRunner = Join-Path -Path $PSScriptRoot -ChildPath $childPath
+
+# Environnement conda cible
+$condaEnvName = "epita_symbolic_ai"
+
+# Reconstruit la commande à passer au script Python
+$commandToExecute = $CommandAndArgs -join ' '
+
+# Construit la commande finale pour appeler le gestionnaire d'environnement
+# qui utilisera 'conda run' en interne.
+$finalCommand = "conda run -n $condaEnvName --no-capture-output python.exe `"$pythonRunner`" --env-name $condaEnvName --run-command $commandAndArgs"
+
+Write-Host "[DEBUG] Calling: $finalCommand" -ForegroundColor Gray
+
+# Appelle le script Python avec les arguments traités
+Invoke-Expression -Command $finalCommand
+
+# Propage le code de sortie du script python
+$exitCode = $LASTEXITCODE
+exit $exitCode
