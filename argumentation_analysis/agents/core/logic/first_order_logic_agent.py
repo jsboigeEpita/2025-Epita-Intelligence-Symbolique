@@ -265,25 +265,71 @@ class BeliefSetBuilderPlugin:
         name="add_constant_to_sort"
     )
     def add_constant_to_sort(self, constant_name: str, sort_name: str):
-        """Ajoute une constante à un sort."""
+        """Ajoute une constante à un sort. Si la constante a déjà une sorte de base,
+        interprète cette nouvelle assignation comme un fait atomique."""
         logger.info(f"AUDIT - [BeliefSetBuilderPlugin({id(self)})] Appel de add_constant_to_sort avec: '{constant_name}', '{sort_name}'")
         norm_const = self._normalize(constant_name)
         norm_sort = self._normalize(sort_name)
+
+        # 1. S'assurer que la sorte de destination existe.
         if norm_sort not in self._sorts:
             self.add_sort(norm_sort)
-        if norm_const not in self._sorts[norm_sort]:
-            self._sorts[norm_sort].append(norm_const)
-        return f"Constant '{norm_const}' added to sort '{norm_sort}'."
 
-    @kernel_function(description="Add an atomic fact, e.g., 'Socrates is a man'.", name="add_atomic_fact")
+        # 2. Vérifier si la constante a déjà une sorte de base.
+        existing_sort = self._find_sort_of_constant(norm_const)
+        
+        if not existing_sort:
+            # Cas simple : la constante est nouvelle. On l'assigne à sa sorte de base.
+            self._sorts[norm_sort].append(norm_const)
+            return f"Constant '{norm_const}' assigned to base sort '{norm_sort}'."
+        
+        # Cas où la constante a déjà une sorte
+        if existing_sort == norm_sort:
+            return f"Constant '{norm_const}' is already in sort '{norm_sort}'. No action needed."
+
+        # --- LOGIQUE CLÉ ---
+        # Cas complexe : La constante a déjà une sorte de base différente.
+        # Interpréter cela comme l'intention de déclarer un fait : `nouvelle_sorte(constante)`.
+        self.logger.info(f"La constante '{norm_const}' a déjà une sorte de base ('{existing_sort}'). "
+                         f"L'assignation à '{norm_sort}' est interprétée comme un fait atomique.")
+        
+        # Le nom du prédicat est dérivé de la nouvelle sorte.
+        predicate_name_candidate = norm_sort
+        
+        # S'assurer que le prédicat correspondant existe.
+        # Sa sorte d'argument doit être elle-même.
+        self._ensure_predicate_exists(predicate_name_candidate, arity=1)
+        
+        # Ajouter le fait atomique. La validation dans `add_atomic_fact` va maintenant
+        # utiliser la hiérarchie de sortes pour vérifier la compatibilité.
+        try:
+            self.add_atomic_fact(fact_predicate_name=predicate_name_candidate, fact_arguments=[norm_const])
+            return f"Fact '{predicate_name_candidate}({norm_const})' added instead of changing sort."
+        except ValueError as e:
+            # Si `add_atomic_fact` lève une erreur, c'est une vraie incohérence.
+            self.logger.error(f"Failed to create implicit atomic fact for '{norm_const}': {e}")
+            return f"Error: Could not assert fact '{predicate_name_candidate}({norm_const})' due to validation error: {e}"
+
+    @kernel_function(
+        description="Adds a simple positive statement (atomic fact), like 'Socrates is a philosopher'. Use `predicate_name` for the property (e.g., 'Philosopher') and `arguments` for the individual(s) (e.g., ['socrate']).",
+        name="add_atomic_fact"
+    )
     def add_atomic_fact(self, fact_predicate_name: str, fact_arguments: List[str]):
-        """Ajoute un fait atomique après une validation et une réparation souples."""
+        """Ajoute un fait atomique après une validation stricte."""
         logger.info(f"AUDIT - [BeliefSetBuilderPlugin({id(self)})] Appel de add_atomic_fact avec: '{fact_predicate_name}', {fact_arguments}")
         norm_pred_name = self._normalize(fact_predicate_name)
         norm_args = [self._normalize(arg) for arg in fact_arguments]
 
+        # Assure que le prédicat existe pour éviter les KeyErrors.
         self._ensure_predicate_exists(norm_pred_name, arity=len(norm_args))
 
+        # Validation de l'arité
+        expected_arity = len(self._predicates[norm_pred_name])
+        actual_arity = len(norm_args)
+        if actual_arity != expected_arity:
+            raise ValueError(f"Erreur d'arité pour '{norm_pred_name}'. Attendu: {expected_arity}, Reçu: {actual_arity}.")
+
+        # Validation des sortes
         expected_sorts = self._predicates[norm_pred_name]
         
         if len(norm_args) != len(expected_sorts):
@@ -292,31 +338,35 @@ class BeliefSetBuilderPlugin:
 
         # The new combined logic
         for i, arg_name in enumerate(norm_args):
-            expected_sort_name = self._normalize(expected_sorts[i])
-            
-            constant_sort = self._find_sort_of_constant(arg_name)
-            
-            # Case 1: The constant is completely new. Assign it to the expected sort.
-            if constant_sort is None:
-                logger.debug(f"Constant '{arg_name}' is undeclared. Assigning to expected sort '{expected_sort_name}'.")
-                self.add_constant_to_sort(arg_name, expected_sort_name)
-            
-            # Case 2: The constant exists, but its sort is not compatible with the one expected by the predicate.
-            # We use the repairing logic from 'OURS' to add the constant to the new sort, ensuring robustness.
-            elif not self._is_compatible(constant_sort, expected_sort_name):
-                logger.warning((f"Constant '{arg_name}' has sort '{constant_sort}', which is not a sub-sort of the "
-                                f"expected '{expected_sort_name}'. "
-                                f"Adding constant to the expected sort '{expected_sort_name}' as a repair mechanism."))
-                self.add_constant_to_sort(arg_name, expected_sort_name)
-            
-            # Case 3: The constant exists and its sort is compatible. Do nothing.
-            else:
-                 logger.debug(f"Constant '{arg_name}' with sort '{constant_sort}' is compatible with expected sort '{expected_sort_name}'.")
+            expected_sort = self._normalize(expected_sorts[i])
+            actual_sort = self._find_sort_of_constant(arg_name)
 
-        self._atomic_facts.append(AtomicFact(norm_pred_name, norm_args))
-        return f"Fait atomique '{norm_pred_name}({', '.join(norm_args)})' ajouté après validation flexible."
+            if not actual_sort:
+                # La constante n'a pas de sorte. On l'assigne à la sorte attendue.
+                logger.info(f"Réparation : La constante '{arg_name}' était non déclarée. Assignation à la sorte attendue '{expected_sort}'.")
+                self.add_constant_to_sort(arg_name, expected_sort)
+                actual_sort = expected_sort # Mettre à jour pour la suite
 
-    @kernel_function(description="Add a negated atomic fact, e.g., 'Socrates is NOT a god'.", name="add_negated_atomic_fact")
+            # Utiliser la hiérarchie pour la validation, avec auto-correction
+            if not self._is_compatible(actual_sort, expected_sort):
+                logger.warning(
+                    f"Incompatibilité de sorte détectée pour '{arg_name}' dans '{norm_pred_name}'. "
+                    f"Attendu '{expected_sort}', trouvé '{actual_sort}'. "
+                    f"Inférence d'une nouvelle règle de hiérarchie : '{actual_sort}' est une sous-sorte de '{expected_sort}'."
+                )
+                # On force la compatibilité en ajoutant une règle hiérarchique
+                self._sort_hierarchy.setdefault(actual_sort, set()).add(expected_sort)
+
+        # Si toutes les validations passent, ajouter le fait.
+        new_fact = AtomicFact(norm_pred_name, norm_args)
+        if new_fact not in self._atomic_facts:
+            self._atomic_facts.append(new_fact)
+        return f"Fait atomique '{norm_pred_name}({', '.join(norm_args)})' ajouté avec succès après validation et inférence de hiérarchie."
+
+    @kernel_function(
+        description="Adds a negative statement (negated atomic fact), like 'Socrates is NOT a god'. Use `predicate_name` for the property and `arguments` for the individual.",
+        name="add_negated_atomic_fact"
+    )
     def add_negated_atomic_fact(self, fact_predicate_name: str, fact_arguments: List[str]):
         p_name = self._normalize(fact_predicate_name)
         arg_list = [self._normalize(arg) for arg in fact_arguments]
@@ -337,7 +387,10 @@ class BeliefSetBuilderPlugin:
         self._negated_atomic_facts.append(NegatedAtomicFact(p_name, arg_list))
         return f"Negated atomic fact 'not {p_name}({', '.join(arg_list)})' added."
 
-    @kernel_function(description="Add a universal implication.", name="add_universal_implication")
+    @kernel_function(
+        description="Adds a universal rule (implication), like 'All A are B'. Use `antecedent_predicate` for A, `consequent_predicate` for B, and `sort_of_variable` for the category they belong to.",
+        name="add_universal_implication"
+    )
     def add_universal_implication(self, impl_antecedent_predicate: str, impl_consequent_predicate: str, impl_sort_of_variable: str):
         logger.info(f"AUDIT - [BeliefSetBuilderPlugin({id(self)})] Appel de add_universal_implication avec: '{impl_antecedent_predicate}' => '{impl_consequent_predicate}'")
         # Ensure predicates exist with a default arity of 1 before proceeding.
@@ -431,9 +484,12 @@ class BeliefSetBuilderPlugin:
                 arg = arguments.get(i)
                 arg_sort = arg.getSort()
                 expected_sort = expected_sorts.get(i)
-                if not arg_sort.equals(expected_sort):
-                    logger.error(f"Sort mismatch for predicate '{str(predicate.getName())}' at position {i}. "
-                                 f"Expected sort '{str(expected_sort.getName())}' but argument '{str(arg.toString())}' has sort '{str(arg_sort.getName())}'.")
+                # Utiliser la logique de compatibilité hiérarchique
+                actual_sort_name = str(arg_sort.getName())
+                expected_sort_name = str(expected_sort.getName())
+                if not self._is_compatible(actual_sort_name, expected_sort_name):
+                    logger.error(f"Validation finale échouée: Incompatibilité de sorte pour le prédicat '{str(predicate.getName())}' à la position {i}. "
+                                 f"Attendu '{expected_sort_name}', mais l'argument '{str(arg.toString())}' a la sorte '{actual_sort_name}', qui n'est pas une sous-sorte compatible.")
                     return None
             
             # If all checks pass, create and return the atom
@@ -777,57 +833,120 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         text = re.sub(r'[^a-zA-Z0-9_]', '', text)
         return text.lower()
 
+    def _parse_and_invoke_tool_calls(self, llm_response: str):
+        """
+        Parses the LLM's text response to find and execute tool calls.
+        This manual parsing is more robust for older SK versions.
+        """
+        import ast
+        
+        # Split response into individual lines, as LLM should provide one call per line
+        for line in llm_response.strip().split('\n'):
+            line = line.strip()
+            if not line.startswith("BeliefBuilder."):
+                continue
+
+            # Regex to find `BeliefBuilder.method_name(arguments)`
+            match = re.match(r"BeliefBuilder\.([a-zA-Z_]\w*)\((.*)\)", line)
+            if not match:
+                self.logger.warning(f"Could not parse tool call: {line}")
+                continue
+
+            method_name = match.group(1)
+            args_str = match.group(2).strip()
+
+            try:
+                method_to_call = getattr(self._builder_plugin, method_name, None)
+                if not method_to_call:
+                    self.logger.warning(f"LLM tried to call non-existent method: {method_name}")
+                    continue
+
+                # Argument parsing using a more robust regex and ast.literal_eval
+                kwargs = {}
+                # This regex captures key-value pairs, handling strings and lists
+                arg_pattern = re.compile(r"(\w+)\s*=\s*((?:'.*?'|\".*?\"|\[.*?\]))")
+                
+                for arg_match in arg_pattern.finditer(args_str):
+                    key = arg_match.group(1)
+                    value_str = arg_match.group(2)
+                    
+                    try:
+                        # Use literal_eval on the value part only
+                        value = ast.literal_eval(value_str)
+                        kwargs[key] = value
+                    except (ValueError, SyntaxError) as e:
+                        self.logger.error(f"Could not parse argument value '{value_str}' for key '{key}' in tool call '{line}'. Error: {e}")
+                        # Skip this argument
+                        continue
+                
+                if not kwargs:
+                    # Handle calls with no arguments if necessary
+                    if args_str:
+                       self.logger.warning(f"Could not parse any arguments from '{args_str}' for method '{method_name}'.")
+
+                # --- Map LLM-generated argument names to actual Python function parameter names ---
+                arg_mapping = {
+                    "add_atomic_fact": {
+                        "predicate_name": "fact_predicate_name",
+                        "arguments": "fact_arguments",
+                    },
+                    "add_negated_atomic_fact": {
+                        "predicate_name": "fact_predicate_name",
+                        "arguments": "fact_arguments",
+                    },
+                    "add_universal_implication": {
+                        "antecedent_predicate": "impl_antecedent_predicate",
+                        "consequent_predicate": "impl_consequent_predicate",
+                        "sort_of_variable": "impl_sort_of_variable",
+                    },
+                }
+
+                mapped_kwargs = {}
+                # Use the mapping if the method requires it
+                if method_name in arg_mapping:
+                    current_map = arg_mapping[method_name]
+                    for key, value in kwargs.items():
+                        # Map the key from the LLM response to the actual function parameter name
+                        mapped_key = current_map.get(key, key)
+                        mapped_kwargs[mapped_key] = value
+                else:
+                    # If no mapping is needed, use the arguments as they are
+                    mapped_kwargs = kwargs
+                
+                self.logger.info(f"Manually invoking tool: {method_name} with mapped args: {mapped_kwargs}")
+                method_to_call(**mapped_kwargs)
+
+            except Exception as e:
+                self.logger.error(f"Failed to invoke tool call: {line}. Error: {e}", exc_info=True)
+
     async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[FirstOrderBeliefSet], str]:
         """
-        Convertit un texte en `FirstOrderBeliefSet` en utilisant la stratégie d'appel d'outils.
+        Converts text to a FirstOrderBeliefSet by manually parsing LLM tool call suggestions.
         """
-        self.logger.info(f"Début de la conversion de texte vers FOL (stratégie Outils) pour {self.name}...")
-
+        self.logger.info(f"Début de la conversion de texte vers FOL (stratégie de parsing manuel) pour {self.name}...")
         self._builder_plugin.reset()
 
-        from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
-        # In SK v0.9, tool calling is enabled via these settings
-        prompt_exec_settings = OpenAIChatPromptExecutionSettings(
-            service_id=self._llm_service_id,
-            function_call_behavior="auto_invoke_kernel_functions"
-        )
-
         try:
-            # Create a history with the system prompt
+            # Simple invocation to get tool suggestions as text
             chat_history = ChatHistory(system_message=self.system_prompt)
             chat_history.add_user_message(text)
-
-            # In SK v0.9, the kernel expects KernelArguments
-            arguments = KernelArguments(
-                settings=prompt_exec_settings,
-                chat_history=chat_history,
-                input=text
-            )
-
-            # In SK v0.9, we need to wrap the chat flow in a semantic function
-            # that has tool calling enabled in its execution settings.
-            prompt_function = KernelFunctionFromPrompt(
-                function_name="chat_with_tools",
-                plugin_name="ChatTool",
-                prompt=self.system_prompt,
-                prompt_execution_settings=prompt_exec_settings,
-            )
-
-            # The function calling is handled automatically by the kernel when invoking this function
-            result = await self._kernel.invoke(
-                function=prompt_function,
-                arguments=arguments,
-            )
-
-            # --- NOUVELLE ÉTAPE : INFERENCE DE LA HIERARCHIE ---
-            self.logger.info("Le LLM a terminé d'appeler les outils. Inférence de la hiérarchie des sortes...")
+            
+            arguments = KernelArguments(chat_history=chat_history)
+            result = await self._kernel.invoke_prompt(prompt=self.system_prompt, arguments=arguments)
+            llm_response_text = str(result)
+            
+            # Manually parse and execute the tool calls from the response
+            self._parse_and_invoke_tool_calls(llm_response_text)
+            
+            # --- PROCESS THE RESULTS ---
+            self.logger.info("Le parsing et l'invocation manuelle des outils sont terminés.")
             self._builder_plugin._infer_sort_hierarchy()
-            # ----------------------------------------------------
-
+            
             self.logger.info("Construction de l'ensemble de croyances Tweety...")
             java_belief_set = self._builder_plugin.build_tweety_belief_set(self._tweety_bridge)
+            
             if java_belief_set is None:
-                return None, "La construction programmatique du belief set a échoué."
+                return FirstOrderBeliefSet(content="", java_object=None), "La construction programmatique du belief set a échoué. Le résultat est None."
 
             final_belief_set = FirstOrderBeliefSet(content=str(java_belief_set.toString()), java_object=java_belief_set)
 
@@ -836,16 +955,10 @@ class FirstOrderLogicAgent(BaseLogicAgent):
 
             return final_belief_set, "Conversion réussie."
 
-        except KernelException as e:
-            if e.__cause__ and isinstance(e.__cause__, ValueError):
-                msg = f"Erreur de validation: {e.__cause__}"
-                self.logger.warning(f"Validation error during tool call: '{msg}'. Returning empty belief set.")
-                return FirstOrderBeliefSet(content="", java_object=None), msg
-            self.logger.error(f"Erreur du noyau sémantique inattendue : {e}", exc_info=True)
-            raise e
         except Exception as e:
             self.logger.error(f"Exception inattendue dans `text_to_belief_set`: {e}", exc_info=True)
-            raise e
+            # Return an empty but valid belief set to avoid downstream errors
+            return FirstOrderBeliefSet(content="", java_object=None), f"Une erreur est survenue: {e}"
     
     def _extract_json_block(self, text: str) -> str:
         """

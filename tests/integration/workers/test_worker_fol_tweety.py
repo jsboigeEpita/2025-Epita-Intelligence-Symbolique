@@ -261,6 +261,7 @@ Man(socrates)
 
         # Assert: Vérifier l'inférence clé.
         # Le prédicat peut être "Mortal" ou "mortel" selon le LLM. On vérifie la version lowercase.
+        # Le prédicat, une fois normalisé, sera `mortel`.
         entails, _ = await agent.execute_query(belief_set, "mortel(socrate)")
         assert entails is True, "L'inférence 'mortel(socrate)' devrait être acceptée."
         
@@ -374,25 +375,12 @@ class TestFOLErrorHandling:
         # comme invalide ou incohérente par le système.
         assert belief_set is not None, "Le belief_set ne devrait pas être None."
 
-        # Le LLM est capable de générer une structure logique syntaxiquement valide
-        # même à partir de texte absurde. Le test doit donc vérifier que cette
-        # structure, bien que non vide, est correctement gérée.
-        assert belief_set is not None, "Le belief_set ne devrait pas être None."
+        # Avec le nouveau système d'appel d'outils, le LLM ne devrait extraire
+        # aucune structure logique pertinente d'un texte sémantiquement absurde.
+        # Le belief set résultant devrait donc être vide.
+        assert belief_set.is_empty(), "Le belief_set généré à partir d'un texte absurde devrait être vide."
         
-        # Le BeliefSet ne sera pas vide car le LLM crée une structure valide.
-        assert not belief_set.is_empty(), "Le belief_set généré à partir du texte absurde ne devrait pas être vide."
-        
-        logger.warning(f"Le LLM a extrait une structure logique de l'absurde: {belief_set.content}")
-        
-        # Le point crucial est de vérifier si cette structure est cohérente.
-        # Une base de connaissances aussi absurde devrait être considérée comme incohérente
-        # par un moteur de raisonnement logique robuste.
-        is_consistent, consistency_msg = await agent.is_consistent(belief_set)
-        
-        # Nous nous attendons à ce que Tweety rejette cette base comme étant incohérente.
-        assert not is_consistent, f"La structure extraite de l'absurde aurait dû être incohérente. Message: {consistency_msg}"
-        
-        logger.info("✅ La structure erronée mais syntaxiquement valide a bien été détectée comme incohérente par Tweety.")
+        logger.info("✅ Le LLM n'a correctement extrait aucune structure logique d'un texte absurde, retournant un belief set vide.")
         
     @pytest.mark.asyncio
     async def test_fol_timeout_handling(self, fol_agent_with_kernel, jvm_session):

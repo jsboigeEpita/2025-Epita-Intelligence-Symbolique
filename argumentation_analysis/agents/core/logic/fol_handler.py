@@ -231,7 +231,7 @@ class FOLHandler:
             parser = FolParser()
             parser.setSignature(signature)
             
-            logger.debug(f"Signature for query parsing: {signature}")
+            logger.info(f"Signature for query parsing: {signature.toString()}")
             query_formula = self.parse_fol_formula(query_formula_str, custom_parser=parser)
             
             # Utiliser le même raisonneur que pour la vérification de cohérence pour la consistance.
