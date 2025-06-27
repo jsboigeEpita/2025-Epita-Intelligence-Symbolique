@@ -98,6 +98,49 @@ pytest_plugins = [
     "tests.mocks.numpy_setup"
 ]
 
+@pytest.fixture(autouse=True)
+def check_mock_llm_is_forced(request):
+    """
+    Ce "coupe-circuit" est une sécurité pour tous les tests.
+    Il vérifie que nous ne pouvons pas accidentellement utiliser un vrai LLM.
+    Pour ce faire, il patche la fonction d'initialisation de l'environnement
+    et s'assure qu'elle est TOUJOURS appelée avec force_mock_llm=True.
+
+    Si un test tente d'initialiser l'environnement sans forcer le mock,
+    une erreur sera levée, arrêtant la suite de tests.
+    Ceci prévient l'utilisation involontaire de services payants.
+    """
+    # Ce coupe-circuit est crucial même pour les tests de validation qui simulent
+    # un environnement e2e. Nous le laissons actif.
+
+    from argumentation_analysis.core.bootstrap import initialize_project_environment as original_init
+
+    def new_init(*args, **kwargs):
+        if not kwargs.get("force_mock_llm"):
+             pytest.fail(
+                "ERREUR DE SÉCURITÉ: Appel à initialize_project_environment() sans "
+                "'force_mock_llm=True'. Tous les tests doivent forcer l'utilisation "
+                "d'un LLM mocké pour éviter d'utiliser des services réels.",
+                pytrace=False
+            )
+        
+        # S'assurer que le service_id est correct pour les tests mockés
+        service_id = kwargs.get("service_id")
+        if service_id and service_id != "default_llm_bootstrap":
+            pytest.fail(
+                f"ERREUR DE CONFIGURATION TEST: 'service_id' doit être 'default_llm_bootstrap' "
+                f"lorsque 'force_mock_llm=True', mais a reçu '{service_id}'.",
+                pytrace=False
+            )
+        
+        # Forcer le service_id par défaut pour les tests si non spécifié
+        if not service_id:
+            kwargs["service_id"] = "default_llm_bootstrap"
+            
+        return original_init(*args, **kwargs)
+
+    with patch('argumentation_analysis.core.bootstrap.initialize_project_environment', new=new_init):
+        yield
     
 def pytest_addoption(parser):
     """Ajoute des options de ligne de commande personnalisées à pytest."""

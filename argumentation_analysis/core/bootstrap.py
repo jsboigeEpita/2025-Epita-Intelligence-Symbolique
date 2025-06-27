@@ -70,18 +70,16 @@ try:
 except ImportError as e:
     logger.error(f"Failed to import create_llm_service: {e}")
 
-# Imports liés à l'agent informel et semantic-kernel ont été supprimés
-# car la dépendance a été retirée du projet.
-# try:
-#     from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent as InformalAgent_class
-# except ImportError as e:
-#     logger.error(f"Failed to import InformalAnalysisAgent: {e}")
-#
-# try:
-#     import semantic_kernel as sk_module
-# except ImportError as e:
-#     logger.error(f"Failed to import semantic_kernel: {e}")
-sk_module = None
+try:
+    from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent as InformalAgent_class
+except ImportError as e:
+    logger.error(f'Failed to import InformalAnalysisAgent: {e}')
+
+try:
+    import semantic_kernel as sk_module
+except ImportError as e:
+    logger.error(f'Failed to import semantic_kernel: {e}')
+    sk_module = None
 
 try:
     from argumentation_analysis.ui.config import ENCRYPTION_KEY as ENCRYPTION_KEY_imported
@@ -122,6 +120,7 @@ class ContextualFallacyDetectorAdapter:
 
 class ProjectContext:
     def __init__(self):
+        self.kernel: sk_module.Kernel = None
         self.jvm_initialized = False
         self.crypto_service = None
         self.definition_service = None
@@ -196,7 +195,7 @@ def _load_tweety_classes(context: 'ProjectContext'):
         logger.critical(f"Erreur inattendue lors du chargement des classes Tweety: {e}", exc_info=True)
 
 
-def initialize_project_environment(env_path_str: str = None, root_path_str: str = None) -> ProjectContext:
+def initialize_project_environment(env_path_str: str = None, root_path_str: str = None, force_mock_llm: bool = False) -> ProjectContext:
     global project_root
 
     context = ProjectContext()
@@ -353,24 +352,23 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
     else:
         logger.error("DefinitionService_class n'a pas pu être importé.")
 
-    # if create_llm_service_func:
-    #     logger.info("Initialisation de LLMService via create_llm_service...")
-    #     # Utiliser le service LLM réel avec configuration depuis .env
-    #     try:
-    #         context.llm_service = create_llm_service_func(service_id="default_llm_bootstrap", force_mock=False)
-    #         logger.info("LLMService initialisé en mode réel.")
-    #     except Exception as e:
-    #         logger.error(f"Erreur lors de l'appel à create_llm_service avec force_mock=True : {e}", exc_info=True)
-    # else:
-    #     logger.error("create_llm_service_func n'a pas pu être importé.")
-
     # L'initialisation de ContextualFallacyDetector est maintenant paresseuse
     # et gérée via la méthode context.get_fallacy_detector().
     # Le bloc d'initialisation rapide ici est donc supprimé.
 
-    # Le bloc d'initialisation de InformalAgent a été complètement supprimé
-    # car il dépendait de semantic-kernel, qui n'est plus dans le projet.
-    # Cela résout l'erreur de démarrage du backend.
+    if sk_module and create_llm_service_func:
+        logger.info("Initialisation du Kernel Semantic Kernel...")
+        try:
+            context.kernel = sk_module.Kernel()
+            # Le service LLM est un prérequis pour de nombreux plugins, donc on l'ajoute au kernel.
+            # Le paramètre force_mock_llm détermine si on doit forcer l'usage du service mocké.
+            context.llm_service = create_llm_service_func(service_id="default_llm_bootstrap", force_mock=force_mock_llm)
+            context.kernel.add_service(context.llm_service) # Assurez-vous que c'est la bonne méthode
+            logger.info("Semantic Kernel et LLMService initialisés et ajoutés au contexte.")
+        except Exception as e:
+            logger.error(f"Erreur lors de l'initialisation du Semantic Kernel ou du LLM Service : {e}", exc_info=True)
+    else:
+        logger.warning("Semantic-kernel non importé ou create_llm_service non disponible, le kernel ne sera pas initialisé.")
 
     logger.info("--- Fin de l'initialisation de l'environnement du projet ---")
     return context
@@ -405,7 +403,7 @@ if __name__ == '__main__':
     print(f"CryptoService: {'Oui' if initialized_context.crypto_service else 'Non'} (Type: {type(initialized_context.crypto_service).__name__ if initialized_context.crypto_service else 'N/A'})")
     print(f"DefinitionService: {'Oui' if initialized_context.definition_service else 'Non'} (Type: {type(initialized_context.definition_service).__name__ if initialized_context.definition_service else 'N/A'})")
     print(f"LLMService: {'Oui' if initialized_context.llm_service else 'Non'} (Type: {type(initialized_context.llm_service).__name__ if initialized_context.llm_service else 'N/A'})")
-    # print(f"InformalAgent: {'Oui' if initialized_context.informal_agent else 'Non'} (Type: {type(initialized_context.informal_agent).__name__ if initialized_context.informal_agent else 'N/A'})")
+    print(f"Kernel: {'Oui' if initialized_context.kernel else 'Non'} (Type: {type(initialized_context.kernel).__name__ if initialized_context.kernel else 'N/A'})")
     print(f"Configuration chargée (.env):")
     for key, value in initialized_context.config.items():
         display_value = value

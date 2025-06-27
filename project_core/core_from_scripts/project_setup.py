@@ -58,6 +58,51 @@ class ProjectSetup:
         status["overall_status"] = all(status.values())
         return status
 
+    def install_project(self, requirements_file: str = "requirements.txt") -> bool:
+        """
+        Orchestre une installation complète et propre du projet.
+
+        Cette méthode exécute les étapes suivantes dans l'ordre :
+        1. Valide la présence des outils de compilation.
+        2. Tente d'installer les dépendances depuis le fichier requirements.txt.
+        3. Crée le fichier .pth pour assurer la visibilité du projet dans le PYTHONPATH.
+
+        Args:
+            requirements_file (str): Le chemin vers le fichier requirements.txt principal.
+
+        Returns:
+            bool: True si toutes les étapes ont réussi, False sinon.
+        """
+        self.logger.info("Démarrage de l'installation orchestrée du projet...")
+        
+        # Étape 1: Valider les outils de compilation
+        self.logger.info("Étape 1/3 : Validation des outils de compilation...")
+        build_tools_status = self.validator.validate_build_tools()
+        self.logger.info(build_tools_status['message'])
+        if build_tools_status['status'] == 'failure':
+            self.logger.error("Installation annulée. Veuillez installer les outils de compilation requis et réessayer.")
+            return False
+        self.logger.success("Outils de compilation validés.")
+
+        # Étape 2: Installer les dépendances depuis requirements.txt
+        self.logger.info(f"Étape 2/3 : Installation des dépendances depuis '{requirements_file}'...")
+        deps_installed = self.env_manager.fix_dependencies(requirements_file=requirements_file, strategy='aggressive')
+        if not deps_installed:
+            self.logger.error(f"L'installation des dépendances depuis '{requirements_file}' a échoué. Installation annulée.")
+            return False
+        self.logger.success("Dépendances installées avec succès.")
+
+        # Étape 3: Configurer le PYTHONPATH
+        self.logger.info("Étape 3/3 : Configuration du PYTHONPATH via le fichier .pth...")
+        path_set = self.set_project_path_file()
+        if not path_set:
+            self.logger.error("La configuration du PYTHONPATH a échoué. L'installation est peut-être incomplète.")
+            return False
+        self.logger.success("PYTHONPATH configuré avec succès.")
+
+        self.logger.success("Installation complète du projet terminée avec succès!")
+        return True
+
     def set_project_path_file(self) -> bool:
         """
         Crée un fichier .pth pour ajouter la racine du projet au PYTHONPATH.

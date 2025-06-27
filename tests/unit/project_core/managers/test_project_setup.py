@@ -52,3 +52,34 @@ class TestProjectSetup(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+    @patch('project_core.core_from_scripts.project_setup.ProjectSetup.set_project_path_file', return_value=True)
+    @patch('project_core.core_from_scripts.environment_manager.EnvironmentManager.fix_dependencies', return_value=True)
+    @patch('project_core.core_from_scripts.validation.validation_engine.ValidationEngine.validate_build_tools', return_value={'status': 'success', 'message': 'OK'})
+    def test_install_project_success(self, mock_validate_build_tools, mock_fix_dependencies, mock_set_path):
+        """Test the complete project installation orchestration succeeds."""
+        # Action
+        result = self.setup.install_project()
+
+        # Assertions
+        self.assertTrue(result)
+        mock_validate_build_tools.assert_called_once()
+        mock_fix_dependencies.assert_called_once_with(requirements_file="requirements.txt", strategy='aggressive')
+        mock_set_path.assert_called_once()
+        self.mock_logger.success.assert_any_call("Installation complète du projet terminée avec succès!")
+
+    @patch('project_core.core_from_scripts.validation.validation_engine.ValidationEngine.validate_build_tools', return_value={'status': 'failure', 'message': 'Build tools not found'})
+    @patch('project_core.core_from_scripts.environment_manager.EnvironmentManager.fix_dependencies')
+    @patch('project_core.core_from_scripts.project_setup.ProjectSetup.set_project_path_file')
+    def test_install_project_stops_on_build_tools_failure(self, mock_set_path, mock_fix_dependencies, mock_validate_build_tools):
+        """Test the installation process stops if build tools validation fails."""
+        # Action
+        result = self.setup.install_project()
+
+        # Assertions
+        self.assertFalse(result)
+        mock_validate_build_tools.assert_called_once()
+        # Ensure that the next steps were NOT called
+        mock_fix_dependencies.assert_not_called()
+        mock_set_path.assert_not_called()
+        self.mock_logger.error.assert_any_call("Installation annulée. Veuillez installer les outils de compilation requis et réessayer.")
