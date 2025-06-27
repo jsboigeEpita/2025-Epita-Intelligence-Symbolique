@@ -9,9 +9,11 @@ Date: 09/06/2025
 """
 
 import os
+from pathlib import Path
 import sys
 import argparse
 from typing import Dict, List, Optional, Any
+import site
 
 from .common_utils import Logger, LogLevel
 from .environment_manager import EnvironmentManager
@@ -23,8 +25,8 @@ class ProjectSetup:
     
     def __init__(self, logger: Logger = None):
         self.logger = logger or Logger()
-        self.env_manager = EnvironmentManager(self.logger)
-        self.validator = ValidationEngine(self.logger)
+        self.env_manager = EnvironmentManager(logger=self.logger)
+        self.validator = ValidationEngine(logger=self.logger)
     
     def setup_environment(self, force: bool = False) -> bool:
         """Setup complet de l'environnement"""
@@ -55,6 +57,54 @@ class ProjectSetup:
         
         status["overall_status"] = all(status.values())
         return status
+
+    def set_project_path_file(self) -> bool:
+        """
+        Crée un fichier .pth pour ajouter la racine du projet au PYTHONPATH.
+
+        Cette méthode est une solution de secours robuste lorsque les installations
+        en mode édition (`pip install -e .`) échouent.
+
+        Returns:
+            True si le fichier a été créé ou mis à jour, False en cas d'erreur.
+        """
+        try:
+            # Déterminer le chemin racine du projet
+            project_root = Path(__file__).resolve().parent.parent.parent
+            
+            # Obtenir le répertoire site-packages de l'environnement actuel
+            site_packages_paths = site.getsitepackages()
+            
+            # Si `getsitepackages` ne retourne rien, essayer `getusersitepackages` comme fallback
+            if not site_packages_paths:
+                self.logger.warning("site.getsitepackages() n'a retourné aucun chemin. Tentative avec site.getusersitepackages().")
+                user_site_packages = site.getusersitepackages()
+                if user_site_packages and Path(user_site_packages).is_dir():
+                    site_packages_paths = [user_site_packages]
+                else:
+                    self.logger.error("Impossible de déterminer le répertoire site-packages, même avec getusersitepackages.")
+                    return False
+
+            # Utiliser le premier chemin de site-packages trouvé
+            site_packages = Path(site_packages_paths[0])
+            if not site_packages.is_dir():
+                self.logger.error(f"Le répertoire site-packages trouvé n'existe pas ou n'est pas un répertoire : {site_packages}")
+                return False
+                
+            pth_file_path = site_packages / "argumentation_analysis_project.pth"
+            
+            self.logger.info(f"Création/Mise à jour du fichier .pth : {pth_file_path}")
+            
+            # Écrire le chemin absolu de la racine du projet dans le fichier .pth
+            with open(pth_file_path, 'w') as f:
+                f.write(str(project_root))
+            
+            self.logger.info(f"Le fichier '{pth_file_path.name}' a été configuré avec succès.")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Erreur lors de la création du fichier .pth : {e}")
+            return False
 
 
 def setup_environment(force: bool = False, logger: Logger = None) -> bool:
