@@ -35,12 +35,12 @@ A sophisticated multi-agent debate system where AI agents with different persona
 
 ### Interactive Mode
 ```bash
-python argumentation_main.py
+python enhanced_argumentation_main.py
 ```
 
 ### Command Line Mode
 ```bash
-python argumentation_main.py "Should artificial intelligence be regulated by governments?"
+python enhanced_argumentation_main.py "Should artificial intelligence be regulated by governments?"
 ```
 
 ### Example Topics
@@ -61,18 +61,29 @@ The system will:
 ## Example Output
 
 ```
-🎭 Starting debate on: Should artificial intelligence be regulated by governments?
-📋 Participants: The Scholar (for), The Skeptic (against)
+🎭 ENHANCED DEBATE SYSTEM
+📋 Topic: Is Pasta better then Rice ?
+👥 Participants: The Populist (for), The Economist (against)
 ================================================================================
 
-🗣️  Turn 1: The Scholar (for)
-📝 Governments must regulate AI to prevent potential harms to society. Research from Oxford and MIT demonstrates that unregulated AI development could lead to job displacement, privacy violations, and algorithmic bias. The European Union's AI Act provides a framework for responsible AI governance while still allowing innovation.
-💪 Strength: 0.75
+🎬 OPENING PHASE
+----------------------------------------
 
-🗣️  Turn 2: The Skeptic (against)
-📝 Government regulation of AI is premature and potentially harmful. We lack sufficient understanding of AI's long-term implications to create effective policies. Heavy-handed regulation could stifle innovation and push development to less regulated jurisdictions, ultimately making us less competitive globally.
-💪 Strength: 0.65
+🗣️  Turn 1: The Populist (for) - opening_statement
+2025-06-27 10:49:43,074 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+📝 Ladies and gentlemen, esteemed opponents, and fellow debaters, today we gather to delve into the age-old question: Is pasta better than rice? As The Populist, I stand firmly on the side of pasta, not just as a matter of personal preference but based on solid reasoning and widespread popularity.
 
+Pasta is a versatile culinary delight that caters to a multitude of tastes and preferences. Whether it's comforting spaghetti bolognese, creamy fettuccine alfredo, or zesty penne arrabbiata, pasta offers a diverse range of flavors and textures that can satisfy anyone's palate. Additionally, pasta dishes are often quick and easy to prepare, making them a convenient choice for busy individuals and families.
+
+Furthermore, pasta has been a staple in many cultures for centuries, transcending borders and becoming a beloved dish worldwide. Its enduring popularity speaks volumes about its appeal and adaptability to different culinary traditions.
+
+In light of recent arguments, I acknowledge that rice also holds its own place in the hearts and kitchens of many. However, when considering factors such as versatility, flavor, and global appeal, pasta emerges as the superior choice for a satisfying and enjoyable dining experience. Join me in celebrating the magnificence of pasta as we embark on this flavorful debate journey.
+📊 Analysis:
+   • Persuasiveness: 0.48
+   • Evidence Quality: 0.30
+   • Logic Score: 0.50
+   • Readability: 0.29
+👏 Audience Impact: +4 points
 ...
 ```
 
