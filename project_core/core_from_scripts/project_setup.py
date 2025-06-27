@@ -25,7 +25,7 @@ class ProjectSetup:
     
     def __init__(self, logger: Logger = None):
         self.logger = logger or Logger()
-        self.env_manager = EnvironmentManager(logger=self.logger)
+        self.env_manager = EnvironmentManager(logger_instance=self.logger)
         self.validator = ValidationEngine(logger=self.logger)
     
     def setup_environment(self, force: bool = False) -> bool:

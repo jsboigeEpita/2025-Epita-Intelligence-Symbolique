@@ -107,6 +107,47 @@ class EnvironmentManager:
             self.logger.error(f"Erreur lors de la copie du fichier d'environnement : {e}")
             return False
 
+    def fix_dependencies(self, packages: Optional[List[str]] = None, requirements_file: Optional[str] = None) -> bool:
+        """
+        Répare les dépendances en les réinstallant.
+
+        Peut fonctionner à partir d'une liste de paquets ou d'un fichier requirements.
+        Les deux options sont mutuellement exclusives.
+
+        Args:
+            packages: Une liste de noms de paquets à réinstaller.
+            requirements_file: Le chemin vers un fichier requirements.txt.
+
+        Returns:
+            True si l'opération a réussi, False sinon.
+        """
+        if packages and requirements_file:
+            self.logger.error("Les arguments 'packages' et 'requirements_file' sont mutuellement exclusifs.")
+            raise ValueError("Les arguments 'packages' et 'requirements_file' sont mutuellement exclusifs.")
+
+        if not packages and not requirements_file:
+            self.logger.warning("Aucun paquet ni fichier de requirements n'a été fourni. Aucune action effectuée.")
+            return True
+
+        command_to_run = ""
+        if packages:
+            package_str = " ".join(packages)
+            command_to_run = f"pip install --force-reinstall --no-cache-dir {package_str}"
+        
+        elif requirements_file:
+            # Vérifier si le fichier existe
+            if not (self.project_root / requirements_file).is_file():
+                self.logger.error(f"Le fichier de requirements '{requirements_file}' est introuvable.")
+                return False
+            command_to_run = f"pip install -r {requirements_file}"
+
+        if command_to_run:
+            self.logger.info(f"Exécution de la commande de réparation de dépendances : {command_to_run}")
+            exit_code = self.run_command_in_conda_env(command_to_run)
+            return exit_code == 0
+        
+        return False
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
