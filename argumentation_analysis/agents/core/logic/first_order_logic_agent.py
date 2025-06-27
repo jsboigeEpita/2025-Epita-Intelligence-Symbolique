@@ -562,7 +562,57 @@ class BeliefSetBuilderPlugin:
             belief_set.setSignature(signature) # CRITICAL FIX: Attach the signature to the belief set
 
             # 3. Add formulas
-            # Add atomic facts
+
+            # 3a. Update signature with inferred sort hierarchy (Pass 1)
+            self.logger.debug(f"Mise à jour de la signature avec la hiérarchie de sortes inférée : {self._sort_hierarchy}")
+            for sub_sort_str, super_sorts in self._sort_hierarchy.items():
+                sub_sort_java = java_sorts.get(sub_sort_str)
+                if not sub_sort_java:
+                    continue
+                for super_sort_str in super_sorts:
+                    super_sort_java = java_sorts.get(super_sort_str)
+                    if super_sort_java:
+                        self.logger.info(f"Déclaration de la hiérarchie à la signature Tweety : '{sub_sort_str}' < '{super_sort_str}'")
+                        signature.add(sub_sort_java, super_sort_java)
+                    else:
+                        logger.warning(f"Impossible de déclarer la hiérarchie car la super-sorte '{super_sort_str}' n'a pas été trouvée.")
+
+            # 3b. Add inferred hierarchy formulas (Pass 2)
+            self.logger.debug(f"Ajout des axiomes de hiérarchie de sortes inférés : {self._sort_hierarchy}")
+            for sub_sort_str, super_sorts in self._sort_hierarchy.items():
+                for super_sort_str in super_sorts:
+                    self.logger.info(f"Création de la formule d'implication pour la hiérarchie : {sub_sort_str} -> {super_sort_str}")
+                    ante_pred = java_predicates.get(sub_sort_str)
+                    cons_pred = java_predicates.get(super_sort_str)
+                    j_sort = java_sorts.get(sub_sort_str)
+
+                    if not all([ante_pred, cons_pred, j_sort]):
+                        self.logger.error(f"Impossible de créer l'axiome de hiérarchie pour '{sub_sort_str} -> {super_sort_str}'. "
+                                        f"Éléments manquants : Prédicat Antécédent={'OK' if ante_pred else 'MANQUANT'}, "
+                                        f"Prédicat Conséquent={'OK' if cons_pred else 'MANQUANT'}, "
+                                        f"Sorte={'OK' if j_sort else 'MANQUANTE'}.")
+                        continue
+                    
+                    var_name = sub_sort_str[0].upper() if sub_sort_str else 'X'
+                    j_var = Variable(var_name, j_sort)
+
+                    ante_args = ArrayList()
+                    ante_args.add(j_var)
+                    antecedent = self._create_safe_fol_atom(FolAtom, ante_pred, ante_args)
+                    
+                    cons_args = ArrayList()
+                    cons_args.add(j_var)
+                    consequent = self._create_safe_fol_atom(FolAtom, cons_pred, cons_args)
+
+                    if antecedent and consequent:
+                        implication = Implication(antecedent, consequent)
+                        quantified_formula = ForallQuantifiedFormula(implication, j_var)
+                        belief_set.add(quantified_formula)
+                        self.logger.debug(f"Ajout de la formule de hiérarchie : {str(quantified_formula.toString())}")
+                    else:
+                        self.logger.error(f"Échec de la création de l'atome pour la formule de hiérarchie '{sub_sort_str} -> {super_sort_str}'.")
+
+            # 3c. Add atomic facts
             for fact in self._atomic_facts:
                 if fact.predicate_name in java_predicates:
                     j_pred = java_predicates[fact.predicate_name]
@@ -930,9 +980,21 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             # Simple invocation to get tool suggestions as text
             chat_history = ChatHistory(system_message=self.system_prompt)
             chat_history.add_user_message(text)
-            
-            arguments = KernelArguments(chat_history=chat_history)
-            result = await self._kernel.invoke_prompt(prompt=self.system_prompt, arguments=arguments)
+
+            arguments = KernelArguments()
+
+            # Manually create a KernelFunctionFromPrompt, following this agent's specific pattern
+            prompt_function = KernelFunctionFromPrompt(
+                function_name="get_tool_calls_from_text",
+                plugin_name="Instructions",
+                prompt=self.system_prompt,
+            )
+    
+            # Now invoke the function
+            result = await self._kernel.invoke(
+                function=prompt_function,
+                arguments=KernelArguments(input=text)  # Pass the main text as 'input'
+            )
             llm_response_text = str(result)
             
             # Manually parse and execute the tool calls from the response
@@ -955,10 +1017,9 @@ class FirstOrderLogicAgent(BaseLogicAgent):
 
             return final_belief_set, "Conversion réussie."
 
-        except Exception as e:
-            self.logger.error(f"Exception inattendue dans `text_to_belief_set`: {e}", exc_info=True)
-            # Return an empty but valid belief set to avoid downstream errors
-            return FirstOrderBeliefSet(content="", java_object=None), f"Une erreur est survenue: {e}"
+        except (KernelException, Exception) as e:
+            self.logger.error(f"Exception interceptée dans `text_to_belief_set` ({type(e).__name__}). Re-levée pour un débogage complet.", exc_info=True)
+            raise e
     
     def _extract_json_block(self, text: str) -> str:
         """
