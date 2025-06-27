@@ -36,6 +36,8 @@ Répare les dépendances Python du projet.
 
   Cette stratégie tentera une séquence de méthodes d'installation (standard, sans binaire, etc.) jusqu'à ce que l'une d'entre elles réussisse.
 
+  En dernier recours, si les méthodes `pip` traditionnelles échouent, la stratégie agressive essaiera d'installer une version pré-compilée du paquet (un "wheel" `.whl`) depuis le répertoire `ressources/private/wheels`. Cela est particulièrement utile pour les paquets qui nécessitent une compilation complexe sur Windows.
+
 
 ### `set-path`
 

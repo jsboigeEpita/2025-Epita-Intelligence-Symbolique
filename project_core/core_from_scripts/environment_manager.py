@@ -3,6 +3,8 @@ import sys
 import logging
 import argparse
 import sys
+import os
+import platform
 from pathlib import Path
 from typing import Optional, List, Union, Dict
 
@@ -166,6 +168,38 @@ class EnvironmentManager:
         self.logger.warning("vcvarsall.bat introuvable.")
         return None
 
+    def _get_python_version_for_wheel(self) -> str:
+        """Retourne la version de Python formatée pour les noms de wheels (ex: cp312)."""
+        return f"cp{sys.version_info.major}{sys.version_info.minor}"
+
+    def _try_wheel_install(self, package: str) -> bool:
+        """Tente de deviner et d'installer un wheel précompilé."""
+        if not sys.platform == 'win32':
+            return False
+
+        python_version = self._get_python_version_for_wheel()
+        architecture = 'win_amd64' if platform.architecture()[0] == '64bit' else 'win32'
+        
+        # Heuristique pour JPype1, qui est le cas d'usage principal
+        if package.lower() == 'jpype1':
+            # Exemple: JPype1-1.5.0-cp312-cp312-win_amd64.whl
+            # Note : la version est difficile à deviner, on tente une version commune
+            # Idéalement, il faudrait une API pour lister les versions disponibles
+            versions_to_try = ["1.5.0", "1.4.1", "1.4.0"]
+            for version in versions_to_try:
+                wheel_name = f"{package}-{version}-{python_version}-{python_version}-{architecture}.whl"
+                # L'URL est une supposition, pointant vers pypi.
+                wheel_url = f"https://files.pythonhosted.org/packages/source/J/JPype1/{wheel_name}"
+                
+                self.logger.info(f"Tentative de téléchargement et installation du wheel: {wheel_url}")
+                command = f'pip install "{wheel_url}"'
+                if self.run_command_in_conda_env(command) == 0:
+                    self.logger.info(f"Succès de l'installation via le wheel précompilé '{wheel_name}'.")
+                    return True
+        
+        self.logger.warning(f"Impossible de deviner un wheel pour le paquet '{package}'.")
+        return False
+
     def _aggressive_fix_for_package(self, package: str) -> bool:
         """Applique une séquence de stratégies de réparation pour un seul paquet."""
         
@@ -185,9 +219,15 @@ class EnvironmentManager:
             return True
         self.logger.warning(f"[{package}] L'installation sans binaire a échoué. Passage à la stratégie suivante.")
 
-        # Stratégie 3: Utilisation de vcvarsall.bat (Windows uniquement)
+        # Stratégie 3: Installation via Wheel précompilé (Windows)
+        self.logger.info(f"[{package}] Stratégie 3 : Tentative d'installation via un wheel précompilé...")
+        if self._try_wheel_install(package):
+            return True
+        self.logger.warning(f"[{package}] La recherche de wheel précompilé a échoué. Passage à la stratégie suivante.")
+
+        # Stratégie 4: Utilisation de vcvarsall.bat (Windows uniquement)
         if sys.platform == 'win32':
-            self.logger.info(f"[{package}] Stratégie 3 : Tentative d'installation avec les outils de compilation MSVC...")
+            self.logger.info(f"[{package}] Stratégie 4 : Tentative d'installation avec les outils de compilation MSVC...")
             vcvars_path = self._find_vcvarsall()
             if vcvars_path:
                 # La commande doit être exécutée dans un sous-shell qui a initialisé l'environnement de compilation.

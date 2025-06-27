@@ -3,6 +3,7 @@ from unittest.mock import patch, MagicMock
 from pathlib import Path
 import os
 import sys
+from collections import namedtuple
 
 from project_core.core_from_scripts.environment_manager import EnvironmentManager
 
@@ -78,18 +79,42 @@ class TestEnvironmentManager(unittest.TestCase):
         mock_run_command.assert_any_call('pip install "JPype1"')
         mock_run_command.assert_any_call('pip install --no-binary :all: "JPype1"')
 
-    @patch('project_core.core_from_scripts.environment_manager.EnvironmentManager._find_vcvarsall', return_value=None)
     @patch('project_core.core_from_scripts.environment_manager.EnvironmentManager.run_command_in_conda_env')
-    def test_fix_dependencies_aggressive_strategy_all_fail(self, mock_run_command, mock_find_vcvars):
+    def test_fix_dependencies_aggressive_strategy_all_fail(self, mock_run_command):
         """Test the aggressive strategy when all attempts fail."""
-        mock_run_command.return_value = 1  # All pip commands fail
+        mock_run_command.return_value = 1
         
-        result = self.manager.fix_dependencies(packages=["acme"], strategy='aggressive')
-        
-        self.assertFalse(result)
-        self.assertEqual(mock_run_command.call_count, 2) # It will try the two pip strategies
-        if sys.platform == 'win32':
-             mock_find_vcvars.assert_called_once()
+        with patch('project_core.core_from_scripts.environment_manager.EnvironmentManager._find_vcvarsall', return_value=None) as mock_find_vcvars:
+            result = self.manager.fix_dependencies(packages=["acme"], strategy='aggressive')
+            
+            self.assertFalse(result)
+            self.assertEqual(mock_run_command.call_count, 2)
+            if sys.platform == 'win32':
+                mock_find_vcvars.assert_called_once()
+
+    def test_fix_dependencies_aggressive_strategy_success_on_wheel(self):
+        """Test the aggressive strategy succeeding with the precompiled wheel."""
+        VersionInfo = namedtuple('VersionInfo', ['major', 'minor', 'micro', 'releaselevel', 'serial'])
+        python_version_mock = VersionInfo(major=3, minor=12, micro=0, releaselevel='final', serial=0)
+
+        with patch('sys.platform', 'win32'), \
+             patch('platform.architecture', return_value=('64bit', 'WindowsPE')), \
+             patch('sys.version_info', python_version_mock), \
+             patch('project_core.core_from_scripts.environment_manager.EnvironmentManager.run_command_in_conda_env') as mock_run_command:
+
+            # Echec pour 'pip install', echec pour 'pip --no-binary', succès pour 'pip install wheel_url'
+            mock_run_command.side_effect = [1, 1, 0]
+            
+            result = self.manager.fix_dependencies(packages=["JPype1"], strategy='aggressive')
+            
+            self.assertTrue(result)
+            self.assertEqual(mock_run_command.call_count, 3)
+            
+            expected_wheel_url_part = "JPype1-1.5.0-cp312-cp312-win_amd64.whl"
+            
+            # Vérifier que le troisième appel était bien pour le wheel
+            third_call_args = mock_run_command.call_args_list[2].args[0]
+            self.assertIn(expected_wheel_url_part, third_call_args)
 
 
 if __name__ == '__main__':
