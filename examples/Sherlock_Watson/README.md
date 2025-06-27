@@ -113,6 +113,19 @@ python examples/Sherlock_Watson/agents_logiques_production.py --scenario example
 - Watson validation via raisonnement formel
 ```
 
+### 🎲 **Jeu du Cluedo Logique**
+**Déduction du coupable via analyse d'indices**
+
+```bash
+# Résolution du Cluedo avec analyse logique
+python examples/Sherlock_Watson/agents_logiques_production.py --scenario examples/Sherlock_Watson/cluedo_scenario.json
+
+# Caractéristiques:
+- Analyse des suspects, armes et lieux.
+- Construction d'un graphe de déduction.
+- Identification du coupable sur base des prémisses.
+```
+
 ### 🔮 **Oracle Einstein avec Moriarty**
 **Système d'indices progressifs par Professor Moriarty**
 

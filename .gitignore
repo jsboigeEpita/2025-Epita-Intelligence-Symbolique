@@ -28,8 +28,10 @@ share/python-wheels/
 MANIFEST
 
 # PyInstaller
-# Ces fichiers sont généralement écrits par un script python à partir d'un modèle
-# avant que PyInstaller ne construise l'exe, afin d'y injecter des informations de date/version.
+# Ces fichiers sont généralement écrits par un scrip
+pt python à partir d'un modèle
+# avant que PyInstaller ne construise l'exe, afin d'
+'y injecter des informations de date/version.        
 *.manifest
 *.spec
 
@@ -149,10 +151,12 @@ setup_*.log
 # Archives (si non voulues dans le repo)
 _archives/
 
-# Fichiers spécifiques au projet (regroupés depuis HEAD)
-argumentation_analysis/data/learning_data.json
+# Fichiers spécifiques au projet (regroupés depuis H
+HEAD)
+argumentation_analysis/data/learning_data.json      
 README_TESTS.md
-argumentation_analysis/tests/tools/reports/test_report_*.txt
+argumentation_analysis/tests/tools/reports/test_repo
+ort_*.txt
 results/rhetorical_analysis_*.json
 libs/portable_jdk/
 libs/portable_octave/
@@ -185,7 +189,7 @@ logs/obsolete_documentation_report_*.md
 playwright-report/
 test-results/
 
-# Node.js dependencies (éviter pollution racine)
+# Node.js dependencies (éviter pollution racine)    
 node_modules/
 
 # Temporary files
@@ -213,7 +217,8 @@ validation_outputs_*.txt
 $null
 $outputFile
 
-# Fichiers de résultats et rapports spécifiques non suivis
+# Fichiers de résultats et rapports spécifiques non 
+ suivis
 backend_info.json
 validation_report.md
 phase_c_test_results_*.json
@@ -267,7 +272,7 @@ analyse_trace_complete_*.json
 # Dossier temporaire de l'API web
 services/web_api/_temp_static/
 
-# Fichiers de résultats de tests et de couverture
+# Fichiers de résultats de tests et de couverture   
 *.txt
 coverage_results.txt
 unit_test_results.txt
@@ -290,7 +295,7 @@ temp_backend_runner_*.ps1
 docs/commit_analysis_reports/
 
 # Uvicorn logging configuration
-argumentation_analysis/config/uvicorn_logging.json
+argumentation_analysis/config/uvicorn_logging.json  
 
 # Fichiers de débogage
 *.debug.py
@@ -307,14 +312,17 @@ execution_traces/
 # JDK local lock file
 portable_jdk_locked/
 
-# Ignorer explicitement le dossier de résultats du service manager
+# Ignorer explicitement le dossier de résultats du s
+service manager
 results_service_manager/
 _temp/service_manager_results/
 
-# Fichiers et dossiers temporaires ou de dépendances téléchargées
+# Fichiers et dossiers temporaires ou de dépendances
+s téléchargées
 _temp_downloads/
 node-v*/
 
-# Ignorer les répertoires de cache Python et les fichiers de log
+# Ignorer les répertoires de cache Python et les fic
+chiers de log
 **/__pycache__/
 *.log

@@ -20,7 +20,7 @@ import time
 import uuid
 import logging
 from unittest.mock import MagicMock
-
+import random
 import pytest
 
 from argumentation_analysis.core.communication.message import (
@@ -793,7 +793,6 @@ async def async_test_environment():
     
     logger.info("Async test environment teardown complete")
     
-@pytest.mark.skip(reason="Désactivation temporaire pour débloquer la suite de tests.")
 @pytest.mark.skip(reason="Désactivation temporaire pour débloquer la suite de tests.")
 @pytest.mark.asyncio
 async def test_async_request_response(async_test_environment):
