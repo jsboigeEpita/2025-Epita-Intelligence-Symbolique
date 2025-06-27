@@ -30,8 +30,8 @@ $env:PYTHONPATH = "$PSScriptRoot;$env:PYTHONPATH"
 $childPath = "project_core\core_from_scripts\environment_manager.py"
 $pythonRunner = Join-Path -Path $PSScriptRoot -ChildPath $childPath
 
-# Environnement conda cible
-$condaEnvName = "epita_symbolic_ai"
+# Environnement conda cible (corrigé pour correspondre aux attentes des tests)
+$condaEnvName = "projet-is-roo-new"
 
 # Reconstruit la commande à passer au script Python
 # Reconstruit la commande à passer au script Python.

@@ -28,10 +28,20 @@ class SimpleAnalysisService:
         self.logger = logging.getLogger(__name__)
         self.client = None
         self.initialized = False
+        self.force_mock = os.getenv('FORCE_MOCK_LLM', '0') == '1'
+        if self.force_mock:
+            self.logger.warning("✅ Mode MOCK forcé par la variable d'environnement FORCE_MOCK_LLM.")
 
     async def _initialize_openai(self):
         """Initialise le client OpenAI pour GPT-4o-mini de manière asynchrone."""
         if self.initialized:
+            return
+
+        # Si le mode mock est forcé, on ne tente même pas d'initialiser OpenAI
+        if self.force_mock:
+            self.logger.info("Initialisation OpenAI sautée (mode mock forcé).")
+            self.client = None
+            self.initialized = True
             return
             
         self.logger.info("Initialisation asynchrone du client OpenAI...")

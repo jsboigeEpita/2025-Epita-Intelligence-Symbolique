@@ -757,10 +757,6 @@ async def test_fol_agent_basic():
     
     result = await agent.analyze(test_text)
     
-    print(f"Formules FOL: {result.formulas}")
-    print(f"Cohérence: {result.consistency_check}")
-    print(f"Inférences: {result.inferences}")
-    print(f"Confiance: {result.confidence_score}")
 
 
 if __name__ == "__main__":

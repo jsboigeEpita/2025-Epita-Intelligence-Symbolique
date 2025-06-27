@@ -8,9 +8,7 @@ from argumentation_analysis.mocks.fallacy_detection import MockFallacyDetector
 @pytest.fixture
 def mock_logger():
     """Fixture to mock the logger in the fallacy_detection module."""
-    with mock.patch('logging.getLogger') as mock_get_logger:
-        mock_log = mock.MagicMock()
-        mock_get_logger.return_value = mock_log
+    with mock.patch('argumentation_analysis.mocks.fallacy_detection.logger') as mock_log:
         yield mock_log
 
 @pytest.fixture

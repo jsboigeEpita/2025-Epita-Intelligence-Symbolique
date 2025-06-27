@@ -459,7 +459,8 @@ class TestCLIIntegrationAuthenticity:
         """Test de cohérence de gestion d'erreurs."""
         invalid_tests_args_list = [
             (["--invalid-option", "value"], True, True), # (args, expect_validate_fail, expect_analyze_fail)
-            (["--config", "invalid_config_value_that_does_not_exist"], True, True),
+            (["--logic-type", "invalid"], True, True),
+            (["--mock-level", "invalid"], True, True),
             ([], False, True) # Validate might pass with no args (default), Analyze needs text/file
         ]
         
@@ -483,6 +484,8 @@ class TestCLIIntegrationAuthenticity:
                 analyze_result = subprocess.run(current_analyze_cmd, capture_output=True, text=True, timeout=30, check=False, encoding='utf-8')
                 if expect_analyze_fail:
                     assert analyze_result.returncode != 0, f"Analyze script should fail for {invalid_args_item}. stderr: {analyze_result.stderr}"
+                    if any("invalid" in str(arg) for arg in invalid_args_item):
+                        assert "invalid choice" in analyze_result.stderr.lower()
                 
             except subprocess.TimeoutExpired:
                 pytest.skip(f"Timeout pour test d'erreur {invalid_args_item}")

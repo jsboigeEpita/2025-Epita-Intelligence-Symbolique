@@ -333,8 +333,6 @@ if __name__ == "__main__":
     context = "Discours commercial pour un produit controversé"
     
     results = analyzer.analyze_context(text, context)
-    print(f"Résultats de l'analyse contextuelle: {json.dumps(results, indent=2, ensure_ascii=False)}")
     
     # Exemple d'identification de sophismes contextuels
     fallacies = analyzer.identify_contextual_fallacies(text, context)
-    print(f"Sophismes contextuels identifiés: {json.dumps(fallacies, indent=2, ensure_ascii=False)}")

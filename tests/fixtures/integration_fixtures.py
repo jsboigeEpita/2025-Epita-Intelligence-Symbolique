@@ -47,34 +47,10 @@ from unittest.mock import MagicMock
 _REAL_JPYPE_MODULE = jpype if hasattr(jpype, 'isJVMStarted') and not isinstance(jpype, MagicMock) else None
 _JPYPE_MODULE_MOCK_OBJ_GLOBAL = jpype if isinstance(jpype, MagicMock) else MagicMock(name="fallback_jpype_mock_obj_global_in_integration_fixtures")
 
-@pytest.fixture(scope="session")
-def jvm_session(request):
-    """
-    Fixture de portée session qui initialise la JVM de manière paresseuse (lazy).
-
-    Cette fixture garantit que la JVM est démarrée une seule fois pour toute la
-    session de test, mais uniquement lorsque le premier test qui en a besoin
-    l'appelle. Le nettoyage est géré par le hook `pytest_sessionfinish`.
-    """
-    fixture_logger = logging.getLogger("tests.fixtures.jvm_session_fixture")
-    fixture_logger.info("--- Entrée dans la fixture 'jvm_session' ---")
-
-    if not jpype.isJVMStarted():
-        fixture_logger.info("La JVM n'est pas démarrée. Tentative d'initialisation...")
-        initialized = initialize_jvm(session_fixture_owns_jvm=True)
-        if not initialized:
-            pytest.fail(
-                "L'initialisation de la JVM a échoué dans la fixture 'jvm_session'.",
-                pytrace=False
-            )
-        fixture_logger.info("JVM initialisée avec succès par la fixture 'jvm_session'.")
-    else:
-        fixture_logger.info("La JVM était déjà démarrée. La fixture 'jvm_session' n'a rien fait.")
-
-    yield jpype
-
-    fixture_logger.info("--- Sortie de la fixture 'jvm_session'. Le nettoyage sera fait par pytest_sessionfinish. ---")
-
+# La fixture jvm_session est maintenant centralisée dans le conftest.py principal.
+# Toutes les fixtures ici qui ont besoin de la JVM doivent simplement la déclarer
+# en tant que dépendance, et pytest la fournira depuis conftest.py.
+# La fixture redondante a été supprimée pour éviter les conflits et les doubles initialisations.
 
 @pytest.fixture(scope="session")
 def tweety_classpath_initializer(jvm_session):
