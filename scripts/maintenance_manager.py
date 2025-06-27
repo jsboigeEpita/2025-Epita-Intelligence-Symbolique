@@ -13,6 +13,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from project_core.managers.repository_manager import RepositoryManager
 from project_core.core_from_scripts.cleanup_manager import CleanupManager
 from project_core.core_from_scripts.environment_manager import EnvironmentManager
+from project_core.core_from_scripts.organization_manager import OrganizationManager
 
 def handle_repo_commands(args):
     """
@@ -64,6 +65,28 @@ def handle_env_commands(args):
         else:
             print(f"Environment '{args.validate}' is invalid.")
 
+def handle_organize_commands(args):
+    """
+    Handles commands related to project organization.
+    """
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    manager = OrganizationManager(project_root)
+
+    if args.target == 'results':
+        print("Organizing the 'results' directory...")
+        report = manager.organize_results_directory()
+        if report["errors"]:
+            print("Errors occurred:")
+            for error in report["errors"]:
+                print(f"- {error}")
+        else:
+            print("Successfully organized the 'results' directory.")
+            print(f"  - Archived: {report['archived']}")
+            print(f"  - Files moved: {len(report['files_moved'])}")
+            print(f"  - README generated: {report['readme_generated']}")
+    else:
+        print(f"Unknown target for organization: {args.target}")
+
 def main():
     """
     Main function for the Maintenance Manager CLI.
@@ -87,6 +110,10 @@ def main():
     env_group.add_argument('--switch-to', metavar='NAME', help='Switch the main .env file to the specified environment')
     env_group.add_argument('--create', metavar='NAME', help='Create a new environment file from the template')
     env_group.add_argument('--validate', metavar='NAME', help='Validate an environment file against the template')
+
+    # 'organize' command
+    organize_parser = subparsers.add_parser('organize', help='Organize project directories')
+    organize_parser.add_argument('--target', required=True, choices=['results'], help='The target directory to organize')
     
     args = parser.parse_args()
 
@@ -102,6 +129,8 @@ def main():
             project_parser.print_help()
     elif args.command == 'env':
         handle_env_commands(args)
+    elif args.command == 'organize':
+        handle_organize_commands(args)
     else:
         parser.print_help()
 
