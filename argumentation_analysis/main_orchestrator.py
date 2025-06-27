@@ -101,7 +101,7 @@ async def main():
     from argumentation_analysis.paths import LIBS_DIR
     logging.info("Tentative d'initialisation de la JVM...")
     # La fonction initialize_jvm gère maintenant aussi le téléchargement des JARs
-    jvm_ready_status = initialize_jvm(lib_dir_path=LIBS_DIR)
+    jvm_ready_status = initialize_jvm()
 
     if jvm_ready_status:
         logging.info("[OK] JVM initialisée avec succès ou déjà active.")

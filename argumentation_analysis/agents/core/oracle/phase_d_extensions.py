@@ -442,7 +442,7 @@ class PhaseDExtensions:
         CRITICAL_THRESHOLD = 7.0
         if final_score < CRITICAL_THRESHOLD:
             alert_message = f"CRITICAL: Narrative quality degradation detected! Score: {final_score:.2f}, Threshold: {CRITICAL_THRESHOLD}"
-            print(alert_message)  # Ou utiliser un logger de haut niveau
+            logger_main.critical(alert_message)
             # Idéalement, ici on pourrait notifier un système externe
         
         return metrics
@@ -586,23 +586,3 @@ if __name__ == "__main__":
         "J'ai le Colonel Moutarde dans mes cartes !",
         0.9
     )
-    print("RÉVÉLATION PROGRESSIVE:")
-    print(revelation)
-    print("\n" + "="*60 + "\n")
-    
-    # Test fausse piste
-    false_setup, misdirection, true_reveal = extensions.create_false_lead_sequence(
-        "J'ai le Revolver ET le Chandelier !"
-    )
-    print("SÉQUENCE FAUSSE PISTE:")
-    print(f"Setup: {false_setup}")
-    print(f"Misdirection: {misdirection}")
-    print(f"Révélation: {true_reveal}")
-    print("\n" + "="*60 + "\n")
-    
-    # Test polish conversationnel
-    watson_content = extensions.apply_conversational_polish("Watson", "C'est une déduction brillante !")
-    print("POLISH CONVERSATIONNEL:")
-    print(f"Watson: {watson_content}")
-    
-    print("\n[OK] Extensions Phase D testées avec succès !")
