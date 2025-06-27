@@ -4,7 +4,7 @@
 import pytest
 import os
 from unittest.mock import patch
-from argumentation_analysis.utils.core_utils.crypto_utils import (
+from argumentation_analysis.core.utils.crypto_utils import (
     derive_encryption_key,
     load_encryption_key,
     encrypt_data_with_fernet,
@@ -43,36 +43,51 @@ def test_load_encryption_key_from_arg():
     loaded_key = load_encryption_key(passphrase_arg=passphrase_arg)
     assert loaded_key == expected_key
 
-@patch.dict(os.environ, {"TEST_CRYPTO_KEY_VAR": "env_passphrase"}, clear=True)
-def test_load_encryption_key_from_env():
-    """Teste le chargement de la clé depuis une variable d'environnement."""
-    env_var_name = "TEST_CRYPTO_KEY_VAR"
-    expected_key = derive_encryption_key("env_passphrase")
+@patch.dict(os.environ, {}, clear=True)
+@patch('argumentation_analysis.core.utils.crypto_utils.settings')
+def test_load_encryption_key_from_settings(mock_settings):
+    """Teste le chargement de la clé depuis la configuration centrale."""
+    passphrase = "settings_passphrase"
+    mock_settings.passphrase.get_secret_value.return_value = passphrase
+    mock_settings.passphrase_arg = None # Assurer que l'argument direct n'est pas utilisé
     
-    loaded_key = load_encryption_key(env_var_name=env_var_name)
+    expected_key = derive_encryption_key(passphrase)
+    
+    # Configure la valeur de retour pour le mock settings
+    loaded_key = load_encryption_key() # Ne pas passer d'argument direct
+    
     assert loaded_key == expected_key
+    mock_settings.passphrase.get_secret_value.assert_called_once()
 
-@patch.dict(os.environ, {"TEST_CRYPTO_KEY_VAR": "env_passphrase_override"}, clear=True)
-def test_load_encryption_key_arg_priority_over_env():
-    """Teste que l'argument passphrase a la priorité sur la variable d'environnement."""
+@patch('argumentation_analysis.core.utils.crypto_utils.settings')
+def test_load_encryption_key_arg_priority_over_settings(mock_settings):
+    """Teste que l'argument passphrase a la priorité sur la configuration centrale."""
     passphrase_arg = "priority_passphrase"
-    env_var_name = "TEST_CRYPTO_KEY_VAR" # Cette variable existe mais doit être ignorée
+    
+    # Même si les settings existent, ils ne devraient pas être utilisés
+    mock_settings.passphrase.get_secret_value.return_value = "should_be_ignored"
     
     expected_key = derive_encryption_key(passphrase_arg)
-    loaded_key = load_encryption_key(passphrase_arg=passphrase_arg, env_var_name=env_var_name)
+    loaded_key = load_encryption_key(passphrase_arg=passphrase_arg)
+    
     assert loaded_key == expected_key
+    mock_settings.passphrase.get_secret_value.assert_not_called()
 
 @patch.dict(os.environ, {}, clear=True)
-def test_load_encryption_key_no_source():
+@patch('argumentation_analysis.core.utils.crypto_utils.settings', passphrase=None)
+def test_load_encryption_key_no_source(mock_settings):
     """Teste le cas où aucune source de passphrase n'est disponible."""
     loaded_key = load_encryption_key()
     assert loaded_key is None
 
-@patch.dict(os.environ, {"EMPTY_PASSPHRASE_VAR": ""}, clear=True)
-def test_load_encryption_key_empty_env_passphrase():
-    """Teste le cas où la variable d'environnement contient une passphrase vide."""
-    loaded_key = load_encryption_key(env_var_name="EMPTY_PASSPHRASE_VAR")
-    assert loaded_key is None # derive_encryption_key retourne None pour une passphrase vide
+@patch('argumentation_analysis.core.utils.crypto_utils.settings')
+def test_load_encryption_key_empty_settings_passphrase(mock_settings):
+    """Teste le cas où la configuration centrale contient une passphrase vide."""
+    mock_settings.passphrase.get_secret_value.return_value = ""
+    mock_settings.passphrase_arg = None
+    
+    loaded_key = load_encryption_key()
+    assert loaded_key is None
 
 # Tests pour encrypt_data_with_fernet et decrypt_data_with_fernet
 def test_fernet_encryption_decryption_cycle():

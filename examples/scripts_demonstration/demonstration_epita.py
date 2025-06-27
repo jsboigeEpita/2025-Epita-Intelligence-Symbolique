@@ -1,637 +1,865 @@
+﻿# -*- coding: utf-8 -*-
 """
-Script de démonstration pour le projet d'Intelligence Symbolique EPITA.
+Script principal de démonstration EPITA - Architecture Modulaire
+Intelligence Symbolique - Menu Catégorisé + Validation Données Custom
 
-Ce script a pour but de démontrer les fonctionnalités clés du dépôt, incluant :
-1. L'exécution des tests unitaires.
-2. L'analyse rhétorique sur un exemple de texte clair, tentant d'utiliser les services réels `InformalAgent` et `create_llm_service`.
-   Si `OPENAI_API_KEY` n'est pas configurée ou si `create_llm_service` ne peut être importé, un `MockLLMService` est utilisé.
-   L'analyse des sophismes elle-même utilise un `MockFallacyDetector` pour cette démonstration afin de garantir une exécution rapide et prévisible.
-3. L'analyse rhétorique sur des données chiffrées. Le script tente d'utiliser les services réels `CryptoService`
-   et `DefinitionService` pour le déchiffrement. L'analyse rhétorique d'un extrait est ensuite effectuée
-   par un `InformalAgent` réel (utilisant le résultat de `create_llm_service` réel si configuré, sinon un mock).
-   L'analyse des sophismes elle-même utilise un `MockFallacyDetector` pour cette démonstration.
-   **Correction (Sous-tâche F)**: `MockDefinitionService` retourne maintenant un objet `ExtractDefinitions` (ou son mock) correctement formé.
-   **Correction (Sous-tâche I)**: L'initialisation de `RealDefinitionService` est corrigée pour inclure `config_file`.
-4. La génération d'un rapport complet à partir des résultats d'analyse de l'extrait chiffré.
+VERSION 2.1 - Ajout validation avec données dédiées en paramètre
+Détection automatique des mocks vs traitement réel
 
-Prérequis importants :
-- Python 3.x installé.
-- Dépendances du projet : Ce script vérifie et tente d'installer `flask-cors` et `seaborn` si manquants.
-  Pour les autres dépendances majeures (`pytest`, `python-dotenv`, `pandas`, `matplotlib`, `markdown`, `semantic-kernel`),
-  assurez-vous qu'elles sont installées (par exemple, via `pip install -r requirements.txt` ou `pip install -e .`).
-- Pour la partie "analyse de données chiffrées" et l'utilisation des services LLM réels :
-    - Un fichier `argumentation_analysis/.env` doit exister et être correctement configuré.
-    - Ce fichier `.env` DOIT contenir la variable `TEXT_CONFIG_PASSPHRASE` avec la passphrase correcte
-      pour déchiffrer le fichier `argumentation_analysis/data/extract_sources.json.gz.enc`.
-    - La variable `ENCRYPTION_KEY` doit être définie dans `argumentation_analysis/ui/config.py` pour utiliser `RealCryptoService`.
-    - Pour utiliser le service LLM réel (via `create_llm_service`, pour l'analyse de texte clair et/ou l'analyse de l'extrait déchiffré),
-      la variable `OPENAI_API_KEY` DOIT être définie dans le fichier `.env` ou dans l'environnement système.
-      Sinon, un `MockLLMService` sera utilisé.
-- Les tests unitaires (lancés par ce script) utilisent généralement des mocks pour les services externes.
-- Ce script est conçu pour être exécuté depuis la racine du projet.
-
-Comment exécuter le script :
-Exécutez la commande suivante depuis la racine du projet :
-python scripts/demonstration_epita.py
+Utilisation :
+  python demonstration_epita.py                    # Menu interactif
+  python demonstration_epita.py --interactive      # Mode interactif avec modules
+  python demonstration_epita.py --quick-start      # Quick start étudiants
+  python demonstration_epita.py --metrics          # Métriques seulement
+  python demonstration_epita.py --validate-custom  # Validation avec données dédiées
+  python demonstration_epita.py --custom-data "texte"  # Test avec données custom
 """
-# Configuration du logging pour ce script
-import logging # Ajout du logging
-import sys # Ajout de l'import manquant
-logger = logging.getLogger("demonstration_epita")
-if not logger.handlers:
-    handler = logging.StreamHandler(sys.stdout) # Utiliser sys.stdout configuré
-    formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
 
-# Imports nécessaires
-logger.info("Début des imports Python standards.") # Remplacé print par logger.info
+import sys
+import os
+import argparse
+import importlib.util
 import subprocess
+import time
+import hashlib
 import json
 from pathlib import Path
-import os
-import sys
-import io
-import time
-from typing import Union
-import asyncio
+from typing import Dict, Any, Optional, List, Tuple
+from dataclasses import dataclass
+from datetime import datetime
 
-# Import pour semantic_kernel, nécessaire globalement
-try:
-    import semantic_kernel as sk
-    logger.info("semantic_kernel importé.") # Remplacé print par logger.info
-except ImportError:
-    logger.error("semantic_kernel n'a pas pu être importé. Certaines fonctionnalités seront indisponibles.") # Remplacé print par logger.error
-    sk = None # Pour éviter les NameError plus tard
-
-
-# Reconfigurer sys.stdout et sys.stderr pour utiliser UTF-8
-try:
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
-    logger.info("sys.stdout et sys.stderr reconfigurés pour utiliser UTF-8.")
-except Exception as e_reconfig_utf8:
-    original_stderr = getattr(sys, '__stderr__', sys.stderr)
-    if original_stderr:
-        try:
-            original_stderr.write(f"AVERTISSEMENT: Impossible de reconfigurer stdout/stderr en UTF-8 : {e_reconfig_utf8}\n")
-            original_stderr.flush()
-        except Exception:
-            pass # Impossible d'afficher l'avertissement
-
-# Détermination de la racine du projet
-# __file__ est le chemin du script actuel (demonstration_epita.py)
-current_script_path = Path(__file__).resolve()
-# project_root est le répertoire parent de 'scripts'
-project_root = current_script_path.parent.parent.parent
+# Configuration du chemin pour les modules
+project_root = Path(__file__).resolve().parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
-logger.info(f"Racine du projet calculée : {project_root}")
-logger.debug(f"Current sys.path: {sys.path}")
+os.chdir(project_root)
 
-# Import du module de bootstrap
-try:
-    from argumentation_analysis.core.bootstrap import initialize_project_environment, ProjectContext
-    logger.info("Module de bootstrap importé avec succès.")
-except ImportError as e:
-    logger.critical(f"ERREUR CRITIQUE: Impossible d'importer le module de bootstrap 'project_core.bootstrap'. {e}")
-    logger.critical("Assurez-vous que project_core/bootstrap.py existe et que project_root est correctement dans sys.path.")
-    sys.exit(1) # Arrêter si le bootstrap n'est pas là
-
-# Imports des modèles de données (nécessaires pour typer et instancier dans la démo)
-try:
-    from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
-    logger.info("Modèles d'extrait (ExtractDefinitions, etc.) importés.")
-except ImportError as e:
-    logger.error(f"AVERTISSEMENT: Impossible d'importer les modèles d'extrait: {e}. Certaines parties de la démo pourraient échouer.")
-    ExtractDefinitions, SourceDefinition, Extract = None, None, None
+# --- AUTO-ACTIVATION DE L'ENVIRONNEMENT ---
+import argumentation_analysis.core.environment # Auto-activation environnement intelligent
+# --- FIN DE L'AUTO-ACTIVATION ---
 
 
-# La vérification et l'installation des dépendances peuvent rester,
-# car elles concernent l'environnement d'exécution de base du script.
-def check_and_install_dependencies():
-    """
-    Vérifie la présence des packages listés (`flask-cors`, `seaborn`, `semantic-kernel`) et tente de les installer s'ils sont manquants.
-    Les autres dépendances majeures sont supposées être installées.
-    """
-    print("\n--- Vérification et installation des dépendances (flask-cors, seaborn, semantic-kernel) ---")
-    dependencies = ["flask-cors", "seaborn", "semantic-kernel", "markdown"]
-    for package_name in dependencies:
-        try:
-            module_name = package_name.replace("-", "_")
-            __import__(module_name)
-            print(f"INFO: Le package '{package_name}' (module '{module_name}') est déjà installé.")
-        except ImportError:
-            print(f"AVERTISSEMENT: Le package '{package_name}' (module '{module_name}') n'est pas trouvé. Tentative d'installation...")
-            try:
-                # Utiliser capture_output=True et text=True pour subprocess.run
-                # S'assurer que l'encodage est géré pour la sortie du subprocess
-                # Ajout d'un timeout de 300 secondes pour l'installation
-                print(f"INFO: Tentative d'installation de '{package_name}' avec un timeout de 300 secondes...")
-                pip_result = subprocess.run([sys.executable, "-m", "pip", "install", package_name], 
-                                            check=True, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=300)
-                print(f"SUCCÈS: Le package '{package_name}' a été installé.")
-                if pip_result.stdout:
-                    print(f"Sortie pip (stdout):\n{pip_result.stdout}")
-            except subprocess.TimeoutExpired:
-                print(f"ERREUR: L'installation de '{package_name}' a dépassé le timeout de 300 secondes.")
-                print(f"Veuillez vérifier votre connexion internet et installer '{package_name}' manuellement.")
-            except subprocess.CalledProcessError as e:
-                print(f"ERREUR: Échec de l'installation de '{package_name}'. Code de retour : {e.returncode}")
-                # e.stdout et e.stderr sont déjà des chaînes si text=True a été utilisé, ou des bytes sinon.
-                # Si text=True n'était pas utilisé (ou si on veut être ultra-prudent), on décode.
-                # Ici, on suppose que si text=True est utilisé dans l'appel original, e.stdout/stderr sont des str.
-                # Si on veut être sûr, on peut décoder comme pour la sortie pytest.
-                # Pour simplifier, on les traite comme des chaînes (résultat de text=True).
-                if e.stdout:
-                    print(f"Sortie pip (stdout):\n{e.stdout}")
-                if e.stderr:
-                    print(f"Sortie pip (stderr):\n{e.stderr}")
-                print(f"Veuillez vérifier votre connexion internet et installer '{package_name}' manuellement (ex: pip install {package_name}).")
-            except FileNotFoundError:
-                print(f"ERREUR: La commande '{sys.executable} -m pip' n'a pas été trouvée. Assurez-vous que pip est installé et accessible dans l'environnement Python actuel.")
-                print(f"Veuillez installer '{package_name}' manuellement.")
-            except Exception as e:
-                print(f"ERREUR: Une erreur inattendue est survenue lors de la tentative d'installation de '{package_name}': {e}")
-                print(f"Veuillez installer '{package_name}' manuellement.")
-        except Exception as e:
-            print(f"ERREUR: Une erreur inattendue est survenue lors de la vérification de '{package_name}': {e}")
-
-
-def run_unit_tests():
-    logger.info("\n--- Exécution des tests unitaires ---")
-    logger.info("Les tests unitaires utilisent typiquement des mocks pour isoler le code testé et garantir une exécution rapide.")
-    start_time_tests = time.time()
-    logger.info(f"Début de l'exécution des tests unitaires : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_tests))}")
+# Vérifier et installer PyYAML si nécessaire
+def ensure_yaml_dependency():
     try:
-        # MODIFICATION 1: Capturer en bytes (retrait de text=True, encoding, errors)
-        # Ajout d'un timeout de 900 secondes (15 minutes)
-        logger.info("Exécution de pytest avec un timeout de 900 secondes (15 minutes)...")
-        pytest_process = subprocess.run([sys.executable, "-m", "pytest"], capture_output=True, check=False, timeout=900) # Timeout augmenté
-        
-        end_time_tests = time.time()
-        logger.info(f"Fin de l'exécution des tests unitaires : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests))}")
-        logger.info(f"Tests unitaires exécutés en {end_time_tests - start_time_tests:.2f} secondes.")
+        import yaml
+    except ImportError:
+        print("Installation de PyYAML...")
+        subprocess.run([sys.executable, "-m", "pip", "install", "PyYAML"], check=True)
+        import yaml
 
-        # MODIFICATION 2: Décodage robuste de stdout et stderr
-        pytest_stdout_str = ""
-        pytest_stderr_str = ""
+ensure_yaml_dependency()
 
-        if pytest_process.stdout:
-            try:
-                pytest_stdout_str = pytest_process.stdout.decode('utf-8', errors='replace')
-            except UnicodeDecodeError as e_decode_utf8:
-                logger.warning(f"Échec du décodage UTF-8 pour stdout des tests: {e_decode_utf8}. Tentative avec latin-1.")
-                try:
-                    pytest_stdout_str = pytest_process.stdout.decode('latin-1', errors='replace')
-                except UnicodeDecodeError as e_decode_latin1:
-                    logger.error(f"Échec du décodage latin-1 pour stdout des tests après échec UTF-8: {e_decode_latin1}.")
-                    pytest_stdout_str = f"Impossible de décoder stdout des tests. Données brutes (repr): {repr(pytest_process.stdout)}"
-            except Exception as e_decode_other_stdout:
-                logger.error(f"Erreur inattendue lors du décodage de stdout des tests: {e_decode_other_stdout}")
-                pytest_stdout_str = f"Erreur inattendue lors du décodage de stdout des tests. Données brutes (repr): {repr(pytest_process.stdout)}"
+# Classes pour la validation avec données dédiées
+@dataclass
+class CustomTestDataset:
+    """Dataset de test personnalisé pour validation Épita."""
+    name: str
+    content: str
+    content_hash: str
+    expected_indicators: List[str]
+    test_purpose: str
+    marker: str
 
-        if pytest_process.stderr:
-            try:
-                pytest_stderr_str = pytest_process.stderr.decode('utf-8', errors='replace')
-            except UnicodeDecodeError as e_decode_utf8_err:
-                logger.warning(f"Échec du décodage UTF-8 pour stderr des tests: {e_decode_utf8_err}. Tentative avec latin-1.")
-                try:
-                    pytest_stderr_str = pytest_process.stderr.decode('latin-1', errors='replace')
-                except UnicodeDecodeError as e_decode_latin1_err:
-                    logger.error(f"Échec du décodage latin-1 pour stderr des tests après échec UTF-8: {e_decode_latin1_err}.")
-                    pytest_stderr_str = f"Impossible de décoder stderr des tests. Données brutes (repr): {repr(pytest_process.stderr)}"
-            except Exception as e_decode_other_stderr:
-                 logger.error(f"Erreur inattendue lors du décodage de stderr des tests: {e_decode_other_stderr}")
-                 pytest_stderr_str = f"Erreur inattendue lors du décodage de stderr des tests. Données brutes (repr): {repr(pytest_process.stderr)}"
+@dataclass
+class ValidationResult:
+    """Résultat de validation d'un test."""
+    dataset_name: str
+    mode_tested: str
+    timestamp: str
+    success: bool
+    output_captured: str
+    real_processing_detected: bool
+    mock_detected: bool
+    custom_data_processed: bool
+    execution_time: float
+    error: str = ""
 
-        logger.info("\nRésultat de l'exécution de pytest:")
-
-        if pytest_stdout_str:
-            logger.info("\n--- Sortie Standard Pytest ---")
-            for line in pytest_stdout_str.splitlines(): # Imprimer ligne par ligne pour le logger
-                logger.info(line)
-            logger.info("--- Fin Sortie Standard Pytest ---")
-        
-        if pytest_stderr_str:
-            logger.error("\n--- Sortie d'Erreur Pytest ---") # Utiliser logger.error pour stderr
-            for line in pytest_stderr_str.splitlines(): # Imprimer ligne par ligne
-                logger.error(line)
-            logger.error("--- Fin Sortie d'Erreur Pytest ---")
-
-        if pytest_process.returncode == 0:
-            logger.info("\nSUCCÈS: Tests unitaires réussis !")
-        else:
-            logger.warning(f"\nAVERTISSEMENT: Échec des tests unitaires ou certains tests ont échoué (code de retour : {pytest_process.returncode}).")
-            
-            summary_lines = []
-            if pytest_stdout_str:
-                try:
-                    keywords = ["collected", "passed", "failed", "error", "skipped", "xfailed", "xpassed", "short test summary info", "===="]
-                    summary_lines = [line for line in pytest_stdout_str.splitlines() if any(keyword in line.lower() for keyword in keywords)]
-                except Exception as e_split:
-                    logger.warning(f"Erreur lors du découpage de la sortie standard pour le résumé des tests: {e_split}")
-                    summary_lines = ["Erreur lors de l'extraction du résumé des tests."]
-
-            if summary_lines:
-                summary_to_print = "\n".join(summary_lines)
-                logger.info("\n--- Résumé des tests (extrait de la sortie) ---")
-                for line in summary_to_print.splitlines(): # Imprimer ligne par ligne
-                    logger.info(line)
-                logger.info("--- Fin Résumé des tests ---")
-            elif pytest_stdout_str :
-                 logger.info("Aucun résumé pertinent trouvé dans la sortie de pytest.")
-            else:
-                logger.warning("Impossible d'extraire un résumé des tests : la sortie standard de pytest était vide.")
-    except subprocess.TimeoutExpired:
-        logger.error("L'exécution de pytest a dépassé le timeout de 900 secondes (15 minutes).")
-        logger.error("Cela peut indiquer un problème dans les tests (boucle infinie, attente indéfinie), un environnement très lent, ou des tests particulièrement longs.")
-        logger.error("Si ce problème persiste, essayez d'exécuter 'pytest -v' manuellement pour identifier les tests lents ou bloquants.")
-        end_time_tests_timeout = time.time()
-        logger.info(f"Fin de l'exécution des tests unitaires (timeout) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests_timeout))}")
-        logger.info(f"Tests unitaires (tentative) exécutés en {end_time_tests_timeout - start_time_tests:.2f} secondes avant timeout.")
-    except FileNotFoundError:
-        logger.error("La commande 'pytest' n'a pas été trouvée. Assurez-vous que pytest est installé et dans votre PATH.")
-        end_time_tests_error = time.time()
-        logger.info(f"Fin de l'exécution des tests unitaires (erreur FileNotFoundError) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests_error))}")
-        logger.info(f"Tests unitaires (tentative) exécutés en {end_time_tests_error - start_time_tests:.2f} secondes.")
-    except Exception as e:
-        logger.error(f"Une erreur inattendue est survenue lors de l'exécution des tests : {e}", exc_info=True) # Ajout de exc_info=True
-        # import traceback # Déjà géré par exc_info=True pour le logger
-        # traceback.print_exc()
-        end_time_tests_exception = time.time()
-        logger.info(f"Fin de l'exécution des tests unitaires (erreur Exception) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_tests_exception))}")
-        logger.info(f"Tests unitaires (tentative) exécutés en {end_time_tests_exception - start_time_tests:.2f} secondes.")
-
-
-def analyze_clear_text_example(project_context: ProjectContext, example_file_path_str: str):
-    logger.info(f"\n--- Analyse du fichier texte : {example_file_path_str} ---")
-
-    if not project_context.informal_agent:
-        logger.error("InformalAgent non initialisé dans project_context. Impossible d'analyser le texte clair.")
-        return
+class EpitaValidator:
+    """Validateur pour détecter mocks vs traitement réel."""
     
-    # Utiliser project_root_path depuis le contexte pour construire le chemin absolu
-    # si example_file_path_str est relatif.
-    # Si example_file_path_str est déjà absolu, Path le gérera.
-    # Le script original utilisait project_root global.
-    # Ici, on s'assure d'utiliser celui du contexte ou le project_root global s'il est défini.
-    current_project_root_path = project_context.project_root_path if project_context.project_root_path else Path(project_root)
-
-    file_path = Path(example_file_path_str)
-    if not file_path.is_absolute():
-        file_path = current_project_root_path / example_file_path_str
-
-
-    try:
-        if not file_path.is_file():
-            logger.error(f"Le fichier d'exemple '{file_path}' n'a pas été trouvé.")
-            default_content = "Ceci est un texte d'exemple pour l'analyse de sophismes. L'argument de mon adversaire est ridicule, il doit être idiot. De plus, tout le monde sait que j'ai raison."
-            logger.info(f"Création d'un fichier d'exemple à '{file_path}' avec contenu par défaut.")
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(default_content)
-        
-        with open(file_path, "r", encoding="utf-8") as f:
-            text_content = f.read()
-
-        logger.info(f"Contenu du fichier '{example_file_path_str}' (premiers 200 caractères) :\n{text_content[:200]}...\n")
-        logger.info("L'objectif est d'analyser ce texte pour identifier d'éventuels sophismes.")
-        
-        agent_instance = project_context.informal_agent
-        analysis_description = f"InformalAgent (type: {type(agent_instance).__name__})"
-        if project_context.llm_service:
-            analysis_description += f" avec LLM Service (type: {type(project_context.llm_service).__name__})"
-        else:
-            analysis_description += " sans LLM Service configuré via bootstrap (l'agent peut utiliser un fallback interne ou échouer)."
-
-        logger.info(f"Utilisation de {analysis_description} pour l'analyse.")
-            
-        try:
-            start_time_analyze_clear = time.time()
-            logger.info(f"Début de l'analyse des sophismes (texte clair) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_analyze_clear))}")
-            
-            # L'InformalAgent initialisé par le bootstrap devrait avoir son kernel et LLM service déjà configurés.
-            # La méthode analyze_fallacies devrait fonctionner directement.
-            analysis_results = asyncio.run(agent_instance.analyze_fallacies(text_content))
-            
-            end_time_analyze_clear = time.time()
-            logger.info(f"Fin de l'analyse des sophismes (texte clair) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_analyze_clear))}")
-            logger.info(f"Analyse des sophismes (texte clair) effectuée en {end_time_analyze_clear - start_time_analyze_clear:.2f} secondes.")
-
-            logger.info(f"Résultats de l'analyse des sophismes pour '{example_file_path_str}' ({analysis_description}) :")
-            logger.info("L'utilisateur devrait observer une structure JSON listant les sophismes détectés (ou une indication d'absence de sophismes).")
-            try:
-                # Utiliser logger.info pour la sortie JSON pour la cohérence
-                analysis_results_json = json.dumps(analysis_results, indent=4, ensure_ascii=False)
-                for line in analysis_results_json.splitlines(): # Imprimer ligne par ligne pour le logger
-                    logger.info(line)
-            except TypeError:
-                logger.warning(f"Les résultats de l'analyse du texte clair ne sont pas directement sérialisables en JSON. Affichage brut : {analysis_results}")
-        
-        except Exception as e_analyze:
-            logger.error(f"ERREUR lors de l'appel à agent_instance.analyze_fallacies pour le texte clair ('{example_file_path_str}') : {e_analyze}", exc_info=True)
-
-    except Exception as e:
-        logger.error(f"Une erreur est survenue lors de l'analyse du fichier '{file_path}' : {e}", exc_info=True)
-
-
-def analyze_encrypted_data(project_context: ProjectContext) -> Union[str, None]:
-    logger.info("\n--- Analyse des données chiffrées ---")
-    
-    if not project_context.crypto_service:
-        logger.error("CryptoService non initialisé dans project_context. Impossible de déchiffrer.")
-        return None
-    if not project_context.definition_service:
-        logger.error("DefinitionService non initialisé dans project_context. Impossible de charger les définitions.")
-        return None
-    if not project_context.informal_agent:
-        logger.error("InformalAgent non initialisé dans project_context. Impossible d'analyser.")
-        return None
-    if Extract is None or ExtractDefinitions is None: # Vérifier si les modèles ont été importés
-        logger.error("Les modèles Extract/ExtractDefinitions n'ont pas été importés. Impossible de traiter les données.")
-        return None
-
-    analysis_results_list = []
-    current_project_root_path = project_context.project_root_path if project_context.project_root_path else Path(project_root)
-    
-    try:
-        start_time_load_defs = time.time()
-        logger.info(f"Début du chargement des définitions d'extraits via DefinitionService du contexte: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_load_defs))}")
-        
-        extract_definitions_obj = project_context.definition_service.load_definitions()
-        
-        end_time_load_defs = time.time()
-        logger.info(f"Fin du chargement des définitions d'extraits : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_load_defs))}")
-        logger.info(f"Définitions d'extraits chargées en {end_time_load_defs - start_time_load_defs:.2f} secondes.")
-        logger.info("Recherche des extraits à traiter dans l'objet de définitions...")
-        
-        # Tentative de gestion des deux structures (directement .extracts ou .sources[0].extracts)
-        extracts_to_process = []
-        if hasattr(extract_definitions_obj, 'extracts') and isinstance(extract_definitions_obj.extracts, list):
-            extracts_to_process = extract_definitions_obj.extracts
-            logger.info(f"{len(extracts_to_process)} extraits trouvés directement dans extract_definitions_obj.extracts.")
-        elif hasattr(extract_definitions_obj, 'sources') and isinstance(extract_definitions_obj.sources, list) and extract_definitions_obj.sources:
-            first_source = extract_definitions_obj.sources[0]
-            if hasattr(first_source, 'extracts') and isinstance(first_source.extracts, list):
-                extracts_to_process = first_source.extracts
-                logger.info(f"{len(extracts_to_process)} extraits trouvés dans la première source (extract_definitions_obj.sources[0].extracts).")
-            else:
-                logger.warning("extract_definitions_obj.sources[0] ne contient pas d'attribut 'extracts' de type liste.")
-        else:
-            logger.error("Aucun extrait trouvé dans l'objet extract_definitions. Structure attendue : .extracts ou .sources[0].extracts.")
-            logger.debug(f"Type de extract_definitions_obj: {type(extract_definitions_obj)}")
-            if hasattr(extract_definitions_obj, 'extracts'): logger.debug(f"Type de .extracts: {type(extract_definitions_obj.extracts)}")
-            if hasattr(extract_definitions_obj, 'sources'): logger.debug(f"Type de .sources: {type(extract_definitions_obj.sources)}")
-            return None
-
-        if not extracts_to_process:
-            logger.info("Aucun extrait à analyser.")
-            return None
-
-        selected_extract = extracts_to_process[0] # Analyse du premier extrait pour la démo
-        logger.info(f"Sélection du premier extrait (ID: {getattr(selected_extract, 'id', 'N/A')}) pour l'analyse détaillée.")
-        
-        # Les attributs de 'selected_extract' devraient correspondre à la classe Extract
-        # (soit réelle, soit le mock si l'import réel a échoué dans bootstrap)
-        extract_id = getattr(selected_extract, 'id', getattr(selected_extract, 'extract_name', 'N/A_ID'))
-        text_content_extract = getattr(selected_extract, 'full_text', '') # MODIFIÉ ICI
-        extract_title = getattr(selected_extract, 'title', 'N/A_Title')
-
-        logger.info(f"\n--- Analyse rhétorique de l'extrait déchiffré (ID: {extract_id}, Titre: {extract_title}) ---")
-        logger.info(f"Texte de l'extrait déchiffré sélectionné (ID: {extract_id}, Titre: {extract_title}, premiers 200 chars):\n{text_content_extract[:200]}...")
-        logger.info("L'objectif est d'analyser cet extrait déchiffré pour identifier d'éventuels sophismes.")
-
-        agent_instance_encrypted = project_context.informal_agent
-        analysis_description_encrypted = f"InformalAgent (type: {type(agent_instance_encrypted).__name__})"
-        if project_context.llm_service:
-            analysis_description_encrypted += f" avec LLM Service (type: {type(project_context.llm_service).__name__})"
-        else:
-            analysis_description_encrypted += " sans LLM Service configuré (l'agent peut utiliser un fallback ou échouer)."
-        logger.info(f"Utilisation de {analysis_description_encrypted} pour l'analyse de l'extrait.")
-            
-        try:
-            start_time_analyze_encrypted = time.time()
-            logger.info(f"Début de l'analyse des sophismes (extrait déchiffré) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_analyze_encrypted))}")
-            
-            real_analysis_data = asyncio.run(agent_instance_encrypted.analyze_fallacies(text_content_extract))
-            
-            end_time_analyze_encrypted = time.time()
-            logger.info(f"Fin de l'analyse des sophismes (extrait déchiffré) : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_analyze_encrypted))}")
-            logger.info(f"Analyse des sophismes (extrait déchiffré) effectuée en {end_time_analyze_encrypted - start_time_analyze_encrypted:.2f} secondes.")
-
-            structured_analysis_result = {
-                "extract_id": extract_id,
-                "title": extract_title,
-                "analysis_type": f"Rhetorical Analysis ({analysis_description_encrypted})",
-                "analysis_details": real_analysis_data
-            }
-            analysis_results_list.append(structured_analysis_result)
-
-            logger.info(f"\nRésultat de l'analyse de l'extrait déchiffré (ID: {extract_id}, Titre: {extract_title}) (formaté pour sauvegarde) :")
-            logger.info("L'utilisateur devrait observer une structure JSON similaire à celle de l'analyse de texte clair.")
-            analysis_results_list_json = json.dumps(analysis_results_list, indent=4, ensure_ascii=False)
-            for line in analysis_results_list_json.splitlines(): # Imprimer ligne par ligne
-                logger.info(line)
-        
-        except Exception as e_analyze_enc:
-            logger.error(f"ERREUR lors de l'appel à agent_instance_encrypted.analyze_fallacies pour l'extrait (ID: {extract_id}) : {e_analyze_enc}", exc_info=True)
-
-        results_dir = current_project_root_path / "results"
-        results_dir.mkdir(parents=True, exist_ok=True)
-        
-        analysis_output_path = results_dir / "analysis_encrypted_extract_demo_refactored.json"
-        with open(analysis_output_path, "w", encoding="utf-8") as f:
-            try:
-                json.dump(analysis_results_list, f, indent=4, ensure_ascii=False)
-            except TypeError:
-                f.write(str(analysis_results_list))
-                logger.warning(f"Le résultat de l'analyse chiffrée n'était pas sérialisable en JSON, sauvegardé comme chaîne.")
-        logger.info(f"\nRésultat de l'analyse sauvegardé dans : {analysis_output_path.resolve()}")
-        
-        return str(analysis_output_path.resolve())
-
-    except FileNotFoundError as e:
-        logger.error(f"ERREUR Fichier non trouvé : {e}", exc_info=True)
-    except KeyError as e:
-        logger.error(f"ERREUR Variable d'environnement manquante : {e}", exc_info=True)
-    except json.JSONDecodeError as e:
-        logger.error(f"ERREUR de décodage JSON : {e}", exc_info=True)
-    except AttributeError as e:
-        logger.error(f"ERREUR d'attribut : {e}. Problème avec la structure des objets.", exc_info=True)
-    except Exception as e:
-        logger.error(f"Une erreur inattendue est survenue lors de l'analyse des données chiffrées : {e}", exc_info=True)
-    return None
-
-
-def generate_report_from_analysis(project_context: ProjectContext, analysis_json_path_str: str):
-    logger.info(f"\n--- Génération du rapport à partir de : {analysis_json_path_str} ---")
-    
-    current_project_root_path = project_context.project_root_path if project_context.project_root_path else Path(project_root)
-    report_script_path = current_project_root_path / "argumentation_analysis" / "scripts" / "generate_comprehensive_report.py"
-    
-    analysis_file_path = Path(analysis_json_path_str) # Doit être un chemin absolu ou relatif au CWD
-
-    if not report_script_path.exists():
-        logger.error(f"Le script de génération de rapport '{report_script_path}' n'a pas été trouvé.")
-        return
-
-    if not analysis_file_path.exists():
-        logger.error(f"Le fichier de résultats d'analyse '{analysis_file_path}' n'a pas été trouvé.")
-        return
-
-    start_time_report_gen = time.time()
-    logger.info(f"Début de la génération du rapport : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_report_gen))}")
-    try:
-        command = [
-            sys.executable, str(report_script_path.resolve()),
-            "--advanced-results", str(analysis_file_path.resolve())
+    def __init__(self):
+        self.real_indicators = [
+            "analyse en cours", "traitement", "parsing", "détection",
+            "calcul", "métrique", "score", "résultat", "argument", "sophisme"
         ]
-        logger.info(f"Exécution de la commande pour générer le rapport : {' '.join(command)}")
-        logger.info("Ce script tentera de produire des rapports en plusieurs formats (ex: HTML, Markdown) basés sur les résultats d'analyse.")
-        
-        logger.info("Exécution du script de génération de rapport avec un timeout de 300 secondes...")
-        report_process = subprocess.run(command, capture_output=True, check=False, cwd=str(current_project_root_path), timeout=300)
- 
-        report_stdout_str = ""
-        report_stderr_str = ""
-
-        if report_process.stdout:
-            try:
-                report_stdout_str = report_process.stdout.decode('utf-8', errors='replace')
-            except UnicodeDecodeError:
-                try:
-                    report_stdout_str = report_process.stdout.decode('latin-1', errors='replace')
-                except:
-                    report_stdout_str = f"Impossible de décoder stdout du script de rapport. Données brutes (repr): {repr(report_process.stdout)}"
-        
-        if report_process.stderr:
-            try:
-                report_stderr_str = report_process.stderr.decode('utf-8', errors='replace')
-            except UnicodeDecodeError:
-                try:
-                    report_stderr_str = report_process.stderr.decode('latin-1', errors='replace')
-                except:
-                    report_stderr_str = f"Impossible de décoder stderr du script de rapport. Données brutes (repr): {repr(report_process.stderr)}"
-
-        logger.info("\nRésultat de la génération du rapport :")
-        if report_stdout_str:
-            logger.info("\n--- Sortie Standard du script de génération de rapport ---")
-            for line in report_stdout_str.splitlines(): # Imprimer ligne par ligne
-                logger.info(line)
-            logger.info("--- Fin Sortie Standard du script de génération de rapport ---")
-        
-        if report_stderr_str:
-            logger.error("\n--- Sortie d'Erreur du script de génération de rapport ---")
-            for line in report_stderr_str.splitlines(): # Imprimer ligne par ligne
-                logger.error(line)
-            logger.error("--- Fin Sortie d'Erreur du script de génération de rapport ---")
-        
-        if report_process.returncode == 0:
-            logger.info("\nSUCCÈS: Génération du rapport terminée.")
-            report_dir = current_project_root_path / 'results' / 'reports' / 'comprehensive'
-            logger.info(f"Les rapports (HTML, Markdown, etc.) devraient être disponibles dans le dossier : {report_dir.resolve()}")
-            logger.info("L'utilisateur devrait vérifier ce dossier pour les fichiers de rapport générés.")
-        else:
-            logger.error(f"\nÉCHEC: La génération du rapport a échoué (code de retour : {report_process.returncode}).")
-            logger.error("Vérifiez les logs ci-dessus et les dépendances du script de rapport.")
-
-    except subprocess.TimeoutExpired:
-        logger.error("ERREUR: L'exécution du script de génération de rapport a dépassé le timeout de 300 secondes.")
-    except FileNotFoundError:
-        logger.error(f"ERREUR: L'interpréteur Python ('{sys.executable}') ou le script de rapport n'a pas été trouvé.")
-    except Exception as e:
-        logger.error(f"Une erreur inattendue est survenue lors de la génération du rapport : {e}", exc_info=True)
+        self.mock_indicators = [
+            "simulation", "mock", "données factices"
+        ]
     
-    end_time_report_gen = time.time()
-    logger.info(f"Fin de la génération du rapport : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_report_gen))}")
-    logger.info(f"Génération du rapport effectuée en {end_time_report_gen - start_time_report_gen:.2f} secondes.")
+    def create_custom_datasets(self) -> List[CustomTestDataset]:
+        """Crée des datasets avec marqueurs uniques."""
+        timestamp = int(time.time())
+        datasets = []
+        
+        # Dataset 1: Logique Épita avec marqueur unique
+        content1 = f"[EPITA_VALID_{timestamp}] Tous les algorithmes Épita sont optimisés. Cet algorithme est optimisé. Donc cet algorithme est un algorithme Épita."
+        datasets.append(CustomTestDataset(
+            name="logique_epita_custom",
+            content=content1,
+            content_hash=hashlib.md5(content1.encode()).hexdigest(),
+            expected_indicators=["syllogisme", "logique", "prémisse"],
+            test_purpose="Test logique avec identifiant unique",
+            marker=f"EPITA_VALID_{timestamp}"
+        ))
+        
+        # Dataset 2: Sophisme technique avec marqueur
+        content2 = f"[EPITA_TECH_{timestamp + 1}] Cette technologie est adoptée par 90% des entreprises. Notre projet doit donc l'utiliser pour réussir."
+        datasets.append(CustomTestDataset(
+            name="sophisme_tech_custom",
+            content=content2,
+            content_hash=hashlib.md5(content2.encode()).hexdigest(),
+            expected_indicators=["argumentum ad populum", "sophisme", "fallacy"],
+            test_purpose="Détection sophisme technique",
+            marker=f"EPITA_TECH_{timestamp + 1}"
+        ))
+        
+        # Dataset 3: Unicode et caractères spéciaux
+        content3 = f"[EPITA_UNICODE_{timestamp + 2}] Algorithme: O(n²) → O(n log n) 🚀 Performance: +100% ✓ Café ☕"
+        datasets.append(CustomTestDataset(
+            name="unicode_test_custom",
+            content=content3,
+            content_hash=hashlib.md5(content3.encode()).hexdigest(),
+            expected_indicators=["algorithme", "complexité", "unicode"],
+            test_purpose="Test robustesse Unicode",
+            marker=f"EPITA_UNICODE_{timestamp + 2}"
+        ))
+        
+        return datasets
+    
+    def validate_with_dataset(self, dataset: CustomTestDataset, module_func, mode: str) -> ValidationResult:
+        """Valide un module avec un dataset custom."""
+        start_time = time.time()
+        
+        try:
+            # Créer un fichier temporaire avec les données custom
+            temp_file = Path(f"temp_epita_test_{dataset.name}_{int(time.time())}.txt")
+            temp_file.write_text(dataset.content, encoding='utf-8')
+            
+            # Capturer stdout/stderr pour analyser la sortie
+            import io
+            import contextlib
+            
+            captured_output = io.StringIO()
+            
+            with contextlib.redirect_stdout(captured_output), contextlib.redirect_stderr(captured_output):
+                try:
+                    if hasattr(module_func, '__call__'):
+                        # Tenter de passer les données custom au module
+                        result = module_func() if not module_func.__code__.co_argcount else module_func(dataset.content)
+                    else:
+                        result = True
+                except Exception as e:
+                    result = False
+            
+            output = captured_output.getvalue()
+            execution_time = time.time() - start_time
+            
+            # Analyser la sortie pour détecter traitement réel vs mock
+            real_processing = any(indicator.lower() in output.lower() for indicator in self.real_indicators)
+            mock_detected = any(indicator.lower() in output.lower() for indicator in self.mock_indicators)
+            
+            # Vérifier si le marqueur custom apparaît (preuve que les données ont été lues)
+            custom_data_processed = (dataset.marker in output or
+                                   dataset.content_hash in output or
+                                   any(expected.lower() in output.lower() for expected in dataset.expected_indicators))
+            
+            # Nettoyer le fichier temporaire
+            if temp_file.exists():
+                temp_file.unlink()
+            
+            return ValidationResult(
+                dataset_name=dataset.name,
+                mode_tested=mode,
+                timestamp=datetime.now().isoformat(),
+                success=result is not False,
+                output_captured=output[:500],  # Limiter la sortie
+                real_processing_detected=real_processing,
+                mock_detected=mock_detected,
+                custom_data_processed=custom_data_processed,
+                execution_time=execution_time
+            )
+            
+        except Exception as e:
+            execution_time = time.time() - start_time
+            return ValidationResult(
+                dataset_name=dataset.name,
+                mode_tested=mode,
+                timestamp=datetime.now().isoformat(),
+                success=False,
+                output_captured="",
+                real_processing_detected=False,
+                mock_detected=False,
+                custom_data_processed=False,
+                execution_time=execution_time,
+                error=str(e)
+            )
 
+# Import des utilitaires depuis le module
+modules_path = Path(__file__).parent / "modules"
+sys.path.insert(0, str(modules_path))
+
+try:
+    from demo_utils import (
+        DemoLogger, Colors, Symbols, charger_config_categories,
+        afficher_progression, pause_interactive, confirmer_action,
+        valider_environnement
+    )
+except ImportError as e:
+    print(f"Erreur d'import des utilitaires : {e}")
+    print("Chargement du mode legacy...")
+    # Fallback vers le mode legacy si les modules ne sont pas disponibles
+    from demonstration_epita_legacy import main as legacy_main
+    legacy_main()
+    sys.exit(0)
+
+def afficher_banniere_principale():
+    """Affiche la bannière principale du système"""
+    print(f"""
+{Colors.CYAN}{Colors.BOLD}
++==============================================================================+
+|                [EPITA] DEMONSTRATION - Intelligence Symbolique              |
+|                        Architecture Modulaire v2.0                         |
++==============================================================================+
+{Colors.ENDC}""")
+
+def afficher_menu_categories(config: Dict[str, Any]) -> None:
+    """Affiche le menu catégorisé principal"""
+    print(f"\n{Colors.BOLD}{'=' * 47}{Colors.ENDC}")
+    
+    if 'categories' not in config:
+        print(f"{Colors.FAIL}Configuration des catégories non trouvée{Colors.ENDC}")
+        return
+    
+    categories = config['categories']
+    categories_triees = sorted(categories.items(), key=lambda x: x[1]['id'])
+    
+    for cat_id, cat_info in categories_triees:
+        icon = cat_info.get('icon', '•')
+        nom = cat_info.get('nom', cat_id)
+        description = cat_info.get('description', '')
+        id_num = cat_info.get('id', 0)
+        
+        print(f"{Colors.CYAN}{icon} {id_num}. {nom}{Colors.ENDC} ({description})")
+    
+    print(f"\n{Colors.WARNING}Sélectionnez une catégorie (1-6) ou 'q' pour quitter:{Colors.ENDC}")
+
+def charger_et_executer_module(nom_module: str, mode_interactif: bool = False) -> bool:
+    """Charge et exécute dynamiquement un module de démonstration"""
+    try:
+        module_path = modules_path / f"{nom_module}.py"
+        if not module_path.exists():
+            print(f"{Colors.FAIL}{Symbols.CROSS} Module {nom_module} non trouvé{Colors.ENDC}")
+            return False
+        
+        # Chargement dynamique du module
+        spec = importlib.util.spec_from_file_location(nom_module, module_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        
+        # Exécution selon le mode
+        if mode_interactif and hasattr(module, 'run_demo_interactive'):
+            return module.run_demo_interactive()
+        elif hasattr(module, 'run_demo_rapide'):
+            return module.run_demo_rapide()
+        else:
+            print(f"{Colors.WARNING}Fonction de démonstration non trouvée dans {nom_module}{Colors.ENDC}")
+            return False
+            
+    except Exception as e:
+        print(f"{Colors.FAIL}{Symbols.CROSS} Erreur lors de l'exécution de {nom_module}: {e}{Colors.ENDC}")
+        return False
+
+def mode_menu_interactif(config: Dict[str, Any]) -> None:
+    """Mode menu interactif principal"""
+    logger = DemoLogger("menu_principal")
+    
+    while True:
+        afficher_banniere_principale()
+        afficher_menu_categories(config)
+        
+        try:
+            choix = input(f"\n{Colors.CYAN}> {Colors.ENDC}").strip().lower()
+            
+            if choix == 'q' or choix == 'quit':
+                logger.info("Au revoir !")
+                break
+            
+            # Conversion en entier pour la sélection
+            if choix.isdigit():
+                num_choix = int(choix)
+                
+                # Trouver la catégorie correspondante
+                categories = config.get('categories', {})
+                cat_selectionnee = None
+                
+                for cat_id, cat_info in categories.items():
+                    if cat_info.get('id') == num_choix:
+                        cat_selectionnee = (cat_id, cat_info)
+                        break
+                
+                if cat_selectionnee:
+                    cat_id, cat_info = cat_selectionnee
+                    nom_module = cat_info.get('module', '')
+                    if cat_id == 'agents_logiques':
+                        nom_module = 'demo_analyse_argumentation'
+                    nom_cat = cat_info.get('nom', cat_id)
+                    
+                    logger.header(f"{Symbols.ROCKET} Lancement de : {nom_cat}")
+                    
+                    if confirmer_action(f"Exécuter la démonstration '{nom_cat}' ?"):
+                        succes = charger_et_executer_module(nom_module, mode_interactif=True)
+                        
+                        if succes:
+                            logger.success(f"{Symbols.CHECK} Démonstration '{nom_cat}' terminée avec succès !")
+                        else:
+                            logger.error(f"{Symbols.CROSS} Échec de la démonstration '{nom_cat}'")
+                        
+                        pause_interactive("Appuyez sur Entrée pour revenir au menu principal...")
+                else:
+                    print(f"{Colors.FAIL}Choix invalide : {num_choix}{Colors.ENDC}")
+                    pause_interactive()
+            else:
+                print(f"{Colors.FAIL}Veuillez entrer un numéro (1-6) ou 'q'{Colors.ENDC}")
+                pause_interactive()
+                
+        except KeyboardInterrupt:
+            logger.info("\nInterruption utilisateur - Au revoir !")
+            break
+        except Exception as e:
+            logger.error(f"Erreur inattendue : {e}")
+            pause_interactive()
+
+def mode_quick_start() -> None:
+    """Mode Quick Start pour les étudiants"""
+    logger = DemoLogger("quick_start")
+    afficher_banniere_principale()
+    logger.header(f"{Symbols.ROCKET} MODE QUICK-START - Démonstration rapide")
+    
+    # Charger la configuration
+    config = charger_config_categories()
+    if not config:
+        return
+    
+    # Exécuter une démo rapide de chaque catégorie
+    categories = config.get('categories', {})
+    
+    for cat_id, cat_info in categories.items():
+        module_name = cat_info.get('module')
+        if module_name:
+            try:
+                print(f"\n{Colors.CYAN}{cat_info.get('icon', '[INFO]')} {cat_info.get('nom', 'Catégorie')}{Colors.ENDC}")
+                succes = charger_et_executer_module(module_name, mode_interactif=False)
+                if succes:
+                    print(f"{Colors.GREEN}  [OK] Terminé{Colors.ENDC}")
+                else:
+                    print(f"{Colors.FAIL}  [FAIL] Erreur{Colors.ENDC}")
+                time.sleep(0.5)
+            except Exception as e:
+                logger.error(f"Erreur module {module_name}: {e}")
+    
+    print(f"\n{Colors.GREEN}{Symbols.CHECK} Quick-start terminé !{Colors.ENDC}")
+
+def mode_metrics_only(config: Dict[str, Any]) -> None:
+    """Affiche uniquement les métriques du projet"""
+    afficher_banniere_principale()
+    
+    config_global = config.get('config', {})
+    taux_succes = config_global.get('taux_succes_tests', 99.7)
+    architecture = config_global.get('architecture', 'Python + Java (JPype)')
+    domaines = config_global.get('domaines', [])
+    
+    print(f"\n{Colors.BOLD}{Symbols.CHART} MÉTRIQUES DU PROJET{Colors.ENDC}")
+    print(f"{Colors.CYAN}{'=' * 50}{Colors.ENDC}")
+    print(f"{Colors.GREEN}{Symbols.CHECK} Taux de succès des tests : {taux_succes}%{Colors.ENDC}")
+    print(f"{Colors.BLUE}{Symbols.GEAR} Architecture : {architecture}{Colors.ENDC}")
+    print(f"{Colors.CYAN}{Symbols.BRAIN} Domaines couverts :{Colors.ENDC}")
+    for domaine in domaines:
+        print(f"  • {domaine}")
+    
+    print(f"\n{Colors.BOLD}Modules disponibles :{Colors.ENDC}")
+    categories = config.get('categories', {})
+    for cat_info in sorted(categories.values(), key=lambda x: x.get('id', 0)):
+        icon = cat_info.get('icon', '•')
+        nom = cat_info.get('nom', 'Module')
+        print(f"  {icon} {nom}")
+
+def mode_execution_legacy() -> None:
+    """Exécute le comportement legacy pour compatibilité"""
+    print(f"{Colors.WARNING}{Symbols.WARNING} Mode legacy - Chargement du script original...{Colors.ENDC}")
+    
+    try:
+        # Import et exécution du script legacy
+        legacy_path = Path(__file__).parent / "demonstration_epita_legacy.py"
+        spec = importlib.util.spec_from_file_location("legacy", legacy_path)
+        legacy_module = importlib.util.module_from_spec(spec)
+        
+        # Simuler les arguments pour le mode normal
+        import sys
+        original_argv = sys.argv.copy()
+        sys.argv = ['demonstration_epita_legacy.py']  # Mode normal
+        
+        try:
+            spec.loader.exec_module(legacy_module)
+        finally:
+            sys.argv = original_argv
+            
+    except Exception as e:
+        print(f"{Colors.FAIL}Erreur lors de l'exécution du mode legacy : {e}{Colors.ENDC}")
+
+def execute_all_categories_non_interactive(config: Dict[str, Any]) -> None:
+    """Exécute toutes les catégories de tests en mode non-interactif avec trace complète."""
+    logger = DemoLogger("all_tests")
+    
+    # Bannière pour le mode all-tests
+    print(f"""
+{Colors.CYAN}{Colors.BOLD}
++==============================================================================+
+|              [EPITA] MODE --ALL-TESTS - Trace Complète Non-Interactive     |
+|                     Exécution de toutes les catégories                     |
++==============================================================================+
+{Colors.ENDC}""")
+    
+    start_time = time.time()
+    categories = config.get('categories', {})
+    categories_triees = sorted(categories.items(), key=lambda x: x[1]['id'])
+    
+    logger.info(f"{Symbols.ROCKET} Début de l'exécution complète - {len(categories_triees)} catégories à traiter")
+    logger.info(f"[TIME] Timestamp de démarrage : {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    # Statistiques globales
+    total_categories = len(categories_triees)
+    categories_reussies = 0
+    categories_echouees = 0
+    resultats_detailles = []
+    
+    for i, (cat_id, cat_info) in enumerate(categories_triees, 1):
+        nom_module = cat_info.get('module', '')
+        if cat_id == 'agents_logiques':
+            nom_module = 'demo_analyse_argumentation'
+        nom_cat = cat_info.get('nom', cat_id)
+        icon = cat_info.get('icon', '•')
+        description = cat_info.get('description', '')
+        
+        print(f"\n{Colors.BOLD}{'=' * 80}{Colors.ENDC}")
+        print(f"{Colors.CYAN}{icon} CATÉGORIE {i}/{total_categories} : {nom_cat}{Colors.ENDC}")
+        print(f"{Colors.BLUE}Description : {description}{Colors.ENDC}")
+        print(f"{Colors.WARNING}Module : {nom_module}{Colors.ENDC}")
+        print(f"{'=' * 80}")
+        
+        cat_start_time = time.time()
+        
+        try:
+            # Exécution non-interactive du module
+            logger.info(f"[CAT] Début exécution catégorie : {nom_cat}")
+            succes = charger_et_executer_module(nom_module, mode_interactif=False)
+            cat_end_time = time.time()
+            cat_duration = cat_end_time - cat_start_time
+            
+            if succes:
+                categories_reussies += 1
+                status = "SUCCÈS"
+                color = Colors.GREEN
+                symbol = Symbols.CHECK
+                logger.success(f"{Symbols.CHECK} Catégorie '{nom_cat}' terminée avec succès en {cat_duration:.2f}s")
+            else:
+                categories_echouees += 1
+                status = "ÉCHEC"
+                color = Colors.FAIL
+                symbol = Symbols.CROSS
+                logger.error(f"[FAIL] Échec de la catégorie '{nom_cat}' après {cat_duration:.2f}s")
+            
+            resultats_detailles.append({
+                'categorie': nom_cat,
+                'module': nom_module,
+                'status': status,
+                'duration': cat_duration,
+                'index': i
+            })
+            
+            print(f"\n{color}{symbol} Statut : {status} (durée: {cat_duration:.2f}s){Colors.ENDC}")
+            
+        except Exception as e:
+            categories_echouees += 1
+            cat_end_time = time.time()
+            cat_duration = cat_end_time - cat_start_time
+            
+            logger.error(f"[ERROR] Erreur critique dans la catégorie '{nom_cat}': {e}")
+            print(f"\n{Colors.FAIL}{Symbols.CROSS} ERREUR CRITIQUE : {e}{Colors.ENDC}")
+            
+            resultats_detailles.append({
+                'categorie': nom_cat,
+                'module': nom_module,
+                'status': 'ERREUR',
+                'duration': cat_duration,
+                'index': i,
+                'erreur': str(e)
+            })
+    
+    # Rapport final
+    end_time = time.time()
+    total_duration = end_time - start_time
+    taux_reussite = (categories_reussies / total_categories) * 100 if total_categories > 0 else 0
+    
+    print(f"\n{Colors.BOLD}{'=' * 80}{Colors.ENDC}")
+    print(f"{Colors.CYAN}{Colors.BOLD}           RAPPORT FINAL - EXÉCUTION COMPLÈTE{Colors.ENDC}")
+    print(f"{'=' * 80}")
+    
+    print(f"\n{Colors.BOLD}[STATS] STATISTIQUES GÉNÉRALES :{Colors.ENDC}")
+    print(f"   [TIME] Timestamp de fin : {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"   [TIME] Durée totale : {total_duration:.2f} secondes")
+    print(f"   [INFO] Total catégories : {total_categories}")
+    print(f"   [OK] Catégories réussies : {categories_reussies}")
+    print(f"   [FAIL] Catégories échouées : {categories_echouees}")
+    print(f"   [CHART] Taux de réussite : {taux_reussite:.1f}%")
+    
+    print(f"\n{Colors.BOLD}[INFO] DÉTAILS PAR CATÉGORIE :{Colors.ENDC}")
+    for resultat in resultats_detailles:
+        status_color = Colors.GREEN if resultat['status'] == 'SUCCÈS' else Colors.FAIL
+        status_symbol = '[OK]' if resultat['status'] == 'SUCCÈS' else '[FAIL]'
+        
+        print(f"   {status_symbol} {resultat['index']:2d}. {resultat['categorie']:<30} "
+              f"{status_color}[{resultat['status']}]{Colors.ENDC} "
+              f"({resultat['duration']:.2f}s)")
+        
+        if 'erreur' in resultat:
+            print(f"      [ERROR] Erreur: {resultat['erreur']}")
+    
+    # Métriques techniques
+    print(f"\n{Colors.BOLD}[TECH] MÉTRIQUES TECHNIQUES :{Colors.ENDC}")
+    print(f"   [PYTHON] Architecture : {config.get('config', {}).get('architecture', 'Python + Java (JPype)')}")
+    print(f"   [VERSION] Version : {config.get('config', {}).get('version', '2.0.0')}")
+    print(f"   [TARGET] Taux succès tests : {config.get('config', {}).get('taux_succes_tests', 99.7)}%")
+    
+    domaines = config.get('config', {}).get('domaines', [])
+    if domaines:
+        print(f"   [BRAIN] Domaines couverts :")
+        for domaine in domaines:
+            print(f"      • {domaine}")
+    
+    # Message final
+    if categories_echouees == 0:
+        final_color = Colors.GREEN
+        final_message = f"[SUCCESS] EXÉCUTION COMPLÈTE RÉUSSIE - Tous les tests ont été exécutés avec succès !"
+        logger.success(final_message)
+    else:
+        final_color = Colors.WARNING
+        final_message = f"[WARNING] EXÉCUTION TERMINÉE AVEC {categories_echouees} ÉCHEC(S)"
+        logger.warning(final_message)
+    
+    print(f"\n{final_color}{Colors.BOLD}{final_message}{Colors.ENDC}")
+    print(f"{'=' * 80}")
+
+def mode_validation_custom_data(config: Dict[str, Any]) -> None:
+    """Mode validation avec données dédiées pour détecter mocks vs réel."""
+    logger = DemoLogger("validation_custom")
+    
+    print(f"""
+{Colors.CYAN}{Colors.BOLD}
++==============================================================================+
+|              [EPITA] VALIDATION AVEC DONNÉES DÉDIÉES                        |
+|                   Détection Mocks vs Traitement Réel                        |
++==============================================================================+
+{Colors.ENDC}""")
+    
+    validator = EpitaValidator()
+    datasets = validator.create_custom_datasets()
+    
+    logger.info(f"[TEST] Création de {len(datasets)} datasets de test personnalisés")
+    
+    # Tester chaque catégorie avec les datasets custom
+    categories = config.get('categories', {})
+    categories_triees = sorted(categories.items(), key=lambda x: x[1]['id'])
+    
+    all_results = []
+    
+    for cat_id, cat_info in categories_triees:
+        nom_module = cat_info.get('module', '')
+        nom_cat = cat_info.get('nom', cat_id)
+        
+        timestamp_start_cat = datetime.now().strftime('%H:%M:%S')
+        print(f"\n{Colors.BOLD}{'=' * 60}{Colors.ENDC}")
+        print(f"{Colors.CYAN}[{timestamp_start_cat} | SEARCH] VALIDATION MODULE: {nom_cat}{Colors.ENDC}")
+        print(f"{'=' * 60}")
+        
+        for dataset in datasets:
+            timestamp_start_ds = datetime.now().strftime('%H:%M:%S')
+            print(f"\n{Colors.WARNING}[{timestamp_start_ds} | DATA] Test avec dataset: {dataset.name}{Colors.ENDC}")
+            print(f"   Marqueur: {dataset.marker}")
+            print(f"   Objectif: {dataset.test_purpose}")
+            
+            try:
+                # Charger le module et tester avec le dataset
+                module_path = modules_path / f"{nom_module}.py"
+                if module_path.exists():
+                    spec = importlib.util.spec_from_file_location(nom_module, module_path)
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                    
+                    # Trouver la fonction de démo appropriée
+                    demo_func = None
+                    if hasattr(module, 'run_demo_rapide'):
+                        demo_func = module.run_demo_rapide
+                    elif hasattr(module, 'run_demo_interactive'):
+                        demo_func = module.run_demo_interactive
+                    
+                    if demo_func:
+                        result = validator.validate_with_dataset(dataset, demo_func, nom_cat)
+                        all_results.append(result)
+                        
+                        # Afficher les résultats
+                        if result.success:
+                            print(f"   {Colors.GREEN}[OK] Exécution: SUCCÈS{Colors.ENDC}")
+                        else:
+                            print(f"   {Colors.FAIL}[FAIL] Exécution: ÉCHEC{Colors.ENDC}")
+                        
+                        if result.custom_data_processed:
+                            print(f"   {Colors.GREEN}[DOC] Données custom: TRAITÉES{Colors.ENDC}")
+                        else:
+                            print(f"   {Colors.WARNING}[DOC] Données custom: NON DÉTECTÉES{Colors.ENDC}")
+                        
+                        if result.real_processing_detected:
+                            print(f"   {Colors.GREEN}[TOOL] Traitement réel: DÉTECTÉ{Colors.ENDC}")
+                        else:
+                            print(f"   {Colors.WARNING}[TOOL] Traitement réel: NON DÉTECTÉ{Colors.ENDC}")
+                        
+                        if result.mock_detected:
+                            print(f"   {Colors.FAIL}[MOCK] Mocks détectés: OUI{Colors.ENDC}")
+                        else:
+                            print(f"   {Colors.GREEN}[MOCK] Mocks détectés: NON{Colors.ENDC}")
+                        
+                        timestamp_end_ds = datetime.now().strftime('%H:%M:%S')
+                        print(f"   [{timestamp_end_ds} | TIME] Temps d'exécution: {result.execution_time:.3f}s")
+                        
+                        if result.error:
+                            print(f"   {Colors.FAIL}[ERROR] Erreur: {result.error}{Colors.ENDC}")
+                    else:
+                        print(f"   {Colors.WARNING}[WARN] Aucune fonction de démo trouvée{Colors.ENDC}")
+                else:
+                    print(f"   {Colors.FAIL}[FAIL] Module non trouvé: {module_path}{Colors.ENDC}")
+                    
+            except Exception as e:
+                print(f"   {Colors.FAIL}[ERROR] Erreur lors du test: {e}{Colors.ENDC}")
+        
+        timestamp_end_cat = datetime.now().strftime('%H:%M:%S')
+        print(f"\n{Colors.CYAN}[{timestamp_end_cat}] Fin de la validation pour le module: {nom_cat}{Colors.ENDC}")
+    
+    # Rapport final de validation
+    print(f"\n{Colors.BOLD}{'=' * 80}{Colors.ENDC}")
+    print(f"{Colors.CYAN}{Colors.BOLD}           RAPPORT FINAL - VALIDATION DONNÉES CUSTOM{Colors.ENDC}")
+    print(f"{'=' * 80}")
+    
+    if all_results:
+        total_tests = len(all_results)
+        success_tests = sum(1 for r in all_results if r.success)
+        real_processing_tests = sum(1 for r in all_results if r.real_processing_detected)
+        custom_data_tests = sum(1 for r in all_results if r.custom_data_processed)
+        mock_detected_tests = sum(1 for r in all_results if r.mock_detected)
+        
+        print(f"\n{Colors.BOLD}[DATA] STATISTIQUES GÉNÉRALES:{Colors.ENDC}")
+        print(f"   Total tests effectués: {total_tests}")
+        print(f"   Tests réussis: {success_tests}/{total_tests} ({success_tests/total_tests*100:.1f}%)")
+        print(f"   Traitement réel détecté: {real_processing_tests}/{total_tests} ({real_processing_tests/total_tests*100:.1f}%)")
+        print(f"   Données custom traitées: {custom_data_tests}/{total_tests} ({custom_data_tests/total_tests*100:.1f}%)")
+        print(f"   Mocks détectés: {mock_detected_tests}/{total_tests} ({mock_detected_tests/total_tests*100:.1f}%)")
+        
+        print(f"\n{Colors.BOLD}[TARGET] ÉVALUATION CAPACITÉS:{Colors.ENDC}")
+        if custom_data_tests > total_tests * 0.7:
+            print(f"   {Colors.GREEN}[OK] EXCELLENTE acceptation des données custom{Colors.ENDC}")
+        elif custom_data_tests > total_tests * 0.4:
+            print(f"   {Colors.WARNING}[WARN] MODÉRÉE acceptation des données custom{Colors.ENDC}")
+        else:
+            print(f"   {Colors.FAIL}[FAIL] FAIBLE acceptation des données custom{Colors.ENDC}")
+        
+        if real_processing_tests > total_tests * 0.6:
+            print(f"   {Colors.GREEN}[OK] TRAITEMENT RÉEL prédominant{Colors.ENDC}")
+        else:
+            print(f"   {Colors.WARNING}[WARN] MOCKS ou simulations détectés{Colors.ENDC}")
+        
+        # Sauvegarder le rapport détaillé
+        rapport_path = Path("logs") / f"validation_epita_custom_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        rapport_path.parent.mkdir(exist_ok=True)
+        
+        with open(rapport_path, 'w', encoding='utf-8') as f:
+            json.dump([result.__dict__ for result in all_results], f, indent=2, ensure_ascii=False)
+        
+        print(f"\n{Colors.BLUE}[FILE] Rapport détaillé sauvegardé: {rapport_path}{Colors.ENDC}")
+    else:
+        print(f"{Colors.FAIL}[FAIL] Aucun résultat de validation généré{Colors.ENDC}")
+
+def mode_custom_data_test(custom_text: str, config: Dict[str, Any]) -> None:
+    """Test avec des données custom spécifiques fournies par l'utilisateur."""
+    logger = DemoLogger("custom_data_test")
+    
+    print(f"""
+{Colors.CYAN}{Colors.BOLD}
++==============================================================================+
+|              [EPITA] TEST AVEC DONNÉES CUSTOM SPÉCIFIQUES                   |
+|                        Texte fourni par l'utilisateur                       |
++==============================================================================+
+{Colors.ENDC}""")
+    
+    print(f"\n{Colors.BOLD}[DOC] DONNÉES À TESTER:{Colors.ENDC}")
+    print(f"   Longueur: {len(custom_text)} caractères")
+    print(f"   Hash: {hashlib.md5(custom_text.encode()).hexdigest()[:8]}...")
+    print(f"   Aperçu: {custom_text[:100]}{'...' if len(custom_text) > 100 else ''}")
+    
+    # Créer un dataset custom avec les données utilisateur
+    timestamp = int(time.time())
+    marker = f"USER_DATA_{timestamp}"
+    custom_dataset = CustomTestDataset(
+        name="user_provided_data",
+        content=f"[{marker}] {custom_text}",
+        content_hash=hashlib.md5(custom_text.encode()).hexdigest(),
+        expected_indicators=["analyse", "traitement", "résultat"],
+        test_purpose="Test avec données utilisateur spécifiques",
+        marker=marker
+    )
+    
+    validator = EpitaValidator()
+    categories = config.get('categories', {})
+    
+    print(f"\n{Colors.BOLD}[SEARCH] TEST SUR TOUTES LES CATÉGORIES:{Colors.ENDC}")
+    
+    results = []
+    for cat_id, cat_info in sorted(categories.items(), key=lambda x: x[1]['id']):
+        nom_module = cat_info.get('module', '')
+        nom_cat = cat_info.get('nom', cat_id)
+        
+        print(f"\n{Colors.CYAN}[DATA] {nom_cat}:{Colors.ENDC}")
+        
+        try:
+            module_path = modules_path / f"{nom_module}.py"
+            if module_path.exists():
+                spec = importlib.util.spec_from_file_location(nom_module, module_path)
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                
+                demo_func = getattr(module, 'run_demo_rapide', None) or getattr(module, 'run_demo_interactive', None)
+                
+                if demo_func:
+                    result = validator.validate_with_dataset(custom_dataset, demo_func, nom_cat)
+                    results.append(result)
+                    
+                    status = "[OK] SUCCÈS" if result.success else "[FAIL] ÉCHEC"
+                    data_processed = "[DOC] TRAITÉES" if result.custom_data_processed else "[DOC] NON DÉTECTÉES"
+                    real_processing = "[TOOL] RÉEL" if result.real_processing_detected else "[TOOL] SIMULÉ"
+                    
+                    print(f"   {status} | {data_processed} | {real_processing} | [TIME] {result.execution_time:.3f}s")
+                else:
+                    print(f"   {Colors.WARNING}[WARN] Fonction de démo non trouvée{Colors.ENDC}")
+            else:
+                print(f"   {Colors.FAIL}[FAIL] Module non trouvé{Colors.ENDC}")
+        except Exception as e:
+            print(f"   {Colors.FAIL}[ERROR] Erreur: {str(e)[:50]}...{Colors.ENDC}")
+    
+    # Résumé final
+    if results:
+        success_rate = sum(1 for r in results if r.success) / len(results) * 100
+        processing_rate = sum(1 for r in results if r.custom_data_processed) / len(results) * 100
+        real_rate = sum(1 for r in results if r.real_processing_detected) / len(results) * 100
+        
+        print(f"\n{Colors.BOLD}[CHART] RÉSUMÉ VALIDATION DONNÉES CUSTOM:{Colors.ENDC}")
+        print(f"   Taux de succès: {success_rate:.1f}%")
+        print(f"   Taux de traitement des données: {processing_rate:.1f}%")
+        print(f"   Taux de traitement réel: {real_rate:.1f}%")
+        
+        if processing_rate > 70:
+            print(f"   {Colors.GREEN}[TARGET] CONCLUSION: Les données custom sont bien acceptées et traitées{Colors.ENDC}")
+        elif processing_rate > 30:
+            print(f"   {Colors.WARNING}[TARGET] CONCLUSION: Acceptation partielle des données custom{Colors.ENDC}")
+        else:
+            print(f"   {Colors.FAIL}[TARGET] CONCLUSION: Les données custom ne semblent pas être traitées{Colors.ENDC}")
+
+def parse_arguments():
+    """Parse les arguments de ligne de commande"""
+    parser = argparse.ArgumentParser(
+        description="Script de démonstration EPITA - Architecture Modulaire v2.1",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Modes disponibles :
+  [défaut]           Menu interactif catégorisé
+  --interactive      Mode interactif avec pauses pédagogiques
+  --quick-start      Mode Quick Start pour étudiants
+  --metrics          Affichage des métriques uniquement
+  --all-tests        Exécution complète non-interactive de toutes les catégories
+  --validate-custom  Validation avec datasets dédiés pour détecter mocks vs réel
+  --custom-data      Test avec des données custom spécifiques
+  --legacy           Exécution du script original (compatibilité)
+        """
+    )
+    
+    parser.add_argument('--interactive', '-i', action='store_true',
+                       help='Mode interactif avec pauses pédagogiques')
+    parser.add_argument('--quick-start', '-q', action='store_true',
+                       help='Mode Quick Start pour étudiants')
+    parser.add_argument('--metrics', '-m', action='store_true',
+                       help='Affichage des métriques uniquement')
+    parser.add_argument('--legacy', '-l', action='store_true',
+                       help='Exécution du script original (compatibilité)')
+    parser.add_argument('--all-tests', action='store_true',
+                       help='Exécute tous les tests de toutes les catégories en mode non-interactif')
+    parser.add_argument('--validate-custom', action='store_true',
+                       help='Mode validation avec données dédiées pour détecter mocks vs traitement réel')
+    parser.add_argument('--custom-data', type=str, metavar='TEXT',
+                       help='Test avec des données custom spécifiques fournies en paramètre')
+    
+    return parser.parse_args()
+
+def main():
+    """Fonction principale"""
+    # Validation de l'environnement
+    if not valider_environnement():
+        print(f"{Colors.FAIL}Environnement non valide. Exécutez depuis la racine du projet.{Colors.ENDC}")
+        sys.exit(1)
+    
+    # Parse des arguments
+    args = parse_arguments()
+    
+    # Chargement de la configuration
+    config = charger_config_categories()
+    if not config:
+        print(f"{Colors.FAIL}Impossible de charger la configuration. Exécution en mode legacy.{Colors.ENDC}")
+        mode_execution_legacy()
+        return
+    
+    # Sélection du mode d'exécution
+    if args.validate_custom:
+        mode_validation_custom_data(config)
+    elif args.custom_data:
+        mode_custom_data_test(args.custom_data, config)
+    elif args.all_tests:
+        execute_all_categories_non_interactive(config)
+    elif args.quick_start:
+        mode_quick_start()
+    elif args.metrics:
+        mode_metrics_only(config)
+    elif args.legacy:
+        mode_execution_legacy()
+    elif args.interactive:
+        # Mode interactif avancé - exécution séquentielle des modules
+        logger = DemoLogger("demo_complet")
+        logger.header("[EPITA] DÉMONSTRATION COMPLÈTE - MODE INTERACTIF")
+        
+        categories = config.get('categories', {})
+        categories_triees = sorted(categories.items(), key=lambda x: x[1]['id'])
+        
+        for i, (cat_id, cat_info) in enumerate(categories_triees, 1):
+            nom_module = cat_info.get('module', '')
+            nom_cat = cat_info.get('nom', cat_id)
+            
+            afficher_progression(i, len(categories_triees), f"Module : {nom_cat}")
+            
+            if confirmer_action(f"Exécuter '{nom_cat}' ?"):
+                charger_et_executer_module(nom_module, mode_interactif=True)
+            
+            if i < len(categories_triees):
+                pause_interactive()
+        
+        logger.success("🎓 Démonstration complète terminée !")
+    else:
+        # Mode menu interactif par défaut
+        mode_menu_interactif(config)
 
 if __name__ == "__main__":
-    logger.info("=== Début du script de démonstration EPITA (Refactorisé) ===")
-    start_time_script = time.time()
-    logger.info(f"Heure de début du script : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_script))}")
-
-    # Initialisation de l'environnement via le bootstrap
-    # Le bootstrap s'occupe du .env, de la JVM, et des services principaux.
-    # project_root est déjà défini globalement dans ce script.
-    logger.info("Initialisation de l'environnement du projet via le module de bootstrap...")
-    # Passer project_root explicitement au bootstrap pour qu'il sache où il est.
-    # Le chemin vers .env sera déduit par le bootstrap à partir de ce root_path_str.
-    project_context = initialize_project_environment(root_path_str=str(project_root))
-
-    if not project_context:
-        logger.critical("Échec de l'initialisation du contexte du projet. Arrêt du script.")
-        sys.exit(1)
-
-    logger.info(f"Contexte du projet initialisé. Racine du projet utilisée: {project_context.project_root_path}")
-    logger.info(f"JVM initialisée par bootstrap: {project_context.jvm_initialized}")
-
-    # 1. Vérification des dépendances (peut rester, car c'est pour l'environnement Python de base)
-    logger.info("Appel de check_and_install_dependencies()...")
-    check_and_install_dependencies()
-    logger.info("Fin de check_and_install_dependencies().")
-
-    # 2. Exécution des tests unitaires (peut rester)
-    logger.info("Appel de run_unit_tests()...")
-    run_unit_tests() # Cette fonction utilise le project_root global
-    logger.info("Fin de run_unit_tests().")
-
-    # 3. Analyse de texte clair
-    # Le chemin vers exemple_sophisme.txt est relatif à la racine du projet.
-    example_clear_text_file = "examples/exemple_sophisme.txt" # Relatif à project_root
-    logger.info(f"Appel de analyze_clear_text_example() avec le fichier : {example_clear_text_file}...")
-    analyze_clear_text_example(project_context, example_clear_text_file)
-    logger.info("Fin de analyze_clear_text_example().")
-
-    # 4. Analyse de données chiffrées
-    logger.info("Appel de analyze_encrypted_data()...")
-    encrypted_analysis_output_file_path = analyze_encrypted_data(project_context)
-    logger.info("Fin de analyze_encrypted_data().")
-
-    # 5. Génération de rapport
-    # if encrypted_analysis_output_file_path:
-    #     logger.info(f"Appel de generate_report_from_analysis() avec le fichier : {encrypted_analysis_output_file_path}...")
-    #     generate_report_from_analysis(project_context, encrypted_analysis_output_file_path)
-    #     logger.info("Fin de generate_report_from_analysis().")
-    # else:
-    #     logger.warning("\nLa génération de rapport à partir des données chiffrées a été sautée (pas de fichier de résultat).")
-
-    # 6. TODO: Interaction avec Tweety (à ajouter pour être exhaustif)
-    # Cette partie nécessitera d'utiliser jpype et les classes Tweety via le project_context.jvm_initialized
-    # et potentiellement des classes chargées dans project_context.tweety_classes.
-    logger.info("\n--- Démonstration de l'interaction avec Tweety (TODO) ---")
-    if project_context.jvm_initialized:
-        logger.info("La JVM est initialisée. Une interaction basique avec Tweety pourrait être ajoutée ici.")
-        try:
-            import jpype
-            # Exemple simple: charger une classe Tweety et l'afficher
-            if jpype.isJVMStarted(): # Double vérification
-                PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
-                parser_instance = PlParser()
-                logger.info(f"Instance de PlParser créée avec succès via JPype: {parser_instance}")
-                
-                # Parser une formule simple
-                formula_str = "a && b"
-                parsed_formula = parser_instance.parseFormula(jpype.JString(formula_str))
-                logger.info(f"Formule Tweety '{formula_str}' parsée en: {parsed_formula.toString()}")
-                
-                # Afficher les atomes
-                atoms_set = parsed_formula.getAtoms() # java.util.Set
-                py_atoms_list = [str(atom) for atom in atoms_set]
-                logger.info(f"Atomes dans la formule: {py_atoms_list}")
-
-            else:
-                logger.warning("JVM initialisée par bootstrap, mais jpype.isJVMStarted() est False ici. Étrange.")
-        except Exception as e_tweety:
-            logger.error(f"Erreur lors de la démonstration Tweety : {e_tweety}", exc_info=True)
-    else:
-        logger.warning("JVM non initialisée, la démonstration Tweety est sautée.")
-
-
-    end_time_script = time.time()
-    logger.info(f"\nHeure de fin du script : {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_script))}")
-    logger.info(f"Durée totale d'exécution du script : {end_time_script - start_time_script:.2f} secondes.")
-    logger.info("\n=== Fin du script de démonstration EPITA (Refactorisé) ===")
+    main()

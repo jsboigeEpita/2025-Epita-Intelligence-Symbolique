@@ -1,0 +1,18 @@
+[
+    {
+        "name": "Énigme d'Einstein",
+        "custom_data_test": {
+            "agent": "sherlock",
+            "data": "Il y a cinq maisons de couleurs différentes. Dans chaque maison vit une personne de nationalité différente. Chaque personne boit une boisson différente, fume une marque de cigares différente et a un animal domestique différent. L'Anglais vit dans la maison rouge. Le Suédois a des chiens. Le Danois boit du thé. La maison verte est immédiatement à gauche de la maison blanche. Le propriétaire de la maison verte boit du café. La personne qui fume des Pall Mall a des oiseaux. Le propriétaire de la maison jaune fume des Dunhill. L'homme qui vit dans la maison du centre boit du lait. Le Norvégien vit dans la première maison. L'homme qui fume des Blends vit à côté de celui qui a des chats. L'homme qui a un cheval vit à côté de celui qui fume des Dunhill. Le propriétaire qui fume des Bluemasters boit de la bière. L'Allemand fume des Prince. Le Norvégien vit à côté de la maison bleue. L'homme qui fume des Blends a un voisin qui boit de l'eau. Qui a le poisson ?"
+        },
+        "dialogue_test": {
+            "sender": "sherlock",
+            "receiver": "watson",
+            "message": "Watson, cette énigme est un pur exercice de déduction. Chaque fait est une prémisse. Si nous les assemblons correctement, la conclusion devrait émerger d'elle-même. La logique propositionnelle est notre meilleur outil ici."
+        },
+        "debate_test": {
+            "topic": "La méthode de résolution la plus efficace pour l'énigme d'Einstein",
+            "agents": ["sherlock", "watson", "moriarty"]
+        }
+    }
+]

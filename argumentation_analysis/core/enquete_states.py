@@ -246,6 +246,9 @@ class EnqueteCluedoState(EnquetePoliciereState):
         self.indices_distribues_cluedo: List[Dict] = [] # Liste d'éléments qui ne sont PAS la solution
         self.main_cluedo_bs_id: str = f"cluedo_bs_{self.workflow_id}"
         self.belief_set_initial_watson: Dict[str, List[str]] = {} # Initialisation de l'attribut
+        self.is_solution_proposed: bool = False
+        self.final_solution: Optional[Dict[str, str]] = None
+        self.suggestions_historique: List[Dict] = []
         
         self._initialize_cluedo_belief_set()
 
@@ -317,6 +320,23 @@ class EnqueteCluedoState(EnquetePoliciereState):
 
     def get_elements_jeu(self) -> dict:
         return self.elements_jeu_cluedo
+
+    def propose_final_solution(self, solution: Dict[str, str]):
+        """
+        Enregistre la solution finale proposée par un agent et met à jour l'état.
+        La solution doit être un dictionnaire avec les clés 'suspect', 'arme', 'lieu'.
+        """
+        if not all(k in solution for k in ["suspect", "arme", "lieu"]):
+            raise ValueError("La solution proposée est invalide. Elle doit contenir 'suspect', 'arme', et 'lieu'.")
+        
+        self.final_solution = solution
+        self.is_solution_proposed = True
+        # On pourrait aussi ajouter un log ici
+        self.add_log_message(
+            agent_source="System",
+            message_type="solution_proposed",
+            content=f"Solution finale proposée: {solution}"
+        )
 
     # D'autres méthodes spécifiques au Cluedo pourraient être ajoutées ici,
     # par exemple pour gérer les "suggestions" des joueurs, etc.

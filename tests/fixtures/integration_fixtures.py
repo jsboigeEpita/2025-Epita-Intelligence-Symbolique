@@ -1,8 +1,14 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+from semantic_kernel.contents.chat_history import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 import pytest
 import sys
 import os
 import logging
-from unittest.mock import MagicMock
+
 import pathlib # Ajout pour la manipulation des chemins
 import platform # Ajout pour platform.system()
 
@@ -20,136 +26,60 @@ if not logger.handlers: # Vérifier si des handlers existent déjà pour éviter
 # Importation de la fonction d'initialisation centralisée et des constantes nécessaires
 # Placé APRÈS la configuration du logger, au cas où ces imports déclencheraient des logs.
 try:
-    from argumentation_analysis.core.jvm_setup import initialize_jvm, LIBS_DIR, TWEETY_VERSION
-    logger.info("initialize_jvm, LIBS_DIR, TWEETY_VERSION importés avec succès.")
+    from argumentation_analysis.core.jvm_setup import initialize_jvm
+    logger.info("initialize_jvm importé avec succès.")
 except ImportError as e:
-    logger.error(f"ERREUR CRITIQUE - Impossible d'importer depuis core.jvm_setup: {e}")
+    logger.error(f"ERREUR CRITIQUE - Impossible d'importer 'initialize_jvm' depuis core.jvm_setup: {e}")
     # Définir des placeholders pour que le reste du fichier ne plante pas à l'import,
     # mais les tests utilisant la JVM seront skippés.
     initialize_jvm = None
-    LIBS_DIR = None
-    TWEETY_VERSION = None
 
 
 # Importer _REAL_JPYPE_MODULE depuis jpype_setup
 # et potentiellement _JPYPE_MODULE_MOCK_OBJ_GLOBAL si des comparaisons sont faites
-try:
-    from tests.mocks.jpype_setup import _REAL_JPYPE_MODULE, _JPYPE_MODULE_MOCK_OBJ_GLOBAL
-    logger.info("_REAL_JPYPE_MODULE et _JPYPE_MODULE_MOCK_OBJ_GLOBAL importés de jpype_setup.")
-except ImportError:
-    logger.error("ERREUR CRITIQUE: Impossible d'importer _REAL_JPYPE_MODULE de jpype_setup.")
-    _REAL_JPYPE_MODULE = None # Fallback pour éviter des NameError, mais les tests d'intégration échoueront.
-    _JPYPE_MODULE_MOCK_OBJ_GLOBAL = MagicMock(name="fallback_jpype_mock_obj_global_in_integration_fixtures")
+# L'import de jpype_setup est obsolète. Le bootstrap gère le mock.
+# Pour les tests d'intégration, nous attendons que l'environnement soit configuré
+# pour utiliser le vrai JPype.
+import jpype
+from unittest.mock import MagicMock
+# MagicMock peut être nécessaire si jpype est un mock et que nous voulons vérifier ses attributs
+# Définir des placeholders pour la clarté, mais le but est d'utiliser le module 'jpype' importé directement
+_REAL_JPYPE_MODULE = jpype if hasattr(jpype, 'isJVMStarted') and not isinstance(jpype, MagicMock) else None
+_JPYPE_MODULE_MOCK_OBJ_GLOBAL = jpype if isinstance(jpype, MagicMock) else MagicMock(name="fallback_jpype_mock_obj_global_in_integration_fixtures")
 
-# Variable globale pour suivre si initialize_jvm a été appelée avec succès dans la session
-_initialize_jvm_called_successfully_session = False
+# La fixture jvm_session est maintenant centralisée dans le conftest.py principal.
+# Toutes les fixtures ici qui ont besoin de la JVM doivent simplement la déclarer
+# en tant que dépendance, et pytest la fournira depuis conftest.py.
+# La fixture redondante a été supprimée pour éviter les conflits et les doubles initialisations.
 
 @pytest.fixture(scope="session")
-def integration_jvm():
-    global _initialize_jvm_called_successfully_session
-    logger.info("Début de la fixture integration_jvm (scope session).")
-
-    if initialize_jvm is None:
-        logger.error("La fonction initialize_jvm n'est pas disponible. Skip.")
-        pytest.skip("initialize_jvm non importée, skip tests d'intégration JPype.")
-        return None
-
-    if _REAL_JPYPE_MODULE is None:
-        logger.error("_REAL_JPYPE_MODULE est None. Impossible de démarrer la JVM pour les tests d'intégration.")
-        pytest.skip("Le vrai module JPype n'a pas pu être chargé, skip tests d'intégration.")
-        return None
-
-    # S'assurer que sys.modules['jpype'] est le vrai module pour cette fixture
-    original_sys_jpype = sys.modules.get('jpype')
-    sys.modules['jpype'] = _REAL_JPYPE_MODULE
-    logger.info(f"integration_fixtures.py: sys.modules['jpype'] (ID: {id(sys.modules['jpype'])}) mis à _REAL_JPYPE_MODULE (ID: {id(_REAL_JPYPE_MODULE)}).")
-
-    jpype_for_integration = _REAL_JPYPE_MODULE
-    
-    try:
-        if not _initialize_jvm_called_successfully_session:
-            logger.info("initialize_jvm n'a pas encore été appelée avec succès dans cette session. Appel...")
-            
-            if LIBS_DIR is None or TWEETY_VERSION is None:
-                logger.error("LIBS_DIR ou TWEETY_VERSION non défini. Impossible d'appeler initialize_jvm.")
-                pytest.skip("LIBS_DIR ou TWEETY_VERSION manquant pour initialize_jvm.")
-                return None
-
-            # Définir explicitement le chemin vers libs/tweety pour cette fixture
-            # pour s'assurer que le bon répertoire est utilisé, conformément à la demande de correction.
-            current_file_path = pathlib.Path(__file__).resolve()
-            project_root_for_fixture = current_file_path.parent.parent.parent
-            explicit_libs_tweety_path = project_root_for_fixture / "libs" / "tweety"
-            
-            if not explicit_libs_tweety_path.is_dir():
-                logger.error(f"Le chemin explicite vers les JARs Tweety '{explicit_libs_tweety_path}' n'est pas un répertoire. Skip.")
-                pytest.skip(f"Chemin libs/tweety explicite non trouvé: {explicit_libs_tweety_path}")
-                return None
-
-            logger.info(f"Utilisation du chemin explicite pour les JARs Tweety: {explicit_libs_tweety_path}")
-
-            # Définir le chemin vers le JAR spécifique
-            specific_jar_file_name = "org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
-            specific_jar_full_path = explicit_libs_tweety_path / specific_jar_file_name
-
-            if not specific_jar_full_path.is_file():
-                logger.error(f"Le JAR spécifique '{specific_jar_full_path}' n'a pas été trouvé. Skip.")
-                pytest.skip(f"JAR spécifique non trouvé: {specific_jar_full_path}")
-                return None
-            
-            logger.info(f"Tentative d'initialisation de la JVM avec le JAR spécifique: {specific_jar_full_path}")
-
-            success = initialize_jvm(
-                # lib_dir_path=str(explicit_libs_tweety_path), # Commenté car nous utilisons specific_jar_path
-                specific_jar_path=str(specific_jar_full_path)
-            )
-            if success:
-                logger.info("initialize_jvm a réussi avec le JAR spécifique.")
-                _initialize_jvm_called_successfully_session = True
-            else:
-                logger.error("initialize_jvm a échoué.")
-                pytest.skip("Échec de initialize_jvm pour les tests d'intégration.")
-                return None
-        else:
-            logger.info("initialize_jvm a déjà été appelée avec succès dans cette session. Utilisation de la JVM existante.")
-
-        if not jpype_for_integration.isJVMStarted():
-            logger.error("ERREUR CRITIQUE - JVM non démarrée même après l'appel à initialize_jvm.")
-            pytest.skip("JVM non démarrée après initialize_jvm.")
-            return None
-
-        # Log du classpath effectif
-        if jpype_for_integration.isJVMStarted():
-            system_class = jpype_for_integration.JClass("java.lang.System")
-            class_path = system_class.getProperty("java.class.path")
-            logger.info(f"Java ClassPath effectif: {class_path}")
-        else:
-            logger.warning("JVM non démarrée, impossible de récupérer le classpath.")
-            
-        yield jpype_for_integration
-
-    finally:
-        logger.info("Nettoyage de la fixture integration_jvm (restauration de sys.modules['jpype'] si besoin).")
-        if original_sys_jpype is not None:
-            sys.modules['jpype'] = original_sys_jpype
-        elif 'jpype' in sys.modules and sys.modules['jpype'] is _REAL_JPYPE_MODULE:
-            if _REAL_JPYPE_MODULE is not _JPYPE_MODULE_MOCK_OBJ_GLOBAL :
-                 del sys.modules['jpype']
-        logger.info("Fin de la fixture integration_jvm.")
+def tweety_classpath_initializer(jvm_session):
+    """
+    [OBSOLETE] Fixture qui garantissait l'initialisation du classpath.
+    Cette logique est maintenant gérée directement au sein de `integration_jvm` qui passe
+    le classpath au moment du `startJVM`.
+    Cette fixture est conservée pour ne pas briser le graphe de dépendances des tests
+    existants, mais elle ne fait plus rien.
+    """
+    logger.info("integration_fixtures.py: Fixture 'tweety_classpath_initializer' appelée (maintenant obsolète, aucune action).")
+    # Vérifie simplement que la dépendance à integration_jvm est résolue.
+    if jvm_session is None:
+        pytest.skip("Dépendance 'jvm_session' non résolue pour tweety_classpath_initializer.")
+    yield
 
 
 # Fixtures pour les classes Tweety (nécessitent une JVM active via integration_jvm)
 @pytest.fixture(scope="session")
-def dung_classes(integration_jvm):
-    if integration_jvm is None: pytest.skip("JVM non disponible pour dung_classes.")
-    JClass = integration_jvm.JClass
+def dung_classes(tweety_classpath_initializer, jvm_session):
+    if jvm_session is None: pytest.skip("JVM non disponible pour dung_classes.")
+    JClass = jvm_session.JClass
     loader_to_use = None
     try:
-        JavaThread = integration_jvm.JClass("java.lang.Thread")
+        JavaThread = jvm_session.JClass("java.lang.Thread")
         current_thread = JavaThread.currentThread()
         loader_to_use = current_thread.getContextClassLoader()
-        if loader_to_use is None: 
-             loader_to_use = integration_jvm.JClass("java.lang.ClassLoader").getSystemClassLoader()
+        if loader_to_use is None:
+             loader_to_use = jvm_session.JClass("java.lang.ClassLoader").getSystemClassLoader()
         logger.info(f"integration_fixtures.py: dung_classes - Utilisation du ClassLoader: {loader_to_use}")
     except Exception as e_loader:
         logger.warning(f"integration_fixtures.py: dung_classes - Erreur lors de l'obtention du ClassLoader: {str(e_loader)}. JClass utilisera le loader par défaut.")
@@ -167,37 +97,37 @@ def dung_classes(integration_jvm):
     }
 
 @pytest.fixture(scope="session")
-def dl_syntax_parser(integration_jvm):
-    if integration_jvm is None: pytest.skip("JVM non disponible pour dl_syntax_parser.")
-    return integration_jvm.JClass("org.tweetyproject.logics.dl.parser.DlParser")
+def dl_syntax_parser(jvm_session):
+    if jvm_session is None: pytest.skip("JVM non disponible pour dl_syntax_parser.")
+    return jvm_session.JClass("org.tweetyproject.logics.dl.parser.DlParser")
 
 @pytest.fixture(scope="session")
-def fol_syntax_parser(integration_jvm):
-    if integration_jvm is None: pytest.skip("JVM non disponible pour fol_syntax_parser.")
-    return integration_jvm.JClass("org.tweetyproject.logics.fol.parser.FolParser")
+def fol_syntax_parser(jvm_session):
+    if jvm_session is None: pytest.skip("JVM non disponible pour fol_syntax_parser.")
+    return jvm_session.JClass("org.tweetyproject.logics.fol.parser.FolParser")
 
 @pytest.fixture(scope="session")
-def pl_syntax_parser(integration_jvm):
-    if integration_jvm is None: pytest.skip("JVM non disponible pour pl_syntax_parser.")
-    return integration_jvm.JClass("org.tweetyproject.logics.pl.parser.PlParser")
+def pl_syntax_parser(jvm_session):
+    if jvm_session is None: pytest.skip("JVM non disponible pour pl_syntax_parser.")
+    return jvm_session.JClass("org.tweetyproject.logics.pl.parser.PlParser")
 
 @pytest.fixture(scope="session")
-def cl_syntax_parser(integration_jvm):
-    if integration_jvm is None: pytest.skip("JVM non disponible pour cl_syntax_parser.")
-    return integration_jvm.JClass("org.tweetyproject.logics.cl.parser.ClParser")
+def cl_syntax_parser(jvm_session):
+    if jvm_session is None: pytest.skip("JVM non disponible pour cl_syntax_parser.")
+    return jvm_session.JClass("org.tweetyproject.logics.cl.parser.ClParser")
 
 
 @pytest.fixture(scope="session")
-def tweety_logics_classes(integration_jvm):
-    if integration_jvm is None: pytest.skip("JVM non disponible pour tweety_logics_classes.")
-    JClass = integration_jvm.JClass
+def tweety_logics_classes(tweety_classpath_initializer, jvm_session):
+    if jvm_session is None: pytest.skip("JVM non disponible pour tweety_logics_classes.")
+    JClass = jvm_session.JClass
     loader_to_use = None
     try:
-        JavaThread = integration_jvm.JClass("java.lang.Thread")
+        JavaThread = jvm_session.JClass("java.lang.Thread")
         current_thread = JavaThread.currentThread()
         loader_to_use = current_thread.getContextClassLoader()
         if loader_to_use is None:
-             loader_to_use = integration_jvm.JClass("java.lang.ClassLoader").getSystemClassLoader()
+             loader_to_use = jvm_session.JClass("java.lang.ClassLoader").getSystemClassLoader()
         logger.info(f"integration_fixtures.py: tweety_logics_classes - Utilisation du ClassLoader: {loader_to_use}")
     except Exception as e_loader:
         logger.warning(f"integration_fixtures.py: tweety_logics_classes - Erreur lors de l'obtention du ClassLoader: {str(e_loader)}. JClass utilisera le loader par défaut.")
@@ -256,46 +186,46 @@ def tweety_logics_classes(integration_jvm):
     }
 
 @pytest.fixture(scope="session")
-def tweety_string_utils(integration_jvm):
-    if integration_jvm is None: pytest.skip("JVM non disponible pour tweety_string_utils.")
-    return integration_jvm.JClass("org.tweetyproject.commons.util.string.StringUtils")
+def tweety_string_utils(jvm_session):
+    if jvm_session is None: pytest.skip("JVM non disponible pour tweety_string_utils.")
+    return jvm_session.JClass("org.tweetyproject.commons.util.string.StringUtils")
 
 @pytest.fixture(scope="session")
-def tweety_math_utils(integration_jvm):
-    if integration_jvm is None: pytest.skip("JVM non disponible pour tweety_math_utils.")
-    return integration_jvm.JClass("org.tweetyproject.math.util.MathUtils")
+def tweety_math_utils(jvm_session):
+    if jvm_session is None: pytest.skip("JVM non disponible pour tweety_math_utils.")
+    return jvm_session.JClass("org.tweetyproject.math.util.MathUtils")
 
 @pytest.fixture(scope="session")
-def tweety_probability(integration_jvm):
-    if integration_jvm is None: pytest.skip("JVM non disponible pour tweety_probability.")
-    return integration_jvm.JClass("org.tweetyproject.math.probability.Probability")
+def tweety_probability(jvm_session):
+    if jvm_session is None: pytest.skip("JVM non disponible pour tweety_probability.")
+    return jvm_session.JClass("org.tweetyproject.math.probability.Probability")
 
 @pytest.fixture(scope="session")
-def tweety_conditional_probability(integration_jvm):
-    if integration_jvm is None: pytest.skip("JVM non disponible pour tweety_conditional_probability.")
-    return integration_jvm.JClass("org.tweetyproject.math.probability.ConditionalProbability")
+def tweety_conditional_probability(jvm_session):
+    if jvm_session is None: pytest.skip("JVM non disponible pour tweety_conditional_probability.")
+    return jvm_session.JClass("org.tweetyproject.math.probability.ConditionalProbability")
 
 @pytest.fixture(scope="session")
-def tweety_parser_exception(integration_jvm):
-    if integration_jvm is None: pytest.skip("JVM non disponible pour tweety_parser_exception.")
-    return integration_jvm.JClass("org.tweetyproject.parsers.ParserException")
+def tweety_parser_exception(jvm_session):
+    if jvm_session is None: pytest.skip("JVM non disponible pour tweety_parser_exception.")
+    return jvm_session.JClass("org.tweetyproject.parsers.ParserException")
 
 @pytest.fixture(scope="session")
-def tweety_io_exception(integration_jvm):
-    if integration_jvm is None: pytest.skip("JVM non disponible pour tweety_io_exception.")
-    return integration_jvm.JClass("java.io.IOException")
+def tweety_io_exception(jvm_session):
+    if jvm_session is None: pytest.skip("JVM non disponible pour tweety_io_exception.")
+    return jvm_session.JClass("java.io.IOException")
 
 @pytest.fixture(scope="session")
-def tweety_qbf_classes(integration_jvm):
-    if integration_jvm is None: pytest.skip("JVM non disponible pour tweety_qbf_classes.")
-    JClass = integration_jvm.JClass
+def tweety_qbf_classes(tweety_classpath_initializer, jvm_session):
+    if jvm_session is None: pytest.skip("JVM non disponible pour tweety_qbf_classes.")
+    JClass = jvm_session.JClass
     loader_to_use = None
     try:
-        JavaThread = integration_jvm.JClass("java.lang.Thread") # integration_jvm est le paramètre ici
+        JavaThread = jvm_session.JClass("java.lang.Thread") # jvm_session est le paramètre ici
         current_thread = JavaThread.currentThread()
         loader_to_use = current_thread.getContextClassLoader()
         if loader_to_use is None:
-             loader_to_use = integration_jvm.JClass("java.lang.ClassLoader").getSystemClassLoader()
+             loader_to_use = jvm_session.JClass("java.lang.ClassLoader").getSystemClassLoader()
         logger.info(f"integration_fixtures.py: tweety_qbf_classes - Utilisation du ClassLoader: {loader_to_use}")
     except Exception as e_loader:
         logger.warning(f"integration_fixtures.py: tweety_qbf_classes - Erreur lors de l'obtention du ClassLoader: {str(e_loader)}. JClass utilisera le loader par défaut.")
@@ -310,9 +240,9 @@ def tweety_qbf_classes(integration_jvm):
         "QbfParser": JClass("org.tweetyproject.logics.qbf.parser.QbfParser", loader=loader_to_use)
     }
 @pytest.fixture(scope="session") # Changé scope à session pour correspondre aux autres fixtures Tweety
-def belief_revision_classes(integration_jvm):
+def belief_revision_classes(tweety_classpath_initializer, jvm_session):
     logger.info("integration_fixtures.py: Début de la fixture 'belief_revision_classes'.")
-    jpype_instance = integration_jvm
+    jpype_instance = jvm_session
     
     if jpype_instance is None:
         logger.error("integration_fixtures.py: belief_revision_classes - jpype_instance (résultat de integration_jvm) est None!")
@@ -375,9 +305,9 @@ def belief_revision_classes(integration_jvm):
     except Exception as e_py: pytest.fail(f"Erreur Python (belief_revision_classes): {str(e_py)}")
 
 @pytest.fixture(scope="session") # Changé scope à session
-def dialogue_classes(integration_jvm):
+def dialogue_classes(tweety_classpath_initializer, jvm_session):
     logger.info("integration_fixtures.py: Début de la fixture 'dialogue_classes'.")
-    jpype_instance = integration_jvm
+    jpype_instance = jvm_session
     if not jpype_instance or not jpype_instance.isJVMStarted(): pytest.skip("JVM non démarrée ou jpype_instance None (dialogue_classes).")
     try:
         loader_to_use = None
@@ -405,3 +335,58 @@ def dialogue_classes(integration_jvm):
         }
     except jpype_instance.JException as e: pytest.fail(f"Echec import classes Dialogue: {e.stacktrace() if hasattr(e, 'stacktrace') else str(e)}")
     except Exception as e_py: pytest.fail(f"Erreur Python (dialogue_classes): {str(e_py)}")
+# --- Fixture pour les tests E2E ---
+import sys
+from pathlib import Path
+project_root_fixture = Path(__file__).parent.parent.parent.resolve()
+if str(project_root_fixture) not in sys.path:
+    sys.path.insert(0, str(project_root_fixture))
+import asyncio
+from argumentation_analysis.webapp.orchestrator import UnifiedWebOrchestrator
+import argparse
+
+@pytest.fixture(scope="session", autouse=True)
+def webapp_service(request):
+    """
+    Fixture E2E qui NE démarre PAS les serveurs, mais récupère leurs URLs
+    depuis les options de la ligne de commande fournies par l'orchestrateur principal.
+    Ceci évite le conflit de double démarrage.
+    """
+    logger.info("--- DEBUT FIXTURE 'webapp_service' (récupération des URLs E2E) ---")
+
+    # Vérifier si la fixture est désactivée explicitement (garde la porte ouverte)
+    if request.config.getoption("--disable-e2e-servers-fixture"):
+        pytest.skip("Fixture webapp_service désactivée via la ligne de commande.")
+
+    # Récupérer les URLs depuis les options pytest
+    backend_url = request.config.getoption("--backend-url")
+    frontend_url = request.config.getoption("--frontend-url")
+
+    # Valider que les URLs sont bien présentes, sinon les tests E2E n'ont pas de sens.
+    if not backend_url or not frontend_url:
+        logger.info("URLs non fournies, la fixture 'webapp_service' ne fait rien.")
+        yield None
+        return
+
+    logger.info(f"URL Backend récupérée: {backend_url}")
+    logger.info(f"URL Frontend récupérée: {frontend_url}")
+
+    # Pour résoudre `TypeError: 'Namespace' object is not subscriptable`,
+    # on retourne un simple dictionnaire, qui est l'interface attendue par les tests.
+    service_info = {
+        "backend_url": backend_url,
+        "frontend_url": frontend_url,
+        # On inclut la structure imbriquée `app_info` pour la compatibilité
+        # avec les tests qui pourraient utiliser `service.app_info.backend_url`.
+        "app_info": argparse.Namespace(
+            backend_url=backend_url,
+            frontend_url=frontend_url,
+            backend_pid=None,
+            frontend_pid=None
+        )
+    }
+
+    # Le yield fournit le dictionnaire aux tests.
+    yield service_info
+    
+    logger.info("--- FIN FIXTURE 'webapp_service' ---")

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Utilitaires pour la réparation et la maintenance des données d'extraits.
 """
@@ -10,8 +10,10 @@ from typing import Optional, List, Dict, Any, Tuple # Ajout des types nécessair
 
 # Imports pour les fonctions déplacées
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent #, AuthorRole # Temporairement commenté
-# from semantic_kernel.agents import ChatCompletionAgent # Temporairement commenté
+# from semantic_kernel.contents import ChatMessageContent, AuthorRole # Temporairement commenté
+# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
+# from semantic_kernel.agents import ChatCompletionAgent
+# from semantic_kernel.contents import AuthorRole
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
 from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract # Ajustement du chemin
@@ -257,7 +259,7 @@ async def run_extract_repair_pipeline(
         
         # extract_service, fetch_service, definition_service sont maintenant disponibles localement
         
-        extract_definitions, error_message = definition_service.load_definitions()
+        extract_definitions, error_message = await definition_service.load_definitions()
         if error_message:
             logger.warning(f"Avertissement lors du chargement des définitions (pipeline): {error_message}")
         
@@ -295,9 +297,9 @@ async def run_extract_repair_pipeline(
         
         if save_changes:
             logger.info("Sauvegarde des modifications (pipeline)...")
-            success, error_msg_save = definition_service.save_definitions(updated_definitions)
+            success, error_msg_save = await definition_service.save_definitions(updated_definitions)
             if success:
-                logger.info("✅ Modifications sauvegardées avec succès (pipeline).")
+                logger.info("[OK] Modifications sauvegardées avec succès (pipeline).")
             else:
                 logger.error(f"❌ Erreur lors de la sauvegarde (pipeline): {error_msg_save}")
         
@@ -305,7 +307,7 @@ async def run_extract_repair_pipeline(
             output_json_file = Path(output_json_path_str)
             output_json_file.parent.mkdir(parents=True, exist_ok=True)
             logger.info(f"Exportation des définitions JSON mises à jour vers {output_json_file} (pipeline)...")
-            success_export, msg_export = definition_service.export_definitions_to_json(
+            success_export, msg_export = await definition_service.export_definitions_to_json(
                 updated_definitions, output_json_file
             )
             logger.info(msg_export)

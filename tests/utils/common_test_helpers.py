@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -16,7 +23,7 @@ import tempfile
 import shutil
 from pathlib import Path
 from contextlib import contextmanager
-from unittest.mock import patch, MagicMock
+
 
 # Configurer le logging
 logging.basicConfig(
@@ -398,6 +405,10 @@ def run_with_mocked_dependencies(func, *args, **kwargs):
         return func(*args, **kwargs)
 
 
+async def create_authentic_gpt4o_mini_instance():
+    """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+    config = UnifiedConfig()
+    return config.get_kernel_with_gpt4o_mini()
 if __name__ == "__main__":
     # Exemple d'utilisation
     env_info = setup_test_environment()

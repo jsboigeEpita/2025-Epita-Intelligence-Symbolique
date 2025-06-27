@@ -49,9 +49,11 @@ def verify_extract(source_info: Dict[str, Any], extract_info: Dict[str, Any]) ->
     
     logger.info(f"Vérification de l'extrait '{extract_name}' de la source '{source_name}'...")
     
-    # load_source_text attend un dictionnaire qui peut être un objet SourceDefinition converti.
-    # Il est important que source_info contienne les clés attendues par load_source_text.
-    source_text, url = load_source_text(source_info) # type: ignore
+    # Convertir le dictionnaire en objet SourceDefinition pour utiliser get_url()
+    # et assurer la cohérence des types.
+    source_definition_obj = SourceDefinition.from_dict(source_info)
+    
+    source_text, url = load_source_text(source_definition_obj)
     if not source_text:
         logger.error(f"Impossible de charger le texte source pour '{source_name}': {url}")
         return {

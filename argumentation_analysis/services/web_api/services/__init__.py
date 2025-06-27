@@ -5,10 +5,8 @@
 Services pour l'API Web d'analyse argumentative.
 """
 
-from .analysis_service import AnalysisService
-from .validation_service import ValidationService
-from .fallacy_service import FallacyService
-from .framework_service import FrameworkService
+# Import conditionnel pour éviter les erreurs de dépendances
+# Les services sont importés directement par app.py selon disponibilité
 
 __all__ = [
     'AnalysisService',
@@ -16,3 +14,6 @@ __all__ = [
     'FallacyService',
     'FrameworkService'
 ]
+
+# Note: Les imports sont maintenant gérés directement dans app.py
+# avec fallback vers fallback_services.py si nécessaire

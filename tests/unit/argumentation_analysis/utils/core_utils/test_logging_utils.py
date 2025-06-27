@@ -1,13 +1,21 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # -*- coding: utf-8 -*-
 """
 Tests unitaires pour les utilitaires de logging de project_core.
 """
 import pytest
 import logging
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import sys # Ajout pour sys.stdout dans le test modifié
 
-from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
+from argumentation_analysis.core.utils.logging_utils import setup_logging
 
 # Liste des niveaux de log valides pour les tests paramétrés
 VALID_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -77,13 +85,13 @@ def test_setup_logging_invalid_level_defaults_to_info(caplog):
     assert "Niveau de log invalide: INVALID_LEVEL. Utilisation du niveau INFO par défaut." in caplog.text, \
         "Un avertissement pour niveau invalide aurait dû être loggué."
 
-@patch('logging.StreamHandler') # Mocker StreamHandler pour vérifier son utilisation
+@patch('logging.StreamHandler')
 def test_setup_logging_configures_handler_and_formatter(mock_stream_handler_class, caplog):
     """
     Teste que setup_logging configure correctement le StreamHandler et le formateur.
     """
     # Créer une instance mock pour le handler qui sera retournée par la classe mockée
-    mock_handler_instance = MagicMock() # spec retiré car logging.StreamHandler est déjà mocké par @patch
+    mock_handler_instance = MagicMock()
     mock_stream_handler_class.return_value = mock_handler_instance
 
     # S'assurer que le handler mocké a un attribut 'level' de type int,

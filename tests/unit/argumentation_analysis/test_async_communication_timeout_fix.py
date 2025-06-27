@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # -*- coding: utf-8 -*-
 """
 Module de correction pour les tests asynchrones qui se bloquent.
@@ -12,7 +19,7 @@ import threading
 import time
 import uuid
 from typing import Dict, Any, Optional, List, Set
-from unittest.mock import MagicMock
+
 
 from argumentation_analysis.core.communication.message import (
     Message, MessageType, MessagePriority, AgentLevel
@@ -507,5 +514,6 @@ async def run_test_with_timeout():
 
 
 if __name__ == "__main__":
-    # Exécuter le test
-    asyncio.run(run_test_with_timeout())
+    # Exécuter le test avec pytest-asyncio
+    import pytest
+    pytest.main([__file__, "-v"])

@@ -19,8 +19,7 @@ try:
 except ImportError:
     REAL_TOOLS_AVAILABLE = False
 
-# Import des outils mocks et de l'orchestrateur d'analyse d'extrait
-from argumentation_analysis.mocks.advanced_tools import create_mock_advanced_rhetorical_tools
+# PHASE 2: Mocks éliminés - import des outils réels uniquement
 from argumentation_analysis.orchestration.advanced_analyzer import analyze_extract_advanced
 
 
@@ -30,7 +29,7 @@ def run_advanced_rhetoric_pipeline(
     extract_definitions: List[Dict[str, Any]],
     base_results: List[Dict[str, Any]],
     output_file: Path,
-    use_real_tools: bool = False # Paramètre pour choisir entre outils réels et mocks
+    # PHASE 2: Paramètre use_real_tools supprimé - outils réels uniquement
 ) -> None:
     """
     Analyse tous les extraits avec les outils avancés et sauvegarde les résultats.
@@ -62,23 +61,17 @@ def run_advanced_rhetoric_pipeline(
     
     # Initialiser les outils d'analyse avancés
     tools: Dict[str, Any]
-    if use_real_tools and REAL_TOOLS_AVAILABLE:
-        try:
-            tools = {
-                "complex_fallacy_analyzer": EnhancedComplexFallacyAnalyzer(),
-                "contextual_fallacy_analyzer": EnhancedContextualFallacyAnalyzer(),
-                "fallacy_severity_evaluator": EnhancedFallacySeverityEvaluator(),
-                "rhetorical_result_analyzer": EnhancedRhetoricalResultAnalyzer()
-            }
-            logger.info("✅ Outils d'analyse rhétorique avancés (réels) initialisés.")
-        except Exception as e: # Attraper une exception plus large au cas où l'init échoue
-            logger.warning(f"Erreur lors de l'initialisation des outils réels: {e}. Utilisation des mocks.")
-            tools = create_mock_advanced_rhetorical_tools()
-    else:
-        if use_real_tools and not REAL_TOOLS_AVAILABLE:
-            logger.warning("Les outils réels ont été demandés mais ne sont pas disponibles. Utilisation des mocks.")
-        tools = create_mock_advanced_rhetorical_tools()
-        logger.info("✅ Outils d'analyse rhétorique avancés (mocks) initialisés.")
+    # PHASE 2: Mocks éliminés - utilisation exclusive des outils réels
+    logger.info("Initialisation des outils d'analyse rhétorique avancés (réels uniquement)")
+    
+    # Pas de try/except - on laisse les vraies erreurs apparaître
+    tools = {
+        "complex_fallacy_analyzer": EnhancedComplexFallacyAnalyzer(),
+        "contextual_fallacy_analyzer": EnhancedContextualFallacyAnalyzer(),
+        "fallacy_severity_evaluator": EnhancedFallacySeverityEvaluator(),
+        "rhetorical_result_analyzer": EnhancedRhetoricalResultAnalyzer()
+    }
+    logger.info("[OK] Outils d'analyse rhétorique avancés (réels) initialisés avec succès.")
             
     base_results_dict: Dict[str, Dict[str, Any]] = {}
     for result in base_results:
@@ -126,6 +119,6 @@ def run_advanced_rhetoric_pipeline(
         output_file.parent.mkdir(parents=True, exist_ok=True) # S'assurer que le répertoire parent existe
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(all_pipeline_results, f, ensure_ascii=False, indent=2)
-        logger.info(f"✅ Résultats du pipeline d'analyse avancée sauvegardés dans {output_file}")
+        logger.info(f"[OK] Résultats du pipeline d'analyse avancée sauvegardés dans {output_file}")
     except Exception as e:
         logger.error(f"❌ Erreur lors de la sauvegarde des résultats du pipeline: {e}", exc_info=True)

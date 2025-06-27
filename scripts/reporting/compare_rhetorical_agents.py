@@ -1,3 +1,4 @@
+import argumentation_analysis.core.environment
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """

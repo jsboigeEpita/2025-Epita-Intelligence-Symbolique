@@ -40,7 +40,8 @@ class RequestResponseProtocol:
         self.middleware = middleware
         self.pending_requests = {}  # Dictionnaire des requêtes en attente de réponse
         self.response_callbacks = {}  # Callbacks pour les réponses asynchrones
-        self.lock = threading.RLock()  # Verrou pour les opérations concurrentes
+        self.lock = threading.RLock()  # Verrou threading pour compatibilité avec les méthodes synchrones
+        self.async_lock = asyncio.Lock()  # Verrou AsyncIO pour les opérations asynchrones
         self.early_responses = {}  # File d'attente pour les réponses anticipées
         self.early_responses_by_conversation = {}  # Réponses anticipées indexées par conversation_id
         
@@ -278,49 +279,54 @@ class RequestResponseProtocol:
                 # Créer un futur pour la réponse
                 response_future = asyncio.Future()
                 
-                # Enregistrer la requête comme en attente avec le futur
-                with self.lock:
-                    self.pending_requests[request.id] = {
-                        "request": request,
-                        "expires_at": datetime.now() + timedelta(seconds=timeout),
-                        "response": None,
-                        "completed": threading.Event(),
-                        "future": response_future,
-                        "loop": asyncio.get_running_loop() # Stocker la boucle actuelle
-                    }
-                    self.logger.info(f"Registered request {request.id} in pending_requests")
-                    
-                    # Vérifier à nouveau s'il y a une réponse anticipée après avoir enregistré la requête
-                    # Cela permet de capturer les réponses qui sont arrivées entre-temps
-                    if request.id in self.early_responses:
-                        early_response = self.early_responses[request.id]["response"]
-                        del self.early_responses[request.id]
-                        self.logger.info(f"Using early response for request {request.id} after registration")
+                # Race condition fix: attendre avant enregistrement des requêtes
+                await asyncio.sleep(0.1)
+                
+                # Utiliser le verrou AsyncIO pour les opérations asynchrones
+                async with self.async_lock:
+                    # Enregistrer la requête comme en attente avec le futur
+                    with self.lock:
+                        self.pending_requests[request.id] = {
+                            "request": request,
+                            "expires_at": datetime.now() + timedelta(seconds=timeout),
+                            "response": None,
+                            "completed": threading.Event(),
+                            "future": response_future,
+                            "loop": asyncio.get_running_loop() # Stocker la boucle actuelle
+                        }
+                        self.logger.info(f"Registered request {request.id} in pending_requests")
                         
-                        # Compléter le futur avec la réponse anticipée
-                        response_future.set_result(early_response)
+                        # Vérifier à nouveau s'il y a une réponse anticipée après avoir enregistré la requête
+                        # Cela permet de capturer les réponses qui sont arrivées entre-temps
+                        if request.id in self.early_responses:
+                            early_response = self.early_responses[request.id]["response"]
+                            del self.early_responses[request.id]
+                            self.logger.info(f"Using early response for request {request.id} after registration")
+                            
+                            # Compléter le futur avec la réponse anticipée
+                            response_future.set_result(early_response)
+                            
+                            # Supprimer la requête des requêtes en attente
+                            del self.pending_requests[request.id]
+                            
+                            return early_response
                         
-                        # Supprimer la requête des requêtes en attente
-                        del self.pending_requests[request.id]
-                        
-                        return early_response
-                    
-                    # Vérifier par ID de conversation
-                    if conversation_id and conversation_id in self.early_responses_by_conversation:
-                        early_response = self.early_responses_by_conversation[conversation_id]["response"]
-                        request_id = early_response.metadata.get("reply_to")
-                        if request_id in self.early_responses:
-                            del self.early_responses[request_id]
-                        del self.early_responses_by_conversation[conversation_id]
-                        self.logger.info(f"Using early response for conversation {conversation_id} after registration")
-                        
-                        # Compléter le futur avec la réponse anticipée
-                        response_future.set_result(early_response)
-                        
-                        # Supprimer la requête des requêtes en attente
-                        del self.pending_requests[request.id]
-                        
-                        return early_response
+                        # Vérifier par ID de conversation
+                        if conversation_id and conversation_id in self.early_responses_by_conversation:
+                            early_response = self.early_responses_by_conversation[conversation_id]["response"]
+                            request_id = early_response.metadata.get("reply_to")
+                            if request_id in self.early_responses:
+                                del self.early_responses[request_id]
+                            del self.early_responses_by_conversation[conversation_id]
+                            self.logger.info(f"Using early response for conversation {conversation_id} after registration")
+                            
+                            # Compléter le futur avec la réponse anticipée
+                            response_future.set_result(early_response)
+                            
+                            # Supprimer la requête des requêtes en attente
+                            del self.pending_requests[request.id]
+                            
+                            return early_response
                 
                 # Envoyer la requête
                 self.middleware.send_message(request)

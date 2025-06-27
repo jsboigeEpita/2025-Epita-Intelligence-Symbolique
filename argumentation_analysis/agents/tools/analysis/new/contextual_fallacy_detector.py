@@ -2,10 +2,18 @@
 # -*- coding: utf-8 -*-
 
 """
-Détecteur de sophismes contextuels.
+Détecteur de sophismes contextuels basé sur un système de règles.
 
-Ce module fournit des fonctionnalités pour détecter les sophismes
-qui dépendent fortement du contexte dans lequel ils sont utilisés.
+Ce module fournit `ContextualFallacyDetector`, une classe qui identifie les
+sophismes dont la nature fallacieuse dépend fortement du contexte. Contrairement
+aux approches basées sur des modèles NLP lourds, ce détecteur utilise un système
+expert léger et explicite fondé sur des règles prédéfinies.
+
+La détection repose sur :
+- L'inférence de facteurs contextuels (domaine, audience, etc.) par mots-clés.
+- La recherche de marqueurs textuels spécifiques à chaque type de sophisme.
+- L'application de règles contextuelles pour déterminer si le sophisme est
+  suffisamment "grave" pour être signalé dans le contexte donné.
 """
 
 import os
@@ -29,10 +37,12 @@ logger = logging.getLogger("ContextualFallacyDetector")
 
 class ContextualFallacyDetector:
     """
-    Détecteur de sophismes contextuels.
-    
-    Cette classe fournit des méthodes pour détecter les sophismes
-    qui dépendent fortement du contexte dans lequel ils sont utilisés.
+    Détecte les sophismes en appliquant des règles basées sur le contexte.
+
+    Cette classe utilise une approche "top-down" : elle analyse d'abord le
+    contexte de l'argumentation, puis recherche des marqueurs de sophismes.
+    Un sophisme n'est signalé que si sa gravité, telle que définie dans les
+    règles pour le contexte identifié, dépasse un certain seuil.
     """
     
     def __init__(self):
@@ -52,10 +62,14 @@ class ContextualFallacyDetector:
     
     def _define_contextual_factors(self) -> Dict[str, Dict[str, Any]]:
         """
-        Définit les facteurs contextuels pour l'analyse des sophismes.
-        
+        Définit les axes et les valeurs possibles pour l'analyse contextuelle.
+
+        Cette méthode agit comme une base de connaissances des dimensions
+        contextuelles pertinentes pour l'analyse des sophismes (domaine,
+        audience, support, objectif).
+
         Returns:
-            Dict[str, Dict[str, Any]]: Dictionnaire contenant les facteurs contextuels
+            Dict[str, Dict[str, Any]]: Un dictionnaire des facteurs contextuels.
         """
         factors = {
             "domain": {
@@ -92,10 +106,16 @@ class ContextualFallacyDetector:
     
     def _define_contextual_fallacies(self) -> Dict[str, Dict[str, Any]]:
         """
-        Définit les sophismes contextuels.
-        
+        Définit la base de règles pour la détection de sophismes contextuels.
+
+        Cette méthode retourne un dictionnaire qui est la principale base de
+        connaissances du détecteur. Pour chaque sophisme, elle définit :
+        - `markers` : Les mots-clés qui peuvent indiquer sa présence.
+        - `contextual_rules`: Des règles qui spécifient la gravité du sophisme
+          dans un domaine particulier.
+
         Returns:
-            Dict[str, Dict[str, Any]]: Dictionnaire contenant les sophismes contextuels
+            Dict[str, Dict[str, Any]]: Un dictionnaire des règles de sophismes.
         """
         fallacies = {
             "appel_inapproprié_autorité": {
@@ -169,18 +189,26 @@ class ContextualFallacyDetector:
         contextual_factors: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
         """
-        Détecte les sophismes fortement contextuels dans un argument.
-        
-        Cette méthode détecte les sophismes qui dépendent fortement du contexte,
-        comme les appels inappropriés à l'autorité, à l'émotion, à la tradition, etc.
-        
+        Détecte les sophismes contextuels pour un seul argument.
+
+        L'algorithme de détection est le suivant :
+        1. Inférer les facteurs contextuels à partir de la `context_description` si
+           ils ne sont pas fournis.
+        2. Pour chaque sophisme dans la base de règles, rechercher ses marqueurs
+           dans le texte de l'argument.
+        3. Si un marqueur est trouvé, calculer la gravité du sophisme en utilisant
+           les règles contextuelles.
+        4. Si la gravité calculée est supérieure à 0.5, signaler le sophisme.
+
         Args:
-            argument (str): Argument à analyser
-            context_description (str): Description du contexte
-            contextual_factors (Optional[Dict[str, str]]): Facteurs contextuels spécifiques
-            
+            argument (str): L'argument à analyser.
+            context_description (str): Une description textuelle du contexte.
+            contextual_factors (Optional[Dict[str, str]], optional): Facteurs
+                contextuels pré-analysés. Si None, ils sont inférés.
+
         Returns:
-            Dict[str, Any]: Résultats de la détection
+            Dict[str, Any]: Un dictionnaire de résultats contenant la liste des
+            sophismes détectés pour cet argument.
         """
         self.logger.info(f"Détection de sophismes contextuels dans: {argument[:50]}...")
         

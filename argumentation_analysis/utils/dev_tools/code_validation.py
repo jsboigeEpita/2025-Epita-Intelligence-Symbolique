@@ -34,7 +34,7 @@ def check_python_syntax(file_path: str) -> Tuple[bool, str, List[str]]:
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
         ast.parse(content)
-        message = "✅ La syntaxe du fichier est correcte."
+        message = "[OK] La syntaxe du fichier est correcte."
         logger.info(f"{message} ({file_path})")
         return True, message, []
     except SyntaxError as e:
@@ -96,7 +96,7 @@ def check_python_tokens(file_path: str) -> Tuple[bool, str, List[Dict[str, Any]]
             message = f"❌ Des tokens d'erreur ont été détectés dans {file_path}."
             return False, message, error_tokens_found
         else:
-            message = f"✅ Analyse des tokens terminée pour {file_path}. Aucun token d'erreur."
+            message = f"[OK] Analyse des tokens terminée pour {file_path}. Aucun token d'erreur."
             logger.info(message)
             return True, message, []
             

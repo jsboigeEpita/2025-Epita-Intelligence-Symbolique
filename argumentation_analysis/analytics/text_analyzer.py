@@ -16,17 +16,10 @@ textuelles, avec la possibilité d'étendre les types d'analyses supportées
 import logging
 from typing import Dict, Any
 
-# Importation au niveau du module pour une meilleure clarté
-try:
-    from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
-except ImportError:
-    # Gérer le cas où le script est exécuté d'une manière qui perturbe les imports relatifs
-    logging.error("Failed to import 'run_analysis_conversation'. Check PYTHONPATH and module structure.")
-    # Rendre la fonction inutilisable si l'import échoue
-    async def run_analysis_conversation(*args: Any, **kwargs: Any) -> None: # type: ignore
-        """Placeholder if import fails."""
-        raise ImportError("run_analysis_conversation could not be imported.")
+logger = logging.getLogger(__name__)
 
+# L'importation de run_analysis_conversation a été déplacée dans perform_text_analysis
+# pour résoudre une dépendance circulaire.
 
 async def perform_text_analysis(text: str, services: Dict[str, Any], analysis_type: str = "default") -> Any:
     """Effectue une analyse de texte en fonction du texte, des services et du type d'analyse fournis.
@@ -60,56 +53,39 @@ async def perform_text_analysis(text: str, services: Dict[str, Any], analysis_ty
    :raises ImportError: Si les composants d'analyse essentiels ne peuvent pas être importés.
     :raises Exception: Pour toute autre erreur survenant pendant le processus d'analyse.
     """
-    logging.info(f"Initiating text analysis of type '{analysis_type}' on text of length {len(text)} chars.")
+    logger.info(f"Initiating text analysis of type '{analysis_type}' on text of length {len(text)} chars.")
+
+    # --- DEBUT DU CORRECTIF POUR L'IMPORT CIRCULAIRE ---
+    # L'import est effectué ici pour briser le cycle de dépendance qui se produit lorsque
+    # `text_analyzer` est importé par une chaîne qui dépend de `analysis_runner` qui,
+    # à son tour, importe des modules (comme `auto_env`) qui peuvent déclencher une
+    # cascade d'imports menant de nouveau à `text_analyzer`.
+    try:
+        from argumentation_analysis.orchestration.analysis_runner import _run_analysis_conversation as run_analysis_conversation
+    except ImportError as e:
+        logger.critical(f"Impossible d'importer '_run_analysis_conversation' même avec un import local: {e}", exc_info=True)
+        raise
+    # --- FIN DU CORRECTIF ---
+
 
     llm_service = services.get("llm_service")
     # jvm_ready_status = services.get("jvm_ready", False) # Disponible si nécessaire
 
     if not llm_service:
-        logging.critical("❌ Le service LLM n'est pas disponible dans les services fournis. L'analyse ne peut pas continuer.")
+        logger.critical(" Le service LLM n'est pas disponible dans les services fournis. L'analyse ne peut pas continuer.")
         return None # Indique un échec critique
 
-    # Une logique future pour le routage basé sur analysis_type peut être ajoutée ici.
-    # Exemple :
-    # if analysis_type == "rhetoric_specific":
-    #     return await analyze_rhetoric_specifically(text, llm_service, services)
-    # elif analysis_type == "fallacy_specific":
-    #     return await detect_fallacies_specifically(text, llm_service, services)
-
     try:
-        logging.info(f"Lancement de l'analyse principale (type: {analysis_type}) via run_analysis_conversation...")
-        # `run_analysis_conversation` est attendue. Son utilisation originale dans `run_analysis.py`
-        # n'implique pas la capture d'une valeur de retour pour un traitement ultérieur dans ce script.
-        # Elle gère sa propre journalisation du succès ou de l'échec.
-        await run_analysis_conversation(
+        logger.info(f"Lancement de l'analyse principale (type: {analysis_type}) via run_analysis_conversation...")
+        analysis_result = await run_analysis_conversation(
             texte_a_analyser=text,
             llm_service=llm_service
-            # Si `analysis_type` ou d'autres `services` deviennent pertinents pour `run_analysis_conversation`,
-            # ils devront être passés ici.
         )
-        logging.info(f"🏁 Analyse principale (type: '{analysis_type}') terminée avec succès (via run_analysis_conversation).")
-        # Imite le comportement original : aucun résultat explicite retourné par ce chemin, le succès est journalisé.
-        return # Ou un indicateur de succès plus spécifique si l'appelant en a besoin.
+        logger.info(f"Analyse principale (type: '{analysis_type}') terminee avec succes (via run_analysis_conversation).")
+        logger.debug(f"RESULTAT BRUT DE _run_analysis_conversation: {analysis_result}")
+        # La fonction retourne maintenant le résultat de l'analyse.
+        return analysis_result
 
-    except ImportError as ie:
-        # Ceci serait typiquement intercepté au chargement du module si run_analysis_conversation est critique.
-        logging.error(f"❌ Échec de l'importation ou de l'utilisation des composants d'analyse pour le type '{analysis_type}': {ie}", exc_info=True)
-        raise # Propage l'ImportError pour indiquer un problème de dépendance.
     except Exception as e:
-        logging.error(f"❌ Erreur lors de l'analyse du texte (type: {analysis_type}): {e}", exc_info=True)
-        # Il est important de ne pas masquer l'erreur originale si elle n'est pas gérée spécifiquement.
-        # Retourner None ici pourrait masquer la cause racine d'un problème plus large.
-        # Si une gestion spécifique de l'erreur est nécessaire, elle doit être ajoutée.
-        # Sinon, il est préférable de laisser l'exception se propager ou de la lever à nouveau.
-        raise # Propage l'exception pour une gestion d'erreur plus globale.
-
-# Placeholder for more specific analysis functions if `analysis_type` routing is implemented:
-# async def analyze_rhetoric_specifically(text: str, llm_service: Any, all_services: Dict[str, Any]):
-#     logging.info("Performing specific rhetoric analysis...")
-#     # ... specific logic ...
-#     return "Rhetoric analysis results"
-
-# async def detect_fallacies_specifically(text: str, llm_service: Any, all_services: Dict[str, Any]):
-#     logging.info("Performing specific fallacy detection...")
-#     # ... specific logic ...
-#     return "Fallacy detection results"
+        logger.error(f" Erreur lors de l'analyse du texte (type: {analysis_type}): {e}", exc_info=True)
+        raise

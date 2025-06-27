@@ -44,21 +44,33 @@ def ensure_directory_exists(directory_path):
 
 def get_project_root():
     """
-    Récupère le chemin racine du projet.
+    Récupère le chemin racine du projet de manière robuste en cherchant un marqueur de projet.
     
     Returns:
         Path: Chemin racine du projet
     """
     from pathlib import Path
     import os
+    # On commence par le répertoire du fichier actuel pour avoir un point d'ancrage fiable.
+    start_path = Path(os.path.abspath(__file__)).parent
+    current_path = start_path
     
-    # Obtenir le répertoire du script courant
-    current_dir = Path(os.path.dirname(os.path.abspath(__file__)))
-    
-    # Remonter de deux niveaux pour obtenir la racine du projet (depuis utils -> argumentation_analysis -> project_root)
-    project_root = current_dir.parent.parent
-    
-    return project_root
+    # On remonte l'arborescence jusqu'à trouver un marqueur de la racine du projet.
+    # On ajoute une limite pour éviter une boucle infinie si on n'est pas dans un projet.
+    for _ in range(10): # Limite de 10 niveaux de recherche vers le haut
+        # Marqueurs possibles : un dossier .git, un fichier pyproject.toml, requirements.txt, etc.
+        if (current_path / ".git").is_dir() or (current_path / "pyproject.toml").is_file():
+            return current_path
+        
+        parent_path = current_path.parent
+        if parent_path == current_path: # On a atteint la racine du système de fichiers (ex: C:\)
+            break
+        current_path = parent_path
+            
+    # Si aucun marqueur n'est trouvé, on retourne le calcul précédent comme fallback,
+    # mais on log un avertissement sévère.
+    # logger.warning(f"Could not determine project root by marker. Falling back to relative path calculation from {start_path}.")
+    return start_path.parent.parent # Fallback
 
 def is_running_in_notebook():
     """
@@ -83,7 +95,7 @@ def check_and_install(package_import_name: str, package_install_name: str):
         try:
             # Utilisation de -q pour une sortie moins verbeuse, --disable-pip-version-check pour éviter les warnings
             subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "--disable-pip-version-check", package_install_name])
-            logger.info(f"✅ {package_install_name} installé avec succès.")
+            logger.info(f"[OK] {package_install_name} installé avec succès.")
             # Recharger les modules ou invalider les caches peut être nécessaire dans certains environnements
             importlib.invalidate_caches()
             importlib.import_module(package_import_name) # Re-tester l'import

@@ -25,20 +25,16 @@ for jar_path_check in TWEETY_JARS:
     if not os.path.exists(jar_path_check):
         raise FileNotFoundError(f"JAR file {jar_path_check} not found. Please run download_test_jars.py or ensure correct paths.")
 
-def start_jvm_if_not_started(): # Conservé pour référence ou exécution hors pytest
-    if not jpype.isJVMStarted():
-        print("JVM non démarrée. Tentative de démarrage avec le classpath complet...")
-        classpath = os.pathsep.join(TWEETY_JARS)
-        jpype.startJVM(classpath=[classpath], convertStrings=False)
-        print(f"JVM démarrée avec classpath: {classpath}")
-    else:
-        print("JVM déjà démarrée.")
-
-def test_load_theory():
+def test_load_theory(jvm_session):
+    """
+    Teste le chargement d'une théorie propositionnelle à partir d'un fichier,
+    en utilisant une fixture de session pour gérer la JVM.
+    """
     try:
         print("Démarrage du test de chargement de théorie...")
 
-        start_jvm_if_not_started() # Assure que la JVM est démarrée avec le classpath
+        # La fixture jvm_session s'est déjà occupée de démarrer la JVM.
+        assert jpype.isJVMStarted(), "La JVM devrait être démarrée par la fixture jvm_session"
 
         PlBeliefSet = jpype.JClass("net.sf.tweety.logics.pl.syntax.PlBeliefSet")
         PlParser = jpype.JClass("net.sf.tweety.logics.pl.parser.PlParser")
@@ -87,27 +83,9 @@ def test_load_theory():
 
         print("Test de chargement de théorie RÉUSSI.")
 
-    except Exception as e_main: # Renommé pour clarté
-        print(f"Test de chargement de théorie ÉCHOUÉ : {e_main}")
+    except Exception as e:
+        print(f"Test de chargement de théorie ÉCHOUÉ : {e}")
         import traceback
         traceback.print_exc()
-        # L'exception sera levée dans le finally si elle existe
-        
-    finally:
-        if jpype.isJVMStarted():
-            try:
-                System = jpype.JClass("java.lang.System")
-                actual_classpath = System.getProperty("java.class.path")
-                print(f"DEBUG_FINALLY_CLASSPATH (test_load_theory): {actual_classpath}")
-            except Exception as e_jvm_debug_finally:
-                print(f"DEBUG_FINALLY_CLASSPATH_ERROR (test_load_theory): {e_jvm_debug_finally}")
-        
-        # Optionnel: arrêter la JVM si ce script est le seul utilisateur
-        # if jpype.isJVMStarted():
-        #     jpype.shutdownJVM()
-        #     print("JVM arrêtée.")
-        
-        # Relancer l'exception originale si elle a eu lieu pour que le test échoue
-        if 'e_main' in locals() and isinstance(e_main, Exception):
-            raise e_main # s'assure que le test échoue si une exception a été attrapée
-        pass
+        #pytest se chargera de lever l'exception
+        raise e

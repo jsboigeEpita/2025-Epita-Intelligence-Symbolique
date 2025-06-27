@@ -200,6 +200,37 @@ class TestExtractDefinition(unittest.TestCase):
 if __name__ == "__main__":
     unittest.main()
 
+@pytest.fixture
+def sample_extract_dict():
+    """Fournit un dictionnaire de base pour un objet Extract."""
+    return {
+        "extract_name": "Test Extract",
+        "start_marker": "DEBUT_EXTRAIT",
+        "end_marker": "FIN_EXTRAIT",
+        "template_start": "T{0}"
+    }
+
+@pytest.fixture
+def sample_extract(sample_extract_dict):
+    """Fournit un objet Extract de base."""
+    return Extract.from_dict(sample_extract_dict)
+
+@pytest.fixture
+def sample_source(sample_extract):
+    """Fournit un objet SourceDefinition de base."""
+    return SourceDefinition(
+        source_name="Test Source",
+        source_type="url",
+        schema="https",
+        host_parts=["example", "com"],
+        path="/test",
+        extracts=[sample_extract]
+    )
+
+@pytest.fixture
+def sample_definitions(sample_source):
+    """Fournit un objet ExtractDefinitions de base."""
+    return ExtractDefinitions(sources=[sample_source])
 
 # Tests utilisant les fixtures pytest
 

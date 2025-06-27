@@ -1,0 +1,214 @@
+{
+  "scan_date": "2025-06-07T13:26:33.893339",
+  "total_files_scanned": 226,
+  "obsolete_scripts_found": [
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\start_web_application_simple.ps1",
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\backend_failover_non_interactive.ps1",
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\integration_tests_with_failover.ps1",
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\run_integration_tests.ps1",
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\run_backend.cmd",
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\run_frontend.cmd"
+  ],
+  "pattern_matches": [
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\start_web_application.ps1",
+      "pattern_type": "invoke_webrequest_pattern",
+      "line_number": 134,
+      "matched_content": "try { $response = Invoke-WebRequest -Uri \"http://localhost:5003/api/health\" -TimeoutSec 2 -ErrorAction SilentlyContinue; $backendReady = $true } catch { $backendReady = $false }",
+      "confidence": 0.7,
+      "replacement_suggestion": "service_manager.test_service_health(url)"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\start_web_application.ps1",
+      "pattern_type": "invoke_webrequest_pattern",
+      "line_number": 137,
+      "matched_content": "try { $response = Invoke-WebRequest -Uri \"http://localhost:3000\" -TimeoutSec 2 -ErrorAction SilentlyContinue; $frontendReady = $true } catch { $frontendReady = $false }",
+      "confidence": 0.7,
+      "replacement_suggestion": "service_manager.test_service_health(url)"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\start_web_application_simple.ps1",
+      "pattern_type": "invoke_webrequest_pattern",
+      "line_number": 136,
+      "matched_content": "$backendTest = Invoke-WebRequest -Uri \"http://localhost:5003/api/health\" -TimeoutSec 5",
+      "confidence": 0.7,
+      "replacement_suggestion": "service_manager.test_service_health(url)"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\start_web_application_simple.ps1",
+      "pattern_type": "invoke_webrequest_pattern",
+      "line_number": 145,
+      "matched_content": "$frontendTest = Invoke-WebRequest -Uri \"http://localhost:3000\" -TimeoutSec 5",
+      "confidence": 0.7,
+      "replacement_suggestion": "service_manager.test_service_health(url)"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\backend_failover_non_interactive.ps1",
+      "pattern_type": "invoke_webrequest_pattern",
+      "line_number": 38,
+      "matched_content": "$response = Invoke-WebRequest -Uri \"http://localhost:$port/api/health\" -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop",
+      "confidence": 0.7,
+      "replacement_suggestion": "service_manager.test_service_health(url)"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\backend_failover_non_interactive.ps1",
+      "pattern_type": "free_port_pattern",
+      "line_number": 46,
+      "matched_content": "function Free-Port($port) {",
+      "confidence": 1.0,
+      "replacement_suggestion": "port_manager.free_port(port, force=True)"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\diagnose_backend_startup.ps1",
+      "pattern_type": "invoke_webrequest_pattern",
+      "line_number": 88,
+      "matched_content": "$response = Invoke-WebRequest -Uri \"http://localhost:$testPort/api/health\" -TimeoutSec 2 -ErrorAction Stop",
+      "confidence": 0.7,
+      "replacement_suggestion": "service_manager.test_service_health(url)"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\integration_tests_with_failover.ps1",
+      "pattern_type": "cleanup_services_pattern",
+      "line_number": 48,
+      "matched_content": "function Cleanup-Services {",
+      "confidence": 1.0,
+      "replacement_suggestion": "service_manager.stop_all_services()"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\integration_tests_with_failover.ps1",
+      "pattern_type": "invoke_webrequest_pattern",
+      "line_number": 113,
+      "matched_content": "$response = Invoke-WebRequest -Uri \"http://localhost:$global:BackendPort/api/health\" -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop",
+      "confidence": 0.7,
+      "replacement_suggestion": "service_manager.test_service_health(url)"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\integration_test_trace_simple_success.ps1",
+      "pattern_type": "invoke_webrequest_pattern",
+      "line_number": 31,
+      "matched_content": "$response = Invoke-WebRequest -Uri \"http://localhost:5003/api/health\" -TimeoutSec 5 -ErrorAction Stop",
+      "confidence": 0.7,
+      "replacement_suggestion": "service_manager.test_service_health(url)"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\integration_test_trace_simple_success.ps1",
+      "pattern_type": "invoke_webrequest_pattern",
+      "line_number": 47,
+      "matched_content": "$response = Invoke-WebRequest -Uri \"http://localhost:5003/api/health\" -TimeoutSec 5",
+      "confidence": 0.7,
+      "replacement_suggestion": "service_manager.test_service_health(url)"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\integration_test_with_trace.ps1",
+      "pattern_type": "cleanup_services_pattern",
+      "line_number": 106,
+      "matched_content": "function Cleanup-Services {",
+      "confidence": 1.0,
+      "replacement_suggestion": "service_manager.stop_all_services()"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\integration_test_with_trace.ps1",
+      "pattern_type": "invoke_webrequest_pattern",
+      "line_number": 164,
+      "matched_content": "$response = Invoke-WebRequest -Uri \"http://localhost:$global:BackendPort/api/health\" -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop",
+      "confidence": 0.7,
+      "replacement_suggestion": "service_manager.test_service_health(url)"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\integration_test_with_trace_fixed.ps1",
+      "pattern_type": "cleanup_services_pattern",
+      "line_number": 106,
+      "matched_content": "function Cleanup-Services {",
+      "confidence": 1.0,
+      "replacement_suggestion": "service_manager.stop_all_services()"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\integration_test_with_trace_fixed.ps1",
+      "pattern_type": "invoke_webrequest_pattern",
+      "line_number": 164,
+      "matched_content": "$response = Invoke-WebRequest -Uri \"http://localhost:$global:BackendPort/api/health\" -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop",
+      "confidence": 0.7,
+      "replacement_suggestion": "service_manager.test_service_health(url)"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\integration_test_with_trace_robust.ps1",
+      "pattern_type": "cleanup_services_pattern",
+      "line_number": 327,
+      "matched_content": "function Cleanup-Services {",
+      "confidence": 1.0,
+      "replacement_suggestion": "service_manager.stop_all_services()"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\run_all_and_test.ps1",
+      "pattern_type": "test_netconnection_pattern",
+      "line_number": 41,
+      "matched_content": "$backend_ok = (Test-NetConnection -ComputerName localhost -Port 5003 -WarningAction SilentlyContinue).TcpTestSucceeded",
+      "confidence": 0.8,
+      "replacement_suggestion": "port_manager.is_port_free(port)"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\run_all_and_test.ps1",
+      "pattern_type": "test_netconnection_pattern",
+      "line_number": 45,
+      "matched_content": "$frontend_ok = (Test-NetConnection -ComputerName localhost -Port 3000 -WarningAction SilentlyContinue).TcpTestSucceeded",
+      "confidence": 0.8,
+      "replacement_suggestion": "port_manager.is_port_free(port)"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\run_integration_tests.ps1",
+      "pattern_type": "stop_process_pattern",
+      "line_number": 33,
+      "matched_content": "Get-Process -Name \"node\" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue",
+      "confidence": 0.8,
+      "replacement_suggestion": "process_cleanup.stop_backend_processes() ou stop_frontend_processes()"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\run_integration_tests.ps1",
+      "pattern_type": "test_netconnection_pattern",
+      "line_number": 69,
+      "matched_content": "$testConnection = Test-NetConnection -ComputerName \"localhost\" -Port 5003 -WarningAction SilentlyContinue",
+      "confidence": 0.8,
+      "replacement_suggestion": "port_manager.is_port_free(port)"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\run_integration_tests.ps1",
+      "pattern_type": "test_netconnection_pattern",
+      "line_number": 111,
+      "matched_content": "$testConnection = Test-NetConnection -ComputerName \"localhost\" -Port 3000 -WarningAction SilentlyContinue",
+      "confidence": 0.8,
+      "replacement_suggestion": "port_manager.is_port_free(port)"
+    },
+    {
+      "file_path": "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\run_frontend.cmd",
+      "pattern_type": "npm_direct_pattern",
+      "line_number": 10,
+      "matched_content": "npm start",
+      "confidence": 0.8,
+      "replacement_suggestion": "service_manager.start_service_with_failover(\"frontend-react\")"
+    }
+  ],
+  "migration_priority": {
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\start_web_application_simple.ps1": 1,
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\backend_failover_non_interactive.ps1": 1,
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\integration_tests_with_failover.ps1": 2,
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\run_integration_tests.ps1": 2,
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\run_backend.cmd": 1,
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\run_frontend.cmd": 1
+  },
+  "estimated_effort_hours": {
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\start_web_application_simple.ps1": 6,
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\backend_failover_non_interactive.ps1": 8,
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\integration_tests_with_failover.ps1": 12,
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\run_integration_tests.ps1": 4,
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\run_backend.cmd": 2,
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\run_frontend.cmd": 2
+  },
+  "replacement_commands": {
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\start_web_application_simple.ps1": "python -m project_core.test_runner start-app --wait",
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\backend_failover_non_interactive.ps1": "python -c \"from project_core.service_manager import *; sm = ServiceManager(); sm.start_service_with_failover('backend-flask')\"",
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\integration_tests_with_failover.ps1": "python -m project_core.test_runner integration",
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\run_integration_tests.ps1": "python -m project_core.test_runner integration",
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\run_backend.cmd": "python -m project_core.test_runner start-app",
+    "C:\\dev\\2025-Epita-Intelligence-Symbolique\\scripts\\run_frontend.cmd": "python -m project_core.test_runner start-app"
+  }
+}

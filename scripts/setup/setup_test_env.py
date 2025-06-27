@@ -8,6 +8,7 @@ Ce script utilise le pipeline de setup défini dans project_core.pipelines.setup
 pour orchestrer les différentes étapes de configuration, y compris:
 - Le diagnostic de l'environnement (implicitement via les autres pipelines).
 - Le téléchargement de dépendances (ex: JARs).
+import argumentation_analysis.core.environment
 - L'installation des paquets Python via un fichier requirements.
 - La configuration optionnelle d'un mock pour JPype.
 
@@ -117,7 +118,6 @@ def main():
 
 
     success = run_test_environment_setup_pipeline(
-        config_path=args.config_path,
         requirements_path=args.requirements_path,
         mock_jpype=args.mock_jpype,
         venv_path=args.venv_path,

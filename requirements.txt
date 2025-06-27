@@ -1,25 +1,63 @@
-Flask[async]~=3.1.1
-jpype1
-Flask-CORS
-matplotlib
-networkx
-nltk
-openai
-pandas
-pydantic>=2.0,<2.10
-pytest
-pytest-asyncio
-pytest-mock
-python-dotenv
+# Core ML/Data Science
+numpy==1.25.0
+pandas==2.0.3
+scipy
 scikit-learn
-scipy>=1.15.1
-sentence-transformers
-semantic-kernel
-numpy
+nltk
 spacy
-coverage
-clingo
-unidecode
-markdown
+torch
+transformers
+sympy==1.13.1
+thinc
+blis
 
+# Web & API
+flask
+requests
+fastapi
+uvicorn
+whitenoise
+flask-cors
+starlette
+a2wsgi
+asgiref
+
+# Utilities
+pydantic==2.9.2
+pydantic-settings>=2.0
+python-dotenv
+cryptography
+tqdm
+pyyaml
+regex
+markdown
+unidecode
+
+# Plotting & Graphing
+matplotlib
+seaborn
+statsmodels
+networkx
+pyvis
+
+# Java Bridge
+jpype1
+
+# Logic & Reasoning
+clingo
+
+# Pip dependencies
+# semantic-kernel>=1.33.0
+flask_socketio>=5.3.6
 playwright
+psutil
+pyautogen>=0.2.0
+tenacity
+pybreaker
+# mcp
+# Testing
+pytest-asyncio
+pytest-trio
+trio
+tenacity
+pybreaker

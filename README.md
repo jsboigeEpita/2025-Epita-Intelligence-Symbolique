@@ -1,151 +1,148 @@
-﻿# Projet d'Analyse d'Argumentation
+﻿# 🏆 Projet d'Intelligence Symbolique EPITA
+## Une Exploration Approfondie de l'Analyse d'Argumentation et des Systèmes Multi-Agents
 
-Ce projet contient une application web pour l'analyse d'argumentation, composée d'un backend Flask et d'un frontend React.
+---
 
-## Prérequis
+## 🎓 **Bienvenue aux Étudiants d'EPITA !**
 
-### Backend
-- Python 3.x
-- Conda (pour la gestion de l'environnement)
-- Les dépendances listées dans `requirements.txt`
+Ce projet est bien plus qu'une simple collection de scripts ; c'est une **plateforme d'apprentissage interactive** conçue spécifiquement pour vous, futurs ingénieurs en intelligence artificielle. Notre objectif est de vous immerger dans les concepts fondamentaux et les applications pratiques de l'IA symbolique. Ici, vous ne trouverez pas seulement du code, mais des opportunités d'explorer, d'expérimenter, de construire et, surtout, d'apprendre.
 
-### Frontend
-- Node.js (avec npm ou yarn)
+### 🎯 **Vos Objectifs Pédagogiques avec ce Projet :**
+*   🧠 **Comprendre en Profondeur :** Assimiler les fondements de l'IA symbolique, du raisonnement logique et de l'IA explicable.
+*   🗣️ **Maîtriser l'Argumentation :** Développer une expertise dans les techniques d'analyse argumentative, la détection de sophismes et la construction d'arguments solides.
+*   🤖 **Explorer l'Orchestration d'Agents :** Découvrir la puissance des systèmes multi-agents et leur intégration avec des modèles de langage (LLM) pour des tâches complexes.
+*   🛠️ **Intégrer les Technologies Modernes :** Acquérir une expérience pratique avec Python, Java (via JPype), les API web (Flask/FastAPI), et les interfaces utilisateur (React).
+*   🏗️ **Développer des Compétences en Ingénierie Logicielle :** Vous familiariser avec les bonnes pratiques en matière d'architecture logicielle, de tests automatisés et de gestion de projet.
 
-## Configuration de l'environnement
+---
 
-### Backend
-1.  **Créer et activer l'environnement Conda** (si ce n'est pas déjà fait) :
-    ```bash
-    conda create --name projet-is python=3.9  # Ou la version de Python que vous utilisez
-    conda activate projet-is
-    ```
-2.  **Installer les dépendances Python** :
-    Depuis la racine du projet :
-    ```bash
-    pip install -r requirements.txt
-    ```
-3.  **Configurer PYTHONPATH** :
-    Assurez-vous que le répertoire racine du projet est dans votre `PYTHONPATH`.
-    Sous PowerShell (pour la session actuelle) :
-    ```powershell
-    $env:PYTHONPATH = "C:\dev\2025-Epita-Intelligence-Symbolique;" + $env:PYTHONPATH 
-    # Remplacez C:\dev\2025-Epita-Intelligence-Symbolique par le chemin absolu de la racine de votre projet si différent.
-    ```
-    Pour une configuration permanente, ajoutez ceci à votre profil PowerShell ou configurez-le via les variables d'environnement système.
+## 🚀 **DÉMARRAGE ULTRA-RAPIDE (5 minutes)**
 
-    **Alternative : Utilisation des scripts d'environnement PowerShell**
+Suivez ces étapes pour avoir un environnement fonctionnel et validé en un temps record.
 
-    Pour simplifier la configuration de l'environnement et l'exécution de commandes, le projet fournit des scripts PowerShell.
-
-    **1. Le script de travail principal : `scripts\env\activate_project_env.ps1`**
-
-    Ce script est le cœur de l'automatisation de l'environnement. Voici ce qu'il fait :
-    *   Il charge les variables d'environnement depuis le fichier `.env` situé à la racine du projet (par exemple, `OPENAI_API_KEY`, `JAVA_HOME`, `CONDA_ENV_NAME`).
-    *   Il configure la variable d'environnement `JAVA_HOME` pour la session PowerShell actuelle si elle est définie dans `.env`.
-    *   Il ajoute le répertoire `bin` de `JAVA_HOME` au `PATH` système pour la session PowerShell actuelle.
-    *   **Comportement avec `-CommandToRun`** :
-        *   Si vous lui passez le paramètre `-CommandToRun "<votre_commande>"` (où `<votre_commande>` n'est pas une chaîne vide) :
-            *   Il exécute `<votre_commande>` en utilisant `conda run -n <nom_env_conda> --no-capture-output --live-stream <votre_commande>`. Le `<nom_env_conda>` est typiquement `projet-is` ou celui défini par `CONDA_ENV_NAME` dans votre `.env`.
-            *   Cela signifie que votre commande s'exécute dans l'environnement Conda isolé, qui gère ses propres dépendances et `PYTHONPATH`. C'est la méthode recommandée pour lancer des applications Python du projet.
-        *   Si `-CommandToRun` n'est pas fourni, ou si la commande est une chaîne vide :
-            *   Le script N'EXÉCUTE PAS `conda run`.
-            *   Il N'ACTIVE PAS l'environnement Conda dans votre session PowerShell actuelle (il ne fait pas `conda activate projet-is`).
-            *   Il NE CONFIGURE PAS `PYTHONPATH` pour votre session PowerShell actuelle. Dans ce cas, si vous voulez lancer des scripts Python manuellement ensuite, vous devrez gérer l'activation de Conda et `PYTHONPATH` vous-même (voir la configuration manuelle ci-dessus).
-
-    **2. Les scripts raccourcis à la racine du projet**
-
-    Pour faciliter l'appel du script principal, deux raccourcis (wrappers) sont disponibles à la racine du projet :
-
-    *   **`.\activate_project_env.ps1`**
-        *   **Usage recommandé pour lancer des commandes (comme le serveur backend) :**
-            ```powershell
-            .\activate_project_env.ps1 -CommandToRun "python .\argumentation_analysis\services\web_api\start_api.py --port 5003"
-            ```
-            Cela passe l'option `-CommandToRun` au script `scripts\env\activate_project_env.ps1`, qui exécutera la commande via `conda run`.
-        *   **Usage pour préparer partiellement l'environnement (sans lancer de commande via Conda) :**
-            Si vous l'appelez sans `-CommandToRun` :
-            ```powershell
-            .\activate_project_env.ps1
-            ```
-            Il appelle `scripts\env\activate_project_env.ps1` sans `-CommandToRun`. Cela chargera les variables de `.env` et configurera `JAVA_HOME`/`PATH` dans votre session PowerShell actuelle. Cela n'active pas Conda ni ne configure `PYTHONPATH` pour le shell.
-
-    *   **`.\setup_project_env.ps1`**
-        *   Ce script appelle toujours `scripts\env\activate_project_env.ps1` en lui passant le paramètre `-CommandToRun`.
-        *   Si vous l'appelez avec `-CommandToRun "<votre_commande>"` :
-            ```powershell
-            .\setup_project_env.ps1 -CommandToRun "python .\argumentation_analysis\services\web_api\start_api.py --port 5003"
-            ```
-            L'effet est identique à l'utilisation de `.\activate_project_env.ps1 -CommandToRun "<votre_commande>"`.
-        *   Si vous l'appelez sans `-CommandToRun` :
-            ```powershell
-            .\setup_project_env.ps1
-            ```
-            Il passe `-CommandToRun ""` (une chaîne vide) à `scripts\env\activate_project_env.ps1`. L'effet est donc similaire à `.\activate_project_env.ps1` sans argument : chargement de `.env`, configuration de `JAVA_HOME`/`PATH`, mais pas d'exécution via `conda run` ni d'activation Conda/`PYTHONPATH` pour le shell.
-            Le nom "setup" peut être un peu trompeur dans ce cas précis ; il est plus pertinent si vous l'utilisez avec `-CommandToRun` pour exécuter une tâche de configuration ou de lancement.
-
-    **En résumé pour démarrer le backend :**
-    La méthode recommandée utilisant les scripts est :
-    ```powershell
-    .\activate_project_env.ps1 -CommandToRun "python .\argumentation_analysis\services\web_api\start_api.py --port 5003"
-    ```
-    Cela garantit que le serveur s'exécute dans l'environnement Conda correctement configuré.
-
-    Un script `setup_project_env.sh` est disponible pour les environnements bash/zsh, fonctionnant sur un principe similaire pour exécuter une commande dans un environnement préparé.
-
-### Frontend
-1.  **Installer les dépendances Node.js** :
-    Naviguez vers le répertoire du client :
-    ```bash
-    cd services/web_api/interface-web-argumentative
-    ```
-    Puis installez les dépendances :
-    ```bash
-    npm install
-    # ou si vous utilisez yarn:
-    # yarn install
-    ```
-    Retournez ensuite à la racine du projet si nécessaire :
-    ```bash
-    cd ../../.. 
-    ```
-
-## Démarrage de l'application
-
-Le lancement du backend et du frontend est géré par des scripts pour plus de simplicité et de cohérence.
-
-### 1. Configurer la communication Frontend -> Backend
-
-Avant de lancer, assurez-vous que le frontend sait comment contacter le backend.
-
-1.  **Créez un fichier** nommé `.env` dans le répertoire du frontend, ici : `services/web_api/interface-web-argumentative/.env`
-2.  **Ajoutez la ligne suivante** dans ce fichier. Le port doit correspondre à celui sur lequel vous allez lancer le backend (par exemple, 5005).
-
-    ```
-    REACT_APP_API_BASE_URL=http://localhost:5005
-    ```
-
-### 2. Lancer les serveurs
-
-Ouvrez deux terminaux PowerShell à la racine du projet.
-
-**Terminal 1 : Lancer le Backend**
-
-Utilisez le script `run_backend.cmd` pour démarrer le serveur Flask. Vous pouvez spécifier un port.
+### **1. Installation Complète (2 minutes)**
+Le script suivant s'occupe de tout : création de l'environnement, installation des dépendances, etc.
 
 ```powershell
-# Lance le backend sur le port 5005
-.\activate_project_env.ps1 -CommandToRun "scripts\run_backend.cmd 5005"
+# Depuis la racine du projet en PowerShell
+./setup_project_env.ps1
 ```
+> **Note:** Si vous n'êtes pas sur Windows, un script `setup_project_env.sh` est également disponible.
 
-**Terminal 2 : Lancer le Frontend**
+### **2. Configuration de l'API OpenRouter (1 minute)**
+Pour les fonctionnalités avancées basées sur les LLMs.
 
-Utilisez le script `run_frontend.cmd` pour démarrer le serveur React. Vous pouvez également spécifier un port.
+```bash
+# Créer le fichier .env avec votre clé API
+echo "OPENROUTER_API_KEY=sk-or-v1-VOTRE_CLE_ICI" > .env
+echo "OPENROUTER_BASE_URL=https://openrouter.ai/api/v1" >> .env
+echo "OPENROUTER_MODEL=gpt-4o-mini" >> .env
+```
+> *Obtenez une clé gratuite sur [OpenRouter.ai](https://openrouter.ai)*
+
+### **3. Activation & Test de Validation (2 minutes)**
 
 ```powershell
-# Lance le frontend sur le port 3001
-.\activate_project_env.ps1 -CommandToRun "scripts\run_frontend.cmd 3001"
+# Activer l'environnement
+./activate_project_env.ps1
+
+# Lancer le test système rapide
+python examples/scripts_demonstration/demonstration_epita.py --quick-start
 ```
+> Si ce script s'exécute sans erreur, votre installation est un succès !
 
-L'application React s'ouvrira dans votre navigateur et communiquera avec le backend sur le port que vous avez défini dans le fichier `.env` du frontend.
+---
 
+
+## 🧭 **Comment Naviguer dans ce Vaste Projet : Les 5 Points d'Entrée Clés**
+
+Ce projet est riche et comporte de nombreuses facettes. Pour vous aider à vous orienter, nous avons défini 5 points d'entrée principaux, chacun ouvrant la porte à un aspect spécifique du système.
+
+| Point d'Entrée             | Idéal Pour                                  | Description Brève                                                                                                | Documentation Détaillée                                                                 |
+| :------------------------- | :------------------------------------------ | :--------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------- |
+| **1. Démo Pédagogique EPITA** | Étudiants (première découverte)             | Un menu interactif et guidé pour explorer les concepts clés et les fonctionnalités du projet de manière ludique. | [`examples/scripts_demonstration/README.md`](examples/scripts_demonstration/README.md) |
+| **2. Démos de Raisonnement Logique** | Passionnés d'IA, logique, multi-agents    | Lancez des scénarios d'investigation complexes (Cluedo, Einstein) avec le système d'agents logiques unifié. | [`examples/Sherlock_Watson/README.md`](examples/Sherlock_Watson/README.md) |
+| **3. Analyse Rhétorique**   | Développeurs IA, linguistes computationnels | Accédez au cœur du système d'analyse d'arguments, de détection de sophismes et de raisonnement formel.        | **[Cartographie du Système](docs/mapping/rhetorical_analysis_map.md)** <br> **[Rapports de Test](docs/reports/rhetorical_analysis/)** <br> **[README Technique](argumentation_analysis/README.md)** |
+| **4. Application Web**      | Développeurs Web, testeurs UI               | Démarrez et interagir avec l'écosystème de microservices web (API, frontend, outils JTMS).                   | [`docs/mapping/web_apps_map.md`](docs/mapping/web_apps_map.md:0) |
+| **5. Suite de Tests**       | Développeurs, Assurance Qualité             | Exécutez les tests unitaires, d'intégration et end-to-end (Pytest & Playwright) pour valider le projet.        | [`tests/README.md`](tests/README.md:0)                                                   |
+
+### **Accès et Commandes Principales par Point d'Entrée :**
+
+#### **1. 🎭 Démo Pédagogique EPITA (Point d'Entrée Recommandé)**
+Conçue pour une introduction en douceur, cette démo vous guide à travers les fonctionnalités principales.
+*   **Lancement (mode interactif guidé) :**
+    ```bash
+    python examples/scripts_demonstration/demonstration_epita.py --interactive
+    ```
+*   Pour plus de détails : **[Consultez le README de la Démo Epita](examples/scripts_demonstration/README.md)**.
+
+#### **2. 🕵️ Démos de Raisonnement Logique (Cluedo, Einstein, etc.)**
+Plongez au cœur du raisonnement multi-agents avec des scénarios d'investigation pilotés par le script de production.
+*   **Lancement du scénario Cluedo :**
+    ```bash
+    python examples/Sherlock_Watson/agents_logiques_production.py --scenario examples/Sherlock_Watson/cluedo_scenario.json
+    ```
+*   **Lancement du scénario du Puzzle d'Einstein :**
+    ```bash
+    python examples/Sherlock_Watson/agents_logiques_production.py --scenario examples/Sherlock_Watson/einstein_scenario.json
+    ```
+*   Pour plus de détails : **[Consultez le README des démos logiques](examples/Sherlock_Watson/README.md)**.
+
+#### **3. 🗣️ Analyse Rhétorique Approfondie**
+Accédez directement aux capacités d'analyse d'arguments du projet.
+*   **Lancement de la démonstration d'analyse rhétorique :**
+    ```bash
+    python argumentation_analysis/demos/rhetorical_analysis/run_demo.py
+    ```
+*   Pour comprendre l'architecture : **[Cartographie du Système](docs/mapping/rhetorical_analysis_map.md)**.
+
+#### **4. 🌐 Application et Services Web**
+Démarrez l'ensemble des microservices (API backend, frontend React, outils JTMS).
+*   **Lancement de l'orchestrateur web :**
+    ```powershell
+    # Depuis la racine du projet (PowerShell)
+    ./start_webapp.ps1
+    ```
+*   Pour les détails : **[Consultez la cartographie de l'application web](docs/mapping/web_apps_map.md)**
+
+#### **5. 🧪 Suite de Tests Complète**
+Validez l'intégrité et le bon fonctionnement du projet avec plus de 400 tests.
+*   **Lancer tous les tests Python (Pytest) :**
+    ```powershell
+    # Depuis la racine du projet (PowerShell)
+    ./run_tests.ps1
+    ```
+*   **Lancer les tests avec des appels LLM réels :**
+     ```bash
+    python -m pytest tests/unit/argumentation_analysis/test_strategies_real.py -v
+    ```
+*   Pour les instructions détaillées : **[Consultez le README des Tests](tests/README.md)**
+
+---
+
+## 🆘 **Dépannage Rapide**
+
+| Erreur | Solution Rapide |
+| :--- | :--- |
+| **API Key manquante ou invalide** | Vérifiez le contenu de votre fichier `.env`. Il doit contenir `OPENROUTER_API_KEY=...` |
+| **Java non trouvé (pour TweetyProject)** | Assurez-vous d'avoir un JDK 8+ installé et que la variable d'environnement `JAVA_HOME` est correctement configurée. |
+| **Dépendances manquantes** | Relancez `pip install -r requirements.txt --force-reinstall` après avoir activé votre environnement conda. |
+
+---
+
+## ✨ **Aperçu des Technologies Utilisées**
+
+Ce projet est une mosaïque de technologies modernes et de concepts d'IA éprouvés :
+
+| Domaine                     | Technologies Clés                                       |
+| :-------------------------- | :------------------------------------------------------ |
+| **Langages Principaux**     | Python, JavaScript, Java (via JPype)                    |
+| **IA & LLM**                | Semantic Kernel, OpenRouter/OpenAI API, TweetyProject   |
+| **Développement Web**       | Flask, FastAPI, React, WebSockets                       |
+| **Tests**                   | Pytest, Playwright                                      |
+| **Gestion d'Environnement** | Conda, NPM                                              |
+| **Analyse Argumentative**   | Outils et agents personnalisés pour la logique et les sophismes |
+
+---
+
+**🏆 Projet d'Intelligence Symbolique EPITA 2025 - Prêt pour votre exploration et contribution ! 🚀**

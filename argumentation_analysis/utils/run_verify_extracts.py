@@ -131,7 +131,7 @@ def main():
                 logger.info(f"  - {result.get('source_name')} - {result.get('extract_name')}: {result.get('message')}")
     
     # Afficher un message de succès
-    print(f"\n✅ Vérification des extraits terminée avec succès. Rapport généré dans {output_file}")
+    print(f"\n[OK] Vérification des extraits terminée avec succès. Rapport généré dans {output_file}")
     print(f"Résumé: {valid_count} valides, {warning_count} avec avertissements, {invalid_count} invalides, {error_count} erreurs")
 
 if __name__ == "__main__":

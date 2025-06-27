@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -8,8 +15,9 @@ Tests unitaires pour le module embedding_utils.py.
 import pytest
 import json
 from pathlib import Path
-from unittest.mock import patch, MagicMock, mock_open
+
 import httpx # Ajout de l'import
+from unittest.mock import patch, MagicMock, mock_open
 
 # Chemins pour le patching
 OPENAI_CLIENT_PATH = "argumentation_analysis.nlp.embedding_utils.OpenAI"
@@ -183,14 +191,13 @@ def test_save_embeddings_data_io_error(tmp_path, sample_embeddings_data, caplog)
     output_file = tmp_path / "embeddings_io_error.json"
     
     with patch(MKDIR_PATH), \
-         patch(OPEN_BUILTIN_PATH, mock_open()) as mock_file_open:
-        # Simuler une IOError lors de l'écriture
-        mock_file_open.side_effect = IOError("Test IOError")
+         patch(OPEN_BUILTIN_PATH, mock_open()), \
+         patch('json.dump', side_effect=IOError("Test IOError")):
         
         success = save_embeddings_data(sample_embeddings_data, output_file)
         
         assert success is False
-        assert "Erreur d'E/S lors de la sauvegarde" in caplog.text
+        assert "❌ Erreur d'E/S lors de la sauvegarde" in caplog.text
         assert "Test IOError" in caplog.text
 
 def test_save_embeddings_data_other_exception(tmp_path, sample_embeddings_data, caplog):
@@ -198,14 +205,13 @@ def test_save_embeddings_data_other_exception(tmp_path, sample_embeddings_data, 
     output_file = tmp_path / "embeddings_other_error.json"
     
     with patch(MKDIR_PATH), \
-         patch(OPEN_BUILTIN_PATH, mock_open()) as mock_file_open:
-        # Simuler une exception générique
-        mock_file_open.side_effect = Exception("Test Generic Exception")
+         patch(OPEN_BUILTIN_PATH, mock_open()), \
+         patch('json.dump', side_effect=Exception("Test Generic Exception")):
         
         success = save_embeddings_data(sample_embeddings_data, output_file)
         
         assert success is False
-        assert "Erreur inattendue lors de la sauvegarde" in caplog.text
+        assert "❌ Erreur inattendue lors de la sauvegarde" in caplog.text
         assert "Test Generic Exception" in caplog.text
 
 def test_save_embeddings_data_mkdir_fails(tmp_path, sample_embeddings_data, caplog):

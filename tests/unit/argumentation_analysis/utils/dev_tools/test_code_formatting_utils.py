@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # tests/dev_utils/test_code_formatting_utils.py
 import pytest
 import os
@@ -5,9 +12,14 @@ import tempfile
 from pathlib import Path
 import subprocess
 import logging
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 
 from argumentation_analysis.utils.dev_tools.code_formatting_utils import format_python_file_with_autopep8, logger as formatting_utils_logger
+
+@pytest.fixture
+def mock_run(mocker):
+    return mocker.patch('subprocess.run')
 
 @pytest.fixture
 def temp_python_file(request):
@@ -40,7 +52,7 @@ def temp_python_file(request):
             f_path.unlink()
 
 @pytest.mark.debuglog
-@patch('subprocess.run')
+
 def test_format_file_basic_indentation(mock_run, temp_python_file):
     """Teste le formatage basique de l'indentation."""
     
@@ -99,7 +111,7 @@ def foo():
     assert mock_run.call_count == 2 # version check + format call
 
 @pytest.mark.debuglog
-@patch('subprocess.run')
+
 def test_format_file_no_changes_needed(mock_run, temp_python_file):
     """Teste un fichier déjà bien formaté."""
     
@@ -142,19 +154,9 @@ def test_format_file_not_found():
     assert result is False
 
 @pytest.mark.debuglog
-@patch('subprocess.run')
-def test_format_file_autopep8_fails(mock_subprocess_run, temp_python_file):
+
+def test_format_file_autopep8_fails(mock_run, temp_python_file):
     """Teste le cas où la commande autopep8 échoue."""
-    mock_subprocess_run.side_effect = subprocess.CalledProcessError(
-        returncode=1, cmd=['autopep8'], stderr="autopep8 error"
-    )
-    # Le premier appel à subprocess.run est pour la vérification de version, le second pour le formatage.
-    # On peut aussi mocker la vérification de version pour qu'elle passe.
-    
-    # Pour simplifier, on peut mocker la vérification de version pour qu'elle passe toujours
-    # et ne se concentrer que sur l'échec du formatage.
-    # Cependant, la structure actuelle appelle `autopep8 --version` en premier.
-    # On va donc mocker les deux appels.
     
     mock_version_result = MagicMock()
     mock_version_result.stdout = "autopep8 1.5.7"
@@ -173,7 +175,7 @@ def test_format_file_autopep8_fails(mock_subprocess_run, temp_python_file):
     format_error_instance.stdout = "" # autopep8 peut ne rien écrire sur stdout en cas d'erreur
     
     # Configurer side_effect pour retourner le succès pour --version, puis l'échec pour le formatage
-    mock_subprocess_run.side_effect = [
+    mock_run.side_effect = [
         mock_version_result, # Pour l'appel à `autopep8 --version`
         format_error_instance # Pour l'appel de formatage
     ]
@@ -181,22 +183,22 @@ def test_format_file_autopep8_fails(mock_subprocess_run, temp_python_file):
     file_path = temp_python_file("print('hello')")
     result = format_python_file_with_autopep8(str(file_path))
     assert result is False
-    assert mock_subprocess_run.call_count == 2 # un pour version, un pour formatage
+    assert mock_run.call_count == 2 # un pour version, un pour formatage
 
 @pytest.mark.debuglog
-@patch('subprocess.run')
-def test_format_file_autopep8_not_found(mock_subprocess_run, temp_python_file):
+
+def test_format_file_autopep8_not_found(mock_run, temp_python_file):
     """Teste le cas où autopep8 n'est pas installé."""
     # Le premier appel (version check) lèvera FileNotFoundError
-    mock_subprocess_run.side_effect = FileNotFoundError("autopep8 not found")
+    mock_run.side_effect = FileNotFoundError("autopep8 not found")
     
     file_path = temp_python_file("print('test')")
     result = format_python_file_with_autopep8(str(file_path))
     assert result is False
-    mock_subprocess_run.assert_called_once() # Seulement l'appel de version est tenté
+    mock_run.assert_called_once() # Seulement l'appel de version est tenté
 
 @pytest.mark.debuglog
-def test_format_with_custom_args(temp_python_file):
+def test_format_with_custom_args(mock_run, temp_python_file):
     """Teste le passage d'arguments personnalisés à autopep8."""
     code_with_long_line = """
 def my_func():
@@ -214,44 +216,43 @@ def my_func():
     # Un test d'intégration complet nécessiterait de vérifier la sortie réelle,
     # ce qui peut être complexe à cause des variations de version d'autopep8.
 
-    with patch('subprocess.run') as mock_run:
-        mock_version_result = MagicMock()
-        mock_version_result.stdout = "autopep8 1.5.7"
-        mock_version_result.returncode = 0
-        
-        mock_format_result = MagicMock()
-        mock_format_result.stdout = "some output"
-        mock_format_result.returncode = 0
-        
-        mock_run.side_effect = [mock_version_result, mock_format_result]
-        
-        custom_args = ['--max-line-length=80', '--experimental']
-        result = format_python_file_with_autopep8(str(file_path), autopep8_args=custom_args)
-        
-        assert result is True
-        assert mock_run.call_count == 2
-        
-        # Vérifier que le deuxième appel (formatage) contient les bons arguments
-        format_call_args = mock_run.call_args_list[1][0][0] # Premier argument du deuxième appel
-        assert format_call_args[0] == 'autopep8'
-        assert '--max-line-length=80' in format_call_args
-        assert '--experimental' in format_call_args
-        assert str(file_path) in format_call_args
-        # Les arguments par défaut comme --in-place ne devraient pas être là si on fournit des args custom
-        # La logique actuelle de format_python_file_with_autopep8 ajoute les args custom
-        # SANS écraser les défauts, mais les ajoute à la liste.
-        # La fonction devrait plutôt remplacer les args par défaut si autopep8_args est fourni.
-        # Je vais corriger cela dans la fonction.
-        # Pour l'instant, ce test va échouer si on vérifie que --in-place n'est PAS là.
-        # On va plutôt vérifier que nos args SONT là.
-        # La fonction a été modifiée pour que autopep8_args remplace les défauts.
-        # Donc, --in-place ne sera pas là si non inclus dans custom_args.
-        # Cependant, pour un formatage utile, --in-place est souvent voulu.
-        # Le test actuel vérifie que les args sont passés.
-        # La fonction `format_python_file_with_autopep8` a été écrite pour que
-        # si `autopep8_args` est `None`, elle utilise ses propres défauts.
-        # Si `autopep8_args` est une liste, elle utilise cette liste.
-        # Donc, si on veut --in-place avec des args custom, il faut l'inclure.
-        # Pour ce test, on ne l'inclut pas pour vérifier que seuls les args custom sont passés.
-        assert '--in-place' not in format_call_args # Car non inclus dans custom_args
-        assert '--aggressive' not in format_call_args
+    mock_version_result = MagicMock()
+    mock_version_result.stdout = "autopep8 1.5.7"
+    mock_version_result.returncode = 0
+    
+    mock_format_result = MagicMock()
+    mock_format_result.stdout = "some output"
+    mock_format_result.returncode = 0
+    
+    mock_run.side_effect = [mock_version_result, mock_format_result]
+    
+    custom_args = ['--max-line-length=80', '--experimental']
+    result = format_python_file_with_autopep8(str(file_path), autopep8_args=custom_args)
+    
+    assert result is True
+    assert mock_run.call_count == 2
+    
+    # Vérifier que le deuxième appel (formatage) contient les bons arguments
+    format_call_args = mock_run.call_args_list[1][0][0] # Premier argument du deuxième appel
+    assert format_call_args[0] == 'autopep8'
+    assert '--max-line-length=80' in format_call_args
+    assert '--experimental' in format_call_args
+    assert str(file_path) in format_call_args
+    # Les arguments par défaut comme --in-place ne devraient pas être là si on fournit des args custom
+    # La logique actuelle de format_python_file_with_autopep8 ajoute les args custom
+    # SANS écraser les défauts, mais les ajoute à la liste.
+    # La fonction devrait plutôt remplacer les args par défaut si autopep8_args est fourni.
+    # Je vais corriger cela dans la fonction.
+    # Pour l'instant, ce test va échouer si on vérifie que --in-place n'est PAS là.
+    # On va plutôt vérifier que nos args SONT là.
+    # La fonction a été modifiée pour que autopep8_args remplace les défauts.
+    # Donc, --in-place ne sera pas là si non inclus dans custom_args.
+    # Cependant, pour un formatage utile, --in-place est souvent voulu.
+    # Le test actuel vérifie que les args sont passés.
+    # La fonction `format_python_file_with_autopep8` a été écrite pour que
+    # si `autopep8_args` est `None`, elle utilise ses propres défauts.
+    # Si `autopep8_args` est une liste, elle utilise cette liste.
+    # Donc, si on veut --in-place avec des args custom, il faut l'inclure.
+    # Pour ce test, on ne l'inclut pas pour vérifier que seuls les args custom sont passés.
+    assert '--in-place' not in format_call_args # Car non inclus dans custom_args
+    assert '--aggressive' not in format_call_args

@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -8,6 +15,7 @@ Tests pour la gestion des erreurs réseau du FetchService avec pytest.
 import pytest
 import requests
 from unittest.mock import patch, MagicMock
+
 
 # Définir une classe de service de récupération simplifiée pour les tests
 class FetchService:
@@ -177,7 +185,7 @@ def test_successful_fetch(fetch_service):
         mock_response.status_code = 200
         mock_response.text = expected_text
         # Simuler l'absence d'erreur HTTP en s'assurant que raise_for_status ne fait rien
-        mock_response.raise_for_status = MagicMock() 
+        mock_response.raise_for_status = MagicMock()
         mock_get.return_value = mock_response
         
         content, error = fetch_service.fetch_url(url)

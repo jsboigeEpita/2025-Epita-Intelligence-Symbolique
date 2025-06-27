@@ -28,6 +28,9 @@ Guide pour l'intégration et l'utilisation de l'API Web du système.
 ### [Utilisation des Agents Logiques](./utilisation_agents_logiques.md)
 Instructions sur la configuration et l'emploi des agents logiques.
 
+### [Guide des Patterns d'Orchestration](./GUIDE_PATTERNS_ORCHESTRATION_MODES.md)
+Guide complet des patterns d'orchestration utilisés dans le projet, incluant 5 types d'orchestration distincts (Git/Versioning, Refonte Technique, Test/Validation, Sprints, Documentation) avec leurs templates de communication, séquences d'outils, modes délégués et bonnes pratiques. Basé sur l'analyse d'une session de développement complète avec 100% de succès.
+
 ### [Analyse Impact Guides Sur Projets Etudiants](./analyse_impact_guides_sur_projets_etudiants.md) <!-- TODO: Rédiger une brève description pour ce guide. -->
 
 ### [Contribution Documentation](./contribution_documentation.md) <!-- TODO: Rédiger une brève description pour ce guide. -->

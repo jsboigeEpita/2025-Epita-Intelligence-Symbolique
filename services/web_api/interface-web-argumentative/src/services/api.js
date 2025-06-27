@@ -1,4 +1,8 @@
-const API_BASE_URL = 'http://localhost:5000';
+// En mode de développement et de test E2E, l'URL du backend est fournie par une variable d'environnement.
+// Cela permet au frontend (servi par le serveur de développement React) de communiquer avec le backend Python
+// qui tourne sur un port différent. En production, cette variable peut être absente,
+// et les requêtes utiliseront des chemins relatifs car le frontend est servi par le même serveur que l'API.
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || '';
 
 // Configuration par défaut pour les requêtes
 const defaultHeaders = {
@@ -86,14 +90,15 @@ export const detectFallacies = async (text, options = {}) => {
   return handleResponse(response);
 };
 
-// Construction de framework de Dung
-export const buildFramework = async (argumentList, attacks = []) => {
+// Analyse de framework de Dung via le nouveau backend centralisé
+export const analyzeDungFramework = async (argumentList, attacks = []) => {
+  // Les données sont directement Pydantic-compatibles depuis le frontend
   const requestBody = {
-    arguments: argumentList,
-    attacks
+    arguments: argumentList.map(arg => arg.id), // Extrait les IDs : ['a', 'b', ...]
+    attacks: attacks // Les attaques sont déjà au format [['source_id', 'target_id']]
   };
 
-  const response = await fetchWithTimeout(`${API_BASE_URL}/api/framework`, {
+  const response = await fetchWithTimeout(`${API_BASE_URL}/api/v1/framework/analyze`, {
     method: 'POST',
     headers: defaultHeaders,
     body: JSON.stringify(requestBody)
@@ -165,10 +170,11 @@ export const analyzeLogicGraph = async (data) => {
   const { text, options } = data;
   const requestBody = {
     text,
+    logic_type: 'propositional', // Ajout du type de logique manquant
     options: options || { layout: 'hierarchical' }
   };
 
-  const response = await fetchWithTimeout(`${API_BASE_URL}/api/logic_graph`, {
+  const response = await fetchWithTimeout(`${API_BASE_URL}/api/logic/belief-set`, {
     method: 'POST',
     headers: defaultHeaders,
     body: JSON.stringify(requestBody)
@@ -224,13 +230,13 @@ export const getExampleFallacyDetection = () => {
 };
 
 export const getExampleFramework = () => {
-  return buildFramework([
+  return analyzeDungFramework([
     { id: 'A', text: 'Les voitures polluent' },
     { id: 'B', text: 'Les voitures électriques ne polluent pas' },
     { id: 'C', text: 'L\'électricité peut être produite proprement' }
   ], [
     { from: 'B', to: 'A', type: 'attack' },
-    { from: 'C', to: 'B', type: 'support' }
+    { from: 'C', to: 'B', type: 'attack' } // 'support' n'est pas un type d'attaque valide pour Dung. Corrigé.
   ]);
 };
 
@@ -257,7 +263,7 @@ export default {
   analyzeText,
   validateArgument,
   detectFallacies,
-  buildFramework,
+  analyzeDungFramework, // Remplacement de buildFramework
   createBeliefSet,
   executeLogicQuery,
   generateLogicQueries,
@@ -270,6 +276,6 @@ export default {
     getExampleAnalysis,
     getExampleValidation,
     getExampleFallacyDetection,
-    getExampleFramework
+    getExampleFramework // Cette fonction devra être adaptée pour utiliser analyzeDungFramework
   }
 };

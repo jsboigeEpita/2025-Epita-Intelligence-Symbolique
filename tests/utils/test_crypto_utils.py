@@ -1,10 +1,18 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # tests/utils/test_crypto_utils.py
 import pytest
 import base64
 import os
 from unittest import mock
-# MODIFIÉ: Ajout de encrypt_data_with_fernet et decrypt_data_with_fernet
-from argumentation_analysis.utils.core_utils.crypto_utils import (
+ 
+ # MODIFIÉ: Ajout de encrypt_data_with_fernet et decrypt_data_with_fernet
+from argumentation_analysis.core.utils.crypto_utils import (
     derive_encryption_key, load_encryption_key, FIXED_SALT,
     encrypt_data_with_fernet, decrypt_data_with_fernet
 )
@@ -94,21 +102,23 @@ EXPECTED_KEY_FOR_SIMPLE_PASSPHRASE = derive_encryption_key(TEST_PASSPHRASE_SIMPL
 
 def test_load_key_from_passphrase_arg():
     """Teste le chargement de la clé via l'argument passphrase_arg."""
-    key = load_encryption_key(passphrase_arg=TEST_PASSPHRASE_SIMPLE, env_var_name=TEST_ENV_VAR_NAME)
+    key = load_encryption_key(passphrase_arg=TEST_PASSPHRASE_SIMPLE)
     assert key is not None
     assert key == EXPECTED_KEY_FOR_SIMPLE_PASSPHRASE
 
-@mock.patch.dict(os.environ, {TEST_ENV_VAR_NAME: TEST_PASSPHRASE_SIMPLE})
-def test_load_key_from_env_var():
-    """Teste le chargement de la clé via la variable d'environnement."""
-    key = load_encryption_key(passphrase_arg=None, env_var_name=TEST_ENV_VAR_NAME)
-    assert key is not None
-    assert key == EXPECTED_KEY_FOR_SIMPLE_PASSPHRASE
+def test_load_key_from_settings():
+    """Teste le chargement de la clé via la configuration `settings`."""
+    with mock.patch('argumentation_analysis.core.utils.crypto_utils.settings.passphrase', new_callable=mock.PropertyMock) as mock_passphrase:
+        mock_passphrase.return_value.get_secret_value.return_value = TEST_PASSPHRASE_SIMPLE
+        key = load_encryption_key(passphrase_arg=None)
+        assert key is not None
+        assert key == EXPECTED_KEY_FOR_SIMPLE_PASSPHRASE
 
-@mock.patch.dict(os.environ, {TEST_ENV_VAR_NAME: "autrePhraseSecreteMoinsBien"})
 def test_load_key_passphrase_arg_priority():
     """Teste que passphrase_arg a la priorité sur la variable d'environnement."""
-    key = load_encryption_key(passphrase_arg=TEST_PASSPHRASE_SIMPLE, env_var_name=TEST_ENV_VAR_NAME)
+    with mock.patch('argumentation_analysis.core.utils.crypto_utils.settings.passphrase', new_callable=mock.PropertyMock) as mock_passphrase:
+        mock_passphrase.return_value.get_secret_value.return_value = "autrePhraseSecreteMoinsBien"
+        key = load_encryption_key(passphrase_arg=TEST_PASSPHRASE_SIMPLE)
     assert key is not None
     assert key == EXPECTED_KEY_FOR_SIMPLE_PASSPHRASE
     # S'assurer qu'il n'a pas utilisé la valeur de la variable d'environnement
@@ -117,37 +127,35 @@ def test_load_key_passphrase_arg_priority():
 
 def test_load_key_no_source():
     """Teste l'échec si aucune source de passphrase n'est valide ou fournie."""
-    # Assurer que la variable d'environnement n'est pas définie pour ce test
-    with mock.patch.dict(os.environ, clear=True):
-        key = load_encryption_key(passphrase_arg=None, env_var_name=TEST_ENV_VAR_NAME)
+    with mock.patch('argumentation_analysis.core.utils.crypto_utils.settings.passphrase', None):
+        key = load_encryption_key(passphrase_arg=None)
         assert key is None
-        # Test avec une passphrase vide en argument et pas de variable d'env
-        key_empty_arg = load_encryption_key(passphrase_arg=TEST_PASSPHRASE_EMPTY, env_var_name=TEST_ENV_VAR_NAME)
+        key_empty_arg = load_encryption_key(passphrase_arg=TEST_PASSPHRASE_EMPTY)
         assert key_empty_arg is None
 
 
-@mock.patch.dict(os.environ, {TEST_ENV_VAR_NAME: TEST_PASSPHRASE_SIMPLE})
 def test_load_key_invalid_arg_valid_env():
     """Teste le cas où passphrase_arg est invalide (vide) mais la variable d'environnement est valide."""
-    # La fonction load_encryption_key essaiera l'arg en premier, échouera (car vide),
-    # puis devrait utiliser la variable d'environnement.
-    key = load_encryption_key(passphrase_arg=TEST_PASSPHRASE_EMPTY, env_var_name=TEST_ENV_VAR_NAME)
-    assert key is not None, "Devrait utiliser la clé de la variable d'env si l'arg est invalide."
-    assert key == EXPECTED_KEY_FOR_SIMPLE_PASSPHRASE
+    with mock.patch('argumentation_analysis.core.utils.crypto_utils.settings.passphrase', new_callable=mock.PropertyMock) as mock_passphrase:
+        mock_passphrase.return_value.get_secret_value.return_value = TEST_PASSPHRASE_SIMPLE
+        key = load_encryption_key(passphrase_arg=TEST_PASSPHRASE_EMPTY)
+        assert key is not None, "Devrait utiliser la clé des settings si l'arg est invalide."
+        assert key == EXPECTED_KEY_FOR_SIMPLE_PASSPHRASE
 
-@mock.patch.dict(os.environ, {TEST_ENV_VAR_NAME: TEST_PASSPHRASE_EMPTY})
 def test_load_key_valid_arg_invalid_env():
     """Teste le cas où passphrase_arg est valide mais la variable d'environnement est invalide (vide)."""
-    # Devrait utiliser passphrase_arg et ignorer la variable d'env invalide.
-    key = load_encryption_key(passphrase_arg=TEST_PASSPHRASE_SIMPLE, env_var_name=TEST_ENV_VAR_NAME)
-    assert key is not None
-    assert key == EXPECTED_KEY_FOR_SIMPLE_PASSPHRASE
+    with mock.patch('argumentation_analysis.core.utils.crypto_utils.settings.passphrase', new_callable=mock.PropertyMock) as mock_passphrase:
+        mock_passphrase.return_value.get_secret_value.return_value = TEST_PASSPHRASE_EMPTY
+        key = load_encryption_key(passphrase_arg=TEST_PASSPHRASE_SIMPLE)
+        assert key is not None
+        assert key == EXPECTED_KEY_FOR_SIMPLE_PASSPHRASE
 
-@mock.patch.dict(os.environ, {TEST_ENV_VAR_NAME: TEST_PASSPHRASE_EMPTY})
 def test_load_key_arg_none_invalid_env():
     """Teste le cas où passphrase_arg est None et la variable d'environnement est invalide (vide)."""
-    key = load_encryption_key(passphrase_arg=None, env_var_name=TEST_ENV_VAR_NAME)
-    assert key is None, "Devrait retourner None si l'env var est invalide et pas d'arg."
+    with mock.patch('argumentation_analysis.core.utils.crypto_utils.settings.passphrase', new_callable=mock.PropertyMock) as mock_passphrase:
+        mock_passphrase.return_value.get_secret_value.return_value = TEST_PASSPHRASE_EMPTY
+        key = load_encryption_key(passphrase_arg=None)
+        assert key is None, "Devrait retourner None si les settings sont invalides et pas d'arg."
 
 # --- Tests pour encrypt_data_with_fernet et decrypt_data_with_fernet ---
 

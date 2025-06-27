@@ -63,7 +63,7 @@ class DefinitionService:
         if fallback_file:
             self.logger.info(f"Fichier de secours configuré: {fallback_file}")
     
-    def load_definitions(self) -> ExtractDefinitions:
+    def load_definitions(self) -> Tuple[ExtractDefinitions, Optional[str]]:
         """
         Charge les définitions d'extraits à partir du fichier de configuration.
 
@@ -73,9 +73,8 @@ class DefinitionService:
         `self.fallback_file` (JSON brut). Si tout échoue, utilise
         `self.default_definitions`.
 
-        :return: Un objet `ExtractDefinitions` contenant les définitions chargées.
-                 Retourne des définitions vides en cas d'échec persistant.
-        :rtype: ExtractDefinitions
+        :return: Un tuple contenant un objet `ExtractDefinitions` et un message d'erreur optionnel.
+        :rtype: Tuple[ExtractDefinitions, Optional[str]]
         """
         definitions_list = []
         error_message = None
@@ -94,7 +93,7 @@ class DefinitionService:
                     definitions_list = self.crypto_service.decrypt_and_decompress_json(encrypted_data)
                     
                     if definitions_list:
-                        self.logger.info(f"✅ Définitions chargées depuis le fichier chiffré {config_file_path.name}")
+                        self.logger.info(f"[OK] Définitions chargées depuis le fichier chiffré {config_file_path.name}")
                     else:
                         error_message = f"Échec du déchiffrement de {config_file_path.name}"
                         self.logger.error(error_message)
@@ -103,7 +102,7 @@ class DefinitionService:
                     with open(config_file_path, 'r', encoding='utf-8') as f:
                         definitions_list = json.load(f)
                     
-                    self.logger.info(f"✅ Définitions chargées depuis {config_file_path.name}")
+                    self.logger.info(f"[OK] Définitions chargées depuis {config_file_path.name}")
             except Exception as e:
                 error_message = f"Erreur lors du chargement de {config_file_path.name}: {str(e)}"
                 self.logger.error(error_message)
@@ -118,7 +117,7 @@ class DefinitionService:
                 with open(fallback_file_path, 'r', encoding='utf-8') as f:
                     definitions_list = json.load(f)
                 
-                self.logger.info(f"✅ Définitions chargées depuis le fichier de secours {fallback_file_path.name}")
+                self.logger.info(f"[OK] Définitions chargées depuis le fichier de secours {fallback_file_path.name}")
                 error_message = None # Erreur principale gérée, le secours a fonctionné
             except Exception as e:
                 # Conserver le message d'erreur original si existant, sinon utiliser celui du fallback
@@ -135,6 +134,8 @@ class DefinitionService:
             log_message = "Aucune définition trouvée ou erreur de chargement persistante, utilisation des définitions par défaut."
             if error_message: # Si une erreur précédente a été loggée
                 self.logger.warning(f"{log_message} (Erreur précédente: {error_message})")
+                # Mettre à jour le message d'erreur pour refléter l'utilisation des définitions par défaut
+                error_message = f"Utilisation des définitions par défaut. (Erreur précédente: {error_message})"
             else: # Si aucune définition n'a été trouvée sans erreur explicite
                  error_message = "Aucune définition trouvée, utilisation des définitions par défaut." # Pour info interne
                  self.logger.warning(log_message)
@@ -155,7 +156,7 @@ class DefinitionService:
         if error_message: # Log final de l'erreur si une s'est produite et n'a pas été résolue par un fallback
             self.logger.info(f"Processus de chargement des définitions terminé avec message: {error_message}")
             
-        return extract_definitions
+        return extract_definitions, error_message
     
     def save_definitions(self, definitions: ExtractDefinitions) -> Tuple[bool, Optional[str]]:
         """
@@ -194,7 +195,7 @@ class DefinitionService:
                     with open(config_file_path, 'wb') as f:
                         f.write(encrypted_data)
                     
-                    self.logger.info(f"✅ Définitions sauvegardées dans le fichier chiffré {config_file_path.name}")
+                    self.logger.info(f"[OK] Définitions sauvegardées dans le fichier chiffré {config_file_path.name}")
                     success = True
                 else:
                     error_message = "Échec du chiffrement des définitions"
@@ -204,7 +205,7 @@ class DefinitionService:
                 with open(config_file_path, 'w', encoding='utf-8') as f:
                     json.dump(definitions_list, f, indent=2, ensure_ascii=False)
                 
-                self.logger.info(f"✅ Définitions sauvegardées dans {config_file_path.name}")
+                self.logger.info(f"[OK] Définitions sauvegardées dans {config_file_path.name}")
                 success = True
         except Exception as e:
             error_message = f"Erreur lors de la sauvegarde dans {config_file_path.name}: {str(e)}"
@@ -218,7 +219,7 @@ class DefinitionService:
                 with open(fallback_file_path, 'w', encoding='utf-8') as f:
                     json.dump(definitions_list, f, indent=2, ensure_ascii=False)
                 
-                self.logger.info(f"✅ Définitions sauvegardées dans le fichier de secours {fallback_file_path.name}")
+                self.logger.info(f"[OK] Définitions sauvegardées dans le fichier de secours {fallback_file_path.name}")
                 success = True
                 error_message = None # Effacer le message d'erreur précédent si le secours réussit
             except Exception as e:
@@ -257,8 +258,8 @@ class DefinitionService:
             with open(output_file_path, 'w', encoding='utf-8') as f:
                 json.dump(definitions_list, f, indent=2, ensure_ascii=False)
             
-            self.logger.info(f"✅ Définitions exportées vers {output_file_path}")
-            return True, f"✅ Définitions exportées vers {output_file_path}"
+            self.logger.info(f"[OK] Définitions exportées vers {output_file_path}")
+            return True, f"[OK] Définitions exportées vers {output_file_path}"
         except Exception as e:
             error_message = f"❌ Erreur lors de l'exportation vers {output_file_path}: {str(e)}"
             self.logger.error(error_message)
@@ -289,7 +290,7 @@ class DefinitionService:
             # Convertir en modèle ExtractDefinitions
             extract_definitions = ExtractDefinitions.from_dict_list(definitions_list)
             
-            self.logger.info(f"✅ Définitions importées depuis {input_file_path}")
+            self.logger.info(f"[OK] Définitions importées depuis {input_file_path}")
             return True, extract_definitions
         except json.JSONDecodeError as e:
             error_message = f"❌ Erreur de format JSON dans {input_file_path}: {str(e)}"

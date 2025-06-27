@@ -14,20 +14,14 @@ from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional, Union
 
 # Imports depuis les modules du projet
-try:
-    # Import relatif depuis le package ui
-    from ..services.extract_service import ExtractService
-    from ..services.fetch_service import FetchService
-    from ..models.extract_definition import ExtractDefinitions
-    from .config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON, CACHE_DIR
-    from ..services.crypto_service import CryptoService
-except ImportError:
-    # Fallback pour les imports absolus
-    from argumentation_analysis.services.extract_service import ExtractService
-    from argumentation_analysis.services.fetch_service import FetchService
-    from argumentation_analysis.models.extract_definition import ExtractDefinitions
-    from argumentation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON, CACHE_DIR
-    from argumentation_analysis.services.crypto_service import CryptoService
+# Imports depuis les modules du projet (chemins absolus pour la robustesse)
+from argumentation_analysis.services.extract_service import ExtractService
+from argumentation_analysis.services.fetch_service import FetchService
+from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition
+from argumentation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON, CACHE_DIR
+from argumentation_analysis.services.crypto_service import CryptoService
+from argumentation_analysis.services.cache_service import CacheService
+
 
 # Configuration du logging
 logger = logging.getLogger("UI.ExtractUtils")
@@ -36,27 +30,18 @@ logger = logging.getLogger("UI.ExtractUtils")
 extract_service = ExtractService()
 
 # Le FetchService nécessite un CacheService avec un répertoire de cache
-try:
-    # Import relatif
-    from ..services.cache_service import CacheService
-    from ..ui.config import CACHE_DIR
-    cache_service = CacheService(CACHE_DIR)
-except ImportError:
-    # Import absolu
-    from services.cache_service import CacheService
-    from argumentation_analysis.ui.config import CACHE_DIR
-    cache_service = CacheService(CACHE_DIR)
+cache_service = CacheService(CACHE_DIR)
 
 fetch_service = FetchService(cache_service)
 crypto_service = CryptoService()
 
-def load_source_text(source_info: Dict[str, Any]) -> Tuple[str, str]:
+def load_source_text(source_info: Union[Dict[str, Any], SourceDefinition]) -> Tuple[Optional[str], str]:
     """
     Charge le texte source à partir des informations de la source en utilisant `FetchService`.
 
-    :param source_info: Un dictionnaire contenant les informations nécessaires
-                        pour reconstruire l'URL et déterminer la méthode de récupération.
-    :type source_info: Dict[str, Any]
+    :param source_info: Un dictionnaire ou un objet SourceDefinition contenant les
+                        informations de la source.
+    :type source_info: Union[Dict[str, Any], SourceDefinition]
     :return: Un tuple contenant le texte source (str, ou None si échec) et
              l'URL traitée ou un message d'erreur (str).
     :rtype: Tuple[Optional[str], str]
@@ -343,7 +328,7 @@ def export_definitions_to_json(
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(json_data)
         
-        return True, f"✅ Définitions exportées avec succès vers {output_path}"
+        return True, f"[OK] Définitions exportées avec succès vers {output_path}"
     except Exception as e:
         logger.error(f"Erreur lors de l'exportation des définitions: {e}")
         return False, f"❌ Erreur lors de l'exportation: {str(e)}"

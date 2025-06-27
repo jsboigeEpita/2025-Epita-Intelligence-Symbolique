@@ -1,0 +1,300 @@
+{
+  "workflow_config": {
+    "description": "Configuration exemple pour le Comprehensive Workflow Processor",
+    "version": "3.0.0",
+    
+    "general": {
+      "mode": "full",
+      "environment": "development",
+      "parallel_workers": 4,
+      "enable_monitoring": true
+    },
+    
+    "corpus_management": {
+      "enable_decryption": true,
+      "corpus_files": [
+        "tests/extract_sources_backup.enc",
+        "tests/demo_corpus.enc"
+      ],
+      "encryption_passphrase": "${TEXT_CONFIG_PASSPHRASE}",
+      "analysis_modes": [
+        "fallacies",
+        "rhetoric",
+        "logic",
+        "argumentation"
+      ]
+    },
+    
+    "testing_configuration": {
+      "test_timeout": 120,
+      "enable_api_tests": true,
+      "api_base_url": "http://localhost:5000",
+      "performance_iterations": 3,
+      "test_categories": [
+        "unit_tests",
+        "integration_tests",
+        "system_tests",
+        "performance_tests",
+        "api_tests"
+      ]
+    },
+    
+    "validation_settings": {
+      "authenticity_threshold": 0.9,
+      "enable_system_validation": true,
+      "mock_detection": true,
+      "validation_levels": [
+        "syntax_validation",
+        "semantic_validation",
+        "authenticity_check",
+        "performance_validation"
+      ]
+    },
+    
+    "reporting_options": {
+      "output_dir": "results/comprehensive_workflow",
+      "report_formats": [
+        "json",
+        "markdown",
+        "html"
+      ],
+      "include_metrics": true,
+      "generate_charts": true,
+      "export_raw_data": false
+    },
+    
+    "performance_settings": {
+      "batch_size": 100,
+      "max_concurrent_analyses": 8,
+      "memory_limit_mb": 2048,
+      "timeout_per_analysis": 30,
+      "retry_failed_analyses": true,
+      "max_retries": 3
+    },
+    
+    "monitoring_config": {
+      "enable_real_time_metrics": true,
+      "log_level": "INFO",
+      "metrics_collection_interval": 5,
+      "alert_thresholds": {
+        "error_rate": 0.1,
+        "avg_response_time": 10.0,
+        "memory_usage": 0.8
+      }
+    }
+  },
+  
+  "presets": {
+    "development": {
+      "mode": "full",
+      "environment": "development",
+      "parallel_workers": 2,
+      "test_timeout": 60,
+      "authenticity_threshold": 0.7,
+      "report_formats": ["json", "markdown"]
+    },
+    
+    "testing": {
+      "mode": "testing_only",
+      "environment": "testing",
+      "parallel_workers": 4,
+      "test_timeout": 120,
+      "enable_api_tests": true,
+      "authenticity_threshold": 0.9,
+      "report_formats": ["json", "html"]
+    },
+    
+    "production": {
+      "mode": "full",
+      "environment": "production",
+      "parallel_workers": 8,
+      "test_timeout": 180,
+      "authenticity_threshold": 0.95,
+      "mock_detection": true,
+      "report_formats": ["comprehensive"]
+    },
+    
+    "performance_only": {
+      "mode": "performance",
+      "environment": "testing",
+      "parallel_workers": 6,
+      "performance_iterations": 5,
+      "report_formats": ["json", "markdown"],
+      "include_metrics": true
+    },
+    
+    "batch_processing": {
+      "mode": "batch",
+      "environment": "production",
+      "parallel_workers": 12,
+      "batch_size": 500,
+      "max_concurrent_analyses": 16,
+      "report_formats": ["json"]
+    },
+    
+    "validation_only": {
+      "mode": "validation",
+      "environment": "testing",
+      "enable_system_validation": true,
+      "mock_detection": true,
+      "authenticity_threshold": 0.9,
+      "report_formats": ["markdown", "html"]
+    }
+  },
+  
+  "api_test_scenarios": {
+    "fallacy_detection": [
+      {
+        "name": "pente_glissante",
+        "text": "Si on autorise les gens à conduire à 85 km/h, bientôt ils voudront conduire à 200 km/h.",
+        "expected_fallacies": true,
+        "expected_types": ["slippery_slope"]
+      },
+      {
+        "name": "homme_de_paille",
+        "text": "Les écologistes veulent qu'on retourne à l'âge de pierre.",
+        "expected_fallacies": true,
+        "expected_types": ["straw_man"]
+      },
+      {
+        "name": "ad_hominem",
+        "text": "Tu ne peux pas me dire comment conduire, tu as eu trois accidents l'année dernière.",
+        "expected_fallacies": true,
+        "expected_types": ["ad_hominem"]
+      },
+      {
+        "name": "texte_neutre",
+        "text": "Il fait beau aujourd'hui et les oiseaux chantent dans les arbres.",
+        "expected_fallacies": false,
+        "expected_types": []
+      }
+    ],
+    
+    "rhetorical_analysis": [
+      {
+        "name": "discours_politique",
+        "text": "Mes chers compatriotes, ensemble nous construirons un avenir meilleur pour nos enfants.",
+        "expected_elements": ["pathos", "ethos"],
+        "analysis_depth": "comprehensive"
+      },
+      {
+        "name": "argumentation_scientifique",
+        "text": "Les données empiriques démontrent clairement que cette hypothèse est validée par l'expérimentation.",
+        "expected_elements": ["logos"],
+        "analysis_depth": "logical"
+      }
+    ]
+  },
+  
+  "performance_benchmarks": {
+    "text_analysis": {
+      "target_avg_time": 2.0,
+      "max_acceptable_time": 10.0,
+      "memory_limit_mb": 512
+    },
+    
+    "pipeline_initialization": {
+      "target_avg_time": 1.0,
+      "max_acceptable_time": 5.0,
+      "memory_limit_mb": 256
+    },
+    
+    "validation_suite": {
+      "target_avg_time": 0.5,
+      "max_acceptable_time": 2.0,
+      "memory_limit_mb": 128
+    },
+    
+    "batch_processing": {
+      "target_throughput_per_second": 10,
+      "min_acceptable_throughput": 5,
+      "max_memory_per_item_mb": 50
+    }
+  },
+  
+  "environment_variables": {
+    "development": {
+      "TEXT_CONFIG_PASSPHRASE": "epita_ia_symb_2025_dev_key",
+      "FORCE_AUTHENTIC_EXECUTION": "false",
+      "LOG_LEVEL": "DEBUG",
+      "ENABLE_DETAILED_LOGGING": "true"
+    },
+    
+    "testing": {
+      "TEXT_CONFIG_PASSPHRASE": "epita_ia_symb_2025_test_key",
+      "FORCE_AUTHENTIC_EXECUTION": "true",
+      "LOG_LEVEL": "INFO",
+      "ENABLE_PERFORMANCE_MONITORING": "true"
+    },
+    
+    "production": {
+      "TEXT_CONFIG_PASSPHRASE": "${SECURE_PASSPHRASE}",
+      "FORCE_AUTHENTIC_EXECUTION": "true",
+      "LOG_LEVEL": "WARNING",
+      "ENABLE_COMPREHENSIVE_VALIDATION": "true"
+    }
+  },
+  
+  "integration_points": {
+    "llm_services": {
+      "openai_api": {
+        "enabled": true,
+        "model": "gpt-4o-mini",
+        "timeout": 30,
+        "retry_attempts": 3
+      },
+      "anthropic_api": {
+        "enabled": false,
+        "model": "claude-3-sonnet",
+        "timeout": 30,
+        "retry_attempts": 3
+      }
+    },
+    
+    "external_apis": {
+      "rhetorical_analysis_api": {
+        "base_url": "http://localhost:5000",
+        "endpoints": {
+          "fallacies": "/api/fallacies",
+          "rhetoric": "/api/rhetoric",
+          "health": "/api/health"
+        },
+        "timeout": 10,
+        "retry_policy": "exponential_backoff"
+      }
+    },
+    
+    "data_sources": {
+      "corpus_storage": {
+        "type": "encrypted_files",
+        "location": "tests/",
+        "encryption_method": "fernet",
+        "compression": "gzip"
+      },
+      
+      "results_storage": {
+        "type": "local_filesystem",
+        "location": "results/comprehensive_workflow/",
+        "backup_enabled": true,
+        "retention_days": 30
+      }
+    }
+  },
+  
+  "quality_gates": {
+    "minimum_authenticity_score": 0.85,
+    "maximum_error_rate": 0.05,
+    "minimum_test_coverage": 0.8,
+    "maximum_response_time_ms": 5000,
+    "minimum_throughput_per_minute": 100
+  },
+  
+  "debugging_options": {
+    "verbose_logging": false,
+    "debug_mode": false,
+    "trace_execution": false,
+    "dump_intermediate_results": false,
+    "preserve_temp_files": false,
+    "enable_profiling": false
+  }
+}
