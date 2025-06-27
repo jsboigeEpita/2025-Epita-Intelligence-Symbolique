@@ -8,8 +8,12 @@ stockées dans des fichiers .env.
 
 import shutil
 import logging
+import sys
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
+
+# Assumant l'existence de cet utilitaire comme défini dans la roadmap
+from argumentation_analysis.core.utils.shell_utils import execute_command
 
 # Configuration du logger
 logging.basicConfig(level=logging.INFO, format='[ENV_MGR] [%(asctime)s] - %(levelname)s - %(message)s')
@@ -18,18 +22,20 @@ logger = logging.getLogger(__name__)
 class EnvironmentManager:
     """Gère la création, la validation et le changement de fichiers .env."""
 
-    def __init__(self, project_root: Optional[Path] = None):
+    def __init__(self, project_root: Optional[Path] = None, logger: Optional[logging.Logger] = None):
         """
         Initialise le gestionnaire.
 
         Args:
-            project_root: Le chemin racine du projet. S'il n'est pas fourni,
-                          il est déduit de l'emplacement de ce fichier.
+            project_root: Le chemin racine du projet.
+            logger: Le logger à utiliser.
         """
-        if project_root:
+        if project_root and isinstance(project_root, Path):
             self.project_root = project_root
         else:
             self.project_root = Path(__file__).resolve().parent.parent.parent
+        
+        self.logger = logger or logging.getLogger(__name__)
 
         self.env_files_dir = self.project_root / "config" / "environments"
         self.template_path = self.project_root / "config" / "templates" / ".env.tpl"
@@ -123,4 +129,45 @@ class EnvironmentManager:
 
         except IOError as e:
             logger.error(f"Erreur de lecture lors de la validation : {e}")
+            return False
+
+    def fix_dependencies(self, packages: List[str], strategy: str = 'default') -> bool:
+        """
+        Répare les dépendances Python spécifiées en les réinstallant de force.
+
+        Args:
+            packages: Une liste de noms de paquets à réparer.
+            strategy: La stratégie d'installation à utiliser (non utilisée dans ce lot).
+
+        Returns:
+            True si la commande de réparation a été exécutée avec succès, False sinon.
+        """
+        if not packages:
+            self.logger.warning("Aucun paquet spécifié pour la réparation.")
+            return False
+
+        self.logger.info(f"Détection de la version de Python : {sys.version_info.major}.{sys.version_info.minor}")
+        
+        command = [
+            "pip", "install",
+            "--force-reinstall",
+            "--no-cache-dir"
+        ] + packages
+
+        self.logger.info(f"Exécution de la commande de réparation : {' '.join(command)}")
+
+        try:
+            # L'utilitaire execute_command est supposé retourner un tuple (stdout, stderr, exit_code)
+            stdout, stderr, exit_code = execute_command(' '.join(command))
+            
+            if exit_code == 0:
+                self.logger.info(f"Les paquets {', '.join(packages)} ont été réinstallés avec succès.")
+                self.logger.debug(f"Sortie de Pip:\n{stdout}")
+                return True
+            else:
+                self.logger.error(f"Erreur lors de la réinstallation des paquets {', '.join(packages)}.")
+                self.logger.error(f"Erreur Pip:\n{stderr}")
+                return False
+        except Exception as e:
+            self.logger.error(f"Une exception est survenue lors de la tentative de réparation des dépendances : {e}")
             return False

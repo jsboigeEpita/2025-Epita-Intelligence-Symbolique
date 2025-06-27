@@ -91,5 +91,33 @@ class TestEnvironmentManager(unittest.TestCase):
         result = self.manager.validate_environment("non_existent")
         self.assertFalse(result)
 
+    @patch('project_core.core_from_scripts.environment_manager.execute_command')
+    def test_fix_dependencies(self, mock_execute_command):
+        """Teste la réparation ciblée de dépendances."""
+        # Configure le mock pour simuler une exécution réussie
+        mock_execute_command.return_value = ("Success", "", 0)
+
+        # Les paquets à réparer
+        packages_to_fix = ["numpy", "pandas"]
+        
+        # Appelle la méthode à tester
+        result = self.manager.fix_dependencies(packages_to_fix)
+        
+        # Vérifie que le résultat est True
+        self.assertTrue(result)
+        
+        # Vérifie que execute_command a été appelé une fois
+        mock_execute_command.assert_called_once()
+        
+        # Récupère l'argument avec lequel la fonction mockée a été appelée
+        called_command = mock_execute_command.call_args[0][0]
+        
+        # Vérifie que la commande contient les bons éléments
+        self.assertIn("pip install", called_command)
+        self.assertIn("--force-reinstall", called_command)
+        self.assertIn("--no-cache-dir", called_command)
+        self.assertIn("numpy", called_command)
+        self.assertIn("pandas", called_command)
+
 if __name__ == '__main__':
     unittest.main(argv=['first-arg-is-ignored'], exit=False)
