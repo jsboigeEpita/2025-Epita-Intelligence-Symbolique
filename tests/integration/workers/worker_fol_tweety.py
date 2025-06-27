@@ -36,7 +36,7 @@ from typing import Dict, List, Any, Optional
 
 
 # Import a shared fixture to manage the JVM lifecycle
-from tests.fixtures.integration_fixtures import integration_jvm
+from argumentation_analysis.core.jvm_setup import initialize_jvm
 # Import de l'agent FOL et composants
 from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent as FOLLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
@@ -521,12 +521,14 @@ def check_tweety_availability():
 
 
 @pytest_asyncio.fixture(scope="module")
-async def fol_agent_with_kernel(integration_jvm):
+async def fol_agent_with_kernel():
     """Fixture pour créer un FOLLogicAgent avec un kernel authentique."""
     logger.info("--- DEBUT FIXTURE 'fol_agent_with_kernel' (scope=module) ---")
     try:
-        if not integration_jvm:
-            pytest.skip("Skipping test: integration_jvm fixture failed to initialize.")
+        # Initialisation manuelle de la JVM pour le worker
+        jvm_session = initialize_jvm()
+        if not jvm_session:
+            pytest.skip("Skipping test: Manual JVM initialization failed in worker.")
 
         config = UnifiedConfig()
         kernel = config.get_kernel_with_gpt4o_mini()

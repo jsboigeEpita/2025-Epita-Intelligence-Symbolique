@@ -17,13 +17,16 @@ logging.basicConfig(
 # La fixture locale 'simple_jvm_fixture' est supprimée pour éviter les conflits
 # de démarrage de la JVM. Nous utilisons maintenant la fixture de session 'integration_jvm'.
 
-@pytest.mark.skip(reason="Désactivé temporairement pour éviter le crash de la JVM (access violation) et se concentrer sur les erreurs Python.")
-def test_jvm_is_actually_started(integration_jvm):
+# Le test est réactivé et utilise maintenant la fixture de session `jvm_session`
+# définie dans le conftest.py principal pour garantir que la JVM est prête.
+def test_jvm_is_actually_started(jvm_session):
     """
     Teste si la JVM est bien démarrée en utilisant la fixture de session partagée.
+    La fixture `jvm_session` garantit que l'initialisation a eu lieu.
     """
-    assert integration_jvm.isJVMStarted(), "La JVM devrait être démarrée par integration_jvm"
-    logging.info(f"JVM Version from integration_jvm: {integration_jvm.getJVMVersion()}")
+    # La fixture `jvm_session` ne retourne rien, on utilise directement le module jpype
+    assert jpype.isJVMStarted(), "La JVM devrait être démarrée par la fixture de session `jvm_session`"
+    logging.info(f"JVM Version from jpype: {jpype.getJVMVersion()}")
 
 # On ne peut pas tester le chargement des JARs car on ne les met pas dans le classpath.
 # On supprime donc le test `test_tweety_jars_loaded`.

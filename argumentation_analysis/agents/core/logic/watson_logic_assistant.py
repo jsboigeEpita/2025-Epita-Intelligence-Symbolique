@@ -15,6 +15,7 @@ from semantic_kernel.functions import kernel_function
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 from semantic_kernel.contents.chat_history import ChatHistory
 from .tweety_bridge import TweetyBridge
+from .tweety_initializer import TweetyInitializer
 
 WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT = """Vous êtes Watson - analyste brillant et partenaire égal de Holmes.
 
@@ -87,7 +88,7 @@ class WatsonTools:
             self._logger.warning(f"Échec de l'initialisation de TweetyBridge: {e}. Watson fonctionnera sans outils logiques formels.")
             self._tweety_bridge = None
 
-        if not self._tweety_bridge or not self._tweety_bridge.is_jvm_ready():
+        if not self._tweety_bridge or not TweetyInitializer.is_jvm_ready():
             self._logger.warning("TweetyBridge n'est pas prêt. Les outils logiques formels sont désactivés.")
 
     def _normalize_formula(self, formula: str) -> str:

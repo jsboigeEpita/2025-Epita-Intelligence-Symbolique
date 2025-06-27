@@ -39,7 +39,9 @@ from unittest.mock import patch, AsyncMock
 
 
 # Import a shared fixture to manage the JVM lifecycle
-from tests.fixtures.integration_fixtures import jvm_session
+# La fixture jvm_session est maintenant fournie automatiquement par conftest.py (autouse=True)
+# et peut être demandée comme dépendance sans import direct.
+# from tests.fixtures.integration_fixtures import jvm_session
 # Import de l'agent FOL et composants
 from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent as FOLLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import BeliefSet, FirstOrderBeliefSet
