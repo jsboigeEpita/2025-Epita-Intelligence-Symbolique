@@ -359,27 +359,34 @@ class TestFOLErrorHandling:
         else:
             logger.warning("⚠️ Erreur non reconnue par l'analyseur")
     
-    @pytest.mark.skip(reason="Test obsolète. Les LLM modernes tentent d'extraire une structure même d'un non-sens. La robustesse de l'agent est testée par sa capacité à gérer les appels d'outils invalides qui en résultent, et non par la production d'un belief set vide.")
     @pytest.mark.asyncio
     async def test_fol_syntax_error_recovery(self, fol_agent_with_kernel):
-        """Test récupération erreurs syntaxe FOL."""
+        """
+        Teste la robustesse de l'agent face à un texte sémantiquement absurde.
+        L'objectif principal est de s'assurer que l'agent ne crashe pas et gère
+        la situation de manière prévisible, même si le LLM hallucine une structure.
+        """
         agent = fol_agent_with_kernel
         
-        # Texte sémantiquement absurde pour tester la récupération d'erreur.
-        # Le LLM ne devrait extraire aucune structure logique de cette phrase.
+        # Texte sémantiquement absurde.
         problematic_text = "D'incolores idées vertes dorment furieusement."
         
-        belief_set, msg = await agent.text_to_belief_set(problematic_text)
-        
-        # Le LLM peut générer une structure logique même à partir de texte absurde.
-        # L'objectif est de s'assurer que cette structure est soit vide, soit gérée
-        # comme invalide ou incohérente par le système.
-        assert belief_set is not None, "Le belief_set ne devrait pas être None."
+        try:
+            belief_set, msg = await agent.text_to_belief_set(problematic_text)
+            
+            # L'agent doit retourner un objet BeliefSet, même s'il est vide, sans planter.
+            assert belief_set is not None, "Le belief_set ne devrait pas être None après une tentative de conversion."
 
-        # Avec le nouveau système d'appel d'outils, le LLM peut extraire une structure
-        # même à partir d'un texte absurde. Le belief set n'est donc pas garanti d'être vide.
-        # L'important est que l'agent ne plante pas.
-        logger.info(f"Le LLM a retourné un belief_set (potentiellement non vide et erroné) sans planter: {belief_set.content}")
+            if belief_set.is_empty():
+                logger.info("✅ Le LLM a correctement identifié le texte comme absurde et a retourné un belief set vide.")
+            else:
+                logger.warning(f"⚠️ Le LLM a halluciné une structure logique à partir d'un texte absurde : {belief_set.content}. Le test valide simplement que l'agent n'a pas crashé.")
+
+            # Le test est considéré comme réussi si on arrive ici sans exception.
+            logger.info("✅ Le test de robustesse est réussi : l'agent a géré un texte absurde sans planter.")
+
+        except Exception as e:
+            pytest.fail(f"L'agent a levé une exception inattendue face à un texte absurde: {e}", pytrace=True)
         
     @pytest.mark.asyncio
     async def test_fol_timeout_handling(self, fol_agent_with_kernel, jvm_session):
