@@ -1,45 +1,47 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
+from pathlib import Path
+import os
 
-from project_core.managers.environment_manager import EnvironmentManager
-
+from project_core.core_from_scripts.environment_manager import EnvironmentManager
 
 class TestEnvironmentManager(unittest.TestCase):
-    """Unit tests for the EnvironmentManager."""
 
-    @patch('project_core.managers.environment_manager.load_dotenv')
-    def test_init_loads_dotenv(self, mock_load_dotenv):
-        """Test that __init__ calls load_dotenv."""
-        EnvironmentManager()
-        mock_load_dotenv.assert_called_once()
+    def setUp(self):
+        """Set up test environment."""
+        self.mock_logger = MagicMock()
+        self.project_root = Path(__file__).resolve().parent.parent.parent.parent
+        self.manager = EnvironmentManager(project_root=self.project_root, logger_instance=self.mock_logger)
 
-    @patch('os.getenv')
-    @patch('project_core.managers.environment_manager.load_dotenv')
-    def test_get_variable_success(self, mock_load_dotenv, mock_getenv):
-        """Test retrieving an existing environment variable."""
-        # Arrange
-        mock_getenv.return_value = 'my_test_value'
-        env_manager = EnvironmentManager()
+    @patch('pathlib.Path.is_file', return_value=True)
+    @patch('project_core.core_from_scripts.environment_manager.EnvironmentManager.run_command_in_conda_env', return_value=0)
+    def test_fix_dependencies_from_requirements_file(self, mock_run_command, mock_is_file):
+        """Test dependency fixing from a requirements file."""
+        requirements_path = "requirements-test.txt"
+        
+        result = self.manager.fix_dependencies(requirements_file=requirements_path)
 
-        # Act
-        value = env_manager.get_variable('MY_VAR')
+        self.assertTrue(result)
+        mock_is_file.assert_called_with()
+        mock_run_command.assert_called_once_with(f"pip install -r {requirements_path}")
 
-        # Assert
-        mock_getenv.assert_called_once_with('MY_VAR', None)
-        self.assertEqual(value, 'my_test_value')
 
-    @patch('os.getenv')
-    @patch('project_core.managers.environment_manager.load_dotenv')
-    def test_get_variable_with_default(self, mock_load_dotenv, mock_getenv):
-        """Test get_variable returns default value when variable is not set."""
-        # Arrange
-        # This simulates os.getenv returning the default value when the key is not found.
-        mock_getenv.return_value = 'default_value'
-        env_manager = EnvironmentManager()
+    @patch('project_core.core_from_scripts.environment_manager.EnvironmentManager.run_command_in_conda_env', return_value=0)
+    def test_fix_dependencies_with_packages(self, mock_run_command):
+        """Test dependency fixing with a list of packages."""
+        packages_to_fix = ["numpy", "pandas"]
 
-        # Act
-        value = env_manager.get_variable('NON_EXISTENT_VAR', 'default_value')
+        result = self.manager.fix_dependencies(packages=packages_to_fix)
+        
+        self.assertTrue(result)
+        expected_command = "pip install --force-reinstall --no-cache-dir numpy pandas"
+        mock_run_command.assert_called_once_with(expected_command)
 
-        # Assert
-        mock_getenv.assert_called_once_with('NON_EXISTENT_VAR', 'default_value')
-        self.assertEqual(value, 'default_value')
+    def test_fix_dependencies_mutually_exclusive_args(self):
+        """Test that providing both packages and requirements_file raises an error."""
+        with self.assertRaises(ValueError):
+            self.manager.fix_dependencies(packages=["numpy"], requirements_file="req.txt")
+
+
+if __name__ == '__main__':
+    unittest.main()

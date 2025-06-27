@@ -1,159 +1,182 @@
-"""
-Gestionnaire de fichiers d'environnement (.env)
-
-Ce module centralise la logique pour la gestion des fichiers de configuration
-d'environnement, permettant de basculer, créer et valider des configurations
-stockées dans des fichiers .env.
-"""
-import os
-import sys
-import warnings
-from project_core.core_from_scripts import load_dotenv
-import json
+import shutil
 import logging
-from pathlib import Path
-from typing import Optional, List
-import subprocess
 import argparse
+import sys
+from pathlib import Path
+from typing import Optional, List, Union, Dict
 
-# Assumant l'existence de cet utilitaire comme défini dans la roadmap
-from argumentation_analysis.core.utils.shell_utils import execute_command
+# Importation corrigée pour utiliser l'utilitaire central du projet
+from argumentation_analysis.core.utils.shell_utils import run_shell_command
 
 # Configuration du logger
-logging.basicConfig(level=logging.INFO, format='[ENV_MGR] [%(asctime)s] - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='[ENV_MGR] [%(asctime)s] - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class EnvironmentManager:
-    """Gère la création, la validation et le changement de fichiers .env."""
+    """Gère la création, la validation, le changement de fichiers .env et l'exécution de commandes."""
 
-    def __init__(self, project_root: Optional[Path] = None, logger: Optional[logging.Logger] = None):
+    def __init__(self, project_root: Optional[Path] = None, logger_instance: Optional[logging.Logger] = None):
         """
         Initialise le gestionnaire.
-        """
-        if project_root and isinstance(project_root, Path):
-            self.project_root = project_root
-        else:
-            self.project_root = Path(__file__).resolve().parent.parent.parent
-        
-        self.logger = logger or logging.getLogger(__name__)
 
-    def _get_conda_env_path(self, env_name: str) -> Optional[Path]:
-        """Tente de trouver le chemin d'un environnement Conda."""
-        # On essaie d'abord de deviner via les chemins standards
-        conda_base_command = shutil.which("conda")
-        if not conda_base_command:
-            self.logger.warning("Commande 'conda' non trouvée dans le PATH.")
+        Args:
+            project_root: Le chemin racine du projet.
+            logger_instance: Le logger à utiliser.
+        """
+        self.project_root = project_root or Path(__file__).resolve().parent.parent.parent
+        self.logger = logger_instance or logging.getLogger(__name__)
+        self.env_files_dir = self.project_root / "config" / "environments"
+        self.template_path = self.project_root / "config" / "templates" / ".env.tpl"
+        self.target_env_file = self.project_root / ".env"
+
+    def get_conda_env_name_from_dotenv(self) -> Optional[str]:
+        """Lit le nom de l'environnement Conda depuis le fichier .env à la racine."""
+        if not self.target_env_file.is_file():
+            self.logger.error(f"Le fichier .env cible est introuvable à : {self.target_env_file}")
             return None
         
         try:
-            # Exécute `conda info --json` pour obtenir des infos sur l'installation
-            result = subprocess.run(['conda', 'info', '--json'], capture_output=True, text=True, check=True)
-            conda_info = json.loads(result.stdout)
-            env_dirs = conda_info.get('envs_dirs', [])
-            
-            for env_dir in env_dirs:
-                env_path = Path(env_dir) / env_name
-                if env_path.is_dir():
-                    self.logger.info(f"Environnement '{env_name}' trouvé à: {env_path}")
-                    return env_path
-        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
-            self.logger.error(f"Erreur en cherchant l'environnement Conda: {e}")
+            with open(self.target_env_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    if line.strip().startswith("CONDA_ENV_NAME="):
+                        env_name = line.split('=', 1)[1].strip()
+                        # Retirer les guillemets si présents
+                        return env_name.strip('\'"')
 
-        self.logger.error(f"Environnement conda '{env_name}' non trouvé.")
-        return None
-
-    def get_python_executable(self, env_name: str = 'projet-is') -> Optional[str]:
-        """Retourne le chemin absolu de l'exécutable Python pour un environnement Conda."""
-        env_path = self._get_conda_env_path(env_name)
-        if not env_path:
+            self.logger.warning(f"La variable CONDA_ENV_NAME n'a pas été trouvée dans {self.target_env_file}")
             return None
-        
-        python_executable = env_path / ('python.exe' if sys.platform == "win32" else 'bin/python')
-        if not python_executable.is_file():
-            self.logger.error(f"Exécutable Python non trouvé à: {python_executable}")
+        except IOError as e:
+            self.logger.error(f"Erreur de lecture du fichier .env : {e}")
             return None
-            
-        return str(python_executable)
 
-    def run_command(self, command: List[str], env_name: str) -> int:
+    def run_command_in_conda_env(self, command_to_run: str) -> int:
         """
-        Exécute TOUJOURS une commande dans un sous-processus à l'intérieur de l'environnement conda spécifié.
-        Ceci est la méthode la plus robuste pour éviter les conflits de path.
+        Exécute une commande dans l'environnement Conda spécifié par le .env.
+        Utilise `conda run` pour une exécution propre dans un sous-processus.
         """
-        if not command:
-            self.logger.error("Aucune commande à exécuter.")
+        conda_env_name = self.get_conda_env_name_from_dotenv()
+        if not conda_env_name:
+            self.logger.error("Impossible d'exécuter la commande car le nom de l'environnement Conda n'a pas pu être déterminé.")
             return 1
 
-        # Construire la commande finale avec 'conda run'
-        # C'est la manière la plus fiable de s'assurer que la commande s'exécute dans le bon environnement activé.
-        final_command = ["conda", "run", "-n", env_name, "--no-capture-output"] + command
+        # Nouvelle stratégie : Utiliser directement les fonctionnalités de `conda run`.
+        # On supprime la surcouche PowerShell qui s'est avérée peu fiable.
+        # On utilise --cwd pour définir le répertoire de travail, ce qui est la méthode
+        # la plus propre et recommandée.
+        self.logger.info(f"Utilisation de --cwd='{self.project_root}' pour l'exécution.")
+
+        # La commande à exécuter doit être passée en tant que liste d'arguments après `conda run`.
+        command_parts = command_to_run.split()
+
+        full_command = [
+            "conda", "run",
+            "-n", conda_env_name,
+            "--cwd", str(self.project_root),
+            "--no-capture-output",
+            "--live-stream",
+        ] + command_parts
         
-        command_str_for_log = ' '.join(final_command)
-        self.logger.info(f"Exécution de la commande via 'conda run': {command_str_for_log}")
+        description = f"Exécution de '{command_to_run[:50]}...' dans l'env '{conda_env_name}' via `conda run --cwd`"
         
+        # On exécute la commande, en s'assurant que `run_shell_command` n'utilise pas `shell=True`
+        # car on passe une liste d'arguments bien formée.
+        exit_code, _, _ = run_shell_command(
+            command=full_command,
+            description=description,
+            capture_output=False,
+            shell_mode=False
+        )
+        
+        return exit_code
+
+    def switch_environment(self, target_name: str) -> bool:
+        """Bascule vers un fichier .env nommé."""
+        source_path = self.env_files_dir / f"{target_name}.env"
+        if not source_path.is_file():
+            self.logger.error(f"Le fichier d'environnement source n'existe pas : {source_path}")
+            return False
         try:
-            result = subprocess.run(final_command, check=False, capture_output=True, text=True, encoding='utf-8')
-            if result.stdout: self.logger.info(f"--- STDOUT ---\n{result.stdout}")
-            if result.stderr: self.logger.error(f"--- STDERR ---\n{result.stderr}")
-            self.logger.info(f"La commande s'est terminée avec le code de sortie: {result.returncode}")
-            return result.returncode
-        except Exception as e:
-            self.logger.error(f"Erreur lors de l'exécution de la commande: {e}")
-            return 1
+            shutil.copy(source_path, self.target_env_file)
+            self.logger.info(f"L'environnement a été basculé vers '{target_name}'. Fichier '{source_path}' copié vers '{self.target_env_file}'.")
+            return True
+        except IOError as e:
+            self.logger.error(f"Erreur lors de la copie du fichier d'environnement : {e}")
+            return False
 
+    def fix_dependencies(self, packages: Optional[List[str]] = None, requirements_file: Optional[str] = None) -> bool:
+        """
+        Répare les dépendances en les réinstallant.
 
-def main():
-    """Point d'entrée CLI pour la gestion de l'environnement."""
-    parser = argparse.ArgumentParser(
-        description="Outil de gestion d'environnement (avec compatibilité ascendante).",
-        formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-    parser.add_argument(
-        '--get-python-path', 
-        action='store_true', 
-        help="Affiche le chemin de l'exécutable Python de l'environnement."
-    )
-    parser.add_argument(
-        '--env-name', 
-        type=str, 
-        default='projet-is-v2',
-        help="Nom de l'environnement Conda à utiliser."
-    )
-    parser.add_argument(
-        '--setup-vars', 
-        action='store_true', 
-        help="[OBSOLETE] Inclus pour compatibilité."
-    )
-    parser.add_argument(
-        '--run-command',
-        nargs=argparse.REMAINDER,
-        help="Exécute la commande fournie et quitte. Doit être le dernier argument."
-    )
+        Peut fonctionner à partir d'une liste de paquets ou d'un fichier requirements.
+        Les deux options sont mutuellement exclusives.
 
-    args = parser.parse_args()
-    load_dotenv.ensure_dotenv_loaded(silent=False)
-    manager = EnvironmentManager()
+        Args:
+            packages: Une liste de noms de paquets à réinstaller.
+            requirements_file: Le chemin vers un fichier requirements.txt.
 
-    if args.get_python_path:
-        python_path = manager.get_python_executable(args.env_name)
-        if python_path:
-            print(python_path)
-        else:
-            sys.exit(1)
-            
-    elif args.run_command:
-        # La logique de --setup-vars est maintenant obsolète et gérée par conda run.
-        if args.setup_vars:
-            logger.info("Argument --setup-vars ignoré.")
+        Returns:
+            True si l'opération a réussi, False sinon.
+        """
+        if packages and requirements_file:
+            self.logger.error("Les arguments 'packages' et 'requirements_file' sont mutuellement exclusifs.")
+            raise ValueError("Les arguments 'packages' et 'requirements_file' sont mutuellement exclusifs.")
 
-        # Exécuter la commande en utilisant la nouvelle méthode robuste.
-        # Le nom de l'environnement est passé directement.
-        return_code = manager.run_command(args.run_command, args.env_name)
-        sys.exit(return_code)
-    
-    else:
-        logger.warning("Aucune action spécifiée (ex: --get-python-path ou --run-command). Affichage de l'aide.")
-        parser.print_help()
+        if not packages and not requirements_file:
+            self.logger.warning("Aucun paquet ni fichier de requirements n'a été fourni. Aucune action effectuée.")
+            return True
+
+        command_to_run = ""
+        if packages:
+            package_str = " ".join(packages)
+            command_to_run = f"pip install --force-reinstall --no-cache-dir {package_str}"
+        
+        elif requirements_file:
+            # Vérifier si le fichier existe
+            if not (self.project_root / requirements_file).is_file():
+                self.logger.error(f"Le fichier de requirements '{requirements_file}' est introuvable.")
+                return False
+            command_to_run = f"pip install -r {requirements_file}"
+
+        if command_to_run:
+            self.logger.info(f"Exécution de la commande de réparation de dépendances : {command_to_run}")
+            exit_code = self.run_command_in_conda_env(command_to_run)
+            return exit_code == 0
+        
+        return False
+
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Gestionnaire d'environnement de projet. Gère les fichiers .env et exécute des commandes dans l'environnement Conda approprié.",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+    
+    subparsers = parser.add_subparsers(dest="command", help="Commandes disponibles", required=True)
+
+    # --- Commande pour exécuter une commande ---
+    run_parser = subparsers.add_parser("run", help="Exécute une commande dans l'environnement Conda configuré via .env.")
+    run_parser.add_argument("command_to_run", help="La commande à exécuter, à mettre entre guillemets si elle contient des espaces.")
+
+    # --- Commande pour basculer d'environnement ---
+    switch_parser = subparsers.add_parser("switch", help="Bascule vers un autre environnement .env en copiant le fichier de configuration.")
+    switch_parser.add_argument("name", help="Le nom de l'environnement à activer (ex: dev, prod). Le fichier correspondant doit exister dans config/environments.")
+    
+    args = parser.parse_args()
+
+    manager = EnvironmentManager()
+    exit_code = 0
+
+    if args.command == "run":
+        exit_code = manager.run_command_in_conda_env(args.command_to_run)
+    elif args.command == "switch":
+        if not manager.switch_environment(args.name):
+            exit_code = 1
+    else:
+        # Ne devrait jamais être atteint grâce à `required=True` sur les subparsers
+        parser.print_help()
+        exit_code = 1
+
+    sys.exit(exit_code)

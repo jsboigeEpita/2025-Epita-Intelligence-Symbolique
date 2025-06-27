@@ -50,23 +50,24 @@ param(
 # --- Script Body ---
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = $PSScriptRoot
-$ActivationScript = Join-Path $ProjectRoot "scripts/utils/activate_conda_env.ps1"
+# Le script d'activation est remplacé par le manager Python
+$EnvironmentManagerPath = "project_core.core_from_scripts.environment_manager"
 
-# Valider l'existence du script d'activation en amont
-if (-not (Test-Path $ActivationScript)) {
-    Write-Host "[ERREUR] Le script d'activation '$ActivationScript' est introuvable." -ForegroundColor Red
-    exit 1
+# Fonction pour exécuter une commande via le manager
+function Invoke-ManagedCommand {
+    param(
+        [string]$CommandToRun
+    )
+    Write-Host "[CMD] python -m $EnvironmentManagerPath run `"$CommandToRun`"" -ForegroundColor DarkGray
+    python -m $EnvironmentManagerPath run "$CommandToRun"
+    return $LASTEXITCODE
 }
+
 
 # Branche 1: Tests E2E avec Playwright (JavaScript/TypeScript)
 if ($Type -eq "e2e") {
     Write-Host "[INFO] Lancement des tests E2E avec Playwright..." -ForegroundColor Cyan
-    & $ActivationScript # Active l'environnement pour rendre npx disponible
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[ERREUR] L'activation de l'environnement pour Playwright a échoué." -ForegroundColor Red
-        exit $LASTEXITCODE
-    }
-
+    
     $playwrightArgs = @("npx", "playwright", "test")
     if ($PSBoundParameters.ContainsKey('Browser')) {
         $playwrightArgs += "--project", $Browser
@@ -76,16 +77,13 @@ if ($Type -eq "e2e") {
     }
 
     $command = $playwrightArgs -join " "
-    Write-Host "[INFO] Exécution: $command" -ForegroundColor Green
-    Invoke-Expression -Command $command
-    $exitCode = $LASTEXITCODE
+    $exitCode = Invoke-ManagedCommand -CommandToRun $command
     Write-Host "[INFO] Exécution de Playwright terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan
     exit $exitCode
 }
 # Branche 2: Tests E2E avec Pytest (Python)
 elseif ($Type -eq "e2e-python") {
     Write-Host "[INFO] Lancement du cycle de test E2E en trois étapes pour éviter les conflits asyncio et passer les URLs." -ForegroundColor Cyan
-    $ActivationScriptPath = Join-Path $PSScriptRoot "scripts/utils/activate_conda_env.ps1"
     $globalExitCode = 0
     $output = ""
 
@@ -106,8 +104,8 @@ elseif ($Type -eq "e2e-python") {
             Remove-Item $urlsFile
         }
 
-        # Exécuter l'orchestrateur. Il va maintenant écrire les URLs dans le fichier service_urls.json.
-        & $ActivationScriptPath -CommandToRun $startCommand
+        # Exécuter l'orchestrateur via le manager d'environnement
+        Invoke-ManagedCommand -CommandToRun $startCommand
         
         if ($LASTEXITCODE -ne 0) {
             # L'orchestrateur gère déjà l'affichage de ses propres erreurs.
@@ -153,7 +151,7 @@ elseif ($Type -eq "e2e-python") {
         $testPathToRun = if (-not ([string]::IsNullOrEmpty($Path))) { $Path } else { "tests/e2e/python" }
         $pytestCommand += " `"$testPathToRun`""
         
-        & $ActivationScriptPath -CommandToRun $pytestCommand
+        Invoke-ManagedCommand -CommandToRun $pytestCommand
         $globalExitCode = $LASTEXITCODE
         if ($globalExitCode -ne 0) {
             Write-Host "[AVERTISSEMENT] Pytest a échoué avec le code de sortie: $globalExitCode" -ForegroundColor Yellow
@@ -169,7 +167,7 @@ elseif ($Type -eq "e2e-python") {
         # --- ÉTAPE 3: Arrêter les serveurs ---
         Write-Host "[INFO] Étape 3: Arrêt des services via l'orchestrateur..." -ForegroundColor Yellow
         $stopCommand = "python -m argumentation_analysis.webapp.orchestrator --stop"
-        & $ActivationScriptPath -CommandToRun $stopCommand
+        Invoke-ManagedCommand -CommandToRun $stopCommand
         if ($LASTEXITCODE -ne 0) {
             Write-Host "[AVERTISSEMENT] L'orchestrateur a rencontré un problème lors de l'arrêt des services." -ForegroundColor Yellow
             if ($globalExitCode -eq 0) { $globalExitCode = 1 }
@@ -234,31 +232,20 @@ else {
     $pytestFinalCommand = $pytestCommandParts -join " "
 
     # Exécution via le script d'activation pour une meilleure robustesse
-    $ActivationScriptPath = Join-Path $PSScriptRoot "scripts/utils/activate_conda_env.ps1"
     $runnerLogFile = Join-Path $ProjectRoot '_temp/test_runner.log'
     
     Write-Host "[INFO] Commande Pytest à exécuter: $pytestFinalCommand" -ForegroundColor Green
     Write-Host "[INFO] Les logs seront enregistrés dans '$runnerLogFile'" -ForegroundColor Yellow
 
     try {
-        # Appeler le script d'activation avec la commande complète.
-        try {
-            & $ActivationScriptPath -CommandToRun $pytestFinalCommand
-            $exitCode = $LASTEXITCODE
-            if ($exitCode -ne 0) {
-                 throw "Pytest a échoué avec le code $exitCode"
-            }
-        } catch {
-             Write-Host "[ERREUR] L'exécution de Pytest a échoué: $_" -ForegroundColor Red
-             exit 1
-        }
-        $exitCode = $LASTEXITCODE
+        # Appeler le manager d'environnement avec la commande complète.
+        $exitCode = Invoke-ManagedCommand -CommandToRun $pytestFinalCommand
         if ($exitCode -ne 0) {
-            throw "L'exécution des tests via le script d'activation a échoué avec le code de sortie: $exitCode"
+            throw "Pytest a échoué avec le code $exitCode"
         }
     }
     catch {
-        Write-Host "[ERREUR] Une erreur est survenue lors de l'appel au script d'activation. $_" -ForegroundColor Red
+        Write-Host "[ERREUR] Une erreur est survenue lors de l'appel au manager d'environnement. $_" -ForegroundColor Red
         exit 1
     }
 

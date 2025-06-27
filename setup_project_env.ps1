@@ -45,7 +45,7 @@ catch {
 Write-Host "[INFO] Création du nouvel environnement '$EnvName' à partir de '$EnvironmentFile'." -ForegroundColor Green
 try {
     # Utiliser mamba si disponible, sinon conda
-    $PackageManager = if (Get-Command mamba -ErrorAction SilentlyContinue) { "mamba" } else { "conda" }
+    $PackageManager = "conda"
     Write-Host "[INFO] Utilisation de '$PackageManager' pour la création de l'environnement."
     
     & $PackageManager env create --file $EnvironmentFile --name $EnvName
@@ -61,7 +61,19 @@ catch {
     exit 1
 }
 
-# 3. Instructions finales
+# 3. Écriture du fichier de configuration .env
+Write-Host "[INFO] Création du fichier de configuration .env..." -ForegroundColor Green
+$EnvFile = Join-Path $PSScriptRoot ".env"
+try {
+    Set-Content -Path $EnvFile -Value "CONDA_ENV_NAME=$EnvName"
+    Write-Host "[SUCCÈS] Le fichier '$EnvFile' a été créé/mis à jour." -ForegroundColor Green
+}
+catch {
+    Write-Host "[ERREUR] Impossible d'écrire dans le fichier '$EnvFile'." -ForegroundColor Red
+    exit 1
+}
+
+# 4. Instructions finales
 Write-Host -f Green "--- Installation terminée ---"
-Write-Host "Pour activer l'environnement, utilisez la commande suivante dans votre terminal:"
-Write-Host -f Cyan "conda activate $EnvName"
+Write-Host "Pour activer l'environnement, sourcez le script d'activation :"
+Write-Host -f Cyan ". .\scripts\utils\activate_conda_env.ps1"
