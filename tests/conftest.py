@@ -47,41 +47,49 @@ def jvm_session(request):
     # Lire l'option pour sauter Octave
     skip_octave_flag = request.config.getoption("--skip-octave")
     
-    try:
-        # Étape 1: Provisioning des outils (JDK et Tweety)
-        # La racine du projet est un niveau au-dessus du dossier 'tests'
-        project_root = Path(__file__).parent.parent.resolve()
-        # Correction: Le répertoire des outils doit pointer vers 'argumentation_analysis/libs'
-        tools_dir = project_root / "argumentation_analysis" / "libs"
-        tools_dir.mkdir(exist_ok=True)
-        logger.info(f"Running dependency provisioning via setup_tools... Tools directory set to {tools_dir}")
-        setup_tools(
-            tools_dir_base_path=tools_dir,
-            force_reinstall=False,
-            skip_octave=skip_octave_flag
-        )
-        
-        # Le script de setup doit définir JAVA_HOME
-        if not os.environ.get('JAVA_HOME'):
-            pytest.fail("setup_tools() did not set the JAVA_HOME environment variable.", pytrace=False)
-        
-        logger.info(f"JAVA_HOME is set to: {os.environ.get('JAVA_HOME')}")
+    # try:
+    #     # Étape 1: Provisioning des outils (JDK et Tweety)
+    #     # La racine du projet est un niveau au-dessus du dossier 'tests'
+    #     project_root = Path(__file__).parent.parent.resolve()
+    #     # Correction: Le répertoire des outils doit pointer vers 'argumentation_analysis/libs'
+    #     tools_dir = project_root / "argumentation_analysis" / "libs"
+    #     tools_dir.mkdir(exist_ok=True)
+    #     logger.info(f"Running dependency provisioning via setup_tools... Tools directory set to {tools_dir}")
+    #     # L'installation des outils portables est maintenant gérée par le script
+    #     # `setup_project_env.ps1`. Nous laissons cette section commentée comme
+    #     # référence mais nous n'exécutons plus le provisioning ici pour des raisons
+    #     # de performance et de stabilité des tests.
+    #     # setup_tools(
+    #     #     tools_dir_base_path=tools_dir,
+    #     #     force_reinstall=False,
+    #     #     skip_octave=skip_octave_flag
+    #     # )
 
-        # Étape 2: Démarrage de la JVM
-        if not is_jvm_started():
-            logger.info("Attempting to initialize JVM via core.jvm_setup.initialize_jvm...")
-            # La fixture de session est propriétaire de la JVM
-            success = initialize_jvm(session_fixture_owns_jvm=True)
-            if success:
-                logger.info("JVM started successfully for the test session.")
-            else:
-                 pytest.fail("JVM initialization failed via core.jvm_setup.initialize_jvm.", pytrace=False)
-        else:
-            logger.info("JVM was already started.")
+    #     # Il est attendu que le script `setup_project_env.ps1` ait déjà provisionné
+    #     # les outils et que l'environnement (y compris JAVA_HOME) soit pré-configuré
+    #     # avant de lancer les tests.
+        
+    #     # Le script de setup doit définir JAVA_HOME
+    #     if not os.environ.get('JAVA_HOME'):
+    #         pytest.fail("setup_tools() did not set the JAVA_HOME environment variable.", pytrace=False)
+        
+    #     logger.info(f"JAVA_HOME is set to: {os.environ.get('JAVA_HOME')}")
+
+    #     # Étape 2: Démarrage de la JVM
+    #     if not is_jvm_started():
+    #         logger.info("Attempting to initialize JVM via core.jvm_setup.initialize_jvm...")
+    #         # La fixture de session est propriétaire de la JVM
+    #         success = initialize_jvm(session_fixture_owns_jvm=True)
+    #         if success:
+    #             logger.info("JVM started successfully for the test session.")
+    #         else:
+    #              pytest.fail("JVM initialization failed via core.jvm_setup.initialize_jvm.", pytrace=False)
+    #     else:
+    #         logger.info("JVM was already started.")
             
-    except Exception as e:
-        logger.error(f"A critical error occurred during test session setup: {e}", exc_info=True)
-        pytest.exit(f"Test session setup failed: {e}", 1)
+    # except Exception as e:
+    #     logger.error(f"A critical error occurred during test session setup: {e}", exc_info=True)
+    #     pytest.exit(f"Test session setup failed: {e}", 1)
 
     yield
 

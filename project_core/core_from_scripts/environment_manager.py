@@ -39,7 +39,9 @@ class EnvironmentManager:
             return None
         
         try:
-            with open(self.target_env_file, 'r', encoding='utf-8') as f:
+            # Utiliser utf-8-sig pour gérer de manière transparente le BOM (Byte Order Mark)
+            # qui peut être ajouté par certains éditeurs ou outils sur Windows.
+            with open(self.target_env_file, 'r', encoding='utf-8-sig') as f:
                 for line in f:
                     line = line.strip()
                     if not line or line.startswith('#'):

@@ -14,7 +14,7 @@
 #>
 
 # --- Configuration ---
-$EnvName = "projet-is-v2"
+$EnvName = "projet-is"
 $EnvironmentFile = "environment.yml"
 
 # --- Bannière ---
@@ -65,7 +65,14 @@ catch {
 Write-Host "[INFO] Création du fichier de configuration .env..." -ForegroundColor Green
 $EnvFile = Join-Path $PSScriptRoot ".env"
 try {
-    Set-Content -Path $EnvFile -Value "CONDA_ENV_NAME=$EnvName"
+    # On met une petite pause pour s'assurer que les handle de fichier de conda/pip sont libérés
+    Start-Sleep -Seconds 2
+
+    # Supprimer le fichier .env existant pour éviter les problèmes de verrouillage
+    if (Test-Path $EnvFile) {
+        Remove-Item $EnvFile -Force
+    }
+    Set-Content -Path $EnvFile -Value "CONDA_ENV_NAME=$EnvName" -Encoding UTF8
     Write-Host "[SUCCÈS] Le fichier '$EnvFile' a été créé/mis à jour." -ForegroundColor Green
 }
 catch {
@@ -73,7 +80,25 @@ catch {
     exit 1
 }
 
-# 4. Instructions finales
+# 4. Provisioning des outils portables (JDK, etc.)
+Write-Host "[INFO] Lancement du provisioning des outils portables (JDK...)." -ForegroundColor Green
+Write-Host "[INFO] Cela peut prendre quelques minutes lors de la première exécution..." -ForegroundColor Yellow
+try {
+    # On exécute le script Python dans l'environnement fraîchement créé
+    conda run -n $EnvName python scripts/utils/provision_tools.py
+    
+    if ($LASTEXITCODE -ne 0) {
+        throw "Le provisioning des outils a échoué."
+    }
+    Write-Host "[SUCCÈS] Les outils portables ont été installés." -ForegroundColor Green
+}
+catch {
+    Write-Host "[ERREUR] Une erreur critique est survenue lors du provisioning des outils." -ForegroundColor Red
+    Write-Host "Message: $($_.Exception.Message)"
+    exit 1
+}
+
+# 5. Instructions finales
 Write-Host -f Green "--- Installation terminée ---"
 Write-Host "Pour activer l'environnement, sourcez le script d'activation :"
-Write-Host -f Cyan ". .\scripts\utils\activate_conda_env.ps1"
+Write-Host -f Cyan ". .\activate_project_env.ps1"

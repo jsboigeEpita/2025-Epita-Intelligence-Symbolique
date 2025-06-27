@@ -18,26 +18,23 @@ class TestMaintenanceManager(unittest.TestCase):
     Test suite for the command-line interface of the maintenance manager.
     """
 
-    @patch('maintenance_manager.ValidationEngine')
-    def test_project_validate_command(self, mock_validation_engine):
+    @patch('maintenance_manager.EnvironmentManager')
+    def test_env_validate_command(self, mock_environment_manager):
         """
-        Tests that the 'project --validate' command correctly instantiates
-        and runs the ValidationEngine.
+        Tests that the 'env --validate' command correctly instantiates
+        and runs the EnvironmentManager's validation method.
         """
         # Configure the mock
-        mock_instance = mock_validation_engine.return_value
-        mock_instance.run.return_value = [
-            MagicMock(success=True, rule_name='TestRule', message='Test success')
-        ]
+        mock_instance = mock_environment_manager.return_value
+        mock_instance.validate_environment.return_value = True
         
         # Run the command
-        with patch.object(sys, 'argv', ['maintenance_manager.py', 'project', '--validate']):
+        with patch.object(sys, 'argv', ['maintenance_manager.py', 'env', '--validate', 'test_env']):
             main()
         
-        # Assert that the engine was instantiated, rules loaded, and run
-        mock_validation_engine.assert_called_once()
-        mock_instance.load_rules.assert_called_once()
-        mock_instance.run.assert_called_once()
+        # Assert that the manager was instantiated and validate_environment was called
+        mock_environment_manager.assert_called_once()
+        mock_instance.validate_environment.assert_called_once_with('test_env')
         
 if __name__ == '__main__':
     unittest.main()
