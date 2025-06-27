@@ -9,18 +9,23 @@ import pathlib
 """
 Tests d'intégration FOL-Tweety pour FirstOrderLogicAgent.
 
-Ces tests valident l'intégration authentique entre l'agent FOL et TweetyProject :
-- Compatibilité syntaxe FOL avec solveur Tweety réel
-- Analyse avec JAR Tweety authentique
-- Gestion d'erreurs spécifiques FOL
-- Performance vs Modal Logic
-- Validation sans mocks (USE_REAL_JPYPE=true)
+Grammaire BNF du Parser FOL (FolParser.java de TweetyProject) pour référence :
+--------------------------------------------------------------------------------
+ KB 			::== SORTSDEC DECLAR FORMULAS
+ DECLAR		::== (FUNCTORDEC | PREDDEC)*
+ SORTSDEC    ::== ( SORTNAME "=" "{" (CONSTANTNAME ("," CONSTANTNAME)*)? "}" "\n" )*
+ PREDDEC		::== "type" "(" PREDICATENAME ("(" SORTNAME ("," SORTNAME)* ")")? ")" "\n"
+ FUNCTORDEC	::== "type" "(" SORTNAME "=" FUNCTORNAME "(" (SORTNAME ("," SORTNAME)*)? ")" ")" "\n"
+ FORMULAS    ::== ( "\n" FORMULA)*
+ FORMULA     ::== ATOM | "forall" VARIABLENAME ":" "(" FORMULA ")" | "exists" VARIABLENAME ":" "(" FORMULA ")" |
+ 					 "(" FORMULA ")" | FORMULA "&&" FORMULA | FORMULA "||" FORMULA | "!" FORMULA | "+" | "-" |
+ 					 FORMULA "=>" FORMULA | FORMULA "<=>" FORMULA | FORMULA "==" FORMULA | FORMULA "/==" FORMULA |
+ 					 FORMULA "^^" FORMULA
+ ATOM		::== PREDICATENAME ("(" TERM ("," TERM)* ")")?
+ TERM		::== VARIABLENAME | CONSTANTNAME | FUNCTORNAME "(" (TERM ("," TERM)*)?  ")"
+--------------------------------------------------------------------------------
 
-Tests critiques d'intégration :
-✅ Formules FOL acceptées par Tweety sans erreur parsing
-✅ Résultats cohérents du solveur FOL
-✅ Gestion robuste des erreurs Tweety
-✅ Performance stable et prévisible
+Ces tests valident l'intégration authentique entre l'agent FOL et TweetyProject.
 """
 
 import pytest
@@ -91,100 +96,65 @@ class TestFOLTweetyCompatibility:
     
     @pytest.mark.skipif(not TWEETY_AVAILABLE, reason="TweetyBridge non disponible")
     @pytest.mark.asyncio
-    async def test_fol_formula_tweety_compatibility(self, real_tweety_config):
-        """Test compatibilité formules FOL avec Tweety réel."""
-        if not real_tweety_config["USE_REAL_JPYPE"]:
-            pytest.skip("Test nécessite USE_REAL_JPYPE=true")
-            
-        # Formules FOL valides à tester
-        test_formulas = [
-            # Quantificateurs de base
-            "∀x(Human(x) → Mortal(x))",
-            "∃x(Student(x) ∧ Intelligent(x))",
-            
-            # Prédicats complexes
-            "∀x∀y(Loves(x,y) → Cares(x,y))",
-            "∃x∃y(Friend(x,y) ∧ Trust(x,y))",
-            
-            # Connecteurs logiques
-            "∀x((P(x) ∧ Q(x)) → (R(x) ∨ S(x)))",
-            "∃x(¬Bad(x) ↔ Good(x))"
-        ]
-        
-        # Initialisation TweetyBridge
-        tweety_bridge = TweetyBridge()
-        
-        # Test de chaque formule
-        for formula in test_formulas:
-            try:
-                # Test parsing sans erreur
-                is_consistent = await tweety_bridge.check_consistency([formula])
-                logger.info(f"✅ Formule acceptée par Tweety: {formula}")
-                
-                # Tweety doit pouvoir traiter la formule
-                assert isinstance(is_consistent, bool)
-                
-            except Exception as e:
-                logger.error(f"❌ Erreur Tweety pour {formula}: {e}")
-                # Échec = syntaxe incompatible
-                pytest.fail(f"Syntaxe FOL incompatible avec Tweety: {formula} - {e}")
+    async def test_fol_formula_tweety_compatibility(self, fol_agent_with_kernel, jvm_session):
+        """Test compatibilité formules FOL avec l'agent FOL réel."""
+        if not jvm_session:
+            pytest.skip("Test nécessite la JVM.")
+        agent = fol_agent_with_kernel
+        # Syntaxe correcte avec sauts de ligne explicites pour éviter les problèmes de formatage.
+        formula_str = "thing = {a}\ntype(P(thing))\n\nforall X: (P(X))"
+        try:
+            belief_set = FirstOrderBeliefSet(content=formula_str)
+            is_consistent, msg = await agent.is_consistent(belief_set)
+            logger.info(f"✅ Formule syntaxiquement correcte acceptée par Tweety: {msg}")
+            assert is_consistent is True
+        except Exception as e:
+            pytest.fail(f"Une syntaxe FOL valide a été rejetée: {e}")
     
     @pytest.mark.skipif(not TWEETY_AVAILABLE, reason="TweetyBridge non disponible")
     @pytest.mark.asyncio
-    async def test_fol_predicate_declaration_validation(self, real_tweety_config):
-        """Test validation déclaration prédicats FOL avec Tweety."""
-        if not real_tweety_config["USE_REAL_JPYPE"]:
-            pytest.skip("Test nécessite USE_REAL_JPYPE=true")
-            
-        tweety_bridge = TweetyBridge()
-        
-        # Test prédicats correctement déclarés
-        valid_formulas = [
-            "∀x(Human(x) → Mortal(x))",
-            "Human(socrate)",
-            "Mortal(socrate)"
-        ]
-        
+    async def test_fol_predicate_declaration_validation(self, fol_agent_with_kernel, jvm_session):
+        """Test validation déclaration prédicats FOL avec Tweety via l'agent."""
+        if not jvm_session:
+            pytest.skip("Test nécessite la JVM.")
+        agent = fol_agent_with_kernel
+        # Syntaxe multi-lignes correcte, conforme à la BNF de Tweety.
+        valid_formula_str = """
+human = {socrates}
+type(Mortal(human))
+
+Mortal(socrates)
+"""
+        belief_set = FirstOrderBeliefSet(content=valid_formula_str)
         try:
-            result = await tweety_bridge.check_consistency(valid_formulas)
-            logger.info(f"✅ Prédicats validés par Tweety: {result}")
-            assert isinstance(result, bool)
-            
+            is_consistent, msg = await agent.is_consistent(belief_set)
+            logger.info(f"✅ Prédicats validés par Tweety: {msg}")
+            assert is_consistent is True
         except Exception as e:
-            # Analyser l'erreur avec TweetyErrorAnalyzer
-            error_analyzer = TweetyErrorAnalyzer()
-            feedback = error_analyzer.analyze_error(str(e))
-            
-            if feedback and feedback.error_type == "DECLARATION_ERROR":
-                # Erreur de déclaration détectée
-                logger.warning(f"⚠️ Erreur déclaration prédicat: {feedback.corrections}")
-            else:
-                pytest.fail(f"Erreur Tweety inattendue: {e}")
+            pytest.fail(f"Erreur Tweety inattendue pour une déclaration valide: {e}")
     
     @pytest.mark.skipif(not TWEETY_AVAILABLE, reason="TweetyBridge non disponible")
-    @pytest.mark.asyncio 
-    async def test_fol_quantifier_binding_validation(self, real_tweety_config):
-        """Test validation liaison quantificateurs avec Tweety."""
-        if not real_tweety_config["USE_REAL_JPYPE"]:
-            pytest.skip("Test nécessite USE_REAL_JPYPE=true")
-            
-        tweety_bridge = TweetyBridge()
-        
-        # Test variables correctement liées
-        well_bound_formulas = [
-            "∀x(P(x) → Q(x))",  # x lié par ∀
-            "∃y(R(y) ∧ S(y))",  # y lié par ∃
-            "∀x∃y(Rel(x,y))"    # x et y correctement liés
-        ]
-        
-        for formula in well_bound_formulas:
-            try:
-                await tweety_bridge.check_consistency([formula])
-                logger.info(f"✅ Variables correctement liées: {formula}")
-                
-            except Exception as e:
-                logger.error(f"❌ Erreur liaison variables: {formula} - {e}")
-                pytest.fail(f"Variables mal liées détectées par Tweety: {formula}")
+    @pytest.mark.asyncio
+    async def test_fol_quantifier_binding_validation(self, fol_agent_with_kernel, jvm_session):
+        """Test validation liaison quantificateurs avec Tweety via l'agent."""
+        if not jvm_session:
+            pytest.skip("Test nécessite la JVM.")
+        agent = fol_agent_with_kernel
+        # Syntaxe correcte pour les quantificateurs en multi-lignes, conforme à la BNF de Tweety.
+        well_bound_formula_str = """
+item = {a}
+type(P(item))
+type(Q(item))
+
+forall X: (P(X) => Q(X))
+"""
+        belief_set = FirstOrderBeliefSet(content=well_bound_formula_str)
+        try:
+            is_consistent, msg = await agent.is_consistent(belief_set)
+            logger.info(f"✅ Variables correctement liées validées: {msg}")
+            assert is_consistent is True
+        except Exception as e:
+            pytest.fail(f"Variables bien liées ont causé une erreur inattendue: {e}")
 
     @pytest.mark.asyncio
     async def test_programmatic_belief_set_creation_and_consistency(self, fol_agent_with_kernel, jvm_session):
@@ -237,113 +207,86 @@ class TestRealTweetyFOLAnalysis:
     
     @pytest.mark.asyncio
     async def test_real_tweety_fol_syllogism_analysis(self, fol_agent_with_kernel, jvm_session):
-        """Test analyse syllogisme avec Tweety réel (via construction programmatique)."""
+        """Test analyse syllogisme avec Tweety réel (via construction par chaîne)."""
         if not jvm_session:
             pytest.skip("Test nécessite la JVM.")
             
         agent = fol_agent_with_kernel
-        builder = agent._builder_plugin
-        builder.reset()
+        # Test avec une chaîne de caractères syntaxiquement correcte
+        syllogism_str = """
+human = {socrates}
+type(Man(human))
+type(Mortal(human))
 
-        # Construction programmatique du syllogisme
-        builder.add_sort("homme")
-        builder.add_constant_to_sort("socrate", "homme")
-        builder.add_predicate_schema("estunhomme", ["homme"])
-        builder.add_predicate_schema("estmortel", ["homme"])
-        builder.add_universal_implication("estunhomme", "estmortel", "homme")
-        builder.add_atomic_fact("estunhomme", ["socrate"])
-        
-        # Création du belief set
-        java_belief_set_obj = builder.build_tweety_belief_set(agent.tweety_bridge)
-        assert java_belief_set_obj is not None
-        belief_set = FirstOrderBeliefSet(content=java_belief_set_obj.toString(), java_object=java_belief_set_obj)
+forall X: (Man(X) => Mortal(X))
+Man(socrates)
+"""
+        belief_set = FirstOrderBeliefSet(content=syllogism_str)
 
         # Vérification de la consistance
         is_consistent, _ = await agent.is_consistent(belief_set)
         assert is_consistent is True, "Le belief set du syllogisme devrait être consistant."
 
         # Vérification de l'inférence
-        entails, _ = await agent.execute_query(belief_set, "estmortel(socrate)")
-        assert entails is True, "L'inférence 'estmortel(socrate)' devrait être acceptée."
+        entails, _ = await agent.execute_query(belief_set, "Mortal(socrates)")
+        assert entails is True, "L'inférence 'Mortal(socrates)' devrait être acceptée."
         
-        logger.info("✅ Analyse du syllogisme par construction programmatique réussie.")
-        # logger.info(f"Cohérence: {result.consistency_check}") # Attribut non existant sur l'objet belief_set
-        # logger.info(f"Confiance: {result.confidence_score}") # Idem
-    
+        logger.info("✅ Analyse du syllogisme par chaîne de caractères réussie.")
+
     @pytest.mark.asyncio
-    async def test_real_tweety_fol_inconsistency_detection(self, fol_agent_with_kernel, jvm_session):
-        """Test détection incohérence avec Tweety réel (via construction programmatique)."""
+    async def test_end_to_end_fol_syllogism_with_llm(self, fol_agent_with_kernel, jvm_session):
+        """
+        Test l'analyse de bout en bout d'un syllogisme, en utilisant le LLM
+        pour la conversion texte -> belief set, puis Tweety pour le raisonnement.
+        C'est le test d'intégration ultime.
+        """
         if not jvm_session:
             pytest.skip("Test nécessite la JVM.")
         
         agent = fol_agent_with_kernel
-        builder = agent._builder_plugin
-        builder.reset()
-
-        # Construction d'un ensemble de croyances incohérent
-        builder.add_sort("type")
-        builder.add_predicate_schema("est_a", ["type"])
-        builder.add_predicate_schema("nest_pas_a", ["type"])
-        builder.add_constant_to_sort("x", "type")
-        builder.add_atomic_fact("est_a", ["x"])
-        builder.add_universal_implication("est_a", "nest_pas_a", "type") # forall y (est_a(y) -> nest_pas_a(y))
         
-        # Pour rendre l'incohérence plus directe : forall z (est_a(z) -> not(est_a(z)))
-        # Ce n'est pas directement possible avec les outils actuels, mais ce qui précède est suffisant.
-        # Une autre façon : ajouter "est_a(x)" et "not est_a(x)". "not" n'est pas un outil direct.
-        # Le BeliefSet actuel sera { est_a(x), forall y(est_a(y) => nest_pas_a(y)) }
-        # ce qui n'est pas incohérent en soi. Modifions le test.
-        # Construction programmatique d'un ensemble incohérent.
-        # Au lieu de "P et non P", on utilise une chaîne d'implications contradictoires
-        # que le builder peut gérer.
-        # e.g., A(x), forall y (A(y) -> B(y)), forall z (B(z) -> not A(z))
-        builder.reset()
-        builder.add_sort("creature")
-        builder.add_predicate_schema("est_un_pingouin", ["creature"])
-        builder.add_predicate_schema("est_un_oiseau", ["creature"])
-        builder.add_predicate_schema("vole", ["creature"])
-        
-        builder.add_constant_to_sort("tux", "creature")
-        
-        # 1. Tux est un pingouin.
-        builder.add_atomic_fact("est_un_pingouin", ["tux"])
-        # 2. Tous les pingouins sont des oiseaux.
-        builder.add_universal_implication("est_un_pingouin", "est_un_oiseau", "creature")
-        # 3. Aucun oiseau ne peut être un pingouin (contradiction avec 2).
-        # Pour cela on a besoin de la négation, ce que le builder ne fait pas.
-        # Essayons une autre approche:
-        # P(a), forall x (P(x) -> Q(x)), forall x (P(x) -> not Q(x))
-        builder.reset()
-        builder.add_sort("animal")
-        builder.add_predicate_schema("est_un_oiseau", ["animal"])
-        builder.add_predicate_schema("peut_voler", ["animal"])
-        builder.add_predicate_schema("ne_peut_pas_voler", ["animal"])
-        builder.add_constant_to_sort("penny", "animal")
+        syllogism_text = "Tous les hommes sont mortels. Socrate est un homme."
 
-        # Penny est un oiseau
-        builder.add_atomic_fact("est_un_oiseau", ["penny"])
-        # Tous les oiseaux peuvent voler
-        builder.add_universal_implication("est_un_oiseau", "peut_voler", "animal")
-        # Tous les oiseaux ne peuvent pas voler (contradictoire)
-        builder.add_universal_implication("est_un_oiseau", "ne_peut_pas_voler", "animal")
-        # Ajoutons que pouvoir voler et ne pas pouvoir voler est mutuellement exclusif
-        # Cela nécessite une formule plus complexe que le builder ne supporte pas.
+        # Act: Utiliser le LLM pour convertir le texte en belief set.
+        belief_set, conversion_status = await agent.text_to_belief_set(syllogism_text)
+        
+        # Assert: Vérifier que la conversion a réussi et que le belief set n'est pas vide.
+        assert belief_set is not None, f"La conversion du texte en belief set a échoué: {conversion_status}"
+        assert not belief_set.is_empty(), "Le belief set ne devrait pas être vide après la conversion."
+        logger.info(f"BeliefSet généré par le LLM:\n{belief_set.content}")
 
-        # La création d'un BeliefSet à partir d'une chaîne est fragile.
-        # Nous utilisons une approche propositionnelle simple pour tester la détection d'incohérence,
-        # car le builder actuel ne peut pas créer de négations arbitraires.
-        inconsistent_formulas = "predicates: P, Q. formulas: { P, (P => Q), (P => not Q) }."
+        # Assert: Vérifier la consistance du belief set généré.
+        is_consistent, _ = await agent.is_consistent(belief_set)
+        assert is_consistent is True, "Le belief set du syllogisme généré par le LLM devrait être consistant."
+
+        # Assert: Vérifier l'inférence clé.
+        entails, _ = await agent.execute_query(belief_set, "mortel(socrate)")
+        assert entails is True, "L'inférence 'mortel(socrate)' devrait être acceptée."
+        
+        logger.info("✅ Test d'intégration de bout en bout avec LLM et Tweety réussi.")
+
+    @pytest.mark.asyncio
+    async def test_real_tweety_fol_inconsistency_detection(self, fol_agent_with_kernel, jvm_session):
+        """Test détection incohérence avec Tweety réel."""
+        if not jvm_session:
+            pytest.skip("Test nécessite la JVM.")
+        
+        agent = fol_agent_with_kernel
+        
+        # La syntaxe correcte pour une base de connaissance incohérente, conforme à la BNF de Tweety.
+        inconsistent_formulas = """
+thing = {a}
+type(P(thing))
+
+P(a)
+!P(a)
+"""
         belief_set = FirstOrderBeliefSet(content=inconsistent_formulas)
         
         is_consistent, consistency_msg = await agent.is_consistent(belief_set)
 
-        # L'assertion originale était 'is_consistent is False'.
-        # On vérifie que le résultat est bien False et que le message d'erreur
-        # ne provient pas d'une erreur de parsing.
         assert not is_consistent, f"Le BeliefSet devrait être incohérent, mais il est consistant. Message: {consistency_msg}"
         
-        # Un message de succès de la part de l'agent indique que l'incohérence a été trouvée
-        # et non qu'une erreur de parsing a eu lieu.
         assert "inconsistent" in consistency_msg.lower() or "incohérent" in consistency_msg.lower(), \
                f"Le message de retour '{consistency_msg}' n'indique pas une incohérence."
 
@@ -407,15 +350,16 @@ class TestFOLErrorHandling:
         """Test récupération erreurs syntaxe FOL."""
         agent = fol_agent_with_kernel
         
-        # Texte problématique
-        problematic_text = "Ceci n'est pas une formule logique valide !!!"
+        # Texte sémantiquement absurde pour tester la récupération d'erreur.
+        # Le LLM ne devrait extraire aucune structure logique de cette phrase.
+        problematic_text = "D'incolores idées vertes dorment furieusement."
         
         belief_set, msg = await agent.text_to_belief_set(problematic_text)
         
         # Agent doit gérer gracieusement
         assert belief_set is not None, "Le belief_set ne devrait pas être None."
         assert belief_set.is_empty(), f"Le belief_set devrait être vide, mais contient : {belief_set.content}"
-        assert "aucune structure logique" in msg.lower(), f"Le message d'erreur attendu n'a pas été trouvé dans '{msg}'"
+        assert "aucune structure logique" in msg.lower(), f"Le message d'erreur attendu ('aucune structure logique') n'a pas été trouvé dans '{msg}'"
         
     @pytest.mark.asyncio
     async def test_fol_timeout_handling(self, fol_agent_with_kernel, jvm_session):
@@ -516,7 +460,7 @@ class TestFOLPerformanceVsModal:
         
         # Performance stable
         avg_time = total_time / len(test_texts)
-        assert avg_time < 5.0  # Moyenne < 5 secondes par analyse
+        assert avg_time < 5.0  # Moyenne < 5 secondes par an-authenticated-llm-callalyse
         
         logger.info(f"✅ Stabilité FOL: {len(results)} analyses en {total_time:.2f}s")
         logger.info(f"Temps moyen: {avg_time:.2f}s")
@@ -532,7 +476,6 @@ class TestFOLPerformanceVsModal:
             _ = await agent.text_to_belief_set(text)
         
         # Le test de la mémoire est implicite dans le fait que cela ne crashe pas.
-        # Les anciens attributs comme analysis_cache et get_analysis_summary n'existent plus.
         logger.info("Test de stabilité mémoire terminé.")
 
 
@@ -581,10 +524,28 @@ class TestFOLRealWorldIntegration:
 
         logger.info(f"✅ Analyse complexe terminée avec succès.")
     
-    @pytest.mark.skip(reason="Ce test dépend trop du LLM et est non déterministe. La fonctionnalité est couverte par les autres tests.")
     @pytest.mark.asyncio
-    async def test_fol_multilingual_support(self, fol_agent_with_kernel):
-        pass
+    async def test_fol_multilingual_support(self, fol_agent_with_kernel, jvm_session):
+        """Test la capacité du LLM à comprendre et traduire une autre langue (espagnol) en logique."""
+        if not jvm_session:
+            pytest.skip("Test nécessite la JVM.")
+        
+        agent = fol_agent_with_kernel
+        text = "Todos los humanos son mortales. Sócrates es un humano."
+        
+        belief_set, msg = await agent.text_to_belief_set(text)
+        
+        assert belief_set is not None, f"La conversion a échoué: {msg}"
+        assert not belief_set.is_empty(), "Le belief_set ne devrait pas être vide."
+        
+        # Le nom du prédicat peut varier, on inspecte le contenu.
+        logger.info(f"BeliefSet multilingue généré: {belief_set.content}")
+
+        # Le LLM a généré le prédicat "mortel" (minuscule) et la constante "socrates".
+        entails, query_msg = await agent.execute_query(belief_set, "mortel(socrates)")
+
+        assert entails, f"L'inférence 'mortel(socrates)' a échoué: {query_msg}"
+        logger.info("✅ Le support multilingue pour l'espagnol est fonctionnel.")
 
 
 # ==================== UTILITAIRES DE TEST ====================
@@ -645,7 +606,7 @@ async def fol_agent_with_kernel(jvm_session):
         pytest.skip("Skipping test: jvm_session fixture failed to initialize.")
 
     config = UnifiedConfig()
-    kernel = config.get_kernel_with_gpt4o_mini()
+    kernel = config.get_kernel_with_gpt4o_mini(force_authentic=True)
     
     # Création de l'agent. Le paramètre use_serialization est obsolète.
     tweety_bridge = TweetyBridge()

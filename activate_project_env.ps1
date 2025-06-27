@@ -1,51 +1,46 @@
 <#
 .SYNOPSIS
-Wrapper pour exécuter une commande dans l'environnement du projet.
+Wrapper pour exécuter une commande dans l'environnement Conda du projet.
 
 .DESCRIPTION
-Ce script est un simple "wrapper" qui délègue toute la logique de
-démarrage et d'exécution au script Python multiplateforme `scripts/run_in_env.py`.
-Il contient des éléments pour la compatibilité avec les anciens tests de validation "Oracle Enhanced".
-Ce script prépare l'environnement pour les scripts dans 'scripts/sherlock_watson'.
+Ce script délègue l'exécution de commandes au gestionnaire d'environnement Python
+`project_core/core_from_scripts/environment_manager.py`.
+Il assure que les commandes sont lancées dans le bon environnement Conda (`main_env`)
+avec la méthode 'conda run', qui est la plus robuste.
 
 .EXAMPLE
-# Exécute pytest
-.\activate_project_env.ps1 python -m pytest
+# Exécute pytest pour un test spécifique
+.\activate_project_env.ps1 pytest tests/integration/some_test.py
 
 .EXAMPLE
 # Affiche la version de python de l'environnement
 .\activate_project_env.ps1 python --version
 #>
 param(
-    [Parameter(Mandatory=$false, Position=0)]
-    [string]$CommandToRun,
-    
     [Parameter(ValueFromRemainingArguments=$true)]
-    [string[]]$RemainingArgs
+    [string[]]$CommandAndArgs
 )
 
 $ErrorActionPreference = "Stop"
 
-# Configuration pour la compatibilité des tests
+# Configuration pour la compatibilité des tests et l'import de modules locaux
 $env:PYTHONPATH = "$PSScriptRoot;$env:PYTHONPATH"
 
-# Détermine le chemin vers le script Python à exécuter
-$childPath = "scripts\run_in_env.py"
+# Chemin vers le nouveau gestionnaire d'environnement
+$childPath = "project_core\core_from_scripts\environment_manager.py"
 $pythonRunner = Join-Path -Path $PSScriptRoot -ChildPath $childPath
 
-# Détermine la commande finale à exécuter
-$finalArgs = if ($PSBoundParameters.ContainsKey('CommandToRun')) {
-    # Si -CommandToRun est utilisé explicitement, on prend sa valeur
-    $CommandToRun
-} else {
-    # Sinon, on reconstruit la commande à partir de tous les arguments passés
-    # Cela inclut le premier argument non nommé s'il n'y a pas de -CommandToRun
-    $($CommandToRun) + $RemainingArgs -join ' '
-}
+# Environnement conda cible
+$condaEnvName = "main_env"
 
-$finalCommand = "python.exe `"$pythonRunner`" $finalArgs"
+# Reconstruit la commande à passer au script Python
+$commandToExecute = $CommandAndArgs -join ' '
 
-# Write-Host "[DEBUG] Calling: $finalCommand" -ForegroundColor Gray
+# Construit la commande finale pour appeler le gestionnaire d'environnement
+# qui utilisera 'conda run' en interne.
+$finalCommand = "python.exe `"$pythonRunner`" --env-name $condaEnvName --run-command $commandToExecute"
+
+Write-Host "[DEBUG] Calling: $finalCommand" -ForegroundColor Gray
 
 # Appelle le script Python avec les arguments traités
 Invoke-Expression -Command $finalCommand

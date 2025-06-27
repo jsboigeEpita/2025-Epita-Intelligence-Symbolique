@@ -28,11 +28,14 @@ from semantic_kernel.connectors.ai.chat_completion_client_base import ChatComple
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.contents.chat_history import ChatHistory
 # Imports are updated based on recent semantic-kernel changes
-from semantic_kernel.agents.chat_completion.chat_completion_agent import FunctionChoiceBehavior
+from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
+from semantic_kernel.contents.function_call_content import FunctionCallContent
+from semantic_kernel.contents.function_result_content import FunctionResultContent
 # The decorator has been moved to the top-level package for easier access.
 from semantic_kernel.functions import kernel_function, KernelFunctionFromPrompt, KernelPlugin, KernelArguments
 from semantic_kernel.prompt_template.prompt_template_config import PromptTemplateConfig
 from semantic_kernel.connectors.ai.open_ai import OpenAIPromptExecutionSettings
+from semantic_kernel.connectors.ai.function_calling_utils import kernel_function_metadata_to_function_call_format
 from pydantic import Field, field_validator
  
 from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
@@ -213,6 +216,7 @@ class BeliefSetBuilderPlugin:
     )
     def add_sort(self, sort_name: str):
         """Ajoute un sort à la base de connaissances."""
+        logger.info(f"AUDIT - [BeliefSetBuilderPlugin({id(self)})] Appel de add_sort avec: '{sort_name}'")
         norm_sort = self._normalize(sort_name)
         if norm_sort not in self._sorts:
             self._sorts[norm_sort] = []
@@ -220,6 +224,7 @@ class BeliefSetBuilderPlugin:
 
     @kernel_function(description="Define a predicate schema.", name="add_predicate_schema")
     def add_predicate_schema(self, predicate_name: str, argument_sorts: List[str]):
+        logger.info(f"AUDIT - [BeliefSetBuilderPlugin({id(self)})] Appel de add_predicate_schema avec: '{predicate_name}', {argument_sorts}")
         norm_pred = self._normalize(predicate_name)
         norm_args = [self._normalize(s) for s in argument_sorts]
         
@@ -242,8 +247,13 @@ class BeliefSetBuilderPlugin:
         logger.debug(f"Predicate schema '{norm_pred}' registered with explicit sort '{new_sort_name}'.")
         return f"Predicate schema '{norm_pred}' declared with sort '{new_sort_name}'."
 
+    @kernel_function(
+        description="Déclare une constante (un individu spécifique, comme 'Socrate') et l'associe à un sort (une catégorie, comme 'homme').",
+        name="add_constant_to_sort"
+    )
     def add_constant_to_sort(self, constant_name: str, sort_name: str):
-        """Internal method for tests to add a constant to a sort directly."""
+        """Ajoute une constante à un sort."""
+        logger.info(f"AUDIT - [BeliefSetBuilderPlugin({id(self)})] Appel de add_constant_to_sort avec: '{constant_name}', '{sort_name}'")
         norm_const = self._normalize(constant_name)
         norm_sort = self._normalize(sort_name)
         if norm_sort not in self._sorts:
@@ -254,6 +264,7 @@ class BeliefSetBuilderPlugin:
 
     @kernel_function(description="Add an atomic fact, e.g., 'Socrates is a man'.", name="add_atomic_fact")
     def add_atomic_fact(self, fact_predicate_name: str, fact_arguments: List[str]):
+        logger.info(f"AUDIT - [BeliefSetBuilderPlugin({id(self)})] Appel de add_atomic_fact avec: '{fact_predicate_name}', {fact_arguments}")
         p_name = self._normalize(fact_predicate_name)
         arg_list = [self._normalize(arg) for arg in fact_arguments]
 
@@ -284,6 +295,7 @@ class BeliefSetBuilderPlugin:
 
     @kernel_function(description="Add a universal implication.", name="add_universal_implication")
     def add_universal_implication(self, impl_antecedent_predicate: str, impl_consequent_predicate: str, impl_sort_of_variable: str):
+        logger.info(f"AUDIT - [BeliefSetBuilderPlugin({id(self)})] Appel de add_universal_implication avec: '{impl_antecedent_predicate}' => '{impl_consequent_predicate}'")
         # Ensure predicates exist with a default arity of 1 before proceeding.
         norm_antecedent = self._ensure_predicate_exists(impl_antecedent_predicate, arity=1)
         norm_consequent = self._ensure_predicate_exists(impl_consequent_predicate, arity=1)
@@ -301,6 +313,7 @@ class BeliefSetBuilderPlugin:
         
     @kernel_function(description="Add an existential conjunction, e.g., 'Some A are B'.", name="add_existential_conjunction")
     def add_existential_conjunction(self, predicate1: str, predicate2: str, sort_of_variable: str):
+        logger.info(f"AUDIT - [BeliefSetBuilderPlugin({id(self)})] Appel de add_existential_conjunction avec: '{predicate1}' and '{predicate2}'")
         # Ensure predicates exist with a default arity of 1 before proceeding.
         norm_p1 = self._ensure_predicate_exists(predicate1, arity=1)
         norm_p2 = self._ensure_predicate_exists(predicate2, arity=1)
@@ -589,6 +602,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         self._tweety_bridge = tweety_bridge
         # Le plugin qui contient nos outils. Il sera instancié ici.
         self._builder_plugin = BeliefSetBuilderPlugin()
+        self.logger.info(f"AUDIT - Agent {self.name} a initialisé son plugin builder avec l'ID: {id(self._builder_plugin)}")
         self.logger.info(f"Agent {self.name} initialisé. Stratégie: Appel d'Outils (construction programmatique).")
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
@@ -667,31 +681,95 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         chat = ChatHistory(system_message=self.system_prompt)
         chat.add_user_message(text)
         
+        # This is the modern way to handle tool calling.
+        # We retrieve the plugin and manually format each function's metadata
+        # into the format expected by the OpenAI API.
+        builder_plugin = self._kernel.plugins.get("BeliefBuilder")
+        if not builder_plugin:
+            self.logger.error("Plugin 'BeliefBuilder' could not be found in the kernel.")
+            raise ValueError("Plugin 'BeliefBuilder' not found during tool preparation.")
+
+        tools_list = [kernel_function_metadata_to_function_call_format(f.metadata) for f in builder_plugin]
+
         execution_settings = OpenAIPromptExecutionSettings(
             service_id=self._llm_service_id,
-            tool_choice="auto"
-        )
-        # To invoke a chat-like interaction especially for tool calling,
-        # we now need to wrap the interaction in a KernelFunction.
-        prompt_template_config = PromptTemplateConfig(
-            template_format="semantic-kernel",
-            template="""{{$chat_history}}""",
-            execution_settings={"default": execution_settings},
-        )
-        chat_function = KernelFunctionFromPrompt(
-            function_name="ChatWithTools", # A name is needed for the function
-            prompt_template_config=prompt_template_config
+            tool_choice="auto",
+            tools=tools_list,
+            # Disable auto-invoke to handle the loop manually for stateful plugins
+            auto_invoke_kernel_functions=False,
         )
 
-        arguments = KernelArguments(chat_history=chat)
-        
         try:
-            result = await self._kernel.invoke(
-                chat_function,
-                arguments=arguments
-            )
+            successful_tool_calls = 0  # Compteur pour les appels d'outils réussis
+            max_loops = 5  # To prevent infinite loops
+            for i in range(max_loops):
+                self.logger.info(f"Début de la boucle d'appel d'outils, itération {i+1}/{max_loops}")
+                
+                # We need to invoke using the chat service directly, not through kernel.invoke
+                # as that can have different logic paths. We want the raw response.
+                result = await self.service.get_chat_message_content(
+                    chat,
+                    settings=execution_settings
+                )
+                
+                # Add the response to the history
+                chat.add_message(result)
+                
+                # Extract tool calls from the message content items
+                tool_calls_from_message = [item for item in result.items if isinstance(item, FunctionCallContent)]
+                
+                if not tool_calls_from_message:
+                    self.logger.info("Fin de la boucle: le LLM n'a plus d'appels d'outils à effectuer.")
+                    break # Exit loop if no more tools are called
 
-            self.logger.info("Le LLM a terminé d'appeler les outils.")
+                self.logger.info(f"{len(tool_calls_from_message)} appel(s) d'outil(s) reçu(s) du LLM.")
+
+                # Manually invoke the tools
+                for tool_call in tool_calls_from_message:
+                    self.logger.info(f"Invocation manuelle de l'outil: '{tool_call.function_name}' avec les arguments: {tool_call.arguments}")
+                    
+                    # This helper function is designed for this exact purpose:
+                    # finding the function and invoking it with the given arguments.
+                    # Instead of using the black-box `invoke_function_call`, which might have
+                    # side effects on the chat history, we manually find and invoke the function.
+                    # This gives us full control over what is added to the history, preventing
+                    # duplicate tool_call_id entries.
+                    # The `plugins` attribute of the kernel is a dictionary-like object (KernelPluginCollection).
+                    # We access the specific function by indexing first by the plugin name and then
+                    # by the function name. This resolves the previous AttributeError.
+                    function_to_call = self._kernel.plugins[tool_call.plugin_name][tool_call.function_name]
+                    # Invoke the function with the arguments from the tool call.
+                    tool_result = await self._kernel.invoke(
+                        function_to_call, **tool_call.to_kernel_arguments()
+                    )
+                    
+                    # Create the function result content
+                    func_result_content = FunctionResultContent.from_function_call_content_and_result(
+                        function_call_content=tool_call,
+                        result=tool_result
+                    )
+                    
+                    successful_tool_calls += 1  # Incrémenter après un appel réussi
+
+                    # Add the tool's result back to the chat history for the next iteration
+                    chat.add_message(func_result_content.to_chat_message_content())
+            else:
+                 self.logger.warning("La boucle d'appel d'outils a atteint le nombre maximum d'itérations.")
+
+            self.logger.info("Le LLM a terminé d'appeler les outils via la boucle manuelle.")
+
+            # Après la boucle, on vérifie la raison de l'arrêt du LLM.
+            # `result` contient le dernier message de l'assistant.
+            # Si le LLM s'est arrêté (`stop`) SANS AVOIR JAMAIS réussi à appeler un outil,
+            # c'est le signal que l'entrée était invalide ou inexploitable.
+            if result.finish_reason == "stop" and successful_tool_calls == 0:
+                self.logger.warning(
+                    f"LLM stopped with reason 'stop' and ZERO successful tool calls. "
+                    f"This indicates no logical structure could be extracted. "
+                    f"Final content generated: '{result.content}'. "
+                    "Returning an empty BeliefSet."
+                )
+                return FirstOrderBeliefSet(content="", java_object=None), "Aucune structure logique pertinente n'a été trouvée dans le texte fourni."
             
             java_belief_set = self._builder_plugin.build_tweety_belief_set(self._tweety_bridge)
 
