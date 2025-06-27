@@ -66,6 +66,43 @@ Ne retournez aucun texte ou explication en dehors de l'objet JSON.
 [Sophismes Identifiés (JSON)]
 """
 
+# --- Prompt pour l'Analyse de Sophismes (V3 - Tool Use) ---
+# Ce prompt instruit le LLM pour qu'il utilise les fonctions natives (outils)
+# afin d'identifier un sophisme de manière autonome et raisonnée.
+prompt_analyze_fallacies_v3_tool_use = """
+[Contexte]
+Vous êtes un assistant spécialisé dans l'analyse critique. Votre objectif est d'identifier des sophismes dans un argument en utilisant les outils à votre disposition pour explorer une taxonomie.
+
+[Objectif]
+Analysez l'argument fourni ($input) et utilisez les fonctions du plugin `InformalAnalyzer` pour identifier, valider et nommer correctement les sophismes.
+
+[Outils Disponibles (fonctions du plugin InformalAnalyzer)]
+Vous pouvez utiliser les fonctions suivantes :
+- `list_fallacy_categories()`: Pour obtenir la liste des grandes familles de sophismes.
+- `list_fallacies_in_category(category: str)`: Pour lister les sophismes d'une famille spécifique.
+- `get_fallacy_details(fallacy_name: str)`: Pour obtenir la définition, une explication et un exemple pour un sophisme précis.
+- `find_fallacy_definition(keywords: str)`: Pour rechercher une définition de sophisme par mots-clés.
+
+[Démarche Obligatoire]
+1.  Lisez attentivement l'argument à analyser.
+2.  Formulez une hypothèse sur le type de sophisme.
+3.  Utilisez `list_fallacy_categories()` et `list_fallacies_in_category(...)` pour naviguer dans la taxonomie et trouver le nom normalisé le plus probable.
+4.  Validez votre hypothèse en utilisant `get_fallacy_details(...)` avec le nom trouvé. Assurez-vous que la définition correspond EXACTEMENT à l'argument.
+5.  Une fois votre analyse terminée, et SEULEMENT à ce moment-là, structurez votre réponse finale.
+
+[Format de la Réponse Finale]
+La réponse finale doit être un unique objet JSON valide. Ne retournez rien d'autre.
+Cet objet JSON doit contenir une clé "sophismes", qui est une liste d'objets.
+Chaque objet de la liste représente un sophisme identifié et doit contenir :
+- "nom": Le nom exact et normalisé du sophisme, validé via les outils.
+- "justification": Une explication concise expliquant pourquoi l'argument constitue ce sophisme spécifique, en lien avec la définition que vous avez récupérée.
+
+Si, après une analyse rigoureuse avec les outils, aucun sophisme ne correspond, retournez une liste vide : `{"sophismes": []}`.
+
+[Argument à analyser]
+{{$input}}
+"""
+
 # --- Prompt pour la Justification d'Attribution de Sophisme ---
 # Ce prompt guide le LLM pour qu'il rédige une justification détaillée
 # expliquant pourquoi un argument donné correspond à un type de sophisme
@@ -102,4 +139,4 @@ Votre justification doit:
 """
 
 # Log de chargement
-logging.getLogger(__name__).debug("Module agents.core.informal.prompts chargé (V8 - Amélioré, AnalyzeFallacies V1).")
+logging.getLogger(__name__).debug("Module agents.core.informal.prompts chargé (V9 - Template dynamique pour analyse).")
