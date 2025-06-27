@@ -258,7 +258,7 @@ class TestRealLLMOrchestrationAdvanced:
         """Test d'initialisation complète du RealLLMOrchestrator."""
         orchestrator = RealLLMOrchestrator(
             mode="real", 
-            llm_service=self.mock_llm_service
+            kernel=self.mock_llm_service
         )
         
         # Test d'initialisation
@@ -267,12 +267,12 @@ class TestRealLLMOrchestrationAdvanced:
             assert isinstance(init_success, bool)
 
         assert hasattr(orchestrator, 'rhetorical_analyzer')
-        assert hasattr(orchestrator, 'llm_service')
+        assert hasattr(orchestrator, 'kernel')
     
     @pytest.mark.asyncio
     async def test_bnf_feedback_integration(self):
         """Test d'intégration avec TweetyErrorAnalyzer pour feedback BNF."""
-        orchestrator = RealLLMOrchestrator(llm_service=self.mock_llm_service)
+        orchestrator = RealLLMOrchestrator(kernel=self.mock_llm_service)
         
         # Simuler une erreur Tweety
         error_text = "Predicate 'invalid_pred' has not been declared"
@@ -297,7 +297,7 @@ class TestRealLLMOrchestrationAdvanced:
         mock_get_kernel.return_value = mock_kernel_instance
         
         # L'orchestrateur va maintenant utiliser le kernel mocké via la config
-        orchestrator = RealLLMOrchestrator(llm_service=mock_kernel_instance)
+        orchestrator = RealLLMOrchestrator(kernel=mock_kernel_instance)
         
         # Le test original peut continuer, en supposant que l'orchestrateur est
         # conçu pour gérer une exception et potentiellement réessayer.
@@ -314,7 +314,7 @@ class TestRealLLMOrchestrationAdvanced:
     @pytest.mark.asyncio
     async def test_semantic_kernel_integration(self):
         """Test d'intégration avec Semantic Kernel."""
-        orchestrator = RealLLMOrchestrator(llm_service=self.mock_llm_service)
+        orchestrator = RealLLMOrchestrator(kernel=self.mock_llm_service)
         
         # Test d'initialisation du kernel
         if hasattr(orchestrator, 'initialize'):
@@ -373,7 +373,7 @@ class TestUnifiedSystemCoordination:
         
         # Phase 2: Transfert vers orchestration LLM réelle
         mock_llm = MagicMock()
-        real_orchestrator = RealLLMOrchestrator(llm_service=mock_llm)
+        real_orchestrator = RealLLMOrchestrator(kernel=mock_llm)
         
         # Simuler le transfert d'état
         if hasattr(real_orchestrator, 'load_state') and hasattr(conv_orchestrator, 'get_state'):
@@ -382,6 +382,7 @@ class TestUnifiedSystemCoordination:
                 real_orchestrator.load_state(state)
         
         # Test de continuité
+        await real_orchestrator.initialize()
         real_result = await real_orchestrator.orchestrate_analysis(self.test_text)
         assert isinstance(real_result, dict)
     

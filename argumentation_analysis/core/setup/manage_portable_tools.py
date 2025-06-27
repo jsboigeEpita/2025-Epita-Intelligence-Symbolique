@@ -78,13 +78,23 @@ def _download_file(url, dest_folder, file_name, logger_instance=None, log_interv
         logger.info(f"Le fichier {file_name} existe déjà. Téléchargement sauté.")
         return file_path
 
+    bytes_so_far = 0
+    if os.path.exists(file_path):
+        bytes_so_far = os.path.getsize(file_path)
+
     try:
         logger.info(f"Début du téléchargement de {url}...")
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        
-        with urllib.request.urlopen(req) as response, open(file_path, 'wb') as out_file:
-            total_size = int(response.info().get('Content-Length', 0))
-            bytes_so_far = 0
+        if bytes_so_far > 0:
+            req.add_header('Range', f'bytes={bytes_so_far}-')
+
+        with urllib.request.urlopen(req) as response, open(file_path, 'ab') as out_file:
+            content_range = response.headers.get('Content-Range')
+            if content_range:
+                total_size = int(content_range.split('/')[1])
+            else:
+                total_size = bytes_so_far + int(response.info().get('Content-Length', 0))
+
             start_time = time.time()
             last_log_time = start_time
 
@@ -116,8 +126,18 @@ def _download_file(url, dest_folder, file_name, logger_instance=None, log_interv
     except Exception as e:
         logger.error(f"Échec du téléchargement: {e}")
         if os.path.exists(file_path):
-            os.remove(file_path) # Nettoyage en cas d'échec partiel
+            # Ne supprimez pas le fichier partiel pour permettre la reprise
+            pass
         return None
+
+def _download_file_async(url, dest_folder, file_name, logger_instance=None):
+    """Lance le téléchargement de manière asynchrone."""
+    logger = _get_logger_tools(logger_instance)
+    logger.info(f"Lancement du téléchargement asynchrone pour {file_name}.")
+    
+    thread = threading.Thread(target=_download_file, args=(url, dest_folder, file_name, logger_instance), daemon=True)
+    thread.start()
+    return thread
 
 def _unzip_file(zip_path, dest_dir, logger_instance=None):
     """Décompresse une archive ZIP."""
@@ -237,6 +257,11 @@ def setup_single_tool(tool_config, tools_base_dir, temp_download_dir, logger_ins
             logger.error(f"Impossible de supprimer l'ancien répertoire : {e}")
             return None
     
+    if tool_name == "Octave":
+        logger.info("Le téléchargement d'Octave se fera en arrière-plan.")
+        _download_file_async(url, temp_download_dir, file_name, logger_instance=logger)
+        return None  # Retourne immédiatement, n'attend pas la fin.
+
     zip_path = _download_file(url, temp_download_dir, file_name, logger_instance=logger, force_download=force_reinstall)
     if not zip_path:
         return None

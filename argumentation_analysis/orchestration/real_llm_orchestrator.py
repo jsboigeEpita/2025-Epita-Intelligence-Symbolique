@@ -99,6 +99,7 @@ class RealLLMOrchestrator:
         self.relation_extractor = None
         self.consistency_validator = None
         self.coherence_validator = None
+        self.conversation_logger = RealConversationLogger(mode=self.mode)
         
         # Métriques et monitoring
         self.metrics = {
@@ -161,8 +162,6 @@ class RealLLMOrchestrator:
             self.relation_extractor = self._create_basic_relation_extractor()
             self.consistency_validator = self._create_basic_consistency_validator()
             self.coherence_validator = self._create_basic_coherence_validator()
-            
-            self.conversation_logger = RealConversationLogger(mode=self.mode)
             
             self.is_initialized = True
             self.logger.info("Tous les composants initialisés avec succès")

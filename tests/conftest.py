@@ -44,8 +44,11 @@ def jvm_session():
         # Étape 1: Provisioning des outils (JDK et Tweety)
         # La racine du projet est un niveau au-dessus du dossier 'tests'
         project_root = Path(__file__).parent.parent.resolve()
-        logger.info(f"Running dependency provisioning via setup_tools... Project root determined as {project_root}")
-        setup_tools(tools_dir_base_path=project_root, force_reinstall=False)
+        # Correction: Le répertoire des outils doit pointer vers 'argumentation_analysis/libs'
+        tools_dir = project_root / "argumentation_analysis" / "libs"
+        tools_dir.mkdir(exist_ok=True)
+        logger.info(f"Running dependency provisioning via setup_tools... Tools directory set to {tools_dir}")
+        setup_tools(tools_dir_base_path=tools_dir, force_reinstall=False)
         
         # Le script de setup doit définir JAVA_HOME
         if not os.environ.get('JAVA_HOME'):
