@@ -144,7 +144,10 @@ class OrchestrationServiceManager:
     ```
     """
     
-    def __init__(self, enable_logging: bool = True, log_level: int = logging.INFO):
+    def __init__(self,
+                 enable_logging: bool = True,
+                 log_level: int = logging.INFO,
+                 taxonomy_file_path: Optional[str] = None):
         """
         Initialise le ServiceManager.
         
@@ -153,10 +156,12 @@ class OrchestrationServiceManager:
         Args:
             enable_logging: Active/désactive le logging
             log_level: Niveau de logging
+            taxonomy_file_path: Chemin optionnel vers la taxonomie des sophismes.
         """
         # La configuration est maintenant gérée par l'objet `settings` global.
         self.config = None # Cet attribut est obsolète mais conservé pour éviter de casser des `hasattr` potentiels.
         self.state = ServiceManagerState()
+        self.taxonomy_file_path = taxonomy_file_path # Stocker le chemin
         
         # Configuration du logging
         if enable_logging:
@@ -231,6 +236,19 @@ class OrchestrationServiceManager:
                     self.logger.error(f"Échec de l'ajout du service LLM résilient au kernel: {e_kernel_service}", exc_info=True)
             else:
                 self.logger.warning("API Key OpenAI non trouvée dans la configuration. Le service LLM ne sera pas configuré.")
+
+            # 2.1. Import et chargement des plugins sémantiques essentiels
+            try:
+                # Remplacer l'instanciation manuelle par l'appel à la fonction setup_informal_kernel
+                # qui gère l'enregistrement complet (plugin natif + fonctions sémantiques)
+                from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel
+                llm_service = self.kernel.get_service(self.llm_service_id)
+                setup_informal_kernel(kernel=self.kernel, llm_service=llm_service, taxonomy_file_path=self.taxonomy_file_path)
+                self.logger.info("Configuration complète du plugin 'InformalAnalyzer' (natif + sémantique) via setup_informal_kernel.")
+            except ImportError as e_import:
+                 self.logger.error(f"Échec critique de l'importation du InformalAnalysisPlugin: {e_import}", exc_info=True)
+            except Exception as e_kernel:
+                self.logger.error(f"Échec du chargement du InformalAnalysisPlugin dans le kernel: {e_kernel}", exc_info=True)
 
             # 3. Initialisation du middleware de communication
             if settings.service_manager.enable_communication_middleware:

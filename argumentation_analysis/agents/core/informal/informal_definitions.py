@@ -53,8 +53,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("InformalDefinitions")
 
-# Import des prompts
-from .prompts import prompt_identify_args_v8, prompt_analyze_fallacies_v1, prompt_justify_fallacy_attribution_v1 # Nettoyage des imports dupliqués
+# Import des prompts (V3 - Tool Use)
+from .prompts import prompt_identify_args_v8, prompt_analyze_fallacies_v3_tool_use, prompt_justify_fallacy_attribution_v1
 
 # from argumentation_analysis.paths import DATA_DIR # Déjà importé plus haut ou via project_core
 
@@ -711,50 +711,34 @@ class InformalAnalysisPlugin:
 
 logger.info("Classe InformalAnalysisPlugin (V12 avec nouvelles fonctions) définie.")
 
-# --- Fonction setup_informal_kernel (V13 - Simplifiée avec nouvelles fonctions) ---
+# --- Fonction setup_informal_kernel (V15 - Tool Use) ---
 def setup_informal_kernel(kernel: sk.Kernel, llm_service: Any, taxonomy_file_path: Optional[str] = None) -> None:
     """
-    Configure un `Kernel` pour l'analyse d'arguments informels.
-
-    Cette fonction essentielle enregistre dans le kernel fourni :
-    1.  Le plugin natif `InformalAnalysisPlugin` qui donne accès à la taxonomie.
-    2.  Les fonctions sémantiques nécessaires pour l'analyse, définies dans
-        le module `.prompts`.
-
-    L'ensemble est regroupé sous un nom de plugin unique, "InformalAnalyzer",
-    pour une invocation cohérente par l'agent.
+    Configure un `Kernel` pour l'analyse d'arguments informels, en se basant sur
+    des outils et des prompts qui encouragent l'autonomie de l'agent.
 
     Args:
         kernel (sk.Kernel): L'instance du kernel à configurer.
         llm_service (Any): Le service LLM qui exécutera les fonctions sémantiques.
-            Doit posséder un attribut `service_id`.
-        taxonomy_file_path (Optional[str]): Chemin personnalisé vers le fichier
-            de taxonomie, qui sera passé au plugin.
+        taxonomy_file_path (Optional[str]): Chemin personnalisé vers un fichier
+            de taxonomie CSV pour le plugin.
     """
     plugin_name = "InformalAnalyzer"
-    logger.info(f"Configuration Kernel pour {plugin_name} (V13 - Plugin autonome avec nouvelles fonctions)...")
+    logger.info(f"Configuration Kernel pour {plugin_name} (V15 - Tool Use)...")
 
     if not llm_service:
         raise ValueError("Le service LLM (llm_service) est requis")
 
+    # 1. Instancier et ajouter le plugin natif qui contient les outils d'exploration
     informal_plugin_instance = InformalAnalysisPlugin(taxonomy_file_path=taxonomy_file_path)
-
     if plugin_name in kernel.plugins:
         logger.warning(f"Plugin '{plugin_name}' déjà présent. Remplacement.")
     kernel.add_plugin(informal_plugin_instance, plugin_name)
     logger.debug(f"Instance du plugin '{plugin_name}' ajoutée/mise à jour dans le kernel.")
 
-    # --- Enregistrement manuel des fonctions natives ---
-    # L'enregistrement des fonctions natives décorées avec @kernel_function
-    # devrait se faire automatiquement lors de l'appel à kernel.add_plugin(instance, ...).
-    # Les tentatives précédentes d'enregistrement manuel ont échoué à cause des
-    # limitations/bugs de l'API de semantic-kernel==0.9.3b1.
-    # Nous laissons SK tenter l'auto-découverte.
-    logger.info(f"Les fonctions natives de {plugin_name} devraient être auto-découvertes via @kernel_function et kernel.add_plugin.")
-    # --- Fin de la section pour les fonctions natives ---
-
+    # 2. Récupérer les settings d'exécution du LLM
     default_settings = None
-    if llm_service and hasattr(llm_service, 'service_id'): # Vérifier si llm_service et service_id existent
+    if llm_service and hasattr(llm_service, 'service_id'):
         try:
             default_settings = kernel.get_prompt_execution_settings_from_service_id(llm_service.service_id)
             logger.debug(f"Settings LLM récupérés pour {plugin_name}.")
@@ -763,9 +747,8 @@ def setup_informal_kernel(kernel: sk.Kernel, llm_service: Any, taxonomy_file_pat
     elif llm_service:
         logger.warning(f"llm_service fourni pour {plugin_name} mais n'a pas d'attribut 'service_id'.")
 
-
+    # 3. Ajouter les fonctions sémantiques en utilisant les prompts appropriés
     try:
-        # Ajouter la fonction d'identification des arguments
         kernel.add_function(
             prompt=prompt_identify_args_v8,
             plugin_name=plugin_name,
@@ -773,53 +756,29 @@ def setup_informal_kernel(kernel: sk.Kernel, llm_service: Any, taxonomy_file_pat
             description="Identifie les arguments clés dans un texte.",
             prompt_execution_settings=default_settings
         )
-        logger.debug(f"Fonction {plugin_name}.semantic_IdentifyArguments ajoutée/mise à jour.")
+        logger.debug(f"Fonction {plugin_name}.semantic_IdentifyArguments ajoutée.")
 
-        # Ajouter la fonction d'analyse des sophismes
-        try:
-            kernel.add_function(
-                prompt=prompt_analyze_fallacies_v1,
-                plugin_name=plugin_name,
-                function_name="semantic_AnalyzeFallacies",
-                description="Analyse les sophismes dans un argument.",
-                prompt_execution_settings=default_settings
-            )
-            logger.debug(f"Fonction {plugin_name}.semantic_AnalyzeFallacies ajoutée/mise à jour.")
-        except ValueError as ve:
-            logger.warning(f"Problème ajout/MàJ semantic_AnalyzeFallacies: {ve}")
+        kernel.add_function(
+           prompt=prompt_analyze_fallacies_v3_tool_use, # Utilisation du nouveau prompt
+           plugin_name=plugin_name,
+           function_name="semantic_AnalyzeFallacies",
+            description="Analyse les sophismes dans un argument en guidant le LLM à utiliser les outils disponibles.",
+            prompt_execution_settings=default_settings
+        )
+        logger.debug(f"Fonction {plugin_name}.semantic_AnalyzeFallacies (Tool Use) ajoutée.")
             
-        # Ajouter la fonction de justification d'attribution
-        try:
-            kernel.add_function(
-                prompt=prompt_justify_fallacy_attribution_v1,
-                plugin_name=plugin_name,
-                function_name="semantic_JustifyFallacyAttribution",
-                description="Justifie l'attribution d'un sophisme à un argument.",
-                prompt_execution_settings=default_settings
-            )
-            logger.debug(f"Fonction {plugin_name}.semantic_JustifyFallacyAttribution ajoutée/mise à jour.")
-        except ValueError as ve:
-            logger.warning(f"Problème ajout/MàJ semantic_JustifyFallacyAttribution: {ve}")
+        kernel.add_function(
+            prompt=prompt_justify_fallacy_attribution_v1,
+            plugin_name=plugin_name,
+            function_name="semantic_JustifyFallacyAttribution",
+            description="Justifie l'attribution d'un sophisme à un argument.",
+            prompt_execution_settings=default_settings
+        )
+        logger.debug(f"Fonction {plugin_name}.semantic_JustifyFallacyAttribution ajoutée.")
     except Exception as e:
         logger.error(f"Erreur lors de la configuration des fonctions sémantiques: {e}")
 
-    # Les fonctions natives sont automatiquement enregistrées lors de l'ajout du plugin
-    # Vérifions simplement qu'elles sont bien présentes
-    native_facades = [
-        "explore_fallacy_hierarchy", "get_fallacy_details",
-        "find_fallacy_definition", "list_fallacy_categories",
-        "list_fallacies_in_category", "get_fallacy_example"
-    ]
-    if plugin_name in kernel.plugins:
-        for func_name in native_facades:
-            if hasattr(informal_plugin_instance, func_name):
-                logger.debug(f"Fonction native {plugin_name}.{func_name} disponible dans l'instance.")
-            else:
-                logger.error(f"ERREUR CRITIQUE: Fonction {func_name} non trouvée dans l'instance du plugin!")
-    else:
-        logger.error(f"ERREUR CRITIQUE: Plugin {plugin_name} non trouvé après ajout!")
-         
-    logger.info(f"Kernel {plugin_name} configuré (V13 avec nouvelles fonctions natives).")
+    logger.info(f"Kernel {plugin_name} configuré (V15 - Tool Use).")
 
 # --- Instructions Système ---
 # (Provenant de la cellule [ID: 35fbe045] du notebook 'Argument_Analysis_Agentic-1-informal_agent.ipynb')

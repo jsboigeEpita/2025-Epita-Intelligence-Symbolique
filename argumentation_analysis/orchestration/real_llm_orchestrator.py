@@ -25,7 +25,7 @@ from ..agents.tools.analysis.new.semantic_argument_analyzer import SemanticArgum
 from ..agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
 
-# Note: Import circulaire évité - UnifiedTextAnalysisPipeline sera instancié localement si nécessaire
+from semantic_kernel.functions.kernel_arguments import KernelArguments
 
 # Import et alias pour ConversationLogger
 from .conversation_orchestrator import ConversationLogger
@@ -57,31 +57,18 @@ class LLMAnalysisResult:
 class RealLLMOrchestrator:
     """
     Orchestrateur LLM réel pour coordonner l'analyse d'argumentation.
-    
     Cette classe utilise de vrais LLMs pour effectuer des analyses sophistiquées
     d'argumentation en coordonnant tous les composants du système.
     """
     
     def __init__(self, mode: str = "real", kernel=None, config: Optional[Dict[str, Any]] = None):
-        """
-        Initialise l'orchestrateur LLM.
-        
-        Args:
-            mode: Mode d'orchestration
-            kernel: Le kernel Semantic Kernel complet à utiliser.
-            config: Configuration optionnelle pour l'orchestrateur
-        """
         self.mode = mode
-        self.kernel = kernel # Correction: on stocke le kernel, pas llm_service
+        self.kernel = kernel
         self.config = config or self._default_config()
         self.logger = logging.getLogger(__name__)
-        
-        # État de l'orchestrateur
         self.is_initialized = False
         self.active_sessions = {}
         self.analysis_cache = {}
-        
-        # Composants d'analyse refactoriés
         self.rhetorical_analyzer = None
         self.enhanced_rhetorical_analyzer = None
         self.complex_fallacy_analyzer = None
@@ -89,8 +76,6 @@ class RealLLMOrchestrator:
         self.semantic_argument_analyzer = None
         self.unified_pipeline = None
         self.unified_analyzer = None
-
-        # Analyseurs spécialisés additionnels
         self.syntactic_analyzer = None
         self.semantic_analyzer = None
         self.pragmatic_analyzer = None
@@ -110,50 +95,24 @@ class RealLLMOrchestrator:
             'cache_hits': 0,
             'cache_misses': 0
         }
-        
         self.logger.info("RealLLMOrchestrator initialisé")
     
     def _default_config(self) -> Dict[str, Any]:
-        """Retourne la configuration par défaut."""
         return {
-            'max_concurrent_analyses': 10,
-            'default_timeout': 30,
-            'cache_enabled': True,
-            'cache_ttl': 3600,
-            'retry_attempts': 3,
-            'retry_delay': 1.0,
-            'enable_metrics': True,
-            'log_level': 'INFO',
-            'analysis_types': [
-                'rhetorical_analysis',
-                'enhanced_rhetorical_analysis',
-                'fallacy_detection',
-                'contextual_analysis',
-                'semantic_argument_analysis',
-                'unified_analysis',
-                'logical'
-            ]
+            'max_concurrent_analyses': 10, 'default_timeout': 30, 'cache_enabled': True, 'cache_ttl': 3600,
+            'retry_attempts': 3, 'retry_delay': 1.0, 'enable_metrics': True, 'log_level': 'INFO',
+            'analysis_types': ['rhetorical_analysis', 'enhanced_rhetorical_analysis', 'fallacy_detection', 'contextual_analysis', 'semantic_argument_analysis', 'unified_analysis', 'logical', 'informal']
         }
     
     async def initialize(self) -> bool:
-        """
-        Initialise tous les composants de l'orchestrateur.
-        
-        Returns:
-            bool: True si l'initialisation réussit
-        """
         try:
             self.logger.info("Initialisation des composants d'analyse...")
-            
             self.rhetorical_analyzer = RhetoricalResultAnalyzer()
             self.enhanced_rhetorical_analyzer = EnhancedRhetoricalResultAnalyzer()
             self.complex_fallacy_analyzer = EnhancedComplexFallacyAnalyzer()
             self.contextual_fallacy_analyzer = EnhancedContextualFallacyAnalyzer()
             self.semantic_argument_analyzer = SemanticArgumentAnalyzer()
-            
-            self.unified_pipeline = None
             self.unified_analyzer = self._create_unified_analyzer()
-            
             self.syntactic_analyzer = self._create_basic_syntactic_analyzer()
             self.semantic_analyzer = self._create_basic_semantic_analyzer()
             self.pragmatic_analyzer = self._create_basic_pragmatic_analyzer()
@@ -166,29 +125,21 @@ class RealLLMOrchestrator:
             self.is_initialized = True
             self.logger.info("Tous les composants initialisés avec succès")
             return True
-            
         except Exception as e:
             self.logger.error(f"Erreur lors de l'initialisation: {e}", exc_info=True)
             self.is_initialized = False
             return False
     
     async def analyze_text(self, request: Union[LLMAnalysisRequest, str], analysis_type: Optional[str] = "unified_analysis") -> LLMAnalysisResult:
-        """
-        Analyse un texte selon le type d'analyse demandé.
-        Accepte soit une chaîne de caractères, soit un objet LLMAnalysisRequest.
-        """
         if isinstance(request, str):
             request = LLMAnalysisRequest(text=request, analysis_type=analysis_type)
-
         if not self.is_initialized:
             await self.initialize()
         
         start_time = time.time()
         request_id = f"req_{int(time.time() * 1000000)}"
-        
         try:
             self.metrics['total_requests'] += 1
-            
             if self.config['cache_enabled']:
                 cached_result = self._get_cached_result(request)
                 if cached_result:
@@ -199,15 +150,10 @@ class RealLLMOrchestrator:
             result = await self._perform_analysis(request)
             
             processing_time = time.time() - start_time
-            
             analysis_result = LLMAnalysisResult(
-                request_id=request_id,
-                analysis_type=request.analysis_type,
-                result=result,
-                confidence=result.pop('confidence', 0.8),
-                processing_time=processing_time,
-                timestamp=datetime.now(),
-                metadata={'request_params': request.parameters, 'context': request.context}
+                request_id=request_id, analysis_type=request.analysis_type, result=result,
+                confidence=result.pop('confidence', 0.8), processing_time=processing_time,
+                timestamp=datetime.now(), metadata={'request_params': request.parameters, 'context': request.context}
             )
             
             if self.config['cache_enabled']:
@@ -215,115 +161,76 @@ class RealLLMOrchestrator:
             
             self.metrics['successful_analyses'] += 1
             self._update_average_processing_time(processing_time)
-            
             self.logger.info(f"Analyse {request_id} terminée en {processing_time:.2f}s")
             return analysis_result
-            
         except Exception as e:
             self.metrics['failed_analyses'] += 1
             self.logger.error(f"Erreur lors de l'analyse {request_id}: {e}", exc_info=True)
-            
             return LLMAnalysisResult(
-                request_id=request_id,
-                analysis_type=request.analysis_type,
-                result={'error': str(e), 'success': False},
-                confidence=0.0,
-                processing_time=time.time() - start_time,
-                timestamp=datetime.now(),
-                metadata={'error': True}
+                request_id=request_id, analysis_type=request.analysis_type,
+                result={'error': str(e), 'success': False}, confidence=0.0,
+                processing_time=time.time() - start_time, timestamp=datetime.now(), metadata={'error': True}
             )
     
     async def _perform_analysis(self, request: LLMAnalysisRequest) -> Dict[str, Any]:
         analysis_type = request.analysis_type.lower()
-        text = request.text
-        context = request.context or {}
-        parameters = request.parameters or {}
+        text, context, parameters = request.text, request.context or {}, request.parameters or {}
         
-        if analysis_type == 'syntactic':
-            return await self._analyze_syntactic(text, context, parameters)
-        elif analysis_type == 'semantic':
-            return await self._analyze_semantic(text, context, parameters)
-        elif analysis_type == 'pragmatic':
-            return await self._analyze_pragmatic(text, context, parameters)
-        elif analysis_type == 'logical':
-            return await self._analyze_logical(text, context, parameters)
-        elif analysis_type == 'entity_extraction':
-            return await self._extract_entities(text, context, parameters)
-        elif analysis_type == 'relation_extraction':
-            return await self._extract_relations(text, context, parameters)
-        elif analysis_type == 'consistency_validation':
-            return await self._validate_consistency(text, context, parameters)
-        elif analysis_type == 'coherence_validation':
-            return await self._validate_coherence(text, context, parameters)
-        elif analysis_type == 'simple' or analysis_type == 'unified_analysis':
-            return await self._unified_analysis(text, context, parameters)
+        analysis_map = {
+            'syntactic': self._analyze_syntactic,
+            'semantic': self._analyze_semantic,
+            'pragmatic': self._analyze_pragmatic,
+            'logical': self._analyze_logical,
+            'entity_extraction': self._extract_entities,
+            'relation_extraction': self._extract_relations,
+            'consistency_validation': self._validate_consistency,
+            'coherence_validation': self._validate_coherence,
+            'simple': self._unified_analysis,
+            'unified_analysis': self._unified_analysis,
+            'informal': self._analyze_informal
+        }
+        
+        if analysis_type in analysis_map:
+            return await analysis_map[analysis_type](text, context, parameters)
         else:
             raise ValueError(f"Type d'analyse non supporté: {analysis_type}")
     
     async def _analyze_syntactic(self, text: str, context: Dict, parameters: Dict) -> Dict[str, Any]:
-        """Analyse syntaxique du texte."""
         result = self.syntactic_analyzer.analyze(text)
         return {'success': True, 'analysis_type': 'syntactic', 'result': result, 'confidence': 0.9}
 
     async def _analyze_semantic(self, text: str, context: Dict, parameters: Dict) -> Dict[str, Any]:
-        """Analyse sémantique du texte."""
         result = self.semantic_analyzer.analyze(text)
         return {'success': True, 'analysis_type': 'semantic', 'result': result, 'confidence': 0.85}
 
     async def _analyze_pragmatic(self, text: str, context: Dict, parameters: Dict) -> Dict[str, Any]:
-        """Analyse pragmatique du texte."""
         result = self.pragmatic_analyzer.analyze(text, context)
         return {'success': True, 'analysis_type': 'pragmatic', 'result': result, 'confidence': 0.8}
 
     async def _analyze_logical(self, text: str, context: Dict, parameters: Dict) -> Dict[str, Any]:
-        """Analyse logique approfondie de la validité d'un argument."""
         if not isinstance(self.logical_analyzer, PropositionalLogicAgent):
             return {'success': False, 'error': "L'analyseur logique réel n'est pas initialisé."}
         try:
             belief_set, message = await self.logical_analyzer.text_to_belief_set(text)
-            if not belief_set:
-                return {'success': False, 'error': f"Failed to create belief set: {message}"}
-
+            if not belief_set: return {'success': False, 'error': f"Failed to create belief set: {message}"}
             queries = await self.logical_analyzer.generate_queries(text, belief_set)
-            if not queries:
-                return {'success': True, 'analysis_type': 'logical', 'result': {"message": "No relevant queries generated."}, 'confidence': 0.8}
+            if not queries: return {'success': True, 'analysis_type': 'logical', 'result': {"message": "No relevant queries generated."}, 'confidence': 0.8}
 
-            results = []
-            for query in queries:
-                result, raw_output = self.logical_analyzer.execute_query(belief_set, query)
-                results.append((result, raw_output))
-
+            results = [self.logical_analyzer.execute_query(belief_set, q) for q in queries]
             interpretation = await self.logical_analyzer.interpret_results(text, belief_set, queries, results)
+            is_valid = results[0][0] if results and results[0] is not None else False
 
-            # Determine overall validity based on the primary query result
-            # Assuming the first query is the main conclusion to check
-            is_valid_analysis = results[0][0] if results and results[0] is not None else False
-
-            # This structure MUST match what validation_complete_epita.py expects
-            final_result_dict = {
-                "is_valid": is_valid_analysis,
-                "scheme": "Modus Ponens" if is_valid_analysis else "Fallacy", # Corresponds to validator expectation
+            final_result = {
+                "is_valid": is_valid, "scheme": "Modus Ponens" if is_valid else "Fallacy",
                 "details": interpretation,
-                "full_analysis": {
-                    "belief_set": belief_set.to_dict(),
-                    "queries": queries,
-                    "results": [str(r) for r in results],
-                }
+                "full_analysis": {"belief_set": belief_set.to_dict(), "queries": queries, "results": [str(r) for r in results]}
             }
-            
-            # The orchestrator returns a dict that will be wrapped in LLMAnalysisResult
-            # The validator expects `analysis_result_obj.result['result']`
-            return {
-                'success': True,
-                'result': final_result_dict,  # This 'result' key is crucial
-                'confidence': 0.95  # Use a consistent confidence score
-            }
+            return {'success': True, 'result': final_result, 'confidence': 0.95}
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'analyse logique approfondie: {e}", exc_info=True)
+            self.logger.error(f"Erreur d'analyse logique: {e}", exc_info=True)
             return {'success': False, 'error': str(e), 'confidence': 0.0}
 
     async def _extract_entities(self, text: str, context: Dict, parameters: Dict) -> Dict[str, Any]:
-        """Extraction d'entités du texte."""
         entities = self.entity_extractor.extract(text)
         return {'success': True, 'analysis_type': 'entity_extraction', 'entities': entities}
     
@@ -340,67 +247,91 @@ class RealLLMOrchestrator:
         return {'success': True, 'analysis_type': 'coherence_validation', 'result': result}
 
     async def _unified_analysis(self, text: str, context: Dict, parameters: Dict) -> Dict[str, Any]:
-        """Analyse unifiée complète du texte."""
         result = self.unified_analyzer.analyze_text(text)
         return {'success': True, 'analysis_type': 'unified_analysis', 'results': result}
 
+    async def _analyze_informal(self, text: str, context: Dict, parameters: Dict) -> Dict[str, Any]:
+        """Analyse informelle en utilisant le plugin sémantique dédié."""
+        # Le plugin a été enregistré sous "InformalAnalyzer"
+        if "InformalAnalyzer" not in self.kernel.plugins:
+            self.logger.error("Le plugin 'InformalAnalyzer' n'est pas chargé dans le kernel.")
+            return {'success': False, 'error': "Le plugin d'analyse informelle 'InformalAnalyzer' n'est pas chargé."}
+
+        try:
+            # Invocation directe de la fonction via kernel.invoke, qui est la méthode robuste
+            # pour appeler des fonctions de plugin, qu'elles soient natives ou sémantiques.
+            analysis_result = await self.kernel.invoke(
+                plugin_name="InformalAnalyzer",
+                function_name="semantic_AnalyzeFallacies",
+                arguments=KernelArguments(input=text, options=json.dumps(context))
+            )
+
+            # Le résultat est une chaîne JSON, il faut la parser
+            result_str = str(analysis_result)
+            try:
+                # Tentative de parser le JSON
+                result_dict = json.loads(result_str)
+            except json.JSONDecodeError:
+                self.logger.error(f"Erreur de décodage JSON pour la réponse de l'analyse informelle: {result_str}")
+                return {'success': False, 'error': 'Réponse invalide du LLM (non-JSON)', 'raw_response': result_str}
+
+            # Correction de la structure de retour pour correspondre au validateur
+            # Renommer la clé 'sophismes' en 'detected_sophisms'
+            if 'sophismes' in result_dict:
+                result_dict['detected_sophisms'] = result_dict.pop('sophismes')
+
+            return {
+                'success': True,
+                # La méthode `analyze_text` enveloppe ce dict dans un objet LLMAnalysisResult.
+                # Le validateur accède ensuite à `analysis_result.result['result']`.
+                # Ce dictionnaire interne est donc ce qui doit être dans la clé 'result'.
+                'result': result_dict,
+                'confidence': result_dict.get('confidence', 0.90)
+            }
+        except Exception as e:
+            self.logger.error(f"Erreur majeure lors de l'exécution de l'analyse informelle: {e}", exc_info=True)
+            return {'success': False, 'error': str(e), 'confidence': 0.0}
+
     def _get_cached_result(self, request: LLMAnalysisRequest) -> Optional[LLMAnalysisResult]:
-        """Récupère un résultat du cache."""
         cache_key = self._generate_cache_key(request)
         return self.analysis_cache.get(cache_key)
 
     def _cache_result(self, request: LLMAnalysisRequest, result: LLMAnalysisResult):
-        """Met en cache un résultat."""
         cache_key = self._generate_cache_key(request)
         self.analysis_cache[cache_key] = result
 
     def _generate_cache_key(self, request: LLMAnalysisRequest) -> str:
-        """Génère une clé de cache pour la requête."""
         import hashlib
         content = f"{request.text}:{request.analysis_type}:{json.dumps(request.parameters, sort_keys=True)}"
         return hashlib.md5(content.encode()).hexdigest()
 
     def _update_average_processing_time(self, new_time: float):
-        """Met à jour le temps de traitement moyen."""
-        total_successful = self.metrics['successful_analyses']
+        total = self.metrics['successful_analyses']
         current_avg = self.metrics['average_processing_time']
-        
-        if total_successful == 1:
-            self.metrics['average_processing_time'] = new_time
-        else:
-            self.metrics['average_processing_time'] = (
-                (current_avg * (total_successful - 1) + new_time) / total_successful
-            )
+        self.metrics['average_processing_time'] = new_time if total == 1 else ((current_avg * (total - 1) + new_time) / total)
 
     async def batch_analyze(self, requests: List[LLMAnalysisRequest]) -> List[LLMAnalysisResult]:
-        """Effectue des analyses en lot."""
-        max_concurrent = self.config['max_concurrent_analyses']
-        semaphore = asyncio.Semaphore(max_concurrent)
+        semaphore = asyncio.Semaphore(self.config['max_concurrent_analyses'])
+        async def analyze_with_sem(req):
+            async with semaphore: return await self.analyze_text(req)
         
-        async def analyze_with_semaphore(request):
-            async with semaphore:
-                return await self.analyze_text(request)
-        
-        tasks = [analyze_with_semaphore(req) for req in requests]
+        tasks = [analyze_with_sem(req) for req in requests]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
-        processed_results = []
-        for i, result in enumerate(results):
-            if isinstance(result, Exception):
-                self.logger.error(f"Erreur dans l'analyse batch {i}: {result}")
-                processed_results.append(LLMAnalysisResult(
-                    request_id=f"batch_error_{i}",
-                    analysis_type=requests[i].analysis_type,
-                    result={'error': str(result), 'success': False},
-                    confidence=0.0, processing_time=0.0, timestamp=datetime.now(),
-                    metadata={'error': True, 'batch_index': i}
+        processed = []
+        for i, res in enumerate(results):
+            if isinstance(res, Exception):
+                self.logger.error(f"Erreur batch {i}: {res}")
+                processed.append(LLMAnalysisResult(
+                    request_id=f"batch_error_{i}", analysis_type=requests[i].analysis_type,
+                    result={'error': str(res), 'success': False}, confidence=0.0,
+                    processing_time=0.0, timestamp=datetime.now(), metadata={'error': True, 'batch_index': i}
                 ))
             else:
-                processed_results.append(result)
-        return processed_results
+                processed.append(res)
+        return processed
 
     def get_metrics(self) -> Dict[str, Any]:
-        """Retourne les métriques de l'orchestrateur."""
         return self.metrics.copy()
     
     def reset_metrics(self):
@@ -414,94 +345,66 @@ class RealLLMOrchestrator:
 
     def _create_unified_analyzer(self):
         class BasicUnifiedAnalyzer:
-            def analyze_text(self, text):
-                return {"overall_quality": 85.5, "structure_analysis": {"clarity": 90}}
+            def analyze_text(self, text): return {"overall_quality": 85.5, "structure_analysis": {"clarity": 90}}
         return BasicUnifiedAnalyzer()
     
     def _create_basic_syntactic_analyzer(self):
         class BasicSyntacticAnalyzer:
-            def analyze(self, text):
-                return {'sentence_count': len(text.split('.'))}
+            def analyze(self, text): return {'sentence_count': len(text.split('.'))}
         return BasicSyntacticAnalyzer()
 
     def _create_basic_semantic_analyzer(self):
         class BasicSemanticAnalyzer:
-            def analyze(self, text):
-                return {'vocabulary_complexity': 'medium'}
+            def analyze(self, text): return {'vocabulary_complexity': 'medium'}
         return BasicSemanticAnalyzer()
     
     def _create_basic_pragmatic_analyzer(self):
         class BasicPragmaticAnalyzer:
-            def analyze(self, text, context=None):
-                return {'speech_acts': ['assertion']}
+            def analyze(self, text, context=None): return {'speech_acts': ['assertion']}
         return BasicPragmaticAnalyzer()
 
     def _create_real_logical_analyzer(self) -> PropositionalLogicAgent:
-        """Crée et configure une instance réelle du PropositionalLogicAgent."""
-        if not self.kernel:
-            raise ValueError("Le kernel est requis pour l'analyseur logique réel.")
+        if not self.kernel: raise ValueError("Kernel requis.")
+        service_id = next((sid for sid, s in self.kernel.services.items() if isinstance(s, ChatCompletionClientBase)), None)
+        if not service_id: raise ValueError("Service ChatCompletion manquant dans le kernel.")
         
-        kernel = self.kernel
-        # On doit trouver le service_id du service de chat dans le kernel
-        service_id = None
-        # Le kernel a une propriété services qui est un dictionnaire.
-        # On itère dessus pour trouver le premier service de type ChatCompletionClientBase.
-        for sid, service in kernel.services.items():
-            if isinstance(service, ChatCompletionClientBase):
-                service_id = sid
-                break
-        
-        if not service_id:
-            raise ValueError("Aucun service de type ChatCompletionClientBase trouvé dans le kernel.")
-
-        logic_agent = PropositionalLogicAgent(kernel=kernel, service_id=service_id)
-        logic_agent.setup_agent_components(llm_service_id=service_id)
-        
-        self.logger.info("Analyseur logique réel (PropositionalLogicAgent) créé et configuré.")
-        return logic_agent
+        agent = PropositionalLogicAgent(kernel=self.kernel, service_id=service_id)
+        agent.setup_agent_components(llm_service_id=service_id)
+        self.logger.info("Analyseur logique réel (PropositionalLogicAgent) créé.")
+        return agent
 
     def _create_basic_entity_extractor(self):
         class BasicEntityExtractor:
-            def extract(self, text):
-                return [{'text': 'exemple', 'type': 'ENTITY'}]
+            def extract(self, text): return [{'text': 'exemple', 'type': 'ENTITY'}]
         return BasicEntityExtractor()
 
     def _create_basic_relation_extractor(self):
         class BasicRelationExtractor:
-            def extract(self, text):
-                return []
+            def extract(self, text): return []
         return BasicRelationExtractor()
 
     def _create_basic_consistency_validator(self):
         class BasicConsistencyValidator:
-            def validate(self, text):
-                return {'is_consistent': True}
+            def validate(self, text): return {'is_consistent': True}
         return BasicConsistencyValidator()
 
     def _create_basic_coherence_validator(self):
         class BasicCoherenceValidator:
-            def validate(self, text):
-                return {'is_coherent': True}
+            def validate(self, text): return {'is_coherent': True}
         return BasicCoherenceValidator()
 
     async def orchestrate_analysis(self, text: str) -> Dict[str, Any]:
-        """Méthode principale d'orchestration."""
-        if not self.is_initialized:
-            await self.initialize()
+        if not self.is_initialized: await self.initialize()
+        start = time.time()
+        self.conversation_logger.log_agent_message("RealLLMOrchestrator", "Début orchestration", "orchestration")
         
-        start_time = time.time()
-        
-        self.conversation_logger.log_agent_message("RealLLMOrchestrator", "Début de l'orchestration", "orchestration")
-        
-        analysis_results = {}
+        results = {}
         if self.rhetorical_analyzer:
-            analysis_results["rhetorical"] = {"rhetorical_devices": ["metaphor"]}
+            results["rhetorical"] = {"rhetorical_devices": ["metaphor"]}
         
-        processing_time_ms = (time.time() - start_time) * 1000
-        
-        self.conversation_logger.log_agent_message("RealLLMOrchestrator",f"Orchestration terminée", "completion")
-        
-        return {"final_synthesis": "Analyse orchestrée", "processing_time_ms": processing_time_ms}
+        processing_ms = (time.time() - start) * 1000
+        self.conversation_logger.log_agent_message("RealLLMOrchestrator", "Orchestration terminée", "completion")
+        return {"final_synthesis": "Analyse orchestrée", "processing_time_ms": processing_ms}
 
 # Point d'entrée pour les tests
 async def main():

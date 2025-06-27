@@ -189,7 +189,7 @@ class UnifiedWebOrchestrator:
                 'headless': True,
                 'timeout_ms': 10000,
                 'slow_timeout_ms': 20000,
-                'test_paths': ['tests/e2e/python'],
+                'test_paths': ['tests/e2e/webapp'],
                 'screenshots_dir': 'logs/screenshots',
                 'traces_dir': 'logs/traces'
             },
