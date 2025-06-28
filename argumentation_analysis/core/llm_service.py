@@ -66,6 +66,18 @@ class MockChatCompletion(ChatCompletionClientBase):
         
         return [response_message]
 
+    async def complete_chat(self, *args, **kwargs):
+        """Dummy implementation for backward compatibility."""
+        return await self.get_chat_message_contents(*args, **kwargs)
+
+    async def complete_chat_stream(self, *args, **kwargs):
+        """Dummy implementation for backward compatibility."""
+        # This is a simplified stream simulation.
+        # A real implementation would yield content chunks.
+        results = await self.get_chat_message_contents(*args, **kwargs)
+        for result in results:
+            yield [result]
+
 def create_llm_service(service_id: str = "global_llm_service", force_mock: bool = False, force_authentic: bool = False) -> Union[OpenAIChatCompletion, AzureChatCompletion, MockChatCompletion]:
     """
     Factory pour créer et configurer une instance de service de complétion de chat.
