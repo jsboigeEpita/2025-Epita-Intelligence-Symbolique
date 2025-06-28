@@ -166,7 +166,9 @@ class InformalAnalysisPlugin:
                     self._logger.error(f"Erreur critique lors de la définition de 'PK' comme index: {e}")
             else:
                 pk_dtype = df['PK'].dtype if 'PK' in df.columns else 'N/A'
-                self._logger.warning(f"Colonne 'PK' non trouvée ou de type incorrect ({pk_dtype}). L'index ne peut être défini.")
+                msg = f"Colonne 'PK' non trouvée ou de type incorrect ({pk_dtype}). L'index ne peut être défini."
+                self._logger.error(msg)
+                raise ValueError(msg)
 
             return df
         except Exception as e:
@@ -600,9 +602,15 @@ class InformalAnalysisPlugin:
             str: Une chaîne JSON contenant une liste de toutes les catégories.
         """
         self._logger.info("Listage des catégories de sophismes...")
-        df = self._get_taxonomy_dataframe()
+        try:
+            df = self._get_taxonomy_dataframe()
+        except ValueError as e:
+            self._logger.error(f"Erreur de chargement de la taxonomie lors du listage des catégories: {e}")
+            return json.dumps({"error": f"Erreur de chargement de la taxonomie: {e}"})
+
         if df is None:
-            return json.dumps({"error": "Taxonomie non disponible."})
+            # Cette condition est maintenant probablement redondante mais gardée par sécurité
+            return json.dumps({"error": "Taxonomie non disponible (DataFrame est None)."})
 
         if 'Famille' in df.columns:
             categories = df['Famille'].dropna().unique().tolist()

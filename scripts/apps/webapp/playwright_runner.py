@@ -177,6 +177,7 @@ class PlaywrightRunner:
         cmd = [
             'python', '-m', 'pytest',
             '-v',
+            '-p', 'no:asyncio', # Désactive le plugin asyncio pour éviter les conflits avec Playwright
             '--capture=no',
             '--slowmo=100',  # Ralentir un peu plus pour l'observation
             '--log-cli-level=DEBUG', # Augmenter la verbosité

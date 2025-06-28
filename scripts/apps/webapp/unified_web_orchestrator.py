@@ -200,7 +200,7 @@ class UnifiedWebOrchestrator:
             },
             'cleanup': {
                 'auto_cleanup': True,
-                'kill_processes': ['python*', 'node*'],
+                'kill_processes': ['python*', 'node*', 'npm*'],
                 'process_filters': ['app.py', 'web_api', 'serve']
             }
         }
@@ -263,6 +263,9 @@ class UnifiedWebOrchestrator:
                       "Initialisation orchestrateur")
         
         try:
+            # 0. Nettoyage préalable des processus
+            self._cleanup_processes()
+
             # 1. Démarrage backend (obligatoire)
             if not await self._start_backend(app_module=app_module):
                 return False
@@ -493,6 +496,37 @@ class UnifiedWebOrchestrator:
         except Exception as e:
             self.add_trace("[ERROR] ECHEC DEVERROUILLAGE", str(e), status="error")
     
+    def _cleanup_processes(self):
+        """Nettoie les processus potentiellement persistants avant le démarrage."""
+        cleanup_config = self.config.get('cleanup', {})
+        if not cleanup_config.get('auto_cleanup', False):
+            self.add_trace("[CLEANUP] Nettoyage ignoré", "Désactivé dans la configuration.")
+            return
+
+        process_names = cleanup_config.get('kill_processes', [])
+        if not process_names:
+            return
+            
+        self.add_trace("[CLEANUP] Nettoyage des processus", f"Cibles: {', '.join(process_names)}")
+        
+        try:
+            # Commande PowerShell pour tuer les processus par nom
+            process_list = ", ".join([f"'{p}'" for p in process_names])
+            command = f"Get-Process | Where-Object {{ $_.ProcessName -in @({process_list}) }} | Stop-Process -Force -ErrorAction SilentlyContinue"
+            
+            result = subprocess.run(["powershell", "-Command", command], capture_output=True, text=True, check=False)
+            
+            if result.returncode == 0:
+                self.add_trace("[OK] Nettoyage terminé", "Processus précédents arrêtés.")
+            else:
+                 # Même si le code de retour n'est pas 0 (ex: aucun processus trouvé), ce n'est pas une erreur bloquante.
+                self.add_trace("[OK] Nettoyage terminé", f"Processus précédents traités (code: {result.returncode}). stderr: {result.stderr.strip()}", status="success")
+
+        except FileNotFoundError:
+            self.add_trace("[WARNING] Nettoyage impossible", "PowerShell non trouvé. Nettoyage manuel requis.", status="error")
+        except Exception as e:
+            self.add_trace("[WARNING] Erreur nettoyage", str(e), status="error")
+
     async def _save_trace_report(self):
         """Sauvegarde le rapport de trace"""
         if not self.enable_trace or not self.trace_log:

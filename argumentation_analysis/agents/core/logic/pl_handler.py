@@ -39,17 +39,31 @@ class PLHandler:
 
         logger.debug(f"Original formula for normalization: '{formula_str}'")
 
-        # Replacements for common alternative operators
-        formula_str = formula_str.replace("&&", "&").replace("||", "|").replace("->", "=>").replace("<->", "<=>")
+        # Replacements for common alternative operators. Ensure spacing for safety.
+        formula_str = formula_str.replace("&&", " & ").replace("||", " | ")
+        formula_str = formula_str.replace("->", " => ").replace("<->", " <=> ")
         formula_str = formula_str.replace(" NOT ", " ! ").replace(" Not ", " ! ")
 
 
-        # Regex to add spaces around all operators and parentheses
-        # Operators: =>, <=>, &, |, !. Parentheses: (, )
-        # The regex looks for these tokens and ensures they are surrounded by spaces.
-        # It avoids adding spaces if they are already present.
-        # The tokens are captured and replaced with themselves surrounded by spaces.
-        formula_str = re.sub(r'\s*(=>|<=<|&|\||!|\(|\))\s*', r' \1 ', formula_str)
+        # Regex to add spaces around all operators and parentheses that might be stuck together (e.g. "A&B")
+        # This is a safety net for cases the replaces above miss.
+        # Note the correction of '<=>' from the previous '<=<' typo.
+        formula_str = re.sub(r'\s*(=>|<=>|&|\||!|\(|\))\s*', r' \1 ', formula_str)
+
+        # Sanitize proposition names: replace invalid characters with underscore
+        # This is done after operator spacing to avoid corrupting them.
+        tokens = formula_str.split(' ')
+        sanitized_tokens = []
+        operators_and_parentheses = {'=>', '<=>', '&', '|', '!', '(', ')'}
+        for token in tokens:
+            if token in operators_and_parentheses or token == '':
+                sanitized_tokens.append(token)
+            else:
+                # It's a proposition name, sanitize it
+                # Allow letters, numbers, and underscores. Replace everything else.
+                sanitized_token = re.sub(r'[^a-zA-Z0-9_]', '_', token)
+                sanitized_tokens.append(sanitized_token)
+        formula_str = ' '.join(sanitized_tokens)
 
         # Clean up any resulting multiple spaces
         formula_str = " ".join(formula_str.split())

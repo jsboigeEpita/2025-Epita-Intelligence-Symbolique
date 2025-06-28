@@ -341,7 +341,7 @@ from pathlib import Path
 project_root_fixture = Path(__file__).parent.parent.parent.resolve()
 if str(project_root_fixture) not in sys.path:
     sys.path.insert(0, str(project_root_fixture))
-import asyncio
+# import asyncio # Commenté pour éviter le chargement non désiré de pytest-asyncio
 from argumentation_analysis.webapp.orchestrator import UnifiedWebOrchestrator
 import argparse
 
