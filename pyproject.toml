@@ -53,6 +53,7 @@ markers = [
     "robustness",
     "playwright",
     "real_gpt",
+    "real_llm",
 ]
 log_cli = true
 log_cli_level = "INFO"

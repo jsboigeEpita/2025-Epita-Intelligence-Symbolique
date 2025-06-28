@@ -122,11 +122,20 @@ def create_llm_service(service_id: str = "global_llm_service", force_mock: bool 
     model_id = settings.openai.chat_model_id
     # Pour la compatibilité avec Azure, on vérifie si base_url est une instance Azure
     # Pydantic HttpUrl ne peut pas être None, on vérifie la valeur de l'url
-    endpoint = str(settings.openai.base_url) if settings.openai.base_url and "azure" in str(settings.openai.base_url) else None
-    base_url = str(settings.openai.base_url) if settings.openai.base_url and not endpoint else None
+    base_url_str = str(settings.openai.base_url) if settings.openai.base_url else None
+    endpoint = None
+    base_url = None
     org_id = None # org_id n'est pas dans notre modèle de settings pour l'instant
 
-    logger.info(f"Configuration détectée - base_url: {base_url}, endpoint: {endpoint}")
+    if base_url_str and "azure" in base_url_str:
+        endpoint = base_url_str
+    elif base_url_str:
+        # On ne passe la base_url que si elle est explicitement définie et n'est pas une URL Azure
+        base_url = base_url_str
+        if "localhost" in base_url or "127.0.0.1" in base_url:
+             logger.warning(f"Une base_url locale ('{base_url}') est utilisée pour le client OpenAI. Assurez-vous qu'un proxy compatible OpenAI est en cours d'exécution.")
+
+    logger.info(f"Configuration LLM finale - base_url: {base_url}, endpoint Azure: {endpoint}")
     use_azure_openai = bool(endpoint)
 
     llm_instance = None
@@ -150,6 +159,11 @@ def create_llm_service(service_id: str = "global_llm_service", force_mock: bool 
 
             resilient_client = get_resilient_async_client()
             
+            # --- AJOUT DE LOG POUR DEBUG ---
+            logger.critical(f"DEBUG: Valeur de settings.openai.base_url au moment de l'utilisation: {settings.openai.base_url}")
+            logger.critical(f"DEBUG: Valeur de la variable 'base_url' dérivée: {base_url}")
+            # --- FIN DE L'AJOUT DE LOG ---
+
             client_kwargs = {"api_key": api_key, "http_client": resilient_client}
             if base_url:
                 client_kwargs["base_url"] = base_url

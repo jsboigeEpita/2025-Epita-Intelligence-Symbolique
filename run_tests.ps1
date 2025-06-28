@@ -50,6 +50,9 @@ param(
 # --- Script Body ---
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = $PSScriptRoot
+Write-Host "[DEBUG] Script Root (PSScriptRoot): $PSScriptRoot" -ForegroundColor Magenta
+Write-Host "[DEBUG] Current Location: $((Get-Location).Path)" -ForegroundColor Magenta
+
 # Le script d'activation est remplacé par le manager Python
 $EnvironmentManagerPath = "project_core.core_from_scripts.environment_manager"
 
@@ -184,16 +187,104 @@ elseif ($Type -eq "e2e-python") {
     Write-Host "[INFO] Exécution E2E (Python) terminée avec le code de sortie final: $globalExitCode" -ForegroundColor Cyan
     exit $globalExitCode
 }
-# Branche 3: Tests Unit/Functional (Python) directs
+# Branche 3: Tests d'intégration avec gestion du backend
+elseif ($Type -eq "integration") {
+    Write-Host "[INFO] Lancement du cycle de test d'intégration avec gestion du backend..." -ForegroundColor Cyan
+    $globalExitCode = 0
+    $pidsFile = Join-Path $ProjectRoot "_temp/service_pids.json" # Fichier pour stocker les PIDs
+
+    try {
+        # --- ÉTAPE 1: Démarrer le backend et capturer l'URL (Nouvelle méthode robuste) ---
+        Write-Host "[INFO] Étape 1: Démarrage du service backend en arrière-plan..." -ForegroundColor Yellow
+        
+        $urlsFile = Join-Path $ProjectRoot "_temp/service_urls.json"
+        $pidsFile = Join-Path $ProjectRoot "_temp/service_pids.json"
+        $tempDir = Split-Path $urlsFile -Parent
+        if (-not (Test-Path $tempDir)) { New-Item -ItemType Directory -Path $tempDir | Out-Null }
+        if (Test-Path $urlsFile) { Remove-Item $urlsFile }
+        if (Test-Path $pidsFile) { Remove-Item $pidsFile }
+        
+        # Obtenir le nom de l'env depuis le .env (similaire à ce que fait le manager)
+        $envName = (Select-String -Path "$ProjectRoot/.env" -Pattern "CONDA_ENV_NAME=").Line.Split('=')[1].Trim().Trim("'""")
+        if (-not $envName) {
+            throw "Impossible de lire CONDA_ENV_NAME depuis le fichier .env"
+        }
+        Write-Host "[INFO] Utilisation de l'environnement Conda: $envName"
+
+        $startArguments = "-n `"$envName`" --no-capture-output python -m argumentation_analysis.webapp.orchestrator --backend-only --log-level INFO --exit-after-start"
+        
+        # Démarrer le processus en arrière-plan et ne pas attendre sa fin
+        Write-Host "[CMD] Lancement en arrière-plan: conda run $startArguments"
+        Start-Process -FilePath "conda" -ArgumentList "run $startArguments" -NoNewWindow
+        
+        # L'attente du fichier d'URL devient le mécanisme de synchronisation principal
+
+        $maxWaitSeconds = 40
+        $waitIntervalSeconds = 2
+        $waitedSeconds = 0
+        while (-not (Test-Path $urlsFile) -and $waitedSeconds -lt $maxWaitSeconds) {
+            Write-Host "[INFO] Attente du fichier d'URLs... ($($waitedSeconds)s / $($maxWaitSeconds)s)" -ForegroundColor Gray
+            Start-Sleep -Seconds $waitIntervalSeconds
+            $waitedSeconds += $waitIntervalSeconds
+        }
+
+        if (-not (Test-Path $urlsFile)) { throw "Timeout: Le fichier d'URLs '$urlsFile' n'a pas été créé." }
+        
+        $urlsData = Get-Content $urlsFile | ConvertFrom-Json
+        $backendUrl = $urlsData.backend_url
+        if (-not $backendUrl) { throw "Impossible de trouver l'URL du backend dans '$urlsFile'." }
+        
+        Write-Host "[INFO] URL Backend capturée: $backendUrl" -ForegroundColor Green
+        
+        # Définir les variables d'environnement pour Pytest
+        $env:BACKEND_URL = $backendUrl
+        $env:IS_INTEGRATION_TEST = "true" # Flag pour les tests
+        $env:USE_REAL_JPYPE = "true" # Pour Tweety
+        $env:TWEETY_JAR_PATH = "argumentation_analysis/libs/tweety/org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
+        $env:JVM_MEMORY = "1024m"
+
+        # --- ÉTAPE 2: Lancer Pytest pour les tests d'intégration ---
+        Write-Host "[INFO] Étape 2: Lancement de Pytest pour les tests d'intégration..." -ForegroundColor Yellow
+        $testPathToRun = if (-not ([string]::IsNullOrEmpty($Path))) { $Path } else { "tests/integration" }
+        $pytestCommand = "python -m pytest -s -vv `"$testPathToRun`""
+        
+        If ($PytestArgs) {
+             $pytestCommand += " $PytestArgs"
+        }
+
+        # Pour les tests, l'utilisation d'Invoke-ManagedCommand reste acceptable car c'est un processus qui doit se terminer.
+        Invoke-ManagedCommand -CommandToRun $pytestCommand
+        $globalExitCode = $LASTEXITCODE
+    }
+    catch {
+        Write-Host "[ERREUR FATALE] $_" -ForegroundColor Red
+        $globalExitCode = 1
+    }
+    finally {
+        # --- ÉTAPE 3: Arrêter le backend ---
+        Write-Host "[INFO] Étape 3: Arrêt des services..." -ForegroundColor Yellow
+        $stopCommand = "python -m argumentation_analysis.webapp.orchestrator --stop"
+        Invoke-ManagedCommand -CommandToRun $stopCommand
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[AVERTISSEMENT] L'orchestrateur a rencontré une erreur lors de l'arrêt." -ForegroundColor Yellow
+            if ($globalExitCode -eq 0) { $globalExitCode = 1 }
+        }
+        
+        if (Test-Path $urlsFile) { Remove-Item $urlsFile }
+    }
+    
+    Write-Host "[INFO] Exécution des tests d'intégration terminée avec le code de sortie: $globalExitCode" -ForegroundColor Cyan
+    exit $globalExitCode
+}
+# Branche 4: Tests Unit/Functional (Python) directs
 else {
     Write-Host "[INFO] Lancement des tests de type '$Type' via le point d'entrée unifié..." -ForegroundColor Cyan
 
     $testPaths = @{
         "unit"       = "tests/unit"
         "functional" = "tests/functional"
-        "all"        = @("tests/unit", "tests/functional", "tests/integration")
+        "all"        = @("tests/unit", "tests/functional") # 'integration' est maintenant géré à part
         "validation" = "tests/validation"
-        "integration" = "tests/integration"
     }
 
     $selectedPaths = if ($PSBoundParameters.ContainsKey('Path') -and -not [string]::IsNullOrEmpty($Path)) {
@@ -203,20 +294,10 @@ else {
     }
 
     if (-not $selectedPaths) {
-        Write-Host "[ERREUR] Type de test '$Type' non valide." -ForegroundColor Red
+        Write-Host "[ERREUR] Type de test '$Type' non valide ou non géré dans ce mode. Pour les tests d'intégration, utilisez -Type integration." -ForegroundColor Red
         exit 1
     }
-
-    # Configuration spécifique pour les tests d'intégration
-    if ($Type -eq "integration") {
-        Write-Host "[INFO] Configuration de l'environnement pour les tests d'intégration Tweety..." -ForegroundColor Yellow
-        $env:USE_REAL_JPYPE = "true"
-        $env:TWEETY_JAR_PATH = "argumentation_analysis/libs/tweety/org.tweetyproject.tweety-full-1.28-with-dependencies.jar"
-        $env:JVM_MEMORY = "1024m"
-        Write-Host "[INFO] USE_REAL_JPYPE = $($env:USE_REAL_JPYPE)"
-        Write-Host "[INFO] TWEETY_JAR_PATH = $($env:TWEETY_JAR_PATH)"
-    }
-
+    
     # Construire la commande pytest
     $pytestCommandParts = @("python", "-m", "pytest", "-s", "-vv") + $selectedPaths
     
@@ -227,37 +308,23 @@ else {
     }
 
     if (-not ([string]::IsNullOrEmpty($PytestArgs))) {
+        Write-Host "[DEBUG] Contenu de PytestArgs: '$PytestArgs'" -ForegroundColor Magenta
         $pytestCommandParts += $PytestArgs.Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)
     }
     $pytestFinalCommand = $pytestCommandParts -join " "
 
-    # Exécution via le script d'activation pour une meilleure robustesse
+    # Exécution
     $runnerLogFile = Join-Path $ProjectRoot '_temp/test_runner.log'
-    
     Write-Host "[INFO] Commande Pytest à exécuter: $pytestFinalCommand" -ForegroundColor Green
-    Write-Host "[INFO] Les logs seront enregistrés dans '$runnerLogFile'" -ForegroundColor Yellow
+    Write-Host "[INFO] Les logs partiels seront visibles ici. Voir '$runnerLogFile' pour les détails complets." -ForegroundColor Yellow
 
     try {
-        # Appeler le manager d'environnement avec la commande complète.
         $exitCode = Invoke-ManagedCommand -CommandToRun $pytestFinalCommand
-        if ($exitCode -ne 0) {
-            throw "Pytest a échoué avec le code $exitCode"
-        }
+        if ($exitCode -ne 0) { throw "Pytest a échoué avec le code $exitCode" }
     }
     catch {
-        Write-Host "[ERREUR] Une erreur est survenue lors de l'appel au manager d'environnement. $_" -ForegroundColor Red
+        Write-Host "[ERREUR] Une erreur est survenue: $_" -ForegroundColor Red
         exit 1
-    }
-
-    # Afficher un résumé du log
-    if (Test-Path $runnerLogFile) {
-        Write-Host "--- Début du résumé des logs ($runnerLogFile) ---" -ForegroundColor Yellow
-        Get-Content $runnerLogFile -Tail 50 | Write-Host
-        Write-Host "--- Fin du résumé des logs ---" -ForegroundColor Yellow
-    }
-
-    if ($exitCode -ne 0) {
-        Write-Host "[ERREUR] Les tests Pytest ont échoué avec le code $exitCode. Consultez '$runnerLogFile' pour les détails complets." -ForegroundColor Red
     }
     
     Write-Host "[INFO] Exécution terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan

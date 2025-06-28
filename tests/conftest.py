@@ -188,20 +188,21 @@ pytest_plugins = [
 def check_mock_llm_is_forced(request):
     """
     Ce "coupe-circuit" est une sécurité pour tous les tests.
-    Il vérifie que nous ne pouvons pas accidentellement utiliser un vrai LLM.
-    Pour ce faire, il patche la fonction d'initialisation de l'environnement
-    et s'assure qu'elle est TOUJOURS appelée avec force_mock_llm=True.
-
-    Si un test tente d'initialiser l'environnement sans forcer le mock,
-    une erreur sera levée, arrêtant la suite de tests.
-    Ceci prévient l'utilisation involontaire de services payants.
+    Il vérifie que nous ne pouvons pas accidentellement utiliser un vrai LLM,
+    SAUF si le test est explicitement marqué avec 'real_llm'.
     """
-    # Ce coupe-circuit est crucial même pour les tests de validation qui simulent
-    # un environnement e2e. Nous le laissons actif.
+    if 'real_llm' in request.node.keywords:
+        logger.warning(f"Le test {request.node.name} utilise le marqueur 'real_llm'. Le mock LLM est désactivé.")
+        yield
+        return
 
+    # Le reste de la logique de mock s'applique si le marqueur n'est pas présent.
     from argumentation_analysis.core.bootstrap import initialize_project_environment as original_init
 
     def new_init(*args, **kwargs):
+        """
+        Wrapper autour de l'initialiseur d'environnement pour forcer le mock LLM.
+        """
         if not kwargs.get("force_mock_llm"):
              pytest.fail(
                 "ERREUR DE SÉCURITÉ: Appel à initialize_project_environment() sans "
@@ -227,7 +228,7 @@ def check_mock_llm_is_forced(request):
 
     with patch('argumentation_analysis.core.bootstrap.initialize_project_environment', new=new_init):
         yield
-    
+
 def pytest_addoption(parser):
     """Ajoute des options de ligne de commande personnalisées à pytest."""
     parser.addoption(

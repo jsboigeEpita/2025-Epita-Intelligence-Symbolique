@@ -130,6 +130,7 @@ class ProjectContext:
         self.tweety_classes = {}
         self.config = {}
         self.project_root_path = None
+        self.services = {} # Dictionnaire pour regrouper les services
 
     def get_fallacy_detector(self):
         """
@@ -195,7 +196,7 @@ def _load_tweety_classes(context: 'ProjectContext'):
         logger.critical(f"Erreur inattendue lors du chargement des classes Tweety: {e}", exc_info=True)
 
 
-def initialize_project_environment(env_path_str: str = None, root_path_str: str = None, force_mock_llm: bool = False) -> ProjectContext:
+def initialize_project_environment(env_path_str: str = None, root_path_str: str = None, force_mock_llm: bool = False, force_real_llm_in_test: bool = False) -> ProjectContext:
     global project_root
 
     context = ProjectContext()
@@ -362,7 +363,7 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
             context.kernel = sk_module.Kernel()
             # Le service LLM est un prérequis pour de nombreux plugins, donc on l'ajoute au kernel.
             # Le paramètre force_mock_llm détermine si on doit forcer l'usage du service mocké.
-            context.llm_service = create_llm_service_func(service_id="default_llm_bootstrap", force_mock=force_mock_llm)
+            context.llm_service = create_llm_service_func(service_id="default_llm_bootstrap", force_mock=force_mock_llm, force_authentic=force_real_llm_in_test)
             context.kernel.add_service(context.llm_service) # Assurez-vous que c'est la bonne méthode
             logger.info("Semantic Kernel et LLMService initialisés et ajoutés au contexte.")
         except Exception as e:
@@ -370,6 +371,15 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
     else:
         logger.warning("Semantic-kernel non importé ou create_llm_service non disponible, le kernel ne sera pas initialisé.")
 
+    # Regrouper les services dans un dictionnaire pour faciliter leur passage
+    context.services = {
+        "kernel": context.kernel,
+        "crypto_service": context.crypto_service,
+        "definition_service": context.definition_service,
+        "llm_service": context.llm_service,
+        "fallacy_detector": context.get_fallacy_detector()
+    }
+    
     logger.info("--- Fin de l'initialisation de l'environnement du projet ---")
     return context
 

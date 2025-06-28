@@ -310,24 +310,12 @@ class AnalysisService:
 
             # PRIORITÉ 1: Utilisation de l'agent informel
             if self.informal_agent:
-                self.logger.warning("MOCKING InformalAgent for fallacy detection due to timeout issues.")
-                
-                # Mock response to bypass the hanging LLM call
-                result = {
-                    "fallacies": [
-                        {
-                            "name": "Mock Fallacy",
-                            "description": "This is a mock response to test the application flow without a real LLM call.",
-                            "severity": 0.5,
-                            "confidence": 0.99,
-                            "location": {},
-                            "context": text,
-                            "explanation": "Mocked during integration test."
-                        }
-                    ]
-                }
-                # The blocking `asyncio.sleep(1)` has been removed as it can cause issues
-                # with an already-blocked event loop.
+                self.logger.info("Using InformalAgent for fallacy detection.")
+                # The mock has been removed to allow real integration testing.
+                # La bonne méthode est `analyze_text`, qui prend le texte
+                # et retourne un dictionnaire contenant la clé 'fallacies'.
+                result = await self.informal_agent.analyze_text(text=text)
+
                 if result and 'fallacies' in result:
                     for fallacy_data in result['fallacies']:
                         fallacy = FallacyDetection(
