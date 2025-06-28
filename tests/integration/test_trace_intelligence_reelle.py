@@ -75,7 +75,6 @@ def test_interface_web_reelle(capsys):
     except (ImportError, AssertionError) as e:
         pytest.fail(f"Test de l'interface web a échoué: {e}")
 
-@pytest.mark.skip(reason="Impossible de résoudre le ModuleNotFoundError pour autogen dans cet environnement de test.")
 def test_imports_orchestration_reelle():
     """Teste l'importation des modules d'orchestration."""
     modules_ok = []

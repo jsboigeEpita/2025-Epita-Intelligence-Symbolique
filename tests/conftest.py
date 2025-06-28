@@ -1,14 +1,74 @@
 from unittest.mock import patch
-patch('dotenv.main.dotenv_values', return_value={}, override=True).start()
-
+from dotenv import dotenv_values
+import os
+from pathlib import Path
 import pytest
 import jpype
 import logging
-import os
 import time
 import shutil
 import nest_asyncio
-from pathlib import Path
+
+# --- Gestion du patch de dotenv ---
+MOCK_DOTENV = True
+_dotenv_patcher = None
+
+def pytest_configure(config):
+    """
+    Hook de configuration précoce de pytest.
+    1. Charge les variables .env via une mise à jour manuelle de os.environ.
+    2. Gère le cycle de vie du patch de dotenv.
+    """
+    global MOCK_DOTENV, _dotenv_patcher
+
+    if config.getoption("--allow-dotenv"):
+        MOCK_DOTENV = False
+        print("\n[INFO] Dotenv mocking is DISABLED. Real .env file will be used.")
+
+        project_dir = Path(__file__).parent.parent
+        dotenv_path = project_dir / '.env'
+        if dotenv_path.exists():
+            print(f"[INFO] Loading .env file from: {dotenv_path}")
+            
+            # Utilisation de la méthode standard et propre maintenant que le .env est sain
+            env_vars = dotenv_values(dotenv_path=dotenv_path)
+            
+            if not env_vars:
+                print(f"[WARNING] .env file found at '{dotenv_path}' but it seems to be empty.")
+                return
+
+            updated_vars = 0
+            for key, value in env_vars.items():
+                if value is not None:
+                    os.environ[key] = value
+                    updated_vars += 1
+                else:
+                    print(f"[WARNING] Skipping .env variable '{key}' because its value is None.")
+            
+            print(f"[INFO] Loaded {updated_vars} variables from .env into os.environ.")
+            
+            if 'OPENAI_API_KEY' not in os.environ:
+                 print(f"[WARNING] OPENAI_API_KEY was not found in the loaded .env variables.")
+            else:
+                 print("[INFO] OPENAI_API_KEY successfully loaded.")
+
+        else:
+            print(f"[INFO] No .env file found at '{dotenv_path}'.")
+    
+    if MOCK_DOTENV:
+        print("[INFO] Dotenv mocking is ENABLED. .env files will be ignored by tests.")
+        _dotenv_patcher = patch('dotenv.main.dotenv_values', return_value={}, override=True)
+        _dotenv_patcher.start()
+
+def pytest_unconfigure(config):
+    """
+    Arrête le patcher dotenv à la fin de la session de test pour nettoyer.
+    """
+    global _dotenv_patcher
+    if _dotenv_patcher:
+        print("\n[INFO] Stopping dotenv mock.")
+        _dotenv_patcher.stop()
+        _dotenv_patcher = None
 from argumentation_analysis.core.setup.manage_portable_tools import setup_tools
 from argumentation_analysis.core.jvm_setup import initialize_jvm, shutdown_jvm, is_jvm_started
 from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
@@ -48,25 +108,35 @@ def _ensure_tweety_jars_are_correctly_placed():
         logger.error(f"Erreur lors du déplacement défensif des JARs Tweety: {e}", exc_info=True)
 
 
-@pytest.fixture(scope="session")
-def anyio_backend(request):
-    return request.config.getoption("anyio_backend", "asyncio")
+# @pytest.fixture(scope="session")
+# def anyio_backend(request):
+#     """
+#     DEPRECATED: This fixture was causing conflicts with pytest-playwright.
+#     The `apply_nest_asyncio` fixture is now disabled.
+#     """
+#     return request.config.getoption("anyio_backend", "asyncio")
 
 @pytest.fixture(scope="session", autouse=True)
-def apply_nest_asyncio(anyio_backend):
+def apply_nest_asyncio():
     """
-    Applies nest_asyncio to allow nested event loops.
-    This is necessary for running asyncio tests in some environments.
-    Only applied for the 'asyncio' backend.
+    DEPRECATED/DISABLED: This fixture, which applies nest_asyncio, creates a
+    fundamental conflict with the pytest-playwright plugin, causing tests to
+    hang indefinitely. It is disabled for now.
+    If other dedicated asyncio tests fail, a more targeted solution will be
+    needed, for example, by creating a custom marker to enable nest_asyncio
+    only for specific tests that require it, instead of using `autouse=True`.
     """
-    if anyio_backend == "asyncio":
-        logger.info(f"Applying nest_asyncio for '{anyio_backend}' backend.")
-        nest_asyncio.apply()
-        yield
-        logger.info("nest_asyncio teardown for 'asyncio' backend.")
-    else:
-        logger.info(f"Skipping nest_asyncio for '{anyio_backend}' backend.")
-        yield
+    # Original problematic code:
+    # if anyio_backend == "asyncio":
+    #     logger.info(f"Applying nest_asyncio for '{anyio_backend}' backend.")
+    #     nest_asyncio.apply()
+    #     yield
+    #     logger.info("nest_asyncio teardown for 'asyncio' backend.")
+    # else:
+    #     logger.info(f"Skipping nest_asyncio for '{anyio_backend}' backend.")
+    #     yield
+    logger.warning("The 'apply_nest_asyncio' fixture in conftest.py is currently disabled to ensure compatibility with Playwright.")
+    yield
 
 @pytest.fixture(scope="session", autouse=True)
 def jvm_session(request):
@@ -160,6 +230,10 @@ def check_mock_llm_is_forced(request):
     
 def pytest_addoption(parser):
     """Ajoute des options de ligne de commande personnalisées à pytest."""
+    parser.addoption(
+        "--allow-dotenv", action="store_true", default=False,
+        help="Permet le chargement du vrai fichier .env pour les tests (désactive le mock)."
+    )
     parser.addoption(
         "--backend-url", action="store", default="http://localhost:5003",
         help="URL du backend à tester"

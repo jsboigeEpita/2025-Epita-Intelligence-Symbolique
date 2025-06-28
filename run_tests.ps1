@@ -191,7 +191,7 @@ else {
     $testPaths = @{
         "unit"       = "tests/unit"
         "functional" = "tests/functional"
-        "all"        = @("tests/unit", "tests/functional")
+        "all"        = @("tests/unit", "tests/functional", "tests/integration")
         "validation" = "tests/validation"
         "integration" = "tests/integration"
     }

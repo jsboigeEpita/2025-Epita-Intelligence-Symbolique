@@ -258,8 +258,23 @@ class RealLLMOrchestrator:
             return {'success': False, 'error': "Le plugin d'analyse informelle 'InformalAnalyzer' n'est pas chargé."}
 
         try:
-            # Invocation directe de la fonction via kernel.invoke, qui est la méthode robuste
-            # pour appeler des fonctions de plugin, qu'elles soient natives ou sémantiques.
+            # VÉRIFICATION PRÉALABLE (PRE-WARM) :
+            # On tente d'accéder à la taxonomie via une fonction simple pour déclencher
+            # le lazy loading et attraper les erreurs de chargement AVANT d'appeler le LLM.
+            # Cela force _get_taxonomy_dataframe() à s'exécuter dans le plugin.
+            pre_check_result_str = await self.kernel.invoke(
+                plugin_name="InformalAnalyzer",
+                function_name="list_fallacy_categories"
+            )
+
+            # La fonction du plugin retourne maintenant un JSON d'erreur au lieu de lever une exception.
+            pre_check_result = json.loads(str(pre_check_result_str))
+            if 'error' in pre_check_result and pre_check_result['error']:
+                # On propage l'erreur précise retournée par le plugin.
+                self.logger.error(f"Échec de la validation de la taxonomie : {pre_check_result['error']}")
+                raise ValueError(pre_check_result['error'])
+
+            # Si la vérification réussit, on peut procéder à l'analyse sémantique.
             analysis_result = await self.kernel.invoke(
                 plugin_name="InformalAnalyzer",
                 function_name="semantic_AnalyzeFallacies",

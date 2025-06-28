@@ -3,6 +3,8 @@ import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
 from config.unified_config import UnifiedConfig
+from argumentation_analysis.core.llm_service import create_llm_service
+from semantic_kernel import Kernel
 
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
@@ -70,10 +72,13 @@ def integration_services(monkeypatch):
 
 
 class AuthHelper:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
+    async def _create_authentic_gpt4o_mini_instance(self, service_id_for_test: str):
+        """Crée un Kernel avec un service mocké pour les tests."""
+        kernel = Kernel()
+        # On force un mock, et on lui passe le service_id souhaité par le test
+        mock_service = create_llm_service(service_id=service_id_for_test, force_mock=True)
+        kernel.add_service(mock_service)
+        return kernel
 
 
 def test_verify_extracts_integration(mocker, integration_services, tmp_path):
@@ -180,21 +185,17 @@ def test_extract_service_with_fetch_service(integration_services):
     assert "Ceci est le contenu de l'extrait" in extracted_text
 
 
-@pytest.mark.skip(reason="Le module 'scripts.repair_extract_markers' n'est pas trouvé, à corriger plus tard.")
 async def test_repair_extract_markers_integration(mocker, integration_services):
     """Test d'intégration pour la fonction repair_extract_markers."""
-    from scripts.repair_extract_markers import repair_extract_markers
+    from argumentation_analysis.utils.dev_tools.repair_utils import repair_extract_markers
     
     helper = AuthHelper()
     mock_fetch_service, mock_extract_service, integration_sample_definitions = integration_services
-    mock_llm_service = await helper._create_authentic_gpt4o_mini_instance()
-    mock_llm_service.service_id = "mock_llm_service"
+    mock_llm_service = await helper._create_authentic_gpt4o_mini_instance(service_id_for_test="mock_llm_service")
 
-    # Mock OrchestrationServiceManagers if it's used in the function
-    mocker.patch(
-        'scripts.repair_extract_markers.OrchestrationServiceManagers',
-        return_value=(mock_llm_service, MagicMock(), MagicMock())
-    )
+    # Le patch de OrchestrationServiceManagers est supprimé car la fonction
+    # sous test, `repair_extract_markers`, reçoit maintenant les services
+    # directement en argument et ne les initialise plus elle-même.
     
     # Exécuter la fonction repair_extract_markers
     updated_definitions, results = await repair_extract_markers(

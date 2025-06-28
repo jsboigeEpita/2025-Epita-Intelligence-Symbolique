@@ -93,7 +93,23 @@ class EnvironmentManager:
         self.logger.info(f"Utilisation de --cwd='{self.project_root}' pour l'exécution.")
 
         # La commande à exécuter doit être passée en tant que liste d'arguments après `conda run`.
-        command_parts = command_to_run.split()
+        # Correction : La chaîne command_to_run peut contenir '-CommandToRun "commande"'.
+        # On doit extraire proprement la commande. shlex est la méthode la plus robuste
+        # pour gérer les guillemets et les espaces.
+        import shlex
+        
+        # On nettoie d'abord la chaîne pour enlever le paramètre du script parent
+        if command_to_run.strip().lower().startswith("-commandtorun"):
+            # On cherche la position de la fin du marqueur et on prend tout ce qui suit.
+            # C'est plus robuste que .replace() si la commande elle-même contient le mot.
+            marker = '-CommandToRun'
+            # On ignore la casse pour la recherche du marqueur
+            start_index = command_to_run.lower().find(marker.lower()) + len(marker)
+            command_str = command_to_run[start_index:].strip()
+        else:
+            command_str = command_to_run
+
+        command_parts = shlex.split(command_str)
 
         full_command = [
             "conda", "run",

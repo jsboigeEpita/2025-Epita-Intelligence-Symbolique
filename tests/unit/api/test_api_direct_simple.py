@@ -16,17 +16,14 @@ import pytest
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Charger l'environnement
-load_dotenv()
-
 def test_environment_setup():
     """Test 1: Verification environnement."""
     print("\n=== Test 1: Verification environnement ===")
     
     # Verifier cle OpenAI
     api_key = os.getenv('OPENAI_API_KEY')
-    assert api_key is not None, "OPENAI_API_KEY manquante"
-    assert len(api_key) > 20, "OPENAI_API_KEY invalide"
+    assert api_key is not None, "ECHEC: OPENAI_API_KEY n'a pas ete chargee dans l'environnement de test."
+    assert len(api_key) > 20, "ECHEC: La cle OPENAI_API_KEY semble invalide (trop courte)."
     print(f"[OK] OPENAI_API_KEY configuree ({len(api_key)} chars)")
     
     # Verifier fichiers API
@@ -37,11 +34,13 @@ def test_environment_setup():
     
     print("[OK] Test environnement REUSSI")
 
-@pytest.mark.skip(reason="Skipping to unblock the test suite, API tests are failing due to fallback_mode.")
 def test_api_startup_and_basic_functionality():
     """Test 2: Demarrage API et fonctionnalite de base."""
     print("\n=== Test 2: Demarrage API et fonctionnalites ===")
-    
+
+    # La configuration de l'environnement est gérée par conftest.py
+    # load_dotenv(override=True) # Cette ligne n'est plus nécessaire.
+
     # Configuration
     api_url = "http://localhost:8001"
     api_process = None
@@ -57,12 +56,19 @@ def test_api_startup_and_basic_functionality():
             "--log-level", "error"  # Reduire les logs
         ]
         
+        # Creation d'un environnement controle pour le sous-processus
+        proc_env = os.environ.copy()
+        proc_env['PYTHONPATH'] = os.getcwd()
+        api_key = os.getenv('OPENAI_API_KEY')
+        if api_key:
+            proc_env['OPENAI_API_KEY'] = api_key
+        
         api_process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=os.getcwd(),
-            env=dict(os.environ, PYTHONPATH=os.getcwd())
+            env=proc_env
         )
         
         print(f"API process demarre (PID: {api_process.pid})")
