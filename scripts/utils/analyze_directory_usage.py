@@ -3,6 +3,7 @@ Script pour analyser l'utilisation des répertoires config/ et data/ dans le cod
 en utilisant l'utilitaire de project_core.
 """
 
+import argumentation_analysis.core.environment
 import sys
 import os
 import json

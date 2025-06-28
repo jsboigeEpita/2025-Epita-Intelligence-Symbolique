@@ -1,0 +1,13 @@
+{
+  "agents": [
+    {"name": "S1", "personality": "strategic", "preferences": ["A", "B", "C", "D"], "options": ["A", "B", "C", "D"]},
+    {"name": "S2", "personality": "strategic", "preferences": ["A", "C", "B", "D"], "options": ["A", "B", "C", "D"]},
+    {"name": "S3", "personality": "strategic", "preferences": ["B", "A", "C", "D"], "options": ["A", "B", "C", "D"]},
+    {"name": "S4", "personality": "strategic", "preferences": ["B", "C", "A", "D"], "options": ["A", "B", "C", "D"]},
+    {"name": "T1", "personality": "stubborn", "preferences": ["C", "B", "A", "D"], "options": ["A", "B", "C", "D"]},
+    {"name": "T2", "personality": "stubborn", "preferences": ["C", "A", "B", "D"], "options": ["A", "B", "C", "D"]},
+    {"name": "T3", "personality": "stubborn", "preferences": ["D", "A", "B", "C"], "options": ["A", "B", "C", "D"]}
+  ],
+  "options": ["A", "B", "C", "D"],
+  "context": {"description": "Large strategic bloc: strategic agents coordinate to block C, changing the winner for some methods."}
+} 

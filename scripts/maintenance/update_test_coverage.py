@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
+# Fichier adapté pour Oracle Enhanced v2.1.0
 """
 Script de mise à jour de la couverture de tests Oracle Enhanced
 Phase 3: Mise à jour complète de la couverture de tests
 """
 
-import os
-import sys
-from pathlib import Path
-from datetime import datetime
+try:
+    import os
+    import sys
+    from pathlib import Path
+    from datetime import datetime
+except ImportError as e:
+    raise ImportError(f"Erreur d'importation de modules stdlib: {e}")
 
 class TestCoverageUpdater:
     """Mise à jour de la couverture de tests pour Oracle Enhanced"""

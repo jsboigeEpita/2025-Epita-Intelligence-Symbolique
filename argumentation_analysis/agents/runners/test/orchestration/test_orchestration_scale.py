@@ -72,9 +72,7 @@ async def run_orchestration_test():
     
     logger.info(f"Texte chargé pour le test ({len(text_content)} caractères)")
     
-    # Initialiser l'environnement
-    from dotenv import load_dotenv
-    load_dotenv(override=True)
+    # Initialiser l'environnement (le chargement de .env est maintenant implicite via settings)
     
     # Initialisation de la JVM
     from argumentation_analysis.core.jvm_setup import initialize_jvm

@@ -2,11 +2,18 @@
 # -*- coding: utf-8 -*-
 
 """
-Outil de visualisation interactive des structures argumentatives.
+Générateur de visualisations de structures argumentatives avec Matplotlib.
 
-Ce module fournit des fonctionnalités pour visualiser de manière interactive
-les structures argumentatives, les relations entre arguments, et les sophismes
-identifiés dans un ensemble d'arguments.
+Ce module fournit `ArgumentStructureVisualizer`, une classe qui utilise les
+bibliothèques `networkx` et `matplotlib` pour créer des représentations visuelles
+statiques de la structure d'une argumentation.
+
+Contrairement à d'autres visualiseurs basés sur du code client (comme Mermaid.js),
+celui-ci génère directement des images (PNG), des rapports HTML avec images
+embarquées, ou des données brutes au format JSON.
+
+NOTE : L'analyse de structure sous-jacente est une **simulation** basée sur des
+heuristiques simples.
 """
 
 import os
@@ -45,10 +52,16 @@ logger = logging.getLogger("ArgumentStructureVisualizer")
 
 class ArgumentStructureVisualizer:
     """
-    Outil pour la visualisation interactive des structures argumentatives.
-    
-    Cet outil permet de visualiser de manière interactive les structures argumentatives,
-    les relations entre arguments, et les sophismes identifiés dans un ensemble d'arguments.
+    Crée des visualisations statiques de la structure d'une argumentation.
+
+    Cette classe prend un ensemble d'arguments, effectue une analyse de structure
+    simplifiée (simulée), puis génère deux types de visualisations :
+    1. Un graphe de relations (`networkx`) montrant les liens de similarité entre
+       les arguments.
+    2. Une "heatmap" (diagramme à barres) (`matplotlib`) montrant les scores de
+       vulnérabilité de chaque argument.
+
+    La sortie peut être un fichier image (PNG), un rapport HTML ou du JSON.
     """
     
     def __init__(self):
@@ -70,19 +83,25 @@ class ArgumentStructureVisualizer:
         output_path: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Visualise la structure argumentative.
-        
-        Cette méthode génère des visualisations interactives de la structure
-        argumentative, des relations entre arguments, et des sophismes identifiés.
-        
+        Orchestre l'analyse et la génération de toutes les visualisations.
+
+        C'est le point d'entrée principal de la classe. Il exécute les étapes suivantes :
+        1. Appelle `_analyze_argument_structure` pour obtenir une analyse simulée.
+        2. Génère une heatmap des vulnérabilités.
+        3. Génère un graphe des relations entre arguments.
+        4. Sauvegarde les visualisations dans des fichiers si `output_path` est fourni.
+        5. Retourne un dictionnaire complet contenant les données et les visualisations.
+
         Args:
-            arguments (List[str]): Liste des arguments à visualiser
-            context (Optional[str]): Contexte des arguments
-            output_format (str): Format de sortie ("html", "png", "json")
-            output_path (Optional[str]): Chemin de sortie pour sauvegarder les visualisations
-            
+            arguments (List[str]): La liste des arguments à visualiser.
+            context (Optional[str], optional): Le contexte de l'argumentation.
+            output_format (str, optional): Le format de sortie désiré. Accepte
+                "html", "png", "json". Defaults to "html".
+            output_path (Optional[str], optional): Le chemin du répertoire où
+                sauvegarder les fichiers générés.
+
         Returns:
-            Dict[str, Any]: Résultats de la visualisation
+            Dict[str, Any]: Un dictionnaire de résultats structuré.
         """
         self.logger.info(f"Visualisation de {len(arguments)} arguments")
         
@@ -146,13 +165,23 @@ class ArgumentStructureVisualizer:
     
     def _analyze_argument_structure(self, arguments: List[str]) -> Dict[str, Any]:
         """
-        Analyse la structure argumentative.
-        
+        (Simulé) Analyse la structure d'un ensemble d'arguments.
+
+        Cette méthode effectue une analyse de surface pour identifier des relations
+        et des vulnérabilités.
+
+        **NOTE : L'implémentation actuelle est une simulation.** Elle utilise des
+        heuristiques simples :
+        - Les **relations** sont basées sur la similarité de Jaccard entre les mots.
+        - Les **vulnérabilités** sont détectées sur la base de la longueur des
+          arguments ou de la présence de mots-clés de généralisation.
+
         Args:
-            arguments (List[str]): Liste des arguments à analyser
-            
+            arguments (List[str]): La liste des arguments à analyser.
+
         Returns:
-            Dict[str, Any]: Résultats de l'analyse de structure
+            Dict[str, Any]: Un dictionnaire contenant les listes de relations et
+            de vulnérabilités identifiées.
         """
         # Identifier les relations entre arguments
         relations = []
@@ -237,15 +266,22 @@ class ArgumentStructureVisualizer:
         output_format: str
     ) -> Dict[str, Any]:
         """
-        Génère un graphe des relations entre arguments.
-        
+        Génère un graphe des relations entre arguments en utilisant NetworkX.
+
+        Cette méthode construit un graphe `networkx.DiGraph` à partir des relations
+        de similarité, puis le rend dans le format demandé :
+        - `json`: Exporte les nœuds et les arêtes dans un format JSON simple.
+        - `png` / `html`: Utilise `matplotlib` pour dessiner le graphe et le retourne
+          soit en tant que fichier PNG, soit en tant que page HTML avec l'image
+          embarquée en base64.
+
         Args:
-            arguments (List[str]): Liste des arguments
-            argument_structure (Dict[str, Any]): Analyse de la structure argumentative
-            output_format (str): Format de sortie
-            
+            arguments (List[str]): La liste originale des arguments.
+            argument_structure (Dict[str, Any]): Le résultat de `_analyze_argument_structure`.
+            output_format (str): Le format de sortie (`json`, `png`, `html`).
+
         Returns:
-            Dict[str, Any]: Dictionnaire contenant le graphe généré
+            Dict[str, Any]: Un dictionnaire contenant le contenu généré et son format.
         """
         # Extraire les relations
         relations = argument_structure.get("relations", [])
@@ -372,15 +408,22 @@ class ArgumentStructureVisualizer:
         output_format: str
     ) -> Dict[str, Any]:
         """
-        Génère une carte de chaleur des sophismes identifiés dans les arguments.
-        
+        Génère une "heatmap" (diagramme à barres) des vulnérabilités par argument.
+
+        Cette méthode utilise `matplotlib` pour créer un diagramme à barres horizontales
+        où chaque barre représente un argument et sa longueur correspond au score total
+        de vulnérabilité (basé sur l'analyse simulée).
+
+        La sortie peut être `json` (données brutes), `png` (image) ou `html` (rapport
+        avec image embarquée).
+
         Args:
-            arguments (List[str]): Liste des arguments
-            argument_structure (Dict[str, Any]): Analyse de la structure argumentative
-            output_format (str): Format de sortie
-            
+            arguments (List[str]): La liste des arguments.
+            argument_structure (Dict[str, Any]): Le résultat de `_analyze_argument_structure`.
+            output_format (str): Le format de sortie (`json`, `png`, `html`).
+
         Returns:
-            Dict[str, Any]: Dictionnaire contenant la carte de chaleur générée
+            Dict[str, Any]: Un dictionnaire contenant le contenu généré et son format.
         """
         # Extraire les sophismes identifiés
         fallacies = argument_structure.get("vulnerability_analysis", {}).get("specific_vulnerabilities", [])

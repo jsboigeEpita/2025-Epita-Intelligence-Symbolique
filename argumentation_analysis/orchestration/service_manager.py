@@ -17,6 +17,22 @@ Auteur: Intelligence Symbolique EPITA
 Date: 09/06/2025
 """
 
+# ===== AUTO-ACTIVATION ENVIRONNEMENT =====
+try:
+    import argumentation_analysis.core.environment  # Auto-activation environnement intelligent
+except ImportError:
+    # Fallback si l'import direct ne fonctionne pas
+    import sys
+    from pathlib import Path
+    project_root = Path(__file__).resolve().parent.parent.parent
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+    try:
+        import argumentation_analysis.core.environment
+    except ImportError:
+        # Si ça ne marche toujours pas, ignorer l'auto-env pour les tests
+        pass
+# =========================================
 import logging
 import asyncio
 import uuid
@@ -24,14 +40,20 @@ from typing import Dict, List, Any, Optional, Union, Callable, Type
 from datetime import datetime
 from pathlib import Path
 import json
+import os
+import inspect
+import semantic_kernel as sk
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
+from argumentation_analysis.config.settings import settings
+from argumentation_analysis.core.llm_service import create_llm_service
 # Imports du système de base
-from argumentation_analysis.paths import DATA_DIR, RESULTS_DIR
+from argumentation_analysis.core.bootstrap import initialize_project_environment, ProjectContext
 
 # Imports des gestionnaires hiérarchiques
 try:
     from argumentation_analysis.orchestration.hierarchical.strategic.manager import StrategicManager
-    from argumentation_analysis.orchestration.hierarchical.tactical.manager import TacticalManager  
+    from argumentation_analysis.orchestration.hierarchical.tactical.manager import TacticalManager
     from argumentation_analysis.orchestration.hierarchical.operational.manager import OperationalManager
 except ImportError as e:
     logging.warning(f"Certains gestionnaires hiérarchiques ne sont pas disponibles: {e}")
@@ -41,7 +63,8 @@ except ImportError as e:
 
 # Imports des orchestrateurs spécialisés
 try:
-    from argumentation_analysis.orchestration.cluedo_orchestrator import CluedoOrchestrator
+    # CORRECTIF: Importe CluedoExtendedOrchestrator et l'aliase en CluedoOrchestrator
+    from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator as CluedoOrchestrator
     from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
     from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
 except ImportError as e:
@@ -52,13 +75,19 @@ except ImportError as e:
 
 # Imports des systèmes de communication
 try:
+    # Utiliser les exports directs du package communication grâce à son __init__.py
     from argumentation_analysis.core.communication import (
-        MessageMiddleware, Message, ChannelType, 
-        MessagePriority, MessageType, AgentLevel
+        MessageMiddleware, Message, ChannelType,
+        MessagePriority, MessageType, AgentLevel,
+        HierarchicalChannel  # Importer la classe concrète du canal
     )
 except ImportError as e:
-    logging.warning(f"Système de communication non disponible: {e}")
-    MessageMiddleware = None
+    logging.error(f"Échec critique de l'importation des modules de communication: {e}", exc_info=True)
+    # Si ces imports échouent, le ServiceManager ne peut pas fonctionner.
+    # Il est préférable de laisser l'application échouer tôt ou de gérer cela plus radicalement.
+    MessageMiddleware = None # Pour éviter des NameError plus loin si on continue malgré tout
+    HierarchicalChannel = None # Idem
+    # Les autres (Message, ChannelType, etc.) causeront des NameError s'ils sont utilisés.
 
 
 class ServiceManagerError(Exception):
@@ -115,21 +144,24 @@ class OrchestrationServiceManager:
     ```
     """
     
-    def __init__(self, 
-                 config: Optional[Dict[str, Any]] = None,
+    def __init__(self,
                  enable_logging: bool = True,
-                 log_level: int = logging.INFO):
+                 log_level: int = logging.INFO,
+                 taxonomy_file_path: Optional[str] = None):
         """
         Initialise le ServiceManager.
         
+        La configuration est maintenant lue depuis `argumentation_analysis.config.settings`.
+
         Args:
-            config: Configuration optionnelle du service manager
             enable_logging: Active/désactive le logging
             log_level: Niveau de logging
+            taxonomy_file_path: Chemin optionnel vers la taxonomie des sophismes.
         """
-        # Configuration de base
-        self.config = config or self._get_default_config()
+        # La configuration est maintenant gérée par l'objet `settings` global.
+        self.config = None # Cet attribut est obsolète mais conservé pour éviter de casser des `hasattr` potentiels.
         self.state = ServiceManagerState()
+        self.taxonomy_file_path = taxonomy_file_path # Stocker le chemin
         
         # Configuration du logging
         if enable_logging:
@@ -148,6 +180,11 @@ class OrchestrationServiceManager:
         
         # Middleware de communication
         self.middleware: Optional[MessageMiddleware] = None
+
+        # Kernel Semantic Kernel et service LLM principal
+        self.kernel: Optional[sk.Kernel] = None
+        self.llm_service_id: Optional[str] = "gpt-4o-mini" # Default, sera confirmé lors de l'ajout au kernel
+        self.project_context: Optional[ProjectContext] = None # Contexte du projet
         
         # État d'initialisation
         self._initialized = False
@@ -155,19 +192,7 @@ class OrchestrationServiceManager:
         
         self.logger.info(f"ServiceManager créé avec session_id: {self.state.session_id}")
         
-    def _get_default_config(self) -> Dict[str, Any]:
-        """Retourne la configuration par défaut."""
-        return {
-            'enable_hierarchical': True,
-            'enable_specialized_orchestrators': True,
-            'enable_communication_middleware': True,
-            'max_concurrent_analyses': 10,
-            'analysis_timeout': 300,  # 5 minutes
-            'auto_cleanup': True,
-            'save_results': True,
-            'results_dir': str(RESULTS_DIR),
-            'data_dir': str(DATA_DIR)
-        }
+    # La méthode _get_default_config est supprimée car la configuration est gérée par `settings`.
         
     def _setup_logging(self, log_level: int):
         """Configure le système de logging."""
@@ -190,18 +215,51 @@ class OrchestrationServiceManager:
             
         try:
             self.logger.info("Initialisation du ServiceManager...")
-            
-            # Initialisation du middleware de communication
-            if self.config.get('enable_communication_middleware', True) and MessageMiddleware:
-                self.middleware = MessageMiddleware()
-                self.logger.info("Middleware de communication initialisé")
-                
-            # Initialisation des gestionnaires hiérarchiques
-            if self.config.get('enable_hierarchical', True):
+
+            # 1. Initialisation du contexte du projet (bootstrap)
+            self.project_context = initialize_project_environment()
+            if not self.project_context:
+                raise ServiceManagerError("Échec de l'initialisation du contexte du projet (bootstrap).")
+            self.logger.info("Contexte du projet initialisé.")
+
+            # 2. Initialisation du Kernel Semantic Kernel et du service LLM
+            self.kernel = sk.Kernel()
+            api_key = settings.openai.api_key.get_secret_value() if settings.openai.api_key else None
+            self.llm_service_id = settings.service_manager.default_llm_service_id
+
+            if api_key:
+                try:
+                    llm_service = create_llm_service(service_id=self.llm_service_id)
+                    self.kernel.add_service(llm_service)
+                    self.logger.info(f"Service LLM résilient '{self.llm_service_id}' ajouté au kernel.")
+                except Exception as e_kernel_service:
+                    self.logger.error(f"Échec de l'ajout du service LLM résilient au kernel: {e_kernel_service}", exc_info=True)
+            else:
+                self.logger.warning("API Key OpenAI non trouvée dans la configuration. Le service LLM ne sera pas configuré.")
+
+            # 2.1. Import et chargement des plugins sémantiques essentiels
+            try:
+                # Remplacer l'instanciation manuelle par l'appel à la fonction setup_informal_kernel
+                # qui gère l'enregistrement complet (plugin natif + fonctions sémantiques)
+                from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel
+                llm_service = self.kernel.get_service(self.llm_service_id)
+                setup_informal_kernel(kernel=self.kernel, llm_service=llm_service, taxonomy_file_path=self.taxonomy_file_path)
+                self.logger.info("Configuration complète du plugin 'InformalAnalyzer' (natif + sémantique) via setup_informal_kernel.")
+            except ImportError as e_import:
+                 self.logger.error(f"Échec critique de l'importation du InformalAnalysisPlugin: {e_import}", exc_info=True)
+            except Exception as e_kernel:
+                self.logger.error(f"Échec du chargement du InformalAnalysisPlugin dans le kernel: {e_kernel}", exc_info=True)
+
+            # 3. Initialisation du middleware de communication
+            if settings.service_manager.enable_communication_middleware:
+                await self.initialize_middleware()
+
+            # 4. Initialisation des gestionnaires hiérarchiques (après le middleware)
+            if settings.service_manager.enable_hierarchical:
                 await self._initialize_hierarchical_managers()
-                
-            # Initialisation des orchestrateurs spécialisés
-            if self.config.get('enable_specialized_orchestrators', True):
+
+            # 5. Initialisation des orchestrateurs spécialisés
+            if settings.service_manager.enable_specialized_orchestrators:
                 await self._initialize_specialized_orchestrators()
                 
             self._initialized = True
@@ -214,45 +272,86 @@ class OrchestrationServiceManager:
             self.logger.error(f"Erreur lors de l'initialisation: {e}")
             return False
             
+    async def initialize_middleware(self):
+        """Initialise le middleware de communication et ses canaux."""
+        if self.middleware:
+            self.logger.info("Middleware déjà initialisé.")
+            return
+
+        if settings.service_manager.enable_communication_middleware and MessageMiddleware:
+            self.middleware = MessageMiddleware()
+            self.logger.info("Middleware de communication instancié.")
+
+            # Enregistrer les canaux nécessaires
+            if HierarchicalChannel:
+                try:
+                    hierarchical_channel_id = settings.service_manager.hierarchical_channel_id
+                    hc = HierarchicalChannel(channel_id=hierarchical_channel_id)
+                    self.middleware.register_channel(hc)
+                    self.logger.info(f"Canal HIERARCHICAL '{hierarchical_channel_id}' enregistré dans le middleware.")
+                except Exception as e_chan:
+                    self.logger.error(f"Échec de l'enregistrement du HierarchicalChannel: {e_chan}", exc_info=True)
+            else:
+                self.logger.error("Classe HierarchicalChannel non disponible pour enregistrement.")
+        else:
+            self.logger.warning("Middleware de communication désactivé ou non disponible.")
+
     async def _initialize_hierarchical_managers(self):
-        """Initialise les gestionnaires hiérarchiques."""
+        """Initialise les gestionnaires hiérarchiques, s'assurant que le middleware est prêt."""
+        if not self.middleware:
+            self.logger.warning("Middleware non initialisé. Impossible d'initialiser les gestionnaires hiérarchiques.")
+            return
+
         try:
             if StrategicManager:
                 self.strategic_manager = StrategicManager(middleware=self.middleware)
-                self.logger.info("StrategicManager initialisé")
+                self.logger.info("StrategicManager initialisé et abonné au middleware.")
                 
             if TacticalManager:
                 self.tactical_manager = TacticalManager(middleware=self.middleware)
-                self.logger.info("TacticalManager initialisé")
+                self.logger.info("TacticalManager initialisé et abonné au middleware.")
                 
             if OperationalManager:
-                self.operational_manager = OperationalManager(middleware=self.middleware)
-                self.logger.info("OperationalManager initialisé")
-                
+                self.operational_manager = OperationalManager(
+                    middleware=self.middleware,
+                    kernel=self.kernel,
+                    llm_service_id=self.llm_service_id,
+                    project_context=self.project_context
+                )
+                self.logger.info("OperationalManager initialisé et abonné au middleware.")
+                    
         except Exception as e:
-            self.logger.warning(f"Erreur lors de l'initialisation des gestionnaires hiérarchiques: {e}")
-            
+            self.logger.error(f"Erreur critique lors de l'initialisation des gestionnaires hiérarchiques: {e}", exc_info=True)
+            # Optionnellement, remettre les managers à None pour indiquer un état d'échec partiel
+            self.strategic_manager = self.tactical_manager = self.operational_manager = None
+
     async def _initialize_specialized_orchestrators(self):
         """Initialise les orchestrateurs spécialisés."""
         try:
             if CluedoOrchestrator:
-                self.cluedo_orchestrator = CluedoOrchestrator()
+                self.cluedo_orchestrator = CluedoOrchestrator(kernel=self.kernel) # Passer le kernel
                 self.logger.info("CluedoOrchestrator initialisé")
                 
             if ConversationOrchestrator:
+                # Supposons qu'il puisse aussi bénéficier du kernel ou d'un llm_service
+                # Pour l'instant, on garde son initialisation simple.
                 self.conversation_orchestrator = ConversationOrchestrator()
                 self.logger.info("ConversationOrchestrator initialisé")
                 
             if RealLLMOrchestrator:
-                self.llm_orchestrator = RealLLMOrchestrator()
-                self.logger.info("RealLLMOrchestrator initialisé")
+                # CORRECTION: On passe le kernel complet au RealLLMOrchestrator, pas seulement un service.
+                # L'orchestrateur a besoin du kernel pour instancier ses propres agents.
+                self.llm_orchestrator = RealLLMOrchestrator(kernel=self.kernel)
+                self.logger.info(f"RealLLMOrchestrator initialisé avec le kernel principal.")
                 
         except Exception as e:
-            self.logger.warning(f"Erreur lors de l'initialisation des orchestrateurs spécialisés: {e}")
+            self.logger.error(f"Erreur critique lors de l'initialisation des orchestrateurs spécialisés: {e}")
+            self.llm_orchestrator = None
+            raise Exception(f"Impossible d'initialiser les orchestrateurs: {e}")
             
     async def analyze_text(self, 
-                          text: str, 
-                          analysis_type: str = "comprehensive",
+                          text: str,
+                          analysis_type: str = "unified_analysis",
                           options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Lance une analyse de texte en utilisant les services appropriés.
@@ -294,7 +393,7 @@ class OrchestrationServiceManager:
             if orchestrator:
                 # Analyse avec orchestrateur spécialisé
                 orchestrator_results = await self._run_specialized_analysis(
-                    orchestrator, text, options
+                    orchestrator, text, analysis_type, options
                 )
                 results['results']['specialized'] = orchestrator_results
             else:
@@ -313,7 +412,7 @@ class OrchestrationServiceManager:
             })
             
             # Sauvegarde si configurée
-            if self.config.get('save_results', True):
+            if settings.service_manager.save_results:
                 await self._save_results(results)
                 
             self.state.update_activity()
@@ -340,33 +439,59 @@ class OrchestrationServiceManager:
             'conversation': self.conversation_orchestrator,
             'dialogue': self.conversation_orchestrator,
             'llm': self.llm_orchestrator,
-            'language_model': self.llm_orchestrator
+            'language_model': self.llm_orchestrator,
+            # Force tous les types d'analyse vers RealLLMOrchestrator
+            'comprehensive': self.llm_orchestrator, # Gardé pour rétrocompatibilité potentielle
+            'unified_analysis': self.llm_orchestrator,
+            'modal': self.llm_orchestrator,
+            'propositional': self.llm_orchestrator,
+            'logical': self.llm_orchestrator,
+            'rhetorical': self.llm_orchestrator
         }
         
-        return orchestrator_map.get(analysis_type.lower())
+        # Si aucun mapping spécifique, utilise RealLLMOrchestrator par défaut
+        result = orchestrator_map.get(analysis_type.lower())
+        return result if result is not None else self.llm_orchestrator
         
-    async def _run_specialized_analysis(self, 
-                                      orchestrator: Any, 
-                                      text: str, 
+    async def _run_specialized_analysis(self,
+                                      orchestrator: Any,
+                                      text: str,
+                                      analysis_type: str,  # Ajout du paramètre
                                       options: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Lance une analyse avec un orchestrateur spécialisé."""
         try:
-            # Interface générique pour les orchestrateurs
-            if hasattr(orchestrator, 'analyze'):
+            # Interface spécialisée pour RealLLMOrchestrator
+            if hasattr(orchestrator, 'analyze_text'):
+                from .real_llm_orchestrator import LLMAnalysisRequest
+                request = LLMAnalysisRequest(
+                    text=text,
+                    # Correction: Utilise le analysis_type propagé
+                    analysis_type=analysis_type,
+                    context=options.get('context') if options else None,
+                    parameters=options or {}
+                )
+                result = await orchestrator.analyze_text(request)
+                return {
+                    'method': 'real_llm',
+                    'request_id': result.request_id,
+                    'analysis_type': result.analysis_type,
+                    'result': result.result,
+                    'confidence': result.confidence,
+                    'processing_time': result.processing_time,
+                    'timestamp': result.timestamp.isoformat(),
+                    'orchestrator': orchestrator.__class__.__name__
+                }
+            # Interface générique pour autres orchestrateurs
+            elif hasattr(orchestrator, 'analyze'):
                 return await orchestrator.analyze(text, options)
             elif hasattr(orchestrator, 'process'):
                 return await orchestrator.process(text, options)
             else:
-                # Fallback : analyse basique
-                return {
-                    'method': 'fallback',
-                    'text_length': len(text),
-                    'word_count': len(text.split()),
-                    'orchestrator': orchestrator.__class__.__name__
-                }
+                # Plus de fallback autorisé
+                raise Exception(f"Orchestrateur {orchestrator.__class__.__name__} sans méthode d'analyse supportée")
         except Exception as e:
-            self.logger.warning(f"Erreur dans l'orchestrateur spécialisé: {e}")
-            return {'error': str(e), 'method': 'specialized_failed'}
+            self.logger.error(f"Erreur critique dans l'orchestrateur spécialisé: {e}")
+            raise Exception(f"Échec analyse orchestrateur: {e}")
             
     async def _run_hierarchical_analysis(self, 
                                        text: str, 
@@ -408,43 +533,217 @@ class OrchestrationServiceManager:
             
     async def _run_strategic_analysis(self, text: str, options: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Lance l'analyse stratégique."""
-        return {
-            'level': 'strategic',
-            'text_analysis': {
-                'length': len(text),
-                'complexity': 'medium' if len(text) > 100 else 'simple'
-            },
-            'manager': 'StrategicManager'
-        }
+        self.logger.info(f"ServiceManager._run_strategic_analysis appelée pour le texte : '{text[:50]}...'")
+        if not self.strategic_manager:
+            self.logger.warning("StrategicManager non disponible pour _run_strategic_analysis.")
+            return {'error': 'StrategicManager not available', 'status': 'skipped'}
+
+        try:
+            # Note: Les méthodes du StrategicManager sont synchrones.
+            # Si elles devenaient asynchrones, il faudrait utiliser await.
+            # Pour l'instant, on les appelle directement. Si elles bloquent trop,
+            # envisager asyncio.to_thread pour les exécuter dans un thread séparé.
+            
+            self.logger.info("Appel de strategic_manager.initialize_analysis...")
+            initial_strategic_data = self.strategic_manager.initialize_analysis(text)
+            self.logger.info(f"strategic_manager.initialize_analysis retourné : {initial_strategic_data}")
+            
+            objectives = initial_strategic_data.get('objectives', [])
+            if not objectives:
+                self.logger.warning("Aucun objectif stratégique retourné par initialize_analysis.")
+                return {
+                    'level': 'strategic',
+                    'status': 'completed_no_objectives',
+                    'initial_data': initial_strategic_data,
+                    'manager': 'StrategicManager'
+                }
+
+            self.logger.info(f"Définition de {len(objectives)} objectifs stratégiques...")
+            # Itérer sur une copie de la liste pour éviter les problèmes de modification pendant l'itération
+            for objective in list(objectives):
+                self.logger.info(f"Appel de strategic_manager.define_strategic_goal pour l'objectif : {objective.get('id')}")
+                self.strategic_manager.define_strategic_goal(objective) # Synchrone
+                self.logger.info(f"Objectif {objective.get('id')} transmis au niveau tactique (via define_strategic_goal).")
+            
+            return {
+                'level': 'strategic',
+                'status': 'objectives_defined',
+                'objectives_count': len(objectives),
+                'initial_plan': initial_strategic_data.get('strategic_plan'),
+                'manager': 'StrategicManager'
+            }
+        except Exception as e:
+            self.logger.error(f"Erreur dans _run_strategic_analysis: {e}", exc_info=True)
+            return {'error': str(e), 'status': 'failed_in_strategic_manager'}
         
     async def _run_tactical_analysis(self, text: str, options: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """Lance l'analyse tactique."""
-        return {
-            'level': 'tactical', 
-            'processing': {
-                'word_count': len(text.split()),
-                'sentence_estimation': text.count('.') + text.count('!') + text.count('?')
-            },
-            'manager': 'TacticalManager'
-        }
+        """Lance l'analyse tactique avec de vrais appels LLM."""
+        self.logger.info(f"ServiceManager._run_tactical_analysis appelée pour le texte : '{text[:50]}...'. Options: {options}")
+        
+        if not self.tactical_manager:
+            self.logger.error("TacticalManager non initialisé")
+            return {
+                'level': 'tactical',
+                'status': 'error',
+                'message': 'TacticalManager non disponible',
+                'manager': 'TacticalManager'
+            }
+        
+        try:
+            # Utiliser l'API OpenAI async pour les vrais appels LLM non-bloquants
+            import openai
+            import time
+            
+            api_key = settings.openai.api_key.get_secret_value() if settings.openai.api_key else None
+            if not api_key:
+                self.logger.error("OPENAI_API_KEY non configuré dans les settings")
+                return {
+                    'level': 'tactical',
+                    'status': 'error',
+                    'message': 'API key non configuré',
+                    'manager': 'TacticalManager'
+                }
+            
+            # Prompt pour l'analyse tactique
+            tactical_prompt = f"""Effectue une analyse tactique du texte suivant en identifiant les arguments, les sophismes potentiels, et la structure rhétorique:
+
+TEXTE À ANALYSER:
+{text}
+
+INSTRUCTIONS:
+1. Identifie les arguments principaux et secondaires
+2. Détecte les sophismes logiques éventuels
+3. Analyse la structure rhétorique
+4. Évalue la cohérence argumentative
+5. Fournis des recommandations tactiques
+
+Réponds au format JSON avec les clés: arguments, sophismes, structure_rhetorique, coherence, recommandations."""
+
+            # Configuration OpenAI standard avec AsyncOpenAI
+            client = openai.AsyncOpenAI(api_key=api_key)
+            model = "gpt-4o-mini"
+            
+            # Mesurer le temps de début
+            start_time = time.time()
+            
+            # Faire l'appel LLM authentique async
+            # Utiliser le kernel pour l'invocation, ce qui bénéficie de la résilience
+            chat_function = self.kernel.create_function_from_prompt(prompt=tactical_prompt, function_name="tactical_analysis")
+            response = await self.kernel.invoke(chat_function)
+            
+            # Mesurer le temps de fin
+            end_time = time.time()
+            response_time = end_time - start_time
+            
+            llm_result = str(response)
+            
+            return {
+                'level': 'tactical',
+                'status': 'completed',
+                'llm_response': llm_result,
+                'prompt_used': tactical_prompt,
+                'model': model,
+                'response_time': response_time,
+                'manager': 'TacticalManager',
+                'options': options
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Erreur dans l'analyse tactique: {e}", exc_info=True)
+            return {
+                'level': 'tactical',
+                'status': 'error',
+                'error': str(e),
+                'manager': 'TacticalManager'
+            }
         
     async def _run_operational_analysis(self, text: str, options: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """Lance l'analyse opérationnelle."""
-        return {
-            'level': 'operational',
-            'execution': {
-                'characters': len(text),
-                'words': len(text.split()),
-                'timestamp': datetime.now().isoformat()
-            },
-            'manager': 'OperationalManager'
-        }
+        """Lance l'analyse opérationnelle avec de vrais appels LLM."""
+        self.logger.info(f"ServiceManager._run_operational_analysis appelée pour le texte : '{text[:50]}...'. Options: {options}")
+        
+        if not self.operational_manager:
+            self.logger.error("OperationalManager non initialisé")
+            return {
+                'level': 'operational',
+                'status': 'error',
+                'message': 'OperationalManager non disponible',
+                'manager': 'OperationalManager'
+            }
+        
+        try:
+            # Utiliser l'API OpenAI async pour les vrais appels LLM non-bloquants
+            import openai
+            import time
+            
+            api_key = settings.openai.api_key.get_secret_value() if settings.openai.api_key else None
+            if not api_key:
+                self.logger.error("OPENAI_API_KEY non configuré dans les settings")
+                return {
+                    'level': 'operational',
+                    'status': 'error',
+                    'message': 'API key non configuré',
+                    'manager': 'OperationalManager'
+                }
+            
+            # Prompt pour l'analyse opérationnelle détaillée
+            operational_prompt = f"""Effectue une analyse opérationnelle approfondie du texte suivant en te concentrant sur l'extraction d'éléments concrets et l'identification de patterns:
+
+TEXTE À ANALYSER:
+{text}
+
+INSTRUCTIONS OPÉRATIONNELLES:
+1. Extrais toutes les entités nommées (personnes, lieux, dates, concepts)
+2. Identifie les relations logiques explicites et implicites
+3. Détecte les patterns linguistiques et rhétoriques
+4. Analyse les mécanismes de persuasion utilisés
+5. Extrait les prémisses et conclusions principales
+6. Identifie les biais cognitifs potentiels
+7. Fournis une évaluation de la validité logique
+
+Réponds au format JSON avec les clés: entites, relations, patterns, persuasion, premisses, conclusions, biais, validite_logique."""
+
+            # Configuration OpenAI standard avec AsyncOpenAI
+            client = openai.AsyncOpenAI(api_key=api_key)
+            model = "gpt-4o-mini"
+            
+            # Mesurer le temps de début
+            start_time = time.time()
+            
+            # Faire l'appel LLM authentique async
+            chat_function = self.kernel.create_function_from_prompt(prompt=operational_prompt, function_name="operational_analysis")
+            response = await self.kernel.invoke(chat_function)
+            
+            # Mesurer le temps de fin
+            end_time = time.time()
+            response_time = end_time - start_time
+            
+            llm_result = str(response)
+            
+            return {
+                'level': 'operational',
+                'status': 'completed',
+                'llm_response': llm_result,
+                'prompt_used': operational_prompt,
+                'model': model,
+                'response_time': response_time,
+                'manager': 'OperationalManager',
+                'options': options
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Erreur dans l'analyse opérationnelle: {e}", exc_info=True)
+            return {
+                'level': 'operational',
+                'status': 'error',
+                'error': str(e),
+                'manager': 'OperationalManager'
+            }
         
     async def _save_results(self, results: Dict[str, Any]):
         """Sauvegarde les résultats d'analyse."""
         try:
-            results_dir = Path(self.config['results_dir'])
-            results_dir.mkdir(exist_ok=True)
+            results_dir = settings.service_manager.results_dir
+            results_dir.mkdir(parents=True, exist_ok=True)
             
             filename = f"analysis_{results['analysis_id']}.json"
             filepath = results_dir / filename
@@ -472,8 +771,8 @@ class OrchestrationServiceManager:
                 'conversation_orchestrator': self.conversation_orchestrator is not None,
                 'llm_orchestrator': self.llm_orchestrator is not None,
                 'middleware': self.middleware is not None
-            },
-            'config': self.config
+            }
+            # 'config' est obsolète, les paramètres sont dans `settings`
         }
         
     async def health_check(self) -> Dict[str, Any]:
@@ -508,6 +807,92 @@ class OrchestrationServiceManager:
             }
             
         return health_status
+
+    def is_available(self) -> bool:
+        """
+        Vérifie si le service est opérationnel.
+
+        Returns:
+            True si le service est initialisé et non arrêté, False sinon.
+        """
+        return self._initialized and not self._shutdown
+
+    def get_status_details(self) -> Dict[str, Any]:
+        """
+        Retourne des détails sur l'état des services internes.
+        S'inspire de ce qu'une API Flask pourrait retourner pour le statut.
+        """
+        service_details = {
+            'overall_status': 'available' if self.is_available() else 'unavailable',
+            'session_id': self.state.session_id,
+            'start_time': self.state.start_time.isoformat(),
+            'uptime_seconds': self.state.get_uptime(),
+            'last_activity': self.state.last_activity.isoformat(),
+            'initialized': self._initialized,
+            'shutdown_initiated': self._shutdown,
+            'configuration': "obsolete (see settings module)",
+            'active_components': {},
+            'component_specific_status': {}
+        }
+
+        # Statut des gestionnaires hiérarchiques
+        if settings.service_manager.enable_hierarchical:
+            service_details['active_components']['strategic_manager'] = self.strategic_manager is not None
+            service_details['active_components']['tactical_manager'] = self.tactical_manager is not None
+            service_details['active_components']['operational_manager'] = self.operational_manager is not None
+            
+            if self.strategic_manager and hasattr(self.strategic_manager, 'get_status'):
+                try:
+                    service_details['component_specific_status']['strategic_manager'] = self.strategic_manager.get_status()
+                except Exception as e:
+                    service_details['component_specific_status']['strategic_manager'] = {'error': str(e)}
+            
+            if self.tactical_manager and hasattr(self.tactical_manager, 'get_status'):
+                try:
+                    service_details['component_specific_status']['tactical_manager'] = self.tactical_manager.get_status()
+                except Exception as e:
+                    service_details['component_specific_status']['tactical_manager'] = {'error': str(e)}
+
+            if self.operational_manager and hasattr(self.operational_manager, 'get_status'):
+                try:
+                    service_details['component_specific_status']['operational_manager'] = self.operational_manager.get_status()
+                except Exception as e:
+                    service_details['component_specific_status']['operational_manager'] = {'error': str(e)}
+
+        # Statut des orchestrateurs spécialisés
+        if settings.service_manager.enable_specialized_orchestrators:
+            service_details['active_components']['cluedo_orchestrator'] = self.cluedo_orchestrator is not None
+            service_details['active_components']['conversation_orchestrator'] = self.conversation_orchestrator is not None
+            service_details['active_components']['llm_orchestrator'] = self.llm_orchestrator is not None
+
+            if self.cluedo_orchestrator and hasattr(self.cluedo_orchestrator, 'get_status'):
+                try:
+                    service_details['component_specific_status']['cluedo_orchestrator'] = self.cluedo_orchestrator.get_status()
+                except Exception as e:
+                    service_details['component_specific_status']['cluedo_orchestrator'] = {'error': str(e)}
+            
+            if self.conversation_orchestrator and hasattr(self.conversation_orchestrator, 'get_status'):
+                try:
+                    service_details['component_specific_status']['conversation_orchestrator'] = self.conversation_orchestrator.get_status()
+                except Exception as e:
+                    service_details['component_specific_status']['conversation_orchestrator'] = {'error': str(e)}
+
+            if self.llm_orchestrator and hasattr(self.llm_orchestrator, 'get_status'):
+                try:
+                    service_details['component_specific_status']['llm_orchestrator'] = self.llm_orchestrator.get_status()
+                except Exception as e:
+                    service_details['component_specific_status']['llm_orchestrator'] = {'error': str(e)}
+        
+        # Statut du middleware de communication
+        if settings.service_manager.enable_communication_middleware:
+            service_details['active_components']['middleware'] = self.middleware is not None
+            if self.middleware and hasattr(self.middleware, 'get_status'):
+                try:
+                    service_details['component_specific_status']['middleware'] = self.middleware.get_status()
+                except Exception as e:
+                    service_details['component_specific_status']['middleware'] = {'error': str(e)}
+        
+        return service_details
         
     async def shutdown(self):
         """Arrête proprement le ServiceManager."""
@@ -517,35 +902,33 @@ class OrchestrationServiceManager:
         self.logger.info("Arrêt du ServiceManager...")
         
         try:
-            # Nettoyage des orchestrateurs
-            if self.cluedo_orchestrator and hasattr(self.cluedo_orchestrator, 'shutdown'):
-                await self.cluedo_orchestrator.shutdown()
-                
-            if self.conversation_orchestrator and hasattr(self.conversation_orchestrator, 'shutdown'):
-                await self.conversation_orchestrator.shutdown()
-                
-            if self.llm_orchestrator and hasattr(self.llm_orchestrator, 'shutdown'):
-                await self.llm_orchestrator.shutdown()
-                
-            # Nettoyage des gestionnaires
-            if self.strategic_manager and hasattr(self.strategic_manager, 'shutdown'):
-                await self.strategic_manager.shutdown()
-                
-            if self.tactical_manager and hasattr(self.tactical_manager, 'shutdown'):
-                await self.tactical_manager.shutdown()
-                
-            if self.operational_manager and hasattr(self.operational_manager, 'shutdown'):
-                await self.operational_manager.shutdown()
-                
-            # Nettoyage du middleware
-            if self.middleware and hasattr(self.middleware, 'shutdown'):
-                await self.middleware.shutdown()
-                
+            # Fonction d'aide pour un arrêt sécurisé des composants
+            async def safe_shutdown(component, name):
+                """Appelle shutdown() de manière sécurisée, qu'il soir sync ou async."""
+                if component and hasattr(component, 'shutdown'):
+                    self.logger.debug(f"Tentative d'arrêt de {name}...")
+                    shutdown_call = component.shutdown()
+                    if inspect.isawaitable(shutdown_call):
+                        await shutdown_call
+                        self.logger.debug(f"{name} arrêté (async).")
+                    else:
+                        # La méthode était synchrone, l'appel a déjà eu lieu
+                        self.logger.debug(f"{name} arrêté (sync).")
+
+            # Arrêt des composants en utilisant la fonction sécurisée
+            await safe_shutdown(self.cluedo_orchestrator, "CluedoOrchestrator")
+            await safe_shutdown(self.conversation_orchestrator, "ConversationOrchestrator")
+            await safe_shutdown(self.llm_orchestrator, "RealLLMOrchestrator")
+            await safe_shutdown(self.strategic_manager, "StrategicManager")
+            await safe_shutdown(self.tactical_manager, "TacticalManager")
+            await safe_shutdown(self.operational_manager, "OperationalManager")
+            await safe_shutdown(self.middleware, "MessageMiddleware")
+
             self._shutdown = True
             self.logger.info("ServiceManager arrêté proprement")
-            
+
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'arrêt: {e}")
+            self.logger.error(f"Erreur lors de l'arrêt: {e}", exc_info=True)
             
     def __str__(self) -> str:
         return f"ServiceManager(session_id={self.state.session_id}, initialized={self._initialized})"

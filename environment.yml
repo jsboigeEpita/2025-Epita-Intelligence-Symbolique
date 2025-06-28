@@ -1,51 +1,80 @@
 name: projet-is
 channels:
-  - pytorch # Pour PyTorch
   - conda-forge
+  - pytorch
   - defaults
 dependencies:
+  # Python
   - python=3.10
-  - pip # Ajouté pour suivre la recommandation de Conda
+  - pip
+
   # Core ML/Data Science
-  - numpy>=2.0 # Permettre numpy 2.x compatible avec le projet et SK 1.x
-  - pandas
-  - scipy==1.15.3
+  - intel-openmp # Force une version unifiée d'OpenMP
+  - mkl # Force l'utilisation des librairies Intel MKL
+  - tbb # Threading Building Blocks, souvent lié à MKL
+  - numpy=1.25.0 # Version figée pour la stabilité binaire
+  - pandas=2.0.3
+  - scipy
   - scikit-learn
   - nltk
-  - spacy>=3.7
-  - pytorch # Ou torch, selon la dispo sur les canaux
+  - spacy # Laisser conda choisir la version
+  - pytorch
   - transformers
+  - sympy=1.13.1
+  - thinc=8.3.2 # Figé pour compatibilité avec spacy (8.3.4 non trouvé sur conda)
+
   # Web & API
   - flask
   - requests
+  - fastapi
+  - uvicorn
+  - whitenoise
+  - flask-cors
+  - starlette
+  - a2wsgi
+  - asgiref
+
   # Utilities
-  - pydantic>=2.0,<2.10
-  - python-dotenv # s'importe comme dotenv
+  - pydantic
+  - pydantic-settings
+  - python-dotenv
   - cryptography
   - tqdm
-  - pyyaml # Pour parser environment.yml dans setup.py
+  - pyyaml
+  - regex
+  - markdown
+  - psutil
+ 
   # Plotting & Graphing
   - matplotlib
   - seaborn
   - statsmodels
-  - networkx==3.4.2
-  # Java Bridge
-  - jpype1
+  - networkx
+  - pyvis
+ 
   # Logic & Reasoning
   - clingo
-  # Testing - conda gère mieux pytest et coverage directement
+
+  # Testing
   - pytest
-  - pytest-cov # Alternative/complément à coverage, souvent préféré
+  - pytest-cov
   - pytest-mock
   - pytest-asyncio
-  - coverage # Peut être redondant avec pytest-cov mais ne nuit pas
-  - unidecode # Ajouté pour corriger ModuleNotFoundError
-  - markdown # Ajouté pour corriger ModuleNotFoundError
+  - coverage
+  - unidecode
+  - conda-lock
+
+  # La section pip est pour les paquets non disponibles ou problématiques sur Conda
   - pip:
-    - Flask-CORS # Spécifique, souvent via pip
-    - semantic-kernel>=1.32.2 # Latest version from GitHub releases - Full modern API
-    - markdown
+    - semantic-kernel>=1.33.0
+    - flask_socketio>=5.3.6
     - playwright
     - pytest-playwright
-    # Note: semantic-kernel[agents] non disponible dans cette version
-    # Fallback implémenté dans project_core/semantic_kernel_agents_fallback.py
+    - psutil
+    - pyautogen>=0.2.0
+    - tenacity
+    - pybreaker
+    - pytest-dotenv
+    - mcp
+    - blis
+    - JPype1>=1.5.0

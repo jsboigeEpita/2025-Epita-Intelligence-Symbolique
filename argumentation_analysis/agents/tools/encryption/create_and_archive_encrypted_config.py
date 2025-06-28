@@ -8,8 +8,8 @@ Script principal pour créer, vérifier et archiver le fichier encrypté complet
 import os
 import sys
 import time
+import shutil
 from pathlib import Path
-from dotenv import load_dotenv
 
 # Ajouter le répertoire parent au chemin de recherche des modules
 current_dir = Path(__file__).parent
@@ -17,11 +17,14 @@ parent_dir = current_dir.parent
 if str(parent_dir) not in sys.path:
     sys.path.append(str(parent_dir))
 
-# Charger les variables d'environnement
-load_dotenv(override=True)
-
 # Importer les modules nécessaires
+# L'import de settings gère le .env
+from argumentation_analysis.config.settings import settings
 from argumentation_analysis.ui.config import CONFIG_FILE_ENC
+from argumentation_analysis.paths import DATA_DIR
+
+# Afficher les chemins pour le débogage
+print(f"Chemin du fichier encrypté: {CONFIG_FILE_ENC}")
 
 # Importer les fonctions des autres scripts
 from create_complete_encrypted_config import create_complete_encrypted_config
@@ -31,9 +34,9 @@ def main():
     """Fonction principale."""
     print("\n=== Création, vérification et archivage du fichier encrypté complet ===\n")
     
-    # Vérifier si la variable d'environnement TEXT_CONFIG_PASSPHRASE est définie
-    if not os.getenv("TEXT_CONFIG_PASSPHRASE"):
-        print(f"⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie.")
+    # Vérifier si la passphrase est définie dans la configuration
+    if not settings.passphrase:
+        print(f"⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie dans votre .env ou configuration.")
         print(f"   Veuillez la définir avant d'exécuter ce script.")
         sys.exit(1)
     
@@ -58,7 +61,7 @@ def main():
     time.sleep(2)
     
     # Créer un répertoire temporaire pour la vérification
-    temp_cache_dir = TEXT_CACHE_DIR = parent_dir / "text_cache"
+    temp_cache_dir = parent_dir / "text_cache"
     
     # Sauvegarder le répertoire de cache original
     original_cache_dir = parent_dir / "text_cache_original"
@@ -82,7 +85,6 @@ def main():
         if original_cache_dir.exists():
             if temp_cache_dir.exists():
                 try:
-                    import shutil
                     shutil.rmtree(temp_cache_dir)
                 except Exception:
                     pass
@@ -113,7 +115,6 @@ def main():
         # Supprimer le répertoire de cache
         if temp_cache_dir.exists():
             try:
-                import shutil
                 shutil.rmtree(temp_cache_dir)
                 print(f"[OK] Répertoire de cache '{temp_cache_dir}' supprimé.")
             except Exception as e:
@@ -122,7 +123,6 @@ def main():
         # Supprimer le répertoire de cache original
         if original_cache_dir.exists():
             try:
-                import shutil
                 shutil.rmtree(original_cache_dir)
                 print(f"[OK] Répertoire de cache original '{original_cache_dir}' supprimé.")
             except Exception as e:
@@ -145,10 +145,6 @@ def main():
         if original_cache_dir.exists():
             if temp_cache_dir.exists():
                 try:
-                    import shutil
-
-from argumentation_analysis.paths import DATA_DIR
-
                     shutil.rmtree(temp_cache_dir)
                 except Exception:
                     pass

@@ -1,0 +1,11 @@
+{
+  "agents": [
+    {"name": "A1", "personality": "stubborn", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"]},
+    {"name": "A2", "personality": "stubborn", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"]},
+    {"name": "B1", "personality": "stubborn", "preferences": ["B", "C", "A"], "options": ["A", "B", "C"]},
+    {"name": "B2", "personality": "stubborn", "preferences": ["B", "C", "A"], "options": ["A", "B", "C"]},
+    {"name": "C1", "personality": "stubborn", "preferences": ["C", "A", "B"], "options": ["A", "B", "C"]}
+  ],
+  "options": ["A", "B", "C"],
+  "context": {"description": "Spoiler candidate: C splits the vote, changing the winner for plurality/majority but not Borda/Condorcet."}
+} 

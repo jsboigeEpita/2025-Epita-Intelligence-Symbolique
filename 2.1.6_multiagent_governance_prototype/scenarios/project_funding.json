@@ -1,0 +1,13 @@
+{
+  "agents": [
+    {"name": "P1", "personality": "strategic", "preferences": ["ProjA", "ProjB", "ProjC", "ProjD"], "options": ["ProjA", "ProjB", "ProjC", "ProjD"]},
+    {"name": "P2", "personality": "flexible", "preferences": ["ProjB", "ProjA", "ProjD", "ProjC"], "options": ["ProjA", "ProjB", "ProjC", "ProjD"]},
+    {"name": "P3", "personality": "stubborn", "preferences": ["ProjC", "ProjD", "ProjA", "ProjB"], "options": ["ProjA", "ProjB", "ProjC", "ProjD"]},
+    {"name": "P4", "personality": "random", "preferences": ["ProjD", "ProjC", "ProjB", "ProjA"], "options": ["ProjA", "ProjB", "ProjC", "ProjD"]},
+    {"name": "P5", "personality": "flexible", "preferences": ["ProjA", "ProjC", "ProjB", "ProjD"], "options": ["ProjA", "ProjB", "ProjC", "ProjD"]},
+    {"name": "P6", "personality": "strategic", "preferences": ["ProjB", "ProjD", "ProjA", "ProjC"], "options": ["ProjA", "ProjB", "ProjC", "ProjD"]},
+    {"name": "P7", "personality": "stubborn", "preferences": ["ProjD", "ProjB", "ProjC", "ProjA"], "options": ["ProjA", "ProjB", "ProjC", "ProjD"]}
+  ],
+  "options": ["ProjA", "ProjB", "ProjC", "ProjD"],
+  "context": {"description": "7 agents, 4 options, preferences based on project impact. Real-world funding."}
+} 

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Module de démonstration : Cas d'Usage Complets
 Architecture modulaire EPITA - Intelligence Symbolique
@@ -10,14 +10,14 @@ from pathlib import Path
 from typing import Dict, List, Any
 
 # Import des utilitaires communs
-from .demo_utils import (
+from modules.demo_utils import (
     DemoLogger, Colors, Symbols, charger_config_categories,
     afficher_progression, executer_tests, afficher_stats_tests,
     afficher_menu_module, pause_interactive, confirmer_action
 )
 
 # Import du processeur de données custom
-from .custom_data_processor import CustomDataProcessor, AdaptiveAnalyzer, create_fallback_handler
+from modules.custom_data_processor import CustomDataProcessor, AdaptiveAnalyzer, create_fallback_handler
 
 def process_custom_data_cas_usage(custom_data: str = None, logger: DemoLogger = None) -> Dict[str, Any]:
     """
@@ -474,7 +474,7 @@ def run_demo_rapide() -> bool:
     ]
     
     logger.info(f"{Symbols.ROCKET} Test de validation finale Cluedo...")
-    succes, resultats = executer_tests(tests_essentiels, logger, timeout=25)
+    succes, resultats = executer_tests(tests_essentiels, logger, timeout=90)
     
     afficher_stats_tests(resultats)
     

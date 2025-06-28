@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # -*- coding: utf-8 -*-
 """
 Tests unitaires pour les utilitaires système de project_core.
@@ -5,10 +12,11 @@ Tests unitaires pour les utilitaires système de project_core.
 import pytest
 from pathlib import Path
 import subprocess
-from unittest.mock import patch, MagicMock
 
-from argumentation_analysis.utils.core_utils.system_utils import run_shell_command
 
+from unittest.mock import MagicMock, patch
+from argumentation_analysis.core.utils.system_utils import run_shell_command
+ 
 @pytest.fixture
 def mock_subprocess_run():
     """Fixture pour mocker subprocess.run."""

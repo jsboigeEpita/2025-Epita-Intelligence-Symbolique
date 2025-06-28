@@ -1,3 +1,4 @@
+import pytest
 #!/usr/bin/env python3
 """
 Script de test simplifie pour Phase C : Optimisation fluidite transitions.
@@ -17,6 +18,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+@pytest.mark.asyncio
 async def test_phase_c_simple():
     """
     Test simple de la Phase C avec mémoire contextuelle.

@@ -1,3 +1,4 @@
+import pytest
 #!/usr/bin/env python3
 """
 Test simple Phase D : Validation basique des nouvelles fonctionnalités (version fixée).
@@ -10,6 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.asyncio
 async def test_phase_d_simple():
     """Test simple des fonctionnalités Phase D."""
     print("DEBUT TEST PHASE D SIMPLE")

@@ -1,10 +1,14 @@
 """
-Agent de Synthèse Unifié - Phase 1 : SynthesisAgent Core
+Agent de Synthèse qui orchestre les analyses et unifie les résultats.
 
-Ce module implémente la première phase de l'architecture progressive de l'Agent de Synthèse,
-qui coordonne les analyses formelles et informelles existantes sans les modifier.
+Ce module définit le `SynthesisAgent`, un agent de haut niveau dont le rôle
+est de coordonner les analyses logiques (formelles) et rhétoriques (informelles)
+d'un texte donné. Il invoque les agents spécialisés, recueille leurs
+résultats, et les consolide dans un `UnifiedReport` unique et cohérent.
 
-Architecture conforme à docs/synthesis_agent_architecture.md - Phase 1.
+L'agent est conçu avec une architecture progressive (par "phases") pour
+permettre des améliorations futures (gestion des conflits, etc.). La version
+actuelle représente la Phase 1 : coordination et rapport.
 """
 
 import asyncio
@@ -20,30 +24,37 @@ from .data_models import LogicAnalysisResult, InformalAnalysisResult, UnifiedRep
 
 class SynthesisAgent(BaseAgent):
     """
-    Agent de synthèse avec architecture progressive.
-    
-    Phase 1: Coordination basique des agents existants sans modules avancés.
-    Peut être étendu dans les phases futures avec des modules optionnels.
-    
+    Orchestre les analyses formelles et informelles pour produire un rapport unifié.
+
+    En tant qu'agent de haut niveau, il ne réalise pas d'analyse primaire lui-même.
+    Son rôle est de :
+    1.  Invoquer les agents d'analyse spécialisés (logique, informel).
+    2.  Exécuter leurs analyses en parallèle pour plus d'efficacité.
+    3.  Agréger les résultats structurés (`LogicAnalysisResult`, `InformalAnalysisResult`).
+    4.  Générer une synthèse, évaluer la cohérence et produire un `UnifiedReport`.
+
     Attributes:
-        enable_advanced_features (bool): Active/désactive les modules avancés (Phase 2+)
-        _logic_agents_cache (Dict): Cache des agents logiques créés
-        _informal_agent (Optional[InformalAgent]): Agent d'analyse informelle
+        enable_advanced_features (bool): Drapeau pour activer les fonctionnalités
+            des phases futures (non implémentées en Phase 1).
+        _logic_agents_cache (Dict[str, Any]): Cache pour les instances des agents logiques.
+        _informal_agent (Optional[Any]): Instance de l'agent d'analyse informelle.
+        _llm_service_id (str): ID du service LLM utilisé pour les fonctions sémantiques.
     """
-    
+
     def __init__(
-        self, 
-        kernel: Kernel, 
+        self,
+        kernel: Kernel,
         agent_name: str = "SynthesisAgent",
         enable_advanced_features: bool = False
     ):
         """
         Initialise le SynthesisAgent.
-        
+
         Args:
-            kernel: Le kernel Semantic Kernel à utiliser
-            agent_name: Nom de l'agent (défaut: "SynthesisAgent")  
-            enable_advanced_features: Active les modules avancés (Phase 2+, défaut: False)
+            kernel (Kernel): L'instance du kernel Semantic Kernel.
+            agent_name (str): Le nom de l'agent.
+            enable_advanced_features (bool): Si `True`, tentera d'utiliser des
+                fonctionnalités avancées (non disponibles en Phase 1).
         """
         system_prompt = self._get_synthesis_system_prompt()
         super().__init__(kernel, agent_name, system_prompt)
@@ -90,15 +101,19 @@ class SynthesisAgent(BaseAgent):
     
     async def synthesize_analysis(self, text: str) -> UnifiedReport:
         """
-        Point d'entrée principal pour la synthèse d'analyse.
-        
-        Mode simple (Phase 1) ou avancé selon la configuration.
-        
+        Point d'entrée principal pour lancer une analyse complète et une synthèse.
+
+        Cette méthode exécute l'ensemble du pipeline d'analyse :
+        - Orchestration des analyses parallèles.
+        - Synthèse des résultats.
+        - Calcul du temps total de traitement.
+
         Args:
-            text: Le texte à analyser
-            
+            text (str): Le texte source à analyser.
+
         Returns:
-            UnifiedReport: Rapport unifié des analyses
+            UnifiedReport: L'objet `UnifiedReport` complet contenant tous les
+                résultats et la synthèse.
         """
         self._logger.info(f"Début de la synthèse d'analyse (texte: {len(text)} caractères)")
         start_time = time.time()
@@ -123,13 +138,18 @@ class SynthesisAgent(BaseAgent):
     
     async def orchestrate_analysis(self, text: str) -> Tuple[LogicAnalysisResult, InformalAnalysisResult]:
         """
-        Orchestre les analyses formelles et informelles en parallèle.
-        
+        Lance et coordonne les analyses formelles et informelles en parallèle.
+
+        Utilise `asyncio.gather` pour exécuter simultanément les analyses logiques
+        et informelles, optimisant ainsi le temps d'exécution.
+
         Args:
-            text: Le texte à analyser
-            
+            text (str): Le texte à analyser.
+
         Returns:
-            Tuple des résultats d'analyses logique et informelle
+            A tuple containing the `LogicAnalysisResult` and `InformalAnalysisResult`.
+            En cas d'erreur dans une des analyses, un objet de résultat vide
+            est retourné pour cette analyse.
         """
         self._logger.info("Orchestration des analyses formelles et informelles")
         
@@ -162,15 +182,19 @@ class SynthesisAgent(BaseAgent):
         original_text: str
     ) -> UnifiedReport:
         """
-        Unifie les résultats des analyses en un rapport cohérent.
-        
+        Combine les résultats bruts en un rapport unifié et synthétisé.
+
+        Cette méthode prend les résultats des analyses logiques et informelles
+        et les utilise pour peupler un `UnifiedReport`. Elle génère également
+        des métriques et des synthèses de plus haut niveau.
+
         Args:
-            logic_result: Résultats de l'analyse logique
-            informal_result: Résultats de l'analyse informelle
-            original_text: Texte original analysé
-            
+            logic_result (LogicAnalysisResult): Les résultats de l'analyse formelle.
+            informal_result (InformalAnalysisResult): Les résultats de l'analyse informelle.
+            original_text (str): Le texte original pour référence dans le rapport.
+
         Returns:
-            UnifiedReport: Rapport unifié
+            UnifiedReport: Le rapport unifié, prêt à être formaté ou utilisé.
         """
         self._logger.info("Unification des résultats d'analyses")
         
@@ -209,13 +233,13 @@ class SynthesisAgent(BaseAgent):
     
     async def generate_report(self, unified_report: UnifiedReport) -> str:
         """
-        Génère un rapport textuel lisible à partir du rapport unifié.
-        
+        Formate un objet `UnifiedReport` en un rapport textuel lisible (Markdown).
+
         Args:
-            unified_report: Le rapport unifié structuré
-            
+            unified_report (UnifiedReport): L'objet rapport structuré.
+
         Returns:
-            str: Rapport formaté en texte lisible
+            str: Une chaîne de caractères formatée en Markdown représentant le rapport.
         """
         self._logger.info("Génération du rapport textuel")
         
@@ -225,6 +249,12 @@ class SynthesisAgent(BaseAgent):
         report_sections.append("# RAPPORT DE SYNTHÈSE UNIFIÉ")
         report_sections.append(f"Généré le: {unified_report.synthesis_timestamp}")
         report_sections.append(f"Version: {unified_report.synthesis_version}")
+        report_sections.append("")
+
+        # Texte Original Analysé
+        report_sections.append("## TEXTE ORIGINAL ANALYSÉ")
+        # Utilisation d'un bloc de citation pour une meilleure lisibilité
+        report_sections.append(f"> {unified_report.original_text}")
         report_sections.append("")
         
         # Résumé exécutif
@@ -380,17 +410,17 @@ class SynthesisAgent(BaseAgent):
         # Pour la Phase 1, on simule les agents logiques
         self._logger.info(f"Simulation agent logique: {logic_type}")
         if logic_type not in self._logic_agents_cache:
-            # Créer un agent simulé
-            self._logic_agents_cache[logic_type] = MockLogicAgent(logic_type)
+            # MOCK ÉLIMINÉ PHASE 3 - FORCER ERREUR RÉELLE
+            raise NotImplementedError(f"MockLogicAgent éliminé - implémenter agent authentique {logic_type}")
         
         return self._logic_agents_cache.get(logic_type)
     
     def _get_informal_agent(self):
         """Récupère ou crée l'agent d'analyse informelle (simulation Phase 1)."""
         if self._informal_agent is None:
-            # Pour la Phase 1, on simule l'agent informel
-            self._logger.info("Simulation agent informel")
-            self._informal_agent = MockInformalAgent()
+            # MOCK ÉLIMINÉ PHASE 3 - FORCER ERREUR RÉELLE
+            self._logger.error("MockInformalAgent éliminé")
+            raise NotImplementedError("MockInformalAgent éliminé - implémenter agent authentique")
         
         return self._informal_agent
     
@@ -572,67 +602,22 @@ class SynthesisAgent(BaseAgent):
         la spécificité de chaque type d'analyse tout en créant une vue d'ensemble cohérente."""
     
     # Méthodes abstraites de BaseAgent
+    async def invoke_single(self, text: str, **kwargs) -> UnifiedReport:
+        """
+        Exécute la logique principale de l'agent (synthèse) et retourne une réponse unique.
+        Implémentation de la méthode abstraite de BaseAgent.
+        """
+        self._logger.debug(f"invoking SynthesisAgent with text: {text[:80]}...")
+        return await self.synthesize_analysis(text)
+
     async def get_response(self, *args, **kwargs):
         """Implémentation de la méthode abstraite get_response."""
         if args and isinstance(args[0], str):
-            report = await self.synthesize_analysis(args[0])
+            report = await self.invoke_single(args[0])
             return await self.generate_report(report)
         return "Usage: fournir un texte à analyser"
-    
-    async def invoke(self, *args, **kwargs):
-        """Implémentation de la méthode abstraite invoke."""
-        return await self.get_response(*args, **kwargs)
-    
-    async def invoke_stream(self, *args, **kwargs):
-        """Implémentation de la méthode abstraite invoke_stream."""
-        result = await self.invoke(*args, **kwargs)
-        # Simulation d'un stream pour la compatibilité
-        yield result
 # =====================================
-# Classes Mock pour Phase 1 (simulation)
+# MOCKS ÉLIMINÉS PHASE 3 - ZÉRO TOLÉRANCE
 # =====================================
-
-class MockLogicAgent:
-    """Agent logique simulé pour la Phase 1."""
-    
-    def __init__(self, logic_type: str):
-        self.logic_type = logic_type
-        
-    async def analyze_text(self, text: str) -> str:
-        """Simulation d'analyse logique."""
-        if self.logic_type == "propositional":
-            return f"Analyse PL simulée: Structure logique basique détectée dans '{text[:50]}...'"
-        elif self.logic_type == "first_order":
-            return f"Analyse FOL simulée: Prédicats et quantificateurs analysés dans '{text[:50]}...'"
-        elif self.logic_type == "modal":
-            return f"Analyse ML simulée: Modalités nécessité/possibilité évaluées dans '{text[:50]}...'"
-        else:
-            return f"Analyse {self.logic_type} simulée pour '{text[:50]}...'"
-
-
-class MockInformalAgent:
-    """Agent informel simulé pour la Phase 1."""
-    
-    async def analyze_text(self, text: str) -> dict:
-        """Simulation d'analyse informelle."""
-        # Simulation basique de détection de sophismes
-        fallacies = []
-        if "absolument" in text.lower() or "évident" in text.lower():
-            fallacies.append({
-                "type": "assertion_non_fondée",
-                "confidence": 0.7,
-                "description": "Assertion présentée comme évidente sans justification"
-            })
-        
-        if "tout le monde sait" in text.lower():
-            fallacies.append({
-                "type": "appel_au_sens_commun",
-                "confidence": 0.8,
-                "description": "Appel non justifié au sens commun"
-            })
-        
-        return {
-            "fallacies": fallacies,
-            "structure": f"Analyse rhétorique simulée: {len(text)} caractères analysés",
-            "devices": ["assertion", "argumentation"] if len(text) > 50 else ["assertion"]
-        }
+# Classes Mock supprimées brutalement selon consignes élimination
+# Utiliser agents authentiques au lieu de masquer avec mocks

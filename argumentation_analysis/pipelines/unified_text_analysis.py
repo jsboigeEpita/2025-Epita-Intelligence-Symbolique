@@ -1,19 +1,53 @@
 ﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Pipeline unifié d'analyse textuelle - Refactorisation d'analyze_text.py
-=======================================================================
+"""Pipeline orchestrateur d'analyse textuelle unifiée.
 
-Ce pipeline consolide et refactorise les fonctionnalités du script principal
-analyze_text.py en composant réutilisable intégré à l'architecture pipeline.
+Objectif:
+    Ce module fournit un pipeline complet et configurable pour l'analyse
+    argumentative d'un texte. Il agit comme le point d'entrée principal,
+    remplaçant et structurant la logique anciennement dans `analyze_text.py`.
+    Il orchestre divers modes d'analyse (informel, formel, unifié) et peut
+    s'interfacer avec différents moteurs d'orchestration pour des analyses
+    plus complexes et conversationnelles.
 
-Fonctionnalités unifiées :
-- Configuration d'analyse avancée (AnalysisConfig)
-- Analyseur de texte unifié (UnifiedTextAnalyzer) 
-- Intégration avec orchestrateurs existants
-- Support analyses informelle/formelle/unifiée
-- Compatibilité avec l'écosystème pipeline
+Données d'entrée:
+    - `text` (str): Le contenu textuel brut à analyser.
+    - `config` (UnifiedAnalysisConfig): Objet de configuration spécifiant
+      les modes d'analyse, le type d'orchestration, l'utilisation de mocks,
+      et d'autres paramètres avancés.
+
+Étapes (Processeurs):
+    1.  **Initialisation**: La classe `UnifiedTextAnalysisPipeline` initialise
+        tous les composants requis en fonction de la configuration :
+        -   Initialisation de la JVM (si analyse formelle requise).
+        -   Création du service LLM (connexion à l'API).
+        -   Instanciation de l'orchestrateur (si mode `real` ou `conversation`).
+        -   Chargement des outils d'analyse (ex: `EnhancedComplexFallacyAnalyzer`).
+    2.  **Exécution de l'analyse**: La méthode `analyze_text_unified` exécute
+        les analyses sélectionnées dans la configuration :
+        -   `_perform_informal_analysis`: Détecte les sophismes en utilisant
+          les outils d'analyse.
+        -   `_perform_formal_analysis`: Convertit le texte en un ensemble de
+          croyances logiques et vérifie la cohérence (nécessite la JVM).
+        -   `_perform_unified_analysis`: Utilise un `SynthesisAgent` pour
+          créer un rapport combinant les différentes facettes de l'analyse.
+        -   `_perform_orchestration_analysis`: Délègue l'analyse à un
+          orchestrateur plus complexe pour une interaction multi-agents.
+    3.  **Génération de recommandations**: Synthétise les résultats pour
+        fournir des recommandations actionnables.
+    4.  **Logging**: Capture un log détaillé de la conversation si configuré.
+
+Artefacts produits:
+    - Un dictionnaire de résultats complet contenant :
+        - `metadata`: Informations sur l'exécution de l'analyse.
+        - `informal_analysis`: Résultats de la détection de sophismes.
+        - `formal_analysis`: Résultats de l'analyse logique (cohérence, etc.).
+        - `unified_analysis`: Rapport de synthèse de l'agent dédié.
+        - `orchestration_analysis`: Résultats de l'orchestrateur avancé.
+        - `recommendations`: Liste de conseils basés sur l'analyse.
+        - `conversation_log`: Log des interactions entre agents.
+        - `execution_time`: Temps total de l'analyse.
 """
 
 import asyncio
@@ -174,45 +208,32 @@ class UnifiedTextAnalysisPipeline:
         """Initialise les outils d'analyse selon la configuration."""
         logger.info("[TOOLS] Initialisation des outils d'analyse...")
         
+        # PHASE 2: Mocks éliminés - utilisation exclusive des outils réels
         if self.config.use_mocks:
-            logger.info("[TOOLS] Utilisation des outils d'analyse simules")
-            from argumentation_analysis.mocks.analysis_tools import (
-                MockContextualFallacyDetector,
-                MockArgumentCoherenceEvaluator,
-                MockSemanticArgumentAnalyzer
+            logger.warning("use_mocks=True demandé mais les mocks ont été éliminés en Phase 2")
+            logger.info("Forçage de l'utilisation des outils réels")
+        
+        logger.info("[TOOLS] Utilisation des outils d'analyse réels uniquement")
+        
+        # Pas de try/except - on laisse les vraies erreurs apparaître
+        self.analysis_tools = {
+            "contextual_analyzer": EnhancedContextualFallacyAnalyzer(),
+            "complex_analyzer": EnhancedComplexFallacyAnalyzer(),
+            "severity_evaluator": EnhancedFallacySeverityEvaluator()
+        }
+        
+        # SynthesisAgent pour analyse unifiée
+        if self.llm_service and "unified" in self.config.analysis_modes:
+            kernel = sk.Kernel()
+            kernel.add_service(self.llm_service)
+            self.analysis_tools["synthesis_agent"] = SynthesisAgent(
+                kernel=kernel,
+                agent_name="UnifiedPipeline_SynthesisAgent",
+                enable_advanced_features=self.config.use_advanced_tools
             )
-            
-            self.analysis_tools = {
-                "fallacy_detector": MockContextualFallacyDetector(),
-                "coherence_evaluator": MockArgumentCoherenceEvaluator(),
-                "semantic_analyzer": MockSemanticArgumentAnalyzer(),
-            }
-        else:
-            logger.info("[TOOLS] Utilisation des outils d'analyse reels")
-            try:
-                self.analysis_tools = {
-                    "contextual_analyzer": EnhancedContextualFallacyAnalyzer(),
-                    "complex_analyzer": EnhancedComplexFallacyAnalyzer(),
-                    "severity_evaluator": EnhancedFallacySeverityEvaluator()
-                }
-                
-                # SynthesisAgent pour analyse unifiée
-                if self.llm_service and "unified" in self.config.analysis_modes:
-                    kernel = sk.Kernel()
-                    kernel.add_service(self.llm_service)
-                    self.analysis_tools["synthesis_agent"] = SynthesisAgent(
-                        kernel=kernel,
-                        agent_name="UnifiedPipeline_SynthesisAgent",
-                        enable_advanced_features=self.config.use_advanced_tools
-                    )
-                    self.analysis_tools["synthesis_agent"].setup_agent_components(self.llm_service.service_id)
-                
-                logger.info("[TOOLS] Outils d'analyse reels initialises")
-            except Exception as e:
-                logger.error(f"[TOOLS] Erreur initialisation outils reels: {e}")
-                logger.warning("[TOOLS] Basculement vers les mocks")
-                self.config.use_mocks = True
-                await self._initialize_analysis_tools()  # Récursion avec mocks
+            self.analysis_tools["synthesis_agent"].setup_agent_components(self.llm_service.service_id)
+        
+        logger.info("[TOOLS] Outils d'analyse réels initialisés avec succès")
     
     async def analyze_text_unified(self, 
                                    text: str, 
@@ -306,12 +327,10 @@ class UnifiedTextAnalysisPipeline:
             if contextual_analyzer:
                 # Analyse contextuelle des sophismes
                 context_text = text[:500] + "..." if len(text) > 500 else text
-                sample_context = {"text": context_text, "context_type": "sample_for_analysis"}
                 
-                contextual_fallacies = contextual_analyzer.detect_fallacies_with_context(
-                    text,
-                    sample_context,
-                    include_confidence=True
+                contextual_fallacies = contextual_analyzer.identify_contextual_fallacies(
+                    argument=text,
+                    context="sample_for_analysis"
                 )
                 
                 # Format des sophismes détectés
@@ -328,6 +347,7 @@ class UnifiedTextAnalysisPipeline:
                 
                 # Évaluation de la sévérité si disponible
                 if severity_evaluator:
+                    sample_context = {"text": text[:500], "context_type": "sample_for_analysis"}
                     evaluation = severity_evaluator.evaluate_fallacy_list(contextual_fallacies, sample_context)
                     informal_results["fallacies"] = evaluation.get("fallacy_evaluations", contextual_fallacies)
                 else:
@@ -437,20 +457,22 @@ class UnifiedTextAnalysisPipeline:
         try:
             # Analyse unifiée avec le SynthesisAgent
             synthesis_result = await synthesis_agent.synthesize_analysis(
-                text_input=text,
-                context={"source": "unified_pipeline", "timestamp": datetime.now().isoformat()}
+                text=text
             )
             
-            if synthesis_result and synthesis_result.get("status") == "success":
+            if synthesis_result:
                 unified_results.update({
                     "status": "Success",
-                    "synthesis_report": synthesis_result.get("synthesis", ""),
-                    "combined_insights": synthesis_result.get("insights", []),
-                    "meta_analysis": synthesis_result.get("meta_analysis", {})
+                    "synthesis_report": synthesis_result.executive_summary,
+                    "combined_insights": synthesis_result.recommendations,
+                    "meta_analysis": {
+                        "overall_validity": synthesis_result.overall_validity,
+                        "confidence_level": synthesis_result.confidence_level
+                    }
                 })
             else:
                 unified_results["status"] = "Failed"
-                unified_results["reason"] = synthesis_result.get("error", "Erreur inconnue")
+                unified_results["reason"] = "L'analyse de synthèse n'a retourné aucun résultat."
                 
         except Exception as e:
             logger.error(f"Erreur analyse unifiée: {e}")

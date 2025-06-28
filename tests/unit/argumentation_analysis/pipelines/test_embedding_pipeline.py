@@ -1,8 +1,15 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # tests/unit/argumentation_analysis/pipelines/test_embedding_pipeline.py
 import pytest
 import json
 from pathlib import Path
-from unittest.mock import patch, MagicMock, ANY
+
 
 from argumentation_analysis.pipelines.embedding_pipeline import run_embedding_generation_pipeline, PROJECT_ROOT
 
@@ -15,7 +22,7 @@ UI_CONFIG_PATH = "argumentation_analysis.ui.config" # For ENCRYPTION_KEY
 #     # Les tests utilisant cette fixture devront être adaptés ou commentés.
 #     # with patch(f"{MODULE_PATH}.load_documents_from_file") as mock:
 #     #     yield mock
-#     yield MagicMock() # Retourne un mock simple pour l'instant pour éviter des erreurs si la fixture est appelée
+#     yield Magicawait self._create_authentic_gpt4o_mini_instance() # Retourne un mock simple pour l'instant pour éviter des erreurs si la fixture est appelée
 
 @pytest.fixture
 def mock_load_json_file():

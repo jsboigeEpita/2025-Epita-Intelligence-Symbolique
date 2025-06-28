@@ -1,86 +1,108 @@
-param (
-    [string]$CommandToRun = "", # Commande à exécuter après activation
-    [switch]$Help,              # Afficher l'aide
-    [switch]$Status,            # Vérifier le statut environnement
-    [switch]$Setup              # Configuration initiale
-)
+#!/usr/bin/env pwsh
+<#
+.SYNOPSIS
+    Crée ou recrée complètement l'environnement Conda du projet.
+.DESCRIPTION
+    Ce script assure une installation propre de l'environnement 'projet-is-v2'
+    en utilisant le fichier 'environment.yml' comme seule source de vérité.
+    Il supprime d'abord tout environnement existant du même nom pour éviter
+    les conflits.
+.NOTES
+    Auteur: Roo
+    Date: 25/06/2025
+    Raison: Stratégie de dépendances unifiée pour garantir la stabilité.
+#>
 
-# Bannière d'information
-Write-Host "🚀 =================================================================" -ForegroundColor Green
-Write-Host "🚀 ORACLE ENHANCED v2.1.0 - Environnement Dédié" -ForegroundColor Green
-Write-Host "🚀 =================================================================" -ForegroundColor Green
+# --- Configuration ---
+$EnvName = python -m project_core.core_from_scripts.environment_manager get-env-name
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "[ERREUR] Impossible de récupérer le nom de l'environnement à partir du manager Python." -ForegroundColor Red
+    exit 1
+}
+$EnvironmentFile = "environment.yml"
 
-# Gestion des paramètres spéciaux
-if ($Help) {
-    Write-Host @"
-💡 UTILISATION DU SCRIPT PRINCIPAL:
+# --- Bannière ---
+Write-Host "--- Configuration de l'environnement Conda '$EnvName' ---" -ForegroundColor Green
 
-🔍 VÉRIFICATIONS:
-   .\setup_project_env.ps1 -Status
-   .\setup_project_env.ps1 -CommandToRun 'python scripts/env/check_environment.py'
-
-🚀 EXÉCUTION DE COMMANDES:
-   .\setup_project_env.ps1 -CommandToRun 'python demos/webapp/run_webapp.py'
-   .\setup_project_env.ps1 -CommandToRun 'python -m pytest tests/unit/ -v'
-   .\setup_project_env.ps1 -CommandToRun 'python scripts/sherlock_watson/run_sherlock_watson_moriarty_robust.py'
-
-🔧 CONFIGURATION:
-   .\setup_project_env.ps1 -Setup
-   .\setup_project_env.ps1 -CommandToRun 'python scripts/env/manage_environment.py setup'
-
-📚 DOCUMENTATION:
-   Voir: ENVIRONMENT_SETUP.md
-   Voir: CORRECTED_RECOMMENDATIONS.md
-
-⚠️  IMPORTANT: Ce script active automatiquement l'environnement dédié 'projet-is'
-"@ -ForegroundColor Cyan
-    exit 0
+# 1. Tenter de supprimer l'environnement s'il existe pour garantir une installation propre.
+Write-Host "[INFO] Vérification et suppression de l'ancien environnement '$EnvName' si présent..." -ForegroundColor Yellow
+try {
+    # Obtenir la liste des environnements et vérifier si le nôtre existe
+    $envList = conda env list | Out-String
+    if ($envList -match "\s$EnvName\s") {
+        Write-Host "Environnement '$EnvName' trouvé. Tentative de suppression..."
+        conda env remove -n $EnvName --yes
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[AVERTISSEMENT] La suppression de l'environnement a échoué. Il est possible qu'un processus l'utilise encore." -ForegroundColor Red
+        } else {
+            Write-Host "[INFO] Ancien environnement '$EnvName' supprimé." -ForegroundColor Green
+        }
+    } else {
+        Write-Host "[INFO] Pas d'environnement existant '$EnvName' trouvé." -ForegroundColor Gray
+    }
+}
+catch {
+    Write-Host "[AVERTISSEMENT] Une erreur est survenue lors de la tentative de suppression de l'environnement. Le script va continuer." -ForegroundColor Yellow
 }
 
-if ($Status) {
-    Write-Host "🔍 Vérification rapide du statut environnement..." -ForegroundColor Cyan
-    $CommandToRun = "python scripts/env/check_environment.py"
+# 2. Création de l'environnement à partir du fichier YAML
+Write-Host "[INFO] Création du nouvel environnement '$EnvName' à partir de '$EnvironmentFile'." -ForegroundColor Green
+try {
+    # Utiliser mamba si disponible, sinon conda
+    $PackageManager = "conda"
+    Write-Host "[INFO] Utilisation de '$PackageManager' pour la création de l'environnement."
+    
+    & $PackageManager env create --file $EnvironmentFile --name $EnvName
+    
+    if ($LASTEXITCODE -ne 0) {
+        throw "La création de l'environnement avec $PackageManager a échoué."
+    }
+    Write-Host "[SUCCÈS] L'environnement Conda '$EnvName' a été créé." -ForegroundColor Green
 }
-
-if ($Setup) {
-    Write-Host "🔧 Configuration initiale de l'environnement..." -ForegroundColor Cyan
-    $CommandToRun = "python scripts/env/manage_environment.py setup"
-}
-
-# Vérifications préliminaires
-if ([string]::IsNullOrEmpty($CommandToRun)) {
-    Write-Host "❌ Aucune commande spécifiée!" -ForegroundColor Red
-    Write-Host "💡 Utilisez: .\setup_project_env.ps1 -Help pour voir les options" -ForegroundColor Yellow
-    Write-Host "💡 Exemple: .\setup_project_env.ps1 -CommandToRun 'python --version'" -ForegroundColor Yellow
-    Write-Host "💡 Status: .\setup_project_env.ps1 -Status" -ForegroundColor Yellow
+catch {
+    Write-Host "[ERREUR] Une erreur critique est survenue lors de la création de l'environnement." -ForegroundColor Red
+    Write-Host "Message: $($_.Exception.Message)"
     exit 1
 }
 
-# Information sur l'environnement requis
-Write-Host "🎯 [INFO] Environnement cible: conda 'projet-is'" -ForegroundColor Cyan
-Write-Host "📋 [COMMANDE] $CommandToRun" -ForegroundColor Cyan
+# 3. Écriture du fichier de configuration .env
+Write-Host "[INFO] Création du fichier de configuration .env..." -ForegroundColor Green
+$EnvFile = Join-Path $PSScriptRoot ".env"
+try {
+    # On met une petite pause pour s'assurer que les handle de fichier de conda/pip sont libérés
+    Start-Sleep -Seconds 2
 
-# Raccourci vers le script de setup principal
-$realScriptPath = Join-Path $PSScriptRoot "scripts\env\activate_project_env.ps1"
-
-if (!(Test-Path $realScriptPath)) {
-    Write-Host "❌ [ERREUR] Script d'activation non trouvé: $realScriptPath" -ForegroundColor Red
-    Write-Host "💡 Vérifiez l'intégrité du projet" -ForegroundColor Yellow
+    # Supprimer le fichier .env existant pour éviter les problèmes de verrouillage
+    if (Test-Path $EnvFile) {
+        Remove-Item $EnvFile -Force
+    }
+    Set-Content -Path $EnvFile -Value "CONDA_ENV_NAME=$EnvName" -Encoding UTF8
+    Write-Host "[SUCCÈS] Le fichier '$EnvFile' a été créé/mis à jour." -ForegroundColor Green
+}
+catch {
+    Write-Host "[ERREUR] Impossible d'écrire dans le fichier '$EnvFile'." -ForegroundColor Red
     exit 1
 }
 
-& $realScriptPath -CommandToRun $CommandToRun
-$exitCode = $LASTEXITCODE
-
-# Message final informatif
-Write-Host ""
-Write-Host "🏁 =================================================================" -ForegroundColor Green
-Write-Host "🏁 EXÉCUTION TERMINÉE - Code de sortie: $exitCode" -ForegroundColor Green
-if ($exitCode -eq 0) {
-    Write-Host "🏁 ✅ SUCCÈS - Environnement dédié opérationnel" -ForegroundColor Green
-} else {
-    Write-Host "🏁 ❌ ÉCHEC - Vérifiez l'environnement avec: .\setup_project_env.ps1 -Status" -ForegroundColor Red
+# 4. Provisioning des outils portables (JDK, etc.)
+Write-Host "[INFO] Lancement du provisioning des outils portables (JDK...)." -ForegroundColor Green
+Write-Host "[INFO] Cela peut prendre quelques minutes lors de la première exécution..." -ForegroundColor Yellow
+try {
+    # On exécute le script Python dans l'environnement fraîchement créé
+    conda run -n $EnvName python scripts/utils/provision_tools.py
+    
+    if ($LASTEXITCODE -ne 0) {
+        throw "Le provisioning des outils a échoué."
+    }
+    Write-Host "[SUCCÈS] Les outils portables ont été installés." -ForegroundColor Green
 }
-Write-Host "🏁 =================================================================" -ForegroundColor Green
+catch {
+    Write-Host "[ERREUR] Une erreur critique est survenue lors du provisioning des outils." -ForegroundColor Red
+    Write-Host "Message: $($_.Exception.Message)"
+    exit 1
+}
 
-exit $exitCode
+# 5. Instructions finales
+Write-Host -f Green "--- Installation terminée ---"
+Write-Host "Pour activer l'environnement, sourcez le script d'activation :"
+Write-Host -f Cyan ". .\activate_project_env.ps1"

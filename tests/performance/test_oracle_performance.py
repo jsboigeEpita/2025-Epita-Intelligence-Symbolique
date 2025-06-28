@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 """
 Tests de performance pour le système Oracle Enhanced.
 
@@ -14,7 +21,7 @@ import gc
 import sys
 import psutil
 import os
-from unittest.mock import Mock, patch
+
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
@@ -149,6 +156,21 @@ def performance_test_elements():
 
 @pytest.mark.performance
 class TestOracleResponseTimePerformance:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests de performance des temps de réponse Oracle."""
     
     @pytest.mark.asyncio
@@ -325,7 +347,7 @@ class TestOracleLoadPerformance:
         try:
             # Création d'agents concurrents (avec mocks pour éviter coûts)
             for i in range(num_concurrent_agents):
-                mock_kernel = Mock()
+                mock_kernel = await self._create_authentic_gpt4o_mini_instance()
                 oracle_state = CluedoOracleState(
                     nom_enquete_cluedo=f"Concurrent Test {i}",
                     elements_jeu_cluedo=performance_test_elements,

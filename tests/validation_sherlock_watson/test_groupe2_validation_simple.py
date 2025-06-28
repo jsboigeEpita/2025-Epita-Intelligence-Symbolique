@@ -1,3 +1,4 @@
+import pytest
 #!/usr/bin/env python3
 """
 Validation specifique des 4 tests du Groupe 2 corriges.
@@ -6,11 +7,12 @@ Validation specifique des 4 tests du Groupe 2 corriges.
 import sys
 import os
 import asyncio
-from unittest.mock import Mock, AsyncMock
+
 
 # Ajouter le dossier racine au path
 sys.path.insert(0, os.path.abspath('.'))
 
+from tests.utils.common_test_helpers import create_authentic_gpt4o_mini_instance
 # Imports necessaires
 from argumentation_analysis.agents.core.oracle.dataset_access_manager import DatasetAccessManager
 from argumentation_analysis.agents.core.oracle.permissions import QueryType, PermissionManager, PermissionRule, OracleResponse
@@ -18,6 +20,7 @@ from argumentation_analysis.agents.core.oracle.oracle_base_agent import OracleBa
 from semantic_kernel.kernel import Kernel
 
 
+@pytest.mark.asyncio
 async def test_validate_agent_permissions_success():
     """Test equivalent a test_validate_agent_permissions_success du fichier original."""
     print("Test Groupe 2-1: test_validate_agent_permissions_success")
@@ -27,7 +30,7 @@ async def test_validate_agent_permissions_success():
     mock_kernel.add_plugin = Mock()
     
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
-    mock_dataset_manager.check_permission = Mock(return_value=True)
+    mock_dataset_manager.check_permission = AsyncMock(return_value=True)
     
     agent_config = {
         "agent_name": "TestOracle",
@@ -49,7 +52,7 @@ async def test_validate_agent_permissions_success():
     )
     
     # Verifications
-    mock_dataset_manager.check_permission.assert_called_once_with(
+    mock_dataset_manager.check_permission.assert_awaited_once_with(
         "Watson",
         QueryType.CARD_INQUIRY
     )
@@ -59,6 +62,7 @@ async def test_validate_agent_permissions_success():
     print("  REUSSI")
 
 
+@pytest.mark.asyncio
 async def test_validate_agent_permissions_failure():
     """Test equivalent a test_validate_agent_permissions_failure du fichier original."""
     print("Test Groupe 2-2: test_validate_agent_permissions_failure")
@@ -68,7 +72,7 @@ async def test_validate_agent_permissions_failure():
     mock_kernel.add_plugin = Mock()
     
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
-    mock_dataset_manager.check_permission = Mock(return_value=False)
+    mock_dataset_manager.check_permission = AsyncMock(return_value=False)
     
     agent_config = {
         "agent_name": "TestOracle",
@@ -97,6 +101,7 @@ async def test_validate_agent_permissions_failure():
     print("  REUSSI")
 
 
+@pytest.mark.asyncio
 async def test_check_agent_permission_success():
     """Test equivalent a test_check_agent_permission_success du fichier original."""
     print("Test Groupe 2-3: test_check_agent_permission_success")
@@ -106,7 +111,7 @@ async def test_check_agent_permission_success():
     mock_kernel.add_plugin = Mock()
     
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
-    mock_dataset_manager.check_permission = Mock(return_value=True)
+    mock_dataset_manager.check_permission = AsyncMock(return_value=True)
     
     agent_config = {
         "agent_name": "TestOracle", 
@@ -130,7 +135,7 @@ async def test_check_agent_permission_success():
     )
     
     # Verifications
-    mock_dataset_manager.check_permission.assert_called_once_with(
+    mock_dataset_manager.check_permission.assert_awaited_once_with(
         "AuthorizedAgent",
         QueryType.CARD_INQUIRY
     )
@@ -139,6 +144,7 @@ async def test_check_agent_permission_success():
     print("  REUSSI")
 
 
+@pytest.mark.asyncio
 async def test_check_agent_permission_failure():
     """Test equivalent a test_check_agent_permission_failure du fichier original."""
     print("Test Groupe 2-4: test_check_agent_permission_failure")
@@ -148,7 +154,7 @@ async def test_check_agent_permission_failure():
     mock_kernel.add_plugin = Mock()
     
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
-    mock_dataset_manager.check_permission = Mock(return_value=False)
+    mock_dataset_manager.check_permission = AsyncMock(return_value=False)
     
     agent_config = {
         "agent_name": "TestOracle",
@@ -178,6 +184,7 @@ async def test_check_agent_permission_failure():
     print("  REUSSI")
 
 
+@pytest.mark.asyncio
 async def main():
     """Fonction principale pour valider les 4 tests du Groupe 2."""
     print("=" * 80)

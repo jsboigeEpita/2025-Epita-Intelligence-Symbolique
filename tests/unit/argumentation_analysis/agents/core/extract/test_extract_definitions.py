@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # -*- coding: utf-8 -*-
 """
 Tests unitaires pour le module extract_definitions.
@@ -8,13 +15,28 @@ agents.core.extract.extract_definitions.
 
 import unittest
 import json
-from unittest.mock import MagicMock, patch
+
 from argumentation_analysis.agents.core.extract.extract_definitions import (
     ExtractResult, ExtractAgentPlugin, ExtractDefinition
 )
 
 
 class TestExtractResult(unittest.TestCase):
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests pour la classe ExtractResult."""
 
     def setUp(self):
@@ -156,17 +178,19 @@ class TestExtractAgentPlugin(unittest.TestCase):
             self.assertIn("position", result)
             self.assertIn("context", result)
 
-    def test_find_similar_markers_with_custom_function(self):
+    async def test_find_similar_markers_with_custom_function(self):
         """Test de la méthode find_similar_markers avec une fonction personnalisée."""
         marker = "texte de test"
         
         # Créer une fonction mock
-        mock_find_similar_text = MagicMock()
+        mock_find_similar_text = AsyncMock()
+        # Simuler le retour de la fonction find_similar_text
+        # Elle devrait retourner une liste de tuples (contexte, position, texte_marqueur_trouvé)
         mock_find_similar_text.return_value = [
             ("contexte avant texte de test contexte après", 10, "texte de test")
         ]
         
-        results = self.plugin.find_similar_markers(
+        results = await self.plugin.find_similar_markers( # find_similar_markers est probablement async
             self.test_text, marker, find_similar_text_func=mock_find_similar_text
         )
         

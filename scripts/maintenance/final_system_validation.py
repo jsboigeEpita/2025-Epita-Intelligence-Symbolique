@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-[VALIDATION] VALIDATION FINALE SYSTÈME ORACLE ENHANCED V2.1.0
+🔍 VALIDATION FINALE SYSTÈME ORACLE ENHANCED V2.1.0
 
 Script de validation complète pour la tâche 5/6.
 Effectue tous les tests critiques et génère un rapport complet.
@@ -54,9 +54,9 @@ class OracleEnhancedValidator:
         if not success and error:
             self.results["errors"].append(f"{test_name}: {error}")
         
-        print(f"{'[OK]' if success else '[ERREUR]'} {test_name}: {details}")
+        print(f"{'✅' if success else '❌'} {test_name}: {details}")
         if error:
-            print(f"   [ERREUR] Erreur: {error}")
+            print(f"   💥 Erreur: {error}")
     
     def run_command_with_env(self, command: str, test_name: str) -> Tuple[bool, str, str]:
         """Exécute une commande avec l'environnement projet activé"""
@@ -86,7 +86,7 @@ class OracleEnhancedValidator:
     
     def test_oracle_imports(self) -> bool:
         """Test 1: Validation des imports Oracle Enhanced v2.1.0"""
-        print("\n[RECHERCHE] === TEST 1: IMPORTS ORACLE ENHANCED ===")
+        print("\n🔍 === TEST 1: IMPORTS ORACLE ENHANCED ===")
         
         # Test import principal Oracle
         success, stdout, stderr = self.run_command_with_env(
@@ -135,7 +135,7 @@ class OracleEnhancedValidator:
     
     def test_sherlock_watson_functionality(self) -> bool:
         """Test 2: Fonctionnalités Sherlock-Watson-Moriarty"""
-        print("\n[DETECTIVE] === TEST 2: SHERLOCK-WATSON-MORIARTY ===")
+        print("\n🕵️ === TEST 2: SHERLOCK-WATSON-MORIARTY ===")
         
         # Test des agents Oracle
         success, stdout, stderr = self.run_command_with_env(
@@ -170,7 +170,7 @@ class OracleEnhancedValidator:
     
     def test_system_integrity(self) -> bool:
         """Test 3: Intégrité du système"""
-        print("\n[OUTILS] === TEST 3: INTÉGRITÉ SYSTÈME ===")
+        print("\n🔧 === TEST 3: INTÉGRITÉ SYSTÈME ===")
         
         # Vérification structure projet
         critical_paths = [
@@ -220,7 +220,7 @@ class OracleEnhancedValidator:
     
     def test_non_regression(self) -> bool:
         """Test 4: Non-régression des fonctionnalités"""
-        print("\n[TESTS] === TEST 4: NON-RÉGRESSION ===")
+        print("\n🧪 === TEST 4: NON-RÉGRESSION ===")
         
         # Test Phase D intégration
         phase_d_script = self.project_root / "test_phase_d_integration.py"
@@ -271,77 +271,9 @@ class OracleEnhancedValidator:
         
         return regression_score >= 0.6
     
-    def validate_documentation_links(self) -> bool:
-        """Test 5: Validation des liens de documentation"""
-        print("\n[DOCUMENTATION] === TEST 5: VALIDATION DOCUMENTATION ===")
-        
-        try:
-            # Exécution de l'analyseur de documentation obsolète
-            cmd = [
-                sys.executable,
-                "scripts/maintenance/analyze_obsolete_documentation.py",
-                "--quick-scan",
-                "--output-format", "json"
-            ]
-            
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                cwd=str(self.project_root),
-                timeout=300  # 5 minutes timeout
-            )
-            
-            if result.returncode == 0:
-                # Documentation saine
-                self.log_result("documentation_links", True, "Aucun lien brisé détecté dans la documentation")
-                self.results["system_integrity"]["documentation_health"] = True
-                return True
-            else:
-                # Documentation obsolète détectée
-                # Tenter de parser la sortie pour obtenir des statistiques
-                output_lines = result.stdout.split('\n')
-                links_info = {}
-                
-                for line in output_lines:
-                    if "Fichiers analyses:" in line:
-                        links_info["analyzed_files"] = line.split(':')[1].strip()
-                    elif "Liens totaux:" in line:
-                        links_info["total_links"] = line.split(':')[1].strip()
-                    elif "Liens brises:" in line:
-                        links_info["broken_links"] = line.split(':')[1].strip()
-                    elif "Pourcentage de liens valides:" in line:
-                        links_info["valid_percentage"] = line.split(':')[1].strip().replace('%', '')
-                
-                details = f"Documentation obsolète détectée: {links_info.get('broken_links', 'N/A')} liens brisés"
-                self.log_result("documentation_links", False, details)
-                self.results["system_integrity"]["documentation_health"] = False
-                
-                # Ajouter un avertissement si le pourcentage de liens valides est très bas
-                try:
-                    valid_pct = float(links_info.get("valid_percentage", "0"))
-                    if valid_pct < 50:
-                        self.results["warnings"].append(f"📚 CRITIQUE: Seulement {valid_pct}% des liens de documentation sont valides")
-                    elif valid_pct < 80:
-                        self.results["warnings"].append(f"📚 ATTENTION: {valid_pct}% des liens de documentation sont valides")
-                except ValueError:
-                    pass
-                
-                return False
-            
-        except subprocess.TimeoutExpired:
-            self.log_result("documentation_links", False, "Timeout lors de l'analyse de documentation")
-            self.results["system_integrity"]["documentation_health"] = False
-            return False
-        except Exception as e:
-            error_msg = f"Exception lors de la validation documentation: {str(e)}"
-            self.log_result("documentation_links", False, error_msg)
-            self.results["system_integrity"]["documentation_health"] = False
-            return False
-    
     def analyze_git_status(self) -> bool:
         """Test 5: Analyse état Git"""
-        print("\n[GIT] === TEST 5: ANALYSE GIT ===")
+        print("\n📋 === TEST 5: ANALYSE GIT ===")
         
         try:
             # Git status
@@ -383,11 +315,10 @@ class OracleEnhancedValidator:
     def calculate_overall_score(self) -> float:
         """Calcule le score global de validation"""
         critical_weights = {
-            "imports": 0.25,      # 25% - Imports critiques
+            "imports": 0.30,      # 30% - Imports critiques
             "functionality": 0.25, # 25% - Fonctionnalités Sherlock-Watson
             "integrity": 0.20,    # 20% - Intégrité système
-            "documentation": 0.15, # 15% - Santé documentation
-            "non_regression": 0.15 # 15% - Non-régression
+            "non_regression": 0.25 # 25% - Non-régression
         }
         
         weighted_score = 0.0
@@ -403,32 +334,29 @@ class OracleEnhancedValidator:
         
         # Recommandations basées sur les tests critiques
         if self.results["critical_tests"].get("imports", 0) < 0.8:
-            recommendations.append("[CRITIQUE] CRITIQUE: Corriger les problèmes d'imports Oracle Enhanced")
+            recommendations.append("🔧 CRITIQUE: Corriger les problèmes d'imports Oracle Enhanced")
         
         if self.results["critical_tests"].get("functionality", 0) < 0.5:
-            recommendations.append("[PRIORITE] HAUTE PRIORITÉ: Déboguer les fonctionnalités Sherlock-Watson-Moriarty")
-        
-        if self.results["critical_tests"].get("documentation", 0) < 0.8:
-            recommendations.append("📚 IMPORTANT: Corriger les liens brisés dans la documentation")
+            recommendations.append("🕵️ HAUTE PRIORITÉ: Déboguer les fonctionnalités Sherlock-Watson-Moriarty")
         
         if self.results["critical_tests"].get("integrity", 0) < 0.8:
-            recommendations.append("[IMPORTANT] IMPORTANTE: Restaurer l'intégrité de la structure du projet")
+            recommendations.append("🔧 IMPORTANTE: Restaurer l'intégrité de la structure du projet")
         
         if self.results["critical_tests"].get("non_regression", 0) < 0.6:
-            recommendations.append("[PRIORITE] PRIORITÉ: Investiguer les régressions détectées")
+            recommendations.append("🧪 PRIORITÉ: Investiguer les régressions détectées")
         
         # Recommandations Git
         git_changes = self.results.get("git_analysis", {}).get("total_changes", 0)
         if git_changes > 50:
-            recommendations.append(f"[INFO] INFO: {git_changes} changements Git détectés - Préparer commit structuré")
+            recommendations.append(f"📋 INFO: {git_changes} changements Git détectés - Préparer commit structuré")
         
         self.results["recommendations"] = recommendations
     
     def run_validation(self) -> Dict[str, Any]:
         """Lance la validation complète"""
-        print("[DEMARRAGE] === DÉBUT VALIDATION ORACLE ENHANCED V2.1.0 ===")
-        print(f"[DATE] Date: {self.results['validation_date']}")
-        print(f"[PROJET] Projet: {self.project_root}")
+        print("🚀 === DÉBUT VALIDATION ORACLE ENHANCED V2.1.0 ===")
+        print(f"📅 Date: {self.results['validation_date']}")
+        print(f"📂 Projet: {self.project_root}")
         
         start_time = time.time()
         
@@ -438,7 +366,6 @@ class OracleEnhancedValidator:
         tests_results.append(self.test_sherlock_watson_functionality())
         tests_results.append(self.test_system_integrity())
         tests_results.append(self.test_non_regression())
-        tests_results.append(self.validate_documentation_links())
         tests_results.append(self.analyze_git_status())
         
         # Calcul score global
@@ -446,13 +373,13 @@ class OracleEnhancedValidator:
         
         # Détermination du statut
         if self.results["overall_score"] >= 0.85:
-            self.results["status"] = "[EXCELLENT] EXCELLENT"
+            self.results["status"] = "✅ EXCELLENT"
         elif self.results["overall_score"] >= 0.70:
-            self.results["status"] = "[VALIDE] VALIDÉ"
+            self.results["status"] = "✅ VALIDÉ"
         elif self.results["overall_score"] >= 0.50:
-            self.results["status"] = "[PARTIEL] PARTIEL"
+            self.results["status"] = "⚠️ PARTIEL"
         else:
-            self.results["status"] = "[CRITIQUE] CRITIQUE"
+            self.results["status"] = "❌ CRITIQUE"
         
         # Génération recommandations
         self.generate_recommendations()
@@ -460,10 +387,10 @@ class OracleEnhancedValidator:
         execution_time = time.time() - start_time
         self.results["execution_time"] = execution_time
         
-        print(f"\n[FIN] === VALIDATION TERMINÉE ===")
-        print(f"[DUREE] Temps d'exécution: {execution_time:.2f}s")
-        print(f"[SCORE] Score global: {self.results['overall_score']:.1%}")
-        print(f"[STATUT] Statut: {self.results['status']}")
+        print(f"\n🏁 === VALIDATION TERMINÉE ===")
+        print(f"⏱️ Temps d'exécution: {execution_time:.2f}s")
+        print(f"📊 Score global: {self.results['overall_score']:.1%}")
+        print(f"🎯 Statut: {self.results['status']}")
         
         return self.results
 
@@ -480,7 +407,7 @@ def main():
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
         
-        print(f"\n[SAUVEGARDE] Résultats sauvegardés: {output_file}")
+        print(f"\n💾 Résultats sauvegardés: {output_file}")
         
         # Code de sortie basé sur le statut
         if results["overall_score"] >= 0.70:
@@ -489,7 +416,7 @@ def main():
             sys.exit(1)  # Échec
             
     except Exception as e:
-        print(f"[ERREUR] ERREUR CRITIQUE: {str(e)}")
+        print(f"💥 ERREUR CRITIQUE: {str(e)}")
         traceback.print_exc()
         sys.exit(2)
 

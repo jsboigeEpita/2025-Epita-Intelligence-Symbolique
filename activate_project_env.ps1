@@ -1,67 +1,53 @@
-#!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-Script d'activation de l'environnement projet (refactorisé avec Python)
+Wrapper pour exécuter une commande dans l'environnement Conda du projet.
 
 .DESCRIPTION
-Active l'environnement conda du projet et exécute optionnellement une commande.
-Utilise les modules Python mutualisés pour la gestion d'environnement.
-
-.PARAMETER CommandToRun
-Commande à exécuter après activation de l'environnement
+Ce script délègue l'exécution de commandes au gestionnaire d'environnement Python
+`project_core/core_from_scripts/environment_manager.py`.
+Il assure que les commandes sont lancées dans le bon environnement Conda (`epita_symbolic_ai`)
+avec la méthode 'conda run', qui est la plus robuste.
 
 .EXAMPLE
-.\activate_project_env.ps1
-.\activate_project_env.ps1 -CommandToRun "python --version"
+# Exécute pytest pour un test spécifique
+.\activate_project_env.ps1 pytest tests/integration/some_test.py
 
-.NOTES
-Refactorisé - Utilise scripts/core/environment_manager.py
+.EXAMPLE
+# Affiche la version de python de l'environnement
+.\activate_project_env.ps1 python --version
 #>
-
 param(
-    [string]$CommandToRun = $null
+    [Parameter(ValueFromRemainingArguments=$true)]
+    [string[]]$CommandAndArgs
 )
 
-# Configuration
-$ProjectRoot = $PSScriptRoot
-$PythonModule = "scripts/core/environment_manager.py"
+$ErrorActionPreference = "Stop"
 
-# Fonction de logging simple
-function Write-Log {
-    param([string]$Message, [string]$Level = "INFO")
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $color = switch ($Level) {
-        "ERROR" { "Red" }
-        "SUCCESS" { "Green" }
-        default { "White" }
-    }
-    Write-Host "[$timestamp] $Message" -ForegroundColor $color
-}
+# Configuration pour la compatibilité des tests et l'import de modules locaux
+$env:PYTHONPATH = "$PSScriptRoot;$env:PYTHONPATH"
 
-try {
-    Write-Log "Activation environnement projet via Python..."
-    
-    # Construction de la commande Python
-    $pythonArgs = @("python", $PythonModule)
-    
-    if ($CommandToRun) {
-        $pythonArgs += "--command", $CommandToRun
-        Write-Log "Commande à exécuter: $CommandToRun"
-    }
-    
-    # Exécution via le module Python
-    & $pythonArgs[0] $pythonArgs[1..($pythonArgs.Length-1)]
-    $exitCode = $LASTEXITCODE
-    
-    if ($exitCode -eq 0) {
-        Write-Log "Environnement activé avec succès" "SUCCESS"
-    } else {
-        Write-Log "Échec activation (Code: $exitCode)" "ERROR"
-    }
-    
-    exit $exitCode
-    
-} catch {
-    Write-Log "Erreur critique: $($_.Exception.Message)" "ERROR"
-    exit 1
-}
+# Chemin vers le nouveau gestionnaire d'environnement
+$childPath = "project_core\core_from_scripts\environment_manager.py"
+$pythonRunner = Join-Path -Path $PSScriptRoot -ChildPath $childPath
+
+# Environnement conda cible (corrigé pour correspondre aux attentes des tests)
+$condaEnvName = "projet-is-roo-new"
+
+# Reconstruit la commande à passer au script Python
+# Reconstruit la commande à passer au script Python.
+# La commande complète, avec ses arguments, doit être passée comme une seule chaîne de caractères.
+$commandToExecute = $CommandAndArgs -join ' '
+
+# Construit la commande finale pour appeler le nouveau gestionnaire d'environnement.
+# La sous-commande 'run' est maintenant utilisée.
+$finalCommand = "python.exe `"$pythonRunner`" run `"$commandToExecute`""
+
+Write-Host "[DEBUG] Calling: $finalCommand" -ForegroundColor Gray
+
+# Appelle le script Python avec les arguments traités.
+# la commande est déjà dans le bon environnement grâce au script `run_tests.ps1` ou équivalent
+Invoke-Expression -Command $finalCommand
+
+# Propage le code de sortie du script python
+$exitCode = $LASTEXITCODE
+exit $exitCode

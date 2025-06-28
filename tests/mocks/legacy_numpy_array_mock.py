@@ -90,25 +90,29 @@ class dtype:
     """Mock pour numpy.dtype."""
     
     def __init__(self, type_spec):
-        # Si type_spec est une chaîne (ex: 'float64'), la stocker.
-        # Si c'est un type Python (ex: float), stocker cela.
-        # Si c'est une instance de nos classes de type (ex: float64), utiliser son nom.
-        if isinstance(type_spec, str):
+        self.names = None
+        self.descr = []
+        if isinstance(type_spec, list) and type_spec and isinstance(type_spec[0], tuple):
+            # Structured dtype, ex: [('x', 'i4'), ('y', 'f8')]
+            self.names = tuple([t[0] for t in type_spec])
+            self.descr = type_spec
+            # Pour un dtype structuré, 'name' est une représentation de la structure
+            self.name = str(type_spec)
+            self.type = 'void' # Souvent un type void pour les dtypes structurés
+        elif isinstance(type_spec, str):
             self.name = type_spec
-            self.type = type_spec # Garder une trace du type original si possible
+            self.type = type_spec
         elif isinstance(type_spec, type):
-             # Cas où on passe un type Python comme float, int
             if type_spec is float: self.name = 'float64'
             elif type_spec is int: self.name = 'int64'
             elif type_spec is bool: self.name = 'bool_'
             elif type_spec is complex: self.name = 'complex128'
             else: self.name = type_spec.__name__
             self.type = type_spec
-        else: # Supposer que c'est une de nos classes de type mockées
+        else:
             self.name = str(getattr(type_spec, '__name__', str(type_spec)))
             self.type = type_spec
 
-        # Attributs attendus par certaines bibliothèques
         self.char = self.name[0] if self.name else ''
         self.num = 0 # Placeholder
         self.itemsize = 8 # Placeholder, typiquement 8 pour float64/int64

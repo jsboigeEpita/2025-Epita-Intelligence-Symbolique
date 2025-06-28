@@ -18,6 +18,12 @@ import logging
 import os
 import uuid
 from datetime import datetime
+
+# AUTO_ENV: Activation automatique environnement
+try:
+    import scripts.core.auto_env  # Auto-activation environnement intelligent
+except ImportError:
+    print("[WARNING] auto_env non disponible - environnement non activé")
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
@@ -52,7 +58,7 @@ except ImportError as e:
 
 # Configuration de l'application Flask
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'dev-key-epita-2025')
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-key-EPITA-2025')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
 # Configuration CORS simple sans dépendance externe

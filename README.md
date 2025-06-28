@@ -1,457 +1,148 @@
-﻿# Projet d'Intelligence Symbolique EPITA
-
-**Bienvenue dans l'Architecture Sophistiquée d'Analyse d'Argumentation** - Intelligence Symbolique avec Stratégies Authentiques Validées
-
----
-
-## 🚀 **Démarrage Rapide**
-
-### Lancer l'Application Web
-```bash
-# Démarrage complet (backend + frontend)
-python start_webapp.py
-
-# Backend seul
-python start_webapp.py --backend-only
-
-# Frontend seul
-python start_webapp.py --frontend-only
-
-# Mode configuration personnalisée
-python start_webapp.py --config config/webapp_config.yml --verbose
-```
-
-### Migration depuis PowerShell
-Les anciens scripts PowerShell ont été **modernisés** ! Voir [MIGRATION_WEBAPP.md](MIGRATION_WEBAPP.md) pour migrer depuis l'ancien `start_web_application.ps1`.
-
-**Ancienne méthode** (obsolète) → **Nouvelle méthode** (recommandée) :
-```bash
-# ❌ Obsolète
-.\start_web_application.ps1
-
-# ✅ Moderne
-python start_webapp.py
-```
-
-### Avantages de la Nouvelle Approche
-- ✅ **Configuration YAML** centralisée
-- ✅ **Logs structurés** avec niveaux de verbosité
-- ✅ **Gestion d'erreurs** robuste
-- ✅ **Tests automatisés** intégrés
-- ✅ **Health checks** des services
+﻿# 🏆 Projet d'Intelligence Symbolique EPITA
+## Une Exploration Approfondie de l'Analyse d'Argumentation et des Systèmes Multi-Agents
 
 ---
 
-## 🎓 **Bienvenue Étudiants et Visiteurs !**
+## 🎓 **Bienvenue aux Étudiants d'EPITA !**
 
-Ce projet constitue une démonstration avancée d'intelligence symbolique développée dans le cadre du cours EPITA. Il combine recherche académique rigoureuse et développement technique moderne pour offrir aux étudiants une expérience complète d'exploration des concepts d'IA symbolique et d'analyse argumentative.
+Ce projet est bien plus qu'une simple collection de scripts ; c'est une **plateforme d'apprentissage interactive** conçue spécifiquement pour vous, futurs ingénieurs en intelligence artificielle. Notre objectif est de vous immerger dans les concepts fondamentaux et les applications pratiques de l'IA symbolique. Ici, vous ne trouverez pas seulement du code, mais des opportunités d'explorer, d'expérimenter, de construire et, surtout, d'apprendre.
 
-### 🎯 **Objectifs Pédagogiques**
-- **Comprendre** les fondements de l'intelligence symbolique et de l'IA explicable
-- **Maîtriser** les techniques d'analyse argumentative et de détection de sophismes
-- **Explorer** l'orchestration multi-agents avec Semantic Kernel
-- **Intégrer** des technologies modernes (Python, Java, React) dans un système cohérent
-- **Développer** des compétences en architecture logicielle et test automatisé
-
----
-
-## 🚀 **4 Points d'Entrée Principaux**
-
-### 1. 🎭 **Démo EPITA - Exploration des Fonctionnalités**
-**Point d'entrée recommandé pour découvrir le système**
-
-Le script [`demonstration_epita.py`](examples/scripts_demonstration/demonstration_epita.py) est votre **porte d'entrée principale** avec 4 modes adaptés :
-
-```bash
-# 🎓 Mode interactif pédagogique (RECOMMANDÉ pour étudiants)
-python examples/scripts_demonstration/demonstration_epita.py --interactive
-
-# 🚀 Démarrage rapide avec suggestions de projets
-python examples/scripts_demonstration/demonstration_epita.py --quick-start
-
-# 📊 Menu catégorisé (mode par défaut)
-python examples/scripts_demonstration/demonstration_epita.py
-
-# ⚙️ Tests complets avec métriques
-python examples/scripts_demonstration/demonstration_epita.py --all-tests
-```
-
-**Fonctionnalités** :
-- 🧠 **Intelligence Symbolique** - Raisonnement logique et contraintes  
-- 🎭 **Analyse d'Argumentation** - Stratégies rhétoriques sophistiquées
-- ⚙️ **Orchestration Agentique** - Coordination multi-agents
-- 🔗 **Intégration Java-Python** - Bridges JPype avancés
-- 🌐 **Services Web** - APIs et interfaces web
-- 🧪 **Tests et Validation** - Couverture complète et métriques
-
-📋 **Documentation** : [`demonstration_epita_README.md`](examples/scripts_demonstration/demonstration_epita_README.md)
-
-### 2. ⚙️ **Système d'Analyse Rhétorique Unifié**
-**Orchestration avancée avec paramètres de contrôle**
-
-Le script [`run_orchestration.py`](argumentation_analysis/run_orchestration.py) offre un contrôle fin de l'orchestration :
-
-```bash
-# Analyse interactive avec choix des agents
-python argumentation_analysis/run_orchestration.py --interactive
-
-# Analyse avec agents spécifiques
-python argumentation_analysis/run_orchestration.py --agents "ExtractAgent,LogicAgent" --text "Votre texte"
-
-# Mode verbeux pour debugging
-python argumentation_analysis/run_orchestration.py --verbose --interactive
-
-# Génération de rapport détaillé
-python argumentation_analysis/run_orchestration.py --report --output-format json
-```
-
-**Paramètres disponibles** :
-- 🎯 **Source** : Texte direct, fichier, ou entrée interactive
-- 🔀 **Orchestration** : Choix des agents et stratégies
-- 🤖 **Agents** : Sélection spécifique d'agents d'analyse
-- 📢 **Verbosité** : Contrôle des logs et traces d'exécution  
-- 📊 **Rapport** : Formats de sortie (console, JSON, markdown)
-
-### 3. 🌐 **Application Web avec Manager Dédié**
-**Interface moderne pour services d'analyse**
-
-Système web complet avec backend Flask et frontend React :
-
-```bash
-# Démarrage Backend (Port 5005)
-cd services/web_api
-python start_api.py --port 5005
-
-# Démarrage Frontend (Port 3001) - Terminal séparé
-cd services/web_api/interface-web-argumentative  
-npm install && npm start
-
-# Ou utilisation des scripts PowerShell intégrés
-.\scripts\run_backend.cmd 5005
-.\scripts\run_frontend.cmd 3001
-```
-
-**Services disponibles** :
-- 🔍 **API REST** : Endpoints d'analyse argumentative (`/api/analyze`, `/api/validate`)
-- 🌐 **Interface Web** : Dashboard React pour interaction utilisateur
-- 🧪 **Tests Playwright** : Validation automatisée de l'interface
-- 📊 **Monitoring** : Métriques de performance et santé des services
-
-#### 🎭 **Démos Playwright Opérationnelles**
-**Interface complète avec tests automatisés et captures d'écran**
-
-Les démos Playwright sont maintenant **100% opérationnelles** avec backend mock intégré :
-
-```bash
-# 🚀 Démo complète automatisée (RECOMMANDÉ)
-python demo_playwright_complet.py
-
-# 🔧 Orchestrateur intégré (backend réel)
-python scripts/run_webapp_integration.py --visible --frontend
-
-# ⚡ Tests Playwright directs
-powershell -File scripts/env/activate_project_env.ps1 -CommandToRun "python -m pytest tests/functional/test_webapp_homepage.py -v --headed"
-```
-
-**Fonctionnalités démontrées** :
-- 🎯 **6 Onglets d'Analyse** : Analyseur, Sophismes, Reconstructeur, Graphe Logique, Validation, Framework
-- 📸 **Captures Automatiques** : Screenshots générés dans `logs/` pour chaque démonstration
-- 🔄 **Tests d'Interaction** : Navigation complète et validation fonctionnelle
-- 🛡️ **Backend Mock** : Démos fonctionnelles même sans backend complet
-
-📋 **Documentation** : [`services/README.md`](services/README.md) | **Démos** : [`README_DEMOS_PLAYWRIGHT.md`](README_DEMOS_PLAYWRIGHT.md)
-
-### 4. 🕵️ **Système d'Enquête Sherlock-Watson-Moriarty**
-**Pipeline d'analyse Oracle Enhanced avec intégrité garantie**
-
-Système multi-agents sophistiqué pour résolution de problèmes logiques :
-
-```bash
-# Démo Cluedo Oracle Enhanced
-python -m scripts.sherlock_watson.run_cluedo_oracle_enhanced
-
-# Démo Puzzle d'Einstein  
-python -m scripts.sherlock_watson.run_einstein_oracle_demo
-
-# Tests de validation comportementale
-python -m scripts.sherlock_watson.test_oracle_behavior_simple
-
-# Validation couverture complète (148+ tests)
-python -m scripts.maintenance.validate_oracle_coverage
-```
-
-**Agents disponibles** :
-- 🔍 **Sherlock Holmes** : Agent d'investigation logique avec raisonnement déductif
-- 👨‍⚕️ **Dr Watson** : Agent de déduction médicale et assistance analytique  
-- 🎭 **Professor Moriarty** : Agent Oracle authentique avec révélations automatiques
-- 🛡️ **Système d'Intégrité** : Protection anti-triche avec `CluedoIntegrityError`
-
-📋 **Documentation** : [`docs/sherlock_watson/`](docs/sherlock_watson/) - Guide complet utilisateur et développeur
+### 🎯 **Vos Objectifs Pédagogiques avec ce Projet :**
+*   🧠 **Comprendre en Profondeur :** Assimiler les fondements de l'IA symbolique, du raisonnement logique et de l'IA explicable.
+*   🗣️ **Maîtriser l'Argumentation :** Développer une expertise dans les techniques d'analyse argumentative, la détection de sophismes et la construction d'arguments solides.
+*   🤖 **Explorer l'Orchestration d'Agents :** Découvrir la puissance des systèmes multi-agents et leur intégration avec des modèles de langage (LLM) pour des tâches complexes.
+*   🛠️ **Intégrer les Technologies Modernes :** Acquérir une expérience pratique avec Python, Java (via JPype), les API web (Flask/FastAPI), et les interfaces utilisateur (React).
+*   🏗️ **Développer des Compétences en Ingénierie Logicielle :** Vous familiariser avec les bonnes pratiques en matière d'architecture logicielle, de tests automatisés et de gestion de projet.
 
 ---
 
-## 🔒 **Sécurité et Intégrité - Mise à Jour Janvier 2025**
+## 🚀 **DÉMARRAGE ULTRA-RAPIDE (5 minutes)**
 
-### ✅ **Audit d'Intégrité Récent**
-Un audit de sécurité complet a été réalisé sur le système **Sherlock-Watson-Moriarty Oracle Enhanced**, aboutissant à :
+Suivez ces étapes pour avoir un environnement fonctionnel et validé en un temps record.
 
-- **4 violations d'intégrité** détectées et **corrigées**
-- **CluedoIntegrityError** déployé pour protection anti-triche
-- **Mécanismes de surveillance** temps réel intégrés
-- **Couverture tests** maintenue à **100%**
+### **1. Installation Complète (2 minutes)**
+Le script suivant s'occupe de tout : création de l'environnement, installation des dépendances, etc.
 
-Pour plus de détails, consulter :
-- 📋 **[Rapport d'Audit Complet](docs/sherlock_watson/AUDIT_INTEGRITE_CLUEDO.md)**
-- 🛠️ **[Guide Utilisateur Sécurisé](docs/sherlock_watson/GUIDE_UTILISATEUR_COMPLET.md)**
-- 🏗️ **[Architecture Sécurité](docs/sherlock_watson/ARCHITECTURE_ORACLE_ENHANCED.md)**
+```powershell
+# Depuis la racine du projet en PowerShell
+./setup_project_env.ps1
+```
+> **Note:** Si vous n'êtes pas sur Windows, un script `setup_project_env.sh` est également disponible.
 
-## 🏆 **Certification d'Authenticité - Post-Audit Anti-Mock**
+### **2. Configuration de l'API OpenRouter (1 minute)**
+Pour les fonctionnalités avancées basées sur les LLMs.
 
-### ✅ **Validation Critique Réussie (Juin 2025)**
-Suite à l'audit critique anti-mock, le système a été **100% validé** avec des composants entièrement authentiques :
-
-**🎯 Résultats de l'Audit** :
-- **📊 106/106 tests authentiques** réussis (100% de succès)
-- **🚫 0 mock critique** dans les composants stratégiques
-- **⚡ 3 stratégies sophistiquées** intégrées avec Semantic Kernel
-- **🎯 État partagé innovant** pour coordination inter-stratégies
-
-**🔍 Stratégies Authentiques Découvertes** :
-- ✅ **[`SimpleTerminationStrategy`](docs/architecture/strategies/strategies_architecture.md#1-simpleterminationstrategy)** : Terminaison intelligente basée sur conclusion + max_steps
-- ✅ **[`DelegatingSelectionStrategy`](docs/architecture/strategies/strategies_architecture.md#2-delegatingselectionstrategy)** : Sélection avec désignation explicite via état partagé
-- ✅ **[`BalancedParticipationStrategy`](docs/architecture/strategies/strategies_architecture.md#3-balancedparticipationstrategy)** : Équilibrage algorithmique sophistiqué
-
-**📋 Documentation Technique Complète** :
-- 🏗️ **[Architecture des Stratégies](docs/architecture/strategies/strategies_architecture.md)** - Spécifications techniques détaillées
-- 🔍 **[Audit Anti-Mock](docs/architecture/strategies/audit_anti_mock.md)** - Rapport de validation complet (106/106 tests)
-- 🔗 **[Intégration Semantic Kernel](docs/architecture/strategies/semantic_kernel_integration.md)** - Conformité aux interfaces standard
-- 📊 **[État Partagé](docs/architecture/strategies/shared_state_architecture.md)** - Architecture de coordination
-
-## 🔧 **Configuration et Prérequis**
-
-### ⚡ **Installation Rapide**
 ```bash
-# 1. Cloner et naviguer dans le projet
-git clone <repository-url>
-cd 2025-Epita-Intelligence-Symbolique
+# Créer le fichier .env avec votre clé API
+echo "OPENROUTER_API_KEY=sk-or-v1-VOTRE_CLE_ICI" > .env
+echo "OPENROUTER_BASE_URL=https://openrouter.ai/api/v1" >> .env
+echo "OPENROUTER_MODEL=gpt-4o-mini" >> .env
+```
+> *Obtenez une clé gratuite sur [OpenRouter.ai](https://openrouter.ai)*
 
-# 2. Environnement Python (recommandé : Conda)
-conda create --name projet-is python=3.9
-conda activate projet-is
-pip install -r requirements.txt
+### **3. Activation & Test de Validation (2 minutes)**
 
-# 3. Test de l'installation
+```powershell
+# Activer l'environnement
+./activate_project_env.ps1
+
+# Lancer le test système rapide
 python examples/scripts_demonstration/demonstration_epita.py --quick-start
 ```
-
-### 📋 **Prérequis Détaillés**
-
-**Core System** :
-- Python 3.9+ (avec Conda recommandé)
-- Java 8+ (pour JPype et intégration Tweety)
-- Git (pour clonage et mises à jour)
-
-**Application Web** (optionnel) :
-- Node.js 16+ (pour le frontend React)
-- NPM ou Yarn
-
-**APIs Externes** (optionnel) :
-- OpenAI API Key (pour les agents conversationnels)
-
-### 🛠️ **Configuration Avancée avec Scripts PowerShell**
-
-Le projet inclut des **scripts d'environnement automatisés** pour simplifier la configuration :
-
-#### **Script Principal : `scripts\env\activate_project_env.ps1`**
-```powershell
-# Exécution avec commande (recommandé)
-.\scripts\env\activate_project_env.ps1 -CommandToRun "python examples/scripts_demonstration/demonstration_epita.py"
-
-# Configuration d'environnement uniquement
-.\scripts\env\activate_project_env.ps1
-```
-
-**Fonctionnalités** :
-- ✅ Chargement automatique des variables d'environnement (`.env`)
-- ✅ Configuration `JAVA_HOME` et `PATH`
-- ✅ Exécution via `conda run` pour isolation complète
-- ✅ Gestion `PYTHONPATH` automatique
-
-#### **Scripts Raccourcis à la Racine**
-```powershell
-# Lancement direct de démonstrations
-.\scripts\env\activate_project_env.ps1 -CommandToRun "python examples/scripts_demonstration/demonstration_epita.py --interactive"
-
-# Setup complet du projet
-.\scripts\env\activate_project_env.ps1 -CommandToRun "python examples/scripts_demonstration/demonstration_epita.py --all-tests"
-```
-
-### 🌐 **Configuration Application Web** (Optionnel)
-
-Si vous souhaitez utiliser l'interface web complète :
-
-```bash
-# 1. Installation frontend
-cd services/web_api/interface-web-argumentative
-npm install
-
-# 2. Configuration backend/frontend
-echo "REACT_APP_API_BASE_URL=http://localhost:5005" > .env
-
-# 3. Lancement (2 terminaux)
-# Terminal 1 - Backend:
-.\scripts\env\activate_project_env.ps1 -CommandToRun "scripts\run_backend.cmd 5005"
-
-# Terminal 2 - Frontend:
-.\scripts\env\activate_project_env.ps1 -CommandToRun "scripts\run_frontend.cmd 3001"
-```
-
-## 📚 **Documentation Technique Complète**
-
-### 🎯 **Documentation Post-Audit (Recommandée)**
-
-**Architecture des Stratégies Authentiques** (Post-Audit Anti-Mock) :
-- 🏗️ **[Architecture des Stratégies](docs/architecture/strategies/strategies_architecture.md)** - Spécifications techniques des 3 stratégies validées
-- 🔍 **[Audit Anti-Mock](docs/architecture/strategies/audit_anti_mock.md)** - Rapport de validation complet (106/106 tests)
-- 🔗 **[Intégration Semantic Kernel](docs/architecture/strategies/semantic_kernel_integration.md)** - Conformité aux interfaces standard
-- 📊 **[État Partagé](docs/architecture/strategies/shared_state_architecture.md)** - Architecture de coordination inter-stratégies
-
-**Sécurité et Intégrité Sherlock-Watson** :
-- 📋 **[Audit d'Intégrité Cluedo](docs/sherlock_watson/AUDIT_INTEGRITE_CLUEDO.md)** - Rapport de sécurité complet
-- 🛠️ **[Guide Utilisateur Sécurisé](docs/sherlock_watson/GUIDE_UTILISATEUR_COMPLET.md)** - Utilisation sécurisée
-- 🏗️ **[Architecture Sécurité](docs/sherlock_watson/ARCHITECTURE_ORACLE_ENHANCED.md)** - Spécifications techniques
-
-### 📖 **Documentation Générale**
-
-**Points d'Entrée** :
-- **[Documentation Complète](docs/README.md)** - Index général de la documentation
-- **[Architecture du Système](docs/architecture/README.md)** - Architecture hiérarchique et patterns
-- **[Guides d'Utilisation](docs/guides/README.md)** - Tutoriels et guides pratiques
-
-**Orchestration Agentique Avancée** :
-- **[Analyse Orchestrations Sherlock/Watson](docs/architecture/analyse_orchestrations_sherlock_watson.md)** - Flux d'orchestration dans les conversations agentiques incluant interactions, outils et solvers Tweety
-- **[Guide Patterns d'Orchestration](docs/guides/GUIDE_PATTERNS_ORCHESTRATION_MODES.md)** - Patterns reproductibles avec 5 types d'orchestration distincts, templates de communication et bonnes pratiques
-
-### 🔍 **Validation et Tests**
-
-**Couverture de Tests** :
-- ✅ **106/106 tests authentiques** réussis (stratégies d'argumentation)
-- ✅ **148/148 tests Oracle Enhanced** réussis (système Sherlock-Watson-Moriarty)
-- ✅ **100% couverture** des composants critiques validés
-- ✅ **0 mock critique** dans les composants stratégiques
-- ✅ **Architecture modulaire** entièrement testée
-
-**Scripts de Validation** :
-```bash
-# Validation complète avec métriques
-python examples/scripts_demonstration/demonstration_epita.py --all-tests
-
-# Tests des stratégies spécifiquement
-python -m pytest tests/unit/argumentation_analysis/test_strategies_real.py -v
-
-# Validation Oracle Enhanced
-python -m scripts.maintenance.validate_oracle_coverage
-```
+> Si ce script s'exécute sans erreur, votre installation est un succès !
 
 ---
 
-## 🎭 **Système Sherlock-Watson-Moriarty Oracle Enhanced v2.1.0**
 
-### Vue d'ensemble
-Le système Oracle Enhanced implémente un véritable système multi-agents avec:
-- **Sherlock Holmes**: Agent d'investigation logique
-- **Dr Watson**: Agent de déduction médicale  
-- **Professor Moriarty**: Agent Oracle authentique avec révélations automatiques
+## 🧭 **Comment Naviguer dans ce Vaste Projet : Les 5 Points d'Entrée Clés**
 
-### Nouvelles fonctionnalités Oracle Enhanced v2.1.0
+Ce projet est riche et comporte de nombreuses facettes. Pour vous aider à vous orienter, nous avons défini 5 points d'entrée principaux, chacun ouvrant la porte à un aspect spécifique du système.
 
-#### 🔧 Architecture Refactorisée
-- **Gestion d'erreurs avancée**: Hiérarchie complète d'erreurs Oracle
-- **Interfaces standardisées**: ABC pour agents Oracle et gestionnaires dataset
-- **Réponses uniformisées**: `StandardOracleResponse` avec statuts enum
-- **Cache intelligent**: `QueryCache` avec TTL et éviction automatique
+| Point d'Entrée             | Idéal Pour                                  | Description Brève                                                                                                | Documentation Détaillée                                                                 |
+| :------------------------- | :------------------------------------------ | :--------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------- |
+| **1. Démo Pédagogique EPITA** | Étudiants (première découverte)             | Un menu interactif et guidé pour explorer les concepts clés et les fonctionnalités du projet de manière ludique. | [`examples/scripts_demonstration/README.md`](examples/scripts_demonstration/README.md) |
+| **2. Démos de Raisonnement Logique** | Passionnés d'IA, logique, multi-agents    | Lancez des scénarios d'investigation complexes (Cluedo, Einstein) avec le système d'agents logiques unifié. | [`examples/Sherlock_Watson/README.md`](examples/Sherlock_Watson/README.md) |
+| **3. Analyse Rhétorique**   | Développeurs IA, linguistes computationnels | Accédez au cœur du système d'analyse d'arguments, de détection de sophismes et de raisonnement formel.        | **[Cartographie du Système](docs/mapping/rhetorical_analysis_map.md)** <br> **[Rapports de Test](docs/reports/rhetorical_analysis/)** <br> **[README Technique](argumentation_analysis/README.md)** |
+| **4. Application Web**      | Développeurs Web, testeurs UI               | Démarrez et interagir avec l'écosystème de microservices web (API, frontend, outils JTMS).                   | [`docs/mapping/web_apps_map.md`](docs/mapping/web_apps_map.md:0) |
+| **5. Suite de Tests**       | Développeurs, Assurance Qualité             | Exécutez les tests unitaires, d'intégration et end-to-end (Pytest & Playwright) pour valider le projet.        | [`tests/README.md`](tests/README.md:0)                                                   |
 
-#### 📊 Couverture Tests 100%
-- **148+ tests Oracle Enhanced** (vs 105 avant refactorisation)
-- **Tests nouveaux modules**: error_handling, interfaces, intégration
-- **Validation automatique**: Scripts de couverture intégrés
-- **Fixtures avancées**: Support testing complet
+### **Accès et Commandes Principales par Point d'Entrée :**
 
-#### 🏗️ Structure Modulaire
+#### **1. 🎭 Démo Pédagogique EPITA (Point d'Entrée Recommandé)**
+Conçue pour une introduction en douceur, cette démo vous guide à travers les fonctionnalités principales.
+*   **Lancement (mode interactif guidé) :**
+    ```bash
+    python examples/scripts_demonstration/demonstration_epita.py --interactive
+    ```
+*   Pour plus de détails : **[Consultez le README de la Démo Epita](examples/scripts_demonstration/README.md)**.
 
-```
-argumentation_analysis/agents/core/oracle/
-├── oracle_base_agent.py           # Agent Oracle de base
-├── moriarty_interrogator_agent.py # Moriarty Oracle authentique
-├── cluedo_dataset.py              # Dataset Cluedo avec intégrité
-├── dataset_access_manager.py      # Gestionnaire accès permissions
-├── permissions.py                 # Système permissions avancé
-├── error_handling.py              # 🆕 Gestion erreurs centralisée
-├── interfaces.py                  # 🆕 Interfaces ABC standardisées
-└── __init__.py                    # Exports consolidés v2.1.0
-```
+#### **2. 🕵️ Démos de Raisonnement Logique (Cluedo, Einstein, etc.)**
+Plongez au cœur du raisonnement multi-agents avec des scénarios d'investigation pilotés par le script de production.
+*   **Lancement du scénario Cluedo :**
+    ```bash
+    python examples/Sherlock_Watson/agents_logiques_production.py --scenario examples/Sherlock_Watson/cluedo_scenario.json
+    ```
+*   **Lancement du scénario du Puzzle d'Einstein :**
+    ```bash
+    python examples/Sherlock_Watson/agents_logiques_production.py --scenario examples/Sherlock_Watson/einstein_scenario.json
+    ```
+*   Pour plus de détails : **[Consultez le README des démos logiques](examples/Sherlock_Watson/README.md)**.
 
-### Guide de Démarrage Rapide
+#### **3. 🗣️ Analyse Rhétorique Approfondie**
+Accédez directement aux capacités d'analyse d'arguments du projet.
+*   **Lancement de la démonstration d'analyse rhétorique :**
+    ```bash
+    python argumentation_analysis/demos/rhetorical_analysis/run_demo.py
+    ```
+*   Pour comprendre l'architecture : **[Cartographie du Système](docs/mapping/rhetorical_analysis_map.md)**.
 
-#### Installation et Configuration
-```bash
-# 1. Activation environnement
-powershell -File .\scripts\env\activate_project_env.ps1
+#### **4. 🌐 Application et Services Web**
+Démarrez l'ensemble des microservices (API backend, frontend React, outils JTMS).
+*   **Lancement de l'orchestrateur web :**
+    ```powershell
+    # Depuis la racine du projet (PowerShell)
+    ./start_webapp.ps1
+    ```
+*   Pour les détails : **[Consultez la cartographie de l'application web](docs/mapping/web_apps_map.md)**
 
-# 2. Test système Oracle
-python -m scripts.maintenance.validate_oracle_coverage
-
-# 3. Démo Cluedo Oracle Enhanced
-python -m scripts.sherlock_watson.run_cluedo_oracle_enhanced
-
-# 4. Démo Einstein Oracle
-python -m scripts.sherlock_watson.run_einstein_oracle_demo
-```
-
-#### Utilisation Programmatique
-```python
-from argumentation_analysis.agents.core.oracle import (
-    CluedoDataset, CluedoDatasetManager, MoriartyInterrogatorAgent
-)
-
-# Initialisation système Oracle
-dataset = CluedoDataset()
-manager = CluedoDatasetManager(dataset) 
-oracle = MoriartyInterrogatorAgent(dataset_manager=manager, name="Moriarty")
-
-# Validation suggestion avec Oracle authentique
-response = await oracle.validate_suggestion_cluedo(
-    suspect="Colonel Moutarde", arme="Chandelier", lieu="Bibliothèque",
-    suggesting_agent="Sherlock"
-)
-print(response.data)  # Révélation automatique ou validation
-```
-
-### Documentation Complète
-
-- 📖 **[Guide Utilisateur Complet](docs/sherlock_watson/GUIDE_UTILISATEUR_COMPLET.md)**
-- 🏗️ **[Architecture Oracle Enhanced](docs/sherlock_watson/ARCHITECTURE_ORACLE_ENHANCED.md)**
-- 🔧 **[Guide Développeur](docs/sherlock_watson/GUIDE_DEVELOPPEUR_ORACLE.md)**
-- 📊 **[Documentation Tests](docs/sherlock_watson/DOCUMENTATION_TESTS.md)**
-- 🚀 **[Guide Déploiement](docs/sherlock_watson/GUIDE_DEPLOIEMENT.md)**
-
-### État du Projet
-
-| Composant | Statut | Tests | Couverture |
-|-----------|--------|-------|------------|
-| Oracle Base Agent | ✅ Stable | 25/25 | 100% |
-| Moriarty Oracle | ✅ Refactorisé | 30/30 | 100% |
-| Dataset Cluedo | ✅ Intégrité | 24/24 | 100% |
-| Error Handling | 🆕 Nouveau | 20/20 | 100% |
-| Interfaces | 🆕 Nouveau | 15/15 | 100% |
-| **Total Oracle** | **✅ Production** | **148/148** | **100%** |
-
-### Historique Versions
-
-- **v2.1.0** (2025-01-07): Refactorisation complète, nouveaux modules
-- **v2.0.0** (2025-01-06): Oracle Enhanced authentique, 100% tests
-- **v1.0.0** (2024-12): Version initiale multi-agents
+#### **5. 🧪 Suite de Tests Complète**
+Validez l'intégrité et le bon fonctionnement du projet avec plus de 400 tests.
+*   **Lancer tous les tests Python (Pytest) :**
+    ```powershell
+    # Depuis la racine du projet (PowerShell)
+    ./run_tests.ps1
+    ```
+*   **Lancer les tests avec des appels LLM réels :**
+     ```bash
+    python -m pytest tests/unit/argumentation_analysis/test_strategies_real.py -v
+    ```
+*   Pour les instructions détaillées : **[Consultez le README des Tests](tests/README.md)**
 
 ---
 
-**📢 Ce projet constitue une démonstration avancée d'intelligence symbolique avec validation technique complète. Commencez par le script [`demonstration_epita.py`](examples/scripts_demonstration/demonstration_epita.py) en mode interactif pour explorer toutes les capacités du système de manière pédagogique.**
+## 🆘 **Dépannage Rapide**
+
+| Erreur | Solution Rapide |
+| :--- | :--- |
+| **API Key manquante ou invalide** | Vérifiez le contenu de votre fichier `.env`. Il doit contenir `OPENROUTER_API_KEY=...` |
+| **Java non trouvé (pour TweetyProject)** | Assurez-vous d'avoir un JDK 8+ installé et que la variable d'environnement `JAVA_HOME` est correctement configurée. |
+| **Dépendances manquantes** | Relancez `pip install -r requirements.txt --force-reinstall` après avoir activé votre environnement conda. |
+
+---
+
+## ✨ **Aperçu des Technologies Utilisées**
+
+Ce projet est une mosaïque de technologies modernes et de concepts d'IA éprouvés :
+
+| Domaine                     | Technologies Clés                                       |
+| :-------------------------- | :------------------------------------------------------ |
+| **Langages Principaux**     | Python, JavaScript, Java (via JPype)                    |
+| **IA & LLM**                | Semantic Kernel, OpenRouter/OpenAI API, TweetyProject   |
+| **Développement Web**       | Flask, FastAPI, React, WebSockets                       |
+| **Tests**                   | Pytest, Playwright                                      |
+| **Gestion d'Environnement** | Conda, NPM                                              |
+| **Analyse Argumentative**   | Outils et agents personnalisés pour la logique et les sophismes |
+
+---
+
+**🏆 Projet d'Intelligence Symbolique EPITA 2025 - Prêt pour votre exploration et contribution ! 🚀**

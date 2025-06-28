@@ -1,4 +1,11 @@
-﻿#!/usr/bin/env python3
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
+#!/usr/bin/env python3
 """
 Tests d'intégration système pour orchestrations unifiées
 ======================================================
@@ -13,7 +20,7 @@ import sys
 import time
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock, AsyncMock
+
 from typing import Dict, Any, List
 
 # Ajout du chemin pour les imports
@@ -24,7 +31,7 @@ try:
     from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
     from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
     from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer
-    from config.unified_config import UnifiedConfig
+    from config.unified_config import UnifiedConfig as RealUnifiedConfig
     from argumentation_analysis.agents.core.logic.fol_logic_agent import FirstOrderLogicAgent
     REAL_COMPONENTS_AVAILABLE = True
 except ImportError as e:
@@ -114,7 +121,21 @@ except ImportError as e:
 
 
 class TestUnifiedSystemIntegration:
-    """Tests d'intégration système complet."""
+    """Suite de tests pour l'intégration du système unifié."""
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = RealUnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
     
     def setup_method(self):
         """Configuration initiale pour chaque test."""
@@ -172,7 +193,7 @@ class TestUnifiedSystemIntegration:
         
         # Phase 2: Transition vers LLM réel
         real_config = UnifiedConfig(orchestration_type='REAL_LLM')
-        mock_llm = Mock()
+        mock_llm = await self._create_authentic_gpt4o_mini_instance()
         real_orchestrator = RealLLMOrchestrator(
             mode="real", 
             llm_service=mock_llm, 
@@ -289,7 +310,7 @@ class TestUnifiedSystemIntegration:
 
 
 class TestUnifiedErrorHandlingIntegration:
-    """Tests d'intégration pour gestion d'erreurs unifiée."""
+    """Vérifie la robustesse du système face à des erreurs."""
     
     def setup_method(self):
         """Configuration initiale pour chaque test."""
@@ -371,7 +392,7 @@ class TestUnifiedErrorHandlingIntegration:
 
 
 class TestUnifiedConfigurationIntegration:
-    """Tests d'intégration pour configuration unifiée."""
+    """Valide la gestion et la cohérence de la configuration unifiée."""
     
     def test_configuration_persistence(self):
         """Test de persistance de configuration."""
@@ -420,7 +441,7 @@ class TestUnifiedConfigurationIntegration:
 
 
 class TestUnifiedPerformanceIntegration:
-    """Tests de performance d'intégration système."""
+    """Évalue la performance et la scalabilité du système intégré."""
     
     def test_scalability_multiple_texts(self):
         """Test de scalabilité avec textes multiples."""
@@ -505,7 +526,7 @@ class TestUnifiedPerformanceIntegration:
 
 @pytest.mark.skipif(not REAL_COMPONENTS_AVAILABLE, reason="Composants réels non disponibles")
 class TestAuthenticIntegrationSuite:
-    """Suite de tests d'intégration authentique (sans mocks)."""
+    """Exécute des tests d'intégration avec des composants réels (non mockés)."""
     
     def test_authentic_fol_integration(self):
         """Test d'intégration FOL authentique."""

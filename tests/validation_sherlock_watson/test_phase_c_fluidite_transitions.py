@@ -1,3 +1,4 @@
+import pytest
 #!/usr/bin/env python3
 """
 Script de test pour Phase C : Optimisation fluidité transitions.
@@ -31,7 +32,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Imports pour simulation (mock pour le test)
-class MockKernel:
+class AuthenticGPT4oMiniKernel:
     """Mock du Kernel pour les tests."""
     def add_plugin(self, plugin, name): pass
     def add_filter(self, filter_type, filter_func): pass
@@ -42,6 +43,7 @@ class MockChatMessage:
         self.name = name
         self.content = content
 
+@pytest.mark.asyncio
 async def test_phase_c_fluidite_complete():
     """
     Test complet de la Phase C avec 5 conversations simulées.
@@ -99,6 +101,7 @@ async def test_phase_c_fluidite_complete():
     
     print("\n[OK] TEST PHASE C TERMINE")
 
+@pytest.mark.asyncio
 async def simulate_fluidity_conversation(test_num: int, elements_jeu: Dict[str, List[str]]) -> Dict[str, Any]:
     """
     Simule une conversation avec focus sur la fluidité des transitions.
@@ -200,6 +203,7 @@ async def simulate_fluidity_conversation(test_num: int, elements_jeu: Dict[str, 
     
     return fluidity_metrics
 
+@pytest.mark.asyncio
 async def simulate_contextual_analysis(oracle_state, agent_name: str, content: str, turn: int):
     """
     Simule l'analyse contextuelle qui serait faite par l'orchestrateur.
@@ -323,31 +327,31 @@ def print_phase_c_results(aggregate: Dict[str, Any]):
     print("📊 MÉTRIQUES DE FLUIDITÉ:")
     fluidity = aggregate["fluidity_scores"]
     print(f"   Score moyen: {fluidity['mean']:.1f}/10 (cible: {fluidity['target']})")
-    print(f"   Cible atteinte: {'✅ OUI' if fluidity['target_achieved'] else '❌ NON'}")
+    print(f"   Cible atteinte: {'[OK] OUI' if fluidity['target_achieved'] else '[FAIL] NON'}")
     print(f"   Plage: {fluidity['min']:.1f} - {fluidity['max']:.1f}")
     print()
     
     print("🔗 RÉFÉRENCES CONTEXTUELLES:")
     refs = aggregate["contextual_references"]
     print(f"   Taux moyen: {refs['mean_rate']:.1f}% (cible: {refs['target']}%)")
-    print(f"   Cible atteinte: {'✅ OUI' if refs['target_achieved'] else '❌ NON'}")
+    print(f"   Cible atteinte: {'[OK] OUI' if refs['target_achieved'] else '[FAIL] NON'}")
     print(f"   Plage: {refs['min_rate']:.1f}% - {refs['max_rate']:.1f}%")
     print()
     
     print("❤️ RÉACTIONS ÉMOTIONNELLES:")
     reactions = aggregate["emotional_reactions"]
     print(f"   Taux moyen: {reactions['mean_rate']:.1f}% (cible: {reactions['target']}%)")
-    print(f"   Cible atteinte: {'✅ OUI' if reactions['target_achieved'] else '❌ NON'}")
+    print(f"   Cible atteinte: {'[OK] OUI' if reactions['target_achieved'] else '[FAIL] NON'}")
     print(f"   Plage: {reactions['min_rate']:.1f}% - {reactions['max_rate']:.1f}%")
     print()
     
     print("🎯 SUCCÈS PHASE C:")
-    print(f"   Amélioration fluidité (>5.0): {'✅' if aggregate['phase_c_success']['fluidity_improved'] else '❌'}")
-    print(f"   Références suffisantes (≥90%): {'✅' if aggregate['phase_c_success']['references_sufficient'] else '❌'}")
-    print(f"   Réactions suffisantes (≥70%): {'✅' if aggregate['phase_c_success']['reactions_sufficient'] else '❌'}")
+    print(f"   Amélioration fluidité (>5.0): {'[OK]' if aggregate['phase_c_success']['fluidity_improved'] else '[FAIL]'}")
+    print(f"   Références suffisantes (≥90%): {'[OK]' if aggregate['phase_c_success']['references_sufficient'] else '[FAIL]'}")
+    print(f"   Réactions suffisantes (≥70%): {'[OK]' if aggregate['phase_c_success']['reactions_sufficient'] else '[FAIL]'}")
     print()
     
-    print(f"🏆 RÉSULTAT GLOBAL: {'✅ SUCCÈS' if aggregate['overall_success'] else '❌ ÉCHEC'}")
+    print(f"🏆 RÉSULTAT GLOBAL: {'[OK] SUCCÈS' if aggregate['overall_success'] else '[FAIL] ÉCHEC'}")
     print(f"   Pourcentage de réussite: {aggregate['success_percentage']:.1f}%")
 
 def save_test_results(all_results: List[Dict[str, Any]], aggregate: Dict[str, Any]):
@@ -373,7 +377,7 @@ def save_test_results(all_results: List[Dict[str, Any]], aggregate: Dict[str, An
         print(f"\n💾 Résultats sauvegardés: {filename}")
     except Exception as e:
         logger.error(f"Erreur sauvegarde: {e}")
-        print(f"\n❌ Erreur sauvegarde: {e}")
+        print(f"\n[FAIL] Erreur sauvegarde: {e}")
 
 if __name__ == "__main__":
     asyncio.run(test_phase_c_fluidite_complete())

@@ -4,7 +4,7 @@
   "ports": {
     "backend": {
       "primary": 5003,
-      "fallback": [5004, 5005, 5006],
+      "fallback": [5004, 5005, 5006, 5007, 5008, 5009, 5010, 5011, 5012, 5013, 5014, 5015, 5016, 5017, 5018, 5019, 5020],
       "description": "API Backend Flask"
     },
     "frontend": {

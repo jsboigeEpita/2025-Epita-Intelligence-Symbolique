@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 
 """
-Outil d'analyse des résultats d'une analyse rhétorique.
+Fournit un outil pour l'analyse méta des résultats d'une analyse rhétorique.
 
-Ce module fournit des fonctionnalités pour analyser les résultats d'une analyse
-rhétorique, extraire des insights et générer des résumés.
+Ce module définit `RhetoricalResultAnalyzer`, un outil qui n'analyse pas le
+texte brut, mais plutôt l'état (`state`) résultant d'une analyse rhétorique
+préalable. Son but est de calculer des métriques, d'évaluer la qualité globale
+de l'analyse, d'extraire des insights de haut niveau et de générer des résumés.
 """
 
 import os
@@ -33,31 +35,34 @@ logger = logging.getLogger("RhetoricalResultAnalyzer")
 
 class RhetoricalResultAnalyzer:
     """
-    Outil pour l'analyse des résultats d'une analyse rhétorique.
-    
-    Cet outil permet d'analyser les résultats d'une analyse rhétorique, d'extraire
-    des insights et de générer des résumés.
+    Analyse un état contenant les résultats d'une analyse rhétorique.
+
+    Cette classe prend en entrée un dictionnaire (`state`) qui représente
+    l'ensemble des données collectées lors d'une analyse (arguments identifiés,
+    sophismes, etc.) et produit une analyse de second niveau sur ces données.
     """
-    
+
     def __init__(self):
-        """
-        Initialise l'analyseur de résultats rhétoriques.
-        """
+        """Initialise l'analyseur de résultats rhétoriques."""
         self.logger = logger
         self.logger.info("Analyseur de résultats rhétoriques initialisé.")
     
     def analyze_results(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Analyse les résultats d'une analyse rhétorique.
-        
-        Cette méthode analyse l'état partagé contenant les résultats d'une analyse
-        rhétorique pour en extraire des métriques et des insights.
-        
+        Point d'entrée principal pour analyser l'état des résultats.
+
+        Cette méthode prend l'état complet d'une analyse et orchestre une série
+        de sous-analyses pour calculer des métriques, évaluer la qualité et
+        structurer les résultats.
+
         Args:
-            state: État partagé contenant les résultats
-            
+            state (Dict[str, Any]): L'état partagé contenant les résultats bruts
+                de l'analyse rhétorique (arguments, sophismes, etc.).
+
         Returns:
-            Dictionnaire contenant les résultats de l'analyse
+            Dict[str, Any]: Un dictionnaire structuré contenant les résultats de
+            cette méta-analyse, incluant des métriques, des analyses de
+            sophismes, d'arguments, et une évaluation de la qualité.
         """
         self.logger.info("Analyse des résultats d'une analyse rhétorique")
         

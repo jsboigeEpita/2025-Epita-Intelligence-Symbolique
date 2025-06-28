@@ -1,10 +1,10 @@
 import jpype
-from jpype.types import JString
+import re
 import logging
 from typing import Optional, List
 # La configuration du logging (appel à setup_logging()) est supposée être faite globalement,
 # par exemple au point d'entrée de l'application ou dans conftest.py pour les tests.
-from argumentation_analysis.utils.core_utils.logging_utils import setup_logging
+from argumentation_analysis.core.utils.logging_utils import setup_logging
 # Import TweetyInitializer to access its static methods for parser/reasoner
 from .tweety_initializer import TweetyInitializer
 
@@ -20,7 +20,10 @@ class PLHandler:
     def __init__(self, initializer_instance: TweetyInitializer):
         self._initializer_instance = initializer_instance
         self._pl_parser = self._initializer_instance.get_pl_parser()
-        self._pl_reasoner = self._initializer_instance.get_pl_reasoner()
+        # Dans la nouvelle architecture, le handler est responsable de créer son propre reasoner.
+        # Le nom correct, trouvé dans les sources, est SimplePlReasoner.
+        SimplePlReasoner = jpype.JClass("org.tweetyproject.logics.pl.reasoner.SimplePlReasoner")
+        self._pl_reasoner = SimplePlReasoner()
 
         if self._pl_parser is None or self._pl_reasoner is None:
             logger.error("PL components not initialized. Ensure TweetyBridge calls TweetyInitializer first.")
@@ -28,77 +31,42 @@ class PLHandler:
 
     def _normalize_formula(self, formula_str: str) -> str:
         """
-        Normalizes a formula string to be compatible with Tweety's parser.
-        - Replaces logical operators (&&, ||, !, ->, <->).
-        - Removes spaces within predicates, e.g., 'Coupable(Colonel Moutarde)' -> 'Coupable(ColonelMoutarde)'.
-        - Ensures consistent spacing around operators.
+        Ensures consistent spacing around logical operators and parentheses for Tweety's parser.
+        This version uses regex for safer and more robust replacements.
         """
         if not isinstance(formula_str, str):
             return ""
-            
-        logger.debug(f"Normalizing formula: '{formula_str}'")
-        
-        # Replace logical operator variations
-        replacements = {
-            "&&": "&",
-            "||": "|",
-            "|": "|",
-            "->": "=>",
-            "<=>": "<=>",
-            "Not ": "!",
-            "NOT ": "!",
-        }
-        for old, new in replacements.items():
-            formula_str = formula_str.replace(old, new)
 
-        # Remove spaces inside predicates like `Coupable(Colonel Moutarde)`
-        import re
-        
-        # This function will be applied to each match of the regex.
-        # It replaces spaces with underscores inside the matched group.
-        def replace_spaces_with_underscores(match):
-            return match.group(0).replace(' ', '_')
+        logger.debug(f"Original formula for normalization: '{formula_str}'")
 
-        # A more robust approach: split by operators, process, then rejoin.
-        # This avoids complex regex lookarounds.
-        operators_pattern = r'(\s*=>\s*|\s*<=>\s*|\s*\||\s*&\s*|\s*!\s*|\(|\))'
-        parts = re.split(operators_pattern, formula_str)
-        
-        processed_parts = []
-        for part in parts:
-            if part is None:
-                continue
-            # Check if the part is an operator (with potential whitespace)
-            if re.fullmatch(operators_pattern, part):
-                # Keep operator as is, but without surrounding spaces that will be added later
-                processed_parts.append(part.strip())
+        # Replacements for common alternative operators. Ensure spacing for safety.
+        formula_str = formula_str.replace("&&", " & ").replace("||", " | ")
+        formula_str = formula_str.replace("->", " => ").replace("<->", " <=> ")
+        formula_str = formula_str.replace(" NOT ", " ! ").replace(" Not ", " ! ")
+
+
+        # Regex to add spaces around all operators and parentheses that might be stuck together (e.g. "A&B")
+        # This is a safety net for cases the replaces above miss.
+        # Note the correction of '<=>' from the previous '<=<' typo.
+        formula_str = re.sub(r'\s*(=>|<=>|&|\||!|\(|\))\s*', r' \1 ', formula_str)
+
+        # Sanitize proposition names: replace invalid characters with underscore
+        # This is done after operator spacing to avoid corrupting them.
+        tokens = formula_str.split(' ')
+        sanitized_tokens = []
+        operators_and_parentheses = {'=>', '<=>', '&', '|', '!', '(', ')'}
+        for token in tokens:
+            if token in operators_and_parentheses or token == '':
+                sanitized_tokens.append(token)
             else:
-                # This is a proposition name, replace spaces with underscores
-                processed_parts.append(part.strip().replace(' ', '_'))
-        
-        # Rejoin the formula, ensuring single spaces around binary operators
-        final_formula = ""
-        for i, part in enumerate(processed_parts):
-            if not part:
-                continue
-            
-            is_binary_op = part in ['=>', '<=>', '|', '&']
-            is_unary_op = part == '!'
-            is_open_paren = part == '('
-            is_close_paren = part == ')'
-            
-            # Add space before binary operators and after close parenthesis if needed
-            if final_formula and (is_binary_op or is_open_paren or not is_unary_op and not final_formula.endswith('(') and not final_formula.endswith('!')):
-                 if not final_formula.endswith(' '):
-                    final_formula += " "
+                # It's a proposition name, sanitize it
+                # Allow letters, numbers, and underscores. Replace everything else.
+                sanitized_token = re.sub(r'[^a-zA-Z0-9_]', '_', token)
+                sanitized_tokens.append(sanitized_token)
+        formula_str = ' '.join(sanitized_tokens)
 
-            final_formula += part
-            
-            # Add space after binary operators and open parenthesis
-            if is_binary_op or is_open_paren:
-                final_formula += " "
-
-        formula_str = " ".join(final_formula.split()) # Clean up extra spaces
+        # Clean up any resulting multiple spaces
+        formula_str = " ".join(formula_str.split())
 
         logger.debug(f"Normalized formula to: '{formula_str}'")
         return formula_str
@@ -136,13 +104,13 @@ class PLHandler:
                 signature = PlSignature()
                 Proposition = jpype.JClass("org.tweetyproject.logics.pl.syntax.Proposition")
                 for const_name in constants:
-                    proposition = Proposition(JString(const_name))
+                    proposition = Proposition(jpype.JClass("java.lang.String")(const_name))
                     if not signature.contains(proposition):
                         signature.add(proposition)
                 pl_formula = self._pl_parser.parseFormula(JString(normalized_formula), signature)
             else:
-                java_formula_str = JString(normalized_formula)
-                pl_formula = self._pl_parser.parseFormula(java_formula_str)
+                # Using JString is a good practice to avoid ambiguity.
+                pl_formula = self._pl_parser.parseFormula(jpype.JString(normalized_formula))
 
             logger.info(f"Successfully parsed PL formula: '{formula_str}' as '{normalized_formula}' -> {pl_formula}")
             return pl_formula

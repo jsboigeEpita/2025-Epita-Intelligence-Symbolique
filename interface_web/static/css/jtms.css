@@ -1,0 +1,776 @@
+/**
+ * Styles CSS pour Interface JTMS
+ * =============================
+ * 
+ * Styles personnalisés pour l'interface web JTMS.
+ * Design moderne, responsive et cohérent avec Bootstrap 5.
+ * 
+ * Version: 1.0.0
+ * Auteur: Intelligence Symbolique EPITA
+ * Date: 11/06/2025
+ */
+
+/* ============================================================================
+   VARIABLES CSS PERSONNALISÉES
+   ============================================================================ */
+
+:root {
+    /* Couleurs principales JTMS */
+    --jtms-primary: #007bff;
+    --jtms-secondary: #6c757d;
+    --jtms-success: #28a745;
+    --jtms-danger: #dc3545;
+    --jtms-warning: #ffc107;
+    --jtms-info: #17a2b8;
+    --jtms-light: #f8f9fa;
+    --jtms-dark: #343a40;
+    
+    /* Couleurs spécifiques aux croyances */
+    --belief-valid: #28a745;
+    --belief-invalid: #dc3545;
+    --belief-unknown: #ffc107;
+    --belief-nonmonotonic: #fd7e14;
+    
+    /* Couleurs d'arrière-plan */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8f9fa;
+    --bg-tertiary: #e9ecef;
+    
+    /* Ombres et effets */
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 8px rgba(0,0,0,0.12);
+    --shadow-lg: 0 8px 16px rgba(0,0,0,0.16);
+    
+    /* Transitions */
+    --transition-fast: 0.15s ease-in-out;
+    --transition-normal: 0.3s ease-in-out;
+    --transition-slow: 0.5s ease-in-out;
+    
+    /* Rayons de bordure */
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+    
+    /* Espacements */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+}
+
+/* ============================================================================
+   CLASSES GÉNÉRALES JTMS
+   ============================================================================ */
+
+.jtms-container {
+    background-color: var(--bg-secondary);
+    min-height: 100vh;
+}
+
+.jtms-panel {
+    background: var(--bg-primary);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-xl);
+    margin-bottom: var(--spacing-lg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--bg-tertiary);
+    transition: all var(--transition-normal);
+}
+
+.jtms-panel:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-1px);
+}
+
+.jtms-panel h4,
+.jtms-panel h5,
+.jtms-panel h6 {
+    color: var(--jtms-dark);
+    font-weight: 600;
+    margin-bottom: var(--spacing-lg);
+}
+
+.jtms-panel h4 i,
+.jtms-panel h5 i,
+.jtms-panel h6 i {
+    margin-right: var(--spacing-sm);
+    color: var(--jtms-primary);
+}
+
+/* ============================================================================
+   ÉTATS DES CROYANCES
+   ============================================================================ */
+
+.belief-status {
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.belief-status.justified {
+    color: var(--belief-valid);
+}
+
+.belief-status.unjustified {
+    color: var(--belief-invalid);
+}
+
+.belief-status.unknown {
+    color: var(--belief-unknown);
+}
+
+.belief-status.non-monotonic {
+    color: var(--belief-nonmonotonic);
+    font-style: italic;
+}
+
+.belief-status::before {
+    content: "●";
+    font-size: 1.2em;
+}
+
+/* ============================================================================
+   BADGES ET INDICATEURS
+   ============================================================================ */
+
+.jtms-badge {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.jtms-badge.valid {
+    background-color: var(--belief-valid);
+    color: white;
+}
+
+.jtms-badge.invalid {
+    background-color: var(--belief-invalid);
+    color: white;
+}
+
+.jtms-badge.unknown {
+    background-color: var(--belief-unknown);
+    color: var(--jtms-dark);
+}
+
+.jtms-badge.nonmonotonic {
+    background-color: var(--belief-nonmonotonic);
+    color: white;
+}
+
+/* ============================================================================
+   CARTES DE STATISTIQUES
+   ============================================================================ */
+
+.stat-card {
+    text-align: center;
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--bg-tertiary);
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    background: var(--bg-primary);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-2px);
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--jtms-primary), var(--jtms-info));
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-xs);
+    color: var(--jtms-dark);
+    transition: all var(--transition-normal);
+}
+
+.stat-card:hover .stat-number {
+    transform: scale(1.1);
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--jtms-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+
+/* ============================================================================
+   LOG D'ACTIVITÉ
+   ============================================================================ */
+
+.activity-log {
+    height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--bg-tertiary);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-md);
+    background: var(--bg-secondary);
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.activity-log::-webkit-scrollbar {
+    width: 6px;
+}
+
+.activity-log::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+    border-radius: 3px;
+}
+
+.activity-log::-webkit-scrollbar-thumb {
+    background: var(--jtms-secondary);
+    border-radius: 3px;
+}
+
+.activity-log::-webkit-scrollbar-thumb:hover {
+    background: var(--jtms-primary);
+}
+
+.log-entry {
+    margin-bottom: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--border-radius-sm);
+    background: var(--bg-primary);
+    border-left: 3px solid var(--jtms-primary);
+    transition: all var(--transition-fast);
+    position: relative;
+}
+
+.log-entry:hover {
+    background: var(--bg-secondary);
+    border-left-color: var(--jtms-info);
+    transform: translateX(2px);
+}
+
+.log-entry.success {
+    border-left-color: var(--belief-valid);
+}
+
+.log-entry.error {
+    border-left-color: var(--belief-invalid);
+}
+
+.log-entry.warning {
+    border-left-color: var(--belief-unknown);
+}
+
+.log-timestamp {
+    color: var(--jtms-secondary);
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+/* ============================================================================
+   SECTIONS DE CONTRÔLE
+   ============================================================================ */
+
+.control-section {
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+    border: 1px solid var(--bg-tertiary);
+    transition: all var(--transition-normal);
+}
+
+.control-section:hover {
+    background: var(--bg-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.control-section .form-label {
+    font-weight: 600;
+    color: var(--jtms-dark);
+    margin-bottom: var(--spacing-sm);
+    display: flex;
+    align-items: center;
+}
+
+.control-section .form-label i {
+    margin-right: var(--spacing-sm);
+    color: var(--jtms-primary);
+}
+
+/* ============================================================================
+   PERSONNALISATION DES ONGLETS
+   ============================================================================ */
+
+.nav-tabs .nav-link {
+    color: var(--jtms-secondary);
+    font-weight: 500;
+    border-radius: var(--border-radius-sm) var(--border-radius-sm) 0 0;
+    transition: all var(--transition-normal);
+}
+
+.nav-tabs .nav-link:hover {
+    background-color: var(--bg-secondary);
+    border-color: var(--bg-tertiary);
+    color: var(--jtms-primary);
+}
+
+.nav-tabs .nav-link.active {
+    background-color: var(--jtms-primary);
+    border-color: var(--jtms-primary);
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.tab-content {
+    border: 1px solid var(--bg-tertiary);
+    border-top: none;
+    border-radius: 0 0 var(--border-radius-md) var(--border-radius-md);
+    padding: var(--spacing-lg);
+    background: var(--bg-primary);
+}
+
+/* ============================================================================
+   BOUTONS PERSONNALISÉS
+   ============================================================================ */
+
+.btn-jtms {
+    border-radius: var(--border-radius-sm);
+    font-weight: 500;
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-jtms::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s;
+}
+
+.btn-jtms:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.btn-jtms i {
+    margin-right: var(--spacing-xs);
+}
+
+/* ============================================================================
+   DÉTAILS DES CROYANCES
+   ============================================================================ */
+
+.belief-details-content {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.justifications-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.justification-item {
+    transition: all var(--transition-fast);
+}
+
+.justification-item:hover {
+    background-color: var(--bg-secondary) !important;
+    transform: translateX(4px);
+}
+
+/* ============================================================================
+   VISUALISATION GRAPHIQUE
+   ============================================================================ */
+
+#network-container {
+    position: relative;
+    border: 2px solid var(--bg-tertiary);
+    border-radius: var(--border-radius-md);
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+
+#network-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 20% 20%, rgba(0, 123, 255, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(40, 167, 69, 0.05) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.network-controls {
+    position: absolute;
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: var(--border-radius-sm);
+    padding: var(--spacing-xs);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-sm);
+}
+
+/* ============================================================================
+   NAVIGATION JTMS
+   ============================================================================ */
+
+.navbar-brand i {
+    margin-right: var(--spacing-sm);
+    color: var(--jtms-info);
+}
+
+.navbar-nav .nav-link {
+    transition: all var(--transition-normal);
+    border-radius: var(--border-radius-sm);
+    margin-right: var(--spacing-xs);
+}
+
+.navbar-nav .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.navbar-nav .nav-link.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    font-weight: 600;
+}
+
+.navbar-nav .nav-link i {
+    margin-right: var(--spacing-sm);
+}
+
+/* ============================================================================
+   NOTIFICATIONS TOAST
+   ============================================================================ */
+
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+}
+
+.toast {
+    min-width: 300px;
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-lg);
+    backdrop-filter: blur(10px);
+}
+
+.toast-header {
+    background-color: rgba(255, 255, 255, 0.95);
+    border-bottom: 1px solid var(--bg-tertiary);
+}
+
+.toast-body {
+    background-color: rgba(255, 255, 255, 0.95);
+}
+
+.toast.bg-success {
+    background-color: rgba(40, 167, 69, 0.95) !important;
+}
+
+.toast.bg-danger {
+    background-color: rgba(220, 53, 69, 0.95) !important;
+}
+
+.toast.bg-warning {
+    background-color: rgba(255, 193, 7, 0.95) !important;
+}
+
+/* ============================================================================
+   ÉTATS VIDES ET DE CHARGEMENT
+   ============================================================================ */
+
+.empty-state {
+    padding: var(--spacing-xl) var(--spacing-lg);
+    text-align: center;
+    color: var(--jtms-secondary);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: var(--spacing-lg);
+    opacity: 0.5;
+    color: var(--jtms-primary);
+}
+
+.loading-state {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+    color: var(--jtms-secondary);
+}
+
+.loading-state .spinner-border {
+    margin-right: var(--spacing-md);
+}
+
+/* ============================================================================
+   LÉGENDES ET AIDES
+   ============================================================================ */
+
+.legend {
+    font-size: 0.8rem;
+    color: var(--jtms-secondary);
+    padding: var(--spacing-sm);
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius-sm);
+    margin-top: var(--spacing-md);
+}
+
+.legend .belief-status {
+    margin-right: var(--spacing-md);
+}
+
+.help-text {
+    font-size: 0.75rem;
+    color: var(--jtms-secondary);
+    font-style: italic;
+    margin-top: var(--spacing-xs);
+}
+
+/* ============================================================================
+   RESPONSIVE DESIGN
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .jtms-panel {
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-md);
+    }
+    
+    #network-container {
+        height: 400px !important;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+    }
+    
+    .activity-log {
+        height: 200px;
+    }
+    
+    .control-section {
+        padding: var(--spacing-md);
+    }
+    
+    .navbar-nav .nav-link {
+        margin-bottom: var(--spacing-xs);
+    }
+    
+    .toast {
+        min-width: 250px;
+    }
+}
+
+@media (max-width: 576px) {
+    :root {
+        --spacing-xl: 1rem;
+        --spacing-lg: 0.75rem;
+    }
+    
+    .jtms-panel {
+        padding: var(--spacing-md);
+    }
+    
+    .stat-card {
+        padding: var(--spacing-md);
+    }
+    
+    .stat-number {
+        font-size: 1.25rem;
+    }
+    
+    #network-container {
+        height: 300px !important;
+    }
+    
+    .activity-log {
+        height: 150px;
+    }
+}
+
+/* ============================================================================
+   ANIMATIONS PERSONNALISÉES
+   ============================================================================ */
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.animate-pulse {
+    animation: pulse 2s infinite;
+}
+
+.animate-slide-in {
+    animation: slideInRight 0.3s ease-out;
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* ============================================================================
+   MODES SOMBRES (PRÉPARATION)
+   ============================================================================ */
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-primary: #2d3748;
+        --bg-secondary: #1a202c;
+        --bg-tertiary: #4a5568;
+        --jtms-dark: #e2e8f0;
+        --jtms-secondary: #a0aec0;
+    }
+    
+    .jtms-panel {
+        background: var(--bg-primary);
+        border-color: var(--bg-tertiary);
+    }
+    
+    .control-section {
+        background: var(--bg-secondary);
+    }
+    
+    .form-control {
+        background-color: var(--bg-secondary);
+        border-color: var(--bg-tertiary);
+        color: var(--jtms-dark);
+    }
+    
+    .form-control:focus {
+        background-color: var(--bg-primary);
+        border-color: var(--jtms-primary);
+        color: var(--jtms-dark);
+    }
+}
+
+/* ============================================================================
+   UTILITAIRES
+   ============================================================================ */
+
+.border-jtms {
+    border-color: var(--jtms-primary) !important;
+}
+
+.text-jtms {
+    color: var(--jtms-primary) !important;
+}
+
+.bg-jtms {
+    background-color: var(--jtms-primary) !important;
+}
+
+.shadow-jtms {
+    box-shadow: var(--shadow-md) !important;
+}
+
+.rounded-jtms {
+    border-radius: var(--border-radius-md) !important;
+}
+
+.transition-jtms {
+    transition: all var(--transition-normal) !important;
+}
+
+/* ============================================================================
+   PRINT STYLES
+   ============================================================================ */
+
+@media print {
+    .jtms-panel {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #000;
+    }
+    
+    .navbar,
+    .toast-container,
+    .network-controls {
+        display: none !important;
+    }
+    
+    #network-container {
+        height: 400px !important;
+        background: white !important;
+    }
+    
+    .activity-log {
+        height: auto !important;
+        max-height: 200px;
+        overflow: visible !important;
+    }
+}

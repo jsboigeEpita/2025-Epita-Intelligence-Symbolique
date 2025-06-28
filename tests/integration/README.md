@@ -1,34 +1,198 @@
 # Tests d'Intégration
 
-## Objectif
+Ce dossier contient les tests d'intégration end-to-end pour valider le fonctionnement complet des démos principales du projet.
 
-Ce répertoire contient les tests d'intégration du projet. Contrairement aux tests unitaires qui valident des composants isolés, ces tests ont pour but de vérifier que plusieurs parties du système fonctionnent correctement ensemble pour réaliser des workflows complets et des scénarios d'utilisation réalistes.
+## 📋 Vue d'ensemble
 
-L'objectif est de s'assurer de la robustesse des interactions entre les différents services, agents, et couches logiques du système.
+Les tests d'intégration valident le comportement end-to-end des 4 démos principales dans [`examples/Sherlock_Watson/`](../../examples/Sherlock_Watson/) :
 
-## Organisation des Tests
+- ✅ **Fonctionnement complet** sans dépendances externes obligatoires
+- ✅ **Gestion fallback** pour environnements partiels  
+- ✅ **Validation conformité** des composants opérationnels
+- ✅ **Tests autonomes** avec skip automatique si infrastructure manquante
 
-Les tests d'intégration sont organisés en sous-répertoires et fichiers thématiques :
+## 🧪 Modules de Tests
 
-*   ### [jpype_tweety/](./jpype_tweety/README.md)
-    *   **Rôle :** Valide l'intégration bas niveau entre Python et la bibliothèque de raisonnement Java **Tweety** via **JPype**.
-    *   **Contenu :** Ces tests s'assurent que la JVM peut être démarrée, que les classes Java de Tweety peuvent être instanciées, et que les opérations logiques fondamentales (parsing, raisonnement, manipulation de théories) fonctionnent comme attendu depuis Python. C'est la base sur laquelle repose toute la logique formelle du projet.
-    *   *Pour plus de détails, consultez le [README de jpype_tweety](./jpype_tweety/README.md).*
+### 1. [`test_sherlock_watson_demo_integration.py`](test_sherlock_watson_demo_integration.py)
+**Tests pour `sherlock_watson_authentic_demo.py`**
 
-*   ### Tests d'Intégration de Haut Niveau (fichiers à la racine)
+```bash
+pytest tests/integration/test_sherlock_watson_demo_integration.py -v
+```
 
-    Les fichiers `.py` situés directement dans ce répertoire testent des workflows applicatifs complets en assemblant plusieurs composants majeurs :
+**Tests couverts** :
+- Configuration environnement (Semantic Kernel + OpenAI)
+- Chargement cas Cluedo avec structure validée
+- Investigation simplifiée avec conversation multi-agents
+- Tests agents logiques avec fallback
+- Validation Oracle avec gestion d'erreurs
+- Sauvegarde session avec données persistantes
 
-    *   **`test_agents_tools_integration.py` :** Vérifie que les agents d'analyse (ex: `InformalAnalysisAgent`) peuvent correctement utiliser et coordonner leurs outils internes (analyseurs de sophismes, évaluateurs de contexte, etc.) pour réaliser une analyse complète.
+### 2. [`test_cluedo_oracle_integration.py`](test_cluedo_oracle_integration.py)
+**Tests pour `cluedo_oracle_complete.py`**
 
-    *   **`test_cluedo_orchestration_integration.py` :** Simule un scénario complexe d'orchestration multi-agents (un jeu de Cluedo) pour valider la collaboration, la gestion d'état et le déroulement d'un dialogue entre plusieurs agents (Sherlock, Watson).
+```bash
+pytest tests/integration/test_cluedo_oracle_integration.py -v
+```
 
-    *   **`test_logic_agents_integration.py` :** Teste le pipeline complet des agents logiques : conversion de texte en base de croyances formelle, génération de requêtes, exécution via le `TweetyBridge`, et interprétation des résultats.
+**Tests couverts** :
+- État Oracle avec solution secrète et cartes
+- Validation suggestions avec révélations automatiques
+- Comportement Oracle (réfutation/confirmation/neutre)
+- Moteur de jeu avec configuration Semantic Kernel
+- Investigation complète avec conversation structurée
+- Statistiques Oracle et métriques de performance
 
-    *   **`test_logic_api_integration.py` :** Valide les endpoints de l'API Web (Flask) qui exposent les services logiques. Ce test assure que la couche de service web est correctement intégrée avec la logique métier sous-jacente.
+### 3. [`test_agents_logiques_integration.py`](test_agents_logiques_integration.py)
+**Tests pour `agents_logiques_production.py`**
 
-    *   **`test_notebooks_structure.py` :** Un test de "méta-intégration" qui garantit que les notebooks Jupyter fournis comme tutoriels sont bien formés et fonctionnels.
+```bash
+pytest tests/integration/test_agents_logiques_integration.py -v
+```
 
-## Stratégie de Test
+**Tests couverts** :
+- Processeur données custom avec patterns sophistiques
+- Détection sophistiques (ad hominem, strawman, false dilemma, etc.)
+- Analyse logique modale (nécessité, possibilité, temporal, etc.)
+- Extraction propositions logiques avec validation
+- Calcul force d'argument avec métriques
+- Analyse complète intégrée avec hash authentique
 
-Ces tests utilisent fréquemment des **mocks** pour simuler les dépendances externes (comme les appels aux LLM ou les bases de données) afin de se concentrer exclusivement sur la validation des **interactions et des flux de données** entre les composants internes du projet.
+### 4. [`test_orchestration_finale_integration.py`](test_orchestration_finale_integration.py)
+**Tests pour `orchestration_finale_reelle.py`**
+
+```bash
+pytest tests/integration/test_orchestration_finale_integration.py -v
+```
+
+**Tests couverts** :
+- Moteur d'orchestration avec session management
+- Workflows multiples (Cluedo, Einstein, Agents, Sherlock-Watson)
+- Modes orchestration (séquentiel, parallèle, adaptatif)
+- Métriques convergence avec calculs statistiques
+- Validation environnement avec checks authentification
+- Session complète avec sauvegarde résultats
+
+### 5. [`test_einstein_tweetyproject_integration.py`](test_einstein_tweetyproject_integration.py)
+**Tests spécifiques pour l'intégration TweetyProject dans Einstein**
+
+```bash
+pytest tests/integration/test_einstein_tweetyproject_integration.py -v
+```
+
+**Tests couverts** :
+- Validation initialisation TweetyProject pour Einstein
+- Tests formulation clauses logiques Watson
+- Tests exécution requêtes TweetyProject spécifiques
+- Tests validation contraintes Einstein formelles
+- Tests états EinsteinsRiddleState avec TweetyProject
+- Tests gestion erreurs TweetyProject (timeouts, échecs)
+- Tests récupération et fallback
+- Tests performance traitement contraintes
+- Tests robustesse avec contraintes malformées
+
+## 🚀 Exécution des Tests
+
+### Tests individuels
+```bash
+# Test démo principale
+pytest tests/integration/test_sherlock_watson_demo_integration.py -v
+
+# Test Oracle Cluedo
+pytest tests/integration/test_cluedo_oracle_integration.py -v
+
+# Test agents logiques
+pytest tests/integration/test_agents_logiques_integration.py -v
+
+# Test orchestration finale
+pytest tests/integration/test_orchestration_finale_integration.py -v
+
+# Test Einstein TweetyProject
+pytest tests/integration/test_einstein_tweetyproject_integration.py -v
+```
+
+### Suite complète
+```bash
+# Tous les tests d'intégration
+pytest tests/integration/ -v
+
+# Avec rapport de couverture
+pytest tests/integration/ -v --cov=examples.Sherlock_Watson
+```
+
+### Tests avec infrastructure complète
+```bash
+# Avec clé OpenAI configurée (tests complets)
+OPENAI_API_KEY=sk-your-key pytest tests/integration/ -v
+
+# Mode verbose pour debugging
+pytest tests/integration/ -v -s --tb=short
+```
+
+## ⚙️ Configuration
+
+### Variables d'environnement optionnelles
+```bash
+# Pour tests avec API réelle (optionnel)
+export OPENAI_API_KEY=sk-your-openai-key
+export OPENAI_CHAT_MODEL_ID=gpt-4o-mini
+
+# Configuration Python
+export PYTHONPATH="${PYTHONPATH}:$(pwd)/examples/Sherlock_Watson"
+```
+
+### Gestion automatique des dépendances
+Les tests gèrent automatiquement :
+- ✅ **Skip automatique** si modules non disponibles
+- ✅ **Fallback modes** si API/réseau indisponible  
+- ✅ **Tests offline** pour validation structure
+- ✅ **Timeout protection** pour éviter blocages
+
+## 📊 Caractéristiques Techniques
+
+### Approche de test
+- **Tests end-to-end** : Validation flux complet de chaque démo
+- **Isolation modules** : Chaque test fonctionne indépendamment
+- **Gestion d'erreurs** : Skip intelligent si infrastructure manquante
+- **Validation conformité** : Vérification absence de simulations
+- **Tests spécialisés** : Focus Einstein TweetyProject avec logique formelle
+
+### Patterns utilisés
+- **Fixtures pytest** : Configuration test avec cleanup automatique
+- **Temporary directories** : Isolation fichiers temporaires
+- **Mock environnement** : Tests avec variables d'environnement simulées
+- **Async testing** : Support tests asynchrones avec `pytest-asyncio`
+- **Contraintes simulées** : Validation TweetyProject avec clauses logiques
+- **Tests de robustesse** : Gestion erreurs et contraintes malformées
+
+### Métriques validées
+- **Durée exécution** : Tracking performance de chaque test
+- **Taux succès** : Validation pourcentage réussite
+- **Conformité** : Vérification absence mocks/simulations
+- **Couverture** : Validation points d'entrée critiques
+- **Performance TweetyProject** : Temps traitement contraintes < 1s
+- **Robustesse logique** : Validation clauses Einstein formelles
+
+## 🔍 Debugging
+
+### Logs détaillés
+```bash
+# Activation logs détaillés
+pytest tests/integration/ -v -s --log-cli-level=INFO
+
+# Focus sur un test spécifique
+pytest tests/integration/test_cluedo_oracle_integration.py::TestCluedoOracleIntegration::test_oracle_behavior_validation -v -s
+```
+
+### Debugging d'erreurs
+```bash
+# Mode debug avec breakpoints
+pytest tests/integration/ --pdb
+
+# Affichage stdout complet
+pytest tests/integration/ -v -s --tb=long
+```
+
+---
+
+**📝 Note** : Ces tests d'intégration complètent la suite de validation dans [`tests/finaux/`](../finaux/) en se concentrant sur le comportement end-to-end plutôt que sur la validation technique interne.

@@ -1,0 +1,38 @@
+agents:
+  - id: "expert_alice"
+    dialogue_type: "inquiry"
+    strategy: "collaborative"
+    propositions:
+      - content: "Le réchauffement climatique est causé par l'activité humaine"
+        truth_value: true
+        confidence: 0.9
+      - content: "Les émissions de CO2 augmentent depuis 1950"
+        truth_value: true
+        confidence: 0.95
+      - content: "Le CO2 cause l'effet de serre"
+        truth_value: true
+        confidence: 0.9
+    arguments:
+      - id: "arg1"
+        premises: ["Les émissions de CO2 augmentent depuis 1950", "Le CO2 cause l'effet de serre"]
+        conclusion: "Le réchauffement climatique est causé par l'activité humaine"
+        strength: 0.8
+
+  - id: "skeptic_bob"
+    dialogue_type: "inquiry" 
+    strategy: "skeptical"
+    propositions:
+      - content: "Les variations climatiques sont naturelles"
+        truth_value: true
+        confidence: 0.7
+      - content: "Les modèles climatiques sont imprécis"
+        truth_value: true
+        confidence: 0.6
+      - content: "L'activité solaire influence le climat"
+        truth_value: true
+        confidence: 0.8
+    arguments:
+      - id: "arg2"
+        premises: ["Le climat a toujours varié", "Les cycles solaires influencent le climat"]
+        conclusion: "Les variations climatiques sont naturelles"
+        strength: 0.6

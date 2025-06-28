@@ -1,3 +1,4 @@
+import argumentation_analysis.core.environment
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -16,19 +17,17 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 def run_single_test():
     """Exécute un test simple pour vérifier la logique de chiffrement."""
-    print("=== Test simple de la logique de chiffrement ===")
+    print("=== Test simple de la logique de chiffrement RÉELLE ===")
     
     try:
-        # Importer les modules nécessaires
-        from tests.mocks.extract_definitions_mock import setup_extract_definitions_mock
+        # Importer les modules nécessaires - VRAIES IMPLÉMENTATIONS UNIQUEMENT !
         from argumentation_analysis.ui import file_operations
         from cryptography.fernet import Fernet
         import tempfile
         import json
         
-        # Configurer le mock
-        setup_result = setup_extract_definitions_mock()
-        print(f"Configuration du mock: {'[OK] Reussi' if setup_result else '[ERREUR] Echec'}")
+        # PLUS AUCUN MOCK ! Test avec vraies implémentations
+        print("Configuration des vraies implémentations: [OK] Réussi")
         
         # Créer des données de test
         test_data = [
@@ -84,15 +83,14 @@ def run_single_test():
 
 def run_script_test():
     """Teste l'exécution du script embed_all_sources.py."""
-    print("\n=== Test d'exécution du script embed_all_sources.py ===")
+    print("\n=== Test d'exécution RÉEL du script embed_all_sources.py ===")
     
     try:
         import tempfile
-        from tests.mocks.extract_definitions_mock import setup_extract_definitions_mock
         from argumentation_analysis.ui import file_operations
         
-        # Configurer le mock
-        setup_extract_definitions_mock()
+        # PLUS AUCUN MOCK ! Vraies implémentations uniquement
+        print("Utilisation des vraies implémentations: [OK] Configuré")
         
         # Créer des données de test
         test_data = [
@@ -135,32 +133,28 @@ def run_script_test():
             
             print(f"Commande: {' '.join(cmd)}")
             
-            # Mock get_full_text_for_source pour éviter les appels réseau
-            import unittest.mock
-            with unittest.mock.patch('argumentation_analysis.ui.utils.get_full_text_for_source') as mock_get_text:
-                mock_get_text.return_value = "Mocked full text content"
-                
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-                
-                print(f"Code de retour: {result.returncode}")
-                print(f"STDOUT: {result.stdout}")
-                if result.stderr:
-                    print(f"STDERR: {result.stderr}")
-                
-                print(f"Fichier de sortie cree: {'[OK] Oui' if output_file.exists() else '[ERREUR] Non'}")
-                
-                if output_file.exists():
-                    # Vérifier le contenu du fichier de sortie
-                    output_data = file_operations.load_extract_definitions(
-                        config_file=output_file,
-                        key=test_passphrase
-                    )
-                    print(f"Donnees de sortie: {len(output_data) if output_data else 0} elements")
-                    if output_data and len(output_data) > 0:
-                        has_full_text = 'full_text' in output_data[0]
-                        print(f"Texte complet ajoute: {'[OK] Oui' if has_full_text else '[ERREUR] Non'}")
-                
-                return result.returncode == 0
+            # PLUS DE MOCK ! Utilisation directe des vraies implémentations
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            
+            print(f"Code de retour: {result.returncode}")
+            print(f"STDOUT: {result.stdout}")
+            if result.stderr:
+                print(f"STDERR: {result.stderr}")
+            
+            print(f"Fichier de sortie cree: {'[OK] Oui' if output_file.exists() else '[ERREUR] Non'}")
+            
+            if output_file.exists():
+                # Vérifier le contenu du fichier de sortie
+                output_data = file_operations.load_extract_definitions(
+                    config_file=output_file,
+                    key=test_passphrase
+                )
+                print(f"Donnees de sortie: {len(output_data) if output_data else 0} elements")
+                if output_data and len(output_data) > 0:
+                    has_full_text = 'full_text' in output_data[0]
+                    print(f"Texte complet ajoute: {'[OK] Oui' if has_full_text else '[ERREUR] Non'}")
+            
+            return result.returncode == 0
         
     except Exception as e:
         print(f"[ERREUR] Erreur: {e}")

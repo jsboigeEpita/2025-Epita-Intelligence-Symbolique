@@ -1,3 +1,9 @@
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # -*- coding: utf-8 -*-
 # tests/integration/test_sprint2_improvements.py
 """
@@ -5,7 +11,8 @@ Tests d'intégration spécifiques pour valider les améliorations du Sprint 2.
 """
 
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
+
 import asyncio
 from datetime import datetime
 
@@ -18,17 +25,29 @@ from argumentation_analysis.agents.core.informal.informal_agent_adapter import I
 
 
 class TestSprint2Improvements(unittest.TestCase):
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests pour valider les améliorations du Sprint 2."""
     
     def setUp(self):
         """Initialisation avant chaque test."""
+        # Création d'un mock pour l'application Flask
         self.mock_app = MagicMock()
-        self.mock_app.route = MagicMock()
-        
-        # Mock flask app attributes
-        self.mock_app.logic_service = None
-        self.mock_app.group_chat_orchestration = None
-        self.mock_app.service_integrator = None
+        self.mock_app.config = {}
+        self.mock_app.extensions = {}
         
     def test_harmonized_agent_interfaces(self):
         """Test que les interfaces d'agents sont harmonisées et compatibles."""
@@ -133,14 +152,16 @@ class TestSprint2Improvements(unittest.TestCase):
         results = async_manager.run_multiple_hybrid(tasks)
         self.assertEqual(results, [3, 7, 11])
     
-    def test_group_chat_orchestration_robustness(self):
+    async def test_group_chat_orchestration_robustness(self):
         """Test que l'orchestration de groupe chat est robuste."""
         orchestration = GroupChatOrchestration()
         
         # Test initialisation session
+        agent1 = await self._create_authentic_gpt4o_mini_instance()
+        agent2 = await self._create_authentic_gpt4o_mini_instance()
         success = orchestration.initialize_session("test_session", {
-            "agent1": MagicMock(),
-            "agent2": MagicMock()
+            "agent1": agent1,
+            "agent2": agent2
         })
         self.assertTrue(success)
         
@@ -298,16 +319,15 @@ class TestSprint2Improvements(unittest.TestCase):
         cleaned = async_manager.cleanup_completed_tasks(max_age_hours=0)
         self.assertGreaterEqual(cleaned, 0)
     
-    def test_concurrent_operations(self):
+    async def test_concurrent_operations(self):
         """Test que les opérations concurrentes fonctionnent correctement."""
         orchestration = GroupChatOrchestration()
         
-        # Initialiser avec plusieurs agents mockés
+        # Initialiser avec plusieurs agents authentiques
         agents = {}
         for i in range(3):
-            mock_agent = MagicMock()
-            mock_agent.get_agent_capabilities.return_value = {"type": f"agent_{i}"}
-            agents[f"agent_{i}"] = mock_agent
+            agent = await self._create_authentic_gpt4o_mini_instance()
+            agents[f"agent_{i}"] = agent
         
         orchestration.initialize_session("concurrent_test", agents)
         

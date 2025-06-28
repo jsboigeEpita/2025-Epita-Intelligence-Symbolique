@@ -51,7 +51,7 @@ def find_webapp_processes():
             cmdline = ' '.join(proc.cmdline()).lower()
             if any(keyword in cmdline for keyword in keywords):
                 # Vérifier si c'est bien lié à notre projet
-                if 'epita' in cmdline or 'argumentation' in cmdline or 'interface' in cmdline:
+                if 'EPITA' in cmdline or 'epita' in cmdline or 'argumentation' in cmdline or 'interface' in cmdline:
                     webapp_processes.append(proc)
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             continue

@@ -1,4 +1,10 @@
-﻿#!/usr/bin/env python3
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
+#!/usr/bin/env python3
 """
 Tests unitaires pour la configuration CLI étendue
 ===============================================
@@ -11,8 +17,9 @@ import argparse
 import sys
 import os
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+
 from typing import Dict, Any, List
+from unittest.mock import patch
 
 # Ajout du chemin pour les imports
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
@@ -67,6 +74,21 @@ except ImportError:
 
 
 class TestExtendedCLIArguments:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests pour les nouveaux arguments CLI."""
     
     def test_logic_type_argument_parsing(self):
@@ -166,7 +188,7 @@ class TestCLIArgumentValidation:
     def test_validate_invalid_logic_type(self):
         """Test de validation avec type de logique invalide."""
         # Mock des arguments invalides
-        invalid_args = Mock()
+        invalid_args = argparse.Namespace()
         invalid_args.logic_type = 'invalid_logic'
         invalid_args.mock_level = 'minimal'
         
@@ -175,7 +197,7 @@ class TestCLIArgumentValidation:
     
     def test_validate_invalid_mock_level(self):
         """Test de validation avec niveau de mock invalide."""
-        invalid_args = Mock()
+        invalid_args = argparse.Namespace()
         invalid_args.logic_type = 'propositional'
         invalid_args.mock_level = 'invalid_level'
         
@@ -232,7 +254,7 @@ class TestCLIConfigurationDefaults:
         defaults = get_default_cli_config()
         
         # Créer un namespace à partir des defaults
-        default_args = Mock()
+        default_args = argparse.Namespace()
         default_args.logic_type = defaults['logic_type']
         default_args.mock_level = defaults['mock_level']
         
@@ -319,6 +341,18 @@ class TestArgumentParser:
 class TestCLIIntegrationWithScripts:
     """Tests d'intégration CLI avec les scripts existants."""
     
+    @pytest.fixture
+    def mock_argv(self, mocker):
+        """Fixture pour mocker sys.argv."""
+        mock_argv_list = [
+            'script.py',
+            '--logic-type', 'modal',
+            '--mock-level', 'none',
+            '--use-real-tweety',
+            '--text', 'Command line test'
+        ]
+        return mocker.patch('sys.argv', mock_argv_list)
+
     def test_cli_integration_with_orchestration_script(self):
         """Test d'intégration avec le script d'orchestration."""
         # Simuler l'appel du script avec nouveaux arguments
@@ -356,30 +390,19 @@ class TestCLIIntegrationWithScripts:
         assert 'PowerShell' in args.text
         assert 'integration' in args.text
     
-    @patch('sys.argv')
     def test_cli_arguments_from_command_line(self, mock_argv):
         """Test de lecture des arguments depuis la ligne de commande."""
-        # Simuler sys.argv
-        mock_argv.return_value = [
-            'script.py',
-            '--logic-type', 'modal',
-            '--mock-level', 'none',
-            '--use-real-tweety',
-            '--text', 'Command line test'
-        ]
+        # La fixture mock_argv a déjà patché sys.argv
         
-        # Test que le parser peut lire sys.argv
         parser = create_argument_parser()
         
-        # Parse des arguments sans spécifier la liste (utilise sys.argv par défaut)
-        try:
-            args = parser.parse_args(mock_argv.return_value[1:])  # Exclure le nom du script
-            assert args.logic_type == 'modal'
-            assert args.mock_level == 'none'
-            assert args.use_real_tweety is True
-        except Exception:
-            # Si erreur de parsing, test basique
-            assert len(mock_argv.return_value) > 1
+        # parser.parse_args() sans argument utilise sys.argv[1:] par défaut
+        args = parser.parse_args()
+        
+        assert args.logic_type == 'modal'
+        assert args.mock_level == 'none'
+        assert args.use_real_tweety is True
+        assert args.text == 'Command line test'
 
 
 class TestCLIBackwardCompatibility:

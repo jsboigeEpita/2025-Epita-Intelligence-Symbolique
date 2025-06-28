@@ -1,3 +1,4 @@
+import pytest
 #!/usr/bin/env python3
 """
 Test simple d'analyse de trace Sherlock-Watson-Moriarty
@@ -8,9 +9,10 @@ import json
 import logging
 import sys
 from datetime import datetime
+import pytest
 
 # Imports de l'infrastructure Oracle
-from argumentation_analysis.orchestration.cluedo_extended_orchestrator import run_cluedo_oracle_game
+# from argumentation_analysis.orchestration.cluedo_extended_orchestrator import run_cluedo_oracle_game
 from semantic_kernel import Kernel
 
 # Configuration du logging simple
@@ -18,6 +20,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.asyncio
 async def test_workflow_simple():
     """Test simple du workflow 3-agents."""
     logger.info("DEBUT - Test du workflow 3-agents")
@@ -59,7 +62,9 @@ async def test_workflow_simple():
         agent_counts = {}
         for msg in conversation_history:
             sender = msg.get("sender", "Unknown")
-            agent_counts[sender] = agent_counts.get(sender, 0) + 1
+            # Conversion en string pour éviter les objets property
+            sender_str = str(sender) if sender is not None else "Unknown"
+            agent_counts[sender_str] = agent_counts.get(sender_str, 0) + 1
         
         for agent, count in agent_counts.items():
             print(f"  {agent}: {count} messages")
@@ -68,8 +73,9 @@ async def test_workflow_simple():
         print("\nEchantillon de conversation:")
         for i, msg in enumerate(conversation_history[:6]):  # 6 premiers messages
             sender = msg.get("sender", "Unknown")
+            sender_str = str(sender) if sender is not None else "Unknown"
             content = msg.get("message", "")[:100]  # 100 premiers caractères
-            print(f"{i+1}. [{sender}]: {content}...")
+            print(f"{i+1}. [{sender_str}]: {content}...")
         
         # Analyse qualitative simple
         naturalite_score = analyze_naturalness(conversation_history)
@@ -92,12 +98,41 @@ async def test_workflow_simple():
         
         # Sauvegarde simple
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Nettoyer les données pour la sérialisation JSON
+        def clean_for_json(obj):
+            """Convertit récursivement les objets en structures sérialisables JSON"""
+            if obj is None:
+                return None
+            elif isinstance(obj, (str, int, float, bool)):
+                return obj
+            elif isinstance(obj, property):
+                return str(obj)
+            elif isinstance(obj, dict):
+                cleaned_dict = {}
+                for k, v in obj.items():
+                    # Nettoyer la clé aussi
+                    clean_key = str(k) if isinstance(k, property) or hasattr(k, '__dict__') else k
+                    cleaned_dict[clean_key] = clean_for_json(v)
+                return cleaned_dict
+            elif isinstance(obj, (list, tuple)):
+                return [clean_for_json(item) for item in obj]
+            elif hasattr(obj, '__dict__') and not isinstance(obj, type):
+                return f"<{obj.__class__.__name__} object>"
+            else:
+                return str(obj)
+        
+        # Nettoyer complètement toutes les données
+        sample_conversation_cleaned = clean_for_json(conversation_history[:6])
+        agent_counts_cleaned = clean_for_json(agent_counts)
+        workflow_result_cleaned = clean_for_json(workflow_result)
+        
         simple_report = {
             "timestamp": datetime.now().isoformat(),
             "conversation_summary": {
                 "total_messages": len(conversation_history),
-                "messages_by_agent": agent_counts,
-                "sample_conversation": conversation_history[:6]
+                "messages_by_agent": agent_counts_cleaned,
+                "sample_conversation": sample_conversation_cleaned
             },
             "quality_scores": {
                 "naturalite": naturalite_score,
@@ -106,7 +141,7 @@ async def test_workflow_simple():
                 "global": (naturalite_score + pertinence_score + progression_score) / 3
             },
             "improvements": improvements,
-            "full_results": workflow_result
+            "full_results": workflow_result_cleaned
         }
         
         with open(f"rapport_simple_{timestamp}.json", "w", encoding="utf-8") as f:

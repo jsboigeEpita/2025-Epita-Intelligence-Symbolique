@@ -117,10 +117,16 @@ class AnalysisService:
                 # Vous devrez peut-être adapter le modèle et le service_id
                 try:
                     service_id = "default"
+                    model_id = os.environ.get("OPENAI_CHAT_MODEL_ID")
+                    api_key = os.environ.get("OPENAI_API_KEY")
+                    if not model_id or not api_key:
+                        raise ValueError("Les variables d'environnement OPENAI_CHAT_MODEL_ID et OPENAI_API_KEY sont requises.")
+                    
                     kernel.add_service(
                         OpenAIChatCompletion(
                             service_id=service_id,
-                            env_file_path=env_file_path
+                            ai_model_id=model_id,
+                            api_key=api_key,
                         )
                     )
                     self.informal_agent = InformalAgent(kernel=kernel)
@@ -178,7 +184,7 @@ class AnalysisService:
             fallacies = await self._detect_fallacies(request.text, request.options)
             
             # Analyse de la structure argumentative
-            structure = self._analyze_structure(request.text, request.options)
+            structure = await self._analyze_structure(request.text, request.options)
             
             # Calcul des métriques globales
             overall_quality = self._calculate_overall_quality(fallacies, structure)
@@ -260,7 +266,7 @@ class AnalysisService:
         
         return fallacies
     
-    def _analyze_structure(self, text: str, options) -> Optional[ArgumentStructure]:
+    async def _analyze_structure(self, text: str, options) -> Optional[ArgumentStructure]:
         """Analyse la structure argumentative du texte."""
         try:
             # Analyse basique de structure

@@ -1,25 +1,30 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # -*- coding: utf-8 -*-
 """
 Tests unitaires pour le module de logique propositionnelle.
 """
 
 import unittest
-from unittest.mock import MagicMock, patch
+
 import jpype
 import semantic_kernel as sk
+from unittest.mock import patch, MagicMock
 from argumentation_analysis.agents.core.pl.pl_definitions import PropositionalLogicPlugin, setup_pl_kernel
 
 
 class TestPropositionalLogicPlugin(unittest.TestCase):
     """Tests pour la classe PropositionalLogicPlugin."""
 
-    @patch('jpype.isJVMStarted')
     @patch('jpype.JClass')
-    def test_initialization_jvm_not_started(self, mock_jclass, mock_is_jvm_started):
+    @patch('jpype.isJVMStarted', return_value=False)
+    def test_initialization_jvm_not_started(self, mock_is_jvm_started, mock_jclass):
         """Teste l'initialisation lorsque la JVM n'est pas démarrée."""
-        # Configurer les mocks
-        mock_is_jvm_started.return_value = False
-        
         # Créer l'instance du plugin
         plugin = PropositionalLogicPlugin()
         
@@ -27,23 +32,23 @@ class TestPropositionalLogicPlugin(unittest.TestCase):
         self.assertFalse(plugin._jvm_ok)
         mock_jclass.assert_not_called()
 
-    @patch('jpype.isJVMStarted')
-    @patch('jpype.JClass')
-    def test_initialization_jvm_started(self, mock_jclass, mock_is_jvm_started):
+    @patch('argumentation_analysis.agents.core.pl.pl_definitions.jpype.JClass')
+    @patch('argumentation_analysis.agents.core.pl.pl_definitions.jpype.isJVMStarted', return_value=True)
+    def test_initialization_jvm_started(self, mock_is_jvm_started, mock_jclass):
         """Teste l'initialisation lorsque la JVM est démarrée."""
-        # Configurer les mocks
-        mock_is_jvm_started.return_value = True
-        
         # Configurer les mocks pour les classes Java
         mock_parser = MagicMock()
         mock_reasoner = MagicMock()
         mock_formula = MagicMock()
         
-        mock_jclass.side_effect = lambda class_name: {
-            "org.tweetyproject.logics.pl.parser.PlParser": mock_parser,
-            "org.tweetyproject.logics.pl.reasoner.SatReasoner": mock_reasoner,
-            "org.tweetyproject.logics.pl.syntax.PlFormula": mock_formula
-        }[class_name]
+        def jclass_side_effect(class_name):
+            return {
+                "org.tweetyproject.logics.pl.parser.PlParser": mock_parser,
+                "org.tweetyproject.logics.pl.reasoner.SatReasoner": mock_reasoner,
+                "org.tweetyproject.logics.pl.syntax.PlFormula": mock_formula
+            }[class_name]
+        
+        mock_jclass.side_effect = jclass_side_effect
         
         # Créer l'instance du plugin
         plugin = PropositionalLogicPlugin()
@@ -55,13 +60,9 @@ class TestPropositionalLogicPlugin(unittest.TestCase):
         self.assertEqual(plugin._PlFormula, mock_formula)
         self.assertEqual(mock_jclass.call_count, 3)
 
-    @patch('jpype.isJVMStarted')
-    @patch('jpype.JClass')
-    def test_execute_pl_query_jvm_not_ready(self, mock_jclass, mock_is_jvm_started):
+    @patch('jpype.isJVMStarted', return_value=False)
+    def test_execute_pl_query_jvm_not_ready(self, mock_is_jvm_started):
         """Teste l'exécution d'une requête lorsque la JVM n'est pas prête."""
-        # Configurer les mocks
-        mock_is_jvm_started.return_value = False
-        
         # Créer l'instance du plugin
         plugin = PropositionalLogicPlugin()
         
@@ -72,13 +73,9 @@ class TestPropositionalLogicPlugin(unittest.TestCase):
         self.assertTrue(result.startswith("FUNC_ERROR"))
         self.assertIn("JVM non prête", result)
 
-    @patch('jpype.isJVMStarted')
-    @patch('jpype.JClass')
-    def test_execute_pl_query_success(self, mock_jclass, mock_is_jvm_started):
+    @patch('jpype.isJVMStarted', return_value=True)
+    def test_execute_pl_query_success(self, mock_is_jvm_started):
         """Teste l'exécution réussie d'une requête."""
-        # Configurer les mocks
-        mock_is_jvm_started.return_value = True
-        
         # Créer des mocks pour les méthodes internes
         with patch.object(PropositionalLogicPlugin, '_internal_parse_belief_set') as mock_parse_bs, \
              patch.object(PropositionalLogicPlugin, '_internal_parse_formula') as mock_parse_formula, \
@@ -102,13 +99,9 @@ class TestPropositionalLogicPlugin(unittest.TestCase):
             mock_parse_formula.assert_called_once_with("a")
             mock_execute_query.assert_called_once()
 
-    @patch('jpype.isJVMStarted')
-    @patch('jpype.JClass')
-    def test_execute_pl_query_rejected(self, mock_jclass, mock_is_jvm_started):
+    @patch('jpype.isJVMStarted', return_value=True)
+    def test_execute_pl_query_rejected(self, mock_is_jvm_started):
         """Teste l'exécution d'une requête rejetée."""
-        # Configurer les mocks
-        mock_is_jvm_started.return_value = True
-        
         # Créer des mocks pour les méthodes internes
         with patch.object(PropositionalLogicPlugin, '_internal_parse_belief_set') as mock_parse_bs, \
              patch.object(PropositionalLogicPlugin, '_internal_parse_formula') as mock_parse_formula, \
@@ -132,13 +125,9 @@ class TestPropositionalLogicPlugin(unittest.TestCase):
             mock_parse_formula.assert_called_once_with("a")
             mock_execute_query.assert_called_once()
 
-    @patch('jpype.isJVMStarted')
-    @patch('jpype.JClass')
-    def test_execute_pl_query_unknown(self, mock_jclass, mock_is_jvm_started):
+    @patch('jpype.isJVMStarted', return_value=True)
+    def test_execute_pl_query_unknown(self, mock__is_jvm_started):
         """Teste l'exécution d'une requête avec résultat inconnu."""
-        # Configurer les mocks
-        mock_is_jvm_started.return_value = True
-        
         # Créer des mocks pour les méthodes internes
         with patch.object(PropositionalLogicPlugin, '_internal_parse_belief_set') as mock_parse_bs, \
              patch.object(PropositionalLogicPlugin, '_internal_parse_formula') as mock_parse_formula, \
@@ -162,13 +151,9 @@ class TestPropositionalLogicPlugin(unittest.TestCase):
             mock_parse_formula.assert_called_once_with("a")
             mock_execute_query.assert_called_once()
 
-    @patch('jpype.isJVMStarted')
-    @patch('jpype.JClass')
-    def test_execute_pl_query_parse_error(self, mock_jclass, mock_is_jvm_started):
+    @patch('jpype.isJVMStarted', return_value=True)
+    def test_execute_pl_query_parse_error(self, mock_is_jvm_started):
         """Teste l'exécution d'une requête avec erreur de parsing."""
-        # Configurer les mocks
-        mock_is_jvm_started.return_value = True
-        
         # Créer des mocks pour les méthodes internes
         with patch.object(PropositionalLogicPlugin, '_internal_parse_belief_set') as mock_parse_bs, \
              patch.object(PropositionalLogicPlugin, '_internal_parse_formula') as mock_parse_formula:
@@ -194,12 +179,9 @@ class TestPropositionalLogicPlugin(unittest.TestCase):
 class TestSetupPLKernel(unittest.TestCase):
     """Tests pour la fonction setup_pl_kernel."""
 
-    @patch('jpype.isJVMStarted')
+    @patch('jpype.isJVMStarted', return_value=False)
     def test_setup_pl_kernel_jvm_not_started(self, mock_is_jvm_started):
         """Teste la configuration du kernel lorsque la JVM n'est pas démarrée."""
-        # Configurer les mocks
-        mock_is_jvm_started.return_value = False
-        
         # Créer un mock pour le kernel
         kernel_mock = MagicMock(spec=sk.Kernel)
         
@@ -212,13 +194,10 @@ class TestSetupPLKernel(unittest.TestCase):
         # Vérifier que le plugin n'a pas été ajouté
         kernel_mock.add_plugin.assert_not_called()
 
-    @patch('jpype.isJVMStarted')
-    @patch('agents.core.pl.pl_definitions.PropositionalLogicPlugin')
-    def test_setup_pl_kernel_jvm_started(self, mock_plugin_class, mock_is_jvm_started):
+    @patch('argumentation_analysis.agents.core.pl.pl_definitions.PropositionalLogicPlugin')
+    @patch('argumentation_analysis.agents.core.pl.pl_definitions.jpype.isJVMStarted', return_value=True)
+    def test_setup_pl_kernel_jvm_started(self, mock_is_jvm_started, mock_plugin_class):
         """Teste la configuration du kernel lorsque la JVM est démarrée."""
-        # Configurer les mocks
-        mock_is_jvm_started.return_value = True
-        
         # Créer un mock pour l'instance du plugin
         plugin_instance_mock = MagicMock()
         plugin_instance_mock._jvm_ok = True

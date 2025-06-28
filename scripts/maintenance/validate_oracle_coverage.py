@@ -1,5 +1,10 @@
+# Fichier adapté pour Oracle Enhanced v2.1.0
 #!/usr/bin/env python3
-"""Script de validation de la couverture Oracle Enhanced"""
+"""
+Script de validation de la couverture pour le framework Oracle Enhanced.
+Ce script vérifie la couverture des tests pour les agents Oracle,
+y compris les composants comme CluedoOracle et le dataset_manager.
+"""
 
 import subprocess
 import sys

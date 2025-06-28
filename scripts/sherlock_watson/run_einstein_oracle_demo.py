@@ -8,7 +8,7 @@ et Sherlock/Watson doivent déduire la solution à partir de ces indices.
 
 PUZZLE EINSTEIN ADAPTÉ :
 - 5 maisons de couleurs différentes
-- 5 nationalités différentes  
+- 5 nationalités différentes
 - 5 boissons différentes
 - 5 animaux différents
 - 5 cigarettes différentes
@@ -53,7 +53,7 @@ class EinsteinPuzzleOracle:
     def __init__(self):
         self.solution = {
             1: {"couleur": "Jaune", "nationalite": "Norvégien", "boisson": "Eau", "cigarette": "Dunhill", "animal": "Chat"},
-            2: {"couleur": "Bleue", "nationalite": "Danois", "boisson": "Thé", "cigarette": "Blend", "animal": "Cheval"},  
+            2: {"couleur": "Bleue", "nationalite": "Danois", "boisson": "Thé", "cigarette": "Blend", "animal": "Cheval"},
             3: {"couleur": "Rouge", "nationalite": "Anglais", "boisson": "Lait", "cigarette": "Pall Mall", "animal": "Oiseau"},
             4: {"couleur": "Verte", "nationalite": "Allemand", "boisson": "Café", "cigarette": "Prince", "animal": "Poisson"},
             5: {"couleur": "Blanche", "nationalite": "Suédois", "boisson": "Bière", "cigarette": "Blue Master", "animal": "Chien"}

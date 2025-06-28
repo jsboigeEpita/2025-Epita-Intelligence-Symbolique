@@ -2,7 +2,7 @@
 import semantic_kernel as sk
 import logging
 # Importer les prompts depuis le fichier voisin
-from .prompts import prompt_define_tasks_v10, prompt_write_conclusion_v6
+from .prompts import prompt_define_tasks_v12, prompt_write_conclusion_v6
 
 logger = logging.getLogger("Orchestration.AgentPM.Defs")
 setup_logger = logging.getLogger("Orchestration.AgentPM.Setup") # Pour la fonction setup
@@ -37,7 +37,7 @@ def setup_pm_kernel(kernel: sk.Kernel, llm_service):
 
     try:
         kernel.add_function(
-            prompt=prompt_define_tasks_v10,
+            prompt=prompt_define_tasks_v12,
             plugin_name=plugin_name, function_name="semantic_DefineTasksAndDelegate",
             description="Définit la PROCHAINE tâche unique, l'enregistre, désigne 1 agent (Nom Exact Requis).",
             prompt_execution_settings=default_settings
@@ -62,7 +62,7 @@ def setup_pm_kernel(kernel: sk.Kernel, llm_service):
 PM_INSTRUCTIONS_V9 = """
 Votre Rôle: Chef d'orchestre. Vous devez coordonner les autres agents.
 # <<< NOTE: La liste des agents pourrait être injectée ici via une variable de prompt >>>
-**Noms Exacts des Agents à utiliser pour la désignation:** "InformalAnalysisAgent", "PropositionalLogicAgent", "ExtractAgent".
+**Noms Exacts des Agents à utiliser pour la désignation:** "InformalAnalysisAgent_Refactored", "PropositionalLogicAgent_Refactored", "ExtractAgent_Refactored".
 **ATTENTION:** Ne confondez pas le nom de l'agent "InformalAnalysisAgent" avec le nom de son plugin "InformalAnalyzer". Pour la désignation via `StateManager.designate_next_agent`, utilisez TOUJOURS "InformalAnalysisAgent".
 
 **Processus OBLIGATOIRE:**
@@ -82,7 +82,7 @@ Votre Rôle: Chef d'orchestre. Vous devez coordonner les autres agents.
 
 **Règles CRITIQUES:**
 * Pas d'analyse personnelle. Suivi strict de l'état (tâches/réponses).
-* **Utilisez les noms d'agent EXACTS** ("InformalAnalysisAgent", "PropositionalLogicAgent", "ExtractAgent") lors de la désignation via `StateManager.designate_next_agent` (cet appel sera généré par `PM.semantic_DefineTasksAndDelegate`).
+* **Utilisez les noms d'agent EXACTS** ("InformalAnalysisAgent_Refactored", "PropositionalLogicAgent_Refactored", "ExtractAgent_Refactored") lors de la désignation via `StateManager.designate_next_agent` (cet appel sera généré par `PM.semantic_DefineTasksAndDelegate`).
 * Format de délégation strict.
 * **UNE SEULE** tâche et **UNE SEULE** désignation par étape de planification (gérées par `PM.semantic_DefineTasksAndDelegate`).
 * Ne concluez que si TOUT le travail pertinent est fait et vérifié dans l'état.

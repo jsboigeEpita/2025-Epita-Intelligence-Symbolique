@@ -1,3 +1,11 @@
+from unittest.mock import patch, MagicMock
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # -*- coding: utf-8 -*-
 """
 Tests unitaires pour le module complex_fallacy_analyzer.
@@ -8,12 +16,27 @@ agents.tools.analysis.complex_fallacy_analyzer.
 
 import unittest
 import json
-from unittest.mock import MagicMock, patch, PropertyMock
+
 
 from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer
 
 
 class TestComplexFallacyAnalyzer(unittest.TestCase):
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests pour la classe ComplexFallacyAnalyzer."""
 
     def setUp(self):
@@ -204,39 +227,35 @@ class TestComplexFallacyAnalyzer(unittest.TestCase):
     def test_identify_fallacy_patterns(self):
         """Teste l'identification des motifs de sophismes."""
         # Configurer le mock de l'analyseur contextuel
-        self.mock_contextual_analyzer.identify_contextual_fallacies.side_effect = [
-            [  # Premier paragraphe
-                {
-                    "fallacy_type": "Appel à l'autorité",
-                    "keyword": "expert",
-                    "context_text": "Les experts affirment que...",
-                    "confidence": 0.8
-                }
-            ],
-            [  # Deuxième paragraphe
-                {
-                    "fallacy_type": "Appel à l'émotion",
-                    "keyword": "peur",
-                    "context_text": "Vous devriez avoir peur de...",
-                    "confidence": 0.7
-                }
-            ],
-            [  # Troisième paragraphe
-                {
-                    "fallacy_type": "Appel à l'autorité",
-                    "keyword": "scientifique",
-                    "context_text": "Les scientifiques ont prouvé que...",
-                    "confidence": 0.8
-                }
-            ],
-            [  # Quatrième paragraphe
-                {
-                    "fallacy_type": "Appel à l'émotion",
-                    "keyword": "inquiétude",
-                    "context_text": "Cela devrait vous inquiéter...",
-                    "confidence": 0.7
-                }
-            ]
+        self.mock_contextual_analyzer.identify_contextual_fallacies.return_value = [
+            # Premier paragraphe
+            {
+                "fallacy_type": "Appel à l'autorité",
+                "keyword": "expert",
+                "context_text": "Les experts affirment que...",
+                "confidence": 0.8
+            },
+            # Deuxième paragraphe
+            {
+                "fallacy_type": "Appel à l'émotion",
+                "keyword": "peur",
+                "context_text": "Vous devriez avoir peur de...",
+                "confidence": 0.7
+            },
+            # Troisième paragraphe
+            {
+                "fallacy_type": "Appel à l'autorité",
+                "keyword": "scientifique",
+                "context_text": "Les scientifiques ont prouvé que...",
+                "confidence": 0.8
+            },
+            # Quatrième paragraphe
+            {
+                "fallacy_type": "Appel à l'émotion",
+                "keyword": "inquiétude",
+                "context_text": "Cela devrait vous inquiéter...",
+                "confidence": 0.7
+            }
         ]
         
         # Patch pour les méthodes internes

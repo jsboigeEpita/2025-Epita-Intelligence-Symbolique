@@ -5,6 +5,7 @@ Test simple de validation : Traitement des données custom
 Validation de l'élimination des mocks - ÉPITA Demo
 """
 
+import argumentation_analysis.core.environment
 import sys
 from pathlib import Path
 

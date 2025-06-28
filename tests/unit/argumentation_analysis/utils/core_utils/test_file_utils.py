@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 # -*- coding: utf-8 -*-
 """
 Tests unitaires pour les utilitaires de fichiers de project_core.
@@ -8,7 +15,7 @@ import json
 import shutil # Ajouté pour archive_file
 
 # Fonctions à tester
-from argumentation_analysis.utils.core_utils.file_utils import (
+from argumentation_analysis.core.utils.file_utils import (
     sanitize_filename,
     load_text_file,
     save_text_file,

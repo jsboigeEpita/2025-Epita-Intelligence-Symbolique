@@ -211,12 +211,14 @@ def test_webapp_complete():
     if result.failures:
         print("\nÉCHECS:")
         for test, traceback in result.failures:
-            print(f"- {test}: {traceback.split('AssertionError: ')[-1].split('\n')[0]}")
+            error_msg = traceback.split('AssertionError: ')[-1].split('\n')[0]
+            print(f"- {test}: {error_msg}")
     
     if result.errors:
         print("\nERREURS:")
         for test, traceback in result.errors:
-            print(f"- {test}: {traceback.split('\n')[-2]}")
+            error_msg = traceback.split('\n')[-2]
+            print(f"- {test}: {error_msg}")
     
     success = len(result.failures) == 0 and len(result.errors) == 0
     print(f"\nRÉSULTAT GLOBAL: {'[OK] SUCCÈS' if success else '[ERREUR] ÉCHEC'}")

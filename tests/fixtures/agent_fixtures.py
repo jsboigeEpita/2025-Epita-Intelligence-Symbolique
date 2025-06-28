@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -11,7 +18,7 @@ et leurs adaptateurs.
 import pytest
 import os
 import sys
-from unittest.mock import MagicMock, patch
+
 
 # Ajouter le répertoire racine au chemin Python pour pouvoir importer les modules
 # sys.path.append(os.path.abspath('../..'))
@@ -21,7 +28,7 @@ from unittest.mock import MagicMock, patch
 from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent
 from argumentation_analysis.agents.core.informal.informal_definitions import FallacyDefinition, FallacyCategory
 from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import ComplexFallacyAnalyzer
-from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
+from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer as ContextualFallacyAnalyzer
 from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator import FallacySeverityEvaluator
 from argumentation_analysis.agents.tools.analysis.fallacy_detector import FallacyDetector
 from argumentation_analysis.agents.tools.analysis.rhetorical_analyzer import RhetoricalAnalyzer

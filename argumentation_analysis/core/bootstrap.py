@@ -2,9 +2,13 @@
 import os
 import sys
 from pathlib import Path
-from dotenv import load_dotenv
 import logging
 from typing import Dict, List, Any # Ajout pour List et Dict dans l'adaptateur
+import threading
+
+# --- Verrou global pour l'initialisation de la JVM ---
+_JVM_INITIALIZED = False
+_JVM_INIT_LOCK = threading.Lock()
 
 # Configuration du logger pour ce module
 logger = logging.getLogger(__name__)
@@ -30,11 +34,17 @@ except NameError: # __file__ n'est pas défini si exécuté interactivement ou v
 
 
 # Imports des services et modules nécessaires (seront dans des try-except)
+try:
+    from argumentation_analysis.config.settings import settings
+except ImportError as e:
+    logger.error(f"CRITICAL: Failed to import settings from argumentation_analysis.config: {e}")
+    settings = None
+
 initialize_jvm_func = None
 CryptoService_class = None
 DefinitionService_class = None
 create_llm_service_func = None
-InformalAgent_class = None # Changé de InformalAnalysisAgent à InformalAgent
+InformalAgent_class = None
 ContextualFallacyDetector_class = None
 sk_module = None
 ENCRYPTION_KEY_imported = None
@@ -43,7 +53,7 @@ ExtractDefinitions_class, SourceDefinition_class, Extract_class = None, None, No
 try:
     from argumentation_analysis.core.jvm_setup import initialize_jvm as initialize_jvm_func
 except ImportError as e:
-    logger.error(f"Failed to import initialize_jvm: {e}")
+    logger.error(f"Failed to import start_jvm_if_needed (aliased as initialize_jvm_func): {e}")
 
 try:
     from argumentation_analysis.services.crypto_service import CryptoService as CryptoService_class
@@ -61,15 +71,15 @@ except ImportError as e:
     logger.error(f"Failed to import create_llm_service: {e}")
 
 try:
-    # Correction du nom de la classe importée pour correspondre à la définition
-    from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent_class
+    from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent as InformalAgent_class
 except ImportError as e:
-    logger.error(f"Failed to import InformalAnalysisAgent: {e}")
+    logger.error(f'Failed to import InformalAnalysisAgent: {e}')
 
 try:
     import semantic_kernel as sk_module
 except ImportError as e:
-    logger.error(f"Failed to import semantic_kernel: {e}")
+    logger.error(f'Failed to import semantic_kernel: {e}')
+    sk_module = None
 
 try:
     from argumentation_analysis.ui.config import ENCRYPTION_KEY as ENCRYPTION_KEY_imported
@@ -110,18 +120,82 @@ class ContextualFallacyDetectorAdapter:
 
 class ProjectContext:
     def __init__(self):
+        self.kernel: sk_module.Kernel = None
         self.jvm_initialized = False
         self.crypto_service = None
         self.definition_service = None
         self.llm_service = None
-        self.informal_agent = None
-        self.fallacy_detector = None
+        self._fallacy_detector_instance = None
+        self._fallacy_detector_lock = threading.Lock()
         self.tweety_classes = {}
         self.config = {}
         self.project_root_path = None
 
+    def get_fallacy_detector(self):
+        """
+        Initialise de manière paresseuse et retourne le ContextualFallacyDetector.
+        L'initialisation est thread-safe.
+        """
+        if self._fallacy_detector_instance is None:
+            with self._fallacy_detector_lock:
+                # Double-vérification pour s'assurer que l'instance n'a pas été créée
+                # pendant que le thread attendait le verrou.
+                if self._fallacy_detector_instance is None:
+                    logger.info("Initialisation paresseuse de ContextualFallacyDetector...")
+                    if ContextualFallacyDetector_class:
+                        try:
+                            original_detector = ContextualFallacyDetector_class()
+                            self._fallacy_detector_instance = ContextualFallacyDetectorAdapter(original_detector)
+                            logger.info("ContextualFallacyDetector initialisé et mis en cache.")
+                        except Exception as e:
+                            logger.error(f"Erreur lors de l'initialisation paresseuse de ContextualFallacyDetector : {e}", exc_info=True)
+                            # On retourne None pour que l'application puisse continuer
+                            # sans le détecteur si l'initialisation échoue.
+                            return None
+                    else:
+                        logger.error("Impossible d'initialiser paresseusement : ContextualFallacyDetector_class n'a pas été importé.")
+                        return None
+        return self._fallacy_detector_instance
 
-def initialize_project_environment(env_path_str: str = None, root_path_str: str = None) -> ProjectContext:
+def _load_tweety_classes(context: 'ProjectContext'):
+    """Charge les classes Tweety nécessaires si la JVM est démarrée."""
+    if not context.jvm_initialized:
+        logger.warning("Tentative de chargement des classes Tweety alors que la JVM n'est pas initialisée.")
+        return
+
+    try:
+        import jpype
+        import jpype.imports
+        logger.info("Chargement des classes Java depuis Tweety pour l'analyse d'argumentation textuelle...")
+        
+        # 1. Charger le parser pour la logique propositionnelle (langage sous-jacent)
+        PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
+        pl_parser_instance = PlParser()
+        logger.info("Classe 'org.tweetyproject.logics.pl.parser.PlParser' chargée et instanciée.")
+
+        # 2. Charger le générateur de formules pour les règles ASPIC basées sur la logique prop.
+        PlFormulaGenerator = jpype.JClass("org.tweetyproject.arg.aspic.ruleformulagenerator.PlFormulaGenerator")
+        pl_formula_generator_instance = PlFormulaGenerator()
+        logger.info("Classe 'org.tweetyproject.arg.aspic.ruleformulagenerator.PlFormulaGenerator' chargée et instanciée.")
+
+        # 3. Charger et instancier le parser ASPIC principal avec ses dépendances
+        AspicParser = jpype.JClass("org.tweetyproject.arg.aspic.parser.AspicParser")
+        aspic_parser_instance = AspicParser(pl_parser_instance, pl_formula_generator_instance)
+        logger.info("Classe 'org.tweetyproject.arg.aspic.parser.AspicParser' chargée et instanciée.")
+
+        # 4. Stocker l'instance du parser dans le contexte de l'application
+        context.tweety_classes['AspicParser'] = aspic_parser_instance
+        logger.info("Instance de AspicParser stockée dans context.tweety_classes['AspicParser'].")
+        
+        # L'ancien 'ArgumentParser' est maintenant remplacé par le 'AspicParser' configuré.
+
+    except ImportError as e:
+        logger.critical(f"Échec critique de l'import d'une classe Tweety après le démarrage de la JVM: {e}", exc_info=True)
+    except Exception as e:
+        logger.critical(f"Erreur inattendue lors du chargement des classes Tweety: {e}", exc_info=True)
+
+
+def initialize_project_environment(env_path_str: str = None, root_path_str: str = None, force_mock_llm: bool = False) -> ProjectContext:
     global project_root
 
     context = ProjectContext()
@@ -153,11 +227,7 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
                     from argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import ContextualFallacyDetector as ContextualFallacyDetector_class
                     logger.info("Late import: ContextualFallacyDetector_class")
                 except ImportError: pass
-            if not InformalAgent_class: # Ajout pour InformalAgent
-                try:
-                    from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent as InformalAgent_class
-                    logger.info("Late import: InformalAgent_class")
-                except ImportError: pass
+            # L'import tardif de InformalAgent a été supprimé.
 
 
     context.project_root_path = current_project_root
@@ -171,34 +241,60 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
         # Ou si vous voulez le garder dans argumentation_analysis:
         # actual_env_path = current_project_root / "argumentation_analysis" / ".env"
 
-    if actual_env_path.exists():
-        load_dotenv(dotenv_path=actual_env_path, override=True)
-        logger.info(f"Variables d'environnement chargées depuis : {actual_env_path}")
-        context.config['OPENAI_API_KEY'] = os.getenv("OPENAI_API_KEY")
-        context.config['TEXT_CONFIG_PASSPHRASE'] = os.getenv("TEXT_CONFIG_PASSPHRASE")
-        context.config['ENCRYPTION_KEY_FROM_ENV'] = os.getenv("ENCRYPTION_KEY")
+    # La configuration est maintenant chargée via le module `settings` à l'import.
+    # On peuple `context.config` pour la compatibilité avec le reste du code.
+    if settings:
+        logger.info("Chargement de la configuration depuis l'objet `settings` centralisé.")
+        context.config['OPENAI_API_KEY'] = settings.openai.api_key.get_secret_value() if settings.openai.api_key else None
+        
+        # Récupération sécurisée des secrets depuis l'objet settings.
+        # Le dictionnaire context.config est conservé pour la compatibilité ascendante du reste du script.
+        context.config['TEXT_CONFIG_PASSPHRASE'] = settings.passphrase.get_secret_value() if settings.passphrase else None
+        context.config['ENCRYPTION_KEY_FROM_ENV'] = settings.encryption_key.get_secret_value() if settings.encryption_key else None
 
-        if not context.config['OPENAI_API_KEY']:
-            logger.warning("OPENAI_API_KEY non trouvée dans le .env ou l'environnement.")
-        if not context.config['TEXT_CONFIG_PASSPHRASE']:
-            logger.warning("TEXT_CONFIG_PASSPHRASE non trouvée dans le .env ou l'environnement.")
+        if not context.config.get('OPENAI_API_KEY'):
+            logger.warning("OPENAI_API_KEY non configurée dans `settings`.")
+        if not context.config.get('TEXT_CONFIG_PASSPHRASE'):
+            logger.warning("TEXT_CONFIG_PASSPHRASE non configurée dans `settings`.")
     else:
-        logger.warning(f"Fichier .env non trouvé à {actual_env_path}. Les services dépendant de variables d'environnement pourraient ne pas fonctionner.")
+        logger.error("Le module `settings` n'a pas pu être importé. La configuration est indisponible.")
 
-    if initialize_jvm_func:
-        logger.info("Initialisation de la JVM via jvm_setup.initialize_jvm()...")
-        try:
-            context.jvm_initialized = initialize_jvm_func()
-            if context.jvm_initialized:
-                logger.info("JVM initialisée avec succès.")
+    # Utiliser un attribut sur le module `sys` pour un état vraiment global
+    # qui survit au rechargement de module par Uvicorn.
+    if hasattr(sys, '_jvm_initialized') and sys._jvm_initialized:
+        logger.info("JVM déjà initialisée dans ce processus (détecté via sys._jvm_initialized). On saute la ré-initialisation.")
+        context.jvm_initialized = True
+    else:
+        with _JVM_INIT_LOCK:
+            # Re-vérifier à l'intérieur du verrou (double-checked locking)
+            if hasattr(sys, '_jvm_initialized') and sys._jvm_initialized:
+                 logger.info("JVM initialisée par un autre thread pendant l'attente du verrou.")
+                 context.jvm_initialized = True
             else:
-                logger.error("Échec de l'initialisation de la JVM.")
-        except Exception as e:
-            logger.error(f"Erreur lors de l'initialisation de la JVM : {e}", exc_info=True)
-            context.jvm_initialized = False
-    else:
-        logger.error("La fonction initialize_jvm n'a pas pu être importée. Impossible d'initialiser la JVM.")
-        context.jvm_initialized = False
+                if initialize_jvm_func:
+                    logger.info("APPEL IMMINENT : Initialisation de la JVM via jvm_setup.initialize_jvm()...") # LOG AJOUTÉ
+                    logger.info("Initialisation de la JVM via jvm_setup.initialize_jvm()...")
+                    try:
+                        if initialize_jvm_func(): # Appelle initialize_jvm qui retourne un booléen
+                            context.jvm_initialized = True
+                            sys._jvm_initialized = True # Marquer globalement pour ce processus
+                            logger.info("JVM initialisée avec succès (confirmé par le retour de initialize_jvm).")
+                        else:
+                            context.jvm_initialized = False
+                            sys._jvm_initialized = False # Assurer la cohérence
+                            logger.error("Échec de l'initialisation de la JVM (initialize_jvm a retourné False).")
+                    except Exception as e: # Capturer les exceptions potentielles de initialize_jvm
+                        logger.error(f"Erreur lors de l'appel à initialize_jvm_func : {e}", exc_info=True)
+                        context.jvm_initialized = False
+                        sys._jvm_initialized = False # Assurer que c'est False en cas d'erreur
+                else:
+                    logger.error("La fonction initialize_jvm n'a pas pu être importée. Impossible d'initialiser la JVM.")
+                    context.jvm_initialized = False
+                    sys._jvm_initialized = False
+        
+    # --- Chargement des classes Java si la JVM a été initialisée ---
+    if context.jvm_initialized:
+        _load_tweety_classes(context)
 
     if CryptoService_class:
         logger.info("Initialisation de CryptoService...")
@@ -220,8 +316,14 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
                 context.crypto_service = CryptoService_class(encryption_key=key_to_use)
                 logger.info("CryptoService initialisé avec encryption_key.")
             elif passphrase_to_use:
-                 context.crypto_service = CryptoService_class(passphrase=passphrase_to_use)
-                 logger.info("CryptoService initialisé avec passphrase.")
+                 temp_crypto_for_derivation = CryptoService_class()
+                 derived_key = temp_crypto_for_derivation.derive_key_from_passphrase(passphrase_to_use)
+                 if derived_key:
+                     context.crypto_service = CryptoService_class(encryption_key=derived_key)
+                     logger.info("CryptoService initialisé avec une clé dérivée de la passphrase.")
+                 else:
+                     logger.error("Échec de la dérivation de la clé à partir de la passphrase. CryptoService non-initialisé avec clé.")
+                     context.crypto_service = CryptoService_class() # Initialisation sans clé
             else:
                 context.crypto_service = CryptoService_class()
                 logger.warning("CryptoService initialisé sans clé/passphrase explicite.")
@@ -250,62 +352,23 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
     else:
         logger.error("DefinitionService_class n'a pas pu être importé.")
 
-    if create_llm_service_func:
-        logger.info("Initialisation de LLMService via create_llm_service...")
-        # Toujours forcer le mock pour éviter les erreurs d'authentification pendant le débogage
-        try:
-            context.llm_service = create_llm_service_func(service_id="default_llm_bootstrap", force_mock=True)
-            logger.info("LLMService initialisé en mode mock forcé.")
-        except Exception as e:
-            logger.error(f"Erreur lors de l'appel à create_llm_service avec force_mock=True : {e}", exc_info=True)
-    else:
-        logger.error("create_llm_service_func n'a pas pu être importé.")
+    # L'initialisation de ContextualFallacyDetector est maintenant paresseuse
+    # et gérée via la méthode context.get_fallacy_detector().
+    # Le bloc d'initialisation rapide ici est donc supprimé.
 
-    if ContextualFallacyDetector_class:
-        logger.info("Initialisation de ContextualFallacyDetector...")
+    if sk_module and create_llm_service_func:
+        logger.info("Initialisation du Kernel Semantic Kernel...")
         try:
-            original_detector = ContextualFallacyDetector_class()
-            context.fallacy_detector = ContextualFallacyDetectorAdapter(original_detector)
-            logger.info("ContextualFallacyDetector initialisé et enveloppé dans l'adaptateur.")
+            context.kernel = sk_module.Kernel()
+            # Le service LLM est un prérequis pour de nombreux plugins, donc on l'ajoute au kernel.
+            # Le paramètre force_mock_llm détermine si on doit forcer l'usage du service mocké.
+            context.llm_service = create_llm_service_func(service_id="default_llm_bootstrap", force_mock=force_mock_llm)
+            context.kernel.add_service(context.llm_service) # Assurez-vous que c'est la bonne méthode
+            logger.info("Semantic Kernel et LLMService initialisés et ajoutés au contexte.")
         except Exception as e:
-            logger.error(f"Erreur lors de l'initialisation de ContextualFallacyDetector ou de son adaptateur : {e}", exc_info=True)
+            logger.error(f"Erreur lors de l'initialisation du Semantic Kernel ou du LLM Service : {e}", exc_info=True)
     else:
-        logger.error("ContextualFallacyDetector_class n'a pas pu être importé.")
-
-    if InformalAgent_class and context.llm_service and sk_module and context.fallacy_detector:
-        logger.info("Initialisation de InformalAgent...")
-        try:
-            kernel = sk_module.Kernel()
-            kernel.add_service(context.llm_service)
-            
-            informal_agent_tools = {
-                "fallacy_detector": context.fallacy_detector
-            }
-            
-            context.informal_agent = InformalAgent_class(
-                kernel=kernel,
-                agent_name="bootstrap_informal_agent"
-            )
-            
-            # Configuration des plugins et fonctions sémantiques de l'agent
-            if context.llm_service:
-                llm_service_id = getattr(context.llm_service, 'service_id', 'default')
-                context.informal_agent.setup_agent_components(llm_service_id=llm_service_id)
-                logger.info(f"Composants de l'agent configurés avec le service LLM ID: {llm_service_id}")
-            else:
-                logger.warning("LLM Service non disponible, impossible de configurer les composants de l'agent.")
-
-            logger.info("InformalAgent initialisé et configuré.")
-        except Exception as e:
-            logger.error(f"Erreur lors de l'initialisation de InformalAgent : {e}", exc_info=True)
-    elif not context.llm_service:
-         logger.error("LLMService non initialisé. Impossible d'initialiser InformalAgent.")
-    elif not sk_module:
-        logger.error("Semantic Kernel (sk_module) non importé.")
-    elif not context.fallacy_detector:
-        logger.error("FallacyDetector non initialisé. Impossible d'initialiser InformalAgent.")
-    else:
-        logger.error("InformalAgent_class n'a pas pu être importé.")
+        logger.warning("Semantic-kernel non importé ou create_llm_service non disponible, le kernel ne sera pas initialisé.")
 
     logger.info("--- Fin de l'initialisation de l'environnement du projet ---")
     return context
@@ -340,7 +403,7 @@ if __name__ == '__main__':
     print(f"CryptoService: {'Oui' if initialized_context.crypto_service else 'Non'} (Type: {type(initialized_context.crypto_service).__name__ if initialized_context.crypto_service else 'N/A'})")
     print(f"DefinitionService: {'Oui' if initialized_context.definition_service else 'Non'} (Type: {type(initialized_context.definition_service).__name__ if initialized_context.definition_service else 'N/A'})")
     print(f"LLMService: {'Oui' if initialized_context.llm_service else 'Non'} (Type: {type(initialized_context.llm_service).__name__ if initialized_context.llm_service else 'N/A'})")
-    print(f"InformalAgent: {'Oui' if initialized_context.informal_agent else 'Non'} (Type: {type(initialized_context.informal_agent).__name__ if initialized_context.informal_agent else 'N/A'})")
+    print(f"Kernel: {'Oui' if initialized_context.kernel else 'Non'} (Type: {type(initialized_context.kernel).__name__ if initialized_context.kernel else 'N/A'})")
     print(f"Configuration chargée (.env):")
     for key, value in initialized_context.config.items():
         display_value = value

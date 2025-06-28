@@ -1,10 +1,17 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 """
 Tests d'intégration pour les nouveaux modules Oracle Enhanced v2.1.0
 """
 
 import pytest
 import asyncio
-from unittest.mock import Mock, patch
+
 
 from argumentation_analysis.agents.core.oracle.error_handling import (
     OracleErrorHandler, OraclePermissionError, oracle_error_handler
@@ -69,11 +76,10 @@ class TestNewModulesIntegration:
                 
         asyncio.run(test_error_request())
         
-    @patch('logging.getLogger')
-    def test_complete_integration_scenario(self, mock_get_logger):
+    
+    @pytest.mark.asyncio
+    async def test_complete_integration_scenario(self):
         """Test scenario d'intégration complet"""
-        mock_logger = Mock()
-        mock_get_logger.return_value = mock_logger
         
         class CompleteOracleAgent(OracleAgentInterface):
             def __init__(self):
@@ -134,23 +140,21 @@ class TestNewModulesIntegration:
         agent = CompleteOracleAgent()
         
         # Test requête normale
-        async def test_integration():
-            # Requête réussie
-            result = await agent.process_oracle_request("Sherlock", "validate", {"data": "test"})
-            assert result["success"] is True
-            assert result["data"]["request_id"] == 1
-            assert result["metadata"]["status_code"] == "success"
-            
-            # Requête interdite 
-            result = await agent.process_oracle_request("Watson", "forbidden", {})
-            assert result["success"] is False
-            assert result["error_code"] == "OraclePermissionError"
-            assert result["metadata"]["status_code"] == "permission_denied"
-            
-            # Vérifier statistiques
-            stats = agent.get_oracle_statistics()
-            assert stats["total_requests"] == 2
-            assert stats["error_stats"]["total_errors"] == 1
-            assert stats["error_stats"]["permission_errors"] == 1
-            
-        asyncio.run(test_integration())
+        # Test requête normale
+        # Requête réussie
+        result = await agent.process_oracle_request("Sherlock", "validate", {"data": "test"})
+        assert result["success"] is True
+        assert result["data"]["request_id"] == 1
+        assert result["metadata"]["status_code"] == "success"
+        
+        # Requête interdite
+        result = await agent.process_oracle_request("Watson", "forbidden", {})
+        assert result["success"] is False
+        assert result["error_code"] == "OraclePermissionError"
+        assert result["metadata"]["status_code"] == "permission_denied"
+        
+        # Vérifier statistiques
+        stats = agent.get_oracle_statistics()
+        assert stats["total_requests"] == 2
+        assert stats["error_stats"]["total_errors"] == 1
+        assert stats["error_stats"]["permission_errors"] == 1

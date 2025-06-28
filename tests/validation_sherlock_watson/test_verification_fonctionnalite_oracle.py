@@ -7,9 +7,6 @@ Ce script vérifie que les modifications des prompts n'ont pas cassé la fonctio
 technique des agents Watson, Moriarty et Sherlock.
 """
 
-# Auto-activation environnement intelligent
-import scripts.core.auto_env
-
 import sys
 import importlib.util
 
@@ -21,7 +18,7 @@ def test_watson_import():
         assert True, "Watson import réussi"
     except Exception as e:
         print(f"[ERREUR] Watson import: {e}")
-        return False
+        assert False
 
 def test_moriarty_import():
     """Test d'import Moriarty"""
@@ -31,17 +28,17 @@ def test_moriarty_import():
         assert True, "Moriarty import réussi"
     except Exception as e:
         print(f"[ERREUR] Moriarty import: {e}")
-        return False
+        assert False
 
 def test_sherlock_import():
     """Test d'import Sherlock"""
     try:
         from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
         print("[OK] Sherlock import réussi")
-        return True
+        assert True
     except Exception as e:
         print(f"[ERREUR] Sherlock import: {e}")
-        return False
+        assert False
 
 def test_prompt_syntax():
     """Test de syntaxe des prompts modifiés"""
@@ -55,14 +52,14 @@ def test_prompt_syntax():
             print("[OK] Watson prompt bien formaté")
         else:
             print("[ERREUR] Watson prompt mal formaté")
-            return False
+            assert False
             
         # Vérification Sherlock
         if "Vous êtes Sherlock Holmes" in SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT:
             print("[OK] Sherlock prompt bien formaté") 
         else:
             print("[ERREUR] Sherlock prompt mal formaté")
-            return False
+            assert False
             
         # Vérification Moriarty
         moriarty_instructions = MoriartyInterrogatorAgent.MORIARTY_SPECIALIZED_INSTRUCTIONS
@@ -70,12 +67,12 @@ def test_prompt_syntax():
             print("[OK] Moriarty prompt bien formaté")
         else:
             print("[ERREUR] Moriarty prompt mal formaté")
-            return False
+            assert False
             
-        return True
+        assert True
     except Exception as e:
         print(f"[ERREUR] Test syntaxe prompts: {e}")
-        return False
+        assert False
 
 def test_new_personality_keywords():
     """Test de présence des nouveaux mots-clés de personnalité"""
@@ -104,7 +101,7 @@ def test_new_personality_keywords():
         
     except Exception as e:
         print(f"[ERREUR] Test mots-clés personnalité: {e}")
-        return False
+        assert False
 
 def test_core_functionality_preserved():
     """Test que les fonctionnalités de base sont préservées"""
@@ -118,7 +115,7 @@ def test_core_functionality_preserved():
             print("[OK] Watson outils préservés")
         else:
             print("[ERREUR] Watson outils manquants")
-            return False
+            assert False
         
         # Test Moriarty Tools
         from argumentation_analysis.agents.core.oracle.dataset_access_manager import CluedoDatasetManager
@@ -136,17 +133,17 @@ def test_core_functionality_preserved():
             print("[OK] Moriarty outils préservés")
         else:
             print("[ERREUR] Moriarty outils manquants")
-            return False
+            assert False
         
         # Test Sherlock Tools - Vérification que la classe existe
         from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockTools
         print("[OK] Sherlock outils préservés")
         
-        return True
+        assert True
         
     except Exception as e:
         print(f"[ERREUR] Test fonctionnalité préservée: {e}")
-        return False
+        assert False
 
 def main():
     """Test principal de vérification"""
@@ -194,11 +191,11 @@ def main():
     if success_rate >= 80:
         print("\n[SUCCES] Fonctionnalité Oracle préservée !")
         print("Les modifications Phase A n'ont pas cassé le système")
-        return True
+        assert True
     else:
         print("\n[ECHEC] Problèmes détectés !")
         print("Révision nécessaire des modifications")
-        return False
+        assert False
 
 if __name__ == "__main__":
     try:

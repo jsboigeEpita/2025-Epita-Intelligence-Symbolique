@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
@@ -33,9 +33,10 @@ file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] [%(name
 logger.addHandler(file_handler)
 
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent, AuthorRole
+from semantic_kernel.contents import ChatMessageContent
+# from semantic_kernel.contents import AuthorRole
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
-from argumentation_analysis.utils.semantic_kernel_compatibility import ChatCompletionAgent
+from autogen.agentchat.contrib.llm_assistant_agent import LLMAssistantAgent
 try:
     # Import relatif depuis le package utils
     logger.info("Tentative d'import relatif...")
@@ -162,7 +163,7 @@ except ImportError as e:
                     "integrity": 5,
                     "comments": "Ceci est une réponse simulée pour les tests."
                 }
-                return ChatMessageContent(role=AuthorRole.ASSISTANT, content=json.dumps(response))
+                return ChatMessageContent(role="assistant", content=json.dumps(response))
             
             def instantiate_prompt_execution_settings(self):
                 """Méthode requise par Semantic Kernel."""
@@ -216,7 +217,7 @@ async def setup_evaluation_agent(llm_service):
         prompt_exec_settings = {}
     
     try:
-        evaluation_agent = ChatCompletionAgent(
+        evaluation_agent = LLMAssistantAgent(
             kernel=kernel,
             service=llm_service,
             name="EvaluationAgent",

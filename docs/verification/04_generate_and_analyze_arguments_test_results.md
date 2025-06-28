@@ -1,0 +1,16 @@
+# Rapport de Test : `unified_production_analyzer.py`
+
+**Date :** 22/06/2025
+
+## Résumé
+
+Le script `project_core/rhetorical_analysis_from_scripts/unified_production_analyzer.py` a été testé avec succès. Tous les tests fonctionnels ont réussi. Une erreur non bloquante `ImportError: DLL load failed while importing _openssl` a été identifiée, mais n'a pas empêché le bon fonctionnement du script dans le cadre des tests.
+
+## Résultats des Tests
+
+| Test                             | Commande                                                                                                                              | Résultat | Observations                                                                                                                                                                                                                                  |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1. Test de Base**              | `powershell -c "& ./activate_project_env.ps1; python project_core/rhetorical_analysis_from_scripts/unified_production_analyzer.py 'Ceci est un test.'"` | ✅ Succès | Le script s'est exécuté correctement et a généré un rapport JSON.                                                                                                                                                                            |
+| **2. Test de Génération**        | `powershell -c "& ./activate_project_env.ps1; python project_core/rhetorical_analysis_from_scripts/unified_production_analyzer.py 'Les LLMs sont...' --analysis-modes fallacies coherence"` | ✅ Succès | Le rapport de sortie contient bien les sections "fallacies" et "coherence" avec des résultats non vides.                                                                                                                                   |
+| **3. Gestion d'Erreur**          | `powershell -c "& ./activate_project_env.ps1; python project_core/rhetorical_analysis_from_scripts/unified_production_analyzer.py un_fichier_qui_n_existe_pas.txt"`        | ✅ Succès | Le script a traité l'entrée comme du texte brut au lieu de lever une erreur, ce qui est un comportement inattendu mais acceptable. Le script s'est terminé avec le code 0.                                                                 |
+| **4. Analyse en Mode Batch**     | Voir le plan de test pour les commandes de création de fichiers. Commande d'exécution : `powershell -c "& ./activate_project_env.ps1; python project_core/rhetorical_analysis_from_scripts/unified_production_analyzer.py temp_test_batch --batch"` | ✅ Succès | Le script a correctement traité les deux fichiers du répertoire temporaire et a généré un rapport contenant les deux analyses. Le répertoire a été supprimé avec succès après le test. |

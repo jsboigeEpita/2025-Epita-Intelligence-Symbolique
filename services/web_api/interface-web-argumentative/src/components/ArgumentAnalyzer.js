@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { analyzeText } from '../services/api';
 import './ArgumentAnalyzer.css';
 
@@ -44,7 +44,7 @@ const ArgumentAnalyzer = () => {
     
     try {
       const result = await analyzeText(text, options);
-      setAnalysis(result);
+setAnalysis(result);
     } catch (err) {
       setError('Erreur lors de l\'analyse : ' + err.message);
       setAnalysis(null);
@@ -215,19 +215,19 @@ const ArgumentAnalyzer = () => {
           <div className="results-header">
             <h3>📊 Résultats de l'analyse</h3>
             <div className="analysis-metadata">
-              <span>⏱️ {analysis.processing_time?.toFixed(3)}s</span>
+              <span>⏱️ {analysis.metadata?.duration?.toFixed(3)}s</span>
               <span>📅 {new Date().toLocaleString()}</span>
             </div>
           </div>
 
           {/* Métriques principales */}
           <div className="metrics-grid">
-            <div className={`metric-card quality-${getQualityColor(analysis.overall_quality)}`}>
+            <div className={`metric-card quality-${getQualityColor(analysis.results?.overall_quality)}`}>
               <div className="metric-icon">🎯</div>
               <div className="metric-content">
                 <h4>Qualité globale</h4>
                 <div className="metric-value">
-                  {(analysis.overall_quality * 100).toFixed(1)}%
+                  {(analysis.results?.overall_quality * 100).toFixed(1)}%
                 </div>
               </div>
             </div>
@@ -237,7 +237,7 @@ const ArgumentAnalyzer = () => {
               <div className="metric-content">
                 <h4>Sophismes détectés</h4>
                 <div className="metric-value">
-                  {analysis.fallacy_count || 0}
+                  {analysis.results?.fallacy_count || 0}
                 </div>
               </div>
             </div>
@@ -247,7 +247,7 @@ const ArgumentAnalyzer = () => {
               <div className="metric-content">
                 <h4>Structure</h4>
                 <div className="metric-value">
-                  {analysis.argument_structure?.argument_type || 'N/A'}
+                  {analysis.results?.argument_structure?.argument_type || 'N/A'}
                 </div>
               </div>
             </div>
@@ -257,8 +257,8 @@ const ArgumentAnalyzer = () => {
               <div className="metric-content">
                 <h4>Cohérence</h4>
                 <div className="metric-value">
-                  {analysis.argument_structure ? 
-                    (analysis.argument_structure.coherence * 100).toFixed(1) + '%' : 
+                  {analysis.results?.argument_structure ?
+                    (analysis.results.argument_structure.coherence * 100).toFixed(1) + '%' :
                     'N/A'
                   }
                 </div>
@@ -267,11 +267,11 @@ const ArgumentAnalyzer = () => {
           </div>
 
           {/* Sophismes détectés */}
-          {analysis.fallacies && analysis.fallacies.length > 0 && (
+          {analysis.results?.fallacies && analysis.results.fallacies.length > 0 && (
             <div className="fallacies-section">
               <h4>⚠️ Sophismes détectés</h4>
               <div className="fallacies-list">
-                {analysis.fallacies.map((fallacy, index) => (
+                {analysis.results.fallacies.map((fallacy, index) => (
                   <div key={index} className={`fallacy-item severity-${getSeverityColor(fallacy.severity)}`}>
                     <div className="fallacy-header">
                       <h5>{fallacy.name}</h5>
@@ -292,27 +292,27 @@ const ArgumentAnalyzer = () => {
           )}
 
           {/* Structure argumentative */}
-          {analysis.argument_structure && (
+          {analysis.results?.argument_structure && (
             <div className="structure-section">
               <h4>🏗️ Structure argumentative</h4>
               
               <div className="structure-overview">
                 <div className="structure-metric">
-                  <strong>Type:</strong> {analysis.argument_structure.argument_type}
+                  <strong>Type:</strong> {analysis.results.argument_structure.argument_type}
                 </div>
                 <div className="structure-metric">
-                  <strong>Force:</strong> {(analysis.argument_structure.strength * 100).toFixed(1)}%
+                  <strong>Force:</strong> {(analysis.results.argument_structure.strength * 100).toFixed(1)}%
                 </div>
                 <div className="structure-metric">
-                  <strong>Cohérence:</strong> {(analysis.argument_structure.coherence * 100).toFixed(1)}%
+                  <strong>Cohérence:</strong> {(analysis.results.argument_structure.coherence * 100).toFixed(1)}%
                 </div>
               </div>
               
-              {analysis.argument_structure.premises && analysis.argument_structure.premises.length > 0 && (
+              {analysis.results.argument_structure.premises && analysis.results.argument_structure.premises.length > 0 && (
                 <div className="premises-section">
                   <h5>📝 Prémisses identifiées</h5>
                   <ol className="premises-list">
-                    {analysis.argument_structure.premises.map((premise, index) => (
+                    {analysis.results.argument_structure.premises.map((premise, index) => (
                       <li key={index} className="premise-item">
                         {premise}
                       </li>
@@ -321,11 +321,11 @@ const ArgumentAnalyzer = () => {
                 </div>
               )}
               
-              {analysis.argument_structure.conclusion && (
+              {analysis.results.argument_structure.conclusion && (
                 <div className="conclusion-section">
                   <h5>🎯 Conclusion</h5>
                   <div className="conclusion-text">
-                    {analysis.argument_structure.conclusion}
+                    {analysis.results.argument_structure.conclusion}
                   </div>
                 </div>
               )}
@@ -333,11 +333,11 @@ const ArgumentAnalyzer = () => {
           )}
 
           {/* Recommandations */}
-          {analysis.suggestions && analysis.suggestions.length > 0 && (
+          {analysis.results?.suggestions && analysis.results.suggestions.length > 0 && (
             <div className="suggestions-section">
               <h4>💡 Recommandations</h4>
               <ul className="suggestions-list">
-                {analysis.suggestions.map((suggestion, index) => (
+                {analysis.results.suggestions.map((suggestion, index) => (
                   <li key={index} className="suggestion-item">
                     {suggestion}
                   </li>

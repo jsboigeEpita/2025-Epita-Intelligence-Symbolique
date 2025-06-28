@@ -1,9 +1,12 @@
 # argumentation_analysis/agents/core/oracle/dataset_access_manager.py
 """
-Gestionnaire d'accès centralisé aux datasets avec système de permissions ACL.
+Fournit un gestionnaire d'accès centralisé et sécurisé aux jeux de données.
 
-Ce module implémente la logique de contrôle d'accès pour les agents Oracle,
-gérant les permissions, la validation des requêtes, et la mise en cache.
+Ce module définit `DatasetAccessManager`, une classe qui agit comme un point
+d'entrée unique pour toute interaction avec un jeu de données. Il orchestre
+la validation des permissions via un `PermissionManager`, la mise en cache
+des requêtes, et l'exécution effective des requêtes sur le jeu de données
+sous-jacent.
 """
 
 import logging
@@ -20,17 +23,31 @@ from .cluedo_dataset import CluedoDataset
 
 
 class QueryCache:
-    """Cache intelligent pour les requêtes fréquentes."""
-    
+    """
+    Implémente un cache pour les résultats de requêtes avec une politique
+    d'éviction basée sur la taille et une durée de vie (TTL).
+
+    Attributes:
+        max_size (int): Nombre maximum d'entrées dans le cache.
+        ttl_seconds (int): Durée de vie d'une entrée de cache en secondes.
+    """
+
     def __init__(self, max_size: int = 1000, ttl_seconds: int = 300):
+        """
+        Initialise le cache de requêtes.
+
+        Args:
+            max_size (int): Taille maximale du cache.
+            ttl_seconds (int): Durée de vie (TTL) en secondes pour chaque entrée.
+        """
         self.max_size = max_size
         self.ttl_seconds = ttl_seconds
         self._cache: Dict[str, Dict[str, Any]] = {}
         self._access_times: Dict[str, datetime] = {}
         self._logger = logging.getLogger(self.__class__.__name__)
-    
+
     def _generate_key(self, agent_name: str, query_type: QueryType, query_params: Dict[str, Any]) -> str:
-        """Génère une clé unique pour la requête."""
+        """Génère une clé de cache unique et déterministe pour une requête."""
         import hashlib
         import json
         
@@ -38,7 +55,21 @@ class QueryCache:
         return hashlib.md5(content.encode()).hexdigest()
     
     def get(self, agent_name: str, query_type: QueryType, query_params: Dict[str, Any]) -> Optional[QueryResult]:
-        """Récupère un résultat depuis le cache."""
+        """
+        Tente de récupérer le résultat d'une requête depuis le cache.
+
+        La récupération échoue si l'entrée n'existe pas ou si sa durée de
+        vie (TTL) a expiré.
+
+        Args:
+            agent_name (str): Nom de l'agent demandeur.
+            query_type (QueryType): Type de la requête.
+            query_params (Dict[str, Any]): Paramètres de la requête.
+
+        Returns:
+            Optional[QueryResult]: Le résultat en cache s'il est trouvé et
+            valide, sinon `None`.
+        """
         key = self._generate_key(agent_name, query_type, query_params)
         
         if key not in self._cache:
@@ -65,7 +96,17 @@ class QueryCache:
         )
     
     def put(self, agent_name: str, query_type: QueryType, query_params: Dict[str, Any], result: QueryResult) -> None:
-        """Stocke un résultat dans le cache."""
+        """
+        Ajoute un résultat de requête au cache.
+
+        Si le cache est plein, l'entrée la plus anciennement utilisée est supprimée.
+
+        Args:
+            agent_name (str): Nom de l'agent demandeur.
+            query_type (QueryType): Type de la requête.
+            query_params (Dict[str, Any]): Paramètres de la requête.
+            result (QueryResult): L'objet résultat à mettre en cache.
+        """
         key = self._generate_key(agent_name, query_type, query_params)
         
         # Nettoyage si cache plein
@@ -122,19 +163,29 @@ class QueryCache:
 
 class DatasetAccessManager:
     """
-    Gestionnaire d'accès centralisé aux datasets avec contrôle de permissions.
-    
-    Cette classe orchestre l'accès aux datasets en validant les permissions,
-    gérant le cache, et maintenant un audit trail complet.
+    Orchestre l'accès sécurisé et contrôlé à un jeu de données.
+
+    Cette classe est le point central pour toute interaction avec un jeu de données.
+    Elle intègre un `PermissionManager` pour le contrôle d'accès basé sur des
+    règles, et un `QueryCache` pour optimiser les performances. Elle est
+    également responsable de l'audit de toutes les tentatives d'accès.
+
+    Attributes:
+        dataset (Any): L'instance du jeu de données à protéger (ex: `CluedoDataset`).
+        permission_manager (PermissionManager): Le gestionnaire qui applique les
+            règles de permission.
+        query_cache (QueryCache): Le cache pour les résultats de requêtes.
     """
-    
+
     def __init__(self, dataset: Any, permission_manager: Optional[PermissionManager] = None):
         """
         Initialise le gestionnaire d'accès.
-        
+
         Args:
-            dataset: Le dataset à gérer (ex: CluedoDataset)
-            permission_manager: Gestionnaire de permissions (optionnel)
+            dataset (Any): L'instance du jeu de données à gérer.
+            permission_manager (Optional[PermissionManager]): Une instance du
+                gestionnaire de permissions. Si non fournie, une nouvelle sera
+                créée.
         """
         self.dataset = dataset
         self.permission_manager = permission_manager or PermissionManager()
@@ -150,21 +201,27 @@ class DatasetAccessManager:
         
         self._logger.info(f"DatasetAccessManager initialisé avec dataset: {type(dataset).__name__}")
     
-    def execute_query(self, agent_name: str, query_type: QueryType, query_params: Dict[str, Any]) -> QueryResult:
+    async def execute_query(self, agent_name: str, query_type: QueryType, query_params: Dict[str, Any]) -> QueryResult:
         """
-        Exécute une requête après validation des permissions et vérification du cache.
-        
+        Exécute une requête en suivant un pipeline de validation et d'exécution sécurisé.
+
+        Le pipeline est le suivant :
+        1.  Vérification des permissions via `PermissionManager`.
+        2.  Tentative de récupération depuis le `QueryCache`.
+        3.  Validation des paramètres de la requête.
+        4.  Exécution de la requête sur le jeu de données.
+        5.  Filtrage des champs du résultat selon les permissions.
+        6.  Mise en cache du résultat final.
+        7.  Enregistrement de l'accès pour l'audit.
+
         Args:
-            agent_name: Nom de l'agent demandeur
-            query_type: Type de requête
-            query_params: Paramètres spécifiques à la requête
-            
+            agent_name (str): Le nom de l'agent qui fait la requête.
+            query_type (QueryType): Le type de requête à exécuter.
+            query_params (Dict[str, Any]): Les paramètres de la requête.
+
         Returns:
-            QueryResult avec données filtrées selon permissions
-            
-        Raises:
-            PermissionDeniedError: Si l'agent n'a pas les permissions
-            InvalidQueryError: Si les paramètres sont invalides
+            QueryResult: Un objet contenant le résultat de l'opération, qu'elle
+            ait réussi ou échoué.
         """
         self.total_queries += 1
         start_time = datetime.now()
@@ -209,7 +266,7 @@ class DatasetAccessManager:
                 )
             
             # Exécution de la requête sur le dataset
-            result = self._execute_dataset_query(agent_name, query_type, query_params)
+            result = await self._execute_dataset_query(agent_name, query_type, query_params)
             
             # Filtrage selon permissions
             filtered_result = self._apply_permission_filters(agent_name, result)
@@ -290,10 +347,10 @@ class DatasetAccessManager:
         # Générer un hash pour éviter les clés trop longues
         return hashlib.md5(cache_data.encode()).hexdigest()
     
-    def _execute_dataset_query(self, agent_name: str, query_type: QueryType, query_params: Dict[str, Any]) -> QueryResult:
+    async def _execute_dataset_query(self, agent_name: str, query_type: QueryType, query_params: Dict[str, Any]) -> QueryResult:
         """Exécute la requête sur le dataset approprié."""
         if isinstance(self.dataset, CluedoDataset):
-            return self.dataset.process_query(agent_name, query_type, query_params)
+            return await self.dataset.process_query(agent_name, query_type, query_params)
         else:
             # Support pour d'autres types de datasets à l'avenir
             return QueryResult(
@@ -321,7 +378,7 @@ class DatasetAccessManager:
     
     def _filter_forbidden_fields(self, data: Any, forbidden_fields: List[str]) -> Any:
         """Filtre les champs interdits des données."""
-        # Vérification de sécurité pour éviter les erreurs avec les mocks
+        # Vérification de sécurité pour éviter les erreurs de données
         if not forbidden_fields or not hasattr(forbidden_fields, '__iter__'):
             return data
             
@@ -336,20 +393,23 @@ class DatasetAccessManager:
         else:
             return data
     
-    def execute_oracle_query(self, agent_name: str, query_type: QueryType, query_params: Dict[str, Any]) -> OracleResponse:
+    async def execute_oracle_query(self, agent_name: str, query_type: QueryType, query_params: Dict[str, Any]) -> OracleResponse:
         """
-        Interface haut niveau pour les requêtes Oracle.
-        
+        Interface haut niveau qui exécute une requête et la formate en `OracleResponse`.
+
+        Cette méthode sert de façade sur `execute_query` pour retourner le type
+        `OracleResponse` attendu par les agents.
+
         Args:
-            agent_name: Nom de l'agent demandeur
-            query_type: Type de requête
-            query_params: Paramètres de la requête
-            
+            agent_name (str): Le nom de l'agent demandeur.
+            query_type (QueryType): Le type de requête.
+            query_params (Dict[str, Any]): Les paramètres de la requête.
+
         Returns:
-            OracleResponse avec autorisation et données
+            OracleResponse: La réponse standardisée pour le système Oracle.
         """
         try:
-            query_result = self.execute_query(agent_name, query_type, query_params)
+            query_result = await self.execute_query(agent_name, query_type, query_params)
             
             return OracleResponse(
                 authorized=query_result.success,
@@ -400,7 +460,12 @@ class DatasetAccessManager:
         """Ajoute une règle de permission."""
         self.permission_manager.add_permission_rule(rule)
     
-    def check_permission(self, agent_name: str, query_type: QueryType) -> bool:
+    def add_permission(self, agent_name: str, query_type: QueryType):
+        """Ajoute une permission pour un agent via le gestionnaire de permissions."""
+        self.permission_manager.add_permission(agent_name, query_type)
+        self._logger.info(f"Permission {query_type.value} ajoutée pour l'agent {agent_name}.")
+
+    async def check_permission(self, agent_name: str, query_type: QueryType) -> bool:
         """
         Vérifie si un agent a les permissions pour un type de requête.
         
@@ -462,9 +527,9 @@ class CluedoDatasetManager(DatasetAccessManager):
         super().__init__(cluedo_dataset, permission_manager)
         self._logger.info("CluedoDatasetManager initialisé avec permissions par défaut")
     
-    def validate_cluedo_suggestion(self, agent_name: str, suspect: str, arme: str, lieu: str) -> OracleResponse:
+    async def validate_cluedo_suggestion(self, agent_name: str, suspect: str, arme: str, lieu: str) -> OracleResponse:
         """Interface simplifiée pour valider une suggestion Cluedo."""
-        return self.execute_oracle_query(
+        return await self.execute_oracle_query(
             agent_name=agent_name,
             query_type=QueryType.SUGGESTION_VALIDATION,
             query_params={
@@ -476,17 +541,17 @@ class CluedoDatasetManager(DatasetAccessManager):
             }
         )
     
-    def request_clue(self, agent_name: str) -> OracleResponse:
+    async def request_clue(self, agent_name: str) -> OracleResponse:
         """Interface simplifiée pour demander un indice."""
-        return self.execute_oracle_query(
+        return await self.execute_oracle_query(
             agent_name=agent_name,
             query_type=QueryType.CLUE_REQUEST,
             query_params={}
         )
     
-    def inquire_about_card(self, agent_name: str, card: str) -> OracleResponse:
+    async def inquire_about_card(self, agent_name: str, card: str) -> OracleResponse:
         """Interface simplifiée pour enquêter sur une carte."""
-        return self.execute_oracle_query(
+        return await self.execute_oracle_query(
             agent_name=agent_name,
             query_type=QueryType.CARD_INQUIRY,
             query_params={"card": card}

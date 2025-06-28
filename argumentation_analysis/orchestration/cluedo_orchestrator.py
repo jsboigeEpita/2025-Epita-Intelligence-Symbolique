@@ -1,22 +1,20 @@
 import asyncio
+import logging
 from typing import List, Dict, Any, Optional
 
 import semantic_kernel as sk
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.kernel import Kernel
-# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité pour agents et filters
-from argumentation_analysis.utils.semantic_kernel_compatibility import (
-    Agent, AgentGroupChat, SequentialSelectionStrategy, TerminationStrategy,
-    FunctionInvocationContext, FilterTypes
-)
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 from pydantic import Field
-import logging
 
-# Configuration du logging
+# Configuration du logging en premier
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+from .base import Agent, TerminationStrategy
+from .cluedo_extended_orchestrator import CyclicSelectionStrategy
 
 from argumentation_analysis.core.enquete_states import EnqueteCluedoState
 from argumentation_analysis.orchestration.plugins.enquete_state_manager_plugin import EnqueteStateManagerPlugin
@@ -53,7 +51,7 @@ class CluedoTerminationStrategy(TerminationStrategy):
         return False
 
 
-async def logging_filter(context: FunctionInvocationContext, next):
+async def logging_filter(context: Any, next):
     """Filtre pour logger les appels de fonction."""
     logger.info(f"[FILTER PRE] Appel de: {context.function.plugin_name}-{context.function.name}")
     logger.info(f"[FILTER PRE] Arguments: {context.arguments}")
@@ -87,31 +85,42 @@ async def run_cluedo_game(
 
     plugin = EnqueteStateManagerPlugin(enquete_state)
     kernel.add_plugin(plugin, "EnqueteStatePlugin")
-    kernel.add_filter(FilterTypes.FUNCTION_INVOCATION, logging_filter)
+    if hasattr(kernel, 'auto_function_invocation_filters'):
+        kernel.auto_function_invocation_filters.append(logging_filter)
+    elif hasattr(kernel, 'add_function_invocation_filter'): # Fallback pour les anciennes versions
+         kernel.add_function_invocation_filter(logging_filter)
 
     elements = enquete_state.elements_jeu_cluedo
     all_constants = [name.replace(" ", "") for category in elements.values() for name in category]
 
-    sherlock = SherlockEnqueteAgent(kernel=kernel, agent_name="Sherlock")
-    watson = WatsonLogicAssistant(kernel=kernel, agent_name="Watson", constants=all_constants)
+    # Récupération du service_id depuis les settings
+    from argumentation_analysis.config.settings import settings
+    service_id = settings.openai.chat_model_id if settings.openai else "default"
+
+    sherlock = SherlockEnqueteAgent(kernel=kernel, agent_name="Sherlock", service_id=service_id)
+    watson = WatsonLogicAssistant(kernel=kernel, agent_name="Watson", constants=all_constants, service_id=service_id)
 
     termination_strategy = CluedoTerminationStrategy(max_turns=max_turns, enquete_plugin=plugin)
+    selection_strategy = CyclicSelectionStrategy(agents=[sherlock, watson])
     
-    group_chat = AgentGroupChat(
-        agents=[sherlock, watson],
-        selection_strategy=SequentialSelectionStrategy(),
-        termination_strategy=termination_strategy,
-    )
-
     # Ajout du message initial au chat pour démarrer la conversation
     initial_message = ChatMessageContent(role="user", content=initial_question, name="System")
-    await group_chat.add_chat_message(message=initial_message)
     history.append(initial_message)
 
-    logger.info("Début de la boucle de jeu gérée par AgentGroupChat.invoke...")
-    async for message in group_chat.invoke():
-        history.append(message)
-        logger.info(f"Message de {message.name}: {message.content}")
+    logger.info("Début de la boucle de jeu...")
+    
+    current_agent = sherlock # Démarrer avec Sherlock
+    while not await termination_strategy.should_terminate(agent=current_agent, history=history):
+        current_agent = await selection_strategy.next(agents=[sherlock, watson], history=history)
+        
+        logger.info(f"--- Tour de {current_agent.name} ---")
+        
+        response = await current_agent.invoke(history)
+        
+        message_content = response[0] if isinstance(response, list) and response else ChatMessageContent(role="assistant", content=str(response), name=current_agent.name)
+
+        history.append(message_content)
+        logger.info(f"Message de {message_content.name}: {message_content.content}")
 
     logger.info("Jeu terminé.")
     return [
@@ -121,10 +130,22 @@ async def run_cluedo_game(
 
 async def main():
     """Point d'entrée pour exécuter le script de manière autonome."""
+    from argumentation_analysis.config.settings import settings
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
     kernel = Kernel()
-    # NOTE: Ajoutez ici la configuration du service LLM (ex: OpenAI, Azure) au kernel.
-    # from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
-    # kernel.add_service(OpenAIChatCompletion(service_id="default", ...))
+    
+    if not settings.use_mock_llm and settings.openai.api_key:
+        kernel.add_service(
+            OpenAIChatCompletion(
+                service_id=settings.openai.chat_model_id,
+                ai_model_id=settings.openai.chat_model_id,
+                api_key=settings.openai.api_key.get_secret_value(),
+            )
+        )
+    else:
+        logger.warning("Aucun service LLM configuré ou utilisation de mock activée. L'exécution peut échouer ou être limitée.")
+
 
     final_history, final_state = await run_cluedo_game(kernel, "L'enquête commence. Sherlock, à vous.")
     
@@ -134,15 +155,15 @@ async def main():
     print("--- Fin de la Conversation ---")
 
     print("\n--- État Final de l'Enquête ---")
-    print(f"Nom de l'enquête: {final_state.nom_enquete}")
+    print(f"Nom de l'enquête: {final_state.nom_enquete_cluedo}")
     print(f"Description: {final_state.description_cas}")
-    print(f"Solution proposée: {final_state.solution_proposee}")
-    print(f"Solution correcte: {final_state.solution_correcte}")
+    print(f"Solution proposée: {final_state.final_solution}")
+    print(f"Solution correcte: {final_state.solution_secrete_cluedo}")
     print("\nHypothèses:")
-    for hypo in final_state.hypotheses.values():
+    for hypo in final_state.get_hypotheses():
         print(f"  - ID: {hypo['id']}, Text: {hypo['text']}, Confiance: {hypo['confidence_score']}, Statut: {hypo['status']}")
     print("\nTâches:")
-    for task in final_state.tasks.values():
+    for task in final_state.tasks:
         print(f"  - ID: {task['id']}, Description: {task['description']}, Assigné à: {task['assignee']}, Statut: {task['status']}")
     print("--- Fin de l'État ---")
 

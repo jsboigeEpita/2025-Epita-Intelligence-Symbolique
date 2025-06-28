@@ -8,13 +8,13 @@ Ce module fournit les composants nécessaires à la création et à l'utilisatio
 Les agents logiques de ce module suivent la hiérarchie suivante :
 
 1.  **`BaseAgent`** ([`argumentation_analysis.agents.core.abc.agent_bases.BaseAgent`](../../abc/agent_bases.py:24)): Classe de base abstraite pour tous les agents du système.
-2.  **`BaseLogicAgent`** ([`argumentation_analysis.agents.core.abc.agent_bases.BaseLogicAgent`](../../abc/agent_bases.py:159)): Hérite de `BaseAgent` et sert de classe de base abstraite pour tous les agents logiques. Elle définit l'interface commune pour la manipulation d'ensembles de croyances, la génération et l'exécution de requêtes, etc.
+2.  **`BaseLogicAgent`** ([`argumentation_analysis.agents.core.abc.agent_bases.BaseLogicAgent`](../../abc/agent_bases.py:159)): Hérite de `BaseAgent` et sert de classe de base abstraite **unifiée** pour tous les agents logiques. Elle définit une interface complète qui inclut :
+    *   **Le raisonnement formel** : Manipulation d'ensembles de croyances, génération et exécution de requêtes via le `TweetyBridge`.
+    *   **L'orchestration de tâches** : Une méthode `process_task` (héritée de l'ancien `AbstractLogicAgent`) qui permet de gérer des workflows complexes comme la traduction de texte en logique ou l'interrogation de la base de connaissances.
 3.  **Agents Logiques Concrets** :
     *   [`PropositionalLogicAgent`](propositional_logic_agent.py:0) : Agent pour la logique propositionnelle. Sert de référence et est bien documenté.
     *   [`FirstOrderLogicAgent`](first_order_logic_agent.py:0) : Agent pour la logique du premier ordre.
     *   [`ModalLogicAgent`](modal_logic_agent.py:0) : Agent pour la logique modale.
-
-*Note :* Ce répertoire contient également [`AbstractLogicAgent.py`](abstract_logic_agent.py:0). Bien que son nom suggère qu'il s'agit d'une classe de base pour les agents logiques ici, les agents concrets (`PropositionalLogicAgent`, `FirstOrderLogicAgent`, `ModalLogicAgent`) héritent en réalité de `BaseLogicAgent` (située dans `argumentation_analysis/agents/core/abc/`). `AbstractLogicAgent` pourrait être une version antérieure ou une abstraction destinée à un autre type d'orchestration, car elle inclut des méthodes de gestion de tâches (`process_task`) non présentes dans `BaseLogicAgent`.*
 
 ### Autres Composants Essentiels
 

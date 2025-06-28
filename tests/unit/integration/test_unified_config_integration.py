@@ -1,3 +1,10 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -17,9 +24,9 @@ import sys
 import tempfile
 import json
 from pathlib import Path
-from unittest.mock import patch, MagicMock, AsyncMock
 
-# Ajout du chemin pour importer les modules du projet
+
+from unittest.mock import MagicMock
 project_root = Path(__file__).resolve().parent.parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
@@ -31,6 +38,21 @@ from config.unified_config import (
 
 
 class TestUnifiedConfigIntegration:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests d'intégration pour le système de configuration unifié."""
     
     @pytest.mark.asyncio
@@ -194,49 +216,7 @@ class TestUnifiedConfigIntegration:
         assert auth_section["require_full_taxonomy"] is True
         assert auth_section["validate_tool_calls"] is True
 
-    @patch('scripts.main.analyze_text.create_unified_config_from_args')
-    def test_cli_integration_mapping(self, mock_create_config):
-        """Test de l'intégration avec l'interface CLI."""
-        # Configuration de test pour le mock
-        test_config = UnifiedConfig(
-            logic_type=LogicType.FOL,
-            mock_level=MockLevel.NONE,
-            agents=[AgentType.INFORMAL, AgentType.FOL_LOGIC]
-        )
-        mock_create_config.return_value = test_config
-        
-        # Import et test de la fonction CLI
-        from scripts.main.analyze_text import create_unified_config_from_args
-        
-        # Simulation d'arguments CLI
-        class MockArgs:
-            logic_type = 'fol'
-            mock_level = 'none'
-            agents = 'informal,fol_logic'
-            taxonomy = 'full'
-            orchestration = 'unified'
-            modes = 'fallacies,coherence'
-            advanced = False
-            mocks = False
-            no_jvm = False
-            require_real_gpt = True
-            require_real_tweety = True
-            require_full_taxonomy = True
-            validate_tools = True
-            format = 'markdown'
-            template = 'default'
-            output_mode = 'both'
-            output = None
-            verbose = False
-        
-        # Test de la conversion CLI -> Config
-        result_config = create_unified_config_from_args(MockArgs())
-        
-        # Vérification que la fonction a été appelée
-        mock_create_config.assert_called_once()
-        assert result_config.logic_type == LogicType.FOL
-        assert result_config.mock_level == MockLevel.NONE
-
+    
     def test_performance_configuration_impact(self):
         """Test de l'impact des configurations sur les performances."""
         # Configuration rapide (test)

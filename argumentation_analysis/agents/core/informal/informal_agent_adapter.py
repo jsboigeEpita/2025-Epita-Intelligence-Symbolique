@@ -10,7 +10,6 @@ de continuer à fonctionner avec la nouvelle architecture basée sur Semantic Ke
 
 import logging
 from typing import Dict, List, Any, Optional
-from unittest.mock import MagicMock
 
 # Import de la nouvelle classe
 from .informal_agent import InformalAnalysisAgent
@@ -47,19 +46,21 @@ class InformalAgent:
         self.tools = tools or {}
         self.strict_validation = strict_validation
         self.logger = logging.getLogger(f"{__name__}.{agent_id}")
+
+        # Validation de la configuration des outils, comme attendu par les tests.
+        if self.strict_validation and not self.tools:
+            raise ValueError("Aucun outil fourni. L'agent ne peut pas fonctionner sans outils en mode de validation stricte.")
         
-        # Pour les tests, on mocke la création du kernel SK
-        self._mock_kernel = MagicMock()
-        self._setup_mock_kernel()
-        
-        # Créer l'agent SK sous-jacent (désactivé pour les tests purs)
-        self._sk_agent = None
-        
-    def _setup_mock_kernel(self):
-        """Configure le kernel mocké pour les tests."""
-        self._mock_kernel.plugins = {}
-        self._mock_kernel.add_plugin = MagicMock()
-        self._mock_kernel.add_function = MagicMock()
+        # Essayer de créer le vrai agent SK sous-jacent
+        try:
+            self._sk_agent = InformalAnalysisAgent(
+                agent_name=self.agent_name,
+                tools=self.tools
+            )
+            self.logger.info(f"Agent SK réel créé pour {self.agent_name}")
+        except Exception as e:
+            self.logger.warning(f"Impossible de créer l'agent SK réel: {e}. Mode dégradé activé.")
+            self._sk_agent = None
         
     def get_available_tools(self) -> List[str]:
         """Retourne la liste des outils disponibles."""
@@ -91,7 +92,16 @@ class InformalAgent:
         """
         self.logger.info(f"Analyse d'un texte de {len(text)} caractères...")
         
-        # Simuler l'analyse avec les outils mockés
+        # Essayer d'utiliser l'agent SK réel si disponible
+        if self._sk_agent:
+            try:
+                # Utiliser le vrai agent SK
+                sk_result = self._sk_agent.analyze_text(text, context)
+                return sk_result
+            except Exception as e:
+                self.logger.error(f"Erreur avec l'agent SK réel: {e}. Utilisation du mode dégradé.")
+        
+        # Mode dégradé : utiliser les outils locaux
         fallacies = []
         
         if "fallacy_detector" in self.tools:
@@ -99,7 +109,7 @@ class InformalAgent:
             if hasattr(detector, 'detect'):
                 fallacies = detector.detect(text)
             else:
-                # Fallback pour les mocks
+                # Fallback pour les tests
                 fallacies = getattr(detector, 'return_value', [])
         
         result = {
@@ -199,4 +209,4 @@ class InformalAgent:
 
 
 # Alias pour compatibilité
-InformalAnalysisAgent = InformalAgent
+# InformalAnalysisAgent = InformalAgent

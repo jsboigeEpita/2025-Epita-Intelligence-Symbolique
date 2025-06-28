@@ -2,11 +2,18 @@
 # -*- coding: utf-8 -*-
 
 """
-Outil de visualisation des résultats d'une analyse rhétorique.
+Générateur de visualisations pour les résultats d'analyses rhétoriques.
 
-Ce module fournit des fonctionnalités pour visualiser les résultats d'une analyse
-rhétorique, comme la génération de graphes d'arguments, de distributions de sophismes,
-et de heatmaps de qualité argumentative.
+Ce module fournit une classe, RhetoricalResultVisualizer, capable de transformer
+l'état final d'une analyse rhétorique en représentations visuelles. Plutôt que
+de dépendre de bibliothèques graphiques lourdes, il génère du code source pour
+Mermaid.js, une bibliothèque JavaScript légère pour le rendu de diagrammes.
+
+Il peut produire :
+- Des graphes d'arguments montrant les liens avec les sophismes.
+- Des diagrammes de distribution des types de sophismes.
+- Des "heatmaps" pour évaluer la qualité argumentative.
+- Un rapport HTML complet et autonome intégrant toutes ces visualisations.
 """
 
 import os
@@ -33,11 +40,12 @@ logger = logging.getLogger("RhetoricalResultVisualizer")
 
 class RhetoricalResultVisualizer:
     """
-    Outil pour la visualisation des résultats d'une analyse rhétorique.
-    
-    Cet outil permet de visualiser les résultats d'une analyse rhétorique, comme
-    la génération de graphes d'arguments, de distributions de sophismes, et de
-    heatmaps de qualité argumentative.
+    Génère le code source pour des visualisations basées sur les résultats d'une analyse.
+
+    Cette classe prend en entrée l'état final d'une analyse rhétorique (un dictionnaire
+    contenant les arguments, sophismes, etc.) et produit des chaînes de caractères
+    contenant le code pour diverses visualisations au format Mermaid.js, ainsi qu'un
+    rapport HTML complet pour les afficher.
     """
     
     def __init__(self):
@@ -49,16 +57,19 @@ class RhetoricalResultVisualizer:
     
     def generate_argument_graph(self, state: Dict[str, Any]) -> str:
         """
-        Génère un graphe des arguments et des sophismes.
-        
-        Cette méthode génère un graphe Mermaid représentant les arguments et les
-        sophismes identifiés dans l'analyse rhétorique.
-        
+        Génère un graphe orienté (Top-Down) des arguments et des sophismes.
+
+        Cette méthode crée une représentation textuelle au format Mermaid.js d'un
+        graphe où les nœuds sont les arguments identifiés. Les sophismes sont
+        également des nœuds, liés aux arguments qu'ils ciblent.
+
         Args:
-            state: État partagé contenant les résultats
-            
+            state (Dict[str, Any]): L'état contenant les `identified_arguments` et
+                `identified_fallacies`.
+
         Returns:
-            Code Mermaid pour le graphe
+            str: Une chaîne de caractères contenant le code Mermaid pour le graphe.
+                 Exemple: `graph TD\\n    arg_1["Texte..."]\\n    fallacy_1["Type"]`
         """
         self.logger.info("Génération d'un graphe des arguments et des sophismes")
         
@@ -104,16 +115,17 @@ class RhetoricalResultVisualizer:
     
     def generate_fallacy_distribution(self, state: Dict[str, Any]) -> str:
         """
-        Génère une visualisation de la distribution des sophismes.
-        
-        Cette méthode génère un diagramme circulaire Mermaid représentant la
-        distribution des types de sophismes identifiés dans l'analyse rhétorique.
-        
+        Génère un diagramme circulaire (Pie Chart) de la distribution des sophismes.
+
+        Cette méthode compte les occurrences de chaque type de sophisme dans l'état
+        et produit le code Mermaid pour un diagramme circulaire illustrant leur
+        répartition proportionnelle.
+
         Args:
-            state: État partagé contenant les résultats
-            
+            state (Dict[str, Any]): L'état contenant les `identified_fallacies`.
+
         Returns:
-            Code Mermaid pour la visualisation
+            str: Une chaîne de caractères contenant le code Mermaid pour le diagramme.
         """
         self.logger.info("Génération d'une visualisation de la distribution des sophismes")
         
@@ -148,17 +160,19 @@ class RhetoricalResultVisualizer:
     
     def generate_argument_quality_heatmap(self, state: Dict[str, Any]) -> str:
         """
-        Génère une heatmap de la qualité des arguments.
-        
-        Cette méthode génère une heatmap Mermaid représentant la qualité des
-        arguments identifiés dans l'analyse rhétorique, en fonction du nombre
-        de sophismes associés à chaque argument.
-        
+        Génère une heatmap de la qualité perçue des arguments.
+
+        Cette méthode produit une heatmap au format Mermaid où chaque argument est
+        associé à un score de qualité. Ce score est calculé en fonction inverse du
+        nombre de sophismes qui le ciblent, selon la formule :
+        `qualité = max(0, 10 - 2 * nombre_de_sophismes)`.
+
         Args:
-            state: État partagé contenant les résultats
-            
+            state (Dict[str, Any]): L'état contenant les `identified_arguments` et
+                `identified_fallacies`.
+
         Returns:
-            Code Mermaid pour la heatmap
+            str: Une chaîne de caractères contenant le code Mermaid pour la heatmap.
         """
         self.logger.info("Génération d'une heatmap de la qualité des arguments")
         
@@ -203,16 +217,19 @@ class RhetoricalResultVisualizer:
     
     def generate_all_visualizations(self, state: Dict[str, Any]) -> Dict[str, str]:
         """
-        Génère toutes les visualisations disponibles.
-        
-        Cette méthode génère toutes les visualisations disponibles pour les résultats
-        d'une analyse rhétorique.
-        
+        Orchestre la génération de toutes les visualisations textuelles.
+
+        Cette méthode est un point d'entrée pratique qui appelle les autres méthodes
+        de génération (`generate_argument_graph`, `generate_fallacy_distribution`,
+        etc.) et retourne leurs résultats dans un dictionnaire structuré.
+
         Args:
-            state: État partagé contenant les résultats
-            
+            state (Dict[str, Any]): L'état partagé contenant tous les résultats de l'analyse.
+
         Returns:
-            Dictionnaire contenant les codes Mermaid pour chaque visualisation
+            Dict[str, str]: Un dictionnaire où les clés sont les noms des
+            visualisations (ex: "argument_graph") et les valeurs sont les
+            chaînes de caractères du code Mermaid correspondant.
         """
         self.logger.info("Génération de toutes les visualisations disponibles")
         
@@ -232,16 +249,18 @@ class RhetoricalResultVisualizer:
     
     def generate_html_report(self, state: Dict[str, Any]) -> str:
         """
-        Génère un rapport HTML avec toutes les visualisations.
-        
-        Cette méthode génère un rapport HTML contenant toutes les visualisations
-        disponibles pour les résultats d'une analyse rhétorique.
-        
+        Génère un rapport HTML autonome avec toutes les visualisations.
+
+        Cette méthode produit un fichier HTML complet et portable. Il intègre le code
+        Mermaid généré pour chaque visualisation et inclut le script Mermaid.js
+        via un CDN, ce qui permet de visualiser le rapport dans n'importe quel
+        navigateur web moderne sans installation supplémentaire.
+
         Args:
-            state: État partagé contenant les résultats
-            
+            state (Dict[str, Any]): L'état partagé contenant les résultats de l'analyse.
+
         Returns:
-            Code HTML pour le rapport
+            str: Une chaîne de caractères contenant le code HTML complet du rapport.
         """
         self.logger.info("Génération d'un rapport HTML avec toutes les visualisations")
         

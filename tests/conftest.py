@@ -1,187 +1,273 @@
-"""
-Configuration pour les tests pytest.
-
-Ce fichier est automatiquement chargé par pytest avant l'exécution des tests.
-Il configure les mocks nécessaires pour les tests et utilise les vraies bibliothèques
-lorsqu'elles sont disponibles. Pour Python 3.12 et supérieur, le mock JPype1 est
-automatiquement utilisé en raison de problèmes de compatibilité.
-"""
-import sys
+from unittest.mock import patch
+from dotenv import dotenv_values
 import os
+from pathlib import Path
 import pytest
-from unittest.mock import patch, MagicMock
-import importlib.util
+import jpype
 import logging
-import threading # Ajout de l'import pour l'inspection des threads
-# --- Configuration globale du Logging pour les tests ---
-# Le logger global pour conftest est déjà défini plus bas,
-# mais nous avons besoin de configurer basicConfig tôt.
-# Nous allons utiliser un logger temporaire ici ou le logger racine.
-_conftest_setup_logger = logging.getLogger("conftest.setup")
+import time
+import shutil
+import nest_asyncio
 
-if not logging.getLogger().handlers: # Si le root logger n'a pas de handlers, basicConfig n'a probablement pas été appelé efficacement.
-    logging.basicConfig(
-        level=logging.INFO, # Ou un autre niveau pertinent pour les tests globaux
-        format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
-        datefmt='%H:%M:%S'
-    )
-    _conftest_setup_logger.info("Configuration globale du logging appliquée.")
-else:
-    _conftest_setup_logger.info("Configuration globale du logging déjà présente ou appliquée par un autre module.")
-# --- Début Patching JPype Mock au niveau module si nécessaire ---
-_SHOULD_USE_REAL_JPYPE = os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1')
-_conftest_setup_logger.info(f"conftest.py: USE_REAL_JPYPE={os.environ.get('USE_REAL_JPYPE', 'false')}, _SHOULD_USE_REAL_JPYPE={_SHOULD_USE_REAL_JPYPE}")
+# --- Gestion du patch de dotenv ---
+MOCK_DOTENV = True
+_dotenv_patcher = None
 
-if not _SHOULD_USE_REAL_JPYPE:
-    _conftest_setup_logger.info("conftest.py: Application du mock JPype au niveau module dans sys.modules.")
-    try:
-        # S'assurer que le répertoire des mocks est dans le path pour les imports suivants
-        _current_dir_for_jpype_mock_patch = os.path.dirname(os.path.abspath(__file__))
-        _mocks_dir_for_jpype_mock_patch = os.path.join(_current_dir_for_jpype_mock_patch, 'mocks')
-        # if _mocks_dir_for_jpype_mock_patch not in sys.path:
-        #     sys.path.insert(0, _mocks_dir_for_jpype_mock_patch)
-        #     _conftest_setup_logger.info(f"Ajout de {_mocks_dir_for_jpype_mock_patch} à sys.path pour jpype_mock.")
+def pytest_configure(config):
+    """
+    Hook de configuration précoce de pytest.
+    1. Charge les variables .env via une mise à jour manuelle de os.environ.
+    2. Gère le cycle de vie du patch de dotenv.
+    """
+    global MOCK_DOTENV, _dotenv_patcher
 
-        from .mocks import jpype_mock # Importer le module mock principal
-        from .mocks.jpype_components.imports import imports_module as actual_mock_jpype_imports_module
+    if config.getoption("--allow-dotenv"):
+        MOCK_DOTENV = False
+        print("\n[INFO] Dotenv mocking is DISABLED. Real .env file will be used.")
 
-        # Préparer l'objet mock principal pour 'jpype'
-        _jpype_module_mock_obj = MagicMock(name="jpype_module_mock_from_conftest")
-        _jpype_module_mock_obj.__path__ = [] # Nécessaire pour simuler un package
-        _jpype_module_mock_obj.isJVMStarted = jpype_mock.isJVMStarted
-        _jpype_module_mock_obj.startJVM = jpype_mock.startJVM
-        _jpype_module_mock_obj.getJVMPath = jpype_mock.getJVMPath
-        _jpype_module_mock_obj.getJVMVersion = jpype_mock.getJVMVersion
-        _jpype_module_mock_obj.getDefaultJVMPath = jpype_mock.getDefaultJVMPath
-        _jpype_module_mock_obj.JClass = jpype_mock.JClass
-        _jpype_module_mock_obj.JException = jpype_mock.JException
-        _jpype_module_mock_obj.JObject = jpype_mock.JObject
-        _jpype_module_mock_obj.JVMNotFoundException = jpype_mock.JVMNotFoundException
-        _jpype_module_mock_obj.__version__ = getattr(jpype_mock, '__version__', '1.x.mock.conftest')
-        _jpype_module_mock_obj.imports = actual_mock_jpype_imports_module
-        # Simuler d'autres attributs/méthodes si nécessaire pour la collecte
-        _jpype_module_mock_obj.config = MagicMock(name="jpype.config_mock_from_conftest")
-        _jpype_module_mock_obj.config.destroy_jvm = True # Comportement par défaut sûr pour un mock
+        project_dir = Path(__file__).parent.parent
+        dotenv_path = project_dir / '.env'
+        if dotenv_path.exists():
+            print(f"[INFO] Loading .env file from: {dotenv_path}")
+            
+            # Utilisation de la méthode standard et propre maintenant que le .env est sain
+            env_vars = dotenv_values(dotenv_path=dotenv_path)
+            
+            if not env_vars:
+                print(f"[WARNING] .env file found at '{dotenv_path}' but it seems to be empty.")
+                return
 
-        # Préparer le mock pour '_jpype' (le module C)
-        _mock_dot_jpype_module = jpype_mock._jpype
+            updated_vars = 0
+            for key, value in env_vars.items():
+                if value is not None:
+                    os.environ[key] = value
+                    updated_vars += 1
+                else:
+                    print(f"[WARNING] Skipping .env variable '{key}' because its value is None.")
+            
+            print(f"[INFO] Loaded {updated_vars} variables from .env into os.environ.")
+            
+            if 'OPENAI_API_KEY' not in os.environ:
+                 print(f"[WARNING] OPENAI_API_KEY was not found in the loaded .env variables.")
+            else:
+                 print("[INFO] OPENAI_API_KEY successfully loaded.")
 
-        # Appliquer les mocks à sys.modules
-        sys.modules['jpype'] = _jpype_module_mock_obj
-        sys.modules['_jpype'] = _mock_dot_jpype_module 
-        sys.modules['jpype._core'] = _mock_dot_jpype_module 
-        sys.modules['jpype.imports'] = actual_mock_jpype_imports_module
-        sys.modules['jpype.config'] = _jpype_module_mock_obj.config
-        
-        _mock_types_module = MagicMock(name="jpype.types_mock_from_conftest")
-        for type_name in ["JString", "JArray", "JObject", "JBoolean", "JInt", "JDouble", "JLong", "JFloat", "JShort", "JByte", "JChar"]:
-             setattr(_mock_types_module, type_name, getattr(jpype_mock, type_name, MagicMock(name=f"Mock{type_name}")))
-        sys.modules['jpype.types'] = _mock_types_module
-        sys.modules['jpype.JProxy'] = MagicMock(name="jpype.JProxy_mock_from_conftest")
-
-        _conftest_setup_logger.info("Mock JPype appliqué à sys.modules DEPUIS conftest.py.")
-
-    except ImportError as e_mock_load:
-        _conftest_setup_logger.error(f"conftest.py: ERREUR CRITIQUE lors du chargement des mocks JPype (jpype_mock ou jpype_components): {e_mock_load}. Le mock JPype pourrait ne pas être actif.")
-    except Exception as e_patching:
-        _conftest_setup_logger.error(f"conftest.py: Erreur inattendue lors du patching de JPype: {e_patching}", exc_info=True)
-else:
-    _conftest_setup_logger.info("conftest.py: _SHOULD_USE_REAL_JPYPE est True. Aucun mock JPype appliqué au niveau module depuis conftest.py.")
-# --- Fin Patching JPype Mock ---
-# # --- Gestion des imports conditionnels NumPy et Pandas ---
-# _conftest_setup_logger.info("Début de la gestion des imports conditionnels pour NumPy et Pandas.")
-# try:
-#     import numpy
-#     import pandas
-#     _conftest_setup_logger.info("NumPy et Pandas réels importés avec succès.")
-# except ImportError:
-#     _conftest_setup_logger.warning("Échec de l'import de NumPy et/ou Pandas. Tentative d'utilisation des mocks.")
+        else:
+            print(f"[INFO] No .env file found at '{dotenv_path}'.")
     
-#     # Mock pour NumPy
-#     try:
-#         # Tenter d'importer le contenu spécifique du mock si disponible
-#         from tests.mocks.numpy_mock import array as numpy_array_mock # Importer un élément spécifique pour vérifier
-#         # Si l'import ci-dessus fonctionne, on peut supposer que le module mock est complet
-#         # et sera utilisé par les imports suivants dans le code testé.
-#         # Cependant, pour forcer l'utilisation du mock complet, on le met dans sys.modules.
-#         import tests.mocks.numpy_mock as numpy_mock_content
-#         sys.modules['numpy'] = numpy_mock_content
-#         _conftest_setup_logger.info("Mock pour NumPy (tests.mocks.numpy_mock) activé via sys.modules.")
-#     except ImportError:
-#         _conftest_setup_logger.error("Mock spécifique tests.mocks.numpy_mock non trouvé. Utilisation de MagicMock pour NumPy.")
-#         sys.modules['numpy'] = MagicMock()
-#     except Exception as e_numpy_mock:
-#         _conftest_setup_logger.error(f"Erreur inattendue lors du chargement du mock NumPy: {e_numpy_mock}. Utilisation de MagicMock.")
-#         sys.modules['numpy'] = MagicMock()
+    if MOCK_DOTENV:
+        print("[INFO] Dotenv mocking is ENABLED. .env files will be ignored by tests.")
+        _dotenv_patcher = patch('dotenv.main.dotenv_values', return_value={}, override=True)
+        _dotenv_patcher.start()
 
-#     # Mock pour Pandas
-#     try:
-#         # Tenter d'importer le contenu spécifique du mock
-#         from tests.mocks.pandas_mock import DataFrame as pandas_dataframe_mock # Importer un élément spécifique
-#         import tests.mocks.pandas_mock as pandas_mock_content
-#         sys.modules['pandas'] = pandas_mock_content
-#         _conftest_setup_logger.info("Mock pour Pandas (tests.mocks.pandas_mock) activé via sys.modules.")
-#     except ImportError:
-#         _conftest_setup_logger.error("Mock spécifique tests.mocks.pandas_mock non trouvé. Utilisation de MagicMock pour Pandas.")
-#         sys.modules['pandas'] = MagicMock()
-#     except Exception as e_pandas_mock:
-#         _conftest_setup_logger.error(f"Erreur inattendue lors du chargement du mock Pandas: {e_pandas_mock}. Utilisation de MagicMock.")
-#         sys.modules['pandas'] = MagicMock()
-# _conftest_setup_logger.info("Fin de la gestion des imports conditionnels pour NumPy et Pandas.")
-# # --- Fin Gestion des imports conditionnels ---
-# --- Fin Configuration globale du Logging ---
+def pytest_unconfigure(config):
+    """
+    Arrête le patcher dotenv à la fin de la session de test pour nettoyer.
+    """
+    global _dotenv_patcher
+    if _dotenv_patcher:
+        print("\n[INFO] Stopping dotenv mock.")
+        _dotenv_patcher.stop()
+        _dotenv_patcher = None
+from argumentation_analysis.core.setup.manage_portable_tools import setup_tools
+from argumentation_analysis.core.jvm_setup import initialize_jvm, shutdown_jvm, is_jvm_started
+from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
 
-# --- Gestion du Path pour les Mocks (déplacé ici AVANT les imports des mocks) ---
-current_dir_for_mock = os.path.dirname(os.path.abspath(__file__))
-mocks_dir_for_mock = os.path.join(current_dir_for_mock, 'mocks')
-# if mocks_dir_for_mock not in sys.path:
-#     sys.path.insert(0, mocks_dir_for_mock)
-#     _conftest_setup_logger.info(f"Ajout de {mocks_dir_for_mock} à sys.path pour l'accès aux mocks locaux.")
-
-from .mocks.jpype_setup import (
-    _REAL_JPYPE_MODULE,
-    _REAL_JPYPE_AVAILABLE, # Ajouté pour skipif
-    _JPYPE_MODULE_MOCK_OBJ_GLOBAL,
-    _MOCK_DOT_JPYPE_MODULE_GLOBAL,
-    activate_jpype_mock_if_needed,
-    pytest_sessionstart,
-    pytest_sessionfinish
-)
-from .mocks.numpy_setup import setup_numpy_for_tests_fixture
-
-from .fixtures.integration_fixtures import (
-    integration_jvm, dung_classes, dl_syntax_parser, fol_syntax_parser,
-    pl_syntax_parser, cl_syntax_parser, tweety_logics_classes,
-    tweety_string_utils, tweety_math_utils, tweety_probability,
-    tweety_conditional_probability, tweety_parser_exception,
-    tweety_io_exception, tweety_qbf_classes, belief_revision_classes,
-    dialogue_classes
-)
-
-# --- Configuration du Logger (déplacé avant la sauvegarde JPype pour l'utiliser) ---
 logger = logging.getLogger(__name__)
 
-# _REAL_JPYPE_MODULE, _JPYPE_MODULE_MOCK_OBJ_GLOBAL, _MOCK_DOT_JPYPE_MODULE_GLOBAL sont maintenant importés de jpype_setup.py
+def _ensure_tweety_jars_are_correctly_placed():
+    """
+    Code défensif pour les tests. Vérifie si des JARs Tweety sont dans le
+    répertoire 'libs' au lieu de 'libs/tweety' et les déplace.
+    """
+    try:
+        project_root = Path(__file__).parent.parent.resolve()
+        libs_dir = project_root / "argumentation_analysis" / "libs"
+        tweety_dir = libs_dir / "tweety"
+        
+        if not libs_dir.is_dir():
+            logger.debug("Le répertoire 'libs' n'existe pas, rien à faire.")
+            return
 
-# Nécessaire pour la fixture integration_jvm
-# La variable _integration_jvm_started_session_scope et les imports de jvm_setup
-# ne sont plus nécessaires ici, gérés dans integration_fixtures.py
+        tweety_dir.mkdir(exist_ok=True)
+        
+        jars_in_libs = [f for f in libs_dir.iterdir() if f.is_file() and f.suffix == '.jar']
+        
+        if not jars_in_libs:
+            logger.debug("Aucun fichier JAR trouvé directement dans 'libs'.")
+            return
+            
+        logger.warning(f"JARs trouvés directement dans '{libs_dir}'. Ils devraient être dans '{tweety_dir}'.")
+        for jar_path in jars_in_libs:
+            destination = tweety_dir / jar_path.name
+            logger.info(f"Déplacement de '{jar_path.name}' vers '{destination}'...")
+            shutil.move(str(jar_path), str(destination))
+        logger.info("Déplacement des JARs terminé.")
 
-# Les sections de code commentées pour le mocking global de Matplotlib, NetworkX,
-# l'installation immédiate de Pandas, et ExtractDefinitions ont été supprimées.
-# Ces mocks, s'ils sont nécessaires, devraient être gérés par des fixtures spécifiques
-# ou une configuration au niveau du module mock lui-même, similaire à NumPy/Pandas.
+    except Exception as e:
+        logger.error(f"Erreur lors du déplacement défensif des JARs Tweety: {e}", exc_info=True)
 
-# Ajout du répertoire racine du projet à sys.path pour assurer la découverte des modules du projet.
-# Ceci est particulièrement utile si les tests sont exécutés d'une manière où le répertoire racine
-# n'est pas automatiquement inclus dans PYTHONPATH (par exemple, exécution directe de pytest
-# depuis un sous-répertoire ou avec certaines configurations d'IDE).
-# parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# if parent_dir not in sys.path:
-#     sys.path.insert(0, parent_dir)
-#     _conftest_setup_logger.info(f"Ajout du répertoire racine du projet ({parent_dir}) à sys.path.")
-# Commenté car l'installation du package via `pip install -e .` devrait gérer l'accessibilité.
 
-# Les fixtures et hooks sont importés depuis leurs modules dédiés.
-# Les commentaires résiduels concernant les déplacements de code et les refactorisations
-# antérieures ont été supprimés pour améliorer la lisibilité.
+# @pytest.fixture(scope="session")
+# def anyio_backend(request):
+#     """
+#     DEPRECATED: This fixture was causing conflicts with pytest-playwright.
+#     The `apply_nest_asyncio` fixture is now disabled.
+#     """
+#     return request.config.getoption("anyio_backend", "asyncio")
+
+@pytest.fixture(scope="session", autouse=True)
+def apply_nest_asyncio():
+    """
+    DEPRECATED/DISABLED: This fixture, which applies nest_asyncio, creates a
+    fundamental conflict with the pytest-playwright plugin, causing tests to
+    hang indefinitely. It is disabled for now.
+    If other dedicated asyncio tests fail, a more targeted solution will be
+    needed, for example, by creating a custom marker to enable nest_asyncio
+    only for specific tests that require it, instead of using `autouse=True`.
+    """
+    # Original problematic code:
+    # if anyio_backend == "asyncio":
+    #     logger.info(f"Applying nest_asyncio for '{anyio_backend}' backend.")
+    #     nest_asyncio.apply()
+    #     yield
+    #     logger.info("nest_asyncio teardown for 'asyncio' backend.")
+    # else:
+    #     logger.info(f"Skipping nest_asyncio for '{anyio_backend}' backend.")
+    #     yield
+    logger.warning("The 'apply_nest_asyncio' fixture in conftest.py is currently disabled to ensure compatibility with Playwright.")
+    yield
+
+@pytest.fixture(scope="session", autouse=True)
+def jvm_session(request):
+    """
+    Manages the JPype JVM lifecycle for the entire test session.
+    1. Ensures all portable dependencies (JDK, Tweety JARs) are provisioned.
+    2. Starts the JVM using the centralized jvm_setup module.
+    3. Shuts down the JVM after all tests are complete.
+    """
+    logger.info("---------- Pytest session starting: Provisioning dependencies and Initializing JVM... ----------")
+    
+    try:
+        # Étape 1 (Défensive): S'assurer que les JARs sont au bon endroit
+        logger.info("Checking Tweety JARs location...")
+        _ensure_tweety_jars_are_correctly_placed()
+
+        # Étape 2: Démarrage de la JVM via le module centralisé
+        if not is_jvm_started():
+            logger.info("Attempting to initialize JVM via core.jvm_setup.initialize_jvm...")
+            # La fixture de session est propriétaire de la JVM
+            success = initialize_jvm(session_fixture_owns_jvm=True)
+            if success:
+                logger.info("JVM started successfully for the test session.")
+            else:
+                 pytest.fail("JVM initialization failed via core.jvm_setup.initialize_jvm.", pytrace=False)
+        else:
+            logger.info("JVM was already started.")
+            
+    except Exception as e:
+        logger.error(f"A critical error occurred during test session setup: {e}", exc_info=True)
+        pytest.exit(f"Test session setup failed: {e}", 1)
+
+    yield True
+
+    logger.info("---------- Pytest session finished: Shutting down JVM... ----------")
+    # L'arrêt est géré par la fixture elle-même, donc on passe True
+    shutdown_jvm(called_by_session_fixture=True)
+
+
+# Charger les fixtures définies dans d'autres fichiers comme des plugins
+pytest_plugins = [
+   "tests.fixtures.integration_fixtures",
+   "tests.fixtures.jvm_subprocess_fixture",
+    "pytest_playwright",
+    "tests.mocks.numpy_setup"
+]
+
+@pytest.fixture(autouse=True)
+def check_mock_llm_is_forced(request):
+    """
+    Ce "coupe-circuit" est une sécurité pour tous les tests.
+    Il vérifie que nous ne pouvons pas accidentellement utiliser un vrai LLM.
+    Pour ce faire, il patche la fonction d'initialisation de l'environnement
+    et s'assure qu'elle est TOUJOURS appelée avec force_mock_llm=True.
+
+    Si un test tente d'initialiser l'environnement sans forcer le mock,
+    une erreur sera levée, arrêtant la suite de tests.
+    Ceci prévient l'utilisation involontaire de services payants.
+    """
+    # Ce coupe-circuit est crucial même pour les tests de validation qui simulent
+    # un environnement e2e. Nous le laissons actif.
+
+    from argumentation_analysis.core.bootstrap import initialize_project_environment as original_init
+
+    def new_init(*args, **kwargs):
+        if not kwargs.get("force_mock_llm"):
+             pytest.fail(
+                "ERREUR DE SÉCURITÉ: Appel à initialize_project_environment() sans "
+                "'force_mock_llm=True'. Tous les tests doivent forcer l'utilisation "
+                "d'un LLM mocké pour éviter d'utiliser des services réels.",
+                pytrace=False
+            )
+        
+        # S'assurer que le service_id est correct pour les tests mockés
+        service_id = kwargs.get("service_id")
+        if service_id and service_id != "default_llm_bootstrap":
+            pytest.fail(
+                f"ERREUR DE CONFIGURATION TEST: 'service_id' doit être 'default_llm_bootstrap' "
+                f"lorsque 'force_mock_llm=True', mais a reçu '{service_id}'.",
+                pytrace=False
+            )
+        
+        # Forcer le service_id par défaut pour les tests si non spécifié
+        if not service_id:
+            kwargs["service_id"] = "default_llm_bootstrap"
+            
+        return original_init(*args, **kwargs)
+
+    with patch('argumentation_analysis.core.bootstrap.initialize_project_environment', new=new_init):
+        yield
+    
+def pytest_addoption(parser):
+    """Ajoute des options de ligne de commande personnalisées à pytest."""
+    parser.addoption(
+        "--allow-dotenv", action="store_true", default=False,
+        help="Permet le chargement du vrai fichier .env pour les tests (désactive le mock)."
+    )
+    parser.addoption(
+        "--backend-url", action="store", default="http://localhost:5003",
+        help="URL du backend à tester"
+    )
+    parser.addoption(
+        "--frontend-url", action="store", default="http://localhost:3000",
+        help="URL du frontend à tester (si applicable)"
+    )
+    parser.addoption(
+        "--disable-e2e-servers-fixture", action="store_true", default=False,
+        help="Désactive la fixture e2e_servers pour éviter les conflits."
+    )
+    parser.addoption(
+        "--skip-octave", action="store_true", default=False,
+        help="Saute le téléchargement et la configuration d'Octave."
+    )
+
+@pytest.fixture(scope="session")
+def backend_url(request):
+    """Fixture pour récupérer l'URL du backend depuis les options pytest."""
+    return request.config.getoption("--backend-url")
+
+@pytest.fixture(scope="session")
+def frontend_url(request):
+    """Fixture pour récupérer l'URL du frontend depuis les options pytest."""
+    return request.config.getoption("--frontend-url")
+
+@pytest.fixture(autouse=True)
+def mock_crypto_passphrase(monkeypatch):
+    """
+    Mocks the settings.passphrase for all tests to ensure crypto operations
+    have a valid default passphrase.
+    """
+    from unittest.mock import MagicMock
+    mock_passphrase = MagicMock()
+    mock_passphrase.get_secret_value.return_value = "test-passphrase-for-crypto"
+    monkeypatch.setattr("argumentation_analysis.core.utils.crypto_utils.settings.passphrase", mock_passphrase)

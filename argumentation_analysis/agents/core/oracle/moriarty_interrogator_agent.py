@@ -1,48 +1,73 @@
 # argumentation_analysis/agents/core/oracle/moriarty_interrogator_agent.py
 """
-Agent Moriarty - Oracle spécialisé pour les enquêtes Sherlock/Watson.
+Implémentation de l'agent "Moriarty", un Oracle spécialisé pour le jeu Cluedo.
 
-Hérite d'OracleBaseAgent pour la gestion des datasets d'enquête Cluedo,
-simulation du comportement d'autres joueurs, et révélations progressives selon stratégie.
+Ce module définit `MoriartyInterrogatorAgent`, une implémentation concrète de
+`OracleBaseAgent`. Cet agent agit comme un joueur dans une partie de Cluedo,
+gérant ses propres cartes et répondant aux suggestions des autres joueurs.
+
+Il utilise `MoriartyTools`, une extension de `OracleTools`, pour exposer des
+capacités spécifiques au jeu Cluedo (validation de suggestion, révélation de
+carte) en tant que fonctions natives pour le kernel sémantique.
 """
 
 import logging
-from typing import Dict, List, Any, Optional, ClassVar
+from typing import Dict, List, Any, Optional, ClassVar, Union
 from datetime import datetime
+import random
+import uuid
+from dataclasses import replace
 
+import re
 from semantic_kernel import Kernel
 from semantic_kernel.functions import kernel_function
+from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents.chat_history import ChatHistory
+
 
 from .oracle_base_agent import OracleBaseAgent, OracleTools
 from .dataset_access_manager import CluedoDatasetManager
 from .cluedo_dataset import CluedoDataset, CluedoSuggestion
 from .permissions import QueryType, OracleResponse, RevealPolicy
+from argumentation_analysis.utils.performance_monitoring import monitor_performance
 
 
 class MoriartyTools(OracleTools):
     """
-    Plugin contenant les outils spécialisés pour l'agent Moriarty.
-    Étend OracleTools avec des fonctionnalités spécifiques au Cluedo.
+    Plugin d'outils natifs spécialisés pour le jeu Cluedo.
+
+    Cette classe étend `OracleTools` en y ajoutant des fonctions natives
+    (`@kernel_function`) qui encapsulent la logique du jeu Cluedo, comme
+    la validation de suggestions ou la révélation de cartes.
     """
-    
+
     def __init__(self, dataset_manager: CluedoDatasetManager):
+        """
+        Initialise les outils Moriarty.
+
+        Args:
+            dataset_manager (CluedoDatasetManager): Le gestionnaire d'accès
+                spécialisé pour le jeu de données Cluedo.
+        """
         super().__init__(dataset_manager)
         self.cluedo_dataset: CluedoDataset = dataset_manager.dataset
         self._logger = logging.getLogger(self.__class__.__name__)
-    
+
+    @monitor_performance(log_args=True)
     @kernel_function(name="validate_cluedo_suggestion", description="Valide une suggestion Cluedo selon les règles du jeu.")
     def validate_cluedo_suggestion(self, suspect: str, arme: str, lieu: str, suggesting_agent: str) -> str:
         """
-        Valide une suggestion Cluedo selon les règles du jeu.
-        
+        Traite une suggestion Cluedo et détermine si Moriarty peut la réfuter.
+
         Args:
-            suspect: Le suspect suggéré
-            arme: L'arme suggérée
-            lieu: Le lieu suggéré
-            suggesting_agent: Agent qui fait la suggestion
-            
+            suspect (str): Le suspect de la suggestion.
+            arme (str): L'arme de la suggestion.
+            lieu (str): Le lieu de la suggestion.
+            suggesting_agent (str): Le nom de l'agent qui fait la suggestion.
+
         Returns:
-            Résultat de la validation avec cartes révélées si réfutation possible
+            str: Un message textuel décrivant si la suggestion est réfutée
+                 (et avec quelle carte) ou non.
         """
         try:
             self._logger.info(f"Validation suggestion Cluedo: {suspect}, {arme}, {lieu} par {suggesting_agent}")
@@ -78,15 +103,16 @@ class MoriartyTools(OracleTools):
     @kernel_function(name="reveal_card_if_owned", description="Révèle une carte si Moriarty la possède.")
     def reveal_card_if_owned(self, card: str, requesting_agent: str, context: str = "") -> str:
         """
-        Révèle une carte si Moriarty la possède, selon la stratégie de révélation.
-        
+        Vérifie si Moriarty possède une carte et la révèle selon sa stratégie.
+
         Args:
-            card: La carte demandée
-            requesting_agent: Agent qui fait la demande
-            context: Contexte de la demande
-            
+            card (str): La carte sur laquelle porte la requête.
+            requesting_agent (str): L'agent qui demande l'information.
+            context (str, optional): Contexte additionnel de la requête.
+
         Returns:
-            Résultat de la révélation
+            str: Un message indiquant si Moriarty possède la carte et s'il a
+                 choisi de la révéler.
         """
         try:
             self._logger.info(f"Demande révélation carte: {card} par {requesting_agent}")
@@ -118,14 +144,15 @@ class MoriartyTools(OracleTools):
     @kernel_function(name="provide_game_clue", description="Fournit un indice stratégique selon la politique de révélation.")
     def provide_game_clue(self, requesting_agent: str, clue_type: str = "general") -> str:
         """
-        Fournit un indice de jeu selon la stratégie Oracle.
-        
+        Fournit un indice au demandeur, en respectant les permissions.
+
         Args:
-            requesting_agent: Agent qui demande l'indice
-            clue_type: Type d'indice demandé ("general", "category", "specific")
-            
+            requesting_agent (str): L'agent qui demande l'indice.
+            clue_type (str): Le type d'indice demandé (sa logique de génération
+                est dans le `CluedoDataset`).
+
         Returns:
-            Indice généré selon la stratégie
+            str: Un message contenant un indice ou un refus.
         """
         try:
             self._logger.info(f"Demande d'indice par {requesting_agent}, type: {clue_type}")
@@ -145,17 +172,18 @@ class MoriartyTools(OracleTools):
     @kernel_function(name="simulate_other_player_response", description="Simule la réponse d'un autre joueur Cluedo.")
     def simulate_other_player_response(self, suggestion: str, player_name: str = "AutreJoueur") -> str:
         """
-        Simule la réponse d'un autre joueur dans le jeu Cluedo de manière LÉGITIME.
-        
-        CORRECTION INTÉGRITÉ: Cette simulation ne triche plus en accédant aux cartes des autres.
-        Elle utilise une simulation probabiliste respectant les règles du Cluedo.
-        
+        Simule la réponse d'un autre joueur à une suggestion de manière légitime.
+
+        Cette simulation est probabiliste et ne se base que sur les informations
+        publiquement connues (ce que Moriarty ne possède pas), sans tricher.
+
         Args:
-            suggestion: La suggestion au format "suspect,arme,lieu"
-            player_name: Nom du joueur simulé
-            
+            suggestion (str): La suggestion à réfuter, au format "suspect,arme,lieu".
+            player_name (str): Le nom du joueur dont on simule la réponse.
+
         Returns:
-            Réponse simulée du joueur (probabiliste, sans triche)
+            str: La réponse simulée, indiquant si le joueur peut réfuter et
+                 quelle carte il montre (simulation).
         """
         try:
             self._logger.info(f"Simulation LÉGITIME réponse joueur {player_name} pour suggestion: {suggestion}")
@@ -182,7 +210,6 @@ class MoriartyTools(OracleTools):
                     elements_possibles_pour_refutation.append(element)
             
             # Simulation probabiliste basée sur la logique du jeu
-            import random
             if elements_possibles_pour_refutation and random.random() > 0.3:  # 70% de chance de pouvoir réfuter
                 # Choisit un élément au hasard parmi ceux possibles
                 revealed_card = random.choice(elements_possibles_pour_refutation)
@@ -215,14 +242,18 @@ class MoriartyTools(OracleTools):
 
 class MoriartyInterrogatorAgent(OracleBaseAgent):
     """
-    Agent spécialisé pour les enquêtes Sherlock/Watson.
-    Hérite d'OracleBaseAgent pour la gestion des datasets d'enquête.
-    
-    Spécialisations:
-    - Dataset Cluedo (cartes, solution secrète, révélations)
-    - Simulation comportement autres joueurs
-    - Révélations progressives selon stratégie de jeu
-    - Validation des suggestions selon règles Cluedo
+    Implémentation de l'agent Moriarty pour le jeu Cluedo.
+
+    Cet agent spécialise `OracleBaseAgent` pour un rôle précis : agir comme
+    un joueur-oracle dans une partie de Cluedo. Il utilise `MoriartyTools`
+    pour exposer ses capacités uniques.
+
+    Ses responsabilités incluent :
+    -   Valider les suggestions des autres joueurs.
+    -   Révéler ses propres cartes de manière stratégique.
+    -   Fournir des indices selon sa politique de révélation.
+    -   Simuler les réponses des autres joueurs.
+    -   Adopter une personnalité spécifique via des instructions et réponses stylisées.
     """
     
     # Instructions spécialisées pour Moriarty
@@ -247,21 +278,21 @@ Votre mission : Fasciner par votre mystère élégant."""
     
     def __init__(self,
                  kernel: Kernel,
-                 cluedo_dataset: CluedoDataset,
+                 dataset_manager: CluedoDatasetManager,
                  game_strategy: str = "balanced",
                  agent_name: str = "MoriartyInterrogator",
                  **kwargs):
         """
-        Initialise une instance de MoriartyInterrogatorAgent.
-        
+        Initialise l'agent Moriarty.
+
         Args:
-            kernel: Le kernel Semantic Kernel à utiliser
-            cluedo_dataset: Dataset Cluedo avec cartes et solution
-            game_strategy: Stratégie de jeu ("cooperative", "competitive", "balanced", "progressive")
-            agent_name: Nom de l'agent
+            kernel (Kernel): L'instance du kernel Semantic Kernel.
+            dataset_manager (CluedoDatasetManager): Le gestionnaire d'accès
+                spécialisé pour le jeu de données Cluedo.
+            game_strategy (str): La stratégie de révélation à adopter
+                ('cooperative', 'competitive', 'balanced', 'progressive').
+            agent_name (str): Le nom de l'agent.
         """
-        # Configuration du dataset manager spécialisé Cluedo
-        dataset_manager = CluedoDatasetManager(cluedo_dataset)
         
         # Outils spécialisés Moriarty
         moriarty_tools = MoriartyTools(dataset_manager)
@@ -280,19 +311,18 @@ Votre mission : Fasciner par votre mystère élégant."""
         )
         
         # CORRECTIF CRITICAL: Ajout de l'attribut 'id' requis par Semantic Kernel AgentGroupChat
-        import uuid
         object.__setattr__(self, 'id', str(uuid.uuid4()))
         
         # Configuration de la stratégie de jeu APRÈS super().__init__
         object.__setattr__(self, 'game_strategy', game_strategy)
-        self._configure_strategy(cluedo_dataset, game_strategy)
+        self._configure_strategy(dataset_manager.dataset, game_strategy)
         
         # Tracking des révélations par agent
         object.__setattr__(self, 'cards_revealed_by_agent', {})
         object.__setattr__(self, 'suggestion_history', [])
         
         self._logger.info(f"MoriartyInterrogatorAgent '{agent_name}' initialisé avec stratégie: {game_strategy}")
-        self._logger.info(f"Cartes Moriarty: {cluedo_dataset.get_moriarty_cards()}")
+        self._logger.info(f"Cartes Moriarty: {dataset_manager.dataset.get_moriarty_cards()}")
     
     def _configure_strategy(self, dataset: CluedoDataset, strategy: str) -> None:
         """Configure la stratégie de révélation du dataset."""
@@ -310,21 +340,42 @@ Votre mission : Fasciner par votre mystère élégant."""
             self._logger.warning(f"Stratégie inconnue '{strategy}', utilisation de 'balanced'")
             dataset.reveal_policy = RevealPolicy.BALANCED
     
-    def validate_suggestion_cluedo(self, suspect: str, arme: str, lieu: str, suggesting_agent: str) -> OracleResponse:
+    async def validate_suggestion_cluedo(self, suspect: str, arme: str, lieu: str, suggesting_agent: str) -> OracleResponse:
         """
         Interface directe pour valider une suggestion Cluedo.
         
         Args:
             suspect: Suspect suggéré
-            arme: Arme suggérée  
+            arme: Arme suggérée
             lieu: Lieu suggéré
             suggesting_agent: Agent qui fait la suggestion
             
         Returns:
             OracleResponse avec résultat de validation
         """
-        response = self.dataset_manager.validate_cluedo_suggestion(suggesting_agent, suspect, arme, lieu)
+        response = await self.dataset_manager.validate_cluedo_suggestion(suggesting_agent, suspect, arme, lieu)
         
+        # Enrichissement de la réponse avec la personnalité de Moriarty
+        original_message = response.message
+        if response.authorized and response.data and response.data.can_refute:
+            # Cas où Moriarty réfute
+            if response.revealed_information:
+                revealed_card = response.revealed_information[0]
+                response.message = f"Un sourire énigmatique se dessine. C'est un jeu fascinant, n'est-ce pas ? Hélas, votre théorie sur '{suspect}' se heurte à un petit obstacle : j'ai la carte '{revealed_card}'."
+            else:
+                # Ceci est un état incohérent: can_refute est True mais aucune carte n'est révélée.
+                self._logger.error(f"État incohérent détecté : can_refute est True, mais revealed_information est vide pour la suggestion de {suggesting_agent} sur ({suspect}, {arme}, {lieu}).")
+                response.message = f"*semble momentanément confus* Un détail m'échappe... Votre suggestion sur '{suspect}' est... intéressante, mais je dois garder mes cartes pour moi pour l'instant."
+                # On force la réponse à un état non-réfutation pour éviter de bloquer le jeu.
+                # response.data est un ValidationResult, qui est immuable. On le remplace.
+                response.data = replace(response.data, can_refute=False, reason="Forcé en non-réfutation (état incohérent)")
+        elif response.authorized:
+            # Cas où Moriarty ne peut pas réfuter
+            response.message = f"Tiens, tiens... Votre suggestion pour '{suspect}' est délicieuse. Un mystère intrigant. Je ne peux rien dire pour le moment, le spectacle doit continuer."
+        else:
+            # Cas non autorisé
+            response.message = f"Ah ah... Pensez-vous vraiment que je vais répondre à cela, {suggesting_agent} ? Quelle audace théâtrale."
+
         # Tracking local
         suggestion_record = {
             "timestamp": datetime.now().isoformat(),
@@ -395,9 +446,104 @@ Votre mission : Fasciner par votre mystère élégant."""
         
         return base_tools + moriarty_tools
     
+    def _extract_cluedo_suggestion(self, message_content: str) -> Optional[Dict[str, str]]:
+        """
+        Extrait une suggestion Cluedo d'un message (suspect, arme, lieu).
+        """
+        content_lower = message_content.lower()
+        
+        suggestion_keywords = ['suggère', 'propose', 'accuse', 'pense que', 'suspect', 'arme', 'lieu']
+        if not any(keyword in content_lower for keyword in suggestion_keywords):
+            return None
+
+        # Utilise les éléments du jeu
+        elements = self.dataset_manager.dataset.elements_jeu
+        suspects = [s.lower() for s in elements.get("suspects", [])]
+        armes = [a.lower() for a in elements.get("armes", [])]
+        lieux = [l.lower() for l in elements.get("lieux", [])]
+        
+        found_suspect = next((s.title() for s in suspects if s in content_lower), None)
+        found_arme = next((a.title() for a in armes if a in content_lower), None)
+        found_lieu = next((l.title() for l in lieux if l in content_lower), None)
+
+        if found_suspect or found_arme or found_lieu:
+            return {
+                "suspect": found_suspect,
+                "arme": found_arme,
+                "lieu": found_lieu
+            }
+        
+        return None
+
     def reset_game_state(self) -> None:
         """Remet à zéro l'état de jeu pour une nouvelle partie."""
         self.reset_oracle_state()
         self.cards_revealed_by_agent.clear()
         self.suggestion_history.clear()
         self._logger.info(f"État de jeu Moriarty remis à zéro")
+
+    async def invoke(self, input: Union[str, List[ChatMessageContent]], **kwargs) -> List[ChatMessageContent]:
+        """
+        Point d'entrée pour l'invocation de l'agent par l'orchestrateur.
+        Gère à la fois une chaîne simple et un historique de conversation pour la compatibilité.
+        """
+        self._logger.info(f"[{self.name}] Invoke called with input type: {type(input)}")
+
+        history = ChatHistory()
+        if isinstance(input, str):
+            history.add_user_message(input)
+        elif isinstance(input, list):
+            for message in input:
+                # La validation Pydantic a échoué car le content_type est 'message'
+                # et non pas 'text'. Nous devons extraire le contenu textuel.
+                if isinstance(message, ChatMessageContent) and message.content:
+                     # On ne prend pas le risque de parser le content s'il est complexe.
+                     # On le convertit simplement en string et l'ajoute à un nouveau message plus simple.
+                    history.add_message(message)
+                else:
+                    self._logger.warning(f"Message non-conforme ou vide dans l'historique: {type(message)}. Ignoré.")
+
+        response_message = await self.invoke_single(history=history)
+        return [response_message]
+
+    async def invoke_single(self, *args, **kwargs) -> ChatMessageContent:
+        """
+        Implémentation de l'invocation single-shot requise par BaseAgent.
+        Moriarty ne génère pas de texte, il réagit aux suggestions du jeu.
+        """
+        history = next((arg for arg in args if isinstance(arg, ChatHistory)), None)
+        if not history:
+             history = kwargs.get("history", ChatHistory())
+
+        self._logger.info(f"[{self.name}] Invocation Oracle avec {len(history)} messages.")
+         
+        last_user_message = next((msg for msg in reversed(history) if getattr(msg, 'name', self.name) != self.name), None)
+        if not last_user_message or not last_user_message.content:
+            return ChatMessageContent(role="assistant", content="*Silence énigmatique*", name=self.name)
+            
+        self._logger.debug(f"Moriarty a trouvé le dernier message de l'interlocuteur: {last_user_message}")
+        if not last_user_message:
+            return ChatMessageContent(role="assistant", content="*Attend un interlocuteur pour commencer le jeu.*", name=self.name)
+
+        content_str = str(last_user_message.content)
+        suggesting_agent = getattr(last_user_message, 'name', "UnknownAgent")
+
+        suggestion = self._extract_cluedo_suggestion(content_str)
+
+        if suggestion:
+            response = await self.validate_suggestion_cluedo(
+                suspect=suggestion.get('suspect'),
+                arme=suggestion.get('arme'),
+                lieu=suggestion.get('lieu'),
+                suggesting_agent=suggesting_agent
+            )
+            return ChatMessageContent(role="assistant", content=response.message, name=self.name)
+        else:
+            # Si pas de suggestion formelle, Moriarty reste mystérieux
+            responses = [
+                "*Un sourire en coin se dessine sur mon visage.*",
+                "Continuez, je vous écoute avec grande attention.",
+                "C'est un jeu fascinant, n'est-ce pas ?",
+                "Chaque parole est une pièce du puzzle. Choisissez-les bien."
+            ]
+            return ChatMessageContent(role="assistant", content=random.choice(responses), name=self.name)

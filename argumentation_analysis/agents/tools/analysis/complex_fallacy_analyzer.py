@@ -2,11 +2,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Outil d'analyse des sophismes complexes.
+Fournit un outil pour l'analyse de sophismes complexes et structurels.
 
-Ce module fournit des fonctionnalités pour analyser des sophismes complexes,
-comme les combinaisons de sophismes ou les sophismes qui s'étendent sur plusieurs
-arguments.
+Ce module définit `ComplexFallacyAnalyzer`, un analyseur de "second niveau"
+qui ne détecte pas les sophismes simples, mais plutôt les méta-patterns et
+les relations entre eux. Il opère sur les résultats d'analyseurs plus
+fondamentaux pour identifier des problèmes comme :
+-   Des combinaisons de sophismes connues.
+-   Des sophismes structurels s'étendant sur plusieurs arguments (contradictions).
+-   Des motifs récurrents dans l'utilisation des sophismes.
 """
 
 import os
@@ -37,16 +41,26 @@ logger = logging.getLogger("ComplexFallacyAnalyzer")
 
 class ComplexFallacyAnalyzer:
     """
-    Outil pour l'analyse des sophismes complexes.
-    
-    Cet outil permet d'analyser des sophismes complexes, comme les combinaisons
-    de sophismes ou les sophismes qui s'étendent sur plusieurs arguments.
+    Analyse les sophismes complexes, combinés et structurels.
+
+    Cet analyseur s'appuie sur des analyseurs plus simples (`ContextualFallacyAnalyzer`,
+    `FallacySeverityEvaluator`) pour identifier des motifs de plus haut niveau.
+    Il ne détecte pas les sophismes de base, mais recherche des patterns dans
+    les résultats d'une analyse préalable.
+
+    Attributes:
+        contextual_analyzer (ContextualFallacyAnalyzer): Analyseur de dépendance
+            pour identifier les sophismes de base dans un contexte.
+        severity_evaluator (FallacySeverityEvaluator): Analyseur de dépendance
+            pour évaluer la gravité des sophismes.
+        fallacy_combinations (Dict): Base de connaissances des combinaisons de
+            sophismes connues.
+        structural_fallacies (Dict): Base de connaissances des sophismes qui
+            se définissent par une relation entre plusieurs arguments.
     """
-    
+
     def __init__(self):
-        """
-        Initialise l'analyseur de sophismes complexes.
-        """
+        """Initialise l'analyseur de sophismes complexes."""
         self.logger = logger
         self.contextual_analyzer = ContextualFallacyAnalyzer()
         self.severity_evaluator = FallacySeverityEvaluator()
@@ -115,17 +129,18 @@ class ComplexFallacyAnalyzer:
     
     def identify_combined_fallacies(self, argument: str) -> List[Dict[str, Any]]:
         """
-        Identifie les combinaisons de sophismes dans un argument.
-        
-        Cette méthode analyse un argument pour identifier des combinaisons connues
-        de sophismes qui apparaissent ensemble et qui peuvent former des sophismes
-        complexes.
-        
+        Identifie les combinaisons de sophismes prédéfinies dans un argument.
+
+        Cette méthode effectue d'abord une analyse pour trouver les sophismes
+        individuels, puis vérifie si des combinaisons connues (ex: "Ad hominem"
+        + "Généralisation hâtive") sont présentes parmi les sophismes trouvés.
+
         Args:
-            argument: Argument à analyser
-            
+            argument (str): L'argument à analyser.
+
         Returns:
-            Liste des combinaisons de sophismes identifiées
+            List[Dict[str, Any]]: Une liste de dictionnaires, où chaque
+            dictionnaire représente une combinaison de sophismes identifiée.
         """
         self.logger.info(f"Identification des combinaisons de sophismes dans l'argument (longueur: {len(argument)})")
         
@@ -178,17 +193,18 @@ class ComplexFallacyAnalyzer:
     
     def analyze_structural_fallacies(self, arguments: List[str]) -> List[Dict[str, Any]]:
         """
-        Analyse les sophismes structurels qui s'étendent sur plusieurs arguments.
-        
-        Cette méthode analyse un ensemble d'arguments pour identifier des sophismes
-        structurels qui s'étendent sur plusieurs arguments, comme les contradictions
-        cachées ou les cercles argumentatifs.
-        
+        Analyse une liste d'arguments pour y déceler des sophismes structurels.
+
+        Contrairement aux autres méthodes, celle-ci opère sur un ensemble
+        d'arguments pour trouver des problèmes qui émergent de leur interaction,
+        tels que des contradictions ou des raisonnements circulaires.
+
         Args:
-            arguments: Liste d'arguments à analyser
-            
+            arguments (List[str]): Une liste de chaînes de caractères, où
+                chaque chaîne est un argument distinct.
+
         Returns:
-            Liste des sophismes structurels identifiés
+            List[Dict[str, Any]]: Une liste des sophismes structurels identifiés.
         """
         self.logger.info(f"Analyse des sophismes structurels dans {len(arguments)} arguments")
         
@@ -356,16 +372,18 @@ class ComplexFallacyAnalyzer:
     
     def identify_fallacy_patterns(self, text: str) -> List[Dict[str, Any]]:
         """
-        Identifie les motifs de sophismes dans un texte.
-        
-        Cette méthode analyse un texte pour identifier des motifs récurrents de sophismes,
-        comme l'alternance entre appel à l'émotion et appel à l'autorité.
-        
+        Identifie des motifs séquentiels dans l'utilisation des sophismes.
+
+        Cette méthode segmente un texte en paragraphes et analyse la séquence
+        des sophismes pour y trouver des motifs comme l'alternance ou
+        l'escalade.
+
         Args:
-            text: Texte à analyser
-            
+            text (str): Le texte complet à analyser.
+
         Returns:
-            Liste des motifs de sophismes identifiés
+            List[Dict[str, Any]]: Une liste de dictionnaires, chacun décrivant
+            un motif de sophisme identifié.
         """
         self.logger.info(f"Identification des motifs de sophismes dans le texte (longueur: {len(text)})")
         
@@ -557,7 +575,6 @@ if __name__ == "__main__":
     argument = "Les experts sont unanimes : ce produit est sûr et efficace. Des millions de personnes l'utilisent déjà, donc vous devriez l'essayer aussi."
     
     combined_fallacies = analyzer.identify_combined_fallacies(argument)
-    print(f"Combinaisons de sophismes identifiées: {json.dumps(combined_fallacies, indent=2, ensure_ascii=False)}")
     
     # Exemple d'analyse de sophismes structurels
     arguments = [
@@ -567,7 +584,6 @@ if __name__ == "__main__":
     ]
     
     structural_fallacies = analyzer.analyze_structural_fallacies(arguments)
-    print(f"Sophismes structurels identifiés: {json.dumps(structural_fallacies, indent=2, ensure_ascii=False)}")
     
     # Exemple d'identification de motifs de sophismes
     text = """
@@ -585,4 +601,3 @@ if __name__ == "__main__":
     """
     
     patterns = analyzer.identify_fallacy_patterns(text)
-    print(f"Motifs de sophismes identifiés: {json.dumps(patterns, indent=2, ensure_ascii=False)}")

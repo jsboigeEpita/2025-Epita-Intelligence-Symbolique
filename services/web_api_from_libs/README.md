@@ -1,4 +1,14 @@
-# API Web d'Analyse Argumentative
+# ⚠️ SERVICE DÉPRÉCIÉ ⚠️
+
+> **Attention** : Ce service Flask est obsolète et ne doit plus être utilisé pour de nouveaux développements. Il a été remplacé par une architecture centralisée basée sur FastAPI.
+>
+> Toute la logique a été migrée vers le backend principal situé dans le répertoire `/api`. L'interface utilisateur React a été mise à jour pour utiliser les nouveaux endpoints.
+>
+> Pour plus de détails sur la nouvelle architecture, veuillez consulter le [Plan d'Intégration et de Refactorisation](file://../../docs/plans/PLAN_INTEGRATION_AGENT_DUNG.md).
+>
+> Ce service sera **supprimé** dans une future version.
+
+# API Web d'Analyse Argumentative (Archivée)
 
 Cette API Flask expose les fonctionnalités du moteur d'analyse argumentative pour permettre aux étudiants de créer facilement des interfaces web React.
 
@@ -8,7 +18,7 @@ Cette API Flask expose les fonctionnalités du moteur d'analyse argumentative po
 
 ```bash
 # Naviguer vers le répertoire de l'API
-cd libs/web_api
+cd services/web_api_from_libs
 
 # Installer les dépendances
 pip install -r requirements.txt
@@ -491,20 +501,20 @@ export default ArgumentAnalyzer;
 ### Structure du projet
 
 ```
-libs/web_api/
+services/web_api_from_libs/
 ├── app.py                 # Serveur Flask principal
 ├── requirements.txt       # Dépendances
 ├── README.md             # Documentation
-├── models/               # Modèles de données
+├── models/               # Modèles de données (Pydantic)
 │   ├── __init__.py
-│   ├── request_models.py # Modèles de requêtes
-│   └── response_models.py# Modèles de réponses
-└── services/             # Services métier
+│   ├── request_models.py # Modèles des requêtes entrantes
+│   └── response_models.py# Modèles des réponses sortantes
+└── services/             # Logique métier
     ├── __init__.py
-    ├── analysis_service.py    # Service d'analyse complète
-    ├── validation_service.py  # Service de validation
-    ├── fallacy_service.py     # Service de détection de sophismes
-    └── framework_service.py   # Service de framework de Dung
+    ├── analysis_service.py    # Service pour l'analyse complète
+    ├── validation_service.py  # Service pour la validation d'arguments
+    ├── fallacy_service.py     # Service pour la détection de sophismes
+    └── framework_service.py   # Service pour le framework de Dung
 ```
 
 ### Tests
@@ -517,7 +527,7 @@ pip install pytest pytest-flask requests
 pytest
 
 # Tests avec couverture
-pytest --cov=libs/web_api
+pytest --cov=services/web_api_from_libs
 ```
 
 ### Déploiement
@@ -573,3 +583,19 @@ Pour contribuer au développement :
 ## 📄 Licence
 
 Ce projet fait partie du système d'analyse argumentative EPITA 2025.
+## ⚠️ Problèmes d'Architecture Connus
+
+### Dépendances Circulaires et Imports Relatifs
+
+L'application (`app.py`) utilise des imports qui dépendent d'un autre service (`services/web_api/`) situé au même niveau dans l'arborescence du projet.
+
+**Exemples :**
+```python
+from argumentation_analysis.services.web_api.services.logic_service import LogicService
+from services.web_api.models.response_models import LogicBeliefSetResponse
+```
+
+Ces imports sont rendus possibles par une manipulation du `sys.path` dans `app.py`. Cette approche est fragile et non standard. Elle peut causer des problèmes lors de l'exécution et des tests.
+
+**Recommandation :**
+Une refactorisation future devrait viser à extraire les modèles et services partagés dans une librairie commune installable afin de supprimer ces dépendances directes et complexes entre les services.

@@ -1,13 +1,14 @@
 """
-Prompts et instructions pour les agents d'extraction et de validation.
+Collection de prompts pour les agents d'extraction.
 
-Ce module centralise les chaînes de caractères utilisées comme instructions système
-et comme templates de prompts pour les fonctions sémantiques des agents
-responsables de l'extraction et de la validation d'extraits textuels.
-Chaque prompt est conçu pour guider le LLM dans une tâche spécifique.
+Ce module contient les constantes de chaînes de caractères utilisées pour :
+-   Les instructions système (`system prompt`) des agents.
+-   Les templates de prompt pour les fonctions sémantiques.
 """
 
-# Instructions pour l'agent d'extraction
+# Instructions système pour l'agent d'extraction.
+# Définit le rôle, le processus en deux étapes (proposition, validation)
+# et les règles que l'agent LLM doit suivre.
 EXTRACT_AGENT_INSTRUCTIONS = """
 Vous êtes un agent spécialisé dans l'extraction de passages pertinents à partir de textes sources.
 
@@ -45,13 +46,11 @@ Règles importantes:
 - **CRUCIAL : Lorsque vous appelez une fonction (outil) comme `extract_from_name_semantic` ou `validate_extract_semantic`, vous DEVEZ fournir TOUS ses arguments requis (listés ci-dessus pour chaque fonction) dans le champ `arguments` de l'appel `tool_calls`. Ne faites PAS d'appels avec des arguments vides ou manquants. Vérifiez attentivement les arguments requis pour CHAQUE fonction avant de l'appeler.**
 - **CRUCIAL : Si vous décidez d'appeler la fonction `StateManager.designate_next_agent` (ce qui est rare pour cet agent qui répond généralement au PM), l'argument `agent_name` DOIT être l'un des noms d'agents valides suivants : "ProjectManagerAgent", "InformalAnalysisAgent", "PropositionalLogicAgent", "ExtractAgent".**
 """
-"""
-Instructions système pour l'agent d'extraction (`ExtractAgent`).
-Définit le rôle, le processus et les règles que l'agent doit suivre
-lorsqu'il propose des extraits.
-"""
 
-# Instructions pour l'agent de validation
+# Instructions système pour un agent (ou une fonction) de validation.
+# Définit le rôle, le processus et les critères pour valider un extrait.
+# Note : C'est un concept qui peut être intégré dans le flux de l'ExtractAgent
+# plutôt que d'être un agent séparé.
 VALIDATION_AGENT_INSTRUCTIONS = """
 Vous êtes un agent spécialisé dans la validation d'extraits de texte.
 
@@ -76,25 +75,29 @@ En cas de rejet:
 - Expliquer clairement les raisons du rejet
 - Proposer des améliorations si possible
 """
-"""
-Instructions système pour un agent de validation d'extraits.
-Définit le rôle, le processus et les critères de validation.
-Note: Cet agent pourrait être une fonction sémantique distincte ou intégré
-dans le flux de `ExtractAgent`.
-"""
 
-# Prompt pour l'extraction à partir d'une dénomination
+# Prompt pour proposer des marqueurs d'extrait à partir d'un nom sémantique.
+#
+# Variables d'entrée:
+#   - {{$extract_name}}: Nom/description de l'extrait à trouver.
+#   - {{$source_name}}: Nom du document source pour le contexte.
+#   - {{$extract_context}}: Le texte source complet où chercher.
+#
+# Sortie attendue:
+#   Un objet JSON avec les clés "start_marker", "end_marker", "template_start",
+#   et "explanation".
 EXTRACT_FROM_NAME_PROMPT = """
 Analysez ce texte source et proposez des bornes (marqueurs de début et de fin) pour un extrait
-correspondant à la dénomination suivante: "{extract_name}".
+correspondant à la dénomination suivante: "{{$extract_name}}".
 
-SOURCE: {source_name}
+SOURCE: {{$source_name}}
 
 TEXTE SOURCE:
-{extract_context}
+{{$extract_context}}
 
 Proposez des bornes précises qui délimitent un extrait pertinent correspondant à la dénomination.
 Les bornes doivent exister exactement dans le texte source.
+Les bornes (`start_marker`, `end_marker`) DOIVENT être des chaînes de caractères (string) extraites du TEXTE SOURCE, et non des positions numériques.
 
 Réponds au format JSON avec les champs:
 - start_marker: le marqueur de début proposé
@@ -102,50 +105,52 @@ Réponds au format JSON avec les champs:
 - template_start: un template de début si nécessaire (optionnel)
 - explanation: explication de tes choix
 """
-"""
-Template de prompt pour la fonction sémantique qui propose des marqueurs d'extrait.
 
-Variables attendues :
-    - `extract_name`: Dénomination de l'extrait à trouver.
-    - `source_name`: Nom du document source.
-    - `extract_context`: Le texte source (ou un sous-ensemble pertinent) dans lequel chercher.
-"""
-
-# Prompt pour la validation d'un extrait
+# Prompt pour valider la pertinence d'un extrait proposé.
+#
+# Variables d'entrée:
+#   - {{$extract_name}}: Nom sémantique de l'extrait.
+#   - {{$source_name}}: Nom du document source.
+#   - {{$start_marker}}: Marqueur de début proposé.
+#   - {{$end_marker}}: Marqueur de fin proposé.
+#   - {{$template_start}}: Template de début optionnel.
+#   - {{$extracted_text}}: Le texte qui a été extrait par les marqueurs.
+#   - {{$explanation}}: L'explication fournie par l'agent d'extraction.
+#
+# Sortie attendue:
+#   Un objet JSON avec les clés "valid" (booléen) et "reason" (chaîne).
 VALIDATE_EXTRACT_PROMPT = """
-Validez cet extrait proposé pour la dénomination "{extract_name}".
+Validez cet extrait proposé pour la dénomination "{{$extract_name}}".
 
-SOURCE: {source_name}
+SOURCE: {{$source_name}}
 
 BORNES PROPOSÉES:
-- Marqueur de début: "{start_marker}"
-- Marqueur de fin: "{end_marker}"
-- Template de début: "{template_start}"
+- Marqueur de début: "{{$start_marker}}"
+- Marqueur de fin: "{{$end_marker}}"
+- Template de début: "{{$template_start}}"
 
 TEXTE EXTRAIT:
-{extracted_text}
+{{$extracted_text}}
 
 EXPLICATION DE L'AGENT D'EXTRACTION:
-{explanation}
+{{$explanation}}
 
 Validez ou rejetez l'extrait proposé. Réponds au format JSON avec les champs:
 - valid: true/false
 - reason: raison de la validation ou du rejet
 """
-"""
-Template de prompt pour la fonction sémantique qui valide un extrait proposé.
 
-Variables attendues :
-    - `extract_name`: Dénomination de l'extrait.
-    - `source_name`: Nom du document source.
-    - `start_marker`: Marqueur de début proposé.
-    - `end_marker`: Marqueur de fin proposé.
-    - `template_start`: Template de début optionnel.
-    - `extracted_text`: Le texte délimité par les marqueurs.
-    - `explanation`: L'explication fournie par l'agent d'extraction.
-"""
-
-# Prompt pour la réparation d'un extrait existant
+# Prompt pour tenter de réparer les marqueurs d'un extrait défectueux.
+# Note : Il est possible que ce prompt soit moins utilisé si la stratégie
+# de réparation consiste simplement à ré-exécuter une extraction.
+#
+# Variables d'entrée:
+#   - {source_name}, {extract_name}, {start_marker}, {end_marker},
+#   - {template_start}, {status}, {start_found}, {end_found}, {repair_context}
+#
+# Sortie attendue:
+#   Un objet JSON avec "new_start_marker", "new_end_marker",
+#   "new_template_start", et "explanation".
 REPAIR_EXTRACT_PROMPT = """
 Analysez cet extrait défectueux et proposez des corrections pour les bornes.
 
@@ -169,24 +174,17 @@ Propose des corrections pour les marqueurs défectueux. Réponds au format JSON 
 - new_template_start: le nouveau template de début (optionnel)
 - explanation: explication de tes choix
 """
-"""
-Template de prompt pour la fonction sémantique qui tente de réparer un extrait défectueux.
-(Note: Ce prompt pourrait ne pas être utilisé directement si la réparation est gérée
-par une nouvelle invocation de `EXTRACT_FROM_NAME_PROMPT`).
 
-Variables attendues :
-    - `source_name`: Nom du document source.
-    - `extract_name`: Dénomination de l'extrait.
-    - `start_marker`: Marqueur de début actuel (défectueux).
-    - `end_marker`: Marqueur de fin actuel (défectueux).
-    - `template_start`: Template de début actuel.
-    - `status`: Statut actuel de l'extrait.
-    - `start_found`: Booléen indiquant si le marqueur de début actuel a été trouvé.
-    - `end_found`: Booléen indiquant si le marqueur de fin actuel a été trouvé.
-    - `repair_context`: Le texte source (ou un sous-ensemble) pour la réparation.
-"""
-
-# Template général pour les prompts d'extraction
+# Template de prompt générique pour une extraction basée sur des critères.
+# Note : Il s'agit d'une version plus flexible de `EXTRACT_FROM_NAME_PROMPT`.
+#
+# Variables d'entrée:
+#   - {source_name}: Nom du document source.
+#   - {extract_context}: Le texte source.
+#   - {extraction_criteria}: Les critères spécifiques de l'extraction.
+#
+# Sortie attendue:
+#   Un objet JSON comme `EXTRACT_FROM_NAME_PROMPT`.
 EXTRACT_PROMPT_TEMPLATE = """
 Analysez ce texte source et identifiez les passages pertinents selon les critères spécifiés.
 
@@ -206,14 +204,4 @@ Réponds au format JSON avec les champs:
 - end_marker: le marqueur de fin proposé
 - template_start: un template de début si nécessaire (optionnel)
 - explanation: explication de tes choix
-"""
-"""
-Template de prompt générique pour l'extraction basée sur des critères.
-(Note: Ce prompt semble être une version plus générale de `EXTRACT_FROM_NAME_PROMPT`
-si `extraction_criteria` est utilisé pour passer la dénomination de l'extrait).
-
-Variables attendues :
-    - `source_name`: Nom du document source.
-    - `extract_context`: Le texte source (ou un sous-ensemble).
-    - `extraction_criteria`: Les critères spécifiques pour l'extraction.
 """

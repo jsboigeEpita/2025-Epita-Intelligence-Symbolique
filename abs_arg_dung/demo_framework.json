@@ -1,0 +1,31 @@
+{
+  "arguments": [
+    "A",
+    "B",
+    "C",
+    "D"
+  ],
+  "attacks": [
+    [
+      "B",
+      "C"
+    ],
+    [
+      "A",
+      "B"
+    ],
+    [
+      "C",
+      "D"
+    ],
+    [
+      "D",
+      "A"
+    ]
+  ],
+  "metadata": {
+    "num_arguments": 4,
+    "num_attacks": 4,
+    "creation_time": null
+  }
+}

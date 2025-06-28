@@ -1,10 +1,17 @@
+
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
 """
 Phase 3 - JPype Killer - Solution radicale pour éliminer JPype
 Mock JPype AVANT tout import pour éviter les problèmes JVM
 """
 import sys
 import os
-from unittest.mock import MagicMock, patch
+
 
 # ============================================================================
 # JPYPE KILLER - Mock au niveau système AVANT tous les imports

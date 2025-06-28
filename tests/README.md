@@ -1,91 +1,85 @@
-# Tests du Projet d'Analyse d'Argumentation
+# Documentation des Tests du Projet
 
-Ce répertoire contient l'ensemble des tests (unitaires, d'intégration, fonctionnels) pour le projet d'analyse d'argumentation. L'objectif de cette suite de tests est de garantir la robustesse, la fiabilité et la correction du code à travers les différentes couches du système, depuis les interactions de bas niveau avec la JVM jusqu'aux workflows d'analyse complets.
+Ce document décrit comment exécuter les différentes suites de tests pour l'ensemble du projet.
 
-## Philosophie de Test
+## Prérequis
 
-Notre approche de test est basée sur la pyramide des tests. Nous privilégions une large base de **tests unitaires** rapides et isolés, complétée par des **tests d'intégration** ciblés pour vérifier les interactions entre les composants, et enfin quelques **tests fonctionnels** de bout en bout pour valider les scénarios utilisateurs clés.
+- Assurez-vous que votre environnement Conda (`base`) est correctement configuré.
+- Installez les dépendances de test :
+  - Pour Python : `pip install -r requirements.txt` (si applicable), `pip install pytest`
+  - Pour les tests E2E (JavaScript) : `pip install playwright` suivi de `playwright install`
 
-## Structure des Tests
+## Point d'Entrée Unifié : `run_tests.ps1`
 
-Le répertoire `tests` est organisé pour refléter les différentes natures de tests et faciliter la navigation :
+Le moyen le plus simple et recommandé pour lancer les tests est d'utiliser le script unifié `run_tests.ps1` à la racine du projet. Ce script gère l'activation de l'environnement et l'exécution de la suite de tests appropriée.
 
--   **[`agents/`](agents/README.md)**: Contient les tests pour les agents, qui sont les acteurs principaux du système. Les tests sont subdivisés par type d'agent (logique, informel, etc.).
+### Utilisation
 
--   **[`environment_checks/`](environment_checks/README.md)**: Une suite de tests de diagnostic pour valider la configuration de l'environnement local (dépendances, `PYTHONPATH`).
-
--   **[`fixtures/`](fixtures/README.md)**: Contient les fixtures Pytest partagées, utilisées pour initialiser des données ou des états nécessaires à l'exécution des tests.
-
--   **[`functional/`](functional/README.md)**: Contient les tests fonctionnels qui valident des workflows complets du point de vue de l'utilisateur.
-
--   **[`integration/`](integration/README.md)**: Contient les tests d'intégration qui vérifient que différents modules interagissent correctement.
-    -   **[`integration/jpype_tweety/`](integration/jpype_tweety/README.md)**: Tests spécifiques à l'intégration avec la bibliothèque Java Tweety via JPype.
-
--   **[`minimal_jpype_tweety_tests/`](minimal_jpype_tweety_tests/README.md)**: Tests de très bas niveau pour la communication directe Python-Java, utiles pour le débogage de la couche JPype.
-
--   **[`mocks/`](mocks/README.md)**: Contient des mocks réutilisables qui simulent le comportement de dépendances externes (ex: `numpy`, `pandas`, `jpype`) pour isoler le code testé.
-
--   **[`support/`](support/README.md)**: Contient des outils et scripts de support pour les tests, comme un installeur de dépendances portables (ex: GNU Octave).
-
--   **[`unit/`](unit/README.md)**: Contient les tests unitaires qui vérifient de petites unités de code isolées. La structure de ce répertoire miroir celle du code source du projet.
-
--   **[`ui/`](ui/README.md)**: Contient les tests pour la logique sous-jacente de l'interface utilisateur.
-
--   **[`conftest.py`](conftest.py)**: Fichier de configuration global pour Pytest, contenant les hooks et les fixtures disponibles pour tous les tests.
-
-## Exécution des Tests
-
-Avant d'exécuter les tests, il est impératif d'activer l'environnement virtuel du projet. Utilisez le script suivant à la racine du projet :
+Ouvrez un terminal PowerShell et utilisez la syntaxe suivante :
 
 ```powershell
-. .\activate_project_env.ps1
+.\run_tests.ps1 -Type <type_de_test>
 ```
 
-Une fois l'environnement activé, vous pouvez utiliser Pytest pour lancer les tests.
+Où `<type_de_test>` peut être :
+- `unit` : Lance les tests unitaires (rapides, sans I/O).
+- `functional` : Lance les tests fonctionnels.
+- `integration` : Lance les tests d'intégration.
+- `e2e` : Lance les tests End-to-End avec Playwright (JS/TS).
+- `e2e-python` : Lance les tests End-to-End avec Pytest (Python).
+- `validation` : Lance les tests de validation.
+- `all` : (Défaut) Lance les tests `unit` et `functional`.
 
-### Commandes Pytest de base :
+### Exemples Concrets
 
--   **Exécuter tous les tests du projet :**
-    ```bash
-    pytest
-    ```
+**1. Lancer la suite complète des tests unitaires (recommandé pour la validation rapide) :**
 
--   **Exécuter tous les tests dans un répertoire spécifique (par exemple, les tests unitaires) :**
-    ```bash
-    pytest tests/unit/
-    ```
+```powershell
+.\run_tests.ps1 -Type unit
+```
 
--   **Exécuter un test spécifique (une fonction ou une méthode) dans un fichier :**
-    ```bash
-    pytest tests/unit/mon_module/test_ma_fonction.py::test_cas_particulier
-    ```
+**2. Lancer un répertoire de tests unitaires spécifique :**
 
-### Utilisation des Marqueurs Pytest :
+```powershell
+.\run_tests.ps1 -Type unit -Path tests/unit/agents/
+```
 
-Des marqueurs (`@pytest.mark.<nom_marqueur>`) sont utilisés pour catégoriser les tests.
+**3. Lancer les tests End-to-End avec Playwright :**
+Assurez-vous d'avoir exécuté `playwright install` au préalable.
 
--   **Exécuter les tests marqués comme `slow` :**
-    ```bash
-    pytest -m slow
-    ```
+```powershell
+.\run_tests.ps1 -Type e2e -Browser chromium
+```
 
--   **Exécuter les tests qui ne sont PAS marqués comme `slow` :**
-    ```bash
-    pytest -m "not slow"
-    ```
-    Consultez le fichier [`tests/conftest.py`](conftest.py) pour voir les marqueurs personnalisés disponibles.
+---
 
-### Tests avec Couverture de Code
+## Méthodes d'Exécution Alternatives (Manuelles)
 
-Pour exécuter les tests et générer un rapport de couverture de code :
+### Tests Pytest (unit, functional, etc.)
+
+Si vous ne souhaitez pas utiliser le script unifié, vous pouvez lancer `pytest` directement après avoir activé l'environnement Conda.
 
 ```bash
-pytest --cov=argumentation_analysis --cov-report=html
+# Activer l'environnement Conda
+conda activate base
+
+# Lancer les tests unitaires
+python -m pytest tests/unit/
+
+# Lancer les tests fonctionnels
+python -m pytest tests/functional/
 ```
-Le rapport HTML sera généré dans un répertoire `htmlcov/`.
 
-## Bonnes Pratiques et Documentation
+### Tests End-to-End (Playwright)
 
--   **Bonnes Pratiques**: Pour des directives détaillées sur l'écriture et la maintenance des tests, veuillez consulter le document [`BEST_PRACTICES.md`](BEST_PRACTICES.md).
--   **Plan d'action**: [Plan d'action pour l'amélioration des tests](../docs/tests/plan_action_tests.md)
--   **Rapport de couverture**: [Rapport sur l'état du dépôt et la couverture des tests](../docs/reports/etat_depot_couverture_tests.md)
+Ces tests nécessitent que les **deux** serveurs (backend et frontend) soient démarrés manuellement au préalable.
+
+```bash
+# 1. Démarrer le backend (dans un terminal)
+# ...
+
+# 2. Démarrer le frontend (dans un autre terminal)
+# ...
+
+# 3. Lancer les tests Playwright (dans un troisième terminal)
+playwright test tests/e2e/webapp/

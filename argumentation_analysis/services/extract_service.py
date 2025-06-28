@@ -79,7 +79,7 @@ class ExtractService:
             try:
                 # Essayer d'abord avec le marqueur tel quel
                 found_start = text.index(start_marker)
-                start_index = found_start + len(start_marker)
+                start_index = found_start + len(start_marker) # Exclure le marqueur de début
                 start_found = True
             except ValueError:
                 # Si échec et template disponible, essayer avec le template
@@ -88,7 +88,7 @@ class ExtractService:
                         # Remplacer {0} dans le template par le marqueur original
                         complete_start_marker = template_start.replace("{0}", start_marker)
                         found_start = text.index(complete_start_marker)
-                        start_index = found_start + len(complete_start_marker)
+                        start_index = found_start + len(complete_start_marker) # Exclure le marqueur de début avec template
                         start_found = True
                     except ValueError:
                         pass
@@ -97,7 +97,7 @@ class ExtractService:
         if end_marker:
             try:
                 found_end = text.index(end_marker, start_index)
-                end_index = found_end
+                end_index = found_end # Exclure le marqueur de fin
                 end_found = True
             except ValueError:
                 pass
@@ -111,7 +111,7 @@ class ExtractService:
             if not end_found:
                 status += "⚠️ Marqueur fin non trouvé. "
             if start_found and end_found:
-                status = "[OK] Extraction réussie"
+                status = "✅ Extraction réussie"
             return extracted_text, status, start_found, end_found
         else:
             return None, "❌ Conflit de marqueurs ou texte vide", start_found, end_found

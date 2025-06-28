@@ -1,4 +1,10 @@
-﻿#!/usr/bin/env python3
+# Authentic gpt-4o-mini imports (replacing mocks)
+import openai
+from semantic_kernel.contents import ChatHistory
+from semantic_kernel.core_plugins import ConversationSummaryPlugin
+from config.unified_config import UnifiedConfig
+
+#!/usr/bin/env python3
 """
 Tests d'intégration pour les composants authentiques
 =================================================
@@ -11,7 +17,7 @@ import asyncio
 import sys
 import os
 from pathlib import Path
-from unittest.mock import Mock, patch
+
 
 # Ajout du chemin pour les imports
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -19,6 +25,21 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 
 class TestRealGPT4oMiniIntegration:
+    async def _create_authentic_gpt4o_mini_instance(self):
+        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+        config = UnifiedConfig()
+        return config.get_kernel_with_gpt4o_mini()
+        
+    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        """Fait un appel authentique à gpt-4o-mini."""
+        try:
+            kernel = await self._create_authentic_gpt4o_mini_instance()
+            result = await kernel.invoke("chat", input=prompt)
+            return str(result)
+        except Exception as e:
+            logger.warning(f"Appel LLM authentique échoué: {e}")
+            return "Authentic LLM call failed"
+
     """Tests d'intégration avec GPT-4o-mini authentique."""
     
     @pytest.mark.integration
@@ -31,13 +52,11 @@ class TestRealGPT4oMiniIntegration:
         try:
             from argumentation_analysis.core.llm_service import create_llm_service
             
-            service = create_llm_service(
-                model_name="gpt-4o-mini",
-                use_real_service=True
-            )
+            service = create_llm_service()
             
             assert service is not None
-            assert hasattr(service, 'invoke') or hasattr(service, 'complete')
+            # La nouvelle API de semantic-kernel utilise get_chat_message_contents
+            assert hasattr(service, 'get_chat_message_contents')
             
         except ImportError:
             pytest.skip("LLM service components not available")
@@ -55,7 +74,7 @@ class TestRealGPT4oMiniIntegration:
             from argumentation_analysis.core.llm_service import create_llm_service
             
             # Créer service LLM réel
-            llm_service = create_llm_service(use_real_service=True)
+            llm_service = create_llm_service()
             
             # Créer orchestrateur
             orchestrator = RealLLMOrchestrator(llm_service=llm_service)
@@ -63,15 +82,16 @@ class TestRealGPT4oMiniIntegration:
             # Test avec texte réel
             test_text = "L'Ukraine a été créée par la Russie. Donc Poutine a raison."
             
-            result = await orchestrator.run_real_llm_orchestration(test_text)
+            result = await orchestrator.orchestrate_analysis(test_text)
             
             assert isinstance(result, dict)
-            assert "status" in result
-            assert "analysis" in result
+            assert "final_synthesis" in result
+            assert "analysis_results" in result
             
             # Vérifier que l'analyse contient du contenu réel
-            analysis = result.get("analysis", "")
-            assert len(analysis) > 100  # Analyse substantielle
+            analysis = result.get("analysis_results", {})
+            assert isinstance(analysis, dict)
+            assert len(analysis) > 0 # L'analyse doit contenir des résultats
             
         except ImportError:
             pytest.skip("Real LLM orchestrator not available")
@@ -105,7 +125,8 @@ class TestRealTweetyIntegration:
     
     @pytest.mark.integration
     @pytest.mark.requires_tweety_jar
-    def test_real_tweety_modal_logic_analysis(self):
+    @pytest.mark.asyncio
+    async def test_real_tweety_modal_logic_analysis(self):
         """Test d'analyse logique modale avec Tweety réel."""
         if not self._is_real_tweety_available():
             pytest.skip("Real Tweety not available")
@@ -114,7 +135,7 @@ class TestRealTweetyIntegration:
             from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent
             
             # Créer agent modal avec Tweety réel
-            mock_kernel = Mock()
+            mock_kernel = await self._create_authentic_gpt4o_mini_instance()
             modal_agent = ModalLogicAgent(kernel=mock_kernel, use_real_tweety=True)
             
             # Test avec formules modales
@@ -134,7 +155,8 @@ class TestRealTweetyIntegration:
     
     @pytest.mark.integration
     @pytest.mark.requires_tweety_jar
-    def test_real_tweety_error_handling(self):
+    @pytest.mark.asyncio
+    async def test_real_tweety_error_handling(self):
         """Test de gestion d'erreurs avec Tweety réel."""
         if not self._is_real_tweety_available():
             pytest.skip("Real Tweety not available")
@@ -143,7 +165,7 @@ class TestRealTweetyIntegration:
             from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent
             from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer
             
-            modal_agent = ModalLogicAgent(kernel=Mock(), use_real_tweety=True)
+            modal_agent = ModalLogicAgent(kernel=await self._create_authentic_gpt4o_mini_instance(), use_real_tweety=True)
             error_analyzer = TweetyErrorAnalyzer()
             
             # Formule intentionnellement incorrecte
@@ -217,7 +239,8 @@ class TestCompleteTaxonomyIntegration:
             pytest.skip("Taxonomy manager not available")
     
     @pytest.mark.integration
-    def test_fallacy_analysis_with_complete_taxonomy(self):
+    @pytest.mark.asyncio
+    async def test_fallacy_analysis_with_complete_taxonomy(self):
         """Test d'analyse de sophismes avec taxonomie complète."""
         try:
             from argumentation_analysis.agents.informal_agent import InformalAnalysisAgent
@@ -229,7 +252,7 @@ class TestCompleteTaxonomyIntegration:
             
             # Créer agent avec taxonomie complète
             agent = InformalAnalysisAgent(
-                kernel=Mock(),
+                kernel=await self._create_authentic_gpt4o_mini_instance(),
                 taxonomy=complete_taxonomy
             )
             
@@ -273,7 +296,7 @@ class TestUnifiedAuthenticComponentsIntegration:
             from argumentation_analysis.core.mock_elimination import TaxonomyManager
             
             # 1. Service LLM authentique
-            llm_service = create_llm_service(use_real_service=True)
+            llm_service = create_llm_service()
             
             # 2. Taxonomie complète
             taxonomy_manager = TaxonomyManager()

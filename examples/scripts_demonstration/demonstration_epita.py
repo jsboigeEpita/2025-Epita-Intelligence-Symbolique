@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Script principal de démonstration EPITA - Architecture Modulaire
 Intelligence Symbolique - Menu Catégorisé + Validation Données Custom
@@ -33,6 +33,11 @@ project_root = Path(__file__).resolve().parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 os.chdir(project_root)
+
+# --- AUTO-ACTIVATION DE L'ENVIRONNEMENT ---
+import argumentation_analysis.core.environment # Auto-activation environnement intelligent
+# --- FIN DE L'AUTO-ACTIVATION ---
+
 
 # Vérifier et installer PyYAML si nécessaire
 def ensure_yaml_dependency():
@@ -79,8 +84,7 @@ class EpitaValidator:
             "calcul", "métrique", "score", "résultat", "argument", "sophisme"
         ]
         self.mock_indicators = [
-            "simulation", "mock", "exemple générique", "données factices",
-            "placeholder", "test pattern", "demo content"
+            "simulation", "mock", "données factices"
         ]
     
     def create_custom_datasets(self) -> List[CustomTestDataset]:
@@ -297,6 +301,8 @@ def mode_menu_interactif(config: Dict[str, Any]) -> None:
                 if cat_selectionnee:
                     cat_id, cat_info = cat_selectionnee
                     nom_module = cat_info.get('module', '')
+                    if cat_id == 'agents_logiques':
+                        nom_module = 'demo_analyse_argumentation'
                     nom_cat = cat_info.get('nom', cat_id)
                     
                     logger.header(f"{Symbols.ROCKET} Lancement de : {nom_cat}")
@@ -429,6 +435,8 @@ def execute_all_categories_non_interactive(config: Dict[str, Any]) -> None:
     
     for i, (cat_id, cat_info) in enumerate(categories_triees, 1):
         nom_module = cat_info.get('module', '')
+        if cat_id == 'agents_logiques':
+            nom_module = 'demo_analyse_argumentation'
         nom_cat = cat_info.get('nom', cat_id)
         icon = cat_info.get('icon', '•')
         description = cat_info.get('description', '')
@@ -557,7 +565,7 @@ def mode_validation_custom_data(config: Dict[str, Any]) -> None:
     validator = EpitaValidator()
     datasets = validator.create_custom_datasets()
     
-    logger.info(f"🧪 Création de {len(datasets)} datasets de test personnalisés")
+    logger.info(f"[TEST] Création de {len(datasets)} datasets de test personnalisés")
     
     # Tester chaque catégorie avec les datasets custom
     categories = config.get('categories', {})
@@ -569,12 +577,14 @@ def mode_validation_custom_data(config: Dict[str, Any]) -> None:
         nom_module = cat_info.get('module', '')
         nom_cat = cat_info.get('nom', cat_id)
         
+        timestamp_start_cat = datetime.now().strftime('%H:%M:%S')
         print(f"\n{Colors.BOLD}{'=' * 60}{Colors.ENDC}")
-        print(f"{Colors.CYAN}🔍 VALIDATION MODULE: {nom_cat}{Colors.ENDC}")
+        print(f"{Colors.CYAN}[{timestamp_start_cat} | SEARCH] VALIDATION MODULE: {nom_cat}{Colors.ENDC}")
         print(f"{'=' * 60}")
         
         for dataset in datasets:
-            print(f"\n{Colors.WARNING}📊 Test avec dataset: {dataset.name}{Colors.ENDC}")
+            timestamp_start_ds = datetime.now().strftime('%H:%M:%S')
+            print(f"\n{Colors.WARNING}[{timestamp_start_ds} | DATA] Test avec dataset: {dataset.name}{Colors.ENDC}")
             print(f"   Marqueur: {dataset.marker}")
             print(f"   Objectif: {dataset.test_purpose}")
             
@@ -599,36 +609,40 @@ def mode_validation_custom_data(config: Dict[str, Any]) -> None:
                         
                         # Afficher les résultats
                         if result.success:
-                            print(f"   {Colors.GREEN}✅ Exécution: SUCCÈS{Colors.ENDC}")
+                            print(f"   {Colors.GREEN}[OK] Exécution: SUCCÈS{Colors.ENDC}")
                         else:
-                            print(f"   {Colors.FAIL}❌ Exécution: ÉCHEC{Colors.ENDC}")
+                            print(f"   {Colors.FAIL}[FAIL] Exécution: ÉCHEC{Colors.ENDC}")
                         
                         if result.custom_data_processed:
-                            print(f"   {Colors.GREEN}📝 Données custom: TRAITÉES{Colors.ENDC}")
+                            print(f"   {Colors.GREEN}[DOC] Données custom: TRAITÉES{Colors.ENDC}")
                         else:
-                            print(f"   {Colors.WARNING}📝 Données custom: NON DÉTECTÉES{Colors.ENDC}")
+                            print(f"   {Colors.WARNING}[DOC] Données custom: NON DÉTECTÉES{Colors.ENDC}")
                         
                         if result.real_processing_detected:
-                            print(f"   {Colors.GREEN}🔧 Traitement réel: DÉTECTÉ{Colors.ENDC}")
+                            print(f"   {Colors.GREEN}[TOOL] Traitement réel: DÉTECTÉ{Colors.ENDC}")
                         else:
-                            print(f"   {Colors.WARNING}🔧 Traitement réel: NON DÉTECTÉ{Colors.ENDC}")
+                            print(f"   {Colors.WARNING}[TOOL] Traitement réel: NON DÉTECTÉ{Colors.ENDC}")
                         
                         if result.mock_detected:
-                            print(f"   {Colors.FAIL}🎭 Mocks détectés: OUI{Colors.ENDC}")
+                            print(f"   {Colors.FAIL}[MOCK] Mocks détectés: OUI{Colors.ENDC}")
                         else:
-                            print(f"   {Colors.GREEN}🎭 Mocks détectés: NON{Colors.ENDC}")
+                            print(f"   {Colors.GREEN}[MOCK] Mocks détectés: NON{Colors.ENDC}")
                         
-                        print(f"   ⏱️ Temps d'exécution: {result.execution_time:.3f}s")
+                        timestamp_end_ds = datetime.now().strftime('%H:%M:%S')
+                        print(f"   [{timestamp_end_ds} | TIME] Temps d'exécution: {result.execution_time:.3f}s")
                         
                         if result.error:
-                            print(f"   {Colors.FAIL}💥 Erreur: {result.error}{Colors.ENDC}")
+                            print(f"   {Colors.FAIL}[ERROR] Erreur: {result.error}{Colors.ENDC}")
                     else:
-                        print(f"   {Colors.WARNING}⚠️ Aucune fonction de démo trouvée{Colors.ENDC}")
+                        print(f"   {Colors.WARNING}[WARN] Aucune fonction de démo trouvée{Colors.ENDC}")
                 else:
-                    print(f"   {Colors.FAIL}❌ Module non trouvé: {module_path}{Colors.ENDC}")
+                    print(f"   {Colors.FAIL}[FAIL] Module non trouvé: {module_path}{Colors.ENDC}")
                     
             except Exception as e:
-                print(f"   {Colors.FAIL}💥 Erreur lors du test: {e}{Colors.ENDC}")
+                print(f"   {Colors.FAIL}[ERROR] Erreur lors du test: {e}{Colors.ENDC}")
+        
+        timestamp_end_cat = datetime.now().strftime('%H:%M:%S')
+        print(f"\n{Colors.CYAN}[{timestamp_end_cat}] Fin de la validation pour le module: {nom_cat}{Colors.ENDC}")
     
     # Rapport final de validation
     print(f"\n{Colors.BOLD}{'=' * 80}{Colors.ENDC}")
@@ -642,25 +656,25 @@ def mode_validation_custom_data(config: Dict[str, Any]) -> None:
         custom_data_tests = sum(1 for r in all_results if r.custom_data_processed)
         mock_detected_tests = sum(1 for r in all_results if r.mock_detected)
         
-        print(f"\n{Colors.BOLD}📊 STATISTIQUES GÉNÉRALES:{Colors.ENDC}")
+        print(f"\n{Colors.BOLD}[DATA] STATISTIQUES GÉNÉRALES:{Colors.ENDC}")
         print(f"   Total tests effectués: {total_tests}")
         print(f"   Tests réussis: {success_tests}/{total_tests} ({success_tests/total_tests*100:.1f}%)")
         print(f"   Traitement réel détecté: {real_processing_tests}/{total_tests} ({real_processing_tests/total_tests*100:.1f}%)")
         print(f"   Données custom traitées: {custom_data_tests}/{total_tests} ({custom_data_tests/total_tests*100:.1f}%)")
         print(f"   Mocks détectés: {mock_detected_tests}/{total_tests} ({mock_detected_tests/total_tests*100:.1f}%)")
         
-        print(f"\n{Colors.BOLD}🎯 ÉVALUATION CAPACITÉS:{Colors.ENDC}")
+        print(f"\n{Colors.BOLD}[TARGET] ÉVALUATION CAPACITÉS:{Colors.ENDC}")
         if custom_data_tests > total_tests * 0.7:
-            print(f"   {Colors.GREEN}✅ EXCELLENTE acceptation des données custom{Colors.ENDC}")
+            print(f"   {Colors.GREEN}[OK] EXCELLENTE acceptation des données custom{Colors.ENDC}")
         elif custom_data_tests > total_tests * 0.4:
-            print(f"   {Colors.WARNING}⚠️ MODÉRÉE acceptation des données custom{Colors.ENDC}")
+            print(f"   {Colors.WARNING}[WARN] MODÉRÉE acceptation des données custom{Colors.ENDC}")
         else:
-            print(f"   {Colors.FAIL}❌ FAIBLE acceptation des données custom{Colors.ENDC}")
+            print(f"   {Colors.FAIL}[FAIL] FAIBLE acceptation des données custom{Colors.ENDC}")
         
         if real_processing_tests > total_tests * 0.6:
-            print(f"   {Colors.GREEN}✅ TRAITEMENT RÉEL prédominant{Colors.ENDC}")
+            print(f"   {Colors.GREEN}[OK] TRAITEMENT RÉEL prédominant{Colors.ENDC}")
         else:
-            print(f"   {Colors.WARNING}⚠️ MOCKS ou simulations détectés{Colors.ENDC}")
+            print(f"   {Colors.WARNING}[WARN] MOCKS ou simulations détectés{Colors.ENDC}")
         
         # Sauvegarder le rapport détaillé
         rapport_path = Path("logs") / f"validation_epita_custom_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
@@ -669,9 +683,9 @@ def mode_validation_custom_data(config: Dict[str, Any]) -> None:
         with open(rapport_path, 'w', encoding='utf-8') as f:
             json.dump([result.__dict__ for result in all_results], f, indent=2, ensure_ascii=False)
         
-        print(f"\n{Colors.BLUE}📄 Rapport détaillé sauvegardé: {rapport_path}{Colors.ENDC}")
+        print(f"\n{Colors.BLUE}[FILE] Rapport détaillé sauvegardé: {rapport_path}{Colors.ENDC}")
     else:
-        print(f"{Colors.FAIL}❌ Aucun résultat de validation généré{Colors.ENDC}")
+        print(f"{Colors.FAIL}[FAIL] Aucun résultat de validation généré{Colors.ENDC}")
 
 def mode_custom_data_test(custom_text: str, config: Dict[str, Any]) -> None:
     """Test avec des données custom spécifiques fournies par l'utilisateur."""
@@ -685,7 +699,7 @@ def mode_custom_data_test(custom_text: str, config: Dict[str, Any]) -> None:
 +==============================================================================+
 {Colors.ENDC}""")
     
-    print(f"\n{Colors.BOLD}📝 DONNÉES À TESTER:{Colors.ENDC}")
+    print(f"\n{Colors.BOLD}[DOC] DONNÉES À TESTER:{Colors.ENDC}")
     print(f"   Longueur: {len(custom_text)} caractères")
     print(f"   Hash: {hashlib.md5(custom_text.encode()).hexdigest()[:8]}...")
     print(f"   Aperçu: {custom_text[:100]}{'...' if len(custom_text) > 100 else ''}")
@@ -705,14 +719,14 @@ def mode_custom_data_test(custom_text: str, config: Dict[str, Any]) -> None:
     validator = EpitaValidator()
     categories = config.get('categories', {})
     
-    print(f"\n{Colors.BOLD}🔍 TEST SUR TOUTES LES CATÉGORIES:{Colors.ENDC}")
+    print(f"\n{Colors.BOLD}[SEARCH] TEST SUR TOUTES LES CATÉGORIES:{Colors.ENDC}")
     
     results = []
     for cat_id, cat_info in sorted(categories.items(), key=lambda x: x[1]['id']):
         nom_module = cat_info.get('module', '')
         nom_cat = cat_info.get('nom', cat_id)
         
-        print(f"\n{Colors.CYAN}📊 {nom_cat}:{Colors.ENDC}")
+        print(f"\n{Colors.CYAN}[DATA] {nom_cat}:{Colors.ENDC}")
         
         try:
             module_path = modules_path / f"{nom_module}.py"
@@ -727,17 +741,17 @@ def mode_custom_data_test(custom_text: str, config: Dict[str, Any]) -> None:
                     result = validator.validate_with_dataset(custom_dataset, demo_func, nom_cat)
                     results.append(result)
                     
-                    status = "✅ SUCCÈS" if result.success else "❌ ÉCHEC"
-                    data_processed = "📝 TRAITÉES" if result.custom_data_processed else "📝 NON DÉTECTÉES"
-                    real_processing = "🔧 RÉEL" if result.real_processing_detected else "🔧 SIMULÉ"
+                    status = "[OK] SUCCÈS" if result.success else "[FAIL] ÉCHEC"
+                    data_processed = "[DOC] TRAITÉES" if result.custom_data_processed else "[DOC] NON DÉTECTÉES"
+                    real_processing = "[TOOL] RÉEL" if result.real_processing_detected else "[TOOL] SIMULÉ"
                     
-                    print(f"   {status} | {data_processed} | {real_processing} | ⏱️ {result.execution_time:.3f}s")
+                    print(f"   {status} | {data_processed} | {real_processing} | [TIME] {result.execution_time:.3f}s")
                 else:
-                    print(f"   {Colors.WARNING}⚠️ Fonction de démo non trouvée{Colors.ENDC}")
+                    print(f"   {Colors.WARNING}[WARN] Fonction de démo non trouvée{Colors.ENDC}")
             else:
-                print(f"   {Colors.FAIL}❌ Module non trouvé{Colors.ENDC}")
+                print(f"   {Colors.FAIL}[FAIL] Module non trouvé{Colors.ENDC}")
         except Exception as e:
-            print(f"   {Colors.FAIL}💥 Erreur: {str(e)[:50]}...{Colors.ENDC}")
+            print(f"   {Colors.FAIL}[ERROR] Erreur: {str(e)[:50]}...{Colors.ENDC}")
     
     # Résumé final
     if results:
@@ -745,17 +759,17 @@ def mode_custom_data_test(custom_text: str, config: Dict[str, Any]) -> None:
         processing_rate = sum(1 for r in results if r.custom_data_processed) / len(results) * 100
         real_rate = sum(1 for r in results if r.real_processing_detected) / len(results) * 100
         
-        print(f"\n{Colors.BOLD}📈 RÉSUMÉ VALIDATION DONNÉES CUSTOM:{Colors.ENDC}")
+        print(f"\n{Colors.BOLD}[CHART] RÉSUMÉ VALIDATION DONNÉES CUSTOM:{Colors.ENDC}")
         print(f"   Taux de succès: {success_rate:.1f}%")
         print(f"   Taux de traitement des données: {processing_rate:.1f}%")
         print(f"   Taux de traitement réel: {real_rate:.1f}%")
         
         if processing_rate > 70:
-            print(f"   {Colors.GREEN}🎯 CONCLUSION: Les données custom sont bien acceptées et traitées{Colors.ENDC}")
+            print(f"   {Colors.GREEN}[TARGET] CONCLUSION: Les données custom sont bien acceptées et traitées{Colors.ENDC}")
         elif processing_rate > 30:
-            print(f"   {Colors.WARNING}🎯 CONCLUSION: Acceptation partielle des données custom{Colors.ENDC}")
+            print(f"   {Colors.WARNING}[TARGET] CONCLUSION: Acceptation partielle des données custom{Colors.ENDC}")
         else:
-            print(f"   {Colors.FAIL}🎯 CONCLUSION: Les données custom ne semblent pas être traitées{Colors.ENDC}")
+            print(f"   {Colors.FAIL}[TARGET] CONCLUSION: Les données custom ne semblent pas être traitées{Colors.ENDC}")
 
 def parse_arguments():
     """Parse les arguments de ligne de commande"""

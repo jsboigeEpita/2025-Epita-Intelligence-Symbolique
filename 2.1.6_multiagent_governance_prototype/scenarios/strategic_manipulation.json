@@ -1,0 +1,13 @@
+{
+  "agents": [
+    {"name": "S1", "personality": "strategic", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"]},
+    {"name": "S2", "personality": "strategic", "preferences": ["B", "C", "A"], "options": ["A", "B", "C"]},
+    {"name": "S3", "personality": "strategic", "preferences": ["C", "A", "B"], "options": ["A", "B", "C"]},
+    {"name": "T1", "personality": "stubborn", "preferences": ["B", "A", "C"], "options": ["A", "B", "C"]},
+    {"name": "T2", "personality": "stubborn", "preferences": ["C", "B", "A"], "options": ["A", "B", "C"]},
+    {"name": "R1", "personality": "random", "preferences": ["A", "C", "B"], "options": ["A", "B", "C"]},
+    {"name": "R2", "personality": "random", "preferences": ["B", "A", "C"], "options": ["A", "B", "C"]}
+  ],
+  "options": ["A", "B", "C"],
+  "context": {"description": "Strategic manipulation: mix of strategic, stubborn, and random agents. Tests manipulability of methods."}
+} 
