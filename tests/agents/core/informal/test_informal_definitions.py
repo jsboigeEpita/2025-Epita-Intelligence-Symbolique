@@ -37,7 +37,6 @@ class TestInformalDefinitions: # Suppression de l'héritage unittest.TestCase
         assert plugin._current_taxonomy_path is not None # pylint: disable=protected-access
         assert plugin._get_taxonomy_dataframe() is not None # pylint: disable=protected-access
     
-    @pytest.mark.skip(reason="Problème persistant avec TypeError: int() argument must be a string... not '_NoValueType' lors de set_index, potentiellement lié à l'état de NumPy/Pandas dans l'environnement de test.")
     def test_get_taxonomy_dataframe(self, authentic_informal_analysis_plugin):
         plugin = authentic_informal_analysis_plugin
         df = plugin._get_taxonomy_dataframe() # pylint: disable=protected-access
@@ -56,7 +55,6 @@ class TestInformalDefinitions: # Suppression de l'héritage unittest.TestCase
             assert hasattr(df, '_data') # pylint: disable=protected-access
             assert len(df._data) > 0 # pylint: disable=protected-access
 
-    @pytest.mark.skip(reason="TypeError persistante avec NumPy/Pandas sous use_real_numpy lors de l'exécution groupée (numpy.core._methods.py:49: TypeError: int() argument must be a string, a bytes-like object or a real number, not '_NoValueType')")
     def test_explore_fallacy_hierarchy(self, authentic_informal_analysis_plugin):
         plugin = authentic_informal_analysis_plugin
         hierarchy_json = plugin.explore_fallacy_hierarchy("1") 
@@ -65,10 +63,8 @@ class TestInformalDefinitions: # Suppression de l'héritage unittest.TestCase
         assert isinstance(hierarchy, dict)
         assert "current_node" in hierarchy
         assert "children" in hierarchy
-        assert hierarchy["current_node"]["Name"] == "Appel a l'autorite"
+        assert hierarchy["current_node"]["Name"] == "Appel à l'autorité"
     
-    @pytest.mark.skip(reason="TypeError persistante avec NumPy/Pandas sous use_real_numpy lors de l'exécution groupée (numpy.core._methods.py:49: TypeError: int() argument must be a string, a bytes-like object or a real number, not '_NoValueType')")
-    # @pytest.mark.use_real_numpy # Gardons la marque au cas où, mais le skip la rend inactive
     def test_get_fallacy_details(self, authentic_informal_analysis_plugin):
         plugin = authentic_informal_analysis_plugin
         details_json = plugin.get_fallacy_details("1")
@@ -77,7 +73,7 @@ class TestInformalDefinitions: # Suppression de l'héritage unittest.TestCase
         assert isinstance(details, dict)
         assert "pk" in details
         assert details["pk"] == 1
-        assert details["Name"] == "Appel a l'autorite"
+        assert details["Name"] == "Appel à l'autorité"
         assert "Description" in details
     
     def test_setup_informal_kernel(self, authentic_semantic_kernel, setup_authentic_taxonomy_csv): # Ajout de setup_authentic_taxonomy_csv
