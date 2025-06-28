@@ -14,7 +14,11 @@
 #>
 
 # --- Configuration ---
-$EnvName = "projet-is"
+$EnvName = python -m project_core.core_from_scripts.environment_manager get-env-name
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "[ERREUR] Impossible de récupérer le nom de l'environnement à partir du manager Python." -ForegroundColor Red
+    exit 1
+}
 $EnvironmentFile = "environment.yml"
 
 # --- Bannière ---

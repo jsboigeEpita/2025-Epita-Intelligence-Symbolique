@@ -284,6 +284,9 @@ if __name__ == "__main__":
     switch_parser = subparsers.add_parser("switch", help="Bascule vers un autre environnement .env en copiant le fichier de configuration.")
     switch_parser.add_argument("name", help="Le nom de l'environnement à activer (ex: dev, prod). Le fichier correspondant doit exister dans config/environments.")
     
+    # --- Commande pour obtenir le nom de l'environnement ---
+    get_name_parser = subparsers.add_parser("get-env-name", help="Affiche le nom de l'environnement Conda configuré dans .env.")
+
     args = parser.parse_args()
 
     manager = EnvironmentManager()
@@ -293,6 +296,13 @@ if __name__ == "__main__":
         exit_code = manager.run_command_in_conda_env(args.command_to_run)
     elif args.command == "switch":
         if not manager.switch_environment(args.name):
+            exit_code = 1
+    elif args.command == "get-env-name":
+        env_name = manager.get_conda_env_name_from_dotenv()
+        if env_name:
+            print(env_name)
+            exit_code = 0
+        else:
             exit_code = 1
     else:
         # Ne devrait jamais être atteint grâce à `required=True` sur les subparsers
