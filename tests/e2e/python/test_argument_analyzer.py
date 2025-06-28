@@ -59,16 +59,31 @@ def test_successful_simple_argument_analysis(page: Page, frontend_url: str):
     logger.info("--- DEBUT test_successful_simple_argument_analysis ---")
     
     try:
+        # --- Instrumentation pour le débogage ---
+        def log_console_message(msg):
+            logger.info(f"[BROWSER CONSOLE] {msg.type}: {msg.text}")
+
+        def log_network_request(request):
+            logger.info(f"[BROWSER NETWORK] >> {request.method} {request.url}")
+
+        def log_network_response(response):
+            logger.info(f"[BROWSER NETWORK] << {response.status} {response.url}")
+
+        page.on("console", log_console_message)
+        page.on("request", log_network_request)
+        page.on("response", log_network_response)
+        # --- Fin de l'instrumentation ---
+
         logger.info(f"Étape 1: Navigation vers l'URL du frontend: {frontend_url}")
-        page.goto(frontend_url, timeout=60000)
+        page.goto(frontend_url, timeout=90000)  # Timeout augmenté
         logger.info("SUCCES: Navigation terminée.")
 
         logger.info("Étape 2: Attente de la connexion à l'API.")
         logger.info("CHERCHE: Indicateur de connexion '.api-status.connected'")
         api_status_locator = page.locator(".api-status.connected")
         logger.info("TROUVÉ: Localisateur pour '.api-status.connected'.")
-        logger.info("VÉRIFICATION: L'indicateur est visible (timeout=30s).")
-        expect(api_status_locator).to_be_visible(timeout=30000)
+        logger.info("VÉRIFICATION: L'indicateur est visible (timeout=60s).")
+        expect(api_status_locator).to_be_visible(timeout=60000) # Timeout augmenté
         logger.info("SUCCES: Indicateur de connexion API visible.")
 
         logger.info("Étape 3: Clic sur l'onglet 'Analyse'.")

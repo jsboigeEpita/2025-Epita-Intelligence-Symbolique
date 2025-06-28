@@ -14,10 +14,16 @@ function App() {
   const [apiError, setApiError] = useState(null);
 
   useEffect(() => {
+    console.log('[Debug] useEffect a démarré. Appel de checkAPIHealth...');
     // Vérifier l'état de l'API au démarrage
     checkAPIHealth()
-      .then(() => setApiStatus('connected'))
+      .then((data) => {
+        console.log('[Debug] checkAPIHealth a réussi. Données:', data);
+        console.log('[Debug] Appel de setApiStatus("connected")');
+        setApiStatus('connected');
+      })
       .catch((error) => {
+        console.error('[Debug] checkAPIHealth a échoué:', error);
         setApiStatus('disconnected');
         setApiError(error.message);
       });
@@ -41,6 +47,7 @@ function App() {
     return null;
   };
 
+  console.log(`[Debug] Rendu du composant App avec apiStatus = "${apiStatus}"`);
   return (
     <div className="App">
       <header className="App-header">

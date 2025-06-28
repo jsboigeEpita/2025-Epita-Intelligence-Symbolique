@@ -181,7 +181,7 @@ pytest_plugins = [
    "tests.fixtures.integration_fixtures",
    "tests.fixtures.jvm_subprocess_fixture",
     "pytest_playwright",
-    "tests.mocks.numpy_setup"
+    # "tests.mocks.numpy_setup" # DÉSACTIVÉ GLOBALEMENT - Provoque un comportement instable pour les tests E2E
 ]
 
 @pytest.fixture(autouse=True)

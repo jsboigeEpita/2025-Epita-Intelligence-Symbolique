@@ -80,7 +80,7 @@ class PlaywrightRunner:
             await self._prepare_test_environment(effective_config)
             
             # Construction commande pytest
-            cmd = self._build_pytest_command(test_paths, effective_config)
+            cmd = self._build_playwright_command(test_paths, effective_config)
             
             # Exécution tests
             result = await self._execute_tests(cmd, effective_config)
@@ -118,17 +118,17 @@ class PlaywrightRunner:
         env_vars = {
             'BACKEND_URL': config['backend_url'],
             'FRONTEND_URL': config['frontend_url'],
-            # Variables de compatibilité pour les tests existants
-            'API_BASE_URL': config['backend_url'],
-            'FRONTEND_BASE_URL': config['frontend_url'],
             'HEADLESS': str(config['headless']).lower(),
             'BROWSER': config['browser'],
             'SCREENSHOTS_DIR': str(self.screenshots_dir),
-            'TRACES_DIR': str(self.traces_dir)
+            'TRACES_DIR': str(self.traces_dir),
+            # Forcer KMP_DUPLICATE_LIB_OK pour éviter les crashs avec MKL
+            'KMP_DUPLICATE_LIB_OK': 'TRUE',
+            # Le mode DEBUG est maintenant activé via page.pause() dans le code de test
         }
         
-        for key, value in env_vars.items():
-            os.environ[key] = value
+        # Mettre à jour l'environnement actuel du processus
+        os.environ.update(env_vars)
             
         self.logger.info(f"Variables test configurées: {env_vars}")
         
@@ -146,54 +146,76 @@ class PlaywrightRunner:
                     except Exception:
                         pass  # Ignore erreurs de suppression
     
-    def _build_pytest_command(self, test_paths: List[str], 
-                             config: Dict[str, Any]) -> List[str]:
-        """Construit la commande pytest avec options Playwright"""
-        
-        # Base command avec activation environnement
-        if sys.platform == "win32":
-            cmd = [
-                'powershell', '-File', 'scripts/env/activate_project_env.ps1',
-                '-CommandToRun', 'python -m pytest'
-            ]
-        else:
-            cmd = ['conda', 'run', '-n', 'projet-is', 'python', '-m', 'pytest']
-        
-        # Options pytest
-        pytest_args = [
-            '-v',  # Verbose
-            '-s',  # Pas de capture stdout
-            '--tb=short',  # Traceback court
+    def _build_playwright_command(self, test_paths: List[str], config: Dict[str, Any]) -> List[str]:
+        """Construit la commande pytest directe pour Playwright."""
+        self.logger.info("Préparation de la commande Pytest pour l'environnement Conda 'projet-is'.")
+
+        python_executable = self._get_conda_env_python_executable()
+        if not python_executable:
+            raise RuntimeError("Impossible de trouver l'exécutable Python pour l'environnement Conda 'projet-is'.")
+
+        # Base de la commande
+        cmd = [
+            str(python_executable),
+            "-m", "pytest",
+            "-v",  # Verbose
+            "-p", "no:asyncio", # Empêche le plugin pytest-asyncio de causer des conflits
+            "--capture=no", # Affiche les prints en temps réel
+            "--slowmo=100", # Ralentit les opérations Playwright
+            "--log-cli-level=DEBUG", # Niveau de log pour la console
+            f"--log-file={self.traces_dir / 'pytest.log'}"
         ]
         
+        # Chemins des tests
+        cmd.extend(test_paths)
+
         # Options Playwright
-        if config['headless']:
-            pytest_args.append('--headless')
-        else:
-            pytest_args.append('--headed')
-            
-        pytest_args.extend([
-            f'--browser={config["browser"]}',
-            '--screenshot=on',
-            '--video=on' if config.get('traces', True) else '--video=off'
-        ])
-        
-        # Chemins de tests
-        pytest_args.extend(test_paths)
-        
-        # Marqueurs Playwright - temporairement désactivé pour débuggage
-        # pytest_args.extend(['-m', 'playwright'])
-        
-        # Intégration dans commande
-        if sys.platform == "win32":
-            # Pour PowerShell, joindre les arguments pytest
-            cmd[-1] += ' ' + ' '.join(pytest_args)
-        else:
-            cmd.extend(pytest_args)
+        if not config.get('headless', True):
+            cmd.append('--headed')
+            self.logger.info(f"Le mode Headless est configuré sur: {config.get('headless')}")
+
+        cmd.append(f'--tracing={"on" if config.get("traces") else "off"}')
+        cmd.append(f'--browser={config.get("browser", "chromium")}')
+
+        # URLs pour les fixtures
+        cmd.append(f'--backend-url={config.get("backend_url")}')
+        cmd.append(f'--frontend-url={config.get("frontend_url")}')
         
         return cmd
+
+    def _get_conda_env_python_executable(self, env_name: str = "projet-is") -> Optional[Path]:
+         """
+         Trouve le chemin de l'exécutable Python pour un environnement Conda donné.
+         """
+         self.logger.info(f"Recherche de l'environnement Conda nommé: '{env_name}'")
+         try:
+             # Commande pour obtenir les informations sur les environnements conda en format JSON
+             command = ["conda", "env", "list", "--json"]
+             result = subprocess.run(command, capture_output=True, text=True, check=True)
+            
+             data = json.loads(result.stdout)
+            
+             # Recherche du chemin de l'environnement
+             for env_path_str in data.get("envs", []):
+                 env_path = Path(env_path_str)
+                 if env_path.name == env_name:
+                     self.logger.info(f"Chemin trouvé pour l'environnement '{env_name}': {env_path}")
+                     python_executable = env_path / "python.exe" if sys.platform == "win32" else env_path / "bin" / "python"
+                     if python_executable.exists():
+                         self.logger.info(f"Exécutable Python validé pour l'environnement '{env_name}': {python_executable}")
+                         return python_executable
+                     else:
+                         self.logger.warning(f"Chemin de l'environnement '{env_name}' trouvé, mais l'exécutable Python '{python_executable}' est introuvable.")
+                         return None
+
+             self.logger.error(f"L'environnement Conda '{env_name}' est introuvable dans la liste des environnements.")
+             return None
+
+         except (subprocess.CalledProcessError, json.JSONDecodeError, FileNotFoundError) as e:
+             self.logger.error(f"Erreur lors de la recherche de l'environnement Conda '{env_name}': {e}")
+             return None
     
-    async def _execute_tests(self, cmd: List[str], 
+    async def _execute_tests(self, cmd: List[str],
                            config: Dict[str, Any]) -> subprocess.CompletedProcess:
         """Exécute les tests et capture la sortie"""
         self.logger.info(f"Commande test: {' '.join(cmd)}")
@@ -212,7 +234,7 @@ class PlaywrightRunner:
                     text=True,
                     encoding='utf-8',
                     errors='replace',
-                    timeout=config.get('test_timeout', 300),  # 5 min par défaut
+                    timeout=config.get('test_timeout', 900),  # Augmenté pour le débogage interactif
                     cwd=Path.cwd()
                 )
             else:
@@ -222,7 +244,7 @@ class PlaywrightRunner:
                     text=True,
                     encoding='utf-8',
                     errors='replace',
-                    timeout=config.get('test_timeout', 300),
+                    timeout=config.get('test_timeout', 900),
                     cwd=Path.cwd()
                 )
             
