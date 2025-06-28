@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+dist/
+build/
+*.so
+
+# Project Specific
+results/
+local_llm_data/
+.pytest_cache/
+.vscode/
+*.log
+*.log.*
+.temp/
+*.tmp
+*.swp
+
+# Environment
+.env
