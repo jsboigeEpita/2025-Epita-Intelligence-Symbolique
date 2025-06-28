@@ -1,0 +1,1 @@
+setView(Views.MAIN)

@@ -1,0 +1,14 @@
+{
+  "agents": [
+    {"name": "A1", "personality": "stubborn", "preferences": ["A", "B", "C", "D", "E"], "options": ["A", "B", "C", "D", "E"]},
+    {"name": "A2", "personality": "stubborn", "preferences": ["A", "B", "C", "D", "E"], "options": ["A", "B", "C", "D", "E"]},
+    {"name": "B1", "personality": "stubborn", "preferences": ["B", "A", "C", "D", "E"], "options": ["A", "B", "C", "D", "E"]},
+    {"name": "B2", "personality": "stubborn", "preferences": ["B", "A", "C", "D", "E"], "options": ["A", "B", "C", "D", "E"]},
+    {"name": "C1", "personality": "stubborn", "preferences": ["C", "A", "B", "D", "E"], "options": ["A", "B", "C", "D", "E"]},
+    {"name": "D1", "personality": "stubborn", "preferences": ["D", "A", "B", "C", "E"], "options": ["A", "B", "C", "D", "E"]},
+    {"name": "E1", "personality": "stubborn", "preferences": ["E", "A", "B", "C", "D"], "options": ["A", "B", "C", "D", "E"]},
+    {"name": "E2", "personality": "stubborn", "preferences": ["E", "A", "B", "C", "D"], "options": ["A", "B", "C", "D", "E"]}
+  ],
+  "options": ["A", "B", "C", "D", "E"],
+  "context": {"description": "Clone candidates: A and B are similar, splitting the vote and changing the winner for plurality/majority."}
+} 

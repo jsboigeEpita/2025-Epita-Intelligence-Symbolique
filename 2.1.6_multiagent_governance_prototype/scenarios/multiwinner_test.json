@@ -1,0 +1,16 @@
+{
+  "agents": [
+    {"name": "M1", "personality": "stubborn", "preferences": ["A", "B", "C", "D", "E"], "options": ["A", "B", "C", "D", "E"]},
+    {"name": "M2", "personality": "flexible", "preferences": ["B", "C", "D", "E", "A"], "options": ["A", "B", "C", "D", "E"]},
+    {"name": "M3", "personality": "strategic", "preferences": ["C", "D", "E", "A", "B"], "options": ["A", "B", "C", "D", "E"]},
+    {"name": "M4", "personality": "random", "preferences": ["D", "E", "A", "B", "C"], "options": ["A", "B", "C", "D", "E"]},
+    {"name": "M5", "personality": "stubborn", "preferences": ["E", "A", "B", "C", "D"], "options": ["A", "B", "C", "D", "E"]},
+    {"name": "M6", "personality": "flexible", "preferences": ["A", "C", "E", "B", "D"], "options": ["A", "B", "C", "D", "E"]},
+    {"name": "M7", "personality": "strategic", "preferences": ["B", "D", "A", "E", "C"], "options": ["A", "B", "C", "D", "E"]},
+    {"name": "M8", "personality": "random", "preferences": ["C", "E", "B", "A", "D"], "options": ["A", "B", "C", "D", "E"]},
+    {"name": "M9", "personality": "stubborn", "preferences": ["D", "B", "E", "C", "A"], "options": ["A", "B", "C", "D", "E"]},
+    {"name": "M10", "personality": "flexible", "preferences": ["E", "C", "A", "D", "B"], "options": ["A", "B", "C", "D", "E"]}
+  ],
+  "options": ["A", "B", "C", "D", "E"],
+  "context": {"description": "Multiwinner test: 10 agents, 5 options, diverse preferences. Tests methods' ability to handle close races."}
+} 

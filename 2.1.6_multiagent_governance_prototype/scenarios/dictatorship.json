@@ -1,0 +1,11 @@
+{
+  "agents": [
+    {"name": "D1", "personality": "strategic", "preferences": ["A", "B", "C"], "options": ["A", "B", "C"]},
+    {"name": "O1", "personality": "stubborn", "preferences": ["B", "C", "A"], "options": ["A", "B", "C"]},
+    {"name": "O2", "personality": "flexible", "preferences": ["C", "A", "B"], "options": ["A", "B", "C"]},
+    {"name": "O3", "personality": "random", "preferences": ["B", "A", "C"], "options": ["A", "B", "C"]},
+    {"name": "O4", "personality": "stubborn", "preferences": ["C", "B", "A"], "options": ["A", "B", "C"]}
+  ],
+  "options": ["A", "B", "C"],
+  "context": {"description": "Dictatorship: one strategic agent (dictator), others have diverse preferences. Tests sensitivity to strong individual influence."}
+} 

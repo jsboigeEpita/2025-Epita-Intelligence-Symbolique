@@ -1,111 +1,45 @@
-import argparse
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Façade CLI pour le Gestionnaire de Setup du Projet.
+=====================================================
+
+Ce script est le point d'entrée unique pour toutes les opérations de
+configuration et de validation de l'environnement du projet. Il délègue
+toute la logique d'exécution au module `project_setup` dans `project_core`.
+
+Utilisation:
+    python scripts/setup_manager.py setup --env test
+    python scripts/setup_manager.py validate --all
+    python scripts/setup_manager.py install
+
+Auteur: Intelligence Symbolique EPITA
+Date: 27/06/2025
+"""
+
 import sys
 from pathlib import Path
 
-# Ajouter la racine du projet au sys.path pour permettre les imports absolus
+# Assurer que la racine du projet est dans le sys.path pour les imports
+# Ce montage est nécessaire pour exécuter le script depuis n'importe où
+# tout en conservant des imports absolus cohérents.
 project_root = Path(__file__).resolve().parent.parent
-sys.path.append(str(project_root))
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
-from project_core.core_from_scripts.environment_manager import EnvironmentManager
-from project_core.core_from_scripts.project_setup import ProjectSetup
-from project_core.core_from_scripts.validation_engine import ValidationEngine
+from project_core.core_from_scripts.project_setup import main as project_setup_main
 
 def main():
-    """Point d'entrée principal pour la façade CLI de setup."""
-    parser = argparse.ArgumentParser(
-        description="Façade CLI pour gérer le setup et la configuration de l'environnement du projet.",
-        formatter_class=argparse.RawTextHelpFormatter
-    )
+    """
+    Fonction principale qui agit comme un proxy direct vers le point
+    d'entrée du gestionnaire de setup principal.
     
-    subparsers = parser.add_subparsers(dest="command", help="Commandes disponibles", required=True)
-
-    # --- Commande pour réparer les dépendances ---
-    fix_deps_parser = subparsers.add_parser(
-        "fix-deps", 
-        help="Répare les dépendances Python, soit par paquet, soit depuis un fichier."
-    )
-    group = fix_deps_parser.add_mutually_exclusive_group(required=True)
-    group.add_argument(
-        "--package",
-        nargs='+',
-        metavar='PACKAGE',
-        help="Un ou plusieurs paquets à réinstaller de force (ex: numpy pandas)."
-    )
-    group.add_argument(
-        "--from-requirements",
-        metavar='FILE_PATH',
-        help="Chemin vers le fichier requirements.txt à utiliser pour l'installation."
-    )
-    fix_deps_parser.add_argument(
-        "--strategy",
-        choices=['default', 'aggressive'],
-        default='default',
-        help="Stratégie de réparation à utiliser (default: simple réinstallation, aggressive: essaie plusieurs méthodes)."
-    )
-
-    # --- Commande pour configurer le PYTHONPATH via un fichier .pth ---
-    set_path_parser = subparsers.add_parser(
-        "set-path",
-        help="Configure le PYTHONPATH en créant un .pth dans site-packages."
-    )
-
-    # --- Commande pour valider les composants ---
-    validate_parser = subparsers.add_parser(
-        "validate",
-        help="Valide differents composants de l'environnement."
-    )
-    validate_parser.add_argument(
-        "--component",
-        choices=['jvm-bridge', 'build-tools'],
-        required=True,
-        help="Le composant a valider."
-    )
-
-    args = parser.parse_args()
-
-    env_manager = EnvironmentManager()
-    validation_engine = ValidationEngine()
-    exit_code = 0
-
-    if args.command == "fix-deps":
-        if args.package:
-            print(f"Tentative de réparation des paquets : {', '.join(args.package)} avec la stratégie '{args.strategy}'")
-            if not env_manager.fix_dependencies(packages=args.package, strategy=args.strategy):
-                print("La réparation des dépendances par paquet a échoué.", file=sys.stderr)
-                exit_code = 1
-            else:
-                print("Réparation des dépendances par paquet terminée avec succès.")
-        elif args.from_requirements:
-            print(f"Tentative de réparation depuis le fichier : {args.from_requirements}")
-            if not env_manager.fix_dependencies(requirements_file=args.from_requirements, strategy=args.strategy):
-                print(f"La réparation depuis le fichier '{args.from_requirements}' a échoué.", file=sys.stderr)
-                exit_code = 1
-            else:
-                print(f"Réparation depuis le fichier '{args.from_requirements}' terminée avec succès.")
-
-    elif args.command == "set-path":
-        print("Tentative de configuration du fichier .pth pour le PYTHONPATH...")
-        setup_manager = ProjectSetup()
-        if not setup_manager.set_project_path_file():
-            print("La configuration du fichier .pth a échoué.", file=sys.stderr)
-            exit_code = 1
-        else:
-            print("Configuration du fichier .pth terminée avec succès.")
-
-    elif args.command == "validate":
-        print(f"Validation du composant : {args.component}...")
-        if args.component == 'build-tools':
-            result = validation_engine.validate_build_tools()
-            print(result['message'])
-            if result['status'] == 'failure':
-                exit_code = 1
-        elif args.component == 'jvm-bridge':
-            result = validation_engine.validate_jvm_bridge()
-            print(result['message'])
-            if result['status'] == 'failure':
-                exit_code = 1
-
-    sys.exit(exit_code)
+    Cette approche de "trampoline" assure que ce script reste un simple
+    lanceur, tandis que toute la complexité (parsing des arguments, logique
+    métier) est encapsulée dans le module `project_core`.
+    """
+    project_setup_main()
 
 if __name__ == "__main__":
     main()

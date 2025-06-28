@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Case AI</title>
+        <link rel="stylesheet" href="static/style/style.css">
+    </head>
+    <body>
+        <div id="page">
+            <div id="title_container">
+                <p id="title">Case.AI</p>
+                <p id="subtitle">Hi there!</p>
+            </div>
+            <div id="view_container">
+                <div id="main_view" class="view hidden">
+                    <div id="tribody">
+                        <div id="rules">
+                            <p id="rules-title">RULES</p>
+                            <p id="rules-text">
+                            Welcome to Case.AI!<br><br>
+                            A crime has been commited!<br>
+                            YOU are the detective.<br><br>
+                            Question suspects, gather evidence, build a mind map, and solve the case!<br><br>
+                            Each playthrough is unique!<br><br>
+                        </p>
+                        </div>
+                        <div id="buttons">
+                            <div id="play_button" class="big-button"><p class="button-text">PLAY</p></div>
+                        </div>
+                        <div id="settings">
+                            <p id="settings-title">SETTINGS</p>
+                            <input type="text" id="api_key_input" placeholder="Put your OpenAI api key here, it wont be cached."></input>
+                        </div>
+                    </div>             
+                </div>
+                <div id="empty_view" class="view hidden"></div>
+                <div id="game_view" class="view hidden">
+                    <div id="phaser_container">
+                    </div>
+                    <div class="floating" id="testimony">
+                        <div id="testimony_header">
+                            <p>Testimony of :</p>
+                            <div></div>
+                        </div>
+                        <p id="testimony_text">
+                            Click any character in the map to question him/her.<br><br>               
+                            You can enter your questions at the bottom.
+                        </p>
+                        <input id="testimony_input">
+                        <div id="testimony_accuse_button"><p>YOU are the murderer!</p></div>
+                        </input>
+                    </div>
+                </div>
+                <div id="board_view" class="view hidden">
+                    <div class="floating" id="newspaper">
+                        <div id="newspaper_whole">
+                            <div id="newspaper_header">
+                                <p>BREAKING NEWS !</p>
+                            </div>
+                            <div id="newspaper_body">
+                                <div id="newspaper_body_left">
+                                    <p id="newspaper_text">Lorem ipsum dolor armet</p>
+                                </div>
+                                <div id="newspaper_body_right">
+                                    <div id="newspaper_picture"></div>
+                                    <div id="newspaper_sub_picture">
+                                        <p>A renowned detective has been hired on the case, we will keep you updated on his findings.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="end_view" class="view hidden">
+                    <p id="end_text">LOREM IPSUM</p>
+                </div>
+            </div>
+        </div>
+        <div id="templates">
+            <div class="floating note hidden">
+                <p class="note-title">Example title</p>
+                <p class="note-text">Example content<br>over multiple lines</p>
+            </div>
+            <div class="floating picture hidden">
+                <div class="picture-image"></div>
+                <p class="picture-text"></p>
+            </div>
+        </div>
+        <audio id="sound_background_music" src="static/sounds/detective_music.mp3" loop></audio>
+        <audio id="sound_woosh" src="static/sounds/woosh.mp3"></audio>
+        <audio id="sound_pick" src="static/sounds/pick.mp3"></audio>
+        <audio id="sound_hm" src="static/sounds/hm.mp3"></audio>
+        <audio id="sound_gibberish0" src="static/sounds/gibberish0.mp3"></audio>
+        <audio id="sound_hammer" src="static/sounds/hammer.mp3"></audio>
+        <audio id="sound_footsteps" src="static/sounds/footsteps.mp3"></audio>
+    </body>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tau-prolog@0.3.2/modules/core.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tau-prolog@0.3.2/modules/lists.js"></script>
+    <script src="static/scripts/globals.js"></script>
+    <script src="static/scripts/view.js"></script>
+    <script src="static/scripts/sound.js"></script>
+    <script src="static/scripts/floating.js"></script>
+    <script src="static/scripts/map.js"></script>
+    <script src="static/scripts/prompt.js"></script>
+    <script src="static/scripts/back.js"></script>
+    <script src="static/scripts/settings.js"></script>
+    <script src="static/scripts/testimony.js"></script>
+    <script src="static/scripts/picture.js"></script>
+    <script src="static/scripts/note.js"></script>
+    <script src="static/scripts/canvas.js"></script>
+    <script src="static/scripts/game.js"></script>
+    <script src="static/scripts/index.js"></script>
+</html>

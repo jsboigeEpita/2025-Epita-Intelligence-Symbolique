@@ -1,74 +1,73 @@
 # Guide d'Utilisation : `setup_manager.py`
 
-Ce script est le point d'entrée principal pour toutes les opérations de configuration et de validation de l'environnement de développement.
+Le script `setup_manager.py` est la façade CLI centralisée pour toutes les opérations de **configuration, de réparation et de validation** de l'environnement de développement et de test du projet. Il remplace des dizaines d'anciens scripts par une interface unifiée et robuste.
 
-## Commandes Disponibles
+## Commandes Principales
 
-### `fix-deps`
+### 1. Configuration Complète d'un Environnement (`setup`)
 
-Répare les dépendances Python du projet.
+C'est la commande à utiliser pour préparer un environnement de travail.
 
-**Utilisation :**
-
-- **Réparer des paquets spécifiques :**
-  ```bash
-  python scripts/setup_manager.py fix-deps --package numpy pandas
-  ```
-
-- **Installer depuis un fichier `requirements.txt` :**
-  ```bash
-  python scripts/setup_manager.py fix-deps --from-requirements path/to/requirements.txt
-  ```
-
-- **Installer les dépendances d'un sous-projet :**
- Certains modules du projet, comme `abs_arg_dung`, ont leurs propres dépendances. Vous pouvez les installer de la manière suivante :
-
- ```bash
- python scripts/setup_manager.py fix-deps --from-requirements abs_arg_dung/requirements.txt
- ```
-- **Stratégies de Réparation :**
-  Par défaut, `fix-deps` réinstalle simplement un paquet. Pour les cas difficiles (par exemple, avec `JPype1`), une stratégie "agressive" peut être utilisée.
-
-  ```bash
-  # Utiliser la stratégie agressive pour installer un paquet récalcitrant
-  python scripts/setup_manager.py fix-deps --package JPype1 --strategy aggressive
-  ```
-
-  Cette stratégie tentera une séquence de méthodes d'installation (standard, sans binaire, etc.) jusqu'à ce que l'une d'entre elles réussisse.
-
-  En dernier recours, si les méthodes `pip` traditionnelles échouent, la stratégie agressive essaiera d'installer une version pré-compilée du paquet (un "wheel" `.whl`) depuis le répertoire `ressources/private/wheels`. Cela est particulièrement utile pour les paquets qui nécessitent une compilation complexe sur Windows.
-
-
-### `set-path`
-
-Configure le `PYTHONPATH` pour le projet en cours en créant un fichier `.pth` dans le répertoire `site-packages` de l'environnement. C'est une méthode de secours robuste si l'installation en mode éditable (`pip install -e .`) échoue.
-
-**Utilisation :**
 ```bash
-python scripts/setup_manager.py set-path
+# Configurer l'environnement de développement
+powershell -c "./activate_project_env.ps1; python scripts/setup_manager.py setup --env dev"
+
+# Configurer l'environnement de test (avec mocks)
+powershell -c "./activate_project_env.ps1; python scripts/setup_manager.py setup --env test --with-mocks"
 ```
 
-### `validate`
+**Que fait cette commande ?**
 
-Valide des composants spécifiques de l'environnement pour s'assurer qu'ils sont correctement configurés.
+*   `--env dev` : S'assure que les prérequis de base sont là et configure les variables d'environnement.
+*   `--env test` : Orchestre la préparation complète de l'environnement de test, incluant :
+    *   Le téléchargement des dépendances JAR nécessaires.
+    *   L'activation des mocks (si `--with-mocks` est utilisé) pour simuler des composants comme la JVM.
 
-**Utilisation :**
+### 2. Validation Complète du Projet (`validate`)
+
+Cette commande lance un bilan de santé complet sur le projet.
+
 ```bash
-python scripts/setup_manager.py validate --component <nom_du_composant>
+# Lancer une validation complète de tous les composants
+powershell -c "./activate_project_env.ps1; python scripts/maintenance_manager.py validate --all"
 ```
 
-**Composants disponibles :**
+*Note : La commande `validate --all` est implémentée via le `maintenance_manager.py` pour regrouper toutes les actions de "vérification" de l'état du projet.*
 
-- `build-tools`:
-  Vérifie la présence des outils de compilation Visual Studio sur Windows, nécessaires pour compiler certaines dépendances Python (comme `JPype`). Si la validation échoue, elle vous guidera sur la marche à suivre.
+**Que fait cette commande ?**
 
-  ```bash
-  python scripts/setup_manager.py validate --component build-tools
-  ```
+Elle exécute une série de vérifications et produit un rapport sur :
+*   L'existence des fichiers et répertoires critiques.
+*   La validité des imports majeurs du projet.
+*   La couverture de code des tests.
 
-- `jvm-bridge`:
-  Vérifie que la librairie `jpype` est installée, ce qui est essentiel pour la communication entre Python et la JVM.
+## Commandes de Réparation (Dépannage)
 
-  ```bash
-  python scripts/setup_manager.py validate --component jvm-bridge
-  ```
+### 3. Réparation des Dépendances (`fix-deps`)
+
+Utilisez cette commande lorsque vous rencontrez des problèmes avec des paquets Python.
+
+**Par paquet :**
+```bash
+# Réinstaller de force `numpy` et `pandas`
+powershell -c "./activate_project_env.ps1; python scripts/setup_manager.py fix-deps --package numpy pandas"
+
+# Tenter une réparation agressive pour JPype1 (essaie plusieurs stratégies)
+powershell -c "./activate_project_env.ps1; python scripts/setup_manager.py fix-deps --package JPype1 --strategy=aggressive"
+```
+
+**Depuis un fichier `requirements.txt`:**
+```bash
+# Installer les dépendances pour un sous-projet
+powershell -c "./activate_project_env.ps1; python scripts/setup_manager.py fix-deps --from-requirements abs_arg_dung/requirements.txt"
+```
+
+### 4. Configuration Manuelle du `PYTHONPATH` (`set-path`)
+
+En dernier recours, si le projet n'est pas trouvé par Python, cette commande crée un fichier `.pth` dans votre environnement pour forcer la reconnaissance du chemin du projet.
+
+```bash
+powershell -c "./activate_project_env.ps1; python scripts/setup_manager.py set-path"
+```
+
+Cette commande est particulièrement utile si `pip install -e .` a échoué.

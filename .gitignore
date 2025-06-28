@@ -29,7 +29,7 @@ MANIFEST
 
 # PyInstaller
 # Ces fichiers sont généralement écrits par un scrip
-pt python à partir d'un modèle
+# pt python à partir d'un modèle
 # avant que PyInstaller ne construise l'exe, afin d'
 'y injecter des informations de date/version.        
 *.manifest
@@ -326,3 +326,7 @@ node-v*/
 chiers de log
 **/__pycache__/
 *.log
+
+
+# Archives created by maintenance scripts
+results_archive/

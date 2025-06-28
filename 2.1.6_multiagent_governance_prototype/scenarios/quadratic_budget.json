@@ -1,0 +1,12 @@
+{
+  "agents": [
+    {"name": "Q1", "personality": "flexible", "preferences": ["A", "B", "C", "D"], "options": ["A", "B", "C", "D"]},
+    {"name": "Q2", "personality": "strategic", "preferences": ["B", "C", "D", "A"], "options": ["A", "B", "C", "D"]},
+    {"name": "Q3", "personality": "stubborn", "preferences": ["C", "D", "A", "B"], "options": ["A", "B", "C", "D"]},
+    {"name": "Q4", "personality": "random", "preferences": ["D", "A", "B", "C"], "options": ["A", "B", "C", "D"]},
+    {"name": "Q5", "personality": "flexible", "preferences": ["B", "A", "C", "D"], "options": ["A", "B", "C", "D"]},
+    {"name": "Q6", "personality": "strategic", "preferences": ["C", "B", "D", "A"], "options": ["A", "B", "C", "D"]}
+  ],
+  "options": ["A", "B", "C", "D"],
+  "context": {"description": "Quadratic voting test: 6 agents, 4 options, custom budget. Mix of personalities.", "quadratic_budget": 15}
+} 
