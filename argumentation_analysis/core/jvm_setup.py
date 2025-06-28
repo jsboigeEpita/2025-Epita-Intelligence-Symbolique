@@ -378,6 +378,15 @@ def initialize_jvm(session_fixture_owns_jvm=False) -> bool:
         try:
             jvm_path = jpype.getDefaultJVMPath()
             jvm_options = get_jvm_options()
+            
+            # --- AJOUT DEBUG ---
+            logger.info("="*20 + " JVM STARTUP DEBUG " + "="*20)
+            logger.info(f"Chemin de la JVM: {jvm_path}")
+            logger.info(f"Options JVM: {jvm_options}")
+            logger.info(f"Classpath: {classpath}")
+            logger.info("="*58)
+            # --- FIN AJOUT DEBUG ---
+
             logger.info("Tentative de démarrage de la JVM...")
             jpype.startJVM(
                 jvm_path,

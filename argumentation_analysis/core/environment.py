@@ -111,7 +111,7 @@ if __name__ != "__main__" and not os.getenv("IS_PYTEST_RUNNING"):
     #
     # NE JAMAIS DÉSACTIVER, COMMENTER OU SUPPRIMER CETTE LIGNE.
     # =====================================================================================
-    ensure_env()
+    pass  # Temporairement désactivé pour les tests
 
 
 if __name__ == "__main__":

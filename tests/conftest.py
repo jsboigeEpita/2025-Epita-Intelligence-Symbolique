@@ -39,11 +39,13 @@ def pytest_configure(config):
 
             updated_vars = 0
             for key, value in env_vars.items():
-                if value is not None:
+                if key not in os.environ and value is not None:
                     os.environ[key] = value
                     updated_vars += 1
-                else:
+                elif value is None:
                     print(f"[WARNING] Skipping .env variable '{key}' because its value is None.")
+                else:
+                    print(f"[INFO] Skipping .env variable '{key}' because it's already set in the environment.")
             
             print(f"[INFO] Loaded {updated_vars} variables from .env into os.environ.")
             

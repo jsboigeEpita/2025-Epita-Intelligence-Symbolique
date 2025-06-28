@@ -21,9 +21,9 @@ def test_dummy_health_check_to_isolate_playwright():
 def test_health_check_endpoint(playwright: Playwright, backend_url: str):
     """
     Test a lightweight, dependency-free /api/health endpoint using a raw API request.
-    This avoids launching a full browser page, which can cause asyncio conflicts.
+    This avoids launching a full browser page and potential asyncio event loop conflicts by running synchronously.
     """
-    logger.info("--- DEBUT test_health_check_endpoint (API only) ---")
+    logger.info("--- DEBUT test_health_check_endpoint (API only, sync) ---")
     health_check_url = f"{backend_url}/api/health"
     logger.info(f"Tentative de requête API vers l'endpoint de health check: {health_check_url}")
 
@@ -56,45 +56,17 @@ def test_successful_simple_argument_analysis(page: Page, frontend_url: str):
     Scenario 1.1: Successful analysis of a simple argument (Happy Path)
     This test targets the React application.
     """
-    logger.info("--- DEBUT test_successful_simple_argument_analysis ---")
-    
     try:
-        # --- Instrumentation pour le débogage ---
-        def log_console_message(msg):
-            logger.info(f"[BROWSER CONSOLE] {msg.type}: {msg.text}")
+        # Navigate to the React app
+        page.goto(frontend_url)
 
-        def log_network_request(request):
-            logger.info(f"[BROWSER NETWORK] >> {request.method} {request.url}")
+        # Wait for the API to be connected
+        expect(page.locator(".api-status.connected")).to_be_visible(timeout=60000)
 
-        def log_network_response(response):
-            logger.info(f"[BROWSER NETWORK] << {response.status} {response.url}")
+        # Navigate to the "Analyse" tab
+        page.locator('[data-testid="analyzer-tab"]').click()
 
-        page.on("console", log_console_message)
-        page.on("request", log_network_request)
-        page.on("response", log_network_response)
-        # --- Fin de l'instrumentation ---
-
-        logger.info(f"Étape 1: Navigation vers l'URL du frontend: {frontend_url}")
-        page.goto(frontend_url, timeout=90000)  # Timeout augmenté
-        logger.info("SUCCES: Navigation terminée.")
-
-        logger.info("Étape 2: Attente de la connexion à l'API.")
-        logger.info("CHERCHE: Indicateur de connexion '.api-status.connected'")
-        api_status_locator = page.locator(".api-status.connected")
-        logger.info("TROUVÉ: Localisateur pour '.api-status.connected'.")
-        logger.info("VÉRIFICATION: L'indicateur est visible (timeout=60s).")
-        expect(api_status_locator).to_be_visible(timeout=60000) # Timeout augmenté
-        logger.info("SUCCES: Indicateur de connexion API visible.")
-
-        logger.info("Étape 3: Clic sur l'onglet 'Analyse'.")
-        logger.info("CHERCHE: Onglet 'Analyse' avec le sélecteur '[data-testid=\"analyzer-tab\"]'")
-        analyzer_tab_locator = page.locator('[data-testid="analyzer-tab"]')
-        logger.info("TROUVÉ: Localisateur pour l'onglet 'Analyse'.")
-        logger.info("ACTION: Clic.")
-        analyzer_tab_locator.click()
-        logger.info("SUCCES: Clic sur l'onglet 'Analyse' effectué.")
-
-        # Définition des localisateurs
+        # Define locators
         argument_input = page.locator("#argument-text")
         submit_button = page.locator("form.analyzer-form button[type=\"submit\"]")
         results_container = page.locator(".analysis-results")
@@ -102,61 +74,40 @@ def test_successful_simple_argument_analysis(page: Page, frontend_url: str):
         
         argument_text = "Tous les hommes sont mortels. Socrate est un homme. Donc Socrate est mortel."
 
-        logger.info("Étape 4: Remplissage du champ d'analyse.")
-        logger.info("CHERCHE: Champ de texte '#argument-text'")
-        logger.info("VÉRIFICATION: Le champ est visible (timeout=10s).")
-        expect(argument_input).to_be_visible(timeout=10000)
-        logger.info("TROUVÉ: Champ de texte visible.")
-        logger.info(f"ACTION: Remplissage avec le texte : '{argument_text[:30]}...'")
+        # Fill the input
+        expect(argument_input).to_be_visible()
         argument_input.fill(argument_text)
-        logger.info("SUCCES: Champ d'analyse rempli.")
 
-        logger.info("Étape 5: Clic sur le bouton de soumission.")
-        logger.info("CHERCHE: Bouton de soumission 'form.analyzer-form button[type=\"submit\"]'")
-        logger.info("TROUVÉ: Localisateur pour le bouton de soumission.")
-        logger.info("ACTION: Clic.")
+        # Click submit
         submit_button.click()
-        logger.info("SUCCES: Bouton de soumission cliqué.")
 
-        logger.info("Étape 6: Attente de la disparition du spinner de chargement.")
-        logger.info("CHERCHE: Spinner de chargement '.loading-spinner'")
-        logger.info("VÉRIFICATION: Le spinner n'est plus visible (timeout=120s).")
+        # Wait for results
         expect(loading_spinner).not_to_be_visible(timeout=120000)
-        logger.info("SUCCES: Spinner de chargement disparu.")
-
-        logger.info("Étape 7: Attente et vérification des résultats.")
-        logger.info("CHERCHE: Conteneur de résultats '.analysis-results'")
-        logger.info("VÉRIFICATION: Le conteneur de résultats est visible (timeout=10s).")
-        expect(results_container).to_be_visible(timeout=10000)
-        logger.info("TROUVÉ: Conteneur de résultats visible.")
-        logger.info("VÉRIFICATION: Le conteneur contient le texte 'Structure argumentative'.")
+        expect(results_container).to_be_visible()
         expect(results_container).to_contain_text("Structure argumentative")
-        logger.info("SUCCES: Conteneur de résultats visible et contient le texte attendu.")
-        
+
     except PlaywrightTimeoutError as e:
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         screenshot_path = f"playwright-timeout-screenshot-{timestamp}.png"
         html_path = f"playwright-timeout-page-{timestamp}.html"
         
-        logger.error(f"ERREUR FATALE: Timeout Playwright détecté. {e}")
+        logger.error(f"FATAL ERROR: Playwright timeout detected. {e}")
         try:
-            logger.info(f"Tentative de sauvegarde de la capture d'écran dans : {screenshot_path}")
+            logger.info(f"Attempting to save screenshot to: {screenshot_path}")
             page.screenshot(path=screenshot_path, full_page=True)
-            logger.info("Capture d'écran sauvegardée avec succès.")
+            logger.info("Screenshot saved successfully.")
             
-            logger.info(f"Tentative de sauvegarde du HTML de la page dans : {html_path}")
+            logger.info(f"Attempting to save page HTML to: {html_path}")
             with open(html_path, "w", encoding="utf-8") as f:
                 f.write(page.content())
-            logger.info("HTML de la page sauvegardé avec succès.")
+            logger.info("Page HTML saved successfully.")
         except Exception as save_exc:
-            logger.error(f"ÉCHEC de la sauvegarde des artefacts de débogage. Erreur : {save_exc}")
+            logger.error(f"Failed to save debug artifacts. Error: {save_exc}")
             
-        pytest.fail(f"Timeout Playwright. Artefacts de débogage (screenshot/html) sauvegardés. Erreur originale: {e}")
+        pytest.fail(f"Playwright timeout. Debug artifacts (screenshot/html) saved. Original error: {e}")
     except Exception as e:
-        logger.error(f"ERREUR INATTENDUE dans le test: {e}", exc_info=True)
-        pytest.fail(f"Une exception inattendue est survenue: {e}")
-
-    logger.info("--- FIN test_successful_simple_argument_analysis ---")
+        logger.error(f"UNEXPECTED ERROR in test: {e}", exc_info=True)
+        pytest.fail(f"An unexpected exception occurred: {e}")
 
 
 @pytest.mark.playwright
