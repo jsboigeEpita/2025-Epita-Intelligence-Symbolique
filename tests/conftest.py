@@ -106,25 +106,35 @@ def _ensure_tweety_jars_are_correctly_placed():
         logger.error(f"Erreur lors du déplacement défensif des JARs Tweety: {e}", exc_info=True)
 
 
-@pytest.fixture(scope="session")
-def anyio_backend(request):
-    return request.config.getoption("anyio_backend", "asyncio")
+# @pytest.fixture(scope="session")
+# def anyio_backend(request):
+#     """
+#     DEPRECATED: This fixture was causing conflicts with pytest-playwright.
+#     The `apply_nest_asyncio` fixture is now disabled.
+#     """
+#     return request.config.getoption("anyio_backend", "asyncio")
 
 @pytest.fixture(scope="session", autouse=True)
-def apply_nest_asyncio(anyio_backend):
+def apply_nest_asyncio():
     """
-    Applies nest_asyncio to allow nested event loops.
-    This is necessary for running asyncio tests in some environments.
-    Only applied for the 'asyncio' backend.
+    DEPRECATED/DISABLED: This fixture, which applies nest_asyncio, creates a
+    fundamental conflict with the pytest-playwright plugin, causing tests to
+    hang indefinitely. It is disabled for now.
+    If other dedicated asyncio tests fail, a more targeted solution will be
+    needed, for example, by creating a custom marker to enable nest_asyncio
+    only for specific tests that require it, instead of using `autouse=True`.
     """
-    if anyio_backend == "asyncio":
-        logger.info(f"Applying nest_asyncio for '{anyio_backend}' backend.")
-        nest_asyncio.apply()
-        yield
-        logger.info("nest_asyncio teardown for 'asyncio' backend.")
-    else:
-        logger.info(f"Skipping nest_asyncio for '{anyio_backend}' backend.")
-        yield
+    # Original problematic code:
+    # if anyio_backend == "asyncio":
+    #     logger.info(f"Applying nest_asyncio for '{anyio_backend}' backend.")
+    #     nest_asyncio.apply()
+    #     yield
+    #     logger.info("nest_asyncio teardown for 'asyncio' backend.")
+    # else:
+    #     logger.info(f"Skipping nest_asyncio for '{anyio_backend}' backend.")
+    #     yield
+    logger.warning("The 'apply_nest_asyncio' fixture in conftest.py is currently disabled to ensure compatibility with Playwright.")
+    yield
 
 @pytest.fixture(scope="session", autouse=True)
 def jvm_session(request):

@@ -412,10 +412,10 @@ class PropositionalLogicAgent(BaseLogicAgent):
             return None, "Aucune formule valide n'a pu être générée ou conservée après filtrage."
 
         belief_set_content = "\n".join(valid_formulas)
-        is_valid, validation_msg = self._tweety_bridge.validate_belief_set(belief_set_content)
-        if not is_valid:
-            self.logger.error(f"Ensemble de croyances final invalide: {validation_msg}\nContenu:\n{belief_set_content}")
-            return None, f"Ensemble de croyances invalide: {validation_msg}"
+        is_consistent = self._tweety_bridge.pl_handler.pl_check_consistency(belief_set_content)
+        if not is_consistent:
+            self.logger.error(f"Ensemble de croyances final invalide: Incohérent\nContenu:\n{belief_set_content}")
+            return None, f"Ensemble de croyances invalide: Incohérent"
 
         belief_set = PropositionalBeliefSet(belief_set_content, propositions=list(declared_propositions))
         self.logger.info("Conversion et validation du BeliefSet réussies.")
