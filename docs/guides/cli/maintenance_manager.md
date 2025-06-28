@@ -19,6 +19,26 @@ python scripts/maintenance_manager.py repo find-orphans
 
 ---
 
+### `cleanup`
+
+Commandes pour nettoyer le projet des fichiers et répertoires temporaires.
+
+#### `cleanup --default`
+
+Supprime les fichiers et répertoires temporaires courants générés par Python et `pytest`. La commande cible spécifiquement :
+- Les répertoires `__pycache__`
+- Les répertoires `.pytest_cache`
+- Les fichiers se terminant par `.pyc`
+
+Elle parcourt l'ensemble du projet depuis la racine et supprime les éléments correspondants, en ignorant les liens symboliques pour éviter les erreurs.
+
+**Usage :**
+```bash
+python scripts/maintenance_manager.py cleanup --default
+```
+
+---
+
 ### `organize`
 
 Commandes pour réorganiser les répertoires du projet.
@@ -92,4 +112,3 @@ python scripts/maintenance_manager.py organize --apply-plan plan.json
 ```
 
 ---
-*D'autres commandes seront documentées ici au fur et à mesure de leur implémentation.*
