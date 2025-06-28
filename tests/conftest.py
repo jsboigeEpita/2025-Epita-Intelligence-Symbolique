@@ -255,13 +255,21 @@ def pytest_addoption(parser):
 
 @pytest.fixture(scope="session")
 def backend_url(request):
-    """Fixture pour récupérer l'URL du backend depuis les options pytest."""
-    return request.config.getoption("--backend-url")
+    """
+    Fixture to get the backend URL.
+    It prioritizes the BACKEND_URL environment variable, then falls back
+    to the --backend-url command-line option.
+    """
+    return os.environ.get("BACKEND_URL", request.config.getoption("--backend-url"))
 
 @pytest.fixture(scope="session")
 def frontend_url(request):
-    """Fixture pour récupérer l'URL du frontend depuis les options pytest."""
-    return request.config.getoption("--frontend-url")
+    """
+    Fixture to get the frontend URL.
+    It prioritizes the FRONTEND_URL environment variable, then falls back
+    to the --frontend-url command-line option.
+    """
+    return os.environ.get("FRONTEND_URL", request.config.getoption("--frontend-url"))
 
 @pytest.fixture(autouse=True)
 def mock_crypto_passphrase(monkeypatch):

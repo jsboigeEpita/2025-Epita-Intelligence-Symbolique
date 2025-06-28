@@ -81,10 +81,8 @@ except ImportError as e:
     logger.error(f'Failed to import semantic_kernel: {e}')
     sk_module = None
 
-try:
-    from argumentation_analysis.ui.config import ENCRYPTION_KEY as ENCRYPTION_KEY_imported
-except ImportError:
-    logger.warning("ENCRYPTION_KEY not found in argumentation_analysis.ui.config. CryptoService might rely on .env or fail.")
+# L'import de ENCRYPTION_KEY depuis ui.config est supprimé au profit de l'objet settings.
+ENCRYPTION_KEY_imported = None
 
 try:
     from argumentation_analysis.models.extract_definition import ExtractDefinitions as ExtractDefinitions_class, SourceDefinition as SourceDefinition_class, Extract as Extract_class
@@ -298,35 +296,26 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
 
     if CryptoService_class:
         logger.info("Initialisation de CryptoService...")
-        key_to_use = ENCRYPTION_KEY_imported
-        passphrase_to_use = None
+        # La logique de recherche de clé est simplifiée pour utiliser directement l'objet `settings`.
+        key_from_settings = settings.encryption_key.get_secret_value() if settings.encryption_key else None
+        passphrase_from_settings = settings.passphrase.get_secret_value() if settings.passphrase else None
 
-        if not key_to_use and context.config.get('ENCRYPTION_KEY_FROM_ENV'):
-            key_to_use = context.config['ENCRYPTION_KEY_FROM_ENV']
-            logger.info("Utilisation de ENCRYPTION_KEY depuis le fichier .env pour CryptoService.")
-        elif not key_to_use:
-             passphrase_to_use = context.config.get('TEXT_CONFIG_PASSPHRASE')
-             if passphrase_to_use:
-                 logger.info("ENCRYPTION_KEY non trouvée, utilisation de TEXT_CONFIG_PASSPHRASE pour CryptoService.")
-             else:
-                 logger.warning("Ni ENCRYPTION_KEY (ui.config ou .env) ni TEXT_CONFIG_PASSPHRASE (.env) trouvées pour CryptoService.")
-        
         try:
-            if key_to_use:
-                context.crypto_service = CryptoService_class(encryption_key=key_to_use)
-                logger.info("CryptoService initialisé avec encryption_key.")
-            elif passphrase_to_use:
+            if key_from_settings:
+                context.crypto_service = CryptoService_class(encryption_key=key_from_settings)
+                logger.info("CryptoService initialisé avec la clé de `settings.encryption_key`.")
+            elif passphrase_from_settings:
                  temp_crypto_for_derivation = CryptoService_class()
-                 derived_key = temp_crypto_for_derivation.derive_key_from_passphrase(passphrase_to_use)
+                 derived_key = temp_crypto_for_derivation.derive_key_from_passphrase(passphrase_from_settings)
                  if derived_key:
                      context.crypto_service = CryptoService_class(encryption_key=derived_key)
-                     logger.info("CryptoService initialisé avec une clé dérivée de la passphrase.")
+                     logger.info("CryptoService initialisé avec une clé dérivée de `settings.passphrase`.")
                  else:
-                     logger.error("Échec de la dérivation de la clé à partir de la passphrase. CryptoService non-initialisé avec clé.")
-                     context.crypto_service = CryptoService_class() # Initialisation sans clé
+                     logger.error("Échec de la dérivation de la clé à partir de la passphrase. CryptoService initialisé sans clé.")
+                     context.crypto_service = CryptoService_class()
             else:
                 context.crypto_service = CryptoService_class()
-                logger.warning("CryptoService initialisé sans clé/passphrase explicite.")
+                logger.warning("CryptoService initialisé sans clé ou passphrase explicite depuis `settings`.")
         except Exception as e:
             logger.error(f"Erreur lors de l'initialisation de CryptoService : {e}", exc_info=True)
     else:

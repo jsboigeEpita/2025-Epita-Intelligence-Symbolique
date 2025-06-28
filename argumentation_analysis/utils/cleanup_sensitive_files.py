@@ -32,7 +32,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 # Importer les modules nécessaires
 try:
-    from argumentation_analysis.ui import config as ui_config
+    from argumentation_analysis.config.settings import settings
     from argumentation_analysis.ui.extract_utils import load_extract_definitions_safely
     logger.info("Import réussi.")
 except ImportError as e:
@@ -41,10 +41,12 @@ except ImportError as e:
     sys.exit(1)
 
 # Définir les constantes
-ENCRYPTION_KEY = ui_config.ENCRYPTION_KEY
-CONFIG_FILE = ui_config.CONFIG_FILE
-CONFIG_FILE_JSON = ui_config.CONFIG_FILE_JSON
-CONFIG_FILE_ENC = ui_config.CONFIG_FILE_ENC
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+ENCRYPTION_KEY = settings.encryption_key.get_secret_value() if settings.encryption_key else None
+CONFIG_DIR = PROJECT_ROOT / "argumentation_analysis" / "data"
+CONFIG_FILE_JSON = CONFIG_DIR / "extract_sources.json"
+CONFIG_FILE_ENC = CONFIG_DIR / "extract_sources.json.gz.enc"
+CONFIG_FILE = CONFIG_FILE_ENC
 
 def verify_encrypted_file():
     """

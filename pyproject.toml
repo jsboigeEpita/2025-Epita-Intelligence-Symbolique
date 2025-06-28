@@ -21,9 +21,6 @@ pythonpath = [
 testpaths = [
     "tests"
 ]
-dotenv_files = [
-    ".env"
-]
 markers = [
     "authentic",
     "phase5",

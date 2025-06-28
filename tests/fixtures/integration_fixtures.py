@@ -358,9 +358,10 @@ def webapp_service(request):
     if request.config.getoption("--disable-e2e-servers-fixture"):
         pytest.skip("Fixture webapp_service désactivée via la ligne de commande.")
 
-    # Récupérer les URLs depuis les options pytest
-    backend_url = request.config.getoption("--backend-url")
-    frontend_url = request.config.getoption("--frontend-url")
+    # Récupérer les URLs en priorité depuis les variables d'environnement,
+    # puis depuis les options pytest en fallback.
+    backend_url = os.environ.get("BACKEND_URL", request.config.getoption("--backend-url"))
+    frontend_url = os.environ.get("FRONTEND_URL", request.config.getoption("--frontend-url"))
 
     # Valider que les URLs sont bien présentes, sinon les tests E2E n'ont pas de sens.
     if not backend_url or not frontend_url:
