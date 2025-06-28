@@ -13,6 +13,8 @@ import time
 import requests
 import subprocess
 import pytest
+from pathlib import Path
+from dotenv import load_dotenv
 
 def test_environment_setup():
     """Test 1: Verification environnement."""
@@ -35,7 +37,10 @@ def test_environment_setup():
 def test_api_startup_and_basic_functionality():
     """Test 2: Demarrage API et fonctionnalite de base."""
     print("\n=== Test 2: Demarrage API et fonctionnalites ===")
-    
+
+    # La configuration de l'environnement est gérée par conftest.py
+    # load_dotenv(override=True) # Cette ligne n'est plus nécessaire.
+
     # Configuration
     api_url = "http://localhost:8001"
     api_process = None

@@ -30,25 +30,27 @@ def pytest_configure(config):
         if dotenv_path.exists():
             print(f"[INFO] Loading .env file from: {dotenv_path}")
             
-            # Charger les valeurs sans modifier automatiquement os.environ
+            # Utilisation de la méthode standard et propre maintenant que le .env est sain
             env_vars = dotenv_values(dotenv_path=dotenv_path)
             
             if not env_vars:
-                print(f"[WARNING] .env file found at '{dotenv_path}' but it is empty or could not be parsed.")
+                print(f"[WARNING] .env file found at '{dotenv_path}' but it seems to be empty.")
                 return
 
-            # Mettre à jour manuellement os.environ, en écrasant les valeurs existantes (comportement `override`)
             updated_vars = 0
             for key, value in env_vars.items():
-                os.environ[key] = value  # Met à jour ou ajoute la clé
-                updated_vars += 1
+                if value is not None:
+                    os.environ[key] = value
+                    updated_vars += 1
+                else:
+                    print(f"[WARNING] Skipping .env variable '{key}' because its value is None.")
             
-            print(f"[INFO] Manually set/updated os.environ with {updated_vars} variables from .env file (override mode).")
-            # Vérification immédiate pour le débogage
-            if 'OPENAI_API_KEY' in os.environ:
-                print("[DEBUG] OPENAI_API_KEY is now present in os.environ in pytest_configure.")
+            print(f"[INFO] Loaded {updated_vars} variables from .env into os.environ.")
+            
+            if 'OPENAI_API_KEY' not in os.environ:
+                 print(f"[WARNING] OPENAI_API_KEY was not found in the loaded .env variables.")
             else:
-                 print("[DEBUG] WARNING: OPENAI_API_KEY was NOT found in os.environ after manual update.")
+                 print("[INFO] OPENAI_API_KEY successfully loaded.")
 
         else:
             print(f"[INFO] No .env file found at '{dotenv_path}'.")
