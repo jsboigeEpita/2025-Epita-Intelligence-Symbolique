@@ -3,10 +3,11 @@ import logging
 import asyncio
 # La configuration du logging (appel à setup_logging()) est supposée être faite globalement.
 from argumentation_analysis.core.utils.logging_utils import setup_logging
-from .tweety_initializer import TweetyInitializer # To access FOL parser
+from .tweety_initializer import TweetyInitializer
+from argumentation_analysis.core.prover9_runner import run_prover9
 
 setup_logging()
-logger = logging.getLogger(__name__) # Obtient le logger pour ce module
+logger = logging.getLogger(__name__)
 
 class FOLHandler:
     """
@@ -199,53 +200,55 @@ class FOLHandler:
 
     async def fol_check_consistency(self, belief_set):
         """
-        Checks if an FOL knowledge base (as a Java object) is consistent.
+        Checks if an FOL knowledge base is consistent using an external Prover9 process.
         """
-        logger.debug(f"Checking FOL consistency for belief set of size {belief_set.size()}")
+        logger.debug(f"Checking FOL consistency for belief set of size {belief_set.size()} via external Prover9")
         try:
-            Contradiction = jpype.JClass("org.tweetyproject.logics.fol.syntax.Contradiction")()
-            if not hasattr(self, '_fol_reasoner') or self._fol_reasoner is None:
-                 Prover = jpype.JClass("org.tweetyproject.logics.fol.reasoner.SimpleFolReasoner")
-                 self._fol_reasoner = Prover()
+            # Convert belief set to Prover9 input format
+            formulas_str = belief_set.toString().replace(";", ".\n")
+            prover9_input = f"formulas(assumptions).\n{formulas_str}\nend_of_list.\n\ngoals.\n$F.\nend_of_list."
 
-            is_consistent_result = await asyncio.to_thread(
-                self._fol_reasoner.query, belief_set, Contradiction
-            )
-            is_consistent = not is_consistent_result
+            logger.debug(f"Prover9 input for consistency check:\n{prover9_input}")
+
+            # Run Prover9 externally
+            prover9_output = await asyncio.to_thread(run_prover9, prover9_input)
+            
+            # Check output for proof of contradiction
+            is_consistent = "END OF PROOF" not in prover9_output
+            
             msg = f"Consistency check result: {is_consistent}"
             logger.info(msg)
             return is_consistent, msg
-        except jpype.JException as e:
-            logger.error(f"JPype JException during FOL consistency check: {e.getMessage()}", exc_info=True)
-            raise RuntimeError(f"FOL consistency check failed: {e.getMessage()}") from e
+        except Exception as e:
+            logger.error(f"Error during external FOL consistency check: {e}", exc_info=True)
+            raise RuntimeError(f"FOL consistency check failed: {e}") from e
 
     def fol_query(self, belief_set, query_formula_str: str) -> bool:
         """
-        Checks if a query formula is entailed by an FOL belief base object.
+        Checks if a query is entailed by a belief base using an external Prover9 process.
         """
-        logger.debug(f"Performing FOL query. Query: '{query_formula_str}'")
+        logger.debug(f"Performing FOL query via external Prover9. Query: '{query_formula_str}'")
         try:
-            signature = belief_set.getSignature()
+            # Convert belief set and query to Prover9 input format
+            formulas_str = belief_set.toString().replace(";", ".\n")
             
-            FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
-            parser = FolParser()
-            parser.setSignature(signature)
+            # The query must not end with a period in the goals section for Prover9
+            prover9_goal = query_formula_str.rstrip('.')
             
-            logger.info(f"Signature for query parsing: {signature.toString()}")
-            query_formula = self.parse_fol_formula(query_formula_str, custom_parser=parser)
+            prover9_input = f"formulas(assumptions).\n{formulas_str}\nend_of_list.\n\ngoals.\n{prover9_goal}.\nend_of_list."
             
-            # Utiliser le même raisonneur que pour la vérification de cohérence pour la consistance.
-            if not hasattr(self, '_fol_reasoner') or self._fol_reasoner is None:
-                 Prover = jpype.JClass("org.tweetyproject.logics.fol.reasoner.SimpleFolReasoner")
-                 self._fol_reasoner = Prover()
-            
-            # La méthode query est synchrone, pas besoin d'asyncio ici.
-            entails = self._fol_reasoner.query(belief_set, query_formula)
+            logger.debug(f"Prover9 input for query:\n{prover9_input}")
+
+            # Run Prover9 externally
+            prover9_output = run_prover9(prover9_input)
+
+            # Check for "END OF PROOF" which means the goal was proven
+            entails = "END OF PROOF" in prover9_output
             
             logger.info(f"FOL Query: KB entails '{query_formula_str}'? {entails}")
-            return bool(entails)
-        except (ValueError, jpype.JException) as e:
-            logger.error(f"Error during FOL query: {e}", exc_info=True)
+            return entails
+        except Exception as e:
+            logger.error(f"Error during external FOL query: {e}", exc_info=True)
             raise
 
     def validate_formula_with_signature(self, signature, formula_str: str) -> tuple[bool, str]:

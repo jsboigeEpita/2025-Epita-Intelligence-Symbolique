@@ -1,0 +1,42 @@
+# Fichier: .github/workflows/ci.yml
+# Description: Workflow d'intégration continue pour le projet.
+#
+# Actions:
+# 1. Checkout du code.
+# 2. Setup de Python.
+# 3. Setup de l'environnement de test (Java via le script PowerShell).
+# 4. Installation des dépendances Python.
+# 5. Exécution des tests unitaires avec pytest.
+
+name: Python CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest  # Les tests dépendent de PowerShell
+
+    steps:
+    - name: Checkout du code
+      uses: actions/checkout@v3
+
+    - name: Configuration de Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11' # Spécifier la version de Python
+
+    - name: Configuration de l'environnement de test (Java/Tweety)
+      run: ./setup_test_env.ps1
+      shell: pwsh
+
+    - name: Installation des dépendances Python
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Exécution des tests unitaires
+      run: pytest

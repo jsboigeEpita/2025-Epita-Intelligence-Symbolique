@@ -61,9 +61,9 @@ class TestModalLogicAgent:
         kernel.plugins = {}
         for agent_name in ["TestModalAgent", "IntegrationAgent"]:
             kernel.plugins[agent_name] = {
-                "TextToModalBeliefSet": MagicMock(spec=KernelFunction, invoke=AsyncMock()),
-                "GenerateModalQueryIdeas": MagicMock(spec=KernelFunction, invoke=AsyncMock()),
-                "InterpretModalResult": MagicMock(spec=KernelFunction, invoke=AsyncMock())
+                "TextToModalBeliefSet": AsyncMock(spec=KernelFunction),
+                "GenerateModalQueryIdeas": AsyncMock(spec=KernelFunction),
+                "InterpretModalResult": AsyncMock(spec=KernelFunction)
             }
         
         # Simuler get_function pour retourner les mocks pré-créés
@@ -235,9 +235,12 @@ class TestModalLogicAgent:
     
         modal_agent.setup_agent_components("test_service")
         # Correction : le mock doit retourner un objet avec un attribut 'value'
-        mock_response_object = MagicMock()
-        mock_response_object.value = mock_json_response
-        modal_agent._kernel.plugins[modal_agent.name]["TextToModalBeliefSet"].invoke = AsyncMock(return_value=mock_response_object)
+        # Le mock 'invoke' est déjà un AsyncMock grâce à la fixture.
+        # On configure directement sa valeur de retour.
+        # La valeur de retour d'une coroutine mockée est la valeur que `await` produira.
+        mock_response = MagicMock()
+        mock_response.value = mock_json_response
+        modal_agent._kernel.plugins[modal_agent.name]["TextToModalBeliefSet"].invoke.return_value = mock_response
         
         text = "Il est urgent d'agir sur le climat."
         belief_set, message = await modal_agent.text_to_belief_set(text)
@@ -258,9 +261,9 @@ class TestModalLogicAgent:
         mock_invalid_json = 'JSON invalide {'
     
         modal_agent.setup_agent_components("test_service")
-        mock_response_object = MagicMock()
-        mock_response_object.value = mock_invalid_json
-        modal_agent._kernel.plugins[modal_agent.name]["TextToModalBeliefSet"].invoke = AsyncMock(return_value=mock_response_object)
+        mock_response = MagicMock()
+        mock_response.value = mock_invalid_json
+        modal_agent._kernel.plugins[modal_agent.name]["TextToModalBeliefSet"].invoke.return_value = mock_response
         
         text = "Texte de test"
         with pytest.raises(ValueError) as excinfo:
@@ -299,9 +302,9 @@ class TestModalLogicAgent:
         mock_json_response = '{"query_ideas": [{"formula": "[](urgent)"}, {"formula": "<>(urgent)"}]}'
     
         modal_agent.setup_agent_components("test_service")
-        mock_response_object = MagicMock()
-        mock_response_object.value = mock_json_response
-        modal_agent._kernel.plugins[modal_agent.name]["GenerateModalQueryIdeas"].invoke = AsyncMock(return_value=mock_response_object)
+        mock_response = MagicMock()
+        mock_response.value = mock_json_response
+        modal_agent._kernel.plugins[modal_agent.name]["GenerateModalQueryIdeas"].invoke.return_value = mock_response
         
         text = "Test text"
         queries = await modal_agent.generate_queries(text, belief_set)
@@ -321,9 +324,9 @@ class TestModalLogicAgent:
         mock_json_response = '{"query_ideas": []}'
     
         modal_agent.setup_agent_components("test_service")
-        mock_response_object = MagicMock()
-        mock_response_object.value = mock_json_response
-        modal_agent._kernel.plugins[modal_agent.name]["GenerateModalQueryIdeas"].invoke = AsyncMock(return_value=mock_response_object)
+        mock_response = MagicMock()
+        mock_response.value = mock_json_response
+        modal_agent._kernel.plugins[modal_agent.name]["GenerateModalQueryIdeas"].invoke.return_value = mock_response
         
         text = "Test text"
         queries = await modal_agent.generate_queries(text, belief_set)
@@ -379,7 +382,7 @@ class TestModalLogicAgent:
         modal_agent.setup_agent_components("test_service")
         mock_response_object = MagicMock()
         mock_response_object.value = mock_response
-        modal_agent._kernel.plugins[modal_agent.name]["InterpretModalResult"].invoke = AsyncMock(return_value=mock_response_object)
+        modal_agent._kernel.plugins[modal_agent.name]["InterpretModalResult"].invoke.return_value = mock_response_object
         
         text = "Texte original"
         belief_set = ModalBeliefSet("constant urgent\n\n[](urgent)")
@@ -397,9 +400,7 @@ class TestModalLogicAgent:
         """Test la gestion d'erreur lors de l'interprétation."""
         # Mock qui lève une exception
         modal_agent.setup_agent_components("test_service")
-        mock_response_object = MagicMock()
-        mock_response_object.value = Exception("Interpret error")
-        modal_agent._kernel.plugins[modal_agent.name]["InterpretModalResult"].invoke = AsyncMock(side_effect=mock_response_object.value)
+        modal_agent._kernel.plugins[modal_agent.name]["InterpretModalResult"].invoke.side_effect = Exception("Interpret error")
         
         text = "Texte"
         belief_set = ModalBeliefSet("constant test\n\n[](test)")
@@ -500,9 +501,9 @@ class TestModalLogicAgent:
         modal_agent._tweety_bridge = mock_tweety_bridge
         modal_agent.setup_agent_components("test_service")
         
-        mock_response_object = MagicMock()
-        mock_response_object.value = '{"propositions": ["test"], "modal_formulas": ["[](test)"]}'
-        modal_agent._kernel.plugins[modal_agent.name]["TextToModalBeliefSet"].invoke = AsyncMock(return_value=mock_response_object)
+        mock_response = MagicMock()
+        mock_response.value = '{"propositions": ["test"], "modal_formulas": ["[](test)"]}'
+        modal_agent._kernel.plugins[modal_agent.name]["TextToModalBeliefSet"].invoke.return_value = mock_response
         mock_tweety_bridge.validate_modal_belief_set.return_value = (True, "Valid")
         
         # get_response est une coroutine, pas un générateur asynchrone
@@ -516,9 +517,9 @@ class TestModalLogicAgent:
         modal_agent._tweety_bridge = mock_tweety_bridge
         modal_agent.setup_agent_components("test_service")
         
-        mock_response_object = MagicMock()
-        mock_response_object.value = '{"propositions": ["test"], "modal_formulas": ["[](test)"]}'
-        modal_agent._kernel.plugins[modal_agent.name]["TextToModalBeliefSet"].invoke = AsyncMock(return_value=mock_response_object)
+        mock_response = MagicMock()
+        mock_response.value = '{"propositions": ["test"], "modal_formulas": ["[](test)"]}'
+        modal_agent._kernel.plugins[modal_agent.name]["TextToModalBeliefSet"].invoke.return_value = mock_response
         mock_tweety_bridge.validate_modal_belief_set.return_value = (True, "Valid")
 
         results = [result async for result in modal_agent.invoke("test text")]
@@ -532,9 +533,9 @@ class TestModalLogicAgent:
         modal_agent._tweety_bridge = mock_tweety_bridge
         modal_agent.setup_agent_components("test_service")
 
-        mock_response_object = MagicMock()
-        mock_response_object.value = '{"propositions": ["test"], "modal_formulas": ["[](test)"]}'
-        modal_agent._kernel.plugins[modal_agent.name]["TextToModalBeliefSet"].invoke = AsyncMock(return_value=mock_response_object)
+        mock_response = MagicMock()
+        mock_response.value = '{"propositions": ["test"], "modal_formulas": ["[](test)"]}'
+        modal_agent._kernel.plugins[modal_agent.name]["TextToModalBeliefSet"].invoke.return_value = mock_response
         mock_tweety_bridge.validate_modal_belief_set.return_value = (True, "Valid")
 
         results = [result async for result in modal_agent.invoke_stream("test text")]
@@ -559,9 +560,9 @@ class TestModalLogicAgentIntegration:
         kernel.plugins = {}
         for agent_name in ["TestModalAgent", "IntegrationAgent"]:
             kernel.plugins[agent_name] = {
-                "TextToModalBeliefSet": MagicMock(spec=KernelFunction, invoke=AsyncMock()),
-                "GenerateModalQueryIdeas": MagicMock(spec=KernelFunction, invoke=AsyncMock()),
-                "InterpretModalResult": MagicMock(spec=KernelFunction, invoke=AsyncMock())
+                "TextToModalBeliefSet": AsyncMock(spec=KernelFunction),
+                "GenerateModalQueryIdeas": AsyncMock(spec=KernelFunction),
+                "InterpretModalResult": AsyncMock(spec=KernelFunction)
             }
         
         # Simuler get_function pour retourner les mocks pré-créés

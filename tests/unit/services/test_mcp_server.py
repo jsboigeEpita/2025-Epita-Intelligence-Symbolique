@@ -3,7 +3,7 @@
 
 import pytest
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 
 # Correction des Mocks pour l'initialisation asynchrone
 sys.modules['mcp.server.fastmcp'] = MagicMock()
@@ -50,7 +50,7 @@ async def mcp_service_mock():
 
         async def mock_detect_fallacies(*args, **kwargs):
             return FallacyResponse(
-                success=True, text_analyzed="Sample text for fallacies"
+                success=True, text_analyzed="Sample text for fallacies", fallacies=[]
             )
 
         async def mock_build_framework(*args, **kwargs):
