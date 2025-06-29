@@ -1,16 +1,18 @@
 # config/config.yaml
 # Configuration des services d'IA utilisés par le Kernel
 
+default_llm_service_id: "azure_openai_chat_gpt4"
+
 ai_services:
   # Pointeur vers les secrets dans le fichier .env
   azure_openai_embedding:
     service_id: "azure_openai_embedding"
-    model_id: "text-embedding-ada-002"
+    deployment_name: "text-embedding-ada-002"
     env_api_key: "AZURE_OPENAI_API_KEY"
     env_endpoint: "AZURE_OPENAI_ENDPOINT"
 
   azure_openai_chat_gpt4:
     service_id: "azure_openai_chat_gpt4"
-    model_id: "gpt-4"
+    deployment_name: "gpt-4"
     env_api_key: "AZURE_OPENAI_API_KEY"
     env_endpoint: "AZURE_OPENAI_ENDPOINT"

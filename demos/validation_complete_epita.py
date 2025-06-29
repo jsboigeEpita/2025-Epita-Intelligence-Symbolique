@@ -1,5 +1,35 @@
-import argumentation_analysis.core.environment
 #!/usr/bin/env python3
+import sys
+import os
+from pathlib import Path
+
+# --- DÉBUT DU COUPE-CIRCUIT D'ENVIRONNEMENT ---
+# Ce bloc garantit que le script s'exécute dans le bon contexte, même s'il est appelé directement.
+try:
+    # Détecter la racine du projet de manière robuste
+    current_file_path = Path(__file__).resolve()
+    project_root = current_file_path.parent.parent
+
+    # Vérifier si la détection est correcte en cherchant un marqueur de projet
+    if not (project_root / "argumentation_analysis").exists() or not (project_root / "pyproject.toml").exists():
+        # Si le script est déplacé, remonter jusqu'à trouver la racine
+        project_root = next((p for p in current_file_path.parents if (p / "pyproject.toml").exists()), None)
+        if project_root is None:
+            raise FileNotFoundError("Impossible de localiser la racine du projet. Assurez-vous que 'pyproject.toml' est présent.")
+
+    # Ajouter la racine au sys.path si elle n'y est pas déjà
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+    
+    # Maintenant, l'import du vérificateur d'environnement peut se faire en toute sécurité
+    import argumentation_analysis.core.environment
+
+except (NameError, FileNotFoundError) as e:
+    print(f"ERREUR CRITIQUE DE BOOTSTRAP : Impossible de configurer l'environnement du projet.", file=sys.stderr)
+    print(f"Détails: {e}", file=sys.stderr)
+    print(f"Veuillez exécuter ce script via le wrapper 'activate_project_env.ps1'.", file=sys.stderr)
+    sys.exit(1)
+# --- FIN DU COUPE-CIRCUIT D'ENVIRONNEMENT ---
 """
 Validation Complète EPITA - Intelligence Symbolique
 Version 2.0 avec Paramètres Variables et Tests Authentiques
@@ -448,12 +478,22 @@ class ValidationEpitaComplete:
             # Table de mapping pour les alias de sophismes
             alias_map = {
                 "pente-glissante": "slippery-slope",
+                "glissement-vers-l'anarchie": "slippery-slope",
+                "glissement-de-terrain": "slippery-slope",
                 "fausse-dichotomie": "false-dilemma",
+                "false-dichotomy": "false-dilemma",
                 "faux-dilemme": "false-dilemma",
                 "homme-de-paille": "straw-man",
+                "sophisme-de-l'homme-de-paille": "straw-man",
                 "attaque-personnelle": "ad-hominem",
+                "argument-ad-hominem": "ad-hominem",
+                "ad-hominem": "ad-hominem",
+                "argumentum-ad-hominem": "ad-hominem",
                 "appeal-to-hypocrisy": "appeal-to-hypocrisy",
-                "stolen-concept": "stolen-concept"
+                "stolen-concept": "stolen-concept",
+                "argument-circulaire": "circular-reasoning",
+                "petitio-principii": "circular-reasoning",
+                "circular-reasoning": "stolen-concept"
             }
 
             detected_ids = []
@@ -678,7 +718,7 @@ Exemples d'utilisation:
                         help='Affichage verbeux des détails')
     
     parser.add_argument('--taxonomy', type=str,
-                        default='argumentation_analysis/data/taxonomies/fallacies_en_small.csv',
+                        default='argumentation_analysis/data/argumentum_fallacies_taxonomy.csv',
                         help='Chemin vers le fichier de taxonomie des sophismes CSV.')
 
     args = parser.parse_args()
