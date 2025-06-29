@@ -11,7 +11,7 @@ from semantic_kernel.contents.chat_history import ChatHistory
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.contents.function_call_content import FunctionCallContent
 from semantic_kernel.contents.function_result_content import FunctionResultContent
-from semantic_kernel.tools.function_view import FunctionView
+# from semantic_kernel.tools.function_view import FunctionView
 from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatCompletionAgent
 
 from argumentation_analysis.agents.plugins.fallacy_identification_plugin import FallacyIdentificationPlugin

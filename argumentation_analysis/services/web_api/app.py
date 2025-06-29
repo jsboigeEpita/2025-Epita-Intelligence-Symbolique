@@ -180,9 +180,9 @@ if __name__ == '__main__':
 
 # --- Point d'entrée pour Uvicorn/Gunicorn ---
 # Initialise les dépendances lourdes une seule fois au démarrage
-initialize_heavy_dependencies()
+# initialize_heavy_dependencies() # ATTENTION: Déplacé/Supprimé pour éviter l'init au chargement du module
 # Crée l'application Flask en utilisant la factory
-flask_app = create_app()
+# flask_app = create_app() # ATTENTION: Déplacé/Supprimé pour éviter l'init au chargement du module
 # Applique le wrapper ASGI pour la compatibilité avec Uvicorn
 # C'est cette variable 'app' que `launch_webapp_background.py` attend.
-app = WsgiToAsgi(flask_app)
+app = None # Doit être défini, mais initialisé plus tard par le script de lancement.
