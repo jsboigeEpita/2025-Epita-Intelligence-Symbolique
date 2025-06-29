@@ -432,6 +432,13 @@ def initialize_jvm(session_fixture_owns_jvm=False) -> bool:
             jvm_path = jpype.getDefaultJVMPath()
             jvm_options = get_jvm_options()
             
+            # --- AJOUT DE LOGS DE DÉBOGAGE CRITIQUES ---
+            logger.info("="*20 + " DIAGNOSTIC DÉMARRAGE JVM " + "="*20)
+            logger.info(f"Chemin JVM (jpype.getDefaultJVMPath): {jvm_path}")
+            logger.info(f"Options JVM finales: {jvm_options}")
+            logger.info(f"Classpath final: {classpath}")
+            logger.info("="*71)
+            # --- FIN DES LOGS ---
 
             logger.info("Tentative de démarrage de la JVM...")
             jpype.startJVM(

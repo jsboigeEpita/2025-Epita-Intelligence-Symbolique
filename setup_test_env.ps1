@@ -16,7 +16,8 @@ $ErrorActionPreference = "Stop"
 
 # --- CONFIGURATION ---
 # Chemin vers le répertoire 'libs' de Tweety (à adapter si nécessaire)
-$tweetyLibsDir = "$PSScriptRoot/tweety/libs"
+# Le chemin pointe maintenant vers un répertoire racine 'libs'
+$tweetyLibsDir = "$PSScriptRoot/libs/tweety"
 
 # --- 1. LOCALISATION DU JDK ---
 Write-Host "1. Recherche d'un JDK compatible..."
@@ -66,7 +67,8 @@ if (-not (Test-Path -Path $tweetyLibsDir -PathType Container)) {
     exit 1
 }
 
-# Lister tous les fichiers .jar dans le répertoire libs
+# Lister tous les fichiers .jar dans le répertoire racine de tweety
+# Lister tous les fichiers .jar récursivement pour trouver les dépendances
 $jarFiles = Get-ChildItem -Path $tweetyLibsDir -Filter *.jar -Recurse | ForEach-Object { $_.FullName }
 
 if ($jarFiles.Count -eq 0) {

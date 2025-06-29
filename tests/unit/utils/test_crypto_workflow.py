@@ -33,13 +33,6 @@ from argumentation_analysis.utils.crypto_workflow import (
 class TestCryptoWorkflowManager:
     """Tests pour CryptoWorkflowManager."""
     
-    @pytest.mark.skip(reason="Legacy test, passphrase is now provided by a global fixture.")
-    def test_init_default_passphrase(self):
-        """Test initialisation avec passphrase par défaut."""
-        manager = CryptoWorkflowManager()
-        assert manager.passphrase is not None
-        assert len(manager.passphrase) > 0
-    
     def test_init_custom_passphrase(self):
         """Test initialisation avec passphrase personnalisée."""
         custom_passphrase = "test_passphrase_123"
@@ -222,14 +215,6 @@ class TestCorpusDecryptionResult:
 
 class TestFactoryFunction:
     """Tests pour les fonctions factory."""
-    
-    @pytest.mark.skip(reason="Legacy test, passphrase is now provided by a global fixture.")
-    def test_create_crypto_manager_default(self):
-        """Test création avec paramètres par défaut."""
-        manager = create_crypto_manager()
-        
-        assert isinstance(manager, CryptoWorkflowManager)
-        assert manager.passphrase is not None
     
     def test_create_crypto_manager_custom_passphrase(self):
         """Test création avec passphrase personnalisée."""

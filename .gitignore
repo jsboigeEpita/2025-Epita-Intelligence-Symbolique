@@ -318,7 +318,7 @@ results_service_manager/
 _temp/service_manager_results/
 
 # Fichiers et dossiers temporaires ou de dépendances
-s téléchargées
+# téléchargées
 _temp_downloads/
 node-v*/
 
@@ -339,3 +339,7 @@ local_llm_data/
 
 # Secrets
 .env
+
+# Fichiers temporaires de débogage
+.temp/
+_temp_prover9_install/
