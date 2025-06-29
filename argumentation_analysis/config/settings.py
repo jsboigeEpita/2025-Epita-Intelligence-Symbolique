@@ -15,6 +15,18 @@ class OpenAISettings(BaseSettings):
         extra='ignore'
     )
 
+class AzureOpenAISettings(BaseSettings):
+    api_key: Optional[SecretStr] = Field(None, alias='AZURE_OPENAI_API_KEY')
+    endpoint: Optional[HttpUrl] = Field(None, alias='AZURE_OPENAI_ENDPOINT')
+    deployment_name: Optional[str] = Field(None, alias='AZURE_OPENAI_CHAT_DEPLOYMENT_NAME')
+    chat_model_id: str = 'gpt-4o-mini'
+    model_config = SettingsConfigDict(
+        env_prefix='AZURE_OPENAI_',
+        env_file='.env',
+        env_file_encoding='utf-8',
+        extra='ignore'
+    )
+
 class TikaSettings(BaseSettings):
     server_endpoint: HttpUrl = "https://tika.open-webui.myia.io/tika"
     server_timeout: int = 600
@@ -49,7 +61,7 @@ class ServiceManagerSettings(BaseSettings):
     save_results: bool = True
     results_dir: Path = Path("_temp/service_manager_results")
     data_dir: Path = Path("data")
-    default_llm_service_id: str = "gpt-4o-mini"
+    default_llm_service_id: str = "openai"
     hierarchical_channel_id: str = "hierarchical_main"
     model_config = SettingsConfigDict(env_prefix='SERVICE_MANAGER_')
 
@@ -67,6 +79,7 @@ class JVMSettings(BaseSettings):
     tweety_libs_dir: Path = Path("libs/tweety")
     native_libs_dir: Path = Path("libs/native")
 
+    azure_openai: AzureOpenAISettings = AzureOpenAISettings()
     model_config = SettingsConfigDict(env_prefix='JVM_')
 
 class AppSettings(BaseSettings):

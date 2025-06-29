@@ -15,6 +15,7 @@ Fonctionnalités principales :
 - Navigation et interrogation d'une taxonomie de sophismes via un plugin natif.
 """
 
+import warnings
 import logging
 import json
 import re
@@ -30,6 +31,8 @@ from ..abc.agent_bases import BaseAgent
 from .informal_definitions import InformalAnalysisPlugin, INFORMAL_AGENT_INSTRUCTIONS
 from .prompts import prompt_identify_args_v8, prompt_analyze_fallacies_v1, prompt_justify_fallacy_attribution_v1
 from .taxonomy_sophism_detector import TaxonomySophismDetector, get_global_detector
+from argumentation_analysis.agents.agent_factory import AgentFactory
+from argumentation_analysis.config.settings import AppSettings
 
 
 # Configuration du logging
@@ -39,7 +42,7 @@ from .taxonomy_sophism_detector import TaxonomySophismDetector, get_global_detec
 #     datefmt='%H:%M:%S'
 # )
 
-class InformalAnalysisAgent(BaseAgent):
+class LegacyInformalAnalysisAgent(BaseAgent):
     """
     Agent spécialiste de la détection de sophismes et de l'analyse informelle.
 
@@ -768,6 +771,57 @@ class InformalAnalysisAgent(BaseAgent):
 
         response_message = ChatMessageContent(role="assistant", content=response_content, name=self.name)
         return [response_message]
+
+class InformalAnalysisAgent(BaseAgent):
+    """
+    (Façade Obsolète) Wrapper pour le nouveau AgentFactory.
+    Cette classe est conservée pour la rétrocompatibilité.
+    Elle émet un avertissement et délègue tous les appels à la nouvelle
+    architecture basée sur AgentFactory.
+    """
+    def __init__(self, kernel: sk.Kernel, agent_name: str = "InformalAnalysisAgent", **kwargs):
+        warnings.warn(
+            "La classe 'InformalAnalysisAgent' est obsolète et sera supprimée dans une future version. "
+            "Veuillez utiliser 'AgentFactory.create_agent(\"fallacy_analyst\", ...)' à la place.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        super().__init__(kernel, agent_name)
+        
+        try:
+            settings = AppSettings()
+            # Note: le type d'agent dans la factory est 'fallacy_analyst'
+            self._modern_agent = AgentFactory.create_agent(
+                agent_type="fallacy_analyst",
+                kernel=kernel,
+                llm_service_id=settings.service_manager.default_llm_service_id,
+                settings=settings,
+                agent_name=agent_name
+            )
+        except Exception as e:
+            self.logger.error(f"Impossible de créer l'agent moderne via la factory: {e}")
+            self._modern_agent = None
+            
+    def __getattribute__(self, name: str) -> Any:
+        # Éviter la récursion infinie
+        if name.startswith('_') or name in ['logger', 'name', 'kernel']:
+            return super().__getattribute__(name)
+            
+        if self._modern_agent and hasattr(self._modern_agent, name):
+            return getattr(self._modern_agent, name)
+        
+        return super().__getattribute__(name)
+
+    async def get_response(self, kernel: "sk.Kernel", arguments: Optional["KernelArguments"] = None) -> list[ChatMessageContent]:
+        if not self._modern_agent:
+            raise RuntimeError("L'agent moderne n'a pas pu être initialisé.")
+        return await self._modern_agent.get_response(kernel, arguments)
+
+    async def invoke_single(self, kernel: "sk.Kernel", arguments: Optional["KernelArguments"] = None) -> list[ChatMessageContent]:
+        if not self._modern_agent:
+            raise RuntimeError("L'agent moderne n'a pas pu être initialisé.")
+        return await self._modern_agent.invoke_single(kernel, arguments)
+
 
 # Log de chargement
 # logging.getLogger(__name__).debug("Module agents.core.informal.informal_agent chargé.") # Géré par BaseAgent

@@ -1,74 +1,46 @@
 # Fichier: argumentation_analysis/kernel/kernel_builder.py
 
-import os
-from typing import List, Dict, Any
-
 import semantic_kernel as sk
-import yaml
-from dotenv import load_dotenv
-from pydantic import BaseModel, Field
 from semantic_kernel.connectors.ai.open_ai import (
     AzureChatCompletion,
-    AzureTextEmbedding,
+    OpenAIChatCompletion,
 )
+from argumentation_analysis.config.settings import AppSettings
 
-
-# 1. Modèles Pydantic pour une configuration typée
-class AIServiceSettings(BaseModel):
-    """Définit la configuration pour un service IA."""
-    service_id: str = Field(..., alias="service_id")
-    model_id: str = Field(..., alias="model_id")
-    env_api_key: str = Field(..., alias="env_api_key")
-    env_endpoint: str = Field(..., alias="env_endpoint")
-
-
-class KernelSettings(BaseModel):
-    """Modèle racine pour la configuration du kernel."""
-    ai_services: Dict[str, AIServiceSettings]
-
-
-# 2. Classe de construction du Kernel
 class KernelBuilder:
     """
-    Classe responsable de la construction et configuration du Kernel
-    à partir de fichiers de configuration.
+    Classe responsable de la construction et de la configuration du Kernel
+    à partir d'un objet de configuration centralisé.
     """
 
     @staticmethod
-    def load_settings(config_path: str, env_path: str) -> KernelSettings:
-        """Charge la configuration depuis les fichiers YAML et .env."""
-        load_dotenv(dotenv_path=env_path)
-        with open(config_path, "r") as f:
-            config = yaml.safe_load(f)
-        return KernelSettings(**config)
-
-    @staticmethod
-    def create_kernel(settings: KernelSettings) -> sk.Kernel:
+    def create_kernel(settings: AppSettings) -> sk.Kernel:
         """Crée et configure une instance du Kernel."""
         kernel = sk.Kernel()
 
-        service_map = {
-            "azure_openai_embedding": AzureTextEmbedding,
-            "azure_openai_chat_gpt4": AzureChatCompletion,
-        }
+        llm_service_name = settings.service_manager.default_llm_service_id
+        
+        if llm_service_name == "openai":
+            if settings.openai.api_key:
+                service = OpenAIChatCompletion(
+                    service_id="openai",
+                    ai_model_id=settings.openai.chat_model_id,
+                    api_key=settings.openai.api_key.get_secret_value(),
+                )
+            else:
+                raise ValueError("La clé API OpenAI n'est pas configurée.")
+        elif llm_service_name == "azure":
+            if settings.azure_openai.api_key and settings.azure_openai.endpoint:
+                service = AzureChatCompletion(
+                    service_id="azure",
+                    deployment_name=settings.azure_openai.deployment_name,
+                    endpoint=str(settings.azure_openai.endpoint),
+                    api_key=settings.azure_openai.api_key.get_secret_value(),
+                )
+            else:
+                raise ValueError("La clé API ou l'endpoint Azure ne sont pas configurés.")
+        else:
+            raise ValueError(f"Service LLM global inconnu: {llm_service_name}")
 
-        for service_name, service_settings in settings.ai_services.items():
-            service_class = service_map.get(service_name)
-            if not service_class:
-                raise ValueError(f"Service IA inconnu: {service_name}")
-
-            api_key = os.getenv(service_settings.env_api_key)
-            endpoint = os.getenv(service_settings.env_endpoint)
-
-            if not api_key or not endpoint:
-                raise ValueError(f"Clé API ou endpoint manquant pour {service_name}")
-
-            service_instance = service_class(
-                service_id=service_settings.service_id,
-                model_id=service_settings.model_id,
-                api_key=api_key,
-                endpoint=endpoint,
-            )
-            kernel.add_service(service_instance)
-
+        kernel.add_service(service)
         return kernel

@@ -1,29 +1,66 @@
 # Fichier : argumentation_analysis/agents/agent_factory.py
 
 from semantic_kernel import Kernel
-from .abc.abstract_agent import AbstractAgent
-from .concrete_agents.informal_fallacy_agent import InformalFallacyAgent
-from .concrete_agents.project_manager_agent import ProjectManagerAgent # NOUVEL IMPORT
+from semantic_kernel.agents import Agent
+from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatCompletionAgent
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
+
+from .plugins.fallacy_identification_plugin import FallacyIdentificationPlugin
+from .plugins.project_management_plugin import ProjectManagementPlugin
 
 class AgentFactory:
     """
     Usine pour la création et la configuration centralisée des agents.
-    Permet le découplage entre l'orchestrateur et les implémentations concrètes.
+    Utilise ChatCompletionAgent comme base pour tous les agents.
     """
 
     def __init__(self, kernel: Kernel, llm_service_id: str):
         """Initialise la factory avec les dépendances partagées."""
-        self._kernel = kernel
+        self._kernel = kernel # Ce kernel de base sert pour les settings, mais chaque agent aura le sien.
         self._llm_service_id = llm_service_id
 
-    def create_informal_fallacy_agent(self) -> AbstractAgent:
+    def create_informal_fallacy_agent(self) -> Agent:
         """Crée et configure un agent d'analyse des sophismes."""
-        agent = InformalFallacyAgent(kernel=self._kernel.clone(), name="Fallacy_Analyst")
-        agent.setup_agent_components(llm_service_id=self._llm_service_id)
-        return agent
+        agent_kernel = Kernel()
+        agent_kernel.add_plugin(FallacyIdentificationPlugin(), plugin_name="FallacyIdPlugin")
+        
+        with open("argumentation_analysis/agents/prompts/InformalFallacyAgent/skprompt.txt", "r") as f:
+            prompt = f.read()
 
-    def create_project_manager_agent(self) -> AbstractAgent:
+        execution_settings = OpenAIChatPromptExecutionSettings(
+            service_id=self._llm_service_id,
+            tool_choice="required",
+        )
+        # Lie les settings au kernel de l'agent
+        agent_kernel.add_service(
+            service=self._kernel.get_service(self._llm_service_id)
+        )
+
+        return ChatCompletionAgent(
+            kernel=agent_kernel,
+            name="Fallacy_Analyst",
+            instructions=prompt
+        )
+
+    def create_project_manager_agent(self) -> Agent:
         """Crée et configure l'agent chef de projet."""
-        agent = ProjectManagerAgent(kernel=self._kernel.clone(), name="Project_Manager") # NOUVELLE IMPLEMENTATION
-        agent.setup_agent_components(llm_service_id=self._llm_service_id)
-        return agent
+        agent_kernel = Kernel()
+        agent_kernel.add_plugin(ProjectManagementPlugin(), plugin_name="ProjectMgmtPlugin")
+
+        with open("argumentation_analysis/agents/prompts/ProjectManagerAgent/skprompt.txt", "r") as f:
+            prompt = f.read()
+
+        execution_settings = OpenAIChatPromptExecutionSettings(
+            service_id=self._llm_service_id,
+            tool_choice="required",
+        )
+        # Lie les settings au kernel de l'agent
+        agent_kernel.add_service(
+            service=self._kernel.get_service(self._llm_service_id)
+        )
+
+        return ChatCompletionAgent(
+            kernel=agent_kernel,
+            name="Project_Manager",
+            instructions=prompt
+        )

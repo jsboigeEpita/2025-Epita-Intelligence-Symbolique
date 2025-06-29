@@ -2,6 +2,7 @@
 import logging
 from typing import Dict, Any, Optional
 
+import warnings
 from semantic_kernel import Kernel # type: ignore
 from semantic_kernel.functions.kernel_arguments import KernelArguments # type: ignore
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
@@ -11,11 +12,14 @@ from semantic_kernel.contents.utils.author_role import AuthorRole
 from ..abc.agent_bases import BaseAgent
 from .pm_definitions import PM_INSTRUCTIONS # Ou PM_INSTRUCTIONS_V9 selon la version souhaitée
 from .prompts import prompt_define_tasks_v15, prompt_write_conclusion_v7
+from argumentation_analysis.agents.agent_factory import AgentFactory
+from argumentation_analysis.config.settings import AppSettings
+
 
 # Supposons que StateManagerPlugin est importable si nécessaire
 # from ...services.state_manager_plugin import StateManagerPlugin # Exemple
 
-class ProjectManagerAgent(BaseAgent):
+class LegacyProjectManagerAgent(BaseAgent):
     """
     Agent spécialisé dans la planification stratégique de l'analyse d'argumentation.
     Il définit les tâches séquentielles et génère la conclusion finale,
@@ -258,6 +262,61 @@ class ProjectManagerAgent(BaseAgent):
     #     #     return await self.define_tasks_and_delegate(full_state_snapshot, raw_text)
     #     pass
 
+
+class ProjectManagerAgent(BaseAgent):
+    """
+    (Façade Obsolète) Wrapper pour le nouveau AgentFactory.
+    Cette classe est conservée pour la rétrocompatibilité.
+    Elle émet un avertissement et délègue tous les appels à la nouvelle
+    architecture basée sur AgentFactory.
+    """
+    def __init__(self, kernel: Kernel, agent_name: str = "ProjectManagerAgent", **kwargs):
+        warnings.warn(
+            "La classe 'ProjectManagerAgent' est obsolète et sera supprimée dans une future version. "
+            "Veuillez utiliser 'AgentFactory.create_agent(\"project_manager\", ...)' à la place.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        super().__init__(kernel, agent_name)
+        
+        # Pour instancier l'agent moderne, la factory a besoin des settings.
+        # On suppose qu'ils peuvent être chargés ici ou qu'un kernel pré-configuré est passé.
+        try:
+            settings = AppSettings()
+            self._modern_agent = AgentFactory.create_agent(
+                agent_type="project_manager",
+                kernel=kernel,
+                llm_service_id=settings.service_manager.default_llm_service_id,
+                settings=settings,
+                agent_name=agent_name
+            )
+        except Exception as e:
+            self.logger.error(f"Impossible de créer l'agent moderne via la factory: {e}")
+            self._modern_agent = None
+
+    def __getattribute__(self, name: str) -> Any:
+        """
+        Délègue les appels de méthode à l'agent moderne si elles existent.
+        """
+        # Éviter la récursion infinie pour les attributs internes
+        if name.startswith('_') or name in ['logger', 'name', 'kernel']:
+            return super().__getattribute__(name)
+            
+        if self._modern_agent and hasattr(self._modern_agent, name):
+            return getattr(self._modern_agent, name)
+        
+        return super().__getattribute__(name)
+
+    async def get_response(self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None) -> list[ChatMessageContent]:
+        if not self._modern_agent:
+            raise RuntimeError("L'agent moderne n'a pas pu être initialisé.")
+        return await self._modern_agent.get_response(kernel, arguments)
+
+    async def invoke_single(self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None) -> list[ChatMessageContent]:
+        if not self._modern_agent:
+            raise RuntimeError("L'agent moderne n'a pas pu être initialisé.")
+        return await self._modern_agent.invoke_single(kernel, arguments)
+
 if __name__ == '__main__':
     import argparse
     import asyncio
@@ -306,9 +365,10 @@ if __name__ == '__main__':
                 )
                 kernel_instance.add_service(llm_service)
                 
-                # Création de l'agent PM
+                # Création de l'agent PM (via la façade pour tester l'avertissement)
                 pm_agent = ProjectManagerAgent(kernel=kernel_instance)
-                pm_agent.setup_agent_components("openai_service")
+                # La configuration est maintenant gérée en interne par la façade via la factory
+                # pm_agent.setup_agent_components("openai_service")
                 
                 # Prompt de génération de rapport
                 report_prompt = f"""
