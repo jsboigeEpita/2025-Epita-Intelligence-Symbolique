@@ -284,8 +284,27 @@ class RealLLMOrchestrator:
             # Le résultat est une chaîne JSON, il faut la parser
             result_str = str(analysis_result)
             try:
-                # Tentative de parser le JSON
-                result_dict = json.loads(result_str)
+                import re
+                # Nouvelle logique pour extraire le JSON après "[Réponse Finale]"
+                # et gérer les blocs de code markdown.
+                final_answer_marker = "[Réponse Finale]"
+                if final_answer_marker in result_str:
+                    # Isoler la partie après le marqueur
+                    payload = result_str.split(final_answer_marker, 1)[1]
+                    
+                    # Utiliser une regex pour trouver le bloc JSON, même avec du texte autour
+                    match = re.search(r"```json\s*([\s\S]+?)\s*```", payload, re.DOTALL)
+                    if match:
+                        json_str = match.group(1).strip()
+                    else:
+                        # Si pas de bloc markdown, prendre tout ce qui ressemble à un JSON
+                        json_str = payload.strip()
+                else:
+                    # Fallback à l'ancienne méthode si le marqueur n'est pas là
+                    json_str = result_str.strip().removeprefix("```json").removesuffix("```").strip()
+
+                result_dict = json.loads(json_str)
+
             except json.JSONDecodeError:
                 self.logger.error(f"Erreur de décodage JSON pour la réponse de l'analyse informelle: {result_str}")
                 return {'success': False, 'error': 'Réponse invalide du LLM (non-JSON)', 'raw_response': result_str}
