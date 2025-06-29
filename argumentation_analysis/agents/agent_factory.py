@@ -3,8 +3,7 @@
 from semantic_kernel import Kernel
 from .abc.abstract_agent import AbstractAgent
 from .concrete_agents.informal_fallacy_agent import InformalFallacyAgent
-# L'import de ProjectManagerAgent sera ajouté dans le WO-04.
-# from .concrete_agents import ProjectManagerAgent
+from .concrete_agents.project_manager_agent import ProjectManagerAgent # NOUVEL IMPORT
 
 class AgentFactory:
     """
@@ -25,5 +24,6 @@ class AgentFactory:
 
     def create_project_manager_agent(self) -> AbstractAgent:
         """Crée et configure l'agent chef de projet."""
-        # L'implémentation complète sera faite dans le WO-04.
-        raise NotImplementedError("Implémentation de ProjectManagerAgent à venir dans WO-04")
+        agent = ProjectManagerAgent(kernel=self._kernel.clone(), name="Project_Manager") # NOUVELLE IMPLEMENTATION
+        agent.setup_agent_components(llm_service_id=self._llm_service_id)
+        return agent
