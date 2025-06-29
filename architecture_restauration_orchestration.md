@@ -642,3 +642,418 @@ La stratégie architecturale, décrite dans les commentaires mêmes du fichier, 
 *   L'agent reçoit l'objet Pydantic et s'occupe de le sérialiser en un rapport JSON propre.
 
 En adoptant cette approche, nous ne faisons donc qu'appliquer une "best practice" interne, garantissant que notre nouvelle architecture est non seulement théoriquement saine, mais aussi parfaitement alignée avec les solutions qui ont déjà fait leurs preuves dans ce codebase.
+
+
+# Partie 4 : Robustesse, Configuration et Tests
+
+Alors que les parties précédentes ont établi une architecture fonctionnelle et élégante, cette section s'attaque aux aspects non fonctionnels qui transforment un prototype prometteur en un système de production fiable, maintenable et évolutif. Nous allons "durcir" notre architecture en formalisant les stratégies de robustesse, en centralisant la configuration et en définissant un plan de test complet.
+
+## 4.1. Stratégies de Robustesse et Gestion des Erreurs
+
+Un système basé sur des LLM est intrinsèquement non déterministe et sujet à des défaillances imprévisibles (erreurs réseau, timeouts d'API, réponses mal formées). Une architecture robuste ne vise pas à éliminer les erreurs, mais à les anticiper, les gérer et y survivre avec grâce.
+
+### 4.1.1. Gestion des Échecs d'Agents au sein de `AgentGroupChat`
+
+**Problématique :** Que se passe-t-il si un agent, lors de son tour de parole (`invoke`), lève une exception inattendue (ex: `APIError` du LLM, bug interne) ? Dans sa version de base, `AgentGroupChat` pourrait s'arrêter brutalement, laissant l'orchestration dans un état instable.
+
+**Solution :** Nous proposons un mécanisme de capture d'exception au niveau de la boucle d'invocation de `AgentGroupChat` et l'introduction d'un agent "ErrorHandler" spécialisé.
+
+**Diagramme de Séquence de la Gestion d'Erreur :**
+
+```mermaid
+sequenceDiagram
+    participant Orchestrateur as AgentGroupChat
+    participant Strategy as SelectionStrategy
+    participant FailingAgent as Agent_X
+    participant ErrorHandler as ErrorHandlerAgent
+
+    Orchestrateur->>Strategy: next()
+    Strategy-->>Orchestrateur: FailingAgent
+    
+    Orchestrateur->>FailingAgent: invoke()
+    activate FailingAgent
+    Note over FailingAgent: Déclenche une exception !
+    FailingAgent-->>Orchestrateur: Lève une Exception
+    deactivate FailingAgent
+
+    Orchestrateur->>Orchestrateur: catch Exception as e
+    Note over Orchestrateur: Capture l'erreur et prépare un message de contexte.
+
+    Orchestrateur->>Strategy: next(context=error_context)
+    Strategy-->>Orchestrateur: ErrorHandlerAgent
+    
+    Orchestrateur->>ErrorHandler: invoke(error_details)
+    activate ErrorHandler
+    ErrorHandler-->>Orchestrateur: Message de diagnostic ou de correction
+    deactivate ErrorHandler
+```
+
+**Pseudo-code de la modification de `AgentGroupChat.invoke` :**
+
+```python
+# Fichier : semantic_kernel/agents/group_chat/agent_group_chat.py (Modification proposée)
+
+async def invoke(...):
+    ...
+    for _ in range(self.termination_strategy.maximum_iterations):
+        try:
+            # 1. Sélection normale de l'agent
+            selected_agent = await self.selection_strategy.next(self.agents, self.history.messages)
+
+            # 2. Invocation de l'agent
+            async for message in super().invoke_agent(selected_agent):
+                 # ... (logique existante) ...
+        
+        except Exception as e:
+            self.logger.error(f"L'agent '{selected_agent.name}' a échoué : {e}", exc_info=True)
+            
+            # 3. Construction d'un contexte d'erreur
+            error_context = f"ERREUR SYSTÈME : L'agent {selected_agent.name} a rencontré une erreur critique : {type(e).__name__} - {e}. Il faut analyser la situation et décider de la prochaine étape : corriger, ignorer ou arrêter."
+            
+            # Ajoute le message d'erreur à l'historique pour informer les autres agents
+            self.history.add_user_message(error_context)
+            
+            # 4. Délégation à la stratégie pour choisir un "gestionnaire d'erreur"
+            # La stratégie de sélection peut être conçue pour reconnaître le contexte d'erreur
+            # et sélectionner un agent "ErrorHandler" spécialisé.
+            error_handler_agent = await self.selection_strategy.next(self.agents, self.history.messages)
+            async for message in super().invoke_agent(error_handler_agent):
+                 # ... (logique existante) ...
+
+        # ... (logique de terminaison) ...
+```
+
+L'agent `ErrorHandlerAgent` peut alors être un agent simple dont le prompt lui demande d'analyser l'erreur et de suggérer une action, comme réessayer, abandonner, ou notifier un humain.
+
+### 4.1.2. Politiques de Réessai (Retry Policy)
+
+Les appels aux API externes (LLMs) sont la source la plus fréquente d'erreurs transitoires (problèmes réseau, surcharges momentanées de l'API retournant des erreurs 5xx). Recoder une logique de réessai manuellement est fastidieux et source d'erreurs.
+
+**Solution :** Utiliser une bibliothèque éprouvée comme `tenacity` pour décorer les appels critiques.
+
+**Exemple de code avec `tenacity` :**
+
+```python
+# Fichier : argumentation_analysis/core/kernel_builder.py (ou un module utilitaire)
+
+import tenacity
+import logging
+import openai
+
+def robust_openai_call(func):
+    """
+    Un décorateur qui enveloppe un appel à l'API OpenAI avec une politique de réessai.
+    Cible les erreurs transitoires comme les timeouts ou les erreurs serveur.
+    """
+    @tenacity.retry(
+        wait=tenacity.wait_exponential(multiplier=1, min=2, max=60), # Attente exponentielle (2s, 4s, 8s...)
+        stop=tenacity.stop_after_attempt(5), # Arrêt après 5 tentatives
+        retry=tenacity.retry_if_exception_type((
+            openai.APITimeoutError,
+            openai.APIConnectionError,
+            openai.RateLimitError,
+            openai.APIStatusError, # Pour les 5xx
+        )),
+        before_sleep=tenacity.before_sleep_log(logging.getLogger(__name__), logging.INFO)
+    )
+    async def wrapper(*args, **kwargs):
+        return await func(*args, **kwargs)
+    
+    return wrapper
+
+# Comment l'appliquer (par exemple, par "monkey-patching" sur le Kernel ou dans le client HTTP)
+# class ResilientKernel(Kernel):
+#    
+#    @robust_openai_call
+#    async def invoke_prompt(...):
+#        # ...
+#        pass
+```
+*Note : L'application exacte peut varier. Une approche plus propre serait d'injecter un client HTTP personnalisé dans le `Kernel` qui intègre déjà cette logique.*
+
+### 4.1.3. Validation des Entrées/Sorties et Auto-Correction
+
+La **Partie 3** a brillamment introduit l'utilisation de Pydantic pour forcer des sorties structurées. Mais que se passe-t-il si, malgré tout, le LLM échoue à générer une sortie qui passe la validation de Pydantic ?
+
+**Solution :** Mettre en place une boucle de "dialogue correctif" au sein même de l'agent.
+
+**Exemple de pseudo-code dans un `AbstractAgent` :**
+
+```python
+# Fichier : argumentation_analysis/agents/abc/abstract_agent.py (logique améliorée)
+
+from pydantic import ValidationError, BaseModel
+
+MAX_CORRECTION_ATTEMPTS = 3
+
+async def _invoke_llm_with_pydantic_tool(
+    self, 
+    prompt: str, 
+    pydantic_tool: type[BaseModel]
+) -> BaseModel:
+    
+    # ... code pour la configuration de l'appel LLM ...
+    
+    for attempt in range(MAX_CORRECTION_ATTEMPTS):
+        try:
+            # Appel au kernel pour obtenir la réponse structurée
+            response_object = await self.kernel.invoke_prompt(...) # avec le tool_choice Pydantic
+            
+            # Si aucune exception n'est levée, la validation a réussi
+            return response_object
+
+        except ValidationError as e:
+            self.logger.warning(f"Tentative {attempt + 1}: Échec de la validation Pydantic. Erreur: {e}")
+            
+            # Construction d'un message d'erreur pour le LLM
+            error_feedback = (
+                f"Votre dernière réponse n'était pas valide. "
+                f"Veuillez corriger les erreurs suivantes et réessayer :\n{e}"
+            )
+            
+            # Ajoute le feedback à l'historique de la conversation interne
+            # pour que le LLM sache quoi corriger à la prochaine tentative.
+            self.internal_history.add_user_message(error_feedback)
+
+    # Si toutes les tentatives échouent
+    self.logger.error("Échec de la validation après plusieurs tentatives. Abandon.")
+    raise SystemError("L'agent n'a pas pu produire une sortie valide.")
+
+```
+Ce pattern transforme une erreur de validation en une opportunité de dialogue, augmentant drastiquement la fiabilité de l'agent.
+
+## 4.2. Configuration Centralisée et Gestion de l'Environnement
+
+Éparpiller la configuration (clés API, noms de modèles, timeouts) à travers le code est une recette pour le désastre. Une architecture de production nécessite une source de vérité unique pour la configuration.
+
+### 4.2.1. Fichiers de Configuration : `.env` et `config.yaml`
+
+**Solution :** Nous combinons deux types de fichiers de configuration pour séparer les secrets des paramètres.
+
+1.  **`.env` : Pour les secrets.**
+    Ce fichier (ignoré par Git) contient toutes les informations sensibles.
+    ```dotenv
+    # Fichier: .env
+    OPENAI_API_KEY="sk-..."
+    AZURE_OPENAI_ENDPOINT="https://..."
+    ```
+
+2.  **`config.yaml` : Pour les paramètres de l'application.**
+    Ce fichier (versionné dans Git) contient la configuration non sensible.
+    ```yaml
+    # Fichier: config.yaml
+    llm_services:
+      default_chat:
+        service_id: "default_chat_gpt4"
+        model_id: "gpt-4-turbo-preview"
+        type: "openai" # ou "azure_openai"
+      embedding_generator:
+        service_id: "default_embedding"
+        model_id: "text-embedding-ada-002"
+        type: "openai"
+
+    agent_settings:
+      timeout_seconds: 120
+      max_retry_attempts: 3
+    ```
+
+Une bibliothèque comme `pydantic-settings` peut lire et valider ces fichiers pour charger la configuration dans des objets Pydantic typés.
+
+### 4.2.2. Le `KernelBuilder` : Usine de Construction du `Kernel`
+
+**Problématique :** La création et la configuration du `Kernel` (ajout des services LLM, des plugins, etc.) peuvent devenir complexes. Cette logique ne doit pas être dupliquée.
+
+**Solution :** Créer une classe `KernelBuilder` qui lit la configuration centralisée et assemble une instance de `Kernel` prête à l'emploi.
+
+**Pseudo-code d'un `KernelBuilder` :**
+
+```python
+# Fichier : argumentation_analysis/core/kernel_builder.py
+
+from semantic_kernel import Kernel
+# from .config import AppConfig # Modèle Pydantic chargeant config.yaml et .env
+
+class KernelBuilder:
+    """Construit et configure une instance de Kernel à partir de la config centrale."""
+
+    @staticmethod
+    def build_from_config(config) -> Kernel: # config: AppConfig
+        kernel = Kernel()
+
+        # Itérer sur les services définis dans le YAML
+        for service_config in config.llm_services:
+            if service_config.type == "openai":
+                kernel.add_chat_service(
+                    service_id=service_config.service_id,
+                    service=OpenAIChatCompletion(
+                        model_id=service_config.model_id,
+                        api_key=config.openai_api_key.get_secret_value() # Via pydantic-settings
+                    ),
+                )
+            elif service_config.type == "azure_openai":
+                 kernel.add_chat_service(...) # Logique pour Azure
+
+        # ... ajouter les services d'embedding, les plugins globaux, etc. ...
+        
+        return kernel
+
+# Utilisation
+# config = AppConfig() # Charge automatiquement .env et config.yaml
+# kernel = KernelBuilder.build_from_config(config)
+```
+
+### 4.2.3. Injection de Dépendances : `KernelBuilder` -> `AgentFactory`
+
+Le `Kernel` construit de manière centralisée doit être partagé par tous les agents. La `AgentFactory` est le point d'injection parfait.
+
+**Diagramme de flux de la configuration :**
+
+```mermaid
+graph TD
+    subgraph "Phase d'Initialisation"
+        A[Fichiers .env / config.yaml] --> B{AppConfig};
+        B --> C[KernelBuilder];
+        C --> D{Kernel};
+        D --> E{AgentFactory};
+        B --> E;
+    end
+    
+    subgraph "Phase d'Exécution"
+        E --> F[Agent Concret 1];
+        E --> G[Agent Concret 2];
+        F --> D;
+        G --> D;
+    end
+
+    style D fill:#9cf,stroke:#333,stroke-width:2px
+```
+
+Le `analysis_runner` devient alors très simple :
+1.  Charger la configuration (`AppConfig`).
+2.  Construire le `Kernel` via `KernelBuilder`.
+3.  Instancier `AgentFactory` avec le `Kernel` et la configuration.
+4.  Utiliser la factory pour créer les agents.
+5.  Lancer `AgentGroupChat`.
+
+Cette approche garantit que l'ensemble du système partage une configuration unique et cohérente.
+
+## 4.3. Stratégie de Tests Complète
+
+Tester une application basée sur des LLM est difficile, mais essentiel. Nous adoptons une approche multi-niveaux.
+
+### 4.3.1. Tests Unitaires : Isoler la Logique d'un Agent
+
+**Objectif :** Tester la logique interne d'un `AbstractAgent` sans faire de véritables appels LLM.
+
+**Solution :** Utiliser des mocks (comme `unittest.mock.AsyncMock` en Python) pour simuler le `Kernel` et ses réponses.
+
+**Exemple de test unitaire pour `InformalAnalysisAgent` :**
+
+```python
+# Fichier : tests/agents/test_informal_analysis_agent.py
+
+import unittest
+from unittest.mock import AsyncMock, MagicMock
+
+async def test_agent_returns_valid_json_on_mocked_llm_call():
+    # Arrange
+    # 1. Créer un mock du Kernel
+    mock_kernel = AsyncMock(spec=Kernel)
+    
+    # 2. Configurer le mock pour qu'il retourne une fausse réponse LLM simulée
+    #    Cette réponse contient un "tool call" Pydantic valide.
+    mock_response = MagicMock()
+    mock_response.tool_calls = [
+        # Simule le tool call que le kernel retournerait
+        create_mock_tool_call(FallacyAnalysisResult(is_fallacious=True, fallacies=[]))
+    ]
+    mock_kernel.invoke_prompt.return_value = mock_response
+    
+    # 3. Instancier l'agent avec le Kernel mocké
+    agent = InformalAnalysisAgent(kernel=mock_kernel, name="TestAgent")
+    agent.setup_agent_components("mock_service")
+
+    # Act
+    # L'appel à get_response va maintenant utiliser le kernel mocké
+    response_item = await agent.get_response(messages=[], arguments={"input": "Some text"})
+    
+    # Assert
+    # 4. Vérifier que la sortie est bien le JSON attendu, produit à partir du mock
+    assert '"is_fallacious": true' in response_item.message.content
+    mock_kernel.invoke_prompt.assert_awaited_once() # Vérifie que le LLM a été appelé
+```
+
+### 4.3.2. Tests d'Intégration : Valider l'Orchestration
+
+**Objectif :** Vérifier que les stratégies de `AgentGroupChat` (`selection_strategy`, `termination_strategy`) fonctionnent correctement sans dépendre des réponses imprévisibles des LLM.
+
+**Solution :** Créer un `AgentGroupChat` avec de "faux" agents dont les réponses sont pré-définies et déterministes.
+
+**Exemple de test d'intégration de l'orchestration :**
+
+```python
+# Fichier : tests/orchestration/test_agent_group_chat.py
+
+class MockAgent(AbstractAgent):
+    """Un faux agent qui retourne toujours une réponse prédéfinie."""
+    def __init__(self, response_to_give: str, **kwargs):
+        super().__init__(**kwargs)
+        self.response = response_to_give
+
+    async def get_response(self, ...) -> AgentResponseItem:
+        return AgentResponseItem(message=ChatMessageContent(role="assistant", content=self.response))
+
+async def test_conversation_terminates_when_pm_says_stop():
+    # Arrange
+    # 1. Créer des agents avec des réponses fixes
+    agent1 = MockAgent(response_to_give="Faisons l'analyse. PM, à toi.", name="Agent1", kernel=Kernel())
+    pm_agent = MockAgent(response_to_give="Analyse terminée. @TERMINATE", name="PM", kernel=Kernel()) # Réponse spéciale
+    
+    # 2. Utiliser les vraies stratégies, mais en mode "non-LLM" si possible
+    #    (par ex. une stratégie de sélection qui lit simplement la réponse)
+    # selection_strategy = SimpleSelectionStrategy(keyword="@")
+    # termination_strategy = SimpleTerminationStrategy(keyword="@TERMINATE")
+    
+    # 3. Assembler le chat de test
+    group_chat = AgentGroupChat(
+        agents=[agent1, pm_agent],
+        selection_strategy=selection_strategy,
+        termination_strategy=termination_strategy
+    )
+
+    # Act
+    final_history = [message async for message in group_chat.invoke()]
+
+    # Assert
+    # 4. Vérifier que la conversation s'est déroulée comme prévu et s'est arrêtée
+    assert len(final_history) == 2 # 2 tours de parole
+    assert "Analyse terminée" in final_history[-1].content
+    assert group_chat.is_complete is True
+```
+
+### 4.3.3. Tests End-to-End : Détecter les Régressions avec un "Golden File"
+
+**Objectif :** Valider l'ensemble du flux, de l'entrée initiale à la sortie finale, pour s'assurer que le comportement global du système ne régresse pas au fil des modifications.
+
+**Solution :** Le test du "fichier d'or" (`.golden`).
+
+**Méthode :**
+1.  **Créer un fichier d'entrée de référence :** `test_case_1.txt`.
+2.  **Exécuter l'analyse complète (avec de vrais appels LLM) une première fois.**
+3.  **Sauvegarder le résultat JSON final dans `test_case_1.json.golden`.** Ce fichier est commité dans Git et devient la "vérité".
+4.  **Créer un test automatisé** qui :
+    *   Exécute l'analyse sur `test_case_1.txt`.
+    *   Compare le nouveau résultat JSON avec le contenu de `test_case_1.json.golden`.
+    *   Le test échoue si les deux fichiers diffèrent.
+
+**Exemple de structure de fichiers :**
+```
+tests/e2e/
+├── test_complex_argument.py
+├── inputs/
+│   └── complex_argument.txt
+└── goldens/
+    └── complex_argument.json.golden
+```
+
+Si une modification du code (ex: un changement de prompt) entraîne une modification de la sortie, le test échouera. Le développeur doit alors inspecter la différence. Si le changement est attendu et correct, il met à jour le fichier `.golden` pour refléter la nouvelle vérité. Sinon, il a détecté une régression et doit corriger son code.
