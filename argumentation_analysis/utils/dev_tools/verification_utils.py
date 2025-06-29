@@ -19,11 +19,7 @@ from argumentation_analysis.services.crypto_service import CryptoService
 from argumentation_analysis.services.definition_service import DefinitionService
 from argumentation_analysis.services.extract_service import ExtractService
 from argumentation_analysis.services.fetch_service import FetchService
-from argumentation_analysis.ui.config import (
-    ENCRYPTION_KEY as DEFAULT_ENCRYPTION_KEY,
-    CONFIG_FILE as DEFAULT_CONFIG_FILE_PATH,
-    CONFIG_FILE_JSON as DEFAULT_CONFIG_FILE_JSON_PATH
-)
+from argumentation_analysis.config.settings import settings
 
 
 logger = logging.getLogger(__name__)
@@ -275,13 +271,13 @@ def run_extract_verification_pipeline(
         logger.info("Initialisation manuelle des services pour verification_utils...")
         base_path = project_root_dir if project_root_dir else Path.cwd()
 
-        current_encryption_key = DEFAULT_ENCRYPTION_KEY # TODO: Permettre la surcharge via config si nécessaire
+        current_encryption_key = settings.encryption_key.get_secret_value() if settings.encryption_key else None
         
-        current_config_file = config_file_to_use if config_file_to_use else base_path / DEFAULT_CONFIG_FILE_PATH
+        current_config_file = config_file_to_use if config_file_to_use else settings.config_file_enc
         if not current_config_file.is_absolute():
             current_config_file = base_path / current_config_file
         
-        current_fallback_file = base_path / DEFAULT_CONFIG_FILE_JSON_PATH # TODO: Permettre la surcharge
+        current_fallback_file = settings.config_file_json
         if not current_fallback_file.is_absolute():
             current_fallback_file = base_path / current_fallback_file
         if not current_fallback_file.exists():

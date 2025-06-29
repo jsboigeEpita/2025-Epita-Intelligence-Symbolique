@@ -13,19 +13,35 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from project_core.core_from_scripts.cleanup_manager import CleanupManager
 from project_core.core_from_scripts.environment_manager import EnvironmentManager
 from project_core.core_from_scripts.organization_manager import OrganizationManager
-from project_core.managers.repository_manager import RepositoryManager
+from project_core.core_from_scripts.repository_manager import RepositoryManager
 
 
 def handle_repo_commands(args):
     """Handles commands related to the Git repository."""
+    manager = RepositoryManager()
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
     if args.repo_command == 'find-orphans':
-        files = RepositoryManager.find_untracked_files()
+        # This part of the function seems to call a class method, which might be an error.
+        # Assuming it should be an instance method for consistency.
+        # If RepositoryManager.find_untracked_files is indeed a static/class method,
+        # this would need to be adjusted.
+        files = manager.find_untracked_files()
         if files:
             print("Fichiers non suivis (orphelins) :")
             for f in files:
                 print(f"- {f}")
         else:
             print("Aucun fichier orphelin trouvé.")
+    elif args.repo_command == 'update-gitignore':
+        template_path = os.path.join(project_root, 'project_core', 'templates', 'project.gitignore.template')
+        added_rules = manager.update_gitignore_from_template(project_root, template_path)
+        if added_rules:
+            print(f"Successfully added {len(added_rules)} new rules to .gitignore:")
+            for rule in added_rules:
+                print(f" - {rule}")
+        else:
+            print(".gitignore is already up to date.")
 
 def handle_cleanup_commands(args):
     """Handles cleanup commands."""
@@ -98,7 +114,8 @@ def main():
     # 'repo' command
     repo_parser = subparsers.add_parser('repo', help='Commands related to the Git repository')
     repo_subparsers = repo_parser.add_subparsers(dest='repo_command', help='Action to perform on the repository', required=True)
-    repo_subparsers.add_parser('find-orphans', help='Find untracked (orphan) files in the repository')
+    find_orphans_parser = repo_subparsers.add_parser('find-orphans', help='Find untracked (orphan) files in the repository')
+    update_gitignore_parser = repo_subparsers.add_parser('update-gitignore', help='Update .gitignore from template.')
 
     # 'cleanup' command
     cleanup_parser = subparsers.add_parser('cleanup', help='Project cleanup commands')

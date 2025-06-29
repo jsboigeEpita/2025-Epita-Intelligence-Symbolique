@@ -330,3 +330,10 @@ chiers de log
 
 # Archives created by maintenance scripts
 results_archive/
+
+# Managed by Project Core
+*.log.*
+*.pyc
+*.pyd
+*.pyo
+local_llm_data/

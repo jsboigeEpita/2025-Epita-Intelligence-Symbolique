@@ -20,7 +20,7 @@ import json
 
 # Importer PROJECT_ROOT depuis la configuration centrale (de la version stashed)
 try:
-    from argumentation_analysis.ui.config import PROJECT_ROOT
+    from argumentation_analysis.core.bootstrap import project_root as PROJECT_ROOT
 except ImportError:
     # Fallback si le script est exécuté dans un contexte où l'import direct n'est pas possible
     PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent

@@ -13,7 +13,6 @@ sys.path.append(str(Path(__file__).parent.parent))
 # Importer les modules nécessaires
 from argumentation_analysis.config.settings import settings
 from argumentation_analysis.core.io_manager import save_extract_definitions
-from argumentation_analysis.ui import config as ui_config
 
 def update_encrypted_config():
     """
@@ -21,16 +20,19 @@ def update_encrypted_config():
     à partir du fichier JSON corrigé extract_sources_updated.json
     """
     # Chemin vers le fichier JSON corrigé
-    json_file_path = Path(__file__).parent / "extract_repair" / "docs" / "extract_sources_updated.json"
+    json_file_path = settings.project_root / "argumentation_analysis" / "utils" / "extract_repair" / "docs" / "extract_sources_updated.json"
     
+    # Récupérer la clé de chiffrement
+    encryption_key = settings.encryption_key.get_secret_value() if settings.encryption_key else None
+
     # Vérifier si le fichier JSON corrigé existe
     if not json_file_path.exists():
         print(f"❌ Erreur: Le fichier JSON corrigé '{json_file_path}' n'existe pas.")
         return False
     
     # Vérifier si la clé de chiffrement est disponible
-    if not ui_config.ENCRYPTION_KEY:
-        print(f"❌ Erreur: La clé de chiffrement n'est pas disponible. Vérifiez la variable d'environnement '{ui_config.PASSPHRASE_VAR_NAME}'.")
+    if not encryption_key:
+        print(f"❌ Erreur: La clé de chiffrement n'est pas disponible. Vérifiez la variable d'environnement 'TEXT_CONFIG_PASSPHRASE'.")
         return False
     
     try:
@@ -42,13 +44,13 @@ def update_encrypted_config():
         print(f"   - {len(definitions)} sources trouvées.")
         
         # Sauvegarder les définitions dans le fichier chiffré
-        success = save_extract_definitions(definitions, ui_config.CONFIG_FILE_ENC, ui_config.ENCRYPTION_KEY)
+        success = save_extract_definitions(definitions, settings.config_file_enc, encryption_key)
         
         if success:
-            print(f"[OK] Fichier chiffré '{ui_config.CONFIG_FILE_ENC}' mis à jour avec succès.")
+            print(f"[OK] Fichier chiffré '{settings.config_file_enc}' mis à jour avec succès.")
             return True
         else:
-            print(f"❌ Erreur: Échec de la mise à jour du fichier chiffré '{ui_config.CONFIG_FILE_ENC}'.")
+            print(f"❌ Erreur: Échec de la mise à jour du fichier chiffré '{settings.config_file_enc}'.")
             return False
     
     except Exception as e:
@@ -60,8 +62,7 @@ if __name__ == "__main__":
     
     # Vérifier si la variable d'environnement TEXT_CONFIG_PASSPHRASE est définie
     if not settings.passphrase:
-        # Tenter d'obtenir le nom de la variable depuis l'ancien ui_config pour le message d'erreur
-        passphrase_var_name = getattr(ui_config, 'PASSPHRASE_VAR_NAME', 'TEXT_CONFIG_PASSPHRASE')
+        passphrase_var_name = 'TEXT_CONFIG_PASSPHRASE'
         print(f"⚠️ La variable d'environnement '{passphrase_var_name}' n'est pas définie dans votre .env ou configuration.")
         print(f"   Veuillez la définir avant d'exécuter ce script.")
         sys.exit(1)
@@ -74,12 +75,12 @@ if __name__ == "__main__":
         print("\n=== Vérification du fichier chiffré ===\n")
         
         # Vérifier que le fichier chiffré existe
-        if ui_config.CONFIG_FILE_ENC.exists():
-            print(f"[OK] Le fichier chiffré '{ui_config.CONFIG_FILE_ENC}' existe.")
-            print(f"   - Taille: {ui_config.CONFIG_FILE_ENC.stat().st_size} octets")
+        if settings.config_file_enc.exists():
+            print(f"[OK] Le fichier chiffré '{settings.config_file_enc}' existe.")
+            print(f"   - Taille: {settings.config_file_enc.stat().st_size} octets")
             print("\n[OK] Mise à jour réussie !")
         else:
-            print(f"❌ Erreur: Le fichier chiffré '{ui_config.CONFIG_FILE_ENC}' n'existe pas.")
+            print(f"❌ Erreur: Le fichier chiffré '{settings.config_file_enc}' n'existe pas.")
             print("\n❌ Échec de la mise à jour.")
     else:
         print("\n❌ Échec de la mise à jour.")
