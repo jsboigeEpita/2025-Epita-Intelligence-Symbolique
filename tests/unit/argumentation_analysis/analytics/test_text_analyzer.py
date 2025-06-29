@@ -1,4 +1,3 @@
-
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
@@ -18,95 +17,74 @@ from unittest.mock import MagicMock, patch, AsyncMock
 
 
 # Cible pour le patching
-# Le patch cible la classe là où elle est réellement définie, car elle est importée dynamiquement.
-RUN_ANALYSIS_CONVERSATION_PATH = "argumentation_analysis.orchestration.enhanced_pm_analysis_runner.EnhancedPMAnalysisRunner"
+# Le patch cible la fonction là où elle est définie, car elle est importée localement dans la fonction testée.
+# Cibles pour le patching
+APP_SETTINGS_PATH = "argumentation_analysis.analytics.text_analyzer.AppSettings"
+ANALYSIS_RUNNER_PATH = "argumentation_analysis.analytics.text_analyzer.AnalysisRunner"
 
-# Importation de la fonction à tester après avoir défini le chemin de patch
+# Importation de la fonction à tester
 from argumentation_analysis.analytics.text_analyzer import perform_text_analysis
 
-
-@pytest.fixture
-def mock_llm_service():
-    """Fixture pour un service LLM mocké."""
-    """Fixture pour un service LLM mocké."""
-    return MagicMock(name="MockLLMService")
-
-@pytest.fixture
-def sample_services(mock_llm_service):
-    """Fixture pour un dictionnaire de services avec le LLM mocké."""
-    return {"llm_service": mock_llm_service, "jvm_ready": True}
-
 @pytest.mark.asyncio
-async def test_perform_text_analysis_nominal_case(sample_services, mock_llm_service, caplog):
+@patch(ANALYSIS_RUNNER_PATH)
+@patch(APP_SETTINGS_PATH)
+async def test_perform_text_analysis_nominal_case(mock_app_settings_class, mock_analysis_runner_class, caplog):
     """Teste le cas nominal de perform_text_analysis."""
     text_to_analyze = "Ceci est un texte d'exemple pour l'analyse."
     analysis_type = "default_test"
+    expected_result = "Résultat de l'analyse"
 
-    with patch("argumentation_analysis.analytics.text_analyzer.logger") as mock_logger:
-        with patch(RUN_ANALYSIS_CONVERSATION_PATH) as mock_runner_class:
-            mock_runner_instance = mock_runner_class.return_value
-            # La méthode doit être une AsyncMock pour être "awaited" et pour que les assertions async fonctionnent
-            mock_runner_instance.run_enhanced_analysis = AsyncMock(return_value={"success": True})
+    # Configurer les mocks
+    mock_settings_instance = mock_app_settings_class.return_value
+    mock_runner_instance = mock_analysis_runner_class.return_value
+    mock_runner_instance.run_analysis = AsyncMock(return_value=expected_result)
 
-            result = await perform_text_analysis(text_to_analyze, sample_services, analysis_type)
+    result = await perform_text_analysis(text_to_analyze, analysis_type)
 
-            mock_runner_instance.run_enhanced_analysis.assert_awaited_once_with(
-                text_content=text_to_analyze,
-                llm_service=mock_llm_service
-            )
-            assert result == {"success": True}
-
-            # Vérifier les appels au logger mocké
-            mock_logger.info.assert_any_call(f"Initiating enhanced text analysis of type '{analysis_type}' on text of length {len(text_to_analyze)} chars.")
-            mock_logger.info.assert_any_call(f"Launching main analysis (type: {analysis_type}) via EnhancedPMAnalysisRunner...")
-            mock_logger.info.assert_any_call(f"Main analysis (type: '{analysis_type}') completed successfully via EnhancedPMAnalysisRunner.")
+    # Assertions
+    mock_app_settings_class.assert_called_once()
+    mock_analysis_runner_class.assert_called_once_with(mock_settings_instance)
+    mock_runner_instance.run_analysis.assert_awaited_once_with(input_text=text_to_analyze)
+    assert result == expected_result
+    assert f"Initiating text analysis of type '{analysis_type}'" in caplog.text
+    assert "Lancement de l'analyse principale (type: default_test) via AnalysisRunner..." in caplog.text
+    assert "Analyse principale (type: 'default_test') terminée avec succès." in caplog.text
 
 @pytest.mark.asyncio
-async def test_perform_text_analysis_llm_service_missing(sample_services, caplog):
-    """Teste le cas où le service LLM est manquant."""
-    services_without_llm = {"jvm_ready": True} # Pas de llm_service
+@patch(APP_SETTINGS_PATH)
+async def test_perform_text_analysis_settings_fail(mock_app_settings_class, caplog):
+    """Teste le cas où l'initialisation de AppSettings échoue."""
     text_to_analyze = "Texte test."
+    expected_exception = FileNotFoundError("Fichier de config manquant")
+    mock_app_settings_class.side_effect = expected_exception
 
-    with patch("argumentation_analysis.analytics.text_analyzer.logger") as mock_logger:
-        with patch(RUN_ANALYSIS_CONVERSATION_PATH) as mock_runner_class:
-            result = await perform_text_analysis(text_to_analyze, services_without_llm, "test_no_llm")
-            
-            assert result is None # Indique un échec critique
-            # La méthode n'aurait pas dû être appelée car le service LLM est manquant
-            mock_runner_class.return_value.run_enhanced_analysis.assert_not_called()
-            mock_logger.critical.assert_called_once_with(" Le service LLM n'est pas disponible dans les services fournis. L'analyse ne peut pas continuer.")
+    with pytest.raises(FileNotFoundError) as excinfo:
+        await perform_text_analysis(text_to_analyze)
+    
+    assert excinfo.value == expected_exception
+    assert "Erreur de configuration critique" in caplog.text
 
 @pytest.mark.asyncio
-async def test_perform_text_analysis_run_analysis_raises_exception(sample_services, mock_llm_service, caplog):
-    """Teste le cas où run_analysis_conversation lève une exception."""
+@patch(ANALYSIS_RUNNER_PATH)
+@patch(APP_SETTINGS_PATH)
+async def test_perform_text_analysis_runner_fails(mock_app_settings_class, mock_analysis_runner_class, caplog):
+    """Teste le cas où la méthode run_analysis de AnalysisRunner lève une exception."""
     text_to_analyze = "Texte qui cause une erreur."
     analysis_type = "error_case"
-    expected_exception = Exception("Erreur simulée dans run_analysis_conversation")
+    expected_exception = Exception("Erreur simulée dans run_analysis")
 
-    with patch("argumentation_analysis.analytics.text_analyzer.logger") as mock_logger:
-        with patch(RUN_ANALYSIS_CONVERSATION_PATH) as mock_runner_class:
-            mock_runner_instance = mock_runner_class.return_value
-            # La méthode doit être une AsyncMock pour que les assertions async fonctionnent
-            mock_runner_instance.run_enhanced_analysis = AsyncMock(side_effect=expected_exception)
+    # Configurer les mocks
+    mock_settings_instance = mock_app_settings_class.return_value
+    mock_runner_instance = mock_analysis_runner_class.return_value
+    mock_runner_instance.run_analysis = AsyncMock(side_effect=expected_exception)
 
-            with pytest.raises(Exception) as excinfo:
-                await perform_text_analysis(text_to_analyze, sample_services, analysis_type)
-            
-            assert excinfo.value == expected_exception
-            mock_runner_instance.run_enhanced_analysis.assert_awaited_once_with(
-                text_content=text_to_analyze,
-                llm_service=mock_llm_service
-            )
-            mock_logger.error.assert_called_once_with(f"Error during text analysis (type: {analysis_type}): {expected_exception}", exc_info=True)
+    with pytest.raises(Exception) as excinfo:
+        await perform_text_analysis(text_to_analyze, analysis_type)
 
-@pytest.mark.asyncio
-async def test_perform_text_analysis_run_analysis_raises_import_error(sample_services, mock_llm_service, caplog):
-    """Teste le cas où run_analysis_conversation lève une ImportError."""
-    text_to_analyze = "Texte pour test d'ImportError."
-    analysis_type = "import_error_case"
-    # Ce test est redondant car le test 'raises_exception' couvre déjà ce cas.
-    # La logique actuelle de gestion d'erreur ne différencie pas les types d'exceptions.
-    pass
+    assert excinfo.value == expected_exception
+    mock_analysis_runner_class.assert_called_once_with(mock_settings_instance)
+    mock_runner_instance.run_analysis.assert_awaited_once_with(input_text=text_to_analyze)
+    assert f"Erreur lors de l'analyse du texte (type: {analysis_type}): {expected_exception}" in caplog.text
 
 
 # Test pour vérifier le comportement si l'import initial de run_analysis_conversation échoue

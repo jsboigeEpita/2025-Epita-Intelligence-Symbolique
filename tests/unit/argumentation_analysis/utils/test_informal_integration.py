@@ -13,6 +13,8 @@ import logging
 from unittest.mock import MagicMock
 from pathlib import Path
 import pytest # Ajout pour le marqueur
+from unittest.mock import MagicMock
+import semantic_kernel as sk
 
 # Ajouter le répertoire racine au path pour pouvoir importer les modules
 root_dir = str(Path(__file__).parent.parent.parent)
@@ -38,7 +40,7 @@ def test_informal_integration():
         
         # Créer une instance de la classe
         logger.info("Création d'une instance de InformalAnalysisPlugin...")
-        mock_kernel = MagicMock()
+        mock_kernel = MagicMock(spec=sk.Kernel)
         plugin = InformalAnalysisPlugin(kernel=mock_kernel)
         
         # Explorer la hiérarchie des sophismes à partir de la racine (PK=0)

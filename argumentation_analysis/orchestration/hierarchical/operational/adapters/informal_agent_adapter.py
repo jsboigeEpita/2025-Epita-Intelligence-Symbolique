@@ -18,6 +18,7 @@ from argumentation_analysis.orchestration.hierarchical.operational.agent_interfa
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
 from argumentation_analysis.agents.agent_factory import AgentFactory
 from argumentation_analysis.core.bootstrap import ProjectContext
+from semantic_kernel.agents import Agent
 
 class InformalAgentAdapter(OperationalAgent):
     """
@@ -38,7 +39,7 @@ class InformalAgentAdapter(OperationalAgent):
             config_name: La configuration de l'agent à créer (ex: 'simple', 'full').
         """
         super().__init__(name, operational_state)
-        self.agent: Optional[ChatCompletionAgent] = None
+        self.agent: Optional[Agent] = None
         self.kernel: Optional[sk.Kernel] = None
         self.llm_service_id: Optional[str] = None
         self.project_context = project_context
@@ -57,9 +58,9 @@ class InformalAgentAdapter(OperationalAgent):
         self.llm_service_id = llm_service_id
         
         try:
-            self.logger.info(f"Initialisation de l'agent d'analyse informelle via factory avec la config '{self.config_name}'...")
+            self.logger.info("Création de l'agent d'analyse informelle via la factory...")
             factory = AgentFactory(kernel=self.kernel, llm_service_id=self.llm_service_id)
-            self.agent = factory.create_informal_fallacy_agent(config_name=self.config_name)
+            self.agent = factory.create_informal_fallacy_agent()
             self.initialized = True
             self.logger.info("Agent d'analyse informelle initialisé avec succès.")
             return True

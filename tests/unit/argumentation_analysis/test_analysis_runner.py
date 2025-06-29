@@ -15,68 +15,66 @@ qui orchestre l'analyse argumentative d'un texte.
 import unittest
 from unittest.mock import patch, MagicMock, AsyncMock
 import asyncio
-# from tests.async_test_case import AsyncTestCase # Suppression de l'import
+from unittest.mock import patch, MagicMock, AsyncMock
 from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner
+from argumentation_analysis.config.settings import AppSettings
 
 
-class TestAnalysisRunner(unittest.TestCase):
+class TestAnalysisRunner(unittest.IsolatedAsyncioTestCase):
     """Suite de tests pour la classe `AnalysisRunner`."""
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-        
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
 
     def setUp(self):
         """Initialisation avant chaque test."""
-        self.runner = AnalysisRunner()
+        self.mock_settings = MagicMock(spec=AppSettings)
+        # Configurez les attributs nécessaires sur mock_settings si le constructeur de AnalysisRunner les utilise
+        self.mock_settings.service_manager = MagicMock()
+        self.mock_settings.service_manager.default_llm_service_id = "test_service"
+        
+        # Le constructeur de AnalysisRunner crée un kernel et une factory, nous devons patcher cela
+        with patch('argumentation_analysis.orchestration.analysis_runner.KernelBuilder.create_kernel') as mock_create_kernel, \
+             patch('argumentation_analysis.orchestration.analysis_runner.AgentFactory') as mock_agent_factory:
+            
+            self.runner = AnalysisRunner(settings=self.mock_settings)
+        
         self.test_text = "Ceci est un texte de test pour l'analyse."
-        self.mock_llm_service = MagicMock()
-        self.mock_llm_service.service_id = "test_service_id"
- 
-    
-    @patch('argumentation_analysis.orchestration.analysis_runner._run_analysis_conversation', new_callable=AsyncMock)
-    @patch('argumentation_analysis.orchestration.analysis_runner.create_llm_service')
-    async def test_run_analysis_with_llm_service(self, mock_create_llm_service, mock_run_analysis_conversation):
-        """Teste l'exécution de l'analyse avec un service LLM fourni."""
-        mock_run_analysis_conversation.return_value = "Résultat de l'analyse"
-        
-        result = await self.runner.run_analysis_async(
-            text_content=self.test_text,
-            llm_service=self.mock_llm_service
-        )
-        
-        self.assertEqual(result, "Résultat de l'analyse")
-        mock_create_llm_service.assert_not_called()
-        mock_run_analysis_conversation.assert_called_once_with(
-            texte_a_analyser=self.test_text,
-            llm_service=self.mock_llm_service
-        )
 
-    @patch('argumentation_analysis.orchestration.analysis_runner._run_analysis_conversation', new_callable=AsyncMock)
-    @patch('argumentation_analysis.orchestration.analysis_runner.create_llm_service')
-    async def test_run_analysis_without_llm_service(self, mock_create_llm_service, mock_run_analysis_conversation):
-        """Teste l'exécution de l'analyse sans service LLM fourni."""
-        mock_create_llm_service.return_value = self.mock_llm_service
-        mock_run_analysis_conversation.return_value = "Résultat de l'analyse"
+    @patch('argumentation_analysis.orchestration.analysis_runner.AgentGroupChat', new_callable=AsyncMock)
+    async def test_run_analysis_calls_group_chat(self, mock_agent_group_chat_class):
+        """
+        Teste que `run_analysis` initialise et invoque correctement AgentGroupChat.
+        """
+        # Configurer le mock pour l'instance de AgentGroupChat
+        mock_chat_instance = mock_agent_group_chat_class.return_value
+        # Simuler la réponse de l'invocation du chat
+        mock_chat_instance.invoke.return_value = self.mock_async_iterator([MagicMock()])
         
-        result = await self.runner.run_analysis_async(text_content=self.test_text)
+        # Mocker la factory d'agent sur l'instance du runner
+        self.runner.factory = MagicMock()
+        mock_manager = MagicMock()
+        mock_fallacy = MagicMock()
+        self.runner.factory.create_project_manager_agent.return_value = mock_manager
+        self.runner.factory.create_informal_fallacy_agent.return_value = mock_fallacy
+
+        # Exécuter la méthode
+        result = await self.runner.run_analysis(self.test_text)
+
+        # Assertions
+        self.runner.factory.create_project_manager_agent.assert_called_once()
+        self.runner.factory.create_informal_fallacy_agent.assert_called_once()
         
-        self.assertEqual(result, "Résultat de l'analyse")
-        mock_create_llm_service.assert_called_once()
-        mock_run_analysis_conversation.assert_called_once_with(
-            texte_a_analyser=self.test_text,
-            llm_service=self.mock_llm_service
-        )
+        mock_agent_group_chat_class.assert_called_once()
+        # Vérifier que le chat a été invoqué
+        mock_chat_instance.invoke.assert_awaited_once()
+        
+        # Vérifier que le résultat contient le message initial et les messages du chat
+        self.assertEqual(len(result), 2)
+
+    def mock_async_iterator(self, items):
+        """Crée un itérateur asynchrone à partir d'une liste d'éléments."""
+        async def _iterator():
+            for item in items:
+                yield item
+        return _iterator()
 
 if __name__ == '__main__':
     unittest.main()

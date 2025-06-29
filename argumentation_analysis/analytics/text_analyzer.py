@@ -14,15 +14,15 @@ textuelles, avec la possibilité d'étendre les types d'analyses supportées
 à l'avenir via le paramètre `analysis_type`.
 """
 import logging
-from typing import Dict, Any
+from typing import Any
+from argumentation_analysis.config.settings import AppSettings
+from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner
 
 logger = logging.getLogger(__name__)
 
-# L'importation de run_analysis_conversation a été déplacée dans perform_text_analysis
-# pour résoudre une dépendance circulaire.
-
-async def perform_text_analysis(text: str, services: Dict[str, Any], analysis_type: str = "default") -> Any:
-    """Effectue une analyse de texte en utilisant l'orchestrateur `EnhancedPMAnalysisRunner`.
+async def perform_text_analysis(text: str, services: dict[str, Any], analysis_type: str = "default") -> Any:
+    """
+    Effectue une analyse de texte en utilisant l'orchestrateur `EnhancedPMAnalysisRunner`.
 
     Cette fonction sert de point d'entrée pour l'analyse, en utilisant le nouvel
     orchestrateur amélioré pour effectuer l'analyse.
@@ -33,7 +33,7 @@ async def perform_text_analysis(text: str, services: Dict[str, Any], analysis_ty
     :return: Les résultats structurés de l'analyse.
     :raises Exception: Propage les exceptions de l'orchestrateur.
     """
-    logger.info(f"Initiating enhanced text analysis of type '{analysis_type}' on text of length {len(text)} chars.")
+    logger.info(f"Lancement de l'analyse de texte améliorée de type '{analysis_type}' sur un texte de {len(text)} caractères.")
 
     # Utilisation du nouvel orchestrateur. L'import est local pour la clarté.
     try:
@@ -44,22 +44,22 @@ async def perform_text_analysis(text: str, services: Dict[str, Any], analysis_ty
 
     llm_service = services.get("llm_service")
     if not llm_service:
-        logger.critical(" Le service LLM n'est pas disponible dans les services fournis. L'analyse ne peut pas continuer.")
+        logger.critical("Le service LLM n'est pas disponible dans les services fournis. L'analyse ne peut pas continuer.")
         return None
 
     try:
         runner = EnhancedPMAnalysisRunner()
-        logger.info(f"Launching main analysis (type: {analysis_type}) via EnhancedPMAnalysisRunner...")
+        logger.info(f"Lancement de l'analyse principale (type: {analysis_type}) via EnhancedPMAnalysisRunner...")
         
         analysis_result = await runner.run_enhanced_analysis(
             text_content=text,
             llm_service=llm_service
         )
         
-        logger.info(f"Main analysis (type: '{analysis_type}') completed successfully via EnhancedPMAnalysisRunner.")
-        logger.debug(f"RAW RESULT from EnhancedPMAnalysisRunner: {analysis_result}")
+        logger.info(f"Analyse principale (type: '{analysis_type}') terminée avec succès via EnhancedPMAnalysisRunner.")
+        logger.debug(f"RÉSULTAT BRUT de EnhancedPMAnalysisRunner: {analysis_result}")
         return analysis_result
 
     except Exception as e:
-        logger.error(f"Error during text analysis (type: {analysis_type}): {e}", exc_info=True)
+        logger.error(f"Erreur lors de l'analyse du texte (type: {analysis_type}): {e}", exc_info=True)
         raise

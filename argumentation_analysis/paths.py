@@ -70,5 +70,10 @@ def ensure_directories_exist():
         except Exception as e:
             logger.warning(f"Impossible de créer le répertoire {directory}: {e}")
 
+def get_project_root() -> Path:
+    """Retourne le chemin racine du projet."""
+    return PROJECT_ROOT_DIR
+
+
 # Créer les répertoires au moment de l'importation du module
 ensure_directories_exist()

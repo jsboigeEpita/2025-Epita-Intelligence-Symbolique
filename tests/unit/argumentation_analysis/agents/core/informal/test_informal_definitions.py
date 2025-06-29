@@ -60,7 +60,7 @@ def informal_plugin_real(tmp_path, sample_taxonomy_data):
     """Fixture pour une instance du plugin utilisant un vrai fichier CSV temporaire."""
     csv_file = tmp_path / "temp_taxonomy.csv"
     pd.DataFrame(sample_taxonomy_data).to_csv(csv_file, index=False)
-    mock_kernel = MagicMock(spec=Kernel)
+    mock_kernel = MagicMock(spec=sk.Kernel)
     # L'instance chargera ce fichier
     return InformalAnalysisPlugin(kernel=mock_kernel, taxonomy_file_path=str(csv_file))
 

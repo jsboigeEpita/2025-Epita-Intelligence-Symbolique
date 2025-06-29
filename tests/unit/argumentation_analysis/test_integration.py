@@ -47,7 +47,7 @@ def mock_kernel_class(mocker):
 @pytest.fixture
 def mock_run_analysis(mocker):
     """Fixture pour mocker la fonction run_analysis."""
-    return mocker.patch('argumentation_analysis.orchestration.analysis_runner.AnalysisRunner.run_analysis_async')
+    return mocker.patch('argumentation_analysis.orchestration.analysis_runner.AnalysisRunner.run_analysis')
 
 
 class TestBasicIntegration:
