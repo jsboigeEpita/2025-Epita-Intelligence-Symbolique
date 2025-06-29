@@ -2,15 +2,15 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-# The 'webapp_service' session fixture in conftest.py is autouse=True,
+# Les URLs des services sont injectées via les fixtures `frontend_url` et `backend_url`.
 # so the web server is started automatically for all tests in this module.
 @pytest.mark.playwright
 @pytest.mark.asyncio
-async def test_successful_graph_visualization(page: Page, webapp_service: dict):
+async def test_successful_graph_visualization(page: Page, frontend_url: str):
     """
     Scenario 4.1: Successful visualization of a logic graph (Happy Path)
     """
-    await page.goto(webapp_service.frontend_url)
+    await page.goto(frontend_url)
     
     # Attendre que l'API soit connectée
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
@@ -37,11 +37,11 @@ async def test_successful_graph_visualization(page: Page, webapp_service: dict):
 
 @pytest.mark.playwright
 @pytest.mark.asyncio
-async def test_logic_graph_api_error(page: Page, webapp_service: dict):
+async def test_logic_graph_api_error(page: Page, frontend_url: str):
     """
     Scenario 4.2: API error during graph generation
     """
-    await page.goto(webapp_service.frontend_url)
+    await page.goto(frontend_url)
     
     # Attendre que l'API soit connectée
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
@@ -73,11 +73,11 @@ async def test_logic_graph_api_error(page: Page, webapp_service: dict):
 
 @pytest.mark.playwright
 @pytest.mark.asyncio
-async def test_logic_graph_reset_button(page: Page, webapp_service: dict):
+async def test_logic_graph_reset_button(page: Page, frontend_url: str):
     """
     Scenario 4.3: Reset button clears input and graph
     """
-    await page.goto(webapp_service.frontend_url)
+    await page.goto(frontend_url)
     
     # Attendre que l'API soit connectée
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)

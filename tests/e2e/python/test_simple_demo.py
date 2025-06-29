@@ -7,15 +7,15 @@ from playwright.sync_api import Page, expect
 
 
 @pytest.mark.asyncio
-async def test_app_loads_successfully(page: Page, webapp_service: dict):
+async def test_app_loads_successfully(page: Page, frontend_url: str):
     """
     Test basique qui vérifie que l'application se charge.
     SANS marker playwright problématique.
     """
     try:
         # Navigation vers l'application
-        print(f"[START] Navigation vers {webapp_service['frontend_url']}")
-        await page.goto(webapp_service.frontend_url, timeout=10000)
+        print(f"[START] Navigation vers {frontend_url}")
+        await page.goto(frontend_url, timeout=10000)
         
         # Attendre que la page soit chargée
         page.wait_for_load_state('networkidle', timeout=10000)
@@ -62,7 +62,7 @@ async def test_app_loads_successfully(page: Page, webapp_service: dict):
 
 
 @pytest.mark.asyncio
-async def test_api_connectivity(page: Page, webapp_service: dict):
+async def test_api_connectivity(page: Page, frontend_url: str):
     """
     Test qui vérifie la connectivité API.
     """
@@ -70,7 +70,7 @@ async def test_api_connectivity(page: Page, webapp_service: dict):
         print("[API] Test connectivite API")
         
         # Navigation
-        await page.goto(webapp_service.frontend_url, timeout=10000)
+        await page.goto(frontend_url, timeout=10000)
         page.wait_for_load_state('networkidle', timeout=5000)
         
         # Attendre indicateur de statut API
@@ -108,14 +108,14 @@ async def test_api_connectivity(page: Page, webapp_service: dict):
 
 
 @pytest.mark.asyncio
-async def test_navigation_tabs(page: Page, webapp_service: dict):
+async def test_navigation_tabs(page: Page, frontend_url: str):
     """
     Test basique de navigation entre onglets.
     """
     try:
         print("[NAV] Test navigation onglets")
         
-        await page.goto(webapp_service.frontend_url, timeout=10000)
+        await page.goto(frontend_url, timeout=10000)
         page.wait_for_load_state('networkidle', timeout=5000)
         
         # Chercher des éléments cliquables qui ressemblent à des onglets

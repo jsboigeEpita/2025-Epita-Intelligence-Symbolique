@@ -4,13 +4,13 @@ from playwright.sync_api import Page, expect, TimeoutError
 # L'import de PlaywrightHelpers est supprimé car la classe n'existe plus.
 # Les appels sont remplacés par des localisateurs directs de Playwright.
 
-# The 'webapp_service' session fixture in conftest.py is autouse=True,
+# Les URLs des services sont injectées via les fixtures `frontend_url` et `backend_url`.
 # so the web server is started automatically for all tests in this module.
 @pytest.mark.asyncio
 @pytest.fixture(scope="function")
-async def framework_page(page: Page, webapp_service: dict) -> Page:
+async def framework_page(page: Page, frontend_url: str) -> Page:
     """Fixture qui prépare la page et navigue vers l'onglet Framework."""
-    await page.goto(webapp_service.frontend_url)
+    await page.goto(frontend_url)
     # L'attente de l'état de connexion de l'API est maintenant dans chaque test
     # pour une meilleure isolation et un débogage plus facile.
     

@@ -21,7 +21,7 @@ class TestWebAppAPIInvestigation:
     def test_api_health(self):
         """Test de santé de l'API"""
         base_url = os.environ.get("BACKEND_URL")
-        assert base_url, "La variable d'environnement BACKEND_URL doit être définie par la fixture webapp_service"
+        assert base_url, "La variable d'environnement BACKEND_URL doit être définie par l'orchestrateur de tests"
         response = requests.get(f"{base_url}/api/status", timeout=10)
         assert response.status_code == 200
         
@@ -50,7 +50,7 @@ class TestWebAppAPIInvestigation:
         
         try:
             base_url = os.environ.get("BACKEND_URL")
-            assert base_url, "La variable d'environnement BACKEND_URL doit être définie par la fixture webapp_service"
+            assert base_url, "La variable d'environnement BACKEND_URL doit être définie par l'orchestrateur de tests"
             response = requests.post(f"{base_url}/api/analyze", json=payload, timeout=30)
             print(f"\n[ANALYZE] Test de l'endpoint /api/analyze:")
             print(f"   Status Code: {response.status_code}")
@@ -85,7 +85,7 @@ class TestWebAppAPIInvestigation:
             # Je la skipperai pour l'instant.
             pytest.skip("La route /api/fallacies n'est plus implémentée.")
             base_url = os.environ.get("BACKEND_URL")
-            assert base_url, "La variable d'environnement BACKEND_URL doit être définie par la fixture webapp_service"
+            assert base_url, "La variable d'environnement BACKEND_URL doit être définie par l'orchestrateur de tests"
             response = requests.post(f"{base_url}/api/fallacies", json=payload, timeout=30)
             print(f"\n[WARNING]  Test de l'endpoint /api/fallacies:")
             print(f"   Status Code: {response.status_code}")
@@ -119,7 +119,7 @@ class TestWebAppAPIInvestigation:
             # Cette route /api/validate n'existe plus dans la nouvelle app Starlette
             pytest.skip("La route /api/validate n'est plus implémentée.")
             base_url = os.environ.get("BACKEND_URL")
-            assert base_url, "La variable d'environnement BACKEND_URL doit être définie par la fixture webapp_service"
+            assert base_url, "La variable d'environnement BACKEND_URL doit être définie par l'orchestrateur de tests"
             response = requests.post(f"{base_url}/api/validate", json=payload, timeout=30)
             print(f"\n[OK] Test de l'endpoint /api/validate:")
             print(f"   Status Code: {response.status_code}")
@@ -154,7 +154,7 @@ class TestWebAppAPIInvestigation:
             # Cette route /api/framework n'existe plus. Elle a été remplacée par /api/v1/framework/analyze
             pytest.skip("La route /api/framework a été remplacée par /api/v1/framework/analyze.")
             base_url = os.environ.get("BACKEND_URL")
-            assert base_url, "La variable d'environnement BACKEND_URL doit être définie par la fixture webapp_service"
+            assert base_url, "La variable d'environnement BACKEND_URL doit être définie par l'orchestrateur de tests"
             response = requests.post(f"{base_url}/api/framework", json=payload, timeout=30)
             print(f"\n[FRAMEWORK]  Test de l'endpoint /api/framework:")
             print(f"   Status Code: {response.status_code}")

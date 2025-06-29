@@ -295,9 +295,17 @@ class MinimalFrontendManager:
         # Sur Windows, il est plus robuste d'appeler npm.cmd directement
         if sys.platform == "win32":
             start_command_str = start_command_str.replace("npm", "npm.cmd", 1)
-        start_command = start_command_str.split()
+        
+        conda_env_name = os.environ.get('CONDA_DEFAULT_ENV', 'projet-is')
+        self.logger.info(f"[FRONTEND] Utilisation de l'environnement Conda '{conda_env_name}' pour le démarrage.")
+    
+        # Encapsuler la commande avec `conda run` pour garantir l'environnement correct
+        start_command = [
+            'conda', 'run', '-n', conda_env_name, '--no-capture-output'
+        ] + start_command_str.split()
         
         self.logger.info(f"[FRONTEND] Tentative de démarrage du frontend dans '{path}' sur le port {port}...")
+        self.logger.info(f"[FRONTEND] Commande de lancement: {' '.join(start_command)}")
 
         # Préparation de l'environnement pour le processus frontend
         env = os.environ.copy()
@@ -320,41 +328,37 @@ class MinimalFrontendManager:
             timeout_seconds = self.config.get('timeout_seconds', 90)
             
             try:
-                ready_line = "Compiled successfully!"
-                ready = False
+                startup_event = asyncio.Event()
                 output_lines = []
 
-                async def read_stream(stream, stream_name):
-                    nonlocal ready
-                    line = await stream.readline()
-                    if line:
-                        line_str = line.decode('utf-8', errors='ignore').strip()
-                        output_lines.append(f"[{stream_name}] {line_str}")
-                        self.logger.info(f"[FRONTEND_LOGS] {line_str}")
-                        if "Compiled successfully!" in line_str or "Compiled with warnings" in line_str:
-                            ready = True
-                    return line
+                async def log_stream_and_set_event(stream, stream_name):
+                    while not stream.at_eof():
+                        line_bytes = await stream.readline()
+                        if not line_bytes:
+                            break
+                        line = line_bytes.decode('utf-8', errors='ignore').strip()
+                        output_lines.append(f"[{stream_name}] {line}")
+                        self.logger.info(f"[FRONTEND_LOG] {line}")
+                        if ("Compiled successfully!" in line or "Compiled with warnings" in line) and not startup_event.is_set():
+                            startup_event.set()
 
-                end_time = asyncio.get_event_loop().time() + timeout_seconds
-                while not ready and asyncio.get_event_loop().time() < end_time:
-                    tasks = [
-                        asyncio.create_task(read_stream(self.process.stdout, "STDOUT")),
-                        asyncio.create_task(read_stream(self.process.stderr, "STDERR"))
-                    ]
-                    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-                    
-                    for task in pending:
-                        task.cancel()
-                    
-                    if not any(task.result() for task in done):
-                        break
+                # Lancer les tâches de logging en arrière-plan
+                log_tasks = [
+                    asyncio.create_task(log_stream_and_set_event(self.process.stdout, "STDOUT")),
+                    asyncio.create_task(log_stream_and_set_event(self.process.stderr, "STDERR"))
+                ]
 
-                if not ready:
-                    raise asyncio.TimeoutError("Le message 'Compiled successfully!' n'a pas été trouvé.")
+                # Attendre l'événement de démarrage ou le timeout
+                await asyncio.wait_for(startup_event.wait(), timeout=timeout_seconds)
+
+                # Annuler les tâches de logging après le démarrage pour ne pas consommer de ressources
+                for task in log_tasks:
+                    task.cancel()
+                await asyncio.gather(*log_tasks, return_exceptions=True)
 
             except asyncio.TimeoutError:
                 log_output = "\n".join(output_lines)
-                self.logger.error(f"[FRONTEND] Timeout de {timeout_seconds}s atteint. Le serveur frontend n'a pas démarré. Logs:\n{log_output}")
+                self.logger.error(f"[FRONTEND] Timeout de {timeout_seconds}s atteint. Le serveur n'a pas signalé son démarrage. Logs:\n{log_output}")
                 await self.stop()
                 return {'success': False, 'error': 'Timeout lors du démarrage du frontend.'}
 

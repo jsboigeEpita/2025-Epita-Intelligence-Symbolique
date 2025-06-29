@@ -1,7 +1,7 @@
 ﻿import pytest
 from playwright.sync_api import Page, expect
 
-# The 'webapp_service' session fixture in conftest.py is autouse=True,
+# Les URLs des services sont injectées via les fixtures `frontend_url` et `backend_url`.
 # so the web server is started automatically for all tests in this module.
 @pytest.fixture(scope="function")
 def validation_page(page: Page, frontend_url: str) -> Page:

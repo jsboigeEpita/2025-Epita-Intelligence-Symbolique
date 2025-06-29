@@ -28,9 +28,8 @@ d'utiliser des options pytest.
 # Exécute un test spécifique avec l'option -s pour voir les prints
 .\run_tests.ps1 "tests/agents/core/logic/test_tweety_bridge.py -s"
 #>
-param(
-    [string]$TestArgs
-)
+# Ce script ne prend plus d'arguments via le bloc `param`.
+# Utilisez les paires clé-valeur, ex: .\run_tests.ps1 -TestType e2e
 
 # --- Vérification et installation des dépendances PowerShell ---
 try {
@@ -117,51 +116,68 @@ function Invoke-ManagedCommand {
 
 # Parse les arguments en utilisant une table de hachage pour les options
 $params = @{
-    Type = "all" # Par défaut, exécute tous les tests non-intégration
+    TestType = "all" # Par défaut, exécute tous les tests non-intégration
 }
 $remainingArgs = @()
 $i = 0
 while ($i -lt $args.Count) {
-    if ($args[$i] -match '^-') {
-        $paramName = $args[$i].Substring(1)
-        if (($i + 1) -lt $args.Count -and -not ($args[$i+1] -match '^-')) {
+    # Nos clés sont sensibles à la casse et commencent par un tiret (ex: -TestType)
+    if ($args[$i] -match '^-([a-zA-Z0-9_]+)$') {
+        $paramName = $Matches[1]
+        # Si l'argument suivant existe et n'est pas une autre clé, alors c'est une valeur
+        if ((($i + 1) -lt $args.Count) -and ($args[$i+1] -notmatch '^-')) {
             $params[$paramName] = $args[$i+1]
-            $i++
+            $i++ # On consomme la valeur, on passe à l'argument suivant
         } else {
-            $params[$paramName] = $true # C'est un switch/flag
+            # C'est un switch/flag (ex: -SkipOctave)
+            $params[$paramName] = $true
         }
     } else {
+        # Tout ce qui n'est pas une clé est considéré comme un argument restant (pour Pytest)
         $remainingArgs += $args[$i]
     }
     $i++
 }
 
 # Assignation des variables complexes après parsing
-$Type = $params['Type']
-$Path = $params.Get_Item('Path')       # Peut être null
-$PytestArgs = $params.Get_Item('PytestArgs') # Peut être null
+$TestType = $params['TestType']
+$Path = if ($params.ContainsKey('Path')) { $params['Path'] } else { $null }
+$PytestArgs = if ($remainingArgs.Count -gt 0) { $remainingArgs -join ' ' } else { $null }
 $SkipOctave = $params.ContainsKey('SkipOctave')
 
-Write-Host "[INFO] Début de l'exécution des tests avec le type: '$Type'" -ForegroundColor Green
+
+Write-Host "[INFO] Début de l'exécution des tests avec le type: '$TestType'" -ForegroundColor Green
 if ($Path) { Write-Host "[INFO] Chemin spécifié: '$Path'" }
 if ($PytestArgs) { Write-Host "[INFO] Arguments Pytest supplémentaires: '$PytestArgs'" }
 
 # Branche 1: Installation ou mise à jour des dépendances
-if ($Type -eq "install" -or $Type -eq "update") {
+if ($TestType -eq "install" -or $TestType -eq "update") {
     Write-Host "[INFO] Installation/Mise à jour des dépendances via Poetry..." -ForegroundColor Cyan
-    $installCommand = "python -m poetry " + (if ($Type -eq "update") { "update" } else { "install --sync" })
+    $installCommand = "python -m poetry " + (if ($TestType -eq "update") { "update" } else { "install --sync" })
     Invoke-ManagedCommand -CommandToRun $installCommand
     exit $LASTEXITCODE
 }
 # Branche 2: Nettoyage
-elseif ($Type -eq "clean") {
+elseif ($TestType -eq "clean") {
     Write-Host "[INFO] Nettoyage du projet..." -ForegroundColor Cyan
     Get-ChildItem -Path $script:ProjectRoot -Include @("__pycache__", "*.pyc", "_temp") -Recurse -Force | Remove-Item -Recurse -Force
     Write-Host "[INFO] Nettoyage terminé." -ForegroundColor Green
     exit 0
 }
 # Branche 3: Tests d'intégration avec gestion du backend
-elseif ($Type -eq "integration") {
+elseif ($TestType -eq "e2e") {
+    Write-Host "[INFO] Lancement du cycle de test E2E complet via l'orchestrateur..." -ForegroundColor Cyan
+    $testPathToRun = if ($Path) { $Path } else { "tests/e2e" }
+    $config_file = "tests/e2e/e2e_config.yml"
+    # Encapsuler les arguments de pytest dans des apostrophes pour les passer comme une seule chaîne
+    $pytestArgsString = "-s -vv `"$testPathToRun`" $PytestArgs".Trim()
+    $pytestCommand = "python -m argumentation_analysis.webapp.orchestrator --config `"$config_file`" --frontend test --pytest-args '$pytestArgsString'"
+    
+    $script:globalExitCode = Invoke-ManagedCommand -CommandToRun $pytestCommand -NoExitOnError
+    Write-Host "[INFO] Exécution des tests E2E terminée avec le code de sortie: $script:globalExitCode" -ForegroundColor Cyan
+    exit $script:globalExitCode
+}
+elseif ($TestType -eq "integration") {
     Write-Host "[INFO] Lancement du cycle de test d'intégration avec gestion du backend..." -ForegroundColor Cyan
     $urlsFile = Join-Path $script:ProjectRoot "_temp/service_urls.json" # Fichier pour stocker les PIDs
 
@@ -237,23 +253,23 @@ elseif ($Type -eq "integration") {
 }
 # Branche 4: Tests Unit/Functional (Python) directs
 else {
-    Write-Host "[INFO] Lancement des tests de type '$Type' via le point d'entrée unifié..." -ForegroundColor Cyan
+    Write-Host "[INFO] Lancement des tests de type '$TestType' via le point d'entrée unifié..." -ForegroundColor Cyan
 
     $testPaths = @{
         "unit"       = "tests/unit"
         "functional" = "tests/functional"
-        "all"        = @("tests/unit", "tests/functional") # 'integration' est maintenant géré à part
+        "all"        = @("tests/unit", "tests/functional") # 'integration' et 'e2e' sont gérés à part
         "validation" = "tests/validation"
     }
 
     $selectedPaths = if ($Path) {
         @($Path)
     } else {
-        $testPaths[$Type]
+        $testPaths[$TestType]
     }
 
     if (-not $selectedPaths) {
-        Write-Host "[ERREUR] Type de test '$Type' non valide. Options valides: $($testPaths.Keys -join ', ')." -ForegroundColor Red
+        Write-Host "[ERREUR] Type de test '$TestType' non valide. Options valides: $($testPaths.Keys -join ', ')." -ForegroundColor Red
         exit 1
     }
     
@@ -265,6 +281,7 @@ else {
     }
 
     if ($PytestArgs) {
+        # Utiliser directement PytestArgs qui contient maintenant les arguments restants
         $pytestCommandParts += $PytestArgs.Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)
     }
     $pytestFinalCommand = $pytestCommandParts -join " "

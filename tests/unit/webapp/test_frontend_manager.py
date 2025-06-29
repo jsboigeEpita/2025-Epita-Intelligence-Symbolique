@@ -61,33 +61,46 @@ async def test_start_fails_if_path_not_found(manager, logger_mock):
 @pytest.mark.asyncio
 @patch('asyncio.create_subprocess_exec')
 async def test_start_success(mock_subprocess, manager, logger_mock, tmp_path):
-    """Tests the full successful start sequence."""
-    # Setup a valid fake frontend path
+    """Tests the full successful start sequence with the new event-based logic."""
+    # Setup
     manager.config['path'] = str(tmp_path)
-    # Mock the subprocess
     mock_proc = AsyncMock()
     mock_proc.pid = 1234
     
-    # Mock stdout pour simuler la compilation réussie
+    # Configure stdout mock
     mock_stdout = AsyncMock()
+    # readline is awaitable
     mock_stdout.readline.side_effect = [
         b'Starting the development server...\n',
         b'Compiled successfully!\n',
-        b'' # End of stream
     ]
+    # at_eof is a synchronous method, so we use a standard MagicMock for it
+    # This resolves the RuntimeWarning about a coroutine not being awaited.
+    stdout_at_eof_mock = MagicMock(side_effect=[False, False, True])
+    mock_stdout.at_eof = stdout_at_eof_mock
+
+    # Configure stderr mock
+    mock_stderr = AsyncMock()
+    mock_stderr.readline.side_effect = [] # No output
+    stderr_at_eof_mock = MagicMock(return_value=True) # Always at end
+    mock_stderr.at_eof = stderr_at_eof_mock
+
     mock_proc.stdout = mock_stdout
-    mock_proc.stderr = AsyncMock()
-    mock_proc.stderr.readline.return_value = b'' # No errors
+    mock_proc.stderr = mock_stderr
 
     mock_subprocess.return_value = mock_proc
 
-    result = await manager.start()
+    # Execute the start method with a timeout to prevent hangs
+    result = await asyncio.wait_for(manager.start(), timeout=2)
 
+    # Assertions
     assert result['success'] is True
     assert result['port'] == manager.config['port']
     assert result['pid'] == 1234
     mock_subprocess.assert_awaited_once()
     logger_mock.info.assert_any_call(f"[FRONTEND] Frontend démarré et prêt sur {result['url']}")
+    # Check that stdout was actually read
+    assert mock_stdout.readline.call_count == 2
 
 
 @pytest.mark.asyncio
