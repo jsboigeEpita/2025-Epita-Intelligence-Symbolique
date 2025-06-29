@@ -12,28 +12,22 @@ import asyncio
 import time
 from typing import Dict, List, Any, Optional
 import semantic_kernel as sk
+from semantic_kernel.agents import ChatCompletionAgent
 
 from argumentation_analysis.orchestration.hierarchical.operational.agent_interface import OperationalAgent
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
-from argumentation_analysis.agents.core.informal.informal_agent import LegacyInformalAnalysisAgent as InformalAnalysisAgent
+from argumentation_analysis.agents.agent_factory import AgentFactory
 from argumentation_analysis.core.bootstrap import ProjectContext
 
 class InformalAgentAdapter(OperationalAgent):
     """
-    Traduit les commandes opérationnelles pour l'`InformalAnalysisAgent`.
-
-    Cette classe implémente l'interface `OperationalAgent`. Son rôle est de :
-    1.  Recevoir une tâche générique de l'`OperationalManager` (ex: "détecter les
-        sophismes").
-    2.  Traduire les "techniques" de cette tâche en appels de méthode concrets
-        sur une instance de `InformalAnalysisAgent` (ex: appeler
-        `self.agent.detect_fallacies(...)`).
-    3.  Prendre les résultats retournés par l'agent.
-    4.  Les reformater en un dictionnaire de résultat standardisé, attendu
-        par l'`OperationalManager`.
+    Traduit les commandes opérationnelles pour l'InformalFallacyAgent créé par factory.
     """
 
-    def __init__(self, name: str = "InformalAgent", operational_state: Optional[OperationalState] = None, project_context: Optional[ProjectContext] = None):
+    def __init__(self, name: str = "InformalAgent",
+                 operational_state: Optional[OperationalState] = None,
+                 project_context: Optional[ProjectContext] = None,
+                 config_name: str = "simple"):
         """
         Initialise l'adaptateur pour l'agent d'analyse informelle.
 
@@ -41,26 +35,20 @@ class InformalAgentAdapter(OperationalAgent):
             name: Le nom de l'instance de l'agent.
             operational_state: L'état opérationnel partagé.
             project_context: Le contexte du projet.
+            config_name: La configuration de l'agent à créer (ex: 'simple', 'full').
         """
         super().__init__(name, operational_state)
-        self.agent: Optional[InformalAnalysisAgent] = None
+        self.agent: Optional[ChatCompletionAgent] = None
         self.kernel: Optional[sk.Kernel] = None
         self.llm_service_id: Optional[str] = None
         self.project_context = project_context
+        self.config_name = config_name
         self.initialized = False
         self.logger = logging.getLogger(f"InformalAgentAdapter.{name}")
 
     async def initialize(self, kernel: sk.Kernel, llm_service_id: str, project_context: ProjectContext) -> bool:
         """
-        Initialise l'agent d'analyse informelle sous-jacent.
-
-        Args:
-            kernel: Le kernel Semantic Kernel à utiliser.
-            llm_service_id: L'ID du service LLM à utiliser.
-            project_context: Le contexte du projet (reçu du registre).
-
-        Returns:
-            True si l'initialisation a réussi, False sinon.
+        Initialise l'agent d'analyse informelle en utilisant l'AgentFactory.
         """
         if self.initialized:
             return True
@@ -69,26 +57,28 @@ class InformalAgentAdapter(OperationalAgent):
         self.llm_service_id = llm_service_id
         
         try:
-            self.logger.info("Initialisation de l'agent d'analyse informelle interne...")
-            self.agent = InformalAnalysisAgent(kernel=self.kernel, agent_name=f"{self.name}_InformalAgent")
-            self.agent.setup_agent_components(llm_service_id=self.llm_service_id)
+            self.logger.info(f"Initialisation de l'agent d'analyse informelle via factory avec la config '{self.config_name}'...")
+            factory = AgentFactory(kernel=self.kernel, llm_service_id=self.llm_service_id)
+            self.agent = factory.create_informal_fallacy_agent(config_name=self.config_name)
             self.initialized = True
-            self.logger.info("Agent d'analyse informelle interne initialisé.")
+            self.logger.info("Agent d'analyse informelle initialisé avec succès.")
             return True
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'initialisation de l'agent informel: {e}", exc_info=True)
+            self.logger.error(f"Erreur lors de l'initialisation de l'agent informel via factory: {e}", exc_info=True)
             return False
 
     def get_capabilities(self) -> List[str]:
         """Retourne les capacités de cet agent."""
-        return [
-            "argument_identification",
-            "fallacy_detection",
-            "informal_analysis",
-            "complex_fallacy_analysis",
-            "contextual_fallacy_analysis",
-            "fallacy_severity_evaluation"
-        ]
+        # Pourrait être rendu dynamique en inspectant les plugins de self.agent
+        if self.config_name == "simple":
+            return ["fallacy_detection"]
+        elif self.config_name == "explore_only":
+            return ["taxonomy_exploration"]
+        elif self.config_name == "workflow_only":
+            return ["fallacy_analysis_workflow", "taxonomy_exploration"]
+        elif self.config_name == "full":
+            return ["fallacy_detection", "fallacy_analysis_workflow", "taxonomy_exploration"]
+        return []
 
     def can_process_task(self, task: Dict[str, Any]) -> bool:
         """Vérifie si l'agent peut traiter la tâche."""
@@ -99,27 +89,13 @@ class InformalAgentAdapter(OperationalAgent):
 
     async def process_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Traite une tâche en la traduisant en appels à l'InformalAnalysisAgent.
-
-        Cette méthode est le cœur de l'adaptateur. Elle itère sur les techniques
-        de la tâche. Pour chaque technique (ex: "fallacy_pattern_matching"),
-        elle appelle la méthode correspondante de l'agent sous-jacent (ex:
-        `self.agent.detect_fallacies`).
-
-        Les résultats bruts sont ensuite collectés et formatés en une réponse
-        standard pour la couche opérationnelle.
-
-        Args:
-            task: La tâche opérationnelle à traiter.
-
-        Returns:
-            Le résultat du traitement, formaté pour l'OperationalManager.
+        Traite une tâche en invoquant l'agent avec un prompt construit à partir de la tâche.
         """
         task_id = self.register_task(task)
         self.update_task_status(task_id, "in_progress")
         start_time = time.time()
 
-        if not self.initialized:
+        if not self.initialized or not self.agent:
             self.logger.error(f"Tentative de traitement de la tâche {task_id} sans initialisation.")
             return self.format_result(task, [], {}, [{"type": "initialization_error"}], task_id)
 
@@ -130,19 +106,23 @@ class InformalAgentAdapter(OperationalAgent):
             if not text_to_analyze:
                  raise ValueError("Aucun contenu textuel trouvé dans `text_extracts`.")
             
-            for technique in task.get("techniques", []):
-                technique_name = technique.get("name")
-                params = technique.get("parameters", {})
-                
-                # Traduction de la technique en appel de méthode de l'agent
-                if technique_name == "premise_conclusion_extraction" and self.agent:
-                    res = await self.agent.identify_arguments(text=text_to_analyze, parameters=params)
-                    results.extend([{"type": "identified_arguments", **arg} for arg in res])
-                elif technique_name == "fallacy_pattern_matching" and self.agent:
-                    res = await self.agent.detect_fallacies(text=text_to_analyze, parameters=params)
-                    results.extend([{"type": "identified_fallacies", **fallacy} for fallacy in res])
-                else:
-                    issues.append({"type": "unsupported_technique", "name": technique_name})
+            # Construire un prompt simple pour l'agent
+            # Note: C'est une simplification. Une approche robuste construirait
+            # un input structuré que le prompt de l'agent saurait interpréter.
+            prompt = f"Analyze the following text for fallacies: '{text_to_analyze}'"
+            
+            # Invoquer l'agent
+            agent_response = await self.agent.invoke(prompt)
+
+            # Le résultat de `invoke` est souvent une liste de messages.
+            # Nous supposons ici que le contenu pertinent est dans le dernier message.
+            if isinstance(agent_response, list) and agent_response:
+                final_content = agent_response[-1].content
+                # Ici, on devrait parser `final_content` pour extraire les résultats structurés.
+                # Pour l'instant, on le retourne directement.
+                results.append({"type": "agent_raw_output", "content": final_content})
+            else:
+                 issues.append({"type": "empty_agent_response"})
 
             metrics = {"execution_time": time.time() - start_time}
             status = "completed_with_issues" if issues else "completed"
