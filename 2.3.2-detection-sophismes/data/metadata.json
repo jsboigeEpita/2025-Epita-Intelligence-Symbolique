@@ -1,0 +1,48 @@
+{
+  "label_mapping": {
+    "ad hominem": 0,
+    "ad populum": 1,
+    "appel à l'émotion": 2,
+    "fallacy of credibility": 3,
+    "fallacy of extension": 4,
+    "fallacy of logic": 5,
+    "faulty generalization": 6,
+    "fausse causalité": 7,
+    "faux dilemme": 8,
+    "intentional": 9,
+    "raisonnement circulaire": 10,
+    "sophisme de pertinence": 11,
+    "équivoque": 12
+  },
+  "class_weights": [
+    0.8687978687978688,
+    1.114957264957265,
+    1.114957264957265,
+    1.114957264957265,
+    1.114957264957265,
+    1.114957264957265,
+    0.6252096812844476,
+    1.114957264957265,
+    1.114957264957265,
+    0.780903920981742,
+    1.114957264957265,
+    1.114957264957265,
+    1.114957264957265
+  ],
+  "num_classes": 13,
+  "classes": [
+    "ad hominem",
+    "ad populum",
+    "appel à l'émotion",
+    "fallacy of credibility",
+    "fallacy of extension",
+    "fallacy of logic",
+    "faulty generalization",
+    "fausse causalité",
+    "faux dilemme",
+    "intentional",
+    "raisonnement circulaire",
+    "sophisme de pertinence",
+    "équivoque"
+  ]
+}
