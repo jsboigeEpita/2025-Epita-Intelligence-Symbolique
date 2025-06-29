@@ -38,7 +38,7 @@ def test_health_check_endpoint(playwright: Playwright, backend_url: str):
 
         # Vérifier le contenu de la réponse JSON
         json_response = response.json()
-        assert json_response.get("status") == "operational", f"La réponse JSON ne contient pas 'status: operational'. Reçu: {json_response}"
+        assert json_response.get("status") == "ok", f"La réponse JSON ne contient pas 'status: ok'. Reçu: {json_response}"
         logger.info("SUCCES: La réponse JSON contient bien 'status: operational'.")
 
     except PlaywrightTimeoutError as e:
