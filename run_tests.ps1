@@ -32,25 +32,25 @@ d'utiliser des options pytest.
 # Utilisez les paires clé-valeur, ex: .\run_tests.ps1 -TestType e2e
 
 # --- Vérification et installation des dépendances PowerShell ---
-try {
-    $moduleName = "PSToml"
-    # Vérifier si le module est déjà disponible
-    if (-not (Get-Module -ListAvailable -Name $moduleName)) {
-        Write-Host "[SETUP] Le module '$moduleName' est manquant. Tentative d'installation depuis PSGallery..." -ForegroundColor Yellow
+# try {
+#     $moduleName = "PSToml"
+#     # Vérifier si le module est déjà disponible
+#     if (-not (Get-Module -ListAvailable -Name $moduleName)) {
+#         Write-Host "[SETUP] Le module '$moduleName' est manquant. Tentative d'installation depuis PSGallery..." -ForegroundColor Yellow
         
-        # Installer le module, en gérant les erreurs potentielles
-        Install-Module -Name $moduleName -Scope CurrentUser -Repository PSGallery -Force -Confirm:$false -ErrorAction Stop
+#         # Installer le module, en gérant les erreurs potentielles
+#         Install-Module -Name $moduleName -Scope CurrentUser -Repository PSGallery -Force -Confirm:$false -ErrorAction Stop
         
-        Write-Host "[SETUP] Module '$moduleName' installé avec succès." -ForegroundColor Green
-    }
-    # Importer le module pour s'assurer qu'il est chargé dans la session
-    Import-Module -Name $moduleName
-}
-catch {
-    Write-Host "[ERREUR FATALE] Impossible d'installer ou d'importer le module '$moduleName'. Vérifiez votre connexion internet et la configuration de PSGallery." -ForegroundColor Red
-    Write-Host "[ERREUR DÉTAILLÉE] $_" -ForegroundColor DarkRed
-    exit 1
-}
+#         Write-Host "[SETUP] Module '$moduleName' installé avec succès." -ForegroundColor Green
+#     }
+#     # Importer le module pour s'assurer qu'il est chargé dans la session
+#     Import-Module -Name $moduleName
+# }
+# catch {
+#     Write-Host "[ERREUR FATALE] Impossible d'installer ou d'importer le module '$moduleName'. Vérifiez votre connexion internet et la configuration de PSGallery." -ForegroundColor Red
+#     Write-Host "[ERREUR DÉTAILLÉE] $_" -ForegroundColor DarkRed
+#     exit 1
+# }
 
 
 # --- Script Body ---
@@ -72,8 +72,8 @@ function Get-CondaEnvFromConfig {
     if (-not (Test-Path $dependencyFile)) {
         throw "Fichier de configuration '$dependencyFile' introuvable."
     }
-    $config = Get-Content $dependencyFile | Out-String | ConvertFrom-Toml
-    $envName = $config.tool.poetry.extras.conda_env_name[0]
+    # $config = Get-Content $dependencyFile | Out-String | ConvertFrom-Toml
+    $envName = "projet-is-roo-new" # $config.tool.poetry.extras.conda_env_name[0]
     if (-not $envName) {
         throw "Impossible de trouver 'conda_env_name' dans '$dependencyFile'. Assurez-vous qu'il est défini sous [tool.poetry.extras]."
     }

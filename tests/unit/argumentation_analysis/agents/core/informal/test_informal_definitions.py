@@ -5,6 +5,7 @@ import logging
 from unittest.mock import MagicMock, patch
 import sys
 import semantic_kernel as sk
+from semantic_kernel.kernel import Kernel
 
 from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin, setup_informal_kernel, logger as informal_logger
 from argumentation_analysis.utils.taxonomy_loader import logger as taxonomy_loader_logger
@@ -49,7 +50,8 @@ def informal_plugin_mocked(mock_taxonomy_df):
     """Fixture pour une instance du plugin avec un loader mocké."""
     # Le chemin à patcher est celui utilisé DANS le module informal_definitions
     with patch('argumentation_analysis.agents.core.informal.informal_definitions.load_csv_file', return_value=mock_taxonomy_df.reset_index()) as mock_load:
-        plugin = InformalAnalysisPlugin(taxonomy_file_path="mock/path.csv")
+        mock_kernel = MagicMock(spec=sk.Kernel)
+        plugin = InformalAnalysisPlugin(kernel=mock_kernel, taxonomy_file_path="mock/path.csv")
         # Le df est déjà dans le plugin via le __init__ mocké, pas besoin de le recharger
         return plugin
         
@@ -58,8 +60,9 @@ def informal_plugin_real(tmp_path, sample_taxonomy_data):
     """Fixture pour une instance du plugin utilisant un vrai fichier CSV temporaire."""
     csv_file = tmp_path / "temp_taxonomy.csv"
     pd.DataFrame(sample_taxonomy_data).to_csv(csv_file, index=False)
+    mock_kernel = MagicMock(spec=Kernel)
     # L'instance chargera ce fichier
-    return InformalAnalysisPlugin(taxonomy_file_path=str(csv_file))
+    return InformalAnalysisPlugin(kernel=mock_kernel, taxonomy_file_path=str(csv_file))
 
 # --- Tests des méthodes internes (nécessitent de gérer le DataFrame manuellement) ---
 
@@ -176,11 +179,10 @@ def test_setup_informal_kernel_success():
 
 def test_setup_informal_kernel_no_llm_service():
     """Test kernel setup failure when no LLM service is available."""
-    plugin = InformalAnalysisPlugin()
     # La fonction setup attend un kernel, un llm_service, etc. Pas une instance de plugin.
     with pytest.raises(ValueError, match=r"Le service LLM \(llm_service\) est requis"):
         # On passe un kernel mocké et llm_service=None pour déclencher l'erreur
-        setup_informal_kernel(MagicMock(), llm_service=None)
+        setup_informal_kernel(MagicMock(spec=sk.Kernel), llm_service=None)
 
 def test_setup_informal_kernel_with_init_error():
     """

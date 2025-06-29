@@ -59,7 +59,8 @@ correctement indexé et que les types de données sont normalisés.
     )
 
     # Initialiser le plugin. Le chemin fourni ici est un placeholder car le chargement est patché.
-    plugin = InformalAnalysisPlugin(taxonomy_file_path="dummy/path/to/taxonomy.csv")
+    mock_kernel = MagicMock(spec=sk.Kernel)
+    plugin = InformalAnalysisPlugin(kernel=mock_kernel, taxonomy_file_path="dummy/path/to/taxonomy.csv")
     
     # Forcer le chargement et la préparation du DataFrame dans le cache du plugin pour les tests.
     # C'est l'étape cruciale qui manquait.

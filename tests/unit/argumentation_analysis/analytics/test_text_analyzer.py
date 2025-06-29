@@ -18,8 +18,8 @@ from unittest.mock import MagicMock, patch, AsyncMock
 
 
 # Cible pour le patching
-# Le patch cible la fonction là où elle est définie, car elle est importée localement dans la fonction testée.
-RUN_ANALYSIS_CONVERSATION_PATH = "argumentation_analysis.orchestration.analysis_runner._run_analysis_conversation"
+# Le patch cible la classe là où elle est réellement définie, car elle est importée dynamiquement.
+RUN_ANALYSIS_CONVERSATION_PATH = "argumentation_analysis.orchestration.enhanced_pm_analysis_runner.EnhancedPMAnalysisRunner"
 
 # Importation de la fonction à tester après avoir défini le chemin de patch
 from argumentation_analysis.analytics.text_analyzer import perform_text_analysis
@@ -27,6 +27,7 @@ from argumentation_analysis.analytics.text_analyzer import perform_text_analysis
 
 @pytest.fixture
 def mock_llm_service():
+    """Fixture pour un service LLM mocké."""
     """Fixture pour un service LLM mocké."""
     return MagicMock(name="MockLLMService")
 
@@ -42,20 +43,23 @@ async def test_perform_text_analysis_nominal_case(sample_services, mock_llm_serv
     analysis_type = "default_test"
 
     with patch("argumentation_analysis.analytics.text_analyzer.logger") as mock_logger:
-        with patch(RUN_ANALYSIS_CONVERSATION_PATH, new_callable=AsyncMock) as mock_run_analysis:
-            mock_run_analysis.return_value = None  # S'assurer que le mock retourne ce que le test attend
+        with patch(RUN_ANALYSIS_CONVERSATION_PATH) as mock_runner_class:
+            mock_runner_instance = mock_runner_class.return_value
+            # La méthode doit être une AsyncMock pour être "awaited" et pour que les assertions async fonctionnent
+            mock_runner_instance.run_enhanced_analysis = AsyncMock(return_value={"success": True})
+
             result = await perform_text_analysis(text_to_analyze, sample_services, analysis_type)
 
-            mock_run_analysis.assert_awaited_once_with(
-                texte_a_analyser=text_to_analyze,
+            mock_runner_instance.run_enhanced_analysis.assert_awaited_once_with(
+                text_content=text_to_analyze,
                 llm_service=mock_llm_service
             )
-            assert result is None
+            assert result == {"success": True}
 
             # Vérifier les appels au logger mocké
-            mock_logger.info.assert_any_call(f"Initiating text analysis of type '{analysis_type}' on text of length {len(text_to_analyze)} chars.")
-            mock_logger.info.assert_any_call(f"Lancement de l'analyse principale (type: {analysis_type}) via run_analysis_conversation...")
-            mock_logger.info.assert_any_call(f"Analyse principale (type: '{analysis_type}') terminee avec succes (via run_analysis_conversation).")
+            mock_logger.info.assert_any_call(f"Initiating enhanced text analysis of type '{analysis_type}' on text of length {len(text_to_analyze)} chars.")
+            mock_logger.info.assert_any_call(f"Launching main analysis (type: {analysis_type}) via EnhancedPMAnalysisRunner...")
+            mock_logger.info.assert_any_call(f"Main analysis (type: '{analysis_type}') completed successfully via EnhancedPMAnalysisRunner.")
 
 @pytest.mark.asyncio
 async def test_perform_text_analysis_llm_service_missing(sample_services, caplog):
@@ -64,11 +68,12 @@ async def test_perform_text_analysis_llm_service_missing(sample_services, caplog
     text_to_analyze = "Texte test."
 
     with patch("argumentation_analysis.analytics.text_analyzer.logger") as mock_logger:
-        with patch(RUN_ANALYSIS_CONVERSATION_PATH, new_callable=AsyncMock) as mock_run_analysis:
+        with patch(RUN_ANALYSIS_CONVERSATION_PATH) as mock_runner_class:
             result = await perform_text_analysis(text_to_analyze, services_without_llm, "test_no_llm")
             
             assert result is None # Indique un échec critique
-            mock_run_analysis.assert_not_awaited() # Ne doit pas être appelé
+            # La méthode n'aurait pas dû être appelée car le service LLM est manquant
+            mock_runner_class.return_value.run_enhanced_analysis.assert_not_called()
             mock_logger.critical.assert_called_once_with(" Le service LLM n'est pas disponible dans les services fournis. L'analyse ne peut pas continuer.")
 
 @pytest.mark.asyncio
@@ -79,16 +84,20 @@ async def test_perform_text_analysis_run_analysis_raises_exception(sample_servic
     expected_exception = Exception("Erreur simulée dans run_analysis_conversation")
 
     with patch("argumentation_analysis.analytics.text_analyzer.logger") as mock_logger:
-        with patch(RUN_ANALYSIS_CONVERSATION_PATH, new_callable=AsyncMock, side_effect=expected_exception) as mock_run_analysis:
+        with patch(RUN_ANALYSIS_CONVERSATION_PATH) as mock_runner_class:
+            mock_runner_instance = mock_runner_class.return_value
+            # La méthode doit être une AsyncMock pour que les assertions async fonctionnent
+            mock_runner_instance.run_enhanced_analysis = AsyncMock(side_effect=expected_exception)
+
             with pytest.raises(Exception) as excinfo:
                 await perform_text_analysis(text_to_analyze, sample_services, analysis_type)
             
             assert excinfo.value == expected_exception
-            mock_run_analysis.assert_awaited_once_with(
-                texte_a_analyser=text_to_analyze,
+            mock_runner_instance.run_enhanced_analysis.assert_awaited_once_with(
+                text_content=text_to_analyze,
                 llm_service=mock_llm_service
             )
-            mock_logger.error.assert_called_once_with(f" Erreur lors de l'analyse du texte (type: {analysis_type}): {expected_exception}", exc_info=True)
+            mock_logger.error.assert_called_once_with(f"Error during text analysis (type: {analysis_type}): {expected_exception}", exc_info=True)
 
 @pytest.mark.asyncio
 async def test_perform_text_analysis_run_analysis_raises_import_error(sample_services, mock_llm_service, caplog):

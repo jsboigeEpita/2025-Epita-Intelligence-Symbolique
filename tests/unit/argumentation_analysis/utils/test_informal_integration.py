@@ -10,6 +10,7 @@ import os
 import sys
 import json
 import logging
+from unittest.mock import MagicMock
 from pathlib import Path
 import pytest # Ajout pour le marqueur
 
@@ -37,7 +38,8 @@ def test_informal_integration():
         
         # Créer une instance de la classe
         logger.info("Création d'une instance de InformalAnalysisPlugin...")
-        plugin = InformalAnalysisPlugin()
+        mock_kernel = MagicMock()
+        plugin = InformalAnalysisPlugin(kernel=mock_kernel)
         
         # Explorer la hiérarchie des sophismes à partir de la racine (PK=0)
         logger.info("Exploration de la hiérarchie des sophismes depuis la racine (PK=0)...")

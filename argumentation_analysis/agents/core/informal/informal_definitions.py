@@ -811,7 +811,7 @@ def setup_informal_kernel(kernel: sk.Kernel, llm_service: Any, taxonomy_file_pat
         raise ValueError("Le service LLM (llm_service) est requis")
 
     # 1. Instancier et ajouter le plugin natif qui contient les outils d'exploration
-    informal_plugin_instance = InformalAnalysisPlugin(taxonomy_file_path=taxonomy_file_path)
+    informal_plugin_instance = InformalAnalysisPlugin(kernel=kernel, taxonomy_file_path=taxonomy_file_path)
     if plugin_name in kernel.plugins:
         logger.warning(f"Plugin '{plugin_name}' déjà présent. Remplacement.")
     kernel.add_plugin(informal_plugin_instance, plugin_name)

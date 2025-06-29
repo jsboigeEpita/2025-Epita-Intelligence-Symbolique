@@ -15,7 +15,7 @@ import semantic_kernel as sk
 
 from argumentation_analysis.orchestration.hierarchical.operational.agent_interface import OperationalAgent
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
-from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
+from argumentation_analysis.agents.core.informal.informal_agent import LegacyInformalAnalysisAgent as InformalAnalysisAgent
 from argumentation_analysis.core.bootstrap import ProjectContext
 
 class InformalAgentAdapter(OperationalAgent):
