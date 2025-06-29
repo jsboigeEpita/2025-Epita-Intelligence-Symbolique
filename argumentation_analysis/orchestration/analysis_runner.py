@@ -2,13 +2,18 @@
 
 import asyncio
 import logging
-import os
-
 from semantic_kernel.agents import AgentGroupChat
 from semantic_kernel.contents import ChatMessageContent, AuthorRole
+from semantic_kernel.contents.chat_history import ChatHistory
+from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatHistoryAgentThread
+from semantic_kernel.agents.channels.chat_history_channel import ChatHistoryChannel
 
-from ..kernel.kernel_builder import KernelBuilder
-from ..agents.agent_factory import AgentFactory
+from argumentation_analysis.config.settings import AppSettings
+from argumentation_analysis.kernel.kernel_builder import KernelBuilder
+from argumentation_analysis.agents.agent_factory import AgentFactory
+
+# Correction pour Pydantic : Reconstruire le modèle après avoir défini la dépendance de thread.
+ChatHistoryChannel.model_rebuild()
 
 # Configuration du logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -21,14 +26,11 @@ async def main():
     logger.info("Démarrage du processus d'analyse d'argumentation.")
     
     # 1. Configuration et construction du Kernel
-    config_path = os.path.join("config", "config.yaml")
-    env_path = os.path.join("config", ".env")
-    
     try:
-        settings = KernelBuilder.load_settings(config_path, env_path)
+        settings = AppSettings()
         kernel = KernelBuilder.create_kernel(settings)
-        llm_service_id = settings.default_llm_service_id
-        logger.info("Kernel et services IA configurés avec succès.")
+        llm_service_id = settings.service_manager.default_llm_service_id
+        logger.info(f"Kernel et services IA configurés avec succès en utilisant '{llm_service_id}'.")
     except (FileNotFoundError, ValueError) as e:
         logger.error(f"Erreur de configuration critique: {e}")
         return
@@ -44,14 +46,7 @@ async def main():
         logger.error(f"Erreur lors de la création des agents : {e}")
         return
 
-    # 3. Création et configuration du Chat de Groupe d'Agents
-    chat = AgentGroupChat(
-        agents=[manager_agent, fallacy_agent],
-        admin_agent=manager_agent  # Le chef de projet initie et termine la conversation
-    )
-    logger.info("AgentGroupChat créé avec le Project_Manager comme administrateur.")
-
-    # 4. Exécution du scénario d'analyse
+    # 3. Préparation du chat
     input_text = (
         "Le sénateur prétend que sa loi va créer des emplois, "
         "mais il a été vu en train de manger une glace au chocolat. "
@@ -59,18 +54,30 @@ async def main():
         "Son projet est donc mauvais."
     )
     
-    logger.info(f"Début de l'invocation du chat avec le texte d'entrée.")
+    # Création de l'historique de chat avec le message initial de l'utilisateur
+    chat_history = ChatHistory()
+    chat_history.add_message(message=ChatMessageContent(role=AuthorRole.USER, content=input_text))
+
+    # 4. Création et configuration du Chat de Groupe d'Agents
+    chat = AgentGroupChat(
+        agents=[manager_agent, fallacy_agent],
+        chat_history=chat_history
+    )
+    logger.info("AgentGroupChat créé et pré-configuré avec l'historique initial.")
+
+    # 5. Exécution du scénario d'analyse
+    logger.info(f"Début de l'invocation du chat.")
     
-    # Ajout du message initial au chat, provenant de "l'utilisateur"
-    initial_message = ChatMessageContent(role=AuthorRole.USER, content=input_text)
-    
-    # Invocation du chat et récupération de l'historique complet
-    full_history = await chat.invoke([initial_message])
+    # Invocation du chat et récupération de l'historique complet.
+    # On ajoute le message initial à l'historique affiché.
+    history = [chat_history.messages[0]]
+    async for message in chat.invoke():
+        history.append(message)
     
     logger.info("Invocation du chat terminée. Affichage de l'historique complet de la conversation.")
     
-    # 5. Affichage des résultats
-    for message in full_history:
+    # 6. Affichage des résultats
+    for message in history:
         print(f"[{message.role.value.upper()}] - {message.name or 'User'}:\n---\n{message.content}\n---")
 
 if __name__ == "__main__":
