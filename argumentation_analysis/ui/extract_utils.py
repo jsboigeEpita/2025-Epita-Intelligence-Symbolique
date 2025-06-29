@@ -18,20 +18,25 @@ from typing import List, Dict, Any, Tuple, Optional, Union
 from argumentation_analysis.services.extract_service import ExtractService
 from argumentation_analysis.services.fetch_service import FetchService
 from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition
-from argumentation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON, CACHE_DIR
+from argumentation_analysis.config.settings import settings
 from argumentation_analysis.services.crypto_service import CryptoService
 from argumentation_analysis.services.cache_service import CacheService
-
 
 # Configuration du logging
 logger = logging.getLogger("UI.ExtractUtils")
 
+# Définition des constantes à partir de la configuration centrale
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+CACHE_DIR = PROJECT_ROOT / "_temp" / "text_cache"
+CONFIG_DIR = PROJECT_ROOT / "argumentation_analysis" / "data"
+CONFIG_FILE_JSON = CONFIG_DIR / "extract_sources.json"
+CONFIG_FILE_ENC = CONFIG_DIR / "extract_sources.json.gz.enc"
+ENCRYPTION_KEY = settings.encryption_key.get_secret_value() if settings.encryption_key else None
+
+
 # Initialisation des services
 extract_service = ExtractService()
-
-# Le FetchService nécessite un CacheService avec un répertoire de cache
 cache_service = CacheService(CACHE_DIR)
-
 fetch_service = FetchService(cache_service)
 crypto_service = CryptoService()
 

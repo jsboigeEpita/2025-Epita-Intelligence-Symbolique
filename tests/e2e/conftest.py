@@ -1,25 +1,22 @@
 import pytest
-import os
-from typing import Generator, Tuple
 
-# La fonction pytest_addoption est supprimée pour éviter les conflits avec les plugins
-# qui définissent déjà --backend-url et --frontend-url.
+# Note: The pytest_addoption function is defined in the root conftest.py
+# This local conftest.py provides fixtures that correctly consume the command-line options.
 
 @pytest.fixture(scope="session")
-def backend_url() -> str:
-    """Fixture to get the backend URL from the BACKEND_URL environment variable."""
-    url = os.environ.get("BACKEND_URL")
+def backend_url(request) -> str:
+    """Fixture to get the backend URL from the --backend-url pytest option."""
+    url = request.config.getoption("--backend-url")
     if not url:
-        pytest.fail("La variable d'environnement BACKEND_URL n'est pas définie. L'orchestrateur doit la fournir.")
+        pytest.fail("The --backend-url command-line option is not defined. The test runner must provide it.")
     return url
 
 @pytest.fixture(scope="session")
-def frontend_url() -> str:
-    """Fixture to get the frontend URL from the BASE_URL or FRONTEND_URL environment variable."""
-    # BASE_URL est souvent utilisé comme fallback générique pour le frontend.
-    url = os.environ.get("BASE_URL") or os.environ.get("FRONTEND_URL")
+def frontend_url(request) -> str:
+    """Fixture to get the frontend URL from the --frontend-url pytest option."""
+    url = request.config.getoption("--frontend-url")
     if not url:
-        pytest.fail("Les variables d'environnement BASE_URL ou FRONTEND_URL ne sont pas définies. L'orchestrateur doit les fournir.")
+        pytest.fail("The --frontend-url command-line option is not defined. The test runner must provide it.")
     return url
 
 # NOTE: The old 'webapp_service' fixture has been removed.

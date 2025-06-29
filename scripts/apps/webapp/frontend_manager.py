@@ -53,8 +53,6 @@ class FrontendManager:
         self.current_port: Optional[int] = None
         self.current_url: Optional[str] = None
         self.pid: Optional[int] = None
-        self.frontend_stdout_log_file: Optional[Any] = None
-        self.frontend_stderr_log_file: Optional[Any] = None
 
     # NOTE DE FUSION: On garde la logique de recherche de `_find_frontend_path`
     # tout en intégrant la logique de démarrage robuste de l'upstream.
@@ -112,46 +110,70 @@ class FrontendManager:
         return {'success': False, 'error': error_msg}
 
     async def _start_dev_server(self, port: int) -> Dict[str, Any]:
-        """Démarre le serveur de développement React via 'npm start'."""
-        host = "localhost" # Le serveur de dev React écoute sur localhost par défaut
-
-        # La variable d'environnement PORT est le moyen standard de spécifier le port pour create-react-app
+        """Démarre le serveur de développement React et capture ses logs en temps réel."""
+        host = "localhost"
         env = os.environ.copy()
         env['PORT'] = str(port)
+        # Ajout pour empêcher l'ouverture automatique du navigateur, ce qui peut causer des crashs.
+        env['BROWSER'] = 'none'
         
-        # Pour Windows, la commande doit être exécutée via 'cmd /c'
         cmd = ['cmd', '/c'] + self.start_command.split() if sys.platform == "win32" else self.start_command.split()
         
+        log_listener_tasks = []
         try:
             self.logger.info(f"Exécution de la commande: {' '.join(cmd)} avec PORT={port}")
+            self.logger.info("--- DEBUG: Redirection de la sortie standard du frontend vers la console principale ---")
             
-            log_dir = Path("logs"); log_dir.mkdir(exist_ok=True)
-            self.frontend_stdout_log_file = open(log_dir / "frontend_dev_server_stdout.log", "wb")
-            self.frontend_stderr_log_file = open(log_dir / "frontend_dev_server_stderr.log", "wb")
-
-            self.process = subprocess.Popen(
-                cmd,
-                stdout=self.frontend_stdout_log_file,
-                stderr=self.frontend_stderr_log_file,
+            # DEBUG: On redirige la sortie directement vers la console pour un débogage brut
+            self.process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=None, # Hérite de la sortie standard du parent
+                stderr=None, # Hérite de la sortie d'erreur du parent
                 cwd=self.frontend_path,
-                env=env,
+                env=env
             )
-            
+            self.pid = self.process.pid
+            self.logger.info(f"Processus frontend démarré avec PID: {self.pid}")
+
+            # Les tâches de lecture de stream ne sont plus nécessaires avec la redirection directe
+            # log_listener_tasks.append(
+            #     asyncio.create_task(self._log_stream(self.process.stdout, logging.INFO))
+            # )
+            # log_listener_tasks.append(
+            #     asyncio.create_task(self._log_stream(self.process.stderr, logging.ERROR))
+            # )
+
             server_ready, url = await self._wait_for_dev_server(port, host)
+            
             if server_ready:
                 self.current_port = port
                 self.current_url = url
-                self.pid = self.process.pid
-                self.logger.info(f"Serveur de développement démarré. PID: {self.pid}, URL: {self.current_url}")
+                self.logger.info(f"Serveur de développement prêt. URL: {self.current_url}")
                 return {'success': True, 'url': self.current_url, 'port': self.current_port, 'pid': self.pid}
             else:
-                await self.stop()
-                return {'success': False, 'error': f"Échec du démarrage du serveur de développement sur le port {port}"}
+                raise Exception(f"Le serveur de développement n'a pas pu démarrer sur le port {port}.")
 
         except Exception as e:
-            self.logger.critical(f"Erreur critique lors du démarrage du serveur de développement: {e}", exc_info=True)
+            self.logger.error(f"Erreur critique lors du démarrage du serveur de développement: {e}", exc_info=False)
             await self.stop()
             return {'success': False, 'error': str(e)}
+        finally:
+            # S'assurer que les tâches de lecture des logs sont terminées
+            for task in log_listener_tasks:
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(*log_listener_tasks, return_exceptions=True)
+
+    # async def _log_stream(self, stream, log_level):
+    #     """Lit et logue le contenu d'un stream (stdout/stderr) en temps réel."""
+    #     while not stream.at_eof():
+    #         try:
+    #             line = await stream.readline()
+    #             if line:
+    #                 self.logger.log(log_level, f"[FRONTEND_LOG] {line.decode('utf-8', errors='ignore').strip()}")
+    #         except Exception as e:
+    #             self.logger.error(f"[FRONTEND_LOG] Erreur de lecture du stream: {e}")
+    #             break
 
     async def _ensure_dependencies(self) -> bool:
         """S'assure que les dépendances npm sont installées. Retourne True si succès."""
@@ -208,27 +230,13 @@ class FrontendManager:
 
         while time.time() - start_time < timeout:
             # 1. Vérifier si le processus est toujours en cours
-            if self.process and self.process.poll() is not None:
-                self.logger.error(f"Serveur de développement terminé prématurément (code: {self.process.returncode}).")
-                # Lire les logs pour le diagnostic
-                stderr_path = Path("logs/frontend_dev_server_stderr.log")
-                if stderr_path.exists() and stderr_path.stat().st_size > 0:
-                    self.logger.error(f"Stderr du serveur:\n{stderr_path.read_text(errors='ignore')}")
+            #    Avec asyncio.subprocess, on vérifie `returncode` au lieu d'appeler `poll()`
+            if self.process and self.process.returncode is not None:
+                self.logger.error(f"Serveur de développement terminé prématurément (code: {self.process.returncode}). Les logs ci-dessus devraient indiquer la cause.")
                 return False, None
 
-            # 2. Vérifier les logs pour le message de succès
-            if log_path.exists():
-                try:
-                    log_content = log_path.read_text(encoding='utf-8', errors='ignore')
-                    if success_pattern.search(log_content):
-                        self.logger.info(f"🎉 Message 'Compiled successfully' détecté dans les logs en {time.time() - start_time:.1f}s.")
-                        # Même après compilation, il peut y avoir un court délai
-                        await asyncio.sleep(2)
-                        return True, url_to_check
-                except Exception:
-                    pass # Le fichier peut être en cours d'écriture
-
-            # 3. Sonde HTTP en fallback
+            # 2. Sonde HTTP
+            #    C'est la méthode la plus fiable pour savoir si le serveur est prêt.
             try:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(url_to_check, timeout=3) as response:
@@ -236,6 +244,7 @@ class FrontendManager:
                             self.logger.info(f"🎉 Serveur de développement accessible via HTTP sur {url_to_check} en {time.time() - start_time:.1f}s.")
                             return True, url_to_check
             except aiohttp.ClientError:
+                # C'est normal si le serveur n'est pas encore prêt
                 pass
             
             await asyncio.sleep(2)
@@ -291,43 +300,30 @@ class FrontendManager:
         return False
     
     async def stop(self):
-        """Arrête le frontend proprement en nettoyant agressivement son port."""
-        self.logger.info("Début de l'arrêt du serveur de développement frontend.")
-
-        # 1. Tenter d'arrêter le processus principal que nous avons lancé
-        if self.process:
-            self.logger.info(f"Arrêt du processus Popen du frontend (PID: {self.process.pid})")
+        """Arrête le processus du serveur de développement frontend."""
+        if not self.process:
+            return
+        
+        self.logger.info(f"Tentative d'arrêt du processus frontend (PID: {self.pid})")
+        
+        # Le processus est un asyncio.subprocess.Process
+        if self.process.returncode is None: # Si le processus est toujours en cours
             try:
                 self.process.terminate()
-                self.process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                self.logger.warning(f"Le processus Popen du frontend (PID: {self.process.pid}) n'a pas terminé, on le tue.")
+                await asyncio.wait_for(self.process.wait(), timeout=10.0)
+                self.logger.info(f"Processus frontend (PID: {self.pid}) terminé avec succès.")
+            except asyncio.TimeoutError:
+                self.logger.warning(f"Le processus frontend (PID: {self.pid}) n'a pas répondu à terminate. Tentative de kill.")
                 self.process.kill()
+                await self.process.wait()
+                self.logger.info(f"Processus frontend (PID: {self.pid}) tué.")
             except Exception as e:
-                self.logger.error(f"Erreur lors de l'arrêt du processus Popen du frontend: {e}")
-            finally:
-                self.process = None
-        
-        # 2. Fermeture des fichiers de log
-        if self.frontend_stdout_log_file:
-            try:
-                self.frontend_stdout_log_file.close()
-            except Exception as log_e:
-                self.logger.error(f"Erreur fermeture frontend_stdout_log_file: {log_e}")
-            self.frontend_stdout_log_file = None
-        
-        if self.frontend_stderr_log_file:
-            try:
-                self.frontend_stderr_log_file.close()
-            except Exception as log_e:
-                self.logger.error(f"Erreur fermeture frontend_stderr_log_file: {log_e}")
-            self.frontend_stderr_log_file = None
+                self.logger.error(f"Erreur lors de l'arrêt du processus frontend : {e}")
 
-        # 4. Réinitialisation de l'état
-        self.logger.info("Arrêt du frontend terminé.")
+        self.process = None
+        self.pid = None
         self.current_url = None
         self.current_port = None
-        self.pid = None
 
     async def build(self) -> bool:
         """Construit l'application React pour la production."""

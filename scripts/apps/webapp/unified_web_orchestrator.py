@@ -27,17 +27,29 @@ import logging
 import argparse
 import subprocess
 import threading
+import psutil
+import re
 from typing import Dict, List, Optional, Any, Tuple
 from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass, asdict
 from enum import Enum
+from dotenv import load_dotenv
 
 # Correction du chemin pour les imports internes
 # Le script est dans D:/.../scripts/apps/webapp/ ; la racine du projet est 3 niveaux au-dessus.
 project_root = Path(__file__).resolve().parents[3]
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
+
+# Charger les variables d'environnement du fichier .env à la racine du projet
+dotenv_path = project_root / '.env'
+if dotenv_path.exists():
+    load_dotenv(dotenv_path=dotenv_path, override=True)
+    print(f"INFO: Fichier .env chargé depuis {dotenv_path}")
+else:
+    print(f"WARNING: Fichier .env non trouvé à l'emplacement {dotenv_path}")
+
 
 # Imports internes
 from scripts.apps.webapp.backend_manager import BackendManager
@@ -496,36 +508,76 @@ class UnifiedWebOrchestrator:
         except Exception as e:
             self.add_trace("[ERROR] ECHEC DEVERROUILLAGE", str(e), status="error")
     
+    def _kill_process_by_port(self, port: int):
+        """Tue le processus qui écoute sur un port spécifique en utilisant psutil."""
+        self.add_trace(f"[CLEANUP] Vérification du port {port} avec psutil")
+        try:
+            for conn in psutil.net_connections():
+                if conn.laddr.port == port and conn.status == psutil.CONN_LISTEN:
+                    pid = conn.pid
+                    self.add_trace(f"[CLEANUP] Port {port} occupé par PID {pid}. Tentative d'arrêt.")
+                    try:
+                        proc = psutil.Process(pid)
+                        proc_name = proc.name()
+                        proc.kill()
+                        self.add_trace(f"[OK] Processus '{proc_name}' (PID {pid}) arrêté avec succès.")
+                    except psutil.NoSuchProcess:
+                        self.add_trace(f"[OK] Le processus PID {pid} n'existe déjà plus.")
+                    except Exception as e:
+                        self.add_trace(f"[WARNING] Échec de l'arrêt du PID {pid}", str(e), status="error")
+                    # On a trouvé et traité le processus, on peut sortir de la boucle
+                    return
+        except Exception as e:
+            self.add_trace(f"[WARNING] Erreur lors du scan des ports avec psutil pour le port {port}", str(e), status="error")
+
+
+
     def _cleanup_processes(self):
         """Nettoie les processus potentiellement persistants avant le démarrage."""
         cleanup_config = self.config.get('cleanup', {})
         if not cleanup_config.get('auto_cleanup', False):
             self.add_trace("[CLEANUP] Nettoyage ignoré", "Désactivé dans la configuration.")
             return
-
+            
+        # --- Étape 1: Nettoyage agressif par port ---
+        ports_to_clean = []
+        if self.config.get('backend', {}).get('enabled'):
+            ports_to_clean.append(self.config['backend']['start_port'])
+            ports_to_clean.extend(self.config['backend'].get('fallback_ports', []))
+        
+        if self.config.get('frontend', {}).get('enabled'):
+            ports_to_clean.append(self.config['frontend']['start_port'])
+            ports_to_clean.extend(self.config['frontend'].get('fallback_ports', []))
+        
+        if ports_to_clean:
+            self.add_trace("[CLEANUP] Nettoyage agressif des ports", f"Ports cibles: {ports_to_clean}")
+            for port in set(ports_to_clean): # set() pour éviter doublons
+                self._kill_process_by_port(port)
+        
+        # --- Étape 2: Nettoyage par nom de processus (moins ciblé) ---
         process_names = cleanup_config.get('kill_processes', [])
         if not process_names:
             return
             
-        self.add_trace("[CLEANUP] Nettoyage des processus", f"Cibles: {', '.join(process_names)}")
+        self.add_trace("[CLEANUP] Nettoyage des processus par nom", f"Cibles: {', '.join(process_names)}")
         
         try:
             # Commande PowerShell pour tuer les processus par nom
             process_list = ", ".join([f"'{p}'" for p in process_names])
-            command = f"Get-Process | Where-Object {{ $_.ProcessName -in @({process_list}) }} | Stop-Process -Force -ErrorAction SilentlyContinue"
+            command = f"Get-Process | Where-Object {{ ($_.ProcessName -in @({process_list})) -and ($_.Path -like '*{str(project_root).replace('//', '////')}*') }} | Stop-Process -Force -ErrorAction SilentlyContinue"
             
             result = subprocess.run(["powershell", "-Command", command], capture_output=True, text=True, check=False)
             
             if result.returncode == 0:
-                self.add_trace("[OK] Nettoyage terminé", "Processus précédents arrêtés.")
+                self.add_trace("[OK] Nettoyage par nom terminé", "Processus précédents arrêtés.")
             else:
                  # Même si le code de retour n'est pas 0 (ex: aucun processus trouvé), ce n'est pas une erreur bloquante.
-                self.add_trace("[OK] Nettoyage terminé", f"Processus précédents traités (code: {result.returncode}). stderr: {result.stderr.strip()}", status="success")
+                self.add_trace("[OK] Nettoyage par nom terminé", f"Processus précédents traités (code: {result.returncode}). stderr: {result.stderr.strip()}", status="success")
 
         except FileNotFoundError:
-            self.add_trace("[WARNING] Nettoyage impossible", "PowerShell non trouvé. Nettoyage manuel requis.", status="error")
+            self.add_trace("[WARNING] Nettoyage par nom impossible", "PowerShell non trouvé. Nettoyage manuel requis.", status="error")
         except Exception as e:
-            self.add_trace("[WARNING] Erreur nettoyage", str(e), status="error")
+            self.add_trace("[WARNING] Erreur nettoyage par nom", str(e), status="error")
 
     async def _save_trace_report(self):
         """Sauvegarde le rapport de trace"""

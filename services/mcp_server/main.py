@@ -198,7 +198,7 @@ class MCPService:
             # Appeler le service (identique à l'API Web)
             result = await self.services.analysis_service.analyze_text(analysis_request)
             
-            return result.dict()
+            return result.model_dump()
             
         except ValidationError as e:
             self.logger.warning(f"Validation des données d'analyse a échoué: {str(e)}")
@@ -245,7 +245,7 @@ class MCPService:
             # Appeler le service (identique à l'API Web)
             result = await self.services.validation_service.validate_argument(validation_request)
             
-            return result.dict()
+            return result.model_dump()
             
         except ValidationError as e:
             self.logger.warning(f"Validation des données a échoué: {str(e)}")
@@ -306,9 +306,9 @@ class MCPService:
             fallacy_request = FallacyRequest(text=text, options=options)
             
             # Appeler le service (identique à l'API Web)
-            result = self.services.fallacy_service.detect_fallacies(fallacy_request)
+            result = await self.services.fallacy_service.detect_fallacies(fallacy_request)
             
-            return result.dict()
+            return result.model_dump()
             
         except ValidationError as e:
             self.logger.warning(f"Validation des données a échoué: {str(e)}")
@@ -367,9 +367,9 @@ class MCPService:
             framework_request = FrameworkRequest(arguments=argument_objects, options=options)
             
             # Appeler le service (identique à l'API Web)
-            result = self.services.framework_service.build_framework(framework_request)
+            result = await self.services.framework_service.build_framework(framework_request)
             
-            return result.dict()
+            return result.model_dump()
             
         except ValidationError as e:
             self.logger.warning(f"Validation des données a échoué: {str(e)}")
@@ -447,7 +447,7 @@ class MCPService:
             )
             
             result = await self.services.logic_service.create_belief_set(request)
-            return result.dict()
+            return result.model_dump()
             
         except ValidationError as e:
             return {"error": "Données invalides", "message": str(e), "status_code": 400}
@@ -490,7 +490,7 @@ class MCPService:
             )
             
             result = await self.services.logic_service.execute_query(request)
-            return result.dict()
+            return result.model_dump()
             
         except ValidationError as e:
             return {"error": "Données invalides", "message": str(e), "status_code": 400}
@@ -533,7 +533,7 @@ class MCPService:
             )
             
             result = await self.services.logic_service.generate_queries(request)
-            return result.dict()
+            return result.model_dump()
             
         except ValidationError as e:
             return {"error": "Données invalides", "message": str(e), "status_code": 400}

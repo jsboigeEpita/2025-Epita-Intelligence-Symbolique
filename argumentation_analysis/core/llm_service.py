@@ -107,7 +107,14 @@ def create_llm_service(service_id: str = "global_llm_service", force_mock: bool 
     logger.info(f"--- Configuration du Service LLM ({service_id}) ---")
 
     # Mocking automatique en environnement de test (détecté via variable pytest)
+    # On peut le surcharger avec la variable d'environnement FORCE_REAL_LLM_IN_TEST
+    force_real_llm_env = os.environ.get("FORCE_REAL_LLM_IN_TEST", "false").lower() == "true"
+    if force_real_llm_env:
+        force_authentic = True
+        logger.info("Variable d'environnement FORCE_REAL_LLM_IN_TEST détectée. Forçage du LLM authentique.")
+
     is_test_environment = 'PYTEST_CURRENT_TEST' in os.environ
+    # La variable force_mock ne sera vraie que si on est en environnement de test ET qu'on ne force PAS le LLM réel.
     if is_test_environment and not force_authentic:
         logger.warning("Environnement de test détecté et `force_authentic` est False. Forçage du service LLM mocké.")
         force_mock = True
@@ -122,11 +129,26 @@ def create_llm_service(service_id: str = "global_llm_service", force_mock: bool 
     model_id = settings.openai.chat_model_id
     # Pour la compatibilité avec Azure, on vérifie si base_url est une instance Azure
     # Pydantic HttpUrl ne peut pas être None, on vérifie la valeur de l'url
-    endpoint = str(settings.openai.base_url) if settings.openai.base_url and "azure" in str(settings.openai.base_url) else None
-    base_url = str(settings.openai.base_url) if settings.openai.base_url and not endpoint else None
+    base_url_str = str(settings.openai.base_url) if settings.openai.base_url else None
+    endpoint = None
+    base_url = None
     org_id = None # org_id n'est pas dans notre modèle de settings pour l'instant
 
-    logger.info(f"Configuration détectée - base_url: {base_url}, endpoint: {endpoint}")
+    if base_url_str and "azure" in base_url_str:
+        endpoint = base_url_str
+    elif base_url_str:
+        # On ne passe la base_url que si elle est explicitement définie et n'est pas une URL Azure
+        base_url = base_url_str
+        if "localhost" in base_url or "127.0.0.1" in base_url:
+            logger.warning(f"Une base_url locale ('{base_url}') est utilisée pour le client OpenAI. Assurez-vous qu'un proxy compatible OpenAI est en cours d'exécution.")
+            
+            # CORRECTIF ROBUSTE: En mode test forcé (`force_authentic`), si une URL locale
+            # est détectée, nous l'ignorons pour nous assurer de contacter l'API externe réelle.
+            if force_authentic:
+                logger.warning(f"CORRECTION TEST: La base_url '{base_url}' est ignorée car `force_authentic` est actif.")
+                base_url = None # Forcer l'utilisation de l'API OpenAI par défaut
+
+    logger.info(f"Configuration LLM finale - base_url: {base_url}, endpoint Azure: {endpoint}")
     use_azure_openai = bool(endpoint)
 
     llm_instance = None
@@ -149,7 +171,7 @@ def create_llm_service(service_id: str = "global_llm_service", force_mock: bool 
                 raise ValueError("Configuration OpenAI standard incomplète (.env).")
 
             resilient_client = get_resilient_async_client()
-            
+
             client_kwargs = {"api_key": api_key, "http_client": resilient_client}
             if base_url:
                 client_kwargs["base_url"] = base_url

@@ -192,6 +192,7 @@ class MinimalBackendManager:
         try:
             project_root = str(Path(__file__).parent.parent.parent.resolve())
             env = os.environ.copy()
+
             python_path = env.get('PYTHONPATH', '')
             if project_root not in python_path:
                 env['PYTHONPATH'] = f"{project_root}{os.pathsep}{python_path}"

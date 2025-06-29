@@ -7,97 +7,129 @@ en utilisant une configuration d'intégration complète (LLM + JVM réels).
 """
 
 import pytest
-import pytest_asyncio
 import logging
+import os
+import importlib
+from unittest.mock import patch
 
-# Configure logging for tests
-from argumentation_analysis.core.utils.logging_utils import setup_logging
-setup_logging()
+# Import de la factory de l'application Flask et de son initialisation
+from argumentation_analysis.services.web_api.app import create_app, initialize_heavy_dependencies
+from argumentation_analysis.core.bootstrap import initialize_project_environment
+
+# Configuration du logging
 logger = logging.getLogger(__name__)
 
-# Import the main analysis pipeline orchestrator
-from argumentation_analysis.analytics.text_analyzer import TextAnalyzer
+# Marque tous les tests de ce fichier pour utiliser une JVM et un LLM réel.
+pytestmark = [
+    pytest.mark.usefixtures("jvm_session"),
+    pytest.mark.real_llm
+]
 
-# Ensure JVM is ready for these tests
-pytestmark = pytest.mark.usefixtures("jvm_session")
+@pytest.fixture(scope="module")
+def app():
+    """
+    Crée une instance de test de l'application Flask.
+    Cette fixture est configurée au niveau du module et force l'utilisation
+    d'un vrai LLM pour tous les tests de ce module en positionnant une variable
+    d'environnement *avant* la création de l'application.
+    """
+    logger.info("--- Création de l'application Flask pour les tests d'intégration ---")
 
-@pytest_asyncio.fixture
-async def authentic_text_analyzer():
-    """
-    Fixture pour initialiser le TextAnalyzer avec des services réels (LLM et JVM).
-    La fixture jvm_session garantit que la JVM est démarrée.
-    """
+    # Sauvegarde de l'état original des variables d'environnement
+    original_force_real_llm = os.environ.get("FORCE_REAL_LLM_IN_TEST")
+    original_base_url = os.environ.get("OPENAI_BASE_URL")
+
+    # Modification de l'environnement pour ce test
+    os.environ["FORCE_REAL_LLM_IN_TEST"] = "true"
+    if "OPENAI_BASE_URL" in os.environ:
+        del os.environ["OPENAI_BASE_URL"]
+        logger.warning("Variable d'environnement OPENAI_BASE_URL supprimée pour forcer l'usage de l'API directe.")
+
     try:
-        # Configuration minimale pour lancer une analyse réelle
-        # Les services (LLM, JVM) sont initialisés par TextAnalyzer en se basant
-        # sur la configuration par défaut du projet.
-        analyzer = TextAnalyzer(log_level=logging.INFO)
-        return analyzer
-    except Exception as e:
-        pytest.fail(f"Échec de la configuration du TextAnalyzer authentique: {e}")
+        # Forcer le rechargement des modules de configuration pour qu'ils prennent
+        # en compte les variables d'environnement modifiées. C'est crucial car
+        # la configuration est chargée à l'import.
+        from argumentation_analysis.config import settings
+        from argumentation_analysis.core import llm_service
+        importlib.reload(settings)
+        importlib.reload(llm_service)
+        
+        # Maintenant que la config est rechargée, on peut créer l'app
+        test_app = create_app()
+        test_app.config.update({"TESTING": True})
+        
+        yield test_app
+
+    finally:
+        # Restauration de l'environnement à son état original
+        logger.info("--- Nettoyage et restauration des variables d'environnement ---")
+        if original_force_real_llm is None:
+            if "FORCE_REAL_LLM_IN_TEST" in os.environ:
+                del os.environ["FORCE_REAL_LLM_IN_TEST"]
+        else:
+            os.environ["FORCE_REAL_LLM_IN_TEST"] = original_force_real_llm
+
+        if original_base_url is None:
+            if "OPENAI_BASE_URL" in os.environ:
+                del os.environ["OPENAI_BASE_URL"]
+        else:
+            os.environ["OPENAI_BASE_URL"] = original_base_url
+            logger.info("Variable d'environnement OPENAI_BASE_URL restaurée.")
+            
+        # Recharger une dernière fois pour nettoyer pour les tests suivants
+        from argumentation_analysis.config import settings
+        from argumentation_analysis.core import llm_service
+        importlib.reload(settings)
+        importlib.reload(llm_service)
+        logger.info("--- Fin des tests d'intégration, nettoyage de l'app ---")
+    
+@pytest.fixture()
+def client(app):
+    """Un client de test pour l'application Flask."""
+    return app.test_client()
 
 @pytest.mark.integration
-@pytest.mark.asyncio
-async def test_analyze_empty_string_graceful_handling(authentic_text_analyzer: TextAnalyzer):
+def test_analyze_empty_string_graceful_handling(client):
     """
-    Vérifie que le pipeline gère une chaîne d'entrée vide sans planter.
-    
-    ATTENTE: L'analyse doit se terminer avec un statut de succès (ou un
-             état indiquant une entrée non valide) mais sans lever d'exception.
+    Vérifie que l'API gère une chaîne d'entrée vide sans planter.
     """
-    logger.info("--- Test: Analyse d'une chaîne vide ---")
-    input_text = ""
+    logger.info("--- Test API: Analyse d'une chaîne vide ---")
+    response = client.post('/api/analyze', json={'text': ''})
     
-    result = await authentic_text_analyzer.analyze_text(input_text, analysis_type="default")
-    
-    assert result is not None, "Le résultat de l'analyse ne doit pas être None."
-    assert result.get("status") in ["success", "no_text_to_analyze"], \
-           f"Le statut attendu était 'success' ou 'no_text_to_analyze', mais était '{result.get('status')}'"
-    logger.info(f"Analyse de la chaîne vide terminée avec succès. Statut: {result.get('status')}")
-
+    assert response.status_code == 400, f"Le code de statut attendu était 400, mais était {response.status_code}"
+    json_data = response.get_json()
+    assert "error" in json_data
+    assert json_data["error"] == "Données invalides"
+    logger.info(f"Réponse pour chaîne vide OK: {json_data}")
 
 @pytest.mark.integration
-@pytest.mark.asyncio
-async def test_analyze_non_argumentative_text(authentic_text_analyzer: TextAnalyzer):
+def test_analyze_non_argumentative_text(client):
     """
-    Vérifie que le pipeline traite correctement un texte factuel et non argumentatif.
-
-    ATTENTE: L'analyse doit réussir et identifier idéalement aucun sophisme.
-             S'il en identifie, leur nombre doit être très faible.
+    Vérifie que l'API traite correctement un texte factuel et non argumentatif.
     """
-    logger.info("--- Test: Analyse d'un texte non-argumentatif ---")
+    logger.info("--- Test API: Analyse d'un texte non-argumentatif ---")
     input_text = (
         "La tour Eiffel est une tour de fer puddlé de 330 mètres de hauteur "
         "située à Paris, à l’extrémité nord-ouest du parc du Champ-de-Mars en "
         "bordure de la Seine. Construite en deux ans par Gustave Eiffel et ses "
-        "collaborateurs pour l’Exposition universelle de Paris de 1889, et "
-        "initialement nommée « tour de 300 mètres », elle est devenue le "
-        "symbole de la capitale française et un site touristique de premier plan."
+        "collaborateurs pour l’Exposition universelle de Paris de 1889."
     )
     
-    result = await authentic_text_analyzer.analyze_text(input_text, analysis_type="default")
+    response = client.post('/api/analyze', json={'text': input_text, 'analysis_type': 'default'})
     
-    assert result is not None
-    assert result.get("status") == "success", f"L'analyse a échoué avec le statut: {result.get('status')}"
+    assert response.status_code == 200, f"L'analyse a échoué avec le statut: {response.status_code}"
+    json_data = response.get_json()
     
-    # Vérifier que peu ou pas de sophismes sont détectés
-    final_state = result.get("analysis", {})
-    fallacies = final_state.get("identified_fallacies", {})
-    
+    fallacies = json_data.get("analysis", {}).get("identified_fallacies", {})
     assert len(fallacies) <= 1, f"Trop de sophismes ({len(fallacies)}) détectés dans un texte non argumentatif."
     logger.info(f"Analyse du texte non-argumentatif terminée. {len(fallacies)} sophisme(s) détecté(s).")
 
-
 @pytest.mark.integration
-@pytest.mark.asyncio
-async def test_analyze_complex_argumentative_text(authentic_text_analyzer: TextAnalyzer):
+def test_analyze_complex_argumentative_text(client):
     """
-    Vérifie le comportement du pipeline avec un texte complexe contenant
-    plusieurs arguments, des sophismes et des distracteurs.
-
-    ATTENTE: L'analyse doit réussir et identifier les sophismes pertinents.
+    Vérifie le comportement de l'API avec un texte complexe.
     """
-    logger.info("--- Test: Analyse d'un texte argumentatif complexe ---")
+    logger.info("--- Test API: Analyse d'un texte argumentatif complexe ---")
     input_text = (
         "La proposition de loi sur l'eau est une nécessité absolue. Les experts de notre comité, "
         "tous titulaires d'un doctorat, sont formels : sans cette loi, nos réserves d'eau seront "
@@ -107,22 +139,20 @@ async def test_analyze_complex_argumentative_text(authentic_text_analyzer: TextA
         "Il est évident pour toute personne sensée que nous devons agir maintenant."
     )
     
-    result = await authentic_text_analyzer.analyze_text(input_text, analysis_type="default")
+    response = client.post('/api/analyze', json={'text': input_text, 'analysis_type': 'default'})
     
-    assert result is not None
-    assert result.get("status") == "success", f"L'analyse a échoué avec le statut: {result.get('status')}"
-    
-    final_state = result.get("analysis", {})
-    fallacies = final_state.get("identified_fallacies", {})
-    
-    assert len(fallacies) > 0, "Aucun sophisme n'a été détecté dans un texte qui devrait en contenir."
-    
-    fallacy_types = {f.get('type', '').lower() for f in fallacies.values()}
-    logger.info(f"Sophismes détectés: {fallacy_types}")
+    assert response.status_code == 200, f"L'analyse a échoué avec le statut: {response.status_code}"
+    json_data = response.get_json()
 
-    # On s'attend à détecter au moins un appel à l'autorité ou une attaque personnelle.
-    # Note : Le nom exact peut varier selon le LLM.
+    # La structure de réponse a changé. La clé est 'fallacies' à la racine.
+    fallacies_list = json_data.get("fallacies", [])
+    assert len(fallacies_list) > 0, "Aucun sophisme n'a été détecté dans un texte qui devrait en contenir."
+    
+    # La réponse est une liste de dictionnaires, pas un dictionnaire de dictionnaires.
+    fallacy_names = {f.get('name', '').lower() for f in fallacies_list}
+    logger.info(f"Sophismes détectés: {fallacy_names}")
+
     assert any(
-        "ad hominem" in f_type or "autorité" in f_type or "ad verecundiam" in f_type
-        for f_type in fallacy_types
+        "ad hominem" in f_name or "appel à l'autorité" in f_name or "ad verecundiam" in f_name
+        for f_name in fallacy_names
     ), "Devrait détecter un sophisme de type Ad Hominem ou Appel à l'Autorité."

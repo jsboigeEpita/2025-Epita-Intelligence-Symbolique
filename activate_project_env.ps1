@@ -33,13 +33,11 @@ $pythonRunner = Join-Path -Path $PSScriptRoot -ChildPath $childPath
 # Environnement conda cible (corrigé pour correspondre aux attentes des tests)
 $condaEnvName = "projet-is-roo-new"
 
-# Reconstruit la commande à passer au script Python
 # Reconstruit la commande à passer au script Python.
-# La commande complète, avec ses arguments, doit être passée comme une seule chaîne de caractères.
 $commandToExecute = $CommandAndArgs -join ' '
 
 # Construit la commande finale pour appeler le nouveau gestionnaire d'environnement.
-# La sous-commande 'run' est maintenant utilisée.
+# Si aucune commande n'est fournie, le script python affichera un message d'aide.
 $finalCommand = "python.exe `"$pythonRunner`" run `"$commandToExecute`""
 
 Write-Host "[DEBUG] Calling: $finalCommand" -ForegroundColor Gray

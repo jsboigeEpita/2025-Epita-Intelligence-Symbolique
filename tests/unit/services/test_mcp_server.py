@@ -3,61 +3,113 @@
 
 import pytest
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 
-# Mock du module mcp avant son importation
+# Correction des Mocks pour l'initialisation asynchrone
 sys.modules['mcp.server.fastmcp'] = MagicMock()
+sys.modules['argumentation_analysis.core.bootstrap'] = MagicMock()
+sys.modules['argumentation_analysis.services.web_api.services.analysis_service'] = MagicMock()
+sys.modules['argumentation_analysis.services.web_api.services.validation_service'] = MagicMock()
+sys.modules['argumentation_analysis.services.web_api.services.fallacy_service'] = MagicMock()
+sys.modules['argumentation_analysis.services.web_api.services.framework_service'] = MagicMock()
+sys.modules['argumentation_analysis.services.web_api.services.logic_service'] = MagicMock()
 
-from services.mcp_server.main import MCPService
+from services.mcp_server.main import MCPService, AppServices
+from argumentation_analysis.services.web_api.models.response_models import AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse
 
 @pytest.fixture
-def mcp_service_mock():
-    """Fixture pour mocker les dépendances et initialiser le service."""
-    with patch('services.mcp_server.main.FastMCP') as mock_fast_mcp:
-        mock_instance = mock_fast_mcp.return_value
-        mock_instance.tool.return_value = lambda f: f
+async def mcp_service_mock():
+    """Fixture améliorée pour mocker complètement l'initialisation et les services."""
+    with patch('services.mcp_server.main.FastMCP') as mock_fast_mcp, \
+         patch('services.mcp_server.main.initialize_project_environment') as mock_init_env, \
+         patch('services.mcp_server.main.AppServices') as mock_app_services:
+
+        # Mocker l'instance de FastMCP et sa méthode 'tool'
+        mock_mcp_instance = mock_fast_mcp.return_value
+        mock_mcp_instance.tool.return_value = lambda f: f
         
+        # Mocker l'instance des services (AppServices) et ses sous-services
+        mock_services_instance = mock_app_services.return_value
+        # Importer ValidationResult pour le mock ci-dessous
+        from argumentation_analysis.services.web_api.models.response_models import ValidationResult
+
+        async def mock_analyze_text(*args, **kwargs):
+            return AnalysisResponse(
+                success=True, text_analyzed="Sample text"
+            )
+
+        async def mock_validate_argument(*args, **kwargs):
+            from argumentation_analysis.services.web_api.models.response_models import ValidationResult
+            return ValidationResponse(
+                success=True,
+                premises=["p1"],
+                conclusion="c1",
+                argument_type="deductive",
+                result=ValidationResult(is_valid=True, validity_score=1.0, soundness_score=1.0)
+            )
+
+        async def mock_detect_fallacies(*args, **kwargs):
+            return FallacyResponse(
+                success=True, text_analyzed="Sample text for fallacies", fallacies=[]
+            )
+
+        async def mock_build_framework(*args, **kwargs):
+            return FrameworkResponse(
+                success=True, semantics_used="complete"
+            )
+
+        mock_services_instance.analysis_service.analyze_text.side_effect = mock_analyze_text
+        mock_services_instance.validation_service.validate_argument.side_effect = mock_validate_argument
+        mock_services_instance.fallacy_service.detect_fallacies.side_effect = mock_detect_fallacies
+        mock_services_instance.framework_service.build_framework.side_effect = mock_build_framework
+
         service = MCPService()
-        service.mcp_mock = mock_fast_mcp
-        service.mcp_instance_mock = mock_instance
+        
+        # Attacher les mocks pour les assertions dans les tests
+        service.mcp_instance_mock = mock_mcp_instance
+        service.mock_init_env = mock_init_env
+        service.mock_app_services_class = mock_app_services
+        service.mock_services_instance = mock_services_instance
+
+        # Simuler l'initialisation qui se fait normalement de manière asynchrone
+        await service._ensure_initialized()
+
         yield service
 
 def test_mcp_service_initialization(mcp_service_mock: MCPService):
-    """Teste l'initialisation correcte du service MCP."""
+    """Teste l'initialisation correcte du service MCP et le bon nombre d'outils."""
     assert mcp_service_mock is not None
-    # Vérifie que le constructeur de FastMCP a été appelé
-    mcp_service_mock.mcp_mock.assert_called_once()
-    # Vérifie que la méthode pour enregistrer les outils a été appelée
-    assert mcp_service_mock.mcp_instance_mock.tool.call_count == 4
-
+    mcp_service_mock.mock_init_env.assert_called_once()
+    mcp_service_mock.mock_app_services_class.assert_called_once()
+    assert mcp_service_mock.mcp_instance_mock.tool.call_count == 10
 
 @pytest.mark.asyncio
-async def test_analyze_method(mcp_service_mock: MCPService):
-    """Teste la réponse de la méthode 'analyze'."""
-    response = await mcp_service_mock.analyze(text="Test text.")
-    assert response["message"] == "Analyse en attente d'implémentation."
-    assert response["status"] == "success"
-
+async def test_analyze_text_method(mcp_service_mock: MCPService):
+    """Teste la réponse de la méthode 'analyze_text'."""
+    response = await mcp_service_mock.analyze_text(text="Test text.")
+    assert response['success'] is True
+    assert response['text_analyzed'] == "Sample text"
 
 @pytest.mark.asyncio
 async def test_validate_argument_method(mcp_service_mock: MCPService):
     """Teste la réponse de la méthode 'validate_argument'."""
     response = await mcp_service_mock.validate_argument(premises=["p1"], conclusion="c1")
-    assert response["message"] == "Validation en attente d'implémentation."
-    assert response["status"] == "success"
-
+    assert response['success'] is True
+    assert response['result']['is_valid'] is True
 
 @pytest.mark.asyncio
 async def test_detect_fallacies_method(mcp_service_mock: MCPService):
     """Teste la réponse de la méthode 'detect_fallacies'."""
     response = await mcp_service_mock.detect_fallacies(text="Test fallacy.")
-    assert response["message"] == "Détection de sophismes en attente d'implémentation."
-    assert response["status"] == "success"
-
+    assert response['success'] is True
+    assert response['text_analyzed'] == "Sample text for fallacies"
+    assert not response['fallacies']
 
 @pytest.mark.asyncio
 async def test_build_framework_method(mcp_service_mock: MCPService):
-    """Teste la réponse de la méthode 'build_framework'."""
-    response = await mcp_service_mock.build_framework(arguments=[])
-    assert response["message"] == "Construction du framework en attente d'implémentation."
-    assert response["status"] == "success"
+    """Teste la réponse de la méthode 'build_framework' avec des données valides."""
+    # Le modèle `FrameworkRequest` requiert au moins un argument.
+    valid_argument = [{"id": "A", "content": "Argument A"}]
+    response = await mcp_service_mock.build_framework(arguments=valid_argument)
+    assert response['success'] is True
+    assert response['semantics_used'] == "complete"

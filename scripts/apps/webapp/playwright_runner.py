@@ -122,7 +122,7 @@ class PlaywrightRunner:
         effective_config = {
             'backend_url': 'http://localhost:5003',
             'frontend_url': 'http://localhost:3000',
-            'headless': self.headless,
+            'headless': True, # Valeur par défaut standard
             'browser': self.browser,
             'timeout_ms': self.config.get('timeout_ms', 30000),
             'slow_timeout_ms': self.config.get('slow_timeout_ms', 60000),
@@ -130,8 +130,11 @@ class PlaywrightRunner:
             'traces': True
         }
         
-        # Override avec runtime
+        # Appliquer la configuration runtime en premier
         effective_config.update(runtime_config)
+        
+        # Forcer le mode headed pour le débogage, cette valeur écrase toute autre config
+        effective_config['headless'] = False
         
         return effective_config
     
@@ -172,7 +175,7 @@ class PlaywrightRunner:
                                  config: Dict[str, Any]) -> List[str]:
         """Construit la commande pour exécuter les tests via Pytest."""
 
-        self.logger.info(f"Préparation de la commande Pytest pour l'environnement Conda 'projet-is'.")
+        self.logger.info(f"Préparation de la commande Pytest pour l'environnement Conda 'projet-is-roo-new'.")
 
         cmd = [
             'python', '-m', 'pytest',
@@ -206,12 +209,12 @@ class PlaywrightRunner:
         # Spécifier le navigateur à utiliser
         cmd.append(f'--browser={config["browser"]}')
 
-        # Ajout des URLs via les options de ligne de commande pour pytest
+        # Passer les URLs dynamiques à Pytest.
+        # Ceci surcharge les valeurs par défaut définies dans tests/conftest.py
         if 'backend_url' in config:
-            cmd.append(f'--backend-url={config["backend_url"]}')
+            cmd.append(f"--backend-url={config['backend_url']}")
         if 'frontend_url' in config:
-            cmd.append(f'--frontend-url={config["frontend_url"]}')
-
+            cmd.append(f"--frontend-url={config['frontend_url']}")
         
         return cmd
     
@@ -259,7 +262,7 @@ class PlaywrightRunner:
                              config: Dict[str, Any]) -> subprocess.CompletedProcess:
         """Exécute les tests directement avec l'exécutable python de l'environnement Conda cible."""
         
-        env_name = "projet-is"
+        env_name = "projet-is-roo-new"
         python_executable = self._get_conda_env_python_executable(env_name)
 
         if not python_executable:

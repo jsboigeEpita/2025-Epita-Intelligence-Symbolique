@@ -17,6 +17,79 @@ try:
     import pandas as pd
     import seaborn as sns
     VISUALIZATION_LIBS_AVAILABLE = True
+    # --- Définition des fonctions helpers A L'INTERIEUR du bloc try ---
+    # Cela évite les AttributeError au moment du parsing si les libs sont absentes.
+    def _prepare_data_for_bar_chart(metrics: Dict, metric_name: str) -> (List[str], List[float]):
+        """Extrait les données pour un graphique à barres simple."""
+        agents_with_metric = [agent for agent in metrics.keys() if metrics[agent].get(metric_name) is not None]
+        values = [metrics[agent][metric_name] for agent in agents_with_metric]
+        return agents_with_metric, values
+
+    def _plot_bar_chart(ax, data_agents: List[str], data_values: List[float], title: str, ylabel: str, palette: str, text_suffix: str = ""):
+        """Génère un graphique à barres sur un axe donné."""
+        bars = ax.bar(data_agents, data_values, color=sns.color_palette(palette, len(data_agents)))
+        for bar in bars:
+            ax.text(bar.get_x() + bar.get_width()/2., bar.get_height() + 0.05 * max(data_values, default=1),
+                     f"{bar.get_height():.2f}{text_suffix}", ha='center', va='bottom')
+        ax.set_title(title)
+        ax.set_xlabel("Agent")
+        ax.set_ylabel(ylabel)
+        ax.tick_params(axis='x', rotation=45)
+
+    def _plot_error_rates(ax, metrics: Dict, agents: List[str]):
+        """Génère le graphique des taux d'erreur."""
+        error_agents = [agent for agent in agents if metrics[agent].get("false_positive_rate") is not None and metrics[agent].get("false_negative_rate") is not None]
+        if not error_agents:
+            return
+        fp_rates = [metrics[agent]["false_positive_rate"] for agent in error_agents]
+        fn_rates = [metrics[agent]["false_negative_rate"] for agent in error_agents]
+        
+        x = np.arange(len(error_agents))
+        width = 0.35
+        palette = sns.color_palette("coolwarm", n_colors=4)
+        ax.bar(x - width/2, fp_rates, width, label='Taux Faux Positifs', color=palette[0])
+        ax.bar(x + width/2, fn_rates, width, label='Taux Faux Négatifs', color=palette[3])
+        ax.set_title("Taux de faux positifs et faux négatifs estimés par agent")
+        ax.set_xlabel("Agent")
+        ax.set_ylabel("Taux d'erreur estimé")
+        ax.set_xticks(x)
+        ax.set_xticklabels(error_agents, rotation=45, ha="right")
+        ax.legend()
+
+    def _prepare_heatmap_data(metrics: Dict, agents: List[str]) -> pd.DataFrame:
+        """Prépare et normalise les données pour le heatmap."""
+        heatmap_metrics = ["fallacy_count", "confidence", "false_positive_rate", "false_negative_rate", "execution_time", "contextual_richness", "relevance", "complexity", "recommendation_relevance"]
+        
+        df = pd.DataFrame(index=pd.Index(agents, name="agent"))
+        for metric_name in heatmap_metrics:
+            metric_values = [metrics.get(agent, {}).get(metric_name) for agent in agents]
+            df[metric_name] = pd.to_numeric(pd.Series(metric_values, index=df.index), errors='coerce')
+
+        df.dropna(axis=1, how='all', inplace=True)
+        if df.empty:
+            return pd.DataFrame()
+            
+        df.fillna(0, inplace=True)
+        return df
+
+    def _normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+        """Normalise un DataFrame."""
+        if df.empty:
+            return pd.DataFrame()
+        df_min = df.min()
+        df_max = df.max()
+        range_val = df_max - df_min
+        range_val_safe = range_val.replace(0, 1)
+        df_normalized = (df - df_min) / range_val_safe
+        return df_normalized.fillna(0)
+
+    def _plot_heatmap(ax, df_normalized: pd.DataFrame, df_original: pd.DataFrame):
+        """Génère le heatmap sur un axe donné."""
+        sns.heatmap(df_normalized, annot=df_original.round(2), cmap="viridis_r", linewidths=.5, fmt=".2f", ax=ax)
+        ax.set_title("Matrice de comparaison normalisée des performances des agents")
+        ax.tick_params(axis='x', rotation=45)
+        ax.tick_params(axis='y', rotation=0)
+
 except ImportError:
     VISUALIZATION_LIBS_AVAILABLE = False
     # Initialiser les variables pour que le code ne plante pas si les libs sont absentes
@@ -25,6 +98,7 @@ except ImportError:
     np = None
     pd = None
     sns = None
+    # Les fonctions helpers ne seront pas définies, ce qui est le comportement attendu.
 
 
 logger = logging.getLogger(__name__)
@@ -34,77 +108,6 @@ if not logger.handlers:
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
-
-def _prepare_data_for_bar_chart(metrics: Dict, metric_name: str) -> (List[str], List[float]):
-    """Extrait les données pour un graphique à barres simple."""
-    agents_with_metric = [agent for agent in metrics.keys() if metrics[agent].get(metric_name) is not None]
-    values = [metrics[agent][metric_name] for agent in agents_with_metric]
-    return agents_with_metric, values
-
-def _plot_bar_chart(ax, data_agents: List[str], data_values: List[float], title: str, ylabel: str, palette: str, text_suffix: str = ""):
-    """Génère un graphique à barres sur un axe donné."""
-    bars = ax.bar(data_agents, data_values, color=sns.color_palette(palette, len(data_agents)))
-    for bar in bars:
-        ax.text(bar.get_x() + bar.get_width()/2., bar.get_height() + 0.05 * max(data_values, default=1),
-                 f"{bar.get_height():.2f}{text_suffix}", ha='center', va='bottom')
-    ax.set_title(title)
-    ax.set_xlabel("Agent")
-    ax.set_ylabel(ylabel)
-    ax.tick_params(axis='x', rotation=45)
-
-def _plot_error_rates(ax, metrics: Dict, agents: List[str]):
-    """Génère le graphique des taux d'erreur."""
-    error_agents = [agent for agent in agents if metrics[agent].get("false_positive_rate") is not None and metrics[agent].get("false_negative_rate") is not None]
-    if not error_agents:
-        return
-    fp_rates = [metrics[agent]["false_positive_rate"] for agent in error_agents]
-    fn_rates = [metrics[agent]["false_negative_rate"] for agent in error_agents]
-    
-    x = np.arange(len(error_agents))
-    width = 0.35
-    palette = sns.color_palette("coolwarm", n_colors=4)
-    ax.bar(x - width/2, fp_rates, width, label='Taux Faux Positifs', color=palette[0])
-    ax.bar(x + width/2, fn_rates, width, label='Taux Faux Négatifs', color=palette[3])
-    ax.set_title("Taux de faux positifs et faux négatifs estimés par agent")
-    ax.set_xlabel("Agent")
-    ax.set_ylabel("Taux d'erreur estimé")
-    ax.set_xticks(x)
-    ax.set_xticklabels(error_agents, rotation=45, ha="right")
-    ax.legend()
-
-def _prepare_heatmap_data(metrics: Dict, agents: List[str]) -> pd.DataFrame:
-    """Prépare et normalise les données pour le heatmap."""
-    heatmap_metrics = ["fallacy_count", "confidence", "false_positive_rate", "false_negative_rate", "execution_time", "contextual_richness", "relevance", "complexity", "recommendation_relevance"]
-    
-    df = pd.DataFrame(index=pd.Index(agents, name="agent"))
-    for metric_name in heatmap_metrics:
-        metric_values = [metrics.get(agent, {}).get(metric_name) for agent in agents]
-        df[metric_name] = pd.to_numeric(pd.Series(metric_values, index=df.index), errors='coerce')
-
-    df.dropna(axis=1, how='all', inplace=True)
-    if df.empty:
-        return pd.DataFrame()
-        
-    df.fillna(0, inplace=True)
-    return df
-
-def _normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    """Normalise un DataFrame."""
-    if df.empty:
-        return pd.DataFrame()
-    df_min = df.min()
-    df_max = df.max()
-    range_val = df_max - df_min
-    range_val_safe = range_val.replace(0, 1)
-    df_normalized = (df - df_min) / range_val_safe
-    return df_normalized.fillna(0)
-
-def _plot_heatmap(ax, df_normalized: pd.DataFrame, df_original: pd.DataFrame):
-    """Génère le heatmap sur un axe donné."""
-    sns.heatmap(df_normalized, annot=df_original.round(2), cmap="viridis_r", linewidths=.5, fmt=".2f", ax=ax)
-    ax.set_title("Matrice de comparaison normalisée des performances des agents")
-    ax.tick_params(axis='x', rotation=45)
-    ax.tick_params(axis='y', rotation=0)
 
 def generate_performance_visualizations(
     metrics: Dict[str, Dict[str, Any]],

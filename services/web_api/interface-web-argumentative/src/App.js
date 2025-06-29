@@ -11,16 +11,12 @@ import { checkAPIHealth } from './services/api';
 function App() {
   const [activeTab, setActiveTab] = useState('analyzer');
   const [apiStatus, setApiStatus] = useState('checking');
-  const [apiError, setApiError] = useState(null);
 
   useEffect(() => {
     // Vérifier l'état de l'API au démarrage
     checkAPIHealth()
       .then(() => setApiStatus('connected'))
-      .catch((error) => {
-        setApiStatus('disconnected');
-        setApiError(error.message);
-      });
+      .catch(() => setApiStatus('disconnected'));
   }, []);
 
   const tabs = [
@@ -47,13 +43,13 @@ function App() {
         <div className="header-content">
           <h1>🎯 Interface d'Analyse Argumentative</h1>
           <p className="header-subtitle">
-            Analysez vos arguments, détectez les sophismes et construisez des frameworks robustes
+            Analysez vos arguments, détectez les sophismes et construisez des frameworks r
+robustes
           </p>
           <div className={`api-status ${apiStatus}`}>
             <span className="status-indicator"></span>
-            API: {apiStatus === 'connected' ? '✅ Connectée' : 
-                  apiStatus === 'disconnected' ? '❌ Déconnectée' : '🔄 Vérification...'}
-            {apiError && <p className="api-error-message">Erreur: {apiError}</p>}
+            API: {apiStatus === 'connected' ? '✅ Connectée' :
+                  apiStatus === 'disconnected' ? '❌ Déconnectée' : '🔄 Vérification...'} 
           </div>
         </div>
       </header>
@@ -87,12 +83,12 @@ function App() {
             <div className="error-icon">🚫</div>
             <h2>API Indisponible</h2>
             <p>
-              L'API d'analyse argumentative n'est pas accessible. 
+              L'API d'analyse argumentative n'est pas accessible.
               Veuillez vérifier qu'elle est démarrée sur le port 5000.
             </p>
             <div className="error-instructions">
               <h3>Pour démarrer l'API :</h3>
-              <pre><code>cd services/web_api{'\n'}python start_api.py</code></pre>
+              <pre><code>cd services/web_api{'\n'}python start_api.py</code></pre>        
             </div>
           </div>
         ) : (
@@ -104,7 +100,7 @@ function App() {
 
       <footer className="App-footer">
         <div className="footer-content">
-          <p>Interface Web d'Analyse Argumentative - Intelligence Symbolique 2025</p>
+          <p>Interface Web d'Analyse Argumentative - Intelligence Symbolique 2025</p>     
           <div className="footer-links">
             <a href="/api/endpoints" target="_blank" rel="noopener noreferrer">
               📚 Documentation API

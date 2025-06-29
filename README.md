@@ -120,6 +120,27 @@ Validez l'intégrité et le bon fonctionnement du projet avec plus de 400 tests.
 
 ---
 
+---
+
+## 🛠️ Environnement de Développement : Prérequis et Configuration
+
+Pour contribuer au développement et exécuter les tests, un environnement correctement configuré est essentiel.
+
+### **Prérequis Logiciels**
+1.  **Python** (version 3.10 ou supérieure)
+2.  **Java Development Kit (JDK)** (version 11 ou supérieure). Indispensable pour notre couche de raisonnement logique basée sur `TweetyProject`.
+3.  **Conda** pour la gestion des environnements Python.
+
+### **Configuration de l'Environnement Java**
+
+Le bon fonctionnement des tests d'intégration dépend de la capacité du projet à trouver la JVM.
+
+1.  **Installation du JDK :** Si vous ne l'avez pas, installez un JDK (par exemple, depuis [Adoptium](https://adoptium.net/)).
+2.  **Configuration de `JAVA_HOME` :** La manière la plus simple est de laisser le script de préparation s'en charger. Notre script `setup_test_env.ps1` (utilisé par la CI et les scripts de test) tente de localiser automatiquement un JDK.
+3.  **Configuration Manuelle (si l'auto-détection échoue) :**
+    *   Définissez la variable d'environnement `JAVA_HOME` pour qu'elle pointe vers le répertoire racine de votre installation JDK.
+    *   Le `CLASSPATH` est également géré automatiquement par nos scripts, qui parcourent le répertoire `tweety/libs` pour inclure toutes les dépendances Java nécessaires.
+
 ## 🆘 **Dépannage Rapide**
 
 | Erreur | Solution Rapide |

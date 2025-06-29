@@ -1,5 +1,5 @@
 # argumentation_analysis/config/settings.py
-from pydantic import SecretStr, HttpUrl, Field, DirectoryPath
+from pydantic import SecretStr, HttpUrl, Field, DirectoryPath, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional, List
 from pathlib import Path
@@ -72,6 +72,7 @@ class JVMSettings(BaseSettings):
 class AppSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8', extra='ignore')
 
+    # Child settings
     openai: OpenAISettings = OpenAISettings()
     tika: TikaSettings = TikaSettings()
     jina: JinaSettings = JinaSettings()
@@ -80,6 +81,7 @@ class AppSettings(BaseSettings):
     service_manager: ServiceManagerSettings = ServiceManagerSettings()
     jvm: JVMSettings = JVMSettings()
 
+    # App-level settings
     debug_mode: bool = Field(False, alias='DEBUG')
     environment: str = "development"
     passphrase: Optional[SecretStr] = Field(None, alias='TEXT_CONFIG_PASSPHRASE')
@@ -87,5 +89,29 @@ class AppSettings(BaseSettings):
     enable_jvm: bool = Field(True, alias='ENABLE_JVM')
     use_mock_llm: bool = Field(False, alias='USE_MOCK_LLM')
     libs_dir: Optional[DirectoryPath] = Field(None, alias='LIBS_DIR')
+    
+    # Derived Paths
+    project_root: Path = Path(__file__).resolve().parents[2]
+
+    @computed_field
+    @property
+    def config_dir(self) -> Path:
+        return self.project_root / "argumentation_analysis" / "data"
+
+    @computed_field
+    @property
+    def config_file_json(self) -> Path:
+        return self.config_dir / "extract_sources.json"
+
+    @computed_field
+    @property
+    def config_file_enc(self) -> Path:
+        return self.config_dir / "extract_sources.json.gz.enc"
+    
+    @computed_field
+    @property
+    def config_file(self) -> Path:
+        # For legacy compatibility, CONFIG_FILE pointed to the encrypted file
+        return self.config_file_enc
 
 settings = AppSettings()

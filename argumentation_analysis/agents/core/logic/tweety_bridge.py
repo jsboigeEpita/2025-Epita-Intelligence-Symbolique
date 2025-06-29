@@ -60,16 +60,12 @@ class TweetyBridge:
     def __init__(self, jar_directory: Optional[str] = None):
         """
         Initialise le pont. La JVM n'est pas démarrée ici, mais dans `initialize_jvm`.
+        Les handlers sont chargés paresseusement (lazy-loaded) lors du premier accès.
         """
-        if not hasattr(self, '_initialized'):  # Empêche la réinitialisation sur les appels multiples
+        if not hasattr(self, '_initialized'):
             self.jar_directory = jar_directory or self._find_default_jar_dir()
-            
-            # L'initializer devient un composant clé du pont
             self._initializer = TweetyInitializer()
-            
-            # Les handlers sont maintenant initialisés avec l'initializer
-            self._pl_handler = PropositionalLogicHandler(self._initializer)
-            self._fol_handler = FirstOrderLogicHandler(self._initializer)
+            # Les handlers ne sont plus initialisés ici pour éviter les erreurs de JVM
             self._initialized = True
 
     def _find_default_jar_dir(self) -> str:
@@ -94,16 +90,22 @@ class TweetyBridge:
 
     @property
     def pl_handler(self) -> PropositionalLogicHandler:
-        """Retourne le handler pour la logique propositionnelle."""
-        if not TweetyInitializer.is_jvm_ready():
+        """Retourne le handler pour la logique propositionnelle, en l'initialisant si nécessaire."""
+        if not self.initializer.is_jvm_ready():
             raise RuntimeError("La JVM n'est pas démarrée. Appelez initialize_jvm() en premier.")
+        if self._pl_handler is None:
+            logger.debug("Chargement paresseux (lazy-loading) du PLHandler.")
+            self._pl_handler = PropositionalLogicHandler(self._initializer)
         return self._pl_handler
 
     @property
     def fol_handler(self) -> FirstOrderLogicHandler:
-        """Retourne le handler pour la logique du premier ordre."""
-        if not TweetyInitializer.is_jvm_ready():
+        """Retourne le handler pour la logique du premier ordre, en l'initialisant si nécessaire."""
+        if not self.initializer.is_jvm_ready():
             raise RuntimeError("La JVM n'est pas démarrée. Appelez initialize_jvm() en premier.")
+        if self._fol_handler is None:
+            logger.debug("Chargement paresseux (lazy-loading) du FOLHandler.")
+            self._fol_handler = FirstOrderLogicHandler(self._initializer)
         return self._fol_handler
 
     @property
@@ -180,15 +182,20 @@ class TweetyBridge:
                 logger.info("La JVM a été arrêtée via le gestionnaire centralisé.")
 
     def validate_pl_formula(self, formula: str) -> bool:
-        """Valide la syntaxe d'une formule de logique propositionnelle."""
-        return self.pl_handler.is_well_formed(formula)
+        """Valide la syntaxe d'une formule de logique propositionnelle en tentant de la parser."""
+        try:
+            # La validation se fait en tentant un parsing. Si ça ne lève pas d'erreur, c'est valide.
+            self.pl_handler.parse_pl_formula(formula)
+            return True
+        except ValueError:
+            return False
 
     def pl_query(self, knowledge_base: str, query: str) -> Optional[bool]:
         """
         Exécute une requête en logique propositionnelle.
         Retourne True si la KB entraîne la requête, False sinon, ou None en cas d'erreur.
         """
-        return self.pl_handler.query(knowledge_base, query)
+        return self.pl_handler.pl_query(knowledge_base, query)
 
     def create_pl_belief_base_from_string(self, formula_string: str) -> Optional["java.lang.Object"]:
         """Crée un objet PlBeliefSet Java à partir d'une chaîne."""
@@ -199,8 +206,12 @@ class TweetyBridge:
     # ===============================================
 
     def validate_fol_formula(self, formula: str) -> Tuple[bool, str]:
-        """Valide la syntaxe d'une formule FOL."""
-        return self.fol_handler.is_well_formed(formula)
+        """Valide la syntaxe d'une formule FOL en tentant de la parser."""
+        try:
+            self.fol_handler.parse_fol_formula(formula)
+            return True, "Formule valide."
+        except ValueError as e:
+            return False, str(e)
 
     def fol_check_consistency(self, belief_set: Any) -> Tuple[bool, str]:
         """Vérifie la consistance d'un ensemble de croyances FOL."""

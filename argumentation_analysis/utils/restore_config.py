@@ -27,19 +27,19 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 # Importer les modules nécessaires
 try:
-    from argumentation_analysis.ui import config as ui_config
-    from argumentation_analysis.ui.extract_utils import load_extract_definitions_safely, save_extract_definitions_safely
+    from argumentation_analysis.config.settings import settings
+    from argumentation_analysis.ui.extract_utils import load_extract_definitions_safely
     logger.info("Import réussi.")
 except ImportError as e:
     logger.error(f"Erreur d'importation: {e}")
     logger.error("Vérifiez que les modules nécessaires sont présents dans le projet.")
     sys.exit(1)
 
-# Définir les constantes
-ENCRYPTION_KEY = ui_config.ENCRYPTION_KEY
-CONFIG_FILE = ui_config.CONFIG_FILE
-CONFIG_FILE_JSON = ui_config.CONFIG_FILE_JSON
-CONFIG_FILE_ENC = ui_config.CONFIG_FILE_ENC
+# Définir les constantes à partir de l'objet de configuration centralisé
+ENCRYPTION_KEY = settings.encryption_key.get_secret_value() if settings.encryption_key else None
+CONFIG_FILE = settings.config_file
+CONFIG_FILE_JSON = settings.config_file_json
+CONFIG_FILE_ENC = settings.config_file_enc
 
 def restore_config_files():
     """
@@ -88,7 +88,7 @@ def restore_config_files():
     logger.info(f"[OK] Définitions d'extraits sauvegardées dans {CONFIG_FILE_JSON}.")
     
     # Sauvegarder également dans le fichier extract_sources_updated.json pour les outils de réparation
-    repair_config_path = Path(__file__).parent / "extract_repair" / "docs" / "extract_sources_updated.json"
+    repair_config_path = settings.project_root / "argumentation_analysis" / "utils" / "extract_repair" / "docs" / "extract_sources_updated.json"
     
     # Créer le répertoire parent si nécessaire
     repair_config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -110,11 +110,12 @@ def main():
         logger.info("\n[OK] Restauration terminée avec succès.")
         logger.info("\nFichiers restaurés:")
         logger.info(f"   - {CONFIG_FILE_JSON}")
-        logger.info(f"   - {Path(__file__).parent / 'extract_repair' / 'docs' / 'extract_sources_updated.json'}")
+        repair_file = settings.project_root / "argumentation_analysis" / "utils" / "extract_repair" / "docs" / "extract_sources_updated.json"
+        logger.info(f"   - {repair_file}")
         
         logger.info("\nATTENTION: Ces fichiers contiennent des informations sensibles et ne doivent pas être versionnés.")
         logger.info("Pour nettoyer ces fichiers avant de commiter, exécutez:")
-        logger.info("   python cleanup_sensitive_files.py")
+        logger.info("   python argumentation_analysis/utils/cleanup_sensitive_files.py")
     else:
         logger.error("\n❌ Échec de la restauration.")
         sys.exit(1)
