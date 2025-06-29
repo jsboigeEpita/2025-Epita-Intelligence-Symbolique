@@ -115,58 +115,21 @@ class InformalAnalysisAgent(BaseAgent):
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants pour {self.name} avec le service LLM: {llm_service_id}...")
 
-        # 1. Initialisation et Enregistrement du Plugin Natif
-        informal_plugin_instance = InformalAnalysisPlugin(taxonomy_file_path=self._taxonomy_file_path)
-        # Utiliser self.name comme nom de plugin pour la cohérence, ou un nom spécifique comme "InformalAnalyzer"
-        # Si le system_prompt fait référence à "InformalAnalyzer", il faut utiliser ce nom.
-        # D'après INFORMAL_AGENT_INSTRUCTIONS, le plugin est appelé "InformalAnalyzer"
+        # 1. Initialisation et Enregistrement du Plugin Natif Hybride
+        # Le plugin a maintenant besoin du kernel pour son fonctionnement interne.
+        informal_plugin_instance = InformalAnalysisPlugin(
+            kernel=self._kernel,
+            taxonomy_file_path=self._taxonomy_file_path
+        )
+        
         native_plugin_name = "InformalAnalyzer"
         self._kernel.add_plugin(informal_plugin_instance, plugin_name=native_plugin_name)
-        self.logger.info(f"Plugin natif '{native_plugin_name}' enregistré dans le kernel.")
+        self.logger.info(f"Plugin natif hybride '{native_plugin_name}' enregistré dans le kernel.")
 
-        # 2. Enregistrement des Fonctions Sémantiques
-        # Le plugin_name pour les fonctions sémantiques est souvent le nom de l'agent ou un domaine.
-        # Ici, nous utilisons aussi native_plugin_name pour que les appels soient cohérents
-        # si le prompt système s'attend à `InformalAnalyzer.semantic_IdentifyArguments`.
-        
-        # Récupérer les settings d'exécution par défaut pour le service LLM spécifié
-        try:
-            execution_settings = self._kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
-        except Exception as e:
-            self.logger.warning(f"Impossible de récupérer les settings LLM pour {llm_service_id}: {e}. Utilisation des settings par défaut.")
-            execution_settings = None
-
-        try:
-            self._kernel.add_function(
-                prompt=prompt_identify_args_v8,
-                plugin_name=native_plugin_name, # Cohérent avec les appels attendus
-                function_name="semantic_IdentifyArguments",
-                description="Identifie les arguments clés dans un texte.",
-                prompt_execution_settings=execution_settings
-            )
-            self.logger.info(f"Fonction sémantique '{native_plugin_name}.semantic_IdentifyArguments' enregistrée.")
-
-            self._kernel.add_function(
-                prompt=prompt_analyze_fallacies_v1,
-                plugin_name=native_plugin_name,
-                function_name="semantic_AnalyzeFallacies",
-                description="Analyse les sophismes dans un argument.",
-                prompt_execution_settings=execution_settings
-            )
-            self.logger.info(f"Fonction sémantique '{native_plugin_name}.semantic_AnalyzeFallacies' enregistrée.")
-
-            self._kernel.add_function(
-                prompt=prompt_justify_fallacy_attribution_v1,
-                plugin_name=native_plugin_name,
-                function_name="semantic_JustifyFallacyAttribution",
-                description="Justifie l'attribution d'un sophisme à un argument.",
-                prompt_execution_settings=execution_settings
-            )
-            self.logger.info(f"Fonction sémantique '{native_plugin_name}.semantic_JustifyFallacyAttribution' enregistrée.")
-            
-        except Exception as e:
-            self.logger.error(f"Erreur lors de l'enregistrement des fonctions sémantiques: {e}", exc_info=True)
-            raise  # Propage l'erreur pour indiquer un échec de configuration
+        # 2. Les fonctions sémantiques sont maintenant encapsulées DANS le plugin.
+        # Il n'est plus nécessaire de les enregistrer ici. La seule fonction exposée
+        # est `analyze_argument`, qui est déjà une @kernel_function.
+        self.logger.info("Les fonctions sémantiques sont maintenant gérées en interne par le plugin hybride.")
 
         self.logger.info(f"Composants de {self.name} configurés avec succès.")
 
@@ -202,9 +165,9 @@ class InformalAnalysisAgent(BaseAgent):
         try:
             arguments = KernelArguments(input=text)
             result = await self._kernel.invoke(
-                plugin_name="InformalAnalyzer", # Doit correspondre au nom utilisé dans setup_agent_components
-                function_name="semantic_AnalyzeFallacies",
-                arguments=arguments
+                plugin_name="InformalAnalyzer",
+                function_name="analyze_argument",
+                arguments=KernelArguments(text_to_analyze=text)
             )
             
             # Le traitement du résultat dépendra du format de sortie du prompt.
