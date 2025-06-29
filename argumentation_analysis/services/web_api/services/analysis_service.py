@@ -320,7 +320,7 @@ class AnalysisService:
                     for fallacy_data in result['fallacies']:
                         fallacy = FallacyDetection(
                             type=fallacy_data.get('type', 'semantic'),
-                            name=fallacy_data.get('nom', fallacy_data.get('name', 'Sophisme non identifié')),
+                            name=fallacy_data.get('fallacy_type', fallacy_data.get('nom', fallacy_data.get('name', 'Sophisme non identifié'))),
                             description=fallacy_data.get('explication', fallacy_data.get('description', fallacy_data.get('explanation', ''))),
                             severity=fallacy_data.get('severity', 0.7),
                             confidence=fallacy_data.get('confidence', 0.8),

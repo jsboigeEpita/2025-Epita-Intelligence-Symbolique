@@ -9,6 +9,7 @@ en utilisant une configuration d'intégration complète (LLM + JVM réels).
 import pytest
 import logging
 import os
+import importlib
 from unittest.mock import patch
 
 # Import de la factory de l'application Flask et de son initialisation
@@ -34,24 +35,52 @@ def app():
     """
     logger.info("--- Création de l'application Flask pour les tests d'intégration ---")
 
-    # Force la logique interne de `create_llm_service` à utiliser un vrai LLM
-    # en positionnant la variable d'environnement AVANT l'appel à `create_app()`.
-    # On utilise os.environ directement et on gère le nettoyage manuellement.
-    original_env_value = os.environ.get("FORCE_REAL_LLM_IN_TEST")
+    # Sauvegarde de l'état original des variables d'environnement
+    original_force_real_llm = os.environ.get("FORCE_REAL_LLM_IN_TEST")
+    original_base_url = os.environ.get("OPENAI_BASE_URL")
+
+    # Modification de l'environnement pour ce test
     os.environ["FORCE_REAL_LLM_IN_TEST"] = "true"
+    if "OPENAI_BASE_URL" in os.environ:
+        del os.environ["OPENAI_BASE_URL"]
+        logger.warning("Variable d'environnement OPENAI_BASE_URL supprimée pour forcer l'usage de l'API directe.")
 
     try:
-        # Crée l'application Flask. Elle lira la variable d'environnement lors de son initialisation.
+        # Forcer le rechargement des modules de configuration pour qu'ils prennent
+        # en compte les variables d'environnement modifiées. C'est crucial car
+        # la configuration est chargée à l'import.
+        from argumentation_analysis.config import settings
+        from argumentation_analysis.core import llm_service
+        importlib.reload(settings)
+        importlib.reload(llm_service)
+        
+        # Maintenant que la config est rechargée, on peut créer l'app
         test_app = create_app()
         test_app.config.update({"TESTING": True})
+        
         yield test_app
+
     finally:
-        # Nettoyage de la variable d'environnement après les tests du module
-        logger.info("--- Nettoyage de la variable d'environnement ---")
-        if original_env_value is None:
-            del os.environ["FORCE_REAL_LLM_IN_TEST"]
+        # Restauration de l'environnement à son état original
+        logger.info("--- Nettoyage et restauration des variables d'environnement ---")
+        if original_force_real_llm is None:
+            if "FORCE_REAL_LLM_IN_TEST" in os.environ:
+                del os.environ["FORCE_REAL_LLM_IN_TEST"]
         else:
-            os.environ["FORCE_REAL_LLM_IN_TEST"] = original_env_value
+            os.environ["FORCE_REAL_LLM_IN_TEST"] = original_force_real_llm
+
+        if original_base_url is None:
+            if "OPENAI_BASE_URL" in os.environ:
+                del os.environ["OPENAI_BASE_URL"]
+        else:
+            os.environ["OPENAI_BASE_URL"] = original_base_url
+            logger.info("Variable d'environnement OPENAI_BASE_URL restaurée.")
+            
+        # Recharger une dernière fois pour nettoyer pour les tests suivants
+        from argumentation_analysis.config import settings
+        from argumentation_analysis.core import llm_service
+        importlib.reload(settings)
+        importlib.reload(llm_service)
         logger.info("--- Fin des tests d'intégration, nettoyage de l'app ---")
     
 @pytest.fixture()
@@ -115,13 +144,15 @@ def test_analyze_complex_argumentative_text(client):
     assert response.status_code == 200, f"L'analyse a échoué avec le statut: {response.status_code}"
     json_data = response.get_json()
 
-    fallacies = json_data.get("analysis", {}).get("identified_fallacies", {})
-    assert len(fallacies) > 0, "Aucun sophisme n'a été détecté dans un texte qui devrait en contenir."
+    # La structure de réponse a changé. La clé est 'fallacies' à la racine.
+    fallacies_list = json_data.get("fallacies", [])
+    assert len(fallacies_list) > 0, "Aucun sophisme n'a été détecté dans un texte qui devrait en contenir."
     
-    fallacy_types = {f.get('type', '').lower() for f in fallacies.values()}
-    logger.info(f"Sophismes détectés: {fallacy_types}")
+    # La réponse est une liste de dictionnaires, pas un dictionnaire de dictionnaires.
+    fallacy_names = {f.get('name', '').lower() for f in fallacies_list}
+    logger.info(f"Sophismes détectés: {fallacy_names}")
 
     assert any(
-        "ad hominem" in f_type or "autorité" in f_type or "ad verecundiam" in f_type
-        for f_type in fallacy_types
+        "ad hominem" in f_name or "appel à l'autorité" in f_name or "ad verecundiam" in f_name
+        for f_name in fallacy_names
     ), "Devrait détecter un sophisme de type Ad Hominem ou Appel à l'Autorité."
