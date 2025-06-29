@@ -1057,3 +1057,166 @@ tests/e2e/
 ```
 
 Si une modification du code (ex: un changement de prompt) entraîne une modification de la sortie, le test échouera. Le développeur doit alors inspecter la différence. Si le changement est attendu et correct, il met à jour le fichier `.golden` pour refléter la nouvelle vérité. Sinon, il a détecté une régression et doit corriger son code.
+
+
+# Partie 5 : Plan de Migration et d'Implémentation Séquentielle
+
+Cette section finale transforme l'architecture définie précédemment en une feuille de route d'implémentation actionnable. Elle est conçue pour guider le travail de développement de manière logique et séquentielle, en s'assurant que chaque étape s'appuie sur des fondations solides.
+
+## 5.1. Initialisation : Le Retour à la Base Saine
+
+La toute première étape est critique et non négociable. Elle consiste à nettoyer l'espace de travail pour éliminer toute trace de la régression architecturale et repartir sur la base la plus stable identifiée.
+
+1.  **Création de la Branche de Travail :** Depuis la branche principale du projet (`main` ou `develop`), une nouvelle branche de feature doit être créée. Cette branche isolera l'ensemble du travail de refactoring.
+    ```bash
+    git checkout main
+    git pull
+    git checkout -b feature/orchestration-refactor
+    ```
+
+2.  **Réinitialisation à l'État de Référence :** Le commit `69736e25ecb154a4f52f144d473468694b281b3c` a été identifié comme le dernier état "sain" avant l'introduction de la boucle manuelle. La nouvelle branche doit être forcée à revenir à cet état exact. Cette commande réécrit l'historique local de la branche pour correspondre à ce commit, purgeant ainsi tout le code lié à la régression.
+    ```bash
+    git reset --hard 69736e25ecb154a4f52f144d473468694b281b3c
+    ```
+    **Importance :** Cette étape est fondamentale. Tenter de refactorer le code existant pièce par pièce serait plus coûteux et risqué que de reconstruire sur une base connue et stable. Ce `reset` garantit que nous ne transportons aucune partie de la dette technique dans la nouvelle architecture.
+
+## 5.2. Séquence d'Implémentation (Work Orders)
+
+L'implémentation est décomposée en une série de "Commandes de Travail" (Work Orders - WO) logiques et séquentielles. Chaque WO représente une étape de développement cohérente et validable.
+
+---
+
+### **WO-01 : Création des Fondations Architecturales**
+
+**Objectif :** Mettre en place les classes de base et les patrons de conception qui structureront l'ensemble du système d'agents.
+
+**Actions à réaliser :**
+
+1.  **Créer le Répertoire ABC :**
+    *   Créez le répertoire `argumentation_analysis/agents/abc/`.
+
+2.  **Implémenter `AbstractAgent` :**
+    *   Créez le fichier [`argumentation_analysis/agents/abc/abstract_agent.py`](argumentation_analysis/agents/abc/abstract_agent.py).
+    *   Copiez-collez l'intégralité du code de `AbstractAgent` tel que défini en **Partie 2** du présent document.
+
+3.  **Implémenter `AgentFactory` :**
+    *   Créez le fichier [`argumentation_analysis/agents/agent_factory.py`](argumentation_analysis/agents/agent_factory.py).
+    *   Remplissez la classe `AgentFactory` avec le squelette défini en **Partie 2**. Initialement, les méthodes `create_..._agent` peuvent retourner `NotImplementedError` ou être commentées.
+
+---
+
+### **WO-02 : Mise en place de la Configuration**
+
+**Objectif :** Externaliser et centraliser toute la configuration du système pour le rendre robuste et facile à gérer dans différents environnements.
+
+**Actions à réaliser :**
+
+1.  **Créer les Fichiers de Configuration :**
+    *   À la racine du projet, créez un fichier `config.yaml` en vous basant sur le modèle de la **Partie 4.2.1**.
+    *   Créez un fichier `.env.template` pour documenter les variables d'environnement nécessaires (ex: `OPENAI_API_KEY`). Les développeurs devront le copier en `.env` et le remplir.
+
+2.  **Implémenter le `KernelBuilder` :**
+    *   Créez le fichier [`argumentation_analysis/core/kernel_builder.py`](argumentation_analysis/core/kernel_builder.py).
+    *   Implémentez la classe `KernelBuilder` comme décrit en **Partie 4.2.2**. Cette classe doit lire `config.yaml` et `.env` pour assembler et configurer une instance de `Kernel` avec les services LLM appropriés.
+
+---
+
+### **WO-03 : Refactoring du Premier Agent (`InformalAnalysisAgent`)**
+
+**Objectif :** Transformer le premier agent concret en utilisant la nouvelle architecture comme cas d'étude, en appliquant le "Pattern de l'Agent Hybride".
+
+**Actions à réaliser :**
+
+1.  **Créer le Fichier de l'Agent :**
+    *   Créez le répertoire `argumentation_analysis/agents/concrete_agents/`.
+    *   Créez le fichier [`argumentation_analysis/agents/concrete_agents/informal_fallacy_agent.py`](argumentation_analysis/agents/concrete_agents/informal_fallacy_agent.py).
+
+2.  **Implémenter la Classe de l'Agent :**
+    *   La classe `InformalFallacyAgent` doit hériter de `AbstractAgent`.
+    *   Implémentez la logique de la méthode `get_response` en suivant le **Pattern du Builder Plugin** détaillé en **Partie 3**. Cela inclut :
+        *   La définition des classes Pydantic `IdentifiedFallacy` et `FallacyAnalysisResult`.
+        *   L'utilisation d'un `Kernel` interne.
+        *   L'injection dynamique de la taxonomie dans le prompt.
+        *   L'appel au `Kernel` avec les `OpenAIChatPromptExecutionSettings` forçant l'utilisation de l'outil Pydantic (`tool_choice="required"`).
+
+3.  **Mettre à jour la `AgentFactory` :**
+    *   Dans [`agent_factory.py`](argumentation_analysis/agents/agent_factory.py), implémentez la méthode `create_informal_fallacy_agent()` pour qu'elle crée, configure (`setup_agent_components`) et retourne une instance de `InformalFallacyAgent`.
+
+---
+
+### **WO-04 : Refactoring des Autres Agents (Exemple: `ProjectManagerAgent`)**
+
+**Objectif :** Appliquer itérativement le nouveau modèle architectural à tous les autres agents du système.
+
+**Actions à réaliser :**
+
+1.  **Processus Itératif :** Pour chaque agent existant (ex: `ProjectManagerAgent`, `SynthesisAgent`, etc.) :
+    *   Créez un nouveau fichier dans `argumentation_analysis/agents/concrete_agents/`.
+    *   Créez la classe de l'agent en la faisant hériter de `AbstractAgent`.
+    *   Migrez la logique principale de l'agent (ses prompts et sa responsabilité) dans la méthode `get_response`.
+    *   Si l'agent nécessite une sortie structurée, appliquez le même pattern Pydantic que pour le WO-03.
+    *   Ajoutez une méthode `create_..._agent()` correspondante dans `AgentFactory`.
+
+---
+
+### **WO-05 : Remplacement final de l'Orchestrateur**
+
+**Objectif :** Démanteler l'ancienne boucle manuelle et la remplacer par la nouvelle orchestration `AgentGroupChat`.
+
+**Actions à réaliser :**
+
+1.  **Modifier `analysis_runner.py` :**
+    *   Ouvrez le fichier [`argumentation_analysis/orchestration/analysis_runner.py`](argumentation_analysis/orchestration/analysis_runner.py).
+    *   Supprimez complètement l'ancienne boucle `for` et la logique de parsing manuelle.
+
+2.  **Implémenter la Nouvelle Logique :**
+    *   En vous basant sur le code cible de la **Partie 1**, implémentez la nouvelle logique :
+        1.  Initialisez la configuration et construisez le `Kernel` via le `KernelBuilder`.
+        2.  Créez une instance de `AgentFactory`.
+        3.  Utilisez la factory pour obtenir la liste de tous les agents nécessaires.
+        4.  Construisez les stratégies `KernelFunctionSelectionStrategy` et `AggregatorTerminationStrategy` comme détaillé en **Partie 1**.
+        5.  Instanciez et configurez `AgentGroupChat` avec les agents et les stratégies.
+        6.  Appelez la méthode `invoke` de `AgentGroupChat` pour lancer l'analyse.
+
+---
+
+### **WO-06 : Implémentation des Tests**
+
+**Objectif :** Assurer la robustesse et la non-régression du nouveau système via une suite de tests complète.
+
+**Actions à réaliser :**
+
+1.  **Développer les Tests Unitaires :**
+    *   Pour chaque agent concret, créez un fichier de test (ex: `tests/agents/test_informal_fallacy_agent.py`).
+    *   Écrivez des tests unitaires qui mockent le `Kernel` pour valider la logique interne de l'agent sans appels LLM, comme décrit en **Partie 4.3.1**.
+
+2.  **Développer les Tests d'Intégration :**
+    *   Créez des tests pour l'orchestration (`tests/orchestration/test_agent_group_chat.py`).
+    *   Validez le bon fonctionnement des stratégies de sélection et de terminaison en utilisant des agents mockés qui retournent des réponses prévisibles, comme détaillé en **Partie 4.3.2**.
+
+3.  **Mettre en Place les Tests End-to-End :**
+    *   Créez une suite de tests "Golden File" comme décrit en **Partie 4.3.3**.
+    *   Identifiez quelques cas d'usage représentatifs, créez les fichiers d'entrée (`.txt`) et générez les fichiers de sortie de référence (`.json.golden`).
+
+## 5.3. Diagramme de Gantt Simplifié
+
+Le diagramme suivant visualise la séquence des "Work Orders" et met en évidence leurs dépendances. L'implémentation des agents (WO-04) peut être parallélisée une fois les fondations (WO-01, WO-02) et le premier exemple (WO-03) en place.
+
+```mermaid
+gantt
+    title Plan d'Implémentation de la Refonte de l'Orchestration
+    dateFormat  YYYY-MM-DD
+    axisFormat %d/%m
+    
+    section Fondations
+    WO-01: Fondations Architecturales :crit, done, 2025-07-01, 2d
+    WO-02: Configuration Centralisée :crit, done, after WO-01, 2d
+    
+    section Implémentation des Agents
+    WO-03: Refactoring InformalAnalysisAgent :crit, done, after WO-02, 3d
+    WO-04: Refactoring Autres Agents :done, after WO-03, 5d
+    
+    section Orchestration & Validation
+    WO-05: Remplacement Orchestrateur :crit, done, after WO-04, 3d
+    WO-06: Implémentation des Tests :crit, done, after WO-03, 6d
+```
