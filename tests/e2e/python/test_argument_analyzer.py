@@ -59,7 +59,7 @@ def test_successful_simple_argument_analysis(page: Page, frontend_url: str):
     try:
         # --- Instrumentation pour le débogage ---
         def log_console_message(msg):
-            print(f"------------> [BROWSER CONSOLE] Type: {msg.type}, Texte: {msg.text()}")
+            print(f"------------> [BROWSER CONSOLE] Type: {msg.type}, Texte: {msg.text}")
 
         def log_network_request(request):
              print(f"------------> [BROWSER NETWORK] >> {request.method} {request.url}")

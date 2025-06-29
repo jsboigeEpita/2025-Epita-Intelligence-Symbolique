@@ -259,7 +259,7 @@ export const testConnection = async () => {
 };
 
 // Export par défaut pour faciliter l'import
-export default {
+const apiService = {
   analyzeText,
   validateArgument,
   detectFallacies,
