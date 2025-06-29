@@ -330,3 +330,7 @@ chiers de log
 
 # Archives created by maintenance scripts
 results_archive/
+
+
+# Secrets
+.env
