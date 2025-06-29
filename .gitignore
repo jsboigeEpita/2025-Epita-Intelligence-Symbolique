@@ -177,6 +177,7 @@ data/
 !data/.gitkeep
 !data/extract_sources.json.gz.enc
 data/extract_sources.json
+!argumentation_analysis/agents/data/
 **/backups/
 !**/backups/__init__.py
 

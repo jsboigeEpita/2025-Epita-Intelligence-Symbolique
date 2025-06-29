@@ -21,9 +21,24 @@ class FallacyIdentificationResult(BaseModel):
 class FallacyIdentificationPlugin:
     """Un plugin pour identifier les sophismes informels dans un texte."""
     
-    def __init__(self):
-        """Initialise le plugin, en chargeant la taxonomie."""
+    def __init__(self, allowed_operations: List[str] | None = None):
+        """
+        Initialise le plugin, en chargeant la taxonomie.
+        Peut être configuré pour n'exposer que certaines opérations.
+        Args:
+            allowed_operations: Liste optionnelle des noms de fonctions à exposer
+                                (ex: ['identify_fallacies']). Si None, tout est exposé.
+        """
         self.taxonomy = Taxonomy()
+        self.allowed_operations = allowed_operations
+
+        if self.allowed_operations is not None:
+            all_plugin_functions = ["explore_branch", "identify_fallacies"]
+            for func_name in all_plugin_functions:
+                if func_name not in self.allowed_operations:
+                    method = getattr(self, func_name, None)
+                    if method and hasattr(method, "_is_kernel_function"):
+                        delattr(method, "_is_kernel_function")
 
     @kernel_function(name="explore_branch", description="Explore une branche de la taxonomie des sophismes pour voir ses sous-catégories. A utiliser pour naviguer dans la taxonomie avant d'identifier un sophisme final.")
     def explore_branch(

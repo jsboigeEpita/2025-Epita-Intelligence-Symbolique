@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "type": "prompt",
+  "description": "Displays a branch of the fallacy taxonomy from a given node.",
+  "execution_settings": {
+    "default": {
+      "temperature": 0.0,
+      "max_tokens": 1500,
+      "top_p": 1.0
+    }
+  },
+  "input_variables": [
+    {
+      "name": "taxonomy",
+      "description": "The full fallacy taxonomy as a JSON string.",
+      "required": true
+    },
+    {
+      "name": "node_id",
+      "description": "The ID of the node to start the branch from.",
+      "required": true
+    },
+    {
+      "name": "depth",
+      "description": "The depth to display the branch.",
+      "required": true,
+      "default": "1"
+    }
+  ]
+}
