@@ -22,66 +22,59 @@ project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 
-# @pytest.fixture(scope="session")
-# def jvm_session_manager():
-#     """
-#     [DÉSACTIVÉ] Conflit avec la gestion globale de la JVM dans tests/conftest.py.
-#     La gestion de la JVM doit être centralisée pour éviter les crashs.
-#     Les tests doivent utiliser les fixtures JVM globales (ex: 'integration_jvm').
-#
-#     Initialise la JVM une fois pour toute la session de test et l'arrête à la fin.
-#
-#     Utilise une portée 'session' pour éviter l'erreur 'OSError: JVM cannot be restarted'
-#     car JPype ne permet qu'un seul cycle de vie JVM par processus Python.
-#
-#     Cette fixture prend le contrôle exclusif de la JVM pendant toute la session.
-#     """
-#     import jpype
-#     import logging
-#     from argumentation_analysis.core.jvm_setup import (
-#         initialize_jvm, shutdown_jvm_if_needed,
-#         set_session_fixture_owns_jvm, is_session_fixture_owns_jvm
-#     )
-#
-#     logger = logging.getLogger("tests.jvm_session_manager")
-#
-#     # Vérifier l'état initial de la JVM
-#     logger.info(f"JVM_SESSION_MANAGER: Début de session. JVM déjà démarrée: {jpype.isJVMStarted()}")
-#     logger.info(f"JVM_SESSION_MANAGER: Session fixture owns JVM initial: {is_session_fixture_owns_jvm()}")
-#
-#     # PRENDRE LE CONTRÔLE EXCLUSIF DE LA JVM POUR CETTE SESSION
-#     set_session_fixture_owns_jvm(True)
-#     logger.info("JVM_SESSION_MANAGER: Prise de contrôle exclusif de la JVM par la fixture de session")
-#
-#     # Démarrer la JVM seulement si elle ne l'est pas déjà
-#     jvm_was_started_by_us = False
-#     if not jpype.isJVMStarted():
-#         logger.info("JVM_SESSION_MANAGER: Démarrage de la JVM pour la session de tests")
-#         success = initialize_jvm()
-#         if not success:
-#             logger.error("JVM_SESSION_MANAGER: Échec du démarrage de la JVM")
-#             set_session_fixture_owns_jvm(False)  # Libérer le contrôle en cas d'échec
-#             raise RuntimeError("Impossible de démarrer la JVM pour les tests")
-#         jvm_was_started_by_us = True
-#         logger.info("JVM_SESSION_MANAGER: JVM démarrée avec succès par la fixture de session")
-#     else:
-#         logger.info("JVM_SESSION_MANAGER: JVM déjà démarrée, prise de contrôle par la fixture de session")
-#
-#     try:
-#         yield
-#     finally:
-#         logger.info("JVM_SESSION_MANAGER: Fin de session - nettoyage de la JVM")
-#         try:
-#             # Arrêter la JVM seulement si nous la contrôlons et qu'elle est démarrée
-#             if jpype.isJVMStarted():
-#                 logger.info("JVM_SESSION_MANAGER: Arrêt de la JVM à la fin de la session")
-#                 shutdown_jvm_if_needed()
-#             else:
-#                 logger.info("JVM_SESSION_MANAGER: JVM déjà arrêtée")
-#         finally:
-#             # Toujours libérer le contrôle de la JVM
-#             set_session_fixture_owns_jvm(False)
-#             logger.info("JVM_SESSION_MANAGER: Libération du contrôle de la JVM")
+@pytest.fixture(scope="session")
+def jvm_session_manager():
+    """
+    RÉACTIVÉ: Restaure la gestion de la JVM via une fixture de session pour les tests
+    d'orchestration, afin de résoudre les crashs "access violation".
+
+    Initialise la JVM une fois pour toute la session de test et l'arrête proprement à la fin.
+    Utilise une portée 'session' pour éviter l'erreur 'OSError: JVM cannot be restarted'
+    car JPype ne permet qu'un seul cycle de vie JVM par processus Python.
+
+    Cette fixture prend le contrôle exclusif de la JVM pendant toute la session de test.
+    """
+    import jpype
+    import logging
+    from argumentation_analysis.core.jvm_setup import (
+        initialize_jvm, shutdown_jvm, is_jvm_started, is_jvm_owned_by_session_fixture
+    )
+
+    logger = logging.getLogger("tests.jvm_session_manager")
+    
+    # Ne rien faire si la JVM est déjà gérée par une autre fixture de session
+    if is_jvm_owned_by_session_fixture() and is_jvm_started():
+        logger.info("JVM_SESSION_MANAGER: La JVM est déjà démarrée et gérée par une autre fixture. On ne fait rien.")
+        yield
+        return
+
+    logger.info("="*20 + " Début Fixture Session JVM " + "="*20)
+    logger.info(f"État initial -> Démarrée: {is_jvm_started()}, Gérée par session: {is_jvm_owned_by_session_fixture()}")
+
+    # Démarrer la JVM si nécessaire, en déclarant que cette fixture en est propriétaire
+    if not is_jvm_started():
+        logger.info("JVM non démarrée. Démarrage par la fixture de session...")
+        success = initialize_jvm(session_fixture_owns_jvm=True)
+        if not success:
+            logger.error("ÉCHEC CRITIQUE: Impossible de démarrer la JVM pour la session de tests.")
+            raise RuntimeError("Impossible de démarrer la JVM pour les tests d'orchestration.")
+        logger.info("JVM démarrée avec succès par la fixture de session.")
+    else:
+        logger.info("JVM déjà démarrée. La fixture de session en prend le contrôle (attention aux conflits).")
+        # Il n'y a pas de fonction pour "prendre le contrôle" a posteriori,
+        # l'initialisation au démarrage est la méthode privilégiée.
+        # On assume que si on arrive ici, c'est ok.
+
+    try:
+        yield
+    finally:
+        logger.info("="*20 + " Fin Fixture Session JVM " + "="*20)
+        # N'arrêter la JVM que si cette fixture l'a démarrée et la contrôle
+        if is_jvm_owned_by_session_fixture():
+            logger.info("Arrêt de la JVM demandé par la fixture de session qui la contrôle.")
+            shutdown_jvm(called_by_session_fixture=True)
+        else:
+            logger.warning("Fin de session, mais la JVM n'est pas (ou plus) contrôlée par cette fixture. Elle ne sera pas arrêtée ici.")
 
 @pytest.fixture
 def llm_service():
