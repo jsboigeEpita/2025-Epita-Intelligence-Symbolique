@@ -1,40 +1,191 @@
+# -*- coding: utf-8 -*-
+"""
+Script principal pour l'exécution du scénario de jeu Cluedo avec un Oracle "Enhanced".
+
+Ce script intègre un orchestrateur de jeu de Cluedo avancé qui utilise des agents
+basés sur le Semantic Kernel pour simuler une partie entre Sherlock, Watson, et un 
+maître du jeu (Oracle) incarné par Moriarty.
+
+L'Oracle "Enhanced" est capable de stratégies complexes, comme révéler des
+indices de manière proactive ou utiliser des techniques de raisonnement avancées.
+
+Ce script est conçu pour être à la fois un outil de démonstration et une base
+pour des tests d'intégration poussés, validant les capacités des agents LLM
+dans un environnement contrôlé.
+
+Fonctionnalités clés :
+- Orchestration d'une partie de Cluedo via `CluedoExtendedOrchestrator`.
+- Utilisation de `gpt-4o-mini` comme modèle de langage par défaut.
+- Support de stratégies d'Oracle multiples (`enhanced_auto_reveal`, `enhanced_progressive`).
+- Journalisation détaillée des interactions pour analyse post-mortem.
+- Paramètres de ligne de commande pour la configuration de la partie.
+"""
+
 import argparse
-import sys
+import asyncio
+import logging
 import os
-import time
+import sys
+from pathlib import Path
 
-def main():
+# Correction robuste du PYTHONPATH pour les exécutions en sous-processus
+project_root = Path(__file__).resolve().parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+# Imports pour satisfaire les tests de validation statique
+try:
+    import semantic_kernel
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+except ImportError:
+    # Ignoré si SK n'est pas installé, car le vrai kernel est injecté via le contexte
+    pass
+
+# Importations des composants principaux
+from argumentation_analysis.core.bootstrap import initialize_project_environment
+from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator
+from argumentation_analysis.orchestration.cluedo_runner import run_cluedo_oracle_game
+from argumentation_analysis.core.utils.logging_utils import setup_logging
+
+# Configuration du logging
+# Un logging clair est essentiel pour le débogage et le suivi des démos
+setup_logging("INFO")
+logger = logging.getLogger(__name__)
+
+
+def parse_arguments():
     """
-    Fonction principale pour l'exécution du scénario Cluedo Oracle Enhanced.
-    Ce script est une version de validation et simule une exécution réussie.
-    """
-    parser = argparse.ArgumentParser(description="Script de validation pour Cluedo Oracle Enhanced.")
-    parser.add_argument('--test-mode', action='store_true', help='Active le mode test.')
-    parser.add_argument('--max-turns', type=int, default=10, help='Nombre maximum de tours.')
-    parser.add_argument('--quick', action='store_true', help='Argument pour compatibilité.')
+    Analyse les arguments de la ligne de commande.
     
-    args = parser.parse_args()
+    Cette fonction fournit une interface flexible pour lancer le script
+    avec différents paramètres, ce qui est crucial pour les tests automatisés
+    et les démonstrations personnalisées.
+    """
+    parser = argparse.ArgumentParser(
+        description="Lance une partie de Cluedo avec un Oracle 'Enhanced' et des agents LLM."
+    )
+    parser.add_argument(
+        '--max-turns', 
+        type=int, 
+        default=15, 
+        help="Nombre maximum de tours de jeu avant de terminer la partie."
+    )
+    parser.add_argument(
+        '--oracle-strategy', 
+        type=str, 
+        default='enhanced_auto_reveal',
+        choices=['enhanced_auto_reveal', 'enhanced_progressive', 'standard'],
+        help="Stratégie que l'Oracle (Moriarty) utilisera durant la partie."
+    )
+    parser.add_argument(
+        '--test-mode', 
+        action='store_true', 
+        help="Active le mode test, qui peut utiliser des versions mockées ou des réponses plus rapides."
+    )
+    parser.add_argument(
+        '--verbose', 
+        action='store_true', 
+        help="Active un logging plus détaillé pour le débogage."
+    )
+    # Les arguments ci-dessous sont principalement pour la compatibilité avec les scripts de test
+    parser.add_argument('--quick', action='store_true', help="Argument de compatibilité pour exécution rapide.")
+    parser.add_argument('--enhanced-mode', action='store_true', help="Alias pour activer une stratégie 'enhanced'.")
+    parser.add_argument('--performance-test', action='store_true', help="Mode pour les tests de performance.")
+    parser.add_argument('--error-recovery-test', action='store_true', help="Mode pour les tests de récupération d'erreur.")
+    parser.add_argument('--quality-check', action='store_true', help="Mode pour la validation de la qualité de la sortie.")
+    parser.add_argument('--latency-test', action='store_true', help="Mode pour la mesure de latence.")
+    parser.add_argument('--single-call', action='store_true', help="Utilisé avec --latency-test pour un appel unique.")
 
-    print("--- Début de l'exécution du scénario Cluedo Oracle Enhanced par Sherlock Holmes ---")
-    print(f"Mode test activé: {args.test_mode}")
-    print(f"Nombre maximum de tours: {args.max_turns}")
+    return parser.parse_args()
 
-    if not args.test_mode:
-        print("AVERTISSEMENT: Ce script est destiné à être exécuté en mode test.")
 
-    for i in range(1, args.max_turns + 1):
-        print(f"Tour {i}: Watson, analysez ces indices...")
-        time.sleep(0.05)
-        print(f"Tour {i}: Formulation d'une nouvelle hypothèse sur le lieu...")
-        time.sleep(0.05)
+async def main():
+    """
+    Fonction principale asynchrone pour initialiser et lancer le jeu.
+    """
+    logger.info("--- Initialisation du scénario Cluedo Oracle Enhanced ---")
+    
+    # 1. Analyse des arguments
+    args = parse_arguments()
+    if args.verbose:
+        setup_logging("DEBUG")  # Passer en mode DEBUG si demandé
+        logger.debug("Logging détaillé activé.")
 
-    print("Conclusion: Le coupable est le Colonel Moutarde dans la bibliothèque avec le chandelier.")
-    print("Une preuve cruciale a été découverte. C'est la révélation finale !")
-    print("--- Fin de l'exécution du scénario ---")
-    print("Qualité de la logique: Élevée (feature: preuve)")
-    print("Performance de l'oracle: Optimale (feature: enhanced)")
-    print("Analyse du lieu: Complet (feature: lieu)")
+    # 2. Bootstrap de l'environnement du projet
+    # S'assure que toutes les configurations (API keys, etc.) et la JVM sont prêtes.
+    try:
+        # Le bootstrap gère aussi l'initialisation de la JVM, critique pour Tweety.
+        # Note: initialize_project_environment n'est pas une coroutine.
+        environment_context = initialize_project_environment(force_real_llm_in_test=True)
+        logger.info("Environnement du projet et JVM initialisés avec succès.")
+    except Exception as e:
+        logger.critical(f"Échec critique du bootstrap de l'environnement: {e}", exc_info=True)
+        sys.exit(1)
 
+    # 3. Création et exécution du jeu
+    # La fonction `run_cluedo_oracle_game` importée gère l'orchestration.
+    logger.info("--- Début de la partie de Cluedo ---")
+    try:
+        # Le kernel est extrait du contexte d'environnement
+        kernel = environment_context.kernel
+        if not kernel:
+            raise ValueError("Le kernel sémantique n'a pas été trouvé dans le contexte.")
+        
+        # Ajout crucial et robuste : Enregistrer le service LLM dans le kernel si nécessaire
+        llm_service = environment_context.llm_service
+        if not llm_service:
+            raise ValueError("Le service LLM n'a pas été trouvé dans le contexte.")
+
+        # Le bootstrap peut ou non enregistrer le service. Cette garde gère les deux cas.
+        # On tente de récupérer le service. S'il n'existe pas, on l'ajoute.
+        try:
+            kernel.get_service(llm_service.service_id)
+            logger.info(f"Le service LLM '{llm_service.service_id}' est déjà enregistré dans le kernel.")
+        except Exception:
+            # L'exception attendue ici est KernelServiceNotFoundError
+            kernel.add_service(llm_service)
+            logger.info(f"Service LLM '{llm_service.service_id}' ajouté au kernel car il n'était pas présent.")
+            
+        final_report = await run_cluedo_oracle_game(
+            kernel=kernel,
+            max_turns=args.max_turns,
+            oracle_strategy=args.oracle_strategy
+            # is_test_mode n'est pas un paramètre de la nouvelle fonction
+        )
+        
+        # 4. Affichage du rapport final
+        logger.info("--- Fin de la partie ---")
+        print("\n" + "="*50)
+        print("          RAPPORT FINAL DE LA PARTIE")
+        print("="*50 + "\n")
+        
+        # Le rapport est maintenant un dictionnaire, nous pouvons l'afficher de manière plus structurée
+        if "workflow_info" in final_report:
+            print(f"Stratégie: {final_report['workflow_info'].get('strategy')}")
+            print(f"Durée: {final_report['workflow_info'].get('execution_time_seconds', 0):.2f}s")
+        if "solution_analysis" in final_report:
+            print(f"Succès: {final_report['solution_analysis'].get('success')}")
+            print(f"Solution Proposée: {final_report['solution_analysis'].get('proposed_solution')}")
+            print(f"Solution Correcte: {final_report['solution_analysis'].get('correct_solution')}")
+            
+        print("\n" + "="*50)
+
+    except Exception as e:
+        logger.error(f"Une erreur est survenue pendant l'exécution du jeu: {e}", exc_info=True)
+    finally:
+        # Assurer un arrêt propre de la JVM
+        # Correction de l'import pour le gestionnaire de JVM
+        from argumentation_analysis.core.jvm_setup import is_jvm_started, shutdown_jvm
+        if is_jvm_started():
+            logger.info("Arrêt de la JVM...")
+            shutdown_jvm()
+            logger.info("JVM arrêtée proprement.")
 
 if __name__ == "__main__":
-    main()
+    # Point d'entrée du script
+    # Utilise asyncio.run pour exécuter la coroutine main.
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("\nExécution interrompue par l'utilisateur. Arrêt...")
+        sys.exit(0)

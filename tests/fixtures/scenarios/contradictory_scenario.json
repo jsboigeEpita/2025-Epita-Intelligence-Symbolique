@@ -1,0 +1,9 @@
+{
+  "scenario_name": "Contradictory Facts about the Murderer",
+  "description": "A set of facts that directly contradict each other, which the logical agent should identify as inconsistent.",
+  "facts": [
+    "Murderer == 'Miss Rose'",
+    "Murderer != 'Miss Rose'"
+  ],
+  "expected_outcome": "contradiction"
+}

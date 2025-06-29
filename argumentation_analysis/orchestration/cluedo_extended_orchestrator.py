@@ -484,6 +484,26 @@ class CluedoExtendedOrchestrator:
                     action_details={"input": str(turn_input)[:150], "output": last_message_content[:150]}
                 )
 
+                # CORRECTIF ORACLE: Réintroduction de l'interception des suggestions
+                if next_agent.name != "Moriarty":
+                    suggestion = self._extract_cluedo_suggestion(last_message_content)
+                    if suggestion:
+                        self._logger.info(f"🔮 SUGGESTION DÉTECTÉE: {suggestion} par {next_agent.name}")
+                        oracle_response = await self._force_moriarty_oracle_revelation(
+                            suggestion=suggestion,
+                            suggesting_agent=next_agent.name
+                        )
+                        if oracle_response:
+                            oracle_message = self.consolidate_agent_response(oracle_response.get("content"), "Moriarty")
+                            history.append(oracle_message)
+                            self._logger.info(f"🎭 [Moriarty Oracle Auto-Reveal]: {oracle_response.get('content')[:100]}...")
+                            self.oracle_state.add_conversation_message(
+                                agent_name="Moriarty",
+                                content=str(oracle_message.content),
+                                message_type="revelation"
+                            )
+
+
         except Exception as e:
             self._logger.error(f"Erreur durant l'orchestration: {e}", exc_info=True)
             raise

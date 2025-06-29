@@ -1,0 +1,13 @@
+{
+  "scenario_name": "Ambiguous Facts about the Weapon",
+  "description": "A set of facts that are insufficient to determine a single unique solution, leading to ambiguity.",
+  "facts": [
+    "Weapon == 'Dagger' or Weapon == 'Candlestick'",
+    "Location == 'Library'"
+  ],
+  "expected_outcome": "ambiguity",
+  "expected_solutions": [
+    {"Weapon": "Dagger", "Location": "Library"},
+    {"Weapon": "Candlestick", "Location": "Library"}
+  ]
+}

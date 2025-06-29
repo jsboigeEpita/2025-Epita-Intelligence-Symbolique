@@ -30,8 +30,9 @@ def run_in_jvm_subprocess():
         # Créer un environnement pour le sous-processus qui inclut la racine du projet dans PYTHONPATH
         env = os.environ.copy()
         env['PYTHONPATH'] = str(project_root) + os.pathsep + env.get('PYTHONPATH', '')
+        env['PROJECT_ROOT'] = str(project_root)
         
-        print(f"Exécution du worker en sous-processus avec PYTHONPATH: {' '.join(command_for_subprocess)}")
+        print(f"Exécution du worker en sous-processus avec PYTHONPATH et PROJECT_ROOT: {' '.join(command_for_subprocess)}")
 
         result = subprocess.run(
             command_for_subprocess,

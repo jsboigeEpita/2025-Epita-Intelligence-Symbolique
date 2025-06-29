@@ -13,6 +13,7 @@ import os
 import time
 import sys
 import subprocess
+from types import SimpleNamespace
 from pathlib import Path
 # Imports de mocks supprimés - Phase 3A purge complète
 from typing import Dict, Any, List
@@ -50,40 +51,38 @@ def performance_monitor():
     metrics = {
         'start_time': None,
         'end_time': None,
+        'duration': None,
         'api_calls': 0,
         'tokens_used': 0,
         'errors': [],
         'revelations': 0
     }
-    
-    def start_monitoring():
-        metrics['start_time'] = time.time()
-    
-    def stop_monitoring():
-        metrics['end_time'] = time.time()
-        metrics['duration'] = metrics['end_time'] - metrics['start_time']
-    
-    def record_api_call(tokens=None):
-        metrics['api_calls'] += 1
-        if tokens:
-            metrics['tokens_used'] += tokens
-    
-    def record_error(error):
-        metrics['errors'].append(error)
-    
-    def record_revelation():
-        metrics['revelations'] += 1
-    
-    monitor = type('PerformanceMonitor', (), {
-        'start': start_monitoring,
-        'stop': stop_monitoring,
-        'api_call': record_api_call,
-        'error': record_error,
-        'revelation': record_revelation,
-        'metrics': metrics
-    })()
-    
-    return monitor
+
+    class PerformanceMonitor:
+        def __init__(self):
+            # Les métriques sont réinitialisées pour chaque test utilisant la fixture.
+            self.metrics = metrics.copy()
+
+        def start(self):
+            self.metrics['start_time'] = time.time()
+
+        def stop(self):
+            if self.metrics['start_time'] is not None:
+                self.metrics['end_time'] = time.time()
+                self.metrics['duration'] = self.metrics['end_time'] - self.metrics['start_time']
+
+        def api_call(self, tokens=None):
+            self.metrics['api_calls'] += 1
+            if tokens:
+                self.metrics['tokens_used'] += tokens
+
+        def error(self, error):
+            self.metrics['errors'].append(str(error))
+
+        def revelation(self):
+            self.metrics['revelations'] += 1
+
+    return PerformanceMonitor()
 
 
 @pytest.mark.integration
