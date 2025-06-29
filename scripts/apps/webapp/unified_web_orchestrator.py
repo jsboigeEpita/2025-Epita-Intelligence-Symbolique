@@ -34,12 +34,22 @@ from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass, asdict
 from enum import Enum
+from dotenv import load_dotenv
 
 # Correction du chemin pour les imports internes
 # Le script est dans D:/.../scripts/apps/webapp/ ; la racine du projet est 3 niveaux au-dessus.
 project_root = Path(__file__).resolve().parents[3]
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
+
+# Charger les variables d'environnement du fichier .env à la racine du projet
+dotenv_path = project_root / '.env'
+if dotenv_path.exists():
+    load_dotenv(dotenv_path=dotenv_path, override=True)
+    print(f"INFO: Fichier .env chargé depuis {dotenv_path}")
+else:
+    print(f"WARNING: Fichier .env non trouvé à l'emplacement {dotenv_path}")
+
 
 # Imports internes
 from scripts.apps.webapp.backend_manager import BackendManager

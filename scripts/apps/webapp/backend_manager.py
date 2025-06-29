@@ -165,7 +165,7 @@ class BackendManager:
             
             # Stratégie robuste : trouver l'exécutable Python de l'environnement Conda cible.
             # On hardcode le nom car l'environnement d'exécution du script est instable.
-            conda_env_name = "projet-is"
+            conda_env_name = "projet-is-roo-new"
             python_executable = self._get_conda_env_python_executable(conda_env_name)
             
             if not python_executable:

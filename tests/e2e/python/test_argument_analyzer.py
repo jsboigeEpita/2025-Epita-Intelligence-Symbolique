@@ -57,6 +57,21 @@ def test_successful_simple_argument_analysis(page: Page, frontend_url: str):
     This test targets the React application.
     """
     try:
+        # --- Instrumentation pour le débogage ---
+        def log_console_message(msg):
+            print(f"------------> [BROWSER CONSOLE] Type: {msg.type}, Texte: {msg.text()}")
+
+        def log_network_request(request):
+             print(f"------------> [BROWSER NETWORK] >> {request.method} {request.url}")
+
+        def log_network_response(response):
+            print(f"------------> [BROWSER NETWORK] << {response.status} {response.url}")
+
+        # Attacher les listeners AVANT la navigation pour tout capturer
+        page.on("console", log_console_message)
+        page.on("request", log_network_request)
+        page.on("response", log_network_response)
+
         # Navigate to the React app
         page.goto(frontend_url)
 
