@@ -209,10 +209,12 @@ class PlaywrightRunner:
         # Spécifier le navigateur à utiliser
         cmd.append(f'--browser={config["browser"]}')
 
-        # Les URLs sont maintenant passées via les variables d'environnement
-        # et récupérées par les fixtures dans conftest.py.
-        # Laisser ces arguments provoquerait une erreur "unrecognized arguments".
-
+        # Passer les URLs dynamiques à Pytest.
+        # Ceci surcharge les valeurs par défaut définies dans tests/conftest.py
+        if 'backend_url' in config:
+            cmd.append(f"--backend-url={config['backend_url']}")
+        if 'frontend_url' in config:
+            cmd.append(f"--frontend-url={config['frontend_url']}")
         
         return cmd
     

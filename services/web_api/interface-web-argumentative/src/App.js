@@ -9,6 +9,7 @@ import ArgumentAnalyzer from './components/ArgumentAnalyzer';
 import { checkAPIHealth } from './services/api';
 
 function App() {
+  console.log('[DEBUG] Le composant App est sur le point de rendre.');
   const [activeTab, setActiveTab] = useState('analyzer');
   const [apiStatus, setApiStatus] = useState('checking');
   const [apiError, setApiError] = useState(null);
