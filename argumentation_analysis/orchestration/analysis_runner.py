@@ -39,6 +39,9 @@ from argumentation_analysis.agents.core.informal.informal_agent import InformalA
 from argumentation_analysis.agents.core.pl.pl_agent import PropositionalLogicAgent
 from argumentation_analysis.agents.core.pl.pl_agent import PropositionalLogicAgent
 from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
+from argumentation_analysis.config.settings import AppSettings
+from argumentation_analysis.kernel.kernel_builder import KernelBuilder
+from argumentation_analysis.agents.agent_factory import AgentFactory
 
 
 # Configuration du logging
@@ -66,7 +69,7 @@ class AnalysisRunner:
         chat_history = ChatHistory()
         chat_history.add_message(message=ChatMessageContent(role=AuthorRole.USER, content=input_text))
 
-        chat = AgentGroupChat(
+        chat = await AgentGroupChat(
             agents=[manager_agent, fallacy_agent],
             chat_history=chat_history
         )
@@ -75,7 +78,7 @@ class AnalysisRunner:
         logger.info(f"Début de l'invocation du chat.")
         
         history = [chat_history.messages[0]]
-        async for message in chat.invoke():
+        async for message in await chat.invoke():
             history.append(message)
         
         logger.info("Invocation du chat terminée.")

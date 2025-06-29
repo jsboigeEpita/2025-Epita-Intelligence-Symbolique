@@ -152,42 +152,64 @@ def apply_nest_asyncio():
     logger.warning("The 'apply_nest_asyncio' fixture in conftest.py is currently disabled to ensure compatibility with Playwright.")
     yield
 
-@pytest.fixture(scope="session", autouse=True)
-def jvm_session(request):
+@pytest.fixture(scope="session")
+def jvm_session():
     """
     Manages the JPype JVM lifecycle for the entire test session.
+    This fixture is NOT auto-used; it must be requested by another fixture.
+    When activated, it:
     1. Ensures all portable dependencies (JDK, Tweety JARs) are provisioned.
     2. Starts the JVM using the centralized jvm_setup module.
-    3. Shuts down the JVM after all tests are complete.
+    3. Guarantees the JVM is shut down after all tests are complete.
     """
     logger.info("---------- Pytest session starting: Provisioning dependencies and Initializing JVM... ----------")
     
     try:
-        # Étape 1 (Défensive): S'assurer que les JARs sont au bon endroit
         logger.info("Checking Tweety JARs location...")
         _ensure_tweety_jars_are_correctly_placed()
 
-        # Étape 2: Démarrage de la JVM via le module centralisé
         if not is_jvm_started():
             logger.info("Attempting to initialize JVM via core.jvm_setup.initialize_jvm...")
-            # La fixture de session est propriétaire de la JVM
             success = initialize_jvm(session_fixture_owns_jvm=True)
             if success:
                 logger.info("JVM started successfully for the test session.")
             else:
-                 pytest.fail("JVM initialization failed via core.jvm_setup.initialize_jvm.", pytrace=False)
+                 pytest.fail("JVM initialization failed.", pytrace=False)
         else:
             logger.info("JVM was already started.")
             
     except Exception as e:
-        logger.error(f"A critical error occurred during test session setup: {e}", exc_info=True)
-        pytest.exit(f"Test session setup failed: {e}", 1)
+        logger.error(f"A critical error occurred during JVM session setup: {e}", exc_info=True)
+        pytest.exit(f"JVM setup failed: {e}", 1)
 
     yield True
 
     logger.info("---------- Pytest session finished: Shutting down JVM... ----------")
-    # L'arrêt est géré par la fixture elle-même, donc on passe True
     shutdown_jvm(called_by_session_fixture=True)
+
+
+@pytest.fixture(scope="function", autouse=True)
+def manage_jvm_for_test(request):
+    """
+    This 'autouse' fixture runs for every test and decides if the global
+    `jvm_session` fixture is required by manually invoking it.
+    
+    It checks for a 'no_jvm_session' marker on the test. If found, it does nothing.
+    If not found, it uses `request.getfixturevalue()` to activate the `jvm_session`
+    fixture, ensuring the JVM is started for the test.
+    """
+    if 'no_jvm_session' in request.node.keywords:
+        logger.warning(
+            f"Test '{request.node.name}' is marked with 'no_jvm_session'. "
+            "The global JVM fixture will not be requested for this test."
+        )
+        yield
+    else:
+        # Manually trigger the session-scoped JVM fixture.
+        # This will only run it once and then retrieve the cached result
+        # for all subsequent calls.
+        request.getfixturevalue('jvm_session')
+        yield
 
 
 # Charger les fixtures définies dans d'autres fichiers comme des plugins

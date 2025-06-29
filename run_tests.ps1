@@ -262,26 +262,38 @@ else {
         "validation" = "tests/validation"
     }
 
-    $selectedPaths = if ($Path) {
-        @($Path)
-    } else {
-        $testPaths[$TestType]
-    }
+    $selectedPaths = @() # Initialisation
 
-    if (-not $selectedPaths) {
-        Write-Host "[ERREUR] Type de test '$TestType' non valide. Options valides: $($testPaths.Keys -join ', ')." -ForegroundColor Red
-        exit 1
+    if ($PytestArgs -and -not ($Path)) {
+        # Si des arguments de ligne de commande sont passés SANS -Path, on suppose qu'ils contiennent les chemins.
+        # On ne remplit pas $selectedPaths, car $PytestArgs sera utilisé directement.
+        Write-Host "[INFO] Utilisation des arguments directs fournis: '$PytestArgs'. Le paramètre -TestType est ignoré pour la sélection de chemin." -ForegroundColor Yellow
+    } elseif ($Path) {
+        # Si -Path est spécifié (et pas d'args directs), on l'utilise.
+        $selectedPaths = @($Path)
+    } else {
+        # Sinon, on se rabat sur le TestType.
+        $selectedPaths = $testPaths[$TestType]
+        if (-not $selectedPaths) {
+            Write-Host "[ERREUR] Type de test '$TestType' non valide. Options valides: $($testPaths.Keys -join ', ')." -ForegroundColor Red
+            exit 1
+        }
     }
     
     # Construire la commande pytest
-    $pytestCommandParts = @("python", "-m", "pytest", "-s", "-vv") + $selectedPaths
-    
+    $pytestCommandParts = @("python", "-m", "pytest", "-s", "-vv")
+
+    # Ajouter les chemins s'ils ont été déterminés par -TestType ou -Path
+    if ($selectedPaths.Count -gt 0) {
+        $pytestCommandParts += $selectedPaths
+    }
+
     if ($SkipOctave) {
         $pytestCommandParts += "--skip-octave"
     }
-
+    
+    # Ajouter PytestArgs qui contient maintenant soit les arguments seuls, soit les chemins + arguments
     if ($PytestArgs) {
-        # Utiliser directement PytestArgs qui contient maintenant les arguments restants
         $pytestCommandParts += $PytestArgs.Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)
     }
     $pytestFinalCommand = $pytestCommandParts -join " "

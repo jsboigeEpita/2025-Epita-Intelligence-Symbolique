@@ -2,6 +2,7 @@ from tests.fixtures.jvm_subprocess_fixture import run_in_jvm_subprocess
 import pytest
 import os
 
+@pytest.mark.no_jvm_session
 def test_api_endpoints_via_worker(run_in_jvm_subprocess):
     """
     Exécute les tests des endpoints de l'API via un script worker dans un sous-processus.

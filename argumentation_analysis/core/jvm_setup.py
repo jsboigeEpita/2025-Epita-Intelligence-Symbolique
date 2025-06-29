@@ -327,68 +327,8 @@ def get_jvm_options() -> List[str]:
     # Les options "-XX:+UseG1GC", "-Xrs" sur Windows provoquaient un "fatal exception: access violation".
     # Elles sont désactivées de manière permanente.
 
-    # --- DIAGNOSTIC PROVER9 ---
-    try:
-        project_root = get_project_root_robust()
-        prover9_bin_dir = project_root / 'libs' / 'prover9' / 'bin'
-
-        logger.info("="*20 + " DIAGNOSTIC PROVER9 " + "="*20)
-        logger.info(f"OS: {platform.system()} {platform.release()}, Arch: {platform.machine()}")
-        py_arch = "64-bit" if platform.architecture()[0] == "64bit" else "32-bit"
-        logger.info(f"Architecture Python: {py_arch}")
-
-        if prover9_bin_dir.is_dir():
-            logger.info(f"Répertoire binaire Prover9 trouvé: {prover9_bin_dir.resolve()}")
-            
-            # Lister les fichiers dans le répertoire bin de prover9
-            try:
-                files = [f.name for f in prover9_bin_dir.iterdir()]
-                logger.info(f"Contenu de prover9/bin: {files}")
-            except Exception as e:
-                logger.error(f"Impossible de lister le contenu de {prover9_bin_dir}: {e}")
-
-            # Vérifier l'architecture des DLLs avec PowerShell
-            if platform.system() == "Windows":
-                for dll_file in prover9_bin_dir.glob('*.dll'):
-                    try:
-                        cmd = f"""
-                        $filePath = '{dll_file.resolve()}'
-                        try {{
-                            $fileStream = New-Object System.IO.FileStream($filePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read)
-                            $binaryReader = New-Object System.IO.BinaryReader($fileStream)
-                            $fileStream.Seek(60, [System.IO.SeekOrigin]::Begin) | Out-Null
-                            $peHeaderOffset = $binaryReader.ReadInt32()
-                            $fileStream.Seek($peHeaderOffset + 4, [System.IO.SeekOrigin]::Begin) | Out-Null
-                            $machineType = $binaryReader.ReadUInt16()
-                            $binaryReader.Close()
-                            $fileStream.Close()
-
-                            switch ($machineType) {{
-                                332   {{ "I386 (32-bit)" }}
-                                34404 {{ "AMD64 (64-bit)" }}
-                                452   {{ "ARM" }}
-                                43620 {{ "ARM64" }}
-                                default {{ "Inconnu ({0})" -f $machineType }}
-                            }}
-                        }} catch {{
-                            "Erreur lecture: $($_.Exception.Message)"
-                        }}
-                        """
-                        result = subprocess.run(["powershell", "-Command", cmd], capture_output=True, text=True, check=False)
-                        arch_info = result.stdout.strip() if result.stdout else f"Erreur: {result.stderr.strip()}"
-                        logger.info(f"Architecture de '{dll_file.name}': {arch_info}")
-                    except Exception as e:
-                        logger.error(f"Impossible d'analyser {dll_file.name}: {e}")
-            
-            logger.info(f"Activation et ajout de java.library.path pour Prover9: {prover9_bin_dir.resolve()}")
-            options.append(f"-Djava.library.path={str(prover9_bin_dir.resolve())}")
-        else:
-            logger.warning(f"Répertoire binaire Prover9 non trouvé à '{prover9_bin_dir}', l'option ne sera pas ajoutée.")
-        
-        logger.info("="*62)
-
-    except Exception as e:
-        logger.error(f"Erreur majeure lors de la configuration du diagnostic Prover9: {e}", exc_info=True)
+    # --- DIAGNOSTIC PROVER9 (Temporarily disabled for debugging JVM crash) ---
+    logger.warning("Le diagnostic Prover9 et le chargement de la librairie native sont temporairement désactivés.")
     logger.info(f"Options JVM utilisées : {options}")
     return options
 
