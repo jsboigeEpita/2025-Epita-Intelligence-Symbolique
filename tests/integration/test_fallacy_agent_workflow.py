@@ -2,6 +2,9 @@
 import pytest
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
+from argumentation_analysis.agents.agent_factory import AgentFactory
+from argumentation_analysis.agents.plugins.fallacy_workflow_plugin import FallacyWorkflowPlugin
+from argumentation_analysis.agents.plugins.taxonomy_display_plugin import TaxonomyDisplayPlugin
 
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 from semantic_kernel.contents.chat_history import ChatHistory
@@ -220,3 +223,45 @@ async def test_informal_fallacy_agent_uses_parallel_exploration():
     last_message = final_answer[-1]
     assert isinstance(last_message, FunctionResultContent)
     assert last_message.name == "identify_fallacies"
+
+# --- Tests pour AgentFactory ---
+
+@pytest.fixture
+def kernel():
+    """Crée un mock ou un kernel réel léger pour les tests."""
+    from semantic_kernel.kernel import Kernel
+    return Kernel()
+
+@pytest.mark.parametrize(
+    "config_name, expected_plugin_types",
+    [
+        ("simple", [FallacyIdentificationPlugin]),
+        ("explore_only", [TaxonomyDisplayPlugin]),
+        ("workflow_only", [FallacyWorkflowPlugin, TaxonomyDisplayPlugin]),
+        ("full", [FallacyIdentificationPlugin, FallacyWorkflowPlugin, TaxonomyDisplayPlugin]),
+    ],
+)
+def test_agent_factory_configurations(kernel, config_name, expected_plugin_types):
+    """
+    Vérifie que la factory crée des agents avec le bon ensemble de plugins pour chaque configuration.
+    Ceci est une "Théorie" de test qui valide l'architecture configurable.
+    """
+    # --- Arrange ---
+    factory = AgentFactory(kernel)
+
+    # --- Act ---
+    agent = factory.create_informal_fallacy_agent(config_name=config_name)
+    
+    # Récupère les types des plugins réellement chargés dans l'agent
+    loaded_plugin_types = [type(p) for p in agent.plugins]
+
+    # --- Assert ---
+    assert len(loaded_plugin_types) == len(expected_plugin_types)
+    
+    # Vérifie que tous les plugins attendus (et uniquement ceux-là) sont présents
+    for plugin_type in expected_plugin_types:
+        assert plugin_type in loaded_plugin_types
+
+    # Vérification inverse pour s'assurer qu'il n'y a pas de surplus
+    for plugin_type in loaded_plugin_types:
+        assert plugin_type in expected_plugin_types
