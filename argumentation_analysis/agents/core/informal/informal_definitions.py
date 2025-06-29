@@ -26,7 +26,10 @@ import logging
 import pandas as pd
 import requests
 import semantic_kernel as sk
+from semantic_kernel.kernel import Kernel
 from semantic_kernel.functions import kernel_function
+from semantic_kernel.connectors.ai.open_ai import OpenAIPromptExecutionSettings
+from pydantic import BaseModel, Field
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from semantic_kernel.functions.kernel_function import KernelFunction
@@ -59,7 +62,20 @@ from .prompts import prompt_identify_args_v8, prompt_analyze_fallacies_v3_tool_u
 # from argumentation_analysis.paths import DATA_DIR # Déjà importé plus haut ou via project_core
 
 
-# --- Classe InformalAnalysisPlugin (V12 avec nouvelles fonctions) ---
+# --- Modèles Pydantic pour une sortie structurée ---
+class IdentifiedFallacy(BaseModel):
+   """Modèle de données pour un seul sophisme identifié."""
+   fallacy_name: str = Field(..., description="Le nom du sophisme, doit correspondre EXACTEMENT à un nom de la taxonomie fournie.")
+   justification: str = Field(..., description="Citation exacte du texte et explication détaillée de pourquoi c'est un sophisme.")
+   confidence_score: float = Field(..., ge=0.0, le=1.0, description="Score de confiance entre 0.0 et 1.0.")
+
+class FallacyAnalysisResult(BaseModel):
+   """Modèle de données pour le résultat complet de l'analyse de sophismes."""
+   is_fallacious: bool = Field(..., description="Vrai si au moins un sophisme a été détecté, sinon faux.")
+   fallacies: List[IdentifiedFallacy] = Field(..., description="Liste de tous les sophismes identifiés dans le texte.")
+
+
+# --- Classe InformalAnalysisPlugin (Refonte Hybride) ---
 class InformalAnalysisPlugin:
     """
     Plugin natif pour Semantic Kernel dédié à l'analyse de sophismes.
@@ -81,34 +97,26 @@ class InformalAnalysisPlugin:
             d'optimiser les accès répétés.
     """
 
-    def __init__(self, taxonomy_file_path: Optional[str] = None):
+    def __init__(self, kernel: Kernel, taxonomy_file_path: Optional[str] = None):
         """
-        Initialise le plugin.
-
-        Le chemin vers la taxonomie est déterminé à l'initialisation, mais le
-        chargement des données est différé (`lazy loading`) jusqu'au premier accès.
+        Initialise le plugin hybride.
 
         Args:
-            taxonomy_file_path (Optional[str]): Chemin personnalisé vers un
-                fichier de taxonomie CSV. Si `None`, le chemin par défaut
-                est utilisé.
+            kernel (Kernel): Une instance de Kernel pour l'orchestration interne.
+            taxonomy_file_path (Optional[str]): Chemin personnalisé vers la taxonomie.
         """
+        self.kernel = kernel
         self._logger = logging.getLogger("InformalAnalysisPlugin")
-        self._logger.info(f"Initialisation du plugin d'analyse des sophismes (taxonomy_file_path: {taxonomy_file_path})...")
+        self._logger.info(f"Initialisation du plugin d'analyse des sophismes (hybride)...")
         
-        # Chemin par défaut vers la taxonomie réelle
+        # Chemin par défaut et gestion du chemin de la taxonomie
         self.DEFAULT_TAXONOMY_PATH = Path(DATA_DIR) / "argumentum_fallacies_taxonomy.csv"
-        
-        # Déterminer le chemin à utiliser pour la taxonomie
         if taxonomy_file_path:
             self._current_taxonomy_path = Path(taxonomy_file_path)
-            self._logger.info(f"Utilisation du chemin de taxonomie personnalisé: {self._current_taxonomy_path}")
         else:
-            # Utiliser le loader pour obtenir le chemin (gère le mock ou le téléchargement)
             self._current_taxonomy_path = get_taxonomy_path()
-            self._logger.info(f"Utilisation du chemin de taxonomie fourni par le loader: {self._current_taxonomy_path}")
-            
-        # Cache pour le DataFrame de taxonomie
+        self._logger.info(f"Chemin de taxonomie utilisé : {self._current_taxonomy_path}")
+        
         self._taxonomy_df_cache = None
     
     def _internal_load_and_prepare_dataframe(self) -> pd.DataFrame:
@@ -436,6 +444,71 @@ class InformalAnalysisPlugin:
         self._logger.debug(f"DEBUG: Exiting _internal_get_node_details for pk={pk}")
         return result
     
+    @kernel_function(
+        description="Analyse un texte pour identifier les sophismes en se basant sur une taxonomie fournie.",
+        name="analyze_argument"
+    )
+    async def analyze_argument(self, text_to_analyze: str) -> str:
+        """
+        Analyse un texte pour y déceler des sophismes en utilisant un kernel interne
+        et en forçant une sortie structurée avec Pydantic.
+        """
+        self._logger.info(f"Début de l'analyse des sophismes pour un texte de {len(text_to_analyze)} caractères.")
+        
+        prompt = f"""
+        Analyse le texte suivant pour y dénicher des sophismes. Tu dois baser ton analyse
+        UNIQUEMENT sur la taxonomie de sophismes suivante.
+
+        Pour chaque sophisme trouvé, tu dois appeler l'outil `FallacyAnalysisResult`
+        avec les informations requises.
+
+        --- TAXONOMIE DISPONIBLE ---
+        {self.get_taxonomy_summary_for_prompt()}
+
+        --- TEXTE À ANALYSER ---
+        {text_to_analyze}
+        """
+
+        execution_settings = OpenAIPromptExecutionSettings(
+            tool_choice="required",
+            tools=[FallacyAnalysisResult]
+        )
+
+        response = await self.kernel.invoke_prompt(
+            prompt,
+            arguments=sk.KernelArguments(settings=execution_settings)
+        )
+
+        tool_calls = response.tool_calls
+        if not tool_calls:
+            analysis_result = FallacyAnalysisResult(is_fallacious=False, fallacies=[])
+        else:
+            # Le kernel a déjà validé la structure grâce au modèle Pydantic
+            analysis_result: FallacyAnalysisResult = tool_calls[0].to_tool_function()(
+                **tool_calls[0].parse_arguments()
+            )
+        
+        self._validate_and_enrich_result(analysis_result)
+        
+        self._logger.info(f"Analyse terminée. {len(analysis_result.fallacies)} sophisme(s) détecté(s).")
+        return analysis_result.model_dump_json(indent=2)
+
+    def get_taxonomy_summary_for_prompt(self) -> str:
+        """Charge la taxonomie et la formate pour l'injection dans un prompt."""
+        try:
+            df = self._get_taxonomy_dataframe()
+            # Formate chaque ligne en une chaîne "nom: description"
+            return "\n".join(f"- {row.get('nom_vulgarise', 'N/A')}: {row.get('text_fr', 'N/A')}" for _, row in df.iterrows())
+        except Exception as e:
+            self._logger.error(f"Impossible de charger ou formater la taxonomie pour le prompt : {e}")
+            return "Erreur: taxonomie non disponible."
+            
+    def _validate_and_enrich_result(self, result: FallacyAnalysisResult):
+        """Placeholder pour une logique de validation ou d'enrichissement post-analyse."""
+        self._logger.debug("Validation et enrichissement du résultat de l'analyse...")
+        # Ici, on pourrait ajouter de la logique pour valider les noms de sophismes contre la taxonomie, etc.
+        pass
+
     @kernel_function(
         description="Explore la hiérarchie des sophismes à partir d'un nœud donné (par sa PK en chaîne).",
         name="explore_fallacy_hierarchy"

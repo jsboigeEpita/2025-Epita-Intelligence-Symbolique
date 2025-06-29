@@ -15,6 +15,7 @@ Fonctionnalités principales :
 - Navigation et interrogation d'une taxonomie de sophismes via un plugin natif.
 """
 
+import warnings
 import logging
 import json
 import re
@@ -30,6 +31,8 @@ from ..abc.agent_bases import BaseAgent
 from .informal_definitions import InformalAnalysisPlugin, INFORMAL_AGENT_INSTRUCTIONS
 from .prompts import prompt_identify_args_v8, prompt_analyze_fallacies_v1, prompt_justify_fallacy_attribution_v1
 from .taxonomy_sophism_detector import TaxonomySophismDetector, get_global_detector
+from argumentation_analysis.agents.agent_factory import AgentFactory
+from argumentation_analysis.config.settings import AppSettings
 
 
 # Configuration du logging
@@ -39,7 +42,7 @@ from .taxonomy_sophism_detector import TaxonomySophismDetector, get_global_detec
 #     datefmt='%H:%M:%S'
 # )
 
-class InformalAnalysisAgent(BaseAgent):
+class LegacyInformalAnalysisAgent(BaseAgent):
     """
     Agent spécialiste de la détection de sophismes et de l'analyse informelle.
 
@@ -115,58 +118,21 @@ class InformalAnalysisAgent(BaseAgent):
         super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants pour {self.name} avec le service LLM: {llm_service_id}...")
 
-        # 1. Initialisation et Enregistrement du Plugin Natif
-        informal_plugin_instance = InformalAnalysisPlugin(taxonomy_file_path=self._taxonomy_file_path)
-        # Utiliser self.name comme nom de plugin pour la cohérence, ou un nom spécifique comme "InformalAnalyzer"
-        # Si le system_prompt fait référence à "InformalAnalyzer", il faut utiliser ce nom.
-        # D'après INFORMAL_AGENT_INSTRUCTIONS, le plugin est appelé "InformalAnalyzer"
+        # 1. Initialisation et Enregistrement du Plugin Natif Hybride
+        # Le plugin a maintenant besoin du kernel pour son fonctionnement interne.
+        informal_plugin_instance = InformalAnalysisPlugin(
+            kernel=self._kernel,
+            taxonomy_file_path=self._taxonomy_file_path
+        )
+        
         native_plugin_name = "InformalAnalyzer"
         self._kernel.add_plugin(informal_plugin_instance, plugin_name=native_plugin_name)
-        self.logger.info(f"Plugin natif '{native_plugin_name}' enregistré dans le kernel.")
+        self.logger.info(f"Plugin natif hybride '{native_plugin_name}' enregistré dans le kernel.")
 
-        # 2. Enregistrement des Fonctions Sémantiques
-        # Le plugin_name pour les fonctions sémantiques est souvent le nom de l'agent ou un domaine.
-        # Ici, nous utilisons aussi native_plugin_name pour que les appels soient cohérents
-        # si le prompt système s'attend à `InformalAnalyzer.semantic_IdentifyArguments`.
-        
-        # Récupérer les settings d'exécution par défaut pour le service LLM spécifié
-        try:
-            execution_settings = self._kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
-        except Exception as e:
-            self.logger.warning(f"Impossible de récupérer les settings LLM pour {llm_service_id}: {e}. Utilisation des settings par défaut.")
-            execution_settings = None
-
-        try:
-            self._kernel.add_function(
-                prompt=prompt_identify_args_v8,
-                plugin_name=native_plugin_name, # Cohérent avec les appels attendus
-                function_name="semantic_IdentifyArguments",
-                description="Identifie les arguments clés dans un texte.",
-                prompt_execution_settings=execution_settings
-            )
-            self.logger.info(f"Fonction sémantique '{native_plugin_name}.semantic_IdentifyArguments' enregistrée.")
-
-            self._kernel.add_function(
-                prompt=prompt_analyze_fallacies_v1,
-                plugin_name=native_plugin_name,
-                function_name="semantic_AnalyzeFallacies",
-                description="Analyse les sophismes dans un argument.",
-                prompt_execution_settings=execution_settings
-            )
-            self.logger.info(f"Fonction sémantique '{native_plugin_name}.semantic_AnalyzeFallacies' enregistrée.")
-
-            self._kernel.add_function(
-                prompt=prompt_justify_fallacy_attribution_v1,
-                plugin_name=native_plugin_name,
-                function_name="semantic_JustifyFallacyAttribution",
-                description="Justifie l'attribution d'un sophisme à un argument.",
-                prompt_execution_settings=execution_settings
-            )
-            self.logger.info(f"Fonction sémantique '{native_plugin_name}.semantic_JustifyFallacyAttribution' enregistrée.")
-            
-        except Exception as e:
-            self.logger.error(f"Erreur lors de l'enregistrement des fonctions sémantiques: {e}", exc_info=True)
-            raise  # Propage l'erreur pour indiquer un échec de configuration
+        # 2. Les fonctions sémantiques sont maintenant encapsulées DANS le plugin.
+        # Il n'est plus nécessaire de les enregistrer ici. La seule fonction exposée
+        # est `analyze_argument`, qui est déjà une @kernel_function.
+        self.logger.info("Les fonctions sémantiques sont maintenant gérées en interne par le plugin hybride.")
 
         self.logger.info(f"Composants de {self.name} configurés avec succès.")
 
@@ -202,9 +168,9 @@ class InformalAnalysisAgent(BaseAgent):
         try:
             arguments = KernelArguments(input=text)
             result = await self._kernel.invoke(
-                plugin_name="InformalAnalyzer", # Doit correspondre au nom utilisé dans setup_agent_components
-                function_name="semantic_AnalyzeFallacies",
-                arguments=arguments
+                plugin_name="InformalAnalyzer",
+                function_name="analyze_argument",
+                arguments=KernelArguments(text_to_analyze=text)
             )
             
             # Le traitement du résultat dépendra du format de sortie du prompt.
@@ -805,6 +771,57 @@ class InformalAnalysisAgent(BaseAgent):
 
         response_message = ChatMessageContent(role="assistant", content=response_content, name=self.name)
         return [response_message]
+
+class InformalAnalysisAgent(BaseAgent):
+    """
+    (Façade Obsolète) Wrapper pour le nouveau AgentFactory.
+    Cette classe est conservée pour la rétrocompatibilité.
+    Elle émet un avertissement et délègue tous les appels à la nouvelle
+    architecture basée sur AgentFactory.
+    """
+    def __init__(self, kernel: sk.Kernel, agent_name: str = "InformalAnalysisAgent", **kwargs):
+        warnings.warn(
+            "La classe 'InformalAnalysisAgent' est obsolète et sera supprimée dans une future version. "
+            "Veuillez utiliser 'AgentFactory.create_agent(\"fallacy_analyst\", ...)' à la place.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        super().__init__(kernel, agent_name)
+        
+        try:
+            settings = AppSettings()
+            # Note: le type d'agent dans la factory est 'fallacy_analyst'
+            self._modern_agent = AgentFactory.create_agent(
+                agent_type="fallacy_analyst",
+                kernel=kernel,
+                llm_service_id=settings.service_manager.default_llm_service_id,
+                settings=settings,
+                agent_name=agent_name
+            )
+        except Exception as e:
+            self.logger.error(f"Impossible de créer l'agent moderne via la factory: {e}")
+            self._modern_agent = None
+            
+    def __getattribute__(self, name: str) -> Any:
+        # Éviter la récursion infinie
+        if name.startswith('_') or name in ['logger', 'name', 'kernel']:
+            return super().__getattribute__(name)
+            
+        if self._modern_agent and hasattr(self._modern_agent, name):
+            return getattr(self._modern_agent, name)
+        
+        return super().__getattribute__(name)
+
+    async def get_response(self, kernel: "sk.Kernel", arguments: Optional["KernelArguments"] = None) -> list[ChatMessageContent]:
+        if not self._modern_agent:
+            raise RuntimeError("L'agent moderne n'a pas pu être initialisé.")
+        return await self._modern_agent.get_response(kernel, arguments)
+
+    async def invoke_single(self, kernel: "sk.Kernel", arguments: Optional["KernelArguments"] = None) -> list[ChatMessageContent]:
+        if not self._modern_agent:
+            raise RuntimeError("L'agent moderne n'a pas pu être initialisé.")
+        return await self._modern_agent.invoke_single(kernel, arguments)
+
 
 # Log de chargement
 # logging.getLogger(__name__).debug("Module agents.core.informal.informal_agent chargé.") # Géré par BaseAgent
