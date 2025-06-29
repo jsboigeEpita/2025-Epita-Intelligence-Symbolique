@@ -62,7 +62,6 @@ class AgentFactory:
 
         return ChatCompletionAgent(
             kernel=self.kernel,
-            service_id=self.llm_service_id,
             instructions=prompt,
             plugins=plugins
         )
@@ -82,7 +81,6 @@ class AgentFactory:
 
         return ChatCompletionAgent(
             kernel=agent_kernel,
-            service_id=self.llm_service_id,
             name="Project_Manager",
             instructions=prompt
         )
