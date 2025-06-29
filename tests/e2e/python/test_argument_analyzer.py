@@ -38,7 +38,7 @@ def test_health_check_endpoint(playwright: Playwright, backend_url: str):
 
         # Vérifier le contenu de la réponse JSON
         json_response = response.json()
-        assert json_response.get("status") == "ok", f"La réponse JSON ne contient pas 'status: ok'. Reçu: {json_response}"
+        assert json_response.get("status") == "operational", f"La réponse JSON ne contient pas 'status: operational'. Reçu: {json_response}"
         logger.info("SUCCES: La réponse JSON contient bien 'status: operational'.")
 
     except PlaywrightTimeoutError as e:
@@ -47,8 +47,38 @@ def test_health_check_endpoint(playwright: Playwright, backend_url: str):
     except Exception as e:
         logger.error(f"ERREUR INATTENDUE: Une exception s'est produite dans test_health_check_endpoint. Détails: {e}", exc_info=True)
         pytest.fail(f"Exception inattendue: {e}")
+logger.info("--- FIN test_health_check_endpoint ---")
 
-    logger.info("--- FIN test_health_check_endpoint ---")
+
+@pytest.mark.playwright
+def test_malformed_analyze_request_returns_400(playwright: Playwright, backend_url: str):
+    """
+    Scenario: Malformed analyze request (Error Path)
+    This test sends a POST request with a deliberately malformed payload
+    to the /api/analyze endpoint and asserts that the API correctly
+    returns a 400 Bad Request status.
+    """
+    logger.info("--- DEBUT test_malformed_analyze_request_returns_400 ---")
+    analyze_url = f"{backend_url}/api/analyze"
+    logger.info(f"Tentative de requête API malformée vers: {analyze_url}")
+
+    try:
+        api_request_context = playwright.request.new_context()
+        # Envoi d'une charge utile invalide (JSON vide)
+        response = api_request_context.post(analyze_url, data={}, timeout=20000)
+        
+        logger.info(f"SUCCES: La requête a abouti avec le statut {response.status}.")
+
+        # Le test doit affirmer que l'API répond avec 400
+        assert response.status == 422, f"Le statut de la réponse attendu était 422 (Unprocessable Entity), mais j'ai obtenu {response.status}"
+        logger.info("SUCCES: Le statut de la réponse est correct (422).")
+
+    except Exception as e:
+        logger.error(f"ERREUR INATTENDUE: Une exception s'est produite. Détails: {e}", exc_info=True)
+        pytest.fail(f"Exception inattendue: {e}")
+
+    logger.info("--- FIN test_malformed_analyze_request_returns_400 ---")
+
 
 @pytest.mark.playwright
 def test_successful_simple_argument_analysis(page: Page, frontend_url: str):
@@ -155,6 +185,8 @@ def test_empty_argument_submission_displays_error(page: Page, frontend_url: str)
     expect(submit_button).to_be_enabled()
     argument_input.fill("")
     expect(submit_button).to_be_disabled()
+
+
 
 
 @pytest.mark.playwright

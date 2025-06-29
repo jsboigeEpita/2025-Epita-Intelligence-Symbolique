@@ -176,7 +176,11 @@ elseif ($Type -eq "integration") {
         $startArguments = "python -m argumentation_analysis.webapp.orchestrator --backend-only --log-level INFO --exit-after-start"
         
         Write-Host "[CMD] Lancement en arrière-plan: $startArguments"
-        Invoke-ManagedCommand -CommandToRun $startArguments -NoExitOnError # Ne pas quitter si ça plante ici, on gère après
+        # Remplacé par un appel direct non bloquant pour permettre à la boucle de synchronisation de fonctionner.
+        $activationScript = Join-Path $script:ProjectRoot "activate_project_env.ps1"
+        $startProcessArgs = "-File `"$activationScript`" -Command `"$startArguments`""
+        Write-Host "[CMD] Lancement en arrière-plan via Start-Process (sans -Wait): powershell.exe $startProcessArgs" -ForegroundColor DarkCyan
+        Start-Process "powershell.exe" -ArgumentList $startProcessArgs -NoNewWindow
         
         # L'attente du fichier d'URL devient le mécanisme de synchronisation principal
         $maxWaitSeconds = 40
