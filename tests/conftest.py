@@ -9,6 +9,18 @@ import time
 import shutil
 import nest_asyncio
 
+# ===== INTÉGRATION AUTO_ENV - CRITIQUE POUR ÉVITER LES ENVIRONNEMENTS GLOBAUX =====
+# DOIT ÊTRE EXÉCUTÉ AVANT TOUTE AUTRE CONFIGURATION
+try:
+   # L'import a été mis à jour suite à la refactorisation du projet
+   import argumentation_analysis.core.environment
+   print("✅ Environnement projet activé via auto_env (conftest.py principal)")
+except ImportError as e:
+   print(f"⚠️ Auto_env non disponible dans conftest principal: {e}. L'environnement conda 'projet-is' doit être activé manuellement.")
+except Exception as e:
+   print(f"⚠️ Erreur auto_env dans conftest principal: {e}")
+# ==================================================================================
+
 # --- Gestion du patch de dotenv ---
 MOCK_DOTENV = True
 _dotenv_patcher = None
