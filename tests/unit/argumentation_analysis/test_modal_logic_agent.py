@@ -544,77 +544,114 @@ class TestModalLogicAgent:
 
 class TestModalLogicAgentIntegration:
     """Tests d'intégration pour ModalLogicAgent."""
-    
+
     @pytest.fixture
-    def integration_agent(self, mock_kernel):
-        """Agent de base pour tests d'intégration, sans setup complet."""
-        agent = ModalLogicAgent(mock_kernel, "IntegrationAgent", "integration_service")
-        # Le tweety_bridge sera injecté par les patchs dans les tests
+    def mock_kernel(self):
+        """
+        Crée un mock simplifié et robuste du noyau sémantique.
+        Cette version pré-remplit les plugins pour éviter les problèmes de scope
+        et de référence lors des tests.
+        """
+        kernel = Mock(spec=Kernel)
+        from semantic_kernel.functions.kernel_function import KernelFunction
+
+        # Pré-créer la structure des plugins avec des mocks de fonctions robustes
+        kernel.plugins = {}
+        for agent_name in ["TestModalAgent", "IntegrationAgent"]:
+            kernel.plugins[agent_name] = {
+                "TextToModalBeliefSet": MagicMock(spec=KernelFunction, invoke=AsyncMock()),
+                "GenerateModalQueryIdeas": MagicMock(spec=KernelFunction, invoke=AsyncMock()),
+                "InterpretModalResult": MagicMock(spec=KernelFunction, invoke=AsyncMock())
+            }
+        
+        # Simuler get_function pour retourner les mocks pré-créés
+        def mock_get_function(plugin_name, function_name):
+            return kernel.plugins.get(plugin_name, {}).get(function_name)
+        
+        # Simuler add_function pour qu'elle retourne le mock pré-existant.
+        def mock_add_function(plugin_name, function_name, **kwargs):
+            return kernel.plugins.get(plugin_name, {}).get(function_name)
+
+        # Utiliser un MagicMock avec un side_effect pour compter les appels
+        kernel.add_function = MagicMock(side_effect=mock_add_function)
+        kernel.get_function = MagicMock(side_effect=mock_get_function)
+        kernel.get_prompt_execution_settings_from_service_id = Mock(return_value=None)
+
+        return kernel
+
+    @pytest.fixture
+    def modal_agent(self, mock_kernel):
+        """Fixture pour une instance de ModalLogicAgent pour l'intégration."""
+        # Utiliser un nom d'agent cohérent avec la configuration du mock_kernel
+        agent = ModalLogicAgent(mock_kernel, "IntegrationAgent", "test_service")
         return agent
-    
-    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
-    @pytest.mark.asyncio
-    @patch('argumentation_analysis.agents.core.logic.modal_logic_agent.TweetyInitializer.is_jvm_ready', return_value=True)
-    @patch('argumentation_analysis.agents.core.logic.modal_logic_agent.TweetyBridge')
-    @pytest.mark.asyncio
-    async def test_full_analysis_workflow(self, mock_tweety_class, mock_jvm_ready, integration_agent, mock_tweety_bridge):
-        """Test du workflow complet d'analyse modale."""
-        
-        # Configurer le mock pour retourner notre bridge pré-configuré
-        mock_tweety_class.return_value = mock_tweety_bridge
-        
-        # Maintenant, on peut appeler setup en toute sécurité
-        integration_agent.setup_agent_components("integration_service")
 
-        # Le _tweety_bridge de l'agent doit être l'instance mockée (configurée par setup)
-        assert integration_agent._tweety_bridge == mock_tweety_bridge
+    @pytest.mark.asyncio
+    async def test_full_analysis_workflow(self, modal_agent, mock_tweety_bridge):
+        """
+        Test du workflow complet d'analyse modale en utilisant des mocks
+        ciblés avec précision sur les fonctions du noyau sémantique.
+        """
+        agent = modal_agent
+        agent.setup_agent_components("test_service")
+        agent._tweety_bridge = mock_tweety_bridge
 
-        # 1. Mock pour text_to_belief_set
-        mock_text_response = '{"propositions": ["urgent", "action"], "modal_formulas": ["[](urgent)", "<>(action)"]}'
-    
-        # 2. Mock pour generate_queries
-        mock_query_response = '{"query_ideas": [{"formula": "[](urgent)"}, {"formula": "<>(action)"}]}'
-    
-        # 3. Mock pour interpret_results
-        mock_interpret_response = "L'analyse modale montre que l'urgence est nécessaire et l'action est possible."
-    
-        # Configuration des réponses des plugins via les mocks pré-configurés
-        # dans la fixture. Cela évite les patchs dynamiques dans le test.
-        plugins = integration_agent._kernel.plugins["IntegrationAgent"]
-        plugins["TextToModalBeliefSet"].invoke.return_value = MagicMock(value=mock_text_response)
-        plugins["GenerateModalQueryIdeas"].invoke.return_value = MagicMock(value=mock_query_response)
-        plugins["InterpretModalResult"].invoke.return_value = MagicMock(value=mock_interpret_response)
-        
-        # Configuration du side_effect pour execute_query sur le mock bridge
-        mock_tweety_bridge.execute_modal_query.side_effect = [
+        # 1. Définir les réponses attendues pour chaque fonction sémantique
+        #    On mock l'attribut '.value' car le code de l'agent l'utilise
+        #    pour extraire la réponse du noyau.
+
+        mock_belief_set_result = MagicMock()
+        mock_belief_set_result.value = '{"propositions": ["urgent", "action"], "modal_formulas": ["[](urgent)", "<>(action)"]}'
+
+        mock_query_ideas_result = MagicMock()
+        mock_query_ideas_result.value = '{"query_ideas": [{"formula": "[](urgent)"}, {"formula": "<>(action)"}]}'
+
+        mock_interpretation_result = MagicMock()
+        mock_interpretation_result.value = "L'analyse modale montre que l'urgence est nécessaire et l'action est possible."
+
+        # 2. Patcher le dictionnaire de plugins sur le noyau pour que les appels
+        #    à `invoke` retournent nos valeurs mockées.
+        #    C'est la correction clef : on cible ce que le code *réel* de l'agent appelle.
+        # Le nom de l'agent doit correspondre à celui utilisé dans la fixture modal_agent
+        plugins = agent._kernel.plugins["IntegrationAgent"]
+        plugins["TextToModalBeliefSet"].invoke.return_value = mock_belief_set_result
+        plugins["GenerateModalQueryIdeas"].invoke.return_value = mock_query_ideas_result
+        plugins["InterpretModalResult"].invoke.return_value = mock_interpretation_result
+
+        # 3. Configurer le comportement du mock TweetyBridge pour les requêtes logiques
+        agent._tweety_bridge.execute_modal_query.side_effect = [
             "ACCEPTED: Urgency is necessary",
             "ACCEPTED: Action is possible"
         ]
-        
-        # Exécution du workflow complet
+
+        # 4. Exécution et validation du workflow complet
         text = "Il est urgent d'agir immédiatement sur cette situation critique."
-        
-        # 1. Conversion en belief set
-        belief_set, _ = await integration_agent.text_to_belief_set(text)
+
+        # Étape 1: Conversion du texte en ensemble de croyances
+        belief_set, _ = await agent.text_to_belief_set(text)
+        plugins["TextToModalBeliefSet"].invoke.assert_awaited_once()
         assert belief_set is not None
         assert "urgent" in belief_set.content
 
-        # 2. Génération de requêtes
-        queries = await integration_agent.generate_queries(text, belief_set)
+        # Étape 2: Génération de requêtes
+        queries = await agent.generate_queries(text, belief_set)
+        plugins["GenerateModalQueryIdeas"].invoke.assert_awaited_once()
         assert len(queries) >= 1
         assert "urgent" in queries[0]
 
-        # 3. Exécution des requêtes
+        # Étape 3: Exécution des requêtes
         results = []
         for query in queries:
-            result = integration_agent.execute_query(belief_set, query)
-            results.append(result)
+            result_tuple = agent.execute_query(belief_set, query)
+            results.append(result_tuple)
         
+        assert agent._tweety_bridge.execute_modal_query.call_count == len(queries)
         assert len(results) == 2
-        assert results[0][0] is True # ACCEPTED
-        
-        # 4. Interprétation des résultats
-        interpretation = await integration_agent.interpret_results(text, belief_set, queries, results)
+        assert results[0][0] is True
+
+        # Étape 4: Interprétation des résultats
+        interpretation = await agent.interpret_results(text, belief_set, queries, results)
+        plugins["InterpretModalResult"].invoke.assert_awaited_once()
         assert "modale" in interpretation
         assert "urgence" in interpretation.lower() or "urgent" in interpretation.lower()
 

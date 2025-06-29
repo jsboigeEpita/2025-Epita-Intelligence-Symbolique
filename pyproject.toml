@@ -56,4 +56,56 @@ log_cli = true
 log_cli_level = "INFO"
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
-asyncio_mode = "strict"
+asyncio_mode = "auto"
+[tool.poetry]
+name = "argumentation-analysis"
+version = "0.1.0"
+description = "Analysis of argumentation systems"
+authors = ["Your Name <you@example.com>"]
+packages = [
+    { include = "argumentation_analysis" },
+]
+
+[tool.poetry.extras]
+conda_env_name = ["projet-is-roo-new"]
+
+[project]
+name = "argumentation-analysis"
+version = "0.1.0"
+description = "A project for analyzing argumentation systems."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { file = "LICENSE" }
+authors = [
+  { name = "Your Name", email = "you@example.com" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "pyyaml",
+    "psutil",
+    "requests",
+    "pydantic-settings",
+    "pandas",
+    "numpy==1.23.0",
+    "matplotlib",
+    "networkx",
+    "scikit-learn",
+    "scipy",
+    "tweety-libs",
+    "jpype1",
+    "fastapi",
+    "uvicorn[standard]",
+    "python-multipart",
+    "websockets",
+    "jinja2",
+    "aiofiles"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["argumentation_analysis*"]
+exclude = ["tests*"]

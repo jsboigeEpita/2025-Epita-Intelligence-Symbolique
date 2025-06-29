@@ -32,6 +32,28 @@ param(
     [string]$TestArgs
 )
 
+# --- Vérification et installation des dépendances PowerShell ---
+try {
+    $moduleName = "PSToml"
+    # Vérifier si le module est déjà disponible
+    if (-not (Get-Module -ListAvailable -Name $moduleName)) {
+        Write-Host "[SETUP] Le module '$moduleName' est manquant. Tentative d'installation depuis PSGallery..." -ForegroundColor Yellow
+        
+        # Installer le module, en gérant les erreurs potentielles
+        Install-Module -Name $moduleName -Scope CurrentUser -Repository PSGallery -Force -Confirm:$false -ErrorAction Stop
+        
+        Write-Host "[SETUP] Module '$moduleName' installé avec succès." -ForegroundColor Green
+    }
+    # Importer le module pour s'assurer qu'il est chargé dans la session
+    Import-Module -Name $moduleName
+}
+catch {
+    Write-Host "[ERREUR FATALE] Impossible d'installer ou d'importer le module '$moduleName'. Vérifiez votre connexion internet et la configuration de PSGallery." -ForegroundColor Red
+    Write-Host "[ERREUR DÉTAILLÉE] $_" -ForegroundColor DarkRed
+    exit 1
+}
+
+
 # --- Script Body ---
 # UTF-8 signature au début du script pour forcer l'encodage correct
 [System.Text.Encoding]::UTF8.GetPreamble()
@@ -59,38 +81,32 @@ function Get-CondaEnvFromConfig {
     return $envName
 }
 
-# Fonction pour exécuter une commande dans l'environnement Conda géré
-# Elle gère la sortie en temps réel et les erreurs.
+# Fonction pour exécuter une commande en utilisant le script d'activation central
+# Cela garantit que l'environnement est correctement configuré.
 function Invoke-ManagedCommand {
     param(
         [string]$CommandToRun,
         [switch]$NoExitOnError
     )
-    
-    $condaEnvName = Get-CondaEnvFromConfig
-    
-    $tempDir = Join-Path $script:ProjectRoot '_temp'
-    if (-not (Test-Path $tempDir)) {
-        New-Item -ItemType Directory -Path $tempDir | Out-Null
+
+    $activationScript = Join-Path $script:ProjectRoot "activate_project_env.ps1"
+    if (-not (Test-Path $activationScript)) {
+        throw "Script d'activation '$activationScript' introuvable!"
     }
-    $stdoutFile = Join-Path $tempDir 'stdout.log'
-    $stderrFile = Join-Path $tempDir 'stderr.log'
-    
-    # Commande pour activer l'env, exécuter la commande, et rediriger les flux
-    $argumentList = "-n `"$condaEnvName`" --no-capture-output $CommandToRun 2> `"$stderrFile`" | Tee-Object -FilePath `"$stdoutFile`""
-    Write-Host "[CMD] conda run $argumentList" -ForegroundColor DarkCyan
-    
+
+    # Déléguer l'exécution au script d'activation, qui gère Conda, PYTHONPATH, etc.
+    $argumentList = "-Command `"$CommandToRun`""
+    Write-Host "[CMD] $activationScript $argumentList" -ForegroundColor DarkCyan
+
     # Exécution du processus
-    $process = Start-Process "conda" -ArgumentList "run $argumentList" -PassThru -NoNewWindow -Wait
+    $process = Start-Process "powershell.exe" -ArgumentList "-File `"$activationScript`" $argumentList" -PassThru -NoNewWindow -Wait
     
     $exitCode = $process.ExitCode
     
-    if (Test-Path $stderrFile -and (Get-Content $stderrFile)) {
-        Get-Content $stderrFile | ForEach-Object { Write-Host "[STDERR] $_" -ForegroundColor Red }
-    }
-    
+    # Note: La gestion des logs stdout/stderr est désormais gérée par activate_project_env.ps1.
+    # On se contente de vérifier le code de sortie.
     if ($exitCode -ne 0 -and (-not $NoExitOnError)) {
-        throw "La commande a échoué avec le code de sortie: $exitCode. Consultez les logs pour plus de détails."
+        throw "La commande déléguée via '$activationScript' a échoué avec le code de sortie: $exitCode."
     }
     
     return $exitCode
