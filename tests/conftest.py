@@ -30,10 +30,7 @@ from argumentation_analysis.models.extract_definition import ExtractDefinitions,
 logger = logging.getLogger(__name__)
 
 # --- Mocking de python-dotenv ---
-# Variable globale pour conserver une référence au patcher
 _dotenv_patcher = None
-
-# Activer le mocking si une variable d'environnement est définie
 MOCK_DOTENV = os.environ.get("MOCK_DOTENV_IN_TESTS", "true").lower() in ("true", "1", "t")
 
 
@@ -51,21 +48,13 @@ def pytest_addoption(parser):
 def pytest_configure(config):
     """
     Hook de configuration précoce de pytest.
-    1. **Vérification Critique de l'Environnement**: Arrête tout si l'environnement conda n'est pas bon.
-    2. Charge les variables .env via une mise à jour manuelle de os.environ si --allow-dotenv est utilisé.
-    3. Gère le cycle de vie du patch de dotenv.
     """
-    # --- 1. Garde-fou de l'environnement ---
-    # C'est la première chose à faire. Si l'environnement n'est pas bon,
-    # aucun autre code de test ne doit s'exécuter.
     try:
         from argumentation_analysis.core.environment import ensure_env
         ensure_env()
     except RuntimeError as e:
-        # Utilise pytest.exit() pour arrêter proprement la session de test avec un message clair.
         pytest.exit(f"\n\n[FATAL] ERREUR DE CONFIGURATION DE L'ENVIRONNEMENT:\n{e}", returncode=1)
 
-    # --- 2. Configuration du reste ---
     global MOCK_DOTENV, _dotenv_patcher
     
     from dotenv import dotenv_values
@@ -79,7 +68,6 @@ def pytest_configure(config):
         if dotenv_path.exists():
             print(f"[INFO] Loading .env file from: {dotenv_path}")
             
-            # Utilisation de la méthode standard et propre maintenant que le .env est sain
             env_vars = dotenv_values(dotenv_path=dotenv_path)
             
             if not env_vars:
@@ -106,7 +94,6 @@ def pytest_configure(config):
         else:
             print(f"[INFO] No .env file found at '{dotenv_path}'.")
     
-    # Enregistrement des marqueurs personnalisés
     config.addinivalue_line("markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')")
     config.addinivalue_line("markers", "integration: marks tests as integration tests")
     config.addinivalue_line("markers", "unit: marks tests as unit tests")
@@ -116,7 +103,6 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "real_jpype: marks tests that require a real JPype/JVM environment")
     config.addinivalue_line("markers", "no_jvm_session: marks tests that should not start the shared JVM session")
 
-    # Activation du patcher dotenv au début de la session de test si nécessaire
     if MOCK_DOTENV:
         print("[INFO] Dotenv mocking is ENABLED. .env files will be ignored by tests.")
         _dotenv_patcher = patch('dotenv.main.dotenv_values', return_value={}, override=True)
@@ -134,8 +120,7 @@ def pytest_unconfigure(config):
 
 def _ensure_tweety_jars_are_correctly_placed():
     """
-    Code défensif pour les tests. Vérifie si des JARs Tweety sont dans le
-    répertoire 'libs' au lieu de 'libs/tweety' et les déplace.
+    Code défensif pour les tests.
     """
     try:
         project_root = Path(__file__).parent.parent.resolve()
@@ -168,9 +153,7 @@ def _ensure_tweety_jars_are_correctly_placed():
 @pytest.fixture(scope="session", autouse=True)
 def apply_nest_asyncio():
     """
-    DEPRECATED/DISABLED: This fixture, which applies nest_asyncio, creates a
-    fundamental conflict with the pytest-playwright plugin, causing tests to
-    hang indefinitely. It is disabled for now.
+    DEPRECATED/DISABLED
     """
     logger.warning("The 'apply_nest_asyncio' fixture in conftest.py is currently disabled to ensure compatibility with Playwright.")
     yield
@@ -180,7 +163,6 @@ def apply_nest_asyncio():
 def jvm_session():
     """
     Manages the JPype JVM lifecycle for the entire test session.
-    This fixture is NOT auto-used; it must be requested by another fixture.
     """
     logger.info("---------- [JVM_SESSION_FIXTURE] Pytest session starting: Provisioning dependencies and Initializing JVM... ----------")
     
@@ -221,10 +203,6 @@ def manage_jvm_for_test(request):
     """
     This 'autouse' fixture runs for every test and decides if the global
     `jvm_session` fixture is required by manually invoking it.
-    
-    It checks for a 'no_jvm_session' marker on the test. If found, it does nothing.
-    If not found, it uses `request.getfixturevalue()` to activate the `jvm_session`
-    fixture, ensuring the JVM is started for the test.
     """
     if 'no_jvm_session' in request.node.keywords:
         logger.debug(
@@ -233,9 +211,6 @@ def manage_jvm_for_test(request):
         )
         yield
     else:
-        # Manually trigger the session-scoped JVM fixture.
-        # This will only run it once and then retrieve the cached result
-        # for all subsequent calls.
         request.getfixturevalue('jvm_session')
         yield
 
@@ -243,18 +218,14 @@ def manage_jvm_for_test(request):
 # Charger les fixtures définies dans d'autres fichiers comme des plugins
 pytest_plugins = [
    "tests.fixtures.integration_fixtures",
-   "tests.fixtures.jvm_subprocess_fixture", # TEMPORAIREMENT DÉSACTIVÉ - CAUSE UN CRASH JVM
+   "tests.fixtures.jvm_subprocess_fixture",
     "pytest_playwright",
-    # "tests.mocks.numpy_setup" # DÉSACTIVÉ GLOBALEMENT - Provoque un comportement instable pour les tests E2E
 ]
 
 @pytest.fixture(scope="function", autouse=True)
 def check_mock_llm_is_forced(request, monkeypatch):
     """
     Ce "coupe-circuit" est une sécurité pour tous les tests.
-    Il vérifie que nous ne pouvons pas accidentellement utiliser un vrai LLM,
-    SAUF si le test est explicitement marqué avec 'real_llm'.
-    S'il n'est pas marqué, il FORCE le mock LLM à True.
     """
     from argumentation_analysis.config.settings import settings
     if 'real_llm' in request.node.keywords:
@@ -263,24 +234,18 @@ def check_mock_llm_is_forced(request, monkeypatch):
         monkeypatch.setattr(settings, 'use_mock_llm', False)
         yield
     else:
-        # Si le marqueur n'est pas présent, on force le mock.
         monkeypatch.setattr(settings, 'MOCK_LLM', True)
         monkeypatch.setattr(settings, 'use_mock_llm', True)
         yield
         
-# ----------------------------------------------------------------------------------
-# Fixtures précédemment dans tests/unit/argumentation_analysis/conftest.py
-# ----------------------------------------------------------------------------------
-
 @pytest.fixture
 def mock_kernel():
     """Provides a mocked Semantic Kernel."""
     kernel = MagicMock()
     kernel.plugins = MagicMock()
-    # Mock a function within the mocked plugin collection
     mock_plugin = MagicMock()
     mock_function = MagicMock()
-    mock_function.invoke.return_value = '{"formulas": ["exists X: (Cat(X))"]}' # Default mock response
+    mock_function.invoke.return_value = '{"formulas": ["exists X: (Cat(X))"]}'
     mock_plugin.__getitem__.return_value = mock_function
     kernel.plugins.__getitem__.return_value = mock_plugin
     return kernel
@@ -291,11 +256,9 @@ def fol_agent(mock_kernel):
 
     class ConcreteFOLAgent(FOLLogicAgent):
         async def validate_argument(self, premises: list[str], conclusion: str, **kwargs) -> bool:
-            """Mocked implementation for abstract method."""
             return True
 
     agent = ConcreteFOLAgent(kernel=mock_kernel, agent_name="fol_test_agent")
-    # Mocking the bridge to avoid real Java calls
     agent._tweety_bridge = MagicMock()
     agent._tweety_bridge.validate_fol_belief_set.return_value = (True, "Valid")
     return agent
@@ -359,3 +322,21 @@ def sample_definitions():
 def mock_parse_args(mocker):
     """Fixture to mock argparse.ArgumentParser.parse_args."""
     return mocker.patch("argparse.ArgumentParser.parse_args")
+
+@pytest.fixture(scope="session")
+def backend_url(request):
+    return request.config.getoption("--backend-url")
+
+@pytest.fixture
+def successful_simple_argument_analysis_fixture_path(tmp_path):
+    """
+    Creates a temporary JSON file for testing the successful
+    analysis of a simple argument.
+    """
+    data = {
+        "text": "Socrates is a man, all men are mortal, therefore Socrates is mortal.",
+        "analysis_mode": "simple"
+    }
+    file_path = tmp_path / "simple_argument.json"
+    file_path.write_text(json.dumps(data))
+    return str(file_path)

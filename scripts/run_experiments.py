@@ -1,10 +1,11 @@
-import subprocess
 import re
 import os
 import sys
 import shlex
 
 import logging
+
+from project_core.utils.shell import run_sync, ShellCommandError
 
 # Configuration du logging
 log_file_path = 'logs/experiments.log'
@@ -68,29 +69,19 @@ def run_experiments():
             ]
             
             try:
-                process = subprocess.run(
-                    command,
-                    capture_output=True,
-                    text=True,
-                    encoding='utf-8'
-                )
+                # Utilisation du nouveau service unifié
+                result = run_sync(command, check_errors=True)
                 
-                output = process.stdout
+                output = result.stdout
                 
                 logging.info(f"--- STDOUT de {agent}/{taxonomy_name} ---")
                 logging.info(output)
                 logging.info(f"--- Fin STDOUT ---")
-                
-                if process.returncode != 0:
-                    logging.error(f"  -> Erreur (code {process.returncode}):")
-                    logging.error(f"--- STDERR de {agent}/{taxonomy_name} ---")
-                    logging.error(process.stderr)
-                    logging.error(f"--- Fin STDERR ---")
-                    results[agent][taxonomy_name] = "Erreur"
-                    continue
-                
+
+                # La gestion d'erreur est maintenant centralisée, on capture ShellCommandError
+                # L'ancien 'if process.returncode != 0:' est géré par check_errors=True
+
                 # Expression régulière pour trouver le score de précision final
-                # Regex mise à jour pour correspondre au format de sortie "[TARGET] SCORE FINAL: ... (XX.X%)"
                 match = re.search(r"SCORE FINAL:.*?\((\d+\.\d+)%\)", output)
                 
                 if match:
@@ -101,14 +92,14 @@ def run_experiments():
                     results[agent][taxonomy_name] = "N/A"
                     logging.warning("  -> Score non trouvé dans la sortie.")
 
-            except subprocess.CalledProcessError as e:
+            except ShellCommandError as e:
                 logging.error(f"  -> Erreur lors de l'exécution pour Agent='{agent}', Taxonomie='{taxonomy_name}':")
+                logging.error(f"--- STDERR de {agent}/{taxonomy_name} ---")
                 logging.error(e.stderr)
+                logging.error(f"--- Fin STDERR ---")
                 results[agent][taxonomy_name] = "Erreur"
             except FileNotFoundError:
                 logging.error(f"Erreur: Le script '{validation_script_path}' est introuvable.")
-                return
-                print(f"Erreur: Le script '{validation_script_path}' est introuvable.")
                 return
 
     logging.info("\nExpériences terminées.\n")
