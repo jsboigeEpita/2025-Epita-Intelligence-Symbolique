@@ -24,7 +24,7 @@ class AgentGroupChat:
         self.agents = agents or []
         
 AGENTS_AVAILABLE = True
-from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.functions import KernelArguments
 from semantic_kernel.contents.streaming_chat_message_content import StreamingChatMessageContent
 
 # Import conditionnel pour les modules filters qui peuvent ne pas exister

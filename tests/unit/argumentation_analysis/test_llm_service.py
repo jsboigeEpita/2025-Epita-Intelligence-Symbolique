@@ -19,7 +19,7 @@ from unittest.mock import MagicMock, patch
 import os
 import semantic_kernel as sk
 from pathlib import Path
-from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.functions import KernelArguments
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from argumentation_analysis.core.llm_service import create_llm_service
 from openai import AsyncOpenAI, AuthenticationError

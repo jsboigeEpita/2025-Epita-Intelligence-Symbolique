@@ -47,17 +47,6 @@ def pytest_addoption(parser):
     )
     parser.addoption("--frontend-url", action="store", default="http://localhost:3000", help="URL pour le serveur frontend E2E.")
     parser.addoption("--backend-url", action="store", default="http://localhost:5003", help="URL pour le serveur backend E2E.")
-    parser.addoption(
-        "--allow-dotenv", action="store_true", default=False, help="Désactive le mock de dotenv et autorise le chargement du vrai fichier .env."
-    )
-    parser.addoption(
-        "--backend-url", action="store", default="http://localhost:8000",
-        help="URL du serveur backend pour les tests E2E"
-    )
-    parser.addoption(
-        "--frontend-url", action="store", default="http://localhost:3000",
-        help="URL du serveur frontend pour les tests E2E"
-    )
 
 def pytest_configure(config):
     """

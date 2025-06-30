@@ -13,7 +13,7 @@ from argumentation_analysis.core import environment as auto_env
 
 # Imports Semantic Kernel authentiques
 from semantic_kernel import Kernel
-from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.functions import KernelArguments
 
 # Conditional imports pour connecteurs authentiques
 try:

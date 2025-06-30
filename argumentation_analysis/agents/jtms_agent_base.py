@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 import semantic_kernel as sk
 from semantic_kernel import Kernel
 from semantic_kernel.functions import kernel_function
-from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.functions import KernelArguments
 
 # Import du système JTMS existant
 import sys

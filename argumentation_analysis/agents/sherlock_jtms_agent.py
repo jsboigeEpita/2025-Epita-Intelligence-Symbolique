@@ -12,7 +12,7 @@ from datetime import datetime
 import semantic_kernel as sk
 from semantic_kernel import Kernel
 from semantic_kernel.functions import kernel_function
-from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.functions import KernelArguments
 
 from .jtms_agent_base import JTMSAgentBase, ExtendedBelief
 from .core.pm.sherlock_enquete_agent import SherlockEnqueteAgent

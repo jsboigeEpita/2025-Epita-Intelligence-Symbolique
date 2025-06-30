@@ -39,7 +39,7 @@ from semantic_kernel.contents import ChatMessageContent
 # from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent, Agent # Supprimé car le module n'existe plus
 from semantic_kernel.exceptions import AgentChatException
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
-from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.functions import KernelArguments
 
 # Imports système existant
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState

@@ -25,7 +25,7 @@ from ..agents.tools.analysis.new.semantic_argument_analyzer import SemanticArgum
 from ..agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
 
-from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.functions import KernelArguments
 
 # Import et alias pour ConversationLogger
 from .conversation_orchestrator import ConversationLogger

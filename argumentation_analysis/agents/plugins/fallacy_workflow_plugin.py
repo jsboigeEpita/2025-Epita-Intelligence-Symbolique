@@ -5,7 +5,7 @@ from typing import Annotated, List, Dict
 
 from semantic_kernel.functions.kernel_function_decorator import kernel_function
 from semantic_kernel.kernel import Kernel
-from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.functions import KernelArguments
 
 from ..utils.taxonomy_utils import Taxonomy
 

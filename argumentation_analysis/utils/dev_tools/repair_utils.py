@@ -14,7 +14,7 @@ import semantic_kernel as sk
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
 # from semantic_kernel.agents import ChatCompletionAgent
 # from semantic_kernel.contents import AuthorRole
-from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.functions import KernelArguments
 
 from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract # Ajustement du chemin
 from argumentation_analysis.core.llm_service import create_llm_service # Conservé pour le pipeline

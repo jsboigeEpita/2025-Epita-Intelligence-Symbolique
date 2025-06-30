@@ -169,7 +169,7 @@ except ImportError as e:
                 """Méthode requise par Semantic Kernel."""
                 logger.info("Création des paramètres d'exécution de prompt simulés")
                 return {}
-from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.functions import KernelArguments
 
 # Imports depuis les modules du projet
 import sys

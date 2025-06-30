@@ -12,7 +12,7 @@ from semantic_kernel.functions.kernel_function import KernelFunction
 from semantic_kernel.prompt_template import PromptTemplateConfig
 from semantic_kernel.functions.kernel_plugin import KernelPlugin
 from semantic_kernel.functions import kernel_function
-from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.functions import KernelArguments
 from semantic_kernel.contents.chat_history import ChatHistory
 from .tweety_bridge import TweetyBridge
 from .tweety_initializer import TweetyInitializer

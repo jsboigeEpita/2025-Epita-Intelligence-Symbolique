@@ -23,8 +23,10 @@ except ImportError:
     SK_AVAILABLE = False
     class Kernel:
         pass
-    class KernelArguments:
-        pass
+    # La classe KernelArguments de secours est supprimée pour forcer l'utilisation
+    # de l'importation standard et éviter les conflits.
+    # class KernelArguments:
+    #     pass
 
 # Import des services JTMS
 from argumentation_analysis.services.jtms_service import JTMSService
