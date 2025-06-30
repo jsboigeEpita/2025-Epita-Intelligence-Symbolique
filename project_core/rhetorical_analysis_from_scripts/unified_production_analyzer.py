@@ -49,9 +49,6 @@ from enum import Enum
 import traceback
 
 # Ajout du répertoire racine du projet au chemin
-project_root = Path(__file__).resolve().parent.parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
 
 # --- GESTION DE LA DÉPRÉCIATION ---
 # Ce script est maintenant considéré comme obsolète et son importation ne doit pas

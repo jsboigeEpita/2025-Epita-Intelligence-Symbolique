@@ -3,8 +3,6 @@ from unittest.mock import patch, MagicMock
 import sys
 from pathlib import Path
 
-# Adjust the path to import the module under test
-sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
 
 from project_core.core_from_scripts.validation_engine import ValidationEngine
 

@@ -54,7 +54,7 @@ class EnvironmentManager:
     @property
     def strategies_dir(self) -> Path:
         """Retourne le chemin vers le répertoire des stratégies."""
-        return self.project_root / "project_core" / "core_from_scripts" / "strategies"
+        return self.project_root / "scripts" / "strategies"
 
     @property
     def target_env_file(self) -> Path:
@@ -167,7 +167,7 @@ class EnvironmentManager:
 
     def _load_strategies(self):
         """Charge dynamiquement les stratégies de réparation depuis le répertoire des stratégies."""
-        strategies_package = 'project_core.core_from_scripts.strategies'
+        strategies_package = 'scripts.strategies'
         if not self.strategies_dir.is_dir():
             self.logger.warning(f"Le répertoire des stratégies '{self.strategies_dir}' est introuvable.")
             return
@@ -273,7 +273,7 @@ if __name__ == "__main__":
 
     # --- Commande pour exécuter une commande ---
     run_parser = subparsers.add_parser("run", help="Exécute une commande dans l'environnement Conda configuré via .env.")
-    run_parser.add_argument("command_to_run", help="La commande à exécuter, à mettre entre guillemets si elle contient des espaces.")
+    run_parser.add_argument("command_parts", nargs=argparse.REMAINDER, help="La commande à exécuter et ses arguments.")
 
     # --- Commande pour basculer d'environnement ---
     switch_parser = subparsers.add_parser("switch", help="Bascule vers un autre environnement .env en copiant le fichier de configuration.")
@@ -295,7 +295,13 @@ if __name__ == "__main__":
     exit_code = 0
 
     if args.command == "run":
-        exit_code = manager.run_command_in_conda_env(args.command_to_run)
+        if not args.command_parts:
+            logger.error("Aucune commande fournie pour l'action 'run'.")
+            parser.print_help()
+            exit_code = 1
+        else:
+            full_command = " ".join(args.command_parts)
+            exit_code = manager.run_command_in_conda_env(full_command)
     elif args.command == "switch":
         if not manager.switch_environment(args.name):
             exit_code = 1

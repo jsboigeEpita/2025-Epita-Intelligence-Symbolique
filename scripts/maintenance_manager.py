@@ -7,8 +7,6 @@ import argparse
 import sys
 import os
 
-# Add project path to find project_core
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from project_core.core_from_scripts.cleanup_manager import CleanupManager
 from project_core.core_from_scripts.environment_manager import EnvironmentManager

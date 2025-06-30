@@ -68,7 +68,7 @@ class TestOperationalAgentsIntegration:
     """Tests d'intégration pour les agents opérationnels."""
 
     @pytest_asyncio.fixture(scope="function")
-    async def operational_components(self, jvm_session):
+    async def operational_components(self):
         """Initialise les objets nécessaires et patche les adapters au niveau de la fixture."""
         
         mocks = {
