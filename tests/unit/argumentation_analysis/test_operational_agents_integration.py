@@ -24,6 +24,7 @@ import sys
 from unittest.mock import MagicMock, patch
 from pathlib import Path
 import semantic_kernel as sk
+from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
 from semantic_kernel.connectors.ai.prompt_execution_settings import PromptExecutionSettings
 from argumentation_analysis.core.bootstrap import ProjectContext
 
@@ -86,6 +87,10 @@ class TestOperationalAgentsIntegration:
         
         mock_kernel = MagicMock(spec=sk.Kernel)
         mock_llm_service_id = "mock_service"
+        
+        # Créer un mock pour le service LLM qui passe la validation Pydantic
+        mock_chat_service = MagicMock(spec=ChatCompletionClientBase)
+        mock_kernel.get_service.return_value = mock_chat_service
         
         # Le ProjectContext doit contenir le kernel et le service_id
         mock_project_context = MagicMock(spec=ProjectContext)
