@@ -13,7 +13,6 @@ from typing import List, Optional, Union, Any, Dict
 # from argumentation_analysis.core.jvm_setup import initialize_jvm
 # from argumentation_analysis.paths import LIBS_DIR # Nécessaire pour initialize_jvm
 
-import jpype # Pour la vérification finale de la JVM
 # Imports pour le hook LLM
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
@@ -36,8 +35,6 @@ from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
 from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
 from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
-from argumentation_analysis.agents.core.pl.pl_agent import PropositionalLogicAgent
-from argumentation_analysis.agents.core.pl.pl_agent import PropositionalLogicAgent
 from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
 from argumentation_analysis.config.settings import AppSettings
 from argumentation_analysis.kernel.kernel_builder import KernelBuilder

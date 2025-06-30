@@ -5,11 +5,14 @@ import argparse
 import sys
 import os
 import platform
+import importlib
+import pkgutil
 from pathlib import Path
-from typing import Optional, List, Union, Dict
+from typing import Optional, List, Union, Dict, Type
 
 # Importation corrigée pour utiliser l'utilitaire central du projet
 from argumentation_analysis.core.utils.shell_utils import run_shell_command
+from .strategies.base_strategy import BaseStrategy
 
 # Configuration du logger
 logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='[ENV_MGR] [%(asctime)s] - %(levelname)s - %(message)s')
@@ -28,6 +31,8 @@ class EnvironmentManager:
         """
         self._project_root = project_root
         self.logger = logger_instance or logging.getLogger(__name__)
+        self._strategies: Dict[str, BaseStrategy] = {}
+        self._load_strategies()
 
     @property
     def project_root(self) -> Path:
@@ -45,6 +50,11 @@ class EnvironmentManager:
     def template_path(self) -> Path:
         """Retourne le chemin vers le template .env."""
         return self.project_root / "config" / "templates" / ".env.tpl"
+
+    @property
+    def strategies_dir(self) -> Path:
+        """Retourne le chemin vers le répertoire des stratégies."""
+        return self.project_root / "project_core" / "core_from_scripts" / "strategies"
 
     @property
     def target_env_file(self) -> Path:
@@ -146,25 +156,50 @@ class EnvironmentManager:
             self.logger.error(f"Erreur lors de la copie du fichier d'environnement : {e}")
             return False
 
-    def fix_dependencies(self, packages: Optional[List[str]] = None, requirements_file: Optional[str] = None, strategy: str = 'default') -> bool:
+    def _load_strategies(self):
+        """Charge dynamiquement les stratégies de réparation depuis le répertoire des stratégies."""
+        strategies_package = 'project_core.core_from_scripts.strategies'
+        if not self.strategies_dir.is_dir():
+            self.logger.warning(f"Le répertoire des stratégies '{self.strategies_dir}' est introuvable.")
+            return
+
+        for _, module_name, _ in pkgutil.iter_modules([str(self.strategies_dir)]):
+            if module_name == 'base_strategy':
+                continue
+            try:
+                module = importlib.import_module(f".{module_name}", package=strategies_package)
+                for attribute_name in dir(module):
+                    attribute = getattr(module, attribute_name)
+                    if isinstance(attribute, type) and issubclass(attribute, BaseStrategy) and attribute is not BaseStrategy:
+                        strategy_instance = attribute(self)
+                        self._strategies[strategy_instance.name] = strategy_instance
+                        self.logger.debug(f"Stratégie '{strategy_instance.name}' chargée depuis '{module_name}'.")
+            except Exception as e:
+                self.logger.error(f"Erreur lors du chargement de la stratégie depuis {module_name}: {e}")
+
+    def fix_dependencies(self, packages: Optional[List[str]] = None, requirements_file: Optional[str] = None, strategy_name: str = 'default') -> bool:
         """
-        Répare les dépendances en les réinstallant.
+        Répare les dépendances en les réinstallant à l'aide d'un moteur de stratégies.
 
         Args:
             packages: Une liste de noms de paquets à réinstaller.
             requirements_file: Le chemin vers un fichier requirements.txt.
-            strategy: La stratégie à utiliser ('default' ou 'aggressive').
+            strategy_name: Le nom de la stratégie à utiliser ('default', 'aggressive', ou une stratégie spécifique).
 
         Returns:
             True si l'opération a réussi, False sinon.
         """
+        if not self._strategies:
+            self.logger.error("Aucune stratégie de réparation n'a été chargée. Impossible de continuer.")
+            return False
+
         if packages and requirements_file:
             raise ValueError("Les arguments 'packages' et 'requirements_file' sont mutuellement exclusifs.")
 
         if not packages and not requirements_file:
             self.logger.warning("Aucun paquet ou fichier de requirements fourni.")
             return True
-            
+
         if requirements_file:
             if not (self.project_root / requirements_file).is_file():
                 self.logger.error(f"Fichier de requirements introuvable: {requirements_file}")
@@ -174,114 +209,49 @@ class EnvironmentManager:
             return self.run_command_in_conda_env(command) == 0
 
         if packages:
-            if strategy == 'default':
-                package_str = " ".join(packages)
-                command = f"pip install --force-reinstall --no-cache-dir {package_str}"
-                self.logger.info(f"Exécution de la réparation (stratégie par défaut) : {command}")
-                return self.run_command_in_conda_env(command) == 0
-            elif strategy == 'aggressive':
-                self.logger.info(f"Lancement de la stratégie de réparation AGRESSIVE pour : {', '.join(packages)}")
-                for package in packages:
-                    if not self._aggressive_fix_for_package(package):
-                        self.logger.error(f"Échec de la stratégie agressive pour le paquet '{package}'.")
-                        return False
-                self.logger.info("Stratégie de réparation agressive terminée avec succès.")
-                return True
+            if strategy_name == 'aggressive':
+                return self._run_aggressive_strategy(packages)
+
+            strategy = self._strategies.get(strategy_name)
+            if not strategy:
+                self.logger.error(f"Stratégie inconnue : '{strategy_name}'. Stratégies disponibles : {', '.join(self._strategies.keys())}")
+                return False
+
+            self.logger.info(f"Lancement de la stratégie de réparation '{strategy_name}' pour : {', '.join(packages)}")
+            for package in packages:
+                if not strategy.execute(package):
+                    self.logger.error(f"Échec de la stratégie '{strategy_name}' pour le paquet '{package}'.")
+                    return False
+            return True
 
         return False
 
-    def _find_vcvarsall(self) -> Optional[Path]:
-        """Trouve le script vcvarsall.bat dans les emplacements d'installation courants de Visual Studio."""
-        program_files = Path(os.environ.get("ProgramFiles(x86)", "C:/Program Files (x86)"))
-        vs_versions = ["2022", "2019", "2017"]
-        editions = ["Community", "Professional", "Enterprise", "BuildTools"]
+    def _run_aggressive_strategy(self, packages: List[str]) -> bool:
+        """Exécute une séquence prédéfinie de stratégies pour une réparation agressive."""
+        self.logger.info(f"Lancement de la stratégie de réparation AGRESSIVE pour : {', '.join(packages)}")
         
-        for version in vs_versions:
-            for edition in editions:
-                vcvars_path = program_files / "Microsoft Visual Studio" / version / edition / "VC" / "Auxiliary" / "Build" / "vcvarsall.bat"
-                if vcvars_path.is_file():
-                    self.logger.info(f"vcvarsall.bat trouvé : {vcvars_path}")
-                    return vcvars_path
-        self.logger.warning("vcvarsall.bat introuvable.")
-        return None
-
-    def _get_python_version_for_wheel(self) -> str:
-        """Retourne la version de Python formatée pour les noms de wheels (ex: cp312)."""
-        return f"cp{sys.version_info.major}{sys.version_info.minor}"
-
-    def _try_wheel_install(self, package: str) -> bool:
-        """Tente de deviner et d'installer un wheel précompilé."""
-        if not sys.platform == 'win32':
-            return False
-
-        python_version = self._get_python_version_for_wheel()
-        architecture = 'win_amd64' if platform.architecture()[0] == '64bit' else 'win32'
+        # Ordre d'exécution des stratégies
+        strategy_order = ['simple', 'no-binary', 'wheel-install', 'msvc-build']
         
-        # Heuristique pour JPype1, qui est le cas d'usage principal
-        if package.lower() == 'jpype1':
-            # Exemple: JPype1-1.5.0-cp312-cp312-win_amd64.whl
-            # Note : la version est difficile à deviner, on tente une version commune
-            # Idéalement, il faudrait une API pour lister les versions disponibles
-            versions_to_try = ["1.5.0", "1.4.1", "1.4.0"]
-            for version in versions_to_try:
-                wheel_name = f"{package}-{version}-{python_version}-{python_version}-{architecture}.whl"
-                # L'URL est une supposition, pointant vers pypi.
-                wheel_url = f"https://files.pythonhosted.org/packages/source/J/JPype1/{wheel_name}"
+        for package in packages:
+            success = False
+            for strategy_name in strategy_order:
+                strategy = self._strategies.get(strategy_name)
+                if not strategy:
+                    self.logger.warning(f"Stratégie '{strategy_name}' non trouvée, ignorée.")
+                    continue
                 
-                self.logger.info(f"Tentative de téléchargement et installation du wheel: {wheel_url}")
-                command = f'pip install "{wheel_url}"'
-                if self.run_command_in_conda_env(command) == 0:
-                    self.logger.info(f"Succès de l'installation via le wheel précompilé '{wheel_name}'.")
-                    return True
-        
-        self.logger.warning(f"Impossible de deviner un wheel pour le paquet '{package}'.")
-        return False
-
-    def _aggressive_fix_for_package(self, package: str) -> bool:
-        """Applique une séquence de stratégies de réparation pour un seul paquet."""
-        
-        # Stratégie 1: Installation simple
-        self.logger.info(f"[{package}] Stratégie 1 : Tentative d'installation simple...")
-        command1 = f'pip install "{package}"'
-        if self.run_command_in_conda_env(command1) == 0:
-            self.logger.info(f"[{package}] Succès de l'installation simple.")
-            return True
-        self.logger.warning(f"[{package}] L'installation simple a échoué. Passage à la stratégie suivante.")
-
-        # Stratégie 2: Installation sans binaire
-        self.logger.info(f"[{package}] Stratégie 2 : Tentative d'installation sans binaire...")
-        command2 = f'pip install --no-binary :all: "{package}"'
-        if self.run_command_in_conda_env(command2) == 0:
-            self.logger.info(f"[{package}] Succès de l'installation sans binaire.")
-            return True
-        self.logger.warning(f"[{package}] L'installation sans binaire a échoué. Passage à la stratégie suivante.")
-
-        # Stratégie 3: Installation via Wheel précompilé (Windows)
-        self.logger.info(f"[{package}] Stratégie 3 : Tentative d'installation via un wheel précompilé...")
-        if self._try_wheel_install(package):
-            return True
-        self.logger.warning(f"[{package}] La recherche de wheel précompilé a échoué. Passage à la stratégie suivante.")
-
-        # Stratégie 4: Utilisation de vcvarsall.bat (Windows uniquement)
-        if sys.platform == 'win32':
-            self.logger.info(f"[{package}] Stratégie 4 : Tentative d'installation avec les outils de compilation MSVC...")
-            vcvars_path = self._find_vcvarsall()
-            if vcvars_path:
-                # La commande doit être exécutée dans un sous-shell qui a initialisé l'environnement de compilation.
-                # `conda run` ne peut pas facilement gérer `&&` ici, donc nous construisons une commande shell complète.
-                # Note: cette partie est complexe et dépend fortement de la configuration du shell.
-                # pour le moment, on se contente de logger une note car la commande est complexe à construire
-                self.logger.info(f"Pour une installation manuelle, utilisez une console développeur et lancez :")
-                self.logger.info(f'"{vcvars_path}" x64')
-                self.logger.info(f'conda activate {self.get_conda_env_name_from_dotenv()}')
-                self.logger.info(f'pip install "{package}"')
-                self.logger.warning(f"[{package}] La stratégie MSVC automatique n'est pas encore entièrement implémentée. Échec de cette étape.")
-
-            else:
-                self.logger.warning(f"[{package}] Outils de compilation MSVC (vcvarsall.bat) introuvables. Échec de cette étape.")
-
-        self.logger.error(f"[{package}] Toutes les stratégies de réparation ont échoué.")
-        return False
+                if strategy.execute(package):
+                    self.logger.info(f"Réparation réussie pour '{package}' avec la stratégie '{strategy_name}'.")
+                    success = True
+                    break # Passe au paquet suivant
+            
+            if not success:
+                self.logger.error(f"Toutes les stratégies agressives ont échoué pour le paquet '{package}'.")
+                return False
+                
+        self.logger.info("Stratégie de réparation agressive terminée avec succès.")
+        return True
 
 
 if __name__ == "__main__":
@@ -303,6 +273,13 @@ if __name__ == "__main__":
     # --- Commande pour obtenir le nom de l'environnement ---
     get_name_parser = subparsers.add_parser("get-env-name", help="Affiche le nom de l'environnement Conda configuré dans .env.")
 
+    # --- Nouvelle commande pour la réparation des dépendances ---
+    fix_parser = subparsers.add_parser("fix", help="Répare les dépendances d'un ou plusieurs paquets.")
+    fix_parser.add_argument("packages", nargs='*', help="Liste des paquets à réparer.")
+    fix_parser.add_argument("-r", "--requirements", dest="requirements_file", help="Chemin vers un fichier requirements.txt.")
+    fix_parser.add_argument("-s", "--strategy", default="default", help="La stratégie de réparation à utiliser (ex: default, aggressive, simple, no-binary).")
+
+
     args = parser.parse_args()
 
     manager = EnvironmentManager()
@@ -319,6 +296,9 @@ if __name__ == "__main__":
             print(env_name)
             exit_code = 0
         else:
+            exit_code = 1
+    elif args.command == "fix":
+        if not manager.fix_dependencies(args.packages, args.requirements_file, args.strategy):
             exit_code = 1
     else:
         # Ne devrait jamais être atteint grâce à `required=True` sur les subparsers

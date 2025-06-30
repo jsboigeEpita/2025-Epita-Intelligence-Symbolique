@@ -16,7 +16,6 @@ textuelles, avec la possibilité d'étendre les types d'analyses supportées
 import logging
 from typing import Any
 from argumentation_analysis.config.settings import AppSettings
-from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner
 
 logger = logging.getLogger(__name__)
 

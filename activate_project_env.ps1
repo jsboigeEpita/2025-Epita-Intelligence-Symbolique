@@ -33,11 +33,21 @@ $pythonRunner = Join-Path -Path $PSScriptRoot -ChildPath $childPath
 # Environnement conda cible (corrigé pour correspondre aux attentes des tests)
 $condaEnvName = "projet-is-roo-new"
 
-# Reconstruit la commande à passer au script Python.
-$commandToExecute = $CommandAndArgs -join ' '
+# --- Logique de Commande ---
+
+# Si aucune commande n'est fournie, on exécute pytest par défaut.
+# Sinon, on prend la commande passée en argument.
+$commandToExecute = ""
+if ($CommandAndArgs.Count -eq 0) {
+    Write-Host "[INFO] Aucune commande spécifiée. Lancement de pytest par défaut." -ForegroundColor Yellow
+    # La commande par défaut pour exécuter une suite de tests pertinente.
+    $commandToExecute = "pytest -s -vv tests/unit tests/functional"
+} else {
+    $commandToExecute = $CommandAndArgs -join ' '
+}
+
 
 # Construit la commande finale pour appeler le nouveau gestionnaire d'environnement.
-# Si aucune commande n'est fournie, le script python affichera un message d'aide.
 $finalCommand = "python.exe `"$pythonRunner`" run `"$commandToExecute`""
 
 Write-Host "[DEBUG] Calling: $finalCommand" -ForegroundColor Gray
