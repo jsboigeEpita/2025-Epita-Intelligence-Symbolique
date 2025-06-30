@@ -13,43 +13,19 @@ from pathlib import Path
 import shutil
 from unittest.mock import patch, MagicMock
 
+
 # Ajouter le répertoire racine au PYTHONPATH pour assurer la découvrabilité des modules
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
-
-from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
-from argumentation_analysis.models.extract_result import ExtractResult
-from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
-
-# ##################################################################################
-# ##################################################################################
-# ATTENTION : VÉRIFICATION D'ENVIRONNEMENT CRITIQUE
-# CE BLOC EST UN COUPE-CIRCUIT DE SÉCURITÉ NON NÉGOCIABLE.
-# IL EMPÊCHE L'EXÉCUTION DES TESTS EN DEHORS DE L'ENVIRONNEMENT CONDA 'projet-is',
-# CE QUI POURRAIT ENTRAÎNER DES ERREURS IMPRÉVISIBLES ET CORROMPRE LES RÉSULTATS.
-#
-# NE PAS MODIFIER, DÉSACTIVER OU SUPPRIMER SOUS AUCUN PRÉTEXTE.
-# ##################################################################################
-# ##################################################################################
-# ===== INTÉGRATION AUTO_ENV - CRITIQUE POUR ÉVITER LES ENVIRONNEMENTS GLOBAUX =====
-# DOIT ÊTRE EXÉCUTÉ AVANT TOUTE AUTRE CONFIGURATION
-try:
-   # L'import a été mis à jour suite à la refactorisation du projet
-   import argumentation_analysis.core.environment
-   print("✅ Environnement projet activé via auto_env (conftest.py principal)")
-except ImportError as e:
-   print(f"⚠️ Auto_env non disponible dans conftest principal: {e}. L'environnement conda 'projet-is' doit être activé manuellement.")
-except Exception as e:
-   print(f"⚠️ Erreur auto_env dans conftest principal: {e}")
-# ==================================================================================
-# ##################################################################################
-# FIN DU BLOC DE VÉRIFICATION D'ENVIRONNEMENT CRITIQUE
-# ##################################################################################
 
 # Importations nécessaires pour les fixtures ci-dessous
 from argumentation_analysis.core.jvm_setup import (
     initialize_jvm, shutdown_jvm, is_jvm_started, is_jvm_owned_by_session_fixture
 )
+from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
+from argumentation_analysis.models.extract_result import ExtractResult
+from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
+
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +34,14 @@ logger = logging.getLogger(__name__)
 _dotenv_patcher = None
 
 # Activer le mocking si une variable d'environnement est définie
-MOCK_DOTENV = os.environ.get("MOCK_DOTENV_IN_TESTS", "false").lower() in ("true", "1", "t")
+MOCK_DOTENV = os.environ.get("MOCK_DOTENV_IN_TESTS", "true").lower() in ("true", "1", "t")
+
+
+def pytest_addoption(parser):
+    """Ajoute des options de ligne de commande personnalisées à pytest."""
+    parser.addoption(
+        "--allow-dotenv", action="store_true", default=False, help="Désactive le mock de dotenv et autorise le chargement du vrai fichier .env."
+    )
 
 def pytest_addoption(parser):
     """
@@ -75,9 +58,61 @@ def pytest_addoption(parser):
 
 def pytest_configure(config):
     """
-    Configure les markers pytest et active le mocking de dotenv.
+    Hook de configuration précoce de pytest.
+    1. **Vérification Critique de l'Environnement**: Arrête tout si l'environnement conda n'est pas bon.
+    2. Charge les variables .env via une mise à jour manuelle de os.environ si --allow-dotenv est utilisé.
+    3. Gère le cycle de vie du patch de dotenv.
     """
-    global _dotenv_patcher
+    # --- 1. Garde-fou de l'environnement ---
+    # C'est la première chose à faire. Si l'environnement n'est pas bon,
+    # aucun autre code de test ne doit s'exécuter.
+    try:
+        from argumentation_analysis.core.environment import ensure_env
+        ensure_env()
+    except RuntimeError as e:
+        # Utilise pytest.exit() pour arrêter proprement la session de test avec un message clair.
+        pytest.exit(f"\n\n[FATAL] ERREUR DE CONFIGURATION DE L'ENVIRONNEMENT:\n{e}", returncode=1)
+
+    # --- 2. Configuration du reste ---
+    global MOCK_DOTENV, _dotenv_patcher
+    
+    from dotenv import dotenv_values
+
+    if config.getoption("--allow-dotenv"):
+        MOCK_DOTENV = False
+        print("\n[INFO] Dotenv mocking is DISABLED. Real .env file will be used.")
+
+        project_dir = Path(__file__).parent.parent
+        dotenv_path = project_dir / '.env'
+        if dotenv_path.exists():
+            print(f"[INFO] Loading .env file from: {dotenv_path}")
+            
+            # Utilisation de la méthode standard et propre maintenant que le .env est sain
+            env_vars = dotenv_values(dotenv_path=dotenv_path)
+            
+            if not env_vars:
+                print(f"[WARNING] .env file found at '{dotenv_path}' but it seems to be empty.")
+                return
+
+            updated_vars = 0
+            for key, value in env_vars.items():
+                if key not in os.environ and value is not None:
+                    os.environ[key] = value
+                    updated_vars += 1
+                elif value is None:
+                    print(f"[WARNING] Skipping .env variable '{key}' because its value is None.")
+                else:
+                    print(f"[INFO] Skipping .env variable '{key}' because it's already set in the environment.")
+            
+            print(f"[INFO] Loaded {updated_vars} variables from .env into os.environ.")
+            
+            if 'OPENAI_API_KEY' not in os.environ:
+                 print(f"[WARNING] OPENAI_API_KEY was not found in the loaded .env variables.")
+            else:
+                 print("[INFO] OPENAI_API_KEY successfully loaded.")
+
+        else:
+            print(f"[INFO] No .env file found at '{dotenv_path}'.")
     
     # Enregistrement des marqueurs personnalisés
     config.addinivalue_line("markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')")

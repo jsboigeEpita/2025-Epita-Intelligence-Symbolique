@@ -75,7 +75,7 @@ class TestInformalAnalysisAgentAuthentic:
         info = agent.get_agent_info()
         assert isinstance(info, dict)
         assert info["name"] == "authentic_informal_agent"
-        assert info["class"] == "InformalAnalysisAgent"
+        assert info["class"] == "LegacyInformalAnalysisAgent"
         assert "system_prompt" in info
         assert "llm_service_id" in info
         assert "capabilities" in info

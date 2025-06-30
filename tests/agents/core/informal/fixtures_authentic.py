@@ -30,7 +30,7 @@ except ImportError:
     openai_available = False
 
 # Imports composants authentiques
-from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
+from argumentation_analysis.agents.core.informal.informal_agent import LegacyInformalAnalysisAgent
 from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin
 
 
@@ -425,7 +425,7 @@ def authentic_informal_agent(authentic_semantic_kernel, setup_authentic_taxonomy
     
     try:
         # Création avec vrai Kernel et vraie taxonomie
-        agent = InformalAnalysisAgent(
+        agent = LegacyInformalAnalysisAgent(
             kernel=kernel_wrapper.get_kernel(),
             agent_name=agent_name,
             taxonomy_file_path=test_taxonomy_path
@@ -448,7 +448,7 @@ def authentic_informal_agent(authentic_semantic_kernel, setup_authentic_taxonomy
     except Exception as e:
         print(f"[AUTHENTIC] Erreur création agent: {e}")
         # Fallback - agent minimal
-        return InformalAnalysisAgent(
+        return LegacyInformalAnalysisAgent(
             kernel=kernel_wrapper.get_kernel(),
             agent_name=agent_name
         )
