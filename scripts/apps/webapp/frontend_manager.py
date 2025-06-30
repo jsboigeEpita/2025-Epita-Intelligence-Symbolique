@@ -154,7 +154,7 @@ class FrontendManager:
                 raise Exception(f"Le serveur de développement n'a pas pu démarrer sur le port {port}.")
 
         except Exception as e:
-            self.logger.error(f"Erreur critique lors du démarrage du serveur de développement: {e}", exc_info=False)
+            self.logger.error(f"Erreur critique lors du démarrage du serveur de développement: {e}", exc_info=True)
             await self.stop()
             return {'success': False, 'error': str(e)}
         finally:
@@ -229,11 +229,11 @@ class FrontendManager:
         log_path = Path("logs/frontend_dev_server_stdout.log")
 
         while time.time() - start_time < timeout:
-            # 1. Vérifier si le processus est toujours en cours
-            #    Avec asyncio.subprocess, on vérifie `returncode` au lieu d'appeler `poll()`
-            if self.process and self.process.returncode is not None:
-                self.logger.error(f"Serveur de développement terminé prématurément (code: {self.process.returncode}). Les logs ci-dessus devraient indiquer la cause.")
-                return False, None
+            # 1. Vérifier si le processus est toujours en cours - TEMPORAIREMENT DÉSACTIVÉ POUR DIAGNOSTIC
+            #    Le processus npm semble se terminer même si le serveur webpack continue.
+            # if self.process and self.process.returncode is not None:
+            #     self.logger.error(f"Serveur de développement terminé prématurément (code: {self.process.returncode}). Les logs ci-dessus devraient indiquer la cause.")
+            #     return False, None
 
             # 2. Sonde HTTP
             #    C'est la méthode la plus fiable pour savoir si le serveur est prêt.
@@ -243,8 +243,10 @@ class FrontendManager:
                         if response.status == 200:
                             self.logger.info(f"🎉 Serveur de développement accessible via HTTP sur {url_to_check} en {time.time() - start_time:.1f}s.")
                             return True, url_to_check
-            except aiohttp.ClientError:
-                # C'est normal si le serveur n'est pas encore prêt
+            except Exception as e:
+                # C'est normal si le serveur n'est pas encore prêt.
+                # Capturer toutes les exceptions (ClientError, ConnectionRefusedError, etc.)
+                # self.logger.debug(f"Sonde HTTP ({url_to_check}) a échoué : {type(e).__name__}. Nouvelle tentative...")
                 pass
             
             await asyncio.sleep(2)
