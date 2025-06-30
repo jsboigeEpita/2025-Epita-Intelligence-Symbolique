@@ -156,17 +156,20 @@ class AnalysisService:
                         self.logger.error(f"[ERROR] Failed to get taxonomy path for InformalAgent: {tax_e}")
                     
                     if kernel and llm_service_instance:
-                        self.informal_agent = InformalAgent(
-                            kernel=kernel,
-                            agent_name="web_api_informal_agent",
-                            taxonomy_file_path=str(taxonomy_path_instance) if taxonomy_path_instance else None
-                        )
-                        try:
-                            self.informal_agent.setup_agent_components(llm_service_id="default_analysis_llm")
-                            self.logger.info("[OK] InformalAgent configured successfully")
-                        except Exception as setup_e:
-                            self.logger.error(f"[ERROR] Failed to setup InformalAgent components: {setup_e}")
-                            self.informal_agent = None
+                        # FIX: Cannot instantiate abstract class InformalAnalysisAgent
+                        # self.informal_agent = InformalAgent(
+                        #     kernel=kernel,
+                        #     agent_name="web_api_informal_agent",
+                        #     taxonomy_file_path=str(taxonomy_path_instance) if taxonomy_path_instance else None
+                        # )
+                        # try:
+                        #     self.informal_agent.setup_agent_components(llm_service_id="default_analysis_llm")
+                        #     self.logger.info("[OK] InformalAgent configured successfully")
+                        # except Exception as setup_e:
+                        #     self.logger.error(f"[ERROR] Failed to setup InformalAgent components: {setup_e}")
+                        #     self.informal_agent = None
+                        self.logger.warning("[TEMP FIX] InformalAgent instantiation is temporarily disabled due to abstract class error.")
+                        self.informal_agent = None
                     else:
                         self.logger.error("[ERROR] Cannot initialize InformalAgent - missing kernel or LLM service instance")
                         self.informal_agent = None
