@@ -101,6 +101,7 @@ class AppSettings(BaseSettings):
     encryption_key: Optional[SecretStr] = Field(None, alias='ENCRYPTION_KEY')
     enable_jvm: bool = Field(True, alias='ENABLE_JVM')
     use_mock_llm: bool = Field(False, alias='USE_MOCK_LLM')
+    MOCK_LLM: bool = Field(False, alias='MOCK_LLM')
     libs_dir: Optional[DirectoryPath] = Field(None, alias='LIBS_DIR')
     
     # Derived Paths

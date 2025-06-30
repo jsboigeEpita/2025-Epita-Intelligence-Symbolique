@@ -44,7 +44,8 @@ import warnings # Ajout de warnings
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple, Union
-from dataclasses import dataclass, field
+from pydantic import BaseModel
+from dataclasses import field
 from enum import Enum
 import traceback
 
@@ -105,8 +106,7 @@ class AnalysisMode(Enum):
     ADVANCED = "advanced"
 
 
-@dataclass
-class UnifiedProductionConfig:
+class UnifiedProductionConfig(BaseModel):
     """Configuration centralisée pour l'analyse en production"""
     
     # === Configuration LLM Centralisée ===
@@ -477,6 +477,7 @@ class DependencyValidator:
     
     async def _validate_tweety_dependencies(self) -> List[str]:
         """Valide TweetyProject et JPype"""
+        from pathlib import Path
         errors = []
 
         try:
@@ -520,6 +521,7 @@ class DependencyValidator:
             errors.append(f"JPype1 import failed: {e}")
             
         # Vérification des JARs TweetyProject
+        project_root = Path(__file__).resolve().parent.parent.parent.parent
         libs_dir = project_root / "libs" / "tweety"
         if not libs_dir.exists():
             errors.append("Répertoire libs/tweety manquant")
