@@ -34,32 +34,16 @@ class FallacyWorkflowPlugin:
         """
         Explore plusieurs branches de la taxonomie des sophismes en parallèle en utilisant le TaxonomyDisplayPlugin.
         """
-        try:
-            display_function = self.kernel.plugins["TaxonomyDisplayPlugin"]["DisplayBranch"]
-        except KeyError:
-            return json.dumps({"error": "La fonction 'DisplayBranch' du plugin 'TaxonomyDisplayPlugin' est introuvable."})
+        # La recherche de la fonction DisplayBranch est supprimée.
+        # Nous utilisons directement la classe Taxonomy pour obtenir les informations.
 
-        taxonomy_json = self.taxonomy.get_full_taxonomy_json()
-        
-        tasks = []
+        aggregated_results: Dict[str, Any] = {}
         for node_id in nodes:
-            args = KernelArguments(
-                node_id=node_id,
-                depth=depth,
-                taxonomy=taxonomy_json
-            )
-            tasks.append(self.kernel.invoke(display_function, args))
-        
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # Agréger les résultats dans un dictionnaire
-        aggregated_results: Dict[str, str | Dict] = {}
-        for i, res in enumerate(results):
-            node_key = f"branch_{nodes[i]}"
-            if isinstance(res, Exception):
-                aggregated_results[node_key] = {"error": f"Erreur lors de l'exploration du noeud {nodes[i]}: {str(res)}"}
+            branch_data = self.taxonomy.get_branch(node_id)
+            if branch_data:
+                # La profondeur n'est pas gérée par get_branch, mais le comportement par défaut est suffisant.
+                aggregated_results[node_id] = branch_data
             else:
-                # La valeur de retour est un ChatMessageContent, on extrait son contenu.
-                aggregated_results[node_key] = str(res.value)
+                aggregated_results[node_id] = {"error": f"Noeud '{node_id}' non trouvé dans la taxonomie."}
 
         return json.dumps(aggregated_results, indent=2, ensure_ascii=False)

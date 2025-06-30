@@ -60,8 +60,13 @@ class AgentFactory:
         with open("argumentation_analysis/agents/prompts/InformalFallacyAgent/skprompt.txt", "r") as f:
             prompt = f.read()
 
+        # Récupère le service LLM à partir du kernel pour le passer à l'agent
+        llm_service = self.kernel.get_service(self.llm_service_id)
+
         return ChatCompletionAgent(
             kernel=self.kernel,
+            service=llm_service,
+            name="informal_fallacy_agent",
             instructions=prompt,
             plugins=plugins
         )
@@ -79,8 +84,12 @@ class AgentFactory:
             service=self.kernel.get_service(self.llm_service_id)
         )
 
+        # Récupère le service et le passe directement
+        llm_service = self.kernel.get_service(self.llm_service_id)
+        
         return ChatCompletionAgent(
             kernel=agent_kernel,
+            service=llm_service,
             name="Project_Manager",
             instructions=prompt
         )

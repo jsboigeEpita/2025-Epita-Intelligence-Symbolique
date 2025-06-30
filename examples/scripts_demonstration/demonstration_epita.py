@@ -244,33 +244,36 @@ def afficher_menu_categories(config: Dict[str, Any]) -> None:
     
     print(f"\n{Colors.WARNING}Sélectionnez une catégorie (1-6) ou 'q' pour quitter:{Colors.ENDC}")
 
-def charger_et_executer_module(nom_module: str, mode_interactif: bool = False) -> bool:
-    """Charge et exécute dynamiquement un module de démonstration"""
+def charger_et_executer_module(nom_module: str, mode_interactif: bool = False, **kwargs) -> bool:
+    """Charge et exécute dynamiquement un module de démonstration en propageant les arguments."""
     try:
         module_path = modules_path / f"{nom_module}.py"
         if not module_path.exists():
             print(f"{Colors.FAIL}{Symbols.CROSS} Module {nom_module} non trouvé{Colors.ENDC}")
             return False
         
-        # Chargement dynamique du module
         spec = importlib.util.spec_from_file_location(nom_module, module_path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        
-        # Exécution selon le mode
+
+        target_func = None
         if mode_interactif and hasattr(module, 'run_demo_interactive'):
-            return module.run_demo_interactive()
-        elif hasattr(module, 'run_demo_rapide'):
-            return module.run_demo_rapide()
+            target_func = module.run_demo_interactive
+        elif not mode_interactif and hasattr(module, 'run_demo_rapide'):
+            target_func = module.run_demo_rapide
+        
+        if target_func:
+            # Passe les kwargs à la fonction cible
+            return target_func(**kwargs)
         else:
-            print(f"{Colors.WARNING}Fonction de démonstration non trouvée dans {nom_module}{Colors.ENDC}")
+            print(f"{Colors.WARNING}Fonction de démonstration appropriée non trouvée dans {nom_module}{Colors.ENDC}")
             return False
             
     except Exception as e:
         print(f"{Colors.FAIL}{Symbols.CROSS} Erreur lors de l'exécution de {nom_module}: {e}{Colors.ENDC}")
         return False
 
-def mode_menu_interactif(config: Dict[str, Any]) -> None:
+def mode_menu_interactif(config: Dict[str, Any], **kwargs) -> None:
     """Mode menu interactif principal"""
     logger = DemoLogger("menu_principal")
     
@@ -285,30 +288,20 @@ def mode_menu_interactif(config: Dict[str, Any]) -> None:
                 logger.info("Au revoir !")
                 break
             
-            # Conversion en entier pour la sélection
             if choix.isdigit():
                 num_choix = int(choix)
-                
-                # Trouver la catégorie correspondante
                 categories = config.get('categories', {})
-                cat_selectionnee = None
-                
-                for cat_id, cat_info in categories.items():
-                    if cat_info.get('id') == num_choix:
-                        cat_selectionnee = (cat_id, cat_info)
-                        break
+                cat_selectionnee = next(((cid, cinfo) for cid, cinfo in categories.items() if cinfo.get('id') == num_choix), None)
                 
                 if cat_selectionnee:
                     cat_id, cat_info = cat_selectionnee
-                    nom_module = cat_info.get('module', '')
-                    if cat_id == 'agents_logiques':
-                        nom_module = 'demo_analyse_argumentation'
+                    nom_module = 'demo_analyse_argumentation' if cat_id == 'agents_logiques' else cat_info.get('module', '')
                     nom_cat = cat_info.get('nom', cat_id)
                     
                     logger.header(f"{Symbols.ROCKET} Lancement de : {nom_cat}")
                     
                     if confirmer_action(f"Exécuter la démonstration '{nom_cat}' ?"):
-                        succes = charger_et_executer_module(nom_module, mode_interactif=True)
+                        succes = charger_et_executer_module(nom_module, mode_interactif=True, **kwargs)
                         
                         if succes:
                             logger.success(f"{Symbols.CHECK} Démonstration '{nom_cat}' terminée avec succès !")
@@ -330,18 +323,16 @@ def mode_menu_interactif(config: Dict[str, Any]) -> None:
             logger.error(f"Erreur inattendue : {e}")
             pause_interactive()
 
-def mode_quick_start() -> None:
+def mode_quick_start(**kwargs) -> None:
     """Mode Quick Start pour les étudiants"""
     logger = DemoLogger("quick_start")
     afficher_banniere_principale()
     logger.header(f"{Symbols.ROCKET} MODE QUICK-START - Démonstration rapide")
     
-    # Charger la configuration
     config = charger_config_categories()
     if not config:
         return
     
-    # Exécuter une démo rapide de chaque catégorie
     categories = config.get('categories', {})
     
     for cat_id, cat_info in categories.items():
@@ -349,7 +340,7 @@ def mode_quick_start() -> None:
         if module_name:
             try:
                 print(f"\n{Colors.CYAN}{cat_info.get('icon', '[INFO]')} {cat_info.get('nom', 'Catégorie')}{Colors.ENDC}")
-                succes = charger_et_executer_module(module_name, mode_interactif=False)
+                succes = charger_et_executer_module(module_name, mode_interactif=False, **kwargs)
                 if succes:
                     print(f"{Colors.GREEN}  [OK] Terminé{Colors.ENDC}")
                 else:
@@ -407,11 +398,10 @@ def mode_execution_legacy() -> None:
     except Exception as e:
         print(f"{Colors.FAIL}Erreur lors de l'exécution du mode legacy : {e}{Colors.ENDC}")
 
-def execute_all_categories_non_interactive(config: Dict[str, Any]) -> None:
+def execute_all_categories_non_interactive(config: Dict[str, Any], **kwargs) -> None:
     """Exécute toutes les catégories de tests en mode non-interactif avec trace complète."""
     logger = DemoLogger("all_tests")
     
-    # Bannière pour le mode all-tests
     print(f"""
 {Colors.CYAN}{Colors.BOLD}
 +==============================================================================+
@@ -425,76 +415,51 @@ def execute_all_categories_non_interactive(config: Dict[str, Any]) -> None:
     categories_triees = sorted(categories.items(), key=lambda x: x[1]['id'])
     
     logger.info(f"{Symbols.ROCKET} Début de l'exécution complète - {len(categories_triees)} catégories à traiter")
-    logger.info(f"[TIME] Timestamp de démarrage : {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info(f"Paramètres : agent_type={kwargs.get('agent_type')}, taxonomy_path={kwargs.get('taxonomy_path')}")
     
-    # Statistiques globales
     total_categories = len(categories_triees)
     categories_reussies = 0
     categories_echouees = 0
     resultats_detailles = []
-    
+
     for i, (cat_id, cat_info) in enumerate(categories_triees, 1):
-        nom_module = cat_info.get('module', '')
-        if cat_id == 'agents_logiques':
-            nom_module = 'demo_analyse_argumentation'
+        nom_module = 'demo_analyse_argumentation' if cat_id == 'agents_logiques' else cat_info.get('module', '')
         nom_cat = cat_info.get('nom', cat_id)
-        icon = cat_info.get('icon', '•')
-        description = cat_info.get('description', '')
         
         print(f"\n{Colors.BOLD}{'=' * 80}{Colors.ENDC}")
-        print(f"{Colors.CYAN}{icon} CATÉGORIE {i}/{total_categories} : {nom_cat}{Colors.ENDC}")
-        print(f"{Colors.BLUE}Description : {description}{Colors.ENDC}")
+        print(f"{Colors.CYAN}{cat_info.get('icon', '•')} CATÉGORIE {i}/{total_categories} : {nom_cat}{Colors.ENDC}")
         print(f"{Colors.WARNING}Module : {nom_module}{Colors.ENDC}")
-        print(f"{'=' * 80}")
         
         cat_start_time = time.time()
+        succes, erreur = False, None
         
         try:
-            # Exécution non-interactive du module
             logger.info(f"[CAT] Début exécution catégorie : {nom_cat}")
-            succes = charger_et_executer_module(nom_module, mode_interactif=False)
-            cat_end_time = time.time()
-            cat_duration = cat_end_time - cat_start_time
-            
-            if succes:
-                categories_reussies += 1
-                status = "SUCCÈS"
-                color = Colors.GREEN
-                symbol = Symbols.CHECK
-                logger.success(f"{Symbols.CHECK} Catégorie '{nom_cat}' terminée avec succès en {cat_duration:.2f}s")
-            else:
-                categories_echouees += 1
-                status = "ÉCHEC"
-                color = Colors.FAIL
-                symbol = Symbols.CROSS
-                logger.error(f"[FAIL] Échec de la catégorie '{nom_cat}' après {cat_duration:.2f}s")
-            
-            resultats_detailles.append({
-                'categorie': nom_cat,
-                'module': nom_module,
-                'status': status,
-                'duration': cat_duration,
-                'index': i
-            })
-            
-            print(f"\n{color}{symbol} Statut : {status} (durée: {cat_duration:.2f}s){Colors.ENDC}")
-            
+            succes = charger_et_executer_module(nom_module, mode_interactif=False, **kwargs)
         except Exception as e:
-            categories_echouees += 1
-            cat_end_time = time.time()
-            cat_duration = cat_end_time - cat_start_time
-            
+            erreur = e
             logger.error(f"[ERROR] Erreur critique dans la catégorie '{nom_cat}': {e}")
-            print(f"\n{Colors.FAIL}{Symbols.CROSS} ERREUR CRITIQUE : {e}{Colors.ENDC}")
-            
-            resultats_detailles.append({
-                'categorie': nom_cat,
-                'module': nom_module,
-                'status': 'ERREUR',
-                'duration': cat_duration,
-                'index': i,
-                'erreur': str(e)
-            })
+        
+        cat_duration = time.time() - cat_start_time
+        status = "SUCCÈS" if succes else "ÉCHEC"
+        color = Colors.GREEN if succes else Colors.FAIL
+        symbol = Symbols.CHECK if succes else Symbols.CROSS
+        
+        if succes:
+            categories_reussies += 1
+            logger.success(f"{symbol} Catégorie '{nom_cat}' terminée avec succès en {cat_duration:.2f}s")
+        else:
+            categories_echouees += 1
+            logger.error(f"{symbol} Échec de la catégorie '{nom_cat}' après {cat_duration:.2f}s")
+
+        resultats_detailles.append({
+            'categorie': nom_cat, 'module': nom_module, 'status': status,
+            'duration': cat_duration, 'index': i, 'erreur': str(erreur) if erreur else ""
+        })
+        
+        print(f"\n{color}{symbol} Statut : {status} (durée: {cat_duration:.2f}s){Colors.ENDC}")
+        if erreur:
+            print(f"\n{Colors.FAIL}{Symbols.CROSS} ERREUR CRITIQUE : {erreur}{Colors.ENDC}")
     
     # Rapport final
     end_time = time.time()
@@ -789,77 +754,76 @@ Modes disponibles :
         """
     )
     
-    parser.add_argument('--interactive', '-i', action='store_true',
-                       help='Mode interactif avec pauses pédagogiques')
-    parser.add_argument('--quick-start', '-q', action='store_true',
-                       help='Mode Quick Start pour étudiants')
-    parser.add_argument('--metrics', '-m', action='store_true',
-                       help='Affichage des métriques uniquement')
-    parser.add_argument('--legacy', '-l', action='store_true',
-                       help='Exécution du script original (compatibilité)')
-    parser.add_argument('--all-tests', action='store_true',
-                       help='Exécute tous les tests de toutes les catégories en mode non-interactif')
-    parser.add_argument('--validate-custom', action='store_true',
-                       help='Mode validation avec données dédiées pour détecter mocks vs traitement réel')
-    parser.add_argument('--custom-data', type=str, metavar='TEXT',
-                       help='Test avec des données custom spécifiques fournies en paramètre')
-    
+    # Arguments de mode
+    parser.add_argument('--interactive', '-i', action='store_true', help='Mode interactif avec pauses pédagogiques')
+    parser.add_argument('--quick-start', '-q', action='store_true', help='Mode Quick Start pour étudiants')
+    parser.add_argument('--metrics', '-m', action='store_true', help='Affichage des métriques uniquement')
+    parser.add_argument('--legacy', '-l', action='store_true', help='Exécution du script original (compatibilité)')
+    parser.add_argument('--all-tests', action='store_true', help='Exécute tous les tests de toutes les catégories en mode non-interactif')
+    parser.add_argument('--validate-custom', action='store_true', help='Mode validation avec données dédiées')
+    parser.add_argument('--custom-data', type=str, metavar='TEXT', help='Test avec des données custom spécifiques')
+
+    # Arguments de configuration des agents
+    parser.add_argument('--agent-type', type=str, default='informal',
+                        choices=['informal', 'deductive', 'causal', 'example', 'synthesis', 'comparison', 'full'],
+                        help="""Type d'agent à utiliser pour l'analyse.""")
+    parser.add_argument('--taxonomy-path', type=str, default='taxonomies/informal_fallacies.json',
+                        help='Chemin vers le fichier JSON de la taxonomie des sophismes.')
+
     return parser.parse_args()
 
 def main():
     """Fonction principale"""
-    # Validation de l'environnement
     if not valider_environnement():
         print(f"{Colors.FAIL}Environnement non valide. Exécutez depuis la racine du projet.{Colors.ENDC}")
         sys.exit(1)
     
-    # Parse des arguments
     args = parse_arguments()
-    
-    # Chargement de la configuration
     config = charger_config_categories()
+    
     if not config:
         print(f"{Colors.FAIL}Impossible de charger la configuration. Exécution en mode legacy.{Colors.ENDC}")
         mode_execution_legacy()
         return
-    
+
+    # Préparation des kwargs pour la propagation
+    kwargs = {
+        'agent_type': args.agent_type,
+        'taxonomy_path': args.taxonomy_path
+    }
+
     # Sélection du mode d'exécution
     if args.validate_custom:
         mode_validation_custom_data(config)
     elif args.custom_data:
         mode_custom_data_test(args.custom_data, config)
     elif args.all_tests:
-        execute_all_categories_non_interactive(config)
+        execute_all_categories_non_interactive(config, **kwargs)
     elif args.quick_start:
-        mode_quick_start()
+        mode_quick_start(**kwargs)
     elif args.metrics:
         mode_metrics_only(config)
     elif args.legacy:
         mode_execution_legacy()
     elif args.interactive:
-        # Mode interactif avancé - exécution séquentielle des modules
         logger = DemoLogger("demo_complet")
         logger.header("[EPITA] DÉMONSTRATION COMPLÈTE - MODE INTERACTIF")
+        categories = sorted(config.get('categories', {}).items(), key=lambda x: x[1]['id'])
         
-        categories = config.get('categories', {})
-        categories_triees = sorted(categories.items(), key=lambda x: x[1]['id'])
-        
-        for i, (cat_id, cat_info) in enumerate(categories_triees, 1):
+        for i, (cat_id, cat_info) in enumerate(categories, 1):
             nom_module = cat_info.get('module', '')
             nom_cat = cat_info.get('nom', cat_id)
-            
-            afficher_progression(i, len(categories_triees), f"Module : {nom_cat}")
+            afficher_progression(i, len(categories), f"Module : {nom_cat}")
             
             if confirmer_action(f"Exécuter '{nom_cat}' ?"):
-                charger_et_executer_module(nom_module, mode_interactif=True)
+                charger_et_executer_module(nom_module, mode_interactif=True, **kwargs)
             
-            if i < len(categories_triees):
+            if i < len(categories):
                 pause_interactive()
         
         logger.success("🎓 Démonstration complète terminée !")
     else:
-        # Mode menu interactif par défaut
-        mode_menu_interactif(config)
+        mode_menu_interactif(config, **kwargs)
 
 if __name__ == "__main__":
     main()

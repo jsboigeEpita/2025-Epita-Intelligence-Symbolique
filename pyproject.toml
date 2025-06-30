@@ -90,19 +90,19 @@ dependencies = [
     "requests",
     "pydantic-settings",
     "pandas",
-    "numpy==1.23.0",
+    "numpy",
     "matplotlib",
     "networkx",
     "scikit-learn",
     "scipy",
-    "tweety-libs",
     "jpype1",
     "fastapi",
     "uvicorn[standard]",
     "python-multipart",
     "websockets",
     "jinja2",
-    "aiofiles"
+    "aiofiles",
+    "semantic-kernel"
 ]
 
 [tool.setuptools.packages.find]

@@ -47,13 +47,16 @@ import time
 import subprocess
 import argparse
 import random
+import re
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
 from enum import Enum
 
-# Configuration des chemins
-from argumentation_analysis.agents.core.informal.taxonomy_sophism_detector import TaxonomySophismDetector # Import pour le niveau 1
+import semantic_kernel as sk
+from argumentation_analysis.agents.agent_factory import AgentFactory
+from config.unified_config import AgentType
+
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if not (PROJECT_ROOT / "examples" / "scripts_demonstration").exists():
@@ -169,23 +172,29 @@ class ValidationEpitaComplete:
     def __init__(self, mode: ValidationMode = ValidationMode.EXHAUSTIVE,
                  complexity: ComplexityLevel = ComplexityLevel.COMPLEX,
                  level: AnalysisLevel = AnalysisLevel.SEMANTIC, # Ajout du niveau d'analyse
+                 agent_type: str = "full",
                  enable_synthetic: bool = False,
                  taxonomy_file_path: Optional[str] = None):
         self.mode = mode
         self.complexity = complexity
         self.level = level # Stockage du niveau d'analyse
+        self.agent_type = agent_type
         self.enable_synthetic = enable_synthetic
         self.taxonomy_file_path = taxonomy_file_path
         self.manager = None
+        self.kernel = None
+        self.agent_factory = None
+        self.informal_agent = None
         self.results = {
             "metadata": {
                 "timestamp": datetime.now().isoformat(),
                 "mode": mode.value,
                 "complexity": complexity.value,
                 "analysis_level": level.value, # Ajout du niveau au rapport
+                "agent_type": agent_type,
                 "synthetic_enabled": enable_synthetic,
                 "taxonomy_file": taxonomy_file_path,
-                "version": "2.3_dynamic_taxonomy"
+                "version": "2.4_refactored_agent"
             },
             "components": {},
             "score": 0,
@@ -351,22 +360,6 @@ class ValidationEpitaComplete:
         print(f"{Colors.CYAN}[TARGET] Authenticite moyenne: {avg_authenticity:.1%}{Colors.ENDC}")
         return success_count >= len(test_data) * 0.6
 
-    async def _run_authentic_analysis(self, text: str) -> Dict[str, Any]:
-        """Lance une VRAIE analyse authentique en utilisant le ServiceManager."""
-        if not self.manager:
-            from argumentation_analysis.orchestration.service_manager import OrchestrationServiceManager
-            # On passe le chemin de la taxonomie à l'initialisation
-            self.manager = OrchestrationServiceManager(taxonomy_file_path=self.taxonomy_file_path)
-            await self.manager.initialize()
-        try:
-            analysis_result_obj = await self.manager.analyze_text(text, analysis_type="logical")
-            if not analysis_result_obj or not hasattr(analysis_result_obj, 'result') or not isinstance(analysis_result_obj.result, dict):
-                return {'success': False, 'summary': 'Réponse mal formée', 'authenticity_score': 0.0}
-            final_result = analysis_result_obj.result.get('result', {})
-            is_valid = final_result.get("is_valid", False)
-            return {'success': is_valid, 'summary': f"Validité logique détectée: {is_valid}", 'authenticity_score': analysis_result_obj.confidence}
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'summary': f"Exception durant l'analyse: {e}", 'authenticity_score': 0.0}
 
     async def validate_service_manager(self) -> bool:
         """Validation du ServiceManager"""
@@ -442,36 +435,101 @@ class ValidationEpitaComplete:
         if self.manager and hasattr(self.manager, 'is_available') and self.manager.is_available():
             await self.manager.shutdown()
             self.log_test("System", "shutdown", "SUCCESS", "ServiceManager arrêté proprement.", 0.0, 1.0)
+        
+        # Potentiellement arrêter l'agent informel s'il a des ressources
+        if self.informal_agent and hasattr(self.informal_agent, 'shutdown'):
+             await self.informal_agent.shutdown()
+             self.log_test("System", "shutdown", "SUCCESS", "Agent informel arrêté proprement.", 0.0, 1.0)
+
+    async def initialize_agent(self):
+        """Initialise l'agent d'analyse informelle via la factory."""
+        if self.informal_agent is None:
+            print(f"{Colors.CYAN}[SETUP] Initialisation de l'agent d'analyse informelle (type: {self.agent_type})...{Colors.ENDC}")
+            from argumentation_analysis.core.llm_service import create_llm_service
+            
+            self.kernel = sk.Kernel()
+            llm_service_id = "default"  # Ou un identifiant spécifique
+            
+            # Créer et ajouter le service LLM au kernel
+            llm_service = create_llm_service(service_id=llm_service_id, force_authentic=True)
+            self.kernel.add_service(llm_service)
+            
+            # Maintenant, initialiser la factory avec le kernel et l'ID du service
+            self.agent_factory = AgentFactory(self.kernel, llm_service_id)
+            
+            agent_config = {
+                "taxonomy_path": self.taxonomy_file_path
+            }
+            
+            self.informal_agent = self.agent_factory.create_informal_fallacy_agent(
+                config_name=self.agent_type
+            )
+            print(f"{Colors.GREEN}[OK] [SETUP] Agent d'analyse informelle initialisé.{Colors.ENDC}")
 
     async def _parse_and_compare_sophisms(self, analysis_result_obj: Any, expected_sophisms: List[str]) -> Tuple[bool, str]:
         """Parse le résultat de l'analyse sémantique et le compare aux sophismes attendus."""
         try:
-            if not isinstance(analysis_result_obj, dict):
-                return False, f"Le résultat global n'est pas un dictionnaire. Type reçu: {type(analysis_result_obj)}"
+            # Le résultat de l'itération est un AgentResponseItem, qui contient un ChatMessageContent
+            from semantic_kernel.agents.agent import AgentResponseItem
+            from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
-            specialized_result = analysis_result_obj.get('results', {}).get('specialized', {})
-            if not specialized_result:
-                return False, f"La section 'specialized' des résultats est manquante. Reçu: {analysis_result_obj.get('results')}"
+            message_content = None
+            if isinstance(analysis_result_obj, AgentResponseItem):
+                message_content = analysis_result_obj.message
+            elif isinstance(analysis_result_obj, ChatMessageContent):
+                message_content = analysis_result_obj
+            else:
+                 return False, f"Type de résultat inattendu: {type(analysis_result_obj)}"
 
-            result_from_orchestrator = specialized_result.get('result', {})
-            if not result_from_orchestrator:
-                 # Gérer le cas où la réponse est une chaîne JSON directement
-                raw_response = specialized_result.get('raw_response')
-                if isinstance(raw_response, str):
-                    clean_json_str = raw_response.strip().removeprefix("```json").removesuffix("```").strip()
-                    try:
-                        result_from_orchestrator = json.loads(clean_json_str)
-                    except json.JSONDecodeError:
-                        return False, f"Réponse JSON mal formée même après nettoyage: {raw_response}"
-                else:
-                    return False, f"Le dictionnaire de résultat de l'orchestrateur est vide. Reçu: {specialized_result}"
+            if message_content is None or not hasattr(message_content, 'content'):
+                return False, f"Impossible d'extraire le contenu du message depuis {type(analysis_result_obj)}"
 
-            inner_result = result_from_orchestrator.get('result', result_from_orchestrator)
-            if not inner_result or not isinstance(inner_result, dict):
-                return False, f"Le dictionnaire de résultat interne est vide ou invalide. Reçu: {result_from_orchestrator}"
+            # Le contenu est une chaîne JSON
+            analysis_result_str = str(message_content.content)
+            if not analysis_result_str or analysis_result_str == "None":
+               # Si le contenu est vide, il s'agit probablement d'un appel d'outil qui n'a pas produit de réponse textuelle directe.
+               # Nous examinons les `tool_calls` pour trouver la réponse de l'outil `identify_fallacies`.
+               if hasattr(message_content, 'tool_calls'):
+                   for tool_call in message_content.tool_calls:
+                       if "identify_fallacies" in tool_call.function.name:
+                           analysis_result_str = tool_call.function.arguments
+                           break # On a trouvé, on sort de la boucle
+               if not analysis_result_str or analysis_result_str == "None":
+                    return False, "Le contenu du message est vide et aucun appel à 'identify_fallacies' n'a été trouvé."
 
-            detected_sophisms_raw = inner_result.get("detected_sophisms", inner_result.get("sophismes", []))
+            try:
+                # Nettoyage supplémentaire au cas où des backticks markdown sont présents
+                clean_json_str = analysis_result_str.strip().removeprefix("```json").removesuffix("```").strip()
+                analysis_result_dict = json.loads(clean_json_str)
+            except json.JSONDecodeError:
+                # --- FALLBACK : Si le JSON échoue, tenter un parsing par regex amélioré ---
+                detected_sophisms_raw = []
+                # Regex plus flexible pour capturer les noms de sophismes dans divers formats
+                # Gère les puces, le gras, les variations de "Nom du sophisme", etc.
+                pattern = r"(?:sophisme|nom du sophisme)\s*[:\s-]*\s*(?:\d\.\s*)?(?:\*\*)?([^(:\n]+?)(?:\*\*|\s*\()"
+                matches = re.finditer(pattern, analysis_result_str, re.IGNORECASE)
+                
+                for match in matches:
+                    fallacy_name = match.group(1).strip()
+                    detected_sophisms_raw.append({"nom": fallacy_name})
 
+                if not detected_sophisms_raw:
+                     # Deuxième fallback pour les cas où seul le nom est présent, comme "**Homme de paille**"
+                    for key in self.alias_map.keys():
+                        if re.search(r'\b' + re.escape(key) + r'\b', analysis_result_str, re.IGNORECASE):
+                            detected_sophisms_raw.append({"nom": key})
+                
+                if not detected_sophisms_raw:
+                    return False, f"Réponse JSON mal formée ET aucun sophisme trouvé via regex: {analysis_result_str}"
+            else:
+                 # --- PARSING JSON (cas nominal) ---
+                if not isinstance(analysis_result_dict, dict):
+                     return False, f"Le résultat parsé n'est pas un dictionnaire. Type reçu: {type(analysis_result_dict)}"
+                
+                detected_sophisms_raw = analysis_result_dict.get("fallacies",
+                                                                 analysis_result_dict.get("detected_sophisms",
+                                                                 analysis_result_dict.get("sophismes", [])))
+            
             if not isinstance(detected_sophisms_raw, list):
                 return False, f"La liste de sophismes n'est pas au bon format. Reçu: {type(detected_sophisms_raw)}"
 
@@ -498,9 +556,13 @@ class ValidationEpitaComplete:
 
             detected_ids = []
             for item in detected_sophisms_raw:
-                name_raw = str(item.get('nom', '')).lower().strip().replace(' ', '-')
+                name_raw = str(item.get('nom', item.get('fallacy_type', ''))).lower().strip()
+                # Nettoyage amélioré pour enlever les caractères de formatage
+                cleaned_name = re.sub(r'[\*\-]', '', name_raw).strip()
+                # Remplacer les espaces par des tirets pour la normalisation
+                normalized_name_key = cleaned_name.replace(' ', '-')
                 # Normaliser en utilisant la table d'alias
-                normalized_name = alias_map.get(name_raw, name_raw)
+                normalized_name = alias_map.get(normalized_name_key, normalized_name_key)
                 detected_ids.append(normalized_name)
             
             detected_ids = sorted(detected_ids)
@@ -516,8 +578,33 @@ class ValidationEpitaComplete:
             return False, f"Erreur de parsing inattendue: {e}\nTrace: {tb_str}\nReçu: {analysis_result_obj}"
 
     async def validate_informal_analysis_scenarios(self) -> bool:
-        """Validation de la détection de sophismes avec 3 niveaux d'analyse."""
-        print(f"\n{Colors.BOLD}VALIDATION DES SCENARIOS D'ANALYSE INFORMELLE (NIVEAU: {self.level.value.upper()}){Colors.ENDC}")
+        """Validation unifiée de la détection de sophismes via l'agent paramétrable."""
+        print(f"\n{Colors.BOLD}VALIDATION DE L'ANALYSE INFORMELLE (AGENT: {self.agent_type.upper()}){Colors.ENDC}")
+
+        # La table d'alias est maintenant un membre de la classe pour être accessible dans le fallback regex
+        self.alias_map = {
+            "pente-glissante": "slippery-slope", "glissement-vers-l'anarchie": "slippery-slope",
+            "glissement-de-terrain": "slippery-slope", "pente glissante": "slippery-slope",
+            "fausse-dichotomie": "false-dilemma", "false-dichotomy": "false-dilemma",
+            "faux-dilemme": "false-dilemma", "faux dilemme": "false-dilemma",
+            "homme-de-paille": "straw-man", "sophisme-de-l'homme-de-paille": "straw-man",
+            "homme de paille": "straw-man",
+            "attaque-personnelle": "ad-hominem", "argument-ad-hominem": "ad-hominem",
+            "ad-hominem": "ad-hominem", "ad hominem": "ad-hominem",
+            "argumentum-ad-hominem": "ad-hominem",
+            "appel-à-l'hypocrisie": "appeal-to-hypocrisy", "appeal-to-hypocrisy": "appeal-to-hypocrisy",
+            "appel à l'hypocrisie": "appeal-to-hypocrisy",
+            "concept-volé": "stolen-concept", "stolen-concept": "stolen-concept",
+            "concept volé": "stolen-concept",
+            "argument-circulaire": "circular-reasoning", "petitio-principii": "circular-reasoning",
+            "circular-reasoning": "stolen-concept"
+        }
+        
+        await self.initialize_agent()
+        if not self.informal_agent:
+            self.log_test("Analyse Informelle", "Initialisation", "FAILED", "L'agent n'a pas pu être initialisé.", 0.0, 0.0)
+            return False
+
         scenarios = {
             "Attaque personnelle (Ad Hominem)": {"text": "Ne l'écoutez pas, c'est un idiot fini. Ses arguments ne peuvent pas être valables.", "expected_sophisms": ["ad-hominem"]},
             "Pente glissante (Slippery Slope)": {"text": "Si nous autorisons cette petite exception à la règle, bientôt plus personne ne respectera la loi et ce sera l'anarchie totale.", "expected_sophisms": ["slippery-slope"]},
@@ -526,34 +613,26 @@ class ValidationEpitaComplete:
             "Appel à l'hypocrisie (Appeal to Hypocrisy)": {"text": "My doctor told me I should lose weight, but I don't believe him because he's overweight himself.", "expected_sophisms": ["appeal-to-hypocrisy"]},
             "Concept volé (Stolen Concept)": {"text": "You claim that logic is the only way to truth, but you can't prove that statement using logic alone, so your claim is invalid.", "expected_sophisms": ["stolen-concept"]}
         }
-        if not self.manager:
-            from argumentation_analysis.orchestration.service_manager import OrchestrationServiceManager
-            self.manager = OrchestrationServiceManager(taxonomy_file_path=self.taxonomy_file_path)
-            await self.manager.initialize()
-
+        
         overall_success = True
         for test_name, config in scenarios.items():
             start_time = time.time()
             details, success = "", False
             try:
-                if self.level == AnalysisLevel.LEXICAL:
-                    detector = TaxonomySophismDetector()
-                    detected = detector.detect_sophisms_from_taxonomy(config["text"])
-                    detected_ids = [s['id'] for s in detected if s.get('id')]
-                    success = all(exp.lower() in detected_ids for exp in config["expected_sophisms"])
-                    details = f"Détecté (Lexical): {detected_ids}"
-
-                elif self.level == AnalysisLevel.SEMANTIC:
-                    result = await self.manager.analyze_text(config["text"], analysis_type="informal")
-                    success, details = await self._parse_and_compare_sophisms(result, config["expected_sophisms"])
-
-                elif self.level == AnalysisLevel.HYBRID:
-                    lexical_ids = [s['id'] for s in TaxonomySophismDetector().detect_sophisms_from_taxonomy(config["text"]) if s.get('id')]
-                    hint = f"Une pré-analyse suggère: {', '.join(lexical_ids) if lexical_ids else 'aucun'}. Validez et cherchez d'autres sophismes."
-                    result = await self.manager.analyze_text(config["text"], analysis_type="informal", options={"context": hint})
-                    success, details = await self._parse_and_compare_sophisms(result, config["expected_sophisms"])
-                    details = f"[HYBRID] {details}"
-
+                # Nouvelle méthode d'invocation de l'agent
+                from semantic_kernel.contents.chat_history import ChatHistory
+                chat_history = ChatHistory()
+                chat_history.add_user_message(config["text"])
+                
+                # invoke retourne un générateur asynchrone, nous le consommons dans une liste
+                invocation_results = [result async for result in self.informal_agent.invoke(chat_history)]
+                
+                # La réponse de l'agent est le dernier (et unique) message dans notre cas
+                agent_response = invocation_results[-1] if invocation_results else None
+                
+                # Le contenu de la réponse est ce que nous devons parser
+                success, details = await self._parse_and_compare_sophisms(agent_response, config["expected_sophisms"])
+                
                 exec_time = time.time() - start_time
                 status = "SUCCESS" if success else "FAILED"
                 self.log_test("Analyse Informelle", test_name, status, details, exec_time, 0.9 if success else 0.1)
@@ -716,6 +795,10 @@ Exemples d'utilisation:
                         help='Activer automatiquement l\'environnement projet')
     parser.add_argument('--verbose', action='store_true',
                         help='Affichage verbeux des détails')
+
+    parser.add_argument('--agent-type', type=str, default='full',
+                        choices=['simple', 'explore_only', 'workflow_only', 'full'],
+                        help="Type d'agent à utiliser pour l'analyse informelle (défaut: full)")
     
     parser.add_argument('--taxonomy', type=str,
                         default='argumentation_analysis/data/argumentum_fallacies_taxonomy.csv',
@@ -764,10 +847,13 @@ Exemples d'utilisation:
         complexity_enum = ComplexityLevel(args.complexity)
         level_enum = AnalysisLevel(args.level)
         
+        agent_type_enum = args.agent_type
+
         validator = ValidationEpitaComplete(
             mode=mode_enum,
             complexity=complexity_enum,
             level=level_enum,
+            agent_type=agent_type_enum,
             enable_synthetic=args.synthetic,
             taxonomy_file_path=args.taxonomy
         )
