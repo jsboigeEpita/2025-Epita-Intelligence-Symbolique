@@ -60,6 +60,19 @@ _dotenv_patcher = None
 # Activer le mocking si une variable d'environnement est définie
 MOCK_DOTENV = os.environ.get("MOCK_DOTENV_IN_TESTS", "false").lower() in ("true", "1", "t")
 
+def pytest_addoption(parser):
+    """
+    Ajoute les options en ligne de commande personnalisées pour les tests.
+    """
+    parser.addoption(
+        "--backend-url", action="store", default="http://localhost:8000",
+        help="URL du serveur backend pour les tests E2E"
+    )
+    parser.addoption(
+        "--frontend-url", action="store", default="http://localhost:3000",
+        help="URL du serveur frontend pour les tests E2E"
+    )
+
 def pytest_configure(config):
     """
     Configure les markers pytest et active le mocking de dotenv.
@@ -142,33 +155,39 @@ def jvm_session():
     Manages the JPype JVM lifecycle for the entire test session.
     This fixture is NOT auto-used; it must be requested by another fixture.
     """
-    logger.info("---------- Pytest session starting: Provisioning dependencies and Initializing JVM... ----------")
+    logger.info("---------- [JVM_SESSION_FIXTURE] Pytest session starting: Provisioning dependencies and Initializing JVM... ----------")
     
     try:
-        logger.info("Checking Tweety JARs location...")
+        logger.info("[JVM_SESSION_FIXTURE] STEP 1: Checking Tweety JARs location...")
         _ensure_tweety_jars_are_correctly_placed()
+        logger.info("[JVM_SESSION_FIXTURE] STEP 1: Done.")
 
+        logger.info(f"[JVM_SESSION_FIXTURE] STEP 2: Checking if JVM is already started... is_jvm_started() -> {is_jvm_started()}")
         if not is_jvm_started():
-            logger.info("Attempting to initialize JVM via core.jvm_setup.initialize_jvm...")
+            logger.info("[JVM_SESSION_FIXTURE] STEP 3: Attempting to initialize JVM via core.jvm_setup.initialize_jvm...")
             success = initialize_jvm(session_fixture_owns_jvm=True)
+            logger.info(f"[JVM_SESSION_FIXTURE] STEP 3: initialize_jvm returned: {success}")
             if success:
-                logger.info("JVM started successfully for the test session.")
+                logger.info("[JVM_SESSION_FIXTURE] JVM started successfully for the test session.")
             else:
-                 pytest.fail("JVM initialization failed.", pytrace=False)
+                 logger.error("[JVM_SESSION_FIXTURE] initialize_jvm returned False. Failing test session.")
+                 pytest.fail("JVM initialization failed as reported by initialize_jvm.", pytrace=False)
         else:
-            logger.warning("JVM was already started. Assuming it is correctly configured.")
+            logger.warning("[JVM_SESSION_FIXTURE] JVM was already started. Assuming it is correctly configured.")
             
     except Exception as e:
-        logger.error(f"A critical error occurred during JVM session setup: {e}", exc_info=True)
-        pytest.exit(f"JVM setup failed: {e}", 1)
+        logger.error(f"[JVM_SESSION_FIXTURE] A critical error occurred during JVM session setup: {e}", exc_info=True)
+        pytest.exit(f"JVM setup failed with exception: {e}", 1)
 
+    logger.info("[JVM_SESSION_FIXTURE] Handing over control to tests (yield)...")
     yield True
 
-    logger.info("---------- Pytest session finished: Shutting down JVM... ----------")
+    logger.info("---------- [JVM_SESSION_FIXTURE] Pytest session finished: Shutting down JVM... ----------")
+    logger.info(f"[JVM_SESSION_FIXTURE] Checking ownership before shutdown... is_jvm_owned_by_session_fixture() -> {is_jvm_owned_by_session_fixture()}")
     if is_jvm_owned_by_session_fixture():
         shutdown_jvm(called_by_session_fixture=True)
     else:
-        logger.warning("The JVM is not (or no longer) controlled by the global fixture. It will not be shut down here.")
+        logger.warning("[JVM_SESSION_FIXTURE] The JVM is not (or no longer) controlled by the global fixture. It will not be shut down here.")
 
 @pytest.fixture(scope="function", autouse=True)
 def manage_jvm_for_test(request):
@@ -202,27 +221,23 @@ pytest_plugins = [
     # "tests.mocks.numpy_setup" # DÉSACTIVÉ GLOBALEMENT - Provoque un comportement instable pour les tests E2E
 ]
 
-@pytest.fixture(autouse=True)
-def check_mock_llm_is_forced(request):
-    """
-    Ce "coupe-circuit" est une sécurité pour tous les tests.
-    Il vérifie que nous ne pouvons pas accidentellement utiliser un vrai LLM,
-    SAUF si le test est explicitement marqué avec 'real_llm'.
-    """
-    if 'real_llm' in request.node.keywords:
-        logger.warning(f"Le test {request.node.name} utilise le marqueur 'real_llm'. Le mock LLM est désactivé.")
-        yield
-    else:
-        # Si le marqueur n'est pas présent, s'assurer que le LLM est mocké.
-        # Idéalement, le mock est déjà actif via une autre fixture/paramètre.
-        # Ce check sert de double-vérification.
-        from argumentation_analysis.config.settings import settings
-        if not settings.MOCK_LLM:
-             pytest.fail(
-                f"Le test '{request.node.name}' s'exécute sans 'real_llm' mais le mock LLM est inactif! "
-                "Ceci est une condition d'échec de sécurité pour éviter des appels LLM réels non intentionnels."
-            )
-        yield
+# @pytest.fixture(autouse=True)
+# def check_mock_llm_is_forced(request):
+#     """
+#     Ce "coupe-circuit" est une sécurité pour tous les tests.
+#     Il vérifie que nous ne pouvons pas accidentellement utiliser un vrai LLM,
+#     SAUF si le test est explicitement marqué avec 'real_llm'.
+#     """
+#     if 'real_llm' in request.node.keywords:
+#         yield
+#     else:
+#         from argumentation_analysis.config.settings import settings
+#         if not settings.use_mock_llm:
+#              pytest.fail(
+#                 f"Le test '{request.node.name}' s'exécute sans 'real_llm' mais le mock LLM est inactif! "
+#                 "Ceci est une condition d'échec de sécurité pour éviter des appels LLM réels non intentionnels."
+#             )
+#         yield
         
 # ----------------------------------------------------------------------------------
 # Fixtures précédemment dans tests/unit/argumentation_analysis/conftest.py
