@@ -12,19 +12,8 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from jpype import JClass
 
-# Classes pour la structure du graphe
-DungTheory = JClass('org.tweetyproject.arg.dung.syntax.DungTheory')
-Argument = JClass('org.tweetyproject.arg.dung.syntax.Argument')
-Attack = JClass('org.tweetyproject.arg.dung.syntax.Attack')
-
-# Classes pour le raisonnement (calcul des extensions)
-SimpleGroundedReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleGroundedReasoner')
-SimplePreferredReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimplePreferredReasoner')
-SimpleStableReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleStableReasoner')
-SimpleCompleteReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleCompleteReasoner')
-SimpleAdmissibleReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleAdmissibleReasoner')
-SimpleIdealReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleIdealReasoner')
-SimpleSemiStableReasoner = JClass('org.tweetyproject.arg.dung.reasoner.SimpleSemiStableReasoner')
+# Les classes Java sont maintenant initialisées dans le constructeur de DungAgent
+# pour garantir que la JVM est démarrée au préalable.
 
 
 # --- Définition de l'Agent d'Argumentation ---

@@ -25,9 +25,11 @@ try:
     current_script_path = Path(__file__).resolve()
     # argumentation_analysis/core/bootstrap.py -> argumentation_analysis/core -> argumentation_analysis -> project_root
     project_root = current_script_path.parent.parent.parent
-    if str(project_root) not in sys.path:
-        sys.path.insert(0, str(project_root))
-    logger.info(f"Project root (from bootstrap.py) added to sys.path: {project_root}")
+    # La ligne suivante est la source de conflits avec pytest.
+    # Le chemin doit être ajouté par l'exécutant (comme pytest via pyproject.toml ou le script de lancement)
+    # if str(project_root) not in sys.path:
+    #     sys.path.insert(0, str(project_root))
+    # logger.info(f"Project root (from bootstrap.py) added to sys.path: {project_root}")
 except NameError: # __file__ n'est pas défini si exécuté interactivement ou via exec() sans contexte de fichier
     logger.warning("__file__ not defined, sys.path might not be configured correctly by bootstrap.py itself.")
     pass

@@ -34,13 +34,17 @@ logging.basicConfig(
 logger = logging.getLogger("ExtractAgent.Definitions")
 
 # Création d'un handler pour écrire les logs dans un fichier (de la version stashed)
-log_dir = PROJECT_ROOT / "_temp" / "logs"
-log_dir.mkdir(parents=True, exist_ok=True)
-log_file_path = log_dir / "extract_agent.log"
-
-file_handler = logging.FileHandler(log_file_path, mode='a', encoding='utf-8')
-file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S'))
-logger.addHandler(file_handler)
+try:
+    log_dir = PROJECT_ROOT / "_temp" / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file_path = log_dir / "extract_agent.log"
+    
+    file_handler = logging.FileHandler(log_file_path, mode='a', encoding='utf-8')
+    file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] [%(name)s] %(message)s', datefmt='%H:%M:%S'))
+    logger.addHandler(file_handler)
+except Exception as e:
+    logger.warning(f"Impossible d'initialiser le logging de fichier pour l'agent d'extraction : {e}")
+    logger.warning("Cela peut se produire pendant les tests ou si les permissions sont incorrectes.")
 
 
 class ExtractResult:

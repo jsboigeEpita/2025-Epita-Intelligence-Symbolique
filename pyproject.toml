@@ -16,7 +16,8 @@ norecursedirs = [
 ]
 pythonpath = [
     ".",
-    "argumentation_analysis"
+    "argumentation_analysis",
+    "project_core"
 ]
 testpaths = [
     "tests"

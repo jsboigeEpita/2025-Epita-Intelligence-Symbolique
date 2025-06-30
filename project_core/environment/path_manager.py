@@ -86,8 +86,6 @@ class PathManager:
         )
         project_path_str = str(self.project_root.resolve())
         # Assure la compatibilité minimale pour la session en cours
-        if project_path_str not in sys.path:
-            sys.path.insert(0, project_path_str)
 
 
     def normalize_and_validate_java_home(self, auto_install_if_missing: bool = False) -> Optional[str]:

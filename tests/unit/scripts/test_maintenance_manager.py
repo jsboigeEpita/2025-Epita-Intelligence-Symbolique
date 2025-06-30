@@ -8,17 +8,14 @@ from unittest.mock import patch, MagicMock
 import sys
 import os
 
-# Adjust the path to import maintenance_manager
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../scripts')))
-
-from maintenance_manager import main
+from scripts.maintenance_manager import main
 
 class TestMaintenanceManager(unittest.TestCase):
     """
     Test suite for the command-line interface of the maintenance manager.
     """
 
-    @patch('maintenance_manager.EnvironmentManager')
+    @patch('scripts.maintenance_manager.EnvironmentManager')
     def test_env_validate_command(self, mock_environment_manager):
         """
         Tests that the 'env --validate' command correctly instantiates

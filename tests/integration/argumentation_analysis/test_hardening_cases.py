@@ -12,8 +12,7 @@ import os
 import importlib
 from unittest.mock import patch
 
-# Import de la factory de l'application Flask et de son initialisation
-from argumentation_analysis.services.web_api.app import create_app, initialize_heavy_dependencies
+# Importation différée pour contrôle du cycle de vie
 from argumentation_analysis.core.bootstrap import initialize_project_environment
 
 # Configuration du logging
@@ -55,6 +54,8 @@ def app():
         importlib.reload(llm_service)
         
         # Maintenant que la config est rechargée, on peut créer l'app
+        # L'import est localisé ici pour s'assurer que la JVM est gérée par la fixture de session
+        from argumentation_analysis.services.web_api.app import create_app
         test_app = create_app()
         test_app.config.update({"TESTING": True})
         

@@ -3,6 +3,7 @@ import os
 import shutil
 import unittest
 from pathlib import Path
+import sys
 
 from project_core.core_from_scripts.cleanup_manager import CleanupManager
 

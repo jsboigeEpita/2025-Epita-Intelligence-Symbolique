@@ -68,7 +68,7 @@ class TestOperationalAgentsIntegration:
     """Tests d'intégration pour les agents opérationnels."""
 
     @pytest_asyncio.fixture(scope="function")
-    async def operational_components(self, jvm_session):
+    async def operational_components(self):
         """Initialise les objets nécessaires et patche les adapters au niveau de la fixture."""
         
         mocks = {
@@ -86,6 +86,11 @@ class TestOperationalAgentsIntegration:
         interface = TacticalOperationalInterface(tactical_state, operational_state, middleware)
         
         mock_kernel = MagicMock(spec=sk.Kernel)
+        
+        # Configurer le mock du service LLM pour qu'il satisfasse la validation Pydantic
+        mock_llm_service = MagicMock(spec=ChatCompletionClientBase)
+        mock_kernel.get_service.return_value = mock_llm_service
+
         mock_llm_service_id = "mock_service"
         
         # Créer un mock pour le service LLM qui passe la validation Pydantic

@@ -56,6 +56,17 @@ $fullCommand = if ($Arguments) {
     $Command
 }
 
+# Ajout pour les tests : configuration de l'environnement Java
+if ($Command -eq "pytest") {
+    Write-Host "[INFO] Commande 'pytest' détectée. Configuration de l'environnement de test Java..." -ForegroundColor Cyan
+    # Assurez-vous que le script setup_test_env.ps1 existe et est au bon endroit
+    if (Test-Path -Path ".\setup_test_env.ps1") {
+        . .\setup_test_env.ps1
+    } else {
+        Write-Host "[WARNING] Le script 'setup_test_env.ps1' est introuvable." -ForegroundColor Yellow
+    }
+}
+
 # Construit la commande finale en combinant conda run et l'appel au module python
 $moduleName = "project_core.core_from_scripts.environment_manager"
 $commandToExecute = $fullCommand

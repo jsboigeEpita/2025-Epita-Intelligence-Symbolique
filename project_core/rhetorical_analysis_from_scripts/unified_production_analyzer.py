@@ -49,9 +49,6 @@ from enum import Enum
 import traceback
 
 # Ajout du répertoire racine du projet au chemin
-project_root = Path(__file__).resolve().parent.parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
 
 # --- GESTION DE LA DÉPRÉCIATION ---
 # Ce script est maintenant considéré comme obsolète et son importation ne doit pas
@@ -372,10 +369,13 @@ class UnifiedLLMService:
         """Analyse un texte avec retry automatique"""
         
         async def _perform_analysis():
-            if self.config.mock_level == MockLevel.NONE:
-                return await self._real_analysis(text, analysis_type)
-            else:
+            # Logique de décision améliorée :
+            # 1. Si le service est explicitement 'mock', on utilise TOUJOURS l'analyse mock.
+            # 2. Sinon, on se base sur le mock_level pour décider entre réel et mock.
+            if self.config.llm_service == "mock" or self.config.mock_level != MockLevel.NONE:
                 return await self._mock_analysis(text, analysis_type)
+            else:
+                return await self._real_analysis(text, analysis_type)
         
         return await self.retry_mechanism.retry_with_fallback(_perform_analysis)
     

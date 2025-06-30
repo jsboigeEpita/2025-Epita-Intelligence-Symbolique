@@ -15,7 +15,7 @@ import unittest
 import os
 import sys
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 # Assurer que le module à tester est dans le path
 current_dir = Path(__file__).resolve().parent.parent.parent.parent
@@ -27,70 +27,58 @@ from argumentation_analysis.core.environment import ensure_env
 class TestEnsureEnvAsGuard(unittest.TestCase):
     """
     Teste la fonction `ensure_env` en tant que garde-fou de l'environnement.
+    La nouvelle version se base sur la variable d'environnement `CONDA_DEFAULT_ENV`.
     """
 
-    def setUp(self):
-        """Sauvegarde l'environnement."""
-        self.original_env = os.environ.copy()
-        # On s'assure que la variable de test pytest est définie
-        # pour empêcher l'auto-exécution de `ensure_env` à l'import
-        os.environ["IS_PYTEST_RUNNING"] = "true"
-
-    def tearDown(self):
-        """Restaure l'environnement."""
-        os.environ.clear()
-        os.environ.update(self.original_env)
-
-    @patch('sys.prefix', 'C:\\Users\\Test\\miniconda3\\envs\\projet-is')
-    @patch('sys.base_prefix', 'C:\\Users\\Test\\miniconda3')
+    @patch.dict('os.environ', {'CONDA_DEFAULT_ENV': 'projet-is', 'IS_PYTEST_RUNNING': 'true'}, clear=True)
     def test_ensure_env_correct_environment(self):
         """
-        Vérifie que ensure_env() réussit si le `sys.prefix` correspond à
-        l'environnement attendu ('projet-is').
+        Vérifie que ensure_env() réussit si 'CONDA_DEFAULT_ENV' correspond à
+        l'environnement attendu.
         """
         result = ensure_env(env_name="projet-is", silent=True)
         self.assertTrue(result)
 
-    @patch('sys.prefix', 'C:\\Users\\Test\\miniconda3\\envs\\wrong-env')
-    @patch('sys.base_prefix', 'C:\\Users\\Test\\miniconda3')
+    @patch.dict('os.environ', {'CONDA_DEFAULT_ENV': 'wrong-env', 'IS_PYTEST_RUNNING': 'true'}, clear=True)
     def test_ensure_env_incorrect_environment_raises_error(self):
         """
-        Vérifie que ensure_env() lève une RuntimeError si `sys.prefix`
-        ne correspond pas à l'environnement attendu.
+        Vérifie que ensure_env() lève une RuntimeError si 'CONDA_DEFAULT_ENV'
+        est incorrect.
         """
         with self.assertRaises(RuntimeError) as cm:
-            ensure_env(env_name="projet-is", silent=True)
+            ensure_env(env_name="projet-is", silent=False)  # Mettre silent=False pour couvrir le message d'erreur
         
         exception_message = str(cm.exception)
         self.assertIn("ERREUR CRITIQUE", exception_message)
-        self.assertIn("L'INTERPRÉTEUR PYTHON EST INCORRECT", exception_message)
-        self.assertIn("Environnement attendu : 'projet-is'", exception_message)
-        self.assertIn("Environnement détecté : 'wrong-env'", exception_message)
+        self.assertIn("MAUVAIS ENVIRONNEMENT CONDA ACTIF", exception_message)
+        self.assertIn("Environnement attendu   : 'projet-is'", exception_message)
+        self.assertIn("Environnement détecté (CONDA_DEFAULT_ENV) : 'wrong-env'", exception_message)
 
-    @patch('sys.prefix', 'C:\\Users\\Test\\miniconda3')
-    @patch('sys.base_prefix', 'C:\\Users\\Test\\miniconda3')
+    @patch.dict('os.environ', {'CONDA_DEFAULT_ENV': 'base', 'IS_PYTEST_RUNNING': 'true'}, clear=True)
     def test_ensure_env_base_environment_raises_error(self):
         """
-        Vérifie que ensure_env() lève une RuntimeError si l'environnement
-        détecté est 'base'.
+        Vérifie que ensure_env() lève une RuntimeError si 'CONDA_DEFAULT_ENV'
+        est défini sur 'base'.
         """
         with self.assertRaises(RuntimeError) as cm:
-            ensure_env(env_name="projet-is", silent=True)
+            ensure_env(env_name="projet-is", silent=False)
             
         exception_message = str(cm.exception)
         self.assertIn("ERREUR CRITIQUE", exception_message)
-        self.assertIn("L'INTERPRÉTEUR PYTHON EST INCORRECT", exception_message)
-        self.assertIn("Environnement attendu : 'projet-is'", exception_message)
-        self.assertIn("Environnement détecté : 'miniconda3'", exception_message)
+        self.assertIn("MAUVAIS ENVIRONNEMENT CONDA ACTIF", exception_message)
+        self.assertIn("Environnement attendu   : 'projet-is'", exception_message)
+        self.assertIn("Environnement détecté (CONDA_DEFAULT_ENV) : 'base'", exception_message)
 
-    @patch('sys.prefix', 'C:\\Users\\Test\\miniconda3\\envs\\projet-is')
-    @patch('sys.base_prefix', 'C:\\Users\\Test\\miniconda3')
-    def test_ensure_env_silent_mode(self, ):
+    @patch.dict('os.environ', {'CONDA_DEFAULT_ENV': 'projet-is', 'IS_PYTEST_RUNNING': 'true'}, clear=True)
+    def test_ensure_env_silent_mode(self):
         """Vérifie le mode silencieux et non silencieux."""
         # En mode non silencieux, on s'attend à un print
         with patch('builtins.print') as mock_print:
             ensure_env(env_name="projet-is", silent=False)
-            mock_print.assert_called_with("[auto_env] OK: L'environnement 'projet-is' est correctement activé.")
+            # Vérifier que l'un des appels contient le bon message.
+            # La sortie exacte peut être wrapped, donc on vérifie la sous-chaîne.
+            found_call = any("[auto_env] OK: L'environnement 'projet-is' est correctement activé." in call.args[0] for call in mock_print.call_args_list)
+            self.assertTrue(found_call, "Le message de succès n'a pas été affiché en mode non-silencieux.")
 
         # En mode silencieux, on ne s'attend pas à un print
         with patch('builtins.print') as mock_print:

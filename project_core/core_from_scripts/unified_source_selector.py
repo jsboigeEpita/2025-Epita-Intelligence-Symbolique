@@ -18,8 +18,6 @@ from typing import Dict, List, Any, Optional, Tuple
 
 # Ajout du répertoire racine du projet au chemin
 project_root = Path(__file__).resolve().parent.parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
 
 # Import du composant core refactorisé
 from argumentation_analysis.core.source_management import (

@@ -6,10 +6,6 @@ from unittest.mock import patch, MagicMock
 import asyncio
 from pathlib import Path
 
-# Ajout du répertoire racine au `sys.path` pour permettre l'import des modules du projet
-project_root = Path(__file__).resolve().parents[3]
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
 
 # Import des classes et fonctions à tester depuis le nouveau script
 from project_core.rhetorical_analysis_from_scripts.unified_production_analyzer import (
