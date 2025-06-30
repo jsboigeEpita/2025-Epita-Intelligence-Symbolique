@@ -5,7 +5,7 @@
 $ErrorActionPreference = 'Stop'
 
 # Chemin vers le script d'activation de l'environnement
-$ActivationScript = Join-Path $PSScriptRoot "..\activate_project_env.ps1"
+$ActivationScript = Join-Path $PSScriptRoot "..\..\activate_project_env.ps1"
 
 # Chemin vers le script d'orchestration web unifié
 # Le script se trouve dans scripts/ donc on remonte d'un niveau puis on descend dans apps/webapp

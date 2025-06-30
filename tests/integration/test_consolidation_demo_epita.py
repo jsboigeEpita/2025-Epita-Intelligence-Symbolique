@@ -13,10 +13,10 @@ Date : 10/06/2025 01:30
 
 import os
 import sys
-import subprocess
 import time
 import json
 from pathlib import Path
+from project_core.utils.shell import run_in_activated_env, ShellCommandError
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple
 
@@ -101,18 +101,16 @@ class EpitaDemoConsolidator:
             
             try:
                 start_time = time.time()
-                cmd = f'powershell -c "cd {self.project_root}; python {self.demo_principal} {mode_args}"'
-                
-                result = subprocess.run(
-                    cmd,
-                    shell=True,
-                    capture_output=True,
-                    text=True,
-                    encoding='utf-8',
-                    errors='replace',
+                # La nouvelle commande est une liste, sans passer par le shell
+                command = ["-m", self.demo_principal.replace('.py', '').replace('/', '.'), mode_args]
+
+                result = run_in_activated_env(
+                    command,
+                    cwd=self.project_root,
+                    check_errors=False, # On gère les erreurs manuellement ici
                     timeout=timeout
                 )
-                
+
                 execution_time = time.time() - start_time
                 success = result.returncode == 0
                 
@@ -126,9 +124,7 @@ class EpitaDemoConsolidator:
                 
                 if success:
                     print(f"[OK] SUCCÈS - Durée: {execution_time:.2f}s")
-                    # Extraire quelques métriques de la sortie
                     if result.stdout and "Tests réussis" in result.stdout:
-                        # Extraire le nombre de tests réussis
                         lines = result.stdout.split('\n')
                         for line in lines:
                             if "Tests réussis" in line and "/" in line:
@@ -138,19 +134,18 @@ class EpitaDemoConsolidator:
                     print(f"[ERREUR] ÉCHEC - Code: {result.returncode}")
                     resultats["global_success"] = False
                     
-            except subprocess.TimeoutExpired:
-                print(f"[TIMEOUT] TIMEOUT après {timeout}s")
-                resultats["modes_testes"][mode_args] = {
-                    "success": False,
-                    "error": "Timeout",
-                    "timeout": timeout
-                }
+            except ShellCommandError as e:
+                print(f"[TIMEOUT] TIMEOUT ou Erreur Shell: {e}")
+                error_info = { "success": False, "error": str(e) }
+                if "Timeout" in str(e):
+                    error_info["timeout"] = timeout
+                resultats["modes_testes"][mode_args] = error_info
                 resultats["global_success"] = False
                 
             except Exception as e:
-                print(f"[ERREUR] ERREUR: {e}")
+                print(f"[ERREUR] ERREUR INATTENDUE: {e}")
                 resultats["modes_testes"][mode_args] = {
-                    "success": False, 
+                    "success": False,
                     "error": str(e)
                 }
                 resultats["global_success"] = False

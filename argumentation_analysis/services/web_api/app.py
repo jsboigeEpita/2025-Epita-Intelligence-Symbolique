@@ -185,7 +185,7 @@ if "PYTEST_CURRENT_TEST" not in os.environ:
     initialize_heavy_dependencies()
 
 # Crée l'application Flask en utilisant la factory
-# flask_app = create_app() # ATTENTION: Déplacé/Supprimé pour éviter l'init au chargement du module
+flask_app = create_app()
 # Applique le wrapper ASGI pour la compatibilité avec Uvicorn
 # C'est cette variable 'app' que `launch_webapp_background.py` attend.
-app = None # Doit être défini, mais initialisé plus tard par le script de lancement.
+app = WsgiToAsgi(flask_app)
