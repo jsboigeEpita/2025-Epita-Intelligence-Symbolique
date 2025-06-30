@@ -179,8 +179,11 @@ if __name__ == '__main__':
     flask_app_dev.run(host='0.0.0.0', port=port, debug=debug)
 
 # --- Point d'entrée pour Uvicorn/Gunicorn ---
-# Initialise les dépendances lourdes une seule fois au démarrage
-# initialize_heavy_dependencies() # ATTENTION: Déplacé/Supprimé pour éviter l'init au chargement du module
+# Initialise les dépendances lourdes une seule fois au démarrage,
+# sauf si on est en train de lancer les tests, car pytest gérera la JVM.
+if "PYTEST_CURRENT_TEST" not in os.environ:
+    initialize_heavy_dependencies()
+
 # Crée l'application Flask en utilisant la factory
 # flask_app = create_app() # ATTENTION: Déplacé/Supprimé pour éviter l'init au chargement du module
 # Applique le wrapper ASGI pour la compatibilité avec Uvicorn
