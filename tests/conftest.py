@@ -38,15 +38,12 @@ MOCK_DOTENV = os.environ.get("MOCK_DOTENV_IN_TESTS", "true").lower() in ("true",
 
 
 def pytest_addoption(parser):
-    """Ajoute des options de ligne de commande personnalisées à pytest."""
-    parser.addoption(
-        "--allow-dotenv", action="store_true", default=False, help="Désactive le mock de dotenv et autorise le chargement du vrai fichier .env."
-    )
-
-def pytest_addoption(parser):
     """
     Ajoute les options en ligne de commande personnalisées pour les tests.
     """
+    parser.addoption(
+        "--allow-dotenv", action="store_true", default=False, help="Désactive le mock de dotenv et autorise le chargement du vrai fichier .env."
+    )
     parser.addoption(
         "--backend-url", action="store", default="http://localhost:8000",
         help="URL du serveur backend pour les tests E2E"
