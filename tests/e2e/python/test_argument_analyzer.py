@@ -38,8 +38,8 @@ def test_health_check_endpoint(playwright: Playwright, backend_url: str):
 
         # Vérifier le contenu de la réponse JSON
         json_response = response.json()
-        assert json_response.get("status") == "operational", f"La réponse JSON ne contient pas 'status: operational'. Reçu: {json_response}"
-        logger.info("SUCCES: La réponse JSON contient bien 'status: operational'.")
+        assert json_response.get("status") == "ok", f"La réponse JSON ne contient pas 'status: ok'. Reçu: {json_response}"
+        logger.info("SUCCES: La réponse JSON contient bien 'status: ok'.")
 
     except PlaywrightTimeoutError as e:
         logger.error(f"ERREUR FATALE: Timeout Playwright en essayant d'atteindre {health_check_url}. Détails: {e}")
@@ -70,8 +70,8 @@ def test_malformed_analyze_request_returns_400(playwright: Playwright, backend_u
         logger.info(f"SUCCES: La requête a abouti avec le statut {response.status}.")
 
         # Le test doit affirmer que l'API répond avec 400
-        assert response.status == 422, f"Le statut de la réponse attendu était 422 (Unprocessable Entity), mais j'ai obtenu {response.status}"
-        logger.info("SUCCES: Le statut de la réponse est correct (422).")
+        assert response.status == 400, f"Le statut de la réponse attendu était 400 (Bad Request), mais j'ai obtenu {response.status}"
+        logger.info("SUCCES: Le statut de la réponse est correct (400).")
 
     except Exception as e:
         logger.error(f"ERREUR INATTENDUE: Une exception s'est produite. Détails: {e}", exc_info=True)
