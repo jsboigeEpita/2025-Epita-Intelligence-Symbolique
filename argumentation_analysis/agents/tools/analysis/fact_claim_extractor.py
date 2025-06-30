@@ -162,7 +162,7 @@ class FactClaimExtractor:
             ],
             
             ClaimType.TEMPORAL: [
-                r'\b(?:hier|aujourd'hui|demain|maintenant)',
+                r"\b(?:hier|aujourd'hui|demain|maintenant)",
                 r'\b(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)',
                 r'\ben\s+(?:janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)',
                 r'\bce\s+(?:matin|soir|week-end|mois|année)',
@@ -184,8 +184,8 @@ class FactClaimExtractor:
                 r'«[^»]{20,}»',
                 r'\ba\s+(?:dit|déclaré|affirmé|soutenu)',
                 r'\bselon\s+[A-Z][a-zA-ZÀ-ÿ]+',
-                r'\bd'après\s+[A-Z][a-zA-ZÀ-ÿ]+',
-                r'\bcomme\s+l'a\s+dit'
+                r"d'après\s+[A-Z][a-zA-ZÀ-ÿ]+",
+                r"comme l'a dit",
             ]
         }
         
@@ -205,11 +205,11 @@ class FactClaimExtractor:
         # Indicateurs de sources
         self.source_indicators = [
             r'\bselon\s+(?:le|la|les)\s+\w+',
-            r'\bd'après\s+(?:le|la|les)\s+\w+',
+            r"d'après\s+(?:le|la|les)\s+\w+",
             r'\bcomme\s+(?:le|la)\s+(?:dit|rapporte|précise)',
             r'\b(?:une|la)\s+(?:étude|enquête|recherche)\s+(?:de|du)',
             r'\b(?:le|la)\s+(?:journal|magazine|site)\s+\w+',
-            r'\b(?:l'|le|la)\s+(?:organisation|institut|agence)\s+\w+'
+            r"\b(?:l'|le|la)\s+(?:organisation|institut|agence)\s+\w+"
         ]
     
     def extract_factual_claims(self, text: str, max_claims: int = 20) -> List[FactualClaim]:
@@ -394,7 +394,7 @@ class FactClaimExtractor:
         
         # Vérifier la présence de sources
         source_score = sum(1 for pattern in self.source_indicators 
-                          if re.search(pattern, sentence_lower))
+                           if re.search(pattern, sentence_lower))
         
         # Vérifier la présence de données quantifiables
         numerical_score = len(re.findall(r'\d+(?:\.\d+)?', claim))
@@ -492,7 +492,7 @@ class FactClaimExtractor:
             r'\b\d{4}\b',  # Années
             r'\b(?:janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\b',
             r'\b(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b',
-            r'\b(?:hier|aujourd'hui|demain)\b'
+            r"\b(?:hier|aujourd'hui|demain)\b"
         ]
         
         temporal_refs = []
