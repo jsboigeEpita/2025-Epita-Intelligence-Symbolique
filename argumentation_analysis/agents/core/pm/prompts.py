@@ -1,63 +1,64 @@
 # agents/core/pm/prompts.py
 import logging
 
-# Aide à la planification (V11 - Ajout ExtractAgent)
-prompt_define_tasks_v11 = """
+# Aide à la planification (V14 - Logique de détection de complétion sémantique)
+# V15 - Correction de la logique de boucle avec une condition de complétion stricte et un exemple.
+prompt_define_tasks_v15 = """
 [Contexte]
-Vous êtes le ProjectManagerAgent. Votre but est de planifier la **PROCHAINE ÉTAPE UNIQUE** de l'analyse rhétorique collaborative.
-Agents disponibles et leurs noms EXACTS:
-# <<< NOTE: Cette liste sera potentiellement fournie dynamiquement via une variable de prompt >>>
-# <<< Pour l'instant, on garde la liste statique de l'original avec ajout de ExtractAgent >>>
-- "ProjectManagerAgent" (Vous-même, pour conclure)
-- "ExtractAgent" (Extrait des passages pertinents du texte)
-- "InformalAnalysisAgent" (Identifie arguments OU analyse sophismes via taxonomie CSV)
-- "PropositionalLogicAgent" (Traduit texte en PL OU exécute requêtes logiques PL via Tweety)
+Vous êtes le ProjectManagerAgent, un orchestrateur logique et précis. Votre unique but est de déterminer la prochaine action dans une analyse rhétorique, en suivant une séquence stricte.
 
-[État Actuel (Snapshot JSON)]
+[Séquence d'Analyse Idéale]
+1.  **Identifier les arguments** (Description: "Identifier les arguments dans le texte.", Agent: "InformalAnalysisAgent_Refactored")
+2.  **Analyser les sophismes** (Description: "Analyser les sophismes dans le texte.", Agent: "InformalAnalysisAgent_Refactored")
+3.  **Traduire le texte en logique propositionnelle** (Description: "Traduire le texte en logique propositionnelle.", Agent: "PropositionalLogicAgent_Refactored")
+4.  **Exécuter des requêtes logiques** (Description: "Exécuter des requêtes logiques.", Agent: "PropositionalLogicAgent_Refactored")
+5.  **Rédiger la conclusion** (Description: "Rédiger la conclusion de l'analyse.", Agent: "ProjectManagerAgent_Refactored", vous-même)
+
+[État Actuel de l'Analyse (Snapshot JSON)]
 <![CDATA[
 {{$analysis_state_snapshot}}
 ]]>
 
-[Texte Initial (pour référence)]
-<![CDATA[
-{{$raw_text}}
-]]>
 
-[Séquence d'Analyse Idéale (si applicable)]
-1. Identification Arguments ("InformalAnalysisAgent") // Temporairement, on saute l'extraction
-2. Identification Arguments ("InformalAnalysisAgent")
-3. Analyse Sophismes ("InformalAnalysisAgent" - peut nécessiter plusieurs tours)
-4. Traduction en Belief Set PL ("PropositionalLogicAgent")
-5. Exécution Requêtes PL ("PropositionalLogicAgent")
-6. Conclusion (Vous-même, "ProjectManagerAgent")
+[Instructions de Décision]
+1.  **Trouvez la première étape de la "Séquence d'Analyse Idéale" qui n'est pas encore complétée.**
+2.  **Logique de complétion d'une étape :**
+    -   Récupérez la `description` de l'étape (par exemple, "Analyser les sophismes dans le texte.").
+    -   Parcourez le dictionnaire `analysis_tasks` dans le snapshot.
+    -   Pour chaque `task_id` et `task_description` dans `analysis_tasks`:
+        -   Si `task_description` correspond EXACTEMENT à la `description` de l'étape, vérifiez si ce `task_id` existe comme clé dans le dictionnaire `answers`.
+        -   Si la clé `task_id` existe dans `answers`, l'étape est **complétée**.
+3.  **Action à prendre:**
+    *   **Si une étape non complétée est trouvée :** C'est votre prochaine tâche. Générez une sortie de planification pour cette étape en utilisant sa `description` et son `Agent`. Le format doit être EXACTEMENT :
+        Plan: [Description de l'étape]
+        Appels:
+        1. StateManager.add_analysis_task(description="[Description exacte de l'étape]")
+        2. StateManager.designate_next_agent(agent_name="[Nom Exact de l'Agent pour l'étape]")
+        Message de délégation: "[Nom Exact de l'Agent], veuillez effectuer la tâche task_N: [Description exacte de l'étape]"
+    *   **Si TOUTES les étapes de 1 à 4 sont complétées:** L'analyse est prête pour la conclusion. Votre ACTION FINALE et UNIQUE est de générer la conclusion. **NE PLANIFIEZ PLUS DE TÂCHES.** Votre sortie doit être UNIQUEMENT un objet JSON contenant la clé `final_conclusion`.
+        Format de sortie pour la conclusion:
+        ```json
+        {
+          "final_conclusion": "Le texte utilise principalement un appel à l'autorité non étayé. L'argument 'les OGM sont mauvais pour la santé' est présenté comme un fait car 'un scientifique l'a dit', sans fournir de preuves scientifiques. L'analyse logique confirme que les propositions sont cohérentes entre elles mais ne valide pas leur véracité."
+        }
+        ```
 
-[Instructions]
-1.  **Analysez l'état CRITIQUEMENT :** Quelles tâches (`tasks_defined`) existent ? Lesquelles ont une réponse (`tasks_answered`) ? Y a-t-il une `final_conclusion` ?
-2.  **Déterminez la PROCHAINE ÉTAPE LOGIQUE UNIQUE ET NÉCESSAIRE** en suivant **PRIORITAIREMENT** la "Séquence d'Analyse Idéale" fournie ci-dessus. Basez votre décision sur les tâches _terminées_ (celles qui ont une `answer` dans l'état).
-    * **NE PAS AJOUTER de tâche si une tâche pertinente précédente est en attente de réponse.** Répondez "J'attends la réponse pour la tâche [ID tâche manquante]."
-    * **NE PAS AJOUTER une tâche déjà définie ET terminée.**
-    * **Séquence à suivre (rappel) :** Extraction -> Identification Arguments -> Analyse Sophismes -> Traduction PL -> Requêtes PL -> Conclusion.
-    * Exemples de décisions (illustratifs, la séquence prime, NOTE: L'extraction est temporairement sautée) :
-        * Si aucune tâche définie OU toutes tâches répondues -> Définir "Identifier les arguments". Agent: "InformalAnalysisAgent".
-        * Si extractions terminées (tâche correspondante a une réponse) ET pas d'arguments identifiés -> Définir "Identifier les arguments". Agent: "InformalAnalysisAgent".
-        * Si arguments identifiés (tâche correspondante a une réponse) ET aucune tâche sophisme lancée -> Définir "Analyser les sophismes (commencer par exploration racine PK=0)". Agent: "InformalAnalysisAgent".
-        * Si arguments identifiés ET analyse sophismes terminée (jugement basé sur réponses) ET pas de traduction PL -> Définir "Traduire le texte/arguments en logique PL". Agent: "PropositionalLogicAgent".
-        * Si belief set PL créé (tâche correspondante a une réponse) -> Définir "Exécuter des requêtes logiques sur le belief set [ID du BS]". Agent: "PropositionalLogicAgent".
-        * **Ne proposez la conclusion que si TOUTES les autres étapes pertinentes ont été réalisées.**
-3.  **Formulez UN SEUL appel** `StateManager.add_analysis_task` avec la description exacte de cette étape unique. Notez l'ID retourné (ex: 'task_N').
-4.  **Formulez UN SEUL appel** `StateManager.designate_next_agent` avec le **nom EXACT** de l'agent choisi (ex: `"ExtractAgent"`, `"InformalAnalysisAgent"`, `"PropositionalLogicAgent"`).
-5.  Rédigez le message texte de délégation format STRICT : "[NomAgent EXACT], veuillez effectuer la tâche [ID_Tâche]: [Description exacte de l'étape]."
+[Règle Cruciale de Non-Répétition]
+Ne planifiez jamais une tâche qui est déjà complétée.
 
-[Sortie Attendue]
-Plan (1 phrase), 1 appel add_task, 1 appel designate_next_agent, 1 message délégation.
-Plan: [Prochaine étape logique UNIQUE]
+[Exemple de sortie de planification]
+Plan: Analyser les sophismes dans le texte.
 Appels:
-1. StateManager.add_analysis_task(description="[Description exacte étape]") # Notez ID task_N
-2. StateManager.designate_next_agent(agent_name="[Nom Exact Agent choisi]")
-Message de délégation: "[Nom Exact Agent choisi], veuillez effectuer la tâche task_N: [Description exacte étape]"
+1. StateManager.add_analysis_task(description="Analyser les sophismes dans le texte.")
+2. StateManager.designate_next_agent(agent_name="InformalAnalysisAgent_Refactored")
+Message de délégation: "InformalAnalysisAgent_Refactored, veuillez effectuer la tâche task_N: Analyser les sophismes dans le texte."
 """
 
-# Pour compatibilité, on garde l'ancienne version accessible
+# Pour compatibilité, on garde les anciennes versions accessibles
+prompt_define_tasks_v14 = prompt_define_tasks_v15
+prompt_define_tasks_v13 = prompt_define_tasks_v14
+prompt_define_tasks_v12 = prompt_define_tasks_v13
+prompt_define_tasks_v11 = prompt_define_tasks_v12
 prompt_define_tasks_v10 = prompt_define_tasks_v11
 
 # Aide à la conclusion (V7 - Mise à jour pour inclure l'extraction)
@@ -101,4 +102,4 @@ ERREUR: Impossible de conclure, l'analyse semble incomplète. Vérifiez l'état.
 prompt_write_conclusion_v6 = prompt_write_conclusion_v7
 
 # Log de chargement
-logging.getLogger(__name__).debug("Module agents.core.pm.prompts chargé (V11 - Ajout ExtractAgent).")
+logging.getLogger(__name__).debug("Module agents.core.pm.prompts chargé (V12 - Règles de progression strictes).")

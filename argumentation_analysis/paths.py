@@ -32,7 +32,7 @@ ROOT_DIR = Path(__file__).resolve().parent # Devrait pointer vers d:/2025-Epita-
 # Pour les éléments à la racine du projet (comme _temp, portable_jdk), PROJECT_ROOT_DIR est nécessaire.
 CONFIG_DIR = ROOT_DIR / CONFIG_DIR_NAME
 DATA_DIR = ROOT_DIR / DATA_DIR_NAME # Données spécifiques au module
-LIBS_DIR = PROJECT_ROOT_DIR / LIBS_DIR_NAME # Les libs Tweety sont directement dans libs/
+LIBS_DIR = PROJECT_ROOT_DIR / LIBS_DIR_NAME / "tweety" # Les libs Tweety sont dans libs/tweety/
 NATIVE_LIBS_DIR = LIBS_DIR / "tweety" / "native" # Les DLLs natives sont dans libs/tweety/native
 RESULTS_DIR = PROJECT_ROOT_DIR / RESULTS_DIR_NAME # Les résultats sont souvent au niveau projet
 
@@ -69,6 +69,11 @@ def ensure_directories_exist():
             logger.debug(f"Répertoire assuré: {directory}")
         except Exception as e:
             logger.warning(f"Impossible de créer le répertoire {directory}: {e}")
+
+def get_project_root() -> Path:
+    """Retourne le chemin racine du projet."""
+    return PROJECT_ROOT_DIR
+
 
 # Créer les répertoires au moment de l'importation du module
 ensure_directories_exist()

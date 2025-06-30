@@ -11,6 +11,7 @@ import random
 import logging
 from datetime import datetime
 from typing import Dict, List, Any, Optional
+from collections import deque
 
 from .enquete_states import EnqueteCluedoState
 from ..agents.core.oracle.cluedo_dataset import CluedoDataset
@@ -157,18 +158,18 @@ class CluedoOracleState(EnqueteCluedoState):
         self.watson_agent_id = f"watson_agent_{self.workflow_id}"
         
         # Logs et tracking spécialisés Oracle
-        self.revelations_log: List[Dict[str, Any]] = []
-        self.oracle_queries_log: List[Dict[str, Any]] = []
+        self.revelations_log: deque[Dict[str, Any]] = deque(maxlen=100)
+        self.oracle_queries_log: deque[Dict[str, Any]] = deque(maxlen=100)
         
         # Tracking interactions 3-agents
-        self.interaction_pattern: List[str] = []  # ["Sherlock", "Watson", "Moriarty", ...]
+        self.interaction_pattern: deque[str] = deque(maxlen=100)  # ["Sherlock", "Watson", "Moriarty", ...]
         self.oracle_queries_count = 0
-        self.suggestions_validated_by_oracle: List[Dict[str, Any]] = []
+        self.suggestions_validated_by_oracle: deque[Dict[str, Any]] = deque(maxlen=100)
         
         # PHASE C: Mémoire contextuelle pour continuité narrative
-        self.conversation_history: List[Dict[str, Any]] = []  # Messages complets avec contexte
-        self.contextual_references: List[Dict[str, Any]] = []  # Références entre messages
-        self.emotional_reactions: List[Dict[str, Any]] = []  # Réactions émotionnelles enregistrées
+        self.conversation_history: deque[Dict[str, Any]] = deque(maxlen=100)  # Messages complets avec contexte
+        self.contextual_references: deque[Dict[str, Any]] = deque(maxlen=100)  # Références entre messages
+        self.emotional_reactions: deque[Dict[str, Any]] = deque(maxlen=100)  # Réactions émotionnelles enregistrées
         
         # Permissions par agent (configuration par défaut)
         self.agent_permissions = self._initialize_permissions()
@@ -190,7 +191,7 @@ class CluedoOracleState(EnqueteCluedoState):
         self.oracle_interactions = 0  # Compatibilité tests
         self.cards_revealed = 0  # Compteur de cartes révélées
         self.agent_turns = {}  # Tracking détaillé des tours d'agents
-        self.recent_revelations = []  # Liste des révélations récentes (max 10)
+        self.recent_revelations = deque(maxlen=10)  # Liste des révélations récentes (max 10)
         
         self._logger = logging.getLogger(f"{self.__class__.__name__}.{self.workflow_id}")
         self._logger.info(f"CluedoOracleState initialisé avec {len(self.get_moriarty_cards())} cartes Moriarty - Stratégie: {oracle_strategy}")
@@ -268,7 +269,7 @@ class CluedoOracleState(EnqueteCluedoState):
             "Sherlock": {
                 "can_query_oracle": True,
                 "max_oracle_queries_per_turn": 3,
-                "allowed_query_types": ["suggestion_validation", "clue_request", "card_inquiry", "rapid_test"],
+                "allowed_query_types": ["suggestion_validation", "clue_request", "card_inquiry", "rapid_test", "game_state"],
                 "permission_rule": default_permissions.get("SherlockEnqueteAgent")
             },
             "WatsonLogicAssistant": {
@@ -281,7 +282,7 @@ class CluedoOracleState(EnqueteCluedoState):
             "Watson": {
                 "can_query_oracle": True,
                 "max_oracle_queries_per_turn": 1,
-                "allowed_query_types": ["logical_validation", "constraint_check"],
+                "allowed_query_types": ["logical_validation", "constraint_check", "card_inquiry"],
                 "permission_rule": default_permissions.get("WatsonLogicAssistant")
             },
             "MoriartyInterrogatorAgent": {
@@ -297,6 +298,11 @@ class CluedoOracleState(EnqueteCluedoState):
                 "allowed_query_types": ["progressive_hint", "card_inquiry", "suggestion_validation"],
                 "can_access_dataset": True,
                 "is_oracle": True
+            },
+            "TestAgent": {
+                "can_query_oracle": True,
+                "max_oracle_queries_per_turn": 10,
+                "allowed_query_types": ["game_state", "card_inquiry", "test_query"]
             }
         }
     
@@ -314,10 +320,12 @@ class CluedoOracleState(EnqueteCluedoState):
         Returns:
             OracleResponse avec autorisation et données
         """
+        self._logger.info(f"Début de query_oracle pour {agent_name} avec query_type={query_type}")
         try:
             # Conversion du type de requête
             query_type_enum = QueryType(query_type)
         except ValueError:
+            self._logger.warning(f"Type de requête invalide: {query_type}")
             return OracleResponse(
                 authorized=False,
                 message=f"Type de requête invalide: {query_type}",
@@ -326,15 +334,19 @@ class CluedoOracleState(EnqueteCluedoState):
         
         # Vérification permissions
         if not self._agent_can_query_oracle(agent_name, query_type_enum):
+            self._logger.warning(f"Permission refusée pour {agent_name} sur {query_type}")
             return OracleResponse(
                 authorized=False,
                 message=f"Permission refusée pour {agent_name}:{query_type}",
                 agent_name=agent_name
             )
         
+        self._logger.info(f"Permissions validées pour {agent_name}. Délégation au dataset.")
         # Délégation au dataset Oracle
         try:
-            response = self.cluedo_dataset.process_query(agent_name, query_type_enum, query_params)
+            self._logger.debug(f"Appel de cluedo_dataset.process_query avec agent={agent_name}, query={query_type_enum}")
+            response = await self.cluedo_dataset.process_query(agent_name, query_type_enum, query_params)
+            self._logger.debug(f"Retour de process_query: {response}")
             
             # Conversion en OracleResponse
             oracle_response = OracleResponse(
@@ -363,6 +375,7 @@ class CluedoOracleState(EnqueteCluedoState):
         self._log_oracle_interaction(agent_name, query_type_enum, oracle_response, query_params)
         
         self.oracle_queries_count += 1
+        self._logger.info(f"Incrémentation de oracle_interactions. Nouvelle valeur: {self.workflow_metrics['oracle_interactions'] + 1}")
         self.workflow_metrics["oracle_interactions"] += 1
         self.oracle_interactions += 1  # Synchronisation attribut test
         
@@ -406,6 +419,9 @@ class CluedoOracleState(EnqueteCluedoState):
                 # Generate progressive hint content
                 hint_content = f"Level {hint_level} hint: {hint_type} - Progressive complexity escalation"
                 oracle_response.hint_content = hint_content
+                if oracle_response.data is None:
+                    oracle_response.data = {}
+                oracle_response.data['hint_content'] = hint_content
                 oracle_response.metadata["hint_level"] = hint_level
                 oracle_response.metadata["hint_type"] = hint_type
                 
@@ -588,11 +604,7 @@ class CluedoOracleState(EnqueteCluedoState):
         }
         
         # Ajout en début de liste (plus récent en premier)
-        self.recent_revelations.insert(0, revelation_entry)
-        
-        # Limitation à 10 révélations récentes maximum
-        if len(self.recent_revelations) > 10:
-            self.recent_revelations = self.recent_revelations[:10]
+        self.recent_revelations.appendleft(revelation_entry)
         
         # Mise à jour des compteurs
         self.cards_revealed += 1
@@ -610,10 +622,10 @@ class CluedoOracleState(EnqueteCluedoState):
             "workflow_metrics": self.workflow_metrics.copy(),
             "agent_interactions": {
                 "total_turns": len(self.interaction_pattern),
-                "interaction_pattern": self.interaction_pattern[-10:],  # 10 dernières interactions
+                "interaction_pattern": list(self.interaction_pattern)[-10:],  # 10 dernières interactions
                 "oracle_queries": self.oracle_queries_count,
                 "suggestions_validated": len(self.suggestions_validated_by_oracle),
-                "agents_active": list(set(self.interaction_pattern + ["Sherlock", "Watson", "Moriarty"]))  # Include default agents
+                "agents_active": list(set(self.interaction_pattern))
             },
             "cards_distribution": {
                 "moriarty_cards": len(self.get_moriarty_cards()),
@@ -621,7 +633,7 @@ class CluedoOracleState(EnqueteCluedoState):
                 "total_revealed": len(self.revelations_log)
             },
             "dataset_statistics": dataset_stats,
-            "recent_revelations": self.recent_revelations[-5:] if self.recent_revelations else []
+            "recent_revelations": list(self.recent_revelations)[-5:] if self.recent_revelations else []
         }
         
         return stats
@@ -644,7 +656,7 @@ class CluedoOracleState(EnqueteCluedoState):
         if agent_name not in self.agent_turns:
             self.agent_turns[agent_name] = {
                 "total_turns": 0,
-                "recent_actions": []
+                "recent_actions": deque(maxlen=10)
             }
         
         # Mise à jour des statistiques de l'agent
@@ -660,8 +672,7 @@ class CluedoOracleState(EnqueteCluedoState):
         self.agent_turns[agent_name]["recent_actions"].append(action_record)
         
         # Limitation à 10 actions récentes maximum
-        if len(self.agent_turns[agent_name]["recent_actions"]) > 10:
-            self.agent_turns[agent_name]["recent_actions"] = self.agent_turns[agent_name]["recent_actions"][-10:]
+        # La deque s'occupe de la limitation de taille
         
         # Log de l'action
         self.add_log_message(

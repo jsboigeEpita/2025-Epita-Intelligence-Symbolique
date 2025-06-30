@@ -1,104 +1,90 @@
-"""
-Moteur de validation et vérification système
-==========================================
-
-Centralise les validations de prérequis et vérifications système.
-
-Auteur: Intelligence Symbolique EPITA
-Date: 09/06/2025
-"""
-
 import os
 import sys
-import subprocess
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass
+import importlib.util
+from pathlib import Path
 
-from .common_utils import Logger, LogLevel
-from .environment_manager import EnvironmentManager
-
-
-@dataclass
-class ValidationResult:
-    """Résultat d'une validation"""
-    success: bool
-    message: str
-    details: Optional[Dict[str, Any]] = None
-
+from argumentation_analysis.core.utils import shell_utils
 
 class ValidationEngine:
-    """Moteur principal de validation"""
-    
-    def __init__(self, logger: Logger = None):
-        self.logger = logger or Logger()
-        self.env_manager = EnvironmentManager(self.logger)
-        self.project_root = self.env_manager.project_root
-    
-    def check_prerequisites(self, authentic: bool = False) -> List[str]:
-        """Vérifie tous les prérequis système"""
-        issues = []
-        
-        # Python et conda
-        if not self.env_manager.check_python_version():
-            issues.append("Version Python incompatible")
-        
-        if not self.env_manager.check_conda_available():
-            issues.append("Conda non disponible")
-        
-        if not self.env_manager.check_conda_env_exists():
-            issues.append("Environnement conda 'projet-is' manquant")
-        
-        # Fichiers essentiels
-        essential_files = [
-            "scripts/env/activate_project_env.ps1",
-            "config/unified_config.py"
+    """
+    Orchestrates various validation checks to assess project health.
+    """
+
+    def __init__(self, project_root: str = None):
+        """
+        Initializes the ValidationEngine.
+
+        Args:
+            project_root: The root directory of the project. If None, it's detected automatically.
+        """
+        self.project_root = Path(project_root) if project_root else Path(__file__).resolve().parents[3]
+
+    def validate_build_tools(self) -> dict:
+        """
+        Checks for the presence of Visual Studio Build Tools on Windows.
+
+        Returns:
+            A dictionary with status and a message.
+        """
+        if sys.platform != "win32":
+            return {"status": "skipped", "message": "Validation non applicable sur les systèmes non-Windows."}
+
+        # Common paths for vcvarsall.bat
+        vcvars_paths = [
+            Path(os.environ.get("ProgramFiles(x86)", "C:/Program Files (x86)")) / "Microsoft Visual Studio" / "2022" / "BuildTools" / "VC" / "Auxiliary" / "Build" / "vcvarsall.bat",
+            Path(os.environ.get("ProgramFiles(x86)", "C:/Program Files (x86)")) / "Microsoft Visual Studio" / "2019" / "BuildTools" / "VC" / "Auxiliary" / "Build" / "vcvarsall.bat",
         ]
-        
-        for file_path in essential_files:
-            if not os.path.exists(os.path.join(self.project_root, file_path)):
-                issues.append(f"Fichier essentiel manquant: {file_path}")
-        
-        # Prérequis authentiques
-        if authentic:
-            if not os.getenv("OPENAI_API_KEY"):
-                issues.append("Clé API OpenAI manquante")
-            
-            auth_files = ["libs/tweety.jar", "config/taxonomies"]
-            for file_path in auth_files:
-                if not os.path.exists(os.path.join(self.project_root, file_path)):
-                    issues.append(f"Fichier authentique manquant: {file_path}")
-        
-        return issues
-    
-    def validate_system(self, mode: str = "basic") -> ValidationResult:
-        """Validation complète du système"""
-        self.logger.info(f"Validation système mode: {mode}")
-        
-        issues = self.check_prerequisites(authentic=(mode == "authentic"))
-        
-        if issues:
-            self.logger.warning(f"{len(issues)} problèmes détectés")
-            return ValidationResult(
-                success=False,
-                message=f"Validation échouée: {len(issues)} problèmes",
-                details={"issues": issues}
-            )
-        
-        self.logger.success("Validation système réussie")
-        return ValidationResult(
-            success=True,
-            message="Système validé"
-        )
 
+        for path in vcvars_paths:
+            if path.exists():
+                return {"status": "success", "message": f"Outils de compilation trouvés : {path}"}
 
-def check_prerequisites(authentic: bool = False, logger: Logger = None) -> List[str]:
-    """Fonction utilitaire de vérification"""
-    engine = ValidationEngine(logger)
-    return engine.check_prerequisites(authentic)
+        return {
+            "status": "failure",
+            "message": "Les Visual Studio Build Tools semblent manquer. Veuillez exécuter 'scripts/setup/install_build_tools.ps1' avec les droits administrateur."
+        }
 
+    def validate_jvm_bridge(self) -> dict:
+        """
+        Validates that the JPype bridge for the JVM is installed and importable.
+        """
+        try:
+            importlib.import_module("jpype")
+            return {"status": "success", "message": "Le pont JVM (JPype) est correctement installé."}
+        except ImportError:
+            return {
+                "status": "failure",
+                "message": "JPype n'est pas installé. Essayez de le réparer avec 'setup_manager.py fix-deps --package JPype1 --strategy=aggressive'."
+            }
 
-def validate_system(mode: str = "basic", logger: Logger = None) -> bool:
-    """Fonction utilitaire de validation"""
-    engine = ValidationEngine(logger)
-    result = engine.validate_system(mode)
-    return result.success
+    def validate_critical_imports(self, config: dict) -> dict:
+        """
+        Validates that critical project modules can be imported.
+        (SKELETON)
+        """
+        return {"status": "pending", "message": "Fonction non implémentée."}
+
+    def validate_project_structure(self, config: dict) -> dict:
+        """
+        Validates that the project's directory structure is correct.
+        (SKELETON)
+        """
+        return {"status": "pending", "message": "Fonction non implémentée."}
+
+    def run_test_coverage(self) -> dict:
+        """
+        Runs pytest with coverage and returns the result.
+        (SKELETON)
+        """
+        return {"status": "pending", "message": "Fonction non implémentée."}
+
+    def run_full_validation(self) -> dict:
+        """
+        Runs all validation checks and compiles a report.
+        """
+        results = {
+            "build_tools": self.validate_build_tools(),
+            "jvm_bridge": self.validate_jvm_bridge(),
+            # Add other validations here as they are implemented
+        }
+        return results

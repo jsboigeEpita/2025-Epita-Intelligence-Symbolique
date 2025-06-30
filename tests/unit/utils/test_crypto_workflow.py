@@ -15,6 +15,7 @@ import pytest
 import asyncio
 import tempfile
 import json
+import time
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 
@@ -31,12 +32,6 @@ from argumentation_analysis.utils.crypto_workflow import (
 
 class TestCryptoWorkflowManager:
     """Tests pour CryptoWorkflowManager."""
-    
-    def test_init_default_passphrase(self):
-        """Test initialisation avec passphrase par défaut."""
-        manager = CryptoWorkflowManager()
-        assert manager.passphrase is not None
-        assert len(manager.passphrase) > 0
     
     def test_init_custom_passphrase(self):
         """Test initialisation avec passphrase personnalisée."""
@@ -91,30 +86,28 @@ class TestCryptoWorkflowManager:
     @patch('argumentation_analysis.utils.crypto_workflow.load_extract_definitions')
     async def test_load_encrypted_corpus_success(self, mock_load):
         """Test déchiffrement réussi."""
-        # Mock du déchiffrement
         mock_definitions = [
             {"content": "Texte de test 1", "id": "def1"},
             {"content": "Texte de test 2", "id": "def2"}
         ]
         mock_load.return_value = mock_definitions
-        
-        # Création d'un fichier temporaire
+
         with tempfile.NamedTemporaryFile(suffix=".enc", delete=False) as tmp_file:
             tmp_path = Path(tmp_file.name)
-            tmp_file.write(b"encrypted_content")
-        
+            tmp_file.write(b"dummy_content")
+
         try:
             manager = CryptoWorkflowManager("test_key")
             result = await manager.load_encrypted_corpus([str(tmp_path)])
-            
+
             assert result.success
-            assert len(result.loaded_files) == 1
             assert result.total_definitions == 2
+            assert len(result.loaded_files) == 1
             assert result.loaded_files[0]["definitions_count"] == 2
-            assert result.processing_time > 0
-            
+            assert mock_load.call_count == 1
+            assert result.processing_time >= 0
         finally:
-            tmp_path.unlink()  # Nettoyage
+            tmp_path.unlink()
     
     @pytest.mark.asyncio
     @patch('argumentation_analysis.utils.crypto_workflow.load_extract_definitions')
@@ -140,13 +133,14 @@ class TestCryptoWorkflowManager:
     @pytest.mark.asyncio
     async def test_load_encrypted_corpus_import_error(self):
         """Test avec modules de déchiffrement non disponibles."""
-        with patch('argumentation_analysis.utils.crypto_workflow.load_extract_definitions', side_effect=ImportError("Module not found")):
-            manager = CryptoWorkflowManager("test_key")
-            result = await manager.load_encrypted_corpus(["dummy.enc"])
-            
-            assert not result.success
-            assert len(result.errors) > 0
-            assert "non disponibles" in result.errors[0]
+        with tempfile.NamedTemporaryFile(suffix=".enc", delete=True) as tmp_file:
+            with patch('argumentation_analysis.utils.crypto_workflow.load_extract_definitions', side_effect=ImportError("Module not found")):
+                manager = CryptoWorkflowManager("test_key")
+                result = await manager.load_encrypted_corpus([tmp_file.name])
+                
+                assert not result.success
+                assert len(result.errors) > 0
+                assert "non disponibles" in result.errors[0]
     
     def test_validate_corpus_integrity_empty(self):
         """Test validation avec corpus vide."""
@@ -221,13 +215,6 @@ class TestCorpusDecryptionResult:
 
 class TestFactoryFunction:
     """Tests pour les fonctions factory."""
-    
-    def test_create_crypto_manager_default(self):
-        """Test création avec paramètres par défaut."""
-        manager = create_crypto_manager()
-        
-        assert isinstance(manager, CryptoWorkflowManager)
-        assert manager.passphrase is not None
     
     def test_create_crypto_manager_custom_passphrase(self):
         """Test création avec passphrase personnalisée."""

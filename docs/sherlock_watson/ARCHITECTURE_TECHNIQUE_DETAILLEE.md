@@ -11,8 +11,8 @@
 | 🎯 **Section** | 🛠️ **Technologie** | 🔗 **Liens Associés** |
 |----------------|-------------------|----------------------|
 | [⚙️ Semantic Kernel](#️-intégration-semantic-kernel) | v1.29.0 | [📖 Index Principal](README.md) |
-| [☕ Bridge Tweety JVM](#-bridge-tweety-jvm) | JPype1 + 35 JARs | [🏗️ Architecture](DOCUMENTATION_COMPLETE_SHERLOCK_WATSON.md) |
-| [🔄 Workarounds Pydantic](#-workarounds-pydantic) | object.__setattr__() | [🛠️ Guide Utilisateur](GUIDE_UTILISATEUR_COMPLET.md) |
+| [☕ Bridge Tweety JVM](#-bridge-tweety-jvm) | JPype1 + 35 JARs | [🏗️ Architecture](guide_unifie_sherlock_watson.md) |
+| [🔄 Workarounds Pydantic](#-workarounds-pydantic) | object.__setattr__() | [🛠️ Guide Utilisateur](guide_unifie_sherlock_watson.md) |
 | [🎭 Orchestration Cyclique](#-orchestration-cyclique) | 3-agents workflow | [📊 Analyse Orchestrations](../analyse_orchestrations_sherlock_watson.md) |
 | [⚡ Performance](#-performance-et-optimisation) | Monitoring + Cache | [📋 Rapport Oracle](RAPPORT_MISSION_ORACLE_ENHANCED.md) |
 | [🛡️ Sécurité et Intégrité](#️-sécurité-et-intégrité) | CluedoIntegrityError | [📊 Audit Intégrité](AUDIT_INTEGRITE_CLUEDO.md) |
@@ -1722,8 +1722,8 @@ class TweetyQueryCache(MultiLevelCacheSystem):
 ## 🔗 **LIENS DOCUMENTAIRES COMPLÉMENTAIRES**
 
 ### 📚 **Documentation Système**
-- 🏗️ **[Architecture Complète](DOCUMENTATION_COMPLETE_SHERLOCK_WATSON.md)** - Vue d'ensemble système multi-agents
-- 🛠️ **[Guide Utilisateur](GUIDE_UTILISATEUR_COMPLET.md)** - Installation, configuration, utilisation pratique
+- 🏗️ **[Architecture Complète](guide_unifie_sherlock_watson.md)** - Vue d'ensemble système multi-agents
+- 🛠️ **[Guide Utilisateur](guide_unifie_sherlock_watson.md)** - Installation, configuration, utilisation pratique
 - 📖 **[Index Principal](README.md)** - Navigation centrale et accès rapide
 
 ### 📊 **Analyses et Rapports**

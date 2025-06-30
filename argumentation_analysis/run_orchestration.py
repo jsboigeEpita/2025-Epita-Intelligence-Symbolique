@@ -60,10 +60,10 @@ async def setup_environment() -> Any:
     :return: L'instance du service LLM si la création est réussie, sinon None.
     :rtype: Any
     """
-    # 1. Chargement de l'environnement (.env)
-    from dotenv import load_dotenv, find_dotenv
-    loaded = load_dotenv(find_dotenv(), override=True)
-    logging.info(f".env chargé: {loaded}")
+    # 1. Chargement de l'environnement (.env) est maintenant géré automatiquement
+    # par l'import du module `settings`. L'import de `jvm_setup` ou `llm_service`
+    # déclenchera le chargement de la configuration.
+    logging.info("Initialisation de l'environnement (chargement des settings implicite)...")
 
     # 2. Initialisation de la JVM
     from argumentation_analysis.core.jvm_setup import initialize_jvm
@@ -108,14 +108,13 @@ async def run_orchestration(text_content: str, llm_service: Any, agents: Optiona
     logging.info(f"Lancement de l'orchestration sur un texte de {len(text_content)} caractères...")
     
     try:
-        from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
+        from argumentation_analysis.orchestration.analysis_runner import run_analysis
         
-        # Note: La fonction run_analysis_conversation n'accepte pas le paramètre enabled_agents
-        # Les agents sont configurés en interne dans la fonction
+        # Note: La fonction run_analysis gère l'orchestration complète.
         
         # Exécution de l'analyse
-        await run_analysis_conversation(
-            texte_a_analyser=text_content,
+        await run_analysis(
+            text_content=text_content,
             llm_service=llm_service
         )
         

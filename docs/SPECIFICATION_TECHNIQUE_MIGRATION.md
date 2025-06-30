@@ -1,7 +1,7 @@
 # 📋 Spécification Technique - Migration vers Pipeline Unifié Central
 
 ## 🎯 **Objectif**
-Transformer les 3 scripts consolidés pour utiliser `unified_orchestration_pipeline.py` comme moteur central, en préservant leurs interfaces et fonctionnalités.
+Transformer les 3 scripts consolidés pour utiliser `la classe `UnifiedPipeline` du module `argumentation_analysis/pipelines/unified_pipeline.py`` comme moteur central, en préservant leurs interfaces et fonctionnalités.
 
 ## 🔌 **API Pipeline Unifié - Points d'Entrée**
 
@@ -14,8 +14,15 @@ async def run_unified_orchestration_pipeline(
 ) -> Dict[str, Any]
 
 # Alternative avec classe
-pipeline = UnifiedOrchestrationPipeline(config)
-result = await pipeline.analyze_text_extended(text)
+from argumentation_analysis.pipelines import unified_pipeline
+
+# ... (configuration) ...
+
+result = await unified_pipeline.analyze_text(
+    text,
+    mode="orchestration",  # Forcer le nouveau pipeline
+    analysis_type="comprehensive"
+)
 ```
 
 ### **Configuration Unifiée**

@@ -7,13 +7,13 @@ Ce script montre comment les agents AI peuvent utiliser le one-liner
 pour s'assurer automatiquement que l'environnement est actif avant d'exécuter
 leur code, sans se soucier de l'état d'activation préalable.
 
-Auteur: Intelligence Symbolique EPITA  
+Auteur: Intelligence Symbolique EPITA
 Date: 09/06/2025
 """
 
 # ===== ONE-LINER AUTO-ACTIVATEUR =====
-# Méthode 1 : Import ultra-simple (auto-exécution à l'import)
-import scripts.core.auto_env  # Auto-activation environnement intelligent
+# La ligne suivante s'assure que tout l'environnement est configuré.
+import argumentation_analysis.core.environment
 
 # ===== SCRIPT PRINCIPAL =====
 import sys
@@ -43,7 +43,7 @@ def main():
     
     # Test d'import de modules du projet
     try:
-        from scripts.core.environment_manager import EnvironmentManager
+        from project_core.core_from_scripts.environment_manager import EnvironmentManager
         print(f"\n[OK] Import EnvironmentManager réussi")
         
         manager = EnvironmentManager()

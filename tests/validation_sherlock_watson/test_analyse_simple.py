@@ -9,9 +9,10 @@ import json
 import logging
 import sys
 from datetime import datetime
+import pytest
 
 # Imports de l'infrastructure Oracle
-from argumentation_analysis.orchestration.cluedo_extended_orchestrator import run_cluedo_oracle_game
+# from argumentation_analysis.orchestration.cluedo_extended_orchestrator import run_cluedo_oracle_game
 from semantic_kernel import Kernel
 
 # Configuration du logging simple
@@ -19,7 +20,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_workflow_simple():
     """Test simple du workflow 3-agents."""
     logger.info("DEBUT - Test du workflow 3-agents")

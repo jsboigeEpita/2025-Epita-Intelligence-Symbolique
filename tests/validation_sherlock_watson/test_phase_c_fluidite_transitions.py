@@ -1,10 +1,3 @@
-
-# Authentic gpt-4o-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 import pytest
 #!/usr/bin/env python3
 """
@@ -50,7 +43,7 @@ class MockChatMessage:
         self.name = name
         self.content = content
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_phase_c_fluidite_complete():
     """
     Test complet de la Phase C avec 5 conversations simulées.
@@ -108,7 +101,7 @@ async def test_phase_c_fluidite_complete():
     
     print("\n[OK] TEST PHASE C TERMINE")
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def simulate_fluidity_conversation(test_num: int, elements_jeu: Dict[str, List[str]]) -> Dict[str, Any]:
     """
     Simule une conversation avec focus sur la fluidité des transitions.
@@ -210,7 +203,7 @@ async def simulate_fluidity_conversation(test_num: int, elements_jeu: Dict[str, 
     
     return fluidity_metrics
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def simulate_contextual_analysis(oracle_state, agent_name: str, content: str, turn: int):
     """
     Simule l'analyse contextuelle qui serait faite par l'orchestrateur.

@@ -1,105 +1,71 @@
-#!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-Script d'activation de l'environnement projet (refactorisé avec Python)
+Wrapper pour exécuter une commande dans l'environnement Conda du projet.
 
 .DESCRIPTION
-Active l'environnement conda du projet et exécute optionnellement une commande.
-Utilise les modules Python mutualisés pour la gestion d'environnement.
-
-.PARAMETER CommandToRun
-Commande à exécuter après activation de l'environnement
+Ce script exécute une commande dans l'environnement Conda du projet (`projet-is-roo-new`).
+Il configure le PYTHONPATH, puis utilise `conda run` pour lancer la commande,
+garantissant que tous les dépendances et modules sont correctement résolus.
+C'est le point d'entrée privilégié pour toute commande relative au projet.
 
 .EXAMPLE
-.\activate_project_env.ps1
-.\activate_project_env.ps1 -CommandToRun "python --version"
+# Exécute la suite de tests unitaires et fonctionnels
+.\activate_project_env.ps1 -Command "pytest tests/unit tests/functional"
 
-.NOTES
-Refactorisé - Utilise scripts/core/environment_manager.py
+.EXAMPLE
+# Affiche la version de python de l'environnement
+.\activate_project_env.ps1 -Command "python --version"
 #>
-
 param(
-    [string]$CommandToRun = $null,
-    [switch]$Verbose = $false
+    [Parameter(Mandatory=$true, Position=0)]
+    [string]$Command,
+
+    [Parameter(ValueFromRemainingArguments=$true)]
+    [string[]]$Arguments
 )
 
-# Configuration
-$ProjectRoot = $PSScriptRoot
-$PythonModule = "scripts/core/environment_manager.py"
+$ErrorActionPreference = "Stop"
 
-# Fonction de logging simple
-function Write-Log {
-    param([string]$Message, [string]$Level = "INFO")
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $color = switch ($Level) {
-        "ERROR" { "Red" }
-        "SUCCESS" { "Green" }
-        default { "White" }
-    }
-    Write-Host "[$timestamp] $Message" -ForegroundColor $color
-}
-
+# --- Initialisation de Conda pour les sessions non-interactives ---
+# Essaye de trouver la commande 'conda'. Si elle n'est pas dans le PATH,
+# le script s'arrêtera, ce qui est le comportement souhaité.
 try {
-    Write-Log "Activation environnement projet via Python..."
-    
-    # Chemin vers le script Python environment_manager.py
-    $pythonScriptPath = Join-Path $ProjectRoot $PythonModule
-
-    # Commande 1: Activer l'environnement (sans exécuter de commande interne pour l'instant)
-    # $pythonActivateArgs = @("python", $pythonScriptPath)
-    # Write-Log "Activation initiale de l'environnement..."
-    # & $pythonActivateArgs[0] $pythonActivateArgs[1..($pythonActivateArgs.Length-1)]
-    # if ($LASTEXITCODE -ne 0) {
-    #     Write-Log "Échec de l'activation initiale de l'environnement." "ERROR"
-    #     exit 1
-    # }
-    # Write-Log "Activation initiale réussie." "SUCCESS"
-
-    # Si une commande est fournie, la décomposer et l'exécuter séquentiellement
-    # Chaque commande sera passée à environment_manager.py pour être exécutée DANS l'environnement activé.
-    if ($CommandToRun) {
-        Write-Log "Commandes à exécuter séquentiellement: $CommandToRun"
-        $commands = $CommandToRun.Split(';') | ForEach-Object {$_.Trim()}
-        
-        foreach ($cmd in $commands) {
-            if (-not [string]::IsNullOrWhiteSpace($cmd)) {
-                Write-Log "Exécution de la sous-commande: $cmd"
-                $pythonExecArgs = @("python", $pythonScriptPath, "--command", $cmd)
-                if ($Verbose) {
-                    $pythonExecArgs += "--verbose"
-                }
-                
-                # Exécution via le module Python
-                & $pythonExecArgs[0] $pythonExecArgs[1..($pythonExecArgs.Length-1)]
-                $exitCode = $LASTEXITCODE
-                
-                if ($exitCode -ne 0) {
-                    Write-Log "Échec de la sous-commande '$cmd' (Code: $exitCode)" "ERROR"
-                    exit $exitCode # Arrêter si une sous-commande échoue
-                }
-                Write-Log "Sous-commande '$cmd' exécutée avec succès." "SUCCESS"
-            }
-        }
-        Write-Log "Toutes les sous-commandes exécutées." "SUCCESS"
-        exit 0 # Succès global si toutes les sous-commandes ont réussi
-    } else {
-        # Si aucune commande n'est fournie, juste activer l'environnement
-        Write-Log "Activation simple de l'environnement (pas de commande à exécuter)."
-        $pythonActivateOnlyArgs = @("python", $pythonScriptPath)
-        if ($Verbose) {
-            $pythonActivateOnlyArgs += "--verbose"
-        }
-        & $pythonActivateOnlyArgs[0] $pythonActivateOnlyArgs[1..($pythonActivateOnlyArgs.Length-1)]
-        $exitCode = $LASTEXITCODE
-        if ($exitCode -eq 0) {
-            Write-Log "Environnement activé avec succès (sans commande)." "SUCCESS"
-        } else {
-            Write-Log "Échec de l'activation de l'environnement (sans commande) (Code: $exitCode)." "ERROR"
-        }
-        exit $exitCode
-    }
-    
-} catch {
-    Write-Log "Erreur critique: $($_.Exception.Message)" "ERROR"
+    $condaPath = Get-Command conda.exe | Select-Object -ExpandProperty Source
+    Write-Host "[DEBUG] Conda trouvé à l'emplacement: $condaPath" -ForegroundColor DarkGray
+    # Exécute le 'hook' de conda pour initialiser l'environnement dans cette session.
+    # C'est la méthode recommandée pour rendre 'conda activate' et 'conda run' disponibles
+    # dans les scripts et les sessions non-interactives.
+    conda.exe shell.powershell hook | Out-String | Invoke-Expression
+}
+catch {
+    Write-Host "[ERREUR FATALE] La commande 'conda' est introuvable." -ForegroundColor Red
+    Write-Host "Assurez-vous que Conda (ou Miniconda/Anaconda) est installé et que son répertoire 'Scripts' ou 'condabin' est dans votre PATH." -ForegroundColor Red
     exit 1
 }
+
+# Configuration pour la compatibilité des tests et l'import de modules locaux
+$env:PYTHONPATH = "$PSScriptRoot;$env:PYTHONPATH"
+
+# Environnement conda cible
+$condaEnvName = "projet-is"
+
+# Reconstitue la commande complète à partir du paramètre principal et des arguments restants
+$fullCommand = if ($Arguments) {
+    "$Command " + ($Arguments -join ' ')
+} else {
+    $Command
+}
+
+# Construit la commande finale en combinant conda run et l'appel au module python
+$moduleName = "project_core.core_from_scripts.environment_manager"
+$commandToExecute = $fullCommand
+$finalCommand = "conda run --no-capture-output -n $condaEnvName python.exe -m $moduleName run `"$commandToExecute`""
+
+Write-Host "[DEBUG] Calling in Conda Env '$condaEnvName': $finalCommand" -ForegroundColor Gray
+
+# Exécute la commande finale. Invoke-Expression est utilisé pour évaluer la chaîne complète.
+Invoke-Expression -Command $finalCommand
+
+# Propage le code de sortie du script python
+$exitCode = $LASTEXITCODE
+exit $exitCode

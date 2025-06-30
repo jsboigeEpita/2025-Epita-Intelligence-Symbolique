@@ -2,11 +2,21 @@
 # -*- coding: utf-8 -*-
 
 """
-Outil d'analyse des sophismes complexes amélioré.
+Analyseur de haut niveau pour les structures argumentatives et les sophismes composés.
 
-Ce module fournit des fonctionnalités avancées pour analyser des sophismes complexes,
-comme les combinaisons de sophismes, les sophismes qui s'étendent sur plusieurs
-arguments, et les structures argumentatives sophistiquées.
+Ce module définit `EnhancedComplexFallacyAnalyzer`, un outil sophistiqué qui va
+au-delà de la simple détection de sophismes. Il analyse les relations entre les
+arguments, identifie des structures de raisonnement complexes, et détecte des
+"méta-sophismes" formés par la combinaison de plusieurs sophismes simples.
+
+Principales capacités :
+- **Analyse Structurelle :** Identifie les patrons argumentatifs (ex: chaîne causale).
+- **Détection de Sophismes Composés :** Reconnaît des combinaisons de sophismes
+  prédéfinies (ex: "diversion complexe").
+- **Analyse de Cohérence :** Évalue la cohérence logique et thématique entre
+  plusieurs arguments, y compris la détection de raisonnements circulaires.
+- **Héritage et Composition :** Hérite de `ComplexFallacyAnalyzer` et compose
+  d'autres analyseurs "enhanced" pour une analyse multi-facettes.
 """
 
 import os
@@ -48,16 +58,34 @@ logger = logging.getLogger("EnhancedComplexFallacyAnalyzer")
 
 class EnhancedComplexFallacyAnalyzer(BaseAnalyzer):
     """
-    Outil amélioré pour l'analyse des sophismes complexes.
-    
-    Cette version améliorée intègre l'analyse de structure argumentative,
-    la détection de sophismes composés, et l'analyse de cohérence inter-arguments
-    pour une analyse plus précise et nuancée des sophismes complexes.
+    Analyse les structures, les combinaisons et la cohérence des arguments.
+
+    Cet analyseur étend le `ComplexFallacyAnalyzer` de base en introduisant trois
+    niveaux d'analyse supplémentaires :
+    1.  **Structure Argumentative :** Analyse la forme du raisonnement (comparaison,
+        causalité, etc.) pour identifier les vulnérabilités structurelles.
+    2.  **Sophismes Composés :** Utilise une base de connaissances pour détecter
+        des combinaisons de sophismes qui, ensemble, ont un effet amplifié.
+    3.  **Cohérence Inter-Argument :** Évalue la manière dont un ensemble
+        d'arguments se soutiennent, se contredisent ou dérivent thématiquement.
+
+    Il s'appuie sur d'autres outils "enhanced" pour l'analyse contextuelle et
+    l'évaluation de la gravité, formant ainsi un système d'analyse complet.
     """
     
     def __init__(self):
         """
-        Initialise l'analyseur de sophismes complexes amélioré.
+        Initialise l'analyseur et ses dépendances.
+
+        L'initialisation procède comme suit :
+        1.  Appelle le constructeur de la classe de base (`BaseAnalyzer`).
+        2.  Active les importations paresseuses (`_lazy_imports`) pour éviter les
+            dépendances circulaires avec les autres analyseurs "enhanced".
+        3.  Instancie les analyseurs dépendants (`EnhancedContextualFallacyAnalyzer`,
+            `EnhancedFallacySeverityEvaluator`).
+        4.  Charge les "bases de connaissances" internes pour les structures
+            d'arguments et les combinaisons de sophismes.
+        5.  Initialise un historique pour stocker les métadonnées des analyses.
         """
         super().__init__()
         self.logger = logger
@@ -82,10 +110,14 @@ class EnhancedComplexFallacyAnalyzer(BaseAnalyzer):
     
     def _define_argument_structure_patterns(self) -> Dict[str, Dict[str, Any]]:
         """
-        Définit les modèles de structure argumentative.
-        
+        Définit une base de connaissances des patrons de structures argumentatives.
+
+        Cette méthode agit comme une base de données interne qui mappe les noms de
+        structures (ex: "chaîne_causale") à des mots-clés de détection et aux
+        risques de sophismes associés.
+
         Returns:
-            Dictionnaire contenant les modèles de structure argumentative
+            Dict[str, Dict[str, Any]]: Un dictionnaire de patrons structurels.
         """
         patterns = {
             "chaîne_causale": {
@@ -124,10 +156,14 @@ class EnhancedComplexFallacyAnalyzer(BaseAnalyzer):
     
     def _define_advanced_fallacy_combinations(self) -> Dict[str, Dict[str, Any]]:
         """
-        Définit les modèles de sophismes composés avancés.
-        
+        Définit une base de connaissances des combinaisons de sophismes connus.
+
+        Cette méthode crée une cartographie des "méta-sophismes", où chaque entrée
+        définit les sophismes simples qui la composent, le type de patron
+        (ex: escalade, circulaire), et des modificateurs pour le calcul de la gravité.
+
         Returns:
-            Dictionnaire contenant les modèles de sophismes composés avancés
+            Dict[str, Dict[str, Any]]: Un dictionnaire de combinaisons de sophismes.
         """
         combinations = {
             "cascade_émotionnelle": {
@@ -171,13 +207,18 @@ class EnhancedComplexFallacyAnalyzer(BaseAnalyzer):
         
     def _detect_circular_reasoning(self, graph: Dict[int, List[int]]) -> bool:
         """
-        Détecte la présence de raisonnement circulaire dans un graphe d'arguments.
-        
+        Détecte un raisonnement circulaire dans un graphe d'adjacence d'arguments.
+
+        Cette méthode utilise un parcours en profondeur (DFS) à partir de chaque
+        nœud pour détecter si un chemin mène de ce nœud à lui-même.
+
         Args:
-            graph: Graphe des relations entre arguments
-            
+            graph (Dict[int, List[int]]): Le graphe des relations où les clés
+                sont les index des arguments source et les valeurs sont les
+                listes d'index des arguments cible.
+
         Returns:
-            True si un raisonnement circulaire est détecté, False sinon
+            bool: True si un cycle est trouvé, False sinon.
         """
         # Créer une copie du graphe pour éviter de modifier le dictionnaire pendant l'itération
         nodes = list(graph.keys())
@@ -207,18 +248,22 @@ class EnhancedComplexFallacyAnalyzer(BaseAnalyzer):
     
     def analyze_argument_structure(self, arguments: List[str], context: str = "général") -> Dict[str, Any]:
         """
-        Analyse la structure argumentative d'un ensemble d'arguments.
-        
-        Cette méthode améliorée analyse la structure argumentative d'un ensemble
-        d'arguments pour identifier les modèles de raisonnement, les relations
-        entre arguments, et les vulnérabilités potentielles aux sophismes.
-        
+        Analyse la structure globale d'un ensemble d'arguments.
+
+        C'est une méthode de haut niveau qui orchestre plusieurs sous-analyses pour
+        bâtir une vue complète de l'argumentation :
+        1.  Identifie les patrons structurels dans chaque argument individuel.
+        2.  Identifie les relations (support, contradiction) entre les arguments.
+        3.  Évalue la cohérence globale de la structure qui en résulte.
+
         Args:
-            arguments: Liste d'arguments à analyser
-            context: Contexte des arguments (optionnel)
-            
+            arguments (List[str]): La liste des chaînes de caractères des arguments.
+            context (str, optional): Le contexte général de l'analyse. Defaults to "général".
+
         Returns:
-            Dictionnaire contenant les résultats de l'analyse de structure
+            Dict[str, Any]: Un dictionnaire riche contenant les structures
+            identifiées, les relations, l'évaluation de la cohérence et les
+            vulnérabilités potentielles.
         """
         self.logger.info(f"Analyse de la structure argumentative de {len(arguments)} arguments dans le contexte: {context}")
         
@@ -454,18 +499,23 @@ class EnhancedComplexFallacyAnalyzer(BaseAnalyzer):
             
     def detect_composite_fallacies(self, arguments: List[str], context: str = "général") -> Dict[str, Any]:
         """
-        Détecte les sophismes composés dans un ensemble d'arguments.
-        
-        Cette méthode améliorée détecte les sophismes composés, qui sont des
-        combinaisons de sophismes simples qui forment des structures fallacieuses
-        plus complexes et plus difficiles à identifier.
-        
+        Identifie les combinaisons de sophismes (de base et avancées).
+
+        Cette méthode orchestre la détection de sophismes à plusieurs niveaux :
+        1.  Utilise l'analyseur contextuel pour trouver les sophismes simples.
+        2.  Appelle les méthodes de l'analyseur de base pour les combinaisons simples.
+        3.  Applique sa propre logique pour identifier les combinaisons avancées
+            définies dans sa base de connaissance interne.
+        4.  Évalue la gravité de l'ensemble des sophismes composés trouvés.
+
         Args:
-            arguments: Liste d'arguments à analyser
-            context: Contexte des arguments (optionnel)
-            
+            arguments (List[str]): La liste des arguments à analyser.
+            context (str, optional): Le contexte de l'analyse. Defaults to "général".
+
         Returns:
-            Dictionnaire contenant les résultats de la détection
+            Dict[str, Any]: Un dictionnaire des résultats, incluant les sophismes
+            individuels, les combinaisons de base et avancées, et une évaluation
+            de la gravité composite.
         """
         self.logger.info(f"Détection des sophismes composés dans {len(arguments)} arguments dans le contexte: {context}")
         
@@ -943,18 +993,23 @@ class EnhancedComplexFallacyAnalyzer(BaseAnalyzer):
     
     def analyze_inter_argument_coherence(self, arguments: List[str], context: str = "général") -> Dict[str, Any]:
         """
-        Analyse la cohérence entre les arguments.
-        
-        Cette méthode améliorée analyse la cohérence entre les arguments pour
-        identifier les incohérences, les contradictions, et les relations logiques
-        entre les arguments.
-        
+        Analyse la cohérence entre plusieurs arguments sous plusieurs angles.
+
+        Cette méthode de haut niveau évalue si un ensemble d'arguments forme un tout
+        cohérent. Elle le fait en combinant trois analyses distinctes :
+        1.  `_analyze_thematic_coherence` : Les arguments parlent-ils du même sujet ?
+        2.  `_analyze_logical_coherence` : Les arguments s'enchaînent-ils logiquement ?
+        3.  `_detect_contradictions` : Y a-t-il des contradictions flagrantes ?
+
+        Elle produit une évaluation globale avec un score et des recommandations.
+
         Args:
-            arguments: Liste d'arguments à analyser
-            context: Contexte des arguments (optionnel)
-            
+            arguments (List[str]): La liste des arguments à évaluer.
+            context (str, optional): Le contexte de l'analyse. Defaults to "général".
+
         Returns:
-            Dictionnaire contenant les résultats de l'analyse de cohérence
+            Dict[str, Any]: Un dictionnaire détaillé avec les scores de chaque type
+            de cohérence et une évaluation globale.
         """
         self.logger.info(f"Analyse de la cohérence inter-arguments pour {len(arguments)} arguments dans le contexte: {context}")
         
@@ -1283,71 +1338,6 @@ class EnhancedComplexFallacyAnalyzer(BaseAnalyzer):
         }
 
 
-    # Cette méthode a été déplacée plus haut dans le fichier
-    # Correction de l'indentation pour que la méthode fasse partie de la classe
-    def _analyze_structure_vulnerabilities( # Cette méthode doit être indentée pour appartenir à la classe
-        self,
-        argument_structures: List[Dict[str, Any]],
-        argument_relations: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
-        """
-        Analyse les vulnérabilités de la structure argumentative aux sophismes.
-        
-        Args:
-            argument_structures: Structures argumentatives identifiées
-            argument_relations: Relations entre arguments
-            
-        Returns:
-            Dictionnaire contenant l'analyse des vulnérabilités
-        """
-        vulnerabilities = []
-        
-        # Analyser les vulnérabilités basées sur les structures
-        for arg_structure in argument_structures:
-            for structure in arg_structure["structures"]:
-                vulnerabilities.append({
-                    "vulnerability_type": "structure_based",
-                    "argument_index": arg_structure["argument_index"],
-                    "structure_type": structure["structure_type"],
-                    "fallacy_risk": structure["fallacy_risk"],
-                    "risk_level": "Élevé" if structure["confidence"] > 0.7 else "Modéré",
-                    "explanation": f"La structure '{structure['structure_type']}' est vulnérable aux sophismes de type {structure['fallacy_risk']}."
-                })
-        
-        # Analyser les vulnérabilités basées sur les relations
-        relation_types_count = defaultdict(int)
-        for relation in argument_relations:
-            relation_types_count[relation["relation_type"]] += 1
-        
-        # Déséquilibre dans les types de relations
-        if relation_types_count:
-            most_common_relation = max(relation_types_count.items(), key=lambda x: x[1])
-            if most_common_relation[1] > sum(relation_types_count.values()) * 0.7:  # Si plus de 70% des relations sont du même type
-                vulnerabilities.append({
-                    "vulnerability_type": "relation_imbalance",
-                    "dominant_relation": most_common_relation[0],
-                    "relation_count": most_common_relation[1],
-                    "total_relations": sum(relation_types_count.values()),
-                    "risk_level": "Modéré",
-                    "explanation": f"Déséquilibre dans les types de relations, avec une dominance de relations de type '{most_common_relation[0]}'."
-                })
-        
-        # Calculer le score de vulnérabilité global
-        vulnerability_score = min(1.0, len(vulnerabilities) / max(1, len(argument_structures) + len(argument_relations)) * 2)
-        
-        # Déterminer le niveau de vulnérabilité
-        if vulnerability_score > 0.7:
-            vulnerability_level = "Élevé"
-        elif vulnerability_score > 0.4:
-            vulnerability_level = "Modéré"
-        else:
-            vulnerability_level = "Faible"
-        
-        return {
-            "vulnerability_score": vulnerability_score,
-            "vulnerability_level": vulnerability_level,
-            "specific_vulnerabilities": vulnerabilities
-        }
 
 # Test de la classe si exécutée directement
 if __name__ == "__main__":

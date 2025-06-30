@@ -1,454 +1,292 @@
-#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+print("[DEBUG] test_runner.py a démarré")
 """
-TestRunner - Module unifié pour l'exécution des tests avec gestion des services
-Remplace les 4 implémentations PowerShell différentes identifiées dans la cartographie :
-- start_web_application_simple.ps1
-- backend_failover_non_interactive.ps1  
-- integration_tests_with_failover.ps1
-- run_integration_tests.ps1
+Orchestrateur de test unifié pour le projet.
 
-Auteur: Projet Intelligence Symbolique EPITA
-Date: 07/06/2025
+Ce script gère le cycle de vie complet des tests, y compris :
+- Le démarrage et l'arrêt des services dépendants (backend, frontend).
+- L'exécution des suites de tests (unit, functional, e2e) via pytest.
+- La gestion propre des processus et des ressources.
+
+Utilisation :
+    python project_core/test_runner.py --type [unit|functional|e2e|all] [--path <path>] [--browser <name>]
 """
 
+import argparse
 import os
+import subprocess
+import socket
 import sys
 import time
-import logging
-import subprocess
-import threading
-from typing import Dict, List, Optional, Tuple
+from datetime import datetime
 from pathlib import Path
-from dataclasses import dataclass
-from enum import Enum
 
-# Import du ServiceManager local
-from .service_manager import ServiceManager, ServiceConfig, create_default_configs
+# Configuration des chemins et des commandes
+ROOT_DIR = Path(__file__).parent.parent
+API_DIR = ROOT_DIR
+FRONTEND_DIR = ROOT_DIR / "interface_web"
 
-try:
-    import pytest
-except ImportError:
-    print("PyTest non installé. Installation requise: pip install pytest")
-
-
-class TestType(Enum):
-    """Types de tests supportés"""
-    UNIT = "unit"
-    INTEGRATION = "integration" 
-    FUNCTIONAL = "functional"
-    PLAYWRIGHT = "playwright"
-    E2E = "e2e"
+def _log(message):
+    """Affiche un message de log avec un timestamp."""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] {message}")
 
 
-@dataclass
-class TestConfig:
-    """Configuration d'exécution de tests"""
-    test_type: TestType
-    test_paths: List[str]
-    requires_backend: bool = False
-    requires_frontend: bool = False
-    conda_env: Optional[str] = None
-    timeout: int = 300
-    parallel: bool = False
-    browser: str = "chromium"  # Pour tests Playwright
-    headless: bool = True
+class ServiceManager:
+    """Gère le démarrage et l'arrêt des services web (API et Frontend)."""
 
+    def __init__(self):
+        self.processes = []
+        self.log_files = {}
+        self.api_port = self._find_free_port()
+        self.frontend_port = 3000
 
-class EnvironmentManager:
-    """Gestionnaire d'environnement conda/venv - remplace activate_project_env.ps1"""
-    
-    def __init__(self, logger: logging.Logger):
-        self.logger = logger
-        self.original_env = dict(os.environ)
+    def start_services(self):
+        """Démarre l'API backend qui sert également le frontend."""
+        _log("Démarrage du service API pour les tests E2E...")
+
+        # Démarrer le backend API
+        _log(f"[RUNNER_DEBUG] Démarrage du service API sur le port {self.api_port} (CWD: {API_DIR})")
+        api_log_out = open("api_server.log", "w", encoding="utf-8")
+        api_log_err = open("api_server.error.log", "w", encoding="utf-8")
+        self.log_files["api_out"] = api_log_out
+        self.log_files["api_err"] = api_log_err
         
-    def activate_conda_env(self, env_name: str) -> bool:
-        """Active un environnement conda"""
-        try:
-            # Recherche de conda
-            conda_base = self._find_conda_installation()
-            if not conda_base:
-                self.logger.error("Installation conda non trouvée")
+        _log(f"[RUNNER_DEBUG] Commande Popen Uvicorn: {[sys.executable, '-m', 'uvicorn', 'argumentation_analysis.services.web_api.app:app', '--port', str(self.api_port), '--log-level', 'debug']}")
+        api_process = subprocess.Popen(
+            [sys.executable, "-m", "uvicorn", "argumentation_analysis.services.web_api.app:app", "--port", str(self.api_port), "--log-level", "debug"],
+            cwd=API_DIR,
+            stdout=api_log_out,
+            stderr=api_log_err
+        )
+        self.processes.append(api_process)
+        _log(f"[RUNNER_DEBUG] Service API démarré avec le PID: {api_process.pid}")
+
+        # Le frontend est servi par le backend, pas de service séparé à démarrer.
+        _log("[RUNNER_DEBUG] Début de l'attente de la disponibilité du service API...")
+        self._wait_for_services(ports=[self.api_port])
+        _log("[RUNNER_DEBUG] Fin de l'attente de la disponibilité du service API.")
+
+    def stop_services(self):
+        """Arrête proprement tous les services démarrés."""
+        _log("Arrêt des services...")
+        for process in self.processes:
+            try:
+                _log(f"Tentative d'arrêt du processus {process.pid}...")
+                process.terminate()
+                process.wait(timeout=10)
+                _log(f"Processus {process.pid} arrêté avec succès.")
+            except subprocess.TimeoutExpired:
+                _log(f"Le processus {process.pid} ne s'est pas arrêté à temps, forçage...")
+                process.kill()
+                _log(f"Processus {process.pid} forcé à s'arrêter.")
+        self.processes = []
+
+        # Fermer les fichiers de log
+        _log("Fermeture des fichiers de log...")
+        for log_file in self.log_files.values():
+            log_file.close()
+        self.log_files = {}
+        _log("Fichiers de log fermés.")
+
+    def _check_service_health(self):
+        """Vérifie si les processus de service sont toujours en cours d'exécution."""
+        for process in self.processes:
+            if process.poll() is not None:
+                _log(f"ERREUR: Le service avec le PID {process.pid} s'est arrêté de manière inattendue.")
                 return False
+        return True
+
+    def _wait_for_services(self, ports, timeout=90):
+        """Attend que les services soient prêts en vérifiant la disponibilité des ports."""
+        start_time = time.time()
+        interval = 5
+
+        while time.time() - start_time < timeout:
+            if not self._check_service_health():
+                _log("Un service s'est arrêté prématurément. Annulation de l'attente.")
+                raise RuntimeError("Échec du démarrage d'un service dépendant.")
+
+            all_ports_ready = True
+            for port in ports:
+                if not self._check_port(port):
+                    _log(f"Le port {port} n'est pas encore disponible. Prochaine vérification dans {interval}s.")
+                    all_ports_ready = False
+                    break
             
-            # Activation de l'environnement
-            if sys.platform == "win32":
-                activate_script = conda_base / "Scripts" / "activate.bat"
-                env_path = conda_base / "envs" / env_name
-            else:
-                activate_script = conda_base / "bin" / "activate"
-                env_path = conda_base / "envs" / env_name
-            
-            if not env_path.exists():
-                self.logger.error(f"Environnement conda '{env_name}' non trouvé dans {env_path}")
+            if all_ports_ready:
+                _log("[RUNNER_DEBUG] Tous les services sont opérationnels. Démarrage des tests.")
+                return
+
+            time.sleep(interval)
+
+        _log(f"Dépassement du timeout de {timeout}s pour le démarrage des services.")
+        raise RuntimeError("Timeout atteint lors de l'attente du démarrage des services.")
+
+    def _check_port(self, port, host="127.0.0.1"):
+        """Vérifie si un port est ouvert sur un hôte donné."""
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(1)  # Timeout court pour ne pas bloquer
+            try:
+                s.connect((host, port))
+                return True
+            except (socket.timeout, ConnectionRefusedError):
                 return False
-            
-            # Mise à jour PATH et variables d'environnement
-            if sys.platform == "win32":
-                python_path = env_path / "python.exe"
-                scripts_path = env_path / "Scripts"
-            else:
-                python_path = env_path / "bin" / "python"
-                scripts_path = env_path / "bin"
-            
-            os.environ["PATH"] = f"{scripts_path}{os.pathsep}{os.environ['PATH']}"
-            os.environ["CONDA_DEFAULT_ENV"] = env_name
-            os.environ["CONDA_PREFIX"] = str(env_path)
-            
-            self.logger.info(f"Environnement conda '{env_name}' activé")
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Erreur activation conda '{env_name}': {e}")
-            return False
-    
-    def _find_conda_installation(self) -> Optional[Path]:
-        """Trouve l'installation conda"""
-        possible_paths = [
-            Path.home() / "miniconda3",
-            Path.home() / "anaconda3", 
-            Path("/opt/conda"),
-            Path("/usr/local/conda"),
-        ]
-        
-        # Essayer variable d'environnement CONDA_PREFIX
-        if "CONDA_PREFIX" in os.environ:
-            conda_prefix = Path(os.environ["CONDA_PREFIX"])
-            if conda_prefix.exists():
-                possible_paths.insert(0, conda_prefix.parent)
-        
-        for path in possible_paths:
-            if path.exists() and (path / "bin" / "conda").exists():
-                return path
-        
-        return None
-    
-    def restore_environment(self):
-        """Restaure l'environnement original"""
-        os.environ.clear()
-        os.environ.update(self.original_env)
-        self.logger.info("Environnement restauré")
 
-
+    def _find_free_port(self):
+        """Trouve et retourne un port TCP libre sur la machine."""
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(('127.0.0.1', 0))
+            return s.getsockname()[1]
 class TestRunner:
-    """Runner unifié pour tous types de tests avec gestion des services"""
-    
-    def __init__(self, log_level: int = logging.INFO):
-        self.logger = self._setup_logging(log_level)
-        self.service_manager = ServiceManager(log_level)
-        self.env_manager = EnvironmentManager(self.logger)
-        self.test_configs: Dict[str, TestConfig] = {}
-        
-        # Enregistrement des configurations de services par défaut
-        for config in create_default_configs():
-            self.service_manager.register_service(config)
-        
-        self._register_default_test_configs()
-    
-    def _setup_logging(self, level: int) -> logging.Logger:
-        """Configuration du logging"""
-        logger = logging.getLogger('TestRunner')
-        logger.setLevel(level)
-        
-        if not logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-            )
-            handler.setFormatter(formatter)
-            logger.addHandler(handler)
-        
-        return logger
-    
-    def _register_default_test_configs(self):
-        """Enregistre les configurations de test par défaut"""
-        configs = [
-            TestConfig(
-                test_type=TestType.UNIT,
-                test_paths=["tests/unit"],
-                requires_backend=False,
-                requires_frontend=False,
-                timeout=120,
-                parallel=True
-            ),
-            TestConfig(
-                test_type=TestType.INTEGRATION,
-                test_paths=["tests/integration"],
-                requires_backend=True,
-                requires_frontend=False,
-                timeout=300
-            ),
-            TestConfig(
-                test_type=TestType.FUNCTIONAL,
-                test_paths=["tests/functional"],
-                requires_backend=True,
-                requires_frontend=False,
-                timeout=300
-            ),
-            TestConfig(
-                test_type=TestType.PLAYWRIGHT,
-                test_paths=["tests/playwright"],
-                requires_backend=True,
-                requires_frontend=True,
-                timeout=600,
-                browser="chromium",
-                headless=True
-            ),
-            TestConfig(
-                test_type=TestType.E2E,
-                test_paths=["tests/e2e"],
-                requires_backend=True,
-                requires_frontend=True,
-                timeout=900,
-                browser="chromium",
-                headless=False
-            )
-        ]
-        
-        for config in configs:
-            self.test_configs[config.test_type.value] = config
-    
-    def register_test_config(self, name: str, config: TestConfig):
-        """Enregistre une configuration de test personnalisée"""
-        self.test_configs[name] = config
-        self.logger.info(f"Configuration de test enregistrée: {name}")
-    
-    def start_required_services(self, config: TestConfig) -> Dict[str, Tuple[bool, Optional[int]]]:
-        """Démarre les services requis pour les tests"""
-        results = {}
-        
-        if config.requires_backend:
-            self.logger.info("Démarrage du service backend...")
-            success, port = self.service_manager.start_service_with_failover("backend-flask")
-            results["backend"] = (success, port)
-            
-            if not success:
-                self.logger.error("Échec démarrage backend - abandon")
-                return results
-        
-        if config.requires_frontend:
-            self.logger.info("Démarrage du service frontend...")
-            success, port = self.service_manager.start_service_with_failover("frontend-react")
-            results["frontend"] = (success, port)
-            
-            if not success:
-                self.logger.error("Échec démarrage frontend - nettoyage backend")
-                if config.requires_backend:
-                    self.service_manager.stop_service("backend-flask")
-                return results
-        
-        return results
-    
-    def run_pytest_command(self, config: TestConfig, extra_args: List[str] = None) -> int:
-        """Exécute une commande pytest avec la configuration donnée"""
-        cmd = ["python", "-m", "pytest"]
-        
-        # Ajout des chemins de test
-        cmd.extend(config.test_paths)
-        
-        # Options pytest
-        cmd.extend([
-            "-v",  # Mode verbeux
-            "--tb=short",  # Traceback court
-            f"--timeout={config.timeout}",
-        ])
-        
-        # Exécution parallèle si supportée
-        if config.parallel:
-            cmd.extend(["-n", "auto"])  # Nécessite pytest-xdist
-        
-        # Configuration spécifique Playwright
-        if config.test_type in [TestType.PLAYWRIGHT, TestType.E2E]:
-            cmd.extend([
-                f"--browser={config.browser}",
-                f"--headed={'false' if config.headless else 'true'}",
-            ])
-        
-        # Arguments supplémentaires
-        if extra_args:
-            cmd.extend(extra_args)
-        
-        self.logger.info(f"Exécution: {' '.join(cmd)}")
-        
+    """Orchestre l'exécution des tests."""
+
+    def __init__(self, test_type, test_path, browser, pytest_extra_args=None):
+        self.test_type = test_type
+        self.test_path = test_path
+        self.browser = browser
+        self.pytest_extra_args = pytest_extra_args if pytest_extra_args is not None else []
+        self.service_manager = ServiceManager()
+
+    def run(self):
+        """Exécute le cycle de vie complet des tests."""
+        needs_services = self.test_type in ["functional", "e2e"]
+
         try:
-            result = subprocess.run(
-                cmd,
-                capture_output=False,
-                text=True,
-                timeout=config.timeout
-            )
-            return result.returncode
+            if needs_services:
+                self.service_manager.start_services()
             
-        except subprocess.TimeoutExpired:
-            self.logger.error(f"Timeout après {config.timeout}s")
-            return 124
-        except Exception as e:
-            self.logger.error(f"Erreur exécution pytest: {e}")
-            return 1
-    
-    def run_tests(self, test_type: str, extra_args: List[str] = None, conda_env: str = None) -> int:
-        """
-        Point d'entrée principal - remplace les scripts PowerShell
-        Équivalent unifié de :
-        - integration_tests_with_failover.ps1
-        - backend_failover_non_interactive.ps1
-        - run_integration_tests.ps1
-        """
-        if test_type not in self.test_configs:
-            self.logger.error(f"Type de test non supporté: {test_type}")
-            self.logger.info(f"Types disponibles: {list(self.test_configs.keys())}")
-            return 1
-        
-        config = self.test_configs[test_type]
-        
-        # Activation environnement conda si spécifié
-        if conda_env or config.conda_env:
-            env_name = conda_env or config.conda_env
-            if not self.env_manager.activate_conda_env(env_name):
-                return 1
-        
-        services_started = {}
-        exit_code = 1
-        
-        try:
-            # Démarrage des services requis avec failover intelligent
-            self.logger.info(f"Préparation tests {test_type}...")
-            services_started = self.start_required_services(config)
-            
-            # Vérification que tous les services requis sont démarrés
-            all_services_ok = True
-            for service, (success, port) in services_started.items():
-                if not success:
-                    self.logger.error(f"Service {service} non démarré")
-                    all_services_ok = False
-                else:
-                    self.logger.info(f"Service {service} démarré sur port {port}")
-            
-            if not all_services_ok:
-                self.logger.error("Échec démarrage des services - abandon tests")
-                return 1
-            
-            # Délai d'attente pour stabilisation des services
-            if services_started:
-                self.logger.info("Attente stabilisation des services...")
-                time.sleep(5)
-            
-            # Exécution des tests
-            self.logger.info(f"Lancement des tests {test_type}...")
-            exit_code = self.run_pytest_command(config, extra_args)
-            
-            if exit_code == 0:
-                self.logger.info(f"Tests {test_type} réussis ✓")
-            else:
-                self.logger.error(f"Tests {test_type} échoués (code: {exit_code})")
-        
+            # Si les services ne sont pas nécessaires, ou s'ils ont démarré, on lance les tests.
+            self._run_pytest()
         finally:
-            # Nettoyage systématique - pattern Cleanup-Services
-            self.logger.info("Nettoyage des services...")
-            self.service_manager.stop_all_services()
-            
-            # Restauration environnement
-            if conda_env or config.conda_env:
-                self.env_manager.restore_environment()
+            # Assure l'affichage des logs et l'arrêt des services même si start_services échoue.
+            if needs_services:
+                self._show_service_logs()
+                self.service_manager.stop_services()
+
+    def _get_test_paths(self):
+        """Détermine les chemins de test à utiliser."""
+        if self.test_path:
+            return [self.test_path]
         
-        return exit_code
-    
-    def run_integration_tests_with_failover(self, extra_args: List[str] = None) -> int:
-        """Remplace integration_tests_with_failover.ps1"""
-        return self.run_tests("integration", extra_args)
-    
-    def run_playwright_tests(self, headless: bool = True, browser: str = "chromium") -> int:
-        """Exécution spécialisée tests Playwright avec configuration"""
-        config = self.test_configs["playwright"]
-        config.headless = headless
-        config.browser = browser
-        
-        return self.run_tests("playwright")
-    
-    def start_web_application(self, wait: bool = True) -> Dict[str, Tuple[bool, Optional[int]]]:
-        """
-        Remplace start_web_application_simple.ps1
-        Démarre backend + frontend avec failover
-        """
-        results = {}
-        
-        self.logger.info("Démarrage application web complète...")
-        
-        # Démarrage backend
-        success, port = self.service_manager.start_service_with_failover("backend-flask")
-        results["backend"] = (success, port)
-        
-        if success:
-            # Démarrage frontend
-            success, port = self.service_manager.start_service_with_failover("frontend-react")
-            results["frontend"] = (success, port)
-            
-            if success:
-                self.logger.info("Application web démarrée avec succès")
-                if wait:
-                    try:
-                        self.logger.info("Appuyez sur Ctrl+C pour arrêter l'application")
-                        while True:
-                            time.sleep(1)
-                    except KeyboardInterrupt:
-                        self.logger.info("Arrêt demandé par l'utilisateur")
-                        self.service_manager.stop_all_services()
-            else:
-                self.logger.error("Échec démarrage frontend")
-                self.service_manager.stop_service("backend-flask")
-        else:
-            self.logger.error("Échec démarrage backend")
-        
-        return results
-    
-    def get_services_status(self) -> Dict:
-        """Retourne le statut de tous les services"""
-        return {
-            "services": self.service_manager.list_all_services(),
-            "test_configs": list(self.test_configs.keys())
+        paths = {
+            "unit": "tests/unit",
+            "functional": "tests/functional",
+            "e2e": "tests/e2e",
+            "all": ["tests/unit"],
         }
+        
+        path_or_paths = paths.get(self.test_type)
+        if isinstance(path_or_paths, list):
+            return path_or_paths
+        return [path_or_paths] if path_or_paths else []
+
+
+    def _run_pytest(self):
+        """Lance pytest avec les arguments appropriés et une journalisation en temps réel."""
+        test_paths = self._get_test_paths()
+        if not test_paths:
+            _log(f"Type de test '{self.test_type}' non reconnu ou aucun chemin de test trouvé.")
+            return
+
+        command = ["python", "-m", "pytest", "-q"] + test_paths
+        
+        # Passer les URLs aux tests seulement si les services sont démarrés
+        needs_services = self.test_type in ["functional", "e2e", "all"]
+        if needs_services:
+            backend_url = f"http://127.0.0.1:{self.service_manager.api_port}"
+            # L'URL du frontend est la même que celle du backend car il sert les fichiers statiques
+            frontend_url = backend_url
+            command.extend(["--backend-url", backend_url])
+            command.extend(["--frontend-url", frontend_url])
+
+        if self.browser:
+            command.extend(["--browser", self.browser])
+
+        if self.pytest_extra_args:
+            command.extend(self.pytest_extra_args)
+        
+        _log(f"Lancement de pytest avec la commande: {' '.join(command)}")
+        _log(f"Répertoire de travail: {ROOT_DIR}")
+
+        # Définir l'environnement pour le sous-processus
+        env = os.environ.copy()
+        if self.test_type == "unit" or self.test_type == "all":
+            _log("Activation du contournement de la JVM via la variable d'environnement SKIP_JVM_TESTS.")
+            env["SKIP_JVM_TESTS"] = "1"
+
+        # Utilisation de subprocess.Popen pour un affichage en temps réel
+        _log("[RUNNER_DEBUG] --- APPEL DE SUBPROCESS.POPEN POUR PYTEST ---")
+        process = subprocess.Popen(
+            command,
+            cwd=ROOT_DIR,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding='utf-8',
+            bufsize=1, # Mode ligne-buffer pour la sortie texte
+            env=env
+        )
+
+        # Lire et afficher la sortie en temps réel
+        # La boucle s'arrêtera quand le processus sera terminé et que stdout sera fermé
+        if process.stdout:
+            for line in iter(process.stdout.readline, ''):
+                print(line, end='')
+        
+        # Attendre que le processus se termine et obtenir le code de retour
+        returncode = process.wait()
+        _log(f"[RUNNER_DEBUG] --- PROCESSUS PYTEST TERMINÉ (Code: {returncode}) ---")
+
+        if returncode != 0:
+            _log(f"Pytest a terminé avec le code d'erreur {returncode}.")
+            sys.exit(returncode)
+        else:
+            _log("Pytest a terminé avec succès.")
+
+    def _show_service_logs(self):
+        """Affiche le contenu des fichiers de log des services."""
+        _log("Affichage des logs des services...")
+        for log_name, log_path in [("API_OUT", "api_server.log"), ("API_ERR", "api_server.error.log")]:
+            full_path = ROOT_DIR / log_path
+            if full_path.exists():
+                try:
+                    content = full_path.read_text(encoding="utf-8").strip()
+                    if content:
+                        _log(f"--- Contenu du log: {log_name} ({full_path}) ---")
+                        print(content)
+                        _log(f"--- Fin du log: {log_name} ---")
+                    else:
+                        _log(f"Le fichier de log {full_path} est vide.")
+                except Exception as e:
+                    _log(f"Impossible de lire le fichier de log {full_path}: {e}")
+            else:
+                _log(f"Le fichier de log {full_path} n'a pas été trouvé.")
 
 
 def main():
-    """Point d'entrée CLI"""
-    import argparse
-    
-    parser = argparse.ArgumentParser(description="TestRunner unifié - remplace les scripts PowerShell")
-    parser.add_argument("command", choices=[
-        "unit", "integration", "functional", "playwright", "e2e",
-        "start-app", "status"
-    ], help="Commande à exécuter")
-    
-    parser.add_argument("--conda-env", help="Environnement conda à activer")
-    parser.add_argument("--headless", action="store_true", help="Mode headless pour tests navigateur")
-    parser.add_argument("--browser", default="chromium", help="Navigateur pour tests (chromium, firefox, webkit)")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Mode verbeux")
-    parser.add_argument("--wait", action="store_true", help="Attendre après démarrage app")
-    parser.add_argument("extra_args", nargs="*", help="Arguments supplémentaires pour pytest")
-    
-    args = parser.parse_args()
-    
-    # Configuration logging
-    log_level = logging.DEBUG if args.verbose else logging.INFO
-    runner = TestRunner(log_level)
-    
-    if args.command == "start-app":
-        results = runner.start_web_application(wait=args.wait)
-        return 0 if all(success for success, _ in results.values()) else 1
-    
-    elif args.command == "status":
-        status = runner.get_services_status()
-        print("=== Status des Services ===")
-        for service in status["services"]:
-            print(f"- {service['name']}: {'Running' if service['running'] else 'Stopped'}")
-        print(f"\nConfigurations de tests: {', '.join(status['test_configs'])}")
-        return 0
-    
-    elif args.command == "playwright":
-        return runner.run_playwright_tests(headless=args.headless, browser=args.browser)
-    
-    else:
-        return runner.run_tests(args.command, args.extra_args, args.conda_env)
+    """Point d'entrée principal du script."""
+    parser = argparse.ArgumentParser(description="Orchestrateur de tests du projet.")
+    parser.add_argument(
+        "--type",
+        required=True,
+        choices=["unit", "functional", "e2e", "all"],
+        help="Type de tests à exécuter."
+    )
+    parser.add_argument(
+        "--path",
+        help="Chemin spécifique vers un fichier ou dossier de test (optionnel)."
+    )
+    parser.add_argument(
+        "--browser",
+        choices=["chromium", "firefox", "webkit"],
+        help="Navigateur pour les tests Playwright (optionnel)."
+    )
+    args, unknown_args = parser.parse_known_args()
+ 
+    runner = TestRunner(args.type, args.path, args.browser, pytest_extra_args=unknown_args)
+    runner.run()
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

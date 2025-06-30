@@ -140,7 +140,7 @@ class TestEnhancedComplexFallacyAnalyzer(unittest.TestCase):
     
     
     
-    def test_analyze_argument_structure(self, mock_evaluate_coherence, mock_identify_relations, mock_identify_structures):
+    def test_analyze_argument_structure(self):
         """Teste l'analyse de la structure argumentative."""
         self.skipTest("Test désactivé car la refonte des mocks a cassé la syntaxe.")
         # # Configurer les mocks
@@ -174,14 +174,7 @@ class TestEnhancedComplexFallacyAnalyzer(unittest.TestCase):
     
     
     
-    def test_detect_composite_fallacies(
-        self,
-        mock_evaluate_severity,
-        mock_identify_patterns,
-        mock_identify_advanced,
-        mock_identify_combined,
-        mock_contextual_analyzer
-    ):
+    def test_detect_composite_fallacies(self):
         """Teste la détection des sophismes composés."""
         self.skipTest("Test désactivé car la refonte des mocks a cassé la syntaxe.")
         # # Configurer les mocks
@@ -225,14 +218,7 @@ class TestEnhancedComplexFallacyAnalyzer(unittest.TestCase):
     
     
     
-    def test_analyze_inter_argument_coherence(
-        self,
-        mock_evaluate_overall,
-        mock_detect_contradictions,
-        mock_analyze_logical,
-        mock_analyze_thematic,
-        mock_analyze_structure
-    ):
+    def test_analyze_inter_argument_coherence(self):
         """Teste l'analyse de la cohérence inter-arguments."""
         self.skipTest("Test désactivé car la refonte des mocks a cassé la syntaxe.")
         # # Configurer les mocks

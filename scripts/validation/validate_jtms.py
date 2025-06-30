@@ -8,6 +8,7 @@ Script de raccourci pour lancer facilement la validation JTMS
 depuis la racine du projet.
 
 Usage: python validate_jtms.py
+import argumentation_analysis.core.environment
 """
 
 import sys

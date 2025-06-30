@@ -1,15 +1,22 @@
-import subprocess
 import os
 import sys
+import json
+import asyncio
+import argparse
+import logging
+from pathlib import Path
 
-# Ensure the script is run from the root of the argumentation_analysis directory
-# This helps locate run_analysis.py correctly.
-# A more robust solution might involve setting Python paths, but for a demo, this is sufficient.
-if not os.path.exists('run_analysis.py'):
-    print("Error: This script must be run from the 'argumentation_analysis' directory.", file=sys.stderr)
-    sys.exit(1)
+# Ensure the project root is in the Python path
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
-# Define a list of sample texts for demonstration
+from argumentation_analysis.pipelines.analysis_pipeline import run_text_analysis_pipeline
+from argumentation_analysis.core.utils.logging_utils import setup_logging
+import argumentation_analysis.service_setup.analysis_services as analysis_services_module
+print(f"CHEMIN DU MODULE ANALYSIS_SERVICES: {analysis_services_module.__file__}")
+
+# Define a list of sample texts for the default demonstration mode
 sample_texts = [
     {
         "title": "Demonstration 1: Simple Fallacy",
@@ -22,70 +29,105 @@ sample_texts = [
     {
         "title": "Demonstration 3: Complex Argument",
         "text": "While some studies suggest a correlation between ice cream sales and crime rates, it is a fallacy to assume causation. The lurking variable is clearly the weather; hot temperatures lead to both more ice cream consumption and more people being outside, which can lead to more public disturbances."
+    },
+    {
+        "title": "Demonstration 4: Analysis from File",
+        "file_path": "argumentation_analysis/demos/sample_epita_discourse.txt"
     }
 ]
 
-# --- Demo from command line argument ---
-print("=" * 80)
-print("STARTING RHETORICAL ANALYSIS DEMONSTRATIONS")
-print("=" * 80)
+async def run_and_log_analysis(title, text=None, file_path=None, output_path=None, log_level="INFO"):
+    """Runs a single analysis, logs the process, and handles output."""
+    logger = logging.getLogger("RhetoricalAnalysisDemo")
+    logger.info(f"--- Starting: {title} ---")
 
-for demo in sample_texts:
-    print(f"\n\n--- {demo['title']} ---\n")
-    print(f"Analyzing text: \"{demo['text']}\"\n")
-    
-    # Construct the command to run the analysis
-    command = [
-        "python",
-        "run_analysis.py",
-        "--text",
-        demo["text"],
-        "--verbose"  # Use verbose mode to get detailed output
-    ]
-    
-    # Execute the command
+    input_desc = f"text: \"{text[:50]}...\"" if text else f"file: '{file_path}'"
+    logger.info(f"Analyzing {input_desc}")
+
     try:
-        subprocess.run(command, check=True, text=True)
-        print(f"\n--- {demo['title']} COMPLETED ---")
-    except subprocess.CalledProcessError as e:
-        print(f"\n--- ERROR during {demo['title']} ---", file=sys.stderr)
-        print(e, file=sys.stderr)
-    except FileNotFoundError:
-        print("\n--- ERROR: 'python' command not found. Make sure Python is in your PATH.", file=sys.stderr)
-        break
+        analysis_results = await run_text_analysis_pipeline(
+            input_text_content=text,
+            input_file_path=file_path,
+            log_level=log_level
+        )
 
+        logger.info("--- ANALYSIS RESULT ---")
+        if analysis_results:
+            output_json_str = json.dumps(analysis_results, indent=2, ensure_ascii=False)
+            if output_path:
+                try:
+                    output_path.parent.mkdir(parents=True, exist_ok=True)
+                    output_path.write_text(output_json_str, encoding='utf-8')
+                    logger.info(f"Analysis results saved to: {output_path}")
+                except Exception as write_error:
+                    logger.error(f"Failed to write to output file {output_path}: {write_error}")
+                    print(output_json_str) # Fallback to stdout
+            else:
+                print(output_json_str)
+        else:
+            logger.warning("Analysis returned None or empty result.")
 
-# --- Demo from file ---
-demo_file_path = "demos/sample_epita_discourse.txt"
-demo_file_content = """
-Le projet EPITA Intelligence Symbolique 2025 est un défi majeur. 
-Certains disent qu'il est trop ambitieux et voué à l'échec car aucun projet étudiant n'a jamais atteint ce niveau d'intégration.
-Cependant, cet argument ignore les compétences uniques de notre équipe et les avancées technologiques récentes. 
-Nous devons nous concentrer sur une livraison incrémentale et prouver que la réussite est possible.
-"""
+        logger.info(f"--- Completed: {title} ---")
 
-print(f"\n\n--- Demonstration 4: Analysis from File ---\n")
-try:
-    with open(demo_file_path, "w", encoding="utf-8") as f:
-        f.write(demo_file_content)
-    print(f"Created demo file: {demo_file_path}")
+    except Exception as e:
+        logger.error(f"--- ERROR during {title} ---", exc_info=True)
 
-    print(f"Analyzing text from file...\n")
-    command = [
-        "python",
-        "run_analysis.py",
-        "--file",
-        demo_file_path,
-        "--verbose"
-    ]
-    subprocess.run(command, check=True, text=True)
-    print(f"\n--- Demonstration 4 COMPLETED ---")
+async def main():
+    """Main function to parse arguments and run rhetorical analysis."""
+    parser = argparse.ArgumentParser(description="Canonical entry point for Rhetorical Analysis.")
+    
+    text_source = parser.add_mutually_exclusive_group()
+    text_source.add_argument("--file", "-f", type=str, help="Path to a text file to analyze.")
+    text_source.add_argument("--text", "-t", type=str, help="Text to analyze directly from the command line.")
+    
+    parser.add_argument("--output-file", "-o", type=str, help="Path to save the output JSON report.")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable detailed DEBUG logging.")
+    
+    args = parser.parse_args()
+    
+    log_level = "DEBUG" if args.verbose else "INFO"
+    setup_logging(log_level_str=log_level)
+    logger = logging.getLogger("RhetoricalAnalysisDemo")
 
-except Exception as e:
-    print(f"\n--- ERROR during Demonstration 4 ---", file=sys.stderr)
-    print(e, file=sys.stderr)
+    output_file_path = Path(args.output_file) if args.output_file else None
 
+    # If no arguments are provided, run the default demonstrations
+    if not (args.file or args.text):
+        logger.info("No input specified. Running default demonstrations.")
+        print("=" * 80)
+        print("STARTING RHETORICAL ANALYSIS DEMONSTRATIONS")
+        print("=" * 80)
+        for i, demo in enumerate(sample_texts):
+            demo_output_path = None
+            if output_file_path:
+                 # Create a unique output file for each demo run
+                demo_output_path = output_file_path.with_name(f"{output_file_path.stem}_demo_{i+1}{output_file_path.suffix}")
+            
+            file_path = demo.get('file_path')
+            if file_path and not os.path.exists(file_path):
+                 logger.warning(f"Skipping demo '{demo['title']}' - File not found: {file_path}")
+                 continue
 
-print("\n\n" + "=" * 80)
-print("ALL DEMONSTRATIONS COMPLETED")
-print("=" * 80)
+            await run_and_log_analysis(
+                title=demo['title'], 
+                text=demo.get('text'), 
+                file_path=file_path,
+                output_path=demo_output_path,
+                log_level=log_level
+            )
+        print("\\n" + "=" * 80)
+        print("ALL DEMONSTRATIONS COMPLETED")
+        print("=" * 80)
+    else:
+        # Run with specified command-line arguments
+        title = "Command-Line Analysis"
+        await run_and_log_analysis(
+            title=title,
+            text=args.text,
+            file_path=args.file,
+            output_path=output_file_path,
+            log_level=log_level
+        )
+
+if __name__ == "__main__":
+    asyncio.run(main())

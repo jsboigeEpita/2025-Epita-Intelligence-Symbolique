@@ -69,6 +69,45 @@ def sample_json_data():
         }
     }
 
+@pytest.fixture
+def mock_derive(mocker):
+    """Fixture to mock key derivation and raise an exception."""
+    return mocker.patch(
+        'argumentation_analysis.services.crypto_service.PBKDF2HMAC.derive',
+        side_effect=Exception("Derivation Error")
+    )
+
+@pytest.fixture
+def mock_encrypt(mocker):
+    """Fixture to mock data encryption and raise an exception."""
+    return mocker.patch(
+        'argumentation_analysis.services.crypto_service.Fernet.encrypt',
+        side_effect=Exception("Encryption Error")
+    )
+
+@pytest.fixture
+def mock_decrypt(mocker):
+    """Fixture to mock data decryption and raise an exception."""
+    return mocker.patch(
+        'argumentation_analysis.services.crypto_service.Fernet.decrypt',
+        side_effect=Exception("Decryption Error")
+    )
+
+@pytest.fixture
+def mock_dumps(mocker):
+    """Fixture to mock json.dumps and raise an exception."""
+    return mocker.patch(
+        'argumentation_analysis.services.crypto_service.json.dumps',
+        side_effect=Exception("JSON Error")
+    )
+
+@pytest.fixture
+def mock_decompress(mocker):
+    """Fixture to mock gzip.decompress and raise an exception."""
+    return mocker.patch(
+        'argumentation_analysis.services.crypto_service.gzip.decompress',
+        side_effect=Exception("Decompression Error")
+    )
 
 class TestCryptoService:
     async def _create_authentic_gpt4o_mini_instance(self):

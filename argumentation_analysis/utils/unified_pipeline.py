@@ -23,6 +23,8 @@ from typing import Dict, List, Any, Optional, Union
 from dataclasses import dataclass, field
 from enum import Enum
 
+from argumentation_analysis.config.settings import settings
+
 
 class AnalysisMode(Enum):
     """Modes d'analyse disponibles."""
@@ -238,9 +240,9 @@ class UnifiedAnalysisPipeline:
             kernel = sk.Kernel()
             
             # Configuration du service OpenAI
-            api_key = os.getenv("OPENAI_API_KEY")
+            api_key = settings.openai.api_key.get_secret_value() if settings.openai.api_key else None
             if not api_key:
-                self.logger.warning("[API-KEY] OPENAI_API_KEY non trouvée, utilisation fallback")
+                self.logger.warning("[API-KEY] OPENAI_API_KEY non trouvée dans la configuration, utilisation fallback")
                 return await self._fallback_analysis(text, mode)
             
             # Ajout du service OpenAI au kernel

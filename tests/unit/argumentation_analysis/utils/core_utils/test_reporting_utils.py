@@ -5,7 +5,7 @@ from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
 from config.unified_config import UnifiedConfig
 
-from argumentation_analysis.utils.core_utils.reporting_utils import generate_performance_comparison_markdown_report
+from argumentation_analysis.core.utils.reporting_utils import generate_performance_comparison_markdown_report
 from unittest.mock import patch
 # -*- coding: utf-8 -*-
 """
@@ -16,7 +16,7 @@ from pathlib import Path
 import json
 
 
-from argumentation_analysis.utils.core_utils.reporting_utils import (
+from argumentation_analysis.core.utils.reporting_utils import (
     save_json_report,
     generate_json_report,
     save_text_report,

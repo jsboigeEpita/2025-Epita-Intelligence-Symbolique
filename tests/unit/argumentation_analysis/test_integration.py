@@ -38,36 +38,36 @@ def basic_state():
     return RhetoricalAnalysisState(test_text)
 
 
-class TestBasicIntegration:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-        
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
 
+@pytest.fixture
+def mock_kernel_class(mocker):
+    """Fixture pour mocker la classe du kernel."""
+    return mocker.patch('semantic_kernel.Kernel')
+
+@pytest.fixture
+def mock_run_analysis(mocker):
+    """Fixture pour mocker la fonction run_analysis."""
+    return mocker.patch('argumentation_analysis.orchestration.analysis_runner.AnalysisRunner.run_analysis')
+
+
+class TestBasicIntegration:
     """Tests d'intégration de base pour vérifier l'interaction entre les composants."""
 
-    
-    
-    async def test_component_interaction(self, mock_agent_class, mock_kernel_class, basic_state):
-        """Teste l'interaction de base entre les composants."""
+    @pytest.mark.asyncio
+    async def test_component_interaction(self, basic_state):
+        """Teste l'interaction de base entre les composants en utilisant des mocks."""
         state = basic_state
-        pm_agent = await self._create_authentic_gpt4o_mini_instance()
+        
+        # Utiliser MagicMock avec spec pour simuler l'interface des agents
+        from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
+        
+        pm_agent = MagicMock(spec=BaseAgent)
         pm_agent.name = "ProjectManagerAgent"
         
-        pl_agent = await self._create_authentic_gpt4o_mini_instance()
+        pl_agent = MagicMock(spec=BaseAgent)
         pl_agent.name = "PropositionalLogicAgent"
         
-        informal_agent = await self._create_authentic_gpt4o_mini_instance()
+        informal_agent = MagicMock(spec=BaseAgent)
         informal_agent.name = "InformalAnalysisAgent"
         
         agents = [pm_agent, pl_agent, informal_agent]
@@ -95,6 +95,7 @@ class TestSimulatedAnalysisFlow:
     """Tests simulant un flux d'analyse complet avec des mocks."""
 
     
+    @pytest.mark.asyncio
     async def test_simulated_analysis_flow(self, mock_run_analysis, basic_state):
         """Simule un flux d'analyse complet."""
         state = basic_state
@@ -188,6 +189,7 @@ def mocked_services():
 class TestExtractIntegration:
     """Tests d'intégration pour les composants d'extraction."""
     
+    @pytest.mark.asyncio
     async def test_extract_integration(self, mocked_services):
         """Teste l'intégration entre les services d'extraction et de récupération."""
         mock_fetch_service, mock_extract_service, integration_sample_definitions = mocked_services

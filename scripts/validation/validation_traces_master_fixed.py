@@ -6,6 +6,7 @@ Script maître de validation des démos Sherlock, Watson et Moriarty avec traces
 Version corrigée avec auto_env compatible.
 """
 
+import argumentation_analysis.core.environment # Added import
 # ===== INTÉGRATION AUTO_ENV - MÊME APPROCHE QUE CONFTEST.PY =====
 import sys
 import os

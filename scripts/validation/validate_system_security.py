@@ -7,6 +7,7 @@ Script de validation de la sécurité du système de basculement.
 Ce script valide que le système de basculement entre sources simples et complexes
 fonctionne correctement et que la sécurité des données politiques est préservée.
 """
+import argumentation_analysis.core.environment
 
 import os
 import sys

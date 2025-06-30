@@ -13,7 +13,6 @@ Composant réutilisable pour :
 Intégré dans l'architecture modulaire pour éviter la duplication de code.
 """
 
-import os
 import logging
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
@@ -22,6 +21,8 @@ from cryptography.fernet import Fernet
 import base64
 import hashlib
 
+from argumentation_analysis.core.io_manager import load_extract_definitions
+from argumentation_analysis.config.settings import settings
 
 @dataclass
 class CorpusDecryptionResult:
@@ -38,12 +39,22 @@ class CryptoWorkflowManager:
     
     def __init__(self, passphrase: Optional[str] = None):
         self.logger = logging.getLogger(f"{__name__}.CryptoWorkflowManager")
-        self.passphrase = passphrase or os.getenv("TEXT_CONFIG_PASSPHRASE", "epita_ia_symb_2025_temp_key")
+        
+        passphrase_to_use = passphrase
+        if not passphrase_to_use and settings.passphrase:
+            passphrase_to_use = settings.passphrase.get_secret_value()
+            
+        if not passphrase_to_use:
+            self.logger.warning("Aucune passphrase fournie ou configurée dans les settings. Le déchiffrement échouera probablement.")
+            
+        self.passphrase = passphrase_to_use
         self._encryption_key = None
         
     def derive_encryption_key(self) -> bytes:
         """Dérive une clé de chiffrement depuis la passphrase."""
         if self._encryption_key is None:
+            if not self.passphrase:
+                raise ValueError("Impossible de dériver la clé: aucune passphrase n'est définie.")
             # Dérivation compatible avec le système existant
             key_material = self.passphrase.encode('utf-8')
             key_hash = hashlib.sha256(key_material).digest()
@@ -71,10 +82,12 @@ class CryptoWorkflowManager:
             processing_time=0.0
         )
         
+        if not corpus_files:
+            self.logger.info("La liste des fichiers de corpus est vide, aucune action requise.")
+            result.processing_time = time.time() - start_time
+            return result
+
         try:
-            # Import dynamique pour éviter les erreurs de dépendances
-            from argumentation_analysis.ui.file_operations import load_extract_definitions
-            
             encryption_key = self.derive_encryption_key()
             self.logger.info(f"🔓 Déchiffrement de {len(corpus_files)} fichiers de corpus")
             
@@ -93,7 +106,8 @@ class CryptoWorkflowManager:
                     # Chargement et déchiffrement
                     definitions = load_extract_definitions(
                         config_file=corpus_path,
-                        key=encryption_key
+                        b64_derived_key=encryption_key,
+                        fallback_definitions=[]
                     )
                     
                     if definitions:
@@ -112,12 +126,20 @@ class CryptoWorkflowManager:
                         result.errors.append(error_msg)
                         self.logger.error(error_msg)
                         
+                except ImportError as ie:
+                    error_msg = f"Modules de déchiffrement non disponibles: {ie}"
+                    result.errors.append(error_msg)
+                    self.logger.error(error_msg)
+                    result.success = False # En cas d'erreur d'import, l'opération globale échoue
                 except Exception as e:
                     error_msg = f"Erreur traitement {corpus_path}: {e}"
                     result.errors.append(error_msg)
                     self.logger.error(error_msg)
-            
-            result.success = len(result.loaded_files) > 0
+
+            if not result.errors:
+                 result.success = True
+            else:
+                 result.success = len(result.loaded_files) > 0 and not any("non disponibles" in err for err in result.errors)
             result.processing_time = time.time() - start_time
             
             self.logger.info(f"🎯 Déchiffrement terminé: {len(result.loaded_files)} fichiers, {result.total_definitions} définitions")

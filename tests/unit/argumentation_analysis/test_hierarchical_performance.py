@@ -21,9 +21,10 @@ from datetime import datetime
 from typing import Dict, Any
 import statistics
 from pathlib import Path
+from unittest.mock import MagicMock
 
 # Importer les composants de l'ancienne architecture
-from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation as run_analysis
+from argumentation_analysis.orchestration.enhanced_pm_analysis_runner import EnhancedPMAnalysisRunner
 from argumentation_analysis.core.strategies import BalancedParticipationStrategy as BalancedStrategy
 
 # Mocker HierarchicalOrchestrator car le fichier d'origine n'existe pas/plus
@@ -74,8 +75,9 @@ class TestPerformanceComparison(unittest.TestCase):
             mock_llm_service = MagicMock()
             mock_llm_service.service_id = "mock_llm"
             for i in range(3):
+                runner = EnhancedPMAnalysisRunner()
                 start_time = time.time()
-                await run_analysis(text, llm_service=mock_llm_service) 
+                await runner.run_analysis_async(text, llm_service=mock_llm_service)
                 end_time = time.time()
                 legacy_times.append(end_time - start_time)
             

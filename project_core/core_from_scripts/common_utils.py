@@ -60,16 +60,18 @@ class ColorCodes:
 class Logger:
     """Logger centralisé avec support couleurs et formatage"""
     
-    def __init__(self, use_colors: bool = None, verbose: bool = False):
+    def __init__(self, use_colors: bool = None, verbose: bool = False, log_file_path: Optional[str] = None):
         """
         Initialise le logger
         
         Args:
             use_colors: Utiliser les couleurs (auto-détecté si None)
             verbose: Mode verbeux pour plus de détails
+            log_file_path: Chemin vers le fichier de log
         """
         self.verbose = verbose
         self.use_colors = use_colors if use_colors is not None else self._supports_color()
+        self.log_file_path = log_file_path
         self.color_map = {
             LogLevel.DEBUG: ColorCodes.CYAN,
             LogLevel.INFO: ColorCodes.WHITE,
@@ -78,6 +80,11 @@ class Logger:
             LogLevel.ERROR: ColorCodes.BRIGHT_RED,
             LogLevel.CRITICAL: ColorCodes.RED + ColorCodes.BOLD
         }
+        if self.log_file_path:
+            # S'assurer que le répertoire de log existe
+            log_dir = os.path.dirname(self.log_file_path)
+            if log_dir and not os.path.exists(log_dir):
+                os.makedirs(log_dir)
     
     def _supports_color(self) -> bool:
         """Détecte si le terminal supporte les couleurs"""
@@ -105,11 +112,22 @@ class Logger:
         
         formatted = self._format_message(message, level)
         
-        # Erreurs et critiques vers stderr
-        if level in [LogLevel.ERROR, LogLevel.CRITICAL]:
-            print(formatted, file=sys.stderr)
-        else:
-            print(formatted)
+        # Tous les logs sont dirigés vers stderr pour ne pas polluer la sortie standard (stdout),
+        # qui peut être utilisée pour retourner des données (ex: une commande à exécuter).
+        print(formatted, file=sys.stderr)
+
+        if self.log_file_path:
+            try:
+                # Écrire le message formaté (sans les couleurs) dans le fichier de log
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                # Recréer le message sans couleur pour le fichier
+                file_formatted_message = f"[{timestamp}] [{level.value}] {message}"
+                with open(self.log_file_path, 'a', encoding='utf-8') as f:
+                    f.write(file_formatted_message + '\\n')
+            except Exception as e:
+                # Si le logging de fichier échoue, on affiche une erreur sur stderr
+                # pour ne pas entrer dans une boucle infinie.
+                print(f"[LOGGER FILE ERROR] Could not write to {self.log_file_path}: {e}", file=sys.stderr)
     
     def debug(self, message: str):
         """Log un message de debug"""
@@ -143,15 +161,15 @@ class ColoredOutput:
     def print_banner(title: str, char: str = "="):
         """Affiche une bannière stylée"""
         banner_line = char * max(60, len(title) + 4)
-        print(f"\n{banner_line}")
-        print(f"{char} {title.center(len(banner_line) - 4)} {char}")
-        print(f"{banner_line}\n")
+        print(f"\n{banner_line}", file=sys.stderr)
+        print(f"{char} {title.center(len(banner_line) - 4)} {char}", file=sys.stderr)
+        print(f"{banner_line}\n", file=sys.stderr)
     
     @staticmethod
     def print_section(title: str):
         """Affiche un titre de section"""
-        print(f"\n🔸 {title}")
-        print("-" * (len(title) + 4))
+        print(f"\n[+] {title}", file=sys.stderr)
+        print("-" * (len(title) + 4), file=sys.stderr)
 
 
 def format_timestamp(dt: datetime = None) -> str:
@@ -279,9 +297,9 @@ def create_progress_indicator(total: int, prefix: str = "Progression"):
         bar_length = 50
         filled_length = int(bar_length * current // total)
         bar = '█' * filled_length + '-' * (bar_length - filled_length)
-        print(f'\r{prefix}: |{bar}| {percent:.1f}% {suffix}', end='', flush=True)
+        print(f'\r{prefix}: |{bar}| {percent:.1f}% {suffix}', end='', flush=True, file=sys.stderr)
         if current == total:
-            print()  # Nouvelle ligne à la fin
+            print(file=sys.stderr)  # Nouvelle ligne à la fin
     
     return update_progress
 
@@ -352,11 +370,11 @@ def print_colored(message: str, color: str = "white", bold: bool = False):
     
     # Gestion de l'encodage Unicode sur Windows
     try:
-        print(formatted_message)
+        print(formatted_message, file=sys.stderr)
     except UnicodeEncodeError:
         # Fallback sans caractères Unicode problématiques
         safe_message = formatted_message.encode('ascii', 'replace').decode('ascii')
-        print(safe_message)
+        print(safe_message, file=sys.stderr)
 
 
 def setup_logging(verbose: bool = False, use_colors: bool = None) -> Logger:

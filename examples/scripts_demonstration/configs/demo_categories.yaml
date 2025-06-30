@@ -22,7 +22,7 @@ categories:
     icon: "[AI]"
     nom: "Agents Logiques & Argumentation"
     description: "Raisonnement symbolique"
-    module: "demo_agents_logiques"
+    module: "demo_analyse_argumentation"
     tests_associes:
       - "tests/unit/argumentation_analysis/test_pl_definitions.py"
       - "tests/unit/argumentation_analysis/test_strategies.py"

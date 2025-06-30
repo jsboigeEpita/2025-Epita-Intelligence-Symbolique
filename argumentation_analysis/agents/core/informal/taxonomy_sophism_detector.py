@@ -24,33 +24,56 @@ logger = logging.getLogger("TaxonomySophismDetector")
 
 class TaxonomySophismDetector:
     """
-    Détecteur de sophismes unifié utilisant la vraie taxonomie.
-    
-    Cette classe centralise toute la logique de détection de sophismes
-    en utilisant la taxonomie réelle au lieu des mocks éparpillés.
+    Centralise la logique de détection et d'exploration des sophismes.
+
+    Cette classe s'appuie sur une taxonomie structurée (généralement un fichier
+    CSV ou un DataFrame pandas) pour identifier, classer et explorer les
+    sophismes dans un texte. Elle remplace les implémentations ad-hoc en
+    fournissant une interface unifiée qui interagit avec un
+    `InformalAnalysisPlugin` pour accéder aux données brutes de la taxonomie.
+
+    Attributes:
+        plugin (InformalAnalysisPlugin): Le plugin qui gère l'accès direct
+            aux données de la taxonomie.
+        _taxonomy_cache (Optional[pd.DataFrame]): Cache pour le DataFrame de
+            la taxonomie afin d'éviter les lectures répétées.
+        logger: Instance du logger pour ce module.
     """
-    
+
     def __init__(self, taxonomy_file_path: Optional[str] = None):
         """
-        Initialise le détecteur avec accès à la taxonomie.
-        
-        :param taxonomy_file_path: Chemin optionnel vers le fichier CSV de taxonomie
+        Initialise le détecteur de sophismes.
+
+        Args:
+            taxonomy_file_path (Optional[str]): Chemin vers le fichier CSV
+                contenant la taxonomie. S'il n'est pas fourni, le plugin
+                utilisera son chemin par défaut.
         """
         self.logger = logging.getLogger("TaxonomySophismDetector")
         self.plugin = InformalAnalysisPlugin(taxonomy_file_path=taxonomy_file_path)
         self._taxonomy_cache = None
-        
+
     def _get_taxonomy_df(self) -> pd.DataFrame:
-        """Récupère le DataFrame de taxonomie avec cache."""
+        """
+        Récupère le DataFrame de la taxonomie, en utilisant un cache interne.
+
+        Returns:
+            pd.DataFrame: Le DataFrame pandas représentant la taxonomie.
+        """
         if self._taxonomy_cache is None:
             self._taxonomy_cache = self.plugin._get_taxonomy_dataframe()
         return self._taxonomy_cache
-    
+
     def get_main_branches(self) -> List[Dict[str, Any]]:
         """
-        Récupère les branches principales de la taxonomie (niveau 0/1).
-        
-        :return: Liste des branches principales avec leurs clés taxonomiques
+        Récupère les branches principales (racines) de la taxonomie.
+
+        Sont considérées comme branches principales les nœuds de profondeur 0 ou 1.
+
+        Returns:
+            List[Dict[str, Any]]: Une liste de dictionnaires, chaque dictionnaire
+            représentant une branche principale avec ses informations clés
+            (nom, clé, description, etc.).
         """
         try:
             df = self._get_taxonomy_df()
@@ -80,11 +103,15 @@ class TaxonomySophismDetector:
     
     def explore_branch(self, taxonomy_key: int, max_depth: int = 3) -> Dict[str, Any]:
         """
-        Explore une branche de la taxonomie pour approfondir la spécificité.
-        
-        :param taxonomy_key: Clé taxonomique de la branche à explorer
-        :param max_depth: Profondeur maximale d'exploration
-        :return: Structure hiérarchique de la branche
+        Explore récursivement une branche de la taxonomie à partir d'une clé donnée.
+
+        Args:
+            taxonomy_key (int): La clé (PK) du nœud de départ de l'exploration.
+            max_depth (int): La profondeur maximale de l'exploration récursive.
+
+        Returns:
+            Dict[str, Any]: Un dictionnaire représentant la structure hiérarchique
+            de la branche, incluant le nœud courant et ses enfants.
         """
         try:
             # Utiliser la méthode du plugin pour explorer la hiérarchie
@@ -118,13 +145,27 @@ class TaxonomySophismDetector:
     
     def detect_sophisms_from_taxonomy(self, text: str, max_sophisms: int = 10) -> List[Dict[str, Any]]:
         """
-        Détecte les sophismes dans un texte en utilisant la taxonomie.
-        
-        Méthode principale qui remplace tous les détecteurs éparpillés.
-        
-        :param text: Texte à analyser
-        :param max_sophisms: Nombre maximum de sophismes à détecter
-        :return: Liste des sophismes détectés avec leurs clés taxonomiques
+        Détecte les sophismes dans un texte par analyse lexicale de la taxonomie.
+
+        Cette méthode implémente une heuristique de détection basée sur la
+        recherche de correspondances entre les noms, synonymes et mots-clés de
+        la taxonomie et le contenu du texte fourni.
+
+        Le processus se déroule en trois étapes :
+        1.  **Analyse lexicale** : Parcourt la taxonomie et assigne un score de
+            confiance basé sur les correspondances trouvées.
+        2.  **Tri et filtrage** : Trie les détections par confiance et ne conserve
+            que les plus pertinentes.
+        3.  **Enrichissement** : Ajoute du contexte aux sophismes détectés, comme
+            la hiérarchie de la branche et les sophismes apparentés.
+
+        Args:
+            text (str): Le texte à analyser.
+            max_sophisms (int): Le nombre maximum de sophismes à retourner.
+
+        Returns:
+            List[Dict[str, Any]]: Une liste de dictionnaires, où chaque dictionnaire
+            représente un sophisme détecté avec ses détails et son contexte.
         """
         detected_sophisms = []
         
@@ -201,10 +242,14 @@ class TaxonomySophismDetector:
     
     def _get_parent_context(self, taxonomy_key: int) -> Dict[str, Any]:
         """
-        Récupère le contexte parent d'un sophisme (frères/sœurs).
-        
-        :param taxonomy_key: Clé taxonomique du sophisme
-        :return: Contexte parent avec les sophismes apparentés
+        Récupère le contexte parent d'un nœud (ses "frères").
+
+        Args:
+            taxonomy_key (int): La clé du nœud pour lequel trouver les frères.
+
+        Returns:
+            Dict[str, Any]: Un dictionnaire contenant le chemin du parent et
+            une liste des nœuds frères.
         """
         try:
             df = self._get_taxonomy_df()
@@ -250,10 +295,17 @@ class TaxonomySophismDetector:
     
     def get_sophism_details_by_key(self, taxonomy_key: int) -> Dict[str, Any]:
         """
-        Récupère les détails complets d'un sophisme par sa clé taxonomique.
-        
-        :param taxonomy_key: Clé taxonomique du sophisme
-        :return: Détails complets du sophisme
+        Récupère les détails complets d'un sophisme via sa clé taxonomique.
+
+        Délègue l'appel au plugin sous-jacent pour extraire toutes les
+        informations associées à une clé primaire (PK) de la taxonomie.
+
+        Args:
+            taxonomy_key (int): La clé taxonomique du sophisme.
+
+        Returns:
+            Dict[str, Any]: Un dictionnaire contenant les détails complets
+            du sophisme, ou un message d'erreur si la clé est introuvable.
         """
         try:
             result = self.plugin._internal_get_node_details(
@@ -268,11 +320,18 @@ class TaxonomySophismDetector:
     
     def search_sophisms_by_pattern(self, pattern: str, max_results: int = 10) -> List[Dict[str, Any]]:
         """
-        Recherche des sophismes par motif dans les noms et descriptions.
-        
-        :param pattern: Motif à rechercher
-        :param max_results: Nombre maximum de résultats
-        :return: Liste des sophismes correspondants
+        Recherche des sophismes par motif textuel.
+
+        La recherche s'effectue sur plusieurs champs textuels de la taxonomie
+        (nom, nom vulgarisé, description, famille) avec des poids différents.
+
+        Args:
+            pattern (str): Le motif de recherche (insensible à la casse).
+            max_results (int): Le nombre maximum de résultats à retourner.
+
+        Returns:
+            List[Dict[str, Any]]: Une liste de sophismes correspondant au
+            motif, triés par pertinence.
         """
         try:
             df = self._get_taxonomy_df()
@@ -322,23 +381,34 @@ class TaxonomySophismDetector:
 
 def create_unified_detector(taxonomy_file_path: Optional[str] = None) -> TaxonomySophismDetector:
     """
-    Factory function pour créer le détecteur unifié.
-    
-    :param taxonomy_file_path: Chemin optionnel vers le fichier de taxonomie
-    :return: Instance du détecteur unifié
+    Factory pour instancier `TaxonomySophismDetector`.
+
+    Args:
+        taxonomy_file_path (Optional[str]): Chemin vers le fichier de taxonomie.
+
+    Returns:
+        TaxonomySophismDetector: Une nouvelle instance du détecteur.
     """
     return TaxonomySophismDetector(taxonomy_file_path=taxonomy_file_path)
 
 
-# Instance globale pour l'utilisation dans l'agent informel
+# Instance globale pour une utilisation partagée (style singleton).
 _global_detector = None
 
 def get_global_detector(taxonomy_file_path: Optional[str] = None) -> TaxonomySophismDetector:
     """
-    Récupère l'instance globale du détecteur (singleton pattern).
-    
-    :param taxonomy_file_path: Chemin optionnel vers le fichier de taxonomie
-    :return: Instance globale du détecteur
+    Récupère l'instance globale partagée du détecteur.
+
+    Cette fonction implémente un modèle singleton simple pour garantir qu'une
+    seule instance du détecteur est utilisée à travers l'application, ce qui
+    évite de recharger la taxonomie plusieurs fois.
+
+    Args:
+        taxonomy_file_path (Optional[str]): Chemin vers le fichier de taxonomie,
+            utilisé uniquement lors de la première création de l'instance.
+
+    Returns:
+        TaxonomySophismDetector: L'instance globale du détecteur.
     """
     global _global_detector
     if _global_detector is None:

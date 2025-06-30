@@ -29,6 +29,8 @@ async def main(port):
     try:
         await site.start()
         logging.info(f"Fake aiohttp backend started on http://localhost:{port}")
+        # THIS IS THE CRITICAL LINE THE ORCHESTRATOR IS WAITING FOR
+        logging.info("Application startup complete.")
         # Keep the server running indefinitely
         await asyncio.Event().wait()
     except Exception as e:
@@ -38,14 +40,14 @@ async def main(port):
         logging.info("Fake backend stopped.")
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        try:
-            port_arg = int(sys.argv[1])
-        except ValueError:
-            logging.error(f"Invalid port '{sys.argv[1]}'. Must be an integer.")
-            sys.exit(1)
-    else:
-        port_arg = 8000
+    import os
+    # Priorité: variable d'environnement FLASK_RUN_PORT, puis argument CLI, puis 8000
+    port_arg_str = os.environ.get('FLASK_RUN_PORT') or (sys.argv[1] if len(sys.argv) > 1 else "8000")
+    try:
+        port_arg = int(port_arg_str)
+    except (ValueError, TypeError):
+        logging.error(f"Invalid port specified: '{port_arg_str}'.")
+        sys.exit(1)
 
     try:
         asyncio.run(main(port_arg))

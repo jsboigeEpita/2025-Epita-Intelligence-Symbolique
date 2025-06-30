@@ -20,7 +20,7 @@ from datetime import datetime
 from semantic_kernel import Kernel # Déjà présent, pas de changement nécessaire
 
 from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
-from argumentation_analysis.agents.core.logic.abstract_logic_agent import AbstractLogicAgent
+from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent as AbstractLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
 from argumentation_analysis.agents.core.logic.query_executor import QueryExecutor
 

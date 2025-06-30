@@ -1,42 +1,44 @@
-# Analyse d'Argumentation
+# Module d'Analyse d'Argumentation
 
-Ce répertoire contient le cœur du projet d'analyse d'argumentation. Il inclut les modèles, les pipelines de traitement, les agents et les orchestrateurs nécessaires pour analyser et évaluer des structures argumentatives.
+Ce document fournit une vue d'ensemble du module `argumentation_analysis`, de son architecture et de la manière de l'utiliser.
 
-## Organisation des répertoires
+## Architecture
 
-La structure de ce répertoire est la suivante :
+L'architecture du module est conçue pour être flexible et modulaire, s'appuyant sur deux modèles d'orchestration principaux pour traiter les demandes d'analyse.
 
--   **agents/** : Contient les agents intelligents qui exécutent des tâches spécifiques.
--   **analytics/** : Outils et scripts pour l'analyse des résultats.
--   **api/** : Points d'entrée de l'API pour l'intégration avec d'autres services.
--   **config/** : Fichiers de configuration pour les différents composants.
--   **core/** : Composants de base du système.
--   **data/** : Données utilisées pour l'entraînement, les tests et l'analyse.
--   **demos/** : Scripts de démonstration.
--   **docs/** : Documentation du projet.
--   **examples/** : Exemples d'utilisation des outils et des pipelines.
--   **execution\_traces/** : Traces d'exécution pour le débogage et l'analyse.
--   **integrations/** : Intégrations avec des services externes.
--   **mocks/** : Mocks pour les tests.
--   **models/** : Modèles d'apprentissage automatique pré-entraînés.
--   **nlp/** : Outils et bibliothèques pour le traitement du langage naturel.
--   **notebooks/** : Notebooks Jupyter pour l'expérimentation et l'analyse.
--   **orchestration/** : Orchéstrateurs qui coordonnent les différents composants.
--   **pipelines/** : Pipelines de traitement des données et d'analyse.
--   **plugins/** : Plugins pour étendre les fonctionnalités.
--   **reporting/** : Scripts pour générer des rapports.
--   **results/** : Résultats des analyses.
--   **scripts/** : Scripts utilitaires pour le projet.
--   **service\_setup/** : Scripts pour la configuration des services.
--   **services/** : Services externes utilisés par le projet.
--   **temp\_downloads/** : Téléchargements temporaires.
--   **tests/** : Tests unitaires et d'intégration.
--   **text\_cache/** : Cache pour les textes traités.
--   **ui/** : Interface utilisateur pour interagir avec le système.
--   **utils/** : Fonctions et classes utilitaires.
+### Modèles Architecturaux
 
-## Points d'Entrée Principaux
+1.  **Le Modèle d'Orchestration Hiérarchique** :
+    *   **Description** : Une architecture classique à trois niveaux (Stratégique, Tactique, Opérationnel) où une demande est progressivement décomposée en objectifs, puis en tâches exécutables.
+    *   **Flux** : `Demande -> Analyse Stratégique -> Plan Tactique -> Exécution Opérationnelle -> Synthèse`.
+    *   **Idéal pour** : Des analyses complexes et profondes nécessitant une planification détaillée.
 
--   **`main_orchestrator.py`** : Le point d'entrée principal pour lancer l'orchestration complète de l'analyse d'argumentation. Il coordonne les pipelines, les agents et les modèles pour exécuter une analyse de bout en bout.
--   **`run_analysis.py`** : Lance une analyse spécifique en utilisant un pipeline ou un modèle particulier. Utile pour des exécutions ciblées.
--   **`run_orchestration.py`** : Exécute un scénario d'orchestration prédéfini. Permet de tester ou de lancer des workflows d'analyse complexes.
+2.  **Le Modèle d'Orchestration Spécialisée (Plugin)** :
+    *   **Description** : Un modèle qui court-circuite la hiérarchie pour exécuter directement un "orchestrateur spécialisé" conçu pour une tâche très spécifique (ex: analyse de conversation, analyse logique).
+    *   **Flux** : `Demande -> Sélection du Plugin -> Exécution par l'Orchestrateur Spécialisé -> Résultat`.
+    *   **Idéal pour** : Des tâches bien définies et spécifiques où une approche directe est plus efficace.
+
+La sélection entre ces modèles est dynamique, permettant au système de choisir la meilleure approche en fonction du contexte de la demande.
+
+## Utilisation
+
+Le point d'entrée principal pour lancer une analyse via la ligne de commande est le module `argumentation_analysis.orchestration.engine.main_orchestrator`.
+
+### Commande d'Exécution
+
+Pour exécuter une analyse, utilisez la commande suivante à la racine du projet. Assurez-vous que votre environnement Python est correctement configuré et que les dépendances sont installées.
+
+```bash
+python -m argumentation_analysis.orchestration.engine.main_orchestrator --text "L'intelligence artificielle représente une avancée majeure pour l'humanité, mais elle soulève également des questions éthiques importantes concernant l'autonomie et la surveillance."
+```
+
+### Arguments
+
+*   `--text` : (Requis) La chaîne de caractères contenant le texte que vous souhaitez analyser.
+
+## Configuration
+
+La configuration du module est gérée de manière centralisée et se trouve principalement dans le répertoire `argumentation_analysis/config/`.
+
+*   **`settings.py`**: Ce fichier contient les paramètres de configuration principaux de l'application. Vous pouvez y ajuster les chemins, les clés d'API et d'autres paramètres de comportement du système.
+*   **`.env` / `.env.template`**: Le module utilise des variables d'environnement (via `python-dotenv`) pour gérer les secrets comme les clés d'API. Copiez `.env.template` en `.env` et remplissez les valeurs requises pour votre environnement local.

@@ -122,7 +122,7 @@ argumentation_analysis/
 python examples/cluedo_demo/demo_cluedo_workflow.py
 
 # Démo Einstein
-python examples/logique_complexe_demo/demo_einstein_workflow.py
+python examples/Sherlock_Watson/agents_logiques_production.py --scenario examples/Sherlock_Watson/einstein_scenario.json
 
 # Agents authentiques Sherlock/Watson
 python examples/Sherlock_Watson/sherlock_watson_authentic_demo.py
@@ -138,7 +138,7 @@ python examples/Sherlock_Watson/orchestration_finale_reelle.py
 ```
 examples/
 ├── cluedo_demo/demo_cluedo_workflow.py         # ⭐ Cluedo
-├── logique_complexe_demo/demo_einstein_workflow.py # ⭐ Einstein
+# (Le workflow Einstein est maintenant géré par le script de production)
 └── Sherlock_Watson/                            # ⭐ Agents authentiques
     ├── sherlock_watson_authentic_demo.py
     ├── cluedo_oracle_complete.py
@@ -227,7 +227,7 @@ python -m pytest tests/unit/mocks/test_numpy_rec_mock.py -v
 python -m pytest tests/validation_sherlock_watson/test_phase_a_personnalites_distinctes.py -v
 
 # Tests orchestration
-python -m pytest tests/unit/orchestration/test_unified_orchestration_pipeline.py -v
+python -m pytest tests/unit/orchestration/test_la classe `UnifiedPipeline` du module `argumentation_analysis/pipelines/unified_pipeline.py` -v
 ```
 
 ---

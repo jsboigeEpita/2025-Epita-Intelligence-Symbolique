@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IA Dialogique: Un système avancé d'argumentation multi-agents</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="presentation-container">
+        <!-- Navigation Bar -->
+        <nav class="nav-bar">
+            <div class="nav-left">
+                <button class="btn btn--secondary btn--sm" id="prevBtn">← Précédent</button>
+                <span class="slide-counter">
+                    <span id="currentSlide">1</span> / <span id="totalSlides">11</span>
+                </span>
+                <button class="btn btn--secondary btn--sm" id="nextBtn">Suivant →</button>
+            </div>
+            <div class="nav-right">
+                <select class="form-control" id="slideSelector">
+                    <option value="0">1. Titre</option>
+                    <option value="1">2. Objectifs</option>
+                    <option value="2">3. État de l'art</option>
+                    <option value="3">4. Architecture</option>
+                    <option value="4">5. Agents IA</option>
+                    <option value="5">6. Expérimentations</option>
+                    <option value="6">7.1 Résultats</option>
+                    <option value="7">7.2 Résultats</option>
+                    <option value="8">7.3 Résultats</option>
+                    <option value="9">8. Limites</option>
+                    <option value="10">9. Conclusion</option>
+                </select>
+            </div>
+        </nav>
+
+        <!-- Slides Container -->
+        <div class="slides-container">
+            <!-- Slide 1: Titre -->
+            <div class="slide active" data-slide="0">
+                <div class="slide-content slide-title">
+                    <h1>IA Dialogique</h1>
+                    <h2>Un système avancé d'argumentation multi-agents</h2>
+                    <p class="subtitle">Projet de recherche en intelligence artificielle</p>
+                    <div class="title-visual">
+                        <div class="ai-icons">
+                            <div class="icon-debate">🤖</div>
+                            <div class="icon-arrow">↔️</div>
+                            <div class="icon-debate">🤖</div>
+                        </div>
+                    </div>
+                    <div class="author-info">
+                        <p><strong>Recherche & Développement</strong></p>
+                        <p>Intelligence Artificielle • Argumentation Computationnelle</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 3: Objectifs -->
+            <div class="slide" data-slide="1">
+                <div class="slide-content">
+                    <h1>Objectifs du Projet</h1>
+                    <div class="objectives-grid">
+                        <div class="objective-card">
+                            <div class="objective-icon">🎯</div>
+                            <h3>Système Multi-Agents</h3>
+                            <p>Développer des agents IA avec des personnalités argumentatives distinctes et complémentaires</p>
+                        </div>
+                        <div class="objective-card">
+                            <div class="objective-icon">⚖️</div>
+                            <h3>Modération Intelligente</h3>
+                            <p>Créer un modérateur capable d'analyser et structurer les débats en temps réel</p>
+                        </div>
+                        <div class="objective-card">
+                            <div class="objective-icon">📊</div>
+                            <h3>Évaluation Avancée</h3>
+                            <p>Mettre en place un système d'analyse multicritère de la qualité argumentative</p>
+                        </div>
+                        <div class="objective-card">
+                            <div class="objective-icon">🔬</div>
+                            <h3>Validation Expérimentale</h3>
+                            <p>Tester le système sur différents sujets et valider son efficacité</p>
+                        </div>
+                    </div>
+                    <div class="innovation-highlight">
+                        <h3>🚀 Innovations clés</h3>
+                        <ul>
+                            <li>Intégration hybride base de données locale + GPT</li>
+                            <li>7 personnalités argumentatives spécialisées</li>
+                            <li>Analyse en temps réel sur 8 métriques de qualité</li>
+                            <li>Visualisation dynamique des débats</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 4: État de l'art -->
+            <div class="slide" data-slide="2">
+                <div class="slide-content">
+                    <h1>État de l'Art</h1>
+                    <div class="state-of-art-grid">
+                        <div class="research-area">
+                            <h3>🤖 IA Conversationnelle</h3>
+                            <ul>
+                                <li>ChatGPT, Claude, Gemini</li>
+                                <li>Limitation: pas de personnalité distincte</li>
+                                <li>Pas d'analyse argumentative structurée</li>
+                            </ul>
+                        </div>
+                        <div class="research-area">
+                            <h3>📚 Argumentation Computationnelle</h3>
+                            <ul>
+                                <li>Frameworks formels (Dung, ASPIC+)</li>
+                                <li>Systèmes de débat automatisé</li>
+                                <li>IBM Project Debater</li>
+                            </ul>
+                        </div>
+                        <div class="research-area">
+                            <h3>👥 Systèmes Multi-Agents</h3>
+                            <ul>
+                                <li>Agents coopératifs et compétitifs</li>
+                                <li>Négociation automatisée</li>
+                                <li>Personnalités artificielles basiques</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="gap-analysis">
+                        <h3>🎯 Lacunes identifiées</h3>
+                        <div class="gap-cards">
+                            <div class="gap-card">
+                                <strong>Manque de diversité</strong>
+                                <p>Agents trop homogènes dans leur approche argumentative</p>
+                            </div>
+                            <div class="gap-card">
+                                <strong>Évaluation limitée</strong>
+                                <p>Métriques simplifiées de qualité argumentative</p>
+                            </div>
+                            <div class="gap-card">
+                                <strong>Adaptabilité réduite</strong>
+                                <p>Difficultés avec des sujets non prévus dans la base</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 5: Architecture -->
+            <div class="slide" data-slide="3">
+                <div class="slide-content">
+                    <h1>Architecture du Système</h1>
+                    <div class="architecture-container">
+                        <div class="architecture-image">
+                            <img src="https://pplx-res.cloudinary.com/image/upload/v1749490805/gpt4o_images/gdpzs52lblh7wcllioec.png" alt="Architecture du système" />
+                        </div>
+                        <div class="components-grid">
+                            <div class="component-card" data-component="analyzer">
+                                <h4>🔍 ArgumentAnalyzer</h4>
+                                <p>Analyse avancée des arguments et système de notation évaluant 8 métriques de qualité</p>
+                                <div class="component-details hidden">
+                                    <ul>
+                                        <li>Qualité des preuves</li>
+                                        <li>Cohérence logique</li>
+                                        <li>Appel émotionnel</li>
+                                        <li>Score de nouveauté</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="component-card" data-component="agent">
+                                <h4>🤖 EnhancedArgumentationAgent</h4>
+                                <p>Agent IA avec personnalité adaptative, mémoire et stratégies évolutives</p>
+                                <div class="component-details hidden">
+                                    <ul>
+                                        <li>7 personnalités distinctes</li>
+                                        <li>Mémoire de débat</li>
+                                        <li>Adaptation contextuelle</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="component-card" data-component="moderator">
+                                <h4>⚖️ EnhancedDebateModerator</h4>
+                                <p>Modérateur de débat avec gestion des phases et analyse en temps réel</p>
+                                <div class="component-details hidden">
+                                    <ul>
+                                        <li>Gestion des phases</li>
+                                        <li>Analyse en temps réel</li>
+                                        <li>Contrôle du timing</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="component-card" data-component="viz">
+                                <h4>📊 VisualizationEngine</h4>
+                                <p>Moteur de visualisation pour l'analyse graphique des débats</p>
+                                <div class="component-details hidden">
+                                    <ul>
+                                        <li>Graphiques interactifs</li>
+                                        <li>Analyses de tendances</li>
+                                        <li>Rapports automatisés</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 6: Agents et Personnalités -->
+            <div class="slide" data-slide="4">
+                <div class="slide-content">
+                    <h1>Agents IA et Personnalités</h1>
+                    <div class="personalities-container">
+                        <div class="concept-image">
+                            <img src="https://pplx-res.cloudinary.com/image/upload/v1749490855/gpt4o_images/rvcig0tbyhrcrsmeezi2.png" alt="Agents IA d'argumentation" />
+                        </div>
+                        <div class="personalities-grid">
+                            <div class="personality-card" data-personality="scholar">
+                                <div class="personality-header">
+                                    <span class="personality-icon">🎓</span>
+                                    <h4>The Scholar</h4>
+                                    <span class="persuasiveness-score">74%</span>
+                                </div>
+                                <p>Académique et basé sur les preuves</p>
+                                <div class="personality-details hidden">
+                                    <p><strong>Forces:</strong> Qualité des preuves, cohérence logique</p>
+                                    <p><strong>Faiblesses:</strong> Appel émotionnel limité</p>
+                                </div>
+                            </div>
+                            <div class="personality-card" data-personality="idealist">
+                                <div class="personality-header">
+                                    <span class="personality-icon">💫</span>
+                                    <h4>The Idealist</h4>
+                                    <span class="persuasiveness-score">85%</span>
+                                </div>
+                                <p>Argumente sur des principes moraux</p>
+                                <div class="personality-details hidden">
+                                    <p><strong>Forces:</strong> Appel émotionnel, persuasion</p>
+                                    <p><strong>Faiblesses:</strong> Qualité des preuves variable</p>
+                                </div>
+                            </div>
+                            <div class="personality-card" data-personality="pragmatist">
+                                <div class="personality-header">
+                                    <span class="personality-icon">🔧</span>
+                                    <h4>The Pragmatist</h4>
+                                    <span class="persuasiveness-score">65%</span>
+                                </div>
+                                <p>Focus sur les implications pratiques</p>
+                                <div class="personality-details hidden">
+                                    <p><strong>Forces:</strong> Pertinence, lisibilité</p>
+                                    <p><strong>Faiblesses:</strong> Manque de nouveauté</p>
+                                </div>
+                            </div>
+                            <div class="personality-card" data-personality="others">
+                                <div class="personality-header">
+                                    <span class="personality-icon">👥</span>
+                                    <h4>+ 4 autres</h4>
+                                    <span class="persuasiveness-score">Var.</span>
+                                </div>
+                                <p>Skeptic, Populist, Economist, Philosopher</p>
+                                <div class="personality-details hidden">
+                                    <p>Chacun avec ses forces et stratégies uniques</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 7: Expérimentations -->
+            <div class="slide" data-slide="5">
+                <div class="slide-content">
+                    <h1>Expérimentations Menées</h1>
+                    <div class="experiments-container">
+                        <div class="experiment-section">
+                            <h3>Sujets de débat testés</h3>
+                            <div class="topics-grid">
+                                <div class="topic-card">Intelligence artificielle et emploi</div>
+                                <div class="topic-card">Énergie nucléaire vs renouvelables</div>
+                                <div class="topic-card">Télétravail obligatoire</div>
+                                <div class="topic-card">Réseaux sociaux pour mineurs</div>
+                                <div class="topic-card">Voiture autonome</div>
+                            </div>
+                        </div>
+                        
+                        <div class="methodology-section">
+                            <h3>Méthodologie</h3>
+                            <div class="method-steps">
+                                <div class="step">
+                                    <div class="step-number">1</div>
+                                    <div class="step-content">
+                                        <h4>Test initial</h4>
+                                        <p>Agent autonome avec base de données locale uniquement</p>
+                                    </div>
+                                </div>
+                                <div class="step">
+                                    <div class="step-number">2</div>
+                                    <div class="step-content">
+                                        <h4>Problème identifié</h4>
+                                        <p>Compétences limitées sur certains sujets spécialisés</p>
+                                    </div>
+                                </div>
+                                <div class="step">
+                                    <div class="step-number">3</div>
+                                    <div class="step-content">
+                                        <h4>Solution hybride</h4>
+                                        <p>Intégration d'appels à ChatGPT pour compléter les connaissances</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="protocols-section">
+                            <h3>📋 Protocoles d'évaluation</h3>
+                            <ul>
+                                <li> 4 phases de débat: Ouverture, Arguments principaux, Réfutations, Clôture</li>
+                                <li> 8 métriques de qualité évaluées automatiquement</li>
+                                <li> Tests avec différentes combinaisons de personnalités</li>
+                                <li> Mesure des temps de réponse et de la précision factuelle</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 8.1: Résultats -->
+            <div class="slide" data-slide="6">
+                <div class="slide-content">
+                    <h1>Résultats et Analyses</h1>
+                    <div class="results-container">
+                        <div class="chart-section">
+                            <h3>Performance par personnalité</h3>
+                            <div class="chart-container clickable-chart" data-chart="persuasiveness">
+                                <img src="https://pplx-res.cloudinary.com/image/upload/v1749490605/pplx_code_interpreter/a9d79fee_hswmdq.jpg" alt="Performance de persuasion par personnalité" />
+                                <div class="chart-overlay">
+                                    <p>Cliquer pour voir les détails</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 8.2: Résultats -->
+            <div class="slide" data-slide="7">
+                <div class="slide-content">
+                    <h1>Résultats et Analyses</h1>
+                    <div class="results-container">
+                        <div class="chart-section">
+                            <h3>Évolution par phase de débat</h3>
+                            <div class="chart-container clickable-chart" data-chart="phases">
+                                <img src="https://pplx-res.cloudinary.com/image/upload/v1749490644/pplx_code_interpreter/41303fc5_m2h5pl.jpg" alt="Évolution de la qualité par phase" />
+                                <div class="chart-overlay">
+                                    <p>Cliquer pour voir les détails</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Slide 8: Résultats -->
+            <div class="slide" data-slide="8">
+                <div class="slide-content">
+                    <h1>Résultats et Analyses</h1>
+                    <div class="results-container">
+                        
+                        <div class="chart-section">
+                            <h3>Comparaison avant/après GPT</h3>
+                            <div class="chart-container clickable-chart" data-chart="comparison">
+                                <img src="https://pplx-res.cloudinary.com/image/upload/v1749490747/pplx_code_interpreter/8b104def_hkehjy.jpg" alt="Comparaison des performances" />
+                                <div class="chart-overlay">
+                                    <p>Cliquer pour voir les détails</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="key-insights">
+                        <h3>🎯 Points saillants</h3>
+                        <div class="insights-grid">
+                            <div class="insight-card">
+                                <strong>Idealist = 85% de persuasion</strong>
+                                <p>Meilleure performance grâce à l'appel émotionnel</p>
+                            </div>
+                            <div class="insight-card">
+                                <strong>Pic en phase Rebuttals</strong>
+                                <p>Qualité argumentative maximale (0.81)</p>
+                            </div>
+                            <div class="insight-card">
+                                <strong>GPT améliore de +89%</strong>
+                                <p>Couverture des sujets significativement élargie</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 9: Limites et Perspectives -->
+            <div class="slide" data-slide="9">
+                <div class="slide-content">
+                    <h1>Limites et Perspectives</h1>
+                    <div class="limits-perspectives-container">
+                        <div class="limitations-section">
+                            <h3>⚠️ Difficultés rencontrées</h3>
+                            <div class="limitation-cards">
+                                <div class="limitation-card">
+                                    <div class="limitation-icon">🔗</div>
+                                    <h4>Dépendance GPT</h4>
+                                    <p>Nécessité d'appels externes pour les sujets spécialisés</p>
+                                </div>
+                                <div class="limitation-card">
+                                    <div class="limitation-icon">⏱️</div>
+                                    <h4>Temps de réponse</h4>
+                                    <p>Légère augmentation avec l'intégration GPT (+0.9s)</p>
+                                </div>
+                                <div class="limitation-card">
+                                    <div class="limitation-icon">⚖️</div>
+                                    <h4>Évaluation objective</h4>
+                                    <p>Complexité de l'évaluation automatique des arguments</p>
+                                </div>
+                                <div class="limitation-card">
+                                    <div class="limitation-icon">🌍</div>
+                                    <h4>Nuances culturelles</h4>
+                                    <p>Difficultés à capturer certains aspects culturels</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="improvements-section">
+                            <h3>🚀 Pistes d'amélioration</h3>
+                            <div class="improvement-timeline">
+                                <div class="timeline-item">
+                                    <div class="timeline-marker">1</div>
+                                    <div class="timeline-content">
+                                        <h4>Court terme</h4>
+                                        <ul>
+                                            <li>Optimisation des temps de réponse</li>
+                                            <li>Amélioration de l'interface utilisateur</li>
+                                            <li>Tests sur plus de domaines</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="timeline-item">
+                                    <div class="timeline-marker">2</div>
+                                    <div class="timeline-content">
+                                        <h4>Moyen terme</h4>
+                                        <ul>
+                                            <li>Personnalisation selon profils réels</li>
+                                            <li>Amélioration de l'évaluation</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="timeline-item">
+                                    <div class="timeline-marker">3</div>
+                                    <div class="timeline-content">
+                                        <h4>Long terme</h4>
+                                        <ul>
+                                            <li>Applications spécialisées (droit, politique)</li>
+                                            <li>Elimination de la dépendace à Chat GPT</li>
+                                            <li>IA émotionnellement intelligente</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 10: Conclusion -->
+            <div class="slide" data-slide="10">
+                <div class="slide-content">
+                    <h1>Conclusion et Perspectives</h1>
+                    <div class="conclusion-container">
+                        <div class="contributions-section">
+                            <h3>🎯 Contributions principales</h3>
+                            <div class="contributions-grid">
+                                <div class="contribution-card">
+                                    <div class="contribution-icon">🤖</div>
+                                    <h4>Système Multi-Agents Innovant</h4>
+                                    <p>7 personnalités argumentatives distinctes avec stratégies spécialisées</p>
+                                </div>
+                                <div class="contribution-card">
+                                    <div class="contribution-icon">🔬</div>
+                                    <h4>Analyse Multidimensionnelle</h4>
+                                    <p>Évaluation sur 8 métriques de qualité argumentative</p>
+                                </div>
+                                <div class="contribution-card">
+                                    <div class="contribution-icon">⚡</div>
+                                    <h4>Architecture Hybride</h4>
+                                    <p>Combinaison efficace base locale + IA générative</p>
+                                </div>
+                                <div class="contribution-card">
+                                    <div class="contribution-icon">📊</div>
+                                    <h4>Validation Expérimentale</h4>
+                                    <p>Tests rigoureux sur 5 domaines d'application</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="thank-you-section">
+                            <div class="thank-you-card">
+                                <h2>Merci pour votre attention !</h2>
+                                <div class="questions-cta">
+                                    <h3>Questions & Discussion</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart Details Modal -->
+        <div id="chartModal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <div id="modalContent"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>

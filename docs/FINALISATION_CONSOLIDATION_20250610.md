@@ -51,7 +51,7 @@
 📁 Intelligence Symbolique (PROPRE)
 ├── 🎯 project_core/                    ← Architecture centralisée
 │   ├── pipelines/
-│   │   └── unified_orchestration_pipeline.py  ✅ Pipeline principal
+│   │   └── la classe `UnifiedPipeline` du module `argumentation_analysis/pipelines/unified_pipeline.py`  ✅ Pipeline principal
 │   ├── services/                       ✅ Services unifiés
 │   └── utils/                          ✅ Utilitaires consolidés
 ├── 🔧 scripts/

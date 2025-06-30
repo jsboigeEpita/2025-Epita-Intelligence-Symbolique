@@ -1,10 +1,3 @@
-
-# Authentic gpt-4o-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 import pytest
 #!/usr/bin/env python3
 """Script de test simple pour valider les corrections du Groupe 1."""
@@ -26,7 +19,7 @@ except ImportError as e:
     print(f"ERREUR d'import: {e}")
     sys.exit(1)
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_group1_fixes():
     """Test des corrections du Groupe 1."""
     print("=== Test des corrections Groupe 1 - AsyncMock ===")

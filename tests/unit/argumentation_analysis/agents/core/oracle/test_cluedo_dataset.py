@@ -183,11 +183,12 @@ class TestCluedoDataset:
         hint_terms = ["indice", "suggère", "concentrer", "cartes", "moriarty"]
         assert len(clue) > 0 and isinstance(clue, str)
     
-    def test_process_query_card_inquiry(self, cluedo_dataset):
+    @pytest.mark.asyncio
+    async def test_process_query_card_inquiry(self, cluedo_dataset):
         """Test le traitement d'une requête de carte."""
         moriarty_card = cluedo_dataset.get_moriarty_cards()[0]
         
-        result = cluedo_dataset.process_query(
+        result = await cluedo_dataset.process_query(
             agent_name="Sherlock",
             query_type=QueryType.CARD_INQUIRY,
             query_params={"card": moriarty_card}
@@ -197,7 +198,8 @@ class TestCluedoDataset:
         assert result.query_type == QueryType.CARD_INQUIRY
         # Le succès dépend de la politique de révélation
     
-    def test_process_query_suggestion_validation(self, cluedo_dataset):
+    @pytest.mark.asyncio
+    async def test_process_query_suggestion_validation(self, cluedo_dataset):
         """Test le traitement d'une validation de suggestion."""
         suggestion = {
             "suspect": "Colonel Moutarde",
@@ -205,7 +207,7 @@ class TestCluedoDataset:
             "lieu": "Salon"
         }
         
-        result = cluedo_dataset.process_query(
+        result = await cluedo_dataset.process_query(
             agent_name="Watson",
             query_type=QueryType.SUGGESTION_VALIDATION,
             query_params={"suggestion": suggestion}
@@ -215,9 +217,10 @@ class TestCluedoDataset:
         assert result.query_type == QueryType.SUGGESTION_VALIDATION
         assert result.success is True  # Suggestion valide
     
-    def test_process_query_clue_request(self, cluedo_dataset):
+    @pytest.mark.asyncio
+    async def test_process_query_clue_request(self, cluedo_dataset):
         """Test le traitement d'une requête d'indice."""
-        result = cluedo_dataset.process_query(
+        result = await cluedo_dataset.process_query(
             agent_name="Moriarty",
             query_type=QueryType.CLUE_REQUEST,
             query_params={"request": "strategic_clue"}
@@ -429,19 +432,20 @@ class TestCluedoDatasetIntegration:
         # Simulation de requêtes concurrentes
         import asyncio
         
-        def make_query(agent_name, card_name):
-            return dataset.process_query(
+        async def make_query(agent_name, card_name):
+            return await dataset.process_query(
                 agent_name=agent_name,
                 query_type=QueryType.CARD_INQUIRY,
                 query_params={"card": card_name}
             )
         
         # Lancement de requêtes concurrentes
-        results = [
+        tasks = [
             make_query("Sherlock", "Colonel Moutarde"),
             make_query("Watson", "Professeur Violet"),
             make_query("Moriarty", "Poignard")
         ]
+        results = await asyncio.gather(*tasks)
         
         # Toutes les requêtes devraient aboutir
         assert len(results) == 3

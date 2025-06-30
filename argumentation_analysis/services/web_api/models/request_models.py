@@ -8,7 +8,7 @@ Modèles de données pour les requêtes de l'API.
 from typing import Dict, List, Any, Optional
 from pydantic import BaseModel, Field, validator, field_validator
 from argumentation_analysis.agents.core.extract.extract_definitions import ExtractDefinition as Extract
-from argumentation_analysis.ui.config import SourceDefinition
+from argumentation_analysis.models.extract_definition import SourceDefinition
 from typing import List
 
 ExtractDefinitions = List[SourceDefinition]
@@ -170,7 +170,7 @@ class LogicBeliefSetRequest(BaseModel):
     """Requête pour la conversion d'un texte en ensemble de croyances logiques."""
     text: str = Field(..., min_length=1, description="Texte à convertir")
     logic_type: str = Field(..., description="Type de logique (propositional, first_order, modal)")
-    options: Optional[LogicOptions] = Field(default_factory=LogicOptions, description="Options de conversion")
+    options: Optional[dict] = Field(default_factory=dict, description="Options de conversion flexibles")
     
     @field_validator('text')
     def validate_text(cls, v: str) -> str:

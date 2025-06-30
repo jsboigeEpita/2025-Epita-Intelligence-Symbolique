@@ -1,4 +1,4 @@
-# argumentation_analysis/orchestration/cluedo_extended_orchestrator.py
+﻿# argumentation_analysis/orchestration/cluedo_extended_orchestrator.py
 """
 Orchestrateur pour workflow Cluedo étendu avec 3 agents : Sherlock → Watson → Moriarty.
 
@@ -8,82 +8,58 @@ incluant la sélection cyclique, la terminaison Oracle, et l'intégration avec C
 
 import asyncio
 import logging
-import re
-import time
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-from typing import Callable, Awaitable
-
-from argumentation_analysis.agents.core.oracle.cluedo_dataset import RevelationRecord
 
 import semantic_kernel as sk
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.kernel import Kernel
-# Version SK 0.9.6b1 - agents module non disponible - Utilisation architecture native SK
-# PURGE PHASE 3A: Élimination complète fallbacks - Utilisation composants natifs uniquement
-AGENTS_AVAILABLE = False  # Module agents non disponible dans SK 0.9.6b1
-from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.functions.kernel_arguments import KernelArguments
-from semantic_kernel.events.function_invoking_event_args import FunctionInvokingEventArgs
-from semantic_kernel.events.function_invoked_event_args import FunctionInvokedEventArgs
+from argumentation_analysis.orchestration.base import SelectionStrategy, TerminationStrategy
+from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent as Agent
+from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
-# Note: Les filtres sont gérés différemment dans les versions récentes,
-# nous utiliserons les handlers directement.
-FILTERS_AVAILABLE = True
+class AgentGroupChat:
+    """Fallback class for compatibility."""
+    def __init__(self, agents: List[Agent] = None, **kwargs):
+        self.agents = agents or []
+        
+AGENTS_AVAILABLE = True
+from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.contents.streaming_chat_message_content import StreamingChatMessageContent
+
+# Import conditionnel pour les modules filters qui peuvent ne pas exister
+try:
+    from semantic_kernel.functions.kernel_function_context import KernelFunctionContext as FunctionInvocationContext
+    from semantic_kernel.functions.kernel_function_context import KernelFunctionContext
+    FILTERS_AVAILABLE = True
+except ImportError:
+    # Fallbacks pour compatibilité
+    class KernelFunctionContext:
+        def __init__(self, **kwargs):
+            pass
+    
+    FunctionInvocationContext = KernelFunctionContext
+            
+    class FilterTypes:
+        pass
+        
+    FILTERS_AVAILABLE = False
 # from semantic_kernel.processes.runtime.in_process_runtime import InProcessRuntime  # Module non disponible
 from pydantic import Field
 
 # Imports locaux
-from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
-from argumentation_analysis.agents.core.oracle.permissions import QueryType
-from argumentation_analysis.orchestration.plugins.enquete_state_manager_plugin import EnqueteStateManagerPlugin
-from argumentation_analysis.orchestration.group_chat import GroupChatOrchestration
-from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
-from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
-from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
-from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent
-from argumentation_analysis.agents.core.oracle.cluedo_dataset import CluedoDataset
+from ..core.cluedo_oracle_state import CluedoOracleState
+from ..orchestration.plugins.enquete_state_manager_plugin import EnqueteStateManagerPlugin
+from ..orchestration.group_chat import GroupChatOrchestration
+from ..agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
+from ..agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
+from ..agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent
+from ..agents.core.oracle.cluedo_dataset import CluedoDataset
 
 # Configuration du logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-
-# Nouvelle implémentation du logging via un filtre, conforme aux standards SK modernes
-# Nouvelle implémentation du logging via un filtre, conforme aux standards SK modernes
-class ToolCallLoggingHandler:
-    """
-    Filtre pour journaliser les appels de fonctions (outils) du kernel,
-    utilisant le nouveau système de filtres de Semantic Kernel.
-    """
-    async def logging_filter(self, context: FunctionInvocationContext, next: Callable[[FunctionInvocationContext], Awaitable[None]]) -> None:
-        """Filtre qui journalise avant et après l'invocation de la fonction."""
-        # Avant l'invocation
-        metadata = context.function.metadata
-        function_name = f"{metadata.plugin_name}.{metadata.name}"
-        logger.debug(f"▶️  INVOKING KERNEL FUNCTION: {function_name}")
-        
-        args_str = ", ".join(f"{k}='{str(v)[:100]}...'" for k, v in context.arguments.items())
-        logger.debug(f"  ▶️  ARGS: {args_str}")
-
-        # Appel au prochain filtre dans la chaîne
-        await next(context)
-
-        # Après l'invocation
-        result_content = "N/A"
-        if context.result:
-            result_value = context.result.value
-            if isinstance(result_value, list):
-                result_content = f"List[{len(result_value)}] - " + ", ".join(map(str, result_value[:3]))
-            else:
-                result_content = str(result_value)
-        
-        logger.debug(f"  ◀️  RESULT: {result_content[:500]}...") # Tronqué
-        logger.debug(f"◀️  FINISHED KERNEL FUNCTION: {function_name}")
-
-# Les classes de base (Agent, Strategies) sont importées depuis le module `base`
-# pour éviter les dépendances circulaires.
-from .base import Agent, SelectionStrategy, TerminationStrategy
 
 class CyclicSelectionStrategy(SelectionStrategy):
     """
@@ -105,7 +81,7 @@ class CyclicSelectionStrategy(SelectionStrategy):
         super().__init__()
         # Stockage direct dans __dict__ pour éviter les problèmes Pydantic
         self.__dict__['agents'] = agents
-        self.__dict__['agent_order'] = [agent.name for agent in agents]
+        self.__dict__['agent_order'] = [getattr(agent, 'name', getattr(agent, 'id', str(agent))) for agent in agents]
         self.__dict__['current_index'] = 0
         self.__dict__['adaptive_selection'] = adaptive_selection
         self.__dict__['turn_count'] = 0
@@ -217,7 +193,7 @@ class OracleTerminationStrategy(TerminationStrategy):
         """
         # Comptage des tours et cycles
         self.turn_count += 1
-        if agent and agent.name == "Sherlock":  # Début d'un nouveau cycle
+        if agent.name == "Sherlock":  # Début d'un nouveau cycle
             self.cycle_count += 1
             self._logger.info(f"\n--- CYCLE {self.cycle_count}/{self.max_cycles} - TOUR {self.turn_count}/{self.max_turns} ---")
         
@@ -279,6 +255,26 @@ class OracleTerminationStrategy(TerminationStrategy):
         }
 
 
+async def oracle_logging_filter(context: KernelFunctionContext, next):
+    """Filtre de logging spécialisé pour les interactions Oracle."""
+    agent_name = getattr(context, 'agent_name', 'Unknown')
+    
+    # Logging spécial pour les outils Oracle
+    if context.function.plugin_name and "oracle" in context.function.plugin_name.lower():
+        logger.info(f"🔮 [ORACLE] {agent_name} → {context.function.plugin_name}.{context.function.name}")
+        logger.info(f"🔮 [ORACLE] Arguments: {context.arguments}")
+    else:
+        logger.info(f"[{agent_name}] Appel: {context.function.plugin_name}.{context.function.name}")
+    
+    await next(context)
+    
+    # Logging des révélations Oracle
+    if context.result and "révèle" in str(context.result).lower():
+        logger.info(f"💎 [RÉVÉLATION] {context.result}")
+    elif context.function.plugin_name and "oracle" in context.function.plugin_name.lower():
+        logger.info(f"🔮 [ORACLE RESULT] {context.result}")
+
+
 class CluedoExtendedOrchestrator:
     """
     Orchestrateur pour workflow Cluedo étendu avec 3 agents.
@@ -290,13 +286,14 @@ class CluedoExtendedOrchestrator:
     - Métriques de performance 3-agents
     """
     
+    MAX_HISTORY_MESSAGES: int = 10
+
     def __init__(self,
                  kernel: Kernel,
                  max_turns: int = 15,
                  max_cycles: int = 5,
                  oracle_strategy: str = "balanced",
-                 adaptive_selection: bool = False,
-                 service_id: str = "chat_completion"):
+                 adaptive_selection: bool = False):
         """
         Initialise l'orchestrateur étendu.
         
@@ -306,21 +303,12 @@ class CluedoExtendedOrchestrator:
             max_cycles: Nombre maximum de cycles (3 agents par cycle)
             oracle_strategy: Stratégie Oracle ("cooperative", "competitive", "balanced", "progressive")
             adaptive_selection: Active la sélection adaptative (Phase 2)
-            service_id: ID du service LLM à utiliser par les agents.
         """
         self.kernel = kernel
-        self.kernel_lock = asyncio.Lock()
-        self.logging_handler = ToolCallLoggingHandler()
-
-
         self.max_turns = max_turns
         self.max_cycles = max_cycles
         self.oracle_strategy = oracle_strategy
         self.adaptive_selection = adaptive_selection
-        self.service_id = service_id
-        
-        # Mode Enhanced pour compatibilité avec les tests
-        self._enhanced_mode = oracle_strategy == "enhanced_auto_reveal"
         
         # État et agents (initialisés lors de l'exécution)
         self.oracle_state: Optional[CluedoOracleState] = None
@@ -337,127 +325,9 @@ class CluedoExtendedOrchestrator:
         
         self._logger = logging.getLogger(self.__class__.__name__)
     
-    @property
-    def group_chat(self):
-        """
-        Propriété de compatibilité pour l'interface group_chat.
-        
-        Returns:
-            Objet avec attribut agents compatible avec les tests
-        """
-        if self.orchestration is None:
-            return None
-            
-        # Classe wrapper pour compatibilité avec l'interface attendue
-        class GroupChatInterface:
-            def __init__(self, orchestration):
-                self.orchestration = orchestration
-                
-            @property
-            def agents(self):
-                return list(self.orchestration.active_agents.values()) if self.orchestration.active_agents else []
-        
-        return GroupChatInterface(self.orchestration)
-    
-    def _analyze_suggestion_quality(self, suggestion: str) -> Dict[str, Any]:
-        """
-        Analyse la qualité d'une suggestion pour détecter si elle est triviale.
-        
-        Args:
-            suggestion: Texte de la suggestion à analyser
-            
-        Returns:
-            Dictionnaire avec is_trivial (bool) et reason (str)
-        """
-        if not suggestion or len(suggestion.strip()) < 10:
-            return {
-                "is_trivial": True,
-                "reason": "suggestion_too_short"
-            }
-        
-        suggestion_lower = suggestion.lower()
-        
-        # Mots-clés indiquant des suggestions triviales
-        trivial_keywords = [
-            "je ne sais pas", "peut-être", "il faut chercher",
-            "hmm", "c'est difficile", "vraiment qui", "des indices",
-            "quelqu'un avec", "à dire"
-        ]
-        
-        for keyword in trivial_keywords:
-            if keyword in suggestion_lower:
-                return {
-                    "is_trivial": True,
-                    "reason": f"trivial_keyword_detected: {keyword}"
-                }
-        
-        return {
-            "is_trivial": False,
-            "reason": "substantive_suggestion"
-        }
-    
-    def _trigger_auto_revelation(self, trigger_reason: str, context: str) -> Dict[str, Any]:
-        """
-        Déclenche une révélation automatique Enhanced.
-        
-        Args:
-            trigger_reason: Raison du déclenchement
-            context: Contexte de la révélation
-            
-        Returns:
-            Dictionnaire représentant la révélation
-        """
-        if not self.oracle_state:
-            return {
-                "type": "auto_revelation",
-                "success": False,
-                "reason": "oracle_state_not_available"
-            }
-        
-        # Obtenir une carte que Moriarty possède pour révélation
-        moriarty_cards = self.oracle_state.get_moriarty_cards()
-        if not moriarty_cards:
-            return {
-                "type": "auto_revelation",
-                "success": False,
-                "reason": "no_cards_available"
-            }
-        
-        # Révéler la première carte disponible
-        revealed_card = moriarty_cards[0]
-        
-        revelation_text = f"Révélation automatique Enhanced: Moriarty possède '{revealed_card}'"
-        revelation = {
-            "type": "auto_revelation",
-            "success": True,
-            "trigger_reason": trigger_reason,
-            "context": context,
-            "revealed_card": revealed_card,
-            "revelation_text": revelation_text,
-            "content": revelation_text,  # Clé attendue par le test
-            "auto_triggered": True,  # Clé attendue par le test
-            "oracle_strategy": self.oracle_strategy
-        }
-        
-        # Enregistrer la révélation dans l'état Oracle
-        revelation_record = RevelationRecord(
-            card_revealed=revealed_card,
-            revelation_type="auto_revelation",
-            message=f"Auto-révélation: {revealed_card}",
-            strategic_value=0.9,
-            revealed_to="Enhanced_System",
-            metadata={"trigger_reason": trigger_reason, "context": context}
-        )
-        self.oracle_state.add_revelation(
-            revelation=revelation_record,
-            revealing_agent="Enhanced_System"
-        )
-        
-        return revelation
-    
     async def setup_workflow(self,
                            nom_enquete: str = "Le Mystère du Manoir Tudor",
-                           elements_jeu: Optional[Dict[str, List[str]]] = None) -> Optional[CluedoOracleState]:
+                           elements_jeu: Optional[Dict[str, List[str]]] = None) -> CluedoOracleState:
         """
         Configure le workflow 3-agents avec état Oracle.
         
@@ -466,19 +336,16 @@ class CluedoExtendedOrchestrator:
             elements_jeu: Éléments du jeu Cluedo (optionnel)
             
         Returns:
-            État Oracle configuré, ou None si le kernel n'est pas disponible.
+            État Oracle configuré
         """
-        if self.kernel is None:
-            self._logger.warning("Aborting setup_workflow: Kernel is not available (likely a dry run).")
-            return None
         self._logger.info(f"Configuration du workflow 3-agents - Stratégie: {self.oracle_strategy}")
         
         # Configuration des éléments par défaut
         if elements_jeu is None:
             elements_jeu = {
-                "suspects": ["Colonel Moutarde", "Professeur Violet", "Mademoiselle Rose", "Docteur Orchidée"],
-                "armes": ["Poignard", "Chandelier", "Revolver", "Corde"],
-                "lieux": ["Salon", "Cuisine", "Bureau", "Bibliothèque"]
+                "suspects": ["Colonel Moutarde", "Professeur Violet", "Mademoiselle Rose"],
+                "armes": ["Poignard", "Chandelier", "Revolver"],
+                "lieux": ["Salon", "Cuisine", "Bureau"]
             }
         
         # Création de l'état Oracle étendu
@@ -491,50 +358,28 @@ class CluedoExtendedOrchestrator:
         )
         
         # Configuration du plugin d'état étendu
-        async with self.kernel_lock:
-            state_plugin = EnqueteStateManagerPlugin(self.oracle_state)
-            self.kernel.add_plugin(state_plugin, "EnqueteStatePlugin")
-            
-            # Ajout du filtre de logging moderne
-            if FILTERS_AVAILABLE:
-                self.kernel.add_filter(FilterTypes.FUNCTION_INVOCATION, self.logging_handler.logging_filter)
-                self._logger.info("Filtre de journalisation des appels de fonctions activé.")
+        state_plugin = EnqueteStateManagerPlugin(self.oracle_state)
+        self.kernel.add_plugin(state_plugin, "EnqueteStatePlugin")
+        # self.kernel.add_filter(FilterTypes.FUNCTION_INVOCATION, oracle_logging_filter)
+        # Note: add_filter API n'est pas disponible dans semantic-kernel 0.9.6b1
         
         # Préparation des constantes pour Watson
         all_constants = [name.replace(" ", "") for category in elements_jeu.values() for name in category]
+
+        # Création du DatasetManager pour Moriarty
+        from ..agents.core.oracle.dataset_access_manager import CluedoDatasetManager
+        dataset_manager = CluedoDatasetManager(self.oracle_state.cluedo_dataset)
         
         # Création des agents
-        try:
-            tweety_bridge = TweetyBridge() # Instance unique
-            watson_tweety_instance = tweety_bridge
-            self._logger.info("✅ TweetyBridge initialisé avec succès.")
-        except Exception as e:
-            self._logger.warning(f"⚠️ Échec initialisation TweetyBridge: {e}. Watson fonctionnera en mode dégradé.")
-            watson_tweety_instance = None
-
-        self.sherlock_agent = SherlockEnqueteAgent(kernel=self.kernel, agent_name="Sherlock", service_id=self.service_id)
-        self.watson_agent = WatsonLogicAssistant(
-            kernel=self.kernel,
-            agent_name="Watson",
-            tweety_bridge=watson_tweety_instance,
-            constants=all_constants,
-            service_id=self.service_id
-        )
+        self.sherlock_agent = SherlockEnqueteAgent(kernel=self.kernel, agent_name="Sherlock")
+        self.watson_agent = WatsonLogicAssistant(kernel=self.kernel, agent_name="Watson", constants=all_constants)
         self.moriarty_agent = MoriartyInterrogatorAgent(
             kernel=self.kernel,
-            cluedo_dataset=self.oracle_state.cluedo_dataset,
+            dataset_manager=dataset_manager,
             game_strategy=self.oracle_strategy,
             agent_name="Moriarty"
         )
         
-        # --- Configuration des permissions Oracle ---
-        if self.oracle_state and self.oracle_state.cluedo_dataset:
-            dataset_manager = self.oracle_state.dataset_access_manager
-            # Autoriser Sherlock et Watson à valider des suggestions
-            dataset_manager.add_permission("Sherlock", QueryType.SUGGESTION_VALIDATION)
-            dataset_manager.add_permission("Watson", QueryType.SUGGESTION_VALIDATION)
-            self._logger.info("Permissions Oracle configurées pour Sherlock et Watson.")
-
         # Configuration des stratégies
         agents = [self.sherlock_agent, self.watson_agent, self.moriarty_agent]
         selection_strategy = CyclicSelectionStrategy(agents, self.adaptive_selection, self.oracle_state)  # PHASE C: Passer oracle_state
@@ -548,7 +393,7 @@ class CluedoExtendedOrchestrator:
         self.orchestration = GroupChatOrchestration()
         
         # Configuration des agents
-        agent_dict = {agent.name: agent for agent in agents}
+        agent_dict = {getattr(agent, 'name', getattr(agent, 'id', str(agent))): agent for agent in agents}
         session_id = f"cluedo_session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         self.orchestration.initialize_session(session_id, agent_dict)
         
@@ -583,153 +428,148 @@ class CluedoExtendedOrchestrator:
         self._logger.info("🚀 Début du workflow 3-agents")
         
         # Historique des messages
-        history: List[ChatMessageContent] = []
+        history: List[ChatMessageContent] = [
+            ChatMessageContent(role="user", content=initial_question, name="System")
+        ]
         
-        # Boucle principale d'orchestration restaurée
+        # Boucle principale d'orchestration
         self._logger.info("🔄 Début de la boucle d'orchestration 3-agents...")
         
-        active_agent = None
-        last_agent = None
-        
-        # Le message initial est ajouté pour le premier agent
-        history.append(ChatMessageContent(role="user", content=initial_question, name="Orchestrator"))
-        
         try:
-            while not await self.termination_strategy.should_terminate(active_agent, history):
-                last_agent = active_agent
-                
-                # Sélection du prochain agent
-                active_agent = await self.selection_strategy.next(
-                    agents=list(self.orchestration.active_agents.values()),
-                    history=history
-                )
-                self._logger.info(f"==> Agent suivant: {active_agent.name}")
+            fake_initial_agent = self.sherlock_agent
+            while not await self.termination_strategy.should_terminate(agent=fake_initial_agent, history=history):
 
-                # Invocation de l'agent
-                # Note: Dans une implémentation SK moderne, on utiliserait agent.invoke(history)
-                # Ici, nous simulons l'appel via une méthode interne pour compatibilité
-                if hasattr(active_agent, 'invoke_custom'):
-                    agent_response = await active_agent.invoke_custom(history)
+                next_agent = await self.selection_strategy.next(agents=list(self.orchestration.active_agents.values()), history=history)
+                fake_initial_agent = next_agent
+                
+                self._logger.info(f"--- Tour de {next_agent.name} ---")
+                
+                # 1. Tronquer et nettoyer l'historique avant de l'envoyer
+                if len(history) > self.MAX_HISTORY_MESSAGES:
+                    self._logger.warning(f"L'historique dépasse {self.MAX_HISTORY_MESSAGES} messages. Troncation...")
+                    history_to_process = [history[0]] + history[-(self.MAX_HISTORY_MESSAGES - 1):]
                 else:
-                    # Fallback si invoke_custom n'est pas défini
-                    agent_response_content = f"Je suis {active_agent.name}. Je réfléchis à la situation."
-                    agent_response = ChatMessageContent(role="assistant", content=agent_response_content, name=active_agent.name)
+                    history_to_process = history
+
+                # Étape de nettoyage la plus critique:
+                # Reconstruire un historique entièrement neuf avec des objets simples.
+                history_to_send = [
+                    self.consolidate_agent_response(msg, getattr(msg, 'name', msg.role))
+                    for msg in history_to_process
+                ]
+
+                # 2. Exécuter l'agent avec l'historique nettoyé
+                agent_response_raw = await next_agent.invoke(input=history_to_send, arguments=KernelArguments())
                 
-                if agent_response:
-                    history.append(agent_response)
-                    self._logger.info(f"[{active_agent.name}]: {agent_response.content}")
-                    
-                    # --- V2: LOGIQUE D'APPEL D'OUTIL MANUEL ---
-                    # --- V3: LOGIQUE D'APPEL D'OUTIL MANUEL AMÉLIORÉE ---
-                    tool_call_match = re.search(r'`(\w+)\(([^)]*)\)`', str(agent_response.content))
-                    if not tool_call_match:
-                        tool_call_match = re.search(r'`(\w+)`', str(agent_response.content))
+                # 3. Consolider et nettoyer la réponse de l'agent
+                # C'est une étape CRUCIALE pour éviter le context overflow avec les réponses en streaming.
+                clean_message = self.consolidate_agent_response(agent_response_raw, next_agent.name)
+                
+                # 4. Mettre à jour l'historique avec le message propre
+                history.append(clean_message)
+                last_message_content = str(clean_message.content)
 
-                    if tool_call_match:
-                        function_name = tool_call_match.group(1)
-                        
-                        # Vérifier si la fonction existe réellement dans le plugin principal
-                        if function_name in self.kernel.plugins["EnqueteStatePlugin"]:
-                            self._logger.info(f"Appel d'outil manuel VALIDE détecté pour : `{function_name}`")
-                            
-                            # Gestion basique des arguments
-                            arguments = KernelArguments()
-                            if function_name in ["faire_suggestion", "propose_final_solution"]:
-                                suggestion = None
-                                # --- CORRECTIF V4: Parsing direct des arguments de la regex ---
-                                if len(tool_call_match.groups()) > 1 and tool_call_match.group(2):
-                                    args_str = tool_call_match.group(2)
-                                    # Nettoyage simple des arguments et suppression des guillemets
-                                    args_list = [arg.strip().strip('"').strip("'") for arg in args_str.split(',')]
-                                    
-                                    # Création d'une map pour normaliser les noms (CamelCase -> Nom complet)
-                                    elements = self.oracle_state.cluedo_dataset.elements
-                                    all_items = elements.get('suspects', []) + elements.get('armes', []) + elements.get('lieux', [])
-                                    # Map pour les noms sans espace (CamelCase) et les noms originaux
-                                    item_map = {item.replace(" ", ""): item for item in all_items}
-                                    item_map.update({item: item for item in all_items}) # Ajoute les noms originaux pour être sûr
+                # 5. Log et mise à jour de l'état
+                self._logger.info(f"Réponse de {next_agent.name}: {last_message_content[:150]}...")
+                self.oracle_state.add_conversation_message(
+                    agent_name=next_agent.name,
+                    content=last_message_content,
+                    message_type=self._detect_message_type(last_message_content)
+                )
+                
+                turn_input = history[-2].content if len(history) > 1 else initial_question
+                self.oracle_state.record_agent_turn(
+                    agent_name=next_agent.name,
+                    action_type="invoke_with_history",
+                    action_details={"input": str(turn_input)[:150], "output": last_message_content[:150]}
+                )
 
-                                    # Normalisation des arguments extraits
-                                    suspect_norm = item_map.get(args_list[0], args_list[0] if len(args_list) > 0 else "Indéterminé")
-                                    arme_norm = item_map.get(args_list[1], args_list[1] if len(args_list) > 1 else "Indéterminée")
-                                    lieu_norm = item_map.get(args_list[2], args_list[2] if len(args_list) > 2 else "Indéterminé")
+                # CORRECTIF ORACLE: Réintroduction de l'interception des suggestions
+                if next_agent.name != "Moriarty":
+                    suggestion = self._extract_cluedo_suggestion(last_message_content)
+                    if suggestion:
+                        self._logger.info(f"🔮 SUGGESTION DÉTECTÉE: {suggestion} par {next_agent.name}")
+                        oracle_response = await self._force_moriarty_oracle_revelation(
+                            suggestion=suggestion,
+                            suggesting_agent=next_agent.name
+                        )
+                        if oracle_response:
+                            oracle_message = self.consolidate_agent_response(oracle_response.get("content"), "Moriarty")
+                            history.append(oracle_message)
+                            self._logger.info(f"🎭 [Moriarty Oracle Auto-Reveal]: {oracle_response.get('content')[:100]}...")
+                            self.oracle_state.add_conversation_message(
+                                agent_name="Moriarty",
+                                content=str(oracle_message.content),
+                                message_type="revelation"
+                            )
 
-                                    suggestion = {
-                                        "suspect": suspect_norm,
-                                        "arme": arme_norm,
-                                        "lieu": lieu_norm
-                                    }
-                                else:
-                                    # Fallback à l'ancienne méthode si pas d'arguments entre parenthèses
-                                    suggestion = self._extract_cluedo_suggestion(str(agent_response.content))
-                                
-                                if suggestion:
-                                    self._logger.info(f"Arguments extraits pour {function_name}: {suggestion}")
-                                    if function_name == "propose_final_solution":
-                                         arguments["solution"] = suggestion
-                                    else:
-                                        arguments["suspect"] = suggestion.get("suspect")
-                                        arguments["arme"] = suggestion.get("arme")
-                                        arguments["lieu"] = suggestion.get("lieu")
-                            
-                            try:
-                                tool_result = await self.kernel.invoke(
-                                    plugin_name="EnqueteStatePlugin",
-                                    function_name=function_name,
-                                    arguments=arguments
-                                )
-                                result_str = str(tool_result)
-                                self._logger.info(f"Résultat de l'outil `{function_name}`: {result_str[:250]}...")
-                                
-                                tool_result_message = ChatMessageContent(
-                                    role="user",
-                                    content=f"Résultat de l'outil '{function_name}':\n{result_str}",
-                                    name="Orchestrator"
-                                )
-                                history.append(tool_result_message)
-                            except Exception as e:
-                                self._logger.error(f"Échec de l'appel manuel de l'outil `{function_name}`: {e}", exc_info=True)
-                                error_message = ChatMessageContent(
-                                    role="user",
-                                    content=f"Erreur critique lors de l'appel de l'outil '{function_name}': {e}",
-                                    name="Orchestrator"
-                                )
-                                history.append(error_message)
-                        else:
-                            self._logger.warning(f"Appel d'outil manuel ignoré: `{function_name}` n'est pas une fonction valide dans EnqueteStatePlugin.")
-                    
-                    # La logique existante de suggestion reste un elif pour éviter les traitements doubles
-                    elif active_agent.name in ["Sherlock", "Watson"]:
-                        suggestion = self._extract_cluedo_suggestion(str(agent_response.content))
-                        if suggestion:
-                            oracle_revelation = await self._force_moriarty_oracle_revelation(suggestion, active_agent.name)
-                            if oracle_revelation:
-                                revealed_msg = ChatMessageContent(role="assistant", content=str(oracle_revelation), name="Moriarty")
-                                history.append(revealed_msg)
-                                self._logger.info(f"[Moriarty - Oracle]: {revealed_msg.content}")
 
         except Exception as e:
-            self._logger.error(f"Erreur durant la boucle d'orchestration: {e}", exc_info=True)
-            # Ajout d'un message d'erreur dans l'historique pour le contexte
-            history.append(ChatMessageContent(role="system", content=f"Erreur système: {e}"))
+            self._logger.error(f"Erreur durant l'orchestration: {e}", exc_info=True)
+            raise
         
         finally:
             self.end_time = datetime.now()
-
-        # Collecte des métriques finales
+        
         workflow_result = await self._collect_final_metrics(history)
         
         self._logger.info("[OK] Workflow 3-agents terminé")
         return workflow_result
     
+    def consolidate_agent_response(self, response_raw: Any, agent_name: str) -> ChatMessageContent:
+        """
+        Consolide la réponse brute d'un agent (qui peut être un string, un objet complexe,
+        un stream, etc.) en un unique ChatMessageContent simple (rôle, contenu texte, nom).
+        Ceci est LA fonction critique pour éviter le context_length_exceeded.
+        """
+        full_content = ""
+        role = "assistant"
+        
+        # Cas 1: La réponse est une liste de chunks de streaming
+        if isinstance(response_raw, list):
+            for chunk in response_raw:
+                if isinstance(chunk, StreamingChatMessageContent):
+                    for part in chunk.items:
+                        if hasattr(part, 'text'):
+                            full_content += part.text
+                # Gérer le cas où un ChatMessageContent se retrouve dans la liste
+                elif isinstance(chunk, ChatMessageContent):
+                     full_content += str(chunk.content or "")
+
+        # Cas 2: La réponse est un objet de streaming unique
+        elif isinstance(response_raw, StreamingChatMessageContent):
+            for part in response_raw.items:
+                if hasattr(part, 'text'):
+                    full_content += part.text
+
+        # Cas 3: C'est déjà un ChatMessageContent (potentiellement avec un contenu complexe)
+        elif isinstance(response_raw, ChatMessageContent):
+            # Extraire le contenu texte, peu importe comment il est encapsulé
+            content_obj = response_raw.content
+            if hasattr(content_obj, 'text'):
+                full_content = content_obj.text
+            elif isinstance(content_obj, str):
+                full_content = content_obj
+            else:
+                full_content = str(content_obj or "")
+            role = response_raw.role
+
+        # Cas 4: C'est juste un string ou un autre type de base
+        else:
+            full_content = str(response_raw or "")
+
+        return ChatMessageContent(role=role, content=full_content, name=agent_name)
+
+
     async def _collect_final_metrics(self, history: List[ChatMessageContent]) -> Dict[str, Any]:
         """Collecte les métriques finales du workflow."""
         execution_time = (self.end_time - self.start_time).total_seconds() if self.start_time and self.end_time else 0
         
         # Statistiques de base
         conversation_history = [
-            {"sender": getattr(msg, 'author_name', msg.role), "message": str(msg.content)}
-            for msg in history if getattr(msg, 'author_name', msg.role) != "system"
+            {"sender": getattr(msg, 'name', getattr(msg, 'role', str(getattr(msg, 'author', 'Unknown')))),
+             "message": str(getattr(msg, 'content', msg))}
+            for msg in history if getattr(msg, 'name', getattr(msg, 'role', getattr(msg, 'author', ''))) != "System"
         ]
         
         # Métriques Oracle
@@ -744,9 +584,6 @@ class CluedoExtendedOrchestrator:
         # Métriques de performance comparatives
         performance_metrics = self._calculate_performance_metrics(oracle_stats, execution_time)
         
-        # Métriques Enhanced spécifiques au mode enhanced_auto_reveal
-        enhanced_metrics = self._calculate_enhanced_metrics(oracle_stats)
-        
         return {
             "workflow_info": {
                 "strategy": self.oracle_strategy,
@@ -760,7 +597,6 @@ class CluedoExtendedOrchestrator:
             "oracle_statistics": oracle_stats,
             "performance_metrics": performance_metrics,
             "phase_c_fluidity_metrics": fluidity_metrics,  # PHASE C: Nouvelles métriques
-            "enhanced_metrics": enhanced_metrics,  # Métriques Enhanced
             "final_state": {
                 "solution_proposed": self.oracle_state.is_solution_proposed,
                 "final_solution": self.oracle_state.final_solution,
@@ -794,140 +630,6 @@ class CluedoExtendedOrchestrator:
                 "arme": proposed.get("arme") == correct.get("arme"),  
                 "lieu": proposed.get("lieu") == correct.get("lieu")
             } if proposed and correct else {}
-        }
-    
-    def _calculate_enhanced_metrics(self, oracle_stats: Dict[str, Any]) -> Dict[str, Any]:
-        """Calcule les métriques Enhanced spécifiques au mode enhanced_auto_reveal."""
-        # Comptage des révélations automatiques
-        auto_revelations_count = 0
-        if hasattr(self, '_auto_revelations_triggered'):
-            auto_revelations_count = len(self._auto_revelations_triggered)
-        else:
-            # Fallback: compter à partir des révélations Oracle
-            revelations_by_agent = oracle_stats.get('dataset_statistics', {}).get('revelations_by_agent', {})
-            auto_revelations_count = sum(revelations_by_agent.values())
-        
-        # Scores de qualité des suggestions (simulation)
-        suggestion_quality_scores = []
-        if hasattr(self, '_suggestion_quality_scores'):
-            suggestion_quality_scores = self._suggestion_quality_scores
-        else:
-            # Valeurs par défaut pour la compatibilité des tests
-            suggestion_quality_scores = [0.75, 0.82, 0.68]
-        
-        # Niveau d'optimisation du workflow Enhanced
-        workflow_optimization_level = "enhanced_auto_reveal"
-        if self.oracle_strategy == "enhanced_auto_reveal":
-            # Calcul basé sur l'efficacité des révélations automatiques
-            total_queries = oracle_stats.get('dataset_statistics', {}).get('total_queries', 0)
-            if total_queries > 0:
-                efficiency_ratio = auto_revelations_count / max(total_queries, 1)
-                if efficiency_ratio > 0.7:
-                    workflow_optimization_level = "high_efficiency"
-                elif efficiency_ratio > 0.4:
-                    workflow_optimization_level = "medium_efficiency"
-                else:
-                    workflow_optimization_level = "low_efficiency"
-            else:
-                workflow_optimization_level = "baseline_efficiency"
-        
-        return {
-            "auto_revelations_count": auto_revelations_count,
-            "suggestion_quality_scores": suggestion_quality_scores,
-            "workflow_optimization_level": workflow_optimization_level,
-            "enhanced_strategy_active": self.oracle_strategy == "enhanced_auto_reveal",
-            "average_suggestion_quality": sum(suggestion_quality_scores) / len(suggestion_quality_scores) if suggestion_quality_scores else 0.0
-        }
-
-    def _handle_enhanced_state_transition(self, current_state: str, target_state: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle enhanced state transitions for the orchestrator."""
-        # Validate state transition
-        valid_states = [
-            "idle", "investigation_active", "suggestion_analysis",
-            "auto_revelation_triggered", "solution_approaching"
-        ]
-        
-        if target_state not in valid_states:
-            return {
-                "success": False,
-                "new_state": current_state,
-                "enhanced_features_active": False,
-                "error": f"Invalid target state: {target_state}"
-            }
-        
-        # Simulate state transition logic
-        enhanced_features_map = {
-            "investigation_active": ["auto_clue_generation", "agent_coordination"],
-            "suggestion_analysis": ["quality_scoring", "auto_validation"],
-            "auto_revelation_triggered": ["strategic_reveals", "game_acceleration"],
-            "solution_approaching": ["final_hint_mode", "victory_detection"]
-        }
-        
-        return {
-            "success": True,
-            "new_state": target_state,
-            "enhanced_features_active": enhanced_features_map.get(target_state, []),
-            "transition_from": current_state,
-            "context_elements": len(context.get("elements_jeu", {}))
-        }
-    async def _execute_optimized_agent_turn(self, agent_name: str, turn_number: int, context: str) -> Dict[str, Any]:
-        """
-        Exécute un tour d'agent optimisé avec attribution de rôles spécialisés.
-        
-        Args:
-            agent_name: Nom de l'agent ("Sherlock", "Watson", "Moriarty")
-            turn_number: Numéro du tour dans le cycle
-            context: Contexte d'exécution
-            
-        Returns:
-            Dict contenant le résultat de l'action avec role et métriques optimisées
-        """
-        # Attribution des rôles optimisés selon l'agent
-        role_mapping = {
-            "Sherlock": "investigator",      # Spécialisé dans l'investigation
-            "Watson": "analyzer",            # Spécialisé dans l'analyse logique
-            "Moriarty": "oracle_revealer"    # Spécialisé dans les révélations Oracle
-        }
-        
-        # Obtenir le rôle de l'agent
-        agent_role = role_mapping.get(agent_name, "generic")
-        
-        # Simulation de l'action optimisée selon le rôle
-        if agent_role == "investigator":
-            # Sherlock : génération de suggestions d'enquête
-            action_type = "investigation"
-            efficiency_score = 0.85 + (turn_number * 0.05)  # Amélioration avec l'expérience
-            
-        elif agent_role == "analyzer":
-            # Watson : analyse logique des indices
-            action_type = "analysis"
-            efficiency_score = 0.80 + (turn_number * 0.04)
-            
-        elif agent_role == "oracle_revealer":
-            # Moriarty : révélations Oracle stratégiques
-            action_type = "revelation"
-            efficiency_score = 0.90 + (turn_number * 0.03)
-            
-        else:
-            # Rôle générique
-            action_type = "generic"
-            efficiency_score = 0.70
-        
-        # Simulation de métriques de performance optimisées
-        performance_metrics = {
-            "efficiency": min(efficiency_score, 1.0),  # Plafonné à 1.0
-            "context_awareness": 0.75 if context == "enhanced_cluedo" else 0.60,
-            "role_specialization": 0.95,
-            "turn_optimization": turn_number * 0.1  # Bonus cumulatif par tour
-        }
-        
-        return {
-            "role": agent_role,
-            "action_type": action_type,
-            "performance": performance_metrics,
-            "turn_number": turn_number,
-            "context": context,
-            "success": True
         }
     
     def _calculate_performance_metrics(self, oracle_stats: Dict[str, Any], execution_time: float) -> Dict[str, Any]:
@@ -1184,7 +886,7 @@ class CluedoExtendedOrchestrator:
         
         if len(history) > 1:
             last_message = history[-2]  # Message précédent (avant le message actuel)
-            trigger_agent = getattr(last_message, 'author_name', last_message.role)
+            trigger_agent = last_message.name
             trigger_content = str(last_message.content)
         
         if not trigger_agent or trigger_agent == "System":
@@ -1283,7 +985,21 @@ async def run_cluedo_oracle_game(
 async def main():
     """Point d'entrée pour exécuter le workflow 3-agents de manière autonome."""
     kernel = Kernel()
-    # NOTE: Configurez ici votre service LLM
+    
+    # --- DEBUT BLOC DE CORRECTION ---
+    # Ajout de la configuration du service LLM, comme dans cluedo_orchestrator.py
+    from argumentation_analysis.config.settings import settings
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
+    if not settings.use_mock_llm and settings.openai.api_key:
+        kernel.add_service(
+            OpenAIChatCompletion(
+                service_id=settings.openai.chat_model_id,
+                ai_model_id=settings.openai.chat_model_id,
+                api_key=settings.openai.api_key.get_secret_value(),
+            )
+        )
+    # --- FIN BLOC DE CORRECTION ---
     
     try:
         result = await run_cluedo_oracle_game(
@@ -1306,7 +1022,7 @@ async def main():
             print(f"[OK] Solution: {result['final_state']['final_solution']}")
         else:
             print(f"❌ Solution proposée: {result['final_state']['final_solution']}")
-            print(f"🎯 Solution correcte: {result['final_state']['correct_solution']}")
+            print(f"🎯 Solution correcte: {result['final_state']['secret_solution']}")
         
         print("\n" + "="*60)
         

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Tests d'intégration pour l'interaction entre les différents agents.
 
@@ -11,20 +11,10 @@ import asyncio
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 import semantic_kernel as sk
-# Import fixe pour AuthorRole - créer un mock simple si nécessaire
-try:
-    from semantic_kernel.contents import ChatMessageContent
-except ImportError:
-    ChatMessageContent = None
 
-# Import AuthorRole (maintenant ChatRole) depuis le module de compatibilité
-from semantic_kernel.contents.utils.author_role import AuthorRole
-
-# try:
-#     from semantic_kernel.agents import Agent, AgentGroupChat # Commenté car non disponible dans SK 0.9.6b1
-# except ImportError:
-#     Agent = None
-#     AgentGroupChat = None
+# Correction de l'importation de AuthorRole suite à la refactorisation de semantic-kernel
+from semantic_kernel.contents import ChatMessageContent, AuthorRole
+from semantic_kernel.agents import Agent, AgentGroupChat
 
 # Utiliser la fonction setup_import_paths pour résoudre les problèmes d'imports relatifs
 # from tests import setup_import_paths # Commenté pour investigation
@@ -33,7 +23,7 @@ from semantic_kernel.contents.utils.author_role import AuthorRole
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
 from argumentation_analysis.core.strategies import BalancedParticipationStrategy
-from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
+# from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation # Commenté, non utilisé dans ce fichier
 from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
 from argumentation_analysis.agents.core.pl.pl_definitions import setup_pl_kernel
 from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel
@@ -63,16 +53,16 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
         self.state_manager = StateManagerPlugin(self.state)
         self.kernel.add_plugin(self.state_manager, "StateManager")
         
-        self.pm_agent = MagicMock(spec=Agent)
+        self.pm_agent = MagicMock()
         self.pm_agent.name = "ProjectManagerAgent"
         
-        self.pl_agent = MagicMock(spec=Agent)
+        self.pl_agent = MagicMock()
         self.pl_agent.name = "PropositionalLogicAgent"
         
-        self.informal_agent = MagicMock(spec=Agent)
+        self.informal_agent = MagicMock()
         self.informal_agent.name = "InformalAnalysisAgent"
         
-        self.extract_agent = MagicMock(spec=Agent)
+        self.extract_agent = MagicMock()
         self.extract_agent.name = "ExtractAgent"
         
         self.agents = [self.pm_agent, self.pl_agent, self.informal_agent, self.extract_agent]
@@ -85,6 +75,7 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
 
     @pytest.mark.asyncio
     async def test_pm_informal_interaction(self):
+        """Vérifie la transition du PM à l'agent Informal."""
         history = []
         
         self.state.add_task("Identifier les arguments dans le texte")
@@ -120,6 +111,7 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
 
     @pytest.mark.asyncio
     async def test_informal_pl_interaction(self):
+        """Vérifie la transition de l'agent Informal à l'agent PL."""
         history = []
         
         arg_id = self.state.add_argument("La Terre est plate car l'horizon semble plat")
@@ -150,6 +142,7 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
 
     @pytest.mark.asyncio
     async def test_pl_extract_interaction(self):
+        """Vérifie la transition de l'agent PL à l'agent Extract."""
         history = []
         
         bs_id = self.state.add_belief_set("Propositional", "p => q\np\n")
@@ -178,6 +171,7 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
 
     @pytest.mark.asyncio
     async def test_extract_pm_interaction(self):
+        """Vérifie la transition de l'agent Extract au PM pour la conclusion."""
         history = []
         
         extract_id = self.state.add_extract("Extrait du texte", "La Terre est plate car l'horizon semble plat")
@@ -206,6 +200,7 @@ class TestAgentInteraction: # Suppression de l'héritage AsyncTestCase
 
     @pytest.mark.asyncio
     async def test_full_agent_interaction_cycle(self):
+        """Vérifie un cycle complet d'interaction entre tous les agents."""
         history = []
         
         self.state.add_task("Identifier les arguments dans le texte")
@@ -296,16 +291,16 @@ class TestAgentInteractionWithErrors: # Suppression de l'héritage AsyncTestCase
         self.state_manager = StateManagerPlugin(self.state)
         self.kernel.add_plugin(self.state_manager, "StateManager")
         
-        self.pm_agent = MagicMock(spec=Agent)
+        self.pm_agent = MagicMock()
         self.pm_agent.name = "ProjectManagerAgent"
         
-        self.pl_agent = MagicMock(spec=Agent)
+        self.pl_agent = MagicMock()
         self.pl_agent.name = "PropositionalLogicAgent"
         
-        self.informal_agent = MagicMock(spec=Agent)
+        self.informal_agent = MagicMock()
         self.informal_agent.name = "InformalAnalysisAgent"
         
-        self.extract_agent = MagicMock(spec=Agent)
+        self.extract_agent = MagicMock()
         self.extract_agent.name = "ExtractAgent"
         
         self.agents = [self.pm_agent, self.pl_agent, self.informal_agent, self.extract_agent]
@@ -318,6 +313,7 @@ class TestAgentInteractionWithErrors: # Suppression de l'héritage AsyncTestCase
 
     @pytest.mark.asyncio
     async def test_error_recovery_interaction(self):
+        """Teste la capacité du PM à gérer une erreur d'un autre agent."""
         history = []
         
         self.state.add_task("Identifier les arguments dans le texte")
@@ -380,3 +376,5 @@ if __name__ == '__main__':
     # Utiliser pytest pour exécuter les tests si ce fichier est exécuté directement
     # Cela permet de bénéficier des fixtures et des plugins pytest comme anyio.
     pytest.main(['-xvs', __file__])
+
+

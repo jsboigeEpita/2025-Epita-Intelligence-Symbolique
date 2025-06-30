@@ -31,7 +31,7 @@ try:
     from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
     from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
     from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer
-    from config.unified_config import UnifiedConfig
+    from config.unified_config import UnifiedConfig as RealUnifiedConfig
     from argumentation_analysis.agents.core.logic.fol_logic_agent import FirstOrderLogicAgent
     REAL_COMPONENTS_AVAILABLE = True
 except ImportError as e:
@@ -121,9 +121,10 @@ except ImportError as e:
 
 
 class TestUnifiedSystemIntegration:
+    """Suite de tests pour l'intégration du système unifié."""
     async def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
+        config = RealUnifiedConfig()
         return config.get_kernel_with_gpt4o_mini()
         
     async def _make_authentic_llm_call(self, prompt: str) -> str:
@@ -135,8 +136,6 @@ class TestUnifiedSystemIntegration:
         except Exception as e:
             logger.warning(f"Appel LLM authentique échoué: {e}")
             return "Authentic LLM call failed"
-
-    """Tests d'intégration système complet."""
     
     def setup_method(self):
         """Configuration initiale pour chaque test."""
@@ -311,7 +310,7 @@ class TestUnifiedSystemIntegration:
 
 
 class TestUnifiedErrorHandlingIntegration:
-    """Tests d'intégration pour gestion d'erreurs unifiée."""
+    """Vérifie la robustesse du système face à des erreurs."""
     
     def setup_method(self):
         """Configuration initiale pour chaque test."""
@@ -393,7 +392,7 @@ class TestUnifiedErrorHandlingIntegration:
 
 
 class TestUnifiedConfigurationIntegration:
-    """Tests d'intégration pour configuration unifiée."""
+    """Valide la gestion et la cohérence de la configuration unifiée."""
     
     def test_configuration_persistence(self):
         """Test de persistance de configuration."""
@@ -442,7 +441,7 @@ class TestUnifiedConfigurationIntegration:
 
 
 class TestUnifiedPerformanceIntegration:
-    """Tests de performance d'intégration système."""
+    """Évalue la performance et la scalabilité du système intégré."""
     
     def test_scalability_multiple_texts(self):
         """Test de scalabilité avec textes multiples."""
@@ -527,7 +526,7 @@ class TestUnifiedPerformanceIntegration:
 
 @pytest.mark.skipif(not REAL_COMPONENTS_AVAILABLE, reason="Composants réels non disponibles")
 class TestAuthenticIntegrationSuite:
-    """Suite de tests d'intégration authentique (sans mocks)."""
+    """Exécute des tests d'intégration avec des composants réels (non mockés)."""
     
     def test_authentic_fol_integration(self):
         """Test d'intégration FOL authentique."""

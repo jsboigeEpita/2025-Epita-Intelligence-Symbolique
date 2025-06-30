@@ -24,39 +24,64 @@ class AnalysisService:
         
         try:
             # Utilisation authentique du service manager avec GPT-4o-mini
-            result = await self.manager.analyze_text(text)
+            import json
+            service_result = await self.manager.analyze_text(text)
             
             duration = time.time() - start_time
             self.logger.info(f"[API] Analyse terminée en {duration:.2f}s")
-            
-            # Format des données pour l'API
+            self.logger.debug(f"Résultat brut du ServiceManager: {service_result}")
+
+            # Extraire et parser le résultat du LLM depuis la structure de réponse
+            llm_payload = {}
+            summary = "Analyse terminée, mais le format du résultat est inattendu."
             fallacies_data = []
-            if hasattr(result, 'fallacies') and result.fallacies:
-                fallacies_data = [
-                    {
-                        "type": f.name if hasattr(f, 'name') else str(f),
-                        "description": f.description if hasattr(f, 'description') else str(f),
-                        "confidence": getattr(f, 'confidence', 0.8)
-                    }
-                    for f in result.fallacies
-                ]
-            
-            components_used = []
-            if hasattr(result, 'metadata') and isinstance(result.metadata, dict):
-                components_used = result.metadata.get('components_used', ['GPT-4o-mini', 'ServiceManager'])
-            else:
-                components_used = ['GPT-4o-mini', 'OrchestrationServiceManager']
+            components_used = ['GPT-4o-mini', 'OrchestrationServiceManager']
+
+            try:
+                # Naviguer dans la structure pour trouver le résultat JSON string
+                specialized_result_str = service_result.get('results', {}).get('specialized', {}).get('result', '{}')
+                
+                # S'assurer que ce n'est pas None et que c'est bien une string
+                if isinstance(specialized_result_str, str):
+                    # Parser la string JSON en dictionnaire Python
+                    llm_payload = json.loads(specialized_result_str)
+                elif isinstance(specialized_result_str, dict): # Au cas où le format changerait
+                    llm_payload = specialized_result_str
+                else:
+                    self.logger.warning(f"Le résultat du LLM n'est ni une string ni un dict: {type(specialized_result_str)}")
+
+                # Extraire les données du payload parsé
+                raw_fallacies = llm_payload.get('fallacies', [])
+                if isinstance(raw_fallacies, list):
+                     fallacies_data = [
+                        {
+                            "type": f.get("type", "N/A"),
+                            "description": f.get("description", "N/A"),
+                            "confidence": f.get("confidence", 0.85)
+                        }
+                        for f in raw_fallacies
+                    ]
+
+                summary = llm_payload.get('summary', f"Analyse authentique GPT-4o-mini terminée. {len(fallacies_data)} sophismes détectés.")
+
+            except (json.JSONDecodeError, KeyError, TypeError) as e:
+                self.logger.error(f"Erreur en parsant le résultat du LLM: {e}")
+                summary = f"Erreur de formatage dans la réponse du service: {e}"
             
             return {
                 'fallacies': fallacies_data,
                 'duration': duration,
                 'components_used': components_used,
-                'summary': f"Analyse authentique GPT-4o-mini terminée. {len(fallacies_data)} sophismes détectés.",
+                'summary': summary,
+                'overall_quality': llm_payload.get('overall_quality', 0.0),
+                'argument_structure': llm_payload.get('argument_structure', "N/A"),
+                'suggestions': llm_payload.get('suggestions', []),
                 'authentic_gpt4o_used': True,
                 'analysis_metadata': {
                     'text_length': len(text),
                     'processing_time': duration,
-                    'model_used': 'gpt-4o-mini'
+                    'model_used': 'gpt-4o-mini',
+                    'raw_llm_payload': llm_payload # Pour le débogage
                 }
             }
             
@@ -110,7 +135,20 @@ def get_dung_analysis_service() -> DungAnalysisService:
     global _global_dung_service
     if _global_dung_service is None:
         logging.info("[API] Initialisation du DungAnalysisService...")
-        # L'initialisation de la JVM est gérée au sein du constructeur du service.
+        import jpype
+        import jpype.imports
+        from argumentation_analysis.orchestration.jpype_manager import JPypeManager
+        
+        if not jpype.isJVMStarted():
+            # Instance du manager pour la configuration centralisée
+            jpype_manager = JPypeManager()
+            
+            # Définir le chemin vers les fichiers JAR
+            jpype_manager.set_jars_path('libs/tweety')
+            
+            # Lancer la JVM avec la configuration du manager
+            jpype_manager.start_jvm()
+
         _global_dung_service = DungAnalysisService()
         logging.info("[API] DungAnalysisService initialisé avec succès.")
     return _global_dung_service

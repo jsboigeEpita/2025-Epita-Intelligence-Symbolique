@@ -11,13 +11,13 @@ import os
 import requests
 from pathlib import Path
 from typing import Optional, Tuple, List, Dict, Any, Union
-from dotenv import load_dotenv, find_dotenv
+from pybreaker import CircuitBreakerError
+from tenacity import RetryError
 
+from argumentation_analysis.config.settings import settings
 from argumentation_analysis.models.extract_definition import SourceDefinition
+from argumentation_analysis.core.utils.network_utils import retry_on_network_error, network_breaker
 from .cache_service import CacheService
-
-# Charger les variables d'environnement
-load_dotenv(find_dotenv())
 
 # Configuration du logging
 logger = logging.getLogger("Services.FetchService")
@@ -59,11 +59,10 @@ class FetchService:
         self.cache_service = cache_service
         self.jina_reader_prefix = jina_reader_prefix
         
-        # Utiliser les valeurs du fichier .env si elles ne sont pas fournies
-        # Assurez-vous que l'URL du serveur Tika se termine par '/tika'
-        tika_url = tika_server_url or os.getenv("TIKA_SERVER_ENDPOINT", "https://tika.open-webui.myia.io/tika")
+        # Utiliser la configuration centralisée, avec les arguments comme surcharge
+        tika_url = tika_server_url or str(settings.tika.server_endpoint)
         self.tika_server_url = tika_url if tika_url.endswith('/tika') else f"{tika_url.rstrip('/')}/tika"
-        self.tika_server_timeout = tika_server_timeout or int(os.getenv("TIKA_SERVER_TIMEOUT", "30"))
+        self.tika_server_timeout = tika_server_timeout or settings.tika.server_timeout
         
         self.temp_download_dir = temp_download_dir
         self.plaintext_extensions = plaintext_extensions or ['.txt', '.md', '.json', '.csv', '.xml', '.py', '.js', '.html', '.htm']
@@ -156,26 +155,18 @@ class FetchService:
                     return self.fetch_with_tika(url), url
             else:  # direct_download ou autre
                 return self.fetch_direct_text(url), url
-        except Exception as e:
-            self.logger.error(f"Erreur lors de la récupération de {url}: {e}")
-            return None, f"Erreur: {str(e)}"
+        except CircuitBreakerError as e:
+            self.logger.error(f"Disjoncteur ouvert pour la récupération de {url}: {e}")
+            return None, f"Erreur (disjoncteur ouvert): {str(e)}"
     
+    @retry_on_network_error
+    @network_breaker
     def fetch_direct_text(self, url: str, timeout: int = 60) -> Optional[str]:
         """
-        Récupère le contenu texte brut d'une URL par téléchargement direct.
-
-        :param url: L'URL à partir de laquelle récupérer le texte.
-        :type url: str
-        :param timeout: Le délai d'attente en secondes pour la requête HTTP.
-        :type timeout: int
-        :return: Le contenu textuel de la réponse si la requête réussit, sinon None.
-                 Le texte est décodé en UTF-8.
-        :rtype: Optional[str]
+        Récupère le contenu texte brut d'une URL par téléchargement direct de manière robuste.
         """
         self.logger.info(f"Téléchargement direct depuis: {url}...")
-        
         headers = {'User-Agent': 'ArgumentAnalysisApp/1.0'}
-        
         try:
             response = requests.get(url, headers=headers, timeout=timeout)
             response.raise_for_status()
@@ -183,31 +174,23 @@ class FetchService:
             texte_brut = response.content.decode('utf-8', errors='ignore')
             self.logger.info(f"Contenu direct récupéré (longueur {len(texte_brut)}).")
             
-            # Sauvegarder dans le cache
             self.cache_service.save_to_cache(url, texte_brut)
-            
             return texte_brut
-        except requests.exceptions.RequestException as e:
-            self.logger.error(f"Erreur téléchargement direct ({url}): {e}")
+        except CircuitBreakerError:
+            self.logger.error(f"Disjoncteur ouvert pour fetch_direct_text sur {url}.")
             return None
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Erreur persistante de téléchargement direct pour {url}: {e}")
+            raise  # Relancer pour que Tenacity puisse gérer
     
+    @retry_on_network_error
+    @network_breaker
     def fetch_with_jina(self, url: str, timeout: int = 90) -> Optional[str]:
         """
-        Récupère et extrait le contenu textuel d'une URL en utilisant le service Jina Reader.
-
-        Le service Jina est préfixé à l'URL fournie. La réponse attendue est en Markdown.
-
-        :param url: L'URL originale à traiter via Jina.
-        :type url: str
-        :param timeout: Le délai d'attente en secondes pour la requête HTTP vers Jina.
-        :type timeout: int
-        :return: Le contenu textuel extrait par Jina (potentiellement en Markdown),
-                 ou None si une erreur survient.
-        :rtype: Optional[str]
+        Récupère et extrait le contenu textuel d'une URL via Jina de manière robuste.
         """
         jina_url = f"{self.jina_reader_prefix}{url}"
         self.logger.info(f"Récupération via Jina: {jina_url}...")
-        
         headers = {'Accept': 'text/markdown', 'User-Agent': 'ArgumentAnalysisApp/1.0'}
         
         try:
@@ -221,13 +204,14 @@ class FetchService:
             texte_brut = content[md_start_index + len(md_start_marker):].strip() if md_start_index != -1 else content
             self.logger.info(f"Contenu Jina récupéré (longueur {len(texte_brut)}).")
             
-            # Sauvegarder dans le cache
             self.cache_service.save_to_cache(url, texte_brut)
-            
             return texte_brut
-        except requests.exceptions.RequestException as e:
-            self.logger.error(f"Erreur Jina ({jina_url}): {e}")
+        except CircuitBreakerError:
+            self.logger.error(f"Disjoncteur ouvert pour fetch_with_jina sur {jina_url}.")
             return None
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Erreur Jina persistante pour {jina_url}: {e}")
+            raise # Relancer pour que Tenacity puisse gérer
     
     def fetch_with_tika(
         self,
@@ -298,9 +282,8 @@ class FetchService:
                 self.logger.info(f"Téléchargement (pour Tika) depuis: {url}...")
                 
                 try:
-                    response_dl = requests.get(url, stream=True, timeout=timeout_dl)
-                    response_dl.raise_for_status()
-                    
+                    response_dl = self._robust_get_request(url, stream=True, timeout=timeout_dl)
+                    if response_dl is None: return None
                     content_to_send = response_dl.content
                     self.logger.info(f"Doc téléchargé ({len(content_to_send)} bytes).")
                     
@@ -352,23 +335,51 @@ class FetchService:
         }
         
         try:
-            response_tika = requests.put(self.tika_server_url, data=content_to_send, headers=headers, timeout=effective_timeout)
-            response_tika.raise_for_status()
-            
+            response_tika = self._robust_put_request(self.tika_server_url, data=content_to_send, headers=headers, timeout=effective_timeout)
+            if response_tika is None:
+                # L'erreur est déjà loggée dans _robust_put_request
+                return None
             texte_brut = response_tika.text
-            
+
             if not texte_brut:
                 self.logger.warning(f"Warning: Tika status {response_tika.status_code} sans texte.")
             else:
                 self.logger.info(f"Texte Tika extrait (longueur {len(texte_brut)}).")
-            
-            # Sauvegarder dans le cache
+
             self.cache_service.save_to_cache(cache_key, texte_brut)
-            
             return texte_brut
-        except requests.exceptions.Timeout:
-            self.logger.error(f"❌ Timeout Tika ({effective_timeout}s).")
+        except RetryError as e:
+            self.logger.error(f"Échec de l'envoi à Tika après plusieurs tentatives: {e}")
+            return None
+        except Exception as e:
+            # Catchall pour toute autre erreur inattendue
+            self.logger.error(f"Erreur inattendue lors de la communication avec Tika: {e}", exc_info=True)
+            return None
+
+    @retry_on_network_error
+    @network_breaker
+    def _robust_get_request(self, url: str, **kwargs) -> Optional[requests.Response]:
+        try:
+            response = requests.get(url, **kwargs)
+            response.raise_for_status()
+            return response
+        except CircuitBreakerError:
+            self.logger.error(f"Disjoncteur ouvert pour GET sur {url}.")
             return None
         except requests.exceptions.RequestException as e:
-            self.logger.error(f"Erreur Tika: {e}")
+            self.logger.error(f"Erreur GET persistante pour {url}: {e}")
+            raise
+    
+    @retry_on_network_error
+    @network_breaker
+    def _robust_put_request(self, url: str, **kwargs) -> Optional[requests.Response]:
+        try:
+            response = requests.put(url, **kwargs)
+            response.raise_for_status()
+            return response
+        except CircuitBreakerError:
+            self.logger.error(f"Disjoncteur ouvert pour PUT sur {url}.")
             return None
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Erreur PUT persistante pour {url}: {e}")
+            raise

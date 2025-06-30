@@ -1,75 +1,117 @@
 from setuptools import setup, find_packages
 import os
-import yaml # PyYAML doit être installé (ajoutez 'pyyaml' à environment.yml si besoin)
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ENV_FILE = os.path.join(BASE_DIR, 'environment.yml')
+# Version du package
+__version__ = "0.1.0"
 
-def parse_environment_yml(file_path):
+# Fonction pour parser requirements.txt
+def parse_requirements_txt(filename='requirements.txt'):
     """
-    Parse environment.yml pour extraire les dépendances pour install_requires.
+    Assurez-vous que cette fonction ne lit que les noms des paquets,
+    en ignorant les commentaires, les options et les marqueurs.
     """
-    install_requires_list = []
-    if not os.path.exists(file_path):
-        print(f"AVERTISSEMENT: {file_path} non trouvé. Aucune dépendance ne sera lue.")
-        return install_requires_list
+    # Exclusions pour éviter les conflits de dépendances directes/indirectes
+    # ou les paquets qui sont mieux gérés d'une autre manière.
+    # Un bon exemple est `semantic-kernel` qui peut avoir une version très spécifique
+    # nécessaire pour le projet mais qui pourrait entrer en conflit avec d'autres.
+    # 'uvicorn[standard]' doit être simplifié en 'uvicorn'
+    exclusions = [
+        'semantic-kernel',
+        'uvicorn[standard]'  # Le setup ne gère pas les extras comme ça, on met 'uvicorn' à la place
+    ]
 
-    with open(file_path, 'r', encoding='utf-8') as f:
-        try:
-            env_data = yaml.safe_load(f)
-        except yaml.YAMLError as e:
-            print(f"ERREUR: Impossible de parser {file_path}. Erreur YAML: {e}")
-            return install_requires_list # Retourne une liste vide en cas d'erreur de parsing
+    # Paquets à ajouter explicitement au lieu de ceux exclus (si nécessaire)
+    # par exemple, uvicorn sans l'extra.
+    additions = {
+        'uvicorn[standard]': 'uvicorn'
+    }
 
-    # Traitement de la section 'dependencies' principale
-    if 'dependencies' in env_data and isinstance(env_data['dependencies'], list):
-        for dep in env_data['dependencies']:
-            if isinstance(dep, str):
-                dep_cleaned = dep.split('#')[0].strip() # Enlever les commentaires en ligne
-                if not dep_cleaned: # Ignorer les lignes vides ou de commentaires purs
-                    continue
-                if dep_cleaned.startswith('python=') or dep_cleaned == 'pip':
-                    continue
-                
-                # Normalisations spécifiques Conda -> Pip
-                if dep_cleaned == 'pytorch':
-                    install_requires_list.append('torch')
-                # elif dep_cleaned.startswith('python-dotenv'): # python-dotenv est le même nom pour pip
-                #     install_requires_list.append('python-dotenv')
-                else:
-                    install_requires_list.append(dep_cleaned)
+    libs = {}
+    with open(filename, 'r') as f:
+        for line in f:
+            line = line.strip()
+            # Ignorer les commentaires, les lignes vides et les options
+            if not line or line.startswith('#') or line.startswith('-'):
+                continue
 
-    # Traitement de la section 'pip' (au niveau racine du YAML)
-    if 'pip' in env_data and isinstance(env_data['pip'], list):
-        for pip_dep in env_data['pip']:
-            if isinstance(pip_dep, str):
-                pip_dep_cleaned = pip_dep.split('#')[0].strip() # Enlever les commentaires en ligne
-                if pip_dep_cleaned: # S'assurer que ce n'est pas une ligne vide
-                    install_requires_list.append(pip_dep_cleaned)
-    
-    # Optionnel: déduplication tout en préservant l'ordre approximatif pour la lisibilité
-    # Cependant, setuptools gère les doublons, donc ce n'est pas strictement nécessaire.
-    # seen = set()
-    # unique_install_requires = [x for x in install_requires_list if not (x in seen or seen.add(x))]
-    # return unique_install_requires
-    return install_requires_list
+            # Retirer les commentaires en ligne
+            if '#' in line:
+                line = line.split('#', 1)[0].strip()
 
-# Lire les dépendances depuis environment.yml
-dynamic_install_requires = parse_environment_yml(ENV_FILE)
+            # Normaliser le nom du paquet et retirer les extras pour les exclusions
+            package_name_for_check = line.split('==')[0].split('>=')[0].split('<=')[0].strip()
+            
+            # Gérer les exclusions de manière plus robuste
+            if any(ex in line for ex in exclusions) and not "torch" in line:
+                 # Vérifier si on doit ajouter une version modifiée du paquet
+                for key, value in additions.items():
+                    if key in line:
+                        libs[value] = line.replace(key, value)
+                continue # On saute la ligne originale
 
-if not dynamic_install_requires:
-    print("AVERTISSEMENT: La liste des dépendances dynamiques est vide. Vérifiez environment.yml ou la logique de parsing.")
-    # Vous pourriez vouloir un fallback vers une liste statique ici en cas d'échec critique.
-    # Par exemple: dynamic_install_requires = ["numpy", "pandas"] # Liste minimale de secours
+            # Vérifier que le paquet n'est pas déjà dans la liste
+            # pour éviter les doublons si une substitution a déjà été faite.
+            package_key = package_name_for_check
+            if package_key not in libs:
+                libs[package_key] = line
 
+    return list(libs.values())
+
+# Charger les dépendances depuis requirements.txt
+try:
+    dynamic_install_requires = parse_requirements_txt('requirements.txt')
+except FileNotFoundError:
+    print("AVERTISSEMENT: Le fichier 'requirements.txt' est introuvable. "
+          "Installation sans dépendances.")
+    dynamic_install_requires = []
+
+# Configuration du package
 setup(
     name="argumentation_analysis_project",
-    version="0.1.0",
-    packages=find_packages(exclude=["tests", "tests.*", "docs", "docs.*", "notebooks", "notebooks.*", "venv", ".venv", "dist", "build", "*.egg-info", "_archives", "_archives.*", "examples", "examples.*", "config", "config.*", "services", "services.*", "tutorials", "tutorials.*", "libs", "libs.*", "results", "results.*", "src", "src.*"]),
-    # package_dir={'': 'src'}, # Maintenu commenté comme dans HEAD
+    version=__version__,
+    author="Votre Nom ou Nom de l'Équipe",
+    author_email="votre.email@example.com",
+    description="Un projet d'analyse d'argumentation",
+    long_description=open('README.md', encoding='utf-8').read() if os.path.exists('README.md') else '',
+    long_description_content_type="text/markdown",
+    url="https://github.com/votre_nom/votre_projet",
+    packages=find_packages(
+        exclude=["*.tests", "*.tests.*", "tests.*", "tests",
+                 "docs", "examples", "scripts", "archived_scripts"]
+    ),
     install_requires=dynamic_install_requires,
-    python_requires=">=3.8",
-    description="Système d'analyse argumentative",
-    author="EPITA",
-    author_email="contact@epita.fr",
+    classifiers=[
+        "Development Status :: 3 - Alpha",
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ],
+    python_requires='>=3.8',
+    include_package_data=True,
+    package_data={
+        '': ['*.json', '*.yml', '*.css', '*.js', '*.html', '*.jinja', '*.txt'],
+    },
+    entry_points={
+        'console_scripts': [
+            'analyze_arguments=argumentation_analysis.main:main',
+        ],
+    },
+    # Assurez-vous que les dépendances de test sont dans un fichier-extra
+    # pour ne pas être installées en production.
+    extras_require={
+        'dev': [
+            'pytest',
+            'pytest-cov',
+            'pytest-mock',
+            # autres dépendances de développement
+        ],
+        'docs': [
+            'sphinx',
+            'sphinx_rtd_theme',
+        ]
+    },
+    # Si votre projet inclut des données non-python, spécifiez-les ici
+    # package_data={
+    #     'argumentation_analysis': ['data/*.csv'],
+    # }
 )

@@ -22,7 +22,7 @@ FONCTIONNALITÉS PRODUCTION:
 """
 
 # ===== AUTO-ACTIVATION ENVIRONNEMENT =====
-import scripts.core.auto_env  # Auto-activation environnement intelligent
+# import scripts.core.auto_env  # Auto-activation environnement intelligent
 # =========================================
 import os
 import sys

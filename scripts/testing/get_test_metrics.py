@@ -1,3 +1,4 @@
+import argumentation_analysis.core.environment
 #!/usr/bin/env python3
 """
 Script pour obtenir des métriques rapides des tests sans blocage.

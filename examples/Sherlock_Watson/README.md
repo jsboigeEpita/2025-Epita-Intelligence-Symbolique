@@ -104,13 +104,26 @@ python examples/Sherlock_Watson/orchestration_finale_reelle.py
 
 ```bash
 # Énigme complexe avec logique formelle requise
-python examples/logique_complexe_demo/demo_einstein_workflow.py
+python examples/Sherlock_Watson/agents_logiques_production.py --scenario examples/Sherlock_Watson/einstein_scenario.json
 
 # Caractéristiques:
 - 10+ clauses logiques formulées obligatoires
 - 5+ requêtes TweetyProject exécutées minimum
 - Impossible à résoudre sans formalisation
 - Watson validation via raisonnement formel
+```
+
+### 🎲 **Jeu du Cluedo Logique**
+**Déduction du coupable via analyse d'indices**
+
+```bash
+# Résolution du Cluedo avec analyse logique
+python examples/Sherlock_Watson/agents_logiques_production.py --scenario examples/Sherlock_Watson/cluedo_scenario.json
+
+# Caractéristiques:
+- Analyse des suspects, armes et lieux.
+- Construction d'un graphe de déduction.
+- Identification du coupable sur base des prémisses.
 ```
 
 ### 🔮 **Oracle Einstein avec Moriarty**
@@ -305,7 +318,7 @@ python examples/Sherlock_Watson/sherlock_watson_authentic_demo.py
 python examples/Sherlock_Watson/agents_logiques_production.py
 
 # 2. Exploration logique formelle 
-python examples/logique_complexe_demo/demo_einstein_workflow.py
+python examples/Sherlock_Watson/agents_logiques_production.py --scenario examples/Sherlock_Watson/einstein_scenario.json
 
 # 3. Validation système complet
 python examples/Sherlock_Watson/orchestration_finale_reelle.py
@@ -425,9 +438,9 @@ except ImportError:
 ## 📚 **RÉFÉRENCES ET DOCUMENTATION COMPLÉMENTAIRE**
 
 ### 🔗 **Liens Documentation Technique**
-- **Architecture Complète** : [`docs/sherlock_watson/DOCUMENTATION_COMPLETE_SHERLOCK_WATSON.md`](../../docs/sherlock_watson/DOCUMENTATION_COMPLETE_SHERLOCK_WATSON.md)
-- **Guide Sécurité Oracle** : [`docs/sherlock_watson/AUDIT_INTEGRITE_CLUEDO.md`](../../docs/sherlock_watson/AUDIT_INTEGRITE_CLUEDO.md)
-- **Rapport Mission Complète** : [`docs/sherlock_watson/MISSION_SHERLOCK_WATSON_COMPLETE.md`](../../docs/sherlock_watson/MISSION_SHERLOCK_WATSON_COMPLETE.md)
+- **Architecture Complète** : [`docs/sherlock_watson/../../docs/sherlock_watson/guide_unifie_sherlock_watson.md`](../../docs/sherlock_watson/../../docs/sherlock_watson/guide_unifie_sherlock_watson.md)
+- **Guide Sécurité Oracle** : [`docs/sherlock_watson/../../docs/sherlock_watson/guide_unifie_sherlock_watson.md`](../../docs/sherlock_watson/../../docs/sherlock_watson/guide_unifie_sherlock_watson.md)
+- **Rapport Mission Complète** : [`docs/sherlock_watson/../../docs/sherlock_watson/guide_unifie_sherlock_watson.md`](../../docs/sherlock_watson/../../docs/sherlock_watson/guide_unifie_sherlock_watson.md)
 
 ### 📖 **Documentation Externe**
 - **Semantic Kernel** : [Documentation Officielle Microsoft](https://learn.microsoft.com/en-us/semantic-kernel/)

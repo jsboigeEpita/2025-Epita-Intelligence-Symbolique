@@ -31,59 +31,14 @@ from pydantic import Field
 
 # Import de la classe Agent de base depuis l'orchestrateur principal
 # et définition locale de ChatCompletionAgent héritant de celle-ci.
-try:
-    from argumentation_analysis.orchestration.cluedo_extended_orchestrator import Agent
-except ImportError:
-    # Fallback si l'import échoue (ne devrait pas arriver)
-    class Agent:
-        def __init__(self, name: str, kernel: Kernel = None, **kwargs):
-            self.name = name
-            self.kernel = kernel
-            self._logger = logging.getLogger(f"Agent.{self.name}")
-            self._logger.info(f"Agent {name} initialisé (fallback local fol_logic_agent).")
-
-class ChatCompletionAgent(Agent):
-    def __init__(self, name: str, kernel: Kernel, instructions: str = "", **kwargs):
-        super().__init__(name=name, kernel=kernel, instructions=instructions, **kwargs)
-        # Ajouter ici toute logique spécifique à ChatCompletionAgent si nécessaire pour ce fichier
-        self._logger.info(f"ChatCompletionAgent {name} initialisé (définition locale fol_logic_agent).")
-
-# Utiliser une version de ChatMessageContent qui supporte .name pour compatibilité
-# si l'originale ne le fait pas.
-# La version dans cluedo_extended_orchestrator est déjà compatible.
-# Ici, on s'assure d'avoir une version compatible de ChatMessageContent.
-class ChatMessageContent(OriginalChatMessageContent):
-    def __init__(self, role=None, content=None, name=None, **kwargs):
-        if name is not None:
-            if 'metadata' not in kwargs:
-                kwargs['metadata'] = {}
-            kwargs['metadata']['name'] = name
-        super().__init__(role=role, content=content, **kwargs)
-
-    @property
-    def name(self):
-        return self.metadata.get("name", "") if self.metadata else ""
-
-    @name.setter
-    def name(self, value):
-        if self.metadata is None:
-            self.metadata = {}
-        self.metadata["name"] = value
-
-# Le bloc try-except original pour l'import n'est plus nécessaire pour ces classes
-# car nous les définissons ou les importons explicitement.
-# S'il y avait d'autres imports dans le try, ils devraient être gérés séparément.
-    # Mocks pour compatibilité si SK non disponible
-    # Kernel = None
-    # ChatCompletionAgent = object
-    # ChatMessageContent = object
-    # Field = lambda **kwargs: None
+# from semantic_kernel.agents import ChatCompletionAgent
+from semantic_kernel.contents import ChatMessageContent
 
 from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
 
 # Import BeliefSet avec fallback
 try:
-    from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
+    from argumentation_analysis.agents.core.logic.belief_set import BeliefSet, FirstOrderBeliefSet
 except ImportError:
     # Fallback pour BeliefSet si non disponible
     class BeliefSet:
@@ -249,12 +204,12 @@ RÉPONDS EN FORMAT JSON :
 
     async def _register_fol_semantic_functions(self):
         """Enregistre les fonctions sémantiques spécifiques FOL."""
-        if not self.sk_kernel:
+        if not self._kernel:
             logger.warning("⚠️ Pas de kernel - fonctions sémantiques non enregistrées")
             return
         
         # Fonction de conversion texte → FOL
-        conversion_function = self.sk_kernel.create_function_from_prompt(
+        conversion_function = self._kernel.create_function_from_prompt(
             function_name="convert_to_fol",
             plugin_name="fol_logic",
             prompt=self.conversion_prompt,
@@ -262,7 +217,7 @@ RÉPONDS EN FORMAT JSON :
         )
         
         # Fonction d'analyse FOL
-        analysis_function = self.sk_kernel.create_function_from_prompt(
+        analysis_function = self._kernel.create_function_from_prompt(
             function_name="analyze_fol",
             plugin_name="fol_logic", 
             prompt=self.analysis_prompt,
@@ -328,14 +283,14 @@ RÉPONDS EN FORMAT JSON :
             List[str]: Liste des formules FOL
         """
         try:
-            if self.sk_kernel and self.sk_kernel.services:
+            if self._kernel and self._kernel.services:
                 # Utilisation du LLM pour conversion intelligente
                 conversion_args = {
                     "text": text,
                     "context": str(context) if context else "Aucun contexte"
                 }
                 
-                result = await self.sk_kernel.invoke(
+                result = await self._kernel.invoke(
                     function_name="convert_to_fol",
                     plugin_name="fol_logic",
                     arguments=conversion_args
@@ -473,7 +428,7 @@ RÉPONDS EN FORMAT JSON :
                 result.confidence_score = max(0.1, result.confidence_score - 0.2)
             
             # Analyse LLM complémentaire si disponible
-            if self.sk_kernel and self.sk_kernel.services:
+            if self._kernel and self._kernel.services:
                 enhanced_analysis = await self._llm_enhanced_analysis(result, original_text)
                 if enhanced_analysis:
                     result = enhanced_analysis
@@ -501,7 +456,7 @@ RÉPONDS EN FORMAT JSON :
                 "context": original_text
             }
             
-            llm_result = await self.sk_kernel.invoke(
+            llm_result = await self._kernel.invoke(
                 function_name="analyze_fol",
                 plugin_name="fol_logic",
                 arguments=analysis_args
@@ -571,14 +526,16 @@ RÉPONDS EN FORMAT JSON :
     def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[BeliefSet], str]:
         """Convertit texte en ensemble de croyances FOL."""
         try:
-            # Conversion vers formules FOL
+            # Conversion vers formules FOL en utilisant la méthode existante
             formulas = self._basic_fol_conversion(text)
             
-            # Création BeliefSet
-            from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
-            belief_set = BeliefSet()
-            for formula in formulas:
-                belief_set.add_belief(formula)
+            # Si la conversion ne produit aucune formule, on peut considérer cela comme une erreur
+            if not formulas:
+                return None, "Conversion resulted in no formulas, likely invalid input."
+
+            # Le contenu du BeliefSet est la représentation textuelle des formules
+            content_str = "\n".join(formulas)
+            belief_set = FirstOrderBeliefSet(content=content_str)
             
             return belief_set, f"Converted to {len(formulas)} FOL formulas"
             
@@ -694,9 +651,44 @@ RÉPONDS EN FORMAT JSON :
         except Exception as e:
             return f"Erreur analyse FOL: {str(e)}"
     
-    async def invoke(self, text: str, context: Optional[Dict[str, Any]] = None) -> FOLAnalysisResult:
-        """Invoque l'agent FOL."""
+    async def invoke_single(self, text: str, context: Optional[Dict[str, Any]] = None, **kwargs) -> FOLAnalysisResult:
+        """
+        Exécute la logique principale de l'agent (analyse FOL) et retourne une réponse unique.
+        Implémentation de la méthode abstraite de BaseAgent.
+        """
         return await self.analyze(text, context)
+
+    async def validate_argument(self, premises: List[str], conclusion: str, **kwargs) -> bool:
+        """
+        Valide si une conclusion découle logiquement d'un ensemble de prémisses.
+        Implémentation de la méthode abstraite de BaseLogicAgent.
+
+        Args:
+            premises (List[str]): La liste des prémisses en format FOL.
+            conclusion (str): La conclusion en format FOL.
+
+        Returns:
+            bool: True si l'argument est valide, False sinon.
+        """
+        if not self._tweety_bridge:
+            logger.warning("TweetyBridge non disponible. Impossible de valider l'argument.")
+            return False
+
+        # Un argument est valide si l'ensemble {prémisses} U {¬conclusion} est incohérent.
+        # Nous devons formater la négation de la conclusion. Pour l'instant, une negation simple.
+        negated_conclusion = f"not ({conclusion})"
+        
+        formulas_to_check = premises + [negated_conclusion]
+        
+        try:
+            # check_consistency retourne True si c'est cohérent, False si c'est incohérent.
+            is_consistent = await self._tweety_bridge.check_consistency(formulas_to_check)
+            
+            # L'argument est valide si l'ensemble est INCOHÉRENT.
+            return not is_consistent
+        except Exception as e:
+            logger.error(f"Erreur lors de la validation de l'argument via Tweety: {e}")
+            return False
 
     def get_analysis_summary(self) -> Dict[str, Any]:
         """
@@ -725,6 +717,19 @@ RÉPONDS EN FORMAT JSON :
             "tweety_enabled": self._tweety_bridge is not None
         }
 
+    def _create_belief_set_from_data(self, data: Any) -> BeliefSet:
+        """
+        Implémentation de la méthode abstraite. Crée un BeliefSet à partir de données.
+        Pour FOLLogicAgent, les "données" sont supposées être une liste de formules.
+        Le contenu sera une représentation textuelle de ces formules.
+        """
+        content = ""
+        if isinstance(data, list):
+            content = "\n".join(map(str, data))
+
+        belief_set = FirstOrderBeliefSet(content=content)
+        return belief_set
+
 
 # ==================== FACTORY ET UTILITAIRES ====================
 
@@ -752,12 +757,9 @@ async def test_fol_agent_basic():
     
     result = await agent.analyze(test_text)
     
-    print(f"Formules FOL: {result.formulas}")
-    print(f"Cohérence: {result.consistency_check}")
-    print(f"Inférences: {result.inferences}")
-    print(f"Confiance: {result.confidence_score}")
 
 
 if __name__ == "__main__":
     import asyncio
     asyncio.run(test_fol_agent_basic())
+

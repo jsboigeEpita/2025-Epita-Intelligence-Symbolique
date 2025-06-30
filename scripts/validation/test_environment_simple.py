@@ -5,7 +5,7 @@
 Test simple de l'environnement avant la validation complète.
 """
 
-import scripts.core.auto_env  # Activation automatique de l'environnement
+import argumentation_analysis.core.environment # Activation automatique de l'environnement
 
 import os
 import asyncio

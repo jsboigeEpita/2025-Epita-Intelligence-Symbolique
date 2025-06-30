@@ -5,7 +5,7 @@ Principalement pour les outils de développement et de reporting.
 """
 
 import logging
-from typing import Dict # Ajouté pour le typage
+from typing import Dict, Optional # Ajouté pour le typage
 
 logger = logging.getLogger(__name__)
 

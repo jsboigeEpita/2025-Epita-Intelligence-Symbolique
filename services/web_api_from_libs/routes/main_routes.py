@@ -7,7 +7,7 @@ from ..services.analysis_service import AnalysisService
 from ..services.validation_service import ValidationService
 from ..services.fallacy_service import FallacyService
 from ..services.framework_service import FrameworkService
-from argumentation_analysis.services.web_api.services.logic_service import LogicService
+from ..services.logic_service import LogicService
 from ..models.request_models import (
     AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest
 )

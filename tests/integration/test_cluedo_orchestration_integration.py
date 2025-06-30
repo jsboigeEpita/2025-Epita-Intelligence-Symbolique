@@ -31,8 +31,8 @@ try:
     from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
     from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
     from argumentation_analysis.orchestration.group_chat import AgentGroupChat
-    from argumentation_analysis.services.llm_service_factory import create_llm_service
     from semantic_kernel import Kernel
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
     from config.unified_config import UnifiedConfig
     REAL_COMPONENTS_AVAILABLE = True
 except ImportError as e:
@@ -52,12 +52,22 @@ class TestCluedoOrchestrationRealIntegration:
     async def real_kernel(self):
         """Fixture pour créer un VRAI kernel Semantic Kernel"""
         try:
-            config = UnifiedConfig()
             kernel = Kernel()
+
+            # Correction : Instancier directement le service avec le bon service_id
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                logger.warning("OPENAI_API_KEY not found, skipping LLM service creation.")
+                return kernel
+
+            llm_service = OpenAIChatCompletion(
+                service_id="chat_completion",  # ID attendu par SherlockEnqueteAgent
+                ai_model_id="gpt-4o-mini",
+                api_key=api_key
+            )
             
-            # Ajouter un VRAI service LLM
-            llm_service = await create_llm_service()
             kernel.add_service(llm_service)
+            logger.info("Service LLM 'chat_completion' ajouté au kernel pour le test.")
             
             return kernel
         except Exception as e:
@@ -284,7 +294,15 @@ async def test_full_real_cluedo_integration():
         kernel = Kernel()
         
         # VRAI service LLM
-        llm_service = await create_llm_service()
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            pytest.skip("OPENAI_API_KEY not set, cannot run full integration test.")
+            
+        llm_service = OpenAIChatCompletion(
+            service_id="chat_completion",
+            ai_model_id="gpt-4o-mini",
+            api_key=api_key
+        )
         kernel.add_service(llm_service)
         
         # VRAIS agents (pas de fausses classes)

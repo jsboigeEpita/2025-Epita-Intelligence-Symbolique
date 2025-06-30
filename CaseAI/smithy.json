@@ -1,0 +1,53 @@
+{
+	"maps": [
+		"medieval/smithy/day.jpg",
+		"medieval/smithy/night.jpg"
+	],
+	"locations": [
+		{
+			"id": "La Boutique",
+			"topLeft": {"x": 52, "y": 52},
+			"botRight": {"x": 926, "y": 564},
+		},
+		{
+			"id": "La Chambre",
+			"topLeft": {"x": 52, "y": 582},
+			"botRight": {"x": 422, "y": 853},
+		},
+		{
+			"id": "La Cour",
+			"topLeft": {"x": 441, "y": 582},
+			"botRight": {"x": 926, "y": 853},
+		},
+		{
+			"id": "Le Réfectoire",
+			"topLeft": {"x": 52, "y": 870},
+			"botRight": {"x": 566, "y": 1098},
+		},
+		{
+			"id": "La Reserve",
+			"topLeft": {"x": 945, "y": 52},
+			"botRight": {"x": 1361, "y": 277},
+		},
+		{
+			"id": "La Salle des matières précieuses",
+			"topLeft": {"x": 1378, "y": 52},
+			"botRight": {"x": 1533, "y": 277},
+		},
+		{
+			"id": "La Forge",
+			"topLeft": {"x": 945, "y": 296},
+			"botRight": {"x": 1533, "y": 853},
+		},
+		{
+			"id": "La Fonderie",
+			"topLeft": {"x": 1234, "y": 870},
+			"botRight": {"x": 1533, "y": 1100},
+		},
+		{
+			"id": "L'Atelier de finition",
+			"topLeft": {"x": 945, "y": 870},
+			"botRight": {"x": 1214, "y": 1100},
+		},
+	]
+}

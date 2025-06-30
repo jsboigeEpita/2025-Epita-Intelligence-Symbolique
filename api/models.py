@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 class AnalysisRequest(BaseModel):
     text: str
@@ -28,12 +28,19 @@ class ExampleResponse(BaseModel):
 
 # --- Modèles pour l'analyse de Framework d'Argumentation de Dung ---
 
+class FrameworkAnalysisOptions(BaseModel):
+    """Options pour l'analyse du framework."""
+    semantics: str = "preferred"
+    compute_extensions: bool = True
+    include_visualization: bool = False
+
 class FrameworkAnalysisRequest(BaseModel):
     """
     Modèle de requête pour l'analyse d'un framework d'argumentation.
     """
     arguments: List[str]
     attacks: List[List[str]] # e.g., [["a", "b"], ["b", "c"]]
+    options: Optional[FrameworkAnalysisOptions] = None
 
 class ArgumentStatus(BaseModel):
     """Statut d'un argument individuel."""
@@ -50,7 +57,7 @@ class GraphProperties(BaseModel):
     cycles: List[List[str]]
     self_attacking_nodes: List[str]
 
-class Semantics(BaseModel):
+class Extensions(BaseModel):
     """Conteneur pour toutes les extensions sémantiques."""
     grounded: List[str]
     preferred: List[List[str]]
@@ -60,10 +67,14 @@ class Semantics(BaseModel):
     ideal: List[str]
     semi_stable: List[List[str]]
 
-class FrameworkAnalysisResponse(BaseModel):
-    """
-    Modèle de réponse pour l'analyse complète du framework.
-    """
-    semantics: Semantics
+class FrameworkAnalysisResult(BaseModel):
+    """Contient les résultats détaillés de l'analyse du framework."""
+    extensions: Optional[Extensions] = None
     argument_status: Dict[str, ArgumentStatus]
     graph_properties: GraphProperties
+
+class FrameworkAnalysisResponse(BaseModel):
+    """
+    Modèle de réponse pour l'analyse complète du framework, enveloppé dans une clé 'analysis'.
+    """
+    analysis: FrameworkAnalysisResult

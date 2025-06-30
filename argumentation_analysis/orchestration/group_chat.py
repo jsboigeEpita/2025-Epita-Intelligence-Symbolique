@@ -10,7 +10,7 @@ entre plusieurs agents dans un contexte de groupe chat.
 
 # ===== AUTO-ACTIVATION ENVIRONNEMENT =====
 try:
-    import project_core.core_from_scripts.auto_env  # Auto-activation environnement intelligent
+    import argumentation_analysis.core.environment  # Auto-activation environnement intelligent
 except ImportError:
     # Dans le contexte des tests, auto_env peut déjà être activé
     pass

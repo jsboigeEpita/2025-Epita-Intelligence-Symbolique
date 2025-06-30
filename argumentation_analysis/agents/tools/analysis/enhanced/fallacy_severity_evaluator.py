@@ -2,10 +2,18 @@
 # -*- coding: utf-8 -*-
 
 """
-Évaluateur amélioré de la gravité des sophismes.
+Évaluateur de gravité des sophismes basé sur des règles contextuelles.
 
-Ce module fournit une classe pour évaluer la gravité des sophismes
-en tenant compte du contexte, du public cible et du domaine.
+Ce module fournit la classe `EnhancedFallacySeverityEvaluator`, un système expert
+conçu pour noter la gravité d'un sophisme. Plutôt que d'utiliser des modèles
+complexes, il s'appuie sur un système de score pondéré, ce qui le rend
+transparent, rapide et facilement configurable.
+
+L'évaluation est basée sur une note de base par type de sophisme, qui est
+ensuite ajustée selon trois axes contextuels :
+- Le contexte du discours (académique, politique...).
+- L'audience cible (experts, grand public...).
+- Le domaine de connaissance (santé, finance...).
 """
 
 import os
@@ -27,14 +35,28 @@ logger = logging.getLogger("EnhancedFallacySeverityEvaluator")
 
 class EnhancedFallacySeverityEvaluator:
     """
-    Évaluateur amélioré de la gravité des sophismes.
-    
-    Cette classe évalue la gravité des sophismes en tenant compte du contexte,
-    du public cible et du domaine.
+    Évalue la gravité des sophismes via un système de score pondéré.
+
+    Cette classe utilise une approche basée sur des règles pour calculer la gravité
+    d'un ou plusieurs sophismes. Le score final est le résultat d'une formule
+    combinant une gravité de base inhérente au type de sophisme avec des
+    modificateurs liés au contexte, à l'audience et au domaine de l'argumentation.
     """
     
     def __init__(self):
-        """Initialise l'évaluateur de gravité des sophismes."""
+        """
+        Initialise l'évaluateur en chargeant sa base de connaissances.
+
+        Le constructeur initialise trois dictionnaires qui forment la base de
+        connaissances de l'évaluateur :
+        - `fallacy_severity_base`: La gravité intrinsèque de chaque sophisme.
+        - `context_severity_modifiers`: L'impact du contexte général (ex: un
+          sophisme est plus grave en contexte scientifique).
+        - `audience_severity_modifiers`: L'impact du public (ex: plus grave si
+          le public est considéré comme vulnérable).
+        - `domain_severity_modifiers`: L'impact du domaine (ex: plus grave dans
+          le domaine de la santé).
+        """
         self.logger = logger
         self.logger.info("Évaluateur de gravité des sophismes initialisé.")
         
@@ -160,14 +182,20 @@ class EnhancedFallacySeverityEvaluator:
     
     def evaluate_fallacy_list(self, fallacies: List[Dict[str, Any]], context: str = "général") -> Dict[str, Any]:
         """
-        Évalue la gravité d'une liste de sophismes.
-        
+        Évalue la gravité d'une liste de sophismes pré-identifiés.
+
+        C'est le point d'entrée principal pour intégrer cet évaluateur avec d'autres
+        outils. Il prend une liste de dictionnaires de sophismes, analyse le contexte
+        fourni, puis calcule la gravité de chaque sophisme individuellement avant de
+        produire un score de gravité global pour l'ensemble.
+
         Args:
-            fallacies: Liste de sophismes à évaluer
-            context: Contexte de l'analyse (académique, politique, commercial, etc.)
-            
+            fallacies (List[Dict[str, Any]]): La liste des sophismes détectés.
+            context (str, optional): Le contexte de l'argumentation. Defaults to "général".
+
         Returns:
-            Dictionnaire contenant les résultats de l'évaluation
+            Dict[str, Any]: Un dictionnaire de résultats contenant le score global
+            et les évaluations détaillées pour chaque sophisme.
         """
         self.logger.info(f"Évaluation de la gravité de {len(fallacies)} sophismes")
         
@@ -205,7 +233,7 @@ class EnhancedFallacySeverityEvaluator:
             Dictionnaire contenant l'analyse du contexte
         """
         # Déterminer le type de contexte
-        context_type = context['context_type'].lower() if isinstance(context, dict) and 'context_type' in context and context['context_type'].lower() in self.context_severity_modifiers else "général"
+        context_type = context.lower() if isinstance(context, str) and context.lower() in self.context_severity_modifiers else "général"
         
         # Déterminer le type de public cible en fonction du contexte
         audience_map = {
@@ -260,14 +288,20 @@ class EnhancedFallacySeverityEvaluator:
     
     def _calculate_fallacy_severity(self, fallacy: Dict[str, Any], context_analysis: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Calcule la gravité d'un sophisme.
-        
+        Calcule la gravité finale d'un sophisme en appliquant des modificateurs.
+
+        La formule appliquée est la suivante :
+        `gravité_finale = gravité_base + modif_contexte + modif_audience + modif_domaine`
+        Le résultat est borné entre 0.0 et 1.0.
+
         Args:
-            fallacy: Sophisme à évaluer
-            context_analysis: Analyse du contexte
-            
+            fallacy (Dict[str, Any]): Le dictionnaire représentant le sophisme.
+            context_analysis (Dict[str, Any]): Le dictionnaire d'analyse de
+                contexte produit par `_analyze_context_impact`.
+
         Returns:
-            Dictionnaire contenant l'évaluation de la gravité du sophisme
+            Dict[str, Any]: Un dictionnaire détaillant le calcul de la gravité
+            pour ce sophisme spécifique.
         """
         # Obtenir le type de sophisme
         fallacy_type = fallacy.get("fallacy_type", "Sophisme inconnu")

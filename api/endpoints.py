@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from pydantic import BaseModel
+from typing import List, Dict, Optional
+
 from .models import AnalysisRequest, AnalysisResponse, Fallacy, StatusResponse, ExampleResponse, Example
 from .dependencies import get_analysis_service, AnalysisService, get_dung_analysis_service # Import AnalysisService for type hinting
 from .models import FrameworkAnalysisRequest, FrameworkAnalysisResponse
@@ -6,6 +9,15 @@ from .services import DungAnalysisService
 import asyncio
 import uuid
 from datetime import datetime
+
+# --- Pydantic Models for /endpoints route ---
+class EndpointDetail(BaseModel):
+    path: str
+    methods: List[str]
+    description: Optional[str] = None
+
+class EndpointsListResponse(BaseModel):
+    endpoints: List[EndpointDetail]
 
 router = APIRouter()
 
@@ -33,57 +45,115 @@ async def analyze_framework_endpoint(
     analysis_result = await asyncio.to_thread(
         dung_service.analyze_framework,
         request.arguments,
-        [tuple(attack) for attack in request.attacks] # Convertit les listes en tuples
+        [tuple(attack) for attack in request.attacks], # Convertit les listes en tuples
+        request.options.dict() if request.options else {}
     )
     
     # Pas besoin de convertir le résultat car le service retourne déjà un dictionnaire
     # qui correspond à la structure du modèle Pydantic FrameworkAnalysisResponse.
-    return analysis_result
+    return {"analysis": analysis_result}
 
 # --- Ancien routeur (peut être conservé, modifié ou supprimé selon la stratégie) ---
-@router.post("/analyze", response_model=AnalysisResponse)
+import time
+import logging
+
+logger = logging.getLogger(__name__)
+
+@router.post("/analyze")
 async def analyze_text_endpoint(
-    request: AnalysisRequest,
-    analysis_service: AnalysisService = Depends(get_analysis_service)
+    analysis_req: AnalysisRequest,
+    fastapi_req: Request
 ):
     """
-    Analyzes a given text for logical fallacies.
-    Utilizes the AnalysisService injected via FastAPI's dependency system.
-    Returns the analysis result.
+    Analyse un texte donné pour en extraire la structure argumentative (prémisses/conclusion).
+    Utilise le contexte du projet initialisé au démarrage de FastAPI.
     """
     analysis_id = str(uuid.uuid4())[:8]
-    # Note: start_time could be used to calculate endpoint processing time if needed,
-    # but service_result usually provides its own processing duration.
-    # start_time = datetime.now()
+    logger.info(f"[{analysis_id}] Requête d'analyse reçue pour le texte: '{analysis_req.text[:80]}...'")
+    
+    # Récupérer le contexte du projet depuis l'état de l'application FastAPI
+    project_context = fastapi_req.app.state.project_context
+    
+    start_time = time.time()
+    service_result = {}
+    
+    # Vérifier si la JVM et les classes nécessaires sont prêtes
+    if not project_context or not project_context.jvm_initialized:
+        logger.error(f"[{analysis_id}] Erreur: Le contexte du projet ou la JVM n'est pas initialisé.")
+        service_result = {
+            "summary": "Erreur serveur: La JVM n'est pas disponible.",
+        }
+    elif 'AspicParser' not in project_context.tweety_classes:
+        logger.error(f"[{analysis_id}] Erreur: La classe 'AspicParser' n'a pas été chargée dans le contexte.")
+        service_result = {
+            "summary": "Erreur serveur: Le service d'analyse d'arguments (AspicParser) n'est pas configuré.",
+        }
+    else:
+        try:
+            # Utiliser l'instance pré-chargée depuis le contexte
+            # AspicParser est déjà instancié dans bootstrap
+            parser = project_context.tweety_classes['AspicParser']
+            
+            kb = parser.parseBeliefBase(analysis_req.text)
+            arguments = kb.getArguments()
+            # Convertir les arguments Java en une représentation Python simple (par exemple, des chaînes de caractères)
+            arguments_list = [str(arg) for arg in arguments]
+            
+            # TODO: Améliorer l'extraction des prémisses et conclusions depuis la liste d'arguments.
+            # Pour l'instant, on retourne la liste brute pour valider le endpoint.
+            argument_structure = {
+                "arguments": arguments_list
+            }
+            summary = f"{len(arguments_list)} arguments extraits avec succès."
+            service_result = {
+                "argument_structure": argument_structure,
+                "fallacies": [],
+                "suggestions": ["Analyser chaque argument individuellement."],
+                "summary": summary
+            }
+            logger.info(f"[{analysis_id}] Reconstruction réussie.")
 
-    # Call the analysis service
-    # Assuming analysis_service.analyze_text is an async method
-    # and returns a dict: {'fallacies': [], 'duration': float, 'components_used': [], 'summary': str}
-    service_result = await analysis_service.analyze_text(request.text) # Correction: analyze -> analyze_text
+        except Exception as e:
+            logger.error(f"[{analysis_id}] ERREUR lors de l'analyse du texte avec Tweety: {e}", exc_info=True)
+            service_result = {
+                "summary": f"Erreur du service d'analyse: {e}",
+            }
 
-    # Extract and map fallacies
+    duration = time.time() - start_time
+    # S'assurer que les clés existent avant de les utiliser
+    service_result.setdefault("duration", duration)
+    service_result.setdefault("components_used", ["TweetyArgumentReconstructor_centralized"])
+    service_result.setdefault("fallacies", [])
+    service_result.setdefault("argument_structure", None)
+    service_result.setdefault("suggestions", [])
+    service_result.setdefault("overall_quality", 0.0)
+
+
+    # Construction de la nouvelle structure de réponse imbriquée
     fallacies_data = service_result.get('fallacies', [])
     fallacies = [Fallacy(**f_data) for f_data in fallacies_data]
-
-    status = "success"  # Assuming success, error handling can be added
-
-    # Construct metadata, inspired by interface_web/app.py
-    metadata = {
-        "duration_seconds": service_result.get('duration', 0.0),  # Duration from the service
-        "service_status": "active",  # Simplified status
-        "components_used": service_result.get('components_used', [])  # Components from the service
+    
+    # Données attendues par le frontend
+    results_payload = {
+        "overall_quality": service_result.get('overall_quality', 0.0), # Fournir une valeur par défaut
+        "fallacy_count": len(fallacies),
+        "fallacies": fallacies,
+        "argument_structure": service_result.get('argument_structure', None),
+        "suggestions": service_result.get('suggestions', []),
+        "summary": service_result.get('summary', "L'analyse a été complétée."),
+        "metadata": {
+            "duration": service_result.get('duration', 0.0),
+            "service_status": "active",
+            "components_used": service_result.get('components_used', [])
+        }
     }
-
-    # Get summary from the service
-    summary = service_result.get('summary', "L'analyse a été complétée.")
-
-    return AnalysisResponse(
-        analysis_id=analysis_id,
-        status=status,
-        fallacies=fallacies,
-        metadata=metadata,
-        summary=summary
-    )
+    
+    # La réponse finale est un dictionnaire qui correspond au modèle implicite attendu
+    return {
+        "analysis_id": analysis_id,
+        "status": "success",
+        "results": results_payload
+    }
 
 @router.get("/status", response_model=StatusResponse)
 async def status_endpoint(
@@ -140,3 +210,42 @@ async def get_examples_endpoint():
     ]
     examples = [Example(**ex) for ex in examples_data]
     return ExampleResponse(examples=examples)
+
+@router.get("/health", response_model=StatusResponse)
+async def health_check_endpoint():
+    """
+    Simple health check endpoint.
+    Returns operational status.
+    """
+    # Reusing StatusResponse for consistency, but could be a simpler model
+    return StatusResponse(
+        status="operational",
+        service_status={"details": "API is healthy and running."}
+    )
+
+@router.get("/endpoints", response_model=EndpointsListResponse)
+async def list_endpoints_endpoint(request_fastapi: Request):
+    """
+    Lists available API endpoints.
+    Dynamically introspects routes from the FastAPI application.
+    """
+    url_list = []
+    for route in request_fastapi.app.routes:
+        if hasattr(route, "path") and route.path not in ['/openapi.json', '/docs', '/docs/oauth2-redirect', '/redoc']: # Exclude documentation routes
+            methods = []
+            if hasattr(route, "methods"):
+                methods = sorted(list(route.methods))
+            
+            description = None
+            if hasattr(route, "summary") and route.summary:
+                description = route.summary
+            elif hasattr(route, "name") and route.name:
+                description = route.name.replace("_", " ").title()
+
+
+            url_list.append(EndpointDetail(
+                path=route.path,
+                methods=methods,
+                description=description
+            ))
+    return EndpointsListResponse(endpoints=url_list)

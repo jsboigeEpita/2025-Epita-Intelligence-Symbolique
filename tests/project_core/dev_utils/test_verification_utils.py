@@ -14,6 +14,7 @@ import unittest
 
 from pathlib import Path
 from typing import List, Dict, Any
+from unittest.mock import patch, mock_open
 
 # Fonctions à tester
 from argumentation_analysis.utils.dev_tools.verification_utils import (
@@ -44,10 +45,12 @@ class TestVerificationUtils(unittest.TestCase):
 
     
     
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.extract_text_with_markers')
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.load_source_text')
     def test_verify_extract_valid(self, mock_load_source_text, mock_extract_text_with_markers):
         """Teste verify_extract avec un cas valide."""
-        mock_load_source_text# Mock eliminated - using authentic gpt-4o-mini ("Texte source complet", "http://example.com/source")
-        mock_extract_text_with_markers# Mock eliminated - using authentic gpt-4o-mini ("Texte extrait", "status_ok", True, True)
+        mock_load_source_text.return_value = ("Texte source complet", "http://example.com/source")
+        mock_extract_text_with_markers.return_value = ("Texte extrait", "status_ok", True, True)
         
         source_info = {"source_name": "Test Source", "url": "http://example.com/source"}
         extract_info = {
@@ -64,17 +67,19 @@ class TestVerificationUtils(unittest.TestCase):
         self.assertTrue(result["start_found"])
         self.assertTrue(result["end_found"])
         self.assertEqual(result["extracted_length"], len("Texte extrait"))
-        mock_load_source_text.assert_called_once_with(source_info)
+        mock_load_source_text.assert_called_once()
         mock_extract_text_with_markers.assert_called_once_with(
             "Texte source complet", "Template START", "END", "Template {0}"
         )
 
     
     
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.extract_text_with_markers')
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.load_source_text')
     def test_verify_extract_invalid_markers(self, mock_load_source_text, mock_extract_text_with_markers):
         """Teste verify_extract quand les marqueurs ne sont pas trouvés."""
-        mock_load_source_text# Mock eliminated - using authentic gpt-4o-mini ("Texte source", "url")
-        mock_extract_text_with_markers# Mock eliminated - using authentic gpt-4o-mini ("", "status_fail", False, False)
+        mock_load_source_text.return_value = ("Texte source", "url")
+        mock_extract_text_with_markers.return_value = ("", "status_fail", False, False)
         
         source_info = {"source_name": "S1"}
         extract_info = {"extract_name": "E1", "start_marker": "S", "end_marker": "E", "template_start": "T"}
@@ -86,9 +91,10 @@ class TestVerificationUtils(unittest.TestCase):
         self.assertFalse(result["end_found"])
 
     
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.load_source_text')
     def test_verify_extract_source_load_fail(self, mock_load_source_text):
         """Teste verify_extract quand le chargement de la source échoue."""
-        mock_load_source_text# Mock eliminated - using authentic gpt-4o-mini (None, "http://example.com/failed")
+        mock_load_source_text.return_value = (None, "http://example.com/failed")
         
         source_info = {"source_name": "Failed Source", "url": "http://example.com/failed"}
         extract_info = {"extract_name": "Extract Fail"}
@@ -99,10 +105,12 @@ class TestVerificationUtils(unittest.TestCase):
 
     
     
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.extract_text_with_markers')
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.load_source_text')
     def test_verify_extract_warning_short_text(self, mock_load_source_text, mock_extract_text_with_markers):
         """Teste verify_extract avec un texte extrait valide mais court."""
-        mock_load_source_text# Mock eliminated - using authentic gpt-4o-mini ("Texte source", "url")
-        mock_extract_text_with_markers# Mock eliminated - using authentic gpt-4o-mini ("Court", "status_ok", True, True) # "Court" a 5 caractères
+        mock_load_source_text.return_value = ("Texte source", "url")
+        mock_extract_text_with_markers.return_value = ("Court", "status_ok", True, True) # "Court" a 5 caractères
         
         source_info = {"source_name": "S1"}
         extract_info = {"extract_name": "E1", "start_marker": "S", "end_marker": "E", "template_start": "T"}
@@ -114,11 +122,13 @@ class TestVerificationUtils(unittest.TestCase):
 
     
     
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.extract_text_with_markers')
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.load_source_text')
     def test_verify_extract_warning_template_issue(self, mock_load_source_text, mock_extract_text_with_markers):
         """Teste verify_extract avec un problème de template potentiel."""
-        mock_load_source_text# Mock eliminated - using authentic gpt-4o-mini ("Texte source", "url")
+        mock_load_source_text.return_value = ("Texte source", "url")
         # Simuler un start_marker qui ne commence PAS par le template (sans {0})
-        mock_extract_text_with_markers# Mock eliminated - using authentic gpt-4o-mini ("Texte assez long", "status_ok", True, True)
+        mock_extract_text_with_markers.return_value = ("Texte assez long", "status_ok", True, True)
         
         source_info = {"source_name": "S1"}
         extract_info = {
@@ -134,9 +144,10 @@ class TestVerificationUtils(unittest.TestCase):
         self.assertTrue(result.get("template_issue"))
 
     
+    @patch('argumentation_analysis.utils.dev_tools.verification_utils.verify_extract')
     def test_verify_all_extracts(self, mock_verify_extract):
         """Teste verify_all_extracts."""
-        mock_verify_extract# Mock eliminated - using authentic gpt-4o-mini [
+        mock_verify_extract.side_effect = [
             {"status": "valid", "source_name": "S1", "extract_name": "E1.1"},
             {"status": "invalid", "source_name": "S1", "extract_name": "E1.2"},
             {"status": "valid", "source_name": "S2", "extract_name": "E2.1"},
@@ -168,6 +179,8 @@ class TestVerificationUtils(unittest.TestCase):
 
     
     
+    @patch('pathlib.Path.mkdir')
+    @patch('builtins.open', new_callable=mock_open)
     def test_generate_verification_report(self, mock_file_open, mock_mkdir):
         """Teste la génération du rapport de vérification."""
         results_data: List[Dict[str, Any]] = [

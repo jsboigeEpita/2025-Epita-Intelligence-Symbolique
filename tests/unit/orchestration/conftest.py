@@ -6,6 +6,8 @@ Configuration pytest locale pour les tests d'orchestration.
 Évite les dépendances JPype du conftest.py global.
 """
 
+import argumentation_analysis.core.environment
+
 import pytest
 import sys
 import os
@@ -19,62 +21,76 @@ logging.basicConfig(level=logging.WARNING)
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-# INTÉGRATION AUTO_ENV - CRITIQUE POUR ÉVITER LES ENVIRONNEMENTS GLOBAUX
-# Assurer l'activation automatique de l'environnement projet avant tous les tests
-try:
-    # Import direct par chemin absolu pour éviter les problèmes d'import
-    import sys
-    scripts_core_path = project_root / "scripts" / "core"
-    if str(scripts_core_path) not in sys.path:
-        sys.path.insert(0, str(scripts_core_path))
-    
-    from auto_env import ensure_env
-    success = ensure_env(silent=False)
-    
-    if success:
-        print("[OK AUTO_ENV] Environnement projet active avec succes")
-        print(f"[INFO] Python: {sys.executable}")
-        print(f"[INFO] Environnement conda: {os.environ.get('CONDA_DEFAULT_ENV', 'Non defini')}")
-    else:
-        print("[WARN AUTO_ENV] Activation en mode degrade - continuez dans l'environnement actuel")
-        
-except ImportError as e:
-    print(f"[ERROR AUTO_ENV] Module auto_env non disponible: {e}")
-    print("[INFO] Tests continueront dans l'environnement actuel")
-except Exception as e:
-    print(f"[ERROR AUTO_ENV] Erreur lors de l'activation: {e}")
-    print("[INFO] Tests continueront dans l'environnement actuel")
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_test_environment():
-    """Configuration de l'environnement de test."""
-    # Désactiver les logs verbeux pendant les tests
-    logging.getLogger('argumentation_analysis').setLevel(logging.ERROR)
+@pytest.fixture(scope="session")
+def jvm_session_manager():
+    """
+    RÉACTIVÉ: Restaure la gestion de la JVM via une fixture de session pour les tests
+    d'orchestration, afin de résoudre les crashs "access violation".
+
+    Initialise la JVM une fois pour toute la session de test et l'arrête proprement à la fin.
+    Utilise une portée 'session' pour éviter l'erreur 'OSError: JVM cannot be restarted'
+    car JPype ne permet qu'un seul cycle de vie JVM par processus Python.
+
+    Cette fixture prend le contrôle exclusif de la JVM pendant toute la session de test.
+    """
+    import jpype
+    import logging
+    from argumentation_analysis.core.jvm_setup import (
+        initialize_jvm, shutdown_jvm, is_jvm_started, is_jvm_owned_by_session_fixture
+    )
+
+    logger = logging.getLogger("tests.jvm_session_manager")
     
-    # Mock des composants JPype si nécessaires
-    if 'jpype' not in sys.modules:
-        # Mock basique de jpype pour éviter les erreurs d'import
-        sys.modules['jpype'] = type(sys)('jpype')
-        sys.modules['jpype'].isJVMStarted = lambda: False
-        sys.modules['jpype'].shutdownJVM = lambda: None
-        sys.modules['jpype'].startJVM = lambda *args, **kwargs: None
-    
-    yield
-    
-    # Nettoyage après les tests
-    pass
+    # Ne rien faire si la JVM est déjà gérée par une autre fixture de session
+    if is_jvm_owned_by_session_fixture() and is_jvm_started():
+        logger.info("JVM_SESSION_MANAGER: La JVM est déjà démarrée et gérée par une autre fixture. On ne fait rien.")
+        yield
+        return
+
+    logger.info("="*20 + " Début Fixture Session JVM " + "="*20)
+    logger.info(f"État initial -> Démarrée: {is_jvm_started()}, Gérée par session: {is_jvm_owned_by_session_fixture()}")
+
+    # Démarrer la JVM si nécessaire, en déclarant que cette fixture en est propriétaire
+    if not is_jvm_started():
+        logger.info("JVM non démarrée. Démarrage par la fixture de session...")
+        success = initialize_jvm(session_fixture_owns_jvm=True)
+        if not success:
+            logger.error("ÉCHEC CRITIQUE: Impossible de démarrer la JVM pour la session de tests.")
+            raise RuntimeError("Impossible de démarrer la JVM pour les tests d'orchestration.")
+        logger.info("JVM démarrée avec succès par la fixture de session.")
+    else:
+        logger.info("JVM déjà démarrée. La fixture de session en prend le contrôle (attention aux conflits).")
+        # Il n'y a pas de fonction pour "prendre le contrôle" a posteriori,
+        # l'initialisation au démarrage est la méthode privilégiée.
+        # On assume que si on arrive ici, c'est ok.
+
+    try:
+        yield
+    finally:
+        logger.info("="*20 + " Fin Fixture Session JVM " + "="*20)
+        # N'arrêter la JVM que si cette fixture l'a démarrée et la contrôle
+        if is_jvm_owned_by_session_fixture():
+            logger.info("Arrêt de la JVM demandé par la fixture de session qui la contrôle.")
+            shutdown_jvm(called_by_session_fixture=True)
+        else:
+            logger.warning("Fin de session, mais la JVM n'est pas (ou plus) contrôlée par cette fixture. Elle ne sera pas arrêtée ici.")
 
 @pytest.fixture
-def mock_llm_service():
-    """Service LLM mocké standard pour tous les tests."""
-    from unittest.mock import MagicMock, AsyncMock
+def llm_service():
+    """Crée une instance réelle du service LLM pour les tests d'intégration."""
+    from argumentation_analysis.core.llm_service import create_llm_service
     
-    mock_service = MagicMock()
-    mock_service.service_id = "test_llm_service"
-    mock_service.generate_text = AsyncMock(return_value="Test response")
-    mock_service.analyze_text = AsyncMock(return_value={"status": "success"})
-    
-    return mock_service
+    # Assurez-vous que votre fichier .env est correctement configuré
+    # avec OPENAI_API_KEY et OPENAI_CHAT_MODEL_ID
+    try:
+        service = create_llm_service(
+            service_id="real_test_llm_service",
+            force_mock=False
+        )
+        return service
+    except Exception as e:
+        pytest.skip(f"Impossible de créer le service LLM réel : {e}")
 
 @pytest.fixture
 def sample_text():

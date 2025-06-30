@@ -66,7 +66,7 @@ class MockFallacyDetector:
                     "description": "Appel à la popularité simulé.",
                     "severity": "Faible", # Ajusté, MERGE_HEAD avait "Faible"
                     "confidence": 0.55,
-                    "context_text": text[50:150] if len(text) > 150 else (text[50:] if len(text) > 50 else "") # Protection slicing
+                    "context_text": text[50:150] # Slicing simple
                 }
             ])
         

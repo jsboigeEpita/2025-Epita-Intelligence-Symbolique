@@ -1,10 +1,3 @@
-
-# Authentic gpt-4o-mini imports (replacing mocks)
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 # -*- coding: utf-8 -*-
 """Tests pour les utilitaires de réparation d'extraits."""
 
@@ -12,14 +5,13 @@ import pytest
 import asyncio
 import logging # Ajout de l'import logging
 from pathlib import Path
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock, AsyncMock, patch
 
 from typing import Dict # Ajout pour le typage
 
 from argumentation_analysis.utils.dev_tools.repair_utils import run_extract_repair_pipeline, setup_agents, repair_extract_markers
 from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract # Pour typer les mocks
 import semantic_kernel as sk # Pour setup_agents
-# from semantic_kernel.agents import ChatCompletionAgent # Pour setup_agents (Commenté: non utilisé directement)
 from argumentation_analysis.utils.extract_repair.marker_repair_logic import REPAIR_AGENT_INSTRUCTIONS, VALIDATION_AGENT_INSTRUCTIONS # Pour setup_agents
 
 
@@ -73,28 +65,27 @@ def mock_core_services(
 
 # --- Tests pour run_extract_repair_pipeline ---
 
-
-
-
-
-
-
-
-
 @pytest.mark.asyncio
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.generate_marker_repair_report')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.repair_extract_markers', new_callable=AsyncMock)
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.FetchService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.ExtractService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.CacheService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.CryptoService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.DefinitionService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.create_llm_service')
 async def test_run_extract_repair_pipeline_successful_run_no_save(
-    mock_generate_marker_repair_report: MagicMock,
-    mock_repair_extract_markers: AsyncMock,
-    MockFetchService: MagicMock,
-    MockExtractService: MagicMock,
-    MockCacheService: MagicMock,
-    MockCryptoService: MagicMock,
-    MockDefinitionService: MagicMock,
     mock_create_llm_service: MagicMock,
+    MockDefinitionService: MagicMock,
+    MockCryptoService: MagicMock,
+    MockCacheService: MagicMock,
+    MockExtractService: MagicMock,
+    MockFetchService: MagicMock,
+    mock_repair_extract_markers: AsyncMock,
+    mock_generate_marker_repair_report: MagicMock,
     mock_project_root: Path,
-    mock_llm_service: MagicMock, # Fixture pour configurer le retour de create_llm_service
-    # mock_core_services: Dict[str, MagicMock], # Moins utile maintenant
-    mock_definition_service: MagicMock # Fixture pour configurer le comportement de l'instance mockée de DefinitionService
+    mock_llm_service: MagicMock,
+    mock_definition_service: MagicMock
 ):
     """Teste une exécution réussie du pipeline sans sauvegarde."""
     mock_create_llm_service.return_value = mock_llm_service
@@ -113,9 +104,7 @@ async def test_run_extract_repair_pipeline_successful_run_no_save(
     MockFetchService.return_value = mock_fetch_instance
 
     # Utiliser la configuration de la fixture mock_definition_service pour l'instance mockée
-    # mock_definition_service est déjà configurée avec load_definitions, save_definitions etc.
     MockDefinitionService.return_value = mock_definition_service
-    # Assurer que load_definitions retourne un tuple
     sample_source = SourceDefinition(source_name="Test Source", source_type="text", schema="file", host_parts=[], path="", extracts=[])
     sample_defs = ExtractDefinitions(sources=[sample_source])
     mock_definition_service.load_definitions.return_value = (sample_defs, None)
@@ -136,66 +125,59 @@ async def test_run_extract_repair_pipeline_successful_run_no_save(
 
     mock_create_llm_service.assert_called_once()
     
-    # Vérifier que les constructeurs des services ont été appelés (une fois chacun)
     MockDefinitionService.assert_called_once()
     MockCryptoService.assert_called_once()
     MockCacheService.assert_called_once()
     MockExtractService.assert_called_once()
     MockFetchService.assert_called_once()
 
-    # Vérifier les appels sur les instances mockées
     mock_definition_service.load_definitions.assert_called_once()
     mock_repair_extract_markers.assert_called_once()
-    # Vérifier les arguments de repair_extract_markers (le premier est extract_definitions)
     assert isinstance(mock_repair_extract_markers.call_args[0][0], ExtractDefinitions)
-    assert mock_repair_extract_markers.call_args[0][1] == mock_llm_service # llm_service
-    assert mock_repair_extract_markers.call_args[0][2] == mock_fetch_instance # fetch_service instance
-    assert mock_repair_extract_markers.call_args[0][3] == mock_extract_instance # extract_service instance
+    assert mock_repair_extract_markers.call_args[0][1] == mock_llm_service
+    assert mock_repair_extract_markers.call_args[0][2] == mock_fetch_instance
+    assert mock_repair_extract_markers.call_args[0][3] == mock_extract_instance
 
     mock_generate_marker_repair_report.assert_called_once()
-    assert mock_generate_marker_repair_report.call_args[0][0] == [{"some_result": "data"}] # results
-    assert mock_generate_marker_repair_report.call_args[0][1] == output_report_path # output_file_str
+    assert mock_generate_marker_repair_report.call_args[0][0] == [{"some_result": "data"}]
+    assert mock_generate_marker_repair_report.call_args[0][1] == output_report_path
 
     mock_definition_service.save_definitions.assert_not_called()
     mock_definition_service.export_definitions_to_json.assert_not_called()
 
-
-
-
-
-
-
-
-
- # Cible corrigée
 @pytest.mark.asyncio
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.generate_marker_repair_report')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.repair_extract_markers', new_callable=AsyncMock)
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.FetchService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.ExtractService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.CacheService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.CryptoService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.DefinitionService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.create_llm_service')
 async def test_run_extract_repair_pipeline_with_save_and_json_export(
-    mock_generate_marker_repair_report: MagicMock, # Renommé pour correspondre au nom importé
-    mock_repair_extract_markers: AsyncMock,  # Renommé pour correspondre au nom importé
-    MockFetchService: MagicMock,
-    MockExtractService: MagicMock,
-    MockCacheService: MagicMock,
-    MockCryptoService: MagicMock,
+    mock_create_llm_service: MagicMock,
     MockDefinitionService: MagicMock,
-    mock_create_llm_service: MagicMock, # Renommé pour correspondre au nom importé
+    MockCryptoService: MagicMock,
+    MockCacheService: MagicMock,
+    MockExtractService: MagicMock,
+    MockFetchService: MagicMock,
+    mock_repair_extract_markers: AsyncMock,
+    mock_generate_marker_repair_report: MagicMock,
     mock_project_root: Path,
-    mock_llm_service: MagicMock, # Fixture
-    mock_definition_service: MagicMock # Fixture
+    mock_llm_service: MagicMock,
+    mock_definition_service: MagicMock
 ):
     """Teste le pipeline avec sauvegarde et export JSON."""
     mock_create_llm_service.return_value = mock_llm_service
 
-    # Configurer les instances mockées
     MockCryptoService.return_value = AsyncMock()
     MockCacheService.return_value = AsyncMock()
     MockExtractService.return_value = AsyncMock()
     MockFetchService.return_value = AsyncMock()
-    MockDefinitionService.return_value = mock_definition_service # Utiliser la fixture configurée
+    MockDefinitionService.return_value = mock_definition_service
 
     updated_defs_mock = ExtractDefinitions(sources=[SourceDefinition(source_name="Updated", source_type="text", schema="file", host_parts=[], path="", extracts=[])])
-    # Assurer que load_definitions retourne un tuple correct
     mock_definition_service.load_definitions.return_value = (updated_defs_mock, None)
-    # Fournir un résultat pour que le rapport soit généré
     mock_repair_extract_markers.return_value = (updated_defs_mock, [{"status": "repaired"}])
 
     output_report_path = str(mock_project_root / "report.html")
@@ -214,40 +196,37 @@ async def test_run_extract_repair_pipeline_with_save_and_json_export(
     mock_definition_service.export_definitions_to_json.assert_called_once_with(
         updated_defs_mock, Path(output_json_path)
     )
-    mock_generate_marker_repair_report.assert_called_once() # Vérifier qu'il est appelé
-
-
-
-
- # Ajouter les autres patchs de service
-
-
-
+    mock_generate_marker_repair_report.assert_called_once()
 
 @pytest.mark.asyncio
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.repair_extract_markers', new_callable=AsyncMock)
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.FetchService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.ExtractService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.CacheService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.CryptoService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.DefinitionService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.create_llm_service')
 async def test_run_extract_repair_pipeline_hitler_only_filter(
-    mock_repair_extract_markers: AsyncMock, # Renommé
-    MockFetchService: MagicMock,
-    MockExtractService: MagicMock,
-    MockCacheService: MagicMock,
-    MockCryptoService: MagicMock,
+    mock_create_llm_service: MagicMock,
     MockDefinitionService: MagicMock,
-    mock_create_llm_service: MagicMock, # Renommé
+    MockCryptoService: MagicMock,
+    MockCacheService: MagicMock,
+    MockExtractService: MagicMock,
+    MockFetchService: MagicMock,
+    mock_repair_extract_markers: AsyncMock,
     mock_project_root: Path,
-    mock_llm_service: MagicMock, # Fixture
-    mock_definition_service: MagicMock # Fixture
+    mock_llm_service: MagicMock,
+    mock_definition_service: MagicMock
 ):
     """Teste le filtrage --hitler-only."""
     mock_create_llm_service.return_value = mock_llm_service
     
-    # Configurer les instances mockées
     MockCryptoService.return_value = AsyncMock()
     MockCacheService.return_value = AsyncMock()
     MockExtractService.return_value = AsyncMock()
     MockFetchService.return_value = AsyncMock()
     MockDefinitionService.return_value = mock_definition_service
 
-    # Configurer mock_definition_service_fixture pour retourner plusieurs sources
     sources_data = [
         SourceDefinition(source_name="Discours d'Hitler 1", source_type="text", schema="file", host_parts=[], path="", extracts=[]),
         SourceDefinition(source_name="Autre Discours", source_type="text", schema="file", host_parts=[], path="", extracts=[]),
@@ -255,34 +234,33 @@ async def test_run_extract_repair_pipeline_hitler_only_filter(
     ]
     mock_definition_service.load_definitions.return_value = (ExtractDefinitions(sources=sources_data), None)
     
-    mock_repair_extract_markers.return_value = (ExtractDefinitions(sources=[]), []) # Peu importe le retour ici
+    mock_repair_extract_markers.return_value = (ExtractDefinitions(sources=[]), [])
 
     await run_extract_repair_pipeline(
         project_root_dir=mock_project_root,
         output_report_path_str=str(mock_project_root / "report.html"),
         save_changes=False,
-        hitler_only=True, # Activer le filtre
+        hitler_only=True,
         custom_input_path_str=None,
         output_json_path_str=None
     )
 
     mock_repair_extract_markers.assert_called_once()
-    # Vérifier que les définitions passées à repair_extract_markers sont filtrées
     called_with_definitions = mock_repair_extract_markers.call_args[0][0]
     assert isinstance(called_with_definitions, ExtractDefinitions)
-    assert len(called_with_definitions.sources) == 2 # Seules les sources "Hitler"
+    assert len(called_with_definitions.sources) == 2
     assert called_with_definitions.sources[0].source_name == "Discours d'Hitler 1"
     assert called_with_definitions.sources[1].source_name == "Texte Hitler sur la fin"
 
-
- # Simule échec création LLM
 @pytest.mark.asyncio
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.create_llm_service')
 async def test_run_extract_repair_pipeline_llm_service_creation_fails(
-    mock_create_llm: MagicMock, # Le patch est déjà appliqué
+    mock_create_llm_service: MagicMock,
     mock_project_root: Path,
     caplog
 ):
     """Teste l'échec de création du service LLM."""
+    mock_create_llm_service.return_value = None 
     with caplog.at_level(logging.ERROR):
         await run_extract_repair_pipeline(
             project_root_dir=mock_project_root,
@@ -291,49 +269,45 @@ async def test_run_extract_repair_pipeline_llm_service_creation_fails(
         )
     assert "Impossible de créer le service LLM dans le pipeline." in caplog.text
 
-
-
-
-
-
-
-
 @pytest.mark.asyncio
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.FetchService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.ExtractService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.CacheService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.CryptoService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.DefinitionService')
+@patch('argumentation_analysis.utils.dev_tools.repair_utils.create_llm_service')
 async def test_run_extract_repair_pipeline_load_definitions_fails(
-    MockFetchService: MagicMock, # Ajout des mocks de classe
-    MockExtractService: MagicMock,
-    MockCacheService: MagicMock,
-    MockCryptoService: MagicMock,
+    mock_create_llm_service: MagicMock,
     MockDefinitionService: MagicMock,
-    mock_create_llm_service: MagicMock, # Renommé
+    MockCryptoService: MagicMock,
+    MockCacheService: MagicMock,
+    MockExtractService: MagicMock,
+    MockFetchService: MagicMock,
     mock_project_root: Path,
-    mock_llm_service: MagicMock, # Fixture
-    # mock_definition_service_fixture: MagicMock, # Renommé pour clarté, sera utilisé pour configurer MockDefinitionService.return_value
+    mock_llm_service: MagicMock,
     caplog
 ):
     """Teste l'échec du chargement des définitions."""
     mock_create_llm_service.return_value = mock_llm_service
 
-    # Configurer les instances mockées, en particulier DefinitionService
     mock_def_instance = AsyncMock()
-    mock_def_instance.load_definitions.return_value = (None, "Erreur de chargement test") # Simule échec
+    mock_def_instance.load_definitions.return_value = (None, "Erreur de chargement test")
     MockDefinitionService.return_value = mock_def_instance
     
-    # Les autres services peuvent retourner des mocks simples car ils ne devraient pas être atteints
-    # ou leur interaction n'est pas l'objet de ce test si le pipeline s'arrête tôt.
     MockCryptoService.return_value = AsyncMock()
     MockCacheService.return_value = AsyncMock()
     MockExtractService.return_value = AsyncMock()
     MockFetchService.return_value = AsyncMock()
     
-    with caplog.at_level(logging.ERROR): # ou WARNING selon le log dans le pipeline
+    with caplog.at_level(logging.ERROR):
         await run_extract_repair_pipeline(
             project_root_dir=mock_project_root,
             output_report_path_str="report.html",
             save_changes=False, hitler_only=False, custom_input_path_str=None, output_json_path_str=None
         )
     assert "Aucune définition d'extrait chargée ou sources vides. Arrêt du pipeline." in caplog.text
-    mock_def_instance.load_definitions.assert_called_once() # Vérifier que load_definitions a été appelé
+    mock_def_instance.load_definitions.assert_called_once()
+
 # --- Tests for setup_agents ---
 
 @pytest.fixture
@@ -345,45 +319,12 @@ def mock_sk_kernel() -> MagicMock:
 @pytest.mark.asyncio
 async def test_setup_agents_successful(mock_llm_service: MagicMock, mock_sk_kernel: MagicMock):
     """Teste la configuration réussie des agents."""
-    mock_llm_service.service_id = "test_service_id" # Nécessaire pour get_prompt_execution_settings
-
-    # ChatCompletionAgent n'est plus utilisé directement par setup_agents dans repair_utils.py
-    # La fonction setup_agents retourne (None, None)
-    # with patch("project_core.dev_utils.repair_utils.ChatCompletionAgent", spec=ChatCompletionAgent) as MockAgent:
-        # repair_agent_instance = Magicawait self._create_authentic_gpt4o_mini_instance()
-        # validation_agent_instance = Magicawait self._create_authentic_gpt4o_mini_instance()
-        # MockAgent# Mock eliminated - using authentic gpt-4o-mini [repair_agent_instance, validation_agent_instance]
+    mock_llm_service.service_id = "test_service_id"
 
     repair_agent, validation_agent = await setup_agents(mock_llm_service, mock_sk_kernel)
-
-    # mock_sk_kernel.add_service.assert_called_once_with(mock_llm_service)
-    # get_prompt_execution_settings_from_service_id n'est plus appelé si les agents ne sont pas créés
-    # mock_sk_kernel.get_prompt_execution_settings_from_service_id.assert_called_once_with("test_service_id")
-    
-    # MockAgent ne devrait plus être appelé
-    # assert MockAgent.call_count == 2
-    # # Vérifier les appels à ChatCompletionAgent
-    # calls = MockAgent.call_args_list
-    # assert calls[0][1]["name"] == "RepairAgent"
-    # assert calls[0][1]["instructions"] == REPAIR_AGENT_INSTRUCTIONS
-    # assert calls[1][1]["name"] == "ValidationAgent"
-    # assert calls[1][1]["instructions"] == VALIDATION_AGENT_INSTRUCTIONS
     
     assert repair_agent is None
     assert validation_agent is None
-
-# @pytest.mark.asyncio
-# async def test_setup_agents_creation_fails(mock_llm_service: MagicMock, mock_sk_kernel: MagicMock, caplog):
-#     """Teste la gestion d'erreur si la création d'un agent échoue."""
-#     # Ce test n'est plus pertinent car ChatCompletionAgent n'est plus directement instancié
-#     # par la version modifiée de setup_agents dans repair_utils.py
-#     mock_llm_service.service_id = "test_service_id"
-#     
-#     with patch("project_core.dev_utils.repair_utils.ChatCompletionAgent", side_effect=Exception("Erreur création agent")):
-#         with pytest.raises(Exception, match="Erreur création agent"):
-#             await setup_agents(mock_llm_service, mock_sk_kernel)
-#         assert "Erreur lors de la création de l'agent de réparation" in caplog.text
-
 
 # --- Tests for repair_extract_markers ---
 
@@ -402,17 +343,12 @@ def sample_extracts_for_repair() -> ExtractDefinitions:
 @pytest.mark.asyncio
 async def test_repair_extract_markers_repairs_and_reports(
     sample_extracts_for_repair: ExtractDefinitions,
-    mock_llm_service: MagicMock, # Non utilisé directement par la logique actuelle de repair_extract_markers
-    mock_fetch_service: MagicMock, # Non utilisé directement par la logique actuelle
-    mock_extract_service: MagicMock # Passé à ExtractRepairPlugin, mais le plugin n'est pas testé en profondeur ici
+    mock_llm_service: MagicMock,
+    mock_fetch_service: MagicMock,
+    mock_extract_service: MagicMock
 ):
     """Teste la logique de base de réparation et la structure des résultats."""
     
-    # La logique actuelle de repair_extract_markers modifie extract_definitions en place.
-    # On fait une copie pour vérifier les changements si nécessaire, bien que le test actuel se concentre sur les `results`.
-    # import copy
-    # original_defs = copy.deepcopy(sample_extracts_for_repair)
-
     updated_defs, results = await repair_extract_markers(
         sample_extracts_for_repair, 
         mock_llm_service, 
@@ -420,29 +356,25 @@ async def test_repair_extract_markers_repairs_and_reports(
         mock_extract_service
     )
 
-    assert updated_defs == sample_extracts_for_repair # Vérifie que l'objet est modifié en place
+    assert updated_defs == sample_extracts_for_repair
 
-    assert len(results) == 4 # Un résultat par extrait
+    assert len(results) == 4
 
-    # E1_valid
     res_e1 = next(r for r in results if r["extract_name"] == "E1_valid")
     assert res_e1["status"] == "valid"
     assert res_e1["new_start_marker"] == "Valid start"
 
-    # E2_needs_repair
     res_e2 = next(r for r in results if r["extract_name"] == "E2_needs_repair")
     assert res_e2["status"] == "repaired"
     assert res_e2["old_start_marker"] == "rong start"
-    assert res_e2["new_start_marker"] == "Wrong start" # "W" + "rong start"
-    assert updated_defs.sources[0].extracts[1].start_marker == "Wrong start" # Vérifie la modification en place
+    assert res_e2["new_start_marker"] == "Wrong start"
+    assert updated_defs.sources[0].extracts[1].start_marker == "Wrong start"
 
-    # E3_no_template
     res_e3 = next(r for r in results if r["extract_name"] == "E3_no_template")
-    assert res_e3["status"] == "valid" # Ou un autre statut si on change la logique pour les sans-template
+    assert res_e3["status"] == "valid"
     assert "Aucune correction basée sur template appliquée" in res_e3["message"]
     assert res_e3["new_start_marker"] == "No template here"
 
-    # E4_template_no_fix
     res_e4 = next(r for r in results if r["extract_name"] == "E4_template_no_fix")
     assert res_e4["status"] == "valid"
     assert res_e4["new_start_marker"] == "CGood start"

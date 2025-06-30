@@ -12,11 +12,9 @@ import sys
 import time
 import requests
 import subprocess
+import pytest
 from pathlib import Path
 from dotenv import load_dotenv
-
-# Charger l'environnement
-load_dotenv()
 
 def test_environment_setup():
     """Test 1: Verification environnement."""
@@ -24,8 +22,8 @@ def test_environment_setup():
     
     # Verifier cle OpenAI
     api_key = os.getenv('OPENAI_API_KEY')
-    assert api_key is not None, "OPENAI_API_KEY manquante"
-    assert len(api_key) > 20, "OPENAI_API_KEY invalide"
+    assert api_key is not None, "ECHEC: OPENAI_API_KEY n'a pas ete chargee dans l'environnement de test."
+    assert len(api_key) > 20, "ECHEC: La cle OPENAI_API_KEY semble invalide (trop courte)."
     print(f"[OK] OPENAI_API_KEY configuree ({len(api_key)} chars)")
     
     # Verifier fichiers API
@@ -39,7 +37,10 @@ def test_environment_setup():
 def test_api_startup_and_basic_functionality():
     """Test 2: Demarrage API et fonctionnalite de base."""
     print("\n=== Test 2: Demarrage API et fonctionnalites ===")
-    
+
+    # La configuration de l'environnement est gérée par conftest.py
+    # load_dotenv(override=True) # Cette ligne n'est plus nécessaire.
+
     # Configuration
     api_url = "http://localhost:8001"
     api_process = None
@@ -55,12 +56,19 @@ def test_api_startup_and_basic_functionality():
             "--log-level", "error"  # Reduire les logs
         ]
         
+        # Creation d'un environnement controle pour le sous-processus
+        proc_env = os.environ.copy()
+        proc_env['PYTHONPATH'] = os.getcwd()
+        api_key = os.getenv('OPENAI_API_KEY')
+        if api_key:
+            proc_env['OPENAI_API_KEY'] = api_key
+        
         api_process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=os.getcwd(),
-            env=dict(os.environ, PYTHONPATH=os.getcwd())
+            env=proc_env
         )
         
         print(f"API process demarre (PID: {api_process.pid})")
@@ -96,7 +104,7 @@ def test_api_startup_and_basic_functionality():
         
         # Test examples endpoint  
         print("\nTest endpoint /examples...")
-        response = requests.get(f"{api_url}/examples", timeout=10)
+        response = requests.get(f"{api_url}/api/examples", timeout=10)
         assert response.status_code == 200
         data = response.json()
         assert "examples" in data
@@ -108,7 +116,7 @@ def test_api_startup_and_basic_functionality():
         
         start_time = time.time()
         response = requests.post(
-            f"{api_url}/analyze",
+            f"{api_url}/api/analyze",
             json={"text": test_text},
             timeout=60
         )
@@ -119,17 +127,18 @@ def test_api_startup_and_basic_functionality():
         
         # Verifications
         assert "analysis_id" in data
-        assert "analysis" in data
-        assert "service_used" in data
+        assert "summary" in data
+        assert "metadata" in data
         
-        analysis = data["analysis"]
-        service = data["service_used"]
+        analysis = data["summary"]
+        metadata = data["metadata"]
+        service = metadata.get("gpt_model")
         
         print(f"[OK] Analyse recue ({len(analysis)} chars) en {processing_time:.2f}s")
         print(f"[OK] Service utilise: {service}")
         
         # Verifier authenticite
-        assert service == "openai_gpt4o_mini", f"Service incorrect: {service}"
+        assert "gpt-4o-mini" in service, f"Service incorrect: {service}"
         assert len(analysis) > 20, f"Analyse trop courte: {len(analysis)} chars"
         assert processing_time > 1.0, f"Temps trop rapide ({processing_time:.2f}s), possible mock"
         
@@ -143,14 +152,14 @@ def test_api_startup_and_basic_functionality():
         sophisme_text = "Cette theorie est fausse car son auteur est un idiot."
         
         response = requests.post(
-            f"{api_url}/analyze",
+            f"{api_url}/api/analyze",
             json={"text": sophisme_text},
             timeout=60
         )
         
         assert response.status_code == 200
         data = response.json()
-        analysis = data["analysis"].lower()
+        analysis = data["summary"].lower()
         
         # Chercher des indicateurs de detection logique
         indicators = ["sophisme", "fallacy", "ad hominem", "argument", "logique", "erreur"]

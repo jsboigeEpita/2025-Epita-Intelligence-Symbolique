@@ -26,7 +26,6 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..
 
 # Appliquer les fixtures à toutes les fonctions de test de ce module
 pytestmark = [
-    pytest.mark.usefixtures("setup_numpy_for_tests_fixture"),
     pytest.mark.use_mock_numpy
 ]
 
@@ -56,7 +55,7 @@ def test_numpy_rec_recarray_instantiation():
     arr2 = numpy.rec.recarray(5, formats=['i4', 'f8'], names=['x', 'y'])
     assert arr2 is not None
     assert arr2.dtype.names == ('x', 'y') # MODIFIÉ: Comparer à un tuple
-    assert [d[1].lstrip('<>=') for d in arr2.dtype.descr] == ['i4', 'f8']
+    assert [d[1].lstrip('<>=i') for d in arr2.dtype.descr] == ['4', 'f8']
     
     # Test avec shape et dtype
     arr3 = numpy.rec.recarray(shape=(3, 3), dtype='f8')
@@ -71,7 +70,7 @@ def test_numpy_rec_recarray_properties():
     
     # Test des propriétés
     assert arr.dtype.names == ('id', 'value') # MODIFIÉ: Comparer à un tuple
-    assert [d[1].lstrip('<>=') for d in arr.dtype.descr] == ['i4', 'f8']
+    assert [d[1].lstrip('<>=i') for d in arr.dtype.descr] == ['4', 'f8']
     
     # Test d'accès aux champs (doit retourner un ndarray)
     field_access = arr.id  # Ceci utilise __getattr__

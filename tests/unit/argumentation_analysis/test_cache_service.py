@@ -20,6 +20,10 @@ import os
 import sys
 import shutil
 from pathlib import Path
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 # Ajouter le répertoire parent au chemin de recherche des modules
@@ -139,19 +143,27 @@ class TestCacheService:
         assert loaded_text is None
 
     
-    def test_load_from_cache_error(self, mock_read_text, cache_service, sample_url, sample_text):
+    def test_load_from_cache_error(self, cache_service, sample_url, sample_text, mocker):
         """Test de chargement avec une erreur de lecture."""
         # Sauvegarder d'abord dans le cache
         cache_service.save_to_cache(sample_url, sample_text)
+        filepath = cache_service.get_cache_filepath(sample_url)
+        assert filepath.exists()
+
+        # Configurer le mock pour lever une exception lors de la lecture du fichier
+        mocker.patch.object(Path, 'read_text', side_effect=IOError("Simulated file read error"))
         
-        # Simuler une erreur de lecture
-        mock_read_text# Mock eliminated - using authentic gpt-4o-mini Exception("Erreur de lecture")
-        
-        # Charger depuis le cache
+        # Espionner le logger pour vérifier qu'un avertissement est bien émis
+        spy_logger = mocker.spy(cache_service.logger, 'warning')
+
+        # Tenter de charger depuis le cache
         loaded_text = cache_service.load_from_cache(sample_url)
         
-        # Le résultat doit être None en cas d'erreur
+        # Vérifier que le résultat est None et qu'un avertissement a été loggué
         assert loaded_text is None
+        spy_logger.assert_called_once()
+        assert "Erreur lecture cache" in spy_logger.call_args[0][0]
+        assert "Simulated file read error" in spy_logger.call_args[0][0]
 
     def test_clear_cache_specific_url(self, cache_service, sample_url, sample_text):
         """Test d'effacement du cache pour une URL spécifique."""
@@ -206,20 +218,28 @@ class TestCacheService:
             assert not filepath.exists()
 
     
-    def test_clear_cache_error(self, mock_unlink, cache_service, sample_url, sample_text):
+    def test_clear_cache_error(self, cache_service, sample_url, sample_text, mocker):
         """Test d'effacement du cache avec une erreur."""
         # Sauvegarder d'abord dans le cache
         cache_service.save_to_cache(sample_url, sample_text)
-        
-        # Simuler une erreur lors de la suppression
-        mock_unlink# Mock eliminated - using authentic gpt-4o-mini Exception("Erreur de suppression")
-        
-        # Effacer le cache pour cette URL
+        filepath = cache_service.get_cache_filepath(sample_url)
+        assert filepath.exists()
+
+        # Configurer le mock pour lever une exception lors de la suppression du fichier
+        mocker.patch.object(Path, 'unlink', side_effect=IOError("Simulated file delete error"))
+
+        # Espionner le logger pour vérifier qu'une erreur est bien émise
+        spy_logger = mocker.spy(cache_service.logger, 'error')
+
+        # Tenter d'effacer le cache pour cette URL
         deleted, errors = cache_service.clear_cache(sample_url)
         
-        # Vérifier les résultats
+        # Vérifier que l'opération a échoué comme attendu
         assert deleted == 0
         assert errors == 1
+        spy_logger.assert_called_once()
+        assert "Erreur lors de l'effacement du cache" in spy_logger.call_args[0][0]
+        assert "Simulated file delete error" in spy_logger.call_args[0][0]
 
     def test_get_cache_size(self, cache_service):
         """Test de récupération de la taille du cache."""

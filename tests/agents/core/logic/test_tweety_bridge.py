@@ -1,213 +1,142 @@
 ﻿# -*- coding: utf-8 -*-
 # tests/agents/core/logic/test_tweety_bridge.py
 """
-Tests pour la classe TweetyBridge, refactorisés pour pytest-asyncio.
+Tests unitaires pour la classe TweetyBridge.
 """
-
+import sys
 import os
-import pytest
-from unittest.mock import MagicMock, ANY
+from pathlib import Path
+import unittest
+from unittest.mock import MagicMock, patch
 
-# Imports authentiques (remplaçant les mocks)
-from config.unified_config import UnifiedConfig
+# Ajout pour forcer la reconnaissance du package principal
+current_script_path = Path(__file__).resolve()
+project_root_for_test = current_script_path.parents[4]
+sys.path.insert(0, str(project_root_for_test))
 
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
-# L'import de MockedJException est supprimé car le mock jpype est maintenant géré par fixture.
+from argumentation_analysis.agents.core.logic.pl_handler import PLHandler
+from argumentation_analysis.agents.core.logic.fol_handler import FOLHandler
 
-# --- Configuration des tests ---
+class TestTweetyBridge(unittest.TestCase):
+    """Tests pour la classe TweetyBridge."""
 
-# Condition pour exécuter les tests nécessitant la vraie JVM
-REAL_JPYPE = os.environ.get('USE_REAL_JPYPE', 'false').lower() in ('true', '1')
+    def setUp(self):
+        """Initialisation avant chaque test."""
+        self.use_real_jpype = os.environ.get('USE_REAL_JPYPE') == 'true'
 
-# --- Fonctions d'aide asynchrones ---
-
-async def _create_authentic_gpt4o_mini_instance():
-    """Crée une instance authentique de gpt-4o-mini."""
-    config = UnifiedConfig()
-    # Assurez-vous que cette méthode est asynchrone si elle effectue des I/O
-    return await config.get_kernel_with_gpt4o_mini()
-
-async def _make_authentic_llm_call(prompt: str) -> str:
-    """Fait un appel authentique à gpt-4o-mini."""
-    try:
-        kernel = await _create_authentic_gpt4o_mini_instance()
-        result = await kernel.invoke("chat", input=prompt)
-        return str(result)
-    except Exception as e:
-        print(f"Avertissement: Appel LLM authentique échoué: {e}")
-        return "Authentic LLM call failed"
-
-# --- Fixtures Pytest ---
-
-@pytest.fixture
-def mock_jpype_modules(mocker):
-    """Fixture pour mocker les modules jpype dans leurs contextes respectifs."""
-    if REAL_JPYPE:
-        yield None
-    else:
-        mock_jpype_tweety = mocker.patch('argumentation_analysis.agents.core.logic.tweety_bridge.jpype')
-        mock_jpype_jvm_setup = mocker.patch('argumentation_analysis.core.jvm_setup.jpype')
-
-        # Assurer la cohérence entre les mocks
-        for attr in ['isJVMStarted', 'JClass', 'startJVM', 'shutdownJVM']:
-            setattr(mock_jpype_jvm_setup, attr, getattr(mock_jpype_tweety, attr))
-        
-        # Définir JException directement sur le mock
-        mock_jpype_tweety.JException = Exception
-        setattr(mock_jpype_jvm_setup, 'JException', Exception)
-
-        yield mock_jpype_tweety
-
-
-@pytest.fixture
-def tweety_bridge_mocked(mock_jpype_modules):
-    """Fixture pour une instance de TweetyBridge avec mocks (cas non-REAL_JPYPE)."""
-    if REAL_JPYPE:
-        pytest.skip("Test spécifique aux mocks.")
-
-    mock_jpype_modules.isJVMStarted.return_value = True
-
-    # Mocks pour les classes Java
-    jclass_map = {
-        "org.tweetyproject.logics.pl.parser.PlParser": MagicMock(name="PlParser_class_mock"),
-        "org.tweetyproject.logics.pl.reasoner.SatReasoner": MagicMock(name="SatReasoner_class_mock"),
-        "org.tweetyproject.logics.pl.syntax.PlFormula": MagicMock(name="PlFormula_class_mock"),
-        "org.tweetyproject.logics.fol.parser.FolParser": MagicMock(name="FolParser_class_mock"),
-        "org.tweetyproject.logics.fol.reasoner.SimpleFolReasoner": MagicMock(name="SimpleFolReasoner_class_mock"),
-        "org.tweetyproject.logics.fol.syntax.FolFormula": MagicMock(name="FolFormula_class_mock"),
-        "org.tweetyproject.logics.ml.parser.MlParser": MagicMock(name="MlParser_class_mock"),
-        "org.tweetyproject.logics.ml.reasoner.SimpleMlReasoner": MagicMock(name="SimpleMlReasoner_class_mock"),
-        "org.tweetyproject.logics.ml.syntax.MlFormula": MagicMock(name="ModalFormula_class_mock")
-    }
-
-    def jclass_side_effect(class_name):
-        return jclass_map.get(class_name, MagicMock(name=f"Unknown_Class_{class_name}"))
-    
-    mock_jpype_modules.JClass.side_effect = jclass_side_effect
-
-    # Mocks pour les instances de classes
-    mock_pl_parser_instance = MagicMock(name="PlParser_instance_mock")
-    mock_sat_reasoner_instance = MagicMock(name="SatReasoner_instance_mock")
-
-    jclass_map["org.tweetyproject.logics.pl.parser.PlParser"].return_value = mock_pl_parser_instance
-    jclass_map["org.tweetyproject.logics.pl.reasoner.SatReasoner"].return_value = mock_sat_reasoner_instance
-
-    bridge = TweetyBridge()
-
-    # Attacher les mocks à l'instance pour les assertions
-    bridge.mock_pl_parser_instance = mock_pl_parser_instance
-    bridge.mock_sat_reasoner_instance = mock_sat_reasoner_instance
-    bridge.mock_jpype = mock_jpype_modules
-    bridge.jclass_map = jclass_map
-    
-    return bridge
-
-@pytest.fixture
-async def tweety_bridge_real():
-    """Fixture pour une instance réelle de TweetyBridge (cas REAL_JPYPE)."""
-    if not REAL_JPYPE:
-        pytest.skip("Test nécessitant une vraie JVM.")
-    bridge = TweetyBridge()
-    return bridge
-
-# --- Tests ---
-
-@pytest.mark.asyncio
-async def test_initialization_jvm_ready_mocked(tweety_bridge_mocked):
-    """Test de l'initialisation quand la JVM est prête (mock)."""
-    bridge = tweety_bridge_mocked
-    assert bridge.is_jvm_ready()
-    bridge.mock_jpype.JClass.assert_any_call("org.tweetyproject.logics.pl.parser.PlParser")
-    bridge.jclass_map["org.tweetyproject.logics.pl.parser.PlParser"].assert_called_once()
-
-@pytest.mark.asyncio
-async def test_validate_formula_valid_mocked(tweety_bridge_mocked):
-    """Test de validation d'une formule propositionnelle valide (mock)."""
-    bridge = tweety_bridge_mocked
-    bridge.mock_pl_parser_instance.parseFormula.return_value = MagicMock()
-    
-    is_valid, message = await bridge.validate_formula("a => b")
-    
-    bridge.mock_pl_parser_instance.parseFormula.assert_called_once_with("a => b")
-    assert is_valid
-    assert message == "Formule valide"
-
-@pytest.mark.asyncio
-async def test_validate_formula_invalid_mocked(tweety_bridge_mocked):
-    """Test de validation d'une formule propositionnelle invalide (mock)."""
-    bridge = tweety_bridge_mocked
-    # Utilise JException depuis le mock jpype fourni par la fixture
-    java_exception_instance = bridge.mock_jpype.JException("Erreur de syntaxe")
-    bridge.mock_pl_parser_instance.parseFormula.side_effect = java_exception_instance
-    
-    is_valid, message = await bridge.validate_formula("a ==> b")
-    
-    bridge.mock_pl_parser_instance.parseFormula.assert_called_once_with("a ==> b")
-    assert not is_valid
-    # Le message peut varier un peu, on vérifie la sous-chaine
-    assert "Erreur de syntaxe" in message
-
-@pytest.mark.asyncio
-async def test_execute_pl_query_accepted_mocked(tweety_bridge_mocked):
-    """Test d'exécution d'une requête PL acceptée (mock)."""
-    bridge = tweety_bridge_mocked
-    
-    mock_kb_formula = MagicMock(name="mock_kb_formula")
-    mock_query_formula = MagicMock(name="mock_query_formula")
-
-    def parse_formula_side_effect(formula_str):
-        if "=>" in formula_str:
-            return mock_kb_formula
+        if self.use_real_jpype:
+            self.bridge = TweetyBridge.get_instance()
+            try:
+                self.bridge.initialize_jvm()
+            except Exception as e:
+                self.fail(f"L'initialisation de la JVM en condition réelle a échoué: {e}")
         else:
-            return mock_query_formula
-    
-    bridge.mock_pl_parser_instance.parseFormula.side_effect = parse_formula_side_effect
-    bridge.mock_sat_reasoner_instance.query.return_value = True
-    bridge.mock_jpype.JObject = lambda x, target: target(x) # Simule la conversion de type
+            # Patcher entièrement TweetyInitializer pour éviter tout contact avec jpype
+            self.initializer_patcher = patch('argumentation_analysis.agents.core.logic.tweety_bridge.TweetyInitializer', autospec=True)
+            self.mock_initializer_class = self.initializer_patcher.start()
+            self.mock_initializer_instance = self.mock_initializer_class.return_value
+            # Simuler une JVM prête
+            self.mock_initializer_instance.is_jvm_ready.return_value = True
 
-    status, result_msg = await bridge.execute_pl_query("a => b", "a")
-    
-    bridge.mock_pl_parser_instance.parseFormula.assert_any_call("a => b")
-    bridge.mock_pl_parser_instance.parseFormula.assert_any_call("a")
-    bridge.mock_sat_reasoner_instance.query.assert_called_once_with(ANY, mock_query_formula)
-    assert status == "ACCEPTED"
-    assert "ACCEPTED" in result_msg
+            # Patcher les classes Handler pour injecter des mocks
+            self.pl_handler_patcher = patch('argumentation_analysis.agents.core.logic.tweety_bridge.PropositionalLogicHandler', autospec=True)
+            self.fol_handler_patcher = patch('argumentation_analysis.agents.core.logic.tweety_bridge.FirstOrderLogicHandler', autospec=True)
+            self.mock_pl_handler_class = self.pl_handler_patcher.start()
+            self.mock_fol_handler_class = self.fol_handler_patcher.start()
 
-# --- Tests avec la vraie JVM ---
+            self.mock_pl_handler_instance = self.mock_pl_handler_class.return_value
+            self.mock_fol_handler_instance = self.mock_fol_handler_class.return_value
 
-@pytest.mark.skipif(not REAL_JPYPE, reason="Nécessite une JVM réelle.")
-@pytest.mark.asyncio
-async def test_validate_formula_real(tweety_bridge_real):
-    """Test de validation avec la vraie JVM."""
-    bridge = await tweety_bridge_real
-    
-    # Valide
-    is_valid, message = await bridge.validate_formula("a => b")
-    assert is_valid
-    assert message == "Formule valide"
+            self.bridge = TweetyBridge.get_instance()
 
-    # Invalide
-    is_valid_inv, message_inv = await bridge.validate_formula("a ==> b")
-    assert not is_valid_inv
-    assert "syntax" in message_inv.lower()
+    def tearDown(self):
+        """Nettoyage après chaque test."""
+        if self.use_real_jpype:
+            if self.bridge.initializer.is_jvm_ready():
+                self.bridge.shutdown_jvm()
+        else:
+            patch.stopall()
+        # Réinitialiser le singleton pour l'isolation des tests
+        TweetyBridge._instance = None
 
-@pytest.mark.skipif(not REAL_JPYPE, reason="Nécessite une JVM réelle.")
-@pytest.mark.asyncio
-async def test_execute_pl_query_real(tweety_bridge_real):
-    """Test d'exécution d'une requête PL avec la vraie JVM."""
-    bridge = await tweety_bridge_real
+    def test_singleton_instance(self):
+        """Vérifie que get_instance retourne toujours la même instance."""
+        instance1 = TweetyBridge.get_instance()
+        instance2 = TweetyBridge.get_instance()
+        self.assertIs(instance1, instance2)
 
-    # Acceptée
-    status, result = await bridge.execute_pl_query("a; a=>b", "b")
-    assert status == "ACCEPTED"
-    assert "ACCEPTED (True)" in result
+    @unittest.skipIf(os.environ.get('USE_REAL_JPYPE') == 'true', "Test pour environnement mocké uniquement")
+    def test_lazy_loading_of_handlers(self):
+        """Vérifie que les handlers sont créés uniquement au premier accès."""
+        # Au début, les handlers ne doivent pas être initialisés
+        self.assertIsNone(self.bridge._pl_handler)
+        self.assertIsNone(self.bridge._fol_handler)
+        self.mock_pl_handler_class.assert_not_called()
+        self.mock_fol_handler_class.assert_not_called()
 
-    # Rejetée
-    status_rej, result_rej = await bridge.execute_pl_query("a; a=>b", "c")
-    assert status_rej == "REJECTED"
-    assert "REJECTED (False)" in result_rej
+        # Premier accès au pl_handler
+        _ = self.bridge.pl_handler
+        self.mock_pl_handler_class.assert_called_once_with(self.bridge._initializer)
+        self.assertIsNotNone(self.bridge._pl_handler)
 
-    # Erreur
-    status_err, result_err = await bridge.execute_pl_query("a ==>; b", "c")
-    assert status_err == "ERREUR"
-    assert "error" in result_err.lower() or "exception" in result_err.lower()
+        # Premier accès au fol_handler
+        _ = self.bridge.fol_handler
+        self.mock_fol_handler_class.assert_called_once_with(self.bridge._initializer)
+        self.assertIsNotNone(self.bridge._fol_handler)
+
+    def test_pl_query_delegation(self):
+        """Vérifie que pl_query délègue correctement l'appel au handler."""
+        kb = "a"
+        query = "b"
+        if not self.use_real_jpype:
+            self.bridge.pl_query(kb, query)
+            self.mock_pl_handler_instance.pl_query.assert_called_once_with(kb, query)
+        else:
+            # En mode réel, on vérifie juste que ça ne crashe pas
+            try:
+                self.bridge.pl_query(kb, query)
+            except Exception as e:
+                self.fail(f"pl_query a levé une exception inattendue: {e}")
+
+    def test_fol_query_delegation(self):
+        """Vérifie que fol_query délègue correctement l'appel au handler."""
+        kb_str = "forall X: p(X)."
+        query_str = "p(a)."
+        if not self.use_real_jpype:
+            belief_set_mock = MagicMock()
+            self.mock_fol_handler_instance.create_belief_set_from_string.return_value = belief_set_mock
+            
+            self.bridge.fol_query(kb_str, query_str)
+            
+            self.mock_fol_handler_instance.create_belief_set_from_string.assert_called_once_with(kb_str)
+            self.mock_fol_handler_instance.fol_query.assert_called_once_with(belief_set_mock, query_str)
+        else:
+            try:
+                self.bridge.fol_query(kb_str, query_str)
+            except Exception as e:
+                self.fail(f"fol_query a levé une exception inattendue: {e}")
+
+    def test_validate_pl_formula_delegation(self):
+        """Vérifie que validate_pl_formula délègue correctement."""
+        formula = "a => b"
+        if not self.use_real_jpype:
+            self.bridge.validate_pl_formula(formula)
+            self.mock_pl_handler_instance.parse_pl_formula.assert_called_once_with(formula)
+        else:
+            self.assertTrue(self.bridge.validate_pl_formula(formula))
+            self.assertFalse(self.bridge.validate_pl_formula("a ==> b"))
+
+    def test_validate_fol_formula_delegation(self):
+        """Vérifie que validate_fol_formula délègue correctement."""
+        formula = "forall X : p(X)"
+        if not self.use_real_jpype:
+            self.bridge.validate_fol_formula(formula)
+            self.mock_fol_handler_instance.parse_fol_formula.assert_called_once_with(formula)
+        else:
+            self.assertTrue(self.bridge.validate_fol_formula(formula)[0])
+            self.assertFalse(self.bridge.validate_fol_formula("forall X p(X)")[0])
+
+
+if __name__ == "__main__":
+    unittest.main()

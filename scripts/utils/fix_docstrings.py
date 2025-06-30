@@ -5,6 +5,7 @@
 Script pour corriger les docstrings dans un fichier Python.
 """
 
+import argumentation_analysis.core.environment
 import os
 import sys
 from pathlib import Path # NOUVEAU: Pour ajuster sys.path

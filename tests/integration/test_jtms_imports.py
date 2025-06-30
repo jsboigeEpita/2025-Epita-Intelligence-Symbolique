@@ -32,12 +32,6 @@ def test_axe_b_jtms_imports():
         errors.append(f"Erreur import jtms_models: {e}")
 
     try:
-        from argumentation_analysis.api import jtms_endpoints
-        assert jtms_endpoints is not None
-    except ImportError as e:
-        errors.append(f"Erreur import jtms_endpoints: {e}")
-
-    try:
         from argumentation_analysis.integrations import semantic_kernel_integration
         assert semantic_kernel_integration is not None
     except ImportError as e:

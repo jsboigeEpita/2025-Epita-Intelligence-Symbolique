@@ -12,10 +12,13 @@ from .rhetorical_result_analyzer import EnhancedRhetoricalResultAnalyzer
 from .complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
 from .fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator
 from .contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
+from .nlp_model_manager import NLPModelManager, nlp_model_manager
 
 __all__ = [
     'EnhancedRhetoricalResultAnalyzer',
     'EnhancedComplexFallacyAnalyzer',
     'EnhancedFallacySeverityEvaluator',
-    'EnhancedContextualFallacyAnalyzer'
+    'EnhancedContextualFallacyAnalyzer',
+    'NLPModelManager',
+    'nlp_model_manager'
 ]

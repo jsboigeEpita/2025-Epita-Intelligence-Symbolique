@@ -77,11 +77,11 @@ def test_imports_jtms_reels():
     try:
         from argumentation_analysis.services.jtms_service import JTMSService
         from argumentation_analysis.plugins.semantic_kernel.jtms_plugin import JTMSSemanticKernelPlugin
-        from argumentation_analysis.api.jtms_models import BeliefCreateRequest
+        from argumentation_analysis.api.jtms_models import CreateBeliefRequest
         
         assert JTMSService is not None
         assert JTMSSemanticKernelPlugin is not None
-        assert BeliefCreateRequest is not None
+        assert CreateBeliefRequest is not None
     except ImportError as e:
         pytest.fail(f"Échec d'un import JTMS critique: {e}")
 
@@ -100,7 +100,7 @@ def test_interface_web_reelle():
     try:
         from interface_web.app import app
         assert app is not None
-        assert len(list(app.url_map.iter_rules())) > 0, "Aucune route Flask n'a été trouvée."
+        assert len(app.routes) > 0, "Aucune route Starlette n'a été trouvée."
     except (ImportError, AssertionError) as e:
         pytest.fail(f"Test de l'interface web a échoué: {e}")
 
@@ -118,6 +118,13 @@ async def test_interaction_sherlock_reelle(sherlock_agent):
 async def test_validation_watson_reelle(watson_agent):
     """Teste une interaction de base avec l'agent Watson."""
     validation_chain = [{"step": 1, "proposition": "Porte ouverte", "evidence": "confirmed"}]
+    # Correction: Ajout de la croyance au JTMS de Watson avant la validation
+    for step in validation_chain:
+        proposition = step.get("proposition")
+        if proposition and step.get("evidence") == "confirmed":
+            watson_agent.add_belief(proposition, "TRUE")
+            logger.info(f"Croyance '{proposition}' ajoutée au JTMS de Watson pour le test.")
+
     result = await watson_agent.validate_reasoning_chain(validation_chain)
     assert result and not result.get('error'), f"Watson a retourné une erreur: {result}"
     assert result.get('confidence', 0) > 0, "La confiance de Watson est nulle."

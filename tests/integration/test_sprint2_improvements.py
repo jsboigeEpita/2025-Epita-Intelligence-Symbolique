@@ -1,4 +1,3 @@
-
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
@@ -12,6 +11,7 @@ Tests d'intégration spécifiques pour valider les améliorations du Sprint 2.
 """
 
 import unittest
+from unittest.mock import MagicMock
 
 import asyncio
 from datetime import datetime
@@ -42,11 +42,12 @@ class TestSprint2Improvements(unittest.TestCase):
 
     """Tests pour valider les améliorations du Sprint 2."""
     
-    async def setUp(self):
+    def setUp(self):
         """Initialisation avant chaque test."""
-        # Les mocks pour l'application Flask ne sont plus nécessaires car les tests
-        # se concentrent sur des unités de service et non sur l'application web.
-        pass
+        # Création d'un mock pour l'application Flask
+        self.mock_app = MagicMock()
+        self.mock_app.config = {}
+        self.mock_app.extensions = {}
         
     def test_harmonized_agent_interfaces(self):
         """Test que les interfaces d'agents sont harmonisées et compatibles."""

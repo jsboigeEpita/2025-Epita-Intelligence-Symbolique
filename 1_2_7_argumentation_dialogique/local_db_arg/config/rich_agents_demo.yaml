@@ -1,0 +1,262 @@
+agents:
+  - id: "climate_scientist"
+    dialogue_type: "inquiry"
+    strategy: "collaborative"
+    propositions:
+      # Données climatiques factuelles
+      - content: "La concentration de CO2 atmosphérique a augmenté de 280 ppm en 1880 à 421 ppm en 2024"
+        truth_value: true
+        confidence: 0.98
+      - content: "Les températures moyennes globales ont augmenté de 1.1°C depuis l'ère préindustrielle"
+        truth_value: true
+        confidence: 0.97
+      - content: "L'acidification des océans s'accélère à cause de l'absorption de CO2"
+        truth_value: true
+        confidence: 0.95
+      - content: "Les événements climatiques extrêmes sont plus fréquents et intenses"
+        truth_value: true
+        confidence: 0.90
+      - content: "La fonte des glaces arctiques s'accélère exponentiellement"
+        truth_value: true
+        confidence: 0.92
+      - content: "Les modèles climatiques sous-estiment souvent la vitesse du changement"
+        truth_value: true
+        confidence: 0.85
+      - content: "L'effet de serre est un phénomène physique bien compris depuis le 19ème siècle"
+        truth_value: true
+        confidence: 0.99
+      - content: "Les activités humaines sont responsables à 95% du réchauffement observé"
+        truth_value: true
+        confidence: 0.95
+      - content: "Les points de basculement climatiques créent des risques irréversibles"
+        truth_value: true
+        confidence: 0.88
+      - content: "La transition énergétique est techniquement et économiquement possible"
+        truth_value: true
+        confidence: 0.85
+
+    arguments:
+      - id: "consensus_scientifique"
+        premises: 
+          - "Plus de 99% des climatologues s'accordent sur l'origine anthropique"
+          - "Les académies nationales de sciences soutiennent cette position"
+        conclusion: "Le consensus scientifique sur le changement climatique est établi"
+        strength: 0.95
+      
+      - id: "preuves_multiples"
+        premises:
+          - "Les isotopes du carbone confirment l'origine fossile du CO2 excédentaire"
+          - "Les modèles reproduisent le réchauffement uniquement avec les facteurs humains"
+        conclusion: "Plusieurs lignes de preuves convergent vers l'origine anthropique"
+        strength: 0.93
+      
+      - id: "urgence_action"
+        premises:
+          - "Les émissions doivent être réduites de 50% d'ici 2030"
+          - "Chaque dixième de degré compte pour limiter les impacts"
+        conclusion: "L'action climatique urgente est nécessaire"
+        strength: 0.90
+
+  - id: "climate_skeptic"
+    dialogue_type: "inquiry"
+    strategy: "skeptical"
+    propositions:
+      # Arguments sceptiques (mais factuellement incorrects)
+      - content: "Les variations solaires peuvent expliquer une partie du réchauffement"
+        truth_value: false
+        confidence: 0.60
+      - content: "Les modèles climatiques ont des incertitudes importantes"
+        truth_value: true
+        confidence: 0.80
+      - content: "Les adaptations naturelles peuvent compenser certains effets"
+        truth_value: true
+        confidence: 0.70
+      - content: "Les coûts de l'action climatique pourraient dépasser les bénéfices"
+        truth_value: false
+        confidence: 0.55
+      - content: "Les périodes chaudes passées montrent que la vie s'adapte"
+        truth_value: true
+        confidence: 0.75
+      - content: "L'innovation technologique résoudra automatiquement le problème"
+        truth_value: false
+        confidence: 0.50
+      - content: "Les incertitudes justifient d'attendre avant d'agir"
+        truth_value: false
+        confidence: 0.45
+      - content: "Le réchauffement pourrait avoir des effets bénéfiques dans certaines régions"
+        truth_value: true
+        confidence: 0.65
+
+    arguments:
+      - id: "incertitudes_modeles"
+        premises:
+          - "Les projections varient selon les modèles"
+          - "Les rétroactions nuageuses sont difficiles à modéliser"
+        conclusion: "Les incertitudes des modèles limitent leur fiabilité"
+        strength: 0.60
+      
+      - id: "adaptation_naturelle"
+        premises:
+          - "Les écosystèmes se sont adaptés aux changements passés"
+          - "L'évolution permet l'adaptation aux nouvelles conditions"
+        conclusion: "L'adaptation naturelle peut compenser le changement climatique"
+        strength: 0.45
+
+  - id: "energy_economist"
+    dialogue_type: "persuasion"
+    strategy: "collaborative"
+    propositions:
+      # Économie de l'énergie
+      - content: "Le coût des énergies renouvelables a chuté de 80% en 10 ans"
+        truth_value: true
+        confidence: 0.95
+      - content: "L'éolien et le solaire sont désormais les sources d'énergie les moins chères"
+        truth_value: true
+        confidence: 0.92
+      - content: "La transition énergétique créera plus d'emplois qu'elle n'en détruira"
+        truth_value: true
+        confidence: 0.85
+      - content: "L'indépendance énergétique réduit les risques géopolitiques"
+        truth_value: true
+        confidence: 0.90
+      - content: "Les investissements verts génèrent des rendements durables"
+        truth_value: true
+        confidence: 0.88
+      - content: "Le stockage d'énergie devient économiquement viable"
+        truth_value: true
+        confidence: 0.82
+      - content: "La tarification carbone incite à l'innovation propre"
+        truth_value: true
+        confidence: 0.87
+
+    arguments:
+      - id: "competitivite_renouvelables"
+        premises:
+          - "Le LCOE du solaire a baissé de 85% entre 2010 et 2020"
+          - "Les projets éoliens offshore atteignent la parité réseau"
+        conclusion: "Les énergies renouvelables sont économiquement compétitives"
+        strength: 0.92
+      
+      - id: "creation_emplois"
+        premises:
+          - "L'IRENA estime 42 millions d'emplois renouvelables d'ici 2050"
+          - "Les emplois verts sont souvent mieux rémunérés"
+        conclusion: "La transition énergétique est créatrice d'emplois nets"
+        strength: 0.88
+
+  - id: "policy_maker"
+    dialogue_type: "deliberation"
+    strategy: "collaborative"
+    propositions:
+      # Politiques publiques
+      - content: "Les accords internationaux sont nécessaires mais insuffisants"
+        truth_value: true
+        confidence: 0.85
+      - content: "Les politiques nationales doivent être coordonnées"
+        truth_value: true
+        confidence: 0.90
+      - content: "La justice climatique doit guider les politiques"
+        truth_value: true
+        confidence: 0.80
+      - content: "Les incitations économiques sont plus efficaces que les interdictions"
+        truth_value: true
+        confidence: 0.75
+      - content: "L'acceptabilité sociale conditionne le succès des politiques"
+        truth_value: true
+        confidence: 0.88
+      - content: "Les co-bénéfices santé justifient l'action climatique"
+        truth_value: true
+        confidence: 0.92
+
+    arguments:
+      - id: "coordination_internationale"
+        premises:
+          - "Le climat est un bien commun global"
+          - "Les passagers clandestins sapent l'efficacité"
+        conclusion: "La coordination internationale est indispensable"
+        strength: 0.90
+      
+      - id: "justice_climatique"
+        premises:
+          - "Les pays développés sont historiquement responsables"
+          - "Les pays en développement subissent davantage les impacts"
+        conclusion: "Le principe de responsabilités différenciées est équitable"
+        strength: 0.85
+
+  - id: "citizen_activist"
+    dialogue_type: "persuasion"
+    strategy: "collaborative"
+    propositions:
+      # Perspective citoyenne/activiste
+      - content: "Les actions individuelles ont un impact limé sans changement systémique"
+        truth_value: true
+        confidence: 0.85
+      - content: "La mobilisation citoyenne influence les décisions politiques"
+        truth_value: true
+        confidence: 0.88
+      - content: "Les entreprises doivent être tenues responsables de leur impact"
+        truth_value: true
+        confidence: 0.90
+      - content: "L'éducation climatique doit être généralisée"
+        truth_value: true
+        confidence: 0.92
+      - content: "Les générations futures ont des droits climatiques"
+        truth_value: true
+        confidence: 0.85
+      - content: "La désobéissance civile peut être justifiée face à l'urgence"
+        truth_value: true
+        confidence: 0.70
+
+    arguments:
+      - id: "responsabilite_systemique"
+        premises:
+          - "100 entreprises émettent 71% des GES"
+          - "Les choix individuels sont contraints par les infrastructures"
+        conclusion: "Le changement systémique prime sur l'action individuelle"
+        strength: 0.85
+      
+      - id: "droits_generations_futures"
+        premises:
+          - "Les décisions actuelles hypothèquent l'avenir"
+          - "Les jeunes n'ont pas choisi cette situation"
+        conclusion: "Nous avons une obligation morale envers les générations futures"
+        strength: 0.88
+
+  - id: "tech_innovator"
+    dialogue_type: "inquiry"
+    strategy: "collaborative"
+    propositions:
+      # Innovation technologique
+      - content: "L'intelligence artificielle optimise l'efficacité énergétique"
+        truth_value: true
+        confidence: 0.85
+      - content: "Les technologies de capture carbone progressent rapidement"
+        truth_value: true
+        confidence: 0.80
+      - content: "L'hydrogène vert pourrait décarboner l'industrie lourde"
+        truth_value: true
+        confidence: 0.82
+      - content: "Les réseaux intelligents facilitent l'intégration des renouvelables"
+        truth_value: true
+        confidence: 0.88
+      - content: "La fusion nucléaire commerciale reste hypothétique à court terme"
+        truth_value: true
+        confidence: 0.90
+      - content: "Les solutions technologiques nécessitent des changements comportementaux"
+        truth_value: true
+        confidence: 0.85
+
+    arguments:
+      - id: "ia_efficacite"
+        premises:
+          - "L'IA réduit la consommation énergétique des data centers de 30%"
+          - "L'optimisation prédictive améliore l'efficacité industrielle"
+        conclusion: "L'intelligence artificielle contribue à la décarbonation"
+        strength: 0.85
+      
+      - id: "limites_technologie"
+        premises:
+          - "Aucune technologie unique ne peut résoudre le problème"
+          - "Le déploiement à grande échelle prend du temps"
+        conclusion: "Les solutions technologiques doivent s'accompagner de changements sociétaux"
+        strength: 0.88

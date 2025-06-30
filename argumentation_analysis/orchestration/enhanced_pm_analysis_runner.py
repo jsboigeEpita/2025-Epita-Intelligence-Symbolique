@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
 # -*- coding: utf-8 -*-
 
 """
@@ -14,7 +14,7 @@ Ce module intègre :
 """
 
 # ===== AUTO-ACTIVATION ENVIRONNEMENT =====
-import project_core.core_from_scripts.auto_env  # Auto-activation environnement intelligent
+import argumentation_analysis.core.environment  # Auto-activation environnement intelligent
 # =========================================
 import sys
 import os
@@ -35,9 +35,9 @@ if project_root not in sys.path:
 # Imports Semantic Kernel
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.contents import AuthorRole, ChatMessageContent
-from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent, Agent, AgentChatException
-from semantic_kernel.functions import FunctionChoiceBehavior
+# from semantic_kernel.contents import AuthorRole
+# from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent, Agent # Supprimé car le module n'existe plus
+from semantic_kernel.exceptions import AgentChatException
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 
@@ -47,8 +47,8 @@ from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
 from argumentation_analysis.core.strategies import SimpleTerminationStrategy, BalancedParticipationStrategy
 
 # Imports agents
-from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
-from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
+from argumentation_analysis.agents.core.pm.pm_agent import LegacyProjectManagerAgent as ProjectManagerAgent
+from argumentation_analysis.agents.core.informal.informal_agent import LegacyInformalAnalysisAgent as InformalAnalysisAgent
 from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
 from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent
 from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
@@ -151,52 +151,28 @@ class EnhancedProjectManagerOrchestrator:
         pm_agent_refactored = ProjectManagerAgent(kernel=self.kernel, agent_name="EnhancedProjectManagerAgent")
         pm_agent_refactored.setup_agent_components(llm_service_id=llm_service_id)
         
-        pm_agent = ChatCompletionAgent(
-            kernel=self.kernel,
-            service=self.llm_service,
-            name="ProjectManagerAgent",
-            instructions=pm_agent_refactored.system_prompt,
-            arguments=KernelArguments(settings=prompt_exec_settings)
-        )
+        pm_agent = pm_agent_refactored # Remplacement temporaire
         self.agents["ProjectManager"] = pm_agent
         
         # Configuration Informal Agent
         informal_agent_refactored = InformalAnalysisAgent(kernel=self.kernel, agent_name="EnhancedInformalAgent")
         informal_agent_refactored.setup_agent_components(llm_service_id=llm_service_id)
         
-        informal_agent = ChatCompletionAgent(
-            kernel=self.kernel,
-            service=self.llm_service,
-            name="InformalAnalysisAgent",
-            instructions=informal_agent_refactored.system_prompt,
-            arguments=KernelArguments(settings=prompt_exec_settings)
-        )
+        informal_agent = informal_agent_refactored # Remplacement temporaire
         self.agents["InformalAnalysis"] = informal_agent
         
         # Configuration Modal Logic Agent
         modal_agent_refactored = ModalLogicAgent(kernel=self.kernel, agent_name="EnhancedModalLogicAgent")
         modal_agent_refactored.setup_agent_components(llm_service_id=llm_service_id)
         
-        modal_agent = ChatCompletionAgent(
-            kernel=self.kernel,
-            service=self.llm_service,
-            name="ModalLogicAgent",
-            instructions=modal_agent_refactored.system_prompt,
-            arguments=KernelArguments(settings=prompt_exec_settings)
-        )
+        modal_agent = modal_agent_refactored # Remplacement temporaire
         self.agents["ModalLogic"] = modal_agent
         
         # Configuration Extract Agent
         extract_agent_refactored = ExtractAgent(kernel=self.kernel, agent_name="EnhancedExtractAgent")
         extract_agent_refactored.setup_agent_components(llm_service_id=llm_service_id)
         
-        extract_agent = ChatCompletionAgent(
-            kernel=self.kernel,
-            service=self.llm_service,
-            name="ExtractAgent", 
-            instructions=extract_agent_refactored.system_prompt,
-            arguments=KernelArguments(settings=prompt_exec_settings)
-        )
+        extract_agent = extract_agent_refactored # Remplacement temporaire
         self.agents["Extract"] = extract_agent
         
         self.agent_list = list(self.agents.values())
@@ -217,11 +193,11 @@ class EnhancedProjectManagerOrchestrator:
         )
         
         # Création du groupe de chat
-        self.group_chat = AgentGroupChat(
-            agents=self.agent_list,
-            selection_strategy=selection_strategy,
-            termination_strategy=termination_strategy
-        )
+        # self.group_chat = AgentGroupChat(
+        #     agents=self.agent_list,
+        #     selection_strategy=selection_strategy,
+        #     termination_strategy=termination_strategy
+        # )
         
         logger.info("✅ Stratégies d'orchestration configurées")
     
@@ -278,7 +254,8 @@ class EnhancedProjectManagerOrchestrator:
         except Exception as e:
             logger.error(f"[ERROR] Erreur orchestration PM: {e}", exc_info=True)
             stop_enhanced_pm_capture()
-            return {"success": False, "error": str(e)}
+            # Assurer que l'on retourne une structure JSON valide même en cas d'erreur
+            return {"success": False, "error": str(e), "analysis": {}}
     
     async def _run_phase_1_informal_analysis(self):
         """Phase 1: Analyse informelle coordonnée par PM."""
@@ -519,57 +496,45 @@ ProjectManagerAgent, veuillez coordonner la synthèse finale en intégrant tous 
         logger.info("✅ Phase 3 terminée: Orchestration PM complète")
     
     async def _execute_conversation_phase(self, phase_id: str, max_turns: int):
-        """Exécute une phase de conversation avec capture de trace."""
-        logger.info(f"🔄 Exécution phase {phase_id} (max {max_turns} tours)")
-        
-        turn_count = 0
-        try:
-            async for message in self.group_chat.invoke():
-                turn_count += 1
-                self.tour_counter += 1
+        """Exécute une phase de conversation avec une boucle manuelle simple."""
+        logger.info(f"🔄 Exécution phase {phase_id} (max {max_turns} tours) avec boucle manuelle")
+
+        # Utiliser l'historique de chat de l'orchestrateur s'il existe
+        if not hasattr(self, 'chat_history'):
+            from semantic_kernel.contents.chat_history import ChatHistory
+            self.chat_history = ChatHistory()
+
+        pm_agent = self.agents.get("ProjectManager")
+        if not pm_agent:
+            logger.error("ProjectManagerAgent non trouvé. Impossible d'exécuter la phase de conversation.")
+            return
+
+        for i in range(max_turns):
+            logger.info(f"--- Tour de conversation {i+1}/{max_turns} ---")
+            
+            # Pour cette version de débogage, seul le PM est appelé
+            arguments = KernelArguments(chat_history=self.chat_history)
+            try:
+                result_stream = pm_agent.invoke_stream(self.kernel, arguments=arguments)
                 
-                if not message:
-                    logger.warning(f"Message vide reçu au tour {turn_count}")
+                response_messages = [message async for message in result_stream]
+                if not response_messages:
+                    logger.warning(f"L'agent {pm_agent.name} n'a retourné aucune réponse.")
                     break
                 
-                if turn_count >= max_turns:
-                    logger.info(f"Limite de tours atteinte pour phase {phase_id}")
-                    break
-                
-                # Capture des détails du message
-                agent_name = message.name or getattr(message, 'author_name', f"Role:{message.role.name}")
-                content = str(message.content) if message.content else ""
-                
-                logger.info(f"💬 Tour {self.tour_counter}: {agent_name}")
-                logger.debug(f"   Contenu: {content[:200]}...")
-                
-                # Capture du message de conversation
-                enhanced_global_trace_analyzer.capture_conversation_message(
-                    agent_name=agent_name,
-                    content=content,
-                    tour_number=self.tour_counter,
-                    phase_id=phase_id,
-                    tool_calls_count=len(getattr(message, 'tool_calls', []) or [])
-                )
-                
-                # Capture des tool calls s'il y en a
-                tool_calls = getattr(message, 'tool_calls', []) or []
-                if tool_calls:
-                    logger.info(f"   🔧 {len(tool_calls)} appels d'outils détectés")
-                    for tc in tool_calls:
-                        self._capture_tool_call_from_message(tc, agent_name)
-                
-                # Pause pour éviter la surcharge
-                await asyncio.sleep(0.1)
-                
-        except AgentChatException as e:
-            if "Chat is already complete" in str(e):
-                logger.info(f"Conversation phase {phase_id} terminée naturellement")
-            else:
-                logger.error(f"Erreur conversation phase {phase_id}: {e}")
-                raise
+                for message_list in response_messages:
+                    for msg_content in message_list:
+                        self.chat_history.add_message(message=msg_content)
+                        logger.info(f"Réponse de {pm_agent.name} ajoutée à l'historique.")
+
+                # On arrête après un tour pour ce débug
+                break
+
+            except Exception as e:
+                logger.error(f"Erreur lors de l'invocation de {pm_agent.name}: {e}", exc_info=True)
+                break
         
-        logger.info(f"✅ Phase {phase_id} exécutée: {turn_count} tours")
+        logger.info(f"✅ Phase {phase_id} exécutée.")
     
     def _capture_tool_call_from_message(self, tool_call, agent_name: str):
         """Capture un tool call depuis un message SK."""

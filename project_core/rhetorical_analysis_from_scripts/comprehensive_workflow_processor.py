@@ -176,8 +176,8 @@ class CorpusManager:
         
         try:
             # Import dynamique pour éviter les erreurs de dépendances
-            from argumentation_analysis.ui.file_operations import load_extract_definitions
-            from argumentation_analysis.utils.core_utils.crypto_utils import derive_encryption_key
+            from argumentation_analysis.core.io_manager import load_extract_definitions
+            from argumentation_analysis.core.utils.crypto_utils import derive_encryption_key
             
             # Dérivation de la clé de chiffrement
             encryption_key = derive_encryption_key(self.config.encryption_passphrase)

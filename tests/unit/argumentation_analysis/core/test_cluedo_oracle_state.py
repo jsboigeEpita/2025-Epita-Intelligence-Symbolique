@@ -23,8 +23,10 @@ import asyncio
 
 from typing import Dict, Any, List
 from datetime import datetime
+from unittest.mock import patch
 
 # Imports du système
+from collections import deque
 from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
 from argumentation_analysis.core.enquete_states import EnqueteCluedoState
 from argumentation_analysis.agents.core.oracle.cluedo_dataset import CluedoDataset, RevealPolicy, RevelationRecord
@@ -84,7 +86,7 @@ class TestCluedoOracleState:
         assert oracle_state.oracle_interactions == 0
         assert oracle_state.cards_revealed == 0
         assert oracle_state.agent_turns == {}
-        assert isinstance(oracle_state.recent_revelations, list)
+        assert isinstance(oracle_state.recent_revelations, deque)
         
         # Vérification de l'état de base Cluedo
         assert oracle_state.nom_enquete == "Test Mystery Manor"

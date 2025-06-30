@@ -1,5 +1,0 @@
-fastapi
-llama-cpp-python
-pandas
-tqdm
-uvicorn

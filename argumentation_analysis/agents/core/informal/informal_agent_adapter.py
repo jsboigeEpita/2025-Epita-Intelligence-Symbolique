@@ -46,6 +46,10 @@ class InformalAgent:
         self.tools = tools or {}
         self.strict_validation = strict_validation
         self.logger = logging.getLogger(f"{__name__}.{agent_id}")
+
+        # Validation de la configuration des outils, comme attendu par les tests.
+        if self.strict_validation and not self.tools:
+            raise ValueError("Aucun outil fourni. L'agent ne peut pas fonctionner sans outils en mode de validation stricte.")
         
         # Essayer de créer le vrai agent SK sous-jacent
         try:
@@ -205,4 +209,4 @@ class InformalAgent:
 
 
 # Alias pour compatibilité
-InformalAnalysisAgent = InformalAgent
+# InformalAnalysisAgent = InformalAgent

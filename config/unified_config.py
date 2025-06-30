@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
@@ -19,7 +19,7 @@ TOUT EST CONFIGURÉ POUR L'AUTHENTICITÉ : Aucun mock par défaut.
 import os
 import enum
 from typing import List, Dict, Any, Optional, Union
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 
 # ==================== ÉNUMÉRATIONS ====================
@@ -79,6 +79,7 @@ class UnifiedConfig:
         AgentType.SYNTHESIS
     ])
     orchestration_type: OrchestrationType = OrchestrationType.UNIFIED
+    manual_mode: bool = False  # Ajout pour le mode manuel
     mock_level: MockLevel = MockLevel.NONE
     taxonomy_size: TaxonomySize = TaxonomySize.FULL
     
@@ -129,34 +130,52 @@ class UnifiedConfig:
 
     def __post_init__(self):
         """Validation et normalisation de la configuration."""
+        for f in fields(self):
+            if isinstance(f.type, type) and issubclass(f.type, enum.Enum):
+                value = getattr(self, f.name)
+                if isinstance(value, str):
+                    try:
+                        setattr(self, f.name, f.type(value))
+                    except ValueError:
+                        for member in f.type:
+                            if member.value.lower() == value.lower():
+                                setattr(self, f.name, member)
+                                break
+                        else:
+                            raise ValueError(f"'{value}' n'est pas une valeur valide pour {f.type.__name__}")
+
+        if os.environ.get('USE_MOCK_CONFIG') == '1':
+            self.logic_type = LogicType.PL
+            self.agents = [AgentType.INFORMAL, AgentType.SYNTHESIS]
+            self.orchestration_type = OrchestrationType.UNIFIED
+            self.mock_level = MockLevel.FULL
+            self.taxonomy_size = TaxonomySize.MOCK
+            self.enable_jvm = False
+            self.require_real_gpt = False
+            self.require_real_tweety = False
+            self.require_full_taxonomy = False
+            self.timeout_seconds = 30
+            self.use_mock_llm = True
+            self.use_authentic_llm = False
+            self.use_mock_services = True
+            self.use_authentic_services = False
+            return
+
         self._validate_configuration()
         self._normalize_agent_list()
         self._apply_authenticity_constraints()
 
     def _validate_configuration(self):
         """Valide la cohérence de la configuration."""
-        # Validation du niveau de mock vs authenticité
-        if self.mock_level != MockLevel.NONE:
-            if self.require_real_gpt or self.require_real_tweety or self.require_full_taxonomy:
-                raise ValueError(
-                    f"Configuration incohérente: mock_level={self.mock_level.value} "
-                    f"mais require_real_* activé. Pour l'authenticité 100%, "
-                    f"utilisez mock_level=none."
-                )
+        if self.mock_level != MockLevel.NONE and (self.require_real_gpt or self.require_real_tweety or self.require_full_taxonomy):
+            raise ValueError("Configuration incohérente: mock_level doit être NONE si des composants réels sont requis.")
         
-        # Validation agents vs logique
-        if self.logic_type == LogicType.FOL and AgentType.LOGIC in self.agents:
-            # Remplacer automatiquement par FOL_LOGIC
-            self.agents = [AgentType.FOL_LOGIC if a == AgentType.LOGIC else a for a in self.agents]
-        
-        # Validation JVM vs agents formels
         if AgentType.FOL_LOGIC in self.agents and not self.enable_jvm:
             raise ValueError("FOL_LOGIC agent nécessite enable_jvm=True")
 
     def _normalize_agent_list(self):
         """Normalise la liste des agents selon le type de logique."""
         if self.logic_type in [LogicType.FOL, LogicType.FIRST_ORDER]:
-            # Remplacer les agents logiques génériques par FOL
             self.agents = [
                 AgentType.FOL_LOGIC if a == AgentType.LOGIC else a 
                 for a in self.agents
@@ -165,7 +184,6 @@ class UnifiedConfig:
     def _apply_authenticity_constraints(self):
         """Applique les contraintes d'authenticité - AUTHENTICITÉ PAR DÉFAUT."""
         if self.mock_level == MockLevel.NONE:
-            # Force l'authenticité complète - CONFIGURATION PAR DÉFAUT
             self.require_real_gpt = True
             self.require_real_tweety = True
             self.require_full_taxonomy = True
@@ -208,10 +226,10 @@ class UnifiedConfig:
             "mock_level": self.mock_level.value,
             "validate_responses": self.validate_tool_calls,
             "timeout_seconds": self.timeout_seconds,
-            "default_model": self.default_model,      # gpt-4o-mini par défaut
-            "default_provider": self.default_provider, # openai par défaut
-            "use_mock_llm": self.use_mock_llm,        # False par défaut
-            "use_authentic_llm": self.use_authentic_llm # True par défaut
+            "default_model": self.default_model,
+            "default_provider": self.default_provider,
+            "use_mock_llm": self.use_mock_llm,
+            "use_authentic_llm": self.use_authentic_llm
         }
 
     def get_taxonomy_config(self) -> Dict[str, Any]:
@@ -221,54 +239,55 @@ class UnifiedConfig:
             "require_full_load": self.require_full_taxonomy,
             "node_count": 1000 if self.taxonomy_size == TaxonomySize.FULL else 3
         }
-
-    def get_kernel_with_gpt4o_mini(self):
+    def get_kernel_with_gpt4o_mini(self, force_authentic: bool = False):
         """
-        Crée un Kernel Semantic Kernel avec service LLM GPT-4o-mini authentique.
+        Crée un Kernel Semantic Kernel avec service LLM GPT-4o-mini.
         
-        Cette méthode est le pont principal entre UnifiedConfig et le service LLM réel.
-        Elle respecte la configuration d'authenticité (mock_level=NONE par défaut).
+        Cette méthode est le pont principal entre UnifiedConfig et le service LLM.
+        Elle respecte la configuration d'authenticité (mock_level=NONE par défaut),
+        mais peut être forcée en mode authentique via `force_authentic`.
+        
+        Args:
+            force_authentic (bool): Si True, force la création d'un service LLM
+                                    réel même en environnement de test.
         
         Returns:
-            Kernel: Instance Semantic Kernel configurée avec GPT-4o-mini authentique
+            Kernel: Instance Semantic Kernel configurée.
             
         Raises:
-            ValueError: Si la configuration est incohérente pour l'authenticité
-            RuntimeError: Si la création du service LLM échoue
+            ValueError: Si la configuration est incohérente pour l'authenticité.
+            RuntimeError: Si la création du service LLM échoue.
         """
         from semantic_kernel import Kernel
         from argumentation_analysis.core.llm_service import create_llm_service
         
-        # Validation d'authenticité stricte
-        if self.mock_level != MockLevel.NONE:
-            raise ValueError(
-                f"get_kernel_with_gpt4o_mini() nécessite mock_level=NONE pour l'authenticité. "
-                f"Trouvé: {self.mock_level.value}"
-            )
-        
-        if not self.use_authentic_llm:
-            raise ValueError(
-                "get_kernel_with_gpt4o_mini() nécessite use_authentic_llm=True pour l'authenticité"
-            )
-        
-        if self.use_mock_llm:
-            raise ValueError(
-                "get_kernel_with_gpt4o_mini() est incompatible avec use_mock_llm=True"
-            )
-        
-        # Création du Kernel avec service LLM authentique
+        if not force_authentic:
+            if self.mock_level != MockLevel.NONE:
+                raise ValueError(
+                    f"get_kernel_with_gpt4o_mini() nécessite mock_level=NONE pour l'authenticité. "
+                    f"Trouvé: {self.mock_level.value}"
+                )
+            
+            if not self.use_authentic_llm:
+                raise ValueError(
+                    "get_kernel_with_gpt4o_mini() nécessite use_authentic_llm=True pour l'authenticité"
+                )
+            
+            if self.use_mock_llm:
+                raise ValueError(
+                    "get_kernel_with_gpt4o_mini() est incompatible avec use_mock_llm=True"
+                )
+
         kernel = Kernel()
         
-        # Service LLM GPT-4o-mini authentique (jamais de mock)
+        # force_mock est l'inverse de force_authentic
         llm_service = create_llm_service(
             service_id="gpt-4o-mini-authentic",
-            force_mock=False  # Force l'authenticité
+            force_authentic=force_authentic
         )
         
-        # Ajout du service au kernel
         kernel.add_service(llm_service)
         
-        # Log validation authenticité
         import logging
         logger = logging.getLogger("UnifiedConfig.Authentic")
         logger.info(f"✅ Kernel authentique créé - Service: {type(llm_service).__name__}")
@@ -282,7 +301,10 @@ class UnifiedConfig:
         return {
             "logic_type": self.logic_type.value,
             "agents": [agent.value for agent in self.agents],
-            "orchestration_type": self.orchestration_type.value if hasattr(self.orchestration_type, 'value') else self.orchestration_type,
+            "orchestration": {
+                "type": self.orchestration_type.value if hasattr(self.orchestration_type, 'value') else self.orchestration_type,
+                "manual_mode": self.manual_mode
+            },
             "mock_level": self.mock_level.value,
             "taxonomy_size": self.taxonomy_size.value,
             "analysis_modes": self.analysis_modes,
@@ -370,9 +392,9 @@ class PresetConfigs:
             mock_level=MockLevel.FULL,
             taxonomy_size=TaxonomySize.MOCK,
             enable_jvm=False,
-            require_real_gpt=False,      # Cohérent avec mock_level=FULL
-            require_real_tweety=False,   # Cohérent avec mock_level=FULL
-            require_full_taxonomy=False, # Cohérent avec taxonomy_size=MOCK
+            require_real_gpt=False,
+            require_real_tweety=False,
+            require_full_taxonomy=False,
             timeout_seconds=30
         )
 
@@ -380,9 +402,8 @@ class PresetConfigs:
 
 def load_config_from_env() -> UnifiedConfig:
     """Charge la configuration depuis les variables d'environnement - AUTHENTIQUE PAR DÉFAUT."""
-    config = UnifiedConfig()  # Déjà configuré avec authenticité par défaut
+    config = UnifiedConfig()
     
-    # Configuration de base
     if logic_type := os.getenv("UNIFIED_LOGIC_TYPE"):
         config.logic_type = LogicType(logic_type)
     
@@ -395,11 +416,9 @@ def load_config_from_env() -> UnifiedConfig:
     if mock_level := os.getenv("UNIFIED_MOCK_LEVEL"):
         config.mock_level = MockLevel(mock_level)
     
-    # Configuration LLM - AUTHENTIQUE PAR DÉFAUT
     config.default_model = os.getenv("UNIFIED_DEFAULT_MODEL", "gpt-4o-mini")
     config.default_provider = os.getenv("UNIFIED_DEFAULT_PROVIDER", "openai")
     
-    # Flags d'authenticité - TRUE PAR DÉFAUT, peut être surchargé par l'env
     config.require_real_gpt = os.getenv("UNIFIED_REQUIRE_REAL_GPT", "true").lower() == "true"
     config.require_real_tweety = os.getenv("UNIFIED_REQUIRE_REAL_TWEETY", "true").lower() == "true"
     config.use_mock_llm = os.getenv("UNIFIED_USE_MOCK_LLM", "false").lower() == "true"
@@ -413,35 +432,28 @@ def validate_config(config: UnifiedConfig) -> List[str]:
     """Valide une configuration et retourne les erreurs trouvées - AUTHENTIQUE PAR DÉFAUT."""
     errors = []
     
-    # Vérification de cohérence mock vs authenticité
     if config.mock_level != MockLevel.NONE and config.require_real_gpt:
         errors.append("Mock level != none mais require_real_gpt=True")
     
-    # Vérification de cohérence des flags LLM
     if config.use_mock_llm and config.use_authentic_llm:
         errors.append("use_mock_llm et use_authentic_llm ne peuvent pas être tous les deux True")
     
     if config.use_mock_services and config.use_authentic_services:
         errors.append("use_mock_services et use_authentic_services ne peuvent pas être tous les deux True")
     
-    # Vérification modèle par défaut
     if config.default_model != "gpt-4o-mini":
         errors.append(f"default_model devrait être 'gpt-4o-mini' pour l'authenticité, trouvé: {config.default_model}")
     
-    # Vérification provider par défaut
     if config.default_provider != "openai":
         errors.append(f"default_provider devrait être 'openai' pour l'authenticité, trouvé: {config.default_provider}")
     
-    # Vérification disponibilité JVM
     if config.enable_jvm and not config.require_real_tweety:
         errors.append("JVM activée mais Tweety non-réel - Incohérent pour authenticité")
     
-    # Vérification agents vs logique
     fol_agents = [AgentType.FOL_LOGIC, AgentType.LOGIC]
     if any(agent in config.agents for agent in fol_agents) and not config.enable_jvm:
         errors.append("Agents logiques nécessitent JVM")
     
-    # Vérification authenticité complète pour mock_level=NONE
     if config.mock_level == MockLevel.NONE:
         authenticity_checks = [
             (config.use_mock_llm == False, "use_mock_llm devrait être False pour mock_level=NONE"),

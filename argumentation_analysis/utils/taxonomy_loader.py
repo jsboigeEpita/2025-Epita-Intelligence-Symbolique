@@ -30,6 +30,7 @@ TAXONOMY_URL = "https://raw.githubusercontent.com/ArgumentumGames/Argumentum/mas
 # Chemin local où sera stocké le fichier
 DATA_DIR = Path(__file__).parent.parent / DATA_DIR
 TAXONOMY_FILE = DATA_DIR / "argumentum_fallacies_taxonomy.csv"
+DEFAULT_TAXONOMY_FILE = DATA_DIR / "mock_taxonomy_cards.csv"
 
 # Variable globale pour contrôler le mode mock
 # Modifiez cette variable pour changer le mode de fonctionnement:
@@ -84,7 +85,7 @@ def get_taxonomy_path():
     else:
         # Version réelle (code conservé pour référence)
         if TAXONOMY_FILE.exists():
-            logger.info(f"Fichier de taxonomie trouvé localement: {TAXONOMY_FILE}")
+            logger.info(f"Fichier de taxonomie par défaut trouvé localement: {TAXONOMY_FILE}")
             return TAXONOMY_FILE
         
         # Créer le dossier data s'il n'existe pas

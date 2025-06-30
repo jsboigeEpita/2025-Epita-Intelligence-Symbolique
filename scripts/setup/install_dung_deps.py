@@ -4,6 +4,7 @@ Script pour installer les dépendances du projet abs_arg_dung
 dans l'environnement conda projet-is.
 """
 
+import argumentation_analysis.core.environment
 import os
 import sys
 import subprocess

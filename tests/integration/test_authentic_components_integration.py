@@ -1,4 +1,3 @@
-
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai
 from semantic_kernel.contents import ChatHistory
@@ -53,13 +52,11 @@ class TestRealGPT4oMiniIntegration:
         try:
             from argumentation_analysis.core.llm_service import create_llm_service
             
-            service = create_llm_service(
-                model_name="gpt-4o-mini",
-                use_real_service=True
-            )
+            service = create_llm_service()
             
             assert service is not None
-            assert hasattr(service, 'invoke') or hasattr(service, 'complete')
+            # La nouvelle API de semantic-kernel utilise get_chat_message_contents
+            assert hasattr(service, 'get_chat_message_contents')
             
         except ImportError:
             pytest.skip("LLM service components not available")
@@ -77,7 +74,7 @@ class TestRealGPT4oMiniIntegration:
             from argumentation_analysis.core.llm_service import create_llm_service
             
             # Créer service LLM réel
-            llm_service = create_llm_service(use_real_service=True)
+            llm_service = create_llm_service()
             
             # Créer orchestrateur
             orchestrator = RealLLMOrchestrator(llm_service=llm_service)
@@ -85,15 +82,16 @@ class TestRealGPT4oMiniIntegration:
             # Test avec texte réel
             test_text = "L'Ukraine a été créée par la Russie. Donc Poutine a raison."
             
-            result = await orchestrator.run_real_llm_orchestration(test_text)
+            result = await orchestrator.orchestrate_analysis(test_text)
             
             assert isinstance(result, dict)
-            assert "status" in result
-            assert "analysis" in result
+            assert "final_synthesis" in result
+            assert "analysis_results" in result
             
             # Vérifier que l'analyse contient du contenu réel
-            analysis = result.get("analysis", "")
-            assert len(analysis) > 100  # Analyse substantielle
+            analysis = result.get("analysis_results", {})
+            assert isinstance(analysis, dict)
+            assert len(analysis) > 0 # L'analyse doit contenir des résultats
             
         except ImportError:
             pytest.skip("Real LLM orchestrator not available")
@@ -127,6 +125,7 @@ class TestRealTweetyIntegration:
     
     @pytest.mark.integration
     @pytest.mark.requires_tweety_jar
+    @pytest.mark.asyncio
     async def test_real_tweety_modal_logic_analysis(self):
         """Test d'analyse logique modale avec Tweety réel."""
         if not self._is_real_tweety_available():
@@ -156,6 +155,7 @@ class TestRealTweetyIntegration:
     
     @pytest.mark.integration
     @pytest.mark.requires_tweety_jar
+    @pytest.mark.asyncio
     async def test_real_tweety_error_handling(self):
         """Test de gestion d'erreurs avec Tweety réel."""
         if not self._is_real_tweety_available():
@@ -239,6 +239,7 @@ class TestCompleteTaxonomyIntegration:
             pytest.skip("Taxonomy manager not available")
     
     @pytest.mark.integration
+    @pytest.mark.asyncio
     async def test_fallacy_analysis_with_complete_taxonomy(self):
         """Test d'analyse de sophismes avec taxonomie complète."""
         try:
@@ -295,7 +296,7 @@ class TestUnifiedAuthenticComponentsIntegration:
             from argumentation_analysis.core.mock_elimination import TaxonomyManager
             
             # 1. Service LLM authentique
-            llm_service = create_llm_service(use_real_service=True)
+            llm_service = create_llm_service()
             
             # 2. Taxonomie complète
             taxonomy_manager = TaxonomyManager()

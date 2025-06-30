@@ -23,7 +23,7 @@ from typing import Dict, List, Any, Optional
 try:
     from argumentation_analysis.services.jtms_service import JTMSService
     from argumentation_analysis.services.jtms_session_manager import JTMSSessionManager
-    from argumentation_analysis.api.jtms_models import BeliefModel, JustificationModel
+    from argumentation_analysis.api.jtms_models import BeliefInfo, JustificationInfo
     JTMS_AVAILABLE = True
 except ImportError as e:
     logging.warning(f"Services JTMS non disponibles: {e}")

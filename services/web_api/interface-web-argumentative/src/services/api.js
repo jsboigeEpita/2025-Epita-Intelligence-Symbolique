@@ -1,5 +1,8 @@
-// Utilisation de la variable d'environnement avec fallback intelligent
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+// En mode de développement et de test E2E, l'URL du backend est fournie par une variable d'environnement.
+// Cela permet au frontend (servi par le serveur de développement React) de communiquer avec le backend Python
+// qui tourne sur un port différent. En production, cette variable peut être absente,
+// et les requêtes utiliseront des chemins relatifs car le frontend est servi par le même serveur que l'API.
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || '';
 
 // Configuration par défaut pour les requêtes
 const defaultHeaders = {
@@ -256,7 +259,7 @@ export const testConnection = async () => {
 };
 
 // Export par défaut pour faciliter l'import
-export default {
+const apiService = {
   analyzeText,
   validateArgument,
   detectFallacies,

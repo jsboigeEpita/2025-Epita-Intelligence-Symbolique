@@ -1,0 +1,12 @@
+
+# Core NLP and Machine Learning
+transformers
+torch
+spacy
+
+# For fine-tuning and data handling
+datasets
+scikit-learn
+
+# Optional: For RAG/Verification
+faiss-cpu # or faiss-gpu

@@ -1,18 +1,25 @@
-# argumentation_analysis/agents/core/pm/pm_agent.py
+﻿# argumentation_analysis/agents/core/pm/pm_agent.py
 import logging
 from typing import Dict, Any, Optional
 
+import warnings
 from semantic_kernel import Kernel # type: ignore
 from semantic_kernel.functions.kernel_arguments import KernelArguments # type: ignore
+from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from semantic_kernel.contents.utils.author_role import AuthorRole
+
 
 from ..abc.agent_bases import BaseAgent
 from .pm_definitions import PM_INSTRUCTIONS # Ou PM_INSTRUCTIONS_V9 selon la version souhaitée
-from .prompts import prompt_define_tasks_v11, prompt_write_conclusion_v7
+from .prompts import prompt_define_tasks_v15, prompt_write_conclusion_v7
+from argumentation_analysis.agents.agent_factory import AgentFactory
+from argumentation_analysis.config.settings import AppSettings
+
 
 # Supposons que StateManagerPlugin est importable si nécessaire
 # from ...services.state_manager_plugin import StateManagerPlugin # Exemple
 
-class ProjectManagerAgent(BaseAgent):
+class LegacyProjectManagerAgent(BaseAgent):
     """
     Agent spécialisé dans la planification stratégique de l'analyse d'argumentation.
     Il définit les tâches séquentielles et génère la conclusion finale,
@@ -47,24 +54,24 @@ class ProjectManagerAgent(BaseAgent):
         # lors de l'ajout de la fonction si llm_service_id est valide.
 
         try:
-            self.sk_kernel.add_function(
-                prompt=prompt_define_tasks_v11, # Utiliser la dernière version du prompt
+            self._kernel.add_function(
+                prompt=prompt_define_tasks_v15, # Utiliser la dernière version du prompt
                 plugin_name=plugin_name,
                 function_name="DefineTasksAndDelegate", # Nom plus SK-conventionnel
                 description="Defines the NEXT single task, registers it, and designates 1 agent (Exact Name Required).",
-                # prompt_execution_settings=self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id) # Géré par le kernel
+                # prompt_execution_settings=self.kernel.get_prompt_execution_settings_from_service_id(llm_service_id) # Géré par le kernel
             )
             self.logger.debug(f"Fonction sémantique '{plugin_name}.DefineTasksAndDelegate' ajoutée.")
         except Exception as e:
             self.logger.error(f"Erreur lors de l'ajout de la fonction '{plugin_name}.DefineTasksAndDelegate': {e}")
 
         try:
-            self.sk_kernel.add_function(
+            self._kernel.add_function(
                 prompt=prompt_write_conclusion_v7, # Utiliser la dernière version du prompt
                 plugin_name=plugin_name,
                 function_name="WriteAndSetConclusion", # Nom plus SK-conventionnel
                 description="Writes and registers the final conclusion (with pre-check of state).",
-                # prompt_execution_settings=self.sk_kernel.get_prompt_execution_settings_from_service_id(llm_service_id) # Géré par le kernel
+                # prompt_execution_settings=self.kernel.get_prompt_execution_settings_from_service_id(llm_service_id) # Géré par le kernel
             )
             self.logger.debug(f"Fonction sémantique '{plugin_name}.WriteAndSetConclusion' ajoutée.")
         except Exception as e:
@@ -79,7 +86,7 @@ class ProjectManagerAgent(BaseAgent):
         # Si les prompts étaient conçus pour appeler directement {{StateManager.add_analysis_task}},
         # alors il faudrait ajouter le plugin ici.
         # self.logger.info("Vérification pour StateManagerPlugin...")
-        # state_manager_plugin_instance = self.sk_kernel.plugins.get("StateManager")
+        # state_manager_plugin_instance = self.kernel.plugins.get("StateManager")
         # if state_manager_plugin_instance:
         #     self.logger.info("StateManagerPlugin déjà présent dans le kernel global, aucune action supplémentaire ici.")
         # else:
@@ -87,7 +94,7 @@ class ProjectManagerAgent(BaseAgent):
         #                        "doivent l'appeler directement, il doit être ajouté au kernel (typiquement par l'orchestrateur).")
         #     # Exemple si on devait l'ajouter ici (nécessiterait l'instance):
         #     # sm_plugin = StateManagerPlugin(...) # Nécessite l'instance du StateManager
-        #     # self.sk_kernel.add_plugin(sm_plugin, plugin_name="StateManager")
+        #     # self.kernel.add_plugin(sm_plugin, plugin_name="StateManager")
         #     # self.logger.info("StateManagerPlugin ajouté localement au kernel du PM (ceci est un exemple).")
 
         self.logger.info(f"Composants pour {self.name} configurés.")
@@ -111,7 +118,7 @@ class ProjectManagerAgent(BaseAgent):
         args = KernelArguments(analysis_state_snapshot=analysis_state_snapshot, raw_text=raw_text)
         
         try:
-            response = await self.sk_kernel.invoke(
+            response = await self._kernel.invoke(
                 plugin_name=self.name,
                 function_name="DefineTasksAndDelegate",
                 arguments=args
@@ -144,7 +151,7 @@ class ProjectManagerAgent(BaseAgent):
         args = KernelArguments(analysis_state_snapshot=analysis_state_snapshot, raw_text=raw_text)
 
         try:
-            response = await self.sk_kernel.invoke(
+            response = await self._kernel.invoke(
                 plugin_name=self.name,
                 function_name="WriteAndSetConclusion",
                 arguments=args
@@ -157,54 +164,79 @@ class ProjectManagerAgent(BaseAgent):
             # Retourner une chaîne d'erreur ou lever une exception spécifique
             return f"ERREUR: Impossible d'écrire la conclusion. Détails: {e}"
 
-    # Implémentation des méthodes abstraites de BaseAgent
-    async def get_response(self, request: str, context: str = "", **kwargs) -> str:
-        """
-        Méthode pour obtenir une réponse de l'agent basée sur une requête.
-        
-        Args:
-            request: La requête ou question posée à l'agent
-            context: Le contexte supplémentaire pour la requête
-            **kwargs: Arguments supplémentaires
-            
-        Returns:
-            La réponse de l'agent sous forme de chaîne
-        """
-        self.logger.info(f"get_response appelée avec: {request}")
-        
-        # Logique simple pour déterminer le type de réponse selon la requête
-        if "task" in request.lower() or "delegate" in request.lower():
-            return await self.define_tasks_and_delegate(context, request)
-        elif "conclusion" in request.lower() or "final" in request.lower():
-            return await self.write_conclusion(context, request)
-        else:
-            # Réponse générique basée sur les capacités de l'agent
-            capabilities = self.get_agent_capabilities()
-            return f"Agent ProjectManager prêt. Capacités: {', '.join(capabilities.keys())}"
+    async def get_response(
+        self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None
+    ) -> list[ChatMessageContent]:
+        """Implémentation de la méthode abstraite requise."""
+        self.logger.debug(f"get_response appelé, délégation à invoke_single pour {self.name}.")
+        return await self.invoke_single(kernel, arguments)
 
-    async def invoke(self, function_name: str, **kwargs) -> str:
+    async def invoke_single(
+        self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None
+    ) -> list[ChatMessageContent]:
         """
-        Méthode pour invoquer une fonction spécifique de l'agent.
-        
-        Args:
-            function_name: Le nom de la fonction à invoquer
-            **kwargs: Arguments pour la fonction
-            
-        Returns:
-            Le résultat de l'invocation
+        Implémentation requise par la classe de base abstraite.
+        Délègue à la méthode principale de l'agent.
         """
-        self.logger.info(f"invoke appelée pour la fonction: {function_name}")
+        self.logger.debug(f"invoke_single appelé, délégation à invoke_custom pour {self.name}.")
         
-        if function_name == "define_tasks_and_delegate":
-            analysis_state = kwargs.get("analysis_state_snapshot", "")
-            raw_text = kwargs.get("raw_text", "")
-            return await self.define_tasks_and_delegate(analysis_state, raw_text)
-        elif function_name == "write_conclusion":
-            analysis_state = kwargs.get("analysis_state_snapshot", "")
-            raw_text = kwargs.get("raw_text", "")
-            return await self.write_conclusion(analysis_state, raw_text)
-        else:
-            raise ValueError(f"Fonction inconnue: {function_name}")
+        # Surcharge pour retourner une liste comme attendu par la nouvelle interface d'agent
+        response_message = await self.invoke_custom(kernel, arguments)
+        return [response_message]
+
+
+    async def invoke_custom(
+        self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None
+    ) -> ChatMessageContent:
+        """
+        Logique d'invocation principale du PM, qui décide de la prochaine action.
+        """
+        if not arguments or "chat_history" not in arguments:
+            raise ValueError("L'historique de chat ('chat_history') est manquant dans les arguments.")
+
+        history = arguments["chat_history"]
+        self.logger.info(f"invoke_custom called for {self.name} with {len(history)} messages.")
+
+        # Extraire le texte brut initial du message utilisateur dans l'historique
+        raw_text_user_message = next((m.content for m in history if m.role == "user"), None)
+        if not raw_text_user_message:
+             raise ValueError("Message utilisateur initial non trouvé dans l'historique.")
+        # Isoler le texte brut de l'invite système
+        raw_text = raw_text_user_message.split("---\n")[-2].strip() if "---" in raw_text_user_message else raw_text_user_message
+
+
+        # Le StateManager est maintenant dans le kernel, on peut l'appeler
+        state_manager_plugin = kernel.plugins.get("StateManager")
+        if not state_manager_plugin:
+            raise RuntimeError("StateManagerPlugin non trouvé dans le kernel.")
+        
+        # Correction: Utiliser le nom de fonction correct ("get_current_state_snapshot") et appeler la fonction.
+        snapshot_function = state_manager_plugin["get_current_state_snapshot"]
+        # Correction : Les fonctions natives du kernel nécessitent que le kernel
+        # soit passé comme argument lors de l'appel.
+        # Ajout du paramètre summarize requis.
+        arguments = KernelArguments(summarize=False)
+        snapshot_result = await snapshot_function(kernel=kernel, arguments=arguments)
+        analysis_state_snapshot = str(snapshot_result)
+
+        if not raw_text:
+            self.logger.warning("Aucun texte brut (message utilisateur initial) trouvé dans l'historique.")
+            return ChatMessageContent(role=AuthorRole.ASSISTANT, content='{"error": "Initial text (user message) not found in history."}', name=self.name)
+
+        # La logique de décision est maintenant entièrement déléguée à la fonction sémantique
+        # `DefineTasksAndDelegate` qui utilise `prompt_define_tasks_v11`.
+        # Ce prompt est conçu pour analyser l'état et déterminer s'il faut
+        # créer une tâche ou conclure.
+        self.logger.info("Délégation de la décision et de la définition de la tâche à la fonction sémantique.")
+
+        try:
+            result_str = await self.define_tasks_and_delegate(analysis_state_snapshot, raw_text)
+            return ChatMessageContent(role=AuthorRole.ASSISTANT, content=result_str, name=self.name)
+
+        except Exception as e:
+            self.logger.error(f"Erreur durant l'invocation du PM Agent: {e}", exc_info=True)
+            error_msg = f'{{"error": "An unexpected error occurred in ProjectManagerAgent: {e}"}}'
+            return ChatMessageContent(role=AuthorRole.ASSISTANT, content=error_msg, name=self.name)
 
     # D'autres méthodes métiers pourraient être ajoutées ici si nécessaire,
     # par exemple, une méthode qui encapsule la logique de décision principale du PM
@@ -230,11 +262,68 @@ class ProjectManagerAgent(BaseAgent):
     #     #     return await self.define_tasks_and_delegate(full_state_snapshot, raw_text)
     #     pass
 
+
+class ProjectManagerAgent(BaseAgent):
+    """
+    (Façade Obsolète) Wrapper pour le nouveau AgentFactory.
+    Cette classe est conservée pour la rétrocompatibilité.
+    Elle émet un avertissement et délègue tous les appels à la nouvelle
+    architecture basée sur AgentFactory.
+    """
+    def __init__(self, kernel: Kernel, agent_name: str = "ProjectManagerAgent", **kwargs):
+        warnings.warn(
+            "La classe 'ProjectManagerAgent' est obsolète et sera supprimée dans une future version. "
+            "Veuillez utiliser 'AgentFactory.create_agent(\"project_manager\", ...)' à la place.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        super().__init__(kernel, agent_name)
+        
+        # Pour instancier l'agent moderne, la factory a besoin des settings.
+        # On suppose qu'ils peuvent être chargés ici ou qu'un kernel pré-configuré est passé.
+        try:
+            settings = AppSettings()
+            self._modern_agent = AgentFactory.create_agent(
+                agent_type="project_manager",
+                kernel=kernel,
+                llm_service_id=settings.service_manager.default_llm_service_id,
+                settings=settings,
+                agent_name=agent_name
+            )
+        except Exception as e:
+            self.logger.error(f"Impossible de créer l'agent moderne via la factory: {e}")
+            self._modern_agent = None
+
+    def __getattribute__(self, name: str) -> Any:
+        """
+        Délègue les appels de méthode à l'agent moderne si elles existent.
+        """
+        # Éviter la récursion infinie pour les attributs internes
+        if name.startswith('_') or name in ['logger', 'name', 'kernel']:
+            return super().__getattribute__(name)
+            
+        if self._modern_agent and hasattr(self._modern_agent, name):
+            return getattr(self._modern_agent, name)
+        
+        return super().__getattribute__(name)
+
+    async def get_response(self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None) -> list[ChatMessageContent]:
+        if not self._modern_agent:
+            raise RuntimeError("L'agent moderne n'a pas pu être initialisé.")
+        return await self._modern_agent.get_response(kernel, arguments)
+
+    async def invoke_single(self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None) -> list[ChatMessageContent]:
+        if not self._modern_agent:
+            raise RuntimeError("L'agent moderne n'a pas pu être initialisé.")
+        return await self._modern_agent.invoke_single(kernel, arguments)
+
 if __name__ == '__main__':
     import argparse
     import asyncio
     import os
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
+    from argumentation_analysis.config.settings import settings
     
     # Configuration du logging
     logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s')
@@ -265,9 +354,9 @@ if __name__ == '__main__':
                 kernel_instance = Kernel()
                 
                 # Configuration du service LLM OpenAI
-                api_key = os.getenv('OPENAI_API_KEY', '').strip('"')
+                api_key = settings.openai.api_key.get_secret_value() if settings.openai.api_key else None
                 if not api_key:
-                    raise ValueError("OPENAI_API_KEY non configurée")
+                    raise ValueError("OPENAI_API_KEY non configurée dans les settings")
                 
                 llm_service = OpenAIChatCompletion(
                     service_id="openai_service",
@@ -276,9 +365,10 @@ if __name__ == '__main__':
                 )
                 kernel_instance.add_service(llm_service)
                 
-                # Création de l'agent PM
+                # Création de l'agent PM (via la façade pour tester l'avertissement)
                 pm_agent = ProjectManagerAgent(kernel=kernel_instance)
-                pm_agent.setup_agent_components("openai_service")
+                # La configuration est maintenant gérée en interne par la façade via la factory
+                # pm_agent.setup_agent_components("openai_service")
                 
                 # Prompt de génération de rapport
                 report_prompt = f"""
@@ -342,7 +432,7 @@ Le rapport doit être professionnel, technique et complet.
                         f.write(report_content)
                     logger_main.info(f"Rapport généré: {args.output}")
                 else:
-                    print(report_content)
+                    pass
                 
                 logger_main.info("Génération de rapport terminée avec succès")
                 
@@ -356,22 +446,6 @@ Le rapport doit être professionnel, technique et complet.
         logger_main.info("Exemple d'initialisation et d'utilisation (nécessite un kernel configuré):")
     # # pm_agent.setup_agent_components(llm_service_id="default")
     
-    # # print(pm_agent.get_agent_info())
-    
-    # # async def run_example():
-    # #     # Simuler un état et un texte
-    # #     dummy_state = '{"tasks_defined": [], "tasks_answered": [], "final_conclusion": null}'
-    # #     dummy_text = "Ceci est un texte d'exemple pour l'analyse."
-        
-    # #     print("\n--- Test define_tasks_and_delegate ---")
-    # #     delegation_result = await pm_agent.define_tasks_and_delegate(dummy_state, dummy_text)
-    # #     print(f"Résultat de la délégation:\n{delegation_result}")
-        
-    # #     # Simuler un état plus avancé pour la conclusion
-    # #     advanced_state = '{"tasks_defined": ["task_1"], "tasks_answered": {"task_1": "Extraction faite."}, "identified_arguments": ["Arg1"], "final_conclusion": null}'
-    # #     print("\n--- Test write_conclusion ---")
-    # #     conclusion_result = await pm_agent.write_conclusion(advanced_state, dummy_text)
-    # #     print(f"Résultat de la conclusion:\n{conclusion_result}")
 
     # # import asyncio
     # # asyncio.run(run_example())

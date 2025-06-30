@@ -1,3 +1,4 @@
+from unittest.mock import patch
 
 # Authentic gpt-4o-mini imports (replacing mocks)
 import openai
@@ -133,31 +134,33 @@ class TestValidationIntegriteApresCorrections:
         
         logger.info("[OK] SUCCÈS: Système de permissions renforcé fonctionne")
     
-    def test_fonctionnalites_legitimes_preservees(self):
+    @pytest.mark.asyncio
+    async def test_fonctionnalites_legitimes_preservees(self):
         """[OK] VALIDATION: Les fonctionnalités légitimes sont préservées."""
         logger.info("[OK] TEST: Fonctionnalités légitimes préservées")
-        
+    
         # Les cartes de Moriarty sont toujours accessibles (légitime)
         moriarty_cards = self.dataset.get_moriarty_cards()
         assert len(moriarty_cards) == 3
         assert "Colonel Moutarde" in moriarty_cards
-        
+    
         # Les révélations légitimes fonctionnent toujours
         revelations = self.dataset.get_revealed_cards_to_agent("TestAgent")
         assert isinstance(revelations, list)
-        
+    
         # Les requêtes via le système de permissions fonctionnent
         from argumentation_analysis.agents.core.oracle.permissions import QueryType
-        result = self.dataset.process_query(
-            "TestAgent", 
-            QueryType.CLUE_REQUEST, 
+        result = await self.dataset.process_query(
+            "TestAgent",
+            QueryType.CLUE_REQUEST,
             {}
         )
         assert result.success is True
         
         logger.info("[OK] SUCCÈS: Fonctionnalités légitimes préservées")
     
-    def test_oracle_enhanced_respecte_integrite(self):
+    @pytest.mark.asyncio
+    async def test_oracle_enhanced_respecte_integrite(self):
         """[OK] VALIDATION: Oracle Enhanced respecte l'intégrité."""
         logger.info("[OK] TEST: Oracle Enhanced respecte l'intégrité")
         
@@ -165,12 +168,12 @@ class TestValidationIntegriteApresCorrections:
         query_params = {
             "suggestion": {
                 "suspect": "Colonel Moutarde",  # Carte possédée par Moriarty
-                "arme": "Poignard",             # Carte NON possédée par Moriarty  
+                "arme": "Poignard",             # Carte NON possédée par Moriarty
                 "lieu": "Bureau"                # Carte possédée par Moriarty
             }
         }
         
-        result = self.dataset.process_query("TestAgent", QueryType.SUGGESTION_VALIDATION, query_params)
+        result = await self.dataset.process_query("TestAgent", QueryType.SUGGESTION_VALIDATION, query_params)
         
         # Vérification que l'Oracle fonctionne correctement
         assert result.success is True
@@ -224,7 +227,8 @@ class TestValidationIntegriteApresCorrections:
         logger.info("[OK] SUCCÈS: Toutes les règles du Cluedo sont respectées")
 
 
-def test_validation_complete_integrite_apres_corrections():
+@pytest.mark.asyncio
+async def test_validation_complete_integrite_apres_corrections():
     """Test principal de validation complète après corrections."""
     logger.info("🔍 DÉBUT DE LA VALIDATION COMPLÈTE APRÈS CORRECTIONS")
     
@@ -262,14 +266,14 @@ def test_validation_complete_integrite_apres_corrections():
         return False
     
     try:
-        test_instance.test_fonctionnalites_legitimes_preservees()
+        await test_instance.test_fonctionnalites_legitimes_preservees()
         succes_tests.append("Fonctionnalités légitimes préservées")
     except Exception as e:
         logger.error(f"❌ ÉCHEC: Fonctionnalités légitimes - {e}")
         return False
     
     try:
-        test_instance.test_oracle_enhanced_respecte_integrite()
+        await test_instance.test_oracle_enhanced_respecte_integrite()
         succes_tests.append("Oracle Enhanced respecte l'intégrité")
     except Exception as e:
         logger.error(f"❌ ÉCHEC: Oracle Enhanced - {e}")

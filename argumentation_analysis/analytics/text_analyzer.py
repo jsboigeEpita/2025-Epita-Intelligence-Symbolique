@@ -14,74 +14,51 @@ textuelles, avec la possibilité d'étendre les types d'analyses supportées
 à l'avenir via le paramètre `analysis_type`.
 """
 import logging
-from typing import Dict, Any
+from typing import Any
+from argumentation_analysis.config.settings import AppSettings
 
-# L'importation de run_analysis_conversation a été déplacée dans perform_text_analysis
-# pour résoudre une dépendance circulaire.
+logger = logging.getLogger(__name__)
 
-async def perform_text_analysis(text: str, services: Dict[str, Any], analysis_type: str = "default") -> Any:
-    """Effectue une analyse de texte en fonction du texte, des services et du type d'analyse fournis.
+async def perform_text_analysis(text: str, services: dict[str, Any], analysis_type: str = "default") -> Any:
+    """
+    Effectue une analyse de texte en utilisant l'orchestrateur `EnhancedPMAnalysisRunner`.
 
-    Cette fonction orchestre l'analyse en appelant les fonctions d'analyse
-    sous-jacentes appropriées (actuellement [`run_analysis_conversation`](argumentation_analysis/orchestration/analysis_runner.py:0)).
-    Elle s'attend à ce qu'un service LLM initialisé soit présent dans le dictionnaire `services`.
+    Cette fonction sert de point d'entrée pour l'analyse, en utilisant le nouvel
+    orchestrateur amélioré pour effectuer l'analyse.
 
     :param text: Le texte d'entrée à analyser.
-    :type text: str
-    :param services: Un dictionnaire de services d'analyse initialisés.
-                     Doit contenir 'llm_service'. Il peut également contenir
-                     le statut 'jvm_ready', bien qu'il ne soit pas directement
-                     utilisé par cette fonction mais puisse l'être par les services sous-jacents.
-    :type services: Dict[str, Any]
-    :param analysis_type: Le type d'analyse à effectuer. Ce paramètre est
-                          destiné à une expansion future, permettant le routage vers
-                          différentes fonctions d'analyse spécialisées (par exemple, "rhetoric",
-                          "fallacies"). Actuellement, il est principalement utilisé pour la journalisation et
-                          ne modifie pas la logique d'analyse principale qui utilise par défaut
-                          [`run_analysis_conversation`](argumentation_analysis/orchestration/analysis_runner.py:0).
-    :type analysis_type: str
-    :return: Les résultats de l'analyse. Actuellement, [`run_analysis_conversation`](argumentation_analysis/orchestration/analysis_runner.py:0)
-             ne retourne pas explicitement de valeur dans son contexte d'utilisation original ;
-             elle journalise les résultats. Cette fonction reflète ce comportement en retournant None
-             en cas de succès (impliquant que les résultats sont journalisés ou gérés
-             ailleurs) ou en cas d'erreurs critiques comme un service LLM manquant.
-             Des améliorations futures pourraient impliquer le retour de résultats d'analyse structurés.
-             Retourne None si les services essentiels sont manquants ou si une erreur se produit.
-   :rtype: Optional[Any] # Peut retourner None ou propager une exception. Si succès, retourne None implicitement.
-   :raises ImportError: Si les composants d'analyse essentiels ne peuvent pas être importés.
-    :raises Exception: Pour toute autre erreur survenant pendant le processus d'analyse.
+    :param services: Dictionnaire de services. Doit contenir 'llm_service'.
+    :param analysis_type: Type d'analyse (pour la journalisation).
+    :return: Les résultats structurés de l'analyse.
+    :raises Exception: Propage les exceptions de l'orchestrateur.
     """
-    logging.info(f"Initiating text analysis of type '{analysis_type}' on text of length {len(text)} chars.")
+    logger.info(f"Lancement de l'analyse de texte améliorée de type '{analysis_type}' sur un texte de {len(text)} caractères.")
 
-    # --- DEBUT DU CORRECTIF POUR L'IMPORT CIRCULAIRE ---
-    # L'import est effectué ici pour briser le cycle de dépendance qui se produit lorsque
-    # `text_analyzer` est importé par une chaîne qui dépend de `analysis_runner` qui,
-    # à son tour, importe des modules (comme `auto_env`) qui peuvent déclencher une
-    # cascade d'imports menant de nouveau à `text_analyzer`.
+    # Utilisation du nouvel orchestrateur. L'import est local pour la clarté.
     try:
-        from argumentation_analysis.orchestration.analysis_runner import run_analysis_conversation
+        from argumentation_analysis.orchestration.enhanced_pm_analysis_runner import EnhancedPMAnalysisRunner
     except ImportError as e:
-        logging.critical(f"Impossible d'importer 'run_analysis_conversation' même avec un import local: {e}", exc_info=True)
+        logger.critical(f"Impossible d'importer 'EnhancedPMAnalysisRunner': {e}", exc_info=True)
         raise
-    # --- FIN DU CORRECTIF ---
-
 
     llm_service = services.get("llm_service")
-    # jvm_ready_status = services.get("jvm_ready", False) # Disponible si nécessaire
-
     if not llm_service:
-        logging.critical(" Le service LLM n'est pas disponible dans les services fournis. L'analyse ne peut pas continuer.")
-        return None # Indique un échec critique
+        logger.critical("Le service LLM n'est pas disponible dans les services fournis. L'analyse ne peut pas continuer.")
+        return None
 
     try:
-        logging.info(f"Lancement de l'analyse principale (type: {analysis_type}) via run_analysis_conversation...")
-        await run_analysis_conversation(
-            texte_a_analyser=text,
+        runner = EnhancedPMAnalysisRunner()
+        logger.info(f"Lancement de l'analyse principale (type: {analysis_type}) via EnhancedPMAnalysisRunner...")
+        
+        analysis_result = await runner.run_enhanced_analysis(
+            text_content=text,
             llm_service=llm_service
         )
-        logging.info(f"Analyse principale (type: '{analysis_type}') terminee avec succes (via run_analysis_conversation).")
-        return
+        
+        logger.info(f"Analyse principale (type: '{analysis_type}') terminée avec succès via EnhancedPMAnalysisRunner.")
+        logger.debug(f"RÉSULTAT BRUT de EnhancedPMAnalysisRunner: {analysis_result}")
+        return analysis_result
 
     except Exception as e:
-        logging.error(f" Erreur lors de l'analyse du texte (type: {analysis_type}): {e}", exc_info=True)
+        logger.error(f"Erreur lors de l'analyse du texte (type: {analysis_type}): {e}", exc_info=True)
         raise

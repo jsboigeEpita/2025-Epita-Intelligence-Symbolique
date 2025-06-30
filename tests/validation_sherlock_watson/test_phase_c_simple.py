@@ -18,7 +18,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_phase_c_simple():
     """
     Test simple de la Phase C avec mémoire contextuelle.

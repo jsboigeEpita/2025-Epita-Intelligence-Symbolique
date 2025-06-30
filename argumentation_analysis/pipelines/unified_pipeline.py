@@ -13,26 +13,41 @@ except ImportError as e:
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Pipeline Unifié - Point d'Entrée Principal avec Orchestration Étendue
-====================================================================
+"""Point d'entrée unifié et intelligent pour l'analyse argumentative.
 
-Ce module sert de point d'entrée principal pour l'analyse argumentative,
-intégrant à la fois le pipeline original et le nouveau pipeline d'orchestration
-avec l'architecture hiérarchique complète.
+Objectif:
+    Fournir une interface unique (`analyze_text`) pour lancer une analyse
+    argumentative, tout en masquant la complexité du choix du moteur
+    d'exécution sous-jacent. Ce module agit comme un routeur qui sélectionne
+    automatiquement le pipeline le plus approprié (original, hiérarchique,
+    spécialisé) en fonction des entrées et des capacités disponibles.
 
-MIGRATION VERS L'ORCHESTRATION ÉTENDUE :
-Ce fichier facilite la transition depuis l'API existante vers les nouvelles
-capacités d'orchestration hiérarchique et spécialisée.
+Données d'entrée:
+    - Un texte brut à analyser.
+    - Des paramètres de configuration (`mode`, `analysis_type`, etc.) qui
+      guident la sélection du pipeline.
 
-Usage recommandé :
-- Pour une compatibilité maximale : utiliser les fonctions de ce module
-- Pour les nouvelles fonctionnalités : utiliser directement unified_orchestration_pipeline
-- Pour des performances optimales : utiliser l'orchestration automatique
+Étapes (Logique de routage):
+    1.  **Détection du Mode**: En mode "auto", détermine le meilleur pipeline
+        disponible (`_detect_best_pipeline_mode`).
+    2.  **Validation**: Vérifie la validité des entrées.
+    3.  **Exécution du Pipeline Sélectionné**:
+        - **Mode "orchestration"**: Aiguille vers un orchestrateur spécialisé
+          (`Cluedo`, `Conversation`, etc.) en fonction du contenu du texte ou
+          des paramètres (`_run_orchestration_pipeline`).
+        - **Mode "original"**: Appelle l'ancien pipeline `unified_text_analysis`
+          pour la rétrocompatibilité (`_run_original_pipeline`).
+        - **Mode "hybrid"**: Exécute les deux pipelines et tente de synthétiser
+          les résultats (`_run_hybrid_pipeline`).
+    4.  **Enrichissement**: Peut ajouter des comparaisons de performance et des
+        recommandations aux résultats finaux.
+    5.  **Fallback**: En cas d'échec du pipeline principal, peut tenter de
+        s'exécuter avec le pipeline original.
 
-Version: 2.0.0 (avec orchestration étendue)
-Auteur: Intelligence Symbolique EPITA
-Date: 10/06/2025
+Artefacts produits:
+    - Un dictionnaire de résultats unifié, contenant les métadonnées de
+      l'exécution, les résultats bruts du pipeline choisi, et des informations
+      additionnelles (comparaison, recommandations).
 """
 
 import asyncio
@@ -53,20 +68,16 @@ except ImportError as e:
     logging.warning(f"Pipeline original non disponible: {e}")
     ORIGINAL_PIPELINE_AVAILABLE = False
 
-# Imports du nouveau pipeline d'orchestration
+# Imports des nouveaux orchestrateurs spécialisés
 try:
-    from argumentation_analysis.pipelines.unified_orchestration_pipeline import (
-        run_unified_orchestration_pipeline,
-        run_extended_unified_analysis,
-        compare_orchestration_approaches,
-        ExtendedOrchestrationConfig,
-        OrchestrationMode,
-        AnalysisType,
-        create_extended_config_from_params
-    )
+    from argumentation_analysis.orchestrators.cluedo_orchestrator import CluedoOrchestrator
+    from argumentation_analysis.orchestrators.conversation_orchestrator import ConversationOrchestrator
+    from argumentation_analysis.orchestrators.real_llm_orchestrator import RealLLMOrchestrator
+    from argumentation_analysis.orchestrators.logique_complexe_orchestrator import LogiqueComplexeOrchestrator
+    from argumentation_analysis.services.llm_service import create_llm_service
     ORCHESTRATION_PIPELINE_AVAILABLE = True
 except ImportError as e:
-    logging.warning(f"Pipeline d'orchestration non disponible: {e}")
+    logging.warning(f"Nouveaux orchestrateurs non disponibles: {e}")
     ORCHESTRATION_PIPELINE_AVAILABLE = False
 
 logger = logging.getLogger("UnifiedPipeline")
@@ -210,43 +221,49 @@ def _detect_best_pipeline_mode(enable_orchestration: bool) -> str:
 
 
 async def _run_orchestration_pipeline(
-    text: str, 
-    analysis_type: str, 
-    orchestration_mode: str, 
-    use_mocks: bool, 
+    text: str,
+    analysis_type: str,
+    orchestration_mode: str,
+    use_mocks: bool,
     source_info: Optional[str],
     results: Dict[str, Any],
     **kwargs
 ) -> Dict[str, Any]:
-    """Exécute le pipeline d'orchestration étendu."""
-    logger.info("[UNIFIED] Exécution du pipeline d'orchestration étendu...")
-    
+    """Exécute l'orchestration en sélectionnant un orchestrateur spécialisé."""
+    logger.info("[UNIFIED] Exécution via un orchestrateur spécialisé...")
+
     if not ORCHESTRATION_PIPELINE_AVAILABLE:
-        raise RuntimeError("Pipeline d'orchestration non disponible")
-    
-    # Configuration étendue
-    config = create_extended_config_from_params(
-        orchestration_mode=orchestration_mode,
-        analysis_type=analysis_type,
-        use_mocks=use_mocks,
-        **kwargs
-    )
-    
+        raise RuntimeError("Orchestrateurs spécialisés non disponibles.")
+
+    llm_service = create_llm_service(use_mocks=use_mocks)
+    config = kwargs
+
+    # Logique de sélection de l'orchestrateur
+    orchestrator = None
+    if orchestration_mode == 'cluedo' or "enquête" in text.lower() or "témoin" in text.lower():
+        orchestrator = CluedoOrchestrator(llm_service, config)
+        analysis_method = orchestrator.orchestrate_investigation_analysis
+    elif orchestration_mode == 'conversation' or ":" in text:
+        orchestrator = ConversationOrchestrator(llm_service, config)
+        analysis_method = orchestrator.orchestrate_dialogue_analysis
+    elif orchestration_mode == 'logique' or "tous les hommes" in text.lower():
+        orchestrator = LogiqueComplexeOrchestrator(llm_service, config)
+        analysis_method = orchestrator.orchestrate_complex_logical_analysis
+    else: # Fallback sur l'orchestrateur LLM générique
+        orchestrator = RealLLMOrchestrator(llm_service, config)
+        analysis_method = orchestrator.orchestrate_multi_llm_analysis
+
+    logger.info(f"Orchestrateur sélectionné: {orchestrator.__class__.__name__}")
+
     # Exécution
-    orchestration_results = await run_unified_orchestration_pipeline(text, config, source_info)
-    
+    orchestration_results = await analysis_method(text)
+
     # Intégration des résultats
     results["pipeline_results"]["orchestration"] = orchestration_results
-    
-    # Copier les champs principaux pour compatibilité
-    for key in ["informal_analysis", "formal_analysis", "unified_analysis", "orchestration_analysis"]:
-        if key in orchestration_results:
-            results[key] = orchestration_results[key]
-    
-    # Copier les nouveaux champs d'orchestration
-    for key in ["strategic_analysis", "tactical_coordination", "operational_results", "specialized_orchestration"]:
-        if key in orchestration_results:
-            results[key] = orchestration_results[key]
+    results["specialized_orchestration"] = {
+        "orchestrator_used": orchestrator.__class__.__name__,
+        **orchestration_results
+    }
     
     return results
 
@@ -364,20 +381,7 @@ async def _compare_pipelines(text: str, analysis_type: str, use_mocks: bool) -> 
     }
     
     try:
-        if ORCHESTRATION_PIPELINE_AVAILABLE:
-            approaches = ["pipeline", "hierarchical", "specialized"]
-            comparison_results = await compare_orchestration_approaches(text, approaches)
-            
-            comparison["approaches_tested"] = approaches
-            comparison["performance_metrics"] = comparison_results.get("comparison", {})
-            comparison["detailed_results"] = comparison_results.get("approaches", {})
-            
-            # Recommandations de comparaison
-            if "fastest" in comparison["performance_metrics"]:
-                comparison["recommendations"].append(
-                    f"Approche la plus rapide: {comparison['performance_metrics']['fastest']}"
-                )
-    
+        pass # La comparaison est désactivée car compare_orchestration_approaches est obsolète.
     except Exception as e:
         logger.warning(f"[UNIFIED] Erreur comparaison pipelines: {e}")
         comparison["error"] = str(e)

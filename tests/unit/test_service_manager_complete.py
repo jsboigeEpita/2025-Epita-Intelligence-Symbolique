@@ -20,6 +20,8 @@ import subprocess
 import tempfile
 import logging
 from pathlib import Path
+from unittest.mock import patch, MagicMock
+import psutil
 
 
 # Ajouter project_core au path
@@ -90,28 +92,31 @@ class TestPortManager(unittest.TestCase):
             self.assertIsNone(port)
     
     
+    @patch('psutil.net_connections')
     def test_free_port_no_connections(self, mock_net_connections):
         """Test libération port - aucune connexion"""
-        mock_net_connections# Mock eliminated - using authentic gpt-4o-mini []
+        mock_net_connections.return_value = []
         
         result = self.port_manager.free_port(8080)
         self.assertTrue(result)
     
     
     
-    async def test_free_port_with_process(self, mock_process_class, mock_net_connections):
+    @patch('psutil.net_connections')
+    @patch('psutil.Process')
+    def test_free_port_with_process(self, mock_process_class, mock_net_connections):
         """Test libération port avec processus actif"""
         # Mock connection
-        mock_conn = await self._create_authentic_gpt4o_mini_instance()
+        mock_conn = MagicMock()
         mock_conn.laddr.port = 8080
         mock_conn.pid = 12345
-        mock_net_connections# Mock eliminated - using authentic gpt-4o-mini [mock_conn]
-        
+        mock_net_connections.return_value = [mock_conn]
+
         # Mock process
-        mock_process = await self._create_authentic_gpt4o_mini_instance()
-        mock_process.name# Mock eliminated - using authentic gpt-4o-mini 'test.exe'
+        mock_process = MagicMock()
+        mock_process.name.return_value = 'test.exe'
         mock_process.pid = 12345
-        mock_process_class# Mock eliminated - using authentic gpt-4o-mini mock_process
+        mock_process_class.return_value = mock_process
         
         # Test sans force - devrait retourner False
         result = self.port_manager.free_port(8080, force=False)
@@ -121,7 +126,7 @@ class TestPortManager(unittest.TestCase):
         with patch.object(self.port_manager, 'is_port_free', return_value=True):
             result = self.port_manager.free_port(8080, force=True)
             self.assertTrue(result)
-            # Mock assertion eliminated - authentic validation
+            mock_process.terminate.assert_called_once()
 
 
 class TestProcessCleanup(unittest.TestCase):
@@ -155,40 +160,58 @@ class TestProcessCleanup(unittest.TestCase):
         # Mock assertion eliminated - authentic validation
     
     
-    async def test_stop_backend_processes(self, mock_process_iter):
+    @patch('psutil.Process')
+    @patch('psutil.process_iter')
+    def test_stop_backend_processes(self, mock_process_iter, mock_process_class):
         """Test arrêt processus backend"""
         # Mock process Python
-        mock_process = await self._create_authentic_gpt4o_mini_instance()
+        mock_process = MagicMock(spec=psutil.Process)
         mock_process.info = {
-            'pid': 12345,
             'name': 'python.exe',
+            'pid': 12345,
             'cmdline': ['python', 'app.py', '--port', '5000']
         }
-        mock_process.terminate = await self._create_authentic_gpt4o_mini_instance()
+        # Configure name() and cmdline() as callable methods
+        mock_process.name = MagicMock(return_value='python.exe')
+        mock_process.cmdline = MagicMock(return_value=['python', 'app.py', '--port', '5000'])
+        mock_process.pid = 12345
+        mock_process.terminate = MagicMock()
         
-        mock_process_iter# Mock eliminated - using authentic gpt-4o-mini [mock_process]
+        # Le code ré-instancie un objet Process, on doit s'assurer qu'il retourne le bon mock
+        mock_process_class.return_value = mock_process
+        mock_process_iter.return_value = [mock_process]
         
         count = self.cleanup.stop_backend_processes()
         
-        self.assertGreaterEqual(count, 0)
+        self.assertEqual(count, 1)
+        mock_process.terminate.assert_called_once()
     
     
-    async def test_stop_frontend_processes(self, mock_process_iter):
+    @patch('psutil.Process')
+    @patch('psutil.process_iter')
+    def test_stop_frontend_processes(self, mock_process_iter, mock_process_class):
         """Test arrêt processus frontend"""
         # Mock process Node.js
-        mock_process = await self._create_authentic_gpt4o_mini_instance()
+        mock_process = MagicMock(spec=psutil.Process)
         mock_process.info = {
-            'pid': 12345,
             'name': 'node.exe',
+            'pid': 12345,
             'cmdline': ['node', 'server.js', 'serve']
         }
-        mock_process.terminate = await self._create_authentic_gpt4o_mini_instance()
-        
-        mock_process_iter# Mock eliminated - using authentic gpt-4o-mini [mock_process]
+        # Configure name() and cmdline() as callable methods
+        mock_process.name = MagicMock(return_value='node.exe')
+        mock_process.cmdline = MagicMock(return_value=['node', 'server.js', 'serve'])
+        mock_process.pid = 12345
+        mock_process.terminate = MagicMock()
+
+        # Le code ré-instancie un objet Process, on doit s'assurer qu'il retourne le bon mock
+        mock_process_class.return_value = mock_process
+        mock_process_iter.return_value = [mock_process]
         
         count = self.cleanup.stop_frontend_processes()
         
-        self.assertGreaterEqual(count, 0)
+        self.assertEqual(count, 1)
+        mock_process.terminate.assert_called_once()
 
 
 class TestServiceConfig(unittest.TestCase):
@@ -261,20 +284,22 @@ class TestServiceManager(unittest.TestCase):
         self.assertEqual(services[0]['name'], "test-service")
     
     
-    async def test_service_health_check_success(self, mock_get):
+    @patch('requests.get')
+    def test_service_health_check_success(self, mock_get):
         """Test health check succès"""
-        mock_response = await self._create_authentic_gpt4o_mini_instance()
+        mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_get# Mock eliminated - using authentic gpt-4o-mini mock_response
+        mock_get.return_value = mock_response
         
         result = self.manager.test_service_health("http://localhost:8000/health")
         
         self.assertTrue(result)
     
     
+    @patch('requests.get')
     def test_service_health_check_failure(self, mock_get):
         """Test health check échec"""
-        mock_get# Mock eliminated - using authentic gpt-4o-mini Exception("Connection refused")
+        mock_get.side_effect = Exception("Connection refused")
         
         result = self.manager.test_service_health("http://localhost:8000/health")
         

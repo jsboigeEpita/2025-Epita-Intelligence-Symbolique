@@ -9,7 +9,7 @@ import pytest
 from typing import Optional, Tuple, List
 
 # Import auto-configuration environnement
-import scripts.core.auto_env
+from argumentation_analysis.core import environment as auto_env
 
 # Imports Semantic Kernel authentiques
 from semantic_kernel import Kernel
@@ -113,7 +113,7 @@ class TestPropositionalLogicAgentAuthentic:
         
         # Vérifications de base authentiques
         assert self.agent.name == self.agent_name
-        assert self.agent.sk_kernel == self.kernel
+        assert self.agent._kernel == self.kernel
         assert self.agent.logic_type == "PL"
         assert self.agent.system_prompt == PL_AGENT_INSTRUCTIONS
         
@@ -237,7 +237,7 @@ class TestPropositionalLogicAgentAuthentic:
         start_time = time.time()
         
         # Test avec ensemble de croyances et requête simples
-        belief_set = PropositionalBeliefSet("a => b & a")
+        belief_set = PropositionalBeliefSet("(a => b) & a")
         query = "b"  # Devrait être ACCEPTED par modus ponens
         
         # Exécution authentique

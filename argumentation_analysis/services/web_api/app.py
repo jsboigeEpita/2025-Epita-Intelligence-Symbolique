@@ -3,164 +3,186 @@
 
 """
 API Flask pour l'analyse argumentative.
-
-Cette API expose les fonctionnalités du moteur d'analyse argumentative
-pour permettre aux étudiants de créer des interfaces web facilement.
 """
-import logging
-import sys
-import os # Assurez-vous qu'os est importé si ce n'est pas déjà le cas plus haut
-from pathlib import Path # Assurez-vous que Path est importé
-from typing import Optional, Dict, Any # AJOUTÉ ICI POUR CORRIGER NameError
-
-# --- Initialisation explicite de l'environnement du projet ---
-# Cela doit être fait AVANT toute autre logique d'application ou import de service spécifique au projet.
-try:
-    # Déterminer la racine du projet pour bootstrap.py
-    # argumentation_analysis/services/web_api/app.py -> services/web_api -> services -> argumentation_analysis -> project_root
-    _app_file_path = Path(__file__).resolve()
-    _project_root_for_bootstrap = _app_file_path.parent.parent.parent.parent
-    
-    # S'assurer que argumentation_analysis.core est accessible
-    # Normalement, si PROJECT_ROOT (d:/2025-Epita-Intelligence-Symbolique-4) est dans PYTHONPATH,
-    # argumentation_analysis.core.bootstrap devrait être importable.
-    # Si bootstrap.py gère lui-même l'ajout de la racine du projet à sys.path,
-    # cet ajout ici pourrait être redondant mais ne devrait pas nuire s'il est idempotent.
-    if str(_project_root_for_bootstrap) not in sys.path:
-         sys.path.insert(0, str(_project_root_for_bootstrap))
-
-    from argumentation_analysis.core.bootstrap import initialize_project_environment, ProjectContext
-    
-    # Utiliser le .env à la racine du projet global (d:/2025-Epita-Intelligence-Symbolique-4/.env)
-    # et la racine du projet global comme root_path_str.
-    _env_file_path_for_bootstrap = _project_root_for_bootstrap / ".env"
-
-    print(f"[BOOTSTRAP CALL from app.py] Initializing project environment with root: {_project_root_for_bootstrap}, env_file: {_env_file_path_for_bootstrap}")
-    sys.stdout.flush() # For Uvicorn logs
-
-    project_context: Optional[ProjectContext] = initialize_project_environment(
-        env_path_str=str(_env_file_path_for_bootstrap) if _env_file_path_for_bootstrap.exists() else None,
-        root_path_str=str(_project_root_for_bootstrap)
-    )
-    if project_context:
-        print(f"[BOOTSTRAP CALL from app.py] Project environment initialized. JVM: {project_context.jvm_initialized}, LLM: {'OK' if project_context.llm_service else 'FAIL'}")
-        sys.stdout.flush()
-    else:
-        print("[BOOTSTRAP CALL from app.py] FAILED to initialize project environment.")
-        sys.stdout.flush()
-        # Gérer l'échec de l'initialisation si nécessaire, par exemple en levant une exception
-        # raise RuntimeError("Échec critique de l'initialisation de l'environnement du projet via bootstrap.")
-except ImportError as e_bootstrap_import:
-    print(f"[BOOTSTRAP CALL from app.py] CRITICAL ERROR: Failed to import bootstrap components: {e_bootstrap_import}", file=sys.stderr)
-    sys.stderr.flush()
-    raise
-except Exception as e_bootstrap_init:
-    print(f"[BOOTSTRAP CALL from app.py] CRITICAL ERROR: Failed during bootstrap initialization: {e_bootstrap_init}", file=sys.stderr)
-    sys.stderr.flush()
-    raise
-# --- Fin de l'initialisation explicite de l'environnement ---
-
-
-# Configure logging immediately at the very top of the module execution.
-# This ensures that any subsequent logging calls, even before full app setup, are captured.
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s [%(levelname)s] %(name)s [%(module)s.%(funcName)s:%(lineno)d] - %(message)s',
-                    force=True) # force=True allows reconfiguring if it was called before (e.g. by a dependency)
-_top_module_logger = logging.getLogger(__name__) # Use __name__ to get 'argumentation_analysis.services.web_api.app'
-_top_module_logger.info("--- web_api/app.py module execution START, initial logging configured ---")
-sys.stderr.flush() # Ensure this initial log gets out.
-
-logger = _top_module_logger # Make it available globally as 'logger' for existing code
-
 import os
-# logging est déjà importé et configuré par basicConfig à la ligne 15
-# _top_module_logger est déjà défini à la ligne 18
-import argparse
-import asyncio
-from datetime import datetime
+import sys
+
+# Assurer que la racine du projet est dans le sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
+
+import logging
 from pathlib import Path
-from fastapi import FastAPI
-from flask import Flask, request, jsonify, redirect, url_for
+
+from flask import Flask, send_from_directory, jsonify, request, g
 from flask_cors import CORS
-from werkzeug.exceptions import HTTPException
-from a2wsgi import WSGIMiddleware
+from asgiref.wsgi import WsgiToAsgi
+
+# --- Configuration du Logging ---
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s [%(levelname)s] %(name)s - %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
+logger = logging.getLogger(__name__)
 
 
+# --- Imports des Blueprints et des modèles de données ---
+from argumentation_analysis.services.web_api.routes.main_routes import main_bp
+from argumentation_analysis.services.web_api.routes.logic_routes import logic_bp
+from argumentation_analysis.services.web_api.routes.health_routes import health_bp
+from argumentation_analysis.services.web_api.models.response_models import ErrorResponse
+# Import des classes de service
+from argumentation_analysis.services.web_api.services.analysis_service import AnalysisService
+from argumentation_analysis.services.web_api.services.validation_service import ValidationService
+from argumentation_analysis.services.web_api.services.fallacy_service import FallacyService
+from argumentation_analysis.services.web_api.services.framework_service import FrameworkService
+from argumentation_analysis.services.web_api.services.logic_service import LogicService
+from argumentation_analysis.core.bootstrap import initialize_project_environment
 
-# Déclarer les variables avant le bloc try pour qu'elles aient un scope global dans le module
-flask_app = None # Sera assigné à flask_app_instance_for_init
-app = None # Sera assigné à app_object_for_uvicorn
+class AppServices:
+    """Conteneur pour les instances de service."""
+    def __init__(self):
+        logger.info("Initializing app services container...")
+        self.logic_service = LogicService()
+        self.analysis_service = AnalysisService()
+        self.validation_service = ValidationService(self.logic_service)
+        self.fallacy_service = FallacyService()
+        self.framework_service = FrameworkService()
+        logger.info("App services container initialized.")
 
-try:
-    _top_module_logger.info("--- Initializing Flask app instance ---")
-    sys.stderr.flush()
-    flask_app_instance_for_init = Flask(__name__) # Variable locale temporaire
-    _top_module_logger.info(f"--- Flask app instance CREATED: {type(flask_app_instance_for_init)} ---")
-    sys.stderr.flush()
+def initialize_heavy_dependencies():
+    """
+    Initialise les dépendances lourdes comme la JVM.
+    Cette fonction est destinée à être appelée une seule fois au démarrage du serveur.
+    """
+    logger.info("Starting heavy dependencies initialization (JVM, etc.)...")
+    # S'assure que la racine du projet est dans le path pour les imports
+    current_dir = Path(__file__).resolve().parent
+    # Remonter de 3 niveaux: web_api -> services -> argumentation_analysis -> project_root
+    root_dir = current_dir.parent.parent.parent
+    if str(root_dir) not in sys.path:
+        sys.path.insert(0, str(root_dir))
 
-    _top_module_logger.info("--- Applying CORS to Flask app ---")
-    sys.stderr.flush()
-    CORS(flask_app_instance_for_init)
-    _top_module_logger.info("--- CORS applied ---")
-    sys.stderr.flush()
+    try:
+        # Initialiser l'environnement du projet (ce qui peut inclure le démarrage de la JVM)
+        initialize_project_environment(root_path_str=str(root_dir))
+        logger.info("Project environment (including JVM) initialized successfully.")
+    except Exception as e:
+        logger.critical(f"Critical failure during project environment initialization: {e}", exc_info=True)
+        # L'erreur doit remonter pour empêcher le serveur de démarrer dans un état instable
+        raise
 
-    _top_module_logger.info("--- Mounting Flask app within a FastAPI instance ---")
-    sys.stderr.flush()
+def create_app():
+    """
+    Factory function pour créer et configurer l'application Flask.
+    """
+    logger.info("Creating Flask app instance...")
 
-    # Créer une instance de FastAPI comme application principale
-    fastapi_app = FastAPI()
+    current_dir = Path(__file__).resolve().parent
+    root_dir = current_dir.parent.parent.parent
+    react_build_dir = root_dir / "services" / "web_api" / "interface-web-argumentative" / "build"
+    
+    # Gestion du dossier statique pour le build React
+    if not react_build_dir.exists() or not react_build_dir.is_dir():
+        logger.warning(f"React build directory not found at: {react_build_dir}")
+        # Créer un dossier statique temporaire pour éviter une erreur Flask
+        static_folder_path = root_dir / "services" / "web_api" / "_temp_static"
+        static_folder_path.mkdir(exist_ok=True)
+        (static_folder_path / "placeholder.txt").touch()
+        app_static_folder = str(static_folder_path)
+    else:
+        app_static_folder = str(react_build_dir)
 
-    # Monter l'application Flask (WSGI) sur un sous-chemin
-    fastapi_app.mount("/flask", WSGIMiddleware(flask_app_instance_for_init))
+    flask_app_instance = Flask(__name__, static_folder=app_static_folder)
+    # Configuration CORS plus flexible pour le développement et les tests E2E
+    # autorisant localhost et 127.0.0.1 sur n'importe quel port.
+    cors_origins = [
+        r"http://localhost:.*",
+        r"http://127.0.0.1:.*"
+    ]
+    CORS(flask_app_instance,
+         resources={r"/api/*": {"origins": cors_origins}},
+         supports_credentials=True)
+    
+    flask_app_instance.config['JSON_AS_ASCII'] = False
+    flask_app_instance.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
-    _top_module_logger.info(f"--- Flask app mounted on FastAPI at /flask. Main app type: {type(fastapi_app)} ---")
-    sys.stderr.flush()
+    # Initialisation et stockage des services dans le contexte de l'application
+    flask_app_instance.services = AppServices()
 
-    # Assigner aux variables globales du module si tout a réussi
-    flask_app = flask_app_instance_for_init
-    app = fastapi_app
+    # Enregistrement des Blueprints
+    flask_app_instance.register_blueprint(health_bp, url_prefix='/api')
+    flask_app_instance.register_blueprint(main_bp, url_prefix='/api')
+    flask_app_instance.register_blueprint(logic_bp, url_prefix='/api/logic')
+    logger.info("Blueprints registered.")
 
-except Exception as e_init:
-    _top_module_logger.critical(f"!!! CRITICAL ERROR during Flask/WSGIMiddleware initialization: {e_init} !!!", exc_info=True)
-    # Dans un scénario de production, un `raise` ici serait approprié pour arrêter le chargement du module.
-    # raise e_init
+    # --- Gestionnaires d'erreurs et routes statiques ---
+    @flask_app_instance.errorhandler(404)
+    def handle_404_error(error):
+        """Gestionnaire d'erreurs 404 intelligent."""
+        if request.path.startswith('/api/'):
+            logger.warning(f"API endpoint not found: {request.path}")
+            return jsonify(ErrorResponse(
+                error="Not Found",
+                message=f"The API endpoint '{request.path}' does not exist.",
+                status_code=404
+            ).dict()), 404
+        # Pour toute autre route, on sert l'app React (Single Page Application)
+        return serve_react_app(error)
 
+    @flask_app_instance.errorhandler(Exception)
+    def handle_global_error(error):
+        """Gestionnaire d'erreurs global pour les exceptions non capturées."""
+        if request.path.startswith('/api/'):
+            logger.error(f"Internal API error on {request.path}: {error}", exc_info=True)
+            return jsonify(ErrorResponse(
+                error="Internal Server Error",
+                message="An unexpected internal error occurred.",
+                status_code=500
+            ).dict()), 500
+        logger.error(f"Unhandled server error on route {request.path}: {error}", exc_info=True)
+        return serve_react_app(error)
 
-# Ajout du endpoint de health check pour l'orchestrateur
-if app: # S'assurer que 'app' (fastapi_app) a été initialisé
-    @app.get("/api/health")
-    def health_check():
-        """
-        Simple health check endpoint for the orchestrator.
-        """
-        return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}
+    @flask_app_instance.route('/', defaults={'path': ''})
+    @flask_app_instance.route('/<path:path>')
+    def serve_react_app(path):
+        build_dir = Path(flask_app_instance.static_folder)
+        if path != "" and (build_dir / path).exists():
+            return send_from_directory(str(build_dir), path)
+        
+        # Sinon, servir index.html pour que React puisse gérer la route
+        index_path = build_dir / 'index.html'
+        if index_path.exists():
+            return send_from_directory(str(build_dir), 'index.html')
+        
+        logger.critical("React build or index.html missing.")
+        return jsonify(ErrorResponse(
+            error="Frontend Not Found",
+            message="The frontend application files are missing.",
+            status_code=404
+        ).dict()), 404
 
-    @app.get("/api/endpoints")
-    def get_all_endpoints():
-        """
-        Renvoie la liste des endpoints disponibles.
-        NOTE: Pour l'instant, c'est une implémentation de base pour satisfaire l'orchestrateur.
-        """
-        # TODO: Rendre cette liste dynamique en inspectant à la fois FastAPI et Flask.
-        return {
-            "fastapi_endpoints": [{"path": route.path, "name": route.name} for route in app.routes if hasattr(route, 'path')],
-            "flask_endpoints_expected": [
-                "/flask/api/health", "/flask/api/analyze", "/flask/api/load_text",
-                "/flask/api/get_arguments", "/flask/api/get_graph", "/flask/api/download_results",
-                "/flask/api/status", "/flask/api/config", "/flask/api/feedback"
-            ]
-        }
+    @flask_app_instance.before_request
+    def before_request():
+        """Rend les services accessibles via g."""
+        g.services = flask_app_instance.services
 
-# Importer les routes Flask pour les enregistrer auprès de l'application flask_app
-    from . import flask_routes
-    _top_module_logger.info("Flask routes module imported and registered.")
-# Vérification de sécurité: si l'initialisation a échoué, app et flask_app seront None.
-# Le serveur Uvicorn échouera au démarrage car il ne trouvera pas de callable 'app'.
-if flask_app is None or app is None:
-    _top_module_logger.critical("!!! FATAL: App objects (flask_app, app) are None after initialization. Uvicorn will fail. !!!")
-    # Pour s'assurer que le processus s'arrête si le log seul ne suffit pas.
-    # Dans un contexte de chargement de module, il est préférable que l'exception se propage.
-    # sys.exit(1)
+    logger.info("Flask app instance created and configured.")
+    return flask_app_instance
 
-_top_module_logger.info(f"--- web_api/app.py module execution END.. App object to be served by Uvicorn: {type(app)} ---")
-sys.stderr.flush()
+# --- Point d'entrée pour le développement local (non recommandé pour la production) ---
+if __name__ == '__main__':
+    # Initialise les dépendances lourdes avant de démarrer le serveur
+    initialize_heavy_dependencies()
+    flask_app_dev = create_app()
+    port = int(os.environ.get("PORT", 5004))
+    debug = os.environ.get("DEBUG", "true").lower() == "true"
+    logger.info(f"Starting Flask development server on http://0.0.0.0:{port} (Debug: {debug})")
+    flask_app_dev.run(host='0.0.0.0', port=port, debug=debug)
+
+# --- Point d'entrée pour Uvicorn/Gunicorn ---
+# Initialise les dépendances lourdes une seule fois au démarrage
+# initialize_heavy_dependencies() # ATTENTION: Déplacé/Supprimé pour éviter l'init au chargement du module
+# Crée l'application Flask en utilisant la factory
+# flask_app = create_app() # ATTENTION: Déplacé/Supprimé pour éviter l'init au chargement du module
+# Applique le wrapper ASGI pour la compatibilité avec Uvicorn
+# C'est cette variable 'app' que `launch_webapp_background.py` attend.
+app = None # Doit être défini, mais initialisé plus tard par le script de lancement.

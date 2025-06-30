@@ -8,6 +8,7 @@ Ce script résout automatiquement les problèmes identifiés par diagnostic_envi
 1. Installation du package en mode développement
 2. Installation des dépendances manquantes
 3. Configuration du mock JPype si nécessaire
+import argumentation_analysis.core.environment
 4. Validation finale
 """
 

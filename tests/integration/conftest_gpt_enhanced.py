@@ -255,13 +255,13 @@ def gpt_rate_limiter(gpt_test_session):
 
 
 @pytest.fixture
-def mock_gpt_kernel():
+async def mock_gpt_kernel():
     """Kernel mocké pour tests sans frais GPT."""
     kernel = Mock(spec=Kernel)
-    kernel.add_service = await self._create_authentic_gpt4o_mini_instance()
+    # kernel.add_service = await self._create_authentic_gpt4o_mini_instance() # Ligne incorrecte, probablement un vestige
     
     # Mock du service
-    mock_service = Asyncawait self._create_authentic_gpt4o_mini_instance()
+    mock_service = await self._create_authentic_gpt4o_mini_instance()
     mock_service.service_id = "mock-gpt4o-mini"
     mock_service.ai_model_id = "gpt-4o-mini"
     

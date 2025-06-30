@@ -2,10 +2,17 @@
 # -*- coding: utf-8 -*-
 
 """
-Évaluateur de cohérence des arguments.
+Cadre d'évaluation multi-axes de la cohérence argumentative.
 
-Ce module fournit des fonctionnalités pour évaluer la cohérence
-entre les arguments d'un ensemble argumentatif.
+Ce module définit `ArgumentCoherenceEvaluator`, une classe destinée à fournir une
+analyse détaillée et structurée de la cohérence d'un ensemble d'arguments.
+Il décompose la cohérence en cinq dimensions distinctes : logique, thématique,
+structurelle, rhétorique et épistémique.
+
+NOTE : L'implémentation actuelle de ce module est principalement une **simulation**.
+Les méthodes d'évaluation pour chaque type de cohérence retournent des scores
+pré-définis. Il sert de cadre et de squelette pour une future implémentation
+utilisant une analyse sémantique réelle.
 """
 
 import os
@@ -38,10 +45,13 @@ logger = logging.getLogger("ArgumentCoherenceEvaluator")
 
 class ArgumentCoherenceEvaluator:
     """
-    Évaluateur de cohérence des arguments.
-    
-    Cette classe fournit des méthodes pour évaluer différents types de cohérence
-    entre les arguments d'un ensemble argumentatif.
+    Évalue la cohérence des arguments selon cinq dimensions.
+
+    Cette classe fournit un cadre pour noter la cohérence d'une argumentation.
+    L'évaluation globale est une moyenne pondérée des scores obtenus sur
+    cinq axes d'analyse. Bien que les méthodes de calcul soient actuellement
+    simulées, la structure permet une agrégation et une génération de
+    recommandations fonctionnelles.
     """
     
     def __init__(self):
@@ -85,17 +95,22 @@ class ArgumentCoherenceEvaluator:
         context: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Évalue la cohérence globale entre les arguments.
-        
-        Cette méthode évalue différents types de cohérence entre les arguments
-        et fournit une évaluation globale de la cohérence.
-        
+        Orchestre l'évaluation de la cohérence sur tous les axes définis.
+
+        C'est le point d'entrée principal. Il exécute les étapes suivantes :
+        1. Appelle le `SemanticArgumentAnalyzer` (actuellement sans effet).
+        2. Appelle les méthodes d'évaluation pour chaque type de cohérence (logique,
+           thématique, etc.), qui retournent des scores simulés.
+        3. Calcule un score de cohérence global basé sur les scores pondérés.
+        4. Génère des recommandations basées sur les points faibles identifiés.
+
         Args:
-            arguments (List[str]): Liste des arguments à évaluer
-            context (Optional[str]): Contexte des arguments
-            
+            arguments (List[str]): La liste des arguments à évaluer.
+            context (Optional[str]): Le contexte de l'argumentation.
+
         Returns:
-            Dict[str, Any]: Résultats de l'évaluation de cohérence
+            Dict[str, Any]: Un dictionnaire complet contenant les scores détaillés
+            par type de cohérence, le score global et les recommandations.
         """
         self.logger.info(f"Évaluation de la cohérence de {len(arguments)} arguments")
         
@@ -144,14 +159,19 @@ class ArgumentCoherenceEvaluator:
         semantic_analysis: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Évalue la cohérence logique entre les arguments.
-        
+        (Simulé) Évalue la cohérence logique des arguments.
+
+        Cette méthode est conçue pour vérifier l'absence de contradictions, la
+        validité des inférences et la pertinence des prémisses.
+
+        **NOTE : L'implémentation actuelle est une simulation.**
+
         Args:
-            arguments (List[str]): Liste des arguments
-            semantic_analysis (Dict[str, Any]): Analyse sémantique des arguments
-            
+            arguments (List[str]): Liste des arguments.
+            semantic_analysis (Dict[str, Any]): Analyse sémantique des arguments.
+
         Returns:
-            Dict[str, Any]: Évaluation de la cohérence logique
+            Dict[str, Any]: Un dictionnaire avec un score de cohérence logique simulé.
         """
         # Simuler l'évaluation de la cohérence logique
         return {
@@ -173,14 +193,19 @@ class ArgumentCoherenceEvaluator:
         semantic_analysis: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Évalue la cohérence thématique entre les arguments.
-        
+        (Simulé) Évalue la cohérence thématique des arguments.
+
+        Destinée à vérifier si les arguments restent sur le même sujet et si
+        la progression thématique est logique.
+
+        **NOTE : L'implémentation actuelle est une simulation.**
+
         Args:
-            arguments (List[str]): Liste des arguments
-            semantic_analysis (Dict[str, Any]): Analyse sémantique des arguments
-            
+            arguments (List[str]): Liste des arguments.
+            semantic_analysis (Dict[str, Any]): Analyse sémantique des arguments.
+
         Returns:
-            Dict[str, Any]: Évaluation de la cohérence thématique
+            Dict[str, Any]: Un dictionnaire avec un score de cohérence thématique simulé.
         """
         # Simuler l'évaluation de la cohérence thématique
         return {
@@ -202,14 +227,19 @@ class ArgumentCoherenceEvaluator:
         semantic_analysis: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Évalue la cohérence structurelle entre les arguments.
-        
+        (Simulé) Évalue la cohérence structurelle des arguments.
+
+        Conçue pour analyser l'organisation des arguments, leur séquence et
+        la clarté des transitions.
+
+        **NOTE : L'implémentation actuelle est une simulation.**
+
         Args:
-            arguments (List[str]): Liste des arguments
-            semantic_analysis (Dict[str, Any]): Analyse sémantique des arguments
-            
+            arguments (List[str]): Liste des arguments.
+            semantic_analysis (Dict[str, Any]): Analyse sémantique des arguments.
+
         Returns:
-            Dict[str, Any]: Évaluation de la cohérence structurelle
+            Dict[str, Any]: Un dictionnaire avec un score de cohérence structurelle simulé.
         """
         # Simuler l'évaluation de la cohérence structurelle
         return {
@@ -231,14 +261,19 @@ class ArgumentCoherenceEvaluator:
         semantic_analysis: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Évalue la cohérence rhétorique entre les arguments.
-        
+        (Simulé) Évalue la cohérence rhétorique des arguments.
+
+        Vise à analyser l'harmonie du style, du ton et des figures de style
+        utilisées à travers l'argumentation.
+
+        **NOTE : L'implémentation actuelle est une simulation.**
+
         Args:
-            arguments (List[str]): Liste des arguments
-            semantic_analysis (Dict[str, Any]): Analyse sémantique des arguments
-            
+            arguments (List[str]): Liste des arguments.
+            semantic_analysis (Dict[str, Any]): Analyse sémantique des arguments.
+
         Returns:
-            Dict[str, Any]: Évaluation de la cohérence rhétorique
+            Dict[str, Any]: Un dictionnaire avec un score de cohérence rhétorique simulé.
         """
         # Simuler l'évaluation de la cohérence rhétorique
         return {
@@ -260,14 +295,19 @@ class ArgumentCoherenceEvaluator:
         semantic_analysis: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Évalue la cohérence épistémique entre les arguments.
-        
+        (Simulé) Évalue la cohérence épistémique des arguments.
+
+        Analyse la consistance des standards de preuve, des sources et du
+        niveau de certitude exprimé dans les arguments.
+
+        **NOTE : L'implémentation actuelle est une simulation.**
+
         Args:
-            arguments (List[str]): Liste des arguments
-            semantic_analysis (Dict[str, Any]): Analyse sémantique des arguments
-            
+            arguments (List[str]): Liste des arguments.
+            semantic_analysis (Dict[str, Any]): Analyse sémantique des arguments.
+
         Returns:
-            Dict[str, Any]: Évaluation de la cohérence épistémique
+            Dict[str, Any]: Un dictionnaire avec un score de cohérence épistémique simulé.
         """
         # Simuler l'évaluation de la cohérence épistémique
         return {

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Utilitaires pour la réparation et la maintenance des données d'extraits.
 """
@@ -10,7 +10,7 @@ from typing import Optional, List, Dict, Any, Tuple # Ajout des types nécessair
 
 # Imports pour les fonctions déplacées
 import semantic_kernel as sk
-from semantic_kernel.contents import ChatMessageContent #, AuthorRole # Temporairement commenté
+# from semantic_kernel.contents import ChatMessageContent, AuthorRole # Temporairement commenté
 # CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
 # from semantic_kernel.agents import ChatCompletionAgent
 # from semantic_kernel.contents import AuthorRole
@@ -26,11 +26,7 @@ from argumentation_analysis.services.crypto_service import CryptoService
 from argumentation_analysis.services.definition_service import DefinitionService
 from argumentation_analysis.services.extract_service import ExtractService
 from argumentation_analysis.services.fetch_service import FetchService
-from argumentation_analysis.ui.config import (
-    ENCRYPTION_KEY as DEFAULT_ENCRYPTION_KEY,
-    CONFIG_FILE as DEFAULT_CONFIG_FILE_PATH,
-    CONFIG_FILE_JSON as DEFAULT_CONFIG_FILE_JSON_PATH
-)
+from argumentation_analysis.config.settings import settings
 
 # Services passés en argument à repair_extract_markers, pas besoin d'importer FetchService/ExtractService ici
 # from argumentation_analysis.services.fetch_service import FetchService
@@ -225,13 +221,13 @@ async def run_extract_repair_pipeline(
         logger.info("Initialisation manuelle des services pour repair_utils...")
         base_path = project_root_dir if project_root_dir else Path.cwd()
 
-        current_encryption_key = DEFAULT_ENCRYPTION_KEY # TODO: Permettre la surcharge via config si nécessaire
+        current_encryption_key = settings.encryption_key.get_secret_value() if settings.encryption_key else None
         
-        current_config_file = config_file_to_use if config_file_to_use else base_path / DEFAULT_CONFIG_FILE_PATH
+        current_config_file = config_file_to_use if config_file_to_use else settings.config_file_enc
         if not current_config_file.is_absolute():
             current_config_file = base_path / current_config_file
         
-        current_fallback_file = base_path / DEFAULT_CONFIG_FILE_JSON_PATH # TODO: Permettre la surcharge
+        current_fallback_file = settings.config_file_json
         if not current_fallback_file.is_absolute():
             current_fallback_file = base_path / current_fallback_file
         if not current_fallback_file.exists():
@@ -259,7 +255,7 @@ async def run_extract_repair_pipeline(
         
         # extract_service, fetch_service, definition_service sont maintenant disponibles localement
         
-        extract_definitions, error_message = definition_service.load_definitions()
+        extract_definitions, error_message = await definition_service.load_definitions()
         if error_message:
             logger.warning(f"Avertissement lors du chargement des définitions (pipeline): {error_message}")
         
@@ -297,7 +293,7 @@ async def run_extract_repair_pipeline(
         
         if save_changes:
             logger.info("Sauvegarde des modifications (pipeline)...")
-            success, error_msg_save = definition_service.save_definitions(updated_definitions)
+            success, error_msg_save = await definition_service.save_definitions(updated_definitions)
             if success:
                 logger.info("[OK] Modifications sauvegardées avec succès (pipeline).")
             else:
@@ -307,7 +303,7 @@ async def run_extract_repair_pipeline(
             output_json_file = Path(output_json_path_str)
             output_json_file.parent.mkdir(parents=True, exist_ok=True)
             logger.info(f"Exportation des définitions JSON mises à jour vers {output_json_file} (pipeline)...")
-            success_export, msg_export = definition_service.export_definitions_to_json(
+            success_export, msg_export = await definition_service.export_definitions_to_json(
                 updated_definitions, output_json_file
             )
             logger.info(msg_export)

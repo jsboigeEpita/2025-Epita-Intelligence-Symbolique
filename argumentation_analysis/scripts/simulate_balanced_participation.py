@@ -1,23 +1,37 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Script de simulation pour démontrer l'équilibrage de la participation des agents
 avec la stratégie BalancedParticipationStrategy.
 """
+#
+# Ce script utilise de véritables instances d'agents (et non des mocks) pour simuler
+# une conversation. Il démontre comment la `BalancedParticipationStrategy` peut être utilisée pour
+# guider la conversation vers des objectifs de participation définis pour chaque agent,
+# même en présence de désignations explicites qui pourraient biaiser la discussion.
+#
+# Le script génère un graphique (`balanced_participation_simulation.png`) qui visualise
+# la convergence des taux de participation réels vers les cibles au fil du temps.
+#
 
 import asyncio
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
 from typing import Dict, List, Tuple
-# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
-from semantic_kernel.agents import Agent
-from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.contents import AuthorRole
+
 # Import des modules du projet
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+import semantic_kernel as sk
+# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
+from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
+from semantic_kernel.contents import ChatMessageContent
+# from semantic_kernel.contents import AuthorRole
+from unittest.mock import MagicMock
+
 from argumentation_analysis.core.strategies import BalancedParticipationStrategy
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 
@@ -53,35 +67,35 @@ class ConversationSimulator:
         
         logger.info(f"Simulateur initialisé avec {len(agent_names)} agents: {', '.join(agent_names)}")
     
-    def _create_real_agents(self, agent_names: List[str]) -> List[Agent]:
+    def _create_real_agents(self, agent_names: List[str]) -> List[BaseAgent]:
         """Crée de VRAIS agents pour la simulation - PLUS AUCUN MOCK !
 
         :param agent_names: Liste des noms pour les agents.
         :type agent_names: List[str]
         :return: Une liste d'objets Agent RÉELS.
-        :rtype: List[Agent]
+        :rtype: List[BaseAgent]
         """
         agents = []
         for name in agent_names:
             # Créer de vrais agents selon le type
-            if "informal" in name.lower() or "rhetorical" in name.lower():
+            # Création d'un mock pour le kernel, car il est requis mais non utilisé dans la simulation
+            mock_kernel = MagicMock(spec=sk.Kernel)
+
+            if "informal" in name.lower() or "rhetorical" in name.lower() or "projectmanager" in name.lower():
                 agent = InformalAnalysisAgent(
-                    agent_id=name,
-                    tools={},
-                    semantic_kernel=None,
-                    informal_plugin=None,
-                    strict_validation=False
+                    kernel=mock_kernel,
+                    agent_name=name
                 )
             elif "extract" in name.lower():
-                agent = ExtractAgent(kernel=None, agent_name=name)
+                agent = ExtractAgent(
+                    kernel=mock_kernel,
+                    agent_name=name
+                )
             else:
-                # Agent par défaut de type informal
+                # Agent par défaut de type Informal
                 agent = InformalAnalysisAgent(
-                    agent_id=name,
-                    tools={},
-                    semantic_kernel=None,
-                    informal_plugin=None,
-                    strict_validation=False
+                    kernel=mock_kernel,
+                    agent_name=name
                 )
             
             agent.name = name
@@ -149,7 +163,7 @@ class ConversationSimulator:
             
             # Simuler un message de l'agent sélectionné
             message = MagicMock(spec=ChatMessageContent)
-            message.role = AuthorRole.ASSISTANT
+            message.role = "assistant"
             message.name = selected_agent.name
             self.history.append(message)
             

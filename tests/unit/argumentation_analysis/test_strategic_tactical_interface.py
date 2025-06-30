@@ -70,7 +70,7 @@ class TestStrategicTacticalInterface:
         
         return interface, mock_strategic_state, mock_tactical_state, mock_middleware, mock_strategic_adapter, mock_tactical_adapter
 
-    def test_translate_objectives(self, interface_components):
+    def test_translate_objectives_to_directives(self, interface_components):
         """Teste la traduction des objectifs stratégiques en directives tactiques."""
         (interface, _, _, _, mock_strategic_adapter, _) = interface_components
         # Définir les objectifs à traduire
@@ -88,9 +88,9 @@ class TestStrategicTacticalInterface:
         ]
         
         # Appeler la méthode à tester
-        result = interface.translate_objectives(objectives)
+        result = interface.translate_objectives_to_directives(objectives)
         
-        # Vérifier que la méthode issue_directive a été appelée (corrigé selon l'erreur)
+        # Vérifier que la méthode issue_directive a été appelée
         mock_strategic_adapter.issue_directive.assert_called()
         
         # Vérifier le résultat
@@ -167,14 +167,8 @@ class TestStrategicTacticalInterface:
             }
         }
         
-        # Configurer le mock pour get_pending_reports
-        mock_strategic_adapter.get_pending_reports.return_value = []
-        
         # Appeler la méthode à tester
         result = interface.process_tactical_report(tactical_report)
-        
-        # Vérifier que la méthode get_pending_reports a été appelée
-        mock_strategic_adapter.get_pending_reports.assert_called_once()
         
         # Vérifier le résultat
         assert isinstance(result, dict)

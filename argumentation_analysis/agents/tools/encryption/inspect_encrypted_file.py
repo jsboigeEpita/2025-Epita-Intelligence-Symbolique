@@ -10,7 +10,6 @@ import sys
 import json
 import gzip
 from pathlib import Path
-from dotenv import load_dotenv
 from cryptography.fernet import Fernet
 
 # Ajouter le répertoire parent au chemin de recherche des modules
@@ -19,10 +18,9 @@ parent_dir = current_dir.parent
 if str(parent_dir) not in sys.path:
     sys.path.append(str(parent_dir))
 
-# Charger les variables d'environnement
-load_dotenv(override=True)
 
 # Importer les modules nécessaires
+from argumentation_analysis.config.settings import settings
 from argumentation_analysis.ui.config import ENCRYPTION_KEY, CONFIG_FILE_ENC
 
 def decrypt_data(encrypted_data, key):
@@ -118,9 +116,9 @@ def main():
     """Fonction principale."""
     print("\n=== Inspection du fichier encrypté ===\n")
     
-    # Vérifier si la variable d'environnement TEXT_CONFIG_PASSPHRASE est définie
-    if not os.getenv("TEXT_CONFIG_PASSPHRASE"):
-        print(f"⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie.")
+    # Vérifier si la passphrase est définie dans la configuration
+    if not settings.passphrase:
+        print(f"⚠️ La variable d'environnement 'TEXT_CONFIG_PASSPHRASE' n'est pas définie dans votre .env ou configuration.")
         print(f"   Veuillez la définir avant d'exécuter ce script.")
         sys.exit(1)
     

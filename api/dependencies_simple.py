@@ -27,25 +27,48 @@ class SimpleAnalysisService:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.client = None
-        self._initialize_openai()
-        
-    def _initialize_openai(self):
-        """Initialise le client OpenAI pour GPT-4o-mini"""
-        if not OPENAI_AVAILABLE:
-            self.logger.warning("OpenAI non disponible, mode dégradé")
+        self.initialized = False
+        self.force_mock = os.getenv('FORCE_MOCK_LLM', '0') == '1'
+        if self.force_mock:
+            self.logger.warning("✅ Mode MOCK forcé par la variable d'environnement FORCE_MOCK_LLM.")
+
+    async def _initialize_openai(self):
+        """Initialise le client OpenAI pour GPT-4o-mini de manière asynchrone."""
+        if self.initialized:
+            return
+
+        # Si le mode mock est forcé, on ne tente même pas d'initialiser OpenAI
+        if self.force_mock:
+            self.logger.info("Initialisation OpenAI sautée (mode mock forcé).")
+            self.client = None
+            self.initialized = True
             return
             
-        # Récupérer la clé API depuis les variables d'environnement
+        self.logger.info("Initialisation asynchrone du client OpenAI...")
+        if not OPENAI_AVAILABLE:
+            self.logger.warning("OpenAI non disponible, mode dégradé")
+            self.initialized = True
+            return
+
         api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
             self.logger.warning("OPENAI_API_KEY non définie")
+            self.initialized = True
             return
-            
+
         try:
             self.client = OpenAI(api_key=api_key)
-            self.logger.info("✅ Client OpenAI GPT-4o-mini initialisé")
+            # Valide la clé de manière asynchrone pour ne pas bloquer
+            await asyncio.to_thread(self.client.models.list)
+            self.logger.info("✅ Client OpenAI GPT-4o-mini initialisé et clé validée.")
+        except openai.AuthenticationError as e:
+            self.logger.error(f"❌ Erreur d'authentification OpenAI: {e}")
+            self.client = None
         except Exception as e:
-            self.logger.error(f"❌ Erreur initialisation OpenAI: {e}")
+            self.logger.error(f"❌ Erreur inattendue pendant l'initialisation d'OpenAI: {e}")
+            self.client = None
+        
+        self.initialized = True
     
     async def analyze_text(self, text: str) -> dict:
         """
@@ -54,9 +77,13 @@ class SimpleAnalysisService:
         start_time = time.time()
         self.logger.info(f"[API-SIMPLE] Analyse GPT-4o-mini : {text[:100]}...")
         
+        # Initialisation paresseuse et asynchrone
+        if not self.initialized:
+            await self._initialize_openai()
+
         if not self.client:
             return self._fallback_analysis(text, start_time)
-        
+
         try:
             # Appel authentique à GPT-4o-mini
             response = await asyncio.to_thread(
@@ -93,9 +120,11 @@ class SimpleAnalysisService:
                 import json
                 gpt_result = json.loads(gpt_content)
                 fallacies = gpt_result.get('fallacies', [])
-            except json.JSONDecodeError:
-                # Fallback si GPT ne renvoie pas du JSON valide
-                fallacies = [{"type": "Analyse_GPT4o_Textuelle", "description": gpt_content[:200], "confidence": 0.9}]
+                summary = gpt_result.get('summary', "Résumé non fourni par l'IA.")
+            except (json.JSONDecodeError, AttributeError):
+                # Fallback si GPT ne renvoie pas du JSON valide ou si gpt_content n'est pas une string
+                fallacies = [{"type": "Analyse_GPT4o_Textuelle", "description": str(gpt_content)[:200], "confidence": 0.9}]
+                summary = "Impossible de parser la réponse de l'IA."
             
             self.logger.info(f"✅ Analyse GPT-4o-mini terminée en {duration:.2f}s")
             
@@ -103,7 +132,7 @@ class SimpleAnalysisService:
                 'fallacies': fallacies,
                 'duration': duration,
                 'components_used': ['GPT-4o-mini', 'OpenAI-API', 'SimpleAnalysisService'],
-                'summary': f"Analyse authentique GPT-4o-mini terminée. Modèle: {response.model}. {len(fallacies)} éléments détectés.",
+                'summary': summary,
                 'authentic_gpt4o_used': True,
                 'gpt_model_used': response.model,
                 'tokens_used': response.usage.total_tokens if response.usage else 0,
@@ -146,6 +175,7 @@ class SimpleAnalysisService:
             'components_used': ['FallbackAnalyzer'],
             'summary': f"Analyse de fallback terminée. {len(fallacies)} sophismes détectés par mots-clés.",
             'authentic_gpt4o_used': False,
+            'gpt_model_used': 'fallback_mode',  # Clé ajoutée pour la cohérence
             'fallback_reason': error or 'OpenAI non disponible',
             'analysis_metadata': {
                 'text_length': len(text),
@@ -154,18 +184,22 @@ class SimpleAnalysisService:
             }
         }
     
-    def is_available(self) -> bool:
-        """Vérifie si le service est disponible"""
+    async def ensure_initialized_and_available(self) -> bool:
+        """
+        S'assure que le client est initialisé et vérifie sa disponibilité.
+        """
+        if not self.initialized:
+            await self._initialize_openai()
         return self.client is not None
-    
+
     def get_status_details(self) -> dict:
-        """Retourne les détails du statut"""
+        """Retourne les détails du statut actuels."""
         return {
             "service_type": "SimpleAnalysisService",
             "gpt4o_mini_enabled": self.client is not None,
             "openai_available": OPENAI_AVAILABLE,
             "mock_disabled": True,
-            "service_initialized": True
+            "service_initialized": self.initialized
         }
 
 # Service global simplifié
