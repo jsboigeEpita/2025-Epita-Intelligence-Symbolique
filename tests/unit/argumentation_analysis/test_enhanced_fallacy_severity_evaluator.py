@@ -85,14 +85,67 @@ class TestEnhancedFallacySeverityEvaluator(unittest.TestCase):
     
     def test_evaluate_fallacy_severity(self):
         """Teste l'évaluation de la gravité des sophismes dans une liste d'arguments."""
-        self.skipTest("Test désactivé car la refonte des mocks a cassé la syntaxe.")
+        # Appeler la méthode principale
+        result = self.evaluator.evaluate_fallacy_severity(self.test_arguments, "commercial")
+        
+        # Vérifier les résultats
+        self.assertIn("overall_severity", result)
+        self.assertIn("severity_level", result)
+        self.assertIn("fallacy_evaluations", result)
+        self.assertIn("context_analysis", result)
+        
+        # La logique simulée trouve 4 sophismes (2x Appel à l'autorité)
+        self.assertEqual(len(result["fallacy_evaluations"]), 4)
+        fallacy_types = [eval["fallacy_type"] for eval in result["fallacy_evaluations"]]
+        self.assertEqual(fallacy_types.count("Appel à l'autorité"), 2)
+        self.assertIn("Appel à la popularité", fallacy_types)
+        self.assertIn("Appel à la peur", fallacy_types)
+
+        # Recalcul de la gravité globale pour ce cas
+        # severities = [0.8, 0.7, 0.8, 1.0]
+        # avg = 3.3 / 4 = 0.825
+        # max = 1.0
+        # overall = (0.825 * 0.7) + (1.0 * 0.3) = 0.5775 + 0.3 = 0.8775
+        self.assertAlmostEqual(result["overall_severity"], 0.8775, places=4)
+        self.assertEqual(result["severity_level"], "Élevé")
 
     
     
     
     def test_evaluate_fallacy_list(self):
         """Teste l'évaluation de la gravité d'une liste de sophismes."""
-        self.skipTest("Test désactivé car la refonte des mocks a cassé la syntaxe.")
+        # Appeler la méthode à tester
+        result = self.evaluator.evaluate_fallacy_list(self.test_fallacies, "commercial")
+
+        # Vérifier les résultats
+        self.assertIn("overall_severity", result)
+        self.assertIn("severity_level", result)
+        self.assertIn("fallacy_evaluations", result)
+        self.assertIn("context_analysis", result)
+
+        # Vérifier que tous les sophismes ont été évalués
+        self.assertEqual(len(result["fallacy_evaluations"]), len(self.test_fallacies))
+
+        # Vérifier un exemple de calcul de gravité
+        appeal_to_authority_eval = next(item for item in result["fallacy_evaluations"] if item["fallacy_type"] == "Appel à l'autorité")
+        self.assertEqual(appeal_to_authority_eval["base_severity"], 0.6)
+        self.assertEqual(appeal_to_authority_eval["context_modifier"], 0.1)  # commercial
+        self.assertEqual(appeal_to_authority_eval["audience_modifier"], 0.0) # grand public
+        self.assertEqual(appeal_to_authority_eval["domain_modifier"], 0.1)  # finance
+        self.assertAlmostEqual(appeal_to_authority_eval["final_severity"], 0.8, places=7)
+        self.assertEqual(appeal_to_authority_eval["severity_level"], "Élevé")
+        
+        # Vérifier le score global
+        # Recalcul des valeurs attendues :
+        # Appel à l'autorité: 0.6 + 0.1 (comm) + 0.0 (grand pub) + 0.1 (fin) = 0.8
+        # Appel à la popularité: 0.5 + 0.2 = 0.7
+        # Appel à la peur: 0.8 + 0.2 = 1.0
+        # severities = [0.8, 0.7, 1.0]
+        # avg = 2.5 / 3 = 0.8333
+        # max = 1.0
+        # overall = (0.8333 * 0.7) + (1.0 * 0.3) = 0.5833 + 0.3 = 0.8833
+        self.assertAlmostEqual(result["overall_severity"], 0.8833, places=4)
+        self.assertEqual(result["severity_level"], "Élevé")
 
     def test_analyze_context_impact(self):
         """Teste l'analyse de l'impact du contexte sur la gravité des sophismes."""
