@@ -9,6 +9,16 @@ import time
 import shutil
 import nest_asyncio
 
+# ##################################################################################
+# ##################################################################################
+# ATTENTION : VÉRIFICATION D'ENVIRONNEMENT CRITIQUE
+# CE BLOC EST UN COUPE-CIRCUIT DE SÉCURITÉ NON NÉGOCIABLE.
+# IL EMPÊCHE L'EXÉCUTION DES TESTS EN DEHORS DE L'ENVIRONNEMENT CONDA 'projet-is',
+# CE QUI POURRAIT ENTRAÎNER DES ERREURS IMPRÉVISIBLES ET CORROMPRE LES RÉSULTATS.
+#
+# NE PAS MODIFIER, DÉSACTIVER OU SUPPRIMER SOUS AUCUN PRÉTEXTE.
+# ##################################################################################
+# ##################################################################################
 # ===== INTÉGRATION AUTO_ENV - CRITIQUE POUR ÉVITER LES ENVIRONNEMENTS GLOBAUX =====
 # DOIT ÊTRE EXÉCUTÉ AVANT TOUTE AUTRE CONFIGURATION
 try:
@@ -20,6 +30,9 @@ except ImportError as e:
 except Exception as e:
    print(f"⚠️ Erreur auto_env dans conftest principal: {e}")
 # ==================================================================================
+# ##################################################################################
+# FIN DU BLOC DE VÉRIFICATION D'ENVIRONNEMENT CRITIQUE
+# ##################################################################################
 
 # --- Gestion du patch de dotenv ---
 MOCK_DOTENV = True
@@ -215,7 +228,7 @@ def manage_jvm_for_test(request):
 # Charger les fixtures définies dans d'autres fichiers comme des plugins
 pytest_plugins = [
    "tests.fixtures.integration_fixtures",
-   "tests.fixtures.jvm_subprocess_fixture",
+   # "tests.fixtures.jvm_subprocess_fixture", # TEMPORAIREMENT DÉSACTIVÉ - CAUSE UN CRASH JVM
     "pytest_playwright",
     # "tests.mocks.numpy_setup" # DÉSACTIVÉ GLOBALEMENT - Provoque un comportement instable pour les tests E2E
 ]

@@ -56,11 +56,10 @@ $fullCommand = if ($Arguments) {
     $Command
 }
 
-# Construit la commande finale avec `conda run`.
-# --no-capture-output est crucial pour voir la sortie en temps réel et éviter les problèmes de buffering.
-# --live-stream est une alternative moderne qui fait la même chose.
-$finalCommand = "conda run --no-capture-output -n $condaEnvName $fullCommand"
-
+# Construit la commande finale en combinant conda run et l'appel au module python
+$moduleName = "project_core.core_from_scripts.environment_manager"
+$commandToExecute = $fullCommand
+$finalCommand = "conda run --no-capture-output -n $condaEnvName python.exe -m $moduleName run `"$commandToExecute`""
 
 Write-Host "[DEBUG] Calling in Conda Env '$condaEnvName': $finalCommand" -ForegroundColor Gray
 
