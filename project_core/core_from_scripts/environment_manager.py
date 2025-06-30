@@ -131,13 +131,22 @@ class EnvironmentManager:
         
         description = f"Exécution de '{command_to_run[:50]}...' dans l'env '{conda_env_name}' via `conda run --cwd`"
         
+        # S'assure que la racine du projet est dans le PYTHONPATH
+        env_vars = os.environ.copy()
+        python_path = env_vars.get('PYTHONPATH', '')
+        project_root_str = str(self.project_root)
+        if project_root_str not in python_path.split(os.pathsep):
+            self.logger.info(f"Ajout de {project_root_str} au PYTHONPATH.")
+            env_vars['PYTHONPATH'] = f"{project_root_str}{os.pathsep}{python_path}"
+        
         # On exécute la commande, en s'assurant que `run_shell_command` n'utilise pas `shell=True`
         # car on passe une liste d'arguments bien formée.
         exit_code, _, _ = run_shell_command(
             command=full_command,
             description=description,
             capture_output=False,
-            shell_mode=False
+            shell_mode=False, # Important pour la sécurité et la robustesse
+            env=env_vars
         )
         
         return exit_code
