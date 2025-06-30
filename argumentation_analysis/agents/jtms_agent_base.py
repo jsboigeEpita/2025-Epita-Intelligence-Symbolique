@@ -128,16 +128,32 @@ class JTMSSession:
         self.last_modified = datetime.now()
         return self.extended_beliefs[name]
     
-    def add_justification(self, in_list: List[str], out_list: List[str], 
+    def add_justification(self, in_list: List[str], out_list: List[str],
                          conclusion: str, agent_source: str = "unknown"):
-        """Ajoute justification avec traçabilité d'agent"""
+        """Ajoute justification avec traçabilité d'agent ET détection de contradiction."""
         # Assurer que toutes les croyances existent
-        for belief_name in in_list + out_list + [conclusion]:
+        all_beliefs_in_rule = list(set(in_list + out_list + [conclusion]))
+        for belief_name in all_beliefs_in_rule:
             if belief_name not in self.extended_beliefs:
                 self.add_belief(belief_name, agent_source, {"auto_created": True})
         
         # Ajouter à JTMS
         self.jtms.add_justification(in_list, out_list, conclusion)
+        
+        # Stratégie de contradiction explicite :
+        # Pour une règle A & ~B -> C, on crée une règle de conflit A & B & C -> _CONTRADICTION_
+        # Simplifié : si la conclusion C est vraie et une prémisse négative B est vraie, c'est un conflit.
+        if out_list:
+            contradiction_belief = "_CONTRADICTION_"
+            if contradiction_belief not in self.extended_beliefs:
+                self.add_belief(contradiction_belief, "system", {"auto_created": True})
+
+            for out_item in out_list:
+                # Un conflit survient lorsque toutes les prémisses POSITIVES (in_list)
+                # sont vraies EN MEME TEMPS qu'une prémisse NEGATIVE (out_item) est également vraie.
+                # Donc, in_list ET out_item -> _CONTRADICTION_
+                conflict_in_list = list(set(in_list + [out_item]))
+                self.jtms.add_justification(conflict_in_list, [], contradiction_belief)
         
         # Traçabilité sur la croyance conclusion
         if conclusion in self.extended_beliefs:
@@ -150,6 +166,18 @@ class JTMSSession:
         self.total_inferences += 1
         self.last_modified = datetime.now()
     
+    def set_fact(self, name: str, is_true: bool = True):
+        """Déclare une croyance comme étant un fait (lui assigne une validité sans justification)."""
+        if name not in self.jtms.beliefs:
+            # Si on essaie de mettre un fait sur une croyance qui n'a pas été ajoutée,
+            # on l'ajoute implicitement.
+            self.add_belief(name, "system_fact", {"description": "Auto-added as a fact"})
+        
+        self.jtms.set_belief_validity(name, is_true)
+        # La propagation est gérée par set_belief_validity dans la lib JTMS
+        self.last_modified = datetime.now()
+
+
     def explain_belief(self, belief_name: str) -> str:
         """Explication enrichie avec contexte agent"""
         if belief_name not in self.extended_beliefs:
@@ -175,27 +203,34 @@ Modifications: {len(extended_belief.modification_history)}
         return enriched_explanation
     
     def check_consistency(self) -> Dict:
-        """Vérifie cohérence avec statistiques détaillées"""
+        """Vérifie la cohérence en propageant les justifications et en détectant les contradictions."""
         self.consistency_checks += 1
-        
-        # Vérification basique : pas de croyances contradictoires explicites
-        conflicts = []
-        for name, belief in self.extended_beliefs.items():
-            opposite_name = f"not_{name}" if not name.startswith("not_") else name[4:]
-            if opposite_name in self.extended_beliefs:
-                if (belief.valid and self.extended_beliefs[opposite_name].valid):
-                    conflicts.append({
-                        "type": "contradiction",
-                        "beliefs": [name, opposite_name],
-                        "agents": [belief.agent_source, self.extended_beliefs[opposite_name].agent_source]
-                    })
-        
-        # Détection de cycles non-monotoniques
+
+        # Force la propagation des valeurs de vérité à travers le réseau de justifications.
+        # C'est cette étape qui révèle les contradictions latentes.
         self.jtms.update_non_monotonic_befielfs()
-        non_monotonic_beliefs = [name for name, belief in self.jtms.beliefs.items() 
-                                if belief.non_monotonic]
         
-        is_consistent = len(conflicts) == 0
+        conflicts = []
+        contradiction_belief_name = "_CONTRADICTION_"
+        if (contradiction_belief_name in self.jtms.beliefs and
+            self.jtms.beliefs[contradiction_belief_name].valid):
+            
+            # La croyance _CONTRADICTION_ est valide, donc le système est incohérent.
+            # Maintenant, trouver quelles justifications la supportent.
+            contradiction_belief = self.jtms.beliefs[contradiction_belief_name]
+            for justif in contradiction_belief.justifications:
+                if all(self.jtms.beliefs[b.name].valid for b in justif.in_list):
+                    conflicting_beliefs = [b.name for b in justif.in_list]
+                    conflicts.append({
+                        "type": "explicit_contradiction",
+                        "beliefs": conflicting_beliefs,
+                        "agents": list(set(self.extended_beliefs[b].agent_source for b in conflicting_beliefs if b in self.extended_beliefs))
+                    })
+
+        # Détection de cycles non-monotoniques (qui est une forme d'incohérence/ambiguité)
+        non_monotonic_beliefs = [name for name, belief in self.jtms.beliefs.items() if belief.non_monotonic]
+
+        is_consistent = not conflicts
         self.last_consistency_status = is_consistent
         
         return {
@@ -283,6 +318,11 @@ class JTMSAgentBase(ABC):
         self._logger.info(f"Ajout justification: {in_list} ∧ ¬{out_list} → {conclusion}")
         self._jtms_session.add_justification(in_list, out_list, conclusion, self._agent_name)
     
+    def set_fact(self, belief_name: str, is_true: bool = True):
+        """Déclare une croyance comme un fait dans le JTMS de l'agent."""
+        self._logger.info(f"Déclaration du fait '{belief_name}' à {is_true}")
+        self._jtms_session.set_fact(belief_name, is_true)
+
     def validate_justification(self, in_list: List[str], out_list: List[str], conclusion: str) -> bool:
         """Valide qu'une justification est logiquement cohérente"""
         try:
