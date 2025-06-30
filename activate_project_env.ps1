@@ -17,8 +17,8 @@ C'est le point d'entrée privilégié pour toute commande relative au projet.
 .\activate_project_env.ps1 -Command "python --version"
 #>
 param(
-    [Parameter(Mandatory=$true, Position=0)]
-    [string]$Command,
+    [Parameter(Mandatory=$false, Position=0)]
+    [string]$Command = "",
 
     [Parameter(ValueFromRemainingArguments=$true)]
     [string[]]$Arguments
@@ -67,16 +67,23 @@ if ($Command -eq "pytest") {
     }
 }
 
-# Construit la commande finale en combinant conda run et l'appel au module python
-$moduleName = "project_core.core_from_scripts.environment_manager"
-$commandToExecute = $fullCommand
-$finalCommand = "conda run --no-capture-output -n $condaEnvName python.exe -m $moduleName run `"$commandToExecute`""
+# --- Exécution de la commande ---
+# La commande ne sera exécutée que si le paramètre -Command a été fourni.
+if (-not [string]::IsNullOrWhiteSpace($Command)) {
+    # Construit la commande finale en combinant conda run et l'appel au module python
+    $moduleName = "project_core.core_from_scripts.environment_manager"
+    $commandToExecute = $fullCommand
+    $finalCommand = "conda run --no-capture-output -n $condaEnvName python.exe -m $moduleName run `"$commandToExecute`""
 
-Write-Host "[DEBUG] Calling in Conda Env '$condaEnvName': $finalCommand" -ForegroundColor Gray
+    Write-Host "[DEBUG] Calling in Conda Env '$condaEnvName': $finalCommand" -ForegroundColor Gray
 
-# Exécute la commande finale. Invoke-Expression est utilisé pour évaluer la chaîne complète.
-Invoke-Expression -Command $finalCommand
+    # Exécute la commande finale. Invoke-Expression est utilisé pour évaluer la chaîne complète.
+    Invoke-Expression -Command $finalCommand
 
-# Propage le code de sortie du script python
-$exitCode = $LASTEXITCODE
-exit $exitCode
+    # Propage le code de sortie du script python
+    $exitCode = $LASTEXITCODE
+    exit $exitCode
+}
+else {
+    Write-Host "[INFO] Environnement Conda '$condaEnvName' initialisé. Aucune commande à exécuter." -ForegroundColor Cyan
+}
