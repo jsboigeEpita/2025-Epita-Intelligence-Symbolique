@@ -1,0 +1,14 @@
+﻿diff --git a/argumentation_analysis/agents/agent_factory.py b/argumentation_analysis/agents/agent_factory.py
+index a39942d3..fd499d20 100644
+--- a/argumentation_analysis/agents/agent_factory.py
++++ b/argumentation_analysis/agents/agent_factory.py
+@@ -2,7 +2,8 @@
+ 
+ from typing import List
+ from semantic_kernel import Kernel
+-from semantic_kernel.agents import Agent, ChatCompletionAgent
++from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatCompletionAgent
++from semantic_kernel.agents.agent import Agent
+ from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
+ 
+ from .plugins.fallacy_identification_plugin import FallacyIdentificationPlugin

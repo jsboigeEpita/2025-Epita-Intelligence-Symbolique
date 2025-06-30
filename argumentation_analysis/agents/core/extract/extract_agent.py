@@ -90,58 +90,42 @@ class ExtractAgent(BaseAgent):
         self,
         kernel: sk.Kernel,
         agent_name: str = "ExtractAgent",
+        llm_service_id: str = None,
+        plugins: list = None,
         find_similar_text_func: Optional[Callable] = None,
-        extract_text_func: Optional[Callable] = None
+        extract_text_func: Optional[Callable] = None,
     ):
         """
         Initialise l'agent d'extraction.
-
-        Args:
-            kernel (sk.Kernel): L'instance de `Kernel` de Semantic Kernel utilisée pour
-                invoquer les fonctions sémantiques et gérer les plugins.
-            agent_name (str): Le nom de l'agent, utilisé pour l'enregistrement des
-                fonctions dans le kernel.
-            find_similar_text_func (Optional[Callable]): Une fonction optionnelle pour
-                trouver un texte similaire. Si `None`, la fonction par défaut
-                `find_similar_text` est utilisée.
-            extract_text_func (Optional[Callable]): Une fonction optionnelle pour
-                extraire le texte entre des marqueurs. Si `None`, la fonction par défaut
-                `extract_text_with_markers` est utilisée.
         """
-        super().__init__(kernel, agent_name, EXTRACT_AGENT_INSTRUCTIONS)
+        if plugins is None:
+            plugins = [ExtractAgentPlugin()]
+
+        super().__init__(
+            kernel=kernel,
+            agent_name=agent_name,
+            system_prompt=EXTRACT_AGENT_INSTRUCTIONS,
+            llm_service_id=llm_service_id,
+            plugins=plugins
+        )
+        
         self._find_similar_text_func = find_similar_text_func or find_similar_text
         self._extract_text_func = extract_text_func or extract_text_with_markers
-        self._native_extract_plugin: Optional[ExtractAgentPlugin] = None
+        self._native_extract_plugin = next((p for p in plugins if isinstance(p, ExtractAgentPlugin)), None)
 
-    def get_agent_capabilities(self) -> Dict[str, Any]:
-        return {
-            "extract_from_name": "Extrait un passage pertinent à partir de la dénomination de l'extrait.",
-            "repair_extract": "Répare un extrait existant en utilisant sa dénomination.",
-        }
+        if not llm_service_id:
+            self.logger.warning(f"Aucun llm_service_id fourni pour {self.name}. Les fonctions sémantiques ne seront pas initialisées.")
+            return
 
-    def setup_agent_components(self, llm_service_id: str) -> None:
-        """
-        Initialise et enregistre les composants de l'agent dans le kernel.
+        self._register_semantic_functions(llm_service_id)
 
-        Cette méthode est responsable de :
-        1.  Instancier et enregistrer le plugin natif `ExtractAgentPlugin`.
-        2.  Créer et enregistrer les fonctions sémantiques (`extract_from_name_semantic`
-            et `validate_extract_semantic`) à partir des prompts.
+    def _register_semantic_functions(self, llm_service_id: str):
+        """Enregistre les fonctions sémantiques dans le kernel."""
+        self.logger.info(f"Enregistrement des fonctions sémantiques pour {self.name} avec le service LLM ID: {llm_service_id}")
 
-        Args:
-            llm_service_id (str): L'identifiant du service LLM à utiliser pour les
-                fonctions sémantiques.
-        """
-        super().setup_agent_components(llm_service_id)
-        self.logger.info(f"Configuration des composants pour {self.name} avec le service LLM ID: {llm_service_id}")
-
-        # Enregistrement du plugin natif
-        self._native_extract_plugin = ExtractAgentPlugin()
-        self._kernel.add_plugin(self._native_extract_plugin, plugin_name=self.NATIVE_PLUGIN_NAME)
-        self.logger.info(f"Plugin natif '{self.NATIVE_PLUGIN_NAME}' enregistré.")
-
-        # Configuration et enregistrement de la fonction sémantique d'extraction
         execution_settings = self._kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+        
+        # Fonction d'extraction
         extract_prompt_template_config = PromptTemplateConfig(
             template=EXTRACT_FROM_NAME_PROMPT,
             name=self.EXTRACT_SEMANTIC_FUNCTION_NAME,
@@ -153,14 +137,10 @@ class ExtractAgent(BaseAgent):
             ],
             execution_settings=execution_settings
         )
-        self._kernel.add_function(
-            function_name=self.EXTRACT_SEMANTIC_FUNCTION_NAME,
-            prompt_template_config=extract_prompt_template_config,
-            plugin_name=self.name
-        )
+        self._kernel.add_function(self.EXTRACT_SEMANTIC_FUNCTION_NAME, extract_prompt_template_config, plugin_name=self.name)
         self.logger.info(f"Fonction sémantique '{self.EXTRACT_SEMANTIC_FUNCTION_NAME}' enregistrée dans le plugin '{self.name}'.")
 
-        # Configuration et enregistrement de la fonction sémantique de validation
+        # Fonction de validation
         validate_prompt_template_config = PromptTemplateConfig(
             template=VALIDATE_EXTRACT_PROMPT,
             name=self.VALIDATE_SEMANTIC_FUNCTION_NAME,
@@ -176,12 +156,14 @@ class ExtractAgent(BaseAgent):
             ],
             execution_settings=execution_settings
         )
-        self._kernel.add_function(
-            function_name=self.VALIDATE_SEMANTIC_FUNCTION_NAME,
-            prompt_template_config=validate_prompt_template_config,
-            plugin_name=self.name
-        )
+        self._kernel.add_function(self.VALIDATE_SEMANTIC_FUNCTION_NAME, validate_prompt_template_config, plugin_name=self.name)
         self.logger.info(f"Fonction sémantique '{self.VALIDATE_SEMANTIC_FUNCTION_NAME}' enregistrée dans le plugin '{self.name}'.")
+
+    def get_agent_capabilities(self) -> Dict[str, Any]:
+        return {
+            "extract_from_name": "Extrait un passage pertinent à partir de la dénomination de l'extrait.",
+            "repair_extract": "Répare un extrait existant en utilisant sa dénomination.",
+        }
 
     @property
     def native_extract_plugin(self) -> ExtractAgentPlugin:

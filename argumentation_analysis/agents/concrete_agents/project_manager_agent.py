@@ -15,39 +15,32 @@ class ProjectManagerAgent(BaseAgent):
     d'assigner des tâches et de suivre l'état d'avancement.
     """
 
-    def __init__(self, kernel: Kernel, agent_name: str = "Project_Manager"):
+    def __init__(self, kernel: Kernel, agent_name: str = "Project_Manager", llm_service_id: str = None, plugins: list = None):
         """
         Initialise une instance de ProjectManagerAgent.
 
         Args:
             kernel (Kernel): Le kernel Semantic Kernel à associer à l'agent.
-            agent_name (str, optional): Le nom de l'agent.
-                Defaults to "Project_Manager".
+            agent_name (str, optional): Le nom de l'agent. Defaults to "Project_Manager".
+            llm_service_id (str, optional): L'ID du service LLM. Defaults to None.
+            plugins (list, optional): La liste des plugins à utiliser. Defaults to None.
         """
         prompt_path = get_prompt_path("ProjectManagerAgent")
         with open(prompt_path, "r", encoding="utf-8") as f:
             prompt = f.read()
 
+        # Si aucun plugin n'est fourni, on utilise le plugin par défaut
+        if plugins is None:
+            plugins = [ProjectManagementPlugin()]
+
         super().__init__(
             kernel=kernel,
             agent_name=agent_name,
             system_prompt=prompt,
-            description="Un agent chef de projet pour décomposer et organiser le travail."
+            description="Un agent chef de projet pour décomposer et organiser le travail.",
+            llm_service_id=llm_service_id,
+            plugins=plugins
         )
-
-    def setup_agent_components(self, llm_service_id: str) -> None:
-        """
-        Configure les composants de l'agent, y compris le plugin de gestion de projet.
-
-        Args:
-            llm_service_id (str): L'ID du service LLM à utiliser.
-        """
-        self._llm_service_id = llm_service_id
-        self._kernel.add_plugin(
-            ProjectManagementPlugin(),
-            plugin_name="ProjectMgmtPlugin"
-        )
-        return super().setup_agent_components(llm_service_id)
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         """

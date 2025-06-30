@@ -18,14 +18,8 @@ from pathlib import Path
 from datetime import datetime
 from collections import Counter, defaultdict
 
-# Ajouter le répertoire parent au chemin de recherche des modules
-current_dir = Path(__file__).parent
-parent_dir = current_dir.parent.parent.parent.parent
-if str(parent_dir) not in sys.path:
-    sys.path.append(str(parent_dir))
 
 # Importer l'analyseur de résultats rhétoriques de base
-from argumentation_analysis.agents.tools.analysis.rhetorical_result_analyzer import RhetoricalResultAnalyzer as BaseAnalyzer
 
 # Importer les analyseurs améliorés
 from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
@@ -40,7 +34,109 @@ logging.basicConfig(
 logger = logging.getLogger("EnhancedRhetoricalResultAnalyzer")
 
 
-class EnhancedRhetoricalResultAnalyzer(BaseAnalyzer):
+class RecommendationGenerator:
+    """
+    Génère des recommandations pour améliorer une argumentation.
+    """
+    def generate(
+        self,
+        fallacy_analysis: Dict[str, Any],
+        coherence_analysis: Dict[str, Any],
+        persuasion_analysis: Dict[str, Any],
+        context: str
+    ) -> Dict[str, List[str]]:
+        """
+        Génère des recommandations basées sur les analyses fournies.
+        """
+        # Initialiser les listes de recommandations par catégorie
+        general_recommendations = []
+        fallacy_recommendations = []
+        coherence_recommendations = []
+        persuasion_recommendations = []
+        context_specific_recommendations = []
+        
+        # Recommandations basées sur les sophismes
+        if fallacy_analysis.get("total_fallacies", 0) > 5:
+            fallacy_recommendations.append("Réduire le nombre de sophismes utilisés")
+        
+        if fallacy_analysis.get("overall_severity", 0.5) > 0.7:
+            fallacy_recommendations.append("Éviter les sophismes les plus graves")
+            
+            # Ajouter des recommandations spécifiques pour les sophismes les plus courants
+            most_common_fallacies = fallacy_analysis.get("most_common_fallacies", [])
+            for fallacy in most_common_fallacies:
+                if fallacy == "Appel à l'émotion":
+                    fallacy_recommendations.append("Réduire les appels émotionnels excessifs")
+                elif fallacy == "Ad hominem":
+                    fallacy_recommendations.append("Éviter les attaques personnelles")
+                elif fallacy == "Appel à l'autorité":
+                    fallacy_recommendations.append("Citer des sources plus crédibles et diversifiées")
+        
+        if fallacy_analysis.get("contextual_ratio", 0) < 0.3:
+            fallacy_recommendations.append("Adapter les sophismes au contexte spécifique de l'argumentation")
+        
+        # Recommandations basées sur la cohérence
+        if coherence_analysis.get("overall_coherence", 0.5) < 0.6:
+            coherence_recommendations.append("Améliorer la cohérence globale de l'argumentation")
+        
+        if coherence_analysis.get("contradiction_count", 0) > 0:
+            coherence_recommendations.append(f"Résoudre les {coherence_analysis.get('contradiction_count')} contradictions identifiées")
+        
+        main_coherence_issues = coherence_analysis.get("main_coherence_issues", [])
+        for issue in main_coherence_issues:
+            if issue == "Thematic shifts":
+                coherence_recommendations.append("Maintenir une cohérence thématique plus forte")
+            elif issue == "Logical gaps":
+                coherence_recommendations.append("Combler les lacunes logiques entre les arguments")
+            elif issue == "Multiple unrelated themes":
+                coherence_recommendations.append("Réduire le nombre de thèmes non liés")
+        
+        # Recommandations basées sur la persuasion
+        if persuasion_analysis.get("persuasion_score", 0.5) < 0.6:
+            persuasion_recommendations.append("Renforcer l'efficacité persuasive globale")
+        
+        # Équilibrer les appels rhétoriques
+        rhetorical_appeals = persuasion_analysis.get("rhetorical_appeals", {})
+        if rhetorical_appeals:
+            min_appeal = min(rhetorical_appeals, key=rhetorical_appeals.get)
+            if rhetorical_appeals[min_appeal] < 0.4:
+                if min_appeal == "ethos":
+                    persuasion_recommendations.append("Renforcer l'appel à la crédibilité")
+                elif min_appeal == "pathos":
+                    persuasion_recommendations.append("Renforcer l'appel émotionnel")
+                elif min_appeal == "logos":
+                    persuasion_recommendations.append("Renforcer l'appel logique avec des preuves et des raisonnements solides")
+        
+        # Recommandations spécifiques au contexte
+        if context == "politique":
+            if persuasion_analysis.get("emotional_appeal", 0.5) > 0.8 and persuasion_analysis.get("logical_appeal", 0.5) < 0.4:
+                context_specific_recommendations.append("Équilibrer les appels émotionnels avec des arguments logiques")
+        elif context == "scientifique":
+            if persuasion_analysis.get("logical_appeal", 0.5) < 0.6:
+                context_specific_recommendations.append("Renforcer la rigueur logique et les preuves empiriques")
+        elif context == "commercial":
+            if persuasion_analysis.get("credibility_appeal", 0.5) < 0.5:
+                context_specific_recommendations.append("Renforcer la crédibilité de la marque ou du produit")
+        
+        # Ajouter des recommandations générales basées sur l'ensemble des analyses
+        if fallacy_analysis.get("overall_severity", 0.5) > 0.6 and coherence_analysis.get("overall_coherence", 0.5) < 0.6:
+            general_recommendations.append("Restructurer l'argumentation pour réduire les sophismes et améliorer la cohérence")
+        elif persuasion_analysis.get("persuasion_score", 0.5) < 0.5:
+            general_recommendations.append("Revoir la stratégie persuasive globale")
+        
+        # Regrouper toutes les recommandations
+        recommendations = {
+            "general_recommendations": general_recommendations,
+            "fallacy_recommendations": fallacy_recommendations,
+            "coherence_recommendations": coherence_recommendations,
+            "persuasion_recommendations": persuasion_recommendations,
+            "context_specific_recommendations": context_specific_recommendations
+        }
+        
+        return recommendations
+
+
+class EnhancedRhetoricalResultAnalyzer:
     """
     Outil amélioré pour l'analyse des résultats d'une analyse rhétorique.
     
@@ -49,16 +145,29 @@ class EnhancedRhetoricalResultAnalyzer(BaseAnalyzer):
     complète et nuancée des résultats rhétoriques.
     """
     
-    def __init__(self):
+    def __init__(
+        self,
+        complex_fallacy_analyzer: Optional[Any] = None,
+        severity_evaluator: Optional[Any] = None,
+        recommendation_generator: Optional[Any] = None
+    ):
         """
         Initialise l'analyseur de résultats rhétoriques amélioré.
+        
+        Args:
+            complex_fallacy_analyzer (Optional[Any]): Un analyseur de sophismes complexes.
+                                                      Si non fourni, une instance par défaut sera créée.
+            severity_evaluator (Optional[Any]): Un évaluateur de gravité de sophismes.
+                                                 Si non fourni, une instance par défaut sera créée.
+            recommendation_generator (Optional[Any]): Un générateur de recommandations.
+                                                      Si non fourni, une instance par défaut sera créée.
         """
-        super().__init__()
         self.logger = logger
         
-        # Initialiser les analyseurs améliorés
-        self.complex_fallacy_analyzer = EnhancedComplexFallacyAnalyzer()
-        self.severity_evaluator = EnhancedFallacySeverityEvaluator()
+        # Utiliser les analyseurs fournis ou initialiser des analyseurs par défaut
+        self.complex_fallacy_analyzer = complex_fallacy_analyzer or EnhancedComplexFallacyAnalyzer()
+        self.severity_evaluator = severity_evaluator or EnhancedFallacySeverityEvaluator()
+        self.recommendation_generator = recommendation_generator or RecommendationGenerator()
         
         # Historique des analyses pour l'apprentissage continu
         self.analysis_history = []
@@ -102,7 +211,7 @@ class EnhancedRhetoricalResultAnalyzer(BaseAnalyzer):
         )
         
         # Générer des recommandations
-        recommendations = self._generate_recommendations(
+        recommendations = self.recommendation_generator.generate(
             fallacy_analysis, coherence_analysis, persuasion_analysis, context
         )
         
@@ -520,36 +629,6 @@ class EnhancedRhetoricalResultAnalyzer(BaseAnalyzer):
         
         return min(1.0, contextual_relevance)
     
-    def _analyze_persuasion(self, results: Dict[str, Any], context: str) -> Dict[str, Any]:
-        """
-        Analyse les stratégies de persuasion utilisées.
-        
-        Args:
-            results: Résultats de l'analyse rhétorique
-            context: Contexte de l'analyse
-            
-        Returns:
-            Dictionnaire contenant l'analyse des stratégies de persuasion
-        """
-        # Extraire les informations pertinentes
-        complex_fallacy_analysis = results.get("complex_fallacy_analysis", {})
-        contextual_fallacy_analysis = results.get("contextual_fallacy_analysis", {})
-        
-        # Identifier les stratégies de persuasion
-        persuasion_strategies = self._identify_persuasion_strategies(contextual_fallacy_analysis)
-        
-        # Identifier les appels rhétoriques (ethos, pathos, logos)
-        rhetorical_appeals = self._identify_rhetorical_appeals(contextual_fallacy_analysis)
-        
-        # Préparer l'analyse
-        persuasion_analysis = {
-            "persuasion_strategies": persuasion_strategies,
-            "rhetorical_appeals": rhetorical_appeals,
-            "dominant_appeal": max(rhetorical_appeals, key=rhetorical_appeals.get) if rhetorical_appeals else None
-        }
-        
-        return persuasion_analysis
-    
     def _identify_persuasion_strategies(self, contextual_fallacy_analysis: Dict[str, Any]) -> Dict[str, float]:
         """
         Identifie les stratégies de persuasion utilisées.
@@ -635,145 +714,3 @@ class EnhancedRhetoricalResultAnalyzer(BaseAnalyzer):
         
         return appeals
     
-    def _determine_quality_level(
-        self,
-        fallacy_analysis: Dict[str, Any],
-        coherence_analysis: Dict[str, Any],
-        persuasion_analysis: Dict[str, Any]
-    ) -> str:
-        """
-        Détermine le niveau de qualité de l'analyse rhétorique.
-        
-        Args:
-            fallacy_analysis: Analyse des sophismes
-            coherence_analysis: Analyse de la cohérence
-            persuasion_analysis: Analyse de la persuasion
-            
-        Returns:
-            Niveau de qualité (Excellent, Bon, Moyen, Faible)
-        """
-        # Calculer un score global
-        coherence_score = coherence_analysis.get("overall_coherence_score", 0.5)
-        
-        # Calculer un score de sophistication des sophismes
-        total_fallacies = fallacy_analysis.get("total_fallacies", 0)
-        advanced_combinations_count = fallacy_analysis.get("advanced_combinations_count", 0)
-        sophistication_score = advanced_combinations_count / max(1, total_fallacies)
-        
-        # Calculer un score global
-        overall_score = (coherence_score + sophistication_score) / 2
-        
-        # Déterminer le niveau de qualité
-        if overall_score > 0.8:
-            return "Excellent"
-        elif overall_score > 0.6:
-            return "Bon"
-        elif overall_score > 0.4:
-            return "Moyen"
-        else:
-            return "Faible"
-    
-    def _generate_recommendations(
-        self,
-        fallacy_analysis: Dict[str, Any],
-        coherence_analysis: Dict[str, Any],
-        persuasion_analysis: Dict[str, Any],
-        context: str
-    ) -> Dict[str, List[str]]:
-        """
-        Génère des recommandations pour améliorer l'argumentation.
-        
-        Args:
-            fallacy_analysis: Analyse des sophismes
-            coherence_analysis: Analyse de la cohérence
-            persuasion_analysis: Analyse de la persuasion
-            
-        Returns:
-            Dictionnaire contenant les recommandations par catégorie
-        """
-        # Initialiser les listes de recommandations par catégorie
-        general_recommendations = []
-        fallacy_recommendations = []
-        coherence_recommendations = []
-        persuasion_recommendations = []
-        context_specific_recommendations = []
-        
-        # Recommandations basées sur les sophismes
-        if fallacy_analysis.get("total_fallacies", 0) > 5:
-            fallacy_recommendations.append("Réduire le nombre de sophismes utilisés")
-        
-        if fallacy_analysis.get("overall_severity", 0.5) > 0.7:
-            fallacy_recommendations.append("Éviter les sophismes les plus graves")
-            
-            # Ajouter des recommandations spécifiques pour les sophismes les plus courants
-            most_common_fallacies = fallacy_analysis.get("most_common_fallacies", [])
-            for fallacy in most_common_fallacies:
-                if fallacy == "Appel à l'émotion":
-                    fallacy_recommendations.append("Réduire les appels émotionnels excessifs")
-                elif fallacy == "Ad hominem":
-                    fallacy_recommendations.append("Éviter les attaques personnelles")
-                elif fallacy == "Appel à l'autorité":
-                    fallacy_recommendations.append("Citer des sources plus crédibles et diversifiées")
-        
-        if fallacy_analysis.get("contextual_ratio", 0) < 0.3:
-            fallacy_recommendations.append("Adapter les sophismes au contexte spécifique de l'argumentation")
-        
-        # Recommandations basées sur la cohérence
-        if coherence_analysis.get("overall_coherence", 0.5) < 0.6:
-            coherence_recommendations.append("Améliorer la cohérence globale de l'argumentation")
-        
-        if coherence_analysis.get("contradiction_count", 0) > 0:
-            coherence_recommendations.append(f"Résoudre les {coherence_analysis.get('contradiction_count')} contradictions identifiées")
-        
-        main_coherence_issues = coherence_analysis.get("main_coherence_issues", [])
-        for issue in main_coherence_issues:
-            if issue == "Thematic shifts":
-                coherence_recommendations.append("Maintenir une cohérence thématique plus forte")
-            elif issue == "Logical gaps":
-                coherence_recommendations.append("Combler les lacunes logiques entre les arguments")
-            elif issue == "Multiple unrelated themes":
-                coherence_recommendations.append("Réduire le nombre de thèmes non liés")
-        
-        # Recommandations basées sur la persuasion
-        if persuasion_analysis.get("persuasion_score", 0.5) < 0.6:
-            persuasion_recommendations.append("Renforcer l'efficacité persuasive globale")
-        
-        # Équilibrer les appels rhétoriques
-        rhetorical_appeals = persuasion_analysis.get("rhetorical_appeals", {})
-        if rhetorical_appeals:
-            min_appeal = min(rhetorical_appeals, key=rhetorical_appeals.get)
-            if rhetorical_appeals[min_appeal] < 0.4:
-                if min_appeal == "ethos":
-                    persuasion_recommendations.append("Renforcer l'appel à la crédibilité")
-                elif min_appeal == "pathos":
-                    persuasion_recommendations.append("Renforcer l'appel émotionnel")
-                elif min_appeal == "logos":
-                    persuasion_recommendations.append("Renforcer l'appel logique avec des preuves et des raisonnements solides")
-        
-        # Recommandations spécifiques au contexte
-        if context == "politique":
-            if persuasion_analysis.get("emotional_appeal", 0.5) > 0.8 and persuasion_analysis.get("logical_appeal", 0.5) < 0.4:
-                context_specific_recommendations.append("Équilibrer les appels émotionnels avec des arguments logiques")
-        elif context == "scientifique":
-            if persuasion_analysis.get("logical_appeal", 0.5) < 0.6:
-                context_specific_recommendations.append("Renforcer la rigueur logique et les preuves empiriques")
-        elif context == "commercial":
-            if persuasion_analysis.get("credibility_appeal", 0.5) < 0.5:
-                context_specific_recommendations.append("Renforcer la crédibilité de la marque ou du produit")
-        
-        # Ajouter des recommandations générales basées sur l'ensemble des analyses
-        if fallacy_analysis.get("overall_severity", 0.5) > 0.6 and coherence_analysis.get("overall_coherence", 0.5) < 0.6:
-            general_recommendations.append("Restructurer l'argumentation pour réduire les sophismes et améliorer la cohérence")
-        elif persuasion_analysis.get("persuasion_score", 0.5) < 0.5:
-            general_recommendations.append("Revoir la stratégie persuasive globale")
-        
-        # Regrouper toutes les recommandations
-        recommendations = {
-            "general_recommendations": general_recommendations,
-            "fallacy_recommendations": fallacy_recommendations,
-            "coherence_recommendations": coherence_recommendations,
-            "persuasion_recommendations": persuasion_recommendations,
-            "context_specific_recommendations": context_specific_recommendations
-        }
-        
-        return recommendations

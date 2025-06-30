@@ -60,30 +60,6 @@ class EpitaDemoConsolidator:
                 "type": "PRINCIPAL - CIBLE DE CONSOLIDATION",
                 "statut": "FONCTIONNEL",
                 "description": "Script principal modulaire avec 6 catégories de tests"
-            },
-            {
-                "path": "scripts/demo/demo_epita_showcase.py", 
-                "type": "REDONDANT - Phase 4 pédagogique",
-                "statut": "À ANALYSER",
-                "description": "Démonstration pédagogique avec scénarios authentiques"
-            },
-            {
-                "path": "demos/demo_epita_diagnostic.py",
-                "type": "REDONDANT - Diagnostic composants", 
-                "statut": "À ANALYSER",
-                "description": "Diagnostic complet des composants démo Épita"
-            },
-            {
-                "path": "scripts/demo/test_epita_demo_validation.py",
-                "type": "TESTS DE VALIDATION",
-                "statut": "À ANALYSER", 
-                "description": "Validation complète des scripts démo EPITA"
-            },
-            {
-                "path": "demos/validation_complete_epita.py",
-                "type": "VALIDATION EXHAUSTIVE",
-                "statut": "À ANALYSER",
-                "description": "Validation exhaustive incluant scripts EPITA"
             }
         ]
         

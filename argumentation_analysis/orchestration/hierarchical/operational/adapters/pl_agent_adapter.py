@@ -83,8 +83,11 @@ class PLAgentAdapter(OperationalAgent):
             #     raise RuntimeError("La JVM n'a pas pu être initialisée.")
             
             self.logger.info("Initialisation de l'agent PL interne...")
-            self.agent = PropositionalLogicAgent(kernel=self.kernel, agent_name=f"{self.name}_PLAgent")
-            self.agent.setup_agent_components(llm_service_id=self.llm_service_id)
+            self.agent = PropositionalLogicAgent(
+                kernel=self.kernel,
+                agent_name=f"{self.name}_PLAgent",
+                service_id=self.llm_service_id
+            )
             self.initialized = True
             self.logger.info("Agent PL interne initialisé.")
             return True

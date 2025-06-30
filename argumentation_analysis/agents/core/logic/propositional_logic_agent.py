@@ -221,7 +221,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
     service: Optional[ChatCompletionClientBase] = Field(default=None, exclude=True)
     settings: Optional[Any] = Field(default=None, exclude=True)
 
-    def __init__(self, kernel: Kernel, agent_name: str = "PropositionalLogicAgent", system_prompt: Optional[str] = None, service_id: Optional[str] = None):
+    def __init__(self, kernel: Kernel, agent_name: str = "PropositionalLogicAgent", system_prompt: Optional[str] = None, service_id: Optional[str] = None, **kwargs):
         """
         Initialise l'agent de logique propositionnelle.
 
@@ -234,35 +234,18 @@ class PropositionalLogicAgent(BaseLogicAgent):
                 pour les fonctions sémantiques.
         """
         actual_system_prompt = system_prompt or SYSTEM_PROMPT_PL
-        super().__init__(kernel, agent_name=agent_name, logic_type_name="PL", system_prompt=actual_system_prompt)
+        super().__init__(kernel, agent_name=agent_name, logic_type_name="PL", system_prompt=actual_system_prompt, **kwargs)
         self._llm_service_id = service_id
-        self._tweety_bridge = TweetyBridge()
-        self.logger.info(f"TweetyBridge initialisé pour {self.name}. Vérification de la JVM via TweetyInitializer...")
-        if not TweetyInitializer.is_jvm_ready():
-            self.logger.error("La JVM n'est pas prête selon TweetyInitializer. Les fonctionnalités logiques sont compromises.")
-
-    def get_agent_capabilities(self) -> Dict[str, Any]:
-        return {
-            "name": self.name,
-            "logic_type": self.logic_type,
-            "description": "Agent capable d'analyser du texte en utilisant la logique propositionnelle (PL).",
-            "methods": {
-                "text_to_belief_set": "Convertit un texte en un ensemble de croyances PL.",
-                "generate_queries": "Génère des requêtes PL pertinentes à partir d'un texte et d'un ensemble de croyances.",
-                "execute_query": "Exécute une requête PL sur un ensemble de croyances.",
-                "interpret_results": "Interprète les résultats d'une ou plusieurs requêtes PL.",
-                "validate_formula": "Valide la syntaxe d'une formule PL."
-            }
-        }
-
-    def setup_agent_components(self, llm_service_id: str) -> None:
-        super().setup_agent_components(llm_service_id)
+        
         self.logger.info(f"Configuration des composants sémantiques pour {self.name}...")
 
         if not TweetyInitializer.is_jvm_ready():
             self.logger.error(f"La JVM pour TweetyBridge de {self.name} n'est pas prête.")
             return
 
+        self._tweety_bridge = TweetyBridge()
+        self.logger.info(f"TweetyBridge initialisé pour {self.name}.")
+        
         prompt_execution_settings = None
         if self._llm_service_id:
             try:
@@ -292,6 +275,21 @@ class PropositionalLogicAgent(BaseLogicAgent):
                 self.logger.error(f"Erreur lors de l'ajout de la fonction sémantique {self.name}.{func_name}: {e}", exc_info=True)
         
         self.logger.info(f"Composants pour {self.name} configurés.")
+
+    def get_agent_capabilities(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "logic_type": self.logic_type,
+            "description": "Agent capable d'analyser du texte en utilisant la logique propositionnelle (PL).",
+            "methods": {
+                "text_to_belief_set": "Convertit un texte en un ensemble de croyances PL.",
+                "generate_queries": "Génère des requêtes PL pertinentes à partir d'un texte et d'un ensemble de croyances.",
+                "execute_query": "Exécute une requête PL sur un ensemble de croyances.",
+                "interpret_results": "Interprète les résultats d'une ou plusieurs requêtes PL.",
+                "validate_formula": "Valide la syntaxe d'une formule PL."
+            }
+        }
+
     
     def _extract_json_block(self, text: str) -> str:
         """Extrait le premier bloc JSON valide de la réponse du LLM."""

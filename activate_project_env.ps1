@@ -17,8 +17,7 @@ C'est le point d'entrée privilégié pour toute commande relative au projet.
 .\activate_project_env.ps1 python --version
 #>
 param(
-    [Parameter(Mandatory=$false, Position=0)]
-    [string]$Command,
+    [string]$Command = "",
 
     [Parameter(ValueFromRemainingArguments=$true)]
     [string[]]$RemainingArgs

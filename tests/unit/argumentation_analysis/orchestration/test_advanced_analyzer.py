@@ -164,14 +164,16 @@ def test_analyze_extract_advanced_tool_exception_handling(
     
     # Faire échouer un des outils
     original_method = mock_tools["complex_fallacy_analyzer"].detect_composite_fallacies
-    mock_tools["complex_fallacy_analyzer"].detect_composite_fallacies = MagicMock(side_effect=ValueError("Erreur test outil"))
+    mock_detect = MagicMock(side_effect=ValueError("Erreur test outil"))
+    mock_detect.__name__ = "detect_composite_fallacies"
+    mock_tools["complex_fallacy_analyzer"].detect_composite_fallacies = mock_detect
     
     with caplog.at_level(logging.ERROR):
         results = analyze_extract_advanced(sample_extract_definition, source_name, None, mock_tools)
     
     assert "complex_fallacies" in results["analyses"]
     assert results["analyses"]["complex_fallacies"]["error"] == "Erreur test outil"
-    assert "Erreur lors de l'analyse des sophismes complexes (orchestrateur): Erreur test outil" in caplog.text
+    assert "Erreur lors de l'exécution de l'outil 'detect_composite_fallacies': Erreur test outil" in caplog.text
 
     # Restaurer la méthode pour d'autres tests si nécessaire (non critique ici car fixture recrée)
     mock_tools["complex_fallacy_analyzer"].detect_composite_fallacies = original_method

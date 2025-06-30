@@ -86,7 +86,7 @@ class BaseAgent(ABC): # Suppression de l'héritage de sk.Agent (voir note ci-des
         self.description = description if description else (system_prompt if system_prompt else f"Agent {agent_name}")
         
         self._logger = logging.getLogger(f"agent.{self.__class__.__name__}.{self.name}")
-        self._llm_service_id = None  # Sera défini par setup_agent_components
+        self._llm_service_id = kwargs.get("llm_service_id")
 
     @property
     def logger(self) -> logging.Logger:
@@ -113,24 +113,6 @@ class BaseAgent(ABC): # Suppression de l'héritage de sk.Agent (voir note ci-des
         """
         pass
 
-    @abstractmethod
-    def setup_agent_components(self, llm_service_id: str) -> None:
-        """
-        Configure les composants internes de l'agent.
-
-        Cette méthode abstraite doit être implémentée pour effectuer toute
-        l'initialisation nécessaire après la création de l'agent. Cela inclut
-        typiquement:
-        - L'enregistrement de fonctions sémantiques ou natives dans le kernel.
-        - L'initialisation de clients ou de services externes.
-        - Le stockage de l'ID du service LLM pour les appels futurs.
-
-        Args:
-            llm_service_id (str): L'identifiant du service LLM à utiliser pour
-                les opérations de l'agent.
-        """
-        self._llm_service_id = llm_service_id
-        pass
 
     def get_agent_info(self) -> Dict[str, Any]:
         """

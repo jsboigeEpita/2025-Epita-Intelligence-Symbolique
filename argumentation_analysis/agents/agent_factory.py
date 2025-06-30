@@ -94,25 +94,20 @@ class AgentFactory:
         self, trace_log_path: Optional[str] = None
     ) -> Agent:
         """Crée et configure l'agent chef de projet."""
-        agent_kernel = Kernel()
-        agent_kernel.add_plugin(ProjectManagementPlugin(), plugin_name="ProjectMgmtPlugin")
+        plugins = [ProjectManagementPlugin()]
 
         with open("argumentation_analysis/agents/prompts/ProjectManagerAgent/skprompt.txt", "r") as f:
             prompt = f.read()
 
         # Lie les settings au kernel de l'agent
-        agent_kernel.add_service(
-            service=self.kernel.get_service(self.llm_service_id)
-        )
-
-        # Récupère le service et le passe directement
         llm_service = self.kernel.get_service(self.llm_service_id)
         
         agent = ChatCompletionAgent(
-            kernel=agent_kernel,
+            kernel=self.kernel,
             service=llm_service,
             name="Project_Manager",
             instructions=prompt,
+            plugins=plugins
         )
 
         if trace_log_path:

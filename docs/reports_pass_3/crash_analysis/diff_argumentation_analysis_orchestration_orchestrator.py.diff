@@ -1,0 +1,13 @@
+diff --git a/argumentation_analysis/orchestration/orchestrator.py b/argumentation_analysis/orchestration/orchestrator.py
+index fa7d75a4..5961c605 100644
+--- a/argumentation_analysis/orchestration/orchestrator.py
++++ b/argumentation_analysis/orchestration/orchestrator.py
+@@ -3,7 +3,7 @@
+ 
+ import asyncio
+ import logging
+-from semantic_kernel.agents import AgentGroupChat
++from semantic_kernel.agents.group_chat.agent_group_chat import AgentGroupChat
+ from semantic_kernel.contents import ChatMessageContent, AuthorRole
+ from semantic_kernel.contents.chat_history import ChatHistory
+ 

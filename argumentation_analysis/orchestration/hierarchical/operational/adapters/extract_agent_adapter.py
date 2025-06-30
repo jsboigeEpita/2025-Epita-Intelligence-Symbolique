@@ -76,8 +76,7 @@ class ExtractAgentAdapter(OperationalAgent):
 
         try:
             self.logger.info("Initialisation de l'agent d'extraction interne...")
-            self.agent = ExtractAgent(kernel=self.kernel, agent_name=f"{self.name}_ExtractAgent")
-            self.agent.setup_agent_components(llm_service_id=self.llm_service_id)
+            self.agent = ExtractAgent(kernel=self.kernel, agent_name=f"{self.name}_ExtractAgent", llm_service_id=self.llm_service_id)
             
             if self.agent is None:
                 self.logger.error("Échec de l'instanciation de l'agent d'extraction.")

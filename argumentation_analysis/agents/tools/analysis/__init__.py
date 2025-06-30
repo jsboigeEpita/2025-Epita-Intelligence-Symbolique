@@ -9,7 +9,6 @@ complexes, l'analyse des résultats et la visualisation des résultats.
 from .contextual_fallacy_analyzer import ContextualFallacyAnalyzer
 from .fallacy_severity_evaluator import FallacySeverityEvaluator
 from .complex_fallacy_analyzer import ComplexFallacyAnalyzer
-from .rhetorical_result_analyzer import RhetoricalResultAnalyzer
 from .rhetorical_result_visualizer import RhetoricalResultVisualizer
 
 __all__ = [
