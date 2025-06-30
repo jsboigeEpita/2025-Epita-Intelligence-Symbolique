@@ -24,10 +24,11 @@ import tempfile
 import json
 from pathlib import Path
 import asyncio
-from unittest.mock import AsyncMock # Added for helper
+from unittest.mock import AsyncMock, patch # Added for helper
 
 from typing import Dict, Any, List
 from enum import Enum
+from pydantic import ValidationError
 
 # Ajout du chemin pour les imports
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
@@ -47,166 +48,12 @@ except ImportError as e:
     pytest.skip(f"Modules de l'analyseur unifié non trouvés: {e}", allow_module_level=True)
 
 
-@pytest.mark.skip(reason="CLI script is deprecated, tests need complete refactoring")
+@pytest.mark.skip(reason="CLI script is deprecated, tests are now part of TestCLIIntegrationAuthenticity.")
 class TestValidateAuthenticSystemCLI:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        # This helper is defined but not used by tests in this class.
-        # If it were used, it should return a mock kernel for unit tests.
-        return AsyncMock() # type: ignore
-        
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt) # type: ignore
-            return str(result)
-        except Exception as e:
-            print(f"WARN: Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
-    """Tests pour le script validate_authentic_system.py."""
-    
-    def setup_method(self):
-        """Configuration pour chaque test."""
-        self.script_path = PROJECT_ROOT / "scripts" / "validate_authentic_system.py"
-        if not self.script_path.exists(): # Make it a skip if script not found
-             pytest.skip(f"Script non trouvé: {self.script_path}", allow_module_level=True)
-    
-    def test_validate_script_exists_and_executable(self):
-        """Test d'existence et d'exécutabilité du script."""
-        assert self.script_path.exists()
-        assert self.script_path.is_file()
-        
-        content = self.script_path.read_text(encoding='utf-8')
-        assert 'SystemAuthenticityValidator' in content
-        assert 'def main()' in content
-        assert 'argparse' in content
-    
-    def test_validate_script_help_output(self):
-        """Test de l'affichage de l'aide du script."""
-        try:
-            result = subprocess.run(
-                [sys.executable, str(self.script_path), "--help"],
-                capture_output=True,
-                text=True,
-                timeout=30,
-                check=False,
-                encoding='utf-8'
-            )
-            
-            assert result.returncode == 0, f"Help command failed: {result.stderr}"
-            assert "validation de l'authenticité" in result.stdout.lower()
-            assert "--config" in result.stdout
-            assert "--check-all" in result.stdout
-            assert "--require-100-percent" in result.stdout
-            
-        except subprocess.TimeoutExpired:
-            pytest.skip("Timeout lors de l'exécution du script")
-        except Exception as e:
-            pytest.fail(f"Erreur lors de l'exécution du test d'aide: {e}")
-    
-    def test_validate_script_with_testing_config(self):
-        """Test du script avec configuration de test."""
-        try:
-            result = subprocess.run(
-                [sys.executable, str(self.script_path),
-                 "--config", "testing", "--output", "json"],
-                capture_output=True,
-                text=True,
-                timeout=60,
-                check=False,
-                encoding='utf-8'
-            )
-            
-            assert result.returncode in [0, 1, 2], f"Script exit code {result.returncode} not in [0,1,2]. stderr: {result.stderr}"
-            
-            output = result.stdout.lower()
-            json_indicators = ['authenticity_percentage', 'total_components', '{', '}']
-            message_indicators = ['authenticity', 'validation', 'composant']
-            
-            has_json = any(indicator in output for indicator in json_indicators)
-            has_messages = any(indicator in output for indicator in message_indicators)
-            
-            assert has_json or has_messages, f"Output does not contain JSON or expected messages. Output: {result.stdout}"
-            
-        except subprocess.TimeoutExpired:
-            pytest.skip("Timeout lors de l'exécution du script")
-        except Exception as e:
-            pytest.fail(f"Erreur lors de l'exécution du test de config: {e}")
-    
-    def test_validate_script_json_output_format(self):
-        """Test du format de sortie JSON."""
-        try:
-            result = subprocess.run(
-                [sys.executable, str(self.script_path),
-                 "--config", "testing", "--output", "json"],
-                capture_output=True,
-                text=True,
-                timeout=60,
-                check=False,
-                encoding='utf-8'
-            )
-            
-            json_data_found = False
-            if result.stdout.strip():
-                try:
-                    lines = result.stdout.splitlines()
-                    parsed_json = None
-                    for line in lines:
-                        if line.strip().startswith('{') and line.strip().endswith('}'):
-                            parsed_json = json.loads(line.strip())
-                            json_data_found = True
-                            break
-                    
-                    if json_data_found and parsed_json:
-                        expected_keys = [
-                            'authenticity_percentage',
-                            'is_100_percent_authentic',
-                            'total_components'
-                        ]
-                        for key in expected_keys:
-                            assert key in parsed_json, f"Clé manquante: {key} in {parsed_json}"
-                        
-                        assert isinstance(parsed_json['authenticity_percentage'], (int, float))
-                        assert isinstance(parsed_json['is_100_percent_authentic'], bool)
-                        assert isinstance(parsed_json['total_components'], int)
-                    else:
-                         assert result.returncode in [0, 1, 2], "Script ran but no valid JSON line found."
-                except json.JSONDecodeError:
-                    pytest.fail(f"JSONDecodeError. Output was: {result.stdout}")
-            else:
-                # If no stdout, script might have failed early, check exit code
-                assert result.returncode in [0,1,2], f"No stdout, exit code: {result.returncode}, stderr: {result.stderr}"
-
-        except subprocess.TimeoutExpired:
-            pytest.skip("Timeout lors de l'exécution du script")
-        except Exception as e:
-            pytest.fail(f"Erreur lors de l'exécution du test JSON: {e}")
-    
-    def test_validate_script_require_100_percent_option(self):
-        """Test de l'option --require-100-percent."""
-        try:
-            result = subprocess.run(
-                [sys.executable, str(self.script_path),
-                 "--config", "testing", "--require-100-percent"],
-                capture_output=True,
-                text=True,
-                timeout=60,
-                check=False,
-                encoding='utf-8'
-            )
-            
-            assert result.returncode in [0, 1], f"Exit code {result.returncode} not in [0,1]. stderr: {result.stderr}"
-            
-            if result.returncode == 1:
-                output = result.stdout.lower()
-                assert any(word in output for word in ['échec', 'fail', '<100', '< 100', 'not 100%']), f"Expected failure message not in output: {output}"
-            
-        except subprocess.TimeoutExpired:
-            pytest.skip("Timeout lors de l'exécution du script")
-        except Exception as e:
-            pytest.fail(f"Erreur lors de l'exécution du test require-100-percent: {e}")
+    """Cette classe est obsolète. Les tests de validation sont intégrés dans le workflow
+    de la classe TestCLIIntegrationAuthenticity.
+    """
+    pass
 
 
 @pytest.mark.asyncio
@@ -335,156 +182,140 @@ class TestAnalyzeTextAuthenticCLI:
         assert "input_file" not in result["config_snapshot"]
 
 
-@pytest.mark.skip(reason="CLI script is deprecated, tests need complete refactoring")
+@pytest.mark.asyncio
 class TestCLIIntegrationAuthenticity:
-    """Tests d'intégration pour les scripts CLI d'authenticité."""
-    
-    def setup_method(self):
-        """Configuration pour les tests d'intégration."""
-        self.validate_script = PROJECT_ROOT / "scripts" / "validate_authentic_system.py"
-        self.analyze_script = PROJECT_ROOT / "scripts" / "main" / "analyze_text_authentic.py"
-        if not self.validate_script.exists() or not self.analyze_script.exists():
-            pytest.skip("Un des scripts CLI est manquant.", allow_module_level=True)
+    """Tests d'intégration refactorisés pour le UnifiedProductionAnalyzer."""
 
-    def test_validation_before_analysis_workflow(self):
-        """Test du workflow validation puis analyse."""
-        try:
-            validate_result = subprocess.run([
-                sys.executable, str(self.validate_script),
-                "--config", "testing",
-                "--output", "json"
-            ], capture_output=True, text=True, timeout=60, check=False, encoding='utf-8')
-            
-            if validate_result.returncode == 0:
-                analyze_result = subprocess.run([
-                    sys.executable, str(self.analyze_script),
-                    "--text", "Test d'intégration",
-                    "--preset", "testing",
-                    # "--validate-before-analysis", # This option might require specific setup or real components
-                    "--skip-authenticity-validation", # More robust for unit/integration tests
-                    "--quiet"
-                ], capture_output=True, text=True, timeout=120, check=False, encoding='utf-8')
-                assert analyze_result.returncode in [0, 1, 2], f"Analyze script failed after validation. stderr: {analyze_result.stderr}"
-            else:
-                assert validate_result.returncode in [1, 2], f"Validation script failed unexpectedly. stderr: {validate_result.stderr}"
-                
-        except subprocess.TimeoutExpired:
-            pytest.skip("Timeout lors du workflow intégration")
-        except Exception as e:
-            pytest.fail(f"Erreur lors du workflow: {e}")
+    def setup_method(self):
+        """Configuration pour chaque test utilisant l'analyseur unifié."""
+        self.test_text = "Ceci est un test d'intégration."
+
+    async def test_validation_before_analysis_workflow(self):
+        """
+        Vérifie que l'initialisation de l'analyseur (qui inclut la validation)
+        se comporte comme prévu avant de procéder à une analyse.
+        """
+        # Scénario 1: La validation réussit (en utilisant des mocks)
+        config_success = UnifiedProductionConfig(
+            mock_level=MockLevel.FULL,
+            check_dependencies=True,  # Active la validation
+            llm_service="mock"
+        )
+        analyzer_success = UnifiedProductionAnalyzer(config_success)
+
+        initialized_success = await analyzer_success.initialize()
+        assert initialized_success, "L'analyseur aurait dû s'initialiser correctement avec des mocks."
+
+        # Si l'initialisation réussit, l'analyse doit être possible
+        result = await analyzer_success.analyze_text(self.test_text)
+        assert isinstance(result, dict)
+        assert result['results']['unified']['authentic'] is False # Mock result
+
+        # Scénario 2: La validation échoue
+        # Pour simuler un échec, nous utilisons un mock_level=NONE
+        # sans avoir les dépendances réelles, ce qui fera échouer .initialize()
+        config_fail = UnifiedProductionConfig(
+            mock_level=MockLevel.NONE,
+            check_dependencies=True,
+            llm_service="mock"
+        )
+        analyzer_fail = UnifiedProductionAnalyzer(config_fail)
+
+        # On mock la validation pour qu'elle échoue
+        with patch.object(analyzer_fail.dependency_validator, 'validate_all', return_value=(False, ["mocked error"])):
+            initialized_fail = await analyzer_fail.initialize()
+            assert not initialized_fail, "L'analyseur ne devrait PAS s'initialiser sans les dépendances réelles."
     
+    @pytest.mark.skip(reason="CLI test deprecated, replaced by modern workflow test.")
     def test_consistent_configuration_between_scripts(self):
         """Test de cohérence de configuration entre scripts."""
-        config_options_list = [
-            ["--config", "testing"],
-            ["--config", "development"]
-        ]
+        pass
+
+    async def test_consistent_configuration_workflow(self):
+        """
+        Vérifie que les configurations prédéfinies (presets) peuvent être
+        utilisées pour initialiser et exécuter une analyse de manière cohérente.
+        """
+        # presets_to_test = ["testing", "development"] # Add more presets if needed
+        # For now, let's create configs that MIMIC the old presets.
         
-        for options in config_options_list:
-            try:
-                validate_cmd = [sys.executable, str(self.validate_script)] + options + ["--output", "json"]
-                validate_result = subprocess.run(validate_cmd, capture_output=True, text=True, timeout=60, check=False, encoding='utf-8')
-                
-                preset_value = options[1] if len(options) > 1 and options[0] == "--config" else "testing"
-                analyze_cmd = [
-                    sys.executable, str(self.analyze_script),
-                    "--text", "Test de cohérence",
-                    "--preset", preset_value,
-                    "--skip-authenticity-validation",
-                    "--quiet"
-                ]
-                analyze_result = subprocess.run(analyze_cmd, capture_output=True, text=True, timeout=60, check=False, encoding='utf-8')
-                
-                assert validate_result.returncode in [0, 1, 2], f"Validate script failed for {options}. stderr: {validate_result.stderr}"
-                assert analyze_result.returncode in [0, 1, 2], f"Analyze script failed for {options}. stderr: {analyze_result.stderr}"
-                
-                for result in [validate_result, analyze_result]:
-                    assert "invalid choice" not in result.stderr.lower()
-                    assert "unrecognized arguments" not in result.stderr.lower()
-                
-            except subprocess.TimeoutExpired:
-                pytest.skip(f"Timeout pour configuration {options}")
-            except Exception as e:
-                pytest.fail(f"Erreur pour configuration {options}: {e}")
+        config_testing = UnifiedProductionConfig(
+            mock_level=MockLevel.FULL,
+            check_dependencies=False,
+            llm_service="mock"
+        )
+        
+        config_development = UnifiedProductionConfig(
+            mock_level=MockLevel.PARTIAL,
+            check_dependencies=False,
+            llm_service="mock",
+            logic_type=LogicType.PL
+        )
+
+        configs_to_test = {
+            "testing": config_testing,
+            "development": config_development
+        }
+
+        for name, config in configs_to_test.items():
+            analyzer = UnifiedProductionAnalyzer(config)
+            
+            initialized = await analyzer.initialize()
+            assert initialized, f"L'analyseur n'a pas pu s'initialiser avec la config '{name}'"
+
+            result = await analyzer.analyze_text(self.test_text)
+            
+            assert isinstance(result, dict), f"Le résultat pour '{name}' n'est pas un dictionnaire."
+            assert "config_snapshot" in result
+            assert result["config_snapshot"]["mock_level"] == config.mock_level.value, \
+                f"Mock level mismatch for config '{name}'"
+            assert result["config_snapshot"]["logic_type"] == config.logic_type.value, \
+                f"Logic type mismatch for config '{name}'"
     
+    @pytest.mark.skip(reason="CLI test deprecated, replaced by modern workflow test.")
     def test_error_handling_consistency(self):
         """Test de cohérence de gestion d'erreurs."""
-        invalid_tests_args_list = [
-            (["--invalid-option", "value"], True, True), # (args, expect_validate_fail, expect_analyze_fail)
-            (["--logic-type", "invalid"], True, True),
-            (["--mock-level", "invalid"], True, True),
-            ([], False, True) # Validate might pass with no args (default), Analyze needs text/file
-        ]
+        pass
+
+    async def test_error_handling_for_invalid_config(self):
+        """
+        Vérifie que UnifiedProductionConfig et UnifiedProductionAnalyzer
+        gèrent correctement les configurations invalides en levant des erreurs.
+        """
+        # Scénario 1: Valeur invalide pour un Enum
+        with pytest.raises(ValidationError):
+            UnifiedProductionConfig(logic_type="invalid_logic_type") # type: ignore
+
+        with pytest.raises(ValidationError):
+            UnifiedProductionConfig(mock_level="bad_mock_level") # type: ignore
+
+        # Scénario 2: Analyse sans initialisation correcte
+        config = UnifiedProductionConfig(mock_level=MockLevel.FULL)
+        analyzer_not_initialized = UnifiedProductionAnalyzer(config)
         
-        for invalid_args_item, expect_validate_fail, expect_analyze_fail in invalid_tests_args_list:
-            try:
-                validate_cmd = [sys.executable, str(self.validate_script)] + invalid_args_item
-                validate_result = subprocess.run(validate_cmd, capture_output=True, text=True, timeout=30, check=False, encoding='utf-8')
-                if expect_validate_fail:
-                    assert validate_result.returncode != 0, f"Validate script should fail for {invalid_args_item}. stderr: {validate_result.stderr}"
-                
-                analyze_cmd_base = [sys.executable, str(self.analyze_script)]
-                current_analyze_cmd = analyze_cmd_base + invalid_args_item
-                
-                # Add --text if no file/text arg to make it a valid call for other arg errors
-                if not any(arg.startswith('--text') or arg.startswith('--file') for arg in invalid_args_item) and not invalid_args_item:
-                     pass # analyze script will fail due to missing text/file
-                elif not any(arg.startswith('--text') or arg.startswith('--file') for arg in invalid_args_item):
-                    current_analyze_cmd.extend(["--text", "dummy_text_for_error_test"])
+        # S'assurer que l'analyse échoue si non initialisé
+        with pytest.raises(Exception): # Replace with a more specific exception if available
+             await analyzer_not_initialized.analyze_text("some text")
+
+        # Scénario 3: L'initialisation échoue avec une mauvaise configuration
+        # (ex: mock_level=NONE sans les dépendances)
+        config_fail = UnifiedProductionConfig(
+            mock_level=MockLevel.NONE,
+            check_dependencies=True # Force la vérification
+        )
+        analyzer_fail_init = UnifiedProductionAnalyzer(config_fail)
+        
+        with patch.object(analyzer_fail_init.dependency_validator, 'validate_all', return_value=(False, ["mocked error"])):
+            initialized = await analyzer_fail_init.initialize()
+            assert not initialized, "L'initialisation aurait dû échouer."
 
 
-                analyze_result = subprocess.run(current_analyze_cmd, capture_output=True, text=True, timeout=30, check=False, encoding='utf-8')
-                if expect_analyze_fail:
-                    assert analyze_result.returncode != 0, f"Analyze script should fail for {invalid_args_item}. stderr: {analyze_result.stderr}"
-                    if any("invalid" in str(arg) for arg in invalid_args_item):
-                        assert "invalid choice" in analyze_result.stderr.lower()
-                
-            except subprocess.TimeoutExpired:
-                pytest.skip(f"Timeout pour test d'erreur {invalid_args_item}")
-            except Exception as e:
-                pytest.fail(f"Erreur lors du test d'erreur {invalid_args_item}: {e}")
-
-
-@pytest.mark.skip(reason="CLI script is deprecated, tests need complete refactoring")
+@pytest.mark.skip(reason="CLI test deprecated. Config validation is now part of the analyzer's workflow tests.")
 class TestCLIConfigurationValidation:
-    """Tests de validation des configurations CLI."""
-    
-    def test_preset_configuration_consistency(self):
-        """Test de cohérence des presets entre code et CLI."""
-        available_presets = ['authentic_fol', 'authentic_pl', 'development', 'testing']
-        
-        for preset_name in available_presets:
-            config = None
-            if preset_name == 'authentic_fol': config = PresetConfigs.authentic_fol()
-            elif preset_name == 'authentic_pl': config = PresetConfigs.authentic_pl()
-            elif preset_name == 'development': config = PresetConfigs.development()
-            elif preset_name == 'testing': config = PresetConfigs.testing()
-            else: pytest.fail(f"Preset {preset_name} not handled in test")
-
-            assert isinstance(config, UnifiedConfig), f"Preset {preset_name} did not return UnifiedConfig"
-            assert hasattr(config, 'mock_level')
-            assert hasattr(config, 'logic_type')
-            assert hasattr(config, 'taxonomy_size')
-    
-    def test_cli_option_validation(self):
-        """Test de validation des options CLI."""
-        mock_levels_enum_values = {level.value for level in MockLevel}
-        cli_mock_level_choices = {'none', 'minimal', 'full'} # Typical CLI choices
-        # Allow 'minimal' from CLI to map to 'partial' in enum if that's the case
-        assert cli_mock_level_choices.issubset(mock_levels_enum_values) or \
-               ('minimal' in cli_mock_level_choices and 'partial' in mock_levels_enum_values and
-                (cli_mock_level_choices - {'minimal'}).issubset(mock_levels_enum_values | {'partial'}))
-
-
-        logic_types_enum_values = {logic.value for logic in LogicType}
-        cli_logic_type_choices = {'fol', 'pl', 'modal', 'first_order'}
-        # Allow 'first_order' from CLI to map to 'fol' in enum
-        assert all(lt in logic_types_enum_values or (lt == 'first_order' and 'fol' in logic_types_enum_values) for lt in cli_logic_type_choices)
-
-
-        taxonomy_sizes_enum_values = {size.value for size in TaxonomySize}
-        cli_taxonomy_size_choices = {'full', 'mock'}
-        assert cli_taxonomy_size_choices.issubset(taxonomy_sizes_enum_values)
+    """Cette classe est obsolète. La validation des configurations est testée
+    via les workflows de TestCLIIntegrationAuthenticity.
+    """
+    pass
 
 
 if __name__ == "__main__":

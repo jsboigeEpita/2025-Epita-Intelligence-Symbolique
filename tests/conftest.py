@@ -38,9 +38,15 @@ MOCK_DOTENV = os.environ.get("MOCK_DOTENV_IN_TESTS", "true").lower() in ("true",
 
 
 def pytest_addoption(parser):
-    """
-    Ajoute les options en ligne de commande personnalisées pour les tests.
-    """
+    """Ajoute des options de ligne de commande personnalisées à pytest."""
+    parser.addoption(
+        "--allow-dotenv", action="store_true", default=False, help="Désactive le mock de dotenv et autorise le chargement du vrai fichier .env."
+    )
+    parser.addoption(
+        "--disable-e2e-servers-fixture", action="store_true", default=False, help="Désactive la fixture qui gère les serveurs E2E."
+    )
+    parser.addoption("--frontend-url", action="store", default="http://localhost:3000", help="URL pour le serveur frontend E2E.")
+    parser.addoption("--backend-url", action="store", default="http://localhost:5003", help="URL pour le serveur backend E2E.")
     parser.addoption(
         "--allow-dotenv", action="store_true", default=False, help="Désactive le mock de dotenv et autorise le chargement du vrai fichier .env."
     )
@@ -253,23 +259,25 @@ pytest_plugins = [
     # "tests.mocks.numpy_setup" # DÉSACTIVÉ GLOBALEMENT - Provoque un comportement instable pour les tests E2E
 ]
 
-# @pytest.fixture(autouse=True)
-# def check_mock_llm_is_forced(request):
-#     """
-#     Ce "coupe-circuit" est une sécurité pour tous les tests.
-#     Il vérifie que nous ne pouvons pas accidentellement utiliser un vrai LLM,
-#     SAUF si le test est explicitement marqué avec 'real_llm'.
-#     """
-#     if 'real_llm' in request.node.keywords:
-#         yield
-#     else:
-#         from argumentation_analysis.config.settings import settings
-#         if not settings.use_mock_llm:
-#              pytest.fail(
-#                 f"Le test '{request.node.name}' s'exécute sans 'real_llm' mais le mock LLM est inactif! "
-#                 "Ceci est une condition d'échec de sécurité pour éviter des appels LLM réels non intentionnels."
-#             )
-#         yield
+@pytest.fixture(scope="function", autouse=True)
+def check_mock_llm_is_forced(request, monkeypatch):
+    """
+    Ce "coupe-circuit" est une sécurité pour tous les tests.
+    Il vérifie que nous ne pouvons pas accidentellement utiliser un vrai LLM,
+    SAUF si le test est explicitement marqué avec 'real_llm'.
+    S'il n'est pas marqué, il FORCE le mock LLM à True.
+    """
+    from argumentation_analysis.config.settings import settings
+    if 'real_llm' in request.node.keywords:
+        logger.warning(f"Le test {request.node.name} utilise le marqueur 'real_llm'. Le mock LLM est désactivé.")
+        monkeypatch.setattr(settings, 'MOCK_LLM', False)
+        monkeypatch.setattr(settings, 'use_mock_llm', False)
+        yield
+    else:
+        # Si le marqueur n'est pas présent, on force le mock.
+        monkeypatch.setattr(settings, 'MOCK_LLM', True)
+        monkeypatch.setattr(settings, 'use_mock_llm', True)
+        yield
         
 # ----------------------------------------------------------------------------------
 # Fixtures précédemment dans tests/unit/argumentation_analysis/conftest.py

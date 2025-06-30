@@ -47,7 +47,7 @@ catch {
 $env:PYTHONPATH = "$PSScriptRoot;$env:PYTHONPATH"
 
 # Environnement conda cible
-$condaEnvName = "projet-is-roo-new"
+$condaEnvName = "projet-is"
 
 # Reconstitue la commande complète à partir du paramètre principal et des arguments restants
 $fullCommand = if ($Arguments) {
