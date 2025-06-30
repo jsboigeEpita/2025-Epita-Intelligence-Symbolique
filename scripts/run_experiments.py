@@ -2,6 +2,7 @@ import subprocess
 import re
 import os
 import sys
+import shlex
 
 import logging
 
@@ -30,21 +31,42 @@ def run_experiments():
 
     print("Début des expériences...")
 
+    # Créer le répertoire pour les traces d'expérimentation
+    trace_log_dir = "logs/experiment_traces"
+    os.makedirs(trace_log_dir, exist_ok=True)
+
+
     for agent in agents:
         for taxonomy_file in taxonomies:
             taxonomy_path = os.path.join(taxonomy_base_path, taxonomy_file)
             taxonomy_name = taxonomy_file.replace('.csv', '').replace('taxonomy_', '')
 
-            logging.info(f"Exécution : Agent='{agent}', Taxonomie='{taxonomy_name}'...")
+            # Définir un nom de fichier de log unique pour la trace
+            trace_log_filename = f"agent-{agent}_taxonomy-{taxonomy_name}.log"
+            trace_log_path = os.path.join(trace_log_dir, trace_log_filename)
 
+            logging.info(f"Exécution : Agent='{agent}', Taxonomie='{taxonomy_name}'...")
+            logging.info(f"Fichier de trace : {trace_log_path}")
+
+            # Construction de la commande à exécuter à l'intérieur de l'environnement géré
+            inner_command_parts = [
+                "python",
+                validation_script_path,
+                "--agent-type", agent,
+                "--taxonomy", taxonomy_path,
+                "--verbose",
+                "--trace-log-path", trace_log_path
+            ]
+            
+            # Joindre les parties en une seule chaîne de commande sécurisée
+            inner_command = shlex.join(inner_command_parts)
+
+            # Construction de la commande wrapper qui utilise l'environnement manager
             command = [
                 sys.executable,
-                validation_script_path,
-                "--agent-type",
-                agent,
-                "--taxonomy",
-                taxonomy_path,
-                "--verbose"
+                "-m", "project_core.core_from_scripts.environment_manager",
+                "run",
+                inner_command
             ]
             
             try:

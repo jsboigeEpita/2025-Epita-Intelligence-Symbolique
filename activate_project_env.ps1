@@ -48,7 +48,9 @@ if ($CommandAndArgs.Count -eq 0) {
 
 
 # Construit la commande finale pour appeler le nouveau gestionnaire d'environnement.
-$finalCommand = "python.exe `"$pythonRunner`" run `"$commandToExecute`""
+# Le gestionnaire d'environnement est exécuté comme un module pour supporter les imports relatifs.
+$modulePath = "project_core.core_from_scripts.environment_manager"
+$finalCommand = "python.exe -m $modulePath run `"$commandToExecute`""
 
 Write-Host "[DEBUG] Calling: $finalCommand" -ForegroundColor Gray
 

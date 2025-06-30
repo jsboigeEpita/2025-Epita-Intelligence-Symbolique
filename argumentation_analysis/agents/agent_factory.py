@@ -1,14 +1,16 @@
 # Fichier : argumentation_analysis/agents/agent_factory.py
 
-from typing import List
+from typing import List, Optional
 from semantic_kernel import Kernel
 from semantic_kernel.agents import Agent, ChatCompletionAgent
+from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
 
 from .plugins.fallacy_identification_plugin import FallacyIdentificationPlugin
 from .plugins.project_management_plugin import ProjectManagementPlugin
 from .plugins.fallacy_workflow_plugin import FallacyWorkflowPlugin
 from .plugins.taxonomy_display_plugin import TaxonomyDisplayPlugin
+from .utils.tracer import TracedAgent
 
 
 class AgentFactory:
@@ -22,20 +24,18 @@ class AgentFactory:
         self.kernel = kernel
         self.llm_service_id = llm_service_id
 
-    def create_informal_fallacy_agent(self, config_name: str = "simple") -> ChatCompletionAgent:
+    def create_informal_fallacy_agent(
+        self,
+        config_name: str = "simple",
+        trace_log_path: Optional[str] = None,
+        fallacy_plugin: Optional[FallacyIdentificationPlugin] = None,
+    ) -> Agent:
         """
-        Crée différentes versions de l'InformalFallacyAgent basées sur une configuration.
-
-        Configurations disponibles:
-        - 'simple': Uniquement l'identification de base.
-        - 'explore_only': Exploration simple uniquement.
-        - 'workflow_only': Exploration parallèle uniquement.
-        - 'full': Toutes les capacités.
+        Crée différentes versions de l'InformalFallacyAgent.
         """
         plugins = []
         
-        # Charger les plugins de base nécessaires
-        base_identification_plugin = FallacyIdentificationPlugin()
+        base_identification_plugin = fallacy_plugin or FallacyIdentificationPlugin()
 
         if config_name == "simple":
             plugins.append(base_identification_plugin)
@@ -60,18 +60,39 @@ class AgentFactory:
         with open("argumentation_analysis/agents/prompts/InformalFallacyAgent/skprompt.txt", "r") as f:
             prompt = f.read()
 
-        # Récupère le service LLM à partir du kernel pour le passer à l'agent
         llm_service = self.kernel.get_service(self.llm_service_id)
+        
+        function_choice_behavior = None
+        if config_name in ["simple", "full", "workflow_only"]:
+            function_choice_behavior = FunctionChoiceBehavior.Required(
+                auto_invoke=True,
+                filters={"included_functions": ["FallacyIdentificationPlugin-identify_fallacies"]},
+            )
 
-        return ChatCompletionAgent(
+        agent_to_create = ChatCompletionAgent(
             kernel=self.kernel,
             service=llm_service,
             name="informal_fallacy_agent",
             instructions=prompt,
-            plugins=plugins
+            plugins=plugins,
+            function_choice_behavior=function_choice_behavior,
         )
 
-    def create_project_manager_agent(self) -> Agent:
+        if trace_log_path:
+            # On encapsule l'agent créé dans le wrapper de trace.
+            # Le wrapper est maintenant un simple proxy et n'a pas besoin du kernel/service.
+            final_agent = TracedAgent(
+                agent_to_wrap=agent_to_create,
+                trace_log_path=trace_log_path
+            )
+        else:
+            final_agent = agent_to_create
+            
+        return final_agent
+
+    def create_project_manager_agent(
+        self, trace_log_path: Optional[str] = None
+    ) -> Agent:
         """Crée et configure l'agent chef de projet."""
         agent_kernel = Kernel()
         agent_kernel.add_plugin(ProjectManagementPlugin(), plugin_name="ProjectMgmtPlugin")
@@ -87,9 +108,16 @@ class AgentFactory:
         # Récupère le service et le passe directement
         llm_service = self.kernel.get_service(self.llm_service_id)
         
-        return ChatCompletionAgent(
+        agent = ChatCompletionAgent(
             kernel=agent_kernel,
             service=llm_service,
             name="Project_Manager",
-            instructions=prompt
+            instructions=prompt,
         )
+
+        if trace_log_path:
+            return TracedAgent(
+                agent_to_wrap=agent,
+                trace_log_path=trace_log_path
+            )
+        return agent
