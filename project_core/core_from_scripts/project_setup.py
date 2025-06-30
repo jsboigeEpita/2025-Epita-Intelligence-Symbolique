@@ -107,7 +107,7 @@ class ProjectSetup:
 
         # Étape 2: Installer les dépendances depuis requirements.txt
         self.logger.info(f"Étape 2/3 : Installation des dépendances depuis '{requirements_file}'...")
-        deps_installed = self.env_manager.fix_dependencies(requirements_file=requirements_file, strategy='aggressive')
+        deps_installed = self.env_manager.fix_dependencies(requirements_file=requirements_file, strategy_name='aggressive')
         if not deps_installed:
             self.logger.error(f"L'installation des dépendances depuis '{requirements_file}' a échoué. Installation annulée.")
             return False

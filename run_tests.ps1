@@ -94,11 +94,14 @@ function Invoke-ManagedCommand {
     }
 
     # Déléguer l'exécution au script d'activation, qui gère Conda, PYTHONPATH, etc.
-    $argumentList = "-Command `"$CommandToRun`""
-    Write-Host "[CMD] $activationScript $argumentList" -ForegroundColor DarkCyan
+    # La commande et ses arguments sont maintenant séparés et doivent être passés correctement.
+    # On échappe les guillemets autour de la commande pour s'assurer qu'elle est traitée comme une seule chaîne.
+    $argumentList = "-File `"$activationScript`" -Command `"$CommandToRun`""
+    
+    Write-Host "[CMD] powershell.exe $argumentList" -ForegroundColor DarkCyan
 
     # Exécution du processus
-    $process = Start-Process "powershell.exe" -ArgumentList "-File `"$activationScript`" $argumentList" -PassThru -NoNewWindow -Wait
+    $process = Start-Process "powershell.exe" -ArgumentList $argumentList -PassThru -NoNewWindow -Wait
     
     $exitCode = $process.ExitCode
     
