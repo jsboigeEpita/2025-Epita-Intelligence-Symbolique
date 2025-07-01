@@ -17,8 +17,7 @@ C'est le point d'entrée privilégié pour toute commande relative au projet.
 .\activate_project_env.ps1 python --version
 #>
 param(
-    [Parameter(Mandatory=$false, Position=0)]
-    [string]$Command,
+    [string]$Command = "",
 
     [Parameter(ValueFromRemainingArguments=$true)]
     [string[]]$RemainingArgs
@@ -39,7 +38,7 @@ catch {
 
 # --- Configuration de l'environnement ---
 $env:PYTHONPATH = "$PSScriptRoot;$env:PYTHONPATH"
-$condaEnvName = "projet-is-new"
+$condaEnvName = "projet-is-roo-new"
 
 # --- Logique de commande ---
 # Concatène la commande et ses arguments en une seule chaîne.

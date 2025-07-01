@@ -73,9 +73,9 @@ except ImportError as e:
     logger.error(f"Failed to import create_llm_service: {e}")
 
 try:
-    from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent as InformalAgent_class
+    from semantic_kernel.agents.agent import Agent as InformalAgent_class
 except ImportError as e:
-    logger.error(f'Failed to import InformalAnalysisAgent: {e}')
+    logger.error(f'Failed to import {e}')
 
 try:
     import semantic_kernel as sk_module

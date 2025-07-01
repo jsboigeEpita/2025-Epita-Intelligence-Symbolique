@@ -104,8 +104,9 @@ def ensure_env(env_name: str = None, silent: bool = False) -> bool:
     
     if not silent:
         # Pour l'affichage, on utilise le nom extrait du chemin
-        current_env_name_display = Path(sys.prefix).name
-        print(f"[auto_env] OK: L'environnement '{current_env_name_display}' est correctement activé.")
+        # Le nom affiché doit être celui qui a été validé (env_name), et non celui
+        # déduit du chemin sys.prefix qui peut être ambigu dans certains contextes.
+        print(f"[auto_env] OK: L'environnement '{env_name}' est correctement activé.")
 
     return True
 

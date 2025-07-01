@@ -1,0 +1,13 @@
+diff --git a/examples/scripts_demonstration/modules/demo_utils.py b/examples/scripts_demonstration/modules/demo_utils.py
+index 1d7d6ea7..1f05b6b7 100644
+--- a/examples/scripts_demonstration/modules/demo_utils.py
++++ b/examples/scripts_demonstration/modules/demo_utils.py
+@@ -81,7 +81,7 @@ class DemoLogger:
+ 
+ def charger_config_categories() -> Dict[str, Any]:
+     """Charge la configuration des catégories depuis le fichier YAML"""
+-    config_path = Path(__file__).parent.parent / "demo_categories.yaml"
++    config_path = Path(__file__).parent.parent / "configs" / "demo_categories.yaml"
+     
+     try:
+         with open(config_path, 'r', encoding='utf-8') as f:

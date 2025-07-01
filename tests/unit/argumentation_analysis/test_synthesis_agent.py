@@ -127,12 +127,6 @@ class TestSynthesisAgent:
         assert capabilities["evidence_assessment"] == False
         assert capabilities["quality_metrics"] == False
     
-    def test_setup_agent_components(self, synthesis_agent):
-        """Test la configuration des composants de l'agent."""
-        synthesis_agent.setup_agent_components("test_service")
-        
-        assert hasattr(synthesis_agent, '_llm_service_id')
-        assert synthesis_agent._llm_service_id == "test_service"
     
     @pytest.mark.asyncio
     async def test_synthesize_analysis_simple_mode(self, mocker, synthesis_agent):
@@ -748,7 +742,6 @@ class TestSynthesisAgentIntegration:
         agent = SynthesisAgent(
             mock_kernel, "IntegrationAgent", enable_advanced_features=False
         )
-        agent.setup_agent_components("test_service")
         return agent
     
     @pytest.mark.asyncio

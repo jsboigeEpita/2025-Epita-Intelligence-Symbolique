@@ -34,26 +34,28 @@ def run_in_jvm_subprocess():
         
         print(f"Exécution du worker en sous-processus avec PYTHONPATH et PROJECT_ROOT: {' '.join(command_for_subprocess)}")
 
+        # L'argument `capture_output` est désactivé pour permettre un affichage en temps réel,
+        # ce qui est crucial pour le débogage de tqdm et des erreurs de bas niveau de la JVM
+        # qui pourraient ne pas être capturées correctement autrement.
         result = subprocess.run(
             command_for_subprocess,
-            capture_output=True,
-            text=True,
-            encoding='utf-8',
+            capture_output=False,  # Désactivé pour le débogage
             check=False,
             cwd=project_root,
             env=env
         )
         
-        # Afficher la sortie pour le débogage, surtout en cas d'échec
-        print("\n--- STDOUT du sous-processus ---")
-        print(result.stdout)
-        print("--- STDERR du sous-processus ---")
-        print(result.stderr)
-        print("--- Fin du sous-processus ---")
+        # La sortie (stdout/stderr) s'affichera directement dans la console pytest.
+        # Nous vérifions uniquement le code de retour.
 
         # Vérifier manuellement le code de sortie
         if result.returncode != 0:
-            pytest.fail(f"Le sous-processus de test JVM a échoué avec le code {result.returncode}.", pytrace=False)
+            pytest.fail(
+                f"Le sous-processus de test JVM a échoué avec le code {result.returncode}. "
+                "Vérifiez la sortie de la console ci-dessus pour les logs du worker, "
+                "y compris les erreurs potentielles de téléchargement ou d'initialisation de la JVM.",
+                pytrace=False
+            )
             
         return result
 

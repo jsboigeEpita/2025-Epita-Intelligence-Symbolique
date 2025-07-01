@@ -1,0 +1,35 @@
+﻿diff --git a/activate_project_env.ps1 b/activate_project_env.ps1
+index c9bc592f..bbd6c39c 100644
+--- a/activate_project_env.ps1
++++ b/activate_project_env.ps1
+@@ -17,8 +17,8 @@ C'est le point d'entrée privilégié pour toute commande relative au projet.
+ .\activate_project_env.ps1 -Command "python --version"
+ #>
+ param(
+-    [Parameter(Mandatory=$true, Position=0)]
+-    [string]$Command,
++    [Parameter(Mandatory=$false, Position=0)]
++    [string]$Command = "",
+ 
+     [Parameter(ValueFromRemainingArguments=$true)]
+     [string[]]$Arguments
+@@ -50,11 +50,18 @@ $env:PYTHONPATH = "$PSScriptRoot;$env:PYTHONPATH"
+ $condaEnvName = "projet-is-roo-new"
+ 
+ # Reconstitue la commande complète à partir du paramètre principal et des arguments restants
+-$fullCommand = if ($Arguments) {
++$tempCommand = if ($Arguments) {
+     "$Command " + ($Arguments -join ' ')
+ } else {
+     $Command
+ }
++$fullCommand = $tempCommand.Trim()
++
++# Si aucune commande n'est fournie, ne rien faire de plus et quitter proprement.
++if ([string]::IsNullOrWhiteSpace($fullCommand)) {
++    Write-Host "[INFO] Script d'activation terminé. Aucune commande n'a été spécifiée." -ForegroundColor Green
++    return
++}
+ 
+ # Ajout pour les tests : configuration de l'environnement Java
+ if ($Command -eq "pytest") {

@@ -1,0 +1,14 @@
+diff --git a/argumentation_analysis/orchestration/analysis_runner.py b/argumentation_analysis/orchestration/analysis_runner.py
+index adbb3004..b237b7ef 100644
+--- a/argumentation_analysis/orchestration/analysis_runner.py
++++ b/argumentation_analysis/orchestration/analysis_runner.py
+@@ -23,7 +23,8 @@ from semantic_kernel.kernel import Kernel as SKernel
+ import semantic_kernel as sk
+ from semantic_kernel.contents import ChatMessageContent
+ from semantic_kernel.contents.utils.author_role import AuthorRole
+-from semantic_kernel.agents import AgentGroupChat, Agent
++from semantic_kernel.agents.group_chat.agent_group_chat import AgentGroupChat
++from semantic_kernel.agents.agent import Agent
+ from semantic_kernel.exceptions import AgentChatException
+ from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion # Pour type hint
+ from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior

@@ -45,7 +45,9 @@ class SynthesisAgent(BaseAgent):
         self,
         kernel: Kernel,
         agent_name: str = "SynthesisAgent",
-        enable_advanced_features: bool = False
+        enable_advanced_features: bool = False,
+        service_id: Optional[str] = None,
+        **kwargs
     ):
         """
         Initialise le SynthesisAgent.
@@ -55,13 +57,15 @@ class SynthesisAgent(BaseAgent):
             agent_name (str): Le nom de l'agent.
             enable_advanced_features (bool): Si `True`, tentera d'utiliser des
                 fonctionnalités avancées (non disponibles en Phase 1).
+            service_id (Optional[str]): L'ID du service LLM à utiliser.
         """
         system_prompt = self._get_synthesis_system_prompt()
-        super().__init__(kernel, agent_name, system_prompt)
+        super().__init__(kernel, agent_name, system_prompt, **kwargs)
         
         self.enable_advanced_features = enable_advanced_features
         self._logic_agents_cache: Dict[str, Any] = {}
-        self._informal_agent: Optional[InformalAgent] = None
+        self._informal_agent: Optional["InformalAgent"] = None # Note: InformalAgent may need to be defined or imported
+        self._llm_service_id = service_id
         
         # Modules avancés (Phase 2+) - désactivés en Phase 1
         self.fusion_manager = None
@@ -93,11 +97,6 @@ class SynthesisAgent(BaseAgent):
         
         return capabilities
     
-    def setup_agent_components(self, llm_service_id: str) -> None:
-        """Configure les composants de l'agent."""
-        super().setup_agent_components(llm_service_id)
-        self._llm_service_id = llm_service_id
-        self._logger.info(f"Composants SynthesisAgent configurés avec service LLM: {llm_service_id}")
     
     async def synthesize_analysis(self, text: str) -> UnifiedReport:
         """

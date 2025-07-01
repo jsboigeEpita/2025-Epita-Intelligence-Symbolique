@@ -112,28 +112,6 @@ class TestModalLogicAgent:
         assert "interpret_results" in methods
         assert "validate_formula" in methods
 
-    @patch('argumentation_analysis.agents.core.logic.modal_logic_agent.TweetyInitializer.is_jvm_ready', return_value=True)
-    @patch('argumentation_analysis.agents.core.logic.modal_logic_agent.TweetyBridge')
-    def test_setup_agent_components(self, mock_tweety_class, mock_jvm_ready, modal_agent, mock_tweety_bridge):
-        """Test la configuration des composants de l'agent."""
-        mock_tweety_class.return_value = mock_tweety_bridge
-        
-        # Simulation des plugins mockés
-        modal_agent.setup_agent_components("test_service")
-        
-        # Vérifier que TweetyBridge a été initialisé
-        assert hasattr(modal_agent, '_tweety_bridge')
-        
-        # Vérifier que les fonctions sémantiques ont été "ajoutées" (via le mock)
-        assert modal_agent._kernel.add_function.call_count >= 3
-        
-        # Vérifier que les fonctions sont bien présentes dans le dictionnaire des plugins
-        plugin = modal_agent._kernel.plugins.get(modal_agent.name)
-        assert plugin is not None
-        expected_functions = ["TextToModalBeliefSet", "GenerateModalQueryIdeas", "InterpretModalResult"]
-        for func in expected_functions:
-            assert func in plugin
-
     def test_construct_modal_kb_from_json(self, modal_agent):
         """Test la construction d'une base de connaissances modale depuis JSON."""
         kb_json = {
@@ -233,7 +211,6 @@ class TestModalLogicAgent:
         # Mock de la fonction sémantique - doit retourner directement la chaîne JSON
         mock_json_response = '{"propositions": ["urgent"], "modal_formulas": ["[](urgent)"]}'
     
-        modal_agent.setup_agent_components("test_service")
         # Correction : le mock doit retourner un objet avec un attribut 'value'
         # Le mock 'invoke' est déjà un AsyncMock grâce à la fixture.
         # On configure directement sa valeur de retour.
@@ -260,7 +237,6 @@ class TestModalLogicAgent:
         # Mock retournant un JSON invalide
         mock_invalid_json = 'JSON invalide {'
     
-        modal_agent.setup_agent_components("test_service")
         mock_response = MagicMock()
         mock_response.value = mock_invalid_json
         modal_agent._kernel.plugins[modal_agent.name]["TextToModalBeliefSet"].invoke.return_value = mock_response
@@ -301,7 +277,6 @@ class TestModalLogicAgent:
         # Mock de la réponse LLM
         mock_json_response = '{"query_ideas": [{"formula": "[](urgent)"}, {"formula": "<>(urgent)"}]}'
     
-        modal_agent.setup_agent_components("test_service")
         mock_response = MagicMock()
         mock_response.value = mock_json_response
         modal_agent._kernel.plugins[modal_agent.name]["GenerateModalQueryIdeas"].invoke.return_value = mock_response
@@ -323,7 +298,6 @@ class TestModalLogicAgent:
         # Mock retournant une réponse vide
         mock_json_response = '{"query_ideas": []}'
     
-        modal_agent.setup_agent_components("test_service")
         mock_response = MagicMock()
         mock_response.value = mock_json_response
         modal_agent._kernel.plugins[modal_agent.name]["GenerateModalQueryIdeas"].invoke.return_value = mock_response
@@ -379,7 +353,6 @@ class TestModalLogicAgent:
         # Mock de la fonction d'interprétation
         mock_response = "Interprétation: La requête [](urgent) est acceptée, indiquant une nécessité."
     
-        modal_agent.setup_agent_components("test_service")
         mock_response_object = MagicMock()
         mock_response_object.value = mock_response
         modal_agent._kernel.plugins[modal_agent.name]["InterpretModalResult"].invoke.return_value = mock_response_object
@@ -399,7 +372,6 @@ class TestModalLogicAgent:
     async def test_interpret_results_error(self, modal_agent):
         """Test la gestion d'erreur lors de l'interprétation."""
         # Mock qui lève une exception
-        modal_agent.setup_agent_components("test_service")
         modal_agent._kernel.plugins[modal_agent.name]["InterpretModalResult"].invoke.side_effect = Exception("Interpret error")
         
         text = "Texte"
@@ -499,7 +471,6 @@ class TestModalLogicAgent:
     async def test_get_response(self, modal_agent, mock_tweety_bridge):
         """Test que get_response (via invoke_single) retourne un statut."""
         modal_agent._tweety_bridge = mock_tweety_bridge
-        modal_agent.setup_agent_components("test_service")
         
         mock_response = MagicMock()
         mock_response.value = '{"propositions": ["test"], "modal_formulas": ["[](test)"]}'
@@ -515,7 +486,6 @@ class TestModalLogicAgent:
     async def test_invoke(self, modal_agent, mock_tweety_bridge):
         """Test que invoke retourne un générateur qui produit le statut de invoke_single."""
         modal_agent._tweety_bridge = mock_tweety_bridge
-        modal_agent.setup_agent_components("test_service")
         
         mock_response = MagicMock()
         mock_response.value = '{"propositions": ["test"], "modal_formulas": ["[](test)"]}'
@@ -531,7 +501,6 @@ class TestModalLogicAgent:
     async def test_invoke_stream(self, modal_agent, mock_tweety_bridge):
         """Test que invoke_stream retourne un générateur qui produit le statut de invoke_single."""
         modal_agent._tweety_bridge = mock_tweety_bridge
-        modal_agent.setup_agent_components("test_service")
 
         mock_response = MagicMock()
         mock_response.value = '{"propositions": ["test"], "modal_formulas": ["[](test)"]}'
@@ -594,7 +563,6 @@ class TestModalLogicAgentIntegration:
         ciblés avec précision sur les fonctions du noyau sémantique.
         """
         agent = modal_agent
-        agent.setup_agent_components("test_service")
         agent._tweety_bridge = mock_tweety_bridge
 
         # 1. Définir les réponses attendues pour chaque fonction sémantique

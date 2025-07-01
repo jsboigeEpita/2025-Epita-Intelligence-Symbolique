@@ -140,7 +140,7 @@ class ModalLogicAgent(BaseLogicAgent):
     service: Optional[ChatCompletionClientBase] = Field(default=None, exclude=True)
     settings: Optional[Any] = Field(default=None, exclude=True)
 
-    def __init__(self, kernel: Kernel, agent_name: str = "ModalLogicAgentFixed", service_id: Optional[str] = None):
+    def __init__(self, kernel: Kernel, agent_name: str = "ModalLogicAgentFixed", service_id: Optional[str] = None, **kwargs):
         """
         Initialise une instance de ModalLogicAgentFixed avec retry automatique.
         """
@@ -148,9 +148,69 @@ class ModalLogicAgent(BaseLogicAgent):
             kernel=kernel,
             agent_name=agent_name,
             logic_type_name="Modal",
-            system_prompt=SYSTEM_PROMPT_MODAL
+            system_prompt=SYSTEM_PROMPT_MODAL,
+            **kwargs
         )
         self._llm_service_id = service_id
+        
+        self.logger.info(f"Configuration des composants avec retry automatique pour {self.name}...")
+
+        self._tweety_bridge = TweetyBridge()
+
+        if not TweetyInitializer.is_jvm_ready():
+            self.logger.error("Tentative de setup Modal Kernel alors que la JVM n'est PAS démarrée.")
+            return
+
+        default_settings = None
+        if self._llm_service_id:
+            try:
+                default_settings = self._kernel.get_prompt_execution_settings_from_service_id(
+                    self._llm_service_id
+                )
+                self.logger.debug(f"Settings LLM récupérés pour {self.name}.")
+            except Exception as e:
+                self.logger.warning(f"Impossible de récupérer settings LLM pour {self.name}: {e}")
+
+        retry_settings = self._create_retry_execution_settings(default_settings)
+
+        semantic_functions = [
+            ("TextToModalBeliefSet", PROMPT_TEXT_TO_MODAL_BELIEF_SET,
+             "Convertit le texte en ensemble de croyances modales avec retry automatique."),
+            ("GenerateModalQueryIdeas", PROMPT_GEN_MODAL_QUERIES_IDEAS,
+             "Génère des idées de requêtes modales avec correction de syntaxe."),
+            ("InterpretModalResult", PROMPT_INTERPRET_MODAL,
+              "Interprète résultat requête modale Tweety formaté.")
+        ]
+
+        for func_name, prompt, description in semantic_functions:
+            try:
+                if not prompt or not isinstance(prompt, str):
+                    self.logger.error(f"ERREUR: Prompt invalide pour {self.name}.{func_name}")
+                    continue
+
+                self.logger.info(f"Ajout fonction {self.name}.{func_name} avec retry automatique activé")
+
+                self._kernel.add_function(
+                    prompt=prompt,
+                    plugin_name=self.name,
+                    function_name=func_name,
+                    description=description,
+                    prompt_execution_settings=retry_settings
+                )
+
+                self.logger.debug(f"Fonction sémantique {self.name}.{func_name} ajoutée.")
+                
+                if self.name in self._kernel.plugins and func_name in self._kernel.plugins[self.name]:
+                    self.logger.info(f"(OK) Fonction {self.name}.{func_name} correctement enregistrée.")
+                else:
+                    self.logger.error(f"(CRITICAL ERROR) Fonction {self.name}.{func_name} non trouvée après ajout!")
+
+            except ValueError as ve:
+                self.logger.warning(f"Problème ajout/MàJ {self.name}.{func_name}: {ve}")
+            except Exception as e:
+                self.logger.error(f"Exception inattendue lors de l'ajout de {self.name}.{func_name}: {e}", exc_info=True)
+
+        self.logger.info(f"Composants de {self.name} configurés avec retry automatique.")
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         """Retourne les capacités de l'agent avec support du retry automatique."""
@@ -175,76 +235,6 @@ class ModalLogicAgent(BaseLogicAgent):
             }
         }
 
-    def setup_agent_components(self, llm_service_id: str) -> None:
-        """
-        Configure les composants avec support du retry automatique.
-        
-        CORRECTION PRINCIPALE :
-        - Configuration de max_auto_invoke_attempts dans prompt_execution_settings
-        - Messages d'erreur enrichis avec BNF pour aider le retry
-        """
-        super().setup_agent_components(llm_service_id)
-        self.logger.info(f"Configuration des composants avec retry automatique pour {self.name}...")
-
-        self._tweety_bridge = TweetyBridge()
-
-        if not TweetyInitializer.is_jvm_ready():
-            self.logger.error("Tentative de setup Modal Kernel alors que la JVM n'est PAS démarrée.")
-            return
-        
-        # Récupération des settings par défaut
-        default_settings = None
-        if self._llm_service_id: 
-            try:
-                default_settings = self._kernel.get_prompt_execution_settings_from_service_id(
-                    self._llm_service_id
-                )
-                self.logger.debug(f"Settings LLM récupérés pour {self.name}.")
-            except Exception as e:
-                self.logger.warning(f"Impossible de récupérer settings LLM pour {self.name}: {e}")
-
-        # CORRECTION CRITIQUE : Configuration du retry automatique
-        retry_settings = self._create_retry_execution_settings(default_settings)
-
-        semantic_functions = [
-            ("TextToModalBeliefSet", PROMPT_TEXT_TO_MODAL_BELIEF_SET,
-             "Convertit le texte en ensemble de croyances modales avec retry automatique."),
-            ("GenerateModalQueryIdeas", PROMPT_GEN_MODAL_QUERIES_IDEAS,
-             "Génère des idées de requêtes modales avec correction de syntaxe."),
-            ("InterpretModalResult", PROMPT_INTERPRET_MODAL,
-             "Interprète résultat requête modale Tweety formaté.")
-        ]
-
-        for func_name, prompt, description in semantic_functions:
-            try:
-                if not prompt or not isinstance(prompt, str):
-                    self.logger.error(f"ERREUR: Prompt invalide pour {self.name}.{func_name}")
-                    continue
-                
-                self.logger.info(f"Ajout fonction {self.name}.{func_name} avec retry automatique activé")
-                
-                # Configuration avec retry automatique
-                self._kernel.add_function(
-                    prompt=prompt,
-                    plugin_name=self.name, 
-                    function_name=func_name,
-                    description=description,
-                    prompt_execution_settings=retry_settings  # CORRECTION : Settings avec retry
-                )
-                
-                self.logger.debug(f"Fonction sémantique {self.name}.{func_name} ajoutée avec max_auto_invoke_attempts=3.")
-                
-                if self.name in self._kernel.plugins and func_name in self._kernel.plugins[self.name]:
-                    self.logger.info(f"(OK) Fonction {self.name}.{func_name} correctement enregistrée avec retry automatique.")
-                else:
-                    self.logger.error(f"(CRITICAL ERROR) Fonction {self.name}.{func_name} non trouvée après ajout!")
-                    
-            except ValueError as ve:
-                self.logger.warning(f"Problème ajout/MàJ {self.name}.{func_name}: {ve}")
-            except Exception as e:
-                self.logger.error(f"Exception inattendue lors de l'ajout de {self.name}.{func_name}: {e}", exc_info=True)
-        
-        self.logger.info(f"Composants de {self.name} configurés avec retry automatique.")
 
     def _create_retry_execution_settings(self, base_settings: Optional[PromptExecutionSettings]) -> PromptExecutionSettings:
         """

@@ -17,7 +17,6 @@ import time
 from datetime import datetime
 
 # Import des composants internes refactoriés
-from ..agents.tools.analysis.rhetorical_result_analyzer import RhetoricalResultAnalyzer
 from ..agents.tools.analysis.enhanced.rhetorical_result_analyzer import EnhancedRhetoricalResultAnalyzer
 from ..agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
 from ..agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
