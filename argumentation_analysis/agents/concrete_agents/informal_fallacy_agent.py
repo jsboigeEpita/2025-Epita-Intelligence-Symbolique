@@ -6,7 +6,7 @@ from semantic_kernel import Kernel
 from semantic_kernel.functions import KernelArguments
 
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
-from argumentation_analysis.agents.plugins.fallacy_identification_plugin import FallacyIdentificationPlugin
+from argumentation_analysis.agents.plugins.identification_plugin import IdentificationPlugin
 from argumentation_analysis.utils.path_operations import get_prompt_path
 
 class InformalFallacyAgent(BaseAgent):
