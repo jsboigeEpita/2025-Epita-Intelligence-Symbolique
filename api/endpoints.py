@@ -59,96 +59,66 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-@router.post("/analyze")
-async def analyze_text_endpoint(
-    analysis_req: AnalysisRequest,
-    fastapi_req: Request
-):
-    """
-    Analyse un texte donné pour en extraire la structure argumentative (prémisses/conclusion).
-    Utilise le contexte du projet initialisé au démarrage de FastAPI.
-    """
-    analysis_id = str(uuid.uuid4())[:8]
-    logger.info(f"[{analysis_id}] Requête d'analyse reçue pour le texte: '{analysis_req.text[:80]}...'")
-    
-    # Récupérer le contexte du projet depuis l'état de l'application FastAPI
-    project_context = fastapi_req.app.state.project_context
-    
-    start_time = time.time()
-    service_result = {}
-    
-    # Vérifier si la JVM et les classes nécessaires sont prêtes
+def _perform_tweety_analysis(text: str, project_context) -> Dict:
+    """Effectue l'analyse argumentative avec TweetyProject."""
     if not project_context or not project_context.jvm_initialized:
-        logger.error(f"[{analysis_id}] Erreur: Le contexte du projet ou la JVM n'est pas initialisé.")
-        service_result = {
-            "summary": "Erreur serveur: La JVM n'est pas disponible.",
-        }
-    elif 'AspicParser' not in project_context.tweety_classes:
-        logger.error(f"[{analysis_id}] Erreur: La classe 'AspicParser' n'a pas été chargée dans le contexte.")
-        service_result = {
-            "summary": "Erreur serveur: Le service d'analyse d'arguments (AspicParser) n'est pas configuré.",
-        }
-    else:
-        try:
-            # Utiliser l'instance pré-chargée depuis le contexte
-            # AspicParser est déjà instancié dans bootstrap
-            parser = project_context.tweety_classes['AspicParser']
-            
-            kb = parser.parseBeliefBase(analysis_req.text)
-            arguments = kb.getArguments()
-            # Convertir les arguments Java en une représentation Python simple (par exemple, des chaînes de caractères)
-            arguments_list = [str(arg) for arg in arguments]
-            
-            # TODO: Améliorer l'extraction des prémisses et conclusions depuis la liste d'arguments.
-            # Pour l'instant, on retourne la liste brute pour valider le endpoint.
-            argument_structure = {
-                "arguments": arguments_list
-            }
-            summary = f"{len(arguments_list)} arguments extraits avec succès."
-            service_result = {
-                "argument_structure": argument_structure,
-                "fallacies": [],
-                "suggestions": ["Analyser chaque argument individuellement."],
-                "summary": summary
-            }
-            logger.info(f"[{analysis_id}] Reconstruction réussie.")
+        raise ValueError("Le contexte du projet ou la JVM n'est pas initialisé.")
+    if 'AspicParser' not in project_context.tweety_classes:
+        raise ValueError("La classe 'AspicParser' n'est pas chargée.")
 
-        except Exception as e:
-            logger.error(f"[{analysis_id}] ERREUR lors de l'analyse du texte avec Tweety: {e}", exc_info=True)
-            service_result = {
-                "summary": f"Erreur du service d'analyse: {e}",
-            }
+    parser = project_context.tweety_classes['AspicParser']
+    kb = parser.parseBeliefBase(text)
+    arguments = kb.getArguments()
+    arguments_list = [str(arg) for arg in arguments]
 
-    duration = time.time() - start_time
-    # S'assurer que les clés existent avant de les utiliser
-    service_result.setdefault("duration", duration)
-    service_result.setdefault("components_used", ["TweetyArgumentReconstructor_centralized"])
-    service_result.setdefault("fallacies", [])
-    service_result.setdefault("argument_structure", None)
-    service_result.setdefault("suggestions", [])
-    service_result.setdefault("overall_quality", 0.0)
+    return {
+        "argument_structure": {"arguments": arguments_list},
+        "summary": f"{len(arguments_list)} arguments extraits avec succès.",
+        "suggestions": ["Analyser chaque argument individuellement."],
+        "fallacies": [],
+        "components_used": ["TweetyArgumentReconstructor_centralized"],
+    }
 
-
-    # Construction de la nouvelle structure de réponse imbriquée
-    fallacies_data = service_result.get('fallacies', [])
-    fallacies = [Fallacy(**f_data) for f_data in fallacies_data]
-    
-    # Données attendues par le frontend
-    results_payload = {
-        "overall_quality": service_result.get('overall_quality', 0.0), # Fournir une valeur par défaut
+def _build_response_payload(analysis_result: Dict) -> Dict:
+    """Construit le payload de la réponse finale."""
+    fallacies = [Fallacy(**f_data) for f_data in analysis_result.get('fallacies', [])]
+    return {
+        "overall_quality": analysis_result.get('overall_quality', 0.0),
         "fallacy_count": len(fallacies),
         "fallacies": fallacies,
-        "argument_structure": service_result.get('argument_structure', None),
-        "suggestions": service_result.get('suggestions', []),
-        "summary": service_result.get('summary', "L'analyse a été complétée."),
+        "argument_structure": analysis_result.get('argument_structure'),
+        "suggestions": analysis_result.get('suggestions', []),
+        "summary": analysis_result.get('summary', "L'analyse a été complétée."),
         "metadata": {
-            "duration": service_result.get('duration', 0.0),
+            "duration": analysis_result.get('duration', 0.0),
             "service_status": "active",
-            "components_used": service_result.get('components_used', [])
+            "components_used": analysis_result.get('components_used', [])
         }
     }
+
+@router.post("/analyze")
+async def analyze_text_endpoint(analysis_req: AnalysisRequest, fastapi_req: Request):
+    """
+    Analyse un texte donné pour en extraire la structure argumentative.
+    """
+    analysis_id = str(uuid.uuid4())[:8]
+    logger.info(f"[{analysis_id}] Requête d'analyse reçue: '{analysis_req.text[:80]}...'")
     
-    # La réponse finale est un dictionnaire qui correspond au modèle implicite attendu
+    start_time = time.time()
+    project_context = fastapi_req.app.state.project_context
+    
+    try:
+        service_result = _perform_tweety_analysis(analysis_req.text, project_context)
+        logger.info(f"[{analysis_id}] Analyse réussie.")
+    except Exception as e:
+        logger.error(f"[{analysis_id}] Erreur lors de l'analyse: {e}", exc_info=True)
+        service_result = {"summary": f"Erreur du service d'analyse: {e}"}
+
+    duration = time.time() - start_time
+    service_result.setdefault("duration", duration)
+    
+    results_payload = _build_response_payload(service_result)
+
     return {
         "analysis_id": analysis_id,
         "status": "success",

@@ -3,27 +3,33 @@ from pathlib import Path
 import os
 import glob
 import logging
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
+from .factory import create_app
 from .endpoints import router as api_router, framework_router
 from argumentation_analysis.core.bootstrap import initialize_project_environment
 
-# --- Ajout dynamique de abs_arg_dung au PYTHONPATH ---
-# Cela garantit que le service d'analyse peut importer l'agent de l'étudiant.
+# --- Configuration du PYTHONPATH ---
+# Ajoute dynamiquement le répertoire 'abs_arg_dung' au PYTHONPATH.
+# C'est une solution nécessaire pour assurer que les modules de ce répertoire,
+# qui contiennent la logique d'analyse de l'argumentation de Dung,
+# soient importables par l'API, car ils ne sont pas installés comme un paquet standard.
 current_dir = Path(__file__).parent.resolve()
 abs_arg_dung_path = current_dir.parent / 'abs_arg_dung'
 if str(abs_arg_dung_path) not in sys.path:
-    # On l'insère au début pour prioriser ce chemin si nécessaire
     sys.path.insert(0, str(abs_arg_dung_path))
-# --- Fin de l'ajout ---
+# --- Fin de la configuration du PYTHONPATH ---
 
 # --- Gestion du cycle de vie de la JVM et des services ---
 
 def startup_event():
     """
-    Événement de démarrage de FastAPI.
-    Initialise l'environnement complet du projet (JVM, services, etc.)
-    et l'attache à l'état de l'application.
+    Configure et exécute les routines de démarrage de l'application.
+
+    Cette fonction est appelée une seule fois au lancement de FastAPI. Elle est
+    responsable de l'initialisation de l'environnement global du projet,
+    ce qui inclut le démarrage et la configuration de la JVM via JPype.
+    Le contexte initialisé (contenant les classes Java, etc.) est ensuite
+    stocké dans l'état de l'application (`app.state`) pour être accessible
+    depuis les endpoints.
     """
     logging.info("Événement de démarrage de FastAPI: initialisation de l'environnement du projet...")
     project_context = initialize_project_environment()
@@ -32,32 +38,12 @@ def startup_event():
 
 # --- Application FastAPI ---
 
-app = FastAPI(
+app = create_app(
     title="Argumentation Analysis API",
+    description="API principale d'analyse argumentative avec intégration Java/Tweety.",
+    version="2.0.0",
     on_startup=[startup_event]
-    # on_shutdown n'est plus nécessaire car la JVM est gérée par le processus principal
 )
-
-
-# --- Configuration CORS ---
-# Le frontend est servi sur le port 3001 (ou une autre URL en production),
-# le backend sur 5003. Le navigateur bloque les requêtes cross-origin
-# par défaut. On autorise explicitement l'origine du frontend.
-origins = [
-    os.environ.get("FRONTEND_URL", "http://127.0.0.1:3001"),
-    "http://localhost:3001",
-    "http://127.0.0.1:3000",
-    "http://localhost:3000",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 
 # Inclure les routeurs
 app.include_router(api_router, prefix="/api")
@@ -67,3 +53,20 @@ app.include_router(framework_router)
 async def root():
     import jpype
     return {"message": "Welcome to the Argumentation Analysis API. JVM status: " + ("Running" if jpype.isJVMStarted() else "Stopped")}
+
+@app.get("/health", tags=["Monitoring"])
+async def health_check():
+    """
+    Vérifie l'état de santé de l'API.
+
+    Retourne le statut de l'API et de la JVM.
+    """
+    import jpype
+    jvm_status = "Running" if jpype.isJVMStarted() else "Stopped"
+    return {
+        "status": "healthy",
+        "details": {
+            "api": "Operational",
+            "jvm": jvm_status
+        }
+    }
