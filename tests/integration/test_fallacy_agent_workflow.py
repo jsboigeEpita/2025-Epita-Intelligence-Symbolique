@@ -17,7 +17,7 @@ from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatCom
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
 from semantic_kernel.connectors.ai.prompt_execution_settings import PromptExecutionSettings
 
-from argumentation_analysis.agents.plugins.fallacy_identification_plugin import FallacyIdentificationPlugin
+from argumentation_analysis.agents.plugins.identification_plugin import IdentificationPlugin
 
 # --- Mocks de Réponses du LLM ---
 

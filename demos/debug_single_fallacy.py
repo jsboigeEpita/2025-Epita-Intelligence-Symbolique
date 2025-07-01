@@ -23,7 +23,10 @@ except (NameError, FileNotFoundError, RuntimeError) as e:
 
 import semantic_kernel as sk
 
-from semantic_kernel.functions import KernelArguments
+from semantic_kernel.contents import ChatHistory
+from argumentation_analysis.agents.plugins.fallacy_workflow_plugin import FallacyWorkflowPlugin
+from argumentation_analysis.agents.utils.taxonomy_utils import Taxonomy
+
 class Colors:
     GREEN = '\033[92m'
     RED = '\033[91m'
@@ -31,83 +34,70 @@ class Colors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
 
-# Map d'alias pour les sophismes, pour gérer les variations dans la réponse du LLM
-ALIAS_MAP = {}
-
-def compare_sophisms(analysis_result_dict, expected_sophisms):
-    """Compare le résultat de l'analyse avec les sophismes attendus de manière flexible."""
+def compare_sophisms(analysis_result_str: str, expected_sophisms: list[str]):
+    """Compare le résultat de l'analyse (chaîne JSON d'un appel d'outil) avec les sophismes attendus."""
     try:
-        detected_sophisms_raw = analysis_result_dict.get("sophismes", [])
+        # La sortie attendue est maintenant un `tool_code` qui est une chaîne en format JSON.
+        match = re.search(r"```json\s*(\{.*?\})\s*```", analysis_result_str, re.DOTALL)
+        if not match:
+            # Si le JSON n'est pas dans un bloc de code, on essaie de le parser directement.
+            try:
+                data = json.loads(analysis_result_str)
+            except json.JSONDecodeError:
+                return False, f"La réponse n'est pas un JSON valide et n'est pas dans un bloc de code. Reçu: {analysis_result_str}"
+        else:
+            data = json.loads(match.group(1))
+
+        # Le LLM peut imbriquer la liste sous une clé, on la cherche.
+        if 'fallacies' in data:
+            detected_sophisms_raw = data.get("fallacies", [])
+        else: # Si pas de clé `fallacies`, on suppose que la liste est à la racine
+            detected_sophisms_raw = data if isinstance(data, list) else []
+
         if not detected_sophisms_raw:
-            return False, "Aucun sophisme n'a été détecté dans la réponse de l'IA."
-            
-        detected_ids = []
-        for item in detected_sophisms_raw:
-            # Le modèle peut retourner 'fallacy_type' ou 'fallacy_name'
-            name_raw = str(item.get('nom', '')).lower().strip()
-            normalized_name = ALIAS_MAP.get(name_raw, name_raw)
-            detected_ids.append(normalized_name)
-        
-        detected_set = set(detected_ids)
-        expected_set = set(s.lower().strip() for s in expected_sophisms)
-        
-        success = expected_set.issubset(detected_set)
-        details = f"Attendu: {sorted(list(expected_set))}, Détecté: {sorted(list(detected_set))}"
+             return False, "Aucun sophisme n'a été détecté dans le JSON de la réponse."
+
+        detected_ids = {str(item.get('fallacy_type', '')).lower().strip() for item in detected_sophisms_raw}
+        expected_set = {s.lower().strip() for s in expected_sophisms}
+
+        success = expected_set.issubset(detected_ids)
+        details = f"Attendu: {sorted(list(expected_set))}, Détecté: {sorted(list(detected_ids))}"
         return success, details
-    except (AttributeError, TypeError, KeyError) as e:
-        return False, f"Erreur lors de la comparaison des résultats: {e}. Réponse reçue: {analysis_result_dict}"
+    except (json.JSONDecodeError, AttributeError, TypeError, KeyError) as e:
+        return False, f"Erreur de parsing ou de comparaison: {e}. Réponse reçue: {analysis_result_str}"
+
 
 async def main():
     """Point d'entrée principal pour le script de débogage isolé."""
-    print(f"{Colors.BOLD}--- Début du test de débogage pour 'Concept Volé' ---{Colors.ENDC}")
+    print(f"{Colors.BOLD}--- Début du test de débogage pour 'Concept Volé' avec le nouveau workflow ---{Colors.ENDC}")
 
     scenario = {
         "text": "Reason is not reliable, therefore we cannot use it to find truth.",
         "expected_sophisms": ["stolen-concept"]
     }
 
-    # Configuration du Kernel, du service LLM et du plugin d'analyse
     from argumentation_analysis.core.llm_service import create_llm_service
-    from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel, FallacyAnalysisResult
-    from semantic_kernel.connectors.ai.open_ai.prompt_execution_settings.open_ai_prompt_execution_settings import OpenAIChatPromptExecutionSettings
-
+    
     kernel = sk.Kernel()
     llm_service = create_llm_service(service_id="default", force_authentic=True)
     kernel.add_service(llm_service)
     
-    # Utiliser la configuration standard de l'agent pour charger tous les prompts et plugins
-    setup_informal_kernel(kernel, llm_service)
-    analyze_function = kernel.plugins["InformalAnalyzer"]["semantic_AnalyzeFallacies"]
-
+    workflow_plugin = FallacyWorkflowPlugin(kernel)
+    
     success = False
     details = ""
 
     try:
-        print(f"{Colors.YELLOW}Invoking semantic function 'analyze_argument_semantic'...{Colors.ENDC}")
+        print(f"{Colors.YELLOW}Invoking 'run_workflow'...{Colors.ENDC}")
         
-        response = await kernel.invoke(
-            analyze_function,
-            KernelArguments(input=scenario["text"])
+        final_result_str = await workflow_plugin.run_workflow(
+            argument_text=scenario["text"]
         )
         
-        # La réponse est un ChatMessageContent contenant une chaîne JSON.
-        # Nous devons la parser manuellement.
-        content_str = str(response.value[0].content)
-
-        # Nettoyage de la réponse pour extraire le JSON
-        json_match = re.search(r"```json\n({.*?})\n```", content_str, re.DOTALL)
-        if json_match:
-            content_str = json_match.group(1)
-            
-        analysis_result_obj = FallacyAnalysisResult.model_validate_json(content_str)
-
-        if not isinstance(analysis_result_obj, FallacyAnalysisResult):
-            raise TypeError(f"La réponse n'est pas un objet FallacyAnalysisResult, mais {type(analysis_result_obj)}")
-
-        analysis_result = json.loads(analysis_result_obj.model_dump_json())
-        print(f"{Colors.GREEN}Résultat brut de l'analyse:{Colors.ENDC}\n{json.dumps(analysis_result, indent=2)}")
+        print(f"{Colors.GREEN}Résultat brut du workflow:{Colors.ENDC}\n{final_result_str}")
         
-        success, details = compare_sophisms(analysis_result, scenario["expected_sophisms"])
+        # Le résultat est maintenant une chaîne JSON, la fonction de comparaison est adaptée
+        success, details = compare_sophisms(final_result_str, scenario["expected_sophisms"])
 
     except Exception as e:
         import traceback
@@ -115,7 +105,7 @@ async def main():
     
     # Affichage du résultat final
     print("\n--- Résultat Final ---")
-    print(f"{Colors.YELLOW}Scénario testé:{Colors.ENDC} Appel à l'hypocrisie")
+    print(f"{Colors.YELLOW}Scénario testé:{Colors.ENDC} Concept Volé (Stolen Concept)")
     print(f"{Colors.YELLOW}Détails:{Colors.ENDC} {details}")
     if success:
         print(f"{Colors.GREEN}{Colors.BOLD}[SUCCESS] Le test a réussi !{Colors.ENDC}")

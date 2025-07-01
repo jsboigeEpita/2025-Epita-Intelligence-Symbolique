@@ -11,7 +11,7 @@ sys.path.insert(0, str(project_root))
 from argumentation_analysis.agents.agent_factory import AgentFactory
 from argumentation_analysis.core.llm_service import create_llm_service
 from semantic_kernel.contents.chat_history import ChatHistory
-from argumentation_analysis.agents.plugins.fallacy_identification_plugin import FallacyIdentificationPlugin
+from argumentation_analysis.agents.plugins.identification_plugin import IdentificationPlugin, IdentifiedFallacy
 
 
 @pytest.mark.asyncio

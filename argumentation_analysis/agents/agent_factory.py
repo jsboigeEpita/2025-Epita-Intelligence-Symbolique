@@ -6,7 +6,7 @@ from semantic_kernel.agents import Agent, ChatCompletionAgent
 from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
 
-from .plugins.fallacy_identification_plugin import FallacyIdentificationPlugin
+from .plugins.identification_plugin import IdentificationPlugin
 from .plugins.project_management_plugin import ProjectManagementPlugin
 from .plugins.fallacy_workflow_plugin import FallacyWorkflowPlugin
 from .plugins.taxonomy_display_plugin import TaxonomyDisplayPlugin
@@ -28,7 +28,7 @@ class AgentFactory:
         self,
         config_name: str = "simple",
         trace_log_path: Optional[str] = None,
-        fallacy_plugin: Optional[FallacyIdentificationPlugin] = None,
+        fallacy_plugin: Optional[IdentificationPlugin] = None,
     ) -> Agent:
         """
         Crée différentes versions de l'InformalFallacyAgent.
