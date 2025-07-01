@@ -45,7 +45,7 @@ def case_config(request):
 def informal_fallacy_plugin(case_config):
     """Fixture pour le plugin, configuré selon le cas de test."""
     _, allowed_ops, _, _ = case_config
-    return FallacyIdentificationPlugin(allowed_operations=allowed_ops)
+    return IdentificationPlugin(allowed_operations=allowed_ops)
 
 @pytest.fixture
 def mock_chat_completion_service(case_config):
@@ -221,7 +221,7 @@ async def test_informal_fallacy_agent_uses_parallel_exploration():
     
     # On a besoin des deux plugins pour ce workflow
     workflow_plugin = FallacyWorkflowPlugin(kernel=kernel)
-    identification_plugin = FallacyIdentificationPlugin()
+    identification_plugin = IdentificationPlugin()
     
     agent = ChatCompletionAgent(
         kernel=kernel,
@@ -294,10 +294,10 @@ def kernel():
 @pytest.mark.parametrize(
     "config_name, expected_plugin_types",
     [
-        ("simple", [FallacyIdentificationPlugin]),
+        ("simple", [IdentificationPlugin]),
         ("explore_only", [TaxonomyDisplayPlugin]),
         ("workflow_only", [FallacyWorkflowPlugin, TaxonomyDisplayPlugin]),
-        ("full", [FallacyIdentificationPlugin, FallacyWorkflowPlugin, TaxonomyDisplayPlugin]),
+        ("full", [IdentificationPlugin, FallacyWorkflowPlugin, TaxonomyDisplayPlugin]),
     ],
 )
 def test_agent_factory_configurations(kernel, config_name, expected_plugin_types):

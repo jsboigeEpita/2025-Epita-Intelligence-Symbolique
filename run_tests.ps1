@@ -73,7 +73,7 @@ function Get-CondaEnvFromConfig {
         throw "Fichier de configuration '$dependencyFile' introuvable."
     }
     # $config = Get-Content $dependencyFile | Out-String | ConvertFrom-Toml
-    $envName = "projet-is-roo-new" # $config.tool.poetry.extras.conda_env_name[0]
+    $envName = "projet-is-new" # $config.tool.poetry.extras.conda_env_name[0]
     if (-not $envName) {
         throw "Impossible de trouver 'conda_env_name' dans '$dependencyFile'. Assurez-vous qu'il est défini sous [tool.poetry.extras]."
     }

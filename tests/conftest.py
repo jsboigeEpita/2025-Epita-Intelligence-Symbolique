@@ -243,7 +243,7 @@ def manage_jvm_for_test(request):
 # Charger les fixtures définies dans d'autres fichiers comme des plugins
 pytest_plugins = [
    "tests.fixtures.integration_fixtures",
-   # "tests.fixtures.jvm_subprocess_fixture", # TEMPORAIREMENT DÉSACTIVÉ - CAUSE UN CRASH JVM
+   "tests.fixtures.jvm_subprocess_fixture", # TEMPORAIREMENT DÉSACTIVÉ - CAUSE UN CRASH JVM
     "pytest_playwright",
     # "tests.mocks.numpy_setup" # DÉSACTIVÉ GLOBALEMENT - Provoque un comportement instable pour les tests E2E
 ]
