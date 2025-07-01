@@ -10,80 +10,56 @@ C'est le point d'entrée privilégié pour toute commande relative au projet.
 
 .EXAMPLE
 # Exécute la suite de tests unitaires et fonctionnels
-.\activate_project_env.ps1 -Command "pytest tests/unit tests/functional"
+.\activate_project_env.ps1 pytest tests/unit tests/functional
 
 .EXAMPLE
 # Affiche la version de python de l'environnement
-.\activate_project_env.ps1 -Command "python --version"
+.\activate_project_env.ps1 python --version
 #>
 param(
     [Parameter(Mandatory=$false, Position=0)]
-    [string]$Command = "",
+    [string]$Command,
 
     [Parameter(ValueFromRemainingArguments=$true)]
-    [string[]]$Arguments
+    [string[]]$RemainingArgs
 )
 
 $ErrorActionPreference = "Stop"
 
-# --- Initialisation de Conda pour les sessions non-interactives ---
-# Essaye de trouver la commande 'conda'. Si elle n'est pas dans le PATH,
-# le script s'arrêtera, ce qui est le comportement souhaité.
+# --- Initialisation de Conda ---
 try {
     $condaPath = Get-Command conda.exe | Select-Object -ExpandProperty Source
-    Write-Host "[DEBUG] Conda trouvé à l'emplacement: $condaPath" -ForegroundColor DarkGray
-    # Exécute le 'hook' de conda pour initialiser l'environnement dans cette session.
-    # C'est la méthode recommandée pour rendre 'conda activate' et 'conda run' disponibles
-    # dans les scripts et les sessions non-interactives.
+    Write-Host "[DEBUG] Conda trouvé: $condaPath" -ForegroundColor DarkGray
     conda.exe shell.powershell hook | Out-String | Invoke-Expression
 }
 catch {
-    Write-Host "[ERREUR FATALE] La commande 'conda' est introuvable." -ForegroundColor Red
-    Write-Host "Assurez-vous que Conda (ou Miniconda/Anaconda) est installé et que son répertoire 'Scripts' ou 'condabin' est dans votre PATH." -ForegroundColor Red
+    Write-Host "[FATAL] 'conda' introuvable. Assurez-vous qu'il est installé et dans le PATH." -ForegroundColor Red
     exit 1
 }
 
-# Configuration pour la compatibilité des tests et l'import de modules locaux
+# --- Configuration de l'environnement ---
 $env:PYTHONPATH = "$PSScriptRoot;$env:PYTHONPATH"
+$condaEnvName = "projet-is" 
 
-# Environnement conda cible
-$condaEnvName = "projet-is"
+# --- Logique de commande ---
+# Concatène la commande et ses arguments en une seule chaîne.
+$fullCommand = ($Command + " " + ($RemainingArgs -join ' ')).Trim()
 
-# Reconstitue la commande complète à partir du paramètre principal et des arguments restants
-$fullCommand = if ($Arguments) {
-    "$Command " + ($Arguments -join ' ')
-} else {
-    $Command
+# Si aucune commande n'est passée, le script active simplement l'environnement et se termine.
+if ([string]::IsNullOrWhiteSpace($fullCommand)) {
+    Write-Host "[INFO] Environnement Conda '$condaEnvName' initialisé pour la session PowerShell actuelle." -ForegroundColor Cyan
+    Write-Host "[INFO] Aucune commande fournie, le script se termine. Vous pouvez maintenant exécuter des commandes manuellement." -ForegroundColor Cyan
+    exit 0
 }
 
-# Ajout pour les tests : configuration de l'environnement Java
-if ($Command -eq "pytest") {
-    Write-Host "[INFO] Commande 'pytest' détectée. Configuration de l'environnement de test Java..." -ForegroundColor Cyan
-    # Assurez-vous que le script setup_test_env.ps1 existe et est au bon endroit
-    if (Test-Path -Path ".\setup_test_env.ps1") {
-        . .\setup_test_env.ps1
-    } else {
-        Write-Host "[WARNING] Le script 'setup_test_env.ps1' est introuvable." -ForegroundColor Yellow
-    }
-}
+# --- Exécution via le wrapper Python ---
+# Toute la logique est déléguée au wrapper Python pour assurer la cohérence.
+$moduleName = "project_core.core_from_scripts.environment_manager"
+$finalCommand = "conda run --no-capture-output -n $condaEnvName python.exe -m $moduleName run `"$fullCommand`""
 
-# --- Exécution de la commande ---
-# La commande ne sera exécutée que si le paramètre -Command a été fourni.
-if (-not [string]::IsNullOrWhiteSpace($Command)) {
-    # Construit la commande finale en combinant conda run et l'appel au module python
-    $moduleName = "project_core.core_from_scripts.environment_manager"
-    $commandToExecute = $fullCommand
-    $finalCommand = "conda run --no-capture-output -n $condaEnvName python.exe -m $moduleName run `"$commandToExecute`""
+Write-Host "[DEBUG] Délégation au wrapper Python: $finalCommand" -ForegroundColor Gray
 
-    Write-Host "[DEBUG] Calling in Conda Env '$condaEnvName': $finalCommand" -ForegroundColor Gray
-
-    # Exécute la commande finale. Invoke-Expression est utilisé pour évaluer la chaîne complète.
-    Invoke-Expression -Command $finalCommand
-
-    # Propage le code de sortie du script python
-    $exitCode = $LASTEXITCODE
-    exit $exitCode
-}
-else {
-    Write-Host "[INFO] Environnement Conda '$condaEnvName' initialisé. Aucune commande à exécuter." -ForegroundColor Cyan
-}
+# Exécution et propagation du code de sortie
+Invoke-Expression -Command $finalCommand
+$exitCode = $LASTEXITCODE
+exit $exitCode
