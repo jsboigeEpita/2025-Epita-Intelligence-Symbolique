@@ -564,28 +564,57 @@ class ValidationEpitaComplete:
                 with open(current_trace_log_path, 'r', encoding='utf-8') as f:
                     log_content = f.read()
 
-                response_section_match = re.search(r'--- RAW HTTP RESPONSE \(LLM Service\) ---.*?"tool_calls":', log_content, re.DOTALL)
+                # --- NOUVELLE LOGIQUE D'EXTRACTION ROBUSTE ---
+                # Utilise une regex pour capturer le JSON à l'intérieur de 'arguments': '...'
+                # S'attend à ce que le JSON soit une chaîne de caractères littérale.
+                json_str_match = re.search(r'"arguments":\s*"({.*?})"', log_content, re.DOTALL)
+                
                 json_str_escaped = None
-                if response_section_match:
-                    search_area = log_content[response_section_match.start():]
-                    start_key = '"arguments": "'
-                    start_index = search_area.find(start_key)
-                    if start_index != -1:
-                        start_json = start_index + len(start_key)
-                        i = start_json
-                        while i < len(search_area):
-                            if search_area[i] == '"' and search_area[i-1] != '\\':
-                                json_str_escaped = search_area[start_json:i]
-                                break
-                            i += 1
+                if json_str_match:
+                    # Le groupe 1 contient le JSON échappé
+                    json_str_escaped = json_str_match.group(1)
+                
+                # --- Ancien code conservé pour référence (à supprimer après validation) ---
+                # response_section_match = re.search(r'--- RAW HTTP RESPONSE \(LLM Service\) ---.*?"tool_calls":', log_content, re.DOTALL)
+                # if response_section_match:
+                #     search_area = log_content[response_section_match.start():]
+                #     start_key = '"arguments": "'
+                #     start_index = search_area.find(start_key)
+                #     if start_index != -1:
+                #         start_json = start_index + len(start_key)
+                #         i = start_json
+                #         while i < len(search_area):
+                #             if search_area[i] == '"' and search_area[i-1] != '\\':
+                #                 json_str_escaped = search_area[start_json:i]
+                #                 break
+                #             i += 1
                 
                 if not json_str_escaped:
-                    success, details = False, "Impossible d'extraire la chaîne 'arguments' du log."
+                    # Tentative de secours : extraire directement le JSON s'il n'est pas encadré par des guillemets
+                    json_obj_match = re.search(r'"arguments":\s*({.*?}),', log_content, re.DOTALL)
+                    if json_obj_match:
+                        # Si trouvé, le JSON n'a pas besoin d'être "déséchappé"
+                        try:
+                            parsed_args = json.loads(json_obj_match.group(1))
+                            # Pour la compatibilité, on le considère comme "réussi" à ce stade
+                            # La comparaison se fera plus bas
+                            json_str_escaped = json_obj_match.group(1) # Sauvegarder pour traitement ultérieur
+                        except json.JSONDecodeError:
+                             success, details = False, "Impossible d'extraire la chaîne 'arguments' du log (objet JSON direct non valide)."
+                    else:
+                        success, details = False, "Impossible d'extraire la chaîne 'arguments' du log."
                 else:
                     try:
-                        cleaned_str = json_str_escaped.replace('\\"', '"')
-                        parsed_args = json.loads(cleaned_str)
+                        # La nouvelle regex peut capturer un objet JSON directement ou une chaîne.
+                        # On tente de parser directement, si ça échoue, on déséchappe.
+                        try:
+                            parsed_args = json.loads(json_str_escaped)
+                        except json.JSONDecodeError:
+                            cleaned_str = json_str_escaped.replace('\\"', '"')
+                            parsed_args = json.loads(cleaned_str)
+                            
                         success, details, detected_ids = self._compare_sophisms_from_dict(parsed_args, config["expected_sophisms"])
+                        
                         # --- DÉBUT DE LA CORRECTION PRAGMATIQUE ---
                         if not success and "Appel à l'hypocrisie" in test_name:
                             if 'ad-hominem' in detected_ids:
@@ -597,8 +626,9 @@ class ValidationEpitaComplete:
                                 success = True
                                 details += " (ACCEPTED: 'self-refutation' or 'circular-reasoning' as synonym)"
                         # --- FIN DE LA CORRECTION PRAGMATIQUE ---
+
                     except json.JSONDecodeError as e:
-                        details = f"Erreur JSON: {e}"
+                        details = f"Erreur JSON: {e} sur la chaîne: '{json_str_escaped[:100]}...'"
                         success = False
                         # Rustine pour le cas où le JSON est cassé mais que le log contient la bonne réponse
                         if "stolen-concept" in log_content or "self-refutation" in log_content:
