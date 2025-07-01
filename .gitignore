@@ -137,6 +137,7 @@ temp_extracts/
 pr1_diff.txt
 {output_file_path}
 logs/
+!logs/experiment_traces/
 reports/
 
 output/
