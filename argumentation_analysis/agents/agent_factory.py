@@ -35,7 +35,7 @@ class AgentFactory:
         """
         plugins = []
         
-        base_identification_plugin = fallacy_plugin or FallacyIdentificationPlugin()
+        base_identification_plugin = fallacy_plugin or IdentificationPlugin()
 
         if config_name == "simple":
             plugins.append(base_identification_plugin)

@@ -93,7 +93,7 @@ class EnvironmentManager:
         """Lit le chemin JAVA_HOME depuis le fichier .env à la racine."""
         return self.get_var_from_dotenv("JAVA_HOME")
 
-    def run_command_in_conda_env(self, command_to_run: str) -> int:
+    def run_command_in_conda_env(self, command_parts: List[str]) -> int:
         """
         Exécute une commande dans l'environnement Conda spécifié par le .env.
         Utilise `conda run` pour une exécution propre dans un sous-processus.
@@ -106,18 +106,7 @@ class EnvironmentManager:
 
         self.logger.info(f"Utilisation de --cwd='{self.project_root}' pour l'exécution.")
 
-        import shlex
-        if command_to_run.strip().lower().startswith("-commandtorun"):
-            marker = '-CommandToRun'
-            start_index = command_to_run.lower().find(marker.lower()) + len(marker)
-            command_str = command_to_run[start_index:].strip()
-        else:
-            command_str = command_to_run
-        
-        # Nettoyage supplémentaire pour enlever les guillemets englobants potentiels
-        command_str = command_str.strip('\'"')
-        
-        command_parts = shlex.split(command_str)
+        # La commande est déjà une liste de parties, pas besoin de shlex.split
         
         # Préparation des variables d'environnement
         env_vars = os.environ.copy()
@@ -154,6 +143,7 @@ class EnvironmentManager:
             "--live-stream",
         ] + command_parts
         
+        command_str = " ".join(command_parts)
         description = f"Exécution de '{command_str[:50]}...' dans l'env '{conda_env_name}' via `conda run`"
         
         exit_code, _, _ = run_shell_command(
@@ -230,7 +220,8 @@ class EnvironmentManager:
                 return False
             command = f"pip install -r {requirements_file}"
             self.logger.info(f"Exécution de la réparation depuis le fichier de requirements : {command}")
-            return self.run_command_in_conda_env(command) == 0
+            import shlex
+            return self.run_command_in_conda_env(shlex.split(command)) == 0
 
         if packages:
             if strategy_name == 'aggressive':
@@ -315,8 +306,7 @@ if __name__ == "__main__":
             parser.print_help()
             exit_code = 1
         else:
-            full_command = " ".join(args.command_parts)
-            exit_code = manager.run_command_in_conda_env(full_command)
+            exit_code = manager.run_command_in_conda_env(args.command_parts)
     elif args.command == "switch":
         if not manager.switch_environment(args.name):
             exit_code = 1

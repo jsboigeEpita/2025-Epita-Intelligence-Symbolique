@@ -58,15 +58,13 @@ def run_experiments():
                 "--trace-log-path", trace_log_path
             ]
             
-            # Joindre les parties en une seule chaîne de commande sécurisée
-            inner_command = shlex.join(inner_command_parts)
-
-            # Construction de la commande wrapper qui utilise l'environnement manager
+            # La commande est directement passée comme une liste d'arguments
+            # au script environment_manager, qui attend maintenant une liste.
             command = [
                 sys.executable,
                 "-m", "project_core.core_from_scripts.environment_manager",
                 "run",
-                inner_command
+                *inner_command_parts
             ]
             
             try:
