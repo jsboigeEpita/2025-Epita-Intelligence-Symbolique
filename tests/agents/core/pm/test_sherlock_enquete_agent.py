@@ -6,6 +6,7 @@ import asyncio
 import os
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+from argumentation_analysis.agents.agent_factory import AgentFactory
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
 from typing import AsyncGenerator, Union
 from semantic_kernel.contents.chat_history import ChatHistory
@@ -66,10 +67,23 @@ def authentic_kernel():
     return kernel
 
 @pytest.fixture
-def sherlock_agent(authentic_kernel):
-    """Fixture pour créer un agent Sherlock authentique et concret."""
-    kernel = authentic_kernel
-    return ConcreteSherlockEnqueteAgent(kernel=kernel, agent_name=TEST_AGENT_NAME)
+def agent_factory(authentic_kernel):
+    """Fixture pour créer une instance de l'AgentFactory."""
+    if not authentic_kernel.get_service("chat_completion"):
+        pytest.skip("Le service de chat 'chat_completion' n'est pas configuré.")
+    return AgentFactory(kernel=authentic_kernel, llm_service_id="chat_completion")
+
+@pytest.fixture
+def sherlock_agent(agent_factory):
+    """
+    Fixture pour créer un agent Sherlock concret via la factory pour les tests.
+    Utilise la méthode _create_agent pour instancier la version concrète.
+    """
+    return agent_factory._create_agent(
+        agent_class=ConcreteSherlockEnqueteAgent,
+        agent_name=TEST_AGENT_NAME,
+        service_id=agent_factory.llm_service_id
+    )
 
 @pytest.mark.asyncio
 class TestSherlockEnqueteAgentAuthentic:
@@ -101,15 +115,17 @@ class TestSherlockEnqueteAgentAuthentic:
         # Le nom est maintenant personnalisé par la fixture
         assert agent.name == TEST_AGENT_NAME
 
-    def test_custom_system_prompt(self):
-        """Test la configuration avec un prompt système personnalisé."""
+    def test_custom_system_prompt(self, agent_factory):
+        """Test la configuration avec un prompt système personnalisé via la factory."""
         custom_prompt = "Instructions personnalisées pour Sherlock."
-        kernel = Kernel()
-        agent = ConcreteSherlockEnqueteAgent(
-            kernel=kernel,
+        
+        agent = agent_factory._create_agent(
+            agent_class=ConcreteSherlockEnqueteAgent,
             agent_name=TEST_AGENT_NAME,
-            system_prompt=custom_prompt
+            system_prompt=custom_prompt,
+            service_id=agent_factory.llm_service_id
         )
+        
         assert agent.name == TEST_AGENT_NAME
         assert agent.system_prompt == custom_prompt
 
@@ -170,20 +186,21 @@ class TestSherlockEnqueteAgentAuthentic:
         assert agent._kernel is not None
         assert agent.logger is not None
 
-def test_sherlock_agent_integration_real():
-    """Test d'intégration complet avec vraies APIs."""
+def test_sherlock_agent_integration_real(agent_factory):
+    """Test d'intégration complet avec vraies APIs via la factory."""
     try:
-        agent = ConcreteSherlockEnqueteAgent(
-                kernel=authentic_kernel,
+        agent = agent_factory._create_agent(
+                agent_class=ConcreteSherlockEnqueteAgent,
                 agent_name="IntegrationTestAgent",
-                system_prompt="Test d'intégration authentique"
+                system_prompt="Test d'intégration authentique",
+                service_id=agent_factory.llm_service_id
             )
             
         assert agent is not None
         assert isinstance(agent, SherlockEnqueteAgent)
         assert agent.name == "IntegrationTestAgent"
         
-        print("✅ Test d'intégration authentique réussi")
+        print("✅ Test d'intégration authentique via factory réussi")
             
     except Exception as e:
-        print(f"⚠️ Test d'intégration avec erreur attendue: {e}")
+        pytest.fail(f"Le test d'intégration a échoué de manière inattendue: {e}")

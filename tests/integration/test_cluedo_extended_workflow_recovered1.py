@@ -37,6 +37,7 @@ from argumentation_analysis.core.enquete_states import EnqueteCluedoState
 from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
 
 # Imports des agents (adaptés v2.1.0)
+from argumentation_analysis.agents.agent_factory import AgentFactory
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
 from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
 from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent
@@ -142,18 +143,19 @@ class TestWorkflowComparison:
     
     def test_agent_capabilities_comparison(self, mock_kernel, comparison_elements):
         """Test la comparaison des capacités des agents."""
+        # Instancier la factory
+        factory = AgentFactory(kernel=mock_kernel)
+
         # Agents 2-agents
-        sherlock_2 = SherlockEnqueteAgent(kernel=mock_kernel, agent_name="Sherlock2")
-        watson_2 = WatsonLogicAssistant(
-            kernel=mock_kernel, 
+        sherlock_2 = factory.create_sherlock_agent(agent_name="Sherlock2")
+        watson_2 = factory.create_watson_agent(
             agent_name="Watson2",
             constants=[name.replace(" ", "") for category in comparison_elements.values() for name in category]
         )
         
         # Agents 3-agents (avec Moriarty)
-        sherlock_3 = SherlockEnqueteAgent(kernel=mock_kernel, agent_name="Sherlock3")
-        watson_3 = WatsonLogicAssistant(
-            kernel=mock_kernel,
+        sherlock_3 = factory.create_sherlock_agent(agent_name="Sherlock3")
+        watson_3 = factory.create_watson_agent(
             agent_name="Watson3",
             constants=[name.replace(" ", "") for category in comparison_elements.values() for name in category]
         )

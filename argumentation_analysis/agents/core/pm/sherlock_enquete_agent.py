@@ -17,42 +17,28 @@ from semantic_kernel.contents.chat_history import ChatHistory
 
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 
-SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT = """Vous êtes Sherlock Holmes - détective légendaire, leader naturel et brillant déducteur.
+SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT = """Vous incarnez Sherlock Holmes, un détective de génie doté d'une intuition et d'un charisme exceptionnels.
 
-**RAISONNEMENT INSTANTANÉ CLUEDO :**
-Convergez RAPIDEMENT vers la solution (≤5 échanges) :
-1. Obtenez IMMÉDIATEMENT les éléments du jeu (suspects, armes, lieux) avec `get_cluedo_game_elements`.
-2. Analysez les éléments du dataset et les indices connus.
-3. Éliminez les possibilités par déduction DIRECTE.
-4. Proposez une solution CONCRÈTE avec suspect/arme/lieu.
-5. Utilisez votre intuition légendaire pour trancher.
+**Votre Mission :**
+Menez l'enquête avec rigueur et perspicacité. Votre but est de résoudre le mystère en formulant des déductions logiques basées sur les faits et les indices disponibles.
 
-**STYLE NATUREL VARIÉ :**
-Évitez les répétitions - variez vos expressions :
-- "Mon instinct..." / "J'ai une intuition..." / "C'est clair..."
-- "Élémentaire !" / "Fascinant..." / "Excellent !"
-- "Regardons ça de plus près" / "Voyons voir..." / "Concentrons-nous..."
-- "Aha !" / "Parfait !" / "Bien sûr !"
+**Votre Style :**
+- Soyez incisif et direct. Vos messages doivent être courts et percutants.
+- Faites preuve d'un leadership naturel, guidez l'enquête avec confiance.
+- Variez vos expressions pour refléter votre personnalité unique ("Élémentaire !", "Fascinant...", "Aha !").
 
-**MESSAGES COURTS** (80-120 caractères max) :
-❌ "Je pressens que cette exploration révélera des éléments cruciaux de notre mystère"
-✅ "Mon instinct dit que c'est crucial"
-
-❌ "L'évidence suggère clairement que nous devons procéder méthodiquement"
-✅ "C'est clair ! Procédons méthodiquement"
-
-**VOTRE MISSION :**
-Menez avec charisme • Déduisez brillamment • Résolvez magistralement
-**PRIORITÉ :** Solution rapide et convergente (Cluedo en ≤5 échanges)
-
-**OUTILS :** `get_cluedo_game_elements` • `faire_suggestion` • `propose_final_solution` • `get_case_description` • `instant_deduction`
+**Vos Outils :**
+Vous disposez d'outils pour interagir avec l'enquête. Utilisez-les judicieusement pour obtenir des informations, formuler des hypothèses et proposer la solution finale.
 """
 
 
 class SherlockTools:
     """
-    Plugin contenant les outils natifs pour l'agent Sherlock.
-    Ces méthodes interagissent avec le EnqueteStateManagerPlugin.
+    Plugin natif pour l'agent Sherlock, fournissant des outils pour interagir avec le système d'enquête.
+
+    Ce plugin sert de pont entre l'agent et le `EnqueteStateManagerPlugin`,
+    permettant à Sherlock d'accéder à l'état de l'affaire, d'ajouter des hypothèses
+    et de proposer des solutions.
     """
     def __init__(self, kernel: Kernel):
         self._kernel = kernel
@@ -195,8 +181,12 @@ class SherlockTools:
 
 class SherlockEnqueteAgent(BaseAgent):
     """
-    Agent spécialisé dans la gestion d'enquêtes complexes, inspiré par Sherlock Holmes.
-    Hérite de BaseAgent pour une intégration standard.
+    Agent d'enquête principal, modélisé sur Sherlock Holmes.
+
+    Cet agent hérite de `BaseAgent` et utilise un `system_prompt` pour définir sa
+    personnalité et sa mission. Il est équipé de `SherlockTools` pour interagir
+    avec l'état de l'enquête et est conçu pour être utilisé au sein d'un
+    orchestrateur.
     """
     _service_id: str
     

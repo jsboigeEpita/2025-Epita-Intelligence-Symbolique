@@ -18,8 +18,7 @@ from .cluedo_extended_orchestrator import CyclicSelectionStrategy
 
 from argumentation_analysis.core.enquete_states import EnqueteCluedoState
 from argumentation_analysis.orchestration.plugins.enquete_state_manager_plugin import EnqueteStateManagerPlugin
-from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
-from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
+from argumentation_analysis.agents.agent_factory import AgentFactory
 
 
 class CluedoTerminationStrategy(TerminationStrategy):
@@ -97,8 +96,9 @@ async def run_cluedo_game(
     from argumentation_analysis.config.settings import settings
     service_id = settings.openai.chat_model_id if settings.openai else "default"
 
-    sherlock = SherlockEnqueteAgent(kernel=kernel, agent_name="Sherlock", service_id=service_id)
-    watson = WatsonLogicAssistant(kernel=kernel, agent_name="Watson", constants=all_constants, service_id=service_id)
+    factory = AgentFactory(kernel, service_id)
+    sherlock = factory.create_sherlock_agent(agent_name="Sherlock")
+    watson = factory.create_watson_agent(agent_name="Watson")
 
     termination_strategy = CluedoTerminationStrategy(max_turns=max_turns, enquete_plugin=plugin)
     selection_strategy = CyclicSelectionStrategy(agents=[sherlock, watson])

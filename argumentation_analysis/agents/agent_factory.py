@@ -1,6 +1,6 @@
 # Fichier : argumentation_analysis/agents/agent_factory.py
 
-from typing import List, Optional
+from typing import List, Optional, Type
 from semantic_kernel import Kernel
 from semantic_kernel.agents import Agent, ChatCompletionAgent
 from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
@@ -11,6 +11,8 @@ from .plugins.project_management_plugin import ProjectManagementPlugin
 from .plugins.fallacy_workflow_plugin import FallacyWorkflowPlugin
 from .plugins.taxonomy_display_plugin import TaxonomyDisplayPlugin
 from .utils.tracer import TracedAgent
+from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
+from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
 
 
 class AgentFactory:
@@ -116,3 +118,44 @@ class AgentFactory:
                 trace_log_path=trace_log_path
             )
         return agent
+
+    def _create_agent(
+        self,
+        agent_class: Type[Agent],
+        trace_log_path: Optional[str] = None,
+        **kwargs,
+    ) -> Agent:
+        """Méthode générique pour créer et wrapper un agent."""
+        agent = agent_class(kernel=self.kernel, **kwargs)
+
+        if trace_log_path:
+            return TracedAgent(agent_to_wrap=agent, trace_log_path=trace_log_path)
+        return agent
+
+    def create_sherlock_agent(
+        self,
+        agent_name: str = "Sherlock",
+        trace_log_path: Optional[str] = None,
+    ) -> Agent:
+        """Crée et configure l'agent Sherlock."""
+        return self._create_agent(
+            agent_class=SherlockEnqueteAgent,
+            agent_name=agent_name,
+            service_id=self.llm_service_id,
+            trace_log_path=trace_log_path,
+        )
+
+    def create_watson_agent(
+        self,
+        agent_name: str = "Watson",
+        trace_log_path: Optional[str] = None,
+        constants: Optional[List[str]] = None,
+    ) -> Agent:
+        """Crée et configure l'agent Watson."""
+        return self._create_agent(
+            agent_class=WatsonLogicAssistant,
+            agent_name=agent_name,
+            service_id=self.llm_service_id,
+            trace_log_path=trace_log_path,
+            constants=constants,
+        )

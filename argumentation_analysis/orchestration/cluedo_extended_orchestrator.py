@@ -51,8 +51,7 @@ from pydantic import Field
 from ..core.cluedo_oracle_state import CluedoOracleState
 from ..orchestration.plugins.enquete_state_manager_plugin import EnqueteStateManagerPlugin
 from ..orchestration.group_chat import GroupChatOrchestration
-from ..agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
-from ..agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
+from ..agents.agent_factory import AgentFactory
 from ..agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent
 from ..agents.core.oracle.cluedo_dataset import CluedoDataset
 
@@ -371,8 +370,9 @@ class CluedoExtendedOrchestrator:
         dataset_manager = CluedoDatasetManager(self.oracle_state.cluedo_dataset)
         
         # Création des agents
-        self.sherlock_agent = SherlockEnqueteAgent(kernel=self.kernel, agent_name="Sherlock")
-        self.watson_agent = WatsonLogicAssistant(kernel=self.kernel, agent_name="Watson", constants=all_constants)
+        factory = AgentFactory(self.kernel)
+        self.sherlock_agent = factory.create_sherlock_agent(agent_name="Sherlock")
+        self.watson_agent = factory.create_watson_agent(agent_name="Watson")
         self.moriarty_agent = MoriartyInterrogatorAgent(
             kernel=self.kernel,
             dataset_manager=dataset_manager,

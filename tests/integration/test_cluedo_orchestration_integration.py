@@ -28,6 +28,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 # Imports des VRAIES classes du système
 try:
+    from argumentation_analysis.agents.agent_factory import AgentFactory
     from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
     from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
     from argumentation_analysis.orchestration.group_chat import AgentGroupChat
@@ -93,11 +94,9 @@ class TestCluedoOrchestrationRealIntegration:
         if not real_kernel:
             pytest.skip("Cannot create real kernel")
         
-        # Création du VRAI agent Sherlock (pas une fausse classe)
-        sherlock_agent = SherlockEnqueteAgent(
-            kernel=real_kernel,
-            agent_name="Sherlock_Real_Test"
-        )
+        # Création du VRAI agent Sherlock via la factory
+        factory = AgentFactory(real_kernel)
+        sherlock_agent = factory.create_sherlock_agent(agent_name="Sherlock_Real_Test")
         
         # Vérifications que c'est bien la vraie classe
         assert isinstance(sherlock_agent, SherlockEnqueteAgent)
@@ -115,11 +114,9 @@ class TestCluedoOrchestrationRealIntegration:
         if not real_kernel:
             pytest.skip("Cannot create real kernel")
         
-        # Création du VRAI agent Watson (pas une fausse classe)
-        watson_agent = WatsonLogicAssistant(
-            kernel=real_kernel,
-            agent_name="Watson_Real_Test"
-        )
+        # Création du VRAI agent Watson via la factory
+        factory = AgentFactory(real_kernel)
+        watson_agent = factory.create_watson_agent(agent_name="Watson_Real_Test")
         
         # Vérifications que c'est bien la vraie classe
         assert isinstance(watson_agent, WatsonLogicAssistant)
@@ -138,16 +135,10 @@ class TestCluedoOrchestrationRealIntegration:
             pytest.skip("Cannot create real kernel")
         
         try:
-            # Création des VRAIS agents (pas de fausses classes)
-            sherlock_agent = SherlockEnqueteAgent(
-                kernel=real_kernel,
-                agent_name="Sherlock"
-            )
-            
-            watson_agent = WatsonLogicAssistant(
-                kernel=real_kernel,
-                agent_name="Watson"
-            )
+            # Création des VRAIS agents via la factory
+            factory = AgentFactory(real_kernel)
+            sherlock_agent = factory.create_sherlock_agent(agent_name="Sherlock")
+            watson_agent = factory.create_watson_agent(agent_name="Watson")
             
             # Utilisation de la VRAIE classe AgentGroupChat du système
             group_chat = AgentGroupChat(
@@ -199,7 +190,8 @@ class TestCluedoOrchestrationRealIntegration:
             pytest.skip("Cannot create real kernel")
         
         # Test VRAI agent Sherlock
-        sherlock = SherlockEnqueteAgent(kernel=real_kernel, agent_name="Sherlock_Methods_Test")
+        factory = AgentFactory(real_kernel)
+        sherlock = factory.create_sherlock_agent(agent_name="Sherlock_Methods_Test")
         
         # Vérifier les vraies méthodes de la vraie classe
         assert hasattr(sherlock, 'get_current_case_description')
@@ -208,7 +200,8 @@ class TestCluedoOrchestrationRealIntegration:
         assert callable(getattr(sherlock, 'add_new_hypothesis'))
         
         # Test VRAI agent Watson
-        watson = WatsonLogicAssistant(kernel=real_kernel, agent_name="Watson_Methods_Test")
+        factory = AgentFactory(real_kernel)
+        watson = factory.create_watson_agent(agent_name="Watson_Methods_Test")
         
         # Vérifier les vraies méthodes de la vraie classe
         assert hasattr(watson, 'analyze_text')
@@ -226,7 +219,8 @@ class TestCluedoOrchestrationRealIntegration:
         if not real_kernel:
             pytest.skip("Cannot create real kernel")
         
-        sherlock = SherlockEnqueteAgent(kernel=real_kernel, agent_name="Sherlock_Case_Test")
+        factory = AgentFactory(real_kernel)
+        sherlock = factory.create_sherlock_agent(agent_name="Sherlock_Case_Test")
         
         try:
             # Appel de la VRAIE méthode (pas une fausse méthode)
@@ -258,7 +252,8 @@ class TestCluedoOrchestrationRealIntegration:
         if not real_kernel:
             pytest.skip("Cannot create real kernel")
         
-        watson = WatsonLogicAssistant(kernel=real_kernel, agent_name="Watson_Analysis_Test")
+        factory = AgentFactory(real_kernel)
+        watson = factory.create_watson_agent(agent_name="Watson_Analysis_Test")
         
         try:
             # Appel de la VRAIE méthode (pas une fausse méthode)
@@ -305,9 +300,10 @@ async def test_full_real_cluedo_integration():
         )
         kernel.add_service(llm_service)
         
-        # VRAIS agents (pas de fausses classes)
-        sherlock = SherlockEnqueteAgent(kernel=kernel, agent_name="Sherlock_Integration")
-        watson = WatsonLogicAssistant(kernel=kernel, agent_name="Watson_Integration")
+        # VRAIS agents via la factory
+        factory = AgentFactory(kernel)
+        sherlock = factory.create_sherlock_agent(agent_name="Sherlock_Integration")
+        watson = factory.create_watson_agent(agent_name="Watson_Integration")
         
         # Vérifications que ce sont bien les vraies classes
         assert isinstance(sherlock, SherlockEnqueteAgent)
