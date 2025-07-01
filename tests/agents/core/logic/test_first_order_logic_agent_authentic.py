@@ -17,7 +17,7 @@ from argumentation_analysis.core import environment as auto_env
 
 # Imports authentiques - vrai Semantic Kernel
 from semantic_kernel import Kernel
-from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.functions import KernelArguments
 
 # Imports conditionnels pour les connecteurs LLM
 try:

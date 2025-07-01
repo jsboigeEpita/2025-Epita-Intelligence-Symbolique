@@ -17,13 +17,15 @@ root_dir = current_dir.parent.parent.parent
 if str(root_dir) not in sys.path:
     sys.path.append(str(root_dir))
 
-# Import de l'application Flask
-from argumentation_analysis.services.web_api.app import app # MODIFIÉ
+# L'import de 'app' est déplacé dans les fixtures pour éviter
+# l'initialisation précoce des dépendances (ex: JVM)
+# from argumentation_analysis.services.web_api.app import app
 
 
 @pytest.fixture
 def client():
     """Client de test Flask."""
+    from argumentation_analysis.services.web_api.app import app
     app.config['TESTING'] = True
     app.config['DEBUG'] = False
     

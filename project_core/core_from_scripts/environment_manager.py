@@ -54,72 +54,97 @@ class EnvironmentManager:
     @property
     def strategies_dir(self) -> Path:
         """Retourne le chemin vers le répertoire des stratégies."""
-        return self.project_root / "project_core" / "core_from_scripts" / "strategies"
+        return self.project_root / "scripts" / "strategies"
 
     @property
     def target_env_file(self) -> Path:
         """Retourne le chemin vers le fichier .env cible à la racine du projet."""
         return self.project_root / ".env"
 
-    def get_conda_env_name_from_dotenv(self) -> Optional[str]:
-        """Lit le nom de l'environnement Conda depuis le fichier .env à la racine."""
+    def get_var_from_dotenv(self, var_name: str) -> Optional[str]:
+        """Lit une variable spécifique depuis le fichier .env à la racine."""
         if not self.target_env_file.is_file():
             self.logger.error(f"Le fichier .env cible est introuvable à : {self.target_env_file}")
             return None
         
         try:
-            # Utiliser utf-8-sig pour gérer de manière transparente le BOM (Byte Order Mark)
-            # qui peut être ajouté par certains éditeurs ou outils sur Windows.
             with open(self.target_env_file, 'r', encoding='utf-8-sig') as f:
                 for line in f:
                     line = line.strip()
                     if not line or line.startswith('#'):
                         continue
-                    if line.strip().startswith("CONDA_ENV_NAME="):
-                        env_name = line.split('=', 1)[1].strip()
-                        # Retirer les guillemets si présents
-                        return env_name.strip('\'"')
+                    # Utiliser startswith pour une correspondance préfixe robuste
+                    if line.startswith(f"{var_name}="):
+                        value = line.split('=', 1)[1].strip()
+                        # Retirer les guillemets optionnels
+                        return value.strip('\'"')
 
-            self.logger.warning(f"La variable CONDA_ENV_NAME n'a pas été trouvée dans {self.target_env_file}")
+            self.logger.warning(f"La variable '{var_name}' n'a pas été trouvée dans {self.target_env_file}")
             return None
         except IOError as e:
-            self.logger.error(f"Erreur de lecture du fichier .env : {e}")
+            self.logger.error(f"Erreur de lecture du fichier .env pour la variable '{var_name}': {e}")
             return None
+
+    def get_conda_env_name_from_dotenv(self) -> Optional[str]:
+        """Lit le nom de l'environnement Conda depuis le fichier .env à la racine."""
+        return self.get_var_from_dotenv("CONDA_ENV_NAME")
+
+    def get_java_home_from_dotenv(self) -> Optional[str]:
+        """Lit le chemin JAVA_HOME depuis le fichier .env à la racine."""
+        return self.get_var_from_dotenv("JAVA_HOME")
 
     def run_command_in_conda_env(self, command_to_run: str) -> int:
         """
         Exécute une commande dans l'environnement Conda spécifié par le .env.
         Utilise `conda run` pour une exécution propre dans un sous-processus.
+        Configure l'environnement (ex: JAVA_HOME) de manière dynamique si nécessaire.
         """
         conda_env_name = self.get_conda_env_name_from_dotenv()
         if not conda_env_name:
             self.logger.error("Impossible d'exécuter la commande car le nom de l'environnement Conda n'a pas pu être déterminé.")
             return 1
 
-        # Nouvelle stratégie : Utiliser directement les fonctionnalités de `conda run`.
-        # On supprime la surcouche PowerShell qui s'est avérée peu fiable.
-        # On utilise --cwd pour définir le répertoire de travail, ce qui est la méthode
-        # la plus propre et recommandée.
         self.logger.info(f"Utilisation de --cwd='{self.project_root}' pour l'exécution.")
 
-        # La commande à exécuter doit être passée en tant que liste d'arguments après `conda run`.
-        # Correction : La chaîne command_to_run peut contenir '-CommandToRun "commande"'.
-        # On doit extraire proprement la commande. shlex est la méthode la plus robuste
-        # pour gérer les guillemets et les espaces.
         import shlex
-        
-        # On nettoie d'abord la chaîne pour enlever le paramètre du script parent
         if command_to_run.strip().lower().startswith("-commandtorun"):
-            # On cherche la position de la fin du marqueur et on prend tout ce qui suit.
-            # C'est plus robuste que .replace() si la commande elle-même contient le mot.
             marker = '-CommandToRun'
-            # On ignore la casse pour la recherche du marqueur
             start_index = command_to_run.lower().find(marker.lower()) + len(marker)
             command_str = command_to_run[start_index:].strip()
         else:
             command_str = command_to_run
-
+        
+        # Nettoyage supplémentaire pour enlever les guillemets englobants potentiels
+        command_str = command_str.strip('\'"')
+        
         command_parts = shlex.split(command_str)
+        
+        # Préparation des variables d'environnement
+        env_vars = os.environ.copy()
+        
+        # 1. Gestion du PYTHONPATH
+        python_path = env_vars.get('PYTHONPATH', '')
+        project_root_str = str(self.project_root)
+        if project_root_str not in python_path.split(os.pathsep):
+            self.logger.info(f"Ajout de {project_root_str} au PYTHONPATH.")
+            env_vars['PYTHONPATH'] = f"{project_root_str}{os.pathsep}{python_path}"
+            
+        # 2. Gestion spécifique pour Pytest (JAVA_HOME)
+        if command_parts and command_parts[0].lower() == 'pytest':
+            self.logger.info("Détection de 'pytest'. Configuration de l'environnement Java...")
+            java_home_path = self.get_java_home_from_dotenv()
+            if java_home_path:
+                self.logger.info(f"JAVA_HOME trouvé : {java_home_path}")
+                env_vars['JAVA_HOME'] = java_home_path
+                
+                # Ajout de JAVA_HOME/bin au PATH
+                path_var = env_vars.get('PATH', '')
+                java_bin_path = os.path.join(java_home_path, 'bin')
+                if java_bin_path not in path_var.split(os.pathsep):
+                    self.logger.info(f"Ajout de '{java_bin_path}' au PATH.")
+                    env_vars['PATH'] = f"{java_bin_path}{os.pathsep}{path_var}"
+            else:
+                self.logger.warning("JAVA_HOME n'a pas été trouvé dans le .env. Les tests dépendants de Java pourraient échouer.")
 
         full_command = [
             "conda", "run",
@@ -129,15 +154,14 @@ class EnvironmentManager:
             "--live-stream",
         ] + command_parts
         
-        description = f"Exécution de '{command_to_run[:50]}...' dans l'env '{conda_env_name}' via `conda run --cwd`"
+        description = f"Exécution de '{command_str[:50]}...' dans l'env '{conda_env_name}' via `conda run`"
         
-        # On exécute la commande, en s'assurant que `run_shell_command` n'utilise pas `shell=True`
-        # car on passe une liste d'arguments bien formée.
         exit_code, _, _ = run_shell_command(
             command=full_command,
             description=description,
             capture_output=False,
-            shell_mode=False
+            shell_mode=False,
+            env=env_vars
         )
         
         return exit_code
@@ -158,7 +182,7 @@ class EnvironmentManager:
 
     def _load_strategies(self):
         """Charge dynamiquement les stratégies de réparation depuis le répertoire des stratégies."""
-        strategies_package = 'project_core.core_from_scripts.strategies'
+        strategies_package = 'scripts.strategies'
         if not self.strategies_dir.is_dir():
             self.logger.warning(f"Le répertoire des stratégies '{self.strategies_dir}' est introuvable.")
             return
@@ -264,7 +288,7 @@ if __name__ == "__main__":
 
     # --- Commande pour exécuter une commande ---
     run_parser = subparsers.add_parser("run", help="Exécute une commande dans l'environnement Conda configuré via .env.")
-    run_parser.add_argument("command_to_run", help="La commande à exécuter, à mettre entre guillemets si elle contient des espaces.")
+    run_parser.add_argument("command_parts", nargs=argparse.REMAINDER, help="La commande à exécuter et ses arguments.")
 
     # --- Commande pour basculer d'environnement ---
     switch_parser = subparsers.add_parser("switch", help="Bascule vers un autre environnement .env en copiant le fichier de configuration.")
@@ -286,7 +310,13 @@ if __name__ == "__main__":
     exit_code = 0
 
     if args.command == "run":
-        exit_code = manager.run_command_in_conda_env(args.command_to_run)
+        if not args.command_parts:
+            logger.error("Aucune commande fournie pour l'action 'run'.")
+            parser.print_help()
+            exit_code = 1
+        else:
+            full_command = " ".join(args.command_parts)
+            exit_code = manager.run_command_in_conda_env(full_command)
     elif args.command == "switch":
         if not manager.switch_environment(args.name):
             exit_code = 1

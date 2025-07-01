@@ -3,61 +3,64 @@
 Wrapper pour exécuter une commande dans l'environnement Conda du projet.
 
 .DESCRIPTION
-Ce script délègue l'exécution de commandes au gestionnaire d'environnement Python
-`project_core/core_from_scripts/environment_manager.py`.
-Il assure que les commandes sont lancées dans le bon environnement Conda (`epita_symbolic_ai`)
-avec la méthode 'conda run', qui est la plus robuste.
+Ce script exécute une commande dans l'environnement Conda du projet (`projet-is-roo-new`).
+Il configure le PYTHONPATH, puis utilise `conda run` pour lancer la commande,
+garantissant que tous les dépendances et modules sont correctement résolus.
+C'est le point d'entrée privilégié pour toute commande relative au projet.
 
 .EXAMPLE
-# Exécute pytest pour un test spécifique
-.\activate_project_env.ps1 pytest tests/integration/some_test.py
+# Exécute la suite de tests unitaires et fonctionnels
+.\activate_project_env.ps1 pytest tests/unit tests/functional
 
 .EXAMPLE
 # Affiche la version de python de l'environnement
 .\activate_project_env.ps1 python --version
 #>
 param(
+    [Parameter(Mandatory=$false, Position=0)]
+    [string]$Command,
+
     [Parameter(ValueFromRemainingArguments=$true)]
-    [string[]]$CommandAndArgs
+    [string[]]$RemainingArgs
 )
 
 $ErrorActionPreference = "Stop"
 
-# Configuration pour la compatibilité des tests et l'import de modules locaux
-$env:PYTHONPATH = "$PSScriptRoot;$env:PYTHONPATH"
-
-# Chemin vers le nouveau gestionnaire d'environnement
-$childPath = "project_core\core_from_scripts\environment_manager.py"
-$pythonRunner = Join-Path -Path $PSScriptRoot -ChildPath $childPath
-
-# Environnement conda cible (corrigé pour correspondre aux attentes des tests)
-$condaEnvName = "projet-is-roo-new"
-
-# --- Logique de Commande ---
-
-# Si aucune commande n'est fournie, on exécute pytest par défaut.
-# Sinon, on prend la commande passée en argument.
-$commandToExecute = ""
-if ($CommandAndArgs.Count -eq 0) {
-    Write-Host "[INFO] Aucune commande spécifiée. Lancement de pytest par défaut." -ForegroundColor Yellow
-    # La commande par défaut pour exécuter une suite de tests pertinente.
-    $commandToExecute = "pytest -s -vv tests/unit tests/functional"
-} else {
-    $commandToExecute = $CommandAndArgs -join ' '
+# --- Initialisation de Conda ---
+try {
+    $condaPath = Get-Command conda.exe | Select-Object -ExpandProperty Source
+    Write-Host "[DEBUG] Conda trouvé: $condaPath" -ForegroundColor DarkGray
+    conda.exe shell.powershell hook | Out-String | Invoke-Expression
+}
+catch {
+    Write-Host "[FATAL] 'conda' introuvable. Assurez-vous qu'il est installé et dans le PATH." -ForegroundColor Red
+    exit 1
 }
 
+# --- Configuration de l'environnement ---
+$env:PYTHONPATH = "$PSScriptRoot;$env:PYTHONPATH"
+$condaEnvName = "projet-is-new"
 
-# Construit la commande finale pour appeler le nouveau gestionnaire d'environnement.
-# Le gestionnaire d'environnement est exécuté comme un module pour supporter les imports relatifs.
-$modulePath = "project_core.core_from_scripts.environment_manager"
-$finalCommand = "python.exe -m $modulePath run `"$commandToExecute`""
+# --- Logique de commande ---
+# Concatène la commande et ses arguments en une seule chaîne.
+$fullCommand = ($Command + " " + ($RemainingArgs -join ' ')).Trim()
 
-Write-Host "[DEBUG] Calling: $finalCommand" -ForegroundColor Gray
+# Si aucune commande n'est passée, le script active simplement l'environnement et se termine.
+if ([string]::IsNullOrWhiteSpace($fullCommand)) {
+    Write-Host "[INFO] Environnement Conda '$condaEnvName' initialisé pour la session PowerShell actuelle." -ForegroundColor Cyan
+    Write-Host "[INFO] Aucune commande fournie, le script se termine. Vous pouvez maintenant exécuter des commandes manuellement." -ForegroundColor Cyan
+    conda activate $condaEnvName
+    exit 0
+}
 
-# Appelle le script Python avec les arguments traités.
-# la commande est déjà dans le bon environnement grâce au script `run_tests.ps1` ou équivalent
+# --- Exécution via conda run ---
+# La commande est directement passée à `conda run`.
+# Utilisation de -u pour un output non bufferisé, essentiel pour les logs.
+$finalCommand = "conda run --no-capture-output -n $condaEnvName --cwd '$PSScriptRoot' $fullCommand"
+
+Write-Host "[DEBUG] Commande d'exécution : $finalCommand" -ForegroundColor Gray
+
+# Exécution et propagation du code de sortie
 Invoke-Expression -Command $finalCommand
-
-# Propage le code de sortie du script python
 $exitCode = $LASTEXITCODE
 exit $exitCode

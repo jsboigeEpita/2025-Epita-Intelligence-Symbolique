@@ -27,7 +27,7 @@ from semantic_kernel.agents import AgentGroupChat, Agent
 from semantic_kernel.exceptions import AgentChatException
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion # Pour type hint
 from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
-from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.functions import KernelArguments
 from semantic_kernel.contents.chat_history import ChatHistory
 
 # Correct imports

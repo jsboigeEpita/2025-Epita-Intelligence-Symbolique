@@ -4,7 +4,7 @@ from typing import Dict, Any, Optional
 
 import warnings
 from semantic_kernel import Kernel # type: ignore
-from semantic_kernel.functions.kernel_arguments import KernelArguments # type: ignore
+from semantic_kernel.functions import KernelArguments # type: ignore
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.contents.utils.author_role import AuthorRole
 

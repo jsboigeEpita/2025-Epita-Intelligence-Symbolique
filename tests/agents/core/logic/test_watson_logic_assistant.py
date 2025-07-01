@@ -8,7 +8,7 @@ import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 
 from semantic_kernel import Kernel
-from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.functions import KernelArguments
 
 from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant, WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT
 from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent

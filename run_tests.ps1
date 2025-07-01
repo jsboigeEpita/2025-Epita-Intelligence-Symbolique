@@ -94,11 +94,14 @@ function Invoke-ManagedCommand {
     }
 
     # Déléguer l'exécution au script d'activation, qui gère Conda, PYTHONPATH, etc.
-    $argumentList = "-Command `"$CommandToRun`""
-    Write-Host "[CMD] $activationScript $argumentList" -ForegroundColor DarkCyan
+    # La commande et ses arguments sont maintenant séparés et doivent être passés correctement.
+    # On échappe les guillemets autour de la commande pour s'assurer qu'elle est traitée comme une seule chaîne.
+    $argumentList = "-File `"$activationScript`" -Command `"$CommandToRun`""
+    
+    Write-Host "[CMD] powershell.exe $argumentList" -ForegroundColor DarkCyan
 
     # Exécution du processus
-    $process = Start-Process "powershell.exe" -ArgumentList "-File `"$activationScript`" $argumentList" -PassThru -NoNewWindow -Wait
+    $process = Start-Process "powershell.exe" -ArgumentList $argumentList -PassThru -NoNewWindow -Wait
     
     $exitCode = $process.ExitCode
     
@@ -141,13 +144,13 @@ while ($i -lt $args.Count) {
 
 # Assignation des variables complexes après parsing
 $TestType = $params['TestType']
-$Path = if ($params.ContainsKey('Path')) { $params['Path'] } else { $null }
+$TestPath = if ($params.ContainsKey('TestPath')) { $params['TestPath'] } else { $null }
 $PytestArgs = if ($remainingArgs.Count -gt 0) { $remainingArgs -join ' ' } else { $null }
 $SkipOctave = $params.ContainsKey('SkipOctave')
 
 
 Write-Host "[INFO] Début de l'exécution des tests avec le type: '$TestType'" -ForegroundColor Green
-if ($Path) { Write-Host "[INFO] Chemin spécifié: '$Path'" }
+if ($TestPath) { Write-Host "[INFO] Chemin de test spécifié: '$TestPath'" }
 if ($PytestArgs) { Write-Host "[INFO] Arguments Pytest supplémentaires: '$PytestArgs'" }
 
 # Branche 1: Installation ou mise à jour des dépendances
@@ -264,13 +267,14 @@ else {
 
     $selectedPaths = @() # Initialisation
 
-    if ($PytestArgs -and -not ($Path)) {
-        # Si des arguments de ligne de commande sont passés SANS -Path, on suppose qu'ils contiennent les chemins.
+    if ($TestPath) {
+        # Si -TestPath est spécifié, il a la priorité sur tout le reste.
+        $selectedPaths = @($TestPath)
+        Write-Host "[INFO] Utilisation du chemin de test spécifié: '$TestPath'. Le paramètre -TestType ('$TestType') est ignoré." -ForegroundColor Yellow
+    } elseif ($PytestArgs) {
+        # Si des arguments de ligne de commande sont passés SANS -TestPath, on suppose qu'ils contiennent les chemins.
         # On ne remplit pas $selectedPaths, car $PytestArgs sera utilisé directement.
         Write-Host "[INFO] Utilisation des arguments directs fournis: '$PytestArgs'. Le paramètre -TestType est ignoré pour la sélection de chemin." -ForegroundColor Yellow
-    } elseif ($Path) {
-        # Si -Path est spécifié (et pas d'args directs), on l'utilise.
-        $selectedPaths = @($Path)
     } else {
         # Sinon, on se rabat sur le TestType.
         $selectedPaths = $testPaths[$TestType]
@@ -283,9 +287,23 @@ else {
     # Construire la commande pytest
     $pytestCommandParts = @("python", "-m", "pytest", "-s", "-vv")
 
-    # Ajouter les chemins s'ils ont été déterminés par -TestType ou -Path
+    # Stratégie de chemin flexible :
+    # Si le chemin est un module python (ex: tests.integration), utiliser --pyargs
+    # Sinon, utiliser le chemin de fichier direct.
     if ($selectedPaths.Count -gt 0) {
-        $pytestCommandParts += $selectedPaths
+        $pathValue = $selectedPaths[0] # On ne gère qu'un seul chemin pour l'instant
+        if ($pathValue -and $pathValue.StartsWith("tests.")) {
+            # Transformer le chemin en notation de module pour --pyargs
+            $modulePath = $pathValue.Replace("/", ".").Replace("\", ".")
+            # Supprimer l'extension .py si elle existe
+            if ($modulePath.EndsWith(".py")) {
+                $modulePath = $modulePath.Substring(0, $modulePath.Length - 3)
+            }
+            Write-Host "[INFO] Utilisation de la stratégie d'importation de module via --pyargs pour: $modulePath" -ForegroundColor Yellow
+            $pytestCommandParts += "--pyargs", $modulePath
+        } else {
+             $pytestCommandParts += $selectedPaths
+        }
     }
 
     if ($SkipOctave) {

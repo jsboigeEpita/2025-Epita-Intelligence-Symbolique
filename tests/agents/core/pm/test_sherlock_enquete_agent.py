@@ -7,7 +7,7 @@ import os
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Union
 from semantic_kernel.contents.chat_history import ChatHistory
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 
@@ -15,7 +15,7 @@ TEST_AGENT_NAME = "TestSherlockAgent"
 
 # Classe concrète pour tester l'agent abstrait
 class ConcreteSherlockEnqueteAgent(SherlockEnqueteAgent):
-    async def get_response(self, user_input: str, chat_history: ChatHistory | None = None) -> AsyncGenerator[str, None]:
+    async def get_response(self, user_input: str, chat_history: Union[ChatHistory, None] = None) -> AsyncGenerator[str, None]:
         yield "Réponse de test"
     
     async def text_to_belief_set(self, text: str, logic_type: str = "fol"):

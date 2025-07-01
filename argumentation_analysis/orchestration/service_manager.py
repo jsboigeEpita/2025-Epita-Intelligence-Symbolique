@@ -67,11 +67,13 @@ try:
     from argumentation_analysis.orchestration.cluedo_extended_orchestrator import CluedoExtendedOrchestrator as CluedoOrchestrator
     from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
     from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
+    from argumentation_analysis.orchestration.fact_checking_orchestrator import FactCheckingOrchestrator
 except ImportError as e:
     logging.warning(f"Certains orchestrateurs spécialisés ne sont pas disponibles: {e}")
     CluedoOrchestrator = None
     ConversationOrchestrator = None
     RealLLMOrchestrator = None
+    FactCheckingOrchestrator = None
 
 # Imports des systèmes de communication
 try:
@@ -177,6 +179,7 @@ class OrchestrationServiceManager:
         self.cluedo_orchestrator: Optional[CluedoOrchestrator] = None
         self.conversation_orchestrator: Optional[ConversationOrchestrator] = None
         self.llm_orchestrator: Optional[RealLLMOrchestrator] = None
+        self.fact_checking_orchestrator: Optional[FactCheckingOrchestrator] = None
         
         # Middleware de communication
         self.middleware: Optional[MessageMiddleware] = None
@@ -339,10 +342,17 @@ class OrchestrationServiceManager:
                 self.logger.info("ConversationOrchestrator initialisé")
                 
             if RealLLMOrchestrator:
+
                 # CORRECTION: On passe le kernel complet au RealLLMOrchestrator, pas seulement un service.
                 # L'orchestrateur a besoin du kernel pour instancier ses propres agents.
                 self.llm_orchestrator = RealLLMOrchestrator(kernel=self.kernel)
                 self.logger.info(f"RealLLMOrchestrator initialisé avec le kernel principal.")
+            
+            if FactCheckingOrchestrator:
+                # FactCheckingOrchestrator peut utiliser une configuration API
+                api_config = self.config.get('fact_checking_api_config', {})
+                self.fact_checking_orchestrator = FactCheckingOrchestrator(api_config=api_config)
+                self.logger.info("FactCheckingOrchestrator initialisé")
                 
         except Exception as e:
             self.logger.error(f"Erreur critique lors de l'initialisation des orchestrateurs spécialisés: {e}")
@@ -440,13 +450,15 @@ class OrchestrationServiceManager:
             'dialogue': self.conversation_orchestrator,
             'llm': self.llm_orchestrator,
             'language_model': self.llm_orchestrator,
-            # Force tous les types d'analyse vers RealLLMOrchestrator
-            'comprehensive': self.llm_orchestrator, # Gardé pour rétrocompatibilité potentielle
-            'unified_analysis': self.llm_orchestrator,
+            # Nouveaux types d'analyse avec fact-checking
+            'fact_checking': self.fact_checking_orchestrator,
+            'comprehensive': self.fact_checking_orchestrator,
+            'fallacy_analysis': self.fact_checking_orchestrator,
+            'rhetorical': self.fact_checking_orchestrator,
+            # Types d'analyse logique vers RealLLMOrchestrator
             'modal': self.llm_orchestrator,
             'propositional': self.llm_orchestrator,
-            'logical': self.llm_orchestrator,
-            'rhetorical': self.llm_orchestrator
+            'logical': self.llm_orchestrator
         }
         
         # Si aucun mapping spécifique, utilise RealLLMOrchestrator par défaut
@@ -460,8 +472,28 @@ class OrchestrationServiceManager:
                                       options: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Lance une analyse avec un orchestrateur spécialisé."""
         try:
+            # Interface spécialisée pour FactCheckingOrchestrator
+            if hasattr(orchestrator, 'analyze_with_fact_checking'):
+                from .fact_checking_orchestrator import FactCheckingRequest, AnalysisDepth
+                request = FactCheckingRequest(
+                    text=text,
+                    analysis_depth=AnalysisDepth.STANDARD,
+                    enable_fact_checking=options.get('enable_fact_checking', True) if options else True,
+                    api_config=options.get('api_config') if options else None,
+                    context=options.get('context') if options else None
+                )
+                result = await orchestrator.analyze_with_fact_checking(request)
+                return {
+                    'method': 'fact_checking',
+                    'request_id': result.request_id,
+                    'analysis_result': result.comprehensive_result.to_dict(),
+                    'processing_time': result.processing_time,
+                    'status': result.status,
+                    'timestamp': result.analysis_timestamp.isoformat(),
+                    'orchestrator': orchestrator.__class__.__name__
+                }
             # Interface spécialisée pour RealLLMOrchestrator
-            if hasattr(orchestrator, 'analyze_text'):
+            elif hasattr(orchestrator, 'analyze_text'):
                 from .real_llm_orchestrator import LLMAnalysisRequest
                 request = LLMAnalysisRequest(
                     text=text,
@@ -770,6 +802,7 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
                 'cluedo_orchestrator': self.cluedo_orchestrator is not None,
                 'conversation_orchestrator': self.conversation_orchestrator is not None,
                 'llm_orchestrator': self.llm_orchestrator is not None,
+                'fact_checking_orchestrator': self.fact_checking_orchestrator is not None,
                 'middleware': self.middleware is not None
             }
             # 'config' est obsolète, les paramètres sont dans `settings`
@@ -864,6 +897,7 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
             service_details['active_components']['cluedo_orchestrator'] = self.cluedo_orchestrator is not None
             service_details['active_components']['conversation_orchestrator'] = self.conversation_orchestrator is not None
             service_details['active_components']['llm_orchestrator'] = self.llm_orchestrator is not None
+            service_details['active_components']['fact_checking_orchestrator'] = self.fact_checking_orchestrator is not None
 
             if self.cluedo_orchestrator and hasattr(self.cluedo_orchestrator, 'get_status'):
                 try:
@@ -882,6 +916,12 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
                     service_details['component_specific_status']['llm_orchestrator'] = self.llm_orchestrator.get_status()
                 except Exception as e:
                     service_details['component_specific_status']['llm_orchestrator'] = {'error': str(e)}
+            
+            if self.fact_checking_orchestrator and hasattr(self.fact_checking_orchestrator, 'get_performance_metrics'):
+                try:
+                    service_details['component_specific_status']['fact_checking_orchestrator'] = self.fact_checking_orchestrator.get_performance_metrics()
+                except Exception as e:
+                    service_details['component_specific_status']['fact_checking_orchestrator'] = {'error': str(e)}
         
         # Statut du middleware de communication
         if settings.service_manager.enable_communication_middleware:
@@ -902,6 +942,7 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
         self.logger.info("Arrêt du ServiceManager...")
         
         try:
+
             # Fonction d'aide pour un arrêt sécurisé des composants
             async def safe_shutdown(component, name):
                 """Appelle shutdown() de manière sécurisée, qu'il soir sync ou async."""

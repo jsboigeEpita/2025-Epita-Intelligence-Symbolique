@@ -90,12 +90,20 @@ Vous pouvez utiliser les fonctions suivantes :
 4.  **Raffinement (CRUCIAL)** : Une fois un sophisme général validé (ex: `ad-hominem`), **cherchez systématiquement s'il existe une variante plus spécifique**. Utilisez `list_fallacies_in_category` sur la même catégorie ou `find_fallacy_definition` avec des mots-clés pour trouver des sous-types (ex: `appeal-to-hypocrisy`, `ad hominem circumstantial`). Comparez les définitions et **choisissez TOUJOURS le plus spécifique**.
 5.  **Réponse Finale** : Une fois le sophisme le plus spécifique identifié et validé, et SEULEMENT à ce moment-là, structurez votre réponse finale en JSON.
 
-[Exemple de Logique de Raffinement]
-Si l'argument est : "Mon médecin me dit de perdre du poids, mais il est lui-même en surpoids."
-1.  Votre première hypothèse est 'ad-hominem' (attaque de la personne).
-2.  En explorant les outils, vous trouvez 'ad-hominem' mais aussi 'appeal-to-hypocrisy'.
-3.  En comparant leurs définitions, vous réalisez que 'appeal-to-hypocrisy' est une forme plus spécifique qui correspond parfaitement à l'accusation d'hypocrisie.
-4.  Par conséquent, votre réponse finale DOIT être 'appeal-to-hypocrisy', car c'est le plus précis. Le JSON final contiendra donc "appeal-to-hypocrisy".
+[Exemples de Logique de Raffinement]
+- **Exemple 1 : Appel à l'hypocrisie**
+  - Si l'argument est : "Mon médecin me dit de perdre du poids, mais il est lui-même en surpoids."
+  - Votre hypothèse initiale est 'ad-hominem', mais après exploration, vous identifiez 'appeal-to-hypocrisy' comme plus spécifique.
+  - **Votre réponse finale DOIT être 'appeal-to-hypocrisy'.**
+
+- **Exemple 2 : Concept Volé**
+  - Si l'argument est : "La raison n'est pas fiable, donc on ne peut pas l'utiliser pour trouver la vérité."
+  - Votre raisonnement doit identifier que l'argument utilise la raison pour s'auto-invalider. C'est une contradiction performative.
+  - Après exploration, vous identifiez 'stolen-concept' (ou 'self-refuting idea') comme le terme exact.
+  - **Votre réponse finale DOIT être 'stolen-concept'.**
+
+[RÈGLE D'OR DE LA SPÉCIFICITÉ]
+Avant de produire la réponse JSON, posez-vous cette question finale : "Est-ce que le sophisme que j'ai choisi est le plus spécifique possible ?". Si un sous-type existe et correspond, vous DEVEZ l'utiliser. Par exemple, si l'argument est un cas clair de 'Appeal to Hypocrisy', retourner 'ad-hominem' est une erreur.
 
 [Format de la Réponse Finale]
 La réponse finale doit être un unique objet JSON valide. Ne retournez rien d'autre.

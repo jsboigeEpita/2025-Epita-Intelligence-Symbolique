@@ -142,32 +142,21 @@ class TestEnhancedComplexFallacyAnalyzer(unittest.TestCase):
     
     def test_analyze_argument_structure(self):
         """Teste l'analyse de la structure argumentative."""
-        self.skipTest("Test désactivé car la refonte des mocks a cassé la syntaxe.")
-        # # Configurer les mocks
-        # mock_identify_structures# Mock eliminated - using authentic gpt-4o-mini [{"structure_type": "chaîne_causale", "confidence": 0.8}]
-        # mock_identify_relations# Mock eliminated - using authentic gpt-4o-mini [{"relation_type": "support", "source_argument_index": 0, "target_argument_index": 1}]
-        # mock_evaluate_coherence# Mock eliminated - using authentic gpt-4o-mini {"coherence_score": 0.7, "coherence_level": "Modéré"}
+        # Appeler la méthode à tester
+        result = self.analyzer.analyze_argument_structure(self.test_arguments, self.test_context)
         
-        # # Appeler la méthode à tester
-        # result = self.analyzer.analyze_argument_structure(self.test_arguments, self.test_context)
-        
-        # # Vérifier les résultats
-        # self.assertEqual(result["argument_count"], len(self.test_arguments))
-        # self.assertEqual(result["context"], self.test_context)
-        # self.assertIn("identified_structures", result)
-        # self.assertIn("argument_relations", result)
-        # self.assertIn("coherence_evaluation", result)
-        # self.assertIn("vulnerability_analysis", result)
-        # self.assertIn("analysis_timestamp", result)
-        
-        # # Vérifier que les mocks ont été appelés correctement
-        # mock_identify_structures.assert_called()
-        # mock_identify_relations.assert_called_once_with(self.test_arguments)
-        # mock_evaluate_coherence.# Mock assertion eliminated - authentic validation
-        
-        # # Vérifier que l'analyse a été ajoutée à l'historique
-        # self.assertEqual(len(self.analyzer.analysis_history), 1)
-        # self.assertEqual(self.analyzer.analysis_history[0]["type"], "structure_analysis")
+        # Vérifier les résultats
+        self.assertEqual(result["argument_count"], len(self.test_arguments))
+        self.assertEqual(result["context"], self.test_context)
+        self.assertIn("identified_structures", result)
+        self.assertIn("argument_relations", result)
+        self.assertIn("coherence_evaluation", result)
+        self.assertIn("vulnerability_analysis", result)
+        self.assertIn("analysis_timestamp", result)
+
+        # Vérifier que l'analyse a été ajoutée à l'historique
+        self.assertEqual(len(self.analyzer.analysis_history), 1)
+        self.assertEqual(self.analyzer.analysis_history[0]["type"], "structure_analysis")
 
     
     
@@ -176,42 +165,28 @@ class TestEnhancedComplexFallacyAnalyzer(unittest.TestCase):
     
     def test_detect_composite_fallacies(self):
         """Teste la détection des sophismes composés."""
-        self.skipTest("Test désactivé car la refonte des mocks a cassé la syntaxe.")
-        # # Configurer les mocks
-        # mock_contextual_analyzer.identify_contextual_fallacies.return_value = [ # Mock eliminated - using authentic gpt-4o-mini
-        #     {"fallacy_type": "Appel à l'autorité", "confidence": 0.8}
-        # ]
-        # mock_identify_combined.return_value = [{"combination_type": "autorité_popularité", "severity": 0.7}] # Mock eliminated - using authentic gpt-4o-mini
-        # mock_identify_advanced.return_value = [{"combination_name": "cercle_autoritaire", "severity": 0.8}] # Mock eliminated - using authentic gpt-4o-mini
-        # mock_identify_patterns# Mock eliminated - using authentic gpt-4o-mini [{"pattern_type": "escalation", "severity": 0.6}]
-        # mock_evaluate_severity# Mock eliminated - using authentic gpt-4o-mini {
-        #     "composite_severity": 0.75,
-        #     "adjusted_severity": 0.85,
-        #     "severity_level": "Élevé"
-        # }
+        # Appeler la méthode à tester
+        result = self.analyzer.detect_composite_fallacies(self.test_arguments, self.test_context)
         
-        # # Appeler la méthode à tester
-        # result = self.analyzer.detect_composite_fallacies(self.test_arguments, self.test_context)
+        # Vérifier les résultats (assertions souples)
+        self.assertIn("individual_fallacies_count", result)
+        self.assertIn("basic_combinations", result)
+        self.assertIn("advanced_combinations", result)
+        self.assertIn("fallacy_patterns", result)
+        self.assertIn("composite_severity", result)
+        self.assertIn("context", result)
+        self.assertIn("analysis_timestamp", result)
         
-        # # Vérifier les résultats
-        # self.assertIn("individual_fallacies_count", result)
-        # self.assertIn("basic_combinations", result)
-        # self.assertIn("advanced_combinations", result)
-        # self.assertIn("fallacy_patterns", result)
-        # self.assertIn("composite_severity", result)
-        # self.assertIn("context", result)
-        # self.assertIn("analysis_timestamp", result)
+        # Vérifier les types
+        self.assertIsInstance(result["individual_fallacies_count"], int)
+        self.assertIsInstance(result["basic_combinations"], list)
+        self.assertIsInstance(result["advanced_combinations"], list)
+        self.assertIsInstance(result["fallacy_patterns"], list)
+        self.assertIsInstance(result["composite_severity"], dict)
         
-        # # Vérifier que les mocks ont été appelés correctement
-        # mock_contextual_analyzer.identify_contextual_fallacies.assert_called()
-        # mock_identify_combined.# Mock assertion eliminated - authentic validation
-        # mock_identify_advanced.# Mock assertion eliminated - authentic validation
-        # mock_identify_patterns.# Mock assertion eliminated - authentic validation
-        # mock_evaluate_severity.# Mock assertion eliminated - authentic validation
-        
-        # # Vérifier que l'analyse a été ajoutée à l'historique
-        # self.assertEqual(len(self.analyzer.analysis_history), 1)
-        # self.assertEqual(self.analyzer.analysis_history[0]["type"], "composite_fallacy_detection")
+        # Vérifier que l'analyse a été ajoutée à l'historique
+        self.assertEqual(len(self.analyzer.analysis_history), 1)
+        self.assertEqual(self.analyzer.analysis_history[0]["type"], "composite_fallacy_detection")
 
     
     
@@ -220,42 +195,28 @@ class TestEnhancedComplexFallacyAnalyzer(unittest.TestCase):
     
     def test_analyze_inter_argument_coherence(self):
         """Teste l'analyse de la cohérence inter-arguments."""
-        self.skipTest("Test désactivé car la refonte des mocks a cassé la syntaxe.")
-        # # Configurer les mocks
-        # mock_analyze_structure# Mock eliminated - using authentic gpt-4o-mini {
-        #     "argument_relations": [{"relation_type": "support", "source_argument_index": 0, "target_argument_index": 1}]
-        # }
-        # mock_analyze_thematic# Mock eliminated - using authentic gpt-4o-mini {"coherence_score": 0.8, "coherence_level": "Élevé"}
-        # mock_analyze_logical# Mock eliminated - using authentic gpt-4o-mini {"coherence_score": 0.7, "coherence_level": "Modéré"}
-        # mock_detect_contradictions# Mock eliminated - using authentic gpt-4o-mini []
-        # mock_evaluate_overall# Mock eliminated - using authentic gpt-4o-mini {
-        #     "overall_score": 0.75,
-        #     "coherence_level": "Modéré",
-        #     "recommendations": ["Recommandation 1", "Recommandation 2"]
-        # }
+        # Appeler la méthode à tester
+        result = self.analyzer.analyze_inter_argument_coherence(self.test_arguments, self.test_context)
         
-        # # Appeler la méthode à tester
-        # result = self.analyzer.analyze_inter_argument_coherence(self.test_arguments, self.test_context)
+        # Vérifier les résultats (assertions souples)
+        self.assertEqual(result["argument_count"], len(self.test_arguments))
+        self.assertEqual(result["context"], self.test_context)
+        self.assertIn("thematic_coherence", result)
+        self.assertIn("logical_coherence", result)
+        self.assertIn("contradictions", result)
+        self.assertIn("overall_coherence", result)
+        self.assertIn("analysis_timestamp", result)
         
-        # # Vérifier les résultats
-        # self.assertEqual(result["argument_count"], len(self.test_arguments))
-        # self.assertEqual(result["context"], self.test_context)
-        # self.assertIn("thematic_coherence", result)
-        # self.assertIn("logical_coherence", result)
-        # self.assertIn("contradictions", result)
-        # self.assertIn("overall_coherence", result)
-        # self.assertIn("analysis_timestamp", result)
+        # Vérifier les types
+        self.assertIsInstance(result["thematic_coherence"], dict)
+        self.assertIsInstance(result["logical_coherence"], dict)
+        self.assertIsInstance(result["contradictions"], list)
+        self.assertIsInstance(result["overall_coherence"], dict)
         
-        # # Vérifier que les mocks ont été appelés correctement
-        # mock_analyze_structure.assert_called_once_with(self.test_arguments, self.test_context)
-        # mock_analyze_thematic.assert_called_once_with(self.test_arguments)
-        # mock_analyze_logical.# Mock assertion eliminated - authentic validation
-        # mock_detect_contradictions.assert_called_once_with(self.test_arguments)
-        # mock_evaluate_overall.# Mock assertion eliminated - authentic validation
-        
-        # # Vérifier que l'analyse a été ajoutée à l'historique
-        # self.assertEqual(len(self.analyzer.analysis_history), 1)
-        # self.assertEqual(self.analyzer.analysis_history[0]["type"], "inter_argument_coherence")
+        # Vérifier que l'analyse a été ajoutée à l'historique
+        # Note: D'autres tests ont déjà eu lieu, donc l'historique n'est pas vide
+        self.assertGreater(len(self.analyzer.analysis_history), 0)
+        self.assertEqual(self.analyzer.analysis_history[-1]["type"], "inter_argument_coherence")
 
     def test_circular_reasoning_detection_specific_case(self):
         """Teste la détection spécifique de raisonnement circulaire."""

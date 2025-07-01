@@ -2,7 +2,7 @@
 import pytest
 import json
 import semantic_kernel as sk
-from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.functions import KernelArguments
 
 from argumentation_analysis.core.enquete_states import EnquetePoliciereState, EnqueteCluedoState
 from argumentation_analysis.orchestration.plugins.enquete_state_manager_plugin import EnqueteStateManagerPlugin

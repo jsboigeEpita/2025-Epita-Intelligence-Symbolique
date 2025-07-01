@@ -51,37 +51,56 @@ def ensure_env(env_name: str = None, silent: bool = False) -> bool:
     if env_name is None:
         try:
             from argumentation_analysis.config.settings import settings
-            env_name = settings.model_dump().get('CONDA_ENV_NAME', os.environ.get('CONDA_ENV_NAME', 'projet-is'))
+            env_name = settings.model_dump().get('CONDA_ENV_NAME', os.environ.get('CONDA_ENV_NAME', 'projet-is-new'))
         except (ImportError, AttributeError):
-            env_name = os.environ.get('CONDA_ENV_NAME', 'projet-is')
+            env_name = os.environ.get('CONDA_ENV_NAME', 'projet-is-new')
 
-    # La détection via la comparaison de sys.prefix et sys.base_prefix n'est pas fiable
-    # dans tous les contextes de sous-processus. Une heuristique plus simple et robuste
-    # consiste à vérifier si le nom de l'environnement fait partie du chemin du préfixe.
-    current_env_path = sys.prefix
-    is_env_correct = f"envs\\{env_name}" in current_env_path or f"envs/{env_name}" in current_env_path
+    # La vérification est maintenant en deux étapes pour une robustesse maximale.
+    # 1. Vérifier la variable d'environnement 'CONDA_DEFAULT_ENV'. C'est l'indicateur
+    #    le plus fiable de l'environnement actif dans le shell.
+    # 2. Vérifier sys.prefix comme filet de sécurité.
 
-    # Flexibilité pour CI/CD: accepter `projet-is` même si `projet-is-roo` est attendu.
-    if not is_env_correct and env_name == 'projet-is-roo':
-        is_env_correct = "envs\\projet-is" in current_env_path or "envs/projet-is" in current_env_path
+    active_conda_env = os.environ.get('CONDA_DEFAULT_ENV')
+    is_env_correct_by_var = (active_conda_env == env_name)
 
-    if not is_env_correct:
+    # Pour CI/CD, on peut assouplir la règle.
+    if not is_env_correct_by_var and env_name == 'projet-is-roo' and active_conda_env == 'projet-is':
+        is_env_correct_by_var = True
+
+    if not is_env_correct_by_var:
+        current_env_path_for_error = sys.prefix
+        try:
+            current_env_name_for_error = Path(current_env_path_for_error).name
+        except Exception:
+            current_env_name_for_error = "inconnu"
+        
+        error_message = (
+            f"ERREUR CRITIQUE : MAUVAIS ENVIRONNEMENT CONDA ACTIF.\n"
+            f"  La variable d'environnement 'CONDA_DEFAULT_ENV' est incorrecte.\n"
+            f"  Environnement attendu   : '{env_name}'\n"
+            f"  Environnement détecté (CONDA_DEFAULT_ENV) : '{active_conda_env or 'NON DÉFINIE'}'\n"
+            f"  Interpréteur actuel (peut être trompeur) : '{current_env_name_for_error}' ({sys.prefix})\n\n"
+            f"  SOLUTION IMPÉRATIVE :\n"
+            f"  1. Activez l'environnement : `conda activate {env_name}`\n"
+            f"  2. Lancez votre commande.\n"
+            f"  OU utilisez le script wrapper : `powershell -File .\\activate_project_env.ps1 -CommandToRun \"...\"`\n"
+        )
+        raise RuntimeError(error_message)
+
+
+    # Ancien code conservé comme référence, mais la vérification principale est au-dessus.
+    # current_env_path = sys.prefix
+    # is_env_correct = f"envs\\{env_name}" in current_env_path or f"envs/{env_name}" in current_env_path
+    # if not is_env_correct and env_name == 'projet-is-roo':
+    #     is_env_correct = "envs\\projet-is" in current_env_path or "envs/projet-is" in current_env_path
+    # if not is_env_correct:
         # Tenter d'extraire un nom d'environnement plus précis pour le message d'erreur
         try:
             current_env_name = Path(current_env_path).name
         except Exception:
             current_env_name = "inconnu"
 
-        error_message = (
-            f"ERREUR CRITIQUE : L'INTERPRÉTEUR PYTHON EST INCORRECT.\n"
-            f"  Environnement attendu : '{env_name}'\n"
-            f"  Environnement détecté : '{current_env_name}' (depuis le chemin: {current_env_path})\n"
-            f"  Exécutable utilisé  : '{sys.executable}'\n\n"
-            f"  SOLUTION IMPÉRATIVE :\n"
-            f"  Utilisez le script wrapper 'activate_project_env.ps1' situé à la RACINE du projet pour lancer votre code.\n"
-            f"  Exemple : powershell -File .\\activate_project_env.ps1 -CommandToRun \"python votre_script.py\"\n"
-        )
-        raise RuntimeError(error_message)
+        pass # La levée d'exception est maintenant gérée par la nouvelle logique ci-dessus.
     
     if not silent:
         # Pour l'affichage, on utilise le nom extrait du chemin
@@ -101,9 +120,8 @@ def get_simple_import() -> str:
 
 
 # Auto-exécution à l'import pour usage ultra-simple
-if __name__ != "__main__" and not os.getenv("IS_PYTEST_RUNNING"):
+if __name__ != "__main__":
     # Le module est importé, auto-activation/vérification.
-    # On désactive pour les tests unitaires pour pouvoir les contrôler.
     # ========================== ATTENTION - PROTECTION CRITIQUE ==========================
     # La ligne suivante `ensure_env()` est ESSENTIELLE pour la sécurité et la stabilité
     # de tous les scripts. Elle garantit que le code s'exécute dans
@@ -111,7 +129,7 @@ if __name__ != "__main__" and not os.getenv("IS_PYTEST_RUNNING"):
     #
     # NE JAMAIS DÉSACTIVER, COMMENTER OU SUPPRIMER CETTE LIGNE.
     # =====================================================================================
-    pass  # Temporairement désactivé pour les tests
+    ensure_env()
 
 
 if __name__ == "__main__":

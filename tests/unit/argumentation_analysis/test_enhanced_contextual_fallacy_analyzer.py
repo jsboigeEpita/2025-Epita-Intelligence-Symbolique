@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 """
 Tests unitaires pour le module EnhancedContextualFallacyAnalyzer.
@@ -10,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import json
 import os
 from pathlib import Path
-from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
+from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer, BaseAnalyzer
 
 
 class TestEnhancedContextualFallacyAnalyzer(unittest.TestCase):
@@ -23,7 +22,6 @@ class TestEnhancedContextualFallacyAnalyzer(unittest.TestCase):
         cls.patcher_transformers = patch('argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer.HAS_TRANSFORMERS', True)
         cls.mock_has_transformers = cls.patcher_transformers.start()
 
-        # Mocker les modèles NLP pour éviter les téléchargements et les chargements longs et coûteux
         # Mocker les modèles NLP pour éviter les téléchargements et les chargements longs et coûteux
         cls.patcher_pipeline = patch('argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer.pipeline', return_value=MagicMock())
         cls.mock_pipeline = cls.patcher_pipeline.start()
@@ -74,13 +72,9 @@ class TestEnhancedContextualFallacyAnalyzer(unittest.TestCase):
         self.assertEqual(self.analyzer._determine_context_type("conversation générale"), "général")
         self.assertEqual(self.analyzer._determine_context_type("contexte inconnu"), "général")
 
-    
-    
-    
-    
     def test_analyze_context(self):
         """Teste l'analyse du contexte avec l'instance partagée."""
-        # Simuler un retour des modèles NLP mockés
+        # Simuler un retour des modèles NLP mockés (même si désactivés globalement)
         self.analyzer.nlp_models = {
             'sentiment': MagicMock(return_value=[{'label': 'POSITIVE', 'score': 0.9}]),
             'ner': MagicMock(return_value=[])
@@ -114,10 +108,14 @@ class TestEnhancedContextualFallacyAnalyzer(unittest.TestCase):
         cached_result = self.analyzer._analyze_context_deeply("discours commercial pour un produit de santé")
         self.assertEqual(cached_result, result)
 
-    
     def test_identify_potential_fallacies_with_nlp(self):
-        """Teste l'identification des sophismes potentiels avec NLP."""
-        self.skipTest("Test désactivé car la refonte des mocks a cassé la syntaxe.")
+        """Teste l'identification des sophismes potentiels avec NLP en mode dégradé."""
+        # Les modèles NLP étant désactivés, cette méthode doit se replier sur la méthode de base.
+        expected_result = [{"fallacy_type": "Appel à l'autorité"}]
+        with patch.object(self.analyzer, '_identify_potential_fallacies', return_value=expected_result) as mock_base_call:
+            result = self.analyzer._identify_potential_fallacies_with_nlp(self.test_text)
+            mock_base_call.assert_called_once_with(self.test_text)
+            self.assertEqual(result, expected_result)
 
     def test_filter_by_context_semantic(self):
         """Teste le filtrage des sophismes par contexte sémantique."""
@@ -156,22 +154,53 @@ class TestEnhancedContextualFallacyAnalyzer(unittest.TestCase):
         self.assertFalse(self.analyzer._are_complementary_fallacies("Appel à l'autorité", "Faux dilemme"))
         self.assertFalse(self.analyzer._are_complementary_fallacies("Pente glissante", "Homme de paille"))
 
-    
     def test_identify_contextual_fallacies(self):
-        """Teste l'identification des sophismes contextuels."""
-        self.skipTest("Test désactivé car la refonte des mocks a cassé la syntaxe.")
+        """Teste l'identification des sophismes contextuels en mode dégradé."""
+        # Mocker l'appel à analyze_context pour retourner un résultat contrôlé
+        mock_analysis_result = {
+            "contextual_fallacies": [
+                {"fallacy_type": "Appel à l'autorité", "confidence": 0.8},
+                {"fallacy_type": "Appel à la popularité", "confidence": 0.4}
+            ]
+        }
+        with patch.object(self.analyzer, 'analyze_context', return_value=mock_analysis_result):
+            result = self.analyzer.identify_contextual_fallacies("some text", "some context")
+            # Le filtrage se fait à 0.5 de confiance.
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result[0]['fallacy_type'], "Appel à l'autorité")
 
-    
     def test_provide_feedback(self):
         """Teste la fourniture de feedback pour l'apprentissage continu."""
-        self.skipTest("Test désactivé car la refonte des mocks a cassé la syntaxe.")
+        fallacy_id = "fallacy_0"
+        self.analyzer.last_analysis_fallacies = {
+            fallacy_id: {"fallacy_type": "Appel à l'autorité"}
+        }
+        
+        # Simuler un feedback positif
+        self.analyzer.provide_feedback(fallacy_id, True, "Bonne détection.")
+        
+        # Vérifier que le feedback a été enregistré
+        self.assertEqual(len(self.analyzer.feedback_history), 1)
+        self.assertEqual(self.analyzer.feedback_history[0]["fallacy_id"], fallacy_id)
+        
+        # Vérifier que l'ajustement de confiance a été modifié
+        self.assertIn("Appel à l'autorité", self.analyzer.learning_data["confidence_adjustments"])
+        self.assertGreater(self.analyzer.learning_data["confidence_adjustments"]["Appel à l'autorité"], 0)
 
-    
-    
-    
     def test_get_contextual_fallacy_examples(self):
         """Teste l'obtention d'exemples enrichis de sophismes contextuels."""
-        self.skipTest("Test désactivé car la refonte des mocks a cassé la syntaxe.")
+        # Mocker la méthode de base de laquelle elle hérite
+        base_examples = ["Les experts disent que c'est bien."]
+        # La bonne façon de patcher super() est de patcher la méthode sur la classe BaseAnalyzer
+        with patch.object(BaseAnalyzer, 'get_contextual_fallacy_examples', return_value=base_examples):
+            enriched_examples = self.analyzer.get_contextual_fallacy_examples("Appel à l'autorité", "commercial")
+            
+            self.assertEqual(len(enriched_examples), 1)
+            example = enriched_examples[0]
+            self.assertIn("text", example)
+            self.assertIn("explanation", example)
+            self.assertIn("correction_suggestion", example)
+            self.assertEqual(example["text"], base_examples[0])
 
     def test_generate_fallacy_explanation(self):
         """Teste la génération d'explications détaillées pour les sophismes."""

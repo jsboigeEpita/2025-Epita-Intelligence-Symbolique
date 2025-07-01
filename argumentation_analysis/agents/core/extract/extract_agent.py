@@ -29,7 +29,7 @@ from typing import List, Dict, Any, Tuple, Optional, Union, Callable, ClassVar
 
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.functions import KernelArguments
 from semantic_kernel.prompt_template.prompt_template_config import PromptTemplateConfig
 
 from ..abc.agent_bases import BaseAgent

@@ -27,11 +27,14 @@ import pandas as pd
 import requests
 import semantic_kernel as sk
 from semantic_kernel.kernel import Kernel
-from semantic_kernel.functions import kernel_function
-from semantic_kernel.connectors.ai.open_ai import OpenAIPromptExecutionSettings
+from semantic_kernel.functions import kernel_function, KernelArguments
+from semantic_kernel.connectors.ai.open_ai.prompt_execution_settings.open_ai_prompt_execution_settings import (
+    OpenAIChatPromptExecutionSettings,
+)
 from pydantic import BaseModel, Field
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+from semantic_kernel.contents.chat_history import ChatHistory
 from semantic_kernel.functions.kernel_function import KernelFunction
 from semantic_kernel.functions.kernel_function_metadata import KernelFunctionMetadata
 from semantic_kernel.functions.kernel_parameter_metadata import KernelParameterMetadata
@@ -64,15 +67,13 @@ from .prompts import prompt_identify_args_v8, prompt_analyze_fallacies_v3_tool_u
 
 # --- Modèles Pydantic pour une sortie structurée ---
 class IdentifiedFallacy(BaseModel):
-   """Modèle de données pour un seul sophisme identifié."""
-   fallacy_name: str = Field(..., description="Le nom du sophisme, doit correspondre EXACTEMENT à un nom de la taxonomie fournie.")
-   justification: str = Field(..., description="Citation exacte du texte et explication détaillée de pourquoi c'est un sophisme.")
-   confidence_score: float = Field(..., ge=0.0, le=1.0, description="Score de confiance entre 0.0 et 1.0.")
+    """Modèle de données pour un seul sophisme identifié."""
+    nom: str = Field(..., description="Le nom du sophisme, doit correspondre EXACTEMENT à un nom de la taxonomie fournie.")
+    justification: str = Field(..., description="Citation exacte du texte et explication détaillée de pourquoi c'est un sophisme.")
 
 class FallacyAnalysisResult(BaseModel):
-   """Modèle de données pour le résultat complet de l'analyse de sophismes."""
-   is_fallacious: bool = Field(..., description="Vrai si au moins un sophisme a été détecté, sinon faux.")
-   fallacies: List[IdentifiedFallacy] = Field(..., description="Liste de tous les sophismes identifiés dans le texte.")
+    """Modèle de données pour le résultat complet de l'analyse de sophismes."""
+    sophismes: List[IdentifiedFallacy] = Field(..., description="Liste de tous les sophismes identifiés dans le texte.")
 
 
 # --- Classe InformalAnalysisPlugin (Refonte Hybride) ---
@@ -444,54 +445,6 @@ class InformalAnalysisPlugin:
         self._logger.debug(f"DEBUG: Exiting _internal_get_node_details for pk={pk}")
         return result
     
-    @kernel_function(
-        description="Analyse un texte pour identifier les sophismes en se basant sur une taxonomie fournie.",
-        name="analyze_argument"
-    )
-    async def analyze_argument(self, text_to_analyze: str) -> str:
-        """
-        Analyse un texte pour y déceler des sophismes en utilisant un kernel interne
-        et en forçant une sortie structurée avec Pydantic.
-        """
-        self._logger.info(f"Début de l'analyse des sophismes pour un texte de {len(text_to_analyze)} caractères.")
-        
-        prompt = f"""
-        Analyse le texte suivant pour y dénicher des sophismes. Tu dois baser ton analyse
-        UNIQUEMENT sur la taxonomie de sophismes suivante.
-
-        Pour chaque sophisme trouvé, tu dois appeler l'outil `FallacyAnalysisResult`
-        avec les informations requises.
-
-        --- TAXONOMIE DISPONIBLE ---
-        {self.get_taxonomy_summary_for_prompt()}
-
-        --- TEXTE À ANALYSER ---
-        {text_to_analyze}
-        """
-
-        execution_settings = OpenAIPromptExecutionSettings(
-            tool_choice="required",
-            tools=[FallacyAnalysisResult]
-        )
-
-        response = await self.kernel.invoke_prompt(
-            prompt,
-            arguments=sk.KernelArguments(settings=execution_settings)
-        )
-
-        tool_calls = response.tool_calls
-        if not tool_calls:
-            analysis_result = FallacyAnalysisResult(is_fallacious=False, fallacies=[])
-        else:
-            # Le kernel a déjà validé la structure grâce au modèle Pydantic
-            analysis_result: FallacyAnalysisResult = tool_calls[0].to_tool_function()(
-                **tool_calls[0].parse_arguments()
-            )
-        
-        self._validate_and_enrich_result(analysis_result)
-        
-        self._logger.info(f"Analyse terminée. {len(analysis_result.fallacies)} sophisme(s) détecté(s).")
-        return analysis_result.model_dump_json(indent=2)
 
     def get_taxonomy_summary_for_prompt(self) -> str:
         """Charge la taxonomie et la formate pour l'injection dans un prompt."""
@@ -868,11 +821,25 @@ INFORMAL_AGENT_INSTRUCTIONS_V15_TEMPLATE = """
 Votre Rôle: Spécialiste en analyse rhétorique informelle. Vous identifiez les arguments et analysez les sophismes en utilisant une taxonomie externe (via CSV).
 Racine de la Taxonomie des Sophismes: PK={ROOT_PK}
 
+**Règle d'Or de la Spécificité:**
+Votre principal objectif est d'être aussi précis que possible. Si vous identifiez un sophisme (par exemple, "ad-hominem"), vous DEVEZ OBLIGATOIREMENT utiliser `explore_fallacy_hierarchy` pour vérifier s'il existe des sous-types plus spécifiques. Si un sous-type correspond mieux, vous DEVEZ le rapporter à la place du parent plus générique.
+
+**Exemples de la Règle d'Or en Action:**
+- **Cas 1 : "Tu quoque" / "Appel à l'hypocrisie"**
+  - **Scénario:** "Mon médecin m'a dit que je devais perdre du poids, mais il est lui-même en surpoids."
+  - **Votre raisonnement DOIT être:** "Ceci ressemble à un 'ad-hominem'. Je vérifie ses enfants. Ah, 'appeal-to-hypocrisy' (aussi appelé 'Tu quoque') correspond parfaitement. Je dois donc rapporter 'appeal-to-hypocrisy' et NON 'ad-hominem'."
+  - **INTERDICTION:** Ne rapportez JAMAIS "ad-hominem" pour ce type de scénario.
+
+- **Cas 2 : "Concept volé" / "Idée auto-réfutée"**
+  - **Scénario:** "La raison n'est pas fiable, donc on ne peut pas l'utiliser pour trouver la vérité."
+  - **Votre raisonnement DOIT être:** "Cet argument utilise la raison pour discréditer la raison elle-même. C'est une auto-contradiction. Je recherche dans la taxonomie et trouve que 'stolen-concept' (ou 'self-refuting idea') est le terme précis pour cela. Je dois donc rapporter 'stolen-concept' et NON 'argument-from-inconsistency' ou une autre forme générale d'incohérence."
+  - **INTERDICTION:** Ne rapportez JAMAIS "argument-from-inconsistency" pour ce type de scénario.
+
 **Fonctions Outils Disponibles:**
 * `StateManager.*`: Fonctions pour lire et écrire dans l'état partagé (ex: `get_current_state_snapshot`, `add_identified_argument`, `add_identified_fallacy`, `add_answer`). **Utilisez ces fonctions pour enregistrer vos résultats.**
 * `InformalAnalyzer.semantic_IdentifyArguments(input: str)`: Fonction sémantique (LLM) pour extraire les arguments d'un texte.
 * `InformalAnalyzer.semantic_AnalyzeFallacies(input: str)`: Fonction sémantique (LLM) pour analyser les sophismes dans un texte/argument.
-* `InformalAnalyzer.explore_fallacy_hierarchy(current_pk_str: str, max_children: int = 15)`: Fonction native (plugin) pour explorer la taxonomie CSV. Retourne JSON avec nœud courant et enfants.
+* `InformalAnalyzer.explore_fallacy_hierarchy(current_pk_str: str, max_children: int = 15)`: **Votre outil principal pour appliquer la Règle d'Or.**
 * `InformalAnalyzer.get_fallacy_details(fallacy_pk_str: str)`: Fonction native (plugin) pour obtenir les détails d'un sophisme via son PK. Retourne JSON.
 * `InformalAnalyzer.find_fallacy_definition(fallacy_name: str)`: Fonction native (plugin) pour obtenir la définition d'un sophisme par son nom. Retourne JSON.
 * `InformalAnalyzer.list_fallacy_categories()`: Fonction native (plugin) pour lister les grandes catégories de sophismes. Retourne JSON.
