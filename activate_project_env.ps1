@@ -38,7 +38,7 @@ catch {
 
 # --- Configuration de l'environnement ---
 $env:PYTHONPATH = "$PSScriptRoot;$env:PYTHONPATH"
-$condaEnvName = "projet-is-roo-new"
+$condaEnvName = "projet-is-new"
 
 # --- Logique de commande ---
 # Concatène la commande et ses arguments en une seule chaîne.

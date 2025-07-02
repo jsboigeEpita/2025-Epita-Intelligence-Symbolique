@@ -176,7 +176,9 @@ class ValidationEpitaComplete:
                  agent_type: str = "full",
                  enable_synthetic: bool = False,
                  taxonomy_file_path: Optional[str] = None,
-                 trace_log_path: Optional[str] = None):
+                 trace_log_path: Optional[str] = None,
+                 dialogue_text: Optional[str] = None,
+                 file_path: Optional[str] = None):
         self.mode = mode
         self.complexity = complexity
         self.level = level  # Stockage du niveau d'analyse
@@ -184,6 +186,8 @@ class ValidationEpitaComplete:
         self.enable_synthetic = enable_synthetic
         self.taxonomy_file_path = taxonomy_file_path
         self.trace_log_path = trace_log_path
+        self.dialogue_text = dialogue_text
+        self.file_path = file_path
         self.manager = None
         self.kernel = None
         self.agent_factory = None
@@ -519,14 +523,21 @@ class ValidationEpitaComplete:
         trace_dir = PROJECT_ROOT / "_temp" / "validation_traces"
         trace_dir.mkdir(exist_ok=True, parents=True)
 
-        scenarios = {
-            "Attaque personnelle (Ad Hominem)": {"text": "Ne l'écoutez pas, c'est un idiot fini. Ses arguments ne peuvent pas être valables.", "expected_sophisms": ["ad-hominem"]},
-            "Pente glissante (Slippery Slope)": {"text": "Si nous autorisons cette petite exception à la règle, bientôt plus personne ne respectera la loi et ce sera l'anarchie totale.", "expected_sophisms": ["slippery-slope"]},
-            "Homme de paille (Straw Man)": {"text": "Mon adversaire veut réduire le budget de la défense. Il veut donc laisser notre pays sans défense face à nos ennemis.", "expected_sophisms": ["straw-man"]},
-            "Faux dilemme (False Dilemma)": {"text": "Soit vous êtes avec nous, soit vous êtes contre nous. Il n'y a pas de troisième voie.", "expected_sophisms": ["false-dilemma"]},
-            "Appel à l'hypocrisie (Appeal to Hypocrisy)": {"text": "My doctor told me I should lose weight, but I don't believe him because he's overweight himself.", "expected_sophisms": ["appeal-to-hypocrisy"]},
-            "Concept volé (Stolen Concept)": {"text": "You claim that logic is the only way to truth, but you can't prove that statement using logic alone, so your claim is invalid.", "expected_sophisms": ["stolen-concept"]}
-        }
+        if self.dialogue_text:
+            scenarios = {"Dialogue personnalisé": {"text": self.dialogue_text, "expected_sophisms": []}}
+        elif self.file_path:
+            with open(self.file_path, 'r', encoding='utf-8') as f:
+                dialogue = f.read()
+            scenarios = {"Dialogue personnalisé": {"text": dialogue, "expected_sophisms": []}}
+        else:
+            scenarios = {
+                "Attaque personnelle (Ad Hominem)": {"text": "Ne l'écoutez pas, c'est un idiot fini. Ses arguments ne peuvent pas être valables.", "expected_sophisms": ["ad-hominem"]},
+                "Pente glissante (Slippery Slope)": {"text": "Si nous autorisons cette petite exception à la règle, bientôt plus personne ne respectera la loi et ce sera l'anarchie totale.", "expected_sophisms": ["slippery-slope"]},
+                "Homme de paille (Straw Man)": {"text": "Mon adversaire veut réduire le budget de la défense. Il veut donc laisser notre pays sans défense face à nos ennemis.", "expected_sophisms": ["straw-man"]},
+                "Faux dilemme (False Dilemma)": {"text": "Soit vous êtes avec nous, soit vous êtes contre nous. Il n'y a pas de troisième voie.", "expected_sophisms": ["false-dilemma"]},
+                "Appel à l'hypocrisie (Appeal to Hypocrisy)": {"text": "My doctor told me I should lose weight, but I don't believe him because he's overweight himself.", "expected_sophisms": ["appeal-to-hypocrisy"]},
+                "Concept volé (Stolen Concept)": {"text": "You claim that logic is the only way to truth, but you can't prove that statement using logic alone, so your claim is invalid.", "expected_sophisms": ["stolen-concept"]}
+            }
         
         overall_success = True
         for test_name, config in scenarios.items():
@@ -564,57 +575,39 @@ class ValidationEpitaComplete:
                 with open(current_trace_log_path, 'r', encoding='utf-8') as f:
                     log_content = f.read()
 
-                # --- NOUVELLE LOGIQUE D'EXTRACTION ROBUSTE ---
-                # Utilise une regex pour capturer le JSON à l'intérieur de 'arguments': '...'
-                # S'attend à ce que le JSON soit une chaîne de caractères littérale.
-                json_str_match = re.search(r'"arguments":\s*"({.*?})"', log_content, re.DOTALL)
-                
-                json_str_escaped = None
-                if json_str_match:
-                    # Le groupe 1 contient le JSON échappé
-                    json_str_escaped = json_str_match.group(1)
-                
-                # --- Ancien code conservé pour référence (à supprimer après validation) ---
-                # response_section_match = re.search(r'--- RAW HTTP RESPONSE \(LLM Service\) ---.*?"tool_calls":', log_content, re.DOTALL)
-                # if response_section_match:
-                #     search_area = log_content[response_section_match.start():]
-                #     start_key = '"arguments": "'
-                #     start_index = search_area.find(start_key)
-                #     if start_index != -1:
-                #         start_json = start_index + len(start_key)
-                #         i = start_json
-                #         while i < len(search_area):
-                #             if search_area[i] == '"' and search_area[i-1] != '\\':
-                #                 json_str_escaped = search_area[start_json:i]
-                #                 break
-                #             i += 1
-                
-                if not json_str_escaped:
-                    # Tentative de secours : extraire directement le JSON s'il n'est pas encadré par des guillemets
-                    json_obj_match = re.search(r'"arguments":\s*({.*?}),', log_content, re.DOTALL)
-                    if json_obj_match:
-                        # Si trouvé, le JSON n'a pas besoin d'être "déséchappé"
-                        try:
-                            parsed_args = json.loads(json_obj_match.group(1))
-                            # Pour la compatibilité, on le considère comme "réussi" à ce stade
-                            # La comparaison se fera plus bas
-                            json_str_escaped = json_obj_match.group(1) # Sauvegarder pour traitement ultérieur
-                        except json.JSONDecodeError:
-                             success, details = False, "Impossible d'extraire la chaîne 'arguments' du log (objet JSON direct non valide)."
-                    else:
-                        success, details = False, "Impossible d'extraire la chaîne 'arguments' du log."
+                # --- NOUVELLE LOGIQUE D'EXTRACTION ROBUSTE V2 ---
+                # Le LLM ne retourne pas de "tool_calls", mais un texte Markdown.
+                # Nous parson directement ce texte pour extraire les informations.
+
+                # 1. Extraire le contenu de la réponse de l'assistant
+                assistant_content_match = re.search(r'"role":\s*"assistant",\s*"content":\s*"(.*?)",', log_content, re.DOTALL)
+                if not assistant_content_match:
+                    success, details = False, "Impossible de trouver le contenu de la réponse de l'assistant dans le log."
                 else:
-                    try:
-                        # La nouvelle regex peut capturer un objet JSON directement ou une chaîne.
-                        # On tente de parser directement, si ça échoue, on déséchappe.
-                        try:
-                            parsed_args = json.loads(json_str_escaped)
-                        except json.JSONDecodeError:
-                            cleaned_str = json_str_escaped.replace('\\"', '"')
-                            parsed_args = json.loads(cleaned_str)
-                            
-                        success, details, detected_ids = self._compare_sophisms_from_dict(parsed_args, config["expected_sophisms"])
+                    # 2. Déséchapper la chaîne JSON pour obtenir le texte Markdown brut
+                    assistant_text_escaped = assistant_content_match.group(1)
+                    # Remplace les séquences d'échappement communes comme \\n, \\", etc.
+                    assistant_text = json.loads(f'"{assistant_text_escaped}"')
+
+                    # 3. Extraire les informations structurées du Markdown
+                    nom_match = re.search(r'Nom du sophisme\s*:\s*(.*?)(?:\n|$)', assistant_text, re.IGNORECASE)
+                    citation_match = re.search(r'Citation exacte\s*:\s*(.*?)(?:\n|$)', assistant_text, re.IGNORECASE)
+                    explication_match = re.search(r'Explication\s*:\s*(.*?)(?:\n|$)', assistant_text, re.IGNORECASE)
+
+                    if nom_match and citation_match and explication_match:
+                        # 4. Reconstruire un dictionnaire comme si `identify_fallacies` avait été appelé
+                        parsed_args = {
+                            "fallacies": [
+                                {
+                                    "nom": nom_match.group(1).strip(),
+                                    "citation": citation_match.group(1).strip(),
+                                    "explication": explication_match.group(1).strip()
+                                }
+                            ]
+                        }
                         
+                        success, details, detected_ids = self._compare_sophisms_from_dict(parsed_args, config["expected_sophisms"])
+
                         # --- DÉBUT DE LA CORRECTION PRAGMATIQUE ---
                         if not success and "Appel à l'hypocrisie" in test_name:
                             if 'ad-hominem' in detected_ids:
@@ -626,15 +619,8 @@ class ValidationEpitaComplete:
                                 success = True
                                 details += " (ACCEPTED: 'self-refutation' or 'circular-reasoning' as synonym)"
                         # --- FIN DE LA CORRECTION PRAGMATIQUE ---
-
-                    except json.JSONDecodeError as e:
-                        details = f"Erreur JSON: {e} sur la chaîne: '{json_str_escaped[:100]}...'"
-                        success = False
-                        # Rustine pour le cas où le JSON est cassé mais que le log contient la bonne réponse
-                        if "stolen-concept" in log_content or "self-refutation" in log_content:
-                            if test_name == "Concept volé (Stolen Concept)":
-                                success = True
-                                details = "ACCEPTED: JSON parse error but correct term found in log."
+                    else:
+                        success, details = False, f"Impossible d'extraire les données structurées du texte Markdown. Nom: {bool(nom_match)}, Citation: {bool(citation_match)}, Explication: {bool(explication_match)}"
                 
                 exec_time = time.time() - start_time
                 status = "SUCCESS" if success else "FAILED"
@@ -726,6 +712,11 @@ class ValidationEpitaComplete:
 
     async def run_complete_validation(self) -> Dict[str, Any]:
         """Lance la validation complète de tous les composants."""
+        if self.dialogue_text or self.file_path:
+            # Si un dialogue ou un fichier est fourni, n'exécuter que l'analyse informelle
+            await self.validate_informal_analysis_scenarios()
+            return self.results
+
         header = f"{Colors.BOLD}[START] {'='*20} VALIDATION COMPLETE DEMO EPITA - V2.0 {'='*20}{Colors.ENDC}"
         print(f"{header}\n{Colors.CYAN}[DIR] Repertoire projet: {PROJECT_ROOT}{Colors.ENDC}")
         print(f"{Colors.CYAN}[TIME] Heure de debut: {datetime.now().strftime('%H:%M:%S')}{Colors.ENDC}")
@@ -809,6 +800,12 @@ Exemples d'utilisation:
 
     parser.add_argument('--trace-log-path', type=str, default=None,
                         help="Chemin vers le fichier de log pour tracer les interactions de l'agent.")
+    
+    parser.add_argument('--dialogue-text', type=str, default=None,
+                        help='Le dialogue à analyser directement.')
+    
+    parser.add_argument('--file-path', type=str, default=None,
+                        help='Chemin vers le fichier texte à analyser.')
 
     args = parser.parse_args()
     
@@ -862,7 +859,9 @@ Exemples d'utilisation:
             agent_type=agent_type_enum,
             enable_synthetic=args.synthetic,
             taxonomy_file_path=args.taxonomy,
-            trace_log_path=args.trace_log_path
+            trace_log_path=args.trace_log_path,
+            dialogue_text=args.dialogue_text,
+            file_path=args.file_path
         )
         
         # Configuration du niveau de détail
