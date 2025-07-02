@@ -91,21 +91,21 @@
                             
                             <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <label for="counter-type" class="form-label">Type de contre-argument :</label>
-                                    <select class="form-select" id="counter-type">
-                                        <option value="">Automatique (recommandé)</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="rhetorical-strategy" class="form-label">Stratégie rhétorique :</label>
-                                    <select class="form-select" id="rhetorical-strategy">
-                                        <option value="">Automatique (recommandé)</option>
+                                    <label for="taxonomy-select" class="form-label">Taxonomie des Sophismes :</label>
+                                    <select class="form-select" id="taxonomy-select">
+                                        <!-- Options chargées dynamiquement -->
                                     </select>
                                 </div>
                             </div>
                             
-                            <button type="submit" class="btn btn-primary">Générer un contre-argument</button>
-                            <button type="button" class="btn btn-outline-secondary" id="analyze-only-btn">Analyser seulement</button>
+                            <div class="mb-3">
+                               <label class="form-label">Outils d'Analyse :</label>
+                               <div id="tools-checkbox-group">
+                                   <!-- Cases à cocher chargées dynamiquement -->
+                               </div>
+                           </div>
+                            
+                            <button type="submit" class="btn btn-primary">Lancer l'Analyse</button>
                         </form>
                     </div>
                 </div>
@@ -243,19 +243,14 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Charger les types de contre-arguments et stratégies rhétoriques
-            loadCounterTypes();
-            loadRhetoricalStrategies();
+            // Charger les configurations dynamiques
+            loadTaxonomies();
+            loadAvailableTools();
             
             // Gestionnaire d'événements pour le formulaire
             document.getElementById('argument-form').addEventListener('submit', function(e) {
                 e.preventDefault();
                 generateCounterArgument();
-            });
-            
-            // Gestionnaire pour le bouton d'analyse seulement
-            document.getElementById('analyze-only-btn').addEventListener('click', function(e) {
-                analyzeArgument();
             });
             
             // Gestionnaire pour les boutons d'exemples
@@ -266,113 +261,82 @@
             });
         });
         
-        // Fonction pour charger les types de contre-arguments
-        function loadCounterTypes() {
-            fetch('/api/counter_types')
-                .then(response => response.json())
-                .then(data => {
-                    const select = document.getElementById('counter-type');
-                    data.forEach(type => {
-                        const option = document.createElement('option');
-                        option.value = type.value;
-                        option.textContent = type.name;
-                        option.title = type.description;
-                        select.appendChild(option);
-                    });
-                })
-                .catch(error => console.error('Erreur lors du chargement des types de contre-arguments:', error));
-        }
-        
-        // Fonction pour charger les stratégies rhétoriques
-        function loadRhetoricalStrategies() {
-            fetch('/api/rhetorical_strategies')
-                .then(response => response.json())
-                .then(data => {
-                    const select = document.getElementById('rhetorical-strategy');
-                    data.forEach(strategy => {
-                        const option = document.createElement('option');
-                        option.value = strategy.value;
-                        option.textContent = strategy.name;
-                        option.title = strategy.description;
-                        select.appendChild(option);
-                    });
-                })
-                .catch(error => console.error('Erreur lors du chargement des stratégies rhétoriques:', error));
-        }
-        
-        // Fonction pour analyser un argument
-        function analyzeArgument() {
-            const argumentText = document.getElementById('argument-input').value.trim();
-            
-            if (!argumentText) {
-                alert('Veuillez entrer un argument.');
-                return;
-            }
-            
-            // Afficher le loader
-            document.getElementById('loader').style.display = 'block';
-            document.getElementById('analysis-results').style.display = 'none';
-            document.getElementById('generation-results').style.display = 'none';
-            
-            // Appel à l'API
-            fetch('/analyze', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    argument: argumentText
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erreur réseau ou serveur');
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Masquer le loader
-                document.getElementById('loader').style.display = 'none';
-                
-                // Afficher les résultats
-                displayAnalysisResults(data);
-            })
-            .catch(error => {
-                document.getElementById('loader').style.display = 'none';
-                alert('Erreur lors de l\'analyse: ' + error.message);
-                console.error('Erreur:', error);
-            });
-        }
+        // Fonction pour charger les taxonomies disponibles
+        function loadTaxonomies() {
+           fetch('/api/available-taxonomies')
+               .then(response => response.json())
+               .then(data => {
+                   const select = document.getElementById('taxonomy-select');
+                   select.innerHTML = '';
+                   data.forEach(name => {
+                       const option = document.createElement('option');
+                       option.value = name;
+                       option.textContent = name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                       select.appendChild(option);
+                   });
+               })
+               .catch(error => console.error('Erreur lors du chargement des taxonomies:', error));
+       }
+
+       // Fonction pour charger les outils disponibles
+       function loadAvailableTools() {
+           fetch('/api/available-tools')
+               .then(response => response.json())
+               .then(data => {
+                   const container = document.getElementById('tools-checkbox-group');
+                   container.innerHTML = '';
+                   data.forEach(toolName => {
+                       const div = document.createElement('div');
+                       div.className = 'form-check form-check-inline';
+                       
+                       const input = document.createElement('input');
+                       input.className = 'form-check-input';
+                       input.type = 'checkbox';
+                       input.id = `tool-${toolName}`;
+                       input.value = toolName;
+                       input.checked = true; // Tous cochés par défaut
+
+                       const label = document.createElement('label');
+                       label.className = 'form-check-label';
+                       label.htmlFor = `tool-${toolName}`;
+                       label.textContent = toolName.replace('Tool', '');
+
+                       div.appendChild(input);
+                       div.appendChild(label);
+                       container.appendChild(div);
+                   });
+               })
+               .catch(error => console.error('Erreur lors du chargement des outils:', error));
+       }
         
         // Fonction pour générer un contre-argument
         function generateCounterArgument() {
             const argumentText = document.getElementById('argument-input').value.trim();
-            const counterType = document.getElementById('counter-type').value;
-            const rhetoricalStrategy = document.getElementById('rhetorical-strategy').value;
-            
+            const selectedTaxonomy = document.getElementById('taxonomy-select').value;
+            const enabledTools = Array.from(document.querySelectorAll('#tools-checkbox-group input:checked')).map(cb => cb.value);
+
             if (!argumentText) {
                 alert('Veuillez entrer un argument.');
                 return;
             }
-            
-            // Afficher le loader
+
+            if (!selectedTaxonomy) {
+                alert('Veuillez sélectionner une taxonomie.');
+                return;
+            }
+
+            // Afficher le loader et cacher les résultats précédents
             document.getElementById('loader').style.display = 'block';
             document.getElementById('analysis-results').style.display = 'none';
             document.getElementById('generation-results').style.display = 'none';
-            
+
             // Préparer les données de la requête
             const requestData = {
-                argument: argumentText
+                argument: argumentText,
+                taxonomy: selectedTaxonomy,
+                enabled_tools: enabledTools
             };
-            
-            if (counterType) {
-                requestData.counter_type = counterType;
-            }
-            
-            if (rhetoricalStrategy) {
-                requestData.rhetorical_strategy = rhetoricalStrategy;
-            }
-            
+
             // Appel à l'API
             fetch('/generate', {
                 method: 'POST',
@@ -392,240 +356,59 @@
                 document.getElementById('loader').style.display = 'none';
                 
                 // Afficher les résultats
-                displayGenerationResults(data);
+                // Gérer l'affichage des nouveaux résultats
+                displayDynamicResults(data);
             })
             .catch(error => {
                 document.getElementById('loader').style.display = 'none';
                 alert('Erreur lors de la génération: ' + error.message);
                 console.error('Erreur:', error);
             });
-        }
-        
-        // Fonction pour afficher les résultats de l'analyse
-        function displayAnalysisResults(data) {
-            // Afficher les informations de l'argument
-            document.getElementById('original-argument-text').textContent = data.argument.content;
-            document.getElementById('argument-type').textContent = data.argument.argument_type || 'Non déterminé';
+       }
+
+       function displayDynamicResults(data) {
+           // Cacher les anciennes sections de résultats et en montrer une nouvelle
+           document.getElementById('analysis-results').style.display = 'none';
+           document.getElementById('generation-results').style.display = 'block';
+
+           // Afficher le résumé
+           const summaryContainer = document.getElementById('counter-argument-text');
+           summaryContainer.innerHTML = `<h4>Résumé de l'Analyse</h4><p>${data.summary || 'Aucun résumé fourni.'}</p>`;
+           
+           // Cacher les détails qui ne sont plus pertinents
+            document.getElementById('counter-type-text').textContent = "N/A";
+            document.getElementById('target-component-text').textContent = "N/A";
+            document.getElementById('strength-text').textContent = "N/A";
+            document.getElementById('rhetorical-strategy-text').textContent = "N/A";
+            document.getElementById('is-valid-attack').textContent = "N/A";
+            document.getElementById('original-survives').textContent = "N/A";
+            document.getElementById('counter-succeeds').textContent = "N/A";
+            document.getElementById('logical-consistency').textContent = "N/A";
+
+           const detailsContainer = document.getElementById('scores-container');
+           detailsContainer.innerHTML = "<h5>Détails des Sophismes Identifiés</h5>";
+
+           if (data.details && data.details.length > 0) {
+               data.details.forEach(item => {
+                   const card = document.createElement('div');
+                   card.className = 'card mb-2';
+                   const cardBody = document.createElement('div');
+                   cardBody.className = 'card-body';
+                   
+                   let content = `<strong>Sophisme: ${item.fallacy_name || item.name}</strong> (Score: ${item.validation_score || 'N/A'})`;
+                   content += `<p>Justification: ${item.validation_justification || item.description}</p>`;
+                   
+                   cardBody.innerHTML = content;
+                   card.appendChild(cardBody);
+                   detailsContainer.appendChild(card);
+               });
+           } else {
+               detailsContainer.innerHTML += '<p>Aucun détail de sophisme à afficher.</p>';
+           }
             
-            // Afficher les prémisses
-            const premisesList = document.getElementById('premises-list');
-            premisesList.innerHTML = '';
-            
-            if (data.argument.premises && data.argument.premises.length > 0) {
-                data.argument.premises.forEach(premise => {
-                    const li = document.createElement('li');
-                    li.textContent = premise;
-                    premisesList.appendChild(li);
-                });
-            } else {
-                const li = document.createElement('li');
-                li.textContent = 'Aucune prémisse identifiée';
-                premisesList.appendChild(li);
-            }
-            
-            // Afficher la conclusion
-            document.getElementById('conclusion-text').textContent = data.argument.conclusion || 'Non déterminée';
-            
-            // Afficher les vulnérabilités
-            const vulnerabilitiesContainer = document.getElementById('vulnerabilities-container');
-            vulnerabilitiesContainer.innerHTML = '';
-            
-            if (data.vulnerabilities && data.vulnerabilities.length > 0) {
-                const vulnerabilitiesList = document.createElement('div');
-                
-                data.vulnerabilities.forEach(vulnerability => {
-                    const card = document.createElement('div');
-                    card.className = 'card mb-2';
-                    
-                    const cardBody = document.createElement('div');
-                    cardBody.className = 'card-body';
-                    
-                    const typeBadge = document.createElement('span');
-                    typeBadge.className = 'badge bg-warning text-dark vulnerability-badge';
-                    typeBadge.textContent = vulnerability.type;
-                    
-                    const targetBadge = document.createElement('span');
-                    targetBadge.className = 'badge bg-secondary vulnerability-badge';
-                    targetBadge.textContent = 'Cible: ' + vulnerability.target;
-                    
-                    const scoreBadge = document.createElement('span');
-                    scoreBadge.className = 'badge bg-info vulnerability-badge';
-                    scoreBadge.textContent = 'Score: ' + vulnerability.score.toFixed(2);
-                    
-                    const description = document.createElement('p');
-                    description.className = 'mt-2 mb-0';
-                    description.textContent = vulnerability.description;
-                    
-                    cardBody.appendChild(typeBadge);
-                    cardBody.appendChild(targetBadge);
-                    cardBody.appendChild(scoreBadge);
-                    cardBody.appendChild(description);
-                    
-                    card.appendChild(cardBody);
-                    vulnerabilitiesList.appendChild(card);
-                });
-                
-                vulnerabilitiesContainer.appendChild(vulnerabilitiesList);
-            } else {
-                vulnerabilitiesContainer.innerHTML = '<p>Aucune vulnérabilité détectée.</p>';
-            }
-            
-            // Afficher la section d'analyse
-            document.getElementById('analysis-results').style.display = 'block';
-        }
-        
-        // Fonction pour afficher les résultats de la génération
-        function displayGenerationResults(data) {
-            // Afficher les informations de l'argument original
-            document.getElementById('original-argument-text').textContent = data.original_argument.content;
-            document.getElementById('argument-type').textContent = data.original_argument.argument_type || 'Non déterminé';
-            
-            const premisesList = document.getElementById('premises-list');
-            premisesList.innerHTML = '';
-            
-            if (data.original_argument.premises && data.original_argument.premises.length > 0) {
-                data.original_argument.premises.forEach(premise => {
-                    const li = document.createElement('li');
-                    li.textContent = premise;
-                    premisesList.appendChild(li);
-                });
-            } else {
-                const li = document.createElement('li');
-                li.textContent = 'Aucune prémisse identifiée';
-                premisesList.appendChild(li);
-            }
-            
-            document.getElementById('conclusion-text').textContent = data.original_argument.conclusion || 'Non déterminée';
-            
-            // Afficher les vulnérabilités
-            const vulnerabilitiesContainer = document.getElementById('vulnerabilities-container');
-            vulnerabilitiesContainer.innerHTML = '';
-            
-            if (data.vulnerabilities && data.vulnerabilities.length > 0) {
-                const vulnerabilitiesList = document.createElement('div');
-                
-                data.vulnerabilities.forEach(vulnerability => {
-                    const card = document.createElement('div');
-                    card.className = 'card mb-2';
-                    
-                    const cardBody = document.createElement('div');
-                    cardBody.className = 'card-body';
-                    
-                    const typeBadge = document.createElement('span');
-                    typeBadge.className = 'badge bg-warning text-dark vulnerability-badge';
-                    typeBadge.textContent = vulnerability.type;
-                    
-                    const targetBadge = document.createElement('span');
-                    targetBadge.className = 'badge bg-secondary vulnerability-badge';
-                    targetBadge.textContent = 'Cible: ' + vulnerability.target;
-                    
-                    const scoreBadge = document.createElement('span');
-                    scoreBadge.className = 'badge bg-info vulnerability-badge';
-                    scoreBadge.textContent = 'Score: ' + vulnerability.score.toFixed(2);
-                    
-                    const description = document.createElement('p');
-                    description.className = 'mt-2 mb-0';
-                    description.textContent = vulnerability.description;
-                    
-                    cardBody.appendChild(typeBadge);
-                    cardBody.appendChild(targetBadge);
-                    cardBody.appendChild(scoreBadge);
-                    cardBody.appendChild(description);
-                    
-                    card.appendChild(cardBody);
-                    vulnerabilitiesList.appendChild(card);
-                });
-                
-                vulnerabilitiesContainer.appendChild(vulnerabilitiesList);
-            } else {
-                vulnerabilitiesContainer.innerHTML = '<p>Aucune vulnérabilité détectée.</p>';
-            }
-            
-            // Afficher le contre-argument
-            document.getElementById('counter-argument-text').textContent = data.counter_argument.content;
-            document.getElementById('counter-type-text').textContent = data.counter_argument.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
-            document.getElementById('target-component-text').textContent = data.counter_argument.target_component;
-            document.getElementById('strength-text').textContent = data.counter_argument.strength.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
-            document.getElementById('rhetorical-strategy-text').textContent = data.counter_argument.rhetorical_strategy.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
-            
-            // Afficher la validation
-            document.getElementById('is-valid-attack').textContent = data.validation.is_valid_attack ? 'Oui' : 'Non';
-            document.getElementById('original-survives').textContent = data.validation.original_survives ? 'Oui' : 'Non';
-            document.getElementById('counter-succeeds').textContent = data.validation.counter_succeeds ? 'Oui' : 'Non';
-            document.getElementById('logical-consistency').textContent = data.validation.logical_consistency ? 'Oui' : 'Non';
-            
-            // Afficher les scores d'évaluation
-            const scoresContainer = document.getElementById('scores-container');
-            scoresContainer.innerHTML = '';
-            
-            const scores = [
-                { label: 'Score global', value: data.evaluation.overall_score, key: 'overall_score' },
-                { label: 'Pertinence', value: data.evaluation.relevance, key: 'relevance' },
-                { label: 'Force logique', value: data.evaluation.logical_strength, key: 'logical_strength' },
-                { label: 'Persuasion', value: data.evaluation.persuasiveness, key: 'persuasiveness' },
-                { label: 'Originalité', value: data.evaluation.originality, key: 'originality' },
-                { label: 'Clarté', value: data.evaluation.clarity, key: 'clarity' }
-            ];
-            
-            scores.forEach(score => {
-                const scoreContainer = document.createElement('div');
-                scoreContainer.className = 'score-container';
-                
-                const scoreLabel = document.createElement('div');
-                scoreLabel.className = 'score-label';
-                scoreLabel.textContent = score.label + ':';
-                
-                const scoreBar = document.createElement('div');
-                scoreBar.className = 'score-bar';
-                
-                const scoreFill = document.createElement('div');
-                scoreFill.className = 'score-fill';
-                scoreFill.style.width = (score.value * 100) + '%';
-                // Définir la couleur en fonction du score
-                if (score.value < 0.4) {
-                    scoreFill.style.backgroundColor = '#dc3545'; // rouge
-                } else if (score.value < 0.7) {
-                    scoreFill.style.backgroundColor = '#ffc107'; // jaune
-                } else {
-                    scoreFill.style.backgroundColor = '#28a745'; // vert
-                }
-                
-                const scoreValue = document.createElement('div');
-                scoreValue.className = 'score-value';
-                scoreValue.textContent = score.value.toFixed(2);
-                
-                scoreBar.appendChild(scoreFill);
-                scoreContainer.appendChild(scoreLabel);
-                scoreContainer.appendChild(scoreBar);
-                scoreContainer.appendChild(scoreValue);
-                
-                scoresContainer.appendChild(scoreContainer);
-            });
-            
-            // Afficher les recommandations
-            const recommendationsContainer = document.getElementById('recommendations-container');
-            recommendationsContainer.innerHTML = '';
-            
-            if (data.evaluation.recommendations && data.evaluation.recommendations.length > 0) {
-                const recommendationsList = document.createElement('ul');
-                recommendationsList.className = 'list-group';
-                
-                data.evaluation.recommendations.forEach(recommendation => {
-                    const item = document.createElement('li');
-                    item.className = 'list-group-item';
-                    item.textContent = recommendation;
-                    recommendationsList.appendChild(item);
-                });
-                
-                recommendationsContainer.appendChild(recommendationsList);
-            } else {
-                recommendationsContainer.innerHTML = '<p>Aucune recommandation disponible.</p>';
-            }
-            
-            // Afficher les sections de résultats
-            document.getElementById('analysis-results').style.display = 'block';
-            document.getElementById('generation-results').style.display = 'block';
-        }
+           // Cacher les recommandations pour l'instant
+           document.getElementById('recommendations-container').innerHTML = '';
+       }
     </script>
 </body>
 </html> 
