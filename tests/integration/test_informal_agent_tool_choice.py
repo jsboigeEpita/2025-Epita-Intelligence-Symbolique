@@ -59,7 +59,7 @@ async def test_informal_agent_forced_tool_choice(tmp_path):
     trace_content = log_file.read_text()
     print(f"\n--- Contenu du fichier de trace ---\n{trace_content}\n---------------------------------")
     
-    expected_trace = "Calling FallacyIdentificationPlugin-identify_fallacies function"
+    expected_trace = "Calling IdentificationPlugin-identify_fallacies function"
     assert expected_trace in trace_content, f"La trace de l'appel à l'outil '{expected_trace}' n'a pas été trouvée dans le log."
     
     print(f"\n[SUCCESS] La trace de l'appel à l'outil a été trouvée dans le log.")

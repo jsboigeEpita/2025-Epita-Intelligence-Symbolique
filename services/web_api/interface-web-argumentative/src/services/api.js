@@ -259,23 +259,23 @@ export const testConnection = async () => {
 };
 
 // Export par défaut pour faciliter l'import
-const apiService = {
-  analyzeText,
-  validateArgument,
-  detectFallacies,
-  analyzeDungFramework, // Remplacement de buildFramework
-  createBeliefSet,
-  executeLogicQuery,
-  generateLogicQueries,
-  interpretLogicResults,
-  analyzeLogicGraph,
-  checkAPIHealth,
-  getAPIEndpoints,
-  testConnection,
-  examples: {
-    getExampleAnalysis,
-    getExampleValidation,
-    getExampleFallacyDetection,
-    getExampleFramework // Cette fonction devra être adaptée pour utiliser analyzeDungFramework
-  }
-};
+// const apiService = {
+//   analyzeText,
+//   validateArgument,
+//   detectFallacies,
+//   analyzeDungFramework, // Remplacement de buildFramework
+//   createBeliefSet,
+//   executeLogicQuery,
+//   generateLogicQueries,
+//   interpretLogicResults,
+//   analyzeLogicGraph,
+//   checkAPIHealth,
+//   getAPIEndpoints,
+//   testConnection,
+//   examples: {
+//     getExampleAnalysis,
+//     getExampleValidation,
+//     getExampleFallacyDetection,
+//     getExampleFramework // Cette fonction devra être adaptée pour utiliser analyzeDungFramework
+//   }
+// };

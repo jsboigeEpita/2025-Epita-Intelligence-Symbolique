@@ -41,7 +41,7 @@ class TestEnvironmentManager(unittest.TestCase):
 
         self.assertTrue(result, "fix_dependencies should return True on success")
         self.mock_project_root.__truediv__.return_value.is_file.assert_called_once()
-        mock_run_command.assert_called_once_with(f"pip install -r {requirements_path}")
+        mock_run_command.assert_called_once_with(['pip', 'install', '-r', requirements_path])
 
     def test_fix_dependencies_with_packages(self):
         """Test dependency fixing with a list of packages using the default strategy."""
@@ -78,7 +78,7 @@ class TestEnvironmentManager(unittest.TestCase):
         self.mock_project_root.__truediv__.return_value.is_file.assert_called_once()
         
         # Verify the correct command was run
-        expected_command = f"pip install -r {requirements_path}"
+        expected_command = ['pip', 'install', '-r', requirements_path]
         mock_run_command.assert_called_once_with(expected_command)
 
     def test_fix_dependencies_aggressive_strategy_success_on_first_try(self):

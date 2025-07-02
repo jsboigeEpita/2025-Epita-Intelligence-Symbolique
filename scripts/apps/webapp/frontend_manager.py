@@ -135,13 +135,13 @@ class FrontendManager:
             self.pid = self.process.pid
             self.logger.info(f"Processus frontend démarré avec PID: {self.pid}")
 
-            # Les tâches de lecture de stream ne sont plus nécessaires avec la redirection directe
-            # log_listener_tasks.append(
-            #     asyncio.create_task(self._log_stream(self.process.stdout, logging.INFO))
-            # )
-            # log_listener_tasks.append(
-            #     asyncio.create_task(self._log_stream(self.process.stderr, logging.ERROR))
-            # )
+            # Rétablir le logging pour un meilleur débogage
+            log_listener_tasks.append(
+                asyncio.create_task(self._log_stream(self.process.stdout, logging.INFO))
+            )
+            log_listener_tasks.append(
+                asyncio.create_task(self._log_stream(self.process.stderr, logging.ERROR))
+            )
 
             server_ready, url = await self._wait_for_dev_server(port, host)
             
@@ -164,16 +164,18 @@ class FrontendManager:
                     task.cancel()
             await asyncio.gather(*log_listener_tasks, return_exceptions=True)
 
-    # async def _log_stream(self, stream, log_level):
-    #     """Lit et logue le contenu d'un stream (stdout/stderr) en temps réel."""
-    #     while not stream.at_eof():
-    #         try:
-    #             line = await stream.readline()
-    #             if line:
-    #                 self.logger.log(log_level, f"[FRONTEND_LOG] {line.decode('utf-8', errors='ignore').strip()}")
-    #         except Exception as e:
-    #             self.logger.error(f"[FRONTEND_LOG] Erreur de lecture du stream: {e}")
-    #             break
+    async def _log_stream(self, stream, log_level):
+        """Lit et logue le contenu d'un stream (stdout/stderr) en temps réel."""
+        if not stream:
+            return
+        while not stream.at_eof():
+            try:
+                line = await stream.readline()
+                if line:
+                    self.logger.log(log_level, f"[FRONTEND_LOG] {line.decode('utf-8', errors='ignore').strip()}")
+            except Exception as e:
+                self.logger.error(f"[FRONTEND_LOG] Erreur de lecture du stream: {e}")
+                break
 
     async def _ensure_dependencies(self) -> bool:
         """S'assure que les dépendances npm sont installées. Retourne True si succès."""
@@ -249,7 +251,7 @@ class FrontendManager:
                 # self.logger.debug(f"Sonde HTTP ({url_to_check}) a échoué : {type(e).__name__}. Nouvelle tentative...")
                 pass
             
-            await asyncio.sleep(2)
+            await asyncio.sleep(4) # Augmentation du délai d'attente
 
         self.logger.error(f"Timeout - Serveur de développement non accessible sur {url_to_check} après {timeout}s")
         return False, None

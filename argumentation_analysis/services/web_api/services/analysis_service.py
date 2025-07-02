@@ -12,7 +12,7 @@ import semantic_kernel as sk
 
 # Imports du moteur d'analyse (style b282af4 avec gestion d'erreur)
 try:
-    from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
+    from argumentation_analysis.agents.agent_factory import AgentFactory
     from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer
     from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
     from argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator import FallacySeverityEvaluator
@@ -34,7 +34,7 @@ try:
 except ImportError as e:
     logging.warning(f"[ERROR] CRITICAL: Core analysis modules import failed: {e}")
     # Mode dégradé pour les tests
-    InformalAnalysisAgent = None
+    AgentFactory = None
     ComplexFallacyAnalyzer = None
     ContextualFallacyAnalyzer = None
     FallacySeverityEvaluator = None
@@ -81,7 +81,7 @@ class AnalysisService:
         """Initialise les composants d'analyse internes du service.
 
         Tente d'instancier `ComplexFallacyAnalyzer`, `ContextualFallacyAnalyzer`,
-        `FallacySeverityEvaluator`, et `InformalAnalysisAgent`.
+        `FallacySeverityEvaluator`, et `InformalAgent`.
         Met à jour `self.is_initialized` en fonction du succès.
 
         :return: None
@@ -125,9 +125,9 @@ class AnalysisService:
             if self.severity_evaluator:
                 self.tools['fallacy_severity_evaluator'] = self.severity_evaluator
             
-            # Initialisation de l'agent informel (version b282af4)
-            if InformalAnalysisAgent:
-                self.logger.info("[INIT] Attempting to initialize InformalAnalysisAgent...")
+            # Initialisation de l'agent informel via AgentFactory
+            if AgentFactory:
+                self.logger.info("[INIT] Attempting to initialize informal agent via AgentFactory...")
                 
                 # Vérification des dépendances disponibles
                 self.logger.info(f"create_llm_service available: {create_llm_service is not None}")
@@ -135,54 +135,48 @@ class AnalysisService:
 
                 # Mode compatible sans dépendances manquantes
                 if not create_llm_service or not get_taxonomy_path:
-                    self.logger.warning("[WARN] Missing LLM service dependencies for InformalAnalysisAgent - using fallback mode")
+                    self.logger.warning("[WARN] Missing dependencies for AgentFactory - using fallback mode")
                     self.informal_agent = None
                 else:
                     # Création du kernel et ajout du service LLM
                     kernel = sk.Kernel()
                     llm_service_instance = None # Renommé pour éviter conflit avec variable globale potentielle
                     try:
-                        # FORCER LE MOCK POUR LES TESTS D'INTÉGRATION
-                        llm_service_instance = create_llm_service(service_id="default_analysis_llm", force_mock=True)
+                        llm_service_instance = create_llm_service(service_id="default_analysis_llm")
                         kernel.add_service(llm_service_instance)
-                        self.logger.info("[OK] LLM service created and added to kernel for InformalAnalysisAgent")
+                        self.logger.info("[OK] LLM service created and added to kernel for AgentFactory")
                     except Exception as llm_e:
-                        self.logger.error(f"[ERROR] Failed to create LLM service for InformalAnalysisAgent: {llm_e}")
+                        self.logger.error(f"[ERROR] Failed to create LLM service for AgentFactory: {llm_e}")
 
                     taxonomy_path_instance = None # Renommé
                     try:
                         taxonomy_path_instance = get_taxonomy_path()
-                        self.logger.info(f"[OK] Taxonomy path obtained for InformalAnalysisAgent: {taxonomy_path_instance}")
+                        self.logger.info(f"[OK] Taxonomy path obtained for AgentFactory: {taxonomy_path_instance}")
                     except Exception as tax_e:
-                        self.logger.error(f"[ERROR] Failed to get taxonomy path for InformalAnalysisAgent: {tax_e}")
+                        self.logger.error(f"[ERROR] Failed to get taxonomy path for AgentFactory: {tax_e}")
                     
                     if kernel and llm_service_instance:
-                        # FIX: Cannot instantiate abstract class InformalAnalysisAgent
-                        self.informal_agent = InformalAnalysisAgent(
-                            kernel=kernel,
-                            agent_name="web_api_informal_agent",
-                            taxonomy_file_path=str(taxonomy_path_instance) if taxonomy_path_instance else None
-                        )
                         try:
-                            self.informal_agent.setup_agent_components(llm_service_id="default_analysis_llm")
-                            self.logger.info("[OK] InformalAnalysisAgent configured successfully")
-                        except Exception as setup_e:
-                            self.logger.error(f"[ERROR] Failed to setup InformalAnalysisAgent components: {setup_e}")
+                            factory = AgentFactory(kernel=kernel, llm_service_id="default_analysis_llm")
+                            self.informal_agent = factory.create_informal_fallacy_agent(
+                                config_name="full"
+                            )
+                            self.logger.info("[OK] InformalAgent created and configured successfully via AgentFactory.")
+                        except Exception as factory_e:
+                            self.logger.error(f"[ERROR] Failed to create InformalAgent from factory: {factory_e}", exc_info=True)
                             self.informal_agent = None
-                        # self.logger.warning("[TEMP FIX] InformalAgent instantiation is temporarily disabled due to abstract class error.")
-                        # self.informal_agent = None
                     else:
-                        self.logger.error("[ERROR] Cannot initialize InformalAnalysisAgent - missing kernel or LLM service instance")
+                        self.logger.error("[ERROR] Cannot initialize InformalAgent - missing kernel or LLM service instance")
                         self.informal_agent = None
             else:
                 self.informal_agent = None
-                self.logger.warning("[WARN] InformalAnalysisAgent class not available (import failed or class not found)")
+                self.logger.warning("[WARN] AgentFactory not available (import failed or class not found)")
             
             self.is_initialized = True
             if self.informal_agent:
-                self.logger.info("AnalysisService initialized successfully (with InformalAnalysisAgent).")
+                self.logger.info("AnalysisService initialized successfully (with InformalAgent).")
             else:
-                self.logger.warning("AnalysisService initialized, but InformalAnalysisAgent could not be created/configured.")
+                self.logger.warning("AnalysisService initialized, but InformalAgent could not be created/configured.")
             
         except Exception as e:
             self.logger.error(f"Critical error during AnalysisService initialization: {e}")
@@ -314,7 +308,7 @@ class AnalysisService:
 
             # PRIORITÉ 1: Utilisation de l'agent informel
             if self.informal_agent:
-                self.logger.info("Using InformalAnalysisAgent for fallacy detection.")
+                self.logger.info("Using InformalAgent for fallacy detection.")
                 # The mock has been removed to allow real integration testing.
                 # La bonne méthode est `analyze_text`, qui prend le texte
                 # et retourne un dictionnaire contenant la clé 'fallacies'.
@@ -338,9 +332,7 @@ class AnalysisService:
             elif not fallacies and self.contextual_analyzer:
                 self.logger.info("Using ContextualAnalyzer for fallacy detection (wrapped in asyncio.to_thread).")
                 # Wrap the synchronous, potentially blocking call in a separate thread.
-                # FIX: Incorrect method name and missing 'context' argument.
-                # Passing an empty string for context as a temporary fix.
-                result = await asyncio.to_thread(self.contextual_analyzer.identify_contextual_fallacies, text, "")
+                result = await asyncio.to_thread(self.contextual_analyzer.analyze_fallacies, text)
                 if result:
                     for fallacy_data in result:
                         fallacy = FallacyDetection(

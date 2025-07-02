@@ -68,7 +68,7 @@ class AgentFactory:
         if config_name in ["simple", "full", "workflow_only"]:
             function_choice_behavior = FunctionChoiceBehavior.Required(
                 auto_invoke=True,
-                filters={"included_functions": ["FallacyIdentificationPlugin-identify_fallacies"]},
+                filters={"included_functions": ["IdentificationPlugin-identify_fallacies"]},
             )
 
         agent_to_create = ChatCompletionAgent(

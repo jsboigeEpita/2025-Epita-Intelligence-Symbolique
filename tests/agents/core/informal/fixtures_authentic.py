@@ -14,6 +14,7 @@ from argumentation_analysis.core import environment as auto_env
 
 # Imports Semantic Kernel authentiques
 from semantic_kernel import Kernel
+from argumentation_analysis.agents.agent_factory import AgentFactory
 from semantic_kernel.functions import KernelArguments
 
 # Conditional imports pour connecteurs authentiques
@@ -395,63 +396,54 @@ def setup_authentic_taxonomy_csv(tmp_path):
 
 
 @pytest.fixture
-def authentic_informal_analysis_plugin(setup_authentic_taxonomy_csv):
+def authentic_informal_analysis_plugin(authentic_semantic_kernel, setup_authentic_taxonomy_csv):
     """
     Fixture authentique pour InformalAnalysisPlugin - AUCUN MOCK
     """
+    kernel = authentic_semantic_kernel.get_kernel()
     test_taxonomy_path = str(setup_authentic_taxonomy_csv)
     print(f"[AUTHENTIC] Création du plugin InformalAnalysis authentique avec taxonomie: {test_taxonomy_path}")
     
     try:
-        plugin = InformalAnalysisPlugin(taxonomy_file_path=test_taxonomy_path)
+        plugin = InformalAnalysisPlugin(kernel=kernel, taxonomy_file_path=test_taxonomy_path)
         print("[AUTHENTIC] Plugin InformalAnalysis créé avec succès")
         return plugin
     except Exception as e:
         print(f"[AUTHENTIC] Erreur création plugin: {e}")
         # Fallback - plugin sans fichier taxonomie
-        return InformalAnalysisPlugin()
+        return InformalAnalysisPlugin(kernel=kernel)
 
 
 @pytest.fixture
 def authentic_informal_agent(authentic_semantic_kernel, setup_authentic_taxonomy_csv):
     """
     Fixture authentique pour InformalAnalysisAgent - AUCUN MOCK
+    Utilise désormais AgentFactory pour la création.
     """
-    kernel_wrapper = authentic_semantic_kernel
-    test_taxonomy_path = str(setup_authentic_taxonomy_csv)
+    kernel = authentic_semantic_kernel.get_kernel()
+    llm_service_id = authentic_semantic_kernel.get_service_id()
     agent_name = "authentic_informal_agent"
     
-    print(f"[AUTHENTIC] Création de l'agent InformalAnalysis authentique: {agent_name}")
-    
+    print(f"[AUTHENTIC] Création de l'agent '{agent_name}' via AgentFactory...")
+
     try:
-        # Création avec vrai Kernel et vraie taxonomie
-        agent = LegacyInformalAnalysisAgent(
-            kernel=kernel_wrapper.get_kernel(),
-            agent_name=agent_name,
-            taxonomy_file_path=test_taxonomy_path
+        if not llm_service_id:
+            pytest.skip("Saut du test authentique car aucun service LLM n'est configuré.")
+
+        agent_factory = AgentFactory(kernel, llm_service_id)
+        
+        # On utilise la config "full" pour avoir toutes les fonctionnalités
+        agent = agent_factory.create_informal_fallacy_agent(
+            config_name="full"
         )
+        agent.name = agent_name # Surcharger le nom
         
-        # Configuration des composants si service LLM disponible
-        if kernel_wrapper.is_llm_available():
-            service_id = kernel_wrapper.get_service_id()
-            agent.setup_agent_components(llm_service_id=service_id)
-            print(f"[AUTHENTIC] Agent configuré avec service LLM: {service_id}")
-        else:
-            print("[AUTHENTIC] Agent configuré sans service LLM - fonctionnalités limitées")
-        
-        # Attachement des informations de configuration
-        agent.kernel_wrapper = kernel_wrapper
-        agent.llm_available = kernel_wrapper.is_llm_available()
-        
+        print(f"[AUTHENTIC] Agent '{agent_name}' créé avec succès via AgentFactory.")
         return agent
         
     except Exception as e:
-        print(f"[AUTHENTIC] Erreur création agent: {e}")
-        # Fallback - agent minimal
-        return LegacyInformalAnalysisAgent(
-            kernel=kernel_wrapper.get_kernel(),
-            agent_name=agent_name
-        )
+        print(f"[AUTHENTIC] Erreur création agent via AgentFactory: {e}")
+        pytest.fail(f"Impossible de créer l'agent via AgentFactory: {e}")
 
 
 @pytest.fixture
