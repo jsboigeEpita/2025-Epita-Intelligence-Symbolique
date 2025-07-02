@@ -238,6 +238,11 @@ def check_mock_llm_is_forced(request, monkeypatch):
         monkeypatch.setattr(settings, 'use_mock_llm', True)
         yield
         
+@pytest.fixture(scope="session")
+def backend_url(request):
+    """Provides the backend URL from command-line options."""
+    return request.config.getoption("--backend-url")
+        
 @pytest.fixture
 def mock_kernel():
     """Provides a mocked Semantic Kernel."""
@@ -322,10 +327,6 @@ def sample_definitions():
 def mock_parse_args(mocker):
     """Fixture to mock argparse.ArgumentParser.parse_args."""
     return mocker.patch("argparse.ArgumentParser.parse_args")
-
-@pytest.fixture(scope="session")
-def backend_url(request):
-    return request.config.getoption("--backend-url")
 
 @pytest.fixture
 def successful_simple_argument_analysis_fixture_path(tmp_path):
