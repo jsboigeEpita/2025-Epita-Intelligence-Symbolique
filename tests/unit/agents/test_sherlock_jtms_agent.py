@@ -28,7 +28,7 @@ def mock_kernel():
 @pytest.fixture
 def sherlock_agent(mock_kernel):
     """Agent Sherlock de test"""
-    agent = SherlockJTMSAgent(mock_kernel, "sherlock_test")
+    agent = SherlockJTMSAgent(mock_kernel, "sherlock_test", llm_service_id="mock_service")
     # Mock de la réponse de l'agent de base pour contrôler les descriptions
     async def side_effect(*args, **kwargs):
         input_str = ""

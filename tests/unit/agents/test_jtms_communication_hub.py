@@ -35,7 +35,7 @@ def communication_hub(mock_kernel):
 @pytest.fixture
 def sherlock_agent(mock_kernel):
     """Agent Sherlock de test"""
-    return SherlockJTMSAgent(mock_kernel, "sherlock_test")
+    return SherlockJTMSAgent(mock_kernel, "sherlock_test", llm_service_id="mock_service")
 
 @pytest.fixture
 def watson_agent(mock_kernel):
