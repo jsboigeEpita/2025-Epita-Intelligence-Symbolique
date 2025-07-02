@@ -26,6 +26,13 @@ module.exports = defineConfig({
 
     /* Ignorer les erreurs HTTPS (utile pour les environnements de dev locaux) */
     ignoreHTTPSErrors: true,
+
+    /* Contrôle du mode Headless */
+    // La valeur est lue depuis la variable d'environnement 'HEADLESS'.
+    // `undefined` si non définie, ce qui laisse Playwright décider (souvent headed par défaut).
+    // On force 'true' si la variable n'est pas explicitement 'false'.
+    // Forcer le mode headless pour le débogage, car la variable d'environnement semble inconsistante.
+    headless: true,
   },
 
   /* Configurer les projets pour les principaux navigateurs */
