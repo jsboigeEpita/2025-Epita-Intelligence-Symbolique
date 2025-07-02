@@ -64,7 +64,7 @@ class PlaywrightRunner:
         self.headless = config.get('headless', True)
         self.timeout_ms = config.get('timeout_ms', 60000)
         self.slow_timeout_ms = config.get('slow_timeout_ms', 120000)
-        self.test_paths = config.get('test_paths', ["tests/integration/webapp/"])
+        self.test_paths = config.get('test_paths', ["tests/e2e/python/"])
         self.screenshots_dir = Path(config.get('screenshots_dir', 'logs/screenshots'))
         self.traces_dir = Path(config.get('traces_dir', 'logs/traces'))
         
@@ -75,10 +75,11 @@ class PlaywrightRunner:
         # Variables runtime
         self.last_results: Optional[Dict[str, Any]] = None
         
-    async def run_tests(self, test_paths: List[str] = None, 
+    async def run_tests(self, test_paths: List[str] = None,
                        runtime_config: Dict[str, Any] = None) -> bool:
         """
         Exécute les tests Playwright avec configuration runtime
+        Exécute les tests Playwright de manière groupée.
         
         Args:
             test_paths: Chemins spécifiques des tests (optionnel)
@@ -93,32 +94,45 @@ class PlaywrightRunner:
         
         # Configuration effective
         effective_config = self._merge_runtime_config(runtime_config or {})
-        test_paths = test_paths or self.test_paths
         
-        self.logger.info(f"Démarrage tests Playwright: {test_paths}")
+        # Si un chemin de dossier est fourni, trouver tous les fichiers de test
+        base_test_paths = test_paths or self.test_paths
+        all_test_files = []
+        for path_str in base_test_paths:
+            path = Path(path_str)
+            if path.is_dir():
+                all_test_files.extend([str(p) for p in path.rglob('test_*.py')])
+            elif path.is_file():
+                all_test_files.append(str(path))
+
+        self.logger.info(f"Lancement des tests sur {len(all_test_files)} fichier(s).")
+        self.logger.info(f"Fichiers cibles: {all_test_files}")
         self.logger.info(f"Configuration: {effective_config}")
-        
+
         try:
-            # Préparation environnement test
+            # Préparation de l'environnement
             await self._prepare_test_environment(effective_config)
-            
-            # Construction commande Playwright
-            cmd = self._build_playwright_command(test_paths, effective_config)
-            
-            # Exécution tests
+
+            # Construction de la commande pour tous les fichiers
+            cmd = self._build_playwright_command(all_test_files, effective_config)
+
+            # Exécution de tous les tests en une seule fois
             result = await self._execute_tests(cmd, effective_config)
-            
-            # Analyse résultats
+
+            # Analyse des résultats
             success = await self._analyze_results(result)
             
             return success
             
         except Exception as e:
-            self.logger.error(f"Erreur exécution tests: {e}")
+            self.logger.error(f"Erreur exécution tests: {e}", exc_info=True)
             return False
     
     def _merge_runtime_config(self, runtime_config: Dict[str, Any]) -> Dict[str, Any]:
         """Fusionne configuration par défaut avec runtime"""
+        self.logger.info("--- Début fusion configuration runtime ---")
+        self.logger.info(f"Configuration runtime reçue: {runtime_config}")
+        
         effective_config = {
             'backend_url': 'http://localhost:5003',
             'frontend_url': 'http://localhost:3000',
@@ -129,12 +143,16 @@ class PlaywrightRunner:
             'screenshots': True,
             'traces': True
         }
+        self.logger.info(f"Configuration effective initiale: {effective_config}")
         
         # Appliquer la configuration runtime en premier
         effective_config.update(runtime_config)
+        self.logger.info(f"Configuration effective après fusion: {effective_config}")
         
-        # Forcer le mode headed pour le débogage, cette valeur écrase toute autre config
-        effective_config['headless'] = False
+        # Vérification finale de la valeur headless
+        final_headless_value = effective_config.get('headless')
+        self.logger.info(f"VALEUR FINALE POUR HEADLESS: {final_headless_value} (Type: {type(final_headless_value)})")
+        self.logger.info("--- Fin fusion configuration runtime ---")
         
         return effective_config
     
@@ -149,7 +167,7 @@ class PlaywrightRunner:
             'SCREENSHOTS_DIR': str(self.screenshots_dir),
             'TRACES_DIR': str(self.traces_dir),
             'KMP_DUPLICATE_LIB_OK': 'TRUE', # Contournement pour le conflit OpenMP
-            'PWDEBUG': '1' # Utiliser PWDEBUG pour le logging de Playwright pour éviter les conflits
+            'PWDEBUG': '0' # DÉSACTIVÉ : Forçait le mode headed et l'inspecteur.
         }
         
         for key, value in env_vars.items():
@@ -174,43 +192,35 @@ class PlaywrightRunner:
     def _build_playwright_command(self, test_paths: List[str],
                                  config: Dict[str, Any]) -> List[str]:
         """Construit la commande pour exécuter les tests via Pytest."""
-
-        self.logger.info(f"Préparation de la commande Pytest pour l'environnement Conda 'projet-is-roo-new'.")
-
+        self.logger.info("Préparation de la commande Pytest.")
+        
+        # La commande commence maintenant directement avec 'pytest'.
+        # Elle sera préfixée par le chemin complet de l'exécutable plus tard.
         cmd = [
-            'python', '-m', 'pytest',
+            'pytest',
+            '-p', 'playwright', # Forcer le chargement du plugin playwright
             '-v',
-            '-p', 'no:asyncio', # Désactive le plugin asyncio pour éviter les conflits avec Playwright
-            '--capture=no',
+            '-s', # Alias pour --capture=no, pour voir les prints en direct
+            '-x',  # Arrêter après la première défaillance
             '--slowmo=100',  # Ralentir un peu plus pour l'observation
             '--log-cli-level=DEBUG', # Augmenter la verbosité
             '--log-file=logs/pytest.log',
-            # Le timeout est maintenant géré par l'orchestrateur principal
-            # '--timeout', '300'
         ]
 
-        # Ajout du répertoire de test pour que pytest le découvre
-        # Forçage pour le débogage du test qui timeout
-        # debug_test_path = ["tests/e2e/python/test_argument_reconstructor.py"]
-        # self.logger.warning(f"ATTENTION: Exécution forcée d'un seul fichier de test pour débogage : {debug_test_path}")
-        # cmd.extend(debug_test_path)
         cmd.extend(test_paths)
 
         # Le mode Headless est géré par l'argument --headed.
         # On l'ajoute si la configuration le demande explicitement.
-        if not config.get('headless', True):
-            cmd.append('--headed')
-        self.logger.info(f"Le mode Headless est configuré sur: {config.get('headless', True)}")
+        # Le mode headless est maintenant entièrement géré via la variable d'environnement
+        # HEADLESS et le fichier playwright.config.js. L'argument en ligne de commande
+        # est non seulement inutile, mais il cause une erreur "unrecognized arguments".
+        self.logger.info("Le mode Headless est contrôlé par la variable d'environnement HEADLESS.")
 
-        # --tracing on est l'équivalent de --trace=on pour pytest-playwright
         if config.get('traces', True):
             cmd.append('--tracing=on')
             
-        # Spécifier le navigateur à utiliser
         cmd.append(f'--browser={config["browser"]}')
 
-        # Passer les URLs dynamiques à Pytest.
-        # Ceci surcharge les valeurs par défaut définies dans tests/conftest.py
         if 'backend_url' in config:
             cmd.append(f"--backend-url={config['backend_url']}")
         if 'frontend_url' in config:
@@ -225,15 +235,14 @@ class PlaywrightRunner:
             if line:
                 log_method(line.decode(encoding='utf-8', errors='replace').rstrip())
 
-    def _get_conda_env_python_executable(self, env_name: str) -> Optional[str]:
-        """Trouve le chemin de l'exécutable Python pour un environnement Conda donné."""
+    def _get_conda_env_executable(self, env_name: str, executable_name: str) -> Optional[str]:
+        """Trouve le chemin d'un exécutable pour un environnement Conda donné."""
         try:
-            self.logger.info(f"Recherche de l'environnement Conda nommé: '{env_name}'")
-            # Exécute `conda info` pour obtenir la liste des environnements. Utilisation de `shell=True` pour Windows.
+            self.logger.info(f"Recherche de l'exécutable '{executable_name}' dans l'environnement Conda '{env_name}'")
+            
             result = subprocess.run(['conda', 'info', '--envs', '--json'], capture_output=True, text=True, check=True, shell=True)
             envs_data = json.loads(result.stdout)
             
-            # Cherche le chemin de l'environnement cible
             env_path_str = None
             for env in envs_data.get('envs', []):
                 if Path(env).name == env_name:
@@ -242,40 +251,44 @@ class PlaywrightRunner:
                     break
             
             if not env_path_str:
-                self.logger.error(f"Environnement Conda '{env_name}' non trouvé dans la liste des environnements.")
+                self.logger.error(f"Environnement Conda '{env_name}' non trouvé.")
                 return None
 
-            # Construit le chemin de l'exécutable Python
-            python_executable = Path(env_path_str) / 'python.exe'
-            if python_executable.exists():
-                self.logger.info(f"Exécutable Python validé pour l'environnement '{env_name}': {python_executable}")
-                return str(python_executable)
+            # Sur Windows, les scripts sont dans le sous-dossier "Scripts"
+            executable_path = Path(env_path_str) / 'Scripts' / f'{executable_name}.exe'
+            if not executable_path.exists():
+                 # Fallback pour les systèmes non-Windows
+                executable_path = Path(env_path_str) / 'bin' / executable_name
+            
+            if executable_path.exists():
+                self.logger.info(f"Exécutable '{executable_name}' validé: {executable_path}")
+                return str(executable_path)
             else:
-                self.logger.error(f"python.exe non trouvé dans l'environnement '{env_name}' au chemin: {python_executable}")
+                self.logger.error(f"'{executable_name}' non trouvé dans '{env_path_str}' (vérifié dans Scripts/ et bin/).")
                 return None
 
         except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
-            self.logger.error(f"Erreur critique lors de la recherche de l'environnement Conda via 'conda info': {e}")
+            self.logger.error(f"Erreur critique lors de la recherche de l'exécutable Conda '{executable_name}': {e}")
             return None
 
     async def _execute_tests(self, cmd: List[str],
                              config: Dict[str, Any]) -> subprocess.CompletedProcess:
-        """Exécute les tests directement avec l'exécutable python de l'environnement Conda cible."""
+        """Exécute les tests directement avec l'exécutable pytest de l'environnement Conda cible."""
         
         env_name = "projet-is-roo-new"
-        python_executable = self._get_conda_env_python_executable(env_name)
+        pytest_executable = self._get_conda_env_executable(env_name, "pytest")
 
-        if not python_executable:
-            error_msg = f"Impossible de trouver l'exécutable Python pour l'environnement Conda '{env_name}'."
+        if not pytest_executable:
+            error_msg = f"Impossible de trouver l'exécutable 'pytest' pour l'environnement Conda '{env_name}'."
             self.logger.error(error_msg)
             return subprocess.CompletedProcess(cmd, returncode=-1, stderr=error_msg)
 
-        # Remplacer 'python' par le chemin complet de l'exécutable de l'environnement
-        if cmd and cmd[0] == 'python':
-            cmd[0] = python_executable
+        # Remplacer 'pytest' par le chemin complet de l'exécutable
+        if cmd and cmd[0] == 'pytest':
+            cmd[0] = pytest_executable
         else:
-            self.logger.warning("La commande de test ne commence pas par 'python'. Le remplacement de l'interpréteur a peut-être échoué.")
-            cmd.insert(0, python_executable)
+            self.logger.warning(f"La commande de test ne commence pas par 'pytest'. Tentative d'insertion de l'exécutable au début.")
+            cmd.insert(0, pytest_executable)
 
         # Préparation de l'environnement pour le sous-processus
         script_env = os.environ.copy()

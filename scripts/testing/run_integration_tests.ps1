@@ -5,7 +5,7 @@
 $ErrorActionPreference = 'Stop'
 
 # Chemin vers le script d'activation de l'environnement
-$ActivationScript = Join-Path $PSScriptRoot "..\activate_project_env.ps1"
+$ActivationScript = Join-Path $PSScriptRoot "..\..\activate_project_env.ps1"
 
 # Chemin vers le script d'orchestration web unifié
 # Le script se trouve dans scripts/ donc on remonte d'un niveau puis on descend dans apps/webapp
@@ -15,7 +15,7 @@ $WebAppOrchestratorScript = "scripts/apps/webapp/unified_web_orchestrator.py"
 # --integration est la valeur par défaut mais on l'explicite pour la clarté.
 # --frontend est requis pour les tests e2e
 # --visible peut être utile pour le débogage. Retirer pour exécution en headless.
-$OrchestratorArgs = "--integration --frontend --visible" # Ajoutez --visible ici si nécessaire
+$OrchestratorArgs = "--integration --frontend" # --visible peut être ajouté manuellement pour le débogage
 
 # Commande complète à passer au script d'activation
 $CommandToExecute = "python $WebAppOrchestratorScript $OrchestratorArgs"

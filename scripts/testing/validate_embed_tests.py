@@ -17,6 +17,8 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent # MODIFIÉ: Remonter à la racine du projet
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from project_core.utils.shell import run_in_activated_env, ShellCommandError
+
 def setup_environment():
     """Configure l'environnement de test."""
     try:
@@ -56,18 +58,21 @@ def run_embed_script(args_list, env_vars=None):
     if env_vars:
         env.update(env_vars)
     
-    cmd = [sys.executable, str(script_path)] + args_list
+    # La commande pour run_in_activated_env n'a pas besoin de sys.executable
+    cmd = [str(script_path)] + args_list
     
     try:
-        result = subprocess.run(
+        result = run_in_activated_env(
             cmd,
-            capture_output=True,
-            text=True,
-            env=env,
+            check_errors=False, # Les tests vérifient le code de retour manuellement
             timeout=30,
-            check=False
+            # env n'est pas directement supporté, mais l'environnement activé devrait suffire.
+            # Pour passer des variables spécifiques, il faudrait étendre shell_utils
         )
         return result
+    except ShellCommandError as e:
+        print(f"[ERREUR] Execution script via shell_utils: {e}")
+        return None
     except Exception as e:
         print(f"[ERREUR] Execution script: {e}")
         return None

@@ -26,6 +26,7 @@ import logging
 import pandas as pd
 import requests
 import semantic_kernel as sk
+from semantic_kernel.functions.kernel_arguments import KernelArguments
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.functions import kernel_function, KernelArguments
 from semantic_kernel.connectors.ai.open_ai.prompt_execution_settings.open_ai_prompt_execution_settings import (
@@ -40,16 +41,9 @@ from semantic_kernel.functions.kernel_function_metadata import KernelFunctionMet
 from semantic_kernel.functions.kernel_parameter_metadata import KernelParameterMetadata
 
 # Import de l'utilitaire de lazy loading pour la taxonomie
-# Ajout du chemin pour l'importation
-# utils_path = str(Path(__file__).parent.parent.parent.parent / "utils") # Commenté car taxonomy_loader n'est plus utilisé ici
-# if utils_path not in sys.path:
-#     sys.path.insert(0, utils_path)
-# from taxonomy_loader import get_taxonomy_path, validate_taxonomy_file # Commenté car remplacé
-
-# Importer load_csv_file depuis project_core
 from argumentation_analysis.core.utils.file_loaders import load_csv_file
 from argumentation_analysis.utils.taxonomy_loader import get_taxonomy_path
-from argumentation_analysis.paths import DATA_DIR # Assurer que DATA_DIR est importé si nécessaire ailleurs
+from argumentation_analysis.paths import DATA_DIR 
 
 # Configuration du logging
 logging.basicConfig(
@@ -61,9 +55,6 @@ logger = logging.getLogger("InformalDefinitions")
 
 # Import des prompts (V3 - Tool Use)
 from .prompts import prompt_identify_args_v8, prompt_analyze_fallacies_v3_tool_use, prompt_justify_fallacy_attribution_v1
-
-# from argumentation_analysis.paths import DATA_DIR # Déjà importé plus haut ou via project_core
-
 
 # --- Modèles Pydantic pour une sortie structurée ---
 class IdentifiedFallacy(BaseModel):
@@ -80,37 +71,16 @@ class FallacyAnalysisResult(BaseModel):
 class InformalAnalysisPlugin:
     """
     Plugin natif pour Semantic Kernel dédié à l'analyse de sophismes.
-
-    Ce plugin constitue une interface robuste pour interagir avec une taxonomie
-    de sophismes externe (généralement un fichier CSV). Il encapsule la
-    logique de chargement, de mise en cache et de préparation des données.
-    Il expose ensuite des fonctions natives (`@kernel_function`) qui permettent
-    à un agent LLM ou à une application d'explorer et d'interroger cette taxonomie.
-
-    Les fonctions exposées couvrent l'exploration hiérarchique, la recherche
-    de détails, la recherche par nom et le listage par catégorie.
-
-    Attributes:
-        _logger (logging.Logger): Instance du logger pour le plugin.
-        DEFAULT_TAXONOMY_PATH (Path): Chemin par défaut vers le fichier CSV de la taxonomie.
-        _current_taxonomy_path (Path): Chemin effectif utilisé pour charger la taxonomie.
-        _taxonomy_df_cache (Optional[pd.DataFrame]): Cache pour le DataFrame afin
-            d'optimiser les accès répétés.
     """
 
     def __init__(self, kernel: Kernel, taxonomy_file_path: Optional[str] = None):
         """
         Initialise le plugin hybride.
-
-        Args:
-            kernel (Kernel): Une instance de Kernel pour l'orchestration interne.
-            taxonomy_file_path (Optional[str]): Chemin personnalisé vers la taxonomie.
         """
         self.kernel = kernel
         self._logger = logging.getLogger("InformalAnalysisPlugin")
         self._logger.info(f"Initialisation du plugin d'analyse des sophismes (hybride)...")
         
-        # Chemin par défaut et gestion du chemin de la taxonomie
         self.DEFAULT_TAXONOMY_PATH = Path(DATA_DIR) / "argumentum_fallacies_taxonomy.csv"
         if taxonomy_file_path:
             self._current_taxonomy_path = Path(taxonomy_file_path)
@@ -123,9 +93,6 @@ class InformalAnalysisPlugin:
     def _internal_load_and_prepare_dataframe(self) -> pd.DataFrame:
         """
         Charge et prépare le DataFrame de la taxonomie.
-        - Charge le CSV.
-        - Standardise les types des colonnes de clés (PK, FK_Parent, parent_pk) en entiers nullables (Int64).
-        - Définit 'PK' comme index.
         """
         self._logger.info(f"Chargement et préparation du DataFrame de taxonomie depuis: {self._current_taxonomy_path}...")
         
@@ -136,29 +103,21 @@ class InformalAnalysisPlugin:
             
             self._logger.info(f"Taxonomie chargée : {len(df)} entrées. Standardisation des types de clés...")
 
-            # Clés primaires et étrangères à traiter
             key_columns = ['PK', 'FK_Parent', 'parent_pk']
             
             for col in key_columns:
                 if col in df.columns:
                     try:
-                        # Convertit en numérique, les erreurs de conversion deviennent NaN
                         df[col] = pd.to_numeric(df[col], errors='coerce')
                         
-                        # Pour la clé primaire, on ne veut pas de NaN. Si c'est le cas, on logue une erreur.
-                        # Sinon, on la convertit en entier standard pour l'indexation.
                         if col == 'PK':
                             if df[col].isnull().any():
                                 self._logger.error("La colonne clé primaire 'PK' contient des valeurs nulles après conversion. Problème de données.")
-                                # On la laisse en type nullable pour l'instant pour éviter un crash
                                 df[col] = df[col].astype('Int64')
                             else:
                                 df[col] = df[col].astype(int)
                             self._logger.info(f"Colonne '{col}' traitée, type final: {df[col].dtype}.")
                         else:
-                            # Pour les clés étrangères, si elles n'ont pas de NaN, on les convertit en entier.
-                            # Sinon, on les laisse en float, ce qui est le comportement par défaut de to_numeric
-                            # et ce qui est sûr pour les comparaisons.
                             if not df[col].isnull().any():
                                 df[col] = df[col].astype(int)
                             self._logger.info(f"Colonne '{col}' (clé étrangère) traitée, type final: {df[col].dtype}.")
@@ -166,7 +125,6 @@ class InformalAnalysisPlugin:
                     except Exception as e:
                         self._logger.warning(f"Impossible de convertir la colonne '{col}': {e}. La colonne sera laissée en l'état.")
 
-            # Définir l'index après avoir nettoyé la colonne PK
             if 'PK' in df.columns and pd.api.types.is_integer_dtype(df['PK'].dtype):
                 try:
                     df.set_index('PK', inplace=True)
@@ -187,36 +145,12 @@ class InformalAnalysisPlugin:
     def _get_taxonomy_dataframe(self) -> pd.DataFrame:
         """
         Accède au DataFrame de la taxonomie avec mise en cache.
-
-        Cette méthode est le point d'accès principal pour obtenir les données
-        de la taxonomie. Elle charge le DataFrame lors du premier appel et
-        retourne la version en cache pour les appels suivants.
-
-        Returns:
-            pd.DataFrame: Une copie du DataFrame de la taxonomie pour éviter
-            les modifications involontaires du cache.
         """
         if self._taxonomy_df_cache is None:
             self._taxonomy_df_cache = self._internal_load_and_prepare_dataframe()
-        return self._taxonomy_df_cache.copy() # Retourner une copie pour éviter les modifications accidentelles du cache
+        return self._taxonomy_df_cache.copy() 
     
     def _internal_explore_hierarchy(self, current_pk: int, df: pd.DataFrame, max_children: int = 15) -> Dict[str, Any]:
-        """
-        Logique interne pour explorer la hiérarchie à partir d'un nœud.
-
-        Cette méthode identifie les enfants directs d'un nœud donné en se basant
-        sur les colonnes de relation (`FK_Parent`, `parent_pk`) ou sur la
-        structure des chemins (`path`).
-
-        Args:
-            current_pk (int): La clé primaire (PK) du nœud de départ.
-            df (pd.DataFrame): Le DataFrame de la taxonomie à utiliser.
-            max_children (int): Le nombre maximum d'enfants à retourner.
-
-        Returns:
-            Dict[str, Any]: Un dictionnaire décrivant le nœud courant et la
-            liste de ses enfants. Contient une clé 'error' en cas de problème.
-        """
         self._logger.debug(f"DEBUG: Entering _internal_explore_hierarchy with pk={current_pk}")
         result = {
             "current_node": None,
@@ -229,68 +163,39 @@ class InformalAnalysisPlugin:
             self._logger.debug("DEBUG: Exiting _internal_explore_hierarchy (df is None)")
             return result
         
-        # Convertir les colonnes numériques
         if 'depth' in df.columns and not pd.api.types.is_numeric_dtype(df['depth']):
             df['depth'] = pd.to_numeric(df['depth'], errors='coerce')
         
-        # Trouver le nœud courant
         current_node_df = df.loc[df.index == current_pk] if current_pk in df.index else pd.DataFrame()
         if len(current_node_df) == 0:
             result["error"] = f"PK {current_pk} non trouvée dans la taxonomie."
             return result
         
-        # Extraire les informations du nœud courant
         current_row = current_node_df.iloc[0]
-        # Utiliser une valeur par défaut pour path si elle n'existe pas
-        current_path = current_row.get('path', '') # .get est disponible sur les Series pandas
+        current_path = current_row.get('path', '') 
         
         result["current_node"] = {
-            "pk": int(current_row.name), # PK est l'index
+            "pk": int(current_row.name), 
             "path": current_path,
             "depth": int(current_row['depth']) if pd.notna(current_row.get('depth')) else 0,
-            "Name": current_row.get('Name', ''), # Utiliser la colonne 'Name' du CSV
-            "nom_vulgarise": current_row.get('nom_vulgarise', ''), # nom_vulgarise (peut être redondant ou un alias)
-            "famille": current_row.get('Famille', ''),             # Famille
-            "description_courte": current_row.get('text_fr', '')   # text_fr comme description courte
+            "Name": current_row.get('Name', ''),
+            "nom_vulgarise": current_row.get('nom_vulgarise', ''),
+            "famille": current_row.get('Famille', ''),
+            "description_courte": current_row.get('text_fr', '')
         }
         
-        # Trouver les enfants
-        children_df = pd.DataFrame() # Initialiser à un DataFrame vide
+        children_df = pd.DataFrame() 
         if 'FK_Parent' in df.columns:
-            # Si FK_Parent existe, l'utiliser pour trouver les enfants
             children_df = df[df['FK_Parent'] == current_pk]
         elif 'parent_pk' in df.columns:
-            # Si parent_pk existe, l'utiliser pour trouver les enfants
             children_df = df[df['parent_pk'] == current_pk]
         elif 'path' in df.columns and current_path:
-            # Si path existe, l'utiliser pour trouver les enfants
-            # S'assurer que current_path se termine par un point pour éviter les correspondances partielles incorrectes
-            # Exemple: si current_path est "1", on ne veut pas matcher "10.x"
-            # On cherche les enfants directs, donc le path de l'enfant doit être current_path + ".quelquechose"
-            # et ne pas contenir d'autres points après "quelquechose".
-            # Exemple: si current_path = "1", on cherche "1.X" mais pas "1.X.Y"
-            # Si current_path = "1.2", on cherche "1.2.X" mais pas "1.2.X.Y"
-            
-            # Construire le préfixe attendu pour les enfants directs
             child_path_prefix = str(current_path) + "."
-            
-            # Filtrer les enfants qui commencent par ce préfixe
             potential_children = df[df['path'].astype(str).str.startswith(child_path_prefix, na=False)]
-            
-            # Filtrer pour ne garder que les enfants directs (pas les petits-enfants, etc.)
-            # Un enfant direct aura un path qui, une fois le préfixe retiré, ne contient plus de "."
             children_df = potential_children[~potential_children['path'].astype(str).str.slice(start=len(child_path_prefix)).str.contains('.', na=False, regex=False)]
-
         elif 'depth' in df.columns and pd.notna(current_row.get('depth')):
-             # Si depth existe et que le nœud courant a une profondeur,
-             # les enfants directs auront une profondeur de current_depth + 1
-             # et leur path commencera par le path du parent.
             current_depth = int(current_row['depth'])
-            # S'assurer que current_path est une chaîne pour la comparaison str.startswith
             current_path_str = str(current_path) if pd.notna(current_path) else ""
-
-            # Filtrer par profondeur et par le début du path
-            # (pour éviter de prendre des nœuds d'une autre branche ayant la même profondeur)
             children_df = df[
                 (df['depth'] == current_depth + 1) &
                 (df['path'].astype(str).str.startswith(current_path_str + ('.' if current_path_str else ''), na=False))
@@ -299,48 +204,27 @@ class InformalAnalysisPlugin:
         children_count = len(children_df)
         
         if children_count > 0:
-            # Limiter le nombre d'enfants si nécessaire
             if max_children > 0 and children_count > max_children:
                 children_df = children_df.head(max_children)
                 result["children_truncated"] = True
                 result["total_children"] = children_count
             
-            # Extraire les informations des enfants
             for _, child_row in children_df.iterrows():
-                # Vérifier si l'enfant a lui-même des enfants
-                # (simplifié, une vérification plus robuste serait nécessaire pour une UI complexe)
-                # Pour cette fonction, on peut se baser sur la présence d'enfants dans le dataframe
-                # en utilisant une logique similaire à celle ci-dessus.
-                # Pour l'instant, on met False, car le but est de lister les enfants directs.
                 child_info = {
-                    "pk": int(child_row.name), # .name est l'index (PK)
-                    "nom_vulgarise": child_row.get('nom_vulgarise', ''), # nom_vulgarise
-                    "description_courte": child_row.get('text_fr', ''),   # text_fr
-                    "famille": child_row.get('Famille', ''),             # Famille
-                    "has_children": False # Simplifié. Pourrait être calculé si besoin.
+                    "pk": int(child_row.name), 
+                    "nom_vulgarise": child_row.get('nom_vulgarise', ''),
+                    "description_courte": child_row.get('text_fr', ''),
+                    "famille": child_row.get('Famille', ''),
+                    "has_children": False 
                 }
                 result["children"].append(child_info)
         
         self._logger.debug(f"DEBUG: Exiting _internal_explore_hierarchy with pk={current_pk}")
         return result
     
-    # La méthode _internal_get_children_details est obsolète et a été supprimée.
-    # Sa logique a été intégrée dans _internal_get_node_details et _internal_explore_hierarchy.
-    
     def _internal_get_node_details(self, pk: int, df: pd.DataFrame) -> Dict[str, Any]:
         """
         Logique interne pour récupérer les détails complets d'un nœud.
-
-        Cette méthode rassemble toutes les informations disponibles pour un nœud
-        donné, y compris les détails sur son parent et ses enfants directs.
-
-        Args:
-            pk (int): La clé primaire (PK) du nœud.
-            df (pd.DataFrame): Le DataFrame de la taxonomie.
-
-        Returns:
-            Dict[str, Any]: Un dictionnaire complet des attributs du nœud,
-            incluant des informations contextuelles (parent, enfants).
         """
         self._logger.debug(f"DEBUG: Entering _internal_get_node_details with pk={pk}")
         result = {
@@ -353,36 +237,28 @@ class InformalAnalysisPlugin:
             self._logger.debug(f"DEBUG: Exiting _internal_get_node_details (df is None) for pk={pk}")
             return result
         
-        # Convertir les colonnes numériques si elles existent et ne sont pas déjà numériques
         if 'PK' in df.columns and not pd.api.types.is_numeric_dtype(df['PK']):
             df['PK'] = pd.to_numeric(df['PK'], errors='coerce')
         if 'depth' in df.columns and not pd.api.types.is_numeric_dtype(df['depth']):
             df['depth'] = pd.to_numeric(df['depth'], errors='coerce')
         
-        # Trouver le nœud
-        # Correction pour la compatibilité pandas 2.x
-        # Remplacer df.loc[[pk]] par un filtrage sur l'index, plus robuste
         node_df = df.loc[df.index == pk]
         if len(node_df) == 0:
             result["error"] = f"PK {pk} non trouvée dans la taxonomie."
             return result
-        # Extraire les informations du nœud
         row = node_df.iloc[0]
-        # Suppression des logs de débogage
-        for col in row.index: # Utiliser row.index qui contient les noms des colonnes
+        for col in row.index:
             if pd.notna(row[col]):
-                # Gérer la conversion pour numpy types si nécessaire pour la sérialisation JSON
-                if hasattr(row[col], 'item'): # Typique pour les types numpy (int64, float64, etc.)
+                if hasattr(row[col], 'item'):
                     result[col] = row[col].item()
                 else:
                     result[col] = row[col]
         
-        # Trouver le parent
-        parent_df = pd.DataFrame() # Initialiser
+        parent_df = pd.DataFrame()
         parent_pk_val = None
         if 'FK_Parent' in df.columns and pd.notna(row.get('FK_Parent')):
             parent_pk_val = row.get('FK_Parent')
-        elif 'parent_pk' in df.columns and pd.notna(row.get('parent_pk')): # Fallback
+        elif 'parent_pk' in df.columns and pd.notna(row.get('parent_pk')):
             parent_pk_val = row.get('parent_pk')
         
         if parent_pk_val is not None:
@@ -393,24 +269,19 @@ class InformalAnalysisPlugin:
                 self._logger.warning(f"Valeur FK_Parent/parent_pk non entière pour le nœud {pk}: {parent_pk_val}")
 
         elif 'path' in df.columns:
-            # Sinon, essayer d'utiliser path
             path_val = row.get('path', '')
-            if path_val and '.' in str(path_val): # S'assurer que path_val est une chaîne
+            if path_val and '.' in str(path_val): 
                 parent_path = str(path_val).rsplit('.', 1)[0]
                 parent_df = df[df['path'] == parent_path]
         
         if len(parent_df) > 0:
             parent_row = parent_df.iloc[0]
             result["parent"] = {
-                "pk": int(parent_row.name), # .name est l'index (PK)
-                "nom_vulgarise": parent_row.get('nom_vulgarise', ''), # nom_vulgarise
-                "description_courte": parent_row.get('text_fr', ''),   # text_fr
-                "famille": parent_row.get('Famille', '')              # Famille
+                "pk": int(parent_row.name),
+                "nom_vulgarise": parent_row.get('nom_vulgarise', ''),
+                "description_courte": parent_row.get('text_fr', ''),
+                "famille": parent_row.get('Famille', '')
             }
-        
-        # Trouver les enfants (logique similaire à _internal_explore_hierarchy)
-        # children_list = [] # Renommé pour éviter conflit
-        # Pour être plus précis, on reprend la logique de _internal_explore_hierarchy pour les enfants directs
         
         child_nodes_for_details = pd.DataFrame()
         current_path_for_children = row.get('path', '')
@@ -436,30 +307,26 @@ class InformalAnalysisPlugin:
             for _, child_row_detail in child_nodes_for_details.iterrows():
                 child_info_detail = {
                     "pk": int(child_row_detail.name),
-                    "nom_vulgarise": child_row_detail.get('nom_vulgarise', ''), # nom_vulgarise
-                    "description_courte": child_row_detail.get('text_fr', ''),   # text_fr
-                    "famille": child_row_detail.get('Famille', '')              # Famille
+                    "nom_vulgarise": child_row_detail.get('nom_vulgarise', ''),
+                    "description_courte": child_row_detail.get('text_fr', ''),
+                    "famille": child_row_detail.get('Famille', '')
                 }
                 result["children"].append(child_info_detail)
         
         self._logger.debug(f"DEBUG: Exiting _internal_get_node_details for pk={pk}")
         return result
-    
 
     def get_taxonomy_summary_for_prompt(self) -> str:
         """Charge la taxonomie et la formate pour l'injection dans un prompt."""
         try:
             df = self._get_taxonomy_dataframe()
-            # Formate chaque ligne en une chaîne "nom: description"
             return "\n".join(f"- {row.get('nom_vulgarise', 'N/A')}: {row.get('text_fr', 'N/A')}" for _, row in df.iterrows())
         except Exception as e:
             self._logger.error(f"Impossible de charger ou formater la taxonomie pour le prompt : {e}")
             return "Erreur: taxonomie non disponible."
             
     def _validate_and_enrich_result(self, result: FallacyAnalysisResult):
-        """Placeholder pour une logique de validation ou d'enrichissement post-analyse."""
         self._logger.debug("Validation et enrichissement du résultat de l'analyse...")
-        # Ici, on pourrait ajouter de la logique pour valider les noms de sophismes contre la taxonomie, etc.
         pass
 
     @kernel_function(
@@ -467,21 +334,6 @@ class InformalAnalysisPlugin:
         name="explore_fallacy_hierarchy"
     )
     def explore_fallacy_hierarchy(self, current_pk_str: str, max_children: int = 15) -> str:
-        """
-        Explore la hiérarchie des sophismes à partir d'un nœud.
-
-        Wrapper de la fonction native exposée au kernel. Il prend une PK sous
-        forme de chaîne, appelle la logique interne et sérialise le résultat
-        en JSON pour le LLM.
-
-        Args:
-            current_pk_str (str): La PK du nœud à explorer (chaîne de caractères).
-            max_children (int): Le nombre maximal d'enfants à retourner.
-
-        Returns:
-            str: Une chaîne JSON représentant la structure hiérarchique du nœud
-                 et de ses enfants, ou un objet JSON d'erreur.
-        """
         self._logger.info(f"Exploration hiérarchie sophismes depuis PK {current_pk_str}...")
         
         try:
@@ -491,7 +343,7 @@ class InformalAnalysisPlugin:
             return json.dumps({"error": f"PK invalide: {current_pk_str}"})
         
         df = self._get_taxonomy_dataframe()
-        if df is None: # Vérifier si df est None après l'appel
+        if df is None:
             self._logger.error("Taxonomie sophismes non disponible (DataFrame est None).")
             return json.dumps({"error": "Taxonomie sophismes non disponible."})
         
@@ -502,7 +354,7 @@ class InformalAnalysisPlugin:
             self._logger.info(f" -> Hiérarchie explorée depuis PK {current_pk}: {len(result.get('children', []))} enfants.")
         
         try:
-            return json.dumps(result, indent=2, ensure_ascii=False, default=str) # Ajout de default=str pour types numpy
+            return json.dumps(result, indent=2, ensure_ascii=False, default=str)
         except Exception as e_json:
             self._logger.error(f"Erreur sérialisation JSON hiérarchie PK {current_pk}: {e_json}")
             result_error = {"error": f"Erreur sérialisation JSON: {str(e_json)}", "current_pk": current_pk}
@@ -513,23 +365,9 @@ class InformalAnalysisPlugin:
         name="get_fallacy_details"
     )
     def get_fallacy_details(self, fallacy_pk_str: str) -> str:
-        """
-        Obtient les détails complets d'un sophisme par sa PK.
-
-        Wrapper de la fonction native. Il gère la conversion de la PK (chaîne)
-        en entier, appelle la logique interne et sérialise le résultat complet
-        (nœud, parent, enfants) en JSON.
-
-        Args:
-            fallacy_pk_str (str): La PK (chaîne de caractères) du sophisme.
-
-        Returns:
-            str: Une chaîne JSON avec les détails du sophisme, ou un objet
-                 JSON d'erreur.
-        """
         self._logger.info(f"Récupération détails sophisme PK {fallacy_pk_str}...")
         
-        result_error = {"error": None} # Initialiser avec une clé "error"
+        result_error = {"error": None}
         
         try:
             fallacy_pk = int(fallacy_pk_str)
@@ -539,7 +377,7 @@ class InformalAnalysisPlugin:
             return json.dumps(result_error)
         
         df = self._get_taxonomy_dataframe()
-        if df is None: # Vérifier si df est None
+        if df is None:
             self._logger.error("Taxonomie sophismes non disponible (DataFrame est None).")
             return json.dumps({"pk_requested": fallacy_pk, "error": "Taxonomie sophismes non disponible."})
         
@@ -549,48 +387,31 @@ class InformalAnalysisPlugin:
         else:
              self._logger.info(f" -> Détails récupérés pour PK {fallacy_pk}.")
         try:
-            return json.dumps(details, indent=2, ensure_ascii=False, default=str) # Ajout de default=str
+            return json.dumps(details, indent=2, ensure_ascii=False, default=str)
         except Exception as e_json:
             self._logger.error(f"Erreur sérialisation JSON détails PK {fallacy_pk}: {e_json}")
             result_error["error"] = f"Erreur sérialisation JSON: {str(e_json)}"
             result_error["pk_requested"] = fallacy_pk
             return json.dumps(result_error)
-
-    # --- Nouvelles méthodes pour l'exploration de la taxonomie ---
-
+            
     @kernel_function(
         description="Recherche la définition d'un sophisme par son nom.",
         name="find_fallacy_definition"
     )
     def find_fallacy_definition(self, fallacy_name: str) -> str:
-        """
-        Recherche la définition d'un sophisme par son nom.
-
-        Args:
-            fallacy_name (str): Le nom (ou une partie du nom) du sophisme à
-                rechercher. La recherche est insensible à la casse.
-
-        Returns:
-            str: Une chaîne JSON contenant les détails du premier sophisme trouvé
-                 correspondant, ou un objet JSON d'erreur.
-        """
         self._logger.info(f"Recherche de la définition pour le sophisme: '{fallacy_name}'")
         df = self._get_taxonomy_dataframe()
         if df is None:
             return json.dumps({"error": "Taxonomie non disponible."})
 
-        # Recherche cas insensible dans 'nom_vulgarisé' et 'text_fr' (pour la taxonomie réelle)
-        # 'fallacy_type' n'est pas une colonne standard de la taxonomie réelle pour le nom principal.
-        
         condition_nom_vulgarise = pd.Series(False, index=df.index)
         if 'nom_vulgarise' in df.columns:
             condition_nom_vulgarise = df['nom_vulgarise'].fillna('').astype(str).str.contains(fallacy_name, case=False, na=False)
         
         condition_text_fr = pd.Series(False, index=df.index)
-        if 'text_fr' in df.columns: # text_fr peut aussi contenir des noms/labels
+        if 'text_fr' in df.columns:
             condition_text_fr = df['text_fr'].fillna('').astype(str).str.contains(fallacy_name, case=False, na=False)
             
-        # On peut aussi chercher dans 'Latin' si pertinent
         condition_latin = pd.Series(False, index=df.index)
         if 'Latin' in df.columns:
             condition_latin = df['Latin'].fillna('').astype(str).str.contains(fallacy_name, case=False, na=False)
@@ -598,13 +419,8 @@ class InformalAnalysisPlugin:
         found_fallacy = df[condition_nom_vulgarise | condition_text_fr | condition_latin]
 
         if not found_fallacy.empty:
-            # Prendre la première occurrence si plusieurs
-            # Utiliser 'desc_fr' pour la définition
             definition = found_fallacy.iloc[0].get('desc_fr', "Définition non disponible.")
-            
-            # Gérer l'absence de 'PK' comme index
             pk_found = found_fallacy.iloc[0].name if df.index.name == 'PK' else found_fallacy.index[0]
-            # Le nom trouvé est prioritairement 'nom_vulgarisé', sinon 'text_fr', sinon le nom cherché
             name_found = found_fallacy.iloc[0].get('nom_vulgarise', found_fallacy.iloc[0].get('text_fr', fallacy_name))
 
             self._logger.info(f"Définition trouvée pour '{name_found}' (PK: {pk_found}).")
@@ -618,15 +434,6 @@ class InformalAnalysisPlugin:
         name="list_fallacy_categories"
     )
     def list_fallacy_categories(self) -> str:
-        """
-        Liste toutes les catégories de sophismes disponibles.
-
-        Cette fonction extrait et dédoublonne les valeurs de la colonne 'Famille'
-        de la taxonomie.
-
-        Returns:
-            str: Une chaîne JSON contenant une liste de toutes les catégories.
-        """
         self._logger.info("Listage des catégories de sophismes...")
         try:
             df = self._get_taxonomy_dataframe()
@@ -635,7 +442,6 @@ class InformalAnalysisPlugin:
             return json.dumps({"error": f"Erreur de chargement de la taxonomie: {e}"})
 
         if df is None:
-            # Cette condition est maintenant probablement redondante mais gardée par sécurité
             return json.dumps({"error": "Taxonomie non disponible (DataFrame est None)."})
 
         if 'Famille' in df.columns:
@@ -646,9 +452,7 @@ class InformalAnalysisPlugin:
             else:
                 self._logger.info("Colonne 'Famille' présente mais vide ou que des NaN.")
                 return json.dumps({"categories": [], "message": "Aucune catégorie définie dans la colonne 'Famille'."})
-        # 'fallacy_type' n'est pas pertinent ici pour les catégories dans la taxonomie réelle.
-        # La logique se base sur 'Famille'.
-        else: # Cas où 'Famille' n'est pas dans les colonnes
+        else:
             self._logger.warning("Colonne 'Famille' non trouvée dans la taxonomie.")
             return json.dumps({"categories": [], "error": "Colonne 'Famille' pour les catégories non trouvée dans la taxonomie."})
 
@@ -657,16 +461,6 @@ class InformalAnalysisPlugin:
         name="list_fallacies_in_category"
     )
     def list_fallacies_in_category(self, category_name: str) -> str:
-        """
-        Liste tous les sophismes d'une catégorie spécifique.
-
-        Args:
-            category_name (str): Le nom exact de la catégorie (sensible à la casse).
-
-        Returns:
-            str: Une chaîne JSON contenant une liste de sophismes (nom et PK)
-                 appartenant à cette catégorie.
-        """
         self._logger.info(f"Listage des sophismes dans la catégorie: '{category_name}'")
         df = self._get_taxonomy_dataframe()
         if df is None:
@@ -676,18 +470,16 @@ class InformalAnalysisPlugin:
             self._logger.warning("Colonne 'Famille' non trouvée pour lister les sophismes par catégorie.")
             return json.dumps({"category": category_name, "fallacies": [], "error": "Colonne 'Famille' pour les catégories non trouvée."})
 
-        # Filtrer par catégorie (cas sensible pour correspondre aux valeurs exactes de 'Famille')
         fallacies_in_cat_df = df[df['Famille'] == category_name]
 
         if not fallacies_in_cat_df.empty:
             result_list = []
             for index, row in fallacies_in_cat_df.iterrows():
-                pk_val = index # PK est l'index
-                # Utiliser nom_vulgarisé, sinon text_fr
+                pk_val = index
                 name_val = row.get('nom_vulgarisé', row.get('text_fr', 'Nom non disponible'))
                 result_list.append({
-                    "pk": int(pk_val), # Assurer que PK est un entier
-                    "nom_vulgarise": name_val # Utiliser la clé "nom_vulgarise" pour la cohérence
+                    "pk": int(pk_val),
+                    "nom_vulgarise": name_val 
                 })
             self._logger.info(f"{len(result_list)} sophismes trouvés dans la catégorie '{category_name}'.")
             return json.dumps({"category": category_name, "fallacies": result_list}, default=str)
@@ -700,23 +492,11 @@ class InformalAnalysisPlugin:
         name="get_fallacy_example"
     )
     def get_fallacy_example(self, fallacy_name: str) -> str:
-        """
-        Récupère un exemple illustratif pour un sophisme donné.
-
-        Args:
-            fallacy_name (str): Le nom du sophisme pour lequel un exemple est
-                recherché (insensible à la casse).
-
-        Returns:
-            str: Une chaîne JSON contenant l'exemple trouvé, ou un objet JSON
-                 d'erreur si le sophisme n'est pas trouvé.
-        """
         self._logger.info(f"Recherche d'un exemple pour le sophisme: '{fallacy_name}'")
         df = self._get_taxonomy_dataframe()
         if df is None:
             return json.dumps({"error": "Taxonomie non disponible."})
 
-        # Recherche cas insensible dans 'nom_vulgarisé' et 'text_fr' (pour la taxonomie réelle)
         condition_nom_vulgarise = pd.Series(False, index=df.index)
         if 'nom_vulgarise' in df.columns:
             condition_nom_vulgarise = df['nom_vulgarise'].fillna('').astype(str).str.contains(fallacy_name, case=False, na=False)
@@ -732,7 +512,6 @@ class InformalAnalysisPlugin:
         found_fallacy = df[condition_nom_vulgarise | condition_text_fr | condition_latin]
 
         if not found_fallacy.empty:
-            # Utiliser 'example_fr' pour l'exemple
             example = found_fallacy.iloc[0].get('example_fr', "Exemple non disponible.")
             pk_found = found_fallacy.iloc[0].name if df.index.name == 'PK' else found_fallacy.index[0]
             name_found = found_fallacy.iloc[0].get('nom_vulgarise', found_fallacy.iloc[0].get('text_fr', fallacy_name))
@@ -745,32 +524,19 @@ class InformalAnalysisPlugin:
 
 logger.info("Classe InformalAnalysisPlugin (V12 avec nouvelles fonctions) définie.")
 
-# --- Fonction setup_informal_kernel (V15 - Tool Use) ---
 def setup_informal_kernel(kernel: sk.Kernel, llm_service: Any, taxonomy_file_path: Optional[str] = None) -> None:
-    """
-    Configure un `Kernel` pour l'analyse d'arguments informels, en se basant sur
-    des outils et des prompts qui encouragent l'autonomie de l'agent.
-
-    Args:
-        kernel (sk.Kernel): L'instance du kernel à configurer.
-        llm_service (Any): Le service LLM qui exécutera les fonctions sémantiques.
-        taxonomy_file_path (Optional[str]): Chemin personnalisé vers un fichier
-            de taxonomie CSV pour le plugin.
-    """
     plugin_name = "InformalAnalyzer"
     logger.info(f"Configuration Kernel pour {plugin_name} (V15 - Tool Use)...")
 
     if not llm_service:
         raise ValueError("Le service LLM (llm_service) est requis")
 
-    # 1. Instancier et ajouter le plugin natif qui contient les outils d'exploration
     informal_plugin_instance = InformalAnalysisPlugin(kernel=kernel, taxonomy_file_path=taxonomy_file_path)
     if plugin_name in kernel.plugins:
         logger.warning(f"Plugin '{plugin_name}' déjà présent. Remplacement.")
     kernel.add_plugin(informal_plugin_instance, plugin_name)
     logger.debug(f"Instance du plugin '{plugin_name}' ajoutée/mise à jour dans le kernel.")
 
-    # 2. Récupérer les settings d'exécution du LLM
     default_settings = None
     if llm_service and hasattr(llm_service, 'service_id'):
         try:
@@ -781,7 +547,6 @@ def setup_informal_kernel(kernel: sk.Kernel, llm_service: Any, taxonomy_file_pat
     elif llm_service:
         logger.warning(f"llm_service fourni pour {plugin_name} mais n'a pas d'attribut 'service_id'.")
 
-    # 3. Ajouter les fonctions sémantiques en utilisant les prompts appropriés
     try:
         kernel.add_function(
             prompt=prompt_identify_args_v8,
@@ -793,7 +558,7 @@ def setup_informal_kernel(kernel: sk.Kernel, llm_service: Any, taxonomy_file_pat
         logger.debug(f"Fonction {plugin_name}.semantic_IdentifyArguments ajoutée.")
 
         kernel.add_function(
-           prompt=prompt_analyze_fallacies_v3_tool_use, # Utilisation du nouveau prompt
+           prompt=prompt_analyze_fallacies_v3_tool_use, 
            plugin_name=plugin_name,
            function_name="semantic_AnalyzeFallacies",
             description="Analyse les sophismes dans un argument en guidant le LLM à utiliser les outils disponibles.",
@@ -814,9 +579,6 @@ def setup_informal_kernel(kernel: sk.Kernel, llm_service: Any, taxonomy_file_pat
 
     logger.info(f"Kernel {plugin_name} configuré (V15 - Tool Use).")
 
-# --- Instructions Système ---
-# (Provenant de la cellule [ID: 35fbe045] du notebook 'Argument_Analysis_Agentic-1-informal_agent.ipynb')
-# Mise à jour pour inclure les nouvelles fonctions
 INFORMAL_AGENT_INSTRUCTIONS_V15_TEMPLATE = """
 Votre Rôle: Spécialiste en analyse rhétorique informelle. Vous identifiez les arguments et analysez les sophismes en utilisant une taxonomie externe (via CSV).
 Racine de la Taxonomie des Sophismes: PK={ROOT_PK}
@@ -853,85 +615,13 @@ Votre principal objectif est d'être aussi précis que possible. Si vous identif
 4.  **Enregistrer les résultats** (arguments ou sophismes) dans l'état partagé via les fonctions `StateManager` appropriées (ex: `StateManager.add_identified_argument`, `StateManager.add_identified_fallacy`). Si vous utilisez les nouvelles fonctions d'exploration (find_definition, list_categories, etc.), le résultat de ces fonctions est directement la réponse à fournir.
 5.  **Signaler la fin de la tâche** au PM en appelant `StateManager.add_answer` avec le `task_id` reçu, un résumé de votre travail (ou le résultat direct des fonctions d'exploration) et les IDs des éléments ajoutés/consultés (`arg_id`, `fallacy_id`, `pk`, `category_name`). **Ensuite, appelez `StateManager.designate_next_agent(agent_name="ProjectManagerAgent")` pour redonner la main au PM.**
 
-**Exemples de Tâches Spécifiques (Mise à jour):**
-
-* **Tâche "Identifier les arguments":**
-    1.  Récupérer le texte brut (`raw_text`) depuis l'état.
-    2.  Appeler `InformalAnalyzer.semantic_IdentifyArguments(input=raw_text)`.
-    3.  Pour chaque argument trouvé, appeler `StateManager.add_identified_argument`. Collecter `arg_ids`.
-    4.  Appeler `StateManager.add_answer` (résumé, `arg_ids`). **Puis, désignez "ProjectManagerAgent".**
-
-* **Tâche "Explorer taxonomie [depuis PK]":**
-    1.  Déterminer PK de départ.
-    2.  Appeler `InformalAnalyzer.explore_fallacy_hierarchy(current_pk_str="[PK]")`.
-    3.  Analyser JSON. Formuler réponse textuelle (nœud, enfants, actions possibles).
-    4.  Appeler `StateManager.add_answer` (réponse, PK exploré). **Puis, désignez "ProjectManagerAgent".**
-
-* **Tâche "Obtenir détails sophisme [PK]":**
-    1.  Appeler `InformalAnalyzer.get_fallacy_details(fallacy_pk_str="[PK]")`.
-    2.  Analyser JSON. Formuler réponse textuelle (détails).
-    3.  Appeler `StateManager.add_answer` (détails formatés, PK). **Puis, désignez "ProjectManagerAgent".**
-
-* **Tâche "Trouver définition sophisme [nom]":**
-    1.  Appeler `InformalAnalyzer.find_fallacy_definition(fallacy_name="[nom du sophisme]")`.
-    2.  Analyser JSON. Extraire la définition.
-    3.  Appeler `StateManager.add_answer` (définition trouvée ou message d'erreur, nom du sophisme). **Puis, désignez "ProjectManagerAgent".**
-
-* **Tâche "Lister catégories sophismes":**
-    1.  Appeler `InformalAnalyzer.list_fallacy_categories()`.
-    2.  Analyser JSON. Extraire la liste des catégories.
-    3.  Appeler `StateManager.add_answer` (liste des catégories ou message d'erreur). **Puis, désignez "ProjectManagerAgent".**
-
-* **Tâche "Lister sophismes dans catégorie [nom_catégorie]":**
-    1.  Appeler `InformalAnalyzer.list_fallacies_in_category(category_name="[nom_catégorie]")`.
-    2.  Analyser JSON. Extraire la liste des sophismes (nom, PK).
-    3.  Appeler `StateManager.add_answer` (liste des sophismes ou message d'erreur, nom de la catégorie). **Puis, désignez "ProjectManagerAgent".**
-
-* **Tâche "Obtenir exemple sophisme [nom]":**
-    1.  Appeler `InformalAnalyzer.get_fallacy_example(fallacy_name="[nom du sophisme]")`.
-    2.  Analyser JSON. Extraire l'exemple.
-    3.  Appeler `StateManager.add_answer` (exemple trouvé ou message d'erreur, nom du sophisme). **Puis, désignez "ProjectManagerAgent".**
-
-* **Tâche "Attribuer sophisme [PK] à argument [arg_id]":**
-    1.  Utiliser `get_fallacy_details` ou `find_fallacy_definition` pour obtenir label et description.
-    2.  Rédiger justification détaillée.
-    3.  Appeler `StateManager.add_identified_fallacy`. Noter `fallacy_id`.
-    4.  Appeler `StateManager.add_answer`. **Puis, désignez "ProjectManagerAgent".**
-
-* **Tâche "Analyser sophismes dans argument [arg_id]" (ou texte général):**
-    1.  Récupérer texte.
-    2.  Récupérer `task_id`.
-    3.  Appeler `InformalAnalyzer.semantic_AnalyzeFallacies(input=[texte])`.
-    4.  Appeler `StateManager.add_answer` avec la réponse TEXTUELLE COMPLÈTE de `semantic_AnalyzeFallacies`.
-    5.  Appeler `StateManager.designate_next_agent(agent_name="ProjectManagerAgent")`.
-
-* **Si Tâche Inconnue/Pas Claire:** Signaler via `StateManager.add_answer`. **Puis, désignez "ProjectManagerAgent".**
-
-**Directives pour l'Exploration de la Taxonomie:**
-- Explorez systématiquement la taxonomie en profondeur, pas seulement les premiers niveaux.
-- Utilisez une approche "top-down": commencez par les grandes catégories, puis explorez les sous-catégories pertinentes.
-- Pour chaque argument, considérez au moins 3-5 branches différentes de la taxonomie.
-- Ne vous limitez pas aux sophismes les plus évidents ou les plus connus.
-- Documentez votre processus d'exploration dans vos réponses.
-
-**Directives pour les Justifications:**
-- Vos justifications doivent être détaillées (au moins 100 mots).
-- Incluez toujours des citations spécifiques de l'argument qui illustrent le sophisme.
-- Expliquez le mécanisme du sophisme et son impact sur la validité de l'argument.
-- Quand c'est pertinent, fournissez un exemple similaire pour clarifier.
-- Évitez les justifications vagues ou génériques.
-
 **Important:** Toujours utiliser le `task_id` fourni par le PM pour `StateManager.add_answer`. Gérer les erreurs potentielles des appels de fonction (vérifier `error` dans JSON retourné par les fonctions natives, ou si une fonction retourne `FUNC_ERROR:`). **Après un appel réussi à une fonction sémantique d'analyse (comme `semantic_IdentifyArguments` ou `semantic_AnalyzeFallacies`), vous devez traiter son résultat et passer aux étapes d'enregistrement et de rapport via `StateManager`, et NON ré-appeler la fonction d'analyse immédiatement.**
 **CRUCIAL : Lorsque vous appelez une fonction (outil) comme `semantic_IdentifyArguments` ou `semantic_AnalyzeFallacies`, vous DEVEZ fournir TOUS ses arguments requis (par exemple, `input` pour ces fonctions) dans le champ `arguments` de l'appel `tool_calls`. Ne faites PAS d'appels avec des arguments vides ou manquants.**
 **CRUCIAL : Si vous décidez d'appeler la fonction `StateManager.designate_next_agent`, l'argument `agent_name` DOIT être l'un des noms d'agents valides suivants : "ProjectManagerAgent", "InformalAnalysisAgent", "PropositionalLogicAgent", "ExtractAgent". N'utilisez JAMAIS un nom de plugin ou un nom de fonction sémantique comme nom d'agent.**
 """
 INFORMAL_AGENT_INSTRUCTIONS = INFORMAL_AGENT_INSTRUCTIONS_V15_TEMPLATE.format(ROOT_PK=0)
-"""
-Instructions système finales pour l'agent d'analyse informelle.
-Formatées à partir de `INFORMAL_AGENT_INSTRUCTIONS_V15_TEMPLATE` avec `ROOT_PK` défini à 0.
-"""
 
 logger.info("Instructions Système INFORMAL_AGENT_INSTRUCTIONS (V15 avec nouvelles fonctions) définies.")
 
-# Log de chargement
+
 logging.getLogger(__name__).debug("Module agents.core.informal.informal_definitions chargé.")

@@ -1,9 +1,9 @@
 import pytest
-import subprocess
 import sys
 import os
 from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
+from project_core.utils.shell import run_sync
 
 @pytest.fixture(scope="function")
 def run_in_jvm_subprocess():
@@ -42,7 +42,9 @@ def run_in_jvm_subprocess():
             capture_output=False,  # Désactivé pour le débogage
             check=False,
             cwd=project_root,
-            env=env
+            check_errors=False,  # On gère l'échec manuellement avec pytest.fail
+            capture_output=True, # Assurons-nous que la sortie est capturée
+            # Les autres paramètres (text, encoding, etc.) sont gérés par run_sync
         )
         
         # La sortie (stdout/stderr) s'affichera directement dans la console pytest.

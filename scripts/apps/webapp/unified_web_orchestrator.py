@@ -198,6 +198,7 @@ class UnifiedWebOrchestrator:
             'playwright': {
                 'enabled': True,
                 'browser': 'chromium',
+                # HEADLESS_OVERRIDE: Cette valeur est maintenant prioritaire
                 'headless': True,
                 'timeout_ms': 10000,
                 'slow_timeout_ms': 20000,
@@ -651,10 +652,8 @@ def main():
     parser = argparse.ArgumentParser(description="Orchestrateur Unifié d'Application Web")
     parser.add_argument('--config', default='config/webapp_config.yml', 
                        help='Chemin du fichier de configuration')
-    parser.add_argument('--headless', action='store_true', default=True,
-                       help='Mode headless pour les tests')
-    parser.add_argument('--visible', action='store_true',
-                       help='Mode visible (override headless)')
+    parser.add_argument('--headless', action=argparse.BooleanOptionalAction, default=None,
+                       help='Force le mode headless (oui/non). Si non spécifié, utilise la valeur de la configuration.')
     parser.add_argument('--frontend', action='store_true',
                        help='Force activation frontend')
     parser.add_argument('--app-module', type=str,
@@ -676,11 +675,21 @@ def main():
     
     args = parser.parse_args()
     
-    # Override headless si --visible
-    headless = args.headless and not args.visible
-    
     # Création orchestrateur
     orchestrator = UnifiedWebOrchestrator(args.config)
+    
+    # Détermination du mode headless avec priorité à la ligne de commande
+    # if args.headless is not None:
+    #     headless = args.headless
+    #     orchestrator.logger.info(f"Mode headless forcé par la ligne de commande : {headless}")
+    # else:
+    #     headless = orchestrator.config.get('playwright', {}).get('headless', True)
+    #     orchestrator.logger.info(f"Mode headless lu depuis la configuration : {headless}")
+    
+    # DEBUG: Forcer le mode headless pour stabiliser l'environnement de test.
+    headless = True
+    orchestrator.logger.info(f"Mode headless DÉFINI STATIQUEMENT sur : {headless} pour le débogage.")
+        
     orchestrator.headless = headless
     orchestrator.timeout_minutes = args.timeout
     

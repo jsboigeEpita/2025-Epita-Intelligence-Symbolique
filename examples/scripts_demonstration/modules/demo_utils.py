@@ -4,19 +4,20 @@ Utilitaires communs pour les modules de démonstration EPITA
 Architecture modulaire - Intelligence Symbolique
 """
 
-import subprocess
 import sys
 import time
 import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 
+from project_core.utils.shell import run_sync, run_in_activated_env, ShellCommandError
+
 # Import de PyYAML avec fallback
 try:
     import yaml
 except ImportError:
     print("PyYAML non trouvé. Installation...")
-    subprocess.run([sys.executable, "-m", "pip", "install", "PyYAML"], check=True)
+    run_sync([sys.executable, "-m", "pip", "install", "PyYAML"], check_errors=True)
     import yaml
 
 # Codes couleur ANSI pour la console
@@ -125,22 +126,20 @@ def executer_tests(pattern_tests: List[str], logger: DemoLogger, timeout: int = 
     start_time = time.time()
     
     try:
-        # Construire la commande pytest
-        cmd = [sys.executable, "-m", "pytest", "-v"] + pattern_tests
+        # Construire la commande pour run_in_activated_env. On lance pytest en tant que module.
+        cmd = ["-m", "pytest", "-v"] + pattern_tests
         
-        process = subprocess.run(
+        process = run_in_activated_env(
             cmd,
-            capture_output=True,
-            text=True,
-            encoding='utf-8',
-            errors='replace',
+            check_errors=False, # On gère les erreurs manuellement
             timeout=timeout
         )
         
         resultats['duration'] = time.time() - start_time
         
         # Parser la sortie
-        for line in process.stdout.splitlines():
+        output_to_parse = process.stdout or ""
+        for line in output_to_parse.splitlines():
             if "PASSED" in line:
                 resultats['passed'] += 1
                 resultats['total'] += 1
@@ -153,17 +152,19 @@ def executer_tests(pattern_tests: List[str], logger: DemoLogger, timeout: int = 
                 resultats['details'].append(line)
         
         if process.returncode == 0:
-            logger.success(f"{Symbols.CHECK} Tests réussis : {resultats['passed']}/{resultats['total']}")
+            logger.success(f"{Symbols.CHECK} Tests réussis : {resultats.get('passed', 0)}/{resultats.get('total', 0)}")
             return True, resultats
         else:
-            logger.error(f"{Symbols.CROSS} Tests échoués : {resultats['failed']}/{resultats['total']}")
+            logger.error(f"{Symbols.CROSS} Tests échoués : {resultats.get('failed', 0)}/{resultats.get('total', 0)}")
+            if process.stderr:
+                logger.error(f"Stderr: {process.stderr}")
             return False, resultats
             
-    except subprocess.TimeoutExpired:
-        logger.error(f"{Symbols.CROSS} Timeout atteint ({timeout}s)")
+    except ShellCommandError as e:
+        logger.error(f"{Symbols.CROSS} Erreur Shell (Timeout ou autre) : {e}")
         return False, resultats
     except Exception as e:
-        logger.error(f"{Symbols.CROSS} Erreur lors de l'exécution : {e}")
+        logger.error(f"{Symbols.CROSS} Erreur inattendue lors de l'exécution : {e}")
         return False, resultats
 
 def afficher_stats_tests(resultats: Dict[str, Any]) -> None:

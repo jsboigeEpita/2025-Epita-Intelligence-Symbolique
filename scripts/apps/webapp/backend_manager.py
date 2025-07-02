@@ -14,14 +14,15 @@ Date: 07/06/2025
 import os
 import sys
 import sys
+import subprocess
 import time
 import json
 import asyncio
 import logging
-import subprocess
 import psutil
 import threading
 from typing import Dict, List, Optional, Any, IO
+from project_core.utils.shell import run_sync, run_async, ShellCommandError
 from pathlib import Path
 import aiohttp
 
@@ -56,11 +57,11 @@ class BackendManager:
         self.env_activation = f'powershell -Command ". ./activate_project_env.ps1"'
         
         # État runtime
-        self.process: Optional[subprocess.Popen] = None
+        self.process: Optional[asyncio.subprocess.Process] = None
         self.current_port: Optional[int] = None
         self.current_url: Optional[str] = None
         self.pid: Optional[int] = None
-        self.log_threads: List[threading.Thread] = []
+        self.log_tasks: List[asyncio.Task] = []
         
     async def start_with_failover(self, app_module: Optional[str] = None, port_override: Optional[int] = None) -> Dict[str, Any]:
         """
@@ -110,22 +111,25 @@ class BackendManager:
             'pid': None
         }
     
-    def _log_stream(self, stream: IO[str], log_level: int):
-        """Lit un stream et logue chaque ligne."""
-        try:
-            for line in iter(stream.readline, ''):
-                if line:
-                    self.logger.log(log_level, f"[BACKEND] {line.strip()}")
-            stream.close()
-        except Exception as e:
-            self.logger.error(f"Erreur dans le thread de logging: {e}")
+    async def _log_stream_async(self, stream: asyncio.StreamReader, log_level: int):
+        """Lit un stream asyncio et logue chaque ligne."""
+        while not stream.at_eof():
+            try:
+                line_bytes = await stream.readline()
+                if line_bytes:
+                    line = line_bytes.decode('utf-8', errors='replace').strip()
+                    self.logger.log(log_level, f"[BACKEND] {line}")
+            except Exception as e:
+                self.logger.error(f"Erreur dans la tâche de logging: {e}")
+                break
 
     def _get_conda_env_python_executable(self, env_name: str) -> Optional[str]:
         """Trouve le chemin de l'exécutable Python pour un environnement Conda donné."""
         try:
             self.logger.info(f"Recherche de l'environnement Conda nommé: '{env_name}'")
             # Exécute `conda info` pour obtenir la liste des environnements
-            result = subprocess.run(['conda', 'info', '--envs', '--json'], capture_output=True, text=True, check=True, shell=True)
+            # Note: `shell=True` is avoided by design in shell_utils. `conda` must be in PATH.
+            result = run_sync(['conda', 'info', '--envs', '--json'], check_errors=True)
             envs_data = json.loads(result.stdout)
             
             # Cherche le chemin de l'environnement cible
@@ -149,7 +153,7 @@ class BackendManager:
                 self.logger.error(f"python.exe non trouvé dans l'environnement '{env_name}' au chemin: {python_executable}")
                 return None
 
-        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
+        except (ShellCommandError, FileNotFoundError, json.JSONDecodeError) as e:
             self.logger.error(f"Erreur critique lors de la recherche de l'environnement Conda via 'conda info': {e}")
             return None
 
@@ -191,24 +195,18 @@ class BackendManager:
             env['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
             env['PYTHONPATH'] = str(project_root)
             
-            self.process = subprocess.Popen(
+            self.process = await run_async(
                 cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
                 cwd=project_root,
-                env=env,
-                text=True,
-                encoding='utf-8',
-                errors='replace'
+                # env is not directly supported by run_async, but it inherits os.environ
+                # which we have modified. For a more robust solution, run_async could be extended.
             )
-            # Démarrage des threads pour logger stdout et stderr du sous-processus
-            self.log_threads = [
-                threading.Thread(target=self._log_stream, args=(self.process.stdout, logging.INFO)),
-                threading.Thread(target=self._log_stream, args=(self.process.stderr, logging.ERROR))
+            
+            # Démarrage des tâches asynchrones pour logger stdout et stderr
+            self.log_tasks = [
+                asyncio.create_task(self._log_stream_async(self.process.stdout, logging.INFO)),
+                asyncio.create_task(self._log_stream_async(self.process.stderr, logging.ERROR))
             ]
-            for t in self.log_threads:
-                t.daemon = True
-                t.start()
 
             backend_ready = await self._wait_for_backend(port)
             
@@ -239,7 +237,7 @@ class BackendManager:
         # Boucle principale avec un timeout global long
         while time.time() - start_time < self.timeout_seconds:
             # Vérifie si le processus est toujours en cours d'exécution
-            if self.process.poll() is not None:
+            if self.process.returncode is not None:
                 self.logger.error(f"Processus backend terminé prématurément (code: {self.process.returncode}). Voir logs pour détails.")
                 return False
 
@@ -268,7 +266,7 @@ class BackendManager:
 
         # Si la boucle se termine, c'est un échec définitif par timeout global.
         self.logger.error(f"Timeout global atteint ({self.timeout_seconds}s) - Backend non accessible sur {url}")
-        if self.process.poll() is None:
+        if self.process.returncode is None:
             self.logger.error("Le processus Backend est toujours en cours mais ne répond pas. Terminaison forcée...")
             self.process.terminate()
             try:
@@ -325,14 +323,19 @@ class BackendManager:
                 
                 # Attente arrêt propre (5s max)
                 try:
-                    self.process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
+                    await asyncio.wait_for(self.process.wait(), timeout=5.0)
+                except asyncio.TimeoutError:
                     # Force kill si nécessaire
                     self.process.kill()
-                    self.process.wait()
+                    await self.process.wait()
                     
                 self.logger.info("Backend arrêté")
                 
+                # Annuler les tâches de logging
+                for task in self.log_tasks:
+                    task.cancel()
+                await asyncio.gather(*self.log_tasks, return_exceptions=True)
+
             except Exception as e:
                 self.logger.error(f"Erreur arrêt backend: {e}")
             finally:
@@ -340,6 +343,7 @@ class BackendManager:
                 self.current_port = None
                 self.current_url = None
                 self.pid = None
+                self.log_tasks = []
     
     async def _save_backend_info(self, result: Dict[str, Any]):
         """Sauvegarde les informations du backend"""

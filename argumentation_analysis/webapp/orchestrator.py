@@ -50,9 +50,14 @@ sys.path.insert(0, str(project_root))
 try:
     from project_core.config.port_manager import get_port_manager, set_environment_variables
     CENTRAL_PORT_MANAGER_AVAILABLE = True
+    from project_core.utils.shell import run_async, run_in_activated_env_async, ShellCommandError
 except ImportError:
     CENTRAL_PORT_MANAGER_AVAILABLE = False
     print("[WARNING] Gestionnaire centralisé des ports non disponible, utilisation des ports par défaut")
+    # Provide dummy implementations if the import fails
+    class ShellCommandError(Exception): pass
+    async def run_async(command, **kwargs): raise NotImplementedError("Shell utilities not found")
+    async def run_in_activated_env_async(command, **kwargs): raise NotImplementedError("Shell utilities not found")
 
 # --- DÉBUT DES CLASSES MINIMALES DE REMPLACEMENT ---
 
@@ -174,20 +179,13 @@ class MinimalBackendManager:
 
         module_spec = self.config.get('module', 'api.main:app')
         
-        # L'environnement Conda est déjà activé par le script appelant (run_tests.ps1).
-        # Nous utilisons donc directement l'exécutable Python courant.
-        python_executable = sys.executable
-        self.logger.info(f"[BACKEND] Utilisation du chemin Python absolu : {python_executable}")
-
         command = [
-            'conda', 'run', '-n', 'projet-is', '--no-capture-output',
-            'python',
             '-m', 'uvicorn', module_spec,
             '--host', '127.0.0.1',
             '--port', str(self.port)
         ]
         
-        self.logger.info(f"[BACKEND] Commande de lancement: {' '.join(command)}")
+        self.logger.info(f"[BACKEND] Commande de lancement: python {' '.join(command)}")
 
         try:
             project_root = str(Path(__file__).parent.parent.parent.resolve())
@@ -205,10 +203,11 @@ class MinimalBackendManager:
             env['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
             self.logger.info("[BACKEND] Injection de KMP_DUPLICATE_LIB_OK=TRUE pour corriger le conflit OpenMP.")
 
-            self.process = await asyncio.create_subprocess_exec(
-                *command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+            # Utilisation de la nouvelle fonction unifiée
+            # Le nom de l'environnement est symbolique ici, car la fonction recherche .venv
+            self.process = await run_in_activated_env_async(
+                command=command,
+                env_name="projet-is", # Nom symbolique
                 env=env
             )
             self.logger.info(f"[BACKEND] Processus backend (PID: {self.process.pid}) lancé.")
@@ -299,10 +298,7 @@ class MinimalFrontendManager:
         conda_env_name = os.environ.get('CONDA_DEFAULT_ENV', 'projet-is')
         self.logger.info(f"[FRONTEND] Utilisation de l'environnement Conda '{conda_env_name}' pour le démarrage.")
     
-        # Encapsuler la commande avec `conda run` pour garantir l'environnement correct
-        start_command = [
-            'conda', 'run', '-n', conda_env_name, '--no-capture-output'
-        ] + start_command_str.split()
+        start_command = start_command_str.split()
         
         self.logger.info(f"[FRONTEND] Tentative de démarrage du frontend dans '{path}' sur le port {port}...")
         self.logger.info(f"[FRONTEND] Commande de lancement: {' '.join(start_command)}")
@@ -316,12 +312,11 @@ class MinimalFrontendManager:
             self.logger.info(f"[FRONTEND] Variable d'environnement REACT_APP_BACKEND_URL définie sur: {self.backend_url}")
 
         try:
-            self.process = await asyncio.create_subprocess_exec(
-                *start_command,
+            # Utilisation de la nouvelle fonction unifiée `run_async` avec l'environnement corrigé
+            self.process = await run_async(
+                command=start_command,
                 cwd=path,
-                env=env,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                env=env
             )
             self.logger.info(f"[FRONTEND] Processus frontend (PID: {self.process.pid}) lancé.")
 
@@ -835,12 +830,8 @@ class UnifiedWebOrchestrator:
         self.add_trace("[TEST] COMMANDE", " ".join(command))
         
         try:
-            process = await asyncio.create_subprocess_exec(
-                *command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                # Les variables d'environnement sont héritées, y compris celles qu'on vient de définir
-            )
+            # Remplacer par run_async
+            process = await run_async(command)
 
             # Log en temps réel
             async def log_stream(stream, logger_func):

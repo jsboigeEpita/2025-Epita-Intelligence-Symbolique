@@ -24,59 +24,64 @@ if not logger.handlers and not logger.propagate:
     logger.setLevel(logging.INFO)
 logger.info("<<<<< MODULE llm_service.py LOADED >>>>>")
 
+# Petit classes pour simuler la structure de la réponse de SK
+class MockFunctionCall:
+    def __init__(self, name: str, arguments: dict):
+        self.name = name
+        self._arguments = arguments
+
+    def parse_arguments(self) -> dict:
+        return self._arguments
+
+class MockToolCall:
+    def __init__(self, function_name: str, arguments: dict):
+        self.function = MockFunctionCall(name=function_name, arguments=arguments)
+
 class MockChatCompletion(ChatCompletionClientBase):
     """
-    Service de complétion de chat mocké qui retourne des réponses prédéfinies.
-    Simule le comportement de OpenAIChatCompletion pour les tests E2E.
+    Service de complétion de chat mocké qui retourne des réponses prédéfinies
+    et simule une réponse de type 'tool_call' attendue par l'agent.
     """
     async def get_chat_message_contents(
         self,
         chat_history: ChatHistory,
         **kwargs,
     ) -> list[ChatMessageContent]:
-        """Retourne une réponse mockée basée sur le contenu de l'historique."""
-        logger.warning(f"--- MOCK LLM SERVICE USED (service_id: {self.service_id}) ---")
+        """
+        Retourne une réponse mockée simulant un appel d'outil (tool_call)
+        avec une analyse de sophisme valide et sans sophisme.
+        """
+        logger.warning(f"--- ADVANCED MOCK LLM SERVICE USED (service_id: {self.service_id}, simulating tool_call) ---")
         
-        # Simuler une réponse JSON valide pour une analyse d'argument
-        mock_response_content = {
-            "analysis_id": "mock-12345",
-            "argument_summary": {
-                "main_conclusion": "Socrate est mortel.",
-                "premises": ["Tous les hommes sont mortels.", "Socrate est un homme."],
-                "structure": "Deductif"
-            },
-            "quality_assessment": {
-                "clarity": 85,
-                "relevance": 95,
-                "coherence": 90,
-                "overall_score": 91
-            },
-            "fallacies": [],
-            "suggestions": "Aucune suggestion, l'argument est valide."
+        # 1. Définir le payload de la réponse que l'outil est censé retourner
+        #    Ceci correspond à la structure du modèle Pydantic `FallacyAnalysisResult`
+        mock_tool_arguments = {
+            "analysis_id": "mock-analysis-123",
+            "fallacies": [],  # La clé du succès du test !
+            "is_argument_valid": True,
+            "overall_assessment": "L'argument est valide, clair et bien structuré.",
+            "confidence_score": 0.99
         }
-        
-        # Créer un ChatMessageContent avec la réponse mockée
+
+        # 2. Simuler la structure de 'tool_call' que le LLM renverrait
+        #    On utilise nos classes de simulation pour imiter la structure de Semantic Kernel
+        mock_tool_call = MockToolCall(
+            function_name="submit_fallacy_analysis",
+            arguments=mock_tool_arguments
+        )
+
+        # 3. Créer le message de contenu de chat qui encapsule le 'tool_call'
+        #    Le `content` peut être vide, car l'agent va chercher `tool_calls`
         response_message = ChatMessageContent(
             role="assistant",
-            content=json.dumps(mock_response_content, indent=2, ensure_ascii=False)
+            content=None,  # Le contenu textuel n'est pas nécessaire quand il y a un tool_call
+            tool_calls=[mock_tool_call]
         )
         
         # Simuler une latence réseau
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.05)
         
         return [response_message]
-
-    async def complete_chat(self, *args, **kwargs):
-        """Dummy implementation for backward compatibility."""
-        return await self.get_chat_message_contents(*args, **kwargs)
-
-    async def complete_chat_stream(self, *args, **kwargs):
-        """Dummy implementation for backward compatibility."""
-        # This is a simplified stream simulation.
-        # A real implementation would yield content chunks.
-        results = await self.get_chat_message_contents(*args, **kwargs)
-        for result in results:
-            yield [result]
 
 def create_llm_service(service_id: str = "global_llm_service", force_mock: bool = False, force_authentic: bool = False) -> Union[OpenAIChatCompletion, AzureChatCompletion, MockChatCompletion]:
     """

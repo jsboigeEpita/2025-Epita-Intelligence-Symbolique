@@ -23,21 +23,26 @@ testpaths = [
     "tests"
 ]
 markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "e2e: marks tests as end-to-end tests",
+    "api: marks tests related to the API",
+    "real_llm: marks tests that require a real LLM service",
+    "real_jpype: marks tests that require a real JPype/JVM environment",
+    "no_jvm_session: marks tests that should not start the shared JVM session",
     "authentic",
     "phase5",
     "no_mocks",
     "informal",
     "requires_llm",
-    "integration",
     "performance",
     "comparison",
     "user_experience",
     "config",
     "api_integration",
     "e2e_test",
-    "slow",
     "use_real_numpy",
-    "real_jpype",
     "validation",
     "debuglog",
     "use_mock_numpy",
@@ -51,13 +56,13 @@ markers = [
     "robustness",
     "playwright",
     "real_gpt",
-    "real_llm",
 ]
 log_cli = true
 log_cli_level = "INFO"
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 asyncio_mode = "auto"
+
 [tool.poetry]
 name = "argumentation-analysis"
 version = "0.1.0"
@@ -103,7 +108,9 @@ dependencies = [
     "websockets",
     "jinja2",
     "aiofiles",
-    "semantic-kernel"
+    "semantic-kernel",
+    "python-dotenv",
+    "pytest-playwright"
 ]
 
 [tool.setuptools.packages.find]

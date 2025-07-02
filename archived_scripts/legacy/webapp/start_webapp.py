@@ -32,6 +32,8 @@ import logging
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
+from project_core.utils.shell import run_sync, ShellCommandError
+
 # Configuration encodage UTF-8 pour Windows
 def configure_utf8():
     """Configure UTF-8 pour éviter les problèmes d'encodage Unicode"""
@@ -162,11 +164,9 @@ def check_conda_environment(logger: logging.Logger) -> bool:
     
     try:
         # Lister les environnements
-        result = subprocess.run(
+        result = run_sync(
             [conda_exe, "env", "list"],
-            capture_output=True,
-            text=True,
-            check=True
+            check_errors=True
         )
         
         # Vérifier si notre environnement existe
@@ -179,7 +179,7 @@ def check_conda_environment(logger: logging.Logger) -> bool:
             logger.info(f"   conda env create -f environment.yml")
             return False
             
-    except subprocess.CalledProcessError as e:
+    except ShellCommandError as e:
         logger.error(f"[ERROR] Erreur lors de la vérification conda: {e}")
         return False
 
@@ -254,11 +254,12 @@ def run_orchestrator_with_conda(args: argparse.Namespace, logger: logging.Logger
         # Lancement avec gestion interactive et environnement modifié
         # L'activation de l'environnement est gérée par le script appelant (activate_project_env.ps1)
         # On exécute donc directement la commande python.
-        process = subprocess.run(
-            full_cmd, # La commande est maintenant juste ["python", "-m", "argumentation_analysis.webapp.orchestrator", ...]
+        process = run_sync(
+            full_cmd,
             cwd=PROJECT_ROOT,
-            check=False, # Ne pas lever d'exception sur code de retour non-zéro
-            env=env_vars # Passer les variables d'environnement modifiées (surtout PYTHONPATH)
+            check_errors=False, # La gestion d'erreur est faite manuellement après
+            env=env_vars,
+            capture_output=False # L'orchestrateur est interactif
         )
         
         success = process.returncode == 0
