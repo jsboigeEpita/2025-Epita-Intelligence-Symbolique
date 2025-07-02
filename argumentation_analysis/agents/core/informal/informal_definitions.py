@@ -26,6 +26,7 @@ import logging
 import pandas as pd
 import requests
 import semantic_kernel as sk
+from semantic_kernel.functions.kernel_arguments import KernelArguments
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.functions import kernel_function, KernelArguments
 from semantic_kernel.connectors.ai.open_ai.prompt_execution_settings.open_ai_prompt_execution_settings import (

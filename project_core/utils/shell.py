@@ -125,26 +125,78 @@ async def run_in_activated_env_async(
         logger.error(f"Could not run in activated environment. Reason: {e}")
         raise ShellCommandError(f"Failed to find environment '{env_name}'.", -1, "", str(e)) from e
 
+import json
+import os
+
 def _get_env_python_executable(env_name: str) -> str:
     """
-    Identifies the path to the Python executable for a given conda/venv environment.
-    (This is a placeholder and needs a robust implementation based on the project's env management)
+    Identifies the path to the Python executable for a given conda environment.
     """
-    # This logic needs to be adapted to the actual environment setup (conda, venv, etc.)
-    # For now, let's assume a simple structure.
-    # In a real scenario, we might use `conda run -n env_name which python` or similar lookups.
-    # For this project, we know the env is in '.venv'
-    project_root = Path(__file__).parent.parent.parent
-    venv_path = project_root / ".venv"
-    if sys.platform == "win32":
-        python_executable = venv_path / "Scripts" / "python.exe"
-    else:
-        python_executable = venv_path / "bin" / "python"
+    # HOTFIX: The project consistently uses a single conda environment.
+    # We ignore the passed name to prevent issues from call sites
+    # that might use outdated or incorrect environment names like 'projet-is' or 'default'.
+    correct_env_name = "projet-is-roo-new"
     
-    if not python_executable.exists():
-        raise FileNotFoundError(f"Python executable not found for environment '{env_name}' at {python_executable}")
+    logger.info(f"Locating Python executable for conda env: '{correct_env_name}' (requested env: '{env_name}' was ignored)")
+    try:
+        # Use `conda info --json` which is faster than `conda env list`
+        result = subprocess.run(
+            ["conda", "info", "--json"],
+            capture_output=True,
+            text=True,
+            check=True,
+            encoding='utf-8',
+            timeout=10
+        )
+        info_data = json.loads(result.stdout)
         
-    return str(python_executable)
+        # The target env path should be among the 'envs' list
+        env_dirs = info_data.get("envs", [])
+        env_path = None
+
+        for d in env_dirs:
+            # Check if the directory name matches the conda env name
+            if Path(d).name == correct_env_name:
+                env_path = Path(d)
+                break
+        
+        if not env_path:
+            # Fallback: check if the name is contained in the path, for unusual setups
+            for d in env_dirs:
+                if correct_env_name in d:
+                    env_path = Path(d)
+                    break
+        
+        if not env_path:
+            raise FileNotFoundError(f"Conda environment path for '{correct_env_name}' not found in `conda info` output.")
+
+        # Determine the executable path based on the OS
+        if sys.platform == "win32":
+            python_executable = env_path / "python.exe"
+        else:
+            python_executable = env_path / "bin" / "python"
+
+        if not python_executable.exists():
+            raise FileNotFoundError(f"Python executable not found at the expected path: {python_executable}")
+        
+        logger.info(f"Found Python executable for '{correct_env_name}': {python_executable}")
+        return str(python_executable)
+
+    except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError, subprocess.TimeoutExpired) as e:
+        logger.error(f"Failed to find Python executable for conda env '{correct_env_name}': {e}")
+        # As a last resort, check the legacy '.venv' path for compatibility.
+        project_root = Path(__file__).parent.parent.parent
+        venv_path = project_root / ".venv"
+        if sys.platform == "win32":
+            legacy_executable = venv_path / "Scripts" / "python.exe"
+        else:
+            legacy_executable = venv_path / "bin" / "python"
+        
+        if legacy_executable.exists():
+            logger.warning(f"Falling back to legacy .venv path: {legacy_executable}")
+            return str(legacy_executable)
+        
+        raise ShellCommandError(f"Could not find Python executable for conda environment '{correct_env_name}'.", -1, "", str(e)) from e
 
 def run_in_activated_env(
     command: List[str],
