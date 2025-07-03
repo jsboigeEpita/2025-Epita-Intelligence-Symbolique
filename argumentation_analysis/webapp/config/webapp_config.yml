@@ -20,8 +20,8 @@ cleanup:
   - web_api
   - serve
 frontend:
-  enabled: true
-  path: services/web_api/interface-web-argumentative
+  enabled: false
+  # path: services/web_api/interface-web-argumentative # Chemin invalide, désactivé.
   port: 3000
   start_command: npm start
   timeout_seconds: 90
