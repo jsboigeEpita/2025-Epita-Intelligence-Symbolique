@@ -10,10 +10,12 @@ from pathlib import Path
 from playwright.sync_api import Page, expect
 
 # Configuration
-BACKEND_URL = "http://localhost:5000"
 
-def test_api_analyze_interactions(page: Page):
+@pytest.mark.e2e
+def test_api_analyze_interactions(page: Page, e2e_servers):
     """Test avec interactions API /analyze pour générer des traces exploitables"""
+    backend_url, _ = e2e_servers
+    assert backend_url, "L'URL du backend doit être fournie par la fixture e2e_servers"
     
     # Charger l'interface de test locale
     demo_html_path = Path(__file__).parent / "test_interface_demo.html"
@@ -29,7 +31,7 @@ def test_api_analyze_interactions(page: Page):
     api_calls = []
     
     def handle_response(response):
-        if "/analyze" in response.url or "/status" in response.url:
+        if "/analyze" in response.url or "/health" in response.url:
             api_calls.append({
                 "url": response.url,
                 "method": response.request.method,
@@ -42,7 +44,7 @@ def test_api_analyze_interactions(page: Page):
     # Test 1: Vérifier la connectivité backend
     try:
         page.evaluate(f"""
-            fetch('{BACKEND_URL}/status')
+            fetch('{backend_url}/api/health')
                 .then(response => response.json())
                 .then(data => {{
                     console.log('API Status:', data);
@@ -73,7 +75,7 @@ def test_api_analyze_interactions(page: Page):
             const results = document.getElementById('results');
             
             try {{
-                const response = await fetch('{BACKEND_URL}/analyze', {{
+                const response = await fetch('{backend_url}/api/analyze', {{
                     method: 'POST',
                     headers: {{
                         'Content-Type': 'application/json',
@@ -117,7 +119,7 @@ def test_api_analyze_interactions(page: Page):
             const textInput = document.getElementById('text-input');
             
             try {{
-                const response = await fetch('{BACKEND_URL}/analyze', {{
+                const response = await fetch('{backend_url}/api/analyze', {{
                     method: 'POST',
                     headers: {{
                         'Content-Type': 'application/json',
@@ -155,7 +157,7 @@ def test_api_analyze_interactions(page: Page):
             const textInput = document.getElementById('text-input');
             
             try {{
-                const response = await fetch('{BACKEND_URL}/analyze', {{
+                const response = await fetch('{backend_url}/api/analyze', {{
                     method: 'POST',
                     headers: {{
                         'Content-Type': 'application/json',

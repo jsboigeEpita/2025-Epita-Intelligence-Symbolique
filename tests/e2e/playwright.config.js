@@ -13,7 +13,7 @@ module.exports = defineConfig({
   /* Nombre de workers pour l'exécution parallèle */
   workers: process.env.CI ? 1 : undefined,
   /* Reporter à utiliser. Voir https://playwright.dev/docs/test-reporters */
-  reporter: [['html', { open: 'never' }], ['list']],
+  reporter: [['html', { open: 'never' }], ['list'], ['json', { outputFile: 'report.json' }]],
 
   /* Configuration partagée pour tous les projets */
   use: {
@@ -57,10 +57,10 @@ module.exports = defineConfig({
   outputDir: 'test-results/',
 
   // Lancement du serveur web avant les tests
-  webServer: {
-    command: 'powershell -c "conda activate ./.venv && python -m uvicorn argumentation_analysis.services.web_api.app:app --port 5003"',
-    url: 'http://127.0.0.1:5003',
-    timeout: 120 * 1000,
-    reuseExistingServer: !process.env.CI,
-  },
+  // webServer: {
+  //   command: 'python -m project_core.core_from_scripts.environment_manager run "python -m uvicorn argumentation_analysis.services.web_api.app:app --port 5003"',
+  //   url: 'http://127.0.0.1:5003',
+  //   timeout: 120 * 1000,
+  //   reuseExistingServer: !process.env.CI,
+  // },
 });

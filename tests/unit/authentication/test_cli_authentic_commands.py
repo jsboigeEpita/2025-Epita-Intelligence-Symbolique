@@ -1,8 +1,9 @@
 from unittest.mock import MagicMock
 import pytest
-from argumentation_analysis.analyzers.unified_production_analyzer import (
+from project_core.rhetorical_analysis_from_scripts.unified_production_analyzer import (
     UnifiedProductionAnalyzer,
 )
+from config.unified_config import UnifiedConfig
 
 
 def test_successful_simple_argument_analysis(
@@ -12,10 +13,13 @@ def test_successful_simple_argument_analysis(
     Test a successful analysis of a simple argument.
     """
     # Create an instance of the analyzer
-    analyzer = UnifiedProductionAnalyzer()
+    config = UnifiedConfig()
+    analyzer = UnifiedProductionAnalyzer(config)
 
     # Mock the subprocess.run method
-    mock_run = mocker.patch("subprocess.run")
+    mock_run = mocker.patch(
+        "project_core.rhetorical_analysis_from_scripts.unified_production_analyzer.subprocess.run"
+    )
 
     # Call the method to be tested
     analyzer.run_jvm_based_analysis(successful_simple_argument_analysis_fixture_path)

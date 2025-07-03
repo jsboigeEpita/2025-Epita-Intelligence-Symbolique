@@ -18,11 +18,12 @@ from pathlib import Path
 class TestWebAppAPIInvestigation:
     """Tests d'investigation de l'API d'analyse argumentative"""
     
-    def test_api_health(self):
+    @pytest.mark.e2e
+    def test_api_health(self, e2e_servers):
         """Test de santé de l'API"""
-        base_url = os.environ.get("BACKEND_URL")
-        assert base_url, "La variable d'environnement BACKEND_URL doit être définie par l'orchestrateur de tests"
-        response = requests.get(f"{base_url}/api/status", timeout=10)
+        base_url, _ = e2e_servers
+        assert base_url, "L'URL du backend doit être fournie par la fixture e2e_servers"
+        response = requests.get(f"{base_url}/api/health", timeout=10)
         assert response.status_code == 200
         
         health_data = response.json()
@@ -38,8 +39,10 @@ class TestWebAppAPIInvestigation:
             icon = "[OK]" if status else "[ERROR]"
             print(f"     {icon} {service}: {'OK' if status else 'Indisponible'}")
     
-    def test_api_analyze_endpoint(self):
+    @pytest.mark.e2e
+    def test_api_analyze_endpoint(self, e2e_servers):
         """Test de l'endpoint d'analyse argumentative"""
+        base_url, _ = e2e_servers
         test_text = "Dieu existe parce que la Bible le dit, et la Bible est vraie parce qu'elle est la parole de Dieu."
         
         payload = {
@@ -49,8 +52,7 @@ class TestWebAppAPIInvestigation:
         }
         
         try:
-            base_url = os.environ.get("BACKEND_URL")
-            assert base_url, "La variable d'environnement BACKEND_URL doit être définie par l'orchestrateur de tests"
+            assert base_url, "L'URL du backend doit être fournie par la fixture e2e_servers"
             response = requests.post(f"{base_url}/api/analyze", json=payload, timeout=30)
             print(f"\n[ANALYZE] Test de l'endpoint /api/analyze:")
             print(f"   Status Code: {response.status_code}")
@@ -67,8 +69,10 @@ class TestWebAppAPIInvestigation:
             print(f"   [ERROR] Erreur de connexion: {e}")
             pytest.skip(f"API non accessible: {e}")
     
-    def test_api_fallacies_endpoint(self):
+    @pytest.mark.e2e
+    def test_api_fallacies_endpoint(self, e2e_servers):
         """Test de l'endpoint de détection de sophismes"""
+        base_url, _ = e2e_servers
         test_text = "Si nous autorisons le mariage gay, bientôt nous autoriserons aussi le mariage avec les animaux."
         
         payload = {
@@ -84,8 +88,7 @@ class TestWebAppAPIInvestigation:
             # Cette route /api/fallacies n'existe plus dans la nouvelle app Starlette
             # Je la skipperai pour l'instant.
             pytest.skip("La route /api/fallacies n'est plus implémentée.")
-            base_url = os.environ.get("BACKEND_URL")
-            assert base_url, "La variable d'environnement BACKEND_URL doit être définie par l'orchestrateur de tests"
+            assert base_url, "L'URL du backend doit être fournie par la fixture e2e_servers"
             response = requests.post(f"{base_url}/api/fallacies", json=payload, timeout=30)
             print(f"\n[WARNING]  Test de l'endpoint /api/fallacies:")
             print(f"   Status Code: {response.status_code}")
@@ -104,8 +107,10 @@ class TestWebAppAPIInvestigation:
         except requests.exceptions.RequestException as e:
             print(f"   [ERROR] Erreur de connexion: {e}")
     
-    def test_api_validate_endpoint(self):
+    @pytest.mark.e2e
+    def test_api_validate_endpoint(self, e2e_servers):
         """Test de l'endpoint de validation d'arguments"""
+        base_url, _ = e2e_servers
         payload = {
             "premises": [
                 "Tous les hommes sont mortels",
@@ -118,8 +123,7 @@ class TestWebAppAPIInvestigation:
         try:
             # Cette route /api/validate n'existe plus dans la nouvelle app Starlette
             pytest.skip("La route /api/validate n'est plus implémentée.")
-            base_url = os.environ.get("BACKEND_URL")
-            assert base_url, "La variable d'environnement BACKEND_URL doit être définie par l'orchestrateur de tests"
+            assert base_url, "L'URL du backend doit être fournie par la fixture e2e_servers"
             response = requests.post(f"{base_url}/api/validate", json=payload, timeout=30)
             print(f"\n[OK] Test de l'endpoint /api/validate:")
             print(f"   Status Code: {response.status_code}")
@@ -136,8 +140,10 @@ class TestWebAppAPIInvestigation:
         except requests.exceptions.RequestException as e:
             print(f"   [ERROR] Erreur de connexion: {e}")
     
-    def test_api_framework_endpoint(self):
+    @pytest.mark.e2e
+    def test_api_framework_endpoint(self, e2e_servers):
         """Test de l'endpoint de framework de Dung"""
+        base_url, _ = e2e_servers
         payload = {
             "arguments": [
                 {"id": "A1", "content": "Il faut protéger l'environnement"},
@@ -153,8 +159,7 @@ class TestWebAppAPIInvestigation:
         try:
             # Cette route /api/framework n'existe plus. Elle a été remplacée par /api/v1/framework/analyze
             pytest.skip("La route /api/framework a été remplacée par /api/v1/framework/analyze.")
-            base_url = os.environ.get("BACKEND_URL")
-            assert base_url, "La variable d'environnement BACKEND_URL doit être définie par l'orchestrateur de tests"
+            assert base_url, "L'URL du backend doit être fournie par la fixture e2e_servers"
             response = requests.post(f"{base_url}/api/framework", json=payload, timeout=30)
             print(f"\n[FRAMEWORK]  Test de l'endpoint /api/framework:")
             print(f"   Status Code: {response.status_code}")
@@ -175,17 +180,19 @@ class TestWebAppAPIInvestigation:
         except requests.exceptions.RequestException as e:
             print(f"   [ERROR] Erreur de connexion: {e}")
 
-    def test_generate_api_investigation_report(self):
+    @pytest.mark.e2e
+    def test_generate_api_investigation_report(self, e2e_servers):
         """Génère un rapport d'investigation de l'API"""
+        base_url, _ = e2e_servers
         report_path = Path("tests/functional/logs/api_investigation_report.md")
         report_path.parent.mkdir(parents=True, exist_ok=True)
         
         endpoints = [
-            "/api/status",
+            "/api/health",
             "/api/analyze",
             "/api/v1/framework/analyze"
         ]
-        base_url = os.environ.get("BACKEND_URL", "http://localhost:5003")
+        assert base_url, "L'URL du backend doit être fournie par la fixture e2e_servers"
         report_content = """# [REPORT] Rapport d'Investigation - API Web d'Analyse Argumentative
 
 **Date:** {timestamp}
@@ -200,7 +207,7 @@ class TestWebAppAPIInvestigation:
         
         for endpoint in endpoints:
             try:
-                if endpoint == "/api/status":
+                if endpoint == "/api/health":
                     response = requests.get(f"{base_url}{endpoint}", timeout=5)
                 else:
                     # Test avec données minimales
@@ -216,7 +223,7 @@ class TestWebAppAPIInvestigation:
                 status = "[OK] Opérationnel" if response.status_code in [200, 400, 405] else "[ERROR] Erreur" # 405 est ok pour un GET sur un POST
                 report_content += f"### {endpoint}\n- **Status:** {status} ({response.status_code})\n"
                 
-                if response.status_code == 200 and endpoint == "/api/status":
+                if response.status_code == 200 and endpoint == "/api/health":
                     health_data = response.json()
                     services = health_data.get('services', {})
                     report_content += f"- **Services:** {list(services.keys())}\n"

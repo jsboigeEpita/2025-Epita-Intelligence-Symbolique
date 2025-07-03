@@ -1,3 +1,9 @@
+param(
+    [string]$TestType = "all",
+    [string]$TestPath,
+    [string]$PytestArgs
+)
+
 <#
 .SYNOPSIS
 Lance la suite de tests du projet avec pytest.
@@ -111,43 +117,6 @@ function Stop-Backend {
 }
 
 # --- Logique Principale ---
-$params = @{
-    TestType = "all"
-}
-$remainingArgs = @()
-$ pytestArgsIndex = -1
-
-# Parsing manuel pour mieux gérer les PytestArgs
-for ($i = 0; $i -lt $args.Count; $i++) {
-    if ($args[$i] -eq '-PytestArgs') {
-        $pytestArgsIndex = $i
-        break
-    }
-    if ($args[$i] -match '^-([a-zA-Z0-9_]+)$') {
-        $paramName = $Matches[1]
-        if ((($i + 1) -lt $args.Count) -and ($args[$i+1] -notmatch '^-')) {
-            $params[$paramName] = $args[$i+1]
-            $i++
-        } else {
-            $params[$paramName] = $true
-        }
-    } else {
-        $remainingArgs += $args[$i]
-    }
-}
-
-if ($pytestArgsIndex -ne -1) {
-    # Tous les arguments après -PytestArgs sont pour pytest
-    $params['PytestArgs'] = $args[($pytestArgsIndex + 1)..$args.Count] -join ' '
-} elseif ($remainingArgs.Count -gt 0) {
-    # S'il n'y a pas de -PytestArgs, les arguments restants sont assignés à TestPath
-    $params['TestPath'] = $remainingArgs -join ' '
-}
-
-
-$TestType = $params['TestType']
-$TestPath = if ($params.ContainsKey('TestPath')) { $params['TestPath'] } else { $null }
-$PytestArgs = if ($params.ContainsKey('PytestArgs')) { $params['PytestArgs'] } else { "" }
 
 Write-Host "[INFO] Début de l'exécution des tests avec le type: '$TestType'" -ForegroundColor Green
 if ($TestPath) { Write-Host "[INFO] Chemin de test spécifié: '$TestPath'" }

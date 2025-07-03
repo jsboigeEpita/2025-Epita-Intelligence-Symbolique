@@ -17,10 +17,10 @@ C'est le point d'entrée privilégié pour toute commande relative au projet.
 .\activate_project_env.ps1 python --version
 #>
 param(
-    [string]$Command = "",
+    [string]$CommandToRun,
 
-    [Parameter(ValueFromRemainingArguments=$true)]
-    [string[]]$RemainingArgs
+	[Parameter(ValueFromRemainingArguments=$true)]
+	[string[]]$RemainingArgs
 )
 
 $ErrorActionPreference = "Stop"
@@ -42,24 +42,26 @@ $condaEnvName = "projet-is-roo-new"
 
 # --- Logique de commande ---
 # Concatène la commande et ses arguments en une seule chaîne.
-$fullCommand = ($Command + " " + ($RemainingArgs -join ' ')).Trim()
-
-# Si aucune commande n'est passée, le script active simplement l'environnement et se termine.
-if ([string]::IsNullOrWhiteSpace($fullCommand)) {
-    Write-Host "[INFO] Environnement Conda '$condaEnvName' initialisé pour la session PowerShell actuelle." -ForegroundColor Cyan
-    Write-Host "[INFO] Aucune commande fournie, le script se termine. Vous pouvez maintenant exécuter des commandes manuellement." -ForegroundColor Cyan
-    conda activate $condaEnvName
-    exit 0
-}
+# --- Logique de commande ---
+$fullCommand = ($CommandToRun + " " + ($RemainingArgs -join ' ')).Trim()
 
 # --- Exécution via conda run ---
-# La commande est directement passée à `conda run`.
-# Utilisation de -u pour un output non bufferisé, essentiel pour les logs.
-$finalCommand = "conda run --no-capture-output -n $condaEnvName --cwd '$PSScriptRoot' $fullCommand"
+# Utilisation de Start-Process pour un appel plus stable que Invoke-Expression
+$argumentList = "run --no-capture-output -n $condaEnvName --cwd `"$PSScriptRoot`" $fullCommand"
 
-Write-Host "[DEBUG] Commande d'exécution : $finalCommand" -ForegroundColor Gray
+Write-Host "[DEBUG] Commande d'exécution via Start-Process :" -ForegroundColor Gray
+Write-Host "conda.exe $argumentList" -ForegroundColor Gray
 
-# Exécution et propagation du code de sortie
-Invoke-Expression -Command $finalCommand
-$exitCode = $LASTEXITCODE
+try {
+    # On récupère le chemin complet de conda.exe pour être sûr
+    $condaExecutable = Get-Command conda.exe | Select-Object -ExpandProperty Source
+    $process = Start-Process -FilePath $condaExecutable -ArgumentList $argumentList -Wait -PassThru -NoNewWindow
+    $exitCode = $process.ExitCode
+}
+catch {
+    Write-Host "[FATAL] L'exécution de la commande via conda a échoué." -ForegroundColor Red
+    Write-Host $_ -ForegroundColor Red
+    $exitCode = 1
+}
+
 exit $exitCode

@@ -4,15 +4,16 @@ from playwright.sync_api import Page, expect
 
 # Les URLs des services sont injectées via les fixtures `frontend_url` et `backend_url`.
 # so the web server is started automatically for all tests in this module.
+@pytest.mark.e2e
 @pytest.mark.playwright
-@pytest.mark.asyncio
-async def test_fallacy_detection_basic_workflow(page: Page, frontend_url: str):
+def test_fallacy_detection_basic_workflow(page: Page, e2e_servers):
     """
     Test principal : détection d'un sophisme Ad Hominem
     Valide le workflow complet de détection avec un exemple prédéfini
     """
+    _, frontend_url = e2e_servers
     # 1. Navigation et attente API connectée
-    await page.goto(frontend_url)
+    page.goto(frontend_url)
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     # 2. Activation de l'onglet Sophismes
@@ -45,15 +46,16 @@ async def test_fallacy_detection_basic_workflow(page: Page, frontend_url: str):
     severity_badge = results_container.locator('.severity-badge').first
     expect(severity_badge).to_be_visible()
 
+@pytest.mark.e2e
 @pytest.mark.playwright
-@pytest.mark.asyncio
-async def test_severity_threshold_adjustment(page: Page, frontend_url: str):
+def test_severity_threshold_adjustment(page: Page, e2e_servers):
     """
     Test curseur seuil de sévérité
     Vérifie l'impact du seuil sur les résultats de détection
     """
+    _, frontend_url = e2e_servers
     # 1. Navigation et activation onglet
-    await page.goto(frontend_url)
+    page.goto(frontend_url)
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     fallacy_tab = page.locator('[data-testid="fallacy-detector-tab"]')
@@ -89,15 +91,16 @@ async def test_severity_threshold_adjustment(page: Page, frontend_url: str):
     # Note: Les résultats peuvent être différents selon le seuil
     expect(results_container).to_contain_text("sophisme(s) détecté(s)")
 
+@pytest.mark.e2e
 @pytest.mark.playwright
-@pytest.mark.asyncio
-async def test_fallacy_example_loading(page: Page, frontend_url: str):
+def test_fallacy_example_loading(page: Page, e2e_servers):
     """
     Test chargement des exemples prédéfinis
     Valide le fonctionnement des boutons "Tester" sur les cartes d'exemples
     """
+    _, frontend_url = e2e_servers
     # 1. Navigation et activation onglet
-    await page.goto(frontend_url)
+    page.goto(frontend_url)
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     fallacy_tab = page.locator('[data-testid="fallacy-detector-tab"]')
@@ -132,15 +135,16 @@ async def test_fallacy_example_loading(page: Page, frontend_url: str):
     submit_button = page.locator('[data-testid="fallacy-submit-button"]')
     expect(submit_button).to_be_enabled()
 
+@pytest.mark.e2e
 @pytest.mark.playwright
-@pytest.mark.asyncio
-async def test_fallacy_detector_reset_functionality(page: Page, frontend_url: str):
+def test_fallacy_detector_reset_functionality(page: Page, e2e_servers):
     """
     Test bouton de réinitialisation
     Vérifie que le bouton reset nettoie complètement l'interface
     """
+    _, frontend_url = e2e_servers
     # 1. Navigation et activation onglet
-    await page.goto(frontend_url)
+    page.goto(frontend_url)
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     fallacy_tab = page.locator('[data-testid="fallacy-detector-tab"]')

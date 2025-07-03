@@ -31,7 +31,7 @@ except ImportError:
     openai_available = False
 
 # Imports composants authentiques
-from argumentation_analysis.agents.core.informal.informal_agent import LegacyInformalAnalysisAgent
+from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
 from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin
 
 

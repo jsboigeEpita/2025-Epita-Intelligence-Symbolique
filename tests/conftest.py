@@ -1,3 +1,4 @@
+import json
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -341,3 +342,154 @@ def successful_simple_argument_analysis_fixture_path(tmp_path):
     file_path = tmp_path / "simple_argument.json"
     file_path.write_text(json.dumps(data))
     return str(file_path)
+
+
+# --- Gestion des Serveurs E2E ---
+
+@pytest.fixture(scope="session")
+def e2e_servers(request):
+    """
+    Fixture de session pour démarrer et arrêter les serveurs backend et frontend
+    nécessaires pour les tests E2E.
+    """
+    if request.config.getoption("--disable-e2e-servers-fixture"):
+        logger.warning("E2E servers fixture is disabled via command-line flag.")
+        yield None, None
+        return
+
+    import subprocess
+    import requests
+    import signal
+    import time
+
+    processes = []
+    backend_url_opt = request.config.getoption("--backend-url")
+    frontend_url_opt = request.config.getoption("--frontend-url")
+    
+    project_root = Path(__file__).parent.parent
+    
+    # Création d'un répertoire pour les logs des serveurs E2E
+    log_dir = project_root / "_e2e_logs"
+    log_dir.mkdir(exist_ok=True)
+    logger.info(f"E2E server logs will be stored in: {log_dir.resolve()}")
+    
+    # Ouverture des fichiers de log
+    backend_log_file = open(log_dir / "backend.log", "w", encoding="utf-8")
+    frontend_log_file = open(log_dir / "frontend.log", "w", encoding="utf-8")
+    
+    # --- Helper Functions (tirées de test_react_interface_complete.py) ---
+    def wait_for_service(url, name, timeout=60):
+        logger.info(f"Waiting for {name} on {url}...")
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                response = requests.get(url, timeout=5)
+                if response.status_code in [200, 404]: # 404 is ok for base URL of an API
+                    logger.info(f"[OK] {name} available after {time.time() - start_time:.1f}s")
+                    return True
+            except requests.exceptions.RequestException:
+                pass
+            time.sleep(2)
+        logger.error(f"[ERROR] {name} not available after {timeout}s")
+        return False
+
+    def start_backend():
+        logger.info("--- Starting E2E Backend Server ---")
+        try:
+            if requests.get(f"{backend_url_opt}/api/health", timeout=2).status_code == 200:
+                logger.info("Backend server is already running.")
+                return None
+        except requests.exceptions.RequestException:
+            pass
+
+        backend_cmd = [
+            sys.executable, "-m", "uvicorn",
+            "argumentation_analysis.services.web_api.app:app",
+            "--host", "0.0.0.0",
+            "--port", "5003"
+        ]
+        
+        logger.info(f"Running backend command: {' '.join(backend_cmd)}")
+        process = subprocess.Popen(backend_cmd, cwd=str(project_root), stdout=backend_log_file, stderr=subprocess.STDOUT)
+        if wait_for_service(f"{backend_url_opt}/api/health", "Backend API"):
+            logger.info("Backend server started successfully.")
+            return process
+        else:
+            logger.error("Failed to start backend server.")
+            process.terminate()
+            return None
+
+    def start_frontend():
+        logger.info("--- Starting E2E Frontend Server ---")
+        try:
+            if requests.get(frontend_url_opt, timeout=2).status_code == 200:
+                logger.info("Frontend server is already running.")
+                return None
+        except requests.exceptions.RequestException:
+            pass
+            
+        react_dir = project_root / "services" / "web_api" / "interface-web-argumentative"
+        if not (react_dir / "node_modules").exists():
+            logger.info("Installing npm dependencies for frontend...")
+            subprocess.run("npm install", cwd=str(react_dir), shell=True, check=True)
+
+        env = os.environ.copy()
+        env["BROWSER"] = "none"
+        env["PORT"] = "3000"
+        env["REACT_APP_BACKEND_URL"] = backend_url_opt
+
+        logger.info(f"Running frontend command: npm start in {react_dir}")
+        process = subprocess.Popen("npm start", cwd=str(react_dir), stdout=frontend_log_file, stderr=subprocess.STDOUT, env=env, shell=True)
+        if wait_for_service(frontend_url_opt, "Frontend React"):
+            logger.info("Frontend server started successfully. Adding a stabilization delay.")
+            time.sleep(5) # Ajout d'une attente de stabilisation pour le serveur de dév React
+            return process
+        else:
+            logger.error("Failed to start frontend server.")
+            process.terminate()
+            return None
+
+    # --- Démarrage ---
+    logger.info("=== E2E Servers Fixture Setup ===")
+    backend_process = start_backend()
+    frontend_process = start_frontend()
+    
+    if backend_process:
+        processes.append(("Backend", backend_process))
+    if frontend_process:
+        processes.append(("Frontend", frontend_process))
+
+    yield backend_url_opt, frontend_url_opt
+
+    # --- Nettoyage ---
+    logger.info("=== E2E Servers Fixture Teardown ===")
+    
+    # Fermeture des fichiers de log
+    backend_log_file.close()
+    frontend_log_file.close()
+    
+    for name, process in reversed(processes):
+        if process:
+            logger.info(f"Stopping {name} server (PID: {process.pid})...")
+            if sys.platform == "win32":
+                # Utilisation de taskkill pour un nettoyage plus robuste sur Windows
+                try:
+                    subprocess.run(
+                        ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                        check=True,
+                        capture_output=True,
+                        text=True
+                    )
+                    logger.info(f"Process {name} (PID: {process.pid}) and its children terminated successfully.")
+                except (subprocess.CalledProcessError, FileNotFoundError) as e:
+                    logger.warning(f"Could not terminate process {name} (PID: {process.pid}) using taskkill. Error: {e}. Falling back to process.kill().")
+                    process.kill() # Fallback au cas où taskkill échouerait
+            else:
+                process.terminate()
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    logger.warning(f"Process {name} did not terminate gracefully. Killing it.")
+                    process.kill()
+
+    logger.info("E2E servers teardown complete.")

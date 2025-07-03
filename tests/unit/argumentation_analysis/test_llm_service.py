@@ -76,7 +76,7 @@ class TestLLMService:
         async def _run_async_test():
             try:
                 kernel = sk.Kernel()
-                llm_service = create_llm_service()
+                llm_service = create_llm_service(force_authentic=True)
                 kernel.add_service(llm_service)
                 
                 # Création d'une fonction de prompt simple

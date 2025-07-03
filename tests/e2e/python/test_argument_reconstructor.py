@@ -6,12 +6,14 @@ from playwright.sync_api import Page, expect
 logger = logging.getLogger(__name__)
 
 # Les fixtures frontend_url et backend_url sont injectées par l'orchestrateur de test.
+@pytest.mark.e2e
 @pytest.mark.playwright
-def test_argument_reconstruction_workflow(page: Page, frontend_url: str):
+def test_argument_reconstruction_workflow(page: Page, e2e_servers):
     """
     Test principal : reconstruction d'argument complet
     Valide le workflow de reconstruction avec détection automatique de prémisses/conclusion
     """
+    _, frontend_url = e2e_servers
     logger.info("--- DEBUT test_argument_reconstruction_workflow ---")
     
     # 1. Navigation et attente API connectée
@@ -65,12 +67,14 @@ def test_argument_reconstruction_workflow(page: Page, frontend_url: str):
     # 9. Vérification de la conclusion
     expect(results_container).to_contain_text("Socrate est mortel")
 
+@pytest.mark.e2e
 @pytest.mark.playwright
-def test_reconstructor_basic_functionality(page: Page, frontend_url: str):
+def test_reconstructor_basic_functionality(page: Page, e2e_servers):
     """
     Test fonctionnalité de base du reconstructeur
     Vérifie qu'un deuxième argument peut être analysé correctement
     """
+    _, frontend_url = e2e_servers
     # 1. Navigation et activation onglet
     page.goto(frontend_url, wait_until='networkidle')
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
@@ -96,12 +100,14 @@ def test_reconstructor_basic_functionality(page: Page, frontend_url: str):
     expect(results_container).to_contain_text("Prémisses")
     expect(results_container).to_contain_text("Conclusion")
 
+@pytest.mark.e2e
 @pytest.mark.playwright
-def test_reconstructor_error_handling(page: Page, frontend_url: str):
+def test_reconstructor_error_handling(page: Page, e2e_servers):
     """
     Test gestion d'erreurs
     Vérifie le comportement avec un texte invalide ou sans structure argumentative claire
     """
+    _, frontend_url = e2e_servers
     # 1. Navigation et activation onglet
     page.goto(frontend_url, wait_until='networkidle')
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
@@ -133,12 +139,14 @@ def test_reconstructor_error_handling(page: Page, frontend_url: str):
     expect(results_container).to_contain_text("Prémisses")
     expect(results_container).to_contain_text("Conclusion")
 
+@pytest.mark.e2e
 @pytest.mark.playwright
-def test_reconstructor_reset_functionality(page: Page, frontend_url: str):
+def test_reconstructor_reset_functionality(page: Page, e2e_servers):
     """
     Test bouton de réinitialisation
     Vérifie que le reset nettoie complètement l'interface et revient à l'état initial
     """
+    _, frontend_url = e2e_servers
     # 1. Navigation et activation onglet
     page.goto(frontend_url, wait_until='networkidle')
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
@@ -170,12 +178,14 @@ def test_reconstructor_reset_functionality(page: Page, frontend_url: str):
     expect(results_container).not_to_be_visible()
     expect(submit_button).to_be_enabled()
 
+@pytest.mark.e2e
 @pytest.mark.playwright
-def test_reconstructor_content_persistence(page: Page, frontend_url: str):
+def test_reconstructor_content_persistence(page: Page, e2e_servers):
     """
     Test persistance du contenu
     Vérifie que le contenu reste affiché après reconstruction
     """
+    _, frontend_url = e2e_servers
     # 1. Navigation et activation onglet
     page.goto(frontend_url, wait_until='networkidle')
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
