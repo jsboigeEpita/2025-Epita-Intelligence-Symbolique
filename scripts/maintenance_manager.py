@@ -12,6 +12,31 @@ from project_core.core_from_scripts.cleanup_manager import CleanupManager
 from project_core.core_from_scripts.environment_manager import EnvironmentManager
 from project_core.core_from_scripts.organization_manager import OrganizationManager
 from project_core.core_from_scripts.repository_manager import RepositoryManager
+from project_core.core_from_scripts.refactoring_manager import RefactoringManager
+
+
+def handle_refactor_commands(args):
+    """Handles refactoring commands."""
+    manager = RefactoringManager()
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
+    if args.plan:
+        print(f"Applying refactoring plan: {args.plan}...")
+        diffs = manager.apply_refactoring_plan(args.plan, args.dry_run, project_root=project_root)
+        
+        if args.dry_run:
+            print("Dry run requested. The following changes would be made:")
+            for file_path, diff in diffs.items():
+                print(f"\n--- Diff for {file_path} ---")
+                print(diff)
+        else:
+            print("Refactoring applied.")
+            if diffs:
+                print("Changes were made to the following files:")
+                for file_path in diffs.keys():
+                    print(f" - {file_path}")
+            else:
+                print("No changes were necessary based on the plan.")
 
 
 def handle_repo_commands(args):
@@ -104,6 +129,7 @@ def handle_organize_commands(args):
     else:
         print(f"Unknown target for organization: {args.target}")
 
+
 def main():
     """Main function for the Maintenance Manager CLI."""
     parser = argparse.ArgumentParser(description="Maintenance Manager CLI")
@@ -131,7 +157,12 @@ def main():
     organize_group = organize_parser.add_mutually_exclusive_group(required=True)
     organize_group.add_argument('--target', choices=['results'], help='The target directory to organize')
     organize_group.add_argument('--apply-plan', metavar='PLAN_FILE', help='Apply an organization plan from a JSON file')
-    
+
+    # 'refactor' command
+    refactor_parser = subparsers.add_parser('refactor', help='Automated code refactoring')
+    refactor_parser.add_argument('--plan', required=True, help='Path to the JSON refactoring plan.')
+    refactor_parser.add_argument('--dry-run', action='store_true', help='Show changes without applying them.')
+
     args = parser.parse_args()
 
     command_handlers = {
@@ -139,6 +170,7 @@ def main():
         'cleanup': handle_cleanup_commands,
         'env': handle_env_commands,
         'organize': handle_organize_commands,
+        'refactor': handle_refactor_commands,
     }
 
     handler = command_handlers.get(args.command)
