@@ -51,9 +51,9 @@ def ensure_env(env_name: str = None, silent: bool = False) -> bool:
     if env_name is None:
         try:
             from argumentation_analysis.config.settings import settings
-            env_name = settings.model_dump().get('CONDA_ENV_NAME', os.environ.get('CONDA_ENV_NAME', 'projet-is-new'))
+            env_name = settings.model_dump().get('CONDA_ENV_NAME', os.environ.get('CONDA_ENV_NAME', 'projet-is'))
         except (ImportError, AttributeError):
-            env_name = os.environ.get('CONDA_ENV_NAME', 'projet-is-new')
+            env_name = os.environ.get('CONDA_ENV_NAME', 'projet-is')
 
     # La vérification est maintenant en deux étapes pour une robustesse maximale.
     # 1. Vérifier la variable d'environnement 'CONDA_DEFAULT_ENV'. C'est l'indicateur
