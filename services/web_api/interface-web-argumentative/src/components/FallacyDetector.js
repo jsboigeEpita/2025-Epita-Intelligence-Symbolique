@@ -231,7 +231,7 @@ const FallacyDetector = () => {
             type="submit"
             data-testid="fallacy-submit-button"
             className="btn btn-primary btn-lg"
-            disabled={loading || !text.trim()}
+            disabled={loading || !text.trim() || text.length > 10000}
           >
             {loading ? (
               <>

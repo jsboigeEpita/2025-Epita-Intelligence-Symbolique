@@ -42,8 +42,6 @@ def run_in_jvm_subprocess():
             capture_output=False,  # Désactivé pour le débogage
             check=False,
             cwd=project_root,
-            check_errors=False,  # On gère l'échec manuellement avec pytest.fail
-            capture_output=True, # Assurons-nous que la sortie est capturée
             # Les autres paramètres (text, encoding, etc.) sont gérés par run_sync
         )
         

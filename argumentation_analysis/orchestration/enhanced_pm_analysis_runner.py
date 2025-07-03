@@ -48,7 +48,7 @@ from argumentation_analysis.core.strategies import SimpleTerminationStrategy, Ba
 
 # Imports agents
 from argumentation_analysis.agents.core.pm.pm_agent import LegacyProjectManagerAgent as ProjectManagerAgent
-from argumentation_analysis.agents.core.informal.informal_agent import LegacyInformalAnalysisAgent as InformalAnalysisAgent
+from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
 from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
 from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent
 from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
