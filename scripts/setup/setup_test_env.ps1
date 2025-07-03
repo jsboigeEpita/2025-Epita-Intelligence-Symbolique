@@ -1,111 +1,93 @@
-# Script PowerShell pour configurer un environnement de test pour le projet argumentation_analysis
+# Fichier : setup_test_env.ps1
+# Auteur : Roo
+# Date : 29/06/2025
+#
+# Description :
+# Ce script prépare l'environnement pour l'exécution des tests d'intégration
+# qui dépendent de Java (JPype et TweetyProject).
+#
+# Actions :
+# 1. Tente de localiser un JDK sur le système.
+# 2. Configure la variable d'environnement JAVA_HOME.
+# 3. Construit et exporte le CLASSPATH pour les dépendances de Tweety.
+# 4. Affiche des messages d'erreur clairs si une étape échoue.
 
-function Write-Step {
-    param (
-        [string]$Message
+$ErrorActionPreference = "Stop"
+
+# --- CONFIGURATION ---
+# Chemin vers le répertoire 'libs' de Tweety (à adapter si nécessaire)
+# Le chemin pointe maintenant vers un répertoire racine 'libs'
+$tweetyLibsDir = "$PSScriptRoot/libs/tweety"
+
+# --- 1. LOCALISATION DU JDK ---
+Write-Host "1. Recherche d'un JDK compatible..."
+
+# Stratégie 1: Vérifier si un JDK portable existe dans le projet
+$portableJdkPath = "$PSScriptRoot/portable_jdk"
+if (Test-Path -Path $portableJdkPath -PathType Container) {
+    $env:JAVA_HOME = $portableJdkPath
+    Write-Host "   -> JDK portable trouvé : $env:JAVA_HOME"
+}
+
+# Stratégie 2: Vérifier si JAVA_HOME est déjà défini
+if (-not $env:JAVA_HOME) {
+    Write-Host "   -> La variable d'environnement JAVA_HOME n'est pas définie. Tentative de détection auto..."
+    
+    # Stratégie 3: Détection automatique (Windows)
+    $jdkPaths = @(
+        "C:\Program Files\Java\jdk*",
+        "C:\Program Files\AdoptOpenJDK\jdk*",
+        (Get-Command java -ErrorAction SilentlyContinue).Source | Split-Path | Split-Path
     )
-    
-    Write-Host "`n" -NoNewline
-    Write-Host ("=" * 80) -ForegroundColor Cyan
-    Write-Host "  $Message" -ForegroundColor Cyan
-    Write-Host ("=" * 80) -ForegroundColor Cyan
+
+    $installedJdk = $jdkPaths | ForEach-Object { Get-ChildItem -Path $_ -Directory -ErrorAction SilentlyContinue } | Sort-Object FullName -Descending | Select-Object -First 1
+
+    if ($installedJdk) {
+        $env:JAVA_HOME = $installedJdk.FullName
+        Write-Host "   -> JDK détecté : $($env:JAVA_HOME)"
+    } else {
+        Write-Error "ÉCHEC : Impossible de trouver un JDK. Veuillez installer un JDK (version 11 ou supérieure) et/ou définir la variable d'environnement JAVA_HOME."
+        exit 1
+    }
 }
 
-# Vérifier le répertoire courant
-# Le script est exécuté depuis la racine du projet
-$projectDir = Get-Location
-Write-Step "Configuration de l'environnement de test dans $($projectDir.Path)"
-
-# Vérifier si un environnement virtuel existe déjà
-$venvDir = Join-Path -Path $projectDir.Path -ChildPath "venv_test"
-if (Test-Path $venvDir) {
-    Write-Step "Suppression de l'ancien environnement virtuel"
-    Remove-Item -Path $venvDir -Recurse -Force
-}
-
-# Créer un nouvel environnement virtuel
-Write-Step "Création d'un nouvel environnement virtuel"
-python -m venv venv_test
-if (-not $?) {
-    Write-Host "Échec de la création de l'environnement virtuel." -ForegroundColor Red
+# Vérifier que le chemin JAVA_HOME est valide
+if (-not (Test-Path -Path $env:JAVA_HOME -PathType Container)) {
+    Write-Error "ÉCHEC : Le chemin défini dans JAVA_HOME n'est pas valide : $($env:JAVA_HOME)"
     exit 1
 }
 
-# Activer l'environnement virtuel
-Write-Step "Activation de l'environnement virtuel"
-$activateScript = Join-Path -Path $venvDir -ChildPath "Scripts\Activate.ps1"
-Write-Host "DEBUG: Chemin du script d'activation : '$($activateScript)'"
-try {
-    . $activateScript
-} catch {
-    Write-Host "Échec de l'activation de l'environnement virtuel." -ForegroundColor Red
-    Write-Host "Erreur: $_" -ForegroundColor Red
+Write-Host "`n   JAVA_HOME configuré : $($env:JAVA_HOME)"
+
+# --- 2. CONSTRUCTION DU CLASSPATH ---
+Write-Host "`n2. Construction du CLASSPATH pour TweetyProject..."
+
+if (-not (Test-Path -Path $tweetyLibsDir -PathType Container)) {
+    Write-Error "ÉCHEC : Le répertoire des bibliothèques Tweety est introuvable à l'emplacement : $tweetyLibsDir"
     exit 1
 }
 
-# Mettre à jour pip
-Write-Step "Mise à jour de pip"
-python -m pip install --upgrade pip
-if (-not $?) {
-    Write-Host "Échec de la mise à jour de pip." -ForegroundColor Red
+# Lister tous les fichiers .jar dans le répertoire racine de tweety
+# Lister tous les fichiers .jar récursivement pour trouver les dépendances
+$jarFiles = Get-ChildItem -Path $tweetyLibsDir -Filter *.jar -Recurse | ForEach-Object { $_.FullName }
+
+if ($jarFiles.Count -eq 0) {
+    Write-Error "ÉCHEC : Aucun fichier .jar trouvé dans $tweetyLibsDir. Les bibliothèques de Tweety sont manquantes."
     exit 1
 }
 
-# Installer les dépendances de test
-Write-Step "Installation des dépendances de test"
-$requirementsFile = Join-Path -Path $projectDir -ChildPath "config\requirements-test.txt"
-Write-Host "================================================================================"
-Write-Host "  Validation des versions des dépendances critiques"
-Write-Host "================================================================================"
-pip list | findstr "spacy thinc blis"
-if ($LASTEXITCODE -ne 0) {
-    Write-Warning "Certaines dépendances critiques (spacy, thinc, blis) n'ont pas pu être vérifiées."
-}
-python -m pip install -r $requirementsFile
-if (-not $?) {
-    Write-Host "Échec de l'installation des dépendances de test." -ForegroundColor Red
-    exit 1
-}
+# Construire la chaîne CLASSPATH
+$separator = if ($isWindows) {";"} else {":"}
+$classpath = $jarFiles -join $separator
 
-# Installer le package en mode développement
-Write-Step "Installation du package en mode développement"
-python -m pip install -e .
-if (-not $?) {
-    Write-Host "Échec de l'installation du package en mode développement." -ForegroundColor Red
-    exit 1
-}
+# Exporter le CLASSPATH pour la session courante
+$env:CLASSPATH = $classpath
 
-# Vérifier les importations problématiques
-Write-Step "Vérification des importations problématiques"
+Write-Host "   -> CLASSPATH construit avec $($jarFiles.Count) librairies."
+# Décommenter pour voir le détail du CLASSPATH
+# Write-Host "   CLASSPATH: $classpath"
 
-# Vérifier numpy
-Write-Host "Vérification de numpy..." -ForegroundColor Yellow
-python -c "import numpy; print('Numpy importé avec succès:', numpy.__version__)"
 
-# Vérifier jpype
-Write-Host "Vérification de jpype..." -ForegroundColor Yellow
-python -c "import jpype; print('JPype importé avec succès:', jpype.__version__)"
-
-# Vérifier cffi
-Write-Host "Vérification de cffi..." -ForegroundColor Yellow
-python -c "import cffi; print('CFFI importé avec succès:', cffi.__version__)"
-
-# Vérifier cryptography
-Write-Host "Vérification de cryptography..." -ForegroundColor Yellow
-python -c "import cryptography; print('Cryptography importé avec succès:', cryptography.__version__)"
-
-# Exécuter un test simple pour vérifier l'environnement
-Write-Step "Exécution d'un test simple pour vérifier l'environnement"
-$testFile = "argumentation_analysis/tests/test_async_communication_fixed.py"
-python -m unittest $testFile
-
-if ($?) {
-    Write-Step "Configuration de l'environnement de test terminée avec succès"
-    Write-Host "`nPour activer l'environnement de test dans une nouvelle session:" -ForegroundColor Green
-    Write-Host "    .\venv_test\Scripts\Activate.ps1" -ForegroundColor Green
-    
-    Write-Host "`nPour exécuter les tests:" -ForegroundColor Green
-    Write-Host '    python -m unittest discover -s argumentation_analysis/tests -p "test_*.py" -v' -ForegroundColor Green
-} else {
-    Write-Step "Des problèmes subsistent dans l'environnement de test"
-}
+# --- 3. VÉRIFICATION FINALE ---
+Write-Host "`n3. Environnement de test prêt."
+Write-Host "   -> Prêt à lancer pytest."
