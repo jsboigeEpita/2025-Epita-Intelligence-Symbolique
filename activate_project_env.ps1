@@ -17,11 +17,6 @@ C'est le point d'entrée privilégié pour toute commande relative au projet.
 .\activate_project_env.ps1 python --version
 #>
 param(
-    # Le command à exécuter. Privilégié pour les appels programmatiques.
-    [string]$CommandToRun = "",
-
-    # Maintenu pour la compatibilité avec l'usage direct en ligne de commande.
-    # ex: .\activate_project_env.ps1 pytest tests
     [string]$Command = "",
 
     [Parameter(ValueFromRemainingArguments=$true)]
@@ -43,21 +38,14 @@ catch {
 
 # --- Configuration de l'environnement ---
 $env:PYTHONPATH = "$PSScriptRoot;$env:PYTHONPATH"
-$condaEnvName = "projet-is-new"
+$condaEnvName = "projet-is-roo-new"
 
 # --- Logique de commande ---
-$executableCommand = ""
-if (-not [string]::IsNullOrWhiteSpace($CommandToRun)) {
-    # Priorité 1: Le paramètre nommé -CommandToRun est utilisé.
-    $executableCommand = $CommandToRun
-}
-elseif (-not [string]::IsNullOrWhiteSpace($Command)) {
-    # Priorité 2: Des arguments positionnels sont utilisés.
-    $executableCommand = ($Command + " " + ($RemainingArgs -join ' ')).Trim()
-}
+# Concatène la commande et ses arguments en une seule chaîne.
+$fullCommand = ($Command + " " + ($RemainingArgs -join ' ')).Trim()
 
 # Si aucune commande n'est passée, le script active simplement l'environnement et se termine.
-if ([string]::IsNullOrWhiteSpace($executableCommand)) {
+if ([string]::IsNullOrWhiteSpace($fullCommand)) {
     Write-Host "[INFO] Environnement Conda '$condaEnvName' initialisé pour la session PowerShell actuelle." -ForegroundColor Cyan
     Write-Host "[INFO] Aucune commande fournie, le script se termine. Vous pouvez maintenant exécuter des commandes manuellement." -ForegroundColor Cyan
     conda activate $condaEnvName
@@ -67,7 +55,7 @@ if ([string]::IsNullOrWhiteSpace($executableCommand)) {
 # --- Exécution via conda run ---
 # La commande est directement passée à `conda run`.
 # Utilisation de -u pour un output non bufferisé, essentiel pour les logs.
-$finalCommand = "conda run --no-capture-output -n $condaEnvName --cwd '$PSScriptRoot' $executableCommand"
+$finalCommand = "conda run --no-capture-output -n $condaEnvName --cwd '$PSScriptRoot' $fullCommand"
 
 Write-Host "[DEBUG] Commande d'exécution : $finalCommand" -ForegroundColor Gray
 
