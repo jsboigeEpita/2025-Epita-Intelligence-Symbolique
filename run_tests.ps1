@@ -50,7 +50,7 @@ function Invoke-ManagedCommand {
         throw "Script d'activation '$activationScript' introuvable!"
     }
     
-    $argumentList = "-File `"$activationScript`" -CommandToRun `"$CommandToRun`""
+    $argumentList = "-File `"$activationScript`" -Command `"$CommandToRun`""
     Write-Host "[CMD] powershell.exe $argumentList" -ForegroundColor DarkCyan
 
     $process = Start-Process "powershell.exe" -ArgumentList $argumentList -PassThru -NoNewWindow -Wait
@@ -115,7 +115,7 @@ $params = @{
     TestType = "all"
 }
 $remainingArgs = @()
-$ pytestArgsIndex = -1
+$pytestArgsIndex = -1
 
 # Parsing manuel pour mieux gérer les PytestArgs
 for ($i = 0; $i -lt $args.Count; $i++) {

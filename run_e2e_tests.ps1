@@ -103,7 +103,7 @@ Write-Host "Vérification: CONDA_DEFAULT_ENV a été défini sur: $env:CONDA_DEF
 $commandArgs = @(
     "--config", "`"$configPath`"",
     "--start",
-    # "--frontend", # Désactivé car la configuration gère déjà ce cas et le test n'a pas besoin du frontend.
+    # "--frontend", # Désactivé pour le moment, le pilotage se fait manuellement via les ports.
     "--exit-after-start",
     "--no-trace",
     "--log-level", "DEBUG"
@@ -134,8 +134,23 @@ try {
 }
 
 
-# La fonction Start-FrontendServer est maintenant obsolète car l'orchestrateur
-# gère à la fois le backend et le frontend.
+function Start-FrontendServer {
+    Write-Host "[E2E Orchestrator] Démarrage du serveur Frontend..." -ForegroundColor Cyan
+    $logFile = Join-Path $script:ProjectRoot "_temp/logs/e2e_frontend.log"
+    if (-not (Test-Path (Split-Path $logFile))) { New-Item -ItemType Directory -Path (Split-Path $logFile) -Force | Out-Null }
+    Clear-Content -Path $logFile -ErrorAction SilentlyContinue
+
+    # On suppose que le projet frontend est à la racine et se lance avec `npm start`.
+    $scriptBlock = {
+        param($logFileArg, $envName)
+        # Il est crucial de se placer dans le bon répertoire de travail.
+        # Conda run s'assure que l'environnement est correct, y compris Node/npm si géré par Conda.
+        conda run --no-capture-output -n $envName --cwd $using:script:ProjectRoot npm start *>&1 | Add-Content -Path $logFileArg
+    }
+
+    $job = Start-Job -ScriptBlock $scriptBlock -ArgumentList $logFile, $CondaEnvName
+    return $job
+}
 
 
 function Wait-For-Server {
@@ -181,52 +196,36 @@ try {
     # Note: Start-BackendServer lance maintenant l'orchestrateur qui gère les deux services.
     # L'argument --frontend doit être ajouté à la commande dans la fonction pour activer le frontend.
     # Pour l'instant, on suppose que la fonction est correctement configurée pour le faire.
-    $serverJob = Start-BackendServer
-   
-    Write-Host "[E2E Orchestrator] Tâche des serveurs (via orchestrateur) démarrée (ID: $($serverJob.Id))"
+    $backendJob = Start-BackendServer
+    Write-Host "[E2E Orchestrator] Tâche du serveur Backend (via orchestrateur) démarrée (ID: $($backendJob.Id))"
+    $frontendJob = Start-FrontendServer
+    Write-Host "[E2E Orchestrator] Tâche du serveur Frontend démarrée (ID: $($frontendJob.Id))"
 
     # 2. Attendre que les serveurs soient prêts
     # L'orchestrateur choisit les ports, nous devons donc attendre qu'ils soient connus.
     # On va lire le fichier de log de l'orchestrateur pour trouver les URLs.
-    $urlsFile = Join-Path $script:ProjectRoot "_temp/service_urls.json"
-    $maxWaitSeconds = 120
-    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-    $urlsFound = $false
+    # Approche simplifiée: On ne se fie plus au fichier JSON mais on utilise des ports fixes.
+    # L'orchestrateur est configuré pour démarrer le backend sur $BackendPort.
+    # On suppose que le frontend est servi sur $FrontendPort.
+    $Global:BackendUrl = "http://localhost:$BackendPort"
+    $Global:FrontendUrl = "http://localhost:$FrontendPort" # On force l'URL du Frontend.
 
-    while ($stopwatch.Elapsed.TotalSeconds -lt $maxWaitSeconds) {
-        if (Test-Path $urlsFile) {
-            try {
-                $urlsContent = Get-Content $urlsFile -Raw | ConvertFrom-Json
-                # Le test E2E ne dépend que du backend. Le frontend est optionnel.
-                if ($urlsContent.backend_url) {
-                    $Global:BackendUrl = $urlsContent.backend_url
-                    # Le frontend_url peut être null, c'est un état valide.
-                    $Global:FrontendUrl = $urlsContent.frontend_url
-                    $urlsFound = $true
-                    $frontendDisplay = if ([string]::IsNullOrEmpty($Global:FrontendUrl)) { 'non-défini' } else { $Global:FrontendUrl }
-                    Write-Host "[E2E Orchestrator] URLs trouvées: Backend=> $Global:BackendUrl, Frontend=> $frontendDisplay" -ForegroundColor Green
-                    break
-                }
-            } catch {
-                # Le fichier peut être en cours d'écriture, on ignore les erreurs de parsing.
-            }
-        }
-        Start-Sleep -Seconds 2
-    }
+    Write-Host "[E2E Orchestrator] Utilisation des URLs fixes: Backend=> $Global:BackendUrl, Frontend=> $Global:FrontendUrl" -ForegroundColor Green
 
-    if (-not $urlsFound) { throw "Les URLs des services n'ont pas pu être déterminées après $maxWaitSeconds secondes." }
-    
-    # Maintenant, on attend que les serveurs sur les URLs découvertes soient prêts.
+    # Attendre que les serveurs soient prêts.
     if (-not (Wait-For-Server -Url "$Global:BackendUrl/api/health" -ServerName "Backend")) { throw "Le serveur backend n'a pas démarré." }
-    # On ne lance le health check du frontend que si une URL a été fournie par l'orchestrateur.
-    if ($Global:FrontendUrl -and (-not (Wait-For-Server -Url $Global:FrontendUrl -ServerName "Frontend"))) {
-        throw "Le serveur frontend était configuré mais n'a pas démarré."
+    # On attend explicitement le frontend sur son port par défaut.
+    # C'est un changement crucial: on ne vérifie plus si l'URL est définie, on l'attend toujours.
+    if (-not (Wait-For-Server -Url $Global:FrontendUrl -ServerName "Frontend")) {
+        Write-Host "[E2E Orchestrator] [AVERTISSEMENT] Le serveur frontend n'a pas démarré. Les tests UI vont probablement échouer." -ForegroundColor Yellow
+        # On ne lance pas d'exception pour laisser Playwright tenter sa chance, ce qui donnera une erreur plus claire.
     }
 
     # 3. Exécuter les tests en passant les URLs
     Write-Host "[E2E Orchestrator] Tous les serveurs sont prêts. Démarrage des tests..." -ForegroundColor Green
    
-    $testScriptPath = Join-Path $script:ProjectRoot "tests/e2e/run_tests.ps1"
+    # Correction du chemin vers le script de test. C'était la cause racine des erreurs.
+    $testScriptPath = Join-Path $script:ProjectRoot "run_tests.ps1"
     
     # La méthode la plus fiable consiste à construire un tableau d'arguments simple.
     $pwshArgs = @(
