@@ -30,7 +30,7 @@ $CondaEnvName = "projet-is-new" # Nom de l'environnement Conda requis par l'appl
 $BackendPort = 5003
 $FrontendPort = 3000
 $BackendUrl = "http://localhost:$BackendPort"
-$FrontendUrl = "http://localhost:$FrontendUrl"
+$FrontendUrl = "http://localhost:$FrontendPort"
 $FrontendDir = Join-Path $script:ProjectRoot "services/web_api/interface-web-argumentative"
 
 $backendJob = $null
@@ -136,19 +136,21 @@ try {
 
 function Start-FrontendServer {
     Write-Host "[E2E Orchestrator] Démarrage du serveur Frontend..." -ForegroundColor Cyan
-    $logFile = Join-Path $script:ProjectRoot "_temp/logs/e2e_frontend.log"
+    $logFile = Join-Path $script:ProjectRoot "reports/frontend_launch.log"
     if (-not (Test-Path (Split-Path $logFile))) { New-Item -ItemType Directory -Path (Split-Path $logFile) -Force | Out-Null }
     Clear-Content -Path $logFile -ErrorAction SilentlyContinue
 
     # On suppose que le projet frontend est à la racine et se lance avec `npm start`.
     $scriptBlock = {
-        param($logFileArg, $envName)
-        # Il est crucial de se placer dans le bon répertoire de travail.
-        # Conda run s'assure que l'environnement est correct, y compris Node/npm si géré par Conda.
-        conda run --no-capture-output -n $envName --cwd $using:script:ProjectRoot npm start *>&1 | Add-Content -Path $logFileArg
+        param($logFileArg, $frontendPath)
+        # Il est crucial de se placer dans le bon répertoire de travail pour npm.
+        Set-Location -Path $frontendPath
+        Write-Host "Déplacement vers $($frontendPath) et exécution de 'npm start'..."
+        # Exécuter npm directement, sans passer par Conda.
+        npm start *>&1 | Add-Content -Path $logFileArg
     }
 
-    $job = Start-Job -ScriptBlock $scriptBlock -ArgumentList $logFile, $CondaEnvName
+    $job = Start-Job -ScriptBlock $scriptBlock -ArgumentList $logFile, $FrontendDir
     return $job
 }
 
@@ -222,7 +224,9 @@ try {
     }
 
     # 3. Exécuter les tests en passant les URLs
-    Write-Host "[E2E Orchestrator] Tous les serveurs sont prêts. Démarrage des tests..." -ForegroundColor Green
+    Write-Host "[E2E Orchestrator] Tous les serveurs sont prêts. Ajout d'une pause de 15s pour stabilisation..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 15
+    Write-Host "[E2E Orchestrator] Démarrage des tests..." -ForegroundColor Green
    
     # Correction du chemin vers le script de test. C'était la cause racine des erreurs.
     $testScriptPath = Join-Path $script:ProjectRoot "run_tests.ps1"

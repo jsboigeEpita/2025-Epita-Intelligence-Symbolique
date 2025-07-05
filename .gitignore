@@ -345,3 +345,7 @@ local_llm_data/
 # Fichiers temporaires de débogage
 .temp/
 _temp_prover9_install/
+
+
+# Log file for E2E frontend server
+reports/frontend_launch.log
