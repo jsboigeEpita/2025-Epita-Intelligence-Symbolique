@@ -31,6 +31,7 @@ from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogi
 from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import FirstOrderBeliefSet, ModalBeliefSet, PropositionalBeliefSet
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
 
 class AuthenticTestsValidator:
     """Validateur complet des tests authentiques avec données logiques réalistes."""
@@ -53,8 +54,8 @@ class AuthenticTestsValidator:
         self.tweety_bridge = None
         self.tweety_available = False
         try:
-            self.tweety_bridge = TweetyBridge()
-            self.tweety_available = self.tweety_bridge.is_jvm_ready()
+            self.tweety_bridge = TweetyBridge.get_instance()
+            self.tweety_available = TweetyInitializer.is_jvm_ready()
         except Exception as e:
             print(f"[TWEETY ERROR] TweetyBridge non disponible: {e}")
             self.tweety_available = False

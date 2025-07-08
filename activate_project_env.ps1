@@ -55,8 +55,10 @@ Write-Host "conda.exe $argumentList" -ForegroundColor Gray
 try {
     # On récupère le chemin complet de conda.exe pour être sûr
     $condaExecutable = Get-Command conda.exe | Select-Object -ExpandProperty Source
-    $process = Start-Process -FilePath $condaExecutable -ArgumentList $argumentList -Wait -PassThru -NoNewWindow
-    $exitCode = $process.ExitCode
+    Write-Host "[DEBUG] Lancement de la commande via Invoke-Expression..." -ForegroundColor DarkGray
+    Invoke-Expression "conda $argumentList"
+    $exitCode = $LASTEXITCODE
+    Write-Host "[DEBUG] Commande terminée avec le code de sortie: $exitCode" -ForegroundColor DarkGray
 }
 catch {
     Write-Host "[FATAL] L'exécution de la commande via conda a échoué." -ForegroundColor Red

@@ -74,8 +74,11 @@ class FirstOrderLogicAgent:
         try:
             # Essayer d'importer et initialiser le vrai TweetyBridge
             from ....bridges.tweety_bridge import TweetyBridge
-            self._tweety_bridge = TweetyBridge()
-            if not self._tweety_bridge.is_jvm_ready():
+            from ....bridges.tweety_initializer import TweetyInitializer
+            
+            if TweetyInitializer.is_jvm_ready():
+                self._tweety_bridge = TweetyBridge.get_instance()
+            else:
                 self.logger.warning("JVM TweetyBridge non prête, mode dégradé activé")
                 self._tweety_bridge = None
         except Exception as e:

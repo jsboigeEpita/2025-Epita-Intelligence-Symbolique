@@ -117,9 +117,13 @@ class EnvironmentManager:
         if project_root_str not in python_path.split(os.pathsep):
             self.logger.info(f"Ajout de {project_root_str} au PYTHONPATH.")
             env_vars['PYTHONPATH'] = f"{project_root_str}{os.pathsep}{python_path}"
+        
+        self.logger.info(f"PYTHONPATH final pour l'exécution : {env_vars.get('PYTHONPATH')}")
             
         # 2. Gestion spécifique pour Pytest (JAVA_HOME)
         if command_parts and command_parts[0].lower() == 'pytest':
+            self.logger.info("Détection de 'pytest'. Utilisation de sys.executable pour un appel robuste.")
+            command_parts = [sys.executable, "-m"] + command_parts
             self.logger.info("Détection de 'pytest'. Configuration de l'environnement Java...")
             java_home_path = self.get_java_home_from_dotenv()
             if java_home_path:
@@ -306,7 +310,11 @@ if __name__ == "__main__":
             parser.print_help()
             exit_code = 1
         else:
-            exit_code = manager.run_command_in_conda_env(args.command_parts)
+            import shlex
+            # La commande est reçue comme une seule chaîne, il faut la diviser
+            command_str = " ".join(args.command_parts)
+            command_parts_split = shlex.split(command_str)
+            exit_code = manager.run_command_in_conda_env(command_parts_split)
     elif args.command == "switch":
         if not manager.switch_environment(args.name):
             exit_code = 1

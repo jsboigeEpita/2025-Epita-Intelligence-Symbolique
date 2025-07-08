@@ -99,3 +99,62 @@ def check_files_existence(
         logger.info(f"Tous les {len(existing_files)} fichiers vérifiés existent.")
         
     return existing_files, missing_files
+
+def get_all_files_in_directory(directory: Union[str, Path], pattern: str = "**/*") -> List[Path]:
+    """
+    Récupère la liste de tous les fichiers dans un répertoire de manière récursive,
+    en filtrant potentiellement par un pattern.
+
+    Args:
+        directory (Union[str, Path]): Le chemin du répertoire à scanner.
+        pattern (str): Le pattern de glob à utiliser pour la recherche (par défaut,
+                       recherche tous les fichiers dans tous les sous-répertoires).
+
+    Returns:
+        List[Path]: Une liste d'objets Path pour chaque fichier trouvé.
+    """
+    dir_path = Path(directory)
+    if not dir_path.is_dir():
+        logger.error(f"Le chemin fourni n'est pas un répertoire valide: {directory}")
+        return []
+
+    try:
+        files = list(dir_path.rglob(pattern))
+        logger.info(f"{len(files)} fichiers trouvés dans '{directory}' avec le pattern '{pattern}'.")
+        return files
+    except Exception as e:
+        logger.error(f"Erreur lors de la recherche de fichiers dans {directory}: {e}", exc_info=True)
+        return []
+
+def get_all_files_in_directory(directory: Union[str, Path], patterns: List[str] = None) -> List[Path]:
+    """
+    Récupère la liste de tous les fichiers dans un répertoire correspondant à une liste de patterns.
+
+    Args:
+        directory (Union[str, Path]): Le chemin du répertoire à scanner.
+        patterns (List[str], optionnel): Une liste de patterns glob à utiliser. 
+                                          Par défaut, ['**/*'] pour tout rechercher.
+
+    Returns:
+        List[Path]: Une liste d'objets Path uniques pour chaque fichier trouvé.
+    """
+    if patterns is None:
+        patterns = ["**/*"]
+        
+    logger.info(f"Recherche de fichiers dans '{directory}' avec les patterns: {patterns}...")
+    dir_path = Path(directory)
+    if not dir_path.is_dir():
+        logger.error(f"Le chemin fourni n'est pas un répertoire valide: {directory}")
+        return []
+
+    all_files = set()
+    try:
+        for pattern in patterns:
+            all_files.update(dir_path.rglob(pattern))
+        
+        file_list = sorted(list(all_files)) # sorted for consistent order
+        logger.info(f"{len(file_list)} fichiers trouvés dans '{directory}' avec les patterns {patterns}.")
+        return file_list
+    except Exception as e:
+        logger.error(f"Erreur lors de la recherche de fichiers dans {directory}: {e}", exc_info=True)
+        return []

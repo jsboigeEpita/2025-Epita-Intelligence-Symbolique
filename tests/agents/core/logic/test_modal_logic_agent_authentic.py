@@ -37,6 +37,7 @@ except ImportError:
 from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent, SYSTEM_PROMPT_MODAL
 from argumentation_analysis.agents.core.logic.belief_set import ModalBeliefSet, BeliefSet
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
 
 
 # Création d'une classe concrète pour les tests
@@ -95,8 +96,8 @@ class TestModalLogicAgentAuthentic:
 
         # Initialisation du vrai TweetyBridge
         try:
-            self.tweety_bridge = TweetyBridge()
-            self.tweety_available = self.tweety_bridge.is_jvm_ready()
+            self.tweety_bridge = TweetyBridge.get_instance()
+            self.tweety_available = TweetyInitializer.is_jvm_ready()
             if self.tweety_available:
                 print("✅ TweetyBridge JVM authentique prête pour Modal")
             else:
@@ -128,7 +129,7 @@ class TestModalLogicAgentAuthentic:
         # Test de l'état du TweetyBridge authentique
         if self.tweety_available:
             self.agent.setup_agent_components(self.llm_service_id)
-            assert self.agent.tweety_bridge.is_jvm_ready() == True
+            assert TweetyInitializer.is_jvm_ready() == True
             print("✅ Test authentique TweetyBridge Modal - JVM prête")
         else:
             print("⚠️ TweetyBridge Modal non disponible - test sauté")

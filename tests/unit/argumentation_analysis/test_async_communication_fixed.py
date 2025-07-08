@@ -9,7 +9,6 @@ Ce fichier contient des versions améliorées des tests asynchrones avec:
 4. Utilisation native de pytest-asyncio
 """
 
-import asyncio
 import threading
 import time
 import uuid
@@ -89,33 +88,29 @@ def test_environment():
     
     logger.info("Test environment teardown complete")
     
-@pytest.mark.asyncio
-async def test_async_request_response(test_environment):
+def test_sync_request_response(test_environment):
     """Test de la communication asynchrone par requête-réponse."""
-    logger.info("Starting test_async_request_response")
+    logger.info("Starting test_sync_request_response")
     
     env = test_environment
     middleware = env['middleware']
-    tactical_adapter2 = env['tactical_adapter2']
     
-    # Variable pour stocker la réponse entre les tâches avec verrou AsyncIO
+    # Variable pour stocker la réponse entre les tâches
     response_received = None
-    response_event = asyncio.Event()
-    response_lock = asyncio.Lock()  # Verrou AsyncIO pour éviter les race conditions
+    response_event = threading.Event()
+    response_lock = threading.Lock()
     
-    # Créer une tâche pour simuler l'agent qui répond
-    async def responder_agent():
+    # Créer un thread pour simuler l'agent qui répond
+    def responder_agent():
         logger.info("Responder agent started")
         
-        # Attendre avant enregistrement pour éviter les race conditions
-        await asyncio.sleep(0.1)
+        time.sleep(0.1)
         
-        # Recevoir la requête
-        request = await asyncio.to_thread(
-            middleware.receive_message,
+        # Recevoir la requête (appel bloquant)
+        request = middleware.receive_message(
             recipient_id="tactical-agent-2",
             channel_type=ChannelType.HIERARCHICAL,
-            timeout=10.0  # Timeout augmenté
+            timeout=10.0
         )
         
         logger.info(f"Responder received request: {request.id if request else 'None'}")
@@ -130,32 +125,28 @@ async def test_async_request_response(test_environment):
             
             logger.info(f"Responder created response: {response.id} with reply_to={response.metadata.get('reply_to')}")
             
-            # Attendre avec verrou pour s'assurer que la requête est bien enregistrée
-            async with response_lock:
-                await asyncio.sleep(1.0)
+            with response_lock:
+                time.sleep(0.2) # Simuler un temps de traitement
                 
-                # Envoyer la réponse
                 success = middleware.send_message(response)
                 
                 logger.info(f"Response sent: {response.id}, success: {success}")
                 
-                # Stocker la réponse pour la vérification
                 nonlocal response_received
                 response_received = response
                 response_event.set()
         else:
             logger.error("No request received by responder")
     
-    # Démarrer l'agent qui répond
-    responder_task = asyncio.create_task(responder_agent())
+    # Démarrer l'agent qui répond dans un thread
+    responder_thread = threading.Thread(target=responder_agent)
+    responder_thread.start()
     
-    # Attendre un peu pour que l'agent démarre
-    await asyncio.sleep(1.0)
+    time.sleep(0.2)
     
     logger.info("Sending request from tactical agent 1")
     
-    # Créer et envoyer une requête directement
-    request_id = str(uuid.uuid4())
+    # Créer et envoyer une requête
     request = Message(
         message_type=MessageType.REQUEST,
         sender="tactical-agent-1",
@@ -169,103 +160,81 @@ async def test_async_request_response(test_environment):
         recipient="tactical-agent-2",
         channel=ChannelType.HIERARCHICAL.value,
         priority=MessagePriority.NORMAL,
-        metadata={
-            "conversation_id": f"conv-{uuid.uuid4().hex[:8]}",
-            "requires_ack": True
-        }
+        metadata={"conversation_id": f"conv-{uuid.uuid4().hex[:8]}", "requires_ack": True}
     )
     
-    # Envoyer la requête
     middleware.send_message(request)
     logger.info(f"Request sent: {request.id}")
     
     # Attendre que la réponse soit reçue
-    try:
-        await asyncio.wait_for(response_event.wait(), timeout=10.0)
-        logger.info("Response event set, response received")
+    event_was_set = response_event.wait(timeout=15.0)
+    
+    if not event_was_set:
+        responder_thread.join(timeout=1.0) # Tenter de joindre le thread
+        pytest.fail("Timeout waiting for response event")
         
-        # Vérifier que la réponse a été reçue
-        assert response_received is not None
-        assert response_received.content.get("data", {}).get("solution") == "Use pattern X"
-        assert response_received.metadata.get("reply_to") == request.id
-        
-        # Extraire les données de la réponse
-        assistance = response_received.content.get("data", {})
-        logger.info(f"Received assistance: {assistance}")
-        
-    except asyncio.TimeoutError:
-        logger.error("Timeout waiting for response")
-        raise
-    except Exception as e:
-        logger.error(f"Error in request-response test: {e}")
-        raise
-    finally:
-        # Attendre que la tâche se termine
-        try:
-            await asyncio.wait_for(responder_task, timeout=5.0)
-            logger.info("Responder task completed")
-        except asyncio.TimeoutError:
-            logger.warning("Responder task timed out, but continuing test")
+    logger.info("Response event set, response received")
+    
+    # Vérifier que la réponse a été reçue
+    assert response_received is not None
+    assert response_received.content.get("data", {}).get("solution") == "Use pattern X"
+    assert response_received.metadata.get("reply_to") == request.id
+    
+    # Extraire les données de la réponse
+    assistance = response_received.content.get("data", {})
+    logger.info(f"Received assistance: {assistance}")
+    
+    responder_thread.join(timeout=5.0)
+    assert not responder_thread.is_alive(), "Responder thread should have finished"
     
     # Vérifier que la réponse a été reçue
     assert assistance is not None
     assert assistance["solution"] == "Use pattern X"
     
-    logger.info("test_async_request_response completed successfully")
+    logger.info("test_sync_request_response completed successfully")
     
-@pytest.mark.asyncio
-async def test_async_parallel_requests(test_environment):
-    """Test de l'envoi parallèle de requêtes asynchrones."""
-    logger.info("Starting test_async_parallel_requests")
+def test_sync_parallel_requests(test_environment):
+    """Test de l'envoi parallèle de requêtes en synchrone avec threading."""
+    logger.info("Starting test_sync_parallel_requests")
     
     env = test_environment
     middleware = env['middleware']
     
-    # Variables pour stocker les réponses entre les tâches avec verrous AsyncIO
+    # Variables pour stocker les réponses
     responses_received = {}
     response_events = {}
-    response_lock = asyncio.Lock()  # Verrou AsyncIO pour éviter les race conditions
+    response_lock = threading.Lock()
     
-    # Créer une tâche pour simuler l'agent qui répond
-    async def responder_agent():
+    def responder_agent():
         logger.info("Responder agent started for parallel requests")
         
-        # Attendre avant enregistrement pour éviter les race conditions
-        await asyncio.sleep(0.1)
+        time.sleep(0.1)
         
-        # Traiter 3 requêtes
         for i in range(3):
-            # Recevoir une requête
-            request = await asyncio.to_thread(
-                middleware.receive_message,
+            # Recevoir une requête (appel bloquant)
+            request = middleware.receive_message(
                 recipient_id="tactical-agent-2",
                 channel_type=ChannelType.HIERARCHICAL,
-                timeout=10.0  # Timeout augmenté
+                timeout=10.0
             )
             
             logger.info(f"Responder received request {i+1}: {request.id if request else 'None'}")
             
             if request:
-                # Créer une réponse
                 response = request.create_response(
                     content={"status": "success", "info_type": "response", "data": {"request_id": request.id, "index": i}}
                 )
                 response.sender = "tactical-agent-2"
                 response.sender_level = AgentLevel.TACTICAL
                 
-                # Attendre un peu pour simuler un traitement
-                await asyncio.sleep(0.2)
+                time.sleep(0.2)
                 
                 logger.info(f"Responder created response {i+1}: {response.id} with reply_to={response.metadata.get('reply_to')}")
                 
-                # Utiliser un verrou pour éviter les race conditions
-                async with response_lock:
-                    # Envoyer la réponse
+                with response_lock:
                     success = middleware.send_message(response)
-                    
                     logger.info(f"Response {i+1} sent: {response.id}, success: {success}")
                     
-                    # Stocker la réponse pour la vérification
                     request_id = request.id
                     responses_received[request_id] = response
                     if request_id in response_events:
@@ -273,81 +242,59 @@ async def test_async_parallel_requests(test_environment):
             else:
                 logger.error(f"No request {i+1} received by responder")
     
-    # Démarrer l'agent qui répond
-    responder_task = asyncio.create_task(responder_agent())
+    responder_thread = threading.Thread(target=responder_agent)
+    responder_thread.start()
     
-    # Attendre un peu pour que l'agent démarre
-    await asyncio.sleep(1.0)
+    time.sleep(0.5) # Laisser le temps au responder de se mettre en écoute
     
     logger.info("Sending parallel requests")
     
-    # Envoyer plusieurs requêtes en parallèle
     requests = []
     for i in range(3):
-        # Créer une requête
         request = Message(
             message_type=MessageType.REQUEST,
-            sender="tactical-agent-1",
-            sender_level=AgentLevel.TACTICAL,
-            content={
-                "request_type": f"request-{i}",
-                "index": i,
-                "timeout": 15.0
-            },
-            recipient="tactical-agent-2",
-            channel=ChannelType.HIERARCHICAL.value,
+            sender="tactical-agent-1", sender_level=AgentLevel.TACTICAL,
+            content={"request_type": f"request-{i}", "index": i, "timeout": 15.0},
+            recipient="tactical-agent-2", channel=ChannelType.HIERARCHICAL.value,
             priority=MessagePriority.NORMAL,
-            metadata={
-                "conversation_id": f"conv-{uuid.uuid4().hex[:8]}",
-                "requires_ack": True
-            }
+            metadata={"conversation_id": f"conv-{uuid.uuid4().hex[:8]}", "requires_ack": True}
         )
         
-        # Créer un événement pour cette requête
-        response_events[request.id] = asyncio.Event()
+        response_events[request.id] = threading.Event()
         
-        # Envoyer la requête
         logger.info(f"Sending request {i}: {request.id}")
         middleware.send_message(request)
         
         requests.append(request)
     
-    # Attendre que toutes les réponses soient reçues
     logger.info("Waiting for all responses")
     all_responses = []
     
     for request in requests:
-        try:
-            await asyncio.wait_for(response_events[request.id].wait(), timeout=10.0)
+        event_was_set = response_events[request.id].wait(timeout=10.0)
+        
+        if event_was_set:
             logger.info(f"Response event set for request {request.id}")
-            
-            # Récupérer la réponse
             response = responses_received.get(request.id)
             if response:
-                # Extraire les données de la réponse
                 response_data = response.content.get("data", {})
                 all_responses.append(response_data)
                 logger.info(f"Received response for request {request.id}: {response_data}")
             else:
-                logger.error(f"No response found for request {request.id}")
-                all_responses.append(None)
-            
-        except asyncio.TimeoutError:
-            logger.error(f"Timeout waiting for response to request {request.id}")
-            all_responses.append(None)
+                pytest.fail(f"Event set but no response found for request {request.id}")
+        else:
+            pytest.fail(f"Timeout waiting for response to request {request.id}")
+
+    responder_thread.join(timeout=5.0)
+    assert not responder_thread.is_alive(), "Responder thread should have finished"
     
-    # Attendre que la tâche de réponse se termine
-    try:
-        await asyncio.wait_for(responder_task, timeout=5.0)
-        logger.info("Responder task completed")
-    except asyncio.TimeoutError:
-        logger.warning("Responder task timed out, but continuing test")
-    
-    # Vérifier que toutes les réponses ont été reçues avec assertions pytest
     assert len(all_responses) == 3
-    for i, response in enumerate(all_responses):
-        assert response is not None
-        assert "request_id" in response
-        assert response["index"] == i
+    # Les réponses peuvent arriver dans n'importe quel ordre, nous trions par index
+    all_responses.sort(key=lambda r: r.get('index', -1))
     
-    logger.info("test_async_parallel_requests completed successfully")
+    for i, response_data in enumerate(all_responses):
+        assert response_data is not None
+        assert "request_id" in response_data
+        assert response_data["index"] == i
+    
+    logger.info("test_sync_parallel_requests completed successfully")

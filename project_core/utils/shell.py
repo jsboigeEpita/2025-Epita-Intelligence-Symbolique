@@ -135,7 +135,7 @@ def _get_env_python_executable(env_name: str) -> str:
     # HOTFIX: The project consistently uses a single conda environment.
     # We ignore the passed name to prevent issues from call sites
     # that might use outdated or incorrect environment names like 'projet-is' or 'default'.
-    correct_env_name = "projet-is-roo-new"
+    correct_env_name = "projet-is"
     
     logger.info(f"Locating Python executable for conda env: '{correct_env_name}' (requested env: '{env_name}' was ignored)")
     try:

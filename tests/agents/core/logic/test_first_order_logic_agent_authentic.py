@@ -37,6 +37,7 @@ except ImportError:
 from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import FirstOrderBeliefSet, BeliefSet
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
 
 
 # Le test n'est plus marqué xfail. Le crash à la sortie a été résolu
@@ -86,8 +87,8 @@ async def test_agent_initialization_simplified(jvm_session):
 
     # 2. Initialisation de TweetyBridge (en utilisant la fixture de session)
     try:
-        tweety_bridge = TweetyBridge()
-        tweety_available = tweety_bridge.is_jvm_ready()
+        tweety_bridge = TweetyBridge.get_instance()
+        tweety_available = TweetyInitializer.is_jvm_ready()
         assert tweety_available, "La JVM de TweetyBridge n'est pas prête."
         print(f"✅ TweetyBridge est prêt (JVM démarrée par jvm_session: {tweety_available})")
     except Exception as e:

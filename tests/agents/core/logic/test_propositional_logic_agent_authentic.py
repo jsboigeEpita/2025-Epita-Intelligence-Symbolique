@@ -32,6 +32,7 @@ except ImportError:
 from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import PropositionalBeliefSet
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
 from argumentation_analysis.agents.core.pl.pl_definitions import PL_AGENT_INSTRUCTIONS
 
 
@@ -87,8 +88,8 @@ class TestPropositionalLogicAgentAuthentic:
                 print(f"[AUTHENTIC] OpenAI non disponible: {e}")
         
         # Configuration du vrai TweetyBridge
-        self.tweety_bridge = TweetyBridge()
-        self.tweety_available = self.tweety_bridge.is_jvm_ready()
+        self.tweety_bridge = TweetyBridge.get_instance()
+        self.tweety_available = TweetyInitializer.is_jvm_ready()
         print(f"[AUTHENTIC] TweetyBridge JVM disponible: {self.tweety_available}")
         
         # Configuration PropositionalLogicAgent authentique
@@ -120,14 +121,14 @@ class TestPropositionalLogicAgentAuthentic:
         # Vérification TweetyBridge authentique
         if self.tweety_available:
             # Test d'interaction réelle avec TweetyBridge
-            is_ready = self.tweety_bridge.is_jvm_ready()
+            is_ready = TweetyInitializer.is_jvm_ready()
             assert is_ready is True
             print(f"[AUTHENTIC] TweetyBridge JVM prête: {is_ready}")
             
             # Test de validation authentique
-            valid, msg = self.tweety_bridge.validate_formula("a => b")
+            valid = self.tweety_bridge.validate_pl_formula("a => b")
             assert valid is True
-            print(f"[AUTHENTIC] Validation formule 'a => b': {valid}, {msg}")
+            print(f"[AUTHENTIC] Validation formule 'a => b': {valid}")
         else:
             print("[AUTHENTIC] TweetyBridge JVM non disponible - test gracieux")
         
@@ -172,8 +173,9 @@ class TestPropositionalLogicAgentAuthentic:
                 
                 # Validation authentique avec TweetyBridge si disponible
                 if self.tweety_available:
-                    valid, validation_msg = self.tweety_bridge.validate_belief_set(belief_set.content)
-                    print(f"[AUTHENTIC] Validation TweetyBridge: {valid}, {validation_msg}")
+                    # La méthode validate_belief_set n'existe pas. On valide une formule à la place.
+                    valid = self.tweety_bridge.validate_pl_formula(belief_set.content.split('&')[0].strip())
+                    print(f"[AUTHENTIC] Validation TweetyBridge d'une partie du belief set: {valid}")
             else:
                 print(f"[AUTHENTIC] Conversion produit résultat vide: {message}")
                 
@@ -213,7 +215,7 @@ class TestPropositionalLogicAgentAuthentic:
             # Validation authentique avec TweetyBridge si disponible
             if self.tweety_available and len(queries) > 0:
                 for query in queries:
-                    valid, validation_msg = self.tweety_bridge.validate_formula(query)
+                    valid = self.tweety_bridge.validate_pl_formula(query)
                     print(f"[AUTHENTIC] Validation requête '{query}': {valid}")
                     
         except Exception as e:

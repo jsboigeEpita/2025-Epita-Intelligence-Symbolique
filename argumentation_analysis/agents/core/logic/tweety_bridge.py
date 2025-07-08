@@ -213,18 +213,20 @@ class TweetyBridge:
         except ValueError as e:
             return False, str(e)
 
-    def fol_check_consistency(self, belief_set: Any) -> Tuple[bool, str]:
+    def fol_check_consistency(self, belief_set: Any, signature: Any) -> Tuple[bool, str]:
         """Vérifie la consistance d'un ensemble de croyances FOL."""
         if not self._initializer.FolBeliefSet:
             logger.error("FolBeliefSet class not loaded.")
             return False, "FolBeliefSet class not loaded."
         if not isinstance(belief_set, self._initializer.FolBeliefSet):
             return False, "L'objet fourni n'est pas une instance de FolBeliefSet."
-        return self.fol_handler.fol_check_consistency(belief_set)
+        
+        # L'appel à fol_check_consistency de fol_handler est maintenant synchrone
+        return self.fol_handler.fol_check_consistency(belief_set, signature)
 
-    def fol_query(self, belief_set: Any, query_formula_str: str) -> bool:
+    def fol_query(self, belief_set: Any, signature: Any, query_formula_str: str) -> bool:
         """Exécute une requête en logique du premier ordre."""
-        return self.fol_handler.fol_query(belief_set, query_formula_str)
+        return self.fol_handler.fol_query(belief_set, signature, query_formula_str)
         
     def create_belief_set_from_string(self, formula_string: str) -> Optional[Any]:
         """Crée un objet FolBeliefSet à partir d'une chaîne de formules."""

@@ -9,6 +9,7 @@ from config.unified_config import UnifiedConfig
 """Tests pour l'initialisation des services centraux."""
 
 import pytest
+from unittest.mock import patch, MagicMock
 
 from pathlib import Path
 

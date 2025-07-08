@@ -197,11 +197,12 @@ class TestSherlockJTMSAgent:
         assert "detailed_solution" in result
         assert "confidence_score" in result
     
-    def test_get_investigation_summary(self, sherlock_agent):
+    @pytest.mark.asyncio
+    async def test_get_investigation_summary(self, sherlock_agent):
         """Test de résumé d'enquête"""
         # Ajouter quelques éléments
-        asyncio.run(sherlock_agent.analyze_clues([{"description": "Indice 1"}]))
-        asyncio.run(sherlock_agent.formulate_hypothesis("Hypothèse 1"))
+        await sherlock_agent.analyze_clues([{"description": "Indice 1"}])
+        await sherlock_agent.formulate_hypothesis("Hypothèse 1")
         
         summary = sherlock_agent.get_investigation_summary()
         
@@ -211,10 +212,11 @@ class TestSherlockJTMSAgent:
         assert "total_evidence" in summary
         assert "jtms_statistics" in summary
     
-    def test_export_investigation_state(self, sherlock_agent):
+    @pytest.mark.asyncio
+    async def test_export_investigation_state(self, sherlock_agent):
         """Test d'export d'état d'enquête"""
         # Ajouter quelques éléments de test
-        asyncio.run(sherlock_agent.formulate_hypothesis("Test export"))
+        await sherlock_agent.formulate_hypothesis("Test export")
         
         state = sherlock_agent.export_session_state()
         

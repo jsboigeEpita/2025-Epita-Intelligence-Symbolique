@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Any, Tuple
 
 from .belief_set import BeliefSet
 from .tweety_bridge import TweetyBridge
+from .tweety_initializer import TweetyInitializer
 
 # Configuration du logger
 logger = logging.getLogger("Orchestration.QueryExecutor")
@@ -25,7 +26,7 @@ class QueryExecutor:
         Initialise l'exécuteur de requêtes.
         """
         self._logger = logger
-        self._tweety_bridge = TweetyBridge()
+        self._tweety_bridge = None
     
     def execute_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
         """
@@ -48,10 +49,14 @@ class QueryExecutor:
         self._logger.info(f"Exécution de la requête '{query}' sur un ensemble de croyances de type '{belief_set.logic_type}'")
         
         # Vérifier si la JVM est prête
-        if not self._tweety_bridge.is_jvm_ready():
+        if not TweetyInitializer.is_jvm_ready():
             error_msg = "JVM non prête ou composants Tweety non chargés"
             self._logger.error(error_msg)
             return None, f"FUNC_ERROR: {error_msg}"
+        
+        # Obtenir l'instance de TweetyBridge si elle n'est pas encore initialisée
+        if self._tweety_bridge is None:
+            self._tweety_bridge = TweetyBridge.get_instance()
         
         # Exécuter la requête en fonction du type de logique
         if belief_set.logic_type == "propositional":

@@ -1,6 +1,7 @@
 import jpype
 import logging
 import asyncio
+import re
 # La configuration du logging (appel à setup_logging()) est supposée être faite globalement.
 from argumentation_analysis.core.utils.logging_utils import setup_logging
 from .tweety_initializer import TweetyInitializer
@@ -198,24 +199,147 @@ class FOLHandler:
         self.logger.info(f"Base de connaissances FOL créée par programmation avec {belief_set.size()} formules.")
         return belief_set, signature
 
-    async def fol_check_consistency(self, belief_set):
+    def _tweety_formula_to_prover9_string(self, formula, signature) -> str:
+        """
+        Converts a single Tweety formula object to a Prover9 string recursively,
+        carefully handling parentheses to avoid syntax errors.
+        """
+        # Get cached Java classes from the initializer to ensure correct package paths are used.
+        ForallQuantifiedFormula = self._initializer_instance.ForallQuantifiedFormula
+        ExistsQuantifiedFormula = self._initializer_instance.ExistsQuantifiedFormula
+        Implication = self._initializer_instance.Implication
+        Conjunction = self._initializer_instance.Conjunction
+        Disjunction = self._initializer_instance.Disjunction
+        Negation = self._initializer_instance.Negation
+        FolAtom = self._initializer_instance.FolAtom
+
+        if not all([ForallQuantifiedFormula, ExistsQuantifiedFormula, Implication, Conjunction, Disjunction, Negation, FolAtom]):
+            self.logger.error("One or more required Java classes are not available from the initializer.")
+            raise RuntimeError("Missing essential Java classes for Prover9 conversion.")
+
+        # Case 1: Quantified formulas (all, exists)
+        if isinstance(formula, (ForallQuantifiedFormula, ExistsQuantifiedFormula)):
+            quantifier = "all" if isinstance(formula, ForallQuantifiedFormula) else "exists"
+            variables = [str(v) for v in formula.getQuantifierVariables()]
+            variable_str = " ".join(variables)
+            inner_formula_prover9 = self._tweety_formula_to_prover9_string(formula.getFormula(), signature)
+            # Prover9 syntax: all X (P(X) -> Q(X))
+            return f"{quantifier} {variable_str} ({inner_formula_prover9})"
+
+        # Case 2: Binary connectives (->, &, |)
+        elif isinstance(formula, Implication):
+            op = "->"
+            # Correction pour l'API de Tweety : les opérandes d'une implication sont dans une Pair.
+            operands_pair = formula.getFormulas()
+            left = self._tweety_formula_to_prover9_string(operands_pair.getFirst(), signature)
+            right = self._tweety_formula_to_prover9_string(operands_pair.getSecond(), signature)
+            # Critical for Prover9: Do NOT wrap the entire implication in extra parentheses
+            return f"{left} {op} {right}"
+        elif isinstance(formula, Conjunction):
+            op = "&"
+            operands = [self._tweety_formula_to_prover9_string(f, signature) for f in formula.getFormulas()]
+            return f"({' & '.join(operands)})" # Parens needed for precedence
+        elif isinstance(formula, Disjunction):
+            op = "|"
+            operands = [self._tweety_formula_to_prover9_string(f, signature) for f in formula.getFormulas()]
+            return f"({' | '.join(operands)})" # Parens needed for precedence
+
+        # Case 3: Unary connective (negation)
+        elif isinstance(formula, Negation):
+            inner = self._tweety_formula_to_prover9_string(formula.getFormula(), signature)
+            return f"-({inner})"
+
+        # Case 4: Base case (atomic formula)
+        elif isinstance(formula, FolAtom):
+            # The default str() for FolAtom is usually correct for Prover9
+            return str(formula)
+
+        # Fallback for any other type (should not happen in typical FOL)
+        else:
+            self.logger.warning(f"Unsupported formula type in Prover9 conversion: {type(formula)}. Using default toString().")
+            return str(formula).replace("=>", "->").replace("!", "-")
+
+    def _generate_prover9_input(self, belief_set, signature, goal_formula: str) -> str:
+        """
+        Generates the complete Prover9 input string, including signature declarations.
+        """
+        # 1. Format Signature
+        signature_decls = []
+        if signature:
+            # Sorts
+            sorts = signature.getSorts()
+            if not sorts.isEmpty():
+                for s in sorts:
+                    signature_decls.append(f"sorts({s.getName()}).")
+
+            # Constants
+            constants = signature.getConstants()
+            if not constants.isEmpty():
+                for c in constants:
+                    if c.getSort():
+                         signature_decls.append(f"constant({str(c)}, {str(c.getSort().getName())}).")
+
+            # Predicates are inferred by Prover9 from usage. Explicitly declaring them
+            # with `relation(...)` and then using them in atoms causes a fatal error.
+            # Therefore, this block is disabled.
+            #
+            # predicates = signature.getPredicates()
+            # if not predicates.isEmpty():
+            #     for p in predicates:
+            #         arg_sorts = ", ".join([str(s.getName()) for s in p.getArgumentTypes()])
+            #         signature_decls.append(f"relation({p.getName()}({arg_sorts})).")
+        
+        signature_block = "\n".join(signature_decls)
+
+        # 2. Format Formulas (New robust way)
+        formulas_list = []
+        if belief_set:
+            for formula in belief_set:
+                # Chaque formule doit se terminer par un point pour Prover9.
+                # On l'ajoute ici pour centraliser la logique et éviter les erreurs
+                # dans les appels récursifs potentiels.
+                prover9_formula_str = self._tweety_formula_to_prover9_string(formula, signature)
+                if prover9_formula_str: # Éviter d'ajouter un point à une chaîne vide.
+                    formulas_list.append(prover9_formula_str.strip() + ".")
+        
+        formulas_block = "\n".join(formulas_list)
+
+        # 3. Format Goal
+        # The goal might also be a quantified formula, but for now, we assume simple goals.
+        # Negations in goals are represented by `-> $F`.
+        # A consistency check in Prover9 is proving a contradiction from the assumptions,
+        # which means the goal list should be empty. `$F` is the prover's symbol for false.
+        if goal_formula == "$F":
+            goal_block = "" # Empty goal for consistency check
+        else:
+            # For standard queries, the goal is the formula itself.
+            goal_block = goal_formula.rstrip('.') + '.'
+
+
+
+        # 4. Assemble final input
+        return (
+            f"formulas(assumptions).\n"
+            f"{signature_block}\n\n"
+            f"{formulas_block}\n"
+            f"end_of_list.\n\n"
+            f"formulas(goals).\n"
+            f"{goal_block}\n"
+            f"end_of_list."
+        )
+
+    def fol_check_consistency(self, belief_set, signature):
         """
         Checks if an FOL knowledge base is consistent using an external Prover9 process.
         """
         logger.debug(f"Checking FOL consistency for belief set of size {belief_set.size()} via external Prover9")
         try:
-            # Convert belief set to Prover9 input format
-            formulas_str = belief_set.toString().replace(";", ".\n")
-            prover9_input = f"formulas(assumptions).\n{formulas_str}\nend_of_list.\n\ngoals.\n$F.\nend_of_list."
-
-            logger.debug(f"Prover9 input for consistency check:\n{prover9_input}")
-
-            # Run Prover9 externally
-            prover9_output = await asyncio.to_thread(run_prover9, prover9_input)
+            prover9_input = self._generate_prover9_input(belief_set, signature, "$F")
+            self.logger.critical(f"--- PROVER9 CONSISTENCY INPUT ---\n{prover9_input}\n---------------------------------")
             
-            # Check output for proof of contradiction
-            is_consistent = "END OF PROOF" not in prover9_output
-            
+            prover9_output = run_prover9(prover9_input)
+            is_consistent = "end of proof" not in prover9_output
+
             msg = f"Consistency check result: {is_consistent}"
             logger.info(msg)
             return is_consistent, msg
@@ -223,28 +347,20 @@ class FOLHandler:
             logger.error(f"Error during external FOL consistency check: {e}", exc_info=True)
             raise RuntimeError(f"FOL consistency check failed: {e}") from e
 
-    def fol_query(self, belief_set, query_formula_str: str) -> bool:
+    def fol_query(self, belief_set, signature, query_formula_str: str) -> bool:
         """
         Checks if a query is entailed by a belief base using an external Prover9 process.
         """
         logger.debug(f"Performing FOL query via external Prover9. Query: '{query_formula_str}'")
         try:
-            # Convert belief set and query to Prover9 input format
-            formulas_str = belief_set.toString().replace(";", ".\n")
-            
-            # The query must not end with a period in the goals section for Prover9
             prover9_goal = query_formula_str.rstrip('.')
-            
-            prover9_input = f"formulas(assumptions).\n{formulas_str}\nend_of_list.\n\ngoals.\n{prover9_goal}.\nend_of_list."
-            
-            logger.debug(f"Prover9 input for query:\n{prover9_input}")
+            prover9_input = self._generate_prover9_input(belief_set, signature, prover9_goal)
 
-            # Run Prover9 externally
+            self.logger.critical(f"--- PROVER9 QUERY INPUT ---\n{prover9_input}\n---------------------------")
+
             prover9_output = run_prover9(prover9_input)
+            entails = "end of proof" in prover9_output
 
-            # Check for "END OF PROOF" which means the goal was proven
-            entails = "END OF PROOF" in prover9_output
-            
             logger.info(f"FOL Query: KB entails '{query_formula_str}'? {entails}")
             return entails
         except Exception as e:

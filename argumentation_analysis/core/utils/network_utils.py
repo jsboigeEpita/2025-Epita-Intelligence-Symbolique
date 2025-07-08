@@ -195,9 +195,12 @@ class ResilientAsyncTransport(httpx.AsyncBaseTransport):
         
         # Le décorateur @retry gérera les codes d'état via `retry_if_exception_type`
         # si `raise_for_status()` lève une `HTTPStatusError`.
-        if 400 <= response.status_code < 600:
-             # Force la levée d'une exception pour les codes d'erreur afin que Tenacity la traite
-            response.raise_for_status()
+        # La logique de rejeu est déjà configurée pour s'activer sur les httpx.HTTPStatusError.
+        # Forcer la levée ici est redondant et cause des problèmes lorsque le logging
+        # personnalisé consomme et reconstruit le flux de réponse, perdant la référence
+        # à la requête originale nécessaire pour raise_for_status().
+        # if 400 <= response.status_code < 600:
+        #    response.raise_for_status()
 
         return response
 

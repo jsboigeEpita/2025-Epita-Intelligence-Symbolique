@@ -25,11 +25,12 @@ import os
 
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
-from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents import ChatMessageContent, FunctionResultContent
 from semantic_kernel.contents.chat_history import ChatHistory
 # Imports are updated based on recent semantic-kernel changes
 # The decorator has been moved to the top-level package for easier access.
-from semantic_kernel.functions import kernel_function, KernelFunctionFromPrompt, KernelPlugin, KernelArguments
+from semantic_kernel.functions import kernel_function, KernelPlugin, KernelArguments
+from semantic_kernel.functions.kernel_function_from_prompt import KernelFunctionFromPrompt
 from semantic_kernel.prompt_template.prompt_template_config import PromptTemplateConfig
 from semantic_kernel.connectors.ai.open_ai import OpenAIPromptExecutionSettings
 from pydantic import Field, field_validator
@@ -204,18 +205,29 @@ class BeliefSetBuilderPlugin:
     def _ensure_predicate_exists(self, predicate_name: str, arity: int = 1):
         """
         Ensures a predicate schema exists. If not, creates a default one.
-        This prevents errors when LLMs use predicates before declaring them.
+        Applies the 'is_' prefixing rule for unary predicates matching a sort.
         """
-        norm_pred = self._normalize(predicate_name)
-        if norm_pred not in self._predicates:
-            # Create a default schema with arity 1 and a sort named after the predicate.
-            default_sort_name = norm_pred
-            logger.debug(f"Predicate '{norm_pred}' not found. Creating default schema with arity {arity} and sort '{default_sort_name}'.")
+        norm_pred_base = self._normalize(predicate_name)
+        final_pred_name = norm_pred_base
+
+        # Règle de préfixage : si un prédicat est unaire ET que son nom correspond à une sorte,
+        # on le considère comme un prédicat de typage et on le préfixe.
+        if arity == 1 and norm_pred_base in self._sorts and not norm_pred_base.startswith("is_"):
+            final_pred_name = f"is_{norm_pred_base}"
+            logger.debug(f"Unary predicate '{norm_pred_base}' matches sort. Applying 'is_' prefix -> '{final_pred_name}'")
+
+        if final_pred_name not in self._predicates:
+            # Create a default schema with arity and a sort named after the base predicate name.
+            default_sort_name = norm_pred_base
+            logger.debug(f"Predicate '{final_pred_name}' not found. Creating default schema with arity {arity} and sort '{default_sort_name}'.")
             
-            # The schema will have `arity` arguments, all of the same default sort.
+            if default_sort_name not in self._sorts:
+                self.add_sort(default_sort_name)
+            
             default_arg_sorts = [default_sort_name] * arity
-            self.add_predicate_schema(norm_pred, default_arg_sorts)
-        return norm_pred
+            self.add_predicate_schema(final_pred_name, default_arg_sorts)
+            
+        return final_pred_name
 
     @kernel_function(
         description="Déclare un nouveau sort (un type de catégorie, comme 'personne' ou 'ville').",
@@ -294,21 +306,18 @@ class BeliefSetBuilderPlugin:
                          f"L'assignation à '{norm_sort}' est interprétée comme un fait atomique.")
         
         # Le nom du prédicat est dérivé de la nouvelle sorte.
+        # Le nom du prédicat est dérivé de la nouvelle sorte. _ensure_predicate_exists s'occupera du préfixe.
         predicate_name_candidate = norm_sort
         
-        # S'assurer que le prédicat correspondant existe.
-        # Sa sorte d'argument doit être elle-même.
-        self._ensure_predicate_exists(predicate_name_candidate, arity=1)
-        
-        # Ajouter le fait atomique. La validation dans `add_atomic_fact` va maintenant
-        # utiliser la hiérarchie de sortes pour vérifier la compatibilité.
+        # Garantit que le prédicat (ex: is_homme) existe et est correctement configuré.
+        final_predicate_name = self._ensure_predicate_exists(predicate_name_candidate, arity=1)
+
         try:
-            self.add_atomic_fact(fact_predicate_name=predicate_name_candidate, fact_arguments=[norm_const])
-            return f"Fact '{predicate_name_candidate}({norm_const})' added instead of changing sort."
+            self.add_atomic_fact(fact_predicate_name=final_predicate_name, fact_arguments=[norm_const])
+            return f"Fact '{final_predicate_name}({norm_const})' added instead of changing sort."
         except ValueError as e:
-            # Si `add_atomic_fact` lève une erreur, c'est une vraie incohérence.
             self.logger.error(f"Failed to create implicit atomic fact for '{norm_const}': {e}")
-            return f"Error: Could not assert fact '{predicate_name_candidate}({norm_const})' due to validation error: {e}"
+            return f"Error: Could not assert fact '{final_predicate_name}({norm_const})' due to validation error: {e}"
 
     @kernel_function(
         description="Adds a simple positive statement (atomic fact), like 'Socrates is a philosopher'. Use `predicate_name` for the property (e.g., 'Philosopher') and `arguments` for the individual(s) (e.g., ['socrate']).",
@@ -320,56 +329,43 @@ class BeliefSetBuilderPlugin:
         norm_pred_name = self._normalize(fact_predicate_name)
         norm_args = [self._normalize(arg) for arg in fact_arguments]
 
-        # Assure que le prédicat existe pour éviter les KeyErrors.
-        self._ensure_predicate_exists(norm_pred_name, arity=len(norm_args))
+
+        # La logique de préfixage a été déplacée dans _ensure_predicate_exists,
+        # qui est maintenant la seule source de vérité pour la création et le nommage des prédicats.
+        norm_pred_name = self._ensure_predicate_exists(norm_pred_name, arity=len(norm_args))
 
         # Validation de l'arité
         expected_arity = len(self._predicates[norm_pred_name])
-        actual_arity = len(norm_args)
-        if actual_arity != expected_arity:
-            raise ValueError(f"Erreur d'arité pour '{norm_pred_name}'. Attendu: {expected_arity}, Reçu: {actual_arity}.")
+        if len(norm_args) != expected_arity:
+            raise ValueError(f"Erreur d'arité pour '{norm_pred_name}'. Attendu: {expected_arity}, Reçu: {len(norm_args)}.")
 
-        # Validation des sortes
+        # Validation des sortes et auto-réparation
         expected_sorts = self._predicates[norm_pred_name]
-        
-        if len(norm_args) != len(expected_sorts):
-            logger.error(f"Arity mismatch for '{norm_pred_name}'. Expected {len(expected_sorts)}, got {len(norm_args)}.")
-            return f"Error: Arity mismatch for predicate '{norm_pred_name}'."
-
-        # The new combined logic
         for i, arg_name in enumerate(norm_args):
             expected_sort = self._normalize(expected_sorts[i])
             actual_sort = self._find_sort_of_constant(arg_name)
 
             if not actual_sort:
-                # La constante n'a pas de sorte. On l'assigne à la sorte attendue.
-                logger.info(f"Réparation : La constante '{arg_name}' était non déclarée. Assignation à la sorte attendue '{expected_sort}'.")
-                self.add_constant_to_sort(arg_name, expected_sort)
-                actual_sort = expected_sort # Mettre à jour pour la suite
+                self.logger.info(f"Auto-réparation: La constante '{arg_name}' n'était pas déclarée. Création et assignation à la sorte '{expected_sort}' attendue par le prédicat.")
+                self.add_constant_to_sort(constant_name=arg_name, sort_name=expected_sort)
+                actual_sort = expected_sort # Mettre à jour pour la suite de la validation
 
-            # Utiliser la hiérarchie pour la validation, avec auto-correction
             if not self._is_compatible(actual_sort, expected_sort):
-                logger.warning(
+                self.logger.warning(
                     f"Incompatibilité de sorte détectée pour '{arg_name}' dans '{norm_pred_name}'. "
                     f"Attendu '{expected_sort}', trouvé '{actual_sort}'. "
                     f"Inférence d'une nouvelle règle de hiérarchie : '{actual_sort}' est une sous-sorte de '{expected_sort}'."
                 )
-                # On force la compatibilité en ajoutant une règle hiérarchique
                 self._sort_hierarchy.setdefault(actual_sort, set()).add(expected_sort)
-                
-                # NOUVELLE LOGIQUE : Forcer l'unification pour résoudre le problème en amont.
-                # L'unification mettra à jour les schémas de prédicats pour utiliser une sorte canonique.
-                # Il faut s'assurer que les prédicats correspondants existent pour l'unification.
                 self.logger.info(f"Déclenchement de l'unification des sortes pour la hiérarchie inférée : '{actual_sort}' et '{expected_sort}'")
                 self._ensure_predicate_exists(actual_sort)
                 self._ensure_predicate_exists(expected_sort)
                 self._unify_sorts(actual_sort, expected_sort)
 
-        # Si toutes les validations passent, ajouter le fait.
         new_fact = AtomicFact(norm_pred_name, norm_args)
         if new_fact not in self._atomic_facts:
             self._atomic_facts.append(new_fact)
-        return f"Fait atomique '{norm_pred_name}({', '.join(norm_args)})' ajouté avec succès après validation et inférence de hiérarchie."
+        return f"Fait atomique '{norm_pred_name}({', '.join(norm_args)})' ajouté avec succès."
 
     @kernel_function(
         description="Adds a negative statement (negated atomic fact), like 'Socrates is NOT a god'. Use `predicate_name` for the property and `arguments` for the individual.",
@@ -597,9 +593,28 @@ class BeliefSetBuilderPlugin:
             for sub_sort_str, super_sorts in self._sort_hierarchy.items():
                 for super_sort_str in super_sorts:
                     self.logger.info(f"Création de la formule d'implication pour la hiérarchie : {sub_sort_str} -> {super_sort_str}")
-                    ante_pred = java_predicates.get(sub_sort_str)
-                    cons_pred = java_predicates.get(super_sort_str)
-                    j_sort = java_sorts.get(sub_sort_str)
+                    j_sort = java_sorts.get(sub_sort_str) # La sorte de base est la sous-sorte.
+                    
+                    # --- DÉFENSE CONTRE LES PRÉDICATS MANQUANTS ---
+                    # S'assure que les prédicats pour la hiérarchie existent, sinon les crée.
+                    def ensure_hierarchy_predicate(pred_name, sort_obj):
+                        if pred_name not in java_predicates:
+                            self.logger.debug(f"Création à la volée du prédicat manquant '{pred_name}' pour l'axiome de hiérarchie.")
+                            j_arg_sorts = ArrayList()
+                            j_arg_sorts.add(sort_obj)
+                            try:
+                                jpred = Predicate(pred_name, j_arg_sorts)
+                                signature.add(jpred)
+                                java_predicates[pred_name] = jpred
+                                return jpred
+                            except jpype.JException as e:
+                                self.logger.error(f"Impossible de créer le prédicat de hiérarchie '{pred_name}': {e}")
+                                return None
+                        return java_predicates[pred_name]
+
+                    ante_pred = ensure_hierarchy_predicate(sub_sort_str, j_sort)
+                    cons_pred = ensure_hierarchy_predicate(super_sort_str, j_sort) # Le conséquent utilise aussi la sorte de la variable.
+                    # --- FIN DE LA DÉFENSE ---
 
                     if not all([ante_pred, cons_pred, j_sort]):
                         self.logger.error(f"Impossible de créer l'axiome de hiérarchie pour '{sub_sort_str} -> {super_sort_str}'. "
@@ -849,23 +864,21 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             }
         }
 
-    async def setup_agent_components(self, llm_service_id: str) -> None:
+    def setup_agent_components(self, llm_service_id: str) -> None:
         """
         Configure les composants de l'agent, notamment le pont logique et les fonctions sémantiques.
         """
-        super().setup_agent_components(llm_service_id)
+        # L'appel à super() a été supprimé car la classe de base (BaseLogicAgent)
+        # n'a pas cette méthode. La logique de setup est entièrement contenue ici.
+        # super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants pour {self.name}...")
-
-        # Attendre que le pont Tweety soit prêt si l'initialisation est asynchrone
-        if hasattr(self._tweety_bridge, 'wait_for_jvm') and asyncio.iscoroutinefunction(self._tweety_bridge.wait_for_jvm):
-            await self._tweety_bridge.wait_for_jvm()
 
         if not TweetyInitializer.is_jvm_ready():
             self.logger.error("Tentative de setup FOL Kernel alors que la JVM n'est PAS démarrée.")
             raise RuntimeError("TweetyBridge not initialized, JVM not ready.")
 
         # Ajout du plugin de construction comme une collection d'outils
-        self._kernel.add_plugin(self._builder_plugin, plugin_name="BeliefBuilder")
+        self._kernel.add_plugin(self._builder_plugin, "BeliefBuilder")
 
         # Manually create KernelFunctions from prompts
         gen_queries_func = KernelFunctionFromPrompt(
@@ -886,6 +899,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         )
         
         # Add the plugin to the kernel
+        # The method for adding a pre-constructed plugin is on the plugin collection.
         self._kernel.add_plugin(prompt_plugin)
 
         self.logger.info(f"Plugin 'BeliefBuilder' and prompt-based plugin 'fol_reasoning' added to the kernel.")
@@ -898,143 +912,134 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         text = re.sub(r'[^a-zA-Z0-9_]', '', text)
         return text.lower()
 
-    def _parse_and_invoke_tool_calls(self, llm_response: str):
-        """
-        Parses the LLM's text response to find and execute tool calls.
-        This manual parsing is more robust for older SK versions.
-        """
-        import ast
-        
-        # Split response into individual lines, as LLM should provide one call per line
-        for line in llm_response.strip().split('\n'):
-            line = line.strip()
-            if not line.startswith("BeliefBuilder."):
-                continue
-
-            # Regex to find `BeliefBuilder.method_name(arguments)`
-            match = re.match(r"BeliefBuilder\.([a-zA-Z_]\w*)\((.*)\)", line)
-            if not match:
-                self.logger.warning(f"Could not parse tool call: {line}")
-                continue
-
-            method_name = match.group(1)
-            args_str = match.group(2).strip()
-
-            try:
-                method_to_call = getattr(self._builder_plugin, method_name, None)
-                if not method_to_call:
-                    self.logger.warning(f"LLM tried to call non-existent method: {method_name}")
-                    continue
-
-                # Argument parsing using a more robust regex and ast.literal_eval
-                kwargs = {}
-                # This regex captures key-value pairs, handling strings and lists
-                arg_pattern = re.compile(r"(\w+)\s*=\s*((?:'.*?'|\".*?\"|\[.*?\]))")
-                
-                for arg_match in arg_pattern.finditer(args_str):
-                    key = arg_match.group(1)
-                    value_str = arg_match.group(2)
-                    
-                    try:
-                        # Use literal_eval on the value part only
-                        value = ast.literal_eval(value_str)
-                        kwargs[key] = value
-                    except (ValueError, SyntaxError) as e:
-                        self.logger.error(f"Could not parse argument value '{value_str}' for key '{key}' in tool call '{line}'. Error: {e}")
-                        # Skip this argument
-                        continue
-                
-                if not kwargs:
-                    # Handle calls with no arguments if necessary
-                    if args_str:
-                       self.logger.warning(f"Could not parse any arguments from '{args_str}' for method '{method_name}'.")
-
-                # --- Map LLM-generated argument names to actual Python function parameter names ---
-                arg_mapping = {
-                    "add_atomic_fact": {
-                        "predicate_name": "fact_predicate_name",
-                        "arguments": "fact_arguments",
-                    },
-                    "add_negated_atomic_fact": {
-                        "predicate_name": "fact_predicate_name",
-                        "arguments": "fact_arguments",
-                    },
-                    "add_universal_implication": {
-                        "antecedent_predicate": "impl_antecedent_predicate",
-                        "consequent_predicate": "impl_consequent_predicate",
-                        "sort_of_variable": "impl_sort_of_variable",
-                    },
-                }
-
-                mapped_kwargs = {}
-                # Use the mapping if the method requires it
-                if method_name in arg_mapping:
-                    current_map = arg_mapping[method_name]
-                    for key, value in kwargs.items():
-                        # Map the key from the LLM response to the actual function parameter name
-                        mapped_key = current_map.get(key, key)
-                        mapped_kwargs[mapped_key] = value
-                else:
-                    # If no mapping is needed, use the arguments as they are
-                    mapped_kwargs = kwargs
-                
-                self.logger.info(f"Manually invoking tool: {method_name} with mapped args: {mapped_kwargs}")
-                method_to_call(**mapped_kwargs)
-
-            except Exception as e:
-                self.logger.error(f"Failed to invoke tool call: {line}. Error: {e}", exc_info=True)
 
     async def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[FirstOrderBeliefSet], str]:
         """
-        Converts text to a FirstOrderBeliefSet by manually parsing LLM tool call suggestions.
+        Converts text to a FirstOrderBeliefSet using a conversational loop for tool calling.
         """
-        self.logger.info(f"Début de la conversion de texte vers FOL (stratégie de parsing manuel) pour {self.name}...")
+        self.logger.info(f"Début de la conversion de texte vers FOL (stratégie conversationnelle) pour {self.name}...")
         self._builder_plugin.reset()
 
         try:
-            # Simple invocation to get tool suggestions as text
             chat_history = ChatHistory(system_message=self.system_prompt)
             chat_history.add_user_message(text)
 
-            arguments = KernelArguments()
+            belief_builder_plugin = self._kernel.plugins.get("BeliefBuilder")
+            if not belief_builder_plugin:
+                raise RuntimeError("Le plugin BeliefBuilder n'a pas été trouvé dans le kernel.")
 
-            # Manually create a KernelFunctionFromPrompt, following this agent's specific pattern
-            prompt_function = KernelFunctionFromPrompt(
-                function_name="get_tool_calls_from_text",
-                plugin_name="Instructions",
-                prompt=self.system_prompt,
+            tools_metadata = []
+            type_map = {'str': 'string', 'int': 'integer', 'float': 'number', 'bool': 'boolean', 'list': 'array', 'dict': 'object'}
+            for func in belief_builder_plugin.functions.values():
+                props = {}
+                required_params = []
+                for p in func.metadata.parameters:
+                    param_name = p.name
+                    if not param_name: continue
+                    param_type_str = p.type_ if isinstance(p.type_, str) else 'string'
+                    if 'list' in param_type_str.lower():
+                        param_info = {"type": "array", "items": {"type": "string"}, "description": p.description or ""}
+                    else:
+                        param_info = {"type": type_map.get(param_type_str, 'string'), "description": p.description or ""}
+                    if p.default_value is not None: param_info["default"] = p.default_value
+                    props[param_name] = param_info
+                    if p.is_required: required_params.append(param_name)
+                
+                tools_metadata.append({
+                    "type": "function",
+                    "function": {
+                        "name": func.metadata.name,
+                        "description": func.metadata.description,
+                        "parameters": {"type": "object", "properties": props, "required": required_params},
+                    },
+                })
+
+            execution_settings = OpenAIPromptExecutionSettings(
+                service_id=self._llm_service_id,
+                tool_choice="auto",
+                tools=tools_metadata
             )
-    
-            # Now invoke the function
-            result = await self._kernel.invoke(
-                function=prompt_function,
-                arguments=KernelArguments(input=text)  # Pass the main text as 'input'
-            )
-            llm_response_text = str(result)
-            
-            # Manually parse and execute the tool calls from the response
-            self._parse_and_invoke_tool_calls(llm_response_text)
-            
-            # --- PROCESS THE RESULTS ---
-            self.logger.info("Le parsing et l'invocation manuelle des outils sont terminés.")
-            self._builder_plugin._infer_sort_hierarchy()
-            
-            self.logger.info("Construction de l'ensemble de croyances Tweety...")
+
+            # --- CONVERSATIONAL TOOL CALLING LOOP ---
+            MAX_LOOPS = 5  # Safety break
+            for i in range(MAX_LOOPS):
+                self.logger.debug(f"Début du tour de conversation {i+1}/{MAX_LOOPS}")
+
+                response_messages = await self.service.get_chat_message_contents(
+                    chat_history=chat_history,
+                    settings=execution_settings,
+                    kernel=self._kernel
+                )
+                response_message = response_messages[0]
+
+                # Add assistant's response to history
+                chat_history.add_message(response_message)
+
+                try:
+                    tool_calls = response_message.inner_content.choices[0].message.tool_calls
+                except (AttributeError, IndexError, TypeError):
+                    tool_calls = None
+                
+                if not tool_calls:
+                    self.logger.info("Le LLM n'a plus suggéré d'appel d'outil. Fin de la conversation pour la construction.")
+                    break # Exit loop if no more tool calls
+
+                self.logger.info(f"Tour {i+1}: {len(tool_calls)} appel(s) d'outil(s) suggéré(s) par le LLM.")
+                
+                # Execute tools and prepare results
+                tool_call_results_for_history = []
+                for tool_call in tool_calls:
+                    self.logger.info(f"  - Invocation de '{tool_call.function.name}'")
+                    try:
+                        func_to_call = getattr(self._builder_plugin, tool_call.function.name)
+                        args = json.loads(tool_call.function.arguments)
+                        self.logger.debug(f"    Arguments: {args}")
+                        
+                        call_result = func_to_call(**args)
+                        
+                        tool_call_results_for_history.append({
+                            "tool_call_id": tool_call.id,
+                            "result": str(call_result) # Ensure result is a string for the history
+                        })
+                    except Exception as e:
+                        self.logger.error(f"    ! Échec de l'invocation de l'outil '{tool_call.function.name}': {e}", exc_info=False)
+                        tool_call_results_for_history.append({ "tool_call_id": tool_call.id, "result": f"Error: {e}"})
+
+                # Add all tool results to history for the next turn
+                # This requires creating a new ChatMessageContent with role 'tool'
+                # Note: The current SK Python ChatHistory does not have a direct `add_tool_messageS` method.
+                # We add them one by one. Check SK documentation for batch-add method if available.
+                for res in tool_call_results_for_history:
+                   chat_history.add_message(
+                       ChatMessageContent(
+                           role="tool",
+                           items=[
+                               FunctionResultContent(
+                                   id=res["tool_call_id"],
+                                   result=res["result"]
+                               )
+                           ],
+                           metadata={"tool_call_id": res["tool_call_id"]},
+                       )
+                   )
+            else:
+                 self.logger.warning(f"La boucle de conversation a atteint la limite de {MAX_LOOPS} tours.")
+            # --- END OF LOOP ---
+
+            self.logger.info("Construction finale de l'ensemble de croyances Tweety...")
             java_belief_set = self._builder_plugin.build_tweety_belief_set(self._tweety_bridge)
             
-            if java_belief_set is None:
-                return FirstOrderBeliefSet(content="", java_object=None), "La construction programmatique du belief set a échoué. Le résultat est None."
+            if not java_belief_set:
+                return FirstOrderBeliefSet(content="", java_object=None), "La construction programmatique du belief set a échoué."
 
             final_belief_set = FirstOrderBeliefSet(content=str(java_belief_set.toString()), java_object=java_belief_set)
-
             if final_belief_set.is_empty():
-                 return final_belief_set, "Aucune structure logique pertinente n'a été trouvée."
+                return final_belief_set, "Aucune structure logique pertinente n'a été trouvée."
 
             return final_belief_set, "Conversion réussie."
-
-        except (KernelException, Exception) as e:
-            self.logger.error(f"Exception interceptée dans `text_to_belief_set` ({type(e).__name__}). Re-levée pour un débogage complet.", exc_info=True)
-            raise e
+        except Exception as e:
+            self.logger.error(f"Exception majeure dans `text_to_belief_set`: {e}", exc_info=True)
+            raise
     
     def _extract_json_block(self, text: str) -> str:
         """
@@ -1084,19 +1089,23 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             self.logger.error(f"Erreur durant la génération de requêtes: {e}", exc_info=True)
             return []
 
-    async def execute_query(self, belief_set: FirstOrderBeliefSet, query: str) -> Tuple[Optional[bool], str]:
+    def execute_query(self, belief_set: FirstOrderBeliefSet, query: str) -> Tuple[Optional[bool], str]:
         """
         Exécute une requête FOL sur un `FirstOrderBeliefSet` donné.
         """
         self.logger.info(f"Exécution de la requête: {query} pour l'agent {self.name}")
         
-        java_belief_set = await self._recreate_java_belief_set(belief_set)
+        java_belief_set = self._recreate_java_belief_set(belief_set)
         if not java_belief_set:
             return None, "Impossible de recréer ou de trouver l'objet belief set Java."
             
         try:
+            signature = java_belief_set.getSignature()
+            if not signature:
+                return None, "Impossible de récupérer la signature du belief set Java."
+
             # La méthode fol_query attend la requête sous forme de chaîne de caractères.
-            entails = self._tweety_bridge.fol_query(java_belief_set, query)
+            entails = self._tweety_bridge.fol_query(java_belief_set, signature, query)
             result_str = "ACCEPTED" if entails else "REJECTED"
             return entails, result_str
         except Exception as e:
@@ -1145,18 +1154,22 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         is_valid, _ = self.tweety_bridge.validate_fol_formula(formula)
         return is_valid
 
-    async def is_consistent(self, belief_set: FirstOrderBeliefSet) -> Tuple[bool, str]:
+    def is_consistent(self, belief_set: FirstOrderBeliefSet) -> Tuple[bool, str]:
         """
         Checks if a FOL belief set is consistent.
         """
         self.logger.info(f"Vérification de la consistance pour {self.name}")
         
-        java_belief_set = await self._recreate_java_belief_set(belief_set)
+        java_belief_set = self._recreate_java_belief_set(belief_set)
         if not java_belief_set:
             return False, "Impossible de recréer ou de trouver l'objet belief set Java pour la vérification de consistance."
             
         try:
-            is_cons, _ = await self._tweety_bridge.fol_check_consistency(java_belief_set)
+            signature = java_belief_set.getSignature()
+            if not signature:
+                return False, "Impossible de récupérer la signature du belief set Java pour la vérification de consistance."
+
+            is_cons, _ = self._tweety_bridge.fol_check_consistency(java_belief_set, signature)
             if not is_cons:
                 return False, "Le belief set est incohérent (inconsistent)."
             
@@ -1165,7 +1178,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             self.logger.error(f"Erreur inattendue durant la vérification de consistance: {e}", exc_info=True)
             return False, str(e)
 
-    async def _recreate_java_belief_set(self, belief_set: FirstOrderBeliefSet) -> Optional[Any]:
+    def _recreate_java_belief_set(self, belief_set: FirstOrderBeliefSet) -> Optional[Any]:
         """
         Ensures a Java BeliefSet object is available. If an object is already present,
         it's returned. Otherwise, this logic should be handled by the method that
@@ -1180,9 +1193,25 @@ class FirstOrderLogicAgent(BaseLogicAgent):
             self.logger.warning("Tentative de reconstruction JIT (Just-In-Time) du BeliefSet à partir du contenu. "
                                "Cette approche est obsolète et peut manquer de fiabilité.")
             try:
+                # La reconstruction doit être fiable. On utilise le builder.
+                self.logger.info("Reconstruction JIT via le BeliefSetBuilder pour plus de fiabilité.")
+                # C'est une rustine. Idéalement, l'objet ne devrait jamais être perdu.
+                # On simule un cycle `text_to_belief_set` pour reconstruire.
+                
+                # NOTE: this is a simplification. A real implementation might need to
+                # re-run the LLM which is not ideal. Here we assume the content IS the logic.
+                # We reset the builder, and manually add one formula. This is a HACK.
+                self._builder_plugin.reset()
+
+                # This is tricky because the content is a full string.
+                # We can't easily decompose it back into builder calls.
+                # The robust way is to use the parser that can handle the full string.
                 java_object = self.tweety_bridge.create_belief_set_from_string(belief_set.content)
+
                 if java_object:
+                    # Let's try to rebuild the signature introspection here
                     return java_object
+                
             except Exception as e:
                 self.logger.error(f"Échec de la reconstruction JIT du BeliefSet: {e}", exc_info=True)
                 return None

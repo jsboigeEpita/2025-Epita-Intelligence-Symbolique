@@ -520,6 +520,11 @@ RÉPONDS EN FORMAT JSON :
             # Configuration des fonctions sémantiques
             await self._register_fol_semantic_functions()
             
+            # Ajout du plugin builder (si le kernel existe)
+            if self._kernel and hasattr(self, '_builder_plugin'):
+                self._kernel.add_plugin(self._builder_plugin, "BeliefBuilder")
+                logger.info("✅ Plugin BeliefBuilder ajouté au kernel")
+
         except Exception as e:
             logger.warning(f"⚠️ Configuration composants FOL partielle: {e}")
     
@@ -561,7 +566,7 @@ RÉPONDS EN FORMAT JSON :
         
         return queries
     
-    def execute_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
+    async def execute_query(self, belief_set: BeliefSet, query: str) -> Tuple[Optional[bool], str]:
         """Exécute requête sur ensemble de croyances."""
         try:
             formulas = [b.content for b in belief_set.beliefs]
@@ -569,8 +574,7 @@ RÉPONDS EN FORMAT JSON :
             if query == "consistency_check":
                 # Test cohérence
                 if self.tweety_bridge:
-                    import asyncio
-                    is_consistent = asyncio.run(self.tweety_bridge.check_consistency(formulas))
+                    is_consistent = await self.tweety_bridge.check_consistency(formulas)
                     return is_consistent, f"Consistency: {is_consistent}"
                 else:
                     return True, "Consistency assumed (no Tweety)"
@@ -578,8 +582,7 @@ RÉPONDS EN FORMAT JSON :
             elif query == "derive_conclusions":
                 # Dérivation d'inférences
                 if self.tweety_bridge:
-                    import asyncio
-                    inferences = asyncio.run(self.tweety_bridge.derive_inferences(formulas))
+                    inferences = await self.tweety_bridge.derive_inferences(formulas)
                     return len(inferences) > 0, f"Inferences: {inferences}"
                 else:
                     return True, "Inferences simulated"
@@ -617,14 +620,13 @@ RÉPONDS EN FORMAT JSON :
         """Valide syntaxe formule FOL."""
         return self._validate_fol_formula(formula)
     
-    def is_consistent(self, belief_set: BeliefSet) -> Tuple[bool, str]:
+    async def is_consistent(self, belief_set: BeliefSet) -> Tuple[bool, str]:
         """Vérifie cohérence ensemble de croyances."""
         try:
             formulas = [b.content for b in belief_set.beliefs]
             
             if self.tweety_bridge:
-                import asyncio
-                is_consistent = asyncio.run(self.tweety_bridge.check_consistency(formulas))
+                is_consistent = await self.tweety_bridge.check_consistency(formulas)
                 return is_consistent, f"Tweety consistency check: {is_consistent}"
             else:
                 # Vérification heuristique basique
