@@ -78,67 +78,6 @@ class FallacyWorkflowPlugin:
         )
         return slave_kernel, slave_exec_settings
 
-    async def _explore_single_branch(
-        self,
-        argument_text: str,
-        start_node_pk: str,
-        slave_kernel: Kernel,
-        slave_exec_settings: OpenAIPromptExecutionSettings,
-        slave_system_message: str,
-    ) -> Optional[dict]:
-        """Explore une seule branche de la taxonomie à partir d'un noeud donné."""
-        self.logger.info(f"\n--- [Branch Exploration] Starting at node: {start_node_pk} ---")
-        candidate_nodes = [start_node_pk]
-        
-        for i in range(5):  # Limite de 5 itérations par branche
-            self.logger.info(f"  [Branch Iteration {i+1}] Candidates: {candidate_nodes}")
-
-            children = self.taxonomy_navigator.get_children(candidate_nodes[0])
-            if not children:
-                self.logger.info(f"  [Branch End] No children for {candidate_nodes[0]}. Confirming this node.")
-                return self.taxonomy_navigator.get_node(candidate_nodes[0])
-
-            options_to_present = []
-            current_node_data = self.taxonomy_navigator.get_node(candidate_nodes[0])
-            options_to_present.append({
-                "id": candidate_nodes[0], "name": current_node_data[f"text_{self.language}"],
-                "description": f"PARENT (Confirm this): {current_node_data[f'desc_{self.language}']}"
-            })
-            for child in children:
-                options_to_present.append({
-                    "id": child["PK"], "name": child[f"text_{self.language}"],
-                    "description": f"CHILD (Explore this): {child[f'desc_{self.language}']}",
-                    "example": child[f'example_{self.language}']
-                })
-            
-            context_for_slave = (
-                f"Text to analyze: '{argument_text}'\n\n"
-                "You are analyzing ONE specific branch. Select the SINGLE most promising path to continue.\n"
-                f"{json.dumps(options_to_present, indent=2, ensure_ascii=False)}"
-            )
-
-            history = ChatHistory(system_message=slave_system_message)
-            history.add_user_message(context_for_slave)
-            response_message = await self.llm_service.get_chat_message_content(
-                chat_history=history, settings=slave_exec_settings, kernel=slave_kernel
-            )
-            
-            explore_calls = [c for c in response_message.items if isinstance(c, FunctionCallContent) and c.name == "Exploration-explore_branch"]
-            if not explore_calls:
-                self.logger.info(f"  [Branch End] LLM did not choose a path. Confirming {candidate_nodes[0]}.")
-                return self.taxonomy_navigator.get_node(candidate_nodes[0])
-
-            next_pk = json.loads(explore_calls[0].arguments)["node_pk"]
-            if next_pk == candidate_nodes[0]:
-                self.logger.info(f"  [Branch End] LLM confirmed parent {next_pk}, indicating a dead end for this branch.")
-                return None
-
-            candidate_nodes = [next_pk]
-
-        self.logger.warning(f"  [Branch End] Max iterations reached for starting node {start_node_pk}. Branch failed.")
-        return None
-
-
     @kernel_function(
         name="run_guided_analysis",
         description="Exécute un workflow guidé pour analyser un texte et identifier les sophismes."
@@ -146,96 +85,137 @@ class FallacyWorkflowPlugin:
     async def run_guided_analysis(
         self, argument_text: Annotated[str, "Le texte de l'argument à analyser."]
     ) -> Annotated[str, "Le résultat final de l'analyse, listant les sophismes identifiés."]:
-        print("!!!!!! -------- FallacyWorkflowPlugin.run_guided_analysis (Parallel) CALLED -------- !!!!!")
-        self.logger.info(f"--- Starting Guided Fallacy Analysis for: '{argument_text[:80]}...' ---")
+        """
+        Exécute une analyse séquentielle en deux étapes pour identifier un sophisme.
+        Étape 1: Le LLM choisit la catégorie de premier niveau la plus pertinente.
+        Étape 2: Le LLM explore cette catégorie en profondeur jusqu'à trouver un sophisme ou conclure.
+        """
+        print("!!!!!! -------- FallacyWorkflowPlugin.run_guided_analysis (Sequential) CALLED -------- !!!!!")
+        self.logger.info(f"--- Starting Sequential Fallacy Analysis for: '{argument_text[:80]}...' ---")
 
         slave_kernel, slave_exec_settings = self._create_slave_kernel()
+        slave_system_message = "Your ONLY purpose is to classify text by navigating a taxonomy. You MUST call one function. Do NOT output any other text."
+
+        # --- Étape 1: Sélection de la catégorie racine ---
+        self.logger.info("--- Phase 1: Selecting Root Category ---")
         root_nodes = self.taxonomy_navigator.get_root_nodes()
         if not root_nodes:
             return json.dumps({"error": "No root nodes found."}, indent=2)
 
-        slave_system_message = "Your ONLY purpose is to classify text by navigating a taxonomy. You MUST call one function. Do NOT output any other text."
+        root_options = [
+            {
+                "id": node["PK"],
+                "name": node[f"text_{self.language}"],
+                "description": node[f"desc_{self.language}"],
+            }
+            for node in root_nodes
+        ]
 
-        self.logger.info("--- Phase 1: Identifying initial candidate branches with new prompt logic ---")
-
-        prompt_parts = []
-        for root in root_nodes:
-            root_node = self.taxonomy_navigator.get_node(root["PK"])
-            if not root_node:
-                continue
-
-            category_pk = root_node.get('PK')
-            category_name = root_node.get('text_en', 'Unnamed Category')
-            category_desc = root_node.get('desc_en', 'No description available.')
-
-            children_details = []
-            children = self.taxonomy_navigator.get_children(category_pk)
-            if children:
-                for child in children:
-                    child_name = child.get('Simple_name_en', child.get('text_en', 'Unnamed Sub-category'))
-                    child_desc = child.get('desc_en', 'No description available.')
-                    child_ex = child.get('ex_en', 'No example available.')
-                    
-                    children_details.append(
-                        f"  - Sub-Category: {child_name}\n"
-                        f"    Description: {child_desc}\n"
-                        f"    Example: {child_ex}"
-                    )
-            
-            # Le PK est inclus pour permettre l'appel de la fonction `explore_branch`
-            full_block = (
-                f"Category: {category_name} (ID: {category_pk})\n"
-                f"Description: {category_desc}\n"
-                f"It contains the following sub-categories:\n\n"
-                f"{'\n\n'.join(children_details) if children_details else '  No sub-categories found.'}"
-            )
-            prompt_parts.append(full_block)
-
-        prompt_content = "\n\n---\n\n".join(prompt_parts)
-
-        context = (
+        context_for_root_selection = (
             f"Text to analyze: '{argument_text}'\n\n"
-            "Analyze the following high-level categories. For EACH category that seems plausible, "
-            "call the `explore_branch` function with its corresponding ID.\n\n"
-            f"{prompt_content}"
+            "Select the SINGLE most relevant high-level category for the text from the list below. "
+            "Use the `explore_branch` function with the chosen category's ID.\n\n"
+            f"{json.dumps(root_options, indent=2, ensure_ascii=False)}"
         )
-        
+
         history = ChatHistory(system_message=slave_system_message)
-        history.add_user_message(context)
-
-        # Amélioration de la journalisation avant l'appel LLM
-        self.logger.info(f"--- FallacyWorkflowPlugin: Prompt sent to LLM ---\n{context}")
-        available_functions = [f.name for f in slave_kernel.plugins["Exploration"]]
-        self.logger.info(f"--- FallacyWorkflowPlugin: Available functions for LLM ---\n{available_functions}")
-
+        history.add_user_message(context_for_root_selection)
+        
+        self.logger.info(f"--- Sending prompt for root selection ---\n{context_for_root_selection}")
         response = await self.llm_service.get_chat_message_content(
             chat_history=history, settings=slave_exec_settings, kernel=slave_kernel
         )
-        
-        # Log de la réponse brute de l'LLM
-        self.logger.info(f"--- FallacyWorkflowPlugin: Raw response from LLM ---\n{response}")
+        self.logger.info(f"--- Raw response from LLM for root selection ---\n{response}")
 
-        initial_calls = [c for c in response.items if isinstance(c, FunctionCallContent) and c.name == "Exploration-explore_branch"]
-        if not initial_calls:
-            self.logger.warning("LLM did not select any initial branches.")
+        root_calls = [c for c in response.items if isinstance(c, FunctionCallContent) and c.name == "Exploration-explore_branch"]
+        if not root_calls:
+            self.logger.warning("LLM did not select a root category.")
             return ""
+        
+        # On ne prend que le premier choix pour l'exploration séquentielle
+        current_node_pk = json.loads(root_calls[0].arguments)["node_pk"]
+        self.logger.info(f"--- Root category selected: {current_node_pk} ---")
 
-        candidate_branch_pks = {json.loads(call.arguments)["node_pk"] for call in initial_calls}
-        self.logger.info(f"--- Phase 2: Exploring {len(candidate_branch_pks)} candidate branches in parallel ---")
+        # --- Étape 2: Exploration en profondeur de la catégorie choisie ---
+        self.logger.info(f"--- Phase 2: Exploring branch starting from {current_node_pk} ---")
+        
+        for i in range(10):  # Limite de 10 itérations pour éviter les boucles infinies
+            self.logger.info(f"  [Iteration {i+1}] Current node: {current_node_pk}")
 
-        exploration_tasks = [
-            self._explore_single_branch(argument_text, pk, slave_kernel, slave_exec_settings, slave_system_message)
-            for pk in candidate_branch_pks
-        ]
-        branch_results = await asyncio.gather(*exploration_tasks)
+            # Vérifier si une conclusion a été demandée
+            conclusion_calls = [c for c in response.items if isinstance(c, FunctionCallContent) and c.name.startswith("Exploration-conclude")]
+            if conclusion_calls:
+                conclusion_call = conclusion_calls[0]
+                self.logger.info(f"  Conclusion function called: {conclusion_call.name}")
+                if conclusion_call.name == "Exploration-conclude_fallacy":
+                    args = json.loads(conclusion_call.arguments)
+                    final_fallacy_name = args.get("fallacy_name", "Unknown")
+                    self.logger.info(f"--- Workflow Finished. Identified fallacy: '{final_fallacy_name}' ---")
+                    return final_fallacy_name
+                else: # conclude_no_fallacy
+                    self.logger.info("--- Workflow Finished. No fallacies identified. ---")
+                    return ""
 
-        # TODO: Étape 3: Réconcilier les résultats. Pour l'instant, on prend le premier non-nul.
-        final_node = next((res for res in branch_results if res), None)
+            children = self.taxonomy_navigator.get_children(current_node_pk)
+            current_node_data = self.taxonomy_navigator.get_node(current_node_pk)
 
-        if final_node:
-            nom_technique = final_node.get(f"text_{self.language}", "").strip()
-            self.logger.info(f"--- Workflow Finished. Identified fallacy: '{nom_technique}' ---")
-            return nom_technique
+            if not children:
+                self.logger.info(f"  [Leaf Node] No children for {current_node_pk}. Concluding with this node.")
+                final_fallacy_name = current_node_data.get(f"text_{self.language}", "Unknown")
+                self.logger.info(f"--- Workflow Finished. Identified fallacy at leaf node: '{final_fallacy_name}' ---")
+                return final_fallacy_name
 
-        self.logger.info("--- Workflow Finished. No fallacies identified. ---")
+            options_to_present = []
+            # Ajouter le noeud parent comme option pour permettre la confirmation
+            options_to_present.append({
+                "id": current_node_pk,
+                "name": current_node_data[f"text_{self.language}"],
+                "description": f"PARENT (Confirm this is the correct category): {current_node_data[f'desc_{self.language}']}"
+            })
+            # Ajouter les enfants comme options d'exploration
+            for child in children:
+                options_to_present.append({
+                    "id": child["PK"],
+                    "name": child[f"text_{self.language}"],
+                    "description": f"CHILD (Explore this sub-category): {child[f'desc_{self.language}']}",
+                    "example": child[f'example_{self.language}']
+                })
+
+            context_for_exploration = (
+                f"Text to analyze: '{argument_text}'\n\n"
+                f"You are currently at category: '{current_node_data[f'text_{self.language}']}'.\n"
+                "Choose the next step: explore a more specific sub-category, confirm the current one as the final answer, or conclude that no fallacy is present.\n"
+                "Use `explore_branch(node_pk)` to navigate or `conclude_fallacy(fallacy_name)` to finish.\n\n"
+                f"{json.dumps(options_to_present, indent=2, ensure_ascii=False)}"
+            )
+
+            history = ChatHistory(system_message=slave_system_message)
+            history.add_user_message(context_for_exploration)
+            
+            self.logger.info(f"--- Sending prompt for exploration ---\n{context_for_exploration}")
+            response = await self.llm_service.get_chat_message_content(
+                chat_history=history, settings=slave_exec_settings, kernel=slave_kernel
+            )
+            self.logger.info(f"--- Raw response from LLM for exploration ---\n{response}")
+
+            explore_calls = [c for c in response.items if isinstance(c, FunctionCallContent) and c.name == "Exploration-explore_branch"]
+            
+            if not explore_calls:
+                self.logger.warning("  LLM did not choose a path. Concluding with current node.")
+                final_fallacy_name = current_node_data.get(f"text_{self.language}", "Unknown")
+                self.logger.info(f"--- Workflow Finished. Identified fallacy by default: '{final_fallacy_name}' ---")
+                return final_fallacy_name
+
+            next_pk = json.loads(explore_calls[0].arguments)["node_pk"]
+
+            # Si le LLM choisit à nouveau le parent, c'est la conclusion
+            if next_pk == current_node_pk:
+                self.logger.info(f"  LLM confirmed parent {next_pk}. Concluding with this node.")
+                final_fallacy_name = current_node_data.get(f"text_{self.language}", "Unknown")
+                self.logger.info(f"--- Workflow Finished. Identified fallacy by confirmation: '{final_fallacy_name}' ---")
+                return final_fallacy_name
+            
+            current_node_pk = next_pk
+
+        self.logger.warning(f"--- Workflow Finished. Max iterations reached. ---")
         return ""
