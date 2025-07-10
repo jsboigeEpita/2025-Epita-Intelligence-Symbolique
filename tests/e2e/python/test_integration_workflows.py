@@ -6,7 +6,7 @@ Validation des scénarios critiques d'utilisation de l'application.
 import pytest
 import time
 from typing import Dict, Any
-from playwright.sync_api import Page, expect
+from playwright.async_api import Page, expect
 
 # Les URLs des services sont injectées via les fixtures `frontend_url` et `backend_url`.
 # so the web server is started automatically for all tests in this module.
@@ -23,7 +23,7 @@ async def app_page(page: Page, frontend_url: str) -> Page:
     Navigue vers la racine et attend que l'API soit connectée.
     """
     await page.goto(frontend_url)
-    expect(page.locator('.api-status.connected')).to_be_visible(timeout=WORKFLOW_TIMEOUT)
+    await expect(page.locator('.api-status.connected')).to_be_visible(timeout=WORKFLOW_TIMEOUT)
     return page
 
 # ============================================================================
@@ -114,7 +114,7 @@ class IntegrationWorkflowHelpers:
             for op, metrics in self.performance_metrics.items()
         }
     
-    def navigate_with_validation(self, tab_name: str, expected_element: str):
+    async def navigate_with_validation(self, tab_name: str, expected_element: str):
         """
         Navigue vers un onglet avec validation que l'interface est prête.
         """
@@ -139,7 +139,7 @@ class IntegrationWorkflowHelpers:
             try:
                 tab = self.page.locator(selector).first
                 if tab.is_visible(timeout=2000):
-                    tab.click()
+                    await tab.click()
                     tab_found = True
                     break
             except Exception:
@@ -148,32 +148,32 @@ class IntegrationWorkflowHelpers:
         if not tab_found:
             # Fallback : utiliser le premier onglet disponible
             try:
-                self.page.locator('nav button, nav a, .nav-link, [role="tab"]').first.click()
+                await self.page.locator('nav button, nav a, .nav-link, [role="tab"]').first.click()
                 tab_found = True
             except Exception:
                 pass
         
         # Attendre que l'élément spécifique soit visible (avec timeout plus flexible)
         try:
-            expect(self.page.locator(expected_element)).to_be_visible(
+            await expect(self.page.locator(expected_element)).to_be_visible(
                 timeout=TAB_TRANSITION_TIMEOUT
             )
         except Exception:
             # Si l'élément spécifique n'est pas trouvé, vérifier juste que la page est active
-            self.page.wait_for_load_state('networkidle', timeout=5000)
+            await self.page.wait_for_load_state('networkidle', timeout=5000)
         
         # Pause courte pour s'assurer que l'interface est stable
-        time.sleep(1)
+        await self.page.wait_for_timeout(1000)
     
-    def verify_data_persistence(self, data_checks: Dict[str, str]):
+    async def verify_data_persistence(self, data_checks: Dict[str, str]):
         """
         Vérifie que les données persistent entre les onglets.
         """
         for description, selector in data_checks.items():
             element = self.page.locator(selector)
-            expect(element).to_be_visible(timeout=10000)
+            await expect(element).to_be_visible(timeout=10000)
             # Vérifier que l'élément contient des données
-            expect(element).not_to_have_text("")
+            await expect(element).not_to_have_text("")
 
 @pytest.fixture
 def integration_helpers(page: Page) -> IntegrationWorkflowHelpers:
@@ -198,60 +198,60 @@ async def test_full_argument_analysis_workflow(app_page: Page, integration_helpe
     argument_text = complex_test_data['multi_premise_argument']['text']
     
     # ÉTAPE 1: Analyzer - Analyse initiale
-    integration_helpers.navigate_with_validation('analyzer', '#argument-text')
+    await integration_helpers.navigate_with_validation('analyzer', '#argument-text')
     
-    app_page.locator('#argument-text').fill(argument_text)
-    app_page.locator('button[type="submit"]').click()
+    await app_page.locator('#argument-text').fill(argument_text)
+    await app_page.locator('button[type="submit"]').click()
     
     # Attendre les résultats d'analyse
-    expect(app_page.locator('[data-testid="analyzer-results"]')).to_be_visible(
+    await expect(app_page.locator('[data-testid="analyzer-results"]')).to_be_visible(
         timeout=WORKFLOW_TIMEOUT
     )
     
     # ÉTAPE 2: Fallacies - Détection de sophismes
-    integration_helpers.navigate_with_validation('fallacy_detector', '[data-testid="fallacy-text-input"]')
+    await integration_helpers.navigate_with_validation('fallacy_detector', '[data-testid="fallacy-text-input"]')
     
     # Vérifier que le texte est persisté ou le remplir à nouveau
     fallacy_input = app_page.locator('[data-testid="fallacy-text-input"]')
-    if fallacy_input.input_value() == "":
-        fallacy_input.fill(argument_text)
+    if await fallacy_input.input_value() == "":
+        await fallacy_input.fill(argument_text)
     
-    app_page.locator('[data-testid="fallacy-submit-button"]').click()
+    await app_page.locator('[data-testid="fallacy-submit-button"]').click()
     
     # Attendre les résultats de détection
-    expect(app_page.locator('[data-testid="fallacy-results"]')).to_be_visible(
+    await expect(app_page.locator('[data-testid="fallacy-results"]')).to_be_visible(
         timeout=WORKFLOW_TIMEOUT
     )
     
     # ÉTAPE 3: Reconstructor - Reconstruction d'argument
-    integration_helpers.navigate_with_validation('reconstructor', '[data-testid="reconstructor-text-input"]')
+    await integration_helpers.navigate_with_validation('reconstructor', '[data-testid="reconstructor-text-input"]')
     
     # Remplir si nécessaire
     reconstructor_input = app_page.locator('[data-testid="reconstructor-text-input"]')
-    if reconstructor_input.input_value() == "":
-        reconstructor_input.fill(argument_text)
+    if await reconstructor_input.input_value() == "":
+        await reconstructor_input.fill(argument_text)
     
-    app_page.locator('[data-testid="reconstructor-submit-button"]').click()
+    await app_page.locator('[data-testid="reconstructor-submit-button"]').click()
     
     # Attendre les résultats de reconstruction
-    expect(app_page.locator('[data-testid="reconstructor-results"]')).to_be_visible(
+    await expect(app_page.locator('[data-testid="reconstructor-results"]')).to_be_visible(
         timeout=WORKFLOW_TIMEOUT
     )
     
     # ÉTAPE 4: Validation - Validation finale
-    integration_helpers.navigate_with_validation('validation', '#argument-type')
+    await integration_helpers.navigate_with_validation('validation', '#argument-type')
     
     # Sélectionner le type d'argument
-    app_page.locator('#argument-type').select_option('deductive')
+    await app_page.locator('#argument-type').select_option('deductive')
     
     # Remplir les prémisses et conclusion basées sur l'analyse
-    app_page.locator('#premises').fill("Les changements climatiques sont un défi majeur")
-    app_page.locator('#conclusion').fill("Nous devons agir immédiatement")
+    await app_page.locator('#premises').fill("Les changements climatiques sont un défi majeur")
+    await app_page.locator('#conclusion').fill("Nous devons agir immédiatement")
     
-    app_page.locator('#validate-btn').click()
+    await app_page.locator('#validate-btn').click()
     
     # Attendre les résultats de validation
-    expect(app_page.locator('#validation-results')).to_be_visible(
+    await expect(app_page.locator('#validation-results')).to_be_visible(
         timeout=WORKFLOW_TIMEOUT
     )
     
@@ -273,38 +273,38 @@ async def test_framework_based_validation_workflow(app_page: Page, integration_h
     framework_data = complex_test_data['custom_framework']
     
     # ÉTAPE 1: Framework - Création d'un framework personnalisé
-    integration_helpers.navigate_with_validation('framework', '#arg-content')
+    await integration_helpers.navigate_with_validation('framework', '#arg-content')
     
     # Remplir les détails du framework
-    app_page.locator('#arg-content').fill(framework_data['description'])
+    await app_page.locator('#arg-content').fill(framework_data['description'])
     
     # Sélectionner le type
-    app_page.locator('#argument-type').select_option('inductive')
+    await app_page.locator('#argument-type').select_option('inductive')
     
     # Ajouter les critères (si l'interface le permet)
     if app_page.locator('#criteria-input').is_visible():
         for criterion in framework_data['criteria']:
-            app_page.locator('#criteria-input').fill(criterion)
+            await app_page.locator('#criteria-input').fill(criterion)
             if app_page.locator('#add-criterion').is_visible():
-                app_page.locator('#add-criterion').click()
+                await app_page.locator('#add-criterion').click()
     
     # Créer le framework
-    app_page.locator('#create-framework').click()
+    await app_page.locator('#create-framework').click()
     
     # Attendre la confirmation
-    expect(app_page.locator('#framework-results')).to_be_visible(
+    await expect(app_page.locator('#framework-results')).to_be_visible(
         timeout=WORKFLOW_TIMEOUT
     )
     
     # ÉTAPE 2: Validation - Utiliser le framework créé
-    integration_helpers.navigate_with_validation('validation', '#argument-type')
+    await integration_helpers.navigate_with_validation('validation', '#argument-type')
     
     # Configurer pour utiliser le framework personnalisé
-    app_page.locator('#argument-type').select_option('framework-based')
+    await app_page.locator('#argument-type').select_option('framework-based')
     
     # Sélectionner le framework créé (si disponible)
     if app_page.locator('#framework-selector').is_visible():
-        app_page.locator('#framework-selector').select_option('custom')
+        await app_page.locator('#framework-selector').select_option('custom')
     
     # Remplir un argument environnemental
     environmental_arg = """
@@ -313,21 +313,21 @@ async def test_framework_based_validation_workflow(app_page: Page, integration_h
     C'est une question de justice intergénérationnelle.
     """
     
-    app_page.locator('#premises').fill("Les entreprises polluantes causent des dommages environnementaux")
-    app_page.locator('#conclusion').fill("Elles doivent payer une taxe carbone élevée")
+    await app_page.locator('#premises').fill("Les entreprises polluantes causent des dommages environnementaux")
+    await app_page.locator('#conclusion').fill("Elles doivent payer une taxe carbone élevée")
     
-    app_page.locator('#validate-btn').click()
+    await app_page.locator('#validate-btn').click()
     
     # Attendre les résultats avec le framework personnalisé
-    expect(app_page.locator('#validation-results')).to_be_visible(
+    await expect(app_page.locator('#validation-results')).to_be_visible(
         timeout=WORKFLOW_TIMEOUT
     )
     
     # ÉTAPE 3: Export - Exporter les résultats (si disponible)
     if app_page.locator('#export-results').is_visible():
-        app_page.locator('#export-results').click()
+        await app_page.locator('#export-results').click()
         # Vérifier que l'export est disponible
-        time.sleep(2)  # Temps pour l'export
+        await app_page.wait_for_timeout(2000)  # Temps pour l'export
     
     integration_helpers.end_performance_timer("framework_workflow")
     
@@ -348,31 +348,31 @@ async def test_logic_graph_fallacy_integration(app_page: Page, integration_helpe
     fallacy_text = complex_test_data['multiple_fallacies_text']['text']
     
     # ÉTAPE 1: Logic Graph - Analyse logique
-    integration_helpers.navigate_with_validation('logic_graph', '[data-testid="logic-graph-text-input"]')
+    await integration_helpers.navigate_with_validation('logic_graph', '[data-testid="logic-graph-text-input"]')
     
     # Tester une formule logique complexe
-    app_page.locator('[data-testid="logic-graph-text-input"]').fill(logic_data['formula'])
-    app_page.locator('[data-testid="logic-graph-submit-button"]').click()
+    await app_page.locator('[data-testid="logic-graph-text-input"]').fill(logic_data['formula'])
+    await app_page.locator('[data-testid="logic-graph-submit-button"]').click()
     
     # Attendre l'analyse logique
-    expect(app_page.locator('[data-testid="logic-results"]')).to_be_visible(
+    await expect(app_page.locator('[data-testid="logic-results"]')).to_be_visible(
         timeout=WORKFLOW_TIMEOUT
     )
     
     # Vérifier que le graphe est généré
-    expect(app_page.locator('[data-testid="logic-graph-display"]')).to_be_visible(
+    await expect(app_page.locator('[data-testid="logic-graph-display"]')).to_be_visible(
         timeout=10000
     )
     
     # ÉTAPE 2: Fallacies - Analyse des sophismes sur le même domaine
-    integration_helpers.navigate_with_validation('fallacy_detector', '[data-testid="fallacy-text-input"]')
+    await integration_helpers.navigate_with_validation('fallacy_detector', '[data-testid="fallacy-text-input"]')
     
     # Analyser un texte contenant plusieurs sophismes
-    app_page.locator('[data-testid="fallacy-text-input"]').fill(fallacy_text)
-    app_page.locator('[data-testid="fallacy-submit-button"]').click()
+    await app_page.locator('[data-testid="fallacy-text-input"]').fill(fallacy_text)
+    await app_page.locator('[data-testid="fallacy-submit-button"]').click()
     
     # Attendre les résultats de détection
-    expect(app_page.locator('[data-testid="fallacy-results"]')).to_be_visible(
+    await expect(app_page.locator('[data-testid="fallacy-results"]')).to_be_visible(
         timeout=WORKFLOW_TIMEOUT
     )
     
@@ -380,11 +380,11 @@ async def test_logic_graph_fallacy_integration(app_page: Page, integration_helpe
     # Les résultats doivent être complémentaires
     
     # Retourner au Logic Graph pour comparaison
-    integration_helpers.navigate_with_validation('logic_graph', '[data-testid="logic-graph-text-input"]')
+    await integration_helpers.navigate_with_validation('logic_graph', '[data-testid="logic-graph-text-input"]')
     
     # Vérifier que les données logiques sont toujours présentes
     logic_results = app_page.locator('[data-testid="logic-results"]')
-    expect(logic_results).to_be_visible()
+    await expect(logic_results).to_be_visible()
     
     integration_helpers.end_performance_timer("logic_fallacy_integration")
     
@@ -413,18 +413,18 @@ async def test_cross_tab_data_persistence(app_page: Page, integration_helpers: I
     
     # Remplir chaque onglet avec des données
     for tab_name, input_selector, data in tabs_data:
-        integration_helpers.navigate_with_validation(tab_name, input_selector)
-        app_page.locator(input_selector).fill(data)
-        time.sleep(0.5)  # Pause pour la persistance
+        await integration_helpers.navigate_with_validation(tab_name, input_selector)
+        await app_page.locator(input_selector).fill(data)
+        await app_page.wait_for_timeout(500)  # Pause pour la persistance
     
     # ÉTAPE 2: Vérifier la persistance en naviguant à nouveau
     persistence_checks = {}
     for tab_name, input_selector, expected_data in tabs_data:
-        integration_helpers.navigate_with_validation(tab_name, input_selector)
+        await integration_helpers.navigate_with_validation(tab_name, input_selector)
         
         # Vérifier que les données sont toujours là
         input_element = app_page.locator(input_selector)
-        current_value = input_element.input_value()
+        current_value = await input_element.input_value()
         
         # Enregistrer pour le rapport
         persistence_checks[tab_name] = {
@@ -435,17 +435,17 @@ async def test_cross_tab_data_persistence(app_page: Page, integration_helpers: I
     
     # ÉTAPE 3: Test du reset global
     # Naviguer vers l'onglet principal et faire un reset
-    integration_helpers.navigate_with_validation('analyzer', '#argument-text')
+    await integration_helpers.navigate_with_validation('analyzer', '#argument-text')
     
     # Chercher un bouton de reset global (si disponible)
     if app_page.locator('[data-testid="global-reset"]').is_visible():
-        app_page.locator('[data-testid="global-reset"]').click()
+        await app_page.locator('[data-testid="global-reset"]').click()
         
         # Vérifier que toutes les données sont effacées
         for tab_name, input_selector, _ in tabs_data:
-            integration_helpers.navigate_with_validation(tab_name, input_selector)
+            await integration_helpers.navigate_with_validation(tab_name, input_selector)
             input_element = app_page.locator(input_selector)
-            expect(input_element).to_have_value("")
+            await expect(input_element).to_have_value("")
     
     integration_helpers.end_performance_timer("data_persistence")
     
@@ -487,16 +487,16 @@ async def test_performance_stress_workflow(app_page: Page, integration_helpers: 
         
         try:
             # Navigation
-            integration_helpers.navigate_with_validation(tab_name, input_selector)
+            await integration_helpers.navigate_with_validation(tab_name, input_selector)
             
             # Remplissage avec du texte volumineux
-            app_page.locator(input_selector).fill(stress_text)
+            await app_page.locator(input_selector).fill(stress_text)
             
             # Soumission
-            app_page.locator(submit_selector).click()
+            await app_page.locator(submit_selector).click()
             
             # Attendre les résultats avec timeout étendu
-            expect(app_page.locator(results_selector)).to_be_visible(
+            await expect(app_page.locator(results_selector)).to_be_visible(
                 timeout=STRESS_TEST_TIMEOUT
             )
             
@@ -517,8 +517,8 @@ async def test_performance_stress_workflow(app_page: Page, integration_helpers: 
     for tab_name in ['analyzer', 'fallacy_detector']:
         try:
             tab_selector = f'[data-testid="{tab_name}-tab"]'
-            app_page.locator(tab_selector).click()
-            time.sleep(0.2)  # Navigation rapide mais stable
+            await app_page.locator(tab_selector).click()
+            await app_page.wait_for_timeout(200)  # Navigation rapide mais stable
         except Exception:
             pass  # Ignorer les erreurs de navigation rapide
     
@@ -558,10 +558,10 @@ async def test_integration_suite_health_check(app_page: Page):
     Test de santé pour vérifier que tous les composants d'intégration fonctionnent.
     """
     # Vérifier que l'application est accessible
-    expect(app_page.locator('.api-status.connected')).to_be_visible(timeout=15000)
+    await expect(app_page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     # Attendre que la page soit complètement chargée
-    app_page.wait_for_load_state('networkidle')
+    await app_page.wait_for_load_state('networkidle')
     
     # Test plus flexible - chercher des éléments qui pourraient exister
     tab_selectors = [
@@ -572,18 +572,18 @@ async def test_integration_suite_health_check(app_page: Page):
     found_tabs = False
     for selector in tab_selectors:
         tabs = app_page.locator(selector)
-        if tabs.count() > 0:
+        if await tabs.count() > 0:
             found_tabs = True
-            print(f"✅ Trouvé {tabs.count()} onglets avec le sélecteur: {selector}")
+            print(f"✅ Trouvé {await tabs.count()} onglets avec le sélecteur: {selector}")
             break
     
     if not found_tabs:
         # Si aucun onglet n'est trouvé, tester l'accessibilité de base
-        app_page.wait_for_timeout(2000)
+        await app_page.wait_for_timeout(2000)
         
         # Vérifier que le contenu principal existe
         main_content = app_page.locator('main, #app, .app, .container, .content')
-        expect(main_content.first).to_be_visible(timeout=5000)
+        await expect(main_content.first).to_be_visible(timeout=5000)
         
         print("⚠️  Onglets non trouvés, mais application accessible")
     
