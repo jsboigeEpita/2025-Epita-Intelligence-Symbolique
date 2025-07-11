@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "ports": {
     "backend": {
-      "primary": 5003,
-      "fallback": [5004, 5005, 5006, 5007, 5008, 5009, 5010, 5011, 5012, 5013, 5014, 5015, 5016, 5017, 5018, 5019, 5020],
+      "primary": 8095,
+      "fallback": [8096, 8097, 8098, 8099, 8100],
       "description": "API Backend Flask"
     },
     "frontend": {
-      "primary": 3000,
-      "fallback": [3001, 3002, 3003],
+      "primary": 8085,
+      "fallback": [8086, 8087, 8088],
       "description": "Interface React"
     },
     "test": {

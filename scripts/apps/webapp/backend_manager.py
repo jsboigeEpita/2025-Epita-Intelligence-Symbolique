@@ -164,8 +164,8 @@ class BackendManager:
             server_type = self.config.get('server_type', 'uvicorn')
             
             # Stratégie robuste : trouver l'exécutable Python de l'environnement Conda cible.
-            # On hardcode le nom car l'environnement d'exécution du script est instable.
-            conda_env_name = "projet-is-roo-new"
+            # Stratégie robuste : utilise le nom de l'environnement Conda depuis .env, avec un fallback.
+            conda_env_name = os.getenv('CONDA_ENV_NAME', 'projet-is')
             python_executable = self._get_conda_env_python_executable(conda_env_name)
             
             if not python_executable:

@@ -3,7 +3,15 @@
 Script de génération de données synthétiques complexes pour démonstration système IS
 """
 
-import scripts.core.auto_env
+import sys
+import os
+
+# Ajout pour résoudre les problèmes d'import de project_core
+current_script_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_script_dir, "..", ".."))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+import project_core.core_from_scripts.environment_manager
 import argparse
 import json
 import random

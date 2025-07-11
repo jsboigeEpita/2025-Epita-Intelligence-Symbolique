@@ -14,6 +14,7 @@ from semantic_kernel.functions.kernel_plugin import KernelPlugin
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.functions import KernelArguments
 from semantic_kernel.contents.chat_history import ChatHistory
+from pydantic import Field
 
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 
@@ -48,7 +49,7 @@ class SherlockTools:
     async def get_current_case_description(self) -> str:
         self._logger.info("Récupération de la description de l'affaire en cours.")
         try:
-            result = await self._kernel.invoke(
+            result = await self.kernel.invoke(
                 plugin_name="EnqueteStatePlugin",
                 function_name="get_case_description"
             )
@@ -63,7 +64,7 @@ class SherlockTools:
     async def add_new_hypothesis(self, text: str, confidence_score: float) -> str:
         self._logger.info(f"Ajout d'une nouvelle hypothèse: '{text}' avec confiance {confidence_score}")
         try:
-            await self._kernel.invoke(
+            await self.kernel.invoke(
                 plugin_name="EnqueteStatePlugin",
                 function_name="add_hypothesis",
                 text=text,
@@ -99,7 +100,7 @@ class SherlockTools:
             return "Erreur: La solution n'a pas pu être interprétée."
 
         try:
-            await self._kernel.invoke(
+            await self.kernel.invoke(
                 plugin_name="EnqueteStatePlugin",
                 function_name="propose_final_solution",
                 solution=parsed_solution
@@ -189,6 +190,7 @@ class SherlockEnqueteAgent(BaseAgent):
     orchestrateur.
     """
     _service_id: str
+    logger: Optional[logging.Logger] = Field(None, exclude=True)
     
     def __init__(self, kernel: Kernel, agent_name: str = "Sherlock", system_prompt: Optional[str] = None, service_id: str = "chat_completion", **kwargs):
         """
@@ -200,18 +202,15 @@ class SherlockEnqueteAgent(BaseAgent):
             system_prompt: Prompt système optionnel. Si non fourni, utilise le prompt par défaut.
             service_id: L'ID du service LLM à utiliser.
         """
-        actual_system_prompt = system_prompt if system_prompt is not None else SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT
-        super().__init__(
-            kernel=kernel,
-            agent_name=agent_name,
-            system_prompt=actual_system_prompt,
-            **kwargs
-        )
+        super().__init__(kernel=kernel, agent_name=agent_name, system_prompt=system_prompt)
+        self.kernel = kernel
+        self.instructions = system_prompt or SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT
+        self.logger = logging.getLogger(agent_name)
         self._service_id = service_id
         
         # Le plugin avec les outils de Sherlock, en lui passant le kernel
-        self._tools = SherlockTools(kernel=kernel)
-        self._kernel.add_plugin(self._tools, plugin_name="SherlockAgentPlugin")
+        self._tools = SherlockTools(kernel=self.kernel)
+        self.kernel.add_plugin(self._tools, plugin_name="SherlockAgentPlugin")
 
         # Création de la fonction agent principale
         execution_settings = OpenAIPromptExecutionSettings(
@@ -228,7 +227,7 @@ class SherlockEnqueteAgent(BaseAgent):
             execution_settings={self._service_id: execution_settings},
         )
 
-        self._agent = self._kernel.add_function(
+        self._agent = self.kernel.add_function(
             function_name="chat",
             plugin_name="SherlockAgentCore",
             prompt_template_config=prompt_template_config,
@@ -251,7 +250,7 @@ class SherlockEnqueteAgent(BaseAgent):
 
         # Exécution de l'agent
         arguments = KernelArguments(chat_history=history)
-        response_stream = self._kernel.invoke_stream(
+        response_stream = self.kernel.invoke_stream(
             self._agent,
             arguments=arguments,
         )
@@ -300,6 +299,11 @@ class SherlockEnqueteAgent(BaseAgent):
         # Le contrat de l'orchestrateur attend une liste de messages.
         return [response_message]
 
+    async def invoke_stream(self, input: Union[str, List[ChatMessageContent]], **kwargs) -> AsyncGenerator[List[ChatMessageContent], Any]:
+        """Implémentation de la méthode de streaming abstraite."""
+        response = await self.invoke(input, **kwargs)
+        yield response
+
     async def get_current_case_description(self) -> str:
         """
         Récupère la description du cas actuel.
@@ -324,7 +328,10 @@ class SherlockEnqueteAgent(BaseAgent):
         # Méthode temporaire pour les tests - à implémenter correctement plus tard
         return {"status": "success", "hypothesis": hypothesis_text, "confidence": confidence_score}
 
-    async def invoke_single(self, history: ChatHistory) -> ChatMessageContent:
+    async def invoke_single(self, messages: list[ChatMessageContent]) -> list[ChatMessageContent]:
+        history = ChatHistory()
+        for msg in messages:
+            history.add_message(msg)
         """
         Méthode d'invocation personnalisée pour la boucle d'orchestration.
         Prend un historique et retourne la réponse de l'agent.
@@ -339,7 +346,7 @@ class SherlockEnqueteAgent(BaseAgent):
             # dans le constructeur, qui contient les bons settings.
             arguments = KernelArguments(chat_history=history)
             
-            response = await self._kernel.invoke(self._agent, arguments=arguments)
+            response = await self.kernel.invoke(self._agent, arguments=arguments)
             
             if response:
                 self.logger.info(f"[{self.name}] Réponse générée: {response}")

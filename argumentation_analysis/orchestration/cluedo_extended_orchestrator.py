@@ -15,7 +15,8 @@ import semantic_kernel as sk
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.kernel import Kernel
 from argumentation_analysis.orchestration.base import SelectionStrategy, TerminationStrategy
-from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent as Agent
+from semantic_kernel.agents import Agent
+# from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
 class AgentGroupChat:
