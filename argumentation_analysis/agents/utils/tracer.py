@@ -89,18 +89,27 @@ class TracedAgent:
 
     async def invoke(self, history: "ChatHistory", **kwargs) -> AsyncIterator[ChatMessageContent]:
         """
-        Invoque l'agent encapsulé, en passant l'historique qui sera (théoriquement) mis à jour par référence.
-        Journalise l'état de l'historique avant et après l'invocation complète.
+        Invoque l'agent encapsulé et journalise l'historique complet avant et après.
         """
-        self._logger.info(f"--- START INVOKE on {self.name} ---\n{self._format_messages(history)}\n")
-        
-        # On passe directement l'historique. C'est le comportement attendu par SK.
-        response_stream = self.agent.invoke(history, **kwargs)
+        # Log de l'historique d'entrée dans un format JSON sérialisable
+        try:
+            # Tente de sérialiser l'historique complet, qui est un objet ChatHistory
+            # La méthode `model_dump_json` de Pydantic est idéale pour cela.
+            history_json = history.model_dump_json(indent=2)
+            self._logger.info(f"--- START INVOKE on {self.name} ---\nHISTORY:\n{history_json}\n")
+        except Exception as e:
+            self._logger.error(f"Erreur lors de la sérialisation de l'historique initial: {e}")
 
-        # Consommer le stream est essentiel. On le retransmet (yield from).
+        # Invocation de l'agent en mode stream
+        response_stream = self.agent.invoke_stream(history, **kwargs)
+
+        # Consommation et retransmission du stream
         async for response_part in response_stream:
             yield response_part
         
-        # Après la consommation complète, on logue l'historique passé en paramètre.
-        # Si la mutation par référence fonctionne, il devrait être complet.
-        self._logger.info(f"--- FINAL HISTORY for {self.name} ---\n{self._format_messages(history)}\n")
+        # Log de l'historique final après l'invocation
+        try:
+            final_history_json = history.model_dump_json(indent=2)
+            self._logger.info(f"--- FINAL HISTORY for {self.name} ---\nHISTORY:\n{final_history_json}\n")
+        except Exception as e:
+            self._logger.error(f"Erreur lors de la sérialisation de l'historique final: {e}")

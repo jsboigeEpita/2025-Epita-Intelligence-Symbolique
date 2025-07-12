@@ -1,11 +1,13 @@
 # Fichier : argumentation_analysis/agents/agent_factory.py
 import logging
-from typing import List, Optional, Type, Dict, Any
-
+from typing import List, Optional, Type, Dict, Any, TYPE_CHECKING
 from semantic_kernel import Kernel
 from semantic_kernel.agents import Agent, ChatCompletionAgent
 
-from argumentation_analysis.agents.channels.volatile_agent_channel import VolatileAgentChannel
+# Importations de la version distante (nettoyées)
+from .utils.tracer import TracedAgent
+
+# Importations de ma version (renommées pour clarté)
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
 from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
@@ -15,14 +17,16 @@ from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
 from argumentation_analysis.config.settings import AppSettings
 
+if TYPE_CHECKING:
+    from semantic_kernel.functions import KernelPlugin
+
 logger = logging.getLogger(__name__)
 
 class AgentFactory:
     """
     Usine pour la création et la configuration centralisée des agents.
     Le principe est de toujours envelopper un agent métier "pur" (héritant de BaseAgent)
-    dans un agent d'infrastructure `ChatCompletionAgent` de Semantic Kernel,
-    en appliquant le pattern "Composition over Inheritance".
+    dans un agent d'infrastructure `ChatCompletionAgent` de Semantic Kernel.
     """
 
     def __init__(self, kernel: Kernel, settings: AppSettings):
@@ -35,19 +39,11 @@ class AgentFactory:
         self,
         agent_class: Type[BaseAgent],
         agent_name: Optional[str] = None,
+        trace_log_path: Optional[str] = None,
         **kwargs: Any
     ) -> ChatCompletionAgent:
         """
-        Crée, configure et enveloppe un agent métier à partir de sa classe.
-
-        Args:
-            agent_class (Type[BaseAgent]): La classe de l'agent métier à instancier.
-            agent_name (Optional[str]): Un nom spécifique pour l'instance de l'agent.
-                                         Si non fourni, le nom de la classe sera utilisé.
-            **kwargs: Arguments supplémentaires à passer au constructeur de l'agent métier.
-
-        Returns:
-            Une instance de `ChatCompletionAgent` qui enveloppe l'agent métier configuré.
+        Crée, configure, enveloppe et trace (optionnellement) un agent métier.
         """
         if not issubclass(agent_class, BaseAgent):
             raise TypeError(f"La classe '{agent_class.__name__}' doit hériter de BaseAgent.")
@@ -56,56 +52,69 @@ class AgentFactory:
         logger.info(f"Création de l'agent de type '{agent_class.__name__}' nommé '{final_agent_name}'...")
 
         # 1. Instancier l'agent métier "pur"
-        # On passe les dépendances nécessaires.
-        # Correction: Adapter l'instanciation aux signatures des constructeurs des agents
-        common_kwargs = {"kernel": self.kernel, **kwargs}
-
-        if agent_class in [ProjectManagerAgent, InformalAnalysisAgent, PropositionalLogicAgent, ExtractAgent, WatsonLogicAssistant, SherlockEnqueteAgent]:
-            # Ces classes attendent 'agent_name' au lieu de 'name'
-            # et certaines comme Watson/Sherlock attendent 'kernel'
-            business_agent_instance = agent_class(
-                agent_name=final_agent_name,
-                **common_kwargs
-            )
-        else:
-             # Comportement par défaut pour d'autres agents potentiels
-            business_agent_instance = agent_class(
-                name=final_agent_name,
-                **common_kwargs
-        )
+        common_kwargs = {"kernel": self.kernel, "agent_name": final_agent_name, **kwargs}
+        business_agent_instance = agent_class(**common_kwargs)
         logger.debug(f"Instance de l'agent métier '{final_agent_name}' créée.")
 
-        # 2. Récupérer les instructions et les plugins depuis l'instance métier
-        # L'agent métier est la source de vérité pour sa configuration.
-        instructions = getattr(business_agent_instance, 'instructions',
-                               getattr(business_agent_instance, '_instructions', ''))
+        # 2. Récupérer les instructions et les plugins de l'instance métier
+        instructions = getattr(business_agent_instance, 'instructions', '')
         if not instructions:
-            logger.warning(f"L'agent métier '{final_agent_name}' n'a pas d'instructions claires définies.")
+            logger.warning(f"L'agent métier '{final_agent_name}' n'a pas d'instructions définies.")
 
-        # La méthode get_plugins() permet à l'agent de déclarer les plugins dont il a besoin.
-        # Cela favorise l'encapsulation.
-        try:
-            agent_plugins: List[KernelPlugin] = business_agent_instance.get_plugins()
-            logger.debug(f"L'agent '{final_agent_name}' a fourni {len(agent_plugins)} plugin(s).")
-        except AttributeError:
-            # Rétrocompatibilité ou cas où l'agent n'a pas de plugins spécifiques.
-            agent_plugins = []
-            logger.debug(f"L'agent '{final_agent_name}' n'a pas de méthode get_plugins(). Aucun plugin spécifique chargé.")
-
-        # 3. Envelopper l'agent métier dans un ChatCompletionAgent
+        agent_plugins: List["KernelPlugin"] = getattr(business_agent_instance, 'get_plugins', lambda: [])()
+        logger.debug(f"L'agent '{final_agent_name}' a fourni {len(agent_plugins)} plugin(s).")
+        
+        # 3. Envelopper dans un ChatCompletionAgent
+        llm_service = self.kernel.get_service(self.llm_service_id)
         wrapper_agent = ChatCompletionAgent(
             kernel=self.kernel,
+            service_id=self.llm_service_id, # Utilisation explicite du service_id
             name=final_agent_name,
             instructions=instructions,
-            plugins=agent_plugins, # On utilise les plugins fournis par l'agent
+            plugins=agent_plugins,
         )
         logger.info(f"Agent métier '{final_agent_name}' enveloppé dans un ChatCompletionAgent.")
 
-        # 4. Attribuer un canal de communication
-        # Correction: Le constructeur attend maintenant l'instance de l'agent
-        channel = VolatileAgentChannel(agent=wrapper_agent)
-        # L'assignation du canal est maintenant implicite via le constructeur du canal.
-        # wrapper_agent.channel = channel # Cette ligne est supprimée car l'attribut n'existe plus.
-        logger.debug(f"Canal de communication volatile associé à '{final_agent_name}'.")
-
+        # 4. Envelopper dans un agent de traçage si demandé
+        if trace_log_path:
+            return TracedAgent(agent_to_wrap=wrapper_agent, trace_log_path=trace_log_path)
+            
         return wrapper_agent
+
+    # Les méthodes ci-dessous sont conservées pour la rétrocompatibilité
+    # et la facilité d'utilisation, mais elles utilisent maintenant la nouvelle factory.
+
+    def create_sherlock_agent(self, agent_name: str = "Sherlock", trace_log_path: Optional[str] = None) -> Agent:
+        return self.create_agent(
+            agent_class=SherlockEnqueteAgent,
+            agent_name=agent_name,
+            trace_log_path=trace_log_path,
+        )
+
+    def create_watson_agent(
+        self,
+        agent_name: str = "Watson",
+        trace_log_path: Optional[str] = None,
+        constants: Optional[List[str]] = None,
+    ) -> Agent:
+        return self.create_agent(
+            agent_class=WatsonLogicAssistant,
+            agent_name=agent_name,
+            trace_log_path=trace_log_path,
+            constants=constants,
+        )
+
+    def create_project_manager_agent(self, trace_log_path: Optional[str] = None) -> Agent:
+        return self.create_agent(
+            agent_class=ProjectManagerAgent,
+            agent_name="ProjectManager",
+            trace_log_path=trace_log_path
+        )
+    
+    def create_informal_fallacy_agent(self, trace_log_path: Optional[str] = None) -> Agent:
+        """Crée l'agent d'analyse de sophismes informels (ancienne version)."""
+        return self.create_agent(
+            agent_class=InformalAnalysisAgent,
+            agent_name="InformalFallacyAgent",
+            trace_log_path=trace_log_path
+        )

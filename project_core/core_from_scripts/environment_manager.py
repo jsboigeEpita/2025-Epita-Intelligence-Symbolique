@@ -54,7 +54,8 @@ class EnvironmentManager:
     @property
     def strategies_dir(self) -> Path:
         """Retourne le chemin vers le répertoire des stratégies."""
-        return self.project_root / "scripts" / "strategies"
+        # Chemin corrigé pour pointer vers le répertoire des stratégies local.
+        return Path(__file__).resolve().parent / "strategies"
 
     @property
     def target_env_file(self) -> Path:
@@ -135,16 +136,19 @@ class EnvironmentManager:
             else:
                 self.logger.warning("JAVA_HOME n'a pas été trouvé dans le .env. Les tests dépendants de Java pourraient échouer.")
 
+        # L'appel à `conda run` est nécessaire car ce script est lancé par un
+        # python de base, et n'est pas lui-même dans l'environnement cible.
+        # `conda run` assure que la commande s'exécute dans le bon contexte avec le bon PATH.
+        # --no-capture-output permet de voir la sortie en temps réel.
+        # Le séparateur '--' semble poser problème sur certaines versions/plateformes de Conda/shell.
+        # On le retire pour une meilleure compatibilité.
         full_command = [
-            "conda", "run",
-            "-n", conda_env_name,
-            "--cwd", str(self.project_root),
-            "--no-capture-output",
-            "--live-stream",
-        ] + command_parts
+            "conda", "run", "-n", conda_env_name,
+            "--no-capture-output", *command_parts
+        ]
         
         command_str = " ".join(command_parts)
-        description = f"Exécution de '{command_str[:50]}...' dans l'env '{conda_env_name}' via `conda run`"
+        description = f"Exécution de '{command_str[:50]}...' dans l'environnement Conda '{conda_env_name}'"
         
         exit_code, _, _ = run_shell_command(
             command=full_command,
@@ -172,7 +176,7 @@ class EnvironmentManager:
 
     def _load_strategies(self):
         """Charge dynamiquement les stratégies de réparation depuis le répertoire des stratégies."""
-        strategies_package = 'scripts.strategies'
+        strategies_package = 'project_core.core_from_scripts.strategies'
         if not self.strategies_dir.is_dir():
             self.logger.warning(f"Le répertoire des stratégies '{self.strategies_dir}' est introuvable.")
             return
@@ -306,7 +310,17 @@ if __name__ == "__main__":
             parser.print_help()
             exit_code = 1
         else:
-            exit_code = manager.run_command_in_conda_env(args.command_parts)
+            # Si la commande est passée comme une seule chaîne (ex: "pip install tenacity"),
+            # argparse.REMAINDER la capture comme ['pip install tenacity'].
+            # On la divise en ['pip', 'install', 'tenacity'] pour la passer correctement à subprocess.
+            import shlex
+            
+            command_to_run = args.command_parts
+            if len(command_to_run) == 1 and ' ' in command_to_run[0]:
+                logger.info(f"La commande '{command_to_run[0]}' semble être une chaîne unique, division avec shlex.")
+                command_to_run = shlex.split(command_to_run[0])
+
+            exit_code = manager.run_command_in_conda_env(command_to_run)
     elif args.command == "switch":
         if not manager.switch_environment(args.name):
             exit_code = 1

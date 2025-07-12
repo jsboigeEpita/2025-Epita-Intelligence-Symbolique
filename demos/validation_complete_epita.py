@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 import os
+import codecs
 from pathlib import Path
 
 # --- DÉBUT DU COUPE-CIRCUIT D'ENVIRONNEMENT ---
@@ -491,9 +492,18 @@ class ValidationEpitaComplete:
             detected_ids = []
             for item in detected_sophisms_raw:
                 name_raw = str(item.get('nom', item.get('fallacy_type', ''))).lower().strip()
-                cleaned_name = re.sub(r'\(.*\)', '', name_raw).replace('**', '').strip()
-                normalized_name_key = cleaned_name.replace(' ', '-')
-                normalized_name = alias_map.get(normalized_name_key, normalized_name_key)
+                
+                # --- NOUVELLE LOGIQUE DE NETTOYAGE AGRESSIF ---
+                # 1. Supprimer les ponctuations et caractères non pertinents au début/fin
+                cleaned_name = re.sub(r'^[^\w\s]+|[^\w\s]+$', '', name_raw)
+                # 2. Remplacer les espaces et caractères spéciaux par des tirets
+                cleaned_name = re.sub(r'[\s\W_]+', '-', cleaned_name, flags=re.UNICODE)
+                # 3. Supprimer les parenthèses et leur contenu, ainsi que les étoiles
+                cleaned_name = re.sub(r'\(.*\)', '', cleaned_name).replace('*', '')
+                # 4. Supprimer les tirets en début ou fin de chaîne
+                cleaned_name = cleaned_name.strip('-')
+                
+                normalized_name = alias_map.get(cleaned_name, cleaned_name)
                 detected_ids.append(normalized_name)
             
             # Utiliser un set pour une comparaison plus robuste qui ignore les doublons
@@ -556,71 +566,88 @@ class ValidationEpitaComplete:
 
             try:
                 # Créer un agent frais pour chaque test avec son propre fichier de log
+
                 informal_agent = agent_factory.create_informal_fallacy_agent(
                     config_name=self.agent_type,
-                    trace_log_path=str(current_trace_log_path)
+                    trace_log_path=str(current_trace_log_path),
+                    taxonomy_file_path=self.taxonomy_file_path,
                 )
 
                 from semantic_kernel.contents.chat_history import ChatHistory
                 chat_history = ChatHistory()
                 chat_history.add_user_message(config["text"])
                 
-                invocation_results = informal_agent.invoke(chat_history)
-                async for _ in invocation_results:
-                    pass
+                # --- NOUVELLE LOGIQUE D'INVOCATION CONDITIONNELLE ---
+                if self.agent_type == 'workflow_only':
+                    # L'objet retourné est le plugin lui-même, pas un agent standard.
+                    # On appelle directement sa méthode principale.
+                    final_result_str = await informal_agent.run_guided_analysis(argument_text=config["text"])
+                    print(f"     [AGENT_RESULT] {final_result_str}")
+                    # MODIFICATION: Le résultat est maintenant une chaîne de caractères simple.
+                    # On effectue une comparaison de chaînes robuste, insensible à la casse et aux espaces.
+                    try:
+                        result_str = final_result_str.strip().lower()
 
-                if not current_trace_log_path.exists():
-                    raise FileNotFoundError(f"Fichier de trace introuvable: {current_trace_log_path}")
+                        if config["expected_sophisms"]:
+                            # Il y a un sophisme attendu
+                            expected_fallacy_name = config["expected_sophisms"][0]
+                            expected_str_normalized = self.alias_map.get(
+                                expected_fallacy_name.strip().lower(),
+                                expected_fallacy_name.strip().lower()
+                            )
 
-                with open(current_trace_log_path, 'r', encoding='utf-8') as f:
-                    log_content = f.read()
+                            # La chaîne retournée peut être une phrase, on cherche la présence du nom du sophisme normalisé.
+                            # On normalise aussi le résultat obtenu pour la comparaison.
+                            result_str_normalized_for_search = re.sub(r'[\s_]+', '-', result_str, flags=re.UNICODE)
 
-                # --- NOUVELLE LOGIQUE D'EXTRACTION ROBUSTE V2 ---
-                # Le LLM ne retourne pas de "tool_calls", mais un texte Markdown.
-                # Nous parson directement ce texte pour extraire les informations.
 
-                # 1. Extraire le contenu de la réponse de l'assistant
-                assistant_content_match = re.search(r'"role":\s*"assistant",\s*"content":\s*"(.*?)",', log_content, re.DOTALL)
-                if not assistant_content_match:
-                    success, details = False, "Impossible de trouver le contenu de la réponse de l'assistant dans le log."
+                            if expected_str_normalized in result_str_normalized_for_search:
+                                success = True
+                                details = f"Succès : Attendu '{expected_str_normalized}' trouvé dans le résultat '{result_str}'."
+                            else:
+                                success = False
+                                details = f"Échec : Attendu '{expected_str_normalized}', obtenu '{result_str}'."
+                        else:
+                            # Si aucun sophisme n'est attendu, le test réussit si le résultat est vide ou non significatif
+                            if not result_str or result_str == "none":
+                                success = True
+                                details = "Succès : Aucun sophisme attendu et aucun trouvé."
+                            else:
+                                success = False
+                                details = f"Échec : Aucun sophisme attendu, mais obtenu '{result_str}'."
+                    except Exception as e:
+                        success = False
+                        details = f"Erreur lors de la comparaison de chaînes : {e}. Résultat brut: {final_result_str}"
                 else:
-                    # 2. Déséchapper la chaîne JSON pour obtenir le texte Markdown brut
-                    assistant_text_escaped = assistant_content_match.group(1)
-                    # Remplace les séquences d'échappement communes comme \\n, \\", etc.
-                    assistant_text = json.loads(f'"{assistant_text_escaped}"')
+                    # Logique existante pour les agents standards basés sur les logs de trace.
+                    async for _ in informal_agent.invoke(chat_history):
+                        pass  # Consommer le stream pour s'assurer que l'exécution est complète
 
-                    # 3. Extraire les informations structurées du Markdown
-                    nom_match = re.search(r'Nom du sophisme\s*:\s*(.*?)(?:\n|$)', assistant_text, re.IGNORECASE)
-                    citation_match = re.search(r'Citation exacte\s*:\s*(.*?)(?:\n|$)', assistant_text, re.IGNORECASE)
-                    explication_match = re.search(r'Explication\s*:\s*(.*?)(?:\n|$)', assistant_text, re.IGNORECASE)
+                    if not current_trace_log_path.exists():
+                        raise FileNotFoundError(f"Fichier de trace introuvable: {current_trace_log_path}")
 
-                    if nom_match and citation_match and explication_match:
-                        # 4. Reconstruire un dictionnaire comme si `identify_fallacies` avait été appelé
-                        parsed_args = {
-                            "fallacies": [
-                                {
-                                    "nom": nom_match.group(1).strip(),
-                                    "citation": citation_match.group(1).strip(),
-                                    "explication": explication_match.group(1).strip()
-                                }
-                            ]
-                        }
-                        
-                        success, details, detected_ids = self._compare_sophisms_from_dict(parsed_args, config["expected_sophisms"])
+                    with open(current_trace_log_path, 'r', encoding='utf-8') as f:
+                        log_content = f.read()
 
-                        # --- DÉBUT DE LA CORRECTION PRAGMATIQUE ---
-                        if not success and "Appel à l'hypocrisie" in test_name:
-                            if 'ad-hominem' in detected_ids:
-                                success = True
-                                details += " (ACCEPTED: 'ad-hominem' as parent category)"
-                        
-                        if not success and "Concept volé" in test_name:
-                            if 'self-refutation' in detected_ids or 'circular-reasoning' in detected_ids:
-                                success = True
-                                details += " (ACCEPTED: 'self-refutation' or 'circular-reasoning' as synonym)"
-                        # --- FIN DE LA CORRECTION PRAGMATIQUE ---
+                    # Regex pour trouver l'appel à la fonction d'identification
+                    args_match = re.search(r'identify_fallacies\\", \\"arguments\\": \\"(.*?)\\"', log_content)
+                    
+                    if args_match:
+                        try:
+                            # Les arguments sont une chaîne JSON qui a été "échappée" dans le log.
+                            args_str = codecs.decode(args_match.group(1), 'unicode_escape')
+                            parsed_args = json.loads(args_str)
+                            
+                            # La fonction `identify_fallacies` peut retourner une liste directement
+                            # que l'on doit enrober dans le format attendu par la comparaison.
+                            if 'fallacies' not in parsed_args:
+                                parsed_args = {'fallacies': parsed_args}
+                            
+                            success, details, _ = self._compare_sophisms_from_dict(parsed_args, config["expected_sophisms"])
+                        except (json.JSONDecodeError, TypeError) as e:
+                            success, details = False, f"Erreur de parsing des arguments: {e}. Contenu: {args_match.group(1)}"
                     else:
-                        success, details = False, f"Impossible d'extraire les données structurées du texte Markdown. Nom: {bool(nom_match)}, Citation: {bool(citation_match)}, Explication: {bool(explication_match)}"
+                        success, details = False, "Aucun appel à l'outil `identify_fallacies` n'a été trouvé dans le log de trace."
                 
                 exec_time = time.time() - start_time
                 status = "SUCCESS" if success else "FAILED"
@@ -790,13 +817,13 @@ Exemples d'utilisation:
     parser.add_argument('--verbose', action='store_true',
                         help='Affichage verbeux des détails')
 
-    parser.add_argument('--agent-type', type=str, default='full',
-                        choices=['simple', 'explore_only', 'workflow_only', 'full'],
-                        help="Type d'agent à utiliser pour l'analyse informelle (défaut: full)")
+    parser.add_argument('--agent-type', type=str, default='workflow_only',
+                        choices=['simple', 'explore_only', 'workflow_only'],
+                        help="Type d'agent à utiliser pour l'analyse informelle (défaut: workflow_only)")
     
     parser.add_argument('--taxonomy', type=str,
                         default='argumentation_analysis/data/argumentum_fallacies_taxonomy.csv',
-                        help='Chemin vers le fichier de taxonomie des sophismes CSV.')
+                        help='Chemin vers le fichier de taxonomie (JSON ou CSV).')
 
     parser.add_argument('--trace-log-path', type=str, default=None,
                         help="Chemin vers le fichier de log pour tracer les interactions de l'agent.")

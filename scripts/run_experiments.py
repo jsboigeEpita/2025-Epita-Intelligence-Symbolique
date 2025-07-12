@@ -51,7 +51,7 @@ def run_experiments():
 
             # Construction de la commande à exécuter à l'intérieur de l'environnement géré
             inner_command_parts = [
-                "python",
+                sys.executable,
                 validation_script_path,
                 "--agent-type", agent,
                 "--taxonomy", taxonomy_path,
