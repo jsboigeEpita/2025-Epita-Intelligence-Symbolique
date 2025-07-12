@@ -20,9 +20,9 @@ class TaxonomyNavigator:
             pk = node.get('PK')
             path = node.get('path')
             if pk:
-                self.node_map[pk] = node
+                self.node_map[str(pk)] = node
             if path:
-                self.path_map[path] = node
+                self.path_map[str(path)] = node
 
     def get_node(self, node_id: str) -> Optional[Dict[str, Any]]:
         """
@@ -40,7 +40,14 @@ class TaxonomyNavigator:
         """
         Returns all nodes at the root of the taxonomy (depth 1).
         """
-        return [node for node in self.taxonomy_data if node.get('depth') == '1']
+        roots = []
+        for node in self.taxonomy_data:
+            try:
+                if int(node.get('depth', -1)) == 1:
+                    roots.append(node)
+            except (ValueError, TypeError):
+                continue
+        return roots
 
     def get_children(self, node_id: str) -> List[Dict[str, Any]]:
         """
@@ -62,7 +69,11 @@ class TaxonomyNavigator:
                 continue
 
             node_path = node.get('path', '')
-            if node_path.startswith(f"{parent_path}.") and node_depth == parent_depth + 1:
+            # Ensure paths are strings for comparison
+            node_path_str = str(node_path)
+            parent_path_str = str(parent_path)
+
+            if node_path_str.startswith(f"{parent_path_str}.") and node_depth == parent_depth + 1:
                 children.append(node)
         return children
 
@@ -109,3 +120,48 @@ class TaxonomyNavigator:
             branch_str += f"  - {child_name} (ID: {child['PK']})\n"
         
         return branch_str.strip()
+
+    def get_taxonomy_preview(self, depth: int = 2, language: str = 'fr', details: bool = True) -> str:
+        """
+        Generates a string preview of the taxonomy up to a specified depth,
+        with an option to include details or just names.
+        """
+        if not self.taxonomy_data:
+            return "Taxonomy data is not available."
+
+        preview_lines = []
+        
+        def build_preview(node_id, current_depth):
+            if current_depth > depth:
+                return
+
+            node = self.get_node(node_id)
+            if not node:
+                return
+            
+            indent = "  " * (current_depth - 1)
+            node_name = node.get(f'text_{language}', node.get('PK'))
+            
+            if details:
+                desc = node.get(f'desc_{language}', '').strip()
+                preview_lines.append(f"{indent}- {node_name} (ID: {node['PK']}): {desc}")
+            else:
+                preview_lines.append(f"{indent}- {node_name}")
+            
+            children = self.get_children(node_id)
+            for child in children:
+                build_preview(child['PK'], current_depth + 1)
+
+        root_nodes = self.get_root_nodes()
+        for root in root_nodes:
+            build_preview(root['PK'], 1)
+            
+        return "\n".join(preview_lines)
+
+    def get_taxonomy_as_json(self) -> str:
+        """
+        Returns the entire taxonomy data as a JSON string.
+        """
+        if not self.taxonomy_data:
+            return "[]"
+        return json.dumps(self.taxonomy_data, indent=2, ensure_ascii=False)
