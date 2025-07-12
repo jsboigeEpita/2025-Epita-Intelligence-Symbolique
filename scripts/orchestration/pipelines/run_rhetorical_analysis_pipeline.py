@@ -55,7 +55,7 @@ async def main():
     
     try:
         logger.info("Initialisation du service LLM...")
-        llm_service = create_llm_service()
+        llm_service = create_llm_service(service_id="default", model_id="gpt-4-turbo")
         if not llm_service:
             logger.error("Échec de l'initialisation du service LLM. Vérifiez la configuration.")
             return
