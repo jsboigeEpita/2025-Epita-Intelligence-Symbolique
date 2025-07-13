@@ -1,5 +1,13 @@
-import argumentation_analysis.core.environment
 #!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+# Ajouter la racine du projet au PYTHONPATH pour résoudre les imports
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(project_root))
+
+# Maintenant l'import devrait fonctionner
+import argumentation_analysis.core.environment
 """
 Orchestrateur webapp détaché - utilise les outils de haut niveau existants
 Démarre backend/frontend en arrière-plan et retourne immédiatement le contrôle
@@ -56,7 +64,7 @@ def create_backend_config() -> ServiceConfig:
         working_dir=str(Path(__file__).parent),
         port=5003,
         health_check_url="http://localhost:5003/api/status",
-        startup_timeout=45,
+        startup_timeout=120,
         max_port_attempts=4
     )
 

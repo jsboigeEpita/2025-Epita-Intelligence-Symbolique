@@ -321,12 +321,23 @@ class InfrastructureServiceManager:
             # Démarrage du processus
             self.logger.info(f"Démarrage {service_name}: {' '.join(command)}")
             
+            # Création de fichiers de log pour capturer la sortie du processus
+            log_dir = Path(config.working_dir) / "logs"
+            log_dir.mkdir(exist_ok=True)
+            stdout_log_path = log_dir / f"{service_name}_stdout.log"
+            stderr_log_path = log_dir / f"{service_name}_stderr.log"
+
+            self.logger.info(f"Logs pour {service_name} seront dans {log_dir}")
+
+            # Ouvrir les fichiers de log
+            stdout_log = open(stdout_log_path, 'w')
+            stderr_log = open(stderr_log_path, 'w')
+
             process = psutil.Popen(
                 command,
                 cwd=config.working_dir,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
+                stdout=stdout_log,
+                stderr=stderr_log,
             )
             
             # Enregistrement pour nettoyage automatique

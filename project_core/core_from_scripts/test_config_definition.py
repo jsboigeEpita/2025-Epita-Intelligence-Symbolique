@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from .common_utils import Logger, LogLevel, save_json_report, format_timestamp
-from .environment_manager import EnvironmentManager
+from project_core.managers.environment_manager import EnvironmentManager
 
 
 class TestMode(Enum):

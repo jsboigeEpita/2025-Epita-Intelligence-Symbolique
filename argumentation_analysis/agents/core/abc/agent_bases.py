@@ -24,7 +24,7 @@ from semantic_kernel import Kernel
 # Cet héritage a été supprimé (voir commit e968f26d).
 # Si des problèmes d'intégration avec des fonctionnalités SK (ex: AgentGroupChat)
 # surviennent, réintroduire l'héritage de ChatCompletionAgent pourrait être une solution.
-from semantic_kernel.contents import ChatHistory
+from semantic_kernel.contents.chat_history import ChatHistory
 # from semantic_kernel.agents.channels.chat_history_channel import ChatHistoryChannel # Commenté, module/classe potentiellement déplacé/supprimé
 # from semantic_kernel.agents.chat_completion.chat_completion_agent import ChatHistoryAgentThread # Commenté, module/classe potentiellement déplacé/supprimé
 

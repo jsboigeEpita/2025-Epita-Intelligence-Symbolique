@@ -16,7 +16,7 @@ from typing import Dict, List, Optional, Any
 import site
 
 from .common_utils import Logger, LogLevel
-from .environment_manager import EnvironmentManager
+from project_core.managers.environment_manager import EnvironmentManager
 from .validation.validation_engine import ValidationEngine
 
 

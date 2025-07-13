@@ -1,5 +1,5 @@
 ﻿import pytest
-from playwright.sync_api import Page, expect, TimeoutError
+from playwright.async_api import Page, expect, TimeoutError
 
 # L'import de PlaywrightHelpers est supprimé car la classe n'existe plus.
 # Les appels sont remplacés par des localisateurs directs de Playwright.
@@ -25,29 +25,29 @@ class TestFrameworkBuilder:
         """Test du workflow principal de création de framework"""
         
         page = framework_page
-        expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
+        await expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
         page.locator('[data-testid="framework-tab"]').click()
 
         # Vérification de la présence des éléments du formulaire réels
-        expect(page.locator('#arg-content')).to_be_visible()
-        expect(page.get_by_role("button", name="Ajouter l'argument")).to_be_visible()
-        expect(page.locator('#semantics')).to_be_visible()
-        expect(page.locator('.build-button')).to_be_visible()
+        await expect(page.locator('#arg-content')).to_be_visible()
+        await expect(page.get_by_role("button", name="Ajouter l'argument")).to_be_visible()
+        await expect(page.locator('#semantics')).to_be_visible()
+        await expect(page.locator('.build-button')).to_be_visible()
         
         # Ajout du premier argument
         page.locator('#arg-content').fill('Tous les hommes sont mortels')
         page.get_by_role("button", name="Ajouter l'argument").click()
         
         # Vérification que l'argument a été ajouté
-        expect(page.locator('.argument-card')).to_be_visible()
-        expect(page.locator('.argument-card').first).to_contain_text('Tous les hommes sont mortels')
+        await expect(page.locator('.argument-card')).to_be_visible()
+        await expect(page.locator('.argument-card').first).to_contain_text('Tous les hommes sont mortels')
         
         # Ajout du second argument
         page.locator('#arg-content').fill('Socrate est un homme')
         page.get_by_role("button", name="Ajouter l'argument").click()
         
         # Vérification qu'il y a maintenant 2 arguments
-        expect(page.locator('.argument-card')).to_have_count(2)
+        await expect(page.locator('.argument-card')).to_have_count(2)
         
         # Ajout d'une attaque entre les arguments
         attack_source = page.locator('#attack-source')
@@ -61,7 +61,7 @@ class TestFrameworkBuilder:
         page.get_by_role("button", name="Ajouter l'attaque").click()
         
         # Vérification que l'attaque a été ajoutée
-        expect(page.locator('.attack-item')).to_be_visible()
+        await expect(page.locator('.attack-item')).to_be_visible()
         
         # Sélection de la sémantique
         page.locator('#semantics').select_option('preferred')
@@ -72,13 +72,13 @@ class TestFrameworkBuilder:
         # Vérification que la construction a été tentée (bouton cliqué avec succès)
         # Note: Les résultats ne s'affichent pas à cause d'une erreur JavaScript dans l'app
         # Nous vérifions que l'état du framework persiste correctement
-        expect(page.locator('.argument-card')).to_have_count(2)
+        await expect(page.locator('.argument-card')).to_have_count(2)
 
     @pytest.mark.asyncio
     async def test_framework_rule_management(self, framework_page: Page):
         """Test de la gestion des règles et contraintes du framework"""
         page = framework_page
-        expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
+        await expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
         page.locator('[data-testid="framework-tab"]').click()
         
         # Ajout de plusieurs arguments
@@ -92,17 +92,17 @@ class TestFrameworkBuilder:
             framework_page.locator('#arg-content').fill(arg_content)
             framework_page.get_by_role("button", name="Ajouter l'argument").click()
             # Vérification que l'argument spécifique a été ajouté (en évitant strict mode violation)
-            expect(framework_page.locator('.argument-card').last).to_contain_text(arg_content)
+            await expect(framework_page.locator('.argument-card').last).to_contain_text(arg_content)
         
         # Vérification du nombre d'arguments
-        expect(framework_page.locator('.argument-card')).to_have_count(3)
+        await expect(framework_page.locator('.argument-card')).to_have_count(3)
         
         # Test de suppression d'un argument
         remove_buttons = framework_page.locator('.argument-card .remove-button')
         remove_buttons.first.click()
         
         # Vérification que l'argument a été supprimé
-        expect(framework_page.locator('.argument-card')).to_have_count(2)
+        await expect(framework_page.locator('.argument-card')).to_have_count(2)
         
         # Ajout d'attaques multiples
         attack_source = framework_page.locator('#attack-source')
@@ -119,17 +119,17 @@ class TestFrameworkBuilder:
         framework_page.get_by_role("button", name="Ajouter l'attaque").click()
         
         # Vérification des attaques
-        expect(framework_page.locator('.attack-item')).to_have_count(2)
+        await expect(framework_page.locator('.attack-item')).to_have_count(2)
         
         # Test de suppression d'attaque
         framework_page.locator('.attack-item .remove-button').first.click()
-        expect(framework_page.locator('.attack-item')).to_have_count(1)
+        await expect(framework_page.locator('.attack-item')).to_have_count(1)
 
     @pytest.mark.asyncio
     async def test_framework_validation_integration(self, framework_page: Page):
         """Test de l'intégration avec le système de validation"""
         page = framework_page
-        expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
+        await expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
         page.locator('[data-testid="framework-tab"]').click()
         
         # Construction d'un framework simple mais valide
@@ -146,28 +146,28 @@ class TestFrameworkBuilder:
         compute_extensions = framework_page.locator('input[type="checkbox"]').first
         include_visualization = framework_page.locator('input[type="checkbox"]').nth(1)
         
-        expect(compute_extensions).to_be_checked()  # Par défaut
-        expect(include_visualization).to_be_checked()  # Par défaut
+        await expect(compute_extensions).to_be_checked()  # Par défaut
+        await expect(include_visualization).to_be_checked()  # Par défaut
         
         # Modification des options
         include_visualization.uncheck()
-        expect(include_visualization).not_to_be_checked()
+        await expect(include_visualization).not_to_be_checked()
         
         # Construction du framework (note: l'interface a actuellement une erreur JS)
         framework_page.locator('.build-button').click()
         
         # Vérification que la configuration a été appliquée correctement
-        expect(framework_page.locator('#semantics')).to_have_value('grounded')
-        expect(include_visualization).not_to_be_checked()
+        await expect(framework_page.locator('#semantics')).to_have_value('grounded')
+        await expect(include_visualization).not_to_be_checked()
         
         # Vérification que les arguments persistent
-        expect(framework_page.locator('.argument-card')).to_have_count(2)
+        await expect(framework_page.locator('.argument-card')).to_have_count(2)
 
     @pytest.mark.asyncio
     async def test_framework_persistence(self, framework_page: Page):
         """Test de la persistance et sauvegarde du framework"""
         page = framework_page
-        expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
+        await expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
         page.locator('[data-testid="framework-tab"]').click()
         
         # Construction d'un framework avec données de test
@@ -193,9 +193,9 @@ class TestFrameworkBuilder:
         # Nous vérifions que la configuration a été appliquée correctement
         
         # Vérification que les données persistantes sont présentes
-        expect(framework_page.locator('.argument-card')).to_have_count(2)
-        expect(framework_page.locator('.attack-item')).to_have_count(1)
-        expect(framework_page.locator('#semantics')).to_have_value('complete')
+        await expect(framework_page.locator('.argument-card')).to_have_count(2)
+        await expect(framework_page.locator('.attack-item')).to_have_count(1)
+        await expect(framework_page.locator('#semantics')).to_have_value('complete')
         
         # Test de navigation et retour (simulation de persistance)
         # Aller vers un autre onglet puis revenir
@@ -204,13 +204,13 @@ class TestFrameworkBuilder:
         
         # Vérification que le framework est toujours là (dans la session)
         # Note: La persistance dépend de l'implémentation React et du state management
-        expect(framework_page.locator('.framework-section').first).to_be_visible()
+        await expect(framework_page.locator('.framework-section').first).to_be_visible()
 
     @pytest.mark.asyncio
     async def test_framework_extension_analysis(self, framework_page: Page):
         """Test de l'analyse des extensions du framework"""
         page = framework_page
-        expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
+        await expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
         page.locator('[data-testid="framework-tab"]').click()
         
         # Construction d'un framework plus complexe pour générer des extensions intéressantes
@@ -247,8 +247,8 @@ class TestFrameworkBuilder:
         framework_page.locator('.build-button').click()
         
         # Vérification que la sémantique a été correctement sélectionnée
-        expect(framework_page.locator('#semantics')).to_have_value(semantic)
+        await expect(framework_page.locator('#semantics')).to_have_value(semantic)
         
         # Vérification que tous les arguments et attaques sont toujours présents
-        expect(framework_page.locator('.argument-card')).to_have_count(4)
-        expect(framework_page.locator('.attack-item')).to_have_count(4)
+        await expect(framework_page.locator('.argument-card')).to_have_count(4)
+        await expect(framework_page.locator('.attack-item')).to_have_count(4)

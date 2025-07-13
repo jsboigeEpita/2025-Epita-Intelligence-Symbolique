@@ -6,7 +6,7 @@ from project_core.core_from_scripts.strategies.base_strategy import BaseStrategy
 import sys
 from collections import namedtuple
 
-from project_core.core_from_scripts.environment_manager import EnvironmentManager
+from project_core.managers.environment_manager import EnvironmentManager
 
 class TestEnvironmentManager(unittest.TestCase):
 

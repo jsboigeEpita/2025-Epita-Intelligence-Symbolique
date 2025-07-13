@@ -9,7 +9,7 @@ import os
 
 
 from project_core.core_from_scripts.cleanup_manager import CleanupManager
-from project_core.core_from_scripts.environment_manager import EnvironmentManager
+from project_core.managers.environment_manager import EnvironmentManager
 from project_core.core_from_scripts.organization_manager import OrganizationManager
 from project_core.core_from_scripts.repository_manager import RepositoryManager
 

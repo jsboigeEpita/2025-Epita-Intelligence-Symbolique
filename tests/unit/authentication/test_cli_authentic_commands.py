@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 import pytest
-from argumentation_analysis.analyzers.unified_production_analyzer import (
+from project_core.rhetorical_analysis_from_scripts.unified_production_analyzer import (
     UnifiedProductionAnalyzer,
 )
 

@@ -22,7 +22,9 @@ Date: 09/06/2025
 import os
 import sys
 from pathlib import Path
-# Les imports shutil, platform, dotenv ne sont plus nécessaires ici.
+from dotenv import load_dotenv, find_dotenv
+
+# Les imports shutil, platform, ne sont plus nécessaires ici.
 
 # Il est préférable d'importer les dépendances spécifiques à une fonction à l'intérieur de cette fonction,
 # surtout si elles ne sont pas utilisées ailleurs dans le module.
@@ -49,11 +51,22 @@ def ensure_env(env_name: str = None, silent: bool = False) -> bool:
         RuntimeError: Si l'environnement n'est pas celui attendu.
     """
     if env_name is None:
+        # Dynamiquement charger le nom de l'env depuis le .env à la racine du projet
         try:
-            from argumentation_analysis.config.settings import settings
-            env_name = settings.model_dump().get('CONDA_ENV_NAME', os.environ.get('CONDA_ENV_NAME', 'projet-is-new'))
-        except (ImportError, AttributeError):
-            env_name = os.environ.get('CONDA_ENV_NAME', 'projet-is-new')
+            # Trouve et charge le fichier .env en remontant depuis ce script
+            dotenv_path = find_dotenv(raise_error_if_not_found=True)
+            load_dotenv(dotenv_path)
+            env_name = os.environ.get('CONDA_ENV_NAME')
+            if not env_name:
+                raise ValueError("CONDA_ENV_NAME non trouvé dans le fichier .env")
+        except (IOError, ValueError) as e:
+            # Fallback si .env non trouvé ou variable manquante
+            print(f"[auto_env] AVERTISSEMENT: Impossible de lire le .env. {e}. Utilisation de la configuration par défaut.", file=sys.stderr)
+            try:
+                from argumentation_analysis.config.settings import settings
+                env_name = settings.model_dump().get('CONDA_ENV_NAME', 'projet-is-roo-new')
+            except (ImportError, AttributeError):
+                env_name = 'projet-is-roo-new' # Ultime recours, mais devrait correspondre au projet
 
     # La vérification est maintenant en deux étapes pour une robustesse maximale.
     # 1. Vérifier la variable d'environnement 'CONDA_DEFAULT_ENV'. C'est l'indicateur

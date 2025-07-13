@@ -20,7 +20,7 @@ __version__ = "1.0.0"
 __author__ = "Intelligence Symbolique EPITA"
 
 from .common_utils import *
-from .environment_manager import *
+# from .environment_manager import * # NEUTRALIZED - Replaced by external ps1 scripts
 from .test_config_definition import *
 from .validation.validation_engine import *
 from .project_setup import *
@@ -29,8 +29,8 @@ __all__ = [
     # Common utils
     'Logger', 'ColoredOutput', 'format_timestamp', 'safe_exit',
     
-    # Environment manager
-    'EnvironmentManager', 'check_conda_env', 'activate_project_env',
+    # Environment manager (obsolete)
+    # 'EnvironmentManager', 'check_conda_env', 'activate_project_env',
     
     # Test runner
     'TestRunner', 'TestConfig', 'TestMode', 'run_pytest', 'run_python_script',

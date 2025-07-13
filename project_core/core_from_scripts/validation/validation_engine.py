@@ -14,7 +14,7 @@ from typing import Dict, List, Optional, Any, Type
 from dataclasses import dataclass
 
 from ..common_utils import Logger
-from ..environment_manager import EnvironmentManager
+# from ..environment_manager import EnvironmentManager # Obsolete, logic moved inline
 
 
 @dataclass
@@ -50,10 +50,19 @@ class ValidationEngine:
     
     def __init__(self, logger: Logger = None):
         self.logger = logger or Logger()
-        self.env_manager = EnvironmentManager(self.logger)
-        self.project_root = self.env_manager.project_root
+        self.project_root = self._find_project_root()
+        self.logger.info(f"Project root found at: {self.project_root}")
         self.rules: List[ValidationRule] = []
         self._load_rules()
+
+    def _find_project_root(self) -> str:
+        """Trouve la racine du projet en cherchant le dossier .git."""
+        current_path = os.path.abspath(os.path.dirname(__file__))
+        while current_path != os.path.dirname(current_path):
+            if os.path.isdir(os.path.join(current_path, '.git')):
+                return current_path
+            current_path = os.path.dirname(current_path)
+        raise RuntimeError("Impossible de trouver la racine du projet (dossier .git).")
 
     def _load_rules(self):
         """Charge et instancie toutes les règles de validation."""

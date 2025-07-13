@@ -43,7 +43,7 @@ def main():
     
     # Test d'import de modules du projet
     try:
-        from project_core.core_from_scripts.environment_manager import EnvironmentManager
+        from project_core.managers.environment_manager import EnvironmentManager
         print(f"\n[OK] Import EnvironmentManager réussi")
         
         manager = EnvironmentManager()

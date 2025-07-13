@@ -17,10 +17,16 @@ C'est le point d'entrée privilégié pour toute commande relative au projet.
 .\activate_project_env.ps1 python --version
 #>
 param(
-    [string]$Command = "",
+    # Pour la compatibilité avec l'ancien appel: .\script.ps1 commande args...
+    [Parameter(Position=0)]
+    [string]$Command,
 
+    # Capture tous les arguments restants pour l'ancien appel
     [Parameter(ValueFromRemainingArguments=$true)]
-    [string[]]$RemainingArgs
+    [string[]]$RemainingArgs,
+
+    # Nouveau paramètre nommé, plus robuste: .\script.ps1 -CommandToRun "commande args..."
+    [string]$CommandToRun
 )
 
 $ErrorActionPreference = "Stop"
@@ -38,11 +44,18 @@ catch {
 
 # --- Configuration de l'environnement ---
 $env:PYTHONPATH = "$PSScriptRoot;$env:PYTHONPATH"
-$condaEnvName = "projet-is-new"
+$condaEnvName = "projet-is-roo-new"
 
 # --- Logique de commande ---
-# Concatène la commande et ses arguments en une seule chaîne.
-$fullCommand = ($Command + " " + ($RemainingArgs -join ' ')).Trim()
+# Détermine la commande à exécuter en priorité avec le nouveau paramètre nommé.
+$fullCommand = ""
+if (-not [string]::IsNullOrEmpty($CommandToRun)) {
+    $fullCommand = $CommandToRun
+}
+else {
+    # Fallback sur l'ancienne méthode de concaténation.
+    $fullCommand = ($Command + " " + ($RemainingArgs -join ' ')).Trim()
+}
 
 # Si aucune commande n'est passée, le script active simplement l'environnement et se termine.
 if ([string]::IsNullOrWhiteSpace($fullCommand)) {

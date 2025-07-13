@@ -1,5 +1,5 @@
 import pytest
-from playwright.sync_api import Playwright, expect
+from playwright.async_api import Playwright, expect
 import os
 
 # Marqueur pour facilement cibler ces tests
@@ -10,66 +10,67 @@ pytestmark = [
     pytest.mark.e2e_test
 ]
 
-@pytest.mark.playwright
-def test_dung_framework_analysis_api(playwright: Playwright):
+@pytest.mark.asyncio
+async def test_dung_framework_analysis_api():
     """
     NOTE: Ce test est temporairement désactivé.
     Teste directement l'endpoint de l'API pour l'analyse de A.F. Dung.
     Ceci valide l'intégration du service Dung sans passer par l'UI.
     Le serveur backend est démarré par l'orchestrateur de test.
     """
-    # Création du contexte API. L'URL est récupérée depuis les variables d'environnement
-    # ou une valeur par défaut, ce qui correspond à la configuration de l'orchestrateur de test.
-    api_request_context = playwright.request.new_context(
-        base_url=os.environ.get("BACKEND_URL", "http://127.0.0.1:5003")
-    )
+    from playwright.async_api import async_playwright
+
+    async with async_playwright() as p:
+        # Création du contexte API. L'URL est récupérée depuis les variables d'environnement
+        # ou une valeur par défaut, ce qui correspond à la configuration de l'orchestrateur de test.
+        api_request_context = await p.request.new_context(
+            base_url=os.environ.get("BACKEND_URL", "http://127.0.0.1:5003")
+        )
     
-    # Données d'exemple pour un framework d'argumentation simple
-    test_data = {
-        "arguments": [
-            {"id": "a", "content": "Argument a", "attacks": ["b"]},
-            {"id": "b", "content": "Argument b", "attacks": ["c"]},
-            {"id": "c", "content": "Argument c", "attacks": []}
-        ],
-        "options": {
-            "semantics": "preferred",
-            "compute_extensions": True,
-            "include_visualization": False
+        # Données d'exemple pour un framework d'argumentation simple
+        test_data = {
+            "arguments": ["a", "b", "c"],
+            "attacks": [
+                ["a", "b"],
+                ["b", "c"]
+            ],
+            "options": {
+                "semantics": "preferred",
+                "compute_extensions": True,
+                "include_visualization": False
+            }
         }
-    }
 
-    # Appel direct de l'API
-    response = api_request_context.post(
-        "/api/framework",
-        data=test_data
-    )
+        # Appel direct de l'API
+        response = await api_request_context.post(
+            "/api/v1/framework/analyze",
+            data=test_data
+        )
 
-    # Vérifications de base
-    expect(response).to_be_ok()
-    response_data = response.json()
+        # Vérifications de base
+        await expect(response).to_be_ok()
+        response_data = await response.json()
 
-    # Vérification de la structure et du contenu de la réponse
-    assert "argument_count" in response_data, "La clé 'argument_count' est manquante dans la réponse"
-    assert response_data["argument_count"] == 3
+        # Vérification de la structure et du contenu de la réponse
+        assert "graph_properties" in response_data, "La clé 'graph_properties' est manquante"
+        props = response_data["graph_properties"]
+        assert props.get("num_arguments") == 3, f"Attendu 3 arguments, obtenu {props.get('num_arguments')}"
+        assert props.get("num_attacks") == 2, f"Attendu 2 attaques, obtenu {props.get('num_attacks')}"
 
-    assert "attack_count" in response_data, "La clé 'attack_count' est manquante dans la réponse"
-    assert response_data["attack_count"] == 2, f"Expected 2 attacks, but got {response_data.get('attack_count')}"
-
-    if "extensions" in response_data:
-        extensions_list = response_data["extensions"]
-        assert isinstance(extensions_list, list), "Les extensions devraient être une liste"
-
-        # Trouver l'extension préférée
-        preferred_extensions = [ext for ext in extensions_list if ext.get('type') == 'preferred']
+        assert "analysis" in response_data, "La clé 'analysis' est manquante"
+        analysis = response_data["analysis"]
+        assert "extensions" in analysis, "La clé 'extensions' est manquante dans 'analysis'"
         
-        assert len(preferred_extensions) > 0, "Aucune extension de type 'preferred' n'a été trouvée"
+        extensions = analysis["extensions"]
+        assert "preferred" in extensions, "La sémantique 'preferred' est manquante dans les extensions"
         
-        # Pour le graphe a->b->c, l'extension préférée est {a, c}
-        # Prenons la première extension préférée trouvée pour la validation
-        preferred_ext_data = preferred_extensions[0]
-        
-        assert "arguments" in preferred_ext_data, "La clé 'arguments' est manquante dans l'extension"
-        
-        found_extension = set(preferred_ext_data["arguments"])
+        # Les extensions préférées sont une liste de listes d'arguments
+        preferred_extensions = extensions["preferred"]
+        assert isinstance(preferred_extensions, list), "Les extensions préférées devraient être une liste"
+        assert len(preferred_extensions) > 0, "Aucune extension préférée n'a été trouvée"
+
+        # Pour le graphe a->b->c, l'extension préférée est [{a, c}]
+        # Nous vérifions si notre extension attendue est dans la liste des extensions trouvées.
+        found_extensions_sets = [set(ext) for ext in preferred_extensions]
         expected_extension = {"a", "c"}
-        assert found_extension == expected_extension, f"L'extension préférée est incorrecte. Attendu: {expected_extension}, Obtenu: {found_extension}"
+        assert expected_extension in found_extensions_sets, f"L'extension préférée est incorrecte. Attendu: {expected_extension}, Obtenu: {found_extensions_sets}"

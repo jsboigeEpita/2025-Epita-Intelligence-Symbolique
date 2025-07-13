@@ -44,6 +44,9 @@ def pytest_addoption(parser):
     )
     parser.addoption("--frontend-url", action="store", default="http://localhost:3000", help="URL pour le serveur frontend E2E.")
     parser.addoption("--backend-url", action="store", default="http://localhost:5003", help="URL pour le serveur backend E2E.")
+    # parser.addoption(
+    #     "--headed", action="store_true", default=False, help="Exécute les tests Playwright en mode 'headed' (avec interface graphique)."
+    # )
 
 def pytest_configure(config):
     """
@@ -118,6 +121,7 @@ def pytest_unconfigure(config):
         _dotenv_patcher.stop()
         _dotenv_patcher = None
 
+
 def _ensure_tweety_jars_are_correctly_placed():
     """
     Code défensif pour les tests.
@@ -153,9 +157,16 @@ def _ensure_tweety_jars_are_correctly_placed():
 @pytest.fixture(scope="session", autouse=True)
 def apply_nest_asyncio():
     """
-    DEPRECATED/DISABLED
+    Applique nest_asyncio pour permettre l'exécution de boucles d'événements imbriquées,
+    ce qui est crucial pour la compatibilité entre pytest-asyncio et Playwright.
     """
-    logger.warning("The 'apply_nest_asyncio' fixture in conftest.py is currently disabled to ensure compatibility with Playwright.")
+    try:
+        import nest_asyncio
+        nest_asyncio.apply()
+        logger.info("nest_asyncio patch applied successfully.")
+    except ImportError:
+        logger.error("`nest_asyncio` is not installed. Please install it with `pip install nest-asyncio`.")
+        pytest.fail("Missing dependency: nest_asyncio is required for running async tests with Playwright.", pytrace=False)
     yield
 
 
@@ -219,7 +230,7 @@ def manage_jvm_for_test(request):
 pytest_plugins = [
    "tests.fixtures.integration_fixtures",
    "tests.fixtures.jvm_subprocess_fixture",
-    "pytest_playwright",
+#    "pytest_playwright",
 ]
 
 @pytest.fixture(scope="function", autouse=True)
@@ -242,6 +253,11 @@ def check_mock_llm_is_forced(request, monkeypatch):
 def backend_url(request):
     """Provides the backend URL from command-line options."""
     return request.config.getoption("--backend-url")
+
+@pytest.fixture(scope="session")
+def frontend_url(request):
+    """Provides the frontend URL from command-line options."""
+    return request.config.getoption("--frontend-url")
         
 @pytest.fixture
 def mock_kernel():
@@ -341,3 +357,51 @@ def successful_simple_argument_analysis_fixture_path(tmp_path):
     file_path = tmp_path / "simple_argument.json"
     file_path.write_text(json.dumps(data))
     return str(file_path)
+
+# --- Playwright Async Fixtures ---
+
+@pytest.fixture(scope="session")
+def browser_context_args(pytestconfig):
+    return {
+        "viewport": {
+            "width": 1920,
+            "height": 1080,
+        },
+        "ignore_https_errors": True,
+        "record_video_dir": "logs/videos" if pytestconfig.getoption("--headed") else None,
+    }
+
+@pytest.fixture(scope="session")
+async def browser(pytestconfig):
+    from playwright.async_api import async_playwright
+
+    # Récupérer l'option --headed de la ligne de commande, comme le ferait pytest-playwright
+    headed = pytestconfig.getoption("--headed")
+    
+    launch_options = {
+        "headless": not headed,
+    }
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(**launch_options)
+        yield browser
+        await browser.close()
+
+@pytest.fixture(scope="session")
+async def context(browser, browser_context_args, frontend_url):
+    context = await browser.new_context(
+        **browser_context_args,
+        base_url=frontend_url
+    )
+    yield context
+    await context.close()
+
+
+@pytest.fixture
+async def page(context, frontend_url: str):
+    """Crée une nouvelle page pour chaque test."""
+    logger.info(f"E2E TEST: Creating new page for URL base: {frontend_url}")
+    logger.warning("E2E TEST: Attempting to connect. If tests hang or fail with TargetClosedError, the frontend server is likely DOWN.")
+    page = await context.new_page()
+    yield page
+    await page.close()

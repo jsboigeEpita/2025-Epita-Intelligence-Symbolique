@@ -182,7 +182,9 @@ class MinimalBackendManager:
         command = [
             '-m', 'uvicorn', module_spec,
             '--host', '127.0.0.1',
-            '--port', str(self.port)
+            '--port', str(self.port),
+            '--reload',
+            '--reload-dir', str( Path(__file__).parent.parent / "api" )
         ]
         
         self.logger.info(f"[BACKEND] Commande de lancement: python {' '.join(command)}")

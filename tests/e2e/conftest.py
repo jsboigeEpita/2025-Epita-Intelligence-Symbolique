@@ -23,3 +23,13 @@ def frontend_url(request) -> str:
 # The unified_web_orchestrator.py is now the single source of truth
 # for starting, managing, and stopping the web application during tests.
 # The orchestrator passes the correct URLs to pytest via the command line.
+
+@pytest.fixture(scope="session")
+def browser_launch_options(launch_options):
+    """
+    Force le mode headless pour les tests E2E via les options de lancement.
+    """
+    return {
+        **launch_options,
+        "headless": True,
+    }

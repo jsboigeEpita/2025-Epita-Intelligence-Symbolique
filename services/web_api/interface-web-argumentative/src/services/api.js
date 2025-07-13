@@ -81,7 +81,7 @@ export const detectFallacies = async (text, options = {}) => {
     options: { ...defaultOptions, ...options }
   };
 
-  const response = await fetchWithTimeout(`${API_BASE_URL}/api/fallacies`, {
+  const response = await fetchWithTimeout(`${API_BASE_URL}/api/analyze`, {
     method: 'POST',
     headers: defaultHeaders,
     body: JSON.stringify(requestBody)
