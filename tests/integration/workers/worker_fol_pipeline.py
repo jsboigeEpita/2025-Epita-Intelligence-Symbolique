@@ -131,7 +131,7 @@ class TestFOLPipelineIntegration:
     async def test_fol_orchestration_integration(self):
         """Test d'intégration avec orchestration FOL."""
         # 1. Créer le service LLM
-        llm_service = create_llm_service()
+        llm_service = create_llm_service(service_id="default_worker_service")
         
         # 2. Créer l'orchestrateur
         orchestrator = RealLLMOrchestrator(llm_service=llm_service)

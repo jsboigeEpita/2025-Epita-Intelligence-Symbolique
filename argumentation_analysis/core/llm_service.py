@@ -92,7 +92,7 @@ class MockChatCompletion(ChatCompletionClientBase):
 @staticmethod
 def create_llm_service(
     service_id: str,
-    model_id: str,
+    model_id: str = None,
     service_type: str = "OpenAIChatCompletion",
     **kwargs,
 ) -> "LLMService":
@@ -106,12 +106,10 @@ def create_llm_service(
     Args:
         service_id (str): L'ID de service à utiliser pour l'instance dans
                           le kernel Semantic Kernel.
-        model_id (str): L'ID du modèle à utiliser (ex: "gpt-4-turbo").
-        service_type (str): Le type de service à créer. Actuellement, seul
-                            "OpenAIChatCompletion" est entièrement géré
-                            pour la connexion à l'API OpenAI officielle.
-        force_mock (bool): Si True, retourne une instance de `MockChatCompletion`
-                           ignorant la configuration.
+        model_id (str, optionnel): L'ID du modèle. Si non fourni, il est lu
+                                 depuis la variable d'environnement OPENAI_CHAT_MODEL_ID.
+        service_type (str): Le type de service à créer (par ex., "OpenAIChatCompletion").
+        force_mock (bool): Si True, retourne une instance de MockChatCompletion.
         force_authentic (bool): Si True, force la création d'un service authentique
                                 même dans un environnement de test.
 
@@ -120,19 +118,21 @@ def create_llm_service(
             Une instance configurée du service de chat.
 
     Raises:
-        ValueError: Si la configuration requise (ex: OPENAI_API_KEY) est manquante.
+        ValueError: Si la configuration requise est manquante.
         RuntimeError: Si la création du service échoue.
     """
     logger.critical("<<<<< create_llm_service FUNCTION CALLED >>>>>")
     logger.info(f"--- Configuration du Service LLM ({service_id}) ---")
 
-    # Logique de mock pour les tests
-    is_test_environment = 'PYTEST_CURRENT_TEST' in os.environ
-    force_real_llm_in_test = os.environ.get("FORCE_REAL_LLM_IN_TEST", "false").lower() == "true"
-    
-    if is_test_environment and not force_real_llm_in_test and kwargs.get('force_mock', False):
-        logger.warning("Environnement de test détecté. Création d'un service LLM mocké.")
+    # Gestion du mock : si force_mock est vrai, on retourne directement le mock.
+    if kwargs.get('force_mock', False):
+        logger.warning(f"Création d'un service LLM mocké pour '{service_id}' car force_mock=True.")
         return MockChatCompletion(service_id=service_id, ai_model_id="mock_model")
+
+    # Si on n'est pas en mode mock, on cherche le model_id s'il n'est pas fourni
+    if not model_id:
+        model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+        logger.info(f"model_id non fourni, utilisation de la valeur de .env: {model_id}")
 
     # Récupération directe depuis l'environnement
     api_key = os.environ.get("OPENAI_API_KEY")

@@ -1,6 +1,7 @@
 import pytest
 import sys
 import os
+import subprocess
 from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
 from project_core.utils.shell import run_sync

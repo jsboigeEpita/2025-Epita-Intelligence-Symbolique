@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Union
 
 from argumentation_analysis.core.utils import code_manipulation_utils
-from argumentation_analysis.core.utils.filesystem_utils import get_all_files_in_directory
+# from argumentation_analysis.core.utils.filesystem_utils import get_all_files_in_directory # Obsolete
 import difflib
 
 class RefactoringManager:
@@ -55,27 +55,37 @@ class RefactoringManager:
             plan = json.load(f)
 
         all_diffs = {}
-        target_files = get_all_files_in_directory(project_root, patterns=["*.py"])
+        excluded_dirs = {'node_modules', '.venv', '.git', '__pycache__', 'build', 'dist', 'env'}
 
-        for file_path_str in target_files:
-            file_path = Path(file_path_str)
-            original_code = file_path.read_text(encoding="utf-8")
-            modified_code = original_code
+        all_files = list(project_root.rglob("*.py"))
+        target_files = []
+        for p in all_files:
+            if not any(excluded in p.parts for excluded in excluded_dirs):
+                target_files.append(p)
 
-            for transformation in plan.get("transformations", []):
-                # Apply transformation sequentially on the modified code
-                modified_code = self._apply_single_transformation(modified_code, transformation)
+        for file_path in target_files:
+            try:
+                original_code = file_path.read_text(encoding="utf-8")
+                modified_code = original_code
 
-            if original_code != modified_code:
-                diff = "".join(difflib.unified_diff(
-                    original_code.splitlines(True),
-                    modified_code.splitlines(True),
-                    fromfile=str(file_path),
-                    tofile=str(file_path)
-                ))
-                all_diffs[str(file_path)] = diff
+                for transformation in plan.get("transformations", []):
+                    # Apply transformation sequentially on the modified code
+                    modified_code = self._apply_single_transformation(modified_code, transformation)
 
-                if not dry_run:
-                    file_path.write_text(modified_code, encoding="utf-8")
+                if original_code != modified_code:
+                    diff = "".join(difflib.unified_diff(
+                        original_code.splitlines(True),
+                        modified_code.splitlines(True),
+                        fromfile=str(file_path),
+                        tofile=str(file_path)
+                    ))
+                    all_diffs[str(file_path)] = diff
+
+                    if not dry_run:
+                        file_path.write_text(modified_code, encoding="utf-8")
+                        
+            except OSError as e:
+                print(f"Skipping file due to OSError: {file_path} - {e}")
+                continue
                     
         return all_diffs

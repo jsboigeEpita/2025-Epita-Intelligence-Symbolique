@@ -237,7 +237,7 @@ class TestPhase2AuthenticLLMValidation:
         assert config.use_authentic_services is True
         
         # Test service LLM sans fallback
-        service = create_llm_service("test_no_fallback")
+        service = create_llm_service(service_id="test_no_fallback")
         service_module = service.__class__.__module__
         
         # Validation module authentique (pas de mock dans le path)
@@ -286,7 +286,7 @@ class TestPhase2AuthenticLLMValidation:
             success_criteria["unified_config_authentic"] = True
             
             # Critère 2: Service LLM authentique
-            service = create_llm_service("phase2_validation")
+            service = create_llm_service(service_id="phase2_validation")
             assert isinstance(service, (OpenAIChatCompletion, AzureChatCompletion))
             success_criteria["llm_service_authentic"] = True
             
