@@ -17,16 +17,15 @@ C'est le point d'entrée privilégié pour toute commande relative au projet.
 .\activate_project_env.ps1 python --version
 #>
 param(
-    [string]$CommandToRun,
-
-	[Parameter(ValueFromRemainingArguments=$true)]
-	[string[]]$RemainingArgs
+    [Parameter(ValueFromRemainingArguments=$true)]
+    [string[]]$CommandToRun
 )
 
 $ErrorActionPreference = "Stop"
 
 # --- Initialisation de Conda ---
 try {
+    # Tente de trouver conda et de l'initialiser pour la session PowerShell en cours.
     $condaPath = Get-Command conda.exe | Select-Object -ExpandProperty Source
     Write-Host "[DEBUG] Conda trouvé: $condaPath" -ForegroundColor DarkGray
     conda.exe shell.powershell hook | Out-String | Invoke-Expression
@@ -40,23 +39,24 @@ catch {
 $env:PYTHONPATH = "$PSScriptRoot;$env:PYTHONPATH"
 $condaEnvName = "projet-is-roo-new"
 
-# --- Logique de commande ---
-# Concatène la commande et ses arguments en une seule chaîne.
-# --- Logique de commande ---
-$fullCommand = ($CommandToRun + " " + ($RemainingArgs -join ' ')).Trim()
-
 # --- Exécution via conda run ---
-# Utilisation de Start-Process pour un appel plus stable que Invoke-Expression
-$argumentList = "run --no-capture-output -n $condaEnvName --cwd `"$PSScriptRoot`" $fullCommand"
-
-Write-Host "[DEBUG] Commande d'exécution via Start-Process :" -ForegroundColor Gray
-Write-Host "conda.exe $argumentList" -ForegroundColor Gray
-
+# Le script agit comme un simple wrapper. Tous les arguments passés
+# sont collectés dans $CommandToRun et "splattés" à 'conda run'.
+# C'est la méthode la plus fiable pour passer des arguments complexes.
 try {
-    # On récupère le chemin complet de conda.exe pour être sûr
-    $condaExecutable = Get-Command conda.exe | Select-Object -ExpandProperty Source
-    Write-Host "[DEBUG] Lancement de la commande via Invoke-Expression..." -ForegroundColor DarkGray
-    Invoke-Expression "conda $argumentList"
+    $condaArgs = @(
+        'run',
+        '--no-capture-output',
+        '-n', $condaEnvName,
+        '--cwd', "$PSScriptRoot"
+    ) + $CommandToRun
+
+    Write-Host "[DEBUG] Commande exécutée : conda $($condaArgs -join ' ')" -ForegroundColor DarkGray
+
+    # Utilisation de l'opérateur d'appel `&` pour exécuter la commande
+    # avec les arguments "splattés". C'est la méthode la plus fiable.
+    & conda @condaArgs
+
     $exitCode = $LASTEXITCODE
     Write-Host "[DEBUG] Commande terminée avec le code de sortie: $exitCode" -ForegroundColor DarkGray
 }

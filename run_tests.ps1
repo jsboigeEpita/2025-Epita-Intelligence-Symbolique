@@ -1,170 +1,68 @@
-param(
-    [string]$TestType = "all",
-    [string]$TestPath,
-    [string]$PytestArgs
-)
-
 <#
 .SYNOPSIS
-Lance la suite de tests du projet avec pytest.
+Wrapper pour lancer des tests via pytest en utilisant l'environnement du projet.
 
 .DESCRIPTION
-Ce script est le point d'entrée unique pour exécuter les tests.
-Il utilise `activate_project_env.ps1` pour s'assurer que les tests
-sont exécutés dans le bon environnement Conda (`projet-is-roo-new`) et
-avec le `PYTHONPATH` correctement configuré.
+Ce script agit comme un simple transmetteur d'arguments vers pytest.
+Il utilise `activate_project_env.ps1` pour garantir que l'environnement Conda
+est correctement activé, puis passe tous les arguments qu'il reçoit
+directement à la commande `pytest`.
 
-Toute la sortie est redirigée pour être capturée par les logs, et les
-erreurs sont gérées de manière centralisée.
-
-.PARAMETER TestArgs
-Accepte une chaîne de caractères contenant tous les arguments à passer
-directement à pytest. Cela permet de cibler des tests spécifiques ou
-d'utiliser des options pytest.
+C'est la méthode recommandée pour exécuter tous types de tests, en
+permettant une flexibilité maximale pour spécifier des fichiers,
+des marqueurs ou toute autre option de pytest.
 
 .EXAMPLE
 # Exécute tous les tests
 .\run_tests.ps1
 
 .EXAMPLE
-# Exécute un fichier de test spécifique
-.\run_tests.ps1 -TestPath "tests/integration/test_argument_analyzer.py"
+# Exécute un fichier de test spécifique en mode verbeux
+.\run_tests.ps1 -v tests/integration/test_argument_analyzer.py
 
 .EXAMPLE
-# Exécute un test spécifique avec l'option -s pour voir les prints
-.\run_tests.ps1 -TestPath "tests/integration/test_argument_analyzer.py" -PytestArgs "-s -k test_successful_simple_argument_analysis"
-#>
+# Exécute tous les tests marqués comme "real_llm"
+.\run_tests.ps1 -m "real_llm"
 
-# --- Script Body ---
-[System.Text.Encoding]::UTF8.GetPreamble()
+.EXAMPLE
+# Exécute un test spécifique par son nom dans un fichier
+.\run_tests.ps1 "tests/integration/test_analysis_service.py::TestAnalysisService::test_analyze_complex_argumentative_text"
+#>
+param(
+    [Parameter(ValueFromRemainingArguments=$true)]
+    [string[]]$PytestArgs
+)
 
 $ErrorActionPreference = 'Stop'
-$script:ProjectRoot = $PSScriptRoot
-$script:globalExitCode = 0
-$backendPid = $null
-$backendUrl = "http://localhost:5003" # URL par défaut
 
-# --- Fonctions ---
-function Invoke-ManagedCommand {
-    param(
-        [string]$CommandToRun,
-        [switch]$NoExitOnError
-    )
+# Le script d'activation est le point d'entrée pour toutes les commandes
+# qui doivent s'exécuter dans l'environnement du projet.
+$activationScript = Join-Path $PSScriptRoot "activate_project_env.ps1"
 
-    $activationScript = Join-Path $script:ProjectRoot "activate_project_env.ps1"
-    if (-not (Test-Path $activationScript)) {
-        throw "Script d'activation '$activationScript' introuvable!"
-    }
-    
-    $argumentList = "-File `"$activationScript`" -CommandToRun `"$CommandToRun`""
-    Write-Host "[CMD] powershell.exe $argumentList" -ForegroundColor DarkCyan
-
-    $process = Start-Process "powershell.exe" -ArgumentList $argumentList -PassThru -NoNewWindow -Wait
-    $exitCode = $process.ExitCode
-    
-    if ($exitCode -ne 0 -and (-not $NoExitOnError)) {
-        throw "La commande déléguée via '$activationScript' a échoué avec le code de sortie: $exitCode."
-    }
-    
-    return $exitCode
+if (-not (Test-Path $activationScript)) {
+    Write-Host "[FATAL] Script d'activation '$activationScript' introuvable!" -ForegroundColor Red
+    exit 1
 }
 
-function Start-Backend {
-    Write-Host "[INFO] Démarrage du serveur backend Uvicorn..." -ForegroundColor Yellow
-    $logFile = Join-Path $script:ProjectRoot "_temp/backend_test.log"
-    if (-not (Test-Path (Split-Path $logFile))) { New-Item -ItemType Directory -Path (Split-Path $logFile) | Out-Null }
-
-    $command = "uvicorn argumentation_analysis.main:app --host 0.0.0.0 --port 5003 --log-level info"
+try {
+    # Construit la liste d'arguments à passer au script d'activation.
+    # La commande à exécuter est `python -m pytest`, suivie de tous
+    # les arguments passés à run_tests.ps1.
+    $argumentsToForward = @("python", "-m", "pytest") + $PytestArgs
     
-    $activationScript = Join-Path $script:ProjectRoot "activate_project_env.ps1"
-    $argumentList = "-File `"$activationScript`" -CommandToRun `"$command`""
-
-    $process = Start-Process pwsh -ArgumentList $argumentList -PassThru -RedirectStandardOutput $logFile -RedirectStandardError $logFile
-    $script:backendPid = $process.Id
-    Write-Host "[INFO] Serveur backend démarré avec le PID: $($script:backendPid). Les logs sont dans '$logFile'." -ForegroundColor Green
-
-    # Attendre que le serveur soit prêt
-    Start-Sleep -Seconds 5
-    $maxWait = 20
-    $waited = 0
-    $serverReady = $false
-    while($waited -lt $maxWait){
-        try {
-            $response = Invoke-WebRequest -Uri "$($script:backendUrl)/health" -UseBasicParsing
-            if($response.StatusCode -eq 200){
-                Write-Host "[INFO] Serveur backend prêt." -ForegroundColor Green
-                $serverReady = $true
-                break
-            }
-        } catch {
-             Write-Host "[INFO] Attente du serveur backend... ($($waited)s)" -ForegroundColor Gray
-        }
-        Start-Sleep -Seconds 2
-        $waited += 2
-    }
-    if(-not $serverReady){
-        throw "Le serveur backend n'a pas répondu à temps."
-    }
+    Write-Host "[DEBUG] Exécution: $activationScript $($argumentsToForward -join ' ')" -ForegroundColor DarkGray
+    
+    # Exécute le script d'activation et lui passe la commande et les arguments
+    # de pytest. L'opérateur de "splatting" @ est crucial ici.
+    & $activationScript @argumentsToForward
+    
+    $exitCode = $LASTEXITCODE
+    Write-Host "[INFO] Commande de test terminée avec le code de sortie: $exitCode" -ForegroundColor Cyan
+}
+catch {
+    Write-Host "[FATAL] Une erreur est survenue lors de l'exécution des tests." -ForegroundColor Red
+    Write-Host $_ -ForegroundColor Red
+    $exitCode = 1
 }
 
-function Stop-Backend {
-    if ($script:backendPid) {
-        Write-Host "[INFO] Arrêt du serveur backend (PID: $($script:backendPid))..." -ForegroundColor Yellow
-        Stop-Process -Id $script:backendPid -Force -ErrorAction SilentlyContinue
-        Write-Host "[INFO] Serveur backend arrêté." -ForegroundColor Green
-        $script:backendPid = $null
-    }
-}
-
-# --- Logique Principale ---
-
-Write-Host "[INFO] Début de l'exécution des tests avec le type: '$TestType'" -ForegroundColor Green
-if ($TestPath) { Write-Host "[INFO] Chemin de test spécifié: '$TestPath'" }
-if ($PytestArgs) { Write-Host "[INFO] Arguments Pytest supplémentaires: '$PytestArgs'" }
-
-# Cas "integration" modifié pour utiliser la nouvelle logique
-if ($TestType -eq "integration") {
-    try {
-        Start-Backend
-        $testPathToRun = if ($TestPath) { "`"$TestPath`"" } else { "tests/integration" }
-        
-        # Passer l'URL du backend à pytest
-        $command = "python -m pytest -s -vv --backend-url $($script:backendUrl) $testPathToRun $PytestArgs"
-        
-        $script:globalExitCode = Invoke-ManagedCommand -CommandToRun $command -NoExitOnError
-    }
-    catch {
-        Write-Host "[ERREUR FATALE] $_" -ForegroundColor Red
-        $script:globalExitCode = 1
-    }
-    finally {
-        Stop-Backend
-    }
-    Write-Host "[INFO] Exécution des tests d'intégration terminée avec le code de sortie: $script:globalExitCode" -ForegroundColor Cyan
-    exit $script:globalExitCode
-} else {
-    # Logique pour les autres types de tests (unit, functional, etc.)
-    $testPaths = @{
-        "unit"       = "tests/unit"
-        "functional" = "tests/functional"
-        "all"        = "tests" 
-    }
-    $selectedPath = if ($TestPath) { "`"$TestPath`"" } else { $testPaths[$TestType] }
-    
-    if (-not $selectedPath) {
-        Write-Host "[ERREUR] Type de test '$TestType' non valide ou chemin manquant." -ForegroundColor Red
-        exit 1
-    }
-
-    $command = "python -m pytest -s -vv $selectedPath $PytestArgs"
-    
-    try {
-        $script:globalExitCode = Invoke-ManagedCommand -CommandToRun $command
-    }
-    catch {
-        Write-Host "[ERREUR FATALE] $_" -ForegroundColor Red
-        $script:globalExitCode = 1
-    }
-    Write-Host "[INFO] Exécution des tests terminée avec le code de sortie: $script:globalExitCode" -ForegroundColor Cyan
-    exit $script:globalExitCode
-}
+exit $exitCode

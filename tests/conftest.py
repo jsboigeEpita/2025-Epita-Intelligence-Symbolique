@@ -52,7 +52,7 @@ def pytest_configure(config):
     """
     try:
         from argumentation_analysis.core.environment import ensure_env
-        ensure_env(env_name='projet-is')
+        ensure_env()
     except RuntimeError as e:
         pytest.exit(f"\n\n[FATAL] ERREUR DE CONFIGURATION DE L'ENVIRONNEMENT:\n{e}", returncode=1)
 

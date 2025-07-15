@@ -1,6 +1,6 @@
 # Core ML/Data Science
-numpy==1.25.0
-pandas==2.0.3
+numpy>=1.26.4
+pandas>=2.2.0
 scipy
 scikit-learn
 nltk

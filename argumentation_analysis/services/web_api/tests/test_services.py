@@ -55,7 +55,9 @@ class TestAnalysisService:
         assert hasattr(response, 'processing_time')
         assert response.text_analyzed == request.text
     
-    def test_analyze_text_with_options(self, analysis_service):
+    @pytest.mark.real_llm
+    @pytest.mark.asyncio
+    async def test_analyze_text_with_options(self, analysis_service):
         """Test d'analyse avec options spécifiques."""
         options = AnalysisOptions(
             detect_fallacies=True,
@@ -68,7 +70,7 @@ class TestAnalysisService:
             options=options
         )
         
-        response = analysis_service.analyze_text(request)
+        response = await analysis_service.analyze_text(request)
         
         assert response is not None
         assert response.analysis_options == options.dict()

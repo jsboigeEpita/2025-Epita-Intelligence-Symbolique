@@ -312,9 +312,6 @@ class AnalysisService:
             # PRIORITÉ 1: Utilisation de l'agent informel
             if self.informal_agent:
                 self.logger.info("Using InformalAgent for fallacy detection.")
-                
-                # --- NOUVELLE LOGIQUE DE CONSOMMATION DE L'AGENT ---
-                # Approche simplifiée pour gérer les deux types de retours de `invoke`.
 
                 agent_response = self.informal_agent.invoke(input=text)
                 full_response_str = ""
@@ -324,52 +321,72 @@ class AnalysisService:
 
                 try:
                     if inspect.isasyncgen(agent_response):
-                        self.logger.info("Consuming agent response as an async generator (streaming).")
+                        self.logger.info("Consuming agent response as an async generator using thread history.")
                         
-                        # Agréger le contenu de tous les chunks streamés
-                        full_response_str = "".join([chunk.content async for chunk in agent_response if chunk.content])
-                        self.logger.debug(f"Aggregated stream content: '''{full_response_str}'''")
+                        all_fallacies = []
+                        response_items = []
+                        try:
+                            response_items = [item async for item in agent_response]
+                            if not response_items:
+                                self.logger.warning("Agent response stream was empty.")
+                                return []
 
-                        # Les LLMs enveloppent souvent le JSON dans des blocs de code.
-                        if full_response_str.strip().startswith("```") and full_response_str.strip().endswith("```"):
-                             # Extraire le JSON du bloc de code (ex: ```json ... ```)
-                            json_str = full_response_str.strip()
-                            if json_str.startswith("```json"):
-                                json_str = json_str[7:]
-                            elif json_str.startswith("```"):
-                                json_str = json_str[3:]
+                            final_response_item = response_items[-1]
+                            agent_thread = getattr(final_response_item, 'thread', None)
                             
-                            if json_str.endswith("```"):
-                                 json_str = json_str[:-3]
-                            
-                            full_response_str = json_str.strip()
-                            self.logger.debug(f"Extracted JSON from markdown block: '''{full_response_str}'''")
+                            if not agent_thread:
+                                self.logger.error("Could not find 'thread' in the final agent response item.")
+                                repr_items = [repr(i) for i in response_items]
+                                self.logger.error(f"Full response items (repr): {repr_items}")
+                                return []
 
-                        # Parser le contenu agrégé qui devrait être la représentation JSON d'un tool_call
-                        tool_calls_data = json.loads(full_response_str)
-                        
-                        # Extraire les arguments du premier appel d'outil
-                        if isinstance(tool_calls_data, list) and tool_calls_data:
-                            first_tool_call = tool_calls_data[0]
-                            if 'function' in first_tool_call and 'arguments' in first_tool_call['function']:
-                                # Les arguments sont eux-mêmes une chaîne JSON à parser
-                                result = json.loads(first_tool_call['function']['arguments'])
+                            self.logger.info(f"Scanning agent thread history with {len(agent_thread.messages)} messages for tool calls.")
+                            
+                            final_message_with_tools = None
+                            for message in reversed(agent_thread.messages):
+                                if hasattr(message, 'tool_calls') and message.tool_calls:
+                                    final_message_with_tools = message
+                                    self.logger.info(f"Found message with tool_calls in agent thread history: {final_message_with_tools}")
+                                    break
+
+                            if not final_message_with_tools:
+                                self.logger.error("No message with tool_calls found in the agent's thread history.")
+                                self.logger.error(f"Final response item was: {final_response_item}")
+                                return []
+
+                            tool_calls = final_message_with_tools.tool_calls
+                            self.logger.info(f"Extracted {len(tool_calls)} tool_calls from historical message.")
+
+                            for tool_call in tool_calls:
+                                if "identify_fallacies" in tool_call.function.name:
+                                    try:
+                                        args = json.loads(tool_call.function.arguments)
+                                        if 'fallacies' in args and isinstance(args['fallacies'], list):
+                                            all_fallacies.extend(args['fallacies'])
+                                    except (json.JSONDecodeError, TypeError) as e:
+                                        self.logger.warning(f"Could not parse tool call arguments: '{tool_call.function.arguments}'. Error: {e}")
+                            
+                            if all_fallacies:
+                                self.logger.info(f"Successfully extracted {len(all_fallacies)} fallacies from tool calls.")
+                                result = {"fallacies": all_fallacies}
                             else:
-                                self.logger.warning(f"Unexpected tool_call format in stream: {first_tool_call}")
-                        else:
-                            self.logger.warning(f"Unexpected data format in stream: {tool_calls_data}")
-                            
-                    else:  # Cas du mock qui retourne directement un awaitable
+                                self.logger.warning("Tool calls were present but no fallacies were extracted.")
+                                result = None
+
+                        except Exception as e:
+                            repr_items = [repr(i) for i in response_items]
+                            self.logger.error(f"Error processing agent response stream: {e}. All received items: {repr_items}", exc_info=True)
+                            result = None
+
+                    else:
                         self.logger.info("Consuming agent response as a direct awaitable (non-streaming).")
                         response_content = await agent_response
                         self.logger.debug(f"Direct awaitable response from agent: {response_content}")
 
-                        # Le mock retourne une liste, on prend le premier élément
                         final_message = response_content[0] if isinstance(response_content, list) and response_content else response_content
                         
                         if isinstance(final_message, ChatMessageContent) and final_message.tool_calls:
                             tool_call = final_message.tool_calls[0]
-                            # Dans le mock, 'arguments' est déjà un dictionnaire, pas une chaîne JSON.
                             result = tool_call.function.arguments if hasattr(tool_call.function, 'arguments') else None
                         else:
                             self.logger.warning(f"Unexpected non-streamed response format: {final_message}")
@@ -380,8 +397,6 @@ class AnalysisService:
                 except Exception as e:
                     self.logger.error(f"An unexpected error occurred during agent response processing: {e}", exc_info=True)
                     result = None
-                
-                # --- FIN DE LA NOUVELLE LOGIQUE ---
                 
                 if result and 'fallacies' in result and isinstance(result['fallacies'], list):
                     for fallacy_data in result['fallacies']:
