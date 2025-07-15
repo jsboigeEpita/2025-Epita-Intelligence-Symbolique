@@ -31,7 +31,7 @@ except ImportError:
     openai_available = False
 
 # Imports composants authentiques
-from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as LegacyInformalAnalysisAgent
+from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
 from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin
 
 
@@ -396,12 +396,13 @@ def setup_authentic_taxonomy_csv(tmp_path):
 
 
 @pytest.fixture
-def authentic_informal_analysis_plugin(authentic_semantic_kernel, setup_authentic_taxonomy_csv):
+def authentic_informal_analysis_plugin(setup_authentic_taxonomy_csv, authentic_semantic_kernel):
     """
     Fixture authentique pour InformalAnalysisPlugin - AUCUN MOCK
     """
     kernel = authentic_semantic_kernel.get_kernel()
     test_taxonomy_path = str(setup_authentic_taxonomy_csv)
+    kernel = authentic_semantic_kernel.get_kernel()
     print(f"[AUTHENTIC] Création du plugin InformalAnalysis authentique avec taxonomie: {test_taxonomy_path}")
     
     try:

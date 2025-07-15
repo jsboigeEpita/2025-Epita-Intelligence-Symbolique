@@ -153,9 +153,16 @@ def _ensure_tweety_jars_are_correctly_placed():
 @pytest.fixture(scope="session", autouse=True)
 def apply_nest_asyncio():
     """
-    DEPRECATED/DISABLED
+    Applique nest_asyncio pour permettre l'exécution de boucles d'événements imbriquées,
+    ce qui est crucial pour la compatibilité entre pytest-asyncio et Playwright.
     """
-    logger.warning("The 'apply_nest_asyncio' fixture in conftest.py is currently disabled to ensure compatibility with Playwright.")
+    try:
+        import nest_asyncio
+        nest_asyncio.apply()
+        logger.info("nest_asyncio patch applied successfully.")
+    except ImportError:
+        logger.error("`nest_asyncio` is not installed. Please install it with `pip install nest-asyncio`.")
+        pytest.fail("Missing dependency: nest_asyncio is required for running async tests with Playwright.", pytrace=False)
     yield
 
 
