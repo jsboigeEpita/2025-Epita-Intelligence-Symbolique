@@ -95,18 +95,12 @@ class EnvironmentManager:
 
     def run_command_in_conda_env(self, command_parts: List[str]) -> int:
         """
-        Exécute une commande dans l'environnement Conda spécifié par le .env.
-        Utilise `conda run` pour une exécution propre dans un sous-processus.
-        Configure l'environnement (ex: JAVA_HOME) de manière dynamique si nécessaire.
+        Exécute une commande DANS l'environnement Conda supposément déjà activé.
+        Ce script est destiné à être lancé via `conda run`, donc il exécute la commande directement.
+        Il configure l'environnement (ex: JAVA_HOME) de manière dynamique si nécessaire.
         """
-        conda_env_name = self.get_conda_env_name_from_dotenv()
-        if not conda_env_name:
-            self.logger.error("Impossible d'exécuter la commande car le nom de l'environnement Conda n'a pas pu être déterminé.")
-            return 1
-
-        self.logger.info(f"Utilisation de --cwd='{self.project_root}' pour l'exécution.")
-
-        # La commande est déjà une liste de parties, pas besoin de shlex.split
+        # La validation du nom de l'environnement n'est plus nécessaire ici car on est déjà dedans.
+        # On garde la logique de configuration des variables d'environnement.
         
         # Préparation des variables d'environnement
         env_vars = os.environ.copy()
@@ -119,11 +113,15 @@ class EnvironmentManager:
             env_vars['PYTHONPATH'] = f"{project_root_str}{os.pathsep}{python_path}"
             
         # 2. Gestion spécifique pour Pytest (JAVA_HOME)
-        if command_parts and command_parts[0].lower() == 'pytest':
+        if command_parts and 'pytest' in command_parts[0].lower():
             self.logger.info("Détection de 'pytest'. Configuration de l'environnement Java...")
             java_home_path = self.get_java_home_from_dotenv()
             if java_home_path:
-                self.logger.info(f"JAVA_HOME trouvé : {java_home_path}")
+                # S'assurer que le chemin est absolu
+                if not os.path.isabs(java_home_path):
+                    java_home_path = os.path.normpath(os.path.join(self.project_root, java_home_path))
+                
+                self.logger.info(f"Utilisation de JAVA_HOME: {java_home_path}")
                 env_vars['JAVA_HOME'] = java_home_path
                 
                 # Ajout de JAVA_HOME/bin au PATH
@@ -135,23 +133,19 @@ class EnvironmentManager:
             else:
                 self.logger.warning("JAVA_HOME n'a pas été trouvé dans le .env. Les tests dépendants de Java pourraient échouer.")
 
-        full_command = [
-            "conda", "run",
-            "-n", conda_env_name,
-            "--cwd", str(self.project_root),
-            "--no-capture-output",
-            "--live-stream",
-        ] + command_parts
+        # La commande à exécuter est directement `command_parts`, car ce script
+        # est déjà DANS l'environnement Conda activé par `activate_project_env.ps1`.
         
         command_str = " ".join(command_parts)
-        description = f"Exécution de '{command_str[:50]}...' dans l'env '{conda_env_name}' via `conda run`"
+        description = f"Exécution de '{command_str[:70]}...' dans l'environnement courant"
         
         exit_code, _, _ = run_shell_command(
-            command=full_command,
+            command=command_parts,
             description=description,
             capture_output=False,
-            shell_mode=False,
-            env=env_vars
+            shell_mode=False, # Important pour exécuter `pytest` ou `npx` directement
+            env=env_vars,
+            cwd=self.project_root # S'assurer que la commande s'exécute à la racine
         )
         
         return exit_code
