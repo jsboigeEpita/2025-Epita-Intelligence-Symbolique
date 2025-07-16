@@ -8,13 +8,58 @@ avec l'agent de génération de contre-arguments.
 import os
 import json
 import logging
+import pandas as pd
 from typing import Dict, List, Any, Optional
 
 from flask import Flask, request, jsonify, render_template
 import traceback
 
-from ..agent.counter_agent import CounterArgumentAgent
-from ..agent.definitions import CounterArgumentType, RhetoricalStrategy
+# Imports pour le nouvel orchestrateur
+import semantic_kernel as sk
+from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion, OpenAIChatCompletion
+from ..agent.orchestration.fallacy_workflow_orchestrator import FallacyWorkflowOrchestrator
+from ..agent.definitions import CounterArgumentType, RhetoricalStrategy # Gardé pour les types d'API
+from ..agent.plugins.exploration_tool import ExplorationTool
+from ..agent.plugins.hypothesis_validation_tool import HypothesisValidationTool
+from ..agent.plugins.aggregation_tool import AggregationTool
+
+# Gestionnaire de taxonomie
+class TaxonomyManager:
+   def __init__(self, data_folder_path):
+       self.data_folder = data_folder_path
+       self.taxonomies = self._load_taxonomies()
+
+   def _load_taxonomies(self):
+       taxonomies = {}
+       if not os.path.exists(self.data_folder):
+           logger.warning(f"Le dossier de données '{self.data_folder}' n'existe pas.")
+           return taxonomies
+           
+       for filename in os.listdir(self.data_folder):
+           if filename.endswith(".csv"):
+               try:
+                   taxonomy_name = os.path.splitext(filename)[0]
+                   taxonomies[taxonomy_name] = pd.read_csv(os.path.join(self.data_folder, filename))
+                   logger.info(f"Taxonomie '{taxonomy_name}' chargée avec succès.")
+               except Exception as e:
+                   logger.error(f"Erreur lors du chargement de la taxonomie {filename}: {e}")
+       return taxonomies
+
+   def get_taxonomy_names(self):
+       return list(self.taxonomies.keys())
+
+   def get_taxonomy(self, name):
+       return self.taxonomies.get(name)
+
+   def get_branch(self, taxonomy_name, node_id):
+       taxonomy_df = self.get_taxonomy(taxonomy_name)
+       if taxonomy_df is None or 'id' not in taxonomy_df.columns:
+           return None
+       
+       node_data = taxonomy_df[taxonomy_df['id'] == node_id]
+       if not node_data.empty:
+           return node_data.to_dict('records')[0]
+       return None
 
 # Configuration du logging
 logging.basicConfig(
@@ -31,7 +76,9 @@ app = Flask(
 )
 
 # Variables globales
-agent = None
+kernel = None
+orchestrator = None
+taxonomy_manager = None
 agent_config = None
 
 @app.route('/')
@@ -95,98 +142,54 @@ def analyze_argument():
 @app.route('/generate', methods=['POST'])
 def generate_counter_argument():
     """
-    Génère un contre-argument.
+    Lance le workflow d'analyse de sophismes.
     
     Requête JSON:
     {
         "argument": "Texte de l'argument original",
-        "counter_type": "direct_refutation" (optionnel),
-        "rhetorical_strategy": "socratic_questioning" (optionnel)
+        "taxonomy": "nom_de_la_taxonomie",
+        "enabled_tools": ["ExplorationTool", "HypothesisValidationTool"]
     }
     """
+    import asyncio
     try:
         data = request.json
-        argument_text = data.get('argument', '')
+        argument_text = data.get('argument')
+        taxonomy_name = data.get('taxonomy')
+        enabled_tools = data.get('enabled_tools')
+
+        if not all([argument_text, taxonomy_name, enabled_tools]):
+            return jsonify({'error': 'Argument, taxonomie ou outils manquants'}), 400
+
+
+        global agent_config, kernel, taxonomy_manager
         
-        if not argument_text:
-            return jsonify({'error': 'Argument manquant'}), 400
-        
-        # Paramètres optionnels
-        counter_type_str = data.get('counter_type')
-        rhetorical_strategy_str = data.get('rhetorical_strategy')
-        
-        # Convertir les chaînes en énumérations
-        counter_type = None
-        if counter_type_str:
-            try:
-                counter_type = CounterArgumentType(counter_type_str)
-            except ValueError:
-                return jsonify({'error': f'Type de contre-argument invalide: {counter_type_str}'}), 400
-        
-        rhetorical_strategy = None
-        if rhetorical_strategy_str:
-            try:
-                rhetorical_strategy = RhetoricalStrategy(rhetorical_strategy_str)
-            except ValueError:
-                return jsonify({'error': f'Stratégie rhétorique invalide: {rhetorical_strategy_str}'}), 400
-        
-        # Initialiser l'agent si nécessaire
-        global agent, agent_config
-        if agent is None:
-            agent = CounterArgumentAgent(agent_config)
-        
-        # Générer le contre-argument
-        result = agent.generate_counter_argument(
-            argument_text,
-            counter_type=counter_type,
-            rhetorical_strategy=rhetorical_strategy
-        )
-        
-        # Formater la réponse
-        response = {
-            'original_argument': {
-                'content': result['original_argument'].content,
-                'premises': result['original_argument'].premises,
-                'conclusion': result['original_argument'].conclusion,
-                'argument_type': result['original_argument'].argument_type
-            },
-            'counter_argument': {
-                'content': result['counter_argument'].counter_content,
-                'type': result['counter_argument'].counter_type.value,
-                'target_component': result['counter_argument'].target_component,
-                'strength': result['counter_argument'].strength.value,
-                'rhetorical_strategy': result['counter_argument'].rhetorical_strategy
-            },
-            'vulnerabilities': [
-                {
-                    'type': v.type,
-                    'target': v.target,
-                    'score': v.score,
-                    'description': v.description
-                }
-                for v in result.get('vulnerabilities', [])
-            ],
-            'evaluation': {
-                'relevance': result['evaluation'].relevance,
-                'logical_strength': result['evaluation'].logical_strength,
-                'persuasiveness': result['evaluation'].persuasiveness,
-                'originality': result['evaluation'].originality,
-                'clarity': result['evaluation'].clarity,
-                'overall_score': result['evaluation'].overall_score,
-                'recommendations': result['evaluation'].recommendations
-            },
-            'validation': {
-                'is_valid_attack': result['validation'].is_valid_attack,
-                'original_survives': result['validation'].original_survives,
-                'counter_succeeds': result['validation'].counter_succeeds,
-                'logical_consistency': result['validation'].logical_consistency
-            }
-        }
-        
-        if hasattr(result['validation'], 'formal_representation'):
-            response['validation']['formal_representation'] = result['validation'].formal_representation
-        
-        return jsonify(response)
+        taxonomy_df = taxonomy_manager.get_taxonomy(taxonomy_name)
+        if taxonomy_df is None:
+            return jsonify({'error': f"Taxonomie '{taxonomy_name}' non trouvée."}), 400
+
+        # Simuler l'objet taxonomie attendu par l'orchestrateur
+        class DynamicTaxonomy:
+            def get_branch(self, node_id):
+                node_data = taxonomy_df[taxonomy_df['id'] == int(node_id)]
+                if not node_data.empty:
+                    return node_data.to_dict('records')[0]
+                return None
+
+        # Initialisation du kernel si ce n'est pas fait
+        if kernel is None:
+            kernel = sk.Kernel()
+            api_key = agent_config.get("openai_api_key")
+            # Dans un cas réel, on lirait la config pour le service à utiliser
+            kernel.add_service(OpenAIChatCompletion(service_id="default", api_key=api_key, org_id=""))
+
+        # Instancier l'orchestrateur avec la configuration dynamique
+        orchestrator = FallacyWorkflowOrchestrator(kernel, enabled_tools=enabled_tools)
+
+        # Lancer le workflow
+        final_report = asyncio.run(orchestrator.analyze_argument(argument_text, DynamicTaxonomy()))
+
+        return jsonify(final_report)
     
     except Exception as e:
         logger.error(f"Erreur lors de la génération: {e}")
@@ -224,17 +227,26 @@ def get_rhetorical_strategies():
     return jsonify(strategies)
 
 
+@app.route('/api/available-taxonomies', methods=['GET'])
+def get_available_taxonomies():
+   """Retourne la liste des taxonomies disponibles."""
+   global taxonomy_manager
+   if taxonomy_manager is None:
+       return jsonify({"error": "Le gestionnaire de taxonomie n'est pas initialisé"}), 500
+   return jsonify(taxonomy_manager.get_taxonomy_names())
+
+
+@app.route('/api/available-tools', methods=['GET'])
+def get_available_tools():
+   """Retourne la liste des outils disponibles pour l'orchestrateur."""
+   return jsonify(list(FallacyWorkflowOrchestrator.ALL_TOOLS.keys()))
+
+
 @app.route('/api/metrics', methods=['GET'])
 def get_metrics():
     """Retourne les métriques de performance de l'agent."""
-    global agent, agent_config
-    
-    if agent is None:
-        agent = CounterArgumentAgent(agent_config)
-    
-    metrics = agent.metrics.get_summary_metrics()
-    
-    return jsonify(metrics)
+    # Cette fonction est obsolète car l'ancien agent n'est plus utilisé
+    return jsonify({"message": "Cette route de métriques est obsolète."})
 
 
 def _get_counter_type_description(counter_type: CounterArgumentType) -> str:
@@ -273,16 +285,14 @@ def start_app(host='0.0.0.0', port=5000, debug=False, config=None):
         debug: Activer le mode debug
         config: Configuration pour l'agent
     """
-    # Configurer l'agent
-    global agent_config
+    global agent_config, taxonomy_manager
+
+    # Initialiser le gestionnaire de taxonomie
+    data_path = os.path.join(os.path.dirname(__file__), '..', '..', 'data')
+    taxonomy_manager = TaxonomyManager(data_path)
+
     agent_config = config
     
-    # Si l'agent est déjà initialisé et que la config a changé, le réinitialiser
-    global agent
-    if agent is not None and config is not None:
-        agent = CounterArgumentAgent(config)
-    
-    # Démarrer l'application
     app.run(host=host, port=port, debug=debug)
 
 

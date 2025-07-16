@@ -11,7 +11,7 @@ module.exports = defineConfig({
   /* Ne pas relancer les tests en cas d'échec */
   retries: 0,
   /* Nombre de workers pour l'exécution parallèle */
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1, // FORCER 1 WORKER POUR LE DEBUG
   /* Reporter à utiliser. Voir https://playwright.dev/docs/test-reporters */
   reporter: [['html', { open: 'never' }], ['list'], ['json', { outputFile: 'report.json' }]],
 
@@ -41,7 +41,7 @@ module.exports = defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-
+/*
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
@@ -51,16 +51,31 @@ module.exports = defineConfig({
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
     },
+*/
   ],
 
   /* Emplacement pour les rapports de test, screenshots, etc. */
   outputDir: 'test-results/',
 
   // Lancement du serveur web avant les tests
-  // webServer: {
-  //   command: 'python -m project_core.core_from_scripts.environment_manager run "python -m uvicorn argumentation_analysis.services.web_api.app:app --port 5003"',
-  //   url: 'http://127.0.0.1:5003',
-  //   timeout: 120 * 1000,
-  //   reuseExistingServer: !process.env.CI,
-  // },
+  webServer: [
+    {
+      command: 'powershell -c "conda activate projet-is; python -m uvicorn argumentation_analysis.services.web_api.app:app --port 5004"',
+      url: 'http://127.0.0.1:5004',
+      timeout: 120 * 1000,
+      reuseExistingServer: false,
+    },
+    {
+      command: 'powershell -c "cd ../../services/web_api/interface-web-argumentative; npm start"',
+      url: 'http://localhost:3000',
+      timeout: 120 * 1000,
+      reuseExistingServer: !process.env.CI,
+    },
+/*    {
+      command: 'powershell -c "cd ../../services/web_api/interface-web-argumentative; $env:PORT=3001; npm start"',
+      url: 'http://localhost:3001',
+      timeout: 120 * 1000,
+      reuseExistingServer: !process.env.CI,
+    }*/
+  ],
 });

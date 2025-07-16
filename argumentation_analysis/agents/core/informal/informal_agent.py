@@ -20,20 +20,21 @@ import logging
 import json
 import re
 from typing import Dict, List, Any, Optional
+from pydantic import Field, PrivateAttr
 import semantic_kernel as sk
 from semantic_kernel.functions import KernelArguments
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
 # Import de la classe de base
-from ..abc.agent_bases import BaseAgent
+from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 
 # Import des définitions et des prompts
 from .informal_definitions import InformalAnalysisPlugin, INFORMAL_AGENT_INSTRUCTIONS
 from .prompts import prompt_identify_args_v8, prompt_analyze_fallacies_v1, prompt_justify_fallacy_attribution_v1
 from .taxonomy_sophism_detector import TaxonomySophismDetector, get_global_detector
-from argumentation_analysis.agents.agent_factory import AgentFactory
 from argumentation_analysis.config.settings import AppSettings
 
+from argumentation_analysis.agents.core.informal.informal_definitions import setup_informal_kernel
 
 # Configuration du logging
 # logging.basicConfig( # Commenté car BaseAgent gère son propre logger
@@ -64,12 +65,15 @@ class InformalAnalysisAgent(BaseAgent):
         "max_fallacies": 5,
         "include_context": False
     }
+    logger: Optional[logging.Logger] = Field(default_factory=lambda: logging.getLogger(__name__))
+    _taxonomy_file_path: Optional[str] = PrivateAttr(default=None)
 
     def __init__(
         self,
         kernel: sk.Kernel,
         agent_name: str = "InformalAnalysisAgent",
         taxonomy_file_path: Optional[str] = None,
+        instructions: str = INFORMAL_AGENT_INSTRUCTIONS,
     ):
         """
         Initialise l'agent d'analyse informelle.
@@ -80,12 +84,11 @@ class InformalAnalysisAgent(BaseAgent):
             taxonomy_file_path (Optional[str], optional): Chemin vers le fichier
                 JSON de la taxonomie pour le plugin natif.
         """
-        if not kernel:
-            raise ValueError("Le Kernel Semantic Kernel est requis.")
-        super().__init__(kernel, agent_name, system_prompt=INFORMAL_AGENT_INSTRUCTIONS)
-        self.logger.info(f"Initialisation de l'agent {self.name}...")
+        super().__init__(kernel=kernel, agent_name=agent_name, system_prompt=instructions)
+        self._kernel = kernel
+        self._instructions = instructions
         self._taxonomy_file_path = taxonomy_file_path
-        self.logger.info(f"Agent {self.name} initialisé avec la taxonomie: {self._taxonomy_file_path}.")
+        logging.getLogger(__name__).info(f"Agent {agent_name} initialisé avec la taxonomie: {self._taxonomy_file_path}.")
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         """
@@ -115,26 +118,22 @@ class InformalAnalysisAgent(BaseAgent):
             llm_service_id (str): L'ID du service LLM à utiliser pour les
                 fonctions sémantiques.
         """
-        super().setup_agent_components(llm_service_id)
         self.logger.info(f"Configuration des composants pour {self.name} avec le service LLM: {llm_service_id}...")
 
-        # 1. Initialisation et Enregistrement du Plugin Natif Hybride
-        # Le plugin a maintenant besoin du kernel pour son fonctionnement interne.
-        informal_plugin_instance = InformalAnalysisPlugin(
-            kernel=self._kernel,
+        # Récupérer le service LLM à partir du noyau principal de l'agent
+        llm_service = self.kernel.get_service(llm_service_id)
+        if not llm_service:
+            raise ValueError(f"Service LLM avec ID '{llm_service_id}' non trouvé dans le kernel.")
+
+        # Appeler la fonction setup_informal_kernel pour enregistrer TOUS les composants
+        # (plugin natif ET fonctions sémantiques) dans le noyau de l'agent.
+        setup_informal_kernel(
+            kernel=self.kernel,
+            llm_service=llm_service,
             taxonomy_file_path=self._taxonomy_file_path
         )
-        
-        native_plugin_name = "InformalAnalyzer"
-        self._kernel.add_plugin(informal_plugin_instance, plugin_name=native_plugin_name)
-        self.logger.info(f"Plugin natif hybride '{native_plugin_name}' enregistré dans le kernel.")
 
-        # 2. Les fonctions sémantiques sont maintenant encapsulées DANS le plugin.
-        # Il n'est plus nécessaire de les enregistrer ici. La seule fonction exposée
-        # est `analyze_argument`, qui est déjà une @kernel_function.
-        self.logger.info("Les fonctions sémantiques sont maintenant gérées en interne par le plugin hybride.")
-
-        self.logger.info(f"Composants de {self.name} configurés avec succès.")
+        self.logger.info(f"Composants de {self.name} configurés avec succès via setup_informal_kernel.")
 
     def _extract_json_from_llm_output(self, raw_str: str) -> str:
         """
@@ -167,9 +166,9 @@ class InformalAnalysisAgent(BaseAgent):
         self.logger.info(f"Analyse sémantique des sophismes pour un texte de {len(text)} caractères...")
         try:
             arguments = KernelArguments(input=text)
-            result = await self._kernel.invoke(
+            result = await self.kernel.invoke(
                 plugin_name="InformalAnalyzer",
-                function_name="analyze_argument",
+                function_name="semantic_AnalyzeFallacies",
                 arguments=KernelArguments(text_to_analyze=text)
             )
             
@@ -264,7 +263,7 @@ class InformalAnalysisAgent(BaseAgent):
         self.logger.info(f"Identification sémantique des arguments pour un texte de {len(text)} caractères...")
         try:
             arguments = KernelArguments(input=text)
-            result = await self._kernel.invoke(
+            result = await self.kernel.invoke(
                 plugin_name="InformalAnalyzer", # Doit correspondre au nom utilisé dans setup_agent_components
                 function_name="semantic_IdentifyArguments",
                 arguments=arguments
@@ -392,7 +391,7 @@ class InformalAnalysisAgent(BaseAgent):
         self.logger.info(f"Exploration de la hiérarchie des sophismes (natif) depuis PK {current_pk}...")
         try:
             arguments = KernelArguments(current_pk_str=str(current_pk), max_children=max_children)
-            result = await self._kernel.invoke(
+            result = await self.kernel.invoke(
                 plugin_name="InformalAnalyzer", # Doit correspondre au nom utilisé dans setup_agent_components
                 function_name="explore_fallacy_hierarchy", # Nom de la fonction native dans InformalAnalysisPlugin
                 arguments=arguments
@@ -421,7 +420,7 @@ class InformalAnalysisAgent(BaseAgent):
         self.logger.info(f"Récupération des détails du sophisme (natif) PK {fallacy_pk}...")
         try:
             arguments = KernelArguments(fallacy_pk_str=str(fallacy_pk))
-            result = await self._kernel.invoke(
+            result = await self.kernel.invoke(
                 plugin_name="InformalAnalyzer", # Doit correspondre au nom utilisé dans setup_agent_components
                 function_name="get_fallacy_details", # Nom de la fonction native dans InformalAnalysisPlugin
                 arguments=arguments
@@ -707,123 +706,39 @@ class InformalAnalysisAgent(BaseAgent):
                 "analysis_timestamp": self._get_timestamp()
             }
 
-    async def get_response(
-        self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None
-    ) -> list[ChatMessageContent]:
-        """Implémentation de la méthode abstraite requise."""
-        self.logger.debug(f"get_response appelé, délégation à invoke_single pour {self.name}.")
-        return await self.invoke_single(kernel, arguments)
+    async def get_response(self, messages: list[ChatMessageContent]) -> list[ChatMessageContent]:
+        """(Compatibility) Gets a response from the agent."""
+        warnings.warn(
+            "The 'get_response' method is deprecated and will be removed in a future version. "
+            "Please use 'invoke' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return await self.invoke(messages)
 
-    async def invoke_single(
-        self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None
-    ) -> list[ChatMessageContent]:
+    async def invoke_single(self, messages: list[ChatMessageContent]) -> list[ChatMessageContent]:
         """
-        Logique d'invocation principale de l'agent pour un scénario de chat.
-
-        Analyse le dernier message de l'historique de chat pour déterminer la tâche
-        demandée (par exemple, "identifier les arguments", "analyser les sophismes").
-        Elle exécute ensuite la méthode correspondante et retourne le résultat dans
-        un format de message de chat.
-
-        Args:
-            kernel (sk.Kernel): L'instance du kernel.
-            arguments (Optional[KernelArguments]): Les arguments, qui doivent contenir
-                `chat_history`.
-
-        Returns:
-            List[ChatMessageContent]: Une liste contenant un seul message de réponse de
-            l'assistant avec les résultats de la tâche au format JSON.
+        Invokes the agent to analyze the last message for fallacies.
         """
-        if not arguments or "chat_history" not in arguments:
-            raise ValueError("L'historique de chat ('chat_history') est manquant dans les arguments.")
+        if not messages:
+            return [ChatMessageContent(role="assistant", content="No messages to analyze.")]
 
-        history = arguments["chat_history"]
-        last_message = history.messages[-1].content
-        # On cherche le premier message de l'utilisateur qui contient le texte à analyser.
-        # La logique de l'orchestrateur place le texte brut dans le premier message.
-        raw_text_user_message = next((m.content for m in history if m.role == "user"), None)
-
-        if not raw_text_user_message:
-            self.logger.error("Aucun message utilisateur trouvé dans l'historique pour l'analyse.")
-            # Retourner un message d'erreur structuré
-            error_content = json.dumps({"error": "Message utilisateur initial non trouvé dans l'historique."})
-            return [ChatMessageContent(role="assistant", content=error_content, name=self.name)]
-
-        # On suppose que le premier message utilisateur contient le texte brut à analyser.
-        raw_text = str(raw_text_user_message)
-
-        # Logique de décision basée sur le contenu du dernier message
-        if "identifier les arguments" in last_message.lower():
-            self.logger.info("Tâche détectée: Identification des arguments.")
-            arguments_list = await self.identify_arguments(raw_text)
-            response_content = json.dumps({"identified_arguments": arguments_list}, indent=2, ensure_ascii=False)
+        last_message = messages[-1].content
         
-        elif "analyser les sophismes" in last_message.lower():
-            self.logger.info("Tâche détectée: Analyse des sophismes.")
-            fallacies_list = await self.analyze_fallacies(raw_text)
-            response_content = json.dumps({"identified_fallacies": fallacies_list}, indent=2, ensure_ascii=False)
-            
-        else:
-            self.logger.warning(f"Aucune tâche reconnue dans le message: '{last_message[:100]}...'. Action par défaut.")
-            # Action par défaut: analyse complète
-            analysis_result = await self.analyze_and_categorize(raw_text)
-            response_content = json.dumps(analysis_result, indent=2, ensure_ascii=False)
-
-        response_message = ChatMessageContent(role="assistant", content=response_content, name=self.name)
-        return [response_message]
-
-# class InformalAnalysisAgent(BaseAgent):
-#     """
-#     (Façade Obsolète) Wrapper pour le nouveau AgentFactory.
-#     Cette classe est conservée pour la rétrocompatibilité.
-#     Elle émet un avertissement et délègue tous les appels à la nouvelle
-#     architecture basée sur AgentFactory.
-#     """
-#     def __init__(self, kernel: sk.Kernel, agent_name: str = "InformalAnalysisAgent", **kwargs):
-#         warnings.warn(
-#             "La classe 'InformalAnalysisAgent' est obsolète et sera supprimée dans une future version. "
-#             "Veuillez utiliser 'AgentFactory.create_agent(\"fallacy_analyst\", ...)' à la place.",
-#             DeprecationWarning,
-#             stacklevel=2
-#         )
-#         super().__init__(kernel, agent_name)
+        # Call the core analysis method
+        analysis_result = await self.analyze_text(text=str(last_message))
         
-#         try:
-#             settings = AppSettings()
-#             # Note: le type d'agent dans la factory est 'fallacy_analyst'
-#             self._modern_agent = AgentFactory.create_agent(
-#                 agent_type="fallacy_analyst",
-#                 kernel=kernel,
-#                 llm_service_id=settings.service_manager.default_llm_service_id,
-#                 settings=settings,
-#                 agent_name=agent_name
-#             )
-#         except Exception as e:
-#             self.logger.error(f"Impossible de créer l'agent moderne via la factory: {e}")
-#             self._modern_agent = None
-            
-#     def __getattribute__(self, name: str) -> Any:
-#         # Éviter la récursion infinie
-#         if name.startswith('_') or name in ['logger', 'name', 'kernel']:
-#             return super().__getattribute__(name)
-            
-#         if self._modern_agent and hasattr(self._modern_agent, name):
-#             return getattr(self._modern_agent, name)
+        # Format the response
+        response_content = json.dumps(analysis_result, indent=2)
         
-#         return super().__getattribute__(name)
+        return [ChatMessageContent(role="assistant", content=response_content, name=self.name)]
 
-#     async def get_response(self, kernel: "sk.Kernel", arguments: Optional["KernelArguments"] = None) -> list[ChatMessageContent]:
-#         if not self._modern_agent:
-#             raise RuntimeError("L'agent moderne n'a pas pu être initialisé.")
-#         return await self._modern_agent.get_response(kernel, arguments)
+    async def invoke_stream(self, messages: list[ChatMessageContent]):
+        # Implémentation de base pour le streaming.
+        # Elle peut envelopper la réponse non-streamée dans un stream.
+        final_result = await self.invoke(messages)
+        
+        async def stream_generator():
+            yield final_result
 
-#     async def invoke_single(self, kernel: "sk.Kernel", arguments: Optional["KernelArguments"] = None) -> list[ChatMessageContent]:
-#         if not self._modern_agent:
-#             raise RuntimeError("L'agent moderne n'a pas pu être initialisé.")
-#         return await self._modern_agent.invoke_single(kernel, arguments)
-
-
-# Log de chargement
-# logging.getLogger(__name__).debug("Module agents.core.informal.informal_agent chargé.") # Géré par BaseAgent
-# Alias pour compatibilité avec les imports existants
-# InformalAgent = InformalAnalysisAgent
+        return stream_generator()

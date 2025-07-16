@@ -1,161 +1,111 @@
 # Fichier : argumentation_analysis/agents/agent_factory.py
+import logging
+from typing import List, Optional, Type, Dict, Any
 
-from typing import List, Optional, Type
 from semantic_kernel import Kernel
 from semantic_kernel.agents import Agent, ChatCompletionAgent
-from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
-from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
 
-from .plugins.identification_plugin import IdentificationPlugin
-from .plugins.project_management_plugin import ProjectManagementPlugin
-from .plugins.fallacy_workflow_plugin import FallacyWorkflowPlugin
-from .plugins.taxonomy_display_plugin import TaxonomyDisplayPlugin
-from .utils.tracer import TracedAgent
-from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
+from argumentation_analysis.agents.channels.volatile_agent_channel import VolatileAgentChannel
+from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
+from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
+from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
+from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
 from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
+from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
+from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
+from argumentation_analysis.config.settings import AppSettings
 
+logger = logging.getLogger(__name__)
 
 class AgentFactory:
     """
     Usine pour la création et la configuration centralisée des agents.
-    Utilise ChatCompletionAgent comme base pour tous les agents.
+    Le principe est de toujours envelopper un agent métier "pur" (héritant de BaseAgent)
+    dans un agent d'infrastructure `ChatCompletionAgent` de Semantic Kernel,
+    en appliquant le pattern "Composition over Inheritance".
     """
 
-    def __init__(self, kernel: Kernel, llm_service_id: str):
+    def __init__(self, kernel: Kernel, settings: AppSettings):
         """Initialise la factory avec les dépendances partagées."""
         self.kernel = kernel
-        self.llm_service_id = llm_service_id
+        self.settings = settings
+        self.llm_service_id = settings.service_manager.default_llm_service_id
 
-    def create_informal_fallacy_agent(
+    def create_agent(
         self,
-        config_name: str = "simple",
-        trace_log_path: Optional[str] = None,
-        fallacy_plugin: Optional[IdentificationPlugin] = None,
-    ) -> Agent:
+        agent_class: Type[BaseAgent],
+        agent_name: Optional[str] = None,
+        **kwargs: Any
+    ) -> ChatCompletionAgent:
         """
-        Crée différentes versions de l'InformalFallacyAgent.
+        Crée, configure et enveloppe un agent métier à partir de sa classe.
+
+        Args:
+            agent_class (Type[BaseAgent]): La classe de l'agent métier à instancier.
+            agent_name (Optional[str]): Un nom spécifique pour l'instance de l'agent.
+                                         Si non fourni, le nom de la classe sera utilisé.
+            **kwargs: Arguments supplémentaires à passer au constructeur de l'agent métier.
+
+        Returns:
+            Une instance de `ChatCompletionAgent` qui enveloppe l'agent métier configuré.
         """
-        plugins = []
-        
-        base_identification_plugin = fallacy_plugin or IdentificationPlugin()
+        if not issubclass(agent_class, BaseAgent):
+            raise TypeError(f"La classe '{agent_class.__name__}' doit hériter de BaseAgent.")
 
-        if config_name == "simple":
-            plugins.append(base_identification_plugin)
-        
-        elif config_name == "explore_only":
-            plugins.append(TaxonomyDisplayPlugin())
-            
-        elif config_name == "workflow_only":
-            workflow_plugin = FallacyWorkflowPlugin(self.kernel)
-            plugins.append(workflow_plugin)
-            plugins.append(TaxonomyDisplayPlugin())
+        final_agent_name = agent_name or agent_class.__name__
+        logger.info(f"Création de l'agent de type '{agent_class.__name__}' nommé '{final_agent_name}'...")
 
-        elif config_name == "full":
-            workflow_plugin = FallacyWorkflowPlugin(self.kernel)
-            plugins.append(base_identification_plugin)
-            plugins.append(workflow_plugin)
-            plugins.append(TaxonomyDisplayPlugin())
+        # 1. Instancier l'agent métier "pur"
+        # On passe les dépendances nécessaires.
+        # Correction: Adapter l'instanciation aux signatures des constructeurs des agents
+        common_kwargs = {"kernel": self.kernel, **kwargs}
 
-        else:
-            raise ValueError(f"Configuration d'agent inconnue : {config_name}")
-
-        with open("argumentation_analysis/agents/prompts/InformalFallacyAgent/skprompt.txt", "r") as f:
-            prompt = f.read()
-
-        llm_service = self.kernel.get_service(self.llm_service_id)
-        
-        function_choice_behavior = None
-        if config_name in ["simple", "full", "workflow_only"]:
-            function_choice_behavior = FunctionChoiceBehavior.Required(
-                auto_invoke=True,
-                filters={"included_functions": ["IdentificationPlugin-identify_fallacies"]},
-            )
-
-        agent_to_create = ChatCompletionAgent(
-            kernel=self.kernel,
-            service=llm_service,
-            name="informal_fallacy_agent",
-            instructions=prompt,
-            plugins=plugins,
-            function_choice_behavior=function_choice_behavior,
-        )
-
-        if trace_log_path:
-            # On encapsule l'agent créé dans le wrapper de trace.
-            # Le wrapper est maintenant un simple proxy et n'a pas besoin du kernel/service.
-            final_agent = TracedAgent(
-                agent_to_wrap=agent_to_create,
-                trace_log_path=trace_log_path
+        if agent_class in [ProjectManagerAgent, InformalAnalysisAgent, PropositionalLogicAgent, ExtractAgent, WatsonLogicAssistant, SherlockEnqueteAgent]:
+            # Ces classes attendent 'agent_name' au lieu de 'name'
+            # et certaines comme Watson/Sherlock attendent 'kernel'
+            business_agent_instance = agent_class(
+                agent_name=final_agent_name,
+                **common_kwargs
             )
         else:
-            final_agent = agent_to_create
-            
-        return final_agent
+             # Comportement par défaut pour d'autres agents potentiels
+            business_agent_instance = agent_class(
+                name=final_agent_name,
+                **common_kwargs
+        )
+        logger.debug(f"Instance de l'agent métier '{final_agent_name}' créée.")
 
-    def create_project_manager_agent(
-        self, trace_log_path: Optional[str] = None
-    ) -> Agent:
-        """Crée et configure l'agent chef de projet."""
-        plugins = [ProjectManagementPlugin()]
+        # 2. Récupérer les instructions et les plugins depuis l'instance métier
+        # L'agent métier est la source de vérité pour sa configuration.
+        instructions = getattr(business_agent_instance, 'instructions',
+                               getattr(business_agent_instance, '_instructions', ''))
+        if not instructions:
+            logger.warning(f"L'agent métier '{final_agent_name}' n'a pas d'instructions claires définies.")
 
-        with open("argumentation_analysis/agents/prompts/ProjectManagerAgent/skprompt.txt", "r") as f:
-            prompt = f.read()
+        # La méthode get_plugins() permet à l'agent de déclarer les plugins dont il a besoin.
+        # Cela favorise l'encapsulation.
+        try:
+            agent_plugins: List[KernelPlugin] = business_agent_instance.get_plugins()
+            logger.debug(f"L'agent '{final_agent_name}' a fourni {len(agent_plugins)} plugin(s).")
+        except AttributeError:
+            # Rétrocompatibilité ou cas où l'agent n'a pas de plugins spécifiques.
+            agent_plugins = []
+            logger.debug(f"L'agent '{final_agent_name}' n'a pas de méthode get_plugins(). Aucun plugin spécifique chargé.")
 
-        # Lie les settings au kernel de l'agent
-        llm_service = self.kernel.get_service(self.llm_service_id)
-        
-        agent = ChatCompletionAgent(
+        # 3. Envelopper l'agent métier dans un ChatCompletionAgent
+        wrapper_agent = ChatCompletionAgent(
             kernel=self.kernel,
-            service=llm_service,
-            name="Project_Manager",
-            instructions=prompt,
-            plugins=plugins
+            name=final_agent_name,
+            instructions=instructions,
+            plugins=agent_plugins, # On utilise les plugins fournis par l'agent
         )
+        logger.info(f"Agent métier '{final_agent_name}' enveloppé dans un ChatCompletionAgent.")
 
-        if trace_log_path:
-            return TracedAgent(
-                agent_to_wrap=agent,
-                trace_log_path=trace_log_path
-            )
-        return agent
+        # 4. Attribuer un canal de communication
+        # Correction: Le constructeur attend maintenant l'instance de l'agent
+        channel = VolatileAgentChannel(agent=wrapper_agent)
+        # L'assignation du canal est maintenant implicite via le constructeur du canal.
+        # wrapper_agent.channel = channel # Cette ligne est supprimée car l'attribut n'existe plus.
+        logger.debug(f"Canal de communication volatile associé à '{final_agent_name}'.")
 
-    def _create_agent(
-        self,
-        agent_class: Type[Agent],
-        trace_log_path: Optional[str] = None,
-        **kwargs,
-    ) -> Agent:
-        """Méthode générique pour créer et wrapper un agent."""
-        agent = agent_class(kernel=self.kernel, **kwargs)
-
-        if trace_log_path:
-            return TracedAgent(agent_to_wrap=agent, trace_log_path=trace_log_path)
-        return agent
-
-    def create_sherlock_agent(
-        self,
-        agent_name: str = "Sherlock",
-        trace_log_path: Optional[str] = None,
-    ) -> Agent:
-        """Crée et configure l'agent Sherlock."""
-        return self._create_agent(
-            agent_class=SherlockEnqueteAgent,
-            agent_name=agent_name,
-            service_id=self.llm_service_id,
-            trace_log_path=trace_log_path,
-        )
-
-    def create_watson_agent(
-        self,
-        agent_name: str = "Watson",
-        trace_log_path: Optional[str] = None,
-        constants: Optional[List[str]] = None,
-    ) -> Agent:
-        """Crée et configure l'agent Watson."""
-        return self._create_agent(
-            agent_class=WatsonLogicAssistant,
-            agent_name=agent_name,
-            service_id=self.llm_service_id,
-            trace_log_path=trace_log_path,
-            constants=constants,
-        )
+        return wrapper_agent

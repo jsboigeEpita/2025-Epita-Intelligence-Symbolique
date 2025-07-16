@@ -2,6 +2,15 @@
 
 Ce document décrit l'architecture du système d'analyse rhétorique, basée sur l'exploration de l'arborescence des fichiers.
 
+## Vue d'Ensemble Conceptuelle
+
+Le projet dispose de deux systèmes principaux pour l'analyse argumentative, chacun avec une philosophie distincte :
+
+1.  **`argumentation_analysis/orchestration` :** Le "cerveau" collaboratif. Il gère des équipes d'agents intelligents qui travaillent ensemble de manière dynamique pour analyser un texte. C'est l'approche la plus moderne, flexible et puissante, conçue pour des analyses complexes et multi-facettes.
+2.  **`argumentation_analysis/pipelines` :** La "chaîne de montage" séquentielle. Elle exécute des séquences d'analyse prédéfinies et linéaires. C'est une approche plus simple et statique, optimisée pour le traitement par lot.
+
+---
+
 ## Répertoire `argumentation_analysis/`
 
 Le répertoire racine du projet contient plusieurs modules clés, chacun ayant un rôle spécifique.
@@ -21,7 +30,7 @@ Le répertoire racine du projet contient plusieurs modules clés, chacun ayant u
 *   `source_manager.py`: Gère les sources de données à analyser.
 
 ### `orchestration/`
-*   **Description supposée :** Gère la coordination et la collaboration entre les différents agents et services pour réaliser une analyse complète.
+*   **Description supposée :** Gère la coordination et la collaboration entre les différents agents et services pour réaliser une analyse complète. Pour plus de détails sur l'implémentation technique, consultez la [documentation de l'`analysis_runner`](../reference/orchestration/analysis_runner.md).
 *   `hierarchical/`: Suggère une architecture d'orchestration à plusieurs niveaux (Stratégique, Tactique, Opérationnel), ce qui implique une prise de décision complexe.
 *   `service_manager.py`: Gère le cycle de vie et l'accès aux différents services.
 *   `cluedo_extended_orchestrator.py`: Un orchestrateur spécifique pour un scénario complexe, probablement lié à une démonstration "Cluedo".
@@ -83,3 +92,10 @@ Ce répertoire contient des scripts de démonstration pour illustrer les fonctio
 
 ### `argumentation_analysis/demos/sample_epita_discourse.txt`
 *   **Description supposée :** Un échantillon de texte de discours, probablement utilisé comme donnée d'entrée pour les démonstrations.
+
+## Contexte et Évolution
+
+Pour comprendre l'historique et les décisions qui ont mené à l'architecture actuelle, les documents suivants peuvent être consultés :
+
+*   **Plan de Nettoyage :** [`../refactoring/03_argumentation_analysis_cleanup_plan.md`](../refactoring/03_argumentation_analysis_cleanup_plan.md)
+*   **Rapport de Robustesse :** [`../reports_pass_2/rhetorical_analysis/hardening_report.md`](../reports_pass_2/rhetorical_analysis/hardening_report.md)

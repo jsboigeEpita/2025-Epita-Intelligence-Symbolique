@@ -25,14 +25,17 @@ import json
 import logging
 import asyncio
 from pathlib import Path
-from typing import List, Dict, Any, Tuple, Optional, Union, Callable, ClassVar
+from typing import List, Dict, Any, Tuple, Optional, Union, Callable, ClassVar, AsyncGenerator
 
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.functions import KernelArguments
 from semantic_kernel.prompt_template.prompt_template_config import PromptTemplateConfig
+from semantic_kernel.agents import Agent
+from argumentation_analysis.agents.channels.volatile_agent_channel import VolatileAgentChannel
+from pydantic import Field
 
-from ..abc.agent_bases import BaseAgent
+from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 
 # Import des définitions et prompts locaux
 from .extract_definitions import ExtractAgentPlugin, ExtractResult
@@ -85,6 +88,7 @@ class ExtractAgent(BaseAgent):
     EXTRACT_SEMANTIC_FUNCTION_NAME: ClassVar[str] = "extract_from_name_semantic"
     VALIDATE_SEMANTIC_FUNCTION_NAME: ClassVar[str] = "validate_extract_semantic"
     NATIVE_PLUGIN_NAME: ClassVar[str] = "ExtractNativePlugin"
+    logger: Optional[logging.Logger] = Field(None, exclude=True)
 
     def __init__(
         self,
@@ -101,13 +105,10 @@ class ExtractAgent(BaseAgent):
         if plugins is None:
             plugins = [ExtractAgentPlugin()]
 
-        super().__init__(
-            kernel=kernel,
-            agent_name=agent_name,
-            system_prompt=EXTRACT_AGENT_INSTRUCTIONS,
-            llm_service_id=llm_service_id,
-            plugins=plugins
-        )
+        super().__init__(kernel=kernel, agent_name=agent_name)
+        self.logger = logging.getLogger(agent_name)
+        self._kernel = kernel
+        self._llm_service_id = llm_service_id
         
         self._find_similar_text_func = find_similar_text_func or find_similar_text
         self._extract_text_func = extract_text_func or extract_text_with_markers
@@ -164,6 +165,20 @@ class ExtractAgent(BaseAgent):
             "extract_from_name": "Extrait un passage pertinent à partir de la dénomination de l'extrait.",
             "repair_extract": "Répare un extrait existant en utilisant sa dénomination.",
         }
+
+    def get_channel_keys(self) -> Dict[str, str]:
+        """
+        Retourne les clés uniques pour le canal de communication de l'agent.
+        Utilisé par AgentGroupChat pour identifier de manière unique cet agent.
+        """
+        return {
+            "name": self.name,
+            "id": str(self.id),
+        }
+
+    async def create_channel(self) -> VolatileAgentChannel:
+        """Create a new channel for the agent."""
+        return VolatileAgentChannel(self)
 
     @property
     def native_extract_plugin(self) -> ExtractAgentPlugin:
@@ -254,26 +269,24 @@ class ExtractAgent(BaseAgent):
             extracted_text=extracted_text
         )
 
-    async def get_response(self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None) -> list[ChatMessageContent]:
-        """Délègue l'invocation à la méthode invoke_single."""
-        self.logger.debug(f"get_response appelé, délégation à invoke_single pour {self.name}.")
-        return await self.invoke_single(kernel, arguments)
+    async def get_response(self, messages: list[ChatMessageContent]) -> list[ChatMessageContent]:
+        """(Compatibility) Gets a response from the agent."""
+        import warnings
+        warnings.warn(
+            "The 'get_response' method is deprecated and will be removed in a future version. "
+            "Please use 'invoke' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return await self.invoke(messages)
 
-    async def invoke_single(self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None) -> list[ChatMessageContent]:
+    async def invoke_single(self, messages: list[ChatMessageContent]) -> list[ChatMessageContent]:
         """
-        Point d'entrée principal pour l'invocation de l'agent dans un scénario de chat.
-
-        Cette méthode est conçue pour être appelée par un planificateur ou un orchestrateur.
-        Elle analyse l'historique de la conversation pour extraire deux informations clés :
-        1.  Le **texte source** : typiquement le premier message de l'utilisateur.
-        2.  Le **nom de l'extrait** : recherché dans la dernière instruction, souvent
-            fournie par un agent planificateur.
-
-        Elle délègue ensuite le travail à la méthode `extract_from_name` et formate
-        le résultat en `ChatMessageContent`.
+        Point d'entrée principal pour l'invocation de l'agent.
+        Analyse l'historique des messages pour extraire un passage de texte.
         """
-        self.logger.info(f"Invocation de {self.name} via invoke_single.")
-        history = arguments.get("chat_history") if arguments else None
+        self.logger.info(f"Invocation de {self.name} via invoke.")
+        history = messages
 
         if not history:
             error_msg = "L'historique du chat est vide, impossible d'extraire."
@@ -281,18 +294,18 @@ class ExtractAgent(BaseAgent):
             return [ChatMessageContent(role="assistant", content=json.dumps({"error": error_msg}), name=self.name)]
 
         # Stratégie : prendre le premier message utilisateur comme source principale
+        # et le dernier message comme instruction.
         source_message = next((msg for msg in history if msg.role == "user"), history[0])
         source_text = source_message.content
-        
-        # Le nom de l'extrait est déterminé par le dernier message (instruction du PM)
-        last_message = history[-1].content
+
+        last_message_content = history[-1].content
         # Regex pour trouver une instruction comme extract(name="...")
-        match = re.search(r'extract\s*\(\s*name="([^"]+)"', last_message)
+        match = re.search(r'extract\s*\(\s*name="([^"]+)"', str(last_message_content))
         if match:
             extract_name = match.group(1)
             self.logger.info(f"Nom d'extrait trouvé dans l'instruction: '{extract_name}'")
         else:
-            extract_name = "Le point principal de l'auteur" # Fallback
+            extract_name = "Le point principal de l'auteur"  # Fallback
             self.logger.warning(f"Aucun nom d'extrait spécifique trouvé, utilisation du nom par défaut: '{extract_name}'")
 
         source_info = {"source_name": "Source Conversationnelle"}
@@ -307,11 +320,16 @@ class ExtractAgent(BaseAgent):
                 metadata={'task_name': 'extract_from_name', 'status': result.status}
             )
         except Exception as e:
-            self.logger.error(f"Erreur dans invoke_single de ExtractAgent: {e}", exc_info=True)
+            self.logger.error(f"Erreur dans invoke de ExtractAgent: {e}", exc_info=True)
             response_message = ChatMessageContent(
                 role="assistant",
                 content=json.dumps({"error": f"Erreur lors de l'extraction: {str(e)}"}),
                 name=self.name
             )
-        
+
         return [response_message]
+
+    async def invoke_stream(self, messages: list[ChatMessageContent]) -> AsyncGenerator[list[ChatMessageContent], None]:
+        """Génère la réponse complète en un seul bloc."""
+        final_result = await self.invoke(messages)
+        yield final_result

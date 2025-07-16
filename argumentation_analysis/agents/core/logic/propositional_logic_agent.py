@@ -26,9 +26,8 @@ from semantic_kernel.functions import KernelArguments
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
 from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.contents.chat_history import ChatHistory
-from pydantic import Field
-
-from ..abc.agent_bases import BaseLogicAgent
+from pydantic import Field, PrivateAttr
+from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
 from .belief_set import BeliefSet, PropositionalBeliefSet
 from .tweety_bridge import TweetyBridge
 from .tweety_initializer import TweetyInitializer
@@ -218,24 +217,30 @@ class PropositionalLogicAgent(BaseLogicAgent):
         _tweety_bridge (TweetyBridge): Instance privée du pont vers la bibliothèque
             logique Java TweetyProject.
     """
-    service: Optional[ChatCompletionClientBase] = Field(default=None, exclude=True)
-    settings: Optional[Any] = Field(default=None, exclude=True)
+    _llm_service_id: Optional[str] = PrivateAttr(default=None)
+    _tweety_bridge: Optional[TweetyBridge] = PrivateAttr(default=None)
 
-    def __init__(self, kernel: Kernel, agent_name: str = "PropositionalLogicAgent", system_prompt: Optional[str] = None, service_id: Optional[str] = None, **kwargs):
+    def __init__(self, kernel: Kernel, agent_name: str = "PropositionalLogicAgent", instructions: Optional[str] = None, service_id: Optional[str] = None):
         """
         Initialise l'agent de logique propositionnelle.
 
         Args:
             kernel (Kernel): L'instance du kernel Semantic Kernel.
             agent_name (str, optional): Nom de l'agent.
-            system_prompt (Optional[str], optional): Prompt système à utiliser.
+            instructions (Optional[str], optional): Prompt système à utiliser.
                 Si `None`, `SYSTEM_PROMPT_PL` est utilisé.
             service_id (Optional[str], optional): ID du service LLM à utiliser
                 pour les fonctions sémantiques.
         """
-        actual_system_prompt = system_prompt or SYSTEM_PROMPT_PL
-        super().__init__(kernel, agent_name=agent_name, logic_type_name="PL", system_prompt=actual_system_prompt, **kwargs)
-        self._llm_service_id = service_id
+        actual_instructions = instructions or SYSTEM_PROMPT_PL
+        # Appel correct au constructeur de BaseLogicAgent
+        super().__init__(
+            kernel=kernel,
+            agent_name=agent_name,
+            logic_type_name="PL",
+            system_prompt=actual_instructions,
+            llm_service_id=service_id
+        )
         
         self.logger.info(f"Configuration des composants sémantiques pour {self.name}...")
 
@@ -279,7 +284,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
     def get_agent_capabilities(self) -> Dict[str, Any]:
         return {
             "name": self.name,
-            "logic_type": self.logic_type,
+            "logic_type": self.logic_type_name,
             "description": "Agent capable d'analyser du texte en utilisant la logique propositionnelle (PL).",
             "methods": {
                 "text_to_belief_set": "Convertit un texte en un ensemble de croyances PL.",
@@ -290,7 +295,6 @@ class PropositionalLogicAgent(BaseLogicAgent):
             }
         }
 
-    
     def _extract_json_block(self, text: str) -> str:
         """Extrait le premier bloc JSON valide de la réponse du LLM."""
         match = re.search(r'```json\s*(\{.*?\})\s*```', text, re.DOTALL)
@@ -634,31 +638,39 @@ class PropositionalLogicAgent(BaseLogicAgent):
         belief_set, _ = await self.text_to_belief_set(text=data, context=context)
         return belief_set
 
-    async def get_response(self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None) -> list[ChatMessageContent]:
-        """Délègue l'invocation à la méthode invoke_single."""
-        self.logger.debug(f"get_response appelé, délégation à invoke_single pour {self.name}.")
-        return await self.invoke_single(kernel, arguments)
+    async def get_response(self, messages: list[ChatMessageContent]) -> list[ChatMessageContent]:
+        """(Compatibility) Gets a response from the agent."""
+        import warnings
+        warnings.warn(
+            "The 'get_response' method is deprecated and will be removed in a future version. "
+            "Please use 'invoke' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        # La méthode prend maintenant une liste de messages, pas un kernel et des arguments.
+        # Nous devons adapter l'appel si la logique interne de invoke() en dépend.
+        # Pour l'instant, on délègue directement.
+        return await self.invoke(messages)
 
-    async def invoke_single(self, kernel: "Kernel", arguments: Optional["KernelArguments"] = None) -> list[ChatMessageContent]:
+    async def invoke_single(self, messages: list[ChatMessageContent]) -> list[ChatMessageContent]:
         """
         Gère l'invocation de l'agent en analysant la dernière instruction du chat
         et en appelant la méthode interne appropriée.
         """
-        self.logger.info(f"Invocation de {self.name} avec les arguments fournis.")
-        history = arguments.get("chat_history") if arguments else None
-        if not history or len(history) == 0:
+        self.logger.info(f"Invocation de {self.name} avec les messages fournis.")
+        if not messages:
             error_msg = "L'historique du chat est vide, impossible de continuer."
             self.logger.error(error_msg)
             return [ChatMessageContent(role="assistant", content=f'{{"error": "{error_msg}"}}', name=self.name)]
 
-        last_user_message = history[-1].content
+        last_user_message = messages[-1].content
         self.logger.debug(f"Analyse de la dernière instruction: {last_user_message[:200]}...")
 
         # Analyser la tâche demandée (simplifié)
         if "belief set" in last_user_message.lower():
             task = "text_to_belief_set"
             self.logger.info("Tâche détectée: text_to_belief_set")
-            source_text = history[0].content if len(history) > 1 else ""
+            source_text = messages[0].content if len(messages) > 1 else ""
             belief_set, message = await self.text_to_belief_set(source_text)
             if belief_set:
                 response_content = json.dumps(belief_set.to_dict(), indent=2)
@@ -668,7 +680,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
         elif "generate queries" in last_user_message.lower():
             task = "generate_queries"
             self.logger.info("Tâche détectée: generate_queries")
-            source_text = history[0].content
+            source_text = messages[0].content
             belief_set, _ = await self.text_to_belief_set(source_text)
             if belief_set:
                 queries = await self.generate_queries(source_text, belief_set)
@@ -679,7 +691,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
         elif "traduire le texte" in last_user_message.lower():
             task = "text_to_belief_set"
             self.logger.info("Tâche détectée: text_to_belief_set (via 'traduire le texte')")
-            source_text = history[0].content if len(history) > 1 else ""
+            source_text = messages[0].content if len(messages) > 1 else ""
             belief_set, message = await self.text_to_belief_set(source_text)
             if belief_set:
                 response_content = json.dumps(belief_set.to_dict(), indent=2)
@@ -689,7 +701,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
         elif "exécuter des requêtes" in last_user_message.lower():
             task = "execute_query"
             self.logger.info("Tâche détectée: execute_query (via 'exécuter des requêtes')")
-            source_text = history[0].content if len(history) > 1 else ""
+            source_text = messages[0].content if len(messages) > 1 else ""
             belief_set, message = await self.text_to_belief_set(source_text)
             if belief_set:
                 is_consistent, details = self.is_consistent(belief_set)
@@ -715,3 +727,11 @@ class PropositionalLogicAgent(BaseLogicAgent):
             metadata={'task_name': task}
         )
         return [response_message]
+
+    async def invoke_stream(self, messages: list[ChatMessageContent]):
+        final_result = await self.invoke(messages)
+        
+        async def stream_generator():
+            yield final_result
+
+        return stream_generator()

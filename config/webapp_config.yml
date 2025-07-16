@@ -225,7 +225,7 @@ urls:
 security:
   # CORS pour développement
   cors_enabled: true
-  cors_origins: ["http://localhost:3000", "http://localhost:5003"]
+  cors_origins: ["http://localhost:8085", "http://localhost:8095"]
   
   # Authentification (placeholder)
   auth_enabled: false

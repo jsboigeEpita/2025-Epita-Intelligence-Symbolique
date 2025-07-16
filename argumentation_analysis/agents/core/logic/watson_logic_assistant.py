@@ -1,7 +1,7 @@
 # argumentation_analysis/agents/core/logic/watson_logic_assistant.py
 import logging
 import re
-from typing import Optional, List, AsyncGenerator, ClassVar, Union
+from typing import Optional, List, AsyncGenerator, ClassVar, Union, Any
 import json
 
 import semantic_kernel as sk
@@ -269,7 +269,7 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
     pour s'interfacer avec le système logique `Tweety`.
     """
 
-    def __init__(self, kernel: Kernel, agent_name: str = "Watson", tweety_bridge: TweetyBridge = None, constants: Optional[List[str]] = None, system_prompt: Optional[str] = None, service_id: str = "chat_completion", **kwargs):
+    def __init__(self, kernel: Kernel, agent_name: str = "Watson", tweety_bridge: Optional[TweetyBridge] = None, constants: Optional[List[str]] = None, system_prompt: Optional[str] = None, service_id: str = "chat_completion", **kwargs):
         """
         Initialise une instance de WatsonLogicAssistant.
 
@@ -280,13 +280,18 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
             system_prompt: Prompt système optionnel. Si non fourni, utilise le prompt par défaut.
         """
         actual_system_prompt = system_prompt if system_prompt is not None else WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT
-        super().__init__(kernel=kernel, agent_name=agent_name, system_prompt=actual_system_prompt, service_id=service_id)
+        super().__init__(kernel=kernel, agent_name=agent_name, instructions=actual_system_prompt, service_id=service_id)
         
         self._tools = WatsonTools(tweety_bridge=tweety_bridge, constants=constants)
         
         self.logger.info(f"WatsonLogicAssistant '{agent_name}' initialisé avec les outils logiques.")
         
-    async def invoke(self, input: Union[str, List[ChatMessageContent]], **kwargs) -> List[ChatMessageContent]:
+    async def invoke_single(self, messages: list[ChatMessageContent]) -> list[ChatMessageContent]:
+        history = ChatHistory()
+        for msg in messages:
+            history.add_message(msg)
+        response_message = await self.invoke_custom(history)
+        return [response_message]
         """
         Point d'entrée pour l'invocation de l'agent par l'orchestrateur.
         Gère à la fois une chaîne simple (pour compatibilité) et un historique de conversation complet.
@@ -308,6 +313,13 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
         response_message = await self.invoke_custom(history)
         return [response_message]
 
+    async def invoke_stream(self, input: Union[str, List[ChatMessageContent]], **kwargs) -> AsyncGenerator[List[ChatMessageContent], Any]:
+        """Implémentation de la méthode de streaming abstraite."""
+        # Pour cet agent, le streaming est simulé en appelant la méthode invoke standard
+        # et en retournant le résultat complet en une seule fois.
+        response = await self.invoke(input, **kwargs)
+        yield response
+
     async def get_agent_belief_set_content(self, belief_set_id: str) -> Optional[str]:
         """
         Récupère le contenu d'un ensemble de croyances spécifique via le EnqueteStateManagerPlugin.
@@ -318,7 +330,7 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
         Returns:
             Le contenu de l'ensemble de croyances, ou None si non trouvé ou en cas d'erreur.
         """
-        self._logger.info(f"Récupération du contenu de l'ensemble de croyances ID: {belief_set_id}")
+        self.logger.info(f"Récupération du contenu de l'ensemble de croyances ID: {belief_set_id}")
         try:
             # Préparation des arguments pour la fonction du plugin
             # Le nom du paramètre dans la fonction du plugin doit correspondre à "belief_set_id"
@@ -327,7 +339,7 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
             # Pour l'instant, on suppose que les arguments sont passés en tant que kwargs à invoke.
             # kernel_arguments = {"belief_set_id": belief_set_id} # Alternative si invoke prend des KernelArguments
             
-            result = await self._kernel.invoke(
+            result = await self.kernel.invoke(
                 plugin_name="EnqueteStatePlugin",
                 function_name="get_belief_set_content",
                 arguments=KernelArguments(belief_set_id=belief_set_id)
@@ -338,7 +350,7 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
                 return str(result.value) if result.value is not None else None
             return str(result) if result is not None else None
         except Exception as e:
-            self._logger.error(f"Erreur lors de la récupération du contenu de l'ensemble de croyances {belief_set_id}: {e}")
+            self.logger.error(f"Erreur lors de la récupération du contenu de l'ensemble de croyances {belief_set_id}: {e}")
             return None
 
     async def invoke_custom(self, history: ChatHistory) -> ChatMessageContent:
@@ -346,11 +358,11 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
         Méthode d'invocation personnalisée pour la boucle d'orchestration.
         Prend un historique et retourne la réponse de l'agent.
         """
-        self._logger.info(f"[{self.name}] Invocation personnalisée avec {len(history)} messages.")
+        self.logger.info(f"[{self.name}] Invocation personnalisée avec {len(history)} messages.")
 
         # Ajout du prompt système au début de l'historique pour cette invocation
         full_history = ChatHistory()
-        full_history.add_system_message(self.system_prompt)
+        full_history.add_system_message(self.instructions)
         for msg in history:
             full_history.add_message(msg)
         
@@ -375,16 +387,16 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
             # Invocation via le kernel pour la robustesse et la compatibilité
             arguments = KernelArguments(chat_history=full_history)
             
-            response = await self._kernel.invoke(chat_function, arguments=arguments)
+            response = await self.kernel.invoke(chat_function, arguments=arguments)
             
             if response:
-                self._logger.info(f"[{self.name}] Réponse générée: {response}")
+                self.logger.info(f"[{self.name}] Réponse générée: {response}")
                 # La réponse de invoke est un FunctionResult. Le contenu est la valeur, le rôle est implicite.
                 return ChatMessageContent(role="assistant", content=str(response), name=self.name)
             else:
-                self._logger.warning(f"[{self.name}] N'a reçu aucune réponse du service AI.")
+                self.logger.warning(f"[{self.name}] N'a reçu aucune réponse du service AI.")
                 return ChatMessageContent(role="assistant", content="Je dois analyser la situation plus en détail.", name=self.name)
 
         except Exception as e:
-            self._logger.error(f"[{self.name}] Erreur lors de invoke_custom: {e}", exc_info=True)
+            self.logger.error(f"[{self.name}] Erreur lors de invoke_custom: {e}", exc_info=True)
             return ChatMessageContent(role="assistant", content=f"Une erreur logique m'empêche de procéder: {e}", name=self.name)

@@ -9,6 +9,7 @@ test.describe('Phase 5 - Validation Non-Régression', () => {
   
   // Configuration des ports pour les deux interfaces
   const INTERFACE_REACT_PORT = 3000;
+  const INTERFACE_SIMPLE_PORT = 3001;
   
   test.beforeAll(async () => {
     // Attendre que les interfaces soient disponibles

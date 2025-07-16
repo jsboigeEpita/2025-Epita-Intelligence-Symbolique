@@ -36,9 +36,9 @@ async def perform_text_analysis(text: str, services: dict[str, Any], analysis_ty
 
     # Utilisation du nouvel orchestrateur. L'import est local pour la clarté.
     try:
-        from argumentation_analysis.orchestration.enhanced_pm_analysis_runner import EnhancedPMAnalysisRunner
+        from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner
     except ImportError as e:
-        logger.critical(f"Impossible d'importer 'EnhancedPMAnalysisRunner': {e}", exc_info=True)
+        logger.critical(f"Impossible d'importer 'AnalysisRunner': {e}", exc_info=True)
         raise
 
     llm_service = services.get("llm_service")
@@ -47,10 +47,10 @@ async def perform_text_analysis(text: str, services: dict[str, Any], analysis_ty
         return None
 
     try:
-        runner = EnhancedPMAnalysisRunner()
-        logger.info(f"Lancement de l'analyse principale (type: {analysis_type}) via EnhancedPMAnalysisRunner...")
+        runner = AnalysisRunner()
+        logger.info(f"Lancement de l'analyse principale (type: {analysis_type}) via AnalysisRunner...")
         
-        analysis_result = await runner.run_enhanced_analysis(
+        analysis_result = await runner.run_analysis_async(
             text_content=text,
             llm_service=llm_service
         )

@@ -53,7 +53,14 @@ async def run_and_log_analysis(title, text=None, file_path=None, output_path=Non
 
         logger.info("--- ANALYSIS RESULT ---")
         if analysis_results:
-            output_json_str = json.dumps(analysis_results, indent=2, ensure_ascii=False)
+            def serialize_default(o):
+                if hasattr(o, 'to_dict'):
+                    return o.to_dict()
+                if hasattr(o, 'model_dump'):
+                    return o.model_dump()
+                raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
+
+            output_json_str = json.dumps(analysis_results, indent=2, ensure_ascii=False, default=serialize_default)
             if output_path:
                 try:
                     output_path.parent.mkdir(parents=True, exist_ok=True)

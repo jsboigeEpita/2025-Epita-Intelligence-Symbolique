@@ -42,7 +42,7 @@ def run_in_jvm_subprocess():
             command_for_subprocess,
             capture_output=False,  # Désactivé pour le débogage
             check=False,
-            cwd=project_root
+            cwd=project_root,
             # Les autres paramètres (text, encoding, etc.) sont gérés par run_sync
         )
         

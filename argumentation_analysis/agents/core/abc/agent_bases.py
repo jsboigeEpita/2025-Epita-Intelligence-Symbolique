@@ -229,7 +229,7 @@ class BaseLogicAgent(BaseAgent, ABC):
     # _parser: Any  # Ces éléments seront gérés par TweetyBridge
     # _solver: Any  # Ces éléments seront gérés par TweetyBridge
 
-    def __init__(self, kernel: "Kernel", agent_name: str, logic_type_name: str, system_prompt: Optional[str] = None):
+    def __init__(self, kernel: "Kernel", agent_name: str, logic_type_name: str, system_prompt: Optional[str] = None, **kwargs):
         """
         Initialise une instance de BaseLogicAgent.
 
@@ -239,7 +239,7 @@ class BaseLogicAgent(BaseAgent, ABC):
             logic_type_name (str): Le nom du type de logique (ex: "PL", "FOL").
             system_prompt (Optional[str]): Le prompt système optionnel.
         """
-        super().__init__(kernel, agent_name, system_prompt)
+        super().__init__(kernel=kernel, agent_name=agent_name, system_prompt=system_prompt, **kwargs)
         self._logic_type_name = logic_type_name
         # L'instance de TweetyBridge devrait être passée ou créée ici.
         # Pour l'instant, on suppose qu'elle sera initialisée dans setup_agent_components

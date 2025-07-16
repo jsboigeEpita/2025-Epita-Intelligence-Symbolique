@@ -7,7 +7,7 @@ pertinents en utilisant différentes stratégies rhétoriques.
 """
 
 from counter_agent.agent import (
-    CounterArgumentAgent,
+    # CounterArgumentAgent, # NOTE: Commenté car la classe est introuvable
     Argument,
     CounterArgument,
     CounterArgumentType,
@@ -21,7 +21,7 @@ from counter_agent.agent import (
 __version__ = "0.1.0"
 
 __all__ = [
-    'CounterArgumentAgent',
+    # 'CounterArgumentAgent',
     'Argument',
     'CounterArgument',
     'CounterArgumentType',
