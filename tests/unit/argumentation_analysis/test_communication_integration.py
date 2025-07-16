@@ -718,7 +718,7 @@ class TestCommunicationIntegration(unittest.TestCase):
 
 
 @pytest.fixture
-async def async_test_environment():
+def async_test_environment():
     """Fixture pour initialiser l'environnement de test asynchrone."""
     logger.info("Setting up async test environment")
     
@@ -733,9 +733,6 @@ async def async_test_environment():
     middleware.register_channel(hierarchical_channel)
     middleware.register_channel(collaboration_channel)
     middleware.register_channel(data_channel)
-    
-    # Attendre avant enregistrement pour éviter les race conditions
-    await asyncio.sleep(0.1)
     
     # Initialiser les protocoles
     middleware.initialize_protocols()
@@ -761,163 +758,178 @@ async def async_test_environment():
     # Code de teardown
     logger.info("Tearing down async test environment")
     
-    # Phase 2: Cleanup AsyncIO proper avec gestion des tâches
-    try:
-        # Annuler toutes les tâches en cours
-        current_task = asyncio.current_task()
-        all_tasks = asyncio.all_tasks()
-        pending_tasks = [task for task in all_tasks if not task.done() and task != current_task]
-        
-        if pending_tasks:
-            logger.info(f"Cancelling {len(pending_tasks)} pending tasks")
-            for task in pending_tasks:
-                task.cancel()
+    async def cleanup_async():
+        # Phase 2: Cleanup AsyncIO proper avec gestion des tâches
+        try:
+            # Annuler toutes les tâches en cours
+            current_task = asyncio.current_task()
+            all_tasks = asyncio.all_tasks()
+            pending_tasks = [task for task in all_tasks if not task.done() and task != current_task]
             
-            # Attendre que les tâches se terminent avec un timeout
-            try:
-                await asyncio.wait_for(
-                    asyncio.gather(*pending_tasks, return_exceptions=True),
-                    timeout=2.0
-                )
-            except asyncio.TimeoutError:
-                logger.warning("Some tasks did not terminate within timeout")
-    except Exception as e:
-        logger.warning(f"Error during async cleanup: {e}")
+            if pending_tasks:
+                logger.info(f"Cancelling {len(pending_tasks)} pending tasks")
+                for task in pending_tasks:
+                    task.cancel()
+                
+                # Attendre que les tâches se terminent avec un timeout
+                try:
+                    await asyncio.wait_for(
+                        asyncio.gather(*pending_tasks, return_exceptions=True),
+                        timeout=2.0
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning("Some tasks did not terminate within timeout")
+        except Exception as e:
+            logger.warning(f"Error during async cleanup: {e}")
+        
+        # Attendre un peu pour que tout se termine
+        await asyncio.sleep(0.5)
     
+    try:
+        loop = asyncio.get_running_loop()
+        if loop.is_running():
+            print("Loop is running, scheduling cleanup.")
+            asyncio.ensure_future(cleanup_async())
+        else:
+            raise RuntimeError
+    except RuntimeError:
+        asyncio.run(cleanup_async())
+        
     # Arrêter proprement le middleware
     middleware.shutdown()
-    
-    # Attendre un peu pour que tout se termine
-    await asyncio.sleep(0.5)
     
     logger.info("Async test environment teardown complete")
     
 @pytest.mark.skip(reason="Désactivation temporaire pour débloquer la suite de tests, fusion des raisons.")
-@pytest.mark.asyncio
-async def test_async_request_response(async_test_environment):
+def test_async_request_response(async_test_environment):
     """Test de la communication asynchrone par requête-réponse (version simplifiée)."""
-    logger.info("Starting simplified async test_async_request_response")
-    
-    env = async_test_environment
-    middleware = env['middleware']
-    requester_adapter = env['tactical_adapter']
-    
-    # Créer un adaptateur pour l'agent qui répond
-    responder_adapter = TacticalAdapter("responder_agent", middleware)
-
-    # Agent qui répond aux requêtes
-    async def responder_agent_task():
-        logger.info("[Responder] Agent started. Waiting for a request...")
-        try:
-            # Utiliser l'adaptateur pour recevoir une requête de manière asynchrone
-            request_msg = await responder_adapter.receive_request_async(timeout=10)
-            if request_msg:
-                logger.info(f"[Responder] Received request: {request_msg.id}")
-                
-                # Créer et envoyer une réponse
-                response_content = {"status": "success", "data": {"solution": "Simplified pattern"}}
-                await responder_adapter.send_response_async(original_request=request_msg, content=response_content)
-                logger.info(f"[Responder] Sent response for request {request_msg.id}")
-            else:
-                logger.warning("[Responder] Timed out waiting for request.")
-        except Exception as e:
-            logger.error(f"[Responder] An error occurred: {e}", exc_info=True)
-
-    # Démarrer l'agent qui répond en tâche de fond
-    responder_task = asyncio.create_task(responder_agent_task())
-
-    # Laisser le temps au responder de démarrer et d'écouter
-    await asyncio.sleep(0.5)
-
-    # Agent qui envoie la requête et attend la réponse
-    logger.info("[Requester] Sending request to 'responder_agent'...")
-    try:
-        response = await requester_adapter.request_strategic_guidance_async(
-            request_type="assistance_simplified",
-            parameters={"description": "Simplified help"},
-            recipient_id="responder_agent",
-            timeout=10,
-            priority=MessagePriority.NORMAL
-        )
-
-        logger.info(f"[Requester] Received response: {response}")
-
-        # Assertions pour valider la réponse
-        assert response is not None
-        assert response["status"] == "success"
-        assert response["data"]["solution"] == "Simplified pattern"
+    async def run_test():
+        logger.info("Starting simplified async test_async_request_response")
         
-        logger.info("Simplified async test_async_request_response completed successfully")
-
-    except asyncio.TimeoutError:
-        logger.error("[Requester] Timed out waiting for the response.")
-        pytest.fail("Request timed out unexpectedly.")
-    except Exception as e:
-        logger.error(f"[Requester] An error occurred: {e}", exc_info=True)
-        pytest.fail(f"An unexpected error occurred: {e}")
-    finally:
-        # Attendre que la tâche du responder se termine
-        await asyncio.sleep(0.1)
-        if not responder_task.done():
-            responder_task.cancel()
+        env = async_test_environment
+        middleware = env['middleware']
+        requester_adapter = env['tactical_adapter']
         
+        # Créer un adaptateur pour l'agent qui répond
+        responder_adapter = TacticalAdapter("responder_agent", middleware)
+
+        # Agent qui répond aux requêtes
+        async def responder_agent_task():
+            logger.info("[Responder] Agent started. Waiting for a request...")
+            try:
+                # Utiliser l'adaptateur pour recevoir une requête de manière asynchrone
+                request_msg = await responder_adapter.receive_request_async(timeout=10)
+                if request_msg:
+                    logger.info(f"[Responder] Received request: {request_msg.id}")
+                    
+                    # Créer et envoyer une réponse
+                    response_content = {"status": "success", "data": {"solution": "Simplified pattern"}}
+                    await responder_adapter.send_response_async(original_request=request_msg, content=response_content)
+                    logger.info(f"[Responder] Sent response for request {request_msg.id}")
+                else:
+                    logger.warning("[Responder] Timed out waiting for request.")
+            except Exception as e:
+                logger.error(f"[Responder] An error occurred: {e}", exc_info=True)
+
+        # Démarrer l'agent qui répond en tâche de fond
+        responder_task = asyncio.create_task(responder_agent_task())
+
+        # Laisser le temps au responder de démarrer et d'écouter
+        await asyncio.sleep(0.5)
+
+        # Agent qui envoie la requête et attend la réponse
+        logger.info("[Requester] Sending request to 'responder_agent'...")
         try:
-            await responder_task
-        except asyncio.CancelledError:
-            logger.info("[Main] Responder task successfully cancelled.")
-    
-@pytest.mark.skip(reason="Désactivation temporaire pour débloquer la suite de tests.")
-@pytest.mark.asyncio
-async def test_async_parallel_requests(async_test_environment):
-    """Test de l'envoi parallèle de requêtes asynchrones (version simplifiée)."""
-    logger.info("Starting async test_async_parallel_requests")
-    
-    env = async_test_environment
-    tactical_adapter = env['tactical_adapter']
-    
-    # Version simplifiée pour éviter les blocages
-    # Simuler directement les réponses sans logique complexe
-    
-    # Mock de la méthode request_strategic_guidance_async pour retourner des réponses simulées
-    async def mock_request_guidance(request_type, parameters, recipient_id, timeout=5.0, priority=MessagePriority.NORMAL):
-        # Simuler un délai de traitement
-        await asyncio.sleep(0.1)
-        # Retourner une réponse simulée
-        return {"status": "success", "request_type": request_type, "index": parameters.get("index")}
-    
-    # Remplacer temporairement la méthode
-    original_method = tactical_adapter.request_strategic_guidance_async
-    tactical_adapter.request_strategic_guidance_async = mock_request_guidance
-    
-    try:
-        # Envoyer plusieurs requêtes en parallèle
-        request_tasks = []
-        for i in range(3):
-            task = asyncio.create_task(tactical_adapter.request_strategic_guidance_async(
-                request_type=f"request-{i}",
-                parameters={"index": i},
-                recipient_id="tactical-agent-2",
-                timeout=5.0,
+            response = await requester_adapter.request_strategic_guidance_async(
+                request_type="assistance_simplified",
+                parameters={"description": "Simplified help"},
+                recipient_id="responder_agent",
+                timeout=10,
                 priority=MessagePriority.NORMAL
-            ))
-            request_tasks.append(task)
-        
-        # Attendre que toutes les requêtes soient traitées avec un timeout global
-        responses = await asyncio.wait_for(asyncio.gather(*request_tasks), timeout=10.0)
-        
-        # Vérifier que toutes les réponses ont été reçues avec assertions pytest
-        assert len(responses) == 3
-        for i, response in enumerate(responses):
+            )
+
+            logger.info(f"[Requester] Received response: {response}")
+
+            # Assertions pour valider la réponse
             assert response is not None
             assert response["status"] == "success"
-            assert response["request_type"] == f"request-{i}"
-            assert response["index"] == i
+            assert response["data"]["solution"] == "Simplified pattern"
+            
+            logger.info("Simplified async test_async_request_response completed successfully")
+
+        except asyncio.TimeoutError:
+            logger.error("[Requester] Timed out waiting for the response.")
+            pytest.fail("Request timed out unexpectedly.")
+        except Exception as e:
+            logger.error(f"[Requester] An error occurred: {e}", exc_info=True)
+            pytest.fail(f"An unexpected error occurred: {e}")
+        finally:
+            # Attendre que la tâche du responder se termine
+            await asyncio.sleep(0.1)
+            if not responder_task.done():
+                responder_task.cancel()
+            
+            try:
+                await responder_task
+            except asyncio.CancelledError:
+                logger.info("[Main] Responder task successfully cancelled.")
+
+    asyncio.run(run_test())
+    
+@pytest.mark.skip(reason="Désactivation temporaire pour débloquer la suite de tests.")
+def test_async_parallel_requests(async_test_environment):
+    """Test de l'envoi parallèle de requêtes asynchrones (version simplifiée)."""
+    async def run_test():
+        logger.info("Starting async test_async_parallel_requests")
         
-        logger.info("Async parallel requests test completed successfully")
+        env = async_test_environment
+        tactical_adapter = env['tactical_adapter']
         
-    finally:
-        # Restaurer la méthode originale
-        tactical_adapter.request_strategic_guidance_async = original_method
+        # Version simplifiée pour éviter les blocages
+        # Simuler directement les réponses sans logique complexe
+        
+        # Mock de la méthode request_strategic_guidance_async pour retourner des réponses simulées
+        async def mock_request_guidance(request_type, parameters, recipient_id, timeout=5.0, priority=MessagePriority.NORMAL):
+            # Simuler un délai de traitement
+            await asyncio.sleep(0.1)
+            # Retourner une réponse simulée
+            return {"status": "success", "request_type": request_type, "index": parameters.get("index")}
+        
+        # Remplacer temporairement la méthode
+        original_method = tactical_adapter.request_strategic_guidance_async
+        tactical_adapter.request_strategic_guidance_async = mock_request_guidance
+        
+        try:
+            # Envoyer plusieurs requêtes en parallèle
+            request_tasks = []
+            for i in range(3):
+                task = asyncio.create_task(tactical_adapter.request_strategic_guidance_async(
+                    request_type=f"request-{i}",
+                    parameters={"index": i},
+                    recipient_id="tactical-agent-2",
+                    timeout=5.0,
+                    priority=MessagePriority.NORMAL
+                ))
+                request_tasks.append(task)
+            
+            # Attendre que toutes les requêtes soient traitées avec un timeout global
+            responses = await asyncio.wait_for(asyncio.gather(*request_tasks), timeout=10.0)
+            
+            # Vérifier que toutes les réponses ont été reçues avec assertions pytest
+            assert len(responses) == 3
+            for i, response in enumerate(responses):
+                assert response is not None
+                assert response["status"] == "success"
+                assert response["request_type"] == f"request-{i}"
+                assert response["index"] == i
+            
+            logger.info("Async parallel requests test completed successfully")
+            
+        finally:
+            # Restaurer la méthode originale
+            tactical_adapter.request_strategic_guidance_async = original_method
+
+    asyncio.run(run_test())
 
 
 if __name__ == "__main__":

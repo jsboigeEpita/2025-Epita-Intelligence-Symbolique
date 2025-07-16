@@ -24,8 +24,7 @@ from argumentation_analysis.agents.core.oracle.cluedo_dataset import CluedoDatas
 from semantic_kernel.kernel import Kernel
 
 
-@pytest.mark.asyncio
-async def test_dataset_manager_check_permission():
+def test_dataset_manager_check_permission():
     """Test que DatasetAccessManager a maintenant la methode check_permission."""
     print("Test 1: Verification de l'existence de check_permission sur DatasetAccessManager")
     
@@ -45,8 +44,8 @@ async def test_dataset_manager_check_permission():
     assert hasattr(dataset_manager, 'check_permission'), "La methode check_permission doit exister"
     
     # Tester la methode
-    result_authorized = await dataset_manager.check_permission("Watson", QueryType.CARD_INQUIRY)
-    result_unauthorized = await dataset_manager.check_permission("Watson", QueryType.ADMIN_COMMAND)
+    result_authorized = asyncio.run(dataset_manager.check_permission("Watson", QueryType.CARD_INQUIRY))
+    result_unauthorized = asyncio.run(dataset_manager.check_permission("Watson", QueryType.ADMIN_COMMAND))
 
     assert result_authorized == True, "Watson devrait etre autorise pour CARD_INQUIRY"
     assert result_unauthorized == False, "Watson ne devrait pas etre autorise pour ADMIN_COMMAND"
@@ -54,8 +53,7 @@ async def test_dataset_manager_check_permission():
     print("SUCCES Test 1: check_permission fonctionne correctement")
 
 
-@pytest.mark.asyncio
-async def test_mock_permission_setup():
+def test_mock_permission_setup():
     """Test que les mocks peuvent etre configures correctement pour les tests."""
     print("Test 2: Configuration des mocks pour permission_manager")
     
@@ -73,7 +71,7 @@ async def test_mock_permission_setup():
     assert hasattr(mock_dataset_manager, 'check_permission'), "Le mock doit avoir la methode check_permission"
     
     # Test des appels
-    result = await mock_dataset_manager.check_permission("Watson", QueryType.CARD_INQUIRY)
+    result = asyncio.run(mock_dataset_manager.check_permission("Watson", QueryType.CARD_INQUIRY))
     assert result is True, "Le mock doit retourner True"
     
     mock_dataset_manager.check_permission.assert_awaited_once_with("Watson", QueryType.CARD_INQUIRY)
@@ -81,8 +79,7 @@ async def test_mock_permission_setup():
     print("SUCCES Test 2: Les mocks sont correctement configures")
 
 
-@pytest.mark.asyncio
-async def test_oracle_tools_integration():
+def test_oracle_tools_integration():
     """Test l'integration avec OracleTools."""
     print("Test 3: Integration OracleTools avec check_agent_permission")
     
@@ -112,10 +109,10 @@ async def test_oracle_tools_integration():
     assert hasattr(oracle_agent.oracle_tools, 'check_agent_permission'), "OracleTools doit avoir check_agent_permission"
     
     # Test de la methode check_agent_permission
-    result = await oracle_agent.oracle_tools.check_agent_permission(
+    result = asyncio.run(oracle_agent.oracle_tools.check_agent_permission(
         target_agent="Watson",
         query_type="card_inquiry"
-    )
+    ))
     
     # Verifier que la methode a ete appelee
     # Mock assertion eliminated - authentic validation
@@ -137,11 +134,11 @@ def main():
         print()
         
         # Test 2: Configuration des mocks
-        asyncio.run(test_mock_permission_setup())
+        test_mock_permission_setup()
         print()
         
         # Test 3: Integration OracleTools
-        asyncio.run(test_oracle_tools_integration())
+        test_oracle_tools_integration()
         print()
         
         print("=" * 80)

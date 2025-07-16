@@ -38,25 +38,28 @@ from config.unified_config import (
 
 
 class TestUnifiedConfigIntegration:
-    async def _create_authentic_gpt4o_mini_instance(self):
+    def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-        
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        async def _run():
+            config = UnifiedConfig()
+            return await config.get_kernel_with_gpt4o_mini()
+        return asyncio.run(_run())
+
+    def _make_authentic_llm_call(self, prompt: str) -> str:
         """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
+        async def _run():
+            try:
+                kernel = self._create_authentic_gpt4o_mini_instance()
+                result = await kernel.invoke("chat", input=prompt)
+                return str(result)
+            except Exception as e:
+                logger.warning(f"Appel LLM authentique échoué: {e}")
+                return "Authentic LLM call failed"
+        return asyncio.run(_run())
 
     """Tests d'intégration pour le système de configuration unifié."""
     
-    @pytest.mark.asyncio
-    async def test_full_pipeline_with_authentic_fol_config(self):
+    def test_full_pipeline_with_authentic_fol_config(self):
         """Test du pipeline complet avec configuration authentique FOL."""
         config = PresetConfigs.authentic_fol()
         
@@ -80,8 +83,7 @@ class TestUnifiedConfigIntegration:
         assert taxonomy_config["node_count"] == 1000
         assert taxonomy_config["require_full_load"] is True
 
-    @pytest.mark.asyncio
-    async def test_development_workflow_integration(self):
+    def test_development_workflow_integration(self):
         """Test du workflow de développement avec mocks partiels."""
         config = PresetConfigs.development()
         
@@ -104,8 +106,7 @@ class TestUnifiedConfigIntegration:
         llm_config = config.get_llm_config()
         assert llm_config["require_real_service"] is False  # Mocks autorisés
 
-    @pytest.mark.asyncio
-    async def test_testing_configuration_isolation(self):
+    def test_testing_configuration_isolation(self):
         """Test de l'isolation de la configuration de test."""
         config = PresetConfigs.testing()
         

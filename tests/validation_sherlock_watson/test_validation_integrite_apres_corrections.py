@@ -1,3 +1,4 @@
+import asyncio
 from unittest.mock import patch
 
 # Authentic gpt-4o-mini imports (replacing mocks)
@@ -32,16 +33,16 @@ from argumentation_analysis.agents.core.oracle.permissions import (
 
 
 class TestValidationIntegriteApresCorrections:
-    async def _create_authentic_gpt4o_mini_instance(self):
+    def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
         config = UnifiedConfig()
         return config.get_kernel_with_gpt4o_mini()
         
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
+    def _make_authentic_llm_call(self, prompt: str) -> str:
         """Fait un appel authentique à gpt-4o-mini."""
         try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
+            kernel = self._create_authentic_gpt4o_mini_instance()
+            result = asyncio.run(kernel.invoke("chat", input=prompt))
             return str(result)
         except Exception as e:
             logger.warning(f"Appel LLM authentique échoué: {e}")
@@ -134,8 +135,7 @@ class TestValidationIntegriteApresCorrections:
         
         logger.info("[OK] SUCCÈS: Système de permissions renforcé fonctionne")
     
-    @pytest.mark.asyncio
-    async def test_fonctionnalites_legitimes_preservees(self):
+    def test_fonctionnalites_legitimes_preservees(self):
         """[OK] VALIDATION: Les fonctionnalités légitimes sont préservées."""
         logger.info("[OK] TEST: Fonctionnalités légitimes préservées")
     
@@ -150,17 +150,16 @@ class TestValidationIntegriteApresCorrections:
     
         # Les requêtes via le système de permissions fonctionnent
         from argumentation_analysis.agents.core.oracle.permissions import QueryType
-        result = await self.dataset.process_query(
+        result = asyncio.run(self.dataset.process_query(
             "TestAgent",
             QueryType.CLUE_REQUEST,
             {}
-        )
+        ))
         assert result.success is True
         
         logger.info("[OK] SUCCÈS: Fonctionnalités légitimes préservées")
     
-    @pytest.mark.asyncio
-    async def test_oracle_enhanced_respecte_integrite(self):
+    def test_oracle_enhanced_respecte_integrite(self):
         """[OK] VALIDATION: Oracle Enhanced respecte l'intégrité."""
         logger.info("[OK] TEST: Oracle Enhanced respecte l'intégrité")
         
@@ -173,7 +172,7 @@ class TestValidationIntegriteApresCorrections:
             }
         }
         
-        result = await self.dataset.process_query("TestAgent", QueryType.SUGGESTION_VALIDATION, query_params)
+        result = asyncio.run(self.dataset.process_query("TestAgent", QueryType.SUGGESTION_VALIDATION, query_params))
         
         # Vérification que l'Oracle fonctionne correctement
         assert result.success is True
@@ -227,8 +226,7 @@ class TestValidationIntegriteApresCorrections:
         logger.info("[OK] SUCCÈS: Toutes les règles du Cluedo sont respectées")
 
 
-@pytest.mark.asyncio
-async def test_validation_complete_integrite_apres_corrections():
+def test_validation_complete_integrite_apres_corrections():
     """Test principal de validation complète après corrections."""
     logger.info("🔍 DÉBUT DE LA VALIDATION COMPLÈTE APRÈS CORRECTIONS")
     
@@ -242,49 +240,49 @@ async def test_validation_complete_integrite_apres_corrections():
         succes_tests.append("get_autres_joueurs_cards() sécurisée")
     except Exception as e:
         logger.error(f"❌ ÉCHEC: get_autres_joueurs_cards() - {e}")
-        return False
+        pytest.fail(f"get_autres_joueurs_cards() a échoué: {e}")
     
     try:
         test_instance.test_get_solution_maintenant_securisee()
         succes_tests.append("get_solution() sécurisée")
     except Exception as e:
         logger.error(f"❌ ÉCHEC: get_solution() - {e}")
-        return False
+        pytest.fail(f"get_solution() a échoué: {e}")
     
     try:
         test_instance.test_simulate_other_player_response_maintenant_legitime()
         succes_tests.append("Simulation joueur légitime")
     except Exception as e:
         logger.error(f"❌ ÉCHEC: Simulation joueur - {e}")
-        return False
+        pytest.fail(f"Simulation joueur a échoué: {e}")
     
     try:
         test_instance.test_systeme_permissions_renforce_fonctionne()
         succes_tests.append("Système de permissions renforcé")
     except Exception as e:
         logger.error(f"❌ ÉCHEC: Permissions renforcées - {e}")
-        return False
+        pytest.fail(f"Permissions renforcées a échoué: {e}")
     
     try:
-        await test_instance.test_fonctionnalites_legitimes_preservees()
+        test_instance.test_fonctionnalites_legitimes_preservees()
         succes_tests.append("Fonctionnalités légitimes préservées")
     except Exception as e:
         logger.error(f"❌ ÉCHEC: Fonctionnalités légitimes - {e}")
-        return False
+        pytest.fail(f"Fonctionnalités légitimes a échoué: {e}")
     
     try:
-        await test_instance.test_oracle_enhanced_respecte_integrite()
+        test_instance.test_oracle_enhanced_respecte_integrite()
         succes_tests.append("Oracle Enhanced respecte l'intégrité")
     except Exception as e:
         logger.error(f"❌ ÉCHEC: Oracle Enhanced - {e}")
-        return False
+        pytest.fail(f"Oracle Enhanced a échoué: {e}")
     
     try:
         test_instance.test_regles_cluedo_maintenant_respectees()
         succes_tests.append("Règles du Cluedo respectées")
     except Exception as e:
         logger.error(f"❌ ÉCHEC: Règles Cluedo - {e}")
-        return False
+        pytest.fail(f"Règles Cluedo a échoué: {e}")
     
     logger.info(f"[OK] VALIDATION RÉUSSIE: {len(succes_tests)} tests d'intégrité passés")
     for succes in succes_tests:
@@ -294,24 +292,28 @@ async def test_validation_complete_integrite_apres_corrections():
     
     # Assertion pour que pytest reconnaisse le succès
     assert len(succes_tests) == 7, f"Expected 7 successful tests, got {len(succes_tests)}"
-    assert True, "Validation complète réussie"
+    return True
 
 
 if __name__ == "__main__":
     # Exécution directe de la validation
-    resultat = test_validation_complete_integrite_apres_corrections()
-    if resultat:
-        print("\n🎉 VALIDATION RÉUSSIE: L'intégrité des règles du Cluedo a été restaurée !")
-        print("📋 Résultats:")
-        print("[OK] get_autres_joueurs_cards() sécurisée")
-        print("[OK] get_solution() sécurisée") 
-        print("[OK] simulate_other_player_response() légitime")
-        print("[OK] Système de permissions renforcé")
-        print("[OK] Fonctionnalités légitimes préservées")
-        print("[OK] Oracle Enhanced respecte l'intégrité")
-        print("[OK] Règles du Cluedo respectées")
-        print("\n🎯 OBJECTIF ATTEINT: 100% de tests AVEC intégrité du Cluedo respectée !")
-        exit(0)
-    else:
-        print("\n❌ VALIDATION ÉCHEC: Des problèmes d'intégrité subsistent")
+    try:
+        if test_validation_complete_integrite_apres_corrections():
+            print("\n🎉 VALIDATION RÉUSSIE: L'intégrité des règles du Cluedo a été restaurée !")
+            print("📋 Résultats:")
+            print("[OK] get_autres_joueurs_cards() sécurisée")
+            print("[OK] get_solution() sécurisée")
+            print("[OK] simulate_other_player_response() légitime")
+            print("[OK] Système de permissions renforcé")
+            print("[OK] Fonctionnalités légitimes préservées")
+            print("[OK] Oracle Enhanced respecte l'intégrité")
+            print("[OK] Règles du Cluedo respectées")
+            print("\n🎯 OBJECTIF ATTEINT: 100% de tests AVEC intégrité du Cluedo respectée !")
+            exit(0)
+        else:
+            # Ce cas ne devrait pas être atteint avec les `pytest.fail`
+            print("\n❌ VALIDATION ÉCHEC: Des problèmes d'intégrité subsistent")
+            exit(1)
+    except Exception as main_exc:
+        print(f"\n❌ VALIDATION ÉCHEC sur exception: {main_exc}")
         exit(1)

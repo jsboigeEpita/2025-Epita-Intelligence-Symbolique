@@ -20,6 +20,7 @@ import threading
 import time
 import logging
 import sys
+import asyncio
 
 
 # Configuration du logger
@@ -117,20 +118,35 @@ class MockAdapter:
         return self.middleware.receive_message(self.agent_id, None, timeout)
 
 class TestMockCommunication(unittest.TestCase):
-    async def _create_authentic_gpt4o_mini_instance(self):
+    def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-        
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        async def run_get_kernel():
+            config = UnifiedConfig()
+            return config.get_kernel_with_gpt4o_mini()
+        return asyncio.run(run_get_kernel())
+
+    def _make_authentic_llm_call(self, prompt: str) -> str:
         """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
+        async def run_llm_call():
+            try:
+                kernel = self._create_authentic_gpt4o_mini_instance()
+                # Assuming kernel creation is synchronous now, or handled within.
+                # If _create_authentic_gpt4o_mini_instance remains async, it needs to be awaited.
+                # Let's adjust based on the new sync nature of _create_authentic_gpt4o_mini_instance.
+                # The method now returns a kernel instance directly.
+                
+                # We need to re-evaluate how to get an async-capable kernel instance here.
+                # The original `_create_authentic_gpt4o_mini_instance` was async, now it's sync.
+                # Let's create the kernel inside the async helper.
+                config = UnifiedConfig()
+                kernel = config.get_kernel_with_gpt4o_mini()
+
+                result = await kernel.invoke("chat", input=prompt)
+                return str(result)
+            except Exception as e:
+                logger.warning(f"Appel LLM authentique échoué: {e}")
+                return "Authentic LLM call failed"
+        return asyncio.run(run_llm_call())
 
     """Tests de communication avec des mocks."""
     

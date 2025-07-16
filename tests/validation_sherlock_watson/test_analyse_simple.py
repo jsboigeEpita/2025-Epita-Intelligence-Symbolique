@@ -20,8 +20,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.asyncio
-async def test_workflow_simple():
+def test_workflow_simple():
     """Test simple du workflow 3-agents."""
     logger.info("DEBUT - Test du workflow 3-agents")
     
@@ -32,13 +31,17 @@ async def test_workflow_simple():
         
         # Exécution du workflow
         logger.info("Lancement du workflow...")
-        workflow_result = await run_cluedo_oracle_game(
+        # Note: run_cluedo_oracle_game n'est pas défini dans ce fichier,
+        # en supposant qu'il est importé et est une fonction async.
+        # Si ce n'est pas le cas, l'appel asyncio.run() devra être supprimé.
+        from argumentation_analysis.orchestration.cluedo_extended_orchestrator import run_cluedo_oracle_game
+        workflow_result = asyncio.run(run_cluedo_oracle_game(
             kernel=kernel,
             initial_question="L'enquête commence. Sherlock, menez l'investigation !",
             max_turns=8,
             max_cycles=3,
             oracle_strategy="balanced"
-        )
+        ))
         
         logger.info("Workflow terminé")
         
@@ -279,4 +282,4 @@ def identify_improvements(naturalite, pertinence, progression):
 
 
 if __name__ == "__main__":
-    asyncio.run(test_workflow_simple())
+    test_workflow_simple()

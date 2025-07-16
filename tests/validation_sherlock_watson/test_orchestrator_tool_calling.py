@@ -37,7 +37,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-async def run_test():
+def run_test():
     """
     Exécute un test de bout en bout du CluedoExtendedOrchestrator avec la nouvelle architecture de tool-calling.
     """
@@ -63,13 +63,13 @@ async def run_test():
 
         # 4. Configurer le workflow
         logger.info("Configuration du workflow Cluedo (agents, state, plugins)...")
-        await orchestrator.setup_workflow()
+        asyncio.run(orchestrator.setup_workflow())
         logger.info("✅ Workflow configuré.")
 
         # 5. Exécuter le workflow
         initial_question = "L'enquête sur le meurtre du Manoir Tudor commence. Sherlock, à vous l'honneur."
         logger.info(f"▶️  Exécution du workflow avec la question initiale : '{initial_question}'")
-        results = await orchestrator.execute_workflow(initial_question)
+        results = asyncio.run(orchestrator.execute_workflow(initial_question))
         logger.info("✅ Workflow terminé.")
 
         # 6. Afficher les résultats
@@ -90,4 +90,4 @@ if __name__ == "__main__":
     # Assurez-vous que les variables d'environnement (comme OPENAI_API_KEY) sont chargées.
     # Par exemple, via un fichier .env et `dotenv.load_dotenv()` si nécessaire.
     # Dans ce projet, cela semble géré automatiquement.
-    asyncio.run(run_test())
+    run_test()

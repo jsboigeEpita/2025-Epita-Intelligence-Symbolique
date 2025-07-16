@@ -3,6 +3,7 @@
 import pytest
 import json
 from pathlib import Path
+import asyncio
 
 import semantic_kernel as sk
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
@@ -27,11 +28,13 @@ class TestLogicalAgentHardening:
     """
 
     @pytest.mark.parametrize("load_scenario", ["contradictory_scenario"], indirect=True)
-    async def test_agent_identifies_contradiction(self, kernel, load_scenario):
+    def test_agent_identifies_contradiction(self, kernel, load_scenario):
         """
         Test that the agent correctly identifies and reports a contradiction
         in the provided facts by explicitly defining a conflict.
         """
+        # This test is synchronous as it does not await any coroutines.
+        # The `async def` was likely a leftover.
         # 1. Initialize the agent
         agent = SherlockJTMSAgent(kernel, agent_name="test_contradiction_agent")
 
@@ -61,49 +64,51 @@ class TestLogicalAgentHardening:
         assert fact_id in conflict["beliefs"], "The conflict should involve the contradictory fact."
         
     @pytest.mark.parametrize("load_scenario", ["ambiguous_scenario"], indirect=True)
-    async def test_agent_handles_ambiguity(self, kernel, load_scenario):
+    def test_agent_handles_ambiguity(self, kernel, load_scenario):
         """
         Test that the agent correctly identifies and reports ambiguity
         (i.e., multiple possible solutions) when facts are insufficient.
         """
-        # 1. Initialize the agent
-        agent = SherlockJTMSAgent(kernel, agent_name="test_ambiguity_agent")
-        
-        # 2. Add all facts as evidence
-        evidence_ids = [agent._evidence_manager.add_evidence({"description": f}) for f in load_scenario["facts"]]
-        
-        # 3. Manually create two competing hypotheses to simulate ambiguity
-        hypothesis1_id = agent._hypothesis_tracker.create_hypothesis("Le Colonel Moutarde est le coupable.")
-        hypothesis2_id = agent._hypothesis_tracker.create_hypothesis("Mme. Pervenche est la coupable.")
-
-        # 4. Link evidence to support each hypothesis
-        # The first half of the evidence supports Moutarde
-        for ev_id in evidence_ids[:len(evidence_ids)//2]:
-            agent._hypothesis_tracker.link_evidence_to_hypothesis(hypothesis1_id, ev_id, "positive")
+        async def run_test():
+            # 1. Initialize the agent
+            agent = SherlockJTMSAgent(kernel, agent_name="test_ambiguity_agent")
             
-        # The second half supports Pervenche
-        for ev_id in evidence_ids[len(evidence_ids)//2:]:
-            agent._hypothesis_tracker.link_evidence_to_hypothesis(hypothesis2_id, ev_id, "positive")
-        
-        # 5. Attempt to deduce a solution
-        investigation_context = {"goal": "Find the murderer, weapon, and location"}
-        solution_report = await agent.deduce_solution(investigation_context)
-
-        # 6. Assertions for ambiguity
-        assert "error" not in solution_report, "Deduction should not fail."
-        
-        # Confidence should be less than 1.0 because of a strong competitor
-        assert solution_report["confidence_score"] < 0.8, \
-            f"Confidence should be less than 0.8 in an ambiguous case, but was {solution_report['confidence_score']}"
-        
-        # There should be at least one alternative hypothesis
-        assert len(solution_report.get("alternative_hypotheses", [])) > 0, \
-            "There should be at least one alternative hypothesis."
+            # 2. Add all facts as evidence
+            evidence_ids = [agent._evidence_manager.add_evidence({"description": f}) for f in load_scenario["facts"]]
             
-        # Verify that the alternative is the other hypothesis we created
-        alt_ids = [h["hypothesis_id"] for h in solution_report["alternative_hypotheses"]]
-        primary_id = solution_report["primary_hypothesis"]["hypothesis_id"]
-        
-        assert (hypothesis1_id in alt_ids or hypothesis2_id in alt_ids), \
-            "The alternative hypothesis list should contain one of our created hypotheses."
-        assert primary_id != alt_ids[0], "The primary and alternative hypotheses must be different."
+            # 3. Manually create two competing hypotheses to simulate ambiguity
+            hypothesis1_id = agent._hypothesis_tracker.create_hypothesis("Le Colonel Moutarde est le coupable.")
+            hypothesis2_id = agent._hypothesis_tracker.create_hypothesis("Mme. Pervenche est la coupable.")
+    
+            # 4. Link evidence to support each hypothesis
+            # The first half of the evidence supports Moutarde
+            for ev_id in evidence_ids[:len(evidence_ids)//2]:
+                agent._hypothesis_tracker.link_evidence_to_hypothesis(hypothesis1_id, ev_id, "positive")
+                
+            # The second half supports Pervenche
+            for ev_id in evidence_ids[len(evidence_ids)//2:]:
+                agent._hypothesis_tracker.link_evidence_to_hypothesis(hypothesis2_id, ev_id, "positive")
+            
+            # 5. Attempt to deduce a solution
+            investigation_context = {"goal": "Find the murderer, weapon, and location"}
+            solution_report = await agent.deduce_solution(investigation_context)
+    
+            # 6. Assertions for ambiguity
+            assert "error" not in solution_report, "Deduction should not fail."
+            
+            # Confidence should be less than 1.0 because of a strong competitor
+            assert solution_report["confidence_score"] < 0.8, \
+                f"Confidence should be less than 0.8 in an ambiguous case, but was {solution_report['confidence_score']}"
+            
+            # There should be at least one alternative hypothesis
+            assert len(solution_report.get("alternative_hypotheses", [])) > 0, \
+                "There should be at least one alternative hypothesis."
+                
+            # Verify that the alternative is the other hypothesis we created
+            alt_ids = [h["hypothesis_id"] for h in solution_report["alternative_hypotheses"]]
+            primary_id = solution_report["primary_hypothesis"]["hypothesis_id"]
+            
+            assert (hypothesis1_id in alt_ids or hypothesis2_id in alt_ids), \
+                "The alternative hypothesis list should contain one of our created hypotheses."
+            assert primary_id != alt_ids[0], "The primary and alternative hypotheses must be different."
+        asyncio.run(run_test())

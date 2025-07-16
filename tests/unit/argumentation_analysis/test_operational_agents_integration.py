@@ -50,25 +50,29 @@ logging.basicConfig(level=logging.ERROR)
 
 
 class TestOperationalAgentsIntegration:
-    async def _create_authentic_gpt4o_mini_instance(self):
+    def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
         config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
+        async def _run():
+            return await config.get_kernel_with_gpt4o_mini()
+        return asyncio.run(_run())
         
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
+    def _make_authentic_llm_call(self, prompt: str) -> str:
         """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
+        async def _run():
+            try:
+                kernel = self._create_authentic_gpt4o_mini_instance()
+                result = await kernel.invoke("chat", input=prompt)
+                return str(result)
+            except Exception as e:
+                logger.warning(f"Appel LLM authentique échoué: {e}")
+                return "Authentic LLM call failed"
+        return asyncio.run(_run())
 
     """Tests d'intégration pour les agents opérationnels."""
 
-    @pytest_asyncio.fixture(scope="function")
-    async def operational_components(self):
+    @pytest.fixture(scope="function")
+    def operational_components(self):
         """Initialise les objets nécessaires et patche les adapters au niveau de la fixture."""
         
         mocks = {
@@ -105,19 +109,22 @@ class TestOperationalAgentsIntegration:
         mock_execution_settings = PromptExecutionSettings(service_id=mock_llm_service_id, model_id="mock-model")
         mock_kernel.get_prompt_execution_settings_from_service_id.return_value = mock_execution_settings
 
-        manager = OperationalManager(
-            operational_state=operational_state,
-            tactical_operational_interface=interface,
-            middleware=middleware,
-            kernel=mock_kernel, # Injection directe du kernel mocké
-            llm_service_id=mock_llm_service_id,
-            project_context=mock_project_context # Injection du contexte mocké
-        )
-        await manager.start()
-        
-        # Attendre que tous les agents soient initialisés avant de lancer les tests
-        await manager.agent_registry.initialization_complete.wait()
+        async def setup_manager():
+            manager = OperationalManager(
+                operational_state=operational_state,
+                tactical_operational_interface=interface,
+                middleware=middleware,
+                kernel=mock_kernel, # Injection directe du kernel mocké
+                llm_service_id=mock_llm_service_id,
+                project_context=mock_project_context # Injection du contexte mocké
+            )
+            await manager.start()
+            
+            # Attendre que tous les agents soient initialisés avant de lancer les tests
+            await manager.agent_registry.initialization_complete.wait()
+            return manager
 
+        manager = asyncio.run(setup_manager())
         sample_text = "Texte d'exemple pour les tests."
         tactical_state.raw_text = sample_text
 
@@ -129,11 +136,10 @@ class TestOperationalAgentsIntegration:
             "registry": manager.agent_registry
         }
         
-        await manager.stop()
+        asyncio.run(manager.stop())
         patch.stopall()
     
-    @pytest.mark.asyncio
-    async def test_agent_registry_initialization(self, operational_components):
+    def test_agent_registry_initialization(self, operational_components):
         """Teste l'initialisation du registre d'agents."""
         registry = operational_components["registry"]
         assert registry is not None
@@ -144,117 +150,120 @@ class TestOperationalAgentsIntegration:
         assert "pl" in registry.agents
     
     
-    @pytest.mark.asyncio
-    async def test_extract_agent_task_processing(self, operational_components):
+    def test_extract_agent_task_processing(self, operational_components):
         """Teste le traitement d'une tâche par l'agent d'extraction, avec le mock centralisé."""
-        manager = operational_components["manager"]
-        tactical_state = operational_components["tactical_state"]
-        mock_process_task = operational_components["mocks"]["extract"]
+        async def run_test():
+            manager = operational_components["manager"]
+            tactical_state = operational_components["tactical_state"]
+            mock_process_task = operational_components["mocks"]["extract"]
 
-        async def side_effect(*args, **kwargs):
-            op_task = args[0]
-            return {
-                "id": f"res-{op_task['id']}",
-                "task_id": op_task["id"],
-                "status": "completed",
-                "outputs": {"extracted_segments": "segments extraits"},
-                "metrics": {}
-            }
-        mock_process_task.side_effect = side_effect
+            async def side_effect(*args, **kwargs):
+                op_task = args[0]
+                return {
+                    "id": f"res-{op_task['id']}",
+                    "task_id": op_task["id"],
+                    "status": "completed",
+                    "outputs": {"extracted_segments": "segments extraits"},
+                    "metrics": {}
+                }
+            mock_process_task.side_effect = side_effect
 
-        tactical_task = {"id": "task-extract-1", "required_capabilities": ["text_extraction"]}
-        tactical_state.add_task(tactical_task)
+            tactical_task = {"id": "task-extract-1", "required_capabilities": ["text_extraction"]}
+            tactical_state.add_task(tactical_task)
 
-        final_result = await manager.process_tactical_task(tactical_task)
-        mock_process_task.assert_called_once()
+            final_result = await manager.process_tactical_task(tactical_task)
+            mock_process_task.assert_called_once()
 
-        assert final_result["completion_status"] == "completed"
-        saved_output = json.loads(Path(final_result["results_path"]).read_text(encoding='utf-8'))
-        assert saved_output["outputs"]["extracted_segments"] == "segments extraits"
+            assert final_result["completion_status"] == "completed"
+            saved_output = json.loads(Path(final_result["results_path"]).read_text(encoding='utf-8'))
+            assert saved_output["outputs"]["extracted_segments"] == "segments extraits"
+        asyncio.run(run_test())
     
     
-    @pytest.mark.asyncio
-    async def test_informal_agent_task_processing(self, operational_components):
+    def test_informal_agent_task_processing(self, operational_components):
         """Teste le traitement d'une tâche par l'agent informel."""
-        manager = operational_components["manager"]
-        tactical_state = operational_components["tactical_state"]
-        mock_process_task = operational_components["mocks"]["informal"]
+        async def run_test():
+            manager = operational_components["manager"]
+            tactical_state = operational_components["tactical_state"]
+            mock_process_task = operational_components["mocks"]["informal"]
 
-        async def side_effect(*args, **kwargs):
-            op_task = args[0]
-            return {
-                "id": f"res-{op_task['id']}",
-                "task_id": op_task["id"],
-                "status": "completed",
-                "outputs": {"identified_arguments": "args identifiés"},
-                "metrics": {}
-            }
-        mock_process_task.side_effect = side_effect
-        
-        tactical_task = {"id": "task-informal-1", "required_capabilities": ["fallacy_detection"]}
-        tactical_state.add_task(tactical_task)
+            async def side_effect(*args, **kwargs):
+                op_task = args[0]
+                return {
+                    "id": f"res-{op_task['id']}",
+                    "task_id": op_task["id"],
+                    "status": "completed",
+                    "outputs": {"identified_arguments": "args identifiés"},
+                    "metrics": {}
+                }
+            mock_process_task.side_effect = side_effect
+            
+            tactical_task = {"id": "task-informal-1", "required_capabilities": ["fallacy_detection"]}
+            tactical_state.add_task(tactical_task)
 
-        final_result = await manager.process_tactical_task(tactical_task)
-        mock_process_task.assert_called_once()
+            final_result = await manager.process_tactical_task(tactical_task)
+            mock_process_task.assert_called_once()
 
-        assert final_result["completion_status"] == "completed"
-        saved_output = json.loads(Path(final_result["results_path"]).read_text(encoding='utf-8'))
-        assert saved_output["outputs"]["identified_arguments"] == "args identifiés"
+            assert final_result["completion_status"] == "completed"
+            saved_output = json.loads(Path(final_result["results_path"]).read_text(encoding='utf-8'))
+            assert saved_output["outputs"]["identified_arguments"] == "args identifiés"
+        asyncio.run(run_test())
     
     
-    @pytest.mark.asyncio
-    async def test_pl_agent_task_processing(self, operational_components):
+    def test_pl_agent_task_processing(self, operational_components):
         """Teste le traitement d'une tâche par l'agent de logique propositionnelle."""
-        manager = operational_components["manager"]
-        tactical_state = operational_components["tactical_state"]
-        mock_process_task = operational_components["mocks"]["pl"]
-        async def side_effect(*args, **kwargs):
-            op_task = args[0]
-            return {
-                "id": f"res-{op_task['id']}",
-                "task_id": op_task["id"],
-                "status": "completed",
-                "outputs": {"formal_analyses": "analyses formelles"},
-                "metrics": {}
-            }
-        mock_process_task.side_effect = side_effect
+        async def run_test():
+            manager = operational_components["manager"]
+            tactical_state = operational_components["tactical_state"]
+            mock_process_task = operational_components["mocks"]["pl"]
+            async def side_effect(*args, **kwargs):
+                op_task = args[0]
+                return {
+                    "id": f"res-{op_task['id']}",
+                    "task_id": op_task["id"],
+                    "status": "completed",
+                    "outputs": {"formal_analyses": "analyses formelles"},
+                    "metrics": {}
+                }
+            mock_process_task.side_effect = side_effect
 
-        tactical_task = {"id": "task-pl-1", "required_capabilities": ["formal_logic"]}
-        tactical_state.add_task(tactical_task)
+            tactical_task = {"id": "task-pl-1", "required_capabilities": ["formal_logic"]}
+            tactical_state.add_task(tactical_task)
 
-        final_result = await manager.process_tactical_task(tactical_task)
-        mock_process_task.assert_called_once()
+            final_result = await manager.process_tactical_task(tactical_task)
+            mock_process_task.assert_called_once()
 
-        assert final_result["completion_status"] == "completed"
-        saved_output = json.loads(Path(final_result["results_path"]).read_text(encoding='utf-8'))
-        assert saved_output["outputs"]["formal_analyses"] == "analyses formelles"
+            assert final_result["completion_status"] == "completed"
+            saved_output = json.loads(Path(final_result["results_path"]).read_text(encoding='utf-8'))
+            assert saved_output["outputs"]["formal_analyses"] == "analyses formelles"
+        asyncio.run(run_test())
     
-    @pytest.mark.asyncio
-    async def test_agent_selection(self, operational_components):
+    def test_agent_selection(self, operational_components):
         """Teste la sélection de l'agent approprié pour une tâche."""
-        registry = operational_components["registry"]
-        # L'attente est maintenant dans la fixture
+        async def run_test():
+            registry = operational_components["registry"]
+            # L'attente est maintenant dans la fixture
 
-        # Tâche nécessitant l'extraction de texte
-        task_extract = {"required_capabilities": ["text_extraction"]}
-        agent_extract = await registry.select_agent_for_task(task_extract)
-        assert agent_extract is not None
-        assert agent_extract.name == "ExtractAgent"
+            # Tâche nécessitant l'extraction de texte
+            task_extract = {"required_capabilities": ["text_extraction"]}
+            agent_extract = await registry.select_agent_for_task(task_extract)
+            assert agent_extract is not None
+            assert agent_extract.name == "ExtractAgent"
 
-        # Tâche nécessitant la détection de sophismes
-        task_informal = {"required_capabilities": ["fallacy_detection"]}
-        agent_informal = await registry.select_agent_for_task(task_informal)
-        assert agent_informal is not None
-        assert agent_informal.name == "InformalAgent"
+            # Tâche nécessitant la détection de sophismes
+            task_informal = {"required_capabilities": ["fallacy_detection"]}
+            agent_informal = await registry.select_agent_for_task(task_informal)
+            assert agent_informal is not None
+            assert agent_informal.name == "InformalAgent"
 
-        # Tâche nécessitant la logique formelle
-        task_pl = {"required_capabilities": ["formal_logic"]}
-        agent_pl = await registry.select_agent_for_task(task_pl)
-        assert agent_pl is not None
-        assert agent_pl.name == "PlAgent"
+            # Tâche nécessitant la logique formelle
+            task_pl = {"required_capabilities": ["formal_logic"]}
+            agent_pl = await registry.select_agent_for_task(task_pl)
+            assert agent_pl is not None
+            assert agent_pl.name == "PlAgent"
+        asyncio.run(run_test())
     
-    @pytest.mark.asyncio
-    async def test_operational_state_management(self): # Ne dépend pas de la fixture operational_components
+    def test_operational_state_management(self): # Ne dépend pas de la fixture operational_components
         """Teste la gestion de l'état opérationnel."""
         state = OperationalState()
         
@@ -310,33 +319,34 @@ class TestOperationalAgentsIntegration:
         assert retrieved_metrics is not None
         assert retrieved_metrics["execution_time"] == 1.0
     
-    @pytest.mark.asyncio
-    async def test_end_to_end_task_processing(self, operational_components):
+    def test_end_to_end_task_processing(self, operational_components):
         """Teste le traitement complet d'une tâche, en s'assurant que l'agent est correctement sélectionné et le mock appelé."""
-        manager = operational_components["manager"]
-        tactical_state = operational_components["tactical_state"]
-        mock_extract_process = operational_components["mocks"]["extract"]
+        async def run_test():
+            manager = operational_components["manager"]
+            tactical_state = operational_components["tactical_state"]
+            mock_extract_process = operational_components["mocks"]["extract"]
 
-        async def side_effect(*args, **kwargs):
-            op_task = args[0]
-            return {
-                "id": f"res-{op_task['id']}",
-                "task_id": op_task["id"],
-                "status": "completed",
-                "outputs": {"e2e_segments": "segments e2e"},
-                "metrics": {"execution_time": 1.5}
-            }
-        mock_extract_process.side_effect = side_effect
+            async def side_effect(*args, **kwargs):
+                op_task = args[0]
+                return {
+                    "id": f"res-{op_task['id']}",
+                    "task_id": op_task["id"],
+                    "status": "completed",
+                    "outputs": {"e2e_segments": "segments e2e"},
+                    "metrics": {"execution_time": 1.5}
+                }
+            mock_extract_process.side_effect = side_effect
 
-        tactical_task = {"id": "task-e2e-1", "required_capabilities": ["text_extraction"]}
-        tactical_state.add_task(tactical_task)
+            tactical_task = {"id": "task-e2e-1", "required_capabilities": ["text_extraction"]}
+            tactical_state.add_task(tactical_task)
 
-        # L'attente est désormais gérée par la fixture, plus besoin ici.
-        final_result = await manager.process_tactical_task(tactical_task)
-        
-        mock_extract_process.assert_called_once()
+            # L'attente est désormais gérée par la fixture, plus besoin ici.
+            final_result = await manager.process_tactical_task(tactical_task)
+            
+            mock_extract_process.assert_called_once()
 
-        assert final_result["completion_status"] == "completed"
-        saved_output = json.loads(Path(final_result["results_path"]).read_text(encoding='utf-8'))
-        assert saved_output["outputs"]["e2e_segments"] == "segments e2e"
-        assert saved_output["execution_metrics"]["processing_time"] == 1.5
+            assert final_result["completion_status"] == "completed"
+            saved_output = json.loads(Path(final_result["results_path"]).read_text(encoding='utf-8'))
+            assert saved_output["outputs"]["e2e_segments"] == "segments e2e"
+            assert saved_output["execution_metrics"]["processing_time"] == 1.5
+        asyncio.run(run_test())

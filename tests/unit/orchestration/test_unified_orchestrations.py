@@ -61,10 +61,10 @@ except ImportError as e:
             self.config = config
             self.agents = {}
             
-        async def initialize(self) -> bool:
+        def initialize(self) -> bool:
             return True
             
-        async def run_real_llm_orchestration(self, text: str) -> Dict[str, Any]:
+        def run_real_llm_orchestration(self, text: str) -> Dict[str, Any]:
             return {
                 "status": "success",
                 "analysis": f"Mock real LLM analysis: {text[:50]}...",
@@ -228,20 +228,20 @@ class TestUnifiedOrchestrations:
 class TestRealLLMOrchestrationAdvanced:
     """Tests avancés pour RealLLMOrchestrator."""
     
-    async def _create_authentic_gpt4o_mini_instance(self):
+    def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
         config = UnifiedConfig()
         # Assurez-vous que la méthode get_kernel_with_gpt4o_mini existe et est correcte
         if hasattr(config, 'get_kernel_with_gpt4o_mini'):
-            return config.get_kernel_with_gpt4o_mini()
+            return asyncio.run(config.get_kernel_with_gpt4o_mini())
         # Fallback ou erreur si la méthode n'existe pas
         raise AttributeError("UnifiedConfig n'a pas de méthode 'get_kernel_with_gpt4o_mini'")
 
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
+    def _make_authentic_llm_call(self, prompt: str) -> str:
         """Fait un appel authentique à gpt-4o-mini."""
         try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
+            kernel = self._create_authentic_gpt4o_mini_instance()
+            result = asyncio.run(kernel.invoke("chat", input=prompt))
             return str(result)
         except Exception as e:
             logger.warning(f"Appel LLM authentique échoué: {e}")
@@ -253,24 +253,22 @@ class TestRealLLMOrchestrationAdvanced:
         self.mock_llm_service = MagicMock()
         self.mock_llm_service.invoke = AsyncMock(return_value="Mock LLM response")
     
-    @pytest.mark.asyncio
-    async def test_real_llm_orchestrator_initialization(self):
+    def test_real_llm_orchestrator_initialization(self):
         """Test d'initialisation complète du RealLLMOrchestrator."""
         orchestrator = RealLLMOrchestrator(
-            mode="real", 
+            mode="real",
             kernel=self.mock_llm_service
         )
         
         # Test d'initialisation
         if hasattr(orchestrator, 'initialize'):
-            init_success = await orchestrator.initialize()
+            init_success = orchestrator.initialize()
             assert isinstance(init_success, bool)
 
         assert hasattr(orchestrator, 'rhetorical_analyzer')
         assert hasattr(orchestrator, 'kernel')
     
-    @pytest.mark.asyncio
-    async def test_bnf_feedback_integration(self):
+    def test_bnf_feedback_integration(self):
         """Test d'intégration avec TweetyErrorAnalyzer pour feedback BNF."""
         orchestrator = RealLLMOrchestrator(kernel=self.mock_llm_service)
         
@@ -284,9 +282,8 @@ class TestRealLLMOrchestrationAdvanced:
         assert hasattr(feedback, 'corrections')
         assert hasattr(feedback, 'bnf_rules')
     
-    @pytest.mark.asyncio
     @patch('config.unified_config.UnifiedConfig.get_kernel_with_gpt4o_mini')
-    async def test_intelligent_retry_mechanism(self, mock_get_kernel):
+    def test_intelligent_retry_mechanism(self, mock_get_kernel):
         """Test du mécanisme de retry intelligent avec un kernel mocké."""
         # Configurer le mock pour simuler un LLM qui échoue puis réussit
         mock_kernel_instance = MagicMock(spec=Kernel)
@@ -302,7 +299,7 @@ class TestRealLLMOrchestrationAdvanced:
         # Le test original peut continuer, en supposant que l'orchestrateur est
         # conçu pour gérer une exception et potentiellement réessayer.
         try:
-            result = await orchestrator.run_real_llm_orchestration(self.test_text)
+            result = orchestrator.run_real_llm_orchestration(self.test_text)
             # Le test attend un succès au deuxième essai
             assert isinstance(result, dict)
             # On pourrait même vérifier que le service a été appelé deux fois
@@ -311,14 +308,13 @@ class TestRealLLMOrchestrationAdvanced:
             # Si un retry n'est pas implémenté, le test échouera ici, ce qui est attendu.
             pass
     
-    @pytest.mark.asyncio
-    async def test_semantic_kernel_integration(self):
+    def test_semantic_kernel_integration(self):
         """Test d'intégration avec Semantic Kernel."""
         orchestrator = RealLLMOrchestrator(kernel=self.mock_llm_service)
         
         # Test d'initialisation du kernel
         if hasattr(orchestrator, 'initialize'):
-            await orchestrator.initialize()
+            orchestrator.initialize()
         
         # Vérifier que le kernel est configuré
         if hasattr(orchestrator, 'kernel'):
@@ -362,8 +358,7 @@ class TestUnifiedSystemCoordination:
                 if hasattr(agent, 'orchestrator'):
                     assert agent.orchestrator is not None
     
-    @pytest.mark.asyncio
-    async def test_conversation_to_real_llm_handoff(self):
+    def test_conversation_to_real_llm_handoff(self):
         """Test de handoff entre orchestrateurs."""
         # Phase 1: Orchestration conversationnelle
         conv_orchestrator = ConversationOrchestrator(mode="demo")
@@ -382,8 +377,8 @@ class TestUnifiedSystemCoordination:
                 real_orchestrator.load_state(state)
         
         # Test de continuité
-        await real_orchestrator.initialize()
-        real_result = await real_orchestrator.orchestrate_analysis(self.test_text)
+        real_orchestrator.initialize()
+        real_result = real_orchestrator.run_real_llm_orchestration(self.test_text)
         assert isinstance(real_result, dict)
     
     def test_authentic_mode_validation(self):
@@ -442,8 +437,7 @@ class TestOrchestrationPerformanceAndRobustness:
         
         assert len(collected_results) == 3
     
-    @pytest.mark.asyncio
-    async def test_memory_usage_stability(self):
+    def test_memory_usage_stability(self):
         """Test de stabilité de l'utilisation mémoire."""
         import gc
         

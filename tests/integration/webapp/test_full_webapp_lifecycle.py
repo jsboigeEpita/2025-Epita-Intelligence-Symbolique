@@ -51,38 +51,39 @@ def orchestrator(integration_config, test_config_path, mocker):
         
     return UnifiedWebOrchestrator(args=mock_args)
 
-@pytest.mark.asyncio
-async def test_backend_lifecycle(orchestrator):
+def test_backend_lifecycle(orchestrator):
     """
     Tests the full start and stop lifecycle of the backend through the orchestrator.
     """
-    pid_before_stop = None
-    try:
-        # Start the webapp (only backend enabled)
-        success = await orchestrator.start_webapp()
-        
-        assert success is True
-        assert orchestrator.app_info.status == WebAppStatus.RUNNING
-        assert orchestrator.app_info.backend_pid is not None
-        pid_before_stop = orchestrator.app_info.backend_pid
-        
-        # Check if the process actually exists
-        assert psutil.pid_exists(pid_before_stop)
-        proc = psutil.Process(pid_before_stop)
-        # Check for 'uvicorn' which indicates the real backend is running
-        assert 'uvicorn' in ' '.join(proc.cmdline())
-        
-        # Check that the port is in use
-        assert orchestrator.app_info.backend_port in [9020, 9021, 9022]
-        
-    finally:
-        # Ensure cleanup
-        await orchestrator.stop_webapp()
-        
-        assert orchestrator.app_info.status == WebAppStatus.STOPPED
-        assert orchestrator.app_info.backend_pid is None
-        
-        # Check that the process is actually gone
-        if pid_before_stop:
-            await asyncio.sleep(1) 
-            assert not psutil.pid_exists(pid_before_stop)
+    async def run_test():
+        pid_before_stop = None
+        try:
+            # Start the webapp (only backend enabled)
+            success = await orchestrator.start_webapp()
+            
+            assert success is True
+            assert orchestrator.app_info.status == WebAppStatus.RUNNING
+            assert orchestrator.app_info.backend_pid is not None
+            pid_before_stop = orchestrator.app_info.backend_pid
+            
+            # Check if the process actually exists
+            assert psutil.pid_exists(pid_before_stop)
+            proc = psutil.Process(pid_before_stop)
+            # Check for 'uvicorn' which indicates the real backend is running
+            assert 'uvicorn' in ' '.join(proc.cmdline())
+            
+            # Check that the port is in use
+            assert orchestrator.app_info.backend_port in [9020, 9021, 9022]
+            
+        finally:
+            # Ensure cleanup
+            await orchestrator.stop_webapp()
+            
+            assert orchestrator.app_info.status == WebAppStatus.STOPPED
+            assert orchestrator.app_info.backend_pid is None
+            
+            # Check that the process is actually gone
+            if pid_before_stop:
+                await asyncio.sleep(1)
+                assert not psutil.pid_exists(pid_before_stop)
+    asyncio.run(run_test())

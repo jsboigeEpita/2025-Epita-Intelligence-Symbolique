@@ -53,50 +53,50 @@ def mock_run_analysis(mocker):
 class TestBasicIntegration:
     """Tests d'intégration de base pour vérifier l'interaction entre les composants."""
 
-    @pytest.mark.asyncio
-    async def test_component_interaction(self, basic_state):
+    def test_component_interaction(self, basic_state):
         """Teste l'interaction de base entre les composants en utilisant des mocks."""
-        state = basic_state
-        
-        # Utiliser MagicMock avec spec pour simuler l'interface des agents
-        from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
-        
-        pm_agent = MagicMock(spec=BaseAgent)
-        pm_agent.name = "ProjectManagerAgent"
-        
-        pl_agent = MagicMock(spec=BaseAgent)
-        pl_agent.name = "PropositionalLogicAgent"
-        
-        informal_agent = MagicMock(spec=BaseAgent)
-        informal_agent.name = "InformalAnalysisAgent"
-        
-        agents = [pm_agent, pl_agent, informal_agent]
-        
-        termination_strategy = SimpleTerminationStrategy(state, max_steps=3)
-        
-        state.add_task("Identifier les arguments dans le texte")
-        
-        arg_id = state.add_argument("La Terre est plate car l'horizon semble plat")
-        
-        state.add_fallacy("Faux raisonnement", "Confusion entre apparence et réalité", arg_id)
-        
-        state.set_conclusion("Le texte contient plusieurs sophismes")
-        
-        assert len(state.analysis_tasks) == 1
-        assert len(state.identified_arguments) == 1
-        assert len(state.identified_fallacies) == 1
-        assert state.final_conclusion is not None
-        
-        should_terminate = await termination_strategy.should_terminate(None, [])
-        assert should_terminate
+        async def run_test():
+            state = basic_state
+            
+            # Utiliser MagicMock avec spec pour simuler l'interface des agents
+            from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
+            
+            pm_agent = MagicMock(spec=BaseAgent)
+            pm_agent.name = "ProjectManagerAgent"
+            
+            pl_agent = MagicMock(spec=BaseAgent)
+            pl_agent.name = "PropositionalLogicAgent"
+            
+            informal_agent = MagicMock(spec=BaseAgent)
+            informal_agent.name = "InformalAnalysisAgent"
+            
+            agents = [pm_agent, pl_agent, informal_agent]
+            
+            termination_strategy = SimpleTerminationStrategy(state, max_steps=3)
+            
+            state.add_task("Identifier les arguments dans le texte")
+            
+            arg_id = state.add_argument("La Terre est plate car l'horizon semble plat")
+            
+            state.add_fallacy("Faux raisonnement", "Confusion entre apparence et réalité", arg_id)
+            
+            state.set_conclusion("Le texte contient plusieurs sophismes")
+            
+            assert len(state.analysis_tasks) == 1
+            assert len(state.identified_arguments) == 1
+            assert len(state.identified_fallacies) == 1
+            assert state.final_conclusion is not None
+            
+            should_terminate = await termination_strategy.should_terminate(None, [])
+            assert should_terminate
+        asyncio.run(run_test())
 
 
 class TestSimulatedAnalysisFlow:
     """Tests simulant un flux d'analyse complet avec des mocks."""
 
     
-    @pytest.mark.asyncio
-    async def test_simulated_analysis_flow(self, mock_run_analysis, basic_state):
+    def test_simulated_analysis_flow(self, mock_run_analysis, basic_state):
         """Simule un flux d'analyse complet."""
         state = basic_state
         mock_run_analysis.return_value = (True, "Analyse terminée avec succès")
@@ -189,8 +189,7 @@ def mocked_services():
 class TestExtractIntegration:
     """Tests d'intégration pour les composants d'extraction."""
     
-    @pytest.mark.asyncio
-    async def test_extract_integration(self, mocked_services):
+    def test_extract_integration(self, mocked_services):
         """Teste l'intégration entre les services d'extraction et de récupération."""
         mock_fetch_service, mock_extract_service, integration_sample_definitions = mocked_services
         

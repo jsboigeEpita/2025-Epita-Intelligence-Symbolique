@@ -37,30 +37,27 @@ def test_initialization(manager, frontend_config):
     # La logique de l'orchestrateur utilise 'port'
     assert manager.config['port'] == frontend_config['port']
 
-@pytest.mark.asyncio
-async def test_start_when_disabled(logger_mock):
+def test_start_when_disabled(logger_mock):
     """Tests that start() returns immediately if not enabled."""
     config = {'enabled': False}
     manager = FrontendManager(config, logger_mock)
-    result = await manager.start()
+    result = asyncio.run(manager.start())
     assert result['success'] is True
     assert 'Frontend disabled' in result['error']
 
-@pytest.mark.asyncio
-async def test_start_fails_if_path_not_found(manager, logger_mock):
+def test_start_fails_if_path_not_found(manager, logger_mock):
     """Tests that start() fails if the frontend path does not exist."""
     invalid_config = {
         'enabled': True,
         'path': '/non/existent/path'
     }
     manager_invalid = FrontendManager(invalid_config, logger_mock)
-    result = await manager_invalid.start()
+    result = asyncio.run(manager_invalid.start())
     assert result['success'] is False
     assert "non valide ou non trouvé" in manager_invalid.logger.error.call_args[0][0]
 
-@pytest.mark.asyncio
 @patch('asyncio.create_subprocess_exec')
-async def test_start_success(mock_subprocess, manager, logger_mock, tmp_path):
+def test_start_success(mock_subprocess, manager, logger_mock, tmp_path):
     """Tests the full successful start sequence with the new event-based logic."""
     # Setup
     manager.config['path'] = str(tmp_path)
@@ -91,7 +88,10 @@ async def test_start_success(mock_subprocess, manager, logger_mock, tmp_path):
     mock_subprocess.return_value = mock_proc
 
     # Execute the start method with a timeout to prevent hangs
-    result = await asyncio.wait_for(manager.start(), timeout=2)
+    async def run_start():
+        return await asyncio.wait_for(manager.start(), timeout=2)
+
+    result = asyncio.run(run_start())
 
     # Assertions
     assert result['success'] is True
@@ -103,8 +103,7 @@ async def test_start_success(mock_subprocess, manager, logger_mock, tmp_path):
     assert mock_stdout.readline.call_count == 2
 
 
-@pytest.mark.asyncio
-async def test_stop_process(manager):
+def test_stop_process(manager):
     """Tests that stop correctly terminates the process using psutil."""
     # On simule la présence d'un processus à arrêter
     manager.process = AsyncMock(spec=asyncio.subprocess.Process)
@@ -117,7 +116,7 @@ async def test_stop_process(manager):
         mock_parent.children.return_value = [] # Pas d'enfants pour ce test simple
         mock_psutil_process.return_value = mock_parent
 
-        await manager.stop()
+        asyncio.run(manager.stop())
 
         # On vérifie que `psutil.Process` a été appelé avec le bon PID
         mock_psutil_process.assert_called_with(1234)
@@ -128,26 +127,24 @@ async def test_stop_process(manager):
         # L'important est que la tentative de terminaison a eu lieu.
         pass
 
-@pytest.mark.asyncio
-async def test_health_check_success(manager):
+def test_health_check_success(manager):
     """Tests a successful health check."""
     with patch('aiohttp.ClientSession.get') as mock_get:
         mock_response = AsyncMock()
         mock_response.status = 200
         mock_get.return_value.__aenter__.return_value = mock_response
         
-        result = await manager.health_check()
+        result = asyncio.run(manager.health_check())
         
         assert result is True
 
-@pytest.mark.asyncio
-async def test_health_check_failure(manager):
+def test_health_check_failure(manager):
     """Tests a failed health check."""
     with patch('aiohttp.ClientSession.get') as mock_get:
         mock_response = AsyncMock()
         mock_response.status = 500
         mock_get.return_value.__aenter__.return_value = mock_response
         
-        result = await manager.health_check()
+        result = asyncio.run(manager.health_check())
         
         assert result is False

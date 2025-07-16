@@ -36,7 +36,7 @@ from argumentation_analysis.paths import RESULTS_DIR
 class TestHierarchicalIntegration(unittest.TestCase):
     """Tests d'intégration pour l'architecture hiérarchique à trois niveaux."""
     
-    async def asyncSetUp(self):
+    def setUp(self):
         """Initialise les objets nécessaires pour les tests."""
         # Configurer le logging
         logging.basicConfig(level=logging.INFO)
@@ -77,7 +77,7 @@ class TestHierarchicalIntegration(unittest.TestCase):
         # Configurer les mocks des agents
         self.extract_agent.get_capabilities.return_value = ["text_extraction", "preprocessing"]
         self.extract_agent.can_process_task.return_value = True
-        self.extract_agent.process_task.return_value = {
+        self.extract_agent.process_task = AsyncMock(return_value={
             "id": "result-op-task-1",
             "task_id": "op-task-1",
             "tactical_task_id": "task-1",
@@ -99,11 +99,11 @@ class TestHierarchicalIntegration(unittest.TestCase):
                 "resource_usage": 0.5
             },
             "issues": []
-        }
+        })
         
         self.informal_agent.get_capabilities.return_value = ["fallacy_detection", "argument_identification"]
         self.informal_agent.can_process_task.return_value = True
-        self.informal_agent.process_task.return_value = {
+        self.informal_agent.process_task = AsyncMock(return_value={
             "id": "result-op-task-2",
             "task_id": "op-task-2",
             "tactical_task_id": "task-2",
@@ -134,11 +134,11 @@ class TestHierarchicalIntegration(unittest.TestCase):
                 "resource_usage": 0.6
             },
             "issues": []
-        }
+        })
         
         self.pl_agent.get_capabilities.return_value = ["formal_logic", "validity_checking"]
         self.pl_agent.can_process_task.return_value = True
-        self.pl_agent.process_task.return_value = {
+        self.pl_agent.process_task = AsyncMock(return_value={
             "id": "result-op-task-3",
             "task_id": "op-task-3",
             "tactical_task_id": "task-3",
@@ -160,7 +160,7 @@ class TestHierarchicalIntegration(unittest.TestCase):
                 "resource_usage": 0.4
             },
             "issues": []
-        }
+        })
         
         # Créer le gestionnaire opérationnel avec les agents mockés
         self.operational_manager = OperationalManager(
@@ -173,7 +173,7 @@ class TestHierarchicalIntegration(unittest.TestCase):
         self.operational_manager.register_agent(self.informal_agent)
         self.operational_manager.register_agent(self.pl_agent)
     
-    async def test_end_to_end_workflow(self):
+    def test_end_to_end_workflow(self):
         """Teste le workflow complet de l'architecture hiérarchique."""
         # 1. Définir des objectifs stratégiques
         objectives = [
@@ -291,11 +291,11 @@ class TestHierarchicalIntegration(unittest.TestCase):
         for op_task in operational_tasks:
             # Déterminer quel agent utiliser en fonction des capacités requises
             if "text_extraction" in op_task.get("techniques", [{}])[0].get("name", ""):
-                result = await self.extract_agent.process_task(op_task)
+                result = asyncio.run(self.extract_agent.process_task(op_task))
             elif "fallacy_detection" in op_task.get("techniques", [{}])[0].get("name", ""):
-                result = await self.informal_agent.process_task(op_task)
+                result = asyncio.run(self.informal_agent.process_task(op_task))
             else:
-                result = await self.pl_agent.process_task(op_task)
+                result = asyncio.run(self.pl_agent.process_task(op_task))
             
             operational_results.append(result)
         
@@ -390,43 +390,45 @@ class TestHierarchicalIntegration(unittest.TestCase):
 class TestHierarchicalPerformance(unittest.TestCase):
     """Tests de performance pour l'architecture hiérarchique à trois niveaux."""
     
-    async def test_performance_comparison(self):
+    def test_performance_comparison(self):
         """
         Compare les performances de l'ancienne et de la nouvelle architecture.
         
         Note: Ce test est un exemple simplifié. Dans une implémentation réelle,
         il faudrait mesurer les performances sur des cas d'utilisation réels.
         """
-        # Mesurer le temps d'exécution de la nouvelle architecture
-        start_time = datetime.now()
-        
-        # Simuler l'exécution de la nouvelle architecture
-        # (Utiliser les mêmes étapes que dans test_end_to_end_workflow)
-        await asyncio.sleep(0.1)  # Simuler un délai d'exécution
-        
-        end_time = datetime.now()
-        new_architecture_time = (end_time - start_time).total_seconds()
-        
-        # Mesurer le temps d'exécution de l'ancienne architecture
-        start_time = datetime.now()
-        
-        # Simuler l'exécution de l'ancienne architecture
-        # (Utiliser une implémentation simplifiée de l'ancienne architecture)
-        await asyncio.sleep(0.2)  # Simuler un délai d'exécution plus long
-        
-        end_time = datetime.now()
-        old_architecture_time = (end_time - start_time).total_seconds()
-        
-        # Comparer les performances
-        self.assertLess(new_architecture_time, old_architecture_time)
-        
-        # Calculer l'amélioration en pourcentage
-        improvement = (old_architecture_time - new_architecture_time) / old_architecture_time * 100
-        
-        # Afficher les résultats
-        print(f"Temps d'exécution de la nouvelle architecture: {new_architecture_time:.3f} secondes")
-        print(f"Temps d'exécution de l'ancienne architecture: {old_architecture_time:.3f} secondes")
-        print(f"Amélioration: {improvement:.2f}%")
+        async def run_test():
+            # Mesurer le temps d'exécution de la nouvelle architecture
+            start_time = datetime.now()
+            
+            # Simuler l'exécution de la nouvelle architecture
+            # (Utiliser les mêmes étapes que dans test_end_to_end_workflow)
+            await asyncio.sleep(0.1)  # Simuler un délai d'exécution
+            
+            end_time = datetime.now()
+            new_architecture_time = (end_time - start_time).total_seconds()
+            
+            # Mesurer le temps d'exécution de l'ancienne architecture
+            start_time = datetime.now()
+            
+            # Simuler l'exécution de l'ancienne architecture
+            # (Utiliser une implémentation simplifiée de l'ancienne architecture)
+            await asyncio.sleep(0.2)  # Simuler un délai d'exécution plus long
+            
+            end_time = datetime.now()
+            old_architecture_time = (end_time - start_time).total_seconds()
+            
+            # Comparer les performances
+            self.assertLess(new_architecture_time, old_architecture_time)
+            
+            # Calculer l'amélioration en pourcentage
+            improvement = (old_architecture_time - new_architecture_time) / old_architecture_time * 100
+            
+            # Afficher les résultats
+            print(f"Temps d'exécution de la nouvelle architecture: {new_architecture_time:.3f} secondes")
+            print(f"Temps d'exécution de l'ancienne architecture: {old_architecture_time:.3f} secondes")
+            print(f"Amélioration: {improvement:.2f}%")
+        asyncio.run(run_test())
 
 
 if __name__ == "__main__":

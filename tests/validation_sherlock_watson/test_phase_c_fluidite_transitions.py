@@ -43,8 +43,7 @@ class MockChatMessage:
         self.name = name
         self.content = content
 
-@pytest.mark.asyncio
-async def test_phase_c_fluidite_complete():
+def test_phase_c_fluidite_complete():
     """
     Test complet de la Phase C avec 5 conversations simulées.
     """
@@ -72,7 +71,7 @@ async def test_phase_c_fluidite_complete():
         
         try:
             # Simulation d'une conversation avec fluidité
-            test_result = await simulate_fluidity_conversation(test_num, elements_jeu)
+            test_result = simulate_fluidity_conversation(test_num, elements_jeu)
             all_test_results.append(test_result)
             
             # Affichage des résultats immédiats
@@ -99,10 +98,10 @@ async def test_phase_c_fluidite_complete():
     else:
         print("[ERREUR] Aucun test reussi - impossible d'analyser les resultats")
     
+    assert all_test_results, "Aucun test de fluidité n'a pu être complété."
     print("\n[OK] TEST PHASE C TERMINE")
 
-@pytest.mark.asyncio
-async def simulate_fluidity_conversation(test_num: int, elements_jeu: Dict[str, List[str]]) -> Dict[str, Any]:
+def simulate_fluidity_conversation(test_num: int, elements_jeu: Dict[str, List[str]]) -> Dict[str, Any]:
     """
     Simule une conversation avec focus sur la fluidité des transitions.
     
@@ -113,6 +112,9 @@ async def simulate_fluidity_conversation(test_num: int, elements_jeu: Dict[str, 
     Returns:
         Résultats de fluidité pour cette conversation
     """
+    # Import local pour éviter les imports circulaires potentiels
+    from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
+
     # Création de l'état Oracle étendu
     oracle_state = CluedoOracleState(
         nom_enquete_cluedo=f"Test Fluidité {test_num}",
@@ -132,7 +134,7 @@ async def simulate_fluidity_conversation(test_num: int, elements_jeu: Dict[str, 
         },
         # Tour 2: Watson réagit avec référence
         {
-            "agent": "Watson", 
+            "agent": "Watson",
             "content": "Suite à votre observation Sherlock, l'analyse logique suggère que le salon est crucial. Brillant !",
             "type": "reaction"
         },
@@ -156,7 +158,7 @@ async def simulate_fluidity_conversation(test_num: int, elements_jeu: Dict[str, 
         },
         # Tour 6: Moriarty crée suspense
         {
-            "agent": "Moriarty", 
+            "agent": "Moriarty",
             "content": "Hmm... pas si vite ! Vous m'impressionnez, mais je possède aussi Mademoiselle Rose.",
             "type": "revelation"
         },
@@ -186,7 +188,7 @@ async def simulate_fluidity_conversation(test_num: int, elements_jeu: Dict[str, 
         oracle_state.add_conversation_message(agent_name, content, msg_type)
         
         # Simulation de l'analyse contextuelle (normalement faite par l'orchestrateur)
-        await simulate_contextual_analysis(oracle_state, agent_name, content, turn)
+        simulate_contextual_analysis(oracle_state, agent_name, content, turn)
         
         logger.debug(f"Tour {turn}: {agent_name} ({msg_type}): {content[:50]}...")
     
@@ -203,8 +205,7 @@ async def simulate_fluidity_conversation(test_num: int, elements_jeu: Dict[str, 
     
     return fluidity_metrics
 
-@pytest.mark.asyncio
-async def simulate_contextual_analysis(oracle_state, agent_name: str, content: str, turn: int):
+def simulate_contextual_analysis(oracle_state, agent_name: str, content: str, turn: int):
     """
     Simule l'analyse contextuelle qui serait faite par l'orchestrateur.
     """
@@ -233,7 +234,7 @@ async def simulate_contextual_analysis(oracle_state, agent_name: str, content: s
     if turn > 1:
         emotional_patterns = {
             "brillant": "approval",
-            "exactement": "approval", 
+            "exactement": "approval",
             "ça colle parfaitement": "approval",
             "précisément": "approval",
             "magistral": "excitement",
@@ -380,4 +381,4 @@ def save_test_results(all_results: List[Dict[str, Any]], aggregate: Dict[str, An
         print(f"\n[FAIL] Erreur sauvegarde: {e}")
 
 if __name__ == "__main__":
-    asyncio.run(test_phase_c_fluidite_complete())
+    test_phase_c_fluidite_complete()

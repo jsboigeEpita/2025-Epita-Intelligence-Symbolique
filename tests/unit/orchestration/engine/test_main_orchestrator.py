@@ -37,9 +37,8 @@ def orchestrator(mock_config, mock_kernel):
         return MainOrchestrator(config=mock_config, kernel=mock_kernel)
 
 
-@pytest.mark.asyncio
 @patch('argumentation_analysis.orchestration.engine.main_orchestrator.select_strategy')
-async def test_run_analysis_selects_and_executes_correct_strategy(mock_select_strategy, orchestrator):
+def test_run_analysis_selects_and_executes_correct_strategy(mock_select_strategy, orchestrator):
     """
     Vérifie que run_analysis sélectionne une stratégie et exécute la méthode correspondante.
     Ce test est un exemple simple pour une seule stratégie.
@@ -54,7 +53,7 @@ async def test_run_analysis_selects_and_executes_correct_strategy(mock_select_st
         
         # Appel de la méthode à tester
         text_input = "Ceci est un texte de test."
-        result = await orchestrator.run_analysis(text_input)
+        result = asyncio.run(orchestrator.run_analysis(text_input))
         
         # Assertions
         mock_select_strategy.assert_called_once_with(orchestrator.config, text_input, None, None)
@@ -79,10 +78,9 @@ strategy_to_method_map = [
 ]
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("strategy, method_name", strategy_to_method_map)
 @patch('argumentation_analysis.orchestration.engine.main_orchestrator.select_strategy')
-async def test_run_analysis_routes_to_all_strategies(mock_select_strategy, strategy, method_name, orchestrator):
+def test_run_analysis_routes_to_all_strategies(mock_select_strategy, strategy, method_name, orchestrator):
     """
     Vérifie que run_analysis appelle la bonne méthode d'exécution pour chaque stratégie possible.
     Ce test paramétré garantit que le "routage" interne de run_analysis est correct.
@@ -99,7 +97,7 @@ async def test_run_analysis_routes_to_all_strategies(mock_select_strategy, strat
         custom_config = {"mode": "fast"}
         
         # Appel de la méthode à tester
-        result = await orchestrator.run_analysis(text_input, source_info, custom_config)
+        result = asyncio.run(orchestrator.run_analysis(text_input, source_info, custom_config))
         
         # Assertions
         mock_select_strategy.assert_called_with(orchestrator.config, text_input, source_info, custom_config)
@@ -107,9 +105,8 @@ async def test_run_analysis_routes_to_all_strategies(mock_select_strategy, strat
         assert result["strategy_used"] == strategy.value
 
 
-@pytest.mark.asyncio
 @patch('argumentation_analysis.orchestration.engine.main_orchestrator.select_strategy')
-async def test_run_analysis_handles_unknown_strategy(mock_select_strategy, orchestrator):
+def test_run_analysis_handles_unknown_strategy(mock_select_strategy, orchestrator):
     """
     Vérifie le comportement de run_analysis lorsqu'une stratégie inconnue ou nulle est retournée.
     """
@@ -117,7 +114,7 @@ async def test_run_analysis_handles_unknown_strategy(mock_select_strategy, orche
     mock_select_strategy.return_value = None
     
     text_input = "Test avec une stratégie inconnue."
-    result = await orchestrator.run_analysis(text_input)
+    result = asyncio.run(orchestrator.run_analysis(text_input))
     
     # Assertions
     assert result["status"] == "error"

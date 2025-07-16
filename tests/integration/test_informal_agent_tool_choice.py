@@ -50,9 +50,12 @@ def test_informal_agent_forced_tool_choice(tmp_path):
     # 5. Invocation de l'agent
     try:
         # Consommer le générateur pour s'assurer que l'invocation complète est exécutée
-        async def _invoke():
-            return [m async for m in agent.invoke(chat_history)]
-        _ = asyncio.run(_invoke())
+        def _invoke():
+            # Since agent.invoke is an async generator, we need an event loop to run it.
+            async def _inner_invoke():
+                return [m async for m in agent.invoke(chat_history)]
+            return asyncio.run(_inner_invoke())
+        _ = _invoke()
     except Exception as e:
         pytest.fail(f"L'invocation de l'agent a échoué avec une exception inattendue: {e}")
 

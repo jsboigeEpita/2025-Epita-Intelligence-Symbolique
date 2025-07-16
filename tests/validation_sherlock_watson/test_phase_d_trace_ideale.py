@@ -28,8 +28,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.asyncio
-async def test_phase_d_trace_ideale():
+def test_phase_d_trace_ideale():
     """
     Test complet de la Phase D pour atteindre la trace idéale (8.0+/10).
     """
@@ -80,7 +79,7 @@ async def test_phase_d_trace_ideale():
                 "type": "analysis"
             },
             {
-                "agent": "Watson", 
+                "agent": "Watson",
                 "content": "Suite à votre brillante analyse Sherlock, je confirme la logique.",
                 "type": "reaction"
             },
@@ -112,15 +111,15 @@ async def test_phase_d_trace_ideale():
         # Ajout des messages à l'historique
         for msg in conversation_scenario:
             oracle_state.add_conversation_message(
-                msg["agent"], 
-                msg["content"], 
+                msg["agent"],
+                msg["content"],
                 msg["type"]
             )
             print(f"\n[{msg['agent']}]: {msg['content'][:100]}...")
         
         print(f"\n[OK] {len(conversation_scenario)} messages ajoutés avec dramaturgie")
         
-        # SCÉNARIO 2: Test des retournements narratifs  
+        # SCÉNARIO 2: Test des retournements narratifs
         print("\n" + "="*50)
         print("SCÉNARIO 2: RETOURNEMENTS NARRATIFS")
         print("="*50)
@@ -141,7 +140,7 @@ async def test_phase_d_trace_ideale():
             print("[INFO] Aucun retournement généré pour ce contexte")
         
         # SCÉNARIO 3: Progression avec crescendo
-        print("\n" + "="*50) 
+        print("\n" + "="*50)
         print("SCÉNARIO 3: CRESCENDO FINAL")
         print("="*50)
         
@@ -204,7 +203,7 @@ async def test_phase_d_trace_ideale():
             # 8-10 messages par test pour avoir assez de données
             test_messages = [
                 ("Sherlock", "J'analyse les indices présents dans cette pièce.", "analysis"),
-                ("Watson", "Brillante approche ! Je suis votre raisonnement.", "reaction"),  
+                ("Watson", "Brillante approche ! Je suis votre raisonnement.", "reaction"),
                 ("Moriarty", extensions.generate_progressive_revelation("", f"Test {test_id}: J'ai le Professeur Violet !", 0.8), "revelation"),
                 ("Watson", "Exactement ce que je pensais ! Continuons.", "reaction"),
                 ("Sherlock", "Précisément. Cette information affine notre recherche.", "analysis"),
@@ -292,8 +291,8 @@ async def test_phase_d_trace_ideale():
             "validation_criteria": validation_criteria,
             "success_rate": success_rate,
             "conversation_history": [
-                {"agent": msg.get("agent_name", ""), 
-                 "content": msg.get("content", "")[:200], 
+                {"agent": msg.get("agent_name", ""),
+                 "content": msg.get("content", "")[:200],
                  "type": msg.get("message_type", "")}
                 for msg in oracle_state.conversation_history
             ],
@@ -329,16 +328,16 @@ async def test_phase_d_trace_ideale():
         
         print(f"\n[OK] TEST PHASE D TERMINÉ - STATUS: {success_status}")
         
+        assert phase_d_success, "La validation de la Phase D a échoué."
         return results_data
         
     except Exception as e:
         logger.error(f"Erreur durant le test Phase D: {e}", exc_info=True)
-        print(f"\n[ERREUR] Test Phase D échoué: {e}")
+        pytest.fail(f"Test Phase D a échoué: {e}")
         return None
 
 
-@pytest.mark.asyncio
-async def demonstration_trace_ideale():
+def demonstration_trace_ideale():
     """
     Démonstration complète d'une conversation trace idéale.
     """
@@ -378,7 +377,7 @@ async def demonstration_trace_ideale():
             },
             {
                 "tour": 2,
-                "agent": "Watson", 
+                "agent": "Watson",
                 "content": "Brillante approche Sherlock ! Suite à votre observation, je remarque également que la logique des indices converge vers une hypothèse claire.",
                 "type": "reaction"
             },
@@ -445,7 +444,7 @@ async def demonstration_trace_ideale():
         for msg in conversation_ideale:
             oracle_state.add_conversation_message(
                 msg["agent"],
-                msg["content"], 
+                msg["content"],
                 msg["type"]
             )
             
@@ -477,12 +476,12 @@ async def demonstration_trace_ideale():
 
 if __name__ == "__main__":
     # Exécution des tests Phase D
-    async def run_all_tests():
+    def run_all_tests():
         print("LANCEMENT TESTS COMPLETS PHASE D")
         print("="*70)
         
         # Test principal
-        results = await test_phase_d_trace_ideale()
+        results = test_phase_d_trace_ideale()
         
         if results:
             print("\n" + "="*50)
@@ -490,10 +489,10 @@ if __name__ == "__main__":
             
             # Démonstration si tests réussis
             if results.get("phase_d_success", False):
-                demo_results = await demonstration_trace_ideale()
+                demo_results = demonstration_trace_ideale()
                 if demo_results:
                     print("\n[OK] DÉMONSTRATION TRACE IDÉALE COMPLÉTÉE")
             
         print("\n🎉 PHASE D - TOUS LES TESTS TERMINÉS")
     
-    asyncio.run(run_all_tests())
+    run_all_tests()

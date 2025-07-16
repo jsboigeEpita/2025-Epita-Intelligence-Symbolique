@@ -1,4 +1,5 @@
 
+import asyncio
 import os
 import sys
 import json
@@ -146,36 +147,40 @@ class TestExtractRepairPlugin:
 class TestRepairScriptFunctions:
     """Tests pour les fonctions du script de réparation."""
 
-    @pytest.mark.asyncio
-    async def test_repair_extract_markers_with_template(self, sample_definitions_with_template):
+    def test_repair_extract_markers_with_template(self, sample_definitions_with_template):
         """Test de réparation des extraits avec template."""
-        llm_service_mock, fetch_service_mock, extract_service_mock = MagicMock(), MagicMock(), MagicMock()
-        
-        updated_defs, results = await repair_extract_markers(
-            sample_definitions_with_template, llm_service_mock, fetch_service_mock, extract_service_mock
-        )
-        
-        assert len(results) == 1
-        result = results[0]
-        assert result["status"] == "repaired"
-        assert result["old_start_marker"] == "EBUT_EXTRAIT"
-        assert result["new_start_marker"] == "DEBUT_EXTRAIT"
-        
-        # Vérifier aussi la modification directe de l'objet
-        assert updated_defs.sources[0].extracts[0].start_marker == "DEBUT_EXTRAIT"
+        async def run_test():
+            llm_service_mock, fetch_service_mock, extract_service_mock = MagicMock(), MagicMock(), MagicMock()
+            
+            updated_defs, results = await repair_extract_markers(
+                sample_definitions_with_template, llm_service_mock, fetch_service_mock, extract_service_mock
+            )
+            
+            assert len(results) == 1
+            result = results[0]
+            assert result["status"] == "repaired"
+            assert result["old_start_marker"] == "EBUT_EXTRAIT"
+            assert result["new_start_marker"] == "DEBUT_EXTRAIT"
+            
+            # Vérifier aussi la modification directe de l'objet
+            assert updated_defs.sources[0].extracts[0].start_marker == "DEBUT_EXTRAIT"
 
-    @pytest.mark.asyncio
-    async def test_repair_extract_markers_without_template(self, sample_definitions):
+        asyncio.run(run_test())
+
+    def test_repair_extract_markers_without_template(self, sample_definitions):
         """Test de réparation des extraits sans template (ne devrait rien faire)."""
-        llm_service_mock, fetch_service_mock, extract_service_mock = MagicMock(), MagicMock(), MagicMock()
-        
-        updated_defs, results = await repair_extract_markers(
-            sample_definitions, llm_service_mock, fetch_service_mock, extract_service_mock
-        )
-        
-        assert len(results) == 1
-        assert results[0]["status"] == "valid"
-        assert updated_defs.sources[0].extracts[0].start_marker == "DEBUT_EXTRAIT"
+        async def run_test():
+            llm_service_mock, fetch_service_mock, extract_service_mock = MagicMock(), MagicMock(), MagicMock()
+            
+            updated_defs, results = await repair_extract_markers(
+                sample_definitions, llm_service_mock, fetch_service_mock, extract_service_mock
+            )
+            
+            assert len(results) == 1
+            assert results[0]["status"] == "valid"
+            assert updated_defs.sources[0].extracts[0].start_marker == "DEBUT_EXTRAIT"
+
+        asyncio.run(run_test())
 
     @patch('builtins.open')
     @patch('json.dump')
@@ -193,19 +198,21 @@ class TestSetupAgents:
 
     @patch('semantic_kernel.Kernel')
     @patch('argumentation_analysis.utils.dev_tools.repair_utils.logger')
-    @pytest.mark.asyncio
-    async def test_setup_agents(self, mock_logger, mock_kernel_class):
+    def test_setup_agents(self, mock_logger, mock_kernel_class):
         """
         Test de configuration des agents pour refléter l'état actuel (désactivé).
         """
-        llm_service_mock = MagicMock()
-        kernel_instance_mock = mock_kernel_class()
+        async def run_test():
+            llm_service_mock = MagicMock()
+            kernel_instance_mock = mock_kernel_class()
 
-        repair_agent, validation_agent = await setup_agents(llm_service_mock, kernel_instance_mock)
+            repair_agent, validation_agent = await setup_agents(llm_service_mock, kernel_instance_mock)
 
-        assert repair_agent is None
-        assert validation_agent is None
-        kernel_instance_mock.add_service.assert_not_called()
-        mock_logger.warning.assert_called_once_with(
-            "setup_agents: ChatCompletionAgent est temporairement désactivé. Retour de (None, None)."
-        )
+            assert repair_agent is None
+            assert validation_agent is None
+            kernel_instance_mock.add_service.assert_not_called()
+            mock_logger.warning.assert_called_once_with(
+                "setup_agents: ChatCompletionAgent est temporairement désactivé. Retour de (None, None)."
+            )
+
+        asyncio.run(run_test())

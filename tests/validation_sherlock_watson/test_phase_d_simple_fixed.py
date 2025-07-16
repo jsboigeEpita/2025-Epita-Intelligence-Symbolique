@@ -11,8 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.asyncio
-async def test_phase_d_simple():
+def test_phase_d_simple():
     """Test simple des fonctionnalités Phase D."""
     print("DEBUT TEST PHASE D SIMPLE")
     print("=" * 50)
@@ -165,8 +164,9 @@ async def test_phase_d_simple():
     except Exception as e:
         logger.error(f"Erreur test Phase D: {e}", exc_info=True)
         print(f"\n[ERREUR] Test échoué: {e}")
+        pytest.fail(f"Test Phase D Simple a échoué: {e}")
         return None
 
 
 if __name__ == "__main__":
-    asyncio.run(test_phase_d_simple())
+    test_phase_d_simple()

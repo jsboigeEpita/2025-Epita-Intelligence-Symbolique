@@ -1,6 +1,7 @@
 import pytest
 import json
 from pathlib import Path
+import asyncio
 
 import semantic_kernel as sk
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
@@ -27,10 +28,11 @@ class TestLogicalAgentHardening:
     """
 
     @pytest.mark.parametrize("load_scenario", ["contradictory_scenario"], indirect=True)
-    async def test_agent_identifies_contradiction(self, kernel, load_scenario):
+    def test_agent_identifies_contradiction(self, kernel, load_scenario):
         """
         Test that the agent correctly identifies a contradiction using its JTMS.
         """
+        # This test is synchronous as it does not await any coroutines.
         agent = SherlockJTMSAgent(kernel, agent_name="test_contradiction_agent")
 
         # Manually add facts as beliefs. A more advanced implementation
@@ -60,28 +62,30 @@ class TestLogicalAgentHardening:
             "The list of conflicts should not be empty."
 
     @pytest.mark.parametrize("load_scenario", ["ambiguous_scenario"], indirect=True)
-    async def test_agent_handles_ambiguity(self, kernel, load_scenario):
+    def test_agent_handles_ambiguity(self, kernel, load_scenario):
         """
         Test that the agent reports low confidence when facts are ambiguous.
         """
-        agent = SherlockJTMSAgent(kernel, agent_name="test_ambiguity_agent")
+        async def run_test():
+            agent = SherlockJTMSAgent(kernel, agent_name="test_ambiguity_agent")
 
-        # Add facts from the scenario
-        for fact in load_scenario["facts"]:
-            agent._evidence_manager.add_evidence({"description": fact})
+            # Add facts from the scenario
+            for fact in load_scenario["facts"]:
+                agent._evidence_manager.add_evidence({"description": fact})
 
-        # Create two competing hypotheses based on the rules.
-        # The scenario implies "weapon is Revolver OR weapon is Poignard".
-        h1_id = agent._hypothesis_tracker.create_hypothesis("weapon(Revolver)")
-        h2_id = agent._hypothesis_tracker.create_hypothesis("weapon(Poignard)")
-        
-        # In a real scenario, evidence would support one or the other.
-        # Here, with no specific supporting evidence, the agent should be uncertain.
-        
-        solution = await agent.deduce_solution({"goal": "Determine the weapon"})
+            # Create two competing hypotheses based on the rules.
+            # The scenario implies "weapon is Revolver OR weapon is Poignard".
+            h1_id = agent._hypothesis_tracker.create_hypothesis("weapon(Revolver)")
+            h2_id = agent._hypothesis_tracker.create_hypothesis("weapon(Poignard)")
+            
+            # In a real scenario, evidence would support one or the other.
+            # Here, with no specific supporting evidence, the agent should be uncertain.
+            
+            solution = await agent.deduce_solution({"goal": "Determine the weapon"})
 
-        assert "error" not in solution, "Deduction should not result in an error."
-        assert solution["confidence_score"] < 0.6, \
-            f"Confidence should be low for an ambiguous case, but was {solution['confidence_score']}."
-        assert len(solution.get("alternative_hypotheses", [])) > 0, \
-            "There should be at least one alternative hypothesis."
+            assert "error" not in solution, "Deduction should not result in an error."
+            assert solution["confidence_score"] < 0.6, \
+                f"Confidence should be low for an ambiguous case, but was {solution['confidence_score']}."
+            assert len(solution.get("alternative_hypotheses", [])) > 0, \
+                "There should be at least one alternative hypothesis."
+        asyncio.run(run_test())

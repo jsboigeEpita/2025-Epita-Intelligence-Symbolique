@@ -31,8 +31,8 @@ from argumentation_analysis.services.fetch_service import FetchService
 # Configuration pytest-asyncio
 pytestmark = pytest.mark.asyncio
 
-@pytest_asyncio.fixture
-async def analysis_fixture():
+@pytest.fixture
+def analysis_fixture():
     """Fixture pour initialiser les composants de base pour les tests d'analyse."""
     test_text = """
     La Terre est plate car l'horizon semble plat quand on regarde au loin.
@@ -78,45 +78,47 @@ def balanced_strategy_fixture(monkeypatch):
 class TestExtractIntegrationWithBalancedStrategy:
     """Tests d'intégration pour les composants d'extraction avec la stratégie d'équilibrage."""
 
-    async def test_extract_integration_with_balanced_strategy(self, balanced_strategy_fixture):
-        state, mock_fetch_service, mock_extract_service, integration_sample_definitions = balanced_strategy_fixture
-        
-        source = integration_sample_definitions.sources[0]
-        extract_def = source.extracts[0]
-        
-        pm_agent = MagicMock(); pm_agent.name = "ProjectManagerAgent"
-        pl_agent = MagicMock(); pl_agent.name = "PropositionalLogicAgent"
-        informal_agent = MagicMock(); informal_agent.name = "InformalAnalysisAgent"
-        extract_agent_mock = MagicMock(); extract_agent_mock.name = "ExtractAgent"
-        
-        agents = [pm_agent, pl_agent, informal_agent, extract_agent_mock]
-        
-        balanced_strategy = BalancedParticipationStrategy(agents=agents, state=state, default_agent_name="ProjectManagerAgent")
-        
-        source_text, url = mock_fetch_service.fetch_text(source.to_dict())
-        assert source_text is not None
-        assert url == "https://example.com/test"
-        
-        extracted_text, status, start_found, end_found = mock_extract_service.extract_text_with_markers(
-            source_text, extract_def.start_marker, extract_def.end_marker
-        )
-        assert start_found
-        assert end_found
-        assert "Extraction réussie" in status
-        
-        extract_id = state.add_extract(extract_def.extract_name, extracted_text)
-        
-        history = []
-        state.designate_next_agent("ExtractAgent")
-        selected_agent = await balanced_strategy.next(agents, history)
-        assert selected_agent == extract_agent_mock
-        
-        assert balanced_strategy._participation_counts["ExtractAgent"] == 1
-        assert balanced_strategy._total_turns == 1
-        assert len(state.extracts) == 1
-        assert state.extracts[0]["id"] == extract_id
-        assert state.extracts[0]["name"] == extract_def.extract_name
-        assert state.extracts[0]["content"] == extracted_text
+    def test_extract_integration_with_balanced_strategy(self, balanced_strategy_fixture):
+        async def run_test():
+            state, mock_fetch_service, mock_extract_service, integration_sample_definitions = balanced_strategy_fixture
+            
+            source = integration_sample_definitions.sources[0]
+            extract_def = source.extracts[0]
+            
+            pm_agent = MagicMock(); pm_agent.name = "ProjectManagerAgent"
+            pl_agent = MagicMock(); pl_agent.name = "PropositionalLogicAgent"
+            informal_agent = MagicMock(); informal_agent.name = "InformalAnalysisAgent"
+            extract_agent_mock = MagicMock(); extract_agent_mock.name = "ExtractAgent"
+            
+            agents = [pm_agent, pl_agent, informal_agent, extract_agent_mock]
+            
+            balanced_strategy = BalancedParticipationStrategy(agents=agents, state=state, default_agent_name="ProjectManagerAgent")
+            
+            source_text, url = mock_fetch_service.fetch_text(source.to_dict())
+            assert source_text is not None
+            assert url == "https://example.com/test"
+            
+            extracted_text, status, start_found, end_found = mock_extract_service.extract_text_with_markers(
+                source_text, extract_def.start_marker, extract_def.end_marker
+            )
+            assert start_found
+            assert end_found
+            assert "Extraction réussie" in status
+            
+            extract_id = state.add_extract(extract_def.extract_name, extracted_text)
+            
+            history = []
+            state.designate_next_agent("ExtractAgent")
+            selected_agent = await balanced_strategy.next(agents, history)
+            assert selected_agent == extract_agent_mock
+            
+            assert balanced_strategy._participation_counts["ExtractAgent"] == 1
+            assert balanced_strategy._total_turns == 1
+            assert len(state.extracts) == 1
+            assert state.extracts[0]["id"] == extract_id
+            assert state.extracts[0]["name"] == extract_def.extract_name
+            assert state.extracts[0]["content"] == extracted_text
+        asyncio.run(run_test())
 
 
 if __name__ == '__main__':

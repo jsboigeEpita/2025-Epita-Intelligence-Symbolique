@@ -28,7 +28,7 @@ import asyncio
 import time
 import logging
 from typing import Dict, Any, Optional
-
+from unittest.mock import Mock
 
 # Imports Semantic Kernel
 try:
@@ -77,40 +77,42 @@ class RateLimiter:
         self.token_usage = []
         self.last_request_time = 0
     
-    async def wait_if_needed(self, estimated_tokens: int = 100):
+    def wait_if_needed(self, estimated_tokens: int = 100):
         """Attend si nécessaire pour respecter les rate limits."""
-        current_time = time.time()
-        
-        # Nettoyage des anciens records (> 1 minute)
-        cutoff_time = current_time - 60
-        self.request_times = [t for t in self.request_times if t > cutoff_time]
-        self.token_usage = [(t, tokens) for t, tokens in self.token_usage if t > cutoff_time]
-        
-        # Vérification rate limit requêtes
-        if len(self.request_times) >= self.requests_per_minute:
-            wait_time = 60 - (current_time - self.request_times[0])
-            if wait_time > 0:
-                logger.info(f"Rate limit requêtes: attente {wait_time:.2f}s")
-                await asyncio.sleep(wait_time)
-        
-        # Vérification rate limit tokens
-        current_tokens = sum(tokens for _, tokens in self.token_usage)
-        if current_tokens + estimated_tokens > self.tokens_per_minute:
-            wait_time = 60 - (current_time - self.token_usage[0][0])
-            if wait_time > 0:
-                logger.info(f"Rate limit tokens: attente {wait_time:.2f}s")
-                await asyncio.sleep(wait_time)
-        
-        # Attente minimale entre requêtes
-        min_interval = 0.1  # 100ms minimum
-        time_since_last = current_time - self.last_request_time
-        if time_since_last < min_interval:
-            await asyncio.sleep(min_interval - time_since_last)
-        
-        # Enregistrement de la requête
-        self.request_times.append(time.time())
-        self.token_usage.append((time.time(), estimated_tokens))
-        self.last_request_time = time.time()
+        async def _wait():
+            current_time = time.time()
+            
+            # Nettoyage des anciens records (> 1 minute)
+            cutoff_time = current_time - 60
+            self.request_times = [t for t in self.request_times if t > cutoff_time]
+            self.token_usage = [(t, tokens) for t, tokens in self.token_usage if t > cutoff_time]
+            
+            # Vérification rate limit requêtes
+            if len(self.request_times) >= self.requests_per_minute:
+                wait_time = 60 - (current_time - self.request_times[0])
+                if wait_time > 0:
+                    logger.info(f"Rate limit requêtes: attente {wait_time:.2f}s")
+                    await asyncio.sleep(wait_time)
+            
+            # Vérification rate limit tokens
+            current_tokens = sum(tokens for _, tokens in self.token_usage)
+            if current_tokens + estimated_tokens > self.tokens_per_minute:
+                wait_time = 60 - (current_time - self.token_usage[0][0])
+                if wait_time > 0:
+                    logger.info(f"Rate limit tokens: attente {wait_time:.2f}s")
+                    await asyncio.sleep(wait_time)
+            
+            # Attente minimale entre requêtes
+            min_interval = 0.1  # 100ms minimum
+            time_since_last = current_time - self.last_request_time
+            if time_since_last < min_interval:
+                await asyncio.sleep(min_interval - time_since_last)
+            
+            # Enregistrement de la requête
+            self.request_times.append(time.time())
+            self.token_usage.append((time.time(), estimated_tokens))
+            self.last_request_time = time.time()
+        asyncio.run(_wait())
 
 
 class GPTTestSession:
@@ -149,36 +151,38 @@ class GPTTestSession:
             self.errors.append(f"Kernel creation failed: {e}")
             return None
     
-    async def test_connection(self, kernel: Kernel, service_id: str) -> bool:
+    def test_connection(self, kernel: Kernel, service_id: str) -> bool:
         """Test la connexion GPT-4o-mini."""
-        try:
-            await self.rate_limiter.wait_if_needed(50)
-            
-            chat_service = kernel.get_service(service_id)
-            if not chat_service:
+        async def _test_connection():
+            try:
+                self.rate_limiter.wait_if_needed(50)
+                
+                chat_service = kernel.get_service(service_id)
+                if not chat_service:
+                    return False
+                
+                settings = OpenAIChatPromptExecutionSettings(
+                    max_tokens=20,
+                    temperature=0.1
+                )
+                
+                messages = [ChatMessageContent(role="user", content="Test connection")]
+                
+                response = await chat_service.get_chat_message_contents(
+                    chat_history=messages,
+                    settings=settings
+                )
+                
+                self.test_count += 1
+                self.total_tokens_used += 25  # Estimation
+                
+                return len(response) > 0 and response[0].content is not None
+                
+            except Exception as e:
+                logger.error(f"Test connexion échoué {service_id}: {e}")
+                self.errors.append(f"Connection test failed: {e}")
                 return False
-            
-            settings = OpenAIChatPromptExecutionSettings(
-                max_tokens=20,
-                temperature=0.1
-            )
-            
-            messages = [ChatMessageContent(role="user", content="Test connection")]
-            
-            response = await chat_service.get_chat_message_contents(
-                chat_history=messages,
-                settings=settings
-            )
-            
-            self.test_count += 1
-            self.total_tokens_used += 25  # Estimation
-            
-            return len(response) > 0 and response[0].content is not None
-            
-        except Exception as e:
-            logger.error(f"Test connexion échoué {service_id}: {e}")
-            self.errors.append(f"Connection test failed: {e}")
-            return False
+        return asyncio.run(_test_connection())
     
     def get_session_stats(self) -> Dict[str, Any]:
         """Retourne les statistiques de session."""
@@ -235,10 +239,10 @@ def real_gpt_kernel(gpt_test_session):
 
 
 @pytest.fixture
-async def validated_gpt_kernel(real_gpt_kernel, gpt_test_session):
+def validated_gpt_kernel(real_gpt_kernel, gpt_test_session):
     """Kernel GPT-4o-mini avec connexion validée."""
-    connection_ok = await gpt_test_session.test_connection(
-        real_gpt_kernel, 
+    connection_ok = gpt_test_session.test_connection(
+        real_gpt_kernel,
         "pytest-real-gpt"
     )
     
@@ -255,39 +259,41 @@ def gpt_rate_limiter(gpt_test_session):
 
 
 @pytest.fixture
-async def mock_gpt_kernel():
+def mock_gpt_kernel():
     """Kernel mocké pour tests sans frais GPT."""
-    kernel = Mock(spec=Kernel)
-    # kernel.add_service = await self._create_authentic_gpt4o_mini_instance() # Ligne incorrecte, probablement un vestige
-    
-    # Mock du service
-    mock_service = await self._create_authentic_gpt4o_mini_instance()
-    mock_service.service_id = "mock-gpt4o-mini"
-    mock_service.ai_model_id = "gpt-4o-mini"
-    
-    # Mock des réponses
-    async def mock_get_chat_message_contents(chat_history=None, settings=None):
-        await asyncio.sleep(0.1)  # Simulation latence
+    async def _mock_gpt_kernel():
+        kernel = Mock(spec=Kernel)
         
-        content = "Mock response from GPT-4o-mini"
-        if chat_history and len(chat_history) > 0:
-            user_content = chat_history[-1].content.lower()
+        # Mock du service
+        # This needs to be an async call, so we do it inside the helper
+        config = UnifiedConfig()
+        mock_service = config.get_kernel_with_gpt4o_mini()
+        mock_service.service_id = "mock-gpt4o-mini"
+        mock_service.ai_model_id = "gpt-4o-mini"
+        
+        async def mock_get_chat_message_contents(chat_history=None, settings=None):
+            await asyncio.sleep(0.1)  # Simulation latence
             
-            if "moriarty" in user_content and "révèle" in user_content:
-                content = "En tant que Moriarty, je révèle que j'ai la carte Colonel Moutarde!"
-            elif "sherlock" in user_content:
-                content = "En tant que Sherlock, j'enquête méthodiquement sur cette affaire."
-            elif "watson" in user_content:
-                content = "En tant que Watson, j'analyse logiquement les indices disponibles."
+            content = "Mock response from GPT-4o-mini"
+            if chat_history and len(chat_history) > 0:
+                user_content = chat_history[-1].content.lower()
+                
+                if "moriarty" in user_content and "révèle" in user_content:
+                    content = "En tant que Moriarty, je révèle que j'ai la carte Colonel Moutarde!"
+                elif "sherlock" in user_content:
+                    content = "En tant que Sherlock, j'enquête méthodiquement sur cette affaire."
+                elif "watson" in user_content:
+                    content = "En tant que Watson, j'analyse logiquement les indices disponibles."
+            
+            mock_response = Mock(spec=ChatMessageContent)
+            mock_response.content = content
+            return [mock_response]
         
-        mock_response = await self._create_authentic_gpt4o_mini_instance()
-        mock_response.content = content
-        return [mock_response]
-    
-    mock_service.get_chat_message_contents = mock_get_chat_message_contents
-    kernel.get_service = Mock(return_value=mock_service)
-    
-    return kernel
+        mock_service.get_chat_message_contents = mock_get_chat_message_contents
+        kernel.get_service = Mock(return_value=mock_service)
+        
+        return kernel
+    return asyncio.run(_mock_gpt_kernel())
 
 
 @pytest.fixture
@@ -301,12 +307,11 @@ def oracle_test_elements():
 
 
 @pytest.fixture
-async def enhanced_orchestrator(validated_gpt_kernel, oracle_test_elements):
+def enhanced_orchestrator(validated_gpt_kernel, oracle_test_elements):
     """Orchestrateur Enhanced avec GPT-4o-mini réel."""
     if not ORACLE_SYSTEM_AVAILABLE:
         pytest.skip("Système Oracle non disponible")
     
-    # Oracle Enhanced v2.1.0: Configuration orchestrateur modernisée
     orchestrator = CluedoExtendedOrchestrator(
         kernel=validated_gpt_kernel,
         max_turns=5,
@@ -314,13 +319,14 @@ async def enhanced_orchestrator(validated_gpt_kernel, oracle_test_elements):
         oracle_strategy="enhanced_auto_reveal"
     )
     
-    # Setup optionnel pour tests rapides
     setup_requested = os.environ.get('QUICK_SETUP', 'false').lower() == 'true'
     if setup_requested:
-        await orchestrator.setup_workflow(
-            nom_enquete="Quick Test Enhanced",
-            elements_jeu=oracle_test_elements
-        )
+        async def _setup():
+            await orchestrator.setup_workflow(
+                nom_enquete="Quick Test Enhanced",
+                elements_jeu=oracle_test_elements
+            )
+        asyncio.run(_setup())
     
     return orchestrator
 
@@ -437,7 +443,7 @@ def create_test_oracle_state(elements_jeu: Dict[str, Any]) -> Optional[CluedoOra
         return None
 
 
-async def create_gpt_prompt_for_test(role: str, context: str) -> str:
+def create_gpt_prompt_for_test(role: str, context: str) -> str:
     """Crée un prompt optimisé pour tests GPT."""
     prompts = {
         "sherlock": f"En tant que Sherlock Holmes dans {context}, enquêtez brièvement et méthodiquement.",

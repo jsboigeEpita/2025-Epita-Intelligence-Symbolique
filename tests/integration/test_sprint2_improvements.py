@@ -159,44 +159,41 @@ class TestSprint2Improvements(unittest.TestCase):
     
     def test_group_chat_orchestration_robustness(self):
         """Test que l'orchestration de groupe chat est robuste."""
-        async def _async_test():
-            orchestration = GroupChatOrchestration()
-            
-            # Test initialisation session
-            agent1 = self._create_authentic_gpt4o_mini_instance()
-            agent2 = self._create_authentic_gpt4o_mini_instance()
-            success = orchestration.initialize_session("test_session", {
-                "agent1": agent1,
-                "agent2": agent2
-            })
-            self.assertTrue(success)
-            
-            # Test ajout de message
-            message_entry = orchestration.add_message("agent1", "Test message")
-            self.assertIn("timestamp", message_entry)
-            self.assertIn("agent_id", message_entry)
-            self.assertIn("message", message_entry)
-            
-            # Test analyse coordonnée
-            analysis_result = orchestration.coordinate_analysis("Test text for analysis")
-            self.assertIn("text", analysis_result)
-            self.assertIn("agents_involved", analysis_result)
-            self.assertIn("consolidated_analysis", analysis_result)
-            
-            # Test analyse asynchrone
-            async_result = orchestration.coordinate_analysis_async("Test async text", timeout=30.0)
-            self.assertIn("execution_mode", async_result)
-            self.assertEqual(async_result["execution_mode"], "async")
-            
-            # Test health check
-            health = orchestration.get_service_health()
-            self.assertIn("status", health)
-            
-            # Test nettoyage
-            cleanup_success = orchestration.cleanup_session()
-            self.assertTrue(cleanup_success)
-
-        asyncio.run(_async_test())
+        orchestration = GroupChatOrchestration()
+        
+        # Test initialisation session
+        agent1 = self._create_authentic_gpt4o_mini_instance()
+        agent2 = self._create_authentic_gpt4o_mini_instance()
+        success = orchestration.initialize_session("test_session", {
+            "agent1": agent1,
+            "agent2": agent2
+        })
+        self.assertTrue(success)
+        
+        # Test ajout de message
+        message_entry = orchestration.add_message("agent1", "Test message")
+        self.assertIn("timestamp", message_entry)
+        self.assertIn("agent_id", message_entry)
+        self.assertIn("message", message_entry)
+        
+        # Test analyse coordonnée
+        analysis_result = orchestration.coordinate_analysis("Test text for analysis")
+        self.assertIn("text", analysis_result)
+        self.assertIn("agents_involved", analysis_result)
+        self.assertIn("consolidated_analysis", analysis_result)
+        
+        # Test analyse asynchrone
+        async_result = orchestration.coordinate_analysis_async("Test async text", timeout=30.0)
+        self.assertIn("execution_mode", async_result)
+        self.assertEqual(async_result["execution_mode"], "async")
+        
+        # Test health check
+        health = orchestration.get_service_health()
+        self.assertIn("status", health)
+        
+        # Test nettoyage
+        cleanup_success = orchestration.cleanup_session()
+        self.assertTrue(cleanup_success)
     
     def test_logic_service_robustness(self):
         """Test que le service de logique est robuste."""
@@ -329,35 +326,32 @@ class TestSprint2Improvements(unittest.TestCase):
     
     def test_concurrent_operations(self):
         """Test que les opérations concurrentes fonctionnent correctement."""
-        async def _async_test():
-            orchestration = GroupChatOrchestration()
-            
-            # Initialiser avec plusieurs agents authentiques
-            agents = {}
-            for i in range(3):
-                # We need to call the method to get the kernel instance
-                agent_instance = self._create_authentic_gpt4o_mini_instance()
-                agents[f"agent_{i}"] = agent_instance
-            
-            orchestration.initialize_session("concurrent_test", agents)
-            
-            # Test analyse coordonnée asynchrone avec plusieurs agents
-            result = orchestration.coordinate_analysis_async(
-                "Concurrent analysis text",
-                target_agents=list(agents.keys()),
-                timeout=30.0
-            )
-            
-            self.assertEqual(len(result["agents_involved"]), 3)
-            self.assertEqual(len(result["individual_results"]), 3)
-            self.assertIn("consolidated_analysis", result)
-            
-            # Vérifier que la consolidation a fonctionné
-            consolidated = result["consolidated_analysis"]
-            self.assertIn("agents_count", consolidated)
-            self.assertEqual(consolidated["agents_count"], 3)
-
-        asyncio.run(_async_test())
+        orchestration = GroupChatOrchestration()
+        
+        # Initialiser avec plusieurs agents authentiques
+        agents = {}
+        for i in range(3):
+            # We need to call the method to get the kernel instance
+            agent_instance = self._create_authentic_gpt4o_mini_instance()
+            agents[f"agent_{i}"] = agent_instance
+        
+        orchestration.initialize_session("concurrent_test", agents)
+        
+        # Test analyse coordonnée asynchrone avec plusieurs agents
+        result = orchestration.coordinate_analysis_async(
+            "Concurrent analysis text",
+            target_agents=list(agents.keys()),
+            timeout=30.0
+        )
+        
+        self.assertEqual(len(result["agents_involved"]), 3)
+        self.assertEqual(len(result["individual_results"]), 3)
+        self.assertIn("consolidated_analysis", result)
+        
+        # Vérifier que la consolidation a fonctionné
+        consolidated = result["consolidated_analysis"]
+        self.assertIn("agents_count", consolidated)
+        self.assertEqual(consolidated["agents_count"], 3)
 
 
 if __name__ == "__main__":

@@ -281,7 +281,7 @@ class AuthenticGameEngineFallback:
         
         return history, final_state
     
-    async def validate_oracle_behavior_authentic(self) -> bool:
+    def validate_oracle_behavior_authentic(self) -> bool:
         """Validation comportement Oracle authentique"""
         if not self.oracle:
             return False
@@ -305,7 +305,7 @@ class AuthenticGameEngineFallback:
         self.oracle.tests_passed = tests_passed
         self.oracle.tests_total = len(test_scenarios)
         
-        success_rate = (tests_passed / len(test_scenarios)) * 100
+        success_rate = (tests_passed / len(test_scenarios)) * 100 if len(test_scenarios) > 0 else 0
         logger.info(f"Validation Oracle authentique: {success_rate}% succès")
         
         return success_rate == 100.0

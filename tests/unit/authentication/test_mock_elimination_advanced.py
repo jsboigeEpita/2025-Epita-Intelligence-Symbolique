@@ -17,6 +17,7 @@ Suite de tests pour valider l'authenticité 100% du système :
 """
 
 import pytest
+import asyncio
 import os
 import sys
 from pathlib import Path
@@ -40,20 +41,24 @@ except ImportError as e:
 
 
 class TestMockEliminationAdvanced:
-    async def _create_authentic_gpt4o_mini_instance(self):
+    def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
+        async def _run():
+            config = UnifiedConfig()
+            return await config.get_kernel_with_gpt4o_mini()
+        return asyncio.run(_run())
         
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
+    def _make_authentic_llm_call(self, prompt: str) -> str:
         """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
+        async def _run():
+            try:
+                kernel = self._create_authentic_gpt4o_mini_instance()
+                result = await kernel.invoke("chat", input=prompt)
+                return str(result)
+            except Exception as e:
+                logger.warning(f"Appel LLM authentique échoué: {e}")
+                return "Authentic LLM call failed"
+        return asyncio.run(_run())
 
     """Tests avancés d'élimination des mocks."""
     
@@ -113,7 +118,7 @@ class TestMockEliminationAdvanced:
         assert config.taxonomy_size == TaxonomySize.FULL
         assert config.enable_cache is False  # Cache désactivé pour authenticité
     
-    async def test_inconsistent_configuration_validation(self):
+    def test_inconsistent_configuration_validation(self):
         """Test de validation de configurations incohérentes."""
         # Configuration incohérente : mocks activés mais authentique requis
         with pytest.raises(ValueError, match="Configuration incohérente"):
@@ -128,7 +133,7 @@ class TestMockEliminationAdvanced:
                 require_real_tweety=True  # Incohérent avec mocks partiels
             )
     
-    async def test_authentic_component_validation(self):
+    def test_authentic_component_validation(self):
         """Test de validation des composants authentiques."""
         # Simulation de composants authentiques vs mocks
         class AuthenticLLMService:
@@ -229,7 +234,7 @@ class TestMockEliminationAdvanced:
 class TestComponentMockDetection:
     """Tests de détection de mocks dans les composants spécifiques."""
     
-    async def test_detect_llm_service_mock(self):
+    def test_detect_llm_service_mock(self):
         """Test de détection de mocks dans les services LLM."""
         # Mock évident
         mock_llm = MagicMock()
@@ -253,7 +258,7 @@ class TestComponentMockDetection:
         assert 'Mock' not in authentic_llm.__class__.__name__
         assert not hasattr(authentic_llm.generate_response, '_mock_name')
     
-    async def test_detect_tweety_service_mock(self):
+    def test_detect_tweety_service_mock(self):
         """Test de détection de mocks dans les services Tweety."""
         # Mock Tweety
         mock_tweety = MagicMock()
@@ -349,7 +354,7 @@ class TestAuthenticityMetrics:
         assert mixed_metrics['is_100_percent_authentic'] is False
         assert mixed_metrics['mock_components'] == 2
     
-    async def test_authenticity_validation_comprehensive(self):
+    def test_authenticity_validation_comprehensive(self):
         """Test de validation complète d'authenticité."""
         def validate_component_authenticity(component_type: str, component: Any) -> bool:
             """Valide l'authenticité d'un composant."""

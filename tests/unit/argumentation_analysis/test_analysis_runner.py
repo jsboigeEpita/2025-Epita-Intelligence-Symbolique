@@ -20,7 +20,7 @@ from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner
 from argumentation_analysis.config.settings import AppSettings
 
 
-class TestAnalysisRunner(unittest.IsolatedAsyncioTestCase):
+class TestAnalysisRunner(unittest.TestCase):
     """Suite de tests pour la classe `AnalysisRunner`."""
 
     def setUp(self):
@@ -39,35 +39,38 @@ class TestAnalysisRunner(unittest.IsolatedAsyncioTestCase):
         self.test_text = "Ceci est un texte de test pour l'analyse."
 
     @patch('argumentation_analysis.orchestration.analysis_runner.AgentGroupChat', new_callable=AsyncMock)
-    async def test_run_analysis_calls_group_chat(self, mock_agent_group_chat_class):
+    def test_run_analysis_calls_group_chat(self, mock_agent_group_chat_class):
         """
         Teste que `run_analysis` initialise et invoque correctement AgentGroupChat.
         """
-        # Configurer le mock pour l'instance de AgentGroupChat
-        mock_chat_instance = mock_agent_group_chat_class.return_value
-        # Simuler la réponse de l'invocation du chat
-        mock_chat_instance.invoke.return_value = self.mock_async_iterator([MagicMock()])
-        
-        # Mocker la factory d'agent sur l'instance du runner
-        self.runner.factory = MagicMock()
-        mock_manager = MagicMock()
-        mock_fallacy = MagicMock()
-        self.runner.factory.create_project_manager_agent.return_value = mock_manager
-        self.runner.factory.create_agent.return_value = mock_fallacy
+        async def run_test():
+            # Configurer le mock pour l'instance de AgentGroupChat
+            mock_chat_instance = mock_agent_group_chat_class.return_value
+            # Simuler la réponse de l'invocation du chat
+            mock_chat_instance.invoke.return_value = self.mock_async_iterator([MagicMock()])
+            
+            # Mocker la factory d'agent sur l'instance du runner
+            self.runner.factory = MagicMock()
+            mock_manager = MagicMock()
+            mock_fallacy = MagicMock()
+            self.runner.factory.create_project_manager_agent.return_value = mock_manager
+            self.runner.factory.create_agent.return_value = mock_fallacy
 
-        # Exécuter la méthode
-        result = await self.runner.run_analysis(self.test_text)
+            # Exécuter la méthode
+            result = await self.runner.run_analysis(self.test_text)
 
-        # Assertions
-        self.runner.factory.create_project_manager_agent.assert_called_once()
-        self.runner.factory.create_agent.assert_called_once()
-        
-        mock_agent_group_chat_class.assert_called_once()
-        # Vérifier que le chat a été invoqué
-        mock_chat_instance.invoke.assert_awaited_once()
-        
-        # Vérifier que le résultat contient le message initial et les messages du chat
-        self.assertEqual(len(result), 2)
+            # Assertions
+            self.runner.factory.create_project_manager_agent.assert_called_once()
+            self.runner.factory.create_agent.assert_called_once()
+            
+            mock_agent_group_chat_class.assert_called_once()
+            # Vérifier que le chat a été invoqué
+            mock_chat_instance.invoke.assert_awaited_once()
+            
+            # Vérifier que le résultat contient le message initial et les messages du chat
+            self.assertEqual(len(result), 2)
+
+        asyncio.run(run_test())
 
     def mock_async_iterator(self, items):
         """Crée un itérateur asynchrone à partir d'une liste d'éléments."""

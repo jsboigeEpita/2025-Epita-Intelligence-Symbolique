@@ -13,6 +13,7 @@ Tests pour UnifiedConfig et validation des paramètres CLI étendus.
 """
 
 import pytest
+import asyncio
 import os
 import tempfile
 from pathlib import Path
@@ -85,19 +86,21 @@ except ImportError:
 
 
 class TestUnifiedConfig:
-    async def _create_authentic_gpt4o_mini_instance(self):
+    def _create_authentic_gpt4o_mini_instance(self):
         """Helper to create a mock kernel object if needed by some tests, not UnifiedConfig itself."""
-        return AsyncMock() 
+        return AsyncMock()
 
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
+    def _make_authentic_llm_call(self, prompt: str) -> str:
         """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt) 
-            return str(result)
-        except Exception as e:
-            print(f"WARN: Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
+        async def _run():
+            try:
+                kernel = self._create_authentic_gpt4o_mini_instance()
+                result = await kernel.invoke("chat", input=prompt)
+                return str(result)
+            except Exception as e:
+                print(f"WARN: Appel LLM authentique échoué: {e}")
+                return "Authentic LLM call failed"
+        return asyncio.run(_run())
 
     """Tests pour la classe UnifiedConfig."""
     
@@ -230,7 +233,7 @@ custom_field: test_value
 
 class TestConfigurationCLI:
     """Tests pour l'interface CLI étendue."""
-    async def _create_authentic_gpt4o_mini_instance(self): 
+    def _create_authentic_gpt4o_mini_instance(self):
         return AsyncMock()
 
     def test_cli_arguments_parsing(self):
@@ -254,8 +257,7 @@ class TestConfigurationCLI:
         except ImportError:
             pytest.skip("cli_utils not available for this test")
     
-    @pytest.mark.asyncio
-    async def test_cli_validation_invalid_combinations(self):
+    def test_cli_validation_invalid_combinations(self):
         """Test de validation CLI avec combinaisons invalides."""
         try:
             from argumentation_analysis.utils.core_utils.cli_utils import validate_cli_args

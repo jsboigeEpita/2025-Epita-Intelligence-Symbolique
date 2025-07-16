@@ -240,7 +240,7 @@ class FOLCompleteValidator:
             }
         ]
     
-    async def validate_fol_syntax_generation(self) -> bool:
+    def validate_fol_syntax_generation(self) -> bool:
         """Valide génération syntaxe FOL selon critères."""
         logger.info("🔍 Validation génération syntaxe FOL...")
         
@@ -294,43 +294,47 @@ class FOLCompleteValidator:
         # Cette validation pourrait être plus sophistiquée
         return (has_quantifier or has_predicate) and balanced_parens
     
-    async def validate_tweety_integration(self) -> bool:
+    def validate_tweety_integration(self) -> bool:
         """Valide intégration avec TweetyProject."""
         logger.info("🔍 Validation intégration Tweety...")
-        
+
         agent = FOLLogicAgent(agent_name="TweetyValidator")
-        
-        # Setup agent si possible
-        try:
-            await agent.setup_agent_components()
-        except Exception as e:
-            logger.warning(f"⚠️ Setup Tweety échoué (normal en test): {e}")
-        
-        success = True
-        
-        # Test formules avec Tweety (ou simulation)
-        for sample in self.fol_syntax_samples:
-            if sample["expected_valid"]:
-                try:
-                    # Test via analyse complète
-                    result = await agent._analyze_with_tweety([sample["formula"]])
-                    
-                    # Pas d'erreur de parsing = succès
-                    parsing_success = len(result.validation_errors) == 0
-                    self.metrics.add_tweety_parsing_result(sample["formula"], parsing_success)
-                    
-                    if not parsing_success:
-                        success = False
-                        logger.error(f"❌ Parsing Tweety échoué: {sample['formula']}")
-                        for error in result.validation_errors:
-                            logger.error(f"   Erreur: {error}")
-                    else:
-                        logger.info(f"✅ Parsing Tweety réussi: {sample['description']}")
+
+        async def _run_validation():
+            # Setup agent si possible
+            try:
+                await agent.setup_agent_components()
+            except Exception as e:
+                logger.warning(f"⚠️ Setup Tweety échoué (normal en test): {e}")
+
+            success = True
+            
+            # Test formules avec Tweety (ou simulation)
+            for sample in self.fol_syntax_samples:
+                if sample["expected_valid"]:
+                    try:
+                        # Test via analyse complète
+                        result = await agent._analyze_with_tweety([sample["formula"]])
                         
-                except Exception as e:
-                    success = False
-                    logger.error(f"❌ Erreur Tweety: {sample['formula']} - {e}")
-                    self.metrics.add_tweety_parsing_result(sample["formula"], False, str(e))
+                        # Pas d'erreur de parsing = succès
+                        parsing_success = len(result.validation_errors) == 0
+                        self.metrics.add_tweety_parsing_result(sample["formula"], parsing_success)
+                        
+                        if not parsing_success:
+                            success = False
+                            logger.error(f"❌ Parsing Tweety échoué: {sample['formula']}")
+                            for error in result.validation_errors:
+                                logger.error(f"   Erreur: {error}")
+                        else:
+                            logger.info(f"✅ Parsing Tweety réussi: {sample['description']}")
+                            
+                    except Exception as e:
+                        success = False
+                        logger.error(f"❌ Erreur Tweety: {sample['formula']} - {e}")
+                        self.metrics.add_tweety_parsing_result(sample["formula"], False, str(e))
+            return success
+
+        success = asyncio.run(_run_validation())
         
         # Vérification critère : 0 erreur parsing
         parsing_success_rate = (self.metrics.tweety_parsing_attempts - self.metrics.tweety_parsing_errors) / self.metrics.tweety_parsing_attempts
@@ -345,7 +349,7 @@ class FOLCompleteValidator:
         
         return success
     
-    async def validate_sophism_compatibility(self) -> bool:
+    def validate_sophism_compatibility(self) -> bool:
         """Valide compatibilité avec sophismes existants."""
         logger.info("🔍 Validation compatibilité sophismes...")
         
@@ -357,7 +361,11 @@ class FOLCompleteValidator:
         for sophism in self.sophism_samples:
             try:
                 start_time = time.time()
-                result = await agent.analyze(sophism["text"])
+                
+                async def _run_analysis():
+                    return await agent.analyze(sophism["text"])
+                
+                result = asyncio.run(_run_analysis())
                 analysis_time = time.time() - start_time
                 
                 # Collecte métriques
@@ -391,7 +399,7 @@ class FOLCompleteValidator:
         
         return success
     
-    async def validate_performance_requirements(self) -> bool:
+    def validate_performance_requirements(self) -> bool:
         """Valide exigences de performance."""
         logger.info("🔍 Validation performance...")
         
@@ -404,7 +412,11 @@ class FOLCompleteValidator:
         for sample in self.complex_argumentation_samples:
             try:
                 start_time = time.time()
-                result = await agent.analyze(sample["text"])
+                
+                async def _run_analysis():
+                    return await agent.analyze(sample["text"])
+
+                result = asyncio.run(_run_analysis())
                 analysis_time = time.time() - start_time
                 
                 performance_times.append(analysis_time)
@@ -447,7 +459,7 @@ class FOLCompleteValidator:
         
         return success
     
-    async def validate_error_handling(self) -> bool:
+    def validate_error_handling(self) -> bool:
         """Valide gestion complète des erreurs."""
         logger.info("🔍 Validation gestion erreurs...")
         
@@ -481,7 +493,10 @@ class FOLCompleteValidator:
         
         for case in error_cases:
             try:
-                result = await agent.analyze(case["input"])
+                async def _run_analysis():
+                    return await agent.analyze(case["input"])
+                
+                result = asyncio.run(_run_analysis())
                 
                 # Vérification gestion gracieuse
                 if isinstance(result, FOLAnalysisResult):
@@ -506,7 +521,7 @@ class FOLCompleteValidator:
         
         return success
     
-    async def validate_configuration_integration(self) -> bool:
+    def validate_configuration_integration(self) -> bool:
         """Valide intégration avec système de configuration."""
         logger.info("🔍 Validation intégration configuration...")
         
@@ -522,9 +537,12 @@ class FOLCompleteValidator:
             try:
                 # Test création agent avec config
                 agent = FOLLogicAgent(agent_name=f"Config_{config_name}")
+
+                async def _run_analysis():
+                    return await agent.analyze("Test configuration.")
                 
                 # Test analyse basique
-                result = await agent.analyze("Test configuration.")
+                result = asyncio.run(_run_analysis())
                 
                 if isinstance(result, FOLAnalysisResult):
                     logger.info(f"✅ Configuration {config_name} validée")
@@ -540,28 +558,28 @@ class FOLCompleteValidator:
         
         return success
     
-    async def run_complete_validation(self) -> Dict[str, Any]:
+    def run_complete_validation(self) -> Dict[str, Any]:
         """Exécute validation complète et retourne rapport."""
         logger.info("🚀 Début validation complète agent FOL")
         
         start_time = time.time()
         
         # Exécution des validations
-        validations = [
-            ("Génération syntaxe FOL", self.validate_fol_syntax_generation()),
-            ("Intégration Tweety", self.validate_tweety_integration()),
-            ("Compatibilité sophismes", self.validate_sophism_compatibility()),
-            ("Performance", self.validate_performance_requirements()),
-            ("Gestion erreurs", self.validate_error_handling()),
-            ("Intégration configuration", self.validate_configuration_integration())
-        ]
+        validations = {
+            "Génération syntaxe FOL": self.validate_fol_syntax_generation,
+            "Intégration Tweety": self.validate_tweety_integration,
+            "Compatibilité sophismes": self.validate_sophism_compatibility,
+            "Performance": self.validate_performance_requirements,
+            "Gestion erreurs": self.validate_error_handling,
+            "Intégration configuration": self.validate_configuration_integration
+        }
         
         validation_results = {}
         
-        for name, validation_coro in validations:
+        for name, validation_func in validations.items():
             try:
                 logger.info(f"▶️ {name}...")
-                result = await validation_coro
+                result = validation_func()
                 validation_results[name] = result
                 if result:
                     logger.info(f"✅ {name} réussie")
@@ -639,12 +657,12 @@ class FOLCompleteValidator:
         return recommendations
 
 
-async def main():
+def main():
     """Point d'entrée principal pour validation complète."""
     validator = FOLCompleteValidator()
     
     try:
-        report = await validator.run_complete_validation()
+        report = validator.run_complete_validation()
         
         # Affichage rapport
         print("\n" + "="*80)
@@ -694,5 +712,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    success = asyncio.run(main())
+    success = main()
     exit(0 if success else 1)

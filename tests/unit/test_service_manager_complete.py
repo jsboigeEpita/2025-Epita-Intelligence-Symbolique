@@ -34,16 +34,16 @@ from service_manager import (
 
 
 class TestPortManager(unittest.TestCase):
-    async def _create_authentic_gpt4o_mini_instance(self):
+    def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
         config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-        
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
+        return asyncio.run(config.get_kernel_with_gpt4o_mini())
+
+    def _make_authentic_llm_call(self, prompt: str) -> str:
         """Fait un appel authentique à gpt-4o-mini."""
         try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
+            kernel = self._create_authentic_gpt4o_mini_instance()
+            result = asyncio.run(kernel.invoke("chat", input=prompt))
             return str(result)
         except Exception as e:
             logger.warning(f"Appel LLM authentique échoué: {e}")
@@ -136,9 +136,9 @@ class TestProcessCleanup(unittest.TestCase):
         self.logger = logging.getLogger('test')
         self.cleanup = ProcessCleanup(self.logger)
     
-    async def test_register_process(self):
+    def test_register_process(self):
         """Test enregistrement processus"""
-        mock_process = await self._create_authentic_gpt4o_mini_instance()
+        mock_process = self._create_authentic_gpt4o_mini_instance()
         mock_process.pid = 12345
         
         self.cleanup.register_process("test-service", mock_process)
@@ -146,10 +146,10 @@ class TestProcessCleanup(unittest.TestCase):
         self.assertIn("test-service", self.cleanup.managed_processes)
         self.assertEqual(self.cleanup.managed_processes["test-service"], mock_process)
     
-    async def test_cleanup_managed_processes(self):
+    def test_cleanup_managed_processes(self):
         """Test nettoyage processus gérés"""
         # Créer un mock process
-        mock_process = await self._create_authentic_gpt4o_mini_instance()
+        mock_process = self._create_authentic_gpt4o_mini_instance()
         mock_process.is_running# Mock eliminated - using authentic gpt-4o-mini True
         mock_process.pid = 12345
         

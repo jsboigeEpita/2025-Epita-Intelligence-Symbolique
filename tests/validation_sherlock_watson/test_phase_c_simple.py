@@ -18,8 +18,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-@pytest.mark.asyncio
-async def test_phase_c_simple():
+def test_phase_c_simple():
     """
     Test simple de la Phase C avec mémoire contextuelle.
     """
@@ -158,7 +157,8 @@ async def test_phase_c_simple():
     except Exception as e:
         logger.error(f"Erreur durant le test: {e}", exc_info=True)
         print(f"\n[ERREUR] Test echoue: {e}")
+        pytest.fail(f"Test Phase C a échoué: {e}")
         return None
 
 if __name__ == "__main__":
-    asyncio.run(test_phase_c_simple())
+    test_phase_c_simple()

@@ -67,67 +67,69 @@ class ScriptExecutionValidator:
         self.execution_results = {}
         self.performance_metrics = {}
     
-    async def validate_script_execution(
-        self, 
-        script_path: Path, 
+    def validate_script_execution(
+        self,
+        script_path: Path,
         script_name: str,
         environment: Dict[str, str],
         timeout: int = 60,
         additional_args: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """Valide l'exécution d'un script."""
-        
-        if not script_path.exists():
-            return {
-                "success": False,
-                "error": f"Script not found: {script_path}",
-                "execution_time": 0
-            }
-        
-        args = [sys.executable, str(script_path)]
-        if additional_args:
-            args.extend(additional_args)
-        
-        start_time = time.time()
-        
-        try:
-            process = await asyncio.create_subprocess_exec(
-                *args,
-                env=environment,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            
-            try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(),
-                    timeout=timeout
-                )
-            except asyncio.TimeoutError:
-                process.kill()
+
+        async def _run():
+            if not script_path.exists():
                 return {
                     "success": False,
-                    "error": f"Script timeout after {timeout}s",
-                    "execution_time": timeout
+                    "error": f"Script not found: {script_path}",
+                    "execution_time": 0
                 }
-            
-            execution_time = time.time() - start_time
-            
-            return {
-                "success": process.returncode == 0,
-                "return_code": process.returncode,
-                "stdout": stdout.decode('utf-8'),
-                "stderr": stderr.decode('utf-8'),
-                "execution_time": execution_time,
-                "error": None if process.returncode == 0 else stderr.decode('utf-8')
-            }
-            
-        except Exception as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "execution_time": time.time() - start_time
-            }
+
+            args = [sys.executable, str(script_path)]
+            if additional_args:
+                args.extend(additional_args)
+
+            start_time = time.time()
+
+            try:
+                process = await asyncio.create_subprocess_exec(
+                    *args,
+                    env=environment,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+
+                try:
+                    stdout, stderr = await asyncio.wait_for(
+                        process.communicate(),
+                        timeout=timeout
+                    )
+                except asyncio.TimeoutError:
+                    process.kill()
+                    return {
+                        "success": False,
+                        "error": f"Script timeout after {timeout}s",
+                        "execution_time": timeout
+                    }
+                
+                execution_time = time.time() - start_time
+
+                return {
+                    "success": process.returncode == 0,
+                    "return_code": process.returncode,
+                    "stdout": stdout.decode('utf-8', errors='ignore'),
+                    "stderr": stderr.decode('utf-8', errors='ignore'),
+                    "execution_time": execution_time,
+                    "error": None if process.returncode == 0 else stderr.decode('utf-8', errors='ignore')
+                }
+
+            except Exception as e:
+                return {
+                    "success": False,
+                    "error": str(e),
+                    "execution_time": time.time() - start_time
+                }
+        return asyncio.run(_run())
     
     def analyze_script_output(self, output: str, script_type: str) -> Dict[str, Any]:
         """Analyse la sortie d'un script."""
@@ -196,13 +198,12 @@ class TestScriptsExecution:
         """Setup du validateur pour tous les tests."""
         self.validator = ScriptExecutionValidator()
     
-    @pytest.mark.anyio
-    async def test_cluedo_enhanced_execution(self, script_test_environment, script_timeout_config):
+    def test_cluedo_enhanced_execution(self, script_test_environment, script_timeout_config):
         """Test l'exécution de run_cluedo_oracle_enhanced.py."""
         script_path = SCRIPTS_TO_VALIDATE["cluedo_enhanced"]
         timeout = script_timeout_config["cluedo_enhanced"]
         
-        result = await self.validator.validate_script_execution(
+        result = self.validator.validate_script_execution(
             script_path=script_path,
             script_name="cluedo_enhanced",
             environment=script_test_environment,
@@ -216,7 +217,7 @@ class TestScriptsExecution:
         
         # Analyse de la sortie
         output_analysis = self.validator.analyze_script_output(
-            result["stdout"], 
+            result["stdout"],
             "cluedo_enhanced"
         )
         
@@ -224,13 +225,12 @@ class TestScriptsExecution:
         assert output_analysis["quality_score"] > 0.4, f"Qualité insuffisante: {output_analysis['quality_score']}"
         assert len(output_analysis["features_detected"]) >= 3, "Pas assez de features Cluedo détectées"
     
-    @pytest.mark.anyio
-    async def test_einstein_demo_execution(self, script_test_environment, script_timeout_config):
+    def test_einstein_demo_execution(self, script_test_environment, script_timeout_config):
         """Test l'exécution de run_einstein_oracle_demo.py."""
         script_path = SCRIPTS_TO_VALIDATE["einstein_demo"]
         timeout = script_timeout_config["einstein_demo"]
         
-        result = await self.validator.validate_script_execution(
+        result = self.validator.validate_script_execution(
             script_path=script_path,
             script_name="einstein_demo",
             environment=script_test_environment,
@@ -243,7 +243,7 @@ class TestScriptsExecution:
         
         # Analyse spécifique Einstein
         output_analysis = self.validator.analyze_script_output(
-            result["stdout"], 
+            result["stdout"],
             "einstein_demo"
         )
         
@@ -255,13 +255,12 @@ class TestScriptsExecution:
         found_keywords = [kw for kw in einstein_keywords if kw in result["stdout"].lower()]
         assert len(found_keywords) >= 2, f"Pas assez de mots-clés Einstein: {found_keywords}"
     
-    @pytest.mark.anyio
-    async def test_oracle_behavior_simple_execution(self, script_test_environment, script_timeout_config):
+    def test_oracle_behavior_simple_execution(self, script_test_environment, script_timeout_config):
         """Test l'exécution de test_oracle_behavior_simple.py."""
         script_path = SCRIPTS_TO_VALIDATE["oracle_behavior_simple"]
         timeout = script_timeout_config["oracle_behavior_simple"]
         
-        result = await self.validator.validate_script_execution(
+        result = self.validator.validate_script_execution(
             script_path=script_path,
             script_name="oracle_behavior_simple",
             environment=script_test_environment,
@@ -274,20 +273,19 @@ class TestScriptsExecution:
         
         # Analyse comportement Oracle
         output_analysis = self.validator.analyze_script_output(
-            result["stdout"], 
+            result["stdout"],
             "oracle_behavior_simple"
         )
         
         assert not output_analysis["contains_errors"], "Erreurs dans Oracle Behavior Simple"
         assert output_analysis["quality_score"] > 0.3, f"Qualité Oracle insuffisante: {output_analysis['quality_score']}"
     
-    @pytest.mark.anyio
-    async def test_oracle_behavior_demo_execution(self, script_test_environment, script_timeout_config):
+    def test_oracle_behavior_demo_execution(self, script_test_environment, script_timeout_config):
         """Test l'exécution de test_oracle_behavior_demo.py."""
         script_path = SCRIPTS_TO_VALIDATE["oracle_behavior_demo"]
         timeout = script_timeout_config["oracle_behavior_demo"]
         
-        result = await self.validator.validate_script_execution(
+        result = self.validator.validate_script_execution(
             script_path=script_path,
             script_name="oracle_behavior_demo",
             environment=script_test_environment,
@@ -300,47 +298,32 @@ class TestScriptsExecution:
         
         # Analyse demo Oracle
         output_analysis = self.validator.analyze_script_output(
-            result["stdout"], 
+            result["stdout"],
             "oracle_behavior_demo"
         )
         
         assert not output_analysis["contains_errors"], f"Erreurs dans Oracle Behavior Demo: {result.get('error', 'Unknown error')}"
         assert output_analysis["quality_score"] > 0.3, f"Qualité Demo insuffisante: {output_analysis['quality_score']}"
     
-    @pytest.mark.anyio
-    async def test_all_scripts_parallel_execution(self, script_test_environment, script_timeout_config):
+    def test_all_scripts_parallel_execution(self, script_test_environment, script_timeout_config):
         """Test l'exécution parallèle de tous les scripts."""
-        tasks = []
         
-        # Créer les tâches d'exécution pour tous les scripts existants
+        results = {}
+        start_time = time.time()
+
         for script_name, script_path in SCRIPTS_TO_VALIDATE.items():
             if script_path.exists():
                 timeout = script_timeout_config.get(script_name, script_timeout_config["default"])
                 
-                task = self.validator.validate_script_execution(
+                result = self.validator.validate_script_execution(
                     script_path=script_path,
                     script_name=script_name,
                     environment=script_test_environment,
                     timeout=timeout,
                     additional_args=['--test-mode', '--quick']
                 )
-                tasks.append((script_name, task))
-        
-        # Exécution parallèle
-        start_time = time.time()
-        results = {}
-        
-        for script_name, task in tasks:
-            try:
-                result = await task
                 results[script_name] = result
-            except Exception as e:
-                results[script_name] = {
-                    "success": False,
-                    "error": str(e),
-                    "execution_time": 0
-                }
-        
+
         total_time = time.time() - start_time
         
         # Vérifications globales
@@ -456,8 +439,7 @@ class TestScriptErrorHandling:
         """Setup du validateur."""
         self.validator = ScriptExecutionValidator()
     
-    @pytest.mark.anyio
-    async def test_scripts_with_invalid_arguments(self, script_test_environment):
+    def test_scripts_with_invalid_arguments(self, script_test_environment):
         """Test les scripts avec arguments invalides."""
         invalid_args_tests = [
             ['--invalid-flag'],
@@ -477,7 +459,7 @@ class TestScriptErrorHandling:
             pytest.skip("Aucun script disponible pour test d'erreur")
         
         for invalid_args in invalid_args_tests:
-            result = await self.validator.validate_script_execution(
+            result = self.validator.validate_script_execution(
                 script_path=test_script,
                 script_name="error_test",
                 environment=script_test_environment,
@@ -495,8 +477,7 @@ class TestScriptErrorHandling:
                 assert "Traceback" not in stderr or "handled" in stderr.lower(), \
                     f"Erreur non gérée avec args {invalid_args}: {stderr}"
     
-    @pytest.mark.anyio
-    async def test_scripts_with_missing_dependencies(self, script_test_environment):
+    def test_scripts_with_missing_dependencies(self, script_test_environment):
         """Test les scripts avec dépendances manquantes."""
         # Environnement avec PYTHONPATH corrompu
         corrupted_env = script_test_environment.copy()
@@ -511,7 +492,7 @@ class TestScriptErrorHandling:
         if not test_script:
             pytest.skip("Aucun script disponible pour test dépendances")
         
-        result = await self.validator.validate_script_execution(
+        result = self.validator.validate_script_execution(
             script_path=test_script,
             script_name="dependency_test",
             environment=corrupted_env,

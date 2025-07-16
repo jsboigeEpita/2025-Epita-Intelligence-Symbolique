@@ -50,7 +50,7 @@ class TestCluedoOrchestrationRealIntegration:
     """Tests d'intégration avec les VRAIES classes du système"""
     
     @pytest.fixture
-    async def real_kernel(self):
+    def real_kernel(self):
         """Fixture pour créer un VRAI kernel Semantic Kernel"""
         try:
             kernel = Kernel()
@@ -88,8 +88,7 @@ class TestCluedoOrchestrationRealIntegration:
     
     @pytest.mark.skipif(not REAL_COMPONENTS_AVAILABLE, reason="Vraies classes système non disponibles")
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY required")
-    @pytest.mark.asyncio
-    async def test_real_sherlock_agent_creation(self, real_kernel):
+    def test_real_sherlock_agent_creation(self, real_kernel):
         """Test création d'un VRAI agent Sherlock"""
         if not real_kernel:
             pytest.skip("Cannot create real kernel")
@@ -108,8 +107,7 @@ class TestCluedoOrchestrationRealIntegration:
     
     @pytest.mark.skipif(not REAL_COMPONENTS_AVAILABLE, reason="Vraies classes système non disponibles") 
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY required")
-    @pytest.mark.asyncio
-    async def test_real_watson_agent_creation(self, real_kernel):
+    def test_real_watson_agent_creation(self, real_kernel):
         """Test création d'un VRAI agent Watson"""
         if not real_kernel:
             pytest.skip("Cannot create real kernel")
@@ -128,63 +126,63 @@ class TestCluedoOrchestrationRealIntegration:
     
     @pytest.mark.skipif(not REAL_COMPONENTS_AVAILABLE, reason="Vraies classes système non disponibles")
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY required")
-    @pytest.mark.asyncio
-    async def test_real_group_chat_orchestration(self, real_kernel, cluedo_case_data):
+    def test_real_group_chat_orchestration(self, real_kernel, cluedo_case_data):
         """Test orchestration avec la VRAIE classe AgentGroupChat"""
-        if not real_kernel:
-            pytest.skip("Cannot create real kernel")
-        
-        try:
-            # Création des VRAIS agents via la factory
-            factory = AgentFactory(real_kernel)
-            sherlock_agent = factory.create_sherlock_agent(agent_name="Sherlock")
-            watson_agent = factory.create_watson_agent(agent_name="Watson")
+        async def run_test():
+            if not real_kernel:
+                pytest.skip("Cannot create real kernel")
             
-            # Utilisation de la VRAIE classe AgentGroupChat du système
-            group_chat = AgentGroupChat(
-                agents=[sherlock_agent, watson_agent],
-                session_id="real_test_session"
-            )
-            
-            # Vérifications que c'est bien la vraie classe
-            assert isinstance(group_chat, AgentGroupChat)
-            assert len(group_chat.agents) == 2
-            
-            # Test d'invocation avec la vraie classe
-            initial_message = f"Nouvelle enquête Cluedo: {cluedo_case_data['description']}"
-            
-            # Timeout pour éviter blocage
-            result = await asyncio.wait_for(
-                group_chat.invoke(initial_message),
-                timeout=30.0
-            )
-            
-            # Vérifications du résultat de la vraie orchestration
-            assert result is not None
-            
-            # Si le résultat est une liste de messages
-            if isinstance(result, list):
-                assert len(result) > 0
-                logger.info(f"✅ VRAIE orchestration réussie: {len(result)} messages")
-            
-            # Si le résultat est un string/object
-            elif hasattr(result, '__str__'):
-                result_str = str(result)
-                assert len(result_str) > 0
-                logger.info(f"✅ VRAIE orchestration réussie: {len(result_str)} caractères")
-            
-            logger.info("✅ Test avec VRAIE classe AgentGroupChat réussi")
-            
-        except asyncio.TimeoutError:
-            pytest.skip("Orchestration réelle timeout (API call took too long)")
-        except Exception as e:
-            logger.warning(f"Erreur orchestration réelle: {e}")
-            # Pas un échec si les API ne répondent pas - c'est normal
-            pytest.skip(f"Real orchestration not responding: {e}")
+            try:
+                # Création des VRAIS agents via la factory
+                factory = AgentFactory(real_kernel)
+                sherlock_agent = factory.create_sherlock_agent(agent_name="Sherlock")
+                watson_agent = factory.create_watson_agent(agent_name="Watson")
+                
+                # Utilisation de la VRAIE classe AgentGroupChat du système
+                group_chat = AgentGroupChat(
+                    agents=[sherlock_agent, watson_agent],
+                    session_id="real_test_session"
+                )
+                
+                # Vérifications que c'est bien la vraie classe
+                assert isinstance(group_chat, AgentGroupChat)
+                assert len(group_chat.agents) == 2
+                
+                # Test d'invocation avec la vraie classe
+                initial_message = f"Nouvelle enquête Cluedo: {cluedo_case_data['description']}"
+                
+                # Timeout pour éviter blocage
+                result = await asyncio.wait_for(
+                    group_chat.invoke(initial_message),
+                    timeout=30.0
+                )
+                
+                # Vérifications du résultat de la vraie orchestration
+                assert result is not None
+                
+                # Si le résultat est une liste de messages
+                if isinstance(result, list):
+                    assert len(result) > 0
+                    logger.info(f"✅ VRAIE orchestration réussie: {len(result)} messages")
+                
+                # Si le résultat est un string/object
+                elif hasattr(result, '__str__'):
+                    result_str = str(result)
+                    assert len(result_str) > 0
+                    logger.info(f"✅ VRAIE orchestration réussie: {len(result_str)} caractères")
+                
+                logger.info("✅ Test avec VRAIE classe AgentGroupChat réussi")
+                
+            except asyncio.TimeoutError:
+                pytest.skip("Orchestration réelle timeout (API call took too long)")
+            except Exception as e:
+                logger.warning(f"Erreur orchestration réelle: {e}")
+                # Pas un échec si les API ne répondent pas - c'est normal
+                pytest.skip(f"Real orchestration not responding: {e}")
+        asyncio.run(run_test())
     
     @pytest.mark.skipif(not REAL_COMPONENTS_AVAILABLE, reason="Vraies classes système non disponibles")
-    @pytest.mark.asyncio
-    async def test_real_agent_methods_availability(self, real_kernel):
+    def test_real_agent_methods_availability(self, real_kernel):
         """Test que les VRAIES méthodes des agents sont disponibles"""
         if not real_kernel:
             pytest.skip("Cannot create real kernel")
@@ -213,75 +211,76 @@ class TestCluedoOrchestrationRealIntegration:
     
     @pytest.mark.skipif(not REAL_COMPONENTS_AVAILABLE, reason="Vraies classes système non disponibles")
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY required")
-    @pytest.mark.asyncio
-    async def test_real_sherlock_case_description(self, real_kernel, cluedo_case_data):
+    def test_real_sherlock_case_description(self, real_kernel, cluedo_case_data):
         """Test de la VRAIE méthode get_current_case_description de Sherlock"""
-        if not real_kernel:
-            pytest.skip("Cannot create real kernel")
-        
-        factory = AgentFactory(real_kernel)
-        sherlock = factory.create_sherlock_agent(agent_name="Sherlock_Case_Test")
-        
-        try:
-            # Appel de la VRAIE méthode (pas une fausse méthode)
-            description = await asyncio.wait_for(
-                sherlock.get_current_case_description(),
-                timeout=15.0
-            )
+        async def run_test():
+            if not real_kernel:
+                pytest.skip("Cannot create real kernel")
             
-            # Vérification du résultat de la vraie méthode
-            if description is not None:
-                assert isinstance(description, str)
-                assert len(description) > 0
-                logger.info(f"✅ VRAIE méthode get_current_case_description réussie: {description[:100]}...")
-            else:
-                # Normal sans plugin configuré
-                logger.info("✅ VRAIE méthode appelée (résultat None normal sans plugin)")
+            factory = AgentFactory(real_kernel)
+            sherlock = factory.create_sherlock_agent(agent_name="Sherlock_Case_Test")
             
-        except asyncio.TimeoutError:
-            pytest.skip("Real method call timeout")
-        except Exception as e:
-            # Exception normale sans plugin configuré
-            logger.info(f"✅ VRAIE méthode appelée (exception normale: {e})")
+            try:
+                # Appel de la VRAIE méthode (pas une fausse méthode)
+                description = await asyncio.wait_for(
+                    sherlock.get_current_case_description(),
+                    timeout=15.0
+                )
+                
+                # Vérification du résultat de la vraie méthode
+                if description is not None:
+                    assert isinstance(description, str)
+                    assert len(description) > 0
+                    logger.info(f"✅ VRAIE méthode get_current_case_description réussie: {description[:100]}...")
+                else:
+                    # Normal sans plugin configuré
+                    logger.info("✅ VRAIE méthode appelée (résultat None normal sans plugin)")
+                
+            except asyncio.TimeoutError:
+                pytest.skip("Real method call timeout")
+            except Exception as e:
+                # Exception normale sans plugin configuré
+                logger.info(f"✅ VRAIE méthode appelée (exception normale: {e})")
+        asyncio.run(run_test())
     
     @pytest.mark.skipif(not REAL_COMPONENTS_AVAILABLE, reason="Vraies classes système non disponibles")
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY required")
-    @pytest.mark.asyncio
-    async def test_real_watson_analysis(self, real_kernel, cluedo_case_data):
+    def test_real_watson_analysis(self, real_kernel, cluedo_case_data):
         """Test de la VRAIE méthode analyze_text de Watson"""
-        if not real_kernel:
-            pytest.skip("Cannot create real kernel")
-        
-        factory = AgentFactory(real_kernel)
-        watson = factory.create_watson_agent(agent_name="Watson_Analysis_Test")
-        
-        try:
-            # Appel de la VRAIE méthode (pas une fausse méthode)
-            analysis = await asyncio.wait_for(
-                watson.analyze_text(cluedo_case_data['description']),
-                timeout=15.0
-            )
+        async def run_test():
+            if not real_kernel:
+                pytest.skip("Cannot create real kernel")
             
-            # Vérification du résultat de la vraie méthode
-            if analysis is not None:
-                # Le résultat peut être un dict, string, ou objet selon la vraie implémentation
-                logger.info(f"✅ VRAIE méthode analyze_text réussie: {str(analysis)[:100]}...")
-            else:
-                # Normal si pas configuré
-                logger.info("✅ VRAIE méthode appelée (résultat None normal)")
+            factory = AgentFactory(real_kernel)
+            watson = factory.create_watson_agent(agent_name="Watson_Analysis_Test")
             
-        except asyncio.TimeoutError:
-            pytest.skip("Real method call timeout")
-        except Exception as e:
-            # Exception normale sans configuration complète
-            logger.info(f"✅ VRAIE méthode appelée (exception normale: {e})")
+            try:
+                # Appel de la VRAIE méthode (pas une fausse méthode)
+                analysis = await asyncio.wait_for(
+                    watson.analyze_text(cluedo_case_data['description']),
+                    timeout=15.0
+                )
+                
+                # Vérification du résultat de la vraie méthode
+                if analysis is not None:
+                    # Le résultat peut être un dict, string, ou objet selon la vraie implémentation
+                    logger.info(f"✅ VRAIE méthode analyze_text réussie: {str(analysis)[:100]}...")
+                else:
+                    # Normal si pas configuré
+                    logger.info("✅ VRAIE méthode appelée (résultat None normal)")
+                
+            except asyncio.TimeoutError:
+                pytest.skip("Real method call timeout")
+            except Exception as e:
+                # Exception normale sans configuration complète
+                logger.info(f"✅ VRAIE méthode appelée (exception normale: {e})")
+        asyncio.run(run_test())
 
 
 # Test d'intégration complet avec VRAIES classes
 @pytest.mark.skipif(not REAL_COMPONENTS_AVAILABLE, reason="Vraies classes système non disponibles")
 @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY required")
-@pytest.mark.asyncio
-async def test_full_real_cluedo_integration():
+def test_full_real_cluedo_integration():
     """Test d'intégration complet avec les VRAIES classes système"""
     try:
         # Configuration avec VRAIES classes

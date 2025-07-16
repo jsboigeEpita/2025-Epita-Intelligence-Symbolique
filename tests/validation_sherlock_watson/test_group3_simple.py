@@ -23,16 +23,17 @@ from argumentation_analysis.agents.core.oracle.dataset_access_manager import Dat
 from argumentation_analysis.agents.core.oracle.permissions import QueryType, OracleResponse
 from semantic_kernel.kernel import Kernel
 
-async def main():
+def main():
     """Test simplifié des 4 problèmes identifiés"""
     print("=== DIAGNOSTIC GROUPE 3 ===")
     
     # Setup de base
     mock_kernel = Mock(spec=Kernel)
-    mock_kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
+    # mock_kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance() # Cannot await in sync function
     
     mock_dataset_manager = Mock(spec=DatasetAccessManager)
-    mock_permission_manager = await self._create_authentic_gpt4o_mini_instance()
+    # mock_permission_manager = await self._create_authentic_gpt4o_mini_instance() # Cannot await in sync function
+    mock_permission_manager = Mock()
     mock_permission_manager.is_authorized = Mock(return_value=True)
     mock_dataset_manager.permission_manager = mock_permission_manager
     
@@ -70,19 +71,19 @@ async def main():
     
     # TEST 12: invalid_json
     print("\n--- TEST 12: invalid_json ---")
-    result = await tools.query_oracle_dataset(
+    result = asyncio.run(tools.query_oracle_dataset(
         query_type="card_inquiry",
         query_params="invalid json"
-    )
+    ))
     print(f"Résultat JSON invalide: {result}")
     
     # TEST 13: invalid_query_type
     print("\n--- TEST 13: invalid_query_type ---")
     try:
-        result = await tools.check_agent_permission(
+        result = asyncio.run(tools.check_agent_permission(
             query_type="invalid_query_type",
             target_agent="TestAgent"
-        )
+        ))
         print(f"PROBLEME: Aucune ValueError levée! Résultat: {result}")
     except ValueError as ve:
         print(f"OK: ValueError levée: {ve}")
@@ -93,13 +94,13 @@ async def main():
     print("\n--- TEST 14: error_handling ---")
     mock_dataset_manager.execute_oracle_query = AsyncMock(side_effect=Exception("Erreur de connexion dataset"))
     
-    result = await tools.query_oracle_dataset(
+    result = asyncio.run(tools.query_oracle_dataset(
         query_type="card_inquiry",
         query_params='{"card_name": "Test"}'
-    )
+    ))
     print(f"Résultat erreur: {result}")
     
     print("\n=== FIN DIAGNOSTIC ===")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

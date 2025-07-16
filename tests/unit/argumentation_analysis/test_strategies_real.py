@@ -57,8 +57,8 @@ class RealChatMessage:
         return f"RealMessage({self.author_name}: {self.content})"
 
 
-@pytest_asyncio.fixture
-async def simple_termination_fixture():
+@pytest.fixture
+def simple_termination_fixture():
     """Fixture pour initialiser SUT pour TestRealSimpleTerminationStrategy."""
     state = RhetoricalAnalysisState("Texte de test pour terminaison.")
     strategy = SimpleTerminationStrategy(state, max_steps=5)
@@ -78,24 +78,25 @@ class TestRealSimpleTerminationStrategy:
         assert isinstance(state, RhetoricalAnalysisState)
         print("[OK] Test initialisation SimpleTerminationStrategy réussi")
 
-    @pytest.mark.asyncio
-    async def test_should_terminate_max_steps_real(self, simple_termination_fixture):
+    def test_should_terminate_max_steps_real(self, simple_termination_fixture):
         """Teste la terminaison basée sur le nombre maximum d'étapes."""
         strategy = simple_termination_fixture["strategy"]
         agent = simple_termination_fixture["agent"]
         history = simple_termination_fixture["history"]
         
-        for i in range(4):
+        async def run_test():
+            for i in range(4):
+                result = await strategy.should_terminate(agent, history)
+                assert not result, f"Ne devrait pas terminer au tour {i+1}"
+            
+            # Le 5e appel devrait déclencher la terminaison
             result = await strategy.should_terminate(agent, history)
-            assert not result, f"Ne devrait pas terminer au tour {i+1}"
-        
-        # Le 5e appel devrait déclencher la terminaison
-        result = await strategy.should_terminate(agent, history)
-        assert result, "Devrait terminer après max_steps"
+            assert result, "Devrait terminer après max_steps"
+
+        asyncio.run(run_test())
         print("[OK] Test terminaison max steps réussi")
 
-    @pytest.mark.asyncio
-    async def test_should_terminate_conclusion_real(self, simple_termination_fixture):
+    def test_should_terminate_conclusion_real(self, simple_termination_fixture):
         """Teste la terminaison basée sur une conclusion finale."""
         strategy = simple_termination_fixture["strategy"]
         state = simple_termination_fixture["state"]
@@ -103,13 +104,17 @@ class TestRealSimpleTerminationStrategy:
         history = simple_termination_fixture["history"]
 
         state.final_conclusion = "Conclusion de test atteinte"
-        result = await strategy.should_terminate(agent, history)
+        
+        async def run_test():
+            return await strategy.should_terminate(agent, history)
+
+        result = asyncio.run(run_test())
         assert result, "Devrait terminer avec conclusion finale"
         print("[OK] Test terminaison par conclusion réussi")
 
 
-@pytest_asyncio.fixture
-async def delegating_selection_fixture():
+@pytest.fixture
+def delegating_selection_fixture():
     """Fixture pour initialiser SUT pour TestRealDelegatingSelectionStrategy."""
     state = RhetoricalAnalysisState("Test délégation sélection")
     agents = [
@@ -134,17 +139,19 @@ class TestRealDelegatingSelectionStrategy:
         assert strategy._default_agent_name == "ProjectManagerAgent"
         print("[OK] Test initialisation DelegatingSelectionStrategy réussi")
 
-    @pytest.mark.asyncio
-    async def test_next_agent_default_real(self, delegating_selection_fixture):
+    def test_next_agent_default_real(self, delegating_selection_fixture):
         """Teste la sélection par défaut sans désignation."""
         strategy = delegating_selection_fixture["strategy"]
         agents = delegating_selection_fixture["agents"]
-        selected = await strategy.next(agents, [])
+        
+        async def run_test():
+            return await strategy.next(agents, [])
+        
+        selected = asyncio.run(run_test())
         assert selected.name == "ProjectManagerAgent"
         print("[OK] Test sélection agent par défaut réussi")
 
-    @pytest.mark.asyncio
-    async def test_next_agent_with_designation_real(self, delegating_selection_fixture):
+    def test_next_agent_with_designation_real(self, delegating_selection_fixture):
         """Teste la sélection avec désignation explicite via l'état."""
         strategy = delegating_selection_fixture["strategy"]
         state = delegating_selection_fixture["state"]
@@ -152,13 +159,17 @@ class TestRealDelegatingSelectionStrategy:
         history = delegating_selection_fixture["history"]
         
         state.designate_next_agent("AnalystAgent")
-        selected = await strategy.next(agents, history)
+        
+        async def run_test():
+            return await strategy.next(agents, history)
+
+        selected = asyncio.run(run_test())
         assert selected.name == "AnalystAgent"
         print("[OK] Test sélection avec désignation explicite réussi")
 
 
-@pytest_asyncio.fixture
-async def balanced_participation_fixture():
+@pytest.fixture
+def balanced_participation_fixture():
     """Fixture pour initialiser SUT pour TestRealBalancedParticipationStrategy."""
     state = RhetoricalAnalysisState("Test équilibrage participation")
     agents = [
@@ -187,20 +198,23 @@ class TestRealBalancedParticipationStrategy:
         assert strategy._target_participation["ProjectManagerAgent"] == 0.5
         print("[OK] Test initialisation BalancedParticipationStrategy réussi")
 
-    @pytest.mark.asyncio
-    async def test_balanced_selection_real(self, balanced_participation_fixture):
+    def test_balanced_selection_real(self, balanced_participation_fixture):
         """Teste l'équilibrage de la participation sur plusieurs tours."""
         strategy = balanced_participation_fixture["strategy"]
         agents = balanced_participation_fixture["agents"]
         history = balanced_participation_fixture["history"]
         
-        selections = []
-        for turn in range(10):
-            selected = await strategy.next(agents, history)
-            selections.append(selected.name)
-            message = RealChatMessage(f"Message tour {turn+1}", "assistant", selected.name)
-            history.append(message)
-        
+        async def run_test():
+            selections = []
+            for turn in range(10):
+                selected = await strategy.next(agents, history)
+                selections.append(selected.name)
+                message = RealChatMessage(f"Message tour {turn+1}", "assistant", selected.name)
+                history.append(message)
+            return selections
+
+        selections = asyncio.run(run_test())
+
         pm_count = selections.count("ProjectManagerAgent")
         analyst_count = selections.count("AnalystAgent")
         critic_count = selections.count("CriticAgent")
@@ -210,18 +224,21 @@ class TestRealBalancedParticipationStrategy:
         assert pm_count >= critic_count
         print("[OK] Test équilibrage participation réussi")
 
-    @pytest.mark.asyncio
-    async def test_explicit_designation_override_real(self, balanced_participation_fixture):
+    def test_explicit_designation_override_real(self, balanced_participation_fixture):
         """Teste que la désignation explicite prime sur l'équilibrage."""
         s = balanced_participation_fixture
         s["state"].designate_next_agent("CriticAgent")
-        selected = await s["strategy"].next(s["agents"], s["history"])
+        
+        async def run_test():
+            return await s["strategy"].next(s["agents"], s["history"])
+
+        selected = asyncio.run(run_test())
         assert selected.name == "CriticAgent"
         print("[OK] Test priorité désignation explicite réussi")
 
 
-@pytest_asyncio.fixture
-async def strategies_integration_fixture():
+@pytest.fixture
+def strategies_integration_fixture():
     """Fixture pour initialiser SUT pour TestRealStrategiesIntegration."""
     state = RhetoricalAnalysisState("Integration test complet")
     agents = [
@@ -244,25 +261,29 @@ async def strategies_integration_fixture():
 class TestRealStrategiesIntegration:
     """Tests d'intégration complets utilisant les 3 stratégies (style pytest)."""
     
-    @pytest.mark.asyncio
-    async def test_full_conversation_with_all_strategies_real(self, strategies_integration_fixture):
+    def test_full_conversation_with_all_strategies_real(self, strategies_integration_fixture):
         """Simulation complète avec les 3 stratégies en interaction."""
         fx = strategies_integration_fixture
-        turn = 0
-        conversation_ended = False
         
-        while not conversation_ended and turn < 10:
-            turn += 1
-            selected_agent = await fx["balanced_strategy"].next(fx["agents"], fx["history"])
-            message = RealChatMessage(
-                f"Réponse tour {turn} de {selected_agent.role}", "assistant", selected_agent.name
-            )
-            fx["history"].append(message)
-            conversation_ended = await fx["termination_strategy"].should_terminate(
-                selected_agent, fx["history"]
-            )
-            print(f"   Tour {turn}: Agent={selected_agent.name}, Terminé={conversation_ended}")
-        
+        async def run_test():
+            turn = 0
+            conversation_ended = False
+            
+            while not conversation_ended and turn < 10:
+                turn += 1
+                selected_agent = await fx["balanced_strategy"].next(fx["agents"], fx["history"])
+                message = RealChatMessage(
+                    f"Réponse tour {turn} de {selected_agent.role}", "assistant", selected_agent.name
+                )
+                fx["history"].append(message)
+                conversation_ended = await fx["termination_strategy"].should_terminate(
+                    selected_agent, fx["history"]
+                )
+                print(f"   Tour {turn}: Agent={selected_agent.name}, Terminé={conversation_ended}")
+            return turn
+            
+        turn = asyncio.run(run_test())
+
         assert len(fx["history"]) > 0, "Au moins un message généré"
         assert turn == 8, "La conversation doit se terminer exactement au 8ème tour"
         

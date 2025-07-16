@@ -18,7 +18,7 @@ from services.mcp_server.main import MCPService, AppServices
 from argumentation_analysis.services.web_api.models.response_models import AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse
 
 @pytest.fixture
-async def mcp_service_mock():
+def mcp_service_mock():
     """Fixture améliorée pour mocker complètement l'initialisation et les services."""
     with patch('services.mcp_server.main.FastMCP') as mock_fast_mcp, \
          patch('services.mcp_server.main.initialize_project_environment') as mock_init_env, \
@@ -72,7 +72,8 @@ async def mcp_service_mock():
         service.mock_services_instance = mock_services_instance
 
         # Simuler l'initialisation qui se fait normalement de manière asynchrone
-        await service._ensure_initialized()
+        import asyncio
+        asyncio.run(service._ensure_initialized())
 
         yield service
 
@@ -83,33 +84,33 @@ def test_mcp_service_initialization(mcp_service_mock: MCPService):
     mcp_service_mock.mock_app_services_class.assert_called_once()
     assert mcp_service_mock.mcp_instance_mock.tool.call_count == 10
 
-@pytest.mark.asyncio
-async def test_analyze_text_method(mcp_service_mock: MCPService):
+def test_analyze_text_method(mcp_service_mock: MCPService):
     """Teste la réponse de la méthode 'analyze_text'."""
-    response = await mcp_service_mock.analyze_text(text="Test text.")
+    import asyncio
+    response = asyncio.run(mcp_service_mock.analyze_text(text="Test text."))
     assert response['success'] is True
     assert response['text_analyzed'] == "Sample text"
 
-@pytest.mark.asyncio
-async def test_validate_argument_method(mcp_service_mock: MCPService):
+def test_validate_argument_method(mcp_service_mock: MCPService):
     """Teste la réponse de la méthode 'validate_argument'."""
-    response = await mcp_service_mock.validate_argument(premises=["p1"], conclusion="c1")
+    import asyncio
+    response = asyncio.run(mcp_service_mock.validate_argument(premises=["p1"], conclusion="c1"))
     assert response['success'] is True
     assert response['result']['is_valid'] is True
 
-@pytest.mark.asyncio
-async def test_detect_fallacies_method(mcp_service_mock: MCPService):
+def test_detect_fallacies_method(mcp_service_mock: MCPService):
     """Teste la réponse de la méthode 'detect_fallacies'."""
-    response = await mcp_service_mock.detect_fallacies(text="Test fallacy.")
+    import asyncio
+    response = asyncio.run(mcp_service_mock.detect_fallacies(text="Test fallacy."))
     assert response['success'] is True
     assert response['text_analyzed'] == "Sample text for fallacies"
     assert not response['fallacies']
 
-@pytest.mark.asyncio
-async def test_build_framework_method(mcp_service_mock: MCPService):
+def test_build_framework_method(mcp_service_mock: MCPService):
     """Teste la réponse de la méthode 'build_framework' avec des données valides."""
+    import asyncio
     # Le modèle `FrameworkRequest` requiert au moins un argument.
     valid_argument = [{"id": "A", "content": "Argument A"}]
-    response = await mcp_service_mock.build_framework(arguments=valid_argument)
+    response = asyncio.run(mcp_service_mock.build_framework(arguments=valid_argument))
     assert response['success'] is True
     assert response['semantics_used'] == "complete"

@@ -11,14 +11,14 @@ import traceback
 
 # Imports du système Oracle
 sys.path.append('.')
+from unittest.mock import Mock, AsyncMock
 from tests.utils.common_test_helpers import create_authentic_gpt4o_mini_instance
 from argumentation_analysis.agents.core.oracle.oracle_base_agent import OracleBaseAgent, OracleTools
 from argumentation_analysis.agents.core.oracle.dataset_access_manager import DatasetAccessManager
 from argumentation_analysis.agents.core.oracle.permissions import QueryType, OracleResponse, PermissionManager
 from semantic_kernel.kernel import Kernel
 
-@pytest.mark.asyncio
-async def test_all_group3_fixes():
+def test_all_group3_fixes():
     """Test complet des 4 corrections appliquées"""
     print("=== VALIDATION FINALE GROUPE 3 ===")
     
@@ -79,10 +79,10 @@ async def test_all_group3_fixes():
     # TEST 12: invalid_json - maintenant devrait passer
     print("\n--- TEST 12: invalid_json (FIXED) ---")
     try:
-        result = await tools.query_oracle_dataset(
+        result = asyncio.run(tools.query_oracle_dataset(
             query_type="card_inquiry",
             query_params="invalid json"
-        )
+        ))
         
         if "Erreur de format JSON" in result:
             print("OK Test 12 reussi!")
@@ -98,10 +98,10 @@ async def test_all_group3_fixes():
     print("\n--- TEST 13: invalid_query_type (SHOULD PASS) ---")
     try:
         try:
-            result = await tools.check_agent_permission(
+            result = asyncio.run(tools.check_agent_permission(
                 query_type="invalid_query_type",
                 target_agent="TestAgent"
-            )
+            ))
             print(f"ERREUR Test 13: Aucune ValueError levée! Résultat: {result}")
             results.append(False)
         except ValueError as ve:
@@ -119,10 +119,10 @@ async def test_all_group3_fixes():
     try:
         mock_dataset_manager.execute_oracle_query = AsyncMock(side_effect=Exception("Erreur de connexion dataset"))
         
-        result = await tools.query_oracle_dataset(
+        result = asyncio.run(tools.query_oracle_dataset(
             query_type="card_inquiry",
             query_params='{"card_name": "Test"}'
-        )
+        ))
         
         if "Erreur lors de la requête Oracle" in result and "Erreur de connexion dataset" in result:
             print("OK Test 14 reussi!")
@@ -141,17 +141,16 @@ async def test_all_group3_fixes():
     print(f"\n=== RÉSUMÉ VALIDATION GROUPE 3 ===")
     print(f"Tests passés: {passed}/{total}")
     
-    if passed == total:
-        print("🎉 TOUS LES TESTS DU GROUPE 3 PASSENT!")
-        print("🎯 OBJECTIF 100% ATTEINT!")
-        return True
-    else:
-        print("❌ Des corrections supplémentaires sont nécessaires")
-        return False
+    assert passed == total, f"{total - passed} tests du groupe 3 ont échoué."
+    print("🎉 TOUS LES TESTS DU GROUPE 3 PASSENT!")
+    print("🎯 OBJECTIF 100% ATTEINT!")
+
 
 if __name__ == "__main__":
-    success = asyncio.run(test_all_group3_fixes())
-    if success:
+    try:
+        test_all_group3_fixes()
         print("\n[OK] VALIDATION FINALE RÉUSSIE - GROUPE 3 CORRIGÉ À 100%")
-    else:
-        print("\n❌ VALIDATION FINALE ÉCHOUÉE - CORRECTIONS SUPPLÉMENTAIRES NÉCESSAIRES")
+    except AssertionError as e:
+        print(f"\n❌ VALIDATION FINALE ÉCHOUÉE: {e}")
+    except Exception as e:
+        print(f"\n❌ VALIDATION FINALE ÉCHOUÉE - ERREUR INATTENDUE: {e}")
