@@ -1,12 +1,14 @@
 from enum import Enum
 import semantic_kernel as sk
 from .agents import FallacyAgentBase, MethodicalAuditorAgent, ParallelExplorerAgent, ResearchAssistantAgent
+from .concrete_agents.informal_fallacy_agent import InformalFallacyAgent
 
 class AgentType(Enum):
     """Enumeration of available agent archetypes."""
     METHODICAL_AUDITOR = "MethodicalAuditor"
     PARALLEL_EXPLORER = "ParallelExplorer"
     RESEARCH_ASSISTANT = "ResearchAssistant"
+    INFORMAL_FALLACY = "InformalFallacy"
 
 class AgentFactory:
     """Factory class for creating fallacy detection agents."""
@@ -15,6 +17,7 @@ class AgentFactory:
         AgentType.METHODICAL_AUDITOR: MethodicalAuditorAgent,
         AgentType.PARALLEL_EXPLORER: ParallelExplorerAgent,
         AgentType.RESEARCH_ASSISTANT: ResearchAssistantAgent,
+        AgentType.INFORMAL_FALLACY: InformalFallacyAgent,
     }
 
     def __init__(self, kernel: sk.Kernel, llm_service_id: str):

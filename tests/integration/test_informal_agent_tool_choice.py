@@ -8,7 +8,7 @@ import sys
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from argumentation_analysis.agents.factory import AgentFactory
+from argumentation_analysis.agents.factory import AgentFactory, AgentType
 from argumentation_analysis.core.llm_service import create_llm_service
 from semantic_kernel.contents.chat_history import ChatHistory
 from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer as IdentificationPlugin
@@ -35,7 +35,8 @@ def test_informal_agent_forced_tool_choice(tmp_path):
 
     # 3. Création de l'agent tracé
     agent_factory = AgentFactory(kernel, llm_service_id)
-    agent = agent_factory.create_informal_fallacy_agent(
+    agent = agent_factory.create_agent(
+        AgentType.INFORMAL_FALLACY,
         config_name="simple",
         trace_log_path=str(log_file)
     )

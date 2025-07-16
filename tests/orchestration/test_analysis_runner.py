@@ -42,7 +42,7 @@ async def test_analysis_runner_full_integration_flow(
     mock_manager_agent.name = "Project_Manager"
     
     mock_factory_instance = mock_agent_factory.return_value
-    mock_factory_instance.create_informal_fallacy_agent.return_value = mock_fallacy_agent
+    mock_factory_instance.create_agent.return_value = mock_fallacy_agent
     mock_factory_instance.create_project_manager_agent.return_value = mock_manager_agent
     
     # Simuler AgentGroupChat pour retourner un historique de chat prédéfini
@@ -74,7 +74,7 @@ async def test_analysis_runner_full_integration_flow(
     mock_kernel_builder.create_kernel.assert_called_once_with(mock_settings_instance)
     
     mock_agent_factory.assert_called_once_with(mock_kernel, "mock_service")
-    mock_factory_instance.create_informal_fallacy_agent.assert_called_once()
+    mock_factory_instance.create_agent.assert_called_once()
     mock_factory_instance.create_project_manager_agent.assert_called_once()
     
     mock_agent_group_chat.assert_called_once()

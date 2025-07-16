@@ -53,14 +53,14 @@ class TestAnalysisRunner(unittest.IsolatedAsyncioTestCase):
         mock_manager = MagicMock()
         mock_fallacy = MagicMock()
         self.runner.factory.create_project_manager_agent.return_value = mock_manager
-        self.runner.factory.create_informal_fallacy_agent.return_value = mock_fallacy
+        self.runner.factory.create_agent.return_value = mock_fallacy
 
         # Exécuter la méthode
         result = await self.runner.run_analysis(self.test_text)
 
         # Assertions
         self.runner.factory.create_project_manager_agent.assert_called_once()
-        self.runner.factory.create_informal_fallacy_agent.assert_called_once()
+        self.runner.factory.create_agent.assert_called_once()
         
         mock_agent_group_chat_class.assert_called_once()
         # Vérifier que le chat a été invoqué

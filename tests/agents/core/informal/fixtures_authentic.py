@@ -433,8 +433,8 @@ def authentic_informal_agent(authentic_semantic_kernel, setup_authentic_taxonomy
         agent_factory = AgentFactory(kernel, llm_service_id)
         
         # On utilise la config "full" pour avoir toutes les fonctionnalités
-        agent = agent_factory.create_informal_fallacy_agent(
-            config_name="full"
+        agent = agent_factory.create_agent(
+            AgentType.INFORMAL_FALLACY, config_name="full"
         )
         agent.name = agent_name # Surcharger le nom
         

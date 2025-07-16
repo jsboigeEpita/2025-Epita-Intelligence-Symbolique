@@ -2,7 +2,7 @@
 import pytest
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
-from argumentation_analysis.agents.factory import AgentFactory
+from argumentation_analysis.agents.factory import AgentFactory, AgentType
 from argumentation_analysis.agents.plugins.fallacy_workflow_plugin import FallacyWorkflowPlugin
 from argumentation_analysis.agents.plugins.taxonomy_display_plugin import TaxonomyDisplayPlugin
 
@@ -309,7 +309,7 @@ def test_agent_factory_configurations(kernel, config_name, expected_plugin_types
     factory = AgentFactory(kernel, llm_service_id="test_service")
 
     # --- Act ---
-    agent = factory.create_informal_fallacy_agent(config_name=config_name)
+    agent = factory.create_agent(AgentType.INFORMAL_FALLACY, config_name=config_name)
     
     # Récupère les types des plugins réellement chargés dans le kernel de l'agent
     # L'API a changé, les plugins sont maintenant dans le kernel
