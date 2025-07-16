@@ -92,6 +92,9 @@ class TestInformalAnalysisAgentAuthentic:
         """
         Test authentique d'analyse de sophismes avec vrai LLM, utilisant le nouveau paradigme d'invocation.
         """
+        if not authentic_informal_agent.id:
+            pytest.skip("Service LLM non configuré - test authentique impossible")
+        
         start_time = time.time()
         
         agent = authentic_informal_agent
@@ -132,6 +135,9 @@ class TestInformalAnalysisAgentAuthentic:
         """
         Test authentique d'identification d'arguments via le nouveau paradigme d'invocation.
         """
+        if not authentic_informal_agent.id:
+            pytest.skip("Service LLM non configuré - test authentique impossible")
+        
         start_time = time.time()
         
         agent = authentic_informal_agent
@@ -173,6 +179,9 @@ class TestInformalAnalysisAgentAuthentic:
         """
         Test authentique d'analyse d'argument complet via le nouveau paradigme d'invocation.
         """
+        if not authentic_informal_agent.id:
+            pytest.skip("Service LLM non configuré - test authentique impossible")
+        
         start_time = time.time()
         
         agent = authentic_informal_agent
@@ -214,6 +223,9 @@ class TestInformalAnalysisAgentAuthentic:
         """
         Test authentique d'analyse de texte complète via le nouveau paradigme d'invocation.
         """
+        if not authentic_informal_agent.id:
+            pytest.skip("Service LLM non configuré - test authentique impossible")
+        
         start_time = time.time()
         
         agent = authentic_informal_agent
@@ -366,6 +378,9 @@ class TestInformalAnalysisAgentAuthentic:
         """
         Test authentique du workflow complet d'analyse informelle via une seule invocation.
         """
+        if not authentic_informal_agent.id:
+            pytest.skip("Service LLM requis pour test intégration authentique")
+        
         start_time = time.time()
         
         agent = authentic_informal_agent

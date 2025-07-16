@@ -2,8 +2,8 @@ import pytest
 import sys
 import os
 from pathlib import Path
+import subprocess
 from dotenv import load_dotenv, find_dotenv
-from project_core.utils.shell import run_sync
 
 @pytest.fixture(scope="function")
 def run_in_jvm_subprocess():
@@ -34,15 +34,15 @@ def run_in_jvm_subprocess():
         
         print(f"Exécution du worker en sous-processus avec PYTHONPATH et PROJECT_ROOT: {' '.join(command_for_subprocess)}")
 
-        # L'argument `capture_output` est désactivé pour permettre un affichage en temps réel,
-        # ce qui est crucial pour le débogage de tqdm et des erreurs de bas niveau de la JVM
-        # qui pourraient ne pas être capturées correctement autrement.
+        # On capture la sortie pour pouvoir l'afficher en cas d'erreur.
         result = subprocess.run(
             command_for_subprocess,
-            capture_output=False,  # Désactivé pour le débogage
-            check=False,
+            capture_output=True,
+            check=False,  # On gère l'échec manuellement avec pytest.fail
             cwd=project_root,
-            # Les autres paramètres (text, encoding, etc.) sont gérés par run_sync
+            env=env,
+            text=True,
+            encoding='utf-8'
         )
         
         # La sortie (stdout/stderr) s'affichera directement dans la console pytest.

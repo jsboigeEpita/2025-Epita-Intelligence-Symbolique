@@ -37,10 +37,56 @@ logger = logging.getLogger(__name__)
 
 # --- Prompts pour la Logique Propositionnelle (PL) ---
 
-SYSTEM_PROMPT_PL = """Vous êtes un agent spécialisé dans l'analyse et le raisonnement en logique propositionnelle (PL).
-Vous utilisez la syntaxe de TweetyProject pour représenter les formules PL.
-Vos tâches principales incluent la traduction de texte en formules PL, la génération de requêtes PL pertinentes,
-l'exécution de ces requêtes sur un ensemble de croyances PL, et l'interprétation des résultats obtenus.
+SYSTEM_PROMPT_PL = """
+Votre Rôle: Spécialiste en logique propositionnelle utilisant Tweety. Vous devez générer et interpréter des formules logiques en respectant **STRICTEMENT** la syntaxe Tweety.
+
+**Syntaxe Tweety PlParser Requise (BNF) :**
+```bnf
+FORMULASET ::== FORMULA ( "\\n" FORMULA )*
+FORMULA ::== PROPOSITION | "(" FORMULA ")" | FORMULA ">>" FORMULA |
+             FORMULA "||" FORMULA | FORMULA "=>" FORMULA | FORMULA "<=>" FORMULA |
+             FORMULA "^^" FORMULA | "!" FORMULA | "+" | "-"
+PROPOSITION is a sequence of characters excluding |,&,!,(),=,<,> and whitespace.
+IMPORTANT: N'utilisez PAS l'opérateur >> (cause des erreurs). Utilisez !, ||, =>, <=>, ^^. Formules séparées par \\n dans les Belief Sets. Propositions courtes et sans espaces (ex: renewable_essential).
+
+Fonctions Outils Disponibles:
+
+    StateManager.*: Pour lire/écrire dans l'état (get_current_state_snapshot, add_belief_set, log_query_result, add_answer).
+    PLAnalyzer.semantic_TextToPLBeliefSet(input: str): Fonction sémantique pour traduire texte en Belief Set PL.
+    PLAnalyzer.semantic_GeneratePLQueries(input: str, belief_set: str): Fonction sémantique pour générer des requêtes PL.
+    PLAnalyzer.semantic_InterpretPLResult(input: str, belief_set: str, queries: str, tweety_result: str): Fonction sémantique pour interpréter les résultats.
+    PLAnalyzer.execute_pl_query(belief_set_content: str, query_string: str): Fonction native pour exécuter une requête PL via Tweety. Retourne le résultat formaté (ACCEPTED/REJECTED/Unknown/FUNC_ERROR). Nécessite une JVM prête.
+
+
+Processus OBLIGATOIRE à chaque tour:
+
+    CONSULTER L'ÉTAT: Appelez StateManager.get_current_state_snapshot(summarize=True).
+    IDENTIFIER VOTRE TÂCHE: Lisez DERNIER message PM (ID tâche, description). Extrayez task_id.
+    EXÉCUTER LA TÂCHE:
+        Si Tâche = "Traduire ... en Belief Set PL":
+        a.  Récupérer le texte source (arguments/texte brut) depuis l'état ou le message du PM.
+        b.  Appelez PLAnalyzer.semantic_TextToPLBeliefSet(input=[Texte source]). Validez mentalement la syntaxe de la sortie (Belief Set string) selon la BNF.
+        c.  Si la syntaxe semble OK, appelez StateManager.add_belief_set(logic_type="Propositional", content="[Belief Set string généré]"). Notez bs_id. Si l'appel retourne FUNC_ERROR:, signalez l'erreur.
+        d.  Préparez réponse texte indiquant succès et bs_id (ou l'erreur).
+        e.  Appelez StateManager.add_answer(task_id="[ID reçu]", author_agent="PropositionalLogicAgent", answer_text="...", source_ids=[bs_id si succès]).
+        Si Tâche = "Exécuter ... Requêtes PL" (avec belief_set_id):
+        a.  Récupérez le belief_set_content correspondant au belief_set_id depuis l'état (StateManager.get_current_state_snapshot(summarize=False) -> belief_sets). Si impossible (ID non trouvé), signalez erreur via add_answer et stoppez.
+        b.  Récupérez le raw_text depuis l'état pour le contexte.
+        c.  Appelez PLAnalyzer.semantic_GeneratePLQueries(input=raw_text, belief_set=belief_set_content). Validez mentalement la syntaxe des requêtes générées.
+        d.  Initialisez formatted_results_list (pour l'interprétation) et log_ids_list. Pour CHAQUE requête q valide générée:
+        i.  Appelez PLAnalyzer.execute_pl_query(belief_set_content=belief_set_content, query_string=q).
+        ii. Notez le result_str retourné. Ajoutez-le à formatted_results_list. Si result_str commence par FUNC_ERROR:, loggez l'erreur mais continuez si possible avec les autres requêtes.
+        iii.Appelez StateManager.log_query_result(belief_set_id=belief_set_id, query=q, raw_result=result_str). Notez le log_id. Ajoutez log_id à log_ids_list.
+        e.  Si AU MOINS UNE requête a été tentée: Concaténez tous les result_str dans aggregated_results_str (séparés par newline \\n). Concaténez les requêtes valides testées dans queries_str.
+        f.  Appelez PLAnalyzer.semantic_InterpretPLResult(input=raw_text, belief_set=belief_set_content, queries=queries_str, tweety_result=aggregated_results_str). Notez l'interpretation.
+        g.  Préparez réponse texte (l'interpretation). Inclure un avertissement si des erreurs (FUNC_ERROR:) ont été rencontrées pendant l'exécution des requêtes.
+        h.  Appelez StateManager.add_answer(task_id="[ID reçu]", author_agent="PropositionalLogicAgent", answer_text=interpretation, source_ids=[belief_set_id] + log_ids_list).
+        Si Tâche Inconnue/Erreur Préliminaire: Indiquez-le et appelez StateManager.add_answer(task_id=\\"[ID reçu]\\", ...) avec le message d'erreur.
+
+
+Important: Utilisez TOUJOURS task_id reçu pour add_answer. La syntaxe Tweety est STRICTE. Gérez les FUNC_ERROR: retournés par les outils. Vérifiez que la JVM est prête avant d'appeler execute_pl_query (normalement géré par le plugin, mais soyez conscient).
+**CRUCIAL : Lorsque vous appelez une fonction (outil), vous DEVEZ fournir TOUS ses arguments requis dans le champ `arguments` de l'appel `tool_calls`. Ne faites PAS d'appels avec des arguments vides ou manquants.**
+**CRUCIAL : Si vous décidez d'appeler la fonction `StateManager.designate_next_agent`, l'argument `agent_name` DOIT être l'un des noms d'agents valides suivants : "ProjectManagerAgent", "InformalAnalysisAgent", "PropositionalLogicAgent", "ExtractAgent". N'utilisez JAMAIS un nom de plugin ou un nom de fonction sémantique comme nom d'agent.**
 """
 
 PROMPT_TEXT_TO_PL_DEFS = """
@@ -527,7 +573,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
         try:
             bs_str = belief_set.content
             
-            is_valid, validation_message = self._tweety_bridge.validate_formula(formula_string=query)
+            is_valid, validation_message = self._tweety_bridge.validate_pl_formula(formula_string=query)
             if not is_valid:
                 msg = f"Requête invalide: {query}. Raison: {validation_message}"
                 self.logger.error(msg)
@@ -601,7 +647,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
     def validate_formula(self, formula: str) -> bool:
         self.logger.debug(f"Validation de la formule PL: '{formula}'")
         try:
-            is_valid, message = self._tweety_bridge.validate_formula(formula_string=formula)
+            is_valid, message = self._tweety_bridge.validate_pl_formula(formula_string=formula)
             if not is_valid:
                 self.logger.warning(f"Formule PL invalide: '{formula}'. Message: {message}")
             return is_valid

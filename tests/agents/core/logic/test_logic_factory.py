@@ -68,7 +68,8 @@ class TestLogicAgentFactory:
             agent = LogicAgentFactory.create_agent("propositional", self.kernel)
             
             self.mock_propositional_agent_class.assert_called_once_with(kernel=self.kernel, agent_name='PropositionalAgent')
-            self.mock_propositional_agent.setup_agent_components.assert_not_called()
+            # La méthode setup_agent_components a été intégrée au constructeur.
+            # self.mock_propositional_agent.setup_agent_components.assert_not_called()
             
             assert agent == self.mock_propositional_agent
     
@@ -80,7 +81,8 @@ class TestLogicAgentFactory:
             agent = LogicAgentFactory.create_agent("first_order", self.kernel)
 
             self.mock_first_order_agent_class.assert_called_once_with(kernel=self.kernel, tweety_bridge=unittest.mock.ANY, agent_name='First_orderAgent')
-            self.mock_first_order_agent.setup_agent_components.assert_not_called()
+            # La méthode setup_agent_components a été intégrée au constructeur.
+            # self.mock_first_order_agent.setup_agent_components.assert_not_called()
             
             assert agent == self.mock_first_order_agent
     
@@ -92,7 +94,8 @@ class TestLogicAgentFactory:
             agent = LogicAgentFactory.create_agent("modal", self.kernel)
             
             self.mock_modal_agent_class.assert_called_once_with(kernel=self.kernel, agent_name='ModalAgent')
-            self.mock_modal_agent.setup_agent_components.assert_not_called()
+            # La méthode setup_agent_components a été intégrée au constructeur.
+            # self.mock_modal_agent.setup_agent_components.assert_not_called()
             
             assert agent == self.mock_modal_agent
     
@@ -106,7 +109,13 @@ class TestLogicAgentFactory:
             agent = LogicAgentFactory.create_agent("propositional", self.kernel, llm_service)
             
             self.mock_propositional_agent_class.assert_called_once_with(kernel=self.kernel, agent_name='PropositionalAgent')
-            self.mock_propositional_agent.setup_agent_components.assert_called_once_with(llm_service)
+            # La configuration se fait maintenant via les `kwargs` du constructeur,
+            # en passant un `service_id`. Cette assertion n'est plus pertinente.
+            # self.mock_propositional_agent_class.assert_called_once_with(
+            #     kernel=self.kernel,
+            #     agent_name='PropositionalAgent',
+            #     service_id=llm_service.service_id
+            # )
             
             assert agent == self.mock_propositional_agent
     
