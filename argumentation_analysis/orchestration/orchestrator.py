@@ -9,7 +9,7 @@ from semantic_kernel.contents.chat_history import ChatHistory
 
 from argumentation_analysis.config.settings import AppSettings
 # Supprimé : from argumentation_analysis.core.kernel_builder import KernelBuilder
-from argumentation_analysis.agents.agent_factory import AgentFactory
+from argumentation_analysis.agents.factory import AgentFactory
 from semantic_kernel import Kernel
 
 logger = logging.getLogger(__name__)

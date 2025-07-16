@@ -28,7 +28,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 # Imports des VRAIES classes du système
 try:
-    from argumentation_analysis.agents.agent_factory import AgentFactory
+    from argumentation_analysis.agents.factory import AgentFactory
     from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
     from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
     from argumentation_analysis.orchestration.group_chat import AgentGroupChat

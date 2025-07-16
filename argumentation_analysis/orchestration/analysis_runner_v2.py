@@ -54,7 +54,7 @@ from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
 from argumentation_analysis.config.settings import settings
 
 # --- Agents ---
-from argumentation_analysis.agents.agent_factory import AgentFactory
+from argumentation_analysis.agents.factory import AgentFactory
 from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
 from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
 from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent

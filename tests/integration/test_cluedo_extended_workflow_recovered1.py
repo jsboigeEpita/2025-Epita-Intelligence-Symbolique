@@ -37,7 +37,7 @@ from argumentation_analysis.core.enquete_states import EnqueteCluedoState
 from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
 
 # Imports des agents (adaptés v2.1.0)
-from argumentation_analysis.agents.agent_factory import AgentFactory
+from argumentation_analysis.agents.factory import AgentFactory
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
 from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
 from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent
@@ -47,16 +47,16 @@ from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent impor
 @pytest.mark.integration
 @pytest.mark.comparison
 class TestWorkflowComparison:
-    async def _create_authentic_gpt4o_mini_instance(self):
+    def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
         config = UnifiedConfig()
         return config.get_kernel_with_gpt4o_mini()
         
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
+    def _make_authentic_llm_call(self, prompt: str) -> str:
         """Fait un appel authentique à gpt-4o-mini."""
         try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
+            kernel = self._create_authentic_gpt4o_mini_instance()
+            result = asyncio.run(kernel.invoke("chat", input=prompt))
             return str(result)
         except Exception as e:
             logger.warning(f"Appel LLM authentique échoué: {e}")
@@ -65,11 +65,11 @@ class TestWorkflowComparison:
     """Tests de comparaison entre workflows 2-agents et 3-agents Oracle Enhanced v2.1.0."""
     
     @pytest.fixture
-    async def mock_kernel(self):
+    def mock_kernel(self):
         """Kernel mocké pour tests comparatifs."""
         kernel = Mock(spec=Kernel)
-        kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
-        kernel.add_filter = await self._create_authentic_gpt4o_mini_instance()
+        kernel.add_plugin = self._create_authentic_gpt4o_mini_instance()
+        kernel.add_filter = self._create_authentic_gpt4o_mini_instance()
         return kernel
     
     @pytest.fixture
@@ -101,8 +101,7 @@ class TestWorkflowComparison:
             ChatMessageContent(role="assistant", content="Watson: Donc c'est Colonel Moutarde, Poignard, Salon", name="Watson"),
         ]
     
-    @pytest.mark.asyncio
-    async def test_workflow_setup_comparison(self, mock_kernel, comparison_elements):
+    def test_workflow_setup_comparison(self, mock_kernel, comparison_elements):
         """Test la comparaison des configurations de workflow."""
         # Configuration 2-agents (simulée)
         state_2agents = EnqueteCluedoState(
@@ -184,8 +183,7 @@ class TestWorkflowComparison:
         assert not hasattr(sherlock_2, 'moriarty_tools')
         assert not hasattr(watson_2, 'moriarty_tools')
     
-    @pytest.mark.asyncio
-    async def test_conversation_length_comparison(self, mock_kernel, mock_conversation_2agents, mock_conversation_3agents):
+    def test_conversation_length_comparison(self, mock_kernel, mock_conversation_2agents, mock_conversation_3agents):
         """Test la comparaison de la longueur des conversations."""
         
         # Analyse des conversations simulées
@@ -266,8 +264,7 @@ class TestWorkflowComparison:
         assert total_info_3 > total_info_2
         assert info_3["revelations"] > info_2["revelations"]
     
-    @pytest.mark.asyncio
-    async def test_resolution_efficiency_simulation(self, mock_kernel, comparison_elements):
+    def test_resolution_efficiency_simulation(self, mock_kernel, comparison_elements):
         """Test de simulation d'efficacité de résolution Oracle Enhanced v2.1.0."""
         
         # Métriques simulées pour workflow 2-agents
@@ -369,8 +366,7 @@ class TestWorkflowComparison:
         # Le workflow 3-agents peut prendre plus de temps de setup mais devrait bien scaler
         assert scaling_3 < 20  # Scaling acceptable
     
-    @pytest.mark.asyncio
-    async def test_strategy_adaptation_comparison(self, mock_kernel, comparison_elements):
+    def test_strategy_adaptation_comparison(self, mock_kernel, comparison_elements):
         """Test la comparaison d'adaptation stratégique Oracle Enhanced v2.1.0."""
         
         # Workflow 2-agents : stratégie fixe
@@ -484,8 +480,7 @@ class TestPerformanceComparison:
         
         assert data_3 > data_2
     
-    @pytest.mark.asyncio
-    async def test_query_performance_comparison(self, performance_elements):
+    def test_query_performance_comparison(self, performance_elements):
         """Test la comparaison de performance des requêtes Oracle Enhanced v2.1.0."""
         
         # État 2-agents (requêtes simples)

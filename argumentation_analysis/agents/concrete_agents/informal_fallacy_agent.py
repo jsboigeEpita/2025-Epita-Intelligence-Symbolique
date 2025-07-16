@@ -45,7 +45,7 @@ class InformalFallacyAgent(BaseAgent):
         """
         self._llm_service_id = llm_service_id
         self._kernel.add_plugin(
-            FallacyIdentificationPlugin(),
+            IdentificationPlugin(),
             plugin_name="FallacyIdPlugin"
         )
         return super().setup_agent_components(llm_service_id)

@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 import shutil
 from unittest.mock import patch, MagicMock
+import nest_asyncio
 
 
 # Ajouter le répertoire racine au PYTHONPATH pour assurer la découvrabilité des modules
@@ -153,10 +154,16 @@ def _ensure_tweety_jars_are_correctly_placed():
 @pytest.fixture(scope="session", autouse=True)
 def apply_nest_asyncio():
     """
-    DEPRECATED/DISABLED
+    Applies nest_asyncio to allow nested event loops, which is crucial for
+    integrating asyncio-based libraries like semantic-kernel with pytest-asyncio.
     """
-    logger.warning("The 'apply_nest_asyncio' fixture in conftest.py is currently disabled to ensure compatibility with Playwright.")
-    yield
+    try:
+        logger.info("Applying nest_asyncio for the test session.")
+        nest_asyncio.apply()
+        yield
+    except Exception as e:
+        logger.error(f"Failed to apply nest_asyncio: {e}", exc_info=True)
+        yield
 
 
 @pytest.fixture(scope="session")

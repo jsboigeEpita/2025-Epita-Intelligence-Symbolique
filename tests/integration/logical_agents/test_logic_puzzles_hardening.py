@@ -27,7 +27,6 @@ class TestLogicalAgentHardening:
     """
 
     @pytest.mark.parametrize("load_scenario", ["contradictory_scenario"], indirect=True)
-    @pytest.mark.asyncio
     async def test_agent_identifies_contradiction(self, kernel, load_scenario):
         """
         Test that the agent correctly identifies a contradiction using its JTMS.
@@ -61,7 +60,6 @@ class TestLogicalAgentHardening:
             "The list of conflicts should not be empty."
 
     @pytest.mark.parametrize("load_scenario", ["ambiguous_scenario"], indirect=True)
-    @pytest.mark.asyncio
     async def test_agent_handles_ambiguity(self, kernel, load_scenario):
         """
         Test that the agent reports low confidence when facts are ambiguous.

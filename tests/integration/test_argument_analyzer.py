@@ -138,38 +138,36 @@ def test_successful_simple_argument_analysis(playwright: Playwright, backend_url
 
 
 @pytest.mark.playwright
-@pytest.mark.asyncio
-async def test_empty_argument_submission_displays_error(page: Page, frontend_url: str):
+def test_empty_argument_submission_displays_error(page: Page, frontend_url: str):
     """
     Scenario 1.2: Empty submission (Error Path)
     Checks if an error message is displayed when submitting an empty argument.
     """
-    await page.goto(frontend_url)
-    await expect(page.locator(".api-status.connected")).to_be_visible(timeout=30000)
-    await page.locator('[data-testid="analyzer-tab"]').click()
+    page.goto(frontend_url)
+    expect(page.locator(".api-status.connected")).to_be_visible(timeout=30000)
+    page.locator('[data-testid="analyzer-tab"]').click()
 
     submit_button = page.locator("form.analyzer-form button[type=\"submit\"]")
     argument_input = page.locator("#argument-text")
 
-    await expect(argument_input).to_have_value("")
-    await expect(submit_button).to_be_disabled()
+    expect(argument_input).to_have_value("")
+    expect(submit_button).to_be_disabled()
 
-    await argument_input.fill("test")
-    await expect(submit_button).to_be_enabled()
-    await argument_input.fill("")
-    await expect(submit_button).to_be_disabled()
+    argument_input.fill("test")
+    expect(submit_button).to_be_enabled()
+    argument_input.fill("")
+    expect(submit_button).to_be_disabled()
 
 
 @pytest.mark.playwright
-@pytest.mark.asyncio
-async def test_reset_button_clears_input_and_results(page: Page, frontend_url: str):
+def test_reset_button_clears_input_and_results(page: Page, frontend_url: str):
     """
     Scenario 1.3: Reset functionality
     Ensures the reset button clears the input field and the analysis results.
     """
-    await page.goto(frontend_url)
-    await expect(page.locator(".api-status.connected")).to_be_visible(timeout=30000)
-    await page.locator('[data-testid="analyzer-tab"]').click()
+    page.goto(frontend_url)
+    expect(page.locator(".api-status.connected")).to_be_visible(timeout=30000)
+    page.locator('[data-testid="analyzer-tab"]').click()
 
     argument_input = page.locator("#argument-text")
     submit_button = page.locator("form.analyzer-form button[type=\"submit\"]")
@@ -178,16 +176,16 @@ async def test_reset_button_clears_input_and_results(page: Page, frontend_url: s
 
     argument_text = "Ceci est un test pour la reinitialisation."
 
-    await argument_input.fill(argument_text)
-    await submit_button.click()
+    argument_input.fill(argument_text)
+    submit_button.click()
 
-    await expect(loading_spinner).not_to_be_visible(timeout=20000)
-    await expect(results_container).to_be_visible()
-    await expect(results_container).to_contain_text("Resultats de l'analyse")
-    await expect(argument_input).to_have_value(argument_text)
+    expect(loading_spinner).not_to_be_visible(timeout=20000)
+    expect(results_container).to_be_visible()
+    expect(results_container).to_contain_text("Resultats de l'analyse")
+    expect(argument_input).to_have_value(argument_text)
 
     reset_button = page.locator("button", has_text="🗑️ Effacer tout")
-    await reset_button.click()
+    reset_button.click()
 
-    await expect(argument_input).to_have_value("")
-    await expect(results_container).not_to_be_visible()
+    expect(argument_input).to_have_value("")
+    expect(results_container).not_to_be_visible()

@@ -68,7 +68,7 @@ except ImportError:
             return Mock(error_type="TEST", corrections=["fix1"])
 
 
-@pytest_asyncio.fixture(scope="module")
+@pytest.fixture(scope="module")
 async def fol_agent_with_kernel():
     """Fixture pour créer un FOLLogicAgent avec un kernel authentique."""
     config = UnifiedConfig()

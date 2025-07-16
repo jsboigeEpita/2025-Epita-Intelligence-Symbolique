@@ -15,7 +15,7 @@ from semantic_kernel.functions import kernel_function
 from semantic_kernel.functions import KernelArguments
 
 from .jtms_agent_base import JTMSAgentBase, ExtendedBelief
-from .agent_factory import AgentFactory
+from .factory import AgentFactory
 
 class HypothesisTracker:
     """Gestionnaire des hypothèses avec traçabilité JTMS"""

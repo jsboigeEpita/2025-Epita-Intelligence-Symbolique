@@ -42,8 +42,7 @@ class TestAuthenticGPTIntegration:
         self.test_prompt = "Analysez cette phrase: 'Tous les politiciens mentent, donc Pierre ment.'"
     
     @pytest.mark.skipif(not os.getenv('OPENAI_API_KEY'), reason="Clé API OpenAI requise")
-    @pytest.mark.asyncio
-    async def test_real_gpt_response_quality(self):
+    def test_real_gpt_response_quality(self):
         """Test de qualité des réponses GPT authentiques."""
         try:
             # Initialiser le service LLM réel via la factory
@@ -53,7 +52,7 @@ class TestAuthenticGPTIntegration:
             )
             
             # Test de réponse authentique
-            response = await llm_service.generate_response(self.test_prompt)
+            response = asyncio.run(llm_service.generate_response(self.test_prompt))
             
             # Validations de qualité
             assert isinstance(response, str)
@@ -149,8 +148,7 @@ class TestAuthenticTweetyIntegration:
             pytest.skip(f"Agent FOL réel non disponible: {e}")
     
     @pytest.mark.skipif(not os.getenv('USE_REAL_JPYPE'), reason="Tweety JAR réel requis")
-    @pytest.mark.asyncio
-    async def test_real_tweety_formula_parsing(self):
+    def test_real_tweety_formula_parsing(self):
         """Test de parsing de formule avec Tweety authentique."""
         try:
             fol_agent = FirstOrderLogicAgent(
@@ -159,7 +157,7 @@ class TestAuthenticTweetyIntegration:
             )
             
             # Test de parsing de formule réelle
-            result = await fol_agent.parse_formula(self.test_formula)
+            result = asyncio.run(fol_agent.parse_formula(self.test_formula))
             
             # Validations
             assert isinstance(result, dict)
@@ -273,8 +271,7 @@ class TestAuthenticPipelineIntegration:
         not all([os.getenv('OPENAI_API_KEY'), os.getenv('USE_REAL_JPYPE')]),
         reason="Composants authentiques requis"
     )
-    @pytest.mark.asyncio
-    async def test_full_authentic_pipeline_execution(self):
+    def test_full_authentic_pipeline_execution(self):
         """Test d'exécution pipeline complet 100% authentique."""
         try:
             # Configuration 100% authentique
@@ -292,7 +289,7 @@ class TestAuthenticPipelineIntegration:
             
             # Exécution pipeline authentique
             start_time = time.time()
-            result = await orchestrator.analyze_text(self.test_text)
+            result = asyncio.run(orchestrator.analyze_text(self.test_text))
             execution_time = time.time() - start_time
             
             # Validations du résultat
@@ -328,8 +325,7 @@ class TestAuthenticPipelineIntegration:
         assert auth_dict['authenticity']['require_real_gpt'] is True
         assert mock_dict['authenticity']['require_real_gpt'] is False
     
-    @pytest.mark.asyncio
-    async def test_pipeline_degraded_mode_is_overridden(self):
+    def test_pipeline_degraded_mode_is_overridden(self):
         """Test que le mode dégradé est bien écrasé par les contraintes d'authenticité."""
         # On tente de créer une config authentique mais en désactivant Tweety
         config = UnifiedConfig(

@@ -8,14 +8,14 @@ import sys
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from argumentation_analysis.agents.agent_factory import AgentFactory
+from argumentation_analysis.agents.factory import AgentFactory
 from argumentation_analysis.core.llm_service import create_llm_service
 from semantic_kernel.contents.chat_history import ChatHistory
-from argumentation_analysis.agents.plugins.identification_plugin import IdentificationPlugin, IdentifiedFallacy
+from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer as IdentificationPlugin
+from argumentation_analysis.agents.core.informal.informal_definitions import IdentifiedFallacy
 
 
-@pytest.mark.asyncio
-async def test_informal_agent_forced_tool_choice(tmp_path):
+def test_informal_agent_forced_tool_choice(tmp_path):
     """
     Test d'intégration pour vérifier que l'agent 'simple' utilise bien
     le tool_choice pour appeler 'FallacyIdentificationPlugin-identify_fallacies'
@@ -49,7 +49,9 @@ async def test_informal_agent_forced_tool_choice(tmp_path):
     # 5. Invocation de l'agent
     try:
         # Consommer le générateur pour s'assurer que l'invocation complète est exécutée
-        _ = [message async for message in agent.invoke(chat_history)]
+        async def _invoke():
+            return [m async for m in agent.invoke(chat_history)]
+        _ = asyncio.run(_invoke())
     except Exception as e:
         pytest.fail(f"L'invocation de l'agent a échoué avec une exception inattendue: {e}")
 

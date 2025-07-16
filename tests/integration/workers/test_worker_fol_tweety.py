@@ -637,7 +637,7 @@ def check_tweety_availability():
 # La sérialisation est maintenant la seule stratégie par défaut, la paramétrisation n'est plus nécessaire.
 # La fixture use_serialization a été supprimée.
 
-@pytest_asyncio.fixture(scope="module")
+@pytest.fixture(scope="module")
 async def fol_agent_with_kernel(jvm_session):
     """Fixture pour créer un FOLLogicAgent avec un kernel authentique."""
     logger.info(f"--- DEBUT FIXTURE 'fol_agent_with_kernel' ---")

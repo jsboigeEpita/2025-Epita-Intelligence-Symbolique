@@ -18,7 +18,7 @@ from .cluedo_extended_orchestrator import CyclicSelectionStrategy
 
 from argumentation_analysis.core.enquete_states import EnqueteCluedoState
 from argumentation_analysis.orchestration.plugins.enquete_state_manager_plugin import EnqueteStateManagerPlugin
-from argumentation_analysis.agents.agent_factory import AgentFactory
+from argumentation_analysis.agents.factory import AgentFactory
 
 
 class CluedoTerminationStrategy(TerminationStrategy):

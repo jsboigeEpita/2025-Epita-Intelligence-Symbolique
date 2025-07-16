@@ -27,7 +27,6 @@ class TestLogicalAgentHardening:
     """
 
     @pytest.mark.parametrize("load_scenario", ["contradictory_scenario"], indirect=True)
-    @pytest.mark.asyncio
     async def test_agent_identifies_contradiction(self, kernel, load_scenario):
         """
         Test that the agent correctly identifies and reports a contradiction
@@ -62,7 +61,6 @@ class TestLogicalAgentHardening:
         assert fact_id in conflict["beliefs"], "The conflict should involve the contradictory fact."
         
     @pytest.mark.parametrize("load_scenario", ["ambiguous_scenario"], indirect=True)
-    @pytest.mark.asyncio
     async def test_agent_handles_ambiguity(self, kernel, load_scenario):
         """
         Test that the agent correctly identifies and reports ambiguity

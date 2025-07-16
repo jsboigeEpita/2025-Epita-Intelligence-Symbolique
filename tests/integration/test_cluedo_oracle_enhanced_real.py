@@ -109,14 +109,13 @@ class TestCluedoOracleEnhancedReal:
         for required in required_imports:
             assert required in content, f"Import/référence manquant: {required}"
     
-    @pytest.mark.asyncio
-    async def test_enhanced_script_basic_execution(self, enhanced_test_environment, performance_monitor):
+    def test_enhanced_script_basic_execution(self, enhanced_test_environment, performance_monitor):
         """Test l'exécution de base du script Enhanced."""
         performance_monitor.start()
         
         try:
             # Exécution du script avec timeout
-            process = await asyncio.create_subprocess_exec(
+            process = asyncio.run(asyncio.create_subprocess_exec(
                 sys.executable, str(CLUEDO_ENHANCED_SCRIPT),
                 '--test-mode',
                 '--max-turns', '3',
@@ -124,14 +123,14 @@ class TestCluedoOracleEnhancedReal:
                 env=enhanced_test_environment,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
-            )
+            ))
             
             # Attendre avec timeout
             try:
-                stdout, stderr = await asyncio.wait_for(
+                stdout, stderr = asyncio.run(asyncio.wait_for(
                     process.communicate(),
                     timeout=120.0  # 2 minutes max
-                )
+                ))
             except asyncio.TimeoutError:
                 process.kill()
                 pytest.fail("Script Enhanced timeout après 2 minutes")
@@ -161,8 +160,7 @@ class TestCluedoOracleEnhancedReal:
             performance_monitor.error(str(e))
             raise
     
-    @pytest.mark.asyncio 
-    async def test_enhanced_auto_revelations_validation(self, enhanced_test_environment, performance_monitor):
+    def test_enhanced_auto_revelations_validation(self, enhanced_test_environment, performance_monitor):
         """Test la validation des révélations automatiques Enhanced."""
         performance_monitor.start()
         
@@ -172,7 +170,7 @@ class TestCluedoOracleEnhancedReal:
         env['REVELATION_THRESHOLD'] = '0.3'  # Seuil bas pour déclencher facilement
         
         try:
-            process = await asyncio.create_subprocess_exec(
+            process = asyncio.run(asyncio.create_subprocess_exec(
                 sys.executable, str(CLUEDO_ENHANCED_SCRIPT),
                 '--test-mode',
                 '--max-turns', '6',
@@ -181,12 +179,12 @@ class TestCluedoOracleEnhancedReal:
                 env=env,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
-            )
+            ))
             
-            stdout, stderr = await asyncio.wait_for(
+            stdout, stderr = asyncio.run(asyncio.wait_for(
                 process.communicate(),
                 timeout=180.0  # 3 minutes pour révélations
-            )
+            ))
             
             performance_monitor.stop()
             
@@ -218,8 +216,7 @@ class TestCluedoOracleEnhancedReal:
             performance_monitor.error(str(e))
             raise
     
-    @pytest.mark.asyncio
-    async def test_enhanced_performance_metrics(self, enhanced_test_environment, performance_monitor):
+    def test_enhanced_performance_metrics(self, enhanced_test_environment, performance_monitor):
         """Test et mesure des métriques de performance Enhanced."""
         performance_monitor.start()
         
@@ -233,7 +230,7 @@ class TestCluedoOracleEnhancedReal:
         api_calls_estimated = 0
         
         try:
-            process = await asyncio.create_subprocess_exec(
+            process = asyncio.run(asyncio.create_subprocess_exec(
                 sys.executable, str(CLUEDO_ENHANCED_SCRIPT),
                 '--test-mode',
                 '--max-turns', '4',
@@ -241,12 +238,12 @@ class TestCluedoOracleEnhancedReal:
                 env=env,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
-            )
+            ))
             
-            stdout, stderr = await asyncio.wait_for(
+            stdout, stderr = asyncio.run(asyncio.wait_for(
                 process.communicate(),
                 timeout=90.0  # 1.5 minutes pour performance
-            )
+            ))
             
             execution_time = time.time() - start_time
             performance_monitor.stop()
@@ -292,8 +289,7 @@ class TestCluedoOracleEnhancedReal:
             performance_monitor.error(str(e))
             raise
     
-    @pytest.mark.asyncio
-    async def test_enhanced_error_recovery(self, enhanced_test_environment):
+    def test_enhanced_error_recovery(self, enhanced_test_environment):
         """Test la récupération d'erreur du script Enhanced."""
         # Configuration avec conditions d'erreur potentielles
         env = enhanced_test_environment.copy()
@@ -301,7 +297,7 @@ class TestCluedoOracleEnhancedReal:
         env['NETWORK_UNSTABLE'] = 'true'  # Simulation réseau instable
         
         try:
-            process = await asyncio.create_subprocess_exec(
+            process = asyncio.run(asyncio.create_subprocess_exec(
                 sys.executable, str(CLUEDO_ENHANCED_SCRIPT),
                 '--test-mode',
                 '--max-turns', '2',
@@ -309,12 +305,12 @@ class TestCluedoOracleEnhancedReal:
                 env=env,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
-            )
+            ))
             
-            stdout, stderr = await asyncio.wait_for(
+            stdout, stderr = asyncio.run(asyncio.wait_for(
                 process.communicate(),
                 timeout=60.0
-            )
+            ))
             
             # Le script devrait soit réussir, soit échouer gracieusement
             output = stdout.decode('utf-8')
@@ -364,14 +360,13 @@ class TestCluedoEnhancedIntegrationValidation:
             # (test rapide sans exécution complète)
             assert all(key in env for key in config.keys())
     
-    @pytest.mark.asyncio
-    async def test_enhanced_output_quality_validation(self, enhanced_test_environment):
+    def test_enhanced_output_quality_validation(self, enhanced_test_environment):
         """Test la validation de qualité des outputs Enhanced."""
         env = enhanced_test_environment.copy()
         env['OUTPUT_VALIDATION'] = 'true'
         
         try:
-            process = await asyncio.create_subprocess_exec(
+            process = asyncio.run(asyncio.create_subprocess_exec(
                 sys.executable, str(CLUEDO_ENHANCED_SCRIPT),
                 '--test-mode',
                 '--max-turns', '3',
@@ -379,12 +374,12 @@ class TestCluedoEnhancedIntegrationValidation:
                 env=env,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
-            )
+            ))
             
-            stdout, stderr = await asyncio.wait_for(
+            stdout, stderr = asyncio.run(asyncio.wait_for(
                 process.communicate(),
                 timeout=90.0
-            )
+            ))
             
             assert process.returncode == 0, f"Validation qualité échouée: {stderr.decode()}"
             
@@ -446,8 +441,7 @@ class TestCluedoEnhancedIntegrationValidation:
 class TestCluedoEnhancedLatencyMeasurement:
     """Tests de mesure de latence avec GPT-4o-mini."""
     
-    @pytest.mark.asyncio
-    async def test_openai_latency_measurement(self, enhanced_test_environment):
+    def test_openai_latency_measurement(self, enhanced_test_environment):
         """Mesure la latence des appels OpenAI."""
         latencies = []
         
@@ -459,19 +453,19 @@ class TestCluedoEnhancedLatencyMeasurement:
             start_time = time.time()
             
             try:
-                process = await asyncio.create_subprocess_exec(
+                process = asyncio.run(asyncio.create_subprocess_exec(
                     sys.executable, str(CLUEDO_ENHANCED_SCRIPT),
                     '--latency-test',
                     '--single-call',
                     env=env,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE
-                )
+                ))
                 
-                stdout, stderr = await asyncio.wait_for(
+                stdout, stderr = asyncio.run(asyncio.wait_for(
                     process.communicate(),
                     timeout=45.0
-                )
+                ))
                 
                 call_latency = time.time() - start_time
                 latencies.append(call_latency)

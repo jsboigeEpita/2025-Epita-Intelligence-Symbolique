@@ -8,13 +8,12 @@ d'environnement valide avec une clé API.
 """
 
 import pytest
-import pytest_asyncio
 from semantic_kernel import Kernel
 
 from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
 from argumentation_analysis.core.llm_service import create_llm_service
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def authentic_extract_agent():
     """Fixture pour configurer un agent d'extraction avec un vrai kernel LLM."""
     try:
@@ -41,7 +40,6 @@ def mock_load_source_text(mocker):
     return mock_func
 
 @pytest.mark.integration
-@pytest.mark.asyncio
 async def test_extract_from_name_success_authentic(authentic_extract_agent, mock_load_source_text):
     """Teste le flux d'extraction de bout en bout avec un vrai LLM."""
     agent = authentic_extract_agent
@@ -66,7 +64,6 @@ async def test_extract_from_name_success_authentic(authentic_extract_agent, mock
     mock_load_source_text.assert_called_once_with(source_info)
 
 @pytest.mark.integration
-@pytest.mark.asyncio
 async def test_extract_from_name_large_text(authentic_extract_agent, mock_load_source_text):
     """
     Teste le flux d'extraction de bout en bout avec un vrai LLM sur un texte volumineux,

@@ -12,6 +12,8 @@ Tests d'intégration pour les agents logiques.
 """
 
 import unittest
+import asyncio
+import logging
 
 
 from semantic_kernel import Kernel
@@ -21,26 +23,35 @@ from argumentation_analysis.agents.core.logic.belief_set import (
     PropositionalBeliefSet, FirstOrderBeliefSet, ModalBeliefSet
 )
 
+logger = logging.getLogger(__name__)
+
 
 class TestLogicAgentsIntegration(unittest.TestCase):
-    async def _create_authentic_gpt4o_mini_instance(self):
+    def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
         config = UnifiedConfig()
         return config.get_kernel_with_gpt4o_mini()
         
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
+    def _make_authentic_llm_call(self, prompt: str) -> str:
         """Fait un appel authentique à gpt-4o-mini."""
+        async def _async_call():
+            try:
+                kernel = self._create_authentic_gpt4o_mini_instance()
+                result = await kernel.invoke("chat", input=prompt)
+                return str(result)
+            except Exception as e:
+                logger.warning(f"Appel LLM authentique échoué: {e}")
+                return "Authentic LLM call failed"
+        
         try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
+            return asyncio.run(_async_call())
         except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
+            logger.error(f"Erreur dans asyncio.run: {e}")
+            return "Async runner failed"
 
     """Tests d'intégration pour les agents logiques."""
     
-    async def asyncSetUp(self):
+    def setUp(self):
         """Initialisation avant chaque test."""
         pass
         # print("BEGIN asyncSetUp")
@@ -161,7 +172,8 @@ class TestLogicAgentsIntegration(unittest.TestCase):
     
     def tearDown(self):
         """Nettoyage après chaque test."""
-        self.tweety_bridge_patcher.stop()
+        if hasattr(self, 'tweety_bridge_patcher'):
+            self.tweety_bridge_patcher.stop()
     
     # async def test_factory_creates_appropriate_agent(self):
     #     """Test que la factory crée l'agent approprié en fonction du type de logique."""

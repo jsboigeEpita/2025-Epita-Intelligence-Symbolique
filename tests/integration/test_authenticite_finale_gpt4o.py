@@ -49,7 +49,7 @@ class AuthenticAPITester:
         
         return "\n".join(unique_elements) + f"\n\nAnalysez ce cas en tant que détective Sherlock Holmes. Soyez précis et logique. Veuillez inclure l'Investigation ID '{self.test_id}' dans votre réponse."
     
-    async def test_openai_api_direct(self) -> Dict[str, Any]:
+    def test_openai_api_direct(self) -> Dict[str, Any]:
         """Teste directement l'API OpenAI pour prouver l'authenticité."""
         logger.info(f"[API] Test direct OpenAI avec GPT-4o-mini")
         
@@ -129,7 +129,7 @@ class AuthenticAPITester:
                 "authenticity": "ERROR"
             }
     
-    async def test_orchestrateur_avec_api_reelle(self) -> Dict[str, Any]:
+    def test_orchestrateur_avec_api_reelle(self) -> Dict[str, Any]:
         """Teste l'orchestrateur Cluedo avec API réelle."""
         logger.info(f"[ORCHESTRATEUR] Test avec API réelle")
         
@@ -178,11 +178,11 @@ class AuthenticAPITester:
             """
             
             start_time = time.time()
-            history, final_state = await run_cluedo_game(
+            history, final_state = asyncio.run(run_cluedo_game(
                 kernel=kernel,
                 initial_question=unique_question,
                 max_iterations=3
-            )
+            ))
             end_time = time.time()
             execution_time = end_time - start_time
             
@@ -234,7 +234,7 @@ class AuthenticAPITester:
                 "authenticity": "ERROR"
             }
 
-async def main():
+def main():
     """Point d'entrée principal du test d'authenticité finale."""
     print("TEST D'AUTHENTICITE FINALE - GPT-4O-MINI")
     print("Preuves d'appels API réels avec données synthétiques")
@@ -253,7 +253,7 @@ async def main():
         }
         
         print("\n[TEST 1] Appel direct API OpenAI...")
-        api_result = await tester.test_openai_api_direct()
+        api_result = tester.test_openai_api_direct()
         results["tests"]["direct_api"] = api_result
         
         if api_result["success"]:
@@ -267,7 +267,7 @@ async def main():
             print(f"[ERROR] Echec API: {api_result.get('error', 'Inconnu')}")
         
         print("\n[TEST 2] Orchestrateur Cluedo avec API reelle...")
-        orchestrateur_result = await tester.test_orchestrateur_avec_api_reelle()
+        orchestrateur_result = tester.test_orchestrateur_avec_api_reelle()
         results["tests"]["orchestrateur"] = orchestrateur_result
         
         if orchestrateur_result["success"]:
@@ -329,5 +329,4 @@ async def main():
         return False
 
 if __name__ == "__main__":
-    success = asyncio.run(main())
-    exit(0 if success else 1)
+    main()

@@ -36,7 +36,7 @@ from argumentation_analysis.core.enquete_states import EnqueteCluedoState
 from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
 
 # Imports des agents
-from argumentation_analysis.agents.agent_factory import AgentFactory
+from argumentation_analysis.agents.factory import AgentFactory
 from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent
 
 logger = logging.getLogger(__name__)

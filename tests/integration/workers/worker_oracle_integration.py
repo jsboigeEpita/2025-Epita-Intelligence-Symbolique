@@ -372,7 +372,7 @@ class TestOracleErrorHandlingIntegration:
         config = UnifiedConfig()
         return config.get_kernel_with_gpt4o_mini()
 
-    @pytest_asyncio.fixture
+    @pytest.fixture
     async def error_test_kernel(self):
         """Kernel pour tests d'erreurs."""
         return await self._create_authentic_gpt4o_mini_instance()

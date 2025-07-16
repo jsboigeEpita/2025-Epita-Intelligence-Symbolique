@@ -1,0 +1,21 @@
+[
+  {
+    "id": "TC001_Ad_Hominem",
+    "text": "Don't listen to his argument about climate change. He failed math in the 7th grade, so what could he possibly know?",
+    "expected_fallacies": [
+      "Ad Hominem"
+    ]
+  },
+  {
+    "id": "TC002_Straw_Man",
+    "text": "The senator wants to increase funding for public schools. It's clear he thinks we should just throw money at the education system without any accountability, which is a terrible idea.",
+    "expected_fallacies": [
+      "Straw Man"
+    ]
+  },
+  {
+    "id": "TC003_No_Fallacy",
+    "text": "The Earth revolves around the Sun. This is a well-established astronomical fact supported by centuries of observation and evidence.",
+    "expected_fallacies": []
+  }
+]

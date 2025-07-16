@@ -179,7 +179,7 @@ class AuthenticGameEngineFallback:
         self.simulation_used = False
         logger.info("Moteur de jeu authentique de fallback créé")
     
-    async def setup_authentic_game(self, case_data: Dict[str, Any]) -> bool:
+    def setup_authentic_game(self, case_data: Dict[str, Any]) -> bool:
         """Configuration jeu 100% authentique"""
         try:
             # Vérification clé API authentique
@@ -227,7 +227,7 @@ class AuthenticGameEngineFallback:
         logger.info(f"Cartes Oracle authentiques générées: {len(oracle_cards)}")
         return oracle_cards
     
-    async def _run_simplified_investigation_authentic(self, question: str) -> tuple:
+    def _run_simplified_investigation_authentic(self, question: str) -> tuple:
         """Investigation simplifiée authentique"""
         history = []
         
@@ -242,7 +242,7 @@ class AuthenticGameEngineFallback:
         if self.kernel:
             try:
                 # Appel API authentique
-                response = await self.kernel.invoke("chat", input=question)
+                response = asyncio.run(self.kernel.invoke("chat", input=question))
                 sherlock_response = str(response)
                 
                 history.append({
@@ -464,8 +464,7 @@ class TestCluedoOracleIntegrationAuthentic:
         
         logger.info(f"✅ Statistiques Oracle authentiques: {stats}")
     
-    @pytest.mark.asyncio
-    async def test_game_engine_initialization_authentic(self):
+    def test_game_engine_initialization_authentic(self):
         """Test initialisation moteur de jeu 100% authentique"""
         if COMPONENTS_AVAILABLE:
             try:
@@ -484,8 +483,7 @@ class TestCluedoOracleIntegrationAuthentic:
         
         logger.info("✅ Initialisation moteur de jeu authentique validée")
     
-    @pytest.mark.asyncio
-    async def test_game_engine_setup_without_api_key_authentic(self, test_case_data_authentic):
+    def test_game_engine_setup_without_api_key_authentic(self, test_case_data_authentic):
         """Test configuration jeu sans clé API - comportement authentique"""
         if COMPONENTS_AVAILABLE:
             try:
@@ -502,7 +500,7 @@ class TestCluedoOracleIntegrationAuthentic:
         
         try:
             if hasattr(engine, 'setup_authentic_game'):
-                result = await engine.setup_authentic_game(test_case_data_authentic)
+                result = engine.setup_authentic_game(test_case_data_authentic)
             else:
                 result = False  # Doit échouer sans clé
             
@@ -513,8 +511,7 @@ class TestCluedoOracleIntegrationAuthentic:
             if original_key:
                 os.environ["OPENAI_API_KEY"] = original_key
     
-    @pytest.mark.asyncio
-    async def test_game_engine_setup_with_api_key_authentic(self, test_case_data_authentic):
+    def test_game_engine_setup_with_api_key_authentic(self, test_case_data_authentic):
         """Test configuration jeu avec clé API 100% authentique"""
         if not os.getenv("OPENAI_API_KEY"):
             pytest.skip("OPENAI_API_KEY not configured for authentic test")
@@ -529,7 +526,7 @@ class TestCluedoOracleIntegrationAuthentic:
         
         try:
             if hasattr(engine, 'setup_authentic_game'):
-                result = await engine.setup_authentic_game(test_case_data_authentic)
+                result = engine.setup_authentic_game(test_case_data_authentic)
             else:
                 # Fallback test
                 result = True
@@ -545,8 +542,7 @@ class TestCluedoOracleIntegrationAuthentic:
         except Exception as e:
             pytest.skip(f"Game engine authentic setup error: {e}")
     
-    @pytest.mark.asyncio
-    async def test_simplified_investigation_authentic(self, test_case_data_authentic):
+    def test_simplified_investigation_authentic(self, test_case_data_authentic):
         """Test investigation simplifiée 100% authentique"""
         if COMPONENTS_AVAILABLE:
             try:
@@ -564,7 +560,7 @@ class TestCluedoOracleIntegrationAuthentic:
             )
         
         if hasattr(engine, '_run_simplified_investigation_authentic'):
-            history, state = await engine._run_simplified_investigation_authentic("Test question authentique")
+            history, state = engine._run_simplified_investigation_authentic("Test question authentique")
         else:
             # Fallback investigation
             history = [{"sender": "System", "message": "Investigation authentique", "authentic": True}]
@@ -581,8 +577,7 @@ class TestCluedoOracleIntegrationAuthentic:
         
         logger.info("✅ Investigation simplifiée authentique validée")
     
-    @pytest.mark.asyncio
-    async def test_oracle_behavior_validation_authentic(self, test_case_data_authentic):
+    def test_oracle_behavior_validation_authentic(self, test_case_data_authentic):
         """Test validation comportement Oracle 100% authentique"""
         if COMPONENTS_AVAILABLE:
             try:
@@ -599,7 +594,7 @@ class TestCluedoOracleIntegrationAuthentic:
         )
         
         if hasattr(engine, 'validate_oracle_behavior_authentic'):
-            result = await engine.validate_oracle_behavior_authentic()
+            result = engine.validate_oracle_behavior_authentic()
         else:
             # Test direct Oracle
             result = True
@@ -612,8 +607,7 @@ class TestCluedoOracleIntegrationAuthentic:
         
         logger.info("✅ Validation comportement Oracle authentique réussie")
     
-    @pytest.mark.asyncio
-    async def test_complete_demo_authentic_fallback(self):
+    def test_complete_demo_authentic_fallback(self):
         """Test démonstration complète authentique avec fallback"""
         if not os.getenv("OPENAI_API_KEY"):
             pytest.skip("OPENAI_API_KEY not configured for authentic demo")
@@ -621,10 +615,10 @@ class TestCluedoOracleIntegrationAuthentic:
         try:
             if COMPONENTS_AVAILABLE:
                 # Test avec timeout court pour éviter longs appels
-                result = await asyncio.wait_for(
+                result = asyncio.run(asyncio.wait_for(
                     run_complete_cluedo_oracle_demo(),
                     timeout=15.0
-                )
+                ))
                 
                 # Si succès, vérifier que c'est bien authentique
                 assert result == True

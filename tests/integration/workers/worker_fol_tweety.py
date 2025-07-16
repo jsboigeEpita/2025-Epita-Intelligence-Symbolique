@@ -520,7 +520,7 @@ def check_tweety_availability():
     return TWEETY_AVAILABLE and setup_real_tweety_environment()
 
 
-@pytest_asyncio.fixture(scope="module")
+@pytest.fixture(scope="module")
 async def fol_agent_with_kernel():
     """Fixture pour créer un FOLLogicAgent avec un kernel authentique."""
     logger.info("--- DEBUT FIXTURE 'fol_agent_with_kernel' (scope=module) ---")

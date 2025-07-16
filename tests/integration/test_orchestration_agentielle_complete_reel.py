@@ -95,87 +95,93 @@ def group_chat(sherlock_agent, watson_agent):
     return gc
 
 @pytest.mark.skip(reason="Legacy test for old agent orchestration, disabling to fix collection.")
-@pytest.mark.asyncio
-async def test_sherlock_jtms_hypotheses(sherlock_agent, group_chat):
-    """Test des capacités JTMS de Sherlock."""
-    logger.info("🧪 TEST: Hypothèses JTMS Sherlock")
-    enquete_context = "ENQUÊTE: Vol de diamant au musée..."
-    
-    result = await sherlock_agent.formulate_hypothesis(context=enquete_context)
-    
-    group_chat.add_message(
-        agent_id="sherlock",
-        message=f"Hypothèse formulée: {result.get('hypothesis', 'N/A')}",
-        analysis_results=result
-    )
-    
-    print_results("SHERLOCK JTMS", result)
-    assert result.get('confidence', 0) > 0.3, "La confiance de Sherlock est trop basse."
-    assert result.get('jtms_validity', False), "La validité JTMS de Sherlock est fausse."
-
-@pytest.mark.asyncio
-async def test_watson_jtms_validation(watson_agent, group_chat):
-    """Test des capacités JTMS de Watson."""
-    logger.info("🧪 TEST: Validation JTMS Watson")
-    validation_chain = [
-        {"step": 1, "proposition": "Gardien absent", "evidence": "confirmed"},
-        {"step": 2, "proposition": "Caméra sabotée", "evidence": "confirmed"},
-        {"step": 3, "hypothesis": "Voleur connaît procédures", "hypothesis_id": "insider_knowledge"}
-    ]
-    
-    # Correction: Ajout de TOUTES les croyances (preuves ET hypothèse) au JTMS de Watson avant la validation
-    for step in validation_chain:
-        proposition = step.get("proposition") or step.get("hypothesis")
-        if proposition:
-            # Pour ce test, nous ajoutons toutes les propositions comme des faits établis
-            # y compris l'hypothèse que nous cherchons à valider pour voir si elle est cohérente.
-            # La méthode `validate_reasoning_chain` est supposée vérifier les liens, pas la fondation.
-            watson_agent.add_belief(proposition, "TRUE")
-            logger.info(f"Croyance '{proposition}' ajoutée (comme fait) au JTMS de Watson pour le test.")
-
-    validation_result = await watson_agent.validate_reasoning_chain(validation_chain)
-    
-    group_chat.add_message(
-        agent_id="watson",
-        message=f"Validation: {validation_result.get('chain_valid', False)}",
-        analysis_results=validation_result
-    )
-    
-    print_results("WATSON JTMS", validation_result)
-    # Le test est modifié pour refléter l'état actuel de l'implémentation.
-    # La validation déductive n'est pas encore implémentée, donc 'chain_valid' est attendu à False.
-    assert not validation_result.get('is_valid', True), "La chaîne de raisonnement de Watson aurait dû être marquée comme invalide."
-    
-    # Vérifier que l'échec est dû à la fonctionnalité non implémentée
-    first_step_details = validation_result.get('steps', [{}])[0].get('details', {})
-    assert 'Preuve déductive non implémentée' in first_step_details.get('note', ''), \
-        "La raison de l'échec de validation n'est pas celle attendue."
-
-@pytest.mark.asyncio
-async def test_orchestration_collaborative(sherlock_agent, watson_agent, group_chat):
-    """Test de l'orchestration collaborative complète."""
-    logger.info("🧪 TEST: Orchestration Collaborative Sherlock-Watson")
-    probleme_complexe = "CASE COMPLEXE: Fraude financière..."
-    
-    sherlock_result = await sherlock_agent.formulate_hypothesis(context=probleme_complexe)
-    
-    watson_validation = {}
-    if sherlock_result.get('hypothesis_id'):
-        watson_validation = await watson_agent.validate_hypothesis(
-            hypothesis_id=sherlock_result.get('hypothesis_id', 'unknown_hypothesis'),
-            hypothesis_data=sherlock_result
+def test_sherlock_jtms_hypotheses(sherlock_agent, group_chat):
+    async def _async_test():
+        """Test des capacités JTMS de Sherlock."""
+        logger.info("🧪 TEST: Hypothèses JTMS Sherlock")
+        enquete_context = "ENQUÊTE: Vol de diamant au musée..."
+        
+        result = await sherlock_agent.formulate_hypothesis(context=enquete_context)
+        
+        group_chat.add_message(
+            agent_id="sherlock",
+            message=f"Hypothèse formulée: {result.get('hypothesis', 'N/A')}",
+            analysis_results=result
         )
+        
+        print_results("SHERLOCK JTMS", result)
+        assert result.get('confidence', 0) > 0.3, "La confiance de Sherlock est trop basse."
+        assert result.get('jtms_validity', False), "La validité JTMS de Sherlock est fausse."
 
-    group_chat.add_message("sherlock", "Hypothèse sur fraude", sherlock_result)
-    group_chat.add_message("watson", "Validation de l'hypothèse", watson_validation)
-    
-    summary = group_chat.get_conversation_summary()
-    
-    print_collaboration_results(sherlock_result, watson_validation, summary)
-    
-    assert sherlock_result.get('confidence', 0) > 0.3
-    assert watson_validation.get('validation_result') != 'error'
-    assert summary.get('total_messages', 0) >= 2
+    asyncio.run(_async_test())
+
+def test_watson_jtms_validation(watson_agent, group_chat):
+    async def _async_test():
+        """Test des capacités JTMS de Watson."""
+        logger.info("🧪 TEST: Validation JTMS Watson")
+        validation_chain = [
+            {"step": 1, "proposition": "Gardien absent", "evidence": "confirmed"},
+            {"step": 2, "proposition": "Caméra sabotée", "evidence": "confirmed"},
+            {"step": 3, "hypothesis": "Voleur connaît procédures", "hypothesis_id": "insider_knowledge"}
+        ]
+        
+        # Correction: Ajout de TOUTES les croyances (preuves ET hypothèse) au JTMS de Watson avant la validation
+        for step in validation_chain:
+            proposition = step.get("proposition") or step.get("hypothesis")
+            if proposition:
+                # Pour ce test, nous ajoutons toutes les propositions comme des faits établis
+                # y compris l'hypothèse que nous cherchons à valider pour voir si elle est cohérente.
+                # La méthode `validate_reasoning_chain` est supposée vérifier les liens, pas la fondation.
+                watson_agent.add_belief(proposition, "TRUE")
+                logger.info(f"Croyance '{proposition}' ajoutée (comme fait) au JTMS de Watson pour le test.")
+
+        validation_result = await watson_agent.validate_reasoning_chain(validation_chain)
+        
+        group_chat.add_message(
+            agent_id="watson",
+            message=f"Validation: {validation_result.get('chain_valid', False)}",
+            analysis_results=validation_result
+        )
+        
+        print_results("WATSON JTMS", validation_result)
+        # Le test est modifié pour refléter l'état actuel de l'implémentation.
+        # La validation déductive n'est pas encore implémentée, donc 'chain_valid' est attendu à False.
+        assert not validation_result.get('is_valid', True), "La chaîne de raisonnement de Watson aurait dû être marquée comme invalide."
+        
+        # Vérifier que l'échec est dû à la fonctionnalité non implémentée
+        first_step_details = validation_result.get('steps', [{}])[0].get('details', {})
+        assert 'Preuve déductive non implémentée' in first_step_details.get('note', ''), \
+            "La raison de l'échec de validation n'est pas celle attendue."
+
+    asyncio.run(_async_test())
+
+def test_orchestration_collaborative(sherlock_agent, watson_agent, group_chat):
+    async def _async_test():
+        """Test de l'orchestration collaborative complète."""
+        logger.info("🧪 TEST: Orchestration Collaborative Sherlock-Watson")
+        probleme_complexe = "CASE COMPLEXE: Fraude financière..."
+        
+        sherlock_result = await sherlock_agent.formulate_hypothesis(context=probleme_complexe)
+        
+        watson_validation = {}
+        if sherlock_result.get('hypothesis_id'):
+            watson_validation = await watson_agent.validate_hypothesis(
+                hypothesis_id=sherlock_result.get('hypothesis_id', 'unknown_hypothesis'),
+                hypothesis_data=sherlock_result
+            )
+
+        group_chat.add_message("sherlock", "Hypothèse sur fraude", sherlock_result)
+        group_chat.add_message("watson", "Validation de l'hypothèse", watson_validation)
+        
+        summary = group_chat.get_conversation_summary()
+        
+        print_collaboration_results(sherlock_result, watson_validation, summary)
+        
+        assert sherlock_result.get('confidence', 0) > 0.3
+        assert watson_validation.get('validation_result') != 'error'
+        assert summary.get('total_messages', 0) >= 2
+
+    asyncio.run(_async_test())
 
 def print_results(title, data):
     """Helper pour afficher les résultats."""

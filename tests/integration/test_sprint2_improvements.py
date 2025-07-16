@@ -14,6 +14,7 @@ import unittest
 from unittest.mock import MagicMock
 
 import asyncio
+import logging
 from datetime import datetime
 
 from argumentation_analysis.services.flask_service_integration import FlaskServiceIntegrator
@@ -23,22 +24,26 @@ from argumentation_analysis.utils.async_manager import AsyncManager, run_hybrid_
 from argumentation_analysis.agents.core.logic.first_order_logic_agent_adapter import FirstOrderLogicAgent, LogicAgentFactory
 from argumentation_analysis.agents.core.informal.informal_agent_adapter import InformalAgent
 
+logger = logging.getLogger(__name__)
+
 
 class TestSprint2Improvements(unittest.TestCase):
-    async def _create_authentic_gpt4o_mini_instance(self):
+    def _create_authentic_gpt4o_mini_instance(self):
         """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
         config = UnifiedConfig()
         return config.get_kernel_with_gpt4o_mini()
         
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
+    def _make_authentic_llm_call(self, prompt: str) -> str:
         """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
+        async def _async_call():
+            try:
+                kernel = self._create_authentic_gpt4o_mini_instance()
+                result = await kernel.invoke("chat", input=prompt)
+                return str(result)
+            except Exception as e:
+                logger.warning(f"Appel LLM authentique échoué: {e}")
+                return "Authentic LLM call failed"
+        return asyncio.run(_async_call())
 
     """Tests pour valider les améliorations du Sprint 2."""
     
@@ -152,43 +157,46 @@ class TestSprint2Improvements(unittest.TestCase):
         results = async_manager.run_multiple_hybrid(tasks)
         self.assertEqual(results, [3, 7, 11])
     
-    async def test_group_chat_orchestration_robustness(self):
+    def test_group_chat_orchestration_robustness(self):
         """Test que l'orchestration de groupe chat est robuste."""
-        orchestration = GroupChatOrchestration()
-        
-        # Test initialisation session
-        agent1 = await self._create_authentic_gpt4o_mini_instance()
-        agent2 = await self._create_authentic_gpt4o_mini_instance()
-        success = orchestration.initialize_session("test_session", {
-            "agent1": agent1,
-            "agent2": agent2
-        })
-        self.assertTrue(success)
-        
-        # Test ajout de message
-        message_entry = orchestration.add_message("agent1", "Test message")
-        self.assertIn("timestamp", message_entry)
-        self.assertIn("agent_id", message_entry)
-        self.assertIn("message", message_entry)
-        
-        # Test analyse coordonnée
-        analysis_result = orchestration.coordinate_analysis("Test text for analysis")
-        self.assertIn("text", analysis_result)
-        self.assertIn("agents_involved", analysis_result)
-        self.assertIn("consolidated_analysis", analysis_result)
-        
-        # Test analyse asynchrone
-        async_result = orchestration.coordinate_analysis_async("Test async text", timeout=30.0)
-        self.assertIn("execution_mode", async_result)
-        self.assertEqual(async_result["execution_mode"], "async")
-        
-        # Test health check
-        health = orchestration.get_service_health()
-        self.assertIn("status", health)
-        
-        # Test nettoyage
-        cleanup_success = orchestration.cleanup_session()
-        self.assertTrue(cleanup_success)
+        async def _async_test():
+            orchestration = GroupChatOrchestration()
+            
+            # Test initialisation session
+            agent1 = self._create_authentic_gpt4o_mini_instance()
+            agent2 = self._create_authentic_gpt4o_mini_instance()
+            success = orchestration.initialize_session("test_session", {
+                "agent1": agent1,
+                "agent2": agent2
+            })
+            self.assertTrue(success)
+            
+            # Test ajout de message
+            message_entry = orchestration.add_message("agent1", "Test message")
+            self.assertIn("timestamp", message_entry)
+            self.assertIn("agent_id", message_entry)
+            self.assertIn("message", message_entry)
+            
+            # Test analyse coordonnée
+            analysis_result = orchestration.coordinate_analysis("Test text for analysis")
+            self.assertIn("text", analysis_result)
+            self.assertIn("agents_involved", analysis_result)
+            self.assertIn("consolidated_analysis", analysis_result)
+            
+            # Test analyse asynchrone
+            async_result = orchestration.coordinate_analysis_async("Test async text", timeout=30.0)
+            self.assertIn("execution_mode", async_result)
+            self.assertEqual(async_result["execution_mode"], "async")
+            
+            # Test health check
+            health = orchestration.get_service_health()
+            self.assertIn("status", health)
+            
+            # Test nettoyage
+            cleanup_success = orchestration.cleanup_session()
+            self.assertTrue(cleanup_success)
+
+        asyncio.run(_async_test())
     
     def test_logic_service_robustness(self):
         """Test que le service de logique est robuste."""
@@ -319,33 +327,37 @@ class TestSprint2Improvements(unittest.TestCase):
         cleaned = async_manager.cleanup_completed_tasks(max_age_hours=0)
         self.assertGreaterEqual(cleaned, 0)
     
-    async def test_concurrent_operations(self):
+    def test_concurrent_operations(self):
         """Test que les opérations concurrentes fonctionnent correctement."""
-        orchestration = GroupChatOrchestration()
-        
-        # Initialiser avec plusieurs agents authentiques
-        agents = {}
-        for i in range(3):
-            agent = await self._create_authentic_gpt4o_mini_instance()
-            agents[f"agent_{i}"] = agent
-        
-        orchestration.initialize_session("concurrent_test", agents)
-        
-        # Test analyse coordonnée asynchrone avec plusieurs agents
-        result = orchestration.coordinate_analysis_async(
-            "Concurrent analysis text",
-            target_agents=list(agents.keys()),
-            timeout=30.0
-        )
-        
-        self.assertEqual(len(result["agents_involved"]), 3)
-        self.assertEqual(len(result["individual_results"]), 3)
-        self.assertIn("consolidated_analysis", result)
-        
-        # Vérifier que la consolidation a fonctionné
-        consolidated = result["consolidated_analysis"]
-        self.assertIn("agents_count", consolidated)
-        self.assertEqual(consolidated["agents_count"], 3)
+        async def _async_test():
+            orchestration = GroupChatOrchestration()
+            
+            # Initialiser avec plusieurs agents authentiques
+            agents = {}
+            for i in range(3):
+                # We need to call the method to get the kernel instance
+                agent_instance = self._create_authentic_gpt4o_mini_instance()
+                agents[f"agent_{i}"] = agent_instance
+            
+            orchestration.initialize_session("concurrent_test", agents)
+            
+            # Test analyse coordonnée asynchrone avec plusieurs agents
+            result = orchestration.coordinate_analysis_async(
+                "Concurrent analysis text",
+                target_agents=list(agents.keys()),
+                timeout=30.0
+            )
+            
+            self.assertEqual(len(result["agents_involved"]), 3)
+            self.assertEqual(len(result["individual_results"]), 3)
+            self.assertIn("consolidated_analysis", result)
+            
+            # Vérifier que la consolidation a fonctionné
+            consolidated = result["consolidated_analysis"]
+            self.assertIn("agents_count", consolidated)
+            self.assertEqual(consolidated["agents_count"], 3)
+
+        asyncio.run(_async_test())
 
 
 if __name__ == "__main__":

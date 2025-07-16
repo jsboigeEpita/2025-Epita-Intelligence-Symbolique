@@ -106,40 +106,46 @@ def test_interface_web_reelle():
 
 # --- Tests d'orchestration asynchrones ---
 
-@pytest.mark.asyncio
-async def test_interaction_sherlock_reelle(sherlock_agent):
+def test_interaction_sherlock_reelle(sherlock_agent):
     """Teste une interaction de base avec l'agent Sherlock."""
-    contexte_test = "ENQUÊTE TEST: Objet manquant. INDICES: Porte ouverte."
-    result = await sherlock_agent.formulate_hypothesis(context=contexte_test)
-    assert result and not result.get('error'), f"Sherlock a retourné une erreur: {result}"
-    assert result.get('confidence', 0) > 0, "La confiance de Sherlock est nulle."
+    async def _async_test():
+        contexte_test = "ENQUÊTE TEST: Objet manquant. INDICES: Porte ouverte."
+        result = await sherlock_agent.formulate_hypothesis(context=contexte_test)
+        assert result and not result.get('error'), f"Sherlock a retourné une erreur: {result}"
+        assert result.get('confidence', 0) > 0, "La confiance de Sherlock est nulle."
 
-@pytest.mark.asyncio
-async def test_validation_watson_reelle(watson_agent):
+    asyncio.run(_async_test())
+
+def test_validation_watson_reelle(watson_agent):
     """Teste une interaction de base avec l'agent Watson."""
-    validation_chain = [{"step": 1, "proposition": "Porte ouverte", "evidence": "confirmed"}]
-    # Correction: Ajout de la croyance au JTMS de Watson avant la validation
-    for step in validation_chain:
-        proposition = step.get("proposition")
-        if proposition and step.get("evidence") == "confirmed":
-            watson_agent.add_belief(proposition, "TRUE")
-            logger.info(f"Croyance '{proposition}' ajoutée au JTMS de Watson pour le test.")
+    async def _async_test():
+        validation_chain = [{"step": 1, "proposition": "Porte ouverte", "evidence": "confirmed"}]
+        # Correction: Ajout de la croyance au JTMS de Watson avant la validation
+        for step in validation_chain:
+            proposition = step.get("proposition")
+            if proposition and step.get("evidence") == "confirmed":
+                watson_agent.add_belief(proposition, "TRUE")
+                logger.info(f"Croyance '{proposition}' ajoutée au JTMS de Watson pour le test.")
 
-    result = await watson_agent.validate_reasoning_chain(validation_chain)
-    assert result and not result.get('error'), f"Watson a retourné une erreur: {result}"
-    assert result.get('confidence', 0) > 0, "La confiance de Watson est nulle."
+        result = await watson_agent.validate_reasoning_chain(validation_chain)
+        assert result and not result.get('error'), f"Watson a retourné une erreur: {result}"
+        assert result.get('confidence', 0) > 0, "La confiance de Watson est nulle."
 
-@pytest.mark.asyncio
-async def test_collaboration_orchestration_reelle(group_chat, sherlock_agent, watson_agent):
+    asyncio.run(_async_test())
+
+def test_collaboration_orchestration_reelle(group_chat, sherlock_agent, watson_agent):
     """Teste un cycle de collaboration simple entre Sherlock et Watson."""
-    # Sherlock formule une hypothèse
-    sherlock_result = await sherlock_agent.formulate_hypothesis(context="Test collab")
-    group_chat.add_message("sherlock", "Hypothèse initiale", sherlock_result)
+    async def _async_test():
+        # Sherlock formule une hypothèse
+        sherlock_result = await sherlock_agent.formulate_hypothesis(context="Test collab")
+        group_chat.add_message("sherlock", "Hypothèse initiale", sherlock_result)
 
-    # Watson valide la chaîne
-    validation_chain = [{"step": 1, "proposition": "Hypothèse de Sherlock", "evidence": "proposed"}]
-    watson_result = await watson_agent.validate_reasoning_chain(validation_chain)
-    group_chat.add_message("watson", "Validation de l'hypothèse", watson_result)
+        # Watson valide la chaîne
+        validation_chain = [{"step": 1, "proposition": "Hypothèse de Sherlock", "evidence": "proposed"}]
+        watson_result = await watson_agent.validate_reasoning_chain(validation_chain)
+        group_chat.add_message("watson", "Validation de l'hypothèse", watson_result)
 
-    summary = group_chat.get_conversation_summary()
-    assert summary.get('total_messages', 0) >= 2, "La collaboration n'a pas eu lieu (messages < 2)."
+        summary = group_chat.get_conversation_summary()
+        assert summary.get('total_messages', 0) >= 2, "La collaboration n'a pas eu lieu (messages < 2)."
+
+    asyncio.run(_async_test())

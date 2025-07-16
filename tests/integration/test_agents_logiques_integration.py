@@ -296,15 +296,14 @@ class TestAgentsLogiquesIntegration:
         assert performance["authentic_processing"] == True
         assert performance["mock_used"] == False
     
-    @pytest.mark.asyncio
-    async def test_complete_demo_integration(self):
+    def test_complete_demo_integration(self):
         """Test démonstration complète agents logiques"""
         try:
             # Test avec timeout pour éviter les longs traitements
-            result = await asyncio.wait_for(
+            result = asyncio.run(asyncio.wait_for(
                 run_complete_agents_production_demo(),
                 timeout=15.0
-            )
+            ))
             
             assert result == True
             
