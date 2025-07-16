@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory=$false)]
-    [ValidateSet("unit", "functional", "e2e", "all", "integration", "e2e-python")]
+    [ValidateSet("unit", "functional", "e2e", "all", "integration", "e2e-python", "e2e-js")]
     [string]$Type = "all",
 
     [string]$Path,
@@ -24,101 +24,128 @@ if (-not (Test-Path $ActivationScript)) {
     exit 1
 }
 
-# Branche 1: Tests E2E avec Playwright (JavaScript/TypeScript)
-if ($Type -eq "e2e") {
-    Write-Host "[INFO] Lancement des tests E2E avec Playwright..." -ForegroundColor Cyan
-    
-    # --- DÉBUT BLOC DE NETTOYAGE RADICAL (OPTIONNEL MAIS RECOMMANDÉ) ---
-    $reactAppPath = Join-Path $ProjectRoot "services/web_api/interface-web-argumentative"
-    
-    Write-Host "[INFO] Nettoyage en profondeur de l'environnement React pour garantir un build frais..." -ForegroundColor Yellow
+# Branche 1: Tests E2E avec backend Python
+if ($Type -eq "e2e-python" -or $Type -eq "integration" -or $Type -eq "e2e-js") {
+    Write-Host "[INFO] Lancement des tests avec backend ($Type)..." -ForegroundColor Cyan
+    $pidFile = Join-Path $ProjectRoot '_temp/backend.pid'
+    $backendLauncher = Join-Path $ProjectRoot "project_core/core_from_scripts/start_backend_for_test.py"
+    $exitCode = 1
 
-    # Tuer les serveurs node fantômes.
-    Write-Host "[DEBUG] Tentative d'arrêt des serveurs de développement Node.js existants..."
+    if (-not (Test-Path $backendLauncher)) {
+        Write-Host "[ERREUR] Le script de lancement du backend '$backendLauncher' est introuvable." -ForegroundColor Red
+        exit 1
+    }
+
     try {
-        taskkill /F /IM node.exe /T >$null 2>&1
-        Write-Host "[DEBUG] Processus Node.js existants arrêtés avec succès." -ForegroundColor DarkGray
-    } catch {
-        Write-Host "[DEBUG] Aucun processus Node.js à arrêter, ou une erreur s'est produite (ce qui est normal si rien ne tournait)." -ForegroundColor DarkGray
-    }
+        # 1. Démarrer le backend en arrière-plan
+        Write-Host "[INFO] Démarrage du backend en arrière-plan..." -ForegroundColor Yellow
+        $commandToRunBackend = "python `"$backendLauncher`""
+        $job = Start-Job -ScriptBlock {
+            param($ActivationScript, $commandToRunBackend)
+            & $ActivationScript -CommandToRun $commandToRunBackend
+        } -ArgumentList $ActivationScript, $commandToRunBackend
+        
+        Write-Host "[INFO] Backend en cours de démarrage (Job ID: $($job.Id))... Attente de 90 secondes..."
+        Start-Sleep -Seconds 90 # Augmentation drastique du temps d'attente
+        
+        if (-not (Test-Path $pidFile)) {
+            Write-Host "[ERREUR] Le backend n'a pas démarré correctement (fichier PID '$pidFile' introuvable)." -ForegroundColor Red
+            $stderrLog = Join-Path $ProjectRoot '_temp/backend_stderr.log'
+            if (Test-Path $stderrLog) {
+                Write-Host "[DEBUG] Contenu de _temp/backend_stderr.log:" -ForegroundColor DarkGray
+                Get-Content $stderrLog | Write-Host
+            }
+            throw "Le backend n'a pas démarré correctement."
+        }
+        Write-Host "[INFO] Fichier PID trouvé. Le backend est présumé démarré." -ForegroundColor Green
 
-    Push-Location -Path $reactAppPath
-    
-    Write-Host "[DEBUG] Nettoyage du cache npm..."
-    npm cache clean --force
-    
-    Write-Host "[DEBUG] Suppression de node_modules..."
-    if (Test-Path "node_modules") {
-        Remove-Item -Recurse -Force "node_modules"
-    }
+        # 2. Exécuter les tests pytest
+        $testPaths = @{
+            "e2e-python"  = "tests/e2e/python"
+            "integration" = "tests/integration"
+            "e2e-js"      = "tests/e2e"
+        }
+        $selectedPath = if ($Path) { $Path } else { $testPaths[$Type] }
+        
+        if ($Type -eq "e2e-python" -or $Type -eq "e2e-js") {
+            $pytestCommandParts = @("pytest", "-s", "-vv", "`"$selectedPath`"", "--frontend-url=http://localhost:3000", "--backend-url=http://localhost:8004")
+        }
+        else {
+            $pytestCommandParts = @("pytest", "-s", "-vv", "`"$selectedPath`"")
+        }
 
-    Write-Host "[DEBUG] Suppression de package-lock.json..."
-    if (Test-Path "package-lock.json") {
-        Remove-Item -Force "package-lock.json"
-    }
-    
-    Write-Host "[INFO] Réinstallation des dépendances npm. Cela peut prendre un moment..."
-    npm install --verbose
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[ERREUR] L'installation NPM a échoué." -ForegroundColor Red
-        Pop-Location
-        exit $LASTEXITCODE
-    }
+        if ($PytestArgs) {
+            $pytestCommandParts += $PytestArgs.Split(' ')
+        }
+        $pytestCommand = $pytestCommandParts -join " "
 
-    Pop-Location
-    Write-Host "[INFO] Nettoyage terminé." -ForegroundColor Green
-    # --- FIN BLOC DE NETTOYAGE ---
-
-    # On construit la commande Playwright AVANT de l'envoyer au script d'activation.
-    $playwrightArgs = @("npx", "playwright", "test", "-c", "tests/e2e/playwright.config.js")
-
-    if ($PSBoundParameters.ContainsKey('Browser')) {
-        $playwrightArgs += "--project", $Browser
+        Write-Host "[INFO] Exécution de Pytest : $pytestCommand" -ForegroundColor Green
+        & $ActivationScript -CommandToRun $pytestCommand
+        $exitCode = $LASTEXITCODE
     }
-    if (-not ([string]::IsNullOrEmpty($Path))) {
-        $playwrightArgs += $Path
+    finally {
+        # 3. Arrêter le backend
+        if (Test-Path $pidFile) {
+            $pidToKill = Get-Content $pidFile
+            Write-Host "[INFO] Arrêt du processus backend (PID: $pidToKill)..." -ForegroundColor Yellow
+            Stop-Process -Id $pidToKill -Force -ErrorAction SilentlyContinue
+            Remove-Item $pidFile -ErrorAction SilentlyContinue
+        } else {
+            Write-Host "[WARN] Fichier PID introuvable, impossible d'arrêter le backend. Un nettoyage manuel peut être requis." -ForegroundColor Yellow
+        }
+        # Nettoyer le job
+        if ($job) {
+            Remove-Job $job -Force
+        }
     }
-
-    $finalCommand = $playwrightArgs -join " "
-    
-    # On exécute la commande via le script d'activation qui va charger l'environnement
-    # et ensuite exécuter notre commande.
-    Write-Host "[INFO] Lancement de la commande via le script d'activation : $finalCommand" -ForegroundColor Cyan
-    & $ActivationScript -CommandToRun $finalCommand
-    $exitCode = $LASTEXITCODE
-    
-    Write-Host "[INFO] Exécution de Playwright terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan
+    Write-Host "[INFO] Exécution des tests de type '$Type' terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan
     exit $exitCode
 }
-# Branche 2: Tous les autres types de tests via Pytest
 else {
-    Write-Host "[INFO] Lancement des tests de type '$Type' via Pytest..." -ForegroundColor Cyan
-    
-    $testPaths = @{
-        "unit"       = "tests/unit"
-        "functional" = "tests/functional"
-        "all"        = "tests" # Par défaut, on lance tout sauf e2e/js
-        "e2e-python" = "tests/e2e/python"
-        "integration"= "tests/integration"
+    # Logique pour les autres types de tests (unit, functional, playwright, all)
+    $commandParts = @()
+    if ($Type -eq "e2e") {
+        Write-Host "[INFO] Lancement des tests E2E (Playwright)..." -ForegroundColor Cyan
+        $commandParts = @("npx", "playwright", "test", "-c", "tests/e2e/playwright.config.js")
+        if ($PSBoundParameters.ContainsKey('Browser')) {
+            $commandParts += "--project", $Browser
+        }
+        if (-not ([string]::IsNullOrEmpty($Path))) {
+            $commandParts += $Path
+        }
+    } else {
+        Write-Host "[INFO] Lancement des tests de type '$Type' via Pytest..." -ForegroundColor Cyan
+        $pytestCachePath = Join-Path $ProjectRoot ".pytest_cache"
+        if (Test-Path $pytestCachePath) {
+            Write-Host "[INFO] Nettoyage du cache de pytest..." -ForegroundColor Yellow
+            Remove-Item -Recurse -Force $pytestCachePath
+        }
+        $testPaths = @{
+            "unit"       = "tests/unit"
+            "functional" = "tests/functional"
+            "all"        = "tests"
+        }
+        $selectedPath = $testPaths[$Type]
+        if (-not $selectedPath) {
+            Write-Host "[ERREUR] Type de test '$Type' non valide." -ForegroundColor Red
+            exit 1
+        }
+        if ($Path) {
+            $selectedPath = $Path
+        }
+        $commandParts = @("pytest", "-s", "-vv", "`"$selectedPath`"")
+        if ($PytestArgs) {
+            $commandParts += $PytestArgs.Split(' ')
+        }
     }
-
-    $selectedPath = $testPaths[$Type]
-    if ($Path) {
-        $selectedPath = $Path # Le chemin spécifié a la priorité
-    }
     
-    $pytestCommandParts = @("python", "-m", "pytest", "-s", "-vv", "`"$selectedPath`"")
-    
-    if ($PytestArgs) {
-        $pytestCommandParts += $PytestArgs.Split(' ')
-    }
+    $finalCommand = $commandParts -join " "
+    Write-Host "[INFO] Commande construite : '$finalCommand'" -ForegroundColor Cyan
+    Write-Host "[INFO] Délégation de l'exécution à '$ActivationScript'..." -ForegroundColor Cyan
 
-    $finalCommand = $pytestCommandParts -join " "
-
-    # Exécuter la commande via le script d'activation
     & $ActivationScript -CommandToRun $finalCommand
     $exitCode = $LASTEXITCODE
-    
-    Write-Host "[INFO] Exécution de Pytest terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan
+
+    Write-Host "[INFO] Exécution terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan
     exit $exitCode
 }
