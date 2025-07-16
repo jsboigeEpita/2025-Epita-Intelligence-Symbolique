@@ -47,7 +47,7 @@ def test_core_imports():
         ("argumentation_analysis.services.logic_service", "LogicService"),
         ("argumentation_analysis.services.flask_service_integration", "FlaskServiceIntegrator"),
         ("argumentation_analysis.agents.core.informal.informal_agent_adapter", "InformalAgent"),
-        ("argumentation_analysis.agents.core.logic.first_order_logic_agent_adapter", "FirstOrderLogicAgent"),
+        ("argumentation_analysis.agents.core.logic.fol_logic_agent_adapter", "FirstOrderLogicAgent"),
         ("argumentation_analysis.utils.async_manager", None),
         ("argumentation_analysis.orchestration.group_chat", "GroupChatOrchestration")
     ]
@@ -88,7 +88,7 @@ def test_agent_interfaces():
         print("  [OK] InformalAgent - interfaces harmonisées")
         
         # Test FirstOrderLogicAgent
-        from argumentation_analysis.agents.core.logic.first_order_logic_agent_adapter import FirstOrderLogicAgent
+        from argumentation_analysis.agents.core.logic.fol_logic_agent_adapter import FirstOrderLogicAgent
         
         # Test avec agent_name
         logic_agent1 = FirstOrderLogicAgent(agent_name="logic_test_1")
