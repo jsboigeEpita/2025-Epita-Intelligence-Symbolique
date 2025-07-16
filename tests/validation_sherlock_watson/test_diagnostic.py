@@ -36,7 +36,7 @@ def run_test_group(name, command):
 test_groups = [
     ("Oracle Tests", "python -m pytest tests/unit/argumentation_analysis/agents/core/oracle/ --tb=no"),
     ("Integration Tests", "python -m pytest tests/integration/test_oracle_integration.py --tb=no"),
-    ("Logic Tests (sans Tweety)", "python -m pytest tests/agents/core/logic/test_modal_logic_agent.py --tb=no"),
+    ("Logic Tests (sans Tweety)", "python -m pytest tests/agents/core/logic/test_modal_logic_agent_authentic.py --tb=no"),
 ]
 
 for name, cmd in test_groups:
