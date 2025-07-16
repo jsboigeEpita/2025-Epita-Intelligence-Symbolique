@@ -14,11 +14,26 @@ param(
 )
 
 # --- Script Body ---
+# Force l'initialisation de Conda pour la session en cours.
+try {
+    if (-not (Get-Command conda.exe -ErrorAction SilentlyContinue)) {
+        $condaPath = (Get-Command -Name conda -CommandType Application).Source
+        $condaDir = Split-Path $condaPath -Parent
+        $env:Path = "$condaDir;$env:Path"
+        conda.exe shell.powershell hook | Out-String | Invoke-Expression
+        Write-Host "Conda initialisé pour la session." -ForegroundColor Green
+    }
+}
+catch {
+    Write-Host "[FATAL] 'conda' introuvable ou impossible à initialiser." -ForegroundColor Red
+    exit 1
+}
+
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = $PSScriptRoot
 $ActivationScript = Join-Path $ProjectRoot "activate_project_env.ps1"
 
-# Valider l'existence du script d'activation en amont
+# Valider l'existence du script d'activation en amont (même si on ne l'utilise plus partout, il reste utile)
 if (-not (Test-Path $ActivationScript)) {
     Write-Host "[ERREUR] Le script d'activation '$ActivationScript' est introuvable." -ForegroundColor Red
     exit 1
@@ -39,14 +54,27 @@ if ($Type -eq "e2e-python" -or $Type -eq "integration" -or $Type -eq "e2e-js") {
     try {
         # 1. Démarrer le backend en arrière-plan
         Write-Host "[INFO] Démarrage du backend en arrière-plan..." -ForegroundColor Yellow
-        $commandToRunBackend = "python `"$backendLauncher`""
+
+        # On récupère le nom de l'environnement depuis le manager python.
+        $envName = (python -m project_core.core_from_scripts.environment_manager get-env-name).Trim()
+        if (-not $envName) {
+            throw "Impossible de récupérer le nom de l'environnement Conda via le environment_manager."
+        }
+        Write-Host "[DEBUG] Environnement Conda à utiliser: $envName" -ForegroundColor DarkGray
+
+        # Commande à exécuter pour lancer le backend
+        $backendCommand = "python `"$backendLauncher`""
+        # Arguments pour 'conda run'
+        $condaArgs = "run -n $envName --no-capture-output --live-stream -- $backendCommand"
+
+        # On exécute 'conda.exe run ...' directement dans le job, c'est plus fiable que d'activer.
         $job = Start-Job -ScriptBlock {
-            param($ActivationScript, $commandToRunBackend)
-            & $ActivationScript -CommandToRun $commandToRunBackend
-        } -ArgumentList $ActivationScript, $commandToRunBackend
-        
-        Write-Host "[INFO] Backend en cours de démarrage (Job ID: $($job.Id))... Attente de 90 secondes..."
-        Start-Sleep -Seconds 90 # Augmentation drastique du temps d'attente
+            param($condaExecutable, $arguments)
+            & $condaExecutable $arguments
+        } -ArgumentList @((Get-Command conda.exe).Source, $condaArgs)
+
+        Write-Host "[INFO] Backend en cours de démarrage (Job ID: $($job.Id))... Attente de 20 secondes..."
+        Start-Sleep -Seconds 20
         
         if (-not (Test-Path $pidFile)) {
             Write-Host "[ERREUR] Le backend n'a pas démarré correctement (fichier PID '$pidFile' introuvable)." -ForegroundColor Red
@@ -67,19 +95,22 @@ if ($Type -eq "e2e-python" -or $Type -eq "integration" -or $Type -eq "e2e-js") {
         }
         $selectedPath = if ($Path) { $Path } else { $testPaths[$Type] }
         
-        if ($Type -eq "e2e-python" -or $Type -eq "e2e-js") {
-            $pytestCommandParts = @("pytest", "-s", "-vv", "`"$selectedPath`"", "--frontend-url=http://localhost:3000", "--backend-url=http://localhost:8004")
-        }
-        else {
-            $pytestCommandParts = @("pytest", "-s", "-vv", "`"$selectedPath`"")
-        }
-
+        $pytestCommandParts = @()
         if ($PytestArgs) {
             $pytestCommandParts += $PytestArgs.Split(' ')
         }
-        $pytestCommand = $pytestCommandParts -join " "
+        
+        Write-Host "[INFO] Exécution de Pytest..." -ForegroundColor Green
+        
+        $pytestCommand = "pytest -s -vv `"$selectedPath`""
+        if ($Type -eq "e2e-python" -or $Type -eq "e2e-js") {
+            $pytestCommand += " --frontend-url=http://localhost:3000 --backend-url=http://localhost:8004"
+        }
+        if ($PytestArgs) {
+            $pytestCommand += " $PytestArgs"
+        }
 
-        Write-Host "[INFO] Exécution de Pytest : $pytestCommand" -ForegroundColor Green
+        # On délègue l'exécution à notre script d'activation qui gère l'environnement
         & $ActivationScript -CommandToRun $pytestCommand
         $exitCode = $LASTEXITCODE
     }
@@ -103,6 +134,8 @@ if ($Type -eq "e2e-python" -or $Type -eq "integration" -or $Type -eq "e2e-js") {
 }
 else {
     # Logique pour les autres types de tests (unit, functional, playwright, all)
+    # Cette partie utilise déjà `activate_project_env.ps1`, on la laisse telle quelle pour l'instant
+    # pour ne pas tout casser. La refacto peut se poursuivre plus tard.
     $commandParts = @()
     if ($Type -eq "e2e") {
         Write-Host "[INFO] Lancement des tests E2E (Playwright)..." -ForegroundColor Cyan
