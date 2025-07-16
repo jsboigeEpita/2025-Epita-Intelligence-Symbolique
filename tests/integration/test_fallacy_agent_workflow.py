@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from argumentation_analysis.agents.agent_factory import AgentFactory
 from argumentation_analysis.agents.plugins.fallacy_workflow_plugin import FallacyWorkflowPlugin
 from argumentation_analysis.agents.plugins.taxonomy_display_plugin import TaxonomyDisplayPlugin
+from argumentation_analysis.config.settings import AppSettings
 
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.functions.kernel_arguments import KernelArguments
@@ -306,7 +307,9 @@ def test_agent_factory_configurations(kernel, config_name, expected_plugin_types
     Ceci est une "Théorie" de test qui valide l'architecture configurable.
     """
     # --- Arrange ---
-    factory = AgentFactory(kernel, llm_service_id="test_service")
+    settings = AppSettings()
+    settings.service_manager.default_llm_service_id = "test_service"
+    factory = AgentFactory(kernel, settings)
 
     # --- Act ---
     agent = factory.create_informal_fallacy_agent(config_name=config_name)

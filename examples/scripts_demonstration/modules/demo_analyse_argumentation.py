@@ -10,6 +10,7 @@ from semantic_kernel.connectors.ai.open_ai import OpenAITextCompletion
 from argumentation_analysis.agents.agent_factory import AgentFactory
 from argumentation_analysis.core.llm_service import create_llm_service
 from modules.demo_utils import DemoLogger, pause_interactive, confirmer_action
+from argumentation_analysis.config.settings import AppSettings
 
 # L'initialisation de l'environnement est maintenant gérée par l'import de `environment`
 # et la configuration des services LLM est centralisée dans `create_llm_service`.
@@ -17,14 +18,16 @@ from modules.demo_utils import DemoLogger, pause_interactive, confirmer_action
 def _create_kernel_and_factory() -> tuple[sk.Kernel, AgentFactory, str]:
     """Crée le kernel, le service LLM et la factory d'agents."""
     kernel = sk.Kernel()
-    llm_service_id = "default_service"
+    settings = AppSettings()
+    llm_service_id = settings.service_manager.default_llm_service_id or "default_service"
+    model_id = settings.service_manager.default_model_id or "gpt-4o-mini" # Fallback
     
     # Utilise la factory centralisée pour créer le service LLM
-    llm_service = create_llm_service(service_id=llm_service_id, force_authentic=True)
+    llm_service = create_llm_service(service_id=llm_service_id, model_id=model_id, force_authentic=True)
     kernel.add_service(llm_service)
     
-    # La factory d'agents a maintenant besoin du kernel ET de l'ID du service
-    agent_factory = AgentFactory(kernel, llm_service_id)
+    # La factory d'agents a maintenant besoin du kernel et des settings
+    agent_factory = AgentFactory(kernel, settings)
     
     return kernel, agent_factory, llm_service_id
 

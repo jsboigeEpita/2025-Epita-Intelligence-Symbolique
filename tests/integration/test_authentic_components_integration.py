@@ -24,22 +24,22 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 
-class TestRealGPT4oMiniIntegration:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-        
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
+async def _create_authentic_gpt4o_mini_instance():
+    """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
+    config = UnifiedConfig()
+    return config.get_kernel_with_gpt4o_mini()
 
+async def _make_authentic_llm_call(prompt: str) -> str:
+    """Fait un appel authentique à gpt-4o-mini."""
+    try:
+        kernel = await _create_authentic_gpt4o_mini_instance()
+        result = await kernel.invoke("chat", input=prompt)
+        return str(result)
+    except Exception as e:
+        logger.warning(f"Appel LLM authentique échoué: {e}")
+        return "Authentic LLM call failed"
+
+class TestRealGPT4oMiniIntegration:
     """Tests d'intégration avec GPT-4o-mini authentique."""
     
     @pytest.mark.integration
@@ -52,7 +52,7 @@ class TestRealGPT4oMiniIntegration:
         try:
             from argumentation_analysis.core.llm_service import create_llm_service
             
-            service = create_llm_service()
+            service = create_llm_service(service_id="test_creation", model_id="gpt-4o-mini")
             
             assert service is not None
             # La nouvelle API de semantic-kernel utilise get_chat_message_contents
@@ -74,7 +74,7 @@ class TestRealGPT4oMiniIntegration:
             from argumentation_analysis.core.llm_service import create_llm_service
             
             # Créer service LLM réel
-            llm_service = create_llm_service()
+            llm_service = create_llm_service(service_id="test_orchestration", model_id="gpt-4o-mini")
             
             # Créer orchestrateur
             orchestrator = RealLLMOrchestrator(llm_service=llm_service)
@@ -135,7 +135,7 @@ class TestRealTweetyIntegration:
             from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent
             
             # Créer agent modal avec Tweety réel
-            mock_kernel = await self._create_authentic_gpt4o_mini_instance()
+            mock_kernel = await _create_authentic_gpt4o_mini_instance()
             modal_agent = ModalLogicAgent(kernel=mock_kernel, use_real_tweety=True)
             
             # Test avec formules modales
@@ -165,7 +165,7 @@ class TestRealTweetyIntegration:
             from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent
             from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer
             
-            modal_agent = ModalLogicAgent(kernel=await self._create_authentic_gpt4o_mini_instance(), use_real_tweety=True)
+            modal_agent = ModalLogicAgent(kernel=await _create_authentic_gpt4o_mini_instance(), use_real_tweety=True)
             error_analyzer = TweetyErrorAnalyzer()
             
             # Formule intentionnellement incorrecte
@@ -252,7 +252,7 @@ class TestCompleteTaxonomyIntegration:
             
             # Créer agent avec taxonomie complète
             agent = InformalAnalysisAgent(
-                kernel=await self._create_authentic_gpt4o_mini_instance(),
+                kernel=await _create_authentic_gpt4o_mini_instance(),
                 taxonomy=complete_taxonomy
             )
             
@@ -296,7 +296,7 @@ class TestUnifiedAuthenticComponentsIntegration:
             from argumentation_analysis.core.mock_elimination import TaxonomyManager
             
             # 1. Service LLM authentique
-            llm_service = create_llm_service()
+            llm_service = create_llm_service(service_id="test_full_pipeline", model_id="gpt-4o-mini")
             
             # 2. Taxonomie complète
             taxonomy_manager = TaxonomyManager()

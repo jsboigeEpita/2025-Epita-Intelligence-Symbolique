@@ -2,7 +2,7 @@ import pytest
 import pytest_asyncio
 from unittest.mock import patch, MagicMock, AsyncMock
 
-from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner
+from argumentation_analysis.orchestration.analysis_runner_v2 import AnalysisRunnerV2 as AnalysisRunner
 
 @pytest_asyncio.fixture
 async def mock_llm_service():

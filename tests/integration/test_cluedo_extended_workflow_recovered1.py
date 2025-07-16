@@ -40,6 +40,7 @@ from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
 from argumentation_analysis.agents.agent_factory import AgentFactory
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
 from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
+from argumentation_analysis.config.settings import AppSettings
 from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent
 
 
@@ -144,7 +145,8 @@ class TestWorkflowComparison:
     def test_agent_capabilities_comparison(self, mock_kernel, comparison_elements):
         """Test la comparaison des capacités des agents."""
         # Instancier la factory
-        factory = AgentFactory(kernel=mock_kernel)
+        settings = AppSettings()
+        factory = AgentFactory(kernel=mock_kernel, settings=settings)
 
         # Agents 2-agents
         sherlock_2 = factory.create_sherlock_agent(agent_name="Sherlock2")

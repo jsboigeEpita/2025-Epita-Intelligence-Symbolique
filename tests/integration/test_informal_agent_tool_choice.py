@@ -11,6 +11,7 @@ sys.path.insert(0, str(project_root))
 from argumentation_analysis.agents.agent_factory import AgentFactory
 from argumentation_analysis.core.llm_service import create_llm_service
 from semantic_kernel.contents.chat_history import ChatHistory
+from argumentation_analysis.config.settings import AppSettings
 from argumentation_analysis.agents.plugins.identification_plugin import IdentificationPlugin, IdentifiedFallacy
 
 
@@ -25,7 +26,7 @@ async def test_informal_agent_forced_tool_choice(tmp_path):
     kernel = sk.Kernel()
     llm_service_id = "default"
     try:
-        llm_service = create_llm_service(service_id=llm_service_id, force_authentic=True)
+        llm_service = create_llm_service(service_id=llm_service_id, model_id="gpt-4o-mini", force_authentic=True)
         kernel.add_service(llm_service)
     except Exception as e:
         pytest.fail(f"La configuration du service LLM a échoué: {e}")
@@ -34,7 +35,9 @@ async def test_informal_agent_forced_tool_choice(tmp_path):
     log_file = tmp_path / "test_trace.log"
 
     # 3. Création de l'agent tracé
-    agent_factory = AgentFactory(kernel, llm_service_id)
+    settings = AppSettings()
+    settings.service_manager.default_llm_service_id = llm_service_id
+    agent_factory = AgentFactory(kernel, settings)
     agent = agent_factory.create_informal_fallacy_agent(
         config_name="simple",
         trace_log_path=str(log_file)

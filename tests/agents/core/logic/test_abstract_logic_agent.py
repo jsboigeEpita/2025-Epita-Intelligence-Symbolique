@@ -105,13 +105,13 @@ class MockLogicAgent(BaseLogicAgent):
 @pytest.mark.no_mocks
 @pytest.mark.requires_api_key
 @pytest.mark.usefixtures("jvm_session")  # Utilise la fixture globale pour la JVM
-class TestAbstractLogicAgent(unittest.IsolatedAsyncioTestCase): # Changé en IsolatedAsyncioTestCase
-    
-    async def asyncSetUp(self): # Exécuté avant chaque test
-        """Initialisation avant chaque test."""
-        logger.info("Setting up test case in TestAbstractLogicAgent...")
+class TestAbstractLogicAgent: # Supprime l'héritage de unittest
+
+    @pytest.fixture(autouse=True)
+    async def setup_method(self):
+        """Fixture pytest pour l'initialisation avant chaque test."""
+        logger.info("Setting up test case for pytest in TestAbstractLogicAgent...")
         self.state_manager = OrchestrationServiceManager()
-        # NOTE: L'appel à .initialize() est GÉRÉ PAR LA FIXTURE jvm_session
         
         self.config = UnifiedConfig()
         self.config.mock_level = MockLevel.NONE
@@ -128,7 +128,7 @@ class TestAbstractLogicAgent(unittest.IsolatedAsyncioTestCase): # Changé en Iso
             }
         }
 
-        # Réinitialiser l'état du state_manager ou ses mocks si nécessaire
+        # Réinitialiser l'état du state_manager
         self.state_manager.state.raw_text = self.initial_snapshot_data["raw_text"]
         self.state_manager.state.belief_sets = self.initial_snapshot_data["belief_sets"].copy()
         
@@ -160,14 +160,14 @@ class TestAbstractLogicAgent(unittest.IsolatedAsyncioTestCase): # Changé en Iso
     
     async def test_initialization(self):
         """Test de l'initialisation de l'agent."""
-        self.assertEqual(self.agent.name, "TestAgent")
-        self.assertIsNotNone(self.agent._kernel)
-        self.assertIsInstance(self.agent._kernel, Kernel)
+        assert self.agent.name == "TestAgent"
+        assert self.agent._kernel is not None
+        assert isinstance(self.agent._kernel, Kernel)
 
     async def test_process_task_unknown_task(self):
         """Test du traitement d'une tâche inconnue."""
         result = await self.agent.process_task("task1", "Tâche inconnue", self.state_manager)
-        self.assertEqual(result["status"], "error")
+        assert result["status"] == "error"
 
     async def test_handle_translation_task(self):
         """Test du traitement d'une tâche de traduction."""
@@ -176,7 +176,7 @@ class TestAbstractLogicAgent(unittest.IsolatedAsyncioTestCase): # Changé en Iso
         self.state_manager.state.raw_text = "Ceci est un texte pour la traduction."
         
         result = await self.agent.process_task("task_translation", task_description, self.state_manager)
-        self.assertEqual(result["status"], "success")
+        assert result["status"] == "success"
 
     async def test_handle_query_task(self):
         """Test du traitement d'une tâche d'exécution de requêtes."""
@@ -191,12 +191,12 @@ class TestAbstractLogicAgent(unittest.IsolatedAsyncioTestCase): # Changé en Iso
             "Exécuter les Requêtes sur belief_set_id: bs1",
             self.state_manager
         )
-        self.assertEqual(result["status"], "success")
+        assert result["status"] == "success"
 
     async def test_extract_source_text_from_state(self):
         """Test de l'extraction du texte source depuis l'état."""
         text = self.agent._extract_source_text("", self.initial_snapshot_data)
-        self.assertEqual(text, "Texte de test")
+        assert text == "Texte de test"
     
     def test_extract_source_text_from_description(self):
         """Test de l'extraction du texte source depuis la description."""
@@ -204,17 +204,17 @@ class TestAbstractLogicAgent(unittest.IsolatedAsyncioTestCase): # Changé en Iso
             "Analyser le texte: Ceci est un test", 
             {"raw_text": ""}
         )
-        self.assertEqual(text, "Ceci est un test")
+        assert text == "Ceci est un test"
     
     def test_extract_belief_set_id(self):
         """Test de l'extraction de l'ID de l'ensemble de croyances."""
         bs_id = self.agent._extract_belief_set_id("Requête sur belief_set_id: bs123")
-        self.assertEqual(bs_id, "bs123")
+        assert bs_id == "bs123"
     
     def test_extract_belief_set_id_not_found(self):
         """Test de l'extraction de l'ID de l'ensemble de croyances non trouvé."""
         bs_id = self.agent._extract_belief_set_id("Requête sans ID")
-        self.assertIsNone(bs_id)
+        assert bs_id is None
 
 
 if __name__ == "__main__":

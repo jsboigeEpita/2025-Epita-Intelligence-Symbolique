@@ -163,7 +163,10 @@ class TestWorkflowComparison:
         """Test la comparaison des capacités des agents."""
         kernel_instance = await mock_kernel
         # Initialisation de la factory
-        factory = AgentFactory(kernel=kernel_instance, llm_service_id="chat-gpt")
+        from argumentation_analysis.config.settings import AppSettings
+        settings = AppSettings()
+        settings.service_manager.default_llm_service_id = "chat-gpt"
+        factory = AgentFactory(kernel=kernel_instance, settings=settings)
 
         # Agents 2-agents
         sherlock_2 = factory.create_sherlock_agent(agent_name="Sherlock2")

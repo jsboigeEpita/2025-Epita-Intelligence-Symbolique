@@ -18,10 +18,10 @@ class Orchestrator:
     """
     Orchestrates the argumentation analysis using a group of agents.
     """
-    def __init__(self, kernel: Kernel, llm_service_id: str):
+    def __init__(self, kernel: Kernel, settings: AppSettings):
         self._kernel = kernel
-        self._llm_service_id = llm_service_id
-        self._agent_factory = AgentFactory(self._kernel, self._llm_service_id)
+        self._settings = settings
+        self._agent_factory = AgentFactory(self._kernel, self._settings)
 
     async def run_analysis_async(self, text_content: str):
         """

@@ -13,6 +13,7 @@ from semantic_kernel.functions import KernelArguments
 from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant, WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT
 from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
 from argumentation_analysis.agents.agent_factory import AgentFactory
+from argumentation_analysis.config.settings import AppSettings
 
 # Définir un nom d'agent de test
 TEST_AGENT_NAME = "TestWatsonAssistant"
@@ -25,7 +26,11 @@ def mock_kernel() -> MagicMock:
 @pytest.fixture
 def agent_factory(mock_kernel: MagicMock) -> AgentFactory:
     """Fixture for creating an AgentFactory instance."""
-    return AgentFactory(kernel=mock_kernel, llm_service_id="test_llm_service")
+    # Créer une instance de configuration de base pour la factory
+    mock_settings = AppSettings()
+    # On peut surcharger des valeurs si nécessaire pour les tests
+    mock_settings.service_manager.default_llm_service_id = "test_llm_service"
+    return AgentFactory(kernel=mock_kernel, settings=mock_settings)
 
 @pytest.fixture
 def mock_tweety_bridge() -> MagicMock:

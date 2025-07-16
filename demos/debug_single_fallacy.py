@@ -79,7 +79,7 @@ async def main():
     from argumentation_analysis.core.llm_service import create_llm_service
     
     kernel = sk.Kernel()
-    llm_service = create_llm_service(service_id="default", force_authentic=True)
+    llm_service = create_llm_service(service_id="default", model_id="gpt-4o-mini", force_authentic=True)
     kernel.add_service(llm_service)
     
     workflow_plugin = FallacyWorkflowPlugin(kernel)

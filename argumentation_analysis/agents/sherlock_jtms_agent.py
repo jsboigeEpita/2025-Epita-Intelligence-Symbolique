@@ -184,13 +184,12 @@ class SherlockJTMSAgent(JTMSAgentBase):
     Spécialisé dans la collecte d'indices et génération d'hypothèses avec traçabilité.
     """
     
-    def __init__(self, kernel: Kernel, agent_name: str = "Sherlock_JTMS",
-                 llm_service_id: str = "default",
+    def __init__(self, kernel: Kernel, settings: "AppSettings", agent_name: str = "Sherlock_JTMS",
                  system_prompt: Optional[str] = None, **kwargs):
         super().__init__(kernel, agent_name, strict_mode=False)
 
         # Intégration avec l'agent Sherlock existant via la factory
-        factory = AgentFactory(kernel, llm_service_id=llm_service_id)
+        factory = AgentFactory(kernel, settings)
         self._base_sherlock = factory.create_sherlock_agent(agent_name=agent_name)
         # Note: le system_prompt custom n'est plus directement passé ici,
         # la factory utilise le prompt standardisé.

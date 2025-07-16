@@ -16,6 +16,7 @@ from argumentation_analysis.core import environment as auto_env
 from semantic_kernel import Kernel
 from argumentation_analysis.agents.agent_factory import AgentFactory
 from semantic_kernel.functions import KernelArguments
+from argumentation_analysis.config.settings import AppSettings
 
 # Conditional imports pour connecteurs authentiques
 try:
@@ -431,7 +432,9 @@ def authentic_informal_agent(authentic_semantic_kernel, setup_authentic_taxonomy
         if not llm_service_id:
             pytest.skip("Saut du test authentique car aucun service LLM n'est configuré.")
 
-        agent_factory = AgentFactory(kernel, llm_service_id)
+        settings = AppSettings()
+        settings.service_manager.default_llm_service_id = llm_service_id
+        agent_factory = AgentFactory(kernel, settings)
         
         # On utilise la config "full" pour avoir toutes les fonctionnalités
         agent = agent_factory.create_informal_fallacy_agent(

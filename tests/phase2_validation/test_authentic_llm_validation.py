@@ -122,7 +122,7 @@ class TestPhase2AuthenticLLMValidation:
         logger.info("🔍 Test 3: Validation service LLM authentique direct")
         
         # Création service LLM authentique
-        service = create_llm_service(service_id="test_authentic", force_mock=False)
+        service = create_llm_service(service_id="test_authentic", model_id="gpt-4o-mini", force_mock=False)
         
         # Validation type authentique
         assert service is not None
@@ -145,7 +145,7 @@ class TestPhase2AuthenticLLMValidation:
         logger.info("🔍 Test 4: Validation rejet force_mock")
         
         # Test que force_mock=True est ignoré (comportement authentique)
-        service = create_llm_service(service_id="test_no_mock", force_mock=True)
+        service = create_llm_service(service_id="test_no_mock", model_id="gpt-4o-mini", force_mock=True)
         
         # Même avec force_mock=True, on doit avoir un service authentique
         assert isinstance(service, (OpenAIChatCompletion, AzureChatCompletion))
@@ -237,7 +237,7 @@ class TestPhase2AuthenticLLMValidation:
         assert config.use_authentic_services is True
         
         # Test service LLM sans fallback
-        service = create_llm_service("test_no_fallback")
+        service = create_llm_service(service_id="test_no_fallback", model_id="gpt-4o-mini")
         service_module = service.__class__.__module__
         
         # Validation module authentique (pas de mock dans le path)
@@ -286,7 +286,7 @@ class TestPhase2AuthenticLLMValidation:
             success_criteria["unified_config_authentic"] = True
             
             # Critère 2: Service LLM authentique
-            service = create_llm_service("phase2_validation")
+            service = create_llm_service(service_id="phase2_validation", model_id="gpt-4o-mini")
             assert isinstance(service, (OpenAIChatCompletion, AzureChatCompletion))
             success_criteria["llm_service_authentic"] = True
             

@@ -545,9 +545,11 @@ class ValidationEpitaComplete:
             # Un nouveau kernel et une nouvelle factory sont créés pour chaque test
             # afin de garantir une isolation complète et d'éviter toute contamination de contexte.
             kernel = sk.Kernel()
-            llm_service = create_llm_service(service_id="default", force_authentic=True)
+            llm_service = create_llm_service(service_id="default", model_id="gpt-4o-mini", force_authentic=True) # Ajout model_id
             kernel.add_service(llm_service)
-            agent_factory = AgentFactory(kernel, "default")
+            from argumentation_analysis.config.settings import AppSettings
+            settings = AppSettings()
+            agent_factory = AgentFactory(kernel, settings)
             start_time = time.time()
             details, success = "", False
             # Nettoyer le nom du test pour l'utiliser comme nom de fichier

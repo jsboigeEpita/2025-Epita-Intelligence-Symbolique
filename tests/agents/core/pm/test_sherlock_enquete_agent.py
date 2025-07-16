@@ -11,6 +11,7 @@ from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import Sherloc
 from typing import AsyncGenerator, Union
 from semantic_kernel.contents.chat_history import ChatHistory
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
+from argumentation_analysis.config.settings import AppSettings
 
 TEST_AGENT_NAME = "TestSherlockAgent"
 
@@ -71,18 +72,19 @@ def agent_factory(authentic_kernel):
     """Fixture pour créer une instance de l'AgentFactory."""
     if not authentic_kernel.get_service("chat_completion"):
         pytest.skip("Le service de chat 'chat_completion' n'est pas configuré.")
-    return AgentFactory(kernel=authentic_kernel, llm_service_id="chat_completion")
+    settings = AppSettings()
+    settings.service_manager.default_llm_service_id = "chat_completion"
+    return AgentFactory(kernel=authentic_kernel, settings=settings)
 
 @pytest.fixture
 def sherlock_agent(agent_factory):
     """
     Fixture pour créer un agent Sherlock concret via la factory pour les tests.
-    Utilise la méthode _create_agent pour instancier la version concrète.
+    Utilise la méthode create_agent pour instancier la version concrète.
     """
-    return agent_factory._create_agent(
+    return agent_factory.create_agent(
         agent_class=ConcreteSherlockEnqueteAgent,
-        agent_name=TEST_AGENT_NAME,
-        service_id=agent_factory.llm_service_id
+        agent_name=TEST_AGENT_NAME
     )
 
 @pytest.mark.asyncio
@@ -119,11 +121,10 @@ class TestSherlockEnqueteAgentAuthentic:
         """Test la configuration avec un prompt système personnalisé via la factory."""
         custom_prompt = "Instructions personnalisées pour Sherlock."
         
-        agent = agent_factory._create_agent(
+        agent = agent_factory.create_agent(
             agent_class=ConcreteSherlockEnqueteAgent,
             agent_name=TEST_AGENT_NAME,
-            system_prompt=custom_prompt,
-            service_id=agent_factory.llm_service_id
+            system_prompt=custom_prompt
         )
         
         assert agent.name == TEST_AGENT_NAME
@@ -189,11 +190,10 @@ class TestSherlockEnqueteAgentAuthentic:
 def test_sherlock_agent_integration_real(agent_factory):
     """Test d'intégration complet avec vraies APIs via la factory."""
     try:
-        agent = agent_factory._create_agent(
+        agent = agent_factory.create_agent(
                 agent_class=ConcreteSherlockEnqueteAgent,
                 agent_name="IntegrationTestAgent",
-                system_prompt="Test d'intégration authentique",
-                service_id=agent_factory.llm_service_id
+                system_prompt="Test d'intégration authentique"
             )
             
         assert agent is not None

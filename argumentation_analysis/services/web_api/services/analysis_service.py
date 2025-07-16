@@ -144,7 +144,7 @@ class AnalysisService:
                     kernel = sk.Kernel()
                     llm_service_instance = None # Renommé pour éviter conflit avec variable globale potentielle
                     try:
-                        llm_service_instance = create_llm_service(service_id="default_analysis_llm")
+                        llm_service_instance = create_llm_service(service_id="default_analysis_llm", model_id="gpt-4o-mini")
                         kernel.add_service(llm_service_instance)
                         self.logger.info("[OK] LLM service created and added to kernel for AgentFactory")
                     except Exception as llm_e:
@@ -159,7 +159,10 @@ class AnalysisService:
                     
                     if kernel and llm_service_instance:
                         try:
-                            factory = AgentFactory(kernel=kernel, llm_service_id="default_analysis_llm")
+                            from argumentation_analysis.config.settings import AppSettings
+                            settings = AppSettings()
+                            settings.service_manager.default_llm_service_id = "default_analysis_llm"
+                            factory = AgentFactory(kernel=kernel, settings=settings)
                             self.informal_agent = factory.create_informal_fallacy_agent(
                                 config_name="full"
                             )

@@ -7,7 +7,7 @@ import sys
 from contextlib import redirect_stdout
 
 # Importer la fonction main du script à tester
-from argumentation_analysis.orchestration.analysis_runner import main as analysis_runner_main
+from argumentation_analysis.orchestration.analysis_runner_v2 import run_analysis_v2 as analysis_runner_main
 from semantic_kernel.contents import AuthorRole
 
 @pytest.mark.asyncio
