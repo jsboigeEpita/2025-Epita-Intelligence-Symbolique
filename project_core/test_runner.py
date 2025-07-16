@@ -222,17 +222,23 @@ class TestRunner:
             cwd=ROOT_DIR,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            text=True,
-            encoding='utf-8',
-            bufsize=1, # Mode ligne-buffer pour la sortie texte
+            # text=True, # On gère le décodage manuellement pour éviter les erreurs
+            # encoding='utf-8',
+            # bufsize=1,
             env=env
         )
 
         # Lire et afficher la sortie en temps réel
         # La boucle s'arrêtera quand le processus sera terminé et que stdout sera fermé
         if process.stdout:
-            for line in iter(process.stdout.readline, ''):
-                print(line, end='')
+            # Prise en charge des problèmes d'encodage de la console Windows
+            # Stratégie de lecture robuste pour éviter les UnicodeDecodeError
+            while True:
+                line_bytes = process.stdout.readline()
+                if not line_bytes:
+                    break
+                line_str = line_bytes.decode('utf-8', errors='replace')
+                print(line_str, end='')
         
         # Attendre que le processus se termine et obtenir le code de retour
         returncode = process.wait()

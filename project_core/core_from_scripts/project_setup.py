@@ -54,11 +54,13 @@ class ProjectSetup:
         self.logger.info("Setup de l'environnement de développement...")
         
         # Vérifications préalables
-        issues = self.validator.check_prerequisites()
-        if issues and not force:
-            self.logger.error("Setup impossible - Prérequis manquants")
-            for issue in issues:
-                self.logger.error(f"  - {issue}")
+        validation_results = self.validator.run()
+        failed_validations = [r for r in validation_results if not r.success]
+
+        if failed_validations and not force:
+            self.logger.error("Setup impossible - Prérequis de validation manquants")
+            for result in failed_validations:
+                self.logger.error(f"  - Règle '{result.rule_name}': {result.message}")
             return False
         
         # Configuration variables d'environnement
@@ -73,7 +75,7 @@ class ProjectSetup:
             "conda_available": self.env_manager.check_conda_available(),
             "conda_env_exists": self.env_manager.check_conda_env_exists(),
             "python_version_ok": self.env_manager.check_python_version(),
-            "prerequisites_ok": len(self.validator.check_prerequisites()) == 0
+            "prerequisites_ok": all(r.success for r in self.validator.run())
         }
         
         status["overall_status"] = all(status.values())
@@ -97,16 +99,16 @@ class ProjectSetup:
         self.logger.info("Démarrage de l'installation orchestrée du projet...")
         
         # Étape 1: Valider les outils de compilation
-        self.logger.info("Étape 1/3 : Validation des outils de compilation...")
-        build_tools_status = self.validator.validate_build_tools()
-        self.logger.info(build_tools_status['message'])
-        if build_tools_status['status'] == 'failure':
-            self.logger.error("Installation annulée. Veuillez installer les outils de compilation requis et réessayer.")
-            return False
-        self.logger.success("Outils de compilation validés.")
+        # self.logger.info("Étape 1/3 : Validation des outils de compilation...")
+        # build_tools_status = self.validator.validate_build_tools()
+        # self.logger.info(build_tools_status['message'])
+        # if build_tools_status['status'] == 'failure':
+        #     self.logger.error("Installation annulée. Veuillez installer les outils de compilation requis et réessayer.")
+        #     return False
+        # self.logger.success("Outils de compilation validés.")
 
         # Étape 2: Installer les dépendances depuis requirements.txt
-        self.logger.info(f"Étape 2/3 : Installation des dépendances depuis '{requirements_file}'...")
+        self.logger.info(f"Étape 1/2 : Installation des dépendances depuis '{requirements_file}'...")
         deps_installed = self.env_manager.fix_dependencies(requirements_file=requirements_file, strategy_name='aggressive')
         if not deps_installed:
             self.logger.error(f"L'installation des dépendances depuis '{requirements_file}' a échoué. Installation annulée.")

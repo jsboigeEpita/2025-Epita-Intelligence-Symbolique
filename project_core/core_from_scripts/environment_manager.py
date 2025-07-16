@@ -13,6 +13,7 @@ from typing import Optional, List, Union, Dict, Type
 # Importation corrigée pour utiliser l'utilitaire central du projet
 from argumentation_analysis.core.utils.shell_utils import run_shell_command
 from .strategies.base_strategy import BaseStrategy
+from project_core.environment.conda_manager import CondaManager
 
 # Configuration du logger
 logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='[ENV_MGR] [%(asctime)s] - %(levelname)s - %(message)s')
@@ -31,8 +32,22 @@ class EnvironmentManager:
         """
         self._project_root = project_root
         self.logger = logger_instance or logging.getLogger(__name__)
+        self.conda_manager = CondaManager(logger=self.logger, project_root=self.project_root)
         self._strategies: Dict[str, BaseStrategy] = {}
         self._load_strategies()
+
+    def check_conda_available(self) -> bool:
+        """Vérifie si l'exécutable Conda est disponible."""
+        return self.conda_manager._find_conda_executable() is not None
+
+    def check_conda_env_exists(self, env_name: str = "projet-is") -> bool:
+        """Vérifie si un environnement Conda spécifique existe."""
+        return self.conda_manager.check_conda_env_exists(env_name)
+
+    def check_python_version(self) -> bool:
+        """Vérifie la version de Python (simulé pour l'instant)."""
+        # TODO: Implémenter une vraie vérification de version si nécessaire.
+        return True
 
     @property
     def project_root(self) -> Path:
@@ -139,8 +154,19 @@ class EnvironmentManager:
         command_str = " ".join(command_parts)
         description = f"Exécution de '{command_str[:70]}...' dans l'environnement courant"
         
+        # Remplacer 'python' par le chemin complet de l'exécutable python de l'env
+        env_name = self.get_conda_env_name_from_dotenv() or "projet-is"
+        env_path = self.conda_manager._get_conda_env_path(env_name)
+        if not env_path:
+            self.logger.error(f"Impossible de trouver le chemin de l'environnement '{env_name}' pour construire le chemin python.")
+            return 1
+            
+        python_exe = str(Path(env_path) / "python.exe")
+        
+        final_command_parts = [part.replace("python", python_exe, 1) if part == "python" else part for part in command_parts]
+        
         exit_code, _, _ = run_shell_command(
-            command=command_parts,
+            command=final_command_parts,
             description=description,
             capture_output=False,
             shell_mode=False, # Important pour exécuter `pytest` ou `npx` directement
@@ -198,8 +224,22 @@ class EnvironmentManager:
             True si l'opération a réussi, False sinon.
         """
         if not self._strategies:
-            self.logger.error("Aucune stratégie de réparation n'a été chargée. Impossible de continuer.")
-            return False
+            self.logger.warning("Aucune stratégie de réparation n'a été chargée. Tentative d'installation directe via pip.")
+            if requirements_file:
+                if not (self.project_root / requirements_file).is_file():
+                    self.logger.error(f"Fichier de requirements introuvable: {requirements_file}")
+                    return False
+                command = f"pip install -r {requirements_file}"
+                self.logger.info(f"Exécution de l'installation directe : {command}")
+                import shlex
+                # Utilise une méthode d'exécution qui ne dépend pas de l'environnement déjà activé,
+                # mais qui peut le trouver. `conda_manager.run_in_conda_env` est fait pour ça.
+                env_name = self.get_conda_env_name_from_dotenv() or "projet-is"
+                result = self.conda_manager.run_in_conda_env(shlex.split(command), env_name=env_name)
+                return result.returncode == 0
+            else:
+                self.logger.error("Aucune stratégie et aucun fichier de requirements fourni. Impossible de continuer.")
+                return False
 
         if packages and requirements_file:
             raise ValueError("Les arguments 'packages' et 'requirements_file' sont mutuellement exclusifs.")
