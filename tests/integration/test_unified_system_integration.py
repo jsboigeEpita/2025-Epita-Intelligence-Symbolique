@@ -32,7 +32,7 @@ try:
     from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
     from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer
     from config.unified_config import UnifiedConfig as RealUnifiedConfig
-    from argumentation_analysis.agents.core.logic.fol_logic_agent import FirstOrderLogicAgent
+    from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
     REAL_COMPONENTS_AVAILABLE = True
 except ImportError as e:
     print(f"Avertissement: Composants réels non disponibles: {e}")
@@ -114,7 +114,7 @@ except ImportError as e:
                 'require_real_tweety': self.require_real_tweety
             }
     
-    class FirstOrderLogicAgent:
+    class FOLLogicAgent:
         def __init__(self, **kwargs):
             self.agent_name = "IntegrationFOLAgent"
             self.initialized = True

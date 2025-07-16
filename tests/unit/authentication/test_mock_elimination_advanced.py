@@ -34,7 +34,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 try:
     from config.unified_config import UnifiedConfig, MockLevel, TaxonomySize, LogicType, PresetConfigs
     from argumentation_analysis.core.llm_service import create_llm_service as LLMService
-    from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent
+    from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
 except ImportError as e:
     pytest.skip(f"Modules requis non disponibles: {e}", allow_module_level=True)
 
