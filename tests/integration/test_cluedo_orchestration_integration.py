@@ -31,7 +31,7 @@ try:
     from argumentation_analysis.agents.agent_factory import AgentFactory
     from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
     from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
-    from argumentation_analysis.orchestration.group_chat import AgentGroupChat
+    from argumentation_analysis.orchestration.cluedo_extended_orchestrator import AgentGroupChat
     from semantic_kernel import Kernel
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
     from config.unified_config import UnifiedConfig
