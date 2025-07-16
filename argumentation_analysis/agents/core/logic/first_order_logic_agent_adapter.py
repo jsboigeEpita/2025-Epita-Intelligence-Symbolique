@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Adaptateur pour maintenir la compatibilité avec l'ancienne interface FirstOrderLogicAgent.
+Adaptateur pour maintenir la compatibilité avec l'ancienne interface FOLLogicAgent.
 
 Ce module fournit une classe adaptateur qui permet aux tests existants
 de continuer à fonctionner avec la nouvelle architecture basée sur Semantic Kernel.
@@ -15,12 +15,12 @@ import logging
 from typing import Dict, List, Any, Optional, Tuple
 
 # Import de la nouvelle classe
-from .first_order_logic_agent import FirstOrderLogicAgent as NewFirstOrderLogicAgent
+from .fol_logic_agent import FOLLogicAgent as NewFOLLogicAgent
 from .belief_set import FirstOrderBeliefSet, BeliefSet
 
-class FirstOrderLogicAgent:
+class FOLLogicAgent:
     """
-    Adaptateur de compatibilité pour l'ancien FirstOrderLogicAgent.
+    Adaptateur de compatibilité pour l'ancien FOLLogicAgent.
     
     Cette classe maintient l'interface attendue par les tests existants
     tout en mockant les fonctionnalités pour éviter les dépendances JVM.
@@ -45,8 +45,8 @@ class FirstOrderLogicAgent:
             **kwargs: Arguments supplémentaires
         """
         # Harmonisation des interfaces - compatibilité bidirectionnelle
-        self.name = agent_name or agent_id or "FirstOrderLogicAgent"
-        self.agent_id = agent_id or agent_name or "FirstOrderLogicAgent"
+        self.name = agent_name or agent_id or "FOLLogicAgent"
+        self.agent_id = agent_id or agent_name or "FOLLogicAgent"
         self.agent_name = self.name
         self.logic_type = "FOL"
         self.kernel = kernel
@@ -55,7 +55,7 @@ class FirstOrderLogicAgent:
         
         # Essayer de créer le vrai agent SK sous-jacent
         try:
-            self._sk_agent = NewFirstOrderLogicAgent(
+            self._sk_agent = NewFOLLogicAgent(
                 agent_name=self.agent_name,
                 kernel=self.kernel,
                 service_id=self.service_id
@@ -266,9 +266,9 @@ class LogicAgentFactory:
             if logic_type == "first_order":
                 logger.info("Création d'un agent de logique du premier ordre...")
                 # Éviter les conflits d'arguments - utiliser kwargs ou valeurs par défaut
-                agent_name = kwargs.pop('agent_name', 'FirstOrderLogicAgent')
+                agent_name = kwargs.pop('agent_name', 'FOLLogicAgent')
                 agent_id = kwargs.pop('agent_id', 'fol_agent')
-                return FirstOrderLogicAgent(
+                return FOLLogicAgent(
                     agent_name=agent_name,
                     agent_id=agent_id,
                     kernel=kernel,

@@ -34,7 +34,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 # Imports du projet
 from config.unified_config import UnifiedConfig, LogicType, MockLevel, AgentType, PresetConfigs
 from project_core.semantic_kernel_agents_import import AuthorRole, ChatMessage, AgentChat, is_using_fallback
-from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent
+from argumentation_analysis.agents.core.logic.fol_logic_agent import FirstOrderLogicAgent
 from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent  
 from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
 
