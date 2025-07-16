@@ -1,0 +1,32 @@
+# Rapport d'Analyse des Sophismes
+
+## Résumé
+{% if fallacies %}
+    L'analyse a identifié **{{ fallacies|length }}** type(s) de sophisme(s) dans le texte soumis.
+{% else %}
+    L'analyse n'a détecté aucun sophisme dans le texte soumis.
+{% endif %}
+
+{% if fallacies|length > 3 %}
+### Avertissement
+Le nombre élevé de sophismes détectés suggère que l'argumentation pourrait être structurellement faible. Une attention particulière est recommandée.
+{% endif %}
+
+---
+
+## Détails des Sophismes Identifiés
+
+{% for fallacy in fallacies %}
+### {{ loop.index }}. {{ fallacy.name }}
+**Définition** : {{ fallacy.definition }}
+
+**Confiance** : `{{ "%.2f"|format(fallacy.confidence * 100) }}%`
+
+**Extrait pertinent du texte** : 
+> "{{ fallacy.evidence }}"
+
+**Explication** :
+> {{ fallacy.explanation }}
+
+---
+{% endfor %}
