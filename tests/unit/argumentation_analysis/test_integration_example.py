@@ -76,7 +76,7 @@ class AuthHelper:
         """Crée un Kernel avec un service mocké pour les tests."""
         kernel = Kernel()
         # On force un mock, et on lui passe le service_id souhaité par le test
-        mock_service = create_llm_service(service_id=service_id_for_test, force_mock=True)
+        mock_service = create_llm_service(service_id=service_id_for_test, model_id="test_model", force_mock=True)
         kernel.add_service(mock_service)
         return kernel
 

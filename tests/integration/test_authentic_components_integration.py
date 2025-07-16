@@ -52,7 +52,7 @@ class TestRealGPT4oMiniIntegration:
         try:
             from argumentation_analysis.core.llm_service import create_llm_service
             
-            service = create_llm_service()
+            service = create_llm_service(model_id="test_model")
             
             assert service is not None
             # La nouvelle API de semantic-kernel utilise get_chat_message_contents
@@ -73,7 +73,7 @@ class TestRealGPT4oMiniIntegration:
             from argumentation_analysis.core.llm_service import create_llm_service
             
             # Créer service LLM réel
-            llm_service = create_llm_service()
+            llm_service = create_llm_service(model_id="test_model")
             
             # Créer orchestrateur
             orchestrator = RealLLMOrchestrator(llm_service=llm_service)

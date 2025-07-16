@@ -48,6 +48,7 @@ class TestAuthenticGPTIntegration:
             # Initialiser le service LLM réel via la factory
             llm_service = create_llm_service(
                 service_id="test_real_gpt_quality",
+                model_id="test_model",
                 force_authentic=True
             )
             

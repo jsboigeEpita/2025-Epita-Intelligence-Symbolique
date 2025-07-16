@@ -61,7 +61,7 @@ except ImportError:
             }
     
     async def create_llm_service():
-        return await self._create_authentic_gpt4o_mini_instance()
+        return create_llm_service(model_id="gpt-4o-mini", service_id="authentic_gpt4o_mini")
     
     class TweetyErrorAnalyzer:
         def analyze_error(self, error, context=None):
@@ -131,7 +131,7 @@ class TestFOLPipelineIntegration:
     async def test_fol_orchestration_integration(self):
         """Test d'intégration avec orchestration FOL."""
         # 1. Créer le service LLM
-        llm_service = create_llm_service()
+        llm_service = create_llm_service(model_id="test_model")
         
         # 2. Créer l'orchestrateur
         orchestrator = RealLLMOrchestrator(llm_service=llm_service)
