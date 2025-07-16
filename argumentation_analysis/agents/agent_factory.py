@@ -109,3 +109,29 @@ class AgentFactory:
         logger.debug(f"Canal de communication volatile associé à '{final_agent_name}'.")
 
         return wrapper_agent
+
+    def create_sherlock_agent(
+        self,
+        agent_name: str = "Sherlock",
+    ) -> ChatCompletionAgent:
+        """Crée et configure l'agent Sherlock en utilisant la nouvelle factory."""
+        logger.info("Délégation de la création de l'agent Sherlock à la factory principale.")
+        return self.create_agent(
+            agent_class=SherlockEnqueteAgent,
+            agent_name=agent_name,
+        )
+
+    def create_watson_agent(
+        self,
+        agent_name: str = "Watson",
+        constants: Optional[List[str]] = None,
+        system_prompt: Optional[str] = None,
+    ) -> ChatCompletionAgent:
+        """Crée et configure l'agent Watson en utilisant la nouvelle factory."""
+        logger.info("Délégation de la création de l'agent Watson à la factory principale.")
+        return self.create_agent(
+            agent_class=WatsonLogicAssistant,
+            agent_name=agent_name,
+            constants=constants,
+            system_prompt=system_prompt,
+        )
