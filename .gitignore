@@ -345,3 +345,8 @@ local_llm_data/
 # Fichiers temporaires de débogage
 .temp/
 _temp_prover9_install/
+
+
+# Fichiers et répertoires de nettoyage final
+project_logs/
+archived_artefacts/

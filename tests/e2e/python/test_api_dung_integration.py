@@ -11,7 +11,7 @@ pytestmark = [
 ]
 
 @pytest.mark.playwright
-def test_dung_framework_analysis_api(playwright: Playwright):
+def test_dung_framework_analysis_api(playwright: Playwright, e2e_servers, backend_url: str):
     """
     NOTE: Ce test est temporairement désactivé.
     Teste directement l'endpoint de l'API pour l'analyse de A.F. Dung.
@@ -21,7 +21,7 @@ def test_dung_framework_analysis_api(playwright: Playwright):
     # Création du contexte API. L'URL est récupérée depuis les variables d'environnement
     # ou une valeur par défaut, ce qui correspond à la configuration de l'orchestrateur de test.
     api_request_context = playwright.request.new_context(
-        base_url=os.environ.get("BACKEND_URL", "http://127.0.0.1:5003")
+        base_url=backend_url
     )
     
     # Données d'exemple pour un framework d'argumentation simple

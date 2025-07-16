@@ -13,7 +13,7 @@ module.exports = defineConfig({
   /* Nombre de workers pour l'exécution parallèle */
   workers: 1, // FORCER 1 WORKER POUR LE DEBUG
   /* Reporter à utiliser. Voir https://playwright.dev/docs/test-reporters */
-  reporter: [['html', { open: 'never' }], ['list']],
+  reporter: [['html', { open: 'never' }], ['list'], ['json', { outputFile: 'report.json' }]],
 
   /* Configuration partagée pour tous les projets */
   use: {

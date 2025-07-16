@@ -87,7 +87,7 @@ async def test_agent_initialization_simplified(jvm_session):
     # 2. Initialisation de TweetyBridge (en utilisant la fixture de session)
     try:
         tweety_bridge = TweetyBridge()
-        tweety_available = tweety_bridge.is_jvm_ready()
+        tweety_available = tweety_bridge.initializer.is_jvm_ready()
         assert tweety_available, "La JVM de TweetyBridge n'est pas prête."
         print(f"✅ TweetyBridge est prêt (JVM démarrée par jvm_session: {tweety_available})")
     except Exception as e:

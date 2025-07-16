@@ -7,8 +7,10 @@ Service d'analyse complète utilisant le moteur d'analyse argumentative.
 import time
 import logging
 import asyncio
+import inspect
 from typing import Dict, List, Any, Optional
 import semantic_kernel as sk
+from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
 # Imports du moteur d'analyse (style b282af4 avec gestion d'erreur)
 try:
@@ -303,18 +305,85 @@ class AnalysisService:
         self.logger.info(f"ENTERING _detect_fallacies with text: '{text[:50]}...'")
         
         try:
+            import json
             # La logique d'appel circulaire via FallacyService a été supprimée.
             # L'analyse se base maintenant sur les composants internes comme prévu.
 
             # PRIORITÉ 1: Utilisation de l'agent informel
             if self.informal_agent:
                 self.logger.info("Using InformalAgent for fallacy detection.")
-                # The mock has been removed to allow real integration testing.
-                # La bonne méthode est `analyze_text`, qui prend le texte
-                # et retourne un dictionnaire contenant la clé 'fallacies'.
-                result = await self.informal_agent.analyze_text(text=text)
+                
+                # --- NOUVELLE LOGIQUE DE CONSOMMATION DE L'AGENT ---
+                # Approche simplifiée pour gérer les deux types de retours de `invoke`.
 
-                if result and 'fallacies' in result:
+                agent_response = self.informal_agent.invoke(input=text)
+                full_response_str = ""
+                result = None
+
+                self.logger.info(f"Agent response type: {type(agent_response)}")
+
+                try:
+                    if inspect.isasyncgen(agent_response):
+                        self.logger.info("Consuming agent response as an async generator (streaming).")
+                        
+                        # Agréger le contenu de tous les chunks streamés
+                        full_response_str = "".join([chunk.content async for chunk in agent_response if chunk.content])
+                        self.logger.debug(f"Aggregated stream content: '''{full_response_str}'''")
+
+                        # Les LLMs enveloppent souvent le JSON dans des blocs de code.
+                        if full_response_str.strip().startswith("```") and full_response_str.strip().endswith("```"):
+                             # Extraire le JSON du bloc de code (ex: ```json ... ```)
+                            json_str = full_response_str.strip()
+                            if json_str.startswith("```json"):
+                                json_str = json_str[7:]
+                            elif json_str.startswith("```"):
+                                json_str = json_str[3:]
+                            
+                            if json_str.endswith("```"):
+                                 json_str = json_str[:-3]
+                            
+                            full_response_str = json_str.strip()
+                            self.logger.debug(f"Extracted JSON from markdown block: '''{full_response_str}'''")
+
+                        # Parser le contenu agrégé qui devrait être la représentation JSON d'un tool_call
+                        tool_calls_data = json.loads(full_response_str)
+                        
+                        # Extraire les arguments du premier appel d'outil
+                        if isinstance(tool_calls_data, list) and tool_calls_data:
+                            first_tool_call = tool_calls_data[0]
+                            if 'function' in first_tool_call and 'arguments' in first_tool_call['function']:
+                                # Les arguments sont eux-mêmes une chaîne JSON à parser
+                                result = json.loads(first_tool_call['function']['arguments'])
+                            else:
+                                self.logger.warning(f"Unexpected tool_call format in stream: {first_tool_call}")
+                        else:
+                            self.logger.warning(f"Unexpected data format in stream: {tool_calls_data}")
+                            
+                    else:  # Cas du mock qui retourne directement un awaitable
+                        self.logger.info("Consuming agent response as a direct awaitable (non-streaming).")
+                        response_content = await agent_response
+                        self.logger.debug(f"Direct awaitable response from agent: {response_content}")
+
+                        # Le mock retourne une liste, on prend le premier élément
+                        final_message = response_content[0] if isinstance(response_content, list) and response_content else response_content
+                        
+                        if isinstance(final_message, ChatMessageContent) and final_message.tool_calls:
+                            tool_call = final_message.tool_calls[0]
+                            # Dans le mock, 'arguments' est déjà un dictionnaire, pas une chaîne JSON.
+                            result = tool_call.function.arguments if hasattr(tool_call.function, 'arguments') else None
+                        else:
+                            self.logger.warning(f"Unexpected non-streamed response format: {final_message}")
+
+                except json.JSONDecodeError as e:
+                    self.logger.error(f"Failed to decode JSON from agent. Raw response: '''{full_response_str}'''. Error: {e}")
+                    result = None
+                except Exception as e:
+                    self.logger.error(f"An unexpected error occurred during agent response processing: {e}", exc_info=True)
+                    result = None
+                
+                # --- FIN DE LA NOUVELLE LOGIQUE ---
+                
+                if result and 'fallacies' in result and isinstance(result['fallacies'], list):
                     for fallacy_data in result['fallacies']:
                         fallacy = FallacyDetection(
                             type=fallacy_data.get('type', 'semantic'),

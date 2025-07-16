@@ -4,10 +4,10 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
-from typing import Union # Pour type hint
-import httpx # Ajout pour le client HTTP personnalisé
-from openai import AsyncOpenAI  # Ajout pour instancier le client OpenAI
-import json  # Ajout de l'import manquant
+from typing import Union, AsyncGenerator # Ajout de AsyncGenerator
+import httpx 
+from openai import AsyncOpenAI  
+import json
 import asyncio
 from semantic_kernel.contents.chat_history import ChatHistory
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
@@ -28,64 +28,62 @@ if not logger.handlers and not logger.propagate:
     logger.setLevel(logging.INFO)
 logger.info("<<<<< MODULE llm_service.py LOADED >>>>>")
 
-# Petit classes pour simuler la structure de la réponse de SK
-class MockFunctionCall:
-    def __init__(self, name: str, arguments: dict):
-        self.name = name
-        self._arguments = arguments
-
-    def parse_arguments(self) -> dict:
-        return self._arguments
-
-class MockToolCall:
-    def __init__(self, function_name: str, arguments: dict):
-        self.function = MockFunctionCall(name=function_name, arguments=arguments)
+# Les classes MockFunctionCall et MockToolCall ne sont plus nécessaires avec la nouvelle simulation
+# class MockFunctionCall: ...
+# class MockToolCall: ...
 
 class MockChatCompletion(ChatCompletionClientBase):
     """
-    Service de complétion de chat mocké qui retourne des réponses prédéfinies
-    et simule une réponse de type 'tool_call' attendue par l'agent.
+    Service de complétion de chat mocké qui simule une réponse en streaming
+    contenant un appel d'outil (tool_call).
     """
     async def get_chat_message_contents(
         self,
         chat_history: ChatHistory,
         **kwargs,
-    ) -> list[ChatMessageContent]:
+    ) -> AsyncGenerator[ChatMessageContent, None]:
         """
-        Retourne une réponse mockée simulant un appel d'outil (tool_call)
-        avec une analyse de sophisme valide et sans sophisme.
+        Retourne une réponse mockée sous forme de générateur asynchrone, 
+        simulant un appel d'outil (tool_call) en streaming.
         """
-        logger.warning(f"--- ADVANCED MOCK LLM SERVICE USED (service_id: {self.service_id}, simulating tool_call) ---")
-        
+        logger.warning(f"--- ADVANCED MOCK LLM SERVICE USED (service_id: {self.service_id}, simulating tool_call stream) ---")
+
         # 1. Définir le payload de la réponse que l'outil est censé retourner
-        #    Ceci correspond à la structure du modèle Pydantic `FallacyAnalysisResult`
         mock_tool_arguments = {
             "analysis_id": "mock-analysis-123",
-            "fallacies": [],  # La clé du succès du test !
+            "fallacies": [],
             "is_argument_valid": True,
             "overall_assessment": "L'argument est valide, clair et bien structuré.",
             "confidence_score": 0.99
         }
+        
+        # 2. Simuler le format de réponse brute du LLM pour un appel d'outil en streaming.
+        # Le SDK de Semantic Kernel s'attend à recevoir une chaîne JSON représentant une liste
+        # d'appels d'outils.
+        tool_call_payload = [{
+            "type": "function",
+            "function": {
+                "name": "submit_fallacy_analysis",
+                 # Les arguments doivent être une chaîne JSON sérialisée
+                "arguments": json.dumps(mock_tool_arguments)
+            }
+        }]
+        
+        # Le contenu du message streamé est la sérialisation de la structure ci-dessus.
+        # Souvent, les LLMs l'enveloppent dans un bloc de code.
+        content_str = f"```json\n{json.dumps(tool_call_payload, indent=2)}\n```"
 
-        # 2. Simuler la structure de 'tool_call' que le LLM renverrait
-        #    On utilise nos classes de simulation pour imiter la structure de Semantic Kernel
-        mock_tool_call = MockToolCall(
-            function_name="submit_fallacy_analysis",
-            arguments=mock_tool_arguments
-        )
-
-        # 3. Créer le message de contenu de chat qui encapsule le 'tool_call'
-        #    Le `content` peut être vide, car l'agent va chercher `tool_calls`
-        response_message = ChatMessageContent(
+        # 3. Créer le message (le "chunk") qui sera streamé.
+        response_chunk = ChatMessageContent(
             role="assistant",
-            content=None,  # Le contenu textuel n'est pas nécessaire quand il y a un tool_call
-            tool_calls=[mock_tool_call]
+            content=content_str
         )
         
         # Simuler une latence réseau
         await asyncio.sleep(0.05)
         
-        return [response_message]
+        # 4. Yield le chunk pour simuler le stream. Le générateur se termine après ce yield.
+        yield response_chunk
 
 # La signature de la fonction est conservée pour la compatibilité, mais on utilise create_llm_service
 # pour la logique principale.

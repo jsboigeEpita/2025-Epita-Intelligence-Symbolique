@@ -14,11 +14,12 @@ La commande complète à exécuter (ex: "pytest tests/unit").
 
 .EXAMPLE
 # Exécute la suite de tests unitaires
-.\activate_project_env.ps1 -CommandToRun "pytest tests/unit"
+.\activate_project_env.ps1 pytest tests/unit
 #>
 param(
-    [Parameter(Mandatory=$true)]
-    [string]$CommandToRun
+    [string]$CommandToRun,
+    [Parameter(ValueFromRemainingArguments=$true)]
+    [string[]]$RemainingArgs
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,8 +27,6 @@ $ErrorActionPreference = "Stop"
 # --- DEBUGGING START ---
 $debugLogFile = Join-Path $PSScriptRoot "_temp/debug_activate_script.log"
 "--- Starting activate_project_env.ps1 at $(Get-Date) ---" | Out-File -FilePath $debugLogFile -Encoding utf8 -Append
-Get-Command conda | Out-File -FilePath $debugLogFile -Encoding utf8 -Append
-$env:PATH | Out-File -FilePath $debugLogFile -Encoding utf8 -Append
 # --- DEBUGGING END ---
 
 # Le module Python est le SEUL responsable de la logique.
@@ -48,25 +47,32 @@ catch {
     exit 1
 }
 
-# Étape 2: Construire la commande finale pour l'exécuter avec `conda run`
-# On utilise --no-capture-output pour s'assurer que stdout/stderr du processus enfant
-# sont directement streamés, ce qui est crucial pour le logging des tests.
-$condaCommand = "conda"
-$commandToExecuteInsideEnv = "python -m $moduleName run $CommandToRun"
-# Correction: suppression du séparateur '--' qui n'est pas géré correctement par le shell sous-jacent.
-$finalCommand = "$condaCommand run -n $envName --no-capture-output --live-stream $commandToExecuteInsideEnv"
+# Étape 2: Construire la commande à exécuter
+$fullCommand = ($CommandToRun + " " + ($RemainingArgs -join ' ')).Trim()
+if (-not $fullCommand) {
+    Write-Host "[ERREUR] Aucune commande fournie." -ForegroundColor Red
+    exit 1
+}
 
+# Étape 3: Exécution via Start-Process pour plus de robustesse
 Write-Host "[INFO] Délégation au gestionnaire d'environnement Python via Conda..." -ForegroundColor Cyan
-Write-Host "[DEBUG] Commande finale: $finalCommand" -ForegroundColor Gray
 
-# Étape 3: Exécution et propagation du code de sortie
+# On passe la commande complète au script python qui saura la parser.
+# Les guillemets autour de "$fullCommand" sont cruciaux pour les commandes avec espaces
+$commandToExecuteInsideEnv = "python -m $moduleName run `"$fullCommand`""
+$argumentList = "run -n $envName --no-capture-output --live-stream -- $commandToExecuteInsideEnv"
+
+Write-Host "[DEBUG] Commande d'exécution via Start-Process :" -ForegroundColor Gray
+Write-Host "conda.exe $argumentList" -ForegroundColor Gray
+
 try {
-    Invoke-Expression -Command $finalCommand
-    $exitCode = $LASTEXITCODE
+    $condaExecutable = Get-Command conda.exe | Select-Object -ExpandProperty Source
+    $process = Start-Process -FilePath $condaExecutable -ArgumentList $argumentList -Wait -PassThru -NoNewWindow
+    $exitCode = $process.ExitCode
 }
 catch {
-    Write-Host "[ERREUR FATALE] Échec lors de l'exécution de la commande via 'conda run'." -ForegroundColor Red
-    Write-Host $_
+    Write-Host "[FATAL] L'exécution de la commande via conda a échoué." -ForegroundColor Red
+    Write-Host $_ -ForegroundColor Red
     $exitCode = 1
 }
 

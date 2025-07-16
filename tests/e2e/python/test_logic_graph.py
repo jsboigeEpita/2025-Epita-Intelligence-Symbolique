@@ -5,13 +5,14 @@ from playwright.sync_api import Page, expect
 
 # Les URLs des services sont injectées via les fixtures `frontend_url` et `backend_url`.
 # so the web server is started automatically for all tests in this module.
+@pytest.mark.e2e
 @pytest.mark.playwright
-@pytest.mark.asyncio
-async def test_successful_graph_visualization(page: Page, frontend_url: str):
+def test_successful_graph_visualization(page: Page, e2e_servers):
     """
     Scenario 4.1: Successful visualization of a logic graph (Happy Path)
     """
-    await page.goto(frontend_url)
+    _, frontend_url = e2e_servers
+    page.goto(frontend_url)
     
     # Attendre que l'API soit connectée
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
@@ -36,13 +37,14 @@ async def test_successful_graph_visualization(page: Page, frontend_url: str):
     expect(graph_svg).to_be_visible(timeout=10000)
     expect(graph_svg).to_have_attribute("data-testid", "logic-graph-svg")
 
+@pytest.mark.e2e
 @pytest.mark.playwright
-@pytest.mark.asyncio
-async def test_logic_graph_api_error(page: Page, frontend_url: str):
+def test_logic_graph_api_error(page: Page, e2e_servers):
     """
     Scenario 4.2: API error during graph generation
     """
-    await page.goto(frontend_url)
+    _, frontend_url = e2e_servers
+    page.goto(frontend_url)
     
     # Attendre que l'API soit connectée
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
@@ -72,13 +74,14 @@ async def test_logic_graph_api_error(page: Page, frontend_url: str):
     graph_svg = graph_container.locator("svg")
     expect(graph_svg).not_to_be_visible()
 
+@pytest.mark.e2e
 @pytest.mark.playwright
-@pytest.mark.asyncio
-async def test_logic_graph_reset_button(page: Page, frontend_url: str):
+def test_logic_graph_reset_button(page: Page, e2e_servers):
     """
     Scenario 4.3: Reset button clears input and graph
     """
-    await page.goto(frontend_url)
+    _, frontend_url = e2e_servers
+    page.goto(frontend_url)
     
     # Attendre que l'API soit connectée
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)

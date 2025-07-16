@@ -52,7 +52,7 @@ class TestQueryExecutor:
 
     """Tests pour la classe QueryExecutor."""
     
-    @pytest_asyncio.fixture(autouse=True)
+    @pytest.fixture(autouse=True)
     async def async_setUp(self):
         """Initialisation asynchrone avant chaque test."""
         with patch('argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge') as mock_tweety_bridge_class:

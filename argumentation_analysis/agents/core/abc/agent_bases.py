@@ -379,7 +379,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         """
         pass
 
-    def process_task(self, task_id: str, task_description: str, state_manager: Any) -> Dict[str, Any]:
+    async def process_task(self, task_id: str, task_description: str, state_manager: Any) -> Dict[str, Any]:
         """
         Traite une tâche assignée à l'agent logique.
         Migré depuis AbstractLogicAgent pour unifier l'architecture.
@@ -387,16 +387,16 @@ class BaseLogicAgent(BaseAgent, ABC):
         self.logger.info(f"Traitement de la tâche {task_id}: {task_description}")
         state = state_manager.get_current_state_snapshot(summarize=False)
         if "Traduire" in task_description and "Belief Set" in task_description:
-            return self._handle_translation_task(task_id, task_description, state, state_manager)
+            return await self._handle_translation_task(task_id, task_description, state, state_manager)
         elif "Exécuter" in task_description and "Requêtes" in task_description:
-            return self._handle_query_task(task_id, task_description, state, state_manager)
+            return await self._handle_query_task(task_id, task_description, state, state_manager)
         else:
             error_msg = f"Type de tâche non reconnu: {task_description}"
             self.logger.error(error_msg)
             state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
             return {"status": "error", "message": error_msg}
 
-    def _handle_translation_task(self, task_id: str, task_description: str, state: Dict[str, Any], state_manager: Any) -> Dict[str, Any]:
+    async def _handle_translation_task(self, task_id: str, task_description: str, state: Dict[str, Any], state_manager: Any) -> Dict[str, Any]:
         """
         Gère une tâche spécifique de conversion de texte en un ensemble de croyances logiques.
         """
@@ -407,7 +407,7 @@ class BaseLogicAgent(BaseAgent, ABC):
             state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
             return {"status": "error", "message": error_msg}
         
-        belief_set, status_msg = self.text_to_belief_set(raw_text)
+        belief_set, status_msg = await self.text_to_belief_set(raw_text)
         if not belief_set:
             error_msg = f"Échec de la conversion en ensemble de croyances: {status_msg}"
             self.logger.error(error_msg)
@@ -419,7 +419,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=answer_text, source_ids=[bs_id])
         return {"status": "success", "message": answer_text, "belief_set_id": bs_id}
 
-    def _handle_query_task(self, task_id: str, task_description: str, state: Dict[str, Any], state_manager: Any) -> Dict[str, Any]:
+    async def _handle_query_task(self, task_id: str, task_description: str, state: Dict[str, Any], state_manager: Any) -> Dict[str, Any]:
         """
         Gère une tâche d'exécution de requêtes logiques sur un ensemble de croyances existant.
         """
@@ -429,18 +429,18 @@ class BaseLogicAgent(BaseAgent, ABC):
             self.logger.error(error_msg)
             state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
             return {"status": "error", "message": error_msg}
-
+    
         belief_sets = state.get("belief_sets", {})
         if belief_set_id not in belief_sets:
             error_msg = f"Ensemble de croyances non trouvé: {belief_set_id}"
             self.logger.error(error_msg)
             state_manager.add_answer(task_id=task_id, author_agent=self.name, answer_text=error_msg, source_ids=[])
             return {"status": "error", "message": error_msg}
-
+    
         belief_set_data = belief_sets[belief_set_id]
         belief_set = self._create_belief_set_from_data(belief_set_data)
         raw_text = self._extract_source_text(task_description, state)
-        queries = self.generate_queries(raw_text, belief_set)
+        queries = await self.generate_queries(raw_text, belief_set)
         if not queries:
             error_msg = "Aucune requête n'a pu être générée"
             self.logger.error(error_msg)
