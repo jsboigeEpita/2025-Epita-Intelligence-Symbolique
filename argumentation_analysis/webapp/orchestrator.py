@@ -230,11 +230,19 @@ class MinimalBackendManager:
                 await self.stop()
                 return {'success': False, 'error': 'Timeout lors du démarrage du backend.'}
 
-            # À ce stade, le serveur a signalé qu'il était prêt.
-            self.logger.info("[BACKEND] Message de démarrage détecté. Le serveur est prêt.")
+            # Le serveur a signalé son démarrage, mais il faut maintenant vérifier qu'il accepte les connexions.
+            self.logger.info("[BACKEND] Message de démarrage détecté. Démarrage du health check actif...")
             
             url = f"http://localhost:{self.port}"
-            self.logger.info(f"[BACKEND] Backend démarré et prêt sur {url}")
+            health_check_url = f"{url}{self.config.get('health_endpoint', '/api/health')}"
+            
+            if await self.health_check(health_check_url):
+                self.logger.info(f"[BACKEND] Health check réussi. Backend démarré et prêt sur {url}")
+            else:
+                self.logger.error(f"[BACKEND] Le health check a échoué. Le serveur ne semble pas répondre correctement.")
+                await self.stop()
+                return {'success': False, 'error': 'Le health check du backend a échoué après le démarrage.'}
+
             return {
                 'success': True,
                 'url': url,
@@ -246,6 +254,31 @@ class MinimalBackendManager:
             self.logger.error(f"[BACKEND] Erreur critique lors du lancement du processus backend: {e}", exc_info=True)
             await self.stop() # Assurer le nettoyage en cas d'erreur
             return {'success': False, 'error': str(e)}
+
+    async def health_check(self, url: str, timeout: int = 30) -> bool:
+        """Vérifie activement si le serveur backend répond."""
+        self.logger.info(f"[BACKEND HEALTH CHECK] Démarrage de la vérification sur {url} (timeout: {timeout}s)")
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url, timeout=2) as response:
+                        if response.status == 200:
+                            self.logger.info(f"[BACKEND HEALTH CHECK] Succès ! Le serveur a répondu avec le statut {response.status}.")
+                            return True
+                        else:
+                            self.logger.warning(f"[BACKEND HEALTH CHECK] Le serveur a répondu avec le statut {response.status}. Nouvelle tentative...")
+            except aiohttp.ClientConnectorError as e:
+                self.logger.info(f"[BACKEND HEALTH CHECK] Échec de la connexion ({e}). Le serveur n'est probablement pas encore prêt. Nouvelle tentative...")
+            except asyncio.TimeoutError:
+                self.logger.info("[BACKEND HEALTH CHECK] Timeout de la requête. Nouvelle tentative...")
+            except Exception as e:
+                self.logger.error(f"[BACKEND HEALTH CHECK] Erreur inattendue: {e}", exc_info=True)
+
+            await asyncio.sleep(1) # Attendre 1 seconde avant la prochaine tentative
+
+        self.logger.error(f"[BACKEND HEALTH CHECK] Échec final après {timeout}s. Le serveur ne répond pas correctement.")
+        return False
 
     async def stop(self):
         if self.process and self.process.returncode is None:
