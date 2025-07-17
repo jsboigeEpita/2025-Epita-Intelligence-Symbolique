@@ -15,7 +15,7 @@ from semantic_kernel.functions import kernel_function
 from semantic_kernel.functions import KernelArguments
 
 from .jtms_agent_base import JTMSAgentBase, ExtendedBelief
-from .factory import AgentFactory
+# from .factory import AgentFactory
 
 class HypothesisTracker:
     """Gestionnaire des hypothèses avec traçabilité JTMS"""
@@ -189,12 +189,13 @@ class SherlockJTMSAgent(JTMSAgentBase):
                  system_prompt: Optional[str] = None, **kwargs):
         super().__init__(kernel, agent_name, strict_mode=False)
 
-        # Intégration avec l'agent Sherlock existant via la factory
-        factory = AgentFactory(kernel, llm_service_id=llm_service_id)
-        self._base_sherlock = factory.create_sherlock_agent(agent_name=agent_name)
-        # Note: le system_prompt custom n'est plus directement passé ici,
-        # la factory utilise le prompt standardisé.
-        # Pour une customisation, il faudrait étendre la factory.
+        # # Intégration avec l'agent Sherlock existant via la factory
+        # factory = AgentFactory(kernel, llm_service_id=llm_service_id)
+        # self._base_sherlock = factory.create_sherlock_agent(agent_name=agent_name)
+        # # Note: le system_prompt custom n'est plus directement passé ici,
+        # # la factory utilise le prompt standardisé.
+        # # Pour une customisation, il faudrait étendre la factory.
+        self._base_sherlock = kernel # Placeholder
         
         # Gestionnaires spécialisés JTMS
         self._hypothesis_tracker = HypothesisTracker(self._jtms_session)
@@ -214,8 +215,9 @@ class SherlockJTMSAgent(JTMSAgentBase):
         
         try:
             # Générer hypothèse via l'agent Sherlock de base
-            base_hypothesis = await self._base_sherlock.invoke(
-                input=f"Formulez une hypothèse pour cette situation: {context}"
+            base_hypothesis = await self._kernel.invoke_prompt(
+                prompt=f"Formulez une hypothèse pour cette situation: {context}",
+                arguments=KernelArguments()
             )
             
             # Créer hypothèse dans le tracker JTMS
@@ -346,7 +348,7 @@ class SherlockJTMSAgent(JTMSAgentBase):
                 Proposez une solution finale détaillée.
                 """
                 
-                detailed_solution = await self._base_sherlock.invoke(input=solution_prompt)
+                detailed_solution = await self._kernel.invoke_prompt(prompt=solution_prompt, arguments=KernelArguments())
                 
                 # Vérification de cohérence JTMS
                 consistency_check = self.check_consistency()
@@ -509,6 +511,32 @@ class SherlockJTMSAgent(JTMSAgentBase):
             self._logger.error(f"Erreur génération pistes: {e}")
             return []
     
+    async def analyze_text(self, text: str, **kwargs) -> Dict:
+        """
+        Analyse un texte brut comme une nouvelle série d'indices.
+        Ceci sert de point d'entrée standardisé pour l'agent.
+        """
+        self._logger.info(f"Analyse de texte reçue via analyze_text: '{text[:100]}...'")
+        # Transformer le texte brut en un format de 'clue' attendu par l'agent
+        clues_from_text = [{
+            "description": text,
+            "type": "textual_evidence",
+            "reliability": 0.7, # Fiabilité par défaut pour le texte brut
+            "source": "direct_input"
+        }]
+        details = await self.analyze_clues(clues_from_text)
+        # Formater la sortie pour qu'elle corresponde à ce qui est attendu par les tests
+        summary_text = f"Analysis complete. Processed {len(details.get('processed_clues', []))} clues, " \
+                       f"generated {len(details.get('generated_hypotheses', []))} hypotheses."
+        
+        # Le test attend une clé "findings". Nous utilisons les hypothèses générées comme tel.
+        findings = details.get("generated_hypotheses", [])
+
+        return {
+            "summary": summary_text,
+            "details": details,
+            "findings": findings
+        }
     # === IMPLÉMENTATION DES MÉTHODES ABSTRAITES ===
     
     async def process_jtms_inference(self, context: str) -> Dict:

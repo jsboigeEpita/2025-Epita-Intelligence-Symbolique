@@ -6,6 +6,14 @@ import os
 from argumentation_analysis.orchestration.workflow import ParallelWorkflowManager
 from argumentation_analysis.utils.taxonomy_loader import TaxonomyLoader
 
+class AgentType(Enum):
+    """Enumeration of available agent archetypes."""
+    METHODICAL_AUDITOR = "MethodicalAuditor"
+    PARALLEL_EXPLORER = "ParallelExplorer"
+    RESEARCH_ASSISTANT = "ResearchAssistant"
+    INFORMAL_FALLACY = "InformalFallacy"
+    SHERLOCK_JTMS = "SherlockJTMS"
+
 class FallacyAgentBase(abc.ABC):
     """Abstract base class for fallacy detection agents."""
 
@@ -30,7 +38,7 @@ class MethodicalAuditorAgent(FallacyAgentBase):
     2. A parallel exploration runs only on the suggested categories.
     This aims for a balance of speed and accuracy.
     """
-    def __init__(self, kernel: sk.Kernel):
+    def __init__(self, kernel: sk.Kernel, **kwargs):
         super().__init__(kernel)
         script_dir = os.path.dirname(__file__)
         self.plugins_directory = os.path.join(script_dir, "..", "plugins")
@@ -51,7 +59,7 @@ class MethodicalAuditorAgent(FallacyAgentBase):
         
         # 1. Run the guiding plugin to find relevant categories
         print("Step 1: Identifying relevant fallacy categories...")
-        guiding_result = await self.kernel.invoke(self.guiding_func, input=text)
+        guiding_result = await self._kernel.invoke(self.guiding_func, input=text)
         
         try:
             relevant_categories_data = json.loads(str(guiding_result))
@@ -93,7 +101,7 @@ class ParallelExplorerAgent(FallacyAgentBase):
     Agent that explores all taxonomy branches in parallel.
     Uses the ParallelWorkflowManager for a comprehensive but potentially less focused analysis.
     """
-    def __init__(self, kernel: sk.Kernel):
+    def __init__(self, kernel: sk.Kernel, **kwargs):
         super().__init__(kernel)
         # Determine paths relative to this file's location
         script_dir = os.path.dirname(__file__)
@@ -109,7 +117,8 @@ class ParallelExplorerAgent(FallacyAgentBase):
         """
         print("--- Running Parallel Explorer Agent ---")
         loader = TaxonomyLoader()
-        taxonomy_branches = loader.load_taxonomy()
+        taxonomy_branches_list = loader.load_taxonomy()
+        taxonomy_branches = {item['nom_vulgarisé']: item['text_fr'] for item in taxonomy_branches_list}
         
         print(f"Loaded {len(taxonomy_branches)} branches for parallel exploration.")
         
@@ -128,7 +137,7 @@ class ResearchAssistantAgent(FallacyAgentBase):
     for interactive, step-by-step analysis.
     This agent is not yet implemented.
     """
-    def __init__(self, kernel: sk.Kernel):
+    def __init__(self, kernel: sk.Kernel, **kwargs):
         super().__init__(kernel)
         print("--- Research Assistant Agent Initialized (Placeholder) ---")
 

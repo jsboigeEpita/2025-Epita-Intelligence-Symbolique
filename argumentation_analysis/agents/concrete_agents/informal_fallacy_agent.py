@@ -6,7 +6,9 @@ from semantic_kernel import Kernel
 from semantic_kernel.functions import KernelArguments
 
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
-from argumentation_analysis.agents.plugins.identification_plugin import IdentificationPlugin
+from argumentation_analysis.agents.plugins.fallacy_workflow_plugin import FallacyWorkflowPlugin
+from argumentation_analysis.agents.plugins.taxonomy_display_plugin import TaxonomyDisplayPlugin
+from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer as IdentificationPlugin
 from argumentation_analysis.utils.path_operations import get_prompt_path
 
 class InformalFallacyAgent(BaseAgent):
@@ -15,14 +17,14 @@ class InformalFallacyAgent(BaseAgent):
     dans un texte donné.
     """
 
-    def __init__(self, kernel: Kernel, agent_name: str = "Fallacy_Analyst"):
+    def __init__(self, kernel: Kernel, agent_name: str = "Fallacy_Analyst", config_name: str = "simple", **kwargs):
         """
         Initialise une instance de InformalFallacyAgent.
 
         Args:
             kernel (Kernel): Le kernel Semantic Kernel à associer à l'agent.
             agent_name (str, optional): Le nom de l'agent.
-                Defaults to "Fallacy_Analyst".
+            config_name (str, optional): La configuration des plugins à charger.
         """
         prompt_path = get_prompt_path("InformalFallacyAgent")
         with open(prompt_path, "r", encoding="utf-8") as f:
@@ -34,21 +36,33 @@ class InformalFallacyAgent(BaseAgent):
             system_prompt=prompt,
             description="Un agent expert dans la détection des sophismes informels."
         )
+        self._add_plugins_from_config(config_name)
 
-    def setup_agent_components(self, llm_service_id: str) -> None:
-        """
-        Configure les composants de l'agent, y compris le plugin de détection
-        de sophismes.
+    def _add_plugins_from_config(self, config_name: str):
+        """Ajoute les plugins au kernel en fonction de la configuration."""
+        
+        # Récupérer le service LLM à partir du kernel pour l'injecter dans le workflow
+        try:
+            # Note: `get_service` est la nouvelle API de Semantic Kernel v1.0+
+            llm_service = self._kernel.get_service()
+        except Exception:
+            # Fallback pour les anciennes versions ou si non trouvé
+            llm_service = next(iter(self._kernel.services.values()), None)
 
-        Args:
-            llm_service_id (str): L'ID du service LLM à utiliser.
-        """
-        self._llm_service_id = llm_service_id
-        self._kernel.add_plugin(
-            IdentificationPlugin(),
-            plugin_name="FallacyIdPlugin"
-        )
-        return super().setup_agent_components(llm_service_id)
+        if not llm_service:
+            raise ValueError("LLM service not found in the kernel, required for FallacyWorkflowPlugin.")
+
+        if config_name == "simple":
+            self._kernel.add_plugin(IdentificationPlugin(), plugin_name="FallacyIdentificationPlugin")
+        elif config_name == "explore_only":
+            self._kernel.add_plugin(TaxonomyDisplayPlugin(), plugin_name="TaxonomyDisplayPlugin")
+        elif config_name == "workflow_only":
+            self._kernel.add_plugin(FallacyWorkflowPlugin(master_kernel=self._kernel, llm_service=llm_service), plugin_name="FallacyWorkflowPlugin")
+            self._kernel.add_plugin(TaxonomyDisplayPlugin(), plugin_name="TaxonomyDisplayPlugin")
+        elif config_name == "full":
+            self._kernel.add_plugin(IdentificationPlugin(), plugin_name="FallacyIdentificationPlugin")
+            self._kernel.add_plugin(FallacyWorkflowPlugin(master_kernel=self._kernel, llm_service=llm_service), plugin_name="FallacyWorkflowPlugin")
+            self._kernel.add_plugin(TaxonomyDisplayPlugin(), plugin_name="TaxonomyDisplayPlugin")
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         """
@@ -61,7 +75,11 @@ class InformalFallacyAgent(BaseAgent):
             "plugins": ["FallacyIdPlugin"]
         }
 
-    async def get_response(self, text_to_analyze: str) -> Any:
+    async def get_response(self, text_to_analyze: str, **kwargs: Any) -> Any:
+        # Implémentation du contrat de BaseAgent
+        return await self.analyze_text(text_to_analyze, **kwargs)
+
+    async def analyze_text(self, text_to_analyze: str, **kwargs) -> Any:
         """
         Analyse un texte pour y déceler des sophismes informels.
 
@@ -73,7 +91,7 @@ class InformalFallacyAgent(BaseAgent):
         """
         return await self.invoke_single(text_to_analyze=text_to_analyze)
 
-    async def invoke_single(self, text_to_analyze: str) -> Any:
+    async def invoke_single(self, text_to_analyze: str, **kwargs: Any) -> Any:
         """
         Invoque le plugin d'identification de sophismes.
 
@@ -88,7 +106,6 @@ class InformalFallacyAgent(BaseAgent):
             tool_choice="required"
         )
         return await self._kernel.invoke_prompt(
-            function_name="identify_fallacies",
-            plugin_name="FallacyIdPlugin",
+            prompt=self.system_prompt,
             arguments=arguments
         )

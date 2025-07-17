@@ -221,7 +221,9 @@ class FOLHandler:
             return is_consistent, msg
         except Exception as e:
             logger.error(f"Error during external FOL consistency check: {e}", exc_info=True)
-            raise RuntimeError(f"FOL consistency check failed: {e}") from e
+            # Propage le message d'erreur détaillé préparé par prover9_runner
+            detailed_error = e.stderr if e.stderr else str(e)
+            raise RuntimeError(f"FOL consistency check failed. Details: {detailed_error}") from e
 
     def fol_query(self, belief_set, query_formula_str: str) -> bool:
         """
