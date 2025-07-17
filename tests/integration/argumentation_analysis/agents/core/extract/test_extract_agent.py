@@ -17,18 +17,16 @@ from argumentation_analysis.core.llm_service import create_llm_service
 @pytest.fixture
 def authentic_extract_agent():
     """Fixture pour configurer un agent d'extraction avec un vrai kernel LLM."""
-    async def run_setup():
-        try:
-            service_id = "test_llm_service"
-            llm_service = create_llm_service(service_id=service_id, model_id="test_model")
-            kernel = Kernel()
-            kernel.add_service(llm_service)
-            agent = ExtractAgent(kernel=kernel)
-            agent.setup_agent_components(llm_service_id=service_id)
-            return agent
-        except Exception as e:
-            pytest.fail(f"Échec de la configuration de l'agent d'extraction authentique: {e}")
-    return asyncio.run(run_setup())
+    try:
+        service_id = "test_llm_service"
+        llm_service = create_llm_service(service_id=service_id, model_id="gpt-4o-mini")
+        kernel = Kernel()
+        kernel.add_service(llm_service)
+        agent = ExtractAgent(kernel=kernel)
+        agent.setup_agent_components(llm_service_id=service_id)
+        return agent
+    except Exception as e:
+        pytest.fail(f"Échec de la configuration de l'agent d'extraction authentique: {e}")
 
 @pytest.fixture
 def mock_load_source_text(mocker):

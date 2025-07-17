@@ -118,6 +118,7 @@ class InformalAnalysisAgent(BaseAgent):
             llm_service_id (str): L'ID du service LLM à utiliser pour les
                 fonctions sémantiques.
         """
+        # super().setup_agent_components(llm_service_id) # Appel supprimé car la méthode n'existe pas dans BaseAgent
         self.logger.info(f"Configuration des composants pour {self.name} avec le service LLM: {llm_service_id}...")
 
         # Récupérer le service LLM à partir du noyau principal de l'agent

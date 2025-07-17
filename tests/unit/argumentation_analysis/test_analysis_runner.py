@@ -16,7 +16,7 @@ import unittest
 from unittest.mock import patch, MagicMock, AsyncMock
 import asyncio
 from unittest.mock import patch, MagicMock, AsyncMock
-from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner
+from argumentation_analysis.orchestration.analysis_runner_v2 import AnalysisRunnerV2 as AnalysisRunner
 from argumentation_analysis.config.settings import AppSettings
 
 

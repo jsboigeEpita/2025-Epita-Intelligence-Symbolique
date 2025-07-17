@@ -94,9 +94,7 @@ async def run_cluedo_game(
 
     # Récupération du service_id depuis les settings
     from argumentation_analysis.config.settings import settings
-    service_id = settings.openai.chat_model_id if settings.openai else "default"
-
-    factory = AgentFactory(kernel, service_id)
+    factory = AgentFactory(kernel, settings)
     sherlock = factory.create_sherlock_agent(agent_name="Sherlock")
     watson = factory.create_watson_agent(agent_name="Watson")
 

@@ -175,7 +175,7 @@ async def run_orchestration_test():
     
     # Création du Service LLM
     from argumentation_analysis.core.llm_service import create_llm_service
-    llm_service = create_llm_service()
+    llm_service = create_llm_service(service_id="orchestration_test", model_id="gpt-4o-mini")
     
     if not llm_service:
         logger.error("❌ Impossible de créer le service LLM.")

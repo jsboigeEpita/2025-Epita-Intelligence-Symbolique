@@ -17,15 +17,10 @@ C'est le point d'entrée privilégié pour toute commande relative au projet.
 .\activate_project_env.ps1 python --version
 #>
 param(
-    # Le command à exécuter. Privilégié pour les appels programmatiques.
-    [string]$CommandToRun = "",
+    [string]$CommandToRun,
 
-    # Maintenu pour la compatibilité avec l'usage direct en ligne de commande.
-    # ex: .\activate_project_env.ps1 pytest tests
-    [string]$Command = "",
-
-    [Parameter(ValueFromRemainingArguments=$true)]
-    [string[]]$RemainingArgs
+	[Parameter(ValueFromRemainingArguments=$true)]
+	[string[]]$RemainingArgs
 )
 
 $ErrorActionPreference = "Stop"
@@ -47,32 +42,27 @@ $env:PYTHONPATH = "$PSScriptRoot\2.3.3-generation-contre-argument;$PSScriptRoot;
 $condaEnvName = "projet-is-new"
 
 # --- Logique de commande ---
-$executableCommand = ""
-if (-not [string]::IsNullOrWhiteSpace($CommandToRun)) {
-    # Priorité 1: Le paramètre nommé -CommandToRun est utilisé.
-    $executableCommand = $CommandToRun
-}
-elseif (-not [string]::IsNullOrWhiteSpace($Command)) {
-    # Priorité 2: Des arguments positionnels sont utilisés.
-    $executableCommand = ($Command + " " + ($RemainingArgs -join ' ')).Trim()
-}
-
-# Si aucune commande n'est passée, le script active simplement l'environnement et se termine.
-if ([string]::IsNullOrWhiteSpace($executableCommand)) {
-    Write-Host "[INFO] Environnement Conda '$condaEnvName' initialisé pour la session PowerShell actuelle." -ForegroundColor Cyan
-    Write-Host "[INFO] Aucune commande fournie, le script se termine. Vous pouvez maintenant exécuter des commandes manuellement." -ForegroundColor Cyan
-    conda activate $condaEnvName
-    exit 0
-}
+# Concatène la commande et ses arguments en une seule chaîne.
+# --- Logique de commande ---
+$fullCommand = ($CommandToRun + " " + ($RemainingArgs -join ' ')).Trim()
 
 # --- Exécution via conda run ---
-# La commande est directement passée à `conda run`.
-# Utilisation de -u pour un output non bufferisé, essentiel pour les logs.
-$finalCommand = "conda run --no-capture-output -n $condaEnvName --cwd '$PSScriptRoot' $executableCommand"
+# Utilisation de Start-Process pour un appel plus stable que Invoke-Expression
+$argumentList = "run --no-capture-output -n $condaEnvName --cwd `"$PSScriptRoot`" $fullCommand"
 
-Write-Host "[DEBUG] Commande d'exécution : $finalCommand" -ForegroundColor Gray
+Write-Host "[DEBUG] Commande d'exécution via Start-Process :" -ForegroundColor Gray
+Write-Host "conda.exe $argumentList" -ForegroundColor Gray
 
-# Exécution et propagation du code de sortie
-Invoke-Expression -Command $finalCommand
-$exitCode = $LASTEXITCODE
+try {
+    # On récupère le chemin complet de conda.exe pour être sûr
+    $condaExecutable = Get-Command conda.exe | Select-Object -ExpandProperty Source
+    $process = Start-Process -FilePath $condaExecutable -ArgumentList $argumentList -Wait -PassThru -NoNewWindow
+    $exitCode = $process.ExitCode
+}
+catch {
+    Write-Host "[FATAL] L'exécution de la commande via conda a échoué." -ForegroundColor Red
+    Write-Host $_ -ForegroundColor Red
+    $exitCode = 1
+}
+
 exit $exitCode

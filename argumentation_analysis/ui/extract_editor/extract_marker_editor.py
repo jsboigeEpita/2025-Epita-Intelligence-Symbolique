@@ -655,7 +655,7 @@ def create_marker_editor_ui():
         
         try:
             # Créer le service LLM
-            llm_service = create_llm_service()
+            llm_service = create_llm_service(service_id="extract_editor_llm", model_id="gpt-4o-mini")
             if not llm_service:
                 with status_output:
                     clear_output(wait=True)
@@ -674,7 +674,7 @@ def create_marker_editor_ui():
             # Pour simplifier, on va supposer que create_llm_service a déjà assigné un service_id
             # ou que l'on peut utiliser celui par défaut.
             # Mieux : on crée le service avec un ID spécifique ici.
-            llm_service_instance = create_llm_service(service_id=llm_service_id, model_id="default")
+            llm_service_instance = create_llm_service(service_id=llm_service_id, model_id="gpt-4o-mini")
             if not llm_service_instance:
                 with status_output:
                     clear_output(wait=True)

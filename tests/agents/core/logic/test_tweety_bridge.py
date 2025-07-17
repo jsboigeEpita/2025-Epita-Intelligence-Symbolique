@@ -101,19 +101,21 @@ class TestTweetyBridge(unittest.TestCase):
 
     def test_fol_query_delegation(self):
         """Vérifie que fol_query délègue correctement l'appel au handler."""
-        kb_str = "forall X: p(X)."
         query_str = "p(a)."
         if not self.use_real_jpype:
             belief_set_mock = MagicMock()
-            self.mock_fol_handler_instance.create_belief_set_from_string.return_value = belief_set_mock
             
-            self.bridge.fol_query(kb_str, query_str)
+            # Appeler directement avec le mock, car la création est externe maintenant
+            self.bridge.fol_query(belief_set_mock, query_str)
             
-            self.mock_fol_handler_instance.create_belief_set_from_string.assert_called_once_with(kb_str)
+            # Vérifier que la méthode du handler est appelée correctement
             self.mock_fol_handler_instance.fol_query.assert_called_once_with(belief_set_mock, query_str)
         else:
             try:
-                self.bridge.fol_query(kb_str, query_str)
+                # Pour le test réel, nous devons d'abord créer un belief set
+                belief_set_obj = self.bridge.create_belief_set_from_string("forall X: p(X).")
+                self.assertIsNotNone(belief_set_obj)
+                self.bridge.fol_query(belief_set_obj, query_str)
             except Exception as e:
                 self.fail(f"fol_query a levé une exception inattendue: {e}")
 

@@ -49,7 +49,11 @@ class TestLLMService:
         if not self.api_key:
             pytest.skip("La variable d'environnement OPENAI_API_KEY est requise pour ce test.")
 
+<<<<<<< HEAD
         service = create_llm_service(model_id="test_model", force_authentic=True)
+=======
+        service = create_llm_service(service_id="test_authentic", model_id=self.model_id, force_authentic=True)
+>>>>>>> 134c72c951b22f666f583863586dd4c235b83303
         
         assert service is not None, "Le service LLM ne devrait pas être None."
         assert isinstance(service, OpenAIChatCompletion), "Le service devrait être une instance de OpenAIChatCompletion."
@@ -64,7 +68,11 @@ class TestLLMService:
         mock_settings.openai.base_url = None   # Assurer que le chemin Azure n'est pas pris
 
         with pytest.raises(ValueError) as excinfo:
+<<<<<<< HEAD
             create_llm_service(model_id="test_model", force_authentic=True)
+=======
+            create_llm_service(service_id="test_missing_key", model_id="gpt-4o-mini", force_authentic=True)
+>>>>>>> 134c72c951b22f666f583863586dd4c235b83303
         
         assert "Configuration OpenAI standard incomplète" in str(excinfo.value)
 
@@ -76,7 +84,11 @@ class TestLLMService:
         async def _run_async_test():
             try:
                 kernel = sk.Kernel()
+<<<<<<< HEAD
                 llm_service = create_llm_service(model_id="test_model")
+=======
+                llm_service = create_llm_service(service_id="test_authentic_call", model_id=self.model_id)
+>>>>>>> 134c72c951b22f666f583863586dd4c235b83303
                 kernel.add_service(llm_service)
                 
                 # Création d'une fonction de prompt simple

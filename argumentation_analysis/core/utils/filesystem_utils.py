@@ -99,3 +99,44 @@ def check_files_existence(
         logger.info(f"Tous les {len(existing_files)} fichiers vérifiés existent.")
         
     return existing_files, missing_files
+
+def get_all_files_in_directory(
+    dir_path: Union[str, Path], 
+    patterns: List[str] = ["*"], 
+    recursive: bool = True
+) -> List[Path]:
+    """
+    Récupère tous les fichiers dans un répertoire correspondant à une liste de motifs.
+
+    Args:
+        dir_path (Union[str, Path]): Chemin du répertoire à parcourir.
+        patterns (List[str], optional): Liste de motifs de fichiers à inclure (glob). 
+                                        Par défaut, ["*"] (tous les fichiers).
+        recursive (bool, optional): Si True, parcourt les sous-répertoires. 
+                                    Par défaut, True.
+
+    Returns:
+        List[Path]: Une liste d'objets Path pour les fichiers trouvés.
+    """
+    base_path = Path(dir_path)
+    all_files = []
+    
+    if not base_path.is_dir():
+        logger.error(f"Le chemin spécifié n'est pas un répertoire valide : {base_path}")
+        return []
+
+    for pattern in patterns:
+        if recursive:
+            glob_generator = base_path.rglob(pattern)
+        else:
+            glob_generator = base_path.glob(pattern)
+        
+        for file_path in glob_generator:
+            if file_path.is_file():
+                all_files.append(file_path)
+
+    # Dédoublonner au cas où les motifs se chevauchent
+    unique_files = sorted(list(set(all_files)))
+    logger.debug(f"{len(unique_files)} fichiers uniques trouvés dans {base_path} avec les motifs {patterns}.")
+    
+    return unique_files

@@ -16,6 +16,7 @@ from argumentation_analysis.core import environment as auto_env
 from semantic_kernel import Kernel
 from argumentation_analysis.agents.agent_factory import AgentFactory
 from semantic_kernel.functions import KernelArguments
+from argumentation_analysis.config.settings import AppSettings
 
 # Conditional imports pour connecteurs authentiques
 try:
@@ -31,7 +32,7 @@ except ImportError:
     openai_available = False
 
 # Imports composants authentiques
-from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as LegacyInformalAnalysisAgent
+from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
 from argumentation_analysis.agents.core.informal.informal_definitions import InformalAnalysisPlugin
 
 
@@ -396,12 +397,13 @@ def setup_authentic_taxonomy_csv(tmp_path):
 
 
 @pytest.fixture
-def authentic_informal_analysis_plugin(authentic_semantic_kernel, setup_authentic_taxonomy_csv):
+def authentic_informal_analysis_plugin(setup_authentic_taxonomy_csv, authentic_semantic_kernel):
     """
     Fixture authentique pour InformalAnalysisPlugin - AUCUN MOCK
     """
     kernel = authentic_semantic_kernel.get_kernel()
     test_taxonomy_path = str(setup_authentic_taxonomy_csv)
+    kernel = authentic_semantic_kernel.get_kernel()
     print(f"[AUTHENTIC] Création du plugin InformalAnalysis authentique avec taxonomie: {test_taxonomy_path}")
     
     try:
@@ -430,7 +432,9 @@ def authentic_informal_agent(authentic_semantic_kernel, setup_authentic_taxonomy
         if not llm_service_id:
             pytest.skip("Saut du test authentique car aucun service LLM n'est configuré.")
 
-        agent_factory = AgentFactory(kernel, llm_service_id)
+        settings = AppSettings()
+        settings.service_manager.default_llm_service_id = llm_service_id
+        agent_factory = AgentFactory(kernel, settings)
         
         # On utilise la config "full" pour avoir toutes les fonctionnalités
         agent = agent_factory.create_agent(

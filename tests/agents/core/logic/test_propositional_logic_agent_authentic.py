@@ -88,15 +88,17 @@ class TestPropositionalLogicAgentAuthentic:
         
         # Configuration du vrai TweetyBridge
         self.tweety_bridge = TweetyBridge()
-        self.tweety_available = self.tweety_bridge.is_jvm_ready()
+        self.tweety_available = self.tweety_bridge.initializer.is_jvm_ready()
         print(f"[AUTHENTIC] TweetyBridge JVM disponible: {self.tweety_available}")
         
         # Configuration PropositionalLogicAgent authentique
         self.agent_name = "TestPLAgentAuthentic"
-        self.agent = PropositionalLogicAgent(self.kernel, agent_name=self.agent_name)
-        
+        self.agent = PropositionalLogicAgent(
+            kernel=self.kernel,
+            agent_name=self.agent_name,
+            service_id=self.llm_service_id if self.llm_service_configured else None,
+        )
         if self.llm_service_configured:
-            self.agent.setup_agent_components(self.llm_service_id)
             print(f"[AUTHENTIC] PropositionalLogicAgent configuré avec service: {self.llm_service_id}")
         else:
             print("[AUTHENTIC] PropositionalLogicAgent configuré sans service LLM")
@@ -120,14 +122,14 @@ class TestPropositionalLogicAgentAuthentic:
         # Vérification TweetyBridge authentique
         if self.tweety_available:
             # Test d'interaction réelle avec TweetyBridge
-            is_ready = self.tweety_bridge.is_jvm_ready()
+            is_ready = self.tweety_bridge.initializer.is_jvm_ready()
             assert is_ready is True
             print(f"[AUTHENTIC] TweetyBridge JVM prête: {is_ready}")
             
             # Test de validation authentique
-            valid, msg = self.tweety_bridge.validate_formula("a => b")
+            valid = self.tweety_bridge.validate_pl_formula("a => b")
             assert valid is True
-            print(f"[AUTHENTIC] Validation formule 'a => b': {valid}, {msg}")
+            print(f"[AUTHENTIC] Validation formule 'a => b': {valid}")
         else:
             print("[AUTHENTIC] TweetyBridge JVM non disponible - test gracieux")
         
@@ -172,8 +174,8 @@ class TestPropositionalLogicAgentAuthentic:
                 
                 # Validation authentique avec TweetyBridge si disponible
                 if self.tweety_available:
-                    valid, validation_msg = self.tweety_bridge.validate_belief_set(belief_set.content)
-                    print(f"[AUTHENTIC] Validation TweetyBridge: {valid}, {validation_msg}")
+                    valid = self.tweety_bridge.validate_belief_set(belief_set.content)
+                    print(f"[AUTHENTIC] Validation TweetyBridge: {valid}")
             else:
                 print(f"[AUTHENTIC] Conversion produit résultat vide: {message}")
                 
@@ -213,7 +215,7 @@ class TestPropositionalLogicAgentAuthentic:
             # Validation authentique avec TweetyBridge si disponible
             if self.tweety_available and len(queries) > 0:
                 for query in queries:
-                    valid, validation_msg = self.tweety_bridge.validate_formula(query)
+                    valid = self.agent.validate_formula(query)
                     print(f"[AUTHENTIC] Validation requête '{query}': {valid}")
                     
         except Exception as e:

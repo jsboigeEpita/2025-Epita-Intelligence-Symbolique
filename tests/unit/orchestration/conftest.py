@@ -33,7 +33,11 @@ def llm_service():
     try:
         service = create_llm_service(
             service_id="real_test_llm_service",
+<<<<<<< HEAD
             model_id="test_model",
+=======
+            model_id="gpt-4o-mini",
+>>>>>>> 134c72c951b22f666f583863586dd4c235b83303
             force_mock=False
         )
         return service

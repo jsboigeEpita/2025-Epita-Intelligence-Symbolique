@@ -3,7 +3,7 @@ import pytest
 import logging
 from playwright.sync_api import Page, expect
 
-def test_homepage_has_correct_title_and_header(page: Page, frontend_url: str):
+def test_homepage_has_correct_title_and_header(page: Page, frontend_url: str, e2e_servers):
     """
     Ce test vérifie que la page d'accueil de l'application web se charge correctement,
     affiche le bon titre, un en-tête H1 visible et que la connexion à l'API est active.

@@ -207,8 +207,11 @@ class ValidationEpitaComplete:
 
         for test_name, config in scenarios.items():
             kernel = sk.Kernel()
-            kernel.add_service(create_llm_service(service_id="default", force_authentic=True))
-            agent_factory = AgentFactory(kernel, "default")
+            llm_service = create_llm_service(service_id="default", model_id="gpt-4o-mini", force_authentic=True) # Ajout model_id
+            kernel.add_service(llm_service)
+            from argumentation_analysis.config.settings import AppSettings
+            settings = AppSettings()
+            agent_factory = AgentFactory(kernel, settings)
             start_time = time.time()
             safe_test_name = re.sub(r'[\s\(\)]+', '_', test_name).lower()
             

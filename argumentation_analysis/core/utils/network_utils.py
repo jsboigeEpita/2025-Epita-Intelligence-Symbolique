@@ -13,7 +13,7 @@ from pathlib import Path
 import requests
 import httpx
 from typing import Optional, Any
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
 from pybreaker import CircuitBreaker, CircuitBreakerError
 
 from argumentation_analysis.config.settings import settings
@@ -29,8 +29,7 @@ network_breaker = CircuitBreaker(
     reset_timeout=settings.network.breaker_reset_timeout
 )
 
-# 2. Stratégie de rejeu (Retry) avec Tenacity
-# Les paramètres sont maintenant lus depuis la configuration centrale.
+# 2. Stratégie de rejeu (Retry) SYNCHRONE pour `requests`
 retry_on_network_error = retry(
     stop=stop_after_attempt(settings.network.retry_stop_after_attempt),
     wait=wait_exponential(
@@ -43,12 +42,24 @@ retry_on_network_error = retry(
         requests.exceptions.Timeout,
         requests.exceptions.HTTPError,
     )),
-    before_sleep=lambda retry_state: logger.warning(
-        f"Tentative {retry_state.attempt_number} échouée. "
-        f"Nouvelle tentative dans {retry_state.next_action.sleep:.2f}s. "
-        f"Erreur: {retry_state.outcome.exception()}"
-    )
+    before_sleep=before_sleep_log(logger, logging.WARNING)
 )
+
+# 3. Stratégie de rejeu ASYNCHRONE pour `httpx`
+async_retry_on_network_error = retry(
+    stop=stop_after_attempt(settings.network.retry_stop_after_attempt),
+    wait=wait_exponential(
+        multiplier=settings.network.retry_wait_multiplier,
+        min=settings.network.retry_wait_min,
+        max=settings.network.retry_wait_max
+    ),
+    retry=retry_if_exception_type((
+        httpx.RequestError,
+        httpx.HTTPStatusError,
+    )),
+    before_sleep=before_sleep_log(logger, logging.WARNING)
+)
+
 
 # --- Fonctions Utilitaires Réseau ---
 
@@ -171,21 +182,24 @@ class ResilientAsyncTransport(httpx.AsyncBaseTransport):
     def __init__(self, transport: httpx.AsyncBaseTransport):
         self.transport = transport
 
-    @retry_on_network_error
+    @async_retry_on_network_error
     @network_breaker
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        """
+        Gère une requête asynchrone avec résilience (rejeu et disjoncteur).
+        Ne pas attraper les exceptions ici, Tenacity et PyBreaker s'en chargent.
+        """
         logger.debug(f"Via Resilient Transport: {request.method} {request.url}")
-        try:
-            return await self.transport.handle_async_request(request)
-        except CircuitBreakerError:
-            logger.critical(f"Disjoncteur OUVERT pour {request.url}.")
-            return httpx.Response(503, text="Circuit Breaker is open")
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code in {429, 502, 503, 504}:
-                raise
-            raise
-        except httpx.RequestError:
-            raise
+        # L'appel `await` est à l'intérieur du décorateur de rejeu, qui gère les exceptions.
+        response = await self.transport.handle_async_request(request)
+        
+        # Le décorateur @retry gérera les codes d'état via `retry_if_exception_type`
+        # si `raise_for_status()` lève une `HTTPStatusError`.
+        if 400 <= response.status_code < 600:
+             # Force la levée d'une exception pour les codes d'erreur afin que Tenacity la traite
+            response.raise_for_status()
+
+        return response
 
 def get_resilient_async_client() -> httpx.AsyncClient:
     """

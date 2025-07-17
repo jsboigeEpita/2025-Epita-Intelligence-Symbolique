@@ -122,7 +122,11 @@ class TestPhase2AuthenticLLMValidation:
         logger.info("🔍 Test 3: Validation service LLM authentique direct")
         
         # Création service LLM authentique
+<<<<<<< HEAD
         service = create_llm_service(service_id="test_authentic", model_id="test_model", force_mock=False)
+=======
+        service = create_llm_service(service_id="test_authentic", model_id="gpt-4o-mini", force_mock=False)
+>>>>>>> 134c72c951b22f666f583863586dd4c235b83303
         
         # Validation type authentique
         assert service is not None
@@ -145,7 +149,11 @@ class TestPhase2AuthenticLLMValidation:
         logger.info("🔍 Test 4: Validation rejet force_mock")
         
         # Test que force_mock=True est ignoré (comportement authentique)
+<<<<<<< HEAD
         service = create_llm_service(service_id="test_no_mock", model_id="test_model", force_mock=True)
+=======
+        service = create_llm_service(service_id="test_no_mock", model_id="gpt-4o-mini", force_mock=True)
+>>>>>>> 134c72c951b22f666f583863586dd4c235b83303
         
         # Même avec force_mock=True, on doit avoir un service authentique
         assert isinstance(service, (OpenAIChatCompletion, AzureChatCompletion))
@@ -237,7 +245,11 @@ class TestPhase2AuthenticLLMValidation:
         assert config.use_authentic_services is True
         
         # Test service LLM sans fallback
+<<<<<<< HEAD
         service = create_llm_service("test_no_fallback", model_id="test_model")
+=======
+        service = create_llm_service(service_id="test_no_fallback", model_id="gpt-4o-mini")
+>>>>>>> 134c72c951b22f666f583863586dd4c235b83303
         service_module = service.__class__.__module__
         
         # Validation module authentique (pas de mock dans le path)
@@ -286,7 +298,11 @@ class TestPhase2AuthenticLLMValidation:
             success_criteria["unified_config_authentic"] = True
             
             # Critère 2: Service LLM authentique
+<<<<<<< HEAD
             service = create_llm_service("phase2_validation", model_id="test_model")
+=======
+            service = create_llm_service(service_id="phase2_validation", model_id="gpt-4o-mini")
+>>>>>>> 134c72c951b22f666f583863586dd4c235b83303
             assert isinstance(service, (OpenAIChatCompletion, AzureChatCompletion))
             success_criteria["llm_service_authentic"] = True
             

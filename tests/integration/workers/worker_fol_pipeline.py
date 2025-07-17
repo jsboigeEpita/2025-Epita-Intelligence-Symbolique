@@ -131,7 +131,11 @@ class TestFOLPipelineIntegration:
     async def test_fol_orchestration_integration(self):
         """Test d'intégration avec orchestration FOL."""
         # 1. Créer le service LLM
+<<<<<<< HEAD
         llm_service = create_llm_service(model_id="test_model")
+=======
+        llm_service = create_llm_service(service_id="test_fol_orchestration", model_id="gpt-4o-mini")
+>>>>>>> 134c72c951b22f666f583863586dd4c235b83303
         
         # 2. Créer l'orchestrateur
         orchestrator = RealLLMOrchestrator(llm_service=llm_service)

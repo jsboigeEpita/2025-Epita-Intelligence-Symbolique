@@ -54,6 +54,7 @@ from ..orchestration.plugins.enquete_state_manager_plugin import EnqueteStateMan
 from ..orchestration.group_chat import GroupChatOrchestration
 from ..agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent
 from ..agents.core.oracle.cluedo_dataset import CluedoDataset
+from argumentation_analysis.config.settings import AppSettings
 
 # Configuration du logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -371,7 +372,7 @@ class CluedoExtendedOrchestrator:
         
         # Création des agents
         from ..agents.factory import AgentFactory
-        factory = AgentFactory(self.kernel)
+        factory = AgentFactory(self.kernel, self.kernel.get_service(None).service_id)
         self.sherlock_agent = factory.create_sherlock_agent(agent_name="Sherlock")
         self.watson_agent = factory.create_watson_agent(agent_name="Watson")
         self.moriarty_agent = MoriartyInterrogatorAgent(

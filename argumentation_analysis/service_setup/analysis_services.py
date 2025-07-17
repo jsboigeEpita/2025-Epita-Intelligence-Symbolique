@@ -60,6 +60,7 @@ def initialize_analysis_services(config: Dict[str, Any] = None) -> Dict[str, Any
         # Le paramètre force_mock est directement déduit de la configuration
         llm_service = create_llm_service(
             service_id="default_llm_service",
+            model_id=settings.default_model_id,
             force_mock=settings.use_mock_llm
         )
         services["llm_service"] = llm_service
