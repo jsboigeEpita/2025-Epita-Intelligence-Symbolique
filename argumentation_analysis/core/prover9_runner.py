@@ -39,14 +39,21 @@ def run_prover9(input_content: str) -> str:
             temp_input_path = temp_input_file.name
 
         # La commande inclut maintenant le chemin du fichier d'entrée
-        command = [str(PROVER9_EXECUTABLE), "-f", temp_input_path]
+        # Normaliser le chemin pour garantir la compatibilité avec Windows
+        executable_path = os.path.normpath(os.path.abspath(PROVER9_EXECUTABLE))
+        # Forcer les guillemets autour des chemins pour le shell
+        executable_path_quoted = f'"{executable_path}"'
+        temp_input_path_quoted = f'"{temp_input_path}"'
+        command_str = f"{executable_path_quoted} -f {temp_input_path_quoted}"
 
         process = subprocess.run(
-            command,
+            command_str,
             capture_output=True,
             text=True,
             check=True,
-            cwd=str(PROVER9_BIN_DIR)
+            cwd=str(PROVER9_BIN_DIR),
+            encoding='cp1252',
+            shell=True
         )
         return process.stdout
     except subprocess.CalledProcessError as e:
