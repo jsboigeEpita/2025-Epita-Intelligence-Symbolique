@@ -44,7 +44,7 @@ catch {
 # --- Configuration de l'environnement ---
 # Ajoute le répertoire du code source et le répertoire racine au PYTHONPATH
 $env:PYTHONPATH = "$PSScriptRoot\2.3.3-generation-contre-argument;$PSScriptRoot;$env:PYTHONPATH"
-$condaEnvName = "projet-is"
+$condaEnvName = "projet-is-new"
 
 # --- Logique de commande ---
 $executableCommand = ""
