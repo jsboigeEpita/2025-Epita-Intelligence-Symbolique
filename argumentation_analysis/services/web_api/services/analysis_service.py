@@ -142,7 +142,7 @@ class AnalysisService:
                     kernel = sk.Kernel()
                     llm_service_instance = None # Renommé pour éviter conflit avec variable globale potentielle
                     try:
-                        llm_service_instance = create_llm_service(service_id="default_analysis_llm", model_id="default")
+                        llm_service_instance = create_llm_service(service_id="default_analysis_llm", model_id="gpt-3.5-turbo")
                         kernel.add_service(llm_service_instance)
                         self.logger.info("[OK] LLM service created and added to kernel for AgentFactory")
                     except Exception as llm_e:
@@ -332,7 +332,7 @@ class AnalysisService:
             elif not fallacies and self.contextual_analyzer:
                 self.logger.info("Using ContextualAnalyzer for fallacy detection (wrapped in asyncio.to_thread).")
                 # Wrap the synchronous, potentially blocking call in a separate thread.
-                result = await asyncio.to_thread(self.contextual_analyzer.analyze_fallacies, text)
+                result = await asyncio.to_thread(self.contextual_analyzer.identify_contextual_fallacies, text, "général")
                 if result:
                     for fallacy_data in result:
                         fallacy = FallacyDetection(

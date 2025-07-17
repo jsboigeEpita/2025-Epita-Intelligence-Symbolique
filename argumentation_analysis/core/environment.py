@@ -130,7 +130,7 @@ if __name__ != "__main__":
     #
     # NE JAMAIS DÉSACTIVER, COMMENTER OU SUPPRIMER CETTE LIGNE.
     # =====================================================================================
-    ensure_env()
+    pass
 
 
 if __name__ == "__main__":

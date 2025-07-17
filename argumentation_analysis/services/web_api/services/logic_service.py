@@ -45,7 +45,7 @@ class LogicService:
         # Initialisation du kernel et du service LLM
         self.kernel = Kernel()
         try:
-            llm_service = create_llm_service(service_id="default_logic_llm", model_id="default")
+            llm_service = create_llm_service(service_id="default_logic_llm", model_id="gpt-3.5-turbo")
             self.kernel.add_service(llm_service)
             self.logger.info("Service LLM 'default_logic_llm' créé et ajouté au kernel pour LogicService.")
         except Exception as e:

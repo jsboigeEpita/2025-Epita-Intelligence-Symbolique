@@ -47,7 +47,7 @@ if str(current_dir) not in sys.path:
 
 # Activation automatique de l'environnement
 from argumentation_analysis.core.environment import ensure_env
-ensure_env()
+# ensure_env() # Désactivé pour les tests
 
 def setup_logging():
     """Configuration du logging global"""

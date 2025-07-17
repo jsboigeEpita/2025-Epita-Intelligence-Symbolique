@@ -52,7 +52,7 @@ class TestRealGPT4oMiniIntegration:
         try:
             from argumentation_analysis.core.llm_service import create_llm_service
             
-            service = create_llm_service(model_id="test_model")
+            service = create_llm_service(model_id="test_model", service_id="test_service")
             
             assert service is not None
             # La nouvelle API de semantic-kernel utilise get_chat_message_contents
@@ -71,12 +71,17 @@ class TestRealGPT4oMiniIntegration:
         try:
             from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
             from argumentation_analysis.core.llm_service import create_llm_service
+            from semantic_kernel import Kernel
             
             # Créer service LLM réel
-            llm_service = create_llm_service(model_id="test_model")
+            llm_service = create_llm_service(model_id="gpt-4o-mini", service_id="test_service")
             
+            # Créer un kernel et ajouter le service
+            kernel = Kernel()
+            kernel.add_service(llm_service)
+
             # Créer orchestrateur
-            orchestrator = RealLLMOrchestrator(llm_service=llm_service)
+            orchestrator = RealLLMOrchestrator(kernel=kernel)
             
             # Test avec texte réel
             test_text = "L'Ukraine a été créée par la Russie. Donc Poutine a raison."
@@ -292,7 +297,9 @@ class TestUnifiedAuthenticComponentsIntegration:
             from argumentation_analysis.core.mock_elimination import TaxonomyManager
             
             # 1. Service LLM authentique
-            llm_service = create_llm_service()
+            llm_service = create_llm_service(model_id="gpt-4o-mini", service_id="auth_service")
+            kernel = Kernel()
+            kernel.add_service(llm_service)
             
             # 2. Taxonomie complète
             taxonomy_manager = TaxonomyManager()
@@ -300,9 +307,8 @@ class TestUnifiedAuthenticComponentsIntegration:
             
             # 3. Orchestrateur avec composants authentiques
             orchestrator = RealLLMOrchestrator(
-                llm_service=llm_service,
-                use_real_tweety=True,
-                taxonomy=complete_taxonomy
+                kernel=kernel,
+                config={'use_real_tweety': True, 'taxonomy': complete_taxonomy}
             )
             
             # 4. Analyse complète authentique

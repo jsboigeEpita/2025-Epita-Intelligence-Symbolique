@@ -109,7 +109,10 @@ class ExtractAgent(BaseAgent):
         self.logger = logging.getLogger(agent_name)
         self._kernel = kernel
         self._llm_service_id = llm_service_id
-        
+        self.llm_service = None
+        if llm_service_id:
+            self.llm_service = self._kernel.get_service(llm_service_id)
+
         self._find_similar_text_func = find_similar_text_func or find_similar_text
         self._extract_text_func = extract_text_func or extract_text_with_markers
         self._native_extract_plugin = next((p for p in plugins if isinstance(p, ExtractAgentPlugin)), None)

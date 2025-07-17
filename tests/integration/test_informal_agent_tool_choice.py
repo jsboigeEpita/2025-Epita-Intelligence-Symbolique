@@ -25,7 +25,7 @@ def test_informal_agent_forced_tool_choice(tmp_path):
     kernel = sk.Kernel()
     llm_service_id = "default"
     try:
-        llm_service = create_llm_service(service_id=llm_service_id, model_id="test_model", force_authentic=True)
+        llm_service = create_llm_service(service_id=llm_service_id, model_id="gpt-3.5-turbo", force_authentic=True)
         kernel.add_service(llm_service)
     except Exception as e:
         pytest.fail(f"La configuration du service LLM a échoué: {e}")

@@ -832,6 +832,9 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         self._tweety_bridge = tweety_bridge
         # Le plugin qui contient nos outils. Il sera instancié ici.
         self._builder_plugin = BeliefSetBuilderPlugin(logger=self.logger)
+        # Forcer l'initialisation du FOL handler pour éviter les NoneType errors
+        if self._tweety_bridge.initializer.is_jvm_ready():
+            _ = self._tweety_bridge.fol_handler
         self.logger.info(f"AUDIT - Agent {self.name} a initialisé son plugin builder avec l'ID: {id(self._builder_plugin)}")
         self.logger.info(f"Agent {self.name} initialisé. Stratégie: Appel d'Outils (construction programmatique).")
 
@@ -853,7 +856,7 @@ class FirstOrderLogicAgent(BaseLogicAgent):
         """
         Configure les composants de l'agent, notamment le pont logique et les fonctions sémantiques.
         """
-        super().setup_agent_components(llm_service_id)
+
         self.logger.info(f"Configuration des composants pour {self.name}...")
 
         # Attendre que le pont Tweety soit prêt si l'initialisation est asynchrone

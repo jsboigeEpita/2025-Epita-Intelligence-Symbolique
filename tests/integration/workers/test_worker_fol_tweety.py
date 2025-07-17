@@ -637,7 +637,7 @@ def check_tweety_availability():
 # La sérialisation est maintenant la seule stratégie par défaut, la paramétrisation n'est plus nécessaire.
 # La fixture use_serialization a été supprimée.
 
-@pytest.fixture(scope="module")
+@pytest_asyncio.fixture(scope="module")
 async def fol_agent_with_kernel(jvm_session):
     """Fixture pour créer un FOLLogicAgent avec un kernel authentique."""
     logger.info(f"--- DEBUT FIXTURE 'fol_agent_with_kernel' ---")
@@ -655,9 +655,7 @@ async def fol_agent_with_kernel(jvm_session):
     # Injection manuelle de TweetyBridge et initialisation
     await agent.setup_agent_components(llm_service_id="default")
     
-    yield agent
-    
-    logger.info(f"--- FIN FIXTURE 'fol_agent_with_kernel' ---")
+    return agent
 
 
 if __name__ == "__main__":

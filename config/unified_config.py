@@ -283,6 +283,7 @@ class UnifiedConfig:
         # force_mock est l'inverse de force_authentic
         llm_service = create_llm_service(
             service_id="gpt-4o-mini-authentic",
+            model_id="gpt-4o-mini",
             force_authentic=force_authentic
         )
         

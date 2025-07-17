@@ -46,7 +46,7 @@ def run_scenario_from_file(scenario_path: str):
         # Note: nous passons les faits comme une seule chaîne de caractères concaténée pour l'instant.
         # Une amélioration future pourrait être de gérer une liste de faits directement.
         input_text = ". ".join(facts)
-        result = asyncio.run(orchestrator.run_logic_and_linguistic_analysis(input_text))
+        result = asyncio.run(orchestrator.run_analysis_async(input_text))
         
         # Pour les tests de durcissement, nous vérifions si le résultat contient le résultat attendu
         # (par exemple, "contradiction").

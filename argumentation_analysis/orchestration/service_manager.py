@@ -232,7 +232,7 @@ class OrchestrationServiceManager:
 
             if api_key:
                 try:
-                    llm_service = create_llm_service(service_id=self.llm_service_id)
+                    llm_service = create_llm_service(service_id=self.llm_service_id, model_id="default")
                     self.kernel.add_service(llm_service)
                     self.logger.info(f"Service LLM résilient '{self.llm_service_id}' ajouté au kernel.")
                 except Exception as e_kernel_service:
