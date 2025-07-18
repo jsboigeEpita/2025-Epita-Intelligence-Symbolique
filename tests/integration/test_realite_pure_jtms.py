@@ -33,6 +33,7 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
 from argumentation_analysis.agents.watson_jtms_agent import WatsonJTMSAgent
 from argumentation_analysis.orchestration.group_chat import GroupChatOrchestration
+from argumentation_analysis.config.settings import AppSettings
 
 # Configuration de base
 logging.basicConfig(level=logging.INFO)
@@ -54,7 +55,8 @@ def kernel():
 @pytest.fixture(scope="module")
 def sherlock_agent(kernel):
     """Fixture pour l'agent Sherlock JTMS."""
-    return SherlockJTMSAgent(kernel=kernel, agent_name="Sherlock_Test_Real")
+    settings = AppSettings()
+    return SherlockJTMSAgent(kernel=kernel, settings=settings, agent_name="Sherlock_Test_Real")
 
 @pytest.fixture(scope="module")
 def watson_agent(kernel):

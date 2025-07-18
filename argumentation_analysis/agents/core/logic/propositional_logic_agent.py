@@ -601,9 +601,9 @@ class PropositionalLogicAgent(BaseLogicAgent):
         try:
             bs_str = belief_set.content
             
-            is_valid, validation_message = self._tweety_bridge.validate_pl_formula(formula_string=query)
+            is_valid = self._tweety_bridge.validate_pl_formula(formula=query)
             if not is_valid:
-                msg = f"Requête invalide: {query}. Raison: {validation_message}"
+                msg = f"Requête invalide: {query}."
                 self.logger.error(msg)
                 return None, f"FUNC_ERROR: {msg}"
 
@@ -675,9 +675,9 @@ class PropositionalLogicAgent(BaseLogicAgent):
     def validate_formula(self, formula: str) -> bool:
         self.logger.debug(f"Validation de la formule PL: '{formula}'")
         try:
-            is_valid, message = self._tweety_bridge.validate_pl_formula(formula_string=formula)
+            is_valid = self._tweety_bridge.validate_pl_formula(formula=formula)
             if not is_valid:
-                self.logger.warning(f"Formule PL invalide: '{formula}'. Message: {message}")
+                self.logger.warning(f"Formule PL invalide: '{formula}'.")
             return is_valid
         except Exception as e:
             self.logger.error(f"Erreur lors de la validation de la formule PL '{formula}': {e}", exc_info=True)

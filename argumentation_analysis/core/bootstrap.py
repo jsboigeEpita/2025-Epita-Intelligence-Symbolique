@@ -129,6 +129,7 @@ class ProjectContext:
         self._fallacy_detector_lock = threading.Lock()
         self.tweety_classes = {}
         self.config = {}
+        self.settings = None
         self.project_root_path = None
         self.services = {} # Dictionnaire pour regrouper les services
 
@@ -245,6 +246,7 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
     # La configuration est maintenant chargée via le module `settings` à l'import.
     # On peuple `context.config` pour la compatibilité avec le reste du code.
     if settings:
+        context.settings = settings
         logger.info("Chargement de la configuration depuis l'objet `settings` centralisé.")
         context.config['OPENAI_API_KEY'] = settings.openai.api_key.get_secret_value() if settings.openai.api_key else None
         
@@ -354,7 +356,17 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
             context.kernel = sk_module.Kernel()
             # Le service LLM est un prérequis pour de nombreux plugins, donc on l'ajoute au kernel.
             # Le paramètre force_mock_llm détermine si on doit forcer l'usage du service mocké.
-            context.llm_service = create_llm_service_func(service_id="default_llm_bootstrap", force_mock=force_mock_llm, force_authentic=force_real_llm_in_test)
+            # Ajout de model_id en utilisant la configuration par défaut de l'application
+            default_model_id = "default_model"
+            if settings and settings.openai and settings.openai.chat_model_id:
+                default_model_id = settings.openai.chat_model_id
+            
+            context.llm_service = create_llm_service_func(
+                service_id="default_llm_bootstrap",
+                model_id=default_model_id,
+                force_mock=force_mock_llm,
+                force_authentic=force_real_llm_in_test
+            )
             context.kernel.add_service(context.llm_service) # Assurez-vous que c'est la bonne méthode
             logger.info("Semantic Kernel et LLMService initialisés et ajoutés au contexte.")
         except Exception as e:

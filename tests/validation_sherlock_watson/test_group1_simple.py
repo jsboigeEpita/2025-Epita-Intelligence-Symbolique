@@ -8,6 +8,7 @@ import os
 
 
 # Ajouter le répertoire racine au path
+from unittest.mock import Mock, AsyncMock
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 try:

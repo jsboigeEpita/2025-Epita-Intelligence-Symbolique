@@ -8,6 +8,7 @@ import sys
 import os
 import asyncio
 
+from unittest.mock import Mock, AsyncMock
 
 # Ajouter le dossier racine au path
 sys.path.insert(0, os.path.abspath('.'))

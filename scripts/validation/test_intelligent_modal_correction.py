@@ -1,5 +1,4 @@
-import argumentation_analysis.core.environment
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Test du système de correction intelligente des erreurs modales avec feedback BNF

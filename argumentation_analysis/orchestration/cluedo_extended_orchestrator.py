@@ -290,6 +290,7 @@ class CluedoExtendedOrchestrator:
 
     def __init__(self,
                  kernel: Kernel,
+                 settings: AppSettings,
                  max_turns: int = 15,
                  max_cycles: int = 5,
                  oracle_strategy: str = "balanced",
@@ -299,12 +300,14 @@ class CluedoExtendedOrchestrator:
         
         Args:
             kernel: Kernel Semantic Kernel
+            settings: Instance de AppSettings pour la configuration.
             max_turns: Nombre maximum de tours total
             max_cycles: Nombre maximum de cycles (3 agents par cycle)
             oracle_strategy: Stratégie Oracle ("cooperative", "competitive", "balanced", "progressive")
             adaptive_selection: Active la sélection adaptative (Phase 2)
         """
         self.kernel = kernel
+        self.settings = settings
         self.max_turns = max_turns
         self.max_cycles = max_cycles
         self.oracle_strategy = oracle_strategy
@@ -461,7 +464,8 @@ class CluedoExtendedOrchestrator:
                 ]
 
                 # 2. Exécuter l'agent avec l'historique nettoyé
-                agent_response_raw = await next_agent.invoke(input=history_to_send, arguments=KernelArguments())
+                agent_response_stream = next_agent.invoke(input=history_to_send, arguments=KernelArguments())
+                agent_response_raw = [message async for message in agent_response_stream]
                 
                 # 3. Consolider et nettoyer la réponse de l'agent
                 # C'est une étape CRUCIALE pour éviter le context overflow avec les réponses en streaming.

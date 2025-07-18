@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 # --- Mocking de python-dotenv ---
 _dotenv_patcher = None
-MOCK_DOTENV = os.environ.get("MOCK_DOTENV_IN_TESTS", "true").lower() in ("true", "1", "t")
+MOCK_DOTENV = os.environ.get("MOCK_DOTENV_IN_TESTS", "false").lower() in ("true", "1", "t")
 
 
 def pytest_addoption(parser):
@@ -106,6 +106,14 @@ def pytest_configure(config):
         else:
             print(f"[INFO] No .env file found at '{dotenv_path}'.")
     
+    # --- Désactivation d'OpenTelemetry pour les tests ---
+    # Pour éviter les erreurs de connexion pendant les tests, nous désactivons
+    # explicitement les exportateurs OTLP, sauf si demandé autrement.
+    print("\\n[INFO] Disabling OpenTelemetry exporters for tests by default.")
+    os.environ["OTEL_TRACES_EXPORTER"] = "none"
+    os.environ["OTEL_METRICS_EXPORTER"] = "none"
+    os.environ["OTEL_LOGS_EXPORTER"] = "none"
+
     config.addinivalue_line("markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')")
     config.addinivalue_line("markers", "integration: marks tests as integration tests")
     config.addinivalue_line("markers", "unit: marks tests as unit tests")
@@ -264,14 +272,28 @@ def backend_url(request):
         
 @pytest.fixture
 def mock_kernel():
-    """Provides a mocked Semantic Kernel."""
-    kernel = MagicMock()
+    """
+    Provides a mocked Semantic Kernel that is compatible with Pydantic validation.
+    It returns a real Kernel instance with a mocked chat completion service.
+    """
+    try:
+        import semantic_kernel as sk
+        from argumentation_analysis.core.llm_service import MockChatCompletion
+    except ImportError:
+        pytest.fail("Failed to import semantic_kernel or MockChatCompletion for mock_kernel fixture.")
+
+    kernel = sk.Kernel()
+    mock_service = MockChatCompletion(service_id="mock_service", ai_model_id="mock_model")
+    kernel.add_service(mock_service)
+    
+    # Conserver une certaine compatibilité avec l'ancien mock pour les plugins si nécessaire
     kernel.plugins = MagicMock()
     mock_plugin = MagicMock()
     mock_function = MagicMock()
     mock_function.invoke.return_value = '{"formulas": ["exists X: (Cat(X))"]}'
     mock_plugin.__getitem__.return_value = mock_function
     kernel.plugins.__getitem__.return_value = mock_plugin
+    
     return kernel
 
 @pytest.fixture

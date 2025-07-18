@@ -575,11 +575,12 @@ class MCPService:
 
 
 # Point d'entrée principal
-print("Lancement du serveur MCP...")
-mcp_service = MCPService()
+if __name__ == "__main__":
+    print("Lancement du serveur MCP...")
+    mcp_service = MCPService()
 
-# Compter les outils enregistrés manuellement car FastMCP n'expose pas _tools
-tools_count = 10  # health_check, analyze_text, validate_argument, detect_fallacies, build_framework, logic_graph, create_belief_set, execute_logic_query, generate_logic_queries, list_available_tools
+    # Compter les outils enregistrés manuellement car FastMCP n'expose pas _tools
+    tools_count = 10  # health_check, analyze_text, validate_argument, detect_fallacies, build_framework, logic_graph, create_belief_set, execute_logic_query, generate_logic_queries, list_available_tools
 
-print(f"Serveur MCP initialisé avec {tools_count} outils disponibles")
-mcp_service.run("streamable-http")
+    print(f"Serveur MCP initialisé avec {tools_count} outils disponibles")
+    mcp_service.run("streamable-http")

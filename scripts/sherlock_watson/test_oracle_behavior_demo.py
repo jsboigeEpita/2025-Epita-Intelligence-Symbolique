@@ -8,7 +8,7 @@ async def run_demo():
     print("--- Début de la démo du comportement de l'oracle ---")
     # Forcer l'utilisation du LLM mocké est crucial pour les tests
     project_context = initialize_project_environment(force_mock_llm=True)
-    agent = SherlockJTMSAgent(kernel=project_context.kernel)
+    agent = SherlockJTMSAgent(kernel=project_context.kernel, settings=project_context.settings)
     # Remplacer l'appel obsolète par l'appel à une méthode principale comme analyze_clues
     clues = [
         {'type': 'arme', 'description': 'Couteau ensanglanté trouvé dans la cuisine.', 'reliability': 0.9},
