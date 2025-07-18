@@ -121,7 +121,7 @@ def create_llm_service(
         ValueError: Si la configuration requise (ex: OPENAI_API_KEY) est manquante.
         RuntimeError: Si la création du service échoue.
     """
-    logger.critical("<<<<< create_llm_service FUNCTION CALLED >>>>>")
+    logger.info("<<<<< create_llm_service FUNCTION CALLED >>>>>")
     logger.info(f"--- Configuration du Service LLM ({service_id}) ---")
 
     # Logique de mock pour les tests

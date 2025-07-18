@@ -1,6 +1,7 @@
 import jpype
 import logging
 import asyncio
+import re
 # La configuration du logging (appel à setup_logging()) est supposée être faite globalement.
 from argumentation_analysis.core.utils.logging_utils import setup_logging
 from .tweety_initializer import TweetyInitializer
@@ -205,18 +206,33 @@ class FOLHandler:
         logger.debug(f"Checking FOL consistency for belief set of size {belief_set.size()} via external Prover9")
         try:
             # Convert belief set to Prover9 input format
-            formulas_str = belief_set.toString().replace(";", ".\n")
-            prover9_input = f"formulas(assumptions).\n{formulas_str}\nend_of_list.\n\ngoals.\n$F.\nend_of_list."
+            # Remplacer la négation "!" par "-" pour la compatibilité avec Prover9
+            formulas = []
+            for formula in belief_set:
+                formula_str = str(formula.toString())
+                formula_str = formula_str.replace('!', '-')
+                # Transformation pour "forall" et "exists"
+                formula_str = re.sub(r'forall\s+([A-Z_][a-zA-Z0-9_]*)\s*:', r'all \1 ', formula_str)
+                formula_str = re.sub(r'exists\s+([A-Z_][a-zA-Z0-9_]*)\s*:', r'exists \1 ', formula_str)
+                # Remplacer le symbole d'implication de Tweety par celui de Prover9
+                formula_str = formula_str.replace('=>', '->')
+                # Remplacer la conjonction de Tweety par celle de Prover9
+                formula_str = formula_str.replace('&&', '&')
+                formulas.append(formula_str)
+            formulas_str = "\n".join(f"{f}." for f in formulas)
+            prover9_input = f"formulas(assumptions).\n{formulas_str}\nend_of_list.\n\nformulas(goals).\n$F.\nend_of_list."
 
-            logger.debug(f"Prover9 input for consistency check:\n{prover9_input}")
+            logger.info(f"Prover9 input for consistency check:\n{prover9_input}")
 
             # Run Prover9 externally
             prover9_output = await asyncio.to_thread(run_prover9, prover9_input)
             
-            # Check output for proof of contradiction
-            is_consistent = "END OF PROOF" not in prover9_output
+            # Si Prover9 trouve une preuve pour $F (la fausseté), cela signifie que la base est incohérente.
+            is_inconsistent = "THEOREM PROVED" in prover9_output or "END OF PROOF" in prover9_output
             
-            msg = f"Consistency check result: {is_consistent}"
+            is_consistent = not is_inconsistent
+            
+            msg = f"Le belief set est {'cohérent (consistent)' if is_consistent else 'incohérent (inconsistent)'}."
             logger.info(msg)
             return is_consistent, msg
         except Exception as e:
@@ -232,20 +248,34 @@ class FOLHandler:
         logger.debug(f"Performing FOL query via external Prover9. Query: '{query_formula_str}'")
         try:
             # Convert belief set and query to Prover9 input format
-            formulas_str = belief_set.toString().replace(";", ".\n")
+            # Convert belief set to Prover9 input format, ensuring correct negation syntax
+            formulas = []
+            for formula in belief_set:
+                formula_str = str(formula.toString())
+                formula_str = formula_str.replace('!', '-')
+                # Transformation pour "forall" et "exists"
+                formula_str = re.sub(r'forall\s+([A-Z_][a-zA-Z0-9_]*)\s*:', r'all \1 ', formula_str)
+                formula_str = re.sub(r'exists\s+([A-Z_][a-zA-Z0-9_]*)\s*:', r'exists \1 ', formula_str)
+                # Remplacer le symbole d'implication de Tweety par celui de Prover9
+                formula_str = formula_str.replace('=>', '->')
+                # Remplacer la conjonction de Tweety par celle de Prover9
+                formula_str = formula_str.replace('&&', '&')
+                formulas.append(formula_str)
+            formulas_str = "\n".join(f"{f}." for f in formulas)
             
             # The query must not end with a period in the goals section for Prover9
-            prover9_goal = query_formula_str.rstrip('.')
+            # Also ensure the query negation syntax is correct
+            prover9_goal = query_formula_str.replace("!", "-").rstrip('.')
             
-            prover9_input = f"formulas(assumptions).\n{formulas_str}\nend_of_list.\n\ngoals.\n{prover9_goal}.\nend_of_list."
+            prover9_input = f"formulas(assumptions).\n{formulas_str}\nend_of_list.\n\nformulas(goals).\n{prover9_goal}.\nend_of_list."
             
             logger.debug(f"Prover9 input for query:\n{prover9_input}")
 
             # Run Prover9 externally
             prover9_output = run_prover9(prover9_input)
 
-            # Check for "END OF PROOF" which means the goal was proven
-            entails = "END OF PROOF" in prover9_output
+            # Si Prover9 prouve le but, cela signifie que la base de connaissances l'implique.
+            entails = "THEOREM PROVED" in prover9_output or "END OF PROOF" in prover9_output
             
             logger.info(f"FOL Query: KB entails '{query_formula_str}'? {entails}")
             return entails

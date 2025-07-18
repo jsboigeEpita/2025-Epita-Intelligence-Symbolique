@@ -350,3 +350,7 @@ _temp_prover9_install/
 # Fichiers et répertoires de nettoyage final
 project_logs/
 archived_artefacts/
+
+
+# Prover9 temporary input files
+libs/prover9/bin/*.in

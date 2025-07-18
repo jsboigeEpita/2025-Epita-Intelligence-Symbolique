@@ -10,59 +10,49 @@ C'est le point d'entrée privilégié pour toute commande relative au projet.
 
 .EXAMPLE
 # Exécute la suite de tests unitaires et fonctionnels
-.\activate_project_env.ps1 pytest tests/unit tests/functional
+.\activate_project_env.ps1 -Command "pytest tests/unit tests/functional"
 
 .EXAMPLE
 # Affiche la version de python de l'environnement
-.\activate_project_env.ps1 python --version
+.\activate_project_env.ps1 -Command "python --version"
 #>
 param(
-    [string]$CommandToRun,
-
-	[Parameter(ValueFromRemainingArguments=$true)]
-	[string[]]$RemainingArgs
+    [Parameter(Mandatory=$true, ValueFromRemainingArguments=$true)]
+    [string[]]$CommandArgs
 )
 
 $ErrorActionPreference = "Stop"
 
-# --- Initialisation de Conda ---
+# --- Initialisation de Conda pour les sessions non-interactives ---
+# Essaye de trouver la commande 'conda'. Si elle n'est pas dans le PATH,
+# le script s'arrêtera, ce qui est le comportement souhaité.
 try {
-    $condaPath = Get-Command conda.exe | Select-Object -ExpandProperty Source
-    Write-Host "[DEBUG] Conda trouvé: $condaPath" -ForegroundColor DarkGray
-    conda.exe shell.powershell hook | Out-String | Invoke-Expression
+    $condaExecutable = Get-Command conda.exe | Select-Object -ExpandProperty Source
+    Write-Host "[DEBUG] Conda trouvé à l'emplacement: $condaExecutable" -ForegroundColor DarkGray
+    # L'initialisation via 'hook' est supprimée car elle est instable dans les sessions 'pwsh -c'.
+    # On se repose directement sur 'conda run', qui est conçu pour fonctionner sans activation préalable.
 }
 catch {
-    Write-Host "[FATAL] 'conda' introuvable. Assurez-vous qu'il est installé et dans le PATH." -ForegroundColor Red
+    Write-Host "[ERREUR FATALE] La commande 'conda' est introuvable." -ForegroundColor Red
+    Write-Host "Assurez-vous que Conda (ou Miniconda/Anaconda) est installé et que son répertoire 'Scripts' ou 'condabin' est dans votre PATH." -ForegroundColor Red
     exit 1
 }
 
-# --- Configuration de l'environnement ---
-# Ajoute le répertoire du code source et le répertoire racine au PYTHONPATH
-$env:PYTHONPATH = "$PSScriptRoot\2.3.3-generation-contre-argument;$PSScriptRoot;$env:PYTHONPATH"
-$condaEnvName = "projet-is-new"
+# Configuration pour la compatibilité des tests et l'import de modules locaux
+$env:PYTHONPATH = "$PSScriptRoot;$env:PYTHONPATH"
 
-# --- Logique de commande ---
-# Concatène la commande et ses arguments en une seule chaîne.
-# --- Logique de commande ---
-$fullCommand = ($CommandToRun + " " + ($RemainingArgs -join ' ')).Trim()
+# Environnement conda cible
+$condaEnvName = "projet-is"
 
-# --- Exécution via conda run ---
-# Utilisation de Start-Process pour un appel plus stable que Invoke-Expression
-$argumentList = "run --no-capture-output -n $condaEnvName --cwd `"$PSScriptRoot`" $fullCommand"
+# Construit la liste d'arguments pour `conda run`.
+$condaArgs = @("run", "--no-capture-output", "-n", $condaEnvName) + $CommandArgs
 
-Write-Host "[DEBUG] Commande d'exécution via Start-Process :" -ForegroundColor Gray
-Write-Host "conda.exe $argumentList" -ForegroundColor Gray
+Write-Host "[DEBUG] Calling Conda with: & '$condaExecutable' $($condaArgs -join ' ')" -ForegroundColor Gray
 
-try {
-    # On récupère le chemin complet de conda.exe pour être sûr
-    $condaExecutable = Get-Command conda.exe | Select-Object -ExpandProperty Source
-    $process = Start-Process -FilePath $condaExecutable -ArgumentList $argumentList -Wait -PassThru -NoNewWindow
-    $exitCode = $process.ExitCode
-}
-catch {
-    Write-Host "[FATAL] L'exécution de la commande via conda a échoué." -ForegroundColor Red
-    Write-Host $_ -ForegroundColor Red
-    $exitCode = 1
-}
+# Exécute la commande directement en utilisant l'opérateur d'appel `&`.
+# C'est la méthode la plus propre et la plus robuste, qui évite Invoke-Expression et le hook.
+& $condaExecutable $condaArgs
 
+# Propage le code de sortie du script python
+$exitCode = $LASTEXITCODE
 exit $exitCode

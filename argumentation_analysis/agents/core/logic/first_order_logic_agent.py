@@ -356,14 +356,6 @@ class BeliefSetBuilderPlugin:
                 )
                 # On force la compatibilité en ajoutant une règle hiérarchique
                 self._sort_hierarchy.setdefault(actual_sort, set()).add(expected_sort)
-                
-                # NOUVELLE LOGIQUE : Forcer l'unification pour résoudre le problème en amont.
-                # L'unification mettra à jour les schémas de prédicats pour utiliser une sorte canonique.
-                # Il faut s'assurer que les prédicats correspondants existent pour l'unification.
-                self.logger.info(f"Déclenchement de l'unification des sortes pour la hiérarchie inférée : '{actual_sort}' et '{expected_sort}'")
-                self._ensure_predicate_exists(actual_sort)
-                self._ensure_predicate_exists(expected_sort)
-                self._unify_sorts(actual_sort, expected_sort)
 
         # Si toutes les validations passent, ajouter le fait.
         new_fact = AtomicFact(norm_pred_name, norm_args)
@@ -481,39 +473,6 @@ class BeliefSetBuilderPlugin:
         # on n'a pas trouvé norm_super, alors ce n'est pas compatible.
         return False
 
-    def _create_safe_fol_atom(self, FolAtom, predicate, arguments):
-        """
-        Safely creates a FolAtom after checking for sort compatibility.
-        Returns the atom on success, or None on failure.
-        """
-        try:
-            # Direct check for arity
-            if predicate.getArity() != arguments.size():
-                logger.error(f"Arity mismatch for predicate '{str(predicate.getName())}'. "
-                             f"Expected {predicate.getArity()}, but got {arguments.size()}.")
-                return None
-
-            # Check sort compatibility for each argument
-            expected_sorts = predicate.getArgumentTypes()
-            for i in range(arguments.size()):
-                arg = arguments.get(i)
-                arg_sort = arg.getSort()
-                expected_sort = expected_sorts.get(i)
-                # Utiliser la logique de compatibilité hiérarchique
-                actual_sort_name = str(arg_sort.getName())
-                expected_sort_name = str(expected_sort.getName())
-                if not self._is_compatible(actual_sort_name, expected_sort_name):
-                    logger.error(f"Validation finale échouée: Incompatibilité de sorte pour le prédicat '{str(predicate.getName())}' à la position {i}. "
-                                 f"Attendu '{expected_sort_name}', mais l'argument '{str(arg.toString())}' a la sorte '{actual_sort_name}', qui n'est pas une sous-sorte compatible.")
-                    return None
-            
-            # If all checks pass, create and return the atom
-            return FolAtom(predicate, arguments)
-
-        except Exception as e:
-            # Catch potential Java exceptions during creation
-            logger.error(f"Failed to create FolAtom for predicate '{str(predicate.getName())}' due to Java exception: {e}", exc_info=True)
-            return None
         
     def build_tweety_belief_set(self, tweety_bridge: "TweetyBridge") -> Optional[Any]:
         """
@@ -592,55 +551,48 @@ class BeliefSetBuilderPlugin:
                     else:
                         logger.warning(f"Impossible de déclarer la hiérarchie car la super-sorte '{super_sort_str}' n'a pas été trouvée.")
 
-            # 3b. Add inferred hierarchy formulas (Pass 2)
-            self.logger.debug(f"Ajout des axiomes de hiérarchie de sortes inférés : {self._sort_hierarchy}")
-            for sub_sort_str, super_sorts in self._sort_hierarchy.items():
-                for super_sort_str in super_sorts:
-                    self.logger.info(f"Création de la formule d'implication pour la hiérarchie : {sub_sort_str} -> {super_sort_str}")
-                    ante_pred = java_predicates.get(sub_sort_str)
-                    cons_pred = java_predicates.get(super_sort_str)
-                    j_sort = java_sorts.get(sub_sort_str)
-
-                    if not all([ante_pred, cons_pred, j_sort]):
-                        self.logger.error(f"Impossible de créer l'axiome de hiérarchie pour '{sub_sort_str} -> {super_sort_str}'. "
-                                        f"Éléments manquants : Prédicat Antécédent={'OK' if ante_pred else 'MANQUANT'}, "
-                                        f"Prédicat Conséquent={'OK' if cons_pred else 'MANQUANT'}, "
-                                        f"Sorte={'OK' if j_sort else 'MANQUANTE'}.")
-                        continue
-                    
-                    var_name = sub_sort_str[0].upper() if sub_sort_str else 'X'
-                    j_var = Variable(var_name, j_sort)
-
-                    ante_args = ArrayList()
-                    ante_args.add(j_var)
-                    antecedent = self._create_safe_fol_atom(FolAtom, ante_pred, ante_args)
-                    
-                    cons_args = ArrayList()
-                    cons_args.add(j_var)
-                    consequent = self._create_safe_fol_atom(FolAtom, cons_pred, cons_args)
-
-                    if antecedent and consequent:
-                        implication = Implication(antecedent, consequent)
-                        quantified_formula = ForallQuantifiedFormula(implication, j_var)
-                        belief_set.add(quantified_formula)
-                        self.logger.debug(f"Ajout de la formule de hiérarchie : {str(quantified_formula.toString())}")
-                    else:
-                        self.logger.error(f"Échec de la création de l'atome pour la formule de hiérarchie '{sub_sort_str} -> {super_sort_str}'.")
-
-            # 3c. Add atomic facts
+            # 3b. Add atomic facts with pre-creation validation
             for fact in self._atomic_facts:
                 if fact.predicate_name in java_predicates:
                     j_pred = java_predicates[fact.predicate_name]
-                    j_args = ArrayList()
-                    for arg_name in fact.arguments:
-                        if arg_name in java_constants:
-                            j_args.add(java_constants[arg_name])
-                        else:
-                            logger.warning(f"Constant '{arg_name}' not found for fact '{fact.predicate_name}'. Skipping argument.")
                     
-                    atom = self._create_safe_fol_atom(FolAtom, j_pred, j_args)
-                    if atom:
+                    # --- Python-side validation before Java call ---
+                    expected_sorts_java = j_pred.getArgumentTypes()
+                    is_compatible_fact = True
+                    
+                    j_args_list = []
+                    for i, arg_name in enumerate(fact.arguments):
+                        if arg_name not in java_constants:
+                            logger.warning(f"Constant '{arg_name}' not found for fact '{fact.predicate_name}'. Skipping fact.")
+                            is_compatible_fact = False
+                            break
+                        
+                        j_const = java_constants[arg_name]
+                        j_args_list.append(j_const)
+                        
+                        actual_sort_name = str(j_const.getSort().getName())
+                        expected_sort_name = str(expected_sorts_java.get(i).getName())
+                        
+                        if not self._is_compatible(actual_sort_name, expected_sort_name):
+                            logger.warning(f"Pré-validation échouée pour le fait '{fact.predicate_name}({arg_name})'. "
+                                         f"Sorte actuelle '{actual_sort_name}' n'est pas compatible avec la sorte attendue '{expected_sort_name}'. "
+                                         "Ce fait ne sera pas ajouté, car il devrait être inférable par la hiérarchie.")
+                            is_compatible_fact = False
+                            break
+                    
+                    if not is_compatible_fact:
+                        continue # Skip this fact
+                    
+                    # Convert list to ArrayList for Java
+                    j_args = ArrayList()
+                    for j_arg in j_args_list:
+                        j_args.add(j_arg)
+
+                    try:
+                        atom = FolAtom(j_pred, j_args)
                         belief_set.add(atom)
+                    except Exception as e:
+                        logger.warning(f"La création de FolAtom a échoué pour le prédicat '{fact.predicate_name}' même après la pré-validation : {e}", exc_info=True)
 
             # Add negated atomic facts
             for fact in self._negated_atomic_facts:
@@ -653,10 +605,12 @@ class BeliefSetBuilderPlugin:
                         else:
                             logger.warning(f"Constant '{arg_name}' not found for negated fact '{fact.predicate_name}'. Skipping argument.")
                     
-                    atom = self._create_safe_fol_atom(FolAtom, j_pred, j_args)
-                    if atom:
+                    try:
+                        atom = FolAtom(j_pred, j_args)
                         negated_formula = Negation(atom)
                         belief_set.add(negated_formula)
+                    except Exception as e:
+                        logger.warning(f"Could not create negated FolAtom for predicate '{fact.predicate_name}': {e}", exc_info=True)
 
             # Add universal implications
             for impl in self._universal_implications:
@@ -674,19 +628,19 @@ class BeliefSetBuilderPlugin:
                 ante_pred = java_predicates.get(impl.antecedent_predicate)
                 ante_args = ArrayList()
                 ante_args.add(j_var)
-                antecedent = self._create_safe_fol_atom(FolAtom, ante_pred, ante_args)
+                antecedent = FolAtom(ante_pred, ante_args)
                 
                 cons_pred = java_predicates.get(impl.consequent_predicate)
                 cons_args = ArrayList()
                 cons_args.add(j_var)
-                consequent = self._create_safe_fol_atom(FolAtom, cons_pred, cons_args)
+                consequent = FolAtom(cons_pred, cons_args)
 
                 if antecedent and consequent:
                     implication = Implication(antecedent, consequent)
                     quantified_formula = ForallQuantifiedFormula(implication, j_var)
                     belief_set.add(quantified_formula)
                 else:
-                    logger.error(f"Skipping universal implication due to atom creation failure: forall {var_name}:{impl.sort_of_variable}.({impl.antecedent_predicate}({var_name}) => {impl.consequent_predicate}({var_name}))")
+                    logger.warning(f"Skipping universal implication due to atom creation failure: forall {var_name}:{impl.sort_of_variable}.({impl.antecedent_predicate}({var_name}) => {impl.consequent_predicate}({var_name}))")
 
             # Add existential conjunctions
             for ex in self._existential_conjunctions:
@@ -701,19 +655,19 @@ class BeliefSetBuilderPlugin:
                 p1 = java_predicates.get(ex.predicate1)
                 p1_args = ArrayList()
                 p1_args.add(j_var)
-                atom1 = self._create_safe_fol_atom(FolAtom, p1, p1_args)
+                atom1 = FolAtom(p1, p1_args)
                 
                 p2 = java_predicates.get(ex.predicate2)
                 p2_args = ArrayList()
                 p2_args.add(j_var)
-                atom2 = self._create_safe_fol_atom(FolAtom, p2, p2_args)
+                atom2 = FolAtom(p2, p2_args)
 
                 if atom1 and atom2:
                     conjunction = Conjunction(atom1, atom2)
                     quantified_formula = ExistsQuantifiedFormula(conjunction, j_var)
                     belief_set.add(quantified_formula)
                 else:
-                    logger.error(f"Skipping existential conjunction due to atom creation failure: exists {var_name}:{ex.sort_of_variable}.({ex.predicate1}({var_name}) and {ex.predicate2}({var_name}))")
+                    logger.warning(f"Skipping existential conjunction due to atom creation failure: exists {var_name}:{ex.sort_of_variable}.({ex.predicate1}({var_name}) and {ex.predicate2}({var_name}))")
 
             # --- DEBUT DEBUG LOGS ---
             sig_string = f"Signature state:\n"
@@ -741,10 +695,10 @@ class BeliefSetBuilderPlugin:
             return belief_set
 
         except (jpype.JException, AttributeError, TypeError) as e:
-            logger.error(f"Failed to build Tweety belief set due to an exception: {e}", exc_info=True)
+            logger.warning(f"Failed to build Tweety belief set due to an exception: {e}", exc_info=True)
             return None
         except Exception as e:
-            logger.error(f"An unexpected error occurred during belief set construction: {e}", exc_info=True)
+            logger.warning(f"An unexpected error occurred during belief set construction: {e}", exc_info=True)
             return None
 
 
