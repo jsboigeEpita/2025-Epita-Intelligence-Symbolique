@@ -10,7 +10,7 @@ import pathlib
 # -*- coding: utf-8 -*-
 
 """
-Tests d'intégration FOL-Tweety pour FirstOrderLogicAgent.
+Tests d'intégration FOL-Tweety pour FOLLogicAgent.
 
 Ces tests valident l'intégration authentique entre l'agent FOL et TweetyProject :
 - Compatibilité syntaxe FOL avec solveur Tweety réel
@@ -38,7 +38,7 @@ from typing import Dict, List, Any, Optional
 # Import a shared fixture to manage the JVM lifecycle
 from argumentation_analysis.core.jvm_setup import initialize_jvm
 # Import de l'agent FOL et composants
-from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent as FOLLogicAgent
+from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent as FOLLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
 from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
 

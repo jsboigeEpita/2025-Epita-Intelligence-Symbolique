@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
-from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
+from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent as FOLLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import FirstOrderBeliefSet
 
 # @pytest.mark.asyncio

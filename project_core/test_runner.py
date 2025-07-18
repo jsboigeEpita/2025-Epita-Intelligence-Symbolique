@@ -20,6 +20,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Configuration des chemins et des commandes
 ROOT_DIR = Path(__file__).parent.parent
@@ -38,7 +39,8 @@ class ServiceManager:
     def __init__(self):
         self.processes = []
         self.log_files = {}
-        self.api_port = self._find_free_port()
+        # FORCER LE PORT 5000 car le frontend est en build statique
+        self.api_port = 5000 
         self.frontend_port = 3000
 
     def start_services(self):
@@ -52,12 +54,23 @@ class ServiceManager:
         self.log_files["api_out"] = api_log_out
         self.log_files["api_err"] = api_log_err
         
-        _log(f"[RUNNER_DEBUG] Commande Popen Uvicorn: {[sys.executable, '-m', 'uvicorn', 'argumentation_analysis.services.web_api.app:app', '--port', str(self.api_port), '--log-level', 'debug']}")
+        uvicorn_command = [
+            sys.executable, "-m", "uvicorn", 
+            "argumentation_analysis.services.web_api.app:app",
+            "--host", "0.0.0.0",
+            "--port", str(self.api_port), 
+            "--log-level", "debug"
+        ]
+        _log(f"[RUNNER_DEBUG] Commande Popen Uvicorn: {uvicorn_command}")
+        
+        # On s'assure de propager l'environnement actuel au sous-processus
+        env = os.environ.copy()
         api_process = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "argumentation_analysis.services.web_api.app:app", "--port", str(self.api_port), "--log-level", "debug"],
+            uvicorn_command,
             cwd=API_DIR,
             stdout=api_log_out,
-            stderr=api_log_err
+            stderr=api_log_err,
+            env=env
         )
         self.processes.append(api_process)
         _log(f"[RUNNER_DEBUG] Service API démarré avec le PID: {api_process.pid}")
@@ -191,6 +204,9 @@ class TestRunner:
 
         command = ["python", "-m", "pytest", "-q"] + test_paths
         
+        # Ajout de l'option pour autoriser le chargement du .env
+        command.append("--allow-dotenv")
+
         # Passer les URLs aux tests seulement si les services sont démarrés
         needs_services = self.test_type in ["functional", "e2e", "all"]
         if needs_services:
@@ -222,17 +238,23 @@ class TestRunner:
             cwd=ROOT_DIR,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            text=True,
-            encoding='utf-8',
-            bufsize=1, # Mode ligne-buffer pour la sortie texte
+            # text=True, # On gère le décodage manuellement pour éviter les erreurs
+            # encoding='utf-8',
+            # bufsize=1,
             env=env
         )
 
         # Lire et afficher la sortie en temps réel
         # La boucle s'arrêtera quand le processus sera terminé et que stdout sera fermé
         if process.stdout:
-            for line in iter(process.stdout.readline, ''):
-                print(line, end='')
+            # Prise en charge des problèmes d'encodage de la console Windows
+            # Stratégie de lecture robuste pour éviter les UnicodeDecodeError
+            while True:
+                line_bytes = process.stdout.readline()
+                if not line_bytes:
+                    break
+                line_str = line_bytes.decode('utf-8', errors='replace')
+                print(line_str, end='')
         
         # Attendre que le processus se termine et obtenir le code de retour
         returncode = process.wait()
@@ -251,7 +273,7 @@ class TestRunner:
             full_path = ROOT_DIR / log_path
             if full_path.exists():
                 try:
-                    content = full_path.read_text(encoding="utf-8").strip()
+                    content = full_path.read_text(encoding="utf-8", errors='replace').strip()
                     if content:
                         _log(f"--- Contenu du log: {log_name} ({full_path}) ---")
                         print(content)
@@ -266,6 +288,19 @@ class TestRunner:
 
 def main():
     """Point d'entrée principal du script."""
+    # Pour s'assurer que les tests (en particulier E2E) ont toujours accès aux variables
+    # d'environnement nécessaires (comme la clé API), nous chargeons explicitement le fichier .env.
+    # Cela rend le script de test autonome et résilient aux problèmes de propagation d'environnement
+    # depuis les scripts de lancement (PowerShell, Conda, etc.).
+    env_path = ROOT_DIR / '.env'
+    if env_path.exists():
+        _log(f"Chargement des variables d'environnement depuis {env_path}")
+        # `override=True` garantit que les variables du .env priment sur celles
+        # qui pourraient déjà exister dans l'environnement système.
+        load_dotenv(dotenv_path=env_path, override=True)
+    else:
+        _log(f"[WARNING] Fichier .env non trouvé à {env_path}. Les tests risquent d'échouer si les variables requises ne sont pas déjà définies dans l'environnement.")
+
     parser = argparse.ArgumentParser(description="Orchestrateur de tests du projet.")
     parser.add_argument(
         "--type",

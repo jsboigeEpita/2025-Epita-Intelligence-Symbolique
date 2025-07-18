@@ -16,61 +16,47 @@ import unittest
 from unittest.mock import patch, MagicMock, AsyncMock
 import asyncio
 from unittest.mock import patch, MagicMock, AsyncMock
-from argumentation_analysis.orchestration.analysis_runner_v2 import AnalysisRunnerV2 as AnalysisRunner
+from argumentation_analysis.orchestration.analysis_runner_v2 import AnalysisRunnerV2
 from argumentation_analysis.config.settings import AppSettings
 
 
-class TestAnalysisRunner(unittest.TestCase):
-    """Suite de tests pour la classe `AnalysisRunner`."""
+class TestAnalysisRunnerV2(unittest.IsolatedAsyncioTestCase):
+    """Suite de tests pour la classe `AnalysisRunnerV2`."""
 
     def setUp(self):
         """Initialisation avant chaque test."""
-        self.mock_settings = MagicMock(spec=AppSettings)
-        # Configurez les attributs nécessaires sur mock_settings si le constructeur de AnalysisRunner les utilise
-        self.mock_settings.service_manager = MagicMock()
-        self.mock_settings.service_manager.default_llm_service_id = "test_service"
-        
-        # Le constructeur de AnalysisRunner crée un kernel et une factory, nous devons patcher cela
-        with patch('argumentation_analysis.orchestration.analysis_runner.KernelBuilder.create_kernel') as mock_create_kernel, \
-             patch('argumentation_analysis.orchestration.analysis_runner.AgentFactory') as mock_agent_factory:
-            
-            self.runner = AnalysisRunner(settings=self.mock_settings)
-        
+        self.mock_llm_service = MagicMock()
+        self.runner = AnalysisRunnerV2(llm_service=self.mock_llm_service)
         self.test_text = "Ceci est un texte de test pour l'analyse."
 
-    @patch('argumentation_analysis.orchestration.analysis_runner.AgentGroupChat', new_callable=AsyncMock)
-    def test_run_analysis_calls_group_chat(self, mock_agent_group_chat_class):
+    @patch('argumentation_analysis.orchestration.analysis_runner_v2.AgentGroupChat', new_callable=AsyncMock)
+    @patch('argumentation_analysis.orchestration.analysis_runner_v2.AgentFactory')
+    @patch('argumentation_analysis.orchestration.analysis_runner_v2.RhetoricalAnalysisState')
+    @patch('argumentation_analysis.orchestration.analysis_runner_v2.start_enhanced_pm_capture')
+    @patch('argumentation_analysis.orchestration.analysis_runner_v2.stop_enhanced_pm_capture')
+    @patch('argumentation_analysis.orchestration.analysis_runner_v2.save_enhanced_pm_report')
+    async def test_run_analysis_v2_flow(self, mock_save_report, mock_stop_capture, mock_start_capture, mock_state, mock_factory, mock_chat_class):
         """
-        Teste que `run_analysis` initialise et invoque correctement AgentGroupChat.
+        Teste le flux principal de `run_analysis` dans `AnalysisRunnerV2`.
         """
-        async def run_test():
-            # Configurer le mock pour l'instance de AgentGroupChat
-            mock_chat_instance = mock_agent_group_chat_class.return_value
-            # Simuler la réponse de l'invocation du chat
-            mock_chat_instance.invoke.return_value = self.mock_async_iterator([MagicMock()])
-            
-            # Mocker la factory d'agent sur l'instance du runner
-            self.runner.factory = MagicMock()
-            mock_manager = MagicMock()
-            mock_fallacy = MagicMock()
-            self.runner.factory.create_project_manager_agent.return_value = mock_manager
-            self.runner.factory.create_agent.return_value = mock_fallacy
+        # --- Arrange ---
+        mock_chat_instance = mock_chat_class.return_value
+        mock_chat_instance.invoke.return_value = self.mock_async_iterator([]) # Pas de messages, juste pour que ça tourne
 
-            # Exécuter la méthode
-            result = await self.runner.run_analysis(self.test_text)
+        # --- Act ---
+        result = await self.runner.run_analysis(self.test_text)
 
-            # Assertions
-            self.runner.factory.create_project_manager_agent.assert_called_once()
-            self.runner.factory.create_agent.assert_called_once()
-            
-            mock_agent_group_chat_class.assert_called_once()
-            # Vérifier que le chat a été invoqué
-            mock_chat_instance.invoke.assert_awaited_once()
-            
-            # Vérifier que le résultat contient le message initial et les messages du chat
-            self.assertEqual(len(result), 2)
+        # --- Assert ---
+        mock_start_capture.assert_called_once()
+        self.assertTrue(mock_state.called)
+        self.assertTrue(mock_factory.called)
+        # 3 phases, donc 3 appels à AgentGroupChat
+        self.assertEqual(mock_chat_class.call_count, 3)
+        self.assertEqual(mock_chat_instance.invoke.await_count, 3)
+        mock_stop_capture.assert_called_once()
+        mock_save_report.assert_called_once()
 
-        asyncio.run(run_test())
+        self.assertEqual(result['status'], 'success')
 
     def mock_async_iterator(self, items):
         """Crée un itérateur asynchrone à partir d'une liste d'éléments."""

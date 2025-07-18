@@ -280,11 +280,14 @@ class UnifiedConfig:
 
         kernel = Kernel()
         
-        # force_mock est l'inverse de force_authentic
+        # Forcer le modèle authentique par défaut
+        model_to_use = self.default_model
+        
         llm_service = create_llm_service(
             service_id="gpt-4o-mini-authentic",
             model_id=self.default_model,
-            force_authentic=force_authentic
+            force_authentic=force_authentic,
+            force_mock=not force_authentic and self.mock_level != MockLevel.NONE
         )
         
         kernel.add_service(llm_service)

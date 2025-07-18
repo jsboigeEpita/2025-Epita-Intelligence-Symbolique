@@ -31,7 +31,7 @@ try:
     from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
     from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
     from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer, TweetyErrorFeedback
-    from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
+    from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent as FOLLogicAgent
     REAL_COMPONENTS_AVAILABLE = True
 except ImportError as e:
     print(f"Avertissement: Composants réels non disponibles: {e}")

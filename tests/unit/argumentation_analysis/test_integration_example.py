@@ -14,6 +14,7 @@ Exemple de test d'intégration pour le projet d'analyse d'argumentation.
 """
 
 import pytest
+import os
 from unittest.mock import MagicMock
 
 # Importer les modules à tester
@@ -185,13 +186,16 @@ def test_extract_service_with_fetch_service(integration_services):
     assert "Ceci est le contenu de l'extrait" in extracted_text
 
 
+@pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY non disponible")
 async def test_repair_extract_markers_integration(mocker, integration_services):
     """Test d'intégration pour la fonction repair_extract_markers."""
     from argumentation_analysis.utils.dev_tools.repair_utils import repair_extract_markers
     
     helper = AuthHelper()
     mock_fetch_service, mock_extract_service, integration_sample_definitions = integration_services
-    mock_llm_service = await helper._create_authentic_gpt4o_mini_instance(service_id_for_test="mock_llm_service")
+    # On force la création d'un vrai service LLM pour ce test d'intégration
+    kernel = UnifiedConfig().get_kernel_with_gpt4o_mini(force_authentic=True)
+    llm_service = kernel.get_service()
 
     # Le patch de OrchestrationServiceManagers est supprimé car la fonction
     # sous test, `repair_extract_markers`, reçoit maintenant les services
@@ -200,7 +204,7 @@ async def test_repair_extract_markers_integration(mocker, integration_services):
     # Exécuter la fonction repair_extract_markers
     updated_definitions, results = await repair_extract_markers(
         integration_sample_definitions,
-        mock_llm_service,
+        llm_service,
         mock_fetch_service,
         mock_extract_service
     )

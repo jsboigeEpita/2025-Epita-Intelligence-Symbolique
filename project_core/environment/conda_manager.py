@@ -89,7 +89,50 @@ class CondaManager:
 
         self.logger.warning(f"'{conda_exe_name}' non trouvé via shutil.which. Le PATH est peut-être incomplet.")
         self.logger.debug(f"PATH actuel: {os.environ.get('PATH')}")
+
+        # Plan B : Tenter de lire CONDA_PATH depuis .env
+        self.logger.info("Tentative de localisation de Conda via le fichier .env...")
+        conda_path_from_env = self._get_var_from_dotenv("CONDA_PATH")
+        if conda_path_from_env:
+            self.logger.info(f"Variable CONDA_PATH trouvée dans .env: {conda_path_from_env}")
+            original_path = os.environ.get('PATH', '')
+            # Utiliser un séparateur approprié pour le système
+            separator = os.pathsep
+            new_path = f"{conda_path_from_env}{separator}{original_path}"
+            os.environ['PATH'] = new_path
+            
+            self.logger.debug(f"Nouveau PATH (temporaire): {new_path}")
+            
+            # Nouvelle tentative avec le PATH mis à jour
+            conda_path = shutil.which(conda_exe_name)
+            if conda_path:
+                self.logger.info(f"Exécutable Conda trouvé via .env et shutil.which: {conda_path}")
+                self.conda_executable_path = conda_path
+                return self.conda_executable_path
+
+        self.logger.error("Échec final de la localisation de l'exécutable Conda.")
         return None
+
+    def _get_var_from_dotenv(self, var_name: str) -> Optional[str]:
+        """Lit une variable spécifique depuis le fichier .env à la racine."""
+        dotenv_path = self.project_root / ".env"
+        if not dotenv_path.is_file():
+            self.logger.warning(f"Fichier .env introuvable à : {dotenv_path}")
+            return None
+        
+        try:
+            with open(dotenv_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    if line.startswith(f"{var_name}="):
+                        value = line.split('=', 1)[1].strip()
+                        return value.strip('\'"')
+            return None
+        except IOError as e:
+            self.logger.error(f"Erreur de lecture du fichier .env pour la variable '{var_name}': {e}")
+            return None
 
     def _get_conda_env_path(self, env_name: str) -> Optional[str]:
         """Récupère le chemin complet d'un environnement conda par son nom."""

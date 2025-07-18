@@ -44,6 +44,7 @@ class TestLLMService:
         os.environ.clear()
         os.environ.update(self.original_env)
 
+    @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY non disponible")
     def test_create_llm_service_openai_authentic(self):
         """Teste la création d'un vrai service LLM OpenAI."""
         if not self.api_key:
@@ -53,26 +54,24 @@ class TestLLMService:
         
         assert service is not None, "Le service LLM ne devrait pas être None."
         assert isinstance(service, OpenAIChatCompletion), "Le service devrait être une instance de OpenAIChatCompletion."
-        assert service.ai_model_id == self.model_id, "Le modèle ID du service ne correspond pas."
+        assert service.ai_model_id == self.model_id, f"L'ID du modèle du service ({service.ai_model_id}) ne correspond pas à celui de l'environnement ({self.model_id})."
 
-    @patch('argumentation_analysis.core.llm_service.settings')
-    def test_create_llm_service_missing_api_key(self, mock_settings):
-        """Teste que la création du service échoue sans clé API en utilisant un mock des settings."""
-        # Configurer le mock pour simuler l'absence de clé API
-        mock_settings.openai.api_key = None
-        mock_settings.openai.chat_model_id = "gpt-4o-mini" # Doit être défini pour passer `all()`
-        mock_settings.openai.base_url = None   # Assurer que le chemin Azure n'est pas pris
+    def test_create_llm_service_missing_api_key(self):
+        """Teste que la création du service échoue sans clé API."""
+        # Supprimer temporairement la clé API de l'environnement
+        if "OPENAI_API_KEY" in os.environ:
+            del os.environ["OPENAI_API_KEY"]
 
         with pytest.raises(ValueError) as excinfo:
             create_llm_service(service_id="test_missing_key", model_id="gpt-4o-mini", force_authentic=True)
         
         assert "Configuration OpenAI standard incomplète" in str(excinfo.value)
 
+        assert "OPENAI_API_KEY" in str(excinfo.value)
+
+    @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY non disponible")
     def test_authentic_llm_call(self):
         """Teste un appel authentique à gpt-4o-mini pour valider la connectivité."""
-        if not self.api_key:
-            pytest.skip("La variable d'environnement OPENAI_API_KEY est requise pour ce test.")
-
         async def _run_async_test():
             try:
                 kernel = sk.Kernel()

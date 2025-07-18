@@ -26,7 +26,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
-    from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent as FOLLogicAgent
+    from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent as FOLLogicAgent
     from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
     from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator, LLMAnalysisRequest
     from argumentation_analysis.core.llm_service import create_llm_service
@@ -131,11 +131,7 @@ class TestFOLPipelineIntegration:
     async def test_fol_orchestration_integration(self):
         """Test d'intégration avec orchestration FOL."""
         # 1. Créer le service LLM
-<<<<<<< HEAD
-        llm_service = create_llm_service(model_id="test_model")
-=======
         llm_service = create_llm_service(service_id="test_fol_orchestration", model_id="gpt-4o-mini")
->>>>>>> 134c72c951b22f666f583863586dd4c235b83303
         
         # 2. Créer l'orchestrateur
         orchestrator = RealLLMOrchestrator(llm_service=llm_service)
@@ -263,7 +259,7 @@ class TestFOLPipelineIntegration:
         
         feedback = error_analyzer.analyze_error(fol_error, context={
             "logic_type": "first_order",
-            "agent": "FirstOrderLogicAgent"
+            "agent": "FOLLogicAgent"
         })
         
         assert hasattr(feedback, 'error_type')

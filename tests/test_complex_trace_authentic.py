@@ -31,15 +31,15 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
-    from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent
+    from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
     from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
-    from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
+    from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent
     from argumentation_analysis.services.llm_service import LLMService
     from argumentation_analysis.utils.crypto_utils import CryptoUtils
 except ImportError as e:
     print(f"Import error (will use fallbacks): {e}")
     # Fallbacks pour assurer que les tests fonctionnent
-    FirstOrderLogicAgent = Mock
+    FOLLogicAgent = Mock
     EnhancedComplexFallacyAnalyzer = Mock
     InformalAgent = Mock
     LLMService = Mock
@@ -105,7 +105,7 @@ class ComplexTraceAuthenticityTester:
         try:
             # Création de l'agent FOL avec kernel mocké minimal
             mock_kernel = await self._create_authentic_gpt4o_mini_instance()
-            fol_agent = FirstOrderLogicAgent(kernel=mock_kernel, agent_name="ComplexTestFOL")
+            fol_agent = FOLLogicAgent(kernel=mock_kernel, agent_name="ComplexTestFOL")
             
             # Extraction des contraintes modales complexes
             modal_data = complex_data["modal_reasoning"]

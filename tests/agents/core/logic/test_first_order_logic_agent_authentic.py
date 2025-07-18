@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-# tests/agents/core/logic/test_first_order_logic_agent_authentic.py
+# tests/agents/core/logic/test_fol_logic_agent_authentic.py
 """
-Tests unitaires authentiques pour la classe FirstOrderLogicAgent.
+Tests unitaires authentiques pour la classe FOLLogicAgent.
 Phase 5 - Élimination complète des mocks - Version authentique
 """
 
@@ -34,7 +34,7 @@ except ImportError:
         AzureOpenAIChatCompletion = None
 
 # Imports du projet
-from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent
+from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import FirstOrderBeliefSet, BeliefSet
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
@@ -94,10 +94,10 @@ async def test_agent_initialization_simplified(jvm_session):
         pytest.fail(f"Échec de l'initialisation de TweetyBridge: {e}")
 
     # 3. Initialisation de l'agent
-    agent = FirstOrderLogicAgent(kernel, tweety_bridge, service_id=llm_service_id)
+    agent = FOLLogicAgent(kernel, tweety_bridge=tweety_bridge, service_id=llm_service_id)
     assert agent is not None
     assert agent.tweety_bridge is tweety_bridge
-    print("✅ Agent FirstOrderLogicAgent initialisé")
+    print("✅ Agent FOLLogicAgent initialisé")
 
     # # 4. Configuration de l'agent (si le LLM est disponible)
     # if llm_available:

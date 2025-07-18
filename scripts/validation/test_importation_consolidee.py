@@ -68,7 +68,7 @@ def test_critical_imports():
         print(f"❌ CluedoOrchestrator: {e}")
     
     try:
-        from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
+        from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent as InformalAgent
         print("✅ InformalAgent importé")
     except Exception as e:
         print(f"❌ InformalAgent: {e}")

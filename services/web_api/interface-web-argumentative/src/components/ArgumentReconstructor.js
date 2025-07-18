@@ -1,31 +1,40 @@
 import React, { useState } from 'react';
 import * as api from '../services/api';
+import { useAppContext } from '../context/AppContext';
 
 function ArgumentReconstructor() {
-  const [argument, setArgument] = useState('');
-  const [reconstruction, setReconstruction] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const {
+    reconstructionResult,
+    setReconstructionResult,
+    textInputs,
+    updateTextInput,
+    isLoading,
+    setIsLoading,
+  } = useAppContext();
+
   const [error, setError] = useState(null);
 
+  const argument = textInputs.reconstructor;
+
   const handleReconstruct = async () => {
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
-    setReconstruction(null);
+    setReconstructionResult(null);
     try {
       const response = await api.analyzeText(argument);
-      setReconstruction(response);
+      setReconstructionResult(response);
     } catch (err) {
       console.error("Erreur lors de la reconstruction de l'argument:", err);
       setError(err.response?.data?.error || 'Une erreur inattendue est survenue.');
     }
-    setLoading(false);
+    setIsLoading(false);
   };
 
   const handleReset = () => {
-    setArgument('');
-    setReconstruction(null);
+    updateTextInput('reconstructor', '');
+    setReconstructionResult(null);
     setError(null);
-    setLoading(false);
+    setIsLoading(false);
   };
 
   return (
@@ -34,7 +43,7 @@ function ArgumentReconstructor() {
       <textarea
         data-testid="reconstructor-text-input"
         value={argument}
-        onChange={(e) => setArgument(e.target.value)}
+        onChange={(e) => updateTextInput('reconstructor', e.target.value)}
         placeholder="Entrez l'argument à reconstruire..."
         rows="5"
         style={{ width: '100%', marginTop: '10px' }}
@@ -42,10 +51,10 @@ function ArgumentReconstructor() {
       <button
         data-testid="reconstructor-submit-button"
         onClick={handleReconstruct}
-        disabled={loading}
+        disabled={isLoading}
         style={{ marginTop: '10px' }}
       >
-        {loading ? 'Reconstruction en cours...' : 'Reconstruire'}
+        {isLoading ? 'Reconstruction en cours...' : 'Reconstruire'}
       </button>
       <button
         data-testid="reconstructor-reset-button"
@@ -54,25 +63,25 @@ function ArgumentReconstructor() {
       >
         Réinitialiser
       </button>
-      {loading && <div className="loading-spinner" data-testid="loading-spinner"></div>}
+      {isLoading && <div className="loading-spinner" data-testid="loading-spinner"></div>}
       {error && (
         <div data-testid="reconstructor-error-message" style={{ color: 'red', marginTop: '20px' }}>
           {error}
         </div>
       )}
-      {reconstruction && (
+      {reconstructionResult && (
         <div data-testid="reconstructor-results-container" style={{ marginTop: '20px' }}>
           <h3>Résultats de la Reconstruction :</h3>
-          {reconstruction.argument_structure && (
+          {reconstructionResult.argument_structure && (
             <div>
               <h4>Prémisses</h4>
               <ul>
-                {reconstruction.argument_structure.premises.map((premise, index) => (
+                {reconstructionResult.argument_structure.premises.map((premise, index) => (
                   <li key={index}>Prémisse {index + 1}: {premise}</li>
                 ))}
               </ul>
               <h4>Conclusion</h4>
-              <p>{reconstruction.argument_structure.conclusion}</p>
+              <p>{reconstructionResult.argument_structure.conclusion}</p>
             </div>
           )}
         </div>

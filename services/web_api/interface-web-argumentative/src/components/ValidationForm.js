@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { AppContext } from '../context/AppContext';
 import { validateArgument } from '../services/api';
 import './ValidationForm.css';
 
@@ -6,13 +7,13 @@ import './ValidationForm.css';
  * Composant pour la validation d'arguments logiques
  */
 const ValidationForm = () => {
+  const { isLoading, setIsLoading } = useContext(AppContext);
   // État du formulaire
   const [premises, setPremises] = useState(['']);
   const [conclusion, setConclusion] = useState('');
   const [argumentType, setArgumentType] = useState('deductive');
   
   // État de l'interface
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
 
@@ -67,7 +68,7 @@ const ValidationForm = () => {
       return;
     }
 
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
     setResult(null);
 
@@ -80,7 +81,7 @@ const ValidationForm = () => {
       setError(err.message);
       console.error('Erreur lors de la validation:', err);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -184,9 +185,9 @@ const ValidationForm = () => {
         <button 
           onClick={handleValidation}
           className="validate-button"
-          disabled={loading || premises.every(p => !p.trim()) || !conclusion.trim()}
+          disabled={isLoading || premises.every(p => !p.trim()) || !conclusion.trim()}
         >
-          {loading ? '🔄 Validation...' : '✅ Valider l\'argument'}
+          {isLoading ? '🔄 Validation...' : '✅ Valider l\'argument'}
         </button>
         
         <button onClick={loadExample} className="example-button">

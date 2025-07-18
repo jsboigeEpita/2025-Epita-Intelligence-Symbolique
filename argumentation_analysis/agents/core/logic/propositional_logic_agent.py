@@ -291,8 +291,8 @@ class PropositionalLogicAgent(BaseLogicAgent):
         self.logger.info(f"Configuration des composants sémantiques pour {self.name}...")
 
         if not TweetyInitializer.is_jvm_ready():
-            self.logger.error(f"La JVM pour TweetyBridge de {self.name} n'est pas prête.")
-            return
+            self.logger.critical(f"La JVM pour TweetyBridge de {self.name} n'est pas prête. Impossible de continuer.")
+            raise RuntimeError(f"JVM not ready for agent {self.name}")
 
         self._tweety_bridge = TweetyBridge()
         self.logger.info(f"TweetyBridge initialisé pour {self.name}.")
@@ -438,29 +438,57 @@ class PropositionalLogicAgent(BaseLogicAgent):
         max_retries = 3
 
         # Étape 1: Génération des Propositions
+        self.logger.debug("[text_to_belief_set] Étape 1: Invocation du LLM pour TextToPLDefs...")
         defs_json, error_msg = await self._invoke_llm_for_json(
             self._kernel, self.name, "TextToPLDefs", {"input": text},
             ["propositions"], "prop-gen", max_retries
         )
         if not defs_json: return None, error_msg
+        self.logger.debug("[text_to_belief_set] Étape 1: Terminé.")
 
         # Étape 2: Génération des Formules
+        self.logger.debug("[text_to_belief_set] Étape 2: Invocation du LLM pour TextToPLFormulas...")
         formulas_json, error_msg = await self._invoke_llm_for_json(
             self._kernel, self.name, "TextToPLFormulas",
             {"input": text, "definitions": json.dumps(defs_json, indent=2)},
             ["formulas"], "formula-gen", max_retries
         )
         if not formulas_json: return None, error_msg
+        self.logger.debug("[text_to_belief_set] Étape 2: Terminé.")
 
         # Étape 3: Filtrage et Validation
+        self.logger.debug("[text_to_belief_set] Étape 3: Filtrage des formules...")
         declared_propositions = set(defs_json.get("propositions", []))
         all_formulas = formulas_json.get("formulas", [])
         valid_formulas = self._filter_formulas(all_formulas, declared_propositions)
         if not valid_formulas:
             return None, "Aucune formule valide n'a pu être générée ou conservée après filtrage."
+        self.logger.debug("[text_to_belief_set] Étape 3: Terminé.")
 
         belief_set_content = "\n".join(valid_formulas)
-        is_consistent = self._tweety_bridge.pl_handler.pl_check_consistency(belief_set_content)
+        self.logger.debug(f"--- DÉBUT VÉRIFICATION CONSISTANCE ---")
+        self.logger.debug(f"Contenu envoyé à Tweety:\n{belief_set_content}")
+        
+        is_consistent = False
+        try:
+            self.logger.debug("Appel à self._tweety_bridge.pl_handler.pl_check_consistency...")
+            # Note: L'appel correct se fait via le pl_handler du bridge
+            is_consistent = self._tweety_bridge.pl_handler.pl_check_consistency(belief_set_content)
+            self.logger.debug(f"Appel à Tweety réussi. Résultat: {is_consistent}")
+        except Exception as e:
+            import traceback
+            tb_str = "".join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__))
+            self.logger.error(f"############################################################")
+            self.logger.error(f"EXCEPTION CATASTROPHIQUE DANS PL_CHECK_CONSISTENCY")
+            self.logger.error(f"TYPE: {type(e).__name__}")
+            self.logger.error(f"MESSAGE: {e}")
+            self.logger.error(f"TRACEBACK:\n{tb_str}")
+            self.logger.error(f"############################################################")
+            # Propage l'erreur pour qu'elle soit visible dans les logs du serveur
+            raise
+
+        self.logger.debug(f"--- FIN VÉRIFICATION CONSISTANCE ---")
+
         if not is_consistent:
             self.logger.error(f"Ensemble de croyances final invalide: Incohérent\nContenu:\n{belief_set_content}")
             return None, f"Ensemble de croyances invalide: Incohérent"

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { analyzeDungFramework as buildFramework } from '../services/api';
+import { useAppContext } from '../context/AppContext';
 import './FrameworkBuilder.css';
 
 /**
@@ -29,7 +30,7 @@ const FrameworkBuilder = () => {
 
   // État de l'interface
   // const [selectedArguments, setSelectedArguments] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const { isLoading, setIsLoading } = useAppContext();
   const [error, setError] = useState(null);
   
   // État des résultats
@@ -109,7 +110,7 @@ const FrameworkBuilder = () => {
       return;
     }
 
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
 
     try {
@@ -120,7 +121,7 @@ const FrameworkBuilder = () => {
       setError(err.message);
       console.error('Erreur lors de la construction:', err);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -316,9 +317,9 @@ const FrameworkBuilder = () => {
       <button 
         onClick={handleBuildFramework}
         className="build-button"
-        disabled={loading || args.length === 0}
+        disabled={isLoading || args.length === 0}
       >
-        {loading ? '🔄 Construction...' : '🏗️ Construire le framework'}
+        {isLoading ? '🔄 Construction...' : '🏗️ Construire le framework'}
       </button>
     </div>
   );

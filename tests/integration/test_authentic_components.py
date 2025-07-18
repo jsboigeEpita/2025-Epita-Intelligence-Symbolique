@@ -28,7 +28,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 try:
     from config.unified_config import UnifiedConfig, MockLevel, TaxonomySize, LogicType, PresetConfigs
     from argumentation_analysis.core.llm_service import create_llm_service
-    from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent
+    from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
 except ImportError as e:
     pytest.skip(f"Modules requis non disponibles: {e}", allow_module_level=True)
 
@@ -48,11 +48,7 @@ class TestAuthenticGPTIntegration:
             # Initialiser le service LLM réel via la factory
             llm_service = create_llm_service(
                 service_id="test_real_gpt_quality",
-<<<<<<< HEAD
-                model_id="test_model",
-=======
                 model_id="gpt-4o-mini",
->>>>>>> 134c72c951b22f666f583863586dd4c235b83303
                 force_authentic=True
             )
             
@@ -138,7 +134,7 @@ class TestAuthenticTweetyIntegration:
     def test_real_fol_logic_agent_initialization(self):
         """Test d'initialisation agent logique FOL avec Tweety réel."""
         try:
-            fol_agent = FirstOrderLogicAgent(
+            fol_agent = FOLLogicAgent(
                 enable_jvm=True,
                 use_real_tweety=True,
                 logic_type='fol'
@@ -156,7 +152,7 @@ class TestAuthenticTweetyIntegration:
     def test_real_tweety_formula_parsing(self):
         """Test de parsing de formule avec Tweety authentique."""
         try:
-            fol_agent = FirstOrderLogicAgent(
+            fol_agent = FOLLogicAgent(
                 enable_jvm=True,
                 use_real_tweety=True
             )

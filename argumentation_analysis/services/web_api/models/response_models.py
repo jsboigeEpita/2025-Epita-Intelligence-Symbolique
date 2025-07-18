@@ -243,3 +243,11 @@ class LogicInterpretationResponse(BaseModel):
     # Métadonnées
     processing_time: float = Field(default=0.0, ge=0.0, description="Temps de traitement")
     interpretation_options: Dict[str, Any] = Field(default_factory=dict, description="Options utilisées")
+
+
+class SuccessResponse(BaseModel):
+    """Réponse de succès standardisée."""
+    message: str = Field(default="Operation successful", description="Message de succès")
+    data: Optional[Any] = Field(default=None, description="Données retournées par l'opération")
+    status_code: int = Field(default=200, description="Code de statut HTTP")
+    timestamp: datetime = Field(default_factory=datetime.now, description="Timestamp de la réponse")

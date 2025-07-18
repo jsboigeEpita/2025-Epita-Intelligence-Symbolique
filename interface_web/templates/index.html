@@ -322,7 +322,7 @@
 
         async function loadSystemStatus() {
             try {
-                const response = await fetch('/status');
+                const response = await fetch('/api/health');
                 const status = await response.json();
                 
                 systemOnline = status.status === 'operational';

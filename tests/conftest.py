@@ -66,11 +66,21 @@ def pytest_configure(config):
         print("\n[INFO] Dotenv mocking is DISABLED. Real .env file will be used.")
 
         project_dir = Path(__file__).parent.parent
+        # Hiérarchie de chargement: .env.test > .env
+        dotenv_test_path = project_dir / '.env.test'
         dotenv_path = project_dir / '.env'
-        if dotenv_path.exists():
+
+        if dotenv_test_path.exists():
+            print(f"[INFO] Loading .env.test file from: {dotenv_test_path}")
+            env_vars = dotenv_values(dotenv_path=dotenv_test_path)
+        elif dotenv_path.exists():
             print(f"[INFO] Loading .env file from: {dotenv_path}")
-            
             env_vars = dotenv_values(dotenv_path=dotenv_path)
+        else:
+            env_vars = {}
+            print("[INFO] No .env or .env.test file found.")
+
+        if env_vars:
             
             if not env_vars:
                 print(f"[WARNING] .env file found at '{dotenv_path}' but it seems to be empty.")
@@ -78,13 +88,13 @@ def pytest_configure(config):
 
             updated_vars = 0
             for key, value in env_vars.items():
-                if key not in os.environ and value is not None:
+                if value is not None:
+                    if key in os.environ:
+                        print(f"[INFO] Overriding existing environment variable '{key}'.")
                     os.environ[key] = value
                     updated_vars += 1
-                elif value is None:
-                    print(f"[WARNING] Skipping .env variable '{key}' because its value is None.")
                 else:
-                    print(f"[INFO] Skipping .env variable '{key}' because it's already set in the environment.")
+                    print(f"[WARNING] Skipping .env variable '{key}' because its value is None.")
             
             print(f"[INFO] Loaded {updated_vars} variables from .env into os.environ.")
             
@@ -351,6 +361,25 @@ def successful_simple_argument_analysis_fixture_path(tmp_path):
     file_path.write_text(json.dumps(data))
     return str(file_path)
 
+@pytest.fixture(scope="function")
+def page_with_console_logs(page: "Page"):
+    """
+    Wraps the Playwright page to automatically log console messages,
+    especially JS errors.
+    """
+    def handle_console_message(msg):
+        # Filtrer pour ne montrer que les messages pertinents (erreurs, warnings)
+        if msg.type.lower() in ['error', 'warning']:
+            print(f"\n[CONSOLE {msg.type.upper()}] {msg.text}")
+            # Si c'est une erreur, afficher la pile d'appels si disponible
+            if msg.location:
+                print(f"    at {msg.location['url']}:{msg.location['lineNumber']}:{msg.location['columnNumber']}")
+
+    page.on("console", handle_console_message)
+    yield page
+    # Le nettoyage se fait automatiquement à la fin du test
+    page.remove_listener("console", handle_console_message)
+
 
 # --- Gestion des Serveurs E2E ---
 
@@ -414,7 +443,8 @@ def e2e_servers(request):
             sys.executable, "-m", "uvicorn",
             "argumentation_analysis.services.web_api.app:app",
             "--host", "0.0.0.0",
-            "--port", "5003"
+            "--port", "5003",
+            "--log-level", "debug"
         ]
         
         logger.info(f"Running backend command: {' '.join(backend_cmd)}")

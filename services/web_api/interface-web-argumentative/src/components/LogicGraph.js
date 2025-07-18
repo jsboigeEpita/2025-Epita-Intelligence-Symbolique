@@ -1,23 +1,31 @@
 import React, { useState } from 'react';
 import { analyzeLogicGraph } from '../services/api';
+import { useAppContext } from '../context/AppContext';
 
 function LogicGraph() {
-  const [text, setText] = useState('');
-  const [graphData, setGraphData] = useState(null);
+  const {
+    logicGraphResult,
+    setLogicGraphResult,
+    textInputs,
+    updateTextInput,
+    isLoading,
+    setIsLoading,
+  } = useAppContext();
+
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+
+  const text = textInputs.logic_graph;
 
   const handleSubmit = async () => {
     setIsLoading(true);
     setError('');
-    setGraphData(null);
+    setLogicGraphResult(null);
     try {
       const data = await analyzeLogicGraph({ text });
-      // L'API retourne un LogicBeliefSetResponse avec success et belief_set
       if (data.success && data.belief_set) {
-        setGraphData(data.belief_set);
+        setLogicGraphResult(data.belief_set);
       } else {
-        setError('Échec de la conversion en ensemble de croyances');
+        setError(data.error || 'Échec de la conversion en ensemble de croyances');
       }
     } catch (err) {
       setError(err.message || 'An error occurred while analyzing the graph.');
@@ -27,8 +35,8 @@ function LogicGraph() {
   };
 
   const handleReset = () => {
-    setText('');
-    setGraphData(null);
+    updateTextInput('logic_graph', '');
+    setLogicGraphResult(null);
     setError('');
     setIsLoading(false);
   };
@@ -39,7 +47,7 @@ function LogicGraph() {
       <textarea
         data-testid="logic-graph-text-input"
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => updateTextInput('logic_graph', e.target.value)}
         placeholder="Enter text to visualize as a logic graph"
         rows="5"
         style={{ width: '100%', marginBottom: '10px' }}
@@ -66,23 +74,23 @@ function LogicGraph() {
       )}
 
       <div data-testid="logic-graph-container" style={{ marginTop: '20px' }}>
-        {graphData && (
+        {logicGraphResult && (
           // In a real application, this would render a proper graph (e.g., using D3, vis.js, or a library)
           // For testing, we'll just render a simple SVG element to prove it's present.
           <div>
             <h3>Ensemble de croyances généré:</h3>
-            <p><strong>Type:</strong> {graphData.logic_type}</p>
-            <p><strong>Contenu:</strong> {graphData.content}</p>
+            <p><strong>Type:</strong> {logicGraphResult.logic_type}</p>
+            <p><strong>Contenu:</strong> {logicGraphResult.content}</p>
             <svg data-testid="logic-graph-svg" width="200" height="100">
               <circle cx="50" cy="50" r="40" stroke="green" strokeWidth="4" fill="yellow" />
               <text x="120" y="30" fontFamily="Arial" fontSize="12" fill="black">
                 Logic Graph
               </text>
               <text x="120" y="50" fontFamily="Arial" fontSize="10" fill="black">
-                {graphData.logic_type}
+                {logicGraphResult.logic_type}
               </text>
               <text x="120" y="70" fontFamily="Arial" fontSize="8" fill="black">
-                {graphData.content.substring(0, 20)}...
+                {logicGraphResult.content.substring(0, 20)}...
               </text>
             </svg>
           </div>

@@ -21,7 +21,7 @@ from argumentation_analysis.services.flask_service_integration import FlaskServi
 from argumentation_analysis.services.logic_service import LogicService
 from argumentation_analysis.orchestration.group_chat import GroupChatOrchestration
 from argumentation_analysis.utils.async_manager import AsyncManager, run_hybrid_safe
-from argumentation_analysis.agents.core.logic.first_order_logic_agent_adapter import FirstOrderLogicAgent, LogicAgentFactory
+from argumentation_analysis.agents.core.logic.first_order_logic_agent_adapter import FOLLogicAgent, LogicAgentFactory
 from argumentation_analysis.agents.core.informal.informal_agent_adapter import InformalAgent
 
 logger = logging.getLogger(__name__)
@@ -56,13 +56,13 @@ class TestSprint2Improvements(unittest.TestCase):
         
     def test_harmonized_agent_interfaces(self):
         """Test que les interfaces d'agents sont harmonisées et compatibles."""
-        # Test FirstOrderLogicAgent avec différents paramètres
-        fol_agent1 = FirstOrderLogicAgent(agent_name="FOLAgent1")
+        # Test FOLLogicAgent avec différents paramètres
+        fol_agent1 = FOLLogicAgent(agent_name="FOLAgent1")
         self.assertEqual(fol_agent1.name, "FOLAgent1")
         self.assertEqual(fol_agent1.agent_id, "FOLAgent1")
         self.assertEqual(fol_agent1.agent_name, "FOLAgent1")
         
-        fol_agent2 = FirstOrderLogicAgent(agent_id="FOLAgent2")
+        fol_agent2 = FOLLogicAgent(agent_id="FOLAgent2")
         self.assertEqual(fol_agent2.name, "FOLAgent2")
         self.assertEqual(fol_agent2.agent_id, "FOLAgent2")
         self.assertEqual(fol_agent2.agent_name, "FOLAgent2")
@@ -81,7 +81,7 @@ class TestSprint2Improvements(unittest.TestCase):
         # Test création d'agents valides
         fol_agent = LogicAgentFactory.create_agent("first_order")
         self.assertIsNotNone(fol_agent)
-        self.assertEqual(fol_agent.name, "FirstOrderLogicAgent")
+        self.assertEqual(fol_agent.name, "FOLLogicAgent")
         self.assertEqual(fol_agent.agent_id, "fol_agent")
         
         pl_agent = LogicAgentFactory.create_agent("propositional")

@@ -20,7 +20,7 @@ from semantic_kernel import Kernel
 from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
 from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
 from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
-from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent
+from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
 from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent
 
 
@@ -47,11 +47,16 @@ class TestLogicAgentFactory:
         self.kernel = MagicMock(spec=Kernel)
 
         self.mock_propositional_agent = MagicMock(spec=PropositionalLogicAgent)
-        self.mock_first_order_agent = MagicMock(spec=FirstOrderLogicAgent)
+        self.mock_first_order_agent = MagicMock(spec=FOLLogicAgent)
         self.mock_modal_agent = MagicMock(spec=ModalLogicAgent)
+        
+        # FIX: S'assurer que les mocks ont la méthode setup_agent_components, qui est appelée par la factory
+        self.mock_propositional_agent.setup_agent_components = MagicMock()
+        self.mock_first_order_agent.setup_agent_components = MagicMock()
+        self.mock_modal_agent.setup_agent_components = MagicMock()
 
         self.mock_propositional_agent_class = MagicMock(spec=PropositionalLogicAgent, return_value=self.mock_propositional_agent)
-        self.mock_first_order_agent_class = MagicMock(spec=FirstOrderLogicAgent, return_value=self.mock_first_order_agent)
+        self.mock_first_order_agent_class = MagicMock(spec=FOLLogicAgent, return_value=self.mock_first_order_agent)
         self.mock_modal_agent_class = MagicMock(spec=ModalLogicAgent, return_value=self.mock_modal_agent)
 
         self.agent_classes_patch = patch.dict(LogicAgentFactory._agent_classes, {

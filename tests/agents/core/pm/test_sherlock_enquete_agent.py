@@ -6,7 +6,7 @@ import asyncio
 import os
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
-from argumentation_analysis.agents.agent_factory import AgentFactory
+from argumentation_analysis.agents.factory import AgentFactory
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
 from typing import AsyncGenerator, Union
 from semantic_kernel.contents.chat_history import ChatHistory

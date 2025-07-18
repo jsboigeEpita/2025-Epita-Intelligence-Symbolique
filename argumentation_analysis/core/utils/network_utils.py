@@ -150,25 +150,33 @@ class LoggingHttpTransport(httpx.AsyncBaseTransport):
         if request.content:
             try:
                 content_bytes = await request.aread()
-                request.stream._buffer = [content_bytes]
+                request.stream._buffer = [content_bytes]  # Re-buffer for next transport
                 json_content = json.loads(content_bytes.decode('utf-8'))
                 pretty_json_content = json.dumps(json_content, indent=2, ensure_ascii=False)
                 self.logger.info(f"  Body (JSON):\n{pretty_json_content}")
-            except Exception:
-                 self.logger.info(f"  Body: (Contenu non-JSON)")
-        
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                 self.logger.info(f"  Body: (Contenu non-JSON ou binaire)")
+
         response = await self._wrapped_transport.handle_async_request(request)
 
         self.logger.info(f"--- RAW HTTP RESPONSE (LLM Service) ---")
         self.logger.info(f"  Status Code: {response.status_code}")
-        response_content_bytes = await response.aread()
-        response.stream._buffer = [response_content_bytes]
-        try:
-            json_response_content = json.loads(response_content_bytes.decode('utf-8'))
-            pretty_json_response_content = json.dumps(json_response_content, indent=2, ensure_ascii=False)
-            self.logger.info(f"  Body (JSON):\n{pretty_json_response_content}")
-        except Exception:
-            self.logger.info(f"  Body: (Contenu non-JSON)")
+        
+        # La lecture du corps de la réponse a été désactivée car elle consomme
+        # le flux et peut interférer avec la décompression (ex: brotli).
+        # L'interception est désormais minimale pour éviter les effets de bord.
+        
+        # Le transport sous-jacent a déjà traité la réponse.
+        # On peut inspecter les headers et le statut sans lire le corps.
+
+        # Forcer la levée d'une exception pour les codes d'erreur (4xx, 5xx)
+        # afin que le décorateur @retry de Tenacity puisse la traiter.
+        if 400 <= response.status_code < 600:
+            # Nous devons lire le corps ici UNIQUEMENT en cas d'erreur,
+            # car raise_for_status en a besoin pour le message d'exception.
+            await response.aread()
+            response.raise_for_status()
+
         return response
 
     async def aclose(self) -> None:
@@ -187,18 +195,14 @@ class ResilientAsyncTransport(httpx.AsyncBaseTransport):
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         """
         Gère une requête asynchrone avec résilience (rejeu et disjoncteur).
-        Ne pas attraper les exceptions ici, Tenacity et PyBreaker s'en chargent.
+        Les exceptions sont gérées par les décorateurs Tenacity et PyBreaker.
         """
         logger.debug(f"Via Resilient Transport: {request.method} {request.url}")
-        # L'appel `await` est à l'intérieur du décorateur de rejeu, qui gère les exceptions.
+        # L'appel est simplement transmis au transporteur suivant.
+        # L'inspection de la réponse et la levée d'exception sont gérées
+        # plus haut dans la chaîne (dans LoggingHttpTransport) pour garantir
+        # que `raise_for_status()` est appelé sur un objet réponse valide.
         response = await self.transport.handle_async_request(request)
-        
-        # Le décorateur @retry gérera les codes d'état via `retry_if_exception_type`
-        # si `raise_for_status()` lève une `HTTPStatusError`.
-        if 400 <= response.status_code < 600:
-             # Force la levée d'une exception pour les codes d'erreur afin que Tenacity la traite
-            response.raise_for_status()
-
         return response
 
 def get_resilient_async_client() -> httpx.AsyncClient:

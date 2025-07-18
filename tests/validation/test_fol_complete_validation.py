@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Validation complète de l'agent FirstOrderLogicAgent (FOL).
+Validation complète de l'agent FOLLogicAgent (FOL).
 
 Ce script exécute une validation exhaustive selon les critères de la tâche :
 
@@ -11,7 +11,7 @@ MÉTRIQUES DE VALIDATION :
 ✅ 0 erreur de parsing Tweety avec syntaxe FOL  
 ✅ >95% compatibilité avec sophismes existants
 ✅ Temps réponse ≤ Modal Logic précédent
-✅ >90% couverture tests pour FirstOrderLogicAgent
+✅ >90% couverture tests pour FOLLogicAgent
 ✅ Tous les cas d'erreur gérés
 ✅ Integration validée avec tous orchestrateurs
 

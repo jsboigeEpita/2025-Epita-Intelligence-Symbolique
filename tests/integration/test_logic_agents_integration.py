@@ -184,7 +184,7 @@ class TestLogicAgentsIntegration(unittest.TestCase):
         
     #     # Vérifier les types d'agents
     #     self.assertEqual(pl_agent.name, "PropositionalLogicAgent")
-    #     self.assertEqual(fol_agent.name, "FirstOrderLogicAgent")
+    #     self.assertEqual(fol_agent.name, "FOLLogicAgent")
     #     self.assertEqual(modal_agent.name, "ModalLogicAgent")
     
     # async def test_propositional_to_first_order_integration(self):

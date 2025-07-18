@@ -7,7 +7,7 @@ import pathlib
 # -*- coding: utf-8 -*-
 
 """
-Tests d'intégration FOL-Tweety pour FirstOrderLogicAgent.
+Tests d'intégration FOL-Tweety pour FOLLogicAgent.
 
 Grammaire BNF du Parser FOL (FolParser.java de TweetyProject) pour référence :
 --------------------------------------------------------------------------------
@@ -42,7 +42,7 @@ from unittest.mock import patch, AsyncMock
 # et peut être demandée comme dépendance sans import direct.
 # from tests.fixtures.integration_fixtures import jvm_session
 # Import de l'agent FOL et composants
-from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent as FOLLogicAgent
+from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent as FOLLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import BeliefSet, FirstOrderBeliefSet
 # Import configuration et Tweety
 from config.unified_config import LogicType, MockLevel, PresetConfigs

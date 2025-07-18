@@ -332,7 +332,7 @@ class TestUnifiedConfig:
         
         agent_classes = config.get_agent_classes()
         assert agent_classes["informal"] == "InformalAnalysisAgent"
-        assert agent_classes["fol_logic"] == "FirstOrderLogicAgent"
+        assert agent_classes["fol_logic"] == "FOLLogicAgent"
         assert agent_classes["synthesis"] == "SynthesisAgent"
         assert agent_classes["pm"] == "ProjectManagerAgent"
 

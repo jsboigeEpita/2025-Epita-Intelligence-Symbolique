@@ -6,7 +6,7 @@ Valide les fonctionnalités spécialisées de l'agent détective.
 import pytest
 import asyncio
 from datetime import datetime
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock, AsyncMock, MagicMock
 
 import semantic_kernel as sk
 from semantic_kernel import Kernel
@@ -18,6 +18,15 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
 
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
 from argumentation_analysis.models.extended_belief_model import BeliefType, ConfidenceLevel
+from argumentation_analysis.config.settings import AppSettings
+
+@pytest.fixture
+def mock_settings():
+    """Crée un mock pour AppSettings."""
+    settings = MagicMock(spec=AppSettings)
+    settings.service_manager = MagicMock()
+    settings.service_manager.default_llm_service_id = "mock_service"
+    return settings
 
 @pytest.fixture
 def mock_kernel():
@@ -26,9 +35,9 @@ def mock_kernel():
     return kernel
 
 @pytest.fixture
-def sherlock_agent(mock_kernel):
+def sherlock_agent(mock_kernel, mock_settings):
     """Agent Sherlock de test"""
-    agent = SherlockJTMSAgent(mock_kernel, "sherlock_test", llm_service_id="mock_service")
+    agent = SherlockJTMSAgent(mock_kernel, mock_settings, agent_name="sherlock_test")
     # Mock de la réponse de l'agent de base pour contrôler les descriptions
     async def side_effect(*args, **kwargs):
         input_str = ""
@@ -229,14 +238,19 @@ if __name__ == "__main__":
         from unittest.mock import Mock
         
         mock_kernel = Mock(spec=Kernel)
-        agent = SherlockJTMSAgent(mock_kernel, "test_sherlock")
-        
+        # Créer un mock pour AppSettings
+        mock_settings = MagicMock(spec=AppSettings)
+        mock_settings.service_manager = MagicMock()
+        mock_settings.service_manager.default_llm_service_id = "mock_service"
+
+        agent = SherlockJTMSAgent(mock_kernel, mock_settings, agent_name="test_sherlock")
+
         print("Test d'analyse d'indice...")
-        result = await agent.analyze_clue("test_clue", {"description": "Test clue"})
+        result = await agent.analyze_clues([{"description": "Test clue"}])
         print(f"Résultat: {result}")
-        
+
         print("Test de formation d'hypothèse...")
-        result2 = await agent.form_hypothesis("test_hyp", {"suspect": "Test"})
+        result2 = await agent.formulate_hypothesis("Contexte de test", evidence_ids=[result["new_evidence_ids"][0]])
         print(f"Résultat: {result2}")
         
         print("✅ Tests Sherlock de base passent!")

@@ -6,7 +6,7 @@ Valide les fonctionnalités de communication et coordination entre agents JTMS.
 import pytest
 import asyncio
 from datetime import datetime
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock, AsyncMock, MagicMock
 
 import semantic_kernel as sk
 from semantic_kernel import Kernel
@@ -20,6 +20,15 @@ from argumentation_analysis.agents.jtms_communication_hub import JTMSCommunicati
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
 from argumentation_analysis.agents.watson_jtms_agent import WatsonJTMSAgent
 from argumentation_analysis.models.agent_communication_model import AgentMessage, MessageType
+from argumentation_analysis.config.settings import AppSettings
+
+@pytest.fixture
+def mock_settings():
+    """Crée un mock pour AppSettings."""
+    settings = MagicMock(spec=AppSettings)
+    settings.service_manager = MagicMock()
+    settings.service_manager.default_llm_service_id = "mock_service"
+    return settings
 
 @pytest.fixture
 def mock_kernel():
@@ -33,14 +42,14 @@ def communication_hub(mock_kernel):
     return JTMSCommunicationHub(mock_kernel)
 
 @pytest.fixture
-def sherlock_agent(mock_kernel):
+def sherlock_agent(mock_kernel, mock_settings):
     """Agent Sherlock de test"""
-    return SherlockJTMSAgent(mock_kernel, "sherlock_test", llm_service_id="mock_service")
+    return SherlockJTMSAgent(mock_kernel, mock_settings, agent_name="sherlock_test")
 
 @pytest.fixture
-def watson_agent(mock_kernel):
+def watson_agent(mock_kernel, mock_settings):
     """Agent Watson de test"""
-    return WatsonJTMSAgent(mock_kernel, "watson_test")
+    return WatsonJTMSAgent(mock_kernel, mock_settings, agent_name="watson_test")
 
 class TestJTMSCommunicationHub:
     """Tests pour la classe JTMSCommunicationHub"""
@@ -326,9 +335,15 @@ if __name__ == "__main__":
         from unittest.mock import Mock
         
         mock_kernel = Mock(spec=Kernel)
+        
+        # Créer un mock pour AppSettings
+        mock_settings = MagicMock(spec=AppSettings)
+        mock_settings.service_manager = MagicMock()
+        mock_settings.service_manager.default_llm_service_id = "mock_service"
+
         hub = JTMSCommunicationHub(mock_kernel)
-        sherlock = SherlockJTMSAgent(mock_kernel, "test_sherlock")
-        watson = WatsonJTMSAgent(mock_kernel, "test_watson")
+        sherlock = SherlockJTMSAgent(mock_kernel, mock_settings, agent_name="test_sherlock")
+        watson = WatsonJTMSAgent(mock_kernel, mock_settings, agent_name="test_watson")
         
         print("Test d'enregistrement d'agents...")
         success1 = await hub.register_agent(sherlock)

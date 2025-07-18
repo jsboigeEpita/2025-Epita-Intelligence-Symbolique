@@ -38,7 +38,6 @@ class InformalAgentAdapter(OperationalAgent):
             project_context: Le contexte du projet.
             config_name: La configuration de l'agent à créer (ex: 'simple', 'full').
         """
-        super().__init__(name, operational_state)
         self.agent: Optional[Agent] = None
         self.kernel: Optional[sk.Kernel] = None
         self.llm_service_id: Optional[str] = None
@@ -46,6 +45,7 @@ class InformalAgentAdapter(OperationalAgent):
         self.config_name = config_name
         self.initialized = False
         self.logger = logging.getLogger(f"InformalAgentAdapter.{name}")
+        super().__init__(name, operational_state)
 
     async def initialize(self, kernel: sk.Kernel, llm_service_id: str, project_context: ProjectContext) -> bool:
         """
