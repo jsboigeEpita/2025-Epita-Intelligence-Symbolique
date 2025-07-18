@@ -1,11 +1,18 @@
 import React, { useRef, useState } from 'react';
 import { analyzeText } from '../services/api';
+import { useAppContext } from '../context/AppContext';
 import './ArgumentAnalyzer.css';
 
 const ArgumentAnalyzer = () => {
-  const [text, setText] = useState('');
-  const [analysis, setAnalysis] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const {
+    analysisResult,
+    setAnalysisResult,
+    textInputs,
+    updateTextInput,
+    isLoading,
+    setIsLoading,
+  } = useAppContext();
+
   const [error, setError] = useState(null);
   const [options, setOptions] = useState({
     detect_fallacies: true,
@@ -14,6 +21,7 @@ const ArgumentAnalyzer = () => {
   });
   
   const textareaRef = useRef(null);
+  const text = textInputs.analyzer;
 
   // Exemples d'arguments prédéfinis
   const examples = [
@@ -39,29 +47,29 @@ const ArgumentAnalyzer = () => {
     e.preventDefault();
     if (!text.trim()) return;
 
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
     
     try {
       const result = await analyzeText(text, options);
-setAnalysis(result);
+      setAnalysisResult(result);
     } catch (err) {
       setError('Erreur lors de l\'analyse : ' + err.message);
-      setAnalysis(null);
+      setAnalysisResult(null);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const loadExample = (example) => {
-    setText(example.text);
-    setAnalysis(null);
+    updateTextInput('analyzer', example.text);
+    setAnalysisResult(null);
     setError(null);
   };
 
   const clearAll = () => {
-    setText('');
-    setAnalysis(null);
+    updateTextInput('analyzer', '');
+    setAnalysisResult(null);
     setError(null);
   };
 
@@ -98,7 +106,7 @@ setAnalysis(result);
               key={index}
               className="example-button"
               onClick={() => loadExample(example)}
-              disabled={loading}
+              disabled={isLoading}
             >
               <strong>{example.title}</strong>
               <span>{example.text.substring(0, 80)}...</span>
@@ -118,7 +126,7 @@ setAnalysis(result);
             id="argument-text"
             className="form-textarea"
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => updateTextInput('analyzer', e.target.value)}
             placeholder="Entrez votre argument ici..."
             rows={6}
             required
@@ -174,9 +182,9 @@ setAnalysis(result);
           <button
             type="submit"
             className="btn btn-primary btn-lg"
-            disabled={loading || !text.trim()}
+            disabled={isLoading || !text.trim()}
           >
-            {loading ? (
+            {isLoading ? (
               <>
                 <span className="loading-spinner"></span>
                 Analyse en cours...
@@ -191,7 +199,7 @@ setAnalysis(result);
             type="button"
             className="btn btn-secondary"
             onClick={clearAll}
-            disabled={loading}
+            disabled={isLoading}
           >
             🗑️ Effacer tout
           </button>
@@ -210,24 +218,24 @@ setAnalysis(result);
       )}
 
       {/* Résultats d'analyse */}
-      {analysis && (
-        <div className="analysis-results">
+      {analysisResult && (
+        <div className="analysis-results" data-testid="analyzer-results">
           <div className="results-header">
             <h3>📊 Résultats de l'analyse</h3>
             <div className="analysis-metadata">
-              <span>⏱️ {analysis.metadata?.duration?.toFixed(3)}s</span>
+              <span>⏱️ {analysisResult.processing_time?.toFixed(3)}s</span>
               <span>📅 {new Date().toLocaleString()}</span>
             </div>
           </div>
 
           {/* Métriques principales */}
           <div className="metrics-grid">
-            <div className={`metric-card quality-${getQualityColor(analysis.results?.overall_quality)}`}>
+            <div className={`metric-card quality-${getQualityColor(analysisResult.overall_quality)}`}>
               <div className="metric-icon">🎯</div>
               <div className="metric-content">
                 <h4>Qualité globale</h4>
                 <div className="metric-value">
-                  {(analysis.results?.overall_quality * 100).toFixed(1)}%
+                  {(analysisResult.overall_quality * 100).toFixed(1)}%
                 </div>
               </div>
             </div>
@@ -237,7 +245,7 @@ setAnalysis(result);
               <div className="metric-content">
                 <h4>Sophismes détectés</h4>
                 <div className="metric-value">
-                  {analysis.results?.fallacy_count || 0}
+                  {analysisResult.fallacy_count || 0}
                 </div>
               </div>
             </div>
@@ -247,7 +255,7 @@ setAnalysis(result);
               <div className="metric-content">
                 <h4>Structure</h4>
                 <div className="metric-value">
-                  {analysis.results?.argument_structure?.argument_type || 'N/A'}
+                  {analysisResult.argument_structure?.argument_type || 'N/A'}
                 </div>
               </div>
             </div>
@@ -257,8 +265,8 @@ setAnalysis(result);
               <div className="metric-content">
                 <h4>Cohérence</h4>
                 <div className="metric-value">
-                  {analysis.results?.argument_structure ?
-                    (analysis.results.argument_structure.coherence * 100).toFixed(1) + '%' :
+                  {analysisResult.argument_structure ?
+                    (analysisResult.argument_structure.coherence * 100).toFixed(1) + '%' :
                     'N/A'
                   }
                 </div>
@@ -267,11 +275,11 @@ setAnalysis(result);
           </div>
 
           {/* Sophismes détectés */}
-          {analysis.results?.fallacies && analysis.results.fallacies.length > 0 && (
+          {analysisResult.fallacies && analysisResult.fallacies.length > 0 && (
             <div className="fallacies-section">
               <h4>⚠️ Sophismes détectés</h4>
               <div className="fallacies-list">
-                {analysis.results.fallacies.map((fallacy, index) => (
+                {analysisResult.fallacies.map((fallacy, index) => (
                   <div key={index} className={`fallacy-item severity-${getSeverityColor(fallacy.severity)}`}>
                     <div className="fallacy-header">
                       <h5>{fallacy.name}</h5>
@@ -292,27 +300,27 @@ setAnalysis(result);
           )}
 
           {/* Structure argumentative */}
-          {analysis.results?.argument_structure && (
+          {analysisResult.argument_structure && (
             <div className="structure-section">
               <h4>🏗️ Structure argumentative</h4>
               
               <div className="structure-overview">
                 <div className="structure-metric">
-                  <strong>Type:</strong> {analysis.results.argument_structure.argument_type}
+                  <strong>Type:</strong> {analysisResult.argument_structure.argument_type}
                 </div>
                 <div className="structure-metric">
-                  <strong>Force:</strong> {(analysis.results.argument_structure.strength * 100).toFixed(1)}%
+                  <strong>Force:</strong> {(analysisResult.argument_structure.strength * 100).toFixed(1)}%
                 </div>
                 <div className="structure-metric">
-                  <strong>Cohérence:</strong> {(analysis.results.argument_structure.coherence * 100).toFixed(1)}%
+                  <strong>Cohérence:</strong> {(analysisResult.argument_structure.coherence * 100).toFixed(1)}%
                 </div>
               </div>
               
-              {analysis.results.argument_structure.premises && analysis.results.argument_structure.premises.length > 0 && (
+              {analysisResult.argument_structure.premises && analysisResult.argument_structure.premises.length > 0 && (
                 <div className="premises-section">
                   <h5>📝 Prémisses identifiées</h5>
                   <ol className="premises-list">
-                    {analysis.results.argument_structure.premises.map((premise, index) => (
+                    {analysisResult.argument_structure.premises.map((premise, index) => (
                       <li key={index} className="premise-item">
                         {premise}
                       </li>
@@ -321,11 +329,11 @@ setAnalysis(result);
                 </div>
               )}
               
-              {analysis.results.argument_structure.conclusion && (
+              {analysisResult.argument_structure.conclusion && (
                 <div className="conclusion-section">
                   <h5>🎯 Conclusion</h5>
                   <div className="conclusion-text">
-                    {analysis.results.argument_structure.conclusion}
+                    {analysisResult.argument_structure.conclusion}
                   </div>
                 </div>
               )}
@@ -333,11 +341,11 @@ setAnalysis(result);
           )}
 
           {/* Recommandations */}
-          {analysis.results?.suggestions && analysis.results.suggestions.length > 0 && (
+          {analysisResult.suggestions && analysisResult.suggestions.length > 0 && (
             <div className="suggestions-section">
               <h4>💡 Recommandations</h4>
               <ul className="suggestions-list">
-                {analysis.results.suggestions.map((suggestion, index) => (
+                {analysisResult.suggestions.map((suggestion, index) => (
                   <li key={index} className="suggestion-item">
                     {suggestion}
                   </li>
@@ -351,7 +359,7 @@ setAnalysis(result);
             <button 
               className="btn btn-secondary"
               onClick={() => {
-                const resultsText = JSON.stringify(analysis, null, 2);
+                const resultsText = JSON.stringify(analysisResult, null, 2);
                 navigator.clipboard.writeText(resultsText);
               }}
             >
@@ -360,7 +368,7 @@ setAnalysis(result);
             <button 
               className="btn btn-secondary"
               onClick={() => {
-                const blob = new Blob([JSON.stringify(analysis, null, 2)], 
+                const blob = new Blob([JSON.stringify(analysisResult, null, 2)],
                   { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');

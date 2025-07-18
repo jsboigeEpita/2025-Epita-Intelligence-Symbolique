@@ -11,12 +11,17 @@ const defaultHeaders = {
 
 // Fonction utilitaire pour gérer les erreurs HTTP
 const handleResponse = async (response) => {
+  const json = await response.json();
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    const errorMessage = errorData.message || errorData.error || `Erreur API: ${response.status}`;
+    const errorMessage = json.message || json.error || `Erreur API: ${response.status}`;
     throw new Error(errorMessage);
   }
-  return response.json();
+  // Si la réponse est une enveloppe standard (contient un champ 'data'), on extrait les données.
+  // Sinon, on retourne l'objet JSON complet.
+  if (json.data !== undefined) {
+    return json.data;
+  }
+  return json;
 };
 
 // Fonction utilitaire pour les requêtes avec timeout

@@ -1,11 +1,18 @@
 import React, { useRef, useState } from 'react';
 import { detectFallacies } from '../services/api';
+import { useAppContext } from '../context/AppContext';
 import './FallacyDetector.css';
 
 const FallacyDetector = () => {
-  const [text, setText] = useState('');
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const {
+    fallacyResult,
+    setFallacyResult,
+    textInputs,
+    updateTextInput,
+    isLoading,
+    setIsLoading,
+  } = useAppContext();
+
   const [error, setError] = useState(null);
   const [options, setOptions] = useState({
     severity_threshold: 0.3,
@@ -14,6 +21,7 @@ const FallacyDetector = () => {
   });
   
   const textareaRef = useRef(null);
+  const text = textInputs.fallacy_detector;
 
   // Exemples de sophismes courants
   const fallacyExamples = [
@@ -53,29 +61,29 @@ const FallacyDetector = () => {
     e.preventDefault();
     if (!text.trim()) return;
 
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
     
     try {
       const detection = await detectFallacies(text, options);
-      setResult(detection);
+      setFallacyResult(detection);
     } catch (err) {
       setError('Erreur lors de la détection : ' + err.message);
-      setResult(null);
+      setFallacyResult(null);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const loadExample = (example) => {
-    setText(example.text);
-    setResult(null);
+    updateTextInput('fallacy_detector', example.text);
+    setFallacyResult(null);
     setError(null);
   };
 
   const clearAll = () => {
-    setText('');
-    setResult(null);
+    updateTextInput('fallacy_detector', '');
+    setFallacyResult(null);
     setError(null);
   };
 
@@ -130,7 +138,7 @@ const FallacyDetector = () => {
                 <button
                   className="btn btn-sm btn-primary"
                   onClick={() => loadExample(example)}
-                  disabled={loading}
+                  disabled={isLoading}
                 >
                   Tester
                 </button>
@@ -154,7 +162,7 @@ const FallacyDetector = () => {
             data-testid="fallacy-text-input"
             className="form-textarea"
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => updateTextInput('fallacy_detector', e.target.value)}
             placeholder="Entrez le texte à analyser pour détecter les sophismes..."
             rows={6}
             required
@@ -231,9 +239,9 @@ const FallacyDetector = () => {
             type="submit"
             data-testid="fallacy-submit-button"
             className="btn btn-primary btn-lg"
-            disabled={loading || !text.trim() || text.length > 10000}
+            disabled={isLoading || !text.trim() || text.length > 10000}
           >
-            {loading ? (
+            {isLoading ? (
               <>
                 <span className="loading-spinner"></span>
                 Détection en cours...
@@ -249,7 +257,7 @@ const FallacyDetector = () => {
             data-testid="fallacy-reset-button"
             className="btn btn-secondary"
             onClick={clearAll}
-            disabled={loading}
+            disabled={isLoading}
           >
             🗑️ Effacer
           </button>
@@ -268,30 +276,30 @@ const FallacyDetector = () => {
       )}
 
       {/* Résultats */}
-      {result && (
+      {fallacyResult && (
         <div className="detection-results" data-testid="fallacy-results-container">
           <div className="results-header">
             <h3>🎯 Résultats de la détection</h3>
             <div className="results-stats">
               <span className="stat-item">
-                <strong>{result.fallacies?.length || 0}</strong> sophisme(s) détecté(s)
+                <strong>{fallacyResult.fallacies?.length || 0}</strong> sophisme(s) détecté(s)
               </span>
               <span className="stat-item">
-                <strong>{result.confidence ? (result.confidence * 100).toFixed(1) : 'N/A'}%</strong> confiance
+                <strong>{fallacyResult.confidence ? (fallacyResult.confidence * 100).toFixed(1) : 'N/A'}%</strong> confiance
               </span>
               <span className="stat-item">
-                <strong>{result.processing_time?.toFixed(3) || 'N/A'}s</strong> temps
+                <strong>{fallacyResult.processing_time?.toFixed(3) || 'N/A'}s</strong> temps
               </span>
             </div>
           </div>
 
-          {result.fallacies && result.fallacies.length > 0 ? (
+          {fallacyResult.fallacies && fallacyResult.fallacies.length > 0 ? (
             <div className="fallacies-detected">
               <div className="fallacies-summary">
                 <h4>📊 Résumé des sophismes</h4>
                 <div className="severity-distribution">
                   {['critical', 'high', 'medium', 'low'].map(level => {
-                    const count = result.fallacies.filter(f => 
+                    const count = fallacyResult.fallacies.filter(f =>
                       getSeverityColor(f.severity) === level
                     ).length;
                     return count > 0 && (
@@ -305,7 +313,7 @@ const FallacyDetector = () => {
               </div>
 
               <div className="fallacies-list">
-                {result.fallacies.map((fallacy, index) => (
+                {fallacyResult.fallacies.map((fallacy, index) => (
                   <div key={index} className={`fallacy-detection severity-${getSeverityColor(fallacy.severity)}`}>
                     <div className="fallacy-detection-header">
                       <div className="fallacy-info">
@@ -390,7 +398,7 @@ const FallacyDetector = () => {
                 const report = {
                   text,
                   options,
-                  results: result,
+                  results: fallacyResult,
                   timestamp: new Date().toISOString()
                 };
                 navigator.clipboard.writeText(JSON.stringify(report, null, 2));
@@ -404,7 +412,7 @@ const FallacyDetector = () => {
                 const report = {
                   text,
                   options,
-                  results: result,
+                  results: fallacyResult,
                   timestamp: new Date().toISOString()
                 };
                 const blob = new Blob([JSON.stringify(report, null, 2)], 
