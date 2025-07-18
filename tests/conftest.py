@@ -351,6 +351,25 @@ def successful_simple_argument_analysis_fixture_path(tmp_path):
     file_path.write_text(json.dumps(data))
     return str(file_path)
 
+@pytest.fixture(scope="function")
+def page_with_console_logs(page: "Page"):
+    """
+    Wraps the Playwright page to automatically log console messages,
+    especially JS errors.
+    """
+    def handle_console_message(msg):
+        # Filtrer pour ne montrer que les messages pertinents (erreurs, warnings)
+        if msg.type.lower() in ['error', 'warning']:
+            print(f"\n[CONSOLE {msg.type.upper()}] {msg.text}")
+            # Si c'est une erreur, afficher la pile d'appels si disponible
+            if msg.location:
+                print(f"    at {msg.location['url']}:{msg.location['lineNumber']}:{msg.location['columnNumber']}")
+
+    page.on("console", handle_console_message)
+    yield page
+    # Le nettoyage se fait automatiquement à la fin du test
+    page.remove_listener("console", handle_console_message)
+
 
 # --- Gestion des Serveurs E2E ---
 

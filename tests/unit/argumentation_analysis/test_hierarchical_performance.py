@@ -24,7 +24,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 # Importer les composants de l'ancienne architecture
-from argumentation_analysis.orchestration.hierarchical.strategic.manager import StrategicManager as EnhancedPMAnalysisRunner
+from argumentation_analysis.orchestration.analysis_runner_v2 import AnalysisRunnerV2 as EnhancedPMAnalysisRunner
 from argumentation_analysis.core.strategies import BalancedParticipationStrategy as BalancedStrategy
 
 # Mocker HierarchicalOrchestrator car le fichier d'origine n'existe pas/plus

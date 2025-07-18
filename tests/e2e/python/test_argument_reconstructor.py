@@ -1,31 +1,31 @@
 import re
 import pytest
 import logging
-from playwright.async_api import Page, expect
+from playwright.sync_api import Page, expect
 
 logger = logging.getLogger(__name__)
 
 # Les fixtures frontend_url et backend_url sont injectées par l'orchestrateur de test.
 @pytest.mark.e2e
 @pytest.mark.playwright
-@pytest.mark.asyncio
-async def test_argument_reconstruction_workflow(page: Page, frontend_url: str):
+def test_argument_reconstruction_workflow(page: Page, e2e_servers):
     """
     Test principal : reconstruction d'argument complet
     Valide le workflow de reconstruction avec détection automatique de prémisses/conclusion
     """
+    _, frontend_url = e2e_servers
     logger.info("--- DEBUT test_argument_reconstruction_workflow ---")
     
     # 1. Navigation et attente API connectée
     logger.info("Étape 1: Navigation vers le frontend et attente de la connexion API.")
     page.goto(frontend_url, wait_until='networkidle')
-    page.locator('.api-status.connected').wait_for(state='visible', timeout=15000)
+    expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     logger.info("Connexion API confirmée.")
     
     # 2. Activation de l'onglet Reconstructeur
     logger.info("Étape 2: Activation de l'onglet Reconstructeur.")
     reconstructor_tab = page.locator('[data-testid="reconstructor-tab"]')
-    assert reconstructor_tab.is_enabled()
+    expect(reconstructor_tab).to_be_enabled()
     reconstructor_tab.click()
     logger.info("Onglet Reconstructeur cliqué.")
     
@@ -40,44 +40,44 @@ async def test_argument_reconstruction_workflow(page: Page, frontend_url: str):
     Tous les hommes sont mortels. Socrate est un homme.
     Donc Socrate est mortel.
     """
-    text_input.wait_for(state='visible')
+    expect(text_input).to_be_visible()
     text_input.fill(argument_text)
     logger.info("Texte saisi.")
     
     # 5. Soumission du formulaire
     logger.info("Étape 5: Soumission du formulaire de reconstruction.")
-    assert submit_button.is_enabled()
+    expect(submit_button).to_be_enabled()
     submit_button.click()
     logger.info("Bouton de soumission cliqué.")
     
     # 6. Attente des résultats de reconstruction
     logger.info("Étape 6: Attente de l'affichage du conteneur de résultats...")
-    results_container.wait_for(state='visible', timeout=20000) # Timeout augmenté pour les traitements longs
+    expect(results_container).to_be_visible(timeout=20000) # Timeout augmenté pour les traitements longs
     
     # 7. Vérification des sections principales
-    assert "Résultats de la Reconstruction" in results_container.inner_text()
-    assert "Prémisses" in results_container.inner_text()
-    assert "Conclusion" in results_container.inner_text()
+    expect(results_container).to_contain_text("Résultats de la Reconstruction")
+    expect(results_container).to_contain_text("Prémisses")
+    expect(results_container).to_contain_text("Conclusion")
     
     # 8. Vérification contenu des prémisses - structure attendue de l'API
-    assert "Prémisse 1" in results_container.inner_text()
-    assert "Tous les hommes sont mortels" in results_container.inner_text()
-    assert "Socrate est un homme" in results_container.inner_text()
+    expect(results_container).to_contain_text("Prémisse 1")
+    expect(results_container).to_contain_text("Tous les hommes sont mortels")
+    expect(results_container).to_contain_text("Socrate est un homme")
     
     # 9. Vérification de la conclusion
-    assert "Socrate est mortel" in results_container.inner_text()
+    expect(results_container).to_contain_text("Socrate est mortel")
 
 @pytest.mark.e2e
 @pytest.mark.playwright
-@pytest.mark.asyncio
-async def test_reconstructor_basic_functionality(page: Page, frontend_url: str):
+def test_reconstructor_basic_functionality(page: Page, e2e_servers):
     """
     Test fonctionnalité de base du reconstructeur
     Vérifie qu'un deuxième argument peut être analysé correctement
     """
+    _, frontend_url = e2e_servers
     # 1. Navigation et activation onglet
     page.goto(frontend_url, wait_until='networkidle')
-    page.locator('.api-status.connected').wait_for(state='visible', timeout=15000)
+    expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     reconstructor_tab = page.locator('[data-testid="reconstructor-tab"]')
     reconstructor_tab.click()
@@ -93,24 +93,24 @@ async def test_reconstructor_basic_functionality(page: Page, frontend_url: str):
     submit_button.click()
     
     # 4. Attente des résultats
-    results_container.wait_for(state='visible', timeout=10000)
+    expect(results_container).to_be_visible(timeout=10000)
     
     # 5. Vérification contenu basique
-    assert "Résultats de la Reconstruction" in results_container.inner_text()
-    assert "Prémisses" in results_container.inner_text()
-    assert "Conclusion" in results_container.inner_text()
+    expect(results_container).to_contain_text("Résultats de la Reconstruction")
+    expect(results_container).to_contain_text("Prémisses")
+    expect(results_container).to_contain_text("Conclusion")
 
 @pytest.mark.e2e
 @pytest.mark.playwright
-@pytest.mark.asyncio
-async def test_reconstructor_error_handling(page: Page, frontend_url: str):
+def test_reconstructor_error_handling(page: Page, e2e_servers):
     """
     Test gestion d'erreurs
     Vérifie le comportement avec un texte invalide ou sans structure argumentative claire
     """
+    _, frontend_url = e2e_servers
     # 1. Navigation et activation onglet
     page.goto(frontend_url, wait_until='networkidle')
-    page.locator('.api-status.connected').wait_for(state='visible', timeout=15000)
+    expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     reconstructor_tab = page.locator('[data-testid="reconstructor-tab"]')
     reconstructor_tab.click()
@@ -125,8 +125,8 @@ async def test_reconstructor_error_handling(page: Page, frontend_url: str):
     submit_button.click()
     
     # 4. Attente et vérification que l'analyse se fait quand même
-    results_container.wait_for(state='visible', timeout=10000)
-    assert "Résultats de la Reconstruction" in results_container.inner_text()
+    expect(results_container).to_be_visible(timeout=10000)
+    expect(results_container).to_contain_text("Résultats de la Reconstruction")
     
     # 5. Test avec texte sans structure argumentative claire
     text_input.clear()
@@ -134,22 +134,22 @@ async def test_reconstructor_error_handling(page: Page, frontend_url: str):
     submit_button.click()
     
     # 6. Vérification que l'analyse se fait quand même
-    results_container.wait_for(state='visible', timeout=10000)
-    assert "Résultats de la Reconstruction" in results_container.inner_text()
-    assert "Prémisses" in results_container.inner_text()
-    assert "Conclusion" in results_container.inner_text()
+    expect(results_container).to_be_visible(timeout=10000)
+    expect(results_container).to_contain_text("Résultats de la Reconstruction")
+    expect(results_container).to_contain_text("Prémisses")
+    expect(results_container).to_contain_text("Conclusion")
 
 @pytest.mark.e2e
 @pytest.mark.playwright
-@pytest.mark.asyncio
-async def test_reconstructor_reset_functionality(page: Page, frontend_url: str):
+def test_reconstructor_reset_functionality(page: Page, e2e_servers):
     """
     Test bouton de réinitialisation
     Vérifie que le reset nettoie complètement l'interface et revient à l'état initial
     """
+    _, frontend_url = e2e_servers
     # 1. Navigation et activation onglet
     page.goto(frontend_url, wait_until='networkidle')
-    page.locator('.api-status.connected').wait_for(state='visible', timeout=15000)
+    expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     reconstructor_tab = page.locator('[data-testid="reconstructor-tab"]')
     reconstructor_tab.click()
@@ -166,29 +166,29 @@ async def test_reconstructor_reset_functionality(page: Page, frontend_url: str):
     submit_button.click()
     
     # 4. Attendre les résultats
-    results_container.wait_for(state='visible', timeout=10000)
-    assert text_input.input_value() == test_text
+    expect(results_container).to_be_visible(timeout=10000)
+    expect(text_input).to_have_value(test_text)
     
     # 5. Clic sur le bouton reset
-    assert reset_button.is_enabled()
+    expect(reset_button).to_be_enabled()
     reset_button.click()
     
     # 6. Vérifications après reset
-    assert text_input.input_value() == ""
-    results_container.wait_for(state='hidden')
-    assert submit_button.is_enabled()
+    expect(text_input).to_have_value("")
+    expect(results_container).to_be_hidden()
+    expect(submit_button).to_be_enabled()
 
 @pytest.mark.e2e
 @pytest.mark.playwright
-@pytest.mark.asyncio
-async def test_reconstructor_content_persistence(page: Page, frontend_url: str):
+def test_reconstructor_content_persistence(page: Page, e2e_servers):
     """
     Test persistance du contenu
     Vérifie que le contenu reste affiché après reconstruction
     """
+    _, frontend_url = e2e_servers
     # 1. Navigation et activation onglet
     page.goto(frontend_url, wait_until='networkidle')
-    page.locator('.api-status.connected').wait_for(state='visible', timeout=15000)
+    expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
     
     reconstructor_tab = page.locator('[data-testid="reconstructor-tab"]')
     reconstructor_tab.click()
@@ -204,16 +204,16 @@ async def test_reconstructor_content_persistence(page: Page, frontend_url: str):
     submit_button.click()
     
     # 4. Attendre les résultats
-    results_container.wait_for(state='visible', timeout=10000)
+    expect(results_container).to_be_visible(timeout=10000)
     
     # 5. Vérifier que le texte d'entrée est conservé
-    assert text_input.input_value() == argument_text
+    expect(text_input).to_have_value(argument_text)
     
     # 6. Vérifier que les résultats sont toujours visibles
-    assert "Résultats de la Reconstruction" in results_container.inner_text()
-    assert "Prémisses" in results_container.inner_text()
-    assert "Conclusion" in results_container.inner_text()
+    expect(results_container).to_contain_text("Résultats de la Reconstruction")
+    expect(results_container).to_contain_text("Prémisses")
+    expect(results_container).to_contain_text("Conclusion")
     
     # 7. Vérifier que le bouton reste activé pour une nouvelle analyse
-    assert submit_button.is_enabled()
-    assert "Reconstruire" in submit_button.inner_text()
+    expect(submit_button).to_be_enabled()
+    expect(submit_button).to_contain_text("Reconstruire")

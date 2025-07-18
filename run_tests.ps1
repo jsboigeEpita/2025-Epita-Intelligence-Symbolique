@@ -94,6 +94,12 @@ if ($Type -eq "e2e") {
 else {
     Write-Host "[INFO] Lancement des tests de type '$Type' via Pytest..." -ForegroundColor Cyan
     
+    # Désactiver OpenTelemetry pour éviter les erreurs de connexion pendant les tests
+    $env:OTEL_SDK_DISABLED = "true"
+    $env:OTEL_METRICS_EXPORTER = "none"
+    $env:OTEL_TRACES_EXPORTER = "none"
+    Write-Host "[INFO] OpenTelemetry a été désactivé pour cette session de test." -ForegroundColor Yellow
+    
     $testPaths = @{
         "unit"       = "tests/unit"
         "functional" = "tests/functional"
