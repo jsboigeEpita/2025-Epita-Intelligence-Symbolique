@@ -14,8 +14,31 @@ param(
 )
 
 # --- Script Body ---
+# Le script délègue désormais entièrement la gestion de l'environnement à 'activate_project_env.ps1'
+# qui utilise 'conda run'. Toute initialisation manuelle est donc supprimée.
+
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = $PSScriptRoot
+
+# --- Chargement de l'environnement de test ---
+# Si un fichier .env.test existe, charge ses variables pour les tests E2E.
+# Cela permet de surcharger la configuration (ex: clés API) sans altérer les .env standards.
+$TestEnvFile = Join-Path $ProjectRoot ".env.test"
+if (Test-Path $TestEnvFile) {
+    Write-Host "[INFO] Fichier .env.test trouvé, chargement des variables..." -ForegroundColor Cyan
+    Get-Content $TestEnvFile | ForEach-Object {
+        $line = $_.Trim()
+        if ($line -and !$line.StartsWith("#")) {
+            $key, $value = $line -split '=', 2
+            if ($key -and $value) {
+                # Supprime les guillemets autour de la valeur, s'ils existent
+                $value = $value -replace '^"|"$'
+                [System.Environment]::SetEnvironmentVariable($key.Trim(), $value.Trim())
+                Write-Host "  - Variable '$($key.Trim())' chargée." -ForegroundColor Gray
+            }
+        }
+    }
+}
 $ActivationScript = Join-Path $ProjectRoot "activate_project_env.ps1"
 $TestRunnerScript = Join-Path $ProjectRoot "project_core/test_runner.py"
 
@@ -31,8 +54,13 @@ if (-not (Test-Path $TestRunnerScript)) {
 
 # La logique Playwright reste en PowerShell car elle appelle 'npx'
 if ($Type -eq 'e2e') {
+    # On définit une variable d'environnement pour que les sous-scripts sachent
+    # qu'on est en mode test E2E et puissent adapter leur comportement (ex: désactiver
+    # certaines vérifications d'environnement strictes).
+    $env:E2E_TESTING_MODE = "1"
+
     Write-Host "[INFO] Lancement des tests E2E (Playwright)..." -ForegroundColor Cyan
-    $commandParts = @("npx", "playwright", "test", "-c", "tests/e2e/playwright.config.js")
+    $commandParts = @("python", "-m", "project_core.test_runner", "--type", "e2e")
     if ($PSBoundParameters.ContainsKey('Browser')) {
         $commandParts += "--project", $Browser
     }

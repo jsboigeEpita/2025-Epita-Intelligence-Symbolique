@@ -36,13 +36,14 @@ from argumentation_analysis.services.web_api.services.fallacy_service import Fal
 from argumentation_analysis.services.web_api.services.framework_service import FrameworkService
 from argumentation_analysis.services.web_api.services.logic_service import LogicService
 from argumentation_analysis.core.bootstrap import initialize_project_environment
+from argumentation_analysis.config.settings import settings
 
 class AppServices:
     """Conteneur pour les instances de service."""
     def __init__(self):
         logger.info("Initializing app services container...")
         self.logic_service = LogicService()
-        self.analysis_service = AnalysisService()
+        self.analysis_service = AnalysisService(settings=settings)
         self.validation_service = ValidationService(self.logic_service)
         self.fallacy_service = FallacyService()
         self.framework_service = FrameworkService()

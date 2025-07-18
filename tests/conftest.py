@@ -65,11 +65,21 @@ def pytest_configure(config):
         print("\n[INFO] Dotenv mocking is DISABLED. Real .env file will be used.")
 
         project_dir = Path(__file__).parent.parent
+        # Hiérarchie de chargement: .env.test > .env
+        dotenv_test_path = project_dir / '.env.test'
         dotenv_path = project_dir / '.env'
-        if dotenv_path.exists():
+
+        if dotenv_test_path.exists():
+            print(f"[INFO] Loading .env.test file from: {dotenv_test_path}")
+            env_vars = dotenv_values(dotenv_path=dotenv_test_path)
+        elif dotenv_path.exists():
             print(f"[INFO] Loading .env file from: {dotenv_path}")
-            
             env_vars = dotenv_values(dotenv_path=dotenv_path)
+        else:
+            env_vars = {}
+            print("[INFO] No .env or .env.test file found.")
+
+        if env_vars:
             
             if not env_vars:
                 print(f"[WARNING] .env file found at '{dotenv_path}' but it seems to be empty.")
@@ -77,13 +87,13 @@ def pytest_configure(config):
 
             updated_vars = 0
             for key, value in env_vars.items():
-                if key not in os.environ and value is not None:
+                if value is not None:
+                    if key in os.environ:
+                        print(f"[INFO] Overriding existing environment variable '{key}'.")
                     os.environ[key] = value
                     updated_vars += 1
-                elif value is None:
-                    print(f"[WARNING] Skipping .env variable '{key}' because its value is None.")
                 else:
-                    print(f"[INFO] Skipping .env variable '{key}' because it's already set in the environment.")
+                    print(f"[WARNING] Skipping .env variable '{key}' because its value is None.")
             
             print(f"[INFO] Loaded {updated_vars} variables from .env into os.environ.")
             

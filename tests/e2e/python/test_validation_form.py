@@ -15,7 +15,13 @@ class TestValidationForm:
         page.goto(frontend_url, wait_until="networkidle")
         expect(page).to_have_title("Argumentation Analysis App", timeout=10000)
         
-        # Étape 2: Attente de la connexion API backend
+        # Étape 2: Attente de la connexion API backend.
+        # Le test vérifie que l'indicateur de statut a la bonne couleur de fond (vert),
+        # ce qui est un indicateur fiable que le JS de statut a bien fonctionné.
+        status_indicator = page.locator('.status-indicator')
+        expect(status_indicator).to_be_visible(timeout=10000)
+        # La couleur du statut n'est pas directement sur cet élément dans la version React.
+        # Nous allons donc attendre le conteneur parent qui a la classe 'connected'.
         expect(page.locator('.api-status.connected')).to_be_visible(timeout=20000)
         
         # Étape 3: Clic sur l'onglet et attente de l'affichage du contenu

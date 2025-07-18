@@ -15,9 +15,6 @@ from semantic_kernel.connectors.ai.chat_completion_client_base import ChatComple
 from argumentation_analysis.core.utils.network_utils import get_resilient_async_client
 from argumentation_analysis.config.settings import settings
 
-# Charger les variables d'environnement depuis le fichier .env
-load_dotenv(override=True)
-
 # Logger pour ce module
 logger = logging.getLogger("Orchestration.LLM")
 if not logger.handlers and not logger.propagate:

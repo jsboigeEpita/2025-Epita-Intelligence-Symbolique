@@ -137,17 +137,15 @@ def get_dung_analysis_service() -> DungAnalysisService:
         logging.info("[API] Initialisation du DungAnalysisService...")
         import jpype
         import jpype.imports
-        from argumentation_analysis.orchestration.jpype_manager import JPypeManager
+        # La gestion de la JVM est maintenant centralisée dans jvm_setup.
+        # Il suffit de s'assurer qu'elle est initialisée.
+        from argumentation_analysis.core import jvm_setup
         
-        if not jpype.isJVMStarted():
-            # Instance du manager pour la configuration centralisée
-            jpype_manager = JPypeManager()
-            
-            # Définir le chemin vers les fichiers JAR
-            jpype_manager.set_jars_path('libs/tweety')
-            
-            # Lancer la JVM avec la configuration du manager
-            jpype_manager.start_jvm()
+        if not jvm_setup.is_jvm_started():
+            if not jvm_setup.initialize_jvm():
+                # Lever une exception si l'initialisation échoue,
+                # pour que l'erreur soit claire dans les logs.
+                raise RuntimeError("Échec critique de l'initialisation de la JVM pour DungAnalysisService.")
 
         _global_dung_service = DungAnalysisService()
         logging.info("[API] DungAnalysisService initialisé avec succès.")
