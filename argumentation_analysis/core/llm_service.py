@@ -4,16 +4,19 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
-from typing import Union, AsyncGenerator # Ajout de AsyncGenerator
-import httpx 
-from openai import AsyncOpenAI  
+from typing import Union, AsyncGenerator, List
+import httpx
+from openai import AsyncOpenAI
 import json
 import asyncio
 from semantic_kernel.contents.chat_history import ChatHistory
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
+# Tentative de correction en supprimant l'import qui échoue
+# from semantic_kernel.contents.tool_call_content import ToolCallContent
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
 from argumentation_analysis.core.utils.network_utils import get_resilient_async_client
 from argumentation_analysis.config.settings import settings
+from tests.mocks.llm_service_mocks import MockChatCompletion
 
 # Charger les variables d'environnement depuis le fichier .env
 load_dotenv(override=True)
@@ -28,110 +31,52 @@ if not logger.handlers and not logger.propagate:
     logger.setLevel(logging.INFO)
 logger.info("<<<<< MODULE llm_service.py LOADED >>>>>")
 
-# Les classes MockFunctionCall et MockToolCall ne sont plus nécessaires avec la nouvelle simulation
-# class MockFunctionCall: ...
-# class MockToolCall: ...
-
-class MockChatCompletion(ChatCompletionClientBase):
-    """
-    Service de complétion de chat mocké qui simule une réponse en streaming
-    contenant un appel d'outil (tool_call).
-    """
-    async def get_chat_message_contents(
-        self,
-        chat_history: ChatHistory,
-        **kwargs,
-    ) -> AsyncGenerator[ChatMessageContent, None]:
-        """
-        Retourne une réponse mockée sous forme de générateur asynchrone, 
-        simulant un appel d'outil (tool_call) en streaming.
-        """
-        logger.warning(f"--- ADVANCED MOCK LLM SERVICE USED (service_id: {self.service_id}, simulating tool_call stream) ---")
-
-        # 1. Définir le payload de la réponse que l'outil est censé retourner
-        mock_tool_arguments = {
-            "analysis_id": "mock-analysis-123",
-            "fallacies": [],
-            "is_argument_valid": True,
-            "overall_assessment": "L'argument est valide, clair et bien structuré.",
-            "confidence_score": 0.99
-        }
-        
-        # 2. Simuler le format de réponse brute du LLM pour un appel d'outil en streaming.
-        # Le SDK de Semantic Kernel s'attend à recevoir une chaîne JSON représentant une liste
-        # d'appels d'outils.
-        tool_call_payload = [{
-            "type": "function",
-            "function": {
-                "name": "submit_fallacy_analysis",
-                 # Les arguments doivent être une chaîne JSON sérialisée
-                "arguments": json.dumps(mock_tool_arguments)
-            }
-        }]
-        
-        # Le contenu du message streamé est la sérialisation de la structure ci-dessus.
-        # Souvent, les LLMs l'enveloppent dans un bloc de code.
-        content_str = f"```json\n{json.dumps(tool_call_payload, indent=2)}\n```"
-
-        # 3. Créer le message (le "chunk") qui sera streamé.
-        response_chunk = ChatMessageContent(
-            role="assistant",
-            content=content_str
-        )
-        
-        # Simuler une latence réseau
-        await asyncio.sleep(0.05)
-        
-        # 4. Yield le chunk pour simuler le stream. Le générateur se termine après ce yield.
-        yield response_chunk
-
 # La signature de la fonction est conservée pour la compatibilité, mais on utilise create_llm_service
 # pour la logique principale.
-@staticmethod
 def create_llm_service(
     service_id: str,
     model_id: str,
     service_type: str = "OpenAIChatCompletion",
-    **kwargs,
-) -> "LLMService":
+    force_mock: bool = False,
+    force_authentic: bool = False,
+) -> Union[OpenAIChatCompletion, AzureChatCompletion, MockChatCompletion]:
     """
     Factory pour créer et configurer une instance de service de complétion de chat.
 
     Cette fonction lit la configuration à partir des variables d'environnement
     pour déterminer quel service instancier (OpenAI standard ou Azure OpenAI).
-    Elle peut également forcer la création d'un service mocké pour les tests.
+    Elle peut également forcer la création d'un service mocké ou authentique
+    pour les tests.
 
     Args:
-        service_id (str): L'ID de service à utiliser pour l'instance dans
-                          le kernel Semantic Kernel.
-        model_id (str): L'ID du modèle à utiliser (ex: "gpt-4-turbo").
-        service_type (str): Le type de service à créer. Actuellement, seul
-                            "OpenAIChatCompletion" est entièrement géré
-                            pour la connexion à l'API OpenAI officielle.
-        force_mock (bool): Si True, retourne une instance de `MockChatCompletion`
-                           ignorant la configuration.
-        force_authentic (bool): Si True, force la création d'un service authentique
-                                même dans un environnement de test.
+        service_id (str): L'ID de service à utiliser pour l'instance Semantic Kernel.
+        model_id (str): L'ID du modèle à utiliser (ex: "gpt-4o-mini").
+        service_type (str): Le type de service (par défaut "OpenAIChatCompletion").
+        force_mock (bool): Si True, force un service mocké.
+        force_authentic (bool): Si True, force un service authentique.
 
     Returns:
-        Union[OpenAIChatCompletion, AzureChatCompletion, MockChatCompletion]:
-            Une instance configurée du service de chat.
+        Instance configurée du service de chat.
 
     Raises:
-        ValueError: Si la configuration requise (ex: OPENAI_API_KEY) est manquante.
+        ValueError: Si la configuration requise est manquante.
         RuntimeError: Si la création du service échoue.
     """
     logger.critical("<<<<< create_llm_service FUNCTION CALLED >>>>>")
     logger.info(f"--- Configuration du Service LLM ({service_id}) ---")
 
-    # Logique de mock pour les tests
+    # Logique de mock/authenticité pour les tests
     is_test_environment = 'PYTEST_CURRENT_TEST' in os.environ
-    force_real_llm_in_test = os.environ.get("FORCE_REAL_LLM_IN_TEST", "false").lower() == "true"
-    
-    if is_test_environment and not force_real_llm_in_test and kwargs.get('force_mock', False):
-        logger.warning("Environnement de test détecté. Création d'un service LLM mocké.")
+
+    if force_mock:
+        logger.warning("Création forcée d'un service LLM MOCKÉ.")
+        return MockChatCompletion(service_id=service_id, ai_model_id="mock_model")
+        
+    if is_test_environment and not force_authentic:
+        logger.warning("Environnement de test détecté sans forçage. Création d'un service LLM MOCKÉ.")
         return MockChatCompletion(service_id=service_id, ai_model_id="mock_model")
 
+    logger.info("Tentative de création d'un service LLM AUTHENTIQUE...")
     # Récupération directe depuis l'environnement
     api_key = os.environ.get("OPENAI_API_KEY")
     org_id = os.environ.get("OPENAI_ORG_ID")

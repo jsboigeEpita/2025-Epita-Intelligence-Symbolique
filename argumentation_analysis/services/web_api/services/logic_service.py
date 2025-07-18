@@ -17,7 +17,8 @@ import uuid
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 
-from semantic_kernel import Kernel # Déjà présent, pas de changement nécessaire
+from semantic_kernel import Kernel
+from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
 
 from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
 from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
@@ -37,19 +38,18 @@ from ..models.response_models import (
 class LogicService:
     """Service pour les opérations logiques."""
     
-    def __init__(self):
+    def __init__(self, llm_service: ChatCompletionClientBase):
         """Initialisation du service."""
         self.logger = logging.getLogger("WebAPI.LogicService")
         self.logger.info("Initialisation du service LogicService")
         
-        # Initialisation du kernel et du service LLM
+        # Initialisation du kernel et injection du service LLM
         self.kernel = Kernel()
-        try:
-            llm_service = create_llm_service(service_id="default_logic_llm", model_id="gpt-4o-mini")
+        if llm_service:
             self.kernel.add_service(llm_service)
-            self.logger.info("Service LLM 'default_logic_llm' créé et ajouté au kernel pour LogicService.")
-        except Exception as e:
-            self.logger.error(f"Erreur lors de la création du service LLM pour LogicService: {e}")
+            self.logger.info(f"Service LLM '{llm_service.service_id}' injecté dans le kernel pour LogicService.")
+        else:
+            self.logger.warning("Aucun service LLM n'a été fourni à LogicService.")
         
         # Initialisation de l'exécuteur de requêtes
         self.query_executor = QueryExecutor()
@@ -84,6 +84,8 @@ class LogicService:
         Returns:
             Une réponse contenant l'ensemble de croyances créé
         """
+        self.logger.info(f"--- ENTERING LogicService.text_to_belief_set ---")
+        self.logger.debug(f"Request details: {request}")
         self.logger.info(f"Conversion de texte en ensemble de croyances de type '{request.logic_type}'")
         start_time = time.time()
         

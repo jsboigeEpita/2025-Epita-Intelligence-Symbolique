@@ -79,11 +79,6 @@ class LogicAgentFactory:
             if llm_service and hasattr(llm_service, 'service_id'):
                 agent_args["service_id"] = llm_service.service_id
 
-            # FOLLogicAgent a une signature de constructeur différente et nécessite l'injection de TweetyBridge
-            if logic_type == "first_order":
-                from .tweety_bridge import TweetyBridge
-                agent_args["tweety_bridge"] = TweetyBridge()
-
             # Créer l'agent avec les arguments
             agent = agent_class(**agent_args)
             

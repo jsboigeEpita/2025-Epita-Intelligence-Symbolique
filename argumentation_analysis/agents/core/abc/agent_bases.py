@@ -276,6 +276,22 @@ class BaseLogicAgent(BaseAgent, ABC):
             raise RuntimeError("TweetyBridge not initialized. Call setup_agent_components or ensure it's injected.")
         return self._tweety_bridge
 
+    def setup_agent_components(self, llm_service_id: Optional[str] = None) -> None:
+        """
+        Configure les composants spécifiques de l'agent, comme les fonctions sémantiques.
+
+        Cette méthode peut être surchargée par les classes filles pour des configurations
+        plus complexes. Par défaut, elle s'assure que l'ID du service LLM est défini.
+
+        Args:
+            llm_service_id (Optional[str]): L'ID du service LLM à utiliser.
+        """
+        if llm_service_id:
+            self._llm_service_id = llm_service_id
+            self.logger.info(f"Composants de l'agent configurés pour utiliser le service LLM: {llm_service_id}")
+        else:
+            self.logger.info("Aucun service LLM spécifique fourni pour la configuration des composants.")
+
     @abstractmethod
     def text_to_belief_set(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[Optional["BeliefSet"], str]:
         """

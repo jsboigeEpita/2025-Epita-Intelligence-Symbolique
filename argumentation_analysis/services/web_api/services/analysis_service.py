@@ -10,11 +10,14 @@ import asyncio
 import inspect
 from typing import Dict, List, Any, Optional
 import semantic_kernel as sk
+from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
 # Imports du moteur d'analyse (style b282af4 avec gestion d'erreur)
 try:
+    from argumentation_analysis.config.settings import AppSettings
     from argumentation_analysis.agents.factory import AgentFactory, AgentType
+    from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
     from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer
     from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
     from argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator import FallacySeverityEvaluator
@@ -73,13 +76,13 @@ class AnalysisService:
     l'analyse de structure et l'évaluation de cohérence.
     """
     
-    def __init__(self):
+    def __init__(self, llm_service: ChatCompletionClientBase):
         """Initialise le service d'analyse."""
         self.logger = logger
         self.is_initialized = False
-        self._initialize_components()
+        self._initialize_components(llm_service)
     
-    def _initialize_components(self) -> None:
+    def _initialize_components(self, llm_service: ChatCompletionClientBase) -> None:
         """Initialise les composants d'analyse internes du service.
 
         Tente d'instancier `ComplexFallacyAnalyzer`, `ContextualFallacyAnalyzer`,
@@ -142,13 +145,12 @@ class AnalysisService:
                 else:
                     # Création du kernel et ajout du service LLM
                     kernel = sk.Kernel()
-                    llm_service_instance = None # Renommé pour éviter conflit avec variable globale potentielle
-                    try:
-                        llm_service_instance = create_llm_service(service_id="default_analysis_llm", model_id="gpt-4o-mini")
+                    llm_service_instance = llm_service # Utiliser le service injecté
+                    if llm_service_instance:
                         kernel.add_service(llm_service_instance)
-                        self.logger.info("[OK] LLM service created and added to kernel for AgentFactory")
-                    except Exception as llm_e:
-                        self.logger.error(f"[ERROR] Failed to create LLM service for AgentFactory: {llm_e}")
+                        self.logger.info(f"[OK] LLM service '{llm_service_instance.service_id}' injecté dans le kernel pour AgentFactory")
+                    else:
+                        self.logger.error("[ERROR] Aucun service LLM n'a été fourni à AnalysisService.")
 
                     taxonomy_path_instance = None # Renommé
                     try:
@@ -159,12 +161,14 @@ class AnalysisService:
                     
                     if kernel and llm_service_instance:
                         try:
-                            from argumentation_analysis.config.settings import AppSettings
-                            settings = AppSettings()
-                            settings.service_manager.default_llm_service_id = "default_analysis_llm"
-                            factory = AgentFactory(kernel=kernel, settings=settings)
-                            self.informal_agent = factory.create_informal_fallacy_agent(
-                                config_name="full"
+                            # Créer une instance de settings par défaut pour la factory
+                            app_settings = AppSettings()
+                            factory = AgentFactory(kernel=kernel, settings=app_settings)
+                            
+                            # Utiliser la méthode générique pour créer l'agent
+                            self.informal_agent = factory.create_agent(
+                                agent_class=InformalAnalysisAgent,
+                                agent_name="InformalAnalysisAgent"
                             )
                             self.logger.info("[OK] InformalAgent created and configured successfully via AgentFactory.")
                         except Exception as factory_e:
@@ -329,53 +333,61 @@ class AnalysisService:
                     if inspect.isasyncgen(agent_response):
                         self.logger.info("Consuming agent response as an async generator (streaming).")
                         
-                        # Agréger le contenu de tous les chunks streamés
-                        full_response_str = "".join([chunk.content async for chunk in agent_response if chunk.content])
-                        self.logger.debug(f"Aggregated stream content: '''{full_response_str}'''")
+                        # Boucle de consommation du stream, gérant à la fois le contenu textuel et les tool_calls.
+                        content_parts = []
+                        async for message_content_list in agent_response:
+                            for chunk in message_content_list:
+                                # Cas 1: Le chunk contient un tool_call (cas du mock et de certains LLMs)
+                                if hasattr(chunk, 'tool_calls') and chunk.tool_calls:
+                                    self.logger.info("Tool call detected in stream chunk.")
+                                    tool_call = chunk.tool_calls[0]
+                                    
+                                    # Gérer les deux formats possibles: objet ou dictionnaire
+                                    if hasattr(tool_call, 'function') and hasattr(tool_call.function, 'arguments'):
+                                        # Cas d'un objet avec des attributs
+                                        arguments_str = tool_call.function.arguments
+                                    elif isinstance(tool_call, dict) and 'function' in tool_call and 'arguments' in tool_call['function']:
+                                        # Cas d'un dictionnaire
+                                        arguments_str = tool_call['function']['arguments']
+                                    else:
+                                        self.logger.warning(f"Could not extract arguments from tool_call: {tool_call}")
+                                        continue
 
-                        # Les LLMs enveloppent souvent le JSON dans des blocs de code.
-                        if full_response_str.strip().startswith("```") and full_response_str.strip().endswith("```"):
-                             # Extraire le JSON du bloc de code (ex: ```json ... ```)
-                            json_str = full_response_str.strip()
-                            if json_str.startswith("```json"):
-                                json_str = json_str[7:]
-                            elif json_str.startswith("```"):
-                                json_str = json_str[3:]
+                                    # Les arguments devraient être une chaîne JSON
+                                    if isinstance(arguments_str, str):
+                                        result = json.loads(arguments_str)
+                                        # On a trouvé ce qu'on cherchait, on peut sortir
+                                        break
+                                
+                                # Cas 2: Le chunk est du contenu textuel (cas standard du streaming)
+                                if hasattr(chunk, 'content') and chunk.content:
+                                    content_parts.append(str(chunk.content))
                             
-                            if json_str.endswith("```"):
-                                 json_str = json_str[:-3]
-                            
-                            full_response_str = json_str.strip()
-                            self.logger.debug(f"Extracted JSON from markdown block: '''{full_response_str}'''")
+                            if result:
+                                break # Sortir de la boucle principale si on a le résultat
 
-                        # Parser le contenu agrégé qui devrait être la représentation JSON d'un tool_call
-                        tool_calls_data = json.loads(full_response_str)
-                        
-                        # Extraire les arguments du premier appel d'outil
-                        if isinstance(tool_calls_data, list) and tool_calls_data:
-                            first_tool_call = tool_calls_data[0]
-                            if 'function' in first_tool_call and 'arguments' in first_tool_call['function']:
-                                # Les arguments sont eux-mêmes une chaîne JSON à parser
-                                result = json.loads(first_tool_call['function']['arguments'])
-                            else:
-                                self.logger.warning(f"Unexpected tool_call format in stream: {first_tool_call}")
-                        else:
-                            self.logger.warning(f"Unexpected data format in stream: {tool_calls_data}")
-                            
-                    else:  # Cas du mock qui retourne directement un awaitable
-                        self.logger.info("Consuming agent response as a direct awaitable (non-streaming).")
+                        # Traitement post-boucle si on n'a eu que du texte
+                        if not result and content_parts:
+                            full_response_str = "".join(content_parts)
+                            self.logger.debug(f"Aggregated stream content: '''{full_response_str}'''")
+                            # Ici, on pourrait essayer de parser full_response_str si on s'attend à du JSON
+                            try:
+                                result = json.loads(full_response_str)
+                            except json.JSONDecodeError:
+                                self.logger.warning("Aggregated stream content is not valid JSON.")
+
+                    else:  # Cas du non-streamable (ne devrait plus arriver avec le mock corrigé)
+                        self.logger.warning("Consuming agent response as a direct awaitable (non-streaming fallback).")
                         response_content = await agent_response
-                        self.logger.debug(f"Direct awaitable response from agent: {response_content}")
-
-                        # Le mock retourne une liste, on prend le premier élément
                         final_message = response_content[0] if isinstance(response_content, list) and response_content else response_content
-                        
                         if isinstance(final_message, ChatMessageContent) and final_message.tool_calls:
                             tool_call = final_message.tool_calls[0]
-                            # Dans le mock, 'arguments' est déjà un dictionnaire, pas une chaîne JSON.
-                            result = tool_call.function.arguments if hasattr(tool_call.function, 'arguments') else None
-                        else:
-                            self.logger.warning(f"Unexpected non-streamed response format: {final_message}")
+                            if hasattr(tool_call, 'function'):
+                                result = tool_call.function.arguments
+                            elif isinstance(tool_call, dict) and 'function' in tool_call:
+                                result = json.loads(tool_call['function']['arguments'])
+                            else:
+                                result = None
 
                 except json.JSONDecodeError as e:
                     self.logger.error(f"Failed to decode JSON from agent. Raw response: '''{full_response_str}'''. Error: {e}")
@@ -409,7 +421,7 @@ class AnalysisService:
                     for fallacy_data in result:
                         fallacy = FallacyDetection(
                             type=fallacy_data.get('type', 'contextual'),
-                            name=fallacy_data.get('name', 'Sophisme contextuel'),
+                            name=fallacy_data.get('fallacy_type', 'Sophisme contextuel non identifié'),
                             description=fallacy_data.get('description', ''),
                             severity=fallacy_data.get('severity', 0.5),
                             confidence=fallacy_data.get('confidence', 0.5),
