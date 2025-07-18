@@ -433,7 +433,8 @@ def e2e_servers(request):
             sys.executable, "-m", "uvicorn",
             "argumentation_analysis.services.web_api.app:app",
             "--host", "0.0.0.0",
-            "--port", "5003"
+            "--port", "5003",
+            "--log-level", "debug"
         ]
         
         logger.info(f"Running backend command: {' '.join(backend_cmd)}")

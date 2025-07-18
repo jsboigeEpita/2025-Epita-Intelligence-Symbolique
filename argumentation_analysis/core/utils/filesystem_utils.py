@@ -6,7 +6,7 @@ Utilitaires pour les opérations sur le système de fichiers.
 import logging
 import os # Conservé pour os.path.exists si préféré à Path.exists() pour une raison
 from pathlib import Path
-from typing import List, Tuple, Union, Iterable # Ajout de Union et Iterable
+from typing import List, Tuple, Union, Iterable, Optional # Ajout de Union et Iterable
 
 logger = logging.getLogger(__name__)
 
