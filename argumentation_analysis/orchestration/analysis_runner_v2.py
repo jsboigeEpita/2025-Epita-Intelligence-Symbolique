@@ -333,7 +333,11 @@ if __name__ == "__main__":
         # ou via le fichier de configuration chargé par `settings`.
         from argumentation_analysis.core.llm_service import create_llm_service
         
-        cli_llm_service = create_llm_service()
+        # Fournir les arguments requis pour le service LLM
+        cli_llm_service = create_llm_service(
+            service_id="default",
+            model_id="gpt-4-turbo-2024-04-09"
+        )
         
         # Exécution de l'analyse
         analysis_result = asyncio.run(run_analysis_v2(

@@ -71,12 +71,22 @@ def _perform_tweety_analysis(text: str, project_context) -> Dict:
     arguments = kb.getArguments()
     arguments_list = [str(arg) for arg in arguments]
 
+    # Logique de séparation simple pour correspondre au frontend
+    premises = []
+    conclusion = ""
+    if arguments_list:
+        premises = arguments_list[:-1]
+        conclusion = arguments_list[-1]
+
     return {
-        "argument_structure": {"arguments": arguments_list},
-        "summary": f"{len(arguments_list)} arguments extraits avec succès.",
+        "argument_structure": {
+            "premises": premises,
+            "conclusion": conclusion
+        },
+        "summary": f"{len(premises)} prémisses et 1 conclusion extraites.",
         "suggestions": ["Analyser chaque argument individuellement."],
         "fallacies": [],
-        "components_used": ["TweetyArgumentReconstructor_centralized"],
+        "components_used": ["TweetyArgumentReconstructor_centralized_v2"],
     }
 
 def _build_response_payload(analysis_result: Dict) -> Dict:

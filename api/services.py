@@ -173,12 +173,17 @@ class DungAnalysisService:
     def _get_all_arguments_status(self, arg_names: list[str], preferred_ext: list, grounded_ext: list, stable_ext: list) -> dict:
         # NOTE: Assurer la présence des statuts grounded et stable.
         all_status = {}
+        # Convertir les extensions en listes de chaînes une seule fois pour l'efficacité
+        preferred_ext_str = [[str(arg) for arg in ext] for ext in preferred_ext]
+        grounded_ext_str = [str(arg) for arg in grounded_ext]
+        stable_ext_str = [[str(arg) for arg in ext] for ext in stable_ext]
+
         for name in arg_names:
             all_status[name] = {
-                'credulously_accepted': any(name in ext for ext in preferred_ext),
-                'skeptically_accepted': all(name in ext for ext in preferred_ext) if preferred_ext else False,
-                'grounded_accepted': name in grounded_ext,
-                'stable_accepted': all(name in ext for ext in stable_ext) if stable_ext else False,
+                'credulously_accepted': any(name in ext for ext in preferred_ext_str),
+                'skeptically_accepted': all(name in ext for ext in preferred_ext_str) if preferred_ext_str else False,
+                'grounded_accepted': name in grounded_ext_str,
+                'stable_accepted': all(name in ext for ext in stable_ext_str) if stable_ext_str else False,
             }
         return all_status
     
@@ -193,7 +198,8 @@ class DungAnalysisService:
         G.add_nodes_from(nodes)
         G.add_edges_from(attacks)
         
-        cycles = [list(map(str, c)) for c in nx.simple_cycles(G)]
+        # Les cycles retournés par simple_cycles sont déjà des listes de nœuds (str), pas besoin de map
+        cycles = [c for c in nx.simple_cycles(G)]
         self_attacking = [str(a.getAttacker().getName()) for a in agent.af.getAttacks() if a.getAttacker() == a.getAttacked()]
 
         return {

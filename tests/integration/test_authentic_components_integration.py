@@ -24,28 +24,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 
-<<<<<<< HEAD
-class TestRealGPT4oMiniIntegration:
-    def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-        
-    def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-4o-mini."""
-        try:
-            kernel = self._create_authentic_gpt4o_mini_instance()
-            result = asyncio.run(kernel.invoke("chat", input=prompt))
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-=======
 async def _create_authentic_gpt4o_mini_instance():
     """Crée une instance authentique de gpt-4o-mini au lieu d'un mock."""
     config = UnifiedConfig()
     return config.get_kernel_with_gpt4o_mini()
->>>>>>> 134c72c951b22f666f583863586dd4c235b83303
 
 async def _make_authentic_llm_call(prompt: str) -> str:
     """Fait un appel authentique à gpt-4o-mini."""
@@ -70,11 +52,7 @@ class TestRealGPT4oMiniIntegration:
         try:
             from argumentation_analysis.core.llm_service import create_llm_service
             
-<<<<<<< HEAD
-            service = create_llm_service(model_id="test_model", service_id="test_service")
-=======
             service = create_llm_service(service_id="test_creation", model_id="gpt-4o-mini")
->>>>>>> 134c72c951b22f666f583863586dd4c235b83303
             
             assert service is not None
             # La nouvelle API de semantic-kernel utilise get_chat_message_contents
@@ -96,11 +74,7 @@ class TestRealGPT4oMiniIntegration:
             from semantic_kernel import Kernel
             
             # Créer service LLM réel
-<<<<<<< HEAD
-            llm_service = create_llm_service(model_id="gpt-4o-mini", service_id="test_service")
-=======
-            llm_service = create_llm_service(service_id="test_orchestration", model_id="gpt-4o-mini")
->>>>>>> 134c72c951b22f666f583863586dd4c235b83303
+            llm_service = create_llm_service(service_id="orchestration_service", model_id="gpt-4o-mini")
             
             # Créer un kernel et ajouter le service
             kernel = Kernel()
@@ -155,7 +129,7 @@ class TestRealTweetyIntegration:
     
     @pytest.mark.integration
     @pytest.mark.requires_tweety_jar
-    def test_real_tweety_modal_logic_analysis(self):
+    async def test_real_tweety_modal_logic_analysis(self):
         """Test d'analyse logique modale avec Tweety réel."""
         if not self._is_real_tweety_available():
             pytest.skip("Real Tweety not available")
@@ -164,11 +138,7 @@ class TestRealTweetyIntegration:
             from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent
             
             # Créer agent modal avec Tweety réel
-<<<<<<< HEAD
-            mock_kernel = self._create_authentic_gpt4o_mini_instance()
-=======
             mock_kernel = await _create_authentic_gpt4o_mini_instance()
->>>>>>> 134c72c951b22f666f583863586dd4c235b83303
             modal_agent = ModalLogicAgent(kernel=mock_kernel, use_real_tweety=True)
             
             # Test avec formules modales
@@ -188,7 +158,7 @@ class TestRealTweetyIntegration:
     
     @pytest.mark.integration
     @pytest.mark.requires_tweety_jar
-    def test_real_tweety_error_handling(self):
+    async def test_real_tweety_error_handling(self):
         """Test de gestion d'erreurs avec Tweety réel."""
         if not self._is_real_tweety_available():
             pytest.skip("Real Tweety not available")
@@ -197,11 +167,7 @@ class TestRealTweetyIntegration:
             from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent
             from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer
             
-<<<<<<< HEAD
-            modal_agent = ModalLogicAgent(kernel=self._create_authentic_gpt4o_mini_instance(), use_real_tweety=True)
-=======
             modal_agent = ModalLogicAgent(kernel=await _create_authentic_gpt4o_mini_instance(), use_real_tweety=True)
->>>>>>> 134c72c951b22f666f583863586dd4c235b83303
             error_analyzer = TweetyErrorAnalyzer()
             
             # Formule intentionnellement incorrecte
@@ -275,7 +241,7 @@ class TestCompleteTaxonomyIntegration:
             pytest.skip("Taxonomy manager not available")
     
     @pytest.mark.integration
-    def test_fallacy_analysis_with_complete_taxonomy(self):
+    async def test_fallacy_analysis_with_complete_taxonomy(self):
         """Test d'analyse de sophismes avec taxonomie complète."""
         try:
             from argumentation_analysis.agents.informal_agent import InformalAnalysisAgent
@@ -287,11 +253,7 @@ class TestCompleteTaxonomyIntegration:
             
             # Créer agent avec taxonomie complète
             agent = InformalAnalysisAgent(
-<<<<<<< HEAD
-                kernel=self._create_authentic_gpt4o_mini_instance(),
-=======
                 kernel=await _create_authentic_gpt4o_mini_instance(),
->>>>>>> 134c72c951b22f666f583863586dd4c235b83303
                 taxonomy=complete_taxonomy
             )
             
@@ -335,13 +297,9 @@ class TestUnifiedAuthenticComponentsIntegration:
             from argumentation_analysis.core.mock_elimination import TaxonomyManager
             
             # 1. Service LLM authentique
-<<<<<<< HEAD
-            llm_service = create_llm_service(model_id="gpt-4o-mini", service_id="auth_service")
+            llm_service = create_llm_service(service_id="test_full_pipeline", model_id="gpt-4o-mini")
             kernel = Kernel()
             kernel.add_service(llm_service)
-=======
-            llm_service = create_llm_service(service_id="test_full_pipeline", model_id="gpt-4o-mini")
->>>>>>> 134c72c951b22f666f583863586dd4c235b83303
             
             # 2. Taxonomie complète
             taxonomy_manager = TaxonomyManager()

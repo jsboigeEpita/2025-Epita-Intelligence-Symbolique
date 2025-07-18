@@ -21,42 +21,36 @@ logger = logging.getLogger(__name__)
 
 async def perform_text_analysis(text: str, services: dict[str, Any], analysis_type: str = "default") -> Any:
     """
-    Effectue une analyse de texte en utilisant l'orchestrateur `EnhancedPMAnalysisRunner`.
+    Effectue une analyse de texte en utilisant l'orchestrateur `AnalysisRunnerV2`.
 
     Cette fonction sert de point d'entrée pour l'analyse, en utilisant le nouvel
-    orchestrateur amélioré pour effectuer l'analyse.
+    orchestrateur pour effectuer l'analyse.
 
     :param text: Le texte d'entrée à analyser.
-    :param services: Dictionnaire de services. Doit contenir 'llm_service'.
+    :param services: Dictionnaire de services. N'est plus utilisé directement mais conservé pour compatibilité.
     :param analysis_type: Type d'analyse (pour la journalisation).
     :return: Les résultats structurés de l'analyse.
     :raises Exception: Propage les exceptions de l'orchestrateur.
     """
-    logger.info(f"Lancement de l'analyse de texte améliorée de type '{analysis_type}' sur un texte de {len(text)} caractères.")
+    logger.info(f"Lancement de l'analyse de texte de type '{analysis_type}' sur un texte de {len(text)} caractères.")
 
-    # Utilisation du nouvel orchestrateur. L'import est local pour la clarté.
     try:
-        from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner
+        from argumentation_analysis.orchestration.analysis_runner_v2 import AnalysisRunnerV2
     except ImportError as e:
-        logger.critical(f"Impossible d'importer 'AnalysisRunner': {e}", exc_info=True)
+        logger.critical(f"Impossible d'importer 'AnalysisRunnerV2': {e}", exc_info=True)
         raise
 
-    llm_service = services.get("llm_service")
-    if not llm_service:
-        logger.critical("Le service LLM n'est pas disponible dans les services fournis. L'analyse ne peut pas continuer.")
-        return None
-
     try:
-        runner = AnalysisRunner()
-        logger.info(f"Lancement de l'analyse principale (type: {analysis_type}) via AnalysisRunner...")
+        # Le runner V2 gère lui-même la configuration et l'accès aux services.
+        runner = AnalysisRunnerV2()
+        logger.info(f"Lancement de l'analyse principale (type: {analysis_type}) via AnalysisRunnerV2...")
         
         analysis_result = await runner.run_analysis_async(
-            text_content=text,
-            llm_service=llm_service
+            input_text=text
         )
         
-        logger.info(f"Analyse principale (type: '{analysis_type}') terminée avec succès via EnhancedPMAnalysisRunner.")
-        logger.debug(f"RÉSULTAT BRUT de EnhancedPMAnalysisRunner: {analysis_result}")
+        logger.info(f"Analyse principale (type: '{analysis_type}') terminée avec succès via AnalysisRunnerV2.")
+        logger.debug(f"RÉSULTAT BRUT de AnalysisRunnerV2: {analysis_result}")
         return analysis_result
 
     except Exception as e:

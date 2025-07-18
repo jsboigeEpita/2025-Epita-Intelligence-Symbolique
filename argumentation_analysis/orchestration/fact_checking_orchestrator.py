@@ -13,12 +13,13 @@ from dataclasses import dataclass
 from datetime import datetime
 
 # Imports des nouveaux composants
-from ..agents.tools.analysis.fact_claim_extractor import FactClaimExtractor, FactualClaim
-from ..agents.tools.analysis.fallacy_family_analyzer import (
+# Correction des imports pour utiliser des chemins absolus et éviter les ambiguïtés
+from argumentation_analysis.agents.tools.analysis.fact_claim_extractor import FactClaimExtractor, FactualClaim
+from argumentation_analysis.agents.tools.analysis.fallacy_family_analyzer import (
     FallacyFamilyAnalyzer, get_family_analyzer, AnalysisDepth, ComprehensiveAnalysisResult
 )
-from ..services.fact_verification_service import get_verification_service
-from ..services.fallacy_taxonomy_service import get_taxonomy_manager
+from argumentation_analysis.services.fact_verification_service import get_verification_service
+from argumentation_analysis.services.fallacy_taxonomy_service import get_taxonomy_manager
 
 logger = logging.getLogger(__name__)
 

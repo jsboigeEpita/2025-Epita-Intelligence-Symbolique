@@ -6,12 +6,11 @@ from playwright.sync_api import Page, expect
 # so the web server is started automatically for all tests in this module.
 @pytest.mark.e2e
 @pytest.mark.playwright
-def test_fallacy_detection_basic_workflow(page: Page, e2e_servers):
+def test_fallacy_detection_basic_workflow(page: Page, frontend_url: str):
     """
     Test principal : détection d'un sophisme Ad Hominem
     Valide le workflow complet de détection avec un exemple prédéfini
     """
-    _, frontend_url = e2e_servers
     # 1. Navigation et attente API connectée
     page.goto(frontend_url)
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
@@ -48,12 +47,11 @@ def test_fallacy_detection_basic_workflow(page: Page, e2e_servers):
 
 @pytest.mark.e2e
 @pytest.mark.playwright
-def test_severity_threshold_adjustment(page: Page, e2e_servers):
+def test_severity_threshold_adjustment(page: Page, frontend_url: str):
     """
     Test curseur seuil de sévérité
     Vérifie l'impact du seuil sur les résultats de détection
     """
-    _, frontend_url = e2e_servers
     # 1. Navigation et activation onglet
     page.goto(frontend_url)
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
@@ -77,6 +75,7 @@ def test_severity_threshold_adjustment(page: Page, e2e_servers):
     
     # Attendre les résultats du premier test
     expect(results_container).to_be_visible(timeout=10000)
+    first_result_text = results_container.text_content()
     
     # 5. Réduction du seuil (0.3) - devrait détecter plus
     severity_slider.fill('0.3')
@@ -84,18 +83,19 @@ def test_severity_threshold_adjustment(page: Page, e2e_servers):
     
     # Attendre les nouveaux résultats
     expect(results_container).to_be_visible(timeout=10000)
+    second_result_text = results_container.text_content()
     
     # 6. Vérification que les résultats changent avec le seuil
+    # Note: Les résultats peuvent être différents selon le seuil
     expect(results_container).to_contain_text("sophisme(s) détecté(s)")
 
 @pytest.mark.e2e
 @pytest.mark.playwright
-def test_fallacy_example_loading(page: Page, e2e_servers):
+def test_fallacy_example_loading(page: Page, frontend_url: str):
     """
     Test chargement des exemples prédéfinis
     Valide le fonctionnement des boutons "Tester" sur les cartes d'exemples
     """
-    _, frontend_url = e2e_servers
     # 1. Navigation et activation onglet
     page.goto(frontend_url)
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
@@ -134,12 +134,11 @@ def test_fallacy_example_loading(page: Page, e2e_servers):
 
 @pytest.mark.e2e
 @pytest.mark.playwright
-def test_fallacy_detector_reset_functionality(page: Page, e2e_servers):
+def test_fallacy_detector_reset_functionality(page: Page, frontend_url: str):
     """
     Test bouton de réinitialisation
     Vérifie que le bouton reset nettoie complètement l'interface
     """
-    _, frontend_url = e2e_servers
     # 1. Navigation et activation onglet
     page.goto(frontend_url)
     expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)

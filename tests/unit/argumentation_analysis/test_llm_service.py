@@ -47,11 +47,14 @@ class TestLLMService:
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY non disponible")
     def test_create_llm_service_openai_authentic(self):
         """Teste la création d'un vrai service LLM OpenAI."""
-        service = create_llm_service(service_id="test", model_id=self.model_id)
+        if not self.api_key:
+            pytest.skip("La variable d'environnement OPENAI_API_KEY est requise pour ce test.")
+
+        service = create_llm_service(service_id="test_service", force_authentic=True)
         
         assert service is not None, "Le service LLM ne devrait pas être None."
         assert isinstance(service, OpenAIChatCompletion), "Le service devrait être une instance de OpenAIChatCompletion."
-        assert service.ai_model_id == self.model_id, "Le modèle ID du service ne correspond pas."
+        assert service.ai_model_id == self.model_id, f"L'ID du modèle du service ({service.ai_model_id}) ne correspond pas à celui de l'environnement ({self.model_id})."
 
     def test_create_llm_service_missing_api_key(self):
         """Teste que la création du service échoue sans clé API."""
@@ -60,7 +63,9 @@ class TestLLMService:
             del os.environ["OPENAI_API_KEY"]
 
         with pytest.raises(ValueError) as excinfo:
-            create_llm_service(service_id="test", model_id="test")
+            create_llm_service(service_id="test_service", force_authentic=True)
+        
+        assert "Configuration OpenAI standard incomplète" in str(excinfo.value)
 
         assert "OPENAI_API_KEY" in str(excinfo.value)
 
@@ -70,7 +75,7 @@ class TestLLMService:
         async def _run_async_test():
             try:
                 kernel = sk.Kernel()
-                llm_service = create_llm_service(service_id="test", model_id=self.model_id)
+                llm_service = create_llm_service(service_id="test_service")
                 kernel.add_service(llm_service)
                 
                 # Création d'une fonction de prompt simple

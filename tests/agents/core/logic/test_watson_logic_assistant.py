@@ -12,7 +12,7 @@ from semantic_kernel.functions import KernelArguments
 
 from argumentation_analysis.agents.core.logic.watson_logic_assistant import WatsonLogicAssistant, WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT
 from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
-from argumentation_analysis.agents.agent_factory import AgentFactory
+from argumentation_analysis.agents.factory import AgentFactory
 from argumentation_analysis.config.settings import AppSettings
 
 # Définir un nom d'agent de test

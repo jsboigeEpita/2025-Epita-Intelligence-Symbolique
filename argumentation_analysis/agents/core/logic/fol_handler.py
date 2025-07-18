@@ -84,7 +84,7 @@ class FOLHandler:
         C'est la nouvelle approche robuste qui contourne les bizarreries du
         parseur de fichier .fologic.
         """
-        from argumentation_analysis.agents.core.logic.first_order_logic_agent import BeliefSetBuilderPlugin
+        from argumentation_analysis.agents.core.logic.fol_logic_agent import BeliefSetBuilderPlugin
         
         sorts_data = builder_plugin_data.get("_sorts", {})
         predicates_data = builder_plugin_data.get("_predicates", {})

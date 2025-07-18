@@ -13,9 +13,10 @@ import semantic_kernel as sk
 from semantic_kernel import Kernel
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.functions import KernelArguments
-
 from .jtms_agent_base import JTMSAgentBase, ExtendedBelief
-# from .factory import AgentFactory
+from .factory import AgentFactory
+from argumentation_analysis.config.settings import AppSettings
+from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
 
 class HypothesisTracker:
     """Gestionnaire des hypothèses avec traçabilité JTMS"""
@@ -184,13 +185,12 @@ class SherlockJTMSAgent(JTMSAgentBase):
     Spécialisé dans la collecte d'indices et génération d'hypothèses avec traçabilité.
     """
     
-    def __init__(self, kernel: Kernel, settings: "AppSettings", agent_name: str = "Sherlock_JTMS",
+    def __init__(self, kernel: Kernel, agent_name: str = "Sherlock_JTMS",
                  system_prompt: Optional[str] = None, **kwargs):
         super().__init__(kernel, agent_name, strict_mode=False)
-
-        # L'agent Sherlock de base n'est plus nécessaire car cet agent est maintenant autonome.
-        # La logique a été intégrée directement.
-        self._base_sherlock = None
+        # Note: le system_prompt custom n'est plus directement passé ici,
+        # la factory utilise le prompt standardisé.
+        # Pour une customisation, il faudrait étendre la factory.
         
         # Gestionnaires spécialisés JTMS
         self._hypothesis_tracker = HypothesisTracker(self._jtms_session)

@@ -48,6 +48,13 @@ def ensure_env(env_name: str = None, silent: bool = False) -> bool:
     Raises:
         RuntimeError: Si l'environnement n'est pas celui attendu.
     """
+    # En mode test E2E, on ne fait pas cette vérification pour éviter les problèmes
+    # de propagation de l'environnement dans les sous-processus.
+    if os.environ.get('E2E_TESTING_MODE') == '1':
+        if not silent:
+            print("[auto_env] WARNING: Vérification de l'environnement Conda désactivée pour les tests E2E.")
+        return True
+
     if env_name is None:
         try:
             from argumentation_analysis.config.settings import settings

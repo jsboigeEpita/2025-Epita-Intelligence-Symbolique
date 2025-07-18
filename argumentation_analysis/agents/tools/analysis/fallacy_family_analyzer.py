@@ -15,8 +15,8 @@ from datetime import datetime
 
 # Import des composants développés
 from .fact_claim_extractor import FactClaimExtractor, FactualClaim
-from ...services.fact_verification_service import FactVerificationService, get_verification_service
-from ...services.fallacy_taxonomy_service import (
+from argumentation_analysis.services.fact_verification_service import FactVerificationService, get_verification_service
+from argumentation_analysis.services.fallacy_taxonomy_service import (
     FallacyTaxonomyManager, get_taxonomy_manager, FallacyFamily, ClassifiedFallacy
 )
 from ...services.fallacy_family_definitions import (

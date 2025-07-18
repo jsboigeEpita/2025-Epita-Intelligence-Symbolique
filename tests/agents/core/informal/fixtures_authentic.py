@@ -14,7 +14,7 @@ from argumentation_analysis.core import environment as auto_env
 
 # Imports Semantic Kernel authentiques
 from semantic_kernel import Kernel
-from argumentation_analysis.agents.agent_factory import AgentFactory
+from argumentation_analysis.agents.factory import AgentFactory
 from semantic_kernel.functions import KernelArguments
 from argumentation_analysis.config.settings import AppSettings
 

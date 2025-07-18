@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock
 from semantic_kernel import Kernel
-from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent
+from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
 @pytest.fixture
@@ -12,7 +12,7 @@ def fol_agent_with_hierarchy():
     mock_tweety_bridge = Mock(spec=TweetyBridge)
 
     # Initialiser l'agent avec les mocks
-    agent = FirstOrderLogicAgent(kernel=mock_kernel, tweety_bridge=mock_tweety_bridge, agent_name="test_agent_repair")
+    agent = FOLLogicAgent(kernel=mock_kernel, tweety_bridge=mock_tweety_bridge, agent_name="test_agent_repair")
     builder = agent._builder_plugin
 
     # Définir les prédicats qui représentent les sortes

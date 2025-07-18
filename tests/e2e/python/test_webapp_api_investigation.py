@@ -61,7 +61,7 @@ class TestWebAppAPIInvestigation:
             if response.status_code == 200:
                 result = response.json()
                 print(f"   [OK] Analyse réussie")
-                print(f"   Résultat: {json.dumps(result, indent=2, ensure_ascii=False)[:200]}...")
+                print(f"   Résultat complet: {json.dumps(result, indent=2, ensure_ascii=False)}")
             else:
                 print(f"   [ERROR] Erreur: {response.text}")
                 

@@ -76,6 +76,15 @@ async def analyze_text():
 
         analysis_request = AnalysisRequest(**data)
         result = await analysis_service.analyze_text(analysis_request)
+
+        if not result.success:
+            logger.warning(f"Analysis failed (success=False). Request data: {data}")
+            return jsonify(ErrorResponse(
+                error="Internal Analysis Error",
+                message="The service was unable to complete the analysis. Check server logs for details.",
+                status_code=500
+            ).dict()), 500
+
         logger.info("Exiting analyze_text route")
         return jsonify(result.dict())
 
@@ -121,7 +130,7 @@ def detect_fallacies():
         logger.error(f"Erreur lors de la détection de sophismes: {str(e)}", exc_info=True)
         return jsonify(ErrorResponse(error="Erreur de détection", message=str(e), status_code=500).dict()), 500
 
-@main_bp.route('/framework', methods=['POST'])
+@main_bp.route('/v1/framework/analyze', methods=['POST'])
 def build_framework():
     """Construction d'un framework de Dung."""
     try:

@@ -9,7 +9,7 @@ from config.unified_config import UnifiedConfig
 # -*- coding: utf-8 -*-
 
 """
-Tests de migration Modal Logic → FOL pour FirstOrderLogicAgent.
+Tests de migration Modal Logic → FOL pour FOLLogicAgent.
 
 Ce module valide que l'agent FOL peut remplacer Modal Logic avec :
 ✅ Remplacement fonctionnel complet
@@ -178,7 +178,7 @@ class TestModalToFOLInterface:
         # Vérification mapping agent
         agent_classes = fol_config.get_agent_classes()
         assert "fol_logic" in agent_classes
-        assert agent_classes["fol_logic"] == "FirstOrderLogicAgent"
+        assert agent_classes["fol_logic"] == "FOLLogicAgent"
         
         # Configuration legacy (si supportée)
         legacy_config = UnifiedConfig(
@@ -440,7 +440,7 @@ class TestOrchestrationIntegration:
         
         # Mapping correct pour nouveau style
         agent_classes = new_style_config.get_agent_classes()
-        assert agent_classes["fol_logic"] == "FirstOrderLogicAgent"
+        assert agent_classes["fol_logic"] == "FOLLogicAgent"
         
         logger.info("✅ Rétrocompatibilité configuration validée")
 

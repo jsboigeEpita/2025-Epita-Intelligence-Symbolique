@@ -27,7 +27,6 @@ def main():
         sys.exit(1)
 
     # Configuration des chemins
-    orchestrator_module = "argumentation_analysis.webapp.orchestrator"
     log_dir = project_root / '_temp'
     log_dir.mkdir(exist_ok=True) # S'assurer que le répertoire de log existe
     
@@ -36,51 +35,64 @@ def main():
     pid_file = log_dir / 'backend.pid'
 
     # S'assurer que la racine du projet est dans le PYTHONPATH
-    # pour que l'import de l'orchestrateur fonctionne
     sys.path.insert(0, str(project_root))
     
     # Construction de la commande de lancement
-    # On utilise sys.executable pour s'assurer qu'on utilise le python
-    # de l'environnement conda activé.
-    orchestrator_cmd = [
+    uvicorn_cmd = [
         sys.executable,
-        "-m",
-        orchestrator_module,
-        "--backend-only",
-        "--config",
-        str(project_root / "config/webapp_config.yml")
+        "-m", "uvicorn",
+        "api.main:app", # Point d'entrée corrigé
+        "--host", "127.0.0.1",
+        "--port", "8004", # Port fixe pour les tests
+        "--log-level", "info"
     ]
 
     print(f"--- Lancement du Backend pour les tests (via {__file__}) ---")
-    print(f"  - Commande: {' '.join(orchestrator_cmd)}")
+    print(f"  - Commande: {' '.join(uvicorn_cmd)}")
     print(f"  - PID file: {pid_file}")
-    print(f"  - Logs: {log_dir}")
+    print(f"  - Logs: {backend_stdout_log} / {backend_stderr_log}")
 
-    # Ouvrir les fichiers de log pour la redirection
-    # L'encodage utf-8 est crucial pour éviter les erreurs sur Windows
-    stdout_log = open(backend_stdout_log, 'w', encoding='utf-8')
-    stderr_log = open(backend_stderr_log, 'w', encoding='utf-8')
+    try:
+        # Ouvrir les fichiers de log pour la redirection
+        stdout_log = open(backend_stdout_log, 'w', encoding='utf-8')
+        stderr_log = open(backend_stderr_log, 'w', encoding='utf-8')
 
-    # Démarrer le processus en arrière-plan
-    # Popen est non-bloquant
-    process = subprocess.Popen(
-        orchestrator_cmd,
-        cwd=project_root,
-        stdout=stdout_log,
-        stderr=stderr_log,
-        env=os.environ.copy() # Transmettre l'environnement actuel
-    )
+        # Démarrer le processus en arrière-plan
+        process = subprocess.Popen(
+            uvicorn_cmd,
+            cwd=project_root,
+            stdout=stdout_log,
+            stderr=stderr_log,
+            env=os.environ.copy()
+        )
+    except Exception as e:
+        print(f"ERREUR CRITIQUE: subprocess.Popen a échoué: {e}", file=sys.stderr)
+        sys.exit(1)
     
     # Écrire le PID dans le fichier pour que le script appelant puisse le tuer
     try:
         with open(pid_file, 'w', encoding='utf-8') as f:
             f.write(str(process.pid))
-        print(f"Backend lancé avec succès. PID: {process.pid}")
+        print(f"Backend lancé avec succès. PID: {process.pid}. En attente de la fin du processus...")
     except IOError as e:
         print(f"ERREUR: Impossible d'écrire dans le fichier PID '{pid_file}': {e}", file=sys.stderr)
         # Tenter de tuer le processus qu'on vient de lancer pour ne pas le laisser zombie
         process.kill()
         sys.exit(1)
+        
+    # Le script doit maintenant attendre que le processus uvicorn se termine.
+    # C'est ce qui maintient le script "en cours d'exécution" et donc le Job PowerShell
+    # à l'état "Running". Le processus sera tué de l'extérieur par le script de test.
+    try:
+        process.wait()
+    except KeyboardInterrupt:
+        print("Interruption manuelle reçue. Le backend s'arrête.")
+        process.terminate()
+    finally:
+        # Nettoyage au cas où le processus se terminerait de manière inattendue
+        if os.path.exists(pid_file):
+            os.remove(pid_file)
+
 
 if __name__ == "__main__":
     main()

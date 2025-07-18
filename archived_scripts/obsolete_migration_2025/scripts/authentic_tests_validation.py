@@ -26,7 +26,7 @@ except ImportError:
 
 # Imports des agents authentiques
 from semantic_kernel import Kernel
-from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent
+from argumentation_analysis.agents.core.logic.fol_logic_agent import FirstOrderLogicAgent
 from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent
 from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import FirstOrderBeliefSet, ModalBeliefSet, PropositionalBeliefSet

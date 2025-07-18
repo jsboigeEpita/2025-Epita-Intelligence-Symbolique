@@ -13,6 +13,7 @@ from typing import Optional, List, Union, Dict, Type
 # Importation corrigée pour utiliser l'utilitaire central du projet
 from argumentation_analysis.core.utils.shell_utils import run_shell_command
 from .strategies.base_strategy import BaseStrategy
+from project_core.environment.conda_manager import CondaManager
 
 # Configuration du logger
 logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='[ENV_MGR] [%(asctime)s] - %(levelname)s - %(message)s')
@@ -31,8 +32,22 @@ class EnvironmentManager:
         """
         self._project_root = project_root
         self.logger = logger_instance or logging.getLogger(__name__)
+        self.conda_manager = CondaManager(logger=self.logger, project_root=self.project_root)
         self._strategies: Dict[str, BaseStrategy] = {}
         self._load_strategies()
+
+    def check_conda_available(self) -> bool:
+        """Vérifie si l'exécutable Conda est disponible."""
+        return self.conda_manager._find_conda_executable() is not None
+
+    def check_conda_env_exists(self, env_name: str = "projet-is") -> bool:
+        """Vérifie si un environnement Conda spécifique existe."""
+        return self.conda_manager.check_conda_env_exists(env_name)
+
+    def check_python_version(self) -> bool:
+        """Vérifie la version de Python (simulé pour l'instant)."""
+        # TODO: Implémenter une vraie vérification de version si nécessaire.
+        return True
 
     @property
     def project_root(self) -> Path:
@@ -96,18 +111,12 @@ class EnvironmentManager:
 
     def run_command_in_conda_env(self, command_parts: List[str]) -> int:
         """
-        Exécute une commande dans l'environnement Conda spécifié par le .env.
-        Utilise `conda run` pour une exécution propre dans un sous-processus.
-        Configure l'environnement (ex: JAVA_HOME) de manière dynamique si nécessaire.
+        Exécute une commande DANS l'environnement Conda supposément déjà activé.
+        Ce script est destiné à être lancé via `conda run`, donc il exécute la commande directement.
+        Il configure l'environnement (ex: JAVA_HOME) de manière dynamique si nécessaire.
         """
-        conda_env_name = self.get_conda_env_name_from_dotenv()
-        if not conda_env_name:
-            self.logger.error("Impossible d'exécuter la commande car le nom de l'environnement Conda n'a pas pu être déterminé.")
-            return 1
-
-        self.logger.info(f"Utilisation de --cwd='{self.project_root}' pour l'exécution.")
-
-        # La commande est déjà une liste de parties, pas besoin de shlex.split
+        # La validation du nom de l'environnement n'est plus nécessaire ici car on est déjà dedans.
+        # On garde la logique de configuration des variables d'environnement.
         
         # Préparation des variables d'environnement
         env_vars = os.environ.copy()
@@ -120,11 +129,15 @@ class EnvironmentManager:
             env_vars['PYTHONPATH'] = f"{project_root_str}{os.pathsep}{python_path}"
             
         # 2. Gestion spécifique pour Pytest (JAVA_HOME)
-        if command_parts and command_parts[0].lower() == 'pytest':
+        if command_parts and 'pytest' in command_parts[0].lower():
             self.logger.info("Détection de 'pytest'. Configuration de l'environnement Java...")
             java_home_path = self.get_java_home_from_dotenv()
             if java_home_path:
-                self.logger.info(f"JAVA_HOME trouvé : {java_home_path}")
+                # S'assurer que le chemin est absolu
+                if not os.path.isabs(java_home_path):
+                    java_home_path = os.path.normpath(os.path.join(self.project_root, java_home_path))
+                
+                self.logger.info(f"Utilisation de JAVA_HOME: {java_home_path}")
                 env_vars['JAVA_HOME'] = java_home_path
                 
                 # Ajout de JAVA_HOME/bin au PATH
@@ -136,26 +149,30 @@ class EnvironmentManager:
             else:
                 self.logger.warning("JAVA_HOME n'a pas été trouvé dans le .env. Les tests dépendants de Java pourraient échouer.")
 
-        # L'appel à `conda run` est nécessaire car ce script est lancé par un
-        # python de base, et n'est pas lui-même dans l'environnement cible.
-        # `conda run` assure que la commande s'exécute dans le bon contexte avec le bon PATH.
-        # --no-capture-output permet de voir la sortie en temps réel.
-        # Le séparateur '--' semble poser problème sur certaines versions/plateformes de Conda/shell.
-        # On le retire pour une meilleure compatibilité.
-        full_command = [
-            "conda", "run", "-n", conda_env_name,
-            "--no-capture-output", *command_parts
-        ]
+        # La commande à exécuter est directement `command_parts`, car ce script
+        # est déjà DANS l'environnement Conda activé par `activate_project_env.ps1`.
         
         command_str = " ".join(command_parts)
-        description = f"Exécution de '{command_str[:50]}...' dans l'environnement Conda '{conda_env_name}'"
+        description = f"Exécution de '{command_str[:70]}...' dans l'environnement courant"
+        
+        # Remplacer 'python' par le chemin complet de l'exécutable python de l'env
+        env_name = self.get_conda_env_name_from_dotenv() or "projet-is"
+        env_path = self.conda_manager._get_conda_env_path(env_name)
+        if not env_path:
+            self.logger.error(f"Impossible de trouver le chemin de l'environnement '{env_name}' pour construire le chemin python.")
+            return 1
+            
+        python_exe = str(Path(env_path) / "python.exe")
+        
+        final_command_parts = [part.replace("python", python_exe, 1) if part == "python" else part for part in command_parts]
         
         exit_code, _, _ = run_shell_command(
-            command=full_command,
+            command=final_command_parts,
             description=description,
             capture_output=False,
-            shell_mode=False,
-            env=env_vars
+            shell_mode=False, # Important pour exécuter `pytest` ou `npx` directement
+            env=env_vars,
+            cwd=self.project_root # S'assurer que la commande s'exécute à la racine
         )
         
         return exit_code
@@ -208,8 +225,22 @@ class EnvironmentManager:
             True si l'opération a réussi, False sinon.
         """
         if not self._strategies:
-            self.logger.error("Aucune stratégie de réparation n'a été chargée. Impossible de continuer.")
-            return False
+            self.logger.warning("Aucune stratégie de réparation n'a été chargée. Tentative d'installation directe via pip.")
+            if requirements_file:
+                if not (self.project_root / requirements_file).is_file():
+                    self.logger.error(f"Fichier de requirements introuvable: {requirements_file}")
+                    return False
+                command = f"pip install -r {requirements_file}"
+                self.logger.info(f"Exécution de l'installation directe : {command}")
+                import shlex
+                # Utilise une méthode d'exécution qui ne dépend pas de l'environnement déjà activé,
+                # mais qui peut le trouver. `conda_manager.run_in_conda_env` est fait pour ça.
+                env_name = self.get_conda_env_name_from_dotenv() or "projet-is"
+                result = self.conda_manager.run_in_conda_env(shlex.split(command), env_name=env_name)
+                return result.returncode == 0
+            else:
+                self.logger.error("Aucune stratégie et aucun fichier de requirements fourni. Impossible de continuer.")
+                return False
 
         if packages and requirements_file:
             raise ValueError("Les arguments 'packages' et 'requirements_file' sont mutuellement exclusifs.")

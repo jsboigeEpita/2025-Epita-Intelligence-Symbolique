@@ -18,9 +18,6 @@ from argumentation_analysis.core.utils.network_utils import get_resilient_async_
 from argumentation_analysis.config.settings import settings
 from tests.mocks.llm_service_mocks import MockChatCompletion
 
-# Charger les variables d'environnement depuis le fichier .env
-load_dotenv(override=True)
-
 # Logger pour ce module
 logger = logging.getLogger("Orchestration.LLM")
 if not logger.handlers and not logger.propagate:
@@ -35,7 +32,7 @@ logger.info("<<<<< MODULE llm_service.py LOADED >>>>>")
 # pour la logique principale.
 def create_llm_service(
     service_id: str,
-    model_id: str,
+    model_id: str = None,
     service_type: str = "OpenAIChatCompletion",
     force_mock: bool = False,
     force_authentic: bool = False,
@@ -49,11 +46,14 @@ def create_llm_service(
     pour les tests.
 
     Args:
-        service_id (str): L'ID de service à utiliser pour l'instance Semantic Kernel.
-        model_id (str): L'ID du modèle à utiliser (ex: "gpt-4o-mini").
-        service_type (str): Le type de service (par défaut "OpenAIChatCompletion").
-        force_mock (bool): Si True, force un service mocké.
-        force_authentic (bool): Si True, force un service authentique.
+        service_id (str): L'ID de service à utiliser pour l'instance dans
+                          le kernel Semantic Kernel.
+        model_id (str, optionnel): L'ID du modèle. Si non fourni, il est lu
+                                 depuis la variable d'environnement OPENAI_CHAT_MODEL_ID.
+        service_type (str): Le type de service à créer (par ex., "OpenAIChatCompletion").
+        force_mock (bool): Si True, retourne une instance de MockChatCompletion.
+        force_authentic (bool): Si True, force la création d'un service authentique
+                                même dans un environnement de test.
 
     Returns:
         Instance configurée du service de chat.
@@ -65,18 +65,21 @@ def create_llm_service(
     logger.critical("<<<<< create_llm_service FUNCTION CALLED >>>>>")
     logger.info(f"--- Configuration du Service LLM ({service_id}) ---")
 
-    # Logique de mock/authenticité pour les tests
+    # Gestion des mocks pour les tests
     is_test_environment = 'PYTEST_CURRENT_TEST' in os.environ
-
-    if force_mock:
-        logger.warning("Création forcée d'un service LLM MOCKÉ.")
-        return MockChatCompletion(service_id=service_id, ai_model_id="mock_model")
-        
-    if is_test_environment and not force_authentic:
-        logger.warning("Environnement de test détecté sans forçage. Création d'un service LLM MOCKÉ.")
+    if force_mock or (is_test_environment and not force_authentic):
+        if force_mock:
+            logger.warning(f"Création forcée d'un service LLM MOCKÉ pour '{service_id}'.")
+        else:
+            logger.warning(f"Environnement de test détecté. Création d'un service LLM MOCKÉ pour '{service_id}'.")
         return MockChatCompletion(service_id=service_id, ai_model_id="mock_model")
 
     logger.info("Tentative de création d'un service LLM AUTHENTIQUE...")
+    
+    # Si on n'est pas en mode mock, on cherche le model_id s'il n'est pas fourni
+    if not model_id:
+        model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+        logger.info(f"model_id non fourni, utilisation de la valeur de .env: {model_id}")
     # Récupération directe depuis l'environnement
     api_key = os.environ.get("OPENAI_API_KEY")
     org_id = os.environ.get("OPENAI_ORG_ID")

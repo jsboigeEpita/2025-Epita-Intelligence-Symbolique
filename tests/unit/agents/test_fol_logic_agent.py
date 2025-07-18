@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock # Ajout pour mocker les méthodes async
 # -*- coding: utf-8 -*-
 
 """
-Tests unitaires pour FirstOrderLogicAgent (FOL).
+Tests unitaires pour FOLLogicAgent (FOL).
 
 Ce module teste toutes les fonctionnalités critiques de l'agent FOL :
 - Initialisation et configuration avec UnifiedConfig
@@ -122,7 +122,7 @@ class TestFirstOrderLogicAgentInitialization:
         # Vérification du mapping
         agent_classes = config.get_agent_classes()
         assert "fol_logic" in agent_classes
-        assert agent_classes["fol_logic"] == "FirstOrderLogicAgent"
+        assert agent_classes["fol_logic"] == "FOLLogicAgent"
         
         # Vérification configuration Tweety
         tweety_config = config.get_tweety_config()
@@ -612,7 +612,7 @@ class TestFOLConfigurationIntegration:
         
         # Mapping classe
         agent_classes = config.get_agent_classes()
-        assert agent_classes["fol_logic"] == "FirstOrderLogicAgent"
+        assert agent_classes["fol_logic"] == "FOLLogicAgent"
         
     def test_fol_preset_configurations(self):
         """Test configurations prédéfinies FOL."""

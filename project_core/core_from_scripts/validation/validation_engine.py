@@ -50,7 +50,7 @@ class ValidationEngine:
     
     def __init__(self, logger: Logger = None):
         self.logger = logger or Logger()
-        self.env_manager = EnvironmentManager(self.logger)
+        self.env_manager = EnvironmentManager(logger_instance=self.logger)
         self.project_root = self.env_manager.project_root
         self.rules: List[ValidationRule] = []
         self._load_rules()

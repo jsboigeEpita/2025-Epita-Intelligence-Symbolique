@@ -1,6 +1,7 @@
 import pytest
 from playwright.sync_api import Playwright, expect
 import os
+import json
 
 # Marqueur pour facilement cibler ces tests
 # Les fixtures sont injectées par l'orchestrateur de test.
@@ -13,48 +14,51 @@ pytestmark = [
 @pytest.mark.playwright
 def test_dung_framework_analysis_api(playwright: Playwright, e2e_servers, backend_url: str):
     """
-    Teste directement le nouvel endpoint /api/v1/framework/analyze.
+    Teste directement l'endpoint de l'API pour l'analyse de A.F. Dung.
     Ceci valide l'intégration du service Dung sans passer par l'UI.
     """
     api_request_context = playwright.request.new_context(
         base_url=backend_url
     )
     
-    # Données conformes au modèle FrameworkAnalysisRequest
     test_data = {
-        "arguments": ["a", "b", "c"],
-        "attacks": [["a", "b"], ["b", "c"]]
+        "arguments": [
+            {"id": "a", "content": "Argument A", "attacks": ["b"]},
+            {"id": "b", "content": "Argument B", "attacks": ["c"]},
+            {"id": "c", "content": "Argument C", "attacks": []}
+        ],
+        "options": {
+            "semantics": "preferred",
+            "compute_extensions": True,
+            "include_visualization": False
+        }
     }
 
-    # Appel à la nouvelle API
     response = api_request_context.post(
         "/api/v1/framework/analyze",
-        data=test_data
+        data=json.dumps(test_data),
+        headers={"Content-Type": "application/json"}
     )
 
-    # Vérifications de base
     expect(response).to_be_ok()
     response_data = response.json()
-
-    # La réponse est une SuccessResponse, les données sont dans le champ 'data'
-    assert "data" in response_data, "La clé 'data' est manquante dans la réponse"
-    data = response_data["data"]
-
-    # Vérification des statistiques
-    assert "statistics" in data, "La clé 'statistics' est manquante"
-    stats = data["statistics"]
-    assert stats.get("arguments_count") == 3
-    assert stats.get("attacks_count") == 2
-
-    # Vérification des extensions (basé sur la logique factice actuelle)
-    assert "extensions" in data, "La clé 'extensions' est manquante"
-    extensions = data["extensions"]
-    assert isinstance(extensions, list), "Les extensions devraient être une liste"
-    assert len(extensions) > 0, "La liste des extensions ne devrait pas être vide"
     
-    # La logique factice renvoie les arguments non attaqués.
-    # Pour a->b et b->c, les arguments attaqués sont 'b' et 'c'.
-    # Seul 'a' n'est pas attaqué.
-    found_extension = set(extensions[0])
-    expected_extension = {"a"}
-    assert found_extension == expected_extension, f"L'extension est incorrecte. Attendu: {expected_extension}, Obtenu: {found_extension}"
+    # DEBUG: Afficher la réponse complète de l'API
+    print(f"API Response: {json.dumps(response_data, indent=2)}")
+
+    # Vérification de la nouvelle structure de réponse
+    assert response_data.get("argument_count") == 3, f"Attendu 3 arguments, mais obtenu {response_data.get('argument_count')}"
+    assert response_data.get("attack_count") == 2, f"Attendu 2 attaques, mais obtenu {response_data.get('attack_count')}"
+
+    assert "extensions" in response_data, "La clé 'extensions' est manquante."
+    extensions = response_data['extensions']
+    # La structure des extensions a aussi changé
+    assert len(extensions) > 0, "Aucune extension n'a été retournée"
+    preferred_ext_obj = extensions[0]
+    assert preferred_ext_obj['type'] == 'preferred'
+    
+    preferred_ext = preferred_ext_obj["arguments"]
+    assert isinstance(preferred_ext, list), "Les extensions 'preferred' devraient être une liste."
+    
+    expected_extension = {'a', 'c'}
+    assert set(preferred_ext) == expected_extension, f"L'extension préférée {expected_extension} n'a pas été trouvée dans {preferred_ext}"

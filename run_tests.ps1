@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory=$false)]
-    [ValidateSet("unit", "functional", "e2e", "all", "integration", "e2e-python")]
+    [ValidateSet("unit", "functional", "e2e", "all", "integration", "e2e-python", "e2e-js")]
     [string]$Type = "all",
 
     [string]$Path,
@@ -14,117 +14,111 @@ param(
 )
 
 # --- Script Body ---
+# Le script délègue désormais entièrement la gestion de l'environnement à 'activate_project_env.ps1'
+# qui utilise 'conda run'. Toute initialisation manuelle est donc supprimée.
+
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = $PSScriptRoot
-$ActivationScript = Join-Path $ProjectRoot "activate_project_env.ps1"
 
-# Valider l'existence du script d'activation en amont
+# --- Chargement de l'environnement de test ---
+# Si un fichier .env.test existe, charge ses variables pour les tests E2E.
+# Cela permet de surcharger la configuration (ex: clés API) sans altérer les .env standards.
+$TestEnvFile = Join-Path $ProjectRoot ".env.test"
+if (Test-Path $TestEnvFile) {
+    Write-Host "[INFO] Fichier .env.test trouvé, chargement des variables..." -ForegroundColor Cyan
+    Get-Content $TestEnvFile | ForEach-Object {
+        $line = $_.Trim()
+        if ($line -and !$line.StartsWith("#")) {
+            $key, $value = $line -split '=', 2
+            if ($key -and $value) {
+                # Supprime les guillemets autour de la valeur, s'ils existent
+                $value = $value -replace '^"|"$'
+                [System.Environment]::SetEnvironmentVariable($key.Trim(), $value.Trim())
+                Write-Host "  - Variable '$($key.Trim())' chargée." -ForegroundColor Gray
+            }
+        }
+    }
+}
+$ActivationScript = Join-Path $ProjectRoot "activate_project_env.ps1"
+$TestRunnerScript = Join-Path $ProjectRoot "project_core/test_runner.py"
+
+# Valider l'existence des scripts critiques
 if (-not (Test-Path $ActivationScript)) {
     Write-Host "[ERREUR] Le script d'activation '$ActivationScript' est introuvable." -ForegroundColor Red
     exit 1
 }
+if (-not (Test-Path $TestRunnerScript)) {
+    Write-Host "[ERREUR] L'orchestrateur de test Python '$TestRunnerScript' est introuvable." -ForegroundColor Red
+    exit 1
+}
+# La logique Playwright reste en PowerShell car elle appelle 'npx'
+if ($Type -eq 'e2e') {
+    # On définit une variable d'environnement pour que les sous-scripts sachent
+    # qu'on est en mode test E2E et puissent adapter leur comportement (ex: désactiver
+    # certaines vérifications d'environnement strictes).
+    $env:E2E_TESTING_MODE = "1"
 
-# Branche 1: Tests E2E avec Playwright (JavaScript/TypeScript)
-if ($Type -eq "e2e") {
-    Write-Host "[INFO] Lancement des tests E2E avec Playwright..." -ForegroundColor Cyan
-    
-    # --- DÉBUT BLOC DE NETTOYAGE RADICAL (OPTIONNEL MAIS RECOMMANDÉ) ---
-    $reactAppPath = Join-Path $ProjectRoot "services/web_api/interface-web-argumentative"
-    
-    Write-Host "[INFO] Nettoyage en profondeur de l'environnement React pour garantir un build frais..." -ForegroundColor Yellow
-
-    # Tuer les serveurs node fantômes.
-    Write-Host "[DEBUG] Tentative d'arrêt des serveurs de développement Node.js existants..."
-    try {
-        taskkill /F /IM node.exe /T >$null 2>&1
-        Write-Host "[DEBUG] Processus Node.js existants arrêtés avec succès." -ForegroundColor DarkGray
-    } catch {
-        Write-Host "[DEBUG] Aucun processus Node.js à arrêter, ou une erreur s'est produite (ce qui est normal si rien ne tournait)." -ForegroundColor DarkGray
-    }
-
-    Push-Location -Path $reactAppPath
-    
-    Write-Host "[DEBUG] Nettoyage du cache npm..."
-    npm cache clean --force
-    
-    Write-Host "[DEBUG] Suppression de node_modules..."
-    if (Test-Path "node_modules") {
-        Remove-Item -Recurse -Force "node_modules"
-    }
-
-    Write-Host "[DEBUG] Suppression de package-lock.json..."
-    if (Test-Path "package-lock.json") {
-        Remove-Item -Force "package-lock.json"
-    }
-    
-    Write-Host "[INFO] Réinstallation des dépendances npm. Cela peut prendre un moment..."
-    npm install --verbose
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[ERREUR] L'installation NPM a échoué." -ForegroundColor Red
-        Pop-Location
-        exit $LASTEXITCODE
-    }
-
-    Pop-Location
-    Write-Host "[INFO] Nettoyage terminé." -ForegroundColor Green
-    # --- FIN BLOC DE NETTOYAGE ---
-
-    # On construit la commande Playwright AVANT de l'envoyer au script d'activation.
-    $playwrightArgs = @("npx", "playwright", "test", "-c", "tests/e2e/playwright.config.js")
-
+    Write-Host "[INFO] Lancement des tests E2E (Playwright)..." -ForegroundColor Cyan
+    $commandParts = @("python", "-m", "project_core.test_runner", "--type", "e2e")
     if ($PSBoundParameters.ContainsKey('Browser')) {
-        $playwrightArgs += "--project", $Browser
+        $commandParts += "--project", $Browser
     }
     if (-not ([string]::IsNullOrEmpty($Path))) {
-        $playwrightArgs += $Path
+        $commandParts += $Path
     }
-
-    $finalCommand = $playwrightArgs -join " "
+    $finalCommand = $commandParts -join " "
     
-    # On exécute la commande via le script d'activation qui va charger l'environnement
-    # et ensuite exécuter notre commande.
-    Write-Host "[INFO] Lancement de la commande via le script d'activation : $finalCommand" -ForegroundColor Cyan
+    Write-Host "[INFO] Commande construite : '$finalCommand'" -ForegroundColor Cyan
+    Write-Host "[INFO] Délégation de l'exécution à '$ActivationScript'..." -ForegroundColor Cyan
+
     & $ActivationScript -CommandToRun $finalCommand
     $exitCode = $LASTEXITCODE
-    
-    Write-Host "[INFO] Exécution de Playwright terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan
+    Write-Host "[INFO] Exécution Playwright terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan
     exit $exitCode
 }
-# Branche 2: Tous les autres types de tests via Pytest
-else {
-    Write-Host "[INFO] Lancement des tests de type '$Type' via Pytest..." -ForegroundColor Cyan
-    
-    # Désactiver OpenTelemetry pour éviter les erreurs de connexion pendant les tests
-    $env:OTEL_SDK_DISABLED = "true"
-    $env:OTEL_METRICS_EXPORTER = "none"
-    $env:OTEL_TRACES_EXPORTER = "none"
-    Write-Host "[INFO] OpenTelemetry a été désactivé pour cette session de test." -ForegroundColor Yellow
-    
-    $testPaths = @{
-        "unit"       = "tests/unit"
-        "functional" = "tests/functional"
-        "all"        = "tests" # Par défaut, on lance tout sauf e2e/js
-        "e2e-python" = "tests/e2e/python"
-        "integration"= "tests/integration"
-    }
 
-    $selectedPath = $testPaths[$Type]
-    if ($Path) {
-        $selectedPath = $Path # Le chemin spécifié a la priorité
-    }
-    
-    $pytestCommandParts = @("python", "-m", "pytest", "-s", "-vv", "`"$selectedPath`"")
-    
-    if ($PytestArgs) {
-        $pytestCommandParts += $PytestArgs.Split(' ')
-    }
+# Pour tous les tests basés sur Python, on désactive OpenTelemetry
+$env:OTEL_SDK_DISABLED = "true"
+$env:OTEL_METRICS_EXPORTER = "none"
+$env:OTEL_TRACES_EXPORTER = "none"
+Write-Host "[INFO] OpenTelemetry a été désactivé pour cette session de test." -ForegroundColor Yellow
 
-    $finalCommand = $pytestCommandParts -join " "
 
-    # Exécuter la commande via le script d'activation
-    & $ActivationScript -CommandToRun $finalCommand
-    $exitCode = $LASTEXITCODE
-    
-    Write-Host "[INFO] Exécution de Pytest terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan
-    exit $exitCode
+# Tous les autres types de tests sont délégués au runner Python
+$pythonRunnerType = $Type
+if ($Type -in @("e2e-python", "e2e-js")) {
+    $pythonRunnerType = "e2e"
 }
+elseif ($Type -eq "integration") {
+    # Le runner python ne connait que "functional" pour ce cas
+    $pythonRunnerType = "functional"
+}
+
+$runnerArgs = @(
+    "python",
+    $TestRunnerScript,
+    "--type", $pythonRunnerType
+)
+
+if ($PSBoundParameters.ContainsKey('Path') -and -not ([string]::IsNullOrEmpty($Path))) {
+    $runnerArgs += "--path", "`"$Path`"" # Encapsuler avec des guillemets doubles
+}
+if ($PSBoundParameters.ContainsKey('Browser')) {
+    $runnerArgs += "--browser", $Browser
+}
+if (-not ([string]::IsNullOrEmpty($PytestArgs))) {
+    # On passe les arguments supplémentaires à la fin, pour que argparse les récupère
+    $runnerArgs += $PytestArgs.Split(' ')
+}
+
+$CommandToRun = $runnerArgs -join " "
+
+Write-Host "[INFO] Commande construite pour le runner Python : '$CommandToRun'" -ForegroundColor Cyan
+Write-Host "[INFO] Délégation de l'exécution à '$ActivationScript'..." -ForegroundColor Cyan
+
+# Exécuter la commande via le script d'activation qui gère l'environnement
+& $ActivationScript -CommandToRun $CommandToRun
+$exitCode = $LASTEXITCODE
+
+Write-Host "[INFO] Exécution terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan
+exit $exitCode

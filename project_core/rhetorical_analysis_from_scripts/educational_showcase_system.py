@@ -81,7 +81,7 @@ try:
     from argumentation_analysis.models.extract_definition import ExtractDefinitions
     from argumentation_analysis.paths import DATA_DIR, LIBS_DIR
     from argumentation_analysis.agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
-    from argumentation_analysis.agents.core.logic.first_order_logic_agent import FirstOrderLogicAgent
+    from argumentation_analysis.agents.core.logic.fol_logic_agent import FirstOrderLogicAgent
     from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
     from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator
     from argumentation_analysis.reporting.real_time_trace_analyzer import (
