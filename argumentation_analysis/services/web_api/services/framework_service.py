@@ -6,6 +6,7 @@ Service pour l'analyse des frameworks d'argumentation.
 """
 
 from typing import List, Dict, Any
+import logging
 
 class FrameworkService:
     """
@@ -15,7 +16,8 @@ class FrameworkService:
         """
         Initialise le service.
         """
-        pass
+        self.logger = logging.getLogger("WebAPI.FrameworkService")
+        self.logger.info("--- FrameworkService INITIALIZED ---")
 
     def analyze_dung_framework(self, arguments: List[str], attacks: List[List[str]]) -> Dict[str, Any]:
         """

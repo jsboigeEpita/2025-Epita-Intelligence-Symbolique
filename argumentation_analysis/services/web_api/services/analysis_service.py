@@ -146,12 +146,14 @@ class AnalysisService:
                         try:
                             # Créer une instance de settings par défaut pour la factory
                             app_settings = AppSettings()
-                            factory = AgentFactory(kernel=kernel, settings=app_settings)
+                            factory = AgentFactory(kernel=kernel, llm_service_id=llm_service_instance.service_id)
                             
                             # Utiliser la méthode générique pour créer l'agent
+                            # L'argument 'agent_name' n'est pas attendu par la factory pour ce type d'agent.
+                            # Il est géré en interne par la classe de l'agent.
                             self.informal_agent = factory.create_agent(
-                                agent_class=InformalAnalysisAgent,
-                                agent_name="InformalAnalysisAgent"
+                                agent_type=AgentType.INFORMAL_FALLACY,
+                                config_name="default_with_plugins"
                             )
                             self.logger.info("[OK] InformalAgent created and configured successfully via AgentFactory.")
                         except Exception as factory_e:
@@ -228,10 +230,20 @@ class AnalysisService:
         fallacies = []
         self.logger.info(f"ENTERING _detect_fallacies with text: '{text[:50]}...'")
         
-        if self.informal_agent:
-            self.logger.info("Using InformalAgent for fallacy detection.")
-            try:
-                agent_response = self.informal_agent.invoke(input=text)
+        try:
+            import json
+            # La logique d'appel circulaire via FallacyService a été supprimée.
+            # L'analyse se base maintenant sur les composants internes comme prévu.
+
+            # PRIORITÉ 1: Utilisation de l'agent informel
+            if self.informal_agent:
+                self.logger.info("Using InformalAgent for fallacy detection.")
+                
+                # --- NOUVELLE LOGIQUE DE CONSOMMATION DE L'AGENT ---
+                # Approche simplifiée pour gérer les deux types de retours de `invoke`.
+
+                messages = [ChatMessageContent(role="user", content=text)]
+                agent_response = self.informal_agent.invoke(messages)
                 full_response_str = ""
                 result = None
 
@@ -302,27 +314,27 @@ class AnalysisService:
                         )
                         fallacies.append(fallacy)
 
-            except json.JSONDecodeError as e:
-                self.logger.error(f"Failed to decode JSON from agent. Raw response: '''{full_response_str}'''. Error: {e}")
-            except Exception as e:
-                self.logger.error(f"An unexpected error occurred during agent response processing: {e}", exc_info=True)
+            # PRIORITÉ 3: Analyse contextuelle si les autres méthodes n'ont rien donné
+            elif not fallacies and self.contextual_analyzer:
+                self.logger.info("Using ContextualAnalyzer for fallacy detection (wrapped in asyncio.to_thread).")
+                # Wrap the synchronous, potentially blocking call in a separate thread.
+                result = await asyncio.to_thread(self.contextual_analyzer.identify_contextual_fallacies, text, "général")
+                if result:
+                    for fallacy_data in result:
+                        fallacy = FallacyDetection(
+                            type=fallacy_data.get('type', 'contextual'),
+                            name=fallacy_data.get('fallacy_type', 'Sophisme contextuel non identifié'),
+                            description=fallacy_data.get('description', ''),
+                            severity=fallacy_data.get('severity', 0.5),
+                            confidence=fallacy_data.get('confidence', 0.5),
+                            context=fallacy_data.get('context')
+                        )
+                        fallacies.append(fallacy)
         
-        # PRIORITÉ 3: Analyse contextuelle si les autres méthodes n'ont rien donné
-        elif not fallacies and self.contextual_analyzer:
-            self.logger.info("Using ContextualAnalyzer for fallacy detection (wrapped in asyncio.to_thread).")
-            # Wrap the synchronous, potentially blocking call in a separate thread.
-            result = await asyncio.to_thread(self.contextual_analyzer.identify_contextual_fallacies, text, "général")
-            if result:
-                for fallacy_data in result:
-                    fallacy = FallacyDetection(
-                        type=fallacy_data.get('type', 'contextual'),
-                        name=fallacy_data.get('fallacy_type', 'Sophisme contextuel non identifié'),
-                        description=fallacy_data.get('description', ''),
-                        severity=fallacy_data.get('severity', 0.5),
-                        confidence=fallacy_data.get('confidence', 0.5),
-                        context=fallacy_data.get('context')
-                    )
-                    fallacies.append(fallacy)
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Failed to decode JSON from agent. Raw response: '''{full_response_str}'''. Error: {e}")
+        except Exception as e:
+            self.logger.error(f"An unexpected error occurred during agent response processing: {e}", exc_info=True)
         
         # Filtrage par seuil de sévérité
         if options and hasattr(options, 'severity_threshold') and options.severity_threshold is not None:

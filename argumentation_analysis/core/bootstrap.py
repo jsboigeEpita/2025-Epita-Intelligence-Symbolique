@@ -356,14 +356,16 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
             context.kernel = sk_module.Kernel()
             # Le service LLM est un prérequis pour de nombreux plugins, donc on l'ajoute au kernel.
             # Le paramètre force_mock_llm détermine si on doit forcer l'usage du service mocké.
-            # Ajout de model_id en utilisant la configuration par défaut de l'application
-            default_model_id = "default_model"
+            # Récupérer le model_id depuis les settings, avec un fallback
+            model_id_to_use = "default_model" # Fallback au cas où settings ne serait pas dispo
             if settings and settings.openai and settings.openai.chat_model_id:
-                default_model_id = settings.openai.chat_model_id
-            
+                model_id_to_use = settings.openai.chat_model_id
+            else:
+                logger.warning("Impossible de trouver `settings.openai.chat_model_id`, utilisation de 'default_model' comme fallback.")
+
             context.llm_service = create_llm_service_func(
                 service_id="default_llm_bootstrap",
-                model_id=default_model_id,
+                model_id=model_id_to_use,
                 force_mock=force_mock_llm,
                 force_authentic=force_real_llm_in_test
             )

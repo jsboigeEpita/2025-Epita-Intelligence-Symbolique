@@ -411,6 +411,10 @@ def e2e_servers(request):
     Fixture de session pour démarrer et arrêter les serveurs backend et frontend
     nécessaires pour les tests E2E.
     """
+    # Forcer l'initialisation des dépendances lourdes avant de démarrer les serveurs
+    from argumentation_analysis.services.web_api.app import initialize_heavy_dependencies
+    initialize_heavy_dependencies()
+
     if request.config.getoption("--disable-e2e-servers-fixture"):
         logger.warning("E2E servers fixture is disabled via command-line flag.")
         yield None, None
@@ -420,6 +424,57 @@ def e2e_servers(request):
     import requests
     import signal
     import time
+    import re
+
+    # --- Helper pour nettoyer les ports ---
+    def _kill_process_using_port(port: int):
+        if sys.platform != "win32":
+            logger.warning(f"Port cleanup function is only implemented for Windows. Skipping for port {port}.")
+            return
+        
+        try:
+            logger.info(f"Checking if port {port} is in use...")
+            # Exécute netstat pour trouver le PID utilisant le port
+            result = subprocess.run(
+                ["netstat", "-aon"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            # Chercher la ligne correspondant au port
+            pid_found = None
+            for line in result.stdout.splitlines():
+                if f":{port}" in line and 'LISTENING' in line:
+                    # La sortie est du genre: '  TCP    0.0.0.0:5003           0.0.0.0:0              LISTENING       12345'
+                    match = re.search(r'LISTENING\s+(\d+)', line)
+                    if match:
+                        pid_found = match.group(1)
+                        logger.warning(f"Port {port} is currently being used by PID {pid_found}.")
+                        break
+            
+            if pid_found:
+                logger.info(f"Attempting to terminate process with PID {pid_found}...")
+                kill_result = subprocess.run(
+                    ["taskkill", "/PID", pid_found, "/F"],
+                    capture_output=True,
+                    text=True
+                )
+                if kill_result.returncode == 0:
+                    logger.info(f"Successfully terminated process {pid_found}.")
+                else:
+                    # Il se peut que le processus se soit terminé entre-temps
+                    logger.warning(f"Could not terminate process {pid_found}. It might have already finished. Output: {kill_result.stdout} {kill_result.stderr}")
+                
+                time.sleep(2) # Laisser le temps au port de se libérer
+            else:
+                logger.info(f"Port {port} is free.")
+
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
+            logger.error(f"Failed to check or kill process for port {port}: {e}")
+        except Exception as e:
+            logger.error(f"An unexpected error occurred during port cleanup for port {port}: {e}", exc_info=True)
+
 
     processes = []
     backend_url_opt = request.config.getoption("--backend-url")
@@ -453,20 +508,11 @@ def e2e_servers(request):
         return False
 
     def start_backend():
-        logger.info("--- Starting E2E Backend Server ---")
-        try:
-            if requests.get(f"{backend_url_opt}/api/health", timeout=2).status_code == 200:
-                logger.info("Backend server is already running.")
-                return None
-        except requests.exceptions.RequestException:
-            pass
+        logger.info("--- Starting E2E Backend Server (Forced) ---")
 
         backend_cmd = [
-            sys.executable, "-m", "uvicorn",
-            "argumentation_analysis.services.web_api.app:app",
-            "--host", "0.0.0.0",
-            "--port", "5003",
-            "--log-level", "debug"
+            sys.executable,
+            str(project_root / "scripts" / "run_e2e_backend.py")
         ]
         
         logger.info(f"Running backend command: {' '.join(backend_cmd)}")
@@ -475,18 +521,12 @@ def e2e_servers(request):
             logger.info("Backend server started successfully.")
             return process
         else:
-            logger.error("Failed to start backend server.")
+            logger.error("Failed to start backend server. Check '_e2e_logs/backend_launcher.log' for details.")
             process.terminate()
             return None
 
     def start_frontend():
-        logger.info("--- Starting E2E Frontend Server ---")
-        try:
-            if requests.get(frontend_url_opt, timeout=2).status_code == 200:
-                logger.info("Frontend server is already running.")
-                return None
-        except requests.exceptions.RequestException:
-            pass
+        logger.info("--- Starting E2E Frontend Server (Forced) ---")
             
         react_dir = project_root / "services" / "web_api" / "interface-web-argumentative"
         if not (react_dir / "node_modules").exists():
@@ -511,6 +551,11 @@ def e2e_servers(request):
 
     # --- Démarrage ---
     logger.info("=== E2E Servers Fixture Setup ===")
+    
+    # Nettoyage préventif des ports
+    _kill_process_using_port(5003) # Backend
+    _kill_process_using_port(3000) # Frontend
+    
     backend_process = start_backend()
     frontend_process = start_frontend()
     
