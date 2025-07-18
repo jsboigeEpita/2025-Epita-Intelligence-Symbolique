@@ -50,7 +50,7 @@ class TestLLMService:
         if not self.api_key:
             pytest.skip("La variable d'environnement OPENAI_API_KEY est requise pour ce test.")
 
-        service = create_llm_service(service_id="test_authentic", model_id=self.model_id, force_authentic=True)
+        service = create_llm_service(service_id="test_service", model_id=self.model_id, force_authentic=True)
         
         assert service is not None, "Le service LLM ne devrait pas être None."
         assert isinstance(service, OpenAIChatCompletion), "Le service devrait être une instance de OpenAIChatCompletion."
@@ -63,7 +63,7 @@ class TestLLMService:
             del os.environ["OPENAI_API_KEY"]
 
         with pytest.raises(ValueError) as excinfo:
-            create_llm_service(service_id="test_missing_key", model_id="gpt-4o-mini", force_authentic=True)
+            create_llm_service(service_id="test_service", model_id=self.model_id, force_authentic=True)
         
         assert "Configuration OpenAI standard incomplète" in str(excinfo.value)
 
@@ -75,7 +75,7 @@ class TestLLMService:
         async def _run_async_test():
             try:
                 kernel = sk.Kernel()
-                llm_service = create_llm_service(service_id="test_authentic_call", model_id=self.model_id)
+                llm_service = create_llm_service(service_id="test_service", model_id=self.model_id)
                 kernel.add_service(llm_service)
                 
                 # Création d'une fonction de prompt simple

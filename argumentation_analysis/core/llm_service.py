@@ -62,7 +62,7 @@ def create_llm_service(
         ValueError: Si la configuration requise est manquante.
         RuntimeError: Si la création du service échoue.
     """
-    logger.info("<<<<< create_llm_service FUNCTION CALLED >>>>>")
+    logger.critical("<<<<< create_llm_service FUNCTION CALLED >>>>>")
     logger.info(f"--- Configuration du Service LLM ({service_id}) ---")
 
     # Gestion des mocks pour les tests

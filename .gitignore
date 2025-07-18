@@ -353,8 +353,5 @@ _temp_prover9_install/
 project_logs/
 archived_artefacts/
 
-# Prover9 temporary input files
-libs/prover9/bin/*.in
-
 # Dossiers de refactoring temporaires
 temp_test_refactor/

@@ -52,35 +52,12 @@ if (-not (Test-Path $TestRunnerScript)) {
     exit 1
 }
 # La logique Playwright reste en PowerShell car elle appelle 'npx'
-if ($Type -in @('e2e', 'e2e-js')) {
-    Write-Host "[INFO] Préparation de l'environnement pour les tests E2E (Playwright)..." -ForegroundColor Cyan
-
-    # Étape 1 : Nettoyage forcé de l'environnement NPM pour garantir un état propre
-    $npmPath = Get-Command npm -ErrorAction SilentlyContinue
-    if ($npmPath) {
-        $e2eDir = Join-Path $ProjectRoot "services/web_api/interface-web-argumentative"
-        $nodeModulesDir = Join-Path $e2eDir "node_modules"
-        $playwrightReportDir = Join-Path $ProjectRoot "playwright-report"
-
-        if (Test-Path $nodeModulesDir) {
-            Write-Host "[INFO] Nettoyage des anciens modules NPM..." -ForegroundColor Yellow
-            Remove-Item -Recurse -Force $nodeModulesDir
-        }
-        if (Test-Path $playwrightReportDir) {
-            Write-Host "[INFO] Nettoyage des anciens rapports Playwright..." -ForegroundColor Yellow
-            Remove-Item -Recurse -Force $playwrightReportDir
-        }
-
-        Write-Host "[INFO] Réinstallation des dépendances NPM..." -ForegroundColor Cyan
-        Push-Location $e2eDir
-        npm install
-        Pop-Location
-    } else {
-        Write-Host "[WARN] 'npm' non trouvé. Le nettoyage et l'installation des dépendances sont ignorés." -ForegroundColor Yellow
-    }
-
-    # Étape 2 : Lancement des tests via le runner Python
+if ($Type -eq 'e2e') {
+    # On définit une variable d'environnement pour que les sous-scripts sachent
+    # qu'on est en mode test E2E et puissent adapter leur comportement (ex: désactiver
+    # certaines vérifications d'environnement strictes).
     $env:E2E_TESTING_MODE = "1"
+
     Write-Host "[INFO] Lancement des tests E2E (Playwright)..." -ForegroundColor Cyan
     $commandParts = @("python", "-m", "project_core.test_runner", "--type", "e2e")
     if ($PSBoundParameters.ContainsKey('Browser')) {
@@ -89,12 +66,12 @@ if ($Type -in @('e2e', 'e2e-js')) {
     if (-not ([string]::IsNullOrEmpty($Path))) {
         $commandParts += $Path
     }
+    $finalCommand = $commandParts -join " "
     
-    Write-Host "[INFO] Commande construite : '$($commandParts -join ' ')'" -ForegroundColor Cyan
+    Write-Host "[INFO] Commande construite : '$finalCommand'" -ForegroundColor Cyan
     Write-Host "[INFO] Délégation de l'exécution à '$ActivationScript'..." -ForegroundColor Cyan
 
-    # Appel direct avec les arguments, géré par le nouveau script d'activation
-    & $ActivationScript $commandParts
+    & $ActivationScript -CommandToRun $finalCommand
     $exitCode = $LASTEXITCODE
     Write-Host "[INFO] Exécution Playwright terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan
     exit $exitCode
@@ -134,11 +111,13 @@ if (-not ([string]::IsNullOrEmpty($PytestArgs))) {
     $runnerArgs += $PytestArgs.Split(' ')
 }
 
-Write-Host "[INFO] Commande construite pour le runner Python : '$($runnerArgs -join ' ')'" -ForegroundColor Cyan
+$CommandToRun = $runnerArgs -join " "
+
+Write-Host "[INFO] Commande construite pour le runner Python : '$CommandToRun'" -ForegroundColor Cyan
 Write-Host "[INFO] Délégation de l'exécution à '$ActivationScript'..." -ForegroundColor Cyan
 
 # Exécuter la commande via le script d'activation qui gère l'environnement
-& $ActivationScript $runnerArgs
+& $ActivationScript -CommandToRun $CommandToRun
 $exitCode = $LASTEXITCODE
 
 Write-Host "[INFO] Exécution terminée avec le code de sortie : $exitCode" -ForegroundColor Cyan

@@ -1,0 +1,8 @@
+formulas(assumptions).
+-estvrai(a).
+estvrai(a).
+end_of_list.
+
+formulas(goals).
+$F.
+end_of_list.

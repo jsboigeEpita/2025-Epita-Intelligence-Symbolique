@@ -29,6 +29,7 @@ Ces tests valident l'intégration authentique entre l'agent FOL et TweetyProject
 """
 
 import pytest
+import pytest_asyncio
 import asyncio
 import os
 import time
@@ -101,7 +102,7 @@ class TestFOLTweetyCompatibility:
         """Test compatibilité formules FOL avec l'agent FOL réel."""
         if not jvm_session:
             pytest.skip("Test nécessite la JVM.")
-        agent = await fol_agent_with_kernel
+        agent = fol_agent_with_kernel
         # Syntaxe correcte avec sauts de ligne explicites pour éviter les problèmes de formatage.
         formula_str = "thing = {a}\ntype(P(thing))\n\nP(a)"
         try:
@@ -118,7 +119,7 @@ class TestFOLTweetyCompatibility:
         """Test validation déclaration prédicats FOL avec Tweety via l'agent."""
         if not jvm_session:
             pytest.skip("Test nécessite la JVM.")
-        agent = await fol_agent_with_kernel
+        agent = fol_agent_with_kernel
         # Syntaxe multi-lignes correcte, conforme à la BNF de Tweety.
         valid_formula_str = """
 human = {socrate}
@@ -140,7 +141,7 @@ Mortal(socrate)
         """Test validation liaison quantificateurs avec Tweety via l'agent."""
         if not jvm_session:
             pytest.skip("Test nécessite la JVM.")
-        agent = await fol_agent_with_kernel
+        agent = fol_agent_with_kernel
         # Syntaxe correcte pour les quantificateurs en multi-lignes, conforme à la BNF de Tweety.
         well_bound_formula_str = """
 item = {a}
@@ -166,7 +167,7 @@ forall X: (P(X) => Q(X))
         if not jvm_session:
             pytest.skip("Test nécessite la JVM.")
         
-        agent = await fol_agent_with_kernel
+        agent = fol_agent_with_kernel
         builder = agent._builder_plugin
         builder.reset() # S'assurer qu'il est propre avant de commencer
 
@@ -212,7 +213,7 @@ class TestRealTweetyFOLAnalysis:
         if not jvm_session:
             pytest.skip("Test nécessite la JVM.")
             
-        agent = await fol_agent_with_kernel
+        agent = fol_agent_with_kernel
         # Test avec une chaîne de caractères syntaxiquement correcte
         syllogism_str = """
 human = {socrate}
@@ -245,7 +246,7 @@ Man(socrate)
         if not jvm_session:
             pytest.skip("Test nécessite la JVM.")
 
-        agent = await fol_agent_with_kernel
+        agent = fol_agent_with_kernel
         
         syllogism_text = "Tous les hommes sont mortels. Socrate est un homme."
 
@@ -283,20 +284,20 @@ Man(socrate)
         if not jvm_session:
             pytest.skip("Test nécessite la JVM.")
         
-        agent = await fol_agent_with_kernel
+        agent = fol_agent_with_kernel
         builder = agent._builder_plugin
         builder.reset()
 
         # 1. Définir le schéma de base: un prédicat P avec un argument.
         builder.add_sort("concept")
-        builder.add_predicate_schema("estvrai", ["concept"])
+        builder.add_predicate_schema("est_vrai", ["concept"])
         builder.add_constant_to_sort("a", "concept")
 
         # 2. Ajouter un fait atomique P(a).
-        builder.add_atomic_fact("estvrai", ["a"])
+        builder.add_atomic_fact("est_vrai", ["a"])
         
         # 3. Ajouter sa négation ¬P(a) en utilisant la nouvelle fonctionnalité.
-        builder.add_negated_atomic_fact("estvrai", ["a"])
+        builder.add_negated_atomic_fact("est_vrai", ["a"])
 
         # 4. Construire le BeliefSet à partir des faits.
         java_belief_set_obj = builder.build_tweety_belief_set(agent.tweety_bridge)
@@ -319,7 +320,7 @@ Man(socrate)
         if not jvm_session:
             pytest.skip("Test nécessite la JVM.")
         
-        agent = await fol_agent_with_kernel
+        agent = fol_agent_with_kernel
         builder = agent._builder_plugin
         builder.reset()
         
@@ -373,7 +374,7 @@ class TestFOLErrorHandling:
         L'objectif principal est de s'assurer que l'agent ne crashe pas et gère
         la situation de manière prévisible, même si le LLM hallucine une structure.
         """
-        agent = await fol_agent_with_kernel
+        agent = fol_agent_with_kernel
         
         # Texte sémantiquement absurde.
         problematic_text = "D'incolores idées vertes dorment furieusement."
@@ -401,7 +402,7 @@ class TestFOLErrorHandling:
         if not jvm_session:
             pytest.skip("Test nécessite la JVM.")
         
-        agent = await fol_agent_with_kernel
+        agent = fol_agent_with_kernel
         builder = agent._builder_plugin
         builder.reset()
 
@@ -433,7 +434,7 @@ class TestFOLPerformanceVsModal:
             pytest.skip("Test nécessite la JVM.")
         
         # Agent FOL
-        fol_agent = await fol_agent_with_kernel
+        fol_agent = fol_agent_with_kernel
         builder = fol_agent._builder_plugin
         builder.reset()
         
@@ -459,7 +460,7 @@ class TestFOLPerformanceVsModal:
     @pytest.mark.asyncio
     async def test_fol_stability_multiple_analyses(self, fol_agent_with_kernel):
         """Test stabilité FOL sur analyses multiples."""
-        agent = await fol_agent_with_kernel
+        agent = fol_agent_with_kernel
         
         test_texts = [
             "Tous les chats sont des animaux.",
@@ -502,7 +503,7 @@ class TestFOLPerformanceVsModal:
     @pytest.mark.asyncio
     async def test_fol_memory_usage_stability(self, fol_agent_with_kernel):
         """Test stabilité mémoire agent FOL."""
-        agent = await fol_agent_with_kernel
+        agent = fol_agent_with_kernel
         
         # Analyses répétées pour tester fuites mémoire
         for i in range(10):
@@ -522,7 +523,7 @@ class TestFOLRealWorldIntegration:
         if not jvm_session:
             pytest.skip("Test nécessite la JVM.")
 
-        agent = await fol_agent_with_kernel
+        agent = fol_agent_with_kernel
         builder = agent._builder_plugin
         builder.reset()
 
@@ -564,7 +565,7 @@ class TestFOLRealWorldIntegration:
         if not jvm_session:
             pytest.skip("Test nécessite la JVM.")
         
-        agent = await fol_agent_with_kernel
+        agent = fol_agent_with_kernel
         text = "Todos los humanos sont mortales. Sócrates es un humano."
         
         belief_set, msg = await agent.text_to_belief_set(text)
@@ -636,7 +637,7 @@ def check_tweety_availability():
 # La sérialisation est maintenant la seule stratégie par défaut, la paramétrisation n'est plus nécessaire.
 # La fixture use_serialization a été supprimée.
 
-@pytest.fixture(scope="function")
+@pytest_asyncio.fixture(scope="module")
 async def fol_agent_with_kernel(jvm_session):
     """Fixture pour créer un FOLLogicAgent avec un kernel authentique."""
     logger.info(f"--- DEBUT FIXTURE 'fol_agent_with_kernel' ---")
