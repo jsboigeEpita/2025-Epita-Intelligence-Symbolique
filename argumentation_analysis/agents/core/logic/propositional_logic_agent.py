@@ -290,12 +290,13 @@ class PropositionalLogicAgent(BaseLogicAgent):
         
         self.logger.info(f"Configuration des composants sémantiques pour {self.name}...")
 
-        if not TweetyInitializer.is_jvm_ready():
-            self.logger.critical(f"La JVM pour TweetyBridge de {self.name} n'est pas prête. Impossible de continuer.")
-            raise RuntimeError(f"JVM not ready for agent {self.name}")
-
+        # Initialiser TweetyBridge d'abord. Son constructeur s'occupe de la JVM.
         self._tweety_bridge = TweetyBridge()
         self.logger.info(f"TweetyBridge initialisé pour {self.name}.")
+
+        if not self._tweety_bridge.initializer.is_jvm_ready():
+            self.logger.critical(f"La JVM pour TweetyBridge de {self.name} n'est pas prête après initialisation. Impossible de continuer.")
+            raise RuntimeError(f"JVM not ready for agent {self.name} after initialization attempt.")
         
         prompt_execution_settings = None
         if self._llm_service_id:

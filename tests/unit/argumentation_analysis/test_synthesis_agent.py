@@ -29,28 +29,24 @@ class MockLogicAgent:
     def __init__(self, logic_type: str):
         self.logic_type = logic_type
 
-    def analyze_text(self, text: str) -> str:
-        async def _run():
-            if self.logic_type == "first_order":
-                return f"Analyse FOL simulée: Prédicats et quantificateurs détectés dans '{text}'"
-            if self.logic_type == "modal":
-                return f"Analyse ML simulée: Modalités nécessité/possibilité détectées dans '{text}'"
-            return f"Analyse {self.logic_type} simulée pour le texte: '{text}'"
-        return asyncio.run(_run())
+    async def analyze_text(self, text: str) -> str:
+        if self.logic_type == "first_order":
+            return f"Analyse FOL simulée: Prédicats et quantificateurs détectés dans '{text}'"
+        if self.logic_type == "modal":
+            return f"Analyse ML simulée: Modalités nécessité/possibilité détectées dans '{text}'"
+        return f"Analyse {self.logic_type} simulée pour le texte: '{text}'"
 
 class MockInformalAgent:
-    def analyze_text(self, text: str) -> dict:
-        async def _run():
-            fallacies = []
-            devices = ["assertion"]
-            if "absolument" in text or "évidemment" in text:
-                fallacies.append({"type": "assertion_non_fondée", "confidence": 0.8})
-            if "tout le monde sait" in text:
-                fallacies.append({"type": "appel_au_sens_commun", "confidence": 0.7})
-            if len(text) > 50:
-                devices.append("argumentation")
-            return {"fallacies": fallacies, "structure": "Structure analysée (mock)", "devices": devices}
-        return asyncio.run(_run())
+    async def analyze_text(self, text: str) -> dict:
+        fallacies = []
+        devices = ["assertion"]
+        if "absolument" in text or "évidemment" in text:
+            fallacies.append({"type": "assertion_non_fondée", "confidence": 0.8})
+        if "tout le monde sait" in text:
+            fallacies.append({"type": "appel_au_sens_commun", "confidence": 0.7})
+        if len(text) > 50:
+            devices.append("argumentation")
+        return {"fallacies": fallacies, "structure": "Structure analysée (mock)", "devices": devices}
 
 
 class TestSynthesisAgent:
@@ -317,10 +313,7 @@ class TestSynthesisAgent:
             "modal": mock_agent_modal
         }
         
-        async def run_test():
-            return await synthesis_agent._run_formal_analysis(test_text)
-
-        result = asyncio.run(run_test())
+        result = asyncio.run(synthesis_agent._run_formal_analysis(test_text))
         
         assert isinstance(result, LogicAnalysisResult)
         assert result.propositional_result is not None
@@ -337,10 +330,7 @@ class TestSynthesisAgent:
         OrchestrationServiceManager = MockInformalAgent()
         synthesis_agent._informal_agent = OrchestrationServiceManager
         
-        async def run_test():
-            return await synthesis_agent._run_informal_analysis(test_text)
-
-        result = asyncio.run(run_test())
+        result = asyncio.run(synthesis_agent._run_informal_analysis(test_text))
         
         assert isinstance(result, InformalAnalysisResult)
         assert result.processing_time_ms is not None
@@ -693,7 +683,7 @@ class TestMockAgents:
         
         assert agent.logic_type == "propositional"
         
-        result = agent.analyze_text("Texte de test avec logique")
+        result = asyncio.run(agent.analyze_text("Texte de test avec logique"))
         
         assert "Analyse propositional simulée" in result
         assert "Texte de test" in result
@@ -702,7 +692,7 @@ class TestMockAgents:
         """Test MockLogicAgent pour logique de premier ordre."""
         agent = MockLogicAgent("first_order")
         
-        result = agent.analyze_text("Texte avec prédicats")
+        result = asyncio.run(agent.analyze_text("Texte avec prédicats"))
         
         assert "Analyse FOL simulée" in result
         assert "Prédicats et quantificateurs" in result
@@ -711,7 +701,7 @@ class TestMockAgents:
         """Test MockLogicAgent pour logique modale."""
         agent = MockLogicAgent("modal")
         
-        result = agent.analyze_text("Il est nécessaire que...")
+        result = asyncio.run(agent.analyze_text("Il est nécessaire que..."))
         
         assert "Analyse ML simulée" in result
         assert "Modalités nécessité/possibilité" in result
@@ -720,7 +710,7 @@ class TestMockAgents:
         """Test MockLogicAgent pour type inconnu."""
         agent = MockLogicAgent("unknown_logic")
         
-        result = agent.analyze_text("Texte quelconque")
+        result = asyncio.run(agent.analyze_text("Texte quelconque"))
         
         assert "Analyse unknown_logic simulée" in result
     
@@ -728,7 +718,7 @@ class TestMockAgents:
         """Test MockInformalAgent sans sophismes."""
         agent = MockInformalAgent()
         
-        result = agent.analyze_text("Texte neutre sans mots-clés")
+        result = asyncio.run(agent.analyze_text("Texte neutre sans mots-clés"))
         
         assert isinstance(result, dict)
         assert "fallacies" in result
@@ -742,7 +732,7 @@ class TestMockAgents:
         
         # Texte contenant des mots-clés déclencheurs
         text = "C'est absolument évident que tout le monde sait cela"
-        result = agent.analyze_text(text)
+        result = asyncio.run(agent.analyze_text(text))
         
         assert len(result["fallacies"]) >= 2  # "absolument" et "tout le monde sait"
         
@@ -757,13 +747,13 @@ class TestMockAgents:
         
         # Texte court
         short_text = "Court"
-        result_short = agent.analyze_text(short_text)
+        result_short = asyncio.run(agent.analyze_text(short_text))
         assert "assertion" in result_short["devices"]
         assert len(result_short["devices"]) == 1
         
         # Texte long
         long_text = "Texte long avec plus de cinquante caractères pour déclencher l'analyse avancée"
-        result_long = agent.analyze_text(long_text)
+        result_long = asyncio.run(agent.analyze_text(long_text))
         assert "assertion" in result_long["devices"]
         assert "argumentation" in result_long["devices"]
         assert len(result_long["devices"]) == 2

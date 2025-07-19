@@ -241,10 +241,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         """
         super().__init__(kernel=kernel, agent_name=agent_name, system_prompt=system_prompt, **kwargs)
         self._logic_type_name = logic_type_name
-        # L'instance de TweetyBridge devrait être passée ou créée ici.
-        # Pour l'instant, on suppose qu'elle sera initialisée dans setup_agent_components
-        # ou passée d'une manière ou d'une autre.
-        # self._tweety_bridge = TweetyBridge() # Exemple
+        self._tweety_bridge = None  # Initialisation explicite à None
         self._syntax_bnf = None # Pourrait être chargé par le bridge ou la sous-classe
 
     @property

@@ -40,8 +40,8 @@ import json
 from typing import Dict, List, Any, Optional
 
 # Import de l'agent FOL
-from argumentation_analysis.agents.core.logic.first_order_logic_agent import (
-    FirstOrderLogicAgent,
+from argumentation_analysis.agents.core.logic.fol_logic_agent import (
+    FOLLogicAgent as FirstOrderLogicAgent,
     # FOLAnalysisResult, # OBSOLETE: Remplacé par BeliefSetBuilderPlugin
     # create_fol_agent # OBSOLETE: Factory n'est plus utilisée, l'agent est instancié directement
 )

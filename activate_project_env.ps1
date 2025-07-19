@@ -86,7 +86,8 @@ $moduleName = "project_core.core_from_scripts.environment_manager"
 # Étape 1: Récupérer le nom de l'environnement Conda de manière fiable
 Write-Host "[INFO] Récupération du nom de l'environnement Conda depuis .env..." -ForegroundColor Cyan
 try {
-    $envName = python -m $moduleName get-env-name
+    $rawEnvName = python -m $moduleName get-env-name
+    $envName = $rawEnvName.Trim()
     if (-not $envName) {
         throw "Le nom de l'environnement Conda n'a pas pu être déterminé."
     }
@@ -102,7 +103,7 @@ catch {
 # On utilise --no-capture-output pour s'assurer que stdout/stderr du processus enfant
 # sont directement streamés, ce qui est crucial pour le logging des tests.
 $condaCommand = "conda"
-$commandToExecuteInsideEnv = "python -m $moduleName run `"$CommandToRun`""
+$commandToExecuteInsideEnv = " python -m $moduleName run `"$CommandToRun`""
 # Correction: suppression du séparateur '--' qui n'est pas géré correctement par le shell sous-jacent.
 $finalCommand = "$condaCommand run -n $envName --no-capture-output --live-stream $commandToExecuteInsideEnv"
 
@@ -111,7 +112,22 @@ Write-Host "[DEBUG] Commande finale: $finalCommand" -ForegroundColor Gray
 
 # Étape 3: Exécution et propagation du code de sortie
 try {
-    Invoke-Expression -Command $finalCommand
+    # Méthode d'appel direct et robuste, évitant Invoke-Expression
+    $condaPath = Get-Command conda.exe | Select-Object -ExpandProperty Source
+    $commandArguments = @(
+        "run",
+        "-n",
+        $envName,
+        "--no-capture-output",
+        "--live-stream",
+        "python",
+        "-m",
+        $moduleName,
+        "run"
+    )
+    $commandArguments += $CommandToRun.Split(' ')
+    
+    & $condaPath $commandArguments
     $exitCode = $LASTEXITCODE
 }
 catch {

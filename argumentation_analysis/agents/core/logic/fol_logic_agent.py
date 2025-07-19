@@ -115,7 +115,6 @@ class FOLLogicAgent(BaseLogicAgent):
         )
         
         # Configuration spécifique FOL
-        self._tweety_bridge: Optional[TweetyBridge] = None
         self.analysis_cache: Dict[str, FOLAnalysisResult] = {}
         
         # Prompts spécialisés FOL

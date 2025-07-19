@@ -14,7 +14,6 @@ from semantic_kernel import Kernel
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.functions import KernelArguments
 from .jtms_agent_base import JTMSAgentBase, ExtendedBelief
-from .factory import AgentFactory
 from argumentation_analysis.config.settings import AppSettings
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
 

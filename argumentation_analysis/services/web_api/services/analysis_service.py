@@ -19,7 +19,7 @@ import json
 # Imports du moteur d'analyse (style b282af4 avec gestion d'erreur)
 try:
     from argumentation_analysis.config.settings import AppSettings
-    from argumentation_analysis.agents.factory import AgentFactory, AgentType
+    # from argumentation_analysis.agents.factory import AgentFactory, AgentType
     from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
     from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer
     from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
@@ -42,7 +42,7 @@ try:
 except ImportError as e:
     logging.warning(f"[ERROR] CRITICAL: Core analysis modules import failed: {e}")
     # Mode dégradé pour les tests
-    AgentFactory = None
+    # AgentFactory = None # This is now handled by the late import
     ComplexFallacyAnalyzer = None
     ContextualFallacyAnalyzer = None
     FallacySeverityEvaluator = None
@@ -107,6 +107,12 @@ class AnalysisService:
             if self.contextual_analyzer: self.tools['contextual_fallacy_analyzer'] = self.contextual_analyzer
             if self.severity_evaluator: self.tools['fallacy_severity_evaluator'] = self.severity_evaluator
             
+            try:
+                from argumentation_analysis.agents.factory import AgentFactory
+            except ImportError as e:
+                self.logger.warning(f"Could not import AgentFactory: {e}")
+                AgentFactory = None
+                
             if AgentFactory and create_llm_service and get_taxonomy_path:
                 self.logger.info("[INIT] Attempting to initialize informal agent via AgentFactory...")
                 kernel = sk.Kernel()

@@ -27,12 +27,18 @@ async def perform_text_analysis(text: str, services: dict[str, Any], analysis_ty
     orchestrateur pour effectuer l'analyse.
 
     :param text: Le texte d'entrée à analyser.
-    :param services: Dictionnaire de services. N'est plus utilisé directement mais conservé pour compatibilité.
+    :param services: Dictionnaire de services, doit contenir 'llm_service'.
     :param analysis_type: Type d'analyse (pour la journalisation).
     :return: Les résultats structurés de l'analyse.
-    :raises Exception: Propage les exceptions de l'orchestrateur.
+    :raises ValueError: Si le service LLM est manquant.
+    :raises Exception: Propage les autres exceptions de l'orchestrateur.
     """
     logger.info(f"Lancement de l'analyse de texte de type '{analysis_type}' sur un texte de {len(text)} caractères.")
+    
+    llm_service = services.get("llm_service")
+    if not llm_service:
+        logger.critical("Le service LLM n'est pas disponible dans les services fournis.")
+        raise ValueError("Le service LLM est requis pour l'analyse.")
 
     try:
         from argumentation_analysis.orchestration.analysis_runner_v2 import AnalysisRunnerV2
@@ -41,12 +47,11 @@ async def perform_text_analysis(text: str, services: dict[str, Any], analysis_ty
         raise
 
     try:
-        # Le runner V2 gère lui-même la configuration et l'accès aux services.
-        runner = AnalysisRunnerV2()
+        runner = AnalysisRunnerV2(llm_service=llm_service)
         logger.info(f"Lancement de l'analyse principale (type: {analysis_type}) via AnalysisRunnerV2...")
         
-        analysis_result = await runner.run_analysis_async(
-            input_text=text
+        analysis_result = await runner.run_analysis(
+            text_content=text
         )
         
         logger.info(f"Analyse principale (type: '{analysis_type}') terminée avec succès via AnalysisRunnerV2.")

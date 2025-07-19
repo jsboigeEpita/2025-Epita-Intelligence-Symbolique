@@ -47,7 +47,6 @@ class TestCluedoOrchestratorIntegration:
     These tests focus on the public API and the main workflow, reflecting the actual code.
     """
 
-    @pytest.mark.skip(reason="Skipping due to fatal JPype error")
     async def test_workflow_setup(self, orchestrator, game_elements, mock_kernel):
         """
         Tests that the setup_workflow method correctly initializes the game state,
@@ -56,6 +55,9 @@ class TestCluedoOrchestratorIntegration:
         # Ensure kernel.add_plugin does not return a coroutine
         mock_kernel.add_plugin = Mock()
         
+        # Configure the mock to satisfy Pydantic validation
+        mock_kernel.get_service.return_value.service_id = "test_service_id"
+
         # Action
         oracle_state = await orchestrator.setup_workflow(
             nom_enquete="Test Setup",
@@ -86,7 +88,6 @@ class TestCluedoOrchestratorIntegration:
         # Verify kernel interactions
         assert mock_kernel.add_plugin.call_count == 4
 
-    @pytest.mark.skip(reason="Skipping due to fatal JPype error")
     @patch('argumentation_analysis.orchestration.cluedo_extended_orchestrator.CyclicSelectionStrategy.next')
     @patch('argumentation_analysis.orchestration.cluedo_extended_orchestrator.OracleTerminationStrategy.should_terminate')
     async def test_workflow_execution(self, mock_should_terminate, mock_selection_next, orchestrator, game_elements, mock_kernel):
@@ -96,6 +97,8 @@ class TestCluedoOrchestratorIntegration:
         # --- Setup ---
         mock_kernel.add_plugin = Mock()
 
+        # Configure the mock to satisfy Pydantic validation
+        mock_kernel.get_service.return_value.service_id = "test_service_id"
         await orchestrator.setup_workflow(elements_jeu=game_elements)
 
         # Mock agents and their 'invoke' responses
