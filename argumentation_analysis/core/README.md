@@ -42,6 +42,22 @@ Ce répertoire contient les classes et fonctions fondamentales partagées par l'
     * Supporte la configuration de paramètres avancés comme la température, le nombre de tokens maximum, etc.
     * Implémente un mécanisme de fallback en cas d'erreur de connexion.
 
+### ⚠️ Risques d'Intégration Native et Leçons Apprises
+
+L'intégration de bibliothèques natives (.dll, .so) via la JVM présente des risques de stabilité critiques si les architectures ne sont pas parfaitement alignées.
+
+**Crash `Windows fatal exception: access violation`:**
+
+*   **Cause :** Une analyse post-crash a démontré que cette erreur était systématiquement déclenchée lors du chargement de bibliothèques natives (spécifiquement les DLLs de Prover9) via l'argument `-Djava.library.path`. La cause est un conflit d'architecture entre la JVM (ex: 64-bit) et les bibliothèques natives chargées (ex: 32-bit).
+*   **Solution de contournement :** La stabilité a été restaurée en désactivant complètement le chargement de la bibliothèque native problématique.
+
+**Recommandations Fortes :**
+
+1.  **Privilégier les dépendances 100% Java :** Dans la mesure du possible, utilisez des bibliothèques entièrement écrites en Java pour éviter les problèmes de compatibilité multiplateforme et d'architecture.
+2.  **Validation d'architecture rigoureuse :** **N'UTILISEZ PAS** l'argument `-Djava.library.path` avant d'avoir formellement validé que l'architecture de chaque bibliothèque native (DLL) correspond exactement à celle de la JVM utilisée (32-bit vs 64-bit).
+3.  **Dépendances Stables :** Pour assurer la stabilité, reportez-vous aux fichiers `requirements.txt` et à la configuration du projet pour les versions de Java et `jpype` testées.
+4.  **Variable `JAVA_HOME` :** Assurez-vous toujours que la variable d'environnement `JAVA_HOME` pointe vers la racine du JDK dont l'architecture est compatible avec les bibliothèques natives que vous prévoyez de charger.
+
 ## Utilisation
 
 ### Initialisation de l'État

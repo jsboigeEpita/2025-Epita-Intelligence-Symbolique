@@ -192,7 +192,14 @@ def jvm_session():
     Manages the JPype JVM lifecycle for the entire test session.
     """
     logger.info("---------- [JVM_SESSION_FIXTURE] Pytest session starting: Provisioning dependencies and Initializing JVM... ----------")
-    
+
+    # Vérification de la variable d'environnement pour skipper les tests JVM
+    if os.environ.get("SKIP_JVM_TESTS", "false").lower() == "true":
+        logger.warning("[JVM_SESSION_FIXTURE] SKIP_JVM_TESTS is set. Skipping JVM initialization and related tests.")
+        pytest.skip("JVM tests are skipped via SKIP_JVM_TESTS environment variable.")
+        yield
+        return
+
     try:
         logger.info("[JVM_SESSION_FIXTURE] STEP 1: Checking Tweety JARs location...")
         _ensure_tweety_jars_are_correctly_placed()
@@ -220,10 +227,10 @@ def jvm_session():
 
     logger.info("---------- [JVM_SESSION_FIXTURE] Pytest session finished: Shutting down JVM... ----------")
     logger.info(f"[JVM_SESSION_FIXTURE] Checking ownership before shutdown... is_jvm_owned_by_session_fixture() -> {is_jvm_owned_by_session_fixture()}")
-    if is_jvm_owned_by_session_fixture():
+    if is_jvm_owned_by_session_fixture() and is_jvm_started():
         shutdown_jvm(called_by_session_fixture=True)
     else:
-        logger.warning("[JVM_SESSION_FIXTURE] The JVM is not (or no longer) controlled by the global fixture. It will not be shut down here.")
+        logger.warning("[JVM_SESSION_FIXTURE] The JVM is not (or no longer) controlled by the global fixture, or was not started. It will not be shut down here.")
 
 @pytest.fixture(scope="function", autouse=True)
 def manage_jvm_for_test(request):
