@@ -322,7 +322,8 @@ def get_jvm_options() -> List[str]:
         f"-Xms{settings.jvm.min_heap_size}",
         f"-Xmx{settings.jvm.max_heap_size}",
         "-Dfile.encoding=UTF-8",
-        "-Djava.awt.headless=true"
+        # "-Djava.awt.headless=true" # Cette option cause un "Windows fatal exception: access violation"
+                                     # sur certaines configurations Windows. Elle est désactivée.
     ]
     # Les options "-XX:+UseG1GC", "-Xrs" sur Windows provoquaient un "fatal exception: access violation".
     # Elles sont désactivées de manière permanente.
