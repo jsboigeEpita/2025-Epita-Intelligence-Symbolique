@@ -7,6 +7,7 @@ import asyncio
 
 import semantic_kernel as sk
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
+from argumentation_analysis.config.settings import AppSettings
 
 # Fixture to create a mock kernel for the agent
 @pytest.fixture
@@ -36,7 +37,8 @@ class TestLogicalAgentHardening:
         # This test is synchronous as it does not await any coroutines.
         # The `async def` was likely a leftover.
         # 1. Initialize the agent
-        agent = SherlockJTMSAgent(kernel, agent_name="test_contradiction_agent")
+        settings = AppSettings()
+        agent = SherlockJTMSAgent(kernel, settings, agent_name="test_contradiction_agent")
 
         # 2. Add a single fact
         fact_description = load_scenario["facts"][0]

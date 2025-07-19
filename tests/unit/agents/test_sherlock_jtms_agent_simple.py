@@ -17,6 +17,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
+from argumentation_analysis.config.settings import AppSettings
 
 @pytest.fixture
 def mock_kernel():
@@ -27,7 +28,8 @@ def mock_kernel():
 @pytest.fixture
 def sherlock_agent(mock_kernel):
     """Agent Sherlock de test"""
-    return SherlockJTMSAgent(mock_kernel, "sherlock_test", llm_service_id="mock_service")
+    settings = AppSettings()
+    return SherlockJTMSAgent(mock_kernel, settings, agent_name="sherlock_test")
 
 class TestSherlockJTMSAgentSimple:
     """Tests simplifiés pour la classe SherlockJTMSAgent"""
@@ -145,7 +147,8 @@ if __name__ == "__main__":
         from unittest.mock import Mock
         
         mock_kernel = Mock(spec=Kernel)
-        agent = SherlockJTMSAgent(mock_kernel, "test_sherlock")
+        settings = AppSettings()
+        agent = SherlockJTMSAgent(mock_kernel, settings, "test_sherlock")
         
         print("Test d'initialisation...")
         assert agent.agent_name == "test_sherlock"

@@ -76,14 +76,16 @@ def test_forbidden_methods_integrity():
 def test_validation_result_creation():
     """Test de création de résultat de validation."""
     result = ValidationResult(
-        is_valid=True,
-        reason="Test validation",
-        revealed_cards=["Professeur Violet"]
+        can_refute=True,
+        suggestion_valid=False, # Une suggestion réfutée n'est pas valide
+        reason="Test validation: Réfutation",
+        revealed_cards=[{"type": "suspect", "value": "Professeur Violet"}]
     )
     
-    assert result.is_valid is True
-    assert result.reason == "Test validation" 
-    assert "Professeur Violet" in result.revealed_cards
+    assert result.suggestion_valid is False
+    assert result.reason == "Test validation: Réfutation"
+    # Vérifier la nouvelle structure de revealed_cards
+    assert any(card.get("value") == "Professeur Violet" for card in result.revealed_cards)
     
     print("[OK] Test création ValidationResult réussi")
 

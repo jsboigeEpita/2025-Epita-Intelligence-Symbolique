@@ -86,6 +86,10 @@ def create_app():
     """
     logger.info("Creating Flask app instance...")
 
+    # --- Initialisation des dépendances lourdes ---
+    # Appelée ici pour garantir l'initialisation à chaque création d'app
+    initialize_heavy_dependencies()
+
     current_dir = Path(__file__).resolve().parent
     root_dir = current_dir.parent.parent.parent
     react_build_dir = root_dir / "services" / "web_api" / "interface-web-argumentative" / "build"
@@ -207,8 +211,7 @@ if __name__ == '__main__':
 # --- Point d'entrée pour Uvicorn/Gunicorn ---
 # Initialise les dépendances lourdes une seule fois au démarrage,
 # sauf si on est en train de lancer les tests, car pytest gérera la JVM.
-if "PYTEST_CURRENT_TEST" not in os.environ:
-    initialize_heavy_dependencies()
+# L'initialisation est maintenant dans create_app, donc cette section est supprimée.
 
 # Crée l'application Flask en utilisant la factory
 # Crée l'application Flask en utilisant la factory

@@ -8,6 +8,7 @@ from config.unified_config import UnifiedConfig
 
 #!/usr/bin/env python3
 """
+from unittest.mock import Mock, AsyncMock
 Test simple pour identifier les problèmes des 4 derniers tests du Groupe 3.
 """
 

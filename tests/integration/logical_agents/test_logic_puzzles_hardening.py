@@ -5,6 +5,7 @@ import asyncio
 
 import semantic_kernel as sk
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
+from argumentation_analysis.config.settings import AppSettings
 
 # Fixture to create a mock kernel for the agent
 @pytest.fixture

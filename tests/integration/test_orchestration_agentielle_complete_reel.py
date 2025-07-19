@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 # Imports des vrais agents
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
 from argumentation_analysis.agents.watson_jtms_agent import WatsonJTMSAgent
+from argumentation_analysis.config.settings import AppSettings
 
 # Imports des orchestrateurs réels
 from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
@@ -61,8 +62,10 @@ def kernel():
 def sherlock_agent(kernel):
     """Fixture pour l'agent Sherlock JTMS."""
     try:
+        settings = AppSettings()
         agent = SherlockJTMSAgent(
             kernel=kernel,
+            settings=settings,
             agent_name="Sherlock_JTMS_Real",
             system_prompt="""Vous êtes Sherlock Holmes avec JTMS intégré..."""
         )

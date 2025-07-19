@@ -10,10 +10,14 @@ import logging
 import sys
 from datetime import datetime
 import pytest
+from unittest.mock import patch, AsyncMock
+from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from semantic_kernel.contents.utils.author_role import AuthorRole
 
 # Imports de l'infrastructure Oracle
-# from argumentation_analysis.orchestration.cluedo_extended_orchestrator import run_cluedo_oracle_game
+from argumentation_analysis.orchestration.cluedo_runner import run_cluedo_oracle_game
 from semantic_kernel import Kernel
+from argumentation_analysis.core.bootstrap import initialize_project_environment
 
 # Configuration du logging simple
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -25,9 +29,15 @@ def test_workflow_simple():
     logger.info("DEBUT - Test du workflow 3-agents")
     
     try:
-        # Configuration du kernel
-        logger.info("Configuration du kernel...")
-        kernel = Kernel()
+        # Configuration du kernel en utilisant le bootstrap du projet
+        logger.info("Configuration du kernel via bootstrap...")
+        project_context = initialize_project_environment(force_mock_llm=True)
+        kernel = project_context.kernel
+        settings = project_context.settings
+        
+        assert kernel is not None, "Le kernel ne doit pas être None après l'initialisation"
+        assert kernel.services, "Le kernel doit avoir des services configurés"
+        assert settings is not None, "L'objet settings ne doit pas être None"
         
         # Exécution du workflow
         logger.info("Lancement du workflow...")

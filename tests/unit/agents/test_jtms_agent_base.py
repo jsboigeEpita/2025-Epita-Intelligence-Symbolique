@@ -26,6 +26,7 @@ from argumentation_analysis.models.extended_belief_model import (
 
 class TestJTMSAgent(JTMSAgentBase):
     """Agent de test héritant de JTMSAgentBase"""
+    __test__ = False  # Indiquer à pytest de ne pas collecter cette classe comme une suite de tests
     
     def __init__(self, kernel: Kernel, agent_name: str = "test_agent"):
         super().__init__(kernel, agent_name)

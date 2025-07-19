@@ -8,6 +8,7 @@ import sys
 import asyncio
 import traceback
 
+from unittest.mock import Mock, AsyncMock
 
 # Imports du système Oracle
 sys.path.append('.')

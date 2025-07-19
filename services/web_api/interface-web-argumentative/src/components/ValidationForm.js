@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { AppContext } from '../context/AppContext';
+import { useAppContext } from '../context/AppContext';
 import { validateArgument } from '../services/api';
 import './ValidationForm.css';
 
@@ -7,7 +7,7 @@ import './ValidationForm.css';
  * Composant pour la validation d'arguments logiques
  */
 const ValidationForm = () => {
-  const { isLoading, setIsLoading } = useContext(AppContext);
+  const { isLoading, setIsLoading } = useAppContext();
   // État du formulaire
   const [premises, setPremises] = useState(['']);
   const [conclusion, setConclusion] = useState('');

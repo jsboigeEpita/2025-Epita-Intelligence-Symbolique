@@ -8,6 +8,7 @@ Tests les methodes liees aux permissions qui echouaient auparavant.
 import sys
 import os
 import asyncio
+from unittest.mock import Mock, AsyncMock
 
 from unittest.mock import Mock, AsyncMock
 
