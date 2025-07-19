@@ -5,7 +5,7 @@ Script de test pour l'architecture modulaire
 """
 
 # ===== AUTO-ACTIVATION ENVIRONNEMENT =====
-import scripts.core.auto_env  # Auto-activation environnement intelligent
+# import scripts.core.auto_env  # Auto-activation environnement intelligent
 # =========================================
 import sys
 import os

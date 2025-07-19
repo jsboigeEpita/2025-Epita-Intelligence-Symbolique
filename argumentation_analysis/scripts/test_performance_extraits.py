@@ -186,6 +186,7 @@ async def setup_informal_agent(llm_service: Any) -> Tuple[Any, StateManagerMock]
     return kernel, state_manager
 
 @pytest.mark.parametrize("texte", TEXTES_POUR_TEST)
+@pytest.mark.asyncio
 async def test_identify_arguments(kernel: Any, state_manager: StateManagerMock, texte: str) -> Tuple[List[str], float]:
     """
     Teste la fonction d'identification des arguments de l'agent Informel.
@@ -233,6 +234,7 @@ async def test_identify_arguments(kernel: Any, state_manager: StateManagerMock, 
     logger.info(f"Arguments identifiés: {len(arg_ids)} en {execution_time:.2f} secondes")
     return arg_ids, execution_time
 
+@pytest.mark.asyncio
 async def test_explore_fallacy_hierarchy(kernel: Any, root_pk: str = "0") -> Tuple[Optional[Dict[str, Any]], float]:
     """
     Teste la fonction d'exploration de la hiérarchie des sophismes de l'agent Informel.
@@ -274,6 +276,7 @@ async def test_explore_fallacy_hierarchy(kernel: Any, root_pk: str = "0") -> Tup
         return None, execution_time
 
 @pytest.mark.parametrize("fallacy_pk", [0, 1, 13])
+@pytest.mark.asyncio
 async def test_get_fallacy_details(kernel: Any, fallacy_pk: Any) -> Tuple[Optional[Dict[str, Any]], float]:
     """
     Teste la fonction de récupération des détails d'un sophisme de l'agent Informel.

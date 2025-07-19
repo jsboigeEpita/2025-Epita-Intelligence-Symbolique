@@ -28,6 +28,7 @@ from .services.validation_service import ValidationService
 from .services.fallacy_service import FallacyService
 from .services.framework_service import FrameworkService
 # Import pour LogicService
+from argumentation_analysis.core.llm_service import create_llm_service
 from argumentation_analysis.services.web_api.services.logic_service import LogicService
 from argumentation_analysis.services.web_api.models.request_models import (
     LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest
@@ -73,7 +74,8 @@ analysis_service = AnalysisService()
 validation_service = ValidationService()
 fallacy_service = FallacyService()
 framework_service = FrameworkService()
-logic_service = LogicService()
+llm_service = create_llm_service(service_id="default")
+logic_service = LogicService(llm_service)
 
 # Enregistrer les blueprints pour les routes API
 app.register_blueprint(main_bp, url_prefix='/api')

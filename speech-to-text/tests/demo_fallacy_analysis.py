@@ -2,20 +2,11 @@
 Test script for fallacy analysis integration
 This script tests the integration between speech-to-text and fallacy detection
 """
-import sys
-from pathlib import Path
+
 import json
-import pytest
-
-# Add parent directory to path for imports
-parent_dir = Path(__file__).parent.parent
-if str(parent_dir) not in sys.path:
-    sys.path.insert(0, str(parent_dir))
-
 from simple_fallacy_detector import detect_fallacies_simple
 
-@pytest.mark.skip(reason="Test étudiant. De plus, problème de PYTHONPATH ou __init__.py manquant, à corriger.")
-def test_fallacy_analysis_integration():
+def main():
     """Test the fallacy analysis integration"""
     print("🧠 Testing Fallacy Analysis Integration...")
     
@@ -66,9 +57,13 @@ def test_fallacy_analysis_integration():
         print("="*60)
         print("The speech-to-text to fallacy analysis pipeline is working!")
         
-        assert True
-        
     except Exception as e:
         print(f"\n❌ Error during fallacy analysis: {str(e)}")
         print("Integration test failed.")
-        assert False, f"Fallacy analysis failed with error: {e}"
+        return False
+    
+    return True
+
+if __name__ == "__main__":
+    success = main()
+    exit(0 if success else 1) 
