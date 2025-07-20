@@ -171,6 +171,19 @@ def _ensure_tweety_jars_are_correctly_placed():
 
 
 @pytest.fixture(scope="session", autouse=True)
+def setup_test_environment():
+    """
+    Fixture de session pour configurer l'environnement de test global.
+    Définit une variable d'environnement pour signaler que les tests sont en cours.
+    """
+    os.environ['PYTEST_RUNNING'] = '1'
+    logger.info("Variable d'environnement 'PYTEST_RUNNING' définie à '1'.")
+    yield
+    del os.environ['PYTEST_RUNNING']
+    logger.info("Variable d'environnement 'PYTEST_RUNNING' supprimée.")
+
+
+@pytest.fixture(scope="session", autouse=True)
 def apply_nest_asyncio():
     """
     Applique nest_asyncio pour permettre l'exécution de boucles d'événements imbriquées,
@@ -238,14 +251,16 @@ def manage_jvm_for_test(request):
     This 'autouse' fixture runs for every test and decides if the global
     `jvm_session` fixture is required by manually invoking it.
     """
-    if 'no_jvm_session' in request.node.keywords:
-        logger.debug(
-            f"Test '{request.node.name}' is marked with 'no_jvm_session'. "
-            "The global JVM fixture will not be requested for this test."
+    # Inversion de la logique : ne charger la JVM que si c'est explicitement demandé.
+    if 'real_jpype' in request.node.keywords:
+        logger.warning(
+            f"Test '{request.node.name}' is marked with 'real_jpype'. "
+            "The global JVM fixture WILL BE requested for this test."
         )
+        request.getfixturevalue('jvm_session')
         yield
     else:
-        request.getfixturevalue('jvm_session')
+        # Pour tous les autres tests, ne rien faire et ne pas démarrer la JVM.
         yield
 
 

@@ -44,12 +44,12 @@ def communication_hub(mock_kernel):
 @pytest.fixture
 def sherlock_agent(mock_kernel, mock_settings):
     """Agent Sherlock de test"""
-    return SherlockJTMSAgent(mock_kernel, mock_settings, agent_name="sherlock_test")
+    return SherlockJTMSAgent(mock_kernel, agent_name="sherlock_test")
 
 @pytest.fixture
 def watson_agent(mock_kernel, mock_settings):
     """Agent Watson de test"""
-    return WatsonJTMSAgent(mock_kernel, mock_settings, agent_name="watson_test")
+    return WatsonJTMSAgent(mock_kernel, agent_name="watson_test")
 
 class TestJTMSCommunicationHub:
     """Tests pour la classe JTMSCommunicationHub"""
@@ -342,8 +342,8 @@ if __name__ == "__main__":
         mock_settings.service_manager.default_llm_service_id = "mock_service"
 
         hub = JTMSCommunicationHub(mock_kernel)
-        sherlock = SherlockJTMSAgent(mock_kernel, mock_settings, agent_name="test_sherlock")
-        watson = WatsonJTMSAgent(mock_kernel, mock_settings, agent_name="test_watson")
+        sherlock = SherlockJTMSAgent(mock_kernel, agent_name="test_sherlock")
+        watson = WatsonJTMSAgent(mock_kernel, agent_name="test_watson")
         
         print("Test d'enregistrement d'agents...")
         success1 = await hub.register_agent(sherlock)

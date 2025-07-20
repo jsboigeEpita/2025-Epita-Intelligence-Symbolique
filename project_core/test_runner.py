@@ -154,11 +154,12 @@ class ServiceManager:
 class TestRunner:
     """Orchestre l'exécution des tests."""
 
-    def __init__(self, test_type, test_path, browser, pytest_extra_args=None):
+    def __init__(self, test_type, test_path, browser, pytest_extra_args=None, collect_only_path=None):
         self.test_type = test_type
         self.test_path = test_path
         self.browser = browser
         self.pytest_extra_args = pytest_extra_args if pytest_extra_args is not None else []
+        self.collect_only_path = collect_only_path
         self.service_manager = ServiceManager()
 
     def run(self):
@@ -202,7 +203,7 @@ class TestRunner:
             _log(f"Type de test '{self.test_type}' non reconnu ou aucun chemin de test trouvé.")
             return
 
-        command = ["python", "-m", "pytest", "-q"] + test_paths
+        command = ["python", "-m", "pytest", "-v"] + test_paths
         
         # Ajout de l'option pour autoriser le chargement du .env
         command.append("--allow-dotenv")
@@ -221,6 +222,9 @@ class TestRunner:
 
         if self.pytest_extra_args:
             command.extend(self.pytest_extra_args)
+
+        if self.collect_only_path:
+            command.extend(["--collect-only"])
         
         _log(f"Lancement de pytest avec la commande: {' '.join(command)}")
         _log(f"Répertoire de travail: {ROOT_DIR}")
@@ -245,16 +249,32 @@ class TestRunner:
         )
 
         # Lire et afficher la sortie en temps réel
-        # La boucle s'arrêtera quand le processus sera terminé et que stdout sera fermé
-        if process.stdout:
-            # Prise en charge des problèmes d'encodage de la console Windows
-            # Stratégie de lecture robuste pour éviter les UnicodeDecodeError
-            while True:
-                line_bytes = process.stdout.readline()
-                if not line_bytes:
-                    break
-                line_str = line_bytes.decode('utf-8', errors='replace')
-                print(line_str, end='')
+        collected_tests = []
+        if self.collect_only_path:
+            # For collection, we use quiet mode to get clean node IDs
+            if "-q" not in command:
+                command.insert(command.index("--collect-only"), "-q")
+            raw_output = process.communicate()[0].decode('utf-8', errors='replace')
+            
+            for line in raw_output.splitlines():
+                line_stripped = line.strip()
+                # A valid pytest node ID must contain '::' and a python file extension
+                if '::' in line_stripped and '.py' in line_stripped and not line_stripped.startswith('==') and 'warning' not in line_stripped.lower():
+                    collected_tests.append(line_stripped)
+        else:
+             # Regular execution with real-time output
+            if process.stdout:
+                while True:
+                    line_bytes = process.stdout.readline()
+                    if not line_bytes:
+                        break
+                    line_str = line_bytes.decode('utf-8', errors='replace')
+                    print(line_str, end='')
+
+        if self.collect_only_path:
+            _log(f"Sauvegarde de {len(collected_tests)} tests collectés dans {self.collect_only_path}")
+            with open(self.collect_only_path, "w", encoding="utf-8") as f:
+                f.write("\n".join(collected_tests))
         
         # Attendre que le processus se termine et obtenir le code de retour
         returncode = process.wait()
@@ -317,9 +337,20 @@ def main():
         choices=["chromium", "firefox", "webkit"],
         help="Navigateur pour les tests Playwright (optionnel)."
     )
+    parser.add_argument(
+        "--collect-only",
+        default=None,
+        help="Collecte uniquement les noms des tests sans les exécuter et les enregistre dans le fichier spécifié."
+    )
     args, unknown_args = parser.parse_known_args()
  
-    runner = TestRunner(args.type, args.path, args.browser, pytest_extra_args=unknown_args)
+    runner = TestRunner(
+        args.type,
+        args.path,
+        args.browser,
+        pytest_extra_args=unknown_args,
+        collect_only_path=args.collect_only
+    )
     runner.run()
 
 

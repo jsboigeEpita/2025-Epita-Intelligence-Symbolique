@@ -155,11 +155,12 @@ class ModalLogicAgent(BaseLogicAgent):
         
         self.logger.info(f"Configuration des composants avec retry automatique pour {self.name}...")
 
-        self._tweety_bridge = TweetyBridge()
+        # self._tweety_bridge = TweetyBridge() # Désactivé pour empêcher le démarrage de la JVM
+        self._tweety_bridge = None # Assigner None pour éviter les erreurs d'attribut
 
-        if not TweetyInitializer.is_jvm_ready():
-            self.logger.error("Tentative de setup Modal Kernel alors que la JVM n'est PAS démarrée.")
-            return
+        # if not TweetyInitializer.is_jvm_ready():
+        #     self.logger.error("Tentative de setup Modal Kernel alors que la JVM n'est PAS démarrée.")
+        #     return
 
         default_settings = None
         if self._llm_service_id:

@@ -37,7 +37,7 @@ def mock_kernel():
 @pytest.fixture
 def sherlock_agent(mock_kernel, mock_settings):
     """Agent Sherlock de test"""
-    agent = SherlockJTMSAgent(mock_kernel, mock_settings, agent_name="sherlock_test")
+    agent = SherlockJTMSAgent(mock_kernel, agent_name="sherlock_test")
     # Mock de la réponse de l'agent de base pour contrôler les descriptions
     async def side_effect(*args, **kwargs):
         input_str = ""
@@ -56,7 +56,8 @@ def sherlock_agent(mock_kernel, mock_settings):
         return "Réponse par défaut du mock."
 
     agent.validate_hypothesis_against_evidence = AsyncMock(return_value={"validation_result": "supports", "updated_strength": {"strength_score": 0.9}})
-    agent._base_sherlock.invoke = AsyncMock(side_effect=side_effect)
+    agent._kernel.invoke = AsyncMock(side_effect=side_effect)
+    agent._kernel.invoke_prompt = AsyncMock(side_effect=side_effect)
     return agent
 
 class TestSherlockJTMSAgent:
@@ -68,7 +69,6 @@ class TestSherlockJTMSAgent:
         assert sherlock_agent.agent_name == "sherlock_test"
         assert hasattr(sherlock_agent, '_hypothesis_tracker')
         assert hasattr(sherlock_agent, '_evidence_manager')
-        assert hasattr(sherlock_agent, '_base_sherlock')
     
     @pytest.mark.asyncio
     async def test_analyze_clue(self, sherlock_agent):
@@ -243,7 +243,7 @@ if __name__ == "__main__":
         mock_settings.service_manager = MagicMock()
         mock_settings.service_manager.default_llm_service_id = "mock_service"
 
-        agent = SherlockJTMSAgent(mock_kernel, mock_settings, agent_name="test_sherlock")
+        agent = SherlockJTMSAgent(mock_kernel, agent_name="test_sherlock")
 
         print("Test d'analyse d'indice...")
         result = await agent.analyze_clues([{"description": "Test clue"}])

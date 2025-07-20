@@ -47,19 +47,30 @@ try:
     from argumentation_analysis.orchestration.conversation_orchestrator import ConversationOrchestrator
     from argumentation_analysis.orchestration.real_llm_orchestrator import RealLLMOrchestrator
     from argumentation_analysis.orchestration.logique_complexe_orchestrator import LogiqueComplexeOrchestrator
+    from argumentation_analysis.config.settings import AppSettings
     SPECIALIZED_AVAILABLE = True
 except ImportError as e:
     SPECIALIZED_AVAILABLE = False
     pytestmark = pytest.mark.skip(f"Orchestrateurs spécialisés non disponibles: {e}")
 
 
+@pytest.fixture
+def mock_settings() -> Mock:
+    """Fixture pour un mock de AppSettings."""
+    settings = Mock(spec=AppSettings)
+    settings.openai = Mock()
+    settings.openai.api_key = "test_key"
+    # Configurez d'autres attributs nécessaires de settings ici
+    return settings
+
+
 class TestCluedoOrchestrator:
     """Tests pour l'orchestrateur Cluedo (investigations)."""
     
     @pytest.fixture
-    def cluedo_orchestrator(self, mock_kernel: Kernel):
+    def cluedo_orchestrator(self, mock_kernel: Kernel, mock_settings: Mock):
         """Instance de CluedoOrchestrator pour les tests."""
-        return CluedoOrchestrator(kernel=mock_kernel)
+        return CluedoOrchestrator(kernel=mock_kernel, settings=mock_settings)
     
     @pytest.fixture
     def investigation_text(self):
@@ -200,9 +211,9 @@ class TestLogiqueComplexeOrchestrator:
 class TestSpecializedOrchestratorsIntegration:
     """Tests d'intégration entre orchestrateurs spécialisés."""
 
-    def test_orchestrator_instantiation(self, mock_kernel: Kernel):
+    def test_orchestrator_instantiation(self, mock_kernel: Kernel, mock_settings: Mock):
         """Test de l'instanciation correcte des orchestrateurs."""
-        cluedo = CluedoOrchestrator(kernel=mock_kernel)
+        cluedo = CluedoOrchestrator(kernel=mock_kernel, settings=mock_settings)
         assert isinstance(cluedo, CluedoOrchestrator)
 
         convo = ConversationOrchestrator(mode="demo")
@@ -217,7 +228,7 @@ class TestSpecializedOrchestratorsIntegration:
     @patch('argumentation_analysis.orchestration.cluedo_extended_orchestrator.CluedoExtendedOrchestrator.execute_workflow', new_callable=AsyncMock)
     @patch('argumentation_analysis.orchestration.conversation_orchestrator.ConversationOrchestrator.run_demo_conversation', new_callable=AsyncMock)
     @patch('argumentation_analysis.orchestration.logique_complexe_orchestrator.LogiqueComplexeOrchestrator.run_einstein_puzzle', new_callable=AsyncMock)
-    def test_orchestrator_collaboration_mocked(self, mock_logic_run, mock_convo_run, mock_cluedo_run, mock_kernel: Kernel):
+    def test_orchestrator_collaboration_mocked(self, mock_logic_run, mock_convo_run, mock_cluedo_run, mock_kernel: Kernel, mock_settings: Mock):
         """Test de collaboration simulée entre les orchestrateurs."""
         mock_cluedo_run.return_value = {"workflow_info": {"status": "completed"}}
         mock_convo_run.return_value = {"status": "success", "report": "report"}
@@ -225,7 +236,7 @@ class TestSpecializedOrchestratorsIntegration:
 
         complex_text = "Un texte complexe pour tester tout le monde."
         
-        cluedo_orchestrator = CluedoOrchestrator(kernel=mock_kernel)
+        cluedo_orchestrator = CluedoOrchestrator(kernel=mock_kernel, settings=mock_settings)
         # La méthode setup_workflow est nécessaire avant execute_workflow
         cluedo_orchestrator.setup_workflow = AsyncMock()
         asyncio.run(cluedo_orchestrator.setup_workflow())

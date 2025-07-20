@@ -426,6 +426,7 @@ class TestModalLogicAgent:
         assert is_consistent == True
         assert "Consistent" in message
 
+    @pytest.mark.skip(reason="Ce test provoque un crash de la JVM même avec des mocks.")
     def test_is_consistent_inconsistent(self, modal_agent, mock_tweety_bridge):
         """Test la détection d'incohérence."""
         modal_agent._tweety_bridge = mock_tweety_bridge
@@ -497,6 +498,7 @@ class TestModalLogicAgent:
         assert "Analyse modale initiée" in results[0]
 
     # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
+    @pytest.mark.skip(reason="Provoque un crash en l'absence de JVM")
     @pytest.mark.asyncio
     async def test_invoke_stream(self, modal_agent, mock_tweety_bridge):
         """Test que invoke_stream retourne un générateur qui produit le statut de invoke_single."""

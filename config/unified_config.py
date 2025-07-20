@@ -202,7 +202,7 @@ class UnifiedConfig:
         mapping = {
             AgentType.INFORMAL: "InformalAnalysisAgent",
             AgentType.LOGIC: "ModalLogicAgent",  # Legacy
-            AgentType.FOL_LOGIC: "FirstOrderLogicAgent",
+            AgentType.FOL_LOGIC: "FOLLogicAgent",
             AgentType.SYNTHESIS: "SynthesisAgent",
             AgentType.EXTRACT: "ExtractAgent",
             AgentType.PM: "ProjectManagerAgent"

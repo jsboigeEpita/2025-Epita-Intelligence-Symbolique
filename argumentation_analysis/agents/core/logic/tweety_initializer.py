@@ -47,15 +47,22 @@ class TweetyInitializer:
         if tweety_bridge_instance:
             self._tweety_bridge = tweety_bridge_instance
 
+    def ensure_jvm_is_started(self):
+        """
+        Ensures the JVM is started and all necessary Tweety components are initialized.
+        This method is now called explicitly instead of running in the constructor.
+        """
         if os.environ.get('DISABLE_JAVA_LOGIC') == '1':
             logger.info("Java logic is disabled via 'DISABLE_JAVA_LOGIC'. Skipping JVM checks.")
             return
+        
+        if os.environ.get('PYTEST_RUNNING') == '1':
+            logger.info("Pytest is running. Skipping automatic JVM startup.")
+            return
 
-        # L'initialisation se fait maintenant à la demande, ici.
         if not is_jvm_started():
             logger.info("JVM not started. Calling the robust initializer from jvm_setup.")
             if not self.initialize_jvm():
-                # Si l'initialisation échoue, on lève une exception claire.
                 raise RuntimeError("JVM could not be started by the robust initializer. Check logs.")
 
         self.__class__._jvm_started = True

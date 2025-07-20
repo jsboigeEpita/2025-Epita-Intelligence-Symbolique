@@ -64,7 +64,9 @@ class TweetyBridge:
         """
         if not hasattr(self, '_initialized'):
             self.jar_directory = jar_directory or self._find_default_jar_dir()
-            self._initializer = TweetyInitializer()
+            self._initializer = TweetyInitializer(self)
+            # L'initialisation de la JVM est maintenant explicite pour le contrôle dans les tests
+            self._initializer.ensure_jvm_is_started()
             # Les handlers ne sont plus initialisés ici pour éviter les erreurs de JVM
             self._initialized = True
 

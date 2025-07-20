@@ -9,7 +9,7 @@ de l'architecture hiérarchique, de bout en bout.
 import unittest
 import asyncio
 import logging
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 from datetime import datetime
 
 from argumentation_analysis.orchestration.hierarchical.strategic.state import StrategicState
@@ -59,14 +59,11 @@ class TestHierarchicalIntegration(unittest.TestCase):
         
         # Créer les managers
         self.strategic_manager = StrategicManager(
-            strategic_state=self.strategic_state,
-            strategic_tactical_interface=self.strategic_tactical_interface
+            strategic_state=self.strategic_state
         )
         
         self.tactical_coordinator = TacticalCoordinator(
-            tactical_state=self.tactical_state,
-            strategic_tactical_interface=self.strategic_tactical_interface,
-            tactical_operational_interface=self.tactical_operational_interface
+            tactical_state=self.tactical_state
         )
         
         # Créer les adaptateurs d'agents
@@ -169,9 +166,9 @@ class TestHierarchicalIntegration(unittest.TestCase):
         )
         
         # Enregistrer les agents
-        self.operational_manager.register_agent(self.extract_agent)
-        self.operational_manager.register_agent(self.informal_agent)
-        self.operational_manager.register_agent(self.pl_agent)
+        self.operational_manager.agent_registry.agents["extract"] = self.extract_agent
+        self.operational_manager.agent_registry.agents["informal"] = self.informal_agent
+        self.operational_manager.agent_registry.agents["pl"] = self.pl_agent
     
     def test_end_to_end_workflow(self):
         """Teste le workflow complet de l'architecture hiérarchique."""
@@ -196,7 +193,7 @@ class TestHierarchicalIntegration(unittest.TestCase):
         
         # Ajouter les objectifs à l'état stratégique
         for objective in objectives:
-            self.strategic_state.add_objective(objective)
+            self.strategic_state.add_global_objective(objective)
         
         # 2. Créer un plan stratégique
         strategic_plan = {
@@ -232,7 +229,7 @@ class TestHierarchicalIntegration(unittest.TestCase):
         self.strategic_state.strategic_plan = strategic_plan
         
         # 3. Traduire les objectifs en directives tactiques
-        tactical_directives = self.strategic_tactical_interface.translate_objectives(objectives)
+        tactical_directives = self.strategic_tactical_interface.translate_objectives_to_directives(objectives)
         
         # Vérifier que les directives tactiques sont correctes
         self.assertIsInstance(tactical_directives, dict)
@@ -275,7 +272,7 @@ class TestHierarchicalIntegration(unittest.TestCase):
         # 5. Traduire les tâches tactiques en tâches opérationnelles
         operational_tasks = []
         for task in tasks:
-            op_task = self.tactical_operational_interface.translate_task(task)
+            op_task = self.tactical_operational_interface.translate_task_to_command(task)
             operational_tasks.append(op_task)
         
         # Vérifier que les tâches opérationnelles sont correctes
@@ -309,16 +306,18 @@ class TestHierarchicalIntegration(unittest.TestCase):
         
         # 7. Traiter les résultats opérationnels au niveau tactique
         tactical_results = []
-        for op_result in operational_results:
-            tac_result = self.tactical_operational_interface.process_operational_result(op_result)
+        for i, op_result in enumerate(operational_results):
+            original_op_task = operational_tasks[i]
+            tac_result = self.tactical_operational_interface.process_operational_result(original_op_task, op_result)
             tactical_results.append(tac_result)
         
         # Vérifier que les résultats tactiques sont corrects
         self.assertEqual(len(tactical_results), 3)
         for result in tactical_results:
-            self.assertIn("task_id", result)
+            self.assertIn("tactical_task_id", result)
             self.assertIn("completion_status", result)
-            self.assertIn(RESULTS_DIR, result)
+            self.assertIn("results_path", result)
+            self.assertTrue(result["results_path"].startswith(str(RESULTS_DIR)))
             self.assertIn("execution_metrics", result)
         
         # 8. Créer un rapport tactique

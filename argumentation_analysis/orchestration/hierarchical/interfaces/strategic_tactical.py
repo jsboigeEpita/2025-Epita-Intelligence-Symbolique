@@ -95,7 +95,7 @@ class StrategicTacticalInterface:
         for i, objective in enumerate(enriched_objectives):
             self.strategic_adapter.issue_directive(
                 directive_type="objective",
-                content={
+                parameters={
                     "objective": objective,
                     "index": i,
                     "total": len(enriched_objectives),

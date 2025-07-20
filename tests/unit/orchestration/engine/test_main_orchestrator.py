@@ -1,3 +1,4 @@
+import asyncio
 import pytest
 from unittest.mock import MagicMock, patch, ANY, call, AsyncMock
 from argumentation_analysis.orchestration.engine.main_orchestrator import MainOrchestrator

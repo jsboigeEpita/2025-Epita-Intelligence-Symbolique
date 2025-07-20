@@ -28,8 +28,7 @@ def mock_kernel():
 @pytest.fixture
 def sherlock_agent(mock_kernel):
     """Agent Sherlock de test"""
-    settings = AppSettings()
-    return SherlockJTMSAgent(mock_kernel, settings, agent_name="sherlock_test")
+    return SherlockJTMSAgent(mock_kernel, agent_name="sherlock_test")
 
 class TestSherlockJTMSAgentSimple:
     """Tests simplifiés pour la classe SherlockJTMSAgent"""
@@ -46,7 +45,7 @@ class TestSherlockJTMSAgentSimple:
     async def test_formulate_hypothesis(self, sherlock_agent):
         """Test de formulation d'hypothèse"""
         # Mock de la réponse de l'agent de base
-        sherlock_agent._base_sherlock.process_message = AsyncMock(
+        sherlock_agent._kernel.invoke_prompt = AsyncMock(
             return_value="Colonel Moutarde est le meurtrier"
         )
         
@@ -148,7 +147,7 @@ if __name__ == "__main__":
         
         mock_kernel = Mock(spec=Kernel)
         settings = AppSettings()
-        agent = SherlockJTMSAgent(mock_kernel, settings, "test_sherlock")
+        agent = SherlockJTMSAgent(mock_kernel, agent_name="test_sherlock")
         
         print("Test d'initialisation...")
         assert agent.agent_name == "test_sherlock"

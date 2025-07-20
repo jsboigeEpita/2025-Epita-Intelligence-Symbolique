@@ -236,7 +236,8 @@ class TacticalOperationalInterface:
             "fallacy_detection": [{"name": "fallacy_pattern_matching"}],
             "complex_fallacy_analysis": [{"name": "complex_fallacy_analysis"}],
             "contextual_fallacy_analysis": [{"name": "contextual_fallacy_analysis"}],
-            "formal_logic": [{"name": "propositional_logic_formalization"}]
+            "formal_logic": [{"name": "propositional_logic_formalization"}],
+            "text_extraction": [{"name": "text_extraction"}]
         }
         techniques = []
         for capability in required_capabilities:
