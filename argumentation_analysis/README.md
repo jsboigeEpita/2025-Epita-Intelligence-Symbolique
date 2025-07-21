@@ -42,3 +42,23 @@ La configuration du module est gérée de manière centralisée et se trouve pri
 
 *   **`settings.py`**: Ce fichier contient les paramètres de configuration principaux de l'application. Vous pouvez y ajuster les chemins, les clés d'API et d'autres paramètres de comportement du système.
 *   **`.env` / `.env.template`**: Le module utilise des variables d'environnement (via `python-dotenv`) pour gérer les secrets comme les clés d'API. Copiez `.env.template` en `.env` et remplissez les valeurs requises pour votre environnement local.
+
+
+### Configuration du Solveur Logique (First-Order Logic)
+
+Le moteur d'analyse s'appuie sur un système de logique formelle configurable. Vous pouvez sélectionner le solveur à utiliser via la variable d'environnement `ARG_ANALYSIS_SOLVER`.
+
+**Options :**
+*   `tweety` (Défaut) : Solution intégrée basée sur [TweetyProject](https://tweetyproject.org/).
+*   `prover9` : Fait appel au solveur externe [Prover9](https://www.cs.unm.edu/~mccune/prover9/). Assurez-vous qu'il est installé et disponible dans le `PATH` de votre système.
+
+**Exemple d'utilisation (PowerShell) :**
+```powershell
+$env:ARG_ANALYSIS_SOLVER="prover9"
+python -m argumentation_analysis.orchestration.engine.main_orchestrator --text "..."
+```
+
+**Exemple d'utilisation (Bash) :**
+```bash
+ARG_ANALYSIS_SOLVER=prover9 python -m argumentation_analysis.orchestration.engine.main_orchestrator --text "..."
+```
