@@ -337,7 +337,8 @@ if __name__ == "__main__":
     if args.install_prover9:
         main_logger.info("--- Installation de Prover9 demandée ---")
         from argumentation_analysis.core.setup.prover9_manager import Prover9Manager
-        prover9_path = Prover9Manager.get_instance(main_logger).get_prover9_executable_path(force_reinstall=args.force_reinstall)
+        prover9_manager = Prover9Manager(logger_instance=main_logger)
+        prover9_path = prover9_manager.get_prover9_executable_path(force_reinstall=args.force_reinstall)
         if prover9_path:
             main_logger.info(f"Prover9 installé avec succès. Exécutable : {prover9_path}")
         else:

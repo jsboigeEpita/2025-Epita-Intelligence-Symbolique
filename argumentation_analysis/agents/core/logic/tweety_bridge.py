@@ -45,7 +45,6 @@ class TweetyBridge:
     
     # Handlers pour les différentes logiques. Initialisés avec la logique du pont.
     _pl_handler: Optional[PropositionalLogicHandler] = None
-    _fol_handler: Optional[FirstOrderLogicHandler] = None
     
     # Nouvel attribut pour l'initialiseur
     _initializer: Optional[TweetyInitializer] = None
@@ -100,15 +99,6 @@ class TweetyBridge:
             self._pl_handler = PropositionalLogicHandler(self._initializer)
         return self._pl_handler
 
-    @property
-    def fol_handler(self) -> FirstOrderLogicHandler:
-        """Retourne le handler pour la logique du premier ordre, en l'initialisant si nécessaire."""
-        if not self.initializer.is_jvm_ready():
-            raise RuntimeError("La JVM n'est pas démarrée. Appelez initialize_jvm() en premier.")
-        if self._fol_handler is None:
-            logger.debug("Chargement paresseux (lazy-loading) du FOLHandler.")
-            self._fol_handler = FirstOrderLogicHandler(self._initializer)
-        return self._fol_handler
 
     @property
     def initializer(self) -> TweetyInitializer:
@@ -203,42 +193,6 @@ class TweetyBridge:
         """Crée un objet PlBeliefSet Java à partir d'une chaîne."""
         return self.pl_handler.create_belief_base_from_string(formula_string)
 
-    # ===============================================
-    # Méthodes pour la logique du premier ordre (FOL)
-    # ===============================================
-
-    def validate_fol_formula(self, formula: str) -> Tuple[bool, str]:
-        """Valide la syntaxe d'une formule FOL en tentant de la parser."""
-        try:
-            self.fol_handler.parse_fol_formula(formula)
-            return True, "Formule valide."
-        except ValueError as e:
-            return False, str(e)
-
-    def fol_check_consistency(self, belief_set: Any) -> Tuple[bool, str]:
-        """Vérifie la consistance d'un ensemble de croyances FOL."""
-        if not self._initializer.FolBeliefSet:
-            logger.error("FolBeliefSet class not loaded.")
-            return False, "FolBeliefSet class not loaded."
-        if not isinstance(belief_set, self._initializer.FolBeliefSet):
-            return False, "L'objet fourni n'est pas une instance de FolBeliefSet."
-        return self.fol_handler.fol_check_consistency(belief_set)
-
-    def fol_query(self, belief_set: Any, query_formula_str: str) -> bool:
-        """Exécute une requête en logique du premier ordre."""
-        return self.fol_handler.fol_query(belief_set, query_formula_str)
-        
-    def create_belief_set_from_string(self, formula_string: str) -> Optional[Any]:
-        """Crée un objet FolBeliefSet à partir d'une chaîne de formules."""
-        
-        # Vérifier d'abord si la JVM est prête, car l'initializer est nécessaire
-        # S'assurer que les classes Java nécessaires sont chargées
-        if not TweetyInitializer.is_jvm_ready():
-            logger.error("L'initialiseur Tweety n'est pas prêt. La JVM ou les classes Java ne sont pas chargées.")
-            return None
-
-        # Déléguer la création au handler FOL
-        return self._fol_handler.create_belief_set_from_string(formula_string)
 
     @staticmethod
     def get_tweety_project_version() -> str:

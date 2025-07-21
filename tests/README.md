@@ -1,27 +1,31 @@
 # Documentation des Tests du Projet
 
-Ce document décrit comment exécuter les différentes suites de tests pour l'ensemble du projet.
+Ce document décrit la méthode **unique et recommandée** pour exécuter les différentes suites de tests du projet.
 
-## Prérequis
-
-- Assurez-vous que votre environnement Conda (`base`) est correctement configuré.
-- Installez les dépendances de test :
-  - Pour Python : `pip install -r requirements.txt` (si applicable), `pip install pytest`
-  - Pour les tests E2E (JavaScript) : `pip install playwright` suivi de `playwright install`
+---
 
 ## Point d'Entrée Unifié : `run_tests.ps1`
 
-Le moyen le plus simple et recommandé pour lancer les tests est d'utiliser le script unifié `run_tests.ps1` à la racine du projet. Ce script gère l'activation de l'environnement et l'exécution de la suite de tests appropriée.
+Toute l'exécution des tests doit passer par le script unifié `run_tests.ps1` situé à la racine du projet. Ce script est le seul point d'entrée supporté.
+
+**Pourquoi est-ce obligatoire ?**
+Ce script ne se contente pas de lancer les tests. Il est responsable de :
+1.  **Activer l'environnement Conda** correctement.
+2.  **Charger les variables d'environnement** spécifiques aux tests (depuis `.env.test`).
+3.  **Désactiver les services non nécessaires** (comme OpenTelemetry) pour isoler les tests.
+4.  **Déléguer l'exécution** à l'orchestrateur de test interne (`project_core/test_runner.py`) avec les bons paramètres.
+
+Tenter de lancer `pytest` ou `playwright` manuellement contourne ces étapes cruciales et mènera à des échecs ou des résultats non fiables.
 
 ### Utilisation
 
 Ouvrez un terminal PowerShell et utilisez la syntaxe suivante :
 
 ```powershell
-.\run_tests.ps1 -Type <type_de_test>
+.\run_tests.ps1 -Type <type_de_test> [options]
 ```
 
-Où `<type_de_test>` peut être :
+#### Types de Tests (`-Type`)
 - `unit` : Lance les tests unitaires (rapides, sans I/O).
 - `functional` : Lance les tests fonctionnels.
 - `integration` : Lance les tests d'intégration.
@@ -30,56 +34,59 @@ Où `<type_de_test>` peut être :
 - `validation` : Lance les tests de validation.
 - `all` : (Défaut) Lance les tests `unit` et `functional`.
 
+#### Options Communes
+- `-Path <chemin>` : Cible un fichier ou un répertoire de test spécifique.
+- `-Browser <nom>` : Pour les tests `e2e`, spécifie le navigateur (`chromium`, `firefox`, `webkit`).
+- `-PytestArgs "<args>"` : Passe des arguments supplémentaires directement à Pytest (ex: `-PytestArgs "-k mon_test -s"`).
+
 ### Exemples Concrets
 
-**1. Lancer la suite complète des tests unitaires (recommandé pour la validation rapide) :**
-
+**1. Lancer tous les tests unitaires (recommandé pour une validation rapide) :**
 ```powershell
 .\run_tests.ps1 -Type unit
 ```
 
-**2. Lancer un répertoire de tests unitaires spécifique :**
-
+**2. Lancer un répertoire de tests fonctionnels spécifique :**
 ```powershell
-.\run_tests.ps1 -Type unit -Path tests/unit/agents/
+.\run_tests.ps1 -Type functional -Path tests/functional/database/
 ```
 
-**3. Lancer les tests End-to-End avec Playwright :**
-Assurez-vous d'avoir exécuté `playwright install` au préalable.
-
+**3. Lancer un seul fichier de test en affichant les `print()` :**
 ```powershell
-.\run_tests.ps1 -Type e2e -Browser chromium
+.\run_tests.ps1 -Type unit -Path tests/unit/agents/test_parser.py -PytestArgs "-s"
+```
+
+**4. Lancer les tests End-to-End avec Playwright sur Firefox :**
+```powershell
+.\run_tests.ps1 -Type e2e -Browser firefox
 ```
 
 ---
 
-## Méthodes d'Exécution Alternatives (Manuelles)
+## Note Importante : L'Erreur "Windows fatal exception"
 
-### Tests Pytest (unit, functional, etc.)
+Lors de l'exécution de tests qui dépendent de Java (comme les tests d'intégration), vous pourriez voir le message suivant dans les logs :
 
-Si vous ne souhaitez pas utiliser le script unifié, vous pouvez lancer `pytest` directement après avoir activé l'environnement Conda.
+> **Windows fatal exception: access violation**
 
-```bash
-# Activer l'environnement Conda
-conda activate base
+**CECI N'EST PAS UNE ERREUR BLOQUANTE.**
 
-# Lancer les tests unitaires
-python -m pytest tests/unit/
+Ce message est un **artefact cosmétique** connu de la bibliothèque `JPype` sous Windows. Il n'a **aucun impact** sur l'exécution ou le résultat des tests. La JVM est démarrée et fonctionne correctement.
 
-# Lancer les tests fonctionnels
-python -m pytest tests/functional/
+**Vous devez ignorer ce message.** N'essayez pas de le "corriger", les véritables causes d'instabilité ont déjà été résolues en désactivant certaines options JVM dans le code.
+
+---
+
+## Tester les Différents Solveurs
+
+Le système peut utiliser deux solveurs logiques : `tweety` (défaut) et `prover9`. Pour forcer l'utilisation d'un solveur spécifique pendant les tests, vous pouvez définir la variable d'environnement `ARG_ANALYSIS_SOLVER`.
+
+Le script `run_tests.ps1` chargera automatiquement les variables depuis un fichier `.env.test` s'il existe à la racine.
+
+**Exemple de fichier `.env.test` pour utiliser `prover9` :**
+```
+# .env.test
+ARG_ANALYSIS_SOLVER=prover9
 ```
 
-### Tests End-to-End (Playwright)
-
-Ces tests nécessitent que les **deux** serveurs (backend et frontend) soient démarrés manuellement au préalable.
-
-```bash
-# 1. Démarrer le backend (dans un terminal)
-# ...
-
-# 2. Démarrer le frontend (dans un autre terminal)
-# ...
-
-# 3. Lancer les tests Playwright (dans un troisième terminal)
-playwright test tests/e2e/webapp/
+Créez ce fichier, puis lancez les tests normalement. Le `FOLHandler` utilisera alors `prover9`.

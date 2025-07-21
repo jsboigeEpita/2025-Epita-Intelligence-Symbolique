@@ -5,25 +5,34 @@ import asyncio
 from argumentation_analysis.core.utils.logging_utils import setup_logging
 from .tweety_initializer import TweetyInitializer
 from argumentation_analysis.core.prover9_runner import run_prover9
+from argumentation_analysis.core.config import settings, SolverChoice
 
 setup_logging()
 logger = logging.getLogger(__name__)
 
 class FOLHandler:
     """
-    Handles First-Order Logic (FOL) operations using TweetyProject.
-    Relies on TweetyInitializer for JVM and FOL component setup.
+    Handles First-Order Logic (FOL) operations using either TweetyProject or Prover9,
+    based on the application's configuration.
     """
 
-    def __init__(self, initializer_instance: TweetyInitializer):
+    def __init__(self, initializer_instance: TweetyInitializer = None):
+        """
+        Initializes the FOLHandler.
+        The initializer_instance is optional and only required for the Tweety solver path.
+        """
         self.logger = logging.getLogger(__name__)
         self._initializer_instance = initializer_instance
-        self._fol_parser = self._initializer_instance.get_fol_parser()
-        # self._fol_reasoner = TweetyInitializer.get_fol_reasoner() # If a general one is set up
-
-        if self._fol_parser is None:
-            logger.error("FOL Parser not initialized. Ensure TweetyBridge calls TweetyInitializer first.")
-            raise RuntimeError("FOLHandler initialized before TweetyInitializer completed FOL setup.")
+        
+        # Le parser et autres composants Tweety ne sont chargés que si nécessaire.
+        self._fol_parser = None
+        if settings.solver == SolverChoice.TWEETY:
+            # La vérification de _initializer_instance est maintenant faite dans chaque méthode tweety
+            if self._initializer_instance:
+                self._fol_parser = self._initializer_instance.get_fol_parser()
+                if self._fol_parser is None:
+                    logger.error("FOL Parser not initialized. Ensure TweetyBridge calls TweetyInitializer first.")
+                    raise RuntimeError("FOLHandler initialized before TweetyInitializer completed FOL setup.")
 
     def parse_fol_formula(self, formula_str: str, custom_parser=None):
         """
@@ -200,43 +209,76 @@ class FOLHandler:
 
     async def fol_check_consistency(self, belief_set):
         """
-        Checks if an FOL knowledge base is consistent using an external Prover9 process.
+        Checks if an FOL knowledge base is consistent using the configured solver.
         """
+        self.logger.debug(f"Performing FOL consistency check with solver: {settings.solver.value}")
+        if settings.solver == SolverChoice.PROVER9:
+            return await self._fol_check_consistency_with_prover9(belief_set)
+        else:
+            return await self._fol_check_consistency_with_tweety(belief_set)
+
+    async def _fol_check_consistency_with_prover9(self, belief_set):
         logger.debug(f"Checking FOL consistency for belief set of size {belief_set.size()} via external Prover9")
         try:
-            # Convert belief set to Prover9 input format
             formulas_str = belief_set.toString().replace(";", ".\n")
             prover9_input = f"formulas(assumptions).\n{formulas_str}\nend_of_list.\n\ngoals.\n$F.\nend_of_list."
-
             logger.debug(f"Prover9 input for consistency check:\n{prover9_input}")
-
-            # Run Prover9 externally
             prover9_output = await asyncio.to_thread(run_prover9, prover9_input)
-            
-            # Check output for proof of contradiction
             is_consistent = "END OF PROOF" not in prover9_output
-            
             msg = f"Consistency check result: {is_consistent}"
             logger.info(msg)
             return is_consistent, msg
         except Exception as e:
             logger.error(f"Error during external FOL consistency check: {e}", exc_info=True)
-            # Propage le message d'erreur détaillé préparé par prover9_runner
-            detailed_error = e.stderr if e.stderr else str(e)
+            detailed_error = getattr(e, 'stderr', str(e))
             raise RuntimeError(f"FOL consistency check failed. Details: {detailed_error}") from e
+
+    async def _fol_check_consistency_with_tweety(self, belief_set):
+        logger.debug(f"Performing FOL consistency check via Tweety for belief set of size {belief_set.size()}.")
+        if not self._initializer_instance:
+            raise ValueError("TweetyInitializer instance is required for the 'tweety' solver path.")
+        try:
+            # This method requires a reasoner that can check for consistency.
+            # SimpleFolReasoner does not have a direct `isConsistent` method,
+            # but we can infer it. A knowledge base is inconsistent if it entails a contradiction (e.g., "$false").
+            FolFormula = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolFormula")
+            # Tweety's representation of contradiction might be different, let's use a common one.
+            # A more robust solution would be to use a specific Tweety constant for falsehood.
+            contradiction = self.parse_fol_formula("forall X (X = X & not(X=X))")
+            
+            SimpleFolReasoner = self._initializer_instance.get_reasoner("SimpleFolReasoner")
+            inconsistent = SimpleFolReasoner.query(belief_set, contradiction)
+            
+            is_consistent = not bool(inconsistent)
+            msg = f"Tweety-based consistency check result: {is_consistent}"
+            logger.info(msg)
+            return is_consistent, msg
+            
+        except Exception as e:
+            logger.error(f"Error during Tweety FOL consistency check: {e}", exc_info=True)
+            raise NotImplementedError(f"The Tweety pathway for consistency checks failed: {e}") from e
 
     def fol_query(self, belief_set, query_formula_str: str) -> bool:
         """
-        Checks if a query is entailed by a belief base using an external Prover9 process.
+        Checks if a query is entailed by a belief base using the configured solver.
+        """
+        logger.debug(f"Performing FOL query with solver: {settings.solver.value}")
+
+        if settings.solver == SolverChoice.PROVER9:
+            return self._fol_query_with_prover9(belief_set, query_formula_str)
+        else:
+            return self._fol_query_with_tweety(belief_set, query_formula_str)
+
+    def _fol_query_with_prover9(self, belief_set, query_formula_str: str) -> bool:
+        """
+        Ancienne logique d'interrogation via un processus externe Prover9.
+        (Contenu de la méthode fol_query existante)
         """
         logger.debug(f"Performing FOL query via external Prover9. Query: '{query_formula_str}'")
         try:
             # Convert belief set and query to Prover9 input format
             formulas_str = belief_set.toString().replace(";", ".\n")
-            
-            # The query must not end with a period in the goals section for Prover9
             prover9_goal = query_formula_str.rstrip('.')
-            
             prover9_input = f"formulas(assumptions).\n{formulas_str}\nend_of_list.\n\ngoals.\n{prover9_goal}.\nend_of_list."
             
             logger.debug(f"Prover9 input for query:\n{prover9_input}")
@@ -251,6 +293,22 @@ class FOLHandler:
             return entails
         except Exception as e:
             logger.error(f"Error during external FOL query: {e}", exc_info=True)
+            raise RuntimeError(f"FOL query failed. Details: {getattr(e, 'stderr', str(e))}") from e
+
+    def _fol_query_with_tweety(self, belief_set, query_formula_str: str) -> bool:
+        """
+        Logique d'interrogation via Tweety/JPype.
+        """
+        logger.debug(f"Performing FOL query via Tweety. Query: '{query_formula_str}'")
+        if not self._initializer_instance:
+            raise ValueError("TweetyInitializer instance is required for the 'tweety' solver path.")
+        try:
+            query_formula = self.parse_fol_formula(query_formula_str)
+            reasoner = self._initializer_instance.get_reasoner("SimpleFolReasoner")
+            entails = reasoner.query(belief_set, query_formula)
+            return bool(entails)
+        except Exception as e:
+            logger.error(f"Error during Tweety FOL query: {e}", exc_info=True)
             raise
 
     def validate_formula_with_signature(self, signature, formula_str: str) -> tuple[bool, str]:
