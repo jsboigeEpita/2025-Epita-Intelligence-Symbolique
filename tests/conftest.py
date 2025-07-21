@@ -21,9 +21,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Importations nécessaires pour les fixtures ci-dessous
-from argumentation_analysis.core.jvm_setup import (
-    initialize_jvm, shutdown_jvm, is_jvm_started, is_jvm_owned_by_session_fixture
-)
+from argumentation_analysis.core.jvm_setup import is_jvm_started, initialize_jvm, shutdown_jvm
 from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
 from argumentation_analysis.models.extract_result import ExtractResult
 from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
@@ -51,11 +49,15 @@ def pytest_configure(config):
     """
     Hook de configuration précoce de pytest.
     """
-    # try:
-    #     from argumentation_analysis.core.environment import ensure_env
-    #     ensure_env()
-    # except RuntimeError as e:
-    #     pytest.exit(f"\n\n[FATAL] ERREUR DE CONFIGURATION DE L'ENVIRONNEMENT:\n{e}", returncode=1)
+    # ========================== VÉRIFICATION CRITIQUE DE L'ENVIRONNEMENT ==========================
+    # Le bloc suivant est essentiel pour garantir que les tests s'exécutent dans le bon environnement Conda.
+    # NE PAS COMMENTER OU DÉSACTIVER, sauf en cas de maintenance délibérée de l'infrastructure de test.
+    try:
+        from argumentation_analysis.core.environment import ensure_env
+        ensure_env()
+    except RuntimeError as e:
+        pytest.exit(f"\n\n[FATAL] ERREUR DE CONFIGURATION DE L'ENVIRONNEMENT:\n{e}", returncode=1)
+    # ===============================================================================================
 
     global MOCK_DOTENV, _dotenv_patcher
     
@@ -138,38 +140,6 @@ def pytest_unconfigure(config):
         _dotenv_patcher.stop()
         _dotenv_patcher = None
 
-def _ensure_tweety_jars_are_correctly_placed():
-    """
-    Code défensif pour les tests.
-    """
-    try:
-        project_root = Path(__file__).parent.parent.resolve()
-        libs_dir = project_root / "argumentation_analysis" / "libs"
-        tweety_dir = libs_dir / "tweety"
-        
-        if not libs_dir.is_dir():
-            logger.debug("Le répertoire 'libs' n'existe pas, rien à faire.")
-            return
-
-        tweety_dir.mkdir(exist_ok=True)
-        
-        jars_in_libs = [f for f in libs_dir.iterdir() if f.is_file() and f.suffix == '.jar']
-        
-        if not jars_in_libs:
-            logger.debug("Aucun fichier JAR trouvé directement dans 'libs'.")
-            return
-            
-        logger.warning(f"JARs trouvés directement dans '{libs_dir}'. Ils devraient être dans '{tweety_dir}'.")
-        for jar_path in jars_in_libs:
-            destination = tweety_dir / jar_path.name
-            logger.info(f"Déplacement de '{jar_path.name}' vers '{destination}'...")
-            shutil.move(str(jar_path), str(destination))
-        logger.info("Déplacement des JARs terminé.")
-
-    except Exception as e:
-        logger.error(f"Erreur lors du déplacement défensif des JARs Tweety: {e}", exc_info=True)
-
-
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_environment():
     """
@@ -203,64 +173,59 @@ def apply_nest_asyncio():
 def jvm_session():
     """
     Manages the JPype JVM lifecycle for the entire test session.
+    This fixture is NOT auto-used; it must be requested by another fixture.
+    When activated, it:
+    1. Ensures all portable dependencies (JDK, Tweety JARs) are provisioned.
+    2. Starts the JVM using the centralized jvm_setup module.
+    3. Guarantees the JVM is shut down after all tests are complete.
     """
-    logger.info("---------- [JVM_SESSION_FIXTURE] Pytest session starting: Provisioning dependencies and Initializing JVM... ----------")
-
-    # Vérification de la variable d'environnement pour skipper les tests JVM
-    if os.environ.get("SKIP_JVM_TESTS", "false").lower() == "true":
-        logger.warning("[JVM_SESSION_FIXTURE] SKIP_JVM_TESTS is set. Skipping JVM initialization and related tests.")
-        pytest.skip("JVM tests are skipped via SKIP_JVM_TESTS environment variable.")
-        yield
-        return
+    logger.info("---------- Pytest session starting: Provisioning dependencies and Initializing JVM... ----------")
 
     try:
-        logger.info("[JVM_SESSION_FIXTURE] STEP 1: Checking Tweety JARs location...")
-        _ensure_tweety_jars_are_correctly_placed()
-        logger.info("[JVM_SESSION_FIXTURE] STEP 1: Done.")
-
-        logger.info(f"[JVM_SESSION_FIXTURE] STEP 2: Checking if JVM is already started... is_jvm_started() -> {is_jvm_started()}")
+        logger.info("Checking Tweety JARs location...")
+        # This part of the logic seems to be handled elsewhere now, so we keep it minimal.
+        
         if not is_jvm_started():
-            logger.info("[JVM_SESSION_FIXTURE] STEP 3: Attempting to initialize JVM via core.jvm_setup.initialize_jvm...")
+            logger.info("Attempting to initialize JVM via core.jvm_setup.initialize_jvm...")
             success = initialize_jvm(session_fixture_owns_jvm=True)
-            logger.info(f"[JVM_SESSION_FIXTURE] STEP 3: initialize_jvm returned: {success}")
             if success:
-                logger.info("[JVM_SESSION_FIXTURE] JVM started successfully for the test session.")
+                logger.info("JVM started successfully for the test session.")
             else:
-                 logger.error("[JVM_SESSION_FIXTURE] initialize_jvm returned False. Failing test session.")
-                 pytest.fail("JVM initialization failed as reported by initialize_jvm.", pytrace=False)
+                 pytest.fail("JVM initialization failed.", pytrace=False)
         else:
-            logger.warning("[JVM_SESSION_FIXTURE] JVM was already started. Assuming it is correctly configured.")
-            
-    except Exception as e:
-        logger.error(f"[JVM_SESSION_FIXTURE] A critical error occurred during JVM session setup: {e}", exc_info=True)
-        pytest.exit(f"JVM setup failed with exception: {e}", 1)
+            logger.info("JVM was already started.")
 
-    logger.info("[JVM_SESSION_FIXTURE] Handing over control to tests (yield)...")
+    except Exception as e:
+        logger.error(f"A critical error occurred during JVM session setup: {e}", exc_info=True)
+        pytest.exit(f"JVM setup failed: {e}", 1)
+
     yield True
 
-    logger.info("---------- [JVM_SESSION_FIXTURE] Pytest session finished: Shutting down JVM... ----------")
-    logger.info(f"[JVM_SESSION_FIXTURE] Checking ownership before shutdown... is_jvm_owned_by_session_fixture() -> {is_jvm_owned_by_session_fixture()}")
-    if is_jvm_owned_by_session_fixture() and is_jvm_started():
-        shutdown_jvm(called_by_session_fixture=True)
-    else:
-        logger.warning("[JVM_SESSION_FIXTURE] The JVM is not (or no longer) controlled by the global fixture, or was not started. It will not be shut down here.")
+    logger.info("---------- Pytest session finished: Shutting down JVM... ----------")
+    shutdown_jvm(called_by_session_fixture=True)
+
 
 @pytest.fixture(scope="function", autouse=True)
 def manage_jvm_for_test(request):
     """
     This 'autouse' fixture runs for every test and decides if the global
     `jvm_session` fixture is required by manually invoking it.
+    
+    It checks for a 'no_jvm_session' marker on the test. If found, it does nothing.
+    If not found, it uses `request.getfixturevalue()` to activate the `jvm_session`
+    fixture, ensuring the JVM is started for the test.
     """
-    # Inversion de la logique : ne charger la JVM que si c'est explicitement demandé.
-    if 'real_jpype' in request.node.keywords:
+    if 'no_jvm_session' in request.node.keywords:
         logger.warning(
-            f"Test '{request.node.name}' is marked with 'real_jpype'. "
-            "The global JVM fixture WILL BE requested for this test."
+            f"Test '{request.node.name}' is marked with 'no_jvm_session'. "
+            "The global JVM fixture will not be requested for this test."
         )
-        request.getfixturevalue('jvm_session')
         yield
     else:
-        # Pour tous les autres tests, ne rien faire et ne pas démarrer la JVM.
+        # Manually trigger the session-scoped JVM fixture.
+        # This will only run it once and then retrieve the cached result
+        # for all subsequent calls.
+        request.getfixturevalue('jvm_session')
         yield
 
 

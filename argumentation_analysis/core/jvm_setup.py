@@ -328,8 +328,6 @@ def get_jvm_options() -> List[str]:
     # Les options "-XX:+UseG1GC", "-Xrs" sur Windows provoquaient un "fatal exception: access violation".
     # Elles sont désactivées de manière permanente.
 
-    # --- DIAGNOSTIC PROVER9 (Temporarily disabled for debugging JVM crash) ---
-    logger.warning("Le diagnostic Prover9 et le chargement de la librairie native sont temporairement désactivés.")
     logger.info(f"Options JVM utilisées : {options}")
     return options
 
