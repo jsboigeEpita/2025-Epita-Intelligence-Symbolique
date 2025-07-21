@@ -77,16 +77,10 @@ Ce message est un **artefact cosmétique** connu de la bibliothèque `JPype` sou
 
 ---
 
-## Tester les Différents Solveurs
+## Couverture des Solveurs (`tweety` et `prover9`)
 
-Le système peut utiliser deux solveurs logiques : `tweety` (défaut) et `prover9`. Pour forcer l'utilisation d'un solveur spécifique pendant les tests, vous pouvez définir la variable d'environnement `ARG_ANALYSIS_SOLVER`.
+Les tests d'intégration cruciaux qui dépendent d'un solveur logique (comme ceux pour le `FOLHandler`) sont maintenant **automatiquement paramétrés**.
 
-Le script `run_tests.ps1` chargera automatiquement les variables depuis un fichier `.env.test` s'il existe à la racine.
+Cela signifie que lorsque vous exécutez la suite de tests (par exemple, `.\run_tests.ps1 -Type integration`), les tests concernés s'exécuteront **deux fois** : une fois en forçant l'utilisation de `tweety`, et une fois en forçant l'utilisation de `prover9`.
 
-**Exemple de fichier `.env.test` pour utiliser `prover9` :**
-```
-# .env.test
-ARG_ANALYSIS_SOLVER=prover9
-```
-
-Créez ce fichier, puis lancez les tests normalement. Le `FOLHandler` utilisera alors `prover9`.
+Vous n'avez **plus besoin** de définir manuellement la variable d'environnement `ARG_ANALYSIS_SOLVER` pour assurer la couverture des deux solveurs. Le framework de test s'en charge.
