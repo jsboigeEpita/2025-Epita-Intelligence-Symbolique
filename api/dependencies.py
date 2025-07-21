@@ -1,3 +1,4 @@
+import os
 from fastapi import Depends
 from argumentation_analysis.orchestration.service_manager import OrchestrationServiceManager
 from .services import DungAnalysisService
@@ -7,6 +8,56 @@ import time
 # Services globaux pour éviter la réinitialisation
 _global_service_manager = None
 _global_dung_service = None
+_global_mock_service = None
+
+class MockAnalysisService:
+    """Service d'analyse mock pour les tests ou en cas de fallback."""
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+        self.force_mock = True
+
+    async def analyze_text(self, text: str) -> dict:
+        start_time = time.time()
+        self.logger.info("[API-MOCK] Démarrage analyse mock...")
+        
+        # Simuler une détection de base pour "ad hominem"
+        fallacies = []
+        if "idiot" in text or "menteur" in text:
+            fallacies.append({
+                "type": "ad_hominem_potentiel",
+                "description": "Attaque personnelle détectée.",
+                "confidence": 0.9
+            })
+
+        duration = time.time() - start_time
+        return {
+            'fallacies': fallacies,
+            'duration': duration,
+            'components_used': ['FallbackAnalyzer'],
+            'summary': f"Analyse de fallback terminée. {len(fallacies)} sophismes détectés.",
+            'overall_quality': 0.1,
+            'argument_structure': "Non analysé (fallback)",
+            'suggestions': ["Vérifier la connexion à l'API OpenAI."],
+            'authentic_gpt4o_used': False,
+            'analysis_metadata': {
+                'text_length': len(text),
+                'processing_time': duration,
+                'model_used': 'gpt-4o-mini-mock',
+                'fallback_reason': 'Mode mock forcé via FORCE_MOCK_LLM'
+            }
+        }
+
+    def is_available(self) -> bool:
+        return True
+
+    def get_status_details(self) -> dict:
+        return {
+            "service_type": "MockAnalysisService",
+            "gpt4o_mini_enabled": False,
+            "mock_disabled": False,
+            "manager_initialized": True,
+            "uptime_seconds": 0
+        }
 
 class AnalysisService:
     """Service d'analyse authentique utilisant GPT-4o-mini via OrchestrationServiceManager"""
@@ -113,17 +164,32 @@ class AnalysisService:
 
 async def get_analysis_service():
     """
-    Injection de dépendance pour le service d'analyse authentique.
-    Utilise un singleton global pour éviter la réinitialisation.
+    Injection de dépendance pour le service d'analyse.
+    Retourne un service mock si FORCE_MOCK_LLM est activé,
+    sinon le service authentique.
     """
-    global _global_service_manager
-    
+    global _global_service_manager, _global_mock_service
+
+    if os.getenv('FORCE_MOCK_LLM') == '1':
+        if _global_mock_service is None:
+            logging.warning("[API] FORCE_MOCK_LLM activé. Utilisation du MockAnalysisService.")
+            _global_mock_service = MockAnalysisService()
+        return _global_mock_service
+
     if _global_service_manager is None:
-        logging.info("[API] Initialisation du ServiceManager authentique...")
-        _global_service_manager = OrchestrationServiceManager()
-        await _global_service_manager.initialize()
-        logging.info("[API] ServiceManager initialisé avec succès")
-    
+        try:
+            logging.info("[API] Initialisation du ServiceManager authentique...")
+            _global_service_manager = OrchestrationServiceManager()
+            await _global_service_manager.initialize()
+            if not _global_service_manager.is_ready():
+                 raise RuntimeError("Le ServiceManager n'est pas prêt après initialisation.")
+            logging.info("[API] ServiceManager initialisé avec succès")
+        except Exception as e:
+            logging.error(f"[API] Échec critique de l'initialisation du ServiceManager: {e}. Passage en mode MOCK.")
+            if _global_mock_service is None:
+                _global_mock_service = MockAnalysisService()
+            return _global_mock_service
+
     return AnalysisService(_global_service_manager)
 
 

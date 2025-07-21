@@ -264,7 +264,7 @@ class AnalysisRunnerV2:
         
         # Invoquer le chat pour un nombre limité de tours
         turn_count = 0
-        async for message in group_chat.invoke():
+        async for message in await group_chat.invoke():
             self.tour_counter += 1
             capture_shared_state(
                 phase_id=phase_id,

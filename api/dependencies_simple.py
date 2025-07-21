@@ -58,14 +58,19 @@ class SimpleAnalysisService:
 
         try:
             self.client = OpenAI(api_key=api_key)
-            # Valide la clé de manière asynchrone pour ne pas bloquer
-            await asyncio.to_thread(self.client.models.list)
-            self.logger.info("✅ Client OpenAI GPT-4o-mini initialisé et clé validée.")
+            # Pendant les tests (détecté via variable d'env), on fait confiance à la clé sans la valider par un appel réseau
+            if os.getenv("IN_PYTEST"):
+                self.logger.warning("Environnement de test détecté via IN_PYTEST, validation de la clé par appel réseau sautée.")
+            else:
+                # Valide la clé de manière asynchrone pour ne pas bloquer
+                await asyncio.to_thread(self.client.models.list)
+            self.logger.info("✅ Client OpenAI GPT-4o-mini initialisé.")
         except openai.AuthenticationError as e:
             self.logger.error(f"❌ Erreur d'authentification OpenAI: {e}")
             self.client = None
         except Exception as e:
-            self.logger.error(f"❌ Erreur inattendue pendant l'initialisation d'OpenAI: {e}")
+            import traceback
+            self.logger.error(f"❌ Erreur inattendue pendant l'initialisation d'OpenAI: {e}\n{traceback.format_exc()}")
             self.client = None
         
         self.initialized = True
@@ -175,8 +180,8 @@ class SimpleAnalysisService:
             'components_used': ['FallbackAnalyzer'],
             'summary': f"Analyse de fallback terminée. {len(fallacies)} sophismes détectés par mots-clés.",
             'authentic_gpt4o_used': False,
-            'gpt_model_used': 'fallback_mode',  # Clé ajoutée pour la cohérence
-            'fallback_reason': error or 'OpenAI non disponible',
+            'gpt_model_used': 'gpt-4o-mini-mock' if self.force_mock else 'fallback_mode',
+            'fallback_reason': error or ('Mode mock forcé' if self.force_mock else 'OpenAI non disponible'),
             'analysis_metadata': {
                 'text_length': len(text),
                 'processing_time': duration,

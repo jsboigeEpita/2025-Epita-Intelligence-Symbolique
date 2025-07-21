@@ -29,7 +29,7 @@ class TestAnalysisRunnerV2(unittest.IsolatedAsyncioTestCase):
         self.runner = AnalysisRunnerV2(llm_service=self.mock_llm_service)
         self.test_text = "Ceci est un texte de test pour l'analyse."
 
-    @patch('argumentation_analysis.orchestration.analysis_runner_v2.AgentGroupChat', new_callable=AsyncMock)
+    @patch('argumentation_analysis.orchestration.analysis_runner_v2.AgentGroupChat', new_callable=MagicMock)
     @patch('argumentation_analysis.orchestration.analysis_runner_v2.AgentFactory')
     @patch('argumentation_analysis.orchestration.analysis_runner_v2.RhetoricalAnalysisState')
     @patch('argumentation_analysis.orchestration.analysis_runner_v2.start_enhanced_pm_capture')
@@ -40,8 +40,11 @@ class TestAnalysisRunnerV2(unittest.IsolatedAsyncioTestCase):
         Teste le flux principal de `run_analysis` dans `AnalysisRunnerV2`.
         """
         # --- Arrange ---
+        mock_state_instance = mock_state.return_value
+        mock_state_instance.to_json.return_value = '{}'  # Retourne un JSON valide
+
         mock_chat_instance = mock_chat_class.return_value
-        mock_chat_instance.invoke.return_value = self.mock_async_iterator([]) # Pas de messages, juste pour que ça tourne
+        mock_chat_instance.invoke = AsyncMock(return_value=self.mock_async_iterator([])) # invoke est une méthode async
 
         # --- Act ---
         result = await self.runner.run_analysis(self.test_text)

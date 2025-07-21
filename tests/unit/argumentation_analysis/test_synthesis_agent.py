@@ -327,8 +327,8 @@ class TestSynthesisAgent:
         test_text = "Texte qui dit que tout le monde sait que les sophismes sont évidents."
         
         # Mock de l'agent informel
-        OrchestrationServiceManager = MockInformalAgent()
-        synthesis_agent._informal_agent = OrchestrationServiceManager
+        mock_informal_agent = MockInformalAgent()
+        synthesis_agent._informal_agent = mock_informal_agent
         
         result = asyncio.run(synthesis_agent._run_informal_analysis(test_text))
         
@@ -416,10 +416,8 @@ class TestSynthesisAgent:
     
     def test_analyze_with_informal_agent_success(self, mocker, synthesis_agent):
         """Test l'analyse avec l'agent informel."""
-        mock_agent = mocker.MagicMock()
-        mock_agent.analyze_text = AsyncMock(
-            return_value={"fallacies": ["test"], "structure": "test"}
-        )
+        mock_agent = AsyncMock()
+        mock_agent.analyze_text.return_value = {"fallacies": ["test"], "structure": "test"}
 
         async def run_test():
             return await synthesis_agent._analyze_with_informal_agent(
@@ -433,8 +431,8 @@ class TestSynthesisAgent:
 
     def test_analyze_with_informal_agent_exception(self, mocker, synthesis_agent):
         """Test la gestion d'exception lors de l'analyse informelle."""
-        mock_agent = mocker.MagicMock()
-        mock_agent.analyze_text = AsyncMock(side_effect=Exception("Informal error"))
+        mock_agent = AsyncMock()
+        mock_agent.analyze_text.side_effect = Exception("Informal error")
 
         async def run_test():
             return await synthesis_agent._analyze_with_informal_agent(

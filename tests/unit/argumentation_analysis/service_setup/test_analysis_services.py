@@ -84,7 +84,11 @@ def test_initialize_services_nominal_case(mock_settings, mock_load_dotenv, mock_
     assert services.get("jvm_ready") is True
     
     # create_llm_service est appelé avec force_mock=True car mock_settings.use_mock_llm = True
-    mock_create_llm.assert_called_once_with(service_id="default_llm_service", force_mock=True)
+    mock_create_llm.assert_called_once_with(
+        service_id="default_llm_service",
+        model_id=mock_settings.default_model_id,
+        force_mock=True
+    )
     # L'objet retourné doit être celui de la fixture mock_create_llm
     assert services.get("llm_service") == mock_create_llm.return_value
     
@@ -142,7 +146,11 @@ def test_initialize_services_llm_fails_raises_exception(mock_settings, mock_crea
     
     services = initialize_analysis_services()
     
-    mock_create_llm.assert_called_once_with(service_id="default_llm_service", force_mock=True)
+    mock_create_llm.assert_called_once_with(
+        service_id="default_llm_service",
+        model_id=mock_settings.default_model_id,
+        force_mock=True
+    )
     assert services.get("llm_service") is None
     assert f"Échec critique lors de la création du service LLM: {expected_exception}" in caplog.text
 

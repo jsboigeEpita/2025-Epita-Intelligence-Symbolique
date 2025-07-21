@@ -47,11 +47,17 @@ async def perform_text_analysis(text: str, services: dict[str, Any], analysis_ty
         raise
 
     try:
-        runner = AnalysisRunnerV2(llm_service=llm_service)
+        runner = AnalysisRunnerV2()
         logger.info(f"Lancement de l'analyse principale (type: {analysis_type}) via AnalysisRunnerV2...")
         
+        # Le runner V2 attend un service LLM, qui est maintenant géré en interne
+        # ou passé à run_analysis. Pour la compatibilité, nous passons le service
+        # depuis le dictionnaire `services` s'il existe.
+        llm_service = services.get("llm_service")
+        
         analysis_result = await runner.run_analysis(
-            text_content=text
+            text_content=text,
+            llm_service=llm_service
         )
         
         logger.info(f"Analyse principale (type: '{analysis_type}') terminée avec succès via AnalysisRunnerV2.")

@@ -55,11 +55,12 @@ except ImportError as e:
             return self.state
     
     class RealLLMOrchestrator:
-        def __init__(self, mode="real", llm_service=None, config=None):
+        def __init__(self, mode="real", kernel=None, config=None):
             self.mode = mode
-            self.llm_service = llm_service
+            self.kernel = kernel
             self.config = config
             self.agents = {}
+            self.rhetorical_analyzer = None  # Pour la compatibilité des tests
             
         def initialize(self) -> bool:
             return True
@@ -101,7 +102,7 @@ class TestUnifiedOrchestrations:
     
     def test_conversation_orchestrator_initialization(self):
         """Test d'initialisation avancée du ConversationOrchestrator."""
-        orchestrator = ConversationOrchestrator(mode="demo")
+        orchestrator = ConversationOrchestrator(mode="demo", config=self.test_config)
         
         assert orchestrator.mode == "demo"
         assert hasattr(orchestrator, 'agents')
@@ -391,7 +392,7 @@ class TestUnifiedSystemCoordination:
             require_real_tweety=True
         )
         
-        orchestrator = ConversationOrchestrator(mode="demo")
+        orchestrator = ConversationOrchestrator(mode="demo", config=authentic_config)
         
         # Vérifier que le mode authentique est respecté
         if hasattr(orchestrator, 'is_authentic_mode'):

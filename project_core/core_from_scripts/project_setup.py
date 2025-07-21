@@ -99,16 +99,16 @@ class ProjectSetup:
         self.logger.info("Démarrage de l'installation orchestrée du projet...")
         
         # Étape 1: Valider les outils de compilation
-        # self.logger.info("Étape 1/3 : Validation des outils de compilation...")
-        # build_tools_status = self.validator.validate_build_tools()
-        # self.logger.info(build_tools_status['message'])
-        # if build_tools_status['status'] == 'failure':
-        #     self.logger.error("Installation annulée. Veuillez installer les outils de compilation requis et réessayer.")
-        #     return False
-        # self.logger.success("Outils de compilation validés.")
+        self.logger.info("Étape 1/3 : Validation des outils de compilation...")
+        build_tools_status = self.validator.validate_build_tools()
+        self.logger.info(build_tools_status['message'])
+        if build_tools_status['status'] == 'failure':
+            self.logger.error("Installation annulée. Veuillez installer les outils de compilation requis et réessayer.")
+            return False
+        self.logger.success("Outils de compilation validés.")
 
         # Étape 2: Installer les dépendances depuis requirements.txt
-        self.logger.info(f"Étape 1/2 : Installation des dépendances depuis '{requirements_file}'...")
+        self.logger.info(f"Étape 2/3 : Installation des dépendances depuis '{requirements_file}'...")
         deps_installed = self.env_manager.fix_dependencies(requirements_file=requirements_file, strategy_name='aggressive')
         if not deps_installed:
             self.logger.error(f"L'installation des dépendances depuis '{requirements_file}' a échoué. Installation annulée.")

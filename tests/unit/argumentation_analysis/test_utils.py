@@ -14,6 +14,7 @@ import unittest
 import os
 import sys
 import tempfile
+import pytest
 
 from pathlib import Path
 from argumentation_analysis.utils.system_utils import ensure_directory_exists, get_project_root, is_running_in_notebook
@@ -108,6 +109,7 @@ class TestExtractRepairUtils:
 class TestIntegrationUtils:
     """Tests d'intégration pour les utilitaires."""
     
+    @pytest.mark.asyncio
     async def test_extract_repair_workflow(self):
         """Teste le workflow complet de réparation d'extraits."""
         # Note: Ce test est un exemple de test d'intégration

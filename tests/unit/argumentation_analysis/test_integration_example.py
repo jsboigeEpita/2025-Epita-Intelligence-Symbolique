@@ -187,6 +187,7 @@ def test_extract_service_with_fetch_service(integration_services):
 
 
 @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY non disponible")
+@pytest.mark.asyncio
 async def test_repair_extract_markers_integration(mocker, integration_services):
     """Test d'intégration pour la fonction repair_extract_markers."""
     from argumentation_analysis.utils.dev_tools.repair_utils import repair_extract_markers

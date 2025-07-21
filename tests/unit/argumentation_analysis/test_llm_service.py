@@ -65,7 +65,7 @@ class TestLLMService:
         with pytest.raises(ValueError) as excinfo:
             create_llm_service(service_id="test_service", model_id=self.model_id, force_authentic=True)
         
-        assert "Configuration OpenAI standard incomplète" in str(excinfo.value)
+        assert "La variable d'environnement OPENAI_API_KEY n'est pas définie." in str(excinfo.value)
 
         assert "OPENAI_API_KEY" in str(excinfo.value)
 

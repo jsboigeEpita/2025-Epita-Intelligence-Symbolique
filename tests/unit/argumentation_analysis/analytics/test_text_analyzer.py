@@ -10,7 +10,7 @@ import logging
 from unittest.mock import MagicMock, patch, AsyncMock
 
 # Cibles pour le patching
-ANALYSIS_RUNNER_V2_PATH = "argumentation_analysis.orchestration.analysis_runner_v2.AnalysisRunnerV2"
+ENHANCED_RUNNER_PATH = "argumentation_analysis.orchestration.analysis_runner_v2.AnalysisRunnerV2"
 
 # Importation de la fonction à tester
 from argumentation_analysis.analytics.text_analyzer import perform_text_analysis
@@ -21,23 +21,24 @@ def mock_services():
     return {"llm_service": MagicMock()}
 
 @pytest.mark.asyncio
-@patch(ANALYSIS_RUNNER_V2_PATH)
-async def test_perform_text_analysis_nominal_case(mock_runner_v2_class, mock_services, caplog):
+@patch(ENHANCED_RUNNER_PATH)
+async def test_perform_text_analysis_nominal_case(mock_enhanced_runner_class, mock_services, caplog):
     """Teste le cas nominal de perform_text_analysis avec AnalysisRunnerV2."""
     text_to_analyze = "Ceci est un texte d'exemple pour l'analyse."
     analysis_type = "default_test"
     expected_result = {"status": "success", "analysis": "Résultat de l'analyse V2"}
 
-    # Configurer le mock pour AnalysisRunnerV2
-    mock_runner_instance = mock_runner_v2_class.return_value
+    # Configurer le mock pour l'orchestrateur amélioré
+    mock_runner_instance = mock_enhanced_runner_class.return_value
     mock_runner_instance.run_analysis = AsyncMock(return_value=expected_result)
 
     result = await perform_text_analysis(text_to_analyze, mock_services, analysis_type)
 
     # Assertions
-    mock_runner_v2_class.assert_called_once_with(llm_service=mock_services["llm_service"])
+    mock_enhanced_runner_class.assert_called_once_with()
     mock_runner_instance.run_analysis.assert_awaited_once_with(
-        text_content=text_to_analyze
+        text_content=text_to_analyze,
+        llm_service=mock_services["llm_service"]
     )
     assert result == expected_result
     assert f"Lancement de l'analyse de texte de type '{analysis_type}'" in caplog.text
@@ -56,23 +57,24 @@ async def test_perform_text_analysis_no_llm_service(caplog):
     assert "Le service LLM n'est pas disponible dans les services fournis." in caplog.text
 
 @pytest.mark.asyncio
-@patch(ANALYSIS_RUNNER_V2_PATH)
-async def test_perform_text_analysis_runner_fails(mock_runner_v2_class, mock_services, caplog):
+@patch(ENHANCED_RUNNER_PATH)
+async def test_perform_text_analysis_runner_fails(mock_enhanced_runner_class, mock_services, caplog):
     """Teste le cas où la méthode run_analysis de AnalysisRunnerV2 lève une exception."""
     text_to_analyze = "Texte qui cause une erreur."
     analysis_type = "error_case"
     expected_exception = ValueError("Erreur simulée dans run_analysis")
 
     # Configurer le mock
-    mock_runner_instance = mock_runner_v2_class.return_value
+    mock_runner_instance = mock_enhanced_runner_class.return_value
     mock_runner_instance.run_analysis = AsyncMock(side_effect=expected_exception)
 
     with pytest.raises(ValueError) as excinfo:
         await perform_text_analysis(text_to_analyze, mock_services, analysis_type)
 
     assert excinfo.value == expected_exception
-    mock_runner_v2_class.assert_called_once_with(llm_service=mock_services["llm_service"])
+    mock_enhanced_runner_class.assert_called_once_with()
     mock_runner_instance.run_analysis.assert_awaited_once_with(
-        text_content=text_to_analyze
+        text_content=text_to_analyze,
+        llm_service=mock_services["llm_service"]
     )
     assert f"Erreur lors de l'analyse du texte (type: {analysis_type}): {expected_exception}" in caplog.text

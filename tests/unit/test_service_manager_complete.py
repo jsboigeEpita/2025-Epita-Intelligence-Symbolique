@@ -138,7 +138,7 @@ class TestProcessCleanup(unittest.TestCase):
     
     def test_register_process(self):
         """Test enregistrement processus"""
-        mock_process = self._create_authentic_gpt4o_mini_instance()
+        mock_process = MagicMock(spec=subprocess.Popen)
         mock_process.pid = 12345
         
         self.cleanup.register_process("test-service", mock_process)
@@ -146,18 +146,18 @@ class TestProcessCleanup(unittest.TestCase):
         self.assertIn("test-service", self.cleanup.managed_processes)
         self.assertEqual(self.cleanup.managed_processes["test-service"], mock_process)
     
-    def test_cleanup_managed_processes(self):
+    @patch('psutil.pid_exists', return_value=True)
+    def test_cleanup_managed_processes(self, mock_pid_exists):
         """Test nettoyage processus gérés"""
         # Créer un mock process
-        mock_process = self._create_authentic_gpt4o_mini_instance()
-        mock_process.is_running# Mock eliminated - using authentic gpt-4o-mini True
+        mock_process = MagicMock(spec=subprocess.Popen)
         mock_process.pid = 12345
         
         self.cleanup.register_process("test-service", mock_process)
         self.cleanup.cleanup_managed_processes()
         
         # Vérifier que terminate a été appelé
-        # Mock assertion eliminated - authentic validation
+        mock_process.terminate.assert_called_once()
     
     
     @patch('psutil.Process')

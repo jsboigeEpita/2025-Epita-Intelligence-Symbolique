@@ -201,19 +201,19 @@ class ProcessCleanup:
         """Nettoyage de tous les processus managés"""
         for name, process in self.managed_processes.items():
             try:
-                if process.is_running():
-                    self.logger.info(f"Arrêt du processus managé: {name}")
+                if psutil.pid_exists(process.pid):
+                    self.logger.info(f"Arrêt du processus managé: {name} (PID: {process.pid})")
                     process.terminate()
                     
                     # Attendre arrêt gracieux
                     try:
                         process.wait(timeout=timeout)
-                    except psutil.TimeoutExpired:
-                        self.logger.warning(f"Arrêt forcé du processus: {name}")
+                    except subprocess.TimeoutExpired:
+                        self.logger.warning(f"Arrêt forcé du processus: {name} (PID: {process.pid})")
                         process.kill()
                         
             except Exception as e:
-                self.logger.error(f"Erreur arrêt processus {name}: {e}")
+                self.logger.error(f"Erreur arrêt processus {name} (PID: {process.pid}): {e}")
         
         self.managed_processes.clear()
     

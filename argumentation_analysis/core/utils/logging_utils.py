@@ -73,9 +73,8 @@ def setup_logging(log_level_str: str = "INFO") -> None:
     # simplement du niveau configuré via `basicConfig`.
     # Si un comportement différent était souhaité (par exemple, forcer "Orchestration"
     # à être toujours en DEBUG), on le configurerait ici.
-    project_specific_loggers = ["Orchestration"] # semantic_kernel.agents supprimé car module inexistant
+    project_specific_loggers = ["Orchestration", "semantic_kernel.agents"]
     for logger_name in project_specific_loggers:
-        # logging.getLogger(logger_name).setLevel(numeric_level) # Explicite, mais hérité par défaut
-        pass # Les loggers hériteront du niveau `numeric_level` du root logger.
+        logging.getLogger(logger_name).setLevel(numeric_level)
 
     logging.info(f"Logging configuré avec le niveau {log_level_str.upper()}.")
