@@ -202,7 +202,7 @@ class TestModalLogicAgent:
             # Si la réparation échoue, vérifier qu'on a au moins un JSON partiel
             assert "{" in extracted
 
-    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
+    # @pytest.mark.real_jpype
     @pytest.mark.asyncio
     async def test_text_to_belief_set_success(self, modal_agent, mock_tweety_bridge):
         """Test la conversion réussie de texte en belief set."""
@@ -228,7 +228,7 @@ class TestModalLogicAgent:
         assert "constant urgent" in belief_set.content
         assert "[](urgent)" in belief_set.content
 
-    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
+    # @pytest.mark.real_jpype
     @pytest.mark.asyncio
     async def test_text_to_belief_set_json_error(self, modal_agent, mock_tweety_bridge):
         """Test la gestion d'erreur JSON lors de la conversion."""
@@ -265,7 +265,7 @@ class TestModalLogicAgent:
         assert "[](urgent)" in parsed["modal_formulas"]
         assert "<>(urgent => action)" in parsed["modal_formulas"]
 
-    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
+    # @pytest.mark.real_jpype
     @pytest.mark.asyncio
     async def test_generate_queries_success(self, modal_agent, mock_tweety_bridge):
         """Test la génération réussie de requêtes modales."""
@@ -287,7 +287,7 @@ class TestModalLogicAgent:
         assert len(queries) >= 1
         assert any("urgent" in query for query in queries)
 
-    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
+    # @pytest.mark.real_jpype
     @pytest.mark.asyncio
     async def test_generate_queries_empty_response(self, modal_agent, mock_tweety_bridge):
         """Test la génération de requêtes avec réponse vide."""
@@ -346,7 +346,7 @@ class TestModalLogicAgent:
         assert result is None
         assert "FUNC_ERROR" in message
 
-    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
+    # @pytest.mark.real_jpype
     @pytest.mark.asyncio
     async def test_interpret_results_success(self, modal_agent):
         """Test l'interprétation réussie des résultats."""
@@ -367,7 +367,7 @@ class TestModalLogicAgent:
         assert "Interprétation" in interpretation
         assert "urgent" in interpretation
 
-    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
+    # @pytest.mark.real_jpype
     @pytest.mark.asyncio
     async def test_interpret_results_error(self, modal_agent):
         """Test la gestion d'erreur lors de l'interprétation."""
@@ -426,7 +426,7 @@ class TestModalLogicAgent:
         assert is_consistent == True
         assert "Consistent" in message
 
-    @pytest.mark.skip(reason="Ce test provoque un crash de la JVM même avec des mocks.")
+    @pytest.mark.real_jpype
     def test_is_consistent_inconsistent(self, modal_agent, mock_tweety_bridge):
         """Test la détection d'incohérence."""
         modal_agent._tweety_bridge = mock_tweety_bridge
@@ -467,7 +467,7 @@ class TestModalLogicAgent:
         assert isinstance(belief_set, ModalBeliefSet)
         assert belief_set.content == ""
 
-    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
+    # @pytest.mark.real_jpype
     @pytest.mark.asyncio
     async def test_get_response(self, modal_agent, mock_tweety_bridge):
         """Test que get_response (via invoke_single) retourne un statut."""
@@ -482,7 +482,7 @@ class TestModalLogicAgent:
         result = await modal_agent.get_response("test text")
         assert "Analyse modale initiée" in result
 
-    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
+    # @pytest.mark.real_jpype
     @pytest.mark.asyncio
     async def test_invoke(self, modal_agent, mock_tweety_bridge):
         """Test que invoke retourne un générateur qui produit le statut de invoke_single."""
@@ -497,8 +497,8 @@ class TestModalLogicAgent:
         assert len(results) == 1
         assert "Analyse modale initiée" in results[0]
 
-    # @pytest.mark.skip(reason="Bloqué par un crash de la JVM lors de l'initialisation de JPype. Nécessite une investigation de l'environnement.")
-    @pytest.mark.skip(reason="Provoque un crash en l'absence de JVM")
+    # @pytest.mark.real_jpype
+    @pytest.mark.real_jpype
     @pytest.mark.asyncio
     async def test_invoke_stream(self, modal_agent, mock_tweety_bridge):
         """Test que invoke_stream retourne un générateur qui produit le statut de invoke_single."""

@@ -64,7 +64,7 @@ class TestFOLLogicAgentInitialization:
             logger.warning(f"Appel LLM authentique échoué: {e}")
             return "Authentic LLM call failed"
 
-    @pytest.mark.skip(reason="Provoque un crash en l'absence de JVM")
+    @pytest.mark.real_jpype
     def test_agent_initialization_with_fol_config(self):
         """Test création agent avec configuration FOL."""
         config = PresetConfigs.authentic_fol()
