@@ -59,6 +59,10 @@ def pytest_configure(config):
         pytest.exit(f"\n\n[FATAL] ERREUR DE CONFIGURATION DE L'ENVIRONNEMENT:\n{e}", returncode=1)
     # ===============================================================================================
 
+    # Désactiver le plugin opentelemetry pour éviter les crashs avec JPype
+    if "opentelemetry" not in config.option.plugins:
+        config.option.plugins.append("no:opentelemetry")
+
     global MOCK_DOTENV, _dotenv_patcher
     
     from dotenv import dotenv_values
