@@ -89,6 +89,7 @@ class TestAuthenticGPTIntegration:
             assert pattern not in mock_response.lower()
 
 
+@pytest.mark.jvm_test
 class TestAuthenticTweetyIntegration:
     """Tests d'intégration avec Tweety JAR authentique."""
     
