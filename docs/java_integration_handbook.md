@@ -36,6 +36,13 @@ Cette phase a été cruciale pour stabiliser l'environnement sous Windows.
 *   **Cause Racine 2** : Le conflit le plus significatif venait du chargement de la **bibliothèque native Prover9 (`.dll`)** en même temps que la JVM. Sa suppression a été la clé de la stabilisation.
 *   **Cause Racine 3** : Le plugin `pytest-opentelemetry` a été identifié comme une nouvelle source de crash de la JVM et a été désactivé.
 
+### Phase 4 : Défaillance du Cycle de Vie de la JVM dans les Tests (Fin Juillet 2025)
+
+*   **Problème** : Malgré les corrections précédentes, la suite de tests `pytest -m "jvm_test"` échoue systématiquement avec un crash `Windows fatal exception: access violation`.
+*   **Cause Racine** : Le diagnostic a révélé un problème dans la gestion du cycle de vie de la JVM par les fixtures `pytest` :
+    1.  **Conflit de Fixtures** : Certains tests utilisent une fixture `jvm_session` alors que la fixture principale semble être `jvm_fixture`. Cette incohérence cause des erreurs "fixture not found".
+    2.  **Redémarrage illégal de la JVM** : La cause première du crash est une tentative de redémarrer la JVM au sein d'une même session de test. Une fixture avec une portée par défaut (`scope="function"`) tente de démarrer la JVM pour chaque test, alors que JPype n'autorise qu'un seul démarrage par processus.
+
 ## 3. Bonnes Pratiques et Dépannage
 
 Basé sur les leçons apprises, voici les règles à suivre pour maintenir un environnement stable.
@@ -55,3 +62,37 @@ Si vous rencontrez un crash de la JVM ou une instabilité, suivez ces étapes :
 2.  **Examinez les plugins `pytest`** : Désactivez les plugins non essentiels dans `conftest.py` ou `pytest.ini`, en particulier ceux liés à l'instrumentation (`opentelemetry`) ou à l'asynchronisme.
 3.  **Isolez le test** : Créez un test minimal qui reproduit le problème avec le moins de dépendances possible.
 4.  **Vérifiez les bibliothèques natives** : Assurez-vous qu'aucune bibliothèque native n'est chargée dans le même processus que la JVM si elle n'est pas explicitement conçue pour cela.
+5.  **Analysez les Fixtures `pytest`** : En cas de crash des tests d'intégration, vérifiez le fichier `tests/conftest.py`. Assurez-vous que la fixture gérant la JVM (`jvm_fixture`) a une portée de session (`@pytest.fixture(scope="session")`) et que tous les tests utilisent le nom de fixture correct.
+
+## Archéologie Git : Retracer les décisions de conception
+
+Une analyse approfondie de l'historique Git révèle une lutte récurrente pour stabiliser l'interaction entre la JVM, JPype et l'écosystème de test `pytest`. Les décisions clés ont été prises en réaction à des crashs système critiques (`Windows fatal exception: access violation`).
+
+Voici l'évolution des solutions :
+
+1.  **Centralisation du Cycle de Vie de la JVM** : Face à des crashs initiaux dus à de multiples démarrages/arrêts de la JVM, la communauté a convergé vers une gestion centralisée. La création d'une fixture `pytest` unique avec une portée de session (`@pytest.fixture(scope="session")`) est devenue la norme pour s'assurer que la JVM n'est démarrée qu'une seule fois.
+    *   La première introduction d'une fixture de session dédiée apparaît dans le commit `e135c9bf`.
+    *   La refactorisation des tests pour utiliser `jvm_session` a été une étape clé (commit `3645d41f`).
+    *   Les problèmes de fixtures non trouvées, dus à des conflits entre `conftest.py` locaux et globaux, ont été résolus en centralisant la configuration (commit `ac57b2db`).
+
+2.  **Initialisation "Lazy"** : Pour éviter que la JVM ne démarre prématurément lors de la collecte des tests par `pytest`, une approche d'initialisation "lazy" (paresseuse) a été adoptée dans le commit `93114be8`. Cela a permis de s'assurer que la fixture de session contrôle entièrement le moment du démarrage.
+
+3.  **Identification et Isolation des Conflits Natifs** : L'investigation a montré que la cause la plus profonde des crashs était le conflit entre la JVM et d'autres bibliothèques natives chargées dans le même processus.
+    *   La suppression de l'option JVM `-Djava.awt.headless=true` a résolu une première source d'instabilité (commit `7547fadc`).
+    *   La découverte et la suppression du chargement de la DLL de **Prover9** en même temps que la JVM a été la correction la plus critique pour la stabilité sous Windows (commit `609749c6`).
+
+4.  **Conflits avec l'Écosystème de Test** : Des plugins `pytest` ont également été identifiés comme des sources d'instabilité.
+    *   Le plugin `pytest-opentelemetry` a été désactivé car il provoquait des crashs de la JVM (commit `ef9ffbbb`).
+
+Ce contexte historique montre que la gestion du cycle de vie de la JVM est extrêmement sensible. Le problème actuel décrit dans la "Phase 4" (redémarrage illégal de la JVM) est une régression claire, probablement due à une mauvaise utilisation ou à une mauvaise configuration d'une fixture de test, qui ne respecte plus le principe d'un unique démarrage par processus.
+
+### Phase 5 : Stabilisation Finale et Erreurs Subtiles (Fin Juillet 2025)
+
+*   **Problème** : Malgré les corrections successives, un sous-ensemble de tests marqués `jvm_test` continuait d'échouer avec des erreurs variées (`AttributeError`, `file not found`), empêchant la validation complète de l'intégration JVM.
+*   **Stratégie de Diagnostic** : Pour contourner les crashs en cascade qui masquaient les erreurs individuelles, un script `run_isolated_jvm_tests.ps1` a été développé. Ce script exécute chaque test dans un processus `pytest` séparé, permettant de logger la sortie et le code de retour de chaque test, qu'il réussisse, échoue ou crashe.
+*   **Cause Racine 1 (Erreur Logique)** : L'analyse des logs isolés a révélé une `AttributeError: can't set attribute 'tweety_bridge'` dans le constructeur de `FOLLogicAgent`. La cause était une propriété en lecture seule (`@property`) définie dans la classe de base `BaseLogicAgent` qui empêchait l'assignation de l'attribut.
+*   **Cause Racine 2 (Erreur de Chemin)** : Quatre tests échouaient systématiquement avec le code d'erreur 4 de `pytest` ("file or directory not found"). L'enquête a montré qu'une faute de frappe s'était glissée dans le nom du fichier de test (`authentic_components.py` au lieu de `test_authentic_components.py`).
+*   **Solution** :
+    1.  Correction de l'assignation dans `FOLLogicAgent` pour utiliser l'attribut interne `_tweety_bridge` au lieu de la propriété publique.
+    2.  Correction de la faute de frappe dans les fichiers `tests_jvm.txt` (utilisé par le script d'isolation) pour pointer vers le bon fichier de test.
+    3.  Ces corrections, combinées au refactoring précédent qui a introduit l'injection de dépendance pour `TweetyBridge` via une fixture `pytest`, ont permis de rendre la suite de tests `jvm_test` entièrement fonctionnelle.
