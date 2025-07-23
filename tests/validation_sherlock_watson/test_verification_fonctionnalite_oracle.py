@@ -48,22 +48,22 @@ def test_prompt_syntax():
         from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT
         
         # Vérification Watson
-        if "Vous êtes le Dr. John Watson" in WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT:
+        if "Vous êtes le Dr. Watson" in WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT:
             print("[OK] Watson prompt bien formaté")
         else:
             print("[ERREUR] Watson prompt mal formaté")
             assert False
             
         # Vérification Sherlock
-        if "Vous êtes Sherlock Holmes" in SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT:
-            print("[OK] Sherlock prompt bien formaté") 
+        if "Vous incarnez Sherlock Holmes" in SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT:
+            print("[OK] Sherlock prompt bien formaté")
         else:
             print("[ERREUR] Sherlock prompt mal formaté")
             assert False
             
         # Vérification Moriarty
         moriarty_instructions = MoriartyInterrogatorAgent.MORIARTY_SPECIALIZED_INSTRUCTIONS
-        if "Professor James Moriarty" in moriarty_instructions:
+        if "Vous êtes Moriarty" in moriarty_instructions:
             print("[OK] Moriarty prompt bien formaté")
         else:
             print("[ERREUR] Moriarty prompt mal formaté")

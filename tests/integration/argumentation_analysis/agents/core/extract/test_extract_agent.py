@@ -22,8 +22,7 @@ def authentic_extract_agent():
         llm_service = create_llm_service(service_id=service_id, model_id="gpt-4o-mini")
         kernel = Kernel()
         kernel.add_service(llm_service)
-        agent = ExtractAgent(kernel=kernel)
-        agent.setup_agent_components(llm_service_id=service_id)
+        agent = ExtractAgent(kernel=kernel, llm_service_id=service_id)
         return agent
     except Exception as e:
         pytest.fail(f"Échec de la configuration de l'agent d'extraction authentique: {e}")

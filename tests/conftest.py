@@ -59,9 +59,12 @@ def pytest_configure(config):
         pytest.exit(f"\n\n[FATAL] ERREUR DE CONFIGURATION DE L'ENVIRONNEMENT:\n{e}", returncode=1)
     # ===============================================================================================
 
-    # Désactiver le plugin opentelemetry pour éviter les crashs avec JPype
-    if "opentelemetry" not in config.option.plugins:
-        config.option.plugins.append("no:opentelemetry")
+    # Désactive dynamiquement le plugin opentelemetry pour éviter les conflits
+    # avec jpype, qui peuvent causer un crash "access violation" sur Windows.
+    if "opentelemetry" in config.pluginmanager.list_name_plugin():
+        plugin = config.pluginmanager.get_plugin("opentelemetry")
+        config.pluginmanager.unregister(plugin)
+        print("Plugin opentelemetry désenregistré pour éviter le crash de la JVM.", file=sys.stderr)
 
     global MOCK_DOTENV, _dotenv_patcher
     

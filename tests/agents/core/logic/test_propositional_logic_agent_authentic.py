@@ -35,6 +35,8 @@ from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 from argumentation_analysis.agents.core.pl.pl_definitions import PL_AGENT_INSTRUCTIONS
 
 
+# Assure que la JVM est initialisée avant l'exécution de ces tests.
+@pytest.mark.usefixtures("jvm_session")
 class TestPropositionalLogicAgentAuthentic:
     """
     Tests authentiques pour PropositionalLogicAgent - Sans mocks, composants réels

@@ -101,7 +101,7 @@ $runnerArgs = @(
 )
 
 if ($PSBoundParameters.ContainsKey('Path') -and -not ([string]::IsNullOrEmpty($Path))) {
-    $runnerArgs += "--path", "`"$Path`"" # Encapsuler avec des guillemets doubles
+    $runnerArgs += "--path", $Path
 }
 if ($PSBoundParameters.ContainsKey('Browser')) {
     $runnerArgs += "--browser", $Browser

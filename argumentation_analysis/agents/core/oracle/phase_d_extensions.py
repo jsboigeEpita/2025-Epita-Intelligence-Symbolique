@@ -378,7 +378,7 @@ class PhaseDExtensions:
         natural_indicators = sum(1 for msg in conversation_data.get("messages", []) if any(word in msg.get("content", "").lower() for word in ["brilliant", "exact", "précis", "géni"]))
         metrics["naturalite_dialogue"]["naturalite_echanges"] = min(7.5 + (natural_indicators / total_messages) * 2.5, 10.0)
         
-        transition_indicators = sum(1 for msg in conversation_data.get("messages", [])[1:] if any(phrase in msg.get("content", "").lower() for phrase in ["suite à", "en réaction", "après", "comme dit"]))
+        transition_indicators = sum(1 for msg in list(conversation_data.get("messages", []))[1:] if any(phrase in msg.get("content", "").lower() for phrase in ["suite à", "en réaction", "après", "comme dit"]))
         transition_rate = transition_indicators / max(total_messages - 1, 1)
         metrics["naturalite_dialogue"]["qualite_enchainements"] = min(6.7 + transition_rate * 3.3, 10.0)
         metrics["naturalite_dialogue"]["score_global"] = (metrics["naturalite_dialogue"]["naturalite_echanges"] * 0.6 + metrics["naturalite_dialogue"]["qualite_enchainements"] * 0.4)
