@@ -96,32 +96,32 @@ class FOLLogicAgent(BaseLogicAgent):
     les échecs fréquents tout en maintenant une analyse formelle authentique.
     """
     
-    def __init__(self, kernel: Optional[Kernel] = None, agent_name: str = "FOLLogicAgent"):
+    def __init__(self, kernel: Kernel, agent_name: str = "FOLLogicAgent", tweety_bridge: Optional[TweetyBridge] = None, service_id: Optional[str] = None):
         """
         Initialise l'agent FOL.
         
         Args:
-            kernel: Noyau Semantic Kernel (optionnel)
-            agent_name: Nom de l'agent
+            kernel: Noyau Semantic Kernel.
+            agent_name: Nom de l'agent.
+            tweety_bridge (Optional[TweetyBridge]): Instance de TweetyBridge pré-initialisée.
+            service_id (Optional[str]): ID du service LLM à utiliser.
         """
-        # Initialisation de la classe parente avec logic_type
-        if kernel is None:
-            raise ValueError("Un kernel Semantic Kernel réel est requis - pas de Mock autorisé en Phase 2")
-        
         super().__init__(
             kernel=kernel,
             agent_name=agent_name,
-            logic_type_name="first_order"
+            logic_type_name="first_order",
+            llm_service_id=service_id
         )
         
         # Configuration spécifique FOL
         self.analysis_cache: Dict[str, FOLAnalysisResult] = {}
+        self._tweety_bridge = tweety_bridge
         
         # Prompts spécialisés FOL
         self.conversion_prompt = self._create_fol_conversion_prompt()
         self.analysis_prompt = self._create_fol_analysis_prompt()
         
-        logger.info(f"Agent {agent_name} initialise avec logique FOL")
+        logger.info(f"Agent {agent_name} initialisé avec logique FOL")
 
     def _create_fol_conversion_prompt(self) -> str:
         """Crée le prompt de conversion vers FOL."""
