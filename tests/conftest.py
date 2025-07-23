@@ -14,6 +14,7 @@ from pathlib import Path
 import shutil
 from unittest.mock import patch, MagicMock
 import nest_asyncio
+import jpype
 
 
 # Ajouter le répertoire racine au PYTHONPATH pour assurer la découvrabilité des modules
@@ -124,6 +125,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "real_llm: marks tests that require a real LLM service")
     config.addinivalue_line("markers", "real_jpype: marks tests that require a real JPype/JVM environment")
     config.addinivalue_line("markers", "no_jvm_session: marks tests that should not start the shared JVM session")
+    config.addinivalue_line("markers", "jvm_test: marks tests that require the JVM to be started.")
 
     if MOCK_DOTENV:
         print("[INFO] Dotenv mocking is ENABLED. .env files will be ignored by tests.")
@@ -169,64 +171,44 @@ def apply_nest_asyncio():
     yield
 
 
-@pytest.fixture(scope="session")
-def jvm_session():
-    """
-    Manages the JPype JVM lifecycle for the entire test session.
-    This fixture is NOT auto-used; it must be requested by another fixture.
-    When activated, it:
-    1. Ensures all portable dependencies (JDK, Tweety JARs) are provisioned.
-    2. Starts the JVM using the centralized jvm_setup module.
-    3. Guarantees the JVM is shut down after all tests are complete.
-    """
-    logger.info("---------- Pytest session starting: Provisioning dependencies and Initializing JVM... ----------")
-
-    try:
-        logger.info("Checking Tweety JARs location...")
-        # This part of the logic seems to be handled elsewhere now, so we keep it minimal.
-        
-        if not is_jvm_started():
-            logger.info("Attempting to initialize JVM via core.jvm_setup.initialize_jvm...")
-            success = initialize_jvm(session_fixture_owns_jvm=True)
-            if success:
-                logger.info("JVM started successfully for the test session.")
-            else:
-                 pytest.fail("JVM initialization failed.", pytrace=False)
-        else:
-            logger.info("JVM was already started.")
-
-    except Exception as e:
-        logger.error(f"A critical error occurred during JVM session setup: {e}", exc_info=True)
-        pytest.exit(f"JVM setup failed: {e}", 1)
-
-    yield True
-
-    logger.info("---------- Pytest session finished: Shutting down JVM... ----------")
-    shutdown_jvm(called_by_session_fixture=True)
-
-
 @pytest.fixture(scope="function", autouse=True)
-def manage_jvm_for_test(request):
+def jvm_fixture(request):
     """
-    This 'autouse' fixture runs for every test and decides if the global
-    `jvm_session` fixture is required by manually invoking it.
-    
-    It checks for a 'no_jvm_session' marker on the test. If found, it does nothing.
-    If not found, it uses `request.getfixturevalue()` to activate the `jvm_session`
-    fixture, ensuring the JVM is started for the test.
+    Fixture qui garantit que la JVM est démarrée pour les tests marqués 'jvm_test'.
+    Utilise une portée 'function' pour s'appliquer à chaque test individuellement.
     """
-    if 'no_jvm_session' in request.node.keywords:
-        logger.warning(
-            f"Test '{request.node.name}' is marked with 'no_jvm_session'. "
-            "The global JVM fixture will not be requested for this test."
-        )
+    if 'jvm_test' in request.keywords:
+        # Ce test nécessite la JVM
+        if not is_jvm_started():
+            logger.info(f"Test '{request.node.name}' requires JVM. Initializing...")
+            initialize_jvm()
+        else:
+            logger.info(f"Test '{request.node.name}' uses existing JVM session.")
+        
         yield
+        
+        # Le shutdown est laissé à la fin de la session pour ne pas le faire après chaque test.
+        # Idéalement, une fixture de session s'en chargerait, mais pour éviter les conflits
+        # avec xdist, nous adoptons cette stratégie simplifiée.
     else:
-        # Manually trigger the session-scoped JVM fixture.
-        # This will only run it once and then retrieve the cached result
-        # for all subsequent calls.
-        request.getfixturevalue('jvm_session')
+        # Ce test ne nécessite pas la JVM, on ne fait rien.
         yield
+
+@pytest.fixture(scope="function")
+def tweety_bridge_fixture(jvm_fixture):
+    """
+    Fournit une instance de TweetyBridge connectée à la session JVM gérée
+    par la fixture jvm_fixture.
+    """
+    # La dépendance à jvm_fixture garantit que la JVM est démarrée avant
+    # l'exécution de ce code.
+    from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+    logger.info("Création de l'instance TweetyBridge pour la fixture...")
+    bridge = TweetyBridge()
+    assert bridge.initializer.is_jvm_ready(), "La JVM devrait être prête grâce à jvm_fixture"
+    logger.info("Instance TweetyBridge créée avec succès.")
+    yield bridge
+
 
 
 # Charger les fixtures définies dans d'autres fichiers comme des plugins
@@ -402,9 +384,10 @@ def e2e_servers(request):
     from argumentation_analysis.services.web_api.app import initialize_heavy_dependencies
     initialize_heavy_dependencies()
 
+    # Ne rien faire si la fixture est désactivée
     if request.config.getoption("--disable-e2e-servers-fixture"):
         logger.warning("E2E servers fixture is disabled via command-line flag.")
-        yield None, None
+        yield None, None # yield None pour satisfaire le format de la fixture
         return
 
     import subprocess

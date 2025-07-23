@@ -266,7 +266,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
     _llm_service_id: Optional[str] = PrivateAttr(default=None)
     _tweety_bridge: Optional[TweetyBridge] = PrivateAttr(default=None)
 
-    def __init__(self, kernel: Kernel, agent_name: str = "PropositionalLogicAgent", instructions: Optional[str] = None, service_id: Optional[str] = None):
+    def __init__(self, kernel: Kernel, agent_name: str = "PropositionalLogicAgent", instructions: Optional[str] = None, service_id: Optional[str] = None, tweety_bridge: Optional[TweetyBridge] = None):
         """
         Initialise l'agent de logique propositionnelle.
 
@@ -277,6 +277,8 @@ class PropositionalLogicAgent(BaseLogicAgent):
                 Si `None`, `SYSTEM_PROMPT_PL` est utilisé.
             service_id (Optional[str], optional): ID du service LLM à utiliser
                 pour les fonctions sémantiques.
+            tweety_bridge (Optional[TweetyBridge], optional): Une instance pré-configurée
+                de TweetyBridge. Si None, une nouvelle sera créée.
         """
         actual_instructions = instructions or SYSTEM_PROMPT_PL
         # Appel correct au constructeur de BaseLogicAgent
@@ -290,9 +292,13 @@ class PropositionalLogicAgent(BaseLogicAgent):
         
         self.logger.info(f"Configuration des composants sémantiques pour {self.name}...")
 
-        # Initialiser TweetyBridge d'abord. Son constructeur s'occupe de la JVM.
-        self._tweety_bridge = TweetyBridge()
-        self.logger.info(f"TweetyBridge initialisé pour {self.name}.")
+        # Utiliser le TweetyBridge injecté ou en créer un nouveau
+        if tweety_bridge:
+            self._tweety_bridge = tweety_bridge
+            self.logger.info(f"Utilisation de l'instance TweetyBridge injectée pour {self.name}.")
+        else:
+            self.logger.info(f"Aucun TweetyBridge injecté. Création d'une nouvelle instance pour {self.name}.")
+            self._tweety_bridge = TweetyBridge()
 
         if not self._tweety_bridge.initializer.is_jvm_ready():
             self.logger.critical(f"La JVM pour TweetyBridge de {self.name} n'est pas prête après initialisation. Impossible de continuer.")
