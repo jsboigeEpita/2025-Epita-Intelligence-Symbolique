@@ -35,6 +35,7 @@ from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 from argumentation_analysis.agents.core.pl.pl_definitions import PL_AGENT_INSTRUCTIONS
 
 
+@pytest.mark.jvm_test
 class TestPropositionalLogicAgentAuthentic:
     """
     Tests authentiques pour PropositionalLogicAgent - Sans mocks, composants réels
@@ -46,96 +47,90 @@ class TestPropositionalLogicAgentAuthentic:
     - Tests de logique propositionnelle avec opérateurs =>, &, |, !
     """
 
-    def setup_method(self):
+    @pytest.fixture(scope="function")
+    def authentic_pl_agent(self, tweety_bridge_fixture):
         """
-        Configuration authentique avant chaque test - AUCUN MOCK
+        Fixture pour configurer un PropositionalLogicAgent authentique pour chaque test.
+        Injecte une instance TweetyBridge partagée et gérée par une fixture.
         """
-        print("\n[AUTHENTIC] Configuration PropositionalLogicAgent authentique...")
+        print("\n[FIXTURE] Configuration de l'agent PL authentique...")
         
-        # Configuration du vrai Semantic Kernel
-        self.kernel = Kernel()
-        
-        # Configuration des connecteurs authentiques conditionnels
-        self.llm_service_configured = False
-        self.llm_service_id = "test_llm_service"
-        
-        # Tentative de configuration Azure AI Inference
+        kernel = Kernel()
+        llm_service_configured = False
+        llm_service_id = "test_llm_service_fixture"
+
+        # Configuration conditionnelle du service LLM (Azure/OpenAI)
         if azure_available and os.getenv('AZURE_AI_INFERENCE_ENDPOINT'):
             try:
                 azure_service = AzureAIInferenceChatCompletion(
                     endpoint=os.getenv('AZURE_AI_INFERENCE_ENDPOINT'),
-                    api_key=os.getenv('AZURE_AI_INFERENCE_API_KEY'),
-                    service_id=self.llm_service_id
-                )
-                self.kernel.add_service(azure_service)
-                self.llm_service_configured = True
-                print(f"[AUTHENTIC] Azure AI Inference configuré: {self.llm_service_id}")
-            except Exception as e:
-                print(f"[AUTHENTIC] Azure AI Inference non disponible: {e}")
+                    api_key=os.getenv('AZURE_AI_INFERENCE_API_KEY'), service_id=llm_service_id)
+                kernel.add_service(azure_service)
+                llm_service_configured = True
+            except Exception: pass
         
-        # Fallback OpenAI si Azure non disponible
-        if not self.llm_service_configured and openai_available and os.getenv('OPENAI_API_KEY'):
+        if not llm_service_configured and openai_available and os.getenv('OPENAI_API_KEY'):
             try:
-                openai_service = OpenAIChatCompletion(
-                    api_key=os.getenv('OPENAI_API_KEY'),
-                    service_id=self.llm_service_id
-                )
-                self.kernel.add_service(openai_service)
-                self.llm_service_configured = True
-                print(f"[AUTHENTIC] OpenAI configuré: {self.llm_service_id}")
-            except Exception as e:
-                print(f"[AUTHENTIC] OpenAI non disponible: {e}")
+                openai_service = OpenAIChatCompletion(api_key=os.getenv('OPENAI_API_KEY'), service_id=llm_service_id)
+                kernel.add_service(openai_service)
+                llm_service_configured = True
+            except Exception: pass
         
-        # Configuration du vrai TweetyBridge
-        self.tweety_bridge = TweetyBridge()
-        self.tweety_available = self.tweety_bridge.initializer.is_jvm_ready()
-        print(f"[AUTHENTIC] TweetyBridge JVM disponible: {self.tweety_available}")
-        
-        # Configuration PropositionalLogicAgent authentique
-        self.agent_name = "TestPLAgentAuthentic"
-        self.agent = PropositionalLogicAgent(
-            kernel=self.kernel,
-            agent_name=self.agent_name,
-            service_id=self.llm_service_id if self.llm_service_configured else None,
+        agent_name = "TestPLAgentAuthenticFromFixture"
+        agent = PropositionalLogicAgent(
+            kernel=kernel,
+            agent_name=agent_name,
+            service_id=llm_service_id if llm_service_configured else None,
+            tweety_bridge=tweety_bridge_fixture  # Injection de la dépendance
         )
-        if self.llm_service_configured:
-            print(f"[AUTHENTIC] PropositionalLogicAgent configuré avec service: {self.llm_service_id}")
-        else:
-            print("[AUTHENTIC] PropositionalLogicAgent configuré sans service LLM")
+        
+        # Renvoyer un objet ou un dictionnaire pour que le test puisse accéder aux composants
+        class AgentTestSetup:
+            def __init__(self):
+                self.agent = agent
+                self.kernel = kernel
+                self.tweety_bridge = tweety_bridge_fixture
+                self.llm_service_configured = llm_service_configured
+                self.llm_service_id = llm_service_id
+                self.tweety_available = tweety_bridge_fixture.initializer.is_jvm_ready()
+
+        return AgentTestSetup()
 
     @pytest.mark.authentic
     @pytest.mark.phase5
     @pytest.mark.no_mocks
     @pytest.mark.propositional
-    def test_initialization_and_setup_authentic(self):
+    def test_initialization_and_setup_authentic(self, authentic_pl_agent):
         """
         Test authentique d'initialisation et configuration - AUCUN MOCK
         """
         start_time = time.time()
         
+        # Utiliser l'agent et les composants fournis par la fixture
+        agent_setup = authentic_pl_agent
+        
         # Vérifications de base authentiques
-        assert self.agent.name == self.agent_name
-        assert self.agent._kernel == self.kernel
-        assert self.agent.logic_type == "PL"
-        assert self.agent.system_prompt == PL_AGENT_INSTRUCTIONS
+        assert agent_setup.agent.name == "TestPLAgentAuthenticFromFixture"
+        assert agent_setup.agent._kernel == agent_setup.kernel
+        assert agent_setup.agent.logic_type == "PL"
+        assert agent_setup.agent.system_prompt == PL_AGENT_INSTRUCTIONS
         
         # Vérification TweetyBridge authentique
-        if self.tweety_available:
-            # Test d'interaction réelle avec TweetyBridge
-            is_ready = self.tweety_bridge.initializer.is_jvm_ready()
-            assert is_ready is True
-            print(f"[AUTHENTIC] TweetyBridge JVM prête: {is_ready}")
-            
-            # Test de validation authentique
-            valid = self.tweety_bridge.validate_pl_formula("a => b")
-            assert valid is True
-            print(f"[AUTHENTIC] Validation formule 'a => b': {valid}")
-        else:
-            print("[AUTHENTIC] TweetyBridge JVM non disponible - test gracieux")
+        assert agent_setup.tweety_available, "TweetyBridge devrait être disponible via la fixture"
+        
+        # Test d'interaction réelle avec TweetyBridge
+        is_ready = agent_setup.tweety_bridge.initializer.is_jvm_ready()
+        assert is_ready is True
+        print(f"[AUTHENTIC] TweetyBridge JVM prête: {is_ready}")
+        
+        # Test de validation authentique
+        valid = agent_setup.tweety_bridge.validate_pl_formula("a => b")
+        assert valid is True
+        print(f"[AUTHENTIC] Validation formule 'a => b': {valid}")
         
         # Vérification configuration Kernel authentique
-        if self.llm_service_configured:
-            settings = self.kernel.get_prompt_execution_settings_from_service_id(self.llm_service_id)
+        if agent_setup.llm_service_configured:
+            settings = agent_setup.kernel.get_prompt_execution_settings_from_service_id(agent_setup.llm_service_id)
             assert settings is not None
             print(f"[AUTHENTIC] Paramètres LLM: {settings}")
         else:
@@ -150,11 +145,12 @@ class TestPropositionalLogicAgentAuthentic:
     @pytest.mark.phase5
     @pytest.mark.no_mocks
     @pytest.mark.propositional
-    async def test_text_to_belief_set_authentic(self):
+    async def test_text_to_belief_set_authentic(self, authentic_pl_agent):
         """
         Test authentique de conversion texte vers ensemble de croyances propositionnelles
         """
-        if not self.llm_service_configured:
+        agent_setup = authentic_pl_agent
+        if not agent_setup.llm_service_configured:
             pytest.skip("Service LLM non configuré - test authentique impossible")
         
         start_time = time.time()
@@ -163,7 +159,7 @@ class TestPropositionalLogicAgentAuthentic:
         test_text = "Si il pleut alors la rue est mouillée. Il pleut."
         
         try:
-            belief_set, message = await self.agent.text_to_belief_set(test_text)
+            belief_set, message = await agent_setup.agent.text_to_belief_set(test_text)
             
             # Vérifications authentiques
             if belief_set is not None:
@@ -173,8 +169,8 @@ class TestPropositionalLogicAgentAuthentic:
                 print(f"[AUTHENTIC] Ensemble de croyances généré: {belief_set.content}")
                 
                 # Validation authentique avec TweetyBridge si disponible
-                if self.tweety_available:
-                    valid = self.tweety_bridge.validate_belief_set(belief_set.content)
+                if agent_setup.tweety_available:
+                    valid = agent_setup.tweety_bridge.validate_belief_set(belief_set.content)
                     print(f"[AUTHENTIC] Validation TweetyBridge: {valid}")
             else:
                 print(f"[AUTHENTIC] Conversion produit résultat vide: {message}")
@@ -192,11 +188,12 @@ class TestPropositionalLogicAgentAuthentic:
     @pytest.mark.phase5
     @pytest.mark.no_mocks
     @pytest.mark.propositional
-    async def test_generate_queries_authentic(self):
+    async def test_generate_queries_authentic(self, authentic_pl_agent):
         """
         Test authentique de génération de requêtes propositionnelles
         """
-        if not self.llm_service_configured:
+        agent_setup = authentic_pl_agent
+        if not agent_setup.llm_service_configured:
             pytest.skip("Service LLM non configuré - test authentique impossible")
         
         start_time = time.time()
@@ -206,16 +203,16 @@ class TestPropositionalLogicAgentAuthentic:
         test_text = "Analyse des implications de la pluie"
         
         try:
-            queries = await self.agent.generate_queries(test_text, belief_set)
+            queries = await agent_setup.agent.generate_queries(test_text, belief_set)
             
             # Vérifications authentiques
             assert isinstance(queries, list)
             print(f"[AUTHENTIC] Requêtes générées: {queries}")
             
             # Validation authentique avec TweetyBridge si disponible
-            if self.tweety_available and len(queries) > 0:
+            if agent_setup.tweety_available and len(queries) > 0:
                 for query in queries:
-                    valid = self.agent.validate_formula(query)
+                    valid = agent_setup.agent.validate_formula(query)
                     print(f"[AUTHENTIC] Validation requête '{query}': {valid}")
                     
         except Exception as e:
@@ -229,11 +226,12 @@ class TestPropositionalLogicAgentAuthentic:
     @pytest.mark.phase5  
     @pytest.mark.no_mocks
     @pytest.mark.propositional
-    def test_execute_query_authentic(self):
+    def test_execute_query_authentic(self, authentic_pl_agent):
         """
         Test authentique d'exécution de requêtes propositionnelles
         """
-        if not self.tweety_available:
+        agent_setup = authentic_pl_agent
+        if not agent_setup.tweety_available:
             pytest.skip("TweetyBridge JVM non disponible - test authentique impossible")
         
         start_time = time.time()
@@ -243,7 +241,7 @@ class TestPropositionalLogicAgentAuthentic:
         query = "b"  # Devrait être ACCEPTED par modus ponens
         
         # Exécution authentique
-        result, message = self.agent.execute_query(belief_set, query)
+        result, message = agent_setup.agent.execute_query(belief_set, query)
         
         # Vérifications authentiques
         print(f"[AUTHENTIC] Résultat requête '{query}': {result}")
@@ -251,7 +249,7 @@ class TestPropositionalLogicAgentAuthentic:
         
         # Test avec requête qui devrait être rejetée
         query_rejected = "c"  # Non dérivable
-        result_rejected, message_rejected = self.agent.execute_query(belief_set, query_rejected)
+        result_rejected, message_rejected = agent_setup.agent.execute_query(belief_set, query_rejected)
         
         print(f"[AUTHENTIC] Résultat requête rejetée '{query_rejected}': {result_rejected}")
         print(f"[AUTHENTIC] Message rejet: {message_rejected}")
@@ -265,11 +263,12 @@ class TestPropositionalLogicAgentAuthentic:
     @pytest.mark.phase5
     @pytest.mark.no_mocks
     @pytest.mark.propositional
-    async def test_full_propositional_reasoning_workflow_authentic(self):
+    async def test_full_propositional_reasoning_workflow_authentic(self, authentic_pl_agent):
         """
         Test authentique du workflow complet de raisonnement propositionnel
         """
-        if not (self.llm_service_configured and self.tweety_available):
+        agent_setup = authentic_pl_agent
+        if not (agent_setup.llm_service_configured and agent_setup.tweety_available):
             pytest.skip("Services LLM et TweetyBridge requis pour test intégration authentique")
         
         start_time = time.time()
@@ -279,25 +278,25 @@ class TestPropositionalLogicAgentAuthentic:
         
         try:
             # 1. Conversion texte -> ensemble de croyances
-            belief_set, conversion_msg = await self.agent.text_to_belief_set(test_text)
+            belief_set, conversion_msg = await agent_setup.agent.text_to_belief_set(test_text)
             print(f"[AUTHENTIC] Conversion: {conversion_msg}")
             
             if belief_set is None:
                 pytest.skip("Conversion a échoué - impossible de continuer le workflow")
             
             # 2. Génération de requêtes
-            queries = await self.agent.generate_queries(test_text, belief_set)
+            queries = await agent_setup.agent.generate_queries(test_text, belief_set)
             print(f"[AUTHENTIC] Requêtes: {queries}")
             
             # 3. Exécution des requêtes
             results = []
             for query in queries:
-                result, message = self.agent.execute_query(belief_set, query)
+                result, message = agent_setup.agent.execute_query(belief_set, query)
                 results.append((result, message))
                 print(f"[AUTHENTIC] Requête '{query}' -> {result}")
             
             # 4. Interprétation des résultats
-            interpretation = await self.agent.interpret_results(test_text, belief_set, queries, results)
+            interpretation = await agent_setup.agent.interpret_results(test_text, belief_set, queries, results)
             print(f"[AUTHENTIC] Interprétation: {interpretation}")
             
             # Vérifications du workflow
@@ -317,11 +316,12 @@ class TestPropositionalLogicAgentAuthentic:
     @pytest.mark.phase5
     @pytest.mark.no_mocks
     @pytest.mark.propositional
-    def test_formula_validation_performance_authentic(self):
+    def test_formula_validation_performance_authentic(self, authentic_pl_agent):
         """
         Test authentique de performance de validation de formules
         """
-        if not self.tweety_available:
+        agent_setup = authentic_pl_agent
+        if not agent_setup.tweety_available:
             pytest.skip("TweetyBridge JVM non disponible")
         
         start_time = time.time()
@@ -330,7 +330,7 @@ class TestPropositionalLogicAgentAuthentic:
         test_formulas = [
             "a",
             "a & b",
-            "a | b", 
+            "a | b",
             "!a",
             "a => b",
             "(a & b) => c",
@@ -341,7 +341,7 @@ class TestPropositionalLogicAgentAuthentic:
         
         valid_count = 0
         for formula in test_formulas:
-            valid = self.agent.validate_formula(formula)
+            valid = agent_setup.agent.validate_formula(formula)
             if valid:
                 valid_count += 1
             print(f"[AUTHENTIC] Formule '{formula}': {valid}")
