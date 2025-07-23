@@ -5,6 +5,7 @@ from pathlib import Path
 # orchestrer l'exécution de la logique de test dans un sous-processus.
 # Notez l'absence d'imports de jpype ou de code Java.
 
+@pytest.mark.jvm_test
 @pytest.mark.skip(reason="Dépendances JAR Tweety corrompues ou manquantes dans le projet (TICKET-1234)")
 def test_asp_reasoner_consistency_in_subprocess(run_in_jvm_subprocess):
     """

@@ -7,6 +7,7 @@ pytest.skip("Squelettes de tests non implémentés.", allow_module_level=True)
 
 # Le code ci-dessous est conservé à titre de référence mais ne sera pas exécuté.
 
+@pytest.mark.jvm_test
 @pytest.mark.real_jpype
 class TestAgentIntegration:
     """
