@@ -47,26 +47,38 @@ class TweetyInitializer:
         if tweety_bridge_instance:
             self._tweety_bridge = tweety_bridge_instance
 
-    def ensure_jvm_is_started(self):
+    def ensure_jvm_and_components_are_ready(self):
         """
-        Ensures the JVM is started and all necessary Tweety components are initialized.
-        This method is now called explicitly instead of running in the constructor.
+        Garantit que la JVM est démarrée ET que les classes Java de Tweety sont chargées.
+        Cette méthode gère le cas spécial où les tests sont exécutés via pytest.
         """
+        if self.__class__._initialized_components:
+            logger.debug("Les composants JVM et Tweety sont déjà prêts.")
+            return
+
         if os.environ.get('DISABLE_JAVA_LOGIC') == '1':
-            logger.info("Java logic is disabled via 'DISABLE_JAVA_LOGIC'. Skipping JVM checks.")
-            return
-        
-        if os.environ.get('PYTEST_RUNNING') == '1':
-            logger.info("Pytest is running. Skipping automatic JVM startup.")
+            logger.info("Java logic is disabled. Skipping all JVM and component initialization.")
             return
 
+        # Étape 1: Démarrer la JVM si nécessaire
         if not is_jvm_started():
-            logger.info("JVM not started. Calling the robust initializer from jvm_setup.")
-            if not self.initialize_jvm():
-                raise RuntimeError("JVM could not be started by the robust initializer. Check logs.")
-
+            is_pytest_running = os.environ.get('PYTEST_RUNNING') == '1'
+            if is_pytest_running:
+                # Dans un contexte de test, une fixture est responsable du démarrage de la JVM.
+                # Si elle n'est pas démarrée à ce stade, c'est une erreur de configuration du test.
+                msg = "Pytest is running, but the JVM is not started. A fixture like 'jvm_fixture' must be used."
+                logger.error(msg)
+                raise RuntimeError(msg)
+            else:
+                # Contexte normal (hors test), on démarre la JVM nous-mêmes.
+                logger.info("JVM not started. Calling the robust initializer.")
+                if not self.initialize_jvm():
+                    raise RuntimeError("Échec du démarrage de la JVM par l'initialiseur robuste.")
+        
         self.__class__._jvm_started = True
 
+        # Étape 2: Charger les classes et initialiser les composants
+        # Cette étape doit se produire dans tous les cas si elle n'a pas été faite.
         if not self.__class__._initialized_components:
             logger.info("JVM is running. Initializing Java class imports and components for the first time.")
             self._import_java_classes()
@@ -74,8 +86,9 @@ class TweetyInitializer:
             self.initialize_fol_components()
             self.initialize_modal_components()
             self.__class__._initialized_components = True
+            logger.info("Java components initialized successfully.")
         else:
-            logger.debug("Java components already initialized for this session.")
+            logger.debug("Java components were already initialized.")
 
     @staticmethod
     def initialize_jvm():
@@ -209,5 +222,5 @@ class TweetyInitializer:
         """Checks if the JVM is started and classes are loaded."""
         return is_jvm_started() and TweetyInitializer._classes_loaded
 
-    def is_jvm_started(self):
-         return self.__class__._jvm_started
+    def is_jvm_started(self) -> bool:
+        return self.__class__._jvm_started
