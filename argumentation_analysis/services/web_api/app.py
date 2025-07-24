@@ -61,8 +61,13 @@ class AppServices:
 def initialize_heavy_dependencies():
     """
     Initialise les dépendances lourdes comme la JVM.
-    Cette fonction est destinée à être appelée une seule fois au démarrage du serveur.
+    Cette fonction est désactivée si le test est exécuté par un worker pytest-xdist
+    pour éviter les initialisations concurrentes de la JVM.
     """
+    if "PYTEST_XDIST_WORKER" in os.environ:
+        logger.warning("Skipping heavy dependencies initialization for xdist worker.")
+        return
+        
     logger.info("Starting heavy dependencies initialization (JVM, etc.)...")
     # S'assure que la racine du projet est dans le path pour les imports
     current_dir = Path(__file__).resolve().parent
