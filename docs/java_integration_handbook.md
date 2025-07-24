@@ -96,3 +96,14 @@ Ce contexte historique montre que la gestion du cycle de vie de la JVM est extr�
     1.  Correction de l'assignation dans `FOLLogicAgent` pour utiliser l'attribut interne `_tweety_bridge` au lieu de la propriété publique.
     2.  Correction de la faute de frappe dans les fichiers `tests_jvm.txt` (utilisé par le script d'isolation) pour pointer vers le bon fichier de test.
     3.  Ces corrections, combinées au refactoring précédent qui a introduit l'injection de dépendance pour `TweetyBridge` via une fixture `pytest`, ont permis de rendre la suite de tests `jvm_test` entièrement fonctionnelle.
+
+### Phase 6 : Conflits de Dépendances et Ordre d'Importation (Fin Juillet 2025)
+
+*   **Problème** : Les tests `test_api_startup_and_basic_functionality` et `test_api_endpoints_via_worker` échouaient systématiquement avec un crash silencieux du sous-processus de test.
+*   **Stratégie de Diagnostic** : Une journalisation agressive a été ajoutée au script du worker pour tracer chaque étape de l'initialisation.
+*   **Cause Racine 1 (Conflits de Dépendances)** : Le fichier `pyproject.toml` ne fixait pas les versions des dépendances clés (`numpy`, `spacy`, `pydantic`), ce qui entraînait l'installation de versions incompatibles.
+*   **Cause Racine 2 (Ordre d'Importation)** : Des importations locales de `jpype` et `jvm_setup` dans `api/dependencies.py` provoquaient un chargement dans le désordre, entraînant un conflit fatal avec la JVM.
+*   **Solution** :
+    1.  Les versions de `numpy`, `spacy`, et `pydantic` ont été fixées dans `pyproject.toml`.
+    2.  Les importations de `jpype` et `jvm_setup` ont été déplacées au niveau du module dans `api/dependencies.py` pour garantir un ordre de chargement correct.
+    3.  L'API `jpype` a été mise à jour pour utiliser la configuration correcte du cycle de vie de la JVM.
