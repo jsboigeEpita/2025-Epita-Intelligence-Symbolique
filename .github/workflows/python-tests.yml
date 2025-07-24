@@ -11,6 +11,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # On définit des variables d'environnement pour tout le job
+    env:
+      # Cette variable sera 'true' si le secret est défini, sinon 'false'
+      API_KEYS_CONFIGURED: ${{ secrets.OPENAI_API_KEY != '' }}
     strategy:
       matrix:
         python-version: [3.9, 3.10]
@@ -31,6 +35,9 @@ jobs:
         pip install pytest pytest-cov
     
     - name: Run tests with coverage
+      # On passe le secret aux tests pour qu'ils puissent s'en servir
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
         cd argumentation_analysis
         # Exécuter d'abord les tests des modèles et services qui sont stables
@@ -47,6 +54,8 @@ jobs:
         verbose: true
     
     - name: Check coverage threshold
+      # Cette étape ne s'exécute que si les secrets sont présents (vérifié via la variable d'env du job).
+      if: env.API_KEYS_CONFIGURED == 'true'
       run: |
         cd argumentation_analysis
         coverage_percentage=$(python -c "import xml.etree.ElementTree as ET; tree = ET.parse('coverage.xml'); root = tree.getroot(); print(float(root.attrib['line-rate']) * 100)")
