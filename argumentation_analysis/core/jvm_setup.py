@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # core/jvm_setup.py
 import os
 import jpype
@@ -14,37 +15,47 @@ from pathlib import Path
 from typing import List, Optional, Dict
 from tqdm.auto import tqdm
 
-from argumentation_analysis.config.settings import settings
-
-# Configuration du logger pour ce module
-logger = logging.getLogger("Orchestration.JPype")
+# --- Configuration initiale du Logger ---
+# Il est crucial de configurer le logger au tout début.
+# Si le logger parent est déjà configuré, ces lignes n'auront pas d'effet
+# mais garantissent que le logging est actif si ce module est importé en premier.
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("Orchestration.JPype.Setup")
+try:
+    from argumentation_analysis.config.settings import settings
+except ImportError as e:
+    logger.critical(f"CRASH POTENTIEL: Échec de l'importation de 'settings'. Erreur: {e}", exc_info=True)
+    raise
 
 # Verrou global pour rendre l'initialisation de la JVM thread-safe
 _jvm_lock = threading.Lock()
 
-# --- Gestion d'état de la JVM (depuis la branche feature) ---
+# --- Gestion d'état de la JVM ---
 _JVM_INITIALIZED_THIS_SESSION = False
 _JVM_WAS_SHUTDOWN = False
 _SESSION_FIXTURE_OWNS_JVM = False
-
 
 def get_project_root_robust() -> Path:
     """
     Trouve la racine du projet en remontant depuis l'emplacement de ce fichier.
     """
     current_path = Path(__file__).resolve()
+    # Dans la structure actuelle, le chemin est argumentation_analysis/core/jvm_setup.py,
+    # donc il faut remonter de 2 niveaux pour atteindre la racine du projet.
     project_root = current_path.parents[2]
-    logger.debug(f"Racine du projet déterminée de manière statique à : {project_root}")
     return project_root
 
-PROJ_ROOT = get_project_root_robust()
-LIBS_DIR = PROJ_ROOT / settings.jvm.tweety_libs_dir
-TWEETY_VERSION = settings.jvm.tweety_version
-MIN_JAVA_VERSION = settings.jvm.min_java_version
-JDK_VERSION = "11.0.23"
-JDK_BUILD = "9"
-JDK_URL_TEMPLATE = "https://api.adoptium.net/v3/binary/version/jdk-{v}+{b}/{os}/{arch}/jdk/hotspot/normal/eclipse"
-
+try:
+    PROJ_ROOT = get_project_root_robust()
+    LIBS_DIR = PROJ_ROOT / settings.jvm.tweety_libs_dir
+    TWEETY_VERSION = settings.jvm.tweety_version
+    MIN_JAVA_VERSION = settings.jvm.min_java_version
+    JDK_VERSION = settings.jvm.jdk_version
+    JDK_BUILD = settings.jvm.jdk_build
+    JDK_URL_TEMPLATE = settings.jvm.jdk_url_template
+except Exception as e:
+    logger.critical(f"CRASH POTENTIEL: Échec lors de la lecture de 'settings' pour définir les constantes globales. Erreur: {e}", exc_info=True)
+    raise
 
 class TqdmUpTo(tqdm):
     """Provides `update_to(block_num, block_size, total_size)`."""
@@ -307,29 +318,39 @@ def get_jvm_options() -> List[str]:
         "-Dfile.encoding=UTF-8",
         "-Djava.awt.headless=true"
     ]
-    # Les options "-XX:+UseG1GC", "-Xrs" sur Windows provoquaient un "fatal exception: access violation".
-    # Elles sont désactivées de manière permanente.
-
-    # --- DIAGNOSTIC PROVER9 (Temporarily disabled for debugging JVM crash) ---
-    logger.warning("Le diagnostic Prover9 et le chargement de la librairie native sont temporairement désactivés.")
-    logger.info(f"Options JVM utilisées : {options}")
+    logger.info(f"Options JVM de base: {options}")
     return options
 
-def initialize_jvm(session_fixture_owns_jvm=False) -> bool:
-    global _JVM_INITIALIZED_THIS_SESSION, _SESSION_FIXTURE_OWNS_JVM
+def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
+    """
+    Démarre la JVM avec le CLASSPATH configuré, en s'assurant qu'elle n'est démarrée qu'une seule fois.
+    La logique est thread-safe.
+    """
+    global _JVM_INITIALIZED_THIS_SESSION, _SESSION_FIXTURE_OWNS_JVM, _JVM_WAS_SHUTDOWN
+
     with _jvm_lock:
         _SESSION_FIXTURE_OWNS_JVM = session_fixture_owns_jvm
         logger.info("=" * 50)
-        logger.info(f"APPEL À initialize_jvm (Propriétaire de session: {_SESSION_FIXTURE_OWNS_JVM})")
+        logger.info(f"Tentative d'initialisation de la JVM (force_restart={force_restart}, session_owner={session_fixture_owns_jvm})")
+
         if jpype.isJVMStarted():
-            logger.info("La JVM est déjà démarrée.")
-            return True
-        if _JVM_WAS_SHUTDOWN:
-            logger.critical("La JVM a déjà été arrêtée. Le redémarrage n'est pas supporté.")
+            if not force_restart:
+                logger.info("La JVM est déjà démarrée. Aucune action n'est nécessaire.")
+                return True
+            else:
+                logger.warning("Forçage du redémarrage de la JVM. Arrêt de la JVM actuelle...")
+                shutdown_jvm(called_by_session_fixture=True) # On simule l'appel par la fixture pour permettre l'arrêt
+
+        if _JVM_WAS_SHUTDOWN and not force_restart:
+            logger.critical("NON SUPPORTÉ: Tentative de ré-initialisation après un arrêt complet de la JVM sans forçage.")
             return False
-        
-        # Provisioning des dépendances
+
+        # Remise à zéro de l'état d'arrêt si on force le redémarrage
+        _JVM_WAS_SHUTDOWN = False
+
+        logger.info("--- Début du processus de démarrage de la JVM ---")
         if not download_tweety_jars():
+            logger.critical("Échec du téléchargement des JARs Tweety. Arrêt.")
             return False
         
         # Couche 2: Prise de contrôle explicite du cycle de vie de la JVM
@@ -338,51 +359,47 @@ def initialize_jvm(session_fixture_owns_jvm=False) -> bool:
         
         java_home = find_valid_java_home()
         if not java_home:
+            logger.critical("Aucun environnement Java valide trouvé. Arrêt.")
             return False
         os.environ['JAVA_HOME'] = java_home
 
-
-        # Construction du Classpath
         tweety_libs_dir = PROJ_ROOT / settings.jvm.tweety_libs_dir
         uber_jars = [jar for jar in tweety_libs_dir.glob("*.jar") if "full" in jar.name.lower()]
         if uber_jars:
             classpath = [str(uber_jars[0].resolve())]
         else:
-            logger.warning(f"Aucun uber-jar trouvé, chargement de tous les JARs.")
+            logger.warning("Aucun uber-jar trouvé, chargement de tous les JARs.")
             classpath = [str(jar.resolve()) for jar in tweety_libs_dir.glob("*.jar")]
             if not classpath:
-                logger.critical(f"Aucun JAR trouvé dans {tweety_libs_dir}.")
+                logger.critical(f"Aucun JAR trouvé dans {tweety_libs_dir}. Arrêt.")
                 return False
-        
-        # Démarrage de la JVM
+
         try:
-            jvm_path = jpype.getDefaultJVMPath()
+            jvm_path_explicit = str(Path(java_home) / 'bin' / ('java.exe' if platform.system() == 'Windows' else 'java'))
+            if not Path(jvm_path_explicit).exists():
+                 jvm_path_explicit = str(Path(java_home) / 'bin' / ('java.dll' if platform.system() == 'Windows' else 'libjvm.so'))
+            
             jvm_options = get_jvm_options()
             
-            # --- AJOUT DE LOGS DE DÉBOGAGE CRITIQUES ---
-            logger.info("="*20 + " DIAGNOSTIC DÉMARRAGE JVM " + "="*20)
-            logger.info(f"Chemin JVM (jpype.getDefaultJVMPath): {jvm_path}")
-            logger.info(f"Options JVM finales: {jvm_options}")
-            logger.info(f"Classpath final: {classpath}")
-            logger.info(f"jpype.isJVMStarted() avant l'appel: {jpype.isJVMStarted()}")
-            logger.info(f"Variable d'environnement JAVA_HOME: {os.environ.get('JAVA_HOME')}")
-            logger.info(f"Variable d'environnement PATH: {os.environ.get('PATH')}")
-            logger.info("="*71)
-            # --- FIN DES LOGS ---
+            logger.info("--- Paramètres de Démarrage JVM ---")
+            logger.info(f"  Chemin JVM: {jvm_path_explicit}")
+            logger.info(f"  Options: {jvm_options}")
+            logger.info(f"  Classpath: {classpath[0] if classpath else 'Vide'}")
+            logger.info("------------------------------------")
 
-            logger.info("Tentative de démarrage de la JVM...")
             jpype.startJVM(
-                jvm_path,
                 *jvm_options,
                 classpath=classpath,
                 ignoreUnrecognized=True,
                 convertStrings=False
             )
-            logger.info("[SUCCESS] JVM démarrée.")
+            
             _JVM_INITIALIZED_THIS_SESSION = True
+            logger.info("[SUCCESS] JVM démarrée avec succès.")
             return True
         except Exception as e:
-            logger.critical(f"Échec critique du démarrage de la JVM: {e}", exc_info=True)
+            logger.critical(f"CRASH: Échec critique du démarrage de la JVM: {e}", exc_info=True)
+            # Potentiellement marquer la JVM comme non initialisable pour éviter des boucles
             return False
 
 def shutdown_jvm(called_by_session_fixture=False):
@@ -412,5 +429,14 @@ def is_jvm_owned_by_session_fixture() -> bool:
     return _SESSION_FIXTURE_OWNS_JVM
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    # La configuration du logger est déjà faite en haut du fichier
     print("Ce script n'est pas conçu pour être exécuté directement.")
+    print("Il sert à l'initialisation de la JVM pour le projet.")
+    # Test d'initialisation pour le débogage
+    logger.info("Exécution du bloc `if __name__ == '__main__':` pour le test.")
+    initialize_jvm()
+    if is_jvm_started():
+        print("JVM semble avoir démarré correctement.")
+        shutdown_jvm()
+    else:
+        print("Échec du démarrage de la JVM.")
