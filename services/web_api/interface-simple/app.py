@@ -87,13 +87,7 @@ async def initialize_services():
     
     try:
         if SERVICE_MANAGER_AVAILABLE:
-            service_manager = ServiceManager(config={
-                'enable_hierarchical': True,
-                'enable_specialized_orchestrators': True,
-                'enable_communication_middleware': True,
-                'save_results': True,
-                'results_dir': str(RESULTS_DIR)
-            })
+            service_manager = ServiceManager()
             
             # Initialisation asynchrone du ServiceManager
             initialized = await service_manager.initialize()

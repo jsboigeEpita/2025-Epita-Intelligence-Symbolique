@@ -101,13 +101,9 @@ async def lifespan(app: Starlette):
 
     # 2. Créer les instances des gestionnaires
     logger.info("Création des instances de ServiceManager et NLPModelManager.")
-    service_manager_instance = ServiceManager(config={
-        'enable_hierarchical': True,
-        'enable_specialized_orchestrators': True,
-        'enable_communication_middleware': True,
-        'save_results': True,
-        'results_dir': str(RESULTS_DIR)
-    })
+    # La configuration est maintenant gérée globalement via le module 'settings'.
+    # On instancie le manager sans configuration locale.
+    service_manager_instance = ServiceManager()
     app.state.service_manager = service_manager_instance
 
     if NLP_MODELS_AVAILABLE:
@@ -293,6 +289,7 @@ async def framework_analyze_endpoint(request: Request):
 # On combine les routes de l'API et le service des fichiers statiques.
 routes = [
     Route('/api/status', endpoint=status_endpoint, methods=['GET']),
+    Route('/api/health', endpoint=status_endpoint, methods=['GET']),
     Route('/api/analyze', endpoint=analyze_endpoint, methods=['POST']),
     Route('/api/examples', endpoint=examples_endpoint, methods=['GET']),
     Route('/api/v1/framework/analyze', endpoint=framework_analyze_endpoint, methods=['POST']),
