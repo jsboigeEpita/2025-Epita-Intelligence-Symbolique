@@ -63,8 +63,7 @@ def mcp_service_mock():
         service.mock_services_instance = mock_services_instance
 
         # Simuler l'initialisation qui se fait normalement de manière asynchrone
-        import asyncio
-        asyncio.run(service._ensure_initialized())
+        # L'initialisation est maintenant synchrone dans le constructeur
 
         yield service
 

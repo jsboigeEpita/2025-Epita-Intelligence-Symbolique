@@ -72,25 +72,26 @@ class MCPService:
         self.logger = logging.getLogger(__name__)
         self._initialized = False
         self.services = None
+        self._ensure_initialized()  # Initialisation directe
         self._register_tools()
 
-    async def _ensure_initialized(self):
+    def _ensure_initialized(self):
         """S'assure que les services sont initialisés selon le pattern de l'API Web."""
         if not self._initialized:
             try:
                 # Initialiser l'environnement du projet (incluant JVM si nécessaire)
                 current_dir = Path(__file__).resolve().parent
                 root_dir = current_dir.parent.parent
-                
+
                 self.logger.info("Initializing project environment...")
                 initialize_project_environment(root_path_str=str(root_dir))
-                
+
                 # Initialiser les services comme dans l'API Web
                 self.services = AppServices()
-                
+
                 self._initialized = True
                 self.logger.info("MCP services initialized successfully")
-                
+
             except Exception as e:
                 self.logger.error(f"Failed to initialize MCP services: {e}")
                 raise RuntimeError(f"MCP service initialization failed: {e}")
@@ -130,7 +131,7 @@ class MCPService:
         Vérification de l'état de l'API, y compris les dépendances critiques comme la JVM.
         Équivalent de GET /api/health
         """
-        await self._ensure_initialized()
+        self._ensure_initialized()
         
         try:
             # Vérification de l'état de la JVM (identique à l'API Web)
@@ -181,7 +182,7 @@ class MCPService:
             include_context: Inclure le contexte dans l'analyse
             severity_threshold: Seuil de sévérité (0.0-1.0)
         """
-        await self._ensure_initialized()
+        self._ensure_initialized()
         
         try:
             # Construire la requête avec validation (identique à l'API Web)
@@ -232,7 +233,7 @@ class MCPService:
             conclusion: Conclusion de l'argument
             argument_type: Type d'argument (deductive, inductive, abductive)
         """
-        await self._ensure_initialized()
+        self._ensure_initialized()
         
         try:
             # Construire la requête avec validation (identique à l'API Web)
@@ -289,7 +290,7 @@ class MCPService:
             use_contextual: Utiliser l'analyseur Contextual
             use_patterns: Utiliser la détection par patterns
         """
-        await self._ensure_initialized()
+        self._ensure_initialized()
         
         try:
             # Construire la requête avec validation (identique à l'API Web)
@@ -346,7 +347,7 @@ class MCPService:
             include_visualization: Inclure la visualisation
             max_arguments: Nombre maximum d'arguments
         """
-        await self._ensure_initialized()
+        self._ensure_initialized()
         
         try:
             # Construire la requête avec validation (identique à l'API Web)
@@ -396,7 +397,7 @@ class MCPService:
         Args:
             text: Texte à analyser pour le graphe logique
         """
-        await self._ensure_initialized()
+        self._ensure_initialized()
         
         try:
             if not text or not text.strip():
@@ -437,7 +438,7 @@ class MCPService:
             logic_type: Type de logique
             options: Options de conversion flexibles
         """
-        await self._ensure_initialized()
+        self._ensure_initialized()
         
         try:
             request = LogicBeliefSetRequest(
@@ -474,7 +475,7 @@ class MCPService:
             include_explanation: Inclure une explication détaillée
             timeout: Timeout en secondes
         """
-        await self._ensure_initialized()
+        self._ensure_initialized()
         
         try:
             options = LogicOptions(
@@ -517,7 +518,7 @@ class MCPService:
             max_queries: Nombre maximum de requêtes à générer
             include_explanation: Inclure une explication détaillée
         """
-        await self._ensure_initialized()
+        self._ensure_initialized()
         
         try:
             options = LogicOptions(
