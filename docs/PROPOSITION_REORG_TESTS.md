@@ -2,6 +2,8 @@
 
 Ce document propose une nouvelle structure pour le répertoire `tests/` afin d'améliorer la clarté, la maintenabilité et la distinction entre les différents types de tests (unitaires, intégration avec mocks, intégration réelle JVM).
 
+&gt; **Note sur l'État d'Implémentation**
+&gt; Bien que la réorganisation complète des répertoires décrite ici n'ait pas encore été mise en œuvre, des étapes cruciales de stabilisation ont été accomplies, notamment l'isolation des tests JVM via des marqueurs `pytest`. Pour plus de détails sur ces travaux, consultez le [Rapport de Refactoring : Serveur MCP, Stabilisation des Tests et CI](./refactoring/refactoring_mcp_et_stabilisation_ci.md).
 ## Structure Actuelle (Observée)
 
 Le répertoire `tests/` contient actuellement une structure assez plate avec des sous-répertoires thématiques (`agents/`, `functional/`, `integration/`, `mocks/`, etc.), mais la distinction entre les tests unitaires et les tests d'intégration, en particulier ceux qui dépendent de la JVM réelle, n'est pas toujours explicite au premier coup d'œil.

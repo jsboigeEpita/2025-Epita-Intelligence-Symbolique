@@ -8,6 +8,8 @@ L'initialisation et l'arrêt de la JVM sont des opérations critiques qui, si el
 
 Pour contrer ces instabilités, une stratégie de **défense en profondeur** a été développée au fil du temps. Elle repose sur quatre couches de protection distinctes mais complémentaires. Ce document sert de guide de référence pour tout développeur interagissant avec la JVM, afin de comprendre non seulement **comment** le système fonctionne, mais surtout **pourquoi** il a été conçu de cette manière.
 
+&gt; **Note sur l'Évolution de l'Architecture**
+&gt; Ce document se concentre sur les principes fondamentaux de stabilisation de la JVM. Pour une vue d'ensemble des évolutions plus récentes, incluant le refactoring du serveur MCP et la fiabilisation du pipeline de CI qui s'appuient sur ces bases, veuillez consulter le [Rapport de Refactoring : Serveur MCP, Stabilisation des Tests et CI](../refactoring/refactoring_mcp_et_stabilisation_ci.md).
 ## 2. Les Quatre Couches de la Stratégie de Défense
 
 Notre architecture s'articule autour des quatre concepts suivants, appliqués séquentiellement pour maîtriser le cycle de vie de la JVM.
