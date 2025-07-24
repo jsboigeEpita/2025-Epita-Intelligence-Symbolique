@@ -1,3 +1,11 @@
+# --- Importations préventives pour éviter les conflits de bas niveau ---
+# Il est crucial d'importer les bibliothèques lourdes comme torch et transformers
+# AVANT que jpype ne soit initialisé pour éviter des crashs de type "access violation".
+import torch
+import transformers
+
+import jpype
+import jpype.imports
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient

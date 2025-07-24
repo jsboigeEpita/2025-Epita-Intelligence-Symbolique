@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -q -p no:faulthandler"
+addopts = "-ra -q"
 asyncio_mode = "auto"
 norecursedirs = [
     ".git",
@@ -96,11 +96,13 @@ dependencies = [
     "requests",
     "pydantic-settings",
     "pandas",
-    "numpy",
+    "numpy>=2.0",
+    "spacy==3.7.4",
+    "pydantic==2.9.2",
     "matplotlib",
     "networkx",
     "scikit-learn",
-    "scipy",
+    "scipy<=1.13.1",
     "jpype1",
     "fastapi",
     "uvicorn[standard]",

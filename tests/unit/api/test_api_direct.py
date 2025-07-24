@@ -62,13 +62,22 @@ def test_api_startup_and_basic_functionality():
             "--log-level", "info"
         ]
         
+        # Créer un environnement propre pour le sous-processus
+        env = os.environ.copy()
+        env['PYTHONPATH'] = os.getcwd()
+        env['FORCE_MOCK_LLM'] = "1"
+        
+        # Propager JAVA_HOME si défini, crucial pour la JVM
+        if 'JAVA_HOME' in os.environ:
+            env['JAVA_HOME'] = os.environ['JAVA_HOME']
+
         api_process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
             cwd=os.getcwd(),
-            env=dict(os.environ, PYTHONPATH=os.getcwd(), FORCE_MOCK_LLM="1")
+            env=env
         )
         
         print(f"API process démarré (PID: {api_process.pid})")

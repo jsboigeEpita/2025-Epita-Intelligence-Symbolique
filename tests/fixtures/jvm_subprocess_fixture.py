@@ -33,6 +33,9 @@ def run_in_jvm_subprocess():
         env = os.environ.copy()
         env['PYTHONPATH'] = str(project_root) + os.pathsep + env.get('PYTHONPATH', '')
         env['PROJECT_ROOT'] = str(project_root)
+        if 'JAVA_HOME' in os.environ:
+            env['JAVA_HOME'] = os.environ['JAVA_HOME']
+        env['PYTHONUTF8'] = "1" # Forcer l'encodage UTF-8 dans le sous-processus
         
         print(f"Exécution du worker en sous-processus avec PYTHONPATH et PROJECT_ROOT: {' '.join(command_for_subprocess)}")
 

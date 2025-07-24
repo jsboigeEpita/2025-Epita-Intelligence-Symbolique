@@ -1,7 +1,10 @@
 import os
+import jpype
+import jpype.imports
 from fastapi import Depends
 from argumentation_analysis.orchestration.service_manager import OrchestrationServiceManager
 from .services import DungAnalysisService
+from argumentation_analysis.core import jvm_setup
 import logging
 import time
 
@@ -201,12 +204,6 @@ def get_dung_analysis_service() -> DungAnalysisService:
     global _global_dung_service
     if _global_dung_service is None:
         logging.info("[API] Initialisation du DungAnalysisService...")
-        import jpype
-        import jpype.imports
-        # La gestion de la JVM est maintenant centralisée dans jvm_setup.
-        # Il suffit de s'assurer qu'elle est initialisée.
-        from argumentation_analysis.core import jvm_setup
-        
         if not jvm_setup.is_jvm_started():
             if not jvm_setup.initialize_jvm():
                 # Lever une exception si l'initialisation échoue,

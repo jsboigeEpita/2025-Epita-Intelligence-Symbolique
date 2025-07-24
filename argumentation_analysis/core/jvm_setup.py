@@ -43,7 +43,6 @@ TWEETY_VERSION = settings.jvm.tweety_version
 MIN_JAVA_VERSION = settings.jvm.min_java_version
 JDK_VERSION = "11.0.23"
 JDK_BUILD = "9"
-JDK_URL_TEMPLATE = "https://api.adoptium.net/v3/binary/version/jdk-{v}+{b}/{os}/{arch}/jdk/hotspot/normal/eclipse"
 
 
 class TqdmUpTo(tqdm):
@@ -265,9 +264,8 @@ def find_valid_java_home() -> Optional[str]:
     jdk_major_for_url = JDK_VERSION.split('.')[0]
     generic_zip_name = f"portable_jdk_{JDK_VERSION}_{JDK_BUILD}_{os_arch_info['os']}_{os_arch_info['arch']}.zip"
     jdk_zip_target_path = temp_download_dir / generic_zip_name
-    jdk_url = JDK_URL_TEMPLATE.format(
-        maj_v=jdk_major_for_url, v=JDK_VERSION, b=JDK_BUILD, arch=os_arch_info['arch'],
-        os=os_arch_info['os'], b_flat=JDK_BUILD
+    jdk_url = settings.jvm.jdk_url_template.format(
+        v=JDK_VERSION, b=JDK_BUILD, os=os_arch_info['os'], arch=os_arch_info['arch']
     )
     logger.info(f"URL du JDK portable construite: {jdk_url}")
     logger.info(f"Téléchargement du JDK portable depuis {jdk_url} vers {jdk_zip_target_path}...")
@@ -334,7 +332,6 @@ def initialize_jvm(session_fixture_owns_jvm=False) -> bool:
         
         # Couche 2: Prise de contrôle explicite du cycle de vie de la JVM
         # Empêche jpype de tenter un arrêt automatique, ce qui causerait des conflits.
-        jpype.config.destroy_jvm = False
         
         java_home = find_valid_java_home()
         if not java_home:
@@ -376,7 +373,7 @@ def initialize_jvm(session_fixture_owns_jvm=False) -> bool:
                 *jvm_options,
                 classpath=classpath,
                 ignoreUnrecognized=True,
-                convertStrings=False
+                convertStrings=False,
             )
             logger.info("[SUCCESS] JVM démarrée.")
             _JVM_INITIALIZED_THIS_SESSION = True
