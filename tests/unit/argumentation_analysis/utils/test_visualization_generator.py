@@ -70,6 +70,14 @@ def test_generate_performance_visualizations_files_created(
     mock_sns = mocker.patch('argumentation_analysis.utils.visualization_generator.sns')
     mocker.patch('argumentation_analysis.utils.visualization_generator.pd')
 
+    # Mocker les fonctions helper pour éviter la NameError si les libs ne sont pas installées
+    mocker.patch('argumentation_analysis.utils.visualization_generator._prepare_data_for_bar_chart', return_value=(['agent1'], [1]), create=True)
+    mocker.patch('argumentation_analysis.utils.visualization_generator._plot_bar_chart', create=True)
+    mocker.patch('argumentation_analysis.utils.visualization_generator._plot_error_rates', create=True)
+    mocker.patch('argumentation_analysis.utils.visualization_generator._prepare_heatmap_data', return_value=mocker.MagicMock(empty=False), create=True)
+    mocker.patch('argumentation_analysis.utils.visualization_generator._normalize_dataframe', create=True)
+    mocker.patch('argumentation_analysis.utils.visualization_generator._plot_heatmap', create=True)
+
     # Configurer le mock pour subplots() pour retourner un tuple de mocks
     mock_fig, mock_ax = mocker.MagicMock(), mocker.MagicMock()
     mock_plt.subplots.return_value = (mock_fig, mock_ax)

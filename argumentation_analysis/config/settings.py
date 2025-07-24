@@ -73,7 +73,7 @@ class JVMSettings(BaseSettings):
     # Configuration JDK portable
     jdk_version: str = "17.0.12"
     jdk_build: str = "7"
-    jdk_url_template: str = "https://github.com/adoptium/temurin{maj_v}-binaries/releases/download/jdk-{v}%2B{b}/OpenJDK{maj_v}U-jdk_{arch}_{os}_hotspot_{v}_{b_flat}.zip"
+    jdk_url_template: str = "https://api.adoptium.net/v3/binary/version/jdk-{v}+{b}/{os}/{arch}/jdk/hotspot/normal/eclipse"
     # Configuration des librairies Java (Tweety)
     tweety_version: str = "1.28"
     tweety_libs_dir: Path = Path("libs/tweety")

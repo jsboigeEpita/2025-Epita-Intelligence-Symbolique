@@ -14,8 +14,6 @@ from pathlib import Path
 import shutil
 from unittest.mock import patch, MagicMock
 import nest_asyncio
-import jpype
-
 # Désactive la vérification de l'environnement Conda pour les tests E2E
 os.environ['E2E_TESTING_MODE'] = '1'
 
@@ -31,6 +29,8 @@ try:
     print("[INFO] Heavy libraries pre-imported successfully.")
 except ImportError as e:
     print(f"[WARNING] A library pre-import failed: {e}. This might be expected if the dependency is optional.")
+
+import jpype
 
 
 
