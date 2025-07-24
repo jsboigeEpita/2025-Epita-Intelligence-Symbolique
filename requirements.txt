@@ -1,8 +1,28 @@
 # Core Dependencies
-semantic-kernel==1.34.0
-python-dotenv
+Flask[async]~=3.1.1
+Flask-CORS
+jpype1
+matplotlib
+networkx
+nltk
+openai
+pandas
 pydantic==2.9.0
-JPype1
+python-dotenv
+scikit-learn
+# scipy>=1.15.1
+sentence-transformers
+semantic-kernel==1.34.0
+numpy
+spacy
+clingo
+unidecode
+markdown
 
 # Testing Dependencies
 pytest
+pytest-asyncio
+pytest-mock
+pytest-playwright
+playwright
+coverage
