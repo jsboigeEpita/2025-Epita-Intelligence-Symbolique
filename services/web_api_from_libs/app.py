@@ -22,30 +22,25 @@ root_dir = current_dir.parent.parent
 if str(root_dir) not in sys.path:
     sys.path.append(str(root_dir))
 
-# Import des services
+# Import des services et dépendances
+from argumentation_analysis.core.llm_service import create_llm_service
 from .services.analysis_service import AnalysisService
 from .services.validation_service import ValidationService
 from .services.fallacy_service import FallacyService
 from .services.framework_service import FrameworkService
-# Import pour LogicService
-from argumentation_analysis.core.llm_service import create_llm_service
-from argumentation_analysis.services.web_api.services.logic_service import LogicService
-from argumentation_analysis.services.web_api.models.request_models import (
-    LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest
-)
+from .services.logic_service import LogicService
+
 # Import des modèles locaux
 from .models.request_models import (
-    AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest
+    AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest,
+    LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest
 )
 from .models.response_models import (
-    AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse
-)
-# Les modèles de réponse pour la logique depuis l'autre service
-from services.web_api.models.response_models import (
+    AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse,
     LogicBeliefSetResponse, LogicQueryResponse, LogicGenerateQueriesResponse
 )
 
-# Import du Blueprint pour les routes logiques
+# Import du Blueprint pour les routes
 from .routes.logic_routes import logic_bp
 from .routes.main_routes import main_bp
 
