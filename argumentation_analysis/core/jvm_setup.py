@@ -4,23 +4,6 @@ import jpype
 import jpype.imports
 import logging
 import threading
-from pathlib import Path
-from typing import List, Optional
-
-from argumentation_analysis.config.settings import settings
-
-# Configuration du logger pour ce module
-logger = logging.getLogger("Orchestration.JPype")
-
-# Verrou global pour rendre l'initialisation de la JVM thread-safe
-_jvm_lock = threading.Lock()
-
-# core/jvm_setup.py
-import os
-import jpype
-import jpype.imports
-import logging
-import threading
 import platform
 import re
 import requests
@@ -315,8 +298,20 @@ def find_valid_java_home() -> Optional[str]:
         return None
 
 def get_jvm_options() -> List[str]:
-    options = []
-    logger.warning("TOUTES LES OPTIONS JVM SONT DESACTIVEES POUR LE DEBUGGING.")
+    """
+    Retourne une liste d'options JVM optimisées.
+    """
+    options = [
+        # f"-Xms{settings.jvm.min_heap_size}", # Temporairement désactivé pour le débogage
+        # f"-Xmx{settings.jvm.max_heap_size}", # Temporairement désactivé pour le débogage
+        "-Dfile.encoding=UTF-8",
+        "-Djava.awt.headless=true"
+    ]
+    # Les options "-XX:+UseG1GC", "-Xrs" sur Windows provoquaient un "fatal exception: access violation".
+    # Elles sont désactivées de manière permanente.
+
+    # --- DIAGNOSTIC PROVER9 (Temporarily disabled for debugging JVM crash) ---
+    logger.warning("Le diagnostic Prover9 et le chargement de la librairie native sont temporairement désactivés.")
     logger.info(f"Options JVM utilisées : {options}")
     return options
 
@@ -336,6 +331,10 @@ def initialize_jvm(session_fixture_owns_jvm=False) -> bool:
         # Provisioning des dépendances
         if not download_tweety_jars():
             return False
+        
+        # Couche 2: Prise de contrôle explicite du cycle de vie de la JVM
+        # Empêche jpype de tenter un arrêt automatique, ce qui causerait des conflits.
+        jpype.config.destroy_jvm = False
         
         java_home = find_valid_java_home()
         if not java_home:
@@ -365,6 +364,9 @@ def initialize_jvm(session_fixture_owns_jvm=False) -> bool:
             logger.info(f"Chemin JVM (jpype.getDefaultJVMPath): {jvm_path}")
             logger.info(f"Options JVM finales: {jvm_options}")
             logger.info(f"Classpath final: {classpath}")
+            logger.info(f"jpype.isJVMStarted() avant l'appel: {jpype.isJVMStarted()}")
+            logger.info(f"Variable d'environnement JAVA_HOME: {os.environ.get('JAVA_HOME')}")
+            logger.info(f"Variable d'environnement PATH: {os.environ.get('PATH')}")
             logger.info("="*71)
             # --- FIN DES LOGS ---
 
