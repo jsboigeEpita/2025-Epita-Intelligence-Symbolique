@@ -110,6 +110,29 @@ class TweetyInitializer:
             logger.critical(f"An unhandled exception occurred during robust JVM initialization: {e}", exc_info=True)
             return False
 
+    def load_classes(self):
+        """
+        Public method to explicitly trigger the import of Java classes.
+        """
+        if not self.__class__._classes_loaded:
+            logger.info("Explicitly loading Java classes...")
+            self._import_java_classes()
+        else:
+            logger.debug("Java classes already loaded.")
+
+    def initialize_components(self):
+        """
+        Public method to explicitly initialize parsers and other components.
+        """
+        if not self.__class__._initialized_components:
+            logger.info("Explicitly initializing Java components (parsers, etc.)...")
+            self.initialize_pl_components()
+            self.initialize_fol_components()
+            self.initialize_modal_components()
+            self.__class__._initialized_components = True
+        else:
+            logger.debug("Java components already initialized.")
+
     def _import_java_classes(self):
         """
         Imports and caches required Java classes.

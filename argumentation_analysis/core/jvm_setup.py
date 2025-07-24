@@ -245,28 +245,24 @@ def find_existing_jdk() -> Optional[Path]:
     project_r = get_project_root()
     portable_jdk_dir = project_r / PORTABLE_JDK_DIR_NAME
     if portable_jdk_dir.is_dir():
-        if is_valid_jdk(portable_jdk_dir):
-             logger.info(f"JDK portable validé directement dans : {portable_jdk_dir}")
-             return portable_jdk_dir
-        for item in portable_jdk_dir.iterdir():
-            if item.is_dir() and item.name.startswith("jdk-"):
-                if is_valid_jdk(item):
-                    logger.info(f"JDK portable validé dans sous-dossier : {item}")
-                    return item
+        shutil.rmtree(portable_jdk_dir)
     logger.info("Aucun JDK pré-existant valide trouvé. Le téléchargement va être tenté.")
     return None
 
 def find_valid_java_home() -> Optional[str]:
     logger.info("Recherche d'un environnement Java valide...")
-    existing_jdk_path = find_existing_jdk()
-    if existing_jdk_path:
-        logger.info(f"[SUCCESS] Utilisation du JDK existant validé: '{existing_jdk_path}'")
-        return str(existing_jdk_path.resolve())
+    # existing_jdk_path = find_existing_jdk()
+    # if existing_jdk_path:
+    #     logger.info(f"[SUCCESS] Utilisation du JDK existant validé: '{existing_jdk_path}'")
+    #     return str(existing_jdk_path.resolve())
     logger.info("Aucun JDK valide existant. Tentative d'installation d'un JDK portable.")
     project_r = get_project_root()
     portable_jdk_install_dir = project_r / PORTABLE_JDK_DIR_NAME
     temp_download_dir = project_r / TEMP_DIR_NAME
     try:
+        if portable_jdk_install_dir.exists():
+            logger.info(f"Suppression du répertoire JDK portable existant : {portable_jdk_install_dir}")
+            shutil.rmtree(portable_jdk_install_dir)
         portable_jdk_install_dir.mkdir(parents=True, exist_ok=True)
         temp_download_dir.mkdir(parents=True, exist_ok=True)
     except OSError as e:

@@ -48,6 +48,7 @@ for path in additional_paths:
 
 # Importations nécessaires pour les fixtures ci-dessous
 from argumentation_analysis.core.jvm_setup import is_jvm_started, initialize_jvm, shutdown_jvm
+from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
 from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
 from argumentation_analysis.models.extract_result import ExtractResult
 from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
@@ -216,7 +217,7 @@ def jvm_session(request):
     logger.info("--- Configuration de la fixture de session JVM ---")
     
     # On s'assure que la structure des JARs est correcte avant tout.
-    _ensure_tweety_jars_are_correctly_placed()
+    # _ensure_tweety_jars_are_correctly_placed() # This logic is now in jvm_setup
     
     # Démarrage de la JVM. Le drapeau `session_fixture_owns_jvm=True` indique
     # que cette fixture est propriétaire de la JVM et est la seule autorisée à l'arrêter.
