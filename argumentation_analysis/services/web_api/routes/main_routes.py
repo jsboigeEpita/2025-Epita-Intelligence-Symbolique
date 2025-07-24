@@ -154,8 +154,15 @@ def build_framework():
             data['arguments'] = list(args_by_id.values())
 
         framework_request = FrameworkRequest(**data)
-        result = framework_service.build_framework(framework_request)
-        return jsonify(result.dict())
+        # Extraire les données pour la nouvelle signature de la méthode
+        arguments_list = [arg.id for arg in framework_request.arguments]
+        attacks_list = [[arg.id, attacked_id] for arg in framework_request.arguments for attacked_id in arg.attacks]
+        
+        result = framework_service.analyze_dung_framework(
+            arguments=arguments_list,
+            attacks=attacks_list
+        )
+        return jsonify(result)
         
     except Exception as e:
         logger.error(f"Erreur lors de la construction du framework: {str(e)}", exc_info=True)

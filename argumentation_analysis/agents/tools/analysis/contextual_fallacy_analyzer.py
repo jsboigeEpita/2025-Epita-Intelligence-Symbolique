@@ -48,8 +48,10 @@ class ContextualFallacyAnalyzer:
             taxonomy_path: Chemin vers le fichier de taxonomie des sophismes (optionnel)
         """
         self.logger = logger
-        self.taxonomy_df = self._load_taxonomy(taxonomy_path)
-        self.logger.info("Analyseur contextuel de sophismes initialisé.")
+        # LAZY LOADING: Ne pas charger la taxonomie ici.
+        self.taxonomy_df = None
+        self._taxonomy_path = taxonomy_path
+        self.logger.info("Analyseur contextuel de sophismes initialisé (Lazy Loading).")
     
     def _load_taxonomy(self, taxonomy_path: Optional[str] = None) -> Any:
         """
@@ -98,6 +100,10 @@ class ContextualFallacyAnalyzer:
         Returns:
             Dictionnaire contenant les résultats de l'analyse
         """
+        # LAZY LOADING: Charger la taxonomie si elle n'est pas déjà chargée
+        if self.taxonomy_df is None:
+            self.taxonomy_df = self._load_taxonomy(self._taxonomy_path)
+
         self.logger.info(f"Analyse contextuelle du texte (longueur: {len(text)}) dans le contexte: {context}")
         
         # Analyser le type de contexte

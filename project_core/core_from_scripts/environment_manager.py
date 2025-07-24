@@ -348,8 +348,14 @@ if __name__ == "__main__":
             
             command_to_run = args.command_parts
             if len(command_to_run) == 1 and ' ' in command_to_run[0]:
-                logger.info(f"La commande '{command_to_run[0]}' semble être une chaîne unique, division avec shlex (mode non-posix pour Windows).")
-                command_to_run = shlex.split(command_to_run[0], posix=False)
+                command_str = command_to_run[0]
+                # Sur Windows, les backslashes dans les chemins peuvent être mal interprétés
+                # par shlex. On les remplace par des slashes pour plus de robustesse.
+                if platform.system() == "Windows":
+                    command_str = command_str.replace('\\', '/')
+
+                logger.info(f"La commande '{command_str}' (normalisée) semble être une chaîne unique, division avec shlex.")
+                command_to_run = shlex.split(command_str)
 
             exit_code = manager.run_command_in_conda_env(command_to_run)
     elif args.command == "switch":

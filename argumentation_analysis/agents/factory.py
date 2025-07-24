@@ -18,8 +18,6 @@ from argumentation_analysis.agents.core.logic.watson_logic_assistant import Wats
 # L'Enum AgentType et les classes d'agents de base sont nécessaires pour les signatures
 from .agents import AgentType, FallacyAgentBase, MethodicalAuditorAgent, ParallelExplorerAgent, ResearchAssistantAgent
 from .concrete_agents.informal_fallacy_agent import InformalFallacyAgent
-from .sherlock_jtms_agent import SherlockJTMSAgent
-
 class AgentFactory:
     """
     Usine pour la création et la configuration centralisée des agents.
@@ -52,6 +50,9 @@ class AgentFactory:
              # Fait le pont avec la nouvelle méthode de création détaillée
              # On passe les kwargs pour permettre plus de flexibilité (comme 'config_name')
              return self.create_informal_fallacy_agent(**kwargs)
+
+        # --- Importation locale pour briser le cycle d'importation ---
+        from .sherlock_jtms_agent import SherlockJTMSAgent
 
         agent_map = {
             AgentType.METHODICAL_AUDITOR: MethodicalAuditorAgent,

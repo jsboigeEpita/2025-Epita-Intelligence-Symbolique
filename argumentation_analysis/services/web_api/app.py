@@ -92,8 +92,10 @@ def create_app():
     logger.info("Creating Flask app instance...")
 
     # --- Initialisation des dépendances lourdes ---
-    # Appelée ici pour garantir l'initialisation à chaque création d'app
-    initialize_heavy_dependencies()
+    # L'initialisation est maintenant gérée par le point d'entrée du serveur
+    # (ex: conftest.py pour les tests, ou le script de démarrage principal)
+    # pour éviter les initialisations multiples.
+    # initialize_heavy_dependencies() # Appel supprimé
 
     current_dir = Path(__file__).resolve().parent
     root_dir = current_dir.parent.parent.parent
