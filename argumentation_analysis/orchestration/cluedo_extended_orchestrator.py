@@ -8,6 +8,7 @@ incluant la sélection cyclique, la terminaison Oracle, et l'intégration avec C
 
 import asyncio
 import logging
+import inspect
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
@@ -81,7 +82,8 @@ class CyclicSelectionStrategy(SelectionStrategy):
         super().__init__()
         # Stockage direct dans __dict__ pour éviter les problèmes Pydantic
         self.__dict__['agents'] = agents
-        self.__dict__['agent_order'] = [getattr(agent, 'name', getattr(agent, 'id', str(agent))) for agent in agents]
+        # Restaurer l'ordre normal des agents
+        self.__dict__['agent_order'] = [agent.name for agent in agents]
         self.__dict__['current_index'] = 0
         self.__dict__['adaptive_selection'] = adaptive_selection
         self.__dict__['turn_count'] = 0
@@ -464,8 +466,25 @@ class CluedoExtendedOrchestrator:
                 ]
 
                 # 2. Exécuter l'agent avec l'historique nettoyé
-                agent_response_stream = next_agent.invoke(input=history_to_send, arguments=KernelArguments())
-                agent_response_raw = [message async for message in agent_response_stream]
+                # CORRECTIF FINAL : Appel différencié par agent pour gérer les signatures de méthode hétérogènes
+                if next_agent.name == "Watson":
+                    # Watson attend 'messages' mais pas 'arguments'
+                    agent_response_stream = next_agent.invoke(messages=history_to_send)
+                else:
+                    # Sherlock et Moriarty attendent 'input' et 'arguments'
+                    agent_response_stream = next_agent.invoke(input=history_to_send, arguments=KernelArguments())
+
+                # --- CORRECTIF : Gestion des retours hétérogènes (coroutine vs async_generator) ---
+                if inspect.isasyncgen(agent_response_stream):
+                    # Le stream est un générateur asynchrone, on itère dessus
+                    agent_response_raw = [message async for message in agent_response_stream]
+                else:
+                    # Le "stream" est en réalité une coroutine, on l'attend
+                    # Ceci est typique pour les agents qui ne supportent pas le streaming.
+                    agent_response = await agent_response_stream
+                    # On l'encapsule dans une liste pour la compatibilité du reste du code
+                    agent_response_raw = [agent_response]
+                # --- FIN CORRECTIF ---
                 
                 # 3. Consolider et nettoyer la réponse de l'agent
                 # C'est une étape CRUCIALE pour éviter le context overflow avec les réponses en streaming.
