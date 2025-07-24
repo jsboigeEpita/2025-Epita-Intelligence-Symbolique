@@ -102,38 +102,25 @@ catch {
 # Étape 2: Construire la commande finale pour l'exécuter avec `conda run`
 # On utilise --no-capture-output pour s'assurer que stdout/stderr du processus enfant
 # sont directement streamés, ce qui est crucial pour le logging des tests.
-$condaCommand = "conda"
-$commandToExecuteInsideEnv = " python -m $moduleName run `"$CommandToRun`""
-# Correction: suppression du séparateur '--' qui n'est pas géré correctement par le shell sous-jacent.
-$finalCommand = "$condaCommand run -n $envName --no-capture-output --live-stream $commandToExecuteInsideEnv"
 
-Write-Host "[INFO] Délégation au gestionnaire d'environnement Python via Conda..." -ForegroundColor Cyan
-Write-Host "[DEBUG] Commande finale: $finalCommand" -ForegroundColor Gray
+Write-Host "[INFO] Exécution directe de la commande dans l'environnement Conda..." -ForegroundColor Cyan
+
+# Construction de la commande `conda run`
+$CommandArray = $CommandToRun.Split(" ")
+$CondaArgs = @("run", "-n", $envName, "--no-capture-output", "--live-stream") + $CommandArray
+
+Write-Host "[DEBUG] Invoking: conda $($CondaArgs -join ' ')" -ForegroundColor Gray
 
 # Étape 3: Exécution et propagation du code de sortie
 try {
-    # Méthode d'appel direct et robuste, évitant Invoke-Expression
-    $condaPath = Get-Command conda.exe | Select-Object -ExpandProperty Source
-    $commandArguments = @(
-        "run",
-        "-n",
-        $envName,
-        "--no-capture-output",
-        "--live-stream",
-        "python",
-        "-m",
-        $moduleName,
-        "run"
-    )
-    $commandArguments += $CommandToRun.Split(' ')
+    # Exécute la commande. La sortie sera capturée par l'appelant.
+    conda $CondaArgs
     
-    $env:CONDA_DEFAULT_ENV = $envName
-    & $condaPath $commandArguments
     $exitCode = $LASTEXITCODE
 }
 catch {
     Write-Host "[ERREUR FATALE] Échec lors de l'exécution de la commande via 'conda run'." -ForegroundColor Red
-    Write-Host $_
+    $_.Exception.ToString()
     $exitCode = 1
 }
 
