@@ -16,10 +16,35 @@ from unittest.mock import patch, MagicMock
 import nest_asyncio
 import jpype
 
+# Désactive la vérification de l'environnement Conda pour les tests E2E
+os.environ['E2E_TESTING_MODE'] = '1'
 
-# Ajouter le répertoire racine au PYTHONPATH pour assurer la découvrabilité des modules
+# --- Importations préventives pour éviter les conflits de bas niveau ---
+# Il est crucial d'importer les bibliothèques lourdes comme torch et transformers
+# AVANT que jpype ne soit initialisé pour éviter des crashs de type "access violation".
+try:
+    print("[INFO] Pre-importing heavy libraries to prevent conflicts...")
+    import torch
+    import transformers
+    import semantic_kernel
+    import openai
+    print("[INFO] Heavy libraries pre-imported successfully.")
+except ImportError as e:
+    print(f"[WARNING] A library pre-import failed: {e}. This might be expected if the dependency is optional.")
+
+
+
+# Ajouter le répertoire racine et les sous-répertoires pertinents au PYTHONPATH
 project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+additional_paths = [
+    str(project_root),
+    str(project_root / "scripts"),
+    str(project_root / "examples" / "scripts_demonstration"),
+    str(project_root / "services"),
+]
+for path in additional_paths:
+    if path not in sys.path:
+        sys.path.insert(0, path)
 
 # Importations nécessaires pour les fixtures ci-dessous
 from argumentation_analysis.core.jvm_setup import is_jvm_started, initialize_jvm, shutdown_jvm
@@ -382,14 +407,14 @@ def page_with_console_logs(page: "Page"):
 # --- Gestion des Serveurs E2E ---
 
 @pytest.fixture(scope="session")
-def e2e_servers(request):
+def e2e_servers(request, jvm_session):
     """
     Fixture de session pour démarrer et arrêter les serveurs backend et frontend
     nécessaires pour les tests E2E.
+    Dépend de `jvm_session` pour garantir que la JVM est prête.
     """
-    # Forcer l'initialisation des dépendances lourdes avant de démarrer les serveurs
-    from argumentation_analysis.services.web_api.app import initialize_heavy_dependencies
-    initialize_heavy_dependencies()
+    # L'initialisation des dépendances lourdes (JVM) est maintenant gérée
+    # exclusivement par la fixture `jvm_session`.
 
     # Ne rien faire si la fixture est désactivée
     if request.config.getoption("--disable-e2e-servers-fixture"):

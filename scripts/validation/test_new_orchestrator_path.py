@@ -35,7 +35,7 @@ async def main():
             mode="orchestration"
         )
 
-        # Étape 5 : Afficher le résultat
+        # Afficher le résultat
         logger.info("--- Résultat de l'analyse ---")
         print(json.dumps(result, indent=2, ensure_ascii=False))
         logger.info("--- Fin du test ---")
