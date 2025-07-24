@@ -150,7 +150,7 @@ class TestSetupInformalKernel:
     @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY non disponible")
     async def test_setup_informal_kernel(self, mock_add_plugin, mock_add_function, configured_kernel_and_service):
         """Teste la configuration du kernel pour l'agent informel."""
-        kernel, llm_service = await configured_kernel_and_service
+        kernel, llm_service = configured_kernel_and_service
         
         # Appeler la fonction à tester
         setup_informal_kernel(kernel, llm_service)
