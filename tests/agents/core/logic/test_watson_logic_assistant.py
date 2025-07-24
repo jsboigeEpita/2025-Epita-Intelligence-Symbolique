@@ -30,7 +30,7 @@ def agent_factory(mock_kernel: MagicMock) -> AgentFactory:
     mock_settings = AppSettings()
     # On peut surcharger des valeurs si nécessaire pour les tests
     mock_settings.service_manager.default_llm_service_id = "test_llm_service"
-    return AgentFactory(kernel=mock_kernel, settings=mock_settings)
+    return AgentFactory(kernel=mock_kernel, llm_service_id=mock_settings.service_manager.default_llm_service_id)
 
 @pytest.fixture
 def mock_tweety_bridge() -> MagicMock:

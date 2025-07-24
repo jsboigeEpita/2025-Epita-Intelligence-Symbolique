@@ -648,11 +648,10 @@ async def fol_agent_with_kernel(jvm_session):
     kernel = config.get_kernel_with_gpt4o_mini(force_authentic=True)
     
     # Création de l'agent. Le paramètre use_serialization est obsolète.
-    tweety_bridge = TweetyBridge()
-    # La JVM est maintenant gérée par la fixture jvm_session et l'état du pont est synchronisé.
-    agent = FOLLogicAgent(kernel=kernel, tweety_bridge=tweety_bridge, service_id="default")
+    # L'agent gère maintenant sa propre instance de TweetyBridge.
+    agent = FOLLogicAgent(kernel=kernel, agent_name="TestFOLAgentWithKernel")
     
-    # Injection manuelle de TweetyBridge et initialisation
+    # L'initialisation des composants, y compris TweetyBridge, est gérée par l'agent.
     await agent.setup_agent_components(llm_service_id="default")
     
     return agent

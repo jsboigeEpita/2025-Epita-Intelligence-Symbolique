@@ -25,12 +25,12 @@ from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
 from argumentation_analysis.agents.core.logic.query_executor import QueryExecutor
 from argumentation_analysis.core.llm_service import create_llm_service
 
-from ..models.request_models import (
+from argumentation_analysis.services.web_api.models.request_models import (
     LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest, LogicOptions
 )
-from ..models.response_models import (
-    LogicBeliefSet, LogicBeliefSetResponse, LogicQueryResult, LogicQueryResponse,
-    LogicGenerateQueriesResponse, LogicInterpretationResponse
+from argumentation_analysis.services.web_api.models.response_models import (
+    LogicBeliefSetResponse, LogicQueryResponse, LogicQueryResult,
+    LogicGenerateQueriesResponse, LogicInterpretationResponse, ErrorResponse as LogicError
 )
 
 

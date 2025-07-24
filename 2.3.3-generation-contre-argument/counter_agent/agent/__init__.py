@@ -15,7 +15,7 @@ from .definitions import (
     EvaluationResult,
     ValidationResult
 )
-# from .counter_agent import CounterArgumentAgent # NOTE: Commenté car la classe est introuvable
+from .counter_agent import CounterArgumentAgent
 from .parser import ArgumentParser, VulnerabilityAnalyzer
 from .strategies import RhetoricalStrategies
 
@@ -28,7 +28,7 @@ __all__ = [
     'Vulnerability',
     'EvaluationResult',
     'ValidationResult',
-    # 'CounterArgumentAgent',
+    'CounterArgumentAgent',
     'ArgumentParser',
     'VulnerabilityAnalyzer',
     'RhetoricalStrategies'

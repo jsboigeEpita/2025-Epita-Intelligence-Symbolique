@@ -9,6 +9,7 @@ import sys
 import os
 import unittest
 from typing import List
+from unittest.mock import MagicMock
 
 # Ajouter le répertoire parent au path pour permettre l'importation du package
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -28,7 +29,8 @@ class TestArgumentParser(unittest.TestCase):
     
     def setUp(self):
         """Configuration initiale pour les tests."""
-        self.agent = CounterArgumentAgent()
+        self.agent = CounterArgumentAgent(kernel=MagicMock())
+        self.mock_taxonomy = MagicMock()
     
     def test_parse_simple_argument(self):
         """Teste la capacité à parser un argument simple."""
@@ -36,7 +38,7 @@ class TestArgumentParser(unittest.TestCase):
         argument_text = "Il pleut. Donc le sol est mouillé."
         
         # Analyse de l'argument
-        argument = self.agent.analyze_argument(argument_text)
+        argument = self.agent.analyze_argument(argument_text, self.mock_taxonomy)
         
         # Vérifications
         self.assertIsInstance(argument, Argument)
@@ -55,7 +57,7 @@ class TestArgumentParser(unittest.TestCase):
         """
         
         # Analyse de l'argument
-        argument = self.agent.analyze_argument(argument_text)
+        argument = self.agent.analyze_argument(argument_text, self.mock_taxonomy)
         
         # Vérifications
         self.assertIsInstance(argument, Argument)
@@ -69,7 +71,8 @@ class TestVulnerabilityAnalysis(unittest.TestCase):
     
     def setUp(self):
         """Configuration initiale pour les tests."""
-        self.agent = CounterArgumentAgent()
+        self.agent = CounterArgumentAgent(kernel=MagicMock())
+        self.mock_taxonomy = MagicMock()
     
     def test_identify_generalisation_vulnerability(self):
         """Teste la capacité à identifier une généralisation abusive."""
@@ -77,7 +80,7 @@ class TestVulnerabilityAnalysis(unittest.TestCase):
         argument_text = "Tous les politiciens sont corrompus. Donc on ne peut faire confiance à aucun politicien."
         
         # Analyse de l'argument
-        argument = self.agent.analyze_argument(argument_text)
+        argument = self.agent.analyze_argument(argument_text, self.mock_taxonomy)
         vulnerabilities = self.agent.identify_vulnerabilities(argument)
         
         # Vérifications
@@ -99,7 +102,7 @@ class TestVulnerabilityAnalysis(unittest.TestCase):
         argument_text = "Évidemment, les vaccins sont dangereux. Donc il ne faut pas se faire vacciner."
         
         # Analyse de l'argument
-        argument = self.agent.analyze_argument(argument_text)
+        argument = self.agent.analyze_argument(argument_text, self.mock_taxonomy)
         vulnerabilities = self.agent.identify_vulnerabilities(argument)
         
         # Vérifications
@@ -121,7 +124,8 @@ class TestCounterArgumentGeneration(unittest.TestCase):
     
     def setUp(self):
         """Configuration initiale pour les tests."""
-        self.agent = CounterArgumentAgent()
+        self.agent = CounterArgumentAgent(kernel=MagicMock())
+        self.mock_taxonomy = MagicMock()
         
         # Argument utilisé pour les tests
         self.argument_text = """
@@ -130,7 +134,7 @@ class TestCounterArgumentGeneration(unittest.TestCase):
         """
         
         # Analyse préalable
-        self.argument = self.agent.analyze_argument(self.argument_text)
+        self.argument = self.agent.analyze_argument(self.argument_text, self.mock_taxonomy)
         self.vulnerabilities = self.agent.identify_vulnerabilities(self.argument)
     
     def test_direct_refutation_generation(self):
@@ -201,13 +205,14 @@ class TestCounterArgumentEvaluation(unittest.TestCase):
     
     def setUp(self):
         """Configuration initiale pour les tests."""
-        self.agent = CounterArgumentAgent()
+        self.agent = CounterArgumentAgent(kernel=MagicMock())
+        self.mock_taxonomy = MagicMock()
         
         # Argument utilisé pour les tests
         self.argument_text = "Tous les cygnes sont blancs. Donc il n'existe pas de cygnes noirs."
         
         # Analyse préalable
-        self.argument = self.agent.analyze_argument(self.argument_text)
+        self.argument = self.agent.analyze_argument(self.argument_text, self.mock_taxonomy)
         self.vulnerabilities = self.agent.identify_vulnerabilities(self.argument)
         
         # Génération d'un contre-argument

@@ -225,6 +225,29 @@ def test_subsystem_integration():
 4. **Gestion des Erreurs** : Testez la gestion des erreurs entre les modules.
 5. **Nettoyage** : Assurez-vous de nettoyer les ressources après chaque test.
 
+### Comment tester un agent logique qui dépend de la JVM ?
+
+Tout test impliquant un agent logique (comme `PropositionalLogicAgent` ou d'autres agents basés sur `TweetyBridge`) nécessite que la JVM soit démarrée. Pour garantir cela de manière propre et centralisée, utilisez la fixture `jvm_session`.
+
+**Comment faire :**
+
+Ajoutez le décorateur `@pytest.mark.usefixtures("jvm_session")` au-dessus de votre classe de test.
+
+**Exemple :**
+
+```python
+import pytest
+
+# Assure que la JVM est initialisée avant l'exécution de ces tests.
+@pytest.mark.usefixtures("jvm_session")
+class TestMonAgentLogique:
+    def test_une_fonction_qui_utilise_la_jvm(self):
+        # Ce test s'exécutera avec la garantie que la JVM est prête.
+        assert True
+```
+
+Cette pratique évite les erreurs `RuntimeError: JVM not ready` et centralise la gestion du cycle de vie de la JVM pour toute la session de test.
+
 ## Tests Fonctionnels
 
 ### Patterns pour les Tests Fonctionnels

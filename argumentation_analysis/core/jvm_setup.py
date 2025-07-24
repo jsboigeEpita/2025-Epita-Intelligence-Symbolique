@@ -58,9 +58,9 @@ PROJ_ROOT = get_project_root_robust()
 LIBS_DIR = PROJ_ROOT / settings.jvm.tweety_libs_dir
 TWEETY_VERSION = settings.jvm.tweety_version
 MIN_JAVA_VERSION = settings.jvm.min_java_version
-JDK_VERSION = settings.jvm.jdk_version
-JDK_BUILD = settings.jvm.jdk_build
-JDK_URL_TEMPLATE = settings.jvm.jdk_url_template
+JDK_VERSION = "11.0.23"
+JDK_BUILD = "9"
+JDK_URL_TEMPLATE = "https://api.adoptium.net/v3/binary/version/jdk-{v}+{b}/{os}/{arch}/jdk/hotspot/normal/eclipse"
 
 
 class TqdmUpTo(tqdm):
@@ -315,19 +315,8 @@ def find_valid_java_home() -> Optional[str]:
         return None
 
 def get_jvm_options() -> List[str]:
-    """
-    Retourne une liste d'options JVM optimisées.
-    """
-    options = [
-        f"-Xms{settings.jvm.min_heap_size}",
-        f"-Xmx{settings.jvm.max_heap_size}",
-        "-Dfile.encoding=UTF-8",
-        # "-Djava.awt.headless=true" # Cette option cause un "Windows fatal exception: access violation"
-                                     # sur certaines configurations Windows. Elle est désactivée.
-    ]
-    # Les options "-XX:+UseG1GC", "-Xrs" sur Windows provoquaient un "fatal exception: access violation".
-    # Elles sont désactivées de manière permanente.
-
+    options = []
+    logger.warning("TOUTES LES OPTIONS JVM SONT DESACTIVEES POUR LE DEBUGGING.")
     logger.info(f"Options JVM utilisées : {options}")
     return options
 

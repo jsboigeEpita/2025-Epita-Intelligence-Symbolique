@@ -355,3 +355,8 @@ archived_artefacts/
 
 # Dossiers de refactoring temporaires
 temp_test_refactor/
+
+
+# Fichiers de contournement et de résultats de test
+dummy_opentelemetry/
+phase_c_fluidite_results_*.json

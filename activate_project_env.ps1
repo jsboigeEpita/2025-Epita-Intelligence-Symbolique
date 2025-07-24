@@ -127,6 +127,7 @@ try {
     )
     $commandArguments += $CommandToRun.Split(' ')
     
+    $env:CONDA_DEFAULT_ENV = $envName
     & $condaPath $commandArguments
     $exitCode = $LASTEXITCODE
 }

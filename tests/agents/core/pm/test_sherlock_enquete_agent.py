@@ -74,7 +74,7 @@ def agent_factory(authentic_kernel):
         pytest.skip("Le service de chat 'chat_completion' n'est pas configuré.")
     settings = AppSettings()
     settings.service_manager.default_llm_service_id = "chat_completion"
-    return AgentFactory(kernel=authentic_kernel, settings=settings)
+    return AgentFactory(kernel=authentic_kernel, llm_service_id=settings.service_manager.default_llm_service_id)
 
 @pytest.fixture
 def sherlock_agent(agent_factory):
