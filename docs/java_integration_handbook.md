@@ -185,3 +185,28 @@ Cette section documente l'analyse et la résolution de l'erreur `Fatal Python er
         ```
     3.  **Résultat** : **Échec**. Malgré ces modifications et la reconstruction de l'environnement Conda, le crash de la JVM a persisté. L'analyse a montré que `conda` ne parvenait pas à garantir l'installation de la version MKL de NumPy, ou que l'hypothèse de départ était incorrecte.
 *   **Conclusion** : La tentative de forcer l'utilisation de MKL pour NumPy n'a pas résolu le crash. Le problème est plus complexe et pourrait ne pas être lié à un simple conflit MKL/OpenBLAS. Les modifications apportées à `environment.yml` ont été annulées pour revenir à une configuration stable connue. Cette investigation infructueuse est documentée ici pour éviter de futures tentatives similaires sans nouvelles informations.
+
+### Phase 10 : Identification et Résolution du Conflit d'Ordre d'Importation (Fin Juillet 2025)
+
+*   **Problème** : Un crash `Windows fatal exception: access violation` continuait de se produire de manière intermittente, en particulier lors de l'exécution de tests qui impliquaient à la fois des bibliothèques de Machine Learning (comme `torch`, `transformers`) et la JVM via `jpype`.
+*   **Stratégie de Diagnostic** :
+    1.  Une analyse sémantique a mis en évidence des commentaires dans le code (`tests/unit/api/workers/worker_api_endpoints.py`) suggérant des "importations préventives" pour éviter des conflits.
+    2.  L'analyse du point d'entrée des tests (`tests/conftest.py`) a confirmé qu'un ordre d'importation spécifique était déjà en place : `torch` et `transformers` étaient importés **avant** `jpype`.
+    3.  Une expérimentation contrôlée a été menée en créant un test minimal (`tests/debug/test_import_order.py`) qui inversait cet ordre.
+*   **Cause Racine** : L'expérimentation a prouvé de manière concluante que l'ordre d'importation est critique.
+    *   **Ordre incorrect (provoquant le crash)** : Importer `jpype` **avant** `torch`.
+    *   **Ordre correct (stable)** : Importer `torch` **avant** `jpype`.
+    *   **Hypothèse** : `torch` et `jpype` chargent tous deux des bibliothèques natives (`.dll`). Le chargement de `torch` en premier initialise probablement le runtime d'une manière qui est compatible avec le chargement ultérieur de la JVM par `jpype`. L'inverse, cependant, conduit à un conflit de bas niveau qui corrompt la mémoire du processus.
+*   **Solution** :
+    1.  **Documentation** : Le présent guide a été mis à jour pour documenter explicitement ce conflit et l'ordre d'importation requis comme une règle fondamentale.
+    2.  **Application de la Règle** : La solution, déjà implémentée dans `tests/conftest.py`, consiste à s'assurer que tout point d'entrée (que ce soit pour les tests ou l'application) qui utilise à la fois des bibliothèques de ML et la JVM importe les bibliothèques de ML en premier. Cette pratique est maintenant une directive de codage officielle pour le projet.
+
+### Phase 11 : Industrialisation du Diagnostic et Solution Globale (Fin Juillet 2025)
+
+*   **Problème** : Bien que la cause du crash (`jpype` importé avant `torch`) ait été identifiée, la solution n'était appliquée que dans l'environnement de test (`tests/conftest.py`), laissant l'application principale vulnérable. De plus, il n'existait pas d'outil simple pour re-diagnostiquer ce problème à l'avenir.
+*   **Solution** :
+    1.  **Création d'un Outil de Diagnostic Industriel** : Le script `scripts/tools/debugging/diagnose_jvm_crash.py` a été développé. Il lance de manière isolée deux tests `pytest` minimaux pour confirmer de manière fiable la cause du crash lié à l'ordre d'importation, sans être pollué par d'autres facteurs environnementaux.
+    2.  **Création d'un Module de Pré-Amorçage (`pre_bootstrap`)** : Pour généraliser la solution à toute l'application, le module `argumentation_analysis/core/pre_bootstrap.py` a été créé. Son unique rôle est d'importer les bibliothèques lourdes (`torch`, `numpy`, `transformers`) avant tout autre code.
+    3.  **Application Globale** : Ce module `pre_bootstrap` a été ajouté comme tout premier import dans les points d'entrée identifiés de l'application (`main_orchestrator.py`, `unified_web_orchestrator.py`, etc.), garantissant ainsi que l'ordre d'importation correct est respecté dans tous les cas d'utilisation, et pas seulement pendant les tests.
+
+Cette approche fournit une solution robuste et pérenne au conflit de bibliothèques natives.
