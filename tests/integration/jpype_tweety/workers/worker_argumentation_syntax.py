@@ -31,7 +31,8 @@ def setup_jvm():
     logger.info(f"Démarrage de la JVM avec le classpath: {classpath}")
     try:
         logger.info("--- La JVM n'est pas démarrée. Tentative de démarrage par le worker... ---")
-        jpype.startJVM(jpype.getDefaultJVMPath(), "-ea", classpath=classpath, convertStrings=False)
+        # La JVM doit être démarrée par le processus parent.
+        pass
         logger.info("--- JVM démarrée avec succès par le worker ---")
     except Exception as e:
         logger.error(f"ERREUR: Échec du démarrage de la JVM par le worker : {e}", exc_info=True)

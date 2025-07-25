@@ -46,7 +46,9 @@ def initialize_analysis_services(config: Dict[str, Any] = None) -> Dict[str, Any
             services["jvm_ready"] = False
         else:
             logging.info(f"Initialisation de la JVM avec LIBS_DIR: {libs_dir_path}...")
-            jvm_ready_status = initialize_jvm()
+            # La JVM doit être initialisée en amont.
+            from argumentation_analysis.core.jvm_setup import is_jvm_started
+            jvm_ready_status = is_jvm_started()
             services["jvm_ready"] = jvm_ready_status
             if not jvm_ready_status:
                 logging.warning("La JVM n'a pas pu être initialisée.")

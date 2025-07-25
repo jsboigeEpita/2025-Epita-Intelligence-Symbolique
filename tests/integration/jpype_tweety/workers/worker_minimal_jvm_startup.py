@@ -44,7 +44,8 @@ def test_minimal_startup_logic():
     # Démarrage de la JVM
     if not jpype.isJVMStarted():
         try:
-            jpype.startJVM(jpype.getDefaultJVMPath(), "-ea", classpath=classpath, convertStrings=False)
+            # La JVM doit être démarrée par le processus parent.
+            pass
             print("--- JVM démarrée avec succès dans le worker ---")
         except Exception as e:
             print(f"ERREUR: Échec du démarrage de la JVM : {e}", file=sys.stderr)

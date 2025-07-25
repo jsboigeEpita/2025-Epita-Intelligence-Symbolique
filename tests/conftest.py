@@ -203,31 +203,44 @@ def apply_nest_asyncio():
     yield
 
 
-@pytest.fixture(scope="function", autouse=True)
-def jvm_fixture(request):
+@pytest.fixture(scope="session")
+def jvm_session(request):
     """
-    Fixture qui garantit que la JVM est démarrée pour les tests marqués 'jvm_test'.
-    Utilise une portée 'function' pour s'appliquer à chaque test individuellement.
+    Fixture de session qui gère le cycle de vie complet de la JVM pour toute la session de test.
+    Elle garantit que la JVM est démarrée une seule fois et arrêtée proprement à la fin.
     """
-    if 'jvm_test' in request.keywords:
-        # Ce test nécessite la JVM
-        if not is_jvm_started():
-            logger.info(f"Test '{request.node.name}' requires JVM. Initializing...")
-            initialize_jvm()
-        else:
-            logger.info(f"Test '{request.node.name}' uses existing JVM session.")
+    # Ne démarre la JVM que si au moins un test marqué 'jvm_test' est sélectionné
+    if any('jvm_test' in item.keywords for item in request.session.items):
+        import threading
+        thread_id = threading.get_ident()
+        logger.info(f"--- [JVM SESSION - THREAD {thread_id}] Initializing JVM for the test session... ---")
+        if is_jvm_started():
+            logger.warning(f"--- [JVM SESSION - THREAD {thread_id}] JVM was already started. This is unexpected. ---")
+        initialize_jvm()
         
         yield
         
-        # Le shutdown est laissé à la fin de la session pour ne pas le faire après chaque test.
-        # Idéalement, une fixture de session s'en chargerait, mais pour éviter les conflits
-        # avec xdist, nous adoptons cette stratégie simplifiée.
+        thread_id = threading.get_ident()
+        logger.info(f"--- [JVM SESSION - THREAD {thread_id}] Shutting down JVM at the end of the test session... ---")
+        shutdown_jvm()
+        logger.info("--- [JVM SESSION] JVM shutdown complete. ---")
     else:
-        # Ce test ne nécessite pas la JVM, on ne fait rien.
+        logger.info("--- [JVM SESSION] No jvm_test markers found. Skipping JVM lifecycle management. ---")
         yield
 
+@pytest.fixture(scope="function", autouse=True)
+def jvm_fixture(request, jvm_session):
+    """
+    Fixture qui active la fixture de session `jvm_session` pour les tests marqués 'jvm_test'.
+    La logique de démarrage/arrêt est maintenant entièrement déléguée à `jvm_session`.
+    """
+    if 'jvm_test' in request.keywords:
+        # La simple dépendance à `jvm_session` suffit à l'activer.
+        logger.debug(f"Test '{request.node.name}' is marked with 'jvm_test', ensuring JVM session is active.")
+    yield
+
 @pytest.fixture(scope="function")
-def tweety_bridge_fixture(jvm_fixture):
+def tweety_bridge_fixture(jvm_session):
     """
     Fournit une instance de TweetyBridge connectée à la session JVM gérée
     par la fixture jvm_fixture.

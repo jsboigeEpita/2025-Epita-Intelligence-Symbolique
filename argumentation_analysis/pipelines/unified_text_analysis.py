@@ -150,7 +150,8 @@ class UnifiedTextAnalysisPipeline:
         if "formal" in self.config.analysis_modes or "unified" in self.config.analysis_modes:
             logger.info("[JVM] Initialisation de la JVM pour analyse formelle...")
             try:
-                self.jvm_ready = initialize_jvm(lib_dir_path=LIBS_DIR)
+                # La JVM doit être initialisée en amont.
+                self.jvm_ready = is_jvm_started()
                 if self.jvm_ready:
                     logger.info("[JVM] JVM initialisee avec succes")
                     if self.conversation_logger and hasattr(self.conversation_logger, 'info'):

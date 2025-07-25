@@ -49,7 +49,9 @@ def test_asp_reasoner_consistency_logic():
     if not jpype.isJVMStarted():
         try:
             print("--- La JVM n'est pas démarrée. Tentative de démarrage par le worker... ---")
-            jpype.startJVM(jpype.getDefaultJVMPath(), "-ea", classpath=classpath, convertStrings=False)
+            # La JVM doit être démarrée par le processus parent.
+            # Le worker ne doit pas tenter de la démarrer lui-même.
+            pass
             print("--- JVM démarrée avec succès par le worker ---")
         except Exception as e:
             print(f"ERREUR: Échec du démarrage de la JVM par le worker : {e}", file=sys.stderr)

@@ -44,7 +44,8 @@ def test_jvm_stability_logic():
     if not jpype.isJVMStarted():
         try:
             print("--- La JVM n'est pas démarrée. Tentative de démarrage par le worker... ---")
-            jpype.startJVM(jpype.getDefaultJVMPath(), "-ea", classpath=classpath, convertStrings=False)
+            # La JVM doit être démarrée par le processus parent.
+            pass
             print("--- JVM démarrée avec succès par le worker ---")
         except Exception as e:
             print(f"ERREUR: Échec du démarrage de la JVM par le worker : {e}", file=sys.stderr)

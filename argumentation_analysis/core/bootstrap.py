@@ -274,25 +274,24 @@ def initialize_project_environment(env_path_str: str = None, root_path_str: str 
                  logger.info("JVM initialisée par un autre thread pendant l'attente du verrou.")
                  context.jvm_initialized = True
             else:
-                if initialize_jvm_func:
-                    logger.info("APPEL IMMINENT : Initialisation de la JVM via jvm_setup.initialize_jvm()...") # LOG AJOUTÉ
-                    logger.info("Initialisation de la JVM via jvm_setup.initialize_jvm()...")
-                    try:
-                        if initialize_jvm_func(): # Appelle initialize_jvm qui retourne un booléen
-                            context.jvm_initialized = True
-                            sys._jvm_initialized = True # Marquer globalement pour ce processus
-                            logger.info("JVM initialisée avec succès (confirmé par le retour de initialize_jvm).")
-                        else:
-                            context.jvm_initialized = False
-                            sys._jvm_initialized = False # Assurer la cohérence
-                            logger.error("Échec de l'initialisation de la JVM (initialize_jvm a retourné False).")
-                    except Exception as e: # Capturer les exceptions potentielles de initialize_jvm
-                        logger.error(f"Erreur lors de l'appel à initialize_jvm_func : {e}", exc_info=True)
+                # La logique d'initialisation de la JVM est maintenant déléguée au point d'entrée
+                # de l'application (pour la production) ou à la fixture de test (pour les tests).
+                # Le bootstrap ne doit pas tenter de démarrer la JVM lui-même.
+                # On se contente de vérifier si elle est démarrée.
+                if 'jpype' in sys.modules:
+                    import jpype
+                    if jpype.isJVMStarted():
+                        logger.info("Bootstrap: La JVM est déjà démarrée, comme prévu.")
+                        context.jvm_initialized = True
+                        sys._jvm_initialized = True
+                    else:
+                        logger.warning("Bootstrap: La JVM n'est pas démarrée. Les fonctionnalités Java ne seront pas disponibles.")
                         context.jvm_initialized = False
-                        sys._jvm_initialized = False # Assurer que c'est False en cas d'erreur
+                        sys._jvm_initialized = False
                 else:
-                    logger.error("La fonction initialize_jvm n'a pas pu être importée. Impossible d'initialiser la JVM.")
+                    logger.info("Bootstrap: JPype n'est pas importé, la JVM n'est pas pertinente.")
                     context.jvm_initialized = False
+                    sys._jvm_initialized = False
                     sys._jvm_initialized = False
         
     # --- Chargement des classes Java si la JVM a été initialisée ---

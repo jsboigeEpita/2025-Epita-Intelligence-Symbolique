@@ -69,7 +69,9 @@ async def setup_environment() -> Any:
     from argumentation_analysis.core.jvm_setup import initialize_jvm
     from argumentation_analysis.paths import LIBS_DIR
     logging.info("Initialisation de la JVM...")
-    jvm_ready_status = initialize_jvm(lib_dir_path=LIBS_DIR)
+    # L'initialisation de la JVM est maintenant gérée par le point d'entrée de l'application.
+    from argumentation_analysis.core.jvm_setup import is_jvm_started
+    jvm_ready_status = is_jvm_started()
     
     if not jvm_ready_status:
         logging.warning("⚠️ JVM n'a pas pu être initialisée. L'agent PropositionalLogicAgent ne fonctionnera pas.")

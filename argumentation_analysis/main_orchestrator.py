@@ -97,11 +97,12 @@ async def main():
     setup_logging()
 
     # 3. Initialisation de la JVM
-    from argumentation_analysis.core.jvm_setup import initialize_jvm
-    from argumentation_analysis.paths import LIBS_DIR
-    logging.info("Tentative d'initialisation de la JVM...")
-    # La fonction initialize_jvm gère maintenant aussi le téléchargement des JARs
-    jvm_ready_status = initialize_jvm()
+    # L'initialisation de la JVM est maintenant gérée par le point d'entrée de l'application
+    # (par exemple, un script de démarrage) ou par la fixture de test.
+    # Le main_orchestrator ne doit pas démarrer la JVM lui-même.
+    from argumentation_analysis.core.jvm_setup import is_jvm_started
+    if not is_jvm_started():
+        logging.warning("main_orchestrator: La JVM n'est pas démarrée. Les fonctionnalités Java ne seront pas disponibles.")
 
     if jvm_ready_status:
         logging.info("[OK] JVM initialisée avec succès ou déjà active.")
