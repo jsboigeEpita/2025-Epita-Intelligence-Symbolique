@@ -362,3 +362,7 @@ phase_c_fluidite_results_*.json
 
 # Ignorer les fichiers patch
 *.patch
+
+
+# Ignore auto-generated root-level reports
+reports/
