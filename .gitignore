@@ -1,4 +1,4 @@
-# Fichiers byte-compilés / optimisés / DLL
+﻿# Fichiers byte-compilés / optimisés / DLL
 __pycache__/
 *.py[cod]
 *$py.class
@@ -138,7 +138,6 @@ pr1_diff.txt
 {output_file_path}
 logs/
 !logs/experiment_traces/
-reports/
 
 output/
 # Logs spécifiques au projet
