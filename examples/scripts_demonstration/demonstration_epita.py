@@ -263,8 +263,21 @@ def charger_et_executer_module(nom_module: str, mode_interactif: bool = False, *
             target_func = module.run_demo_rapide
         
         if target_func:
-            # Passe les kwargs à la fonction cible
-            return target_func(**kwargs)
+            import inspect
+            sig = inspect.signature(target_func)
+            params = sig.parameters
+            
+            # Filtre les kwargs pour ne passer que ceux attendus par la fonction
+            filtered_kwargs = {}
+            if any(p.kind == p.VAR_KEYWORD for p in params.values()):
+                # Si la fonction accepte **kwargs, on passe tout
+                filtered_kwargs = kwargs
+            else:
+                for param_name in params:
+                    if param_name in kwargs:
+                        filtered_kwargs[param_name] = kwargs[param_name]
+                        
+            return target_func(**filtered_kwargs)
         else:
             print(f"{Colors.WARNING}Fonction de démonstration appropriée non trouvée dans {nom_module}{Colors.ENDC}")
             return False
