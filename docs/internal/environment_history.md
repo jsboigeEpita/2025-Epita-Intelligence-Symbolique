@@ -37,6 +37,16 @@ Face à l'instabilité chronique, une décision architecturale clé a été pris
     *   **Réparation de dépendances :** Implémentation de stratégies sophistiquées (allant jusqu'à l'installation de wheels pré-compilés) pour corriger les environnements corrompus.
     *   **CLI :** Exposition de ses fonctionnalités via une interface en ligne de commande pour la maintenance.
 
+## Acte IV : La Chasse au Conflit de Bibliothèques Natives (Fin Juillet 2025)
+
+*   **Problème :** Le crash persistant de la JVM (`Windows fatal exception: access violation`) lors de l'utilisation de `NumPy` et `PyTorch` a conduit à une nouvelle investigation.
+*   **Hypothèse :** Un conflit entre les bibliothèques de calcul natives, **MKL** (utilisée par PyTorch) et **OpenBLAS** (potentiellement utilisée par NumPy), était suspecté.
+*   **Tentative de Résolution :** Une tentative a été faite pour forcer l'ensemble de l'environnement `Conda` à utiliser MKL. Cela a impliqué :
+    *   L'ajout du canal `intel` à `environment.yml`.
+    *   L'ajout de dépendances explicites à `mkl`, `intel-openmp`, et `tbb`.
+*   **Résultat : Échec.** La modification de l'environnement n'a pas résolu le crash. L'analyse a montré que la résolution des dépendances de Conda ne garantissait pas l'installation d'une version de NumPy liée à MKL, ou que l'hypothèse initiale était incorrecte.
+*   **Conclusion :** Cette piste a été abandonnée. Les modifications de `environment.yml` ont été annulées pour revenir à un état connu et plus simple. Cet échec a renforcé l'idée que la manipulation des dépendances de bas niveau dans Conda est complexe et peu fiable pour résoudre ce type de problème.
+
 ## Conclusion et Leçons Apprises
 
 L'historique de ces fichiers raconte l'histoire classique d'un projet dont la complexité a dépassé les capacités de ses outils initiaux.

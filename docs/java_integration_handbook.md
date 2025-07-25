@@ -134,7 +134,54 @@ Cette section documente l'analyse et la résolution de l'erreur `Fatal Python er
 
     **Toutes ces tentatives ont échoué** avec une erreur `ParameterBindingException`, indiquant une incompatibilité fondamentale entre la manière dont PowerShell gère les commandes et la logique d'activation de Conda dans un script non interactif.
 
+*   **Tentative de forçage de l'encodage (Juillet 2025)**
+    *   **Hypothèse** : L'erreur `init_fs_encoding` pourrait être directement liée à un problème d'encodage dans la console PowerShell. Forcer la sortie en UTF-8 avant l'appel à `conda run` pourrait résoudre le problème.
+    *   **Modification** : Ajout de `[System.Console]::OutputEncoding = [System.Text.Encoding]::UTF8` au début du script `activate_project_env.ps1`.
+    *   **Résultat** : **Échec**. L'erreur a changé pour "Commande ou exécutable non trouvé", indiquant que `pytest` n'était plus dans le PATH de l'environnement créé par `conda run`.
+    *   **Conclusion** : Cette tentative a confirmé que le problème n'est pas un simple problème d'encodage, mais bien un problème plus profond lié à la manière dont `conda run` construit l'environnement d'exécution, notamment la propagation du `PATH`. La modification a été annulée.
+
 *   **Conclusion et Statut Actuel**
     L'échec de cette nouvelle tentative confirme que le passage à `conda activate` dans le contexte actuel du script est plus complexe qu'anticipé. Le problème `init_fs_encoding` reste donc **non résolu**, et l'utilisation de `conda run` demeure un compromis nécessaire.
 
     Toute solution future nécessitera une investigation plus approfondie sur l'interaction entre PowerShell et les fonctions de hook de Conda, ou une refonte de la stratégie de gestion des environnements.
+
+### Phase 8 : Résolution de `init_fs_encoding` avec une Nouvelle Architecture d'Exécution (Fin Juillet 2025)
+
+*   **Problème** : L'erreur `Fatal Python error: init_fs_encoding` persistait, bloquant l'exécution des tests sous Windows via `conda run` depuis PowerShell. Toutes les tentatives de correction directe (activation de l'environnement, forçage de l'encodage) avaient échoué.
+
+*   **Solution : Nouvelle Architecture d'Exécution** : Une refonte complète de la stratégie d'exécution a été implémentée, comme décrit dans `docs/internal/new_test_architecture.md`.
+    1.  **Création de `scripts/test_executor.py`** : Un nouveau script Python a été créé pour orchestrer l'exécution. Il est responsable de :
+        *   Déterminer l'environnement Conda cible (`e2e_test_env`).
+        *   Récupérer le chemin racine (préfixe) de cet environnement.
+        *   Construire les chemins absolus vers les exécutables `python.exe` et `pytest.exe` de l'environnement.
+        *   Récupérer les variables d'environnement complètes de l'environnement cible.
+        *   Lancer `pytest` en utilisant `subprocess.run` avec l'environnement et les chemins corrects.
+    2.  **Simplification de `activate_project_env.ps1`** : Le script PowerShell a été drastiquement simplifié. Sa seule responsabilité est maintenant d'appeler `python scripts/test_executor.py` en lui passant la commande de test à exécuter.
+
+*   **Résultat** : **Succès**. Cette nouvelle architecture a permis de contourner complètement les problèmes liés à `conda run`.
+    *   L'erreur `init_fs_encoding` a été **totalement éliminée**.
+    *   La suite de tests `jvm_test` se lance désormais correctement, bien que le crash `Windows fatal exception: access violation` (un problème distinct lié au cycle de vie de la JVM) persiste et doive être traité séparément.
+    *   Cette solution est robuste, isole la complexité de la gestion de l'environnement et ne modifie aucun code de production.
+### Phase 9 : Tentative de Résolution du Conflit de Bibliothèques Natives (MKL vs. OpenBLAS) - Échec
+
+*   **Problème** : Un crash `Windows fatal exception: access violation` persiste lors de l'utilisation conjointe de PyTorch et NumPy, suspecté d'être un conflit entre les bibliothèques natives MKL et OpenBLAS.
+*   **Hypothèse** : Le conflit proviendrait du chargement simultané de deux backends de calcul linéaire différents et incompatibles. PyTorch (via Conda) est lié à la bibliothèque **MKL (Math Kernel Library)** d'Intel, tandis que NumPy pourrait être lié à **OpenBLAS**. Le chargement des deux dans le même processus créerait un conflit de symboles menant au crash.
+*   **Tentative de Résolution (Échouée)** :
+    1.  **Stratégie** : Forcer toutes les bibliothèques de calcul, en particulier NumPy, à utiliser le même backend que PyTorch (MKL).
+    2.  **Modification de `environment.yml`** : Plusieurs modifications ont été apportées pour tenter de forcer l'installation de versions MKL des paquets :
+        ```yaml
+        # Tentative 1: Ajout du canal Intel
+        channels:
+          - intel
+          - conda-forge
+          # ...
+
+        # Tentative 2: Ajout explicite des dépendances MKL
+        dependencies:
+          - intel-openmp
+          - mkl
+          - tbb
+          - numpy=1.25.0 # En espérant que le canal Intel force la version MKL
+        ```
+    3.  **Résultat** : **Échec**. Malgré ces modifications et la reconstruction de l'environnement Conda, le crash de la JVM a persisté. L'analyse a montré que `conda` ne parvenait pas à garantir l'installation de la version MKL de NumPy, ou que l'hypothèse de départ était incorrecte.
+*   **Conclusion** : La tentative de forcer l'utilisation de MKL pour NumPy n'a pas résolu le crash. Le problème est plus complexe et pourrait ne pas être lié à un simple conflit MKL/OpenBLAS. Les modifications apportées à `environment.yml` ont été annulées pour revenir à une configuration stable connue. Cette investigation infructueuse est documentée ici pour éviter de futures tentatives similaires sans nouvelles informations.
