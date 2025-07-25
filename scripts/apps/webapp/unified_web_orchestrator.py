@@ -19,6 +19,11 @@ Date: 07/06/2025
 
 import os
 import sys
+
+# --- Pré-chargement des bibliothèques lourdes pour éviter les conflits ---
+# Ce module DOIT être le premier importé.
+import argumentation_analysis.core.pre_bootstrap
+
 import time
 import json
 import yaml

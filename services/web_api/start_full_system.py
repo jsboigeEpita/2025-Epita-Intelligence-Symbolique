@@ -18,6 +18,11 @@ Date: 09/06/2025
 """
 
 import sys
+
+# --- Pré-chargement des bibliothèques lourdes pour éviter les conflits ---
+# Ce module DOIT être le premier importé.
+import argumentation_analysis.core.pre_bootstrap
+
 import asyncio
 import argparse
 from pathlib import Path

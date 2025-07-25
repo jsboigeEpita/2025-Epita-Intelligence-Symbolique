@@ -32,6 +32,10 @@ Prérequis:
 * Le fichier `extract_sources.json.gz.enc` (s'il existe déjà) dans `data/`.
 """
 
+# --- Pré-chargement des bibliothèques lourdes pour éviter les conflits ---
+# Ce module DOIT être le premier importé.
+import argumentation_analysis.core.pre_bootstrap
+
 import os
 import sys
 import logging
