@@ -205,10 +205,14 @@ def get_dung_analysis_service() -> DungAnalysisService:
     if _global_dung_service is None:
         logging.info("[API] Initialisation du DungAnalysisService...")
         if not jvm_setup.is_jvm_started():
-            if not jvm_setup.initialize_jvm():
-                # Lever une exception si l'initialisation échoue,
-                # pour que l'erreur soit claire dans les logs.
-                raise RuntimeError("Échec critique de l'initialisation de la JVM pour DungAnalysisService.")
+            # La JVM doit être initialisée par le point d'entrée de l'application,
+            # pas par une dépendance. Si nous arrivons ici et que la JVM n'est pas
+            # démarrée, c'est une erreur de configuration.
+            raise RuntimeError(
+                "La JVM n'est pas démarrée. "
+                "Le service d'analyse Dung ne peut pas fonctionner. "
+                "Assurez-vous que le point d'entrée de l'application (ex: main) a correctement initialisé la JVM."
+            )
 
         _global_dung_service = DungAnalysisService()
         logging.info("[API] DungAnalysisService initialisé avec succès.")
