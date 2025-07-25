@@ -1,4 +1,3 @@
-import argumentation_analysis.core.environment
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -27,11 +26,15 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, asdict
 import traceback
+import argparse
 
-# Configuration du projet
-project_root = Path(__file__).resolve().parent.parent.parent
+# Configuration du projet pour permettre les imports relatifs depuis la racine
+project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
 os.chdir(project_root)
+
+# Importation des modules post-configuration du path
+from argumentation_analysis.core.environment import ensure_env
 
 # Import des services réels (non mockés)
 try:
@@ -117,7 +120,7 @@ class ProfesseurVirtuelLLM:
                 self.llm_service = create_llm_service(
                     service_id="validation_point3_professeur",
                     model_id="gpt-4o-mini",
-                    force_mock=False  # IMPORTANT: vrais LLMs requis
+                    force_mock=self.config.use_mock_llm
                 )
                 self.logger.info(f"✅ LLM réel initialisé: {self.llm_service.ai_model_id}")
             else:
@@ -339,9 +342,13 @@ class ProfesseurVirtuelLLM:
 class OrchestrateurPedagogiqueEpita:
     """Orchestrateur pour sessions d'apprentissage EPITA avec paramètres dynamiques"""
     
-    def __init__(self):
+    def __init__(self, mock_mode: bool = False):
         # Configuration avec vrais LLMs (MockLevel.NONE)
-        self.config = UnifiedConfig(mock_level=MockLevel.NONE, require_real_gpt=True)
+        if mock_mode:
+            self.config = UnifiedConfig(mock_level=MockLevel.FULL)
+        else:
+            self.config = UnifiedConfig()
+
         self.professeur = ProfesseurVirtuelLLM(self.config)
         self.session_active = None
         self.logger = logging.getLogger(__name__)
@@ -676,8 +683,10 @@ def sauvegarder_validation_point3(session: SessionApprentissageEpita, log_file: 
         "log_file": log_file
     }
 
-async def main():
+async def main(args):
     """Fonction principale - Validation Point 3/5"""
+    # Activation et chargement de l'environnement standard du projet
+    ensure_env()
     print("[GRADUATE] VALIDATION POINT 3/5 : Demo EPITA avec parametres dynamiques et vrais LLMs")
     print("=" * 90)
     
@@ -688,8 +697,8 @@ async def main():
     try:
         # Étape 1: Vérification disponibilité LLMs réels
         logger.info("[SEARCH] ETAPE 1: Verification LLMs authentiques")
-        if not LLM_AVAILABLE:
-            raise RuntimeError("Services LLM non disponibles - Validation Point 3 impossible")
+        if not LLM_AVAILABLE and not args.mock:
+            raise RuntimeError("Services LLM non disponibles - Validation Point 3 impossible sans --mock")
         logger.info("[CHECK] Services LLM disponibles")
         
         # Étape 2: Configuration paramètres dynamiques
@@ -706,7 +715,7 @@ async def main():
         
         # Étape 3: Initialisation orchestrateur avec vrais LLMs
         logger.info("[TARGET] ETAPE 3: Initialisation orchestrateur EPITA")
-        orchestrateur = OrchestrateurPedagogiqueEpita()
+        orchestrateur = OrchestrateurPedagogiqueEpita(mock_mode=args.mock)
         logger.info("[CHECK] Orchestrateur initialise avec LLMs authentiques")
         
         # Étape 4: Création session avec paramètres dynamiques
@@ -770,5 +779,13 @@ async def main():
         raise
 
 if __name__ == "__main__":
-    rapport_final = asyncio.run(main())
+    parser = argparse.ArgumentParser(description="Validation Point 3 - Démo EPITA.")
+    parser.add_argument("--mock", action="store_true", help="Activer le mode mock pour utiliser des services simulés.")
+    args = parser.parse_args()
+
+    if args.mock:
+        print("🚀 Démarrage en mode MOCK.")
+        os.environ['USE_MOCK_CONFIG'] = '1'
+
+    rapport_final = asyncio.run(main(args))
     print(f"\n[TARGET] Rapport final: {rapport_final}")
