@@ -1,0 +1,21 @@
+{
+  "input_variables": [
+    { "name": "input", "description": "The user's text to analyze.", "required": true }
+  ],
+  "optimization_axes": [
+    {
+      "name": "rag_depth",
+      "description": "Controls the depth of RAG information injected.",
+      "type": "string",
+      "allowed_values": ["summary", "top_3_chunks"],
+      "default": "top_3_chunks"
+    },
+    {
+      "name": "example_count",
+      "description": "Defines the number of few-shot examples to include.",
+      "type": "integer",
+      "range": [0, 3],
+      "default": 1
+    }
+  ]
+}

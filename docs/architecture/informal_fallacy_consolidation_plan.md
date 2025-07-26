@@ -992,3 +992,167 @@ Ces répertoires semblent correspondre à des projets ou des preuves de concept 
 *   **Plan d'action** : 
     *   `migration_output`: Archiver son contenu si nécessaire pour l'historique, puis supprimer le répertoire.
     *   `templates`: Analyser le contenu. S'il s'agit de templates de prompts, ils doivent être migrés dans la "forêt de prompts" des agents. S'il s'agit d'autre chose (templates HTML, etc.), ils doivent être déplacés avec le composant qui les utilise (ex: `clients/web_interface/templates/`). Le répertoire racine doit être supprimé.
+
+---
+
+# Architecture des Gabarits de Prompts Dynamiques et Optimisables
+
+Cette section détaille l'architecture pour la gestion des gabarits de prompts (`templates`). Elle répond au besoin critique de s'éloigner des prompts monolithiques pour adopter un système flexible, versionnable, et surtout, **optimisable sur plusieurs dimensions**. Cette approche s'inspire des concepts de Semantic Kernel tout en les étendant pour permettre des tests A/B systématiques sur la structure même des prompts.
+
+## 1. Principes Directeurs
+
+1.  **Gabarit = Répertoire** : Un "gabarit" n'est pas un fichier mais un répertoire atomique et découvrable, contenant toute sa configuration.
+2.  **Variabilité Explicite** : Les dimensions de variabilité (ex: le nombre d'exemples à injecter, la profondeur des résultats RAG) sont des paramètres de premier ordre, définis dans la configuration du gabarit.
+3.  **Rendu Centralisé** : Un service unique, le `PromptManager`, est responsable de charger les gabarits et de les "rendre" en prompts concrets prêts à être envoyés à un LLM.
+4.  **Optimisation Intégrée** : La structure doit nativement supporter des boucles d'optimisation où un méta-agent peut tester différentes combinaisons de paramètres sur les axes de variabilité.
+
+## 2. Structure d'un Gabarit de Prompt
+
+Chaque gabarit est un répertoire autonome.
+
+*   `core/prompt_templates/&lt;nom_du_gabarit&gt;/`
+    *   **`skprompt.txt`**: Le texte brut du prompt. Il utilise une syntaxe de templating (ex: Handlebars) pour les placeholders simples (`{{input}}`) et une syntaxe spéciale pour les blocs conditionnels liés aux axes de variabilité.
+    *   **`config.json`**: La configuration standard de Semantic Kernel pour les paramètres du LLM (ex: `temperature`, `top_p`, `max_tokens`).
+    *   **`parameters.json`**: **Nouveauté clé**. Ce fichier déclare les variables dynamiques du prompt, y compris les axes d'optimisation.
+
+**Exemple de `parameters.json` :**
+```json
+{
+  "input_variables": [
+    { "name": "input", "description": "L'entrée utilisateur principale.", "required": true },
+    { "name": "history", "description": "L'historique de la conversation.", "required": false }
+  ],
+  "optimization_axes": [
+    {
+      "name": "rag_depth",
+      "description": "Contrôle la profondeur des informations RAG injectées.",
+      "type": "string",
+      "allowed_values": ["summary", "top_3_chunks", "full_text"],
+      "default": "top_3_chunks"
+    },
+    {
+      "name": "example_count",
+      "description": "Définit le nombre d'exemples 'few-shot' à inclure.",
+      "type": "integer",
+      "range": [0, 5],
+      "default": 3
+    }
+  ]
+}
+```
+
+## 3. Syntaxe Étendue dans `skprompt.txt`
+
+Pour gérer la variabilité, nous étendons la syntaxe du prompt.
+
+```handlebars
+Ceci est le début du prompt. Voici l'entrée utilisateur :
+{{input}}
+
+{{#if history}}
+Voici l'historique de la conversation :
+{{history}}
+{{/if}}
+
+{#optimize_axis name="example_count" min=1}
+Voici quelques exemples :
+{#loop variable="examples" count_from="example_count"}
+- Exemple {{index}}: {{item.text}}
+{/loop}
+{/optimize_axis}
+
+{#optimize_axis name="rag_depth" value="summary"}
+Voici un résumé du document de contexte :
+{{rag_results.summary}}
+{/optimize_axis}
+
+{#optimize_axis name="rag_depth" value="top_3_chunks"}
+Voici les 3 extraits les plus pertinents du document :
+{{#loop variable="rag_results.chunks" count=3}}
+- Extrait {{index}}: {{item.chunk_text}}
+{/loop}
+{/optimize_axis}
+```
+
+## 4. Composants Centraux
+
+### 4.1. `PromptManager`
+
+*   **Rôle** : Service central qui agit comme une factory et un moteur de rendu.
+*   **Fonctionnalités** :
+    *   `discover_templates()`: Scanne le répertoire `core/prompt_templates/` pour charger en mémoire la liste des gabarits disponibles et leur configuration (`parameters.json`).
+    *   `render_prompt(template_name, context)`: Point d'entrée principal.
+        1.  Reçoit le nom du gabarit et un `context` (un dictionnaire Python contenant les valeurs pour `input_variables` et `optimization_axes`).
+        2.  Valide que toutes les variables requises sont présentes.
+        3.  Appelle le `PromptRenderer` avec le gabarit et le contexte pour générer le prompt final.
+        4.  Retourne une structure contenant le prompt rendu et la configuration LLM associée.
+
+### 4.2. `PromptRenderer`
+
+*   **Rôle** : Le moteur de template intelligent.
+*   **Logique** :
+    1.  Prend le texte du `skprompt.txt` et le `context`.
+    2.  Remplace d'abord les placeholders simples (ex: `{{input}}`).
+    3.  Traite ensuite les blocs `#optimize_axis` : il n'inclut dans le rendu final que les blocs dont les conditions (`name`, `value`, `min`, etc.) correspondent aux valeurs fournies dans le `context`.
+    4.  Gère la logique de boucle (`#loop`) en fonction des paramètres du contexte (ex: `example_count`).
+
+## 5. Intégration dans un Workflow d'Optimisation
+
+Cette architecture permet à un agent d'optimisation de tester systématiquement l'impact des variations de prompts.
+
+**Exemple de boucle d'optimisation :**
+```python
+# Pseudo-code pour un test de performance
+prompt_manager = PromptManager()
+test_cases = load_test_cases()
+results = []
+
+# Itérer sur les valeurs possibles de l'axe d'optimisation
+for depth in ["summary", "top_3_chunks"]:
+    for count in range(0, 4):
+        context = {
+            "template_name": "fallacy_analysis_v4",
+            "optimization_params": {
+                "rag_depth": depth,
+                "example_count": count
+            }
+        }
+        
+        total_score = 0
+        for case in test_cases:
+            # Le contexte inclura aussi les variables d'input
+            full_context = {**context, **case.inputs}
+            rendered_prompt = prompt_manager.render_prompt(full_context)
+            
+            # Exécuter le prompt et évaluer le résultat
+            llm_response = await llm.invoke(rendered_prompt)
+            score = evaluate_response(llm_response, case.expected_output)
+            total_score += score
+            
+        results.append({"depth": depth, "count": count, "score": total_score / len(test_cases)})
+
+# Analyser les résultats pour trouver la meilleure combinaison
+best_config = max(results, key=lambda x: x['score'])
+print(f"Meilleure configuration trouvée : {best_config}")
+```
+
+---
+
+# Annexes
+
+Cette section contient des notes prospectives et des idées qui, bien qu'importantes, sont hors du périmètre immédiat de l'architecture de consolidation principale. Elles serviront de base pour de futures orchestrations.
+
+## A. Intégration des Projets de Recherche et Étudiants
+
+Le système a vocation à intégrer les résultats de projets de recherche, notamment ceux menés par des étudiants. L'architecture de plugins est conçue pour faciliter cela :
+*   Un projet de recherche peut être encapsulé en tant que `WorkflowPlugin` expérimental.
+*   Le `Guichet de Service` peut exposer ce workflow via un mode d'analyse spécifique (ex: `"mode": "experimental_analysis_v1"`), permettant de le tester en isolation sans impacter les workflows de production.
+*   Cette approche permet de comparer les performances du nouveau workflow avec les workflows existants avant une potentielle intégration complète.
+
+## B. Taxonomie des "Qualités Argumentatives"
+
+En complément de la taxonomie des **sophismes** (les aspects négatifs d'un argument), une future évolution majeure sera d'intégrer une taxonomie des **qualités argumentatives** (les aspects positifs).
+
+*   **Structure Miroir** : Cette taxonomie serait représentée par un fichier `argumentative_qualities.csv` avec une structure identique à`fallacies.csv`.
+*   **Abstraction** : L'architecture actuelle du `TaxonomyExplorerPlugin` et du `TaxonomyManager` devrait être conçue de manière suffisamment abstraite pour gérer les deux taxonomies. L'idéal serait d'avoir un `TaxonomyManager("fallacies")` et un `TaxonomyManager("qualities")` partageant la même classe de base.
+*   **Impact sur les Agents** : Les agents pourraient alors être dotés d'une nouvelle capacité : non seulement identifier les faiblesses d'un argument, mais aussi reconnaître et louer ses forces, conduisant à des analyses plus nuancées et constructives.
