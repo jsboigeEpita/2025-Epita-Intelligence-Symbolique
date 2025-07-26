@@ -62,6 +62,7 @@ class ServiceManagerSettings(BaseSettings):
     results_dir: Path = Path("_temp/service_manager_results")
     data_dir: Path = Path("data")
     default_llm_service_id: str = "openai"
+    default_model_id: str = "gpt-4o-mini"
     hierarchical_channel_id: str = "hierarchical_main"
     model_config = SettingsConfigDict(env_prefix='SERVICE_MANAGER_')
 

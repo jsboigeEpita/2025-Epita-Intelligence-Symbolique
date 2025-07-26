@@ -229,6 +229,31 @@ def jvm_session(request):
         yield
 
 @pytest.fixture(scope="function", autouse=True)
+def jvm_fixture(request):
+    """
+    Fixture de session qui gère le cycle de vie complet de la JVM pour toute la session de test.
+    Elle garantit que la JVM est démarrée une seule fois et arrêtée proprement à la fin.
+    """
+    # Ne démarre la JVM que si au moins un test marqué 'jvm_test' est sélectionné
+    if any('jvm_test' in item.keywords for item in request.session.items):
+        import threading
+        thread_id = threading.get_ident()
+        logger.info(f"--- [JVM SESSION - THREAD {thread_id}] Initializing JVM for the test session... ---")
+        if is_jvm_started():
+            logger.warning(f"--- [JVM SESSION - THREAD {thread_id}] JVM was already started. This is unexpected. ---")
+        initialize_jvm()
+        
+        yield
+        
+        thread_id = threading.get_ident()
+        logger.info(f"--- [JVM SESSION - THREAD {thread_id}] Shutting down JVM at the end of the test session... ---")
+        shutdown_jvm()
+        logger.info("--- [JVM SESSION] JVM shutdown complete. ---")
+    else:
+        logger.info("--- [JVM SESSION] No jvm_test markers found. Skipping JVM lifecycle management. ---")
+        yield
+
+@pytest.fixture(scope="function", autouse=True)
 def jvm_fixture(request, jvm_session):
     """
     Fixture qui active la fixture de session `jvm_session` pour les tests marqués 'jvm_test'.
@@ -422,7 +447,7 @@ def page_with_console_logs(page: "Page"):
 @pytest.fixture(scope="session")
 def e2e_servers(request, jvm_session):
     """
-    Fixture de session pour démarrer et arrêter les serveurs backend et frontend
+    Fixture de session pour démarrer etarrêter les serveurs backend et frontend
     nécessaires pour les tests E2E.
     Dépend de `jvm_session` pour garantir que la JVM est prête.
     """
@@ -446,7 +471,7 @@ def e2e_servers(request, jvm_session):
         if sys.platform != "win32":
             logger.warning(f"Port cleanup function is only implemented for Windows. Skipping for port {port}.")
             return
-        
+
         try:
             logger.info(f"Checking if port {port} is in use...")
             # Exécute netstat pour trouver le PID utilisant le port
@@ -456,7 +481,7 @@ def e2e_servers(request, jvm_session):
                 text=True,
                 check=True
             )
-            
+
             # Chercher la ligne correspondant au port
             pid_found = None
             for line in result.stdout.splitlines():
@@ -467,7 +492,7 @@ def e2e_servers(request, jvm_session):
                         pid_found = match.group(1)
                         logger.warning(f"Port {port} is currently being used by PID {pid_found}.")
                         break
-            
+
             if pid_found:
                 logger.info(f"Attempting to terminate process with PID {pid_found}...")
                 kill_result = subprocess.run(
@@ -480,7 +505,7 @@ def e2e_servers(request, jvm_session):
                 else:
                     # Il se peut que le processus se soit terminé entre-temps
                     logger.warning(f"Could not terminate process {pid_found}. It might have already finished. Output: {kill_result.stdout} {kill_result.stderr}")
-                
+
                 time.sleep(2) # Laisser le temps au port de se libérer
             else:
                 logger.info(f"Port {port} is free.")
@@ -494,18 +519,18 @@ def e2e_servers(request, jvm_session):
     processes = []
     backend_url_opt = request.config.getoption("--backend-url")
     frontend_url_opt = request.config.getoption("--frontend-url")
-    
+
     project_root = Path(__file__).parent.parent
-    
+
     # Création d'un répertoire pour les logs des serveurs E2E
     log_dir = project_root / "_e2e_logs"
     log_dir.mkdir(exist_ok=True)
     logger.info(f"E2E server logs will be stored in: {log_dir.resolve()}")
-    
+
     # Ouverture des fichiers de log
     backend_log_file = open(log_dir / "backend.log", "w", encoding="utf-8")
     frontend_log_file = open(log_dir / "frontend.log", "w", encoding="utf-8")
-    
+
     # --- Helper Functions (tirées de test_react_interface_complete.py) ---
     def wait_for_service(url, name, timeout=60):
         logger.info(f"Waiting for {name} on {url}...")
@@ -529,7 +554,7 @@ def e2e_servers(request, jvm_session):
             sys.executable,
             str(project_root / "scripts" / "run_e2e_backend.py")
         ]
-        
+
         logger.info(f"Running backend command: {' '.join(backend_cmd)}")
         process = subprocess.Popen(backend_cmd, cwd=str(project_root), stdout=backend_log_file, stderr=subprocess.STDOUT)
         if wait_for_service(f"{backend_url_opt}/api/health", "Backend API"):
@@ -542,7 +567,7 @@ def e2e_servers(request, jvm_session):
 
     def start_frontend():
         logger.info("--- Starting E2E Frontend Server (Forced) ---")
-            
+
         react_dir = project_root / "services" / "web_api" / "interface-web-argumentative"
         if not (react_dir / "node_modules").exists():
             logger.info("Installing npm dependencies for frontend...")
@@ -566,14 +591,14 @@ def e2e_servers(request, jvm_session):
 
     # --- Démarrage ---
     logger.info("=== E2E Servers Fixture Setup ===")
-    
+
     # Nettoyage préventif des ports
     _kill_process_using_port(5003) # Backend
     _kill_process_using_port(3000) # Frontend
-    
+
     backend_process = start_backend()
     frontend_process = start_frontend()
-    
+
     if backend_process:
         processes.append(("Backend", backend_process))
     if frontend_process:
@@ -583,11 +608,11 @@ def e2e_servers(request, jvm_session):
 
     # --- Nettoyage ---
     logger.info("=== E2E Servers Fixture Teardown ===")
-    
+
     # Fermeture des fichiers de log
     backend_log_file.close()
     frontend_log_file.close()
-    
+
     for name, process in reversed(processes):
         if process:
             logger.info(f"Stopping {name} server (PID: {process.pid})...")

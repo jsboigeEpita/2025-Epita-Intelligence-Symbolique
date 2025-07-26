@@ -7,10 +7,11 @@ d'analyse en fonction des paramètres fournis.
 import asyncio
 import semantic_kernel as sk
 from semantic_kernel.connectors.ai.open_ai import OpenAITextCompletion
-from argumentation_analysis.agents.agent_factory import AgentFactory
+from argumentation_analysis.agents.factory import AgentFactory
 from argumentation_analysis.core.llm_service import create_llm_service
 from modules.demo_utils import DemoLogger, pause_interactive, confirmer_action
 from argumentation_analysis.config.settings import AppSettings
+from argumentation_analysis.agents import AgentType
 
 # L'initialisation de l'environnement est maintenant gérée par l'import de `environment`
 # et la configuration des services LLM est centralisée dans `create_llm_service`.
@@ -41,7 +42,14 @@ async def _run_analysis(logger: DemoLogger, agent_type: str, taxonomy_path: str,
         kernel, agent_factory, _ = _create_kernel_and_factory()
         
         logger.info(f"Création de l'agent via la factory avec le type : '{agent_type}'")
-        agent = agent_factory.create_agent(agent_type)
+        # Correction: Convertir la chaîne en AgentType Enum
+        try:
+            agent_type_enum = AgentType[agent_type.upper()]
+        except KeyError:
+            logger.error(f"Type d'agent invalide : '{agent_type}'. Utilisation de INFORMAL_FALLACY par défaut.")
+            agent_type_enum = AgentType.INFORMAL_FALLACY
+            
+        agent = agent_factory.create_agent(agent_type_enum)
 
         logger.info(f"Configuration de l'agent avec la taxonomie : '{taxonomy_path}'")
         await agent.configure(taxonomy_path=taxonomy_path)

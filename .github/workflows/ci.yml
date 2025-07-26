@@ -19,6 +19,9 @@ on:
 jobs:
   build:
     runs-on: windows-latest  # Les tests dépendent de PowerShell
+    env:
+      # Cette variable sera 'true' si le secret est défini, sinon 'false'
+      API_KEYS_CONFIGURED: ${{ secrets.OPENAI_API_KEY != '' }}
 
     steps:
     - name: Checkout du code
@@ -39,4 +42,8 @@ jobs:
         pip install -r requirements.txt
 
     - name: Exécution des tests unitaires
+      # Ne s'exécute que si les secrets sont configurés
+      if: env.API_KEYS_CONFIGURED == 'true'
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: pytest

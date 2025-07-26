@@ -1,0 +1,1 @@
+cmd /c "conda run -n projet-is-new --no-capture-output python project_core/test_runner.py --type all > test_failures.log 2>&1"

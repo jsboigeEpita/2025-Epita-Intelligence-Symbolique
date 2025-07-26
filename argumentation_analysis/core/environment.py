@@ -31,25 +31,46 @@ from pathlib import Path
 # Note: L'import de Logger et EnvironmentManager sera fait à l'intérieur de ensure_env
 # pour éviter les problèmes d'imports circulaires potentiels si auto_env est importé tôt.
 
-def ensure_env(env_name: str = None, silent: bool = False) -> bool:
+def ensure_env(env_name: str = None, silent: bool = False, load_dotenv: bool = True) -> bool:
     """
-    Auto-vérificateur d'environnement et coupe-circuit.
-    Cette fonction ne tente PLUS d'activer l'environnement. Elle VERIFIE que
-    l'environnement correct est déjà activé et lève une RuntimeError si ce n'est pas le cas.
-    C'est un garde-fou crucial.
+    Auto-vérificateur ET initialisateur d'environnement.
+    Cette fonction garantit que l'environnement est correct et que les variables
+    d'environnement (depuis .env) sont chargées.
+    
+    1. VÉRIFIE que l'environnement Conda correct est actif (ne tente pas de l'activer).
+    2. CHARGE les variables d'environnement depuis le fichier .env à la racine du projet.
     
     Args:
-        env_name: Nom de l'environnement conda attendu. Si None, lu depuis la config.
-        silent: Si True, réduit la verbosité en cas de succès.
+        env_name (str, optional): Nom de l'environnement Conda attendu. Defaults to None.
+        silent (bool, optional): Réduit la verbosité. Defaults to False.
+        load_dotenv (bool, optional): Si True, charge le fichier .env. Defaults to True.
     
     Returns:
-        True si l'environnement est correct.
-    
+        bool: True si tout est correct.
+        
     Raises:
-        RuntimeError: Si l'environnement n'est pas celui attendu.
+        RuntimeError: Si l'environnement Conda n'est pas celui attendu.
     """
-    # En mode test E2E, on ne fait pas cette vérification pour éviter les problèmes
-    # de propagation de l'environnement dans les sous-processus.
+    # --- Étape 1: Chargement des variables d'environnement (si activé) ---
+    if load_dotenv:
+        try:
+            # Import local pour éviter les dépendances circulaires
+            from project_core.managers.environment_manager import EnvironmentManager
+            env_manager = EnvironmentManager()
+            if env_manager.dotenv_loaded:
+                 if not silent:
+                    print(f"[auto_env] OK: Fichier .env chargé depuis '{env_manager.dotenv_path}'.")
+            else:
+                if not silent:
+                    print(f"[auto_env] INFO: Aucun fichier .env trouvé ou déjà chargé.")
+        except ImportError as e:
+            if not silent:
+                print(f"[auto_env] WARNING: EnvironmentManager non trouvé, impossible de charger .env. Erreur: {e}")
+        except Exception as e:
+            if not silent:
+                print(f"[auto_env] WARNING: Erreur inattendue lors du chargement de .env. Erreur: {e}")
+
+    # --- Étape 2: Vérification de l'environnement Conda ---
     if os.environ.get('E2E_TESTING_MODE') == '1':
         if not silent:
             print("[auto_env] WARNING: Vérification de l'environnement Conda désactivée pour les tests E2E.")
@@ -113,7 +134,9 @@ def ensure_env(env_name: str = None, silent: bool = False) -> bool:
         # Pour l'affichage, on utilise le nom extrait du chemin
         # Le nom affiché doit être celui qui a été validé (env_name), et non celui
         # déduit du chemin sys.prefix qui peut être ambigu dans certains contextes.
-        print(f"[auto_env] OK: L'environnement '{env_name}' est correctement activé.")
+        # Message de succès consolidé
+        # Le message de chargement de .env est déjà affiché ci-dessus.
+        print(f"[auto_env] OK: Environnement Conda '{env_name}' correctement activé.")
 
     return True
 

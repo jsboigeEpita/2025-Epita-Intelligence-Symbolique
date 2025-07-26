@@ -63,7 +63,7 @@ Ce projet est riche et comporte de nombreuses facettes. Pour vous aider à vous 
 | **1. Démo Pédagogique EPITA** | Étudiants (première découverte)             | Un menu interactif et guidé pour explorer les concepts clés et les fonctionnalités du projet de manière ludique. | [`examples/scripts_demonstration/README.md`](examples/scripts_demonstration/README.md) |
 | **2. Démos de Raisonnement Logique** | Passionnés d'IA, logique, multi-agents    | Lancez des scénarios d'investigation complexes (Cluedo, Einstein) avec le système d'agents logiques unifié. | [`examples/Sherlock_Watson/README.md`](examples/Sherlock_Watson/README.md) |
 | **3. Analyse Rhétorique**   | Développeurs IA, linguistes computationnels | Accédez au cœur du système d'analyse d'arguments, de détection de sophismes et de raisonnement formel.        | **[Cartographie du Système](docs/mapping/rhetorical_analysis_map.md)** <br> **[Rapports de Test](docs/reports/rhetorical_analysis/)** <br> **[README Technique](argumentation_analysis/README.md)** |
-| **4. Application Web**      | Développeurs Web, testeurs UI               | Démarrez et interagir avec l'écosystème de microservices web (API, frontend, outils JTMS).                   | [`docs/mapping/web_apps_map.md`](docs/mapping/web_apps_map.md:0) |
+| **4. Application Web**      | Développeurs Web, testeurs UI               | **Guide de Démarrage :** Lancer et interagir avec l'écosystème complet des applications et services web.     | [`docs/entry_points/ep2_web_applications.md`](docs/entry_points/ep2_web_applications.md) |
 | **5. Suite de Tests**       | Développeurs, Assurance Qualité             | Exécutez les tests unitaires, d'intégration et end-to-end (Pytest & Playwright) pour valider le projet.        | [`tests/README.md`](tests/README.md:0)                                                   |
 
 ### **Accès et Commandes Principales par Point d'Entrée :**
@@ -103,7 +103,7 @@ Démarrez l'ensemble des microservices (API backend, frontend React, outils JTMS
     # Depuis la racine du projet (PowerShell)
     ./start_webapp.ps1
     ```
-*   Pour les détails : **[Consultez la cartographie de l'application web](docs/mapping/web_apps_map.md)**
+*   Pour les détails : **[Consultez le Guide de Démarrage des Applications Web](docs/entry_points/ep2_web_applications.md)**
 
 #### **5. 🧪 Suite de Tests Complète**
 Validez l'intégrité et le bon fonctionnement du projet avec plus de 400 tests.

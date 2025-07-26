@@ -2,6 +2,8 @@
 
 Ce document détaille la stratégie et les étapes pour corriger la suite de tests E2E et assurer une isolation robuste des tests dépendants de la JVM.
 
+&gt; **Note sur l'Implémentation**
+&gt; Ce document décrit le plan d'action initial. Pour un rapport complet sur l'implémentation finale de cette stratégie ainsi que sur le refactoring plus large du serveur MCP et de la CI, veuillez consulter le [Rapport de Refactoring : Serveur MCP, Stabilisation des Tests et CI](./refactoring/refactoring_mcp_et_stabilisation_ci.md).
 ## 1. Stratégie Générale
 
 La stratégie repose sur l'isolation des tests basés sur la JVM du reste de la suite de tests en utilisant les marqueurs `pytest`. Cela nous permettra de contrôler précisément quand et comment la JVM est démarrée et d'éviter les conflits avec d'autres bibliothèques ou plugins.
