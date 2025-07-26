@@ -50,6 +50,17 @@ Description de l'organisation globale des répertoires et des fichiers du projet
 <!-- TODO: Évaluer si docs/api_outils_rhetorique.md doit être listé ici. Si oui, ajouter une entrée avec description et lien ../api_outils_rhetorique.md -->
 <!-- TODO: Évaluer si docs/integration_outils_rhetorique.md doit être listé ici. Si oui, ajouter une entrée avec description et lien ../integration_outils_rhetorique.md -->
 
+### Structure des Répertoires `src`
+
+Pour améliorer la modularité et la clarté du code source, une nouvelle organisation des répertoires a été mise en place dans le dossier `src`. Cette structure distingue clairement les composants fondamentaux du système des modules plus spécifiques liés aux agents.
+
+- **`src/core`**: Ce répertoire contient les composants de base, réutilisables et agnostiques de toute personnalité ou logique métier spécifique. Il est conçu pour héberger le "cœur" de l'application.
+    - **`plugins/standard`**: Contient des plugins standards offrant des fonctionnalités génériques.
+    - **`plugins/workflows`**: Contient des plugins qui définissent des enchaînements d'opérations ou des flux de travail complexes.
+
+- **`src/agents`**: Ce répertoire est dédié aux "personnalités" des agents, c'est-à-dire les implémentations spécifiques, les configurations et les logiques qui définissent le comportement d'un agent particulier.
+    - **`personalities`**: Contient les différentes personnalités des agents, encapsulant leur logique et leurs capacités uniques.
+
 ## Diagrammes et Schémas
 
 Les diagrammes et schémas d'architecture sont disponibles dans le répertoire [images](../images/). <!-- Lien corrigé de ./images/ -->
