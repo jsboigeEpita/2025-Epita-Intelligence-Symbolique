@@ -2,8 +2,14 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 
-from .models import AnalysisRequest, AnalysisResponse, Fallacy, StatusResponse, ExampleResponse, Example
-from .dependencies import get_analysis_service, AnalysisService, get_dung_analysis_service # Import AnalysisService for type hinting
+from .models import (
+    AnalysisRequest, AnalysisResponse, Fallacy, StatusResponse, ExampleResponse, Example,
+    InformalAnalysisRequest, InformalAnalysisResponse
+)
+from .dependencies import (
+    get_analysis_service, AnalysisService, get_dung_analysis_service,
+    get_informal_analysis_service, InformalAnalysisService
+)
 from .models import FrameworkAnalysisRequest, FrameworkAnalysisResponse
 from .services import DungAnalysisService
 import asyncio
@@ -18,6 +24,25 @@ class EndpointDetail(BaseModel):
 
 class EndpointsListResponse(BaseModel):
     endpoints: List[EndpointDetail]
+
+# --- Routeur pour l'analyse de sophismes informels (Facade) ---
+informal_router = APIRouter(prefix="/api/v1/informal", tags=["Informal Fallacy Analysis"])
+
+@informal_router.post("/analyze", response_model=InformalAnalysisResponse)
+async def analyze_informal_fallacy(
+    request: InformalAnalysisRequest,
+    analysis_service: InformalAnalysisService = Depends(get_informal_analysis_service)
+):
+    """
+    Analyzes a text for informal fallacies using the main facade.
+
+    - **text**: The text to analyze.
+    - **strategy**: The analysis strategy ('parallel', 'cluster', 'auto').
+
+    Returns a structured analysis result based on the chosen strategy.
+    """
+    result = await analysis_service.analyze(request.text, request.strategy)
+    return result
 
 router = APIRouter()
 

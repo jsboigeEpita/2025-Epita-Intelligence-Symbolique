@@ -78,3 +78,19 @@ class FrameworkAnalysisResponse(BaseModel):
     Modèle de réponse pour l'analyse complète du framework, enveloppé dans une clé 'analysis'.
     """
     analysis: FrameworkAnalysisResult
+# --- Modèles pour le service d'analyse de sophismes informels (Facade) ---
+
+class InformalAnalysisRequest(BaseModel):
+    """
+    Modèle de requête pour le service d'analyse de sophismes informels.
+    """
+    text: str
+    strategy: Optional[str] = "auto"
+
+class InformalAnalysisResponse(BaseModel):
+    """
+    Modèle de réponse pour le service d'analyse de sophismes informels.
+    """
+    status: str
+    strategy: str
+    result: Dict

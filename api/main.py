@@ -4,7 +4,7 @@ import os
 import glob
 import logging
 from .factory import create_app
-from .endpoints import router as api_router, framework_router
+from .endpoints import router as api_router, framework_router, informal_router
 from argumentation_analysis.core.bootstrap import initialize_project_environment
 
 # --- Configuration du PYTHONPATH ---
@@ -48,6 +48,7 @@ app = create_app(
 # Inclure les routeurs
 app.include_router(api_router, prefix="/api")
 app.include_router(framework_router)
+app.include_router(informal_router)
 
 @app.get("/")
 async def root():

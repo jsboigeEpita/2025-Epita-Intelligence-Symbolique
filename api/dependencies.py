@@ -2,6 +2,7 @@ import os
 from fastapi import Depends
 from argumentation_analysis.orchestration.service_manager import OrchestrationServiceManager
 from .services import DungAnalysisService
+from services.informal_analysis_service import InformalAnalysisService
 import logging
 import time
 
@@ -216,3 +217,22 @@ def get_dung_analysis_service() -> DungAnalysisService:
         _global_dung_service = DungAnalysisService()
         logging.info("[API] DungAnalysisService initialisé avec succès.")
     return _global_dung_service
+
+# ... (rest of the imports)
+
+# ... (rest of the global variables)
+_global_informal_analysis_service = None
+
+# ... (rest of the dependency functions)
+
+def get_informal_analysis_service() -> InformalAnalysisService:
+    """
+    Dependency injection for the InformalAnalysisService.
+    Uses a global singleton to instantiate the service only once.
+    """
+    global _global_informal_analysis_service
+    if _global_informal_analysis_service is None:
+        logging.info("[API] Initializing InformalAnalysisService...")
+        _global_informal_analysis_service = InformalAnalysisService()
+        logging.info("[API] InformalAnalysisService initialized successfully.")
+    return _global_informal_analysis_service
