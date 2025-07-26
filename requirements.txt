@@ -6,3 +6,4 @@ JPype1
 
 # Testing Dependencies
 pytest
+mcp-client

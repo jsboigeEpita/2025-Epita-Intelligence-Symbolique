@@ -19,7 +19,7 @@ import json
 # Imports du moteur d'analyse (style b282af4 avec gestion d'erreur)
 try:
     from argumentation_analysis.config.settings import AppSettings
-    # from argumentation_analysis.agents.factory import AgentFactory, AgentType
+    from argumentation_analysis.agents.factory import AgentFactory, AgentType
     from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
     from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer
     from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
@@ -118,8 +118,9 @@ class AnalysisService:
                 kernel = sk.Kernel()
                 llm_service_instance = None
                 try:
-                    llm_service_instance = create_llm_service(service_id="default_analysis_llm")
-                    kernel.add_service(llm_service_instance)
+                    # llm_service_instance = create_llm_service(service_id="default_analysis_llm") # SUPPRIMÉ: Utiliser l'instance injectée
+                    # kernel.add_service(llm_service_instance)
+                    pass # L'instance est déjà dans le kernel via l'injection
                 except Exception as llm_e:
                     self.logger.error(f"[ERROR] Failed to create LLM service for AgentFactory: {llm_e}")
                 

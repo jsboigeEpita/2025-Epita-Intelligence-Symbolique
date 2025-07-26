@@ -94,7 +94,7 @@ except ImportError as e:
 try:
     from argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import ContextualFallacyDetector as ContextualFallacyDetector_class
 except ImportError as e:
-    logger.error(f"Failed to import ContextualFallacyDetector: {e}")
+        logger.error(f"Failed to import ContextualFallacyDetector: {e}")
 
 # Adapter pour ContextualFallacyDetector
 class ContextualFallacyDetectorAdapter:

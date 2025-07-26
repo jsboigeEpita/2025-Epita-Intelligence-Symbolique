@@ -4,11 +4,7 @@ import multiprocessing
 import time
 import asyncio
 
-try:
-    from mcp.client import Client
-except ImportError:
-    Client = None  # Définir Client à None pour éviter les erreurs de syntaxe plus bas
-    pytest.skip("mcp.client.Client non trouvé, skip des tests d'intégration MCP", allow_module_level=True)
+from mcp import ClientSession as Client
 
 from services.mcp_server.main import MCPService
 
@@ -19,63 +15,53 @@ def run_mcp_service():
     service = MCPService(service_name=SERVICE_NAME)
     service.run(transport='stdio')
 
-@pytest.fixture(scope="module")
-def mcp_server_process():
-    """Fixture pour démarrer et arrêter le service MCP dans un processus séparé."""
-    process = multiprocessing.Process(target=run_mcp_service)
-    process.start()
-    time.sleep(1) # Laisser le temps au serveur de démarrer
-    yield
-    process.terminate()
-    process.join(timeout=1)
 
 @pytest.fixture(scope="module")
-def mcp_client():
+async def mcp_client():
     """Fixture pour créer un client MCP connecté au service."""
-    client = Client(SERVICE_NAME)
-    async def start_client():
-        await client.start(transport='stdio')
-    asyncio.run(start_client())
-    yield client
-    async def stop_client():
-        await client.stop()
-    asyncio.run(stop_client())
+    from mcp.client.stdio import stdio_client
+    from mcp import StdioServerParameters
 
-def test_service_lifecycle(mcp_server_process):
-    """Teste que le service peut être démarré et arrêté."""
-    # Le simple fait d'utiliser la fixture mcp_server_process
-    # exécute le test de cycle de vie (démarrage/arrêt).
-    # Si la fixture se termine sans erreur, le test est réussi.
-    pass
+    import os
+    env = os.environ.copy()
+    env["PYTHONUTF8"] = "1"
 
-def test_analyze_interaction(mcp_server_process, mcp_client: Client):
+    server_params = StdioServerParameters(
+        command="python",
+        args=["-m", "services.mcp_server.main"],
+        env=env,
+    )
+
+    async with stdio_client(server_params) as (read, write):
+        async with Client(read, write) as session:
+            await session.initialize()
+            yield session
+
+async def test_service_lifecycle(mcp_client: Client):
+    """Teste que le service peut être démarré et que le client peut s'y connecter."""
+    tools = await mcp_client.list_tools()
+    assert len(tools.tools) > 0
+
+async def test_analyze_interaction(mcp_client: Client):
     """Teste l'appel de l'outil 'analyze'."""
-    async def run_test():
-        result = await mcp_client.analyze(text="Ceci est un test.")
-        assert result['status'] == 'success'
-        assert "implémentation" in result['message']
-    asyncio.run(run_test())
+    result = await mcp_client.call_tool("analyze", arguments={"text": "Ceci est un test."})
+    assert result.isError is False
+    assert "implémentation" in result.content[0].text
 
-def test_validate_argument_interaction(mcp_server_process, mcp_client: Client):
+async def test_validate_argument_interaction(mcp_client: Client):
     """Teste l'appel de l'outil 'validate_argument'."""
-    async def run_test():
-        result = await mcp_client.validate_argument(premises=["p1"], conclusion="c1")
-        assert result['status'] == 'success'
-        assert "implémentation" in result['message']
-    asyncio.run(run_test())
+    result = await mcp_client.call_tool("validate_argument", arguments={"premises": ["p1"], "conclusion": "c1"})
+    assert result.isError is False
+    assert "implémentation" in result.content[0].text
 
-def test_detect_fallacies_interaction(mcp_server_process, mcp_client: Client):
+async def test_detect_fallacies_interaction(mcp_client: Client):
     """Teste l'appel de l'outil 'detect_fallacies'."""
-    async def run_test():
-        result = await mcp_client.detect_fallacies(text="Ceci est un sophisme.")
-        assert result['status'] == 'success'
-        assert "implémentation" in result['message']
-    asyncio.run(run_test())
+    result = await mcp_client.call_tool("detect_fallacies", arguments={"text": "Ceci est un sophisme."})
+    assert result.isError is False
+    assert "implémentation" in result.content[0].text
 
-def test_build_framework_interaction(mcp_server_process, mcp_client: Client):
+async def test_build_framework_interaction(mcp_client: Client):
     """Teste l'appel de l'outil 'build_framework'."""
-    async def run_test():
-        result = await mcp_client.build_framework(arguments=[])
-        assert result['status'] == 'success'
-        assert "implémentation" in result['message']
-    asyncio.run(run_test())
+    result = await mcp_client.call_tool("build_framework", arguments={"arguments": []})
+    assert result.isError is False
+    assert "implémentation" in result.content[0].text
