@@ -1126,3 +1126,14 @@ Cette section traduit les concepts stratégiques de gouvernance en tâches techn
         *   **Exemple de transformation :** La "Tâche 1 : Mise en Œuvre du Logging Structuré" devient une User Story "En tant que développeur, je veux des logs structurés en JSON pour pouvoir déboguer les requêtes efficacement." avec ses sous-tâches techniques.
 
 ---
+
+
+### IV. Stratégie de Validation et de Test
+
+- **Tests Unitaires :** Il est crucial de valider chaque composant du `BenchmarkService` de manière isolée. Cela inclut les méthodes responsables du chargement des datasets, du prétraitement des données, et du calcul des métriques de performance. Chaque unité de code doit être testée pour garantir sa robustesse et sa fiabilité.
+
+- **Tests d'Intégration :** Le workflow complet, orchestré par `run_benchmark.py`, doit être testé de bout en bout. Ces tests vérifieront la bonne intégration entre le service de benchmark, les contrats de données, et les plugins. Pour les dépendances externes, comme les services de données ou les API, des mocks seront utilisés pour simuler leurs réponses et garantir un environnement de test contrôlé.
+
+- **Données de Test :** Un jeu de données de test dédié sera créé. Il devra être représentatif des cas d'usage réels et inclure des cas limites (edge cases) pour s'assurer que le framework peut gérer une variété de scénarios. La qualité et la pertinence de ce jeu de données sont fondamentales pour la validité des benchmarks.
+
+- **Tests de Non-Régression :** Les benchmarks existants et validés constitueront une suite de tests de non-régression. Avant chaque mise en production d'une modification, cette suite sera exécutée pour s'assurer qu'aucune régression de performance ou de fonctionnalité n'a été introduite.
