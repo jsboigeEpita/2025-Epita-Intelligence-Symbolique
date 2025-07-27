@@ -50,16 +50,36 @@ Description de l'organisation globale des répertoires et des fichiers du projet
 <!-- TODO: Évaluer si docs/api_outils_rhetorique.md doit être listé ici. Si oui, ajouter une entrée avec description et lien ../api_outils_rhetorique.md -->
 <!-- TODO: Évaluer si docs/integration_outils_rhetorique.md doit être listé ici. Si oui, ajouter une entrée avec description et lien ../integration_outils_rhetorique.md -->
 
-### Structure des Répertoires `src`
+### Nouvelle Structure Fondamentale des Répertoires `src`
 
-Pour améliorer la modularité et la clarté du code source, une nouvelle organisation des répertoires a été mise en place dans le dossier `src`. Cette structure distingue clairement les composants fondamentaux du système des modules plus spécifiques liés aux agents.
+Cette section détaille la nouvelle arborescence de base du code source, conçue pour matérialiser le principe architectural fondamental de **séparation des préoccupations**. En isolant physiquement le **cœur logique (`core`)** des **identités des agents (`agents`)**, nous créons un système où le comportement peut être modifié et étendu (via les personnalités) sans altérer la logique métier fondamentale.
 
-- **`src/core`**: Ce répertoire contient les composants de base, réutilisables et agnostiques de toute personnalité ou logique métier spécifique. Il est conçu pour héberger le "cœur" de l'application.
-    - **`plugins/standard`**: Contient des plugins standards offrant des fonctionnalités génériques.
-    - **`plugins/workflows`**: Contient des plugins qui définissent des enchaînements d'opérations ou des flux de travail complexes.
+Cette structure est également conçue pour être explicitement prise en charge par les futurs `plugin_loader` et `agent_loader`, qui s'appuieront sur ces conventions de nommage pour découvrir et charger dynamiquement les composants.
 
-- **`src/agents`**: Ce répertoire est dédié aux "personnalités" des agents, c'est-à-dire les implémentations spécifiques, les configurations et les logiques qui définissent le comportement d'un agent particulier.
-    - **`personalities`**: Contient les différentes personnalités des agents, encapsulant leur logique et leurs capacités uniques.
+Voici la représentation de l'arborescence :
+
+`src/`
+`├── core/`
+`│   ├── __init__.py`
+`│   └── plugins/`
+`│       ├── __init__.py`
+`│       ├── standard/`
+`│       │   └── __init__.py`
+`│       └── workflows/`
+`│           └── __init__.py`
+`└── agents/`
+`    ├── __init__.py`
+`    └── personalities/`
+`        └── __init__.py`
+
+
+#### Détail des composants :
+-   **`src/core`**: Contient les composants de base, réutilisables et agnostiques de toute personnalité ou logique métier spécifique. C'est le "cœur" de l'application.
+    -   **`plugins/`**: Le hub pour le système de plugins extensibles.
+        -   **`standard/`**: Héberge les plugins atomiques, stables et validés. Ce sont les "briques de Lego" fondamentales de notre système.
+        -   **`workflows/`**: Contient les plugins complexes qui orchestrent des séquences d'actions en s'appuyant sur les plugins standards. Ce sont les "manuels d'instructions" qui assemblent les briques.
+-   **`src/agents`**: Dédié aux "personnalités" des agents.
+    -   **`personalities/`**: Contient les configurations uniques de chaque agent (ex: `my_agent/v1/`), leur `system.md`, leur `config.json` et leur code spécifique.
 
 ## Diagrammes et Schémas
 

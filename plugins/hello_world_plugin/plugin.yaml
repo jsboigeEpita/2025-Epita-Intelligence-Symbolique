@@ -1,0 +1,24 @@
+manifest_version: "1.0"
+plugin_name: "hello_world"
+plugin_type: "STANDARD"
+version: "0.1.0"
+description: "Un plugin simple qui retourne un message de salutation."
+entrypoint: "plugins.hello_world_plugin.main.HelloWorldPlugin"
+dependencies: []
+capabilities:
+  - name: "greet"
+    description: "Retourne une salutation personnalisée."
+    input:
+      type: "object"
+      properties:
+        name:
+          type: "string"
+          description: "Le nom à saluer."
+      required: ["name"]
+    output:
+      type: "object"
+      properties:
+        message:
+          type: "string"
+          description: "Le message de salutation complet."
+      required: ["message"]
