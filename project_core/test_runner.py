@@ -154,12 +154,13 @@ class ServiceManager:
 class TestRunner:
     """Orchestre l'exécution des tests."""
 
-    def __init__(self, test_type, test_path, browser, pytest_extra_args=None, collect_only_path=None):
+    def __init__(self, test_type, test_path, browser, pytest_extra_args=None, collect_only_path=None, log_file=None):
         self.test_type = test_type
         self.test_path = test_path
         self.browser = browser
         self.pytest_extra_args = pytest_extra_args if pytest_extra_args is not None else []
         self.collect_only_path = collect_only_path
+        self.log_file = log_file
         self.service_manager = ServiceManager()
 
     def run(self):
@@ -221,10 +222,20 @@ class TestRunner:
             command.extend(["--browser", self.browser])
 
         if self.pytest_extra_args:
-            command.extend(self.pytest_extra_args)
+            # Assurer que les arguments comme '-p no:opentelemetry' sont bien séparés
+            processed_args = []
+            for arg in self.pytest_extra_args:
+                if arg.startswith('-p '):
+                    processed_args.extend(arg.split(' ', 1))
+                else:
+                    processed_args.append(arg)
+            command.extend(processed_args)
 
         if self.collect_only_path:
             command.extend(["--collect-only"])
+        
+        if self.log_file:
+            command.extend([f"--log-file={self.log_file}"])
         
         _log(f"Lancement de pytest avec la commande: {' '.join(command)}")
         _log(f"Répertoire de travail: {ROOT_DIR}")
@@ -308,6 +319,7 @@ class TestRunner:
 
 def main():
     """Point d'entrée principal du script."""
+    print(f"[RUNNER_DEBUG] sys.argv: {sys.argv}")
     # Pour s'assurer que les tests (en particulier E2E) ont toujours accès aux variables
     # d'environnement nécessaires (comme la clé API), nous chargeons explicitement le fichier .env.
     # Cela rend le script de test autonome et résilient aux problèmes de propagation d'environnement
@@ -342,6 +354,11 @@ def main():
         default=None,
         help="Collecte uniquement les noms des tests sans les exécuter et les enregistre dans le fichier spécifié."
     )
+    parser.add_argument(
+        "--log-file",
+        default=None,
+        help="Chemin vers le fichier de log pour la sortie de pytest."
+    )
     args, unknown_args = parser.parse_known_args()
  
     runner = TestRunner(
@@ -349,7 +366,8 @@ def main():
         args.path,
         args.browser,
         pytest_extra_args=unknown_args,
-        collect_only_path=args.collect_only
+        collect_only_path=args.collect_only,
+        log_file=args.log_file
     )
     runner.run()
 

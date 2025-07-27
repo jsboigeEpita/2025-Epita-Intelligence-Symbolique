@@ -178,9 +178,14 @@ class TestCluedoOrchestratorIntegration:
         # uses the result in an 'async for' loop.
         # To solve this, we must override the 'invoke' AsyncMock with a regular
         # Mock that directly returns our async iterator.
-        mock_sherlock.invoke = Mock(return_value=AsyncIterator([ChatMessageContent(role="assistant", content="Sherlock's turn", name="Sherlock")]))
-        mock_watson.invoke = Mock(return_value=AsyncIterator([ChatMessageContent(role="assistant", content="Watson's turn", name="Watson")]))
-        mock_moriarty.invoke = Mock(return_value=AsyncIterator([ChatMessageContent(role="assistant", content="Moriarty's turn", name="Moriarty")]))
+        import asyncio
+        async def async_gen(content):
+            await asyncio.sleep(0.01)
+            yield content
+
+        mock_sherlock.invoke = Mock(return_value=async_gen(ChatMessageContent(role="assistant", content="Sherlock's turn", name="Sherlock")))
+        mock_watson.invoke = Mock(return_value=async_gen(ChatMessageContent(role="assistant", content="Watson's turn", name="Watson")))
+        mock_moriarty.invoke = Mock(return_value=async_gen(ChatMessageContent(role="assistant", content="Moriarty's turn", name="Moriarty")))
 
         # Configure strategy mocks
         mock_selection_next.side_effect = [mock_sherlock, mock_watson, mock_moriarty, mock_sherlock]

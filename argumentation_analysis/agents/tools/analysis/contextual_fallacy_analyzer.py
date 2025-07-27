@@ -79,6 +79,7 @@ class ContextualFallacyAnalyzer:
             import pandas as pd
             df = pd.read_csv(path, encoding='utf-8')
             self.logger.info(f"Taxonomie chargée avec succès: {len(df)} sophismes.")
+            self.taxonomy_df = df
             return df
         except Exception as e:
             self.logger.error(f"Erreur lors du chargement de la taxonomie: {e}")

@@ -7,6 +7,8 @@ param(
     
     [string]$PytestArgs,
 
+    [string]$LogFile,
+
     [ValidateSet("chromium", "firefox", "webkit")]
     [string]$Browser,
 
@@ -109,6 +111,9 @@ if ($PSBoundParameters.ContainsKey('Browser')) {
 if (-not ([string]::IsNullOrEmpty($PytestArgs))) {
     # On passe les arguments supplémentaires à la fin, pour que argparse les récupère
     $runnerArgs += $PytestArgs.Split(' ')
+}
+if (-not ([string]::IsNullOrEmpty($LogFile))) {
+    $runnerArgs += "--log-file=$LogFile"
 }
 
 $CommandToRun = $runnerArgs -join " "

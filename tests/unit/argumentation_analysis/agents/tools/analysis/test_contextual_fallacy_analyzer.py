@@ -113,6 +113,8 @@ class TestContextualFallacyAnalyzer(unittest.TestCase):
     def test_init(self):
         """Teste l'initialisation de la classe."""
         self.assertIsNotNone(self.analyzer)
+        # Force loading of the taxonomy
+        self.analyzer._load_taxonomy()
         self.assertIsNotNone(self.analyzer.taxonomy_df)
         self.assertEqual(len(self.analyzer.taxonomy_df), 4)
 
