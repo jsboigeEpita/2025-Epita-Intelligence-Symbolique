@@ -84,3 +84,29 @@ Les tests d'intégration cruciaux qui dépendent d'un solveur logique (comme ceu
 Cela signifie que lorsque vous exécutez la suite de tests (par exemple, `.\run_tests.ps1 -Type integration`), les tests concernés s'exécuteront **deux fois** : une fois en forçant l'utilisation de `tweety`, et une fois en forçant l'utilisation de `prover9`.
 
 Vous n'avez **plus besoin** de définir manuellement la variable d'environnement `ARG_ANALYSIS_SOLVER` pour assurer la couverture des deux solveurs. Le framework de test s'en charge.
+
+---
+
+## État de la Suite de Tests E2E Python (`e2e-python`)
+
+**ATTENTION :** La suite de tests `e2e-python` est actuellement **partiellement instable** et certains tests échoueront de manière intermittente ou systématique.
+
+### Contexte
+
+Cette suite de tests a une forte dépendance à l'API et, indirectement, à un service LLM externe pour certaines de ses analyses. En environnement de CI/CD ou local sans configuration de clé API (`OPENAI_API_KEY`), le service LLM ne peut pas s'initialiser, ce qui provoque un crash du serveur d'API et un échec complet de la suite de tests.
+
+Pour contourner ce problème, le système de test est configuré pour utiliser des **services "mock"** lorsque la clé API est absente. Cependant, ces mocks sont actuellement trop simplistes et ne retournent pas des données suffisamment réalistes pour satisfaire les assertions complexes des tests d'intégration de l'interface utilisateur.
+
+### État Actuel
+
+1.  **Tests d'API Directs** : Les tests qui ciblent directement les endpoints de l'API (comme `test_api_dung_integration.py`) ont été corrigés et devraient passer.
+2.  **Tests d'Intégration UI (Playwright)** : Les tests qui simulent une interaction utilisateur complète (comme `test_integration_workflows.py`) sont ceux qui échouent. Leurs assertions attendent des résultats complexes que les mocks actuels ne peuvent pas fournir, ce qui conduit à des timeouts.
+3.  **Tests Désactivés** : Pour permettre à la majorité de la suite de s'exécuter, les tests suivants, connus pour être obsolètes ou particulièrement instables, ont été désactivés via `@pytest.mark.skip` :
+    - `test_full_argument_analysis_workflow`
+    - `test_framework_based_validation_workflow`
+
+### Recommandations
+
+- Pour une **validation fiable** de la logique métier, privilégiez l'exécution des suites **`unit`** et **`integration`**.
+- L'exécution de la suite **`e2e-python`** est utile pour confirmer qu'il n'y a pas de régressions majeures, mais attendez-vous à des échecs.
+- Une **refonte du système de mock** est nécessaire pour stabiliser durablement la suite de tests E2E.

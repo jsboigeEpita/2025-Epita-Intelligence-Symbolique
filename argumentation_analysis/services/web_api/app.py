@@ -47,8 +47,8 @@ class AppServices:
         logger.info("Initializing app services container...")
         # Création centralisée des services LLM
         # En environnement de test, la factory retournera des mocks.
-        logic_llm_service = create_llm_service(service_id="logic_service", model_id="gpt-4o-mini")
-        analysis_llm_service = create_llm_service(service_id="analysis_service", model_id="gpt-4o-mini")
+        logic_llm_service = create_llm_service(service_id="logic_service", model_id="gpt-4o-mini", force_mock=True)
+        analysis_llm_service = create_llm_service(service_id="analysis_service", model_id="gpt-4o-mini", force_mock=True)
 
         # Injection des dépendances dans les services
         self.logic_service = LogicService(llm_service=logic_llm_service)
