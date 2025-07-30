@@ -1,0 +1,74 @@
+{
+  "session_info": {
+    "id": "upa_20250610_154300",
+    "timestamp": "2025-06-10T15:43:00.393850",
+    "total_analyses": 1,
+    "config": {
+      "logic_type": "fol",
+      "mock_level": "partial",
+      "orchestration_type": "unified",
+      "analysis_modes": [
+        "unified"
+      ]
+    }
+  },
+  "results_summary": {
+    "successful_analyses": 1,
+    "failed_analyses": 0,
+    "total_execution_time": 0.10424017906188965,
+    "average_execution_time": 0.10424017906188965
+  },
+  "detailed_results": [
+    {
+      "id": "analysis_1",
+      "session_id": "upa_20250610_154300",
+      "timestamp": "2025-06-10T15:43:00.393752",
+      "text_length": 144,
+      "modes_analyzed": [
+        "unified"
+      ],
+      "results": {
+        "unified": {
+          "analysis": "[MOCK] Analyse unified de 144 caractères",
+          "model_used": "mock",
+          "tokens_used": 36,
+          "authentic": false
+        }
+      },
+      "execution_time": 0.10424017906188965,
+      "config_snapshot": {
+        "logic_type": "fol",
+        "mock_level": "partial",
+        "orchestration_type": "unified"
+      },
+      "conversation_summary": {
+        "total_interactions": 1,
+        "agents_used": [
+          "sherlock",
+          "watson",
+          "oracle",
+          "synthesis"
+        ],
+        "conversation_duration": 0.0,
+        "agent_stats": {
+          "sherlock": {
+            "status": "ready",
+            "context": {}
+          },
+          "watson": {
+            "status": "ready",
+            "context": {}
+          },
+          "oracle": {
+            "status": "ready",
+            "context": {}
+          },
+          "synthesis": {
+            "status": "ready",
+            "context": {}
+          }
+        }
+      }
+    }
+  ]
+}

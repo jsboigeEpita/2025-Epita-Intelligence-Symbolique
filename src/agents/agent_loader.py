@@ -1,97 +1,69 @@
-# -*- coding: utf-8 -*-
-"""
-Mécanisme de découverte et de chargement dynamique des personnalités d'agents.
-"""
-
-import importlib
-import inspect
 import os
 import json
-from pathlib import Path
-from typing import Dict, List, Type
-
-from src.agents.interfaces import IAgentPersonality
-
+from typing import List, Dict, Any, Optional
 
 class AgentLoader:
     """
-    Charge et gère les personnalités des agents.
+    Handles the discovery and loading of agents based on their manifests.
 
-    Cette classe scanne un répertoire à la recherche de personnalités d'agents,
-    qui sont définies par un `config.json`, un `system.md` et une classe
-    héritant de `IAgentPersonality`.
+    This class scans a given search path for agent directories, identified
+    by the presence of an 'agent_manifest.json' file. It provides methods
+    to discover these agents and load their metadata.
     """
 
-    def __init__(self, personalities_path: str):
+    def discover_agents(self, search_path: str) -> List[str]:
         """
-        Initialise le chargeur d'agents.
+        Scans subdirectories of a given path to find agent manifests.
 
         Args:
-            personalities_path (str): Chemin vers le répertoire des personnalités.
-        """
-        self.personalities_path = Path(personalities_path)
-        self.loaded_personalities: Dict[str, Type[IAgentPersonality]] = {}
+            search_path: The root directory to start scanning from.
 
-    def discover_and_load(self) -> None:
+        Returns:
+            A list of paths to the discovered agent_manifest.json files.
         """
-        Découvre, charge et valide les personnalités d'agents.
+        discovered_manifests: List[str] = []
+        if not os.path.isdir(search_path):
+            # Log this event appropriately in a real application
+            print(f"Warning: Search path {search_path} does not exist.")
+            return discovered_manifests
+
+        for root, _, files in os.walk(search_path):
+            if "agent_manifest.json" in files:
+                manifest_path = os.path.join(root, "agent_manifest.json")
+                discovered_manifests.append(manifest_path)
+        
+        return discovered_manifests
+
+    def load_agent(self, agent_manifest_path: str) -> Optional[Dict[str, Any]]:
         """
-        if not self.personalities_path.is_dir():
-            print(f"Error: Personalities path {self.personalities_path} is not a valid directory.")
-            return
+        Reads and validates an agent manifest file.
 
-        for root, _, files in os.walk(self.personalities_path):
-            if "config.json" in files and "system.md" in files:
-                module_path_found = False
-                for filename in files:
-                    if filename.endswith(".py") and not filename.startswith("__"):
-                        module_path_found = True
-                        module_path = Path(root) / filename
-                        relative_path = module_path.relative_to(Path.cwd())
-                        module_name = str(relative_path.with_suffix('')).replace(os.sep, '.')
-                        
-                        try:
-                            module = importlib.import_module(module_name)
-                            for _, obj in inspect.getmembers(module, inspect.isclass):
-                                if (
-                                    issubclass(obj, IAgentPersonality)
-                                    and obj is not IAgentPersonality
-                                    and obj not in self.loaded_personalities.values()
-                                ):
-                                    # Valider la présence de tous les fichiers requis
-                                    config_path = Path(root) / "config.json"
-                                    prompt_path = Path(root) / "system.md"
-                                    
-                                    if config_path.exists() and prompt_path.exists():
-                                        
-                                        # Instancier pour charger la config et le prompt
-                                        instance = obj()
-                                        
-                                        with open(config_path, 'r', encoding='utf-8') as f:
-                                            config_data = json.load(f)
-                                        instance.load_configuration(config_data)
+        For now, validation is a simple check for well-formed JSON.
 
-                                        # Le prompt est souvent géré au moment de l'exécution
-                                        # mais on valide sa présence.
-                                        
-                                        self.loaded_personalities[instance.name] = obj
-                                        print(f"Discovered and loaded agent personality: {instance.name}")
+        Args:
+            agent_manifest_path: The full path to the agent_manifest.json file.
 
-                        except (ImportError, AttributeError, NotImplementedError, TypeError) as e:
-                            print(f"Could not load agent from {module_name}: {e}")
-                
-                if not module_path_found:
-                    print(f"Warning: Found config and system prompt in {root}, but no Python module for personality.")
-
-
-    def get_personality(self, name: str) -> Type[IAgentPersonality] | None:
+        Returns:
+            A dictionary containing the manifest data if successful, otherwise None.
         """
-        Récupère une classe de personnalité par son nom.
-        """
-        return self.loaded_personalities.get(name)
+        if not os.path.exists(agent_manifest_path):
+            print(f"Error: Manifest file not found at {agent_manifest_path}")
+            return None
 
-    def get_all_personalities(self) -> List[Type[IAgentPersonality]]:
-        """
-        Retourne toutes les classes de personnalités chargées.
-        """
-        return list(self.loaded_personalities.values())
+        try:
+            with open(agent_manifest_path, 'r', encoding='utf-8') as f:
+                manifest_data = json.load(f)
+            
+            # Basic validation can be expanded here (e.g., with JSON Schema)
+            required_keys = ["manifest_version", "agent_name", "version", "entry_point"]
+            if not all(key in manifest_data for key in required_keys):
+                print(f"Warning: Manifest {agent_manifest_path} is missing required keys.")
+                return None
+
+            return manifest_data
+        except json.JSONDecodeError:
+            print(f"Error: Could not decode JSON from {agent_manifest_path}")
+            return None
+        except Exception as e:
+            print(f"An unexpected error occurred while loading agent {agent_manifest_path}: {e}")
+            return None

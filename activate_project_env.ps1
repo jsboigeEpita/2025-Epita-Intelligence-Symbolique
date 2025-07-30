@@ -105,17 +105,17 @@ catch {
 
 Write-Host "[INFO] Exécution directe de la commande dans l'environnement Conda..." -ForegroundColor Cyan
 
-# Construction de la commande `conda run`
-$CommandArray = $CommandToRun.Split(" ")
-$CondaArgs = @("run", "-n", $envName, "--no-capture-output", "--live-stream") + $CommandArray
+# Étape 2: Construire la commande pour activer et exécuter dans une nouvelle session pwsh
+# Cette approche est plus robuste que `conda run` qui semble avoir des problèmes
+# d'interprétation des arguments dans cet environnement.
+$FullCommand = "conda activate $envName; $CommandToRun"
+Write-Host "[DEBUG] Commande à exécuter dans la sous-session PowerShell : $FullCommand" -ForegroundColor Gray
 
-Write-Host "[DEBUG] Invoking: conda $($CondaArgs -join ' ')" -ForegroundColor Gray
-
-# Étape 3: Exécution et propagation du code de sortie
+# Étape 3: Exécution dans un sous-processus PowerShell
 try {
-    # Exécute la commande. La sortie sera capturée par l'appelant.
-    conda $CondaArgs
-    
+    # On lance une nouvelle instance de PowerShell pour exécuter la chaîne complète
+    # d'activation et de commande.
+    pwsh -c $FullCommand
     $exitCode = $LASTEXITCODE
 }
 catch {

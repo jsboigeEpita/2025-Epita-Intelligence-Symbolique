@@ -205,9 +205,6 @@ class TestRunner:
 
         command = ["python", "-m", "pytest", "-v"] + test_paths
         
-        # Ajout de l'option pour autoriser le chargement du .env
-        command.append("--allow-dotenv")
-
         # Passer les URLs aux tests seulement si les services sont démarrés
         needs_services = self.test_type in ["functional", "e2e", "all"]
         if needs_services:
@@ -231,6 +228,17 @@ class TestRunner:
 
         # Définir l'environnement pour le sous-processus
         env = os.environ.copy()
+
+        # Ajouter le répertoire 'libs' au PYTHONPATH pour que les modules locaux soient trouvés
+        libs_dir = str(ROOT_DIR / "libs")
+        if libs_dir not in env.get("PYTHONPATH", ""):
+            _log(f"Ajout de {libs_dir} au PYTHONPATH du sous-processus.")
+            existing_pythonpath = env.get("PYTHONPATH", "")
+            if existing_pythonpath:
+                env["PYTHONPATH"] = f"{libs_dir}{os.pathsep}{existing_pythonpath}"
+            else:
+                env["PYTHONPATH"] = libs_dir
+        
         if self.test_type == "unit" or self.test_type == "all":
             _log("Activation du contournement de la JVM via la variable d'environnement SKIP_JVM_TESTS.")
             env["SKIP_JVM_TESTS"] = "1"

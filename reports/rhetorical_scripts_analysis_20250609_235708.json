@@ -1,0 +1,370 @@
+{
+  "analysis_summary": {
+    "total_scripts_analyzed": 24,
+    "authentic_scripts": 7,
+    "mock_scripts": 12,
+    "redundant_scripts": 5,
+    "recommended_to_keep": 8,
+    "analysis_timestamp": "2025-06-09T23:57:08",
+    "analysis_method": "static_code_analysis_with_pattern_detection"
+  },
+  "script_analysis": {
+    "demos/demo_rhetorique_complete.py": {
+      "authenticity_level": "authentic",
+      "primary_functions": ["multi_agent_orchestration", "real_llm_integration", "comprehensive_analysis"],
+      "uses_real_llm": true,
+      "has_mocks": false,
+      "code_quality": "high",
+      "uniqueness": "unique",
+      "recommendation": "keep",
+      "reason": "Script authentique utilisant de vrais appels LLM avec orchestration multi-agents complète. Architecture bien structurée."
+    },
+    "demos/demo_rhetorique_corrige.py": {
+      "authenticity_level": "partial",
+      "primary_functions": ["corrected_analysis", "semantic_kernel_integration", "state_management"],
+      "uses_real_llm": true,
+      "has_mocks": false,
+      "code_quality": "medium",
+      "uniqueness": "partial_overlap",
+      "recommendation": "merge",
+      "reason": "Version corrigée avec fonctionnalités similaires au script complet. Peut être intégrée."
+    },
+    "demos/demo_rhetorique_simplifie.py": {
+      "authenticity_level": "partial",
+      "primary_functions": ["simplified_analysis", "agent_initialization", "basic_testing"],
+      "uses_real_llm": true,
+      "has_mocks": false,
+      "code_quality": "medium",
+      "uniqueness": "redundant",
+      "recommendation": "delete",
+      "reason": "Version simplifiée redondante avec le script complet. Fonctionnalités couvertes ailleurs."
+    },
+    "demos/demo_unified_system.py": {
+      "authenticity_level": "authentic",
+      "primary_functions": ["unified_system_demo", "multiple_demo_modes", "comprehensive_integration"],
+      "uses_real_llm": true,
+      "has_mocks": false,
+      "code_quality": "high",
+      "uniqueness": "unique",
+      "recommendation": "keep",
+      "reason": "Système unifié avec multiple modes de démonstration. Architecture avancée et fonctionnalités uniques."
+    },
+    "examples/logic_agents/api_integration_example.py": {
+      "authenticity_level": "authentic",
+      "primary_functions": ["api_integration", "belief_set_operations", "query_execution"],
+      "uses_real_llm": true,
+      "has_mocks": false,
+      "code_quality": "high",
+      "uniqueness": "unique",
+      "recommendation": "keep",
+      "reason": "Exemple d'intégration API authentique avec fonctionnalités spécialisées. Bien documenté."
+    },
+    "examples/logic_agents/combined_logic_example.py": {
+      "authenticity_level": "authentic",
+      "primary_functions": ["multi_logic_analysis", "comparison_framework", "agent_factory"],
+      "uses_real_llm": true,
+      "has_mocks": false,
+      "code_quality": "high",
+      "uniqueness": "unique",
+      "recommendation": "keep",
+      "reason": "Framework de comparaison entre différents types de logiques. Fonctionnalité unique et précieuse."
+    },
+    "examples/logic_agents/first_order_logic_example.py": {
+      "authenticity_level": "fraudulent",
+      "primary_functions": ["fol_demonstration", "hardcoded_api_keys"],
+      "uses_real_llm": false,
+      "has_mocks": true,
+      "code_quality": "low",
+      "uniqueness": "redundant",
+      "recommendation": "delete",
+      "reason": "Contient des clés API hardcodées ('votre_clé_api_openai'). Non fonctionnel en l'état. Frauduleux."
+    },
+    "examples/logic_agents/modal_logic_example.py": {
+      "authenticity_level": "fraudulent",
+      "primary_functions": ["modal_logic_demo", "hardcoded_api_keys"],
+      "uses_real_llm": false,
+      "has_mocks": true,
+      "code_quality": "low",
+      "uniqueness": "redundant",
+      "recommendation": "delete",
+      "reason": "Contient des clés API hardcodées ('votre_clé_api_openai'). Non fonctionnel en l'état. Frauduleux."
+    },
+    "examples/logic_agents/propositional_logic_example.py": {
+      "authenticity_level": "fraudulent",
+      "primary_functions": ["propositional_logic_demo", "hardcoded_api_keys"],
+      "uses_real_llm": false,
+      "has_mocks": true,
+      "code_quality": "low",
+      "uniqueness": "redundant",
+      "recommendation": "delete",
+      "reason": "Contient des clés API hardcodées ('votre_clé_api_openai'). Non fonctionnel en l'état. Frauduleux."
+    },
+    "examples/temp_demos/temp_fol_logic_agent.py": {
+      "authenticity_level": "partial",
+      "primary_functions": ["fol_agent_alternative", "tweety_integration", "fallback_system"],
+      "uses_real_llm": true,
+      "has_mocks": true,
+      "code_quality": "medium",
+      "uniqueness": "unique",
+      "recommendation": "keep",
+      "reason": "Alternative FOL avec système de fallback. Utile pour tests et développement."
+    },
+    "examples/demo_orphelins/demo_real_sk_orchestration.py": {
+      "authenticity_level": "authentic",
+      "primary_functions": ["semantic_kernel_orchestration", "real_gpt4_integration"],
+      "uses_real_llm": true,
+      "has_mocks": false,
+      "code_quality": "high",
+      "uniqueness": "unique",
+      "recommendation": "keep",
+      "reason": "Démonstration authentique d'orchestration Semantic Kernel avec GPT-4o-mini. Code de qualité."
+    },
+    "examples/demo_orphelins/demo_real_sk_orchestration_fixed.py": {
+      "authenticity_level": "authentic",
+      "primary_functions": ["fixed_orchestration", "step_by_step_processing"],
+      "uses_real_llm": true,
+      "has_mocks": false,
+      "code_quality": "high",
+      "uniqueness": "partial_overlap",
+      "recommendation": "merge",
+      "reason": "Version corrigée du script précédent. Devrait être intégrée dans la version principale."
+    },
+    "scripts/execution/advanced_rhetorical_analysis.py": {
+      "authenticity_level": "partial",
+      "primary_functions": ["advanced_analysis", "enhanced_tools_integration"],
+      "uses_real_llm": true,
+      "has_mocks": true,
+      "code_quality": "medium",
+      "uniqueness": "unique",
+      "recommendation": "keep",
+      "reason": "Analyse rhétorique avancée avec outils Enhanced. Fonctionnalités spécialisées importantes."
+    },
+    "scripts/execution/rhetorical_analysis.py": {
+      "authenticity_level": "fraudulent",
+      "primary_functions": ["basic_rhetorical_analysis", "mock_tools_usage"],
+      "uses_real_llm": false,
+      "has_mocks": true,
+      "code_quality": "low",
+      "uniqueness": "redundant",
+      "recommendation": "delete",
+      "reason": "Utilise uniquement des mocks (MockContextualFallacyDetector, MockArgumentCoherenceEvaluator). Aucun LLM réel."
+    },
+    "scripts/execution/run_full_python_analysis_workflow.py": {
+      "authenticity_level": "partial",
+      "primary_functions": ["full_workflow", "corpus_processing", "encryption_handling"],
+      "uses_real_llm": true,
+      "has_mocks": true,
+      "code_quality": "medium",
+      "uniqueness": "unique",
+      "recommendation": "keep",
+      "reason": "Workflow complet avec gestion de corpus chiffré. Fonctionnalités importantes malgré usage mixte mocks/LLM."
+    },
+    "scripts/diagnostic/test_fol_demo_simple.py": {
+      "authenticity_level": "partial",
+      "primary_functions": ["fol_testing", "structure_validation", "configuration_testing"],
+      "uses_real_llm": false,
+      "has_mocks": true,
+      "code_quality": "medium",
+      "uniqueness": "unique",
+      "recommendation": "keep",
+      "reason": "Tests diagnostiques pour FOL. Utile pour validation système."
+    },
+    "scripts/diagnostic/test_advanced_rhetorical_enhanced.py": {
+      "authenticity_level": "partial",
+      "primary_functions": ["enhanced_testing", "pipeline_validation"],
+      "uses_real_llm": false,
+      "has_mocks": true,
+      "code_quality": "medium",
+      "uniqueness": "unique",
+      "recommendation": "keep",
+      "reason": "Tests d'intégration pour pipeline Enhanced. Nécessaire pour validation."
+    },
+    "scripts/diagnostic/test_sophismes_detection.py": {
+      "authenticity_level": "authentic",
+      "primary_functions": ["sophism_detection_testing", "api_validation", "quality_testing"],
+      "uses_real_llm": true,
+      "has_mocks": false,
+      "code_quality": "high",
+      "uniqueness": "unique",
+      "recommendation": "keep",
+      "reason": "Tests authentiques de détection de sophismes via API. Code de qualité avec validation complète."
+    },
+    "scripts/demo/run_rhetorical_analysis_demo.py": {
+      "authenticity_level": "authentic",
+      "primary_functions": ["demo_orchestration", "create_llm_service_integration"],
+      "uses_real_llm": true,
+      "has_mocks": false,
+      "code_quality": "high",
+      "uniqueness": "partial_overlap",
+      "recommendation": "merge",
+      "reason": "Démo authentique avec create_llm_service. Peut être intégrée avec autres démos similaires."
+    },
+    "scripts/demo/run_rhetorical_analysis_phase2_authentic.py": {
+      "authenticity_level": "authentic",
+      "primary_functions": ["phase2_demo", "gpt4_integration", "jvm_tweety_integration"],
+      "uses_real_llm": true,
+      "has_mocks": false,
+      "code_quality": "high",
+      "uniqueness": "unique",
+      "recommendation": "keep",
+      "reason": "Démo Phase 2 authentique avec GPT-4o-mini et TweetyBridge. Fonctionnalités avancées importantes."
+    },
+    "scripts/main/analyze_text.py": {
+      "authenticity_level": "authentic",
+      "primary_functions": ["text_analysis", "gpt4_force_usage"],
+      "uses_real_llm": true,
+      "has_mocks": false,
+      "code_quality": "medium",
+      "uniqueness": "partial_overlap",
+      "recommendation": "merge",
+      "reason": "Script principal d'analyse avec force GPT-4. Peut être consolidé avec autres scripts principaux."
+    },
+    "scripts/testing/test_rhetorical_analysis.py": {
+      "authenticity_level": "fraudulent",
+      "primary_functions": ["testing_framework", "mock_heavy_usage"],
+      "uses_real_llm": false,
+      "has_mocks": true,
+      "code_quality": "low",
+      "uniqueness": "redundant",
+      "recommendation": "delete",
+      "reason": "Tests uniquement basés sur mocks. Aucune valeur ajoutée pour authentification."
+    },
+    "scripts/auto_logical_analysis_task1_VRAI.py": {
+      "authenticity_level": "authentic",
+      "primary_functions": ["authentic_logical_analysis", "real_openai_calls", "no_mocks"],
+      "uses_real_llm": true,
+      "has_mocks": false,
+      "code_quality": "high",
+      "uniqueness": "unique",
+      "recommendation": "keep",
+      "reason": "Script AUTHENTIQUE avec vrais appels OpenAI GPT-4o-mini. Suppression complète des mocks. Haute qualité."
+    },
+    "scripts/orchestration_llm_real.py": {
+      "authenticity_level": "authentic",
+      "primary_functions": ["llm_orchestration", "real_conversation_management"],
+      "uses_real_llm": true,
+      "has_mocks": false,
+      "code_quality": "high",
+      "uniqueness": "unique",
+      "recommendation": "keep",
+      "reason": "Orchestration LLM réelle. Script principal pour gestion conversationnelle authentique."
+    },
+    "scripts/orchestration_conversation_unified.py": {
+      "authenticity_level": "partial",
+      "primary_functions": ["unified_conversation", "mixed_implementation"],
+      "uses_real_llm": true,
+      "has_mocks": true,
+      "code_quality": "medium",
+      "uniqueness": "partial_overlap",
+      "recommendation": "merge",
+      "reason": "Orchestration conversationnelle unifiée. Peut être intégrée avec orchestration_llm_real.py."
+    }
+  },
+  "consolidation_recommendations": {
+    "scripts_to_keep": [
+      "demos/demo_rhetorique_complete.py",
+      "demos/demo_unified_system.py",
+      "examples/logic_agents/api_integration_example.py",
+      "examples/logic_agents/combined_logic_example.py",
+      "examples/temp_demos/temp_fol_logic_agent.py",
+      "examples/demo_orphelins/demo_real_sk_orchestration.py",
+      "scripts/execution/advanced_rhetorical_analysis.py",
+      "scripts/execution/run_full_python_analysis_workflow.py",
+      "scripts/diagnostic/test_fol_demo_simple.py",
+      "scripts/diagnostic/test_advanced_rhetorical_enhanced.py",
+      "scripts/diagnostic/test_sophismes_detection.py",
+      "scripts/demo/run_rhetorical_analysis_phase2_authentic.py",
+      "scripts/auto_logical_analysis_task1_VRAI.py",
+      "scripts/orchestration_llm_real.py"
+    ],
+    "scripts_to_merge": [
+      {
+        "target": "demos/demo_rhetorique_complete.py",
+        "sources": [
+          "demos/demo_rhetorique_corrige.py"
+        ],
+        "reason": "Intégrer les corrections dans le script complet"
+      },
+      {
+        "target": "examples/demo_orphelins/demo_real_sk_orchestration.py",
+        "sources": [
+          "examples/demo_orphelins/demo_real_sk_orchestration_fixed.py"
+        ],
+        "reason": "Appliquer les corrections à la version principale"
+      },
+      {
+        "target": "scripts/orchestration_llm_real.py",
+        "sources": [
+          "scripts/orchestration_conversation_unified.py"
+        ],
+        "reason": "Unifier les orchestrations conversationnelles"
+      },
+      {
+        "target": "scripts/demo/run_rhetorical_analysis_phase2_authentic.py",
+        "sources": [
+          "scripts/demo/run_rhetorical_analysis_demo.py",
+          "scripts/main/analyze_text.py"
+        ],
+        "reason": "Consolider les scripts de démonstration authentiques"
+      }
+    ],
+    "scripts_to_delete": [
+      "demos/demo_rhetorique_simplifie.py - Version simplifiée redondante",
+      "examples/logic_agents/first_order_logic_example.py - Clés API hardcodées, non fonctionnel",
+      "examples/logic_agents/modal_logic_example.py - Clés API hardcodées, non fonctionnel", 
+      "examples/logic_agents/propositional_logic_example.py - Clés API hardcodées, non fonctionnel",
+      "scripts/execution/rhetorical_analysis.py - Uniquement des mocks, aucun LLM réel",
+      "scripts/testing/test_rhetorical_analysis.py - Tests basés uniquement sur mocks"
+    ]
+  },
+  "authenticity_analysis": {
+    "detection_criteria": {
+      "authentic_indicators": [
+        "create_llm_service() usage",
+        "OpenAI/GPT-4o-mini references",
+        "Real Semantic Kernel integration",
+        "Absence of Mock* classes",
+        "Environment variable configuration",
+        "Error handling for real API calls"
+      ],
+      "fraud_indicators": [
+        "Hardcoded API keys ('votre_clé_api_openai')",
+        "Heavy Mock* usage without real alternatives",
+        "Placeholder implementations",
+        "No real LLM service integration",
+        "Fake response generation"
+      ]
+    },
+    "quality_metrics": {
+      "high_quality_scripts": 8,
+      "medium_quality_scripts": 7,
+      "low_quality_scripts": 9,
+      "critical_issues_found": [
+        "Hardcoded API keys in examples/logic_agents/*",
+        "Mock-only implementations without real functionality",
+        "Duplicate functionality across multiple scripts",
+        "Inconsistent error handling patterns"
+      ]
+    }
+  },
+  "final_recommendations": {
+    "immediate_actions": [
+      "Supprimer immédiatement les scripts avec clés API hardcodées",
+      "Merger les versions corrigées avec les scripts principaux", 
+      "Éliminer les scripts mock-only qui n'apportent aucune valeur",
+      "Conserver uniquement les scripts authentiques avec vrais LLMs"
+    ],
+    "architecture_improvements": [
+      "Centraliser la gestion des services LLM",
+      "Standardiser les patterns d'orchestration",
+      "Améliorer la gestion d'erreurs uniformément",
+      "Créer une documentation claire des scripts authentiques"
+    ],
+    "authenticity_score": {
+      "authentic_scripts_percentage": 29.17,
+      "partially_authentic_percentage": 25.0,
+      "fraudulent_scripts_percentage": 45.83,
+      "overall_authenticity_grade": "C+ - Nécessite nettoyage important"
+    }
+  }
+}

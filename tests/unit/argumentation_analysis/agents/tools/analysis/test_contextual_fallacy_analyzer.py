@@ -103,6 +103,8 @@ class TestContextualFallacyAnalyzer(unittest.TestCase):
         
         # Créer l'instance à tester
         self.analyzer = ContextualFallacyAnalyzer()
+        # Forcer le chargement de la taxonomie pour les tests
+        self.analyzer.taxonomy_df = self.analyzer._load_taxonomy()
 
     def tearDown(self):
         """Nettoyage après chaque test."""

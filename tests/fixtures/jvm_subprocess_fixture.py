@@ -34,6 +34,13 @@ def run_in_jvm_subprocess():
         env['PYTHONPATH'] = str(project_root) + os.pathsep + env.get('PYTHONPATH', '')
         env['PROJECT_ROOT'] = str(project_root)
         
+        # Charger les variables du fichier .env pour les rendre disponibles dans le sous-processus
+        dotenv_path = find_dotenv(str(project_root / ".env"))
+        if dotenv_path:
+            load_dotenv(dotenv_path=dotenv_path, override=True)
+            # Mettre à jour l'environnement du sous-processus avec les variables chargées
+            env.update({k: v for k, v in os.environ.items() if k in ["JAVA_HOME", "TWEETY_CLASSPATH"]})
+
         print(f"Exécution du worker en sous-processus avec PYTHONPATH et PROJECT_ROOT: {' '.join(command_for_subprocess)}")
 
         # On capture la sortie pour pouvoir l'afficher en cas d'erreur.

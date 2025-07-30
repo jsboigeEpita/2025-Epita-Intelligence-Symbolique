@@ -1,0 +1,8 @@
+{
+  "manifest_version": "1.0",
+  "agent_name": "SimpleAnalyst",
+  "version": "0.1.0",
+  "author": "Roo Orchestrator",
+  "description": "A simple agent for basic analysis tasks.",
+  "entry_point": "agent.py"
+}

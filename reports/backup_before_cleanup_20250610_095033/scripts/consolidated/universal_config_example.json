@@ -1,0 +1,195 @@
+{
+  "description": "Configuration exemple pour Universal Rhetorical Analyzer",
+  "version": "1.0.0",
+  
+  "default_settings": {
+    "source_type": "text",
+    "workflow_mode": "analysis",
+    "analysis_modes": ["unified"],
+    "parallel_workers": 4,
+    "require_authentic": true,
+    "mock_level": "none"
+  },
+  
+  "llm_configuration": {
+    "service": "openai",
+    "model": "gpt-4",
+    "temperature": 0.3,
+    "timeout": 60,
+    "retry_count": 3
+  },
+  
+  "corpus_settings": {
+    "enable_decryption": true,
+    "default_passphrase_env": "TEXT_CONFIG_PASSPHRASE",
+    "supported_formats": [".enc", ".txt", ".md"],
+    "batch_size": 10
+  },
+  
+  "workflow_modes": {
+    "analysis": {
+      "description": "Analyse uniquement",
+      "components": ["pipeline"],
+      "output_formats": ["json"]
+    },
+    "full": {
+      "description": "Workflow complet avec validation",
+      "components": ["pipeline", "validation", "crypto"],
+      "output_formats": ["json", "markdown"]
+    },
+    "validation": {
+      "description": "Tests et validation système",
+      "components": ["validation"],
+      "output_formats": ["json"]
+    },
+    "performance": {
+      "description": "Tests de performance",
+      "components": ["pipeline", "performance"],
+      "auto_mock": true,
+      "iterations": 3
+    }
+  },
+  
+  "source_types": {
+    "text": {
+      "description": "Texte direct en argument",
+      "example": "python universal_rhetorical_analyzer.py 'Votre texte'"
+    },
+    "file": {
+      "description": "Fichier texte unique",
+      "example": "python universal_rhetorical_analyzer.py --source-type file document.txt"
+    },
+    "encrypted": {
+      "description": "Fichier chiffré unique",
+      "example": "python universal_rhetorical_analyzer.py --source-type encrypted --passphrase 'clé' data.enc"
+    },
+    "batch": {
+      "description": "Répertoire de fichiers texte",
+      "example": "python universal_rhetorical_analyzer.py --source-type batch /path/to/texts/"
+    },
+    "corpus": {
+      "description": "Corpus chiffrés multiples",
+      "example": "python universal_rhetorical_analyzer.py --source-type corpus --corpus file1.enc file2.enc"
+    }
+  },
+  
+  "analysis_modes": {
+    "unified": {
+      "description": "Analyse complète unifiée",
+      "components": ["fallacies", "rhetoric", "logic"],
+      "default": true
+    },
+    "fallacies": {
+      "description": "Détection de sophismes",
+      "fallback_keywords": true
+    },
+    "rhetoric": {
+      "description": "Analyse rhétorique",
+      "techniques": ["ethos", "pathos", "logos"]
+    },
+    "logic": {
+      "description": "Analyse logique formelle",
+      "requires_tweety": true
+    },
+    "coherence": {
+      "description": "Cohérence textuelle",
+      "semantic_analysis": true
+    },
+    "semantic": {
+      "description": "Analyse sémantique",
+      "deep_understanding": true
+    },
+    "advanced": {
+      "description": "Analyse avancée multi-agents",
+      "requires_authentic": true
+    }
+  },
+  
+  "performance_settings": {
+    "parallel_workers": {
+      "min": 1,
+      "max": 16,
+      "recommended": 4
+    },
+    "timeout_limits": {
+      "analysis": 120,
+      "validation": 60,
+      "performance": 300
+    },
+    "retry_settings": {
+      "count": 3,
+      "delay": 1.0,
+      "backoff": "exponential"
+    }
+  },
+  
+  "output_configuration": {
+    "formats": ["json", "yaml"],
+    "auto_timestamp": true,
+    "include_metrics": true,
+    "compression": false
+  },
+  
+  "validation_settings": {
+    "authenticity_threshold": 0.9,
+    "mock_detection": true,
+    "system_validation": true,
+    "api_tests": false
+  },
+  
+  "examples": {
+    "basic_text_analysis": {
+      "command": "python universal_rhetorical_analyzer.py 'Texte à analyser'",
+      "description": "Analyse basique de texte direct"
+    },
+    "file_with_output": {
+      "command": "python universal_rhetorical_analyzer.py --source-type file document.txt --output-file results.json",
+      "description": "Analyse de fichier avec sauvegarde"
+    },
+    "encrypted_corpus": {
+      "command": "python universal_rhetorical_analyzer.py --source-type corpus --corpus data1.enc data2.enc --passphrase 'ma_clé'",
+      "description": "Analyse de corpus chiffrés"
+    },
+    "full_workflow": {
+      "command": "python universal_rhetorical_analyzer.py --workflow-mode full --source-type file document.txt",
+      "description": "Workflow complet avec validation"
+    },
+    "parallel_batch": {
+      "command": "python universal_rhetorical_analyzer.py --source-type batch /texts/ --parallel-workers 8",
+      "description": "Traitement parallèle de lot"
+    },
+    "performance_test": {
+      "command": "python universal_rhetorical_analyzer.py --workflow-mode performance 'Test performance'",
+      "description": "Test de performance automatique"
+    },
+    "development_mode": {
+      "command": "python universal_rhetorical_analyzer.py --allow-mock --verbose 'Test développement'",
+      "description": "Mode développement avec composants simulés"
+    }
+  },
+  
+  "migration_from": {
+    "unified_production_analyzer.py": {
+      "equivalent_command": "python universal_rhetorical_analyzer.py --workflow-mode analysis --require-authentic",
+      "notes": "Utilise les mêmes paramètres d'authenticité et de configuration LLM"
+    },
+    "comprehensive_workflow_processor.py": {
+      "equivalent_command": "python universal_rhetorical_analyzer.py --workflow-mode full --source-type corpus",
+      "notes": "Support complet des corpus chiffrés et workflows"
+    }
+  },
+  
+  "troubleshooting": {
+    "common_issues": {
+      "import_errors": "Vérifier que argumentation_analysis est dans PYTHONPATH",
+      "crypto_errors": "Vérifier la passphrase et les fichiers .enc",
+      "performance_slow": "Réduire parallel_workers ou activer --allow-mock",
+      "authenticity_failed": "Utiliser --allow-mock en développement"
+    },
+    "debug_commands": {
+      "verbose_mode": "--verbose",
+      "development_mode": "--allow-mock --verbose",
+      "test_crypto": "--source-type encrypted --no-decryption"
+    }
+  }
+}

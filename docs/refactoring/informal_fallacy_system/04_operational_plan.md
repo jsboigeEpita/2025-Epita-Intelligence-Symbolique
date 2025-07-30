@@ -456,76 +456,54 @@ Cette étape majeure se concentre sur la migration des composants logiques ident
 
 #### 2.1.2. Plan de Développement Détaillé
 
-Cette section remplace le plan de refactoring sommaire par une liste de tâches de développement granulaires, conçues pour être directement assignables.
+*   **Tâche 1 : Analyse d'Impact et Identification des Références**
+    *   **Objectif :** Localiser toutes les utilisations du `FallacyWorkflowPlugin` hérité pour préparer sa migration.
+    *   **Commande d'analyse :**
+        ```bash
+        # Rechercher toutes les occurrences du nom du plugin et de son fichier
+        rg "FallacyWorkflowPlugin|fallacy_workflow_plugin" .
+        ```
 
-*   **Tâche 1 : Mise en Place du Squelette du Plugin et Conformité aux Standards**
-    *   **Objectif :** Créer la structure de fichiers du nouveau plugin de workflow et s'assurer qu'il respecte les contrats de l'architecture.
-    *   **Checklist Technique :**
-        *   1.1. Créer le répertoire du plugin : `src/core/plugins/workflows/informal_fallacy/`.
-        *   1.2. Créer le manifeste `plugin.yaml` à la racine de ce répertoire.
-            *   Remplir les métadonnées : nom (`informal_fallacy_workflow`), version (`0.1.0`), description ("Workflow orchestrant l'analyse de sophismes informels.").
-            *   Déclarer `spec.type` comme `workflow`.
-            *   Déclarer `spec.entrypoint` vers `plugin.py` et `spec.class_name` vers `InformalFallacyWorkflowPlugin`.
-            *   Déclarer la `capability` principale `run_analysis`. Spécifier les `input_schema` (ex: un objet avec un champ `text`) et `output_schema` (ex: un objet `FallacyAnalysisResult`).
-        *   1.3. Créer le fichier `plugin.py` contenant le squelette de la classe `InformalFallacyWorkflowPlugin`.
-            *   La classe doit hériter de `BasePlugin` (ou de l'interface de workflow si elle existe).
-            *   Implémenter les méthodes abstraites requises par l'interface (ex: `__init__`, `run_analysis`). Le constructeur doit accepter `OrchestrationService` par injection de dépendances.
+*   **Tâche 2 : Opérations sur les Fichiers (Migration et Nettoyage)**
+    *   **Objectif :** Déplacer les fichiers sources vers la nouvelle structure et créer les artefacts de configuration requis.
+    *   **Checklist des Commandes :**
+        ```bash
+        # Déplacer le fichier du plugin vers son nouvel emplacement de workflow
+        git mv argumentation_analysis/agents/plugins/fallacy_workflow_plugin.py src/core/plugins/workflows/informal_fallacy/plugin.py
 
-*   **Tâche 2 : Implémentation de la Logique d'Orchestration (Cœur du Workflow)**
-    *   **Objectif :** Coder la logique principale du workflow, qui doit se comporter comme un chef d'orchestre, sans effectuer de travail métier elle-même.
-    *   **Checklist Technique :**
-        *   2.1. Dans la méthode `run_analysis(self, text: str)` du fichier `plugin.py`:
-        *   2.2. **Décomposition de la logique monolithique :** La méthode doit implémenter une séquence d'appels à d'autres plugins standards via le `self.orchestrator` (instance de `OrchestrationService`).
-        *   2.3. **Pseudo-code de la séquence d'appels :**
-            ```python
-            # Étape 1: Utiliser un plugin de pré-traitement pour nettoyer le texte
-            preprocessed_text = self.orchestrator.call(
-                target="preprocessing.clean_text",
-                payload={"text": text}
-            )
+        # Créer le manifeste du plugin
+        touch src/core/plugins/workflows/informal_fallacy/plugin.yaml
 
-            # Étape 2: Obtenir le "guide" d'analyse pour savoir quels types de sophismes chercher
-            analysis_axes = self.orchestrator.call(
-                target="guiding_plugin.guide_analysis",
-                payload={"text": preprocessed_text}
-            )
+        # Créer le fichier d'initialisation Python
+        touch src/core/plugins/workflows/informal_fallacy/__init__.py
+        ```
 
-            # Étape 3: Pour chaque axe, explorer de manière ciblée (peut être parallélisé)
-            exploration_results = []
-            for axis in analysis_axes:
-                result = self.orchestrator.call(
-                    target="exploration_plugin.explore_category",
-                    payload={"text": preprocessed_text, "category": axis}
-                )
-                exploration_results.append(result)
+*   **Tâche 3 : Refactoring du Code**
+    *   **Objectif :** Adapter le code du plugin pour qu'il respecte les nouveaux contrats de l'architecture.
+    *   **Checklist des modifications (`src/core/plugins/workflows/informal_fallacy/plugin.py`) :**
+        1.  Changer la déclaration de la classe en `class InformalFallacyWorkflowPlugin(BasePlugin, IWorkflowPlugin):` (en supposant l'existence de ces interfaces dans `src/core/plugins/interfaces.py`).
+        2.  Le constructeur doit accepter `OrchestrationService` par injection de dépendances : `def __init__(self, orchestration_service: OrchestrationService):`.
+        3.  Remplacer l'ancienne méthode `run_guided_analysis` par une méthode `run_analysis(self, text: str)` conforme à l'interface de workflow.
+        4.  Supprimer toute logique de construction de prompt. Le prompt est maintenant géré par les plugins `standard` appelés.
+        5.  Supprimer l'instanciation locale du Kernel. Les appels LLM sont délégués.
+        6.  Remplacer la logique monolithique par une séquence d'appels à l'`OrchestrationService` (ex: `self.orchestration_service.call(...)`) pour invoquer les plugins standards (`guiding`, `exploration`, `synthesis`).
+        7.  Supprimer la dépendance au `ResultParsingPlugin`. La sortie est formatée directement par les plugins `standard` appelés, en utilisant leurs `output_schema` Pydantic.
 
-            # Étape 4: Synthétiser les résultats des explorations en un rapport final
-            final_report = self.orchestrator.call(
-                target="synthesis_plugin.synthesize_results",
-                payload={"results": exploration_results}
-            )
+*   **Tâche 4 : Commit Sémantique**
+    *   **Objectif :** Enregistrer cette migration de manière atomique et descriptive.
+    *   **Message de Commit :**
+        ```
+        refactor(plugins): migrate FallacyWorkflowPlugin to new architecture
 
-            return final_report
-            ```
-        *   2.4. **Contrainte critique :** La méthode `run_analysis` ne doit contenir aucune logique métier (pas de construction de prompt, pas d'appel direct à un LLM). Son unique responsabilité est d'invoquer séquentiellement d'autres plugins.
+        Migrates the legacy 'one-shot' FallacyWorkflowPlugin to the new
+        architecture as a modern workflow plugin.
 
-*   **Tâche 3 : Mise à Jour et Adaptation des Tests**
-    *   **Objectif :** Créer un ensemble de tests robustes qui valident le comportement du workflow en isolation et en intégration.
-    *   **Checklist Technique :**
-        *   3.1. Créer le fichier de test d'intégration : `tests/integration/plugins/workflows/test_informal_fallacy.py`.
-        *   3.2. **Test d'Intégration du Workflow :**
-            *   Écrire une classe de test `TestInformalFallacyWorkflow`.
-            *   Dans le `setUp` (ou via une fixture `pytest`), initialiser une instance du `InformalFallacyWorkflowPlugin`.
-            *   **Le point crucial est de mocker l`OrchestrationService` (`self.orchestrator`).** Le mock doit être configuré pour vérifier :
-                *   Que la méthode `call` est appelée le bon nombre de fois.
-                *   Qu'elle est appelée avec les bons `target` (nom du plugin.fonction) dans le bon ordre (`preprocessing`, `guiding`, `exploration`, `synthesis`).
-                *   Qu'elle est appelée avec les bons `payload` à chaque étape.
-            *   Le test doit simuler les valeurs de retour du `orchestrator.call` pour chaque étape afin que le workflow puisse progresser.
-            *   Le test final affirmera que la sortie de `run_analysis` correspond au rapport final simulé, prouvant que le workflow a correctement orchestré les appels.
-        *   3.3. **Mise à jour des tests E2E :**
-            *   Identifier l'ancien test E2E qui appelait le plugin "one-shot".
-            *   Le modifier pour qu'il cible le nouveau `Service Bus` (`POST /v1/execute`) avec un payload demandant l'exécution du `informal_fallacy_workflow`.
-            *   Ce test validera que le workflow est correctement enregistré et peut être appelé depuis le point d'entrée du système.
+        - Moves source file to 'src/core/plugins/workflows/informal_fallacy/'.
+        - Creates the 'plugin.yaml' manifest.
+        - Refactors the class to implement BasePlugin and IWorkflowPlugin.
+        - Replaces monolithic logic with calls to OrchestrationService.
+        - Removes dependency on the obsolete ResultParsingPlugin.
+        ```
 
 
 ### 2.2. Démantèlement du plugin 'result_parsing' (Obsolète)
@@ -544,29 +522,44 @@ Cette section remplace le plan de refactoring sommaire par une liste de tâches 
 #### 2.2.2. Plan de Développement Détaillé
 
 *   **Tâche 1 : Analyse d'Impact et Identification des Références**
-    *   **Objectif :** Localiser toutes les parties du code qui importent ou tentent d'utiliser le `ResultParsingPlugin`.
-    *   **Checklist Technique :**
-        *   1.1. Utiliser un outil de recherche global (ex: `grep`, `rg`, ou la recherche IDE) pour trouver toutes les occurrences de `ResultParsingPlugin` et `result_parsing_plugin` dans la base de code.
-        *   1.2. Lister tous les fichiers contenant des références. L'ancien `FallacyWorkflowPlugin` est le candidat principal.
-        *   1.3. Documenter chaque point d'appel et le refactoring nécessaire pour le supprimer.
+    *   **Objectif :** Localiser toutes les parties du code qui importent ou tentent d'utiliser le `ResultParsingPlugin` pour assurer un retrait complet.
+    *   **Commande d'analyse :**
+        ```bash
+        # Rechercher toutes les occurrences du nom du plugin et de son fichier
+        rg "ResultParsingPlugin|result_parsing_plugin" .
+        ```
 
-*   **Tâche 2 : Refactoring du Code Appelant**
-    *   **Objectif :** Supprimer les dépendances à l'ancien plugin en adoptant les nouveaux mécanismes de la plateforme.
-    *   **Checklist Technique :**
-        *   2.1. Pour chaque fichier identifié dans la Tâche 1 :
-            *   a. Supprimer la ligne `import` relative au `ResultParsingPlugin`.
-            *   b. Supprimer toute logique qui instancie ou appelle le plugin.
-            *   c. Remplacer la logique de parsing par le nouveau pattern : utiliser un `output_parser` (basé sur Pydantic) directement après un appel LLM pour garantir la structure de la sortie.
-        *   2.2. S'assurer que les tests associés au code refactorisé sont mis à jour et passent avec succès.
+*   **Tâche 2 : Opérations sur les Fichiers (Migration et Nettoyage)**
+    *   **Objectif :** Supprimer de manière définitive tous les fichiers associés à ce plugin obsolète.
+    *   **Checklist des Commandes :**
+        ```bash
+        # Supprimer le fichier source du plugin
+        git rm argumentation_analysis/agents/plugins/result_parsing_plugin.py
 
-*   **Tâche 3 : Suppression des Fichiers du Composant Obsolète**
-    *   **Objectif :** Éradiquer définitivement le code du plugin de la base de code.
-    *   **Checklist Technique :**
-        *   3.1. Une fois que l'analyse d'impact (Tâche 1) et le refactoring (Tâche 2) sont complets et validés, supprimer le fichier : `argumentation_analysis/agents/plugins/result_parsing_plugin.py`.
-        *   3.2. Supprimer les tests qui étaient spécifiquement associés à ce plugin (ex: `tests/unit/legacy/test_result_parsing_plugin.py`).
-        *   3.3. Exécuter la suite de tests complète pour s'assurer que la suppression n'a pas causé de régressions inattendues.
-        *   3.4. Rédiger le message de commit sémantique : `refactor(core): dismantle obsolete ResultParsingPlugin`.
+        # Supprimer le test associé (le chemin peut varier)
+        # Supposons l'existence d'un test unitaire pour ce plugin
+        git rm tests/unit/legacy/test_result_parsing_plugin.py
+        ```
 
+*   **Tâche 3 : Refactoring du Code**
+    *   **Objectif :** Supprimer les dépendances à l'ancien plugin dans le code appelant.
+    *   **Checklist des modifications (principalement dans l'ancien `FallacyWorkflowPlugin` avant sa migration) :**
+        1.  Localiser tous les fichiers identifiés par la `Tâche 1`.
+        2.  Supprimer les lignes `import` faisant référence à `ResultParsingPlugin`.
+        3.  Supprimer toute logique qui instancie ou appelle le plugin.
+        4.  Le code qui utilisait le plugin doit maintenant s'attendre à recevoir des objets Pydantic directement des appels LLM ou des appels à d'autres plugins, rendant le parsing explicite inutile.
+
+*   **Tâche 4 : Commit Sémantique**
+    *   **Objectif :** Enregistrer la suppression de ce composant de manière claire.
+    *   **Message de Commit :**
+        ```
+        refactor(core): dismantle obsolete ResultParsingPlugin
+
+        Removes the ResultParsingPlugin which is now obsolete. Its functionality
+        is replaced by Pydantic output parsers integrated within the core
+        plugins and the semantic kernel, simplifying the architecture and
+        removing dead code.
+        ```
 ### 2.3. Migration des Plugins du cycle "Guide-Explore-Synthesize"
 
 *   **Objectif Stratégique :**
@@ -586,40 +579,54 @@ Cette section remplace le plan de refactoring sommaire par une liste de tâches 
 *   **Stratégie Générale :** Chacun des trois composants sera migré en un **Plugin Standard** atomique. Un `workflow` dédié (ex: `GuidedAnalysisWorkflow`) pourra ensuite les orchestrer, rendant la séquence d'appels explicite et robuste.
 
 *   **1. Migration du `GuidingPlugin`**
-    *   **Tâche 1 : Création du Squelette du Plugin (`GuidingPlugin`)**
-        *   1.1. Créer le répertoire : `src/core/plugins/standard/guiding_plugin/`.
-        *   1.2. Créer le manifeste `plugin.yaml` avec `spec.type: standard`, la `capability` `guide_analysis` et ses schémas d'entrée/sortie.
-        *   1.3. Créer le fichier `plugin.py` avec la classe `GuidingPlugin` héritant de `BasePlugin`.
-    *   **Tâche 2 : Implémentation de la Logique Métier**
-        *   2.1. Migrer la logique de `GuidingPlugin` dans la méthode `guide_analysis(self, text: str) -> List[str]`.
-        *   2.2. Externaliser le prompt associé vers un répertoire de personnalité dédié, par exemple `src/agents/personalities/analysis_guider/system.md`.
-    *   **Tâche 3 : Adaptation des Tests Unitaires**
-        *   3.1. Créer `tests/unit/plugins/standard/test_guiding_plugin.py`.
-        *   3.2. Écrire des tests pour valider que la fonction `guide_analysis` retourne les catégories attendues pour un texte donné.
+    *   **Tâche 1 : Analyse d'Impact et Identification des Références**
+        *   **Commande d'analyse :** `rg "GuidingPlugin"`
+    *   **Tâche 2 : Opérations sur les Fichiers**
+        *   **Commandes :**
+            ```bash
+            git mv argumentation_analysis/plugins/GuidingPlugin/GuidingPlugin.py src/core/plugins/standard/guiding_plugin/plugin.py
+            touch src/core/plugins/standard/guiding_plugin/plugin.yaml
+            touch src/core/plugins/standard/guiding_plugin/__init__.py
+            ```
+    *   **Tâche 3 : Refactoring du Code**
+        *   Adapter la classe pour hériter de `BasePlugin`.
+        *   Externaliser le prompt dans un fichier `system.md` dédié.
+        *   Remplacer l'instanciation du Kernel par des appels à un client LLM injecté.
+    *   **Tâche 4 : Commit Sémantique**
+        *   **Message :** `feat(plugins): migrate GuidingPlugin to a standard plugin`
 
 *   **2. Migration du `ExplorationPlugin`**
-    *   **Tâche 1 : Création du Squelette du Plugin (`ExplorationPlugin`)**
-        *   1.1. Créer le répertoire : `src/core/plugins/standard/exploration_plugin/`.
-        *   1.2. Créer le manifeste `plugin.yaml` avec la `capability` `explore_category` (entrée : texte, catégorie ; sortie : résultat d'analyse).
-        *   1.3. Créer le `plugin.py` avec la classe `ExplorationPlugin`.
-    *   **Tâche 2 : Implémentation de la Logique Métier**
-        *   2.1. Migrer la logique dans la méthode `explore_category(self, text: str, category: str) -> AnalysisResult`.
-        *   2.2. Ce plugin devra utiliser le `TaxonomyExplorerPlugin` (via injection de dépendances) pour obtenir les définitions précises de la catégorie explorée.
-    *   **Tâche 3 : Adaptation des Tests Unitaires**
-        *   3.1. Créer `tests/unit/plugins/standard/test_exploration_plugin.py`.
-        *   3.2. Tester la fonction `explore_category` en simulant (`mock`) la réponse du `TaxonomyExplorerPlugin`.
+    *   **Tâche 1 : Analyse d'Impact et Identification des Références**
+        *   **Commande d'analyse :** `rg "ExplorationPlugin"`
+    *   **Tâche 2 : Opérations sur les Fichiers**
+        *   **Commandes :**
+            ```bash
+            git mv argumentation_analysis/plugins/ExplorationPlugin/ExplorationPlugin.py src/core/plugins/standard/exploration_plugin/plugin.py
+            touch src/core/plugins/standard/exploration_plugin/plugin.yaml
+            touch src/core/plugins/standard/exploration_plugin/__init__.py
+            ```
+    *   **Tâche 3 : Refactoring du Code**
+        *   Adapter la classe pour hériter de `BasePlugin`.
+        *   Externaliser le prompt.
+        *   Remplacer les appels directs au `Taxonomy` par une invocation de `TaxonomyExplorerPlugin` via `OrchestrationService`.
+    *   **Tâche 4 : Commit Sémantique**
+        *   **Message :** `feat(plugins): migrate ExplorationPlugin to a standard plugin`
 
 *   **3. Migration du `SynthesisPlugin`**
-    *   **Tâche 1 : Création du Squelette du Plugin (`SynthesisPlugin`)**
-        *   1.1. Créer le répertoire : `src/core/plugins/standard/synthesis_plugin/`.
-        *   1.2. Créer le manifeste `plugin.yaml` avec la `capability` `synthesize_results` (entrée : liste de résultats ; sortie : synthèse finale).
-        *   1.3. Créer le `plugin.py` avec la classe `SynthesisPlugin`.
-    *   **Tâche 2 : Implémentation de la Logique Métier**
-        *   2.1. Migrer la logique de synthèse dans la méthode `synthesize_results(self, results: List[AnalysisResult]) -> SynthesisResult`.
-        *   2.2. Externaliser le prompt de synthèse.
-    *   **Tâche 3 : Adaptation des Tests Unitaires**
-        *   3.1. Créer `tests/unit/plugins/standard/test_synthesis_plugin.py`.
-        *   3.2. Tester la fonction `synthesize_results` avec une liste de résultats d'analyse simulés.
+    *   **Tâche 1 : Analyse d'Impact et Identification des Références**
+        *   **Commande d'analyse :** `rg "SynthesisPlugin"`
+    *   **Tâche 2 : Opérations sur les Fichiers**
+        *   **Commandes :**
+            ```bash
+            git mv argumentation_analysis/plugins/SynthesisPlugin/SynthesisPlugin.py src/core/plugins/standard/synthesis_plugin/plugin.py
+            touch src/core/plugins/standard/synthesis_plugin/plugin.yaml
+            touch src/core/plugins/standard/synthesis_plugin/__init__.py
+            ```
+    *   **Tâche 3 : Refactoring du Code**
+        *   Adapter la classe pour hériter de `BasePlugin`.
+        *   Externaliser le prompt de synthèse.
+    *   **Tâche 4 : Commit Sémantique**
+        *   **Message :** `feat(plugins): migrate SynthesisPlugin to a standard plugin`
 
 ### 2.4. Migration des Services Fondamentaux
 
@@ -639,31 +646,42 @@ Cette section remplace le plan de refactoring sommaire par une liste de tâches 
 
 *   **1. Création du `TaxonomyExplorerPlugin`**
     *   **Stratégie :** Fusionner `fallacy_taxonomy_service.py` et `fallacy_family_definitions.py` en un seul Plugin `Standard`.
-    *   **Tâche 1 : Création du Squelette du Plugin**
-        *   1.1. Créer le répertoire : `src/core/plugins/standard/taxonomy_explorer/`.
-        *   1.2. Créer le `plugin.yaml` avec les `capabilities` : `get_definition`, `get_children`, `get_family_metadata`.
-        *   1.3. Créer le `plugin.py` avec la classe `TaxonomyExplorerPlugin`.
-    *   **Tâche 2 : Implémentation de la Logique Métier**
-        *   2.1. Consolider toute la logique de `fallacy_taxonomy_service.py` et `fallacy_family_definitions.py` au sein de la nouvelle classe de plugin. Les données (définitions) doivent être chargées depuis des fichiers de configuration (ex: YAML ou JSON) et non codées en dur.
-        *   2.2. Exposer les fonctionnalités via des méthodes publiques distinctes, comme spécifié dans les `capabilities`.
-    *   **Tâche 3 : Adaptation des Tests Unitaires**
-        *   3.1. Créer `tests/unit/plugins/standard/test_taxonomy_explorer.py`.
-        *   3.2. Écrire des tests pour chaque capacité, en s'assurant que la navigation et l'interrogation de la taxonomie sont correctes.
+    *   **Tâche 1 : Analyse d'Impact**
+        *   **Commande :** `rg "fallacy_taxonomy_service|fallacy_family_definitions"`
+    *   **Tâche 2 : Opérations sur les Fichiers**
+        *   **Commandes :**
+            ```bash
+            # Créer la nouvelle structure
+            mkdir -p src/core/plugins/standard/taxonomy_explorer
+            touch src/core/plugins/standard/taxonomy_explorer/plugin.yaml
+            touch src/core/plugins/standard/taxonomy_explorer/__init__.py
+            # Les anciens fichiers seront supprimés après la migration du code
+            ```
+    *   **Tâche 3 : Refactoring du Code**
+        *   Créer la classe `TaxonomyExplorerPlugin` héritant de `BasePlugin`.
+        *   Migrer et fusionner la logique des deux services dans les méthodes du plugin (`get_definition`, `get_children`, etc.).
+        *   Charger les définitions depuis des fichiers de configuration externes.
+        *   Supprimer les anciens fichiers `fallacy_taxonomy_service.py` et `fallacy_family_definitions.py` avec `git rm`.
+    *   **Tâche 4 : Commit Sémantique**
+        *   **Message :** `feat(plugins): create TaxonomyExplorerPlugin from legacy services`
 
 *   **2. Création du `ExternalVerificationPlugin`**
     *   **Stratégie :** Transformer `fact_verification_service.py` en un Plugin `Standard` avec un contrat clair.
-    *   **Tâche 1 : Création du Squelette du Plugin**
-        *   1.1. Créer le répertoire `src/core/plugins/standard/external_verification/`.
-        *   1.2. Créer le `plugin.yaml` avec la `capability` `verify_claim` (entrée : `claim`; sortie : `VerificationResult`).
-        *   1.3. Créer le `plugin.py` avec la classe `ExternalVerificationPlugin`.
-    *   **Tâche 2 : Implémentation de la Logique Métier**
-        *   2.1. Migrer la logique de `fact_verification_service.py` dans la méthode `verify_claim`.
-        *   2.2. L'implémentation doit être conçue pour être extensible, en utilisant un système de "providers" (ex: un provider pour une recherche web, un autre pour une base de données interne) qui peut être configuré.
-        *   2.3. Définir le modèle Pydantic `VerificationResult` pour standardiser la sortie (conclusion, sources, niveau de confiance).
-    *   **Tâche 3 : Adaptation des Tests d'Intégration**
-        *   3.1. Créer `tests/integration/plugins/standard/test_external_verification.py`.
-        *   3.2. Les tests doivent mocker les appels aux services externes (ex: API de recherche web) pour valider la logique du plugin de manière isolée et déterministe.
-
+    *   **Tâche 1 : Analyse d'Impact**
+        *   **Commande :** `rg "fact_verification_service"`
+    *   **Tâche 2 : Opérations sur les Fichiers**
+        *   **Commandes :**
+            ```bash
+            git mv fact_verification_service.py src/core/plugins/standard/external_verification/plugin.py
+            touch src/core/plugins/standard/external_verification/plugin.yaml
+            touch src/core/plugins/standard/external_verification/__init__.py
+            ```
+    *   **Tâche 3 : Refactoring du Code**
+        *   Adapter la classe en `ExternalVerificationPlugin(BasePlugin)`.
+        *   Standardiser la méthode `verify_claim` et son modèle de retour `VerificationResult`.
+        *   Rendre le plugin extensible avec un système de "providers".
+    *   **Tâche 4 : Commit Sémantique**
+        *   **Message :** `feat(plugins): migrate fact_verification_service to ExternalVerificationPlugin`
 ### 2.5. Consolidation des Outils d'Analyse
 
 *   **Objectif Stratégique :**
@@ -682,98 +700,159 @@ Cette section remplace le plan de refactoring sommaire par une liste de tâches 
 
 *   **1. Consolidation des Outils "Enhanced" dans `AnalysisToolsPlugin`**
     *   **Stratégie Cible :** Les outils `complex_fallacy_analyzer.py`, `contextual_fallacy_analyzer.py` et `fallacy_severity_evaluator.py` seront les fonctions natives du **Plugin `Standard` `AnalysisToolsPlugin`**.
-    *   **Tâche 1 : Création du Squelette du Plugin**
-        *   1.1. Créer le répertoire : `src/core/plugins/standard/analysis_tools/`.
-        *   1.2. Créer le `plugin.yaml` listant les capacités : `analyze_complex`, `analyze_contextual`, `evaluate_severity`.
-        *   1.3. Créer le `plugin.py` avec la classe `AnalysisToolsPlugin`.
-    *   **Tâche 2 : Implémentation de la Logique Métier**
-        *   2.1. Migrer la logique de chaque outil "Enhanced" dans sa propre méthode au sein de la classe `AnalysisToolsPlugin`.
-        *   2.2. S'assurer que les dépendances (comme le `TaxonomyExplorerPlugin`) sont correctement injectées.
-    *   **Tâche 3 : Adaptation des Tests Unitaires**
-        *   3.1. Créer `tests/unit/plugins/standard/test_analysis_tools.py`.
-        *   3.2. Écrire des tests distincts pour chaque capacité d'analyse, en validant les résultats avec des entrées/sorties prédéfinies.
+    *   **Tâche 1 : Analyse d'Impact**
+        *   **Commande :** `rg "complex_fallacy_analyzer|contextual_fallacy_analyzer|fallacy_severity_evaluator"`
+    *   **Tâche 2 : Opérations sur les Fichiers**
+        *   **Commandes :**
+            ```bash
+            # Créer la nouvelle structure
+            mkdir -p src/core/plugins/standard/analysis_tools
+            touch src/core/plugins/standard/analysis_tools/plugin.yaml
+            touch src/core/plugins/standard/analysis_tools/__init__.py
+            # Le code sera migré dans un seul fichier plugin.py, les anciens seront supprimés
+            touch src/core/plugins/standard/analysis_tools/plugin.py
+            ```
+    *   **Tâche 3 : Refactoring du Code**
+        *   Créer la classe `AnalysisToolsPlugin(BasePlugin)`.
+        *   Migrer la logique de chaque outil "Enhanced" dans sa propre méthode (`analyze_complex`, `analyze_contextual`, etc.) au sein du plugin.
+        *   Supprimer les anciens fichiers avec `git rm`.
+    *   **Tâche 4 : Commit Sémantique**
+        *   **Message :** `feat(plugins): create AnalysisToolsPlugin from enhanced tools`
 
 *   **2. Démantèlement des Outils "Base" (Obsolètes)**
     *   **Stratégie Cible :** Suppression complète après analyse d'impact.
     *   **Tâche 1 : Analyse d'Impact**
-        *   1.1. Identifier tous les fichiers à la racine de `argumentation_analysis/agents/tools/analysis/`.
-        *   1.2. Effectuer une recherche globale pour s'assurer qu'aucune partie du code n'utilise plus ces outils.
-    *   **Tâche 2 : Refactoring des Appels Résiduels (si nécessaire)**
-        *   2.1. Si des appels sont trouvés, les remplacer par des appels aux nouvelles fonctions du `AnalysisToolsPlugin`.
-    *   **Tâche 3 : Suppression des Fichiers**
-        *   3.1. Supprimer les fichiers des outils "Base" et leurs tests associés.
+        *   **Commande :** `rg -l "from argumentation_analysis.agents.tools.analysis import"`
+    *   **Tâche 2 : Opérations sur les Fichiers**
+        *   **Commande :** `git rm argumentation_analysis/agents/tools/analysis/*.py`
+    *   **Tâche 3 : Refactoring du Code**
+        *   Supprimer toutes les références trouvées lors de l'analyse d'impact.
+    *   **Tâche 4 : Commit Sémantique**
+        *   **Message :** `refactor(tools): remove obsolete 'base' analysis tools`
 
 *   **3. Gel et Évaluation des Outils "New" (Obsolètes Temporairement)**
-    *   **Stratégie Cible :** Ne pas migrer, mais planifier une évaluation.
+    *   **Stratégie Cible :** Ne pas migrer, mais planifier une évaluation formelle.
     *   **Tâche 1 : Création d'une Tâche de R&D**
-        *   1.1. Ajouter un ticket au backlog de gestion de projet (ex: Jira, GitHub Issues).
-        *   1.2. Titre du ticket : "R&D: Évaluer l'intégration des outils d'analyse 'New' vs 'Enhanced'".
-        *   1.3. Description : "Mener une évaluation comparative formelle (performance, précision) entre les outils dans `.../tools/analysis/new/` et les capacités existantes du `AnalysisToolsPlugin`. Décider de leur intégration, remplacement ou suppression."
+        *   **Action :** Ajouter un ticket au backlog avec le titre "R&D: Évaluer l'intégration des outils d'analyse 'New' vs 'Enhanced'".
     *   **Tâche 2 : Isolation du Code**
-        *   2.1. S'assurer que ces fichiers ne sont pas inclus dans le packaging de production pour ne pas polluer l'environnement d'exécution. Ils restent dans le code source pour archive et future R&D.
-## Étape 3: Stratégie de Validation et de Benchmarking
+        *   **Action :** S'assurer que les fichiers sous `.../tools/analysis/new/` ne sont pas package, par exemple en utilisant un `.dockerignore`.
+    *   **Tâche 3 : Commit Sémantique**
+        *   **Message :** `chore(tools): freeze 'new' analysis tools pending formal evaluation`
+## Étape 3: Validation et Tests
 
-Cette étape cruciale formalise la stratégie pour garantir la qualité, la non-régression et la performance du système refactorisé. Elle s'appuie sur les concepts identifiés dans la phase de grounding mais les traduit en un plan d'action concret.
+Cette étape cruciale formalise la stratégie pour garantir la qualité, la non-régression et la performance du système refactorisé. Elle s'appuie sur une pyramide de tests granulaires pour valider chaque aspect du système, du composant individuel au workflow complet.
 
-### 3.1. Stratégie de tests et d'assurance qualité
+### 3.1. Tests Unitaires (TU)
 
-L'assurance qualité reposera sur une pyramide de tests classique, exploitant la structure de répertoires déjà mise en place.
+L'objectif des tests unitaires est de valider chaque composant en isolation totale. Ils seront placés dans `tests/unit/` et utiliseront intensivement des mocks pour isoler les dépendances.
 
-*   **Tests Unitaires :** L'objectif est de valider chaque composant en isolation totale. Les tests unitaires seront placés dans `tests/unit/`.
-    *   **Cible :** Plugins `standard` et composants `core` (ex: `PluginLoader`, `AgentLoader`).
-    *   **Méthode :** Chaque fonction native et méthode publique doit être couverte. Toute dépendance externe (appels API, système de fichiers) sera systématiquement remplacée par des **mocks** pour garantir des tests rapides et déterministes.
+#### 3.1.1. `OrchestrationService` (`tests/unit/core/services/test_orchestration_service.py`)
 
-*   **Tests d'Intégration :** Ces tests valident l'interaction entre les différents composants du système et seront situés dans `tests/integration/`.
-    *   **Cible :** L'interaction entre un plugin `workflow` (ex: `InformalFallacyWorkflowPlugin`) et les plugins `standard` qu'il consomme via le `PluginRegistry`.
-    *   **Méthode :** Valider que la chaîne d'appel, depuis le `Service Bus` jusqu'à l'`OrchestrationService` et aux plugins, est fonctionnelle.
+*   **TU-OS-01 : Enregistrement d'un plugin**
+    *   **Scénario :** Vérifier que le service peut enregistrer un plugin valide fourni par un `PluginRegistry` mocké.
+    *   **Assertions :**
+        *   Le plugin est présent dans l'état interne du service.
+*   **TU-OS-02 : Exécution d'un workflow simple (1 plugin)**
+    *   **Scénario :** Simuler un `OrchestrationRequest` pour un appel direct à une capacité de plugin.
+    *   **Dépendances Mockées :** `PluginRegistry` avec un faux plugin.
+    *   **Assertions :**
+        *   La méthode `handle_request` appelle la bonne méthode du bon plugin.
+        *   Le `payload` est transmis correctement.
+        *   La `OrchestrationResponse` est formatée avec le statut `success` et le résultat du plugin.
+*   **TU-OS-03 : Gestion d'une dépendance manquante (plugin non trouvé)**
+    *   **Scénario :** Tenter d'exécuter une capacité d'un plugin qui n'est pas dans le registre.
+    *   **Assertions :**
+        *   Le service retourne une `OrchestrationResponse` avec le statut `error`.
+        *   Le `error_message` indique clairement que le plugin est introuvable.
+*   **TU-OS-04 : Validation du contrat d'entrée**
+    *   **Scénario :** Envoyer une requête avec un `payload` qui ne correspond pas au `input_schema` de la capacité du plugin.
+    *   **Assertions :**
+        *   Le service doit intercepter l'erreur (idéalement via une validation Pydantic) et retourner une réponse `error`.
+        *   Le message d'erreur doit spécifier l'inadéquation du contrat.
 
-*   **Tests End-to-End :** Ces tests simulent un parcours utilisateur complet pour valider un cas d'usage de bout en bout. Ils seront placés dans `tests/e2e/`.
-    *   **Cible :** Le flux complet, depuis une requête HTTP à l'API du `Service Bus` jusqu'à la réception d'une réponse structurée.
-    *   **Méthode :** Utiliser le `TestClient` de FastAPI pour simuler des interactions réelles et valider la conformité de la réponse finale par rapport au contrat d'API.
+#### 3.1.2. `PluginLoader` (`tests/unit/core/plugins/test_plugin_loader.py`)
 
-#### Plan d'Implémentation Détaillé
+*   **TU-PL-01 : Chargement d'un plugin valide**
+    *   **Scénario :** Utiliser une fixture `pytest` pour créer une structure de répertoire temporaire avec un plugin valide (code + `plugin.yaml`).
+    *   **Assertions :**
+        *   Le loader découvre et charge le plugin.
+        *   Le registre retourné contient une instance du plugin.
+*   **TU-PL-02 : Rejet d'un plugin avec manifeste `plugin.yaml` invalide**
+    *   **Scénario :** Créer un `plugin.yaml` avec des champs manquants (ex: `metadata.name`).
+    *   **Assertions :**
+        *   Le loader ignore le plugin.
+        *   Un avertissement (log `WARNING`) est généré.
+        *   Le plugin n'est pas présent dans le registre retourné.
+*   **TU-PL-03 : Détection de dépendances cycliques (avancé)**
+    *   **Scénario :** Créer deux plugins factices où A dépend de B et B dépend de A via leur manifeste.
+    *   **Assertions :**
+        *   Le `PluginLoader` doit lever une exception `CyclicDependencyError` explicite.
 
-*   **Tâche 1 : Création des Squelettes de Test.**
-    *   **Objectif :** Fournir des exemples fonctionnels et minimalistes pour chaque type de test afin de standardiser les contributions et d'accélérer l'adoption.
-    *   **Checklist Technique :**
-        *   Créer un fichier `tests/unit/test_example.py` contenant une assertion simple (ex: `assert 1 + 1 == 2`).
-        *   Créer un fichier `tests/integration/test_example.py` avec une structure de test `pytest` basique.
-        *   Créer un fichier `tests/e2e/test_example.py` avec une structure de test `pytest` basique.
-    *   **Validation :** Exécuter `pytest` et s'assurer que ces trois tests sont découverts et passent.
+#### 3.1.3. `BenchmarkService` (`tests/unit/benchmarking/test_benchmark_service.py`)
 
-*   **Tâche 2 : Développement d'une Fixture `pytest` pour le `PluginLoader`.**
-    *   **Objectif :** Créer un environnement de test isolé et contrôlé pour le `PluginLoader`, lui permettant de charger des plugins "mock" sans dépendre du système de fichiers réel.
-    *   **Checklist Technique :**
-        *   Dans `tests/conftest.py`, définir une nouvelle fixture `pytest` nommée `mock_plugin_loader`.
-        *   Cette fixture utilisera `tmp_path_factory` de `pytest` pour créer une structure de répertoires de plugins temporaire.
-        *   Elle créera dynamiquement des fichiers `plugin.yaml` et des `__init__.py` contenant de fausses classes de plugin.
-        *   La fixture retournera une instance du `PluginLoader` configurée pour lire depuis ce répertoire temporaire.
-    *   **Validation :** Un test unitaire pour le `PluginLoader` pourra utiliser cette fixture pour valider la logique de découverte et de chargement en isolation complète.
+*   **TU-BS-01 : Mesure de la latence d'une fonction**
+    *   **Scénario :** Exécuter une suite de benchmarks sur une capacité mockée qui a un temps de sommeil (`time.sleep`) défini.
+    *   **Dépendances Mockées :** `OrchestrationService`.
+    *   **Assertions :**
+        *   Le `BenchmarkSuiteResult` retourné contient des `duration_ms` cohérentes avec le temps de sommeil.
+        *   Les statistiques agrégées (moyenne, min, max) sont calculées correctement.
+*   **TU-BS-02 : Enregistrement correct des métriques**
+    *   **Scénario :** Exécuter une suite de tests avec des succès et des échecs (l'appel mocké à l'`OrchestrationService` lève une exception).
+    *   **Assertions :**
+        *   Le `BenchmarkSuiteResult` reporte précisément le nombre de `successful_runs` et `failed_runs`.
+        *   Les `BenchmarkResult` individuels contiennent le statut `is_success` et le message `error` corrects.
 
-*   **Tâche 3 : Documentation de la Stratégie de Test.**
-    *   **Objectif :** Rendre la stratégie de test accessible et compréhensible pour tous les contributeurs du projet.
-    *   **Checklist Technique :**
-        *   Ouvrir le fichier `CONTRIBUTING.md`.
-        *   Y ajouter une nouvelle section `## Stratégie de Test`.
-        *   Décrire brièvement le rôle des répertoires `tests/unit`, `tests/integration`, et `tests/e2e`.
-        *   Fournir un exemple d'utilisation de la fixture `mock_plugin_loader` pour expliquer comment tester les composants qui dépendent des plugins.
-### 3.2. Framework de benchmarking de performance
+### 3.2. Tests d'Intégration (TI)
 
-Pour garantir que la refactorisation atteint ses objectifs de performance et d'efficacité, un framework de benchmark est indispensable.
+Les tests d'intégration valident l'interaction entre les différents composants réels du système. Ils seront situés dans `tests/integration/` et utiliseront une base de données de test et des plugins réels mais sur des données contrôlées.
 
-*   **Métriques Clés :** Les indicateurs suivants seront systématiquement suivis :
-    *   **Latence de réponse (ms) :** Temps de traitement complet d'une requête.
-    *   **Coût par appel (€) :** Estimation du coût des appels aux modèles de langage propriétaires, si applicable.
-    *   **Consommation de tokens :** Nombre de tokens d'entrée et de sortie pour chaque appel LLM, crucial pour l'optimisation.
+#### 3.2.1. `TI-Workflow-Standard`
 
-*   **Scénarios de Benchmark :**
-    *   **Benchmark Comparatif (Critique) :** Mettre en place un scénario qui exécute la même tâche d'analyse sur un corpus de test défini, une fois avec le `FallacyWorkflowPlugin` hérité et une fois avec le nouveau workflow `informal_fallacy` orchestré. Cela permettra de mesurer objectivement les gains ou régressions en latence et en coût.
-    *   **Benchmark Atomique :** Mesurer la performance individuelle de chaque fonction de plugin critique pour identifier les goulots d'étranglement.
+*   **Scénario :** Un client envoie une requête HTTP à l'API (`/v1/execute`) pour une analyse de sophisme simple.
+*   **Flux Système :** API (FastAPI `TestClient`) -> `OrchestrationService` -> `fallacy_analysis_plugin` (instance réelle).
+*   **Plugins impliqués :**
+    *   `fallacy_analysis_plugin`: Plugin `standard` qui prend un texte et retourne une analyse.
+*   **Assertions :**
+    1.  La requête HTTP retourne un code de statut 200.
+    2.  L'`OrchestrationService` sélectionne et appelle correctement le `fallacy_analysis_plugin`.
+    3.  La réponse JSON finale est conforme au `output_schema` défini pour la capacité d'analyse, validant le contrat de bout en bout.
 
-*   **Outillage :**
-    *   **`pytest-benchmark` :** Utilisation de la fixture `benchmark` de ce paquet pour des mesures de performance précises et des comparaisons statistiques.
-    *   **Décorateurs personnalisés :** Développement de décorateurs à appliquer sur les clients d'API LLM pour intercepter et compter automatiquement la consommation de tokens.
-    *   **Rapports Structurés :** Les résultats des benchmarks seront exportés en format JSON ou CSV pour permettre un suivi des tendances de performance au fil du temps.
+#### 3.2.2. `TI-Workflow-Complexe`
+
+*   **Scénario :** Un client demande une génération de contre-argument guidée via l'API, un processus nécessitant l'enchaînement de plusieurs plugins.
+*   **Flux Système :** API -> `OrchestrationService` -> `CounterArgumentWorkflow` (plugin de `workflow`).
+*   **Plugins impliqués :**
+    *   `CounterArgumentWorkflow`: Le workflow qui orchestre la séquence.
+    *   `guiding_plugin`: Identifie la stratégie de contre-argument.
+    *   `exploration_plugin`: Recherche des exemples ou des données pertinentes.
+    *   `synthesis_plugin`: Construit le contre-argument final.
+*   **Assertions :**
+    1.  Le `CounterArgumentWorkflow` est bien appelé.
+    2.  Les logs ou un état interne observable montrent que les plugins `guiding`, `exploration`, et `synthesis` sont appelés dans le bon ordre.
+    3.  Les données de sortie d'un plugin (ex: la stratégie du `guiding_plugin`) sont correctement transmises comme données d'entrée au plugin suivant.
+    4.  La réponse finale est une synthèse cohérente produite par le `synthesis_plugin`.
+
+#### 3.2.3. `TI-Benchmark-Complet`
+
+*   **Scénario :** Exécuter le script `src/run_benchmark.py` configuré pour lancer les deux workflows (`TI-Workflow-Standard` et `TI-Workflow-Complexe`) en mode benchmark.
+*   **Flux Système :** `run_benchmark.py` -> `BenchmarkService` -> `OrchestrationService` -> (Plugins réels).
+*   **Assertions :**
+    1.  Le script s'exécute jusqu'à la fin sans erreur.
+    2.  Des rapports de benchmark (ex: fichiers JSON ou sorties console) sont générés.
+    3.  Les rapports contiennent des métriques de performance (latence, nombre de runs) pour chaque plugin et chaque capacité exécutée dans les workflows.
+
+### 3.3. Tests de Contrat
+
+Ces tests garantissent la stabilité des interfaces de données, qui sont le fondement de la communication inter-services.
+
+*   **Objectif :** Valider que chaque modèle Pydantic de requête et de réponse dans `src/core/contracts.py` est bien formé et rejette les données invalides.
+*   **Stratégie d'implémentation (`tests/unit/core/test_contracts.py`) :**
+    1.  Pour chaque `*Request` (ex: `OrchestrationRequest`):
+        *   Créer un test qui l'instancie avec des données valides et vérifier que l'objet est créé.
+        *   Créer des tests qui tentent de l'instancier avec des données invalides (type incorrect, champ manquant) et vérifier qu'une exception `pydantic.ValidationError` est levée.
+    2.  Pour chaque `*Response` (ex: `OrchestrationResponse`):
+        *   Assurer la validation de la structure de la même manière.
+    *   Ces tests agissent comme une documentation vivante et un garde-fou contre les changements cassants accidentels sur les API de données.
 
 ## Étape 4: Stratégie de Déploiement et d'Opérationnalisation
 #### Plan d'Implémentation Détaillé
@@ -1128,12 +1207,93 @@ Cette section traduit les concepts stratégiques de gouvernance en tâches techn
 ---
 
 
-### IV. Stratégie de Validation et de Test
 
-- **Tests Unitaires :** Il est crucial de valider chaque composant du `BenchmarkService` de manière isolée. Cela inclut les méthodes responsables du chargement des datasets, du prétraitement des données, et du calcul des métriques de performance. Chaque unité de code doit être testée pour garantir sa robustesse et sa fiabilité.
+### Étape 4: Gouvernance du Code et Intégration Continue (CI/CD)
 
-- **Tests d'Intégration :** Le workflow complet, orchestré par `run_benchmark.py`, doit être testé de bout en bout. Ces tests vérifieront la bonne intégration entre le service de benchmark, les contrats de données, et les plugins. Pour les dépendances externes, comme les services de données ou les API, des mocks seront utilisés pour simuler leurs réponses et garantir un environnement de test contrôlé.
+Cette section établit les processus de gouvernance et d'intégration continue qui garantiront la qualité, la cohérence et la stabilité du code tout au long du projet de refactorisation. Elle vise à créer un cadre de travail rigoureux mais agile, où chaque contribution est validée avant son intégration.
 
-- **Données de Test :** Un jeu de données de test dédié sera créé. Il devra être représentatif des cas d'usage réels et inclure des cas limites (edge cases) pour s'assurer que le framework peut gérer une variété de scénarios. La qualité et la pertinence de ce jeu de données sont fondamentales pour la validité des benchmarks.
+#### Stratégie de Branches (GitFlow)
 
-- **Tests de Non-Régression :** Les benchmarks existants et validés constitueront une suite de tests de non-régression. Avant chaque mise en production d'une modification, cette suite sera exécutée pour s'assurer qu'aucune régression de performance ou de fonctionnalité n'a été introduite.
+Pour organiser le développement et sécuriser le code de production, le projet adoptera une stratégie de branches basée sur le modèle GitFlow. Ce modèle fournit un cadre robuste pour la gestion des développements parallèles, des versions et des correctifs urgents.
+
+*   **`main`**:
+    *   **Rôle :** Branche de production. Le code sur `main` est considéré comme stable, testé et déployable à tout moment.
+    *   **Règles :** Tout commit sur `main` doit correspondre à une version de production (taguée `vX.X.X`). La branche `main` ne peut être mise à jour que par un merge depuis la branche `develop` après une validation complète. Les commits directs y sont proscrits.
+
+*   **`develop`**:
+    *   **Rôle :** Branche d'intégration principale. C'est la branche qui reflète l'état le plus à jour du développement. Toutes les nouvelles fonctionnalités y sont fusionnées avant d'être considérées pour la production.
+    *   **Règles :** C'est la branche cible pour toutes les Pull Requests de fonctionnalités. Elle doit toujours rester dans un état stable et compilable.
+
+*   **`feature/<nom-feature>`**:
+    *   **Rôle :** Branches de développement pour de nouvelles fonctionnalités. Chaque tâche de développement, comme la migration d'un plugin ou l'ajout d'une nouvelle capacité, doit avoir sa propre branche de feature.
+    *   **Exemples :** `feature/plugin-fallacy-analysis`, `feature/refactor-orchestration-service`.
+    *   **Cycle de vie :**
+        1.  Créée à partir de `develop`.
+        2.  Le développement a lieu sur cette branche avec des commits réguliers.
+        3.  Une fois la fonctionnalité terminée et testée localement, une Pull Request (PR) est ouverte pour merger la branche de feature vers `develop`.
+        4.  Après la revue de code et la validation de la CI, la PR est mergée dans `develop` et la branche de feature est supprimée.
+
+#### Processus de Revue de Code (Pull Request)
+
+Aucun code ne sera intégré à la branche `develop` sans une revue formelle. Ce processus garantit une qualité de code élevée et favorise le partage des connaissances au sein de l'équipe.
+
+*   **Déclenchement :** Toute modification de code doit faire l'objet d'une Pull Request (PR) depuis une branche `feature/*` vers la branche `develop`.
+*   **Requisiteurs :** Chaque PR doit être revue et approuvée par **au moins un autre développeur** que l'auteur du code.
+*   **Points de Vérification Clés :**
+    *   **Respect des Conventions :** Le code adhère-t-il aux standards de style définis pour le projet (ex: **PEP 8** pour Python) ? Est-il lisible et bien commenté ?
+    *   **Clarté et Simplicité :** La logique est-elle facile à comprendre ? N'y a-t-il pas de complexité inutile ?
+    *   **Pertinence des Tests :** La PR inclut-elle des tests unitaires et/ou d'intégration pertinents qui valident la nouvelle fonctionnalité et protègent contre les régressions ?
+    *   **Performance :** Le code introduit-il des goulots d'étranglement potentiels ?
+    *   **Sécurité :** La modification expose-t-elle le système à de nouvelles vulnérabilités ?
+*   **Templates de Pull Request :** Pour standardiser les demandes de revue, un template de PR sera utilisé. Il obligera l'auteur à décrire clairement le "quoi" (objectif de la PR), le "pourquoi" (justification métier/technique), et le "comment" (détails d'implémentation et stratégie de test).
+
+#### Pipeline d'Intégration Continue (CI)
+
+Un pipeline d'intégration continue sera configuré pour s'exécuter automatiquement à chaque push sur une Pull Request ciblant `develop`. Ce pipeline agit comme un gardien automatisé de la qualité du code. Le merge de la PR sera bloqué tant que toutes les étapes du pipeline n'auront pas réussi.
+
+*   **Déclenchement :** Automatique à chaque `push` sur une branche `feature/*` ayant une PR ouverte vers `develop`.
+
+*   **Job 1: Linting & Analyse Statique**
+    *   **Objectif :** Vérifier la conformité du code aux standards sans l'exécuter.
+    *   **Étapes :**
+        *   **Linting du Style (`flake8`)**: Analyse le code Python pour s'assurer qu'il respecte les conventions de style PEP 8.
+        *   **Analyse de Typage Statique (`mypy`)**: Vérifie la cohérence des types pour prévenir les erreurs d'exécution liées aux types de données.
+    *   **Condition de Blocage :** Le job échoue si `flake8` ou `mypy` rapporte des erreurs.
+
+*   **Job 2: Tests Unitaires & d'Intégration**
+    *   **Objectif :** Valider le comportement fonctionnel du code et prévenir les régressions.
+    *   **Étapes :**
+        *   **Exécution des Tests (`pytest`)**: Lance l'ensemble de la suite de tests (unitaires et intégration).
+        *   **Rapport de Couverture de Code**: Un rapport de couverture de code est généré (par exemple avec `pytest-cov`). **La Pull Request sera bloquée si la couverture globale du code diminue**, forçant l'ajout de tests pour toute nouvelle logique.
+    *   **Condition de Blocage :** Le job échoue si un seul test échoue ou si le seuil de couverture de code n'est pas maintenu.
+
+Le merge vers la branche `develop` est techniquement impossible si l'un de ces jobs échoue, assurant ainsi que la base de code principale reste toujours dans un état stable, testé et conforme aux standards.
+
+
+### Étape 5: Validation Finale et Conformité SDDD
+
+Cette étape finale formalise le processus de validation qui garantit que le produit logiciel livré est en stricte conformité avec les exigences et l'architecture décrites dans ce plan opérationnel, conformément au protocole SDDD. Elle sert de "contrat de sortie" pour le projet de refactoring.
+
+#### Processus de Validation
+
+1.  **Audit Final du Code :**
+    *   Une fois que l'ensemble du développement est terminé et que toutes les fonctionnalités ont été mergées dans la branche `develop`, un audit final et complet du code sera mené.
+    *   Cet audit consistera en une comparaison systématique de l'architecture du code final avec l'architecture cible spécifiée dans ce document. L'objectif est de vérifier que les principes de modularité, de découplage et les contrats d'interface ont été respectés.
+
+2.  **Vérification de la Traçabilité (Commit-Tâche) :**
+    *   Chaque commit présent dans l'historique de la branche `develop` depuis le début du projet de refactoring devra être explicitement traçable à une tâche spécifique décrite dans les "Plans de Développement Détaillés" (Étape 2).
+    *   Cette vérification garantit que chaque modification apportée au code a une justification métier ou technique claire et documentée.
+
+3.  **Production du Rapport de Conformité SDDD :**
+    *   Le livrable final et la preuve de conformité de ce projet sera un rapport Markdown.
+    *   **Nom du Fichier :** `docs/refactoring/informal_fallacy_system/reports/YYYYMMDD_sddd_compliance_report.md` (où YYYYMMDD est la date de génération).
+    *   **Contenu du Rapport :** Ce document listera chaque exigence et chaque tâche de migration de ce plan opérationnel et fournira la preuve de sa réalisation dans le code, incluant des liens vers les commits Git correspondants ou les sections de code pertinentes.
+
+#### Critères d'Acceptation
+
+Pour que le projet soit considéré comme terminé, les critères suivants devront être intégralement remplis :
+
+1.  Toutes les migrations détaillées dans l'**Étape 2** sont complétées et validées.
+2.  Tous les tests automatisés décrits dans l'**Étape 3** passent avec succès.
+3.  Le pipeline CI/CD configuré dans l'**Étape 4** est stable et affiche un statut "vert" sur la branche `develop`.
+4.  Le rapport de conformité SDDD, tel que défini dans cette **Étape 5**, est produit, revu et validé.

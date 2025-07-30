@@ -1,0 +1,8 @@
+{
+  "manifest_version": "1.0",
+  "plugin_name": "StandardAnalysis",
+  "version": "0.1.0",
+  "author": "Roo Orchestrator",
+  "description": "Provides standard text analysis functionalities.",
+  "entry_point": "main.py" 
+}

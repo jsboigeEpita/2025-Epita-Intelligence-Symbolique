@@ -1,0 +1,278 @@
+{
+  "educational_system": {
+    "version": "1.0.0",
+    "description": "Configuration pour le système de démonstration éducatif EPITA",
+    
+    "default_configuration": {
+      "mode": "intermediaire",
+      "student_level": "L3",
+      "language": "fr",
+      "enable_real_llm": true,
+      "enable_conversation_capture": true,
+      "enable_step_by_step": true,
+      "enable_interactive_feedback": true,
+      "enable_advanced_metrics": false,
+      "max_conversation_length": 50,
+      "explanation_detail_level": "medium",
+      "enable_visual_diagrams": true,
+      "enable_progress_tracking": true
+    },
+    
+    "level_configurations": {
+      "L1": {
+        "mode": "debutant",
+        "complexity": 0.3,
+        "concepts": ["sophismes_basiques"],
+        "explanation_level": "detailed",
+        "max_agents": 1,
+        "enable_advanced_metrics": false,
+        "recommended_duration_minutes": 15,
+        "learning_objectives": [
+          "Identifier les sophismes basiques",
+          "Comprendre les erreurs de raisonnement",
+          "Développer l'esprit critique"
+        ]
+      },
+      
+      "L2": {
+        "mode": "intermediaire",
+        "complexity": 0.5,
+        "concepts": ["sophismes", "logique_propositionnelle"],
+        "explanation_level": "medium",
+        "max_agents": 2,
+        "enable_advanced_metrics": false,
+        "recommended_duration_minutes": 25,
+        "learning_objectives": [
+          "Maîtriser l'analyse rhétorique",
+          "Comprendre la logique propositionnelle",
+          "Utiliser les connecteurs logiques"
+        ]
+      },
+      
+      "L3": {
+        "mode": "intermediaire",
+        "complexity": 0.7,
+        "concepts": ["logique_complete", "orchestration"],
+        "explanation_level": "medium",
+        "max_agents": 3,
+        "enable_advanced_metrics": true,
+        "recommended_duration_minutes": 35,
+        "learning_objectives": [
+          "Maîtriser la logique modale",
+          "Comprendre l'orchestration multi-agents",
+          "Analyser des arguments complexes"
+        ]
+      },
+      
+      "M1": {
+        "mode": "expert",
+        "complexity": 0.8,
+        "concepts": ["orchestration_avancee", "synthesis"],
+        "explanation_level": "basic",
+        "max_agents": 4,
+        "enable_advanced_metrics": true,
+        "recommended_duration_minutes": 45,
+        "learning_objectives": [
+          "Orchestrer des analyses complètes",
+          "Synthétiser des résultats complexes",
+          "Développer des approches de recherche"
+        ]
+      },
+      
+      "M2": {
+        "mode": "expert",
+        "complexity": 1.0,
+        "concepts": ["recherche_avancee"],
+        "explanation_level": "expert",
+        "max_agents": 5,
+        "enable_advanced_metrics": true,
+        "recommended_duration_minutes": 60,
+        "learning_objectives": [
+          "Mener des recherches indépendantes",
+          "Créer de nouvelles méthodologies",
+          "Publier des résultats scientifiques"
+        ]
+      }
+    },
+    
+    "demonstration_modes": {
+      "sherlock_watson": {
+        "description": "Investigation déductive style Sherlock Holmes",
+        "agents": ["InformalAgent", "ModalLogicAgent", "ProjectManager"],
+        "text_type": "mystery_argument",
+        "expected_duration_minutes": 20,
+        "difficulty": "intermediate"
+      },
+      
+      "einstein_oracle": {
+        "description": "Raisonnement complexe style Einstein",
+        "agents": ["SynthesisAgent", "ModalLogicAgent", "ProjectManager"],
+        "text_type": "scientific_argument",
+        "expected_duration_minutes": 30,
+        "difficulty": "advanced"
+      },
+      
+      "cluedo_enhanced": {
+        "description": "Déduction collaborative multi-agents",
+        "agents": ["InformalAgent", "PropositionalAgent", "ModalLogicAgent", "SynthesisAgent"],
+        "text_type": "collaborative_deduction",
+        "expected_duration_minutes": 40,
+        "difficulty": "expert"
+      },
+      
+      "micro_orchestration": {
+        "description": "Orchestration simplifiée pour démonstration",
+        "agents": ["InformalAgent", "ModalLogicAgent"],
+        "text_type": "simple_argument",
+        "expected_duration_minutes": 10,
+        "difficulty": "beginner"
+      }
+    },
+    
+    "sample_texts_metadata": {
+      "L1_sophismes_basiques": {
+        "title": "Débat sur les Réseaux Sociaux",
+        "domain": "technologie_sociale",
+        "fallacies": ["appel_autorite", "generalisation_abusive", "pente_glissante"],
+        "difficulty": "facile",
+        "estimated_analysis_time_minutes": 15,
+        "pedagogical_notes": "Excellent pour introduire les sophismes de base"
+      },
+      
+      "L2_logique_propositionnelle": {
+        "title": "Argumentation sur l'Écologie",
+        "domain": "environnement",
+        "logical_structures": ["implications", "disjonctions", "negations"],
+        "difficulty": "modere",
+        "estimated_analysis_time_minutes": 25,
+        "pedagogical_notes": "Parfait pour enseigner les connecteurs logiques"
+      },
+      
+      "L3_logique_modale": {
+        "title": "Éthique de l'Intelligence Artificielle",
+        "domain": "ethique_technologique",
+        "modal_operators": ["necessite", "possibilite", "obligation", "incertitude"],
+        "difficulty": "avance",
+        "estimated_analysis_time_minutes": 35,
+        "pedagogical_notes": "Introduction aux modalités et à l'éthique IA"
+      },
+      
+      "M1_orchestration_complexe": {
+        "title": "Débat Multi-dimensionnel sur la Génétique",
+        "domain": "bioethique",
+        "analysis_types": ["sophistique", "logique_propositionnelle", "modalites", "synthese"],
+        "difficulty": "expert",
+        "estimated_analysis_time_minutes": 45,
+        "pedagogical_notes": "Cas d'étude complet nécessitant tous les agents"
+      }
+    },
+    
+    "llm_services": {
+      "preferred_service": "azure_openai",
+      "fallback_services": ["openai", "anthropic"],
+      "educational_prompts": {
+        "student_explanations": true,
+        "step_by_step_reasoning": true,
+        "pedagogical_examples": true,
+        "french_explanations": true
+      },
+      "performance_monitoring": {
+        "track_response_times": true,
+        "monitor_educational_effectiveness": true,
+        "capture_student_feedback": true
+      }
+    },
+    
+    "output_configuration": {
+      "reports": {
+        "generate_markdown": true,
+        "generate_json": true,
+        "include_conversations": true,
+        "include_metrics": true,
+        "include_recommendations": true
+      },
+      
+      "file_locations": {
+        "reports_directory": "reports/educational",
+        "logs_directory": "logs/educational", 
+        "conversations_directory": "logs/educational/conversations",
+        "metrics_directory": "logs/educational/metrics"
+      },
+      
+      "naming_conventions": {
+        "report_prefix": "educational_report",
+        "session_prefix": "educational_session",
+        "conversation_prefix": "conversations",
+        "test_prefix": "educational_test"
+      }
+    },
+    
+    "validation_rules": {
+      "minimum_conversation_length": 5,
+      "required_agents_per_level": {
+        "L1": 1,
+        "L2": 2, 
+        "L3": 2,
+        "M1": 3,
+        "M2": 3
+      },
+      "maximum_session_duration_minutes": 90,
+      "minimum_educational_effectiveness": 0.6,
+      "required_checkpoints_per_session": 3
+    },
+    
+    "troubleshooting": {
+      "common_issues": {
+        "llm_service_unavailable": {
+          "description": "Service LLM non disponible",
+          "solutions": [
+            "Vérifier la configuration .env",
+            "Tester la connectivité réseau",
+            "Utiliser le mode dégradé sans LLM"
+          ]
+        },
+        
+        "jvm_initialization_failed": {
+          "description": "Échec de l'initialisation TweetyProject",
+          "solutions": [
+            "Vérifier l'installation Java",
+            "Contrôler les chemins vers les bibliothèques",
+            "Utiliser le mode sans logique formelle"
+          ]
+        },
+        
+        "agents_creation_failed": {
+          "description": "Impossible de créer les agents spécialisés",
+          "solutions": [
+            "Réduire le nombre d'agents requis",
+            "Vérifier les dépendances du système",
+            "Utiliser le mode dégradé"
+          ]
+        }
+      },
+      
+      "debug_configuration": {
+        "enable_detailed_logging": true,
+        "capture_stack_traces": true,
+        "save_debug_sessions": true,
+        "verbose_agent_interactions": true
+      }
+    },
+    
+    "assessment_criteria": {
+      "educational_effectiveness": {
+        "excellent": 0.9,
+        "good": 0.75,
+        "satisfactory": 0.6,
+        "needs_improvement": 0.4
+      },
+      
+      "learning_progression": {
+        "concepts_mastered": "percentage_of_successful_checkpoints",
+        "interaction_quality": "meaningfulness_of_agent_conversations",
+        "analysis_depth": "complexity_of_insights_generated",
+        "critical_thinking": "quality_of_fallacy_detection"
+      }
+    }
+  }
+}
