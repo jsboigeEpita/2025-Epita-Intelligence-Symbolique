@@ -17,7 +17,7 @@ from semantic_kernel.connectors.ai.open_ai import (
 from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
 from semantic_kernel.contents import ChatHistory, AuthorRole, FunctionCallContent, ChatMessageContent, FunctionResultContent, StreamingChatMessageContent
 from argumentation_analysis.agents.utils.taxonomy_navigator import TaxonomyNavigator
-from .result_parsing_plugin import ResultParsingPlugin
+from argumentation_analysis.agents.plugins.result_parsing_plugin import ResultParsingPlugin
 
 # Configuration du logging pour semantic-kernel
 logging.basicConfig(level=logging.DEBUG)

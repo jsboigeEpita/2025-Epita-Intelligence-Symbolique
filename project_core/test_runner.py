@@ -206,7 +206,7 @@ class TestRunner:
         command = ["python", "-m", "pytest", "-v"] + test_paths
         
         # Passer les URLs aux tests seulement si les services sont démarrés
-        needs_services = self.test_type in ["functional", "e2e", "all"]
+        needs_services = self.test_type in ["functional", "e2e"]
         if needs_services:
             backend_url = f"http://127.0.0.1:{self.service_manager.api_port}"
             # L'URL du frontend est la même que celle du backend car il sert les fichiers statiques

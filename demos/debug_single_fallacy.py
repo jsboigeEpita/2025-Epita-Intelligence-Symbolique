@@ -23,8 +23,8 @@ except (NameError, FileNotFoundError, RuntimeError) as e:
 
 import semantic_kernel as sk
 
+import importlib
 from semantic_kernel.contents import ChatHistory
-from argumentation_analysis.agents.plugins.fallacy_workflow_plugin import FallacyWorkflowPlugin
 from argumentation_analysis.agents.utils.taxonomy_utils import Taxonomy
 
 class Colors:
@@ -82,15 +82,23 @@ async def main():
     llm_service = create_llm_service(service_id="default", model_id="gpt-4o-mini", force_authentic=True)
     kernel.add_service(llm_service)
     
-    workflow_plugin = FallacyWorkflowPlugin(kernel)
-    
+    try:
+        module = importlib.import_module("plugins.FallacyWorkflow.plugin")
+        FallacyWorkflowPlugin = getattr(module, "FallacyWorkflowPlugin")
+        # Le constructeur attend master_kernel et llm_service
+        workflow_plugin = FallacyWorkflowPlugin(master_kernel=kernel, llm_service=llm_service)
+    except (ModuleNotFoundError, AttributeError, TypeError) as e:
+        print(f"{Colors.RED}Failed to load FallacyWorkflowPlugin: {e}{Colors.ENDC}")
+        sys.exit(1)
+
     success = False
     details = ""
 
     try:
         print(f"{Colors.YELLOW}Invoking 'run_workflow'...{Colors.ENDC}")
         
-        final_result_str = await workflow_plugin.run_workflow(
+        # La méthode s'appelle maintenant `run_guided_analysis`
+        final_result_str = await workflow_plugin.run_guided_analysis(
             argument_text=scenario["text"]
         )
         

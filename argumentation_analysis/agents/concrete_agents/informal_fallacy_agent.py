@@ -1,12 +1,12 @@
 # Fichier : argumentation_analysis/agents/concrete_agents/informal_fallacy_agent.py
 
+import importlib
 from typing import Dict, Any, Optional
 
 from semantic_kernel import Kernel
 from semantic_kernel.functions import KernelArguments
 
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
-from argumentation_analysis.agents.plugins.fallacy_workflow_plugin import FallacyWorkflowPlugin
 from argumentation_analysis.agents.plugins.taxonomy_display_plugin import TaxonomyDisplayPlugin
 from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer as IdentificationPlugin
 from argumentation_analysis.utils.path_operations import get_prompt_path
@@ -57,11 +57,26 @@ class InformalFallacyAgent(BaseAgent):
         elif config_name == "explore_only":
             self._kernel.add_plugin(TaxonomyDisplayPlugin(), plugin_name="TaxonomyDisplayPlugin")
         elif config_name == "workflow_only":
-            self._kernel.add_plugin(FallacyWorkflowPlugin(master_kernel=self._kernel, llm_service=llm_service), plugin_name="FallacyWorkflowPlugin")
+            try:
+                # Chargement dynamique du plugin
+                module = importlib.import_module("plugins.FallacyWorkflow.plugin")
+                FallacyWorkflowPlugin = getattr(module, "FallacyWorkflowPlugin")
+                self._kernel.add_plugin(FallacyWorkflowPlugin(master_kernel=self._kernel, llm_service=llm_service), plugin_name="FallacyWorkflowPlugin")
+            except (ModuleNotFoundError, AttributeError) as e:
+                self.logger.error(f"Could not dynamically load FallacyWorkflowPlugin: {e}")
+
             self._kernel.add_plugin(TaxonomyDisplayPlugin(), plugin_name="TaxonomyDisplayPlugin")
         elif config_name == "full":
             self._kernel.add_plugin(IdentificationPlugin(), plugin_name="FallacyIdentificationPlugin")
-            self._kernel.add_plugin(FallacyWorkflowPlugin(master_kernel=self._kernel, llm_service=llm_service), plugin_name="FallacyWorkflowPlugin")
+            
+            try:
+                # Chargement dynamique du plugin
+                module = importlib.import_module("plugins.FallacyWorkflow.plugin")
+                FallacyWorkflowPlugin = getattr(module, "FallacyWorkflowPlugin")
+                self._kernel.add_plugin(FallacyWorkflowPlugin(master_kernel=self._kernel, llm_service=llm_service), plugin_name="FallacyWorkflowPlugin")
+            except (ModuleNotFoundError, AttributeError) as e:
+                self.logger.error(f"Could not dynamically load FallacyWorkflowPlugin: {e}")
+
             self._kernel.add_plugin(TaxonomyDisplayPlugin(), plugin_name="TaxonomyDisplayPlugin")
 
     def get_agent_capabilities(self) -> Dict[str, Any]:

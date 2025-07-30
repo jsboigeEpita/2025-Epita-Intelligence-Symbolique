@@ -3,8 +3,8 @@ import pytest
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 import asyncio
+import importlib
 from argumentation_analysis.agents.factory import AgentFactory, AgentType
-from argumentation_analysis.agents.plugins.fallacy_workflow_plugin import FallacyWorkflowPlugin
 from argumentation_analysis.agents.plugins.taxonomy_display_plugin import TaxonomyDisplayPlugin
 from argumentation_analysis.config.settings import AppSettings
 
@@ -128,9 +128,6 @@ def test_agent_workflow_with_different_configurations(
     asyncio.run(run_test())
 
 # --- Tests pour le FallacyWorkflowPlugin ---
-from argumentation_analysis.agents.plugins.fallacy_workflow_plugin import FallacyWorkflowPlugin
-
-
 @pytest.mark.skip(reason="Test is outdated due to FallacyWorkflowPlugin refactoring, parallel_exploration method removed.")
 def test_parallel_exploration_workflow_unit():
     """
@@ -161,6 +158,8 @@ def test_parallel_exploration_workflow_unit():
         mock_kernel.invoke = AsyncMock(side_effect=invoke_side_effect)
 
         # 2. Instanciation du Plugin à tester
+        module = importlib.import_module("plugins.FallacyWorkflow.plugin")
+        FallacyWorkflowPlugin = getattr(module, "FallacyWorkflowPlugin")
         workflow_plugin = FallacyWorkflowPlugin(kernel=mock_kernel)
 
         # 3. Exécution de la méthode à tester
@@ -229,8 +228,10 @@ def test_informal_fallacy_agent_uses_parallel_exploration():
         kernel.add_service(mock_service)
         
         # On a besoin des deux plugins pour ce workflow
+        module = importlib.import_module("plugins.FallacyWorkflow.plugin")
+        FallacyWorkflowPlugin = getattr(module, "FallacyWorkflowPlugin")
         workflow_plugin = FallacyWorkflowPlugin(kernel=kernel)
-        identification_plugin = IdentificationPlugin()
+        identification_plugin = ComplexFallacyAnalyzer()
         
         agent = ChatCompletionAgent(
             kernel=kernel,
