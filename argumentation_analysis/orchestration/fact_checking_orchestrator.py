@@ -18,8 +18,9 @@ from argumentation_analysis.agents.tools.analysis.fact_claim_extractor import Fa
 from argumentation_analysis.agents.tools.analysis.fallacy_family_analyzer import (
     FallacyFamilyAnalyzer, get_family_analyzer, AnalysisDepth, ComprehensiveAnalysisResult
 )
-from argumentation_analysis.services.fact_verification_service import get_verification_service
-from argumentation_analysis.services.fallacy_taxonomy_service import get_taxonomy_manager
+from src.core.plugins.interfaces import BasePlugin
+from src.core.plugins.standard.taxonomy_explorer.plugin import TaxonomyExplorerPlugin
+from src.core.plugins.standard.external_verification.plugin import ExternalVerificationPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -73,20 +74,28 @@ class FactCheckingOrchestrator:
     - Analyse des corrélations entre fact-checking et sophismes
     """
     
-    def __init__(self, api_config: Optional[Dict[str, Any]] = None):
+    def __init__(self, plugin_registry: Dict[str, BasePlugin], api_config: Optional[Dict[str, Any]] = None):
         """
         Initialise l'orchestrateur de fact-checking.
         
+        :param plugin_registry: Un registre contenant les instances des plugins chargés.
         :param api_config: Configuration des APIs externes (Tavily, SearXNG, etc.)
         """
         self.logger = logging.getLogger("FactCheckingOrchestrator")
         self.api_config = api_config or {}
+        self.plugin_registry = plugin_registry
         
         # Initialiser les composants
         self.fact_extractor = FactClaimExtractor()
-        self.verification_service = get_verification_service(api_config)
-        self.taxonomy_manager = get_taxonomy_manager()
-        self.family_analyzer = get_family_analyzer(api_config)
+        
+        # Récupérer les plugins depuis le registre
+        self.taxonomy_plugin = self.plugin_registry.get("taxonomy_explorer")
+        self.verification_plugin: ExternalVerificationPlugin = self.plugin_registry.get("external_verification")
+        
+        if not self.taxonomy_plugin or not self.verification_plugin:
+            raise ValueError("Les plugins 'taxonomy_explorer' et 'external_verification' sont requis.")
+            
+        self.family_analyzer = get_family_analyzer(taxonomy_plugin=self.taxonomy_plugin, api_config=api_config)
         
         # Métriques de performance
         self.analysis_count = 0
@@ -186,7 +195,7 @@ class FactCheckingOrchestrator:
                 }
             
             # Vérification factuelle
-            verification_results = await self.verification_service.verify_multiple_claims(factual_claims)
+            verification_results = await self.verification_plugin.verify_claims(claims=factual_claims)
             
             # Compilation des résultats
             processing_time = (datetime.now() - start_time).total_seconds()
@@ -221,10 +230,10 @@ class FactCheckingOrchestrator:
             self.logger.info(f"Analyse des familles de sophismes uniquement")
             
             # Détection et classification par famille
-            classified_fallacies = self.taxonomy_manager.detect_fallacies_with_families(text)
+            classified_fallacies = await self.taxonomy_plugin.detect_and_classify(text)
             
             # Statistiques par famille
-            family_stats = self.taxonomy_manager.get_family_statistics(classified_fallacies)
+            family_stats = await self.taxonomy_plugin.get_family_statistics(classified_fallacies)
             
             processing_time = (datetime.now() - start_time).total_seconds()
             
@@ -388,8 +397,8 @@ class FactCheckingOrchestrator:
             }
             
             # Test du gestionnaire de taxonomie
-            test_fallacies = self.taxonomy_manager.detect_fallacies_with_families(test_text, max_fallacies=1)
-            health_status["components"]["taxonomy_manager"] = {
+            test_fallacies = await self.taxonomy_plugin.detect_and_classify(test_text, max_fallacies=1)
+            health_status["components"]["taxonomy_plugin"] = {
                 "status": "ok",
                 "fallacies_detected": len(test_fallacies)
             }

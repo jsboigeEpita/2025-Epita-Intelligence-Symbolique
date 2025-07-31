@@ -15,13 +15,9 @@ from datetime import datetime
 
 # Import des composants développés
 from .fact_claim_extractor import FactClaimExtractor, FactualClaim
-from argumentation_analysis.services.fact_verification_service import FactVerificationService, get_verification_service
-from argumentation_analysis.services.fallacy_taxonomy_service import (
-    FallacyTaxonomyManager, get_taxonomy_manager, FallacyFamily, ClassifiedFallacy
-)
-from ...services.fallacy_family_definitions import (
-    get_family_severity_info, get_family_keywords, get_family_contexts, get_family_metrics
-)
+# Importations nettoyées
+from src.core.plugins.standard.taxonomy_explorer.plugin import TaxonomyExplorerPlugin, ClassifiedFallacy
+from src.core.plugins.standard.external_verification.plugin import ExternalVerificationPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +29,19 @@ class AnalysisDepth(Enum):
     STANDARD = "standard"
     COMPREHENSIVE = "comprehensive"
     EXPERT = "expert"
+
+# L'Enum FallacyFamily est maintenant définie ici car elle est sémantiquement liée
+# à la logique de cet analyseur.
+class FallacyFamily(Enum):
+    """Énumération des 8 familles de sophismes."""
+    AUTHORITY_POPULARITY = "authority_popularity"
+    EMOTIONAL_APPEALS = "emotional_appeals"
+    GENERALIZATION_CAUSALITY = "generalization_causality"
+    DIVERSION_ATTACK = "diversion_attack"
+    FALSE_DILEMMA_SIMPLIFICATION = "false_dilemma_simplification"
+    LANGUAGE_AMBIGUITY = "language_ambiguity"
+    STATISTICAL_PROBABILISTIC = "statistical_probabilistic"
+    AUDIO_ORAL_CONTEXT = "audio_oral_context"
 
 
 @dataclass
@@ -99,18 +108,20 @@ class FallacyFamilyAnalyzer:
     factuelle pour fournir une analyse complète et contextuelle.
     """
     
-    def __init__(self, api_config: Optional[Dict[str, Any]] = None):
+    def __init__(self, taxonomy_plugin: TaxonomyExplorerPlugin, verification_plugin: ExternalVerificationPlugin, api_config: Optional[Dict[str, Any]] = None):
         """
         Initialise l'analyseur par famille.
         
-        :param api_config: Configuration des APIs pour le fact-checking
+        :param taxonomy_plugin: Instance du plugin de taxonomie.
+        :param verification_plugin: Instance du plugin de vérification externe.
+        :param api_config: Configuration des APIs pour le fact-checking.
         """
         self.logger = logging.getLogger("FallacyFamilyAnalyzer")
         
-        # Initialiser les composants
-        self.taxonomy_manager = get_taxonomy_manager()
+        # Initialiser les composants via injection de dépendances
+        self.taxonomy_plugin = taxonomy_plugin
         self.fact_extractor = FactClaimExtractor()
-        self.fact_verifier = get_verification_service(api_config)
+        self.fact_verifier = verification_plugin
         
         self.logger.info("FallacyFamilyAnalyzer initialisé avec fact-checking intégré")
     
@@ -134,11 +145,11 @@ class FallacyFamilyAnalyzer:
             # 2. Vérification factuelle en parallèle
             fact_check_results = []
             if factual_claims:
-                verification_results = await self.fact_verifier.verify_multiple_claims(factual_claims)
+                verification_results = await self.fact_verifier.verify_claims(claims=factual_claims)
                 fact_check_results = [result.to_dict() for result in verification_results]
             
             # 3. Détection et classification des sophismes par famille
-            classified_fallacies = self.taxonomy_manager.detect_fallacies_with_families(text, max_fallacies=20)
+            classified_fallacies = await self.taxonomy_plugin.detect_and_classify(text, max_fallacies=20)
             self.logger.info(f"Sophismes classifiés: {len(classified_fallacies)}")
             
             # 4. Analyse par famille
@@ -197,8 +208,8 @@ class FallacyFamilyAnalyzer:
         
         # Filtrer les sophismes de cette famille
         family_fallacies = [
-            fallacy for fallacy in classified_fallacies 
-            if fallacy.family == family
+            fallacy for fallacy in classified_fallacies
+            if fallacy['family'] == family.value
         ]
         
         # Calculer le score de famille
@@ -236,14 +247,16 @@ class FallacyFamilyAnalyzer:
         
         if not fallacies:
             # Vérifier quand même la présence de patterns de la famille
-            family_keywords = get_family_keywords(family)
+            family_info = self.taxonomy_plugin.families.get(family.value)
+            if not family_info:
+                return 0.0
+            
             text_lower = text.lower()
             
             keyword_score = 0.0
-            for keyword_list in family_keywords.values():
-                for keyword in keyword_list:
-                    if keyword.lower() in text_lower:
-                        keyword_score += 0.05
+            for keyword in family_info.keywords:
+                if keyword.lower() in text_lower:
+                    keyword_score += 0.05
             
             return min(keyword_score, 0.5)  # Maximum 0.5 sans sophismes détectés
         
@@ -251,10 +264,10 @@ class FallacyFamilyAnalyzer:
         total_score = 0.0
         for fallacy in fallacies:
             # Score basé sur la confiance et le score familial
-            base_score = (fallacy.confidence + fallacy.family_pattern_score) / 2
+            base_score = (fallacy['confidence'] + fallacy['family_pattern_score']) / 2
             
             # Pondération par pertinence contextuelle
-            weighted_score = base_score * fallacy.context_relevance
+            weighted_score = base_score * fallacy['context_relevance']
             
             total_score += weighted_score
         
@@ -262,7 +275,7 @@ class FallacyFamilyAnalyzer:
         normalized_score = total_score / len(fallacies) if fallacies else 0.0
         
         # Bonus pour la diversité des sophismes dans la famille
-        unique_types = len(set(f.name for f in fallacies))
+        unique_types = len(set(f['name'] for f in fallacies))
         diversity_bonus = min(unique_types * 0.1, 0.3)
         
         return min(normalized_score + diversity_bonus, 1.0)
@@ -271,8 +284,8 @@ class FallacyFamilyAnalyzer:
                               family_score: float) -> str:
         """Évalue la sévérité d'une famille de sophismes."""
         
-        severity_info = get_family_severity_info(family)
-        base_severity = severity_info.get("base_severity", 0.5)
+        family_info = self.taxonomy_plugin.families.get(family.value)
+        base_severity = family_info.severity_weight if family_info else 0.5
         
         # Calculer la sévérité pondérée
         weighted_severity = family_score * base_severity
@@ -333,11 +346,14 @@ class FallacyFamilyAnalyzer:
     def _calculate_contextual_relevance(self, text: str, family: FallacyFamily) -> float:
         """Calcule la pertinence contextuelle d'une famille."""
         
-        family_contexts = get_family_contexts(family)
+        family_info = self.taxonomy_plugin.families.get(family.value)
+        if not family_info:
+            return 0.0
+
         text_lower = text.lower()
         
         relevance = 0.0
-        for context in family_contexts:
+        for context in family_info.common_contexts:
             if context.lower() in text_lower:
                 relevance += 0.2
         
@@ -378,7 +394,7 @@ class FallacyFamilyAnalyzer:
         
         # Pattern 2: Progression de confiance
         if len(fallacies) >= 2:
-            confidences = [f.confidence for f in fallacies]
+            confidences = [f['confidence'] for f in fallacies]
             if max(confidences) - min(confidences) > 0.4:
                 patterns.append({
                     "type": "confidence_variation",
@@ -390,7 +406,7 @@ class FallacyFamilyAnalyzer:
         # Pattern 3: Analyse de profondeur expert
         if depth == AnalysisDepth.EXPERT:
             # Analyser les combinaisons spécifiques
-            fallacy_names = [f.name for f in fallacies]
+            fallacy_names = [f['name'] for f in fallacies]
             unique_names = set(fallacy_names)
             
             if len(unique_names) < len(fallacy_names):
@@ -613,14 +629,14 @@ class FallacyFamilyAnalyzer:
 # Instance globale de l'analyseur
 _global_family_analyzer = None
 
-def get_family_analyzer(api_config: Optional[Dict[str, Any]] = None) -> FallacyFamilyAnalyzer:
+def get_family_analyzer(taxonomy_plugin: "TaxonomyExplorerPlugin", api_config: Optional[Dict[str, Any]] = None) -> FallacyFamilyAnalyzer:
     """
-    Récupère l'instance globale de l'analyseur par famille (singleton pattern).
+    Crée une instance de l'analyseur par famille.
     
+    :param taxonomy_plugin: Instance du plugin de taxonomie à injecter.
     :param api_config: Configuration optionnelle des APIs
-    :return: Instance globale de l'analyseur
+    :return: Instance de l'analyseur
     """
-    global _global_family_analyzer
-    if _global_family_analyzer is None:
-        _global_family_analyzer = FallacyFamilyAnalyzer(api_config=api_config)
-    return _global_family_analyzer
+    # Le pattern singleton global est abandonné au profit de l'injection de dépendance
+    # contrôlée par l'orchestrateur.
+    return FallacyFamilyAnalyzer(taxonomy_plugin=taxonomy_plugin, api_config=api_config)

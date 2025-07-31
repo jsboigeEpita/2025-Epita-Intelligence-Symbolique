@@ -1,0 +1,32 @@
+metadata:
+  name: "external_verification"
+  version: "1.0.0"
+  author: "Core Team"
+  description: "Plugin pour la vérification factuelle externe d'affirmations."
+
+spec:
+  type: "standard"
+  entrypoint: "plugin.py"
+  class_name: "ExternalVerificationPlugin"
+
+  dependencies:
+    - "aiohttp"
+
+  capabilities:
+    - name: "verify_claims"
+      description: "Vérifie une liste d'affirmations factuelles en utilisant des sources externes."
+      input_schema:
+        type: "object"
+        properties:
+          claims:
+            type: "array"
+            items:
+              type: "object" # This should match FactualClaim structure
+              properties:
+                claim_text: { type: "string" }
+            description: "Liste des affirmations factuelles à vérifier."
+        required: ["claims"]
+      output_schema:
+        type: "array"
+        items:
+          type: "object" # This should match FactVerificationResult structure

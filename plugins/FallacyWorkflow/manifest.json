@@ -5,12 +5,6 @@
     "author": "Refactoring Agent",
     "description": "Orchestrates the fallacy detection workflow, from analysis to result formatting.",
     "entry_point": "plugin.py",
-    "dependencies": [
-        {
-            "name": "ResultParsingPlugin",
-            "version": ">=1.0.0"
-        }
-    ],
     "execution_settings": {
         "type": "python"
     }

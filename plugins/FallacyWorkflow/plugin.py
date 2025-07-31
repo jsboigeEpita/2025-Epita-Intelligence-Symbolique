@@ -17,7 +17,6 @@ from semantic_kernel.connectors.ai.open_ai import (
 from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
 from semantic_kernel.contents import ChatHistory, AuthorRole, FunctionCallContent, ChatMessageContent, FunctionResultContent, StreamingChatMessageContent
 from argumentation_analysis.agents.utils.taxonomy_navigator import TaxonomyNavigator
-from argumentation_analysis.agents.plugins.result_parsing_plugin import ResultParsingPlugin
 
 # Configuration du logging pour semantic-kernel
 logging.basicConfig(level=logging.DEBUG)
@@ -59,18 +58,18 @@ class FallacyWorkflowPlugin:
         else:
             self.logger.error("Taxonomy loading failed or has no root.")
         
-        self.result_parsing_plugin = ResultParsingPlugin(logger=self.logger)
 
     def _create_one_shot_kernel(self) -> tuple[Kernel, OpenAIPromptExecutionSettings]:
         """Crée et configure le kernel pour l'analyse 'one-shot'."""
         one_shot_kernel = Kernel()
         one_shot_kernel.add_service(self.llm_service)
-        one_shot_kernel.add_plugin(self.result_parsing_plugin, "ResultParser")
-
+        # Plus de plugin de parsing, le LLM doit répondre en texte brut.
+        
+        # Les settings sont simplifiés, on n'impose plus d'appel de fonction.
         one_shot_exec_settings = OpenAIPromptExecutionSettings(
-            function_choice_behavior=FunctionChoiceBehavior.Required(
-                auto_invoke=True, function_name="parse_and_return_fallacy", plugin_name="ResultParser"
-            )
+            # On laisse le LLM décider (auto) ou répondre en texte (none).
+            # Pour ce cas, 'none' est plus sûr pour garantir une réponse textuelle.
+            function_choice_behavior=FunctionChoiceBehavior.NONE
         )
         return one_shot_kernel, one_shot_exec_settings
 
@@ -105,7 +104,7 @@ class FallacyWorkflowPlugin:
             one_shot_system_message = (
                 "You are an expert in logical fallacies. Your task is to analyze the provided text and identify the most specific and relevant fallacy from the complete taxonomy given below. "
                 "Carefully consider the definition and example for each fallacy. "
-                "You MUST call the `parse_and_return_fallacy` function with the exact name of the identified fallacy."
+                "You MUST respond with only the exact name of the identified fallacy and nothing else."
             )
 
             # Obtenir la taxonomie complète formatée en JSON
@@ -114,7 +113,7 @@ class FallacyWorkflowPlugin:
             prompt = (
                 f"Analyze the following text:\n--- TEXT ---\n{argument_text}\n--- END TEXT ---\n\n"
                 "Based on the text, identify the single most relevant fallacy from the taxonomy below. "
-                "Use the `parse_and_return_fallacy` function to provide your answer.\n\n"
+                "Your answer must be only the name of the fallacy.\n\n"
                 f"--- COMPLETE FALLACY TAXONOMY ---\n{full_taxonomy_json}\n--- END TAXONOMY ---"
             )
             
@@ -123,29 +122,17 @@ class FallacyWorkflowPlugin:
             
             self.logger.info(f"--- Sending prompt for one-shot analysis ---")
             
-            # Étape 1: Obtenir la réponse du LLM qui devrait contenir l'appel de fonction
+            # Le LLM est maintenant configuré pour répondre directement en texte.
             response = await self.llm_service.get_chat_message_content(
                 chat_history=history,
                 settings=one_shot_exec_settings,
                 kernel=one_shot_kernel
             )
             
-            self.logger.info(f"LLM response received: {response.items}")
+            self.logger.info(f"LLM response received: {response}")
 
-            # Étape 2: Extraire l'appel de fonction de la réponse
-            function_calls = [item for item in response.items if isinstance(item, FunctionCallContent)]
-            if not function_calls:
-                raise ValueError("The LLM did not return a function call as expected.")
-            
-            # S'assurer que le bon outil est appelé
-            func_call = function_calls[0]
-            if func_call.plugin_name != "ResultParser" or func_call.function_name != "parse_and_return_fallacy":
-                raise ValueError(f"Unexpected function call: {func_call.plugin_name}.{func_call.function_name}")
-
-            # Étape 3: Invoquer manuellement la fonction avec les arguments fournis par le LLM
-            result = await self.result_parsing_plugin.parse_and_return_fallacy(**func_call.arguments)
-            
-            final_fallacy_name = str(result)
+            # Extraire directement le contenu texte de la réponse.
+            final_fallacy_name = str(response).strip()
             self.logger.info(f"--- Analysis complete. Identified fallacy: {final_fallacy_name} ---")
             return final_fallacy_name
 

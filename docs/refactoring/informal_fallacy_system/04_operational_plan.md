@@ -648,7 +648,8 @@ Cette étape majeure se concentre sur la migration des composants logiques ident
 
 #### 2.4.2. Plan de Développement Détaillé
 
-*   **1. Création du `TaxonomyExplorerPlugin`**
+*   **1. Création du `TaxonomyExplorerPlugin`** - ✅ **TERMINÉ**
+    *   **Statut (2025-07-31):** Le plugin a été créé, et la logique des services `fallacy_taxonomy_service` et `fallacy_family_definitions` y a été fusionnée et refactorisée. Les consommateurs ont été mis à jour pour utiliser le nouveau plugin via injection de dépendance, et la suite de tests a validé la non-régression.
     *   **Stratégie :** Fusionner `fallacy_taxonomy_service.py` et `fallacy_family_definitions.py` en un seul Plugin `Standard`.
     *   **Tâche 1 : Analyse d'Impact**
         *   **Commande :** `rg "fallacy_taxonomy_service|fallacy_family_definitions"`
@@ -669,23 +670,28 @@ Cette étape majeure se concentre sur la migration des composants logiques ident
     *   **Tâche 4 : Commit Sémantique**
         *   **Message :** `feat(plugins): create TaxonomyExplorerPlugin from legacy services`
 
-*   **2. Création du `ExternalVerificationPlugin`**
+*   **2. Création du `ExternalVerificationPlugin`** - ✅ **TERMINÉ**
+    *   **Statut (2025-07-31):** Le service `fact_verification_service` a été migré avec succès vers un plugin `standard` nommé `ExternalVerificationPlugin`. La logique a été encapsulée, les consommateurs directs (`FactCheckingOrchestrator`, `FallacyFamilyAnalyzer`) ont été refactorisés pour utiliser un système d'injection de dépendance via un registre de plugins. L'ancien service a été supprimé et la suite de tests a validé la non-régression.
     *   **Stratégie :** Transformer `fact_verification_service.py` en un Plugin `Standard` avec un contrat clair.
     *   **Tâche 1 : Analyse d'Impact**
         *   **Commande :** `rg "fact_verification_service"`
     *   **Tâche 2 : Opérations sur les Fichiers**
         *   **Commandes :**
             ```bash
-            git mv fact_verification_service.py src/core/plugins/standard/external_verification/plugin.py
+            # Création de la structure
+            mkdir -p src/core/plugins/standard/external_verification
+            touch src/core/plugins/standard/external_verification/plugin.py
             touch src/core/plugins/standard/external_verification/plugin.yaml
             touch src/core/plugins/standard/external_verification/__init__.py
+            # Suppression de l'ancien service
+            git rm argumentation_analysis/services/fact_verification_service.py
             ```
     *   **Tâche 3 : Refactoring du Code**
         *   Adapter la classe en `ExternalVerificationPlugin(BasePlugin)`.
-        *   Standardiser la méthode `verify_claim` et son modèle de retour `VerificationResult`.
-        *   Rendre le plugin extensible avec un système de "providers".
+        *   Standardiser la méthode `verify_claims` et son modèle de retour.
+        *   Refactoriser les consommateurs pour utiliser le plugin injecté.
     *   **Tâche 4 : Commit Sémantique**
-        *   **Message :** `feat(plugins): migrate fact_verification_service to ExternalVerificationPlugin`
+        *   **Message :** `feat(plugins): create ExternalVerificationPlugin from service`
 ### 2.5. Consolidation des Outils d'Analyse
 
 *   **Objectif Stratégique :**

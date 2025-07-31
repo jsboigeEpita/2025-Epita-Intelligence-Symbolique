@@ -1,0 +1,71 @@
+metadata:
+  name: "taxonomy_explorer"
+  version: "1.0.0"
+  author: "Core Team"
+  description: "Plugin pour explorer la taxonomie des sophismes et leurs familles."
+
+spec:
+  type: "standard"
+  entrypoint: "plugin.py"
+  class_name: "TaxonomyExplorerPlugin"
+
+  capabilities:
+    - name: "list_families"
+      description: "Liste toutes les familles de sophismes disponibles."
+      input_schema: { "type": "object", "properties": {} }
+      output_schema:
+        type: "array"
+        items:
+          type: "object"
+          properties:
+            family_id: { type: "string" }
+            name_fr: { type: "string" }
+
+    - name: "get_family_details"
+      description: "Retourne les informations détaillées d'une famille de sophismes."
+      input_schema:
+        type: "object"
+        properties:
+          family_name: { type: "string", description: "Le nom (ID) de la famille." }
+        required: ["family_name"]
+      output_schema:
+        type: "object"
+        properties:
+            family_id: { type: "string" }
+            name_fr: { type: "string" }
+            description: { type: "string" }
+            keywords: { type: "array", items: { type: "string" } }
+
+    - name: "find_fallacies_by_family"
+      description: "Trouve tous les sophismes associés à une famille spécifique."
+      input_schema:
+        type: "object"
+        properties:
+          family_name: { type: "string", description: "Le nom (ID) de la famille." }
+        required: ["family_name"]
+      output_schema:
+        type: "array"
+        items:
+          type: "object"
+          properties:
+            taxonomy_key: { type: "integer" }
+            name: { type: "string" }
+            nom_vulgarise: { type: "string" }
+
+    - name: "get_fallacy_details"
+      description: "Retourne les détails complets d'un sophisme par sa clé."
+      input_schema:
+        type: "object"
+        properties:
+          fallacy_key: { type: "integer", description: "La clé numérique du sophisme." }
+        required: ["fallacy_key"]
+      output_schema:
+        type: "object"
+        # Le schéma de sortie ici dépend de la structure des données de la taxonomie.
+        # Nous le laissons flexible pour le moment.
+
+    - name: "get_full_taxonomy"
+      description: "Retourne l'arbre complet de la taxonomie des sophismes."
+      input_schema: { "type": "object", "properties": {} }
+      output_schema:
+        type: "object" # Typiquement un arbre ou une liste d'objets
