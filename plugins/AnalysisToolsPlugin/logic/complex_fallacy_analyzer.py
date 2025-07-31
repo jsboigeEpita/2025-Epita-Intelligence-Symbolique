@@ -68,7 +68,7 @@ class EnhancedComplexFallacyAnalyzer(BaseAnalyzer):
     l'évaluation de la gravité, formant ainsi un système d'analyse complet.
     """
     
-    def __init__(self):
+    def __init__(self, fallacy_detector: "AbstractFallacyDetector"):
         """
         Initialise l'analyseur et ses dépendances.
 
@@ -89,7 +89,7 @@ class EnhancedComplexFallacyAnalyzer(BaseAnalyzer):
         _lazy_imports()
         
         # Initialiser les analyseurs améliorés
-        self.contextual_analyzer = EnhancedContextualFallacyAnalyzer()
+        self.contextual_analyzer = EnhancedContextualFallacyAnalyzer(fallacy_detector=fallacy_detector)
         self.severity_evaluator = EnhancedFallacySeverityEvaluator()
         
         # Définir les modèles de structure argumentative

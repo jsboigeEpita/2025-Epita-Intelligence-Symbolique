@@ -9,6 +9,7 @@ from typing import Dict, Any, Optional
 
 from plugins.AnalysisToolsPlugin.plugin import AnalysisToolsPlugin
 from argumentation_analysis.utils.analysis_comparison import compare_rhetorical_analyses
+from argumentation_analysis.utils.data_generation import generate_sample_text
 
 logger = logging.getLogger(__name__)
 
@@ -37,19 +38,16 @@ def analyze_extract_advanced(
     logger.debug(f"Analyse avancée de l'extrait '{extract_name}' via AnalysisToolsPlugin.")
 
     if not extract_text:
-        logger.warning(f"Aucun texte à analyser pour l'extrait '{extract_name}'.")
-        return {
-            "extract_name": extract_name,
-            "source_name": source_name,
-            "error": "Texte manquant",
-            "timestamp": datetime.now().isoformat(),
-        }
+        logger.warning(f"Aucun texte à analyser pour l'extrait '{extract_name}', génération d'un échantillon.")
+        # La fonction generate_sample_text attend maintenant extract_name et source_name
+        extract_text = generate_sample_text(extract_name, source_name)
         
     try:
         # Utiliser directement la méthode de la façade du plugin
+        # Le contexte complet doit être passé, pas seulement une sous-clé.
         advanced_analysis_results = plugin.analyze_text(
             text=extract_text,
-            context=context.get("full_text", "") # Fournir un contexte si possible
+            context=context
         )
 
         results: Dict[str, Any] = {

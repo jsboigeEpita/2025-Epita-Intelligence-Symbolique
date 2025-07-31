@@ -53,7 +53,7 @@ class RhetoricalToolsAdapter(OperationalAgent):
         try:
             self.logger.info("Initialisation du AnalysisToolsPlugin via l'adaptateur...")
             # L'initialisation du plugin se fait maintenant en interne
-            self.analysis_plugin = AnalysisToolsPlugin()
+            self.analysis_plugin = AnalysisToolsPlugin(fallacy_detector=get_fallacy_detector())
             self.initialized = True
             self.logger.info("AnalysisToolsPlugin initialisé.")
             return True

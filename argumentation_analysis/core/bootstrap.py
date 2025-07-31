@@ -3,7 +3,8 @@ import os
 import sys
 from pathlib import Path
 import logging
-from typing import Dict, List, Any # Ajout pour List et Dict dans l'adaptateur
+from typing import Dict, List, Any
+from argumentation_analysis.adapters.contextual_fallacy_detector_adapter import ContextualFallacyDetectorAdapter
 import threading
 
 # --- Verrou global pour l'initialisation de la JVM ---
@@ -96,27 +97,7 @@ try:
 except ImportError as e:
     logger.error(f"Failed to import ContextualFallacyDetector: {e}")
 
-# Adapter pour ContextualFallacyDetector
-class ContextualFallacyDetectorAdapter:
-    def __init__(self, actual_detector):
-        self.actual_detector = actual_detector
-        self.logger = logging.getLogger("ContextualFallacyDetectorAdapter")
-
-    def detect(self, text: str, context_description: str = "général") -> List[Dict[str, Any]]:
-        self.logger.info(f"Adapter: Appel de detect_contextual_fallacies pour le texte: {text[:50]}...")
-        try:
-            results = self.actual_detector.detect_contextual_fallacies(
-                argument=text,
-                context_description=context_description
-            )
-            detected_fallacies = results.get("detected_fallacies", [])
-            if not isinstance(detected_fallacies, list):
-                self.logger.warning(f"Adapter: 'detected_fallacies' n'est pas une liste, mais {type(detected_fallacies)}. Retourne [].")
-                return []
-            return detected_fallacies
-        except Exception as e:
-            self.logger.error(f"Adapter: Erreur lors de l'appel à detect_contextual_fallacies: {e}", exc_info=True)
-            return []
+# L'adaptateur local est maintenant remplacé par celui dans argumentation_analysis.adapters
 
 class ProjectContext:
     def __init__(self):
@@ -147,8 +128,9 @@ class ProjectContext:
                     if ContextualFallacyDetector_class:
                         try:
                             original_detector = ContextualFallacyDetector_class()
+                            # Utilisation du nouvel adaptateur importé
                             self._fallacy_detector_instance = ContextualFallacyDetectorAdapter(original_detector)
-                            logger.info("ContextualFallacyDetector initialisé et mis en cache.")
+                            logger.info("ContextualFallacyDetector initialisé via l'adaptateur et mis en cache.")
                         except Exception as e:
                             logger.error(f"Erreur lors de l'initialisation paresseuse de ContextualFallacyDetector : {e}", exc_info=True)
                             # On retourne None pour que l'application puisse continuer

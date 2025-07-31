@@ -76,6 +76,7 @@ from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFac
 # Importe le nouveau plugin de consolidation.
 # NOTE: Le chemin d'importation devra peut-être être ajusté en fonction de
 # la configuration finale du projet (ex: si 'plugins' devient un package installable).
+from argumentation_analysis.core.bootstrap import get_fallacy_detector
 from plugins.AnalysisToolsPlugin.plugin import AnalysisToolsPlugin
 from argumentation_analysis.agents.core.synthesis.synthesis_agent import SynthesisAgent
 
@@ -218,7 +219,7 @@ class UnifiedTextAnalysisPipeline:
         
         # Pas de try/except - on laisse les vraies erreurs apparaître
         self.analysis_tools = {
-            "analysis_plugin": AnalysisToolsPlugin()
+            "analysis_plugin": AnalysisToolsPlugin(fallacy_detector=get_fallacy_detector())
         }
         
         # SynthesisAgent pour analyse unifiée

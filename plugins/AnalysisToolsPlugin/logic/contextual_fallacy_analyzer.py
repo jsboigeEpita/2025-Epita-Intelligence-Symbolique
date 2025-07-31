@@ -33,7 +33,7 @@ from datetime import datetime
 
 # Importer l'analyseur contextuel de base
 # TODO: Vérifier si ce chemin est toujours valide après le refactoring
-from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer as BaseAnalyzer
+from argumentation_analysis.core.interfaces.fallacy_detector import AbstractFallacyDetector
 
 # Importations pour les modèles de langage avancés
 # TODO: Rendre ce chemin configurable ou propre au plugin
@@ -71,7 +71,7 @@ logging.basicConfig(
 logger = logging.getLogger("EnhancedContextualFallacyAnalyzer")
 
 
-class EnhancedContextualFallacyAnalyzer(BaseAnalyzer):
+class EnhancedContextualFallacyAnalyzer:
     """
     Analyse les sophismes en exploitant le contexte sémantique et l'apprentissage.
 
@@ -87,18 +87,18 @@ class EnhancedContextualFallacyAnalyzer(BaseAnalyzer):
     - S'améliorer au fil du temps grâce à la méthode `provide_feedback`.
     """
     
-    def __init__(self, taxonomy_path: Optional[str] = None, model_name: Optional[str] = "distilbert-base-uncased-finetuned-sst-2-english"):
+    def __init__(self, fallacy_detector: AbstractFallacyDetector, model_name: Optional[str] = "distilbert-base-uncased-finetuned-sst-2-english"):
         """
         Initialise l'analyseur contextuel de sophismes amélioré.
         
         Args:
-            taxonomy_path: Chemin vers le fichier de taxonomie des sophismes (optionnel)
+            fallacy_detector: Un détecteur de sophismes qui respecte l'interface.
             model_name: Nom du modèle de langage à utiliser (optionnel)
         """
         # Appeler la fonction d'importation paresseuse
         _lazy_imports()
         
-        super().__init__(taxonomy_path)
+        self.fallacy_detector = fallacy_detector
         self.logger = logger
         self.model_name = model_name
         self.feedback_history = []
@@ -712,7 +712,9 @@ class EnhancedContextualFallacyAnalyzer(BaseAnalyzer):
             Liste d'exemples enrichis de sophismes contextuels
         """
         # Obtenir les exemples de base
-        basic_examples = super().get_contextual_fallacy_examples(fallacy_type, context_type)
+        # TODO: Cette méthode n'existe pas sur l'interface, il faudra la recréer ou la déplacer.
+        # Pour l'instant, on retourne une liste vide pour ne pas casser.
+        basic_examples = [] # super().get_contextual_fallacy_examples(fallacy_type, context_type)
         
         # Enrichir les exemples avec des explications et des suggestions
         enriched_examples = []

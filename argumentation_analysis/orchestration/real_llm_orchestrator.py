@@ -108,7 +108,7 @@ class RealLLMOrchestrator:
         try:
             self.logger.info("Initialisation des composants d'analyse...")
             if PLUGIN_ANALYSIS_AVAILABLE:
-                self.analysis_plugin = AnalysisToolsPlugin()
+                self.analysis_plugin = AnalysisToolsPlugin(fallacy_detector=get_fallacy_detector())
                 self.logger.info("AnalysisToolsPlugin chargé.")
             else:
                 self.logger.warning("AnalysisToolsPlugin non trouvé. Les capacités d'analyse rhétorique seront indisponibles.")

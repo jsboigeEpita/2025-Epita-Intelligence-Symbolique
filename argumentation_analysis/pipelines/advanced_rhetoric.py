@@ -11,6 +11,7 @@ from tqdm import tqdm
 
 from plugins.AnalysisToolsPlugin.plugin import AnalysisToolsPlugin
 from argumentation_analysis.orchestration.advanced_analyzer import analyze_extract_advanced
+from argumentation_analysis.core.interfaces.fallacy_detector import AbstractFallacyDetector
 
 
 logger = logging.getLogger(__name__)
@@ -19,6 +20,7 @@ def run_advanced_rhetoric_pipeline(
     extract_definitions: List[Dict[str, Any]],
     base_results: List[Dict[str, Any]],
     output_file: Path,
+    fallacy_detector: AbstractFallacyDetector
 ) -> None:
     """
     Analyse tous les extraits avec les outils avancés et sauvegarde les résultats.
@@ -51,7 +53,7 @@ def run_advanced_rhetoric_pipeline(
     # Initialiser le plugin qui contient tous les outils
     logger.info("Initialisation du AnalysisToolsPlugin...")
     try:
-        analysis_plugin = AnalysisToolsPlugin()
+        analysis_plugin = AnalysisToolsPlugin(fallacy_detector=fallacy_detector)
         logger.info("[OK] AnalysisToolsPlugin initialisé avec succès.")
     except Exception as e:
         logger.error(f"❌ Impossible d'initialiser AnalysisToolsPlugin: {e}", exc_info=True)

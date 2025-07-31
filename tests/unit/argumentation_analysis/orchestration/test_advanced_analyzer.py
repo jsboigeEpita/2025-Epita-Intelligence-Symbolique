@@ -69,7 +69,8 @@ def sample_base_result() -> Dict[str, Any]:
 @pytest.fixture
 def mock_generate_sample(mocker: MagicMock) -> MagicMock:
     """Mock la fonction generate_sample_text."""
-    return mocker.patch("argumentation_analysis.utils.data_generation.generate_sample_text")
+    # On doit patcher la fonction là où elle est importée/utilisée, et non là où elle est définie.
+    return mocker.patch("argumentation_analysis.orchestration.advanced_analyzer.generate_sample_text")
 
 @pytest.fixture
 def mock_split_args(mocker: MagicMock) -> MagicMock:

@@ -18,6 +18,8 @@ from unittest.mock import MagicMock, call
 from typing import List, Dict, Any
 
 from argumentation_analysis.pipelines.advanced_rhetoric import run_advanced_rhetoric_pipeline
+from argumentation_analysis.core.interfaces.fallacy_detector import AbstractFallacyDetector
+
 
 from unittest.mock import patch
 
@@ -85,10 +87,12 @@ def temp_output_file(tmp_path: Path) -> Path:
     return tmp_path / "advanced_results.json"
 
 
+@pytest.fixture
+def mock_fallacy_detector() -> MagicMock:
+    """Fournit un mock du AbstractFallacyDetector."""
+    return MagicMock(spec=AbstractFallacyDetector)
 
- # Pour mocker l'écriture du fichier
 
- # Pour mocker la barre de progression
 def test_run_advanced_rhetoric_pipeline_success(
     mock_tqdm: MagicMock,
     mock_json_dump: MagicMock,
@@ -97,7 +101,8 @@ def test_run_advanced_rhetoric_pipeline_success(
     mock_analyze_single_extract: MagicMock,
     sample_extract_definitions: List[Dict[str, Any]],
     sample_base_results: List[Dict[str, Any]],
-    temp_output_file: Path
+    temp_output_file: Path,
+    mock_fallacy_detector: MagicMock
 ):
     """Teste une exécution réussie du pipeline."""
     mock_progress_bar_instance = MagicMock()
@@ -107,7 +112,7 @@ def test_run_advanced_rhetoric_pipeline_success(
         return {"analyzed": True, "extract_name": extract_def["extract_name"], "source_name": source_name}
     mock_analyze_single_extract.side_effect = analyze_single_side_effect
 
-    run_advanced_rhetoric_pipeline(sample_extract_definitions, sample_base_results, temp_output_file)
+    run_advanced_rhetoric_pipeline(sample_extract_definitions, sample_base_results, temp_output_file, mock_fallacy_detector)
 
     assert mock_analyze_single_extract.call_count == 3
     
@@ -144,11 +149,12 @@ def test_run_advanced_rhetoric_pipeline_no_base_results(
     mock_tqdm: MagicMock,
     mock_open: MagicMock,
     mock_json_dump: MagicMock,
+    mock_fallacy_detector: MagicMock
 ):
     """Teste le pipeline sans résultats de base."""
     mock_analyze_single_extract.return_value = {"analyzed": True}
 
-    run_advanced_rhetoric_pipeline(sample_extract_definitions, [], temp_output_file)
+    run_advanced_rhetoric_pipeline(sample_extract_definitions, [], temp_output_file, mock_fallacy_detector)
 
     # Vérifier que analyze_extract_advanced est appelé avec base_result=None et le plugin
     for extract_def_list in sample_extract_definitions:
@@ -171,7 +177,8 @@ def test_run_advanced_rhetoric_pipeline_extract_analysis_error(
     mock_analyze_single_extract: MagicMock,
     sample_extract_definitions: List[Dict[str, Any]],
     temp_output_file: Path,
-    caplog
+    caplog,
+    mock_fallacy_detector: MagicMock
 ):
     """Teste la gestion d'erreur si l'analyse d'un extrait échoue."""
     # mock_create_mocks.return_value = {} # Remplacé par mock_advanced_tools
@@ -180,7 +187,7 @@ def test_run_advanced_rhetoric_pipeline_extract_analysis_error(
     mock_analyze_single_extract.side_effect = Exception("Erreur d'analyse d'extrait!")
 
     with caplog.at_level(logging.ERROR):
-        run_advanced_rhetoric_pipeline(sample_extract_definitions, [], temp_output_file)
+        run_advanced_rhetoric_pipeline(sample_extract_definitions, [], temp_output_file, mock_fallacy_detector)
 
     assert mock_analyze_single_extract.call_count == 3 # Tentative pour chaque extrait
     assert "Erreur dans le pipeline pour l'extrait 'Ext1.1': Erreur d'analyse d'extrait!" in caplog.text
@@ -203,7 +210,8 @@ def test_run_advanced_rhetoric_pipeline_save_error(
     mock_analysis_plugin: MagicMock, # Utilise le mock du plugin
     sample_extract_definitions: List[Dict[str, Any]],
     temp_output_file: Path,
-    caplog
+    caplog,
+    mock_fallacy_detector: MagicMock
 ):
     """Teste la gestion d'erreur si la sauvegarde des résultats échoue."""
     # Configurer le mock 'open' pour qu'il lève une IOError
@@ -212,7 +220,7 @@ def test_run_advanced_rhetoric_pipeline_save_error(
     # On a besoin de mocker analyze_extract_advanced pour qu'il ne lève pas d'erreur pendant la boucle
     with patch("argumentation_analysis.pipelines.advanced_rhetoric.analyze_extract_advanced", return_value={"ok": True}):
         with caplog.at_level(logging.ERROR):
-            run_advanced_rhetoric_pipeline(sample_extract_definitions, [], temp_output_file)
+            run_advanced_rhetoric_pipeline(sample_extract_definitions, [], temp_output_file, mock_fallacy_detector)
 
     # Vérifications
     mock_open.assert_called_once_with(temp_output_file, 'w', encoding='utf-8')
@@ -221,11 +229,12 @@ def test_run_advanced_rhetoric_pipeline_save_error(
 
 
 def test_run_advanced_rhetoric_pipeline_empty_extract_definitions(
-    temp_output_file: Path
+    temp_output_file: Path,
+    mock_fallacy_detector: MagicMock
 ):
     """Teste le pipeline avec une liste vide de définitions d'extraits."""
     # Utilise les vrais mocks pour les outils car on ne mocke pas l'analyse ici
-    run_advanced_rhetoric_pipeline([], [], temp_output_file)
+    run_advanced_rhetoric_pipeline([], [], temp_output_file, mock_fallacy_detector)
     
     # Vérifier que le fichier de sortie est créé mais vide (ou contient une liste vide)
     assert temp_output_file.exists()

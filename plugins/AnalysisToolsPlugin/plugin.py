@@ -8,6 +8,8 @@ Plugin de façade pour la consolidation des outils d'analyse rhétorique.
 import logging
 from typing import Dict, List, Any
 
+from argumentation_analysis.core.interfaces.fallacy_detector import AbstractFallacyDetector
+
 # Imports des outils internes depuis le module 'logic'
 from .logic.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
 from .logic.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
@@ -25,7 +27,7 @@ class AnalysisToolsPlugin:
     Façade unifiée pour accéder à la suite d'outils d'analyse rhétorique.
     """
 
-    def __init__(self):
+    def __init__(self, fallacy_detector: AbstractFallacyDetector):
         """
         Initialise le plugin et ses dépendances internes.
         """
@@ -35,9 +37,9 @@ class AnalysisToolsPlugin:
         # nlp_model_manager.load_models_sync()
 
         # Instancier les analyseurs internes
-        self.contextual_analyzer = EnhancedContextualFallacyAnalyzer()
+        self.contextual_analyzer = EnhancedContextualFallacyAnalyzer(fallacy_detector=fallacy_detector)
         self.severity_evaluator = EnhancedFallacySeverityEvaluator()
-        self.complex_analyzer = EnhancedComplexFallacyAnalyzer()
+        self.complex_analyzer = EnhancedComplexFallacyAnalyzer(fallacy_detector=fallacy_detector)
         self.result_analyzer = EnhancedRhetoricalResultAnalyzer(
             complex_fallacy_analyzer=self.complex_analyzer,
             severity_evaluator=self.severity_evaluator
