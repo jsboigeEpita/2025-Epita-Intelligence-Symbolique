@@ -730,17 +730,17 @@ Cette étape majeure se concentre sur la migration des composants logiques ident
     *   **Tâche 4 : Commit Sémantique**
         *   **Message :** `feat(plugins): create AnalysisToolsPlugin from enhanced tools`
 
-*   **2. Démantèlement des Outils "Base" (Obsolètes)** - ✅ **TERMINÉ**
-    *   **Statut (2025-07-31):** Les anciens outils d'analyse de base ont été supprimés. Les références à ces outils dans le code ont été éliminées lors de la refactorisation des consommateurs vers le `AnalysisToolsPlugin`.
-    *   **Stratégie Cible :** Suppression complète après analyse d'impact.
+*   **2. Démantèlement des Outils "Base" (Obsolètes)** - ✅ **PARTIELLEMENT TERMINÉ**
+    *   **Statut (2025-07-31):** Une analyse d'impact a révélé que la plupart des outils "Base" sont des classes parentes pour les outils "Enhanced" et d'autres composants critiques. Ils ne sont donc pas obsolètes. Seuls les fichiers non référencés et prouvés obsolètes (ex: `example_usage.py`) ont été supprimés. Le reste du code a été conservé pour éviter de casser le système. Cette tâche a mis en évidence une dette technique plus profonde que prévu.
+    *   **Stratégie Révisée :** Suppression chirurgicale des seuls composants confirmés comme étant 100% obsolètes.
     *   **Tâche 1 : Analyse d'Impact**
-        *   **Commande :** `rg -l "from argumentation_analysis.agents.tools.analysis import"`
+        *   **Commande :** Recherches sémantiques et par `rg` pour chaque fichier du répertoire `argumentation_analysis/agents/tools/analysis/`.
     *   **Tâche 2 : Opérations sur les Fichiers**
-        *   **Commande :** `git rm argumentation_analysis/agents/tools/analysis/*.py`
+        *   **Commande :** `git rm argumentation_analysis/agents/tools/analysis/example_usage.py`
     *   **Tâche 3 : Refactoring du Code**
-        *   Supprimer toutes les références trouvées lors de l'analyse d'impact.
+        *   Nettoyer les références au fichier supprimé dans les manifestes de packaging (`.egg-info/SOURCES.txt`).
     *   **Tâche 4 : Commit Sémantique**
-        *   **Message :** `refactor(tools): remove obsolete 'base' analysis tools`
+        *   **Message :** `refactor(cleanup): dismantle obsolete "Base" analysis tools`
 
 *   **3. Gel et Évaluation des Outils "New" (Obsolètes Temporairement)** - ✅ **TERMINÉ**
     *   **Statut (2025-07-31):** Les outils "New" ont été isolés et une tâche pour leur évaluation future a été notée. Ils ne font plus partie du build actif.
