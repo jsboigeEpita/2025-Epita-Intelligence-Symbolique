@@ -7,21 +7,25 @@ class ParallelWorkflowManager:
     """
     Orchestrates the parallel exploration of a text for different fallacy categories.
     """
-    def __init__(self, kernel: sk.Kernel, plugins_directory: str):
+    def __init__(self, kernel: sk.Kernel):
         """
         Initializes the workflow manager and loads the required plugins.
 
         :param kernel: An instance of the semantic-kernel.
-        :param plugins_directory: The path to the directory containing the plugins.
         """
         self.kernel = kernel
         
-        # Load the semantic functions from the kernel using the new method
-        exploration_plugin = self.kernel.add_plugin(parent_directory=plugins_directory, plugin_name="ExplorationPlugin")
-        synthesis_plugin = self.kernel.add_plugin(parent_directory=plugins_directory, plugin_name="SynthesisPlugin")
+        # Note: A centralized service would be better than constructing paths here.
+        import os
+        script_dir = os.path.dirname(__file__)
+        root_plugins_dir = os.path.abspath(os.path.join(script_dir, "..", "..", "plugins"))
+        
+        # Load all plugins from their new standard locations
+        exploration_plugin = self.kernel.add_plugin(parent_directory=root_plugins_dir, plugin_name="ExplorationPlugin")
+        synthesis_plugin = self.kernel.add_plugin(parent_directory=root_plugins_dir, plugin_name="SynthesisPlugin")
 
-        self.exploration_func = exploration_plugin["Explore"]
-        self.synthesis_func = synthesis_plugin["Synthesize"]
+        self.exploration_func = exploration_plugin["explore_fallacy"]
+        self.synthesis_func = synthesis_plugin["synthesize_findings"]
 
     async def _run_single_exploration(self, text: str, taxonomy_path: str, taxonomy_definition: str) -> dict:
         """
@@ -30,7 +34,7 @@ class ParallelWorkflowManager:
         print(f"Starting exploration for: {taxonomy_path}")
         
         arguments = KernelArguments(
-            input=text,
+            text=text,
             taxonomy_path=taxonomy_path,
             taxonomy_definition=taxonomy_definition
         )
@@ -71,7 +75,7 @@ class ParallelWorkflowManager:
         
         # Prepare arguments for the synthesis plugin
         synthesis_args = KernelArguments(
-            input_findings=json.dumps(valid_results)
+            findings=json.dumps(valid_results)
         )
 
         # Invoke the synthesis plugin

@@ -508,6 +508,8 @@ Cette étape majeure se concentre sur la migration des composants logiques ident
 
 ### 2.2. Démantèlement du plugin 'result_parsing' (Obsolète)
 
+> **Statut (2025-07-30) :** ✅ **TERMINÉ**. Cette opération a été exécutée avec succès. Le plugin a été supprimé, ses références nettoyées, et les tests de non-régression ont validé l'opération.
+
 *   **Objectif Stratégique :** Éliminer le `ResultParsingPlugin` hérité. Ce composant est devenu obsolète avec l'adoption de modèles Pydantic et de capacités de parsing directement intégrées dans le Kernel sémantique. Son démantèlement simplifie l'architecture, réduit le couplage inutile et supprime du code mort.
 
 #### 2.2.1. Analyse de l'Existant (Synthèse du Grounding)
@@ -561,6 +563,8 @@ Cette étape majeure se concentre sur la migration des composants logiques ident
         removing dead code.
         ```
 ### 2.3. Migration des Plugins du cycle "Guide-Explore-Synthesize"
+
+> **Statut (2025-07-31) :** ✅ **TERMINÉ**. Cette opération a été exécutée avec succès. Les trois plugins ont été migrés vers la nouvelle architecture standard, leurs consommateurs ont été refactorisés, et les tests de non-régression ont validé l'opération.
 
 *   **Objectif Stratégique :**
     Transformer le trio de plugins `GuidingPlugin`, `ExplorationPlugin`, et `SynthesisPlugin` en plugins **standard** robustes et indépendants. Cette migration est critique car elle préserve une capacité d'analyse avancée et délibérative du système, où un problème est d'abord "trié" (Guide), puis "investigué" en parallèle (Explore), et enfin "résumé" (Synthesize). C'est le cœur d'une approche non-monolithique de l'analyse, rendue explicite et configurable.

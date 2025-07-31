@@ -1,0 +1,34 @@
+{
+    "name": "SynthesisPlugin",
+    "version": "1.0.0",
+    "author": "Core Team",
+    "description": "A plugin to synthesize findings from multiple explorations into a single report.",
+    "spec": {
+        "type": "standard",
+        "entrypoint": "plugin.py",
+        "class_name": "SynthesisPlugin",
+        "capabilities": [
+            {
+                "name": "synthesize_findings",
+                "description": "Synthesizes a list of JSON findings into a final report.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "findings": {
+                            "type": "string",
+                            "description": "A JSON string representing a list of findings from the exploration phase."
+                        }
+                    },
+                    "required": ["findings"]
+                },
+                "output_schema": {
+                    "type": "object",
+                    "properties": {
+                        "summary": { "type": "string" },
+                        "findings": { "type": "array", "items": { "type": "object" } }
+                    }
+                }
+            }
+        ]
+    }
+}

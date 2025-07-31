@@ -41,15 +41,16 @@ class MethodicalAuditorAgent(FallacyAgentBase):
     def __init__(self, kernel: sk.Kernel, **kwargs):
         super().__init__(kernel)
         script_dir = os.path.dirname(__file__)
-        self.plugins_directory = os.path.join(script_dir, "..", "plugins")
+        # The new standard plugins directory is at the root of the project.
+        self.plugins_directory = os.path.abspath(os.path.join(script_dir, "..", "..", "plugins"))
         self.taxonomy_directory = os.path.join(script_dir, "..", "taxonomy", "fallacies")
 
-        # Load the guiding function
-        kernel.add_plugin(parent_directory=self.plugins_directory, plugin_name="GuidingPlugin")
-        self.guiding_func = kernel.plugins["GuidingPlugin"]["GuidingPlugin"]
+        # Load the guiding function from the new standard directory
+        guiding_plugin_ = kernel.add_plugin(parent_directory=self.plugins_directory, plugin_name="GuidingPlugin")
+        self.guiding_func = guiding_plugin_["suggest_categories"]
         
-        # Initialize the workflow manager
-        self.manager = ParallelWorkflowManager(kernel, self.plugins_directory)
+        # Initialize the workflow manager. It now loads its own plugins.
+        self.manager = ParallelWorkflowManager(kernel)
 
     async def analyze_text(self, text: str) -> dict:
         """
@@ -59,7 +60,10 @@ class MethodicalAuditorAgent(FallacyAgentBase):
         
         # 1. Run the guiding plugin to find relevant categories
         print("Step 1: Identifying relevant fallacy categories...")
-        guiding_result = await self._kernel.invoke(self.guiding_func, input=text)
+        guiding_result = await self._kernel.invoke(
+            self.guiding_func,
+            sk.KernelArguments(input=text)
+        )
         
         try:
             relevant_categories_data = json.loads(str(guiding_result))
