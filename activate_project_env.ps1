@@ -105,22 +105,26 @@ catch {
 
 Write-Host "[INFO] Exécution directe de la commande dans l'environnement Conda..." -ForegroundColor Cyan
 
-# Étape 2: Construire la commande pour activer et exécuter dans une nouvelle session pwsh
-# Cette approche est plus robuste que `conda run` qui semble avoir des problèmes
-# d'interprétation des arguments dans cet environnement.
-$FullCommand = "conda activate $envName; $CommandToRun"
-Write-Host "[DEBUG] Commande à exécuter dans la sous-session PowerShell : $FullCommand" -ForegroundColor Gray
+# Étape 2: Construire la commande finale pour l'exécuter avec `conda run`
+# On utilise --no-capture-output pour s'assurer que stdout/stderr du processus enfant
+# sont directement streamés, ce qui est crucial pour le logging des tests.
+$condaArgs = @(
+    "run",
+    "-n", $envName,
+    "--no-capture-output"
+) + $CommandToRun.Split(' ')
 
-# Étape 3: Exécution dans un sous-processus PowerShell
+Write-Host "[DEBUG] Commande à exécuter avec Conda : conda $($condaArgs -join ' ')" -ForegroundColor Gray
+
+# Étape 3: Exécution via Conda
 try {
-    # On lance une nouvelle instance de PowerShell pour exécuter la chaîne complète
-    # d'activation et de commande.
-    pwsh -c $FullCommand
+    # On exécute directement la commande via conda run, ce qui est la méthode standard.
+    conda $condaArgs
     $exitCode = $LASTEXITCODE
 }
 catch {
     Write-Host "[ERREUR FATALE] Échec lors de l'exécution de la commande via 'conda run'." -ForegroundColor Red
-    $_.Exception.ToString()
+    Write-Host $_.Exception.ToString()
     $exitCode = 1
 }
 

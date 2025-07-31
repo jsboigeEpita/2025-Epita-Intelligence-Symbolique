@@ -1,0 +1,30 @@
+{
+    "name": "AnalysisToolsPlugin",
+    "version": "1.0.0",
+    "author": "Roo",
+    "description": "Un plugin consolidé qui expose une suite complète d'outils d'analyse rhétorique via une façade simple.",
+    "entry_point": "plugin.py",
+    "capabilities": {
+        "analyze_text": {
+            "description": "Orchestre une analyse rhétorique complète d'un texte.",
+            "parameters": {
+                "text": "Le texte à analyser.",
+                "context": "Le contexte de l'analyse."
+            }
+        },
+        "evaluate_argument_list": {
+            "description": "Analyse une liste d'arguments pré-segmentés.",
+            "parameters": {
+                "arguments": "La liste des arguments à analyser.",
+                "context": "Le contexte de l'analyse."
+            }
+        },
+        "generate_visual_report": {
+            "description": "Crée les rapports visuels à partir de résultats d'analyse.",
+            "parameters": {
+                "analysis_results": "Les résultats d'une analyse précédente.",
+                "output_dir": "Le répertoire de sortie pour les visualisations."
+            }
+        }
+    }
+}

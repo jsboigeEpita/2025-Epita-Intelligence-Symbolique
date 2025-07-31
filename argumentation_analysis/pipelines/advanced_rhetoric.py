@@ -9,17 +9,7 @@ from pathlib import Path
 from typing import List, Dict, Any
 from tqdm import tqdm
 
-# Imports des outils réels (à gérer avec try-except si nécessaire dans un contexte plus large)
-try:
-    from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
-    from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
-    from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator
-    from argumentation_analysis.agents.tools.analysis.enhanced.rhetorical_result_analyzer import EnhancedRhetoricalResultAnalyzer
-    REAL_TOOLS_AVAILABLE = True
-except ImportError:
-    REAL_TOOLS_AVAILABLE = False
-
-# PHASE 2: Mocks éliminés - import des outils réels uniquement
+from plugins.AnalysisToolsPlugin.plugin import AnalysisToolsPlugin
 from argumentation_analysis.orchestration.advanced_analyzer import analyze_extract_advanced
 
 
@@ -29,7 +19,6 @@ def run_advanced_rhetoric_pipeline(
     extract_definitions: List[Dict[str, Any]],
     base_results: List[Dict[str, Any]],
     output_file: Path,
-    # PHASE 2: Paramètre use_real_tools supprimé - outils réels uniquement
 ) -> None:
     """
     Analyse tous les extraits avec les outils avancés et sauvegarde les résultats.
@@ -59,19 +48,25 @@ def run_advanced_rhetoric_pipeline(
     """
     logger.info("Démarrage du pipeline d'analyse rhétorique avancée...")
     
-    # Initialiser les outils d'analyse avancés
-    tools: Dict[str, Any]
-    # PHASE 2: Mocks éliminés - utilisation exclusive des outils réels
-    logger.info("Initialisation des outils d'analyse rhétorique avancés (réels uniquement)")
-    
-    # Pas de try/except - on laisse les vraies erreurs apparaître
-    tools = {
-        "complex_fallacy_analyzer": EnhancedComplexFallacyAnalyzer(),
-        "contextual_fallacy_analyzer": EnhancedContextualFallacyAnalyzer(),
-        "fallacy_severity_evaluator": EnhancedFallacySeverityEvaluator(),
-        "rhetorical_result_analyzer": EnhancedRhetoricalResultAnalyzer()
-    }
-    logger.info("[OK] Outils d'analyse rhétorique avancés (réels) initialisés avec succès.")
+    # Initialiser le plugin qui contient tous les outils
+    logger.info("Initialisation du AnalysisToolsPlugin...")
+    try:
+        analysis_plugin = AnalysisToolsPlugin()
+        logger.info("[OK] AnalysisToolsPlugin initialisé avec succès.")
+    except Exception as e:
+        logger.error(f"❌ Impossible d'initialiser AnalysisToolsPlugin: {e}", exc_info=True)
+        # Écrit un fichier de résultats d'erreur et quitte si le plugin ne peut pas être chargé.
+        error_result = {
+            "error": "Échec de l'initialisation du AnalysisToolsPlugin",
+            "details": str(e)
+        }
+        try:
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump([error_result], f, ensure_ascii=False, indent=2)
+        except Exception as write_e:
+            logger.error(f"Erreur lors de la tentative d'écriture du fichier d'erreur de pipeline: {write_e}")
+        return
             
     base_results_dict: Dict[str, Dict[str, Any]] = {}
     for result in base_results:
@@ -98,9 +93,9 @@ def run_advanced_rhetoric_pipeline(
             base_result_for_extract = base_results_dict.get(key)
             
             try:
-                # Appel à la fonction d'orchestration pour un seul extrait
+                # Appel à la fonction d'orchestration pour un seul extrait avec le plugin
                 single_extract_results = analyze_extract_advanced(
-                    extract_def, source_name, base_result_for_extract, tools
+                    extract_def, source_name, base_result_for_extract, analysis_plugin
                 )
                 all_pipeline_results.append(single_extract_results)
             except Exception as e:

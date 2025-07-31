@@ -29,13 +29,8 @@ from pathlib import Path
 from datetime import datetime
 from collections import defaultdict
 
-# Ajouter le répertoire parent au chemin de recherche des modules
-current_dir = Path(__file__).parent
-parent_dir = current_dir.parent.parent.parent.parent
-if str(parent_dir) not in sys.path:
-    sys.path.append(str(parent_dir))
-
 # Importer l'analyseur de sophismes complexes de base
+# TODO: Vérifier si ce chemin est toujours valide après le refactoring
 from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer as BaseAnalyzer
 
 # Fonction d'importation paresseuse pour éviter les importations circulaires
@@ -43,9 +38,9 @@ def _lazy_imports():
     """Importe les modules de manière paresseuse pour éviter les importations circulaires."""
     global EnhancedContextualFallacyAnalyzer, EnhancedFallacySeverityEvaluator
     
-    # Importer les analyseurs améliorés
-    from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
-    from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator
+    # Importer les analyseurs améliorés depuis le module logique interne
+    from .contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
+    from .fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator
 
 # Configuration du logging
 logging.basicConfig(

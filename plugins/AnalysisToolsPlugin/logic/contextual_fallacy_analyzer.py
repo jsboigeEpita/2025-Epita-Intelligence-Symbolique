@@ -31,16 +31,12 @@ from typing import Dict, List, Any, Optional, Tuple, Union
 from pathlib import Path
 from datetime import datetime
 
-# Ajouter le répertoire parent au chemin de recherche des modules
-current_dir = Path(__file__).parent
-parent_dir = current_dir.parent.parent.parent.parent
-if str(parent_dir) not in sys.path:
-    sys.path.append(str(parent_dir))
-
 # Importer l'analyseur contextuel de base
+# TODO: Vérifier si ce chemin est toujours valide après le refactoring
 from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer as BaseAnalyzer
 
 # Importations pour les modèles de langage avancés
+# TODO: Rendre ce chemin configurable ou propre au plugin
 from argumentation_analysis.paths import DATA_DIR
 
 # Importations pour les modèles de langage avancés, avec fallback

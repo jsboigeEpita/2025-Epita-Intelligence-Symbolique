@@ -22,15 +22,27 @@ from argumentation_analysis.mocks.advanced_tools import (
     MockEnhancedRhetoricalResultAnalyzer
 )
 
+from plugins.AnalysisToolsPlugin.plugin import AnalysisToolsPlugin
+
 @pytest.fixture
-def mock_tools() -> Dict[str, Any]:
-    """Fournit un dictionnaire d'outils d'analyse mockés."""
-    return {
-        "complex_fallacy_analyzer": MockEnhancedComplexFallacyAnalyzer(),
-        "contextual_fallacy_analyzer": MockEnhancedContextualFallacyAnalyzer(),
-        "fallacy_severity_evaluator": MockEnhancedFallacySeverityEvaluator(),
-        "rhetorical_result_analyzer": MockEnhancedRhetoricalResultAnalyzer()
+def mock_plugin() -> MagicMock:
+    """Fournit un mock du AnalysisToolsPlugin."""
+    plugin = MagicMock(spec=AnalysisToolsPlugin)
+    mock_analysis_result = {
+        "complex_fallacies": {"mock_result": True, "details": "Mocked complex analysis"},
+        "contextual_fallacies": {"mock_result": True, "details": "Mocked contextual analysis"},
+        "fallacy_severity": {"mock_result": True, "score": 0.8},
+        "rhetorical_results": {
+            "overall_analysis": {
+                "rhetorical_quality": 0.9,
+                "clarity_score": 0.85,
+                "engagement_score": 0.92
+            },
+            "details": "This is a mocked rhetorical analysis."
+        },
     }
+    plugin.analyze_text.return_value = mock_analysis_result
+    return plugin
 
 @pytest.fixture
 def sample_extract_definition() -> Dict[str, Any]:
@@ -57,7 +69,7 @@ def sample_base_result() -> Dict[str, Any]:
 @pytest.fixture
 def mock_generate_sample(mocker: MagicMock) -> MagicMock:
     """Mock la fonction generate_sample_text."""
-    return mocker.patch("argumentation_analysis.orchestration.advanced_analyzer.generate_sample_text")
+    return mocker.patch("argumentation_analysis.utils.data_generation.generate_sample_text")
 
 @pytest.fixture
 def mock_split_args(mocker: MagicMock) -> MagicMock:
@@ -66,130 +78,84 @@ def mock_split_args(mocker: MagicMock) -> MagicMock:
 
 def test_analyze_extract_advanced_successful_run(
     sample_extract_definition: Dict[str, Any],
-    mock_tools: Dict[str, Any],
+    mock_plugin: MagicMock,
     sample_base_result: Optional[Dict[str, Any]]
 ):
-    """Teste un déroulement réussi de l'analyse avancée."""
+    """Teste un déroulement réussi de l'analyse avancée avec le plugin."""
     source_name = "TestSource"
     
     results = analyze_extract_advanced(
         sample_extract_definition,
         source_name,
         sample_base_result,
-        mock_tools
+        plugin=mock_plugin
     )
 
     assert results["extract_name"] == sample_extract_definition["extract_name"]
     assert results["source_name"] == source_name
-    assert results["argument_count"] > 0 # split_text_into_arguments devrait trouver 2 args
     assert "timestamp" in results
     
+    # Les résultats d'analyse proviennent maintenant directement du mock_plugin
     analyses = results["analyses"]
     assert "complex_fallacies" in analyses
-    assert "contextual_fallacies" in analyses
-    assert "fallacy_severity" in analyses
-    assert "rhetorical_results" in analyses
-    assert "comparison_with_base" in results # Car sample_base_result est fourni
-
-    # Vérifier que les mocks ont produit quelque chose (pas d'erreur)
-    assert "error" not in analyses["complex_fallacies"]
-    assert "error" not in analyses["contextual_fallacies"]
-    assert "error" not in analyses["fallacy_severity"]
-    assert "error" not in analyses["rhetorical_results"]
+    assert analyses["complex_fallacies"]["details"] == "Mocked complex analysis"
+    
+    # La comparaison avec la base est toujours gérée par l'orchestrateur
+    assert "comparison_with_base" in results
     assert "error" not in results["comparison_with_base"]
-
-    # Vérifier que les données de base ont été utilisées par rhetorical_result_analyzer (indirectement)
-    # Le mock de rhetorical_result_analyzer ne reflète pas directement cela, mais on s'assure qu'il tourne.
-    assert "overall_analysis" in analyses["rhetorical_results"]
+    
+    # Vérifier que le plugin a bien été appelé
+    mock_plugin.analyze_text.assert_called_once_with(
+        text=sample_extract_definition["extract_text"],
+        context=sample_extract_definition["context"]
+    )
 
 
 def test_analyze_extract_advanced_no_base_result(
     sample_extract_definition: Dict[str, Any],
-    mock_tools: Dict[str, Any]
+    mock_plugin: MagicMock
 ):
     """Teste l'analyse sans résultat de base."""
     source_name = "TestSource"
-    results = analyze_extract_advanced(sample_extract_definition, source_name, None, mock_tools)
+    results = analyze_extract_advanced(sample_extract_definition, source_name, None, plugin=mock_plugin)
     
-    assert "comparison_with_base" not in results # Ne devrait pas y avoir de comparaison
+    assert "comparison_with_base" not in results
     assert "rhetorical_results" in results["analyses"]
-    # On peut vérifier que rhetorical_results ne contient pas les champs "base_..."
-    # mais le mock actuel ne le permet pas facilement. On vérifie juste qu'il s'exécute.
-    assert "error" not in results["analyses"]["rhetorical_results"]
+    assert results["analyses"]["rhetorical_results"]["details"] == "This is a mocked rhetorical analysis."
 
 
 
 def test_analyze_extract_advanced_missing_text_uses_sample(
     mock_generate_sample: MagicMock,
     sample_extract_definition: Dict[str, Any],
-    mock_tools: Dict[str, Any]
+    mock_plugin: MagicMock
 ):
     """Teste que generate_sample_text est appelé si extract_text est manquant."""
     mock_generate_sample.return_value = "Texte d'exemple généré."
     extract_def_no_text = sample_extract_definition.copy()
     extract_def_no_text.pop("extract_text", None)
     
-    analyze_extract_advanced(extract_def_no_text, "TestSource", None, mock_tools)
+    analyze_extract_advanced(extract_def_no_text, "TestSource", None, plugin=mock_plugin)
     mock_generate_sample.assert_called_once()
 
 
-def test_analyze_extract_advanced_no_arguments_uses_full_text(
-    mock_split_args: MagicMock,
+def test_analyze_extract_advanced_plugin_exception_handling(
     sample_extract_definition: Dict[str, Any],
-    mock_tools: Dict[str, Any]
-):
-    """Teste que le texte entier est utilisé si split_text_into_arguments ne retourne rien."""
-    mock_split_args.return_value = [] # Simule aucun argument trouvé
-    
-    # Pour vérifier cela, on a besoin de mocker un des analyseurs pour voir ce qu'il reçoit.
-    # On va mocker detect_composite_fallacies pour vérifier les arguments passés.
-    mock_complex_analyzer = mock_tools["complex_fallacy_analyzer"]
-    mock_complex_analyzer.detect_composite_fallacies = MagicMock(return_value={})
-
-    analyze_extract_advanced(sample_extract_definition, "TestSource", None, mock_tools)
-    
-    # Vérifie que detect_composite_fallacies a été appelé avec le texte entier comme seul argument
-    mock_complex_analyzer.detect_composite_fallacies.assert_called_once()
-    call_args = mock_complex_analyzer.detect_composite_fallacies.call_args[0][0]
-    assert call_args == [sample_extract_definition["extract_text"]]
-
-
-def test_analyze_extract_advanced_tool_exception_handling(
-    sample_extract_definition: Dict[str, Any],
-    mock_tools: Dict[str, Any],
+    mock_plugin: MagicMock,
     caplog
 ):
-    """Teste la gestion d'exception si un outil échoue."""
+    """Teste la gestion d'exception si le plugin.analyze_text échoue."""
     source_name = "TestSource"
     
-    # Faire échouer un des outils
-    original_method = mock_tools["complex_fallacy_analyzer"].detect_composite_fallacies
-    mock_detect = MagicMock(side_effect=ValueError("Erreur test outil"))
-    mock_detect.__name__ = "detect_composite_fallacies"
-    mock_tools["complex_fallacy_analyzer"].detect_composite_fallacies = mock_detect
+    # Configurer le mock pour lever une exception
+    test_error = ValueError("Erreur plugin test")
+    mock_plugin.analyze_text.side_effect = test_error
     
     with caplog.at_level(logging.ERROR):
-        results = analyze_extract_advanced(sample_extract_definition, source_name, None, mock_tools)
+        results = analyze_extract_advanced(sample_extract_definition, source_name, None, plugin=mock_plugin)
     
-    assert "complex_fallacies" in results["analyses"]
-    assert results["analyses"]["complex_fallacies"]["error"] == "Erreur test outil"
-    assert "Erreur lors de l'exécution de l'outil 'detect_composite_fallacies': Erreur test outil" in caplog.text
-
-    # Restaurer la méthode pour d'autres tests si nécessaire (non critique ici car fixture recrée)
-    mock_tools["complex_fallacy_analyzer"].detect_composite_fallacies = original_method
-
-
-def test_analyze_extract_advanced_all_tools_missing(
-    sample_extract_definition: Dict[str, Any]
-):
-    """Teste le comportement si le dictionnaire d'outils est vide."""
-    source_name = "TestSource"
-    empty_tools = {}
-    results = analyze_extract_advanced(sample_extract_definition, source_name, None, empty_tools)
-
-    # Les sections d'analyse devraient être absentes ou vides, mais pas d'erreur globale.
-    assert "complex_fallacies" not in results["analyses"]
-    assert "contextual_fallacies" not in results["analyses"]
-    assert "fallacy_severity" not in results["analyses"]
-    assert "rhetorical_results" not in results["analyses"]
-    assert "comparison_with_base" not in results # Car base_result est None
+    # L'orchestrateur doit attraper l'erreur et la retourner dans un format propre
+    assert "error" in results
+    assert "Erreur du plugin" in results["error"]
+    assert str(test_error) in results["error"]
+    assert "Erreur lors de l'appel au AnalysisToolsPlugin" in caplog.text

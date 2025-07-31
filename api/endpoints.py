@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 
@@ -7,8 +7,7 @@ from .models import (
     InformalAnalysisRequest, InformalAnalysisResponse
 )
 from .dependencies import (
-    get_analysis_service, AnalysisService, get_dung_analysis_service,
-    get_informal_analysis_service, InformalAnalysisService
+    get_analysis_service, AnalysisService, get_dung_analysis_service
 )
 from .models import FrameworkAnalysisRequest, FrameworkAnalysisResponse
 from .services import DungAnalysisService
@@ -30,8 +29,7 @@ informal_router = APIRouter(prefix="/api/v1/informal", tags=["Informal Fallacy A
 
 @informal_router.post("/analyze", response_model=InformalAnalysisResponse)
 async def analyze_informal_fallacy(
-    request: InformalAnalysisRequest,
-    analysis_service: InformalAnalysisService = Depends(get_informal_analysis_service)
+    request: InformalAnalysisRequest
 ):
     """
     Analyzes a text for informal fallacies using the main facade.
@@ -41,8 +39,7 @@ async def analyze_informal_fallacy(
 
     Returns a structured analysis result based on the chosen strategy.
     """
-    result = await analysis_service.analyze(request.text, request.strategy)
-    return result
+    raise HTTPException(status_code=501, detail="This endpoint is deprecated and will be replaced by a plugin-based implementation.")
 
 router = APIRouter()
 

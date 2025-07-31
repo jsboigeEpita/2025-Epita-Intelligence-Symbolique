@@ -22,8 +22,8 @@ from collections import Counter, defaultdict
 # Importer l'analyseur de résultats rhétoriques de base
 
 # Importer les analyseurs améliorés
-from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
-from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator
+from .complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
+from .fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator
 
 # Configuration du logging
 logging.basicConfig(

@@ -17,9 +17,12 @@ import time
 from datetime import datetime
 
 # Import des composants internes refactoriés
-from ..agents.tools.analysis.enhanced.rhetorical_result_analyzer import EnhancedRhetoricalResultAnalyzer
-from ..agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
-from ..agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
+# L'analyse rhétorique est maintenant gérée par le plugin consolidé.
+try:
+    from plugins.AnalysisToolsPlugin.plugin import AnalysisToolsPlugin
+    PLUGIN_ANALYSIS_AVAILABLE = True
+except ImportError:
+    PLUGIN_ANALYSIS_AVAILABLE = False
 from ..agents.tools.analysis.new.semantic_argument_analyzer import SemanticArgumentAnalyzer
 from ..agents.core.logic.propositional_logic_agent import PropositionalLogicAgent
 from semantic_kernel.connectors.ai.chat_completion_client_base import ChatCompletionClientBase
@@ -68,10 +71,8 @@ class RealLLMOrchestrator:
         self.is_initialized = False
         self.active_sessions = {}
         self.analysis_cache = {}
-        self.rhetorical_analyzer = None
-        self.enhanced_rhetorical_analyzer = None
-        self.complex_fallacy_analyzer = None
-        self.contextual_fallacy_analyzer = None
+        # Remplacer les anciens analyseurs par le plugin unique
+        self.analysis_plugin = None
         self.semantic_argument_analyzer = None
         self.unified_pipeline = None
         self.unified_analyzer = None
@@ -106,10 +107,11 @@ class RealLLMOrchestrator:
     async def initialize(self) -> bool:
         try:
             self.logger.info("Initialisation des composants d'analyse...")
-            self.rhetorical_analyzer = RhetoricalResultAnalyzer()
-            self.enhanced_rhetorical_analyzer = EnhancedRhetoricalResultAnalyzer()
-            self.complex_fallacy_analyzer = EnhancedComplexFallacyAnalyzer()
-            self.contextual_fallacy_analyzer = EnhancedContextualFallacyAnalyzer()
+            if PLUGIN_ANALYSIS_AVAILABLE:
+                self.analysis_plugin = AnalysisToolsPlugin()
+                self.logger.info("AnalysisToolsPlugin chargé.")
+            else:
+                self.logger.warning("AnalysisToolsPlugin non trouvé. Les capacités d'analyse rhétorique seront indisponibles.")
             self.semantic_argument_analyzer = SemanticArgumentAnalyzer()
             self.unified_analyzer = self._create_unified_analyzer()
             self.syntactic_analyzer = self._create_basic_syntactic_analyzer()

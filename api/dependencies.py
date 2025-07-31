@@ -2,7 +2,6 @@ import os
 from fastapi import Depends
 from argumentation_analysis.orchestration.service_manager import OrchestrationServiceManager
 from .services import DungAnalysisService
-from services.informal_analysis_service import InformalAnalysisService
 import logging
 import time
 
@@ -225,14 +224,9 @@ _global_informal_analysis_service = None
 
 # ... (rest of the dependency functions)
 
-def get_informal_analysis_service() -> InformalAnalysisService:
+def get_informal_analysis_service():
     """
     Dependency injection for the InformalAnalysisService.
     Uses a global singleton to instantiate the service only once.
     """
-    global _global_informal_analysis_service
-    if _global_informal_analysis_service is None:
-        logging.info("[API] Initializing InformalAnalysisService...")
-        _global_informal_analysis_service = InformalAnalysisService()
-        logging.info("[API] InformalAnalysisService initialized successfully.")
-    return _global_informal_analysis_service
+    raise NotImplementedError("InformalAnalysisService is deprecated. Use a plugin-based service instead.")

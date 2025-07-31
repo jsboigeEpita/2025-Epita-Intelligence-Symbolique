@@ -73,9 +73,10 @@ from argumentation_analysis.pipelines.analysis_pipeline import run_text_analysis
 
 # Imports des agents et outils
 from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
-from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
-from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
-from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator
+# Importe le nouveau plugin de consolidation.
+# NOTE: Le chemin d'importation devra peut-être être ajusté en fonction de
+# la configuration finale du projet (ex: si 'plugins' devient un package installable).
+from plugins.AnalysisToolsPlugin.plugin import AnalysisToolsPlugin
 from argumentation_analysis.agents.core.synthesis.synthesis_agent import SynthesisAgent
 
 logger = logging.getLogger("UnifiedTextAnalysis")
@@ -217,9 +218,7 @@ class UnifiedTextAnalysisPipeline:
         
         # Pas de try/except - on laisse les vraies erreurs apparaître
         self.analysis_tools = {
-            "contextual_analyzer": EnhancedContextualFallacyAnalyzer(),
-            "complex_analyzer": EnhancedComplexFallacyAnalyzer(),
-            "severity_evaluator": EnhancedFallacySeverityEvaluator()
+            "analysis_plugin": AnalysisToolsPlugin()
         }
         
         # SynthesisAgent pour analyse unifiée
@@ -312,50 +311,39 @@ class UnifiedTextAnalysisPipeline:
         return results
     
     async def _perform_informal_analysis(self, text: str) -> Dict[str, Any]:
-        """Effectue l'analyse informelle avec les outils classiques."""
-        informal_results = {
-            "status": "Unknown",
-            "fallacies": [],
-            "summary": {}
-        }
-        
+        """Effectue l'analyse informelle via le nouveau plugin consolidé."""
         try:
-            # Utilisation des analyseurs contextuels et complexes
-            contextual_analyzer = self.analysis_tools.get("contextual_analyzer")
-            severity_evaluator = self.analysis_tools.get("severity_evaluator")
+            analysis_plugin = self.analysis_tools.get("analysis_plugin")
+            if not analysis_plugin:
+                raise RuntimeError("AnalysisToolsPlugin n'est pas initialisé.")
+
+            # Appel unique à la façade du plugin
+            analysis_result = analysis_plugin.analyze_text(text, "general_pipeline_context")
+
+            # Adapter la sortie du plugin à la structure attendue par ce pipeline
+            # NOTE: Ceci est une adaptation. La structure de retour de `analyze_text` est riche.
+            # Nous extrayons ici les informations pertinentes pour `informal_analysis`.
+            fallacy_analysis = analysis_result.get("fallacy_analysis", {})
+            fallacies = fallacy_analysis.get("fallacy_types_distribution", {})
             
-            if contextual_analyzer:
-                # Analyse contextuelle des sophismes
-                context_text = text[:500] + "..." if len(text) > 500 else text
-                
-                contextual_fallacies = contextual_analyzer.identify_contextual_fallacies(
-                    argument=text,
-                    context="sample_for_analysis"
-                )
-                
-                # Format des sophismes détectés
-                informal_results["fallacies"] = [
-                    {
-                        "type": f.get("type", "Type inconnu"),
-                        "text_fragment": f.get("text_fragment", "Fragment non disponible"),
-                        "explanation": f.get("explanation", "Explication non disponible"),
-                        "severity": f.get("severity", "Moyen"),
-                        "confidence": f.get("confidence", 0.0)
-                    }
-                    for f in contextual_fallacies
-                ]
-                
-                # Évaluation de la sévérité si disponible
-                if severity_evaluator:
-                    sample_context = {"text": text[:500], "context_type": "sample_for_analysis"}
-                    evaluation = severity_evaluator.evaluate_fallacy_list(contextual_fallacies, sample_context)
-                    informal_results["fallacies"] = evaluation.get("fallacy_evaluations", contextual_fallacies)
-                else:
-                    informal_results["fallacies"] = contextual_fallacies
-                    
+            informal_results = {
+                "status": "Success",
+                "fallacies": [{"type": f, "count": c} for f, c in fallacies.items()],
+                "summary": {
+                    "total_fallacies": fallacy_analysis.get("total_fallacies", 0),
+                    "overall_severity": fallacy_analysis.get("overall_severity", 0.0),
+                    "severity_level": fallacy_analysis.get("severity_level", "Unknown"),
+                }
+            }
+            
         except Exception as e:
-            logger.error(f"Erreur analyse informelle: {e}")
-            informal_results["fallacies"] = []
+            logger.error(f"Erreur analyse informelle via plugin: {e}")
+            informal_results = {
+                "status": "Error",
+                "fallacies": [],
+                "summary": {},
+                "error": str(e)
+            }
         
         # Résumé de l'analyse informelle
         fallacies = informal_results["fallacies"]

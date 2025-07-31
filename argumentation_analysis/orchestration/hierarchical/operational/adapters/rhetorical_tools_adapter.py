@@ -16,92 +16,49 @@ from argumentation_analysis.orchestration.hierarchical.operational.agent_interfa
 from argumentation_analysis.orchestration.hierarchical.operational.state import OperationalState
 from argumentation_analysis.core.bootstrap import ProjectContext
 
-# L'agent RhetoricalAnalysisAgent est supposé encapsuler ces outils.
-# Pour l'instant, un Mock est utilisé.
-from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
-# ... autres imports d'outils ...
-
-# TODO: Remplacer ce mock par le véritable agent une fois qu'il sera créé.
-class MockRhetoricalAnalysisAgent:
-    """Mock de l'agent d'analyse rhétorique pour le développement."""
-    def __init__(self, kernel, agent_name, project_context: ProjectContext):
-        self.logger = logging.getLogger(agent_name)
-        # Les outils seraient initialisés ici
-    async def setup_agent_components(self, llm_service_id):
-        self.logger.info("MockRhetoricalAnalysisAgent setup.")
-    async def analyze_complex_fallacies(self, arguments: List[str], context: str, **kwargs):
-        self.logger.info("Mock-analysing complex fallacies.")
-        return [{"mock_result": "complex"}]
-    async def analyze_contextual_fallacies(self, text: str, context: str, **kwargs):
-        self.logger.info("Mock-analysing contextual fallacies.")
-        return [{"mock_result": "contextual"}]
-    # ... autres méthodes mock ...
-
-RhetoricalAnalysisAgent = MockRhetoricalAnalysisAgent
+# Importe le plugin consolidé qui remplace les outils individuels.
+try:
+    from plugins.AnalysisToolsPlugin.plugin import AnalysisToolsPlugin
+    PLUGIN_ANALYSIS_AVAILABLE = True
+except ImportError:
+    AnalysisToolsPlugin = None
+    PLUGIN_ANALYSIS_AVAILABLE = False
 
 
 class RhetoricalToolsAdapter(OperationalAgent):
     """
-    Traduit les commandes opérationnelles pour le `RhetoricalAnalysisAgent`.
-
-    Cette classe agit comme une façade pour un ensemble d'outils d'analyse
-    rhétorique avancée, exposés via un agent unique (actuellement un mock).
-    Son rôle est de :
-    1.  Recevoir une tâche générique (ex: "évaluer la cohérence").
-    2.  Identifier la bonne méthode à appeler sur l'agent rhétorique sous-jacent.
-    3.  Transmettre les paramètres et le contexte nécessaires.
-    4.  Formatter la réponse de l'outil en un résultat opérationnel standard.
+    Traduit les commandes opérationnelles pour le `AnalysisToolsPlugin`.
     """
 
     def __init__(self, name: str = "RhetoricalTools", operational_state: Optional[OperationalState] = None, project_context: Optional[ProjectContext] = None):
         """
         Initialise l'adaptateur pour les outils d'analyse rhétorique.
-
-        Args:
-            name: Le nom de l'instance de l'agent.
-            operational_state: L'état opérationnel partagé.
-            project_context: Le contexte global du projet.
         """
         super().__init__(name, operational_state)
         self.logger = logging.getLogger(f"RhetoricalToolsAdapter.{name}")
-        self.agent: Optional[RhetoricalAnalysisAgent] = None
-        self.kernel: Optional[Any] = None
-        self.llm_service_id: Optional[str] = None
-        self.project_context = project_context
+        self.analysis_plugin: Optional[AnalysisToolsPlugin] = None
         self.initialized = False
 
     async def initialize(self, kernel: Any, llm_service_id: str, project_context: ProjectContext) -> bool:
         """
-        Initialise l'agent d'analyse rhétorique sous-jacent.
-
-        Args:
-            kernel: Le kernel Semantic Kernel.
-            llm_service_id: L'ID du service LLM.
-            project_context: Le contexte global du projet.
-
-        Returns:
-            True si l'initialisation réussit.
+        Initialise le plugin d'analyse.
         """
         if self.initialized:
             return True
         
-        self.kernel = kernel
-        self.llm_service_id = llm_service_id
-        self.project_context = project_context
-
-        if not self.project_context:
-            self.logger.error("ProjectContext est requis pour l'initialisation.")
+        if not PLUGIN_ANALYSIS_AVAILABLE:
+            self.logger.error("Le plugin d'analyse n'a pas pu être importé. L'adaptateur ne peut pas fonctionner.")
             return False
 
         try:
-            self.logger.info("Initialisation de l'agent d'analyse rhétorique...")
-            self.agent = RhetoricalAnalysisAgent(kernel=self.kernel, agent_name=f"{self.name}_RhetoricalAgent", project_context=self.project_context)
-            await self.agent.setup_agent_components(llm_service_id=self.llm_service_id)
+            self.logger.info("Initialisation du AnalysisToolsPlugin via l'adaptateur...")
+            # L'initialisation du plugin se fait maintenant en interne
+            self.analysis_plugin = AnalysisToolsPlugin()
             self.initialized = True
-            self.logger.info("Agent d'analyse rhétorique initialisé.")
+            self.logger.info("AnalysisToolsPlugin initialisé.")
             return True
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'initialisation de l'agent rhétorique: {e}", exc_info=True)
+            self.logger.error(f"Erreur lors de l'initialisation du plugin d'analyse: {e}", exc_info=True)
             return False
 
     def get_capabilities(self) -> List[str]:
@@ -125,42 +82,27 @@ class RhetoricalToolsAdapter(OperationalAgent):
 
     async def process_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Traite une tâche en l'aiguillant vers le bon outil d'analyse rhétorique.
-
-        Args:
-            task: La tâche opérationnelle à traiter.
-
-        Returns:
-            Le résultat du traitement, formaté.
+        Traite une tâche en utilisant le AnalysisToolsPlugin.
         """
         task_id = self.register_task(task)
         self.update_task_status(task_id, "in_progress")
         start_time = time.time()
 
-        if not self.agent:
-             return self.format_result(task, [], {}, [{"type": "initialization_error"}], task_id)
+        if not self.analysis_plugin:
+             return self.format_result(task, [], {}, [{"type": "initialization_error", "description": "AnalysisToolsPlugin non initialisé."}], task_id)
         
         try:
             results = []
             issues = []
             text_to_analyze = " ".join([extract.get("content", "") for extract in task.get("text_extracts", [])])
-            arguments = self._extract_arguments(text_to_analyze)
+            context = task.get("context", "général")
 
-            for technique in task.get("techniques", []):
-                technique_name = technique.get("name")
-                params = technique.get("parameters", {})
-                context = params.get("context", "général")
-                
-                # Aiguillage vers la méthode correspondante de l'agent.
-                if technique_name == "complex_fallacy_analysis":
-                    res = await self.agent.analyze_complex_fallacies(arguments, context, parameters=params)
-                    results.append({"type": technique_name, **res})
-                elif technique_name == "contextual_fallacy_analysis":
-                    res = await self.agent.analyze_contextual_fallacies(text_to_analyze, context, parameters=params)
-                    results.append({"type": technique_name, **res})
-                # ... ajouter les autres cas d'aiguillage ici ...
-                else:
-                    issues.append({"type": "unsupported_technique", "name": technique_name})
+            # La logique ici est simplifiée : on suppose une analyse globale.
+            # L'aiguillage fin par "technique" est maintenant une responsabilité interne au plugin.
+            # Pour ce refactoring, nous appelons la capacité principale du plugin.
+            
+            analysis_result = self.analysis_plugin.analyze_text(text_to_analyze, context)
+            results.append({"type": "full_rhetorical_analysis", **analysis_result})
 
             metrics = {"execution_time": time.time() - start_time}
             status = "completed_with_issues" if issues else "completed"

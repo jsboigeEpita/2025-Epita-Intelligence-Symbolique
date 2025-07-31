@@ -708,7 +708,8 @@ Cette étape majeure se concentre sur la migration des composants logiques ident
 
 #### 2.5.2. Plan de Développement Détaillé
 
-*   **1. Consolidation des Outils "Enhanced" dans `AnalysisToolsPlugin`**
+*   **1. Consolidation des Outils "Enhanced" dans `AnalysisToolsPlugin`** - ✅ **TERMINÉ**
+    *   **Statut (2025-07-31):** Le plugin `AnalysisToolsPlugin` a été créé avec succès. Il encapsule désormais la logique des anciens outils "Enhanced" (`complex_fallacy_analyzer`, `contextual_fallacy_analyzer`, `fallacy_severity_evaluator`, `rhetorical_result_analyzer`) sous une façade unifiée (`analyze_text`). Les consommateurs principaux (`advanced_analyzer` et `advanced_rhetoric` pipeline) ont été refactorisés pour utiliser ce nouveau plugin. La suite de tests complète a validé la non-régression de cette migration majeure.
     *   **Stratégie Cible :** Les outils `complex_fallacy_analyzer.py`, `contextual_fallacy_analyzer.py` et `fallacy_severity_evaluator.py` seront les fonctions natives du **Plugin `Standard` `AnalysisToolsPlugin`**.
     *   **Tâche 1 : Analyse d'Impact**
         *   **Commande :** `rg "complex_fallacy_analyzer|contextual_fallacy_analyzer|fallacy_severity_evaluator"`
@@ -729,7 +730,8 @@ Cette étape majeure se concentre sur la migration des composants logiques ident
     *   **Tâche 4 : Commit Sémantique**
         *   **Message :** `feat(plugins): create AnalysisToolsPlugin from enhanced tools`
 
-*   **2. Démantèlement des Outils "Base" (Obsolètes)**
+*   **2. Démantèlement des Outils "Base" (Obsolètes)** - ✅ **TERMINÉ**
+    *   **Statut (2025-07-31):** Les anciens outils d'analyse de base ont été supprimés. Les références à ces outils dans le code ont été éliminées lors de la refactorisation des consommateurs vers le `AnalysisToolsPlugin`.
     *   **Stratégie Cible :** Suppression complète après analyse d'impact.
     *   **Tâche 1 : Analyse d'Impact**
         *   **Commande :** `rg -l "from argumentation_analysis.agents.tools.analysis import"`
@@ -740,11 +742,23 @@ Cette étape majeure se concentre sur la migration des composants logiques ident
     *   **Tâche 4 : Commit Sémantique**
         *   **Message :** `refactor(tools): remove obsolete 'base' analysis tools`
 
-*   **3. Gel et Évaluation des Outils "New" (Obsolètes Temporairement)**
+*   **3. Gel et Évaluation des Outils "New" (Obsolètes Temporairement)** - ✅ **TERMINÉ**
+    *   **Statut (2025-07-31):** Les outils "New" ont été isolés et une tâche pour leur évaluation future a été notée. Ils ne font plus partie du build actif.
     *   **Stratégie Cible :** Ne pas migrer, mais planifier une évaluation formelle.
     *   **Tâche 1 : Création d'une Tâche de R&D**
         *   **Action :** Ajouter un ticket au backlog avec le titre "R&D: Évaluer l'intégration des outils d'analyse 'New' vs 'Enhanced'".
     *   **Tâche 2 : Isolation du Code**
+### 3.4. Actions Correctives Non Planifiées
+
+Au cours de la phase de validation, un problème de blocage (`hanging`) systématique de la suite de tests a été identifié. Cette section documente l'analyse et la résolution de ce problème critique qui n'était pas prévu dans le plan initial.
+
+*   **Problème Identifié :** La suite de tests, lancée via `run_tests.ps1`, se bloquait indéfiniment sans produire d'erreur. L'enquête a révélé que l'appel `pwsh -c "conda activate ..."` dans le script `activate_project_env.ps1` était instable et ne retournait pas toujours la main, bloquant ainsi le processus.
+
+*   **Résolution :** Le script `activate_project_env.ps1` a été refactorisé pour utiliser la commande `conda run -n <env_name> --no-capture-output <command>`, qui est une méthode plus robuste et officielle pour exécuter des commandes dans un environnement Conda depuis un script externe.
+
+*   **Impact :** Cette correction a débloqué l'exécution de la suite de tests, permettant de révéler les erreurs d'assertion fonctionnelles qui ont ensuite été corrigées. Elle a également nécessité une mise à jour mineure du fichier `.env.example` pour s'aligner sur la nouvelle configuration de l'environnement de test.
+
+*   **Statut (2025-07-31) :** ✅ **TERMINÉ**. Le problème de blocage est résolu et la suite de tests s'exécute désormais de manière fiable.
         *   **Action :** S'assurer que les fichiers sous `.../tools/analysis/new/` ne sont pas package, par exemple en utilisant un `.dockerignore`.
     *   **Tâche 3 : Commit Sémantique**
         *   **Message :** `chore(tools): freeze 'new' analysis tools pending formal evaluation`

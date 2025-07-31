@@ -14,7 +14,7 @@ logging.basicConfig(
 logger = logging.getLogger("TestEnhancedContextualFallacyAnalyzerPytest")
 
 # Import du module à tester
-from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer, HAS_TRANSFORMERS
+from ..logic.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer, HAS_TRANSFORMERS
 
 @pytest.fixture
 def mock_dependencies(mocker):
@@ -39,7 +39,7 @@ def mock_dependencies(mocker):
     mocker.patch.dict(sys.modules, {'transformers': mock_transformers})
     
     # Patch the HAS_TRANSFORMERS flag in the module under test
-    mocker.patch('argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer.HAS_TRANSFORMERS', True)
+    mocker.patch('plugins.AnalysisToolsPlugin.logic.contextual_fallacy_analyzer.HAS_TRANSFORMERS', True)
 
     return mock_torch, mock_transformers
 
@@ -197,7 +197,7 @@ def test_provide_feedback(analyzer_instance):
 
 def test_get_contextual_fallacy_examples(analyzer_instance):
     """Test l'obtention d'exemples de sophismes contextuels."""
-    parent_class_mock_target = 'argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer.ContextualFallacyAnalyzer.get_contextual_fallacy_examples'
+    parent_class_mock_target = 'plugins.AnalysisToolsPlugin.logic.contextual_fallacy_analyzer.BaseAnalyzer.get_contextual_fallacy_examples'
     
     with patch(parent_class_mock_target, return_value=[
         "Exemple 1.", "Exemple 2."
