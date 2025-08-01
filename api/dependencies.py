@@ -164,17 +164,11 @@ class AnalysisService:
 
 async def get_analysis_service():
     """
-    Injection de dépendance pour le service d'analyse.
-    Retourne un service mock si FORCE_MOCK_LLM est activé,
-    sinon le service authentique.
+    Injection de dépendance pour le service d'analyse authentique.
+    Initialise et retourne le service utilisant l'OrchestrationServiceManager.
+    Lève une RuntimeError si l'initialisation échoue.
     """
-    global _global_service_manager, _global_mock_service
-
-    if os.getenv('FORCE_MOCK_LLM') == '1':
-        if _global_mock_service is None:
-            logging.warning("[API] FORCE_MOCK_LLM activé. Utilisation du MockAnalysisService.")
-            _global_mock_service = MockAnalysisService()
-        return _global_mock_service
+    global _global_service_manager
 
     if _global_service_manager is None:
         try:
@@ -182,15 +176,26 @@ async def get_analysis_service():
             _global_service_manager = OrchestrationServiceManager()
             await _global_service_manager.initialize()
             if not _global_service_manager.is_ready():
-                 raise RuntimeError("Le ServiceManager n'est pas prêt après initialisation.")
+                raise RuntimeError("Le ServiceManager n'est pas prêt après initialisation.")
             logging.info("[API] ServiceManager initialisé avec succès")
         except Exception as e:
-            logging.error(f"[API] Échec critique de l'initialisation du ServiceManager: {e}. Passage en mode MOCK.")
-            if _global_mock_service is None:
-                _global_mock_service = MockAnalysisService()
-            return _global_mock_service
+            logging.critical(f"[API] Échec critique de l'initialisation du ServiceManager: {e}", exc_info=True)
+            # Ne pas passer en mode mock. L'échec doit être visible.
+            raise RuntimeError(f"Impossible d'initialiser le service d'analyse authentique: {e}") from e
 
     return AnalysisService(_global_service_manager)
+
+
+async def get_mock_analysis_service() -> MockAnalysisService:
+    """
+    Injection de dépendance pour obtenir explicitement le service d'analyse mock.
+    Utilisé pour les tests unitaires.
+    """
+    global _global_mock_service
+    if _global_mock_service is None:
+        logging.info("[API] Initialisation du MockAnalysisService pour les tests.")
+        _global_mock_service = MockAnalysisService()
+    return _global_mock_service
 
 
 def get_dung_analysis_service() -> DungAnalysisService:

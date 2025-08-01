@@ -52,9 +52,9 @@ def start_backend_api():
     
     # Vérifier si l'API est déjà démarrée
     try:
-        response = requests.get("http://localhost:5003/api/health", timeout=2)
+        response = requests.get("http://localhost:8095/api/health", timeout=2)
         if response.status_code == 200:
-            print("[INFO] API backend déjà démarrée sur port 5003")
+            print("[INFO] API backend déjà démarrée sur port 8095")
             return None
     except:
         pass
@@ -99,7 +99,7 @@ def start_react_interface():
     
     # Vérifier si React est déjà démarré
     try:
-        response = requests.get("http://localhost:3000/", timeout=2)
+        response = requests.get("http://localhost:8085/", timeout=2)
         if response.status_code == 200:
             print("[INFO] Interface React déjà démarrée")
             return None

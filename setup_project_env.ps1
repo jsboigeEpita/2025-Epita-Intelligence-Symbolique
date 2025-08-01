@@ -65,26 +65,8 @@ catch {
     exit 1
 }
 
-# 3. Écriture du fichier de configuration .env
-Write-Host "[INFO] Création du fichier de configuration .env..." -ForegroundColor Green
-$EnvFile = Join-Path $PSScriptRoot ".env"
-try {
-    # On met une petite pause pour s'assurer que les handle de fichier de conda/pip sont libérés
-    Start-Sleep -Seconds 2
-
-    # Supprimer le fichier .env existant pour éviter les problèmes de verrouillage
-    if (Test-Path $EnvFile) {
-        Remove-Item $EnvFile -Force
-    }
-    Set-Content -Path $EnvFile -Value "CONDA_ENV_NAME=$EnvName" -Encoding UTF8
-    Write-Host "[SUCCÈS] Le fichier '$EnvFile' a été créé/mis à jour." -ForegroundColor Green
-}
-catch {
-    Write-Host "[ERREUR] Impossible d'écrire dans le fichier '$EnvFile'." -ForegroundColor Red
-    exit 1
-}
-
-# 4. Provisioning des outils portables (JDK, etc.)
+# 3. Provisioning des outils portables (JDK, etc.) AVANT la configuration de l'environnement
+#    pour permettre au script Python de créer/modifier le fichier .env avec JAVA_HOME.
 Write-Host "[INFO] Lancement du provisioning des outils portables (JDK...)." -ForegroundColor Green
 Write-Host "[INFO] Cela peut prendre quelques minutes lors de la première exécution..." -ForegroundColor Yellow
 try {
@@ -99,6 +81,22 @@ try {
 catch {
     Write-Host "[ERREUR] Une erreur critique est survenue lors du provisioning des outils." -ForegroundColor Red
     Write-Host "Message: $($_.Exception.Message)"
+    exit 1
+}
+
+# 4. Écriture du fichier de configuration .env
+Write-Host "[INFO] Création du fichier de configuration .env..." -ForegroundColor Green
+$EnvFile = Join-Path $PSScriptRoot ".env"
+try {
+    # On met une petite pause pour s'assurer que les handle de fichier de conda/pip sont libérés
+    Start-Sleep -Seconds 2
+
+    # On utilise Add-Content pour ne pas écraser JAVA_HOME potentiellement écrit par le script de provisioning
+    Add-Content -Path $EnvFile -Value "`nCONDA_ENV_NAME=$EnvName" -Encoding UTF8
+    Write-Host "[SUCCÈS] Le fichier '$EnvFile' a été créé/mis à jour." -ForegroundColor Green
+}
+catch {
+    Write-Host "[ERREUR] Impossible d'écrire dans le fichier '$EnvFile'." -ForegroundColor Red
     exit 1
 }
 

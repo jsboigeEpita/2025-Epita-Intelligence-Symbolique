@@ -240,68 +240,52 @@ def is_valid_jdk(path: Path) -> bool:
         logger.error(f"Erreur lors de la validation du JDK à {path}: {e}", exc_info=True)
         return False
 
-def find_existing_jdk() -> Optional[Path]:
-    logger.debug("Recherche d'un JDK portable pré-existant valide (JAVA_HOME est ignoré).")
-    project_r = get_project_root()
-    portable_jdk_dir = project_r / PORTABLE_JDK_DIR_NAME
-    if portable_jdk_dir.is_dir():
-        shutil.rmtree(portable_jdk_dir)
-    logger.info("Aucun JDK pré-existant valide trouvé. Le téléchargement va être tenté.")
-    return None
+# def find_existing_jdk() -> Optional[Path]:
+#     """
+#     NOTE: This function appears to be obsolete and contains aggressive cleanup logic.
+#     It unconditionally removes the portable_jdk directory. It is not currently called
+#     and should be reviewed before use.
+#     """
+#     logger.debug("Recherche d'un JDK portable pré-existant valide (JAVA_HOME est ignoré).")
+#     project_r = get_project_root()
+#     portable_jdk_dir = project_r / PORTABLE_JDK_DIR_NAME
+#     if portable_jdk_dir.is_dir():
+#         shutil.rmtree(portable_jdk_dir)
+#     logger.info("Aucun JDK pré-existant valide trouvé. Le téléchargement va être tenté.")
+#     return None
 
 def find_valid_java_home() -> Optional[str]:
-    logger.info("Recherche d'un environnement Java valide...")
-    # existing_jdk_path = find_existing_jdk()
-    # if existing_jdk_path:
-    #     logger.info(f"[SUCCESS] Utilisation du JDK existant validé: '{existing_jdk_path}'")
-    #     return str(existing_jdk_path.resolve())
-    logger.info("Aucun JDK valide existant. Tentative d'installation d'un JDK portable.")
-    project_r = get_project_root()
-    portable_jdk_install_dir = project_r / PORTABLE_JDK_DIR_NAME
-    temp_download_dir = project_r / TEMP_DIR_NAME
-    try:
-        if portable_jdk_install_dir.exists():
-            logger.info(f"Suppression du répertoire JDK portable existant : {portable_jdk_install_dir}")
-            shutil.rmtree(portable_jdk_install_dir)
-        portable_jdk_install_dir.mkdir(parents=True, exist_ok=True)
-        temp_download_dir.mkdir(parents=True, exist_ok=True)
-    except OSError as e:
-        logger.error(f"Impossible de créer les répertoires pour JDK portable: {e}")
+    """
+    Trouve un environnement Java valide en se basant EXCLUSIVEMENT sur la variable d'environnement JAVA_HOME.
+    Toute la logique d'auto-installation est maintenant désactivée pour restaurer un comportement robuste
+    et éviter les problèmes de permissions et les dérives de configuration.
+    L'environnement (via activate_project_env.ps1) est la seule source de vérité.
+    """
+    logger.info("Recherche d'un environnement Java valide via la variable d'environnement JAVA_HOME.")
+    
+    java_home_env = os.environ.get('JAVA_HOME')
+    
+    if not java_home_env:
+        logger.critical("La variable d'environnement JAVA_HOME n'est pas définie. "
+                        "Veuillez activer l'environnement du projet avec 'source activate_project_env.sh' "
+                        "ou '.\\activate_project_env.ps1'.")
         return None
-    os_arch_info = get_os_arch_for_jdk()
-    jdk_major_for_url = JDK_VERSION.split('.')[0]
-    generic_zip_name = f"portable_jdk_{JDK_VERSION}_{JDK_BUILD}_{os_arch_info['os']}_{os_arch_info['arch']}.zip"
-    jdk_zip_target_path = temp_download_dir / generic_zip_name
-    jdk_url = JDK_URL_TEMPLATE.format(
-        maj_v=jdk_major_for_url, v=JDK_VERSION, b=JDK_BUILD, arch=os_arch_info['arch'],
-        os=os_arch_info['os'], b_flat=JDK_BUILD
-    )
-    logger.info(f"URL du JDK portable construite: {jdk_url}")
-    logger.info(f"Téléchargement du JDK portable depuis {jdk_url} vers {jdk_zip_target_path}...")
-    downloaded_ok, _ = download_file(jdk_url, jdk_zip_target_path, description=f"JDK {JDK_VERSION}+{JDK_BUILD}")
-    if not downloaded_ok or not jdk_zip_target_path.exists():
-        logger.error(f"Échec du téléchargement du JDK portable.")
-        return None
-    logger.info(f"Décompression du JDK portable...")
-    try:
-        unzip_file(jdk_zip_target_path, portable_jdk_install_dir)
-        final_jdk_path = None
-        if is_valid_jdk(portable_jdk_install_dir):
-            final_jdk_path = portable_jdk_install_dir
-        else:
-            for item in portable_jdk_install_dir.iterdir():
-                if item.is_dir() and item.name.startswith("jdk-") and is_valid_jdk(item):
-                    final_jdk_path = item
-                    break
-        if final_jdk_path:
-            logger.info(f"[SUCCESS] JDK portable installé et validé: '{final_jdk_path}'")
-            return str(final_jdk_path.resolve())
-        else:
-            logger.error(f"L'extraction du JDK dans '{portable_jdk_install_dir}' n'a pas produit une installation valide.")
-            return None
-    except Exception as e_unzip:
-        logger.error(f"Erreur lors de la décompression ou validation du JDK portable: {e_unzip}", exc_info=True)
-        if jdk_zip_target_path.exists(): jdk_zip_target_path.unlink(missing_ok=True)
+        
+    java_home_path = Path(java_home_env)
+    
+    # Résoudre le chemin si il est relatif (bien que ce soit une mauvaise pratique pour JAVA_HOME)
+    if not java_home_path.is_absolute():
+        logger.warning(f"Le chemin JAVA_HOME ('{java_home_env}') n'est pas absolu. Tentative de résolution depuis la racine du projet.")
+        project_r = get_project_root()
+        java_home_path = (project_r / java_home_path).resolve()
+
+    logger.info(f"JAVA_HOME pointe sur: {java_home_path}")
+
+    if is_valid_jdk(java_home_path):
+        logger.info(f"[SUCCESS] Utilisation du JDK depuis JAVA_HOME validé: '{java_home_path}'")
+        return str(java_home_path)
+    else:
+        logger.critical(f"Le chemin spécifié par JAVA_HOME ('{java_home_path}') n'est pas un JDK valide.")
         return None
 
 def get_jvm_options() -> List[str]:
@@ -372,10 +356,19 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
                 return False
 
         try:
-            jvm_path_explicit = str(Path(java_home) / 'bin' / ('java.exe' if platform.system() == 'Windows' else 'java'))
+            # Correction: Fournir le chemin correct vers la bibliothèque JVM (jvm.dll / libjvm.so)
+            if platform.system() == "Windows":
+                jvm_path_explicit = str(Path(java_home) / 'bin' / 'server' / 'jvm.dll')
+                if not Path(jvm_path_explicit).exists():
+                    # Fallback pour les anciennes structures JDK
+                    jvm_path_explicit = str(Path(java_home) / 'bin' / 'client' / 'jvm.dll')
+            else:
+                jvm_path_explicit = str(Path(java_home) / 'lib' / 'server' / 'libjvm.so')
+
             if not Path(jvm_path_explicit).exists():
-                 jvm_path_explicit = str(Path(java_home) / 'bin' / ('java.dll' if platform.system() == 'Windows' else 'libjvm.so'))
-            
+                logger.critical(f"Bibliothèque JVM non trouvée au chemin attendu: {jvm_path_explicit}")
+                return False
+
             jvm_options = get_jvm_options()
             
             logger.info("--- Paramètres de Démarrage JVM ---")
@@ -385,6 +378,7 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
             logger.info("------------------------------------")
 
             jpype.startJVM(
+                jpype.getDefaultJVMPath() if not jvm_path_explicit else jvm_path_explicit,
                 *jvm_options,
                 classpath=classpath,
                 ignoreUnrecognized=True,

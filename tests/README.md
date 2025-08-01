@@ -87,26 +87,52 @@ Vous n'avez **plus besoin** de définir manuellement la variable d'environnement
 
 ---
 
-## État de la Suite de Tests E2E Python (`e2e-python`)
+## Stratégie d'Injection de Dépendances et Mocks
 
-**ATTENTION :** La suite de tests `e2e-python` est actuellement **partiellement instable** et certains tests échoueront de manière intermittente ou systématique.
+Le projet adopte une stratégie stricte pour garantir la fiabilité des tests. Les mocks de services (notamment pour les appels LLM) ne doivent **JAMAIS** être utilisés dans les tests d'intégration ou E2E.
 
-### Contexte
+### Tests d'Intégration et E2E : Utilisation du Service Réel
 
-Cette suite de tests a une forte dépendance à l'API et, indirectement, à un service LLM externe pour certaines de ses analyses. En environnement de CI/CD ou local sans configuration de clé API (`OPENAI_API_KEY`), le service LLM ne peut pas s'initialiser, ce qui provoque un crash du serveur d'API et un échec complet de la suite de tests.
+Tous les tests marqués comme `integration` ou `e2e` (y compris `e2e-python`) sont conçus pour valider la chaîne complète des services.
 
-Pour contourner ce problème, le système de test est configuré pour utiliser des **services "mock"** lorsque la clé API est absente. Cependant, ces mocks sont actuellement trop simplistes et ne retournent pas des données suffisamment réalistes pour satisfaire les assertions complexes des tests d'intégration de l'interface utilisateur.
+**Exigence obligatoire :**
+Pour exécuter ces tests, vous **devez** avoir un fichier `.env` à la racine du projet qui contient une clé `OPENAI_API_KEY` valide.
 
-### État Actuel
+Si la clé est manquante ou invalide, le serveur d'API ne pourra pas démarrer le service d'analyse. Le test échouera, ce qui est le **comportement attendu et souhaité**. Cela garantit que nous ne validons jamais un workflow avec un service LLM implicitement mocké.
 
-1.  **Tests d'API Directs** : Les tests qui ciblent directement les endpoints de l'API (comme `test_api_dung_integration.py`) ont été corrigés et devraient passer.
-2.  **Tests d'Intégration UI (Playwright)** : Les tests qui simulent une interaction utilisateur complète (comme `test_integration_workflows.py`) sont ceux qui échouent. Leurs assertions attendent des résultats complexes que les mocks actuels ne peuvent pas fournir, ce qui conduit à des timeouts.
-3.  **Tests Désactivés** : Pour permettre à la majorité de la suite de s'exécuter, les tests suivants, connus pour être obsolètes ou particulièrement instables, ont été désactivés via `@pytest.mark.skip` :
-    - `test_full_argument_analysis_workflow`
-    - `test_framework_based_validation_workflow`
+### Tests Unitaires : Injection Explicite de Mocks
 
-### Recommandations
+Les tests unitaires, qui doivent être rapides et isolés, sont le **seul endroit** où les services mocks doivent être utilisés. L'injection doit se faire de manière **explicite** en utilisant la fonctionnalité `dependency_overrides` de FastAPI.
 
-- Pour une **validation fiable** de la logique métier, privilégiez l'exécution des suites **`unit`** et **`integration`**.
-- L'exécution de la suite **`e2e-python`** est utile pour confirmer qu'il n'y a pas de régressions majeures, mais attendez-vous à des échecs.
-- Une **refonte du système de mock** est nécessaire pour stabiliser durablement la suite de tests E2E.
+**Exemple :**
+Pour tester un endpoint qui dépend de `get_analysis_service` sans faire d'appel réseau réel, surchargez la dépendance comme suit :
+
+```python
+# tests/unit/api/test_mon_endpoint.py
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+# Importer la dépendance réelle ET la dépendance mockée
+from api.dependencies import get_analysis_service, get_mock_analysis_service
+from api.endpoints import router as api_router
+
+# Créer une application de test
+app = FastAPI()
+app.include_router(api_router)
+
+# Remplacer la dépendance authentique par le mock EXPLICITEMENT pour ce test
+app.dependency_overrides[get_analysis_service] = get_mock_analysis_service
+
+client = TestClient(app)
+
+def test_endpoint_avec_mock():
+    """
+    Ce test utilise le MockAnalysisService car la dépendance
+    a été surchargée au-dessus.
+    """
+    response = client.post("/api/v1/analyzer/analyze", json={"text": "..."})
+    data = response.json()
+    # L'assertion vérifie que la réponse vient bien du mock
+    assert data['authentic_gpt4o_used'] is False
+```
+
+Cette approche garantit une séparation claire des préoccupations et améliore la fiabilité de notre suite de tests.

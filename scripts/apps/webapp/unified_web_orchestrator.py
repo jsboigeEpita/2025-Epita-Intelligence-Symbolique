@@ -679,16 +679,12 @@ def main():
     orchestrator = UnifiedWebOrchestrator(args.config)
     
     # Détermination du mode headless avec priorité à la ligne de commande
-    # if args.headless is not None:
-    #     headless = args.headless
-    #     orchestrator.logger.info(f"Mode headless forcé par la ligne de commande : {headless}")
-    # else:
-    #     headless = orchestrator.config.get('playwright', {}).get('headless', True)
-    #     orchestrator.logger.info(f"Mode headless lu depuis la configuration : {headless}")
-    
-    # DEBUG: Forcer le mode headless pour stabiliser l'environnement de test.
-    headless = True
-    orchestrator.logger.info(f"Mode headless DÉFINI STATIQUEMENT sur : {headless} pour le débogage.")
+    if args.headless is not None:
+        headless = args.headless
+        orchestrator.logger.info(f"Mode headless forcé par la ligne de commande : {headless}")
+    else:
+        headless = orchestrator.config.get('playwright', {}).get('headless', True)
+        orchestrator.logger.info(f"Mode headless lu depuis la configuration : {headless}")
         
     orchestrator.headless = headless
     orchestrator.timeout_minutes = args.timeout

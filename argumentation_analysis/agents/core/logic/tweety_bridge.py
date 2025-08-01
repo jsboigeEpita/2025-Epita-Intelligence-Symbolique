@@ -28,6 +28,7 @@ from typing import Optional, Dict, List, Tuple, Any
 # Pour éviter les dépendances circulaires, on les importe et on les type-hint comme ça
 from .pl_handler import PLHandler as PropositionalLogicHandler
 from .fol_handler import FOLHandler as FirstOrderLogicHandler
+from .af_handler import AFHandler as ArgumentationFrameworkHandler
 from .tweety_initializer import TweetyInitializer
 
 
@@ -45,6 +46,7 @@ class TweetyBridge:
     
     # Handlers pour les différentes logiques. Initialisés avec la logique du pont.
     _pl_handler: Optional[PropositionalLogicHandler] = None
+    _af_handler: Optional[ArgumentationFrameworkHandler] = None
     
     # Nouvel attribut pour l'initialiseur
     _initializer: Optional[TweetyInitializer] = None
@@ -99,6 +101,15 @@ class TweetyBridge:
             self._pl_handler = PropositionalLogicHandler(self._initializer)
         return self._pl_handler
 
+    @property
+    def af_handler(self) -> ArgumentationFrameworkHandler:
+        """Retourne le handler pour les frameworks d'argumentation, en l'initialisant si nécessaire."""
+        if not self.initializer.is_jvm_ready():
+            raise RuntimeError("La JVM n'est pas démarrée. Appelez initialize_jvm() en premier.")
+        if self._af_handler is None:
+            logger.debug("Chargement paresseux (lazy-loading) du AFHandler.")
+            self._af_handler = ArgumentationFrameworkHandler(self._initializer)
+        return self._af_handler
 
     @property
     def initializer(self) -> TweetyInitializer:

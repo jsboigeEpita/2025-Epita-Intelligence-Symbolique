@@ -120,21 +120,21 @@ class PlaywrightRunner:
     def _merge_runtime_config(self, runtime_config: Dict[str, Any]) -> Dict[str, Any]:
         """Fusionne configuration par défaut avec runtime"""
         effective_config = {
-            'backend_url': 'http://localhost:5003',
-            'frontend_url': 'http://localhost:3000',
+            'backend_url': 'http://localhost:8095',
+            'frontend_url': 'http://localhost:8085',
             'headless': True, # Valeur par défaut standard
             'browser': self.browser,
             'timeout_ms': self.config.get('timeout_ms', 30000),
             'slow_timeout_ms': self.config.get('slow_timeout_ms', 60000),
             'screenshots': True,
-            'traces': True
+            'traces': True,
+            'pwdebug': '0'  # S'assurer que le mode debug est désactivé par défaut
         }
         
         # Appliquer la configuration runtime en premier
         effective_config.update(runtime_config)
         
         # Forcer le mode headed pour le débogage, cette valeur écrase toute autre config
-        effective_config['headless'] = False
         
         return effective_config
     
@@ -149,7 +149,7 @@ class PlaywrightRunner:
             'SCREENSHOTS_DIR': str(self.screenshots_dir),
             'TRACES_DIR': str(self.traces_dir),
             'KMP_DUPLICATE_LIB_OK': 'TRUE', # Contournement pour le conflit OpenMP
-            'PWDEBUG': '1' # Utiliser PWDEBUG pour le logging de Playwright pour éviter les conflits
+            'PWDEBUG': config.get('pwdebug', '0'), # Rendre le mode debug configurable
         }
         
         for key, value in env_vars.items():
@@ -181,6 +181,7 @@ class PlaywrightRunner:
             'python', '-m', 'pytest',
             '-v',
             '-p', 'no:asyncio', # Désactive le plugin asyncio pour éviter les conflits avec Playwright
+            '-p', 'pytest_playwright', # Force le chargement du plugin Playwright
             '--capture=no',
             '--slowmo=100',  # Ralentir un peu plus pour l'observation
             '--log-cli-level=DEBUG', # Augmenter la verbosité
@@ -191,9 +192,6 @@ class PlaywrightRunner:
 
         # Ajout du répertoire de test pour que pytest le découvre
         # Forçage pour le débogage du test qui timeout
-        # debug_test_path = ["tests/e2e/python/test_argument_reconstructor.py"]
-        # self.logger.warning(f"ATTENTION: Exécution forcée d'un seul fichier de test pour débogage : {debug_test_path}")
-        # cmd.extend(debug_test_path)
         cmd.extend(test_paths)
 
         # Le mode Headless est géré par l'argument --headed.
@@ -457,8 +455,8 @@ if __name__ == '__main__':
         'enabled': True,
         'browser': 'chromium',
         'headless': True,
-        'backend_url': os.getenv('BACKEND_URL', 'http://127.0.0.1:5003'),
-        'frontend_url': os.getenv('FRONTEND_URL', 'http://127.0.0.1:3000'),
+        'backend_url': os.getenv('BACKEND_URL', 'http://127.0.0.1:8095'),
+        'frontend_url': os.getenv('FRONTEND_URL', 'http://127.0.0.1:8085'),
     }
 
     # Définir les chemins de test par défaut si aucun n'est spécifié

@@ -170,9 +170,9 @@ class MockJClassCore:
         elif self.class_name == "net.sf.tweety.arg.dung.reasoner.StableReasoner":
             if self._jclass_provider: tweety_reasoners.configure_stable_reasoner_mock(instance_mock, dung_theory_instance_arg, self._jclass_provider)
             else: mock_logger.error("Impossible de configurer StableReasoner: JClass provider manquant.")
-        elif self.class_name == "net.sf.tweety.arg.dung.reasoner.PreferredReasoner":
+        elif self.class_name == "org.tweetyproject.arg.dung.reasoner.SimplePreferredReasoner":
             if self._jclass_provider: tweety_reasoners.configure_preferred_reasoner_mock(instance_mock, dung_theory_instance_arg, self._jclass_provider)
-            else: mock_logger.error("Impossible de configurer PreferredReasoner: JClass provider manquant.")
+            else: mock_logger.error("Impossible de configurer SimplePreferredReasoner: JClass provider manquant.")
         elif self.class_name == "net.sf.tweety.arg.dung.reasoner.GroundedReasoner":
             if self._jclass_provider: tweety_reasoners.configure_grounded_reasoner_mock(instance_mock, dung_theory_instance_arg, self._jclass_provider)
             else: mock_logger.error("Impossible de configurer GroundedReasoner: JClass provider manquant.")

@@ -55,5 +55,7 @@ def test_dung_framework_analysis_api(playwright: Playwright, e2e_servers, backen
     
     # Dans ce cas, avec le framework a->b, b->c, l'extension préférée est {a, c}
     # La réponse doit être une liste de listes d'arguments.
-    expected_extension_set = [["a", "c"]]
-    assert preferred_extensions == expected_extension_set, f"Attendu {expected_extension_set}, mais obtenu {preferred_extensions}"
+    # Pour rendre la comparaison insensible à l'ordre, on convertit les listes en ensembles de tuples (les listes ne sont pas hashables)
+    expected_extensions = {tuple(sorted(ext)) for ext in [["a", "c"]]}
+    actual_extensions = {tuple(sorted(ext)) for ext in preferred_extensions}
+    assert actual_extensions == expected_extensions, f"Attendu {expected_extensions}, mais obtenu {actual_extensions}"

@@ -56,15 +56,15 @@ def configure_stable_reasoner_mock(reasoner_instance_mock, dung_theory_instance,
     mock_logger.info(f"[CONFIGURE StableReasoner] Configuration simplifiée. Les calculs d'extensions sont retirés.")
 
 def configure_preferred_reasoner_mock(reasoner_instance_mock, dung_theory_instance, JClass_provider):
-    mock_logger.debug(f"[CONFIGURE PreferredReasoner] pour {reasoner_instance_mock} avec théorie {dung_theory_instance}")
+    mock_logger.debug(f"[CONFIGURE SimplePreferredReasoner] pour {reasoner_instance_mock} avec théorie {dung_theory_instance}")
     models_coll = reasoner_instance_mock._collections.get("models")
     if models_coll is None:
-        mock_logger.error("[CONFIGURE PreferredReasoner] _collections['models'] non trouvée.")
+        mock_logger.error("[CONFIGURE SimplePreferredReasoner] _collections['models'] non trouvée.")
         reasoner_instance_mock._collections["models"] = []
         models_coll = reasoner_instance_mock._collections["models"]
     models_coll.clear()
     
-    mock_logger.info(f"[CONFIGURE PreferredReasoner] Configuration simplifiée pour {reasoner_instance_mock} avec théorie {dung_theory_instance}. Les calculs d'extensions sont retirés.")
+    mock_logger.info(f"[CONFIGURE SimplePreferredReasoner] Configuration simplifiée pour {reasoner_instance_mock} avec théorie {dung_theory_instance}. Les calculs d'extensions sont retirés.")
 
 
 def configure_grounded_reasoner_mock(reasoner_instance_mock, dung_theory_instance, JClass_provider):

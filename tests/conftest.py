@@ -20,17 +20,8 @@ import jpype
 os.environ['E2E_TESTING_MODE'] = '1'
 
 # --- Importations préventives pour éviter les conflits de bas niveau ---
-# Il est crucial d'importer les bibliothèques lourdes comme torch et transformers
-# AVANT que jpype ne soit initialisé pour éviter des crashs de type "access violation".
-try:
-    print("[INFO] Pre-importing heavy libraries to prevent conflicts...")
-    import torch
-    import transformers
-    import semantic_kernel
-    import openai
-    print("[INFO] Heavy libraries pre-imported successfully.")
-except ImportError as e:
-    print(f"[WARNING] A library pre-import failed: {e}. This might be expected if the dependency is optional.")
+# NOTE: Ce bloc a été déplacé dans la fixture `jvm_session` pour garantir
+# que les imports ont lieu dans le bon contexte, juste avant l'initialisation de la JVM.
 
 
 
@@ -69,8 +60,8 @@ def pytest_addoption(parser):
     parser.addoption(
         "--disable-e2e-servers-fixture", action="store_true", default=False, help="Désactive la fixture qui gère les serveurs E2E."
     )
-    parser.addoption("--frontend-url", action="store", default="http://localhost:3000", help="URL pour le serveur frontend E2E.")
-    parser.addoption("--backend-url", action="store", default="http://localhost:5003", help="URL pour le serveur backend E2E.")
+    parser.addoption("--frontend-url", action="store", default="http://localhost:8085", help="URL pour le serveur frontend E2E.")
+    parser.addoption("--backend-url", action="store", default="http://localhost:8095", help="URL pour le serveur backend E2E.")
 
 def pytest_configure(config):
     """
@@ -196,8 +187,8 @@ def apply_nest_asyncio():
     """
     try:
         import nest_asyncio
-        nest_asyncio.apply()
-        logger.info("nest_asyncio patch applied successfully.")
+        # nest_asyncio.apply() # Désactivé temporairement pour diagnostiquer le crash de la JVM
+        logger.warning("nest_asyncio.apply() is temporarily disabled for JVM crash diagnosis.")
     except ImportError:
         logger.error("`nest_asyncio` is not installed. Please install it with `pip install nest-asyncio`.")
         pytest.fail("Missing dependency: nest_asyncio is required for running async tests with Playwright.", pytrace=False)
@@ -215,6 +206,19 @@ def jvm_session(request):
         return
 
     logger.info("--- Configuration de la fixture de session JVM ---")
+
+    # --- Importations préventives pour éviter les conflits de bas niveau ---
+    # Il est crucial d'importer les bibliothèques lourdes comme torch et transformers
+    # AVANT que jpype ne soit initialisé pour éviter des crashs de type "access violation".
+    logger.info("[INFO] Pre-importing heavy libraries inside jvm_session to prevent conflicts...")
+    try:
+        import torch
+        import transformers
+        import semantic_kernel
+        import openai
+        logger.info("[INFO] Heavy libraries pre-imported successfully inside jvm_session.")
+    except ImportError as e:
+        logger.warning(f"[WARNING] A library pre-import failed inside jvm_session: {e}.")
     
     # On s'assure que la structure des JARs est correcte avant tout.
     # _ensure_tweety_jars_are_correctly_placed() # This logic is now in jvm_setup
@@ -475,14 +479,15 @@ def e2e_servers(request, jvm_session):
 
             # Chercher la ligne correspondant au port
             pid_found = None
-            for line in result.stdout.splitlines():
-                if f":{port}" in line and 'LISTENING' in line:
-                    # La sortie est du genre: '  TCP    0.0.0.0:5003           0.0.0.0:0              LISTENING       12345'
-                    match = re.search(r'LISTENING\s+(\d+)', line)
-                    if match:
-                        pid_found = match.group(1)
-                        logger.warning(f"Port {port} is currently being used by PID {pid_found}.")
-                        break
+            if result.stdout:
+                for line in result.stdout.splitlines():
+                    if f":{port}" in line and 'LISTENING' in line:
+                        # La sortie est du genre: '  TCP    0.0.0.0:5003           0.0.0.0:0              LISTENING       12345'
+                        match = re.search(r'LISTENING\s+(\d+)', line)
+                        if match:
+                            pid_found = match.group(1)
+                            logger.warning(f"Port {port} is currently being used by PID {pid_found}.")
+                            break
 
             if pid_found:
                 logger.info(f"Attempting to terminate process with PID {pid_found}...")
@@ -566,7 +571,7 @@ def e2e_servers(request, jvm_session):
 
         env = os.environ.copy()
         env["BROWSER"] = "none"
-        env["PORT"] = "3000"
+        env["PORT"] = "8085"
         env["REACT_APP_BACKEND_URL"] = backend_url_opt
 
         logger.info(f"Running frontend command: npm start in {react_dir}")
@@ -584,8 +589,8 @@ def e2e_servers(request, jvm_session):
     logger.info("=== E2E Servers Fixture Setup ===")
 
     # Nettoyage préventif des ports
-    _kill_process_using_port(5003) # Backend
-    _kill_process_using_port(3000) # Frontend
+    _kill_process_using_port(8095) # Backend
+    _kill_process_using_port(8085) # Frontend
 
     backend_process = start_backend()
     frontend_process = start_frontend()

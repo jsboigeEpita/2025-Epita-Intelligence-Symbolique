@@ -24,7 +24,7 @@ if __name__ == "__main__":
         uvicorn.run(
             "argumentation_analysis.services.web_api.app:app",
             host="0.0.0.0",
-            port=5003,
+            port=8095,
             log_level="debug"
         )
         logger.info("Uvicorn server started successfully.")
