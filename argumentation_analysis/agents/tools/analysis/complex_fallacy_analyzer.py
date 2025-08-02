@@ -16,70 +16,22 @@ fondamentaux pour identifier des problèmes comme :
 import os
 import sys
 import json
-import logging
 from typing import Dict, List, Any, Optional, Tuple
 from pathlib import Path
 
-# Ajouter le répertoire parent au chemin de recherche des modules
-# current_dir = Path(__file__).parent # Commenté car start_api.py devrait gérer sys.path
-# parent_dir = current_dir.parent.parent.parent
-# if str(parent_dir) not in sys.path:
-#     sys.path.append(str(parent_dir))
-
-# Importer les autres analyseurs
+# Importer les services partagés et les dépendances
+from argumentation_analysis.agents.tools.support.shared_services import get_configured_logger, ServiceRegistry, ConfigManager
 from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
 from argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator import FallacySeverityEvaluator
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
-    datefmt='%H:%M:%S'
-)
-logger = logging.getLogger("ComplexFallacyAnalyzer")
-
-
-class ComplexFallacyAnalyzer:
-    """
-    Analyse les sophismes complexes, combinés et structurels.
-
-    Cet analyseur s'appuie sur des analyseurs plus simples (`ContextualFallacyAnalyzer`,
-    `FallacySeverityEvaluator`) pour identifier des motifs de plus haut niveau.
-    Il ne détecte pas les sophismes de base, mais recherche des patterns dans
-    les résultats d'une analyse préalable.
-
-    Attributes:
-        contextual_analyzer (ContextualFallacyAnalyzer): Analyseur de dépendance
-            pour identifier les sophismes de base dans un contexte.
-        severity_evaluator (FallacySeverityEvaluator): Analyseur de dépendance
-            pour évaluer la gravité des sophismes.
-        fallacy_combinations (Dict): Base de connaissances des combinaisons de
-            sophismes connues.
-        structural_fallacies (Dict): Base de connaissances des sophismes qui
-            se définissent par une relation entre plusieurs arguments.
-    """
-
-    def __init__(self):
-        """Initialise l'analyseur de sophismes complexes."""
-        self.logger = logger
-        self.contextual_analyzer = ContextualFallacyAnalyzer()
-        self.severity_evaluator = FallacySeverityEvaluator()
-        self._load_fallacy_combinations()
-        self.logger.info("Analyseur de sophismes complexes initialisé.")
-    
-    def _load_fallacy_combinations(self):
-        """
-        Charge les combinaisons connues de sophismes.
-        
-        Ces combinaisons définissent des motifs courants de sophismes qui apparaissent
-        ensemble et qui peuvent former des sophismes complexes.
-        """
-        # Combinaisons connues de sophismes
-        self.fallacy_combinations = {
+def _load_complex_fallacy_config() -> Dict[str, Any]:
+    """Charge la configuration spécifique à cet analyseur."""
+    return {
+        "fallacy_combinations": {
             "Double appel": {
                 "description": "Combinaison d'un appel à l'autorité et d'un appel à la popularité",
                 "components": ["Appel à l'autorité", "Appel à la popularité"],
-                "severity_modifier": 0.2  # Augmente la gravité de 0.2
+                "severity_modifier": 0.2
             },
             "Dilemme émotionnel": {
                 "description": "Combinaison d'un faux dilemme et d'un appel à l'émotion",
@@ -101,10 +53,8 @@ class ComplexFallacyAnalyzer:
                 "components": ["Pente glissante", "Appel à l'émotion"],
                 "severity_modifier": 0.3
             }
-        }
-        
-        # Sophismes structurels qui s'étendent sur plusieurs arguments
-        self.structural_fallacies = {
+        },
+        "structural_fallacies": {
             "Contradiction cachée": {
                 "description": "Contradiction entre deux arguments présentés comme cohérents",
                 "detection_pattern": "contradiction",
@@ -126,6 +76,27 @@ class ComplexFallacyAnalyzer:
                 "severity_modifier": 0.2
             }
         }
+    }
+
+class ComplexFallacyAnalyzer:
+    """
+    Analyse les sophismes complexes, combinés et structurels en utilisant les services partagés.
+    """
+
+    def __init__(self):
+        """Initialise l'analyseur de sophismes complexes via les services partagés."""
+        self.logger = get_configured_logger("ComplexFallacyAnalyzer")
+        self.contextual_analyzer = ServiceRegistry.get(ContextualFallacyAnalyzer)
+        self.severity_evaluator = ServiceRegistry.get(FallacySeverityEvaluator)
+        
+        config = ConfigManager.load_config(
+            "complex_fallacy_config",
+            _load_complex_fallacy_config
+        )
+        self.fallacy_combinations = config["fallacy_combinations"]
+        self.structural_fallacies = config["structural_fallacies"]
+
+        self.logger.info("Analyseur de sophismes complexes initialisé via les services partagés.")
     
     def identify_combined_fallacies(self, argument: str) -> List[Dict[str, Any]]:
         """

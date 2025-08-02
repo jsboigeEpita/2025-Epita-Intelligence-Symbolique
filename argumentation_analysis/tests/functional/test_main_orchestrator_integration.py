@@ -50,17 +50,17 @@ def run_orchestrator_process(text_file_path, orchestrator_key=None):
     Returns:
         tuple: (stdout, stderr, return_code)
     """
-    # Construire la commande complète avec le wrapper PowerShell, en passant les arguments directement
+    # Construire la commande complète avec le wrapper PowerShell
     wrapper_path = PROJECT_ROOT / "activate_project_env.ps1"
+    # La commande à exécuter par le script PS doit être une seule chaîne
+    command_to_run = f'python "{MAIN_ORCHESTRATOR_PATH}" --skip-ui --text-file "{text_file_path}"'
+    
     command = [
         "powershell",
         "-File",
         str(wrapper_path),
-        "python",
-        str(MAIN_ORCHESTRATOR_PATH),
-        "--skip-ui",
-        "--text-file",
-        str(text_file_path)
+        "-CommandToRun",
+        command_to_run
     ]
     
     # Exécuter depuis la racine du projet

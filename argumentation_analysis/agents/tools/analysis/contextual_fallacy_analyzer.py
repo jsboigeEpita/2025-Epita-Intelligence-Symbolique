@@ -12,86 +12,49 @@ et la gravité des sophismes.
 import os
 import sys
 import json
-import logging
 from typing import Dict, List, Any, Optional, Tuple
 from pathlib import Path
+import pandas as pd
 
-# Ajouter le répertoire parent au chemin de recherche des modules
-# current_dir = Path(__file__).parent # Commenté car start_api.py devrait gérer sys.path
-# parent_dir = current_dir.parent.parent.parent
-# if str(parent_dir) not in sys.path:
-#     sys.path.append(str(parent_dir))
+# Importer les services partagés
+from argumentation_analysis.agents.tools.support.shared_services import get_configured_logger, ConfigManager
+from argumentation_analysis.utils.taxonomy_loader import get_taxonomy_path, validate_taxonomy_file
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
-    datefmt='%H:%M:%S'
-)
-logger = logging.getLogger("ContextualFallacyAnalyzer")
-
+def _load_fallacy_taxonomy() -> Any:
+    """Charge la taxonomie des sophismes à partir du fichier CSV."""
+    logger = get_configured_logger("ContextualFallacyAnalyzer_TaxonomyLoader")
+    try:
+        path = get_taxonomy_path()
+        logger.info(f"Chargement de la taxonomie depuis {path}")
+        if not validate_taxonomy_file():
+            logger.error("Le fichier de taxonomie n'est pas valide.")
+            return None
+        df = pd.read_csv(path, encoding='utf-8')
+        logger.info(f"Taxonomie chargée avec succès: {len(df)} sophismes.")
+        return df
+    except Exception as e:
+        logger.error(f"Erreur lors du chargement de la taxonomie: {e}")
+        return None
 
 class ContextualFallacyAnalyzer:
     """
-    Outil pour l'analyse contextuelle des sophismes.
-    
-    Cet outil permet d'analyser les sophismes dans leur contexte, en tenant compte
-    des facteurs contextuels qui peuvent influencer l'interprétation et la gravité
-    des sophismes.
+    Outil pour l'analyse contextuelle des sophismes, utilisant les services partagés.
     """
     
-    def __init__(self, taxonomy_path: Optional[str] = None):
+    def __init__(self):
         """
-        Initialise l'analyseur contextuel de sophismes.
-        
-        Args:
-            taxonomy_path: Chemin vers le fichier de taxonomie des sophismes (optionnel)
+        Initialise l'analyseur contextuel de sophismes via les services partagés.
         """
-        self.logger = logger
-        # LAZY LOADING: Ne pas charger la taxonomie ici.
-        self.taxonomy_df = None
-        self._taxonomy_path = taxonomy_path
-        self.logger.info("Analyseur contextuel de sophismes initialisé (Lazy Loading).")
+        self.logger = get_configured_logger("ContextualFallacyAnalyzer")
+        self.logger.info("Analyseur contextuel de sophismes initialisé.")
     
-    def _load_taxonomy(self, taxonomy_path: Optional[str] = None) -> Any:
-        """
-        Charge la taxonomie des sophismes.
-        
-        Args:
-            taxonomy_path: Chemin vers le fichier de taxonomie des sophismes (optionnel)
-            
-        Returns:
-            DataFrame contenant la taxonomie des sophismes
-        """
-        try:
-            # Utiliser l'utilitaire de lazy loading pour obtenir le chemin du fichier
-            from argumentation_analysis.utils.taxonomy_loader import get_taxonomy_path, validate_taxonomy_file
-            
-            path = taxonomy_path or get_taxonomy_path()
-            self.logger.info(f"Chargement de la taxonomie depuis {path}")
-            
-            # Vérifier que le fichier est valide
-            if not validate_taxonomy_file():
-                self.logger.error("Le fichier de taxonomie n'est pas valide")
-                return None
-            
-            # Charger le fichier CSV
-            import pandas as pd
-            df = pd.read_csv(path, encoding='utf-8')
-            self.logger.info(f"Taxonomie chargée avec succès: {len(df)} sophismes.")
-            return df
-        except Exception as e:
-            self.logger.error(f"Erreur lors du chargement de la taxonomie: {e}")
-            return None
+    def _get_taxonomy_df(self) -> Any:
+        """Récupère la taxonomie via le ConfigManager."""
+        return ConfigManager.load_config("fallacy_taxonomy", _load_fallacy_taxonomy)
     
     def analyze_context(self, text: str, context: str) -> Dict[str, Any]:
         """
         Analyse le contexte d'un texte pour identifier des sophismes contextuels.
-        
-        Cette méthode analyse un texte dans son contexte pour identifier des sophismes
-        qui dépendent du contexte, comme les appels à l'autorité dans un contexte
-        où l'autorité n'est pas pertinente, ou les appels à la tradition dans un
-        contexte où la tradition n'est pas un argument valide.
         
         Args:
             text: Texte à analyser
@@ -100,9 +63,10 @@ class ContextualFallacyAnalyzer:
         Returns:
             Dictionnaire contenant les résultats de l'analyse
         """
-        # LAZY LOADING: Charger la taxonomie si elle n'est pas déjà chargée
-        if self.taxonomy_df is None:
-            self.taxonomy_df = self._load_taxonomy(self._taxonomy_path)
+        taxonomy_df = self._get_taxonomy_df()
+        if taxonomy_df is None:
+            self.logger.error("Impossible d'analyser le contexte, la taxonomie est manquante.")
+            return {}
 
         self.logger.info(f"Analyse contextuelle du texte (longueur: {len(text)}) dans le contexte: {context}")
         
@@ -332,13 +296,17 @@ class ContextualFallacyAnalyzer:
 
 # Test de la classe si exécutée directement
 if __name__ == "__main__":
-    analyzer = ContextualFallacyAnalyzer()
+    # Le ServiceRegistry gérera l'instanciation
+    from argumentation_analysis.agents.tools.support.shared_services import ServiceRegistry
+    analyzer = ServiceRegistry.get(ContextualFallacyAnalyzer)
     
     # Exemple d'analyse contextuelle
     text = "Les experts sont unanimes : ce produit est sûr et efficace. Des millions de personnes l'utilisent déjà."
     context = "Discours commercial pour un produit controversé"
     
     results = analyzer.analyze_context(text, context)
+    print("Résultats de l'analyse contextuelle:", json.dumps(results, indent=2, ensure_ascii=False))
     
     # Exemple d'identification de sophismes contextuels
     fallacies = analyzer.identify_contextual_fallacies(text, context)
+    print("\nSophismes contextuels identifiés:", json.dumps(fallacies, indent=2, ensure_ascii=False))

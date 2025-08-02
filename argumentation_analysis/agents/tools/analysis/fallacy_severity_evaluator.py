@@ -12,51 +12,16 @@ le contexte, l'impact sur la validité de l'argument, et la visibilité du sophi
 import os
 import sys
 import json
-import logging
-from typing import Dict, List, Any, Optional, Tuple
-from pathlib import Path
+import json
+from typing import Dict, List, Any, Optional
 
-# Ajouter le répertoire parent au chemin de recherche des modules
-current_dir = Path(__file__).parent
-parent_dir = current_dir.parent.parent.parent
-if str(parent_dir) not in sys.path:
-    sys.path.append(str(parent_dir))
+# Importer les services partagés
+from argumentation_analysis.agents.tools.support.shared_services import get_configured_logger, ConfigManager, ServiceRegistry
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
-    datefmt='%H:%M:%S'
-)
-logger = logging.getLogger("FallacySeverityEvaluator")
-
-
-class FallacySeverityEvaluator:
-    """
-    Outil pour l'évaluation de la gravité des sophismes.
-    
-    Cet outil permet d'évaluer la gravité des sophismes identifiés dans un argument,
-    en tenant compte de différents facteurs comme le contexte, l'impact sur la validité
-    de l'argument, et la visibilité du sophisme.
-    """
-    
-    def __init__(self):
-        """
-        Initialise l'évaluateur de gravité des sophismes.
-        """
-        self.logger = logger
-        self._load_severity_data()
-        self.logger.info("Évaluateur de gravité des sophismes initialisé.")
-    
-    def _load_severity_data(self):
-        """
-        Charge les données de gravité des sophismes.
-        
-        Ces données définissent la gravité de base de différents types de sophismes
-        dans différents contextes.
-        """
-        # Gravité de base des sophismes (0.0 à 1.0)
-        self.base_severity = {
+def _load_severity_config() -> Dict[str, Any]:
+    """Charge la configuration de la gravité des sophismes."""
+    return {
+        "base_severity": {
             "Appel à l'autorité": 0.6,
             "Appel à la popularité": 0.5,
             "Appel à la tradition": 0.4,
@@ -72,12 +37,10 @@ class FallacySeverityEvaluator:
             "Appel à l'ignorance": 0.6,
             "Sophisme du vrai écossais": 0.5,
             "Argument d'incrédulité personnelle": 0.4
-        }
-        
-        # Modificateurs de gravité en fonction du contexte
-        self.context_modifiers = {
+        },
+        "context_modifiers": {
             "politique": {
-                "Appel à l'émotion": 0.3,  # Plus grave dans un contexte politique
+                "Appel à l'émotion": 0.3,
                 "Ad hominem": 0.2,
                 "Homme de paille": 0.2,
                 "Faux dilemme": 0.2
@@ -107,6 +70,23 @@ class FallacySeverityEvaluator:
                 "Argument circulaire": 0.3
             }
         }
+    }
+
+
+class FallacySeverityEvaluator:
+    """
+    Évalue la gravité des sophismes en utilisant les services partagés.
+    """
+    
+    def __init__(self):
+        """
+        Initialise l'évaluateur de gravité via les services partagés.
+        """
+        self.logger = get_configured_logger("FallacySeverityEvaluator")
+        config = ConfigManager.load_config("fallacy_severity_config", _load_severity_config)
+        self.base_severity = config["base_severity"]
+        self.context_modifiers = config["context_modifiers"]
+        self.logger.info("Évaluateur de gravité des sophismes initialisé via les services partagés.")
     
     def evaluate_severity(self, fallacy_type: str, argument: str, context: str) -> Dict[str, Any]:
         """
@@ -469,7 +449,7 @@ class FallacySeverityEvaluator:
 
 # Test de la classe si exécutée directement
 if __name__ == "__main__":
-    evaluator = FallacySeverityEvaluator()
+    evaluator = ServiceRegistry.get(FallacySeverityEvaluator)
     
     # Exemple d'évaluation de la gravité d'un sophisme
     fallacy_type = "Appel à l'autorité"

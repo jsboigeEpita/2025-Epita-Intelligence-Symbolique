@@ -4,8 +4,10 @@ from typing import List, Dict, Optional
 
 from .models import (
     AnalysisRequest, AnalysisResponse, Fallacy, StatusResponse, ExampleResponse, Example,
-    InformalAnalysisRequest, InformalAnalysisResponse
+    InformalAnalysisRequest
 )
+from argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer import SemanticArgumentAnalyzer
+from argumentation_analysis.core.models.toulmin_model import ToulminAnalysisResult
 from .dependencies import (
     get_analysis_service, AnalysisService, get_dung_analysis_service
 )
@@ -27,19 +29,35 @@ class EndpointsListResponse(BaseModel):
 # --- Routeur pour l'analyse de sophismes informels (Facade) ---
 informal_router = APIRouter(prefix="/api/v1/informal", tags=["Informal Fallacy Analysis"])
 
-@informal_router.post("/analyze", response_model=InformalAnalysisResponse)
+@informal_router.post("/analyze", response_model=ToulminAnalysisResult)
 async def analyze_informal_fallacy(
     request: InformalAnalysisRequest
-):
+) -> ToulminAnalysisResult:
     """
-    Analyzes a text for informal fallacies using the main facade.
+    Analyzes a given text to extract its argumentative structure using the Toulmin model.
 
-    - **text**: The text to analyze.
-    - **strategy**: The analysis strategy ('parallel', 'cluster', 'auto').
+    This endpoint leverages a semantic analysis service to identify the core
+    components of an argument:
+    - **Claim**: The main point the arguer is trying to make.
+    - **Data**: The evidence or facts used to support the claim.
+    - **Warrant**: The underlying assumption that connects the data to the claim.
+    - **Backing**: Additional support for the warrant.
+    - **Rebuttal**: Counter-arguments or exceptions to the claim.
+    - **Qualifier**: The degree of certainty of the claim (e.g., 'probably', 'certainly').
 
-    Returns a structured analysis result based on the chosen strategy.
+    Args:
+        request (InformalAnalysisRequest): The request body containing the text to analyze.
+
+    Returns:
+        ToulminAnalysisResult: A Pydantic model containing the structured components of the argument.
     """
-    raise HTTPException(status_code=501, detail="This endpoint is deprecated and will be replaced by a plugin-based implementation.")
+    analyzer = SemanticArgumentAnalyzer()
+    try:
+        result = await analyzer.run(request.text)
+        return result
+    except (ValueError, TypeError) as e:
+        logger.error(f"Error during semantic analysis: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to process argument: {e}")
 
 router = APIRouter()
 
