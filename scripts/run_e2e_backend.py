@@ -3,6 +3,11 @@ import logging
 import os
 from pathlib import Path
 
+import sys
+
+# Ajoute le répertoire racine du projet au PYTHONPATH
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 # Configure logging to a file
 log_dir = Path(__file__).parent.parent / "_e2e_logs"
 log_dir.mkdir(exist_ok=True)

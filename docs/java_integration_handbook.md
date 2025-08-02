@@ -96,3 +96,30 @@ Ce contexte historique montre que la gestion du cycle de vie de la JVM est extr�
     1.  Correction de l'assignation dans `FOLLogicAgent` pour utiliser l'attribut interne `_tweety_bridge` au lieu de la propriété publique.
     2.  Correction de la faute de frappe dans les fichiers `tests_jvm.txt` (utilisé par le script d'isolation) pour pointer vers le bon fichier de test.
     3.  Ces corrections, combinées au refactoring précédent qui a introduit l'injection de dépendance pour `TweetyBridge` via une fixture `pytest`, ont permis de rendre la suite de tests `jvm_test` entièrement fonctionnelle.
+
+### Phase 6 : Stabilisation des Tests End-to-End (Début Août 2025)
+
+*   **Problème** : La suite de tests E2E (`pytest -m e2e`) échouait systématiquement avec un timeout de 900 secondes. Le problème n'était pas un test lent, mais l'échec complet du démarrage du serveur backend lors de la phase de setup des tests.
+*   **Stratégie de Diagnostic** : Une série d'itérations a permis d'identifier plusieurs couches de problèmes :
+    1.  **Crash de la JVM** : Le serveur backend, en démarrant la JVM via JPype, se heurtait au crash `Windows fatal exception: access violation`.
+    2.  **Contournement par Mocking (Rejeté)** : Une première tentative a consisté à mocker la JVM pour les tests E2E. Cette approche a été rejetée car elle va à l'encontre du principe d'un test d'intégration, qui doit se rapprocher le plus possible de l'environnement de production.
+    3.  **Problèmes de Lancement de Sous-processus** : La cause racine des échecs de démarrage du serveur backend (même après avoir décidé d'ignorer le crash cosmétique de la JVM) était liée à la manière dont le processus était lancé depuis la fixture `pytest`.
+*   **Causes Racines (Stack d'erreurs d'importation)** :
+    1.  **`ModuleNotFoundError`** : Le sous-processus lancé par `pytest` n'héritait pas du `PYTHONPATH` correct, empêchant `uvicorn` (ou l'application Flask) de trouver les packages du projet comme `services`.
+    2.  **`ImportError: attempted relative import with no known parent package`** : Le lancement d'un script Python (`app.py`) directement ne le traite pas comme un module d'un package, ce qui fait échouer les imports relatifs (ex: `from .services import ...`).
+    3.  **Dépendance Circulaire** : L'importation de l'objet `app` dans le `__init__.py` du package `services.web_api_from_libs` créait une boucle d'importation qui se manifestait lors du lancement en tant que module.
+*   **Solution en Plusieurs Étapes** :
+    1.  **Ré-implémentation d'une Fixture Robuste** : La fixture `e2e_servers` dans `tests/conftest.py` a été entièrement réécrite avec un scope de session pour gérer le cycle de vie complet des serveurs backend et frontend.
+    2.  **Lancement en tant que Module** : La commande de démarrage du backend a été modifiée pour lancer l'application en tant que module (`python -m services.web_api_from_libs.app`), ce qui est la méthode correcte pour les applications packagées et résout les problèmes d'imports relatifs.
+    3.  **Configuration du `PYTHONPATH`** : Le `PYTHONPATH` incluant la racine du projet est explicitement ajouté à l'environnement du sous-processus pour garantir la découverte des packages.
+    4.  **Correction de la Dépendance Circulaire** : L'importation `from .app import app` a été commentée dans `services/web_api_from_libs/__init__.py` pour briser la boucle d'importation.
+    5.  Ces corrections cumulées ont permis de stabiliser complètement le démarrage des serveurs et de rendre la suite de tests E2E fonctionnelle.
+
+*   **Problème de Deadlock I/O masquant une `TypeError`** :
+    *   **Symptôme** : Le serveur backend, bien que ne crashant plus, se bloquait indéfiniment lors de son lancement en sous-processus par la fixture `e2e_servers`.
+    *   **Cause Racine** : Un interblocage (deadlock) était provoqué par la redirection des flux `stdout`/`stderr` vers `subprocess.PIPE`. Lors de l'initialisation, la JVM écrit une quantité importante de données sur ces flux. Si les tampons (buffers) de `PIPE` se remplissent avant que le processus parent (`pytest`) ne les lise, le processus enfant (le serveur) se bloque en attente d'écriture.
+    *   **Problème Masqué** : Ce deadlock masquait une erreur de démarrage critique. Une fois la redirection des flux modifiée pour écrire dans des fichiers (contournant ainsi le deadlock), une `TypeError` est apparue, causée par un appel incorrect au constructeur de `LogicService` dans `services/web_api_from_libs/app.py`.
+    *   **Solution** :
+        1.  **Diagnostic du Deadlock** : Redirection temporaire de `stdout`/`stderr` vers des fichiers pour permettre au serveur de démarrer et de révéler l'erreur sous-jacente.
+        2.  **Correction de la `TypeError`** : Alignement de l'appel au constructeur de `LogicService` avec sa définition (qui n'attendait aucun argument).
+        3.  **Leçon Apprise** : Les interactions I/O avec des sous-processus contenant une JVM sont extrêmement sensibles. La redirection vers `PIPE` doit être gérée avec précaution, par exemple en consommant les flux dans des threads dédiés pour éviter les deadlocks.

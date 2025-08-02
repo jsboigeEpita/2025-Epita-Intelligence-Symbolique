@@ -58,10 +58,17 @@ class AnalysisService:
         """Initialise le service d'analyse."""
         self.logger = logger
         self.is_initialized = False
-        self._initialize_components()
-    
-    def _initialize_components(self):
-        """Initialise les composants d'analyse."""
+        
+        # Initialisation paresseuse : les composants seront initialisés au premier appel
+        self.complex_analyzer = None
+        self.contextual_analyzer = None
+        self.severity_evaluator = None
+        self.informal_agent = None
+
+    def _ensure_initialized(self):
+        """Initialise les composants d'analyse si ce n'est pas déjà fait."""
+        if self.is_initialized:
+            return
         try:
             self.logger.info("=== DIAGNOSTIC ANALYSIS SERVICE ===")
             
@@ -173,6 +180,7 @@ class AnalysisService:
         Returns:
             Réponse avec les résultats d'analyse
         """
+        self._ensure_initialized() # Initialisation paresseuse
         start_time = time.time()
         
         try:

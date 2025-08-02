@@ -10,11 +10,21 @@ import pytest
 import logging
 import os
 import sys
+import asyncio
 from pathlib import Path
 import shutil
 from unittest.mock import patch, MagicMock
 import nest_asyncio
 import jpype
+from unittest.mock import patch, MagicMock
+
+# --- Mocking global pour les tests E2E ---
+# Si --disable-jvm-session est présent, on mocke jpype AVANT toute autre importation.
+_disable_jvm_early_check = any(arg == '--disable-jvm-session' for arg in sys.argv)
+if _disable_jvm_early_check:
+    print("[INFO] Early check: --disable-jvm-session detected. Mocking jpype globally.")
+    sys.modules['jpype'] = MagicMock()
+    sys.modules['jpype.imports'] = MagicMock()
 
 # Désactive la vérification de l'environnement Conda pour les tests E2E
 os.environ['E2E_TESTING_MODE'] = '1'
@@ -59,6 +69,9 @@ def pytest_addoption(parser):
     )
     parser.addoption(
         "--disable-e2e-servers-fixture", action="store_true", default=False, help="Désactive la fixture qui gère les serveurs E2E."
+    )
+    parser.addoption(
+        "--disable-jvm-session", action="store_true", default=False, help="Désactive complètement la fixture de session JVM."
     )
     parser.addoption("--frontend-url", action="store", default="http://localhost:8085", help="URL pour le serveur frontend E2E.")
     parser.addoption("--backend-url", action="store", default="http://localhost:8095", help="URL pour le serveur backend E2E.")
@@ -187,8 +200,8 @@ def apply_nest_asyncio():
     """
     try:
         import nest_asyncio
-        # nest_asyncio.apply() # Désactivé temporairement pour diagnostiquer le crash de la JVM
-        logger.warning("nest_asyncio.apply() is temporarily disabled for JVM crash diagnosis.")
+        nest_asyncio.apply() # Réactivé pour corriger le crash de la JVM
+        logger.info("nest_asyncio.apply() has been re-enabled to prevent JVM crashes.")
     except ImportError:
         logger.error("`nest_asyncio` is not installed. Please install it with `pip install nest-asyncio`.")
         pytest.fail("Missing dependency: nest_asyncio is required for running async tests with Playwright.", pytrace=False)
@@ -200,6 +213,12 @@ def jvm_session(request):
     """
     Fixture de session pour démarrer et arrêter la JVM une seule fois pour tous les tests.
     """
+    # Option pour désactiver complètement la JVM pour une session de test (ex: E2E)
+    if request.config.getoption("--disable-jvm-session"):
+        logger.warning("La fixture jvm_session est désactivée via --disable-jvm-session.")
+        yield
+        return
+
     # Marqueur pour les tests qui ne doivent pas utiliser la JVM partagée.
     if 'no_jvm_session' in request.node.keywords:
         yield
@@ -278,10 +297,25 @@ def tweety_bridge_fixture(jvm_fixture):
 
 # Charger les fixtures définies dans d'autres fichiers comme des plugins
 pytest_plugins = [
-   "tests.fixtures.integration_fixtures",
    "tests.fixtures.jvm_subprocess_fixture",
     "pytest_playwright",
 ]
+
+# --- Chargement conditionnel des fixtures lourdes ---
+# Ne charge les fixtures d'intégration (qui dépendent de la JVM) que si
+# la session JVM n'est pas explicitement désactivée.
+# Cela évite à pytest de tenter de résoudre la fixture jvm_session
+# lorsque nous savons qu'elle ne sera pas disponible.
+import pytest
+_disable_jvm = any(arg == '--disable-jvm-session' for arg in sys.argv)
+
+if not _disable_jvm:
+    pytest_plugins.append("tests.fixtures.integration_fixtures")
+else:
+    # Utilise print pour s'assurer que le message est visible même si le logging n'est pas encore configuré
+    print("\n[INFO] Fixtures d'intégration (integration_fixtures.py) non chargées en raison de l'option --disable-jvm-session.")
+    # Utilise print pour s'assurer que le message est visible même si le logging n'est pas encore configuré
+    print("\n[INFO] Fixtures d'intégration (integration_fixtures.py) non chargées en raison de l'option --disable-jvm-session.")
 
 @pytest.fixture(scope="function", autouse=True)
 def check_mock_llm_is_forced(request, monkeypatch):
@@ -439,198 +473,159 @@ def page_with_console_logs(page: "Page"):
 
 # --- Gestion des Serveurs E2E ---
 
-@pytest.fixture(scope="session")
-def e2e_servers(request, jvm_session):
-    """
-    Fixture de session pour démarrer etarrêter les serveurs backend et frontend
-    nécessaires pour les tests E2E.
-    Dépend de `jvm_session` pour garantir que la JVM est prête.
-    """
-    # L'initialisation des dépendances lourdes (JVM) est maintenant gérée
-    # exclusivement par la fixture `jvm_session`.
+import subprocess
+import time
+import requests
 
-    # Ne rien faire si la fixture est désactivée
+def _wait_for_server(url: str, process: subprocess.Popen, timeout: int = 120):
+    """Attend qu'un serveur soit disponible ou que le processus se termine."""
+    start_time = time.time()
+    try:
+        while time.time() - start_time < timeout:
+            # Vérifie si le processus a terminé prématurément
+            if process.poll() is not None:
+                # Le serveur s'est arrêté, on lève une erreur avec sa sortie
+                stdout, stderr = process.communicate()
+                stdout_decoded = stdout.decode('utf-8', 'ignore')
+                stderr_decoded = stderr.decode('utf-8', 'ignore')
+                
+                # Utiliser le logger pour s'assurer que la sortie est capturée par pytest
+                logger.error(f"Le serveur {url} a terminé prématurément. Code: {process.poll()}")
+                logger.error(f"--- STDOUT DU SERVEUR ---\n{stdout_decoded}")
+                logger.error(f"--- STDERR DU SERVEUR ---\n{stderr_decoded}")
+                
+                raise RuntimeError(
+                    f"Le serveur à l'adresse {url} a terminé prématurément avec le code {process.poll()}.\n"
+                    f"STDOUT:\n{stdout_decoded}\n\n"
+                    f"STDERR:\n{stderr_decoded}"
+                )
+
+            try:
+                response = requests.get(f"{url}/api/health", timeout=5)
+                if response.status_code == 200:
+                    logger.info(f"Serveur à l'adresse {url} est prêt !")
+                    return True
+            except requests.ConnectionError:
+                time.sleep(2)  # Attend un peu avant de réessayer
+            except requests.Timeout:
+                logger.warning(f"Timeout lors de la connexion à {url}. Réessai...")
+        
+        # Si la boucle se termine, c'est un timeout
+        raise TimeoutError(f"Le serveur à l'adresse {url} n'a pas démarré dans le temps imparti de {timeout}s.")
+    finally:
+        # Dans tous les cas (succès, exception), si le processus est toujours en vie mais que
+        # la fonction se termine (par ex. timeout), on essaie de récupérer sa sortie.
+        if process.poll() is None:
+             logger.info("Le processus serveur est toujours en cours d'exécution après la fin de la vérification.")
+        else:
+            # S'il y a eu un timeout et que le processus s'est terminé entre-temps,
+            # on tente une dernière fois de récupérer sa sortie pour le débogage.
+            try:
+                stdout, stderr = process.communicate(timeout=5) # Petit timeout pour ne pas bloquer
+                logger.error("SORTIE DU SERVEUR CAPTURÉE APRÈS TIMEOUT:")
+                logger.error(f"STDOUT:\n{stdout.decode('utf-8', 'ignore')}")
+                logger.error(f"STDERR:\n{stderr.decode('utf-8', 'ignore')}")
+            except subprocess.TimeoutExpired:
+                logger.error("Impossible de récupérer la sortie du processus serveur après le timeout (il est peut-être bloqué).")
+            except Exception as e:
+                 logger.error(f"Une erreur est survenue en tentant de récupérer la sortie du serveur après timeout: {e}")
+
+def _kill_process(proc):
+    if proc and proc.poll() is None:
+        try:
+            proc.terminate()
+            proc.wait(timeout=10)
+            logger.info(f"Processus {proc.pid} terminé avec la méthode terminate().")
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=10)
+            logger.warning(f"Processus {proc.pid} ne répondait pas, il a été tué (kill).")
+        except Exception as e:
+            logger.error(f"Erreur en terminant le processus {proc.pid}: {e}")
+
+@pytest.fixture(scope="session")
+def e2e_servers(request):
+    """
+    Fixture de session qui démarre et gère les serveurs backend et frontend pour les tests E2E.
+    Elle utilise `subprocess.Popen` et garantit l'arrêt des serveurs à la fin.
+    """
     if request.config.getoption("--disable-e2e-servers-fixture"):
-        logger.warning("E2E servers fixture is disabled via command-line flag.")
-        yield None, None # yield None pour satisfaire le format de la fixture
+        logger.info("Fixture e2e_servers désactivée via l'option en ligne de commande.")
+        yield None, None
         return
 
-    import subprocess
-    import requests
-    import signal
-    import time
-    import re
-
-    # --- Helper pour nettoyer les ports ---
-    def _kill_process_using_port(port: int):
-        if sys.platform != "win32":
-            logger.warning(f"Port cleanup function is only implemented for Windows. Skipping for port {port}.")
-            return
-
-        try:
-            logger.info(f"Checking if port {port} is in use...")
-            # Exécute netstat pour trouver le PID utilisant le port
-            result = subprocess.run(
-                ["netstat", "-aon"],
-                capture_output=True,
-                text=True,
-                check=True
-            )
-
-            # Chercher la ligne correspondant au port
-            pid_found = None
-            if result.stdout:
-                for line in result.stdout.splitlines():
-                    if f":{port}" in line and 'LISTENING' in line:
-                        # La sortie est du genre: '  TCP    0.0.0.0:5003           0.0.0.0:0              LISTENING       12345'
-                        match = re.search(r'LISTENING\s+(\d+)', line)
-                        if match:
-                            pid_found = match.group(1)
-                            logger.warning(f"Port {port} is currently being used by PID {pid_found}.")
-                            break
-
-            if pid_found:
-                logger.info(f"Attempting to terminate process with PID {pid_found}...")
-                kill_result = subprocess.run(
-                    ["taskkill", "/PID", pid_found, "/F"],
-                    capture_output=True,
-                    text=True
-                )
-                if kill_result.returncode == 0:
-                    logger.info(f"Successfully terminated process {pid_found}.")
-                else:
-                    # Il se peut que le processus se soit terminé entre-temps
-                    logger.warning(f"Could not terminate process {pid_found}. It might have already finished. Output: {kill_result.stdout} {kill_result.stderr}")
-
-                time.sleep(2) # Laisser le temps au port de se libérer
-            else:
-                logger.info(f"Port {port} is free.")
-
-        except (subprocess.CalledProcessError, FileNotFoundError) as e:
-            logger.error(f"Failed to check or kill process for port {port}: {e}")
-        except Exception as e:
-            logger.error(f"An unexpected error occurred during port cleanup for port {port}: {e}", exc_info=True)
-
-
-    processes = []
-    backend_url_opt = request.config.getoption("--backend-url")
-    frontend_url_opt = request.config.getoption("--frontend-url")
-
+    backend_url = request.config.getoption("--backend-url")
+    frontend_url = request.config.getoption("--frontend-url")
     project_root = Path(__file__).parent.parent
+    
+    backend_process = None
+    frontend_process = None
 
-    # Création d'un répertoire pour les logs des serveurs E2E
-    log_dir = project_root / "_e2e_logs"
-    log_dir.mkdir(exist_ok=True)
-    logger.info(f"E2E server logs will be stored in: {log_dir.resolve()}")
+    try:
+        # --- Démarrage du serveur Backend (Application Flask en tant que module) ---
+        backend_module = "services.web_api_from_libs.app"
+        backend_command = [sys.executable, "-m", backend_module]
+        
+        backend_port = backend_url.split(":")[-1]
 
-    # Ouverture des fichiers de log
-    backend_log_file = open(log_dir / "backend.log", "w", encoding="utf-8")
-    frontend_log_file = open(log_dir / "frontend.log", "w", encoding="utf-8")
+        # --- Définition de l'environnement pour le sous-processus Backend ---
+        # Il est crucial de reconstruire un environnement propre qui inclut
+        # les variables du .env, car Popen n'hérite pas automatiquement de celles
+        # chargées par pytest-dotenv dans le processus principal.
+        from dotenv import dotenv_values
 
-    # --- Helper Functions (tirées de test_react_interface_complete.py) ---
-    def wait_for_service(url, name, timeout=60):
-        logger.info(f"Waiting for {name} on {url}...")
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            try:
-                response = requests.get(url, timeout=5)
-                if response.status_code in [200, 404]: # 404 is ok for base URL of an API
-                    logger.info(f"[OK] {name} available after {time.time() - start_time:.1f}s")
-                    return True
-            except requests.exceptions.RequestException:
-                pass
-            time.sleep(2)
-        logger.error(f"[ERROR] {name} not available after {timeout}s")
-        return False
+        # 1. Copier l'environnement courant
+        backend_env = os.environ.copy()
 
-    def start_backend():
-        logger.info("--- Starting E2E Backend Server (Forced) ---")
+        # 2. Charger les variables du fichier .env
+        dotenv_path = project_root / '.env'
+        if dotenv_path.exists():
+            logger.info(f"Chargement des variables depuis {dotenv_path} pour le sous-processus backend.")
+            env_vars = dotenv_values(dotenv_path)
+            backend_env.update(env_vars)
+            logger.info(f"{len(env_vars)} variables chargées. Clé OPENAI_API_KEY présente: {'OPENAI_API_KEY' in backend_env}")
 
-        backend_cmd = [
-            sys.executable,
-            str(project_root / "scripts" / "run_e2e_backend.py")
-        ]
+        # 3. Ajouter/Surcharger les variables spécifiques au test
+        backend_env["PORT"] = backend_port
+        backend_env["PYTHONPATH"] = str(project_root)
 
-        logger.info(f"Running backend command: {' '.join(backend_cmd)}")
-        process = subprocess.Popen(backend_cmd, cwd=str(project_root), stdout=backend_log_file, stderr=subprocess.STDOUT)
-        if wait_for_service(f"{backend_url_opt}/api/health", "Backend API"):
-            logger.info("Backend server started successfully.")
-            return process
-        else:
-            logger.error("Failed to start backend server. Check '_e2e_logs/backend_launcher.log' for details.")
-            process.terminate()
-            return None
+        logger.info(f"Démarrage du serveur backend Flask avec la commande: {' '.join(backend_command)}")
+        backend_process = subprocess.Popen(
+            backend_command,
+            cwd=project_root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=backend_env
+        )
 
-    def start_frontend():
-        logger.info("--- Starting E2E Frontend Server (Forced) ---")
+        # Attendre que le backend soit prêt
+        _wait_for_server(backend_url, backend_process)
 
-        react_dir = project_root / "services" / "web_api" / "interface-web-argumentative"
-        if not (react_dir / "node_modules").exists():
-            logger.info("Installing npm dependencies for frontend...")
-            subprocess.run("npm install", cwd=str(react_dir), shell=True, check=True)
+        # --- Démarrage du serveur Frontend ---
+        frontend_command = ["npm", "start"]
+        frontend_dir = project_root / "interface_web"
+        # Création d'un environnement pour le frontend avec le port personnalisé
+        frontend_env = os.environ.copy()
+        frontend_env["PORT"] = frontend_url.split(":")[-1]
+        
+        logger.info(f"Démarrage du serveur frontend dans '{frontend_dir}' avec la commande: {' '.join(frontend_command)}")
+        frontend_process = subprocess.Popen(
+            frontend_command,
+            cwd=frontend_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=frontend_env,
+            shell=True
+        )
 
-        env = os.environ.copy()
-        env["BROWSER"] = "none"
-        env["PORT"] = "8085"
-        env["REACT_APP_BACKEND_URL"] = backend_url_opt
+        # Simple attente pour le frontend, car il n'a pas de healthcheck standard
+        logger.info("Attente de 15 secondes pour le démarrage du serveur frontend...")
+        time.sleep(15)
 
-        logger.info(f"Running frontend command: npm start in {react_dir}")
-        process = subprocess.Popen("npm start", cwd=str(react_dir), stdout=frontend_log_file, stderr=subprocess.STDOUT, env=env, shell=True)
-        if wait_for_service(frontend_url_opt, "Frontend React"):
-            logger.info("Frontend server started successfully. Adding a stabilization delay.")
-            time.sleep(5) # Ajout d'une attente de stabilisation pour le serveur de dév React
-            return process
-        else:
-            logger.error("Failed to start frontend server.")
-            process.terminate()
-            return None
+        yield backend_url, frontend_url
 
-    # --- Démarrage ---
-    logger.info("=== E2E Servers Fixture Setup ===")
-
-    # Nettoyage préventif des ports
-    _kill_process_using_port(8095) # Backend
-    _kill_process_using_port(8085) # Frontend
-
-    backend_process = start_backend()
-    frontend_process = start_frontend()
-
-    if backend_process:
-        processes.append(("Backend", backend_process))
-    if frontend_process:
-        processes.append(("Frontend", frontend_process))
-
-    yield backend_url_opt, frontend_url_opt
-
-    # --- Nettoyage ---
-    logger.info("=== E2E Servers Fixture Teardown ===")
-
-    # Fermeture des fichiers de log
-    backend_log_file.close()
-    frontend_log_file.close()
-
-    for name, process in reversed(processes):
-        if process:
-            logger.info(f"Stopping {name} server (PID: {process.pid})...")
-            if sys.platform == "win32":
-                # Utilisation de taskkill pour un nettoyage plus robuste sur Windows
-                try:
-                    subprocess.run(
-                        ["taskkill", "/PID", str(process.pid), "/T", "/F"],
-                        check=True,
-                        capture_output=True,
-                        text=True
-                    )
-                    logger.info(f"Process {name} (PID: {process.pid}) and its children terminated successfully.")
-                except (subprocess.CalledProcessError, FileNotFoundError) as e:
-                    logger.warning(f"Could not terminate process {name} (PID: {process.pid}) using taskkill. Error: {e}. Falling back to process.kill().")
-                    process.kill() # Fallback au cas où taskkill échouerait
-            else:
-                process.terminate()
-                try:
-                    process.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    logger.warning(f"Process {name} did not terminate gracefully. Killing it.")
-                    process.kill()
-
-    logger.info("E2E servers teardown complete.")
+    finally:
+        logger.info("--- Nettoyage de la fixture e2e_servers ---")
+        _kill_process(frontend_process)
+        _kill_process(backend_process)
+        logger.info("Serveurs E2E terminés.")

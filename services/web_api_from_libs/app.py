@@ -23,6 +23,7 @@ if str(root_dir) not in sys.path:
     sys.path.append(str(root_dir))
 
 # Import des services et dépendances
+# Import des services et dépendances
 from argumentation_analysis.core.llm_service import create_llm_service
 from .services.analysis_service import AnalysisService
 from .services.validation_service import ValidationService
@@ -32,12 +33,10 @@ from .services.logic_service import LogicService
 
 # Import des modèles locaux
 from .models.request_models import (
-    AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest,
-    LogicBeliefSetRequest, LogicQueryRequest, LogicGenerateQueriesRequest
+    AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest
 )
 from .models.response_models import (
-    AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse,
-    LogicBeliefSetResponse, LogicQueryResponse, LogicGenerateQueriesResponse
+    AnalysisResponse, ValidationResponse, FallacyResponse, FrameworkResponse, ErrorResponse
 )
 
 # Import du Blueprint pour les routes
@@ -55,54 +54,75 @@ logger = logging.getLogger("WebAPI")
 # Chemin vers le build du frontend React
 react_build_dir = root_dir / "services" / "web_api" / "interface-web-argumentative" / "build"
 
-# Création de l'application Flask
-# On configure le service des fichiers statiques pour qu'il pointe vers le build de React
-app = Flask(__name__, static_folder=str(react_build_dir / "static"), static_url_path='/static')
-CORS(app)  # Activer CORS pour les appels depuis React
+# --- Factory Function pour l'Application Flask ---
 
-# Configuration
-app.config['JSON_AS_ASCII'] = False
-app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+def create_app(config_overrides: Optional[Dict[str, Any]] = None) -> Flask:
+    """
+    Crée et configure une instance de l'application Flask.
+    Cette factory permet de s'assurer que les initialisations (comme les services)
+    ne sont exécutées qu'au moment de la création de l'app, évitant les problèmes
+    d'imports circulaires et de contexte, notamment avec pytest.
+    """
+    # On configure le service des fichiers statiques pour qu'il pointe vers le build de React
+    app = Flask(__name__, static_folder=str(react_build_dir / "static"), static_url_path='/static')
+    
+    # --- Configuration ---
+    app.config['JSON_AS_ASCII'] = False
+    app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+    if config_overrides:
+        app.config.update(config_overrides)
 
-# Initialisation des services
-analysis_service = AnalysisService()
-validation_service = ValidationService()
-fallacy_service = FallacyService()
-framework_service = FrameworkService()
-llm_service = create_llm_service(service_id="default")
-logic_service = LogicService(llm_service)
+    # --- Initialisation des Services ---
+    # Les services sont attachés à l'application via app.extensions pour un accès
+    # global et sécurisé via le contexte de l'application (current_app).
+    llm_service = create_llm_service(service_id="default")
+    
+    app.extensions['racine_services'] = {
+        'analysis': AnalysisService(),
+        'validation': ValidationService(),
+        'fallacy': FallacyService(),
+        'framework': FrameworkService(),
+        'logic': LogicService(),
+        'llm': llm_service
+    }
 
-# Enregistrer les blueprints pour les routes API
-app.register_blueprint(main_bp, url_prefix='/api')
-app.register_blueprint(logic_bp, url_prefix='/api/logic')
+    # --- Enregistrement des Blueprints ---
+    app.register_blueprint(main_bp, url_prefix='/api')
+    app.register_blueprint(logic_bp, url_prefix='/api/logic')
 
-@app.errorhandler(404)
-def not_found(e):
-    # Pour toute route non-API, servir l'application React
-    return send_from_directory(str(react_build_dir), 'index.html')
+    # --- Gestionnaires d'Erreurs ---
+    @app.errorhandler(Exception)
+    def handle_error(error: Exception) -> tuple[str, int]:
+        """Gestionnaire d'erreurs global."""
+        logger.error(f"Erreur non gérée: {str(error)}", exc_info=True)
+        error_response = ErrorResponse(
+            error="Erreur interne du serveur",
+            message=str(error),
+            status_code=500
+        )
+        return jsonify(error_response.dict()), 500
 
-@app.errorhandler(Exception)
-def handle_error(error):
-    """Gestionnaire d'erreurs global."""
-    logger.error(f"Erreur non gérée: {str(error)}", exc_info=True)
-    return jsonify(ErrorResponse(
-        error="Erreur interne du serveur",
-        message=str(error),
-        status_code=500
-    ).dict()), 500
+    # --- Route de Fallback pour l'Application React ---
+    # Doit être enregistré après les blueprints API pour ne pas les intercepter.
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def serve(path: str) -> Any:
+        # Si le chemin correspond à un fichier existant dans le build React, on le sert.
+        if path != "" and os.path.exists(os.path.join(str(react_build_dir), path)):
+            return send_from_directory(str(react_build_dir), path)
+        # Sinon, on sert l'index.html, en laissant React gérer le routage côté client.
+        return send_from_directory(str(react_build_dir), 'index.html')
 
-# Ce fichier est maintenant beaucoup plus propre.
-# Les routes sont gérées par les blueprints.
+    return app
+
+# --- Point d'entrée pour l'exécution directe et les serveurs WSGI ---
+app = create_app()
+
 if __name__ == '__main__':
-    # Configuration pour le développement
     port = int(os.environ.get('PORT', 5004))
     debug = os.environ.get('DEBUG', 'True').lower() == 'true'
     
-    logger.info(f"Démarrage de l'API Flask sur le port {port}")
-    logger.info(f"Mode debug: {debug}")
+    logger.info(f"Démarrage de l'API Flask en mode {'Debug' if debug else 'Production'} sur le port {port}")
     
-    app.run(
-        host='0.0.0.0',
-        port=port,
-        debug=debug
-    )
+    # Utilise l'application créée par la factory
+    app.run(host='0.0.0.0', port=port, debug=debug)
