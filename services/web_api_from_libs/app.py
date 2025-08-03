@@ -15,6 +15,7 @@ from pathlib import Path
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from typing import Dict, Any, Optional
+import atexit
 
 # Ajouter le répertoire racine au chemin Python
 current_dir = Path(__file__).parent
@@ -30,8 +31,9 @@ from .services.validation_service import ValidationService
 from .services.fallacy_service import FallacyService
 from .services.framework_service import FrameworkService
 from .services.logic_service import LogicService
-
-# Import des modèles locaux
+from argumentation_analysis.core.jvm_setup import shutdown_jvm, is_jvm_started
+ 
+ # Import des modèles locaux
 from .models.request_models import (
     AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest
 )
@@ -117,6 +119,21 @@ def create_app(config_overrides: Optional[Dict[str, Any]] = None) -> Flask:
 
 # --- Point d'entrée pour l'exécution directe et les serveurs WSGI ---
 app = create_app()
+
+# --- Routine de Nettoyage ---
+@atexit.register
+def cleanup_on_exit():
+    """
+    Fonction de nettoyage appelée à la sortie de l'application.
+    Assure l'arrêt propre de la JVM si elle était active.
+    """
+    logger.info("Déclenchement du nettoyage 'atexit' de l'application.")
+    if is_jvm_started():
+        logger.info("La JVM est active, tentative d'arrêt propre...")
+        shutdown_jvm()
+        logger.info("Arrêt propre de la JVM demandé.")
+    else:
+        logger.info("La JVM n'était pas active, aucun arrêt nécessaire.")
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5004))

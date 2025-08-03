@@ -201,7 +201,16 @@ class BackendManager:
             env = os.environ.copy()
             env['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
             env['PYTHONPATH'] = str(project_root)
-            # Ajout de la variable pour forcer le mock du LLM en mode test
+            
+            # Correction pour les tests d'intégration :
+            # Assurer que le mock du LLM n'est PAS activé.
+            # Le service LLM s'active en mode mock si PYTEST_CURRENT_TEST est présent.
+            if 'PYTEST_CURRENT_TEST' in env:
+                self.logger.warning("Suppression de 'PYTEST_CURRENT_TEST' de l'environnement pour désactiver le mock LLM.")
+                del env['PYTEST_CURRENT_TEST']
+            
+            # La variable 'INTEGRATION_TEST_MODE' semble redondante ou contradictoire,
+            # nous la laissons pour l'instant mais la suppression de PYTEST_CURRENT_TEST est prioritaire.
             env['INTEGRATION_TEST_MODE'] = 'true'
             
             self.process = subprocess.Popen(

@@ -189,10 +189,18 @@ class PlaywrightRunner:
             # Le timeout est maintenant géré par l'orchestrateur principal
             # '--timeout', '300'
         ]
+        
+        # Correction: Convertir les chemins de test en chemins absolus pour éviter les erreurs "file not found"
+        # lorsque la commande est exécutée depuis un autre répertoire de travail par le wrapper PowerShell.
+        project_root = Path(get_project_root())
+        # Convertit les chemins en format POSIX (avec /) pour une meilleure compatibilité entre les shells
+        absolute_test_paths = [(project_root / path).as_posix() for path in test_paths]
+        self.logger.info(f" chemins de test absolus (format POSIX) : {absolute_test_paths}")
+
 
         # Ajout du répertoire de test pour que pytest le découvre
         # Forçage pour le débogage du test qui timeout
-        cmd.extend(test_paths)
+        cmd.extend(absolute_test_paths)
 
         # Le mode Headless est géré par l'argument --headed.
         # On l'ajoute si la configuration le demande explicitement.
