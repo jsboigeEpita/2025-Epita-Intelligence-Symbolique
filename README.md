@@ -120,6 +120,77 @@ Validez l'intégrité et le bon fonctionnement du projet avec plus de 400 tests.
 
 ---
 
+## ⚡ **API Usage**
+
+Le "Service Bus" expose un point d'entrée unique pour interagir avec le système d'analyse.
+
+### **Analyser un texte**
+
+-   **Endpoint :** `POST /api/v2/analyze`
+-   **Description :** Permet de soumettre un texte pour analyse en spécifiant le plugin à utiliser.
+-   **Corps de la requête (JSON) :**
+    ```json
+    {
+      "text": "Le texte à analyser ici.",
+      "plugin_name": "TestPlugin"
+    }
+    ```
+-   **Exemple avec cURL :**
+    ```bash
+    curl -X POST "http://127.0.0.1:8000/api/v2/analyze" \
+    -H "Content-Type: application/json" \
+    -d '{"text": "L'euthanasie devrait être légalisée car elle respecte l'autonomie du patient.", "plugin_name": "TestPlugin"}'
+    ```
+-   **Réponse type :**
+    ```json
+    {
+        "status": "executed",
+        "received_args": {
+            "text": "L'euthanasie devrait être légalisée car elle respecte l'autonomie du patient."
+        }
+    }
+    ```
+
+---
+
+## 🏛️ **Architecture des Services et Principes de Conception**
+
+Pour les développeurs qui souhaitent contribuer, il est essentiel de comprendre les principes d'architecture qui sous-tendent le projet. Notre conception s'articule autour de **Services Fondamentaux** centralisés pour garantir la cohérence, la testabilité et la maintenabilité.
+
+### **`ServiceRegistry` : Le Registre Central des Services**
+
+-   **Rôle :** Le `ServiceRegistry` est un gestionnaire de services qui implémente le patron de conception Singleton. Il garantit qu'une seule instance de chaque service critique (comme un analyseur, un logger, ou un gestionnaire de configuration) existe dans toute l'application.
+-   **Avantages :**
+    -   **Consistance :** Tous les modules partagent la même instance d'un service.
+    -   **Découplage :** Un module n'a pas besoin de savoir comment construire un service, il demande simplement au registre de le lui fournir.
+    -   **Fondation pour le futur :** C'est la première brique vers notre objectif de "Guichet de Service Unique".
+
+### **`ConfigManager` : Gestion de Configuration Unifiée**
+
+-   **Rôle :** Le `ConfigManager` centralise le chargement de toutes les configurations du projet (fichiers `YAML`, dataframes, etc.). Il utilise un système de cache et de "lazy loading".
+-   **Avantages :**
+    -   **Efficacité :** Les configurations ne sont chargées qu'une seule fois et uniquement lorsqu'elles sont nécessaires.
+    -   **Centralisation :** Fini la logique de chargement de fichiers dispersée dans le code. Toute la gestion de la configuration passe par ce service.
+
+### **`OrchestrationService` : Le Guichet de Service Unique**
+
+-   **Rôle :** L'`OrchestrationService` est le point d'entrée central pour toutes les requêtes d'analyse. Il implémente le "Guichet de Service Unique" en agissant comme une façade qui masque la complexité interne. Il est responsable de recevoir une requête, de la dispatcher vers le bon plugin ou workflow, et de retourner une réponse standardisée.
+-   **Avantages :**
+    -   **Interface Simplifiée :** Les clients (applications web, scripts, etc.) interagissent avec une seule interface claire et cohérente.
+    -   **Orchestration :** Il gère le cycle de vie des plugins et orchestre leur exécution pour répondre à des requêtes complexes.
+    -   **Évolutivité :** Il est conçu pour supporter une architecture de plugins à deux niveaux (Standard et Workflows), permettant au système de s'enrichir de nouvelles capacités de manière modulaire.
+
+Ces composants fondamentaux se trouvent dans `argumentation_analysis/agents/core/` et `argumentation_analysis/agents/tools/support/shared_services.py`. Ils forment la pierre angulaire de notre architecture de services partagés.
+
+### **Exposition via le "Service Bus" API**
+
+Le `OrchestrationService` est exposé à l'extérieur via une API FastAPI qui sert de "Service Bus".
+
+-   **Point d'entrée principal :** `POST /api/v2/analyze`
+    -   **Fichier :** [`argumentation_analysis/api/main.py`](argumentation_analysis/api/main.py:0)
+    -   **Rôle :** Reçoit les requêtes d'analyse du monde extérieur.
+    -   **Logique :** Il valide la requête entrante, récupère l'instance de l'`OrchestrationService` via injection de dépendances, trouve le plugin demandé, **l'exécute** avec le texte fourni et retourne le résultat de l'exécution.
+
 ---
 
 ## 🛠️ Environnement de Développement : Prérequis et Configuration
