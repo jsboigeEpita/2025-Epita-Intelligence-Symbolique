@@ -61,15 +61,24 @@ class TestContextualFallacyAnalyzer(unittest.TestCase):
     def test_init(self):
         """Teste l'initialisation de la classe."""
         self.assertIsNotNone(self.analyzer)
-        # Vérifie que la taxonomie est chargée via le ConfigManager mocké
-        self.assertIsNotNone(self.analyzer.taxonomy_df)
-        self.assertEqual(len(self.analyzer.taxonomy_df), 4)
-        self.mock_load_config.assert_called_with('taxonomy', self.analyzer._load_and_validate_taxonomy)
+        # Vérifie que le logger est bien configuré
+        self.assertIsNotNone(self.analyzer.logger)
 
-    def test_load_taxonomy_delegates_to_config_manager(self):
-        """Vérifie que le chargement de la taxonomie est bien délégué au ConfigManager."""
-        # L'appel est déjà fait dans __init__, on peut donc juste vérifier le mock
-        self.mock_load_config.assert_called_with('taxonomy', self.analyzer._load_and_validate_taxonomy)
+    def test_get_taxonomy_df_uses_config_manager(self):
+        """Vérifie que _get_taxonomy_df charge la taxonomie via le ConfigManager."""
+        # Importer la fonction de chargement réelle pour la passer au mock
+        from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import _load_fallacy_taxonomy
+
+        # Appeler la méthode qui déclenche le chargement
+        df = self.analyzer._get_taxonomy_df()
+
+        # Vérifier que le résultat est bien celui du mock
+        self.assertIsNotNone(df)
+        self.assertEqual(len(df), 4)
+        self.assertEqual(df, self.test_df)
+
+        # Vérifier que ConfigManager.load_config a été appelé correctement
+        self.mock_load_config.assert_called_once_with("fallacy_taxonomy", _load_fallacy_taxonomy)
 
     def test_determine_context_type(self):
         """Teste la détermination du type de contexte."""

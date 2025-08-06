@@ -100,7 +100,8 @@ class TestUnifiedAnalysisPipeline:
         assert pipeline.session_id.startswith("pipeline_")
         assert len(pipeline.results_cache) == 0
     
-    def test_analyze_text_mock_mode(self):
+    @pytest.mark.asyncio
+    async def test_analyze_text_mock_mode(self):
         """Test analyse de texte en mode mock."""
         config = AnalysisConfig(
             require_real_llm=False,
@@ -108,7 +109,7 @@ class TestUnifiedAnalysisPipeline:
         )
         pipeline = UnifiedAnalysisPipeline(config)
         
-        result = asyncio.run(pipeline.analyze_text("Test text for analysis"))
+        result = await pipeline.analyze_text("Test text for analysis")
         
         assert result.status == "completed"
         assert result.source_type == SourceType.TEXT
@@ -117,7 +118,8 @@ class TestUnifiedAnalysisPipeline:
         assert result.execution_time > 0
         assert len(pipeline.results_cache) == 1
     
-    def test_analyze_text_multiple_modes(self):
+    @pytest.mark.asyncio
+    async def test_analyze_text_multiple_modes(self):
         """Test analyse avec plusieurs modes."""
         config = AnalysisConfig(
             require_real_llm=False,
@@ -125,14 +127,15 @@ class TestUnifiedAnalysisPipeline:
         )
         pipeline = UnifiedAnalysisPipeline(config)
         
-        result = asyncio.run(pipeline.analyze_text("Test text"))
+        result = await pipeline.analyze_text("Test text")
         
         assert result.status == "completed"
         assert "fallacies" in result.results
         assert "rhetoric" in result.results
         assert len(result.analysis_modes) == 2
     
-    def test_analyze_text_fallback_mode(self):
+    @pytest.mark.asyncio
+    async def test_analyze_text_fallback_mode(self):
         """Test mode fallback lors d'erreur."""
         config = AnalysisConfig(
             require_real_llm=True,  # Mode authentique qui va échouer
@@ -142,18 +145,16 @@ class TestUnifiedAnalysisPipeline:
         pipeline = UnifiedAnalysisPipeline(config)
         
         # Mock l'erreur et le fallback
-        async def run_analysis():
-            with patch.object(pipeline, '_real_llm_analysis', side_effect=Exception("LLM Error")):
-                with patch.object(pipeline, '_fallback_analysis', new_callable=AsyncMock) as mock_fallback:
-                    mock_fallback.return_value = {"fallback": True}
-                    return await pipeline.analyze_text("Test text")
-
-        result = asyncio.run(run_analysis())
+        with patch.object(pipeline, '_real_llm_analysis', side_effect=Exception("LLM Error")):
+            with patch.object(pipeline, '_fallback_analysis', new_callable=AsyncMock) as mock_fallback:
+                mock_fallback.return_value = {"fallback": True}
+                result = await pipeline.analyze_text("Test text")
 
         assert result.status == "completed"
         assert result.results["unified"]["fallback"] is True
     
-    def test_analyze_batch_sequential(self):
+    @pytest.mark.asyncio
+    async def test_analyze_batch_sequential(self):
         """Test analyse batch séquentielle."""
         config = AnalysisConfig(
             require_real_llm=False,
@@ -162,13 +163,14 @@ class TestUnifiedAnalysisPipeline:
         pipeline = UnifiedAnalysisPipeline(config)
         
         texts = ["Text 1", "Text 2", "Text 3"]
-        results = asyncio.run(pipeline.analyze_batch(texts))
+        results = await pipeline.analyze_batch(texts)
         
         assert len(results) == 3
         assert all(r.status == "completed" for r in results)
         assert all(r.source_type == SourceType.BATCH for r in results)
     
-    def test_analyze_batch_parallel(self):
+    @pytest.mark.asyncio
+    async def test_analyze_batch_parallel(self):
         """Test analyse batch parallèle."""
         config = AnalysisConfig(
             require_real_llm=False,
@@ -179,7 +181,7 @@ class TestUnifiedAnalysisPipeline:
         
         texts = ["Text 1", "Text 2", "Text 3"]
         start_time = time.time()
-        results = asyncio.run(pipeline.analyze_batch(texts))
+        results = await pipeline.analyze_batch(texts)
         execution_time = time.time() - start_time
         
         assert len(results) == 3
@@ -187,7 +189,8 @@ class TestUnifiedAnalysisPipeline:
         # Le parallélisme devrait être plus rapide que séquentiel
         assert execution_time < 1.0  # Avec mock, devrait être très rapide
     
-    def test_analyze_corpus_data(self):
+    @pytest.mark.asyncio
+    async def test_analyze_corpus_data(self):
         """Test analyse de données de corpus."""
         config = AnalysisConfig(require_real_llm=False)
         pipeline = UnifiedAnalysisPipeline(config)
@@ -204,22 +207,24 @@ class TestUnifiedAnalysisPipeline:
             ]
         }
         
-        results = asyncio.run(pipeline.analyze_corpus_data(corpus_data))
+        results = await pipeline.analyze_corpus_data(corpus_data)
         
         assert len(results) == 2
         assert all(r.source_type == SourceType.CORPUS for r in results)
     
-    def test_analyze_corpus_data_empty(self):
+    @pytest.mark.asyncio
+    async def test_analyze_corpus_data_empty(self):
         """Test analyse de corpus vide."""
         config = AnalysisConfig(require_real_llm=False)
         pipeline = UnifiedAnalysisPipeline(config)
         
         corpus_data = {"loaded_files": []}
-        results = asyncio.run(pipeline.analyze_corpus_data(corpus_data))
+        results = await pipeline.analyze_corpus_data(corpus_data)
         
         assert len(results) == 0
     
-    def test_fallback_analysis_fallacies(self):
+    @pytest.mark.asyncio
+    async def test_fallback_analysis_fallacies(self):
         """Test analyse de fallback pour détection de sophismes."""
         config = AnalysisConfig()
         pipeline = UnifiedAnalysisPipeline(config)
@@ -231,10 +236,7 @@ class TestUnifiedAnalysisPipeline:
             "fallacies_detected": ["ad_hominem"]
         })
 
-        async def run_analysis():
-            return await pipeline._fallback_analysis(text, AnalysisMode.FALLACIES)
-
-        result = asyncio.run(run_analysis())
+        result = await pipeline._fallback_analysis(text, AnalysisMode.FALLACIES)
         
         assert result["fallback"] is True
         assert "fallacies_detected" in result
@@ -272,25 +274,27 @@ class TestUnifiedAnalysisPipeline:
 class TestAnalysisModes:
     """Tests pour les modes d'analyse."""
     
-    def test_mock_analysis_fallacies(self):
+    @pytest.mark.asyncio
+    async def test_mock_analysis_fallacies(self):
         """Test analyse mock pour sophismes."""
         config = AnalysisConfig()
         pipeline = UnifiedAnalysisPipeline(config)
         
-        result = asyncio.run(pipeline._mock_analysis("Test text", AnalysisMode.FALLACIES))
+        result = await pipeline._mock_analysis("Test text", AnalysisMode.FALLACIES)
         
         assert result["mode"] == "fallacies"
         assert result["authentic"] is False
         assert "fallacies_detected" in result
         assert "confidence" in result
     
-    def test_mock_analysis_other_modes(self):
+    @pytest.mark.asyncio
+    async def test_mock_analysis_other_modes(self):
         """Test analyse mock pour autres modes."""
         config = AnalysisConfig()
         pipeline = UnifiedAnalysisPipeline(config)
         
         for mode in [AnalysisMode.RHETORIC, AnalysisMode.LOGIC, AnalysisMode.SEMANTIC]:
-            result = asyncio.run(pipeline._mock_analysis("Test text", mode))
+            result = await pipeline._mock_analysis("Test text", mode)
             
             assert result["mode"] == mode.value
             assert result["authentic"] is False
@@ -300,7 +304,8 @@ class TestAnalysisModes:
 class TestRetryMechanism:
     """Tests pour le mécanisme de retry."""
     
-    def test_retry_success_second_attempt(self):
+    @pytest.mark.asyncio
+    async def test_retry_success_second_attempt(self):
         """Test retry réussi à la deuxième tentative."""
         config = AnalysisConfig(retry_count=3, retry_delay=0.01)
         pipeline = UnifiedAnalysisPipeline(config)
@@ -314,18 +319,14 @@ class TestRetryMechanism:
                 raise Exception("First attempt fails")
             return {"success": True}
 
-        async def run_analysis():
-            with patch.object(pipeline, '_real_llm_analysis', side_effect=failing_then_success) as mock_analysis:
-                return await pipeline._execute_analysis_mode("Test", AnalysisMode.UNIFIED), mock_analysis.call_count
+        with patch.object(pipeline, '_real_llm_analysis', side_effect=failing_then_success) as mock_analysis:
+            result = await pipeline._execute_analysis_mode("Test", AnalysisMode.UNIFIED)
         
-        result, final_call_count = asyncio.run(run_analysis())
-            
         assert result["success"] is True
-        # La vérification de call_count ici dépend de l'implémentation,
-        # mais on peut vérifier que le résultat est correct.
-        # Le nombre d'appels est difficile à suivre hors de l'async.
+        assert mock_analysis.call_count == 2
     
-    def test_retry_exhausted_with_fallback(self):
+    @pytest.mark.asyncio
+    async def test_retry_exhausted_with_fallback(self):
         """Test épuisement des tentatives avec fallback."""
         config = AnalysisConfig(
             retry_count=2,
@@ -334,14 +335,11 @@ class TestRetryMechanism:
         )
         pipeline = UnifiedAnalysisPipeline(config)
         
-        async def run_analysis():
-            with patch.object(pipeline, '_real_llm_analysis', side_effect=Exception("Always fails")):
-                with patch.object(pipeline, '_fallback_analysis', new_callable=AsyncMock) as mock_fallback:
-                    mock_fallback.return_value = {"fallback": True}
-                    return await pipeline._execute_analysis_mode("Test", AnalysisMode.UNIFIED)
+        with patch.object(pipeline, '_real_llm_analysis', side_effect=Exception("Always fails")):
+            with patch.object(pipeline, '_fallback_analysis', new_callable=AsyncMock) as mock_fallback:
+                mock_fallback.return_value = {"fallback": True}
+                result = await pipeline._execute_analysis_mode("Test", AnalysisMode.UNIFIED)
 
-        result = asyncio.run(run_analysis())
-                
         assert result["fallback"] is True
 
 
@@ -385,7 +383,8 @@ class TestPipelineIntegration:
     """Tests d'intégration pour le pipeline."""
     
     @pytest.mark.integration
-    def test_full_pipeline_workflow(self):
+    @pytest.mark.asyncio
+    async def test_full_pipeline_workflow(self):
         """Test workflow complet du pipeline."""
         pipeline = create_analysis_pipeline(
             analysis_modes=["unified", "fallacies"],
@@ -393,14 +392,14 @@ class TestPipelineIntegration:
         )
         
         # Test analyse unique
-        result = asyncio.run(pipeline.analyze_text("Test d'intégration du pipeline"))
+        result = await pipeline.analyze_text("Test d'intégration du pipeline")
         
         assert result.status == "completed"
         assert len(result.results) == 2
         
         # Test analyse batch
         texts = ["Texte 1", "Texte 2"]
-        batch_results = asyncio.run(pipeline.analyze_batch(texts))
+        batch_results = await pipeline.analyze_batch(texts)
         
         assert len(batch_results) == 2
         

@@ -59,29 +59,32 @@ class TestCryptoWorkflowManager:
         
         assert key1 != key2
     
-    def test_load_encrypted_corpus_file_not_found(self):
+    @pytest.mark.asyncio
+    async def test_load_encrypted_corpus_file_not_found(self):
         """Test avec fichier non existant."""
         manager = CryptoWorkflowManager("test_key")
         
-        result = asyncio.run(manager.load_encrypted_corpus(["nonexistent.enc"]))
+        result = await manager.load_encrypted_corpus(["nonexistent.enc"])
         
         assert not result.success
         assert len(result.errors) > 0
         assert "non trouvé" in result.errors[0]
         assert result.total_definitions == 0
     
-    def test_load_encrypted_corpus_empty_list(self):
+    @pytest.mark.asyncio
+    async def test_load_encrypted_corpus_empty_list(self):
         """Test avec liste vide de fichiers."""
         manager = CryptoWorkflowManager("test_key")
         
-        result = asyncio.run(manager.load_encrypted_corpus([]))
+        result = await manager.load_encrypted_corpus([])
         
         assert result.success  # Pas d'erreur si liste vide
         assert len(result.loaded_files) == 0
         assert result.total_definitions == 0
     
+    @pytest.mark.asyncio
     @patch('argumentation_analysis.utils.crypto_workflow.load_extract_definitions')
-    def test_load_encrypted_corpus_success(self, mock_load):
+    async def test_load_encrypted_corpus_success(self, mock_load):
         """Test déchiffrement réussi."""
         mock_definitions = [
             {"content": "Texte de test 1", "id": "def1"},
@@ -95,7 +98,7 @@ class TestCryptoWorkflowManager:
 
         try:
             manager = CryptoWorkflowManager("test_key")
-            result = asyncio.run(manager.load_encrypted_corpus([str(tmp_path)]))
+            result = await manager.load_encrypted_corpus([str(tmp_path)])
 
             assert result.success
             assert result.total_definitions == 2
@@ -106,8 +109,9 @@ class TestCryptoWorkflowManager:
         finally:
             tmp_path.unlink()
     
+    @pytest.mark.asyncio
     @patch('argumentation_analysis.utils.crypto_workflow.load_extract_definitions')
-    def test_load_encrypted_corpus_decryption_failure(self, mock_load):
+    async def test_load_encrypted_corpus_decryption_failure(self, mock_load):
         """Test échec de déchiffrement."""
         # Mock qui retourne None (échec)
         mock_load.return_value = None
@@ -117,7 +121,7 @@ class TestCryptoWorkflowManager:
         
         try:
             manager = CryptoWorkflowManager("test_key")
-            result = asyncio.run(manager.load_encrypted_corpus([str(tmp_path)]))
+            result = await manager.load_encrypted_corpus([str(tmp_path)])
             
             assert not result.success
             assert len(result.errors) > 0
@@ -126,12 +130,13 @@ class TestCryptoWorkflowManager:
         finally:
             tmp_path.unlink()
     
-    def test_load_encrypted_corpus_import_error(self):
+    @pytest.mark.asyncio
+    async def test_load_encrypted_corpus_import_error(self):
         """Test avec modules de déchiffrement non disponibles."""
         with tempfile.NamedTemporaryFile(suffix=".enc", delete=True) as tmp_file:
             with patch('argumentation_analysis.utils.crypto_workflow.load_extract_definitions', side_effect=ImportError("Module not found")):
                 manager = CryptoWorkflowManager("test_key")
-                result = asyncio.run(manager.load_encrypted_corpus([tmp_file.name]))
+                result = await manager.load_encrypted_corpus([tmp_file.name])
                 
                 assert not result.success
                 assert len(result.errors) > 0
@@ -225,7 +230,8 @@ class TestCryptoWorkflowIntegration:
     """Tests d'intégration pour crypto_workflow."""
     
     @pytest.mark.integration
-    def test_full_workflow_simulation(self):
+    @pytest.mark.asyncio
+    async def test_full_workflow_simulation(self):
         """Test du workflow complet en simulation."""
         manager = CryptoWorkflowManager("integration_test_key")
         
@@ -237,7 +243,7 @@ class TestCryptoWorkflowIntegration:
             ]
             
             with tempfile.NamedTemporaryFile(suffix=".enc") as tmp_file:
-                result = asyncio.run(manager.load_encrypted_corpus([tmp_file.name]))
+                result = await manager.load_encrypted_corpus([tmp_file.name])
                 
                 # Validation du résultat
                 assert result.success

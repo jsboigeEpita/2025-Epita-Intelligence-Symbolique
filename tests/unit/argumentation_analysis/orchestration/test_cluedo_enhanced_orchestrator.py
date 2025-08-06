@@ -136,81 +136,59 @@ class TestCluedoOrchestratorIntegration:
     @patch('argumentation_analysis.orchestration.cluedo_extended_orchestrator.OracleTerminationStrategy.should_terminate')
     async def test_workflow_execution(self, mock_should_terminate, mock_selection_next, orchestrator, game_elements, mock_kernel, mocker):
         """
-        Tests the execution of a simple, complete workflow, mocking agent responses.
+        Tests the execution of a simple, end-to-end workflow with real agents and real LLM calls.
+        Note: This test will make actual calls to the configured LLM API.
         """
-        mocker.patch('argumentation_analysis.agents.core.logic.propositional_logic_agent.TweetyBridge')
-        mock_agent_factory = mocker.patch('argumentation_analysis.agents.factory.AgentFactory', autospec=True)
-        mock_moriarty_class = mocker.patch('argumentation_analysis.orchestration.cluedo_extended_orchestrator.MoriartyInterrogatorAgent', autospec=True)
-
-        # Configurer le mock de l'AgentFactory pour retourner des agents mockés
-        mock_factory_instance = mock_agent_factory.return_value
-        
-        mock_sherlock = Mock(spec=SherlockEnqueteAgent)
-        mock_sherlock.name = "Sherlock"
-        mock_factory_instance.create_sherlock_agent.return_value = mock_sherlock
-
-        mock_watson = Mock(spec=WatsonLogicAssistant)
-        mock_watson.name = "Watson"
-        mock_factory_instance.create_watson_agent.return_value = mock_watson
-
-        # Configurer le mock de Moriarty
-        mock_moriarty = Mock(spec=MoriartyInterrogatorAgent)
-        mock_moriarty.name = "Moriarty"
-        mock_moriarty_class.return_value = mock_moriarty
-        
         # --- Setup ---
-        mock_kernel.add_plugin = Mock()
-
-        # Configure the mock to satisfy Pydantic validation
-        mock_kernel.get_service.return_value.service_id = "test_service_id"
+        # Ensure we are NOT using a mock LLM for a true end-to-end test.
+        orchestrator.settings.use_mock_llm = False
+        
+        mocker.patch('argumentation_analysis.agents.core.logic.propositional_logic_agent.TweetyBridge')
+        
+        # The real kernel and its services will be used.
+        # We need to ensure the kernel is set up correctly in the fixture if needed.
+        # For this test, we assume the orchestrator's default kernel is sufficient.
+        
         await orchestrator.setup_workflow(elements_jeu=game_elements)
 
-        # Mock agents and their 'invoke' responses
-        # Get the mocked agents from the orchestrator instance
-        mock_sherlock = orchestrator.sherlock_agent
-        mock_watson = orchestrator.watson_agent
-        mock_moriarty = orchestrator.moriarty_agent
+        # We are using real agents and a real LLM, but we still need to mock the
+        # selection and termination strategies to have a predictable test flow.
+        real_sherlock = orchestrator.sherlock_agent
+        real_watson = orchestrator.watson_agent
+        real_moriarty = orchestrator.moriarty_agent
 
-        # The 'invoke' method on the original object is an 'async def' function.
-        # Because our agent mocks have a 'spec', their 'invoke' attribute is
-        # automatically an AsyncMock. Calling it returns a coroutine.
-        # However, the code under test does not 'await' the call, it directly
-        # uses the result in an 'async for' loop.
-        # To solve this, we must override the 'invoke' AsyncMock with a regular
-        # Mock that directly returns our async iterator.
-        mock_sherlock.invoke = Mock(return_value=AsyncIterator([ChatMessageContent(role="assistant", content="Sherlock's turn", name="Sherlock")]))
-        mock_watson.invoke = Mock(return_value=AsyncIterator([ChatMessageContent(role="assistant", content="Watson's turn", name="Watson")]))
-        mock_moriarty.invoke = Mock(return_value=AsyncIterator([ChatMessageContent(role="assistant", content="Moriarty's turn", name="Moriarty")]))
-
-        # Configure strategy mocks
-        mock_selection_next.side_effect = [mock_sherlock, mock_watson, mock_moriarty, mock_sherlock]
+        mock_selection_next.side_effect = [real_sherlock, real_watson, real_moriarty, real_sherlock]
         mock_should_terminate.side_effect = [False, False, False, True] # Terminate after 3 turns
 
         # --- Action ---
         result = await orchestrator.execute_workflow("Start the investigation.")
 
         # --- Assertions ---
-        # Verify workflow execution flow
+        # Verify workflow execution flow by checking our strategy mocks
         assert mock_selection_next.call_count == 3
         assert mock_should_terminate.call_count == 4
         
-        mock_sherlock.invoke.assert_called_once()
-        mock_watson.invoke.assert_called_once()
-        mock_moriarty.invoke.assert_called_once()
-
         # Verify final result structure
         assert "workflow_info" in result
         assert "solution_analysis" in result
         assert "conversation_history" in result
         assert "oracle_statistics" in result
         
+        # Verify that the conversation history contains plausible messages.
+        # We cannot assert the exact content due to the non-deterministic nature of LLMs.
         history = result["conversation_history"]
-        assert len(history) == 3
-        assert history[0]["sender"] == "Sherlock"
-        assert history[0]["message"] == "Sherlock's turn"
-        assert history[1]["sender"] == "Watson"
-        assert history[2]["sender"] == "Moriarty"
+        assert len(history) == 3 # We expect 3 turns based on our mocks
+        
+        # Check that each message has the expected structure
+        assert history[0]["sender"] == real_sherlock.name
+        assert isinstance(history[0]["message"], str) and len(history[0]["message"]) > 0
+        
+        assert history[1]["sender"] == real_watson.name
+        assert isinstance(history[1]["message"], str) and len(history[1]["message"]) > 0
 
-        # Verify metrics were collected
+        assert history[2]["sender"] == real_moriarty.name
+        assert isinstance(history[2]["message"], str) and len(history[2]["message"]) > 0
+
+        # Verify metrics were collected and are valid
         assert result["workflow_info"]["execution_time_seconds"] > 0
         assert result["solution_analysis"]["success"] is False # No solution was proposed

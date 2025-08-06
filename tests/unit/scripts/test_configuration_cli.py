@@ -122,8 +122,9 @@ class TestConfigurationCLI:
         assert args.analysis_modes == ['unified']
         assert args.require_real_gpt is True
 
+    @pytest.mark.asyncio
     @patch('project_core.rhetorical_analysis_from_scripts.unified_production_analyzer.UnifiedProductionAnalyzer')
-    def test_end_to_end_cli_flow(self, mock_analyzer_class):
+    async def test_end_to_end_cli_flow(self, mock_analyzer_class):
         """Simule un flux CLI complet avec des mocks pour vérifier l'intégration."""
 
         # 1. Configuration des mocks
@@ -161,7 +162,7 @@ class TestConfigurationCLI:
             from project_core.rhetorical_analysis_from_scripts.unified_production_analyzer import main
             
             # 5. Appel de la fonction `main`
-            asyncio.run(main())
+            await main()
 
             # 6. Vérifications
             mock_analyzer_class.assert_called_once()

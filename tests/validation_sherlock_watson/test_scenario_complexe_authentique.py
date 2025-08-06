@@ -11,8 +11,8 @@ import pytest
 from pathlib import Path
 
 from argumentation_analysis.services.crypto_service import CryptoService
-from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
-from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
+from argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer import SemanticArgumentAnalyzer as EnhancedComplexFallacyAnalyzer
+from argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import ContextualFallacyDetector as EnhancedContextualFallacyAnalyzer
 from argumentation_analysis.utils.text_processing import split_text_into_arguments
 
 @pytest.fixture(scope="module")

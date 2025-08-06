@@ -309,7 +309,8 @@ class TestOperationalManager:
         assert hasattr(operational_manager, 'middleware')
         assert hasattr(operational_manager, 'adapter')
     
-    def test_process_tactical_task_puts_task_in_queue(self, operational_manager, sample_tasks):
+    @pytest.mark.asyncio
+    async def test_process_tactical_task_puts_task_in_queue(self, operational_manager, sample_tasks):
         """
         Teste que 'process_tactical_task' met bien une tâche dans la queue et
         enregistre une future, sans tester le worker.
@@ -319,30 +320,27 @@ class TestOperationalManager:
         operational_manager.tactical_operational_interface.translate_task_to_command.return_value = op_task
         operational_manager.operational_state.add_result_future = MagicMock()
 
-        async def run_test():
-            # On ne veut pas que le test attende la future, car elle ne sera jamais résolue dans ce test unitaire.
-            # On la lance en tâche de fond.
-            processing_task = asyncio.create_task(operational_manager.process_tactical_task(task))
-            
-            # On donne la main à la boucle d'événements pour permettre à la coroutine de s'exécuter jusqu'au premier await.
-            await asyncio.sleep(0)
-
-            # Vérifier que la tâche a bien été mise dans la queue
-            assert not operational_manager.task_queue.empty()
-            queued_task = operational_manager.task_queue.get_nowait()
-            assert queued_task["id"] == op_task["id"]
-
-            # Vérifier qu'une future a bien été enregistrée
-            operational_manager.operational_state.add_result_future.assert_called_once_with(op_task["id"], ANY)
-
-            # Nettoyage propre de la tâche pour éviter un warning "task never awaited"
-            processing_task.cancel()
-            try:
-                await processing_task
-            except asyncio.CancelledError:
-                pass # C'est normal
+        # On ne veut pas que le test attende la future, car elle ne sera jamais résolue dans ce test unitaire.
+        # On la lance en tâche de fond.
+        processing_task = asyncio.create_task(operational_manager.process_tactical_task(task))
         
-        asyncio.run(run_test())
+        # On donne la main à la boucle d'événements pour permettre à la coroutine de s'exécuter jusqu'au premier await.
+        await asyncio.sleep(0)
+
+        # Vérifier que la tâche a bien été mise dans la queue
+        assert not operational_manager.task_queue.empty()
+        queued_task = operational_manager.task_queue.get_nowait()
+        assert queued_task["id"] == op_task["id"]
+
+        # Vérifier qu'une future a bien été enregistrée
+        operational_manager.operational_state.add_result_future.assert_called_once_with(op_task["id"], ANY)
+
+        # Nettoyage propre de la tâche pour éviter un warning "task never awaited"
+        processing_task.cancel()
+        try:
+            await processing_task
+        except asyncio.CancelledError:
+            pass # C'est normal
 
 
 class TestHierarchicalIntegration:
@@ -370,7 +368,8 @@ class TestHierarchicalIntegration:
             "operational": operational
         }
     
-    def test_full_hierarchical_flow(self, integrated_hierarchy):
+    @pytest.mark.asyncio
+    async def test_full_hierarchical_flow(self, integrated_hierarchy):
         """
         Test du flux complet, simulant la résolution de la future.
         """
@@ -399,29 +398,26 @@ class TestHierarchicalIntegration:
             future_container.append(future)
         operational.operational_state.add_result_future = MagicMock(side_effect=capture_future)
 
-        async def run_flow():
-            # --- Flux ---
-            strategic.initialize_analysis(text)
-            directive = strategic.adapter.issue_directive.call_args.kwargs
-            objectives = directive.get('parameters', {}).get('objectives', [])
-            tactical.process_strategic_objectives(objectives)
-            a_task_for_op = tactical.adapter.assign_task.call_args.kwargs.get("parameters")
-            
-            # Lancer le traitement op. en arrière-plan
-            processing_task = asyncio.create_task(operational.process_tactical_task(a_task_for_op))
-            await asyncio.sleep(0)
+        # --- Flux ---
+        strategic.initialize_analysis(text)
+        directive = strategic.adapter.issue_directive.call_args.kwargs
+        objectives = directive.get('parameters', {}).get('objectives', [])
+        tactical.process_strategic_objectives(objectives)
+        a_task_for_op = tactical.adapter.assign_task.call_args.kwargs.get("parameters")
+        
+        # Lancer le traitement op. en arrière-plan
+        processing_task = asyncio.create_task(operational.process_tactical_task(a_task_for_op))
+        await asyncio.sleep(0)
 
-            # S'assurer qu'une future a été capturée
-            assert len(future_container) == 1
-            future_to_resolve = future_container[0]
-            
-            # Résoudre la future, ce qui doit débloquer la processing_task
-            future_to_resolve.set_result(op_result)
-            
-            # Attendre le résultat
-            return await processing_task
-
-        final_result = asyncio.run(run_flow())
+        # S'assurer qu'une future a été capturée
+        assert len(future_container) == 1
+        future_to_resolve = future_container[0]
+        
+        # Résoudre la future, ce qui doit débloquer la processing_task
+        future_to_resolve.set_result(op_result)
+        
+        # Attendre le résultat
+        final_result = await processing_task
         # Vérification
         assert final_result == final_result_processed
     

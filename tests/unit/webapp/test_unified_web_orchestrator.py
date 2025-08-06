@@ -65,7 +65,8 @@ def test_initialization(orchestrator, mock_managers):
     assert orchestrator.process_cleaner == mock_managers['cleaner']
     assert orchestrator.app_info.status == WebAppStatus.STOPPED
 
-def test_start_webapp_success_flow(orchestrator):
+@pytest.mark.asyncio
+async def test_start_webapp_success_flow(orchestrator):
     """Tests the successful startup flow of the webapp."""
     # Configure mocks for success
     orchestrator.config['frontend']['enabled'] = True
@@ -73,12 +74,8 @@ def test_start_webapp_success_flow(orchestrator):
     orchestrator._validate_services = AsyncMock(return_value=True)
     orchestrator._launch_playwright_browser = AsyncMock()
 
-    async def run_start():
-        with patch.object(orchestrator, '_cleanup_previous_instances', new_callable=AsyncMock) as mock_cleanup:
-            result = await orchestrator.start_webapp(frontend_enabled=True)
-            return result, mock_cleanup
-
-    result, mock_cleanup = asyncio.run(run_start())
+    with patch.object(orchestrator, '_cleanup_previous_instances', new_callable=AsyncMock) as mock_cleanup:
+        result = await orchestrator.start_webapp(frontend_enabled=True)
 
     assert result is True
     mock_cleanup.assert_called_once()
@@ -91,16 +88,14 @@ def test_start_webapp_success_flow(orchestrator):
     assert orchestrator.app_info.backend_pid == 10
     assert orchestrator.app_info.frontend_pid == 20
 
-def test_start_webapp_backend_fails(orchestrator):
+@pytest.mark.asyncio
+async def test_start_webapp_backend_fails(orchestrator):
     """Tests the startup flow when the backend fails to start."""
     # Configure the mock to simulate failure
     orchestrator.backend_manager.start.return_value = {'success': False, 'error': 'simulated failure'}
 
-    async def run_start():
-        with patch.object(orchestrator, '_cleanup_previous_instances', new_callable=AsyncMock) as mock_cleanup:
-            return await orchestrator.start_webapp(), mock_cleanup
-
-    result, mock_cleanup = asyncio.run(run_start())
+    with patch.object(orchestrator, '_cleanup_previous_instances', new_callable=AsyncMock) as mock_cleanup:
+        result = await orchestrator.start_webapp()
 
     assert result is False
     mock_cleanup.assert_called_once()
@@ -109,7 +104,8 @@ def test_start_webapp_backend_fails(orchestrator):
     assert orchestrator.frontend_manager is None
     assert orchestrator.app_info.status == WebAppStatus.ERROR
 
-def test_stop_webapp_flow(orchestrator, mock_managers):
+@pytest.mark.asyncio
+async def test_stop_webapp_flow(orchestrator, mock_managers):
     """Tests the graceful shutdown sequence."""
     # Simulate a running state
     orchestrator.app_info.status = WebAppStatus.RUNNING
@@ -121,7 +117,7 @@ def test_stop_webapp_flow(orchestrator, mock_managers):
 
     orchestrator._close_playwright_browser = AsyncMock()
 
-    asyncio.run(orchestrator.stop_webapp())
+    await orchestrator.stop_webapp()
 
     orchestrator._close_playwright_browser.assert_called_once()
     orchestrator.backend_manager.stop.assert_called_once()
@@ -129,18 +125,16 @@ def test_stop_webapp_flow(orchestrator, mock_managers):
     orchestrator.process_cleaner.cleanup_webapp_processes.assert_called_once()
     assert orchestrator.app_info.status == WebAppStatus.STOPPED
 
-def test_full_integration_test_flow_success(orchestrator):
+@pytest.mark.asyncio
+async def test_full_integration_test_flow_success(orchestrator):
     """Tests the main integration method flow on success."""
     orchestrator.start_webapp = AsyncMock(return_value=True)
     orchestrator.run_tests = AsyncMock(return_value=True)
     orchestrator.stop_webapp = AsyncMock()
     orchestrator._save_trace_report = AsyncMock()
 
-    async def run_test():
-        with patch('asyncio.sleep', new_callable=AsyncMock):
-            return await orchestrator.full_integration_test()
-
-    result = asyncio.run(run_test())
+    with patch('asyncio.sleep', new_callable=AsyncMock):
+        result = await orchestrator.full_integration_test()
 
     assert result is True
     orchestrator.start_webapp.assert_called_once()
@@ -148,7 +142,8 @@ def test_full_integration_test_flow_success(orchestrator):
     orchestrator.stop_webapp.assert_called_once()
     orchestrator._save_trace_report.assert_called_once()
 
-def test_full_integration_test_flow_tests_fail(orchestrator):
+@pytest.mark.asyncio
+async def test_full_integration_test_flow_tests_fail(orchestrator):
     """Tests the main integration method flow when tests fail."""
     orchestrator.start_webapp = AsyncMock(return_value=True)
     # Simulate test failure by raising an exception, as run_tests would do
@@ -156,14 +151,11 @@ def test_full_integration_test_flow_tests_fail(orchestrator):
     orchestrator.stop_webapp = AsyncMock()
     orchestrator._save_trace_report = AsyncMock()
 
-    async def run_test():
-        with patch('asyncio.sleep', new_callable=AsyncMock):
-            # The test expects the orchestrator's full_integration_test to catch the exception
-            # and return False. If the exception propagates, this test will fail,
-            # indicating an issue in the orchestrator's error handling.
-            return await orchestrator.full_integration_test()
-
-    result = asyncio.run(run_test())
+    with patch('asyncio.sleep', new_callable=AsyncMock):
+        # The test expects the orchestrator's full_integration_test to catch the exception
+        # and return False. If the exception propagates, this test will fail,
+        # indicating an issue in the orchestrator's error handling.
+        result = await orchestrator.full_integration_test()
 
     assert result is False, "The orchestrator should have caught the exception and returned False."
     orchestrator.stop_webapp.assert_called_once() # Stop should still be called

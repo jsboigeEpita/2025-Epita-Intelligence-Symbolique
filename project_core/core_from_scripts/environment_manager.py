@@ -124,9 +124,19 @@ class EnvironmentManager:
         # 1. Gestion du PYTHONPATH
         python_path = env_vars.get('PYTHONPATH', '')
         project_root_str = str(self.project_root)
+        libs_path_str = str(self.project_root / "libs")
+
+        # Ajout de la racine du projet au PYTHONPATH
         if project_root_str not in python_path.split(os.pathsep):
             self.logger.info(f"Ajout de {project_root_str} au PYTHONPATH.")
-            env_vars['PYTHONPATH'] = f"{project_root_str}{os.pathsep}{python_path}"
+            python_path = f"{project_root_str}{os.pathsep}{python_path}"
+
+        # Ajout du répertoire libs au PYTHONPATH
+        if libs_path_str not in python_path.split(os.pathsep):
+            self.logger.info(f"Ajout de {libs_path_str} au PYTHONPATH.")
+            python_path = f"{libs_path_str}{os.pathsep}{python_path}"
+
+        env_vars['PYTHONPATH'] = python_path
             
         # 2. Gestion spécifique pour Pytest (JAVA_HOME)
         if command_parts and 'pytest' in command_parts[0].lower():
