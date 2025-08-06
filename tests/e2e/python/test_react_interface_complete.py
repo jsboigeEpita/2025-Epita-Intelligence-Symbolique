@@ -15,6 +15,7 @@ import os
 import requests
 import signal
 from pathlib import Path
+from project_core.utils.shell import run_in_activated_env, ShellCommandError
 
 # Configuration d'encodage pour Windows
 if sys.platform == "win32":
@@ -74,13 +75,23 @@ def start_backend_api():
     print("Démarrage API via orchestrateur unifié...")
     print("Initialisation en cours (15-30s)...")
     
-    process = subprocess.Popen(
-        orchestrator_cmd,
-        cwd=str(project_root),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True
-    )
+    try:
+        # Note: run_in_activated_env est synchrone, mais nous le lançons
+        # et vérifions simplement que le service est démarré.
+        # Le processus parent (ce script) ne gérera pas l'enfant.
+        run_in_activated_env(
+            command=orchestrator_cmd,
+            env_name="projet-is",
+            cwd=str(project_root),
+            check_errors=False, # Ne pas bloquer si le script continue en arrière-plan
+        )
+    except ShellCommandError as e:
+        print(f"[ERROR] Échec du lancement de l'orchestrateur: {e}")
+        return None
+
+    # Le processus est maintenant détaché. Nous nous fions à wait_for_service.
+    # Il n'y a plus d'objet 'process' à retourner.
+    process = None
     
     # Attendre que l'API soit prête
     if wait_for_service("http://localhost:5003/api/health", "API Backend", timeout=60):
