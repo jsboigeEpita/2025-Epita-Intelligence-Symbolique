@@ -116,7 +116,11 @@ async def main():
     try:
         # Le bootstrap gère aussi l'initialisation de la JVM, critique pour Tweety.
         # Note: initialize_project_environment n'est pas une coroutine.
-        environment_context = initialize_project_environment(force_real_llm_in_test=True)
+        # On force le mock LLM si --test-mode est activé.
+        # Cela évite de dépendre d'une clé API en environnement de test.
+        environment_context = initialize_project_environment(
+            force_mock_llm=args.test_mode
+        )
         logger.info("Environnement du projet et JVM initialisés avec succès.")
     except Exception as e:
         logger.critical(f"Échec critique du bootstrap de l'environnement: {e}", exc_info=True)
@@ -148,9 +152,9 @@ async def main():
             
         final_report = await run_cluedo_oracle_game(
             kernel=kernel,
+            settings=environment_context.settings,
             max_turns=args.max_turns,
             oracle_strategy=args.oracle_strategy
-            # is_test_mode n'est pas un paramètre de la nouvelle fonction
         )
         
         # 4. Affichage du rapport final

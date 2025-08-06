@@ -464,8 +464,12 @@ class CluedoExtendedOrchestrator:
                 ]
 
                 # 2. Exécuter l'agent avec l'historique nettoyé
-                agent_response_stream = next_agent.invoke(input=history_to_send, arguments=KernelArguments())
-                agent_response_raw = [message async for message in agent_response_stream]
+                agent_response_stream = await next_agent.invoke(input=history_to_send, arguments=KernelArguments())
+                # Gérer les réponses streamées et non-streamées (mock)
+                if hasattr(agent_response_stream, '__aiter__'):
+                    agent_response_raw = [message async for message in agent_response_stream]
+                else:
+                    agent_response_raw = agent_response_stream  # La réponse est déjà une liste
                 
                 # 3. Consolider et nettoyer la réponse de l'agent
                 # C'est une étape CRUCIALE pour éviter le context overflow avec les réponses en streaming.
