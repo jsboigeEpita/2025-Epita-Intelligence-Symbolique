@@ -123,7 +123,7 @@ class TestFOLPipelineIntegration:
         assert "success" in message.lower() or belief_set is not None
         
         # 3. Analyser avec Tweety FOL
-        is_consistent, consistency_message = fol_agent.is_consistent(belief_set)
+        is_consistent, consistency_message = await fol_agent.is_consistent(belief_set)
 
         assert is_consistent is True, f"L'ensemble de croyances devrait être cohérent: {consistency_message}"
     
@@ -209,7 +209,7 @@ class TestFOLPipelineIntegration:
         for text in test_texts:
             belief_set, _ = await fol_agent.text_to_belief_set(text)
             if belief_set:
-                is_consistent, _ = fol_agent.is_consistent(belief_set)
+                is_consistent, _ = await fol_agent.is_consistent(belief_set)
                 results.append({"consistent": is_consistent})
             else:
                 results.append({"consistent": False})
@@ -243,7 +243,7 @@ class TestFOLPipelineIntegration:
             from argumentation_analysis.agents.core.logic.belief_set import FirstOrderBeliefSet
             belief_set = FirstOrderBeliefSet(belief_set_str) # Création manuelle pour ce test
             
-            is_consistent, message = fol_agent.is_consistent(belief_set)
+            is_consistent, message = await fol_agent.is_consistent(belief_set)
 
             assert is_consistent is True
             
