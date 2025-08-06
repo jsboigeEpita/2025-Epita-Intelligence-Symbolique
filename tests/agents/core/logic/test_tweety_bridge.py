@@ -33,15 +33,16 @@ class TestTweetyBridge(unittest.TestCase):
                 self.fail(f"L'initialisation de la JVM en condition réelle a échoué: {e}")
         else:
             # Patcher entièrement TweetyInitializer pour éviter tout contact avec jpype
-            self.initializer_patcher = patch('argumentation_analysis.agents.core.logic.tweety_bridge.TweetyInitializer', autospec=True)
+            # On retire spec=True car le patching de cette classe est problématique.
+            self.initializer_patcher = patch('argumentation_analysis.agents.core.logic.tweety_bridge.TweetyInitializer')
             self.mock_initializer_class = self.initializer_patcher.start()
             self.mock_initializer_instance = self.mock_initializer_class.return_value
             # Simuler une JVM prête
             self.mock_initializer_instance.is_jvm_ready.return_value = True
 
             # Patcher les classes Handler pour injecter des mocks
-            self.pl_handler_patcher = patch('argumentation_analysis.agents.core.logic.tweety_bridge.PropositionalLogicHandler', autospec=True)
-            self.fol_handler_patcher = patch('argumentation_analysis.agents.core.logic.tweety_bridge.FirstOrderLogicHandler', autospec=True)
+            self.pl_handler_patcher = patch('argumentation_analysis.agents.core.logic.tweety_bridge.PLHandler', autospec=True)
+            self.fol_handler_patcher = patch('argumentation_analysis.agents.core.logic.tweety_bridge.FOLHandler', autospec=True)
             self.mock_pl_handler_class = self.pl_handler_patcher.start()
             self.mock_fol_handler_class = self.fol_handler_patcher.start()
 
@@ -81,6 +82,7 @@ class TestTweetyBridge(unittest.TestCase):
         self.assertIsNotNone(self.bridge._pl_handler)
 
         # Premier accès au fol_handler
+        # Premier accès au fol_handler
         _ = self.bridge.fol_handler
         self.mock_fol_handler_class.assert_called_once_with(self.bridge._initializer)
         self.assertIsNotNone(self.bridge._fol_handler)
@@ -105,17 +107,17 @@ class TestTweetyBridge(unittest.TestCase):
         if not self.use_real_jpype:
             belief_set_mock = MagicMock()
             
-            # Appeler directement avec le mock, car la création est externe maintenant
-            self.bridge.fol_query(belief_set_mock, query_str)
+            # Appel via le handler mocké
+            self.bridge.fol_handler.fol_query(belief_set_mock, query_str)
             
             # Vérifier que la méthode du handler est appelée correctement
             self.mock_fol_handler_instance.fol_query.assert_called_once_with(belief_set_mock, query_str)
         else:
             try:
-                # Pour le test réel, nous devons d'abord créer un belief set
-                belief_set_obj = self.bridge.create_belief_set_from_string("forall X: p(X).")
+                # Pour le test réel, nous devons d'abord créer un belief set via le handler
+                belief_set_obj = self.bridge.fol_handler.create_belief_set_from_string("forall X: p(X).")
                 self.assertIsNotNone(belief_set_obj)
-                self.bridge.fol_query(belief_set_obj, query_str)
+                self.bridge.fol_handler.fol_query(belief_set_obj, query_str)
             except Exception as e:
                 self.fail(f"fol_query a levé une exception inattendue: {e}")
 
@@ -133,11 +135,13 @@ class TestTweetyBridge(unittest.TestCase):
         """Vérifie que validate_fol_formula délègue correctement."""
         formula = "forall X : p(X)"
         if not self.use_real_jpype:
-            self.bridge.validate_fol_formula(formula)
-            self.mock_fol_handler_instance.parse_fol_formula.assert_called_once_with(formula)
+            self.bridge.fol_handler.validate_formula_with_signature(MagicMock(), formula)
+            self.mock_fol_handler_instance.validate_formula_with_signature.assert_called_once()
         else:
-            self.assertTrue(self.bridge.validate_fol_formula(formula)[0])
-            self.assertFalse(self.bridge.validate_fol_formula("forall X p(X)")[0])
+            # Pour un test réel, il faudrait une signature
+            sig_mock = MagicMock()
+            self.assertTrue(self.bridge.fol_handler.validate_formula_with_signature(sig_mock, formula)[0])
+            self.assertFalse(self.bridge.fol_handler.validate_formula_with_signature(sig_mock, "forall X p(X)")[0])
 
 
 if __name__ == "__main__":

@@ -28,6 +28,7 @@ from typing import Optional, Dict, List, Tuple, Any
 # Pour éviter les dépendances circulaires, on les importe et on les type-hint comme ça
 from .pl_handler import PLHandler as PropositionalLogicHandler
 from .fol_handler import FOLHandler as FirstOrderLogicHandler
+from .modal_handler import ModalHandler
 from .af_handler import AFHandler as ArgumentationFrameworkHandler
 from .tweety_initializer import TweetyInitializer
 
@@ -47,6 +48,7 @@ class TweetyBridge:
     # Handlers pour les différentes logiques. Initialisés avec la logique du pont.
     _pl_handler: Optional[PropositionalLogicHandler] = None
     _af_handler: Optional[ArgumentationFrameworkHandler] = None
+    _modal_handler: Optional[ModalHandler] = None
     
     # Nouvel attribut pour l'initialiseur
     _initializer: Optional[TweetyInitializer] = None
@@ -110,6 +112,16 @@ class TweetyBridge:
             logger.debug("Chargement paresseux (lazy-loading) du AFHandler.")
             self._af_handler = ArgumentationFrameworkHandler(self._initializer)
         return self._af_handler
+
+    @property
+    def modal_handler(self) -> ModalHandler:
+        """Retourne le handler pour la logique modale, en l'initialisant si nécessaire."""
+        if not self.initializer.is_jvm_ready():
+            raise RuntimeError("La JVM n'est pas démarrée. Appelez initialize_jvm() en premier.")
+        if self._modal_handler is None:
+            logger.debug("Chargement paresseux (lazy-loading) du ModalHandler.")
+            self._modal_handler = ModalHandler(self._initializer)
+        return self._modal_handler
 
     @property
     def initializer(self) -> TweetyInitializer:
