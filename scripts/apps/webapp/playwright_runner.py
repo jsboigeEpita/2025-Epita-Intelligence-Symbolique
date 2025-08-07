@@ -180,7 +180,7 @@ class PlaywrightRunner:
         self.logger.info(f"Préparation de la commande Pytest pour l'environnement Conda 'projet-is-roo-new'.")
 
         cmd = [
-            'python', '-m', 'pytest',
+            'pytest',
             '-v',
             '-p', 'no:asyncio', # Désactive le plugin asyncio pour éviter les conflits avec Playwright
             '-p', 'pytest_playwright', # Force le chargement du plugin Playwright

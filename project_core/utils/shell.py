@@ -174,13 +174,12 @@ def run_in_activated_env(
     try:
         python_executable = _get_env_python_executable(env_name)
         # For commands like 'pip', 'pytest', etc., use '-m' for robustness
-        if command[0] in ['pip', 'pytest', 'python']:
-             full_command = [python_executable, '-m'] + command[1:] if len(command) > 1 else [python_executable]
-             if command[0] not in ['python']:
-                 full_command.insert(1, command[0])
-
+        if command[0] in ['pip', 'pytest']:
+            full_command = [python_executable, '-m'] + command
+        elif command[0] == 'python':
+            full_command = [python_executable] + command[1:]
         else:
-             full_command = [python_executable] + command
+            full_command = [python_executable] + command
         
         return run_sync(
             command=full_command,
@@ -205,10 +204,10 @@ async def run_in_activated_env_async(
     logger.info(f"Attempting to run async command in activated env '{env_name}': {' '.join(command)}")
     try:
         python_executable = await _get_env_python_executable_async(env_name)
-        if command[0] in ['pip', 'pytest', 'python']:
-             full_command = [python_executable, '-m'] + command[1:] if len(command) > 1 else [python_executable]
-             if command[0] not in ['python']:
-                 full_command.insert(1, command[0])
+        if command[0] in ['pip', 'pytest']:
+            full_command = [python_executable, '-m'] + command
+        elif command[0] == 'python':
+            full_command = [python_executable] + command[1:]
         else:
             full_command = [python_executable] + command
         
