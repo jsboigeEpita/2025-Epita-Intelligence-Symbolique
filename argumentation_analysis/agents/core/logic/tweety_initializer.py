@@ -229,7 +229,8 @@ class TweetyInitializer:
         try:
             logger.debug("Initializing Modal Logic components...")
             self.__class__._modal_parser = jpype.JClass("org.tweetyproject.logics.ml.parser.MlParser")()
-            logger.info("Modal Logic parser initialized.")
+            self.__class__._modal_reasoner = jpype.JClass("org.tweetyproject.logics.ml.reasoner.SimpleMlReasoner")()
+            logger.info("Modal Logic parser and reasoner initialized.")
         except Exception as e:
             logger.error(f"Error initializing Modal Logic components: {e}", exc_info=True)
             raise
@@ -264,6 +265,12 @@ class TweetyInitializer:
         if not TweetyInitializer._modal_parser:
             raise RuntimeError("Modal Parser not initialized.")
         return TweetyInitializer._modal_parser
+
+    @staticmethod
+    def get_modal_reasoner():
+        if not TweetyInitializer._modal_reasoner:
+            raise RuntimeError("Modal Reasoner not initialized.")
+        return TweetyInitializer._modal_reasoner
 
     @staticmethod
     def is_jvm_ready() -> bool:

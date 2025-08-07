@@ -316,7 +316,7 @@ def get_jvm_options() -> List[str]:
         # f"-Xms{settings.jvm.min_heap_size}", # Temporairement désactivé pour le débogage
         # f"-Xmx{settings.jvm.max_heap_size}", # Temporairement désactivé pour le débogage
         "-Dfile.encoding=UTF-8",
-        "-Djava.awt.headless=true"
+        # "-Djava.awt.headless=true" # NOTE: Désactivé car identifié comme cause de crash (voir docs)
     ]
     logger.info(f"Options JVM de base: {options}")
     return options
@@ -388,12 +388,15 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
             logger.info(f"  Classpath: {classpath[0] if classpath else 'Vide'}")
             logger.info("------------------------------------")
 
+            logger.info(">>> APPEL IMMINENT DE jpype.startJVM...")
             jpype.startJVM(
+                jvm_path_explicit,
                 *jvm_options,
                 classpath=classpath,
                 ignoreUnrecognized=True,
-                convertStrings=False
+                convertStrings=True
             )
+            logger.info("<<< APPEL DE jpype.startJVM TERMINÉ AVEC SUCCÈS.")
             
             _JVM_INITIALIZED_THIS_SESSION = True
             logger.info("[SUCCESS] JVM démarrée avec succès.")
