@@ -7,6 +7,7 @@ import argumentation_analysis.core.environment
 import os
 import subprocess
 import json
+from project_core.utils.shell import run_in_activated_env, ShellCommandError
 from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass, asdict
@@ -156,25 +157,28 @@ class GitFilesInventory:
             return "not_python"
         
         try:
-            activate_cmd = f'powershell -File .\\scripts\\env\\activate_project_env.ps1 -CommandToRun "python -m pytest --collect-only {file_path}"'
-            result = subprocess.run(
-                activate_cmd,
-                shell=True,
+            command_to_run = ["pytest", "--collect-only", file_path]
+            result = run_in_activated_env(
+                command=command_to_run,
+                env_name="projet-is",
                 cwd=self.project_root,
-                capture_output=True,
-                text=True,
+                check_errors=False,  # We check the return code manually
                 timeout=30
             )
             
             if result.returncode == 0:
                 return "syntax_ok"
             else:
+                # Log the truncated error for brevity in the report
                 return f"syntax_error: {result.stderr[:100]}"
                 
-        except subprocess.TimeoutExpired:
-            return "timeout"
-        except Exception as e:
+        except ShellCommandError as e:
+            if "timed out" in str(e):
+                return "timeout"
             return f"test_error: {str(e)[:100]}"
+        except Exception as e:
+            # Catch any other unexpected errors during the process
+            return f"unexpected_error: {str(e)[:100]}"
     
     def generate_recommendation(self, file_path: str, status: str, category: str, 
                               functional_test: str, file_info: Dict) -> tuple:

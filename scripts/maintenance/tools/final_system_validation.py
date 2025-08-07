@@ -18,6 +18,7 @@ import json
 import time
 import subprocess
 import traceback
+from project_core.utils.shell import run_in_activated_env, ShellCommandError
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Tuple, Any, Optional
@@ -60,18 +61,16 @@ class OracleEnhancedValidator:
             print(f"   [ERREUR] Erreur: {error}")
     
     def run_command_with_env(self, command: str, test_name: str) -> Tuple[bool, str, str]:
-        """Exécute une commande avec l'environnement projet activé"""
+        """Exécute une commande avec l'environnement projet activé via le service unifié."""
         try:
-            # Commande avec activation d'environnement
-            full_command = f'powershell -File .\\scripts\\env\\activate_project_env.ps1 -CommandToRun "{command}"'
+            command_parts = command.split()
             
-            result = subprocess.run(
-                full_command,
-                shell=True,
-                capture_output=True,
-                text=True,
-                timeout=120,
-                cwd=str(self.project_root)
+            result = run_in_activated_env(
+                command=command_parts,
+                env_name="projet-is",
+                cwd=self.project_root,
+                check_errors=False,
+                timeout=120
             )
             
             success = result.returncode == 0
@@ -80,10 +79,10 @@ class OracleEnhancedValidator:
             
             return success, stdout, stderr
             
-        except subprocess.TimeoutExpired:
-            return False, "", f"Timeout lors de l'exécution de {command}"
+        except ShellCommandError as e:
+            return False, "", str(e)
         except Exception as e:
-            return False, "", f"Erreur d'exécution: {str(e)}"
+            return False, "", f"Erreur inattendue dans run_command_with_env: {str(e)}"
     
     def test_oracle_imports(self) -> bool:
         """Test 1: Validation des imports Oracle Enhanced v2.1.0"""
