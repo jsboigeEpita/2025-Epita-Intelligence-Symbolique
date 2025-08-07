@@ -162,7 +162,7 @@ class TestUnifiedSystemIntegration:
             logic_type='FOL',
             orchestration_type='CONVERSATION'
         )
-        conv_orchestrator = ConversationOrchestrator(mode="demo", config=config)
+        conv_orchestrator = ConversationOrchestrator(mode="demo")
         conv_results = []
         for text in self.test_texts:
             result = conv_orchestrator.run_orchestration(text)
@@ -177,7 +177,7 @@ class TestUnifiedSystemIntegration:
         """Test de handoff conversation vers LLM réel."""
         async def _async_test():
             conv_config = UnifiedConfig(orchestration_type='CONVERSATION')
-            conv_orchestrator = ConversationOrchestrator(mode="demo", config=conv_config)
+            conv_orchestrator = ConversationOrchestrator(mode="demo")
             conv_result = conv_orchestrator.run_orchestration(self.test_texts[0])
             conv_state = conv_orchestrator.get_state()
             assert isinstance(conv_result, str)
@@ -211,7 +211,7 @@ class TestUnifiedSystemIntegration:
         ]
         for config in configs:
             if config.orchestration_type in ['CONVERSATION', 'UNIFIED']:
-                conv_orch = ConversationOrchestrator(config=config)
+                conv_orch = ConversationOrchestrator()
                 assert conv_orch.config.logic_type == config.logic_type
             if config.orchestration_type in ['REAL_LLM', 'UNIFIED']:
                 real_orch = RealLLMOrchestrator(config=config)
@@ -238,8 +238,7 @@ class TestUnifiedSystemIntegration:
                 require_real_tweety=True
             )
             conv_orchestrator = ConversationOrchestrator(
-                mode="enhanced",
-                config=authentic_config
+                mode="enhanced"
             )
             assert conv_orchestrator.is_authentic_mode()
             conv_result = conv_orchestrator.run_orchestration(self.test_texts[1])
@@ -311,7 +310,7 @@ class TestUnifiedErrorHandlingIntegration:
             logic_type='FOL',
             orchestration_type='CONVERSATION'
         )
-        orchestrator = ConversationOrchestrator(config=error_config)
+        orchestrator = ConversationOrchestrator()
         error_texts = ["", None, "🚫" * 1000]
         handled_errors = 0
         for text in error_texts:
@@ -360,7 +359,7 @@ class TestUnifiedConfigurationIntegration:
             orchestration_type='CONVERSATION',
             mock_level='PARTIAL'
         )
-        orchestrator = ConversationOrchestrator(config=config)
+        orchestrator = ConversationOrchestrator()
         if hasattr(orchestrator, 'config'):
             assert orchestrator.config.logic_type == 'FOL'
             assert orchestrator.config.mock_level == 'PARTIAL'
@@ -409,7 +408,7 @@ class TestUnifiedPerformanceIntegration:
         import gc
         for i in range(10):
             config = UnifiedConfig(logic_type='FOL')
-            orchestrator = ConversationOrchestrator(config=config)
+            orchestrator = ConversationOrchestrator()
             result = orchestrator.run_orchestration(f"Test mémoire {i}")
             assert isinstance(result, str)
             if i % 3 == 0:
@@ -429,7 +428,7 @@ class TestAuthenticIntegrationSuite:
             mock_level='NONE',
             require_real_tweety=True
         )
-        orchestrator = ConversationOrchestrator(config=config)
+        orchestrator = ConversationOrchestrator()
         logical_text = "Si P alors Q. P est vrai. Donc Q est vrai."
         result = orchestrator.run_orchestration(logical_text)
         assert isinstance(result, str)
@@ -455,7 +454,7 @@ class TestAuthenticIntegrationSuite:
                 require_real_gpt=True,
                 require_real_tweety=True
             )
-            conv_orchestrator = ConversationOrchestrator(config=config)
+            conv_orchestrator = ConversationOrchestrator()
             conv_result = conv_orchestrator.run_orchestration(
                 "Tous les philosophes réfléchissent. Socrate est un philosophe."
             )

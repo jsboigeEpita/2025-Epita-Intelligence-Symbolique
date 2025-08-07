@@ -82,7 +82,7 @@ def sherlock_agent(agent_factory):
     Fixture pour créer un agent Sherlock concret via la factory pour les tests.
     Utilise la méthode create_agent pour instancier la version concrète.
     """
-    return agent_factory.create_agent(
+    return agent_factory._create_agent(
         agent_class=ConcreteSherlockEnqueteAgent,
         agent_name=TEST_AGENT_NAME
     )
@@ -121,7 +121,7 @@ class TestSherlockEnqueteAgentAuthentic:
         """Test la configuration avec un prompt système personnalisé via la factory."""
         custom_prompt = "Instructions personnalisées pour Sherlock."
         
-        agent = agent_factory.create_agent(
+        agent = agent_factory._create_agent(
             agent_class=ConcreteSherlockEnqueteAgent,
             agent_name=TEST_AGENT_NAME,
             system_prompt=custom_prompt
@@ -190,7 +190,7 @@ class TestSherlockEnqueteAgentAuthentic:
 def test_sherlock_agent_integration_real(agent_factory):
     """Test d'intégration complet avec vraies APIs via la factory."""
     try:
-        agent = agent_factory.create_agent(
+        agent = agent_factory._create_agent(
                 agent_class=ConcreteSherlockEnqueteAgent,
                 agent_name="IntegrationTestAgent",
                 system_prompt="Test d'intégration authentique"
