@@ -33,17 +33,18 @@ from argumentation_analysis.agents.core.logic.propositional_logic_agent import P
 from argumentation_analysis.agents.core.logic.belief_set import PropositionalBeliefSet
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 from argumentation_analysis.agents.core.pl.pl_definitions import PL_AGENT_INSTRUCTIONS
+from argumentation_analysis.core.jvm_setup import is_jvm_started
 
 
 @pytest.fixture(scope="module")
-def authentic_pl_agent(jvm_controller):
+def authentic_pl_agent(jvm_session):
     """
     Fixture pour initialiser un agent PL authentique avec un TweetyBridge partagé.
     Remplace setup_method pour une gestion centralisée de la JVM.
     """
     print("\n[AUTHENTIC FIXTURE] Configuration PropositionalLogicAgent authentique...")
-    if not jvm_controller.is_jvm_ready():
-        pytest.skip("JVM controller not ready, skipping authentic propositional agent tests.")
+    if not is_jvm_started():
+        pytest.skip("JVM not ready, skipping authentic propositional agent tests.")
 
     kernel = Kernel()
     llm_service_configured = False
@@ -74,15 +75,15 @@ def authentic_pl_agent(jvm_controller):
         except Exception as e:
             print(f"[AUTHENTIC] OpenAI non disponible: {e}")
 
-    tweety_bridge = jvm_controller.tweety_bridge
+    tweety_bridge = TweetyBridge()
     agent_name = "TestPLAgentAuthentic"
     agent = PropositionalLogicAgent(
         kernel=kernel,
         agent_name=agent_name,
         service_id=llm_service_id if llm_service_configured else None,
+        tweety_bridge=tweety_bridge
     )
-    # Injection directe du pont partagé
-    agent.tweety_bridge = tweety_bridge
+    # Injection directe du pont partagé via le constructeur
 
     if llm_service_configured:
         print(f"[AUTHENTIC] PropositionalLogicAgent configuré avec service: {llm_service_id}")
@@ -94,7 +95,7 @@ def authentic_pl_agent(jvm_controller):
         "kernel": kernel,
         "tweety_bridge": tweety_bridge,
         "llm_service_configured": llm_service_configured,
-        "tweety_available": jvm_controller.is_jvm_ready(),
+        "tweety_available": is_jvm_started(),
         "llm_service_id": llm_service_id,
         "agent_name": agent_name
     }
@@ -127,7 +128,7 @@ def test_initialization_and_setup_authentic(authentic_pl_agent):
         print("[AUTHENTIC] TweetyBridge JVM non disponible - test gracieux")
     
     if llm_service_configured:
-        settings = agent.kernel.get_prompt_execution_settings_from_service_id(authentic_pl_agent['llm_service_id'])
+        settings = agent._kernel.get_prompt_execution_settings_from_service_id(authentic_pl_agent['llm_service_id'])
         assert settings is not None
         print(f"[AUTHENTIC] Paramètres LLM: {settings}")
     else:

@@ -13,7 +13,7 @@ import subprocess
 import logging
 import shlex
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
 
 # Configuration initiale du logger pour ce module.
 # Il est préférable que l'application configure le logging de manière centralisée.
@@ -29,7 +29,8 @@ if not logger.hasHandlers(): # Vérifie si des handlers sont déjà attachés
 def run_shell_command(
     command: str,
     work_dir: Optional[Path] = None,
-    timeout_seconds: int = 60
+    timeout_seconds: int = 60,
+    env: Optional[Dict[str, str]] = None
 ) -> Tuple[int, str, str]:
     """
     Exécute une commande shell, capture sa sortie, son erreur et son code de retour.
@@ -45,6 +46,8 @@ def run_shell_command(
     :type work_dir: Optional[Path], optional
     :param timeout_seconds: Le délai d'attente maximal en secondes pour la commande.
     :type timeout_seconds: int, optional
+    :param env: Un dictionnaire optionnel de variables d'environnement.
+    :type env: Optional[Dict[str, str]], optional
     :return: Un tuple contenant :
              - `return_code` (int): Le code de retour de la commande.
                Des valeurs négatives spécifiques sont utilisées pour les erreurs internes
@@ -75,7 +78,8 @@ def run_shell_command(
             capture_output=True,
             text=True,  # Décode stdout/stderr en str (UTF-8 par défaut)
             timeout=timeout_seconds,
-            check=False # Important: ne pas lever CalledProcessError pour gérer nous-mêmes
+            check=False, # Important: ne pas lever CalledProcessError pour gérer nous-mêmes
+            env=env
         )
         stdout_str = process.stdout.strip() if process.stdout else ""
         stderr_str = process.stderr.strip() if process.stderr else ""

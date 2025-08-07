@@ -159,6 +159,31 @@ class EnvironmentManager:
             else:
                 self.logger.warning("JAVA_HOME n'a pas été trouvé dans le .env. Les tests dépendants de Java pourraient échouer.")
 
+        # 3. Injection des chemins de l'environnement Conda dans le PATH
+        env_name = self.get_conda_env_name_from_dotenv() or "projet-is"
+        conda_env_path_str = self.conda_manager._get_conda_env_path(env_name)
+        if conda_env_path_str:
+            conda_env_path = Path(conda_env_path_str)
+            self.logger.info(f"Injection des chemins pour l'environnement Conda '{env_name}' dans le PATH.")
+            path_var = env_vars.get('PATH', '')
+            
+            # Chemins essentiels pour un environnement Conda sur Windows
+            conda_paths_to_add = [
+                str(conda_env_path),
+                str(conda_env_path / "Scripts"),
+                str(conda_env_path / "Library" / "bin"),
+            ]
+            
+            # Ajout des chemins s'ils ne sont pas déjà présents
+            for p in reversed(conda_paths_to_add):
+                if p not in path_var:
+                    path_var = f"{p}{os.pathsep}{path_var}"
+            
+            env_vars['PATH'] = path_var
+            self.logger.debug(f"Nouveau PATH (début): {env_vars['PATH'][:200]}...")
+        else:
+            self.logger.error(f"Impossible de trouver le chemin de l'environnement Conda '{env_name}'. L'exécution de la commande risque d'échouer.")
+
         # La commande à exécuter est directement `command_parts`, car ce script
         # est déjà DANS l'environnement Conda activé par `activate_project_env.ps1`.
         
@@ -176,11 +201,14 @@ class EnvironmentManager:
         
         final_command_parts = [part.replace("python", python_exe, 1) if part == "python" else part for part in command_parts]
         
+        # Lorsque shell=True, il est préférable de passer la commande comme une chaîne complète.
+        final_command_str = " ".join(final_command_parts)
+
         exit_code, _, _ = run_shell_command(
-            command=final_command_parts,
+            command=final_command_str,
             description=description,
             capture_output=False,
-            shell_mode=False, # Important pour exécuter `pytest` ou `npx` directement
+            shell_mode=True, # Essentiel sur Windows pour que le shell trouve les exécutables comme pytest.exe via le PATH
             env=env_vars,
             cwd=self.project_root # S'assurer que la commande s'exécute à la racine
         )

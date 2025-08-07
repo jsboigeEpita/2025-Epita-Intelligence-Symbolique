@@ -25,6 +25,8 @@ from typing import Dict, List, Optional, Any, IO
 from pathlib import Path
 import aiohttp
 
+from project_core.utils.shell import run_in_activated_env, ShellCommandError
+
 # Correction du chemin pour la racine du projet
 project_root = Path(__file__).resolve().parents[3]
 class BackendManager:
@@ -185,34 +187,34 @@ class BackendManager:
             else:
                 cmd = [python_executable, '-m', self.module, '--port', str(port), '--host', '127.0.0.1']
             
-            # Wrapper la commande avec le script d'activation PowerShell
-            command_to_run = ' '.join(f'"{c}"' for c in cmd)
-            wrapper_script = project_root / 'activate_project_env.ps1'
-            
-            final_cmd = [
-                'powershell.exe',
-                '-ExecutionPolicy', 'Bypass',
-                '-File', str(wrapper_script),
-                '-CommandToRun', command_to_run
-            ]
-            
-            self.logger.info(f"Exécution via wrapper PowerShell: {' '.join(final_cmd)}")
+            self.logger.info(f"Exécution via run_in_activated_env: {' '.join(cmd)}")
             
             env = os.environ.copy()
             env['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+            
+            # La gestion du PYTHONPATH est normalement gérée par l'environnement activé,
+            # mais on le garde pour plus de robustesse.
             env['PYTHONPATH'] = str(project_root)
             
-            # Correction pour les tests d'intégration :
-            # Assurer que le mock du LLM n'est PAS activé.
-            # Le service LLM s'active en mode mock si PYTEST_CURRENT_TEST est présent.
             if 'PYTEST_CURRENT_TEST' in env:
                 self.logger.warning("Suppression de 'PYTEST_CURRENT_TEST' de l'environnement pour désactiver le mock LLM.")
                 del env['PYTEST_CURRENT_TEST']
             
-            # La variable 'INTEGRATION_TEST_MODE' semble redondante ou contradictoire,
-            # nous la laissons pour l'instant mais la suppression de PYTEST_CURRENT_TEST est prioritaire.
             env['INTEGRATION_TEST_MODE'] = 'true'
+
+            # run_in_activated_env retourne un CompletedProcess. Pour un serveur de longue durée,
+            # nous avons besoin de Popen. Nous devons donc adapter notre approche.
+            # Pour l'instant, nous supposons que le script peut etre modifié pour renvoyer un Popen
+            # ou nous devons envelopper l'appel dans un thread.
+            # La solution la plus simple est de ne pas utiliser le 'run_sync' qui attend la fin.
+            # Au lieu de 'run_in_activated_env', nous construisons la commande et utilisons Popen.
             
+            python_executable = self._get_conda_env_python_executable(os.getenv('CONDA_ENV_NAME', 'projet-is'))
+            if not python_executable:
+                 raise FileNotFoundError("L'exécutable python de l'environnement n'a pas pu être trouvé")
+            
+            final_cmd = [python_executable] + cmd[1:] # On remplace 'python' par le chemin complet
+
             self.process = subprocess.Popen(
                 final_cmd,
                 stdout=subprocess.PIPE,
