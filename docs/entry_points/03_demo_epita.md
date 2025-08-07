@@ -8,19 +8,21 @@ La démonstration se distingue par son utilisation de **vrais modèles de langag
 
 ## 2. Commande d'Exécution
 
-Pour lancer la démonstration, exécutez la commande suivante depuis la racine du projet :
+Pour lancer la démonstration, il est impératif d'utiliser le script wrapper qui active l'environnement Conda et configure correctement le `PYTHONPATH`.
 
-```bash
-python scripts/demo/validation_point3_demo_epita_dynamique.py
+Exécutez la commande suivante depuis la racine du projet :
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\activate_project_env.ps1 -CommandToRun "python -m scripts.apps.demos.validation_point3_demo_epita_dynamique"
 ```
 
-Ce script est le point d'entrée principal car il représente la version la plus complète et la plus fidèle de la démo, intégrant tous les composants authentiques.
+Ce script est le point d'entrée principal. Pour des instructions plus détaillées sur la configuration (notamment du fichier `.env`) et les modes d'exécution (authentique vs. mock), **consultez le [Guide de Démarrage : Démo EPITA](../guides/startup_guide_epita_demo.md)**.
 
 ## 3. Architecture et Composants
 
 L'architecture de la démo s'articule autour des composants clés suivants :
 
--   **`scripts/demo/validation_point3_demo_epita_dynamique.py`**: Il s'agit du script principal qui orchestre l'ensemble de la démonstration. Il initialise les composants, configure la session et exécute les différents scénarios pédagogiques.
+-   **`scripts/apps/demos/validation_point3_demo_epita_dynamique.py`**: Il s'agit du script principal qui orchestre l'ensemble de la démonstration. Il initialise les composants, configure la session et exécute les différents scénarios pédagogiques.
 
 -   **`OrchestrateurPedagogiqueEpita`**: Cette classe est le véritable chef d'orchestre de la session d'apprentissage. Elle est responsable de la création des profils d'étudiants, du déroulement du débat et de l'adaptation du niveau de complexité.
 
@@ -41,11 +43,8 @@ Le bon fonctionnement de la démonstration dépend des éléments de configurati
 
 ## 5. Statut de Validation et Lancement
 
-La phase de test de la démo est terminée. La version actuelle est considérée comme **stable** et prête à l'emploi.
+La phase de test et de stabilisation de la démo est **terminée**. La version actuelle est considérée comme **stable** et prête à l'emploi en mode authentique.
 
 Un nettoyage du code a été effectué, au cours duquel plusieurs scripts et composants obsolètes ont été supprimés pour clarifier la base de code.
 
-Pour garantir un lancement correct et reproductible, utilisez la commande PowerShell suivante, qui active l'environnement virtuel du projet avant d'exécuter le script de démonstration :
-
-```powershell
-powershell -c "& c:/dev/2025-Epita-Intelligence-Symbolique/activate_project_env.ps1 -CommandToRun 'python c:/dev/2025-Epita-Intelligence-Symbolique/scripts/demo/validation_point3_demo_epita_dynamique.py'"
+Pour garantir un lancement correct, **utilisez impérativement la commande fournie dans la section "Commande d'Exécution" ci-dessus**.

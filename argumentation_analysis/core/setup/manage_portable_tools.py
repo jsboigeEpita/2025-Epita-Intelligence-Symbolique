@@ -30,10 +30,10 @@ def _get_logger_tools(logger_instance=None):
 # --- Configurations des Outils ---
 JDK_CONFIG = {
     "name": "JDK",
-    "url_windows": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.11%2B9/OpenJDK17U-jdk_x64_windows_hotspot_17.0.11_9.zip",
-    "url_linux": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.11%2B9/OpenJDK17U-jdk_x64_linux_hotspot_17.0.11_9.tar.gz",
-    "url_darwin": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.11%2B9/OpenJDK17U-x64_mac_hotspot_17.0.11_9.tar.gz",
-    "dir_name_pattern": r"jdk-17.*",
+    "url_windows": "https://mirrors.huaweicloud.com/openjdk/15.0.2/openjdk-15.0.2_windows-x64_bin.zip",
+    "url_linux": "https://mirrors.huaweicloud.com/openjdk/15.0.2/openjdk-15.0.2_linux-x64_bin.tar.gz",
+    "url_darwin": "https://mirrors.huaweicloud.com/openjdk/15.0.2/openjdk-15.0.2_osx-x64_bin.tar.gz",
+    "dir_name_pattern": r"jdk-15.*",
     "home_env_var": "JAVA_HOME"
 }
 

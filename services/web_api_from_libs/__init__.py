@@ -14,7 +14,7 @@ __version__ = "1.0.0"
 __author__ = "Équipe d'Analyse Argumentative EPITA"
 __description__ = "API Web pour l'analyse argumentative"
 
-from .app import app
+# from .app import app # Commenté pour éviter les dépendances circulaires lors du lancement en tant que module
 from .models import *
 from .services import AnalysisService, ValidationService, FallacyService, FrameworkService # Ne pas importer LogicService ici pour l'instant
 

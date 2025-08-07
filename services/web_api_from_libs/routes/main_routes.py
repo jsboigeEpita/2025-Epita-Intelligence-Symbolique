@@ -1,13 +1,8 @@
 # services/web_api_from_libs/routes/main_routes.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import logging
 
 # Import des services et modèles nécessaires
-from ..services.analysis_service import AnalysisService
-from ..services.validation_service import ValidationService
-from ..services.fallacy_service import FallacyService
-from ..services.framework_service import FrameworkService
-from ..services.logic_service import LogicService
 from ..models.request_models import (
     AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest
 )
@@ -23,33 +18,19 @@ main_bp = Blueprint('main_api', __name__)
 
 @main_bp.route('/health', methods=['GET'])
 def health_check():
-    """Vérification de l'état de l'API."""
-    from ..app import analysis_service, validation_service, fallacy_service, framework_service, logic_service
-    try:
-        return jsonify({
-            "status": "healthy",
-            "message": "API d'analyse argumentative opérationnelle",
-            "version": "1.0.0",
-            "services": {
-                "analysis": analysis_service.is_healthy(),
-                "validation": validation_service.is_healthy(),
-                "fallacy": fallacy_service.is_healthy(),
-                "framework": framework_service.is_healthy(),
-                "logic": logic_service.is_healthy()
-            }
-        })
-    except Exception as e:
-        logger.error(f"Erreur lors du health check: {str(e)}")
-        return jsonify(ErrorResponse(
-            error="Erreur de health check",
-            message=str(e),
-            status_code=500
-        ).dict()), 500
+    """
+    Vérification de l'état de l'API.
+    Retourne une réponse simple pour confirmer que le serveur est en cours d'exécution.
+    """
+    return jsonify({
+        "status": "ok",
+        "message": "API is running."
+    }), 200
 
 @main_bp.route('/analyze', methods=['POST'])
 async def analyze_text():
     """Analyse complète d'un texte argumentatif."""
-    from ..app import analysis_service
+    analysis_service = current_app.extensions['racine_services']['analysis']
     try:
         data = request.get_json()
         if not data:
@@ -66,7 +47,7 @@ async def analyze_text():
 @main_bp.route('/validate', methods=['POST'])
 def validate_argument():
     """Validation logique d'un argument."""
-    from ..app import validation_service
+    validation_service = current_app.extensions['racine_services']['validation']
     try:
         data = request.get_json()
         if not data:
@@ -83,7 +64,7 @@ def validate_argument():
 @main_bp.route('/fallacies', methods=['POST'])
 def detect_fallacies():
     """Détection de sophismes dans un texte."""
-    from ..app import fallacy_service
+    fallacy_service = current_app.extensions['racine_services']['fallacy']
     try:
         data = request.get_json()
         if not data:
@@ -100,7 +81,7 @@ def detect_fallacies():
 @main_bp.route('/framework', methods=['POST'])
 def build_framework():
     """Construction d'un framework de Dung."""
-    from ..app import framework_service
+    framework_service = current_app.extensions['racine_services']['framework']
     try:
         data = request.get_json()
         if not data:

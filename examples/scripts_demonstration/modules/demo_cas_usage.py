@@ -461,7 +461,7 @@ def run_demo_interactive() -> bool:
     
     return succes_global
 
-def run_demo_rapide() -> bool:
+def run_demo_rapide(**kwargs) -> bool:
     """Lance une démonstration rapide (non-interactive)"""
     logger = DemoLogger("cas_usage")
     

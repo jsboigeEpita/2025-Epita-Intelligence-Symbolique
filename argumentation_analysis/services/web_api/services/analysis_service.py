@@ -19,7 +19,7 @@ import json
 # Imports du moteur d'analyse (style b282af4 avec gestion d'erreur)
 try:
     from argumentation_analysis.config.settings import AppSettings
-    # from argumentation_analysis.agents.factory import AgentFactory, AgentType
+    from argumentation_analysis.agents.factory import AgentFactory, AgentType
     from argumentation_analysis.agents.core.informal.informal_agent import InformalAnalysisAgent
     from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer
     from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer

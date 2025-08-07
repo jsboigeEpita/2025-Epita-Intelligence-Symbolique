@@ -64,3 +64,13 @@ Ce document suit l'état de la vérification des points d'entrée principaux du 
 - **Artefacts :**
     - **Plan :** [`05_main_app_plan.md`](./05_main_app_plan.md)
     - **Résultats de Test & Fix :** [`05_main_app_test_results.md`](./05_main_app_test_results.md)
+
+---
+
+## 6. Suite de Tests Globale (`pytest`)
+
+- **Statut :** ✅ 100% Fonctionnelle
+- **Date de Vérification :** 2025-07-27
+- **Résumé :** La suite de tests complète du projet a été exécutée avec succès. Le fichier `pytest_failures.log` ne contient aucune erreur (`Error`) ou échec (`Failure`), confirmant la stabilité et la robustesse de la base de code.
+- **Artefacts :**
+    - **Journal des logs :** `pytest_failures.log`

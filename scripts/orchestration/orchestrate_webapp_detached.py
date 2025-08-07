@@ -51,7 +51,7 @@ def create_backend_config() -> ServiceConfig:
             "-m", "uvicorn", 
             "argumentation_analysis.services.web_api.app:app",
             "--host", "0.0.0.0",
-            "--port", "5003"
+            "--port", "8095"
         ],
         working_dir=str(Path(__file__).parent),
         port=5003,

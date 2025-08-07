@@ -25,6 +25,7 @@ class TweetyInitializer:
     _fol_parser = None
     _modal_parser = None
     _modal_reasoner = None
+    _af_parser = None # Ajout pour le parser d'argumentation
     _initialized_components = False
     _jvm_started = False
 
@@ -85,6 +86,7 @@ class TweetyInitializer:
             self.initialize_pl_components()
             self.initialize_fol_components()
             self.initialize_modal_components()
+            self.initialize_af_components()
             self.__class__._initialized_components = True
             logger.info("Java components initialized successfully.")
         else:
@@ -109,6 +111,30 @@ class TweetyInitializer:
         except Exception as e:
             logger.critical(f"An unhandled exception occurred during robust JVM initialization: {e}", exc_info=True)
             return False
+
+    def load_classes(self):
+        """
+        Public method to explicitly trigger the import of Java classes.
+        """
+        if not self.__class__._classes_loaded:
+            logger.info("Explicitly loading Java classes...")
+            self._import_java_classes()
+        else:
+            logger.debug("Java classes already loaded.")
+
+    def initialize_components(self):
+        """
+        Public method to explicitly initialize parsers and other components.
+        """
+        if not self.__class__._initialized_components:
+            logger.info("Explicitly initializing Java components (parsers, etc.)...")
+            self.initialize_pl_components()
+            self.initialize_fol_components()
+            self.initialize_modal_components()
+            self.initialize_af_components()
+            self.__class__._initialized_components = True
+        else:
+            logger.debug("Java components already initialized.")
 
     def _import_java_classes(self):
         """
@@ -148,6 +174,15 @@ class TweetyInitializer:
             _ = jpype.JClass("org.tweetyproject.logics.ml.reasoner.SimpleMlReasoner")
             _ = jpype.JClass("org.tweetyproject.logics.ml.parser.MlParser")
             _ = jpype.JClass("org.tweetyproject.commons.Signature")
+
+            # Argumentation Framework Classes
+            jpype.JClass("org.tweetyproject.arg.dung.syntax.DungTheory")
+            jpype.JClass("org.tweetyproject.arg.dung.syntax.Argument")
+            jpype.JClass("org.tweetyproject.arg.dung.syntax.Attack")
+            jpype.JClass("org.tweetyproject.arg.dung.reasoner.AbstractExtensionReasoner")
+            jpype.JClass("org.tweetyproject.arg.dung.reasoner.SimplePreferredReasoner")
+            jpype.JClass("org.tweetyproject.arg.dung.semantics.Extension")
+            jpype.JClass("org.tweetyproject.arg.dung.parser.FileFormat")
 
             # Reasoner (using EProver, not Prover9)
             jpype.JClass("org.tweetyproject.logics.fol.reasoner.SimpleFolReasoner")
@@ -198,6 +233,19 @@ class TweetyInitializer:
         except Exception as e:
             logger.error(f"Error initializing Modal Logic components: {e}", exc_info=True)
             raise
+    
+    def initialize_af_components(self):
+        if self.__class__._af_parser:
+            return
+        try:
+            logger.debug("Initializing AF components...")
+            # Tweety ne semble pas avoir de parser simple pour les AFs comme pour PL/FOL.
+            # La construction se fait souvent manuellement. On met un placeholder.
+            self.__class__._af_parser = True 
+            logger.info("AF components initialized (placeholder).")
+        except Exception as e:
+            logger.error(f"Error initializing AF components: {e}", exc_info=True)
+            raise
 
     @staticmethod
     def get_pl_parser():
@@ -221,6 +269,6 @@ class TweetyInitializer:
     def is_jvm_ready() -> bool:
         """Checks if the JVM is started and classes are loaded."""
         return is_jvm_started() and TweetyInitializer._classes_loaded
-
+ 
     def is_jvm_started(self) -> bool:
         return self.__class__._jvm_started

@@ -7,6 +7,7 @@ Service pour l'analyse des frameworks d'argumentation.
 
 from typing import List, Dict, Any
 import logging
+from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
 class FrameworkService:
     """
@@ -14,36 +15,40 @@ class FrameworkService:
     """
     def __init__(self):
         """
-        Initialise le service.
+        Initialise le service en se connectant au pont Tweety.
         """
         self.logger = logging.getLogger("WebAPI.FrameworkService")
-        self.logger.info("--- FrameworkService INITIALIZED ---")
+        try:
+            # Initialise le pont TweetyProject (singleton)
+            self.tweety_bridge = TweetyBridge.get_instance()
+            self.logger.info("--- FrameworkService INITIALIZED with real TweetyBridge ---")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize TweetyBridge: {e}", exc_info=True)
+            self.tweety_bridge = None
 
     def analyze_dung_framework(self, arguments: List[str], attacks: List[List[str]]) -> Dict[str, Any]:
         """
-        Analyse un framework d'argumentation de Dung.
-        
-        NOTE: Ceci est une implémentation factice pour les tests E2E.
+        Analyse un framework d'argumentation de Dung en utilisant la vraie logique métier via TweetyProject.
         """
-        # Logique factice
-        print(f"Analyzing framework with {len(arguments)} arguments and {len(attacks)} attacks.")
-        
-        # Simuler un résultat d'analyse conforme à ce que le frontend attend
-        # Le frontend attend une liste de listes d'IDs d'arguments pour les extensions.
-        
-        # Trouver l'ID de l'argument non attaqué
-        attacked_ids = {attack[1] for attack in attacks}
-        accepted_args = [arg_id for arg_id in arguments if arg_id not in attacked_ids]
-
-        result = {
-            "semantics": "preferred",
-            "extensions": [
-                accepted_args
-            ],
-            "statistics": {
-                "arguments_count": len(arguments),
-                "attacks_count": len(attacks),
-                "extensions_count": 1
+        if not self.tweety_bridge:
+            return {
+                "error": "TweetyBridge not initialized. Cannot perform analysis.",
+                "status_code": 500
             }
-        }
-        return result
+        
+        self.logger.info("Forwarding analysis request to the real AFHandler.")
+        
+        try:
+            # Appel de la logique réelle via le handler
+            result = self.tweety_bridge.af_handler.analyze_dung_framework(
+                arguments=arguments,
+                attacks=attacks,
+                semantics="preferred"
+            )
+            return result
+        except Exception as e:
+            self.logger.error(f"An error occurred during framework analysis: {e}", exc_info=True)
+            return {
+                "error": f"An unexpected error occurred: {e}",
+                "status_code": 500
+            }

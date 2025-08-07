@@ -170,8 +170,8 @@ async def main_async():
     # Charger les variables d'environnement pour les ports
     dotenv_path = project_root / '.env'
     load_dotenv(dotenv_path=dotenv_path)
-    backend_port = int(os.environ.get("BACKEND_PORT", 5003))
-    frontend_port = int(os.environ.get("FRONTEND_PORT", 3000))
+    backend_port = int(os.environ.get("BACKEND_PORT", 8095))
+    frontend_port = int(os.environ.get("FRONTEND_PORT", 8085))
 
     # Configuration de l'orchestrateur centralisé
     config_path = project_root / 'scripts' / 'webapp' / 'config' / 'webapp_config.yml'

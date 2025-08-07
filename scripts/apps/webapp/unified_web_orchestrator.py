@@ -202,7 +202,7 @@ class UnifiedWebOrchestrator:
                 'headless': True,
                 'timeout_ms': 10000,
                 'slow_timeout_ms': 20000,
-                'test_paths': ['tests/e2e/webapp'],
+                'test_paths': [],
                 'screenshots_dir': 'logs/screenshots',
                 'traces_dir': 'logs/traces'
             },
@@ -679,73 +679,84 @@ def main():
     orchestrator = UnifiedWebOrchestrator(args.config)
     
     # Détermination du mode headless avec priorité à la ligne de commande
-    # if args.headless is not None:
-    #     headless = args.headless
-    #     orchestrator.logger.info(f"Mode headless forcé par la ligne de commande : {headless}")
-    # else:
-    #     headless = orchestrator.config.get('playwright', {}).get('headless', True)
-    #     orchestrator.logger.info(f"Mode headless lu depuis la configuration : {headless}")
-    
-    # DEBUG: Forcer le mode headless pour stabiliser l'environnement de test.
-    headless = True
-    orchestrator.logger.info(f"Mode headless DÉFINI STATIQUEMENT sur : {headless} pour le débogage.")
+    if args.headless is not None:
+        headless = args.headless
+        orchestrator.logger.info(f"Mode headless forcé par la ligne de commande : {headless}")
+    else:
+        headless = orchestrator.config.get('playwright', {}).get('headless', True)
+        orchestrator.logger.info(f"Mode headless lu depuis la configuration : {headless}")
         
     orchestrator.headless = headless
     orchestrator.timeout_minutes = args.timeout
     
     async def run_command():
-        try:
+        # Cœur de la logique d'exécution des commandes
+        async def _execute():
             if args.stop:
-                await orchestrator.stop_webapp()
-                return True
+                return await orchestrator.stop_webapp()
+            
             elif args.start:
-                # Démarrage simple, mais on maintient le processus en vie
                 if await orchestrator.start_webapp(headless, args.frontend, args.app_module):
                     print(f"Backend '{args.app_module or orchestrator.config['backend']['module']}' démarré. PID: {orchestrator.app_info.backend_pid}")
-                    # Le processus se terminera, mais le serveur backend (uvicorn) continuera de tourner.
-                    return True # Renvoyer True pour indiquer le succès
-                else:
-                    return False
+                    return True
+                return False
 
             elif args.test:
-                # Exécute seulement les tests : démarre l'app, teste, arrête l'app.
-                success = False
-                
-                # Les chemins de test sont soit passés en argument, soit lus depuis la config
-                tests_to_run = args.tests or orchestrator.config.get('playwright', {}).get('test_paths')
+                tests_to_run = args.tests
                 if not tests_to_run:
-                    orchestrator.logger.error("Aucun chemin de test à exécuter. Spécifiez via --tests ou dans la config.")
+                    orchestrator.logger.error("L'argument --tests est obligatoire avec --test.")
                     return False
-                    
+                
+                success = False
                 try:
-                    # Le frontend est généralement requis pour les tests E2E.
                     frontend_enabled = args.frontend or True
                     if not await orchestrator.start_webapp(headless, frontend_enabled):
-                        orchestrator.logger.error("Impossible de démarrer l'application pour les tests.")
                         return False
-                    
                     success = await orchestrator.run_tests(tests_to_run)
                 finally:
-                    # Arrêt systématique de l'application
                     await orchestrator.stop_webapp()
                 return success
-            else:  # Integration par défaut
-                # Pour un test d'intégration complet, le frontend est TOUJOURS requis.
-                # Le flag --frontend sert à l'activer pour d'autres commandes comme --start.
+
+            else:  # Intégration par défaut
+                tests_to_run = args.tests
+                if not tests_to_run:
+                    orchestrator.logger.error("L'argument --tests est obligatoire pour une intégration complète.")
+                    return False
+                
                 return await orchestrator.full_integration_test(
                     headless=headless,
                     frontend_enabled=True,
-                    test_paths=args.tests
+                    test_paths=tests_to_run
                 )
+
+        # Wrapper avec gestion du timeout et des exceptions
+        timeout_seconds = orchestrator.timeout_minutes * 60
+        try:
+            # wait_for exécute la coroutine avec un timeout.
+            return await asyncio.wait_for(_execute(), timeout=timeout_seconds)
+        
+        except asyncio.TimeoutError:
+            orchestrator.logger.error(f"🛑 TIMEOUT! L'exécution a dépassé {orchestrator.timeout_minutes} minute(s).")
+            orchestrator.add_trace(
+                "[TIMEOUT]",
+                f"L'exécution a dépassé la limite de {orchestrator.timeout_minutes} minute(s).",
+                "Arrêt forcé de l'application.",
+                status="error"
+            )
+            await orchestrator.stop_webapp() # Tentative de nettoyage après timeout
+            await orchestrator._save_trace_report()
+            return False
         except KeyboardInterrupt:
             print("\n🛑 Interruption utilisateur")
             await orchestrator.stop_webapp()
             return False
         except Exception as e:
-            print(f"❌ Erreur: {e}")
+            orchestrator.logger.error(f"❌ Erreur inattendue: {e}", exc_info=True)
+            await orchestrator.stop_webapp()
             return False
     
     # Exécution asynchrone
+    # Le run_command gère maintenant toutes les exceptions, y compris le timeout.
     success = asyncio.run(run_command())
     sys.exit(0 if success else 1)
 

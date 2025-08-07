@@ -38,13 +38,13 @@ def setup_jvm():
         raise
 
 def _test_simple_preferred_reasoner(dung_classes):
-    DungTheory, Argument, Attack, PreferredReasoner = dung_classes["DungTheory"], dung_classes["Argument"], dung_classes["Attack"], dung_classes["PreferredReasoner"]
+    DungTheory, Argument, Attack, SimplePreferredReasoner = dung_classes["DungTheory"], dung_classes["Argument"], dung_classes["Attack"], dung_classes["SimplePreferredReasoner"]
     theory = DungTheory()
     arg_a, arg_b, arg_c = Argument("a"), Argument("b"), Argument("c")
     theory.add(arg_a); theory.add(arg_b); theory.add(arg_c)
     theory.add(Attack(arg_a, arg_b))
     theory.add(Attack(arg_b, arg_c))
-    pr = PreferredReasoner()
+    pr = SimplePreferredReasoner()
     preferred_extensions_collection = pr.getModels(theory)
     assert preferred_extensions_collection.size() == 1
     logger.info("Test du raisonneur préféré simple réussi.")
@@ -75,7 +75,7 @@ def test_dialogical_argumentation_logic():
             "DungTheory": jpype.JClass("org.tweetyproject.arg.dung.syntax.DungTheory"),
             "Argument": jpype.JClass("org.tweetyproject.arg.dung.syntax.Argument"),
             "Attack": jpype.JClass("org.tweetyproject.arg.dung.syntax.Attack"),
-            "PreferredReasoner": jpype.JClass("org.tweetyproject.arg.dung.reasoner.PreferredReasoner"),
+            "SimplePreferredReasoner": jpype.JClass("org.tweetyproject.arg.dung.reasoner.SimplePreferredReasoner"),
             "GroundedReasoner": jpype.JClass("org.tweetyproject.arg.dung.reasoner.GroundedReasoner")
         }
         # Importer d'autres classes si nécessaire...

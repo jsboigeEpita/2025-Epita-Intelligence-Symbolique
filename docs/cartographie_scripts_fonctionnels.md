@@ -1,5 +1,6 @@
 # Cartographie des Scripts Fonctionnels - Analyse et Recommandations de Mutualisation
 
+> **Note de mise à jour (Juillet 2025) :** Ce document contient une analyse détaillée des scripts PowerShell et des stratégies de migration. Pour un guide d'utilisation pratique et à jour des scripts Python actuels (`setup_manager.py`, `maintenance_manager.py`, etc.), veuillez consulter le nouveau guide centralisé : **[Guide des Scripts du Projet](../scripts/README.md)**.
 ## 📊 Vue d'ensemble
 
 **Date d'analyse :** 07/06/2025  

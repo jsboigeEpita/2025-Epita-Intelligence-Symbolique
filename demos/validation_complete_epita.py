@@ -50,7 +50,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from enum import Enum
 
 import semantic_kernel as sk
-from argumentation_analysis.agents.agent_factory import AgentFactory
+from argumentation_analysis.agents.factory import AgentFactory
 from config.unified_config import AgentType
 from argumentation_analysis.agents.utils.taxonomy_navigator import TaxonomyNavigator
 from argumentation_analysis.core.llm_service import create_llm_service

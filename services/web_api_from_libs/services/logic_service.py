@@ -40,22 +40,14 @@ class LogicService:
     def __init__(self):
         """Initialisation du service."""
         self.logger = logging.getLogger("WebAPI.LogicService")
-        self.logger.info("Initialisation du service LogicService")
+        self.logger.info("Initialisation du service LogicService (Lazy)")
         
-        # Initialisation du kernel et du service LLM
-        self.kernel = Kernel()
-        try:
-            llm_service = create_llm_service(service_id="default_logic_llm")
-            self.kernel.add_service(llm_service)
-            self.logger.info("Service LLM 'default_logic_llm' créé et ajouté au kernel pour LogicService.")
-        except Exception as e:
-            self.logger.error(f"Erreur lors de la création du service LLM pour LogicService: {e}")
-        
-        # Initialisation de l'exécuteur de requêtes
-        self.query_executor = QueryExecutor()
-        
+        # Initialisation paresseuse
+        self.kernel = None
+        self.query_executor = None
+        self.is_initialized = False
+
         # Stockage des ensembles de croyances (en mémoire pour l'exemple)
-        # Dans une application réelle, on utiliserait une base de données
         self.belief_sets: Dict[str, Dict[str, Any]] = {}
     
     def is_healthy(self) -> bool:
@@ -74,6 +66,26 @@ class LogicService:
             self.logger.error(f"Erreur lors du health check: {str(e)}")
             return False
     
+    def _ensure_initialized(self):
+        """Initialise les composants lourds si ce n'est pas déjà fait."""
+        if self.is_initialized:
+            return
+        
+        self.logger.info("Initialisation paresseuse des composants de LogicService...")
+        self.kernel = Kernel()
+        try:
+            llm_service = create_llm_service(service_id="default_logic_llm")
+            self.kernel.add_service(llm_service)
+            self.logger.info("Service LLM 'default_logic_llm' créé et ajouté au kernel.")
+        except Exception as e:
+            self.logger.error(f"Erreur lors de la création du service LLM pour LogicService: {e}")
+            # Ne pas marquer comme initialisé si le LLM échoue
+            return
+
+        self.query_executor = QueryExecutor()
+        self.is_initialized = True
+        self.logger.info("Composants de LogicService initialisés avec succès.")
+
     async def text_to_belief_set(self, request: LogicBeliefSetRequest) -> LogicBeliefSetResponse:
         """
         Convertit un texte en ensemble de croyances logiques.
@@ -84,6 +96,7 @@ class LogicService:
         Returns:
             Une réponse contenant l'ensemble de croyances créé
         """
+        self._ensure_initialized()
         self.logger.info(f"Conversion de texte en ensemble de croyances de type '{request.logic_type}'")
         start_time = time.time()
         
@@ -149,6 +162,7 @@ class LogicService:
         Returns:
             Une réponse contenant le résultat de la requête
         """
+        self._ensure_initialized()
         self.logger.info(f"Exécution de la requête '{request.query}' sur l'ensemble de croyances '{request.belief_set_id}'")
         start_time = time.time()
         
@@ -208,6 +222,7 @@ class LogicService:
         Returns:
             Une réponse contenant les requêtes générées
         """
+        self._ensure_initialized()
         self.logger.info(f"Génération de requêtes pour l'ensemble de croyances '{request.belief_set_id}'")
         start_time = time.time()
         
@@ -273,6 +288,7 @@ class LogicService:
         Returns:
             Une réponse contenant l'interprétation des résultats
         """
+        self._ensure_initialized()
         self.logger.info(f"Interprétation des résultats pour l'ensemble de croyances '{belief_set_id}'")
         start_time = time.time()
         

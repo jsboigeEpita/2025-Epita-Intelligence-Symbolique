@@ -22,16 +22,9 @@ def test_dung_framework_analysis_api(playwright: Playwright, e2e_servers, backen
     )
     
     test_data = {
-        "arguments": [
-            {"id": "a", "content": "Argument A", "attacks": ["b"]},
-            {"id": "b", "content": "Argument B", "attacks": ["c"]},
-            {"id": "c", "content": "Argument C", "attacks": []}
-        ],
-        "options": {
-            "semantics": "preferred",
-            "compute_extensions": True,
-            "include_visualization": False
-        }
+        "arguments": ["a", "b", "c"],
+        "attacks": [("a", "b"), ("b", "c")],
+        "semantics": "preferred"
     }
 
     response = api_request_context.post(
@@ -46,19 +39,23 @@ def test_dung_framework_analysis_api(playwright: Playwright, e2e_servers, backen
     # DEBUG: Afficher la réponse complète de l'API
     print(f"API Response: {json.dumps(response_data, indent=2)}")
 
-    # Vérification de la nouvelle structure de réponse
-    assert response_data.get("argument_count") == 3, f"Attendu 3 arguments, mais obtenu {response_data.get('argument_count')}"
-    assert response_data.get("attack_count") == 2, f"Attendu 2 attaques, mais obtenu {response_data.get('attack_count')}"
+    # Vérification de la structure de réponse correcte
+    assert "statistics" in response_data, "La clé 'statistics' est manquante dans la réponse."
+    stats = response_data["statistics"]
+    assert stats.get("arguments_count") == 3, f"Attendu 3 arguments, mais obtenu {stats.get('arguments_count')}"
+    assert stats.get("attacks_count") == 2, f"Attendu 2 attaques, mais obtenu {stats.get('attacks_count')}"
 
     assert "extensions" in response_data, "La clé 'extensions' est manquante."
-    extensions = response_data['extensions']
-    # La structure des extensions a aussi changé
-    assert len(extensions) > 0, "Aucune extension n'a été retournée"
-    preferred_ext_obj = extensions[0]
-    assert preferred_ext_obj['type'] == 'preferred'
+    extensions = response_data.get('extensions', {})
+    assert "preferred" in extensions, "La clé 'preferred' est manquante dans les extensions."
     
-    preferred_ext = preferred_ext_obj["arguments"]
-    assert isinstance(preferred_ext, list), "Les extensions 'preferred' devraient être une liste."
+    preferred_extensions = extensions['preferred']
+    assert isinstance(preferred_extensions, list), "Les extensions préférées devraient être une liste."
+    assert len(preferred_extensions) > 0, "Aucune extension préférée n'a été retournée."
     
-    expected_extension = {'a', 'c'}
-    assert set(preferred_ext) == expected_extension, f"L'extension préférée {expected_extension} n'a pas été trouvée dans {preferred_ext}"
+    # Dans ce cas, avec le framework a->b, b->c, l'extension préférée est {a, c}
+    # La réponse doit être une liste de listes d'arguments.
+    # Pour rendre la comparaison insensible à l'ordre, on convertit les listes en ensembles de tuples (les listes ne sont pas hashables)
+    expected_extensions = {tuple(sorted(ext)) for ext in [["a", "c"]]}
+    actual_extensions = {tuple(sorted(ext)) for ext in preferred_extensions}
+    assert actual_extensions == expected_extensions, f"Attendu {expected_extensions}, mais obtenu {actual_extensions}"

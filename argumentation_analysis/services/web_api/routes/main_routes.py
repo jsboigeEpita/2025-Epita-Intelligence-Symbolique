@@ -8,7 +8,7 @@ from pydantic import ValidationError
 # Import des services et modèles nécessaires
 # Les imports relatifs devraient maintenant pointer vers les bons modules.
 from ..models.request_models import (
-    AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest
+    AnalysisRequest, ValidationRequest, FallacyRequest, FrameworkRequest, FrameworkAnalysisRequest
 )
 from ..models.response_models import ErrorResponse
 
@@ -131,41 +131,29 @@ def detect_fallacies():
         return jsonify(ErrorResponse(error="Erreur de détection", message=str(e), status_code=500).dict()), 500
 
 @main_bp.route('/v1/framework/analyze', methods=['POST'])
-def build_framework():
-    """Construction d'un framework de Dung."""
+def analyze_framework():
+    """Analyse un framework de Dung et retourne ses extensions."""
     try:
         framework_service = current_app.services.framework_service
         data = request.get_json()
         if not data:
             return jsonify(ErrorResponse(error="Données manquantes", message="Le body JSON est requis", status_code=400).dict()), 400
 
-        # Gérer le format de requête alternatif avec 'attack_relations' pour la compatibilité
-        if 'arguments' in data and 'attack_relations' in data:
-            args_by_id = {arg['id']: arg for arg in data['arguments']}
-            for rel in data.get('attack_relations', []):
-                attacker_id = rel.get('from')
-                target_id = rel.get('to')
-                if attacker_id and target_id and attacker_id in args_by_id:
-                    if 'attacks' not in args_by_id[attacker_id]:
-                        args_by_id[attacker_id]['attacks'] = []
-                    if target_id not in args_by_id[attacker_id]['attacks']:
-                        args_by_id[attacker_id]['attacks'].append(target_id)
-            
-            data['arguments'] = list(args_by_id.values())
-
-        framework_request = FrameworkRequest(**data)
-        # Extraire les données pour la nouvelle signature de la méthode
-        arguments_list = [arg.id for arg in framework_request.arguments]
-        attacks_list = [[arg.id, attacked_id] for arg in framework_request.arguments for attacked_id in arg.attacks]
+        # Utiliser le modèle de requête simple qui correspond à la signature du service
+        analysis_request = FrameworkAnalysisRequest(**data)
         
         result = framework_service.analyze_dung_framework(
-            arguments=arguments_list,
-            attacks=attacks_list
+            arguments=analysis_request.arguments,
+            attacks=analysis_request.attacks
         )
         return jsonify(result)
+
+    except ValidationError as e:
+        logger.warning(f"Validation des données du framework a échoué: {str(e)}")
+        return jsonify(ErrorResponse(error="Données invalides", message=str(e), status_code=400).dict()), 400
         
     except Exception as e:
-        logger.error(f"Erreur lors de la construction du framework: {str(e)}", exc_info=True)
+        logger.error(f"Erreur lors de l'analyse du framework: {str(e)}", exc_info=True)
         return jsonify(ErrorResponse(error="Erreur de framework", message=str(e), status_code=500).dict()), 500
 
 @main_bp.route('/logic_graph', methods=['POST'])
