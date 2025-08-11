@@ -376,9 +376,15 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
                 return False
 
         try:
-            jvm_path_explicit = str(Path(java_home) / 'bin' / ('java.exe' if platform.system() == 'Windows' else 'java'))
-            if not Path(jvm_path_explicit).exists():
-                 jvm_path_explicit = str(Path(java_home) / 'bin' / ('java.dll' if platform.system() == 'Windows' else 'libjvm.so'))
+            # Correction: JPype a besoin du chemin vers la librairie partagée (DLL/SO), pas de l'exécutable.
+            # Sur Windows, le chemin est souvent bin/server/jvm.dll ou bin/client/jvm.dll
+            # On tente le chemin 'server' en premier, qui est le plus courant pour les JDKs.
+            jvm_lib_path = Path(java_home) / 'bin' / 'server' / ('jvm.dll' if platform.system() == 'Windows' else 'libjvm.so')
+            if not jvm_lib_path.exists():
+                # Fallback pour les anciennes versions de JRE ou les JDK non standards
+                jvm_lib_path = Path(java_home) / 'bin' / ('jvm.dll' if platform.system() == 'Windows' else 'libjvm.so')
+
+            jvm_path_explicit = str(jvm_lib_path)
             
             jvm_options = get_jvm_options()
             

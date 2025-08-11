@@ -26,6 +26,7 @@ from pathlib import Path
 import aiohttp
 
 from project_core.utils.shell import run_in_activated_env, ShellCommandError
+from argumentation_analysis.core.jvm_setup import initialize_jvm
 
 # Correction du chemin pour la racine du projet
 project_root = Path(__file__).resolve().parents[3]
@@ -163,6 +164,15 @@ class BackendManager:
             app_module: Le module applicatif à lancer (ex: 'api.main:app').
         """
         try:
+            # Correction: Initialiser la JVM pour garantir que JAVA_HOME est correctement configuré.
+            # Cette fonction est idempotente et ne fera rien si la JVM est déjà démarrée.
+            self.logger.info("Assurer l'initialisation de la JVM avant de lancer le backend...")
+            if not initialize_jvm():
+                error_msg = "Échec de l'initialisation de la JVM. Le backend ne peut pas démarrer."
+                self.logger.critical(error_msg)
+                return {'success': False, 'error': error_msg}
+            self.logger.info("Initialisation de la JVM vérifiée avec succès.")
+
             server_type = self.config.get('server_type', 'uvicorn')
             
             # Stratégie robuste : trouver l'exécutable Python de l'environnement Conda cible.
@@ -190,6 +200,11 @@ class BackendManager:
             self.logger.info(f"Exécution via run_in_activated_env: {' '.join(cmd)}")
             
             env = os.environ.copy()
+
+            # La logique de recherche du JAVA_HOME est maintenant gérée par `initialize_jvm()`.
+            # La variable d'environnement sera automatiquement héritée par le sous-processus.
+            self.logger.info(f"JAVA_HOME a été configuré par `jvm_setup`: {env.get('JAVA_HOME')}")
+
             env['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
             
             # La gestion du PYTHONPATH est normalement gérée par l'environnement activé,
@@ -263,8 +278,23 @@ class BackendManager:
         # Boucle principale avec un timeout global long
         while time.time() - start_time < self.timeout_seconds:
             # Vérifie si le processus est toujours en cours d'exécution
-            if self.process.poll() is not None:
-                self.logger.error(f"Processus backend terminé prématurément (code: {self.process.returncode}). Voir logs pour détails.")
+            return_code = self.process.poll()
+            if return_code is not None:
+                self.logger.error(f"Processus backend terminé prématurément (code: {return_code}).")
+                # Vider et logger stderr pour le diagnostic
+                stderr_output = ""
+                try:
+                    # Lecture non-bloquante de stderr
+                    stderr_output = "".join(self.process.stderr.readlines())
+                    if stderr_output:
+                        self.logger.error("--- DEBUT SORTIE STDERR DU BACKEND ---")
+                        for line in stderr_output.strip().split('\n'):
+                            self.logger.error(f"[Backend STDERR] {line}")
+                        self.logger.error("--- FIN SORTIE STDERR DU BACKEND ---")
+                    else:
+                        self.logger.error("Aucune sortie sur stderr n'a été capturée avant la fin du processus.")
+                except Exception as e:
+                    self.logger.error(f"Impossible de lire stderr du processus terminé : {e}")
                 return False
 
             try:
@@ -288,7 +318,7 @@ class BackendManager:
                 self.logger.warning(f"Erreur client inattendue lors du health check après {elapsed:.1f}s: {type(e).__name__} - {e}")
 
             # Pause substantielle entre les tentatives pour ne pas surcharger et laisser le temps au serveur de démarrer.
-            await asyncio.sleep(5)
+            await asyncio.sleep(2)
 
         # Si la boucle se termine, c'est un échec définitif par timeout global.
         self.logger.error(f"Timeout global atteint ({self.timeout_seconds}s) - Backend non accessible sur {url}")

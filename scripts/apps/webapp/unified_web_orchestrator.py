@@ -224,14 +224,35 @@ class UnifiedWebOrchestrator:
         log_file = Path(logging_config.get('file', 'logs/webapp_orchestrator.log'))
         log_file.parent.mkdir(parents=True, exist_ok=True)
         
-        logging.basicConfig(
-            level=getattr(logging, logging_config.get('level', 'INFO')),
-            format=logging_config.get('format', '%(asctime)s - %(levelname)s - %(message)s'),
-            handlers=[
-                logging.FileHandler(log_file, encoding='utf-8'),
-                logging.StreamHandler(sys.stdout.reconfigure(encoding='utf-8'))
-            ]
-        )
+        # Niveau de logging de base
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.DEBUG)  # Capture tout, le filtrage se fait par handler
+
+        # Supprimer les anciens handlers pour éviter les duplications
+        if logger.hasHandlers():
+            logger.handlers.clear()
+
+        # Handler Fichier (tout logger)
+        file_handler = logging.FileHandler(log_file, encoding='utf-8')
+        file_formatter = logging.Formatter(logging_config.get('format', '%(asctime)s - %(levelname)s - %(message)s'))
+        file_handler.setFormatter(file_formatter)
+        file_handler.setLevel(logging.DEBUG)  # Logger tout dans le fichier
+        logger.addHandler(file_handler)
+
+        # Handler Console pour STDOUT (INFO et moins)
+        stdout_handler = logging.StreamHandler(sys.stdout)
+        stdout_formatter = logging.Formatter('%(asctime)s - \033[92m%(levelname)s\033[0m - %(message)s') # Vert pour INFO
+        stdout_handler.setFormatter(stdout_formatter)
+        stdout_handler.setLevel(logging.INFO)
+        stdout_handler.addFilter(lambda record: record.levelno < logging.WARNING)
+        logger.addHandler(stdout_handler)
+
+        # Handler Console pour STDERR (WARNING et plus)
+        stderr_handler = logging.StreamHandler(sys.stderr)
+        stderr_formatter = logging.Formatter('%(asctime)s - \033[91m%(levelname)s\033[0m - %(message)s') # Rouge pour WARNING/ERROR
+        stderr_handler.setFormatter(stderr_formatter)
+        stderr_handler.setLevel(logging.WARNING)
+        logger.addHandler(stderr_handler)
         
         return logging.getLogger(__name__)
     

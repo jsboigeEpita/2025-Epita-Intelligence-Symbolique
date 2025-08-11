@@ -123,3 +123,16 @@ Ce contexte historique montre que la gestion du cycle de vie de la JVM est extr�
         1.  **Diagnostic du Deadlock** : Redirection temporaire de `stdout`/`stderr` vers des fichiers pour permettre au serveur de démarrer et de révéler l'erreur sous-jacente.
         2.  **Correction de la `TypeError`** : Alignement de l'appel au constructeur de `LogicService` avec sa définition (qui n'attendait aucun argument).
         3.  **Leçon Apprise** : Les interactions I/O avec des sous-processus contenant une JVM sont extrêmement sensibles. La redirection vers `PIPE` doit être gérée avec précaution, par exemple en consommant les flux dans des threads dédiés pour éviter les deadlocks.
+
+### Phase 7 : Deadlock du Serveur avec Initialisation Paresseuse (Début Août 2025)
+
+*   **Problème** : Après avoir corrigé le crash natif `EXCEPTION_ACCESS_VIOLATION` en déplaçant le démarrage de la JVM au tout début du processus, un nouveau problème est apparu : un deadlock complet du serveur. Le processus démarrait mais n'acceptait jamais de requêtes, provoquant un timeout systématique dans les scripts de test.
+*   **Stratégie de Diagnostic** :
+    1.  **Initialisation Paresseuse** : La première tentative de correction a consisté à déplacer toute la logique d'initialisation (y compris le démarrage de la JVM) dans un hook `@app.before_request` de Flask. L'idée était de démarrer le serveur rapidement et de ne payer le coût de l'initialisation qu'à la toute première requête.
+    2.  **Échec et Isolation** : Cette approche a échoué, le deadlock persistait. Un script de test minimaliste (`scripts/debugging/validate_backend_startup.py`) a été créé pour reproduire le problème de manière isolée, en lançant le serveur et en sondant un endpoint `/api/health`.
+    3.  **Identification du Serveur Fautif** : Les tests ont révélé que le deadlock ne se produisait que lors de l'utilisation du serveur de développement Flask (`werkzeug`). Lorsque le même code était lancé avec un serveur ASGI de production comme **Uvicorn**, le deadlock disparaissait.
+*   **Cause Racine** : Le modèle de rechargement et de gestion des workers du serveur de développement `werkzeug` est incompatible avec le démarrage d'une JVM dans un de ses threads de requête. Le processus se bloque en attendant une ressource qui ne sera jamais libérée.
+*   **Solution** :
+    1.  **Adoption d'Uvicorn** : Tous les scripts de lancement de tests qui nécessitent une instance réelle du serveur doivent utiliser `uvicorn` pour servir l'application Flask, et non le `app.run()` natif de Flask. Le script `scripts/run_e2e_backend.py` est le point d'entrée de référence pour cela.
+    2.  **Conservation de l'Initialisation Paresseuse** : L'architecture d'initialisation dans le hook `@before_request` reste la solution correcte pour s'assurer que les bibliothèques Python (ex: `transformers`) sont chargées avant la JVM, prévenant ainsi le crash natif initial.
+*   **Leçon Apprise** : Le serveur de développement Flask/Werkzeug n'est pas adapté aux tests d'intégration qui impliquent des initialisations lourdes et sensibles comme celle d'une JVM. Il faut systématiquement utiliser un serveur plus robuste (Uvicorn, Gunicorn, etc.) pour valider le comportement du serveur dans des conditions proches de la production.
