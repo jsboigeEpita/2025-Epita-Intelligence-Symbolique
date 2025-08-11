@@ -176,15 +176,16 @@ class EnvironmentManager:
         
         final_command_parts = [part.replace("python", python_exe, 1) if part == "python" else part for part in command_parts]
         
+        # La sortie n'est plus capturée mais streamée en temps réel pour une meilleure visibilité.
         exit_code, _, _ = run_shell_command(
             command=final_command_parts,
             description=description,
-            capture_output=False,
-            shell_mode=False, # Important pour exécuter `pytest` ou `npx` directement
+            capture_output=False, # Stream en temps réel au lieu de capturer.
+            shell_mode=False,
             env=env_vars,
-            cwd=self.project_root # S'assurer que la commande s'exécute à la racine
+            cwd=self.project_root
         )
-        
+
         return exit_code
 
     def switch_environment(self, target_name: str) -> bool:

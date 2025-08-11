@@ -108,6 +108,8 @@ Write-Host "[INFO] Exécution directe de la commande dans l'environnement Conda.
 # Étape 2: Construire la commande finale pour l'exécuter avec `conda run`
 # On utilise --no-capture-output pour s'assurer que stdout/stderr du processus enfant
 # sont directement streamés, ce qui est crucial pour le logging des tests.
+# On ajoute le séparateur '--' pour distinguer clairement les arguments de `conda run`
+# de la commande à exécuter. C'est la méthode la plus robuste.
 $condaArgs = @(
     "run",
     "-n", $envName,
