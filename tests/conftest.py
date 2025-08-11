@@ -224,7 +224,9 @@ def jvm_session(request):
         yield
         return
 
-    logger.info("--- Configuration de la fixture de session JVM ---")
+    logger.info("=" * 80)
+    logger.info(f" début de la fixture jvm_session pour le test : {request.node.name} ")
+    logger.info("=" * 80)
 
     # --- Importations préventives pour éviter les conflits de bas niveau ---
     # Il est crucial d'importer les bibliothèques lourdes comme torch et transformers
@@ -250,46 +252,33 @@ def jvm_session(request):
     yield
     
     # Le code après yield est exécuté à la fin de la session de test.
-    logger.info("--- Nettoyage de la fixture de session JVM ---")
+    logger.info("=" * 80)
+    logger.info(f" Fin de la fixture jvm_session pour le test : {request.node.name} ")
+    logger.info("=" * 80)
     
     # On arrête la JVM en indiquant que c'est bien la fixture de session qui le demande.
-    shutdown_jvm(called_by_session_fixture=True)
+    # shutdown_jvm(called_by_session_fixture=True) # Désactivé car notoirement instable.
+    logger.warning("L'arrêt de la JVM est désactivé à la fin de la session pour éviter les crashs.")
 
-@pytest.fixture(scope="function", autouse=True)
-def jvm_fixture(request):
-    """
-    Fixture qui garantit que la JVM est démarrée pour les tests marqués 'jvm_test'.
-    Utilise une portée 'function' pour s'appliquer à chaque test individuellement.
-    """
-    if 'jvm_test' in request.keywords:
-        # Ce test nécessite la JVM
-        if not is_jvm_started():
-            logger.info(f"Test '{request.node.name}' requires JVM. Initializing...")
-            initialize_jvm()
-        else:
-            logger.info(f"Test '{request.node.name}' uses existing JVM session.")
-        
-        yield
-        
-        # Le shutdown est laissé à la fin de la session pour ne pas le faire après chaque test.
-        # Idéalement, une fixture de session s'en chargerait, mais pour éviter les conflits
-        # avec xdist, nous adoptons cette stratégie simplifiée.
-    else:
-        # Ce test ne nécessite pas la JVM, on ne fait rien.
-        yield
+# La fixture jvm_fixture est supprimée car elle est la source des conflits.
+# La gestion de la JVM est maintenant entièrement centralisée dans jvm_session.
 
 @pytest.fixture(scope="function")
-def tweety_bridge_fixture(jvm_fixture):
+def tweety_bridge_fixture(jvm_session):
     """
     Fournit une instance de TweetyBridge connectée à la session JVM gérée
-    par la fixture jvm_fixture.
+    par la fixture jvm_session.
     """
-    # La dépendance à jvm_fixture garantit que la JVM est démarrée avant
+    # La dépendance à jvm_session garantit que la JVM est démarrée avant
     # l'exécution de ce code.
     from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
     logger.info("Création de l'instance TweetyBridge pour la fixture...")
+
+    # Vérification explicite que la JVM est bien démarrée par la session
+    assert is_jvm_started(), "La fixture jvm_session n'a pas réussi à démarrer la JVM."
+
     bridge = TweetyBridge()
-    assert bridge.initializer.is_jvm_ready(), "La JVM devrait être prête grâce à jvm_fixture"
+    assert bridge.initializer.is_jvm_ready(), "La JVM devrait être prête grâce à jvm_session"
     logger.info("Instance TweetyBridge créée avec succès.")
     yield bridge
 

@@ -376,9 +376,39 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
                 return False
 
         try:
-            jvm_path_explicit = str(Path(java_home) / 'bin' / ('java.exe' if platform.system() == 'Windows' else 'java'))
-            if not Path(jvm_path_explicit).exists():
-                 jvm_path_explicit = str(Path(java_home) / 'bin' / ('java.dll' if platform.system() == 'Windows' else 'libjvm.so'))
+            # Correction de la logique de détection du chemin de la JVM.
+            # JPype a besoin du chemin vers la librairie partagée (jvm.dll/libjvm.so), pas l'exécutable.
+            # On cherche dans les emplacements standards.
+            java_home_path = Path(java_home)
+            if platform.system() == 'Windows':
+                # Ordre de recherche pour Windows
+                search_paths = [
+                    java_home_path / 'bin' / 'server' / 'jvm.dll',
+                    java_home_path / 'bin' / 'client' / 'jvm.dll',
+                    java_home_path / 'bin' / 'jvm.dll',
+                ]
+            else:
+                # Ordre de recherche pour Linux/macOS
+                search_paths = [
+                    java_home_path / 'lib' / 'server' / 'libjvm.so',
+                    java_home_path / 'lib' / 'amd64' / 'server' / 'libjvm.so',
+                    java_home_path / 'jre' / 'lib' / 'amd64' / 'server' / 'libjvm.so',
+                    java_home_path / 'lib' / 'libjvm.so',
+                ]
+
+            jvm_path_explicit = None
+            for path in search_paths:
+                if path.exists():
+                    jvm_path_explicit = str(path)
+                    logger.info(f"Chemin de la JVM valide trouvé : {jvm_path_explicit}")
+                    break
+            
+            if not jvm_path_explicit:
+                logger.critical(f"Impossible de trouver le fichier jvm.dll ou libjvm.so dans les chemins de recherche standards de JAVA_HOME: {java_home_path}")
+                # En dernier recours, on utilise la méthode par défaut de JPype qui peut fonctionner
+                # si le système est bien configuré (ex: variables d'environnement).
+                jvm_path_explicit = jpype.getDefaultJVMPath()
+                logger.warning(f"Utilisation du chemin par défaut de JPype comme solution de repli: {jvm_path_explicit}")
             
             jvm_options = get_jvm_options()
             
@@ -388,13 +418,18 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
             logger.info(f"  Classpath: {classpath[0] if classpath else 'Vide'}")
             logger.info("------------------------------------")
 
+            current_thread_id = threading.get_ident()
+            logger.info(f"Appel à jpype.startJVM sur le point d'être exécuté depuis le thread ID: {current_thread_id}")
+
             jpype.startJVM(
                 *jvm_options,
                 classpath=classpath,
+                jvmpath=jvm_path_explicit,
                 ignoreUnrecognized=True,
                 convertStrings=False
             )
             
+            logger.info(f"Appel à jpype.startJVM terminé (Thread ID: {current_thread_id}).")
             _JVM_INITIALIZED_THIS_SESSION = True
             logger.info("[SUCCESS] JVM démarrée avec succès.")
             return True
