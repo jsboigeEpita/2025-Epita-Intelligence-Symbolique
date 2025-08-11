@@ -35,15 +35,14 @@ from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 from argumentation_analysis.agents.core.pl.pl_definitions import PL_AGENT_INSTRUCTIONS
 
 
-@pytest.fixture(scope="module")
-def authentic_pl_agent(jvm_controller):
+@pytest.fixture(scope="function")
+def authentic_pl_agent(tweety_bridge_fixture):
     """
     Fixture pour initialiser un agent PL authentique avec un TweetyBridge partagé.
-    Remplace setup_method pour une gestion centralisée de la JVM.
     """
     print("\n[AUTHENTIC FIXTURE] Configuration PropositionalLogicAgent authentique...")
-    if not jvm_controller.is_jvm_ready():
-        pytest.skip("JVM controller not ready, skipping authentic propositional agent tests.")
+    if not tweety_bridge_fixture.initializer.is_jvm_ready():
+        pytest.skip("TweetyBridge not ready, skipping authentic propositional agent tests.")
 
     kernel = Kernel()
     llm_service_configured = False
@@ -74,7 +73,6 @@ def authentic_pl_agent(jvm_controller):
         except Exception as e:
             print(f"[AUTHENTIC] OpenAI non disponible: {e}")
 
-    tweety_bridge = jvm_controller.tweety_bridge
     agent_name = "TestPLAgentAuthentic"
     agent = PropositionalLogicAgent(
         kernel=kernel,
@@ -82,7 +80,7 @@ def authentic_pl_agent(jvm_controller):
         service_id=llm_service_id if llm_service_configured else None,
     )
     # Injection directe du pont partagé
-    agent.tweety_bridge = tweety_bridge
+    agent._tweety_bridge = tweety_bridge_fixture
 
     if llm_service_configured:
         print(f"[AUTHENTIC] PropositionalLogicAgent configuré avec service: {llm_service_id}")
@@ -92,9 +90,9 @@ def authentic_pl_agent(jvm_controller):
     return {
         "agent": agent,
         "kernel": kernel,
-        "tweety_bridge": tweety_bridge,
+        "tweety_bridge": tweety_bridge_fixture,
         "llm_service_configured": llm_service_configured,
-        "tweety_available": jvm_controller.is_jvm_ready(),
+        "tweety_available": tweety_bridge_fixture.initializer.is_jvm_ready(),
         "llm_service_id": llm_service_id,
         "agent_name": agent_name
     }

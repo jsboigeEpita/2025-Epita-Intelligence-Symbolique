@@ -44,14 +44,13 @@ from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 class ConcreteModalLogicAgent(ModalLogicAgent):
     pass
 
-@pytest.fixture(scope="module")
-def authentic_agent(jvm_controller):
+@pytest.fixture(scope="function")
+def authentic_agent(tweety_bridge_fixture):
     """
     Fixture pour initialiser un agent authentique avec un TweetyBridge partagé.
-    Cette fixture remplace setup_method pour une gestion correcte de la JVM.
     """
-    if not jvm_controller.is_jvm_ready():
-        pytest.skip("JVM controller not ready, skipping authentic modal agent tests.")
+    if not tweety_bridge_fixture.initializer.is_jvm_ready():
+        pytest.skip("TweetyBridge not ready, skipping authentic modal agent tests.")
 
     kernel = Kernel()
     llm_service_id = "authentic_modal_llm_service"
@@ -89,10 +88,9 @@ def authentic_agent(jvm_controller):
         llm_available = False
         print(f"⚠️ Erreur configuration LLM Modal: {e}")
 
-    tweety_bridge = jvm_controller.tweety_bridge
     agent_name = "ModalLogicAgent"
     agent = ConcreteModalLogicAgent(kernel, service_id=llm_service_id, agent_name=agent_name)
-    agent.tweety_bridge = tweety_bridge # Injection directe
+    agent._tweety_bridge = tweety_bridge_fixture # Injection directe
 
     if llm_available:
         try:
@@ -104,9 +102,9 @@ def authentic_agent(jvm_controller):
     return {
         "agent": agent,
         "kernel": kernel,
-        "tweety_bridge": tweety_bridge,
+        "tweety_bridge": tweety_bridge_fixture,
         "llm_available": llm_available,
-        "tweety_available": jvm_controller.is_jvm_ready(),
+        "tweety_available": tweety_bridge_fixture.initializer.is_jvm_ready(),
         "llm_service_id": llm_service_id,
         "agent_name": agent_name
     }

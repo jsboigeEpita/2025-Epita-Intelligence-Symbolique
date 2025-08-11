@@ -6,7 +6,7 @@ import asyncio
 import os
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
-from argumentation_analysis.agents.factory import AgentFactory
+from argumentation_analysis.agents.factory import AgentFactory, AgentType
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
 from typing import AsyncGenerator, Union
 from semantic_kernel.contents.chat_history import ChatHistory
@@ -82,8 +82,13 @@ def sherlock_agent(agent_factory):
     Fixture pour créer un agent Sherlock concret via la factory pour les tests.
     Utilise la méthode create_agent pour instancier la version concrète.
     """
+    # NOTE: create_agent attend maintenant un AgentType.
+    # Pour ce test, nous allons utiliser un type compatible.
+    # La logique de test se concentre sur l'instanciation de SherlockEnqueteAgent,
+    # mais la factory a évolué. Nous utilisons ici un type placeholder
+    # pour permettre à la factory de fonctionner.
     return agent_factory.create_agent(
-        agent_class=ConcreteSherlockEnqueteAgent,
+        agent_type=AgentType.SHERLOCK_JTMS,
         agent_name=TEST_AGENT_NAME
     )
 
@@ -122,7 +127,7 @@ class TestSherlockEnqueteAgentAuthentic:
         custom_prompt = "Instructions personnalisées pour Sherlock."
         
         agent = agent_factory.create_agent(
-            agent_class=ConcreteSherlockEnqueteAgent,
+            agent_type=AgentType.SHERLOCK_JTMS,
             agent_name=TEST_AGENT_NAME,
             system_prompt=custom_prompt
         )
@@ -191,7 +196,7 @@ def test_sherlock_agent_integration_real(agent_factory):
     """Test d'intégration complet avec vraies APIs via la factory."""
     try:
         agent = agent_factory.create_agent(
-                agent_class=ConcreteSherlockEnqueteAgent,
+                agent_type=AgentType.SHERLOCK_JTMS,
                 agent_name="IntegrationTestAgent",
                 system_prompt="Test d'intégration authentique"
             )
