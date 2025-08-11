@@ -47,6 +47,7 @@ class FallacyWorkflowPlugin:
                 with open(taxonomy_file_path, mode='r', encoding='utf-8') as infile:
                     reader = csv.DictReader(infile)
                     taxonomy_data = list(reader)
+                    pass # Le log de debug n'est plus nécessaire
             except FileNotFoundError:
                 self.logger.error(f"Taxonomy file not found at {taxonomy_file_path}")
             except Exception as e:

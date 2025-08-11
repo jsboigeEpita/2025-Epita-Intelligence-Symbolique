@@ -37,8 +37,9 @@ class AgentFactory:
         # Cela élimine la logique dupliquée et les incohérences.
         agent_to_create = InformalFallacyAgent(
             kernel=self.kernel,
-            config_name=config_name,  # On passe directement le nom de la config
-            llm_service_id=self.llm_service_id # Assurer que les kwargs sont passés
+            config_name=config_name,
+            taxonomy_file_path=taxonomy_file_path,  # Ajout du passage de l'argument manquant
+            llm_service_id=self.llm_service_id
         )
 
         return agent_to_create

@@ -376,16 +376,22 @@ def setup_authentic_taxonomy_csv(tmp_path):
     test_taxonomy_path = test_data_dir / "authentic_taxonomy.csv"
     
     # Contenu CSV authentique plus riche
-    content = """PK,Name,Category,Description,Example,Counter_Example
-1,Appel à l'autorité,Fallacy,Invoquer une autorité non pertinente ou non qualifiée,"Einstein a dit que Dieu ne joue pas aux dés donc la mécanique quantique est fausse","Selon le consensus scientifique actuel le réchauffement climatique est réel"
-2,Pente glissante,Fallacy,Suggérer qu'une action mènera inévitablement à une chaîne d'événements indésirables,"Si nous légalisons la marijuana bientôt toutes les drogues seront légales","Si nous augmentons le salaire minimum certaines entreprises pourraient réduire leurs effectifs"
-3,Ad hominem,Fallacy,Attaquer la personne plutôt que ses idées,"Vous êtes trop jeune pour comprendre la politique","Votre argument est basé sur des données obsolètes"
-4,Faux dilemme,Fallacy,Présenter seulement deux options alors qu'il en existe d'autres,"Vous êtes soit avec nous soit contre nous","Il faut choisir entre sécurité et liberté"
-5,Appel à l'émotion,Fallacy,Utiliser des émotions plutôt que la logique pour convaincre,"Pensez aux enfants qui souffriront si cette loi passe","Ces statistiques montrent l'impact négatif de cette politique"
-"""
-    
-    with open(test_taxonomy_path, 'w', encoding='utf-8') as f:
-        f.write(content)
+    import csv
+    import io
+
+    header = ["PK", "Name", "Category", "Description", "Example", "Counter_Example", "depth", "path"]
+    data = [
+        [1, "Appel à l'autorité", "Fallacy", "Invoquer une autorité non pertinente ou non qualifiée", "Einstein a dit que Dieu ne joue pas aux dés donc la mécanique quantique est fausse", "Selon le consensus scientifique actuel le réchauffement climatique est réel", 1, "1"],
+        [2, "Pente glissante", "Fallacy", "Suggérer qu'une action mènera inévitablement à une chaîne d'événements indésirables", "Si nous légalisons la marijuana bientôt toutes les drogues seront légales", "Si nous augmentons le salaire minimum certaines entreprises pourraient réduire leurs effectifs", 1, "2"],
+        [3, "Ad hominem", "Fallacy", "Attaquer la personne plutôt que ses idées", "Vous êtes trop jeune pour comprendre la politique", "Votre argument est basé sur des données obsolètes", 1, "3"],
+        [4, "Faux dilemme", "Fallacy", "Présenter seulement deux options alors qu'il en existe d'autres", "Vous êtes soit avec nous soit contre nous", "Il faut choisir entre sécurité et liberté", 1, "4"],
+        [5, "Appel à l'émotion", "Fallacy", "Utiliser des émotions plutôt que la logique pour convaincre", "Pensez aux enfants qui souffriront si cette loi passe", "Ces statistiques montrent l'impact négatif de cette politique", 1, "5"]
+    ]
+
+    with open(test_taxonomy_path, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        writer.writerows(data)
         
     print(f"[AUTHENTIC] Fichier taxonomie créé: {test_taxonomy_path}")
     yield test_taxonomy_path
@@ -434,11 +440,14 @@ def authentic_informal_agent(authentic_semantic_kernel, setup_authentic_taxonomy
 
         settings = AppSettings()
         settings.service_manager.default_llm_service_id = llm_service_id
-        agent_factory = AgentFactory(kernel, settings)
+        # Correction: Le constructeur de AgentFactory attend llm_service_id (str), pas settings (AppSettings)
+        agent_factory = AgentFactory(kernel, llm_service_id=llm_service_id)
         
         # On utilise la config "full" pour avoir toutes les fonctionnalités
         agent = agent_factory.create_agent(
-            AgentType.INFORMAL_FALLACY, config_name="full"
+            AgentType.INFORMAL_FALLACY,
+            config_name="full",
+            taxonomy_file_path=str(setup_authentic_taxonomy_csv)
         )
         agent.name = agent_name # Surcharger le nom
         
@@ -449,6 +458,38 @@ def authentic_informal_agent(authentic_semantic_kernel, setup_authentic_taxonomy
         print(f"[AUTHENTIC] Erreur création agent via AgentFactory: {e}")
         pytest.fail(f"Impossible de créer l'agent via AgentFactory: {e}")
 
+
+@pytest.fixture
+def simple_authentic_informal_agent(authentic_semantic_kernel, setup_authentic_taxonomy_csv):
+    """
+    Fixture authentique pour un InformalAnalysisAgent en mode 'simple'.
+    Cet agent est configuré pour une réponse directe sans workflow complexe.
+    """
+    kernel = authentic_semantic_kernel.get_kernel()
+    llm_service_id = authentic_semantic_kernel.get_service_id()
+    agent_name = "simple_authentic_informal_agent"
+    
+    print(f"[AUTHENTIC] Création de l'agent '{agent_name}' (simple) via AgentFactory...")
+
+    try:
+        if not llm_service_id:
+            pytest.skip("Saut du test authentique car aucun service LLM n'est configuré.")
+
+        agent_factory = AgentFactory(kernel, llm_service_id=llm_service_id)
+        
+        agent = agent_factory.create_agent(
+            AgentType.INFORMAL_FALLACY,
+            config_name="simple",
+            taxonomy_file_path=str(setup_authentic_taxonomy_csv)
+        )
+        agent.name = agent_name
+        
+        print(f"[AUTHENTIC] Agent '{agent_name}' créé avec succès.")
+        return agent
+        
+    except Exception as e:
+        print(f"[AUTHENTIC] Erreur création agent simple via AgentFactory: {e}")
+        pytest.fail(f"Impossible de créer l'agent (simple) via AgentFactory: {e}")
 
 @pytest.fixture
 def sample_authentic_test_text():
