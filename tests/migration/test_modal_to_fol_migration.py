@@ -46,6 +46,7 @@ from config.unified_config import (
     LogicType,
     MockLevel,
     AgentType,
+    OrchestrationType,
     PresetConfigs
 )
 
@@ -152,7 +153,9 @@ class TestModalToFOLInterface:
     
     def test_interface_compatibility(self):
         """Test compatibilité interface entre Modal et FOL."""
-        fol_agent = FOLLogicAgent()
+        config = UnifiedConfig()
+        kernel = config.get_kernel_with_gpt4o_mini()
+        fol_agent = FOLLogicAgent(kernel=kernel)
         
         # Vérification méthodes publiques essentielles
         assert hasattr(fol_agent, 'analyze')
@@ -184,7 +187,9 @@ class TestModalToFOLInterface:
         legacy_config = UnifiedConfig(
             logic_type=LogicType.MODAL,
             agents=[AgentType.LOGIC],  # Agent générique
-            mock_level=MockLevel.PARTIAL
+            mock_level=MockLevel.PARTIAL,
+            require_real_gpt=False,
+            require_real_tweety=False
         )
         
         # La config devrait fonctionner (même si agents différents)
@@ -195,7 +200,9 @@ class TestModalToFOLInterface:
     @pytest.mark.asyncio
     async def test_result_structure_compatibility(self):
         """Test compatibilité structure résultats."""
-        fol_agent = FOLLogicAgent()
+        config = UnifiedConfig()
+        kernel = config.get_kernel_with_gpt4o_mini()
+        fol_agent = FOLLogicAgent(kernel=kernel)
         
         text = "Test compatibilité structure."
         result = await fol_agent.analyze(text)
@@ -229,7 +236,9 @@ class TestFunctionalReplacement:
     @pytest.mark.asyncio
     async def test_sophism_analysis_migration(self, migration_suite):
         """Test migration analyse de sophismes."""
-        fol_agent = FOLLogicAgent(agent_name="MigrationTest")
+        config = UnifiedConfig()
+        kernel = config.get_kernel_with_gpt4o_mini()
+        fol_agent = FOLLogicAgent(kernel=kernel, agent_name="MigrationTest")
         
         successful_migrations = 0
         total_cases = len(migration_suite.test_cases)
@@ -266,7 +275,9 @@ class TestFunctionalReplacement:
     @pytest.mark.asyncio
     async def test_error_handling_improvement(self):
         """Test amélioration gestion d'erreurs vs Modal Logic."""
-        fol_agent = FOLLogicAgent()
+        config = UnifiedConfig()
+        kernel = config.get_kernel_with_gpt4o_mini()
+        fol_agent = FOLLogicAgent(kernel=kernel)
         
         # Cas d'erreur problématiques pour Modal Logic
         problematic_cases = [
@@ -306,7 +317,9 @@ class TestPerformanceComparison:
     @pytest.mark.asyncio
     async def test_performance_parity_or_improvement(self):
         """Test parité ou amélioration performance."""
-        fol_agent = FOLLogicAgent(agent_name="PerformanceFOL")
+        config = UnifiedConfig()
+        kernel = config.get_kernel_with_gpt4o_mini()
+        fol_agent = FOLLogicAgent(kernel=kernel, agent_name="PerformanceFOL")
         
         test_texts = [
             "Simple test de performance.",
@@ -349,7 +362,9 @@ class TestPerformanceComparison:
     @pytest.mark.asyncio
     async def test_stability_improvement(self):
         """Test amélioration stabilité vs Modal Logic."""
-        fol_agent = FOLLogicAgent()
+        config = UnifiedConfig()
+        kernel = config.get_kernel_with_gpt4o_mini()
+        fol_agent = FOLLogicAgent(kernel=kernel)
         
         # Tests répétés pour évaluer stabilité
         stability_tests = 10
@@ -402,7 +417,9 @@ class TestOrchestrationIntegration:
         )
         
         # Simulation création agent via factory (normalement fait par orchestrateur)
-        fol_agent = FOLLogicAgent(agent_name="OrchestrationTest")
+        config = UnifiedConfig()
+        kernel = config.get_kernel_with_gpt4o_mini()
+        fol_agent = FOLLogicAgent(kernel=kernel, agent_name="OrchestrationTest")
         
         # Test analyse dans contexte orchestration
         result = await fol_agent.analyze("Test intégration orchestration avec FOL.")
@@ -424,7 +441,9 @@ class TestOrchestrationIntegration:
         old_style_config = UnifiedConfig(
             logic_type=LogicType.MODAL,  # Ancien type
             agents=[AgentType.LOGIC],    # Agent générique
-            mock_level=MockLevel.PARTIAL
+            mock_level=MockLevel.PARTIAL,
+            require_real_gpt=False,
+            require_real_tweety=False
         )
         
         # La configuration doit être valide (même si différente)
@@ -451,7 +470,9 @@ class TestRegressionValidation:
     @pytest.mark.asyncio
     async def test_no_functionality_regression(self):
         """Test absence régression fonctionnelle."""
-        fol_agent = FOLLogicAgent()
+        config = UnifiedConfig()
+        kernel = config.get_kernel_with_gpt4o_mini()
+        fol_agent = FOLLogicAgent(kernel=kernel)
         
         # Tests de base qui devaient fonctionner avec Modal Logic
         basic_tests = [
@@ -503,7 +524,9 @@ class TestRegressionValidation:
     @pytest.mark.asyncio
     async def test_improvement_metrics(self):
         """Test métriques d'amélioration."""
-        fol_agent = FOLLogicAgent()
+        config = UnifiedConfig()
+        kernel = config.get_kernel_with_gpt4o_mini()
+        fol_agent = FOLLogicAgent(kernel=kernel)
         
         # Tests avec cas complexes pour mesurer améliorations
         complex_cases = [
@@ -569,7 +592,9 @@ class CompleteMigrationSuite:
         # Simulation des tests (les vrais tests sont dans les classes ci-dessus)
         try:
             # Interface
-            fol_agent = FOLLogicAgent()
+            config = UnifiedConfig()
+            kernel = config.get_kernel_with_gpt4o_mini()
+            fol_agent = FOLLogicAgent(kernel=kernel)
             assert hasattr(fol_agent, 'analyze')
             logger.info("✅ Interface compatible")
             

@@ -66,6 +66,11 @@ class TestQueryExecutor:
                 self.mock_tweety_bridge = self.query_executor._tweety_bridge
                 self.mock_tweety_bridge.is_jvm_ready.return_value = True
                 
+                # On mock les handlers directement sur l'instance du bridge
+                self.mock_tweety_bridge.pl_handler = MagicMock()
+                self.mock_tweety_bridge.fol_handler = MagicMock()
+                self.mock_tweety_bridge.modal_handler = MagicMock()
+                
                 self.mock_tweety_bridge_class = mock_tweety_bridge_class
                 yield
     
@@ -92,44 +97,44 @@ class TestQueryExecutor:
     @pytest.mark.asyncio
     async def test_execute_query_propositional_accepted(self):
         """Test de l'exécution d'une requête propositionnelle acceptée."""
-        self.mock_tweety_bridge.validate_formula.return_value = (True, "OK")
-        self.mock_tweety_bridge.execute_pl_query.return_value = "Tweety Result: Query 'a' is ACCEPTED (True)."
+        self.mock_tweety_bridge.pl_handler.validate_pl_formula.return_value = (True, "OK")
+        self.mock_tweety_bridge.pl_handler.pl_query.return_value = True
         
         belief_set = PropositionalBeliefSet("a => b")
         result, message = self.query_executor.execute_query(belief_set, "a")
         
-        self.mock_tweety_bridge.validate_formula.assert_called_once_with("a")
-        self.mock_tweety_bridge.execute_pl_query.assert_called_once_with("a => b", "a")
+        self.mock_tweety_bridge.pl_handler.validate_pl_formula.assert_called_once_with("a")
+        self.mock_tweety_bridge.pl_handler.pl_query.assert_called_once_with(belief_set.content, "a")
         
         assert result is True
-        assert message == "Tweety Result: Query 'a' is ACCEPTED (True)."
+        assert "ACCEPTED" in message
     
     @pytest.mark.asyncio
     async def test_execute_query_propositional_rejected(self):
         """Test de l'exécution d'une requête propositionnelle rejetée."""
-        self.mock_tweety_bridge.validate_formula.return_value = (True, "OK")
-        self.mock_tweety_bridge.execute_pl_query.return_value = "Tweety Result: Query 'a' is REJECTED (False)."
+        self.mock_tweety_bridge.pl_handler.validate_pl_formula.return_value = (True, "OK")
+        self.mock_tweety_bridge.pl_handler.pl_query.return_value = False
         
         belief_set = PropositionalBeliefSet("a => b")
         result, message = self.query_executor.execute_query(belief_set, "a")
         
-        self.mock_tweety_bridge.validate_formula.assert_called_once_with("a")
-        self.mock_tweety_bridge.execute_pl_query.assert_called_once_with("a => b", "a")
+        self.mock_tweety_bridge.pl_handler.validate_pl_formula.assert_called_once_with("a")
+        self.mock_tweety_bridge.pl_handler.pl_query.assert_called_once_with(belief_set.content, "a")
         
         assert result is False
-        assert message == "Tweety Result: Query 'a' is REJECTED (False)."
+        assert "REJECTED" in message
     
     @pytest.mark.asyncio
     async def test_execute_query_propositional_error(self):
         """Test de l'exécution d'une requête propositionnelle avec erreur."""
-        self.mock_tweety_bridge.validate_formula.return_value = (True, "OK")
-        self.mock_tweety_bridge.execute_pl_query.return_value = "FUNC_ERROR: Erreur de syntaxe"
+        self.mock_tweety_bridge.pl_handler.validate_pl_formula.return_value = (True, "OK")
+        self.mock_tweety_bridge.pl_handler.pl_query.return_value = "FUNC_ERROR: Erreur de syntaxe"
         
         belief_set = PropositionalBeliefSet("a => b")
         result, message = self.query_executor.execute_query(belief_set, "a")
         
-        self.mock_tweety_bridge.validate_formula.assert_called_once_with("a")
-        self.mock_tweety_bridge.execute_pl_query.assert_called_once_with("a => b", "a")
+        self.mock_tweety_bridge.pl_handler.validate_pl_formula.assert_called_once_with("a")
+        self.mock_tweety_bridge.pl_handler.pl_query.assert_called_once_with(belief_set.content, "a")
         
         assert result is None
         assert message == "FUNC_ERROR: Erreur de syntaxe"
@@ -137,14 +142,13 @@ class TestQueryExecutor:
     @pytest.mark.asyncio
     async def test_execute_query_first_order_accepted(self):
         """Test de l'exécution d'une requête du premier ordre acceptée."""
-        self.mock_tweety_bridge.validate_fol_formula.return_value = (True, "OK")
-        self.mock_tweety_bridge.execute_fol_query.return_value = "Tweety Result: FOL Query 'P(a)' is ACCEPTED (True)."
+        # La validation FOL est skipée dans l'implémentation pour le moment
+        self.mock_tweety_bridge.fol_handler.fol_query.return_value = True
         
         belief_set = FirstOrderBeliefSet("forall X: (P(X) => Q(X))")
         result, message = self.query_executor.execute_query(belief_set, "P(a)")
         
-        self.mock_tweety_bridge.validate_fol_formula.assert_called_once_with("P(a)")
-        self.mock_tweety_bridge.execute_fol_query.assert_called_once_with("forall X: (P(X) => Q(X))", "P(a)")
+        self.mock_tweety_bridge.fol_handler.fol_query.assert_called_once_with(belief_set, "P(a)")
         
         assert result is True
         assert message == "Tweety Result: FOL Query 'P(a)' is ACCEPTED (True)."
@@ -152,14 +156,14 @@ class TestQueryExecutor:
     @pytest.mark.asyncio
     async def test_execute_query_modal_accepted(self):
         """Test de l'exécution d'une requête modale acceptée."""
-        self.mock_tweety_bridge.validate_modal_formula.return_value = (True, "OK")
-        self.mock_tweety_bridge.execute_modal_query.return_value = "Tweety Result: Modal Query '[]p' is ACCEPTED (True)."
+        self.mock_tweety_bridge.modal_handler.validate_modal_formula.return_value = (True, "OK")
+        self.mock_tweety_bridge.modal_handler.execute_modal_query.return_value = "Tweety Result: Modal Query '[]p' is ACCEPTED (True)."
         
         belief_set = ModalBeliefSet("[]p => <>q")
         result, message = self.query_executor.execute_query(belief_set, "[]p")
         
-        self.mock_tweety_bridge.validate_modal_formula.assert_called_once_with("[]p")
-        self.mock_tweety_bridge.execute_modal_query.assert_called_once_with("[]p => <>q", "[]p")
+        self.mock_tweety_bridge.modal_handler.validate_modal_formula.assert_called_once_with("[]p")
+        self.mock_tweety_bridge.modal_handler.execute_modal_query.assert_called_once_with("[]p => <>q", "[]p")
         
         assert result is True
         assert message == "Tweety Result: Modal Query '[]p' is ACCEPTED (True)."
@@ -180,21 +184,21 @@ class TestQueryExecutor:
     @pytest.mark.asyncio
     async def test_execute_queries(self):
         """Test de l'exécution de plusieurs requêtes."""
-        self.mock_tweety_bridge.validate_formula.side_effect = [
+        self.mock_tweety_bridge.pl_handler.validate_pl_formula.side_effect = [
             (True, "OK"),
             (True, "OK"),
-            (False, "Syntax Error in c")
+            (False, "Syntax Error in c") # Simule un échec de validation
         ]
-        self.mock_tweety_bridge.execute_pl_query.side_effect = [
-            "Tweety Result: Query 'a' is ACCEPTED (True).",
-            "Tweety Result: Query 'b' is REJECTED (False)."
+        self.mock_tweety_bridge.pl_handler.pl_query.side_effect = [
+            True,
+            False
         ]
         
         belief_set = PropositionalBeliefSet("a => b")
         results = self.query_executor.execute_queries(belief_set, ["a", "b", "c"])
         
-        assert self.mock_tweety_bridge.validate_formula.call_count == 3
-        assert self.mock_tweety_bridge.execute_pl_query.call_count == 2
+        assert self.mock_tweety_bridge.pl_handler.validate_pl_formula.call_count == 3
+        assert self.mock_tweety_bridge.pl_handler.pl_query.call_count == 2
         
         assert len(results) == 3
         

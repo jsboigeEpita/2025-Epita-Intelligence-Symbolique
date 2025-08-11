@@ -20,11 +20,13 @@ if str(root_dir) not in sys.path:
 
 # Imports du moteur d'analyse
 try:
-    from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
-    from argumentation_analysis.agents.tools.analysis.fallacy_severity_evaluator import FallacySeverityEvaluator
-    from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer as EnhancedContextualAnalyzer
+    # Les analyseurs ont été déplacés dans le AnalysisToolsPlugin
+    from plugins.AnalysisToolsPlugin.logic.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer as EnhancedContextualAnalyzer
+    from plugins.AnalysisToolsPlugin.logic.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator as FallacySeverityEvaluator
+    # On garde ContextualFallacyAnalyzer pointant vers le nouvel analyseur amélioré pour la compatibilité
+    ContextualFallacyAnalyzer = EnhancedContextualAnalyzer
 except ImportError as e:
-    logging.warning(f"Impossible d'importer les analyseurs de sophismes: {e}")
+    logging.warning(f"Impossible d'importer les analyseurs de sophismes (depuis web_api_from_libs): {e}")
     ContextualFallacyAnalyzer = None
     FallacySeverityEvaluator = None
     EnhancedContextualAnalyzer = None

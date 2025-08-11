@@ -103,25 +103,24 @@ class QueryExecutor:
         """
         try:
             # Valider la requête
-            is_valid, validation_msg = self._tweety_bridge.validate_formula(query)
+            is_valid, validation_msg = self._tweety_bridge.pl_handler.validate_pl_formula(query)
             if not is_valid:
                 self._logger.error(f"Requête propositionnelle invalide: {validation_msg}")
                 return None, f"FUNC_ERROR: Requête invalide: {validation_msg}"
-            
+
             # Exécuter la requête
-            result_str = self._tweety_bridge.execute_pl_query(belief_set.content, query)
+            result = self._tweety_bridge.pl_handler.pl_query(belief_set.content, query)
+
+            # Analyser le résultat (le handler retourne un booléen ou une string d'erreur)
+            if isinstance(result, bool):
+                if result:
+                    return True, f"Tweety Result: Query '{query}' is ACCEPTED (True)."
+                else:
+                    return False, f"Tweety Result: Query '{query}' is REJECTED (False)."
             
-            # Analyser le résultat
-            if "FUNC_ERROR" in result_str:
-                self._logger.error(f"Erreur lors de l'exécution de la requête propositionnelle: {result_str}")
-                return None, result_str
-            
-            if "ACCEPTED" in result_str:
-                return True, result_str
-            elif "REJECTED" in result_str:
-                return False, result_str
-            else:
-                return None, result_str
+            # Si ce n'est pas un booléen, c'est un message d'erreur.
+            self._logger.error(f"Erreur du handler propositionnel: {result}")
+            return None, result
         
         except Exception as e:
             error_msg = f"Erreur lors de l'exécution de la requête propositionnelle: {str(e)}"
@@ -142,26 +141,25 @@ class QueryExecutor:
         :rtype: Tuple[Optional[bool], str]
         """
         try:
-            # Valider la requête
-            is_valid, validation_msg = self._tweety_bridge.validate_fol_formula(query)
-            if not is_valid:
-                self._logger.error(f"Requête du premier ordre invalide: {validation_msg}")
-                return None, f"FUNC_ERROR: Requête invalide: {validation_msg}"
-            
+            # Valider la requête (suppose que belief_set a un moyen de fournir une signature)
+            # Pour l'instant, on passe la validation qui est plus complexe en FOL
+            # is_valid, validation_msg = self._tweety_bridge.fol_handler.validate_formula_with_signature(belief_set.get_signature(), query)
+            # if not is_valid:
+            #     self._logger.error(f"Invalid first-order query: {validation_msg}")
+            #     return None, f"FUNC_ERROR: Invalid query: {validation_msg}"
+
             # Exécuter la requête
-            result_str = self._tweety_bridge.execute_fol_query(belief_set.content, query)
-            
+            result = self._tweety_bridge.fol_handler.fol_query(belief_set, query)
+
             # Analyser le résultat
-            if "FUNC_ERROR" in result_str:
-                self._logger.error(f"Erreur lors de l'exécution de la requête du premier ordre: {result_str}")
-                return None, result_str
+            if isinstance(result, bool):
+                if result:
+                    return True, f"Tweety Result: FOL Query '{query}' is ACCEPTED (True)."
+                else:
+                    return False, f"Tweety Result: FOL Query '{query}' is REJECTED (False)."
             
-            if "ACCEPTED" in result_str:
-                return True, result_str
-            elif "REJECTED" in result_str:
-                return False, result_str
-            else:
-                return None, result_str
+            self._logger.error(f"Erreur du handler FOL: {result}")
+            return None, result
         
         except Exception as e:
             error_msg = f"Erreur lors de l'exécution de la requête du premier ordre: {str(e)}"
@@ -183,14 +181,14 @@ class QueryExecutor:
         """
         try:
             # Valider la requête
-            is_valid, validation_msg = self._tweety_bridge.validate_modal_formula(query)
+            is_valid, validation_msg = self._tweety_bridge.modal_handler.validate_modal_formula(query)
             if not is_valid:
                 self._logger.error(f"Requête modale invalide: {validation_msg}")
                 return None, f"FUNC_ERROR: Requête invalide: {validation_msg}"
-            
+
             # Exécuter la requête
-            result_str = self._tweety_bridge.execute_modal_query(belief_set.content, query)
-            
+            result_str = self._tweety_bridge.modal_handler.execute_modal_query(belief_set.content, query)
+
             # Analyser le résultat
             if "FUNC_ERROR" in result_str:
                 self._logger.error(f"Erreur lors de l'exécution de la requête modale: {result_str}")

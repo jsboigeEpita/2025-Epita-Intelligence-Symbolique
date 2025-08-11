@@ -77,7 +77,8 @@ def create_app(config_overrides: Optional[Dict[str, Any]] = None) -> Flask:
     # --- Initialisation des Services ---
     # Les services sont attachés à l'application via app.extensions pour un accès
     # global et sécurisé via le contexte de l'application (current_app).
-    llm_service = create_llm_service(service_id="default")
+    force_mock = os.environ.get('FORCE_MOCK_LLM', 'false').lower() == 'true'
+    llm_service = create_llm_service(service_id="default", force_mock=force_mock)
     
     app.extensions['racine_services'] = {
         'analysis': AnalysisService(),

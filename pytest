@@ -1,1 +1,0 @@
-﻿conda run --no-capture-output -n projet-is python -m project_core.core_from_scripts.environment_manager --setup-vars --run-command --run-command

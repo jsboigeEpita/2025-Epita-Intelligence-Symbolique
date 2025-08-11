@@ -37,6 +37,7 @@ except ImportError:
 from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent, SYSTEM_PROMPT_MODAL
 from argumentation_analysis.agents.core.logic.belief_set import ModalBeliefSet, BeliefSet
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+from argumentation_analysis.core.jvm_setup import is_jvm_started
 
 
 # Création d'une classe concrète pour les tests
@@ -125,7 +126,7 @@ def test_initialization_and_setup_authentic(authentic_agent):
     
     if tweety_available:
         agent.setup_agent_components(llm_service_id)
-        assert agent.tweety_bridge.is_jvm_ready() == True
+        assert agent.tweety_bridge.initializer.is_jvm_ready() == True
         print("✅ Test authentique TweetyBridge Modal - JVM prête")
     else:
         print("⚠️ TweetyBridge Modal non disponible - test sauté")
@@ -188,7 +189,7 @@ async def test_generate_queries_authentic_modal(authentic_agent):
         for i, query in enumerate(queries[:3]):
             if query:
                 print(f"  Requête Modal {i+1}: {query}")
-                is_valid, msg = tweety_bridge.validate_modal_formula(query)
+                is_valid, msg = tweety_bridge.modal_handler.validate_modal_formula(query)
                 print(f"  Validation Modal: {is_valid} - {msg}")
                 
     except Exception as e:
@@ -224,7 +225,7 @@ def test_tweety_bridge_modal_integration_authentic(authentic_agent):
         pytest.skip("TweetyBridge non disponible pour Modal")
         
     formula = "[]p"
-    is_valid, message = tweety_bridge.validate_modal_formula(formula)
+    is_valid, message = tweety_bridge.modal_handler.validate_modal_formula(formula)
     
     print(f"✅ Validation formule Modal authentique: {is_valid} - {message}")
     assert isinstance(is_valid, bool)
@@ -277,7 +278,7 @@ def test_modal_specific_features_authentic(authentic_agent):
     
     for formula in modal_formulas:
         try:
-            is_valid, message = tweety_bridge.validate_modal_formula(formula)
+            is_valid, message = tweety_bridge.modal_handler.validate_modal_formula(formula)
             print(f"✅ Formule modale '{formula}': {is_valid} - {message}")
             assert isinstance(is_valid, bool)
             assert isinstance(message, str)
@@ -297,7 +298,7 @@ def test_performance_modal_authentic(authentic_agent):
     
     for i in range(5):
         formula = f"[]prop{i}"
-        is_valid, _ = tweety_bridge.validate_modal_formula(formula)
+        is_valid, _ = tweety_bridge.modal_handler.validate_modal_formula(formula)
         
     end_time = time.time()
     elapsed = end_time - start_time

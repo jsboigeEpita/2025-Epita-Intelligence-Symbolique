@@ -18,6 +18,7 @@ import sys
 import subprocess
 import json
 from pathlib import Path
+from project_core.utils.shell import run_in_activated_env, ShellCommandError
 
 # Ajouter le répertoire racine au path
 project_root = Path(__file__).parent.parent.absolute()
@@ -57,18 +58,16 @@ def test_conda():
     """Test environnement conda"""
     log_status("Test 2: Environnement conda 'projet-is'")
     try:
-        # Tester conda
-        result = subprocess.run(['conda', '--version'], 
-                              capture_output=True, text=True, timeout=10)
+        # Tester conda via run_in_activated_env
+        result = run_in_activated_env(['conda', '--version'], 'projet-is', check_errors=False)
         if result.returncode != 0:
             log_status("Conda non disponible", "ERROR")
             return False
         
         log_status(f"Conda disponible: {result.stdout.strip()}", "OK")
         
-        # Lister environnements
-        result = subprocess.run(['conda', 'env', 'list', '--json'], 
-                              capture_output=True, text=True, timeout=30)
+        # Lister environnements via run_in_activated_env
+        result = run_in_activated_env(['conda', 'env', 'list', '--json'], 'projet-is', check_errors=False)
         if result.returncode == 0:
             envs_data = json.loads(result.stdout)
             env_names = [Path(env_path).name for env_path in envs_data.get('envs', [])]

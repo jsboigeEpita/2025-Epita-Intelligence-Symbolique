@@ -25,6 +25,7 @@ try:
     # Ce chemin est relatif à la structure attendue du projet
     from project_core.core_from_scripts.environment_manager import EnvironmentManager
     from project_core.core_from_scripts.common_utils import get_project_root
+    from project_core.utils.shell import run_in_activated_env_async, ShellCommandError
 except ImportError:
     # Fallback robuste si le script est exécuté depuis un contexte inattendu
     # On remonte à la racine du projet et on l'ajoute au path
@@ -40,6 +41,7 @@ except ImportError:
     
     from project_core.core_from_scripts.environment_manager import EnvironmentManager
     from project_core.core_from_scripts.common_utils import get_project_root
+    from project_core.utils.shell import run_in_activated_env_async, ShellCommandError
 
 
 class PlaywrightRunner:
@@ -178,7 +180,7 @@ class PlaywrightRunner:
         self.logger.info(f"Préparation de la commande Pytest pour l'environnement Conda 'projet-is-roo-new'.")
 
         cmd = [
-            'python', '-m', 'pytest',
+            'pytest',
             '-v',
             '-p', 'no:asyncio', # Désactive le plugin asyncio pour éviter les conflits avec Playwright
             '-p', 'pytest_playwright', # Force le chargement du plugin Playwright
@@ -266,44 +268,24 @@ class PlaywrightRunner:
 
     async def _execute_tests(self, cmd: List[str],
                              config: Dict[str, Any]) -> subprocess.CompletedProcess:
-        """Exécute les tests via le wrapper PowerShell pour garantir l'activation de l'environnement Conda."""
+        """Exécute les tests directement dans l'environnement activé via le service unifié."""
         
         project_root = Path(get_project_root())
-        wrapper_script = project_root / 'activate_project_env.ps1'
-
-        if not wrapper_script.exists():
-            error_msg = f"Script wrapper introuvable: {wrapper_script}"
-            self.logger.error(error_msg)
-            return subprocess.CompletedProcess(cmd, returncode=-1, stderr=error_msg)
-
-        # La commande originale est jointe en une chaîne, avec des guillemets pour chaque argument
-        # afin de gérer les chemins avec des espaces.
-        command_to_run = " ".join(f'"{c}"' for c in cmd)
-
-        final_cmd = [
-            'powershell.exe',
-            '-ExecutionPolicy', 'Bypass',
-            '-File', str(wrapper_script),
-            '-CommandToRun', command_to_run
-        ]
-        
-        # Préparation de l'environnement pour le sous-processus
         script_env = os.environ.copy()
-        
-        command_str_for_log = " ".join(final_cmd)
-        self.logger.info(f"Exécution de la commande de test via wrapper: {command_str_for_log}")
-
         timeout = config.get('test_timeout', 900)
-        self.logger.info(f"Timeout configuré: {timeout}s")
         
+        self.logger.info(f"Exécution de la commande de test via run_in_activated_env_async: {' '.join(cmd)}")
+        self.logger.info(f"Timeout configuré: {timeout}s")
+
         stdout_lines = []
         stderr_lines = []
+        process = None
 
         try:
-            process = await asyncio.create_subprocess_exec(
-                *final_cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+            process = await run_in_activated_env_async(
+                command=cmd,
+                env_name="projet-is-roo-new", # L'environnement cible pour les tests
+                cwd=project_root,
                 env=script_env
             )
 
@@ -321,21 +303,23 @@ class PlaywrightRunner:
 
             await asyncio.wait_for(asyncio.gather(stdout_task, stderr_task, process.wait()), timeout=timeout)
             
-            returncode = process.returncode
-            self.logger.info(f"Tests pytest terminés avec le code de retour : {returncode}")
+            self.logger.info(f"Tests pytest terminés avec le code de retour : {process.returncode}")
 
         except asyncio.TimeoutError:
             self.logger.error(f"Timeout ({timeout}s) atteint pendant l'exécution des tests.")
-            if 'process' in locals() and process.returncode is None:
+            if process and process.returncode is None:
                 process.kill()
                 await process.wait()
-            return subprocess.CompletedProcess(command_str_for_log, returncode=-1, stdout="\n".join(stdout_lines), stderr="\n".join(stderr_lines))
+            return subprocess.CompletedProcess(' '.join(cmd), returncode=-1, stdout="\n".join(stdout_lines), stderr="Timeout Error")
+        except ShellCommandError as e:
+            self.logger.critical(f"Erreur ShellCommandError lors de l'exécution : {e}", exc_info=True)
+            return subprocess.CompletedProcess(' '.join(cmd), returncode=e.returncode, stdout=e.stdout, stderr=e.stderr)
         except Exception as e:
             self.logger.critical(f"Erreur critique lors de l'exécution du sous-processus de test : {e}", exc_info=True)
-            return subprocess.CompletedProcess(command_str_for_log, returncode=-2, stdout="\n".join(stdout_lines), stderr=str(e))
+            return subprocess.CompletedProcess(' '.join(cmd), returncode=-2, stdout="\n".join(stdout_lines), stderr=str(e))
 
         return subprocess.CompletedProcess(
-            command_str_for_log,
+            ' '.join(cmd),
             process.returncode,
             stdout="\n".join(stdout_lines),
             stderr="\n".join(stderr_lines)

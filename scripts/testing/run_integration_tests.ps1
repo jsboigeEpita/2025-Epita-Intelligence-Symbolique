@@ -2,6 +2,10 @@
 # Ce script utilise l'environnement d'activation du projet pour garantir que
 # toutes les dépendances et variables d'environnement sont correctement configurées.
 
+param(
+    [string]$Tests = "tests/e2e/python"
+)
+
 $ErrorActionPreference = 'Stop'
 
 # Chemin vers le script d'activation de l'environnement
@@ -11,11 +15,11 @@ $ActivationScript = Join-Path $PSScriptRoot "..\..\activate_project_env.ps1"
 # Le script se trouve dans scripts/ donc on remonte d'un niveau puis on descend dans apps/webapp
 $WebAppOrchestratorScript = "scripts/apps/webapp/unified_web_orchestrator.py"
 
-# Arguments à passer à l'orchestrateur. 
+# Arguments à passer à l'orchestrateur.
 # --integration est la valeur par défaut mais on l'explicite pour la clarté.
 # --frontend est requis pour les tests e2e
 # --visible peut être utile pour le débogage. Retirer pour exécution en headless.
-$OrchestratorArgs = "--integration --frontend" # --visible peut être ajouté manuellement pour le débogage
+$OrchestratorArgs = "--integration --frontend --tests $Tests" # --visible peut être ajouté manuellement pour le débogage
 
 # Commande complète à passer au script d'activation
 $CommandToExecute = "python $WebAppOrchestratorScript $OrchestratorArgs"

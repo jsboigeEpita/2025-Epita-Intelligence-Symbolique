@@ -392,7 +392,7 @@ class UnifiedTextAnalysisPipeline:
             
             if belief_set:
                 # Vérification de cohérence
-                is_consistent, consistency_details = logic_agent.is_consistent(belief_set)
+                is_consistent, consistency_details = await logic_agent.is_consistent(belief_set)
                 
                 # Génération de requêtes
                 queries = await logic_agent.generate_queries(text, belief_set)
@@ -400,7 +400,7 @@ class UnifiedTextAnalysisPipeline:
                 # Exécution des requêtes
                 query_results = []
                 for query in queries[:3]:  # Limite pour performance
-                    result, raw_output = logic_agent.execute_query(belief_set, query)
+                    result, raw_output = await logic_agent.execute_query(belief_set, query)
                     query_results.append({
                         "query": query,
                         "result": "Entailed" if result else "Not Entailed" if result is not None else "Unknown",

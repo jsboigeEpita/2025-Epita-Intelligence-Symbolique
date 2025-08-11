@@ -33,6 +33,7 @@ from argumentation_analysis.agents.core.logic.propositional_logic_agent import P
 from argumentation_analysis.agents.core.logic.belief_set import PropositionalBeliefSet
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 from argumentation_analysis.agents.core.pl.pl_definitions import PL_AGENT_INSTRUCTIONS
+from argumentation_analysis.core.jvm_setup import is_jvm_started
 
 
 @pytest.fixture(scope="function")
@@ -77,7 +78,7 @@ def authentic_pl_agent(tweety_bridge_fixture):
     agent = PropositionalLogicAgent(
         kernel=kernel,
         agent_name=agent_name,
-        service_id=llm_service_id if llm_service_configured else None,
+        service_id=llm_service_id if llm_service_configured else None
     )
     # Injection directe du pont partagé
     agent._tweety_bridge = tweety_bridge_fixture
@@ -125,7 +126,7 @@ def test_initialization_and_setup_authentic(authentic_pl_agent):
         print("[AUTHENTIC] TweetyBridge JVM non disponible - test gracieux")
     
     if llm_service_configured:
-        settings = agent.kernel.get_prompt_execution_settings_from_service_id(authentic_pl_agent['llm_service_id'])
+        settings = agent._kernel.get_prompt_execution_settings_from_service_id(authentic_pl_agent['llm_service_id'])
         assert settings is not None
         print(f"[AUTHENTIC] Paramètres LLM: {settings}")
     else:

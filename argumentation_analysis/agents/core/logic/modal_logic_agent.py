@@ -140,7 +140,7 @@ class ModalLogicAgent(BaseLogicAgent):
     service: Optional[ChatCompletionClientBase] = Field(default=None, exclude=True)
     settings: Optional[Any] = Field(default=None, exclude=True)
 
-    def __init__(self, kernel: Kernel, agent_name: str = "ModalLogicAgentFixed", service_id: Optional[str] = None, **kwargs):
+    def __init__(self, kernel: Kernel, agent_name: str = "ModalLogicAgentFixed", service_id: Optional[str] = None, tweety_bridge: Optional[TweetyBridge] = None, **kwargs):
         """
         Initialise une instance de ModalLogicAgentFixed avec retry automatique.
         """
@@ -155,8 +155,7 @@ class ModalLogicAgent(BaseLogicAgent):
         
         self.logger.info(f"Configuration des composants avec retry automatique pour {self.name}...")
 
-        # self._tweety_bridge = TweetyBridge() # Désactivé pour empêcher le démarrage de la JVM
-        self._tweety_bridge = None # Assigner None pour éviter les erreurs d'attribut
+        self._tweety_bridge = tweety_bridge if tweety_bridge is not None else TweetyBridge()
 
         # if not TweetyInitializer.is_jvm_ready():
         #     self.logger.error("Tentative de setup Modal Kernel alors que la JVM n'est PAS démarrée.")
@@ -440,19 +439,15 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
             if not belief_set_content:
                 raise ValueError("La conversion a produit une base de connaissances vide.")
 
-            # Valider avec Tweety (si le modal_handler supporte la validation)
-            try:
-                is_valid, validation_msg = self.tweety_bridge.validate_modal_belief_set(belief_set_content)
-                if not is_valid:
-                    # CORRECTION : Enrichir avec BNF pour le retry
-                    enriched_error = self._enrich_error_with_bnf(
-                        f"Ensemble de croyances invalide selon Tweety: {validation_msg}",
-                        belief_set_content
-                    )
-                    raise ValueError(enriched_error)
-            except AttributeError:
-                # Si la méthode n'existe pas encore, on log un warning et on continue
-                self.logger.warning("Méthode validate_modal_belief_set non disponible, validation Tweety ignorée.")
+            # Valider avec Tweety via le handler
+            is_valid, validation_msg = self.tweety_bridge.modal_handler.is_modal_kb_consistent(belief_set_content)
+            if not is_valid:
+                # CORRECTION : Enrichir avec BNF pour le retry
+                enriched_error = self._enrich_error_with_bnf(
+                    f"Ensemble de croyances invalide selon Tweety: {validation_msg}",
+                    belief_set_content
+                )
+                raise ValueError(enriched_error)
 
             belief_set_obj = ModalBeliefSet(belief_set_content)
             self.logger.info("Conversion et validation réussies avec retry automatique.")
@@ -562,19 +557,13 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
                     self.logger.info(f"Idée de requête rejetée pour '{formula}': Propositions inconnues: {invalid_props}")
                     continue
                 
-                # Validation contextuelle avec Tweety (si disponible)
-                try:
-                    validation_result = self.tweety_bridge.validate_modal_query_with_context(belief_set.content, formula)
-                    is_valid, validation_msg = validation_result if isinstance(validation_result, tuple) else (validation_result, "")
-                    if is_valid:
-                        self.logger.info(f"Idée validée et requête assemblée: {formula}")
-                        valid_queries.append(formula)
-                    else:
-                        self.logger.info(f"Idée rejetée: La requête '{formula}' a échoué la validation de Tweety: {validation_msg}")
-                except AttributeError:
-                    # Si la méthode n'existe pas encore, on accepte la requête après validation basique
-                    self.logger.warning("Méthode validate_modal_query_with_context non disponible, validation basique utilisée.")
+                # Validation contextuelle avec Tweety via le handler
+                is_valid, validation_msg = self.tweety_bridge.modal_handler.validate_modal_formula(formula)
+                if is_valid:
+                    self.logger.info(f"Idée validée et requête assemblée: {formula}")
                     valid_queries.append(formula)
+                else:
+                    self.logger.info(f"Idée rejetée: La requête '{formula}' a échoué la validation de Tweety: {validation_msg}")
 
             self.logger.info(f"Génération terminée avec retry automatique. {len(valid_queries)}/{len(query_ideas)} requêtes valides assemblées.")
             return valid_queries
@@ -600,8 +589,8 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
         try:
             bs_str = belief_set.content
             
-            # Utiliser le modal_handler via TweetyBridge
-            result_str = self.tweety_bridge.execute_modal_query(
+            # Utiliser le modal_handler
+            result_str = self.tweety_bridge.modal_handler.execute_modal_query(
                 belief_set_content=bs_str,
                 query_string=query
             )
@@ -658,35 +647,20 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
         Valide la syntaxe d'une formule de logique modale.
         """
         self.logger.debug(f"Validation de la formule modale: {formula}")
-        try:
-            is_valid, message = self.tweety_bridge.validate_modal_formula(formula)
-            if not is_valid:
-                self.logger.warning(f"Formule modale invalide: {formula}. Message: {message}")
-            return is_valid
-        except AttributeError:
-            # Si la méthode n'existe pas encore dans le bridge, on fait une validation basique
-            self.logger.warning("Méthode validate_modal_formula non disponible, validation basique utilisée.")
-            # Validation basique: vérifier que la formule contient des caractères valides
-            return bool(re.match(r'^[a-zA-Z0-9_\[\]<>()!&|=><=\s]+$', formula))
+        is_valid, message = self.tweety_bridge.modal_handler.validate_modal_formula(formula)
+        if not is_valid:
+            self.logger.warning(f"Formule modale invalide: {formula}. Message: {message}")
+        return is_valid
 
     def is_consistent(self, belief_set: BeliefSet) -> Tuple[bool, str]:
         """
         Vérifie si un ensemble de croyances modales est cohérent.
         """
         self.logger.info(f"Vérification de la cohérence pour l'agent {self.name}")
-        try:
-            is_consistent, message = self.tweety_bridge.is_modal_kb_consistent(belief_set.content)
-            if not is_consistent:
-                self.logger.warning(f"Ensemble de croyances modales jugé incohérent par Tweety: {message}")
-            return is_consistent, message
-        except AttributeError:
-            # Si la méthode n'existe pas encore, on retourne une réponse par défaut
-            self.logger.warning("Méthode is_modal_kb_consistent non disponible, cohérence supposée vraie.")
-            return True, "Vérification de cohérence non implémentée pour la logique modale"
-        except Exception as e:
-            error_msg = f"Erreur inattendue lors de la vérification de la cohérence modale: {e}"
-            self.logger.error(error_msg, exc_info=True)
-            return False, error_msg
+        is_consistent, message = self.tweety_bridge.modal_handler.is_modal_kb_consistent(belief_set.content)
+        if not is_consistent:
+            self.logger.warning(f"Ensemble de croyances modales jugé incohérent par Tweety: {message}")
+        return is_consistent, message
 
     def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> BeliefSet:
         """
@@ -743,10 +717,6 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
         kb_parts.extend(all_formulas)
         belief_set_content = "\n".join(kb_parts)
 
-        try:
-            is_consistent, _ = self.tweety_bridge.is_modal_kb_consistent(belief_set_content)
-            # L'argument est valide si l'ensemble est INCOHÉRENT.
-            return not is_consistent
-        except Exception as e:
-            self.logger.error(f"Erreur lors de la validation de l'argument modal via Tweety: {e}")
-            return False
+        is_consistent, _ = self.tweety_bridge.modal_handler.is_modal_kb_consistent(belief_set_content)
+        # L'argument est valide si l'ensemble est INCOHÉRENT.
+        return not is_consistent

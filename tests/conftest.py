@@ -48,11 +48,6 @@ for path in additional_paths:
         sys.path.insert(0, path)
 
 # Importations nécessaires pour les fixtures ci-dessous
-from argumentation_analysis.core.jvm_setup import is_jvm_started, initialize_jvm, shutdown_jvm
-from argumentation_analysis.agents.core.logic.tweety_initializer import TweetyInitializer
-from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
-from argumentation_analysis.models.extract_result import ExtractResult
-from argumentation_analysis.models.extract_definition import ExtractDefinitions, SourceDefinition, Extract
 
 
 logger = logging.getLogger(__name__)
@@ -186,9 +181,18 @@ def setup_test_environment():
     Définit une variable d'environnement pour signaler que les tests sont en cours.
     """
     os.environ['PYTEST_RUNNING'] = '1'
+    # --- FORCER LE SOLVEUR 'TWEETY' ---
+    # Pour éviter le crash 'access violation' causé par le conflit entre la JVM
+    # et la DLL native de Prover9, nous forçons l'utilisation du solveur 'tweety'
+    # pour toute la session de test.
+    os.environ['ARG_ANALYSIS_SOLVER'] = 'tweety'
     logger.info("Variable d'environnement 'PYTEST_RUNNING' définie à '1'.")
+    logger.info("Variable d'environnement 'ARG_ANALYSIS_SOLVER' forcée à 'tweety' pour éviter les conflits natifs.")
+    
     yield
+    
     del os.environ['PYTEST_RUNNING']
+    # Pas besoin de supprimer ARG_ANALYSIS_SOLVER car l'environnement est propre à cette session de test
     logger.info("Variable d'environnement 'PYTEST_RUNNING' supprimée.")
 
 
@@ -208,10 +212,12 @@ def apply_nest_asyncio():
     yield
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def jvm_session(request):
     """
-    Fixture de session pour démarrer et arrêter la JVM une seule fois pour tous les tests.
+    Fixture de session AUTO-ACTIVEE pour démarrer et arrêter la JVM une seule fois
+    pour tous les tests. L'ancienne fixture 'jvm_fixture' a été supprimée pour
+    éviter les conflits de cycle de vie.
     """
     # Option pour désactiver complètement la JVM pour une session de test (ex: E2E)
     if request.config.getoption("--disable-jvm-session"):
@@ -244,8 +250,29 @@ def jvm_session(request):
     # On s'assure que la structure des JARs est correcte avant tout.
     # _ensure_tweety_jars_are_correctly_placed() # This logic is now in jvm_setup
     
+    # --- Logging de diagnostic AVANT le démarrage de la JVM ---
+    logger.info("--- [DIAGNOSTIC JVM] Vérification de l'état avant initialisation ---")
+    
+    # 1. Vérifier les modules potentiellement conflictuels
+    conflicting_modules = ['opentelemetry', 'torch', 'transformers']
+    loaded_conflicts = [mod for mod in conflicting_modules if mod in sys.modules]
+    if loaded_conflicts:
+        logger.critical(f"[DIAGNOSTIC JVM] ALERTE: Modules conflictuels déjà chargés: {', '.join(loaded_conflicts)}")
+    else:
+        logger.info("[DIAGNOSTIC JVM] OK: Aucun module conflictuel connu (opentelemetry, torch, transformers) n'est présent dans sys.modules.")
+
+    # 2. Vérifier si la JVM pense être déjà démarrée
+    try:
+        is_started = jpype.isJVMStarted()
+        logger.info(f"[DIAGNOSTIC JVM] jpype.isJVMStarted() avant l'appel: {is_started}")
+    except Exception as e:
+        logger.error(f"[DIAGNOSTIC JVM] Erreur en appelant jpype.isJVMStarted(): {e}")
+
+    logger.info("--- [DIAGNOSTIC JVM] Fin de la vérification. Tentative de démarrage... ---")
+
     # Démarrage de la JVM. Le drapeau `session_fixture_owns_jvm=True` indique
     # que cette fixture est propriétaire de la JVM et est la seule autorisée à l'arrêter.
+    from argumentation_analysis.core.jvm_setup import initialize_jvm
     initialize_jvm(session_fixture_owns_jvm=True)
     
     # La fixture cède le contrôle aux tests.
@@ -384,6 +411,7 @@ def extract_result_dict():
 @pytest.fixture
 def valid_extract_result(extract_result_dict):
     """Provides a valid instance of ExtractResult."""
+    from argumentation_analysis.models.extract_result import ExtractResult
     return ExtractResult.from_dict(extract_result_dict)
 
 @pytest.fixture
@@ -405,6 +433,7 @@ def rejected_extract_result(extract_result_dict):
 @pytest.fixture
 def sample_definitions():
     """Provides a sample ExtractDefinitions object for tests."""
+    from argumentation_analysis.models.extract_definition import Extract, SourceDefinition, ExtractDefinitions
     extract = Extract(
         extract_name="Test Extract",
         start_marker="DEBUT_EXTRAIT",
@@ -577,13 +606,21 @@ def e2e_servers(request):
         # 3. Ajouter/Surcharger les variables spécifiques au test
         backend_env["PORT"] = backend_port
         backend_env["PYTHONPATH"] = str(project_root)
+        backend_env["FORCE_MOCK_LLM"] = "true"  # Force le mock pour les tests E2E
 
         logger.info(f"Démarrage du serveur backend Flask avec la commande: {' '.join(backend_command)}")
+        # Création des fichiers de log
+        e2e_logs_dir = project_root / "_e2e_logs"
+        e2e_logs_dir.mkdir(exist_ok=True)
+        backend_log_path = e2e_logs_dir / "backend_server.log"
+        backend_log_file = open(backend_log_path, "w")
+
+        logger.info(f"Démarrage du serveur backend Flask. Logs dans: {backend_log_path}")
         backend_process = subprocess.Popen(
             backend_command,
             cwd=project_root,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=backend_log_file,
+            stderr=backend_log_file,
             env=backend_env
         )
 
@@ -598,11 +635,16 @@ def e2e_servers(request):
         frontend_env["PORT"] = frontend_url.split(":")[-1]
         
         logger.info(f"Démarrage du serveur frontend dans '{frontend_dir}' avec la commande: {' '.join(frontend_command)}")
+        # Création des fichiers de log pour le frontend
+        frontend_log_path = e2e_logs_dir / "frontend_server.log"
+        frontend_log_file = open(frontend_log_path, "w")
+
+        logger.info(f"Démarrage du serveur frontend dans '{frontend_dir}'. Logs dans: {frontend_log_path}")
         frontend_process = subprocess.Popen(
             frontend_command,
             cwd=frontend_dir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=frontend_log_file,
+            stderr=frontend_log_file,
             env=frontend_env,
             shell=True
         )
@@ -616,5 +658,11 @@ def e2e_servers(request):
     finally:
         logger.info("--- Nettoyage de la fixture e2e_servers ---")
         _kill_process(frontend_process)
+        if 'frontend_log_file' in locals() and not frontend_log_file.closed:
+            frontend_log_file.close()
+
         _kill_process(backend_process)
+        if 'backend_log_file' in locals() and not backend_log_file.closed:
+            backend_log_file.close()
+            
         logger.info("Serveurs E2E terminés.")

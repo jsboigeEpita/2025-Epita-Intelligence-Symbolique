@@ -230,7 +230,7 @@ class TestRealTweetyFOLAnalysis:
         
         # Vérifications résultat
         assert belief_set is not None, f"La création du BeliefSet a échoué: {msg}"
-        is_consistent, _ = fol_agent_real_tweety.is_consistent(belief_set)
+        is_consistent, _ = await fol_agent_real_tweety.is_consistent(belief_set)
         assert is_consistent is True
         
         # Performance acceptable (< 30 secondes pour syllogisme simple)
@@ -260,7 +260,7 @@ class TestRealTweetyFOLAnalysis:
 
         # Avec Tweety réel, l'incohérence devrait être détectée
         if os.getenv("USE_REAL_JPYPE", "").lower() == "true":
-            is_consistent, _ = fol_agent_real_tweety.is_consistent(belief_set)
+            is_consistent, _ = await fol_agent_real_tweety.is_consistent(belief_set)
             assert is_consistent is False
             logger.info("✅ Incohérence détectée par Tweety réel")
         else:
@@ -291,7 +291,7 @@ class TestRealTweetyFOLAnalysis:
 
         # Exécuter la première requête générée pour valider
         if queries:
-            result, _ = fol_agent_real_tweety.execute_query(belief_set, queries[0])
+            result, _ = await fol_agent_real_tweety.execute_query(belief_set, queries[0])
             assert result is True # Devrait être accepté
 
 

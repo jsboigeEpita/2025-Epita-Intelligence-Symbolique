@@ -23,7 +23,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-if __name__ == "__main__":
+def start_server():
+    """Lances the Uvicorn server."""
     logger.info("Attempting to start Uvicorn server for E2E tests...")
     try:
         uvicorn.run(
@@ -32,8 +33,11 @@ if __name__ == "__main__":
             port=8095,
             log_level="debug"
         )
-        logger.info("Uvicorn server started successfully.")
+        logger.info("Uvicorn server shut down gracefully.")
     except Exception as e:
         logger.critical("Failed to start Uvicorn server.", exc_info=True)
-        # Exit with a non-zero code to indicate failure
-        exit(1)
+        # Re-raise the exception to allow programmatic control
+        raise
+
+if __name__ == "__main__":
+    start_server()

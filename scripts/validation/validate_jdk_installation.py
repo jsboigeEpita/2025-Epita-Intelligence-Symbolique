@@ -9,12 +9,22 @@ import subprocess
 import sys
 from pathlib import Path
 
+# --- Correction du PYTHONPATH pour l'exécution autonome ---
+def _setup_sys_path():
+    project_root = Path(__file__).resolve().parents[2]
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+
+_setup_sys_path()
+# --- Fin de la correction ---
+
 def main():
     print("=== VALIDATION INSTALLATION JDK 17 PORTABLE ===")
     
     # Chemin JDK
-    project_root = Path(__file__).parent
-    jdk_path = project_root / "portable_jdk" / "jdk-17.0.11+9"
+    project_root = Path(__file__).resolve().parents[2] # Corrigé pour pointer vers la vraie racine
+    libs_dir = project_root / "libs"
+    jdk_path = libs_dir / "portable_jdk" / "jdk-17.0.11+9"
     java_exe = jdk_path / "bin" / "java.exe"
     
     print(f"1. Vérification répertoire JDK: {jdk_path}")

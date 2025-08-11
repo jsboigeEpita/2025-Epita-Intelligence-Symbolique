@@ -60,15 +60,11 @@ module.exports = defineConfig({
   // Lancement du serveur web avant les tests
   webServer: [
     {
-      command: 'powershell -c "conda activate projet-is; python -m uvicorn argumentation_analysis.services.web_api.app:app --port 5004"',
-      url: 'http://127.0.0.1:5004',
-      timeout: 120 * 1000,
-      reuseExistingServer: false,
-    },
-    {
-      command: 'powershell -c "cd ../../services/web_api/interface-web-argumentative; npm start"',
-      url: 'http://localhost:3000',
-      timeout: 120 * 1000,
+      // Commande pour lancer le backend via le runner unifié
+      command: 'python scripts/apps/webapp/playwright_runner.py --test-file tests/e2e/js/example.spec.js',
+      // L'URL et le port sont maintenant gérés par le runner et la configuration sous-jacente
+      url: 'http://127.0.0.1:8085', // L'URL du frontend
+      timeout: 180 * 1000, // Augmentation du timeout pour laisser le temps au setup complet
       reuseExistingServer: !process.env.CI,
     },
 /*    {

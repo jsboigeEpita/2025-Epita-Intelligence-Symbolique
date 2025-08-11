@@ -20,6 +20,7 @@ import traceback
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Tuple, Any, Optional
+from project_core.utils.shell import run_in_activated_env, ShellCommandError
 
 class OracleEnhancedValidatorCorrected:
     """Validateur complet corrigé du système Oracle Enhanced v2.1.0"""
@@ -62,18 +63,16 @@ class OracleEnhancedValidatorCorrected:
             print(f"   💥 Erreur: {error}")
     
     def run_command_with_env(self, command: str, test_name: str, timeout: int = 120) -> Tuple[bool, str, str]:
-        """Exécute une commande avec l'environnement projet activé"""
+        """Exécute une commande avec l'environnement projet activé via le service unifié."""
         try:
-            # Commande avec activation d'environnement
-            full_command = f'powershell -File .\\scripts\\env\\activate_project_env.ps1 -CommandToRun "{command}"'
+            command_parts = command.split()
             
-            result = subprocess.run(
-                full_command,
-                shell=True,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                cwd=str(self.project_root)
+            result = run_in_activated_env(
+                command=command_parts,
+                env_name="projet-is",
+                cwd=self.project_root,
+                check_errors=False,
+                timeout=timeout
             )
             
             success = result.returncode == 0
@@ -82,10 +81,10 @@ class OracleEnhancedValidatorCorrected:
             
             return success, stdout, stderr
             
-        except subprocess.TimeoutExpired:
-            return False, "", f"Timeout ({timeout}s) lors de l'exécution de {command}"
+        except ShellCommandError as e:
+            return False, "", str(e)
         except Exception as e:
-            return False, "", f"Erreur d'exécution: {str(e)}"
+            return False, "", f"Erreur inattendue dans run_command_with_env: {str(e)}"
     
     def test_oracle_imports_corrected(self) -> bool:
         """Test 1: Validation des imports Oracle Enhanced v2.1.0 - Version corrigée"""

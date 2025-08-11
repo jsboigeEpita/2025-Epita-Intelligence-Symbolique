@@ -39,7 +39,7 @@ import sys
 import os
 import json
 import time
-import subprocess
+from project_core.utils.shell import run_in_activated_env, ShellCommandError
 import argparse
 import random
 import re
@@ -321,9 +321,23 @@ def main():
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', stream=sys.stdout)
     
     if args.activate_env:
-        cmd = [ "powershell", "-File", str(PROJECT_ROOT / "activate_project_env.ps1"), "-CommandToRun", f"python {' '.join(sys.argv)}"]
-        subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True)
-        return
+        # Reconstruct the command by removing the --activate-env flag to avoid recursion.
+        command_to_run = [arg for arg in sys.argv if arg != '--activate-env']
+        
+        try:
+            logging.info(f"Re-running script inside 'projet-is' environment with command: {command_to_run}")
+            # The run is synchronous. Output will be streamed to the console by the underlying run_sync.
+            result = run_in_activated_env(
+                command=command_to_run,
+                env_name="projet-is",
+                cwd=PROJECT_ROOT,
+                check_errors=True  # Will raise ShellCommandError on failure
+            )
+            # The script has finished. We exit with the return code of the child process.
+            sys.exit(result.returncode)
+        except ShellCommandError as e:
+            logging.error(f"Failed to re-run script in activated environment: {e}")
+            sys.exit(1)
 
     print(f"{Colors.BOLD}{'='*80}\n   VALIDATION COMPLETE DEMO EPITA - V2.8\n{'='*80}{Colors.ENDC}")
     validator = None
