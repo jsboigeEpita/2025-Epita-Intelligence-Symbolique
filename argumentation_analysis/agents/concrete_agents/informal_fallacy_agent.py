@@ -4,7 +4,7 @@ import importlib
 from typing import Dict, Any, Optional
 
 from semantic_kernel import Kernel
-from semantic_kernel.functions import KernelArguments
+from semantic_kernel.functions import KernelArguments, KernelFunctionFromPrompt
 
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 from argumentation_analysis.agents.plugins.taxonomy_display_plugin import TaxonomyDisplayPlugin
@@ -37,6 +37,12 @@ class InformalFallacyAgent(BaseAgent):
             system_prompt=prompt,
             description="Un agent expert dans la détection des sophismes informels.",
             **kwargs
+        )
+        self._chat_function = KernelFunctionFromPrompt(
+            function_name="chat_with_agent",
+            plugin_name="InformalFallacyAgent",
+            prompt=prompt,
+            description="Initiate a chat with the agent."
         )
         # On passe le chemin de la taxonomie à la méthode de configuration
         self._add_plugins_from_config(config_name, taxonomy_file_path)
@@ -115,23 +121,10 @@ class InformalFallacyAgent(BaseAgent):
         Invoque le plugin d'identification de sophismes.
         Construit un prompt complet en injectant le texte à analyser.
         """
-        from semantic_kernel.connectors.ai.open_ai import OpenAIPromptExecutionSettings
-        from semantic_kernel.connectors.ai.function_choice_behavior import FunctionChoiceBehavior
-
-        # Construction du prompt final
-        final_prompt = f"{self.system_prompt}\n\nTexte à analyser:\n\"\"\"\n{text_to_analyze}\n\"\"\""
-        
-        arguments = KernelArguments()
-
-        # Configuration pour forcer ou non l'appel de fonction
-        if not auto_invoke_kernel_functions:
-            arguments.execution_settings = {
-                self._llm_service_id: OpenAIPromptExecutionSettings(
-                    function_choice_behavior="none"
-                )
-            }
-
-        return await self._kernel.invoke_prompt(
-            prompt=final_prompt,
+        arguments = KernelArguments(
+            input=text_to_analyze
+        )
+        return await self._kernel.invoke(
+            self._chat_function,
             arguments=arguments
         )
