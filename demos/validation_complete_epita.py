@@ -218,75 +218,28 @@ class ValidationEpitaComplete:
             try:
                 informal_agent = agent_factory.create_informal_fallacy_agent(
                     config_name=self.agent_type,
-                    trace_log_path=str(trace_dir / f"{safe_test_name}.log"),
-                    taxonomy_data=taxonomy_data,
+                    trace_log_path=str(trace_dir / f"{safe_test_name}.log")
                 )
                 
                 chat_history = ChatHistory()
                 chat_history.add_user_message(config["text"])
-                final_answer, max_turns = "", 10
-
-                for i in range(max_turns):
-                    logging.info(f"--- Tour {i+1}/{max_turns} pour '{test_name}' ---")
-                    
-                    # Invocation de l'agent
-                    response_stream = informal_agent.invoke(history=chat_history)
-                    
-                    # Traitement de la réponse
-                    full_response_content = ""
-                    tool_calls = []
-                    async for message in response_stream:
-                        if isinstance(message, FunctionCallContent):
-                            tool_calls.append(message)
-                        elif hasattr(message, 'content') and message.content:
-                            full_response_content += str(message.content)
-
-                    # Si l'agent répond avec du texte, on l'ajoute à l'historique
-                    if full_response_content:
-                        logging.info(f"Réponse textuelle de l'agent: {full_response_content[:200]}...")
-                        chat_history.add_assistant_message(full_response_content)
-
-                    # S'il n'y a pas d'appel d'outil, la conversation de l'agent est terminée pour ce tour
-                    if not tool_calls:
-                        final_answer = full_response_content
-                        logging.info("L'agent a terminé, pas d'appel d'outil. Réponse finale extraite.")
-                        break
-
-                    # S'il y a des appels d'outils, on les exécute
-                    logging.info(f"{len(tool_calls)} appel(s) d'outil(s) détecté(s).")
-                    for tool_call in tool_calls:
-                        # Le nom de la fonction dans le prompt est 'get_branch_as_str'
-                        # mais l'agent peut encore appeler 'explore_branch' par habitude de l'entraînement
-                        if tool_call.function_name in ["get_branch_as_str", "explore_branch"]:
-                            logging.info(f"  - Exécution: {tool_call.function_name}({tool_call.arguments})")
-                            try:
-                                tool_args = json.loads(tool_call.arguments)
-                                node_id = tool_args.get("node_id", "1")
-                                tool_result = taxonomy_navigator.get_branch_as_str(node_id)
-                            except (json.JSONDecodeError, TypeError) as e:
-                                tool_result = f"Erreur de parsing des arguments : {e}"
-                                logging.error(tool_result)
-                        else:
-                            tool_result = f"Outil inconnu '{tool_call.function_name}'."
-                            logging.warning(tool_result)
-                        
-                        # Ajout du résultat de l'outil à l'historique pour le prochain tour
-                        chat_history.add_tool_message(FunctionResultContent(tool_call_id=tool_call.id, content=tool_result))
+                # Avec auto_invoke_kernel_functions=True, l'agent gère les appels d'outils en interne.
+                # Le client doit maintenant itérer sur le résultat du stream
+                logging.info(f"--- Invocation de l'agent pour '{test_name}' (streaming activé) ---")
                 
-                else: # Si la boucle for se termine (max_turns atteint)
-                    final_answer = "TIMEOUT"
-                    logging.warning(f"Test '{test_name}' a atteint le nombre maximum de tours.")
+                response = ""
+                async for message in informal_agent.invoke(text_to_analyze=config["text"], history=chat_history):
+                    response += str(message)
+                
+                # La réponse finale est directement le contenu du dernier message de l'assistant.
+                # La variable 'response' contient déjà la chaîne de caractères complète
+                final_answer = response
+                logging.info(f"Réponse finale obtenue de l'agent: {final_answer[:200]}...")
 
                 expected_sophism = config["expected_sophisms"][0].lower()
                 # La réponse finale est maintenant la dernière chose dite par l'assistant
-                last_assistant_message = ""
-                for msg in reversed(chat_history.messages):
-                    if msg.role == "assistant":
-                        last_assistant_message = msg.content
-                        break
-                
-                success = expected_sophism in last_assistant_message.lower()
-                details = f"Attendu: '{expected_sophism}', Obtenu: '{last_assistant_message.strip()}'"
+                success = expected_sophism in final_answer.lower()
+                details = f"Attendu: '{expected_sophism}', Obtenu: '{final_answer.strip()}'"
                 self.log_test("Analyse Informelle", test_name, "SUCCESS" if success else "FAILED", details, time.time() - start_time, 0.9 if success else 0.1)
                 if not success: overall_success = False
             except Exception as e:
