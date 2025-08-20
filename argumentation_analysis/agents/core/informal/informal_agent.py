@@ -320,58 +320,71 @@ class InformalAnalysisAgent(BaseAgent):
         
         return results
 
-    async def analyze_text(self, text: str, context: Optional[str] = None) -> Dict[str, Any]:
+    async def analyze_text(self, text: str, analysis_type: str = "fallacies", context: Optional[str] = None) -> Dict[str, Any]:
         """
-        Effectue une analyse complète d'un texte.
+        Effectue une analyse d'un texte, routée par type d'analyse.
 
-        Cette méthode se concentre actuellement sur l'analyse des sophismes dans le texte fourni.
-        Elle ne procède pas à une identification et une analyse individuelle des arguments
-        comme le faisait `perform_complete_analysis`.
+        Cette méthode peut soit analyser les sophismes, soit identifier les arguments,
+        en fonction de la valeur du paramètre `analysis_type`.
 
         :param text: Le texte à analyser.
         :type text: str
-        :param context: Contexte optionnel pour l'analyse (non utilisé actuellement dans cette méthode).
+        :param analysis_type: Le type d'analyse à effectuer ("fallacies" ou "arguments").
+        :type analysis_type: str
+        :param context: Contexte optionnel pour l'analyse.
         :type context: Optional[str]
-        :return: Un dictionnaire contenant la liste des sophismes détectés, le contexte (si fourni),
-                 un timestamp, et potentiellement un message d'erreur.
+        :return: Un dictionnaire contenant les résultats de l'analyse.
+                 Le format exact dépend de `analysis_type`.
         :rtype: Dict[str, Any]
         """
-        # Validation du texte d'entrée
-        if text is None or text == "":
+        if not text:
             self.logger.warning("Texte vide fourni pour l'analyse")
             return {
-                "fallacies": [],
-                "context": context,
                 "analysis_timestamp": self._get_timestamp(),
-                "error": "Le texte est vide"
+                "error": "Le texte est vide",
+                "result": []
             }
-        
-        self.logger.info(f"Analyse complète d'un texte de {len(text)} caractères...")
-        
+
+        self.logger.info(f"Analyse de '{analysis_type}' pour un texte de {len(text)} caractères...")
+
         try:
-            # Analyser les sophismes directement
-            fallacies = await self.analyze_fallacies(text) # Appel asynchrone
+            if analysis_type == "arguments":
+                # Exécuter l'identification d'arguments
+                arguments = await self.identify_arguments(text)
+                results = {
+                    "arguments": arguments,
+                    "analysis_timestamp": self._get_timestamp()
+                }
+                self.logger.info(f"Analyse terminée: {len(arguments) if arguments else 0} arguments identifiés.")
             
-            # Construire le résultat dans le format attendu par les tests
-            results = {
-                "fallacies": fallacies,
-                "analysis_timestamp": self._get_timestamp()
-            }
+            elif analysis_type == "fallacies":
+                # Exécuter l'analyse des sophismes
+                fallacies = await self.analyze_fallacies(text)
+                results = {
+                    "fallacies": fallacies,
+                    "analysis_timestamp": self._get_timestamp()
+                }
+                self.logger.info(f"Analyse terminée: {len(fallacies)} sophismes détectés.")
             
-            # Ajouter le contexte si fourni
-            if context is not None:
+            else:
+                self.logger.warning(f"Type d'analyse inconnu: '{analysis_type}'")
+                return {
+                    "analysis_timestamp": self._get_timestamp(),
+                    "error": f"Type d'analyse non supporté: {analysis_type}",
+                    "result": []
+                }
+
+            if context:
                 results["context"] = context
-            
-            self.logger.info(f"Analyse terminée: {len(fallacies)} sophismes détectés (via analyze_text).")
+                
             return results
-            
+
         except Exception as e:
-            self.logger.error(f"Erreur lors de l'analyse: {e}")
+            self.logger.error(f"Erreur lors de l'analyse '{analysis_type}': {e}", exc_info=True)
             return {
-                "fallacies": [],
-                "context": context,
                 "analysis_timestamp": self._get_timestamp(),
-                "error": f"Erreur lors de l'analyse: {str(e)}"
+                "error": f"Erreur lors de l'analyse: {str(e)}",
+                "result": []
             }
     
     async def explore_fallacy_hierarchy(self, current_pk: int = 0, max_children: int = 15) -> Dict[str, Any]:

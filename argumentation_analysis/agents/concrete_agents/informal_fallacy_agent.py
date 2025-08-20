@@ -125,11 +125,21 @@ class InformalFallacyAgent(BaseAgent):
 
         # Configuration pour forcer ou non l'appel de fonction
         if not auto_invoke_kernel_functions:
-            arguments.execution_settings = {
-                self._llm_service_id: OpenAIPromptExecutionSettings(
-                    function_choice_behavior="none"
-                )
-            }
+            # Récupérer dynamiquement le service_id du premier service de chat enregistré
+            # C'est plus robuste que de dépendre de self._llm_service_id qui peut
+            # ne pas être défini pour les configurations simples.
+            service_id = None
+            if self._kernel.services and len(self._kernel.services) > 0:
+                service_id = next(iter(self._kernel.services.keys()))
+
+            if service_id:
+                arguments.execution_settings = {
+                    service_id: OpenAIPromptExecutionSettings(
+                        function_choice_behavior="none"
+                    )
+                }
+            else:
+                self.logger.warning("Aucun service LLM trouvé dans le kernel pour appliquer les execution_settings. L'appel pourrait échouer si des outils sont définis.")
 
         return await self._kernel.invoke_prompt(
             prompt=final_prompt,

@@ -2,20 +2,33 @@
 
 ## Table des matières
 
-- [Vue d'ensemble](#vue-densemble)
-- [Organisation des dossiers](#organisation-des-dossiers)
-- [Composants principaux](#composants-principaux)
-  - [Core : Composants fondamentaux](#core--composants-fondamentaux)
-  - [Agents : Agents spécialistes](#agents--agents-spécialistes)
-  - [Services : Services partagés](#services--services-partagés)
-  - [Orchestration : Mécanismes d'orchestration](#orchestration--mécanismes-dorchestation)
-  - [UI : Interface utilisateur](#ui--interface-utilisateur)
-  - [Models : Modèles de données](#models--modèles-de-données)
-  - [Utils : Utilitaires](#utils--utilitaires)
-  - [Tests : Tests unitaires et d'intégration](#tests--tests-unitaires-et-dintégration)
-- [Flux de données](#flux-de-données)
-- [Interfaces entre composants](#interfaces-entre-composants)
-- [Extensibilité](#extensibilité)
+- [Structure du Projet et Composants du Système d'Orchestration Agentique d'Analyse Rhétorique](#structure-du-projet-et-composants-du-système-dorchestration-agentique-danalyse-rhétorique)
+  - [Table des matières](#table-des-matières)
+  - [Vue d'ensemble](#vue-densemble)
+  - [Organisation des dossiers](#organisation-des-dossiers)
+  - [Composants principaux](#composants-principaux)
+    - [Core : Composants fondamentaux](#core--composants-fondamentaux)
+    - [Agents : Agents spécialistes](#agents--agents-spécialistes)
+    - [Services : Services partagés](#services--services-partagés)
+    - [Orchestration : Mécanismes d'orchestation](#orchestration--mécanismes-dorchestation)
+    - [UI : Interface utilisateur](#ui--interface-utilisateur)
+    - [Models : Modèles de données](#models--modèles-de-données)
+    - [Utils : Utilitaires](#utils--utilitaires)
+    - [Tests : Tests unitaires et d'intégration](#tests--tests-unitaires-et-dintégration)
+  - [Flux de données](#flux-de-données)
+  - [Interfaces entre composants](#interfaces-entre-composants)
+    - [Interface État Partagé - Agents](#interface-état-partagé---agents)
+    - [Interface Orchestration - Agents](#interface-orchestration---agents)
+    - [Interface Services - Agents](#interface-services---agents)
+    - [Interface UI - Orchestration](#interface-ui---orchestration)
+    - [Interface Agents - Services Externes](#interface-agents---services-externes)
+  - [Extensibilité](#extensibilité)
+    - [Ajout de nouveaux agents](#ajout-de-nouveaux-agents)
+    - [Ajout de nouveaux outils d'analyse](#ajout-de-nouveaux-outils-danalyse)
+    - [Ajout de nouveaux services](#ajout-de-nouveaux-services)
+    - [Ajout de nouvelles stratégies d'orchestration](#ajout-de-nouvelles-stratégies-dorchestration)
+    - [Ajout de nouvelles fonctionnalités UI](#ajout-de-nouvelles-fonctionnalités-ui)
+    - [Exemples d'extensions possibles](#exemples-dextensions-possibles)
 
 ## Vue d'ensemble
 
@@ -153,6 +166,7 @@ Le projet utilise des mécanismes de redirection pour maintenir la compatibilit�
 Le module `services` contient les services centralisés utilisés dans le projet. Les services fournissent des fonctionnalités réutilisables pour manipuler les extraits, accéder aux sources, et gérer les données.
 
 **Services disponibles :**
+- **BenchmarkService** (`benchmark_service.py`) : Service utilitaire pour mesurer la performance (ex: latence) de fonctions.
 - **CacheService** (`cache_service.py`) : Service de mise en cache des textes sources.
 - **CryptoService** (`crypto_service.py`) : Service de chiffrement et déchiffrement des données sensibles.
 - **DefinitionService** (`definition_service.py`) : Service de gestion des définitions d'extraits.
