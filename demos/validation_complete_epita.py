@@ -207,7 +207,12 @@ class ValidationEpitaComplete:
 
         for test_name, config in scenarios.items():
             kernel = sk.Kernel()
-            llm_service = create_llm_service(service_id="default", model_id="gpt-4o-mini", force_authentic=True) # Ajout model_id
+            # En mode test d'intégration, forcer l'utilisation d'un service mock pour éviter les appels réseau.
+            if self.integration_test:
+                llm_service = create_llm_service(service_id="default", model_id="mock", force_mock=True)
+            else:
+                llm_service = create_llm_service(service_id="default", model_id="gpt-4o-mini", force_authentic=True)
+            
             kernel.add_service(llm_service)
             from argumentation_analysis.config.settings import AppSettings
             settings = AppSettings()
@@ -215,29 +220,43 @@ class ValidationEpitaComplete:
             start_time = time.time()
             safe_test_name = re.sub(r'[\s\(\)]+', '_', test_name).lower()
             
+            logging.info(f"Début du scénario de test : '{test_name}'")
             try:
                 informal_agent = agent_factory.create_informal_fallacy_agent(
                     config_name=self.agent_type,
-                    trace_log_path=str(trace_dir / f"{safe_test_name}.log")
+                    trace_log_path=str(trace_dir / f"{safe_test_name}.log"),
+                    taxonomy_file_path=self.taxonomy_file_path
                 )
-                
+                logging.debug(f"Agent '{self.agent_type}' créé pour le test '{test_name}'.")
+
                 chat_history = ChatHistory()
                 chat_history.add_user_message(config["text"])
-                # Avec auto_invoke_kernel_functions=True, l'agent gère les appels d'outils en interne.
-                # Le client doit maintenant itérer sur le résultat du stream
-                logging.info(f"--- Invocation de l'agent pour '{test_name}' (streaming activé) ---")
+                logging.info(f"--- Invocation de l'agent pour '{test_name}' avec le texte : '{config['text']}' ---")
+
+                final_answer_content = await informal_agent.invoke_single(
+                    text_to_analyze=config["text"], history=chat_history
+                )
+                final_answer = str(final_answer_content)
                 
-                response = ""
-                async for message in informal_agent.invoke(text_to_analyze=config["text"], history=chat_history):
-                    response += str(message)
-                
-                # La réponse finale est directement le contenu du dernier message de l'assistant.
-                # La variable 'response' contient déjà la chaîne de caractères complète
-                final_answer = response
-                logging.info(f"Réponse finale obtenue de l'agent: {final_answer[:200]}...")
+                logging.info(f"Réponse brute de l'agent: {final_answer[:500]}...")
+
+                # Tentative de parsing manuel de la réponse comme contournement (décrit dans le rapport)
+                try:
+                    # Si la réponse est une chaîne JSON, la parser
+                    if final_answer.strip().startswith('{') or final_answer.strip().startswith('['):
+                        parsed_json = json.loads(final_answer)
+                        # Extraire une information pertinente pour la validation
+                        # Ceci est une rustine et dépendra du format exact du JSON retourné
+                        if isinstance(parsed_json, dict):
+                             final_answer = parsed_json.get('fallacy_name', str(parsed_json))
+                        elif isinstance(parsed_json, list) and parsed_json:
+                             final_answer = parsed_json[0].get('fallacy_name', str(parsed_json[0]))
+
+                except json.JSONDecodeError:
+                    # La réponse n'est pas du JSON, on continue avec la chaîne brute
+                    pass
 
                 expected_sophism = config["expected_sophisms"][0].lower()
-                # La réponse finale est maintenant la dernière chose dite par l'assistant
                 success = expected_sophism in final_answer.lower()
                 details = f"Attendu: '{expected_sophism}', Obtenu: '{final_answer.strip()}'"
                 self.log_test("Analyse Informelle", test_name, "SUCCESS" if success else "FAILED", details, time.time() - start_time, 0.9 if success else 0.1)

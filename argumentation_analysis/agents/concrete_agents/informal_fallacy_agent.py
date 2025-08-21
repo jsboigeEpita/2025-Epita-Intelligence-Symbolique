@@ -10,6 +10,9 @@ from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 from argumentation_analysis.agents.plugins.taxonomy_display_plugin import TaxonomyDisplayPlugin
 from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import ComplexFallacyAnalyzer as IdentificationPlugin
 from argumentation_analysis.utils.path_operations import get_prompt_path
+from argumentation_analysis.agents.core.informal.informal_definitions import INFORMAL_AGENT_INSTRUCTIONS
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
+from semantic_kernel.contents.chat_history import ChatHistory
 
 class InformalFallacyAgent(BaseAgent):
     """
@@ -27,9 +30,8 @@ class InformalFallacyAgent(BaseAgent):
             config_name (str, optional): La configuration des plugins à charger.
             taxonomy_file_path (Optional[str], optional): Chemin vers le fichier de taxonomie.
         """
-        prompt_path = get_prompt_path("InformalFallacyAgent")
-        with open(prompt_path, "r", encoding="utf-8") as f:
-            prompt = f.read()
+        # Utilisation du prompt système centralisé
+        prompt = INFORMAL_AGENT_INSTRUCTIONS
 
         super().__init__(
             kernel=kernel,
@@ -38,12 +40,8 @@ class InformalFallacyAgent(BaseAgent):
             description="Un agent expert dans la détection des sophismes informels.",
             **kwargs
         )
-        self._chat_function = KernelFunctionFromPrompt(
-            function_name="chat_with_agent",
-            plugin_name="InformalFallacyAgent",
-            prompt=prompt,
-            description="Initiate a chat with the agent."
-        )
+        # La chat_function n'est plus nécessaire car on utilise invoke_prompt directement
+        self._chat_function = None
         # On passe le chemin de la taxonomie à la méthode de configuration
         self._add_plugins_from_config(config_name, taxonomy_file_path)
 
@@ -116,15 +114,21 @@ class InformalFallacyAgent(BaseAgent):
         """
         return await self.invoke_single(text_to_analyze=text_to_analyze, auto_invoke_kernel_functions=auto_invoke_kernel_functions)
 
-    async def invoke_single(self, text_to_analyze: str, auto_invoke_kernel_functions: bool = True, **kwargs: Any) -> Any:
+    async def invoke_single(self, text_to_analyze: str, history: ChatHistory, **kwargs: Any) -> Any:
         """
-        Invoque le plugin d'identification de sophismes.
-        Construit un prompt complet en injectant le texte à analyser.
+        Invoque l'agent avec une instruction claire de "tool-calling".
         """
-        arguments = KernelArguments(
-            input=text_to_analyze
+        # Forcer l'utilisation des outils comme recommandé dans le rapport d'analyse
+        execution_settings = OpenAIChatPromptExecutionSettings(
+            tool_choice="auto"
         )
-        return await self._kernel.invoke(
-            self._chat_function,
-            arguments=arguments
+
+        # Utilisation de invoke_prompt pour un contrôle total
+        return await self._kernel.invoke_prompt(
+            prompt=self.system_prompt,
+            arguments=KernelArguments(
+                history=history,
+                input=text_to_analyze,
+                settings=execution_settings
+            )
         )

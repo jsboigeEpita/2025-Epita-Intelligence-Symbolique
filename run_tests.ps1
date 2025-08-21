@@ -12,7 +12,9 @@ param(
     [ValidateSet("chromium", "firefox", "webkit")]
     [string]$Browser,
 
-    [switch]$DebugMode
+    [switch]$DebugMode,
+
+    [switch]$NoJvm
 )
 
 # --- Script Body ---
@@ -114,6 +116,9 @@ if (-not ([string]::IsNullOrEmpty($PytestArgs))) {
 }
 if (-not ([string]::IsNullOrEmpty($LogFile))) {
     $runnerArgs += "--log-file=$LogFile"
+}
+if ($NoJvm) {
+    $runnerArgs += "--no-jvm"
 }
 
 $CommandToRun = $runnerArgs -join " "

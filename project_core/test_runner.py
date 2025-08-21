@@ -154,10 +154,11 @@ class ServiceManager:
 class TestRunner:
     """Orchestre l'exécution des tests."""
 
-    def __init__(self, test_type, test_path, browser, pytest_extra_args=None, collect_only_path=None, log_file=None):
+    def __init__(self, test_type, test_path, browser, no_jvm=False, pytest_extra_args=None, collect_only_path=None, log_file=None):
         self.test_type = test_type
         self.test_path = test_path
         self.browser = browser
+        self.no_jvm = no_jvm
         self.pytest_extra_args = pytest_extra_args if pytest_extra_args is not None else []
         self.collect_only_path = collect_only_path
         self.log_file = log_file
@@ -217,6 +218,9 @@ class TestRunner:
 
         if self.browser:
             command.extend(["--browser", self.browser])
+
+        if self.no_jvm:
+            command.extend(["--disable-jvm-session"])
 
         if self.pytest_extra_args:
             # Assurer que les arguments comme '-p no:opentelemetry' sont bien séparés
@@ -367,12 +371,18 @@ def main():
         default=None,
         help="Chemin vers le fichier de log pour la sortie de pytest."
     )
+    parser.add_argument(
+        "--no-jvm",
+        action="store_true",
+        help="Exécute les tests sans démarrer la session JVM partagée."
+    )
     args, unknown_args = parser.parse_known_args()
  
     runner = TestRunner(
         args.type,
         args.path,
         args.browser,
+        no_jvm=args.no_jvm,
         pytest_extra_args=unknown_args,
         collect_only_path=args.collect_only,
         log_file=args.log_file
