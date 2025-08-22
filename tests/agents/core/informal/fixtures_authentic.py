@@ -460,13 +460,23 @@ def authentic_informal_agent(authentic_semantic_kernel, setup_authentic_taxonomy
 
 
 @pytest.fixture
-def simple_authentic_informal_agent(authentic_semantic_kernel, setup_authentic_taxonomy_csv):
+def simple_authentic_informal_agent(setup_authentic_taxonomy_csv):
     """
     Fixture authentique pour un InformalAnalysisAgent en mode 'simple'.
     Cet agent est configuré pour une réponse directe sans workflow complexe.
+    NOTE: Crée un kernel frais à chaque appel pour garantir l'isolation.
     """
-    kernel = authentic_semantic_kernel.get_kernel()
-    llm_service_id = authentic_semantic_kernel.get_service_id()
+    from argumentation_analysis.core.llm_service import create_llm_service
+    from semantic_kernel import Kernel
+
+    kernel = Kernel()
+    llm_service_id = "default_llm_service"
+    try:
+        # force_authentic=True pour s'assurer qu'on n'obtient pas un mock
+        llm_service = create_llm_service(service_id=llm_service_id, force_authentic=True)
+        kernel.add_service(llm_service)
+    except Exception as e:
+        pytest.skip(f"Impossible de créer un service LLM authentique : {e}")
     agent_name = "simple_authentic_informal_agent"
     
     print(f"[AUTHENTIC] Création de l'agent '{agent_name}' (simple) via AgentFactory...")
