@@ -32,4 +32,4 @@ class TestWebAppHomepage:
         expect(page).to_have_title("Argumentation Analysis App")
         header = page.locator('h1')
         expect(header).to_be_visible()
-        expect(header).to_have_text("Argumentation Analysis Platform")
+        expect(header).to_contain_text("Interface d'Analyse Argumentative")

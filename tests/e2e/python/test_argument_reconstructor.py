@@ -110,7 +110,7 @@ def test_reconstructor_error_handling(page: Page, frontend_url: str):
     # L'analyse de la trace Playwright a montré que le frontend ne rend alors
     # pas du tout le conteneur de résultats.
     # Le test doit donc vérifier que le conteneur est bien caché/absent du DOM.
-    expect(results_container).to_be_hidden(timeout=15000)
+    expect(results_container).not_to_be_visible(timeout=15000)
 
 @pytest.mark.e2e
 @pytest.mark.playwright
@@ -185,4 +185,4 @@ def test_reconstructor_content_persistence(page: Page, frontend_url: str):
     
     # 7. Vérifier que le bouton reste activé pour une nouvelle analyse
     expect(submit_button).to_be_enabled()
-    assert "Reconstruire" in submit_button.inner_text()
+    expect(submit_button).to_contain_text("Reconstruire")
