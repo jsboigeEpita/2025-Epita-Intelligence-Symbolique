@@ -47,7 +47,8 @@ def test_run_shell_command_success(mock_subprocess_run):
         capture_output=True,
         text=True,
         timeout=60, # Default timeout
-        check=False
+        check=False,
+        env=None
     )
 
 def test_run_shell_command_with_error_output(mock_subprocess_run):
@@ -163,7 +164,8 @@ def test_run_shell_command_with_work_dir(mock_subprocess_run, tmp_path):
         capture_output=True,
         text=True,
         timeout=60,
-        check=False
+        check=False,
+        env=None
     )
 
 def test_run_shell_command_empty_command_string(caplog):

@@ -77,7 +77,7 @@ class TestEnsureEnvAsGuard(unittest.TestCase):
             ensure_env(env_name="projet-is", silent=False)
             # Vérifier que l'un des appels contient le bon message.
             # La sortie exacte peut être wrapped, donc on vérifie la sous-chaîne.
-            found_call = any("[auto_env] OK: L'environnement 'projet-is' est correctement activé." in call.args[0] for call in mock_print.call_args_list)
+            found_call = any("[auto_env] OK: Environnement Conda 'projet-is' correctement activé." in call.args[0] for call in mock_print.call_args_list)
             self.assertTrue(found_call, "Le message de succès n'a pas été affiché en mode non-silencieux.")
 
         # En mode silencieux, on ne s'attend pas à un print

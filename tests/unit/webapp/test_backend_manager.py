@@ -104,7 +104,8 @@ async def test_wait_for_backend_process_dies(manager):
     result = await manager._wait_for_backend(port=manager.start_port)
     
     assert result is False
-    manager.logger.error.assert_called_with(f"Processus backend terminé prématurément (code: {manager.process.returncode}). Voir logs pour détails.")
+    manager.logger.error.assert_any_call(f"Processus backend terminé prématurément (code: {manager.process.returncode}).")
+    manager.logger.error.assert_any_call("Aucune sortie sur stderr n'a été capturée avant la fin du processus.")
 
 @pytest.mark.asyncio
 @patch('aiohttp.ClientSession.get')

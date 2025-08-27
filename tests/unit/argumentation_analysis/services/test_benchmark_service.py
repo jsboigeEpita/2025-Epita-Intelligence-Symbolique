@@ -1,5 +1,6 @@
 import time
 import pytest
+from unittest.mock import patch
 from argumentation_analysis.services.benchmark_service import BenchmarkService
 
 # Durée de la pause pour la fonction factice (en secondes)
@@ -10,10 +11,13 @@ def dummy_function():
     time.sleep(SLEEP_DURATION)
     return "done"
 
-def test_measure_latency_records_correct_time():
+@patch('time.sleep', return_value=None)
+@patch('time.perf_counter', side_effect=[1000.0, 1000.0 + SLEEP_DURATION])
+def test_measure_latency_records_correct_time(mock_perf_counter, mock_sleep):
     """
     Vérifie que BenchmarkService.measure_latency mesure et enregistre
-    correctement le temps d'exécution d'une fonction.
+    correctement le temps d'exécution d'une fonction, en utilisant des mocks
+    pour stabiliser le test.
     """
     # 1. Arrange
     benchmark_service = BenchmarkService()
@@ -23,7 +27,6 @@ def test_measure_latency_records_correct_time():
     
     # 3. Assert
     assert result == "done"
-    # Vérifie que la latence est dans une marge de tolérance raisonnable
-    # (par exemple, 50% de la durée attendue)
-    assert latency >= SLEEP_DURATION
-    assert latency < SLEEP_DURATION * 1.5 
+    mock_sleep.assert_called_once_with(SLEEP_DURATION)
+    # Vérifie que la latence calculée correspond exactement à la durée simulée
+    assert latency == pytest.approx(SLEEP_DURATION)
