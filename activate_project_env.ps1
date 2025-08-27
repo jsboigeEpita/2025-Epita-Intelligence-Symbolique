@@ -120,9 +120,17 @@ Write-Host "[DEBUG] Commande à exécuter avec Conda : conda $($condaArgs -join 
 
 # Étape 3: Exécution via Conda
 try {
-    # On exécute directement la commande via conda run, ce qui est la méthode standard.
-    conda $condaArgs
-    $exitCode = $LASTEXITCODE
+    # Pour garantir une exécution synchrone et bloquante, on utilise Start-Process -Wait,
+    # qui est la méthode la plus robuste en PowerShell pour attendre la fin d'un processus externe.
+    try {
+        $process = Start-Process -FilePath "conda" -ArgumentList $condaArgs -Wait -NoNewWindow -PassThru
+        $exitCode = $process.ExitCode
+    }
+    catch {
+        Write-Host "[ERREUR FATALE] Échec lors de l'exécution de la commande via 'Start-Process conda'." -ForegroundColor Red
+        Write-Host $_.Exception.ToString()
+        $exitCode = 1
+    }
 }
 catch {
     Write-Host "[ERREUR FATALE] Échec lors de l'exécution de la commande via 'conda run'." -ForegroundColor Red

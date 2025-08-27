@@ -102,6 +102,7 @@ $runnerArgs = @(
     "--type", $pythonRunnerType
 )
 
+
 if ($PSBoundParameters.ContainsKey('Path') -and -not ([string]::IsNullOrEmpty($Path))) {
     $runnerArgs += "--path", $Path
 }

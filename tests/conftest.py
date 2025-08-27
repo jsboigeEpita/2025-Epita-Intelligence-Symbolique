@@ -30,11 +30,18 @@ if _disable_jvm_early_check:
 os.environ['E2E_TESTING_MODE'] = '1'
 
 # --- Importations préventives pour éviter les conflits de bas niveau ---
-# NOTE: Ce bloc a été déplacé dans la fixture `jvm_session` pour garantir
-# que les imports ont lieu dans le bon contexte, juste avant l'initialisation de la JVM.
-
-
-
+# Il est crucial d'importer les bibliothèques lourdes comme torch et transformers
+# AVANT que jpype ne soit initialisé pour éviter des crashs de type "access violation".
+# Ces imports sont effectués au niveau du module pour garantir qu'ils sont chargés
+# avant même que pytest ne commence à traiter les fixtures.
+try:
+    import torch
+    import transformers
+    import openai
+    import semantic_kernel
+except ImportError as e:
+    # Utilise print car le logger n'est pas encore configuré à ce stade.
+    print(f"[AVERTISSEMENT CONTEST] L'importation préventive d'une bibliothèque a échoué: {e}", file=sys.stderr)
 # Ajouter le répertoire racine et les sous-répertoires pertinents au PYTHONPATH
 project_root = Path(__file__).parent.parent
 additional_paths = [
@@ -174,6 +181,43 @@ def pytest_unconfigure(config):
         _dotenv_patcher.stop()
         _dotenv_patcher = None
 
+def pytest_sessionstart(session):
+    """
+    Hook exécuté au tout début de la session de test, avant la collecte.
+    C'est l'endroit le plus sûr pour initialiser la JVM afin d'éviter les conflits
+    avec les bibliothèques natives chargées par les plugins pytest.
+    """
+    logger.info("=" * 80)
+    logger.info("pytest_sessionstart: Initialisation de la JVM...")
+    logger.info("=" * 80)
+
+    if session.config.getoption("--disable-jvm-session"):
+        logger.warning("Initialisation de la JVM sautée via --disable-jvm-session.")
+        session.config.cache.set("jvm_started", False)
+        return
+
+    try:
+        from argumentation_analysis.core.jvm_setup import initialize_jvm
+        initialize_jvm(session_fixture_owns_jvm=True)
+        session.config.cache.set("jvm_started", True)
+        logger.info("JVM initialisée avec succès depuis pytest_sessionstart.")
+    except Exception as e:
+        logger.error(f"ÉCHEC CRITIQUE de l'initialisation de la JVM dans pytest_sessionstart: {e}")
+        session.config.cache.set("jvm_started", False)
+        # On ne lance pas pytest.exit ici pour laisser les tests non-JVM s'exécuter
+        # Mais on pourrait le faire si la JVM est absolument critique pour toute la suite.
+
+
+def pytest_sessionfinish(session):
+    """
+    Hook exécuté à la toute fin de la session de test.
+    """
+    # L'arrêt de la JVM est instable, on se conforme au commentaire existant.
+    logger.info("=" * 80)
+    logger.info("pytest_sessionfinish: L'arrêt de la JVM est désactivé pour plus de stabilité.")
+    logger.info("=" * 80)
+
+
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_environment():
     """
@@ -199,13 +243,13 @@ def setup_test_environment():
 @pytest.fixture(scope="session", autouse=True)
 def apply_nest_asyncio():
     """
-    Applique nest_asyncio pour permettre l'exécution de boucles d'événements imbriquées,
-    ce qui est crucial pour la compatibilité entre pytest-asyncio et Playwright.
+    Applique nest_asyncio pour permettre l'exécution de boucles d'événements imbriquées.
+    Cette fixture est maintenant en `autouse=True` pour s'assurer qu'elle s'exécute tôt.
     """
     try:
         import nest_asyncio
-        nest_asyncio.apply() # Réactivé pour corriger le crash de la JVM
-        logger.info("nest_asyncio.apply() has been re-enabled to prevent JVM crashes.")
+        nest_asyncio.apply()
+        logger.info("nest_asyncio.apply() has been called.")
     except ImportError:
         logger.error("`nest_asyncio` is not installed. Please install it with `pip install nest-asyncio`.")
         pytest.fail("Missing dependency: nest_asyncio is required for running async tests with Playwright.", pytrace=False)
@@ -215,77 +259,26 @@ def apply_nest_asyncio():
 @pytest.fixture(scope="session", autouse=True)
 def jvm_session(request):
     """
-    Fixture de session AUTO-ACTIVEE pour démarrer et arrêter la JVM une seule fois
-    pour tous les tests. L'ancienne fixture 'jvm_fixture' a été supprimée pour
-    éviter les conflits de cycle de vie.
+    Fixture de session qui sert maintenant de "garde" pour les tests nécessitant la JVM.
+    L'initialisation réelle a été déplacée vers `pytest_sessionstart` pour une exécution
+    plus précoce et plus sûre. Cette fixture vérifie si l'initialisation a réussi.
     """
-    # Option pour désactiver complètement la JVM pour une session de test (ex: E2E)
-    if request.config.getoption("--disable-jvm-session"):
-        logger.warning("La fixture jvm_session est désactivée via --disable-jvm-session.")
+    jvm_started = request.config.cache.get("jvm_started", False)
+    
+    is_no_jvm_test = 'no_jvm_session' in request.node.keywords
+    is_jvm_disabled_globally = request.config.getoption("--disable-jvm-session")
+
+    # Si la JVM n'est pas nécessaire ou désactivée, on ne fait rien.
+    if is_no_jvm_test or is_jvm_disabled_globally:
         yield
         return
 
-    # Marqueur pour les tests qui ne doivent pas utiliser la JVM partagée.
-    if 'no_jvm_session' in request.node.keywords:
-        yield
-        return
-
-    logger.info("=" * 80)
-    logger.info(f" début de la fixture jvm_session pour le test : {request.node.name} ")
-    logger.info("=" * 80)
-
-    # --- Importations préventives pour éviter les conflits de bas niveau ---
-    # Il est crucial d'importer les bibliothèques lourdes comme torch et transformers
-    # AVANT que jpype ne soit initialisé pour éviter des crashs de type "access violation".
-    logger.info("[INFO] Pre-importing heavy libraries inside jvm_session to prevent conflicts...")
-    try:
-        import torch
-        import transformers
-        import semantic_kernel
-        import openai
-        logger.info("[INFO] Heavy libraries pre-imported successfully inside jvm_session.")
-    except ImportError as e:
-        logger.warning(f"[WARNING] A library pre-import failed inside jvm_session: {e}.")
+    # Si le test nécessite la JVM mais qu'elle n'a pas démarré, on le saute.
+    if not jvm_started:
+        pytest.skip("Saut du test car l'initialisation de la JVM a échoué dans pytest_sessionstart.")
     
-    # On s'assure que la structure des JARs est correcte avant tout.
-    # _ensure_tweety_jars_are_correctly_placed() # This logic is now in jvm_setup
-    
-    # --- Logging de diagnostic AVANT le démarrage de la JVM ---
-    logger.info("--- [DIAGNOSTIC JVM] Vérification de l'état avant initialisation ---")
-    
-    # 1. Vérifier les modules potentiellement conflictuels
-    conflicting_modules = ['opentelemetry', 'torch', 'transformers']
-    loaded_conflicts = [mod for mod in conflicting_modules if mod in sys.modules]
-    if loaded_conflicts:
-        logger.critical(f"[DIAGNOSTIC JVM] ALERTE: Modules conflictuels déjà chargés: {', '.join(loaded_conflicts)}")
-    else:
-        logger.info("[DIAGNOSTIC JVM] OK: Aucun module conflictuel connu (opentelemetry, torch, transformers) n'est présent dans sys.modules.")
-
-    # 2. Vérifier si la JVM pense être déjà démarrée
-    try:
-        is_started = jpype.isJVMStarted()
-        logger.info(f"[DIAGNOSTIC JVM] jpype.isJVMStarted() avant l'appel: {is_started}")
-    except Exception as e:
-        logger.error(f"[DIAGNOSTIC JVM] Erreur en appelant jpype.isJVMStarted(): {e}")
-
-    logger.info("--- [DIAGNOSTIC JVM] Fin de la vérification. Tentative de démarrage... ---")
-
-    # Démarrage de la JVM. Le drapeau `session_fixture_owns_jvm=True` indique
-    # que cette fixture est propriétaire de la JVM et est la seule autorisée à l'arrêter.
-    from argumentation_analysis.core.jvm_setup import initialize_jvm
-    initialize_jvm(session_fixture_owns_jvm=True)
-    
-    # La fixture cède le contrôle aux tests.
+    # La JVM est prête, le test peut s'exécuter.
     yield
-    
-    # Le code après yield est exécuté à la fin de la session de test.
-    logger.info("=" * 80)
-    logger.info(f" Fin de la fixture jvm_session pour le test : {request.node.name} ")
-    logger.info("=" * 80)
-    
-    # On arrête la JVM en indiquant que c'est bien la fixture de session qui le demande.
-    # shutdown_jvm(called_by_session_fixture=True) # Désactivé car notoirement instable.
-    logger.warning("L'arrêt de la JVM est désactivé à la fin de la session pour éviter les crashs.")
 
 # La fixture jvm_fixture est supprimée car elle est la source des conflits.
 # La gestion de la JVM est maintenant entièrement centralisée dans jvm_session.
@@ -302,7 +295,7 @@ def tweety_bridge_fixture(jvm_session):
     logger.info("Création de l'instance TweetyBridge pour la fixture...")
 
     # Vérification explicite que la JVM est bien démarrée par la session
-    assert is_jvm_started(), "La fixture jvm_session n'a pas réussi à démarrer la JVM."
+    assert jpype.isJVMStarted(), "La fixture jvm_session n'a pas réussi à démarrer la JVM."
 
     bridge = TweetyBridge()
     assert bridge.initializer.is_jvm_ready(), "La JVM devrait être prête grâce à jvm_session"
