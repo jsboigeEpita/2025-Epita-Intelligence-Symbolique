@@ -10,6 +10,17 @@ pour permettre aux étudiants de créer des interfaces web facilement.
 
 import os
 import sys
+# --- Chargement de l'environnement ---
+# DOIT être exécuté avant tout autre import du projet pour garantir que
+# les variables d'environnement (depuis .env) sont chargées.
+import sys
+try:
+    from scripts.utils.environment_loader import load_environment
+    load_environment()
+except ImportError:
+    print("CRITICAL: Failed to import or run environment_loader utility.")
+    sys.exit(1)
+
 import logging
 from pathlib import Path
 from flask import Flask, request, jsonify, send_from_directory
