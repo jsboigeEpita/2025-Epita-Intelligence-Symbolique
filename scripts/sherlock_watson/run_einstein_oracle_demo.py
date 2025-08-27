@@ -24,6 +24,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
+import argparse
 
 # Configuration UTF-8
 sys.stdout.reconfigure(encoding='utf-8')
@@ -118,9 +119,10 @@ class EinsteinOracleOrchestrator:
     Orchestrateur pour la démo Einstein avec Moriarty comme donneur d'indices.
     """
     
-    def __init__(self, kernel, max_rounds=15):
+    def __init__(self, kernel, max_rounds=15, integration_test=False):
         self.kernel = kernel
         self.max_rounds = max_rounds
+        self.integration_test = integration_test
         self.einstein_oracle = EinsteinPuzzleOracle()
         self.conversation_history = []
         self.round_count = 0
@@ -221,7 +223,8 @@ class EinsteinOracleOrchestrator:
                     break
             
             # Pause pour lisibilité
-            await asyncio.sleep(0.1)
+            if not self.integration_test:
+                await asyncio.sleep(0.1)
         
         return await self._collect_einstein_metrics()
     
@@ -383,9 +386,10 @@ class EinsteinOracleOrchestrator:
         }
 
 
-async def run_einstein_oracle_demo():
+async def run_einstein_oracle_demo(integration_test=False):
     """Lance la démo Einstein Oracle"""
-    print("🧠 DÉMO EINSTEIN ORACLE - MORIARTY DONNEUR D'INDICES")
+    if not integration_test:
+        print("🧠 DÉMO EINSTEIN ORACLE - MORIARTY DONNEUR D'INDICES")
     print("="*60)
     print("🎯 OBJECTIF: Démontrer Moriarty comme Oracle donneur d'indices")
     print("🧩 PUZZLE: Qui possède le poisson ? (5 maisons, 5 nationalités...)")
@@ -409,7 +413,7 @@ async def run_einstein_oracle_demo():
     kernel.add_service(chat_service)
     
     # Exécution de la démo Einstein
-    orchestrator = EinsteinOracleOrchestrator(kernel, max_rounds=15)
+    orchestrator = EinsteinOracleOrchestrator(kernel, max_rounds=15, integration_test=integration_test)
     
     try:
         # Configuration
@@ -491,13 +495,33 @@ def display_einstein_results(result: Dict[str, Any]):
 
 async def main():
     """Point d'entrée principal"""
+    parser = argparse.ArgumentParser(description="Lance la démonstration de l'énigme d'Einstein avec un oracle.")
+    parser.add_argument(
+        "--integration-test",
+        action="store_true",
+        help="Exécute la démo en mode test d'intégration (plus rapide et moins de logs)."
+    )
+    args = parser.parse_args()
+
+    # En mode test d'intégration, on s'assure d'initialiser notre propre JVM
+    if args.integration_test:
+        from argumentation_analysis.core.jvm_setup import initialize_jvm, shutdown_jvm, is_jvm_started
+        if not is_jvm_started():
+            initialize_jvm()
+
     try:
-        result = await run_einstein_oracle_demo()
-        print(f"\n🎉 Démo Einstein terminée avec succès!")
+        result = await run_einstein_oracle_demo(integration_test=args.integration_test)
+        if not args.integration_test:
+            print(f"\n🎉 Démo Einstein terminée avec succès!")
         
     except Exception as e:
         logger.error(f"❌ Erreur critique: {e}", exc_info=True)
         print(f"\n❌ ERREUR CRITIQUE: {e}")
+    finally:
+        if args.integration_test:
+            from argumentation_analysis.core.jvm_setup import shutdown_jvm, is_jvm_started
+            if is_jvm_started():
+                shutdown_jvm()
 
 
 if __name__ == "__main__":

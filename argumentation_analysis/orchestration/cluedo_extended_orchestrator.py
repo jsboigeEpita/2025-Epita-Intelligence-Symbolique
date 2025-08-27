@@ -430,7 +430,7 @@ class CluedoExtendedOrchestrator:
             raise ValueError("Workflow non configuré. Appelez setup_workflow() d'abord.")
         
         self.start_time = datetime.now()
-        self._logger.info("🚀 Début du workflow 3-agents")
+        self._logger.info("Début du workflow 3-agents")
         
         # Historique des messages
         history: List[ChatMessageContent] = [
@@ -438,7 +438,7 @@ class CluedoExtendedOrchestrator:
         ]
         
         # Boucle principale d'orchestration
-        self._logger.info("🔄 Début de la boucle d'orchestration 3-agents...")
+        self._logger.info("Début de la boucle d'orchestration 3-agents...")
         
         try:
             fake_initial_agent = self.sherlock_agent
@@ -472,6 +472,8 @@ class CluedoExtendedOrchestrator:
 
                 if hasattr(agent_response_stream, '__aiter__'):
                     agent_response_raw = [message async for message in agent_response_stream]
+                elif isawaitable(agent_response_stream):
+                    agent_response_raw = await agent_response_stream
                 else:
                     agent_response_raw = agent_response_stream
                 
@@ -502,7 +504,7 @@ class CluedoExtendedOrchestrator:
                 if next_agent.name != "Moriarty":
                     suggestion = self._extract_cluedo_suggestion(last_message_content)
                     if suggestion:
-                        self._logger.info(f"🔮 SUGGESTION DÉTECTÉE: {suggestion} par {next_agent.name}")
+                        self._logger.info(f"SUGGESTION DÉTECTÉE: {suggestion} par {next_agent.name}")
                         oracle_response = await self._force_moriarty_oracle_revelation(
                             suggestion=suggestion,
                             suggesting_agent=next_agent.name
@@ -510,7 +512,7 @@ class CluedoExtendedOrchestrator:
                         if oracle_response:
                             oracle_message = self.consolidate_agent_response(oracle_response.get("content"), "Moriarty")
                             history.append(oracle_message)
-                            self._logger.info(f"🎭 [Moriarty Oracle Auto-Reveal]: {oracle_response.get('content')[:100]}...")
+                            self._logger.info(f"[Moriarty Oracle Auto-Reveal]: {oracle_response.get('content')[:100]}...")
                             self.oracle_state.add_conversation_message(
                                 agent_name="Moriarty",
                                 content=str(oracle_message.content),
@@ -845,7 +847,7 @@ class CluedoExtendedOrchestrator:
             Réponse Oracle de Moriarty ou None si erreur
         """
         try:
-            self._logger.info(f"🔮 Force Oracle révélation: {suggestion} par {suggesting_agent}")
+            self._logger.info(f"Force Oracle révélation: {suggestion} par {suggesting_agent}")
             
             # Appel direct à Moriarty pour validation Oracle
             oracle_result = self.moriarty_agent.validate_suggestion_cluedo(

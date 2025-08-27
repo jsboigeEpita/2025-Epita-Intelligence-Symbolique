@@ -622,7 +622,7 @@ def e2e_servers(request):
 
         # --- Démarrage du serveur Frontend ---
         frontend_command = ["npm", "start"]
-        frontend_dir = project_root / "interface_web"
+        frontend_dir = project_root / "services" / "web_api" / "interface-web-argumentative"
         # Création d'un environnement pour le frontend avec le port personnalisé
         frontend_env = os.environ.copy()
         frontend_env["PORT"] = frontend_url.split(":")[-1]

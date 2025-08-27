@@ -8,6 +8,17 @@ import logging
 import sys
 
 def setup_logging(log_level_str: str = "INFO") -> None:
+    # Correction pour forcer UTF-8 sur stdout/stderr pour la compatibilité des tests
+    if sys.stdout.encoding != 'utf-8':
+        try:
+            sys.stdout.reconfigure(encoding='utf-8')
+        except TypeError: # en cas d'environnement où reconfigure n'est pas dispo
+            pass
+    if sys.stderr.encoding != 'utf-8':
+        try:
+            sys.stderr.reconfigure(encoding='utf-8')
+        except TypeError:
+            pass
     """
     Initialise et configure le module logging de Python.
 

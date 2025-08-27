@@ -22,6 +22,7 @@ function LogicGraph() {
     setLogicGraphResult(null);
     try {
       const data = await analyzeLogicGraph({ text });
+      console.log('API Response Data:', JSON.stringify(data, null, 2));
       if (data.success && data.belief_set) {
         setLogicGraphResult(data.belief_set);
       } else {
@@ -78,6 +79,10 @@ function LogicGraph() {
           // In a real application, this would render a proper graph (e.g., using D3, vis.js, or a library)
           // For testing, we'll just render a simple SVG element to prove it's present.
           <div>
+            <h3>Données de l'API :</h3>
+            <pre data-testid="api-response-data">
+              {JSON.stringify(logicGraphResult, null, 2)}
+            </pre>
             <h3>Ensemble de croyances généré:</h3>
             <p><strong>Type:</strong> {logicGraphResult.logic_type}</p>
             <p><strong>Contenu:</strong> {logicGraphResult.content}</p>

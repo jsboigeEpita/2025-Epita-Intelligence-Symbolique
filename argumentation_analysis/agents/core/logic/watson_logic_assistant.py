@@ -286,7 +286,14 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
         
         self.logger.info(f"WatsonLogicAssistant '{agent_name}' initialisé avec les outils logiques.")
         
-    async def invoke_single(self, messages: list[ChatMessageContent]) -> list[ChatMessageContent]:
+    async def invoke_single(self, messages: Optional[list[ChatMessageContent]] = None, **kwargs) -> list[ChatMessageContent]:
+        # Gérer l'argument 'input' pour la compatibilité avec l'orchestrateur
+        if 'input' in kwargs and messages is None:
+            messages = kwargs['input']
+        
+        if messages is None:
+            messages = []
+
         history = ChatHistory()
         for msg in messages:
             history.add_message(msg)
