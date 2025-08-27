@@ -464,12 +464,16 @@ class CluedoExtendedOrchestrator:
                 ]
 
                 # 2. Exécuter l'agent avec l'historique nettoyé
-                agent_response_stream = await next_agent.invoke(input=history_to_send, arguments=KernelArguments())
+                agent_response_stream = next_agent.invoke(input=history_to_send, arguments=KernelArguments())
                 # Gérer les réponses streamées et non-streamées (mock)
+                # Correction pour invoke qui peut retourner un awaitable ou un itérateur
+                if hasattr(agent_response_stream, '__await__'):
+                     agent_response_stream = await agent_response_stream
+
                 if hasattr(agent_response_stream, '__aiter__'):
                     agent_response_raw = [message async for message in agent_response_stream]
                 else:
-                    agent_response_raw = agent_response_stream  # La réponse est déjà une liste
+                    agent_response_raw = agent_response_stream
                 
                 # 3. Consolider et nettoyer la réponse de l'agent
                 # C'est une étape CRUCIALE pour éviter le context overflow avec les réponses en streaming.
@@ -576,11 +580,26 @@ class CluedoExtendedOrchestrator:
         execution_time = (self.end_time - self.start_time).total_seconds() if self.start_time and self.end_time else 0
         
         # Statistiques de base
-        conversation_history = [
-            {"sender": getattr(msg, 'name', getattr(msg, 'role', str(getattr(msg, 'author', 'Unknown')))),
-             "message": str(getattr(msg, 'content', msg))}
-            for msg in history if getattr(msg, 'name', getattr(msg, 'role', getattr(msg, 'author', ''))) != "System"
-        ]
+        conversation_history = []
+        for msg in history:
+            # Skip system messages
+            sender_name = getattr(msg, 'name', None)
+            role_name = getattr(msg, 'role', None)
+            
+            if sender_name == "System" or role_name == "System":
+                continue
+
+            # Robustly extract sender and message
+            if hasattr(msg, 'content'):
+                message = str(msg.content)
+                # Prefer 'name' but fall back to 'role'
+                sender = sender_name or role_name or "Unknown"
+            else:
+                # Handle cases where msg might be a plain string
+                message = str(msg)
+                sender = "Unknown"
+            
+            conversation_history.append({"sender": sender, "message": message})
         
         # Métriques Oracle
         oracle_stats = self.oracle_state.get_oracle_statistics()
