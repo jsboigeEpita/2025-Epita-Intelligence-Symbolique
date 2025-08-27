@@ -218,6 +218,9 @@ class TestModalLogicAgent:
         mock_response = MagicMock()
         mock_response.value = mock_json_response
         modal_agent._kernel.plugins[modal_agent.name]["TextToModalBeliefSet"].invoke.return_value = mock_response
+
+        # Correction : Le mock doit maintenant simuler le handler.
+        mock_tweety_bridge.modal_handler.is_modal_kb_consistent.return_value = (True, "Consistent")
         
         text = "Il est urgent d'agir sur le climat."
         belief_set, message = await modal_agent.text_to_belief_set(text)
@@ -281,6 +284,9 @@ class TestModalLogicAgent:
         mock_response.value = mock_json_response
         modal_agent._kernel.plugins[modal_agent.name]["GenerateModalQueryIdeas"].invoke.return_value = mock_response
         
+        # Correction : S'assurer que la validation de formule est aussi mockée
+        mock_tweety_bridge.modal_handler.validate_modal_formula.return_value = (True, "Valid formula")
+
         text = "Test text"
         queries = await modal_agent.generate_queries(text, belief_set)
         
@@ -310,7 +316,7 @@ class TestModalLogicAgent:
     def test_execute_query_success(self, modal_agent, mock_tweety_bridge):
         """Test l'exécution réussie d'une requête."""
         modal_agent._tweety_bridge = mock_tweety_bridge
-        mock_tweety_bridge.execute_modal_query.return_value = "ACCEPTED: Query validated"
+        mock_tweety_bridge.modal_handler.execute_modal_query.return_value = "ACCEPTED: Query validated"
         
         belief_set = ModalBeliefSet("constant urgent\n\n[](urgent)")
         query = "[](urgent)"
@@ -323,7 +329,7 @@ class TestModalLogicAgent:
     def test_execute_query_rejected(self, modal_agent, mock_tweety_bridge):
         """Test l'exécution d'une requête rejetée."""
         modal_agent._tweety_bridge = mock_tweety_bridge
-        mock_tweety_bridge.execute_modal_query.return_value = "REJECTED: Query not valid"
+        mock_tweety_bridge.modal_handler.execute_modal_query.return_value = "REJECTED: Query not valid"
         
         belief_set = ModalBeliefSet("constant urgent\n\n[](urgent)")
         query = "invalid_query"
@@ -336,7 +342,7 @@ class TestModalLogicAgent:
     def test_execute_query_error(self, modal_agent, mock_tweety_bridge):
         """Test la gestion d'erreur lors de l'exécution de requête."""
         modal_agent._tweety_bridge = mock_tweety_bridge
-        mock_tweety_bridge.execute_modal_query.side_effect = Exception("Test error")
+        mock_tweety_bridge.modal_handler.execute_modal_query.side_effect = Exception("Test error")
         
         belief_set = ModalBeliefSet("constant urgent\n\n[](urgent)")
         query = "[](urgent)"
@@ -386,7 +392,7 @@ class TestModalLogicAgent:
     def test_validate_formula_success(self, modal_agent, mock_tweety_bridge):
         """Test la validation réussie d'une formule."""
         modal_agent._tweety_bridge = mock_tweety_bridge
-        mock_tweety_bridge.validate_modal_formula.return_value = (True, "Valid")
+        mock_tweety_bridge.modal_handler.validate_modal_formula.return_value = (True, "Valid")
         
         formula = "[](urgent)"
         is_valid = modal_agent.validate_formula(formula)
@@ -396,7 +402,7 @@ class TestModalLogicAgent:
     def test_validate_formula_invalid(self, modal_agent, mock_tweety_bridge):
         """Test la validation d'une formule invalide."""
         modal_agent._tweety_bridge = mock_tweety_bridge
-        mock_tweety_bridge.validate_modal_formula.return_value = (False, "Invalid syntax")
+        mock_tweety_bridge.modal_handler.validate_modal_formula.return_value = (False, "Invalid syntax")
         
         formula = "invalid_formula"
         is_valid = modal_agent.validate_formula(formula)
@@ -406,19 +412,20 @@ class TestModalLogicAgent:
     def test_validate_formula_fallback(self, modal_agent, mock_tweety_bridge):
         """Test la validation avec fallback si méthode indisponible."""
         modal_agent._tweety_bridge = mock_tweety_bridge
-        # Simuler l'absence de la méthode
-        del mock_tweety_bridge.validate_modal_formula
-        
+        mock_tweety_bridge.invoke.return_value = {"is_valid": True, "message": "Fallback successful"}
+        # Simuler l'absence de la méthode sur le handler de manière robuste
+        delattr(mock_tweety_bridge.modal_handler, "validate_modal_formula")
+
         formula = "[](urgent)"
         is_valid = modal_agent.validate_formula(formula)
-        
+
         # Devrait utiliser la validation basique
-        assert isinstance(is_valid, bool)
+        assert is_valid is True
 
     def test_is_consistent_success(self, modal_agent, mock_tweety_bridge):
         """Test la vérification de cohérence réussie."""
         modal_agent._tweety_bridge = mock_tweety_bridge
-        mock_tweety_bridge.is_modal_kb_consistent.return_value = (True, "Consistent KB")
+        mock_tweety_bridge.modal_handler.is_modal_kb_consistent.return_value = (True, "Consistent KB")
         
         belief_set = ModalBeliefSet("constant urgent\n\n[](urgent)")
         is_consistent, message = modal_agent.is_consistent(belief_set)
@@ -430,7 +437,7 @@ class TestModalLogicAgent:
     def test_is_consistent_inconsistent(self, modal_agent, mock_tweety_bridge):
         """Test la détection d'incohérence."""
         modal_agent._tweety_bridge = mock_tweety_bridge
-        mock_tweety_bridge.is_modal_kb_consistent.return_value = (False, "Inconsistent KB")
+        mock_tweety_bridge.modal_handler.is_modal_kb_consistent.return_value = (False, "Inconsistent KB")
         
         belief_set = ModalBeliefSet("constant p\n\n[](p)\n!<>(p)")  # Contradictoire
         is_consistent, message = modal_agent.is_consistent(belief_set)
@@ -441,15 +448,16 @@ class TestModalLogicAgent:
     def test_is_consistent_fallback(self, modal_agent, mock_tweety_bridge):
         """Test la vérification de cohérence avec fallback."""
         modal_agent._tweety_bridge = mock_tweety_bridge
-        # Simuler l'absence de la méthode
-        del mock_tweety_bridge.is_modal_kb_consistent
-        
+        mock_tweety_bridge.invoke.return_value = {"is_consistent": True, "message": "Fallback successful"}
+        # Simuler l'absence de la méthode sur le handler de manière robuste
+        delattr(mock_tweety_bridge.modal_handler, "is_modal_kb_consistent")
+
         belief_set = ModalBeliefSet("constant urgent\n\n[](urgent)")
         is_consistent, message = modal_agent.is_consistent(belief_set)
         
         # Devrait retourner True par défaut avec un message explicatif
-        assert is_consistent == True
-        assert "non implémentée" in message
+        assert is_consistent is True
+        assert "Fallback successful" in message
 
     def test_create_belief_set_from_data(self, modal_agent):
         """Test la création d'un belief set depuis des données."""
@@ -476,7 +484,7 @@ class TestModalLogicAgent:
         mock_response = MagicMock()
         mock_response.value = '{"propositions": ["test"], "modal_formulas": ["[](test)"]}'
         modal_agent._kernel.plugins[modal_agent.name]["TextToModalBeliefSet"].invoke.return_value = mock_response
-        mock_tweety_bridge.validate_modal_belief_set.return_value = (True, "Valid")
+        mock_tweety_bridge.modal_handler.is_modal_kb_consistent.return_value = (True, "Valid")
         
         # get_response est une coroutine, pas un générateur asynchrone
         result = await modal_agent.get_response("test text")
@@ -491,7 +499,7 @@ class TestModalLogicAgent:
         mock_response = MagicMock()
         mock_response.value = '{"propositions": ["test"], "modal_formulas": ["[](test)"]}'
         modal_agent._kernel.plugins[modal_agent.name]["TextToModalBeliefSet"].invoke.return_value = mock_response
-        mock_tweety_bridge.validate_modal_belief_set.return_value = (True, "Valid")
+        mock_tweety_bridge.modal_handler.is_modal_kb_consistent.return_value = (True, "Valid")
 
         results = [result async for result in modal_agent.invoke("test text")]
         assert len(results) == 1
@@ -507,7 +515,7 @@ class TestModalLogicAgent:
         mock_response = MagicMock()
         mock_response.value = '{"propositions": ["test"], "modal_formulas": ["[](test)"]}'
         modal_agent._kernel.plugins[modal_agent.name]["TextToModalBeliefSet"].invoke.return_value = mock_response
-        mock_tweety_bridge.validate_modal_belief_set.return_value = (True, "Valid")
+        mock_tweety_bridge.modal_handler.is_modal_kb_consistent.return_value = (True, "Valid")
 
         results = [result async for result in modal_agent.invoke_stream("test text")]
         assert len(results) == 1
@@ -590,10 +598,14 @@ class TestModalLogicAgentIntegration:
         plugins["InterpretModalResult"].invoke.return_value = mock_interpretation_result
 
         # 3. Configurer le comportement du mock TweetyBridge pour les requêtes logiques
-        agent._tweety_bridge.execute_modal_query.side_effect = [
+        agent._tweety_bridge.modal_handler.execute_modal_query.side_effect = [
             "ACCEPTED: Urgency is necessary",
             "ACCEPTED: Action is possible"
         ]
+        # On s'assure aussi que la validation de consistance retourne un tuple valide
+        agent._tweety_bridge.modal_handler.is_modal_kb_consistent.return_value = (True, "Consistent")
+        # Correction : La validation de formule doit aussi être mockée pour chaque requête générée
+        agent._tweety_bridge.modal_handler.validate_modal_formula.return_value = (True, "Valid formula")
 
         # 4. Exécution et validation du workflow complet
         text = "Il est urgent d'agir immédiatement sur cette situation critique."
@@ -616,7 +628,7 @@ class TestModalLogicAgentIntegration:
             result_tuple = agent.execute_query(belief_set, query)
             results.append(result_tuple)
         
-        assert agent._tweety_bridge.execute_modal_query.call_count == len(queries)
+        assert agent._tweety_bridge.modal_handler.execute_modal_query.call_count == len(queries)
         assert len(results) == 2
         assert results[0][0] is True
 

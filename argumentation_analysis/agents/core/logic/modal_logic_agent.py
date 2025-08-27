@@ -645,9 +645,21 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
     def validate_formula(self, formula: str) -> bool:
         """
         Valide la syntaxe d'une formule de logique modale.
+        Tente d'abord d'utiliser la méthode directe. En cas d'échec (AttributeError),
+        utilise une méthode de fallback générique.
         """
         self.logger.debug(f"Validation de la formule modale: {formula}")
-        is_valid, message = self.tweety_bridge.modal_handler.validate_modal_formula(formula)
+        try:
+            if hasattr(self.tweety_bridge.modal_handler, 'validate_modal_formula'):
+                is_valid, message = self.tweety_bridge.modal_handler.validate_modal_formula(formula)
+            else:
+                raise AttributeError("Méthode directe non disponible, utilisation du fallback.")
+        except AttributeError:
+             self.logger.warning("Fallback: validate_modal_formula non trouvé, utilisation de tweety_bridge.invoke.")
+             result = self.tweety_bridge.invoke("validate_formula", "modal", formula)
+             is_valid = result.get("is_valid", False)
+             message = result.get("message", "Aucun message du fallback.")
+
         if not is_valid:
             self.logger.warning(f"Formule modale invalide: {formula}. Message: {message}")
         return is_valid
@@ -655,9 +667,21 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
     def is_consistent(self, belief_set: BeliefSet) -> Tuple[bool, str]:
         """
         Vérifie si un ensemble de croyances modales est cohérent.
+        Tente d'abord d'utiliser la méthode directe. En cas d'échec (AttributeError),
+        utilise une méthode de fallback générique.
         """
         self.logger.info(f"Vérification de la cohérence pour l'agent {self.name}")
-        is_consistent, message = self.tweety_bridge.modal_handler.is_modal_kb_consistent(belief_set.content)
+        try:
+            if hasattr(self.tweety_bridge.modal_handler, 'is_modal_kb_consistent'):
+                is_consistent, message = self.tweety_bridge.modal_handler.is_modal_kb_consistent(belief_set.content)
+            else:
+                raise AttributeError("Méthode directe non disponible, utilisation du fallback.")
+        except AttributeError:
+            self.logger.warning("Fallback: is_modal_kb_consistent non trouvé, utilisation de tweety_bridge.invoke.")
+            result = self.tweety_bridge.invoke("is_consistent", "modal", belief_set.content)
+            is_consistent = result.get("is_consistent", False)
+            message = result.get("message", "Aucun message du fallback.")
+
         if not is_consistent:
             self.logger.warning(f"Ensemble de croyances modales jugé incohérent par Tweety: {message}")
         return is_consistent, message
