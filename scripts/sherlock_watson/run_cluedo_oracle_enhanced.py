@@ -95,6 +95,7 @@ def parse_arguments():
     parser.add_argument('--quality-check', action='store_true', help="Mode pour la validation de la qualité de la sortie.")
     parser.add_argument('--latency-test', action='store_true', help="Mode pour la mesure de latence.")
     parser.add_argument('--single-call', action='store_true', help="Utilisé avec --latency-test pour un appel unique.")
+    parser.add_argument('--integration-test', action='store_true', help="Alias de --test-mode pour les tests d'intégration.")
 
     return parser.parse_args()
 
@@ -119,7 +120,7 @@ async def main():
         # On force le mock LLM si --test-mode est activé.
         # Cela évite de dépendre d'une clé API en environnement de test.
         environment_context = initialize_project_environment(
-            force_mock_llm=args.test_mode
+            force_mock_llm=args.test_mode or args.integration_test
         )
         logger.info("Environnement du projet et JVM initialisés avec succès.")
     except Exception as e:
@@ -159,20 +160,20 @@ async def main():
         
         # 4. Affichage du rapport final
         logger.info("--- Fin de la partie ---")
-        print("\n" + "="*50)
-        print("          RAPPORT FINAL DE LA PARTIE")
-        print("="*50 + "\n")
+        logger.info("\n" + "="*50)
+        logger.info("          RAPPORT FINAL DE LA PARTIE")
+        logger.info("="*50 + "\n")
         
         # Le rapport est maintenant un dictionnaire, nous pouvons l'afficher de manière plus structurée
         if "workflow_info" in final_report:
-            print(f"Stratégie: {final_report['workflow_info'].get('strategy')}")
-            print(f"Durée: {final_report['workflow_info'].get('execution_time_seconds', 0):.2f}s")
+            logger.info(f"Stratégie: {final_report['workflow_info'].get('strategy')}")
+            logger.info(f"Durée: {final_report['workflow_info'].get('execution_time_seconds', 0):.2f}s")
         if "solution_analysis" in final_report:
-            print(f"Succès: {final_report['solution_analysis'].get('success')}")
-            print(f"Solution Proposée: {final_report['solution_analysis'].get('proposed_solution')}")
-            print(f"Solution Correcte: {final_report['solution_analysis'].get('correct_solution')}")
+            logger.info(f"Succès: {final_report['solution_analysis'].get('success')}")
+            logger.info(f"Solution Proposée: {final_report['solution_analysis'].get('proposed_solution')}")
+            logger.info(f"Solution Correcte: {final_report['solution_analysis'].get('correct_solution')}")
             
-        print("\n" + "="*50)
+        logger.info("\n" + "="*50)
 
     except Exception as e:
         logger.error(f"Une erreur est survenue pendant l'exécution du jeu: {e}", exc_info=True)

@@ -6,26 +6,25 @@ from playwright.sync_api import Page, expect
 # so the web server is started automatically for all tests in this module.
 @pytest.mark.e2e
 @pytest.mark.playwright
-@pytest.mark.skip(reason="Le composant de graphe ne s'affiche pas, problème frontend à investiguer.")
-def test_successful_graph_visualization(page: Page, e2e_servers):
+def test_successful_graph_visualization(page_with_console_logs: Page, e2e_servers):
     """
     Scenario 4.1: Successful visualization of a logic graph (Happy Path)
     """
     _, frontend_url = e2e_servers
-    page.goto(frontend_url)
+    page_with_console_logs.goto(frontend_url)
     
     # Attendre que l'API soit connectée
-    expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
+    expect(page_with_console_logs.locator('.api-status.connected')).to_be_visible(timeout=15000)
 
     # Assurez-vous que l'onglet "Logic Graph" est cliquable et cliquez dessus
-    logic_graph_tab = page.locator('[data-testid="logic-graph-tab"]')
+    logic_graph_tab = page_with_console_logs.locator('[data-testid="logic-graph-tab"]')
     expect(logic_graph_tab).to_be_enabled()
     logic_graph_tab.click()
 
     # Localisateurs pour les éléments d'interaction
-    text_input = page.locator('[data-testid="logic-graph-text-input"]')
-    submit_button = page.locator('[data-testid="logic-graph-submit-button"]')
-    graph_container = page.locator('[data-testid="logic-graph-container"]')
+    text_input = page_with_console_logs.locator('[data-testid="logic-graph-text-input"]')
+    submit_button = page_with_console_logs.locator('[data-testid="logic-graph-submit-button"]')
+    graph_container = page_with_console_logs.locator('[data-testid="logic-graph-container"]')
     
     # Remplir le champ de saisie et soumettre
     text_to_analyze = "A -> B; B -> C"
