@@ -1,0 +1,30 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+
+# IDEs and editors
+.vscode/
+.idea/
+
+# Tests
+tests/
+tests_playwright/
+
+# Documentation
+docs/
+
+# Logs and temporary files
+_e2e_logs/
+*.log
+.pytest_cache/
+# Node
+**/node_modules
