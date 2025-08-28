@@ -75,6 +75,7 @@ class BenchmarkResult(BaseModel):
     duration_ms: float = Field(..., description="Temps d'exécution de la requête en millisecondes.")
     output: Optional[Dict[str, Any]] = Field(None, description="Sortie de l'exécution en cas de succès.")
     error: Optional[str] = Field(None, description="Message d'erreur en cas d'échec.")
+    custom_metrics: Dict[str, Any] = Field(default_factory=dict, description="Métrique personnalisée pour cette exécution, ex: nombre de tokens.")
 
 class BenchmarkSuiteResult(BaseModel):
     """
@@ -92,3 +93,4 @@ class BenchmarkSuiteResult(BaseModel):
     max_duration_ms: float = Field(..., description="Durée maximale d'une exécution réussie en millisecondes.")
     
     results: List[BenchmarkResult] = Field(..., description="Liste détaillée des résultats de chaque exécution.")
+    aggregated_custom_metrics: Dict[str, Any] = Field(default_factory=dict, description="Agrégation des métriques personnalisées sur toute la suite.")
