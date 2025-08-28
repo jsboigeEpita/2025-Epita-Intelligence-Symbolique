@@ -575,6 +575,20 @@ def e2e_servers(request):
     backend_url = request.config.getoption("--backend-url")
     frontend_url = request.config.getoption("--frontend-url")
     project_root = Path(__file__).parent.parent
+
+    # --- VALIDATION CRITIQUE POUR L'ISOLATION DE LA JVM ---
+    # Le processus principal de pytest NE DOIT JAMAIS avoir de JVM active
+    # lorsque les serveurs E2E sont démarrés en sous-processus.
+    # Le sous-processus du backend est le SEUL responsable du démarrage de sa propre JVM.
+    if jpype.isJVMStarted():
+        pytest.fail(
+            "\\n[E2E FATAL] Conflit de JVM détecté !\\n"
+            "La JVM est déjà démarrée dans le processus pytest principal. "
+            "Cela causera un crash fatal ('access violation') lors du démarrage du serveur backend.\\n"
+            "SOLUTION: Assurez-vous que vos tests E2E sont marqués avec @pytest.mark.no_jvm_session "
+            "ou lancez pytest avec l'option --disable-jvm-session.",
+            pytrace=False
+        )
     
     backend_process = None
     frontend_process = None

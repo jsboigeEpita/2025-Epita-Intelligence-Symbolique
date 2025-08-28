@@ -1,138 +1,50 @@
-# Documentation des Tests du Projet
+# Stratégie de Gestion de la JVM dans les Tests
 
-Ce document décrit la méthode **unique et recommandée** pour exécuter les différentes suites de tests du projet.
+Ce document explique comment la JVM est gérée dans notre suite de tests `pytest` pour garantir la stabilité, en particulier sous Windows où les conflits de cycle de vie de la JVM peuvent causer des crashs fatals (`Windows fatal exception: access violation`).
 
----
+## Le Problème : Conflit de Cycle de Vie de la JVM
 
-## Point d'Entrée Unifié : `run_tests.ps1`
+Le cœur du problème réside dans le fait que `JPype` ne permet de démarrer la JVM **qu'une seule fois** par processus. Toute tentative de redémarrage ou de démarrage d'une seconde JVM dans un sous-processus qui a hérité de l'état du parent mène à un crash.
 
-Toute l'exécution des tests doit passer par le script unifié `run_tests.ps1` situé à la racine du projet. Ce script est le seul point d'entrée supporté.
+Nos tests se divisent en deux catégories principales :
 
-**Pourquoi est-ce obligatoire ?**
-Ce script ne se contente pas de lancer les tests. Il est responsable de :
-1.  **Activer l'environnement Conda** correctement.
-2.  **Charger les variables d'environnement** spécifiques aux tests (depuis `.env.test`).
-3.  **Désactiver les services non nécessaires** (comme OpenTelemetry) pour isoler les tests.
-4.  **Déléguer l'exécution** à l'orchestrateur de test interne (`project_core/test_runner.py`) avec les bons paramètres.
+1.  **Tests d'Intégration (`@pytest.mark.jvm_test`)**: Ces tests importent directement des composants qui dépendent de la JVM (ex: `TweetyBridge`). Ils nécessitent qu'une JVM soit active dans le processus `pytest` principal.
+2.  **Tests End-to-End (`@pytest.mark.e2e`)**: Ces tests valident l'application complète. Ils utilisent la fixture `e2e_servers` qui démarre le serveur backend dans un **sous-processus**. Ce serveur backend est lui-même responsable de démarrer et de gérer sa propre JVM.
 
-Tenter de lancer `pytest` ou `playwright` manuellement contourne ces étapes cruciales et mènera à des échecs ou des résultats non fiables.
+Le conflit survient lorsqu'un test E2E est exécuté dans une session `pytest` où la JVM a déjà été démarrée pour des tests d'intégration. Le sous-processus du serveur E2E hérite d'un état invalide et crashe en tentant d'initialiser sa propre JVM.
 
-### Utilisation
+## La Solution : Isolation Stricte
 
-Ouvrez un terminal PowerShell et utilisez la syntaxe suivante :
+Pour résoudre ce problème, nous avons implémenté une stratégie d'isolation stricte :
 
-```powershell
-.\run_tests.ps1 -Type <type_de_test> [options]
-```
+1.  **Fixture de Session `jvm_session`**:
+    *   Une fixture `jvm_session` avec `scope="session"` et `autouse=True` est définie dans `tests/conftest.py`.
+    *   Elle est responsable de démarrer la JVM **une unique fois** pour tous les tests qui en ont besoin (principalement les tests d'intégration).
 
-#### Types de Tests (`-Type`)
-- `unit` : Lance les tests unitaires (rapides, sans I/O).
-- `functional` : Lance les tests fonctionnels.
-- `integration` : Lance les tests d'intégration.
-- `e2e` : Lance les tests End-to-End avec Playwright (JS/TS).
-- `e2e-python` : Lance les tests End-to-End avec Pytest (Python).
-- `validation` : Lance les tests de validation.
-- `all` : (Défaut) Lance les tests `unit` et `functional`.
+2.  **Désactivation pour les Tests E2E**:
+    *   Les tests qui utilisent la fixture `e2e_servers` **ne doivent pas** avoir de JVM active dans le processus `pytest` principal.
+    *   Pour garantir cela, tous les tests E2E doivent être marqués avec `@pytest.mark.no_jvm_session`.
+    *   Ce marqueur indique à la fixture `jvm_session` de ne pas s'exécuter pour ce test.
+    *   De plus, une assertion de sécurité a été ajoutée au début de la fixture `e2e_servers` pour vérifier que `jpype.isJVMStarted()` est `False`. Si ce n'est pas le cas, le test échoue avec un message d'erreur explicite, empêchant le crash fatal.
 
-#### Options Communes
-- `-Path <chemin>` : Cible un fichier ou un répertoire de test spécifique.
-- `-Browser <nom>` : Pour les tests `e2e`, spécifie le navigateur (`chromium`, `firefox`, `webkit`).
-- `-PytestArgs "<args>"` : Passe des arguments supplémentaires directement à Pytest (ex: `-PytestArgs "-k mon_test -s"`).
+## Comment Exécuter les Tests
 
-### Exemples Concrets
+*   **Pour exécuter tous les tests sauf les E2E (recommandé pour le développement rapide)**:
+    ```bash
+    python -m pytest -m "not e2e"
+    ```
 
-**1. Lancer tous les tests unitaires (recommandé pour une validation rapide) :**
-```powershell
-.\run_tests.ps1 -Type unit
-```
+*   **Pour exécuter uniquement les tests E2E**:
+    Il est **crucial** d'utiliser le marqueur pour s'assurer que la JVM de session n'est pas démarrée.
+    ```bash
+    python -m pytest -m e2e
+    ```
+    (La configuration actuelle des marqueurs devrait gérer l'isolation automatiquement).
 
-**2. Lancer un répertoire de tests fonctionnels spécifique :**
-```powershell
-.\run_tests.ps1 -Type functional -Path tests/functional/database/
-```
+*   **Pour exécuter un fichier de test E2E spécifique**:
+    Assurez-vous que le test est marqué avec `@pytest.mark.no_jvm_session`.
+    ```bash
+    python -m pytest tests/test_mon_fichier_e2e.py
+    ```
 
-**3. Lancer un seul fichier de test en affichant les `print()` :**
-```powershell
-.\run_tests.ps1 -Type unit -Path tests/unit/agents/test_parser.py -PytestArgs "-s"
-```
-
-**4. Lancer les tests End-to-End avec Playwright sur Firefox :**
-```powershell
-.\run_tests.ps1 -Type e2e -Browser firefox
-```
-
----
-
-## Note Importante : L'Erreur "Windows fatal exception"
-
-Lors de l'exécution de tests qui dépendent de Java (comme les tests d'intégration), vous pourriez voir le message suivant dans les logs :
-
-> **Windows fatal exception: access violation**
-
-**CECI N'EST PAS UNE ERREUR BLOQUANTE.**
-
-Ce message est un **artefact cosmétique** connu de la bibliothèque `JPype` sous Windows. Il n'a **aucun impact** sur l'exécution ou le résultat des tests. La JVM est démarrée et fonctionne correctement.
-
-**Vous devez ignorer ce message.** N'essayez pas de le "corriger", les véritables causes d'instabilité ont déjà été résolues en désactivant certaines options JVM dans le code.
-
----
-
-## Couverture des Solveurs (`tweety` et `prover9`)
-
-Les tests d'intégration cruciaux qui dépendent d'un solveur logique (comme ceux pour le `FOLHandler`) sont maintenant **automatiquement paramétrés**.
-
-Cela signifie que lorsque vous exécutez la suite de tests (par exemple, `.\run_tests.ps1 -Type integration`), les tests concernés s'exécuteront **deux fois** : une fois en forçant l'utilisation de `tweety`, et une fois en forçant l'utilisation de `prover9`.
-
-Vous n'avez **plus besoin** de définir manuellement la variable d'environnement `ARG_ANALYSIS_SOLVER` pour assurer la couverture des deux solveurs. Le framework de test s'en charge.
-
----
-
-## Stratégie d'Injection de Dépendances et Mocks
-
-Le projet adopte une stratégie stricte pour garantir la fiabilité des tests. Les mocks de services (notamment pour les appels LLM) ne doivent **JAMAIS** être utilisés dans les tests d'intégration ou E2E.
-
-### Tests d'Intégration et E2E : Utilisation du Service Réel
-
-Tous les tests marqués comme `integration` ou `e2e` (y compris `e2e-python`) sont conçus pour valider la chaîne complète des services.
-
-**Exigence obligatoire :**
-Pour exécuter ces tests, vous **devez** avoir un fichier `.env` à la racine du projet qui contient une clé `OPENAI_API_KEY` valide.
-
-Si la clé est manquante ou invalide, le serveur d'API ne pourra pas démarrer le service d'analyse. Le test échouera, ce qui est le **comportement attendu et souhaité**. Cela garantit que nous ne validons jamais un workflow avec un service LLM implicitement mocké.
-
-### Tests Unitaires : Injection Explicite de Mocks
-
-Les tests unitaires, qui doivent être rapides et isolés, sont le **seul endroit** où les services mocks doivent être utilisés. L'injection doit se faire de manière **explicite** en utilisant la fonctionnalité `dependency_overrides` de FastAPI.
-
-**Exemple :**
-Pour tester un endpoint qui dépend de `get_analysis_service` sans faire d'appel réseau réel, surchargez la dépendance comme suit :
-
-```python
-# tests/unit/api/test_mon_endpoint.py
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
-# Importer la dépendance réelle ET la dépendance mockée
-from api.dependencies import get_analysis_service, get_mock_analysis_service
-from api.endpoints import router as api_router
-
-# Créer une application de test
-app = FastAPI()
-app.include_router(api_router)
-
-# Remplacer la dépendance authentique par le mock EXPLICITEMENT pour ce test
-app.dependency_overrides[get_analysis_service] = get_mock_analysis_service
-
-client = TestClient(app)
-
-def test_endpoint_avec_mock():
-    """
-    Ce test utilise le MockAnalysisService car la dépendance
-    a été surchargée au-dessus.
-    """
-    response = client.post("/api/v1/analyzer/analyze", json={"text": "..."})
-    data = response.json()
-    # L'assertion vérifie que la réponse vient bien du mock
-    assert data['authentic_gpt4o_used'] is False
-```
-
-Cette approche garantit une séparation claire des préoccupations et améliore la fiabilité de notre suite de tests.
+Cette approche garantit que les deux types de tests peuvent coexister dans la même suite de tests sans provoquer d'instabilité liée à la JVM.
