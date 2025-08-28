@@ -43,6 +43,7 @@ from .services.fallacy_service import FallacyService
 from .services.framework_service import FrameworkService
 from .services.logic_service import LogicService
 from argumentation_analysis.core.jvm_setup import shutdown_jvm, is_jvm_started
+from argumentation_analysis.mocks.fallacy_detection import MockFallacyDetector
  
  # Import des modèles locaux
 from .models.request_models import (
@@ -91,10 +92,32 @@ def create_app(config_overrides: Optional[Dict[str, Any]] = None) -> Flask:
     force_mock = os.environ.get('FORCE_MOCK_LLM', 'false').lower() == 'true'
     llm_service = create_llm_service(service_id="default", force_mock=force_mock)
     
+    # --- Initialisation des Services avec Injection de Dépendances ---
+    mock_fallacy_detector = MockFallacyDetector()
+    
+    # Initialisation des analyseurs qui peuvent être des dépendances
+    # Note: `EnhancedContextualFallacyAnalyzer` est importé en tant que `ContextualFallacyAnalyzer` dans `fallacy_service`
+    from plugins.AnalysisToolsPlugin.logic.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer
+    from plugins.AnalysisToolsPlugin.logic.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer as ComplexFallacyAnalyzer
+    from plugins.AnalysisToolsPlugin.logic.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator as FallacySeverityEvaluator
+    
+    contextual_analyzer = EnhancedContextualFallacyAnalyzer(fallacy_detector=mock_fallacy_detector)
+    complex_analyzer = ComplexFallacyAnalyzer(fallacy_detector=mock_fallacy_detector)
+    severity_evaluator = FallacySeverityEvaluator()
+
+    # Initialisation des services en injectant les dépendances
+    fallacy_service = FallacyService(fallacy_detector=mock_fallacy_detector)
+    analysis_service = AnalysisService(
+        complex_analyzer=complex_analyzer,
+        contextual_analyzer=contextual_analyzer,
+        severity_evaluator=severity_evaluator,
+        informal_agent=None  # L'agent informel n'est pas nécessaire pour les tests E2E de base
+    )
+
     app.extensions['racine_services'] = {
-        'analysis': AnalysisService(),
+        'analysis': analysis_service,
         'validation': ValidationService(),
-        'fallacy': FallacyService(),
+        'fallacy': fallacy_service,
         'framework': FrameworkService(),
         'logic': LogicService(),
         'llm': llm_service
