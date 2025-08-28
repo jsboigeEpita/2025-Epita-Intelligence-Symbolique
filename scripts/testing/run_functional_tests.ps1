@@ -2,9 +2,7 @@
 # La ligne d'activation globale a été supprimée car elle provoquait des erreurs de paramètres.
 
 # Nettoyage agressif des caches
-Write-Host "Nettoyage des caches Python..."
-Get-ChildItem -Path . -Include __pycache__ -Recurse -Force | Remove-Item -Recurse -Force
-Remove-Item -Path .\.pytest_cache -Recurse -Force -ErrorAction SilentlyContinue
+# Le nettoyage des caches a été supprimé car il est trop lent et peu fiable.
 
 # Forcer la réinstallation du paquet en mode editable
 Write-Host "Réinstallation du paquet en mode editable..."
@@ -41,7 +39,7 @@ Start-Job -ScriptBlock {
     Set-Location $using:ProjectRoot
     
     # Exécute l'orchestrateur qui gère le backend et le frontend
-    conda run -n projet-is --no-capture-output --live-stream python -m project_core.webapp_from_scripts.unified_web_orchestrator --start --frontend --visible --log-level INFO
+    conda run -n projet-is --no-capture-output --live-stream python -m argumentation_analysis.webapp.orchestrator --start --frontend --visible --log-level INFO
 } -Name "Orchestrator" -ArgumentList @($ProjectRoot)
 
 # Attente et récupération de l'URL du frontend depuis la sortie du job

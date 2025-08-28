@@ -23,6 +23,7 @@ try:
     # Les analyseurs ont été déplacés dans le AnalysisToolsPlugin
     from plugins.AnalysisToolsPlugin.logic.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer as EnhancedContextualAnalyzer
     from plugins.AnalysisToolsPlugin.logic.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator as FallacySeverityEvaluator
+    from argumentation_analysis.core.interfaces.fallacy_detector import AbstractFallacyDetector
     # On garde ContextualFallacyAnalyzer pointant vers le nouvel analyseur amélioré pour la compatibilité
     ContextualFallacyAnalyzer = EnhancedContextualAnalyzer
 except ImportError as e:
@@ -30,6 +31,7 @@ except ImportError as e:
     ContextualFallacyAnalyzer = None
     FallacySeverityEvaluator = None
     EnhancedContextualAnalyzer = None
+    AbstractFallacyDetector = None
 
 from ..models.request_models import FallacyRequest
 from ..models.response_models import FallacyResponse, FallacyDetection
@@ -45,19 +47,28 @@ class FallacyService:
     pour identifier et évaluer les erreurs de raisonnement.
     """
     
-    def __init__(self):
+    def __init__(self, fallacy_detector: Optional[AbstractFallacyDetector] = None):
         """Initialise le service de détection de sophismes."""
         self.logger = logger
         self.is_initialized = False
+        self.fallacy_detector = fallacy_detector
         self._initialize_analyzers()
         self._load_fallacy_database()
     
     def _initialize_analyzers(self):
         """Initialise les analyseurs de sophismes."""
         try:
+            # Si aucun détecteur n'est fourni, les analyseurs ne peuvent pas être initialisés.
+            if not self.fallacy_detector:
+                self.contextual_analyzer = None
+                self.severity_evaluator = None
+                self.enhanced_analyzer = None
+                self.logger.warning("Aucun FallacyDetector fourni. Les analyseurs avancés sont désactivés.")
+                return
+
             # Analyseur contextuel
             if ContextualFallacyAnalyzer:
-                self.contextual_analyzer = ContextualFallacyAnalyzer()
+                self.contextual_analyzer = ContextualFallacyAnalyzer(fallacy_detector=self.fallacy_detector)
             else:
                 self.contextual_analyzer = None
             
@@ -69,7 +80,7 @@ class FallacyService:
             
             # Analyseur contextuel amélioré
             if EnhancedContextualAnalyzer:
-                self.enhanced_analyzer = EnhancedContextualAnalyzer()
+                self.enhanced_analyzer = EnhancedContextualAnalyzer(fallacy_detector=self.fallacy_detector)
             else:
                 self.enhanced_analyzer = None
             

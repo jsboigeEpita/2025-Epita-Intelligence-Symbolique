@@ -54,107 +54,24 @@ class AnalysisService:
     l'analyse de structure et l'évaluation de cohérence.
     """
     
-    def __init__(self):
-        """Initialise le service d'analyse."""
+    def __init__(self, complex_analyzer=None, contextual_analyzer=None, severity_evaluator=None, informal_agent=None):
+        """Initialise le service d'analyse avec injection de dépendances."""
         self.logger = logger
-        self.is_initialized = False
-        
-        # Initialisation paresseuse : les composants seront initialisés au premier appel
-        self.complex_analyzer = None
-        self.contextual_analyzer = None
-        self.severity_evaluator = None
-        self.informal_agent = None
+        self.complex_analyzer = complex_analyzer
+        self.contextual_analyzer = contextual_analyzer
+        self.severity_evaluator = severity_evaluator
+        self.informal_agent = informal_agent
+        self.is_initialized = True  # L'initialisation est maintenant gérée en amont
+        self.logger.info("Service d'analyse initialisé avec les dépendances injectées.")
+        self.health_check()
 
-    def _ensure_initialized(self):
-        """Initialise les composants d'analyse si ce n'est pas déjà fait."""
-        if self.is_initialized:
-            return
-        try:
-            self.logger.info("=== DIAGNOSTIC ANALYSIS SERVICE ===")
-            
-            # Initialisation des analyseurs
-            if ComplexFallacyAnalyzer:
-                self.complex_analyzer = ComplexFallacyAnalyzer()
-                self.logger.info("✅ ComplexFallacyAnalyzer initialized")
-            else:
-                self.complex_analyzer = None
-                self.logger.warning("❌ ComplexFallacyAnalyzer not available")
-                
-            if ContextualFallacyAnalyzer:
-                self.contextual_analyzer = ContextualFallacyAnalyzer()
-                self.logger.info("✅ ContextualFallacyAnalyzer initialized")
-            else:
-                self.contextual_analyzer = None
-                self.logger.warning("❌ ContextualFallacyAnalyzer not available")
-                
-            if FallacySeverityEvaluator:
-                self.severity_evaluator = FallacySeverityEvaluator()
-                self.logger.info("✅ FallacySeverityEvaluator initialized")
-            else:
-                self.severity_evaluator = None
-                self.logger.warning("❌ FallacySeverityEvaluator not available")
-            
-            # Configuration des outils pour l'agent informel
-            self.tools = {}
-            if self.complex_analyzer:
-                self.tools['complex_fallacy_analyzer'] = self.complex_analyzer
-            if self.contextual_analyzer:
-                self.tools['contextual_fallacy_analyzer'] = self.contextual_analyzer
-            if self.severity_evaluator:
-                self.tools['fallacy_severity_evaluator'] = self.severity_evaluator
-            
-            # Initialisation de l'agent informel
-            if InformalAgent:
-                self.logger.info("📝 Attempting to initialize InformalAgent...")
-                
-                # Vérifier les variables d'environnement OpenAI
-                openai_key = os.environ.get('OPENAI_API_KEY')
-                openai_org = os.environ.get('OPENAI_ORG_ID')
-                env_file_path = os.path.join(root_dir, '.env')
-                
-                self.logger.info(f"OpenAI API Key: {'SET' if openai_key else 'NOT_SET'}")
-                self.logger.info(f"OpenAI Org ID: {'SET' if openai_org else 'NOT_SET'}")
-                self.logger.info(f".env file path: {env_file_path}")
-                self.logger.info(f".env file exists: {os.path.exists(env_file_path)}")
-                
-                # Création d'un kernel SK de base pour l'agent
-                kernel = sk.Kernel()
-                
-                # Ajout d'un service LLM (suppose que les variables d'environnement OPENAI_API_KEY et OPENAI_ORG_ID sont définies)
-                # Vous devrez peut-être adapter le modèle et le service_id
-                try:
-                    service_id = "default"
-                    model_id = os.environ.get("OPENAI_CHAT_MODEL_ID")
-                    api_key = os.environ.get("OPENAI_API_KEY")
-                    if not model_id or not api_key:
-                        raise ValueError("Les variables d'environnement OPENAI_CHAT_MODEL_ID et OPENAI_API_KEY sont requises.")
-                    
-                    kernel.add_service(
-                        OpenAIChatCompletion(
-                            service_id=service_id,
-                            ai_model_id=model_id,
-                            api_key=api_key,
-                        )
-                    )
-                    self.informal_agent = InformalAgent(kernel=kernel)
-                    # La configuration des composants (plugins) se fait via setup_agent_components
-                    self.informal_agent.setup_agent_components(llm_service_id=service_id)
-                    self.logger.info("✅ InformalAgent initialized successfully")
-
-                except Exception as e:
-                    self.logger.error(f"❌ Failed to configure LLM service for kernel: {e}")
-                    self.logger.error(f"   This is likely due to missing OpenAI configuration")
-                    self.informal_agent = None
-            else:
-                self.logger.warning("❌ InformalAgent class not available")
-                self.informal_agent = None
-            
-            self.is_initialized = True
-            self.logger.info("Service d'analyse initialisé avec succès")
-            
-        except Exception as e:
-            self.logger.error(f"Erreur lors de l'initialisation: {e}")
-            self.is_initialized = False
+    def health_check(self):
+        """Vérifie et logue l'état des composants injectés."""
+        self.logger.info("=== DIAGNOSTIC ANALYSIS SERVICE ===")
+        self.logger.info(f"✅ ComplexFallacyAnalyzer: {'Présent' if self.complex_analyzer else 'Absent'}")
+        self.logger.info(f"✅ ContextualFallacyAnalyzer: {'Présent' if self.contextual_analyzer else 'Absent'}")
+        self.logger.info(f"✅ FallacySeverityEvaluator: {'Présent' if self.severity_evaluator else 'Absent'}")
+        self.logger.info(f"✅ InformalAgent: {'Présent' if self.informal_agent else 'Absent'}")
     
     def is_healthy(self) -> bool:
         """Vérifie l'état de santé du service."""
@@ -180,7 +97,6 @@ class AnalysisService:
         Returns:
             Réponse avec les résultats d'analyse
         """
-        self._ensure_initialized() # Initialisation paresseuse
         start_time = time.time()
         
         try:
@@ -252,7 +168,8 @@ class AnalysisService:
             
             # Analyse contextuelle si disponible
             elif self.contextual_analyzer:
-                result = self.contextual_analyzer.analyze_fallacies(text)
+                # L'appel correct est `identify_contextual_fallacies` avec un contexte vide par défaut
+                result = self.contextual_analyzer.identify_contextual_fallacies(text, "")
                 if result:
                     for fallacy_data in result:
                         fallacy = FallacyDetection(
