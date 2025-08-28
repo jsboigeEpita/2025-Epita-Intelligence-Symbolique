@@ -30,3 +30,37 @@ def test_measure_latency_records_correct_time(mock_perf_counter, mock_sleep):
     mock_sleep.assert_called_once_with(SLEEP_DURATION)
     # Vérifie que la latence calculée correspond exactement à la durée simulée
     assert latency == pytest.approx(SLEEP_DURATION)
+
+def test_record_metrics():
+    """
+    Vérifie que le BenchmarkService enregistre correctement différentes métriques.
+    """
+    # 1. Arrange
+    benchmark_service = BenchmarkService()
+    function_name = "test_function"
+
+    # 2. Act
+    benchmark_service.record_metric(function_name, success=True, value=0.123, metric_type="latency")
+    benchmark_service.record_metric(function_name, success=True, value=0.125, metric_type="latency")
+    benchmark_service.record_metric(function_name, success=False, value=1, metric_type="error_count")
+
+    # 3. Assert
+    assert function_name in benchmark_service.metrics
+    metrics_list = benchmark_service.metrics[function_name]
+    
+    assert len(metrics_list) == 3
+    
+    # Vérification de la première métrique de latence
+    assert metrics_list[0]["success"] is True
+    assert metrics_list[0]["value"] == 0.123
+    assert metrics_list[0]["metric_type"] == "latency"
+    
+    # Vérification de la deuxième métrique de latence
+    assert metrics_list[1]["success"] is True
+    assert metrics_list[1]["value"] == 0.125
+    assert metrics_list[1]["metric_type"] == "latency"
+
+    # Vérification de la métrique d'erreur
+    assert metrics_list[2]["success"] is False
+    assert metrics_list[2]["value"] == 1
+    assert metrics_list[2]["metric_type"] == "error_count"
