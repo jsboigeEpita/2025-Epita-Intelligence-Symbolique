@@ -31,6 +31,9 @@ from typing import Dict, List, Any, Optional, Tuple, Union
 from pathlib import Path
 from datetime import datetime
 
+# Définir le chemin du répertoire courant pour résoudre les chemins de données
+current_dir = Path(__file__).parent
+
 # Importer l'analyseur contextuel de base
 # TODO: Vérifier si ce chemin est toujours valide après le refactoring
 from argumentation_analysis.core.interfaces.fallacy_detector import AbstractFallacyDetector
