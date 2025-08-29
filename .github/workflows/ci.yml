@@ -28,32 +28,30 @@ jobs:
         run: flake8 .
 
   automated-tests:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     needs: lint-and-format
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Build Docker image
-        run: docker build -t epita-symbolic-ai .
-      - name: Run tests in Docker container
-        run: docker run epita-symbolic-ai pwsh -c "./run_tests.ps1"
 
-  package-application:
-    runs-on: ubuntu-latest
-    needs: [lint-and-format, automated-tests]
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
+      - name: Setup Java
+        uses: actions/setup-java@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v3
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v2
         with:
-          context: .
-          push: true
-          tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          auto-update-conda: true
+          python-version: 3.10
+          environment-file: environment.yml
+          activate-environment: epita-symbolic-ai
+
+      - name: Run automated tests
+        shell: pwsh
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TEXT_CONFIG_PASSPHRASE: ${{ secrets.TEXT_CONFIG_PASSPHRASE }}
+        run: |
+          ./activate_project_env.ps1 -CommandToRun "pytest"

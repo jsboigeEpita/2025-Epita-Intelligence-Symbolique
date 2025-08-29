@@ -273,10 +273,6 @@ Le pipeline est structuré de manière logique pour optimiser les ressources et 
     *   **Construction de l'image Docker :** Construit une image Docker de l'application.
     *   **Exécution des tests :** Lance la suite de tests complète dans un conteneur Docker pour valider le comportement fonctionnel de l'application. Ce job ne s'exécute que si `lint-and-format` a réussi.
 
-3.  **`package-application` (dépend de `lint-and-format` et `automated-tests`, s'exécute uniquement sur la branche `main`) :**
-    *   **Login à GHCR :** Se connecte au GitHub Container Registry.
-    *   **Build et Push de l'image Docker :** Construit l'image Docker de l'application et la pousse sur le GitHub Container Registry, en la taguant avec le SHA du commit pour une traçabilité parfaite.
-
 Ce processus garantit que chaque modification est non seulement testée fonctionnellement, mais aussi validée sur le plan de la qualité et de la cohérence du code, assurant ainsi que la branche `main` reste toujours stable, lisible et maintenable.
 
 ---
