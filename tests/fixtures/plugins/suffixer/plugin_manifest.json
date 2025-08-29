@@ -1,0 +1,9 @@
+{
+    "manifest_version": "1.0",
+    "plugin_name": "suffixer",
+    "version": "0.1.0",
+    "author": "Test Suite",
+    "description": "Un plugin de test qui ajoute un suffixe.",
+    "entry_point": "suffixer_plugin.py",
+    "class_name": "SuffixerPlugin"
+}

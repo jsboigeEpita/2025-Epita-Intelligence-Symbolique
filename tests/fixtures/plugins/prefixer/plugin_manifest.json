@@ -1,0 +1,9 @@
+{
+    "manifest_version": "1.0",
+    "plugin_name": "prefixer",
+    "version": "0.1.0",
+    "author": "Test Suite",
+    "description": "Un plugin de test qui ajoute un préfixe.",
+    "entry_point": "prefixer_plugin.py",
+    "class_name": "PrefixerPlugin"
+}

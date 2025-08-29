@@ -1,0 +1,6 @@
+{
+    "name": "String Concat",
+    "version": "1.0",
+    "description": "A test plugin for comparing string concatenation methods.",
+    "entry_point": "string_concat_plugin.py"
+}
