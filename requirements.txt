@@ -30,3 +30,5 @@ coverage
 pytest-benchmark
 
 tiktoken
+black
+flake8
