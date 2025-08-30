@@ -181,6 +181,16 @@ def pytest_unconfigure(config):
         _dotenv_patcher.stop()
         _dotenv_patcher = None
 
+def pytest_collection_finish(session):
+    """
+    Hook exécuté après la collecte des tests.
+    Détecte si des tests E2E sont présents et stocke le résultat dans le cache.
+    """
+    is_e2e_session = any('e2e' in item.keywords for item in session.items)
+    session.config.cache.set("is_e2e_session", is_e2e_session)
+    if is_e2e_session:
+        logger.warning("Session de test E2E détectée. L'initialisation globale de la JVM sera sautée.")
+
 def pytest_sessionstart(session):
     """
     Hook exécuté au tout début de la session de test, avant la collecte.
@@ -188,11 +198,19 @@ def pytest_sessionstart(session):
     avec les bibliothèques natives chargées par les plugins pytest.
     """
     logger.info("=" * 80)
-    logger.info("pytest_sessionstart: Initialisation de la JVM...")
+    logger.info("pytest_sessionstart: Vérification pour l'initialisation de la JVM...")
     logger.info("=" * 80)
 
     if session.config.getoption("--disable-jvm-session"):
         logger.warning("Initialisation de la JVM sautée via --disable-jvm-session.")
+        session.config.cache.set("jvm_started", False)
+        return
+
+    # La décision est prise après la collecte, dans pytest_collection_finish
+    is_e2e_session = session.config.cache.get("is_e2e_session", False)
+
+    if is_e2e_session:
+        logger.warning("Décision confirmée: L'initialisation globale de la JVM est sautée pour la session E2E.")
         session.config.cache.set("jvm_started", False)
         return
 

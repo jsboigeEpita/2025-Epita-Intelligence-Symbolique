@@ -15,8 +15,9 @@ try:
     # Les analyseurs ont été déplacés dans le AnalysisToolsPlugin
     from plugins.AnalysisToolsPlugin.logic.contextual_fallacy_analyzer import EnhancedContextualFallacyAnalyzer as EnhancedContextualAnalyzer
     from plugins.AnalysisToolsPlugin.logic.fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator as FallacySeverityEvaluator
-    # On garde ContextualFallacyAnalyzer pointant vers le nouvel analyseur amélioré pour la compatibilité
-    ContextualFallacyAnalyzer = EnhancedContextualAnalyzer
+    # --- NOUVELLE LOGIQUE D'IMPORT ---
+    # Importer l'analyseur de base séparément
+    from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import ContextualFallacyAnalyzer
 except ImportError as e:
     logging.warning(f"Impossible d'importer les analyseurs de sophismes: {e}")
     ContextualFallacyAnalyzer = None
@@ -55,25 +56,29 @@ class FallacyService:
         :rtype: None
         """
         try:
-            # Analyseur contextuel
+            # --- NOUVEL ORDRE D'INITIALISATION ---
+            # 1. Initialiser l'analyseur de base (sans dépendances)
             if ContextualFallacyAnalyzer:
-                self.contextual_analyzer = ContextualFallacyAnalyzer()
+                # C'est maintenant le VRAI analyseur de base
+                self.base_fallacy_detector = ContextualFallacyAnalyzer()
             else:
-                self.contextual_analyzer = None
-            
-            # Évaluateur de sévérité
+                self.base_fallacy_detector = None
+
+            # 2. Évaluateur de sévérité
             if FallacySeverityEvaluator:
                 self.severity_evaluator = FallacySeverityEvaluator()
             else:
                 self.severity_evaluator = None
-            
-            # Analyseur contextuel amélioré
+
+            # 3. Initialiser l'analyseur amélioré en lui passant le détecteur de base
             if EnhancedContextualAnalyzer:
-                self.enhanced_analyzer = EnhancedContextualAnalyzer(fallacy_detector=self.contextual_analyzer)
-                # self.enhanced_analyzer = None # Désactivé pour les tests
+                self.enhanced_analyzer = EnhancedContextualAnalyzer(fallacy_detector=self.base_fallacy_detector)
                 self.logger.info("[OK] EnhancedContextualAnalyzer initialized")
             else:
                 self.enhanced_analyzer = None
+
+            # Garder une référence compatible pour le reste du service
+            self.contextual_analyzer = self.enhanced_analyzer or self.base_fallacy_detector
             
             self.is_initialized = True
             self.logger.info("Analyseurs de sophismes initialisés")

@@ -18,7 +18,7 @@ logger = logging.getLogger("WebAPI.LogicRoutes")
 logic_bp = Blueprint('logic_api', __name__)
 
 @logic_bp.route('/belief-set', methods=['POST'])
-def logic_text_to_belief_set():
+async def logic_text_to_belief_set():
     """Convertit un texte en ensemble de croyances logiques."""
     logic_service = current_app.extensions['racine_services']['logic']
     try:
@@ -34,7 +34,7 @@ def logic_text_to_belief_set():
             error_messages = [f"{err['loc'][0]}: {err['msg']}" for err in ve.errors()]
             return jsonify(ErrorResponse(error="Données invalides", message="; ".join(error_messages), status_code=400).dict()), 400
             
-        result = logic_service.text_to_belief_set(req_model)
+        result = await logic_service.text_to_belief_set(req_model)
         return jsonify(result.dict())
 
     except Exception as e:

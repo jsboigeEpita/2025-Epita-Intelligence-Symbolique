@@ -307,6 +307,29 @@ class EnhancedContextualFallacyAnalyzer:
         
         return context_analysis
     
+    def _determine_context_type(self, context: str) -> str:
+        """
+        Détermine le type de contexte principal à partir d'une chaîne de caractères.
+        
+        Args:
+            context: La chaîne de caractères décrivant le contexte.
+            
+        Returns:
+            Le type de contexte identifié (ex: "politique", "scientifique").
+        """
+        context_lower = context.lower()
+        if "politique" in context_lower or "élection" in context_lower:
+            return "politique"
+        elif "scientifique" in context_lower or "recherche" in context_lower:
+            return "scientifique"
+        elif "commercial" in context_lower or "publicité" in context_lower:
+            return "commercial"
+        elif "juridique" in context_lower or "légal" in context_lower:
+            return "juridique"
+        elif "académique" in context_lower or "universitaire" in context_lower:
+            return "académique"
+        return "général"
+    
     def _identify_potential_fallacies_with_nlp(self, text: str) -> List[Dict[str, Any]]:
         """
         Identifie les sophismes potentiels dans un texte en utilisant des techniques de NLP.
@@ -375,6 +398,12 @@ class EnhancedContextualFallacyAnalyzer:
                 self.logger.error(f"Erreur lors de l'identification des sophismes avec NLP: {e}")
         
         return potential_fallacies
+    
+    def _identify_potential_fallacies(self, text: str) -> List[Dict[str, Any]]:
+        """
+        Wrapper pour la méthode de détection du fallacy_detector sous-jacent.
+        """
+        return self.fallacy_detector.detect_fallacies(text)
         
     def _filter_by_context_semantic(
         self,
