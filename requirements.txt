@@ -26,3 +26,9 @@ pytest-mock
 pytest-playwright
 playwright
 coverage
+
+pytest-benchmark
+
+tiktoken
+black
+flake8

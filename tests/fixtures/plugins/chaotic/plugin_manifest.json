@@ -1,0 +1,6 @@
+{
+    "plugin_name": "chaotic",
+    "entry_point": "chaotic_plugin.py",
+    "class_name": "ChaoticPlugin",
+    "description": "Un plugin pour simuler des erreurs contrôlées dans les workflows de test."
+}

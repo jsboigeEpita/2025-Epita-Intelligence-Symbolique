@@ -238,3 +238,95 @@ Ce projet est une mosaïque de technologies modernes et de concepts d'IA éprouv
 ---
 
 **🏆 Projet d'Intelligence Symbolique EPITA 2025 - Prêt pour votre exploration et contribution ! 🚀**
+
+
+## Déploiement avec Docker
+
+Pour construire l'image Docker, exécutez la commande suivante à la racine du projet :
+
+```bash
+docker build -t epita-symbolic-ai .
+```
+
+Pour exécuter l'image :
+
+```bash
+docker run epita-symbolic-ai
+```
+
+
+---
+
+## Intégration Continue (CI)
+
+Ce projet utilise GitHub Actions pour l'intégration continue. Un pipeline automatisé se déclenche à chaque `push` ou `pull request` sur la branche `main`.
+
+Le pipeline est structuré de manière logique pour optimiser les ressources et fournir un feedback rapide. Les jobs s'exécutent de manière séquentielle :
+
+1.  **`lint-and-format` :**
+    *   **Checkout du code :** Récupère la dernière version du code.
+    *   **Analyse de formatage (`black`) :** Vérifie que le code respecte les standards de formatage du projet.
+    *   **Analyse de qualité (`flake8`) :** Détecte les erreurs de syntaxe, les incohérences et les problèmes de style.
+
+2.  **`automated-tests` (dépend de `lint-and-format`) :**
+    *   **Checkout du code :** Récupère la dernière version du code.
+    *   **Construction de l'image Docker :** Construit une image Docker de l'application.
+    *   **Exécution des tests :** Lance la suite de tests complète dans un conteneur Docker pour valider le comportement fonctionnel de l'application. Ce job ne s'exécute que si `lint-and-format` a réussi.
+
+Ce processus garantit que chaque modification est non seulement testée fonctionnellement, mais aussi validée sur le plan de la qualité et de la cohérence du code, assurant ainsi que la branche `main` reste toujours stable, lisible et maintenable.
+
+---
+
+## Tests de Performance
+
+Ce projet utilise `pytest-benchmark` pour réaliser des mesures de performance statistiques et fiables.
+
+Pour exécuter uniquement les tests de performance, utilisez la commande suivante :
+
+```bash
+pytest tests/performance --benchmark-only
+```
+
+### Interprétation des Benchmarks Comparatifs
+
+Lorsque plusieurs tests sont regroupés (en utilisant `benchmark.group`), `pytest-benchmark` fournit une colonne `Mean` dans le tableau de résultats. Cette colonne est particulièrement utile pour la comparaison :
+
+*   **Le test le plus rapide** du groupe sert de **baseline** (indiqué par `1.00`).
+*   Pour les autres tests du même groupe, la colonne `Mean` indique **le facteur de ralentissement** par rapport à la baseline. Par exemple, une valeur de `2.5` signifie que le test est 2.5 fois plus lent que le plus rapide.
+
+Cela permet de quantifier objectivement l'impact d'une optimisation ou de comparer différentes implémentations d'un même algorithme.
+
+## Suivi de la Consommation de Tokens
+
+Pour faciliter le suivi des coûts et l'analyse de la performance, un décorateur `@track_tokens` est disponible. Il permet de compter automatiquement les tokens des entrées et sorties des fonctions d'un plugin.
+
+### Utilisation
+
+Pour l'utiliser, importez le décorateur et le `BenchmarkService`, puis appliquez-le à la méthode de votre plugin que vous souhaitez instrumenter. Le décorateur a besoin d'une instance du `BenchmarkService` pour enregistrer les métriques.
+
+**Exemple :**
+
+```python
+from src.core.decorators import track_tokens
+from src.benchmarking.benchmark_service import BenchmarkService
+
+# Supposons que 'benchmark_service' est une instance disponible
+# dans le contexte de votre plugin.
+benchmark_service = BenchmarkService(...)
+
+class MyPlugin:
+    @track_tokens(benchmark_service=benchmark_service)
+    def my_capability(self, text: str) -> str:
+        # Votre logique ici...
+        processed_text = text.upper()
+        return processed_text
+```
+
+Le décorateur va automatiquement :
+1.  Identifier les chaînes de caractères dans les arguments (`text`).
+2.  Calculer le nombre de `input_tokens`.
+3.  Identifier les chaînes de caractères dans la valeur de retour (`processed_text`).
+4.  Calculer le nombre de `output_tokens`.
+5.  Enregistrer ces deux métriques via `benchmark_service.record_metric()`.
+
+Ces métriques seront ensuite disponibles dans les résultats aggrégés du `BenchmarkSuiteResult`.

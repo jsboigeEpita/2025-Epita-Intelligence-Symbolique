@@ -18,6 +18,25 @@ class BenchmarkService:
             orchestration_service: Le service qui gère l'exécution des plugins.
         """
         self.orchestration_service = orchestration_service
+        self.custom_metrics: Dict[str, List[Any]] = {}
+
+    def record_metric(self, metric_type: str, value: Any):
+        """
+        Enregistre une métrique personnalisée pendant l'exécution d'un benchmark.
+        Les métriques sont stockées temporairement et associées à la prochaine
+        exécution de `run_suite`.
+
+        Args:
+            metric_type: Le nom de la métrique (ex: 'input_tokens').
+            value: La valeur de la métrique.
+        """
+        if metric_type not in self.custom_metrics:
+            self.custom_metrics[metric_type] = []
+        self.custom_metrics[metric_type].append(value)
+
+    def _clear_metrics(self):
+        """Réinitialise les métriques personnalisées."""
+        self.custom_metrics = {}
 
     def run_suite(
         self,
@@ -37,21 +56,18 @@ class BenchmarkService:
         Returns:
             Un objet BenchmarkSuiteResult avec les résultats agrégés.
         """
+        self._clear_metrics()
         individual_results: List[BenchmarkResult] = []
         successful_durations: List[float] = []
         
-        # Le plan spécifie un target au format "plugin_name.capability_name"
-        # mais la méthode `run_suite` reçoit ces deux informations séparément.
-        # Pour le moment, nous les utilisons comme prévu par la signature de la méthode.
         target = f"{plugin_name}.{capability_name}"
 
-        for request_payload in requests:
-            # Création de la requête d'orchestration
+        for i, request_payload in enumerate(requests):
             request = OrchestrationRequest(
-                mode="direct_plugin_call", # Le mode est fixé pour le benchmark
+                mode="direct_plugin_call",
                 target=target,
                 payload=request_payload,
-                session_id=None # Pas de gestion de session pour ce benchmark
+                session_id=None
             )
             
             start_time = time.perf_counter()
@@ -64,25 +80,44 @@ class BenchmarkService:
             if is_success:
                 successful_durations.append(duration_ms)
 
+            # Associer les métriques enregistrées à ce résultat
+            run_metrics = {}
+            for key, values in self.custom_metrics.items():
+                if i < len(values):
+                    run_metrics[key] = values[i]
+
             result = BenchmarkResult(
-                request_id=f"benchmark-run-{len(individual_results) + 1}", # ID de requête temporaire
+                request_id=f"benchmark-run-{len(individual_results) + 1}",
                 is_success=is_success,
                 duration_ms=duration_ms,
                 output=response.result,
                 error=response.error_message,
+                custom_metrics=run_metrics,
             )
             individual_results.append(result)
         
-        # Calcul des statistiques agrégées
         total_runs = len(requests)
         successful_runs = len(successful_durations)
         failed_runs = total_runs - successful_runs
         
-        # Eviter la division par zéro si aucune exécution n'a réussi
         avg_duration = sum(successful_durations) / successful_runs if successful_runs > 0 else 0
         min_duration = min(successful_durations) if successful_runs > 0 else 0
         max_duration = max(successful_durations) if successful_runs > 0 else 0
         total_duration = sum(r.duration_ms for r in individual_results)
+
+        # Agréger les métriques personnalisées
+        aggregated_metrics: Dict[str, Any] = {}
+        for res in individual_results:
+            for key, value in res.custom_metrics.items():
+                if key not in aggregated_metrics:
+                    aggregated_metrics[key] = []
+                aggregated_metrics[key].append(value)
+        
+        # Calculer la somme pour les métriques numériques
+        for key, values in aggregated_metrics.items():
+            if all(isinstance(v, (int, float)) for v in values):
+                aggregated_metrics[key] = sum(values)
+
 
         return BenchmarkSuiteResult(
             plugin_name=plugin_name,
@@ -95,4 +130,5 @@ class BenchmarkService:
             min_duration_ms=min_duration,
             max_duration_ms=max_duration,
             results=individual_results,
+            aggregated_custom_metrics=aggregated_metrics,
         )
