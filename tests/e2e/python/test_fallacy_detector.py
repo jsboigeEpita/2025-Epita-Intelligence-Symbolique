@@ -40,7 +40,9 @@ def test_fallacy_detection_basic_workflow(page: Page, frontend_url: str):
     # 7. Vérification de la détection
     # Vérification plus flexible qui accepte un ou plusieurs sophismes
     expect(results_container).to_contain_text(re.compile(r"\d+ sophisme\(s\) détecté\(s\)"))
-    expect(results_container).to_contain_text("Ad Hominem")
+    # Utilise une expression régulière insensible à la casse pour plus de robustesse
+    # face aux variations de formatage (ex: "Ad Hominem (Simulé)").
+    expect(results_container).to_contain_text(re.compile(r"ad hominem", re.IGNORECASE))
     
     # 8. Vérification présence d'un niveau de sévérité
     severity_badge = results_container.locator('.severity-badge').first
@@ -101,6 +103,8 @@ def test_fallacy_example_loading(page: Page, frontend_url: str):
     expect(examples_section).to_contain_text("Exemples de sophismes courants")
     
     # 4. Recherche du premier bouton "Tester" (Ad Hominem)
+    # Utilise "Tester" car c'est le libellé réel du bouton dans le composant React.
+    # Le rapport de débogage mentionnait "Essayer", ce qui était une piste incorrecte.
     first_test_button = examples_section.locator('button.btn:has-text("Tester")').first
     expect(first_test_button).to_be_visible()
     
