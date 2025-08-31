@@ -48,18 +48,25 @@ def test_dung_framework_analysis_api(playwright: Playwright, e2e_servers, backen
     # DEBUG: Afficher la réponse complète de l'API
     print(f"API Response: {json.dumps(response_data, indent=2)}")
 
-    # Vérification de la structure de réponse correcte
-    assert "argument_count" in response_data, "La clé 'argument_count' est manquante dans la réponse."
+    # --- Vérifications Robustes de la Réponse ---
+
+    # 1. Vérification des statistiques de base au premier niveau
+    assert "argument_count" in response_data, "La clé 'argument_count' est manquante."
     assert response_data["argument_count"] == 3, f"Attendu 3 arguments, mais obtenu {response_data['argument_count']}"
     
+    assert "attack_count" in response_data, "La clé 'attack_count' est manquante."
+    assert response_data["attack_count"] == 2, f"Attendu 2 attaques, mais obtenu {response_data['attack_count']}"
+
+    # 2. Vérification de la présence et du contenu des extensions
     assert "extensions" in response_data, "La clé 'extensions' est manquante."
     extensions_list = response_data.get('extensions', [])
-    assert len(extensions_list) > 0, "La liste des extensions est vide."
+    assert len(extensions_list) > 0, "La liste des extensions ne devrait pas être vide."
     
-    first_extension = extensions_list[0]
-    assert first_extension.get('type') == 'preferred', "La sémantique 'preferred' n'a pas été trouvée dans les extensions."
+    # Recherche de l'extension 'preferred' spécifique
+    preferred_extension = next((ext for ext in extensions_list if ext.get('type') == 'preferred'), None)
+    assert preferred_extension is not None, "Aucune extension de type 'preferred' n'a été trouvée."
     
-    # Vérification du contenu de l'extension
+    # 3. Vérification du contenu de l'extension trouvée
     expected_extension_content = {"a", "c"}
-    actual_extension_content = set(first_extension.get("arguments", []))
-    assert actual_extension_content == expected_extension_content, f"Attendu l'extension {expected_extension_content}, mais obtenu {actual_extension_content}"
+    actual_extension_content = set(preferred_extension.get("arguments", []))
+    assert actual_extension_content == expected_extension_content, f"Contenu de l'extension incorrect. Attendu: {expected_extension_content}, Obtenu: {actual_extension_content}"

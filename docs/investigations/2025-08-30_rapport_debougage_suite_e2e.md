@@ -66,7 +66,7 @@ Ce rapport documente le processus de débogage et de correction des erreurs qui 
 ### 2.3. Logique Incorrecte dans le Service d'Analyse de Graphe (Dung)
 
 *   **Cause Racine :** Le service `FrameworkService` interprétait mal la structure de la requête pour construire les relations d'attaque. Il s'attendait à ce que les attaques soient définies dans chaque argument, alors que la requête les fournissait dans une liste dédiée `attacks`.
-*   **Solution :** La méthode `_build_attack_relations` a été corrigée pour lire directement la liste `attacks` de la requête, et le test E2E `test_api_dung_integration.py` a été mis à jour pour correspondre au nouveau format de la charge utile et de la réponse de l'API.
+*   **Solution :** La méthode `_build_attack_relations` a été corrigée pour lire directement la liste `attacks` de la requête. Le test E2E `test_api_dung_integration.py` a été mis à jour pour correspondre au nouveau format de la charge utile et, suite à une analyse plus approfondie, ses assertions ont été renforcées pour valider plus rigoureusement la structure de la réponse de l'API (nombre d'attaques, recherche explicite de l'extension sémantique).
 
 **Diffs correspondants :**
 ```diff
