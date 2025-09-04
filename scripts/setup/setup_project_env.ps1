@@ -49,7 +49,7 @@ catch {
 Write-Host "[INFO] Création du nouvel environnement '$EnvName' à partir de '$EnvironmentFile'." -ForegroundColor Green
 try {
     # Utiliser mamba si disponible, sinon conda
-    $PackageManager = "conda"
+    $PackageManager = if (Get-Command mamba -ErrorAction SilentlyContinue) { "mamba" } else { "conda" }
     Write-Host "[INFO] Utilisation de '$PackageManager' pour la création de l'environnement."
     
     & $PackageManager env create --file $EnvironmentFile --name $EnvName
