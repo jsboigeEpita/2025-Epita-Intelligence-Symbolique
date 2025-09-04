@@ -50,7 +50,7 @@ class FrameworkService:
         try:
             # Construction du graphe d'arguments
             argument_nodes = self._build_argument_nodes(request.arguments)
-            attack_relations = self._build_attack_relations(request.arguments)
+            attack_relations = self._build_attack_relations(request.attacks or [])
             support_relations = self._build_support_relations(request.arguments)
             
             # Calcul des extensions si demandé
@@ -141,19 +141,18 @@ class FrameworkService:
         
         return nodes
     
-    def _build_attack_relations(self, arguments: List[Argument]) -> List[Dict[str, str]]:
-        """Construit les relations d'attaque."""
-        relations = []
-        
-        for arg in arguments:
-            for target_id in (arg.attacks or []):
-                relations.append({
-                    'attacker': arg.id,
-                    'target': target_id,
-                    'type': 'attack'
-                })
-        
-        return relations
+    def _build_attack_relations(self, attacks: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        """Construit les relations d'attaque à partir de la liste fournie."""
+        # La requête fournit déjà une liste de dictionnaires {'source': ..., 'target': ...}
+        # Il suffit de les reformater en {'attacker': ..., 'target': ..., 'type': 'attack'}
+        return [
+            {
+                'attacker': attack.get('source'),
+                'target': attack.get('target'),
+                'type': 'attack'
+            }
+            for attack in attacks
+        ]
     
     def _build_support_relations(self, arguments: List[Argument]) -> List[Dict[str, str]]:
         """Construit les relations de support."""

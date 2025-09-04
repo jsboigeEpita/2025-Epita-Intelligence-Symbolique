@@ -81,6 +81,9 @@ def create_app(config_overrides: Optional[Dict[str, Any]] = None) -> Flask:
     app = Flask(__name__, static_folder=str(react_build_dir / "static"), static_url_path='/static')
     
     # --- Configuration ---
+    # Initialisation de CORS pour autoriser les requêtes cross-origin
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
+
     app.config['JSON_AS_ASCII'] = False
     app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
     if config_overrides:

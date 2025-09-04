@@ -187,10 +187,10 @@ def create_app():
                             logger.info("[DEADLOCK_DEBUG] ... analysis_llm_service créé.")
 
                             self.logic_service = LogicService(llm_service=logic_llm)
-                            self.analysis_service = AnalysisService(llm_service=analysis_llm, project_context=self.project_context)
+                            self.analysis_service = AnalysisService(llm_service=analysis_llm)
                             self.validation_service = ValidationService(self.logic_service)
-                            self.fallacy_service = FallacyService(project_context=self.project_context)
-                            self.framework_service = FrameworkService(project_context=self.project_context)
+                            self.fallacy_service = FallacyService()
+                            self.framework_service = FrameworkService()
                             logger.info("[DEADLOCK_DEBUG] AppServices container initialized.")
 
                     logger.info("[DEADLOCK_DEBUG] ÉTAPE 3: Instanciation de AppServices...")
@@ -229,4 +229,4 @@ if __name__ == '__main__':
     logger.info(f"Starting Flask development server on http://0.0.0.0:{port} (Debug: {debug})")
     # L'application `flask_app` est déjà créée ci-dessus.
     # Le hook `before_request` gérera l'initialisation à la première requête.
-    flask_app.run(host='0.0.0.0', port=port, debug=debug)
+    flask_app.run(host='0.0.0.0', port=port, debug=debug, use_reloader=False)

@@ -75,7 +75,7 @@ class MockFallacyDetector:
             detected_fallacies.append({
                 "fallacy_type": "Argument Invalide (Simulé)",
                 "description": "Le raisonnement présenté semble contenir une faille logique simulée.",
-                "severity": "Haute",
+                "severity": 0.8,
                 "confidence": 0.80,
                 "context_text": text[:100] 
             })
@@ -93,6 +93,16 @@ class MockFallacyDetector:
                 "context_text": context_slice
             })
             
+        # Logique pour le cas de test Ad Hominem spécifique
+        if "auteur" in text_lower and ("condamné" in text_lower or "fraude" in text_lower):
+            detected_fallacies.append({
+                "fallacy_type": "Ad Hominem (Simulé)",
+                "description": "Attaque envers l'auteur basée sur ses actions passées (fraude fiscale).",
+                "severity": 0.8,
+                "confidence": 0.95,
+                "context_text": text
+            })
+
         if not detected_fallacies and "sophisme générique" in text_lower:
              detected_fallacies.append({
                 "fallacy_type": "Generic Mock Fallacy", # Nom de HEAD
@@ -104,6 +114,12 @@ class MockFallacyDetector:
 
         logger.info(f"{len(detected_fallacies)} sophismes simulés détectés par MockFallacyDetector.")
         return detected_fallacies
+
+    def detect_fallacies(self, text: str) -> List[Dict[str, Any]]:
+        """
+        Wrapper pour la compatibilité avec l'interface attendue.
+        """
+        return self.detect(text)
 
     def get_capabilities(self) -> Dict[str, Any]:
         """
