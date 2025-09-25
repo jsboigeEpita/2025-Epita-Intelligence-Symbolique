@@ -60,15 +60,14 @@ if ($Type -eq 'e2e') {
     # certaines vérifications d'environnement strictes).
     $env:E2E_TESTING_MODE = "1"
 
-    Write-Host "[INFO] Lancement des tests E2E (Playwright)..." -ForegroundColor Cyan
-    $commandParts = @("python", "-m", "project_core.test_runner", "--type", "e2e")
-    if ($PSBoundParameters.ContainsKey('Browser')) {
-        $commandParts += "--project", $Browser
+    Write-Host "[INFO] Lancement des tests E2E avec le nouvel orchestrateur asynchrone..." -ForegroundColor Cyan
+    $NewOrchestratorPath = Join-Path $ProjectRoot "scripts/orchestration/run_e2e_tests.py"
+    if (-not (Test-Path $NewOrchestratorPath)) {
+        Write-Host "[ERREUR] Le nouvel orchestrateur '$NewOrchestratorPath' est introuvable." -ForegroundColor Red
+        exit 1
     }
-    if (-not ([string]::IsNullOrEmpty($Path))) {
-        $commandParts += $Path
-    }
-    $finalCommand = $commandParts -join " "
+    # Le nouvel orchestrateur est autonome et ne prend pas d'arguments pour l'instant.
+    $finalCommand = "python `"$NewOrchestratorPath`""
     
     Write-Host "[INFO] Commande construite : '$finalCommand'" -ForegroundColor Cyan
     Write-Host "[INFO] Délégation de l'exécution à '$ActivationScript'..." -ForegroundColor Cyan

@@ -19,6 +19,7 @@ clingo
 unidecode
 markdown
 
+psutil
 # Testing Dependencies
 pytest
 pytest-asyncio
