@@ -18,7 +18,7 @@
     "cross-env": "^7.0.3"
   },
   "scripts": {
-    "prestart": "npx -y cross-port-killer 8085 8095",
+    "prestart": "npx -y cross-port-killer 3000 8085 8095",
     "start": "cross-env BROWSER=none react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",

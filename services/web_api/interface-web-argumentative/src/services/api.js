@@ -103,7 +103,7 @@ export const analyzeDungFramework = async (argumentList, attacks = []) => {
     attacks: attacks // Les attaques sont déjà au format [['source_id', 'target_id']]
   };
 
-  const response = await fetchWithTimeout(`${API_BASE_URL}/api/v1/framework/analyze`, {
+  const response = await fetchWithTimeout(`${API_BASE_URL}/api/framework`, {
     method: 'POST',
     headers: defaultHeaders,
     body: JSON.stringify(requestBody)
