@@ -36,46 +36,56 @@ class FrameworkService:
         return self.is_initialized
     
     def build_framework(self, request: FrameworkRequest) -> FrameworkResponse:
-        """
-        Construit un framework de Dung et calcule ses extensions.
-        
-        Args:
-            request: Requête de construction
-            
-        Returns:
-            Réponse avec le framework construit
-        """
+        """Construit et analyse un framework de Dung avec instrumentation complète."""
         start_time = time.time()
+        self.logger.info(f"[FrameworkService] Début build_framework - Arguments reçus: {len(request.arguments)}")
+        self.logger.debug(f"[FrameworkService] Détail des arguments: {[arg.dict() for arg in request.arguments]}")
         
         try:
             # Construction du graphe d'arguments
+            self.logger.debug(f"[FrameworkService] Construction des nœuds d'arguments...")
             argument_nodes = self._build_argument_nodes(request.arguments)
-            attack_relations = self._build_attack_relations(request.attacks or [])
+            self.logger.debug(f"[FrameworkService] {len(argument_nodes)} nœuds d'arguments construits")
+            
+            # Extraction des relations d'attaque
+            attack_relations = self._extract_attack_relations_from_arguments(request.arguments)
+            self.logger.info(f"[FrameworkService] Relations d'attaque extraites: {len(attack_relations)} relations")
+            
+            # Construction des relations de support
+            self.logger.debug(f"[FrameworkService] Construction des relations de support...")
             support_relations = self._build_support_relations(request.arguments)
+            self.logger.debug(f"[FrameworkService] {len(support_relations)} relations de support construites")
             
             # Calcul des extensions si demandé
             extensions = []
             if request.options and request.options.compute_extensions:
+                self.logger.debug(f"[FrameworkService] Calcul des extensions avec sémantique: {request.options.semantics}")
                 extensions = self._compute_extensions(
-                    argument_nodes, 
-                    attack_relations, 
+                    argument_nodes,
+                    attack_relations,
                     request.options.semantics
                 )
+                self.logger.info(f"[FrameworkService] {len(extensions)} extensions calculées")
                 
                 # Mise à jour du statut des arguments
                 self._update_argument_status(argument_nodes, extensions)
+                self.logger.debug(f"[FrameworkService] Statut des arguments mis à jour")
             
             # Génération de la visualisation si demandée
             visualization = None
             if request.options and request.options.include_visualization:
+                self.logger.debug(f"[FrameworkService] Génération de la visualisation...")
                 visualization = self._generate_visualization(
                     argument_nodes, attack_relations, support_relations
                 )
+                self.logger.debug(f"[FrameworkService] Visualisation générée")
             
             # Calcul des statistiques
+            self.logger.debug(f"[FrameworkService] Calcul des statistiques...")
             stats = self._calculate_statistics(argument_nodes, attack_relations, support_relations, extensions)
             
             processing_time = time.time() - start_time
+            self.logger.info(f"[FrameworkService] Framework construit avec succès en {processing_time:.3f}s")
             
             return FrameworkResponse(
                 success=True,
@@ -94,8 +104,9 @@ class FrameworkService:
             )
             
         except Exception as e:
-            self.logger.error(f"Erreur lors de la construction du framework: {e}")
+            self.logger.error(f"[FrameworkService] Erreur lors de la construction du framework: {e}", exc_info=True)
             processing_time = time.time() - start_time
+            self.logger.error(f"[FrameworkService] Échec de construction après {processing_time:.3f}s")
             
             return FrameworkResponse(
                 success=False,
@@ -141,7 +152,25 @@ class FrameworkService:
         
         return nodes
     
+    def _extract_attack_relations_from_arguments(self, arguments: List[Argument]) -> List[Dict[str, str]]:
+        """Extrait les relations d'attaque depuis les arguments."""
+        self.logger.debug(f"Extraction des relations d'attaque depuis {len(arguments)} arguments")
+        
+        relations = []
+        for arg in arguments:
+            for target_id in (arg.attacks or []):
+                relations.append({
+                    'attacker': arg.id,
+                    'target': target_id,
+                    'type': 'attack'
+                })
+        
+        self.logger.info(f"Relations d'attaque extraites: {len(relations)} relations")
+        return relations
+
     def _build_attack_relations(self, attacks: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        self.logger.info(f"VALIDATION_CORRECTIF: _build_attack_relations a reçu {len(attacks)} attaques.")
+        self.logger.info("CACHE_BUSTER: Forcer le rechargement du module.")
         """Construit les relations d'attaque à partir de la liste fournie."""
         # La requête fournit déjà une liste de dictionnaires {'source': ..., 'target': ...}
         # Il suffit de les reformater en {'attacker': ..., 'target': ..., 'type': 'attack'}

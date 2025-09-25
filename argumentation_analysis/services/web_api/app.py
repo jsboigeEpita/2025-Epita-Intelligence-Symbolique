@@ -149,7 +149,13 @@ def create_app():
         """
         Gère l'initialisation des services à la première requête et les attache
         au contexte global de la requête (`g`).
+        L'endpoint de health check est explicitement exclu pour garantir une réponse
+        rapide sans dépendances lourdes.
         """
+        if request.path == '/api/health':
+            logger.debug(f"Skipping heavy initialization for health check endpoint: {request.path}")
+            return
+
         # Utilise un drapeau sur l'objet `g` pour éviter de refaire l'initialisation
         # plusieurs fois pendant la même requête, bien que `before_first_request`
         # soit la principale protection.

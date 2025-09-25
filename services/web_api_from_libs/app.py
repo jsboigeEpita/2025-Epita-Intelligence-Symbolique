@@ -158,6 +158,19 @@ def create_app(config_overrides: Optional[Dict[str, Any]] = None) -> Flask:
 # --- Point d'entrée pour l'exécution directe et les serveurs WSGI ---
 app = create_app()
 
+# --- Adaptateur ASGI pour Uvicorn ---
+try:
+    from asgiref.wsgi import WsgiToAsgi
+    # Créer une version ASGI de l'app Flask pour Uvicorn
+    asgi_app = WsgiToAsgi(app)
+    # Export pour Uvicorn
+    app_asgi = asgi_app
+except ImportError:
+    logger.warning("asgiref non disponible, impossible de créer l'adaptateur ASGI")
+    # Fallback : utiliser l'app Flask directement (ne fonctionnera qu'avec WSGI)
+    asgi_app = app
+    app_asgi = app
+
 # --- Routine de Nettoyage ---
 @atexit.register
 def cleanup_on_exit():

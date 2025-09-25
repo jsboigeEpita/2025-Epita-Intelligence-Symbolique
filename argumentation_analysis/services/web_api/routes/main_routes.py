@@ -130,23 +130,24 @@ def detect_fallacies():
         logger.error(f"Erreur lors de la détection de sophismes: {str(e)}", exc_info=True)
         return jsonify(ErrorResponse(error="Erreur de détection", message=str(e), status_code=500).dict()), 500
 
-@main_bp.route('/v1/framework/analyze', methods=['POST'])
-def analyze_framework():
-    """Analyse un framework de Dung et retourne ses extensions."""
-    try:
-        framework_service = current_app.services.framework_service
-        data = request.get_json()
-        if not data:
-            return jsonify(ErrorResponse(error="Données manquantes", message="Le body JSON est requis", status_code=400).dict()), 400
-
-        # Utiliser le modèle de requête simple qui correspond à la signature du service
-        analysis_request = FrameworkAnalysisRequest(**data)
-        
-        result = framework_service.analyze_dung_framework(
-            arguments=analysis_request.arguments,
-            attacks=analysis_request.attacks
-        )
-        return jsonify(result)
+# TEMPORAIREMENT DÉSACTIVÉ - CONFLIT AVEC framework_routes.py
+# @main_bp.route('/v1/framework/analyze', methods=['POST'])
+# def analyze_framework():
+#     """Analyse un framework de Dung et retourne ses extensions."""
+#     try:
+#         framework_service = current_app.services.framework_service
+#         data = request.get_json()
+#         if not data:
+#             return jsonify(ErrorResponse(error="Données manquantes", message="Le body JSON est requis", status_code=400).dict()), 400
+#
+#         # Utiliser le modèle de requête simple qui correspond à la signature du service
+#         analysis_request = FrameworkAnalysisRequest(**data)
+#
+#         result = framework_service.analyze_dung_framework(
+#             arguments=analysis_request.arguments,
+#             attacks=analysis_request.attacks
+#         )
+#         return jsonify(result)
 
     except ValidationError as e:
         logger.warning(f"Validation des données du framework a échoué: {str(e)}")

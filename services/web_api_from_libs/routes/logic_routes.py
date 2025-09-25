@@ -21,6 +21,7 @@ logic_bp = Blueprint('logic_api', __name__)
 async def logic_text_to_belief_set():
     """Convertit un texte en ensemble de croyances logiques."""
     logic_service = current_app.extensions['racine_services']['logic']
+    logger.info("VALIDATION_CORRECTIF: La route ASYNC logic_text_to_belief_set a été appelée.")
     try:
         data = request.get_json()
         if not data:

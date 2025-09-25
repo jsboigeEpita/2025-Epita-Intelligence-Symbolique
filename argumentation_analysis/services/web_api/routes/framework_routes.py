@@ -21,7 +21,7 @@ def analyze_framework_route():
 
     try:
         data = FrameworkAnalysisRequest(**request.json)
-        framework_service = current_app.framework_service
+        framework_service = current_app.services.framework_service
         
         result = framework_service.analyze_dung_framework(data.arguments, data.attacks)
         
