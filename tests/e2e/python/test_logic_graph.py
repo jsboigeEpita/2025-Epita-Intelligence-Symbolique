@@ -6,8 +6,6 @@ from playwright.sync_api import Page, expect
 # so the web server is started automatically for all tests in this module.
 @pytest.mark.e2e
 @pytest.mark.playwright
-# Ce test nécessite une JVM fonctionnelle pour interagir avec Tweety.
-@pytest.mark.jvm_test
 def test_successful_graph_visualization(page_with_console_logs: Page, e2e_servers):
     """
     Scenario 4.1: Successful visualization of a logic graph (Happy Path)

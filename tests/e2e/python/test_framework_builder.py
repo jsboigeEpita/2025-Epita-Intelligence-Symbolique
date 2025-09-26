@@ -5,29 +5,20 @@ from playwright.sync_api import Page, expect, TimeoutError
 # Les appels sont remplacés par des localisateurs directs de Playwright.
 
 # Les URLs des services sont injectées via les fixtures `frontend_url` et `backend_url`.
-@pytest.mark.asyncio
 @pytest.fixture(scope="function")
-async def framework_page(page: Page, frontend_url: str) -> Page:
+def framework_page(page: Page, frontend_url: str) -> Page:
     """Fixture qui prépare la page et navigue vers l'onglet Framework."""
-    await page.goto(frontend_url)
-    # L'attente de l'état de connexion de l'API est maintenant dans chaque test
-    # pour une meilleure isolation et un débogage plus facile.
-    
-    # La navigation vers l'onglet est également gérée dans chaque test.
+    page.goto(frontend_url)
+    expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
+    page.locator('[data-testid="framework-tab"]').click()
     return page
 
-@pytest.mark.skip(reason="Skipping to debug a test suite hang")
 class TestFrameworkBuilder:
     """Tests fonctionnels pour l'onglet Framework basés sur la structure réelle"""
 
-    @pytest.mark.skip(reason="Skipping individual test to debug hang")
-    @pytest.mark.asyncio
-    async def test_framework_creation_workflow(self, framework_page: Page):
+    def test_framework_creation_workflow(self, framework_page: Page):
         """Test du workflow principal de création de framework"""
-        _, frontend_url = e2e_servers
-        page.goto(frontend_url)
-        expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
-        page.locator('[data-testid="framework-tab"]').click()
+        page = framework_page
 
         # Vérification de la présence des éléments du formulaire réels
         expect(page.locator('#arg-content')).to_be_visible()
@@ -75,14 +66,9 @@ class TestFrameworkBuilder:
         # Nous vérifions que l'état du framework persiste correctement
         expect(page.locator('.argument-card')).to_have_count(2)
 
-    @pytest.mark.skip(reason="Skipping individual test to debug hang")
-    @pytest.mark.asyncio
-    async def test_framework_rule_management(self, framework_page: Page):
+    def test_framework_rule_management(self, framework_page: Page):
         """Test de la gestion des règles et contraintes du framework"""
-        _, frontend_url = e2e_servers
-        page.goto(frontend_url)
-        expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
-        page.locator('[data-testid="framework-tab"]').click()
+        page = framework_page
         
         # Ajout de plusieurs arguments
         arguments = [
@@ -128,14 +114,9 @@ class TestFrameworkBuilder:
         page.locator('.attack-item .remove-button').first.click()
         expect(page.locator('.attack-item')).to_have_count(1)
 
-    @pytest.mark.skip(reason="Skipping individual test to debug hang")
-    @pytest.mark.asyncio
-    async def test_framework_validation_integration(self, framework_page: Page):
+    def test_framework_validation_integration(self, framework_page: Page):
         """Test de l'intégration avec le système de validation"""
-        _, frontend_url = e2e_servers
-        page.goto(frontend_url)
-        expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
-        page.locator('[data-testid="framework-tab"]').click()
+        page = framework_page
         
         # Construction d'un framework simple mais valide
         page.locator('#arg-content').fill('Argument A')
@@ -168,14 +149,9 @@ class TestFrameworkBuilder:
         # Vérification que les arguments persistent
         expect(page.locator('.argument-card')).to_have_count(2)
 
-    @pytest.mark.skip(reason="Skipping individual test to debug hang")
-    @pytest.mark.asyncio
-    async def test_framework_persistence(self, framework_page: Page):
+    def test_framework_persistence(self, framework_page: Page):
         """Test de la persistance et sauvegarde du framework"""
-        _, frontend_url = e2e_servers
-        page.goto(frontend_url)
-        expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
-        page.locator('[data-testid="framework-tab"]').click()
+        page = framework_page
         
         # Construction d'un framework avec données de test
         test_arguments = [
@@ -213,14 +189,9 @@ class TestFrameworkBuilder:
         # Note: La persistance dépend de l'implémentation React et du state management
         expect(page.locator('.framework-section').first).to_be_visible()
 
-    @pytest.mark.skip(reason="Skipping individual test to debug hang")
-    @pytest.mark.asyncio
-    async def test_framework_extension_analysis(self, framework_page: Page):
+    def test_framework_extension_analysis(self, framework_page: Page):
         """Test de l'analyse des extensions du framework"""
-        _, frontend_url = e2e_servers
-        page.goto(frontend_url)
-        expect(page.locator('.api-status.connected')).to_be_visible(timeout=15000)
-        page.locator('[data-testid="framework-tab"]').click()
+        page = framework_page
         
         # Construction d'un framework plus complexe pour générer des extensions intéressantes
         complex_arguments = [

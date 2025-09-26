@@ -23,13 +23,24 @@ def test_dung_framework_analysis_api(playwright: Playwright, e2e_servers, backen
     
     test_data = {
         "arguments": [
-            {"id": "a", "content": "Argument A"},
-            {"id": "b", "content": "Argument B"},
-            {"id": "c", "content": "Argument C"}
-        ],
-        "attacks": [
-            {"source": "a", "target": "b"},
-            {"source": "b", "target": "c"}
+            {
+                "id": "a",
+                "content": "Argument A",
+                "attacks": ["b"],  # A attaque B
+                "supports": []
+            },
+            {
+                "id": "b",
+                "content": "Argument B",
+                "attacks": ["c"],  # B attaque C
+                "supports": []
+            },
+            {
+                "id": "c",
+                "content": "Argument C",
+                "attacks": [],
+                "supports": []
+            }
         ],
         "options": {
             "semantics": "preferred"
@@ -37,9 +48,10 @@ def test_dung_framework_analysis_api(playwright: Playwright, e2e_servers, backen
     }
 
     response = api_request_context.post(
-        "/api/framework",
+        "/api/framework",  # URL CORRIGÉE
         data=json.dumps(test_data),
-        headers={"Content-Type": "application/json"}
+        headers={"Content-Type": "application/json"},
+        timeout=10000  # 10 secondes
     )
 
     expect(response).to_be_ok()

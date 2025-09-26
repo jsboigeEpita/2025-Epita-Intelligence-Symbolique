@@ -282,9 +282,16 @@ def jvm_session(request):
     plus précoce et plus sûre. Cette fixture vérifie si l'initialisation a réussi.
     """
     jvm_started = request.config.cache.get("jvm_started", False)
+    is_e2e_session = request.config.cache.get("is_e2e_session", False)
     
     is_no_jvm_test = 'no_jvm_session' in request.node.keywords
     is_jvm_disabled_globally = request.config.getoption("--disable-jvm-session")
+
+    # Si c'est une session E2E, on ne fait rien et on laisse le test s'exécuter
+    # même si la JVM n'est pas démarrée. Les tests E2E ne doivent pas dépendre de la JVM.
+    if is_e2e_session:
+        yield
+        return
 
     # Si la JVM n'est pas nécessaire ou désactivée, on ne fait rien.
     if is_no_jvm_test or is_jvm_disabled_globally:
