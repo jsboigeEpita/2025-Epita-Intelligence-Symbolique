@@ -94,6 +94,7 @@ class MockFallacyDetector:
             })
             
         # Logique pour le cas de test Ad Hominem spécifique
+        logger.info(f"VALIDATION_CORRECTIF: Recherche de sophisme Ad Hominem simulé pour le texte : '{text_lower}'")
         if "auteur" in text_lower and ("condamné" in text_lower or "fraude" in text_lower):
             detected_fallacies.append({
                 "fallacy_type": "Ad Hominem (Simulé)",

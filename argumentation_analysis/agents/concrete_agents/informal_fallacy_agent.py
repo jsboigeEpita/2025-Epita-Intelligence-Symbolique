@@ -67,10 +67,13 @@ class InformalFallacyAgent(BaseAgent):
         history = kwargs.get("history", ChatHistory())
         return await self.invoke_single(text_to_analyze=text_to_analyze, history=history, auto_invoke_kernel_functions=auto_invoke_kernel_functions)
         
-    async def invoke_single(self, text_to_analyze: str, history: ChatHistory, auto_invoke_kernel_functions: bool = True, **kwargs: Any) -> Any:
+    async def invoke_single(self, text_to_analyze: str, history: Optional[ChatHistory] = None, auto_invoke_kernel_functions: bool = True, **kwargs: Any) -> Any:
         """
         Invoque l'agent avec une instruction claire de "tool-calling".
         """
+        if history is None:
+            history = ChatHistory()
+            
         final_prompt = f"{self.system_prompt}\n\nTexte à analyser:\n\"\"\"\n{text_to_analyze}\n\"\"\""
         
         arguments = KernelArguments(history=history)
