@@ -25,7 +25,7 @@ from dotenv import load_dotenv
 # Configuration des chemins et des commandes
 ROOT_DIR = Path(__file__).parent.parent
 API_DIR = ROOT_DIR
-FRONTEND_DIR = ROOT_DIR / "interface_web"
+FRONTEND_DIR = ROOT_DIR / "services" / "web_api" / "interface-web-argumentative"
 
 def _log(message):
     """Affiche un message de log avec un timestamp."""
@@ -39,46 +39,87 @@ class ServiceManager:
     def __init__(self):
         self.processes = []
         self.log_files = {}
-        # FORCER LE PORT 5000 car le frontend est en build statique
-        self.api_port = 5000 
+        self.api_port = 5004
         self.frontend_port = 3000
 
     def start_services(self):
-        """Démarre l'API backend qui sert également le frontend."""
-        _log("Démarrage du service API pour les tests E2E...")
+        """Démarre les services web backend et frontend."""
+        _log("Démarrage des services pour les tests E2E...")
+        self._start_backend()
+        self._start_frontend()
 
-        # Démarrer le backend API
-        _log(f"[RUNNER_DEBUG] Démarrage du service API sur le port {self.api_port} (CWD: {API_DIR})")
+        _log("Attente de la disponibilité des services...")
+        self._wait_for_services(ports=[self.api_port, self.frontend_port])
+        _log("Tous les services sont prêts.")
+
+    def _start_backend(self):
+        """Démarre le serveur backend API avec uvicorn."""
+        _log(f"Démarrage du service API sur le port {self.api_port}")
         api_log_out = open("api_server.log", "w", encoding="utf-8")
         api_log_err = open("api_server.error.log", "w", encoding="utf-8")
         self.log_files["api_out"] = api_log_out
         self.log_files["api_err"] = api_log_err
-        
+
         uvicorn_command = [
-            sys.executable, "-m", "uvicorn", 
+            sys.executable, "-m", "uvicorn",
             "argumentation_analysis.services.web_api.app:app",
-            "--host", "0.0.0.0",
-            "--port", str(self.api_port), 
-            "--log-level", "debug"
+            "--host", "127.0.0.1",
+            "--port", str(self.api_port),
+            "--log-level", "info"
         ]
-        _log(f"[RUNNER_DEBUG] Commande Popen Uvicorn: {uvicorn_command}")
         
-        # On s'assure de propager l'environnement actuel au sous-processus
-        env = os.environ.copy()
         api_process = subprocess.Popen(
             uvicorn_command,
             cwd=API_DIR,
             stdout=api_log_out,
             stderr=api_log_err,
-            env=env
+            env=os.environ.copy()
         )
         self.processes.append(api_process)
-        _log(f"[RUNNER_DEBUG] Service API démarré avec le PID: {api_process.pid}")
+        _log(f"Service API démarré avec le PID: {api_process.pid}")
 
-        # Le frontend est servi par le backend, pas de service séparé à démarrer.
-        _log("[RUNNER_DEBUG] Début de l'attente de la disponibilité du service API...")
-        self._wait_for_services(ports=[self.api_port])
-        _log("[RUNNER_DEBUG] Fin de l'attente de la disponibilité du service API.")
+    def _start_frontend(self):
+        """Démarre le serveur de développement frontend."""
+        _log(f"Démarrage du service Frontend sur le port {self.frontend_port}")
+        
+        # Vérifier si le répertoire frontend existe
+        if not FRONTEND_DIR.is_dir():
+            _log(f"ERREUR: Le répertoire frontend '{FRONTEND_DIR}' n'existe pas. Impossible de démarrer le service.")
+            raise FileNotFoundError(f"Le répertoire frontend '{FRONTEND_DIR}' est introuvable.")
+
+        # Créer les fichiers de log
+        frontend_log_out = open("frontend_server.log", "w", encoding="utf-8")
+        frontend_log_err = open("frontend_server.error.log", "w", encoding="utf-8")
+        self.log_files["frontend_out"] = frontend_log_out
+        self.log_files["frontend_err"] = frontend_log_err
+
+        # Commande pour lancer le serveur de développement Vite
+        # Utilisation de 'npm.cmd' sur Windows, 'npm' sinon.
+        # Utilisation de 'npm.cmd' sur Windows, 'npm' sinon.
+        npm_command = "npm.cmd" if sys.platform == "win32" else "npm"
+        command = [npm_command, "start"]
+
+        # Sur Windows, l'utilisation de 'start /b' est essentielle pour lancer
+        # le processus en arrière-plan de manière non bloquante. Sans cela,
+        # le sous-processus peut bloquer le script principal.
+        shell_mode = False
+        if sys.platform == "win32":
+            command = ["start", "/b", npm_command, "start"]
+            shell_mode = True
+        
+        env = os.environ.copy()
+        # Le proxy est déjà configuré dans package.json, pas besoin de le passer.
+
+        frontend_process = subprocess.Popen(
+            command,
+            cwd=FRONTEND_DIR,
+            stdout=frontend_log_out,
+            stderr=frontend_log_err,
+            env=env,
+            shell=shell_mode # 'shell=True' est requis pour la commande 'start'
+        )
+        self.processes.append(frontend_process)
+        _log(f"Service Frontend démarré avec le PID: {frontend_process.pid}")
 
     def stop_services(self):
         """Arrête proprement tous les services démarrés."""
@@ -211,8 +252,7 @@ class TestRunner:
         needs_services = self.test_type in ["functional", "e2e"]
         if needs_services:
             backend_url = f"http://127.0.0.1:{self.service_manager.api_port}"
-            # L'URL du frontend est la même que celle du backend car il sert les fichiers statiques
-            frontend_url = backend_url
+            frontend_url = f"http://127.0.0.1:{self.service_manager.frontend_port}"
             command.extend(["--backend-url", backend_url])
             command.extend(["--frontend-url", frontend_url])
 
@@ -309,7 +349,13 @@ class TestRunner:
     def _show_service_logs(self):
         """Affiche le contenu des fichiers de log des services."""
         _log("Affichage des logs des services...")
-        for log_name, log_path in [("API_OUT", "api_server.log"), ("API_ERR", "api_server.error.log")]:
+        log_files_to_show = [
+            ("API_OUT", "api_server.log"),
+            ("API_ERR", "api_server.error.log"),
+            ("FRONTEND_OUT", "frontend_server.log"),
+            ("FRONTEND_ERR", "frontend_server.error.log")
+        ]
+        for log_name, log_path in log_files_to_show:
             full_path = ROOT_DIR / log_path
             if full_path.exists():
                 try:
