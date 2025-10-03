@@ -2,6 +2,25 @@
 ## Une Exploration Approfondie de l'Analyse d'Argumentation et des Systèmes Multi-Agents
 
 ---
+## 📑 Table des Matières
+
+- [Bienvenue aux Étudiants d'EPITA](#-bienvenue-aux-étudiants-depita)
+- [Vos Objectifs Pédagogiques](#-vos-objectifs-pédagogiques)
+- [Projets Étudiants Disponibles](#-projets-étudiants-disponibles)
+- [Démarrage Ultra-Rapide (5 minutes)](#-démarrage-ultra-rapide-5-minutes)
+- [Comment Naviguer dans ce Projet](#-comment-naviguer-dans-ce-projet-5-points-dentrée)
+- [Architecture des Services](#-architecture-des-services)
+- [Documentation Complète](#-documentation-complète)
+- [Environnement de Développement](#-environnement-de-développement)
+- [Dépannage Rapide](#-dépannage-rapide)
+- [Aperçu des Technologies](#-aperçu-des-technologies)
+- [Contribution](#-contribution)
+- [Mesures de Performance](#-mesures-de-performance)
+- [Docker & Conteneurisation](#-docker--conteneurisation)
+- [CI/CD & Automatisation](#-cicd--automatisation)
+- [Monitoring & Tokens](#-monitoring--tokens)
+
+---
 
 ## 🎓 **Bienvenue aux Étudiants d'EPITA !**
 
@@ -15,6 +34,24 @@ Ce projet est bien plus qu'une simple collection de scripts ; c'est une **platef
 *   🏗️ **Développer des Compétences en Ingénierie Logicielle :** Vous familiariser avec les bonnes pratiques en matière d'architecture logicielle, de tests automatisés et de gestion de projet.
 
 ---
+### 📚 **Projets Étudiants Disponibles**
+
+**17 sujets de projets** couvrent l'ensemble des aspects du système : **Fondements Théoriques** (logique formelle, argumentation dialogique, JTMS), **Développement Système** (agents spécialisés, orchestration hiérarchique, détection de sophismes, API), et **Expérience Utilisateur** (interfaces web/mobile, visualisation, chatbots). 
+
+Chaque projet est détaillé avec :
+- 📖 Contexte et enjeux théoriques
+- 🎯 Objectifs d'apprentissage clairs
+- 🛠️ Technologies et outils à maîtriser
+- ⭐ Niveau de difficulté (de ⭐ à ⭐⭐⭐⭐)
+- 📦 Livrables attendus (code, tests, documentation)
+
+**📖 Ressources Projets :**
+- **[Catalogue Complet des Projets](docs/projets/README.md)** - Vue d'ensemble des 17 sujets
+- **[Annonce Officielle Étudiants](docs/projets/message_annonce_etudiants.md)** - Modalités, calendrier, évaluation
+- **[Guides d'Intégration](docs/projets/sujets/aide/GUIDE_INTEGRATION_PROJETS.md)** - Comment démarrer votre projet
+
+---
+
 
 ## 🚀 **DÉMARRAGE ULTRA-RAPIDE (5 minutes)**
 
@@ -191,6 +228,26 @@ Le `OrchestrationService` est exposé à l'extérieur via une API FastAPI qui se
     -   **Rôle :** Reçoit les requêtes d'analyse du monde extérieur.
     -   **Logique :** Il valide la requête entrante, récupère l'instance de l'`OrchestrationService` via injection de dépendances, trouve le plugin demandé, **l'exécute** avec le texte fourni et retourne le résultat de l'exécution.
 
+
+#### **🏗️ Architecture Hiérarchique à 3 Niveaux**
+
+Le système implémente une **architecture sophistiquée à 3 niveaux d'orchestration** pour gérer la complexité des analyses argumentatives multi-agents :
+
+- **🎯 Niveau Stratégique** : Planification globale, définition des objectifs de haut niveau, allocation des ressources macro, coordination des stratégies d'analyse
+- **⚙️ Niveau Tactique** : Coordination des tâches inter-agents, résolution de conflits, supervision des agents opérationnels, optimisation des workflows  
+- **🔧 Niveau Opérationnel** : Exécution des analyses spécifiques via agents spécialisés (InformalAgent, PLAgent, FOLAgent, ExtractAgent), traitement des requêtes unitaires
+
+Cette **séparation en couches** assure :
+- ✅ **Scalabilité** : Ajout facile de nouveaux agents sans refactoriser l'orchestration
+- ✅ **Modularité** : Chaque niveau a des responsabilités clairement définies
+- ✅ **Maintenabilité** : Modifications isolées par niveau, tests ciblés
+- ✅ **Orchestration Efficace** : Distribution intelligente de la charge, gestion des dépendances
+
+**📖 Documentation Architecture Détaillée :**
+- **[Architecture Hiérarchique Complète](docs/architecture/architecture_hierarchique.md)** - Conception détaillée des 3 niveaux avec diagrammes
+- **[Guide Technique d'Implémentation](docs/ARCHITECTURE_HIERARCHIQUE_3_NIVEAUX.md)** - API, patterns de communication, exemples de code  
+- **[Communication Inter-Agents](docs/architecture/communication_agents.md)** - Mécanismes de communication, protocoles, formats de messages
+- **[Agents Spécialisés](docs/composants/agents_specialistes.md)** - Documentation détaillée de chaque agent opérationnel
 ---
 
 ## 🛠️ Environnement de Développement : Prérequis et Configuration
@@ -212,6 +269,35 @@ Le bon fonctionnement des tests d'intégration dépend de la capacité du projet
     *   Définissez la variable d'environnement `JAVA_HOME` pour qu'elle pointe vers le répertoire racine de votre installation JDK.
     *   Le `CLASSPATH` est également géré automatiquement par nos scripts, qui parcourent le répertoire `tweety/libs` pour inclure toutes les dépendances Java nécessaires.
 
+## 📚 **Documentation Complète**
+
+### **📖 Guides et Tutoriels**
+- **[Guide d'Installation Étudiants](docs/guides/GUIDE_INSTALLATION_ETUDIANTS.md)** - Configuration environnement détaillée (Windows/Linux/macOS)
+- **[Guides d'Utilisation](docs/guides/)** - Conventions de code, bonnes pratiques, workflows recommandés
+- **[Série de Tutoriels Progressifs](tutorials/)** - Apprentissage pas-à-pas des concepts clés du système
+- **[Guide JTMS pour EPITA](docs/guides/GUIDE_UTILISATION_JTMS_EPITA.md)** - Introduction au système de maintenance de vérité
+
+### **💾 Exemples et Données de Test**
+- **[Corpus de Textes Argumentatifs](examples/README.md)** - Exemples de textes pour tests (sophismes, discours, articles)
+- **[Scripts de Démonstration](examples/scripts_demonstration/)** - Exemples exécutables commentés pour chaque fonctionnalité
+- **[Scénarios Sherlock & Watson](examples/Sherlock_Watson/)** - Cas d'investigation logique avec JTMS
+- **[Exemples de Code Python](argumentation_analysis/examples/)** - Snippets réutilisables pour l'intégration
+
+### **🏗️ Documentation Technique Détaillée**
+- **[Architecture du Système](docs/architecture/)** - Conception complète multi-niveaux, diagrammes, flux de données
+- **[Composants et Agents](docs/composants/)** - Documentation détaillée de chaque agent spécialisé, API interne  
+- **[Référence API Complète](docs/reference/)** - API orchestration, agents, services partagés
+- **[Rapports Techniques](docs/reports/)** - Analyses de performance, validations, groundings SDDD
+- **[Standards de Documentation](docs/standards_documentation.md)** - Conventions projet, structure attendue
+
+### **🗺️ Ressources Développeurs**
+- **[Cartographie du Système](docs/mapping/)** - Vues d'ensemble, relations entre composants, diagrammes de dépendances
+- **[Structure Documentation](docs/STRUCTURE.md)** - Organisation de `docs/`, comment naviguer
+- **[FAQ Développement](docs/projets/sujets/aide/FAQ_DEVELOPPEMENT.md)** - Questions fréquentes et solutions
+- **[Troubleshooting Avancé](docs/troubleshooting.md)** - Guide de dépannage complet par catégories
+
+---
+
 ## 🆘 **Dépannage Rapide**
 
 | Erreur | Solution Rapide |
@@ -221,6 +307,34 @@ Le bon fonctionnement des tests d'intégration dépend de la capacité du projet
 | **Dépendances manquantes** | Relancez `pip install -r requirements.txt --force-reinstall` après avoir activé votre environnement conda. |
 
 ---
+## 🤝 **Contribution**
+
+### **👨‍🎓 Pour les Étudiants EPITA**
+
+**Processus de Contribution :**
+1. **📖 Choisir un Projet** : Consultez [`docs/projets/README.md`](docs/projets/README.md) pour parcourir les 17 sujets disponibles
+2. **🍴 Fork & Clone** : Créez votre fork personnel du repository
+3. **🌿 Branche Dédiée** : `git checkout -b projet/[categorie]-[nom-court]` (ex: `projet/logique-jtms-extension`)
+4. **💻 Développement** : Suivez les standards de documentation, écrivez des tests, commentez votre code
+5. **✅ Validation Locale** : Exécutez `pytest tests/` et vérifiez que tous les tests passent
+6. **📤 Pull Request** : Soumettez votre travail pour revue avec description détaillée
+
+### **📋 Standards et Bonnes Pratiques**
+
+- **[Standards Documentation](docs/standards_documentation.md)** - Format attendu pour README, docstrings, commentaires
+- **[Guide de Contribution](docs/CONTRIBUTING.md)** - Processus complet, conventions de commit, workflow Git
+- **[Tests Requis](tests/README.md)** - Couverture minimale attendue, comment écrire de bons tests
+- **[Style de Code Python](docs/guides/conventions.md)** - PEP 8, type hints, bonnes pratiques
+
+### **💡 Bonnes Pratiques Recommandées**
+
+- ✅ **Documentation d'abord** : Décrivez votre approche dans un document de conception avant de coder
+- ✅ **Tests unitaires** : Couverture minimale 70%, tests d'intégration pour workflows complets
+- ✅ **Commits atomiques** : Un commit = une fonctionnalité/correction logique, messages descriptifs
+- ✅ **Revue de code** : N'hésitez pas à demander des revues intermédiaires avant la PR finale
+
+---
+
 
 ## ✨ **Aperçu des Technologies Utilisées**
 
@@ -230,6 +344,15 @@ Ce projet est une mosaïque de technologies modernes et de concepts d'IA éprouv
 | :-------------------------- | :------------------------------------------------------ |
 | **Langages Principaux**     | Python, JavaScript, Java (via JPype)                    |
 | **IA & LLM**                | Semantic Kernel, OpenRouter/OpenAI API, TweetyProject   |
+
+> **🔬 TweetyProject & Raisonnement Formel**  
+> TweetyProject est la **bibliothèque Java centrale** pour le raisonnement logique formel du système. Elle fournit des moteurs sophistiqués pour :
+> - **Logique Propositionnelle (PL)** : SAT solving, résolution, équivalence logique
+> - **Logique du Premier Ordre (FOL)** : Unification, résolution SLD, théorème proving
+> - **Logique Modale** : Logiques temporelles, déontiques, épistémiques
+> - **Argumentation Formelle** : Frameworks de Dung, extensions stables/préférées
+> 
+> L'intégration **Python-Java via JPype** permet d'exploiter ces capacités avancées directement depuis nos agents Python. Configuration JVM et troubleshooting détaillés dans [Environnement de Développement](#-environnement-de-développement).
 | **Développement Web**       | Flask, FastAPI, React, WebSockets                       |
 | **Tests**                   | Pytest, Playwright                                      |
 | **Gestion d'Environnement** | Conda, NPM                                              |
