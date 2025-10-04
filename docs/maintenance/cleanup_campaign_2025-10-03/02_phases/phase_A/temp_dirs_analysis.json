@@ -1,0 +1,30 @@
+[
+  {
+    "Directory": "_temp_jdk_download",
+    "Exists": true,
+    "FileCount": 0,
+    "SizeMB": 0.0,
+    "GitTracked": false
+  },
+  {
+    "Directory": "_temp_prover9_install",
+    "Exists": true,
+    "FileCount": 1,
+    "SizeMB": 5.23,
+    "GitTracked": false
+  },
+  {
+    "Directory": "_temp_readme_restoration",
+    "Exists": true,
+    "FileCount": 12,
+    "SizeMB": 0.12,
+    "GitTracked": false
+  },
+  {
+    "Directory": "portable_jdk",
+    "Exists": true,
+    "FileCount": 489,
+    "SizeMB": 301.01,
+    "GitTracked": false
+  }
+]
