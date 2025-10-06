@@ -135,7 +135,7 @@ _temp/
 temp_*.py
 temp_extracts/
 pr1_diff.txt
-{output_file_path}
+
 logs/
 !logs/experiment_traces/
 
@@ -215,8 +215,6 @@ test_phase_*.log
 
 # Fichiers de sortie temporaires
 validation_outputs_*.txt
-$null
-$outputFile
 
 # Fichiers de résultats et rapports spécifiques non
 #  suivis
