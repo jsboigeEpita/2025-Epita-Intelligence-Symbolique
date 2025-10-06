@@ -31,11 +31,11 @@ L'agent a connu plusieurs itérations majeures, chacune introduisant une nouvell
 
 ## 3. Analyse des Anciens Workflows pour Coexistence
 
-### Comparaison du Workflow Parallèle : `4d7132cc` vs. [`DESIGN_PARALLEL_WORKFLOW.md`](DESIGN_PARALLEL_WORKFLOW.md:1)
+### Comparaison du Workflow Parallèle : `4d7132cc` vs. [`DESIGN_PARALLEL_WORKFLOW.md`](maintenance/DESIGN_PARALLEL_WORKFLOW.md:1)
 
 La différence entre l'ancienne et la nouvelle approche parallèle est fondamentale et illustre une maturité croissante de la conception.
 
-| Caractéristique | Ancien Workflow (`4d7132cc`) | Nouveau Design (`DESIGN_PARALLEL_WORKFLOW.md`) |
+| Caractéristique | Ancien Workflow (`4d7132cc`) | Nouveau Design (`maintenance/DESIGN_PARALLEL_WORKFLOW.md`) |
 | :--- | :--- | :--- |
 | **Objectif** | Paralléliser la **collecte d'informations** sur la taxonomie. | Paralléliser l'**analyse complète** du texte pour différentes catégories de sophismes. |
 | **Composant Principal** | Un plugin Python (`FallacyWorkflowPlugin`) qui appelle un autre plugin. | Un orchestrateur de haut niveau (`ParallelWorkflowManager`) qui gère tout le cycle de vie. |

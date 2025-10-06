@@ -38,7 +38,7 @@ Le tableau suivant liste les fichiers et répertoires actuellement à la racine 
 | `CHANGELOG.md`                         | Fichier     | Journal des modifications                               |
 | `GUIDE_DEMARRAGE_RAPIDE_PROJET_EPITA.md`| Fichier     | Guide de démarrage spécifique                           |
 | `JPYPE_WINDOWS_CRASH_FIX.md`           | Fichier     | Notes de dépannage pour JPype sur Windows               |
-| `PLAN.md`                              | Fichier     | Ancien plan de projet ?                                 |
+| [`PLAN.md`](../maintenance/PLAN.md:1)  | Fichier     | ✅ Déplacé vers docs/maintenance/                      |
 | **Logs & Rapports**                     |             |                                                         |
 | `*.log`                                | Fichiers    | Fichiers de log divers                                  |
 | `console_logs.txt`                     | Fichier     | Logs de la console                                      |
