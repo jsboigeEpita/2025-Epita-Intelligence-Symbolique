@@ -224,7 +224,7 @@ phase_c_test_results_*.json
 phase_d_simple_results.json
 phase_d_trace_ideale_results_*.json
 venv_temp/
-"sessions/"
+sessions/
 
 # Log files
 # Fichiers de log
