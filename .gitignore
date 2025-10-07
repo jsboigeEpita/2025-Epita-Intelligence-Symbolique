@@ -271,7 +271,6 @@ analyse_trace_complete_*.json
 services/web_api/_temp_static/
 
 # Fichiers de résultats de tests et de couverture
-*.txt
 coverage_results.txt
 unit_test_results.txt
 # Cython debug symbols
