@@ -280,7 +280,6 @@ cython_debug/
 *.jar.locked
 
 # Image files
-*.png
 
 # Roo added
 config/.port_lock
