@@ -86,7 +86,6 @@ profile_default/
 ipython_config.py
 
 # Environnements
-.env
 .venv/
 venv/
 venv_test/
@@ -244,11 +243,8 @@ rapport_*.md
 temp_*.txt
 
 # Ajouté par le script de nettoyage
-env/
-*.env
 text_cache/
 data/extract_sources.json
-.coverage*
 
 # Fichiers de rapport de trace complexes
 complex_trace_report_*.json
@@ -332,12 +328,8 @@ results_archive/
 local_llm_data/
 
 # Secrets
-.env
-.env.*
-.env.test
 
 # Fichiers temporaires de débogage
-.temp/
 _temp_prover9_install/
 
 
