@@ -128,7 +128,6 @@ hs_err_pid*.log
 
 # Fichiers temporaires et sorties
 *.tmp
-*.log
 *.bak
 temp/
 _temp/
@@ -324,7 +323,6 @@ node-v*/
 # Ignorer les répertoires de cache Python et les fic
 # chiers de log
 **/__pycache__/
-*.log
 
 # Archives created by maintenance scripts
 results_archive/
