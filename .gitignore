@@ -351,3 +351,9 @@ phase_c_fluidite_results_*.json
 
 # Ignore auto-generated root-level reports
 # reports/ - REMOVED Phase C: reports/ now tracked (historical cleanup reports)
+
+# Root-level log files (temporary execution logs)
+/*.log
+
+# Temporary HTML reports
+reports/*.html
