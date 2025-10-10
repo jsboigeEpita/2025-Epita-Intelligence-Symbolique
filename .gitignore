@@ -35,9 +35,6 @@ MANIFEST
 *.manifest
 *.spec
 
-# Logs d'installation
-pip-log.txt
-pip-delete-this-directory.txt
 
 # Rapports de test unitaires / couverture
 htmlcov/
@@ -53,7 +50,6 @@ coverage.json
 .hypothesis/
 # Pytest
 .pytest_cache/
-pytest_results.log
 htmlcov_demonstration/
 tests/reports/
 test-report.xml
@@ -122,7 +118,7 @@ libs/tweety/native/
 target/
 .gradle/
 *.class
-hs_err_pid*.log
+
 *.locked
 
 # Fichiers temporaires et sorties
@@ -134,17 +130,9 @@ temp_*.py
 temp_extracts/
 pr1_diff.txt
 
-logs/
-!logs/experiment_traces/
+
 
 output/
-# Logs spécifiques au projet
-extract_agent.log
-repair_extract_markers.log
-pytest_*.log
-trace_*.log
-sherlock_watson_*.log
-setup_*.log
 
 # Archives (si non voulues dans le repo)
 _archives/
@@ -179,10 +167,6 @@ data/extract_sources.json
 **/backups/
 !**/backups/__init__.py
 
-# Documentation analysis large files
-logs/documentation_analysis_data.json
-logs/obsolete_documentation_report_*.json
-logs/obsolete_documentation_report_*.md
 
 # Playwright test artifacts
 playwright-report/
@@ -206,10 +190,6 @@ diagnose_fastapi_startup.py
 validation_*_report*.json
 donnees_synthetiques_*.json
 
-# Logs de tests
-tests/*.log
-tests/*.json
-test_phase_*.log
 
 # Fichiers de sortie temporaires
 validation_outputs_*.txt
@@ -225,22 +205,12 @@ venv_temp/
 sessions/
 
 # Log files
-# Fichiers de log
-orchestration_finale_reelle.log
-
-# Dung agent logs
-abs_arg_dung/*.log
 
 # Fichiers de données de test générés
 test_orchestration_data.txt
 test_orchestration_data_extended.txt
 test_orchestration_data_simple.txt
 
-# Fichiers de logs et rapports divers
-console_logs.txt
-rapport_*.md
-*log.txt
-temp_*.txt
 
 # Ajouté par le script de nettoyage
 text_cache/
@@ -321,7 +291,6 @@ node-v*/
 results_archive/
 
 # Managed by Project Core
-*.log.*
 *.pyc
 *.pyd
 *.pyo
@@ -345,15 +314,7 @@ temp_test_refactor/
 dummy_opentelemetry/
 phase_c_fluidite_results_*.json
 
-# Ignorer les fichiers patch
-*.patch
 
 
 # Ignore auto-generated root-level reports
 # reports/ - REMOVED Phase C: reports/ now tracked (historical cleanup reports)
-
-# Root-level log files (temporary execution logs)
-/*.log
-
-# Temporary HTML reports
-reports/*.html
