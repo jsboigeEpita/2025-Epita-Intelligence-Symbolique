@@ -55,7 +55,7 @@ Analyse du système de communication permettant aux agents de collaborer efficac
 ### [Analyse des Orchestrations Agentiques Sherlock/Watson](./architecture/analyse_orchestrations_sherlock_watson.md)
 Analyse complète des flux d'orchestration dans les conversations agentiques entre Sherlock Holmes et Dr. Watson, incluant leurs interactions, outils utilisés, et l'usage des solvers Tweety.
 
-### [Conception du Système de Communication Multi-Canal](./conception_systeme_communication_multi_canal.md)
+### [Conception du Système de Communication Multi-Canal](./integration/conception_systeme_communication_multi_canal.md)
 Présentation de la conception du système de communication multi-canal pour les agents.
 
 ### [Outils d'Analyse Rhétorique](./outils_analyse_rhetorique.md)
@@ -67,7 +67,7 @@ Documentation de l'API des outils d'analyse rhétorique.
 ### [Extraits Chiffrés](./extraits_chiffres.md)
 Documentation détaillée sur le système d'extraits chiffrés utilisé pour l'analyse rhétorique, incluant la structure du fichier, les mécanismes de chiffrement et les outils de manipulation.
 
-### [Intégration des Outils Rhétoriques](./integration_outils_rhetorique.md)
+### [Intégration des Outils Rhétoriques](./integration/integration_outils_rhetorique.md)
 Guide pour l'intégration des outils d'analyse rhétorique dans le système.
 
 ### [Validation de l'Intégration](./validation_integration.md)

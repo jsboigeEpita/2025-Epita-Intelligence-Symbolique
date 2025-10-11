@@ -56,7 +56,7 @@ Ce document résume les analyses, actions entreprises, propositions d'extraction
 *   **Actions (Mode Architecte) :**
     *   Mis à jour la description de `test_tweety_bridge.py` dans [`tests/agents/core/logic/README.md`](tests/agents/core/logic/README.md:23).
     *   Identifié les emplacements potentiels pour documentation croisée :
-        *   [`docs/logic_agents.md`](docs/logic_agents.md:1)
+        *   [`docs/logic_agents.md`](docs/reference/logic_agents.md:1)
         *   [`docs/architecture/architecture_python_java_integration.md`](docs/architecture/architecture_python_java_integration.md:1)
         *   [`docs/guides/guide_developpeur.md`](docs/guides/guide_developpeur.md:1)
         *   (Optionnel) [`resources/notebooks/Tweety.ipynb`](resources/notebooks/Tweety.ipynb)

@@ -70,7 +70,7 @@ Aucun conflit n'a été détecté lors de la fusion. La branche locale était d�
 
 ## Partie 2 : Synthèse de Validation pour Grounding Orchestrateur
 
-La stabilisation de la suite de tests et la fusion sécurisée des modifications constituent une base essentielle pour les prochaines étapes de la feuille de route du projet, comme décrit dans des documents tels que [`docs/roadmap_post_stabilisation.md`](docs/roadmap_post_stabilisation.md:25).
+La stabilisation de la suite de tests et la fusion sécurisée des modifications constituent une base essentielle pour les prochaines étapes de la feuille de route du projet, comme décrit dans des documents tels que [`docs/roadmap_post_stabilisation.md`](docs/maintenance/roadmap_post_stabilisation.md:25).
 
 En garantissant la robustesse de l'environnement de test, nous nous assurons que les développements futurs, notamment l'amélioration des interfaces et l'industrialisation du projet, pourront s'appuyer sur une base fiable. La fusion méticuleuse, sans conflit, démontre la maturité de nos processus de gestion de branches, un prérequis indispensable à la collaboration efficace des équipes sur les axes stratégiques définis dans la documentation d'architecture, notamment la réorganisation proposée dans [`docs/architecture/reorganization_proposal.md`](docs/architecture/reorganization_proposal.md:1) et la vision globale présentée dans [`docs/architecture/architecture_hierarchique.md`](docs/architecture/architecture_hierarchique.md:1149).
 
