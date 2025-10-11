@@ -6,6 +6,9 @@ L'objectif de ce document est de décrire l'architecture de l'intégration entre
 
 Ce document s'adresse aux développeurs qui rejoignent le projet ou à ceux qui ont besoin de comprendre, maintenir ou faire évoluer cette intégration.
 
+> **📚 Pour Aller Plus Loin**
+> Pour une compréhension approfondie de la **stratégie de stabilisation avancée de la JVM** (défense en profondeur, gestion du cycle de vie, concurrence), consultez le document complémentaire : [**Stratégie d'Intégration de la JVM : Une Architecture de Défense en Profondeur**](jvm_integration_strategy.md)
+
 ## 2. Vue d'Ensemble de l'Architecture
 
 L'intégration repose sur plusieurs composants clés :

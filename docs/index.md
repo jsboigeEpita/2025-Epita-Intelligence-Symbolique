@@ -41,7 +41,7 @@ Le projet Intelligence Symbolique est une infrastructure d'analyse argumentative
 - [Visualizer](./outils/visualizer.md) - Outil de visualisation
 
 ### Documentation des API
-- [Référence API](./reference/reference_api.md) - Documentation de référence pour les API
+- [Référence API](./reference/api_communication_multicanal.md) - Documentation de référence pour les API
 - [API des Agents Extract](./reference/agents/extract_agent_api.md) - API des agents d'extraction
 - [API des Agents Informal](./reference/agents/informal_agent_api.md) - API des agents informels
 - [API des Agents PL](./reference/agents/pl_agent_api.md) - API des agents de logique propositionnelle
@@ -73,11 +73,11 @@ Le projet Intelligence Symbolique est une infrastructure d'analyse argumentative
 - [Guide Développeur](./guides/guide_developpeur.md) - Guide complet pour les développeurs
 - [Conventions d'Importation](./conventions_importation.md) - Standards de code
 - [Architecture Globale](./architecture/architecture_globale.md) - Comprendre l'architecture
-- [API de Référence](./reference/reference_api.md) - Documentation des API
+- [API de Référence](./reference/api_communication_multicanal.md) - Documentation des API
 
 ### Pour les contributeurs
 - [Guide de Contribution](../README.md#guide-de-contribution) - Comment contribuer
-- [Standards de Documentation](./standards_documentation.md) - Standards pour la documentation
+- [Standards de Documentation](./guides/standards_documentation.md) - Standards pour la documentation
 - [Workflow de Contribution](../docs/CONTRIBUTING.md) - Processus de contribution
 
 ### Pour les administrateurs
@@ -117,10 +117,10 @@ Le projet Intelligence Symbolique est une infrastructure d'analyse argumentative
 | [Rapport de Réorganisation](./rapport_reorganisation_complete.md) | Rapport de réorganisation | Rapports |
 | [Rapport de Validation](./rapport_validation_tests_performance.md) | Validation des tests | Rapports |
 | [README Principal](../README.md) | Point d'entrée du projet | Général |
-| [Référence API](./reference/reference_api.md) | Documentation des API | API |
+| [Référence API](./reference/api_communication_multicanal.md) | Documentation des API | API |
 | [Résumé Global](./resume_global_projet.md) | Vue d'ensemble du projet | Général |
 | [Solution aux Problèmes](./guides/solution_problemes_environnement.md) | Résolution de problèmes | Administration |
-| [Standards de Documentation](./standards_documentation.md) | Standards documentaires | Documentation |
+| [Standards de Documentation](./guides/standards_documentation.md) | Standards documentaires | Documentation |
 | [Structure du Projet](./structure_projet.md) | Organisation des fichiers | Structure |
 | [Synthèse Collaboration](./composants/synthese_collaboration.md) | Collaboration des agents | Composants |
 | [Validation d'Intégration](./integration/validation_integration.md) | Procédures de validation | Intégration |

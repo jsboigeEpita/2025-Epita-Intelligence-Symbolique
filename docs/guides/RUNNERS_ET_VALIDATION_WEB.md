@@ -212,7 +212,7 @@ jobs:
 
 ## 📚 **Références**
 
-- [Guide de Démarrage Rapide](GUIDE_DEMARRAGE_RAPIDE.md)
+- [Guide de Démarrage Rapide](guides/GUIDE_DEMARRAGE_RAPIDE_PROJET_EPITA.md)
 - [Architecture Hiérarchique](ARCHITECTURE_HIERARCHIQUE_3_NIVEAUX.md)
 - [Composants React](COMPOSANTS_REACT_SOPHISTIQUES.md)
 - [Tests Playwright](../tests_playwright/README.md)
