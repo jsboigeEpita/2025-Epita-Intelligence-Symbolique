@@ -1,0 +1,33 @@
+
+RAPPORT D'ANALYSE COMPLEXE MULTI-AGENTS
+======================================
+
+Session: analysis_20250610_032428
+Date: 10/06/2025 à 03:24:28
+Durée: 13.45 secondes
+
+SOURCE ANALYSÉE
+--------------
+Titre: Discours Politique - Réforme Éducative
+Longueur: 778 caractères
+Type: Texte politique de test
+
+AGENTS UTILISÉS
+--------------
+- TextLoader: 1 interactions, 0.00s
+- InformalAnalysisAgent: 1 interactions, 13.45s
+
+RESULTATS
+---------
+
+Authenticité: OUI
+Modèle: gpt-4o-mini
+Confiance: 0.00
+
+PERFORMANCE
+----------
+Interactions totales: 2
+Agents différents: 2
+Durée moyenne/interaction: 6.72s
+Taux de succès: 100.0%
+

@@ -1,0 +1,49 @@
+# File generated from environment.yml to fix the setup script
+# This file should ideally be kept in sync with environment.yml
+
+# --- Pip-specific packages ---
+semantic-kernel>=1.33.0
+flask_socketio>=5.3.6
+playwright
+pytest-playwright
+psutil
+
+# --- Conda packages also available on Pip ---
+numpy
+pandas
+scipy
+scikit-learn
+nltk
+spacy
+torch
+transformers
+sympy==1.13.1
+thinc
+flask
+requests
+fastapi
+uvicorn
+whitenoise
+flask-cors
+starlette
+a2wsgi
+pydantic
+python-dotenv
+cryptography
+tqdm
+pyyaml
+regex
+matplotlib
+seaborn
+statsmodels
+networkx
+pyvis
+jpype1
+clingo
+pytest
+pytest-cov
+pytest-mock
+pytest-asyncio
+coverage
+unidecode
+markdown

@@ -1,0 +1,25 @@
+Analyze the following text for informal fallacies.
+
+Text to analyze:
+{{input}}
+
+{#optimize_axis name="example_count" min=1}
+To help you, here are some examples of fallacies:
+{#loop variable="examples" count_from="example_count"}
+- Example {{index}}: "{{item.text}}" is an example of {{item.fallacy_type}}.
+{/loop}
+{/optimize_axis}
+
+{#optimize_axis name="rag_depth" value="summary"}
+Here is a summary of a relevant document to help your analysis:
+{{rag_results.summary}}
+{/optimize_axis}
+
+{#optimize_axis name="rag_depth" value="top_3_chunks"}
+Here are the most relevant excerpts from a document to help your analysis:
+{#loop variable="rag_results.chunks" count=3}
+- Excerpt {{index}}: {{item.chunk_text}}
+{/loop}
+{/optimize_axis}
+
+Your analysis should be in JSON format.

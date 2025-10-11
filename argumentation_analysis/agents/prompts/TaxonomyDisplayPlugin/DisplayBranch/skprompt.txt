@@ -1,0 +1,7 @@
+From the following taxonomy, display the branch starting at node '{{$node_id}}' down to a depth of {{$depth}}.
+Present the result as a clear and readable tree structure. Only include the nodes in the requested branch.
+
+Taxonomy:
+---
+{{$taxonomy}}
+---
