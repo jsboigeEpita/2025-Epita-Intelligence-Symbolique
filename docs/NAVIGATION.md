@@ -19,12 +19,13 @@ Ce guide vous aide à **trouver rapidement** la documentation dont vous avez bes
 ## 📚 Table des Matières
 
 1. [🚀 Démarrage Rapide](#-démarrage-rapide)
-2. [📂 Structure Documentaire](#-structure-documentaire)
-3. [🎓 Guides par Profil](#-guides-par-profil)
-4. [🔍 Recherche par Sujet](#-recherche-par-sujet)
-5. [📊 Rapports et Analyses](#-rapports-et-analyses)
-6. [🛠️ Maintenance et Contribution](#️-maintenance-et-contribution)
-7. [📖 Documentation Technique Complète](#-documentation-technique-complète)
+2. [🎓 Ressources Pédagogiques et Pratiques](#-ressources-pédagogiques-et-pratiques)
+3. [📂 Structure Documentaire](#-structure-documentaire)
+4. [🎓 Guides par Profil](#-guides-par-profil)
+5. [🔍 Recherche par Sujet](#-recherche-par-sujet)
+6. [📊 Rapports et Analyses](#-rapports-et-analyses)
+7. [🛠️ Maintenance et Contribution](#️-maintenance-et-contribution)
+8. [📖 Documentation Technique Complète](#-documentation-technique-complète)
 
 ---
 
@@ -43,7 +44,50 @@ Ce guide vous aide à **trouver rapidement** la documentation dont vous avez bes
 
 ---
 
-## 📂 Structure Documentaire
+## 🎓 Ressources Pédagogiques et Pratiques
+
+### Démonstrations, Tutoriels et Exemples
+
+Le projet dispose d'une riche collection de ressources pour apprendre et expérimenter :
+
+| Type | Description | Point d'Entrée | Niveau |
+|------|-------------|----------------|--------|
+| **🎭 Démonstrations** | Exemples fonctionnels complets du système | [`demos/README.md`](../demos/README.md) | Tous niveaux |
+| **📚 Tutoriels** | Guides pas-à-pas pour apprendre et étendre | [`tutorials/README.md`](../tutorials/README.md) | Débutant→Avancé |
+| **💡 Exemples** | Code réutilisable pour tous les aspects | [`examples/README.md`](../examples/README.md) | Tous niveaux |
+
+#### 🎭 Démonstrations
+
+**Point d'entrée** : [`demos/README.md`](../demos/README.md)
+
+4 catégories disponibles :
+- [`validation/`](../demos/validation/README.md) - Tests et validation du système
+- [`integration/`](../demos/integration/README.md) - Intégration de composants
+- [`debugging/`](../demos/debugging/README.md) - Outils de débogage
+- [`showcases/`](../demos/showcases/README.md) - Présentations fonctionnalités
+
+#### 📚 Tutoriels
+
+**Point d'entrée** : [`tutorials/README.md`](../tutorials/README.md)
+
+Parcours structuré en 2 niveaux :
+- [`01_getting_started/`](../tutorials/01_getting_started/README.md) - Introduction et premiers pas
+- [`02_extending_the_system/`](../tutorials/02_extending_the_system/README.md) - Extension et personnalisation
+
+#### 💡 Exemples
+
+**Point d'entrée** : [`examples/README.md`](../examples/README.md)
+
+5 catégories numérotées :
+- [`01_logic_and_riddles/`](../examples/01_logic_and_riddles/README.md) - Logique et énigmes
+- [`02_core_system_demos/`](../examples/02_core_system_demos/README.md) - Système central
+- [`03_integrations/`](../examples/03_integrations/README.md) - Intégrations externes
+- [`04_plugins/`](../examples/04_plugins/README.md) - Architecture plugins
+- [`05_notebooks/`](../examples/05_notebooks/README.md) - Notebooks interactifs
+
+---
+
+##  Structure Documentaire
 
 ### Vue d'Ensemble (Post Phase D1)
 
