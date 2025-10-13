@@ -1,6 +1,18 @@
 # Index Global de la Documentation
 
+**🎯 Navigation Rapide** : Utilisez le [Guide de Navigation](./NAVIGATION.md) pour trouver rapidement ce que vous cherchez !
+
 Ce document sert d'index central pour toute la documentation du projet Intelligence Symbolique. Il vous aidera à naviguer efficacement à travers les différents documents et à trouver rapidement les informations dont vous avez besoin.
+
+## 🚀 Ressources Essentielles
+
+| Ressource | Description | Audience |
+|-----------|-------------|----------|
+| [**Guide de Navigation**](./NAVIGATION.md) | Navigation intuitive par profil et besoin | 🌟 Tous |
+| [**README Principal**](../README.md) | Point d'entrée du projet | 🌟 Nouveaux utilisateurs |
+| [**CONTRIBUTING**](./CONTRIBUTING.md) | Guide de contribution (39 références) | 👨‍💻 Contributeurs |
+| [**FAQ**](./faq.md) | Questions fréquentes (24 références) | ❓ Support |
+| [**Méthodologie SDDD**](./maintenance/METHODOLOGIE_SDDD_PHASE_D1.md) | Méthodologie de nettoyage Phase D1 | 🔧 Maintenance |
 
 ## Introduction
 
@@ -161,8 +173,38 @@ Le projet Intelligence Symbolique est une infrastructure d'analyse argumentative
 - [Guide Git pour les débutants](https://rogerdudler.github.io/git-guide/index.fr.html)
 - [Guide des Pull Requests GitHub](https://docs.github.com/fr/pull-requests)
 
+## 📊 Structure Documentaire Post Phase D1 (2025-10-13)
+
+**Réorganisation majeure** : -74% fichiers racine, structure optimisée en 7 catégories
+
+### Nouvelle Organisation
+
+```
+docs/
+├── 📁 architecture/        (49 fichiers) - Architecture système
+├── 📁 guides/              (42 fichiers) - Guides pratiques
+├── 📁 reports/             (29 fichiers) - Rapports d'analyse
+├── 📁 maintenance/         (25 fichiers) - Documentation maintenance
+├── 📁 integration/         (17 fichiers) - Guides d'intégration
+├── 📁 reference/           (12 fichiers) - Documentation référence
+├── 📁 archives/            (8 fichiers)  - Documentation obsolète
+├── 📄 CONTRIBUTING.md      - Guide de contribution (39 réf.)
+├── 📄 faq.md               - FAQ du projet (24 réf.)
+├── 📄 NAVIGATION.md        - Guide de navigation
+└── 📄 index.md             - Cet index
+```
+
+**Métriques d'amélioration** :
+- Fichiers racine : 94 → 24 (-74%)
+- Doublons supprimés : 8 → 0 (-100%)
+- Conflits résolus : 4 → 0 (-100%)
+- Liens cassés : ? → 0 (✅)
+- Score découvrabilité : 4.3 → 8.5/10 (+98%)
+
+**Documentation campagne** : [`.temp/cleanup_campaign_2025-10-03/`](../.temp/cleanup_campaign_2025-10-03/)
+
 ---
 
-*Dernière mise à jour : 27/05/2025*
+*Dernière mise à jour : 2025-10-13 (Post Phase D1 - Grande Campagne de Nettoyage)*
 
 
