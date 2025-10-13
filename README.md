@@ -380,21 +380,42 @@ docker run epita-symbolic-ai
 
 ---
 
-## Intégration Continue (CI)
+## Pipeline CI/CD
 
-Ce projet utilise GitHub Actions pour l'intégration continue. Un pipeline automatisé se déclenche à chaque `push` ou `pull request` sur la branche `main`.
+Le projet utilise GitHub Actions pour l'intégration continue. Le pipeline est configuré pour :
 
-Le pipeline est structuré de manière logique pour optimiser les ressources et fournir un feedback rapide. Les jobs s'exécutent de manière séquentielle :
+### Gestion des Secrets et Forks
 
-1.  **`lint-and-format` :**
-    *   **Checkout du code :** Récupère la dernière version du code.
-    *   **Analyse de formatage (`black`) :** Vérifie que le code respecte les standards de formatage du projet.
-    *   **Analyse de qualité (`flake8`) :** Détecte les erreurs de syntaxe, les incohérences et les problèmes de style.
+**⚠️ Important pour les Contributeurs Externes**
 
-2.  **`automated-tests` (dépend de `lint-and-format`) :**
-    *   **Checkout du code :** Récupère la dernière version du code.
-    *   **Construction de l'image Docker :** Construit une image Docker de l'application.
-    *   **Exécution des tests :** Lance la suite de tests complète dans un conteneur Docker pour valider le comportement fonctionnel de l'application. Ce job ne s'exécute que si `lint-and-format` a réussi.
+Le pipeline CI implémente une gestion conditionnelle des secrets GitHub :
+
+- **Repository principal** : Les tests nécessitant des clés API (`OPENAI_API_KEY`) sont exécutés normalement
+- **Forks et PRs externes** : Les tests sont automatiquement ignorés si les secrets ne sont pas disponibles
+
+Cette approche permet aux contributeurs externes de soumettre des Pull Requests sans que le CI échoue en raison de secrets manquants.
+
+**Comportement du CI :**
+1. Le workflow vérifie la disponibilité des secrets requis
+2. Si présents → Les tests s'exécutent normalement
+3. Si absents → Les tests sont ignorés avec une notification claire
+
+Pour plus de détails techniques, consultez :
+- Configuration CI : [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+- Rapport de mission : [`docs/mission_reports/D-CI-01_rapport_stabilisation_pipeline_ci.md`](docs/mission_reports/D-CI-01_rapport_stabilisation_pipeline_ci.md)
+
+### Architecture du Pipeline
+
+Le workflow est structuré en deux jobs séquentiels :
+
+1. **lint-and-format** : Vérification du formatage et de la qualité du code
+   - Setup environnement Conda
+   - Vérification avec `black` et autres outils de linting
+
+2. **automated-tests** : Exécution des tests automatisés
+   - Dépend du succès du job `lint-and-format`
+   - Gestion conditionnelle des secrets (voir ci-dessus)
+   - Exécution via `pytest`
 
 Ce processus garantit que chaque modification est non seulement testée fonctionnellement, mais aussi validée sur le plan de la qualité et de la cohérence du code, assurant ainsi que la branche `main` reste toujours stable, lisible et maintenable.
 
