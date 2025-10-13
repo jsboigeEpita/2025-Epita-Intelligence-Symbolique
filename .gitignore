@@ -205,6 +205,14 @@ venv_temp/
 sessions/
 
 # Log files
+*.log
+logs/*.log
+logs/**/*.log
+_e2e_logs/*.log
+tests/functional/logs/
+
+# Screenshots temporaires
+logs/screenshots/
 
 # Fichiers de données de test générés
 test_orchestration_data.txt
