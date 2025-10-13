@@ -181,26 +181,17 @@ environment_evaluation_report.json
 
 # Fichiers temporaires de tests
 test_imports*.py
-temp_*.py
 diagnostic_*.py
 diagnose_fastapi_startup.py
 
-# Rapports JSON temporaires
-*rapport*.json
-validation_*_report*.json
-donnees_synthetiques_*.json
 
 
 # Fichiers de sortie temporaires
 validation_outputs_*.txt
 
-# Fichiers de résultats et rapports spécifiques non
-#  suivis
+# Fichiers de résultats et rapports spécifiques non suivis
 backend_info.json
 validation_report.md
-phase_c_test_results_*.json
-phase_d_simple_results.json
-phase_d_trace_ideale_results_*.json
 venv_temp/
 sessions/
 
@@ -224,8 +215,6 @@ test_orchestration_data_simple.txt
 text_cache/
 data/extract_sources.json
 
-# Fichiers de rapport de trace complexes
-complex_trace_report_*.json
 
 # Node.js portable auto-downloaded
 libs/node-v*
@@ -238,8 +227,6 @@ docs/rhetorical_analysis_conversation.md
 docs/sherlock_watson_investigation.md
 
 debug_imports.py
-# Fichiers de trace d'analyse complets
-analyse_trace_complete_*.json
 
 # Dossier temporaire de l'API web
 services/web_api/_temp_static/
@@ -320,7 +307,6 @@ temp_test_refactor/
 
 # Fichiers de contournement et de résultats de test
 dummy_opentelemetry/
-phase_c_fluidite_results_*.json
 
 
 
